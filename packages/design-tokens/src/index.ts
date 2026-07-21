@@ -1,2 +1,2 @@
-// Product visual tokens are intentionally outside VOC-005.
-export {};
+export { spacing } from "./spacing.js";
+export { neutral } from "./colors.js";
