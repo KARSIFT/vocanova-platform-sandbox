@@ -3,24 +3,24 @@ id: VOC-014
 slug: add-an-elevation-shadow-token-scale-to-packages-de
 title: "Design Tokens \u2014 Elevation / Shadow Scale"
 type: feature
-status: draft
+status: implementation-ready
 risk: R1
 planned_implementation_risk_floor: R1
 canonical_path: specs/changes/VOC-014-add-an-elevation-shadow-token-scale-to-packages-de
 authority_model: a003-active
-requirement_source: pending-founder-approved-issue-at-adoption
-requirement_approval_status: not-approved
+requirement_source: https://github.com/KARSIFT/vocanova-platform-sandbox/issues/11
+requirement_approval_status: founder-approved
 base_branch: develop
-base_sha: TBD-set-at-package-adoption
+base_sha: 71b745726948718f8006508f81eac4d86863bcdc
 target_branch: develop
 approved_candidate_sha: TBD-set-at-package-adoption
 owners:
   decision: founder
-  package_preparation: claude-code-planner-draft-only
-  implementation: TBD-assigned-at-adoption
+  package_preparation: claude-code-planner
+  implementation: claude-code
   independent_verification: claude-code
-approval_status: not-approved
-implementation_authorized: false
+approval_status: approved
+implementation_authorized: true
 automatic_merge_allowed: false
 production_impact: none
 rollback_required: true
@@ -43,12 +43,12 @@ dependencies:
 affected_areas:
 - packages/design-tokens
 implementation:
-  authorized: false
-  authority_issue: null
-  authority_status: not-yet-authorized
+  authorized: true
+  authority_issue: 11
+  authority_status: validly-exercised
   required: true
-  status: draft
-  issue: null
+  status: implementation-ready
+  issue: 11
   target_branch: develop
   pull_request: null
 release:
@@ -59,15 +59,13 @@ release:
   automatic_merge: false
   migration_required: false
   rollback_required: true
-repository_adoption_status: not-adopted
-adoption_pr: null
-adoption_evidence: null
+repository_adoption_status: adopted
+adoption_pr: 10
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/10
 implementation_authority_before_adoption: false
-implementation_authority_status: not-yet-authorized
+implementation_authority_status: exercised-pending-first-run
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-applicable
-blocking_reasons:
-- draft-not-yet-adopted-by-a-human
-- no-founder-approved-requirement-source-recorded
+blocking_reasons: null
