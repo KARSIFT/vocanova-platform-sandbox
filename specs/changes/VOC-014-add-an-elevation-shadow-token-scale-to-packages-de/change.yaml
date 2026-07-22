@@ -1,0 +1,73 @@
+schema_version: 1
+id: VOC-014
+slug: add-an-elevation-shadow-token-scale-to-packages-de
+title: "Design Tokens \u2014 Elevation / Shadow Scale"
+type: feature
+status: draft
+risk: R1
+planned_implementation_risk_floor: R1
+canonical_path: specs/changes/VOC-014-add-an-elevation-shadow-token-scale-to-packages-de
+authority_model: a003-active
+requirement_source: pending-founder-approved-issue-at-adoption
+requirement_approval_status: not-approved
+base_branch: develop
+base_sha: TBD-set-at-package-adoption
+target_branch: develop
+approved_candidate_sha: TBD-set-at-package-adoption
+owners:
+  decision: founder
+  package_preparation: claude-code-planner-draft-only
+  implementation: TBD-assigned-at-adoption
+  independent_verification: claude-code
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: false
+production_impact: none
+rollback_required: true
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-014-DEP-01
+  status: pending-founder-approved-issue
+- id: VOC-014-DEP-02
+  status: resolve-base-sha-at-adoption
+- id: VOC-014-DEP-03
+  status: requires-voc-010-through-voc-013-exports-on-develop
+affected_areas:
+- packages/design-tokens
+implementation:
+  authorized: false
+  authority_issue: null
+  authority_status: not-yet-authorized
+  required: true
+  status: draft
+  issue: null
+  target_branch: develop
+  pull_request: null
+release:
+  required: false
+  mode: package-addition-only
+  production_impact: none
+  deployment: prohibited
+  automatic_merge: false
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-yet-authorized
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-applicable
+blocking_reasons:
+- draft-not-yet-adopted-by-a-human
+- no-founder-approved-requirement-source-recorded
