@@ -8,8 +8,12 @@ const MOCK_HOME_STATE = {
 } as const;
 
 export default function HomePage() {
-  const { missionTargetWords, reviewedWordsToday, currentStreakDays, dueReviewWords } =
-    MOCK_HOME_STATE;
+  const {
+    missionTargetWords,
+    reviewedWordsToday,
+    currentStreakDays,
+    dueReviewWords,
+  } = MOCK_HOME_STATE;
 
   const missionProgressPercent = Math.min(
     100,
@@ -23,14 +27,18 @@ export default function HomePage() {
         aria-labelledby="todays-mission-heading"
         className="rounded-md border border-neutral-200 bg-neutral-50 p-[var(--spacing-md)] shadow-sm"
       >
-        <h1 id="todays-mission-heading" className="text-xl font-semibold text-neutral-900">
+        <h1
+          id="todays-mission-heading"
+          className="text-xl font-semibold text-neutral-900"
+        >
           Today&apos;s Mission
         </h1>
         <p className="mt-[var(--spacing-sm)] text-base text-neutral-700">
           Review target: {missionTargetWords} words
         </p>
         <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-          {reviewedWordsToday} of {missionTargetWords} words reviewed today ({missionProgressPercent}
+          {reviewedWordsToday} of {missionTargetWords} words reviewed today (
+          {missionProgressPercent}
           %)
         </p>
 
@@ -49,7 +57,9 @@ export default function HomePage() {
         {currentStreakDays}-day streak
       </p>
 
-      <p className="mt-[var(--spacing-sm)] text-base text-neutral-800">{dueReviewWords} words due today</p>
+      <p className="mt-[var(--spacing-sm)] text-base text-neutral-800">
+        {dueReviewWords} words due today
+      </p>
 
       <Link
         href="/discover"
