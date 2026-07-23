@@ -45,7 +45,10 @@ function expectedProperties() {
     ]),
     ...Object.entries(fontSize).map(([key, value]) => [`--text-${key}`, value]),
     ...Object.entries(radius).map(([key, value]) => [`--radius-${key}`, value]),
-    ...Object.entries(elevation).map(([key, value]) => [`--shadow-${key}`, value]),
+    ...Object.entries(elevation).map(([key, value]) => [
+      `--shadow-${key}`,
+      value,
+    ]),
     ...Object.entries(easing).map(([key, value]) => [
       `--ease-${EASING_KEY_NAMES[key]}`,
       value,
@@ -67,7 +70,12 @@ test("tokens.generated.css includes every token property/value pair", () => {
   assert.equal(entries.length, 64);
 
   for (const [property, value] of entries) {
-    assert.match(css, new RegExp(`\\s${property}:\\s${value.replace(/[.*+?^${}()|[\\]\\]/g, "\\\\$&")};`));
+    assert.match(
+      css,
+      new RegExp(
+        `\\s${property}:\\s${value.replace(/[.*+?^${}()|[\\]\\]/g, "\\\\$&")};`,
+      ),
+    );
   }
 });
 
@@ -77,4 +85,3 @@ test("tokens.generated.css is byte-equal to generator output", () => {
 
   assert.equal(css, generated);
 });
-
