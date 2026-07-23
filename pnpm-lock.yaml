@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@vocanova/design-tokens':
+        specifier: workspace:*
+        version: link:packages/design-tokens
       eslint:
         specifier: 10.7.0
         version: 10.7.0(jiti@2.7.0)

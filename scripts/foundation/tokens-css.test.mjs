@@ -73,7 +73,7 @@ test("tokens.generated.css includes every token property/value pair", () => {
     assert.match(
       css,
       new RegExp(
-        `\\s${property}:\\s${value.replace(/[.*+?^${}()|[\\]\\]/g, "\\\\$&")};`,
+        `\\s${property}:\\s${value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")};`,
       ),
     );
   }
