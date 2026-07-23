@@ -3,7 +3,7 @@ id: VOC-019
 slug: build-the-real-home-screen-apps-web-src-app-app-ho
 title: Build the Real Home Screen (Today's Mission, Streak, Due Reviews, Journey Entry)
 type: feature
-status: draft
+status: implementation-ready
 risk: R1
 planned_implementation_risk_floor: R1
 canonical_path: specs/changes/VOC-019-build-the-real-home-screen-apps-web-src-app-app-ho
@@ -15,15 +15,15 @@ base_branch: develop
 base_sha: a6da9bf3244048773cc08cdf20d536aba42b517b
 target_branch: develop
 approved_candidate_sha: TBD-set-at-package-adoption
-approval_status: not-approved
-implementation_authorized: false
+approval_status: approved
+implementation_authorized: true
 automatic_merge_allowed: false
 production_impact: none
 rollback_required: true
 owners:
   decision: founder
   package_preparation: claude-code-planner
-  implementation: unassigned
+  implementation: codex
   independent_verification: claude-code
 artifacts:
   readme: README.md
@@ -36,19 +36,18 @@ artifacts:
   release_plan: release-plan.md
 dependencies:
 - id: VOC-019-DEP-01
-  status: pending-founder-review-of-draft-package
+  status: founder-approved
 - id: VOC-019-DEP-02
-  status: resolve-base-sha-at-adoption
+  status: 'resolved-at-adoption: base_sha confirmed current develop tip'
 - id: VOC-019-DEP-03
   status: 'confirmed-present-on-develop-at-drafting: VOC-017 shell (/home route, BottomNav,
     (app)/layout.tsx) and VOC-018 wired Tailwind v4 @theme tokens (apps/web/src/app/tokens.generated.css,
     64 custom properties) both present at commit a6da9bf3244048773cc08cdf20d536aba42b517b'
 - id: VOC-019-DEP-04
-  status: 'open-scope-decision: sentence-practice quick-entry and a review-start action
-    are listed in DOC-01 section 2 / DOC-03''s information architecture (section 2)
-    for the Home tab but are excluded from this task per the free-text request''s
-    narrower citation of DOC-03 section 4 item 1 and the absence of a /review route
-    (VOC-019-D01); a human must confirm the narrower scope or direct a follow-up package'
+  status: 'founder-confirmed: narrower scope stands - sentence-practice quick-entry
+    and a review-start action are deferred to a follow-up package once a /review
+    route and real API wiring exist; this task covers Today''s Mission, streak,
+    due-review count (display-only), and Journey/Discover entry only'
 - id: VOC-019-DEP-05
   status: 'required-follow-up-not-in-scope: DOC-03 section 9 empty/loading/error states
     and wiring the feedback token scale (success/warning/error) are deferred to the
@@ -56,10 +55,10 @@ dependencies:
 affected_areas:
 - apps/web
 implementation:
-  authorized: false
-  authority_status: not-exercised
+  authorized: true
+  authority_status: validly-exercised
   required: true
-  status: draft
+  status: implementation-ready
   target_branch: develop
   pull_request: null
   authority_issue: null
@@ -71,13 +70,13 @@ release:
   automatic_merge: false
   migration_required: false
   rollback_required: true
-repository_adoption_status: not-adopted
-adoption_pr: null
-adoption_evidence: null
+repository_adoption_status: adopted
+adoption_pr: 40
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/40
 implementation_authority_before_adoption: false
-implementation_authority_status: not-exercised
+implementation_authority_status: exercised-pending-first-run
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-applicable
-blocking_reasons: package-not-yet-adopted
+blocking_reasons: null
