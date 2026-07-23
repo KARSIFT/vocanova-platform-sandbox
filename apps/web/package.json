@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "next typegen && tsc --noEmit --pretty false"
+    "typecheck": "next typegen && tsc --noEmit --pretty false",
+    "generate:tokens": "node scripts/generate-tokens-css.mjs"
   },
   "dependencies": {
     "next": "16.2.10",
