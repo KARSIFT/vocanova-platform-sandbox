@@ -1,0 +1,83 @@
+schema_version: 1
+id: VOC-019
+slug: build-the-real-home-screen-apps-web-src-app-app-ho
+title: Build the Real Home Screen (Today's Mission, Streak, Due Reviews, Journey Entry)
+type: feature
+status: draft
+risk: R1
+planned_implementation_risk_floor: R1
+canonical_path: specs/changes/VOC-019-build-the-real-home-screen-apps-web-src-app-app-ho
+authority_model: a003-active
+requirement_source: docs/product/01-mvp-prd.md#2 ; docs/design/03-ui-ux-design.md#4
+  ; docs/design/03-ui-ux-design.md#8
+requirement_approval_status: founder-approved
+base_branch: develop
+base_sha: a6da9bf3244048773cc08cdf20d536aba42b517b
+target_branch: develop
+approved_candidate_sha: TBD-set-at-package-adoption
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: false
+production_impact: none
+rollback_required: true
+owners:
+  decision: founder
+  package_preparation: claude-code-planner
+  implementation: unassigned
+  independent_verification: claude-code
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-019-DEP-01
+  status: pending-founder-review-of-draft-package
+- id: VOC-019-DEP-02
+  status: resolve-base-sha-at-adoption
+- id: VOC-019-DEP-03
+  status: 'confirmed-present-on-develop-at-drafting: VOC-017 shell (/home route, BottomNav,
+    (app)/layout.tsx) and VOC-018 wired Tailwind v4 @theme tokens (apps/web/src/app/tokens.generated.css,
+    64 custom properties) both present at commit a6da9bf3244048773cc08cdf20d536aba42b517b'
+- id: VOC-019-DEP-04
+  status: 'open-scope-decision: sentence-practice quick-entry and a review-start action
+    are listed in DOC-01 section 2 / DOC-03''s information architecture (section 2)
+    for the Home tab but are excluded from this task per the free-text request''s
+    narrower citation of DOC-03 section 4 item 1 and the absence of a /review route
+    (VOC-019-D01); a human must confirm the narrower scope or direct a follow-up package'
+- id: VOC-019-DEP-05
+  status: 'required-follow-up-not-in-scope: DOC-03 section 9 empty/loading/error states
+    and wiring the feedback token scale (success/warning/error) are deferred to the
+    real API-wiring package, not this static-mock task (VOC-019-D05, VOC-019-D06)'
+affected_areas:
+- apps/web
+implementation:
+  authorized: false
+  authority_status: not-exercised
+  required: true
+  status: draft
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: false
+  mode: app-screen-addition-only
+  production_impact: none
+  deployment: prohibited
+  automatic_merge: false
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-applicable
+blocking_reasons: package-not-yet-adopted
