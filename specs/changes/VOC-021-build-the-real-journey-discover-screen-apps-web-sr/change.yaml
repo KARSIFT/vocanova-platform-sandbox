@@ -3,7 +3,7 @@ id: VOC-021
 slug: build-the-real-journey-discover-screen-apps-web-sr
 title: Build the Real Journey/Discover Screen (Situation List)
 type: feature
-status: draft
+status: implementation-ready
 risk: R1
 planned_implementation_risk_floor: R1
 canonical_path: specs/changes/VOC-021-build-the-real-journey-discover-screen-apps-web-sr
@@ -15,10 +15,10 @@ base_branch: develop
 base_sha: e31575e06dd3397ff0bc218f5e34089b0bdf7fc5
 target_branch: develop
 approved_candidate_sha: TBD-set-at-package-adoption
-approval_status: not-approved
-implementation_authorized: false
+approval_status: approved
+implementation_authorized: true
 automatic_merge_allowed: false
-production_impact: unknown
+production_impact: none
 rollback_required: true
 owners:
   decision: founder
@@ -36,24 +36,18 @@ artifacts:
   release_plan: release-plan.md
 dependencies:
 - id: VOC-021-DEP-01
-  status: 'pending: requires a founder-approved implementation-ready state at adoption
-    - DOC-01/DOC-03/DOC-05 being approved documents is not itself implementation authority
-    for this specific change'
+  status: founder-approved
 - id: VOC-021-DEP-02
-  status: 'pending-at-adoption: base_sha must be re-pinned to the then-current develop
-    head'
+  status: 'resolved-at-adoption: base_sha confirmed current develop tip'
 - id: VOC-021-DEP-03
   status: 'confirmed-present-on-develop-at-drafting: VOC-017 shell (/discover route,
     BottomNav, (app)/layout.tsx) and VOC-018 wired Tailwind v4 @theme tokens (apps/web/src/app/tokens.generated.css,
     64 custom properties) both present at commit e31575e06dd3397ff0bc218f5e34089b0bdf7fc5'
 - id: VOC-021-DEP-04
-  status: 'open: situation set/order - this draft proposes exactly the seven situations
-    named in the free-text request, in that order; pending founder confirmation at
-    adoption (VOC-021-D01)'
+  status: 'founder-confirmed: the seven proposed situations, in the drafted order,
+    stand as-is'
 - id: VOC-021-DEP-05
-  status: 'open: mock-copy adequacy - this draft proposes specific short-description
-    text in tasks.md as placeholder content; pending founder review/confirmation at
-    adoption (VOC-021-D08)'
+  status: 'founder-confirmed: the drafted mock-copy short descriptions stand as-is'
 - id: VOC-021-DEP-06
   status: 'required-follow-up-not-in-scope: the real /discover/[situation] drill-down
     route, within-situation word list, word detail, and save/unsave, once apps/api
@@ -61,10 +55,10 @@ dependencies:
 affected_areas:
 - apps/web
 implementation:
-  authorized: false
-  authority_status: not-yet-exercised
+  authorized: true
+  authority_status: validly-exercised
   required: true
-  status: draft
+  status: implementation-ready
   target_branch: develop
   pull_request: null
   authority_issue: null
@@ -76,14 +70,13 @@ release:
   automatic_merge: false
   migration_required: false
   rollback_required: true
-repository_adoption_status: not-adopted
-adoption_pr: null
-adoption_evidence: null
+repository_adoption_status: adopted
+adoption_pr: 49
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/49
 implementation_authority_before_adoption: false
-implementation_authority_status: not-exercised
+implementation_authority_status: exercised-pending-first-run
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-applicable
-blocking_reasons: package not adopted; VOC-021-DEP-04 (situation set/order) and VOC-021-DEP-05
-  (mock-copy adequacy) require founder confirmation before implementation is authorized
+blocking_reasons: null
