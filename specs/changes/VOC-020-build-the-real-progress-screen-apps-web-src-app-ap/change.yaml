@@ -1,0 +1,83 @@
+schema_version: 1
+id: VOC-020
+slug: build-the-real-progress-screen-apps-web-src-app-ap
+title: Build the Real Progress Screen (Confidence Points, Streak, Completion History)
+type: feature
+status: draft
+risk: R1
+planned_implementation_risk_floor: R1
+canonical_path: specs/changes/VOC-020-build-the-real-progress-screen-apps-web-src-app-ap
+authority_model: a003-active
+requirement_source: docs/product/01-mvp-prd.md#2 ; docs/design/03-ui-ux-design.md#4
+  ; docs/design/03-ui-ux-design.md#8
+requirement_approval_status: pending-founder-review
+base_branch: develop
+base_sha: 66731642103b57604c7693e45b279838b9f36fcf
+target_branch: develop
+approved_candidate_sha: TBD-set-at-package-adoption
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: false
+production_impact: none
+rollback_required: true
+owners:
+  decision: founder
+  package_preparation: claude-code-planner
+  implementation: codex
+  independent_verification: claude-code
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-020-DEP-01
+  status: pending-founder-review
+- id: VOC-020-DEP-02
+  status: 'resolved-at-adoption: base_sha must be re-pinned to the then-current develop
+    head'
+- id: VOC-020-DEP-03
+  status: 'confirmed-present-on-develop-at-drafting: VOC-017 shell (/progress route,
+    BottomNav, (app)/layout.tsx) and VOC-018 wired Tailwind v4 @theme tokens (apps/web/src/app/tokens.generated.css,
+    64 custom properties) both present at commit 66731642103b57604c7693e45b279838b9f36fcf'
+- id: VOC-020-DEP-04
+  status: 'open-pending-founder-confirmation: completion-history granularity choice
+    (day-by-day current-week strip vs. week-by-week summary), VOC-020-D01'
+- id: VOC-020-DEP-05
+  status: 'open-pending-founder-confirmation: whether the true zero-history/first-mission
+    empty state (DOC-03 section 9) is required now or may be deferred to the real
+    API-wiring follow-up package, VOC-020-D06'
+- id: VOC-020-DEP-06
+  status: 'required-follow-up-not-in-scope: DOC-03 section 9 loading/error states
+    (once Progress fetches live data) and wiring the feedback token scale, VOC-020-D07'
+affected_areas:
+- apps/web
+implementation:
+  authorized: false
+  authority_status: not-yet-exercised
+  required: true
+  status: draft
+  target_branch: develop
+  pull_request: null
+release:
+  required: false
+  mode: app-screen-addition-only
+  production_impact: none
+  deployment: prohibited
+  automatic_merge: false
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-applicable
+blocking_reasons: null
