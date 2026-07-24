@@ -6,7 +6,23 @@ export interface CurrentUser {
   emailVerifiedAt?: string;
 }
 
+/** Body for POST /api/v1/auth/magic-links. */
+export interface RequestMagicLinkBody {
+  email: string;
+}
+
+/** Body for POST /api/v1/auth/magic-links/consume. */
+export interface ConsumeMagicLinkBody {
+  token: string;
+  email: string;
+}
+
+/** Huma problem-details error model. */
 export interface ApiError {
-  code: string;
-  message: string;
+  type?: string;
+  title?: string;
+  status?: number;
+  detail?: string;
+  instance?: string;
+  errors?: Array<{ location?: string; message?: string; value?: unknown }>;
 }
