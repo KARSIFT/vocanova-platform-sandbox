@@ -35,25 +35,27 @@ export default async function SituationDiscoverPage({
 
       <ul className="mt-[var(--spacing-lg)] space-y-[var(--spacing-md)]">
         {situationWords.words.map((word) => (
-          <li
-            key={word.term}
-            className="rounded-md border border-neutral-200 bg-neutral-50 p-[var(--spacing-md)] shadow-sm"
-          >
-            <div className="flex items-start justify-between gap-[var(--spacing-md)]">
-              <div>
-                <p className="text-lg font-semibold text-neutral-900">
-                  {word.term}
-                </p>
-                <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-                  {word.meaning}
-                </p>
+          <li key={word.wordSlug}>
+            <Link
+              href={`/discover/${situation}/${word.wordSlug}`}
+              className="block rounded-md border border-neutral-200 bg-neutral-50 p-[var(--spacing-md)] shadow-sm hover:border-primary-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary-600"
+            >
+              <div className="flex items-start justify-between gap-[var(--spacing-md)]">
+                <div>
+                  <p className="text-lg font-semibold text-neutral-900">
+                    {word.term}
+                  </p>
+                  <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
+                    {word.meaning}
+                  </p>
+                </div>
+                {word.isSaved ? (
+                  <span className="shrink-0 rounded-full bg-primary-100 px-[var(--spacing-sm)] py-[var(--spacing-xs)] text-sm font-semibold text-primary-800">
+                    <span aria-hidden="true">✓</span> Saved
+                  </span>
+                ) : null}
               </div>
-              {word.isSaved ? (
-                <span className="shrink-0 rounded-full bg-primary-100 px-[var(--spacing-sm)] py-[var(--spacing-xs)] text-sm font-semibold text-primary-800">
-                  <span aria-hidden="true">✓</span> Saved
-                </span>
-              ) : null}
-            </div>
+            </Link>
           </li>
         ))}
       </ul>
