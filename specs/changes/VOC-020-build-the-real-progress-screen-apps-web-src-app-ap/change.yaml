@@ -3,20 +3,20 @@ id: VOC-020
 slug: build-the-real-progress-screen-apps-web-src-app-ap
 title: Build the Real Progress Screen (Confidence Points, Streak, Completion History)
 type: feature
-status: draft
+status: implementation-ready
 risk: R1
 planned_implementation_risk_floor: R1
 canonical_path: specs/changes/VOC-020-build-the-real-progress-screen-apps-web-src-app-ap
 authority_model: a003-active
 requirement_source: docs/product/01-mvp-prd.md#2 ; docs/design/03-ui-ux-design.md#4
   ; docs/design/03-ui-ux-design.md#8
-requirement_approval_status: pending-founder-review
+requirement_approval_status: founder-approved
 base_branch: develop
 base_sha: 66731642103b57604c7693e45b279838b9f36fcf
 target_branch: develop
 approved_candidate_sha: TBD-set-at-package-adoption
-approval_status: not-approved
-implementation_authorized: false
+approval_status: approved
+implementation_authorized: true
 automatic_merge_allowed: false
 production_impact: none
 rollback_required: true
@@ -36,33 +36,33 @@ artifacts:
   release_plan: release-plan.md
 dependencies:
 - id: VOC-020-DEP-01
-  status: pending-founder-review
+  status: founder-approved
 - id: VOC-020-DEP-02
-  status: 'resolved-at-adoption: base_sha must be re-pinned to the then-current develop
-    head'
+  status: 'resolved-at-adoption: base_sha confirmed current develop tip'
 - id: VOC-020-DEP-03
   status: 'confirmed-present-on-develop-at-drafting: VOC-017 shell (/progress route,
     BottomNav, (app)/layout.tsx) and VOC-018 wired Tailwind v4 @theme tokens (apps/web/src/app/tokens.generated.css,
     64 custom properties) both present at commit 66731642103b57604c7693e45b279838b9f36fcf'
 - id: VOC-020-DEP-04
-  status: 'open-pending-founder-confirmation: completion-history granularity choice
-    (day-by-day current-week strip vs. week-by-week summary), VOC-020-D01'
+  status: 'founder-confirmed: day-by-day current-week strip (7 entries), as tasks.md
+    already specifies'
 - id: VOC-020-DEP-05
-  status: 'open-pending-founder-confirmation: whether the true zero-history/first-mission
-    empty state (DOC-03 section 9) is required now or may be deferred to the real
-    API-wiring follow-up package, VOC-020-D06'
+  status: 'founder-confirmed: zero-history/first-mission empty state deferred to
+    the real API-wiring follow-up package, consistent with VOC-019 precedent -
+    tasks.md does not include a build step for it'
 - id: VOC-020-DEP-06
   status: 'required-follow-up-not-in-scope: DOC-03 section 9 loading/error states
     (once Progress fetches live data) and wiring the feedback token scale, VOC-020-D07'
 affected_areas:
 - apps/web
 implementation:
-  authorized: false
-  authority_status: not-yet-exercised
+  authorized: true
+  authority_status: validly-exercised
   required: true
-  status: draft
+  status: implementation-ready
   target_branch: develop
   pull_request: null
+  authority_issue: null
 release:
   required: false
   mode: app-screen-addition-only
@@ -71,11 +71,11 @@ release:
   automatic_merge: false
   migration_required: false
   rollback_required: true
-repository_adoption_status: not-adopted
-adoption_pr: null
-adoption_evidence: null
+repository_adoption_status: adopted
+adoption_pr: 45
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/45
 implementation_authority_before_adoption: false
-implementation_authority_status: not-exercised
+implementation_authority_status: exercised-pending-first-run
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
