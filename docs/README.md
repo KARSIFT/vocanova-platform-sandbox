@@ -50,17 +50,17 @@ adopted packages under [`specs/`](../specs/README.md); decision rationale lives 
 - [Migration notes](archive/README-migration-notes.md) preserve the reconciliation evidence trail.
 - [Adoption notes](archive/README-adoption-notes.md) record VOC-008 semantic corrections.
 
-**DOC-17 and DOC-18 describe a system that was never built and is not the project's actual
-direction** (corrected 2026-07-24; both remain `approved`/adopted as historical planning
-documents, not deleted, but should not be read as describing current or planned engineering
-work). They specify a standalone Control Plane service (a durable PostgreSQL work queue, an AI
-Budget Governor, an Execution Lease Manager, an MCP founder interface, etc.) and an 18-phase
-roadmap to build it. The system that actually shipped VOC-010 through VOC-022 is architecturally
-unrelated: a set of reusable GitHub Actions workflows (`KARSIFT/karsift-ai-infra`) wired into this
-repo's own `.github/workflows/pipeline.yml` - no Postgres queue, no Budget Governor, no MCP
-interface, no Change Contract Registry. This was a deliberate decision (see
-`karsift-ai-infra`'s own README and commit history), not an oversight. Their adoption does not
-implement the Control Plane, activate RL1/RL2, or enable production deployment or autonomous
-production release. It also does not, on its own, cover automatic merge into `develop` - that
-narrower capability (A-003 §10) is separately implemented and live; see
+DOC-17 and DOC-18 are adopted together per VOC-004 (canonical adoption), but describe a system
+that was never built and is not the project's actual direction (noted 2026-07-24; both remain
+`approved`/adopted as historical planning documents, not deleted, but should not be read as
+describing current or planned engineering work). They specify a standalone Control Plane service
+(a durable PostgreSQL work queue, an AI Budget Governor, an Execution Lease Manager, an MCP
+founder interface, etc.) and an 18-phase roadmap to build it. The system that actually shipped
+VOC-010 through VOC-022 is architecturally unrelated: a set of reusable GitHub Actions workflows
+(`KARSIFT/karsift-ai-infra`) wired into this repo's own `.github/workflows/pipeline.yml` - no
+Postgres queue, no Budget Governor, no MCP interface, no Change Contract Registry. This was a
+deliberate decision (see `karsift-ai-infra`'s own README and commit history), not an oversight.
+Their adoption does not implement the Control Plane, activate RL1/RL2, or enable production
+deployment or autonomous production release. It also does not, on its own, cover automatic merge
+into `develop` - that narrower capability (A-003 §10) is separately implemented and live; see
 `docs/governance/a003-transition-state.yaml`.

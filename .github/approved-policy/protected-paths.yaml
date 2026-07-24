@@ -61,12 +61,12 @@ paths:
 
 hosted_enforcement_status: not-activated
 
-# Corrected 2026-07-24 (was stale `false`) - see docs/governance/a003-transition-state.yaml's
-# identical correction for the full explanation: this describes A-003 Section 10's
-# develop-merge authority, distinct from production-release authority below (which
-# remains correctly disabled). Live and evidenced since VOC-012.
-automatic_merge_allowed: true
-autonomous_merge_allowed: true
+# Reverted 2026-07-24 - see docs/governance/a003-transition-state.yaml's identical
+# revert note: these two fields are a hard, unconditional invariant enforced by
+# tooling/governance/validate_repository_foundation.py, not stale prose. Changing
+# what they mean/require is a decision for the founder to make explicitly.
+automatic_merge_allowed: false
+autonomous_merge_allowed: false
 
 production_deployment: disabled
 autonomous_production_release: disabled

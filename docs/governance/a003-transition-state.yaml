@@ -34,19 +34,22 @@ exceptional_human_review_mode: exceptional-only
 rl1_technical_activation: false
 rl2_technical_activation: false
 
-# Corrected 2026-07-24 (was stale `false`): this field describes Section 10
-# ("Merge Authority - Merge into `develop`") of A-003, a distinct gate from
-# Section 11/12's production-release authority (rl1/rl2_technical_activation,
-# production_deployment, autonomous_production_release below, which remain
-# correctly disabled - no release to `main` has ever happened without an
-# explicit founder approval). Automatic merge into `develop` has been live
-# and evidenced on this exact repository since VOC-012 (karsift-ai-infra
-# pipeline's merge-gate.yml, auto_merge_enabled: "true" - see
-# .github/workflows/pipeline.yml) and has fired correctly on numerous
-# packages since (VOC-012, VOC-014, VOC-016 through VOC-022 at minimum).
-automatic_merge_allowed: true
-autonomous_merge_allowed: true
-automatic_merge_activation_evidence: "https://github.com/KARSIFT/vocanova-platform-sandbox - see merge-gate.yml auto-merge comments on PRs for VOC-012, VOC-014, VOC-016 through VOC-022"
+# Reverted 2026-07-24: an earlier pass on this date briefly set these two
+# fields to `true`, reasoning that Section 10 ("Merge Authority - Merge into
+# `develop`") is live and distinct from Section 11/12's production-release
+# authority below. That reasoning about A-003's own text is still correct,
+# but these two specific fields are also a hard, unconditional invariant
+# enforced by tooling/governance/validate_repository_foundation.py (which
+# requires both to remain the literal string "false" regardless of A-003
+# activation status) - a deliberate governance tripwire, not stale prose.
+# Changing what these two fields mean/require is a real decision the
+# founder should make explicitly, not a side effect of a docs cleanup, so
+# the values are restored here pending that decision. The underlying fact
+# (karsift-ai-infra's merge-gate.yml auto-merges into develop and has fired
+# on VOC-012, VOC-014, VOC-016 through VOC-022 at minimum) remains true and
+# is recorded in docs/governance/repository-settings.md.
+automatic_merge_allowed: false
+autonomous_merge_allowed: false
 
 production_deployment: disabled
 autonomous_production_release: disabled
