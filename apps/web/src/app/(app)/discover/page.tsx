@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 // Placeholder local data for VOC-021 static UI; replace with real API wiring in a follow-up package.
 const MOCK_DISCOVER_SITUATIONS = [
   {
@@ -54,16 +56,18 @@ export default function DiscoverPage() {
 
       <ul className="mt-[var(--spacing-lg)] grid grid-cols-1 gap-[var(--spacing-md)] sm:grid-cols-2">
         {MOCK_DISCOVER_SITUATIONS.map((situation) => (
-          <li
-            key={situation.slug}
-            className="rounded-md border border-neutral-200 bg-neutral-50 p-[var(--spacing-md)] shadow-sm"
-          >
-            <h2 className="text-lg font-semibold text-neutral-900">
-              {situation.title}
-            </h2>
-            <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-              {situation.shortDescription}
-            </p>
+          <li key={situation.slug}>
+            <Link
+              href={`/discover/${situation.slug}`}
+              className="block rounded-md border border-neutral-200 bg-neutral-50 p-[var(--spacing-md)] shadow-sm hover:border-primary-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary-600"
+            >
+              <h2 className="text-lg font-semibold text-neutral-900">
+                {situation.title}
+              </h2>
+              <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
+                {situation.shortDescription}
+              </p>
+            </Link>
           </li>
         ))}
       </ul>
