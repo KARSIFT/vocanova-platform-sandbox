@@ -1,0 +1,70 @@
+schema_version: 1
+id: VOC-024
+slug: build-the-word-detail-screen-a-new-nested-dynamic
+title: Build the Word Detail Screen
+type: feature
+status: draft
+risk: R1
+planned_implementation_risk_floor: R1
+canonical_path: specs/changes/VOC-024-build-the-word-detail-screen-a-new-nested-dynamic-
+authority_model: a003-active
+requirement_source: docs/design/03-ui-ux-design.md#6 ; docs/engineering/05-database-design.md#7
+  ; supplied free-text request
+requirement_approval_status: source-documents-recorded-package-pending-adoption
+base_branch: develop
+base_sha: not-recorded-in-draft
+target_branch: develop
+approved_candidate_sha: not-applicable-until-adoption
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: false
+production_impact: none
+rollback_required: true
+owners:
+  decision: founder
+  package_preparation: planner
+  implementation: unassigned
+  independent_verification: claude-code
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-024-DEP-01
+  status: pending-founder-adoption-and-resolution-of-VOC-024-D05
+- id: VOC-024-DEP-02
+  status: requires-current-develop-base-sha-at-adoption
+- id: VOC-024-DEP-03
+  status: depends-on-existing-VOC-022-situation-word-mock-data-and-VOC-018-wired-tokens
+affected_areas:
+- apps/web/src/app/(app)/discover/[situation]
+implementation:
+  authorized: false
+  authority_status: not-authorized
+  required: true
+  status: draft-only
+  target_branch: develop
+  pull_request: null
+release:
+  required: false
+  mode: static-web-screen-addition
+  production_impact: none
+  deployment: prohibited
+  automatic_merge: false
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: not-recorded
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-applicable-for-proposed-R1
+blocking_reasons: package-is-draft-and-VOC-024-D05-requires-founder-resolution
