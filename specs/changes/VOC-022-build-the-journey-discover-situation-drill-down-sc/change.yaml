@@ -4,7 +4,7 @@ slug: build-the-journey-discover-situation-drill-down-sc
 title: Build the Journey/Discover Situation Drill-Down Screen (Within-Situation Word
   List)
 type: feature
-status: draft
+status: implementation-ready
 risk: R1
 planned_implementation_risk_floor: R1
 canonical_path: specs/changes/VOC-022-build-the-journey-discover-situation-drill-down-sc
@@ -16,8 +16,8 @@ base_branch: develop
 base_sha: 044d42941ec1eee68fb66e53d59bd2e89fc51011
 target_branch: develop
 approved_candidate_sha: TBD-set-at-package-adoption
-approval_status: not-approved
-implementation_authorized: false
+approval_status: approved
+implementation_authorized: true
 automatic_merge_allowed: false
 production_impact: none
 rollback_required: true
@@ -37,9 +37,10 @@ artifacts:
   release_plan: release-plan.md
 dependencies:
 - id: VOC-022-DEP-01
-  status: pending-founder-review
+  status: founder-approved
 - id: VOC-022-DEP-02
-  status: pending-resolution-at-adoption
+  status: 'founder-confirmed: the drafted six-word-per-situation content, including
+    which words are pre-marked saved, stands as-is'
 - id: VOC-022-DEP-03
   status: 'confirmed-present-on-develop-at-drafting: VOC-021''s seven-situation /discover
     list (apps/web/src/app/(app)/discover/page.tsx, exact slugs airport, restaurant,
@@ -47,18 +48,21 @@ dependencies:
     and VOC-018''s wired Tailwind v4 @theme tokens (apps/web/src/app/tokens.generated.css,
     64 custom properties) both present at commit 044d42941ec1eee68fb66e53d59bd2e89fc51011'
 - id: VOC-022-DEP-04
-  status: open-decision-pending-founder-review
+  status: 'resolved-at-adoption: base_sha confirmed current develop tip'
 - id: VOC-022-DEP-05
-  status: open-decision-pending-founder-review
+  status: 'founder-confirmed: the drafted discover/page.tsx navigation diff shape
+    (wrap card content in a Link, move card styling onto it, add hover/focus-visible
+    treatment) stands as-is, with the mock data array and existing headings staying
+    byte-identical'
 - id: VOC-022-DEP-06
   status: required-follow-up-not-in-scope
 affected_areas:
 - apps/web
 implementation:
-  authorized: false
-  authority_status: not-exercised
+  authorized: true
+  authority_status: validly-exercised
   required: true
-  status: pending-adoption
+  status: implementation-ready
   target_branch: develop
   pull_request: null
   authority_issue: null
@@ -70,16 +74,13 @@ release:
   automatic_merge: false
   migration_required: false
   rollback_required: true
-repository_adoption_status: not-adopted
-adoption_pr: null
-adoption_evidence: null
+repository_adoption_status: adopted
+adoption_pr: 54
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/54
 implementation_authority_before_adoption: false
-implementation_authority_status: not-exercised
+implementation_authority_status: exercised-pending-first-run
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-applicable
-blocking_reasons:
-- not-yet-adopted-by-a-human
-- open-decision-VOC-022-D02-word-list-content-and-count-per-situation
-- open-decision-VOC-022-D05-navigation-diff-shape-in-discover-page-tsx
+blocking_reasons: null
