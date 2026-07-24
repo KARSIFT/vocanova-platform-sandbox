@@ -48,7 +48,10 @@ export default function ProgressPage() {
         aria-labelledby="streak-heading"
         className="mt-[var(--spacing-md)] rounded-md border border-neutral-200 bg-neutral-50 p-[var(--spacing-md)] shadow-sm"
       >
-        <h2 id="streak-heading" className="text-lg font-semibold text-neutral-900">
+        <h2
+          id="streak-heading"
+          className="text-lg font-semibold text-neutral-900"
+        >
           Your streaks
         </h2>
         <p className="mt-[var(--spacing-sm)] text-base text-neutral-800">
