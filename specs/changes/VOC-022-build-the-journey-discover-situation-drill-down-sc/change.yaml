@@ -1,0 +1,85 @@
+schema_version: 1
+id: VOC-022
+slug: build-the-journey-discover-situation-drill-down-sc
+title: Build the Journey/Discover Situation Drill-Down Screen (Within-Situation Word
+  List)
+type: feature
+status: draft
+risk: R1
+planned_implementation_risk_floor: R1
+canonical_path: specs/changes/VOC-022-build-the-journey-discover-situation-drill-down-sc
+authority_model: a003-active
+requirement_source: docs/design/03-ui-ux-design.md#5 ; docs/product/01-mvp-prd.md#2
+  ; docs/engineering/05-database-design.md#7 ; docs/engineering/05-database-design.md#8
+requirement_approval_status: founder-approved
+base_branch: develop
+base_sha: 044d42941ec1eee68fb66e53d59bd2e89fc51011
+target_branch: develop
+approved_candidate_sha: TBD-set-at-package-adoption
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: false
+production_impact: none
+rollback_required: true
+owners:
+  decision: founder
+  package_preparation: claude-code-planner
+  implementation: codex
+  independent_verification: claude-code
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-022-DEP-01
+  status: pending-founder-review
+- id: VOC-022-DEP-02
+  status: pending-resolution-at-adoption
+- id: VOC-022-DEP-03
+  status: 'confirmed-present-on-develop-at-drafting: VOC-021''s seven-situation /discover
+    list (apps/web/src/app/(app)/discover/page.tsx, exact slugs airport, restaurant,
+    hotel-check-in, job-interview, daily-conversation, work-meeting, university-class)
+    and VOC-018''s wired Tailwind v4 @theme tokens (apps/web/src/app/tokens.generated.css,
+    64 custom properties) both present at commit 044d42941ec1eee68fb66e53d59bd2e89fc51011'
+- id: VOC-022-DEP-04
+  status: open-decision-pending-founder-review
+- id: VOC-022-DEP-05
+  status: open-decision-pending-founder-review
+- id: VOC-022-DEP-06
+  status: required-follow-up-not-in-scope
+affected_areas:
+- apps/web
+implementation:
+  authorized: false
+  authority_status: not-exercised
+  required: true
+  status: pending-adoption
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: false
+  mode: app-screen-addition-only
+  production_impact: none
+  deployment: prohibited
+  automatic_merge: false
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-applicable
+blocking_reasons:
+- not-yet-adopted-by-a-human
+- open-decision-VOC-022-D02-word-list-content-and-count-per-situation
+- open-decision-VOC-022-D05-navigation-diff-shape-in-discover-page-tsx
