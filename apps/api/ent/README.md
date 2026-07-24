@@ -1,4 +1,5 @@
-# Ent foundation
+# Ent identity foundation
 
-This directory is structural only. VOC-005 authorizes no database schema or generated
-Ent code.
+VOC-025-T00 defines the `users`, `external_identities`, `sessions`, and
+`magic_links` schemas here. Versioned Atlas SQL remains the migration authority;
+schema creation is never run by API startup.

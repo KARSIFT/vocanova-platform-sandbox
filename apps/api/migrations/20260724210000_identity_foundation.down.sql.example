@@ -1,0 +1,7 @@
+-- RECOVERY EXAMPLE ONLY; the .example suffix prevents Atlas from treating this
+-- destructive sequence as a forward migration. Use only against a disposable
+-- database during an approved rehearsal.
+DROP TABLE magic_links;
+DROP TABLE sessions;
+DROP TABLE external_identities;
+DROP TABLE users;

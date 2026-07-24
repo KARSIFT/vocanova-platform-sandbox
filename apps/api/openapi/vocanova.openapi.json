@@ -1,0 +1,58 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Vocanova API",
+    "version": "0.1.0",
+    "description": "Explicit Vocanova HTTP DTO contract. Internal persistence models are not exposed."
+  },
+  "paths": {
+    "/api/v1/me": {
+      "get": {
+        "operationId": "GetCurrentUser",
+        "summary": "Get the authenticated user",
+        "tags": ["Authentication"],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CurrentUser" }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is required",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CurrentUser": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "displayName": { "type": "string", "maxLength": 120 },
+          "avatarUrl": { "type": "string", "format": "uri" },
+          "emailVerifiedAt": { "type": "string", "format": "date-time" }
+        },
+        "additionalProperties": false
+      },
+      "Error": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": { "type": "string", "example": "authentication_required" },
+          "message": { "type": "string", "example": "Authentication is required." }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}
