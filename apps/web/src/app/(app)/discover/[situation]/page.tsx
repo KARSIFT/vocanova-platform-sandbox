@@ -11,13 +11,21 @@ const MOCK_SITUATION_WORD_LISTS = {
         meaning: "A document that lets you get on your flight.",
         isSaved: true,
       },
-      { term: "gate", meaning: "The place where you board your plane.", isSaved: false },
+      {
+        term: "gate",
+        meaning: "The place where you board your plane.",
+        isSaved: false,
+      },
       {
         term: "security check",
         meaning: "The screening process before entering the departure area.",
         isSaved: false,
       },
-      { term: "luggage", meaning: "Bags and suitcases you take on a trip.", isSaved: true },
+      {
+        term: "luggage",
+        meaning: "Bags and suitcases you take on a trip.",
+        isSaved: true,
+      },
       { term: "customs", meaning: "A border check for goods.", isSaved: false },
       { term: "layover", meaning: "A stop between flights.", isSaved: false },
     ],
@@ -25,67 +33,211 @@ const MOCK_SITUATION_WORD_LISTS = {
   restaurant: {
     title: "Restaurant",
     words: [
-      { term: "menu", meaning: "A list of food and drinks you can order.", isSaved: true },
-      { term: "reservation", meaning: "A booking for a table.", isSaved: false },
-      { term: "appetizer", meaning: "A small dish eaten before the main meal.", isSaved: false },
-      { term: "bill", meaning: "The statement showing how much you need to pay.", isSaved: true },
-      { term: "tip", meaning: "Extra money given to thank someone for service.", isSaved: false },
-      { term: "take-out", meaning: "Food to eat somewhere else.", isSaved: false },
+      {
+        term: "menu",
+        meaning: "A list of food and drinks you can order.",
+        isSaved: true,
+      },
+      {
+        term: "reservation",
+        meaning: "A booking for a table.",
+        isSaved: false,
+      },
+      {
+        term: "appetizer",
+        meaning: "A small dish eaten before the main meal.",
+        isSaved: false,
+      },
+      {
+        term: "bill",
+        meaning: "The statement showing how much you need to pay.",
+        isSaved: true,
+      },
+      {
+        term: "tip",
+        meaning: "Extra money given to thank someone for service.",
+        isSaved: false,
+      },
+      {
+        term: "take-out",
+        meaning: "Food to eat somewhere else.",
+        isSaved: false,
+      },
     ],
   },
   "hotel-check-in": {
     title: "Hotel Check-in",
     words: [
-      { term: "reservation", meaning: "A booking for a room at a hotel.", isSaved: true },
-      { term: "front desk", meaning: "The hotel counter for guest help.", isSaved: false },
-      { term: "key card", meaning: "An electronic card used to open your room.", isSaved: false },
-      { term: "amenities", meaning: "Useful hotel services or features.", isSaved: true },
-      { term: "wake-up call", meaning: "A scheduled phone call to wake you up.", isSaved: false },
-      { term: "check-out", meaning: "The process of leaving a hotel.", isSaved: false },
+      {
+        term: "reservation",
+        meaning: "A booking for a room at a hotel.",
+        isSaved: true,
+      },
+      {
+        term: "front desk",
+        meaning: "The hotel counter for guest help.",
+        isSaved: false,
+      },
+      {
+        term: "key card",
+        meaning: "An electronic card used to open your room.",
+        isSaved: false,
+      },
+      {
+        term: "amenities",
+        meaning: "Useful hotel services or features.",
+        isSaved: true,
+      },
+      {
+        term: "wake-up call",
+        meaning: "A scheduled phone call to wake you up.",
+        isSaved: false,
+      },
+      {
+        term: "check-out",
+        meaning: "The process of leaving a hotel.",
+        isSaved: false,
+      },
     ],
   },
   "job-interview": {
     title: "Job Interview",
     words: [
-      { term: "resume", meaning: "A summary of your work experience and skills.", isSaved: true },
-      { term: "qualifications", meaning: "Skills and experience for a job.", isSaved: false },
-      { term: "references", meaning: "People who can speak about your work.", isSaved: false },
-      { term: "salary expectations", meaning: "The pay range you hope to receive.", isSaved: true },
-      { term: "cover letter", meaning: "A letter for a job application.", isSaved: false },
-      { term: "follow-up", meaning: "A message sent after an interview.", isSaved: false },
+      {
+        term: "resume",
+        meaning: "A summary of your work experience and skills.",
+        isSaved: true,
+      },
+      {
+        term: "qualifications",
+        meaning: "Skills and experience for a job.",
+        isSaved: false,
+      },
+      {
+        term: "references",
+        meaning: "People who can speak about your work.",
+        isSaved: false,
+      },
+      {
+        term: "salary expectations",
+        meaning: "The pay range you hope to receive.",
+        isSaved: true,
+      },
+      {
+        term: "cover letter",
+        meaning: "A letter for a job application.",
+        isSaved: false,
+      },
+      {
+        term: "follow-up",
+        meaning: "A message sent after an interview.",
+        isSaved: false,
+      },
     ],
   },
   "daily-conversation": {
     title: "Daily Conversation",
     words: [
-      { term: "small talk", meaning: "Light conversation about everyday topics.", isSaved: true },
-      { term: "catch up", meaning: "To talk after time apart.", isSaved: false },
-      { term: "weekend plans", meaning: "Activities planned for the weekend.", isSaved: false },
-      { term: "greeting", meaning: "Words used to say hello to someone.", isSaved: true },
-      { term: "farewell", meaning: "Words used to say goodbye to someone.", isSaved: false },
-      { term: "casual", meaning: "Relaxed and informal in style or conversation.", isSaved: false },
+      {
+        term: "small talk",
+        meaning: "Light conversation about everyday topics.",
+        isSaved: true,
+      },
+      {
+        term: "catch up",
+        meaning: "To talk after time apart.",
+        isSaved: false,
+      },
+      {
+        term: "weekend plans",
+        meaning: "Activities planned for the weekend.",
+        isSaved: false,
+      },
+      {
+        term: "greeting",
+        meaning: "Words used to say hello to someone.",
+        isSaved: true,
+      },
+      {
+        term: "farewell",
+        meaning: "Words used to say goodbye to someone.",
+        isSaved: false,
+      },
+      {
+        term: "casual",
+        meaning: "Relaxed and informal in style or conversation.",
+        isSaved: false,
+      },
     ],
   },
   "work-meeting": {
     title: "Work Meeting",
     words: [
-      { term: "agenda", meaning: "A list of topics planned for a meeting.", isSaved: true },
-      { term: "action items", meaning: "Tasks assigned after a meeting.", isSaved: false },
-      { term: "deadline", meaning: "The latest time something must be finished.", isSaved: false },
-      { term: "follow-up", meaning: "A later message or action.", isSaved: true },
-      { term: "stakeholder", meaning: "A person interested in a project.", isSaved: false },
-      { term: "brainstorm", meaning: "To share ideas freely to solve a problem.", isSaved: false },
+      {
+        term: "agenda",
+        meaning: "A list of topics planned for a meeting.",
+        isSaved: true,
+      },
+      {
+        term: "action items",
+        meaning: "Tasks assigned after a meeting.",
+        isSaved: false,
+      },
+      {
+        term: "deadline",
+        meaning: "The latest time something must be finished.",
+        isSaved: false,
+      },
+      {
+        term: "follow-up",
+        meaning: "A later message or action.",
+        isSaved: true,
+      },
+      {
+        term: "stakeholder",
+        meaning: "A person interested in a project.",
+        isSaved: false,
+      },
+      {
+        term: "brainstorm",
+        meaning: "To share ideas freely to solve a problem.",
+        isSaved: false,
+      },
     ],
   },
   "university-class": {
     title: "University Class",
     words: [
-      { term: "lecture", meaning: "A lesson given by an instructor to a class.", isSaved: true },
-      { term: "assignment", meaning: "Work a teacher asks students to complete.", isSaved: false },
-      { term: "syllabus", meaning: "A document describing a course.", isSaved: false },
-      { term: "office hours", meaning: "Times to meet an instructor.", isSaved: true },
-      { term: "group project", meaning: "An assignment with other students.", isSaved: false },
-      { term: "deadline", meaning: "When work must be submitted.", isSaved: false },
+      {
+        term: "lecture",
+        meaning: "A lesson given by an instructor to a class.",
+        isSaved: true,
+      },
+      {
+        term: "assignment",
+        meaning: "Work a teacher asks students to complete.",
+        isSaved: false,
+      },
+      {
+        term: "syllabus",
+        meaning: "A document describing a course.",
+        isSaved: false,
+      },
+      {
+        term: "office hours",
+        meaning: "Times to meet an instructor.",
+        isSaved: true,
+      },
+      {
+        term: "group project",
+        meaning: "An assignment with other students.",
+        isSaved: false,
+      },
+      {
+        term: "deadline",
+        meaning: "When work must be submitted.",
+        isSaved: false,
+      },
     ],
   },
 } as const;
@@ -127,8 +279,12 @@ export default async function SituationDiscoverPage({
           >
             <div className="flex items-start justify-between gap-[var(--spacing-md)]">
               <div>
-                <p className="text-lg font-semibold text-neutral-900">{word.term}</p>
-                <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">{word.meaning}</p>
+                <p className="text-lg font-semibold text-neutral-900">
+                  {word.term}
+                </p>
+                <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
+                  {word.meaning}
+                </p>
               </div>
               {word.isSaved ? (
                 <span className="shrink-0 rounded-full bg-primary-100 px-[var(--spacing-sm)] py-[var(--spacing-xs)] text-sm font-semibold text-primary-800">
