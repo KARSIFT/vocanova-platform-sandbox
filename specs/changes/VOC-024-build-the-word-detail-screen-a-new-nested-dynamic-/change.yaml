@@ -3,28 +3,32 @@ id: VOC-024
 slug: build-the-word-detail-screen-a-new-nested-dynamic
 title: Build the Word Detail Screen
 type: feature
-status: draft
+status: implementation-ready
 risk: R1
 planned_implementation_risk_floor: R1
 canonical_path: specs/changes/VOC-024-build-the-word-detail-screen-a-new-nested-dynamic-
 authority_model: a003-active
 requirement_source: docs/design/03-ui-ux-design.md#6 ; docs/engineering/05-database-design.md#7
   ; supplied free-text request
-requirement_approval_status: source-documents-recorded-package-pending-adoption
+requirement_approval_status: founder-approved
 base_branch: develop
-base_sha: not-recorded-in-draft
+base_sha: 8fa8aeab96994a5667e7be48d896acdc8386be74
 target_branch: develop
-approved_candidate_sha: not-applicable-until-adoption
-approval_status: not-approved
-implementation_authorized: false
+approved_candidate_sha: TBD-set-at-package-adoption
+approval_status: approved
+implementation_authorized: true
 automatic_merge_allowed: false
 production_impact: none
 rollback_required: true
 owners:
   decision: founder
   package_preparation: planner
-  implementation: unassigned
-  independent_verification: claude-code
+  implementation: codex
+  independent_verification: codex
+  # (corrected at adoption: reviewer/planner currently run on openai/codex-action,
+  # a temporary same-vendor compromise - see karsift-ai-infra's config/roles.yml
+  # for the live model assignment and the reason. The draft's "claude-code"
+  # placeholder was already stale by the time this was adopted.)
 artifacts:
   readme: README.md
   specification: specification.md
@@ -36,20 +40,23 @@ artifacts:
   release_plan: release-plan.md
 dependencies:
 - id: VOC-024-DEP-01
-  status: pending-founder-adoption-and-resolution-of-VOC-024-D05
+  status: 'founder-confirmed: static-screen deferral (VOC-024-D05) stands as-is - no
+    sentence-practice entry or live saved-word review state; scheduled only after a
+    real backend contract exists'
 - id: VOC-024-DEP-02
-  status: requires-current-develop-base-sha-at-adoption
+  status: 'resolved-at-adoption: base_sha confirmed current develop tip'
 - id: VOC-024-DEP-03
   status: depends-on-existing-VOC-022-situation-word-mock-data-and-VOC-018-wired-tokens
 affected_areas:
 - apps/web/src/app/(app)/discover/[situation]
 implementation:
-  authorized: false
-  authority_status: not-authorized
+  authorized: true
+  authority_status: validly-exercised
   required: true
-  status: draft-only
+  status: implementation-ready
   target_branch: develop
   pull_request: null
+  authority_issue: null
 release:
   required: false
   mode: static-web-screen-addition
@@ -58,13 +65,13 @@ release:
   automatic_merge: false
   migration_required: false
   rollback_required: true
-repository_adoption_status: not-adopted
-adoption_pr: null
-adoption_evidence: not-recorded
+repository_adoption_status: adopted
+adoption_pr: 58
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/58
 implementation_authority_before_adoption: false
-implementation_authority_status: not-exercised
+implementation_authority_status: exercised-pending-first-run
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-applicable-for-proposed-R1
-blocking_reasons: package-is-draft-and-VOC-024-D05-requires-founder-resolution
+blocking_reasons: null
