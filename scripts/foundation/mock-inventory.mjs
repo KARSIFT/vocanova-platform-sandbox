@@ -16,7 +16,7 @@ const apiSchemaRoot = path.join(repositoryRoot, "apps/api/ent/schema");
 const apiMigrationRoot = path.join(repositoryRoot, "apps/api/migrations");
 
 // Inventory of VOC-010–VOC-024 mocks retained as P4-pending placeholders,
-// reconciled at the VOC-027 P2 boundary. See
+// reconciled at the VOC-028-T00 P3 boundary. See
 // specs/changes/VOC-027-begin-milestone-p2-review-saved-words/mock-inventory.md
 const expectedMocks = [
   {
@@ -154,6 +154,7 @@ export function validateMockInventory() {
 
   // Verify no API routes beyond A1 auth, VOC-026 P1 content/learning, and the
   // VOC-027 P2 review routes (due-queue read and submission) were invented.
+  // VOC-028-T00 adds no route.
   const allowedAPIPaths = [
     /^\/api\/v1\/me$/,
     /^\/api\/v1\/auth(?:\/|$)/,
@@ -172,39 +173,43 @@ export function validateMockInventory() {
       const apiPath = match[1];
       if (!allowedAPIPaths.some((allowed) => allowed.test(apiPath))) {
         errors.push(
-          `${file}: contains API path ${apiPath} outside A1 and VOC-026 P1`,
+          `${file}: contains API path ${apiPath} outside the approved A1/P1/P2/T00 boundary`,
         );
       }
     }
   }
 
-  // Verify no unexpected business modules. VOC-027-T00 adds the pure
-  // scheduling domain and T02 adds the review submission write path.
+  // Verify no unexpected business modules. VOC-028-T00 adds only the
+  // provider-neutral AI-feedback domain boundary and deterministic mock.
   const allowedBusinessModules = new Set([
     "auth",
     "content",
     "learning",
     "reviews",
+    "aifeedback",
   ]);
   for (const entry of readdirSync(apiBusinessRoot, {
     withFileTypes: true,
   })) {
     if (entry.isDirectory() && !allowedBusinessModules.has(entry.name)) {
       errors.push(
-        `apps/api/business/${entry.name}: unexpected business module outside A1 and VOC-026 P1`,
+        `apps/api/business/${entry.name}: unexpected business module outside the approved A1/P1/P2/T00 boundary`,
       );
     }
   }
 
-  // Verify no unexpected Ent schemas (i.e. no invented P2–P4 tables).
+  // Verify no unexpected Ent schemas. VOC-028-T00 adds exactly the two
+  // approved P3 persistence schemas; P4 tables remain forbidden.
   const allowedSchemaFiles = new Set([
     "canonicalword.go",
     "externalidentity.go",
     "journeysituation.go",
     "journeyword.go",
+    "learnersentence.go",
     "magiclink.go",
     "mixins.go",
     "reviewattempt.go",
+    "aifeedbackattempt.go",
     "session.go",
     "usagenote.go",
     "user.go",
@@ -219,18 +224,22 @@ export function validateMockInventory() {
       !allowedSchemaFiles.has(entry.name)
     ) {
       errors.push(
-        `apps/api/ent/schema/${entry.name}: unexpected schema outside A1 and VOC-026 P1`,
+        `apps/api/ent/schema/${entry.name}: unexpected schema outside the approved A1/P1/P2/T00 boundary`,
       );
     }
   }
 
-  // Verify no unexpected migrations (i.e. no invented P2–P4 tables).
+  // Verify no unexpected migrations. VOC-028-T00 adds the learner-sentence
+  // migration followed by the AI-feedback-attempt migration; P4 migrations
+  // remain forbidden.
   const allowedMigrationFiles = new Set([
     "20260724210000_identity_foundation.sql",
     "20260724210001_oauth_state.sql",
     "20260725100000_voc026_p1_content_tables.sql",
     "20260725100001_voc026_p1_idempotency_keys.sql",
     "20260725110000_voc027_p2_review_attempts.sql",
+    "20260725120000_voc028_p3_learner_sentences.sql",
+    "20260725120001_voc028_p3_ai_feedback_attempts.sql",
   ]);
   for (const entry of readdirSync(apiMigrationRoot, {
     withFileTypes: true,
@@ -241,7 +250,7 @@ export function validateMockInventory() {
       !allowedMigrationFiles.has(entry.name)
     ) {
       errors.push(
-        `apps/api/migrations/${entry.name}: unexpected migration outside A1 and VOC-026 P1`,
+        `apps/api/migrations/${entry.name}: unexpected migration outside the approved A1/P1/P2/T00 boundary`,
       );
     }
   }
@@ -313,6 +322,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     );
     process.exitCode = 1;
   } else {
-    process.stdout.write("VOC-027 P2 mock inventory validation passed.\n");
+    process.stdout.write("VOC-028-T00 mock inventory validation passed.\n");
   }
 }
