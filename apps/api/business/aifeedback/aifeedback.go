@@ -71,6 +71,29 @@ const (
 var (
 	ErrMissingLearnerSentence = errors.New("provider task missing learner sentence")
 	ErrProviderRefusal        = errors.New("provider refused to generate feedback")
+	ErrRateLimited            = errors.New("ai feedback rate limited")
+	ErrSafetyBlocked          = errors.New("ai feedback safety blocked")
+	ErrTargetNotFound         = errors.New("target not found")
+)
+
+// Validation codes returned by deterministic input validation (DOC-09 §6).
+const (
+	ValidationCodeTooShort            = "too_short"
+	ValidationCodeTooLong             = "too_long"
+	ValidationCodeMissingTarget       = "missing_target"
+	ValidationCodeInvalidInput        = "invalid_input"
+	ValidationCodeUnsupportedLanguage = "unsupported_language"
+	ValidationCodeAttemptNotEligible  = "attempt_not_eligible"
+)
+
+// Stable public error codes surfaced for failures (DOC-09 §20).
+const (
+	ErrorCodeRateLimited                 = "AI_FEEDBACK_RATE_LIMITED"
+	ErrorCodeTemporaryFailure            = "AI_FEEDBACK_TEMPORARY_FAILURE"
+	ErrorCodeSafetyBlocked               = "SAFETY_BLOCKED"
+	ErrorCodeSafetySelfHarm              = "SAFETY_SELF_HARM"
+	ErrorCodeSafetyModerationUnavailable = "SAFETY_MODERATION_UNAVAILABLE"
+	ErrorCodeIdempotencyConflict         = "IDEMPOTENCY_CONFLICT"
 )
 
 // SentenceFeedbackResult is the public API contract for a sentence-feedback
@@ -87,6 +110,8 @@ type SentenceFeedbackResult struct {
 	MissionCompleted  bool
 	CanRetry          bool
 	Reported          bool
+	ErrorCode         string
+	ErrorMessage      string
 }
 
 // ProviderTask is the provider-neutral input built by the backend (DOC-09 §14).
