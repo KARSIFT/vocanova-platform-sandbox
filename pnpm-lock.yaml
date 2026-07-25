@@ -23,6 +23,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@vocanova/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
       next:
         specifier: 16.2.10
         version: 16.2.10(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -55,7 +58,11 @@ importers:
         specifier: 4.3.3
         version: 4.3.3
 
-  packages/api-client: {}
+  packages/api-client:
+    devDependencies:
+      '@types/node':
+        specifier: 24.13.3
+        version: 24.13.3
 
   packages/design-tokens: {}
 

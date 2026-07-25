@@ -3,9 +3,21 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc -b --pretty false",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit --pretty false"
+    "typecheck": "tsc --noEmit --pretty false",
+    "test": "tsc -b --pretty false && node --test dist/index.test.js"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3"
   }
 }

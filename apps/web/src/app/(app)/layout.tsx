@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { AppHeader } from "./_components/app-header";
 import { BottomNav } from "./_components/bottom-nav";
 
 export default function AppShellLayout({
@@ -7,7 +8,8 @@ export default function AppShellLayout({
 }: Readonly<{ children: ReactNode }>) {
   return (
     <>
-      <main className="min-h-screen pb-16">{children}</main>
+      <AppHeader />
+      <main className="min-h-screen pb-16 pt-14">{children}</main>
       <BottomNav />
     </>
   );
