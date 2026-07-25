@@ -1,13 +1,16 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/auth"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/learning"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/reviews"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
@@ -17,16 +20,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testReviewsAPI(t *testing.T, data reviews.MemoryRepositoryData) (huma.API, *reviews.Service) {
+func testReviewsAPI(t *testing.T, data reviews.MemoryRepositoryData) (huma.API, *reviews.Service, *auth.Service) {
 	repo := reviews.NewMemoryRepository(data)
-	svc := reviews.NewService(repo)
+	svc := reviews.NewService(repo, learning.NewMemoryIdempotencyStore(), nil)
+	authSvc := authStubService()
 
 	config := huma.DefaultConfig("Vocanova API", "0.1.0")
 	api := humachi.New(chi.NewMux(), config)
 	api.UseMiddleware(withHumaContext)
-	api.UseMiddleware(AuthMiddleware(authStubService()))
-	RegisterReviews(api, svc)
-	return api, svc
+	api.UseMiddleware(AuthMiddleware(authSvc))
+	RegisterReviews(api, svc, authSvc)
+	return api, svc, authSvc
 }
 
 func authenticatedReviewsRequest(t *testing.T, userID uuid.UUID) *http.Request {
@@ -35,8 +39,17 @@ func authenticatedReviewsRequest(t *testing.T, userID uuid.UUID) *http.Request {
 	return req.WithContext(ctx)
 }
 
+func submitReviewRequest(t *testing.T, userID uuid.UUID, body string, authSvc *auth.Service) *http.Request {
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/reviews/submissions", bytes.NewReader([]byte(body)))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Idempotency-Key", "idem-key")
+	req = req.WithContext(WithRequester(req.Context(), &auth.User{ID: userID}))
+	addCSRF(req, authSvc)
+	return req
+}
+
 func TestListReviewsDueRequiresAuth(t *testing.T) {
-	api, _ := testReviewsAPI(t, reviews.MemoryRepositoryData{})
+	api, _, _ := testReviewsAPI(t, reviews.MemoryRepositoryData{})
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/reviews/due", nil)
@@ -51,7 +64,7 @@ func TestListReviewsDueReturnsSavedNeverReviewed(t *testing.T) {
 	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
 	userWordID := uuid.MustParse("00000000-0000-0000-0000-000000000004")
 
-	api, _ := testReviewsAPI(t, reviews.MemoryRepositoryData{
+	api, _, _ := testReviewsAPI(t, reviews.MemoryRepositoryData{
 		Words: []reviews.MemoryWord{
 			{ID: wordID, Text: "boarding pass", NormalizedText: "boarding pass", Status: "active"},
 		},
@@ -84,7 +97,7 @@ func TestListReviewsDueExcludesFutureNextReviewAt(t *testing.T) {
 	future := time.Now().UTC().Add(time.Hour)
 	past := time.Now().UTC().Add(-time.Hour)
 
-	api, _ := testReviewsAPI(t, reviews.MemoryRepositoryData{
+	api, _, _ := testReviewsAPI(t, reviews.MemoryRepositoryData{
 		Words: []reviews.MemoryWord{
 			{ID: wordID, Text: "boarding pass", NormalizedText: "boarding pass", Status: "active"},
 		},
@@ -115,7 +128,7 @@ func TestListReviewsDueExcludesNonDueStatusesAndDeleted(t *testing.T) {
 	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
 	deletedAt := time.Now().UTC().Add(-time.Hour)
 
-	api, _ := testReviewsAPI(t, reviews.MemoryRepositoryData{
+	api, _, _ := testReviewsAPI(t, reviews.MemoryRepositoryData{
 		Words: []reviews.MemoryWord{
 			{ID: wordID, Text: "boarding pass", NormalizedText: "boarding pass", Status: "active"},
 		},
@@ -149,7 +162,7 @@ func TestListReviewsDueCrossUserIsolation(t *testing.T) {
 	wordID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
 	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000004")
 
-	api, _ := testReviewsAPI(t, reviews.MemoryRepositoryData{
+	api, _, _ := testReviewsAPI(t, reviews.MemoryRepositoryData{
 		Words: []reviews.MemoryWord{
 			{ID: wordID, Text: "boarding pass", NormalizedText: "boarding pass", Status: "active"},
 		},
@@ -174,7 +187,7 @@ func TestListReviewsDueCrossUserIsolation(t *testing.T) {
 
 func TestListReviewsDueInvalidCursor(t *testing.T) {
 	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
-	api, _ := testReviewsAPI(t, reviews.MemoryRepositoryData{})
+	api, _, _ := testReviewsAPI(t, reviews.MemoryRepositoryData{})
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/reviews/due?after=not-valid", nil)
@@ -192,7 +205,7 @@ func TestListReviewsDuePagination(t *testing.T) {
 	past2 := time.Now().UTC().Add(-2 * time.Hour)
 	past3 := time.Now().UTC().Add(-3 * time.Hour)
 
-	api, _ := testReviewsAPI(t, reviews.MemoryRepositoryData{
+	api, _, _ := testReviewsAPI(t, reviews.MemoryRepositoryData{
 		Words: []reviews.MemoryWord{
 			{ID: wordID, Text: "boarding pass", NormalizedText: "boarding pass", Status: "active"},
 		},
@@ -233,4 +246,253 @@ func TestListReviewsDuePagination(t *testing.T) {
 	assert.Equal(t, 1, second.Body.Items[0].ReviewStep)
 	assert.Equal(t, 3, second.Body.TotalCount)
 	assert.Empty(t, second.Body.NextCursor)
+}
+
+func TestSubmitReviewRequiresAuth(t *testing.T) {
+	api, _, authSvc := testReviewsAPI(t, reviews.MemoryRepositoryData{})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/reviews/submissions", nil)
+	req.Header.Set("Content-Type", "application/json")
+	addCSRF(req, authSvc)
+	api.Adapter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestSubmitReviewRequiresCSRF(t *testing.T) {
+	api, _, _ := testReviewsAPI(t, reviews.MemoryRepositoryData{})
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/reviews/submissions", bytes.NewReader([]byte(`{}`)))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Idempotency-Key", "idem-key")
+	req = req.WithContext(WithRequester(req.Context(), &auth.User{ID: userID}))
+	api.Adapter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestSubmitReviewRequiresIdempotencyKey(t *testing.T) {
+	api, _, authSvc := testReviewsAPI(t, reviews.MemoryRepositoryData{})
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/reviews/submissions", bytes.NewReader([]byte(`{}`)))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(WithRequester(req.Context(), &auth.User{ID: userID}))
+	addCSRF(req, authSvc)
+	api.Adapter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnprocessableEntity, w.Code)
+}
+
+func TestSubmitReviewSchedulesStepForward(t *testing.T) {
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	wordID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
+	userWordID := uuid.MustParse("00000000-0000-0000-0000-000000000004")
+
+	api, _, authSvc := testReviewsAPI(t, reviews.MemoryRepositoryData{
+		Words: []reviews.MemoryWord{
+			{ID: wordID, Text: "boarding pass", NormalizedText: "boarding pass", Status: "active"},
+		},
+		Meanings: []reviews.MemoryMeaning{
+			{ID: meaningID, WordID: wordID, PartOfSpeech: "noun", ShortDefinition: "A document.", Status: "active"},
+		},
+		UserWords: []reviews.MemoryUserWord{
+			{ID: userWordID, UserID: userID, MeaningID: meaningID, Status: "new", Source: "journey", ReviewStep: 0},
+		},
+	})
+
+	body := `{"userWordId":"00000000-0000-0000-0000-000000000004","meaningId":"00000000-0000-0000-0000-000000000003","promptType":"multiple_choice","result":"correct","rating":"good","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"ca-1"}`
+	w := httptest.NewRecorder()
+	req := submitReviewRequest(t, userID, body, authSvc)
+	api.Adapter().ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var out SubmitReviewOutput
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &out.Body))
+	assert.Equal(t, userWordID.String(), out.Body.UserWordID)
+	assert.Equal(t, "correct", out.Body.Result)
+	assert.Equal(t, "good", out.Body.Rating)
+	assert.Equal(t, 0, out.Body.ReviewStepBefore)
+	assert.Equal(t, 1, out.Body.ReviewStepAfter)
+	assert.False(t, out.Body.NextReviewAt.IsZero())
+}
+
+func TestSubmitReviewAgainStepsBack(t *testing.T) {
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	wordID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
+	userWordID := uuid.MustParse("00000000-0000-0000-0000-000000000004")
+
+	api, _, authSvc := testReviewsAPI(t, reviews.MemoryRepositoryData{
+		Words: []reviews.MemoryWord{
+			{ID: wordID, Text: "boarding pass", NormalizedText: "boarding pass", Status: "active"},
+		},
+		Meanings: []reviews.MemoryMeaning{
+			{ID: meaningID, WordID: wordID, PartOfSpeech: "noun", ShortDefinition: "A document.", Status: "active"},
+		},
+		UserWords: []reviews.MemoryUserWord{
+			{ID: userWordID, UserID: userID, MeaningID: meaningID, Status: "learning", Source: "journey", ReviewStep: 3},
+		},
+	})
+
+	body := `{"userWordId":"00000000-0000-0000-0000-000000000004","meaningId":"00000000-0000-0000-0000-000000000003","promptType":"self_check","result":"incorrect","rating":"again","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"ca-2"}`
+	w := httptest.NewRecorder()
+	req := submitReviewRequest(t, userID, body, authSvc)
+	api.Adapter().ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var out SubmitReviewOutput
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &out.Body))
+	assert.Equal(t, 2, out.Body.ReviewStepAfter)
+}
+
+func TestSubmitReviewUnknownUserWordReturns404(t *testing.T) {
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	api, _, authSvc := testReviewsAPI(t, reviews.MemoryRepositoryData{})
+
+	body := `{"userWordId":"00000000-0000-0000-0000-000000000004","meaningId":"00000000-0000-0000-0000-000000000003","promptType":"multiple_choice","result":"correct","rating":"good","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"ca-3"}`
+	w := httptest.NewRecorder()
+	req := submitReviewRequest(t, userID, body, authSvc)
+	api.Adapter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestSubmitReviewMismatchedMeaningReturns404(t *testing.T) {
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	wordID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
+	otherMeaningID := uuid.MustParse("00000000-0000-0000-0000-000000000099")
+	userWordID := uuid.MustParse("00000000-0000-0000-0000-000000000004")
+
+	api, _, authSvc := testReviewsAPI(t, reviews.MemoryRepositoryData{
+		Words: []reviews.MemoryWord{
+			{ID: wordID, Text: "boarding pass", NormalizedText: "boarding pass", Status: "active"},
+		},
+		Meanings: []reviews.MemoryMeaning{
+			{ID: meaningID, WordID: wordID, PartOfSpeech: "noun", ShortDefinition: "A document.", Status: "active"},
+		},
+		UserWords: []reviews.MemoryUserWord{
+			{ID: userWordID, UserID: userID, MeaningID: meaningID, Status: "new", Source: "journey", ReviewStep: 0},
+		},
+	})
+
+	body := fmt.Sprintf(`{"userWordId":"%s","meaningId":"%s","promptType":"multiple_choice","result":"correct","rating":"good","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"ca-4"}`, userWordID.String(), otherMeaningID.String())
+	w := httptest.NewRecorder()
+	req := submitReviewRequest(t, userID, body, authSvc)
+	api.Adapter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestSubmitReviewInvalidRatingForResult(t *testing.T) {
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	api, _, authSvc := testReviewsAPI(t, reviews.MemoryRepositoryData{})
+
+	body := `{"userWordId":"00000000-0000-0000-0000-000000000004","meaningId":"00000000-0000-0000-0000-000000000003","promptType":"multiple_choice","result":"incorrect","rating":"good","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"ca-5"}`
+	w := httptest.NewRecorder()
+	req := submitReviewRequest(t, userID, body, authSvc)
+	api.Adapter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestSubmitReviewIdempotencyReplay(t *testing.T) {
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	wordID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
+	userWordID := uuid.MustParse("00000000-0000-0000-0000-000000000004")
+
+	api, _, authSvc := testReviewsAPI(t, reviews.MemoryRepositoryData{
+		Words: []reviews.MemoryWord{
+			{ID: wordID, Text: "boarding pass", NormalizedText: "boarding pass", Status: "active"},
+		},
+		Meanings: []reviews.MemoryMeaning{
+			{ID: meaningID, WordID: wordID, PartOfSpeech: "noun", ShortDefinition: "A document.", Status: "active"},
+		},
+		UserWords: []reviews.MemoryUserWord{
+			{ID: userWordID, UserID: userID, MeaningID: meaningID, Status: "new", Source: "journey", ReviewStep: 0},
+		},
+	})
+
+	body := `{"userWordId":"00000000-0000-0000-0000-000000000004","meaningId":"00000000-0000-0000-0000-000000000003","promptType":"multiple_choice","result":"correct","rating":"good","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"ca-replay"}`
+	submit := func() *httptest.ResponseRecorder {
+		w := httptest.NewRecorder()
+		req := submitReviewRequest(t, userID, body, authSvc)
+		api.Adapter().ServeHTTP(w, req)
+		return w
+	}
+
+	first := submit()
+	require.Equal(t, http.StatusOK, first.Code)
+	second := submit()
+	require.Equal(t, http.StatusOK, second.Code)
+	var firstBody, secondBody SubmitReviewOutput
+	require.NoError(t, json.Unmarshal(first.Body.Bytes(), &firstBody.Body))
+	require.NoError(t, json.Unmarshal(second.Body.Bytes(), &secondBody.Body))
+	assert.Equal(t, firstBody.Body.AttemptID, secondBody.Body.AttemptID)
+}
+
+func TestSubmitReviewIdempotencyKeyConflict(t *testing.T) {
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	wordID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
+	userWordID := uuid.MustParse("00000000-0000-0000-0000-000000000004")
+
+	api, _, authSvc := testReviewsAPI(t, reviews.MemoryRepositoryData{
+		Words: []reviews.MemoryWord{
+			{ID: wordID, Text: "boarding pass", NormalizedText: "boarding pass", Status: "active"},
+		},
+		Meanings: []reviews.MemoryMeaning{
+			{ID: meaningID, WordID: wordID, PartOfSpeech: "noun", ShortDefinition: "A document.", Status: "active"},
+		},
+		UserWords: []reviews.MemoryUserWord{
+			{ID: userWordID, UserID: userID, MeaningID: meaningID, Status: "new", Source: "journey", ReviewStep: 0},
+		},
+	})
+
+	body1 := `{"userWordId":"00000000-0000-0000-0000-000000000004","meaningId":"00000000-0000-0000-0000-000000000003","promptType":"multiple_choice","result":"correct","rating":"good","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"ca-conflict-1"}`
+	body2 := `{"userWordId":"00000000-0000-0000-0000-000000000004","meaningId":"00000000-0000-0000-0000-000000000003","promptType":"multiple_choice","result":"correct","rating":"easy","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"ca-conflict-2"}`
+
+	w := httptest.NewRecorder()
+	req := submitReviewRequest(t, userID, body1, authSvc)
+	api.Adapter().ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	w = httptest.NewRecorder()
+	req = submitReviewRequest(t, userID, body2, authSvc)
+	api.Adapter().ServeHTTP(w, req)
+	assert.Equal(t, http.StatusConflict, w.Code)
+}
+
+func TestSubmitReviewCrossUserCannotSubmit(t *testing.T) {
+	owner := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	other := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+	wordID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
+	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000004")
+	userWordID := uuid.MustParse("00000000-0000-0000-0000-000000000005")
+
+	api, _, authSvc := testReviewsAPI(t, reviews.MemoryRepositoryData{
+		Words: []reviews.MemoryWord{
+			{ID: wordID, Text: "boarding pass", NormalizedText: "boarding pass", Status: "active"},
+		},
+		Meanings: []reviews.MemoryMeaning{
+			{ID: meaningID, WordID: wordID, PartOfSpeech: "noun", ShortDefinition: "A document.", Status: "active"},
+		},
+		UserWords: []reviews.MemoryUserWord{
+			{ID: userWordID, UserID: owner, MeaningID: meaningID, Status: "new", Source: "journey", ReviewStep: 0},
+		},
+	})
+
+	body := fmt.Sprintf(`{"userWordId":"%s","meaningId":"%s","promptType":"multiple_choice","result":"correct","rating":"good","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"ca-cross"}`, userWordID.String(), meaningID.String())
+	w := httptest.NewRecorder()
+	req := submitReviewRequest(t, other, body, authSvc)
+	api.Adapter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
 }

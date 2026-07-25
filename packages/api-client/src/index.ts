@@ -129,6 +129,43 @@ export interface ListDueWordsResponse {
   totalCount: number;
 }
 
+export interface ReviewAttempt {
+  attemptId: string;
+  userWordId: string;
+  meaningId: string;
+  attemptType: string;
+  promptType: "multiple_choice" | "self_check";
+  result: "correct" | "incorrect" | "skipped";
+  rating?: "again" | "hard" | "good" | "easy";
+  reviewStepBefore: number;
+  reviewStepAfter: number;
+  answeredAt: string;
+  responseTimeMs: number;
+  selectedOptionMeaningId?: string;
+  typedAnswer?: string;
+  wasHintUsed: boolean;
+  source: string;
+  clientAttemptId: string;
+  nextReviewAt: string;
+}
+
+export interface SubmitReviewBody {
+  userWordId: string;
+  meaningId: string;
+  attemptType?: "review";
+  promptType: "multiple_choice" | "self_check";
+  result: "correct" | "incorrect" | "skipped";
+  rating?: "again" | "hard" | "good" | "easy";
+  answeredAt: string;
+  responseTimeMs?: number;
+  selectedOptionMeaningId?: string;
+  typedAnswer?: string;
+  wasHintUsed?: boolean;
+  source?: "review" | "review_session";
+  clientAttemptId: string;
+  metadata?: Record<string, unknown>;
+}
+
 export interface ApiError {
   type?: string;
   title?: string;
@@ -330,6 +367,26 @@ export class VocanovaClient {
       init,
     );
     return { response };
+  }
+
+  async submitReview(
+    body: SubmitReviewBody,
+    idempotencyKey: string,
+    init?: RequestInit,
+  ): Promise<{ data: ReviewAttempt; response: Response }> {
+    const headers = new Headers(init?.headers);
+    headers.set("Idempotency-Key", idempotencyKey);
+    const response = await this.request(
+      "POST",
+      "/api/v1/reviews/submissions",
+      body,
+      {
+        ...init,
+        headers,
+      },
+    );
+    const data = (await response.json()) as ReviewAttempt;
+    return { data, response };
   }
 
   private async request(

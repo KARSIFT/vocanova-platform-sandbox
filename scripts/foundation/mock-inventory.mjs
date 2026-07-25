@@ -124,7 +124,7 @@ export function validateMockInventory() {
   }
 
   // Verify no API routes beyond A1 auth, VOC-026 P1 content/learning, and the
-  // VOC-027 P2 due-queue read route were invented.
+  // VOC-027 P2 review routes (due-queue read and submission) were invented.
   const allowedAPIPaths = [
     /^\/api\/v1\/me$/,
     /^\/api\/v1\/auth(?:\/|$)/,
@@ -133,6 +133,7 @@ export function validateMockInventory() {
     /^\/api\/v1\/user-words$/,
     /^\/api\/v1\/user-words\/[^/]+$/,
     /^\/api\/v1\/reviews\/due$/,
+    /^\/api\/v1\/reviews\/submissions$/,
   ];
   const apiRouteFiles = globSync("**/*.go", { cwd: apiRouteRoot });
   for (const file of apiRouteFiles) {
@@ -148,8 +149,8 @@ export function validateMockInventory() {
     }
   }
 
-  // Verify no unexpected business modules. VOC-027-T00 adds only the pure
-  // scheduling domain; API routes and other P2–P4 behavior remain excluded.
+  // Verify no unexpected business modules. VOC-027-T00 adds the pure
+  // scheduling domain and T02 adds the review submission write path.
   const allowedBusinessModules = new Set([
     "auth",
     "content",

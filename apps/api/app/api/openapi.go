@@ -70,7 +70,11 @@ func NewContractAPI() huma.API {
 	RegisterLearning(contractAPI, learningSvc, svc)
 
 	// Register review routes for OpenAPI generation using an empty in-memory repo.
-	reviewsSvc := reviews.NewService(reviews.NewMemoryRepository(reviews.MemoryRepositoryData{}))
-	RegisterReviews(contractAPI, reviewsSvc)
+	reviewsSvc := reviews.NewService(
+		reviews.NewMemoryRepository(reviews.MemoryRepositoryData{}),
+		learning.NewMemoryIdempotencyStore(),
+		clock.Real{},
+	)
+	RegisterReviews(contractAPI, reviewsSvc, svc)
 	return contractAPI
 }

@@ -3,19 +3,26 @@ package reviews
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"errors"
 	"fmt"
 
+	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/google/uuid"
 )
 
 // PostgreSQLRepository implements Repository against the VOC-027 review schema.
 type PostgreSQLRepository struct {
-	db *sql.DB
+	db    *sql.DB
+	clock clock.Clock
 }
 
 // NewPostgreSQLRepository creates a repository backed by db.
-func NewPostgreSQLRepository(db *sql.DB) *PostgreSQLRepository {
-	return &PostgreSQLRepository{db: db}
+func NewPostgreSQLRepository(db *sql.DB, c clock.Clock) *PostgreSQLRepository {
+	if c == nil {
+		c = clock.Real{}
+	}
+	return &PostgreSQLRepository{db: db, clock: c}
 }
 
 func (r *PostgreSQLRepository) ListDueWords(ctx context.Context, req ListDueWordsRequest) (*ListDueWordsResponse, error) {
@@ -101,14 +108,258 @@ func (r *PostgreSQLRepository) ListDueWords(ctx context.Context, req ListDueWord
 	return resp, nil
 }
 
-func wordSlug(normalized string) string {
-	out := ""
-	for _, r := range normalized {
-		if r == ' ' {
-			out += "-"
-		} else {
-			out += string(r)
+func (r *PostgreSQLRepository) GetReviewAttemptByClientAttemptID(ctx context.Context, userID uuid.UUID, clientAttemptID string) (*ReviewAttempt, error) {
+	row := r.db.QueryRowContext(ctx,
+		`SELECT ra.id, ra.user_word_id, ra.meaning_id, ra.attempt_type, ra.prompt_type,
+		        ra.result, ra.rating, ra.review_step_before, ra.review_step_after,
+		        ra.answered_at, ra.response_time_ms, ra.selected_option_meaning_id,
+		        ra.typed_answer, ra.was_hint_used, ra.source, ra.client_attempt_id,
+		        ra.metadata, uw.next_review_at
+		 FROM review_attempts ra
+		 JOIN user_words uw ON uw.id = ra.user_word_id
+		 WHERE ra.user_id = $1 AND ra.client_attempt_id = $2`,
+		userID, clientAttemptID,
+	)
+	attempt, err := r.scanReviewAttempt(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrReviewAttemptNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("fetch review attempt: %w", err)
+	}
+	return attempt, nil
+}
+
+func (r *PostgreSQLRepository) SubmitReview(ctx context.Context, req SubmitReviewRequest) (*ReviewAttempt, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback()
+
+	var priorStep, totalCount, correctCount, consecutiveCorrect, consecutiveIncorrect int
+	var meaningID uuid.UUID
+	err = tx.QueryRowContext(ctx,
+		`SELECT review_step, meaning_id, total_review_count, correct_review_count,
+		        consecutive_correct_count, consecutive_incorrect_count
+		 FROM user_words
+		 WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
+		 FOR UPDATE`,
+		req.UserWordID, req.UserID,
+	).Scan(&priorStep, &meaningID, &totalCount, &correctCount, &consecutiveCorrect, &consecutiveIncorrect)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrUserWordNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("lock user word: %w", err)
+	}
+	if meaningID != req.MeaningID {
+		return nil, ErrUserWordNotFound
+	}
+
+	// Idempotency guard on (user_id, client_attempt_id).
+	existing, err := r.fetchAttemptByClientAttemptID(ctx, tx, req.UserID, req.ClientAttemptID)
+	if err != nil {
+		return nil, fmt.Errorf("idempotency check: %w", err)
+	}
+	if existing != nil {
+		if reviewAttemptEqualsRequest(existing, req) {
+			if err := tx.Commit(); err != nil {
+				return nil, fmt.Errorf("commit idempotent: %w", err)
+			}
+			return existing, nil
+		}
+		return nil, ErrIdempotencyConflict
+	}
+
+	prior := ReviewState{
+		ReviewStep: priorStep,
+		Counters: ReviewCounters{
+			TotalReviewCount:          totalCount,
+			CorrectReviewCount:        correctCount,
+			ConsecutiveCorrectCount:   consecutiveCorrect,
+			ConsecutiveIncorrectCount: consecutiveIncorrect,
+		},
+	}
+	sched, err := ApplyReview(prior, ApplyReviewRequest{Result: req.Result, Rating: req.Rating}, req.AnsweredAt)
+	if err != nil {
+		return nil, err
+	}
+
+	attemptID := uuid.New()
+	now := r.clock.Now().UTC()
+	selectedOpt := sql.NullString{}
+	if req.SelectedOptionMeaningID != nil {
+		selectedOpt = sql.NullString{String: req.SelectedOptionMeaningID.String(), Valid: true}
+	}
+	typedAnswer := sql.NullString{}
+	if req.TypedAnswer != nil {
+		typedAnswer = sql.NullString{String: *req.TypedAnswer, Valid: true}
+	}
+	rating := sql.NullString{}
+	if req.Rating != "" {
+		rating = sql.NullString{String: req.Rating, Valid: true}
+	}
+	var metadata any
+	if req.Metadata != nil {
+		b, err := json.Marshal(req.Metadata)
+		if err != nil {
+			return nil, fmt.Errorf("marshal metadata: %w", err)
+		}
+		metadata = b
+	}
+
+	_, err = tx.ExecContext(ctx,
+		`INSERT INTO review_attempts (
+			id, user_id, user_word_id, meaning_id, attempt_type, prompt_type, result, rating,
+			review_step_before, review_step_after, answered_at, response_time_ms,
+			selected_option_meaning_id, typed_answer, was_hint_used, source, client_attempt_id,
+			metadata, created_at, updated_at
+		) VALUES (
+			$1, $2, $3, $4, $5, $6, $7, $8,
+			$9, $10, $11, $12,
+			$13, $14, $15, $16, $17,
+			$18, $19, $20
+		)`,
+		attemptID, req.UserID, req.UserWordID, req.MeaningID, req.AttemptType, req.PromptType, req.Result, rating,
+		prior.ReviewStep, sched.ReviewStep, req.AnsweredAt, req.ResponseTimeMs,
+		selectedOpt, typedAnswer, req.WasHintUsed, req.Source, req.ClientAttemptID,
+		metadata, now, now,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("insert review attempt: %w", err)
+	}
+
+	lastResult := sql.NullString{String: sched.LastResult, Valid: true}
+	lastRating := sql.NullString{String: sched.LastRating, Valid: true}
+	_, err = tx.ExecContext(ctx,
+		`UPDATE user_words
+		 SET review_step = $1,
+		     next_review_at = $2,
+		     last_reviewed_at = $3,
+		     last_result = $4,
+		     last_rating = $5,
+		     total_review_count = $6,
+		     correct_review_count = $7,
+		     consecutive_correct_count = $8,
+		     consecutive_incorrect_count = $9,
+		     updated_at = $10
+		 WHERE id = $11 AND user_id = $12`,
+		sched.ReviewStep, sched.NextReviewAt, sched.LastReviewedAt, lastResult, lastRating,
+		sched.Counters.TotalReviewCount, sched.Counters.CorrectReviewCount,
+		sched.Counters.ConsecutiveCorrectCount, sched.Counters.ConsecutiveIncorrectCount,
+		now, req.UserWordID, req.UserID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("update user word schedule: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit review submission: %w", err)
+	}
+
+	return &ReviewAttempt{
+		ID:                      attemptID,
+		UserID:                  req.UserID,
+		UserWordID:              req.UserWordID,
+		MeaningID:               req.MeaningID,
+		AttemptType:             req.AttemptType,
+		PromptType:              req.PromptType,
+		Result:                  req.Result,
+		Rating:                  req.Rating,
+		ReviewStepBefore:        prior.ReviewStep,
+		ReviewStepAfter:         sched.ReviewStep,
+		AnsweredAt:              req.AnsweredAt,
+		ResponseTimeMs:          req.ResponseTimeMs,
+		SelectedOptionMeaningID: req.SelectedOptionMeaningID,
+		TypedAnswer:             req.TypedAnswer,
+		WasHintUsed:             req.WasHintUsed,
+		Source:                  req.Source,
+		ClientAttemptID:         req.ClientAttemptID,
+		Metadata:                req.Metadata,
+		NextReviewAt:            sched.NextReviewAt,
+	}, nil
+}
+
+func (r *PostgreSQLRepository) fetchAttemptByClientAttemptID(ctx context.Context, tx *sql.Tx, userID uuid.UUID, clientAttemptID string) (*ReviewAttempt, error) {
+	row := tx.QueryRowContext(ctx,
+		`SELECT ra.id, ra.user_word_id, ra.meaning_id, ra.attempt_type, ra.prompt_type,
+		        ra.result, ra.rating, ra.review_step_before, ra.review_step_after,
+		        ra.answered_at, ra.response_time_ms, ra.selected_option_meaning_id,
+		        ra.typed_answer, ra.was_hint_used, ra.source, ra.client_attempt_id,
+		        ra.metadata, uw.next_review_at
+		 FROM review_attempts ra
+		 JOIN user_words uw ON uw.id = ra.user_word_id
+		 WHERE ra.user_id = $1 AND ra.client_attempt_id = $2`,
+		userID, clientAttemptID,
+	)
+	attempt, err := r.scanReviewAttempt(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return attempt, nil
+}
+
+func (r *PostgreSQLRepository) scanReviewAttempt(row *sql.Row) (*ReviewAttempt, error) {
+	var a ReviewAttempt
+	var rating, selectedOption, typedAnswer sql.NullString
+	var metadata []byte
+	var nextReviewAt sql.NullTime
+	err := row.Scan(
+		&a.ID, &a.UserWordID, &a.MeaningID, &a.AttemptType, &a.PromptType,
+		&a.Result, &rating, &a.ReviewStepBefore, &a.ReviewStepAfter,
+		&a.AnsweredAt, &a.ResponseTimeMs, &selectedOption,
+		&typedAnswer, &a.WasHintUsed, &a.Source, &a.ClientAttemptID,
+		&metadata, &nextReviewAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if rating.Valid {
+		a.Rating = rating.String
+	}
+	if selectedOption.Valid {
+		id, err := uuid.Parse(selectedOption.String)
+		if err != nil {
+			return nil, fmt.Errorf("parse selected option meaning id: %w", err)
+		}
+		a.SelectedOptionMeaningID = &id
+	}
+	if typedAnswer.Valid {
+		a.TypedAnswer = &typedAnswer.String
+	}
+	if len(metadata) > 0 {
+		if err := json.Unmarshal(metadata, &a.Metadata); err != nil {
+			return nil, fmt.Errorf("unmarshal metadata: %w", err)
 		}
 	}
-	return out
+	if nextReviewAt.Valid {
+		a.NextReviewAt = nextReviewAt.Time
+	}
+	return &a, nil
+}
+
+func reviewAttemptEqualsRequest(a *ReviewAttempt, req SubmitReviewRequest) bool {
+	if a.UserWordID != req.UserWordID || a.MeaningID != req.MeaningID {
+		return false
+	}
+	if a.AttemptType != req.AttemptType || a.PromptType != req.PromptType || a.Result != req.Result || a.Rating != req.Rating {
+		return false
+	}
+	if a.ResponseTimeMs != req.ResponseTimeMs || a.WasHintUsed != req.WasHintUsed || a.Source != req.Source {
+		return false
+	}
+	if !a.AnsweredAt.Equal(req.AnsweredAt) {
+		return false
+	}
+	if !ptrUUIDEqual(a.SelectedOptionMeaningID, req.SelectedOptionMeaningID) {
+		return false
+	}
+	if !ptrStringEqual(a.TypedAnswer, req.TypedAnswer) {
+		return false
+	}
+	return true
 }

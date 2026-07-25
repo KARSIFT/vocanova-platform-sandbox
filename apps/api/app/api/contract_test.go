@@ -59,3 +59,21 @@ func TestContractContainsLearningEndpoints(t *testing.T) {
 		}
 	}
 }
+
+func TestContractContainsReviewEndpoints(t *testing.T) {
+	document, err := json.Marshal(NewContractAPI().OpenAPI())
+	if err != nil {
+		t.Fatalf("marshal OpenAPI: %v", err)
+	}
+	contract := string(document)
+	for _, expected := range []string{"GetReviewsDue", "SubmitReview", "/api/v1/reviews/due", "/api/v1/reviews/submissions", "Idempotency-Key"} {
+		if !strings.Contains(contract, expected) {
+			t.Errorf("OpenAPI missing %q", expected)
+		}
+	}
+	for _, forbidden := range []string{"token_hash", "provider_subject", "revoked_at", "deleted_at", "user_id"} {
+		if strings.Contains(contract, forbidden) {
+			t.Errorf("OpenAPI exposed internal field %q", forbidden)
+		}
+	}
+}

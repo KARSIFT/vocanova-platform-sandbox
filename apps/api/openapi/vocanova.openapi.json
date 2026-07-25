@@ -23,7 +23,10 @@
             "type": "string"
           }
         },
-        "required": ["token", "email"],
+        "required": [
+          "token",
+          "email"
+        ],
         "type": "object"
       },
       "CurrentUser": {
@@ -31,7 +34,9 @@
         "properties": {
           "$schema": {
             "description": "A URL to the JSON Schema for this object.",
-            "examples": ["https://example.com/schemas/CurrentUser.json"],
+            "examples": [
+              "https://example.com/schemas/CurrentUser.json"
+            ],
             "format": "uri",
             "readOnly": true,
             "type": "string"
@@ -135,14 +140,18 @@
         "properties": {
           "$schema": {
             "description": "A URL to the JSON Schema for this object.",
-            "examples": ["https://example.com/schemas/ErrorModel.json"],
+            "examples": [
+              "https://example.com/schemas/ErrorModel.json"
+            ],
             "format": "uri",
             "readOnly": true,
             "type": "string"
           },
           "detail": {
             "description": "A human-readable explanation specific to this occurrence of the problem.",
-            "examples": ["Property foo is required but is missing."],
+            "examples": [
+              "Property foo is required but is missing."
+            ],
             "type": "string"
           },
           "errors": {
@@ -150,29 +159,40 @@
             "items": {
               "$ref": "#/components/schemas/ErrorDetail"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "instance": {
             "description": "A URI reference that identifies the specific occurrence of the problem.",
-            "examples": ["https://example.com/error-log/abc123"],
+            "examples": [
+              "https://example.com/error-log/abc123"
+            ],
             "format": "uri",
             "type": "string"
           },
           "status": {
             "description": "HTTP status code",
-            "examples": [400],
+            "examples": [
+              400
+            ],
             "format": "int64",
             "type": "integer"
           },
           "title": {
             "description": "A short, human-readable summary of the problem type. This value should not change between occurrences of the error.",
-            "examples": ["Bad Request"],
+            "examples": [
+              "Bad Request"
+            ],
             "type": "string"
           },
           "type": {
             "default": "about:blank",
             "description": "A URI reference to human-readable documentation for the error.",
-            "examples": ["https://example.com/errors/example"],
+            "examples": [
+              "https://example.com/errors/example"
+            ],
             "format": "uri",
             "type": "string"
           }
@@ -196,14 +216,20 @@
             "items": {
               "$ref": "#/components/schemas/SituationMeaningDTO"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "situation": {
             "$ref": "#/components/schemas/SituationDTO",
             "description": "Situation"
           }
         },
-        "required": ["situation", "meanings"],
+        "required": [
+          "situation",
+          "meanings"
+        ],
         "type": "object"
       },
       "GetWordOutputBody": {
@@ -211,7 +237,9 @@
         "properties": {
           "$schema": {
             "description": "A URL to the JSON Schema for this object.",
-            "examples": ["https://example.com/schemas/GetWordOutputBody.json"],
+            "examples": [
+              "https://example.com/schemas/GetWordOutputBody.json"
+            ],
             "format": "uri",
             "readOnly": true,
             "type": "string"
@@ -221,7 +249,9 @@
             "description": "Canonical word detail"
           }
         },
-        "required": ["word"],
+        "required": [
+          "word"
+        ],
         "type": "object"
       },
       "ListReviewsDueOutputBody": {
@@ -241,7 +271,10 @@
             "items": {
               "$ref": "#/components/schemas/DueWordDTO"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "nextCursor": {
             "description": "Opaque cursor for the next page",
@@ -253,7 +286,10 @@
             "type": "integer"
           }
         },
-        "required": ["items", "totalCount"],
+        "required": [
+          "items",
+          "totalCount"
+        ],
         "type": "object"
       },
       "ListSavedWordsOutputBody": {
@@ -273,14 +309,19 @@
             "items": {
               "$ref": "#/components/schemas/SavedMeaningDTO"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "nextCursor": {
             "description": "Opaque cursor for the next page",
             "type": "string"
           }
         },
-        "required": ["items"],
+        "required": [
+          "items"
+        ],
         "type": "object"
       },
       "ListSituationsOutputBody": {
@@ -300,14 +341,19 @@
             "items": {
               "$ref": "#/components/schemas/SituationDTO"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "nextCursor": {
             "description": "Opaque cursor for the next page",
             "type": "string"
           }
         },
-        "required": ["items"],
+        "required": [
+          "items"
+        ],
         "type": "object"
       },
       "OAuthStartInputBody": {
@@ -328,7 +374,9 @@
             "type": "string"
           }
         },
-        "required": ["redirectUri"],
+        "required": [
+          "redirectUri"
+        ],
         "type": "object"
       },
       "OAuthStartOutputBody": {
@@ -349,7 +397,9 @@
             "type": "string"
           }
         },
-        "required": ["url"],
+        "required": [
+          "url"
+        ],
         "type": "object"
       },
       "RequestMagicLinkInputBody": {
@@ -370,7 +420,133 @@
             "type": "string"
           }
         },
-        "required": ["email"],
+        "required": [
+          "email"
+        ],
+        "type": "object"
+      },
+      "ReviewAttemptDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/ReviewAttemptDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "answeredAt": {
+            "description": "When the answer was submitted",
+            "format": "date-time",
+            "type": "string"
+          },
+          "attemptId": {
+            "description": "Immutable attempt identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "attemptType": {
+            "description": "Attempt category",
+            "type": "string"
+          },
+          "clientAttemptId": {
+            "description": "Client-provided idempotency identifier",
+            "type": "string"
+          },
+          "meaningId": {
+            "description": "Meaning identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "nextReviewAt": {
+            "description": "When the word will next be due",
+            "format": "date-time",
+            "type": "string"
+          },
+          "promptType": {
+            "description": "Prompt type",
+            "enum": [
+              "multiple_choice",
+              "self_check"
+            ],
+            "type": "string"
+          },
+          "rating": {
+            "description": "Learner rating",
+            "enum": [
+              "again",
+              "hard",
+              "good",
+              "easy"
+            ],
+            "type": "string"
+          },
+          "responseTimeMs": {
+            "description": "Client-measured response time in milliseconds",
+            "format": "int64",
+            "type": "integer"
+          },
+          "result": {
+            "description": "Objective result",
+            "enum": [
+              "correct",
+              "incorrect",
+              "skipped"
+            ],
+            "type": "string"
+          },
+          "reviewStepAfter": {
+            "description": "Review step after this attempt",
+            "format": "int64",
+            "type": "integer"
+          },
+          "reviewStepBefore": {
+            "description": "Review step before this attempt",
+            "format": "int64",
+            "type": "integer"
+          },
+          "selectedOptionMeaningId": {
+            "description": "Chosen option for multiple choice",
+            "format": "uuid",
+            "type": "string"
+          },
+          "source": {
+            "description": "Origin of the attempt",
+            "type": "string"
+          },
+          "typedAnswer": {
+            "description": "Typed answer if applicable",
+            "type": "string"
+          },
+          "userWordId": {
+            "description": "Saved word identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "wasHintUsed": {
+            "description": "Whether a hint was shown",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "attemptId",
+          "userWordId",
+          "meaningId",
+          "attemptType",
+          "promptType",
+          "result",
+          "rating",
+          "reviewStepBefore",
+          "reviewStepAfter",
+          "answeredAt",
+          "responseTimeMs",
+          "wasHintUsed",
+          "source",
+          "clientAttemptId",
+          "nextReviewAt"
+        ],
         "type": "object"
       },
       "SaveUserWordInputBody": {
@@ -392,11 +568,18 @@
           },
           "source": {
             "description": "Origin of the save",
-            "enum": ["journey", "search", "manual"],
+            "enum": [
+              "journey",
+              "search",
+              "manual"
+            ],
             "type": "string"
           }
         },
-        "required": ["meaningId", "source"],
+        "required": [
+          "meaningId",
+          "source"
+        ],
         "type": "object"
       },
       "SavedMeaningDTO": {
@@ -404,7 +587,9 @@
         "properties": {
           "$schema": {
             "description": "A URL to the JSON Schema for this object.",
-            "examples": ["https://example.com/schemas/SavedMeaningDTO.json"],
+            "examples": [
+              "https://example.com/schemas/SavedMeaningDTO.json"
+            ],
             "format": "uri",
             "readOnly": true,
             "type": "string"
@@ -562,6 +747,117 @@
         ],
         "type": "object"
       },
+      "SubmitReviewInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/SubmitReviewInputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "answeredAt": {
+            "description": "When the answer was submitted",
+            "format": "date-time",
+            "type": "string"
+          },
+          "attemptType": {
+            "default": "review",
+            "description": "Attempt category",
+            "enum": [
+              "review"
+            ],
+            "type": "string"
+          },
+          "clientAttemptId": {
+            "description": "Client-provided idempotency identifier",
+            "type": "string"
+          },
+          "meaningId": {
+            "description": "Meaning identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": {},
+            "description": "Extra prompt context",
+            "type": "object"
+          },
+          "promptType": {
+            "description": "Prompt type",
+            "enum": [
+              "multiple_choice",
+              "self_check"
+            ],
+            "type": "string"
+          },
+          "rating": {
+            "description": "Learner rating",
+            "enum": [
+              "again",
+              "hard",
+              "good",
+              "easy"
+            ],
+            "type": "string"
+          },
+          "responseTimeMs": {
+            "default": 0,
+            "description": "Client-measured response time in milliseconds",
+            "format": "int64",
+            "type": "integer"
+          },
+          "result": {
+            "description": "Objective result",
+            "enum": [
+              "correct",
+              "incorrect",
+              "skipped"
+            ],
+            "type": "string"
+          },
+          "selectedOptionMeaningId": {
+            "description": "Chosen option for multiple choice",
+            "format": "uuid",
+            "type": "string"
+          },
+          "source": {
+            "default": "review",
+            "description": "Origin of the attempt",
+            "enum": [
+              "review",
+              "review_session"
+            ],
+            "type": "string"
+          },
+          "typedAnswer": {
+            "description": "Typed answer if applicable",
+            "type": "string"
+          },
+          "userWordId": {
+            "description": "Saved word identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "wasHintUsed": {
+            "default": false,
+            "description": "Whether a hint was shown",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "userWordId",
+          "meaningId",
+          "promptType",
+          "result",
+          "answeredAt",
+          "clientAttemptId"
+        ],
+        "type": "object"
+      },
       "WordDetailDTO": {
         "additionalProperties": false,
         "properties": {
@@ -579,7 +875,10 @@
             "items": {
               "$ref": "#/components/schemas/WordMeaningDTO"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "slug": {
             "description": "URL slug",
@@ -594,7 +893,13 @@
             "type": "string"
           }
         },
-        "required": ["id", "text", "slug", "wordType", "meanings"],
+        "required": [
+          "id",
+          "text",
+          "slug",
+          "wordType",
+          "meanings"
+        ],
         "type": "object"
       },
       "WordExampleDTO": {
@@ -614,7 +919,10 @@
             "type": "string"
           }
         },
-        "required": ["id", "exampleText"],
+        "required": [
+          "id",
+          "exampleText"
+        ],
         "type": "object"
       },
       "WordMeaningDTO": {
@@ -625,7 +933,10 @@
             "items": {
               "$ref": "#/components/schemas/WordExampleDTO"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "id": {
             "description": "Meaning identifier",
@@ -653,7 +964,10 @@
             "items": {
               "$ref": "#/components/schemas/WordUsageNoteDTO"
             },
-            "type": ["array", "null"]
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
         "required": [
@@ -683,7 +997,11 @@
             "type": "string"
           }
         },
-        "required": ["id", "noteType", "noteText"],
+        "required": [
+          "id",
+          "noteType",
+          "noteText"
+        ],
         "type": "object"
       }
     }
@@ -721,7 +1039,9 @@
           }
         },
         "summary": "Log out the current session",
-        "tags": ["Authentication"]
+        "tags": [
+          "Authentication"
+        ]
       }
     },
     "/api/v1/auth/magic-links": {
@@ -753,7 +1073,9 @@
           }
         },
         "summary": "Request a magic sign-in link",
-        "tags": ["Authentication"]
+        "tags": [
+          "Authentication"
+        ]
       }
     },
     "/api/v1/auth/magic-links/consume": {
@@ -792,7 +1114,9 @@
           }
         },
         "summary": "Consume a magic sign-in link",
-        "tags": ["Authentication"]
+        "tags": [
+          "Authentication"
+        ]
       }
     },
     "/api/v1/auth/oauth/google/callback": {
@@ -839,7 +1163,9 @@
           }
         },
         "summary": "Handle the Google OAuth provider callback",
-        "tags": ["Authentication"]
+        "tags": [
+          "Authentication"
+        ]
       }
     },
     "/api/v1/auth/oauth/google/start": {
@@ -878,7 +1204,9 @@
           }
         },
         "summary": "Start a Google OAuth sign-in flow",
-        "tags": ["Authentication"]
+        "tags": [
+          "Authentication"
+        ]
       }
     },
     "/api/v1/canonical-words/{wordSlug}": {
@@ -915,7 +1243,9 @@
           }
         },
         "summary": "Get a canonical word with meanings",
-        "tags": ["Discovery"]
+        "tags": [
+          "Discovery"
+        ]
       }
     },
     "/api/v1/journey-situations": {
@@ -961,7 +1291,9 @@
           }
         },
         "summary": "List active journey situations",
-        "tags": ["Discovery"]
+        "tags": [
+          "Discovery"
+        ]
       }
     },
     "/api/v1/journey-situations/{slug}": {
@@ -998,7 +1330,9 @@
           }
         },
         "summary": "Get a journey situation with meanings",
-        "tags": ["Discovery"]
+        "tags": [
+          "Discovery"
+        ]
       }
     },
     "/api/v1/me": {
@@ -1020,7 +1354,9 @@
           }
         },
         "summary": "Get the authenticated user",
-        "tags": ["Authentication"]
+        "tags": [
+          "Authentication"
+        ]
       }
     },
     "/api/v1/reviews/due": {
@@ -1066,7 +1402,67 @@
           }
         },
         "summary": "List the authenticated requester's due review words",
-        "tags": ["Reviews"]
+        "tags": [
+          "Reviews"
+        ]
+      }
+    },
+    "/api/v1/reviews/submissions": {
+      "post": {
+        "operationId": "SubmitReview",
+        "parameters": [
+          {
+            "description": "User-scoped idempotency key",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "description": "User-scoped idempotency key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitReviewInputBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewAttemptDTO"
+                }
+              }
+            },
+            "description": "Review attempt recorded and schedule updated"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication is required"
+          },
+          "403": {
+            "description": "Invalid CSRF token"
+          },
+          "404": {
+            "description": "Saved word not found"
+          },
+          "409": {
+            "description": "Idempotency conflict"
+          }
+        },
+        "summary": "Submit a review attempt and update the schedule",
+        "tags": [
+          "Reviews"
+        ]
       }
     },
     "/api/v1/user-words": {
@@ -1112,7 +1508,9 @@
           }
         },
         "summary": "List the authenticated requester's saved meanings",
-        "tags": ["Learning"]
+        "tags": [
+          "Learning"
+        ]
       },
       "post": {
         "operationId": "SaveUserWord",
@@ -1163,7 +1561,9 @@
           }
         },
         "summary": "Save a meaning for the authenticated requester",
-        "tags": ["Learning"]
+        "tags": [
+          "Learning"
+        ]
       }
     },
     "/api/v1/user-words/{meaningId}": {
@@ -1197,7 +1597,9 @@
           }
         },
         "summary": "Remove a saved meaning for the authenticated requester",
-        "tags": ["Learning"]
+        "tags": [
+          "Learning"
+        ]
       }
     }
   }

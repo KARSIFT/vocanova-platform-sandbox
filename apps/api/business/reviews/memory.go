@@ -16,19 +16,27 @@ type MemoryRepository struct {
 	userWords []MemoryUserWord
 	meanings  []MemoryMeaning
 	words     []MemoryWord
+	attempts  []MemoryReviewAttempt
 }
 
 // MemoryUserWord is an in-memory user_words row for tests.
 type MemoryUserWord struct {
-	ID           uuid.UUID
-	UserID       uuid.UUID
-	MeaningID    uuid.UUID
-	Status       string
-	Source       string
-	ReviewStep   int
-	NextReviewAt *time.Time
-	AddedAt      time.Time
-	DeletedAt    *time.Time
+	ID                        uuid.UUID
+	UserID                    uuid.UUID
+	MeaningID                 uuid.UUID
+	Status                    string
+	Source                    string
+	ReviewStep                int
+	NextReviewAt              *time.Time
+	TotalReviewCount          int
+	CorrectReviewCount        int
+	ConsecutiveCorrectCount   int
+	ConsecutiveIncorrectCount int
+	LastReviewedAt            *time.Time
+	LastResult                string
+	LastRating                string
+	AddedAt                   time.Time
+	DeletedAt                 *time.Time
 }
 
 // MemoryMeaning is an in-memory canonical meaning for tests.
@@ -46,6 +54,28 @@ type MemoryWord struct {
 	Text           string
 	NormalizedText string
 	Status         string
+}
+
+// MemoryReviewAttempt is an in-memory review_attempts row for tests.
+type MemoryReviewAttempt struct {
+	ID                      uuid.UUID
+	UserID                  uuid.UUID
+	UserWordID              uuid.UUID
+	MeaningID               uuid.UUID
+	AttemptType             string
+	PromptType              string
+	Result                  string
+	Rating                  string
+	ReviewStepBefore        int
+	ReviewStepAfter         int
+	AnsweredAt              time.Time
+	ResponseTimeMs          int
+	SelectedOptionMeaningID *uuid.UUID
+	TypedAnswer             *string
+	WasHintUsed             bool
+	Source                  string
+	ClientAttemptID         string
+	Metadata                map[string]any
 }
 
 // MemoryRepositoryData holds seed data for the memory repository.
@@ -210,3 +240,177 @@ func (r *MemoryRepository) findWord(id uuid.UUID) (MemoryWord, bool) {
 	}
 	return MemoryWord{}, false
 }
+
+func (r *MemoryRepository) GetReviewAttemptByClientAttemptID(ctx context.Context, userID uuid.UUID, clientAttemptID string) (*ReviewAttempt, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for _, a := range r.attempts {
+		if a.UserID == userID && a.ClientAttemptID == clientAttemptID {
+			return r.toReviewAttempt(a), nil
+		}
+	}
+	return nil, ErrReviewAttemptNotFound
+}
+
+func (r *MemoryRepository) SubmitReview(ctx context.Context, req SubmitReviewRequest) (*ReviewAttempt, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Check for an existing attempt by (user_id, client_attempt_id).
+	for i, a := range r.attempts {
+		if a.UserID == req.UserID && a.ClientAttemptID == req.ClientAttemptID {
+			if reviewAttemptsEqual(a, req) {
+				return r.toReviewAttempt(r.attempts[i]), nil
+			}
+			return nil, ErrIdempotencyConflict
+		}
+	}
+
+	idx, ok := r.findActiveUserWord(req.UserWordID)
+	if !ok || r.userWords[idx].UserID != req.UserID {
+		return nil, ErrUserWordNotFound
+	}
+	if r.userWords[idx].MeaningID != req.MeaningID {
+		return nil, ErrUserWordNotFound
+	}
+
+	uw := &r.userWords[idx]
+	prior := ReviewState{
+		ReviewStep: uw.ReviewStep,
+		Counters: ReviewCounters{
+			TotalReviewCount:          uw.TotalReviewCount,
+			CorrectReviewCount:        uw.CorrectReviewCount,
+			ConsecutiveCorrectCount:   uw.ConsecutiveCorrectCount,
+			ConsecutiveIncorrectCount: uw.ConsecutiveIncorrectCount,
+		},
+	}
+	sched, err := ApplyReview(prior, ApplyReviewRequest{Result: req.Result, Rating: req.Rating}, req.AnsweredAt)
+	if err != nil {
+		return nil, err
+	}
+
+	attempt := MemoryReviewAttempt{
+		ID:                      uuid.New(),
+		UserID:                  req.UserID,
+		UserWordID:              req.UserWordID,
+		MeaningID:               req.MeaningID,
+		AttemptType:             req.AttemptType,
+		PromptType:              req.PromptType,
+		Result:                  req.Result,
+		Rating:                  req.Rating,
+		ReviewStepBefore:        prior.ReviewStep,
+		ReviewStepAfter:         sched.ReviewStep,
+		AnsweredAt:              req.AnsweredAt,
+		ResponseTimeMs:          req.ResponseTimeMs,
+		SelectedOptionMeaningID: req.SelectedOptionMeaningID,
+		TypedAnswer:             req.TypedAnswer,
+		WasHintUsed:             req.WasHintUsed,
+		Source:                  req.Source,
+		ClientAttemptID:         req.ClientAttemptID,
+		Metadata:                req.Metadata,
+	}
+	r.attempts = append(r.attempts, attempt)
+
+	uw.ReviewStep = sched.ReviewStep
+	uw.NextReviewAt = &sched.NextReviewAt
+	uw.LastReviewedAt = &sched.LastReviewedAt
+	uw.LastResult = sched.LastResult
+	uw.LastRating = sched.LastRating
+	uw.TotalReviewCount = sched.Counters.TotalReviewCount
+	uw.CorrectReviewCount = sched.Counters.CorrectReviewCount
+	uw.ConsecutiveCorrectCount = sched.Counters.ConsecutiveCorrectCount
+	uw.ConsecutiveIncorrectCount = sched.Counters.ConsecutiveIncorrectCount
+
+	return r.toReviewAttempt(attempt), nil
+}
+
+func (r *MemoryRepository) findActiveUserWord(id uuid.UUID) (int, bool) {
+	for i, uw := range r.userWords {
+		if uw.ID == id && uw.DeletedAt == nil {
+			return i, true
+		}
+	}
+	return 0, false
+}
+
+func (r *MemoryRepository) toReviewAttempt(a MemoryReviewAttempt) *ReviewAttempt {
+	var nextReviewAt time.Time
+	if idx, ok := r.findActiveUserWord(a.UserWordID); ok {
+		if r.userWords[idx].NextReviewAt != nil {
+			nextReviewAt = *r.userWords[idx].NextReviewAt
+		}
+	}
+	return &ReviewAttempt{
+		ID:                      a.ID,
+		UserID:                  a.UserID,
+		UserWordID:              a.UserWordID,
+		MeaningID:               a.MeaningID,
+		AttemptType:             a.AttemptType,
+		PromptType:              a.PromptType,
+		Result:                  a.Result,
+		Rating:                  a.Rating,
+		ReviewStepBefore:        a.ReviewStepBefore,
+		ReviewStepAfter:         a.ReviewStepAfter,
+		AnsweredAt:              a.AnsweredAt,
+		ResponseTimeMs:          a.ResponseTimeMs,
+		SelectedOptionMeaningID: a.SelectedOptionMeaningID,
+		TypedAnswer:             a.TypedAnswer,
+		WasHintUsed:             a.WasHintUsed,
+		Source:                  a.Source,
+		ClientAttemptID:         a.ClientAttemptID,
+		Metadata:                a.Metadata,
+		NextReviewAt:            nextReviewAt,
+	}
+}
+
+func reviewAttemptsEqual(a MemoryReviewAttempt, req SubmitReviewRequest) bool {
+	if a.UserWordID != req.UserWordID || a.MeaningID != req.MeaningID {
+		return false
+	}
+	if a.AttemptType != req.AttemptType || a.PromptType != req.PromptType || a.Result != req.Result || a.Rating != req.Rating {
+		return false
+	}
+	if a.ResponseTimeMs != req.ResponseTimeMs || a.WasHintUsed != req.WasHintUsed || a.Source != req.Source {
+		return false
+	}
+	if !a.AnsweredAt.Equal(req.AnsweredAt) {
+		return false
+	}
+	if !ptrUUIDEqual(a.SelectedOptionMeaningID, req.SelectedOptionMeaningID) {
+		return false
+	}
+	if !ptrStringEqual(a.TypedAnswer, req.TypedAnswer) {
+		return false
+	}
+	return true
+}
+
+func ptrUUIDEqual(a, b *uuid.UUID) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
+}
+
+func ptrStringEqual(a, b *string) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
+}
+
+func wordSlug(normalized string) string {
+	out := ""
+	for _, r := range normalized {
+		if r == ' ' {
+			out += "-"
+		} else {
+			out += string(r)
+		}
+	}
+	return out
+}
+
+// compile-time interface check.
+var _ Repository = (*MemoryRepository)(nil)
