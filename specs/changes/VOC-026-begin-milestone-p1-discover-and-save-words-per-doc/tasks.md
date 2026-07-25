@@ -92,7 +92,7 @@ behavior. This task is blocked until `D05` (and `D06`) are resolved at adoption.
 - Acceptance criteria: `VOC-026-AC-06`, `VOC-026-AC-07`
 - Tests: `VOC-026-TEST-12`, `VOC-026-TEST-20`..`VOC-026-TEST-24`
 - Evidence: `VOC-026-EV-12`, `VOC-026-EV-20`..`VOC-026-EV-24`
-- Status: pending
+- Status: implemented; live staging evidence blocked by `VOC-026-DEP-03`
 
 Inventory every VOC-010–VOC-024 mock touched by P1 and map each to its disposition
 (decommissioned-to-real-P1 / retained-as-mock-pending-P4); add the deterministic mock-inventory
@@ -102,3 +102,20 @@ consistency-across-screens→unsave, cross-user denial, CSRF, idempotency, and t
 content/user-words rollback rehearsal under non-production identities; where it does not, record
 the in-repository evidence and the documented procedures, and record live staging evidence as
 blocked by `VOC-026-DEP-03`. Do not declare the DOC-12 P1 gate complete.
+
+### Deliverables
+
+- `mock-inventory.md`: maps every VOC-010–VOC-024 mock touched by P1 to its VOC
+  source and disposition (`decommissioned-to-real-P1` or `retained-as-mock-pending-P4`).
+- `staging-evidence.md`: collected in-repository evidence (`EV-12`, `EV-20`,
+  `EV-24`) and documented procedures for blocked staging evidence (`EV-21`..`EV-23`).
+- `scripts/foundation/mock-inventory.mjs` and `mock-inventory.test.mjs`:
+  deterministic check that decommissioned mocks are gone and no P2–P4 API route,
+  table, or behavior was invented.
+
+### Blocker
+
+`VOC-026-DEP-03` remains open: F3 staging does not exist, so live staging exercises
+(`EV-21`, `EV-22`, `EV-23`) cannot be executed. The implementation provides the
+procedures and the in-repository evidence only; it does not declare the DOC-12 P1
+gate complete.

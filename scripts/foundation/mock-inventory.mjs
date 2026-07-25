@@ -1,4 +1,4 @@
-import { globSync, readFileSync, statSync } from "node:fs";
+import { globSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -11,7 +11,12 @@ const repositoryRoot = path.resolve(
 const appRouteRoot = path.join(repositoryRoot, "apps/web/src/app/(app)");
 const webSrcRoot = path.join(repositoryRoot, "apps/web/src");
 const apiRouteRoot = path.join(repositoryRoot, "apps/api/app/api");
+const apiBusinessRoot = path.join(repositoryRoot, "apps/api/business");
+const apiSchemaRoot = path.join(repositoryRoot, "apps/api/ent/schema");
+const apiMigrationRoot = path.join(repositoryRoot, "apps/api/migrations");
 
+// Inventory of VOC-010–VOC-024 mocks retained as P4-pending placeholders.
+// See specs/changes/VOC-026-begin-milestone-p1-discover-and-save-words-per-doc/mock-inventory.md
 const expectedMocks = [
   {
     file: "apps/web/src/app/(app)/home/page.tsx",
@@ -25,6 +30,7 @@ const expectedMocks = [
   },
 ];
 
+// Inventory of VOC-010–VOC-024 mocks decommissioned to real P1 sources.
 const decommissionedMocks = [
   {
     file: "apps/web/src/app/(app)/discover/page.tsx",
@@ -32,13 +38,22 @@ const decommissionedMocks = [
     vocPackage: "VOC-021",
   },
   {
-    file: "apps/web/src/app/(app)/discover/[situation]/_lib/mock-word-data.ts",
+    file: "apps/web/src/app/(app)/discover/[situation]/page.tsx",
     expectedConstant: "MOCK_SITUATION_WORD_LISTS",
     vocPackage: "VOC-022",
   },
+  {
+    file: "apps/web/src/app/(app)/discover/[situation]/[word]/page.tsx",
+    expectedConstant: "MOCK_SITUATION_WORD_LISTS",
+    vocPackage: "VOC-022",
+  },
+  {
+    file: "apps/web/src/app/(app)/discover/[situation]/_lib/mock-word-data.ts",
+    expectedConstant: "MOCK_SITUATION_WORD_LISTS",
+    vocPackage: "VOC-022",
+    mustNotExist: true,
+  },
 ];
-
-const expectedMockConsumers = [];
 
 const expectedRouteDirectories = [
   "home",
@@ -51,7 +66,7 @@ const expectedRouteDirectories = [
 export function validateMockInventory() {
   const errors = [];
 
-  // Verify each mock file exists and still declares its expected constant.
+  // Verify each retained mock file exists and still declares its expected constant.
   for (const mock of expectedMocks) {
     const filePath = path.join(repositoryRoot, mock.file);
     if (!exists(filePath)) {
@@ -71,10 +86,18 @@ export function validateMockInventory() {
     }
   }
 
-  // Verify the decommissioned P1 mocks are gone from their original files.
+  // Verify the decommissioned P1 mocks are gone from their original files and,
+  // where marked, that the source file itself has been removed.
   for (const mock of decommissionedMocks) {
     const filePath = path.join(repositoryRoot, mock.file);
-    if (exists(filePath)) {
+    const fileExists = exists(filePath);
+    if (mock.mustNotExist && fileExists) {
+      errors.push(
+        `${mock.file}: decommissioned mock source file must be removed`,
+      );
+      continue;
+    }
+    if (fileExists) {
       const content = readFileSync(filePath, "utf8");
       if (content.includes(mock.expectedConstant)) {
         errors.push(
@@ -84,9 +107,23 @@ export function validateMockInventory() {
     }
   }
 
-  // Verify no API routes beyond A1 auth, VOC-026 T01 content reads, and
-  // VOC-026 T02 user-words writes were invented. Later-milestone endpoints
-  // remain forbidden until their tasks.
+  // Global scan: no decommissioned mock constant may appear anywhere in (app).
+  const appFiles = globSync("**/*.{ts,tsx}", { cwd: appRouteRoot });
+  const decommissionedConstants = new Set(
+    decommissionedMocks.map((m) => m.expectedConstant),
+  );
+  for (const file of appFiles) {
+    const content = readFileSync(path.join(appRouteRoot, file), "utf8");
+    for (const constant of decommissionedConstants) {
+      if (content.includes(constant)) {
+        errors.push(
+          `${file}: decommissioned constant ${constant} still present`,
+        );
+      }
+    }
+  }
+
+  // Verify no API routes beyond A1 auth and VOC-026 P1 content/learning were invented.
   const allowedAPIPaths = [
     /^\/api\/v1\/me$/,
     /^\/api\/v1\/auth(?:\/|$)/,
@@ -103,9 +140,69 @@ export function validateMockInventory() {
       const apiPath = match[1];
       if (!allowedAPIPaths.some((allowed) => allowed.test(apiPath))) {
         errors.push(
-          `${file}: contains API path ${apiPath} outside A1 and VOC-026-T01`,
+          `${file}: contains API path ${apiPath} outside A1 and VOC-026 P1`,
         );
       }
+    }
+  }
+
+  // Verify no unexpected business modules (i.e. no invented P2–P4 behavior).
+  const allowedBusinessModules = new Set(["auth", "content", "learning"]);
+  for (const entry of readdirSync(apiBusinessRoot, {
+    withFileTypes: true,
+  })) {
+    if (entry.isDirectory() && !allowedBusinessModules.has(entry.name)) {
+      errors.push(
+        `apps/api/business/${entry.name}: unexpected business module outside A1 and VOC-026 P1`,
+      );
+    }
+  }
+
+  // Verify no unexpected Ent schemas (i.e. no invented P2–P4 tables).
+  const allowedSchemaFiles = new Set([
+    "canonicalword.go",
+    "externalidentity.go",
+    "journeysituation.go",
+    "journeyword.go",
+    "magiclink.go",
+    "mixins.go",
+    "session.go",
+    "usagenote.go",
+    "user.go",
+    "userword.go",
+    "wordexample.go",
+    "wordmeaning.go",
+  ]);
+  for (const entry of readdirSync(apiSchemaRoot, { withFileTypes: true })) {
+    if (
+      entry.isFile() &&
+      entry.name.endsWith(".go") &&
+      !allowedSchemaFiles.has(entry.name)
+    ) {
+      errors.push(
+        `apps/api/ent/schema/${entry.name}: unexpected schema outside A1 and VOC-026 P1`,
+      );
+    }
+  }
+
+  // Verify no unexpected migrations (i.e. no invented P2–P4 tables).
+  const allowedMigrationFiles = new Set([
+    "20260724210000_identity_foundation.sql",
+    "20260724210001_oauth_state.sql",
+    "20260725100000_voc026_p1_content_tables.sql",
+    "20260725100001_voc026_p1_idempotency_keys.sql",
+  ]);
+  for (const entry of readdirSync(apiMigrationRoot, {
+    withFileTypes: true,
+  })) {
+    if (
+      entry.isFile() &&
+      entry.name.endsWith(".sql") &&
+      !allowedMigrationFiles.has(entry.name)
+    ) {
+      errors.push(
+        `apps/api/migrations/${entry.name}: unexpected migration outside A1 and VOC-026 P1`,
+      );
     }
   }
 
@@ -141,7 +238,6 @@ export function validateMockInventory() {
   }
 
   // Verify no new MOCK_ or placeholder data sources were introduced in (app).
-  const appFiles = globSync("**/*.{ts,tsx}", { cwd: appRouteRoot });
   const knownMocks = new Set(expectedMocks.map((m) => m.expectedConstant));
   for (const file of appFiles) {
     const content = readFileSync(path.join(appRouteRoot, file), "utf8");
@@ -175,6 +271,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     );
     process.exitCode = 1;
   } else {
-    process.stdout.write("A1 mock inventory validation passed.\n");
+    process.stdout.write("VOC-026 P1 mock inventory validation passed.\n");
   }
 }
