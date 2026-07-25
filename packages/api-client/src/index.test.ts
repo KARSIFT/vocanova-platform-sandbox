@@ -244,6 +244,44 @@ describe("VocanovaClient", () => {
     assert.equal(data.items[0]!.wordSlug, "boarding-pass");
   });
 
+  it("sends GET /api/v1/reviews/due", async () => {
+    const fetch = (url: string, init: RequestInit): Promise<Response> => {
+      assert.equal(url, "https://api.example.com/api/v1/reviews/due?limit=2");
+      assert.equal(init.method, "GET");
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            items: [
+              {
+                userWordId: "00000000-0000-0000-0000-000000000001",
+                meaningId: "00000000-0000-0000-0000-000000000002",
+                wordId: "00000000-0000-0000-0000-000000000003",
+                wordText: "boarding pass",
+                wordSlug: "boarding-pass",
+                partOfSpeech: "noun",
+                shortDefinition: "A document.",
+                status: "new",
+                reviewStep: 0,
+              },
+            ],
+            nextCursor: "c",
+            totalCount: 1,
+          }),
+          { headers: { "Content-Type": "application/json" }, status: 200 },
+        ),
+      );
+    };
+
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: fetch as typeof globalThis.fetch,
+    });
+    const { data } = await client.listDueWords({ limit: 2 });
+    assert.equal(data.items[0]!.wordSlug, "boarding-pass");
+    assert.equal(data.items[0]!.reviewStep, 0);
+    assert.equal(data.totalCount, 1);
+  });
+
   it("sends POST /api/v1/user-words with Idempotency-Key", async () => {
     const fetch = (url: string, init: RequestInit): Promise<Response> => {
       assert.equal(url, "https://api.example.com/api/v1/user-words");

@@ -111,6 +111,24 @@ export interface SaveUserWordBody {
   source: "journey" | "search" | "manual";
 }
 
+export interface DueWord {
+  userWordId: string;
+  meaningId: string;
+  wordId: string;
+  wordText: string;
+  wordSlug: string;
+  partOfSpeech: string;
+  shortDefinition: string;
+  status: string;
+  reviewStep: number;
+}
+
+export interface ListDueWordsResponse {
+  items: DueWord[];
+  nextCursor?: string;
+  totalCount: number;
+}
+
 export interface ApiError {
   type?: string;
   title?: string;
@@ -265,6 +283,24 @@ export class VocanovaClient {
       "/api/v1/user-words" + (query.toString() ? `?${query.toString()}` : "");
     const response = await this.request("GET", path, undefined, init);
     const data = (await response.json()) as ListSavedWordsResponse;
+    return { data, response };
+  }
+
+  async listDueWords(
+    params?: { after?: string; limit?: number },
+    init?: RequestInit,
+  ): Promise<{ data: ListDueWordsResponse; response: Response }> {
+    const query = new URLSearchParams();
+    if (params?.after) {
+      query.set("after", params.after);
+    }
+    if (params?.limit !== undefined) {
+      query.set("limit", String(params.limit));
+    }
+    const path =
+      "/api/v1/reviews/due" + (query.toString() ? `?${query.toString()}` : "");
+    const response = await this.request("GET", path, undefined, init);
+    const data = (await response.json()) as ListDueWordsResponse;
     return { data, response };
   }
 

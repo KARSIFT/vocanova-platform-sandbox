@@ -23,10 +23,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "token",
-          "email"
-        ],
+        "required": ["token", "email"],
         "type": "object"
       },
       "CurrentUser": {
@@ -34,9 +31,7 @@
         "properties": {
           "$schema": {
             "description": "A URL to the JSON Schema for this object.",
-            "examples": [
-              "https://example.com/schemas/CurrentUser.json"
-            ],
+            "examples": ["https://example.com/schemas/CurrentUser.json"],
             "format": "uri",
             "readOnly": true,
             "type": "string"
@@ -61,6 +56,63 @@
         },
         "type": "object"
       },
+      "DueWordDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "meaningId": {
+            "description": "Meaning identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "partOfSpeech": {
+            "description": "Part of speech",
+            "type": "string"
+          },
+          "reviewStep": {
+            "description": "Backend review step",
+            "format": "int64",
+            "type": "integer"
+          },
+          "shortDefinition": {
+            "description": "Short definition",
+            "type": "string"
+          },
+          "status": {
+            "description": "Learning status",
+            "type": "string"
+          },
+          "userWordId": {
+            "description": "Saved record identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "wordId": {
+            "description": "Canonical word identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "wordSlug": {
+            "description": "Canonical word URL slug",
+            "type": "string"
+          },
+          "wordText": {
+            "description": "Canonical word text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "userWordId",
+          "meaningId",
+          "wordId",
+          "wordText",
+          "wordSlug",
+          "partOfSpeech",
+          "shortDefinition",
+          "status",
+          "reviewStep"
+        ],
+        "type": "object"
+      },
       "ErrorDetail": {
         "additionalProperties": false,
         "properties": {
@@ -83,18 +135,14 @@
         "properties": {
           "$schema": {
             "description": "A URL to the JSON Schema for this object.",
-            "examples": [
-              "https://example.com/schemas/ErrorModel.json"
-            ],
+            "examples": ["https://example.com/schemas/ErrorModel.json"],
             "format": "uri",
             "readOnly": true,
             "type": "string"
           },
           "detail": {
             "description": "A human-readable explanation specific to this occurrence of the problem.",
-            "examples": [
-              "Property foo is required but is missing."
-            ],
+            "examples": ["Property foo is required but is missing."],
             "type": "string"
           },
           "errors": {
@@ -102,40 +150,29 @@
             "items": {
               "$ref": "#/components/schemas/ErrorDetail"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           },
           "instance": {
             "description": "A URI reference that identifies the specific occurrence of the problem.",
-            "examples": [
-              "https://example.com/error-log/abc123"
-            ],
+            "examples": ["https://example.com/error-log/abc123"],
             "format": "uri",
             "type": "string"
           },
           "status": {
             "description": "HTTP status code",
-            "examples": [
-              400
-            ],
+            "examples": [400],
             "format": "int64",
             "type": "integer"
           },
           "title": {
             "description": "A short, human-readable summary of the problem type. This value should not change between occurrences of the error.",
-            "examples": [
-              "Bad Request"
-            ],
+            "examples": ["Bad Request"],
             "type": "string"
           },
           "type": {
             "default": "about:blank",
             "description": "A URI reference to human-readable documentation for the error.",
-            "examples": [
-              "https://example.com/errors/example"
-            ],
+            "examples": ["https://example.com/errors/example"],
             "format": "uri",
             "type": "string"
           }
@@ -159,20 +196,14 @@
             "items": {
               "$ref": "#/components/schemas/SituationMeaningDTO"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           },
           "situation": {
             "$ref": "#/components/schemas/SituationDTO",
             "description": "Situation"
           }
         },
-        "required": [
-          "situation",
-          "meanings"
-        ],
+        "required": ["situation", "meanings"],
         "type": "object"
       },
       "GetWordOutputBody": {
@@ -180,9 +211,7 @@
         "properties": {
           "$schema": {
             "description": "A URL to the JSON Schema for this object.",
-            "examples": [
-              "https://example.com/schemas/GetWordOutputBody.json"
-            ],
+            "examples": ["https://example.com/schemas/GetWordOutputBody.json"],
             "format": "uri",
             "readOnly": true,
             "type": "string"
@@ -192,9 +221,39 @@
             "description": "Canonical word detail"
           }
         },
-        "required": [
-          "word"
-        ],
+        "required": ["word"],
+        "type": "object"
+      },
+      "ListReviewsDueOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/ListReviewsDueOutputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "items": {
+            "description": "Due words",
+            "items": {
+              "$ref": "#/components/schemas/DueWordDTO"
+            },
+            "type": ["array", "null"]
+          },
+          "nextCursor": {
+            "description": "Opaque cursor for the next page",
+            "type": "string"
+          },
+          "totalCount": {
+            "description": "Total due words for the requester",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": ["items", "totalCount"],
         "type": "object"
       },
       "ListSavedWordsOutputBody": {
@@ -214,19 +273,14 @@
             "items": {
               "$ref": "#/components/schemas/SavedMeaningDTO"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           },
           "nextCursor": {
             "description": "Opaque cursor for the next page",
             "type": "string"
           }
         },
-        "required": [
-          "items"
-        ],
+        "required": ["items"],
         "type": "object"
       },
       "ListSituationsOutputBody": {
@@ -246,19 +300,14 @@
             "items": {
               "$ref": "#/components/schemas/SituationDTO"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           },
           "nextCursor": {
             "description": "Opaque cursor for the next page",
             "type": "string"
           }
         },
-        "required": [
-          "items"
-        ],
+        "required": ["items"],
         "type": "object"
       },
       "OAuthStartInputBody": {
@@ -279,9 +328,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "redirectUri"
-        ],
+        "required": ["redirectUri"],
         "type": "object"
       },
       "OAuthStartOutputBody": {
@@ -302,9 +349,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "url"
-        ],
+        "required": ["url"],
         "type": "object"
       },
       "RequestMagicLinkInputBody": {
@@ -325,9 +370,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "email"
-        ],
+        "required": ["email"],
         "type": "object"
       },
       "SaveUserWordInputBody": {
@@ -349,18 +392,11 @@
           },
           "source": {
             "description": "Origin of the save",
-            "enum": [
-              "journey",
-              "search",
-              "manual"
-            ],
+            "enum": ["journey", "search", "manual"],
             "type": "string"
           }
         },
-        "required": [
-          "meaningId",
-          "source"
-        ],
+        "required": ["meaningId", "source"],
         "type": "object"
       },
       "SavedMeaningDTO": {
@@ -368,9 +404,7 @@
         "properties": {
           "$schema": {
             "description": "A URL to the JSON Schema for this object.",
-            "examples": [
-              "https://example.com/schemas/SavedMeaningDTO.json"
-            ],
+            "examples": ["https://example.com/schemas/SavedMeaningDTO.json"],
             "format": "uri",
             "readOnly": true,
             "type": "string"
@@ -545,10 +579,7 @@
             "items": {
               "$ref": "#/components/schemas/WordMeaningDTO"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           },
           "slug": {
             "description": "URL slug",
@@ -563,13 +594,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "text",
-          "slug",
-          "wordType",
-          "meanings"
-        ],
+        "required": ["id", "text", "slug", "wordType", "meanings"],
         "type": "object"
       },
       "WordExampleDTO": {
@@ -589,10 +614,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "exampleText"
-        ],
+        "required": ["id", "exampleText"],
         "type": "object"
       },
       "WordMeaningDTO": {
@@ -603,10 +625,7 @@
             "items": {
               "$ref": "#/components/schemas/WordExampleDTO"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           },
           "id": {
             "description": "Meaning identifier",
@@ -634,10 +653,7 @@
             "items": {
               "$ref": "#/components/schemas/WordUsageNoteDTO"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": ["array", "null"]
           }
         },
         "required": [
@@ -667,11 +683,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "noteType",
-          "noteText"
-        ],
+        "required": ["id", "noteType", "noteText"],
         "type": "object"
       }
     }
@@ -709,9 +721,7 @@
           }
         },
         "summary": "Log out the current session",
-        "tags": [
-          "Authentication"
-        ]
+        "tags": ["Authentication"]
       }
     },
     "/api/v1/auth/magic-links": {
@@ -743,9 +753,7 @@
           }
         },
         "summary": "Request a magic sign-in link",
-        "tags": [
-          "Authentication"
-        ]
+        "tags": ["Authentication"]
       }
     },
     "/api/v1/auth/magic-links/consume": {
@@ -784,9 +792,7 @@
           }
         },
         "summary": "Consume a magic sign-in link",
-        "tags": [
-          "Authentication"
-        ]
+        "tags": ["Authentication"]
       }
     },
     "/api/v1/auth/oauth/google/callback": {
@@ -833,9 +839,7 @@
           }
         },
         "summary": "Handle the Google OAuth provider callback",
-        "tags": [
-          "Authentication"
-        ]
+        "tags": ["Authentication"]
       }
     },
     "/api/v1/auth/oauth/google/start": {
@@ -874,9 +878,7 @@
           }
         },
         "summary": "Start a Google OAuth sign-in flow",
-        "tags": [
-          "Authentication"
-        ]
+        "tags": ["Authentication"]
       }
     },
     "/api/v1/canonical-words/{wordSlug}": {
@@ -913,9 +915,7 @@
           }
         },
         "summary": "Get a canonical word with meanings",
-        "tags": [
-          "Discovery"
-        ]
+        "tags": ["Discovery"]
       }
     },
     "/api/v1/journey-situations": {
@@ -961,9 +961,7 @@
           }
         },
         "summary": "List active journey situations",
-        "tags": [
-          "Discovery"
-        ]
+        "tags": ["Discovery"]
       }
     },
     "/api/v1/journey-situations/{slug}": {
@@ -1000,9 +998,7 @@
           }
         },
         "summary": "Get a journey situation with meanings",
-        "tags": [
-          "Discovery"
-        ]
+        "tags": ["Discovery"]
       }
     },
     "/api/v1/me": {
@@ -1024,9 +1020,53 @@
           }
         },
         "summary": "Get the authenticated user",
-        "tags": [
-          "Authentication"
-        ]
+        "tags": ["Authentication"]
+      }
+    },
+    "/api/v1/reviews/due": {
+      "get": {
+        "operationId": "GetReviewsDue",
+        "parameters": [
+          {
+            "description": "Opaque pagination cursor",
+            "explode": false,
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "description": "Opaque pagination cursor",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Maximum items to return (1-100)",
+            "explode": false,
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 20,
+              "description": "Maximum items to return (1-100)",
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListReviewsDueOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Authentication is required"
+          }
+        },
+        "summary": "List the authenticated requester's due review words",
+        "tags": ["Reviews"]
       }
     },
     "/api/v1/user-words": {
@@ -1072,9 +1112,7 @@
           }
         },
         "summary": "List the authenticated requester's saved meanings",
-        "tags": [
-          "Learning"
-        ]
+        "tags": ["Learning"]
       },
       "post": {
         "operationId": "SaveUserWord",
@@ -1125,9 +1163,7 @@
           }
         },
         "summary": "Save a meaning for the authenticated requester",
-        "tags": [
-          "Learning"
-        ]
+        "tags": ["Learning"]
       }
     },
     "/api/v1/user-words/{meaningId}": {
@@ -1161,9 +1197,7 @@
           }
         },
         "summary": "Remove a saved meaning for the authenticated requester",
-        "tags": [
-          "Learning"
-        ]
+        "tags": ["Learning"]
       }
     }
   }

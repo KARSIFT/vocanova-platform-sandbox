@@ -123,7 +123,8 @@ export function validateMockInventory() {
     }
   }
 
-  // Verify no API routes beyond A1 auth and VOC-026 P1 content/learning were invented.
+  // Verify no API routes beyond A1 auth, VOC-026 P1 content/learning, and the
+  // VOC-027 P2 due-queue read route were invented.
   const allowedAPIPaths = [
     /^\/api\/v1\/me$/,
     /^\/api\/v1\/auth(?:\/|$)/,
@@ -131,6 +132,7 @@ export function validateMockInventory() {
     /^\/api\/v1\/canonical-words\/[^/]+$/,
     /^\/api\/v1\/user-words$/,
     /^\/api\/v1\/user-words\/[^/]+$/,
+    /^\/api\/v1\/reviews\/due$/,
   ];
   const apiRouteFiles = globSync("**/*.go", { cwd: apiRouteRoot });
   for (const file of apiRouteFiles) {
