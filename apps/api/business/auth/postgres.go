@@ -195,6 +195,89 @@ func (r *PostgreSQLRepository) AttachMagicLinkUser(ctx context.Context, id uuid.
 	return nil
 }
 
+func (r *PostgreSQLRepository) CreateOAuthState(ctx context.Context, tokenHash []byte, environment, provider, appReturnURL string, createdAt, expiresAt time.Time) (*OAuthState, error) {
+	id := uuid.New()
+	_, err := r.db.ExecContext(ctx,
+		`INSERT INTO oauth_states (id, token_hash, environment, provider, app_return_url, created_at, expires_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		id, tokenHash, environment, provider, appReturnURL, createdAt, expiresAt)
+	if err != nil {
+		return nil, fmt.Errorf("create oauth state: %w", err)
+	}
+	return &OAuthState{ID: id, Environment: environment, Provider: provider, AppReturnURL: appReturnURL, CreatedAt: createdAt, ExpiresAt: expiresAt}, nil
+}
+
+func (r *PostgreSQLRepository) GetOAuthStateByTokenHash(ctx context.Context, tokenHash []byte) (*OAuthState, error) {
+	row := r.db.QueryRowContext(ctx,
+		`SELECT id, environment, provider, app_return_url, created_at, expires_at, consumed_at
+		 FROM oauth_states WHERE token_hash = $1`, tokenHash)
+	var o OAuthState
+	var consumedAt sql.NullTime
+	err := row.Scan(&o.ID, &o.Environment, &o.Provider, &o.AppReturnURL, &o.CreatedAt, &o.ExpiresAt, &consumedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, errors.New("oauth state not found")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("scan oauth state: %w", err)
+	}
+	if consumedAt.Valid {
+		o.ConsumedAt = &consumedAt.Time
+	}
+	return &o, nil
+}
+
+func (r *PostgreSQLRepository) ConsumeOAuthState(ctx context.Context, id uuid.UUID, consumedAt time.Time) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE oauth_states SET consumed_at = $1 WHERE id = $2`, consumedAt, id)
+	if err != nil {
+		return fmt.Errorf("consume oauth state: %w", err)
+	}
+	return nil
+}
+
+func (r *PostgreSQLRepository) GetExternalIdentity(ctx context.Context, provider, providerSubject string) (*ExternalIdentity, error) {
+	row := r.db.QueryRowContext(ctx,
+		`SELECT id, user_id, provider, provider_subject, provider_email, provider_email_verified, created_at, updated_at
+		 FROM external_identities
+		 WHERE provider = $1 AND provider_subject = $2 AND deleted_at IS NULL`,
+		provider, providerSubject)
+	return scanExternalIdentity(row)
+}
+
+func (r *PostgreSQLRepository) CreateExternalIdentity(ctx context.Context, userID uuid.UUID, provider, providerSubject, providerEmail string, providerEmailVerified bool) (*ExternalIdentity, error) {
+	id := uuid.New()
+	now := time.Now().UTC()
+	_, err := r.db.ExecContext(ctx,
+		`INSERT INTO external_identities (id, user_id, provider, provider_subject, provider_email, provider_email_verified, created_at, updated_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		id, userID, provider, providerSubject, providerEmail, providerEmailVerified, now, now)
+	if err != nil {
+		return nil, fmt.Errorf("create external identity: %w", err)
+	}
+	return &ExternalIdentity{
+		ID:                    id,
+		UserID:                userID,
+		Provider:              provider,
+		ProviderSubject:       providerSubject,
+		ProviderEmail:         providerEmail,
+		ProviderEmailVerified: providerEmailVerified,
+		CreatedAt:             now,
+		UpdatedAt:             now,
+	}, nil
+}
+
+func scanExternalIdentity(row *sql.Row) (*ExternalIdentity, error) {
+	var e ExternalIdentity
+	err := row.Scan(&e.ID, &e.UserID, &e.Provider, &e.ProviderSubject, &e.ProviderEmail, &e.ProviderEmailVerified, &e.CreatedAt, &e.UpdatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, errors.New("external identity not found")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("scan external identity: %w", err)
+	}
+	return &e, nil
+}
+
 func (r *PostgreSQLRepository) CleanupExpiredSessions(ctx context.Context, before time.Time) (int64, error) {
 	res, err := r.db.ExecContext(ctx,
 		`DELETE FROM sessions WHERE expires_at <= $1 OR (revoked_at IS NOT NULL AND revoked_at <= $1)`, before)
@@ -209,6 +292,15 @@ func (r *PostgreSQLRepository) CleanupExpiredMagicLinks(ctx context.Context, bef
 		`DELETE FROM magic_links WHERE expires_at <= $1 OR consumed_at IS NOT NULL OR (revoked_at IS NOT NULL AND revoked_at <= $1)`, before)
 	if err != nil {
 		return 0, fmt.Errorf("cleanup magic links: %w", err)
+	}
+	return res.RowsAffected()
+}
+
+func (r *PostgreSQLRepository) CleanupExpiredOAuthStates(ctx context.Context, before time.Time) (int64, error) {
+	res, err := r.db.ExecContext(ctx,
+		`DELETE FROM oauth_states WHERE expires_at <= $1 OR consumed_at IS NOT NULL`, before)
+	if err != nil {
+		return 0, fmt.Errorf("cleanup oauth states: %w", err)
 	}
 	return res.RowsAffected()
 }

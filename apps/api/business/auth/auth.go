@@ -4,6 +4,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -57,6 +58,22 @@ func (m MagicLink) Valid(now time.Time) bool {
 	return now.Before(m.ExpiresAt) && m.ConsumedAt == nil && m.RevokedAt == nil
 }
 
+// OAuthState is the service-layer OAuth state projection.
+type OAuthState struct {
+	ID           uuid.UUID
+	Environment  string
+	Provider     string
+	AppReturnURL string
+	CreatedAt    time.Time
+	ExpiresAt    time.Time
+	ConsumedAt   *time.Time
+}
+
+// Valid reports whether the state has not expired or been consumed.
+func (o OAuthState) Valid(now time.Time) bool {
+	return now.Before(o.ExpiresAt) && o.ConsumedAt == nil
+}
+
 // Repository is the persistence boundary for the auth service. Implementations
 // must not expose bearer tokens or raw secrets in errors or logs.
 type Repository interface {
@@ -78,9 +95,19 @@ type Repository interface {
 	RevokeMagicLink(ctx context.Context, id uuid.UUID, revokedAt time.Time) error
 	AttachMagicLinkUser(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 
+	// OAuth states
+	CreateOAuthState(ctx context.Context, tokenHash []byte, environment, provider, appReturnURL string, createdAt, expiresAt time.Time) (*OAuthState, error)
+	GetOAuthStateByTokenHash(ctx context.Context, tokenHash []byte) (*OAuthState, error)
+	ConsumeOAuthState(ctx context.Context, id uuid.UUID, consumedAt time.Time) error
+
+	// External identities
+	GetExternalIdentity(ctx context.Context, provider, providerSubject string) (*ExternalIdentity, error)
+	CreateExternalIdentity(ctx context.Context, userID uuid.UUID, provider, providerSubject, providerEmail string, providerEmailVerified bool) (*ExternalIdentity, error)
+
 	// Cleanup
 	CleanupExpiredSessions(ctx context.Context, before time.Time) (int64, error)
 	CleanupExpiredMagicLinks(ctx context.Context, before time.Time) (int64, error)
+	CleanupExpiredOAuthStates(ctx context.Context, before time.Time) (int64, error)
 }
 
 // ExternalIdentity is the service-layer provider-identity projection.
@@ -97,6 +124,7 @@ type ExternalIdentity struct {
 
 // OAuthProvider is the verified OAuth provider boundary.
 type OAuthProvider interface {
+	AuthURL(state, redirectURI string) string
 	Verify(ctx context.Context, code, state, redirectURI string) (*OAuthIdentity, error)
 }
 
@@ -108,3 +136,14 @@ type OAuthIdentity struct {
 	DisplayName   string
 	AvatarURL     string
 }
+
+// Public errors returned by the service.
+var (
+	ErrInvalidMagicLink       = errors.New("invalid or expired magic link")
+	ErrAuthenticationRequired = errors.New("authentication required")
+	ErrUserDisabled           = errors.New("user disabled")
+	ErrRateLimited            = errors.New("rate limited")
+	ErrInvalidOAuthState      = errors.New("invalid or expired oauth state")
+	ErrOAuthProviderFailed    = errors.New("oauth provider failed")
+	ErrOAuthNotConfigured     = errors.New("oauth provider not configured")
+)

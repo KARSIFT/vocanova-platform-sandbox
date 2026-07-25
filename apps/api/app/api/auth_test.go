@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -25,26 +26,35 @@ func testAuthAPI(t *testing.T) (huma.API, *auth.Service, *auth.MemoryRepository,
 	repo := auth.NewMemoryRepository()
 	fake := &email.Fake{}
 	limiter := auth.NewFixedWindowRateLimiter(c, time.Hour, 100)
-	svc := auth.NewService(repo, fake, c, limiter, auth.Config{
-		Environment:       "test",
-		BaseURL:           "https://test.example.com",
-		MagicLinkPath:     "/auth/magic",
-		SessionLifetime:   30 * 24 * time.Hour,
-		MagicLinkLifetime: 15 * time.Minute,
+	oauth := auth.NewFakeOAuthProvider(&auth.OAuthIdentity{Subject: "sub-123", Email: "user@example.com", EmailVerified: true, DisplayName: "User", AvatarURL: "https://example.com/avatar.png"})
+	svc := auth.NewService(repo, fake, oauth, c, limiter, auth.Config{
+		Environment:            "test",
+		BaseURL:                "https://test.example.com",
+		MagicLinkPath:          "/auth/magic",
+		OAuthRedirectURI:       "https://test.example.com/auth/oauth/google/callback",
+		OAuthRedirectAllowlist: []string{"https://test.example.com/app"},
+		SessionLifetime:        30 * 24 * time.Hour,
+		MagicLinkLifetime:      15 * time.Minute,
+		OAuthStateLifetime:     10 * time.Minute,
 		Cookie: auth.CookieConfig{
-			Name:     "vocanova_session",
-			CSRName:  "vocanova_csrf",
-			Domain:   "",
-			Secure:   false,
-			SameSite: http.SameSiteStrictMode,
+			Name:           "vocanova_session",
+			CSRName:        "vocanova_csrf",
+			OAuthStateName: "vocanova_oauth_state",
+			Domain:         "",
+			Secure:         false,
+			SameSite:       http.SameSiteStrictMode,
 		},
 		RateLimit: auth.RateLimitConfig{
-			MagicRequestWindow: time.Hour,
-			MagicRequestLimit:  10,
-			MagicConsumeWindow: time.Hour,
-			MagicConsumeLimit:  10,
-			LogoutWindow:       time.Hour,
-			LogoutLimit:        10,
+			MagicRequestWindow:  time.Hour,
+			MagicRequestLimit:   10,
+			MagicConsumeWindow:  time.Hour,
+			MagicConsumeLimit:   10,
+			OAuthStartWindow:    time.Hour,
+			OAuthStartLimit:     10,
+			OAuthCallbackWindow: time.Hour,
+			OAuthCallbackLimit:  10,
+			LogoutWindow:        time.Hour,
+			LogoutLimit:         10,
 		},
 	})
 
@@ -180,6 +190,101 @@ func TestLogoutEndpointClearsCookie(t *testing.T) {
 	assert.True(t, clearCookie.Expires.Before(time.Now()) || clearCookie.MaxAge < 0)
 }
 
+func TestOAuthStartEndpointReturnsURLAndSetsCookie(t *testing.T) {
+	api, _, _, _, _ := testAuthAPI(t)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/oauth/google/start", strings.NewReader(`{"redirectUri":"https://test.example.com/app"}`))
+	req.Header.Set("Content-Type", "application/json")
+	api.Adapter().ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "https://fake-oauth.example.com/auth")
+	setCookies := w.Result().Cookies()
+	require.True(t, hasCookie(setCookies, "vocanova_oauth_state"), "oauth state cookie missing")
+}
+
+func TestOAuthStartEndpointRejectsUnknownRedirectURI(t *testing.T) {
+	api, _, _, _, _ := testAuthAPI(t)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/oauth/google/start", strings.NewReader(`{"redirectUri":"https://evil.example.com/callback"}`))
+	req.Header.Set("Content-Type", "application/json")
+	api.Adapter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestOAuthCallbackEndpointSetsSessionAndRedirects(t *testing.T) {
+	api, _, _, _, _ := testAuthAPI(t)
+
+	// Start the flow.
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/oauth/google/start", strings.NewReader(`{"redirectUri":"https://test.example.com/app"}`))
+	req.Header.Set("Content-Type", "application/json")
+	api.Adapter().ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var startResp struct {
+		URL string `json:"url"`
+	}
+	require.NoError(t, jsonDecode(w.Body.String(), &startResp))
+	u, err := url.Parse(startResp.URL)
+	require.NoError(t, err)
+	state := u.Query().Get("state")
+	require.NotEmpty(t, state)
+
+	oauthStateCookie := findCookie(w.Result().Cookies(), "vocanova_oauth_state")
+	require.NotNil(t, oauthStateCookie)
+
+	// Callback with the returned state and cookie.
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/google/callback?code=auth-code&state="+state, nil)
+	req.AddCookie(oauthStateCookie)
+	api.Adapter().ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusFound, w.Code)
+	assert.Equal(t, "https://test.example.com/app", w.Header().Get("Location"))
+	setCookies := w.Result().Cookies()
+	require.True(t, hasCookie(setCookies, "vocanova_session"), "session cookie missing")
+
+	// Oauth state cookie should be cleared.
+	clearCookie := findCookie(setCookies, "vocanova_oauth_state")
+	require.NotNil(t, clearCookie)
+	assert.True(t, clearCookie.Expires.Before(time.Now()) || clearCookie.MaxAge < 0)
+
+	// Replaying the callback fails.
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/google/callback?code=auth-code&state="+state, nil)
+	req.AddCookie(oauthStateCookie)
+	api.Adapter().ServeHTTP(w, req)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestOAuthCallbackEndpointRejectsMissingStateCookie(t *testing.T) {
+	api, _, _, _, _ := testAuthAPI(t)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/oauth/google/start", strings.NewReader(`{"redirectUri":"https://test.example.com/app"}`))
+	req.Header.Set("Content-Type", "application/json")
+	api.Adapter().ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var startResp struct {
+		URL string `json:"url"`
+	}
+	require.NoError(t, jsonDecode(w.Body.String(), &startResp))
+	u, err := url.Parse(startResp.URL)
+	require.NoError(t, err)
+	state := u.Query().Get("state")
+
+	// Callback without the state cookie should fail.
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/google/callback?code=auth-code&state="+state, nil)
+	api.Adapter().ServeHTTP(w, req)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
 func hasCookie(cookies []*http.Cookie, name string) bool {
 	return findCookie(cookies, name) != nil
 }
@@ -215,4 +320,8 @@ func extractTokenFromURL(t *testing.T, body string) string {
 	u, err := url.Parse(start)
 	require.NoError(t, err)
 	return u.Query().Get("token")
+}
+
+func jsonDecode(body string, v any) error {
+	return json.Unmarshal([]byte(body), v)
 }

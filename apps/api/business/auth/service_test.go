@@ -15,30 +15,43 @@ import (
 
 func testConfig() Config {
 	return Config{
-		Environment:       "test",
-		BaseURL:           "https://test.example.com",
-		MagicLinkPath:     "/auth/magic",
-		SessionLifetime:   30 * 24 * time.Hour,
-		MagicLinkLifetime: 15 * time.Minute,
+		Environment:            "test",
+		BaseURL:                "https://test.example.com",
+		MagicLinkPath:          "/auth/magic",
+		OAuthRedirectURI:       "https://test.example.com/auth/oauth/google/callback",
+		OAuthRedirectAllowlist: []string{"https://test.example.com/app"},
+		SessionLifetime:        30 * 24 * time.Hour,
+		MagicLinkLifetime:      15 * time.Minute,
+		OAuthStateLifetime:     10 * time.Minute,
 		RateLimit: RateLimitConfig{
-			MagicRequestWindow: time.Hour,
-			MagicRequestLimit:  5,
-			MagicConsumeWindow: time.Hour,
-			MagicConsumeLimit:  5,
-			LogoutWindow:       time.Hour,
-			LogoutLimit:        5,
+			MagicRequestWindow:  time.Hour,
+			MagicRequestLimit:   5,
+			MagicConsumeWindow:  time.Hour,
+			MagicConsumeLimit:   5,
+			OAuthStartWindow:    time.Hour,
+			OAuthStartLimit:     10,
+			OAuthCallbackWindow: time.Hour,
+			OAuthCallbackLimit:  10,
+			LogoutWindow:        time.Hour,
+			LogoutLimit:         5,
 		},
 	}
 }
 
 func testService(t *testing.T) (*Service, *MemoryRepository, *email.Fake, *clock.Fixed) {
 	t.Helper()
+	return testServiceWithOAuth(t, nil)
+}
+
+func testServiceWithOAuth(t *testing.T, oauth OAuthProvider) (*Service, *MemoryRepository, *email.Fake, *clock.Fixed) {
+	t.Helper()
 	now := time.Date(2026, 7, 24, 12, 0, 0, 0, time.UTC)
 	c := &clock.Fixed{T: now}
 	repo := NewMemoryRepository()
 	fake := &email.Fake{}
 	limiter := NewFixedWindowRateLimiter(c, time.Hour, 100)
-	svc := NewService(repo, fake, c, limiter, testConfig())
+	cfg := testConfig()
+	svc := NewService(repo, fake, oauth, c, limiter, cfg)
 	return svc, repo, fake, c
 }
 
@@ -142,7 +155,7 @@ func TestConsumeMagicLinkRejectsWrongEnvironment(t *testing.T) {
 	msg, _ := fake.Last()
 	rawToken := extractTokenFromURL(t, msg.BodyText)
 
-	svc2 := NewService(NewMemoryRepository(), &email.Fake{}, clock.Real{}, NewFixedWindowRateLimiter(clock.Real{}, time.Hour, 100), Config{Environment: "other"})
+	svc2 := NewService(NewMemoryRepository(), &email.Fake{}, nil, clock.Real{}, NewFixedWindowRateLimiter(clock.Real{}, time.Hour, 100), Config{Environment: "other"})
 	_, _, _, err = svc2.ConsumeMagicLink(ctx, "1.2.3.4", rawToken, "user@example.com")
 	assert.ErrorIs(t, err, ErrInvalidMagicLink)
 }
@@ -235,7 +248,7 @@ func TestRequestMagicLinkRateLimited(t *testing.T) {
 	cfg := testConfig()
 	cfg.RateLimit.MagicRequestLimit = 2
 	limiter := NewFixedWindowRateLimiter(c, time.Hour, cfg.RateLimit.MagicRequestLimit)
-	svc := NewService(repo, fake, c, limiter, cfg)
+	svc := NewService(repo, fake, nil, c, limiter, cfg)
 	ctx := context.Background()
 
 	require.NoError(t, svc.RequestMagicLink(ctx, "1.2.3.4", "a@example.com"))
@@ -271,6 +284,202 @@ func TestCleanupRemovesExpired(t *testing.T) {
 
 	assert.Len(t, repo.sessions, 0)
 	assert.Len(t, repo.magicLinks, 0)
+}
+
+func TestOAuthStartCreatesStateAndReturnsURL(t *testing.T) {
+	oauth := NewFakeOAuthProvider(&OAuthIdentity{Subject: "sub-123", Email: "user@example.com", EmailVerified: true, DisplayName: "User", AvatarURL: "https://example.com/avatar.png"})
+	svc, repo, _, _ := testServiceWithOAuth(t, oauth)
+	ctx := context.Background()
+
+	url, stateToken, err := svc.OAuthStart(ctx, "1.2.3.4", "https://test.example.com/app")
+	require.NoError(t, err)
+	assert.Contains(t, url, "https://fake-oauth.example.com/auth")
+	assert.Contains(t, url, stateToken)
+	assert.NotEmpty(t, stateToken)
+
+	// State is stored as a hash, not the raw token.
+	require.Len(t, repo.oauthStates, 1)
+	for _, o := range repo.oauthStates {
+		assert.Equal(t, "test", o.Environment)
+		assert.Equal(t, "google", o.Provider)
+		assert.Nil(t, o.ConsumedAt)
+	}
+}
+
+func TestOAuthCallbackCreatesUserAndSession(t *testing.T) {
+	identity := &OAuthIdentity{Subject: "sub-123", Email: "user@example.com", EmailVerified: true, DisplayName: "User", AvatarURL: "https://example.com/avatar.png"}
+	oauth := NewFakeOAuthProvider(identity)
+	svc, repo, _, _ := testServiceWithOAuth(t, oauth)
+	ctx := context.Background()
+
+	_, stateToken, err := svc.OAuthStart(ctx, "1.2.3.4", "https://test.example.com/app")
+	require.NoError(t, err)
+
+	user, session, token, _, err := svc.OAuthCallback(ctx, "1.2.3.4", "auth-code", stateToken, stateToken)
+	require.NoError(t, err)
+	assert.Equal(t, "user@example.com", user.Email)
+	assert.NotNil(t, user.EmailVerifiedAt)
+	assert.Equal(t, "active", user.Status)
+	assert.Equal(t, session.UserID, user.ID)
+	assert.NotEmpty(t, token)
+
+	// External identity is recorded.
+	require.Len(t, repo.externalIdentities, 1)
+	for _, ext := range repo.externalIdentities {
+		assert.Equal(t, user.ID, ext.UserID)
+		assert.Equal(t, "google", ext.Provider)
+		assert.Equal(t, "sub-123", ext.ProviderSubject)
+		assert.True(t, ext.ProviderEmailVerified)
+	}
+
+	// State is consumed.
+	for _, o := range repo.oauthStates {
+		assert.NotNil(t, o.ConsumedAt)
+	}
+
+	// Reusing the same code/state fails.
+	_, _, _, _, err = svc.OAuthCallback(ctx, "1.2.3.4", "auth-code", stateToken, stateToken)
+	assert.ErrorIs(t, err, ErrInvalidOAuthState)
+
+	// Validated session works.
+	validated, err := svc.ValidateSession(ctx, token)
+	require.NoError(t, err)
+	assert.Equal(t, user.ID, validated.ID)
+}
+
+func TestOAuthCallbackLinksExistingUserByEmail(t *testing.T) {
+	identity := &OAuthIdentity{Subject: "sub-123", Email: "user@example.com", EmailVerified: true}
+	oauth := NewFakeOAuthProvider(identity)
+	svc, repo, _, _ := testServiceWithOAuth(t, oauth)
+	ctx := context.Background()
+
+	// Create an existing user directly so an email-linked identity can be added.
+	_, err := repo.CreateUser(ctx, "user@example.com", nil)
+	require.NoError(t, err)
+
+	_, stateToken, err := svc.OAuthStart(ctx, "1.2.3.4", "https://test.example.com/app")
+	require.NoError(t, err)
+
+	user, _, _, _, err := svc.OAuthCallback(ctx, "1.2.3.4", "auth-code", stateToken, stateToken)
+	require.NoError(t, err)
+	assert.Equal(t, "user@example.com", user.Email)
+	require.Len(t, repo.externalIdentities, 1)
+	for _, ext := range repo.externalIdentities {
+		assert.Equal(t, user.ID, ext.UserID)
+	}
+}
+
+func TestOAuthCallbackRejectsMismatchedCookieState(t *testing.T) {
+	identity := &OAuthIdentity{Subject: "sub-123", Email: "user@example.com", EmailVerified: true}
+	oauth := NewFakeOAuthProvider(identity)
+	svc, _, _, _ := testServiceWithOAuth(t, oauth)
+	ctx := context.Background()
+
+	_, stateToken, err := svc.OAuthStart(ctx, "1.2.3.4", "https://test.example.com/app")
+	require.NoError(t, err)
+
+	_, _, _, _, err = svc.OAuthCallback(ctx, "1.2.3.4", "auth-code", stateToken, "other-state")
+	assert.ErrorIs(t, err, ErrInvalidOAuthState)
+}
+
+func TestOAuthCallbackRejectsExpiredState(t *testing.T) {
+	identity := &OAuthIdentity{Subject: "sub-123", Email: "user@example.com", EmailVerified: true}
+	oauth := NewFakeOAuthProvider(identity)
+	svc, _, _, c := testServiceWithOAuth(t, oauth)
+	ctx := context.Background()
+
+	url, stateToken, err := svc.OAuthStart(ctx, "1.2.3.4", "https://test.example.com/app")
+	require.NoError(t, err)
+	_ = url
+
+	c.Advance(11 * time.Minute)
+	_, _, _, _, err = svc.OAuthCallback(ctx, "1.2.3.4", "auth-code", stateToken, stateToken)
+	assert.ErrorIs(t, err, ErrInvalidOAuthState)
+}
+
+func TestOAuthCallbackRejectsUnverifiedEmail(t *testing.T) {
+	identity := &OAuthIdentity{Subject: "sub-123", Email: "user@example.com", EmailVerified: false}
+	oauth := NewFakeOAuthProvider(identity)
+	svc, _, _, _ := testServiceWithOAuth(t, oauth)
+	ctx := context.Background()
+
+	url, stateToken, err := svc.OAuthStart(ctx, "1.2.3.4", "https://test.example.com/app")
+	require.NoError(t, err)
+	_ = url
+
+	_, _, _, _, err = svc.OAuthCallback(ctx, "1.2.3.4", "auth-code", stateToken, stateToken)
+	assert.ErrorIs(t, err, ErrOAuthProviderFailed)
+}
+
+func TestOAuthCallbackRejectsDisabledUser(t *testing.T) {
+	identity := &OAuthIdentity{Subject: "sub-123", Email: "user@example.com", EmailVerified: true}
+	oauth := NewFakeOAuthProvider(identity)
+	svc, repo, _, _ := testServiceWithOAuth(t, oauth)
+	ctx := context.Background()
+
+	u, err := repo.CreateUser(ctx, "user@example.com", nil)
+	require.NoError(t, err)
+	u.Status = "disabled"
+	repo.users[u.ID] = u
+	repo.usersByEmail[u.Email] = u
+
+	url, stateToken, err := svc.OAuthStart(ctx, "1.2.3.4", "https://test.example.com/app")
+	require.NoError(t, err)
+	_ = url
+
+	_, _, _, _, err = svc.OAuthCallback(ctx, "1.2.3.4", "auth-code", stateToken, stateToken)
+	assert.ErrorIs(t, err, ErrUserDisabled)
+}
+
+func TestOAuthCallbackRejectsUnknownRedirectURI(t *testing.T) {
+	identity := &OAuthIdentity{Subject: "sub-123", Email: "user@example.com", EmailVerified: true}
+	oauth := NewFakeOAuthProvider(identity)
+	svc, _, _, _ := testServiceWithOAuth(t, oauth)
+	ctx := context.Background()
+
+	_, _, err := svc.OAuthStart(ctx, "1.2.3.4", "https://evil.example.com/callback")
+	assert.ErrorIs(t, err, ErrOAuthProviderFailed)
+}
+
+func TestOAuthStartRateLimited(t *testing.T) {
+	now := time.Date(2026, 7, 24, 12, 0, 0, 0, time.UTC)
+	c := &clock.Fixed{T: now}
+	repo := NewMemoryRepository()
+	fake := &email.Fake{}
+	cfg := testConfig()
+	cfg.RateLimit.OAuthStartLimit = 2
+	limiter := NewFixedWindowRateLimiter(c, time.Hour, cfg.RateLimit.OAuthStartLimit)
+	oauth := NewFakeOAuthProvider(&OAuthIdentity{Subject: "sub", Email: "a@example.com", EmailVerified: true})
+	svc := NewService(repo, fake, oauth, c, limiter, cfg)
+	ctx := context.Background()
+
+	_, _, err := svc.OAuthStart(ctx, "1.2.3.4", "https://test.example.com/app")
+	require.NoError(t, err)
+	_, _, err = svc.OAuthStart(ctx, "1.2.3.4", "https://test.example.com/app")
+	require.NoError(t, err)
+	_, _, err = svc.OAuthStart(ctx, "1.2.3.4", "https://test.example.com/app")
+	assert.ErrorIs(t, err, ErrRateLimited)
+
+	// A different IP is not blocked.
+	_, _, err = svc.OAuthStart(ctx, "5.6.7.8", "https://test.example.com/app")
+	require.NoError(t, err)
+}
+
+func TestCleanupRemovesExpiredOAuthStates(t *testing.T) {
+	identity := &OAuthIdentity{Subject: "sub", Email: "a@example.com", EmailVerified: true}
+	oauth := NewFakeOAuthProvider(identity)
+	svc, repo, _, c := testServiceWithOAuth(t, oauth)
+	ctx := context.Background()
+
+	_, stateToken, err := svc.OAuthStart(ctx, "1.2.3.4", "https://test.example.com/app")
+	require.NoError(t, err)
+	_, _, _, _, err = svc.OAuthCallback(ctx, "1.2.3.4", "auth-code", stateToken, stateToken)
+	require.NoError(t, err)
+
+	c.Advance(11 * time.Minute)
+	err = svc.Cleanup(ctx)
+	require.NoError(t, err)
+	assert.Len(t, repo.oauthStates, 0)
 }
 
 func extractTokenFromURL(t *testing.T, body string) string {

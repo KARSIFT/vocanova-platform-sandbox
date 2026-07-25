@@ -148,3 +148,85 @@ func TestPostgreSQLRepositoryCleanupExpiredMagicLinks(t *testing.T) {
 
 	require.NoError(t, mock.ExpectationsWereMet())
 }
+
+func TestPostgreSQLRepositoryCreateOAuthStateAndGetByTokenHash(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewPostgreSQLRepository(db)
+	ctx := context.Background()
+	now := time.Now().UTC()
+	hash := []byte("01234567890123456789012345678901")
+	expiresAt := now.Add(10 * time.Minute)
+
+	mock.ExpectExec("INSERT INTO oauth_states").
+		WithArgs(sqlmock.AnyArg(), hash, "test", "google", "https://test.example.com/app", now, expiresAt).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	state, err := repo.CreateOAuthState(ctx, hash, "test", "google", "https://test.example.com/app", now, expiresAt)
+	require.NoError(t, err)
+	assert.Equal(t, "test", state.Environment)
+	assert.Equal(t, "google", state.Provider)
+
+	mock.ExpectQuery("SELECT id, environment, provider, app_return_url, created_at, expires_at, consumed_at FROM oauth_states").
+		WithArgs(hash).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "environment", "provider", "app_return_url", "created_at", "expires_at", "consumed_at"}).
+			AddRow(uuid.New(), "test", "google", "https://test.example.com/app", now, expiresAt, nil))
+
+	got, err := repo.GetOAuthStateByTokenHash(ctx, hash)
+	require.NoError(t, err)
+	assert.Equal(t, "test", got.Environment)
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestPostgreSQLRepositoryCreateExternalIdentityAndGet(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewPostgreSQLRepository(db)
+	ctx := context.Background()
+	userID := uuid.New()
+
+	mock.ExpectExec("INSERT INTO external_identities").
+		WithArgs(sqlmock.AnyArg(), userID, "google", "sub-123", "user@example.com", true, sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	ext, err := repo.CreateExternalIdentity(ctx, userID, "google", "sub-123", "user@example.com", true)
+	require.NoError(t, err)
+	assert.Equal(t, userID, ext.UserID)
+	assert.Equal(t, "sub-123", ext.ProviderSubject)
+
+	mock.ExpectQuery("SELECT id, user_id, provider, provider_subject, provider_email, provider_email_verified, created_at, updated_at FROM external_identities").
+		WithArgs("google", "sub-123").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "provider", "provider_subject", "provider_email", "provider_email_verified", "created_at", "updated_at"}).
+			AddRow(uuid.New(), userID, "google", "sub-123", "user@example.com", true, time.Now().UTC(), time.Now().UTC()))
+
+	got, err := repo.GetExternalIdentity(ctx, "google", "sub-123")
+	require.NoError(t, err)
+	assert.Equal(t, "sub-123", got.ProviderSubject)
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestPostgreSQLRepositoryCleanupExpiredOAuthStates(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewPostgreSQLRepository(db)
+	ctx := context.Background()
+	before := time.Now().UTC()
+
+	mock.ExpectExec("DELETE FROM oauth_states").
+		WithArgs(before).
+		WillReturnResult(sqlmock.NewResult(0, 2))
+
+	n, err := repo.CleanupExpiredOAuthStates(ctx, before)
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), n)
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}

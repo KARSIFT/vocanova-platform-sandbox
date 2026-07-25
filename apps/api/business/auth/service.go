@@ -13,52 +13,71 @@ import (
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/email"
-	"github.com/google/uuid"
 )
 
 // Config holds the auth service configuration.
 type Config struct {
-	Environment       string
-	BaseURL           string
-	MagicLinkPath     string
-	SessionLifetime   time.Duration
-	MagicLinkLifetime time.Duration
-	Cookie            CookieConfig
-	RateLimit         RateLimitConfig
+	Environment            string
+	BaseURL                string
+	MagicLinkPath          string
+	OAuthRedirectURI       string
+	OAuthRedirectAllowlist []string
+	SessionLifetime        time.Duration
+	MagicLinkLifetime      time.Duration
+	OAuthStateLifetime     time.Duration
+	Cookie                 CookieConfig
+	RateLimit              RateLimitConfig
 }
 
 // RateLimitConfig configures rate limits.
 type RateLimitConfig struct {
-	MagicRequestWindow time.Duration
-	MagicRequestLimit  int
-	MagicConsumeWindow time.Duration
-	MagicConsumeLimit  int
-	LogoutWindow       time.Duration
-	LogoutLimit        int
+	MagicRequestWindow  time.Duration
+	MagicRequestLimit   int
+	MagicConsumeWindow  time.Duration
+	MagicConsumeLimit   int
+	OAuthStartWindow    time.Duration
+	OAuthStartLimit     int
+	OAuthCallbackWindow time.Duration
+	OAuthCallbackLimit  int
+	LogoutWindow        time.Duration
+	LogoutLimit         int
 }
 
-// Service implements magic-link, session, and logout lifecycle.
+// Service implements magic-link, OAuth, session, and logout lifecycle.
 type Service struct {
 	repo        Repository
 	emailSender email.Sender
+	oauth       OAuthProvider
 	clock       clock.Clock
 	limiter     RateLimiter
 	cfg         Config
 }
 
 // NewService creates an auth service.
-func NewService(repo Repository, emailSender email.Sender, c clock.Clock, limiter RateLimiter, cfg Config) *Service {
+func NewService(repo Repository, emailSender email.Sender, oauth OAuthProvider, c clock.Clock, limiter RateLimiter, cfg Config) *Service {
 	if cfg.SessionLifetime == 0 {
 		cfg.SessionLifetime = 30 * 24 * time.Hour
 	}
 	if cfg.MagicLinkLifetime == 0 {
 		cfg.MagicLinkLifetime = 15 * time.Minute
 	}
+	if cfg.OAuthStateLifetime == 0 {
+		cfg.OAuthStateLifetime = 10 * time.Minute
+	}
 	if cfg.MagicLinkPath == "" {
 		cfg.MagicLinkPath = "/auth/magic"
 	}
-	return &Service{repo: repo, emailSender: emailSender, clock: c, limiter: limiter, cfg: cfg}
+	return &Service{repo: repo, emailSender: emailSender, oauth: oauth, clock: c, limiter: limiter, cfg: cfg}
 }
+
+// OAuthConfigured reports whether an OAuth provider is wired.
+func (s *Service) OAuthConfigured() bool { return s.oauth != nil }
+
+// Clock returns the service clock for HTTP-layer cookie expiry calculations.
+func (s *Service) Clock() clock.Clock { return s.clock }
+
+// OAuthStateLifetime returns the configured OAuth state lifetime.
+func (s *Service) OAuthStateLifetime() time.Duration { return s.cfg.OAuthStateLifetime }
 
 // RequestMagicLink creates a single-use magic link and sends it to the email.
 func (s *Service) RequestMagicLink(ctx context.Context, clientIP, emailAddr string) error {
@@ -163,30 +182,165 @@ func (s *Service) ConsumeMagicLink(ctx context.Context, clientIP, token, emailAd
 		return nil, nil, "", fmt.Errorf("consume magic link: %w", err)
 	}
 
-	if err := s.repo.UpdateUserLastLogin(ctx, user.ID, now); err != nil {
-		return nil, nil, "", fmt.Errorf("update last login: %w", err)
-	}
-	user.LastLoginAt = &now
-
-	session, rawToken, err := s.createSession(ctx, user.ID)
+	user, session, token, err := s.issueSession(ctx, user)
 	if err != nil {
 		return nil, nil, "", err
 	}
-	return user, session, rawToken, nil
+	return user, session, token, nil
 }
 
-func (s *Service) createSession(ctx context.Context, userID uuid.UUID) (*Session, string, error) {
+// OAuthStart begins a Google OAuth flow. It returns the provider authorization
+// URL and the raw state token to set as a cookie. The appReturnURL is the
+// application destination the user should be sent to after successful callback.
+func (s *Service) OAuthStart(ctx context.Context, clientIP, appReturnURL string) (string, string, error) {
+	if !s.OAuthConfigured() {
+		return "", "", ErrOAuthNotConfigured
+	}
+	if !s.allowedAppReturnURL(appReturnURL) {
+		return "", "", ErrOAuthProviderFailed
+	}
+
+	allowed, err := s.limiter.Allow(ctx, KeyForIP("oauth.start", clientIP))
+	if err != nil {
+		return "", "", fmt.Errorf("rate limit: %w", err)
+	}
+	if !allowed {
+		return "", "", ErrRateLimited
+	}
+
+	now := s.clock.Now()
+	expiresAt := now.Add(s.cfg.OAuthStateLifetime)
+	token, hash, err := generateToken()
+	if err != nil {
+		return "", "", err
+	}
+	if _, err := s.repo.CreateOAuthState(ctx, hash, s.cfg.Environment, "google", appReturnURL, now, expiresAt); err != nil {
+		return "", "", fmt.Errorf("create oauth state: %w", err)
+	}
+
+	authURL := s.oauth.AuthURL(token, s.cfg.OAuthRedirectURI)
+	return authURL, token, nil
+}
+
+// OAuthCallback validates the OAuth state, verifies the code with the provider,
+// and creates/links the internal identity and session. It returns the
+// application return URL that was supplied at the start of the flow.
+func (s *Service) OAuthCallback(ctx context.Context, clientIP, code, state, cookieState string) (*User, *Session, string, string, error) {
+	if !s.OAuthConfigured() {
+		return nil, nil, "", "", ErrOAuthNotConfigured
+	}
+	allowed, err := s.limiter.Allow(ctx, KeyForIP("oauth.callback", clientIP))
+	if err != nil {
+		return nil, nil, "", "", fmt.Errorf("rate limit: %w", err)
+	}
+	if !allowed {
+		return nil, nil, "", "", ErrRateLimited
+	}
+
+	state = strings.TrimSpace(state)
+	cookieState = strings.TrimSpace(cookieState)
+	if state == "" || cookieState == "" || subtleCompare(state, cookieState) != 1 {
+		return nil, nil, "", "", ErrInvalidOAuthState
+	}
+
+	_, hash, err := tokenAndHash(state)
+	if err != nil {
+		return nil, nil, "", "", ErrInvalidOAuthState
+	}
+	ostate, err := s.repo.GetOAuthStateByTokenHash(ctx, hash)
+	if err != nil {
+		return nil, nil, "", "", ErrInvalidOAuthState
+	}
+	now := s.clock.Now()
+	if ostate.Environment != s.cfg.Environment || ostate.Provider != "google" || !ostate.Valid(now) {
+		return nil, nil, "", "", ErrInvalidOAuthState
+	}
+	if err := s.repo.ConsumeOAuthState(ctx, ostate.ID, now); err != nil {
+		return nil, nil, "", "", fmt.Errorf("consume oauth state: %w", err)
+	}
+
+	identity, err := s.oauth.Verify(ctx, code, state, s.cfg.OAuthRedirectURI)
+	if err != nil {
+		return nil, nil, "", "", ErrOAuthProviderFailed
+	}
+	if identity.Subject == "" || identity.Email == "" || !identity.EmailVerified {
+		return nil, nil, "", "", ErrOAuthProviderFailed
+	}
+
+	emailAddr := normalizeEmail(identity.Email)
+	if emailAddr == "" {
+		return nil, nil, "", "", ErrOAuthProviderFailed
+	}
+
+	// Try to find an existing provider identity first.
+	user, err := s.resolveOAuthIdentity(ctx, identity, emailAddr, now)
+	if err != nil {
+		return nil, nil, "", "", err
+	}
+	if !user.Active() {
+		return nil, nil, "", "", ErrUserDisabled
+	}
+
+	_, session, token, err := s.issueSession(ctx, user)
+	if err != nil {
+		return nil, nil, "", "", err
+	}
+	return user, session, token, ostate.AppReturnURL, nil
+}
+
+func (s *Service) resolveOAuthIdentity(ctx context.Context, identity *OAuthIdentity, emailAddr string, now time.Time) (*User, error) {
+	// Existing provider identity takes precedence; this prevents email takeover.
+	if ext, err := s.repo.GetExternalIdentity(ctx, "google", identity.Subject); err == nil {
+		user, err := s.repo.GetUserByID(ctx, ext.UserID)
+		if err != nil {
+			return nil, ErrOAuthProviderFailed
+		}
+		return user, nil
+	}
+
+	// No existing provider identity. Link to an existing user by verified email
+	// if one exists, otherwise create a new verified user.
+	user, err := s.repo.GetUserByEmail(ctx, emailAddr)
+	if err != nil {
+		user, err = s.repo.CreateUser(ctx, emailAddr, &now)
+		if err != nil {
+			return nil, fmt.Errorf("create user: %w", err)
+		}
+	}
+	if _, err := s.repo.CreateExternalIdentity(ctx, user.ID, "google", identity.Subject, emailAddr, true); err != nil {
+		return nil, fmt.Errorf("create external identity: %w", err)
+	}
+	return user, nil
+}
+
+func (s *Service) allowedAppReturnURL(uri string) bool {
+	if uri == "" {
+		return false
+	}
+	for _, allowed := range s.cfg.OAuthRedirectAllowlist {
+		if uri == allowed {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Service) issueSession(ctx context.Context, user *User) (*User, *Session, string, error) {
 	now := s.clock.Now()
 	expiresAt := now.Add(s.cfg.SessionLifetime)
 	token, hash, err := generateToken()
 	if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
-	session, err := s.repo.CreateSession(ctx, userID, hash, now, expiresAt)
+	if err := s.repo.UpdateUserLastLogin(ctx, user.ID, now); err != nil {
+		return nil, nil, "", fmt.Errorf("update last login: %w", err)
+	}
+	user.LastLoginAt = &now
+	session, err := s.repo.CreateSession(ctx, user.ID, hash, now, expiresAt)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
-	return session, token, nil
+	return user, session, token, nil
 }
 
 // ValidateSession returns the active user for a session bearer token.
@@ -243,7 +397,7 @@ func (s *Service) Logout(ctx context.Context, token string) error {
 	return s.repo.RevokeSession(ctx, session.ID, now)
 }
 
-// Cleanup removes expired and revoked sessions and magic links.
+// Cleanup removes expired and revoked sessions, magic links, and oauth states.
 func (s *Service) Cleanup(ctx context.Context) error {
 	now := s.clock.Now()
 	if _, err := s.repo.CleanupExpiredSessions(ctx, now); err != nil {
@@ -251,6 +405,9 @@ func (s *Service) Cleanup(ctx context.Context) error {
 	}
 	if _, err := s.repo.CleanupExpiredMagicLinks(ctx, now); err != nil {
 		return fmt.Errorf("cleanup magic links: %w", err)
+	}
+	if _, err := s.repo.CleanupExpiredOAuthStates(ctx, now); err != nil {
+		return fmt.Errorf("cleanup oauth states: %w", err)
 	}
 	return nil
 }
@@ -276,9 +433,22 @@ func (s *Service) SessionCookieName() string { return s.cfg.Cookie.Name }
 // CSRFCookieName returns the configured CSRF double-submit cookie name.
 func (s *Service) CSRFCookieName() string { return s.cfg.Cookie.CSRName }
 
+// OAuthStateCookieName returns the configured OAuth state cookie name.
+func (s *Service) OAuthStateCookieName() string { return s.cfg.Cookie.OAuthStateName }
+
 // IssueCSRFCookie returns a new double-submit CSRF token and its cookie.
 func (s *Service) IssueCSRFCookie() (string, *http.Cookie) {
 	return CSRFToken(s.cfg.Cookie)
+}
+
+// OAuthStateCookie returns the short-lived OAuth state cookie.
+func (s *Service) OAuthStateCookie(token string, expiresAt time.Time) *http.Cookie {
+	return OAuthStateCookie(s.cfg.Cookie, token, expiresAt)
+}
+
+// ClearOAuthStateCookie returns a cookie that deletes the OAuth state cookie.
+func (s *Service) ClearOAuthStateCookie() *http.Cookie {
+	return ClearOAuthStateCookie(s.cfg.Cookie)
 }
 
 // ValidateCSRF validates the double-submit CSRF token.
@@ -307,10 +477,17 @@ func base64URLDecode(s string) ([]byte, error) {
 	return base64.URLEncoding.DecodeString(s)
 }
 
-// Public errors returned by the service.
-var (
-	ErrInvalidMagicLink       = errors.New("invalid or expired magic link")
-	ErrAuthenticationRequired = errors.New("authentication required")
-	ErrUserDisabled           = errors.New("user disabled")
-	ErrRateLimited            = errors.New("rate limited")
-)
+// subtleCompare wraps subtle.ConstantTimeCompare using a 1/0 result.
+func subtleCompare(a, b string) int {
+	if len(a) != len(b) {
+		return 0
+	}
+	var v byte
+	for i := 0; i < len(a); i++ {
+		v |= a[i] ^ b[i]
+	}
+	if v == 0 {
+		return 1
+	}
+	return 0
+}

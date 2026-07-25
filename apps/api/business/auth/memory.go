@@ -13,24 +13,32 @@ import (
 // It is not concurrency-safe for the same email/user identity across racing
 // requests; production uses PostgreSQLRepository.
 type MemoryRepository struct {
-	mu               sync.Mutex
-	users            map[uuid.UUID]*User
-	usersByEmail     map[string]*User
-	sessions         map[uuid.UUID]*Session
-	sessionsByHash   map[string]*Session
-	magicLinks       map[uuid.UUID]*MagicLink
-	magicLinksByHash map[string]*MagicLink
+	mu                 sync.Mutex
+	users              map[uuid.UUID]*User
+	usersByEmail       map[string]*User
+	sessions           map[uuid.UUID]*Session
+	sessionsByHash     map[string]*Session
+	magicLinks         map[uuid.UUID]*MagicLink
+	magicLinksByHash   map[string]*MagicLink
+	oauthStates        map[uuid.UUID]*OAuthState
+	oauthStatesByHash  map[string]*OAuthState
+	externalIdentities map[uuid.UUID]*ExternalIdentity
+	externalByProvider map[string]*ExternalIdentity
 }
 
 // NewMemoryRepository initializes an empty in-memory repository.
 func NewMemoryRepository() *MemoryRepository {
 	return &MemoryRepository{
-		users:            make(map[uuid.UUID]*User),
-		usersByEmail:     make(map[string]*User),
-		sessions:         make(map[uuid.UUID]*Session),
-		sessionsByHash:   make(map[string]*Session),
-		magicLinks:       make(map[uuid.UUID]*MagicLink),
-		magicLinksByHash: make(map[string]*MagicLink),
+		users:              make(map[uuid.UUID]*User),
+		usersByEmail:       make(map[string]*User),
+		sessions:           make(map[uuid.UUID]*Session),
+		sessionsByHash:     make(map[string]*Session),
+		magicLinks:         make(map[uuid.UUID]*MagicLink),
+		magicLinksByHash:   make(map[string]*MagicLink),
+		oauthStates:        make(map[uuid.UUID]*OAuthState),
+		oauthStatesByHash:  make(map[string]*OAuthState),
+		externalIdentities: make(map[uuid.UUID]*ExternalIdentity),
+		externalByProvider: make(map[string]*ExternalIdentity),
 	}
 }
 
@@ -181,6 +189,75 @@ func (r *MemoryRepository) AttachMagicLinkUser(ctx context.Context, id uuid.UUID
 	return nil
 }
 
+func (r *MemoryRepository) CreateOAuthState(ctx context.Context, tokenHash []byte, environment, provider, appReturnURL string, createdAt, expiresAt time.Time) (*OAuthState, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	o := &OAuthState{
+		ID:           uuid.New(),
+		Environment:  environment,
+		Provider:     provider,
+		AppReturnURL: appReturnURL,
+		CreatedAt:    createdAt.UTC(),
+		ExpiresAt:    expiresAt.UTC(),
+	}
+	r.oauthStates[o.ID] = o
+	r.oauthStatesByHash[string(tokenHash)] = o
+	return o, nil
+}
+
+func (r *MemoryRepository) GetOAuthStateByTokenHash(ctx context.Context, tokenHash []byte) (*OAuthState, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	o, ok := r.oauthStatesByHash[string(tokenHash)]
+	if !ok {
+		return nil, errors.New("oauth state not found")
+	}
+	copy := *o
+	return &copy, nil
+}
+
+func (r *MemoryRepository) ConsumeOAuthState(ctx context.Context, id uuid.UUID, consumedAt time.Time) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	o, ok := r.oauthStates[id]
+	if !ok {
+		return errors.New("oauth state not found")
+	}
+	o.ConsumedAt = &consumedAt
+	return nil
+}
+
+func (r *MemoryRepository) GetExternalIdentity(ctx context.Context, provider, providerSubject string) (*ExternalIdentity, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	key := provider + ":" + providerSubject
+	ext, ok := r.externalByProvider[key]
+	if !ok {
+		return nil, errors.New("external identity not found")
+	}
+	copy := *ext
+	return &copy, nil
+}
+
+func (r *MemoryRepository) CreateExternalIdentity(ctx context.Context, userID uuid.UUID, provider, providerSubject, providerEmail string, providerEmailVerified bool) (*ExternalIdentity, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	now := time.Now().UTC()
+	ext := &ExternalIdentity{
+		ID:                    uuid.New(),
+		UserID:                userID,
+		Provider:              provider,
+		ProviderSubject:       providerSubject,
+		ProviderEmail:         providerEmail,
+		ProviderEmailVerified: providerEmailVerified,
+		CreatedAt:             now,
+		UpdatedAt:             now,
+	}
+	r.externalIdentities[ext.ID] = ext
+	r.externalByProvider[provider+":"+providerSubject] = ext
+	return ext, nil
+}
+
 func (r *MemoryRepository) CleanupExpiredSessions(ctx context.Context, before time.Time) (int64, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -210,6 +287,25 @@ func (r *MemoryRepository) CleanupExpiredMagicLinks(ctx context.Context, before 
 			for h, mm := range r.magicLinksByHash {
 				if mm.ID == id {
 					delete(r.magicLinksByHash, h)
+					break
+				}
+			}
+			count++
+		}
+	}
+	return count, nil
+}
+
+func (r *MemoryRepository) CleanupExpiredOAuthStates(ctx context.Context, before time.Time) (int64, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var count int64
+	for id, o := range r.oauthStates {
+		if !o.ExpiresAt.After(before) || o.ConsumedAt != nil {
+			delete(r.oauthStates, id)
+			for h, oo := range r.oauthStatesByHash {
+				if oo.ID == id {
+					delete(r.oauthStatesByHash, h)
 					break
 				}
 			}

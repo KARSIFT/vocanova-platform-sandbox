@@ -17,6 +17,16 @@ export interface ConsumeMagicLinkBody {
   email: string;
 }
 
+/** Body for POST /api/v1/auth/oauth/google/start. */
+export interface OAuthStartBody {
+  redirectUri: string;
+}
+
+/** Response for POST /api/v1/auth/oauth/google/start. */
+export interface OAuthStartResponse {
+  url: string;
+}
+
 /** Huma problem-details error model. */
 export interface ApiError {
   type?: string;

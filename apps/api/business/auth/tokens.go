@@ -38,11 +38,12 @@ func normalizeEmail(email string) string {
 
 // CookieConfig holds session and CSRF cookie settings.
 type CookieConfig struct {
-	Name     string
-	CSRName  string // double-submit cookie name
-	Domain   string
-	Secure   bool
-	SameSite http.SameSite
+	Name           string
+	CSRName        string // double-submit cookie name
+	OAuthStateName string // OAuth state cookie name
+	Domain         string
+	Secure         bool
+	SameSite       http.SameSite
 }
 
 // SessionCookie writes the session bearer cookie.
@@ -108,6 +109,34 @@ func ValidateCSRF(cookieValue, headerValue string) bool {
 		return false
 	}
 	return subtle.ConstantTimeCompare([]byte(cookieValue), []byte(headerValue)) == 1
+}
+
+// OAuthStateCookie writes the OAuth state cookie.
+func OAuthStateCookie(cfg CookieConfig, token string, expiresAt time.Time) *http.Cookie {
+	return &http.Cookie{
+		Name:     cfg.OAuthStateName,
+		Value:    token,
+		Domain:   cfg.Domain,
+		Path:     "/",
+		Expires:  expiresAt,
+		HttpOnly: true,
+		Secure:   cfg.Secure,
+		SameSite: http.SameSiteLaxMode,
+	}
+}
+
+// ClearOAuthStateCookie returns a cookie that deletes the OAuth state cookie.
+func ClearOAuthStateCookie(cfg CookieConfig) *http.Cookie {
+	return &http.Cookie{
+		Name:     cfg.OAuthStateName,
+		Value:    "",
+		Domain:   cfg.Domain,
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   cfg.Secure,
+		SameSite: http.SameSiteLaxMode,
+	}
 }
 
 // clientIP returns a best-effort client IP for rate-limiting from a Huma

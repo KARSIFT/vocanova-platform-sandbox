@@ -142,6 +142,52 @@
         },
         "type": "object"
       },
+      "OAuthStartInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/OAuthStartInputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "redirectUri": {
+            "description": "The allowed OAuth redirect URI to return to",
+            "format": "uri",
+            "type": "string"
+          }
+        },
+        "required": [
+          "redirectUri"
+        ],
+        "type": "object"
+      },
+      "OAuthStartOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/OAuthStartOutputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "url": {
+            "description": "The Google OAuth authorization URL to redirect the user to",
+            "format": "uri",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      },
       "RequestMagicLinkInputBody": {
         "additionalProperties": false,
         "properties": {
@@ -279,6 +325,96 @@
           }
         },
         "summary": "Consume a magic sign-in link",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/oauth/google/callback": {
+      "get": {
+        "operationId": "OAuthCallback",
+        "parameters": [
+          {
+            "description": "The authorization code from the OAuth provider",
+            "explode": false,
+            "in": "query",
+            "name": "code",
+            "schema": {
+              "description": "The authorization code from the OAuth provider",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The state parameter returned by the OAuth provider",
+            "explode": false,
+            "in": "query",
+            "name": "state",
+            "schema": {
+              "description": "The state parameter returned by the OAuth provider",
+              "type": "string"
+            }
+          },
+          {
+            "description": "An error returned by the OAuth provider",
+            "explode": false,
+            "in": "query",
+            "name": "error",
+            "schema": {
+              "description": "An error returned by the OAuth provider",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "302": {
+            "description": "Redirect to the authenticated application"
+          }
+        },
+        "summary": "Handle the Google OAuth provider callback",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/oauth/google/start": {
+      "post": {
+        "operationId": "OAuthStart",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OAuthStartInputBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthStartOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Start a Google OAuth sign-in flow",
         "tags": [
           "Authentication"
         ]
