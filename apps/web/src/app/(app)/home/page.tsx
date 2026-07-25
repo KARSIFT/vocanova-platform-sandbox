@@ -1,5 +1,9 @@
 import Link from "next/link";
 
+import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
+
+// VOC-019 P4-pending mock fields: mission target, reviewed-today count, streak,
+// and due-review count have no P1 equivalent and stay mocked pending P4/P2.
 const MOCK_HOME_STATE = {
   missionTargetWords: 10,
   reviewedWordsToday: 3,
@@ -7,7 +11,17 @@ const MOCK_HOME_STATE = {
   dueReviewWords: 8,
 } as const;
 
-export default function HomePage() {
+export default async function HomePage() {
+  const client = await createServerApiClient();
+  let savedWordsResponse: Awaited<ReturnType<typeof client.listSavedWords>>;
+  try {
+    savedWordsResponse = await client.listSavedWords({ limit: 10 });
+  } catch (error) {
+    requireAuthRedirect(error, "/home");
+  }
+
+  const { items: savedWords } = savedWordsResponse.data;
+
   const {
     missionTargetWords,
     reviewedWordsToday,
@@ -22,7 +36,6 @@ export default function HomePage() {
 
   return (
     <div className="p-[var(--spacing-lg)]">
-      {/* Placeholder local state for VOC-019 static UI; replace with real API wiring in follow-up package. */}
       <section
         aria-labelledby="todays-mission-heading"
         className="rounded-md border border-neutral-200 bg-neutral-50 p-[var(--spacing-md)] shadow-sm"
@@ -51,6 +64,43 @@ export default function HomePage() {
             style={{ width: `${missionProgressPercent}%` }}
           />
         </div>
+      </section>
+
+      <section
+        aria-labelledby="saved-words-heading"
+        className="mt-[var(--spacing-lg)] rounded-md border border-neutral-200 bg-neutral-50 p-[var(--spacing-md)] shadow-sm"
+      >
+        <h2
+          id="saved-words-heading"
+          className="text-lg font-semibold text-neutral-900"
+        >
+          Saved words
+        </h2>
+        {savedWords.length > 0 ? (
+          <ul className="mt-[var(--spacing-sm)] space-y-[var(--spacing-xs)]">
+            {savedWords.map((savedWord) => (
+              <li
+                key={savedWord.userWordId}
+                className="rounded-md p-[var(--spacing-sm)]"
+              >
+                <p className="font-medium text-neutral-900">
+                  {savedWord.wordText}
+                  <span className="ml-[var(--spacing-xs)] text-sm font-normal text-neutral-600">
+                    {savedWord.partOfSpeech}
+                  </span>
+                </p>
+                <p className="text-base text-neutral-700">
+                  {savedWord.shortDefinition}
+                </p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-[var(--spacing-sm)] text-base text-neutral-700">
+            You haven&apos;t saved any words yet. Explore a journey to start
+            building your vocabulary.
+          </p>
+        )}
       </section>
 
       <p className="mt-[var(--spacing-lg)] text-base text-neutral-800">
