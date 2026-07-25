@@ -23,6 +23,9 @@ const expectedMocks = [
     expectedConstant: "MOCK_PROGRESS_STATE",
     vocPackage: "VOC-020",
   },
+];
+
+const decommissionedMocks = [
   {
     file: "apps/web/src/app/(app)/discover/page.tsx",
     expectedConstant: "MOCK_DISCOVER_SITUATIONS",
@@ -35,16 +38,7 @@ const expectedMocks = [
   },
 ];
 
-const expectedMockConsumers = [
-  {
-    file: "apps/web/src/app/(app)/discover/[situation]/page.tsx",
-    expectedImport: "MOCK_SITUATION_WORD_LISTS",
-  },
-  {
-    file: "apps/web/src/app/(app)/discover/[situation]/[word]/page.tsx",
-    expectedImport: "MOCK_SITUATION_WORD_LISTS",
-  },
-];
+const expectedMockConsumers = [];
 
 const expectedRouteDirectories = [
   "home",
@@ -77,18 +71,16 @@ export function validateMockInventory() {
     }
   }
 
-  // Verify the two situation routes still import the shared mock data.
-  for (const consumer of expectedMockConsumers) {
-    const filePath = path.join(repositoryRoot, consumer.file);
-    if (!exists(filePath)) {
-      errors.push(`missing mock consumer file: ${consumer.file}`);
-      continue;
-    }
-    const content = readFileSync(filePath, "utf8");
-    if (!content.includes(consumer.expectedImport)) {
-      errors.push(
-        `${consumer.file}: expected import ${consumer.expectedImport} not found`,
-      );
+  // Verify the decommissioned P1 mocks are gone from their original files.
+  for (const mock of decommissionedMocks) {
+    const filePath = path.join(repositoryRoot, mock.file);
+    if (exists(filePath)) {
+      const content = readFileSync(filePath, "utf8");
+      if (content.includes(mock.expectedConstant)) {
+        errors.push(
+          `${mock.file}: decommissioned constant ${mock.expectedConstant} still present`,
+        );
+      }
     }
   }
 
@@ -150,11 +142,7 @@ export function validateMockInventory() {
 
   // Verify no new MOCK_ or placeholder data sources were introduced in (app).
   const appFiles = globSync("**/*.{ts,tsx}", { cwd: appRouteRoot });
-  const knownMocks = new Set(
-    expectedMocks
-      .map((m) => m.expectedConstant)
-      .concat("MOCK_SITUATION_WORD_LISTS"),
-  );
+  const knownMocks = new Set(expectedMocks.map((m) => m.expectedConstant));
   for (const file of appFiles) {
     const content = readFileSync(path.join(appRouteRoot, file), "utf8");
     const mockMatches = content.match(/\bMOCK_[A-Z_]+\b/g) ?? [];
