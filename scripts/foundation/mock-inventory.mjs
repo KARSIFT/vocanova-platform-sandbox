@@ -146,8 +146,14 @@ export function validateMockInventory() {
     }
   }
 
-  // Verify no unexpected business modules (i.e. no invented P2–P4 behavior).
-  const allowedBusinessModules = new Set(["auth", "content", "learning"]);
+  // Verify no unexpected business modules. VOC-027-T00 adds only the pure
+  // scheduling domain; API routes and other P2–P4 behavior remain excluded.
+  const allowedBusinessModules = new Set([
+    "auth",
+    "content",
+    "learning",
+    "reviews",
+  ]);
   for (const entry of readdirSync(apiBusinessRoot, {
     withFileTypes: true,
   })) {
@@ -166,6 +172,7 @@ export function validateMockInventory() {
     "journeyword.go",
     "magiclink.go",
     "mixins.go",
+    "reviewattempt.go",
     "session.go",
     "usagenote.go",
     "user.go",
@@ -191,6 +198,7 @@ export function validateMockInventory() {
     "20260724210001_oauth_state.sql",
     "20260725100000_voc026_p1_content_tables.sql",
     "20260725100001_voc026_p1_idempotency_keys.sql",
+    "20260725110000_voc027_p2_review_attempts.sql",
   ]);
   for (const entry of readdirSync(apiMigrationRoot, {
     withFileTypes: true,
