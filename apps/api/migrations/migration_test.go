@@ -132,6 +132,73 @@ func TestVOC027P2ReviewAttemptsMigrationCarriesDatabaseInvariants(t *testing.T) 
 	}
 }
 
+func TestVOC028P3LearnerSentencesMigrationCarriesDatabaseInvariants(t *testing.T) {
+	sql, err := os.ReadFile("20260725120000_voc028_p3_learner_sentences.sql")
+	if err != nil {
+		t.Fatalf("read voc-028 p3 learner_sentences migration: %v", err)
+	}
+	text := string(sql)
+	required := []string{
+		"CREATE TABLE learner_sentences",
+		"REFERENCES users(id)",
+		"REFERENCES word_meanings(id)",
+		"REFERENCES user_words(id)",
+		"ON DELETE RESTRICT",
+		"source IN ('word_detail', 'review', 'daily_mission', 'free_practice')",
+		"status IN ('submitted', 'feedback_ready', 'feedback_failed', 'archived')",
+		"char_length(sentence_text) <= 1000",
+		"deleted_at",
+	}
+	for _, invariant := range required {
+		if !strings.Contains(text, invariant) {
+			t.Errorf("migration missing invariant %q", invariant)
+		}
+	}
+	for _, forbidden := range []string{"session_token", "magic_link_token", "access_token", "refresh_token", "oauth_state_token"} {
+		if strings.Contains(text, forbidden) {
+			t.Errorf("migration contains forbidden raw bearer column %q", forbidden)
+		}
+	}
+	if strings.Contains(text, "ON DELETE CASCADE") {
+		t.Errorf("learner_sentences migration contains forbidden ON DELETE CASCADE")
+	}
+}
+
+func TestVOC028P3AIFeedbackAttemptsMigrationCarriesDatabaseInvariants(t *testing.T) {
+	sql, err := os.ReadFile("20260725120001_voc028_p3_ai_feedback_attempts.sql")
+	if err != nil {
+		t.Fatalf("read voc-028 p3 ai_feedback_attempts migration: %v", err)
+	}
+	text := string(sql)
+	required := []string{
+		"CREATE TABLE ai_feedback_attempts",
+		"REFERENCES learner_sentences(id)",
+		"ON DELETE RESTRICT",
+		"status IN ('pending', 'succeeded', 'failed', 'cancelled')",
+		"provider text NOT NULL",
+		"model text NOT NULL",
+		"prompt_version text NOT NULL",
+		"request_hash text NOT NULL",
+		"feedback_json jsonb",
+		"status <> 'succeeded' OR completed_at IS NOT NULL",
+		"status <> 'failed' OR error_code IS NOT NULL",
+		"ON ai_feedback_attempts (request_hash)",
+	}
+	for _, invariant := range required {
+		if !strings.Contains(text, invariant) {
+			t.Errorf("migration missing invariant %q", invariant)
+		}
+	}
+	for _, forbidden := range []string{"session_token", "magic_link_token", "access_token", "refresh_token", "oauth_state_token"} {
+		if strings.Contains(text, forbidden) {
+			t.Errorf("migration contains forbidden raw bearer column %q", forbidden)
+		}
+	}
+	if strings.Contains(text, "ON DELETE CASCADE") {
+		t.Errorf("ai_feedback_attempts migration contains forbidden ON DELETE CASCADE")
+	}
+}
+
 func TestVOC026P1IdempotencyMigrationCarriesDatabaseInvariants(t *testing.T) {
 	sql, err := os.ReadFile("20260725100001_voc026_p1_idempotency_keys.sql")
 	if err != nil {

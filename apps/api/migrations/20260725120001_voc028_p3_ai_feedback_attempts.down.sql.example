@@ -1,0 +1,6 @@
+-- atlas:txmode transaction
+-- VOC-028-T00: disposable recovery rehearsal example only. Not executable by
+-- Atlas in production; production recovery must preserve immutable feedback
+-- history and learner content.
+
+DROP TABLE IF EXISTS ai_feedback_attempts;

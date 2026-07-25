@@ -36,6 +36,7 @@ func (User) Edges() []ent.Edge {
 		edge.To("magic_links", MagicLink.Type),
 		edge.To("user_words", UserWord.Type),
 		edge.To("review_attempts", ReviewAttempt.Type),
+		edge.To("learner_sentences", LearnerSentence.Type),
 	}
 }
 
