@@ -15,8 +15,9 @@ const apiBusinessRoot = path.join(repositoryRoot, "apps/api/business");
 const apiSchemaRoot = path.join(repositoryRoot, "apps/api/ent/schema");
 const apiMigrationRoot = path.join(repositoryRoot, "apps/api/migrations");
 
-// Inventory of VOC-010–VOC-024 mocks retained as P4-pending placeholders.
-// See specs/changes/VOC-026-begin-milestone-p1-discover-and-save-words-per-doc/mock-inventory.md
+// Inventory of VOC-010–VOC-024 mocks retained as P4-pending placeholders,
+// reconciled at the VOC-027 P2 boundary. See
+// specs/changes/VOC-027-begin-milestone-p2-review-saved-words/mock-inventory.md
 const expectedMocks = [
   {
     file: "apps/web/src/app/(app)/home/page.tsx",
@@ -61,6 +62,7 @@ const expectedRouteDirectories = [
   path.join("discover", "[situation]"),
   path.join("discover", "[situation]", "[word]"),
   "progress",
+  "reviews",
 ];
 
 export function validateMockInventory() {
@@ -82,6 +84,33 @@ export function validateMockInventory() {
     if (!content.includes(mock.vocPackage)) {
       errors.push(
         `${mock.file}: expected VOC package reference ${mock.vocPackage} not found`,
+      );
+    }
+  }
+
+  // VOC-027-D05: Home's dueReviewWords was decommissioned to the real P2 due-queue
+  // count and must no longer be a hardcoded field in MOCK_HOME_STATE.
+  const homePath = path.join(
+    repositoryRoot,
+    "apps/web/src/app/(app)/home/page.tsx",
+  );
+  if (exists(homePath)) {
+    const homeContent = readFileSync(homePath, "utf8");
+    const homeMockMatch = homeContent.match(
+      /const\s+MOCK_HOME_STATE\s*=\s*\{[\s\S]*?\}\s*as\s+const/,
+    );
+    if (homeMockMatch && homeMockMatch[0].includes("dueReviewWords")) {
+      errors.push(
+        "apps/web/src/app/(app)/home/page.tsx: MOCK_HOME_STATE still contains the decommissioned dueReviewWords field",
+      );
+    }
+    if (
+      !/const\s+dueReviewWords\s*=\s*dueResponse\.data\.totalCount/.test(
+        homeContent,
+      )
+    ) {
+      errors.push(
+        "apps/web/src/app/(app)/home/page.tsx: dueReviewWords is not wired to the real due-queue totalCount",
       );
     }
   }
@@ -230,6 +259,8 @@ export function validateMockInventory() {
       '"/discover"',
       '"/discover/:path*"',
       '"/progress"',
+      '"/reviews"',
+      '"/reviews/:path*"',
     ];
     for (const pattern of requiredPatterns) {
       if (!matcherText.includes(pattern)) {
@@ -256,7 +287,7 @@ export function validateMockInventory() {
     for (const mock of mockMatches) {
       if (!knownMocks.has(mock)) {
         errors.push(
-          `${file}: unexpected mock constant ${mock}; add it to the T05 inventory or replace with a real source`,
+          `${file}: unexpected mock constant ${mock}; add it to the VOC-027 inventory or replace with a real source`,
         );
       }
     }
@@ -282,6 +313,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     );
     process.exitCode = 1;
   } else {
-    process.stdout.write("VOC-026 P1 mock inventory validation passed.\n");
+    process.stdout.write("VOC-027 P2 mock inventory validation passed.\n");
   }
 }

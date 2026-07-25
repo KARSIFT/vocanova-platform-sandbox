@@ -1,111 +1,115 @@
-# VOC-027 — P2 Staging and Rollback Evidence Collection
+# VOC-027 — P2 Review Staging Evidence
 
-## Purpose
+## Scope and authority
 
-This document records the evidence required by `VOC-027-AC-06` (via
-`VOC-027-TEST-13`, `VOC-027-TEST-20`..`VOC-027-TEST-24`). It collects the
-in-repository evidence that can be produced without the F3 staging environment
-and documents the staging exercises and rollback rehearsal that can only be run
-once F3 exists.
+This document collects the in-repository staging evidence required by
+`VOC-027-AC-06` and `VOC-027-T04`. It is produced under the adopted resolutions
+`VOC-027-D01` through `VOC-027-D06`.
 
-## Current status
+Live staging exercises (EV-21, EV-22, EV-23) are blocked by the open
+environmental dependency `VOC-027-DEP-02`: the F3 staging environment does not
+exist yet. The procedures below are documented and ready to run once F3 is
+available. This document does **not** declare the DOC-12 P2 milestone gate
+complete.
 
-Execution of live staging evidence (`VOC-027-EV-21`..`VOC-027-EV-23`) is
-**blocked** by `VOC-027-DEP-02`: the F3 staging environment does not yet exist
-(carried from `VOC-026-DEP-03`). T00–T03 implement the code; T04 collects every
-piece of evidence that can be produced in-repository and documents the remaining
-staging/rollback work for F3.
+## In-repository evidence (ready now)
 
-No DOC-12 P2-complete declaration is made here.
+| Evidence | Requirement | Status | Location |
+| -------- | ----------- | ------ | -------- |
+| `EV-19` | Home `dueReviewWords` wired to real due-queue | Ready | `apps/web/src/app/(app)/home/page.tsx` fetches `GET /api/v1/reviews/due` and uses `totalCount`; `MOCK_HOME_STATE` no longer contains `dueReviewWords`. |
+| `EV-20` | Mock inventory enforces P2 dispositions | Ready | `scripts/foundation/mock-inventory.mjs` + `mock-inventory.test.mjs` verify the decommissioned `dueReviewWords` field, the retained P4 mocks, and the authorized API/business/schema/migration boundary. |
+| `EV-13` | P2 boundary enforced (API routes, business modules, schemas, migrations) | Ready | `scripts/foundation/mock-inventory.mjs` asserts no unexpected P3/P4 routes, tables, modules, or migrations; `apps/api/business/reviews/` is the only new P2 module; `apps/api/ent/schema/reviewattempt.go` is the only new P2 schema; `apps/api/migrations/20260725110000_voc027_p2_review_attempts.sql` is the only new P2 migration. |
+| `EV-24` | No P4 tables or behavior invented | Ready | No `daily_mission_snapshots`, `confidence_point_ledger`, `streak_states`, or `daily_activity_summaries` schema, route, or business logic exists. Confirmed by mock inventory and the implementation scope. |
 
-## Evidence collected in repository
+## Staging exercise plan (blocked by F3)
 
-| Evidence ID      | Test                                                                        | Status       | Location                                                                                                                                                                                                                                                                                                  |
-| ---------------- | --------------------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `VOC-027-EV-13`  | `VOC-027-TEST-13` — Installed deterministic and security suite               | Collected    | `pnpm run validate`, `pnpm run test`, `pnpm run build`, `cd apps/api && go vet ./... && go test ./...`, the scripts/foundation tests, and the extended mock-inventory check                                                                                                                                |
-| `VOC-027-EV-20`  | `VOC-027-TEST-20` — Mock-decommission inventory (P2)                        | Collected    | `scripts/foundation/mock-inventory.mjs`, `scripts/foundation/mock-inventory.test.mjs`, and `specs/changes/VOC-027-begin-milestone-p2-review-saved-words/mock-inventory.md`                                                                                                                               |
-| `VOC-027-EV-21`  | `VOC-027-TEST-21` — Staging due-queue → submit → completion                 | **Blocked**  | Requires F3 staging with seeded content + due words and a non-production identity. See procedure below.                                                                                                                                                                                                    |
-| `VOC-027-EV-22`  | `VOC-027-TEST-22` — Staging authorization, CSRF, and idempotency validation | **Blocked**  | Requires F3 staging with two isolated non-production users and CSRF/idempotency tooling. See procedure below.                                                                                                                                                                                              |
-| `VOC-027-EV-23`  | `VOC-027-TEST-23` — review_attempts / user_words rollback rehearsal        | **Blocked**  | Requires a staged candidate, approved rollback procedure, and disposable PostgreSQL. See procedure below.                                                                                                                                                                                                  |
-| `VOC-027-EV-24`  | `VOC-027-TEST-24` — Exact-SHA independent verification                      | **Required** | Performed by Claude Code on each T00–T04 final SHA; reports scope, classifier floor, migration/immutable-history safety, scheduling-rule correctness, requester scope, exactly-once idempotency, CSRF, the `D02` DOC-05/DOC-07 reconciliation, no P4 behavior, no P1 revisit, secrets/logging, a11y, evidence. |
+Once `VOC-027-DEP-02` is resolved and a non-production F3 environment is
+available, the following exercises must be executed and their results recorded
+here or in the PR evidence.
 
-## Staging due-queue → submit → completion procedure (EV-21)
+### EV-21 — Due-queue → submit → schedule-update-exactly-once → completion
 
-When F3 staging is available, perform the following with non-production
-identities only:
+1. With a non-production learner identity, save at least one word so it enters
+   the due queue (`next_review_at` null, `status` in `new`/`learning`/`reviewing`).
+2. Call `GET /api/v1/reviews/due` and verify the word appears with accurate
+   `wordText`, `shortDefinition`, `status`, and `reviewStep`.
+3. Submit a `POST /api/v1/reviews/submissions` response with a valid
+   `X-CSRF-Token` and a fresh `Idempotency-Key` / `client_attempt_id`.
+4. Verify the response contains the inserted `review_attempts` row with the
+   matching `client_attempt_id`, `review_step_before`, and `review_step_after`.
+5. Re-query `GET /api/v1/reviews/due` and confirm the word no longer appears
+   (or the `totalCount` decreased exactly by one) and the `user_words` row shows
+   the updated `review_step`, `next_review_at`, `last_result`, `last_rating`,
+   `last_reviewed_at`, and incremented counters.
+6. Drain the queue by reviewing all due words, then confirm the session shows
+   the "You're all caught up" empty state and the Home page reports `0` words
+   due.
 
-1. **Migrate and authenticate**
-   - Ensure the F3 database has the VOC-027 P2 `review_attempts` migration
-     applied on top of the VOC-026 P1 migrations and seed, with `user_words`
-     scheduling fields present.
-   - Authenticate as test user A through the A1 sign-in flow and obtain a valid
-     `vocanova_session` and `vocanova_csrf` token pair.
+### EV-22 — Cross-user denial, CSRF, and idempotency
 
-2. **Establish due words**
-   - Save at least one meaning via the P1 save flow so a `user_words` row exists
-     with `next_review_at = null` (the VOC-026-D04 state).
-   - Call `GET /api/v1/reviews/due`; assert the freshly saved word is returned
-     (null `next_review_at` is a due state).
+1. **Cross-user denial:** As learner A, create a saved word. Attempt to submit
+   or query the due queue as learner B. Expect `401` for unauthenticated
+   requests and `404` for owner mismatches (no cross-learner enumeration).
+2. **CSRF:** Submit a review without `X-CSRF-Token`. Expect `403` and no
+   `review_attempts` row or `user_words` update.
+3. **Idempotency:** Replay the same `client_attempt_id` with the same request
+   fingerprint. Expect `200` with the original attempt, no duplicate
+   `review_attempts` row, and no double update to `user_words`. Reuse the same
+   key with a changed fingerprint. Expect `409` and no schedule change.
 
-3. **Submit and verify exactly once**
-   - Open the new review route, submit a `multiple_choice`/`self_check`
-     response (per the adopted `D02`/`D03`) via the real control with
-     `X-CSRF-Token` + `Idempotency-Key`.
-   - Inspect the `review_attempts` row (append-only, snapshots
-     `review_step_before`/`_after`) and the `user_words` row (step/counters/
-     `next_review_at` updated exactly once per the T00 domain function).
-   - Confirm no `daily_mission_snapshots` / `confidence_point_ledger` /
-     `streak_states` / `daily_activity_summaries` rows were created.
+### EV-23 — Rollback rehearsal
 
-4. **Replay idempotency**
-   - Replay the same `client_attempt_id`/fingerprint; confirm no duplicate
-     attempt and the schedule is **not** advanced twice.
+1. Record the current `review_attempts` and `user_words` state for a test
+   learner.
+2. Apply the VOC-027 P2 build and migration in the staging environment.
+3. Run a few review submissions, then perform a rollback to the previously
+   known-good revision.
+4. Verify that:
+   - All committed `review_attempts` rows created before the rollback remain
+     immutable (no accidental `ON DELETE CASCADE` or migration deletion).
+   - `user_words` schedule state is preserved for rows written before the
+     rollback window.
+   - No daily-mission, point-ledger, streak-state, or P4 tables were created.
+   - The application health checks and the due-queue API remain functional.
 
-5. **Completion state**
-   - Review until the due queue drains; assert the accurate completion state and
-     the "all caught up" empty state per `D04`.
+## Rollback triggers
 
-## Staging authorization, CSRF, and idempotency validation procedure (EV-22)
+Per `VOC-027` implementation-plan §Deployment and rollback, initiate rollback on:
 
-When F3 staging is available:
+- Cross-learner access to due words or attempts.
+- Idempotency failure (duplicate schedule update or duplicate attempt row).
+- Scheduling-rule violation (step outside 0–7, floor/cap error, or two
+  consecutive incorrect/Again not resetting to 0).
+- Migration integrity fault (missing FK, partial-unique index, or check
+  constraint; accidental cascade on `review_attempts` or `user_words`).
+- Leaked secret, token, or PII in logs/responses.
+- Failed health checks or inability to complete the due-queue → submit →
+  completion flow.
 
-1. **Unauthenticated access** — request `GET /api/v1/reviews/due` and
-   `POST /api/v1/reviews/submissions` without a session; confirm `401`.
-2. **Cross-user isolation** — as user B, attempt to submit against A's
-   `user_word_id` by known id and to read A's due queue; confirm `404` and no
-   leakage.
-3. **CSRF enforcement** — submit without/mismatched `X-CSRF-Token` → `403`; valid
-   pair → `200`/`201`.
-4. **Idempotency enforcement** — replay same key/fingerprint (idempotent);
-   reuse same key with a changed fingerprint → `409`; same key as a different
-   user → isolated.
-5. **Redaction** — inspect responses, logs, and OpenAPI; confirm no raw session/
-   CSRF tokens, response times, or another learner's answers are exposed.
+## Rollback procedure
 
-## review_attempts / user_words rollback rehearsal procedure (EV-23)
+1. Preserve immutable `review_attempts` history: never drop committed attempt
+   rows.
+2. Preserve `user_words` schedule state written before the rollback window.
+3. Revert the deployment to the last-known-good revision.
+4. Validate with non-production identities.
+5. Record the last-known-good revision and the rollback reason.
 
-When a staged candidate is ready and the rollback procedure is approved:
+## Limitations / open dependencies
 
-1. **Pre-rollback** — snapshot the staging DB after the `review_attempts`
-   migration and after review submissions; record the last-known-good revision;
-   identify committed `review_attempts` rows and the mutated `user_words` rows.
-2. **Rollback** — stop the API service, revert the code to the last-known-good
-   revision, and restore the DB to the pre-migration state under the approved
-   procedure (or otherwise follow the expand-and-contract plan adopted with the
-   migration).
-3. **Post-rollback safety** — confirm committed immutable `review_attempts`
-   rows are preserved (not dropped) when the adopted plan keeps them; otherwise
-   confirm their documented removal is intentional; confirm `user_words` schedule
-   state written before the rollback window is preserved; confirm no raw tokens
-   or personal answer/response-time data remain in logs.
-4. **Service validation** — start the API, run health checks, confirm the review
-   routes are unavailable until the next forward migration (or restored to a
-   consistent pre-candidate state if retained).
+- `VOC-027-DEP-02`: F3 staging does not exist, so EV-21/EV-22/EV-23 cannot be run
+  live. The procedures and in-repository evidence are complete; live execution
+  is recorded as blocked.
+- Accessibility automation for the review card controls is not yet implemented;
+  this is recorded as a limitation, not a pass.
 
-## Dependency blocker
+## Follow-up work
 
-`VOC-027-DEP-02`: F3 staging environment must exist before the live staging
-exercises (`VOC-027-EV-21`, `VOC-027-EV-22`, `VOC-027-EV-23`) can be executed.
-
-`VOC-027-T04` provides the in-repository evidence and the documented procedures
-only; it does not declare the DOC-12 P2 gate complete.
+- Replace the retained P4-only mock fields in `HomePage` and `ProgressPage`
+  (`missionTargetWords`, `reviewedWordsToday`, `currentStreakDays`,
+  `confidencePointsTotal`, `longestStreakDays`, `completionHistory`) when P4
+  gamification, streak, and daily-mission systems are implemented.
+- Implement `typing` and `sentence_usage` prompt types as a later superset
+  (P3/P4, per DOC-05 §9).
+- Add the daily-mission, point-ledger, streak-state, and daily-activity-summary
+  steps to the submission transaction once the P4 tables exist.

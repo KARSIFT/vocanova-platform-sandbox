@@ -1,7 +1,7 @@
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 
 // VOC-020 P4-pending mock fields: Confidence Points total, streaks, and weekly
-// completion history have no P1 equivalent and stay mocked pending P4/P2.
+// completion history have no P1/P2 equivalent and stay mocked pending P4.
 const MOCK_PROGRESS_STATE = {
   confidencePointsTotal: 1240,
   currentStreakDays: 12,
