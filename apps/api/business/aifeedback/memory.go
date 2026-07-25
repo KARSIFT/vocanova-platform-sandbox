@@ -188,7 +188,7 @@ func (r *MemoryRepository) GetFeedbackAttemptByRequestHash(ctx context.Context, 
 }
 
 // CreatePendingAttempt implements Repository.
-func (r *MemoryRepository) CreatePendingAttempt(ctx context.Context, req SubmitSentenceFeedbackRequest, target *Target, normalized string, requestHash string, now time.Time) (*PendingAttempt, error) {
+func (r *MemoryRepository) CreatePendingAttempt(ctx context.Context, req SubmitSentenceFeedbackRequest, target *Target, normalized string, requestHash string, provider string, model string, now time.Time) (*PendingAttempt, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -211,8 +211,8 @@ func (r *MemoryRepository) CreatePendingAttempt(ctx context.Context, req SubmitS
 		ID:                attemptID,
 		LearnerSentenceID: sentenceID,
 		Status:            AttemptStatusPending,
-		Provider:          ProviderMock,
-		Model:             "mock",
+		Provider:          provider,
+		Model:             model,
 		PromptVersion:     PromptVersionSentenceFeedbackV1,
 		RequestHash:       requestHash,
 	})

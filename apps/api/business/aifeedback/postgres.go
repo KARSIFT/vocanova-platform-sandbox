@@ -157,7 +157,7 @@ func (r *PostgreSQLRepository) scanStoredAttempt(row *sql.Row) (*StoredFeedbackA
 	return &a, nil
 }
 
-func (r *PostgreSQLRepository) CreatePendingAttempt(ctx context.Context, req SubmitSentenceFeedbackRequest, target *Target, normalized string, requestHash string, now time.Time) (*PendingAttempt, error) {
+func (r *PostgreSQLRepository) CreatePendingAttempt(ctx context.Context, req SubmitSentenceFeedbackRequest, target *Target, normalized string, requestHash string, provider string, model string, now time.Time) (*PendingAttempt, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("begin tx: %w", err)
@@ -197,7 +197,7 @@ func (r *PostgreSQLRepository) CreatePendingAttempt(ctx context.Context, req Sub
 			feedback_json, feedback_text, error_code, error_message,
 			started_at, completed_at, created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, NULL, NULL, NULL, NULL, NULL, NULL, $8, $8)`,
-		attemptID, sentenceID, AttemptStatusPending, ProviderMock, "mock", PromptVersionSentenceFeedbackV1, requestHash, now,
+		attemptID, sentenceID, AttemptStatusPending, provider, model, PromptVersionSentenceFeedbackV1, requestHash, now,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("insert ai feedback attempt: %w", err)

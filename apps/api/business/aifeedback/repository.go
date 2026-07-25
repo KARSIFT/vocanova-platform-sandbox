@@ -51,8 +51,8 @@ type Repository interface {
 
 	// CreatePendingAttempt inserts the learner_sentences row and the pending
 	// ai_feedback_attempts row inside a single transaction. It does not call the
-	// provider.
-	CreatePendingAttempt(ctx context.Context, req SubmitSentenceFeedbackRequest, target *Target, normalized string, requestHash string, now time.Time) (*PendingAttempt, error)
+	// provider. provider and model are recorded on the pending attempt row.
+	CreatePendingAttempt(ctx context.Context, req SubmitSentenceFeedbackRequest, target *Target, normalized string, requestHash string, provider string, model string, now time.Time) (*PendingAttempt, error)
 
 	// CompleteFeedbackAttempt updates the attempt and sentence statuses after the
 	// provider call. A non-nil feedback indicates success; otherwise failureCode

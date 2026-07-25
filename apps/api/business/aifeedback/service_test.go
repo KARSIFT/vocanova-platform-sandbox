@@ -322,3 +322,85 @@ func TestServiceIdempotencyKeyConflict(t *testing.T) {
 	assert.Equal(t, ErrorCodeIdempotencyConflict, result.ErrorCode)
 	assert.False(t, result.CanRetry)
 }
+
+func TestServiceRepairsInvalidOutput(t *testing.T) {
+	f := newServiceFixture(t)
+	f.service.provider = &invalidThenValidProvider{valid: NewMockProvider()}
+	req := f.request("I work every day.")
+
+	result, err := f.service.SubmitSentenceFeedback(t.Context(), req)
+	require.NoError(t, err)
+	assert.Equal(t, LearningStatusCorrect, result.Status)
+	assert.Equal(t, 2, f.service.provider.(*invalidThenValidProvider).calls)
+}
+
+func TestServiceRepairFailureIsRetryable(t *testing.T) {
+	f := newServiceFixture(t)
+	f.service.provider = &invalidProvider{}
+	req := f.request("I work every day.")
+
+	result, err := f.service.SubmitSentenceFeedback(t.Context(), req)
+	require.NoError(t, err)
+	assert.Equal(t, ErrorCodeTemporaryFailure, result.ErrorCode)
+	assert.True(t, result.CanRetry)
+	assert.NotEqual(t, uuid.Nil, result.SentenceID)
+	assert.NotEqual(t, uuid.Nil, result.AttemptID)
+}
+
+func TestServiceRecordsConfiguredProviderOnAttempt(t *testing.T) {
+	f := newServiceFixture(t)
+	f.service.config.Provider = ProviderOpenCode
+	f.service.config.Model = DefaultOpenCodeModel
+	req := f.request("I work every day.")
+
+	result, err := f.service.SubmitSentenceFeedback(t.Context(), req)
+	require.NoError(t, err)
+	assert.Equal(t, LearningStatusCorrect, result.Status)
+
+	assert.Len(t, f.repo.attempts, 1)
+	assert.Equal(t, ProviderOpenCode, f.repo.attempts[0].Provider)
+	assert.Equal(t, DefaultOpenCodeModel, f.repo.attempts[0].Model)
+}
+
+func TestOpenCodeServiceConfigWiresProviderAndModel(t *testing.T) {
+	cfg := OpenCodeServiceConfig()
+	assert.Equal(t, ProviderOpenCode, cfg.Provider)
+	assert.Equal(t, DefaultOpenCodeModel, cfg.Model)
+	assert.Equal(t, DefaultOpenCodeModel, cfg.OpenCode.Model)
+	assert.Equal(t, DefaultOpenCodeConfig().BaseURL, cfg.OpenCode.BaseURL)
+	assert.Empty(t, cfg.OpenCode.APIKey)
+}
+
+type invalidThenValidProvider struct {
+	calls int
+	valid FeedbackProvider
+}
+
+func (p *invalidThenValidProvider) GenerateFeedback(ctx context.Context, task ProviderTask) (*ProviderFeedback, error) {
+	p.calls++
+	if p.calls == 1 {
+		return &ProviderFeedback{
+			Status:                  LearningStatusCorrect,
+			TargetWordUsedCorrectly: false,
+			Explanation:             "Looks good.",
+			RawJSON: map[string]any{
+				"status":                     LearningStatusCorrect,
+				"target_word_used_correctly": false,
+			},
+		}, nil
+	}
+	return p.valid.GenerateFeedback(ctx, task)
+}
+
+type invalidProvider struct{}
+
+func (p *invalidProvider) GenerateFeedback(ctx context.Context, task ProviderTask) (*ProviderFeedback, error) {
+	return &ProviderFeedback{
+		Status:                  "not_a_status",
+		TargetWordUsedCorrectly: false,
+		Explanation:             "Invalid.",
+		RawJSON: map[string]any{
+			"status": "not_a_status",
+		},
+	}, nil
+}

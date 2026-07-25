@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/learning"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
@@ -15,6 +16,7 @@ type ServiceConfig struct {
 	Provider  string
 	Model     string
 	RateLimit RateLimitConfig
+	OpenCode  OpenCodeConfig
 }
 
 // DefaultServiceConfig returns the default P3 configuration.
@@ -23,7 +25,19 @@ func DefaultServiceConfig() ServiceConfig {
 		Provider:  ProviderMock,
 		Model:     "mock",
 		RateLimit: DefaultRateLimitConfig(),
+		OpenCode:  DefaultOpenCodeConfig(),
 	}
+}
+
+// OpenCodeServiceConfig returns a service configuration wired for the OpenCode
+// production provider. BaseURL and APIKey must still be supplied from
+// backend-only secrets.
+func OpenCodeServiceConfig() ServiceConfig {
+	cfg := DefaultServiceConfig()
+	cfg.Provider = ProviderOpenCode
+	cfg.Model = DefaultOpenCodeModel
+	cfg.OpenCode.Model = DefaultOpenCodeModel
+	return cfg
 }
 
 // Service orchestrates the sentence-feedback lifecycle.
@@ -201,7 +215,7 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 	}
 
 	now := s.clock.Now().UTC()
-	pending, err := s.repo.CreatePendingAttempt(ctx, req, target, validation.Normalized, requestHash, now)
+	pending, err := s.repo.CreatePendingAttempt(ctx, req, target, validation.Normalized, requestHash, s.config.Provider, s.config.Model, now)
 	if err != nil {
 		return nil, fmt.Errorf("create pending attempt: %w", err)
 	}
@@ -210,10 +224,7 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 		return nil, fmt.Errorf("record idempotency: %w", err)
 	}
 
-	providerStart := s.clock.Now()
-	task := s.taskBuilder.Build(target, validation.Normalized)
-	feedback, providerErr := s.provider.GenerateFeedback(ctx, task)
-	providerDuration := s.clock.Now().Sub(providerStart)
+	feedback, providerDuration, providerErr := s.generateWithRepair(ctx, target, validation.Normalized)
 
 	if providerErr != nil {
 		if err := s.repo.CompleteFeedbackAttempt(ctx, *pending, nil, ErrorCodeTemporaryFailure, providerErr.Error(), s.clock.Now().UTC()); err != nil {
@@ -268,6 +279,43 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 		Reported:          false,
 	}
 	return result, nil
+}
+
+// generateWithRepair calls the provider once and, if the output fails validation,
+// makes one constrained repair attempt (DOC-09 §10). The provider call is bounded
+// by the DOC-09 §18 total backend target of 10 seconds; the adapter itself
+// enforces an 8-second per-request timeout.
+func (s *Service) generateWithRepair(ctx context.Context, target *Target, normalized string) (*ProviderFeedback, time.Duration, error) {
+	providerCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	task := s.taskBuilder.Build(target, normalized)
+	providerStart := s.clock.Now()
+	feedback, err := s.provider.GenerateFeedback(providerCtx, task)
+	providerDuration := s.clock.Now().Sub(providerStart)
+
+	if err != nil {
+		return nil, providerDuration, err
+	}
+
+	validationErr := s.outputValidator.Validate(feedback, target)
+	if validationErr == nil {
+		return feedback, providerDuration, nil
+	}
+
+	repairTask := s.taskBuilder.BuildRepair(task, validationErr.Error(), feedback.RawJSON)
+	repairStart := s.clock.Now()
+	feedback, err = s.provider.GenerateFeedback(providerCtx, repairTask)
+	providerDuration += s.clock.Now().Sub(repairStart)
+
+	if err != nil {
+		return nil, providerDuration, err
+	}
+
+	if err := s.outputValidator.Validate(feedback, target); err != nil {
+		return nil, providerDuration, fmt.Errorf("output validation failed after repair: %w", err)
+	}
+	return feedback, providerDuration, nil
 }
 
 func (s *Service) validationResult(original, code string) *SentenceFeedbackResult {

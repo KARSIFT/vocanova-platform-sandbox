@@ -91,7 +91,7 @@ func TestPostgreSQLRepositoryCreatePendingAttempt(t *testing.T) {
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
-	pending, err := repo.CreatePendingAttempt(t.Context(), req, target, "i work every day.", requestHash, now)
+	pending, err := repo.CreatePendingAttempt(t.Context(), req, target, "i work every day.", requestHash, ProviderMock, "mock", now)
 	require.NoError(t, err)
 	assert.NotEqual(t, uuid.Nil, pending.SentenceID)
 	assert.NotEqual(t, uuid.Nil, pending.AttemptID)

@@ -69,12 +69,19 @@ const (
 
 // Common errors surfaced by provider boundaries.
 var (
-	ErrMissingLearnerSentence = errors.New("provider task missing learner sentence")
-	ErrProviderRefusal        = errors.New("provider refused to generate feedback")
-	ErrRateLimited            = errors.New("ai feedback rate limited")
-	ErrSafetyBlocked          = errors.New("ai feedback safety blocked")
-	ErrTargetNotFound         = errors.New("target not found")
+	ErrMissingLearnerSentence  = errors.New("provider task missing learner sentence")
+	ErrProviderRefusal         = errors.New("provider refused to generate feedback")
+	ErrProviderTimeout         = errors.New("provider request timed out")
+	ErrProviderAuth            = errors.New("provider authentication failed")
+	ErrProviderInvalidInput    = errors.New("provider rejected the request")
+	ErrProviderInvalidResponse = errors.New("provider returned an unparseable response")
+	ErrRateLimited             = errors.New("ai feedback rate limited")
+	ErrSafetyBlocked           = errors.New("ai feedback safety blocked")
+	ErrTargetNotFound          = errors.New("target not found")
 )
+
+// Default production model for the OpenCode Go provider (VOC-028-D02).
+const DefaultOpenCodeModel = "opencode-go/deepseek-v4-pro"
 
 // Validation codes returned by deterministic input validation (DOC-09 §6).
 const (
