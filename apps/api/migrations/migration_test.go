@@ -96,3 +96,28 @@ func TestVOC026P1ContentMigrationCarriesDatabaseInvariants(t *testing.T) {
 		}
 	}
 }
+
+func TestVOC026P1IdempotencyMigrationCarriesDatabaseInvariants(t *testing.T) {
+	sql, err := os.ReadFile("20260725100001_voc026_p1_idempotency_keys.sql")
+	if err != nil {
+		t.Fatalf("read voc-026 p1 idempotency migration: %v", err)
+	}
+	text := string(sql)
+	required := []string{
+		"CREATE TABLE idempotency_keys",
+		"user_id",
+		"operation",
+		"fingerprint",
+		"idempotency_keys (user_id, operation, key)",
+	}
+	for _, invariant := range required {
+		if !strings.Contains(text, invariant) {
+			t.Errorf("migration missing invariant %q", invariant)
+		}
+	}
+	for _, forbidden := range []string{"session_token", "magic_link_token", "access_token", "refresh_token", "oauth_state_token"} {
+		if strings.Contains(text, forbidden) {
+			t.Errorf("migration contains forbidden raw bearer column %q", forbidden)
+		}
+	}
+}

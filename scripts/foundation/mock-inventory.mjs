@@ -92,14 +92,16 @@ export function validateMockInventory() {
     }
   }
 
-  // Verify no API routes beyond A1 auth and the VOC-026 T01 content reads were
-  // invented. The P1 allowlist stays deliberately narrow here: user-word
-  // writes and later-milestone endpoints remain forbidden until their tasks.
+  // Verify no API routes beyond A1 auth, VOC-026 T01 content reads, and
+  // VOC-026 T02 user-words writes were invented. Later-milestone endpoints
+  // remain forbidden until their tasks.
   const allowedAPIPaths = [
     /^\/api\/v1\/me$/,
     /^\/api\/v1\/auth(?:\/|$)/,
     /^\/api\/v1\/journey-situations(?:\/[^/]+)?$/,
     /^\/api\/v1\/canonical-words\/[^/]+$/,
+    /^\/api\/v1\/user-words$/,
+    /^\/api\/v1\/user-words\/[^/]+$/,
   ];
   const apiRouteFiles = globSync("**/*.go", { cwd: apiRouteRoot });
   for (const file of apiRouteFiles) {

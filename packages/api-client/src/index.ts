@@ -87,6 +87,30 @@ export interface WordDetailResponse {
   word: WordDetail;
 }
 
+export interface SavedMeaning {
+  userWordId: string;
+  meaningId: string;
+  wordId: string;
+  wordText: string;
+  wordSlug: string;
+  partOfSpeech: string;
+  shortDefinition: string;
+  status: string;
+  source: string;
+  saved: boolean;
+  addedAt: string;
+}
+
+export interface ListSavedWordsResponse {
+  items: SavedMeaning[];
+  nextCursor?: string;
+}
+
+export interface SaveUserWordBody {
+  meaningId: string;
+  source: "journey" | "search" | "manual";
+}
+
 export interface ApiError {
   type?: string;
   title?: string;
@@ -224,6 +248,52 @@ export class VocanovaClient {
     );
     const data = (await response.json()) as WordDetailResponse;
     return { data, response };
+  }
+
+  async listSavedWords(
+    params?: { after?: string; limit?: number },
+    init?: RequestInit,
+  ): Promise<{ data: ListSavedWordsResponse; response: Response }> {
+    const query = new URLSearchParams();
+    if (params?.after) {
+      query.set("after", params.after);
+    }
+    if (params?.limit !== undefined) {
+      query.set("limit", String(params.limit));
+    }
+    const path =
+      "/api/v1/user-words" + (query.toString() ? `?${query.toString()}` : "");
+    const response = await this.request("GET", path, undefined, init);
+    const data = (await response.json()) as ListSavedWordsResponse;
+    return { data, response };
+  }
+
+  async saveUserWord(
+    body: SaveUserWordBody,
+    idempotencyKey: string,
+    init?: RequestInit,
+  ): Promise<{ data: SavedMeaning; response: Response }> {
+    const headers = new Headers(init?.headers);
+    headers.set("Idempotency-Key", idempotencyKey);
+    const response = await this.request("POST", "/api/v1/user-words", body, {
+      ...init,
+      headers,
+    });
+    const data = (await response.json()) as SavedMeaning;
+    return { data, response };
+  }
+
+  async unsaveUserWord(
+    meaningId: string,
+    init?: RequestInit,
+  ): Promise<{ response: Response }> {
+    const response = await this.request(
+      "DELETE",
+      `/api/v1/user-words/${encodeURIComponent(meaningId)}`,
+      undefined,
+      init,
+    );
+    return { response };
   }
 
   private async request(

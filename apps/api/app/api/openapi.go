@@ -6,6 +6,7 @@ import (
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/auth"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/content"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/learning"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/email"
 	"github.com/danielgtaylor/huma/v2"
@@ -58,5 +59,13 @@ func NewContractAPI() huma.API {
 		content.NewMemorySavedStateReader(nil),
 	)
 	RegisterContent(contractAPI, contentSvc)
+
+	// Register learning routes for OpenAPI generation using an empty in-memory repo.
+	learningSvc := learning.NewService(
+		learning.NewMemoryRepository(learning.MemoryRepositoryData{}),
+		learning.NewMemoryIdempotencyStore(),
+		clock.Real{},
+	)
+	RegisterLearning(contractAPI, learningSvc, svc)
 	return contractAPI
 }

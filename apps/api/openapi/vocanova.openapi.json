@@ -197,6 +197,38 @@
         ],
         "type": "object"
       },
+      "ListSavedWordsOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/ListSavedWordsOutputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "items": {
+            "description": "Saved meanings",
+            "items": {
+              "$ref": "#/components/schemas/SavedMeaningDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "nextCursor": {
+            "description": "Opaque cursor for the next page",
+            "type": "string"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
       "ListSituationsOutputBody": {
         "additionalProperties": false,
         "properties": {
@@ -295,6 +327,115 @@
         },
         "required": [
           "email"
+        ],
+        "type": "object"
+      },
+      "SaveUserWordInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/SaveUserWordInputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "meaningId": {
+            "description": "Meaning identifier to save",
+            "format": "uuid",
+            "type": "string"
+          },
+          "source": {
+            "description": "Origin of the save",
+            "enum": [
+              "journey",
+              "search",
+              "manual"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "meaningId",
+          "source"
+        ],
+        "type": "object"
+      },
+      "SavedMeaningDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/SavedMeaningDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "addedAt": {
+            "description": "When the meaning was added to the learner list",
+            "format": "date-time",
+            "type": "string"
+          },
+          "meaningId": {
+            "description": "Meaning identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "partOfSpeech": {
+            "description": "Part of speech",
+            "type": "string"
+          },
+          "saved": {
+            "description": "Whether the meaning is currently saved",
+            "type": "boolean"
+          },
+          "shortDefinition": {
+            "description": "Short definition",
+            "type": "string"
+          },
+          "source": {
+            "description": "Origin of the save",
+            "type": "string"
+          },
+          "status": {
+            "description": "Learning status",
+            "type": "string"
+          },
+          "userWordId": {
+            "description": "Saved record identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "wordId": {
+            "description": "Canonical word identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "wordSlug": {
+            "description": "Canonical word URL slug",
+            "type": "string"
+          },
+          "wordText": {
+            "description": "Canonical word text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "userWordId",
+          "meaningId",
+          "wordId",
+          "wordText",
+          "wordSlug",
+          "partOfSpeech",
+          "shortDefinition",
+          "status",
+          "source",
+          "saved",
+          "addedAt"
         ],
         "type": "object"
       },
@@ -885,6 +1026,143 @@
         "summary": "Get the authenticated user",
         "tags": [
           "Authentication"
+        ]
+      }
+    },
+    "/api/v1/user-words": {
+      "get": {
+        "operationId": "ListSavedWords",
+        "parameters": [
+          {
+            "description": "Opaque pagination cursor",
+            "explode": false,
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "description": "Opaque pagination cursor",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Maximum items to return (1-100)",
+            "explode": false,
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 20,
+              "description": "Maximum items to return (1-100)",
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListSavedWordsOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Authentication is required"
+          }
+        },
+        "summary": "List the authenticated requester's saved meanings",
+        "tags": [
+          "Learning"
+        ]
+      },
+      "post": {
+        "operationId": "SaveUserWord",
+        "parameters": [
+          {
+            "description": "User-scoped idempotency key",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "description": "User-scoped idempotency key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveUserWordInputBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedMeaningDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Authentication is required"
+          },
+          "403": {
+            "description": "Invalid CSRF token"
+          },
+          "404": {
+            "description": "Meaning not found"
+          },
+          "409": {
+            "description": "Idempotency key conflict"
+          }
+        },
+        "summary": "Save a meaning for the authenticated requester",
+        "tags": [
+          "Learning"
+        ]
+      }
+    },
+    "/api/v1/user-words/{meaningId}": {
+      "delete": {
+        "operationId": "UnsaveUserWord",
+        "parameters": [
+          {
+            "description": "Meaning identifier to unsave",
+            "in": "path",
+            "name": "meaningId",
+            "required": true,
+            "schema": {
+              "description": "Meaning identifier to unsave",
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Authentication is required"
+          },
+          "403": {
+            "description": "Invalid CSRF token"
+          },
+          "404": {
+            "description": "Saved meaning not found"
+          }
+        },
+        "summary": "Remove a saved meaning for the authenticated requester",
+        "tags": [
+          "Learning"
         ]
       }
     }

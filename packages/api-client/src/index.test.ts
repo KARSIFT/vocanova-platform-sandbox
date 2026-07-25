@@ -207,4 +207,99 @@ describe("VocanovaClient", () => {
     assert.equal(data.word.slug, "boarding-pass");
     assert.equal(data.word.meanings[0]!.saved, true);
   });
+
+  it("sends GET /api/v1/user-words", async () => {
+    const fetch = (url: string, init: RequestInit): Promise<Response> => {
+      assert.equal(url, "https://api.example.com/api/v1/user-words");
+      assert.equal(init.method, "GET");
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            items: [
+              {
+                userWordId: "00000000-0000-0000-0000-000000000001",
+                meaningId: "00000000-0000-0000-0000-000000000002",
+                wordId: "00000000-0000-0000-0000-000000000003",
+                wordText: "boarding pass",
+                wordSlug: "boarding-pass",
+                partOfSpeech: "noun",
+                shortDefinition: "A document.",
+                status: "new",
+                source: "journey",
+                saved: true,
+                addedAt: "2026-07-25T12:00:00Z",
+              },
+            ],
+          }),
+          { headers: { "Content-Type": "application/json" }, status: 200 },
+        ),
+      );
+    };
+
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: fetch as typeof globalThis.fetch,
+    });
+    const { data } = await client.listSavedWords();
+    assert.equal(data.items[0]!.wordSlug, "boarding-pass");
+  });
+
+  it("sends POST /api/v1/user-words with Idempotency-Key", async () => {
+    const fetch = (url: string, init: RequestInit): Promise<Response> => {
+      assert.equal(url, "https://api.example.com/api/v1/user-words");
+      assert.equal(init.method, "POST");
+      assert.equal(
+        new Headers(init.headers).get("Idempotency-Key"),
+        "idem-key",
+      );
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            userWordId: "00000000-0000-0000-0000-000000000001",
+            meaningId: "00000000-0000-0000-0000-000000000002",
+            wordId: "00000000-0000-0000-0000-000000000003",
+            wordText: "boarding pass",
+            wordSlug: "boarding-pass",
+            partOfSpeech: "noun",
+            shortDefinition: "A document.",
+            status: "new",
+            source: "journey",
+            saved: true,
+            addedAt: "2026-07-25T12:00:00Z",
+          }),
+          { headers: { "Content-Type": "application/json" }, status: 200 },
+        ),
+      );
+    };
+
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: fetch as typeof globalThis.fetch,
+    });
+    const { data } = await client.saveUserWord(
+      { meaningId: "00000000-0000-0000-0000-000000000002", source: "journey" },
+      "idem-key",
+    );
+    assert.equal(data.wordSlug, "boarding-pass");
+  });
+
+  it("sends DELETE /api/v1/user-words/{meaningId}", async () => {
+    const fetch = (url: string, init: RequestInit): Promise<Response> => {
+      assert.equal(
+        url,
+        "https://api.example.com/api/v1/user-words/00000000-0000-0000-0000-000000000002",
+      );
+      assert.equal(init.method, "DELETE");
+      return Promise.resolve(new Response(null, { status: 204 }));
+    };
+
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: fetch as typeof globalThis.fetch,
+    });
+    const { response } = await client.unsaveUserWord(
+      "00000000-0000-0000-0000-000000000002",
+    );
+    assert.equal(response.status, 204);
+  });
 });
