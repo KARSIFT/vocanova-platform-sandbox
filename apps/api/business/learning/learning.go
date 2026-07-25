@@ -77,6 +77,10 @@ type Repository interface {
 	ListSavedWords(ctx context.Context, req ListSavedWordsRequest) (*ListSavedWordsResponse, error)
 	// IsSaved returns requester-scoped saved states for the given meaning IDs.
 	IsSaved(ctx context.Context, userID uuid.UUID, meaningIDs []uuid.UUID) (map[uuid.UUID]bool, error)
+	// SavedUserWordIDs returns a map from meaning_id to the owning user_word_id for
+	// meanings that are currently saved by the requester. Missing or unsaved IDs
+	// are omitted from the map.
+	SavedUserWordIDs(ctx context.Context, userID uuid.UUID, meaningIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error)
 }
 
 // IdempotencyStore scopes idempotency keys by user and operation.
@@ -177,6 +181,11 @@ func (s *Service) ListSavedWords(ctx context.Context, req ListSavedWordsRequest)
 // IsSaved implements the content.SavedStateReader boundary.
 func (s *Service) IsSaved(ctx context.Context, userID uuid.UUID, meaningIDs []uuid.UUID) (map[uuid.UUID]bool, error) {
 	return s.repo.IsSaved(ctx, userID, meaningIDs)
+}
+
+// SavedUserWordIDs implements the content.SavedStateReader boundary.
+func (s *Service) SavedUserWordIDs(ctx context.Context, userID uuid.UUID, meaningIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
+	return s.repo.SavedUserWordIDs(ctx, userID, meaningIDs)
 }
 
 func idempotencyFingerprint(meaningID uuid.UUID, source string) string {

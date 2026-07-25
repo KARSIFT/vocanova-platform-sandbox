@@ -60,6 +60,7 @@ export interface WordMeaning {
   shortDefinition: string;
   learnerDefinition?: string;
   saved: boolean;
+  userWordId?: string;
   examples: WordExample[];
   usageNotes: WordUsageNote[];
 }
@@ -164,6 +165,33 @@ export interface SubmitReviewBody {
   source?: "review" | "review_session";
   clientAttemptId: string;
   metadata?: Record<string, unknown>;
+}
+
+export interface SentenceFeedbackResult {
+  sentenceId?: string;
+  attemptId?: string;
+  status?: "correct" | "needs_improvement" | "incorrect";
+  originalSentence: string;
+  correctedSentence?: string;
+  explanation?: string;
+  improvementTip?: string;
+  missionCompleted: boolean;
+  canRetry: boolean;
+  reported: boolean;
+  errorCode?: string;
+  errorMessage?: string;
+  crisisResourceMessage?: string;
+}
+
+export interface SubmitSentenceFeedbackBody {
+  sentenceText: string;
+  source: "word_detail" | "review" | "daily_mission" | "free_practice";
+  attemptId: string;
+}
+
+export interface ReportSentenceFeedbackBody {
+  reason: string;
+  classification?: string;
 }
 
 export interface ApiError {
@@ -387,6 +415,40 @@ export class VocanovaClient {
     );
     const data = (await response.json()) as ReviewAttempt;
     return { data, response };
+  }
+
+  async submitSentenceFeedback(
+    body: SubmitSentenceFeedbackBody,
+    idempotencyKey: string,
+    init?: RequestInit,
+  ): Promise<{ data: SentenceFeedbackResult; response: Response }> {
+    const headers = new Headers(init?.headers);
+    headers.set("Idempotency-Key", idempotencyKey);
+    const response = await this.request(
+      "POST",
+      "/api/v1/sentence-feedback",
+      body,
+      {
+        ...init,
+        headers,
+      },
+    );
+    const data = (await response.json()) as SentenceFeedbackResult;
+    return { data, response };
+  }
+
+  async reportSentenceFeedback(
+    attemptId: string,
+    body: ReportSentenceFeedbackBody,
+    init?: RequestInit,
+  ): Promise<{ response: Response }> {
+    const response = await this.request(
+      "POST",
+      `/api/v1/sentence-feedback/${encodeURIComponent(attemptId)}/reports`,
+      body,
+      init,
+    );
+    return { response };
   }
 
   private async request(

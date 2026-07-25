@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/aifeedback"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/auth"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/content"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/learning"
@@ -76,5 +77,21 @@ func NewContractAPI() huma.API {
 		clock.Real{},
 	)
 	RegisterReviews(contractAPI, reviewsSvc, svc)
+
+	// Register AI feedback routes for OpenAPI generation using the mock provider.
+	aifeedbackSvc := aifeedback.NewService(
+		aifeedback.NewMemoryRepository(aifeedback.MemoryRepositoryData{}),
+		aifeedback.NewMockProvider(),
+		nil,
+		nil,
+		learning.NewMemoryIdempotencyStore(),
+		nil,
+		aifeedback.NewNoopTelemetryRecorder(),
+		aifeedback.NewDefaultTaskBuilder(),
+		aifeedback.NewDefaultOutputValidator(),
+		clock.Real{},
+		aifeedback.DefaultServiceConfig(),
+	)
+	RegisterAIFeedback(contractAPI, aifeedbackSvc, svc)
 	return contractAPI
 }

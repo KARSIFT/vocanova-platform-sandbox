@@ -402,6 +402,34 @@
         ],
         "type": "object"
       },
+      "ReportSentenceFeedbackInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/ReportSentenceFeedbackInputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "classification": {
+            "description": "Optional classification (e.g. incorrect, unsafe, unclear)",
+            "maxLength": 100,
+            "type": "string"
+          },
+          "reason": {
+            "description": "Short reason for the report",
+            "maxLength": 200,
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "type": "object"
+      },
       "RequestMagicLinkInputBody": {
         "additionalProperties": false,
         "properties": {
@@ -658,6 +686,86 @@
         ],
         "type": "object"
       },
+      "SentenceFeedbackResultDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/SentenceFeedbackResultDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "attemptId": {
+            "description": "AI feedback attempt identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "canRetry": {
+            "description": "Whether the learner may safely retry",
+            "type": "boolean"
+          },
+          "correctedSentence": {
+            "description": "Corrected sentence when useful",
+            "type": "string"
+          },
+          "crisisResourceMessage": {
+            "description": "Non-clinical crisis resources for self-harm content",
+            "type": "string"
+          },
+          "errorCode": {
+            "description": "Stable public error code on failure",
+            "type": "string"
+          },
+          "errorMessage": {
+            "description": "Safe retryable message on failure",
+            "type": "string"
+          },
+          "explanation": {
+            "description": "Short explanation of the result",
+            "type": "string"
+          },
+          "improvementTip": {
+            "description": "One improvement tip when useful",
+            "type": "string"
+          },
+          "missionCompleted": {
+            "description": "Backend-confirmed mission state (P3 stub: always false)",
+            "type": "boolean"
+          },
+          "originalSentence": {
+            "description": "The sentence the learner submitted",
+            "type": "string"
+          },
+          "reported": {
+            "description": "Whether the learner has reported this feedback",
+            "type": "boolean"
+          },
+          "sentenceId": {
+            "description": "Learner sentence identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "status": {
+            "description": "Pedagogical outcome when feedback succeeded",
+            "enum": [
+              "correct",
+              "needs_improvement",
+              "incorrect"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "originalSentence",
+          "missionCompleted",
+          "canRetry",
+          "reported"
+        ],
+        "type": "object"
+      },
       "SituationDTO": {
         "additionalProperties": false,
         "properties": {
@@ -858,6 +966,46 @@
         ],
         "type": "object"
       },
+      "SubmitSentenceFeedbackInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/SubmitSentenceFeedbackInputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "attemptId": {
+            "description": "Learner-owned attempt identifier (user_word_id for word_detail, review_attempt_id for review)",
+            "format": "uuid",
+            "type": "string"
+          },
+          "sentenceText": {
+            "description": "Learner sentence to check",
+            "maxLength": 300,
+            "type": "string"
+          },
+          "source": {
+            "description": "Origin of the sentence",
+            "enum": [
+              "word_detail",
+              "review",
+              "daily_mission",
+              "free_practice"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "sentenceText",
+          "source",
+          "attemptId"
+        ],
+        "type": "object"
+      },
       "WordDetailDTO": {
         "additionalProperties": false,
         "properties": {
@@ -968,6 +1116,11 @@
               "array",
               "null"
             ]
+          },
+          "userWordId": {
+            "description": "Saved record identifier when this meaning is saved",
+            "format": "uuid",
+            "type": "string"
           }
         },
         "required": [
@@ -1462,6 +1615,107 @@
         "summary": "Submit a review attempt and update the schedule",
         "tags": [
           "Reviews"
+        ]
+      }
+    },
+    "/api/v1/sentence-feedback": {
+      "post": {
+        "operationId": "SubmitSentenceFeedback",
+        "parameters": [
+          {
+            "description": "User-scoped idempotency key",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "description": "User-scoped idempotency key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitSentenceFeedbackInputBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SentenceFeedbackResultDTO"
+                }
+              }
+            },
+            "description": "Feedback result, which may include a business-level error code"
+          },
+          "401": {
+            "description": "Authentication is required"
+          },
+          "403": {
+            "description": "Invalid CSRF token"
+          },
+          "404": {
+            "description": "Owner or target resource not found"
+          },
+          "409": {
+            "description": "Idempotency key conflict"
+          }
+        },
+        "summary": "Submit a learner sentence for AI feedback",
+        "tags": [
+          "AI Feedback"
+        ]
+      }
+    },
+    "/api/v1/sentence-feedback/{attemptId}/reports": {
+      "post": {
+        "operationId": "ReportSentenceFeedback",
+        "parameters": [
+          {
+            "description": "AI feedback attempt identifier",
+            "in": "path",
+            "name": "attemptId",
+            "required": true,
+            "schema": {
+              "description": "AI feedback attempt identifier",
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportSentenceFeedbackInputBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Report recorded"
+          },
+          "401": {
+            "description": "Authentication is required"
+          },
+          "403": {
+            "description": "Invalid CSRF token"
+          },
+          "404": {
+            "description": "Feedback attempt not found"
+          }
+        },
+        "summary": "Report a quality concern for a feedback attempt",
+        "tags": [
+          "AI Feedback"
         ]
       }
     },

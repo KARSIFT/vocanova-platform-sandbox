@@ -88,9 +88,15 @@ func contentSampleData() (*content.MemoryRepository, *content.MemorySavedStateRe
 			},
 		},
 	})
-	reader := content.NewMemorySavedStateReader(map[uuid.UUID]map[uuid.UUID]bool{
-		userID: {meaningID: true},
-	})
+	userWordID := content.MustParseUUID("00000000-0000-0000-0000-000000000010")
+	reader := content.NewMemorySavedStateReaderWithIDs(
+		map[uuid.UUID]map[uuid.UUID]bool{
+			userID: {meaningID: true},
+		},
+		map[uuid.UUID]map[uuid.UUID]uuid.UUID{
+			userID: {meaningID: userWordID},
+		},
+	)
 	return repo, reader
 }
 
@@ -240,6 +246,7 @@ func TestGetCanonicalWordReturnsWordDetail(t *testing.T) {
 	assert.Equal(t, "boarding-pass", body.Word.Slug)
 	require.Len(t, body.Word.Meanings, 1)
 	assert.True(t, body.Word.Meanings[0].Saved)
+	assert.Equal(t, "00000000-0000-0000-0000-000000000010", body.Word.Meanings[0].UserWordID)
 }
 
 func intPtr(i int) *int { return &i }

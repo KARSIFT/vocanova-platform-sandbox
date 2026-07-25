@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
+import { SentenceFeedback } from "../_components/sentence-feedback";
 
 // VOC-019 P4-pending mock fields: mission target, reviewed-today count, and
 // streak have no P1/P2 equivalent and stay mocked pending P4.
@@ -77,7 +78,7 @@ export default async function HomePage() {
           Saved words
         </h2>
         {savedWords.length > 0 ? (
-          <ul className="mt-[var(--spacing-sm)] space-y-[var(--spacing-xs)]">
+          <ul className="mt-[var(--spacing-sm)] space-y-[var(--spacing-md)]">
             {savedWords.map((savedWord) => (
               <li
                 key={savedWord.userWordId}
@@ -92,6 +93,12 @@ export default async function HomePage() {
                 <p className="text-base text-neutral-700">
                   {savedWord.shortDefinition}
                 </p>
+                <SentenceFeedback
+                  targetWord={savedWord.wordText}
+                  attemptId={savedWord.userWordId}
+                  source="word_detail"
+                  shortDefinition={savedWord.shortDefinition}
+                />
               </li>
             ))}
           </ul>

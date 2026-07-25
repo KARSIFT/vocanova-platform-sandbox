@@ -11,6 +11,7 @@ import {
 
 import { createApiClient } from "@/lib/api";
 import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
+import { SentenceFeedback } from "../../_components/sentence-feedback";
 
 type Rating = "again" | "hard" | "good" | "easy";
 
@@ -49,6 +50,12 @@ export function ReviewSession({
   const [phase, setPhase] = useState<PromptPhase>("prompt");
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [startTime, setStartTime] = useState<number>(Date.now());
+  const [lastReviewedCard, setLastReviewedCard] = useState<DueWord | null>(
+    null,
+  );
+  const [lastReviewAttemptId, setLastReviewAttemptId] = useState<string | null>(
+    null,
+  );
 
   const currentCard = dueWords[currentIndex];
 
@@ -139,9 +146,11 @@ export function ReviewSession({
     };
 
     try {
-      await client.submitReview(body, clientAttemptId, {
+      const { data } = await client.submitReview(body, clientAttemptId, {
         headers: { "X-CSRF-Token": csrfToken },
       });
+      setLastReviewedCard(currentCard);
+      setLastReviewAttemptId(data.attemptId);
       setRemainingCount((count) => Math.max(0, count - 1));
       advance();
     } catch (error) {
@@ -172,6 +181,16 @@ export function ReviewSession({
         >
           Back to Home
         </Link>
+        {lastReviewedCard && lastReviewAttemptId ? (
+          <div className="mt-[var(--spacing-lg)] w-full max-w-md text-left">
+            <SentenceFeedback
+              targetWord={lastReviewedCard.wordText}
+              attemptId={lastReviewAttemptId}
+              source="review"
+              shortDefinition={lastReviewedCard.shortDefinition}
+            />
+          </div>
+        ) : null}
       </div>
     );
   }

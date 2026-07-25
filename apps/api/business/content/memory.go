@@ -290,7 +290,8 @@ type SeedJourneyWord struct {
 
 // MemorySavedStateReader is an in-memory read-only saved-state provider for tests.
 type MemorySavedStateReader struct {
-	data map[uuid.UUID]map[uuid.UUID]bool
+	data        map[uuid.UUID]map[uuid.UUID]bool
+	userWordIDs map[uuid.UUID]map[uuid.UUID]uuid.UUID
 }
 
 // NewMemorySavedStateReader creates a saved-state reader from user->meaning maps.
@@ -298,11 +299,32 @@ func NewMemorySavedStateReader(data map[uuid.UUID]map[uuid.UUID]bool) *MemorySav
 	return &MemorySavedStateReader{data: data}
 }
 
+// NewMemorySavedStateReaderWithIDs creates a saved-state reader that also returns
+// the user_word_id for each saved meaning.
+func NewMemorySavedStateReaderWithIDs(
+	saved map[uuid.UUID]map[uuid.UUID]bool,
+	userWordIDs map[uuid.UUID]map[uuid.UUID]uuid.UUID,
+) *MemorySavedStateReader {
+	return &MemorySavedStateReader{data: saved, userWordIDs: userWordIDs}
+}
+
 func (r *MemorySavedStateReader) IsSaved(ctx context.Context, userID uuid.UUID, meaningIDs []uuid.UUID) (map[uuid.UUID]bool, error) {
 	out := make(map[uuid.UUID]bool, len(meaningIDs))
 	userMap := r.data[userID]
 	for _, id := range meaningIDs {
 		out[id] = userMap[id]
+	}
+	return out, nil
+}
+
+// SavedUserWordIDs implements SavedStateReader.
+func (r *MemorySavedStateReader) SavedUserWordIDs(ctx context.Context, userID uuid.UUID, meaningIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
+	out := make(map[uuid.UUID]uuid.UUID, len(meaningIDs))
+	userMap := r.userWordIDs[userID]
+	for _, id := range meaningIDs {
+		if uid, ok := userMap[id]; ok && uid != uuid.Nil {
+			out[id] = uid
+		}
 	}
 	return out, nil
 }

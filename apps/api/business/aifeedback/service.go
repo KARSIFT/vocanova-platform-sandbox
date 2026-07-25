@@ -285,6 +285,32 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 	return result, nil
 }
 
+// ReportFeedback records a learner report for a feedback attempt. It verifies
+// the attempt belongs to the authenticated learner, then emits a privacy-safe
+// telemetry report. It does not change the stored result or mission completion.
+func (s *Service) ReportFeedback(ctx context.Context, userID, attemptID uuid.UUID, reason, classification string) error {
+	if userID == uuid.Nil {
+		return errors.New("user id required")
+	}
+	if attemptID == uuid.Nil {
+		return ErrTargetNotFound
+	}
+	owner, err := s.repo.GetFeedbackAttemptOwner(ctx, attemptID)
+	if err != nil {
+		return fmt.Errorf("lookup attempt owner: %w", err)
+	}
+	if owner != userID {
+		return ErrTargetNotFound
+	}
+	s.telemetry.RecordReport(ctx, FeedbackReport{
+		UserID:         userID,
+		AttemptID:      attemptID,
+		Reason:         reason,
+		Classification: classification,
+	})
+	return nil
+}
+
 // generateWithRepair calls the provider once and, if the output fails validation,
 // makes one constrained repair attempt (DOC-09 §10). The provider call is bounded
 // by the DOC-09 §18 total backend target of 10 seconds; the adapter itself

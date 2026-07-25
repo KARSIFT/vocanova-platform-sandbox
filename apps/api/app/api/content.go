@@ -52,6 +52,7 @@ type WordMeaningDTO struct {
 	ShortDefinition   string             `json:"shortDefinition" doc:"Short definition"`
 	LearnerDefinition string             `json:"learnerDefinition,omitempty" doc:"Learner-friendly definition"`
 	Saved             bool               `json:"saved" doc:"Whether the authenticated requester has saved this meaning"`
+	UserWordID        string             `json:"userWordId,omitempty" format:"uuid" doc:"Saved record identifier when this meaning is saved"`
 	Examples          []WordExampleDTO   `json:"examples" doc:"Example sentences"`
 	UsageNotes        []WordUsageNoteDTO `json:"usageNotes" doc:"Usage notes"`
 }
@@ -226,6 +227,7 @@ func wordToDTO(w *content.WordDetail) WordDetailDTO {
 			ShortDefinition:   m.ShortDefinition,
 			LearnerDefinition: m.LearnerDefinition,
 			Saved:             m.Saved,
+			UserWordID:        m.UserWordID.String(),
 			Examples:          examples,
 			UsageNotes:        notes,
 		}

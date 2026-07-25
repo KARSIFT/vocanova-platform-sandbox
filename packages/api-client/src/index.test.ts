@@ -392,4 +392,82 @@ describe("VocanovaClient", () => {
     assert.equal(data.reviewStepAfter, 1);
     assert.equal(data.nextReviewAt, "2026-07-25T13:00:00Z");
   });
+
+  it("sends POST /api/v1/sentence-feedback with Idempotency-Key", async () => {
+    const fetch = (url: string, init: RequestInit): Promise<Response> => {
+      assert.equal(url, "https://api.example.com/api/v1/sentence-feedback");
+      assert.equal(init.method, "POST");
+      assert.equal(
+        new Headers(init.headers).get("Idempotency-Key"),
+        "idem-key",
+      );
+      assert.equal(
+        init.body,
+        JSON.stringify({
+          sentenceText: "I work every day.",
+          source: "word_detail",
+          attemptId: "00000000-0000-0000-0000-000000000002",
+        }),
+      );
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            sentenceId: "00000000-0000-0000-0000-000000000010",
+            attemptId: "00000000-0000-0000-0000-000000000011",
+            status: "correct",
+            originalSentence: "I work every day.",
+            explanation: "The sentence uses the target word correctly.",
+            missionCompleted: false,
+            canRetry: false,
+            reported: false,
+          }),
+          { headers: { "Content-Type": "application/json" }, status: 200 },
+        ),
+      );
+    };
+
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: fetch as typeof globalThis.fetch,
+    });
+    const { data } = await client.submitSentenceFeedback(
+      {
+        sentenceText: "I work every day.",
+        source: "word_detail",
+        attemptId: "00000000-0000-0000-0000-000000000002",
+      },
+      "idem-key",
+    );
+    assert.equal(data.status, "correct");
+    assert.equal(data.originalSentence, "I work every day.");
+    assert.equal(data.missionCompleted, false);
+  });
+
+  it("sends POST /api/v1/sentence-feedback/{attemptId}/reports", async () => {
+    const fetch = (url: string, init: RequestInit): Promise<Response> => {
+      assert.equal(
+        url,
+        "https://api.example.com/api/v1/sentence-feedback/00000000-0000-0000-0000-000000000011/reports",
+      );
+      assert.equal(init.method, "POST");
+      assert.equal(
+        init.body,
+        JSON.stringify({
+          reason: "The feedback is incorrect.",
+          classification: "incorrect",
+        }),
+      );
+      return Promise.resolve(new Response(null, { status: 204 }));
+    };
+
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: fetch as typeof globalThis.fetch,
+    });
+    const { response } = await client.reportSentenceFeedback(
+      "00000000-0000-0000-0000-000000000011",
+      { reason: "The feedback is incorrect.", classification: "incorrect" },
+    );
+    assert.equal(response.status, 204);
+  });
 });

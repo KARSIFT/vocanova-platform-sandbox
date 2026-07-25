@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ApiResponseError } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
+import { SentenceFeedback } from "../../../_components/sentence-feedback";
 
 import { MeaningSaveButton } from "./_components/meaning-save-button";
 
@@ -107,6 +108,15 @@ export default async function WordDetailPage({ params }: WordDetailPageProps) {
                     ))}
                   </ul>
                 </div>
+              ) : null}
+
+              {meaning.saved && meaning.userWordId ? (
+                <SentenceFeedback
+                  targetWord={wordData.text}
+                  attemptId={meaning.userWordId}
+                  source="word_detail"
+                  shortDefinition={meaning.shortDefinition}
+                />
               ) : null}
             </li>
           ))}

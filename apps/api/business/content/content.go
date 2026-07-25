@@ -68,6 +68,7 @@ type WordMeaning struct {
 	Examples          []WordExample
 	UsageNotes        []WordUsageNote
 	Saved             bool
+	UserWordID        uuid.UUID
 }
 
 // WordDetail is a canonical word with all its meanings.
@@ -93,6 +94,10 @@ type Repository interface {
 // Implementations are read-only and must never expose another learner's rows.
 type SavedStateReader interface {
 	IsSaved(ctx context.Context, userID uuid.UUID, meaningIDs []uuid.UUID) (map[uuid.UUID]bool, error)
+	// SavedUserWordIDs returns a map from meaning_id to the owning user_word_id for
+	// meanings that are currently saved by the requester. Missing or unsaved IDs
+	// are omitted from the map.
+	SavedUserWordIDs(ctx context.Context, userID uuid.UUID, meaningIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error)
 }
 
 // ListSituationsRequest is a paginated query.
@@ -192,8 +197,15 @@ func (s *Service) applySavedWord(ctx context.Context, userID uuid.UUID, word *Wo
 	if err != nil {
 		return err
 	}
+	userWordIDs, err := s.reader.SavedUserWordIDs(ctx, userID, ids)
+	if err != nil {
+		return err
+	}
 	for i := range word.Meanings {
 		word.Meanings[i].Saved = states[word.Meanings[i].ID]
+		if id, ok := userWordIDs[word.Meanings[i].ID]; ok {
+			word.Meanings[i].UserWordID = id
+		}
 	}
 	return nil
 }

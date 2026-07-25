@@ -177,6 +177,24 @@ func (r *MemoryRepository) ListSavedWords(ctx context.Context, req ListSavedWord
 	return resp, nil
 }
 
+// SavedUserWordIDs implements SavedStateReader.
+func (r *MemoryRepository) SavedUserWordIDs(ctx context.Context, userID uuid.UUID, meaningIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	out := make(map[uuid.UUID]uuid.UUID, len(meaningIDs))
+	for _, id := range meaningIDs {
+		for _, uw := range r.userWords {
+			if uw.UserID == userID && uw.MeaningID == id && uw.DeletedAt == nil {
+				out[id] = uw.ID
+				break
+			}
+		}
+	}
+	return out, nil
+}
+
+// IsSaved implements SavedStateReader.
 func (r *MemoryRepository) IsSaved(ctx context.Context, userID uuid.UUID, meaningIDs []uuid.UUID) (map[uuid.UUID]bool, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

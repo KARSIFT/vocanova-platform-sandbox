@@ -264,6 +264,25 @@ func (r *PostgreSQLRepository) CompleteFeedbackAttempt(ctx context.Context, pend
 	return tx.Commit()
 }
 
+// GetFeedbackAttemptOwner implements Repository.
+func (r *PostgreSQLRepository) GetFeedbackAttemptOwner(ctx context.Context, attemptID uuid.UUID) (uuid.UUID, error) {
+	var userID uuid.UUID
+	err := r.db.QueryRowContext(ctx,
+		`SELECT ls.user_id
+		 FROM ai_feedback_attempts afa
+		 JOIN learner_sentences ls ON ls.id = afa.learner_sentence_id
+		 WHERE afa.id = $1`,
+		attemptID,
+	).Scan(&userID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return uuid.Nil, ErrTargetNotFound
+	}
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("get feedback attempt owner: %w", err)
+	}
+	return userID, nil
+}
+
 // RequestHash computes the deduplication key for a sentence-feedback request.
 func RequestHash(userID uuid.UUID, attemptID uuid.UUID, targetWord, normalizedSentence, promptVersion string) string {
 	h := sha256.New()

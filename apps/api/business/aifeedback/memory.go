@@ -220,6 +220,23 @@ func (r *MemoryRepository) CreatePendingAttempt(ctx context.Context, req SubmitS
 	return &PendingAttempt{SentenceID: sentenceID, AttemptID: attemptID}, nil
 }
 
+// GetFeedbackAttemptOwner implements Repository.
+func (r *MemoryRepository) GetFeedbackAttemptOwner(ctx context.Context, attemptID uuid.UUID) (uuid.UUID, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for _, a := range r.attempts {
+		if a.ID == attemptID {
+			for _, s := range r.sentences {
+				if s.ID == a.LearnerSentenceID {
+					return s.UserID, nil
+				}
+			}
+		}
+	}
+	return uuid.Nil, ErrTargetNotFound
+}
+
 // CompleteFeedbackAttempt implements Repository.
 func (r *MemoryRepository) CompleteFeedbackAttempt(ctx context.Context, pending PendingAttempt, feedback *ProviderFeedback, failureCode, failureMessage string, now time.Time) error {
 	r.mu.Lock()

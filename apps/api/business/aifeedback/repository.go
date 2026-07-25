@@ -58,4 +58,9 @@ type Repository interface {
 	// provider call. A non-nil feedback indicates success; otherwise failureCode
 	// and failureMessage describe the failure.
 	CompleteFeedbackAttempt(ctx context.Context, pending PendingAttempt, feedback *ProviderFeedback, failureCode, failureMessage string, now time.Time) error
+
+	// GetFeedbackAttemptOwner returns the learner user_id that owns the sentence
+	// associated with the given ai_feedback_attempts row. If the attempt does not
+	// exist, it returns ErrTargetNotFound so the caller can surface a 404.
+	GetFeedbackAttemptOwner(ctx context.Context, attemptID uuid.UUID) (uuid.UUID, error)
 }

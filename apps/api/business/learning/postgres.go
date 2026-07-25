@@ -216,6 +216,35 @@ func (r *PostgreSQLRepository) IsSaved(ctx context.Context, userID uuid.UUID, me
 	return out, nil
 }
 
+// SavedUserWordIDs implements SavedStateReader for the learning repository.
+func (r *PostgreSQLRepository) SavedUserWordIDs(ctx context.Context, userID uuid.UUID, meaningIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
+	out := make(map[uuid.UUID]uuid.UUID, len(meaningIDs))
+	if len(meaningIDs) == 0 {
+		return out, nil
+	}
+
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT meaning_id, id FROM user_words WHERE user_id = $1 AND meaning_id = ANY($2::uuid[]) AND deleted_at IS NULL`,
+		userID, pq.Array(meaningIDs),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("saved user word ids: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var meaningID, userWordID uuid.UUID
+		if err := rows.Scan(&meaningID, &userWordID); err != nil {
+			return nil, fmt.Errorf("scan saved user word id: %w", err)
+		}
+		out[meaningID] = userWordID
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("saved user word id rows: %w", err)
+	}
+	return out, nil
+}
+
 func (r *PostgreSQLRepository) savedMeaningByID(ctx context.Context, tx *sql.Tx, id uuid.UUID) (*SavedMeaning, error) {
 	var row *sql.Row
 	q := `SELECT uw.id, uw.meaning_id, cw.id, cw.text, cw.normalized_text,

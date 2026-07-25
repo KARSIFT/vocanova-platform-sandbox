@@ -20,9 +20,19 @@ type FeedbackEvent struct {
 	LearningStatus string
 }
 
-// TelemetryRecorder records privacy-safe feedback events.
+// FeedbackReport is a privacy-safe report of a quality concern. It never includes
+// learner text; only attempt identifiers, classifications, and a short reason.
+type FeedbackReport struct {
+	UserID         uuid.UUID
+	AttemptID      uuid.UUID
+	Reason         string
+	Classification string
+}
+
+// TelemetryRecorder records privacy-safe feedback events and reports.
 type TelemetryRecorder interface {
 	Record(ctx context.Context, event FeedbackEvent)
+	RecordReport(ctx context.Context, report FeedbackReport)
 }
 
 // NoopTelemetryRecorder discards telemetry events. It is used for tests and as
@@ -36,3 +46,6 @@ func NewNoopTelemetryRecorder() *NoopTelemetryRecorder {
 
 // Record implements TelemetryRecorder with no side effects.
 func (n *NoopTelemetryRecorder) Record(ctx context.Context, event FeedbackEvent) {}
+
+// RecordReport implements TelemetryRecorder with no side effects.
+func (n *NoopTelemetryRecorder) RecordReport(ctx context.Context, report FeedbackReport) {}
