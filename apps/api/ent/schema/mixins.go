@@ -26,3 +26,12 @@ func (TimeMixin) Fields() []ent.Field {
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
 	}
 }
+
+// SoftDeleteMixin adds a nullable deleted_at timestamp for soft-deleted tables.
+type SoftDeleteMixin struct{ ent.Schema }
+
+func (SoftDeleteMixin) Fields() []ent.Field {
+	return []ent.Field{
+		field.Time("deleted_at").Optional().Nillable(),
+	}
+}

@@ -1,0 +1,2535 @@
+{
+  "journey_situations": [
+    {
+      "id": "eaa6f59e-6903-5cea-9822-5d42e43a1464",
+      "slug": "airport",
+      "title": "Airport",
+      "short_description": "Check in, get through security, and find your gate with confidence.",
+      "level_band": "a1_a2",
+      "category": "travel",
+      "status": "active",
+      "display_order": 1
+    },
+    {
+      "id": "9a26f786-316d-53c4-8ea4-6d4ebdd528e3",
+      "slug": "restaurant",
+      "title": "Restaurant",
+      "short_description": "Order food, ask about the menu, and handle the bill with ease.",
+      "level_band": "a1_a2",
+      "category": "daily_life",
+      "status": "active",
+      "display_order": 2
+    },
+    {
+      "id": "687765d8-b6c0-5b63-9771-19ccb71ecb98",
+      "slug": "hotel-check-in",
+      "title": "Hotel Check-in",
+      "short_description": "Check in and out smoothly and ask about hotel amenities.",
+      "level_band": "a1_a2",
+      "category": "travel",
+      "status": "active",
+      "display_order": 3
+    },
+    {
+      "id": "9eff3b79-a9e9-5456-8d36-94e0da59c117",
+      "slug": "job-interview",
+      "title": "Job Interview",
+      "short_description": "Talk about your experience and answer common interview questions.",
+      "level_band": "a2_b1",
+      "category": "work",
+      "status": "active",
+      "display_order": 4
+    },
+    {
+      "id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
+      "slug": "daily-conversation",
+      "title": "Daily Conversation",
+      "short_description": "Handle everyday small talk and casual exchanges naturally.",
+      "level_band": "a1_a2",
+      "category": "social",
+      "status": "active",
+      "display_order": 5
+    },
+    {
+      "id": "9c689720-9b7f-571a-8a75-4905d5c982e5",
+      "slug": "work-meeting",
+      "title": "Work Meeting",
+      "short_description": "Follow along, share updates, and contribute to workplace discussions.",
+      "level_band": "a2_b1",
+      "category": "work",
+      "status": "active",
+      "display_order": 6
+    },
+    {
+      "id": "a1adeeba-ab2a-5c8f-91e0-50317a2d1898",
+      "slug": "university-class",
+      "title": "University Class",
+      "short_description": "Understand lectures, ask questions, and join class discussion.",
+      "level_band": "a2_b1",
+      "category": "study",
+      "status": "active",
+      "display_order": 7
+    }
+  ],
+  "canonical_words": [
+    {
+      "id": "5a7ebd13-cb34-5b06-9bf6-1a575fdec97c",
+      "text": "action items",
+      "normalized_text": "action items",
+      "word_type": "phrase",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "10fad0bc-e63e-5bca-8f7a-360dac550418",
+      "text": "agenda",
+      "normalized_text": "agenda",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "d49277f7-5d21-5e3a-90be-f178561526ad",
+      "text": "amenities",
+      "normalized_text": "amenities",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "b7443287-0ef1-5e3d-a218-86eb4b2ab1d1",
+      "text": "appetizer",
+      "normalized_text": "appetizer",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "ff983d61-1001-5a79-bc6d-62f0743a0bcf",
+      "text": "assignment",
+      "normalized_text": "assignment",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "59483c64-b545-5b44-a6d1-1a6ca09897d4",
+      "text": "bill",
+      "normalized_text": "bill",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "3d1821fa-17e9-59ba-a132-160350a2d497",
+      "text": "boarding pass",
+      "normalized_text": "boarding pass",
+      "word_type": "phrase",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "666efb95-6eb5-514a-8fc5-166c6900cccd",
+      "text": "brainstorm",
+      "normalized_text": "brainstorm",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "f3daab92-c700-5ee8-b9a3-6706dbf5f4ab",
+      "text": "casual",
+      "normalized_text": "casual",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "812d1cd9-52c8-5726-a7b8-08c094e3fdd2",
+      "text": "catch up",
+      "normalized_text": "catch up",
+      "word_type": "phrase",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "cc424986-4e4d-5c62-acc3-ff2a74faeea2",
+      "text": "check-out",
+      "normalized_text": "check-out",
+      "word_type": "phrase",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "03d1bda1-ced0-556a-b699-3f8a2ff46eda",
+      "text": "cover letter",
+      "normalized_text": "cover letter",
+      "word_type": "phrase",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "14e79757-9bfe-5f24-97d6-c68f039ad0e5",
+      "text": "customs",
+      "normalized_text": "customs",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "fb5affef-ca90-5f39-b5b1-83a8569d548a",
+      "text": "deadline",
+      "normalized_text": "deadline",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "5669bc27-e811-5918-a606-046c71082080",
+      "text": "farewell",
+      "normalized_text": "farewell",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "19e74673-e746-540e-8a33-20724c758443",
+      "text": "follow-up",
+      "normalized_text": "follow-up",
+      "word_type": "phrase",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "216cea36-655e-558a-a9ef-cec8b06d3de6",
+      "text": "front desk",
+      "normalized_text": "front desk",
+      "word_type": "phrase",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "2530a545-ed41-5ca3-80ea-723cc5e141c7",
+      "text": "gate",
+      "normalized_text": "gate",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "7d759285-c327-5f01-a5a5-cdd200403f5e",
+      "text": "greeting",
+      "normalized_text": "greeting",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "481213da-c938-5edb-8d35-e131e9521c70",
+      "text": "group project",
+      "normalized_text": "group project",
+      "word_type": "phrase",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "a44659c3-20e1-57e9-ad4c-23c26ef51b80",
+      "text": "key card",
+      "normalized_text": "key card",
+      "word_type": "phrase",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "52c4b0aa-0cf2-5ad6-8da8-d2c2eddb10ae",
+      "text": "layover",
+      "normalized_text": "layover",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "86ca3cc0-09a1-59a7-bb35-01a02907be87",
+      "text": "lecture",
+      "normalized_text": "lecture",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "59af8ca2-34fd-5937-9632-e1f38cf01644",
+      "text": "luggage",
+      "normalized_text": "luggage",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "55de985a-afa7-588f-b66c-0ae2e9b36cff",
+      "text": "menu",
+      "normalized_text": "menu",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "20b2d9d3-2fa9-5788-8a07-489b3263bccf",
+      "text": "office hours",
+      "normalized_text": "office hours",
+      "word_type": "phrase",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "b367922f-4059-5533-84ef-7c0d00f1344a",
+      "text": "qualifications",
+      "normalized_text": "qualifications",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "9009697e-0f1b-5b93-8652-3735e4d7c8b7",
+      "text": "references",
+      "normalized_text": "references",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "cafdc430-62de-5bb4-8896-437e75336e46",
+      "text": "reservation",
+      "normalized_text": "reservation",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "ecd746b9-be52-5640-8eab-17f86e033d7e",
+      "text": "resume",
+      "normalized_text": "resume",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "60457eeb-bdbc-5d50-ba03-9601bd34bd6f",
+      "text": "salary expectations",
+      "normalized_text": "salary expectations",
+      "word_type": "phrase",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "9892d25b-a681-5d3e-bd0a-cdeb283a68ec",
+      "text": "security check",
+      "normalized_text": "security check",
+      "word_type": "phrase",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "bcfb5030-4a13-5039-9eec-ee12814ad070",
+      "text": "small talk",
+      "normalized_text": "small talk",
+      "word_type": "phrase",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "282a4495-dfa6-5a2f-9f09-63874c3427a7",
+      "text": "stakeholder",
+      "normalized_text": "stakeholder",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "f29ee7bd-3792-51c9-964d-02e1ffb45f48",
+      "text": "syllabus",
+      "normalized_text": "syllabus",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "d68a0adc-bd3c-5fcb-9fa3-d86e2a14b9bf",
+      "text": "take-out",
+      "normalized_text": "take-out",
+      "word_type": "phrase",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "ffdbbc68-4e0a-529b-8dd9-a8bb93ae91f8",
+      "text": "tip",
+      "normalized_text": "tip",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "e9a7f1d7-6cd3-5fb7-931a-1d2465692273",
+      "text": "wake-up call",
+      "normalized_text": "wake-up call",
+      "word_type": "phrase",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "a301a5b5-593c-52b4-893f-3c7c1e50715a",
+      "text": "weekend plans",
+      "normalized_text": "weekend plans",
+      "word_type": "phrase",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": null
+    }
+  ],
+  "word_meanings": [
+    {
+      "id": "7ee5fc1b-8108-5fb4-a254-f75af84695f3",
+      "word_id": "03d1bda1-ced0-556a-b699-3f8a2ff46eda",
+      "part_of_speech": "noun",
+      "short_definition": "A letter for a job application.",
+      "learner_definition": "A letter for a job application.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "8a7f86d3-ed7a-512c-9c19-d86b5d46ffa8",
+      "word_id": "10fad0bc-e63e-5bca-8f7a-360dac550418",
+      "part_of_speech": "noun",
+      "short_definition": "A list of topics planned for a meeting.",
+      "learner_definition": "A list of topics planned for a meeting.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "d62f1f3f-8382-5999-9e9c-30858f6b2c5b",
+      "word_id": "14e79757-9bfe-5f24-97d6-c68f039ad0e5",
+      "part_of_speech": "noun",
+      "short_definition": "A border check for goods.",
+      "learner_definition": "A border check for goods.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "4c3724d8-5abf-5159-8171-76ccdcdae7c0",
+      "word_id": "19e74673-e746-540e-8a33-20724c758443",
+      "part_of_speech": "noun",
+      "short_definition": "A message sent after an interview.",
+      "learner_definition": "A message sent after an interview.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "446b7b9e-8190-5987-9401-0378e95ff493",
+      "word_id": "19e74673-e746-540e-8a33-20724c758443",
+      "part_of_speech": "noun",
+      "short_definition": "A later message or action.",
+      "learner_definition": "A later message or action.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "ce20a0cc-6a7e-5b5e-bbfe-5ec49f1c58d5",
+      "word_id": "20b2d9d3-2fa9-5788-8a07-489b3263bccf",
+      "part_of_speech": "noun",
+      "short_definition": "Times to meet an instructor.",
+      "learner_definition": "Times to meet an instructor.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "3008733d-9cab-547c-9712-4014a26ca697",
+      "word_id": "216cea36-655e-558a-a9ef-cec8b06d3de6",
+      "part_of_speech": "noun",
+      "short_definition": "The hotel counter for guest help.",
+      "learner_definition": "The hotel counter for guest help.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "6a61d337-80e7-5d50-bc61-8b45b6a054a1",
+      "word_id": "2530a545-ed41-5ca3-80ea-723cc5e141c7",
+      "part_of_speech": "noun",
+      "short_definition": "The place where you board your plane.",
+      "learner_definition": "The place where you board your plane.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "1e91dacc-7700-5f65-9310-312ac4dff706",
+      "word_id": "282a4495-dfa6-5a2f-9f09-63874c3427a7",
+      "part_of_speech": "noun",
+      "short_definition": "A person interested in a project.",
+      "learner_definition": "A person interested in a project.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "8a6ec801-3292-5fc2-bfb3-242ac405d891",
+      "word_id": "3d1821fa-17e9-59ba-a132-160350a2d497",
+      "part_of_speech": "noun",
+      "short_definition": "A document that lets you get on your flight.",
+      "learner_definition": "A document that lets you get on your flight.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "5b7f44dd-77ba-5d20-9ee4-01d6967d203a",
+      "word_id": "481213da-c938-5edb-8d35-e131e9521c70",
+      "part_of_speech": "noun",
+      "short_definition": "An assignment with other students.",
+      "learner_definition": "An assignment with other students.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "8f12f8e0-d0a3-5010-941b-8f7d526121cc",
+      "word_id": "52c4b0aa-0cf2-5ad6-8da8-d2c2eddb10ae",
+      "part_of_speech": "noun",
+      "short_definition": "A stop between flights.",
+      "learner_definition": "A stop between flights.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "329c4ec9-6562-568e-9e71-9134da2f0d8d",
+      "word_id": "55de985a-afa7-588f-b66c-0ae2e9b36cff",
+      "part_of_speech": "noun",
+      "short_definition": "A list of food and drinks you can order.",
+      "learner_definition": "A list of food and drinks you can order.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "c954cdb6-c0bc-5d61-9045-18db360f4b84",
+      "word_id": "5669bc27-e811-5918-a606-046c71082080",
+      "part_of_speech": "noun",
+      "short_definition": "Words used to say goodbye to someone.",
+      "learner_definition": "Words used to say goodbye to someone.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "5d21c02b-ef51-5545-bd8a-01f5814d3a67",
+      "word_id": "59483c64-b545-5b44-a6d1-1a6ca09897d4",
+      "part_of_speech": "noun",
+      "short_definition": "The statement showing how much you need to pay.",
+      "learner_definition": "The statement showing how much you need to pay.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "bee2408e-5991-5805-923c-6fba33ab7e7a",
+      "word_id": "59af8ca2-34fd-5937-9632-e1f38cf01644",
+      "part_of_speech": "noun",
+      "short_definition": "Bags and suitcases you take on a trip.",
+      "learner_definition": "Bags and suitcases you take on a trip.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "71c851c2-c028-5d8f-9e0a-5be524410a82",
+      "word_id": "5a7ebd13-cb34-5b06-9bf6-1a575fdec97c",
+      "part_of_speech": "noun",
+      "short_definition": "Tasks assigned after a meeting.",
+      "learner_definition": "Tasks assigned after a meeting.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "0b9878b3-64a7-5175-92f7-ce0435cfbed4",
+      "word_id": "60457eeb-bdbc-5d50-ba03-9601bd34bd6f",
+      "part_of_speech": "phrase",
+      "short_definition": "The pay range you hope to receive.",
+      "learner_definition": "The pay range you hope to receive.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "1eee9c5f-7079-54d4-bcd8-183739df837a",
+      "word_id": "666efb95-6eb5-514a-8fc5-166c6900cccd",
+      "part_of_speech": "verb",
+      "short_definition": "To share ideas freely to solve a problem.",
+      "learner_definition": "To share ideas freely to solve a problem.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "ac93d068-7c3e-55c9-9d85-3fd3518592dc",
+      "word_id": "7d759285-c327-5f01-a5a5-cdd200403f5e",
+      "part_of_speech": "noun",
+      "short_definition": "Words used to say hello to someone.",
+      "learner_definition": "Words used to say hello to someone.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "3d64c3c9-ede0-5ffd-b1ef-278f6b70e486",
+      "word_id": "812d1cd9-52c8-5726-a7b8-08c094e3fdd2",
+      "part_of_speech": "verb",
+      "short_definition": "To talk after time apart.",
+      "learner_definition": "To talk after time apart.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "fd6c39c0-f097-5a5b-b947-c93096e635d0",
+      "word_id": "86ca3cc0-09a1-59a7-bb35-01a02907be87",
+      "part_of_speech": "noun",
+      "short_definition": "A lesson given by an instructor to a class.",
+      "learner_definition": "A lesson given by an instructor to a class.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "9ab971f4-9b7b-5551-b274-62ad41d9273f",
+      "word_id": "9009697e-0f1b-5b93-8652-3735e4d7c8b7",
+      "part_of_speech": "noun",
+      "short_definition": "People who can speak about your work.",
+      "learner_definition": "People who can speak about your work.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "2a610b3d-4031-5eee-a0be-d3def2cc0b53",
+      "word_id": "9892d25b-a681-5d3e-bd0a-cdeb283a68ec",
+      "part_of_speech": "noun",
+      "short_definition": "The screening process before entering the departure area.",
+      "learner_definition": "The screening process before entering the departure area.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "c99075bf-94cb-5f51-90d5-f244f66ea942",
+      "word_id": "a301a5b5-593c-52b4-893f-3c7c1e50715a",
+      "part_of_speech": "phrase",
+      "short_definition": "Activities planned for the weekend.",
+      "learner_definition": "Activities planned for the weekend.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "d990ce6e-4756-52e0-96e8-9926442963f2",
+      "word_id": "a44659c3-20e1-57e9-ad4c-23c26ef51b80",
+      "part_of_speech": "noun",
+      "short_definition": "An electronic card used to open your room.",
+      "learner_definition": "An electronic card used to open your room.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "c7796a82-cc8d-56de-a97f-773ea694e337",
+      "word_id": "b367922f-4059-5533-84ef-7c0d00f1344a",
+      "part_of_speech": "noun",
+      "short_definition": "Skills and experience for a job.",
+      "learner_definition": "Skills and experience for a job.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "2534b539-a80f-5001-b9a4-27a5e0679539",
+      "word_id": "b7443287-0ef1-5e3d-a218-86eb4b2ab1d1",
+      "part_of_speech": "noun",
+      "short_definition": "A small dish eaten before the main meal.",
+      "learner_definition": "A small dish eaten before the main meal.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "3265c02c-5751-5465-b94b-e767aa871d8d",
+      "word_id": "bcfb5030-4a13-5039-9eec-ee12814ad070",
+      "part_of_speech": "noun",
+      "short_definition": "Light conversation about everyday topics.",
+      "learner_definition": "Light conversation about everyday topics.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "52c8ed28-544d-5a80-a911-6ddd03953606",
+      "word_id": "cafdc430-62de-5bb4-8896-437e75336e46",
+      "part_of_speech": "noun",
+      "short_definition": "A booking for a table.",
+      "learner_definition": "A booking for a table.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "edb20c6e-1023-5f10-af4b-0dc059a781b2",
+      "word_id": "cafdc430-62de-5bb4-8896-437e75336e46",
+      "part_of_speech": "noun",
+      "short_definition": "A booking for a room at a hotel.",
+      "learner_definition": "A booking for a room at a hotel.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "846f3dde-4b90-5eb8-929e-ecd28e8315f3",
+      "word_id": "cc424986-4e4d-5c62-acc3-ff2a74faeea2",
+      "part_of_speech": "noun",
+      "short_definition": "The process of leaving a hotel.",
+      "learner_definition": "The process of leaving a hotel.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "dfe9c593-cf2e-505b-96ca-4afef46422d8",
+      "word_id": "d49277f7-5d21-5e3a-90be-f178561526ad",
+      "part_of_speech": "noun",
+      "short_definition": "Useful hotel services or features.",
+      "learner_definition": "Useful hotel services or features.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "1e9e55f8-d329-5c52-bc30-7ed77a31a167",
+      "word_id": "d68a0adc-bd3c-5fcb-9fa3-d86e2a14b9bf",
+      "part_of_speech": "noun",
+      "short_definition": "Food to eat somewhere else.",
+      "learner_definition": "Food to eat somewhere else.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "de015c5a-0fad-507d-944e-572f6a10da66",
+      "word_id": "e9a7f1d7-6cd3-5fb7-931a-1d2465692273",
+      "part_of_speech": "noun",
+      "short_definition": "A scheduled phone call to wake you up.",
+      "learner_definition": "A scheduled phone call to wake you up.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "e5817d4f-eaf9-577e-881f-b100fe1e24f8",
+      "word_id": "ecd746b9-be52-5640-8eab-17f86e033d7e",
+      "part_of_speech": "noun",
+      "short_definition": "A summary of your work experience and skills.",
+      "learner_definition": "A summary of your work experience and skills.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "58529fdd-9425-5aef-a8c7-bc1086be7080",
+      "word_id": "f29ee7bd-3792-51c9-964d-02e1ffb45f48",
+      "part_of_speech": "noun",
+      "short_definition": "A document describing a course.",
+      "learner_definition": "A document describing a course.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "0d267f75-f227-5478-962d-b4b944e0e93e",
+      "word_id": "f3daab92-c700-5ee8-b9a3-6706dbf5f4ab",
+      "part_of_speech": "adjective",
+      "short_definition": "Relaxed and informal in style or conversation.",
+      "learner_definition": "Relaxed and informal in style or conversation.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "b571a540-89bb-533b-be81-9cedf443a64a",
+      "word_id": "fb5affef-ca90-5f39-b5b1-83a8569d548a",
+      "part_of_speech": "noun",
+      "short_definition": "The latest time something must be finished.",
+      "learner_definition": "The latest time something must be finished.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "f582a137-c77d-58df-942e-884fe336cd64",
+      "word_id": "fb5affef-ca90-5f39-b5b1-83a8569d548a",
+      "part_of_speech": "noun",
+      "short_definition": "When work must be submitted.",
+      "learner_definition": "When work must be submitted.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "ae72824e-1341-5081-84ea-0e0fdbf09c50",
+      "word_id": "ff983d61-1001-5a79-bc6d-62f0743a0bcf",
+      "part_of_speech": "noun",
+      "short_definition": "Work a teacher asks students to complete.",
+      "learner_definition": "Work a teacher asks students to complete.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    },
+    {
+      "id": "bd5eacb6-be32-5e7b-a8d7-d56db1908347",
+      "word_id": "ffdbbc68-4e0a-529b-8dd9-a8bb93ae91f8",
+      "part_of_speech": "noun",
+      "short_definition": "Extra money given to thank someone for service.",
+      "learner_definition": "Extra money given to thank someone for service.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": null
+    }
+  ],
+  "word_examples": [
+    {
+      "id": "3b4b1ab4-f994-5b0d-bc51-4d00ea63849f",
+      "meaning_id": "0b9878b3-64a7-5175-92f7-ce0435cfbed4",
+      "example_text": "The recruiter asked about my salary expectations.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Job Interview"
+    },
+    {
+      "id": "369dac8a-1a8c-5069-9fde-29947b3fbe16",
+      "meaning_id": "0d267f75-f227-5478-962d-b4b944e0e93e",
+      "example_text": "The conversation was friendly and casual.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Daily Conversation"
+    },
+    {
+      "id": "873dae53-db10-5e3c-8239-c37d14501090",
+      "meaning_id": "1e91dacc-7700-5f65-9310-312ac4dff706",
+      "example_text": "We invited each stakeholder to comment.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Work Meeting"
+    },
+    {
+      "id": "fc608e99-2ebb-57fe-a311-ca799980a6fe",
+      "meaning_id": "1e9e55f8-d329-5c52-bc30-7ed77a31a167",
+      "example_text": "We ordered take-out after work.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Restaurant"
+    },
+    {
+      "id": "308931e2-3df2-55a5-9ad5-f3cbc9442b1f",
+      "meaning_id": "1eee9c5f-7079-54d4-bcd8-183739df837a",
+      "example_text": "Let's brainstorm possible names for the product.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Work Meeting"
+    },
+    {
+      "id": "200b8f97-ec14-501f-a1ec-f14df088534a",
+      "meaning_id": "2534b539-a80f-5001-b9a4-27a5e0679539",
+      "example_text": "We shared an appetizer before dinner.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Restaurant"
+    },
+    {
+      "id": "4ea97066-3f03-55fe-aee9-ebf90ec64d5f",
+      "meaning_id": "2a610b3d-4031-5eee-a0be-d3def2cc0b53",
+      "example_text": "We arrived early to allow time for the security check.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Airport"
+    },
+    {
+      "id": "3f12afcf-4457-5196-9516-161a2509e884",
+      "meaning_id": "3008733d-9cab-547c-9712-4014a26ca697",
+      "example_text": "Please collect your key at the front desk.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Hotel Check-in"
+    },
+    {
+      "id": "90b5d8c1-82a5-575f-a625-f65c9b97249a",
+      "meaning_id": "3265c02c-5751-5465-b94b-e767aa871d8d",
+      "example_text": "We made small talk while waiting.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Daily Conversation"
+    },
+    {
+      "id": "14da984a-cd90-5d7a-aa9b-f3d1038653b2",
+      "meaning_id": "329c4ec9-6562-568e-9e71-9134da2f0d8d",
+      "example_text": "Could we see the menu, please?",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Restaurant"
+    },
+    {
+      "id": "79054d3c-7755-5245-9e8a-3f8391a54188",
+      "meaning_id": "3d64c3c9-ede0-5ffd-b1ef-278f6b70e486",
+      "example_text": "Let's catch up over coffee.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Daily Conversation"
+    },
+    {
+      "id": "2798e11c-5798-5f70-8319-e3261b5d621e",
+      "meaning_id": "446b7b9e-8190-5987-9401-0378e95ff493",
+      "example_text": "The manager scheduled a follow-up for Monday.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Work Meeting"
+    },
+    {
+      "id": "48627057-7136-52bb-b696-1b4d99a8d099",
+      "meaning_id": "4c3724d8-5abf-5159-8171-76ccdcdae7c0",
+      "example_text": "She sent a follow-up the next morning.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Job Interview"
+    },
+    {
+      "id": "5156ed2f-8c49-5d9b-9481-8fd5143d26e5",
+      "meaning_id": "52c8ed28-544d-5a80-a911-6ddd03953606",
+      "example_text": "I made a reservation for seven o'clock.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Restaurant"
+    },
+    {
+      "id": "02cb6fe9-715d-559d-8b0c-8dd50263a9eb",
+      "meaning_id": "58529fdd-9425-5aef-a8c7-bc1086be7080",
+      "example_text": "The reading list is in the syllabus.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "University Class"
+    },
+    {
+      "id": "f6c99111-6045-50d7-b175-ba3781b27afd",
+      "meaning_id": "5b7f44dd-77ba-5d20-9ee4-01d6967d203a",
+      "example_text": "Our group project includes a presentation.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "University Class"
+    },
+    {
+      "id": "08bfc1ad-41ac-5996-9ca7-352f175e9d37",
+      "meaning_id": "5d21c02b-ef51-5545-bd8a-01f5814d3a67",
+      "example_text": "Could we have the bill, please?",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Restaurant"
+    },
+    {
+      "id": "91e1acc4-88b1-5d67-b30f-7c703da0674f",
+      "meaning_id": "6a61d337-80e7-5d50-bc61-8b45b6a054a1",
+      "example_text": "Our flight leaves from gate twelve.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Airport"
+    },
+    {
+      "id": "a5d7891c-b78b-5e4e-8ae9-6af1d2cb7af8",
+      "meaning_id": "71c851c2-c028-5d8f-9e0a-5be524410a82",
+      "example_text": "We reviewed the action items before leaving.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Work Meeting"
+    },
+    {
+      "id": "ee57eb53-3d43-5931-a287-dfcc8da26449",
+      "meaning_id": "7ee5fc1b-8108-5fb4-a254-f75af84695f3",
+      "example_text": "I tailored my cover letter to the position.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Job Interview"
+    },
+    {
+      "id": "50714ce9-e804-5dbc-9cdd-05446a70ade1",
+      "meaning_id": "846f3dde-4b90-5eb8-929e-ecd28e8315f3",
+      "example_text": "Check-out is at eleven in the morning.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Hotel Check-in"
+    },
+    {
+      "id": "0d32b1ad-6623-5504-936e-3e61141def11",
+      "meaning_id": "8a6ec801-3292-5fc2-bfb3-242ac405d891",
+      "example_text": "Please have your boarding pass ready at the gate.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Airport"
+    },
+    {
+      "id": "ac5c2a77-2e46-53f6-a38b-daef60776445",
+      "meaning_id": "8a7f86d3-ed7a-512c-9c19-d86b5d46ffa8",
+      "example_text": "The budget is first on today's agenda.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Work Meeting"
+    },
+    {
+      "id": "b9535499-021c-5e93-90f3-9eb033860f5d",
+      "meaning_id": "8f12f8e0-d0a3-5010-941b-8f7d526121cc",
+      "example_text": "We have a three-hour layover in Madrid.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Airport"
+    },
+    {
+      "id": "6b41ad56-7051-5b51-8e5e-dc5903109b78",
+      "meaning_id": "9ab971f4-9b7b-5551-b274-62ad41d9273f",
+      "example_text": "The employer asked for two references.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Job Interview"
+    },
+    {
+      "id": "bb9398a3-34b6-52f9-923e-f56636cfec5b",
+      "meaning_id": "ac93d068-7c3e-55c9-9d85-3fd3518592dc",
+      "example_text": "She opened the email with a friendly greeting.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Daily Conversation"
+    },
+    {
+      "id": "287390b4-3fa5-5306-96bd-823b7749b326",
+      "meaning_id": "ae72824e-1341-5081-84ea-0e0fdbf09c50",
+      "example_text": "The assignment is due next week.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "University Class"
+    },
+    {
+      "id": "2a04b214-2783-5e46-850b-b5de5c836d65",
+      "meaning_id": "b571a540-89bb-533b-be81-9cedf443a64a",
+      "example_text": "The deadline is Friday afternoon.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Work Meeting"
+    },
+    {
+      "id": "ff7c8741-a4df-5e9f-9885-ebfe8ab65df3",
+      "meaning_id": "bd5eacb6-be32-5e7b-a8d7-d56db1908347",
+      "example_text": "We left a tip for the server.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Restaurant"
+    },
+    {
+      "id": "0fc0cfd2-b91b-511c-9d69-fc2e68a08495",
+      "meaning_id": "bee2408e-5991-5805-923c-6fba33ab7e7a",
+      "example_text": "Her luggage is already on the plane.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Airport"
+    },
+    {
+      "id": "445da4d4-b874-5db4-ba67-062e3a56bee8",
+      "meaning_id": "c7796a82-cc8d-56de-a97f-773ea694e337",
+      "example_text": "Her qualifications match the role.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Job Interview"
+    },
+    {
+      "id": "34165d93-62fc-56d7-bc2b-80a436f98f9e",
+      "meaning_id": "c954cdb6-c0bc-5d61-9045-18db360f4b84",
+      "example_text": "They said a quick farewell at the station.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Daily Conversation"
+    },
+    {
+      "id": "df12558e-e43c-5ee3-8062-b49351bbd049",
+      "meaning_id": "c99075bf-94cb-5f51-90d5-f244f66ea942",
+      "example_text": "Do you have any weekend plans?",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Daily Conversation"
+    },
+    {
+      "id": "bd1166c0-5487-5c29-8bb1-fe16e640911a",
+      "meaning_id": "ce20a0cc-6a7e-5b5e-bbfe-5ec49f1c58d5",
+      "example_text": "I asked the professor a question during office hours.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "University Class"
+    },
+    {
+      "id": "449c29f2-bfca-5ddd-b60b-443b9f24a0f0",
+      "meaning_id": "d62f1f3f-8382-5999-9e9c-30858f6b2c5b",
+      "example_text": "We went through customs after collecting our bags.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Airport"
+    },
+    {
+      "id": "3484e0d5-ef0c-51f7-aaeb-22972e127889",
+      "meaning_id": "d990ce6e-4756-52e0-96e8-9926442963f2",
+      "example_text": "My key card stopped working.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Hotel Check-in"
+    },
+    {
+      "id": "8027ed9b-e5e0-5ea4-a380-9afe66a96c50",
+      "meaning_id": "de015c5a-0fad-507d-944e-572f6a10da66",
+      "example_text": "I requested a wake-up call for six thirty.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Hotel Check-in"
+    },
+    {
+      "id": "5a7a2fa5-c213-5eaa-b765-9b48f392ed8b",
+      "meaning_id": "dfe9c593-cf2e-505b-96ca-4afef46422d8",
+      "example_text": "The hotel amenities include a gym and a pool.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Hotel Check-in"
+    },
+    {
+      "id": "398cde3f-6ea0-5c7e-95ef-c99645e8e5e3",
+      "meaning_id": "e5817d4f-eaf9-577e-881f-b100fe1e24f8",
+      "example_text": "Bring a copy of your resume to the interview.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Job Interview"
+    },
+    {
+      "id": "c82b4dfd-fdc8-5c3a-9064-d3ac2a699092",
+      "meaning_id": "edb20c6e-1023-5f10-af4b-0dc059a781b2",
+      "example_text": "The receptionist found our reservation.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Hotel Check-in"
+    },
+    {
+      "id": "ebe315e2-c39a-5dd2-9d7a-1fb72cfc688d",
+      "meaning_id": "f582a137-c77d-58df-942e-884fe336cd64",
+      "example_text": "The essay deadline is at noon.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "University Class"
+    },
+    {
+      "id": "c92e0c84-1328-5792-a8d6-c978979d40ca",
+      "meaning_id": "fd6c39c0-f097-5a5b-b947-c93096e635d0",
+      "example_text": "Today's lecture covers climate policy.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "University Class"
+    }
+  ],
+  "usage_notes": [
+    {
+      "id": "ffd3aa7f-5867-54c5-9135-f71b0e6fe5ef",
+      "meaning_id": "0b9878b3-64a7-5175-92f7-ce0435cfbed4",
+      "note_type": "collocation",
+      "note_text": "discuss salary expectations",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "3dda957a-45e2-5703-9d48-b773bfcfc526",
+      "meaning_id": "0b9878b3-64a7-5175-92f7-ce0435cfbed4",
+      "note_type": "register",
+      "note_text": "Neutral; common in recruitment.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "80f2030e-b7ef-520c-b3b5-ab770277530a",
+      "meaning_id": "0b9878b3-64a7-5175-92f7-ce0435cfbed4",
+      "note_type": "common_mistake",
+      "note_text": "Use the plural expectations in this standard interview phrase.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "04fc81d7-98d4-581f-b31a-3531c1c9caf1",
+      "meaning_id": "0d267f75-f227-5478-962d-b4b944e0e93e",
+      "note_type": "collocation",
+      "note_text": "casual conversation",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "c7e9fa44-bd2e-5513-94db-a861c2f85c39",
+      "meaning_id": "0d267f75-f227-5478-962d-b4b944e0e93e",
+      "note_type": "register",
+      "note_text": "Informal in tone but neutral as a description.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "b899255f-f77f-553c-aefe-58c588e9e5d4",
+      "meaning_id": "0d267f75-f227-5478-962d-b4b944e0e93e",
+      "note_type": "common_mistake",
+      "note_text": "Casual describes a noun; casually is the adverb.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "9ded26a8-2f51-5328-8bbe-1dd3b95fb5ea",
+      "meaning_id": "1e91dacc-7700-5f65-9310-312ac4dff706",
+      "note_type": "collocation",
+      "note_text": "key stakeholder",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "b1948c7c-e27e-5a07-986a-30cf0c7dfbbe",
+      "meaning_id": "1e91dacc-7700-5f65-9310-312ac4dff706",
+      "note_type": "register",
+      "note_text": "Neutral; common business vocabulary.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "59d816f8-e37e-5246-8671-3f9a4a5c1f47",
+      "meaning_id": "1e91dacc-7700-5f65-9310-312ac4dff706",
+      "note_type": "common_mistake",
+      "note_text": "A stakeholder can be affected by a project without owning company shares.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "5d6e9a58-6095-5da0-9679-86c2cc264ab4",
+      "meaning_id": "1e9e55f8-d329-5c52-bc30-7ed77a31a167",
+      "note_type": "collocation",
+      "note_text": "order take-out",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "0a89b7fe-8fea-58fd-b420-8731107913bf",
+      "meaning_id": "1e9e55f8-d329-5c52-bc30-7ed77a31a167",
+      "note_type": "register",
+      "note_text": "Informal; takeaway is common in British English.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "e7595596-d42a-51af-97e3-b4a3010aeb65",
+      "meaning_id": "1e9e55f8-d329-5c52-bc30-7ed77a31a167",
+      "note_type": "common_mistake",
+      "note_text": "As a noun use take-out; the verb phrase is take out.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "d109553b-003c-58bb-83b2-1a1a7dae63f3",
+      "meaning_id": "1eee9c5f-7079-54d4-bcd8-183739df837a",
+      "note_type": "collocation",
+      "note_text": "brainstorm ideas",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "ccabc948-2aeb-53ad-92c7-37a360035f04",
+      "meaning_id": "1eee9c5f-7079-54d4-bcd8-183739df837a",
+      "note_type": "register",
+      "note_text": "Neutral to informal workplace language.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "323cb260-3cf8-5347-b06d-7ae589d9c658",
+      "meaning_id": "1eee9c5f-7079-54d4-bcd8-183739df837a",
+      "note_type": "common_mistake",
+      "note_text": "Brainstorm can take a direct object; brainstorm about is often unnecessary.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "a2d5d5b9-32d5-5cda-862f-618d07cbf161",
+      "meaning_id": "2534b539-a80f-5001-b9a4-27a5e0679539",
+      "note_type": "collocation",
+      "note_text": "order an appetizer",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "34e53272-7c50-5fd4-8fe6-905c11df362f",
+      "meaning_id": "2534b539-a80f-5001-b9a4-27a5e0679539",
+      "note_type": "register",
+      "note_text": "Common in American English; starter is common in British English.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "d31284fd-c865-5291-a695-7c5e15b37ac9",
+      "meaning_id": "2534b539-a80f-5001-b9a4-27a5e0679539",
+      "note_type": "common_mistake",
+      "note_text": "An appetizer comes before the main course, not after it.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "480f8b12-30a8-5835-8507-51cb036f868e",
+      "meaning_id": "2a610b3d-4031-5eee-a0be-d3def2cc0b53",
+      "note_type": "collocation",
+      "note_text": "go through a security check",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "42371efd-d08a-5350-bc49-851dc23e08df",
+      "meaning_id": "2a610b3d-4031-5eee-a0be-d3def2cc0b53",
+      "note_type": "register",
+      "note_text": "Neutral; standard travel vocabulary.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "81f6d16b-8b6a-5a24-830c-5ca9fa1d2c05",
+      "meaning_id": "2a610b3d-4031-5eee-a0be-d3def2cc0b53",
+      "note_type": "common_mistake",
+      "note_text": "Say go through security, not pass from security.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "4362e3df-0fdd-591f-bbfc-6f2b634de695",
+      "meaning_id": "3008733d-9cab-547c-9712-4014a26ca697",
+      "note_type": "collocation",
+      "note_text": "call the front desk",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "266c3ffb-f51a-55d6-b826-d114ff0edebb",
+      "meaning_id": "3008733d-9cab-547c-9712-4014a26ca697",
+      "note_type": "register",
+      "note_text": "Neutral; reception is a common synonym.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "db1af203-a7a3-50b0-9210-de5c9b641f76",
+      "meaning_id": "3008733d-9cab-547c-9712-4014a26ca697",
+      "note_type": "common_mistake",
+      "note_text": "Front desk names the service area, not the desk in a guest room.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "60c29dd2-9c54-5a80-a58b-a97f34f1905c",
+      "meaning_id": "3265c02c-5751-5465-b94b-e767aa871d8d",
+      "note_type": "collocation",
+      "note_text": "make small talk",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "79219c93-3c09-543a-8fe3-443305e87608",
+      "meaning_id": "3265c02c-5751-5465-b94b-e767aa871d8d",
+      "note_type": "register",
+      "note_text": "Neutral to informal.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "fdc4882a-9f43-5871-9bf0-7576f36119ed",
+      "meaning_id": "3265c02c-5751-5465-b94b-e767aa871d8d",
+      "note_type": "common_mistake",
+      "note_text": "Small talk is uncountable; do not say a small talk for one conversation.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "93efd8c1-0b8c-5261-9d5d-2a5a03ce406c",
+      "meaning_id": "329c4ec9-6562-568e-9e71-9134da2f0d8d",
+      "note_type": "collocation",
+      "note_text": "read the menu",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "be43b1a5-9db9-5092-98c3-91d037a5e2d7",
+      "meaning_id": "329c4ec9-6562-568e-9e71-9134da2f0d8d",
+      "note_type": "register",
+      "note_text": "Neutral; standard restaurant vocabulary.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "9c8a3d7f-8314-531d-a25f-032b36234692",
+      "meaning_id": "329c4ec9-6562-568e-9e71-9134da2f0d8d",
+      "note_type": "common_mistake",
+      "note_text": "Menu refers to the list, not usually the individual meal ordered.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "fff04709-b6ff-500c-9c55-e97e80d7eaa7",
+      "meaning_id": "3d64c3c9-ede0-5ffd-b1ef-278f6b70e486",
+      "note_type": "collocation",
+      "note_text": "catch up with someone",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "56fda896-a3f1-55f3-90de-3dc1648546e6",
+      "meaning_id": "3d64c3c9-ede0-5ffd-b1ef-278f6b70e486",
+      "note_type": "register",
+      "note_text": "Informal and friendly.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "ecde9050-71c9-5790-8ad7-851269c1e559",
+      "meaning_id": "3d64c3c9-ede0-5ffd-b1ef-278f6b70e486",
+      "note_type": "common_mistake",
+      "note_text": "Use catch up as the verb; catch-up is the noun or adjective.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "f335b6d3-b26e-5d50-9c4a-b6b9434ff0d7",
+      "meaning_id": "446b7b9e-8190-5987-9401-0378e95ff493",
+      "note_type": "collocation",
+      "note_text": "a follow-up meeting",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "0c4572f9-cfbc-5006-a3c4-c483075cff71",
+      "meaning_id": "446b7b9e-8190-5987-9401-0378e95ff493",
+      "note_type": "register",
+      "note_text": "Neutral; common business vocabulary.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "dd6e1935-9a62-5f83-9dcc-6e0a4a2c8f78",
+      "meaning_id": "446b7b9e-8190-5987-9401-0378e95ff493",
+      "note_type": "common_mistake",
+      "note_text": "Use follow-up for the noun or adjective and follow up for the verb.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "b5f4f6c2-b8d4-59c4-86f7-7fd51339534b",
+      "meaning_id": "4c3724d8-5abf-5159-8171-76ccdcdae7c0",
+      "note_type": "collocation",
+      "note_text": "send a follow-up",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "d8fb1029-9d0b-5b64-afe6-c19bb9bf2d61",
+      "meaning_id": "4c3724d8-5abf-5159-8171-76ccdcdae7c0",
+      "note_type": "register",
+      "note_text": "Neutral; common business vocabulary.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "965f1c4c-2dd0-5a25-85c3-70ae786f93e0",
+      "meaning_id": "4c3724d8-5abf-5159-8171-76ccdcdae7c0",
+      "note_type": "common_mistake",
+      "note_text": "Use follow-up for the noun and follow up for the verb.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "d92b603e-57d2-58b4-903b-74f36ca411d3",
+      "meaning_id": "52c8ed28-544d-5a80-a911-6ddd03953606",
+      "note_type": "collocation",
+      "note_text": "make a reservation",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "c2fe7bb0-1f77-5c6c-ab05-d638b6aa600c",
+      "meaning_id": "52c8ed28-544d-5a80-a911-6ddd03953606",
+      "note_type": "register",
+      "note_text": "Neutral; booking is also common.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "44a571eb-1250-58bc-96a3-846e6fc087f5",
+      "meaning_id": "52c8ed28-544d-5a80-a911-6ddd03953606",
+      "note_type": "common_mistake",
+      "note_text": "Use a reservation for the booking and reserve for the verb.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "88754237-8bc7-5c2f-a8fc-5e3bc763ff53",
+      "meaning_id": "58529fdd-9425-5aef-a8c7-bc1086be7080",
+      "note_type": "collocation",
+      "note_text": "course syllabus",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "b2796eed-6617-58b7-8962-f5cd209cc1f0",
+      "meaning_id": "58529fdd-9425-5aef-a8c7-bc1086be7080",
+      "note_type": "register",
+      "note_text": "Neutral; standard academic vocabulary.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "6e754903-1300-598e-836c-e3b5c936bcce",
+      "meaning_id": "58529fdd-9425-5aef-a8c7-bc1086be7080",
+      "note_type": "common_mistake",
+      "note_text": "The common plurals are syllabuses and syllabi.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "b5f61e85-e786-5152-9418-32007771cd2b",
+      "meaning_id": "5b7f44dd-77ba-5d20-9ee4-01d6967d203a",
+      "note_type": "collocation",
+      "note_text": "work on a group project",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "5d74cdb3-5064-5632-97ec-52dc29300df6",
+      "meaning_id": "5b7f44dd-77ba-5d20-9ee4-01d6967d203a",
+      "note_type": "register",
+      "note_text": "Neutral; standard academic vocabulary.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "b7b9d15d-319d-5b32-8cea-c6194535bb75",
+      "meaning_id": "5b7f44dd-77ba-5d20-9ee4-01d6967d203a",
+      "note_type": "common_mistake",
+      "note_text": "A group project is collaborative; an individual project is completed alone.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "a42b9315-c807-5384-a8a0-0f8e39237051",
+      "meaning_id": "5d21c02b-ef51-5545-bd8a-01f5814d3a67",
+      "note_type": "collocation",
+      "note_text": "ask for the bill",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "577cf47d-a2a1-5c85-a0ea-f7aa4ca6f962",
+      "meaning_id": "5d21c02b-ef51-5545-bd8a-01f5814d3a67",
+      "note_type": "register",
+      "note_text": "Neutral; check is common in American restaurants.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "c8259a58-221f-51c2-92cc-db271ee7f005",
+      "meaning_id": "5d21c02b-ef51-5545-bd8a-01f5814d3a67",
+      "note_type": "common_mistake",
+      "note_text": "Do not use receipt when asking how much you owe; the receipt comes after payment.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "ed50dd18-accc-5d26-8cf5-54e7ea830bb6",
+      "meaning_id": "6a61d337-80e7-5d50-bc61-8b45b6a054a1",
+      "note_type": "collocation",
+      "note_text": "departure gate",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "047a3d9e-aa54-5cc7-aba2-e89014f37dcd",
+      "meaning_id": "6a61d337-80e7-5d50-bc61-8b45b6a054a1",
+      "note_type": "register",
+      "note_text": "Neutral; standard travel vocabulary.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "fda98766-c32f-5bcd-97f5-dd88df9f5aae",
+      "meaning_id": "6a61d337-80e7-5d50-bc61-8b45b6a054a1",
+      "note_type": "common_mistake",
+      "note_text": "At an airport, a gate is a boarding area, not only a physical door.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "7f06f7c9-f477-5ae8-8aa3-178e9e67dd8a",
+      "meaning_id": "71c851c2-c028-5d8f-9e0a-5be524410a82",
+      "note_type": "collocation",
+      "note_text": "assign action items",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "406d5472-3ec3-52b6-89fb-1266eb738f2d",
+      "meaning_id": "71c851c2-c028-5d8f-9e0a-5be524410a82",
+      "note_type": "register",
+      "note_text": "Neutral; common workplace vocabulary.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "a6dc548f-3f8f-5106-a343-568bad4a8094",
+      "meaning_id": "71c851c2-c028-5d8f-9e0a-5be524410a82",
+      "note_type": "common_mistake",
+      "note_text": "Action items are specific tasks, not all topics discussed.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "f6378532-ef08-57df-9813-c9ae6d37044e",
+      "meaning_id": "7ee5fc1b-8108-5fb4-a254-f75af84695f3",
+      "note_type": "collocation",
+      "note_text": "write a cover letter",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "55966046-c4ab-5041-b158-77c85b59da8b",
+      "meaning_id": "7ee5fc1b-8108-5fb4-a254-f75af84695f3",
+      "note_type": "register",
+      "note_text": "Neutral; standard employment vocabulary.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "ae671fa3-48c4-5173-80d7-710bb5aa3584",
+      "meaning_id": "7ee5fc1b-8108-5fb4-a254-f75af84695f3",
+      "note_type": "common_mistake",
+      "note_text": "A cover letter supports a resume; it does not replace it.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "c9aaf5ff-bbaf-50c8-84b4-6fe881d9e25e",
+      "meaning_id": "846f3dde-4b90-5eb8-929e-ecd28e8315f3",
+      "note_type": "collocation",
+      "note_text": "late check-out",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "5d9dab1a-0b7d-5216-9a65-a9a726d88dd6",
+      "meaning_id": "846f3dde-4b90-5eb8-929e-ecd28e8315f3",
+      "note_type": "register",
+      "note_text": "Neutral; standard hotel vocabulary.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "a4835b49-c690-5341-8a63-8fba8eb2e047",
+      "meaning_id": "846f3dde-4b90-5eb8-929e-ecd28e8315f3",
+      "note_type": "common_mistake",
+      "note_text": "Use check-out for the noun and check out for the verb.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "0b9e9a94-295c-5125-b5bc-22be56412e2a",
+      "meaning_id": "8a6ec801-3292-5fc2-bfb3-242ac405d891",
+      "note_type": "collocation",
+      "note_text": "show a boarding pass",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "31e23aad-5d7c-5cc7-a496-fe75228aac20",
+      "meaning_id": "8a6ec801-3292-5fc2-bfb3-242ac405d891",
+      "note_type": "register",
+      "note_text": "Neutral; standard travel vocabulary.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "05ae831c-a769-5792-9cfa-25b99a2f6fa0",
+      "meaning_id": "8a6ec801-3292-5fc2-bfb3-242ac405d891",
+      "note_type": "common_mistake",
+      "note_text": "Do not confuse a boarding pass with a ticket, which confirms the booking.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "906840d9-606a-5829-ba61-0f468232293d",
+      "meaning_id": "8a7f86d3-ed7a-512c-9c19-d86b5d46ffa8",
+      "note_type": "collocation",
+      "note_text": "set the agenda",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "c41f4466-42f9-5773-b1d4-9dfb309c964e",
+      "meaning_id": "8a7f86d3-ed7a-512c-9c19-d86b5d46ffa8",
+      "note_type": "register",
+      "note_text": "Neutral; standard workplace vocabulary.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "6f7584ae-0799-500f-bbbb-c9cfbd5b6677",
+      "meaning_id": "8a7f86d3-ed7a-512c-9c19-d86b5d46ffa8",
+      "note_type": "common_mistake",
+      "note_text": "Agenda is singular in modern English; agendas is the plural.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "28c85ee7-5813-58b3-9eb5-757aa20da880",
+      "meaning_id": "8f12f8e0-d0a3-5010-941b-8f7d526121cc",
+      "note_type": "collocation",
+      "note_text": "a short layover",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "a5b9965c-5dac-53ce-a420-54312914fd28",
+      "meaning_id": "8f12f8e0-d0a3-5010-941b-8f7d526121cc",
+      "note_type": "register",
+      "note_text": "Neutral; stopover is also common.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "0bc89fd3-456d-5b42-ba2a-163b25732a27",
+      "meaning_id": "8f12f8e0-d0a3-5010-941b-8f7d526121cc",
+      "note_type": "common_mistake",
+      "note_text": "A layover is between connecting flights, not the final destination.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "89cecc40-6a6a-508b-8f8d-489908c451e2",
+      "meaning_id": "9ab971f4-9b7b-5551-b274-62ad41d9273f",
+      "note_type": "collocation",
+      "note_text": "provide references",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "d921aa5a-2261-5cce-9f68-bad9352b14cb",
+      "meaning_id": "9ab971f4-9b7b-5551-b274-62ad41d9273f",
+      "note_type": "register",
+      "note_text": "Neutral; standard employment vocabulary.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "e3147edd-523f-5e94-8804-52ed4d2a7926",
+      "meaning_id": "9ab971f4-9b7b-5551-b274-62ad41d9273f",
+      "note_type": "common_mistake",
+      "note_text": "A reference may mean the person or their recommendation; make the context clear.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "3adc67db-819c-57c6-baab-48b895b82e9f",
+      "meaning_id": "ac93d068-7c3e-55c9-9d85-3fd3518592dc",
+      "note_type": "collocation",
+      "note_text": "exchange greetings",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "3fd71c2a-162f-53c4-a8a7-c0acc921fb24",
+      "meaning_id": "ac93d068-7c3e-55c9-9d85-3fd3518592dc",
+      "note_type": "register",
+      "note_text": "Neutral; the exact greeting may be formal or informal.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "8801ac9d-06b1-5e27-a802-a867236e59d1",
+      "meaning_id": "ac93d068-7c3e-55c9-9d85-3fd3518592dc",
+      "note_type": "common_mistake",
+      "note_text": "Greeting is the noun; greet is the verb.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "7dfdd3a2-1eaf-5687-8e5d-84251ab72990",
+      "meaning_id": "ae72824e-1341-5081-84ea-0e0fdbf09c50",
+      "note_type": "collocation",
+      "note_text": "complete an assignment",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "045feabc-de2c-58ad-be90-82513d96b700",
+      "meaning_id": "ae72824e-1341-5081-84ea-0e0fdbf09c50",
+      "note_type": "register",
+      "note_text": "Neutral; standard academic vocabulary.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "ea7fff97-039e-566e-9c31-9bc420e302bf",
+      "meaning_id": "ae72824e-1341-5081-84ea-0e0fdbf09c50",
+      "note_type": "common_mistake",
+      "note_text": "Assignment is countable; homework is usually uncountable.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "43422b32-0a6c-58c5-beaa-4fb133dd004d",
+      "meaning_id": "b571a540-89bb-533b-be81-9cedf443a64a",
+      "note_type": "collocation",
+      "note_text": "meet a deadline",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "722cfbe7-df98-5816-8ea2-542799fd817c",
+      "meaning_id": "b571a540-89bb-533b-be81-9cedf443a64a",
+      "note_type": "register",
+      "note_text": "Neutral; standard workplace vocabulary.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "3847481c-063b-54ee-a6f0-75a22b619046",
+      "meaning_id": "b571a540-89bb-533b-be81-9cedf443a64a",
+      "note_type": "common_mistake",
+      "note_text": "You meet a deadline when on time and miss it when late.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "a33405eb-b24f-54bd-9917-aa40e62bee11",
+      "meaning_id": "bd5eacb6-be32-5e7b-a8d7-d56db1908347",
+      "note_type": "collocation",
+      "note_text": "leave a tip",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "e3a93340-87a9-5b55-8579-117a88f6e281",
+      "meaning_id": "bd5eacb6-be32-5e7b-a8d7-d56db1908347",
+      "note_type": "register",
+      "note_text": "Neutral; tipping customs vary by place.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "96f10097-6752-535a-bb6f-5ef2e978475e",
+      "meaning_id": "bd5eacb6-be32-5e7b-a8d7-d56db1908347",
+      "note_type": "common_mistake",
+      "note_text": "A tip is extra money, while the bill is the amount charged.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "85d24247-e00a-5694-8709-fe361ec7a76b",
+      "meaning_id": "bee2408e-5991-5805-923c-6fba33ab7e7a",
+      "note_type": "collocation",
+      "note_text": "check in luggage",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "f91db098-d4d9-5eae-8b6c-2c360feb2d44",
+      "meaning_id": "bee2408e-5991-5805-923c-6fba33ab7e7a",
+      "note_type": "register",
+      "note_text": "Neutral; baggage is a common synonym.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "a5641683-b472-592f-9df1-d04ffd8e452c",
+      "meaning_id": "bee2408e-5991-5805-923c-6fba33ab7e7a",
+      "note_type": "common_mistake",
+      "note_text": "Luggage is uncountable; say two pieces of luggage, not two luggages.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "36bf0705-ab44-56d9-b957-ae3b730ec548",
+      "meaning_id": "c7796a82-cc8d-56de-a97f-773ea694e337",
+      "note_type": "collocation",
+      "note_text": "meet the qualifications",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "5b6a32a1-a956-5369-934a-82549858c0ab",
+      "meaning_id": "c7796a82-cc8d-56de-a97f-773ea694e337",
+      "note_type": "register",
+      "note_text": "Neutral; standard employment vocabulary.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "83c7eea4-08d0-56c8-bb1f-70a6f819b031",
+      "meaning_id": "c7796a82-cc8d-56de-a97f-773ea694e337",
+      "note_type": "common_mistake",
+      "note_text": "Qualifications are evidence of suitability, not only academic degrees.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "c755a232-3aaa-5408-b357-f034a805fd55",
+      "meaning_id": "c954cdb6-c0bc-5d61-9045-18db360f4b84",
+      "note_type": "collocation",
+      "note_text": "say farewell",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "bd3398c9-c874-5e3a-93d8-c6fa2fb851bd",
+      "meaning_id": "c954cdb6-c0bc-5d61-9045-18db360f4b84",
+      "note_type": "register",
+      "note_text": "Neutral to formal; goodbye is more conversational.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "72ece1c5-6254-5e14-afcc-3e70afdba595",
+      "meaning_id": "c954cdb6-c0bc-5d61-9045-18db360f4b84",
+      "note_type": "common_mistake",
+      "note_text": "Farewell can sound formal, so use goodbye in casual speech when appropriate.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "73948140-3318-59e1-ae0f-10bab54da201",
+      "meaning_id": "c99075bf-94cb-5f51-90d5-f244f66ea942",
+      "note_type": "collocation",
+      "note_text": "make weekend plans",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "7963375d-4f58-51d2-bb40-ae572c206bf7",
+      "meaning_id": "c99075bf-94cb-5f51-90d5-f244f66ea942",
+      "note_type": "register",
+      "note_text": "Neutral and conversational.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "14ed0412-5684-5778-945e-bdf445f30cab",
+      "meaning_id": "c99075bf-94cb-5f51-90d5-f244f66ea942",
+      "note_type": "common_mistake",
+      "note_text": "Use plans in the plural when asking generally about someone's weekend.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "ac8d45ca-1dbd-5d97-925c-2b772b7d027d",
+      "meaning_id": "ce20a0cc-6a7e-5b5e-bbfe-5ec49f1c58d5",
+      "note_type": "collocation",
+      "note_text": "hold office hours",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "a2bc1756-cdf6-5346-ac6a-36949839af17",
+      "meaning_id": "ce20a0cc-6a7e-5b5e-bbfe-5ec49f1c58d5",
+      "note_type": "register",
+      "note_text": "Neutral; standard academic vocabulary.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "492e0d4a-09ca-5e44-8ff9-5267a4960513",
+      "meaning_id": "ce20a0cc-6a7e-5b5e-bbfe-5ec49f1c58d5",
+      "note_type": "common_mistake",
+      "note_text": "Office hours is normally plural even when referring to a recurring period.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "3fc9ea5c-8e9a-59f7-8794-9dd2f4f32e5d",
+      "meaning_id": "d62f1f3f-8382-5999-9e9c-30858f6b2c5b",
+      "note_type": "collocation",
+      "note_text": "go through customs",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "274d84e3-c73e-5b25-9a8e-8bd645ae1adc",
+      "meaning_id": "d62f1f3f-8382-5999-9e9c-30858f6b2c5b",
+      "note_type": "register",
+      "note_text": "Neutral; standard border-control vocabulary.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "4078ea1b-f73e-5f9d-9292-91be4c890f82",
+      "meaning_id": "d62f1f3f-8382-5999-9e9c-30858f6b2c5b",
+      "note_type": "common_mistake",
+      "note_text": "Customs takes a singular verb when it names the government service.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "1f8d68d6-a80c-5cd2-b831-0fdf04aa2783",
+      "meaning_id": "d990ce6e-4756-52e0-96e8-9926442963f2",
+      "note_type": "collocation",
+      "note_text": "activate a key card",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "12780933-a8e9-57db-a1fe-7f25f944e073",
+      "meaning_id": "d990ce6e-4756-52e0-96e8-9926442963f2",
+      "note_type": "register",
+      "note_text": "Neutral; standard hotel vocabulary.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "29a95708-119c-55e7-94a2-f5781f1469e1",
+      "meaning_id": "d990ce6e-4756-52e0-96e8-9926442963f2",
+      "note_type": "common_mistake",
+      "note_text": "Write key card as two words when it is a noun.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "c357c89d-863b-560b-8327-b37b3ff57663",
+      "meaning_id": "de015c5a-0fad-507d-944e-572f6a10da66",
+      "note_type": "collocation",
+      "note_text": "request a wake-up call",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "d6be3ad7-5ec0-58a3-8a58-57fc2a7841d0",
+      "meaning_id": "de015c5a-0fad-507d-944e-572f6a10da66",
+      "note_type": "register",
+      "note_text": "Neutral; standard hotel vocabulary.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "9cfc7f5f-47eb-51c6-8bce-f36200a2c095",
+      "meaning_id": "de015c5a-0fad-507d-944e-572f6a10da66",
+      "note_type": "common_mistake",
+      "note_text": "Use wake-up with a hyphen before call; wake up is the verb phrase.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "a4eef1d9-089d-5f2b-bfe1-77399f7e4d75",
+      "meaning_id": "dfe9c593-cf2e-505b-96ca-4afef46422d8",
+      "note_type": "collocation",
+      "note_text": "hotel amenities",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "bec30a83-f1d1-5c10-98d1-24753a650dca",
+      "meaning_id": "dfe9c593-cf2e-505b-96ca-4afef46422d8",
+      "note_type": "register",
+      "note_text": "Neutral; common in travel descriptions.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "63309f62-9dea-5071-82f8-3c6e4d5580da",
+      "meaning_id": "dfe9c593-cf2e-505b-96ca-4afef46422d8",
+      "note_type": "common_mistake",
+      "note_text": "Amenities are useful features, not basic room furniture in general.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "2aba4a4d-fb37-5edf-b3c4-5ffc985f1e75",
+      "meaning_id": "e5817d4f-eaf9-577e-881f-b100fe1e24f8",
+      "note_type": "collocation",
+      "note_text": "update a resume",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "92b37dea-94c2-51c5-bb6b-efd46fd56e51",
+      "meaning_id": "e5817d4f-eaf9-577e-881f-b100fe1e24f8",
+      "note_type": "register",
+      "note_text": "Neutral; CV is used in many regions.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "483c6ea5-f107-5f9c-8dd2-fb4f9ebe0557",
+      "meaning_id": "e5817d4f-eaf9-577e-881f-b100fe1e24f8",
+      "note_type": "common_mistake",
+      "note_text": "Resume without accents can also mean continue, so context matters.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "d477996a-57d5-56be-b20d-cc446b037ace",
+      "meaning_id": "edb20c6e-1023-5f10-af4b-0dc059a781b2",
+      "note_type": "collocation",
+      "note_text": "confirm a reservation",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "a5e2fe20-290a-58d4-b4ae-9a074b6d587c",
+      "meaning_id": "edb20c6e-1023-5f10-af4b-0dc059a781b2",
+      "note_type": "register",
+      "note_text": "Neutral; standard hotel vocabulary.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "5cc22ab6-3c14-5868-8760-8bcb0c1f8d5c",
+      "meaning_id": "edb20c6e-1023-5f10-af4b-0dc059a781b2",
+      "note_type": "common_mistake",
+      "note_text": "Use reservation for the booking and reserve for the action.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "58ac3ecc-d366-59eb-b60c-dece8253e8a8",
+      "meaning_id": "f582a137-c77d-58df-942e-884fe336cd64",
+      "note_type": "collocation",
+      "note_text": "submission deadline",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "ae889c30-2d03-5302-be68-0ab1f091a725",
+      "meaning_id": "f582a137-c77d-58df-942e-884fe336cd64",
+      "note_type": "register",
+      "note_text": "Neutral; standard academic vocabulary.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "bb6195ee-97d5-5af7-8f2e-f1f37a99c2b3",
+      "meaning_id": "f582a137-c77d-58df-942e-884fe336cd64",
+      "note_type": "common_mistake",
+      "note_text": "Use by before a deadline time, not until when stating the required submission time.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "f7c4fde1-a8cf-51cd-a3e7-7a1cbfe85843",
+      "meaning_id": "fd6c39c0-f097-5a5b-b947-c93096e635d0",
+      "note_type": "collocation",
+      "note_text": "attend a lecture",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "eaf52bd1-58d8-53b8-be61-28dc17d921c7",
+      "meaning_id": "fd6c39c0-f097-5a5b-b947-c93096e635d0",
+      "note_type": "register",
+      "note_text": "Neutral; standard academic vocabulary.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "f96dd471-d43d-58ab-8ebf-0ad69e563574",
+      "meaning_id": "fd6c39c0-f097-5a5b-b947-c93096e635d0",
+      "note_type": "common_mistake",
+      "note_text": "A lecture is the teaching session, while a lecturer is the person.",
+      "note_order": 3,
+      "status": "active"
+    }
+  ],
+  "journey_words": [
+    {
+      "id": "97cc3354-c64c-5119-a798-6438a54ad742",
+      "journey_situation_id": "687765d8-b6c0-5b63-9771-19ccb71ecb98",
+      "meaning_id": "edb20c6e-1023-5f10-af4b-0dc059a781b2",
+      "relevance_score": 80,
+      "display_order": 1,
+      "is_core": true
+    },
+    {
+      "id": "8f863914-9b7c-5339-b05b-a040ee1f22d8",
+      "journey_situation_id": "687765d8-b6c0-5b63-9771-19ccb71ecb98",
+      "meaning_id": "3008733d-9cab-547c-9712-4014a26ca697",
+      "relevance_score": 80,
+      "display_order": 2,
+      "is_core": true
+    },
+    {
+      "id": "94c489d9-6ab2-5f23-af6c-e03167319504",
+      "journey_situation_id": "687765d8-b6c0-5b63-9771-19ccb71ecb98",
+      "meaning_id": "d990ce6e-4756-52e0-96e8-9926442963f2",
+      "relevance_score": 80,
+      "display_order": 3,
+      "is_core": true
+    },
+    {
+      "id": "d57b26e8-0516-5ef7-a2be-e11874be3da9",
+      "journey_situation_id": "687765d8-b6c0-5b63-9771-19ccb71ecb98",
+      "meaning_id": "dfe9c593-cf2e-505b-96ca-4afef46422d8",
+      "relevance_score": 80,
+      "display_order": 4,
+      "is_core": false
+    },
+    {
+      "id": "1622cd0f-9fa2-57a3-977b-7e026812df53",
+      "journey_situation_id": "687765d8-b6c0-5b63-9771-19ccb71ecb98",
+      "meaning_id": "de015c5a-0fad-507d-944e-572f6a10da66",
+      "relevance_score": 80,
+      "display_order": 5,
+      "is_core": false
+    },
+    {
+      "id": "65153725-1cbe-5b45-b22f-99c13738aec1",
+      "journey_situation_id": "687765d8-b6c0-5b63-9771-19ccb71ecb98",
+      "meaning_id": "846f3dde-4b90-5eb8-929e-ecd28e8315f3",
+      "relevance_score": 80,
+      "display_order": 6,
+      "is_core": false
+    },
+    {
+      "id": "71cfff35-9d15-52a5-9ee9-be5b4ee1164a",
+      "journey_situation_id": "9a26f786-316d-53c4-8ea4-6d4ebdd528e3",
+      "meaning_id": "329c4ec9-6562-568e-9e71-9134da2f0d8d",
+      "relevance_score": 80,
+      "display_order": 1,
+      "is_core": true
+    },
+    {
+      "id": "a81b470b-0fb5-5df3-af47-58517df96daf",
+      "journey_situation_id": "9a26f786-316d-53c4-8ea4-6d4ebdd528e3",
+      "meaning_id": "52c8ed28-544d-5a80-a911-6ddd03953606",
+      "relevance_score": 80,
+      "display_order": 2,
+      "is_core": true
+    },
+    {
+      "id": "3f702fd3-066f-5896-ab71-b29c2c421de1",
+      "journey_situation_id": "9a26f786-316d-53c4-8ea4-6d4ebdd528e3",
+      "meaning_id": "2534b539-a80f-5001-b9a4-27a5e0679539",
+      "relevance_score": 80,
+      "display_order": 3,
+      "is_core": true
+    },
+    {
+      "id": "e567ed5e-3133-5d90-be5f-4a7a38341ab0",
+      "journey_situation_id": "9a26f786-316d-53c4-8ea4-6d4ebdd528e3",
+      "meaning_id": "5d21c02b-ef51-5545-bd8a-01f5814d3a67",
+      "relevance_score": 80,
+      "display_order": 4,
+      "is_core": false
+    },
+    {
+      "id": "552414ba-93cb-5425-8593-60f4e49cdfb4",
+      "journey_situation_id": "9a26f786-316d-53c4-8ea4-6d4ebdd528e3",
+      "meaning_id": "bd5eacb6-be32-5e7b-a8d7-d56db1908347",
+      "relevance_score": 80,
+      "display_order": 5,
+      "is_core": false
+    },
+    {
+      "id": "aed64896-5cda-56d4-a261-903164005b02",
+      "journey_situation_id": "9a26f786-316d-53c4-8ea4-6d4ebdd528e3",
+      "meaning_id": "1e9e55f8-d329-5c52-bc30-7ed77a31a167",
+      "relevance_score": 80,
+      "display_order": 6,
+      "is_core": false
+    },
+    {
+      "id": "2ca834f4-de50-550a-b1f3-fd18e3192126",
+      "journey_situation_id": "9c689720-9b7f-571a-8a75-4905d5c982e5",
+      "meaning_id": "8a7f86d3-ed7a-512c-9c19-d86b5d46ffa8",
+      "relevance_score": 80,
+      "display_order": 1,
+      "is_core": true
+    },
+    {
+      "id": "52b62f6b-6688-58aa-b09b-6de0511be88f",
+      "journey_situation_id": "9c689720-9b7f-571a-8a75-4905d5c982e5",
+      "meaning_id": "71c851c2-c028-5d8f-9e0a-5be524410a82",
+      "relevance_score": 80,
+      "display_order": 2,
+      "is_core": true
+    },
+    {
+      "id": "a387981b-adb4-5ba9-ae78-930cb394a479",
+      "journey_situation_id": "9c689720-9b7f-571a-8a75-4905d5c982e5",
+      "meaning_id": "b571a540-89bb-533b-be81-9cedf443a64a",
+      "relevance_score": 80,
+      "display_order": 3,
+      "is_core": true
+    },
+    {
+      "id": "4d54cba2-3773-5f49-9435-82e8e3bf27b3",
+      "journey_situation_id": "9c689720-9b7f-571a-8a75-4905d5c982e5",
+      "meaning_id": "446b7b9e-8190-5987-9401-0378e95ff493",
+      "relevance_score": 80,
+      "display_order": 4,
+      "is_core": false
+    },
+    {
+      "id": "a475f6d1-2a18-5fd7-8370-c15c94288acf",
+      "journey_situation_id": "9c689720-9b7f-571a-8a75-4905d5c982e5",
+      "meaning_id": "1e91dacc-7700-5f65-9310-312ac4dff706",
+      "relevance_score": 80,
+      "display_order": 5,
+      "is_core": false
+    },
+    {
+      "id": "734eeb7b-4594-5572-b45e-f1c2e85f3b8b",
+      "journey_situation_id": "9c689720-9b7f-571a-8a75-4905d5c982e5",
+      "meaning_id": "1eee9c5f-7079-54d4-bcd8-183739df837a",
+      "relevance_score": 80,
+      "display_order": 6,
+      "is_core": false
+    },
+    {
+      "id": "69ecea7c-b2d4-50df-b44e-9594b93dbc19",
+      "journey_situation_id": "9eff3b79-a9e9-5456-8d36-94e0da59c117",
+      "meaning_id": "e5817d4f-eaf9-577e-881f-b100fe1e24f8",
+      "relevance_score": 80,
+      "display_order": 1,
+      "is_core": true
+    },
+    {
+      "id": "af041de5-d4f3-548f-b1f2-402b92e02ea4",
+      "journey_situation_id": "9eff3b79-a9e9-5456-8d36-94e0da59c117",
+      "meaning_id": "c7796a82-cc8d-56de-a97f-773ea694e337",
+      "relevance_score": 80,
+      "display_order": 2,
+      "is_core": true
+    },
+    {
+      "id": "e1f3198f-551e-53df-94b1-2fb161733841",
+      "journey_situation_id": "9eff3b79-a9e9-5456-8d36-94e0da59c117",
+      "meaning_id": "9ab971f4-9b7b-5551-b274-62ad41d9273f",
+      "relevance_score": 80,
+      "display_order": 3,
+      "is_core": true
+    },
+    {
+      "id": "33716347-9045-5da2-9e6e-79cf864d095b",
+      "journey_situation_id": "9eff3b79-a9e9-5456-8d36-94e0da59c117",
+      "meaning_id": "0b9878b3-64a7-5175-92f7-ce0435cfbed4",
+      "relevance_score": 80,
+      "display_order": 4,
+      "is_core": false
+    },
+    {
+      "id": "296affa1-2b52-5b73-90a8-b2b1b3ddd8ca",
+      "journey_situation_id": "9eff3b79-a9e9-5456-8d36-94e0da59c117",
+      "meaning_id": "7ee5fc1b-8108-5fb4-a254-f75af84695f3",
+      "relevance_score": 80,
+      "display_order": 5,
+      "is_core": false
+    },
+    {
+      "id": "0b3af90f-480a-55c2-a038-4392b986f2e2",
+      "journey_situation_id": "9eff3b79-a9e9-5456-8d36-94e0da59c117",
+      "meaning_id": "4c3724d8-5abf-5159-8171-76ccdcdae7c0",
+      "relevance_score": 80,
+      "display_order": 6,
+      "is_core": false
+    },
+    {
+      "id": "639b08c4-ed39-5821-a988-7c63c4c00f78",
+      "journey_situation_id": "a1adeeba-ab2a-5c8f-91e0-50317a2d1898",
+      "meaning_id": "fd6c39c0-f097-5a5b-b947-c93096e635d0",
+      "relevance_score": 80,
+      "display_order": 1,
+      "is_core": true
+    },
+    {
+      "id": "52456d07-644e-525b-bec7-be3cb067d01b",
+      "journey_situation_id": "a1adeeba-ab2a-5c8f-91e0-50317a2d1898",
+      "meaning_id": "ae72824e-1341-5081-84ea-0e0fdbf09c50",
+      "relevance_score": 80,
+      "display_order": 2,
+      "is_core": true
+    },
+    {
+      "id": "c51b7737-9df2-58fc-a335-4d2a60bc3510",
+      "journey_situation_id": "a1adeeba-ab2a-5c8f-91e0-50317a2d1898",
+      "meaning_id": "58529fdd-9425-5aef-a8c7-bc1086be7080",
+      "relevance_score": 80,
+      "display_order": 3,
+      "is_core": true
+    },
+    {
+      "id": "d9023ed9-36de-5d91-83ef-9ba018117fda",
+      "journey_situation_id": "a1adeeba-ab2a-5c8f-91e0-50317a2d1898",
+      "meaning_id": "ce20a0cc-6a7e-5b5e-bbfe-5ec49f1c58d5",
+      "relevance_score": 80,
+      "display_order": 4,
+      "is_core": false
+    },
+    {
+      "id": "fac3701d-3582-5175-a84e-f2287da5b53c",
+      "journey_situation_id": "a1adeeba-ab2a-5c8f-91e0-50317a2d1898",
+      "meaning_id": "5b7f44dd-77ba-5d20-9ee4-01d6967d203a",
+      "relevance_score": 80,
+      "display_order": 5,
+      "is_core": false
+    },
+    {
+      "id": "62f4824c-58fa-5c7a-aad5-4c4e805adf5d",
+      "journey_situation_id": "a1adeeba-ab2a-5c8f-91e0-50317a2d1898",
+      "meaning_id": "f582a137-c77d-58df-942e-884fe336cd64",
+      "relevance_score": 80,
+      "display_order": 6,
+      "is_core": false
+    },
+    {
+      "id": "685001fb-9c7b-514b-8fbb-8eec5f9631ed",
+      "journey_situation_id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
+      "meaning_id": "3265c02c-5751-5465-b94b-e767aa871d8d",
+      "relevance_score": 80,
+      "display_order": 1,
+      "is_core": true
+    },
+    {
+      "id": "bf28afbc-503d-56a7-82b5-bf4f79c33db1",
+      "journey_situation_id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
+      "meaning_id": "3d64c3c9-ede0-5ffd-b1ef-278f6b70e486",
+      "relevance_score": 80,
+      "display_order": 2,
+      "is_core": true
+    },
+    {
+      "id": "2b9f84a4-bde5-5aa3-aa5c-34685c0f6ec5",
+      "journey_situation_id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
+      "meaning_id": "c99075bf-94cb-5f51-90d5-f244f66ea942",
+      "relevance_score": 80,
+      "display_order": 3,
+      "is_core": true
+    },
+    {
+      "id": "feb08870-0a0a-56ea-8ae5-b04289088145",
+      "journey_situation_id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
+      "meaning_id": "ac93d068-7c3e-55c9-9d85-3fd3518592dc",
+      "relevance_score": 80,
+      "display_order": 4,
+      "is_core": false
+    },
+    {
+      "id": "22c93ba5-a7c2-57c7-8be3-fb5d7f8481ff",
+      "journey_situation_id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
+      "meaning_id": "c954cdb6-c0bc-5d61-9045-18db360f4b84",
+      "relevance_score": 80,
+      "display_order": 5,
+      "is_core": false
+    },
+    {
+      "id": "9fa67946-084a-51db-b9c8-e487d6728241",
+      "journey_situation_id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
+      "meaning_id": "0d267f75-f227-5478-962d-b4b944e0e93e",
+      "relevance_score": 80,
+      "display_order": 6,
+      "is_core": false
+    },
+    {
+      "id": "4df537d5-67dd-5401-9aea-47cd74e43de1",
+      "journey_situation_id": "eaa6f59e-6903-5cea-9822-5d42e43a1464",
+      "meaning_id": "8a6ec801-3292-5fc2-bfb3-242ac405d891",
+      "relevance_score": 80,
+      "display_order": 1,
+      "is_core": true
+    },
+    {
+      "id": "8b0f1240-d699-5d93-8980-de8d06ec0281",
+      "journey_situation_id": "eaa6f59e-6903-5cea-9822-5d42e43a1464",
+      "meaning_id": "6a61d337-80e7-5d50-bc61-8b45b6a054a1",
+      "relevance_score": 80,
+      "display_order": 2,
+      "is_core": true
+    },
+    {
+      "id": "35516921-c72c-5fcc-a6c3-5d5b7943a315",
+      "journey_situation_id": "eaa6f59e-6903-5cea-9822-5d42e43a1464",
+      "meaning_id": "2a610b3d-4031-5eee-a0be-d3def2cc0b53",
+      "relevance_score": 80,
+      "display_order": 3,
+      "is_core": true
+    },
+    {
+      "id": "e941bae2-2e85-53d4-ba5b-d51e8f27591a",
+      "journey_situation_id": "eaa6f59e-6903-5cea-9822-5d42e43a1464",
+      "meaning_id": "bee2408e-5991-5805-923c-6fba33ab7e7a",
+      "relevance_score": 80,
+      "display_order": 4,
+      "is_core": false
+    },
+    {
+      "id": "b62e073e-fcdd-5857-a123-9794aa370dee",
+      "journey_situation_id": "eaa6f59e-6903-5cea-9822-5d42e43a1464",
+      "meaning_id": "d62f1f3f-8382-5999-9e9c-30858f6b2c5b",
+      "relevance_score": 80,
+      "display_order": 5,
+      "is_core": false
+    },
+    {
+      "id": "8040f0d6-634d-5a71-9755-eccd36023da0",
+      "journey_situation_id": "eaa6f59e-6903-5cea-9822-5d42e43a1464",
+      "meaning_id": "8f12f8e0-d0a3-5010-941b-8f7d526121cc",
+      "relevance_score": 80,
+      "display_order": 6,
+      "is_core": false
+    }
+  ]
+}

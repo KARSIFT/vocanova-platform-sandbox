@@ -1,0 +1,11 @@
+-- VOC-026-T00: disposable recovery rehearsal example only. Do not run in production.
+-- Production recovery must be separately approved and preserve integrity and
+-- learner-owned state.
+
+DROP TABLE IF EXISTS user_words;
+DROP TABLE IF EXISTS journey_words;
+DROP TABLE IF EXISTS journey_situations;
+DROP TABLE IF EXISTS usage_notes;
+DROP TABLE IF EXISTS word_examples;
+DROP TABLE IF EXISTS word_meanings;
+DROP TABLE IF EXISTS canonical_words;
