@@ -1,0 +1,64 @@
+schema_version: 1
+id: VOC-029
+slug: add-a-one-line-comment-to-the-top-of-readme-md
+title: Add a One-Line Comment to the Top of README.md
+type: documentation
+status: draft
+risk: R0
+planned_implementation_risk_floor: R0
+canonical_path: specs/changes/VOC-029-add-a-one-line-comment-to-the-top-of-readme-md
+authority_model: a003-active
+requirement_source: supplied free-text request (trivial diagnostic drafting test;
+  explicitly "not a real change" and "do not adopt this package")
+requirement_approval_status: not-approved
+base_branch: develop
+base_sha: 7cdb0f74e41e64f93e3bf1d30da6b006efb5a3c0
+target_branch: develop
+approved_candidate_sha: TBD-set-at-package-adoption
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: false
+production_impact: unknown
+rollback_required: true
+owners:
+  decision: unassigned
+  package_preparation: planner
+  implementation: unassigned
+  independent_verification: Claude Code
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies: []
+affected_areas:
+- README.md
+implementation:
+  authorized: false
+  required: true
+  status: draft
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: false
+  mode: not-applicable-documentation-only
+  production_impact: not-authorized
+  deployment: prohibited-by-this-draft
+  automatic_merge: false
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
+blocking_reasons: explicit-request-states-do-not-adopt-this-package
