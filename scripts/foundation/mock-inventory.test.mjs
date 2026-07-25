@@ -3,6 +3,6 @@ import test from "node:test";
 
 import { validateMockInventory } from "./mock-inventory.mjs";
 
-test("A1 mock inventory is retained and no P1-P4 APIs are invented", () => {
+test("mock inventory is retained and APIs do not exceed VOC-026-T01", () => {
   assert.deepEqual(validateMockInventory(), []);
 });

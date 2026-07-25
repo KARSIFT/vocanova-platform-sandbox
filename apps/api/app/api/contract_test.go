@@ -30,7 +30,7 @@ func TestContractContainsDiscoveryEndpoints(t *testing.T) {
 		t.Fatalf("marshal OpenAPI: %v", err)
 	}
 	contract := string(document)
-	for _, expected := range []string{"ListJourneySituations", "GetJourneySituation", "GetCanonicalWord", "/api/v1/journey-situations", "/api/v1/canonical-words/"} {
+	for _, expected := range []string{"ListJourneySituations", "GetJourneySituation", "GetCanonicalWord", "/api/v1/journey-situations", "/api/v1/canonical-words/{wordSlug}"} {
 		if !strings.Contains(contract, expected) {
 			t.Errorf("OpenAPI missing %q", expected)
 		}

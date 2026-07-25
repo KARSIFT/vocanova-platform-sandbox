@@ -92,17 +92,26 @@ export function validateMockInventory() {
     }
   }
 
-  // Verify no learning-domain API routes were invented.
+  // Verify no API routes beyond A1 auth and the VOC-026 T01 content reads were
+  // invented. The P1 allowlist stays deliberately narrow here: user-word
+  // writes and later-milestone endpoints remain forbidden until their tasks.
+  const allowedAPIPaths = [
+    /^\/api\/v1\/me$/,
+    /^\/api\/v1\/auth(?:\/|$)/,
+    /^\/api\/v1\/journey-situations(?:\/[^/]+)?$/,
+    /^\/api\/v1\/canonical-words\/[^/]+$/,
+  ];
   const apiRouteFiles = globSync("**/*.go", { cwd: apiRouteRoot });
   for (const file of apiRouteFiles) {
     const content = readFileSync(path.join(apiRouteRoot, file), "utf8");
-    // Only A1 auth routes are permitted in app/api. A1 routes use the auth
-    // package and the /api/v1/me and /api/v1/auth prefixes.
-    const hasLearningPath = /["']\/api\/v1\/(?!me\b|auth\/)/.test(content);
-    if (hasLearningPath) {
-      errors.push(
-        `${file}: contains a non-A1 API path; A1 must not invent learning-domain endpoints`,
-      );
+    const apiPaths = content.matchAll(/["'](\/api\/v1\/[^"'?\s]*)/g);
+    for (const match of apiPaths) {
+      const apiPath = match[1];
+      if (!allowedAPIPaths.some((allowed) => allowed.test(apiPath))) {
+        errors.push(
+          `${file}: contains API path ${apiPath} outside A1 and VOC-026-T01`,
+        );
+      }
     }
   }
 
