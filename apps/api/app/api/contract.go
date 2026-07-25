@@ -29,8 +29,8 @@ type Error struct {
 	Message string `json:"message" example:"Authentication is required."`
 }
 
-// RegisterContract establishes the A1 contract shape only. Authentication and
-// the real current-user handler are deliberately deferred to T03.
+// RegisterContract establishes the A1 current-user contract. Authentication is
+// enforced by the AuthMiddleware and RequireAuth operation middleware.
 func RegisterContract(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "GetCurrentUser",
@@ -38,10 +38,15 @@ func RegisterContract(api huma.API) {
 		Path:        "/api/v1/me",
 		Summary:     "Get the authenticated user",
 		Tags:        []string{"Authentication"},
+		Middlewares: []func(huma.Context, func(huma.Context)){RequireAuth()},
 		Responses: map[string]*huma.Response{
 			"401": {Description: "Authentication is required"},
 		},
-	}, func(context.Context, *struct{}) (*CurrentUserOutput, error) {
-		return nil, huma.Error501NotImplemented("Authentication is not implemented in T00")
+	}, func(ctx context.Context, input *struct{}) (*CurrentUserOutput, error) {
+		u := Requester(ctx)
+		if u == nil {
+			return nil, huma.Error401Unauthorized("authentication required")
+		}
+		return &CurrentUserOutput{Body: currentUserFromAuth(u)}, nil
 	})
 }

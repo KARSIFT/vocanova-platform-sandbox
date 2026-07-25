@@ -94,6 +94,19 @@ func (r *MemoryRepository) UpdateUserLastLogin(ctx context.Context, id uuid.UUID
 	return nil
 }
 
+// SetUserStatus is a test helper to change a user's status without expanding the
+// production Repository interface.
+func (r *MemoryRepository) SetUserStatus(id uuid.UUID, status string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	u, ok := r.users[id]
+	if !ok {
+		return errors.New("user not found")
+	}
+	u.Status = status
+	return nil
+}
+
 func (r *MemoryRepository) CreateSession(ctx context.Context, userID uuid.UUID, tokenHash []byte, createdAt, expiresAt time.Time) (*Session, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

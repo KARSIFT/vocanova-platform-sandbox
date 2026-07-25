@@ -20,7 +20,6 @@ func NewContractAPI() huma.API {
 	config.Info.Description = "Explicit Vocanova HTTP DTO contract. Internal persistence models are not exposed."
 	contractAPI := humachi.New(chi.NewMux(), config)
 	contractAPI.UseMiddleware(withHumaContext)
-	RegisterContract(contractAPI)
 
 	// Register auth routes for OpenAPI generation using a placeholder service.
 	svc := auth.NewService(
@@ -48,6 +47,8 @@ func NewContractAPI() huma.API {
 			},
 		},
 	)
+	contractAPI.UseMiddleware(AuthMiddleware(svc))
+	RegisterContract(contractAPI)
 	RegisterAuth(contractAPI, svc)
 	return contractAPI
 }

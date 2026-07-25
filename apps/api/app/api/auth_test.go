@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -61,6 +62,8 @@ func testAuthAPI(t *testing.T) (huma.API, *auth.Service, *auth.MemoryRepository,
 	config := huma.DefaultConfig("Vocanova API", "0.1.0")
 	api := humachi.New(chi.NewMux(), config)
 	api.UseMiddleware(withHumaContext)
+	api.UseMiddleware(AuthMiddleware(svc))
+	RegisterContract(api)
 	RegisterAuth(api, svc)
 	return api, svc, repo, fake, c
 }
@@ -324,4 +327,174 @@ func extractTokenFromURL(t *testing.T, body string) string {
 
 func jsonDecode(body string, v any) error {
 	return json.Unmarshal([]byte(body), v)
+}
+
+// consumeMagicLinkForEmail requests and consumes a magic link for the given
+// email, returning the issued session cookie.
+func consumeMagicLinkForEmail(t *testing.T, api huma.API, fake *email.Fake, emailAddr string) *http.Cookie {
+	t.Helper()
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/magic-links", strings.NewReader(`{"email":"`+emailAddr+`"}`))
+	req.Header.Set("Content-Type", "application/json")
+	api.Adapter().ServeHTTP(w, req)
+	require.Equal(t, http.StatusNoContent, w.Code)
+
+	msg, _ := fake.Last()
+	rawToken := extractTokenFromURL(t, msg.BodyText)
+
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/auth/magic-links/consume", strings.NewReader(`{"token":"`+rawToken+`","email":"`+emailAddr+`"}`))
+	req.Header.Set("Content-Type", "application/json")
+	api.Adapter().ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	return findCookie(w.Result().Cookies(), "vocanova_session")
+}
+
+func TestGetCurrentUserRequiresAuthentication(t *testing.T) {
+	api, _, _, _, _ := testAuthAPI(t)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/me", nil)
+	api.Adapter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	assert.Contains(t, w.Body.String(), "authentication required")
+}
+
+func TestGetCurrentUserReturnsAuthenticatedRequester(t *testing.T) {
+	api, _, _, fake, _ := testAuthAPI(t)
+
+	sessionCookie := consumeMagicLinkForEmail(t, api, fake, "user@example.com")
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/me", nil)
+	req.AddCookie(sessionCookie)
+	api.Adapter().ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var body CurrentUser
+	require.NoError(t, jsonDecode(w.Body.String(), &body))
+	require.NotNil(t, body.Email)
+	assert.Equal(t, "user@example.com", *body.Email)
+}
+
+func TestGetCurrentUserRejectsInvalidCookie(t *testing.T) {
+	api, _, _, _, _ := testAuthAPI(t)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/me", nil)
+	req.AddCookie(&http.Cookie{Name: "vocanova_session", Value: "not-a-valid-token"})
+	api.Adapter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestGetCurrentUserRejectsExpiredSession(t *testing.T) {
+	api, _, _, fake, c := testAuthAPI(t)
+
+	sessionCookie := consumeMagicLinkForEmail(t, api, fake, "user@example.com")
+	c.Advance(31 * 24 * time.Hour)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/me", nil)
+	req.AddCookie(sessionCookie)
+	api.Adapter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestGetCurrentUserRejectsRevokedSession(t *testing.T) {
+	api, svc, _, fake, _ := testAuthAPI(t)
+
+	sessionCookie := consumeMagicLinkForEmail(t, api, fake, "user@example.com")
+	csrfToken, csrfCookie := svc.IssueCSRFCookie()
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", nil)
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(sessionCookie)
+	req.AddCookie(csrfCookie)
+	req.Header.Set("X-CSRF-Token", csrfToken)
+	api.Adapter().ServeHTTP(w, req)
+	require.Equal(t, http.StatusNoContent, w.Code)
+
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/me", nil)
+	req.AddCookie(sessionCookie)
+	api.Adapter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestGetCurrentUserRejectsDisabledUser(t *testing.T) {
+	api, _, repo, fake, _ := testAuthAPI(t)
+
+	sessionCookie := consumeMagicLinkForEmail(t, api, fake, "user@example.com")
+	u, err := repo.GetUserByEmail(context.Background(), "user@example.com")
+	require.NoError(t, err)
+	require.NoError(t, repo.SetUserStatus(u.ID, "disabled"))
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/me", nil)
+	req.AddCookie(sessionCookie)
+	api.Adapter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestGetCurrentUserCrossUserIsolation(t *testing.T) {
+	api, _, _, fake, _ := testAuthAPI(t)
+
+	sessionA := consumeMagicLinkForEmail(t, api, fake, "a@example.com")
+	sessionB := consumeMagicLinkForEmail(t, api, fake, "b@example.com")
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/me", nil)
+	req.AddCookie(sessionA)
+	api.Adapter().ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+	var bodyA CurrentUser
+	require.NoError(t, jsonDecode(w.Body.String(), &bodyA))
+	require.NotNil(t, bodyA.Email)
+	assert.Equal(t, "a@example.com", *bodyA.Email)
+
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/me", nil)
+	req.AddCookie(sessionB)
+	api.Adapter().ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+	var bodyB CurrentUser
+	require.NoError(t, jsonDecode(w.Body.String(), &bodyB))
+	require.NotNil(t, bodyB.Email)
+	assert.Equal(t, "b@example.com", *bodyB.Email)
+}
+
+func TestLogoutRequiresAuthentication(t *testing.T) {
+	api, svc, _, _, _ := testAuthAPI(t)
+
+	w := httptest.NewRecorder()
+	csrfToken, csrfCookie := svc.IssueCSRFCookie()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", nil)
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(csrfCookie)
+	req.Header.Set("X-CSRF-Token", csrfToken)
+	api.Adapter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestLogoutRequiresCSRF(t *testing.T) {
+	api, _, _, fake, _ := testAuthAPI(t)
+
+	sessionCookie := consumeMagicLinkForEmail(t, api, fake, "user@example.com")
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", nil)
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(sessionCookie)
+	api.Adapter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusForbidden, w.Code)
 }

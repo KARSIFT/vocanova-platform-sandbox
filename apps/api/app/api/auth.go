@@ -202,11 +202,13 @@ func RegisterAuth(api huma.API, svc *auth.Service) {
 		Path:        "/api/v1/auth/logout",
 		Summary:     "Log out the current session",
 		Tags:        []string{"Authentication"},
+		Middlewares: []func(huma.Context, func(huma.Context)){RequireAuth(), CSRFMiddleware(svc)},
+		Responses: map[string]*huma.Response{
+			"401": {Description: "Authentication is required"},
+			"403": {Description: "Invalid CSRF token"},
+		},
 	}, func(ctx context.Context, input *LogoutInput) (*LogoutOutput, error) {
 		c := authHumaContext(ctx)
-		if !svc.ValidateCSRF(csrfCookieValue(c, svc.CSRFCookieName()), c.Header("X-CSRF-Token")) {
-			return nil, huma.Error403Forbidden("invalid csrf token")
-		}
 		sessionCookie, err := huma.ReadCookie(c, svc.SessionCookieName())
 		token := ""
 		if err == nil {
@@ -222,10 +224,17 @@ func RegisterAuth(api huma.API, svc *auth.Service) {
 }
 
 func currentUserFromAuth(u *auth.User) CurrentUser {
-	return CurrentUser{
+	cu := CurrentUser{
 		Email:           &u.Email,
 		EmailVerifiedAt: u.EmailVerifiedAt,
 	}
+	if u.DisplayName != "" {
+		cu.DisplayName = &u.DisplayName
+	}
+	if u.AvatarURL != "" {
+		cu.AvatarURL = &u.AvatarURL
+	}
+	return cu
 }
 
 func mapAuthError(err error) huma.StatusError {
