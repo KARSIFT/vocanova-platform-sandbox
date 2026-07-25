@@ -4,7 +4,14 @@ import { NextResponse } from "next/server";
 import { getApiBaseURL } from "./lib/env";
 
 export const config = {
-  matcher: ["/home", "/discover", "/discover/:path*", "/progress"],
+  matcher: [
+    "/home",
+    "/discover",
+    "/discover/:path*",
+    "/progress",
+    "/reviews",
+    "/reviews/:path*",
+  ],
 };
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
