@@ -41,6 +41,8 @@ func (WordMeaning) Edges() []ent.Edge {
 		edge.To("usage_notes", UsageNote.Type),
 		edge.To("journey_words", JourneyWord.Type),
 		edge.To("user_words", UserWord.Type),
+		edge.To("review_attempts", ReviewAttempt.Type),
+		edge.To("selected_option_attempts", ReviewAttempt.Type),
 	}
 }
 

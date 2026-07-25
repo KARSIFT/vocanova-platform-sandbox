@@ -1,0 +1,4 @@
+-- VOC-027-T00: Disposable recovery rehearsal only. Production rollback must be
+-- separately approved and must preserve immutable review_attempts history.
+
+DROP TABLE IF EXISTS review_attempts;

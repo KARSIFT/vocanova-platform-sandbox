@@ -51,6 +51,7 @@ func (UserWord) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("user", User.Type).Ref("user_words").Field("user_id").Unique().Required(),
 		edge.From("meaning", WordMeaning.Type).Ref("user_words").Field("meaning_id").Unique().Required(),
+		edge.To("review_attempts", ReviewAttempt.Type),
 	}
 }
 
