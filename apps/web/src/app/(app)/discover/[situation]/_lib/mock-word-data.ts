@@ -1,4 +1,4 @@
-// Placeholder local data for static UI; replace with real API wiring in a follow-up package.
+// Placeholder local data for VOC-022 static UI; replace with real API wiring in a follow-up package.
 type PartOfSpeech = "noun" | "verb" | "adjective" | "phrase";
 
 function mockWord(

@@ -41,7 +41,8 @@ export default async function WordDetailPage({
             {wordDetails.term}
           </h1>
           <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-            Placeholder word details pending API wiring.
+            Placeholder word details for VOC-022 static UI; replace with real
+            API wiring in a follow-up package.
           </p>
         </div>
         <button

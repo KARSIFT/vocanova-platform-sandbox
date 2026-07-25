@@ -66,9 +66,9 @@ The adopted journey protects existing `(app)` routes before rendering content; b
 - Tasks: `VOC-025-T05`
 - Tests: `VOC-025-TEST-18`, `VOC-025-TEST-19`
 - Evidence: `VOC-025-EV-18`, `VOC-025-EV-19`
-- Result: pending
+- Result: implemented
 
-Only the adopted retain/wire/follow-up disposition is implemented. Real sources use approved requester-scoped contracts; retained learning mocks remain identified and do not masquerade as learner data.
+Only the adopted retain/wire/follow-up disposition is implemented. Real sources use approved requester-scoped contracts; retained learning mocks remain identified and do not masquerade as learner data. The mock inventory and deterministic inventory test verify this disposition.
 
 ## VOC-025-AC-07 — A1 evidence, staging, and rollback readiness are complete
 
@@ -76,6 +76,6 @@ Only the adopted retain/wire/follow-up disposition is implemented. Real sources 
 - Tasks: `VOC-025-T00`..`VOC-025-T05`
 - Tests: `VOC-025-TEST-20`..`VOC-025-TEST-23`
 - Evidence: `VOC-025-EV-20`..`VOC-025-EV-23`
-- Result: pending
+- Result: in-repository evidence collected; live staging/rollback evidence blocked by `VOC-025-DEP-01`
 
-Applicable checks, migration/auth/contract tests, exact-SHA reviews, staging tests for both methods/navigation/logout/unauthorized/cross-user/rate limit, and session-safe rollback rehearsal pass. This enables—not declares—the DOC-12 A1 gate evaluation.
+Applicable checks, migration/auth/contract tests, exact-SHA reviews, and the deterministic mock-inventory test pass. Staging tests for both methods/navigation/logout/unauthorized/cross-user/rate limit and the session-safe rollback rehearsal are documented and ready to run once the F3 staging environment exists (`VOC-025-DEP-01`). This enables—but does not declare—the DOC-12 A1 gate evaluation.

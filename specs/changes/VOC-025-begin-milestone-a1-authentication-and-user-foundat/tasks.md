@@ -58,6 +58,26 @@ Implement only adopted sign-in/return/logout behavior. Protect the complete `(ap
 - Acceptance criteria: `VOC-025-AC-04`, `VOC-025-AC-06`, `VOC-025-AC-07`
 - Tests: `VOC-025-TEST-18`..`VOC-025-TEST-23`
 - Evidence: `VOC-025-EV-18`..`VOC-025-EV-23`
-- Status: pending
+- Status: implemented; staging evidence blocked by `VOC-025-DEP-01`
 
 Inventory every VOC-010–VOC-024 mock source and map it to adopted retain/wire/follow-up. Do not add P1–P4 APIs. In staging exercise both auth methods, navigation, logout, unauthorized/cross-user/CSRF/abuse paths, and migration/session-safe rollback; collect evidence without declaring A1 complete.
+
+### Deliverables
+
+- `mock-inventory.md`: maps every retained learning-content mock to its VOC
+  source, disposition (`retain` or `wire to A1`), and follow-up package.
+- `staging-evidence.md`: collected in-repository evidence (`EV-18`..`EV-20`)
+  and documented procedures for blocked staging evidence (`EV-21`..`EV-23`).
+- `scripts/foundation/mock-inventory.mjs` and `mock-inventory.test.mjs`:
+  deterministic check that retained mocks are unchanged and no P1–P4 API
+  routes were invented.
+- Minor comment updates in the VOC-022 mock source and word-detail page to
+  identify them explicitly as VOC-022 placeholders (data and rendering
+  unchanged).
+
+### Blocker
+
+`VOC-025-DEP-01` remains open: F3 staging does not exist, so live staging
+exercises (`EV-21`, `EV-22`, `EV-23`) cannot be executed. The implementation
+provides the procedures and the in-repository evidence only; it does not
+declare A1 complete.
