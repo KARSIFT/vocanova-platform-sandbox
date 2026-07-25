@@ -1,0 +1,202 @@
+package content
+
+import (
+	"context"
+	"testing"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func sampleMemoryRepo() (*MemoryRepository, *MemorySavedStateReader) {
+	sitID := MustParseUUID("00000000-0000-0000-0000-000000000001")
+	wordID := MustParseUUID("00000000-0000-0000-0000-000000000002")
+	meaningID := MustParseUUID("00000000-0000-0000-0000-000000000003")
+
+	repo := NewMemoryRepository(MemoryRepositoryData{
+		Situations: []Situation{
+			{
+				ID:               sitID,
+				Slug:             "airport",
+				Title:            "Airport",
+				ShortDescription: "Airport words.",
+				LevelBand:        "a1_a2",
+				Category:         "travel",
+				Status:           "active",
+				DisplayOrder:     1,
+			},
+			{
+				ID:               MustParseUUID("00000000-0000-0000-0000-000000000004"),
+				Slug:             "restaurant",
+				Title:            "Restaurant",
+				ShortDescription: "Restaurant words.",
+				Category:         "daily_life",
+				Status:           "active",
+				DisplayOrder:     2,
+			},
+			{
+				ID:               MustParseUUID("00000000-0000-0000-0000-000000000005"),
+				Slug:             "draft",
+				Title:            "Draft",
+				ShortDescription: "Draft.",
+				Category:         "daily_life",
+				Status:           "draft",
+				DisplayOrder:     3,
+			},
+		},
+		Words: []SeedWord{
+			{
+				ID:             wordID,
+				Text:           "boarding pass",
+				NormalizedText: "boarding pass",
+				WordType:       "phrase",
+				LanguageCode:   "en",
+				Status:         "active",
+			},
+		},
+		Meanings: []SeedMeaning{
+			{
+				ID:              meaningID,
+				WordID:          wordID,
+				PartOfSpeech:    "noun",
+				ShortDefinition: "A document that lets you get on your flight.",
+				MeaningOrder:    1,
+				Status:          "active",
+			},
+		},
+		Examples: []SeedExample{
+			{
+				ID:           MustParseUUID("00000000-0000-0000-0000-000000000006"),
+				MeaningID:    meaningID,
+				ExampleText:  "Please have your boarding pass ready.",
+				ExampleOrder: 1,
+				Status:       "active",
+			},
+		},
+		Notes: []SeedNote{
+			{
+				ID:        MustParseUUID("00000000-0000-0000-0000-000000000007"),
+				MeaningID: meaningID,
+				NoteType:  "collocation",
+				NoteText:  "show a boarding pass",
+				NoteOrder: 1,
+				Status:    "active",
+			},
+		},
+		JourneyWords: []SeedJourneyWord{
+			{
+				ID:                 MustParseUUID("00000000-0000-0000-0000-000000000008"),
+				JourneySituationID: sitID,
+				MeaningID:          meaningID,
+				RelevanceScore:     80,
+				DisplayOrder:       intPtr(1),
+				IsCore:             true,
+			},
+		},
+	})
+
+	userID := MustParseUUID("00000000-0000-0000-0000-000000000009")
+	reader := NewMemorySavedStateReader(map[uuid.UUID]map[uuid.UUID]bool{
+		userID: {meaningID: true},
+	})
+	return repo, reader
+}
+
+func TestServiceListSituationsOnlyActive(t *testing.T) {
+	repo, _ := sampleMemoryRepo()
+	svc := NewService(repo, nil)
+
+	resp, err := svc.ListSituations(context.Background(), ListSituationsRequest{})
+	require.NoError(t, err)
+	require.Len(t, resp.Items, 2)
+	assert.Equal(t, "airport", resp.Items[0].Slug)
+	assert.Equal(t, "restaurant", resp.Items[1].Slug)
+}
+
+func TestServiceListSituationsPagination(t *testing.T) {
+	repo, _ := sampleMemoryRepo()
+	svc := NewService(repo, nil)
+
+	resp, err := svc.ListSituations(context.Background(), ListSituationsRequest{Limit: 1})
+	require.NoError(t, err)
+	require.Len(t, resp.Items, 1)
+	assert.Equal(t, "airport", resp.Items[0].Slug)
+	assert.NotEmpty(t, resp.NextCursor)
+
+	resp2, err := svc.ListSituations(context.Background(), ListSituationsRequest{AfterCursor: resp.NextCursor, Limit: 1})
+	require.NoError(t, err)
+	require.Len(t, resp2.Items, 1)
+	assert.Equal(t, "restaurant", resp2.Items[0].Slug)
+	assert.Empty(t, resp2.NextCursor)
+}
+
+func TestServiceGetSituationNotFound(t *testing.T) {
+	repo, _ := sampleMemoryRepo()
+	svc := NewService(repo, nil)
+
+	_, err := svc.GetSituation(context.Background(), uuid.Nil, "unknown")
+	assert.ErrorIs(t, err, ErrSituationNotFound)
+}
+
+func TestServiceGetSituationReturnsMeanings(t *testing.T) {
+	repo, reader := sampleMemoryRepo()
+	svc := NewService(repo, reader)
+
+	userID := MustParseUUID("00000000-0000-0000-0000-000000000009")
+	detail, err := svc.GetSituation(context.Background(), userID, "airport")
+	require.NoError(t, err)
+	assert.Equal(t, "airport", detail.Situation.Slug)
+	require.Len(t, detail.Meanings, 1)
+	assert.Equal(t, "boarding-pass", detail.Meanings[0].WordSlug)
+	assert.Equal(t, "boarding pass", detail.Meanings[0].WordText)
+	assert.True(t, detail.Meanings[0].Saved)
+}
+
+func TestServiceGetSituationNoSavedReader(t *testing.T) {
+	repo, _ := sampleMemoryRepo()
+	svc := NewService(repo, nil)
+
+	detail, err := svc.GetSituation(context.Background(), uuid.Nil, "airport")
+	require.NoError(t, err)
+	require.Len(t, detail.Meanings, 1)
+	assert.False(t, detail.Meanings[0].Saved)
+}
+
+func TestServiceGetWordDetailNotFound(t *testing.T) {
+	repo, _ := sampleMemoryRepo()
+	svc := NewService(repo, nil)
+
+	_, err := svc.GetWordDetail(context.Background(), uuid.Nil, "unknown")
+	assert.ErrorIs(t, err, ErrWordNotFound)
+}
+
+func TestServiceGetWordDetailReturnsMeanings(t *testing.T) {
+	repo, reader := sampleMemoryRepo()
+	svc := NewService(repo, reader)
+
+	userID := MustParseUUID("00000000-0000-0000-0000-000000000009")
+	word, err := svc.GetWordDetail(context.Background(), userID, "boarding-pass")
+	require.NoError(t, err)
+	assert.Equal(t, "boarding pass", word.Text)
+	assert.Equal(t, "boarding-pass", word.Slug)
+	require.Len(t, word.Meanings, 1)
+	assert.True(t, word.Meanings[0].Saved)
+	require.Len(t, word.Meanings[0].Examples, 1)
+	assert.Equal(t, "Please have your boarding pass ready.", word.Meanings[0].Examples[0].ExampleText)
+	require.Len(t, word.Meanings[0].UsageNotes, 1)
+	assert.Equal(t, "collocation", word.Meanings[0].UsageNotes[0].NoteType)
+}
+
+func TestServiceGetWordDetailCrossUserSavedState(t *testing.T) {
+	repo, reader := sampleMemoryRepo()
+	svc := NewService(repo, reader)
+
+	otherUser := MustParseUUID("00000000-0000-0000-0000-00000000000a")
+	word, err := svc.GetWordDetail(context.Background(), otherUser, "boarding-pass")
+	require.NoError(t, err)
+	require.Len(t, word.Meanings, 1)
+	assert.False(t, word.Meanings[0].Saved)
+}
+
+func intPtr(i int) *int { return &i }

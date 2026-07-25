@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/auth"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/content"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/email"
 	"github.com/danielgtaylor/huma/v2"
@@ -50,5 +51,12 @@ func NewContractAPI() huma.API {
 	contractAPI.UseMiddleware(AuthMiddleware(svc))
 	RegisterContract(contractAPI)
 	RegisterAuth(contractAPI, svc)
+
+	// Register content routes for OpenAPI generation using empty in-memory repos.
+	contentSvc := content.NewService(
+		content.NewMemoryRepository(content.MemoryRepositoryData{}),
+		content.NewMemorySavedStateReader(nil),
+	)
+	RegisterContent(contractAPI, contentSvc)
 	return contractAPI
 }

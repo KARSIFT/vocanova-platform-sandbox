@@ -142,6 +142,93 @@
         },
         "type": "object"
       },
+      "GetSituationOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/GetSituationOutputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "meanings": {
+            "description": "Meanings in the situation",
+            "items": {
+              "$ref": "#/components/schemas/SituationMeaningDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "situation": {
+            "$ref": "#/components/schemas/SituationDTO",
+            "description": "Situation"
+          }
+        },
+        "required": [
+          "situation",
+          "meanings"
+        ],
+        "type": "object"
+      },
+      "GetWordOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/GetWordOutputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "word": {
+            "$ref": "#/components/schemas/WordDetailDTO",
+            "description": "Canonical word detail"
+          }
+        },
+        "required": [
+          "word"
+        ],
+        "type": "object"
+      },
+      "ListSituationsOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/ListSituationsOutputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "items": {
+            "description": "Situations",
+            "items": {
+              "$ref": "#/components/schemas/SituationDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "nextCursor": {
+            "description": "Opaque cursor for the next page",
+            "type": "string"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
       "OAuthStartInputBody": {
         "additionalProperties": false,
         "properties": {
@@ -208,6 +295,241 @@
         },
         "required": [
           "email"
+        ],
+        "type": "object"
+      },
+      "SituationDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "description": "Situation category",
+            "type": "string"
+          },
+          "displayOrder": {
+            "description": "Display order",
+            "format": "int64",
+            "type": "integer"
+          },
+          "id": {
+            "description": "Situation identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "levelBand": {
+            "description": "Suggested level band",
+            "type": "string"
+          },
+          "shortDescription": {
+            "description": "Short description",
+            "type": "string"
+          },
+          "slug": {
+            "description": "URL slug",
+            "type": "string"
+          },
+          "title": {
+            "description": "Human-readable title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "shortDescription",
+          "category",
+          "displayOrder"
+        ],
+        "type": "object"
+      },
+      "SituationMeaningDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "meaningId": {
+            "description": "Meaning identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "partOfSpeech": {
+            "description": "Part of speech",
+            "type": "string"
+          },
+          "saved": {
+            "description": "Whether the authenticated requester has saved this meaning",
+            "type": "boolean"
+          },
+          "shortDefinition": {
+            "description": "Short definition",
+            "type": "string"
+          },
+          "wordId": {
+            "description": "Canonical word identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "wordSlug": {
+            "description": "Canonical word URL slug",
+            "type": "string"
+          },
+          "wordText": {
+            "description": "Canonical word text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "meaningId",
+          "wordId",
+          "wordSlug",
+          "wordText",
+          "partOfSpeech",
+          "shortDefinition",
+          "saved"
+        ],
+        "type": "object"
+      },
+      "WordDetailDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "difficultyLevel": {
+            "description": "Difficulty level",
+            "type": "string"
+          },
+          "id": {
+            "description": "Word identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "meanings": {
+            "description": "Meanings",
+            "items": {
+              "$ref": "#/components/schemas/WordMeaningDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "slug": {
+            "description": "URL slug",
+            "type": "string"
+          },
+          "text": {
+            "description": "Word text",
+            "type": "string"
+          },
+          "wordType": {
+            "description": "Word type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "slug",
+          "wordType",
+          "meanings"
+        ],
+        "type": "object"
+      },
+      "WordExampleDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "exampleText": {
+            "description": "Example sentence",
+            "type": "string"
+          },
+          "id": {
+            "description": "Example identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "situationLabel": {
+            "description": "Optional situation label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "exampleText"
+        ],
+        "type": "object"
+      },
+      "WordMeaningDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "examples": {
+            "description": "Example sentences",
+            "items": {
+              "$ref": "#/components/schemas/WordExampleDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "id": {
+            "description": "Meaning identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "learnerDefinition": {
+            "description": "Learner-friendly definition",
+            "type": "string"
+          },
+          "partOfSpeech": {
+            "description": "Part of speech",
+            "type": "string"
+          },
+          "saved": {
+            "description": "Whether the authenticated requester has saved this meaning",
+            "type": "boolean"
+          },
+          "shortDefinition": {
+            "description": "Short definition",
+            "type": "string"
+          },
+          "usageNotes": {
+            "description": "Usage notes",
+            "items": {
+              "$ref": "#/components/schemas/WordUsageNoteDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "partOfSpeech",
+          "shortDefinition",
+          "saved",
+          "examples",
+          "usageNotes"
+        ],
+        "type": "object"
+      },
+      "WordUsageNoteDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "Note identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "noteText": {
+            "description": "Note text",
+            "type": "string"
+          },
+          "noteType": {
+            "description": "Note type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "noteType",
+          "noteText"
         ],
         "type": "object"
       }
@@ -413,6 +735,132 @@
         "summary": "Start a Google OAuth sign-in flow",
         "tags": [
           "Authentication"
+        ]
+      }
+    },
+    "/api/v1/canonical-words/{wordSlug}": {
+      "get": {
+        "operationId": "GetCanonicalWord",
+        "parameters": [
+          {
+            "description": "Canonical word slug",
+            "in": "path",
+            "name": "wordSlug",
+            "required": true,
+            "schema": {
+              "description": "Canonical word slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetWordOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Authentication is required"
+          },
+          "404": {
+            "description": "Word not found"
+          }
+        },
+        "summary": "Get a canonical word with meanings",
+        "tags": [
+          "Discovery"
+        ]
+      }
+    },
+    "/api/v1/journey-situations": {
+      "get": {
+        "operationId": "ListJourneySituations",
+        "parameters": [
+          {
+            "description": "Opaque pagination cursor",
+            "explode": false,
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "description": "Opaque pagination cursor",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Maximum items to return (1-100)",
+            "explode": false,
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 20,
+              "description": "Maximum items to return (1-100)",
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListSituationsOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Authentication is required"
+          }
+        },
+        "summary": "List active journey situations",
+        "tags": [
+          "Discovery"
+        ]
+      }
+    },
+    "/api/v1/journey-situations/{slug}": {
+      "get": {
+        "operationId": "GetJourneySituation",
+        "parameters": [
+          {
+            "description": "Situation slug",
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "description": "Situation slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetSituationOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Authentication is required"
+          },
+          "404": {
+            "description": "Situation not found"
+          }
+        },
+        "summary": "Get a journey situation with meanings",
+        "tags": [
+          "Discovery"
         ]
       }
     },

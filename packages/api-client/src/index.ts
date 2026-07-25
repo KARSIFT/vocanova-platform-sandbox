@@ -22,6 +22,71 @@ export interface OAuthStartResponse {
   url: string;
 }
 
+export interface Situation {
+  id: string;
+  slug: string;
+  title: string;
+  shortDescription: string;
+  levelBand?: string;
+  category: string;
+  displayOrder: number;
+}
+
+export interface SituationMeaning {
+  meaningId: string;
+  wordId: string;
+  wordSlug: string;
+  wordText: string;
+  partOfSpeech: string;
+  shortDefinition: string;
+  saved: boolean;
+}
+
+export interface WordExample {
+  id: string;
+  exampleText: string;
+  situationLabel?: string;
+}
+
+export interface WordUsageNote {
+  id: string;
+  noteType: string;
+  noteText: string;
+}
+
+export interface WordMeaning {
+  id: string;
+  partOfSpeech: string;
+  shortDefinition: string;
+  learnerDefinition?: string;
+  saved: boolean;
+  examples: WordExample[];
+  usageNotes: WordUsageNote[];
+}
+
+export interface WordDetail {
+  id: string;
+  text: string;
+  slug: string;
+  wordType: string;
+  difficultyLevel?: string;
+  meanings: WordMeaning[];
+}
+
+export interface ListSituationsResponse {
+  items: Situation[];
+  nextCursor?: string;
+}
+
+export interface SituationResponse {
+  situation: Situation;
+  meanings: SituationMeaning[];
+}
+
+export interface WordDetailResponse {
+  word: WordDetail;
+}
+
 export interface ApiError {
   type?: string;
   title?: string;
@@ -112,6 +177,53 @@ export class VocanovaClient {
       init,
     );
     return { response };
+  }
+
+  async listJourneySituations(
+    params?: { after?: string; limit?: number },
+    init?: RequestInit,
+  ): Promise<{ data: ListSituationsResponse; response: Response }> {
+    const query = new URLSearchParams();
+    if (params?.after) {
+      query.set("after", params.after);
+    }
+    if (params?.limit !== undefined) {
+      query.set("limit", String(params.limit));
+    }
+    const path =
+      "/api/v1/journey-situations" +
+      (query.toString() ? `?${query.toString()}` : "");
+    const response = await this.request("GET", path, undefined, init);
+    const data = (await response.json()) as ListSituationsResponse;
+    return { data, response };
+  }
+
+  async getJourneySituation(
+    slug: string,
+    init?: RequestInit,
+  ): Promise<{ data: SituationResponse; response: Response }> {
+    const response = await this.request(
+      "GET",
+      `/api/v1/journey-situations/${encodeURIComponent(slug)}`,
+      undefined,
+      init,
+    );
+    const data = (await response.json()) as SituationResponse;
+    return { data, response };
+  }
+
+  async getCanonicalWord(
+    wordSlug: string,
+    init?: RequestInit,
+  ): Promise<{ data: WordDetailResponse; response: Response }> {
+    const response = await this.request(
+      "GET",
+      `/api/v1/canonical-words/${encodeURIComponent(wordSlug)}`,
+      undefined,
+      init,
+    );
+    const data = (await response.json()) as WordDetailResponse;
+    return { data, response };
   }
 
   private async request(
