@@ -107,19 +107,24 @@ const (
 // response (DOC-09 §9). It contains only the fields the frontend is permitted
 // to display.
 type SentenceFeedbackResult struct {
-	SentenceID        uuid.UUID
-	AttemptID         uuid.UUID
-	Status            string
-	OriginalSentence  string
-	CorrectedSentence *string
-	Explanation       string
-	ImprovementTip    *string
-	MissionCompleted  bool
-	CanRetry          bool
-	Reported          bool
-	ErrorCode         string
-	ErrorMessage      string
+	SentenceID            uuid.UUID
+	AttemptID             uuid.UUID
+	Status                string
+	OriginalSentence      string
+	CorrectedSentence     *string
+	Explanation           string
+	ImprovementTip        *string
+	MissionCompleted      bool
+	CanRetry              bool
+	Reported              bool
+	ErrorCode             string
+	ErrorMessage          string
+	CrisisResourceMessage string
 }
+
+// CrisisResourceText is the non-clinical crisis message surfaced for clear
+// self-harm content. It is not therapy, diagnosis, or counselling.
+const CrisisResourceText = "If you or someone you know is in crisis, please contact your local emergency services or a crisis helpline. In the US, call or text 988 for the Suicide & Crisis Lifeline. You are not alone."
 
 // ProviderTask is the provider-neutral input built by the backend (DOC-09 §14).
 // It separates the system prompt, developer prompt, and user task payload so

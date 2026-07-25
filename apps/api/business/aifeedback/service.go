@@ -77,6 +77,9 @@ func NewService(
 	if rateLimiter == nil {
 		rateLimiter = NewMemoryRateLimiter(config.RateLimit, c)
 	}
+	if safety == nil {
+		safety = NewCompositeSafetyClassifier(NewDefaultLocalAbuseChecker(), nil)
+	}
 	if mission == nil {
 		mission = NewStubMissionUpdater()
 	}
@@ -179,7 +182,7 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 		return nil, fmt.Errorf("safety classification: %w", err)
 	}
 	if moderation == nil {
-		moderation = &ModerationResult{Outcome: SafetyAllowed}
+		moderation = &SafetyResult{Outcome: SafetyAllowed}
 	}
 
 	switch moderation.Outcome {
@@ -195,9 +198,10 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 	case SafetySelfHarmIntervention:
 		s.recordTelemetry(req.UserID, target, "safety_self_harm", 0, "")
 		return &SentenceFeedbackResult{
-			OriginalSentence: req.SentenceText,
-			ErrorCode:        ErrorCodeSafetySelfHarm,
-			CanRetry:         false,
+			OriginalSentence:      req.SentenceText,
+			ErrorCode:             ErrorCodeSafetySelfHarm,
+			CanRetry:              false,
+			CrisisResourceMessage: moderation.CrisisResourceMessage,
 		}, nil
 	case SafetyModerationUnavailable:
 		s.recordTelemetry(req.UserID, target, "safety_moderation_unavailable", 0, "")
