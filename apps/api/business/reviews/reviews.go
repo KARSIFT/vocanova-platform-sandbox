@@ -122,18 +122,18 @@ type Repository interface {
 
 // Public service errors.
 var (
-	ErrInvalidCursor              = errors.New("invalid cursor")
-	ErrUserWordNotFound           = errors.New("saved word not found")
-	ErrInvalidPromptType          = errors.New("invalid prompt type")
-	ErrInvalidRatingForResult     = errors.New("rating is not permitted for the result")
-	ErrInvalidAttemptType         = errors.New("invalid attempt type")
-	ErrInvalidSource              = errors.New("invalid source")
-	ErrClientAttemptIDRequired    = errors.New("client attempt id required")
-	ErrInvalidAnsweredAt          = errors.New("answered at is required")
-	ErrInvalidResponseTimeMs      = errors.New("response time must be non-negative")
-	ErrIdempotencyKeyRequired = errors.New("idempotency key required")
-	ErrIdempotencyConflict    = errors.New("idempotency key conflict")
-	ErrReviewAttemptNotFound  = errors.New("review attempt not found")
+	ErrInvalidCursor           = errors.New("invalid cursor")
+	ErrUserWordNotFound        = errors.New("saved word not found")
+	ErrInvalidPromptType       = errors.New("invalid prompt type")
+	ErrInvalidRatingForResult  = errors.New("rating is not permitted for the result")
+	ErrInvalidAttemptType      = errors.New("invalid attempt type")
+	ErrInvalidSource           = errors.New("invalid source")
+	ErrClientAttemptIDRequired = errors.New("client attempt id required")
+	ErrInvalidAnsweredAt       = errors.New("answered at is required")
+	ErrInvalidResponseTimeMs   = errors.New("response time must be non-negative")
+	ErrIdempotencyKeyRequired  = errors.New("idempotency key required")
+	ErrIdempotencyConflict     = errors.New("idempotency key conflict")
+	ErrReviewAttemptNotFound   = errors.New("review attempt not found")
 )
 
 const operationSubmitReview = "reviews:submit"
