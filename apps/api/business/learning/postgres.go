@@ -7,18 +7,30 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 )
 
 // PostgreSQLRepository implements Repository against the P1 user_words schema.
+// Optional gamification dependency enables P4 reward wiring inside
+// transactions (DOC-06 §3).
 type PostgreSQLRepository struct {
-	db *sql.DB
+	db           *sql.DB
+	gamification *gamification.Service
 }
 
-// NewPostgreSQLRepository creates a repository backed by db.
-func NewPostgreSQLRepository(db *sql.DB) *PostgreSQLRepository {
-	return &PostgreSQLRepository{db: db}
+// NewPostgreSQLRepository creates a repository backed by db with optional
+// gamification integration (nil if not yet wired in).
+func NewPostgreSQLRepository(db *sql.DB, opts ...interface{}) *PostgreSQLRepository {
+	repo := &PostgreSQLRepository{db: db}
+	for _, opt := range opts {
+		switch v := opt.(type) {
+		case *gamification.Service:
+			repo.gamification = v
+		}
+	}
+	return repo
 }
 
 func (r *PostgreSQLRepository) SaveUserWord(ctx context.Context, req SaveUserWordRequest, now time.Time) (*SavedMeaning, error) {
@@ -91,6 +103,29 @@ func (r *PostgreSQLRepository) SaveUserWord(ctx context.Context, req SaveUserWor
 	).Scan(&id); err != nil {
 		return nil, fmt.Errorf("insert user word: %w", err)
 	}
+
+	// P4 reward wiring: record the +2 point award for word addition inside the
+	// existing transaction. This is idempotent via the confidence_point_ledger's
+	// (user_id, idempotency_key) unique index. D03 keeps the optional new-word
+	// mission goal disabled, so we don't call IncrementWordsAdded.
+	if r.gamification != nil {
+		currentBalance, err := r.gamification.CurrentBalance(ctx, req.UserID)
+		if err != nil {
+			return nil, fmt.Errorf("get current balance: %w", err)
+		}
+		if _, _, err := r.gamification.GrantPoint(
+			ctx, tx, req.UserID,
+			gamification.RewardKindAddWord,
+			&id,
+			gamification.UserWordAddedKey(id.String()),
+			currentBalance,
+			now,
+			nil,
+		); err != nil {
+			return nil, fmt.Errorf("grant add-word point: %w", err)
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("commit insert: %w", err)
 	}
