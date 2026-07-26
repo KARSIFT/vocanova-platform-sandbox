@@ -1,14 +1,11 @@
 # VOC-028 — Acceptance Criteria
 
 Acceptance criteria are observable, stable, security-aware, and bidirectionally
-traceable to requirements (`D00`–`D05`), tasks (`T00`–`T05`), tests
-(`VOC-028-TEST-*`), and evidence. Founder decisions are open in this draft:
-`D01` (mission-completion stub boundary — directed by the request), `D02`
-(production provider/model + privacy — hard gate on T02), `D03` (AI-disable /
-cost ceilings), `D04` (retention/legal), `D05` (entry-point UX placement). The
-affected criteria's exact observable outcome is written against the draft's
-proposed resolution and must be adjusted at adoption to the founder's
-resolution (`D06`).
+traceable to requirements (`D00`–`D06`), tasks (`T00`–`T05`), tests
+(`VOC-028-TEST-*`), and evidence. `D01`–`D05` were resolved at adoption
+(2026-07-25) and recorded in `D06`; the criteria below are written against the
+adopted resolutions. Formal privacy/legal review and F3 staging remain
+pre-production gates, not adoption blockers.
 
 ## VOC-028-AC-00 — AI domain persistence and migration integrity
 
@@ -117,26 +114,26 @@ permitted when budget allows. Injection resistance holds: embedded learner
 instructions are graded as text, never followed, and must not reveal/change the
 schema or perform unrelated tasks.
 
-## VOC-028-AC-05 — Production provider adapter boundary (no concrete provider/credentials; `D02` gate)
+## VOC-028-AC-05 — Production provider adapter boundary (`D02` resolved: OpenCode Go / `opencode-go/deepseek-v4-pro`; privacy verification pre-production gate)
 
-- Requirement source: `VOC-028-D00`, `VOC-028-D02`, DOC-09 §§17,18,21,24, DOC-12 §5
+- Requirement source: `VOC-028-D00`, `VOC-028-D02`, `VOC-028-D06`, DOC-09 §§17,18,21,24, DOC-12 §5
 - Tasks: `VOC-028-T02`
 - Tests: `VOC-028-TEST-12`, `VOC-028-TEST-14`
 - Evidence: `VOC-028-EV-12`, `VOC-028-EV-14`
-- Result: pending — blocked until `D02`
+- Result: pending — provider/model and adapter implemented; privacy verification remains a pre-production gate
 
-A production adapter is drafted against the narrow T00 `FeedbackProvider`
-interface **without** selecting or hard-configuring a concrete commercial
-provider/model or wiring real credentials; the provider/model is read from
-configuration and flagged as an open founder decision (`D02`). Timeouts/retries
-match DOC-09 §18 (provider request 8s, total backend target 10s; at most one
-transport retry for a clearly transient failure and one repair attempt — never
-both indefinitely; no retry for invalid input, blocked content, auth failure,
-invalid credentials, persistent schema incompatibility, or learner cancellation).
-One primary provider/model is operated at a time; no automatic multi-provider
-fallback. **This PR cannot be accepted until `D02` is resolved** — provider
-candidates evaluated per DOC-09 §18 and privacy settings verified per §21, and
-the choice + config recorded.
+A production adapter is implemented against the narrow T00 `FeedbackProvider`
+interface, calling the adopted OpenCode Go provider via `opencode serve` with model
+`opencode-go/deepseek-v4-pro` (`D02`). The provider/model is read from
+configuration and backend-only secrets are never hard-coded or committed.
+Timeouts/retries match DOC-09 §18 (provider request 8s, total backend target 10s;
+at most one transport retry for a clearly transient failure and one repair
+attempt — never both indefinitely; no retry for invalid input, blocked content,
+auth failure, invalid credentials, persistent schema incompatibility, or learner
+cancellation). One primary provider/model is operated at a time; no automatic
+multi-provider fallback. The formal privacy verification (training-data use,
+retention, processing regions, subprocessors, deletion) is a pre-production gate
+per `D04` and is recorded as a limitation, not a pass.
 
 ## VOC-028-AC-06 — Safety and moderation outcomes with injection resistance
 
@@ -161,11 +158,11 @@ public error codes hide internal failure categories (DOC-09 §20).
 
 ## VOC-028-AC-07 — API endpoint and frontend integration (Home / Word-Detail / Review-Completion)
 
-- Requirement source: `VOC-028-D00`, `VOC-028-D05`, DOC-09 §§3,5,9,16, DOC-07
+- Requirement source: `VOC-028-D00`, `VOC-028-D05`, `VOC-028-D06`, DOC-09 §§3,5,9,16, DOC-07
 - Tasks: `VOC-028-T04`
 - Tests: `VOC-028-TEST-17`..`VOC-028-TEST-21`
 - Evidence: `VOC-028-EV-17`..`VOC-028-EV-21`
-- Result: pending — blocked until `D05`
+- Result: pending — `D05` resolved at adoption; endpoint and component wiring implemented
 
 The `/api/v1` sentence-feedback write endpoint uses `credentials: "include"`,
 explicit DTOs (never Ent models), a stable operation ID, committed OpenAPI + a
@@ -186,34 +183,35 @@ result. No P4 behavior.
 
 ## VOC-028-AC-08 — Evaluation fixtures, golden regression set, and privacy-safe observability (CI never depends on a paid provider)
 
-- Requirement source: `VOC-028-D00`, `VOC-028-D02`, `VOC-028-D03`, DOC-09 §§19,20,23,25
+- Requirement source: `VOC-028-D00`, `VOC-028-D02`, `VOC-028-D03`, `VOC-028-D06`, DOC-09 §§19,20,23,25
 - Tasks: `VOC-028-T05`
 - Tests: `VOC-028-TEST-22`..`VOC-028-TEST-27`
 - Evidence: `VOC-028-EV-22`..`VOC-028-EV-27`
-- Result: pending — offline live-model evaluation blocked until `D02`
+- Result: pending — evaluation fixtures, observability, and AI-disable seam implemented; protected offline live-model evaluation blocked until formal privacy review + F3 staging
 
 An initial dataset of ≥200 synthetic cases and a stable golden regression set
-(~50 cases, `golden-set-v1`) exist and are versioned; no case is removed just
+(~50 cases, `golden-set-v1`) exist and are versioned (`apps/api/business/aifeedback/evaluation.go`); no case is removed just
 because the current model performs poorly. Every material AI change records
 dataset/golden-set/prompt/schema versions, provider, model, config, commit,
 scores, critical failures, latency, cost, and reviewer approval. **Normal CI
 never depends on a paid provider**; protected offline live-model evaluation runs
-outside CI under explicit cost limits only after `D02`. Observability metrics
+outside CI under explicit cost limits only after the formal privacy review and
+F3 staging are available. Observability metrics (`apps/api/business/aifeedback/metrics.go`)
 are grouped by prompt version/schema version/provider/model/release and never
-include learner text in metric labels; raw provider request/response is not
+include learner text or user identity in metric labels; raw provider request/response is not
 stored by default. The DOC-09 §23 MVP acceptance thresholds are the release-
 blocking targets and the release-blocking critical failures are tracked. The
-AI-disable seam + cost-ceiling knobs exist (`D03`) so non-AI learning features
-remain available if AI generation is disabled; activation values are founder-
-controlled, not guessed.
+AI-disable seam + cost-ceiling knobs (`apps/api/business/aifeedback/gate.go`)
+exist (`D03`) so non-AI learning features remain available if AI generation is
+disabled; activation values are founder-controlled, not guessed.
 
 ## VOC-028-AC-09 — P3 evidence, staging, rollback, mock-inventory, and gate readiness
 
-- Requirement source: `VOC-028-D00`, DOC-12 §5 P3
+- Requirement source: `VOC-028-D00`, `VOC-028-D06`, DOC-12 §5 P3
 - Tasks: `VOC-028-T00`..`VOC-028-T05`
 - Tests: `VOC-028-TEST-28`..`VOC-028-TEST-30`
 - Evidence: `VOC-028-EV-28`..`VOC-028-EV-30`
-- Result: pending
+- Result: pending — in-repository evidence complete; live staging and protected provider evaluation blocked until F3 staging + formal privacy review
 
 Applicable checks, validation/orchestration/provider-mock/safety/contract/
 privacy/evaluation tests, exact-SHA reviews, and the extended deterministic
@@ -222,7 +220,8 @@ invented and no P3-only mock is presented as real. Staging tests for validate �
 mock/real feedback → persist → mission-stub → display, cross-user denial, CSRF,
 idempotency, safety outcomes, AI-disable, and the `learner_sentences`/
 `ai_feedback_attempts` rollback rehearsal are documented and ready to run once
-F3 + `D02` exist (`DEP-02`/`DEP-04`). Protected provider evaluation and privacy
-verification evidence is a placeholder pending `D02`. This enables — but does
-not itself declare — the DOC-12 P3 gate evaluation; the milestone gate is not
-satisfied by package merge or staging deploy alone.
+F3 staging and the formal privacy review are complete (`DEP-02`/`DEP-04`).
+Protected provider evaluation and privacy verification evidence is a placeholder
+pending that review. This enables — but does not itself declare — the DOC-12 P3
+gate evaluation; the milestone gate is not satisfied by package merge or staging
+deploy alone.

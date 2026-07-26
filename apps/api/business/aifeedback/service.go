@@ -15,8 +15,11 @@ import (
 type ServiceConfig struct {
 	Provider  string
 	Model     string
+	Release   string
 	RateLimit RateLimitConfig
 	OpenCode  OpenCodeConfig
+	Gate      GenerationGate
+	Metrics   MetricsRecorder
 }
 
 // DefaultServiceConfig returns the default P3 configuration.
@@ -24,8 +27,11 @@ func DefaultServiceConfig() ServiceConfig {
 	return ServiceConfig{
 		Provider:  ProviderMock,
 		Model:     "mock",
+		Release:   "unknown",
 		RateLimit: DefaultRateLimitConfig(),
 		OpenCode:  DefaultOpenCodeConfig(),
+		Gate:      NewAlwaysEnabledGate(),
+		Metrics:   NewNoopMetricsRecorder(),
 	}
 }
 
@@ -92,6 +98,12 @@ func NewService(
 	if outputValidator == nil {
 		outputValidator = NewDefaultOutputValidator()
 	}
+	if config.Gate == nil {
+		config.Gate = NewAlwaysEnabledGate()
+	}
+	if config.Metrics == nil {
+		config.Metrics = NewNoopMetricsRecorder()
+	}
 	return &Service{
 		repo:            repo,
 		provider:        provider,
@@ -124,6 +136,23 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 		return nil, errors.New("idempotency key required")
 	}
 
+	if err := s.config.Gate.Check(ctx, req.UserID); err != nil {
+		if errors.Is(err, ErrAIGenerationDisabled) {
+			s.recordTelemetry(ctx, req.UserID, nil, "generation_disabled", 0, "")
+			return &SentenceFeedbackResult{
+				OriginalSentence: req.SentenceText,
+				ErrorCode:        ErrorCodeAIGenerationDisabled,
+				CanRetry:         true,
+			}, nil
+		}
+		s.recordTelemetry(ctx, req.UserID, nil, "global_rate_limited", 0, "")
+		return &SentenceFeedbackResult{
+			OriginalSentence: req.SentenceText,
+			ErrorCode:        ErrorCodeRateLimited,
+			CanRetry:         true,
+		}, nil
+	}
+
 	if err := s.rateLimiter.Allow(ctx, req.UserID); err != nil {
 		defer s.rateLimiter.Release(req.UserID)
 		return &SentenceFeedbackResult{
@@ -139,7 +168,7 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 	target, err := s.repo.LoadTarget(ctx, LoadTargetRequest{UserID: req.UserID, Source: req.Source, AttemptID: req.AttemptID})
 	if err != nil {
 		if errors.Is(err, ErrTargetNotFound) {
-			s.recordTelemetry(req.UserID, target, "attempt_not_eligible", 0, "")
+			s.recordTelemetry(ctx, req.UserID, target, "attempt_not_eligible", 0, "")
 			return s.validationResult(req.SentenceText, ValidationCodeAttemptNotEligible), nil
 		}
 		return nil, fmt.Errorf("load target: %w", err)
@@ -147,7 +176,7 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 
 	validation := ValidateSentence(req.SentenceText, target)
 	if !validation.Valid {
-		s.recordTelemetry(req.UserID, target, "validation_failed", 0, "")
+		s.recordTelemetry(ctx, req.UserID, target, "validation_failed", 0, "")
 		return s.validationResult(req.SentenceText, validation.Code), nil
 	}
 
@@ -189,14 +218,14 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 	case SafetyAllowed, SafetyAllowedSensitive:
 		// proceed
 	case SafetyBlocked:
-		s.recordTelemetry(req.UserID, target, "safety_blocked", 0, "")
+		s.recordTelemetry(ctx, req.UserID, target, "safety_blocked", 0, "")
 		return &SentenceFeedbackResult{
 			OriginalSentence: req.SentenceText,
 			ErrorCode:        ErrorCodeSafetyBlocked,
 			CanRetry:         false,
 		}, nil
 	case SafetySelfHarmIntervention:
-		s.recordTelemetry(req.UserID, target, "safety_self_harm", 0, "")
+		s.recordTelemetry(ctx, req.UserID, target, "safety_self_harm", 0, "")
 		return &SentenceFeedbackResult{
 			OriginalSentence:      req.SentenceText,
 			ErrorCode:             ErrorCodeSafetySelfHarm,
@@ -204,7 +233,7 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 			CrisisResourceMessage: moderation.CrisisResourceMessage,
 		}, nil
 	case SafetyModerationUnavailable:
-		s.recordTelemetry(req.UserID, target, "safety_moderation_unavailable", 0, "")
+		s.recordTelemetry(ctx, req.UserID, target, "safety_moderation_unavailable", 0, "")
 		return &SentenceFeedbackResult{
 			OriginalSentence: req.SentenceText,
 			ErrorCode:        ErrorCodeSafetyModerationUnavailable,
@@ -234,7 +263,7 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 		if err := s.repo.CompleteFeedbackAttempt(ctx, *pending, nil, ErrorCodeTemporaryFailure, providerErr.Error(), s.clock.Now().UTC()); err != nil {
 			return nil, fmt.Errorf("finalize failed attempt: %w", err)
 		}
-		s.recordTelemetry(req.UserID, target, "provider_error", providerDuration.Milliseconds(), "")
+		s.recordTelemetry(ctx, req.UserID, target, "provider_error", providerDuration.Milliseconds(), "")
 		return &SentenceFeedbackResult{
 			SentenceID:       pending.SentenceID,
 			AttemptID:        pending.AttemptID,
@@ -248,7 +277,7 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 		if err := s.repo.CompleteFeedbackAttempt(ctx, *pending, nil, ErrorCodeTemporaryFailure, err.Error(), s.clock.Now().UTC()); err != nil {
 			return nil, fmt.Errorf("finalize invalid output attempt: %w", err)
 		}
-		s.recordTelemetry(req.UserID, target, "invalid_output", providerDuration.Milliseconds(), "")
+		s.recordTelemetry(ctx, req.UserID, target, "invalid_output", providerDuration.Milliseconds(), "")
 		return &SentenceFeedbackResult{
 			SentenceID:       pending.SentenceID,
 			AttemptID:        pending.AttemptID,
@@ -268,7 +297,7 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 	}
 
 	duration := s.clock.Now().Sub(start)
-	s.recordTelemetry(req.UserID, target, "success", duration.Milliseconds(), feedback.Status)
+	s.recordTelemetry(ctx, req.UserID, target, "success", duration.Milliseconds(), feedback.Status)
 
 	result := &SentenceFeedbackResult{
 		SentenceID:        pending.SentenceID,
@@ -307,6 +336,13 @@ func (s *Service) ReportFeedback(ctx context.Context, userID, attemptID uuid.UUI
 		AttemptID:      attemptID,
 		Reason:         reason,
 		Classification: classification,
+	})
+	s.config.Metrics.RecordReport(ctx, MetricsReportEvent{
+		Classification: classification,
+		Provider:       s.config.Provider,
+		Model:          s.config.Model,
+		Release:        s.config.Release,
+		Count:          1,
 	})
 	return nil
 }
@@ -390,7 +426,7 @@ func (s *Service) resultFromStored(attempt *StoredFeedbackAttempt, original stri
 	return result
 }
 
-func (s *Service) recordTelemetry(userID uuid.UUID, target *Target, outcome string, durationMs int64, learningStatus string) {
+func (s *Service) recordTelemetry(ctx context.Context, userID uuid.UUID, target *Target, outcome string, durationMs int64, learningStatus string) {
 	ev := FeedbackEvent{
 		UserID:        userID,
 		PromptVersion: PromptVersionSentenceFeedbackV1,
@@ -404,7 +440,20 @@ func (s *Service) recordTelemetry(userID uuid.UUID, target *Target, outcome stri
 		ev.LearningStatus = learningStatus
 	}
 	// Telemetry recording is best-effort and must not leak learner text.
-	s.telemetry.Record(context.Background(), ev)
+	s.telemetry.Record(ctx, ev)
+
+	// Metrics are privacy-safe and never contain learner text or user identity.
+	s.config.Metrics.RecordFeedback(ctx, MetricsEvent{
+		PromptVersion:  PromptVersionSentenceFeedbackV1,
+		SchemaVersion:  SchemaVersionFeedbackV1,
+		Provider:       s.config.Provider,
+		Model:          s.config.Model,
+		Release:        s.config.Release,
+		Outcome:        outcome,
+		DurationMs:     durationMs,
+		LearningStatus: learningStatus,
+		Count:          1,
+	})
 }
 
 func stringValue(m map[string]any, key string) string {

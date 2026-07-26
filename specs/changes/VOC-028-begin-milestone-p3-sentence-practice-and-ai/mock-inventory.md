@@ -4,8 +4,8 @@
 
 This document is the T05 inventory required by `VOC-028-D05`/`VOC-028-D06`:
 every mock/placeholder source touched by P3 is listed with its disposition.
-This is a **draft**; the adopted resolutions are recorded at adoption. The key
-boundaries are:
+This inventory is produced under the **adopted** resolutions `D00`–`D06`
+(2026-07-25). The key boundaries are:
 
 - `VOC-028-D00`: P3 carries forward the A1/P1/P2 foundation; no
   A1/P1/P2 mechanic is re-litigated. P3 adds `learner_sentences` +
@@ -14,9 +14,16 @@ boundaries are:
 - `VOC-028-D01`: the mission-completion step is a **stub/interface point flagged
   for P4**; no `daily_mission_snapshots`/`daily_activity_summaries`/
   `streak_states`/`confidence_point_ledger`/`grace_day_ledger` table is invented.
-- `VOC-028-D02`: no concrete commercial provider/model is selected and no real
-  credentials are wired; the production adapter is drafted against the narrow T00
-  interface and T02 is gated on the founder provider/privacy decision.
+- `VOC-028-D02`: production provider resolved at adoption to the founder's
+  OpenCode Go account, model `opencode-go/deepseek-v4-pro`, integrated via
+  `opencode serve`. The production adapter is implemented against the narrow T00
+  `FeedbackProvider` interface; backend-only secrets are read from configuration
+  and are never hard-coded. Formal privacy verification (training-data use,
+  retention, processing regions, subprocessors, deletion) remains a
+  pre-production gate per `D04`/`DOC-09 §21`.
+- `VOC-028-D03`: AI-disable and cost-ceiling seams implemented with
+  DOC-09-documented starting defaults; activation values are founder-controlled
+  at runtime.
 - `VOC-028-D05`: the reusable feedback component is wired into the Home /
   Word-Detail / Review-Completion entry points per the adopted placement.
 
@@ -36,8 +43,12 @@ provider; all deterministic/integration tests use the mock provider (DOC-09
 | `apps/api/business/aifeedback` (new module)              | VOC-028 (new)     | n/a                                                       | **New real P3**                            | Narrow `FeedbackProvider`/`ModerationProvider` interfaces, mock provider, orchestration service, prompt package, validation, safety. No generic `Generate(any)`.     |
 | `apps/api/ent/schema/learnersentence.go` (new schema)    | VOC-028 (new)     | n/a                                                       | **New real P3**                            | `learner_sentences` table per DOC-05 §11. No P4 table.                                                                                                                |
 | `apps/api/ent/schema/aifeedbackattempt.go` (new schema)  | VOC-028 (new)     | n/a                                                       | **New real P3**                            | `ai_feedback_attempts` table per DOC-05 §11; immutable history.                                                                                                       |
-| mock feedback provider (`aifeedback` adapter)            | VOC-028 (new)     | n/a                                                       | **Retain as mock-in-CI**                  | Deterministic mock provider used in CI; never a paid provider. Production adapter ships behind `D02`.                                                                  |
-| Sentence-History insight screen                         | DOC-09 §26        | (not built)                                               | **Excluded — post-MVP**                    | Explicitly a post-MVP opportunity (DOC-09 §26); P3 does not build it. No mock retained for it.                                                                         |
+| mock feedback provider (`aifeedback` adapter)            | VOC-028 (new)     | `MockProvider`                                            | **Retain as mock-in-CI**                  | Deterministic mock provider used in CI; never a paid provider. Production adapter (`OpenCodeFeedbackProvider`) is implemented against the narrow T00 interface.                                                                     |
+| production feedback provider (`aifeedback` adapter)      | VOC-028 (new)     | `OpenCodeFeedbackProvider` / `opencode-go/deepseek-v4-pro` | **New real P3** (configured behind `D02`) | Persistent HTTP client to `opencode serve`; backend-only API key from configuration; no credential in source. Privacy verification remains a pre-production gate.                                                                    |
+| evaluation layer (`aifeedback` evaluation)               | VOC-028 (new)     | n/a                                                       | **New real P3**                            | `initial-dataset-v1` (>=200 synthetic cases) + `golden-set-v1` (~50 cases) + `RunMockEvaluation`/`RunGoldenEvaluation`. Protected live-model evaluation runs outside CI only after privacy/staging gates.                             |
+| privacy-safe observability (`aifeedback` metrics)        | VOC-028 (new)     | `MetricsRecorder` / `MetricsEvent`                          | **New real P3**                            | Metrics grouped by prompt/schema/provider/model/release; no learner text or user identity in labels.                                                                                                                                 |
+| AI-disable / cost-ceiling seam (`aifeedback` gate)     | VOC-028 (new)     | `GenerationGate` / `MemoryGenerationGate`                 | **New real P3**                            | Emergency disable switch + global daily/monthly cost seams; non-AI learning features remain available when generation is disabled.                                                                                                  |
+| Sentence-History insight screen                         | DOC-09 §26        | (not built)                                               | **Excluded — post-MVP**                    | Explicitly a post-MVP opportunity (DOC-09 §26); P3 does not build it. No mock retained for it.                                                                                                                                       |
 
 ## Disposition definitions
 
@@ -67,9 +78,11 @@ provider; all deterministic/integration tests use the mock provider (DOC-09
 - No `daily_mission_snapshots` / `daily_activity_summaries` / `streak_states` /
   `confidence_point_ledger` / `grace_day_ledger` table, route, or behavior is
   created (P4 out of scope); the mission-completion step is the `D01` stub.
-- No concrete commercial provider/model is selected or hard-configured and no
-  real provider credential is referenced (`D02`); CI never depends on a paid
-  provider.
+- The P3 `aifeedback` module contains the T05 deliverables: `evaluation.go`,
+  `metrics.go`, and `gate.go`.
+- No concrete commercial provider/model other than the adopted OpenCode Go
+  provider is selected or hard-configured; no real provider credential is
+  committed to source (`D02`); CI never depends on a paid provider.
 
 No P4 route, table, or behavior was invented; no A1/P1/P2 mechanic was
 revisited; no Sentence-History screen was built.
@@ -79,9 +92,10 @@ revisited; no Sentence-History screen was built.
 - P4 follow-up: implement the real mission-completion wiring against
   `daily_mission_snapshots`/streak/point tables when P4 creates them, replacing
   the `D01` stub.
-- `D02` follow-up: evaluate and record the production provider/model + privacy
-  config; then accept T02 and run protected offline live-model evaluation.
-- `D03` follow-up: set AI-disable/cost-ceiling activation values (founder-controlled).
-- `D04` follow-up: retention defaults + legal review before production.
+- `D02`/`D04` follow-up: complete the formal privacy verification (training-data
+  use, retention, processing regions, subprocessors, deletion) and record the
+  chosen provider config before production launch.
+- `D03` follow-up: set production AI-disable/cost-ceiling activation values
+  (founder-controlled).
 - Post-MVP (DOC-09 §26): the Sentence-History insight screen and other
   opportunities, each requiring separate approval.

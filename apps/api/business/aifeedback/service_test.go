@@ -453,3 +453,53 @@ func (p *invalidProvider) GenerateFeedback(ctx context.Context, task ProviderTas
 		},
 	}, nil
 }
+
+func TestServiceGenerationGateDisabledReturnsDisabledCode(t *testing.T) {
+	f := newServiceFixture(t)
+	f.service.config.Gate = NewDisabledGate()
+	req := f.request("I work every day.")
+
+	result, err := f.service.SubmitSentenceFeedback(t.Context(), req)
+	require.NoError(t, err)
+	assert.Equal(t, ErrorCodeAIGenerationDisabled, result.ErrorCode)
+	assert.True(t, result.CanRetry)
+	assert.Equal(t, 0, f.provider.calls)
+}
+
+func TestServiceGenerationGateDailyCeilingReturnsRateLimited(t *testing.T) {
+	f := newServiceFixture(t)
+	c := clock.Fixed{T: time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC)}
+	f.service.config.Gate = NewMemoryGenerationGate(GenerationGateConfig{Enabled: true, DailyRequestCeiling: 1}, c)
+
+	req := f.request("I work every day.")
+	_, err := f.service.SubmitSentenceFeedback(t.Context(), req)
+	require.NoError(t, err)
+	assert.Equal(t, 1, f.provider.calls)
+
+	result, err := f.service.SubmitSentenceFeedback(t.Context(), f.request("She works hard."))
+	require.NoError(t, err)
+	assert.Equal(t, ErrorCodeRateLimited, result.ErrorCode)
+	assert.True(t, result.CanRetry)
+	assert.Equal(t, 1, f.provider.calls)
+}
+
+func TestServiceRecordsMetricsWithoutLearnerText(t *testing.T) {
+	f := newServiceFixture(t)
+	metrics := NewInMemoryMetricsRecorder()
+	f.service.config.Metrics = metrics
+	f.service.config.Release = "test-release"
+
+	req := f.request("I work every day.")
+	_, err := f.service.SubmitSentenceFeedback(t.Context(), req)
+	require.NoError(t, err)
+
+	events := metrics.FeedbackEvents()
+	require.Len(t, events, 1)
+	assert.Equal(t, "test-release", events[0].Release)
+	assert.Equal(t, ProviderMock, events[0].Provider)
+	assert.Equal(t, "success", events[0].Outcome)
+	assert.Equal(t, LearningStatusCorrect, events[0].LearningStatus)
+	assert.Equal(t, PromptVersionSentenceFeedbackV1, events[0].PromptVersion)
+	assert.Equal(t, SchemaVersionFeedbackV1, events[0].SchemaVersion)
+	// No learner text or user identifiers are present in metrics.
+}

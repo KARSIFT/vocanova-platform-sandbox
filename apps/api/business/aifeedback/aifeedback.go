@@ -78,6 +78,7 @@ var (
 	ErrRateLimited             = errors.New("ai feedback rate limited")
 	ErrSafetyBlocked           = errors.New("ai feedback safety blocked")
 	ErrTargetNotFound          = errors.New("target not found")
+	ErrAIGenerationDisabled    = errors.New("ai generation is disabled")
 )
 
 // Default production model for the OpenCode Go provider (VOC-028-D02).
@@ -101,6 +102,7 @@ const (
 	ErrorCodeSafetySelfHarm              = "SAFETY_SELF_HARM"
 	ErrorCodeSafetyModerationUnavailable = "SAFETY_MODERATION_UNAVAILABLE"
 	ErrorCodeIdempotencyConflict         = "IDEMPOTENCY_CONFLICT"
+	ErrorCodeAIGenerationDisabled        = "AI_FEEDBACK_GENERATION_DISABLED"
 )
 
 // SentenceFeedbackResult is the public API contract for a sentence-feedback

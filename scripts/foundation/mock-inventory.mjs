@@ -257,6 +257,18 @@ export function validateMockInventory() {
     }
   }
 
+  // Verify the T05 evaluation, observability, and AI-disable/cost-ceiling
+  // deliverables are present in the aifeedback module.
+  const t05ExpectedFiles = ["evaluation.go", "metrics.go", "gate.go"];
+  for (const file of t05ExpectedFiles) {
+    const filePath = path.join(apiBusinessRoot, "aifeedback", file);
+    if (!exists(filePath)) {
+      errors.push(
+        `apps/api/business/aifeedback/${file}: T05 expected file is missing`,
+      );
+    }
+  }
+
   // Verify the middleware matcher covers all (app) routes.
   const middlewarePath = path.join(webSrcRoot, "middleware.ts");
   const middlewareContent = readFileSync(middlewarePath, "utf8");
@@ -324,6 +336,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     );
     process.exitCode = 1;
   } else {
-    process.stdout.write("VOC-028-T00 mock inventory validation passed.\n");
+    process.stdout.write("VOC-028-T05 mock inventory validation passed.\n");
   }
 }
