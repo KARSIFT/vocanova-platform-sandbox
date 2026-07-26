@@ -172,8 +172,8 @@ func TestPostgreSQLRepositorySubmitReviewIdempotencyConflict(t *testing.T) {
 // TestRatingToRewardKind verifies the rating-to-reward-kind conversion.
 func TestRatingToRewardKind(t *testing.T) {
 	tests := []struct {
-		rating    string
-		expected  gamification.RewardKind
+		rating   string
+		expected gamification.RewardKind
 	}{
 		{RatingAgain, gamification.RewardKindReviewAgain},
 		{RatingHard, gamification.RewardKindReviewHard},

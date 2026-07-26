@@ -437,11 +437,11 @@ func (r *PostgreSQLRepository) wireGameification(
 	streakSnapshots := make([]gamification.StreakSnapshot, 0, len(recentSnapshots))
 	for _, s := range recentSnapshots {
 		streakSnapshots = append(streakSnapshots, gamification.StreakSnapshot{
-			LocalDate:   s.LocalDate,
-			Status:      s.Status,
-			CompletedAt: s.CompletedAt,
+			LocalDate:    s.LocalDate,
+			Status:       s.Status,
+			CompletedAt:  s.CompletedAt,
 			GraceApplied: s.GraceApplied,
-			GraceDayID:  s.GraceDayID,
+			GraceDayID:   s.GraceDayID,
 		})
 	}
 
