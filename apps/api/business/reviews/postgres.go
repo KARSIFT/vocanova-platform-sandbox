@@ -6,15 +6,21 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/missions"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/google/uuid"
 )
 
 // PostgreSQLRepository implements Repository against the VOC-027 review schema.
 type PostgreSQLRepository struct {
-	db    *sql.DB
-	clock clock.Clock
+	db             *sql.DB
+	clock          clock.Clock
+	gamification   *gamification.Service
+	missionsRepo   *missions.Repository
+	missionsModule *missions.Service
 }
 
 // NewPostgreSQLRepository creates a repository backed by db.
@@ -23,6 +29,18 @@ func NewPostgreSQLRepository(db *sql.DB, c clock.Clock) *PostgreSQLRepository {
 		c = clock.Real{}
 	}
 	return &PostgreSQLRepository{db: db, clock: c}
+}
+
+// WithGameification wires in gamification and missions services for P4 reward/streak tracking.
+func (r *PostgreSQLRepository) WithGameification(
+	gam *gamification.Service,
+	missionsRepo *missions.Repository,
+	missionsModule *missions.Service,
+) *PostgreSQLRepository {
+	r.gamification = gam
+	r.missionsRepo = missionsRepo
+	r.missionsModule = missionsModule
+	return r
 }
 
 func (r *PostgreSQLRepository) ListDueWords(ctx context.Context, req ListDueWordsRequest) (*ListDueWordsResponse, error) {
@@ -254,6 +272,12 @@ func (r *PostgreSQLRepository) SubmitReview(ctx context.Context, req SubmitRevie
 		return nil, fmt.Errorf("update user word schedule: %w", err)
 	}
 
+	if r.gamification != nil && r.missionsRepo != nil {
+		if err := r.wireGameification(ctx, tx, req, now, sched); err != nil {
+			return nil, err
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("commit review submission: %w", err)
 	}
@@ -340,6 +364,155 @@ func (r *PostgreSQLRepository) scanReviewAttempt(row *sql.Row) (*ReviewAttempt, 
 		a.NextReviewAt = nextReviewAt.Time
 	}
 	return &a, nil
+}
+
+func (r *PostgreSQLRepository) wireGameification(
+	ctx context.Context,
+	tx *sql.Tx,
+	req SubmitReviewRequest,
+	now time.Time,
+	sched ApplyReviewResult,
+) error {
+	resolved, err := r.gamification.GetSettings(ctx, req.UserID, "")
+	if err != nil {
+		return fmt.Errorf("get settings: %w", err)
+	}
+
+	today, err := gamification.LocalDate(now, resolved.Timezone)
+	if err != nil {
+		return fmt.Errorf("compute local date: %w", err)
+	}
+
+	snap, err := r.missionsRepo.CreateDailyMissionSnapshot(
+		ctx, tx, req.UserID, today, resolved.Timezone,
+		resolved.DailyReviewTarget, gamification.MissionPolicyVersion,
+	)
+	if err != nil {
+		return fmt.Errorf("create mission snapshot: %w", err)
+	}
+
+	isCorrect := req.Result == ResultCorrect && req.Rating != RatingAgain
+	isSkipped := req.Result == ResultSkipped
+
+	reviewsCompleted, err := r.missionsRepo.IncrementReviewsCompleted(
+		ctx, tx, req.UserID, today, resolved.Timezone,
+		resolved.DailyReviewTarget, isCorrect, isSkipped,
+	)
+	if err != nil {
+		return fmt.Errorf("increment reviews completed: %w", err)
+	}
+
+	rewardKind := ratingToRewardKind(req.Rating)
+	currentBalance, err := r.gamification.CurrentBalance(ctx, req.UserID)
+	if err != nil {
+		return fmt.Errorf("get current balance: %w", err)
+	}
+
+	newBalance, _, err := r.gamification.GrantPoint(
+		ctx, tx, req.UserID, rewardKind,
+		&req.UserWordID, gamification.ReviewAttemptRatedKey(req.UserWordID.String()),
+		currentBalance, now, nil,
+	)
+	if err != nil {
+		return fmt.Errorf("grant review point: %w", err)
+	}
+
+	pointsReward := rewardKindToAmount(rewardKind)
+	if err := r.missionsRepo.IncrementConfidencePointsEarned(
+		ctx, tx, req.UserID, today, resolved.Timezone, pointsReward,
+	); err != nil {
+		return fmt.Errorf("increment points earned: %w", err)
+	}
+
+	graceBalance, err := r.gamification.CurrentGraceBalance(ctx, req.UserID)
+	if err != nil {
+		return fmt.Errorf("get grace balance: %w", err)
+	}
+
+	recentSnapshots, err := r.missionsRepo.ListRecentSnapshots(ctx, req.UserID, 14)
+	if err != nil {
+		return fmt.Errorf("list recent snapshots: %w", err)
+	}
+
+	streakSnapshots := make([]gamification.StreakSnapshot, 0, len(recentSnapshots))
+	for _, s := range recentSnapshots {
+		streakSnapshots = append(streakSnapshots, gamification.StreakSnapshot{
+			LocalDate:   s.LocalDate,
+			Status:      s.Status,
+			CompletedAt: s.CompletedAt,
+			GraceApplied: s.GraceApplied,
+			GraceDayID:  s.GraceDayID,
+		})
+	}
+
+	if reviewsCompleted >= snap.ReviewTarget {
+		completed, err := r.missionsRepo.MarkSnapshotCompleted(ctx, tx, req.UserID, today, now)
+		if err != nil {
+			return fmt.Errorf("mark snapshot completed: %w", err)
+		}
+		if completed {
+			_, _, err := r.gamification.GrantPoint(
+				ctx, tx, req.UserID, gamification.RewardKindDailyMissionDone,
+				nil, gamification.DailyMissionCompletedKey(req.UserID.String(), today.Format("2006-01-02")),
+				newBalance, now, nil,
+			)
+			if err != nil {
+				return fmt.Errorf("grant mission completion point: %w", err)
+			}
+
+			if err := r.missionsRepo.IncrementConfidencePointsEarned(
+				ctx, tx, req.UserID, today, resolved.Timezone, gamification.RewardDailyMissionDone,
+			); err != nil {
+				return fmt.Errorf("increment mission completion points: %w", err)
+			}
+		}
+	}
+
+	rec, err := r.gamification.ReconcileAndAdvance(
+		ctx, tx, req.UserID, now, resolved.Timezone, streakSnapshots, graceBalance, reviewsCompleted >= snap.ReviewTarget,
+	)
+	if err != nil {
+		return fmt.Errorf("reconcile streak: %w", err)
+	}
+
+	if rec.YesterdayProtectedLocalDate != nil && rec.YesterdaySnapshotID != nil && rec.GraceDayUsed != nil && rec.GraceDayUsed.SourceID != nil {
+		_, err := r.missionsRepo.MarkSnapshotProtected(ctx, tx, uuid.MustParse(*rec.YesterdaySnapshotID), *rec.GraceDayUsed.SourceID)
+		if err != nil {
+			return fmt.Errorf("mark snapshot protected: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func ratingToRewardKind(rating string) gamification.RewardKind {
+	switch rating {
+	case RatingAgain:
+		return gamification.RewardKindReviewAgain
+	case RatingHard:
+		return gamification.RewardKindReviewHard
+	case RatingGood:
+		return gamification.RewardKindReviewGood
+	case RatingEasy:
+		return gamification.RewardKindReviewEasy
+	default:
+		return gamification.RewardKindReviewGood
+	}
+}
+
+func rewardKindToAmount(kind gamification.RewardKind) int {
+	switch kind {
+	case gamification.RewardKindReviewAgain:
+		return gamification.RewardReviewAgain
+	case gamification.RewardKindReviewHard:
+		return gamification.RewardReviewHard
+	case gamification.RewardKindReviewGood:
+		return gamification.RewardReviewGood
+	case gamification.RewardKindReviewEasy:
+		return gamification.RewardReviewEasy
+	default:
+		return 0
+	}
 }
 
 func reviewAttemptEqualsRequest(a *ReviewAttempt, req SubmitReviewRequest) bool {

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -166,4 +167,44 @@ func TestPostgreSQLRepositorySubmitReviewIdempotencyConflict(t *testing.T) {
 	_, err = repo.SubmitReview(t.Context(), req)
 	assert.ErrorIs(t, err, ErrIdempotencyConflict)
 	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+// TestRatingToRewardKind verifies the rating-to-reward-kind conversion.
+func TestRatingToRewardKind(t *testing.T) {
+	tests := []struct {
+		rating    string
+		expected  gamification.RewardKind
+	}{
+		{RatingAgain, gamification.RewardKindReviewAgain},
+		{RatingHard, gamification.RewardKindReviewHard},
+		{RatingGood, gamification.RewardKindReviewGood},
+		{RatingEasy, gamification.RewardKindReviewEasy},
+		{"", gamification.RewardKindReviewGood},
+	}
+	for _, tc := range tests {
+		t.Run(tc.rating, func(t *testing.T) {
+			kind := ratingToRewardKind(tc.rating)
+			assert.Equal(t, tc.expected, kind)
+		})
+	}
+}
+
+// TestRewardKindToAmount verifies the reward-kind-to-amount conversion.
+func TestRewardKindToAmount(t *testing.T) {
+	tests := []struct {
+		kind     gamification.RewardKind
+		expected int
+	}{
+		{gamification.RewardKindReviewAgain, gamification.RewardReviewAgain},
+		{gamification.RewardKindReviewHard, gamification.RewardReviewHard},
+		{gamification.RewardKindReviewGood, gamification.RewardReviewGood},
+		{gamification.RewardKindReviewEasy, gamification.RewardReviewEasy},
+		{"unknown", 0},
+	}
+	for _, tc := range tests {
+		t.Run(string(tc.kind), func(t *testing.T) {
+			amount := rewardKindToAmount(tc.kind)
+			assert.Equal(t, tc.expected, amount)
+		})
+	}
 }
