@@ -115,7 +115,7 @@ func (r *Repository) GetLatestGraceBalance(ctx context.Context, userID uuid.UUID
 	row := r.db.QueryRowContext(ctx,
 		`SELECT balance_after FROM grace_day_ledger
 		 WHERE user_id = $1
-		 ORDER BY occurred_at DESC, id DESC
+		 ORDER BY created_at DESC, id DESC
 		 LIMIT 1`,
 		userID,
 	)

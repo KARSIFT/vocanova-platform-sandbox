@@ -218,14 +218,32 @@ func NewMissionUpdater(m *Service, g *gamification.Service) *MissionUpdater {
 	return &MissionUpdater{missions: m, gamification: g}
 }
 
-// Update is called by aifeedback's SubmitSentenceFeedback inside its
-// post-provider-call update step. It runs the sentence-submitted and
-// AI-feedback-received point awards, increments the activity summary, and
-// (if the optional sentence-practice mission goal is active) the mission
-// counter. missionCompleted returns true iff the call completed the daily
-// mission for the first time today (i.e. the snapshot transitioned to
-// status='completed').
-func (u *MissionUpdater) Update(
+// Update implements the aifeedback.MissionUpdater interface (see that
+// package's mission.go). It resolves the caller's settings from stored
+// user_settings only - no request-time client timezone is available at
+// this seam, unlike an HTTP-request-scoped read - falling back through the
+// same D01 chain's remaining UTC/default step, and applies the VOC-030-D03
+// policy decision (bonus sentence-practice mission goal disabled at
+// launch) before delegating to UpdateForSentence.
+func (u *MissionUpdater) Update(ctx context.Context, userID, sentenceID uuid.UUID) (bool, error) {
+	resolved, err := u.gamification.GetSettings(ctx, userID, "")
+	if err != nil {
+		return false, err
+	}
+	const includeSentenceGoal = false // VOC-030-D03: bonus goals disabled at launch
+	return u.UpdateForSentence(ctx, userID, sentenceID, resolved, time.Now(), includeSentenceGoal)
+}
+
+// UpdateForSentence is the transaction-aware entry point Update above
+// delegates to. It runs the sentence-submitted and AI-feedback-received
+// point awards, increments the activity summary, and (if the optional
+// sentence-practice mission goal is active) the mission counter.
+// missionCompleted returns true iff the call completed the daily mission
+// for the first time today (i.e. the snapshot transitioned to
+// status='completed'). Exposed separately from Update so a caller that
+// already has a resolved settings/clock value (e.g. a future API-layer
+// caller) doesn't pay for a second settings lookup.
+func (u *MissionUpdater) UpdateForSentence(
 	ctx context.Context,
 	userID, sentenceID uuid.UUID,
 	resolved gamification.ResolvedSettings,
