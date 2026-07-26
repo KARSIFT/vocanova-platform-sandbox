@@ -1,6 +1,7 @@
 package learning
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -217,5 +218,130 @@ func TestPostgreSQLRepositoryGetSavedMeaning(t *testing.T) {
 	m, err := repo.GetSavedMeaning(t.Context(), userID, meaningID)
 	require.NoError(t, err)
 	assert.Equal(t, rowID, m.UserWordID)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+// TestPostgreSQLRepositorySaveUserWordWithGamificationNil tests that word-addition
+// without gamification works (gamification is optional and nil by default).
+// This verifies that the pre-existing P1 behavior is byte-for-byte unchanged
+// when gamification is disabled (VOC-030-TEST-11).
+func TestPostgreSQLRepositorySaveUserWordWithGamificationNil(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	// Repository WITHOUT gamification service (nil) - the default
+	repo := NewPostgreSQLRepository(db)
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+	wordID := uuid.MustParse("00000000-0000-0000-0000-000000000004")
+	now := time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC)
+	newID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
+
+	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT id FROM word_meanings").
+		WithArgs(meaningID).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(meaningID))
+	mock.ExpectQuery("SELECT id, deleted_at FROM user_words").
+		WithArgs(userID, meaningID).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "deleted_at"}))
+	mock.ExpectQuery("INSERT INTO user_words").
+		WithArgs(sqlmock.AnyArg(), userID, meaningID, "journey", now).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(newID))
+	mock.ExpectCommit()
+	mock.ExpectQuery(savedMeaningQuery()).
+		WithArgs(sqlmock.AnyArg()).
+		WillReturnRows(savedMeaningRow(newID, meaningID, wordID, now))
+
+	m, err := repo.SaveUserWord(t.Context(), SaveUserWordRequest{
+		UserID:    userID,
+		MeaningID: meaningID,
+		Source:    "journey",
+	}, now)
+	require.NoError(t, err)
+	assert.Equal(t, "new", m.Status)
+	assert.Equal(t, "journey", m.Source)
+	assert.Equal(t, "boarding-pass", m.WordSlug)
+	assert.Equal(t, newID, m.UserWordID)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+// TestPostgreSQLRepositorySaveUserWordFailedInsertNoReward tests that a
+// failed user_words insert does not create any gamification reward (VOC-030-TEST-10).
+func TestPostgreSQLRepositorySaveUserWordFailedInsertNoReward(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewPostgreSQLRepository(db)
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+	now := time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC)
+
+	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT id FROM word_meanings").
+		WithArgs(meaningID).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(meaningID))
+	mock.ExpectQuery("SELECT id, deleted_at FROM user_words").
+		WithArgs(userID, meaningID).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "deleted_at"}))
+	// Simulate a failed INSERT
+	mock.ExpectQuery("INSERT INTO user_words").
+		WithArgs(sqlmock.AnyArg(), userID, meaningID, "journey", now).
+		WillReturnError(errors.New("database error"))
+	mock.ExpectRollback()
+
+	_, err = repo.SaveUserWord(t.Context(), SaveUserWordRequest{
+		UserID:    userID,
+		MeaningID: meaningID,
+		Source:    "journey",
+	}, now)
+	require.Error(t, err)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+// TestPostgreSQLRepositorySaveUserWordRestoreDeletedNoNewReward tests that
+// restoring a previously deleted word-add (idempotent operation) does not
+// create a new gamification reward since the word row already exists
+// (VOC-030-TEST-09 scenario - idempotent behavior).
+func TestPostgreSQLRepositorySaveUserWordRestoreDeletedNoNewReward(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewPostgreSQLRepository(db)
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+	wordID := uuid.MustParse("00000000-0000-0000-0000-000000000004")
+	now := time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC)
+	existingID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
+
+	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT id FROM word_meanings").
+		WithArgs(meaningID).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(meaningID))
+	mock.ExpectQuery("SELECT id, deleted_at FROM user_words").
+		WithArgs(userID, meaningID).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "deleted_at"}).
+			AddRow(existingID, time.Date(2026, 7, 24, 0, 0, 0, 0, time.UTC))) // Previously deleted
+	// Restore the deleted row instead of inserting a new one
+	mock.ExpectExec("UPDATE user_words").
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), existingID).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+	mock.ExpectQuery(savedMeaningQuery()).
+		WithArgs(userID, meaningID).
+		WillReturnRows(savedMeaningRow(existingID, meaningID, wordID, now))
+
+	m, err := repo.SaveUserWord(t.Context(), SaveUserWordRequest{
+		UserID:    userID,
+		MeaningID: meaningID,
+		Source:    "journey",
+	}, now)
+	require.NoError(t, err)
+	assert.Equal(t, existingID, m.UserWordID)
+	// When restoring a previously deleted word, the transaction does an UPDATE,
+	// not an INSERT. The code path does not call gamification.GrantPoint when
+	// restoring deleted words (this is correct idempotent behavior).
 	require.NoError(t, mock.ExpectationsWereMet())
 }

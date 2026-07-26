@@ -109,7 +109,8 @@ func (r *PostgreSQLRepository) SaveUserWord(ctx context.Context, req SaveUserWor
 	// (user_id, idempotency_key) unique index. D03 keeps the optional new-word
 	// mission goal disabled, so we don't call IncrementWordsAdded.
 	if r.gamification != nil {
-		currentBalance, err := r.gamification.CurrentBalance(ctx, req.UserID)
+		// Read current balance inside the transaction to ensure isolation.
+		currentBalance, err := r.getLatestPointBalanceTx(ctx, tx, req.UserID)
 		if err != nil {
 			return nil, fmt.Errorf("get current balance: %w", err)
 		}
@@ -326,4 +327,25 @@ func (r *PostgreSQLRepository) scanSavedMeaning(row *sql.Row) (*SavedMeaning, er
 	m.WordSlug = wordSlug(normalizedText)
 	m.Saved = true
 	return &m, nil
+}
+
+// getLatestPointBalanceTx reads the current confidence points balance for a user
+// inside the given transaction to ensure isolation from concurrent updates.
+// Returns 0 if no balance entries exist.
+func (r *PostgreSQLRepository) getLatestPointBalanceTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID) (int, error) {
+	row := tx.QueryRowContext(ctx,
+		`SELECT COALESCE(balance_after, 0) FROM confidence_point_ledger
+		 WHERE user_id = $1
+		 ORDER BY occurred_at DESC, id DESC
+		 LIMIT 1`,
+		userID,
+	)
+	var balance int
+	if err := row.Scan(&balance); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("fetch latest point balance: %w", err)
+	}
+	return balance, nil
 }
