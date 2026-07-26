@@ -1,0 +1,8 @@
+-- atlas:txmode transaction
+-- VOC-030-T00: disposable recovery rehearsal example only. Not executable by
+-- Atlas in production; production recovery must preserve immutable
+-- confidence_point_ledger and grace_day_ledger history (DOC-05 §16).
+
+DROP TABLE IF EXISTS grace_day_ledger;
+DROP TABLE IF EXISTS streak_states;
+DROP TABLE IF EXISTS confidence_point_ledger;

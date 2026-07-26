@@ -181,27 +181,32 @@ export function validateMockInventory() {
     }
   }
 
-  // Verify no unexpected business modules. VOC-028-T00 adds only the
-  // provider-neutral AI-feedback domain boundary and deterministic mock.
+  // Verify no unexpected business modules. VOC-030-T00 introduces the
+  // `missions` and `gamification` modules; T01-T03 will wire them into
+  // the existing P1/P2/P3 transactions.
   const allowedBusinessModules = new Set([
     "auth",
     "content",
     "learning",
     "reviews",
     "aifeedback",
+    "missions",
+    "gamification",
   ]);
   for (const entry of readdirSync(apiBusinessRoot, {
     withFileTypes: true,
   })) {
     if (entry.isDirectory() && !allowedBusinessModules.has(entry.name)) {
       errors.push(
-        `apps/api/business/${entry.name}: unexpected business module outside the approved A1/P1/P2/T00 boundary`,
+        `apps/api/business/${entry.name}: unexpected business module outside the approved A1/P1/P2/P4-T00 boundary`,
       );
     }
   }
 
-  // Verify no unexpected Ent schemas. VOC-028-T00 adds exactly the two
-  // approved P3 persistence schemas; P4 tables remain forbidden.
+  // Verify no unexpected Ent schemas. VOC-030-T00 introduces six new
+  // tables: daily_mission_snapshots, daily_activity_summaries,
+  // confidence_point_ledger, streak_states, grace_day_ledger, and
+  // user_settings.
   const allowedSchemaFiles = new Set([
     "canonicalword.go",
     "externalidentity.go",
@@ -218,6 +223,12 @@ export function validateMockInventory() {
     "userword.go",
     "wordexample.go",
     "wordmeaning.go",
+    "dailymissionsnapshot.go",
+    "dailyactivitysummary.go",
+    "confidencepointledger.go",
+    "streakstate.go",
+    "gracedayledger.go",
+    "usersettings.go",
   ]);
   for (const entry of readdirSync(apiSchemaRoot, { withFileTypes: true })) {
     if (
@@ -226,14 +237,15 @@ export function validateMockInventory() {
       !allowedSchemaFiles.has(entry.name)
     ) {
       errors.push(
-        `apps/api/ent/schema/${entry.name}: unexpected schema outside the approved A1/P1/P2/T00 boundary`,
+        `apps/api/ent/schema/${entry.name}: unexpected schema outside the approved A1/P1/P2/P4-T00 boundary`,
       );
     }
   }
 
-  // Verify no unexpected migrations. VOC-028-T00 adds the learner-sentence
-  // migration followed by the AI-feedback-attempt migration; P4 migrations
-  // remain forbidden.
+  // Verify no unexpected migrations. VOC-030-T00 adds the
+  // user_settings / mission_tables / gamification_tables migrations in
+  // DOC-05 §18 order after ai_feedback_attempts. P5 migrations remain
+  // forbidden.
   const allowedMigrationFiles = new Set([
     "20260724210000_identity_foundation.sql",
     "20260724210001_oauth_state.sql",
@@ -242,6 +254,9 @@ export function validateMockInventory() {
     "20260725110000_voc027_p2_review_attempts.sql",
     "20260725120000_voc028_p3_learner_sentences.sql",
     "20260725120001_voc028_p3_ai_feedback_attempts.sql",
+    "20260725130000_voc030_p4_user_settings.sql",
+    "20260725130001_voc030_p4_mission_tables.sql",
+    "20260725130002_voc030_p4_gamification_tables.sql",
   ]);
   for (const entry of readdirSync(apiMigrationRoot, {
     withFileTypes: true,
@@ -336,6 +351,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     );
     process.exitCode = 1;
   } else {
-    process.stdout.write("VOC-028-T05 mock inventory validation passed.\n");
+    process.stdout.write("VOC-030-T00 mock inventory validation passed.\n");
   }
 }

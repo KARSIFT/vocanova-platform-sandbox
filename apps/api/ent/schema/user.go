@@ -37,6 +37,12 @@ func (User) Edges() []ent.Edge {
 		edge.To("user_words", UserWord.Type),
 		edge.To("review_attempts", ReviewAttempt.Type),
 		edge.To("learner_sentences", LearnerSentence.Type),
+		edge.To("user_settings", UserSettings.Type),
+		edge.To("daily_mission_snapshots", DailyMissionSnapshot.Type),
+		edge.To("daily_activity_summaries", DailyActivitySummary.Type),
+		edge.To("confidence_point_ledger", ConfidencePointLedger.Type),
+		edge.To("streak_state", StreakState.Type),
+		edge.To("grace_day_ledger", GraceDayLedger.Type),
 	}
 }
 

@@ -223,3 +223,91 @@ func TestVOC026P1IdempotencyMigrationCarriesDatabaseInvariants(t *testing.T) {
 		}
 	}
 }
+
+func TestVOC030P4UserSettingsMigrationCarriesDatabaseInvariants(t *testing.T) {
+	sql, err := os.ReadFile("20260725130000_voc030_p4_user_settings.sql")
+	if err != nil {
+		t.Fatalf("read voc-030 p4 user_settings migration: %v", err)
+	}
+	text := string(sql)
+	required := []string{
+		"CREATE TABLE user_settings",
+		"REFERENCES users(id)",
+		"ON DELETE RESTRICT",
+		"timezone text NOT NULL DEFAULT 'UTC'",
+		"daily_review_target integer NOT NULL DEFAULT 20",
+		"daily_review_target >= 5 AND daily_review_target <= 100",
+		"review_interval_preset IN ('vocanova_default', 'wordup_like', 'custom')",
+		"app_language ~ '^[A-Za-z]{2,8}$'",
+		"char_length(timezone) > 0",
+		"ON user_settings (user_id)",
+	}
+	for _, invariant := range required {
+		if !strings.Contains(text, invariant) {
+			t.Errorf("migration missing invariant %q", invariant)
+		}
+	}
+	if strings.Contains(text, "ON DELETE CASCADE") {
+		t.Errorf("user_settings migration contains forbidden ON DELETE CASCADE")
+	}
+}
+
+func TestVOC030P4MissionTablesMigrationCarriesDatabaseInvariants(t *testing.T) {
+	sql, err := os.ReadFile("20260725130001_voc030_p4_mission_tables.sql")
+	if err != nil {
+		t.Fatalf("read voc-030 p4 mission tables migration: %v", err)
+	}
+	text := string(sql)
+	required := []string{
+		"CREATE TABLE daily_mission_snapshots",
+		"CREATE TABLE daily_activity_summaries",
+		"REFERENCES users(id)",
+		"ON DELETE RESTRICT",
+		"local_date date NOT NULL",
+		"review_target >= 5 AND review_target <= 100",
+		"reviews_completed >= 0 AND reviews_completed <= review_target",
+		"status IN ('open', 'completed', 'missed', 'protected')",
+		"status <> 'completed' OR completed_at IS NOT NULL",
+		"ON daily_mission_snapshots (user_id, local_date)",
+		"ON daily_activity_summaries (user_id, local_date)",
+	}
+	for _, invariant := range required {
+		if !strings.Contains(text, invariant) {
+			t.Errorf("mission_tables migration missing invariant %q", invariant)
+		}
+	}
+	if strings.Contains(text, "ON DELETE CASCADE") {
+		t.Errorf("voc-030 mission_tables migration contains forbidden ON DELETE CASCADE")
+	}
+}
+
+func TestVOC030P4GamificationTablesMigrationCarriesDatabaseInvariants(t *testing.T) {
+	sql, err := os.ReadFile("20260725130002_voc030_p4_gamification_tables.sql")
+	if err != nil {
+		t.Fatalf("read voc-030 p4 gamification tables migration: %v", err)
+	}
+	text := string(sql)
+	required := []string{
+		"CREATE TABLE confidence_point_ledger",
+		"CREATE TABLE streak_states",
+		"CREATE TABLE grace_day_ledger",
+		"amount <> 0",
+		"reason IN ('word_added', 'review_correct', 'daily_mission_completed', 'sentence_submitted', 'ai_feedback_received', 'streak_bonus', 'admin_adjustment')",
+		"source_type IN ('user_word', 'review_attempt', 'daily_mission', 'learner_sentence', 'ai_feedback_attempt', 'streak', 'admin')",
+		"longest_streak_count >= current_streak_count",
+		"status IN ('active', 'at_risk', 'broken')",
+		"reason IN ('earned_by_streak', 'manual_grant', 'used_for_missed_day', 'expired', 'admin_adjustment')",
+		"source_type IN ('daily_mission', 'streak', 'admin')",
+		"ON confidence_point_ledger (user_id, idempotency_key)\n  WHERE idempotency_key IS NOT NULL",
+		"ON grace_day_ledger (user_id, idempotency_key)\n  WHERE idempotency_key IS NOT NULL",
+		"ON streak_states (user_id)",
+	}
+	for _, invariant := range required {
+		if !strings.Contains(text, invariant) {
+			t.Errorf("gamification_tables migration missing invariant %q", invariant)
+		}
+	}
+	if strings.Contains(text, "ON DELETE CASCADE") {
+		t.Errorf("voc-030 gamification_tables migration contains forbidden ON DELETE CASCADE (ledgers must be immutable)")
+	}
+}
