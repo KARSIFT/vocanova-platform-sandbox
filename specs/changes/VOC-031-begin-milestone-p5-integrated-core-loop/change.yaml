@@ -1,0 +1,201 @@
+schema_version: 1
+id: VOC-031
+slug: begin-milestone-p5-integrated-core-loop
+title: "Begin Milestone P5 \u2014 Integrated Core Loop"
+type: feature
+status: draft
+risk: R3
+planned_implementation_risk_floor: R3
+canonical_path: specs/changes/VOC-031-begin-milestone-p5-integrated-core-loop
+authority_model: a003-active
+requirement_source: 'docs/product/12-mvp-implementation-plan.md#5 (P5 paragraph);
+  docs/product/00-product-bible.md#3;
+
+  docs/design/03-ui-ux-design.md#3 (onboarding flow); docs/design/08-web-app-design.md
+  (routing,
+
+  quality standards, Settings description); docs/engineering/04-technical-architecture.md;
+
+  docs/engineering/05-database-design.md#6 (user_onboarding_profiles, user_settings)
+  and #16-#18;
+
+  docs/engineering/06-backend-design.md; docs/engineering/07-api-contract-and-dto-design.md;
+
+  docs/engineering/09-ai-features.md; supplied free-text request, including its three
+  resolved
+
+  founder decisions (onboarding and Settings/account in MVP scope; axe-core/Playwright
+  accessibility
+
+  automation; Lighthouse CI against the DOC-08 thresholds) and its supported-layouts
+  default
+
+  (360px, 430px, one desktop width >=1024px)'
+requirement_approval_status: founder-approved
+base_branch: develop
+base_sha: 96d008ec84e7f63ad630c28c246bf0f103d8047d
+target_branch: develop
+approved_candidate_sha: not-set-until-adoption
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: false
+production_impact: unknown
+rollback_required: true
+owners:
+  decision: founder
+  package_preparation: planner
+  implementation: unassigned
+  independent_verification: Claude Code
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+  mock_inventory: mock-inventory.md
+  staging_evidence: staging-evidence.md
+dependencies:
+- id: VOC-031-DEP-01
+  status: 'open-before-p5-acceptance; per DOC-12 section 6''s strict P1 to P2 to P3
+    to P4 to P5 acceptance
+
+    chain, P5 builds on every prior milestone (A1/VOC-025, P1/VOC-026, P2/VOC-027,
+    P3/VOC-028,
+
+    P4/VOC-030). In-repository evidence exists for each (VOC-026-T05, VOC-027-T04,
+    VOC-028-T05,
+
+    VOC-030-T06/EV-00..EV-37), but live staging gate evidence for all four remains
+    blocked by the
+
+    missing F3 staging environment, so none of them has actually closed its own DOC-12
+    milestone
+
+    gate yet (each package''s own release-plan says so explicitly). This draft does
+    not treat any
+
+    prior milestone as gate-closed; it only relies on their in-repository evidence
+    and shipped code.'
+- id: VOC-031-DEP-02
+  status: 'open-before-staging-evidence; the F3 staging environment does not yet exist
+    (carried from
+
+    VOC-026-DEP-03, VOC-027-DEP-02, VOC-028-DEP-04, VOC-030-DEP-02, handled the same
+    way
+
+    VOC-025-DEP-01 first recorded this gap: explicitly marked blocked, not fabricated).
+    The DOC-12
+
+    P5 gate''s own wording requires the full loop to work coherently "in staging across
+    supported
+
+    layouts," so this is the single largest blocker on this milestone''s own acceptance,
+    not merely
+
+    one evidence item among several. T09''s staging/rollback rehearsal cannot be executed
+    and the P5
+
+    gate cannot itself be declared complete by this work alone.'
+- id: VOC-031-DEP-03
+  status: 'open-before-T00; confirmed at draft time (2026-07-27) in apps/api/ent/schema/,
+
+    apps/api/migrations/, and apps/web/src/app/: user_onboarding_profiles (DOC-05
+    section 6) does
+
+    NOT exist; user_settings exists (created by VOC-030) but has no public read or
+    write API, only
+
+    an internal gamification-module lazy upsert used solely for timezone/daily-review-target
+
+    resolution; no /onboarding, /settings, or /settings/account route exists anywhere
+    under
+
+    apps/web/src/app. No prior milestone captured onboarding answers or built a Settings/account
+
+    surface. VOC-031-T00 through T03 build this as genuinely new, previously-undelivered
+    scope per
+
+    the supplied founder decision, not a stub and not merely a recorded disposition.'
+- id: VOC-031-DEP-04
+  status: 'open-before-T06/T07; confirmed at draft time (2026-07-27) that no accessibility
+    or performance
+
+    test automation is installed anywhere in this repository: no axe-core, @axe-core/playwright,
+    or
+
+    playwright dependency in any package.json; no tests/e2e directory; no Lighthouse
+    or @lhci/cli
+
+    dependency; no accessibility or performance job in .github/workflows/pipeline.yml,
+    despite
+
+    DOC-08 already naming Vitest/React Testing Library/Playwright as the intended
+    web test stack.
+
+    VOC-031-T06 and T07 install and wire this tooling per the supplied founder decisions,
+    not a
+
+    manual-only or spot-check pass.'
+- id: VOC-031-DEP-05
+  status: 'open-before-T00; the adopted base must provide and reconcile the already-established
+
+    Go/Huma/chi, PostgreSQL+Ent+Atlas, OpenAPI generation, committed OpenAPI/client
+    drift handling,
+
+    and migration test commands confirmed present through VOC-026/027/028/030 before
+    T00 begins.'
+affected_areas:
+- apps/api/business/onboarding
+- apps/api/business/gamification
+- apps/api/business/auth
+- apps/api/business/missions
+- apps/api/business/learning
+- apps/api/business/reviews
+- apps/api/business/aifeedback
+- apps/api/ent/schema
+- apps/api/migrations
+- apps/api/app/api
+- apps/api/openapi/vocanova.openapi.json
+- packages/api-client
+- apps/web/src/app
+- apps/web/src/app/(app)/home
+- apps/web/src/app/(app)/discover
+- apps/web/src/app/(app)/reviews
+- apps/web/src/app/(app)/progress
+- apps/web/package.json
+- package.json
+- .github/workflows
+- scripts/foundation
+implementation:
+  authorized: false
+  required: true
+  status: not-started
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-draft
+  production_impact: unknown-pending-p5-staging-evidence
+  deployment: not-authorized-by-this-package
+  automatic_merge: false
+  migration_required: true
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
+blocking_reasons: 'package is in draft and not yet adopted; VOC-031-DEP-01 through
+  DEP-05 remain open and tracked as
+
+  documented above; human adoption, resolution of the open decisions recorded in specification.md,
+
+  and separate implementation authorization are all required before T00 begins.'
