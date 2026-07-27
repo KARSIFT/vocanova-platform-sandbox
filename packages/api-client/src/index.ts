@@ -3,6 +3,37 @@ export interface CurrentUser {
   displayName?: string;
   avatarUrl?: string;
   emailVerifiedAt?: string;
+  /**
+   * VOC-031-T01 additive field. Always present in the response.
+   * The Next.js middleware uses it to gate the core-loop routes
+   * on whether the learner has completed onboarding (DOC-03 §3).
+   */
+  onboardingStatus: "not_started" | "in_progress" | "completed";
+}
+
+export type EnglishLevel = "a1" | "a2" | "b1" | "b2" | "unknown";
+
+export type LearningGoal =
+  "general" | "work" | "travel" | "study" | "conversation" | "exam";
+
+export type MainUseCase = "daily_life" | "work" | "travel" | "study" | "social";
+
+export interface OnboardingProfile {
+  status: "not_started" | "in_progress" | "completed";
+  englishLevel?: EnglishLevel;
+  nativeLanguage?: string;
+  learningGoal?: LearningGoal;
+  mainUseCase?: MainUseCase;
+  dailyReviewTarget?: number;
+  completedAt?: string;
+}
+
+export interface CompleteOnboardingBody {
+  englishLevel: EnglishLevel;
+  nativeLanguage: string;
+  learningGoal: LearningGoal;
+  mainUseCase: MainUseCase;
+  dailyReviewTarget: number;
 }
 
 export interface RequestMagicLinkBody {
@@ -266,6 +297,34 @@ export class VocanovaClient {
   }> {
     const response = await this.request("GET", "/api/v1/me", undefined, init);
     const data = (await response.json()) as CurrentUser;
+    return { data, response };
+  }
+
+  async getOnboarding(init?: RequestInit): Promise<{
+    data: OnboardingProfile;
+    response: Response;
+  }> {
+    const response = await this.request(
+      "GET",
+      "/api/v1/onboarding",
+      undefined,
+      init,
+    );
+    const data = (await response.json()) as OnboardingProfile;
+    return { data, response };
+  }
+
+  async completeOnboarding(
+    body: CompleteOnboardingBody,
+    init?: RequestInit,
+  ): Promise<{ data: OnboardingProfile; response: Response }> {
+    const response = await this.request(
+      "POST",
+      "/api/v1/onboarding",
+      body,
+      init,
+    );
+    const data = (await response.json()) as OnboardingProfile;
     return { data, response };
   }
 

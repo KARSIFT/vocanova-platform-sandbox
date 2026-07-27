@@ -585,4 +585,66 @@ describe("VocanovaClient", () => {
     assert.equal(data.completionHistory.length, 7);
     assert.equal(data.completionHistory[0]?.completed, true);
   });
+
+  it("sends GET /api/v1/onboarding", async () => {
+    const fetch = (url: string, init: RequestInit): Promise<Response> => {
+      assert.equal(url, "https://api.example.com/api/v1/onboarding");
+      assert.equal(init.method, "GET");
+      return Promise.resolve(
+        new Response(JSON.stringify({ status: "not_started" }), {
+          headers: { "Content-Type": "application/json" },
+          status: 200,
+        }),
+      );
+    };
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: fetch as typeof globalThis.fetch,
+    });
+    const { data } = await client.getOnboarding();
+    assert.equal(data.status, "not_started");
+  });
+
+  it("sends POST /api/v1/onboarding with full submission body", async () => {
+    let capturedBody: unknown;
+    const fetch = (url: string, init: RequestInit): Promise<Response> => {
+      assert.equal(url, "https://api.example.com/api/v1/onboarding");
+      assert.equal(init.method, "POST");
+      capturedBody = JSON.parse(String(init.body));
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            status: "completed",
+            englishLevel: "b1",
+            nativeLanguage: "es",
+            learningGoal: "general",
+            mainUseCase: "daily_life",
+            dailyReviewTarget: 25,
+            completedAt: "2026-07-27T12:00:00Z",
+          }),
+          { headers: { "Content-Type": "application/json" }, status: 200 },
+        ),
+      );
+    };
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: fetch as typeof globalThis.fetch,
+    });
+    const { data } = await client.completeOnboarding({
+      englishLevel: "b1",
+      nativeLanguage: "es",
+      learningGoal: "general",
+      mainUseCase: "daily_life",
+      dailyReviewTarget: 25,
+    });
+    assert.deepEqual(capturedBody, {
+      englishLevel: "b1",
+      nativeLanguage: "es",
+      learningGoal: "general",
+      mainUseCase: "daily_life",
+      dailyReviewTarget: 25,
+    });
+    assert.equal(data.status, "completed");
+    assert.equal(data.dailyReviewTarget, 25);
+  });
 });

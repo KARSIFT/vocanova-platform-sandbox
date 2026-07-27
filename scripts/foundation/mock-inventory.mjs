@@ -155,8 +155,9 @@ export function validateMockInventory() {
 
   // Verify no API routes beyond A1 auth, VOC-026 P1 content/learning, the
   // VOC-027 P2 review routes (due-queue read and submission), the
-  // VOC-028-T04 sentence-feedback write/report routes, and the
-  // VOC-030-T04 daily-mission/progress reads were invented.
+  // VOC-028-T04 sentence-feedback write/report routes, the
+  // VOC-030-T04 daily-mission/progress reads, and the
+  // VOC-031-T01 onboarding read/submit routes were invented.
   const allowedAPIPaths = [
     /^\/api\/v1\/me$/,
     /^\/api\/v1\/auth(?:\/|$)/,
@@ -170,6 +171,7 @@ export function validateMockInventory() {
     /^\/api\/v1\/sentence-feedback\/[^/]+\/reports$/,
     /^\/api\/v1\/daily-mission$/,
     /^\/api\/v1\/progress$/,
+    /^\/api\/v1\/onboarding$/,
   ];
   const apiRouteFiles = globSync("**/*.go", { cwd: apiRouteRoot });
   for (const file of apiRouteFiles) {
@@ -295,7 +297,8 @@ export function validateMockInventory() {
     }
   }
 
-  // Verify the middleware matcher covers all (app) routes.
+  // Verify the middleware matcher covers all (app) routes and the
+  // VOC-031-T01 onboarding gate.
   const middlewarePath = path.join(webSrcRoot, "middleware.ts");
   const middlewareContent = readFileSync(middlewarePath, "utf8");
   const matcherMatch = middlewareContent.match(/matcher:\s*\[([^\]]+)\]/s);
@@ -310,6 +313,7 @@ export function validateMockInventory() {
       '"/progress"',
       '"/reviews"',
       '"/reviews/:path*"',
+      '"/onboarding"',
     ];
     for (const pattern of requiredPatterns) {
       if (!matcherText.includes(pattern)) {

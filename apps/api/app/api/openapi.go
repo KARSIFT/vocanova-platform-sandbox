@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"net/http"
 	"time"
@@ -12,11 +13,13 @@ import (
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/learning"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/missions"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/reviews"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/users"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/email"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
 // NewContractAPI returns the OpenAPI contract with all registered routes. It
@@ -57,6 +60,27 @@ func NewContractAPI() huma.API {
 	contractAPI.UseMiddleware(AuthMiddleware(svc))
 	RegisterContract(contractAPI)
 	RegisterAuth(contractAPI, svc)
+
+	// VOC-031-T01: register the onboarding service so the
+	// /api/v1/onboarding routes appear in the OpenAPI document. The
+	// lookup the contract handler uses to enrich GET /api/v1/me with
+	// the additive onboardingStatus field is installed at the same
+	// time so the contract can run end-to-end during OpenAPI
+	// generation without panicking on a missing implementation.
+	usersRepo := users.NewMemoryRepository()
+	usersSvc := users.NewService(usersRepo, usersRepo, clock.Real{})
+	RegisterOnboarding(contractAPI, usersSvc, svc)
+	SetOnboardingStatusLookup(func(ctx context.Context, userID uuid.UUID) (string, error) {
+		profile, err := usersSvc.GetOnboarding(ctx, userID)
+		if err != nil {
+			// An unseen user has not yet submitted onboarding, so
+			// the gate status is "not_started". This matches the
+			// production semantics where the contract default
+			// is "not_started" until CompleteOnboarding is called.
+			return users.OnboardingStatusNotStarted, nil
+		}
+		return profile.Status, nil
+	})
 
 	// Register content routes for OpenAPI generation using empty in-memory repos.
 	contentSvc := content.NewService(
