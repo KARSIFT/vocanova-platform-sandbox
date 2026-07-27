@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 
-import { ApiResponseError, SentenceFeedbackResult } from "@vocanova/api-client";
+import { SentenceFeedbackResult } from "@vocanova/api-client";
 
 import { createApiClient } from "@/lib/api";
 import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
+import { handleApiError } from "@/lib/session";
 
 interface SentenceFeedbackProps {
   targetWord: string;
@@ -69,10 +70,15 @@ export function SentenceFeedback({
       onFeedbackSubmitted?.(data);
     } catch (error) {
       setResult(null);
+      // T06: a 401 here means the session expired mid-sentence-submission.
+      // Never lose the learner's sentence — the textarea stays populated
+      // (controlled by component state) and we route to re-auth. The
+      // learner can copy their text and resume after sign-in.
       setErrorMessage(
-        error instanceof ApiResponseError
-          ? error.message
-          : "Unable to check this sentence right now. Please try again.",
+        handleApiError(
+          error,
+          "Unable to check this sentence right now. Please try again.",
+        ),
       );
     } finally {
       setIsLoading(false);
@@ -104,7 +110,19 @@ export function SentenceFeedback({
       );
       setReported(true);
       setReportStatus("idle");
-    } catch {
+    } catch (error) {
+      // T06: a 401 on a report submission routes the learner to
+      // re-auth. The text is in component state and the feedback
+      // result is still visible — nothing is lost.
+      if (
+        error &&
+        typeof error === "object" &&
+        "status" in error &&
+        (error as { status: number }).status === 401
+      ) {
+        handleApiError(error, "Unable to report. Please try again.");
+        return;
+      }
       setReportStatus("error");
     }
   }

@@ -3,14 +3,11 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import {
-  ApiResponseError,
-  DueWord,
-  SubmitReviewBody,
-} from "@vocanova/api-client";
+import { DueWord, SubmitReviewBody } from "@vocanova/api-client";
 
 import { createApiClient } from "@/lib/api";
 import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
+import { handleApiError } from "@/lib/session";
 import { SentenceFeedback } from "../../_components/sentence-feedback";
 
 type Rating = "again" | "hard" | "good" | "easy";
@@ -94,10 +91,11 @@ export function ReviewSession({
         }
       })
       .catch((error) => {
+        // T06: a 401 here means the session expired mid-review-session;
+        // route the learner to re-auth instead of leaving them looking at
+        // an error on a frozen card.
         setErrorMessage(
-          error instanceof ApiResponseError
-            ? error.message
-            : "Unable to load more words. Please try again.",
+          handleApiError(error, "Unable to load more words. Please try again."),
         );
       })
       .finally(() => {
@@ -154,10 +152,15 @@ export function ReviewSession({
       setRemainingCount((count) => Math.max(0, count - 1));
       advance();
     } catch (error) {
+      // T06: a 401 mid-review-session is the documented
+      // session-expiry mid-flow case — never claim a card was
+      // reviewed when the server rejected it. handleApiError routes
+      // the learner to re-auth instead.
       setErrorMessage(
-        error instanceof ApiResponseError
-          ? error.message
-          : "Unable to submit your answer. Please try again.",
+        handleApiError(
+          error,
+          "Unable to submit your answer. Please try again.",
+        ),
       );
     } finally {
       setIsSubmitting(false);

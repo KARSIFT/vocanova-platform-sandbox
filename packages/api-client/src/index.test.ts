@@ -898,4 +898,65 @@ describe("VocanovaClient", () => {
     assert.equal(data.replayed, false);
     assert.equal(data.purgeAfter, "2026-08-26T12:00:00Z");
   });
+
+  // VOC-031-T06: the session-expiry mid-flow handler at
+  // apps/web/src/lib/session.ts is a thin wrapper around
+  // ApiResponseError.status === 401. The cross-cutting
+  // guarantee (TEST-29) depends on this detection being
+  // stable across the whole (app) surface, so the test below
+  // pins the detection pattern the helper relies on. A
+  // regression where ApiResponseError stopped reporting 401
+  // would surface here before it reached the client.
+  it("exposes a stable 401 detection for the session-expiry mid-flow helper", () => {
+    const isSessionExpiredError = (error: unknown): boolean =>
+      error instanceof ApiResponseError && error.status === 401;
+
+    // 401 with a problem+json body must be detected.
+    const expiredSession = new ApiResponseError(401, {
+      detail: "authentication required",
+    });
+    assert.equal(
+      isSessionExpiredError(expiredSession),
+      true,
+      "401 must be detected as a session expiry",
+    );
+
+    // Other 4xx statuses must NOT be detected as a session
+    // expiry — the helper specifically routes 401 to
+    // re-auth, never 403 (CSRF) or 404 (not found) or
+    // 409 (idempotency conflict), which have their own
+    // per-screen handling.
+    assert.equal(
+      isSessionExpiredError(new ApiResponseError(403, { detail: "csrf" })),
+      false,
+      "403 must not be treated as a session expiry",
+    );
+    assert.equal(
+      isSessionExpiredError(new ApiResponseError(404, { detail: "missing" })),
+      false,
+      "404 must not be treated as a session expiry",
+    );
+    assert.equal(
+      isSessionExpiredError(new ApiResponseError(409, { detail: "conflict" })),
+      false,
+      "409 must not be treated as a session expiry",
+    );
+    assert.equal(
+      isSessionExpiredError(new ApiResponseError(500, { detail: "oops" })),
+      false,
+      "500 must not be treated as a session expiry",
+    );
+
+    // Non-ApiResponseError values (network failures, JSON
+    // parse errors, plain Error, undefined) must not be
+    // detected as a session expiry.
+    assert.equal(
+      isSessionExpiredError(new Error("network failed")),
+      false,
+      "a plain Error must not be treated as a session expiry",
+    );
+    assert.equal(isSessionExpiredError(undefined), false);
+    assert.equal(isSessionExpiredError(null), false);
+    assert.equal(isSessionExpiredError("401"), false);
+  });
 });

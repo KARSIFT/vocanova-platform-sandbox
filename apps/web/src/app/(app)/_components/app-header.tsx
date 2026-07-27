@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 
-import { ApiResponseError } from "@vocanova/api-client";
-
 import { createApiClient } from "@/lib/api";
 import { CSRF_COOKIE_NAME, deleteCookie, getCookieValue } from "@/lib/cookies";
+import { handleApiError } from "@/lib/session";
 
 export function AppHeader() {
   const [status, setStatus] = useState<{
@@ -35,11 +34,14 @@ export function AppHeader() {
       deleteCookie(CSRF_COOKIE_NAME);
       window.location.href = "/signin";
     } catch (error) {
-      const message =
-        error instanceof ApiResponseError
-          ? error.message
-          : "Unable to log out. Please try again.";
-      setStatus({ type: "error", message });
+      // T06: a 401 on logout is the documented "session already
+      // expired" case — clear the local session cookie anyway and
+      // route the learner to sign in, matching the same
+      // session-expiry mid-flow handler used by the core loop.
+      setStatus({
+        type: "error",
+        message: handleApiError(error, "Unable to log out. Please try again."),
+      });
     }
   }
 

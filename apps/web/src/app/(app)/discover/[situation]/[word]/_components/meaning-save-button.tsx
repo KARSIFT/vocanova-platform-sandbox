@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 
-import { ApiResponseError } from "@vocanova/api-client";
-
 import { createApiClient } from "@/lib/api";
 import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
+import { handleApiError } from "@/lib/session";
 
 interface MeaningSaveButtonProps {
   meaningId: string;
@@ -54,11 +53,15 @@ export function MeaningSaveButton({
       setStatus("idle");
     } catch (error) {
       setStatus("error");
-      const message =
-        error instanceof ApiResponseError
-          ? error.message
-          : "Unable to update saved state. Please try again.";
-      setErrorMessage(message);
+      // handleApiError detects 401 and routes the learner to
+      // re-authentication (T06: session-expiry mid-flow). For any
+      // other failure it returns a stable, caller-supplied message.
+      setErrorMessage(
+        handleApiError(
+          error,
+          "Unable to update saved state. Please try again.",
+        ),
+      );
     }
   }
 

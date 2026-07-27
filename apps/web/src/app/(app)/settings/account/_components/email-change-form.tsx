@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 
-import { ApiResponseError } from "@vocanova/api-client";
-
 import { createApiClient } from "@/lib/api";
 import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
+import { handleApiError } from "@/lib/session";
 
 interface EmailChangeFormProps {
   currentEmail: string;
@@ -50,10 +49,14 @@ export function EmailChangeForm({ currentEmail }: EmailChangeFormProps) {
       );
       setPhase({ type: "pending", newEmail: trimmed });
     } catch (error) {
-      const message =
-        error instanceof ApiResponseError
-          ? error.message
-          : "We couldn't send the confirmation email. Please try again.";
+      // T06: a 401 mid-email-change-request routes the learner to
+      // re-auth. The newEmail value is preserved in the form's
+      // controlled input so the learner does not need to retype it
+      // after re-authentication.
+      const message = handleApiError(
+        error,
+        "We couldn't send the confirmation email. Please try again.",
+      );
       setPhase({ type: "error", message });
     }
   }
@@ -90,10 +93,14 @@ export function EmailChangeForm({ currentEmail }: EmailChangeFormProps) {
       setToken("");
       setNewEmail("");
     } catch (error) {
-      const message =
-        error instanceof ApiResponseError
-          ? error.message
-          : "We couldn't confirm that link. Please try again.";
+      // T06: a 401 mid-consume routes the learner to re-auth.
+      // The token is preserved in the form's controlled input so the
+      // learner does not need to recover it from email after
+      // re-authentication.
+      const message = handleApiError(
+        error,
+        "We couldn't confirm that link. Please try again.",
+      );
       setPhase({ type: "error", message });
     } finally {
       setIsConsuming(false);

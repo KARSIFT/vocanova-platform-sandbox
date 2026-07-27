@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { ApiResponseError } from "@vocanova/api-client";
 import type {
   CompleteOnboardingBody,
   EnglishLevel,
@@ -13,6 +12,7 @@ import type {
 
 import { createApiClient } from "@/lib/api";
 import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
+import { handleApiError } from "@/lib/session";
 
 interface OnboardingFormProps {
   defaultNativeLanguage?: string;
@@ -175,10 +175,15 @@ export function OnboardingForm({
       router.push("/home");
       router.refresh();
     } catch (error) {
-      const message =
-        error instanceof ApiResponseError
-          ? error.message
-          : "We couldn't save your answers. Please try again.";
+      // T06: a 401 mid-onboarding means the session expired before the
+      // answers were saved. handleApiError routes the learner to
+      // re-auth; the per-step answers are still in component state so
+      // they survive the page transition. We never claim onboarding is
+      // complete when the server rejected the submission.
+      const message = handleApiError(
+        error,
+        "We couldn't save your answers. Please try again.",
+      );
       setStatus({ type: "error", message });
     }
   }

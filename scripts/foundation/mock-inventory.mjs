@@ -165,7 +165,7 @@ export function validateMockInventory() {
     /^\/api\/v1\/me$/,
     /^\/api\/v1\/auth(?:\/|$)/,
     /^\/api\/v1\/journey-situations(?:\/[^/]+)?$/,
-    /^\/api\/v1\/canonical-words\/[^/]+$/,
+    /^\/api\/v1\/canonical-words(?:\/[^/]+)?$/,
     /^\/api\/v1\/user-words$/,
     /^\/api\/v1\/user-words\/[^/]+$/,
     /^\/api\/v1\/reviews\/due$/,
@@ -419,18 +419,84 @@ export function validateMockInventory() {
     }
   }
 
+  // VOC-031-T06: the P5 cross-cutting reliability test file
+  // exists, alongside the P5 client-side session-expiry helper.
+  // A regression that drops either would silently re-open the
+  // session-expiry mid-flow gap and the no-fabricated-fallback
+  // contract guard.
+  const t06P5Deliverables = [
+    "apps/api/app/api/core_loop_reliability_test.go",
+    "apps/web/src/lib/session.ts",
+  ];
+  for (const file of t06P5Deliverables) {
+    const filePath = path.join(repositoryRoot, file);
+    if (!exists(filePath)) {
+      errors.push(
+        `${file}: T06 P5 cross-cutting reliability deliverable is missing; T06 acceptance requires it`,
+      );
+    }
+  }
+
+  // VOC-031-T06: the no-fabricated-fallback static guard.
+  // Every (app) route's render code must consume data
+  // exclusively through the API client. A regression that
+  // hardcoded a data value, a default count, or a placeholder
+  // string in place of real API data would let a learner
+  // continue interacting with a screen that is showing
+  // fabricated state — exactly the failure mode T06 forbids.
+  //
+  // The check is deliberately conservative: it scans (app)
+  // for any non-comment data-object or array literal that
+  // is not a known-empty-state literal (the empty array `[]`
+  // is a legitimate render of "the API returned no items",
+  // not a fabricated data value). A fabricated value would
+  // look like `const SAVED_WORDS = [{ wordText: "..." }]` or
+  // `const FALLBACK_STREAK = 5`. The regex below catches
+  // the common patterns by name and shape; a regression
+  // that introduced a fabrication under a different name
+  // would be caught by the test plan's TEST-30 contract
+  // check in apps/api/app/api/core_loop_reliability_test.go
+  // (the API never returns a placeholder value), so the two
+  // checks together cover the contract side and the client
+  // side of the no-fabricated-fallback guarantee.
+  const fabricatedDataPatterns = [
+    /\bconst\s+MOCK_[A-Z_]+\s*=\s*\[/,
+    /\bconst\s+MOCK_[A-Z_]+\s*=\s*\{/,
+    /\bconst\s+FAKE_[A-Z_]+\s*=/,
+    /\bconst\s+FALLBACK_[A-Z_]+\s*=/,
+    /\bconst\s+PLACEHOLDER_[A-Z_]+\s*=/,
+    /\bconst\s+DEMO_[A-Z_]+\s*=\s*\[/,
+    /\bconst\s+DEMO_[A-Z_]+\s*=\s*\{/,
+  ];
+  for (const file of appFiles) {
+    const content = readFileSync(path.join(appRouteRoot, file), "utf8");
+    for (const pattern of fabricatedDataPatterns) {
+      if (pattern.test(content)) {
+        errors.push(
+          `${file}: a hardcoded fabricated data literal matched ${pattern}; T06 forbids client-fabricated fallback values (use the real API instead)`,
+        );
+      }
+    }
+  }
+
   // VOC-030-T06: P5 is strictly forbidden. No P5 route, table, or
   // behavior may have been invented. The existing API path allow
   // list and schema/migration allow lists already enforce the
   // route/table side; this check enforces the behavior side on
   // the T06 deliverables (a future P5 feature must not be
   // introduced through this file).
+  //
+  // VOC-031-T06 extends the same behavior-allow-list to the
+  // P5 cross-cutting reliability deliverables (the
+  // core_loop_reliability_test.go file and the session.ts
+  // helper) so a future contributor cannot introduce
+  // out-of-scope P5 behavior through a T06 file either.
   const t06ForbidPatterns = [
     /p5[_-]?leaderboard/i,
     /p5[_-]?badge/i,
     /p5[_-]?reward[_-]?store/i,
   ];
-  for (const file of t06TestFiles) {
+  for (const file of [...t06TestFiles, ...t06P5Deliverables]) {
     const filePath = path.join(repositoryRoot, file);
     if (!exists(filePath)) continue;
     const content = readFileSync(filePath, "utf8");

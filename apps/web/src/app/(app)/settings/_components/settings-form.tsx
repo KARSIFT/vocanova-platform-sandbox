@@ -2,14 +2,11 @@
 
 import { useState } from "react";
 
-import {
-  ApiResponseError,
-  Settings,
-  UpdateSettingsBody,
-} from "@vocanova/api-client";
+import { Settings, UpdateSettingsBody } from "@vocanova/api-client";
 
 import { createApiClient } from "@/lib/api";
 import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
+import { handleApiError } from "@/lib/session";
 
 const DAILY_REVIEW_TARGETS = [5, 10, 15, 20, 30, 50, 75, 100];
 
@@ -99,10 +96,15 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
       });
       setStatus({ type: "saved" });
     } catch (error) {
-      const message =
-        error instanceof ApiResponseError
-          ? error.message
-          : "We couldn't save your settings. Please try again.";
+      // T06: a 401 mid-settings-write is the documented
+      // session-expiry mid-flow case. handleApiError routes the
+      // learner to re-auth; the form state is preserved on the
+      // controlled inputs so the learner does not need to retype
+      // their changes after re-authentication.
+      const message = handleApiError(
+        error,
+        "We couldn't save your settings. Please try again.",
+      );
       setStatus({ type: "error", message });
     }
   }

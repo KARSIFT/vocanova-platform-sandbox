@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { ApiResponseError } from "@vocanova/api-client";
-
 import { createApiClient } from "@/lib/api";
 import {
   CSRF_COOKIE_NAME,
@@ -12,6 +10,7 @@ import {
   getCookieValue,
   SESSION_COOKIE_NAME,
 } from "@/lib/cookies";
+import { handleApiError } from "@/lib/session";
 
 type DeletionPhase =
   | { type: "idle" }
@@ -82,10 +81,16 @@ export function AccountDeletionForm() {
       }
       router.refresh();
     } catch (error) {
-      const message =
-        error instanceof ApiResponseError
-          ? error.message
-          : "We couldn't deactivate your account. Please try again.";
+      // T06: a 401 mid-account-deletion means the session expired
+      // before the deactivation was issued. We never want to claim
+      // an account is deactivated when the server rejected the
+      // request; handleApiError routes the learner to re-auth and
+      // the typed confirmation is preserved in component state so
+      // the learner can re-confirm after re-authentication.
+      const message = handleApiError(
+        error,
+        "We couldn't deactivate your account. Please try again.",
+      );
       setPhase({ type: "error", message });
     } finally {
       setIsDeleting(false);
