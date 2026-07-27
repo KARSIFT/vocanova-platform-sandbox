@@ -18,20 +18,9 @@ const apiMigrationRoot = path.join(repositoryRoot, "apps/api/migrations");
 // Inventory of VOC-010–VOC-024 mocks retained as P4-pending placeholders,
 // reconciled at the VOC-028-T00 P3 boundary. See
 // specs/changes/VOC-027-begin-milestone-p2-review-saved-words/mock-inventory.md
-const expectedMocks = [
-  {
-    file: "apps/web/src/app/(app)/home/page.tsx",
-    expectedConstant: "MOCK_HOME_STATE",
-    vocPackage: "VOC-019",
-  },
-  {
-    file: "apps/web/src/app/(app)/progress/page.tsx",
-    expectedConstant: "MOCK_PROGRESS_STATE",
-    vocPackage: "VOC-020",
-  },
-];
+const expectedMocks = [];
 
-// Inventory of VOC-010–VOC-024 mocks decommissioned to real P1 sources.
+// Inventory of VOC-010–VOC-024 mocks decommissioned to real sources.
 const decommissionedMocks = [
   {
     file: "apps/web/src/app/(app)/discover/page.tsx",
@@ -53,6 +42,18 @@ const decommissionedMocks = [
     expectedConstant: "MOCK_SITUATION_WORD_LISTS",
     vocPackage: "VOC-022",
     mustNotExist: true,
+  },
+  // VOC-030-T05: Home and Progress P4-pending mocks retired to real
+  // `GET /api/v1/daily-mission` and `GET /api/v1/progress` reads.
+  {
+    file: "apps/web/src/app/(app)/home/page.tsx",
+    expectedConstant: "MOCK_HOME_STATE",
+    vocPackage: "VOC-019",
+  },
+  {
+    file: "apps/web/src/app/(app)/progress/page.tsx",
+    expectedConstant: "MOCK_PROGRESS_STATE",
+    vocPackage: "VOC-020",
   },
 ];
 

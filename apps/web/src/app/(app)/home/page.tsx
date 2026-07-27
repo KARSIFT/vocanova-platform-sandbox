@@ -3,23 +3,15 @@ import Link from "next/link";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { SentenceFeedback } from "../_components/sentence-feedback";
 
-// VOC-019 P4-pending mock fields: mission target, reviewed-today count, and
-// streak have no P1/P2 equivalent and stay mocked pending P4.
-// VOC-027-D05: the due-review count is wired to the real P2 due-queue and is
-// no longer part of MOCK_HOME_STATE.
-const MOCK_HOME_STATE = {
-  missionTargetWords: 10,
-  reviewedWordsToday: 3,
-  currentStreakDays: 5,
-} as const;
-
 export default async function HomePage() {
   const client = await createServerApiClient();
   let savedWordsResponse: Awaited<ReturnType<typeof client.listSavedWords>>;
   let dueResponse: Awaited<ReturnType<typeof client.listDueWords>>;
+  let dailyMissionResponse: Awaited<ReturnType<typeof client.getDailyMission>>;
   try {
     savedWordsResponse = await client.listSavedWords({ limit: 10 });
     dueResponse = await client.listDueWords({ limit: 1 });
+    dailyMissionResponse = await client.getDailyMission();
   } catch (error) {
     requireAuthRedirect(error, "/home");
   }
@@ -27,8 +19,12 @@ export default async function HomePage() {
   const { items: savedWords } = savedWordsResponse.data;
   const dueReviewWords = dueResponse.data.totalCount;
 
-  const { missionTargetWords, reviewedWordsToday, currentStreakDays } =
-    MOCK_HOME_STATE;
+  const {
+    reviewTarget: missionTargetWords,
+    reviewsCompleted: reviewedWordsToday,
+    streak,
+  } = dailyMissionResponse.data;
+  const currentStreakDays = streak.currentStreakCount;
 
   const missionProgressPercent = Math.min(
     100,
