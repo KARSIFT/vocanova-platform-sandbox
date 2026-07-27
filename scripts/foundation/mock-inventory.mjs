@@ -335,6 +335,90 @@ export function validateMockInventory() {
     }
   }
 
+  // VOC-030-T05 field retirements: the retired MOCK_HOME_STATE
+  // object and MOCK_PROGRESS_STATE object must be gone from the
+  // (app) routes. T05 replaced both with real
+  // GET /api/v1/daily-mission and GET /api/v1/progress reads; a
+  // regression here would mean the web app is still reading from
+  // the (deleted) mock state. We check by looking for the mock
+  // object names, not for individual field names — the page may
+  // legitimately use the real API field names (e.g.
+  // reviewTarget, reviewsCompleted) as local aliases.
+  for (const file of appFiles) {
+    const content = readFileSync(path.join(appRouteRoot, file), "utf8");
+    if (/\bMOCK_HOME_STATE\b/.test(content)) {
+      errors.push(
+        `${file}: MOCK_HOME_STATE is still present; T05 retired it in favor of GET /api/v1/daily-mission`,
+      );
+    }
+    if (/\bMOCK_PROGRESS_STATE\b/.test(content)) {
+      errors.push(
+        `${file}: MOCK_PROGRESS_STATE is still present; T05 retired it in favor of GET /api/v1/progress`,
+      );
+    }
+  }
+
+  // VOC-030-T06: the P3 aifeedback test fixture must wire the
+  // real missions.MissionUpdater (replacing the StubMissionUpdater
+  // seam) — the T03 acceptance criterion. A regression that
+  // removes the real-updater wiring would silently re-open the
+  // always-false missionCompleted behavior in production.
+  const aifeedbackP4TestPath = path.join(
+    apiBusinessRoot,
+    "aifeedback",
+    "aifeedback_p4_test.go",
+  );
+  if (exists(aifeedbackP4TestPath)) {
+    const testContent = readFileSync(aifeedbackP4TestPath, "utf8");
+    if (!/missions\.NewMissionUpdater\s*\(/.test(testContent)) {
+      errors.push(
+        "apps/api/business/aifeedback/aifeedback_p4_test.go: T03 acceptance requires the test fixture to wire missions.NewMissionUpdater() (replacing NewStubMissionUpdater)",
+      );
+    }
+  }
+
+  // VOC-030-T06: the cross-cutting safety test files added in T06
+  // must exist (their presence is part of the T06 acceptance
+  // criteria for the duplicate/failed/unauthorized-safety
+  // guarantees). A regression that removes either file would
+  // silently re-open the cross-cutting safety holes.
+  const t06TestFiles = [
+    "apps/api/business/missions/cross_cutting_safety_test.go",
+    "apps/api/app/api/missions_cross_cutting_test.go",
+  ];
+  for (const file of t06TestFiles) {
+    const filePath = path.join(repositoryRoot, file);
+    if (!exists(filePath)) {
+      errors.push(
+        `${file}: T06 cross-cutting safety test file is missing; T06 acceptance requires it`,
+      );
+    }
+  }
+
+  // VOC-030-T06: P5 is strictly forbidden. No P5 route, table, or
+  // behavior may have been invented. The existing API path allow
+  // list and schema/migration allow lists already enforce the
+  // route/table side; this check enforces the behavior side on
+  // the T06 deliverables (a future P5 feature must not be
+  // introduced through this file).
+  const t06ForbidPatterns = [
+    /p5[_-]?leaderboard/i,
+    /p5[_-]?badge/i,
+    /p5[_-]?reward[_-]?store/i,
+  ];
+  for (const file of t06TestFiles) {
+    const filePath = path.join(repositoryRoot, file);
+    if (!exists(filePath)) continue;
+    const content = readFileSync(filePath, "utf8");
+    for (const pattern of t06ForbidPatterns) {
+      if (pattern.test(content)) {
+        errors.push(
+          `${file}: P5 behavior detected (matched ${pattern}); P5 is strictly forbidden by the adopted D00 and must not be invented in T06`,
+        );
+      }
+    }
+  }
+
   return errors;
 }
 
@@ -355,6 +439,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     );
     process.exitCode = 1;
   } else {
-    process.stdout.write("VOC-030-T04 mock inventory validation passed.\n");
+    process.stdout.write("VOC-030-T06 mock inventory validation passed.\n");
   }
 }
