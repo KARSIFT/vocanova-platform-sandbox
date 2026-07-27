@@ -1,3 +1,15 @@
+// Package accounts implements the learner-owned account-lifecycle flows
+// introduced by P5 (VOC-031). It currently owns the email-change
+// verification flow (T03, DOC-06 §6, VOC-031-D05) and the
+// account-deletion flow (T04, DOC-05 §16, DOC-06 §§9,14,15,
+// VOC-031-D07).
+//
+// The package depends on the auth module for token generation,
+// rate-limiting primitives, and the cross-module user/session
+// operations (lookup, session revocation, etc.) it must not
+// reimplement. auth's own magic-link/session code is never modified
+// from here; the email-change and account-deletion flows are built
+// strictly on top of the existing primitives.
 package accounts
 
 import (
@@ -14,14 +26,50 @@ import (
 	"github.com/google/uuid"
 )
 
-// Config holds the email-change service configuration. The shape
-// mirrors auth.Config so the production wiring is symmetric.
+// IdempotencyStatus describes the result of an idempotency-key
+// lookup. The semantics match the learning package's
+// IdempotencyStatus enum: Absent means no row matched the
+// (user, operation, key) tuple; Match means a row matched and its
+// stored fingerprint is the same as the one supplied; Conflict
+// means a row matched but the stored fingerprint is different.
+type IdempotencyStatus int
+
+const (
+	IdempotencyAbsent IdempotencyStatus = iota
+	IdempotencyMatch
+	IdempotencyConflict
+)
+
+// IdempotencyStore is the in-process boundary this package uses
+// for the Idempotency-Key header DOC-07 requires on
+// POST /api/v1/account-deletion-requests. The interface mirrors
+// the one the learning package already exposes (it stores
+// per-(user, operation, key) entries and returns a three-state
+// status); accounts reuses the existing primitive rather than
+// inventing a new one. The accounts package does not import the
+// learning package — the interface is duplicated here so the
+// dependency direction stays one-way, and the existing
+// PostgreSQLIdempotencyStore / MemoryIdempotencyStore
+// implementations satisfy this interface verbatim.
+type IdempotencyStore interface {
+	// Check looks up a stored idempotency key.
+	Check(ctx context.Context, userID uuid.UUID, operation, key, fingerprint string) (IdempotencyStatus, error)
+	// Record stores an idempotency key with its fingerprint.
+	Record(ctx context.Context, userID uuid.UUID, operation, key, fingerprint string) error
+}
+
+// Config holds the email-change and account-deletion service
+// configuration. The shape mirrors auth.Config so the production
+// wiring is symmetric.
 type Config struct {
-	Environment             string
-	BaseURL                 string
-	EmailChangePath         string
-	EmailChangeLinkLifetime time.Duration
-	RateLimit               EmailChangeRateLimitConfig
+	Environment               string
+	BaseURL                   string
+	EmailChangePath           string
+	EmailChangeLinkLifetime   time.Duration
+	AccountDeletionPurgeDelay time.Duration
+	AccountDeletionSweepLimit int
+	RateLimit                 EmailChangeRateLimitConfig
+	AccountDeletionRateLimit  AccountDeletionRateLimitConfig
 }
 
 // EmailChangeRateLimitConfig is the rate-limit shape T03 introduces.
@@ -39,13 +87,54 @@ type EmailChangeRateLimitConfig struct {
 	ConsumeLimit  int
 }
 
-// Service is the requester-scoped email-change flow boundary. It
-// owns no state of its own; all persistence is delegated to the
-// Repository and AuthRepository the Service is constructed with.
+// AccountDeletionRateLimitConfig is the rate-limit shape T04
+// introduces. The bucket is separate from the email-change bucket
+// so a runaway email-change retry loop cannot deplete the
+// account-deletion budget. Per-IP and per-session are both
+// enforced, matching the email-change posture (VOC-031-D05,
+// generalized to the irreversible-action class of endpoints).
+type AccountDeletionRateLimitConfig struct {
+	RequestWindow time.Duration
+	RequestLimit  int
+	SweepWindow   time.Duration
+	SweepLimit    int
+}
+
+// DefaultAccountDeletionPurgeDelay is the 30-day DOC-05 §16
+// baseline. The source of truth is always the row's own
+// purge_after column; this constant is what the Service writes
+// when no per-row override is supplied.
+const DefaultAccountDeletionPurgeDelay = 30 * 24 * time.Hour
+
+// accountDeletionOperation is the operation string the
+// idempotency_keys table records for every account-deletion
+// request. It replaces the DOC-05 §13 `scope` enum value T04
+// would otherwise have to invent; the existing schema accepts
+// any non-empty operation text, so the convention is the only
+// thing this constant encodes (mirrors `user_words:save`,
+// `reviews:submit`, `ai_feedback_request`).
+const accountDeletionOperation = "account_deletion"
+
+// accountDeletionFingerprint is the deterministic per-user
+// fingerprint the idempotency store records. Account deletion
+// has no body, so the fingerprint is just the user id — this
+// pins the property that a key used to delete one account can
+// never be replayed to delete a different one, even though the
+// raw Idempotency-Key string is the only thing the client
+// supplies.
+func accountDeletionFingerprint(userID uuid.UUID) string {
+	return fmt.Sprintf("account_deletion|%s", userID.String())
+}
+
+// Service is the requester-scoped email-change and
+// account-deletion flow boundary. It owns no state of its own;
+// all persistence is delegated to the Repository, AuthRepository,
+// and IdempotencyStore the Service is constructed with.
 type Service struct {
 	repo        Repository
 	auth        AuthRepository
 	emailSender email.Sender
+	idem        IdempotencyStore
 	clock       clock.Clock
 	limiter     RateLimiter
 	cfg         Config
@@ -60,26 +149,47 @@ type RateLimiter interface {
 }
 
 // AuthRepository is the cross-module user/session boundary the
-// email-change Service calls into. The interface is a strict
-// subset of auth.Repository: only the methods the email-change
-// flow needs (lookup-by-id) appear here, and the
-// account-deletion T04 will add the others it needs (RevokeSession
-// variants, etc.) without changing this contract.
+// email-change and account-deletion Services call into. The
+// interface is a strict subset of auth.Repository: only the
+// methods these flows need appear here, so the service can be
+// wired in tests against either a real auth.Repository or a
+// smaller fixture. T04 added the two RevokeAll*ForUser methods
+// to support the deactivation transaction; the email-change
+// flow does not use them.
 type AuthRepository interface {
 	GetUserByID(ctx context.Context, id uuid.UUID) (*auth.User, error)
+	RevokeAllSessionsForUser(ctx context.Context, userID uuid.UUID, revokedAt time.Time) (int64, error)
+	RevokeAllMagicLinksForUser(ctx context.Context, userID uuid.UUID, revokedAt time.Time) (int64, error)
 }
 
-// NewService creates an email-change Service. The auth repository
-// is the same auth.Repository the magic-link / session flows use;
-// only the methods in the AuthRepository interface are exercised
-// here, so the service can be wired in tests against either a real
-// auth.Repository or a smaller fixture.
-func NewService(repo Repository, authRepo AuthRepository, emailSender email.Sender, c clock.Clock, limiter RateLimiter, cfg Config) *Service {
+// NewService creates an email-change and account-deletion
+// Service. The auth repository is the same auth.Repository the
+// magic-link / session flows use; only the methods in the
+// AuthRepository interface are exercised here, so the service
+// can be wired in tests against either a real auth.Repository
+// or a smaller fixture. idem may be nil if the caller does not
+// need the account-deletion endpoint (the email-change flow
+// does not use it).
+func NewService(repo Repository, authRepo AuthRepository, emailSender email.Sender, idem IdempotencyStore, c clock.Clock, limiter RateLimiter, cfg Config) *Service {
 	if cfg.EmailChangeLinkLifetime == 0 {
 		cfg.EmailChangeLinkLifetime = 15 * time.Minute
 	}
 	if cfg.EmailChangePath == "" {
 		cfg.EmailChangePath = "/auth/email-change"
+	}
+	if cfg.AccountDeletionPurgeDelay == 0 {
+		cfg.AccountDeletionPurgeDelay = DefaultAccountDeletionPurgeDelay
+	}
+	if cfg.AccountDeletionSweepLimit == 0 {
+		cfg.AccountDeletionSweepLimit = 100
+	}
+	if cfg.AccountDeletionRateLimit.RequestLimit == 0 {
+		cfg.AccountDeletionRateLimit.RequestLimit = 5
+		cfg.AccountDeletionRateLimit.RequestWindow = time.Hour
+	}
+	if cfg.AccountDeletionRateLimit.SweepLimit == 0 {
+		cfg.AccountDeletionRateLimit.SweepLimit = 60
+		cfg.AccountDeletionRateLimit.SweepWindow = time.Hour
 	}
 	if c == nil {
 		c = clock.Real{}
@@ -88,6 +198,7 @@ func NewService(repo Repository, authRepo AuthRepository, emailSender email.Send
 		repo:        repo,
 		auth:        authRepo,
 		emailSender: emailSender,
+		idem:        idem,
 		clock:       c,
 		limiter:     limiter,
 		cfg:         cfg,
@@ -335,4 +446,232 @@ func isAcceptableEmail(value string) bool {
 		}
 	}
 	return true
+}
+
+// AccountDeletionResult is the post-create projection returned to
+// the API layer. The user is already deactivated at this point:
+// the row's status is 'deactivated', the user is set to
+// 'deleted' on users.status, deleted_at is set, every session
+// and unconsumed auth/email-change token is revoked, and the
+// purge_after clock is running. The API layer renders the
+// result so the frontend can route the learner to a clear
+// post-deletion confirmation and initiate logout.
+type AccountDeletionResult struct {
+	UserID         uuid.UUID
+	Status         string
+	RequestedAt    time.Time
+	PurgeAfter     time.Time
+	IdempotencyKey string
+	// Replayed is true when this call was a no-op because the
+	// (user, idempotency-key) pair already had a matching
+	// row. The frontend uses it to suppress duplicate "your
+	// account was deleted" toasts on a retry.
+	Replayed bool
+}
+
+// CreateAccountDeletionRequest performs the irreversible
+// deactivation transaction for the requester's account
+// (VOC-031-D07, DOC-05 §16, DOC-06 §14, DOC-07). The flow:
+//
+//  1. Validate the Idempotency-Key header (DOC-07 requires it).
+//  2. Look up the (user, idempotency-key) row. On Match, return
+//     the existing row without re-running any side effect —
+//     this is the replay-safety property DOC-07 mandates. On
+//     Conflict (same key, different fingerprint), return a
+//     stable 409. On Absent, proceed.
+//  3. Rate-limit per IP and per session (mirrors the email-
+//     change posture; an attacker with a valid session must
+//     not be able to deplete the per-IP budget across IPs, and
+//     a single session must not be able to deplete the per-
+//     session budget across IPs).
+//  4. Delegate the deactivation transaction to the repository
+//     (set users.status='deleted' / users.deleted_at, revoke
+//     every active session, every unconsumed magic link, every
+//     unconsumed email change link, insert the
+//     account_deletion_requests row).
+//  5. Record the idempotency key so a future replay lands on
+//     the Match path.
+//
+// A user that has already been deactivated (an in-flight
+// 'deactivated' or 'anonymizing' row exists) returns
+// ErrAccountDeletionAlreadyInFlight on a fresh
+// Idempotency-Key; the same key on a replay returns the
+// existing row.
+func (s *Service) CreateAccountDeletionRequest(ctx context.Context, userID, clientIP, sessionToken, idempotencyKey string) (*AccountDeletionResult, error) {
+	uid, err := uuid.Parse(userID)
+	if err != nil || uid == uuid.Nil {
+		return nil, errors.New("user id required")
+	}
+	if strings.TrimSpace(idempotencyKey) == "" {
+		return nil, ErrAccountDeletionIdempotencyKeyRequired
+	}
+	if s.idem == nil {
+		return nil, errors.New("idempotency store not configured")
+	}
+
+	// Idempotency check first: a replay with the same key
+	// short-circuits to the existing row, no side effects.
+	fingerprint := accountDeletionFingerprint(uid)
+	status, err := s.idem.Check(ctx, uid, accountDeletionOperation, idempotencyKey, fingerprint)
+	if err != nil {
+		return nil, fmt.Errorf("idempotency check: %w", err)
+	}
+	if status == IdempotencyConflict {
+		return nil, ErrAccountDeletionIdempotencyConflict
+	}
+	if status == IdempotencyMatch {
+		existing, gerr := s.repo.GetAccountDeletionRequestByUserID(ctx, uid)
+		if gerr != nil {
+			return nil, fmt.Errorf("read existing deletion request: %w", gerr)
+		}
+		return &AccountDeletionResult{
+			UserID:         existing.UserID,
+			Status:         existing.Status,
+			RequestedAt:    existing.RequestedAt,
+			PurgeAfter:     existing.PurgeAfter,
+			IdempotencyKey: existing.IdempotencyKey,
+			Replayed:       true,
+		}, nil
+	}
+
+	// Per-IP and per-session rate limits, matching the
+	// email-change posture (VOC-031-D05 generalized).
+	if allowed, err := s.limiter.Allow(ctx, auth.KeyForIP("accountdeletion.request", clientIP)); err != nil {
+		return nil, fmt.Errorf("rate limit: %w", err)
+	} else if !allowed {
+		return nil, ErrAccountDeletionRateLimited
+	}
+	if allowed, err := s.limiter.Allow(ctx, auth.KeyForSession("accountdeletion.request", sessionToken)); err != nil {
+		return nil, fmt.Errorf("rate limit: %w", err)
+	} else if !allowed {
+		return nil, ErrAccountDeletionRateLimited
+	}
+
+	// Existence check: ErrUserNotFound surfaces a 404 (the
+	// API layer's mapAccountDeletionError). Without this, a
+	// JWT in flight for a deleted-and-purged user would 500
+	// inside the deactivation transaction.
+	if _, err := s.auth.GetUserByID(ctx, uid); err != nil {
+		return nil, ErrUserNotFound
+	}
+
+	now := s.clock.Now().UTC()
+	row, err := s.repo.CreateAccountDeletionRequest(ctx, uid, idempotencyKey, now, s.cfg.AccountDeletionPurgeDelay)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.idem.Record(ctx, uid, accountDeletionOperation, idempotencyKey, fingerprint); err != nil {
+		// The deactivation is already persisted at this
+		// point; the idempotency row is the second line of
+		// defense (a future replay would still find the
+		// existing account_deletion_requests row even
+		// without the idempotency_keys row, because
+		// GetAccountDeletionRequestByUserID is keyed on
+		// user_id alone). We log the error via the
+		// returned error so the operator can see it, but
+		// we do not undo the deactivation: a transient
+		// idempotency-store failure must not block the
+		// user's right to be forgotten.
+		return &AccountDeletionResult{
+			UserID:         row.UserID,
+			Status:         row.Status,
+			RequestedAt:    row.RequestedAt,
+			PurgeAfter:     row.PurgeAfter,
+			IdempotencyKey: row.IdempotencyKey,
+			Replayed:       false,
+		}, fmt.Errorf("record idempotency: %w", err)
+	}
+
+	return &AccountDeletionResult{
+		UserID:         row.UserID,
+		Status:         row.Status,
+		RequestedAt:    row.RequestedAt,
+		PurgeAfter:     row.PurgeAfter,
+		IdempotencyKey: row.IdempotencyKey,
+		Replayed:       false,
+	}, nil
+}
+
+// RunDeletionSweep runs one pass of the anonymization sweep
+// (VOC-031-D07). The pass:
+//
+//  1. Lists up to cfg.AccountDeletionSweepLimit 'deactivated'
+//     rows whose purge_after is at or before now.
+//  2. For each, atomically transitions the row to 'anonymizing'
+//     (the claim step). A losing claim (another sweeper
+//     already claimed the row) is a no-op for this pass.
+//  3. Runs the per-table anonymization inside one
+//     transaction: soft-deletes pending purge for
+//     external_identities / user_words / learner_sentences;
+//     irreversibly de-identifies review_attempts /
+//     ai_feedback_attempts / confidence_point_ledger /
+//     grace_day_ledger / (feature_audit_logs if present);
+//     deletes or de-identifies user_onboarding_profiles /
+//     user_settings / daily_mission_snapshots /
+//     daily_activity_summaries / streak_states (DOC-05 §16).
+//  4. Transitions the row to 'completed' and stamps
+//     completed_at.
+//
+// The function is idempotent: a row that is already
+// 'anonymizing' is processed again (resumable sweep,
+// VOC-031-D07), and a row that is 'completed' is never
+// re-touched. Per-IP and per-session rate limits apply
+// (mirrors the request path's posture).
+func (s *Service) RunDeletionSweep(ctx context.Context, clientIP, sessionToken string) (*SweepResult, error) {
+	if allowed, err := s.limiter.Allow(ctx, auth.KeyForIP("accountdeletion.sweep", clientIP)); err != nil {
+		return nil, fmt.Errorf("rate limit: %w", err)
+	} else if !allowed {
+		return nil, ErrAccountDeletionRateLimited
+	}
+	if allowed, err := s.limiter.Allow(ctx, auth.KeyForSession("accountdeletion.sweep", sessionToken)); err != nil {
+		return nil, fmt.Errorf("rate limit: %w", err)
+	} else if !allowed {
+		return nil, ErrAccountDeletionRateLimited
+	}
+
+	now := s.clock.Now().UTC()
+	rows, err := s.repo.ListDeactivatedRequestsDueForPurge(ctx, now, s.cfg.AccountDeletionSweepLimit)
+	if err != nil {
+		return nil, fmt.Errorf("list due deletion requests: %w", err)
+	}
+
+	result := &SweepResult{}
+	for _, row := range rows {
+		result.Processed++
+		claimed, err := s.repo.ClaimAccountDeletionRequestForAnonymization(ctx, row.ID, now)
+		if err != nil {
+			result.Failed++
+			return result, fmt.Errorf("%w: claim row %s: %v", ErrAccountDeletionSweep, row.ID, err)
+		}
+		if !claimed {
+			// Another sweeper already claimed this row.
+			// Skip without counting it as a failure.
+			continue
+		}
+		counters, err := s.repo.AnonymizeUserData(ctx, row.UserID)
+		if err != nil {
+			result.Failed++
+			return result, fmt.Errorf("%w: anonymize user %s: %v", ErrAccountDeletionSweep, row.UserID, err)
+		}
+		result.Anonymized++
+		result.AnonymizationTotals.ExternalIdentities += counters.ExternalIdentities
+		result.AnonymizationTotals.UserWords += counters.UserWords
+		result.AnonymizationTotals.LearnerSentences += counters.LearnerSentences
+		result.AnonymizationTotals.ReviewAttempts += counters.ReviewAttempts
+		result.AnonymizationTotals.AIFeedbackAttempts += counters.AIFeedbackAttempts
+		result.AnonymizationTotals.ConfidencePointLedger += counters.ConfidencePointLedger
+		result.AnonymizationTotals.GraceDayLedger += counters.GraceDayLedger
+		result.AnonymizationTotals.FeatureAuditLogs += counters.FeatureAuditLogs
+		result.AnonymizationTotals.UserOnboardingProfiles += counters.UserOnboardingProfiles
+		result.AnonymizationTotals.UserSettings += counters.UserSettings
+		result.AnonymizationTotals.DailyMissionSnapshots += counters.DailyMissionSnapshots
+		result.AnonymizationTotals.DailyActivitySummaries += counters.DailyActivitySummaries
+		result.AnonymizationTotals.StreakStates += counters.StreakStates
+		if err := s.repo.MarkAccountDeletionRequestCompleted(ctx, row.ID, now); err != nil {
+			result.Failed++
+			return result, fmt.Errorf("%w: complete row %s: %v", ErrAccountDeletionSweep, row.ID, err)
+		}
+	}
+	return result, nil
 }

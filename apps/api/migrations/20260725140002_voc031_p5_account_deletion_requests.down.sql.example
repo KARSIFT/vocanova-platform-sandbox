@@ -1,0 +1,8 @@
+-- atlas:txmode transaction
+-- VOC-031-T04 (companion to 20260725140002): down-migration for
+-- account_deletion_requests. Drops the new table and its indexes; no other
+-- table is touched. The companion `.sql` is the source of truth; this
+-- file mirrors it for the rollback rehearsal (T11).
+DROP INDEX IF EXISTS account_deletion_requests_user_id_idx;
+DROP INDEX IF EXISTS account_deletion_requests_status_purge_after_idx;
+DROP TABLE IF EXISTS account_deletion_requests;

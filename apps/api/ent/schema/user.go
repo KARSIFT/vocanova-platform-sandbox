@@ -40,6 +40,7 @@ func (User) Edges() []ent.Edge {
 		edge.To("learner_sentences", LearnerSentence.Type),
 		edge.To("user_settings", UserSettings.Type),
 		edge.To("user_onboarding_profile", UserOnboardingProfile.Type),
+		edge.To("account_deletion_requests", AccountDeletionRequest.Type),
 		edge.To("daily_mission_snapshots", DailyMissionSnapshot.Type),
 		edge.To("daily_activity_summaries", DailyActivitySummary.Type),
 		edge.To("confidence_point_ledger", ConfidencePointLedger.Type),

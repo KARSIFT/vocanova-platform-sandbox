@@ -21,10 +21,13 @@ func testNow() time.Time {
 }
 
 // authRepoStub is a tiny in-memory AuthRepository the
-// service-level tests use. The accounts package only calls
-// GetUserByID, so the stub is a one-method seam.
+// service-level tests use. It implements the four methods the
+// accounts.Service calls: GetUserByID (T03, T04), and the two
+// RevokeAll*ForUser methods T04 needs.
 type authRepoStub struct {
-	users map[uuid.UUID]*auth.User
+	users             map[uuid.UUID]*auth.User
+	revokedSessions   int64
+	revokedMagicLinks int64
 }
 
 func newAuthRepoStub() *authRepoStub {
@@ -40,13 +43,28 @@ func (a *authRepoStub) GetUserByID(ctx context.Context, id uuid.UUID) (*auth.Use
 	return &c, nil
 }
 
+func (a *authRepoStub) RevokeAllSessionsForUser(ctx context.Context, userID uuid.UUID, revokedAt time.Time) (int64, error) {
+	a.revokedSessions++
+	return 0, nil
+}
+
+func (a *authRepoStub) RevokeAllMagicLinksForUser(ctx context.Context, userID uuid.UUID, revokedAt time.Time) (int64, error) {
+	a.revokedMagicLinks++
+	return 0, nil
+}
+
 func (a *authRepoStub) setUser(u *auth.User) {
+	a.users[u.ID] = u
+}
+
+func (a *authRepoStub) setUserDeleted(u *auth.User) {
 	a.users[u.ID] = u
 }
 
 // newService wires a Service backed by a fresh in-memory Repository
 // and the auth-repo stub. emailSender is a *email.Fake so the test
-// can assert on dispatched messages.
+// can assert on dispatched messages. idem is a fresh in-memory
+// idempotency store.
 func newService(t *testing.T) (*Service, *MemoryRepository, *authRepoStub, *email.Fake, *clock.Fixed) {
 	t.Helper()
 	now := testNow()
@@ -55,14 +73,21 @@ func newService(t *testing.T) (*Service, *MemoryRepository, *authRepoStub, *emai
 	authRepo := newAuthRepoStub()
 	fake := &email.Fake{}
 	limiter := auth.NewFixedWindowRateLimiter(c, time.Hour, 100)
-	svc := NewService(repo, authRepo, fake, c, limiter, Config{
-		Environment:             "test",
-		BaseURL:                 "https://test.example.com",
-		EmailChangePath:         "/auth/email-change",
-		EmailChangeLinkLifetime: 15 * time.Minute,
+	idem := NewMemoryIdempotencyStore()
+	svc := NewService(repo, authRepo, fake, idem, c, limiter, Config{
+		Environment:               "test",
+		BaseURL:                   "https://test.example.com",
+		EmailChangePath:           "/auth/email-change",
+		EmailChangeLinkLifetime:   15 * time.Minute,
+		AccountDeletionPurgeDelay: 30 * 24 * time.Hour,
+		AccountDeletionSweepLimit: 100,
 		RateLimit: EmailChangeRateLimitConfig{
 			RequestWindow: time.Hour, RequestLimit: 100,
 			ConsumeWindow: time.Hour, ConsumeLimit: 100,
+		},
+		AccountDeletionRateLimit: AccountDeletionRateLimitConfig{
+			RequestWindow: time.Hour, RequestLimit: 100,
+			SweepWindow: time.Hour, SweepLimit: 100,
 		},
 	})
 	return svc, repo, authRepo, fake, c
@@ -187,7 +212,8 @@ func TestRequestEmailChangeLinkRateLimitedByIP(t *testing.T) {
 	uid := uuid.New()
 	authRepo.setUser(&auth.User{ID: uid, Email: "old@example.com", Status: "active"})
 	limiter := auth.NewFixedWindowRateLimiter(c, time.Hour, 1)
-	svc := NewService(repo, authRepo, &email.Fake{}, c, limiter, Config{
+	idem := NewMemoryIdempotencyStore()
+	svc := NewService(repo, authRepo, &email.Fake{}, idem, c, limiter, Config{
 		Environment: "test", BaseURL: "https://test.example.com",
 		EmailChangePath: "/auth/email-change", EmailChangeLinkLifetime: 15 * time.Minute,
 	})
@@ -210,7 +236,8 @@ func TestRequestEmailChangeLinkRateLimitedBySession(t *testing.T) {
 	uid := uuid.New()
 	authRepo.setUser(&auth.User{ID: uid, Email: "old@example.com", Status: "active"})
 	limiter := auth.NewFixedWindowRateLimiter(c, time.Hour, 1)
-	svc := NewService(repo, authRepo, &email.Fake{}, c, limiter, Config{
+	idem := NewMemoryIdempotencyStore()
+	svc := NewService(repo, authRepo, &email.Fake{}, idem, c, limiter, Config{
 		Environment: "test", BaseURL: "https://test.example.com",
 		EmailChangePath: "/auth/email-change", EmailChangeLinkLifetime: 15 * time.Minute,
 	})
@@ -362,7 +389,7 @@ func TestConsumeEmailChangeLinkRejectsWrongEnvironment(t *testing.T) {
 	otherRepo := NewMemoryRepository()
 	otherAuth := newAuthRepoStub()
 	otherAuth.setUser(&auth.User{ID: uid, Email: "old@example.com", Status: "active"})
-	otherSvc := NewService(otherRepo, otherAuth, &email.Fake{}, &clock.Fixed{T: testNow()},
+	otherSvc := NewService(otherRepo, otherAuth, &email.Fake{}, NewMemoryIdempotencyStore(), &clock.Fixed{T: testNow()},
 		auth.NewFixedWindowRateLimiter(&clock.Fixed{T: testNow()}, time.Hour, 100),
 		Config{Environment: "production", BaseURL: "https://test.example.com", EmailChangePath: "/auth/email-change", EmailChangeLinkLifetime: 15 * time.Minute},
 	)
@@ -400,8 +427,8 @@ func TestConsumeEmailChangeLinkDuplicateEmailRace(t *testing.T) {
 	fake := &email.Fake{}
 	limiter := auth.NewFixedWindowRateLimiter(c, time.Hour, 100)
 	cfg := Config{Environment: "test", BaseURL: "https://test.example.com", EmailChangePath: "/auth/email-change", EmailChangeLinkLifetime: 15 * time.Minute}
-	svcA := NewService(repoA, authA, fake, c, limiter, cfg)
-	svcB := NewService(repoB, authB, fake, c, limiter, cfg)
+	svcA := NewService(repoA, authA, fake, NewMemoryIdempotencyStore(), c, limiter, cfg)
+	svcB := NewService(repoB, authB, fake, NewMemoryIdempotencyStore(), c, limiter, cfg)
 
 	// Both A and B request the same new email.
 	linkA, err := svcA.RequestEmailChangeLink(context.Background(), uidA, "1.2.3.4", "sess-token", "shared@example.com")
@@ -461,7 +488,8 @@ func TestConsumeEmailChangeLinkRateLimitedByIP(t *testing.T) {
 	uid := uuid.New()
 	authRepo.setUser(&auth.User{ID: uid, Email: "old@example.com", Status: "active"})
 	limiter := auth.NewFixedWindowRateLimiter(c, time.Hour, 1)
-	svc := NewService(repo, authRepo, &email.Fake{}, c, limiter, Config{
+	idem := NewMemoryIdempotencyStore()
+	svc := NewService(repo, authRepo, &email.Fake{}, idem, c, limiter, Config{
 		Environment: "test", BaseURL: "https://test.example.com",
 		EmailChangePath: "/auth/email-change", EmailChangeLinkLifetime: 15 * time.Minute,
 	})
@@ -484,7 +512,8 @@ func TestConsumeEmailChangeLinkRateLimitedBySession(t *testing.T) {
 	uid := uuid.New()
 	authRepo.setUser(&auth.User{ID: uid, Email: "old@example.com", Status: "active"})
 	limiter := auth.NewFixedWindowRateLimiter(c, time.Hour, 1)
-	svc := NewService(repo, authRepo, &email.Fake{}, c, limiter, Config{
+	idem := NewMemoryIdempotencyStore()
+	svc := NewService(repo, authRepo, &email.Fake{}, idem, c, limiter, Config{
 		Environment: "test", BaseURL: "https://test.example.com",
 		EmailChangePath: "/auth/email-change", EmailChangeLinkLifetime: 15 * time.Minute,
 	})

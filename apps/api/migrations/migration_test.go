@@ -403,3 +403,74 @@ func TestVOC031P5EmailChangeLinksMigrationCarriesDatabaseInvariants(t *testing.T
 		t.Errorf("email_change_links migration contains forbidden ON DELETE CASCADE")
 	}
 }
+
+// TestVOC031P5AccountDeletionRequestsMigrationCarriesDatabaseInvariants
+// covers the migration invariants for VOC-031-T04. The
+// migration creates the account_deletion_requests table per
+// DOC-05 §16 / DOC-06 §14 / VOC-031-D07: one row per user
+// (user_id UNIQUE), a 30-day-default purge_after the
+// service-layer code reads, a (status, purge_after) partial
+// index that makes the sweep's "find due rows" an index
+// scan, and a check constraint pair that ensures
+// status='completed' is paired with completed_at IS NOT NULL
+// (and the converse). No existing A1–P4 table, column, or
+// constraint is altered; no ON DELETE CASCADE is introduced
+// (the per-table disposition runs in code, not as a database
+// cascade).
+func TestVOC031P5AccountDeletionRequestsMigrationCarriesDatabaseInvariants(t *testing.T) {
+	sql, err := os.ReadFile("20260725140002_voc031_p5_account_deletion_requests.sql")
+	if err != nil {
+		t.Fatalf("read voc-031 p5 account_deletion_requests migration: %v", err)
+	}
+	text := string(sql)
+	required := []string{
+		"CREATE TABLE account_deletion_requests",
+		"user_id uuid NOT NULL UNIQUE REFERENCES users(id)",
+		"ON DELETE RESTRICT",
+		"status text NOT NULL DEFAULT 'deactivated'",
+		"status IN ('deactivated', 'anonymizing', 'completed')",
+		"requested_at timestamptz NOT NULL",
+		"purge_after timestamptz NOT NULL",
+		"completed_at timestamptz",
+		"idempotency_key text NOT NULL",
+		"idempotency_key <> ''",
+		"purge_after > requested_at",
+		"purge_after <= requested_at + interval '365 days'",
+		"status = 'completed' OR completed_at IS NULL",
+		"status <> 'completed' OR completed_at IS NOT NULL",
+		"ON account_deletion_requests (status, purge_after)",
+		"WHERE status = 'deactivated'",
+		"ON account_deletion_requests (user_id)",
+	}
+	for _, invariant := range required {
+		if !strings.Contains(text, invariant) {
+			t.Errorf("account_deletion_requests migration missing invariant %q", invariant)
+		}
+	}
+	for _, forbidden := range []string{
+		"session_token", "magic_link_token", "access_token", "refresh_token",
+		"oauth_state_token", "email_change_link_token", "account_deletion_token",
+	} {
+		if strings.Contains(text, forbidden) {
+			t.Errorf("account_deletion_requests migration contains forbidden raw bearer column %q", forbidden)
+		}
+	}
+	if strings.Contains(text, "ON DELETE CASCADE") {
+		// The header comment is allowed to mention the
+		// phrase "ON DELETE CASCADE" (it explicitly
+		// states the migration does NOT introduce it).
+		// Detect the actual SQL pattern: a space (or
+		// start-of-line) before "ON DELETE CASCADE" is
+		// what we forbid.
+		lines := strings.Split(text, "\n")
+		for i, line := range lines {
+			trimmed := strings.TrimSpace(line)
+			if strings.HasPrefix(trimmed, "--") {
+				continue
+			}
+			if strings.Contains(line, "ON DELETE CASCADE") {
+				t.Errorf("account_deletion_requests migration contains forbidden ON DELETE CASCADE at line %d: %q", i+1, line)
+			}
+		}
+	}
+}

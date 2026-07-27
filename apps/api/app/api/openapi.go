@@ -97,7 +97,8 @@ func NewContractAPI() huma.API {
 	// missing dependency.
 	accountsRepo := accounts.NewMemoryRepository()
 	accountsLimiter := auth.NewFixedWindowRateLimiter(clock.Real{}, time.Minute, 10)
-	accountsSvc := accounts.NewService(accountsRepo, authRepo, &email.Fake{}, clock.Real{}, accountsLimiter, accounts.Config{
+	accountsIdem := accounts.NewMemoryIdempotencyStore()
+	accountsSvc := accounts.NewService(accountsRepo, authRepo, &email.Fake{}, accountsIdem, clock.Real{}, accountsLimiter, accounts.Config{
 		Environment: "openapi", BaseURL: "https://example.com",
 		EmailChangePath: "/auth/email-change", EmailChangeLinkLifetime: 15 * time.Minute,
 		RateLimit: accounts.EmailChangeRateLimitConfig{
@@ -106,6 +107,14 @@ func NewContractAPI() huma.API {
 		},
 	})
 	RegisterEmailChangeLinks(contractAPI, accountsSvc, svc)
+
+	// VOC-031-T04: register the account-deletion route on the
+	// contract. The accounts service is the same one the
+	// T03 email-change route uses; the in-memory idempotency
+	// store is the same instance. The route is requester-
+	// scoped, requires an authenticated session, double-
+	// submit CSRF, and an Idempotency-Key header (DOC-07).
+	RegisterAccountDeletionRequests(contractAPI, accountsSvc, svc)
 
 	// Register content routes for OpenAPI generation using empty in-memory repos.
 	contentSvc := content.NewService(

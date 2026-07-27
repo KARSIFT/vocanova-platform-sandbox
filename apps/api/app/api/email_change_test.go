@@ -64,7 +64,8 @@ func testEmailChangeAPI(t *testing.T) (huma.API, *auth.Service, *accounts.Servic
 	accountsRepo := accounts.NewMemoryRepository()
 	fake := &email.Fake{}
 	accountsLimiter := auth.NewFixedWindowRateLimiter(c, time.Hour, 100)
-	accountsSvc := accounts.NewService(accountsRepo, authRepo, fake, c, accountsLimiter, accounts.Config{
+	accountsIdem := accounts.NewMemoryIdempotencyStore()
+	accountsSvc := accounts.NewService(accountsRepo, authRepo, fake, accountsIdem, c, accountsLimiter, accounts.Config{
 		Environment: "test", BaseURL: "https://test.example.com",
 		EmailChangePath: "/auth/email-change", EmailChangeLinkLifetime: 15 * time.Minute,
 		RateLimit: accounts.EmailChangeRateLimitConfig{

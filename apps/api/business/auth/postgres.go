@@ -206,6 +206,25 @@ func (r *PostgreSQLRepository) RevokeMagicLink(ctx context.Context, id uuid.UUID
 	return nil
 }
 
+// RevokeAllMagicLinksForUser revokes every unconsumed magic_links
+// row for userID in one statement. Used by the account-deletion
+// path (VOC-031-T04) so no in-flight sign-in link can be consumed
+// after the account is deactivated.
+func (r *PostgreSQLRepository) RevokeAllMagicLinksForUser(ctx context.Context, userID uuid.UUID, revokedAt time.Time) (int64, error) {
+	res, err := r.db.ExecContext(ctx,
+		`UPDATE magic_links SET revoked_at = $1
+		 WHERE user_id = $2 AND consumed_at IS NULL AND revoked_at IS NULL`,
+		revokedAt, userID)
+	if err != nil {
+		return 0, fmt.Errorf("revoke all magic links: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("revoke all magic links rows: %w", err)
+	}
+	return n, nil
+}
+
 func (r *PostgreSQLRepository) AttachMagicLinkUser(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
 	_, err := r.db.ExecContext(ctx,
 		`UPDATE magic_links SET user_id = $1 WHERE id = $2`, userID, id)

@@ -75,14 +75,98 @@ var (
 	// invalid or empty new_email values before any token work
 	// runs.
 	ErrEmailChangeInvalidEmail = errors.New("invalid email address")
+	// ErrAccountDeletionIdempotencyKeyRequired is returned when
+	// the request is missing the Idempotency-Key header that
+	// DOC-07 makes required for this endpoint. Stable 400.
+	ErrAccountDeletionIdempotencyKeyRequired = errors.New("idempotency key required")
+	// ErrAccountDeletionIdempotencyConflict is returned when
+	// the same Idempotency-Key was previously used for a
+	// different request fingerprint. Stable 409.
+	ErrAccountDeletionIdempotencyConflict = errors.New("idempotency key conflict")
+	// ErrAccountDeletionAlreadyInFlight is returned when a
+	// user already has a non-completed account_deletion_requests
+	// row, so a second deactivation would race against the
+	// first. Stable 409. The replay with the same
+	// Idempotency-Key is still served (returning the original
+	// row) — this error is only emitted when a fresh key
+	// collides with an in-flight deletion.
+	ErrAccountDeletionAlreadyInFlight = errors.New("account deletion already in flight")
+	// ErrAccountDeletionRateLimited is returned when the IP or
+	// session rate-limiter rejects the request.
+	ErrAccountDeletionRateLimited = errors.New("account deletion rate limited")
+	// ErrAccountDeletionSweep is the parent error wrapping any
+	// per-table failure during the anonymization sweep. The
+	// sweep is designed to be resumable: a wrapped error
+	// indicates a row that needs to be retried, and the sweep
+	// leaves the row in 'anonymizing' so the next call can pick
+	// it up. The cause is preserved in the chain.
+	ErrAccountDeletionSweep = errors.New("account deletion sweep failed")
 )
 
-// Repository is the persistence boundary for the email-change flow.
-// It owns only the email_change_links table; user and session
-// operations are delegated to the AuthRepository the Service is
-// constructed with (mirrors the seed/settings split in the users
-// module: the local Repository never holds a *sql.Tx and is the
-// only thing the service calls to mutate EmailChangeLink rows).
+// AccountDeletionRequest is the per-user "the learner requested
+// account deletion" record (DOC-05 §16, DOC-06 §14,
+// VOC-031-D07). The lifecycle is three-valued and strictly
+// ordered: 'deactivated' (the user is deactivated and the
+// purge_after clock is running), 'anonymizing' (the sweep
+// claimed the row and is performing the per-table disposition),
+// 'completed' (every per-table disposition has run).
+type AccountDeletionRequest struct {
+	ID             uuid.UUID
+	UserID         uuid.UUID
+	Status         string
+	RequestedAt    time.Time
+	PurgeAfter     time.Time
+	CompletedAt    *time.Time
+	IdempotencyKey string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+// Valid reports whether the request can still be processed by
+// the sweep (i.e. its purge_after has passed and it is still in
+// 'deactivated' status).
+func (r AccountDeletionRequest) EligibleForPurge(now time.Time) bool {
+	return r.Status == "deactivated" && !now.Before(r.PurgeAfter)
+}
+
+// AnonymizationCounters is the per-table count of rows the
+// anonymization sweep mutated. Returned to the API layer for
+// observability and to support the T04 acceptance evidence
+// (a "documented per-table count" claim requires a real
+// count, not an assertion).
+type AnonymizationCounters struct {
+	ExternalIdentities     int64
+	UserWords              int64
+	LearnerSentences       int64
+	ReviewAttempts         int64
+	AIFeedbackAttempts     int64
+	ConfidencePointLedger  int64
+	GraceDayLedger         int64
+	FeatureAuditLogs       int64
+	UserOnboardingProfiles int64
+	UserSettings           int64
+	DailyMissionSnapshots  int64
+	DailyActivitySummaries int64
+	StreakStates           int64
+}
+
+// SweepResult is the aggregate result of one sweep pass. The
+// API/observability layer can render this directly; the per-row
+// state is captured in the AccountDeletionRequest status
+// transitions.
+type SweepResult struct {
+	Processed           int
+	Anonymized          int
+	Failed              int
+	AnonymizationTotals AnonymizationCounters
+}
+
+// Repository is the persistence boundary for the email-change
+// flow and the account-deletion flow. It owns the
+// email_change_links and account_deletion_requests tables; the
+// user, session, and cross-table operations are delegated to the
+// AuthRepository and the cross-module Repository methods the
+// Service is constructed with.
 type Repository interface {
 	// CreateEmailChangeLink inserts one row and returns the
 	// projection. The token hash, expiry, and environment
@@ -109,4 +193,51 @@ type Repository interface {
 	// (unique_violation) on the email index into
 	// ErrEmailAlreadyRegistered rather than a 500.
 	UpdateUserEmail(ctx context.Context, userID uuid.UUID, newEmail string, now time.Time) error
+
+	// CreateAccountDeletionRequest performs the entire
+	// deactivation transaction in one call: marks the user
+	// deleted, revokes every active session, every unconsumed
+	// magic link, and every unconsumed email change link,
+	// then inserts the account_deletion_requests row in
+	// 'deactivated' state with purge_after = requested_at +
+	// 30 days. The (user_id) UNIQUE constraint on
+	// account_deletion_requests means a second deactivation
+	// for the same user surfaces a SQLSTATE 23505, which the
+	// repository translates to
+	// ErrAccountDeletionAlreadyInFlight (stable 409, never a
+	// 500). Returns the persisted row.
+	CreateAccountDeletionRequest(ctx context.Context, userID uuid.UUID, idempotencyKey string, now time.Time, purgeDelay time.Duration) (*AccountDeletionRequest, error)
+	// GetAccountDeletionRequestByUserID returns the current
+	// row for the user, or an error if none exists. Used to
+	// (a) re-validate a replayed Idempotency-Key and (b) feed
+	// the sweep's claim-step.
+	GetAccountDeletionRequestByUserID(ctx context.Context, userID uuid.UUID) (*AccountDeletionRequest, error)
+	// ListDeactivatedRequestsDueForPurge returns up to limit
+	// rows whose status is 'deactivated' and whose purge_after
+	// is at or before now. The (status, purge_after) partial
+	// index makes this an index scan. Used by the sweep.
+	ListDeactivatedRequestsDueForPurge(ctx context.Context, now time.Time, limit int) ([]AccountDeletionRequest, error)
+	// ClaimAccountDeletionRequestForAnonymization atomically
+	// transitions a row from 'deactivated' to 'anonymizing'
+	// and returns true when the transition succeeded (this
+	// caller now owns the row). Returns false when another
+	// sweeper already claimed it; the caller should skip the
+	// row.
+	ClaimAccountDeletionRequestForAnonymization(ctx context.Context, id uuid.UUID, now time.Time) (bool, error)
+	// AnonymizeUserData runs the per-table disposition for
+	// userID inside one transaction. Soft-deletes
+	// external_identities / user_words / learner_sentences;
+	// irreversibly de-identifies review_attempts /
+	// ai_feedback_attempts / confidence_point_ledger /
+	// grace_day_ledger / feature_audit_logs; deletes or
+	// de-identifies user_onboarding_profiles / user_settings /
+	// daily_mission_snapshots / daily_activity_summaries /
+	// streak_states (DOC-05 §16). Returns the per-table
+	// counts for observability.
+	AnonymizeUserData(ctx context.Context, userID uuid.UUID) (AnonymizationCounters, error)
+	// MarkAccountDeletionRequestCompleted transitions the
+	// row from 'anonymizing' to 'completed' and sets
+	// completed_at. Idempotent: a second call on a
+	// 'completed' row is a no-op.
+	MarkAccountDeletionRequestCompleted(ctx context.Context, id uuid.UUID, now time.Time) error
 }

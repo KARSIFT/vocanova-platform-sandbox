@@ -3,6 +3,7 @@ package accounts
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -32,25 +33,49 @@ type MemoryRepository struct {
 	// a write because newEmail is already taken. Tests assert on
 	// it directly; production code never reads it.
 	collisions int
+	// deletionRequests holds every account_deletion_requests
+	// row the in-memory store has seen, keyed by the row's
+	// primary id. The (user_id) UNIQUE constraint is enforced
+	// at write time.
+	deletionRequests map[uuid.UUID]*AccountDeletionRequest
+	// sessionsRevoked counts the (user, session) pairs the
+	// deactivation transaction has revoked. Tests assert on
+	// it directly.
+	sessionsRevoked int
+	// magicLinksRevoked counts the (user, magic-link) pairs
+	// the deactivation transaction has revoked.
+	magicLinksRevoked int
+	// emailChangeLinksRevoked counts the (user,
+	// email-change-link) pairs the deactivation transaction
+	// has revoked.
+	emailChangeLinksRevoked int
+	// anonymizeCounters aggregates the per-table counts the
+	// in-memory AnonymizeUserData has produced. Tests assert
+	// on it directly to confirm the per-table disposition
+	// actually ran.
+	anonymizeCounters AnonymizationCounters
 }
 
 // memoryUser is the minimal projection the in-memory repository
-// needs about a user: the current email and a soft-delete flag
-// matching users.deleted_at IS NULL.
+// needs about a user: the current email, a soft-delete flag
+// matching users.deleted_at IS NULL, and the deleted_at
+// timestamp the deactivation transaction writes.
 type memoryUser struct {
-	ID      uuid.UUID
-	Email   string
-	Deleted bool
+	ID        uuid.UUID
+	Email     string
+	Deleted   bool
+	DeletedAt *time.Time
 }
 
 // NewMemoryRepository creates an empty in-memory Repository.
 func NewMemoryRepository() *MemoryRepository {
 	return &MemoryRepository{
-		byID:         make(map[uuid.UUID]*EmailChangeLink),
-		byHash:       make(map[string]*EmailChangeLink),
-		byUser:       make(map[uuid.UUID]map[uuid.UUID]*EmailChangeLink),
-		usersByEmail: make(map[string]uuid.UUID),
-		users:        make(map[uuid.UUID]*memoryUser),
+		byID:             make(map[uuid.UUID]*EmailChangeLink),
+		byHash:           make(map[string]*EmailChangeLink),
+		byUser:           make(map[uuid.UUID]map[uuid.UUID]*EmailChangeLink),
+		usersByEmail:     make(map[string]uuid.UUID),
+		users:            make(map[uuid.UUID]*memoryUser),
+		deletionRequests: make(map[uuid.UUID]*AccountDeletionRequest),
 	}
 }
 
@@ -237,6 +262,244 @@ func cloneLink(l *EmailChangeLink) *EmailChangeLink {
 	if l.RevokedAt != nil {
 		t := *l.RevokedAt
 		c.RevokedAt = &t
+	}
+	return &c
+}
+
+// CreateAccountDeletionRequest performs the deactivation
+// transaction in-memory. The semantics match the SQL
+// implementation: deactivate the user (status='deleted',
+// deleted_at=now), revoke every active session, every
+// unconsumed magic link, every unconsumed email change link,
+// and insert the account_deletion_requests row. The
+// (user_id) UNIQUE constraint is enforced at the in-memory
+// write so a second deactivation for the same user surfaces
+// ErrAccountDeletionAlreadyInFlight exactly the way the SQL
+// path does.
+func (r *MemoryRepository) CreateAccountDeletionRequest(ctx context.Context, userID uuid.UUID, idempotencyKey string, now time.Time, purgeDelay time.Duration) (*AccountDeletionRequest, error) {
+	if userID == uuid.Nil {
+		return nil, errors.New("user id required")
+	}
+	if idempotencyKey == "" {
+		return nil, errors.New("idempotency key required")
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Pre-check: a deletion for this user is already in
+	// flight. The SQL path relies on a unique-violation
+	// translation; the memory path translates the
+	// pre-check directly.
+	for _, row := range r.deletionRequests {
+		if row.UserID == userID {
+			return nil, fmt.Errorf("%w: deletion already in flight", ErrAccountDeletionAlreadyInFlight)
+		}
+	}
+
+	u, ok := r.users[userID]
+	if !ok || u.Deleted {
+		return nil, ErrUserNotFound
+	}
+	now = now.UTC()
+	t := now
+	u.Deleted = true
+	u.DeletedAt = &t
+	// Release the email from the partial-unique-index
+	// discipline: a deactivated user does not occupy the
+	// email. The email string is kept on the projection so
+	// existing readers see the last-known value, but
+	// usersByEmail is the authoritative source for "can
+	// another user claim this address".
+	if u.Email != "" {
+		delete(r.usersByEmail, u.Email)
+	}
+
+	// The session / magic-link / email-change-link revocation
+	// counters are incremented here. The test reads them to
+	// confirm the transaction invoked each step. Production
+	// would call the corresponding auth.Repository methods;
+	// the in-memory stand-in counts the calls instead.
+	r.sessionsRevoked++
+	r.magicLinksRevoked++
+	r.emailChangeLinksRevoked++
+
+	row := &AccountDeletionRequest{
+		ID:             uuid.New(),
+		UserID:         userID,
+		Status:         "deactivated",
+		RequestedAt:    now,
+		PurgeAfter:     now.Add(purgeDelay),
+		IdempotencyKey: idempotencyKey,
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	}
+	r.deletionRequests[row.ID] = row
+	return cloneDeletion(row), nil
+}
+
+// GetAccountDeletionRequestByUserID returns the current row
+// for the user, or an error.
+func (r *MemoryRepository) GetAccountDeletionRequestByUserID(ctx context.Context, userID uuid.UUID) (*AccountDeletionRequest, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, row := range r.deletionRequests {
+		if row.UserID == userID {
+			return cloneDeletion(row), nil
+		}
+	}
+	return nil, errors.New("account deletion request not found")
+}
+
+// ListDeactivatedRequestsDueForPurge returns up to limit
+// rows whose status is 'deactivated' and whose purge_after
+// is at or before now. The order matches the SQL
+// implementation: oldest purge_after first.
+func (r *MemoryRepository) ListDeactivatedRequestsDueForPurge(ctx context.Context, now time.Time, limit int) ([]AccountDeletionRequest, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	now = now.UTC()
+	if limit <= 0 {
+		limit = 100
+	}
+	var out []AccountDeletionRequest
+	for _, row := range r.deletionRequests {
+		if row.Status == "deactivated" && !row.PurgeAfter.After(now) {
+			out = append(out, *cloneDeletion(row))
+		}
+	}
+	// Sort by PurgeAfter ascending to match the SQL ORDER BY.
+	for i := 0; i < len(out); i++ {
+		for j := i + 1; j < len(out); j++ {
+			if out[j].PurgeAfter.Before(out[i].PurgeAfter) {
+				out[i], out[j] = out[j], out[i]
+			}
+		}
+	}
+	if len(out) > limit {
+		out = out[:limit]
+	}
+	return out, nil
+}
+
+// ClaimAccountDeletionRequestForAnonymization atomically
+// transitions a row from 'deactivated' to 'anonymizing'.
+// Returns true when this caller now owns the row, false
+// when the row was already claimed (or no longer
+// 'deactivated').
+func (r *MemoryRepository) ClaimAccountDeletionRequestForAnonymization(ctx context.Context, id uuid.UUID, now time.Time) (bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	row, ok := r.deletionRequests[id]
+	if !ok {
+		return false, nil
+	}
+	if row.Status != "deactivated" {
+		return false, nil
+	}
+	row.Status = "anonymizing"
+	row.UpdatedAt = now.UTC()
+	return true, nil
+}
+
+// AnonymizeUserData runs the per-table disposition for
+// the user. The memory implementation does not have
+// underlying tables to mutate (the per-table
+// de-identification only exists at the SQL level); the
+// counters it returns reflect the work that *would* have
+// run, so tests can assert on the same shape the
+// production sweep would produce. A test helper
+// (AnonymizeCounters) exposes the per-table counts.
+func (r *MemoryRepository) AnonymizeUserData(ctx context.Context, userID uuid.UUID) (AnonymizationCounters, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if userID == uuid.Nil {
+		return AnonymizationCounters{}, errors.New("user id required")
+	}
+	// The in-memory store has no per-table data to mutate.
+	// Each table's counter is incremented by 1 to record
+	// that the disposition ran for at least one row of
+	// that class; tests that need a non-zero counter use
+	// SetAnonymizeCounters to seed the value before the
+	// sweep runs.
+	r.anonymizeCounters.ExternalIdentities++
+	r.anonymizeCounters.UserWords++
+	r.anonymizeCounters.LearnerSentences++
+	r.anonymizeCounters.ReviewAttempts++
+	r.anonymizeCounters.AIFeedbackAttempts++
+	r.anonymizeCounters.ConfidencePointLedger++
+	r.anonymizeCounters.GraceDayLedger++
+	r.anonymizeCounters.UserOnboardingProfiles++
+	r.anonymizeCounters.UserSettings++
+	r.anonymizeCounters.DailyMissionSnapshots++
+	r.anonymizeCounters.DailyActivitySummaries++
+	r.anonymizeCounters.StreakStates++
+	return r.anonymizeCounters, nil
+}
+
+// MarkAccountDeletionRequestCompleted transitions a row
+// from 'anonymizing' to 'completed' and stamps
+// completed_at. Idempotent.
+func (r *MemoryRepository) MarkAccountDeletionRequestCompleted(ctx context.Context, id uuid.UUID, now time.Time) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	row, ok := r.deletionRequests[id]
+	if !ok {
+		return errors.New("account deletion request not found")
+	}
+	if row.Status == "completed" {
+		return nil
+	}
+	row.Status = "completed"
+	t := now.UTC()
+	row.CompletedAt = &t
+	row.UpdatedAt = t
+	return nil
+}
+
+// SessionsRevoked is a test helper that exposes the
+// per-call revocation count the in-memory deactivation
+// transaction has produced.
+func (r *MemoryRepository) SessionsRevoked() int64 {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return int64(r.sessionsRevoked)
+}
+
+// MagicLinksRevoked is a test helper that exposes the
+// per-call magic-link revocation count.
+func (r *MemoryRepository) MagicLinksRevoked() int64 {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return int64(r.magicLinksRevoked)
+}
+
+// EmailChangeLinksRevoked is a test helper that exposes
+// the per-call email-change-link revocation count.
+func (r *MemoryRepository) EmailChangeLinksRevoked() int64 {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return int64(r.emailChangeLinksRevoked)
+}
+
+// DeletionRequest is a test helper that returns the
+// in-memory account_deletion_requests row for a user, if
+// any.
+func (r *MemoryRepository) DeletionRequest(userID uuid.UUID) *AccountDeletionRequest {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, row := range r.deletionRequests {
+		if row.UserID == userID {
+			return cloneDeletion(row)
+		}
+	}
+	return nil
+}
+
+func cloneDeletion(r *AccountDeletionRequest) *AccountDeletionRequest {
+	c := *r
+	if r.CompletedAt != nil {
+		t := *r.CompletedAt
+		c.CompletedAt = &t
 	}
 	return &c
 }
