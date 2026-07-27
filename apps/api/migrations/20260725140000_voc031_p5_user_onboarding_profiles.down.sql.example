@@ -1,0 +1,10 @@
+-- atlas:txmode transaction
+-- VOC-031-T00: disposable recovery rehearsal example only. Not executable by
+-- Atlas in production; production recovery must preserve user-owned state.
+-- The onboarding_status backfill in the matching forward migration is a
+-- additive UPDATE; this example intentionally does not reverse it because
+-- doing so would silently re-engage the /onboarding gate for every account
+-- that existed at migration time — that gate is the only thing keeping
+-- pre-existing staging/test identities reachable today.
+
+DROP TABLE IF EXISTS user_onboarding_profiles;

@@ -187,7 +187,8 @@ export function validateMockInventory() {
 
   // Verify no unexpected business modules. VOC-030-T00 introduces the
   // `missions` and `gamification` modules; T01-T03 will wire them into
-  // the existing P1/P2/P3 transactions.
+  // the existing P1/P2/P3 transactions. VOC-031-T00 introduces the
+  // `users` module; T03 will add the `accounts` module.
   const allowedBusinessModules = new Set([
     "auth",
     "content",
@@ -196,6 +197,7 @@ export function validateMockInventory() {
     "aifeedback",
     "missions",
     "gamification",
+    "users",
   ]);
   for (const entry of readdirSync(apiBusinessRoot, {
     withFileTypes: true,
@@ -210,7 +212,8 @@ export function validateMockInventory() {
   // Verify no unexpected Ent schemas. VOC-030-T00 introduces six new
   // tables: daily_mission_snapshots, daily_activity_summaries,
   // confidence_point_ledger, streak_states, grace_day_ledger, and
-  // user_settings.
+  // user_settings. VOC-031-T00 adds user_onboarding_profiles; T03/T04
+  // will add email_change_links and account_deletion_requests.
   const allowedSchemaFiles = new Set([
     "canonicalword.go",
     "externalidentity.go",
@@ -233,6 +236,7 @@ export function validateMockInventory() {
     "streakstate.go",
     "gracedayledger.go",
     "usersettings.go",
+    "useronboardingprofile.go",
   ]);
   for (const entry of readdirSync(apiSchemaRoot, { withFileTypes: true })) {
     if (
@@ -248,8 +252,10 @@ export function validateMockInventory() {
 
   // Verify no unexpected migrations. VOC-030-T00 adds the
   // user_settings / mission_tables / gamification_tables migrations in
-  // DOC-05 §18 order after ai_feedback_attempts. P5 migrations remain
-  // forbidden.
+  // DOC-05 §18 order after ai_feedback_attempts. VOC-031-T00 adds the
+  // user_onboarding_profiles migration in DOC-05 §18 order after the
+  // P4 gamification_tables migration; T03/T04 will add the
+  // email_change_links and account_deletion_requests migrations.
   const allowedMigrationFiles = new Set([
     "20260724210000_identity_foundation.sql",
     "20260724210001_oauth_state.sql",
@@ -261,6 +267,7 @@ export function validateMockInventory() {
     "20260725130000_voc030_p4_user_settings.sql",
     "20260725130001_voc030_p4_mission_tables.sql",
     "20260725130002_voc030_p4_gamification_tables.sql",
+    "20260725140000_voc031_p5_user_onboarding_profiles.sql",
   ]);
   for (const entry of readdirSync(apiMigrationRoot, {
     withFileTypes: true,

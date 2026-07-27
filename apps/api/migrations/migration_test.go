@@ -311,3 +311,44 @@ func TestVOC030P4GamificationTablesMigrationCarriesDatabaseInvariants(t *testing
 		t.Errorf("voc-030 gamification_tables migration contains forbidden ON DELETE CASCADE (ledgers must be immutable)")
 	}
 }
+
+// TestVOC031P5UserOnboardingProfilesMigrationCarriesDatabaseInvariants
+// covers VOC-031-TEST-00. The migration is the T00 deliverable: it
+// creates the user_onboarding_profiles table (DOC-05 §6) and
+// backfills pre-existing users' onboarding_status to 'completed'
+// (VOC-031-D03). Like every other migration in this repository, no
+// existing A1–P4 table, column, or constraint is altered — the
+// backfill is purely additive on users.onboarding_status.
+func TestVOC031P5UserOnboardingProfilesMigrationCarriesDatabaseInvariants(t *testing.T) {
+	sql, err := os.ReadFile("20260725140000_voc031_p5_user_onboarding_profiles.sql")
+	if err != nil {
+		t.Fatalf("read voc-031 p5 user_onboarding_profiles migration: %v", err)
+	}
+	text := string(sql)
+	required := []string{
+		"CREATE TABLE user_onboarding_profiles",
+		"REFERENCES users(id)",
+		"ON DELETE RESTRICT",
+		"english_level IN ('a1', 'a2', 'b1', 'b2', 'unknown')",
+		"native_language",
+		"char_length(native_language) > 0",
+		"learning_goal IN ('general', 'work', 'travel', 'study', 'conversation', 'exam')",
+		"main_use_case IN ('daily_life', 'work', 'travel', 'study', 'social')",
+		"daily_review_target >= 5 AND daily_review_target <= 100",
+		"completed_at timestamptz",
+		"user_id uuid NOT NULL UNIQUE",
+		"ON user_onboarding_profiles (user_id)",
+		"UPDATE users",
+		"SET onboarding_status = 'completed'",
+		"WHERE onboarding_status = 'not_started'",
+		"created_at < NOW()",
+	}
+	for _, invariant := range required {
+		if !strings.Contains(text, invariant) {
+			t.Errorf("user_onboarding_profiles migration missing invariant %q", invariant)
+		}
+	}
+	if strings.Contains(text, "ON DELETE CASCADE") {
+		t.Errorf("user_onboarding_profiles migration contains forbidden ON DELETE CASCADE")
+	}
+}
