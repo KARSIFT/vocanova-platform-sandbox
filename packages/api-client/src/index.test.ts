@@ -470,4 +470,119 @@ describe("VocanovaClient", () => {
     );
     assert.equal(response.status, 204);
   });
+
+  it("sends GET /api/v1/daily-mission", async () => {
+    const fetch = (url: string, init: RequestInit): Promise<Response> => {
+      assert.equal(url, "https://api.example.com/api/v1/daily-mission");
+      assert.equal(init.method, "GET");
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            localDate: "2026-07-26",
+            timezone: "UTC",
+            reviewTarget: 20,
+            reviewsCompleted: 5,
+            policyVersion: "p4-mission-policy-v1",
+            status: "open",
+            graceApplied: false,
+            streak: {
+              currentStreakCount: 0,
+              longestStreakCount: 0,
+              status: "active",
+              graceDayBalance: 0,
+            },
+          }),
+          { headers: { "Content-Type": "application/json" }, status: 200 },
+        ),
+      );
+    };
+
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: fetch as typeof globalThis.fetch,
+    });
+    const { data } = await client.getDailyMission();
+    assert.equal(data.localDate, "2026-07-26");
+    assert.equal(data.reviewTarget, 20);
+    assert.equal(data.streak.status, "active");
+  });
+
+  it("sends GET /api/v1/daily-mission?timezone=America/New_York", async () => {
+    const fetch = (url: string, init: RequestInit): Promise<Response> => {
+      assert.equal(
+        url,
+        "https://api.example.com/api/v1/daily-mission?timezone=America%2FNew_York",
+      );
+      assert.equal(init.method, "GET");
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            localDate: "2026-07-26",
+            timezone: "America/New_York",
+            reviewTarget: 20,
+            reviewsCompleted: 0,
+            policyVersion: "p4-mission-policy-v1",
+            status: "open",
+            graceApplied: false,
+            streak: {
+              currentStreakCount: 0,
+              longestStreakCount: 0,
+              status: "active",
+              graceDayBalance: 0,
+            },
+          }),
+          { headers: { "Content-Type": "application/json" }, status: 200 },
+        ),
+      );
+    };
+
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: fetch as typeof globalThis.fetch,
+    });
+    const { data } = await client.getDailyMission({
+      timezone: "America/New_York",
+    });
+    assert.equal(data.timezone, "America/New_York");
+  });
+
+  it("sends GET /api/v1/progress", async () => {
+    const fetch = (url: string, init: RequestInit): Promise<Response> => {
+      assert.equal(url, "https://api.example.com/api/v1/progress");
+      assert.equal(init.method, "GET");
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            confidencePointsBalance: 42,
+            streak: {
+              currentStreakCount: 3,
+              longestStreakCount: 7,
+              status: "active",
+              graceDayBalance: 1,
+            },
+            completionHistory: [
+              { localDate: "2026-07-20", completed: true },
+              { localDate: "2026-07-21", completed: true },
+              { localDate: "2026-07-22", completed: false },
+              { localDate: "2026-07-23", completed: true },
+              { localDate: "2026-07-24", completed: true },
+              { localDate: "2026-07-25", completed: true },
+              { localDate: "2026-07-26", completed: false },
+            ],
+          }),
+          { headers: { "Content-Type": "application/json" }, status: 200 },
+        ),
+      );
+    };
+
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: fetch as typeof globalThis.fetch,
+    });
+    const { data } = await client.getProgress();
+    assert.equal(data.confidencePointsBalance, 42);
+    assert.equal(data.streak.currentStreakCount, 3);
+    assert.equal(data.completionHistory.length, 7);
+    assert.equal(data.completionHistory[0]?.completed, true);
+  });
 });

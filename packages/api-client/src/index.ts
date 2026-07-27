@@ -194,6 +194,40 @@ export interface ReportSentenceFeedbackBody {
   classification?: string;
 }
 
+export interface Streak {
+  currentStreakCount: number;
+  longestStreakCount: number;
+  status: "active" | "at_risk" | "broken";
+  graceDayBalance: number;
+}
+
+export interface DailyMission {
+  localDate: string;
+  timezone: string;
+  reviewTarget: number;
+  reviewsCompleted: number;
+  newWordTarget?: number;
+  newWordsCompleted?: number;
+  sentencePracticeTarget?: number;
+  sentencePracticesCompleted?: number;
+  policyVersion: string;
+  status: "open" | "completed" | "missed" | "protected";
+  completedAt?: string;
+  graceApplied: boolean;
+  streak: Streak;
+}
+
+export interface CompletionDay {
+  localDate: string;
+  completed: boolean;
+}
+
+export interface Progress {
+  confidencePointsBalance: number;
+  streak: Streak;
+  completionHistory: CompletionDay[];
+}
+
 export interface ApiError {
   type?: string;
   title?: string;
@@ -449,6 +483,36 @@ export class VocanovaClient {
       init,
     );
     return { response };
+  }
+
+  async getDailyMission(
+    params?: { timezone?: string },
+    init?: RequestInit,
+  ): Promise<{ data: DailyMission; response: Response }> {
+    const query = new URLSearchParams();
+    if (params?.timezone) {
+      query.set("timezone", params.timezone);
+    }
+    const path =
+      "/api/v1/daily-mission" + (query.toString() ? `?${query.toString()}` : "");
+    const response = await this.request("GET", path, undefined, init);
+    const data = (await response.json()) as DailyMission;
+    return { data, response };
+  }
+
+  async getProgress(
+    params?: { timezone?: string },
+    init?: RequestInit,
+  ): Promise<{ data: Progress; response: Response }> {
+    const query = new URLSearchParams();
+    if (params?.timezone) {
+      query.set("timezone", params.timezone);
+    }
+    const path =
+      "/api/v1/progress" + (query.toString() ? `?${query.toString()}` : "");
+    const response = await this.request("GET", path, undefined, init);
+    const data = (await response.json()) as Progress;
+    return { data, response };
   }
 
   private async request(

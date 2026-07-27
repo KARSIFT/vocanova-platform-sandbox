@@ -3,6 +3,6 @@ import test from "node:test";
 
 import { validateMockInventory } from "./mock-inventory.mjs";
 
-test("VOC-030-T00 mock dispositions and protected boundaries are respected", () => {
+test("VOC-030-T04 mock dispositions and protected boundaries are respected", () => {
   assert.deepEqual(validateMockInventory(), []);
 });

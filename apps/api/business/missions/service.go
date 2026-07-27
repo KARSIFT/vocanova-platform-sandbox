@@ -105,22 +105,82 @@ func (s *Service) MarkSnapshotCompleted(
 }
 
 // GetDailyMissionView returns the API view of today's daily mission for the
-// user, including the shared streak object. If the snapshot does not yet
-// exist, one is created lazily inside a read transaction; this is the
-// lazy-snapshot-creation pattern from DOC-06 §10.
+// user, including the shared streak object. The clientTimezone is the
+// optional request-time IANA timezone from the caller (validated by
+// gamification.GetSettings, per VOC-030-D01). If today's snapshot does not
+// yet exist, one is created lazily inside a short read transaction
+// (DOC-06 §10 lazy-snapshot-creation pattern). The lazy creation runs
+// streak reconciliation so the returned StreakView reflects a fresh
+// at-risk/broken state rather than a stale "active" state on a multi-day
+// gap (VOC-030-R06).
 func (s *Service) GetDailyMissionView(
 	ctx context.Context,
 	userID uuid.UUID,
-	resolved gamification.ResolvedSettings,
+	clientTimezone string,
 	now time.Time,
 ) (*DailyMissionView, error) {
+	resolved, err := s.gamification.GetSettings(ctx, userID, clientTimezone)
+	if err != nil {
+		return nil, err
+	}
 	today, err := gamification.LocalDate(now, resolved.Timezone)
 	if err != nil {
 		return nil, err
 	}
+	// Lazy snapshot creation: if today's row does not exist yet, create it
+	// (and run a read-time streak reconciliation) so the read APIs always
+	// return a stable projection. The unique (user_id, local_date) index
+	// makes CreateDailyMissionSnapshot idempotent.
+	tx, err := s.missions.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback()
 	snap, err := s.missions.GetDailyMissionSnapshot(ctx, userID, today)
 	if err != nil {
 		return nil, err
+	}
+	if snap == nil {
+		snap, err = s.missions.CreateDailyMissionSnapshot(
+			ctx, tx, userID, today, resolved.Timezone,
+			resolved.DailyReviewTarget, gamification.MissionPolicyVersion,
+		)
+		if err != nil {
+			return nil, err
+		}
+		// Streak reconciliation on first read of a new local day so the
+		// returned StreakView reflects the user's actual streak state
+		// (a multi-day gap, e.g. day 1 completed and now reading on day 5,
+		// must surface as "broken"/0, not a stale "active"). The
+		// ReconcileAndAdvance helper is itself a no-op when there is
+		// nothing to transition, so this is cheap for the common case.
+		snaps, err := s.missions.ListRecentSnapshots(ctx, userID, 14)
+		if err != nil {
+			return nil, fmt.Errorf("list recent snapshots: %w", err)
+		}
+		streakSnaps := make([]gamification.StreakSnapshot, 0, len(snaps))
+		for _, s := range snaps {
+			streakSnaps = append(streakSnaps, gamification.StreakSnapshot{
+				LocalDate:    s.LocalDate,
+				Status:       s.Status,
+				CompletedAt:  s.CompletedAt,
+				GraceApplied: s.GraceApplied,
+				GraceDayID:   s.GraceDayID,
+			})
+		}
+		graceBalance, err := s.gamification.CurrentGraceBalance(ctx, userID)
+		if err != nil {
+			return nil, fmt.Errorf("current grace balance: %w", err)
+		}
+		if _, err := s.gamification.ReconcileAndAdvance(
+			ctx, tx, userID, now, resolved.Timezone,
+			streakSnaps, graceBalance, false,
+		); err != nil {
+			return nil, fmt.Errorf("reconcile streak: %w", err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit: %w", err)
 	}
 	streak, graceBalance, err := s.loadStreakAndGrace(ctx, userID, resolved.Timezone)
 	if err != nil {
@@ -132,36 +192,35 @@ func (s *Service) GetDailyMissionView(
 		Streak:          streak,
 		GraceDayBalance: graceBalance,
 	}
-	if snap != nil {
-		view.ReviewTarget = snap.ReviewTarget
-		view.ReviewsCompleted = snap.ReviewsCompleted
-		view.NewWordTarget = snap.NewWordTarget
-		view.NewWordsCompleted = snap.NewWordsCompleted
-		view.SentencePracticeTarget = snap.SentencePracticeTarget
-		view.SentencePracticesCompleted = snap.SentencePracticesCompleted
-		view.PolicyVersion = snap.PolicyVersion
-		view.Status = snap.Status
-		view.CompletedAt = snap.CompletedAt
-		view.GraceApplied = snap.GraceApplied
-	} else {
-		view.ReviewTarget = resolved.DailyReviewTarget
-		view.ReviewsCompleted = 0
-		view.PolicyVersion = gamification.MissionPolicyVersion
-		view.Status = StatusOpen
-	}
+	view.ReviewTarget = snap.ReviewTarget
+	view.ReviewsCompleted = snap.ReviewsCompleted
+	view.NewWordTarget = snap.NewWordTarget
+	view.NewWordsCompleted = snap.NewWordsCompleted
+	view.SentencePracticeTarget = snap.SentencePracticeTarget
+	view.SentencePracticesCompleted = snap.SentencePracticesCompleted
+	view.PolicyVersion = snap.PolicyVersion
+	view.Status = snap.Status
+	view.CompletedAt = snap.CompletedAt
+	view.GraceApplied = snap.GraceApplied
 	return view, nil
 }
 
 // GetProgressView returns the API view of the user's overall progress
 // (Confidence Points balance, shared streak, bounded 7-day completion
 // history). Home and Progress read the same streak source via this method.
+// The clientTimezone is the optional request-time IANA timezone from the
+// caller (validated by gamification.GetSettings, per VOC-030-D01).
 func (s *Service) GetProgressView(
 	ctx context.Context,
 	userID uuid.UUID,
-	resolved gamification.ResolvedSettings,
+	clientTimezone string,
 	now time.Time,
 	historyDays int,
 ) (*ProgressView, error) {
+	resolved, err := s.gamification.GetSettings(ctx, userID, clientTimezone)
+	if err != nil {
+		return nil, err
+	}
 	balance, err := s.gamification.CurrentBalance(ctx, userID)
 	if err != nil {
 		return nil, err

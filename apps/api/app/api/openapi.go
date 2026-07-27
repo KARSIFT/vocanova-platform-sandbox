@@ -1,13 +1,16 @@
 package api
 
 import (
+	"database/sql"
 	"net/http"
 	"time"
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/aifeedback"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/auth"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/content"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/learning"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/missions"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/reviews"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/email"
@@ -93,5 +96,16 @@ func NewContractAPI() huma.API {
 		aifeedback.DefaultServiceConfig(),
 	)
 	RegisterAIFeedback(contractAPI, aifeedbackSvc, svc)
+
+	// Register missions/progress read routes for OpenAPI generation. The
+	// missions and gamification modules are *sql.DB-backed today; the
+	// OpenAPI generator only needs the constructor to succeed (handlers
+	// are not invoked during generation), so a nil *sql.DB is safe here.
+	var openapiDB *sql.DB
+	missionsRepo := missions.NewRepository(openapiDB)
+	gamRepo := gamification.NewRepository(openapiDB)
+	gamSvc := gamification.NewService(gamRepo)
+	missionsSvc := missions.NewService(missionsRepo, gamSvc)
+	RegisterMissions(contractAPI, missionsSvc)
 	return contractAPI
 }

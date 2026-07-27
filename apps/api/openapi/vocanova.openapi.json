@@ -1,6 +1,25 @@
 {
   "components": {
     "schemas": {
+      "CompletionDayDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "completed": {
+            "description": "Whether the mission was completed or protected that local day",
+            "type": "boolean"
+          },
+          "localDate": {
+            "description": "Local calendar date for the day",
+            "format": "date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "localDate",
+          "completed"
+        ],
+        "type": "object"
+      },
       "ConsumeMagicLinkInputBody": {
         "additionalProperties": false,
         "properties": {
@@ -59,6 +78,97 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "DailyMissionDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/DailyMissionDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "completedAt": {
+            "description": "When the mission was first completed (status=completed)",
+            "format": "date-time",
+            "type": "string"
+          },
+          "graceApplied": {
+            "description": "Whether a grace day protected today's streak",
+            "type": "boolean"
+          },
+          "localDate": {
+            "description": "Local calendar date for the mission",
+            "format": "date",
+            "type": "string"
+          },
+          "newWordTarget": {
+            "description": "Optional new-word goal (D03: disabled at launch)",
+            "format": "int64",
+            "type": "integer"
+          },
+          "newWordsCompleted": {
+            "description": "Optional new-word counter (D03: disabled at launch)",
+            "format": "int64",
+            "type": "integer"
+          },
+          "policyVersion": {
+            "description": "Snapshot policy version (e.g. p4-mission-policy-v1)",
+            "type": "string"
+          },
+          "reviewTarget": {
+            "description": "Required review count for the mission",
+            "format": "int64",
+            "type": "integer"
+          },
+          "reviewsCompleted": {
+            "description": "Reviews completed against today's target",
+            "format": "int64",
+            "type": "integer"
+          },
+          "sentencePracticeTarget": {
+            "description": "Optional sentence-practice goal (D03: disabled at launch)",
+            "format": "int64",
+            "type": "integer"
+          },
+          "sentencePracticesCompleted": {
+            "description": "Optional sentence-practice counter (D03: disabled at launch)",
+            "format": "int64",
+            "type": "integer"
+          },
+          "status": {
+            "description": "Mission state",
+            "enum": [
+              "open",
+              "completed",
+              "missed",
+              "protected"
+            ],
+            "type": "string"
+          },
+          "streak": {
+            "$ref": "#/components/schemas/StreakDTO",
+            "description": "Shared streak object (matches GET /api/v1/progress)"
+          },
+          "timezone": {
+            "description": "Resolved IANA timezone for the mission",
+            "type": "string"
+          }
+        },
+        "required": [
+          "localDate",
+          "timezone",
+          "reviewTarget",
+          "reviewsCompleted",
+          "policyVersion",
+          "status",
+          "graceApplied",
+          "streak"
+        ],
         "type": "object"
       },
       "DueWordDTO": {
@@ -399,6 +509,45 @@
         },
         "required": [
           "url"
+        ],
+        "type": "object"
+      },
+      "ProgressDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/ProgressDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "completionHistory": {
+            "description": "Bounded 7-day completion history",
+            "items": {
+              "$ref": "#/components/schemas/CompletionDayDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "confidencePointsBalance": {
+            "description": "Current Confidence Points balance from the ledger",
+            "format": "int64",
+            "type": "integer"
+          },
+          "streak": {
+            "$ref": "#/components/schemas/StreakDTO",
+            "description": "Shared streak object (matches GET /api/v1/daily-mission)"
+          }
+        },
+        "required": [
+          "confidencePointsBalance",
+          "streak",
+          "completionHistory"
         ],
         "type": "object"
       },
@@ -852,6 +1001,42 @@
           "partOfSpeech",
           "shortDefinition",
           "saved"
+        ],
+        "type": "object"
+      },
+      "StreakDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "currentStreakCount": {
+            "description": "Current consecutive local-day completion count",
+            "format": "int64",
+            "type": "integer"
+          },
+          "graceDayBalance": {
+            "description": "Available grace-day balance",
+            "format": "int64",
+            "type": "integer"
+          },
+          "longestStreakCount": {
+            "description": "All-time longest streak count",
+            "format": "int64",
+            "type": "integer"
+          },
+          "status": {
+            "description": "Streak state",
+            "enum": [
+              "active",
+              "at_risk",
+              "broken"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "currentStreakCount",
+          "longestStreakCount",
+          "status",
+          "graceDayBalance"
         ],
         "type": "object"
       },
@@ -1401,6 +1586,45 @@
         ]
       }
     },
+    "/api/v1/daily-mission": {
+      "get": {
+        "operationId": "GetDailyMission",
+        "parameters": [
+          {
+            "description": "Optional client-supplied IANA timezone",
+            "explode": false,
+            "in": "query",
+            "name": "timezone",
+            "schema": {
+              "description": "Optional client-supplied IANA timezone",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyMissionDTO"
+                }
+              }
+            },
+            "description": "Today's daily mission projection"
+          },
+          "400": {
+            "description": "Invalid client-supplied timezone"
+          },
+          "401": {
+            "description": "Authentication is required"
+          }
+        },
+        "summary": "Get today's daily mission for the authenticated requester",
+        "tags": [
+          "Missions"
+        ]
+      }
+    },
     "/api/v1/journey-situations": {
       "get": {
         "operationId": "ListJourneySituations",
@@ -1509,6 +1733,45 @@
         "summary": "Get the authenticated user",
         "tags": [
           "Authentication"
+        ]
+      }
+    },
+    "/api/v1/progress": {
+      "get": {
+        "operationId": "GetProgress",
+        "parameters": [
+          {
+            "description": "Optional client-supplied IANA timezone",
+            "explode": false,
+            "in": "query",
+            "name": "timezone",
+            "schema": {
+              "description": "Optional client-supplied IANA timezone",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressDTO"
+                }
+              }
+            },
+            "description": "Progress projection including shared streak and 7-day completion history"
+          },
+          "400": {
+            "description": "Invalid client-supplied timezone"
+          },
+          "401": {
+            "description": "Authentication is required"
+          }
+        },
+        "summary": "Get the authenticated requester's overall progress",
+        "tags": [
+          "Missions"
         ]
       }
     },
