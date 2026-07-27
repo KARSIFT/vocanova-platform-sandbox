@@ -494,7 +494,8 @@ export class VocanovaClient {
       query.set("timezone", params.timezone);
     }
     const path =
-      "/api/v1/daily-mission" + (query.toString() ? `?${query.toString()}` : "");
+      "/api/v1/daily-mission" +
+      (query.toString() ? `?${query.toString()}` : "");
     const response = await this.request("GET", path, undefined, init);
     const data = (await response.json()) as DailyMission;
     return { data, response };
