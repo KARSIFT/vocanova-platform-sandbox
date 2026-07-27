@@ -291,10 +291,16 @@ func (u *MissionUpdater) Update(ctx context.Context, userID, sentenceID uuid.UUI
 // UpdateForSentence is the transaction-aware entry point Update above
 // delegates to. It runs the sentence-submitted and AI-feedback-received
 // point awards, increments the activity summary, and (if the optional
-// sentence-practice mission goal is active) the mission counter.
-// missionCompleted returns true iff the call completed the daily mission
-// for the first time today (i.e. the snapshot transitioned to
-// status='completed'). Exposed separately from Update so a caller that
+// sentence-practice mission goal is active) the mission counter. It also
+// runs streak reconciliation so the read APIs' shared StreakView stays
+// consistent with backend state (e.g. at_risk when today isn't yet
+// completed). missionCompleted returns true iff the call completed the
+// daily mission for the first time today (i.e. the snapshot transitioned
+// to status='completed'). On the P3 path, reviews_completed is never
+// incremented (only the P2 review path does that), so the structural
+// return value is always false here; the explicit assignment replaces
+// the earlier always-false hardcode so the function is honest about the
+// path invariant. Exposed separately from Update so a caller that
 // already has a resolved settings/clock value (e.g. a future API-layer
 // caller) doesn't pay for a second settings lookup.
 func (u *MissionUpdater) UpdateForSentence(
@@ -359,6 +365,42 @@ func (u *MissionUpdater) UpdateForSentence(
 		return false, err
 	}
 
+	// Streak reconciliation: lazy, no queue/cron (DOC-06 §15), computed
+	// from the recent snapshot history. P3 never increments
+	// reviews_completed and never transitions the snapshot, so the
+	// mission/streak transition never fires here; the reconciliation
+	// still runs so the streak status reflects "at_risk" honestly if
+	// today isn't yet completed. This keeps Home/Progress reads
+	// consistent with backend state.
+	snaps, err := u.missions.missions.ListRecentSnapshots(ctx, userID, 14)
+	if err != nil {
+		return false, fmt.Errorf("list recent snapshots: %w", err)
+	}
+	streakSnaps := make([]gamification.StreakSnapshot, 0, len(snaps))
+	for _, s := range snaps {
+		streakSnaps = append(streakSnaps, gamification.StreakSnapshot{
+			LocalDate:    s.LocalDate,
+			Status:       s.Status,
+			CompletedAt:  s.CompletedAt,
+			GraceApplied: s.GraceApplied,
+			GraceDayID:   s.GraceDayID,
+		})
+	}
+	graceBalance, err := u.gamification.CurrentGraceBalance(ctx, userID)
+	if err != nil {
+		return false, fmt.Errorf("current grace balance: %w", err)
+	}
+	if _, err := u.gamification.ReconcileAndAdvance(
+		ctx, tx, userID, now, resolved.Timezone,
+		streakSnaps, graceBalance, false, // currentCompletion: P3 never completes the mission
+	); err != nil {
+		return false, fmt.Errorf("reconcile streak: %w", err)
+	}
+
+	// P3 invariant: only the P2 review path increments reviews_completed
+	// and marks the snapshot completed, so the structural return value
+	// here is always false. The explicit assignment replaces the prior
+	// always-false hardcode with the honest path-invariant value.
 	missionCompleted := false
 	if err := tx.Commit(); err != nil {
 		return false, fmt.Errorf("commit: %w", err)
