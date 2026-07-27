@@ -1043,6 +1043,64 @@
         ],
         "type": "object"
       },
+      "SettingsDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/SettingsDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "appLanguage": {
+            "description": "Persisted app language preference; only 'en' is accepted at launch",
+            "enum": [
+              "en"
+            ],
+            "type": "string"
+          },
+          "dailyReviewTarget": {
+            "description": "Daily review target (5-100)",
+            "format": "int64",
+            "maximum": 100,
+            "minimum": 5,
+            "type": "integer"
+          },
+          "displayName": {
+            "description": "Learner-controlled display name (0-80 chars)",
+            "type": "string"
+          },
+          "marketingEmailsEnabled": {
+            "description": "Whether the learner opts into marketing emails",
+            "type": "boolean"
+          },
+          "notificationsEnabled": {
+            "description": "Whether the learner opts into in-app notifications",
+            "type": "boolean"
+          },
+          "reviewIntervalPreset": {
+            "description": "Review interval preset",
+            "enum": [
+              "vocanova_default",
+              "wordup_like",
+              "custom"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "dailyReviewTarget",
+          "reviewIntervalPreset",
+          "appLanguage",
+          "notificationsEnabled",
+          "marketingEmailsEnabled",
+          "displayName"
+        ],
+        "type": "object"
+      },
       "SituationDTO": {
         "additionalProperties": false,
         "properties": {
@@ -1317,6 +1375,57 @@
           "source",
           "attemptId"
         ],
+        "type": "object"
+      },
+      "UpdateSettingsInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/UpdateSettingsInputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "appLanguage": {
+            "description": "App language; only 'en' is accepted at launch",
+            "enum": [
+              "en"
+            ],
+            "type": "string"
+          },
+          "dailyReviewTarget": {
+            "description": "Daily review target (5-100)",
+            "format": "int64",
+            "maximum": 100,
+            "minimum": 5,
+            "type": "integer"
+          },
+          "displayName": {
+            "description": "Display name (0-80 chars)",
+            "maxLength": 80,
+            "type": "string"
+          },
+          "marketingEmailsEnabled": {
+            "description": "Marketing emails opt-in",
+            "type": "boolean"
+          },
+          "notificationsEnabled": {
+            "description": "Notifications opt-in",
+            "type": "boolean"
+          },
+          "reviewIntervalPreset": {
+            "description": "Review interval preset",
+            "enum": [
+              "vocanova_default",
+              "wordup_like",
+              "custom"
+            ],
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "WordDetailDTO": {
@@ -2172,6 +2281,74 @@
         "summary": "Report a quality concern for a feedback attempt",
         "tags": [
           "AI Feedback"
+        ]
+      }
+    },
+    "/api/v1/settings": {
+      "get": {
+        "operationId": "GetSettings",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Authentication is required"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        },
+        "summary": "Get the requester's settings",
+        "tags": [
+          "Settings"
+        ]
+      },
+      "patch": {
+        "operationId": "UpdateSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSettingsInputBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid settings update"
+          },
+          "401": {
+            "description": "Authentication is required"
+          },
+          "403": {
+            "description": "Invalid CSRF token"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        },
+        "summary": "Update the requester's settings",
+        "tags": [
+          "Settings"
         ]
       }
     },

@@ -66,7 +66,7 @@ func testOnboardingAPI(t *testing.T) (huma.API, *auth.Service, *users.MemoryRepo
 	})
 
 	usersRepo := users.NewMemoryRepository()
-	usersSvc := users.NewService(usersRepo, usersRepo, c)
+	usersSvc := users.NewService(usersRepo, usersRepo, usersRepo, c)
 
 	config := huma.DefaultConfig("Vocanova API", "0.1.0")
 	api := humachi.New(chi.NewMux(), config)

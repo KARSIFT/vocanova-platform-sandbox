@@ -14,10 +14,12 @@ import (
 // against the same in-memory user_settings slice, so tests can wire a
 // single instance to both Repository and UserSettingsReader.
 type MemoryRepository struct {
-	mu         sync.Mutex
-	profiles   map[uuid.UUID]*MemoryOnboardingProfile
-	settings   map[uuid.UUID]*MemoryUserSettings
-	onboarding map[uuid.UUID]string // userID -> onboarding_status
+	mu           sync.Mutex
+	profiles     map[uuid.UUID]*MemoryOnboardingProfile
+	settings     map[uuid.UUID]*MemoryUserSettings
+	displayNames map[uuid.UUID]string // userID -> display_name
+	seenUsers    map[uuid.UUID]struct{}
+	onboarding   map[uuid.UUID]string // userID -> onboarding_status
 }
 
 // MemoryOnboardingProfile is the in-memory shape of a
@@ -48,12 +50,15 @@ type MemoryUserSettings struct {
 }
 
 // NewMemoryRepository creates an empty in-memory repository. It can
-// be seeded via UpsertStoredUserSettings and SetOnboardingStatus.
+// be seeded via UpsertStoredUserSettings, SetDisplayName, and
+// SetOnboardingStatus.
 func NewMemoryRepository() *MemoryRepository {
 	return &MemoryRepository{
-		profiles:   make(map[uuid.UUID]*MemoryOnboardingProfile),
-		settings:   make(map[uuid.UUID]*MemoryUserSettings),
-		onboarding: make(map[uuid.UUID]string),
+		profiles:     make(map[uuid.UUID]*MemoryOnboardingProfile),
+		settings:     make(map[uuid.UUID]*MemoryUserSettings),
+		displayNames: make(map[uuid.UUID]string),
+		seenUsers:    make(map[uuid.UUID]struct{}),
+		onboarding:   make(map[uuid.UUID]string),
 	}
 }
 
@@ -182,6 +187,7 @@ func (r *MemoryRepository) UpsertStoredUserSettings(userID uuid.UUID, s MemoryUs
 	defer r.mu.Unlock()
 	s.UserID = userID
 	r.settings[userID] = &s
+	r.seenUsers[userID] = struct{}{}
 }
 
 // GetStoredUserSettings implements UserSettingsReader against the
@@ -216,6 +222,119 @@ func (r *MemoryRepository) ProfilesOrderedByCompletion() []MemoryOnboardingProfi
 		return out[i].CompletedAt.Before(out[j].CompletedAt)
 	})
 	return out
+}
+
+// markSeen records that a user exists in the in-memory fixture.
+// GetSettings uses it to distinguish "user exists with no row yet"
+// (returns schema defaults) from "user does not exist" (returns
+// ErrSettingsNotFound). Marking on every Get/Update mirrors the
+// SQL semantics where the LEFT JOIN on users is the source of
+// truth for existence.
+func (r *MemoryRepository) markSeen(userID uuid.UUID) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.seenUsers[userID] = struct{}{}
+}
+
+// GetSettings returns the requester's Settings projection, filling
+// any unset fields from the user_settings schema defaults so the
+// response shape is stable. The in-memory fixture treats every
+// userID as a real, non-deleted user in the users table (the SQL
+// path's "WHERE deleted_at IS NULL" predicate always passes for
+// test fixtures) so the response is always 200 with schema
+// defaults when no user_settings row exists yet. The
+// 404/ErrSettingsNotFound code path is exercised in integration
+// tests against a real database, not in this fixture.
+func (r *MemoryRepository) GetSettings(ctx context.Context, userID uuid.UUID) (Settings, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.seenUsers[userID] = struct{}{}
+	s := r.settings[userID]
+	settings := Settings{
+		DailyReviewTarget:      schemaDailyReviewTargetDefaultInt,
+		ReviewIntervalPreset:   schemaReviewIntervalPresetDefault,
+		AppLanguage:            schemaAppLanguageDefault,
+		NotificationsEnabled:   schemaNotificationsEnabledDefault,
+		MarketingEmailsEnabled: schemaMarketingEmailsEnabledDefault,
+		DisplayName:            r.displayNames[userID],
+	}
+	if s != nil {
+		settings.DailyReviewTarget = s.DailyReviewTarget
+		settings.ReviewIntervalPreset = s.ReviewIntervalPreset
+		settings.AppLanguage = s.AppLanguage
+		settings.NotificationsEnabled = s.NotificationsEnabled
+		settings.MarketingEmailsEnabled = s.MarketingEmailsEnabled
+	}
+	return settings, nil
+}
+
+// UpdateSettings applies a partial update to the in-memory
+// user_settings slice and (when supplied) users.display_name,
+// then returns the merged Settings projection. The first-ever
+// write creates a row with schema defaults filled in. Validation
+// is the caller's responsibility (the service runs it before
+// reaching this method), matching the SQL implementation's
+// contract.
+func (r *MemoryRepository) UpdateSettings(ctx context.Context, userID uuid.UUID, update SettingsUpdate, now time.Time) (Settings, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.seenUsers[userID] = struct{}{}
+	s, ok := r.settings[userID]
+	if !ok {
+		s = &MemoryUserSettings{
+			UserID:                 userID,
+			Timezone:               "UTC",
+			DailyReviewTarget:      schemaDailyReviewTargetDefaultInt,
+			ReviewIntervalPreset:   schemaReviewIntervalPresetDefault,
+			NotificationsEnabled:   schemaNotificationsEnabledDefault,
+			MarketingEmailsEnabled: schemaMarketingEmailsEnabledDefault,
+			AppLanguage:            schemaAppLanguageDefault,
+		}
+		r.settings[userID] = s
+	}
+	if update.DailyReviewTarget != nil {
+		s.DailyReviewTarget = *update.DailyReviewTarget
+	}
+	if update.ReviewIntervalPreset != nil {
+		s.ReviewIntervalPreset = *update.ReviewIntervalPreset
+	}
+	if update.AppLanguage != nil {
+		s.AppLanguage = *update.AppLanguage
+	}
+	if update.NotificationsEnabled != nil {
+		s.NotificationsEnabled = *update.NotificationsEnabled
+	}
+	if update.MarketingEmailsEnabled != nil {
+		s.MarketingEmailsEnabled = *update.MarketingEmailsEnabled
+	}
+	if update.DisplayName != nil {
+		r.displayNames[userID] = *update.DisplayName
+	}
+	return Settings{
+		DailyReviewTarget:      s.DailyReviewTarget,
+		ReviewIntervalPreset:   s.ReviewIntervalPreset,
+		AppLanguage:            s.AppLanguage,
+		NotificationsEnabled:   s.NotificationsEnabled,
+		MarketingEmailsEnabled: s.MarketingEmailsEnabled,
+		DisplayName:            r.displayNames[userID],
+	}, nil
+}
+
+// SetDisplayName seeds users.display_name for a fixture user. It
+// is a test helper, not part of the SettingsRepository contract.
+func (r *MemoryRepository) SetDisplayName(userID uuid.UUID, name string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.seenUsers[userID] = struct{}{}
+	r.displayNames[userID] = name
+}
+
+// MarkSeen records a userID as existing without changing any
+// stored state. Tests that want to exercise the no-row-yet path
+// of GetSettings use it to make the user "seen" without writing
+// a user_settings row. Not part of the contract.
+func (r *MemoryRepository) MarkSeen(userID uuid.UUID) {
+	r.markSeen(userID)
 }
 
 func timePtr(t time.Time) *time.Time {

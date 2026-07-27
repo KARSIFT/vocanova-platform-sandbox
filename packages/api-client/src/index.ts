@@ -259,6 +259,47 @@ export interface Progress {
   completionHistory: CompletionDay[];
 }
 
+export type ReviewIntervalPreset =
+  "vocanova_default" | "wordup_like" | "custom";
+
+/**
+ * VOC-031-T02 additive type. The persisted app language
+ * preference; only "en" is accepted at launch (VOC-031-D06),
+ * because no i18n infrastructure exists in this repository
+ * today.
+ */
+export type AppLanguage = "en";
+
+/**
+ * VOC-031-T02. The public Settings projection returned by
+ * GET /api/v1/settings. The /api/v1/settings/account frontend
+ * reads this for every editable Settings field.
+ */
+export interface Settings {
+  dailyReviewTarget: number;
+  reviewIntervalPreset: ReviewIntervalPreset;
+  appLanguage: AppLanguage;
+  notificationsEnabled: boolean;
+  marketingEmailsEnabled: boolean;
+  displayName: string;
+}
+
+/**
+ * VOC-031-T02. The partial-update payload for
+ * PATCH /api/v1/settings. Every field is optional; the API
+ * only writes the fields the caller supplies. The DOC-07 §3
+ * "no-op PATCH is a well-formed read" rule is honored, so
+ * an empty body returns the current state.
+ */
+export interface UpdateSettingsBody {
+  dailyReviewTarget?: number;
+  reviewIntervalPreset?: ReviewIntervalPreset;
+  appLanguage?: AppLanguage;
+  notificationsEnabled?: boolean;
+  marketingEmailsEnabled?: boolean;
+  displayName?: string;
+}
+
 export interface ApiError {
   type?: string;
   title?: string;
@@ -572,6 +613,46 @@ export class VocanovaClient {
       "/api/v1/progress" + (query.toString() ? `?${query.toString()}` : "");
     const response = await this.request("GET", path, undefined, init);
     const data = (await response.json()) as Progress;
+    return { data, response };
+  }
+
+  /**
+   * VOC-031-T02. Get the requester's settings. The response is
+   * a stable Settings projection — every field is always
+   * present, with schema defaults for any unset value.
+   */
+  async getSettings(init?: RequestInit): Promise<{
+    data: Settings;
+    response: Response;
+  }> {
+    const response = await this.request(
+      "GET",
+      "/api/v1/settings",
+      undefined,
+      init,
+    );
+    const data = (await response.json()) as Settings;
+    return { data, response };
+  }
+
+  /**
+   * VOC-031-T02. Update the requester's settings via a partial
+   * PATCH. Only the fields supplied in `body` are written; every
+   * other field is preserved. An empty body is a well-formed
+   * no-op read and returns the current state. The `init.headers`
+   * are forwarded so the caller can attach a CSRF token.
+   */
+  async updateSettings(
+    body: UpdateSettingsBody,
+    init?: RequestInit,
+  ): Promise<{ data: Settings; response: Response }> {
+    const response = await this.request(
+      "PATCH",
+      "/api/v1/settings",
+      body,
+      init,
+    );
+    const data = (await response.json()) as Settings;
     return { data, response };
   }
 

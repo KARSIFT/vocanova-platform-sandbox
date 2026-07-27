@@ -647,4 +647,148 @@ describe("VocanovaClient", () => {
     assert.equal(data.status, "completed");
     assert.equal(data.dailyReviewTarget, 25);
   });
+
+  it("sends GET /api/v1/settings", async () => {
+    const fetch = (url: string, init: RequestInit): Promise<Response> => {
+      assert.equal(url, "https://api.example.com/api/v1/settings");
+      assert.equal(init.method, "GET");
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            dailyReviewTarget: 20,
+            reviewIntervalPreset: "vocanova_default",
+            appLanguage: "en",
+            notificationsEnabled: true,
+            marketingEmailsEnabled: false,
+            displayName: "",
+          }),
+          { headers: { "Content-Type": "application/json" }, status: 200 },
+        ),
+      );
+    };
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: fetch as typeof globalThis.fetch,
+    });
+    const { data } = await client.getSettings();
+    assert.equal(data.dailyReviewTarget, 20);
+    assert.equal(data.reviewIntervalPreset, "vocanova_default");
+    assert.equal(data.appLanguage, "en");
+    assert.equal(data.notificationsEnabled, true);
+    assert.equal(data.marketingEmailsEnabled, false);
+    assert.equal(data.displayName, "");
+  });
+
+  it("sends PATCH /api/v1/settings with partial body and CSRF header", async () => {
+    let capturedBody: unknown;
+    const fetch = (url: string, init: RequestInit): Promise<Response> => {
+      assert.equal(url, "https://api.example.com/api/v1/settings");
+      assert.equal(init.method, "PATCH");
+      assert.equal(
+        new Headers(init.headers).get("X-CSRF-Token"),
+        "csrf-token-value",
+      );
+      assert.equal(
+        new Headers(init.headers).get("Content-Type"),
+        "application/json",
+      );
+      capturedBody = JSON.parse(String(init.body));
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            dailyReviewTarget: 35,
+            reviewIntervalPreset: "wordup_like",
+            appLanguage: "en",
+            notificationsEnabled: false,
+            marketingEmailsEnabled: true,
+            displayName: "Ada",
+          }),
+          { headers: { "Content-Type": "application/json" }, status: 200 },
+        ),
+      );
+    };
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: fetch as typeof globalThis.fetch,
+    });
+    const { data } = await client.updateSettings(
+      {
+        dailyReviewTarget: 35,
+        reviewIntervalPreset: "wordup_like",
+        notificationsEnabled: false,
+        marketingEmailsEnabled: true,
+        displayName: "Ada",
+      },
+      { headers: { "X-CSRF-Token": "csrf-token-value" } },
+    );
+    assert.deepEqual(capturedBody, {
+      dailyReviewTarget: 35,
+      reviewIntervalPreset: "wordup_like",
+      notificationsEnabled: false,
+      marketingEmailsEnabled: true,
+      displayName: "Ada",
+    });
+    assert.equal(data.dailyReviewTarget, 35);
+    assert.equal(data.displayName, "Ada");
+  });
+
+  it("sends PATCH /api/v1/settings with empty body for no-op read", async () => {
+    const fetch = (url: string, init: RequestInit): Promise<Response> => {
+      assert.equal(url, "https://api.example.com/api/v1/settings");
+      assert.equal(init.method, "PATCH");
+      assert.equal(init.body, JSON.stringify({}));
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            dailyReviewTarget: 20,
+            reviewIntervalPreset: "vocanova_default",
+            appLanguage: "en",
+            notificationsEnabled: true,
+            marketingEmailsEnabled: false,
+            displayName: "",
+          }),
+          { headers: { "Content-Type": "application/json" }, status: 200 },
+        ),
+      );
+    };
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: fetch as typeof globalThis.fetch,
+    });
+    const { data } = await client.updateSettings({});
+    assert.equal(data.dailyReviewTarget, 20);
+  });
+
+  it("throws ApiResponseError for /api/v1/settings 422", async () => {
+    const fetch = (): Promise<Response> =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            detail: "daily review target 200 out of range [5,100]",
+          }),
+          {
+            headers: { "Content-Type": "application/problem+json" },
+            status: 422,
+          },
+        ),
+      );
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: fetch as typeof globalThis.fetch,
+    });
+    await assert.rejects(
+      client.updateSettings({ dailyReviewTarget: 200 }),
+      (error: unknown) => {
+        if (!(error instanceof ApiResponseError)) {
+          return false;
+        }
+        assert.equal(error.status, 422);
+        assert.equal(
+          error.message,
+          "daily review target 200 out of range [5,100]",
+        );
+        return true;
+      },
+    );
+  });
 });

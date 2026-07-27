@@ -144,3 +144,51 @@ func TestContractContainsMissionsEndpoints(t *testing.T) {
 		}
 	}
 }
+
+// TestContractContainsSettingsEndpoints pins the OpenAPI shape
+// for VOC-031-T02: the /api/v1/settings GET/PATCH routes, the
+// DTO, and the field-level constraints. The contract is the
+// source of truth for the api-client package and the frontend's
+// settings/account UI; this test catches a regression where the
+// Huma tags drift away from the founder-directed field set.
+func TestContractContainsSettingsEndpoints(t *testing.T) {
+	document, err := json.Marshal(NewContractAPI().OpenAPI())
+	if err != nil {
+		t.Fatalf("marshal OpenAPI: %v", err)
+	}
+	contract := string(document)
+	for _, expected := range []string{
+		"GetSettings",
+		"UpdateSettings",
+		"/api/v1/settings",
+		"SettingsDTO",
+		"dailyReviewTarget",
+		"reviewIntervalPreset",
+		"appLanguage",
+		"notificationsEnabled",
+		"marketingEmailsEnabled",
+		"displayName",
+		// Enum constraints the API uses to validate the
+		// inbound payload at the Huma boundary.
+		"vocanova_default", "wordup_like", "custom",
+		// Patch DTO name.
+		"UpdateSettingsInputBody",
+	} {
+		if !strings.Contains(contract, expected) {
+			t.Errorf("OpenAPI missing settings contract element %q", expected)
+		}
+	}
+	for _, forbidden := range []string{
+		// Settings responses are requester-scoped
+		// projections of the user_settings + users
+		// tables; the contract must never expose any
+		// internal user_id / token / FK column.
+		"user_id",
+		"token_hash",
+		"deleted_at",
+	} {
+		if strings.Contains(contract, forbidden) {
+			t.Errorf("OpenAPI exposed internal settings field %q", forbidden)
+		}
+	}
+}

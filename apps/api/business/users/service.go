@@ -159,19 +159,22 @@ var (
 	ErrOnboardingConflict = errors.New("onboarding profile already exists")
 )
 
-// Service is the requester-scoped onboarding read/complete boundary.
+// Service is the requester-scoped onboarding + settings read/write boundary.
 type Service struct {
-	repo     Repository
-	settings UserSettingsReader
-	clock    clock.Clock
+	repo         Repository
+	settings     UserSettingsReader
+	settingsRepo SettingsRepository
+	clock        clock.Clock
 }
 
-// NewService creates a users.Service.
-func NewService(repo Repository, settings UserSettingsReader, c clock.Clock) *Service {
+// NewService creates a users.Service. settingsRepo may be nil for
+// callers that only need onboarding; passing a non-nil value is
+// required to exercise the GET/PATCH /api/v1/settings endpoints.
+func NewService(repo Repository, settings UserSettingsReader, settingsRepo SettingsRepository, c clock.Clock) *Service {
 	if c == nil {
 		c = clock.Real{}
 	}
-	return &Service{repo: repo, settings: settings, clock: c}
+	return &Service{repo: repo, settings: settings, settingsRepo: settingsRepo, clock: c}
 }
 
 // GetOnboarding returns the requester's onboarding profile and the
@@ -218,4 +221,39 @@ func (s *Service) CompleteOnboarding(ctx context.Context, userID uuid.UUID, answ
 		}
 	}
 	return profile, stored, nil
+}
+
+// GetSettings returns the requester's Settings projection. The
+// requester is always taken from the session; the userID is never
+// trusted from the request body. The call returns
+// ErrSettingsNotFound when the user does not exist or has been
+// soft-deleted (the API layer maps that to 404).
+func (s *Service) GetSettings(ctx context.Context, userID uuid.UUID) (Settings, error) {
+	if userID == uuid.Nil {
+		return Settings{}, errors.New("user id required")
+	}
+	if s.settingsRepo == nil {
+		return Settings{}, errors.New("settings repository not configured")
+	}
+	return s.settingsRepo.GetSettings(ctx, userID)
+}
+
+// UpdateSettings applies a partial update to the requester's
+// Settings. Empty updates (no fields set) are accepted and return
+// the current state unchanged, matching DOC-07 §3's "no-op PATCH
+// is a well-formed read" rule. Validation runs before the
+// repository call so the API layer can map errors to 400
+// consistently.
+func (s *Service) UpdateSettings(ctx context.Context, userID uuid.UUID, update SettingsUpdate) (Settings, error) {
+	if userID == uuid.Nil {
+		return Settings{}, errors.New("user id required")
+	}
+	if s.settingsRepo == nil {
+		return Settings{}, errors.New("settings repository not configured")
+	}
+	if err := update.Validate(); err != nil {
+		return Settings{}, err
+	}
+	now := s.clock.Now().UTC()
+	return s.settingsRepo.UpdateSettings(ctx, userID, update, now)
 }

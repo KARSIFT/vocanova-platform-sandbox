@@ -67,9 +67,13 @@ func NewContractAPI() huma.API {
 	// the additive onboardingStatus field is installed at the same
 	// time so the contract can run end-to-end during OpenAPI
 	// generation without panicking on a missing implementation.
+	// VOC-031-T02 wires the same MemoryRepository in as the
+	// SettingsRepository so the new /api/v1/settings routes also
+	// appear in the contract.
 	usersRepo := users.NewMemoryRepository()
-	usersSvc := users.NewService(usersRepo, usersRepo, clock.Real{})
+	usersSvc := users.NewService(usersRepo, usersRepo, usersRepo, clock.Real{})
 	RegisterOnboarding(contractAPI, usersSvc, svc)
+	RegisterSettings(contractAPI, usersSvc, svc)
 	SetOnboardingStatusLookup(func(ctx context.Context, userID uuid.UUID) (string, error) {
 		profile, err := usersSvc.GetOnboarding(ctx, userID)
 		if err != nil {

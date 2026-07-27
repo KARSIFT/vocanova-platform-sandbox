@@ -207,3 +207,235 @@ func validOnboardingStatus(s string) bool {
 	}
 	return false
 }
+
+// GetSettings returns the requester's Settings projection. The
+// user_settings row may not exist yet; in that case every field
+// is filled from the user_settings schema defaults (the values
+// the schema would have produced for a brand-new row). The
+// users.display_name read always comes from the users table, even
+// when no user_settings row exists, so a learner with no row yet
+// still sees a stable response.
+func (r *PostgreSQLRepository) GetSettings(ctx context.Context, userID uuid.UUID) (Settings, error) {
+	row := r.db.QueryRowContext(ctx,
+		`SELECT u.display_name,
+		        s.daily_review_target,
+		        s.review_interval_preset,
+		        s.notifications_enabled,
+		        s.marketing_emails_enabled,
+		        s.app_language
+		 FROM users u
+		 LEFT JOIN user_settings s ON s.user_id = u.id
+		 WHERE u.id = $1 AND u.deleted_at IS NULL`,
+		userID,
+	)
+	var (
+		displayName      sql.NullString
+		dailyReview      sql.NullInt32
+		intervalPreset   sql.NullString
+		notifsEnabled    sql.NullBool
+		marketingEnabled sql.NullBool
+		appLanguage      sql.NullString
+	)
+	err := row.Scan(&displayName, &dailyReview, &intervalPreset,
+		&notifsEnabled, &marketingEnabled, &appLanguage)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Settings{}, ErrSettingsNotFound
+	}
+	if err != nil {
+		return Settings{}, fmt.Errorf("fetch settings: %w", err)
+	}
+	settings := Settings{
+		DailyReviewTarget:      schemaDailyReviewTargetDefaultInt,
+		ReviewIntervalPreset:   schemaReviewIntervalPresetDefault,
+		AppLanguage:            schemaAppLanguageDefault,
+		NotificationsEnabled:   schemaNotificationsEnabledDefault,
+		MarketingEmailsEnabled: schemaMarketingEmailsEnabledDefault,
+		DisplayName:            displayName.String,
+	}
+	if dailyReview.Valid {
+		settings.DailyReviewTarget = int(dailyReview.Int32)
+	}
+	if intervalPreset.Valid {
+		settings.ReviewIntervalPreset = intervalPreset.String
+	}
+	if notifsEnabled.Valid {
+		settings.NotificationsEnabled = notifsEnabled.Bool
+	}
+	if marketingEnabled.Valid {
+		settings.MarketingEmailsEnabled = marketingEnabled.Bool
+	}
+	if appLanguage.Valid {
+		settings.AppLanguage = appLanguage.String
+	}
+	return settings, nil
+}
+
+// UpdateSettings atomically applies a partial Settings update to
+// the user_settings row and (when the caller supplies a new
+// display_name) users.display_name. The implementation reads the
+// existing user_settings row inside the transaction, merges the
+// update in Go, then writes the merged result with an ON CONFLICT
+// upsert. This handles the first-ever-write case (no existing
+// row) without a unique-constraint race against the gamification
+// module's lazy-create path (VOC-031-R05): the ON CONFLICT
+// (user_id) DO UPDATE is the same pattern gamification uses, and
+// the transactional read-modify-write is atomic.
+func (r *PostgreSQLRepository) UpdateSettings(ctx context.Context, userID uuid.UUID, update SettingsUpdate, now time.Time) (Settings, error) {
+	if err := update.Validate(); err != nil {
+		return Settings{}, err
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Settings{}, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback()
+
+	merged, err := readMergedSettingsForUpdate(ctx, tx, userID, update)
+	if err != nil {
+		return Settings{}, err
+	}
+
+	row := tx.QueryRowContext(ctx,
+		`INSERT INTO user_settings (id, user_id, timezone, daily_review_target,
+		                           review_interval_preset, notifications_enabled,
+		                           marketing_emails_enabled, app_language)
+		 VALUES ($1, $2, 'UTC', $3, $4, $5, $6, $7)
+		 ON CONFLICT (user_id) DO UPDATE
+		   SET daily_review_target = EXCLUDED.daily_review_target,
+		       review_interval_preset = EXCLUDED.review_interval_preset,
+		       notifications_enabled = EXCLUDED.notifications_enabled,
+		       marketing_emails_enabled = EXCLUDED.marketing_emails_enabled,
+		       app_language = EXCLUDED.app_language,
+		       updated_at = NOW()
+		 RETURNING daily_review_target, review_interval_preset,
+		           notifications_enabled, marketing_emails_enabled, app_language`,
+		uuid.New(), userID,
+		merged.DailyReviewTarget, merged.ReviewIntervalPreset,
+		merged.NotificationsEnabled, merged.MarketingEmailsEnabled,
+		merged.AppLanguage,
+	)
+	if err := row.Scan(
+		&merged.DailyReviewTarget, &merged.ReviewIntervalPreset,
+		&merged.NotificationsEnabled, &merged.MarketingEmailsEnabled,
+		&merged.AppLanguage,
+	); err != nil {
+		return Settings{}, fmt.Errorf("upsert user settings: %w", err)
+	}
+
+	if update.DisplayName != nil {
+		if _, err := tx.ExecContext(ctx,
+			`UPDATE users SET display_name = $2, updated_at = $3
+			 WHERE id = $1 AND deleted_at IS NULL`,
+			userID, *update.DisplayName, now,
+		); err != nil {
+			return Settings{}, fmt.Errorf("update display name: %w", err)
+		}
+		merged.DisplayName = *update.DisplayName
+	} else {
+		// Re-read the display_name so the response always
+		// reflects the persisted value, even when the
+		// caller did not include it in the PATCH. This is
+		// the symmetric counterpart of GetSettings' LEFT
+		// JOIN, kept in a single round-trip via a SELECT
+		// on the same tx.
+		var name sql.NullString
+		if err := tx.QueryRowContext(ctx,
+			`SELECT display_name FROM users WHERE id = $1`, userID,
+		).Scan(&name); err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return Settings{}, fmt.Errorf("re-read display name: %w", err)
+		}
+		merged.DisplayName = name.String
+	}
+
+	if err := tx.Commit(); err != nil {
+		return Settings{}, fmt.Errorf("commit: %w", err)
+	}
+	return merged, nil
+}
+
+// readMergedSettingsForUpdate reads the existing user_settings
+// row inside tx (returning schema defaults when no row exists) and
+// applies the partial update in Go. This read-modify-write is
+// what lets the conflict-updating upsert always pass a complete,
+// correct row to EXCLUDED: the conflict path replaces every
+// field with EXCLUDED.*, and only the EXCLUDED fields we just
+// computed can win.
+func readMergedSettingsForUpdate(ctx context.Context, tx *sql.Tx, userID uuid.UUID, update SettingsUpdate) (Settings, error) {
+	row := tx.QueryRowContext(ctx,
+		`SELECT daily_review_target, review_interval_preset,
+		        notifications_enabled, marketing_emails_enabled, app_language
+		 FROM user_settings WHERE user_id = $1`,
+		userID,
+	)
+	merged := Settings{
+		DailyReviewTarget:      schemaDailyReviewTargetDefaultInt,
+		ReviewIntervalPreset:   schemaReviewIntervalPresetDefault,
+		AppLanguage:            schemaAppLanguageDefault,
+		NotificationsEnabled:   schemaNotificationsEnabledDefault,
+		MarketingEmailsEnabled: schemaMarketingEmailsEnabledDefault,
+	}
+	var (
+		dailyReview    sql.NullInt32
+		intervalPreset sql.NullString
+		notifsEnabled  sql.NullBool
+		marketingOn    sql.NullBool
+		appLanguage    sql.NullString
+	)
+	err := row.Scan(&dailyReview, &intervalPreset, &notifsEnabled, &marketingOn, &appLanguage)
+	switch {
+	case err == nil:
+		if dailyReview.Valid {
+			merged.DailyReviewTarget = int(dailyReview.Int32)
+		}
+		if intervalPreset.Valid {
+			merged.ReviewIntervalPreset = intervalPreset.String
+		}
+		if notifsEnabled.Valid {
+			merged.NotificationsEnabled = notifsEnabled.Bool
+		}
+		if marketingOn.Valid {
+			merged.MarketingEmailsEnabled = marketingOn.Bool
+		}
+		if appLanguage.Valid {
+			merged.AppLanguage = appLanguage.String
+		}
+	case errors.Is(err, sql.ErrNoRows):
+		// No existing row — schema defaults are already in
+		// merged. Caller is performing a first-ever write;
+		// the upsert will create the row.
+	default:
+		return Settings{}, fmt.Errorf("read existing settings: %w", err)
+	}
+
+	if update.DailyReviewTarget != nil {
+		merged.DailyReviewTarget = *update.DailyReviewTarget
+	}
+	if update.ReviewIntervalPreset != nil {
+		merged.ReviewIntervalPreset = *update.ReviewIntervalPreset
+	}
+	if update.AppLanguage != nil {
+		merged.AppLanguage = *update.AppLanguage
+	}
+	if update.NotificationsEnabled != nil {
+		merged.NotificationsEnabled = *update.NotificationsEnabled
+	}
+	if update.MarketingEmailsEnabled != nil {
+		merged.MarketingEmailsEnabled = *update.MarketingEmailsEnabled
+	}
+	return merged, nil
+}
+
+// Schema defaults for user_settings. These match the NOT NULL
+// DEFAULT clauses in apps/api/migrations/20260725130000_voc030_p4_user_settings.sql
+// and the user_settings ent schema's Default(...) calls. They are
+// duplicated here (rather than imported from gamification) so
+// users.Settings stays a self-contained module: importing
+// gamification just for the constants would create a cycle the
+// current package layout cannot resolve.
+const (
+	schemaDailyReviewTargetDefaultInt   = 20
+	schemaReviewIntervalPresetDefault   = "vocanova_default"
+	schemaAppLanguageDefault            = "en"
+	schemaNotificationsEnabledDefault   = true
+	schemaMarketingEmailsEnabledDefault = false
+)
