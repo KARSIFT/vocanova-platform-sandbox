@@ -300,6 +300,67 @@ export interface UpdateSettingsBody {
   displayName?: string;
 }
 
+/**
+ * VOC-031-T03. The request body for
+ * POST /api/v1/settings/email-change-links. The new email is
+ * the destination the requester wants to switch to; the
+ * current sign-in address is taken from the session and is
+ * never trusted from the body. The request is unconditionally
+ * generic on the server side, so the registration status of
+ * the new address is never observable through the request
+ * outcome (anti-enumeration posture, VOC-031-D05).
+ */
+export interface RequestEmailChangeLinkBody {
+  newEmail: string;
+}
+
+/**
+ * VOC-031-T03. The request body for
+ * POST /api/v1/settings/email-change-links/consume. The token
+ * is the only form the requester supplies; the API never sees
+ * the email itself at consume time (the server resolved it
+ * when the request was issued).
+ */
+export interface ConsumeEmailChangeLinkBody {
+  token: string;
+}
+
+/**
+ * VOC-031-T03. The post-confirm response from
+ * POST /api/v1/settings/email-change-links/consume. The
+ * server returns the new email and the previous email so the
+ * frontend can show the learner which address the security
+ * notification was dispatched to; the notification itself is
+ * owned by the backend, not the frontend.
+ */
+export interface ConsumeEmailChangeLinkResult {
+  email: string;
+  previousEmail: string;
+  changedAt: string;
+}
+
+/**
+ * VOC-031-T04. The post-deactivation response from
+ * POST /api/v1/account-deletion-requests. The user is already
+ * deactivated at this point: status is 'deactivated', every
+ * active session and every unconsumed auth/email-change
+ * token is revoked, and the purge_after clock is running. The
+ * frontend uses the dates to render a clear "your account
+ * has been scheduled for deletion" confirmation and to
+ * initiate logout. `replayed` is true when the call was a
+ * no-op because the (user, idempotency-key) pair already
+ * matched a prior request — the frontend uses it to
+ * suppress duplicate toasts on a retry.
+ */
+export interface CreateAccountDeletionRequestResult {
+  status: string;
+  userId: string;
+  requestedAt: string;
+  purgeAfter: string;
+  idempotencyKey: string;
+  replayed: boolean;
+}
+
 export interface ApiError {
   type?: string;
   title?: string;
@@ -653,6 +714,83 @@ export class VocanovaClient {
       init,
     );
     const data = (await response.json()) as Settings;
+    return { data, response };
+  }
+
+  /**
+   * VOC-031-T03. Request a single-use email-change link. The
+   * request is unconditionally generic on the server side
+   * (anti-enumeration posture, VOC-031-D05): whether the
+   * requested new email is already registered is never
+   * observable through this response. The `init.headers` are
+   * forwarded so the caller can attach a CSRF token.
+   */
+  async requestEmailChangeLink(
+    body: RequestEmailChangeLinkBody,
+    init?: RequestInit,
+  ): Promise<{ response: Response }> {
+    const response = await this.request(
+      "POST",
+      "/api/v1/settings/email-change-links",
+      body,
+      init,
+    );
+    return { response };
+  }
+
+  /**
+   * VOC-031-T03. Consume a single-use email-change link. The
+   * server validates the token's hash, expiry, single-use
+   * `consumed_at`, and environment, re-checks new-email
+   * uniqueness atomically at confirm time, and updates
+   * `users.email`. The `init.headers` are forwarded so the
+   * caller can attach a CSRF token.
+   */
+  async consumeEmailChangeLink(
+    body: ConsumeEmailChangeLinkBody,
+    init?: RequestInit,
+  ): Promise<{
+    data: ConsumeEmailChangeLinkResult;
+    response: Response;
+  }> {
+    const response = await this.request(
+      "POST",
+      "/api/v1/settings/email-change-links/consume",
+      body,
+      init,
+    );
+    const data = (await response.json()) as ConsumeEmailChangeLinkResult;
+    return { data, response };
+  }
+
+  /**
+   * VOC-031-T04. Deactivate the requester's account and
+   * schedule anonymization. Requires a CSRF token and a
+   * unique Idempotency-Key (DOC-07). A replay with the same
+   * key returns the existing row with `replayed: true`, so
+   * the frontend can suppress duplicate "your account was
+   * deleted" toasts on a retry. The user is already
+   * deactivated at this point: every active session is
+   * revoked, and the `purgeAfter` clock is running. The
+   * frontend should follow up with a logout request to clear
+   * the session cookie.
+   */
+  async createAccountDeletionRequest(
+    idempotencyKey: string,
+    init?: RequestInit,
+  ): Promise<{
+    data: CreateAccountDeletionRequestResult;
+    response: Response;
+  }> {
+    const headers = new Headers(init?.headers);
+    headers.set("Idempotency-Key", idempotencyKey);
+    const response = await this.request(
+      "POST",
+      "/api/v1/account-deletion-requests",
+      undefined,
+      { ...init, headers },
+    );
+    const data = (await response.json()) as CreateAccountDeletionRequestResult;
     return { data, response };
   }
 

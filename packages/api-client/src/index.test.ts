@@ -791,4 +791,111 @@ describe("VocanovaClient", () => {
       },
     );
   });
+
+  it("sends POST /api/v1/settings/email-change-links with newEmail", async () => {
+    const fetch = (url: string, init: RequestInit): Promise<Response> => {
+      assert.equal(
+        url,
+        "https://api.example.com/api/v1/settings/email-change-links",
+      );
+      assert.equal(init.method, "POST");
+      assert.equal(
+        new Headers(init.headers).get("X-CSRF-Token"),
+        "csrf-token-value",
+      );
+      assert.equal(
+        init.body,
+        JSON.stringify({ newEmail: "new-address@example.com" }),
+      );
+      return Promise.resolve(new Response(null, { status: 204 }));
+    };
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: fetch as typeof globalThis.fetch,
+    });
+    const { response } = await client.requestEmailChangeLink(
+      { newEmail: "new-address@example.com" },
+      { headers: { "X-CSRF-Token": "csrf-token-value" } },
+    );
+    assert.equal(response.status, 204);
+  });
+
+  it("sends POST /api/v1/settings/email-change-links/consume with token", async () => {
+    let capturedBody: unknown;
+    const fetch = (url: string, init: RequestInit): Promise<Response> => {
+      assert.equal(
+        url,
+        "https://api.example.com/api/v1/settings/email-change-links/consume",
+      );
+      assert.equal(init.method, "POST");
+      assert.equal(
+        new Headers(init.headers).get("X-CSRF-Token"),
+        "csrf-token-value",
+      );
+      capturedBody = JSON.parse(String(init.body));
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            email: "new-address@example.com",
+            previousEmail: "old-address@example.com",
+            changedAt: "2026-07-27T12:00:00Z",
+          }),
+          { headers: { "Content-Type": "application/json" }, status: 200 },
+        ),
+      );
+    };
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: fetch as typeof globalThis.fetch,
+    });
+    const { data } = await client.consumeEmailChangeLink(
+      { token: "the-token" },
+      { headers: { "X-CSRF-Token": "csrf-token-value" } },
+    );
+    assert.deepEqual(capturedBody, { token: "the-token" });
+    assert.equal(data.email, "new-address@example.com");
+    assert.equal(data.previousEmail, "old-address@example.com");
+    assert.equal(data.changedAt, "2026-07-27T12:00:00Z");
+  });
+
+  it("sends POST /api/v1/account-deletion-requests with Idempotency-Key and CSRF", async () => {
+    const fetch = (url: string, init: RequestInit): Promise<Response> => {
+      assert.equal(
+        url,
+        "https://api.example.com/api/v1/account-deletion-requests",
+      );
+      assert.equal(init.method, "POST");
+      assert.equal(
+        new Headers(init.headers).get("Idempotency-Key"),
+        "idem-key",
+      );
+      assert.equal(
+        new Headers(init.headers).get("X-CSRF-Token"),
+        "csrf-token-value",
+      );
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            status: "deactivated",
+            userId: "00000000-0000-0000-0000-000000000001",
+            requestedAt: "2026-07-27T12:00:00Z",
+            purgeAfter: "2026-08-26T12:00:00Z",
+            idempotencyKey: "idem-key",
+            replayed: false,
+          }),
+          { headers: { "Content-Type": "application/json" }, status: 200 },
+        ),
+      );
+    };
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: fetch as typeof globalThis.fetch,
+    });
+    const { data } = await client.createAccountDeletionRequest("idem-key", {
+      headers: { "X-CSRF-Token": "csrf-token-value" },
+    });
+    assert.equal(data.status, "deactivated");
+    assert.equal(data.replayed, false);
+    assert.equal(data.purgeAfter, "2026-08-26T12:00:00Z");
+  });
 });

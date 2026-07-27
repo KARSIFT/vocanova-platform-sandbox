@@ -12,6 +12,8 @@ export const config = {
     "/progress",
     "/reviews",
     "/reviews/:path*",
+    "/settings",
+    "/settings/:path*",
   ],
 };
 
