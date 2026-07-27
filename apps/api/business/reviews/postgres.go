@@ -6,23 +6,58 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/missions"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/google/uuid"
 )
 
 // PostgreSQLRepository implements Repository against the VOC-027 review schema.
+// Optional gamification and missions dependencies enable the P4 reward, mission,
+// and streak wiring inside the existing review-submission transaction
+// (DOC-06 §3). When both are nil, the pre-existing P2 behavior is preserved
+// byte-for-byte (no extra SQL, no extra writes) — this is the contract the
+// existing reviews package tests already rely on.
 type PostgreSQLRepository struct {
-	db    *sql.DB
-	clock clock.Clock
+	db           *sql.DB
+	clock        clock.Clock
+	gamification *gamification.Service
+	missions     *missions.Service
 }
 
-// NewPostgreSQLRepository creates a repository backed by db.
-func NewPostgreSQLRepository(db *sql.DB, c clock.Clock) *PostgreSQLRepository {
+// ReviewRepositoryOption configures a PostgreSQLRepository at construction
+// time. Typed options keep the constructor type-safe while remaining
+// backwards-compatible with existing two-argument call sites that only
+// supply db + clock.
+type ReviewRepositoryOption func(*PostgreSQLRepository)
+
+// WithGamificationService wires in the gamification service for P4 reward
+// and streak writes inside the review transaction.
+func WithGamificationService(s *gamification.Service) ReviewRepositoryOption {
+	return func(r *PostgreSQLRepository) { r.gamification = s }
+}
+
+// WithMissionsService wires in the missions service for daily-mission
+// snapshot and activity-summary writes inside the review transaction.
+func WithMissionsService(s *missions.Service) ReviewRepositoryOption {
+	return func(r *PostgreSQLRepository) { r.missions = s }
+}
+
+// NewPostgreSQLRepository creates a repository backed by db. c may be nil
+// (defaults to clock.Real). Optional gamification/missions dependencies
+// enable the P4 reward wiring; both are independent and may be supplied
+// together or left nil to keep the pre-P2 behavior unchanged.
+func NewPostgreSQLRepository(db *sql.DB, c clock.Clock, opts ...ReviewRepositoryOption) *PostgreSQLRepository {
 	if c == nil {
 		c = clock.Real{}
 	}
-	return &PostgreSQLRepository{db: db, clock: c}
+	repo := &PostgreSQLRepository{db: db, clock: c}
+	for _, opt := range opts {
+		opt(repo)
+	}
+	return repo
 }
 
 func (r *PostgreSQLRepository) ListDueWords(ctx context.Context, req ListDueWordsRequest) (*ListDueWordsResponse, error) {
@@ -254,6 +289,20 @@ func (r *PostgreSQLRepository) SubmitReview(ctx context.Context, req SubmitRevie
 		return nil, fmt.Errorf("update user word schedule: %w", err)
 	}
 
+	// P4 reward wiring: record the rating-tiered point award, update the daily
+	// activity summary, advance the daily mission, and reconcile the streak —
+	// all inside the same transaction. Both dependencies are required to wire
+	// anything; either being nil preserves the pre-P4 P2 behavior. A skipped
+	// review awards no rating-tiered point (DOC-06 §11 prices only
+	// correct/incorrect ratings); the activity summary still gets the
+	// reviews_skipped counter and a non-zero attempted event so the read APIs
+	// can show "skipped today" honestly.
+	if r.gamification != nil && r.missions != nil {
+		if err := r.applyP4ReviewWiring(ctx, tx, req, attemptID, now); err != nil {
+			return nil, err
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("commit review submission: %w", err)
 	}
@@ -279,6 +328,252 @@ func (r *PostgreSQLRepository) SubmitReview(ctx context.Context, req SubmitRevie
 		Metadata:                req.Metadata,
 		NextReviewAt:            sched.NextReviewAt,
 	}, nil
+}
+
+// applyP4ReviewWiring runs the P4 reward/mission/streak writes for one
+// successful review submission. It is invoked strictly after the existing
+// review_attempts INSERT and user_words UPDATE and strictly before the
+// existing commit, so all writes either land together or roll back together.
+// Idempotency is enforced by the confidence_point_ledger
+// (user_id, idempotency_key) partial unique index and the daily_mission_snapshots
+// status='open' guard in MarkSnapshotCompleted — even a retried/replayed
+// transaction can never award a second reward or double-complete the mission.
+func (r *PostgreSQLRepository) applyP4ReviewWiring(
+	ctx context.Context,
+	tx *sql.Tx,
+	req SubmitReviewRequest,
+	attemptID uuid.UUID,
+	now time.Time,
+) error {
+	// Resolve per-user settings (timezone + review target) using the
+	// user_settings row first, then the request-time client IANA timezone
+	// (empty here — P2's SubmitReview is the caller's own transaction, not
+	// an HTTP request), falling back to UTC/default. D01 governs.
+	resolved, err := r.gamification.GetSettings(ctx, req.UserID, "")
+	if err != nil {
+		return fmt.Errorf("get settings: %w", err)
+	}
+
+	// Ensure today's snapshot exists (lazy creation per DOC-06 §10).
+	snap, err := r.missions.EnsureTodaySnapshot(ctx, tx, req.UserID, resolved, now)
+	if err != nil {
+		return fmt.Errorf("ensure today snapshot: %w", err)
+	}
+
+	// Map review result/rating to the P4 activity flags used by both the
+	// daily_activity_summaries row and the rating-tiered reward grant.
+	correct, skipped, rewardKind, ok := reviewRewardKind(req.Result, req.Rating)
+	if !ok {
+		// Unrecognized result/rating — should be unreachable because
+		// Service.SubmitReview already validates, but be defensive.
+		return fmt.Errorf("review reward kind: result=%q rating=%q", req.Result, req.Rating)
+	}
+
+	// Increment reviews_completed on the snapshot (capped at review_target
+	// by LEAST) and upsert the activity summary's review counters.
+	newReviewsCompleted, err := r.missions.IncrementReviewsCompleted(
+		ctx, tx, req.UserID, snap.LocalDate, resolved.Timezone,
+		resolved.DailyReviewTarget, correct, skipped,
+	)
+	if err != nil {
+		return fmt.Errorf("increment reviews completed: %w", err)
+	}
+
+	// Skipped reviews do not award a rating-tiered point (DOC-06 §11
+	// prices only Again/Hard/Good/Easy, all of which require a rating)
+	// but the activity counter above already recorded the attempt.
+	if !skipped {
+		balance, err := getLatestPointBalanceTx(ctx, tx, req.UserID)
+		if err != nil {
+			return fmt.Errorf("get latest point balance: %w", err)
+		}
+		newBalance, _, err := r.gamification.GrantPoint(
+			ctx, tx, req.UserID,
+			rewardKind, &attemptID,
+			gamification.ReviewAttemptRatedKey(attemptID.String()),
+			balance, now, nil,
+		)
+		if err != nil {
+			return fmt.Errorf("grant review point: %w", err)
+		}
+		if err := r.missions.IncrementConfidencePointsEarned(
+			ctx, tx, req.UserID, snap.LocalDate, resolved.Timezone, newBalance-balance,
+		); err != nil {
+			return fmt.Errorf("increment points earned: %w", err)
+		}
+	}
+
+	// If the review target is met for the first time today, transition
+	// the snapshot to completed, record the +10 daily-mission-completion
+	// award, and let the streak reconciliation know the day completed
+	// (so it advances the streak and may earn a grace day).
+	missionCompletedNow := false
+	if newReviewsCompleted >= snap.ReviewTarget && snap.Status == missions.StatusOpen {
+		completed, err := r.missions.MarkSnapshotCompleted(ctx, tx, req.UserID, snap.LocalDate, now)
+		if err != nil {
+			return fmt.Errorf("mark snapshot completed: %w", err)
+		}
+		if completed {
+			missionCompletedNow = true
+			balance, err := getLatestPointBalanceTx(ctx, tx, req.UserID)
+			if err != nil {
+				return fmt.Errorf("get latest point balance: %w", err)
+			}
+			localDateKey := snap.LocalDate.Format("2006-01-02")
+			if _, _, err := r.gamification.GrantPoint(
+				ctx, tx, req.UserID,
+				gamification.RewardKindDailyMissionDone, nil,
+				gamification.DailyMissionCompletedKey(req.UserID.String(), localDateKey),
+				balance, now, nil,
+			); err != nil {
+				return fmt.Errorf("grant daily mission point: %w", err)
+			}
+			if err := r.missions.IncrementConfidencePointsEarned(
+				ctx, tx, req.UserID, snap.LocalDate, resolved.Timezone, gamification.RewardDailyMissionDone,
+			); err != nil {
+				return fmt.Errorf("increment points earned: %w", err)
+			}
+		}
+	}
+
+	// Streak reconciliation: lazy, no queue/cron (DOC-06 §15), computed
+	// from the recent snapshot history. Reads happen on the caller's tx
+	// (consistent read) and any grace-day ledger writes happen here too.
+	snaps, err := r.fetchStreakSnapshotsTx(ctx, tx, req.UserID)
+	if err != nil {
+		return fmt.Errorf("fetch streak snapshots: %w", err)
+	}
+	graceBalance, err := getLatestGraceBalanceTx(ctx, tx, req.UserID)
+	if err != nil {
+		return fmt.Errorf("get latest grace balance: %w", err)
+	}
+	if _, err := r.gamification.ReconcileAndAdvance(
+		ctx, tx, req.UserID, now, resolved.Timezone,
+		snaps, graceBalance, missionCompletedNow,
+	); err != nil {
+		return fmt.Errorf("reconcile streak: %w", err)
+	}
+	return nil
+}
+
+// reviewRewardKind maps a (result, rating) pair to the per-event reward
+// kind and the activity summary flags. Skipped reviews return ok=false for
+// the reward kind (no rating-tiered award applies) but still record the
+// attempt in the activity summary. Unknown pairs are returned with ok=false
+// so the caller can fail closed without silently awarding 0 points.
+func reviewRewardKind(result, rating string) (correct, skipped bool, kind gamification.RewardKind, ok bool) {
+	switch result {
+	case ResultCorrect:
+		correct = true
+		switch rating {
+		case RatingHard:
+			return correct, false, gamification.RewardKindReviewHard, true
+		case RatingGood:
+			return correct, false, gamification.RewardKindReviewGood, true
+		case RatingEasy:
+			return correct, false, gamification.RewardKindReviewEasy, true
+		}
+		// Defensive: a correct attempt with empty rating is treated
+		// as Good by ApplyReview, so mirror that mapping here.
+		if rating == "" {
+			return correct, false, gamification.RewardKindReviewGood, true
+		}
+		return false, false, "", false
+	case ResultIncorrect:
+		// Again is the only permitted rating for an incorrect attempt.
+		if rating == RatingAgain {
+			return false, false, gamification.RewardKindReviewAgain, true
+		}
+		return false, false, "", false
+	case ResultSkipped:
+		// Skipped attempts have no rating; no rating-tiered reward.
+		return false, true, "", true
+	}
+	return false, false, "", false
+}
+
+// fetchStreakSnapshotsTx reads the recent daily_mission_snapshots history
+// for the user (a 14-day window is sufficient for streak reconciliation)
+// inside the caller's tx so the read is consistent with the writes just
+// performed by the P4 wiring block.
+func (r *PostgreSQLRepository) fetchStreakSnapshotsTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID) ([]gamification.StreakSnapshot, error) {
+	rows, err := tx.QueryContext(ctx,
+		`SELECT local_date, status, completed_at, grace_applied, grace_day_id
+		 FROM daily_mission_snapshots
+		 WHERE user_id = $1
+		 ORDER BY local_date DESC
+		 LIMIT $2`,
+		userID, 14,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("fetch streak snapshots: %w", err)
+	}
+	defer rows.Close()
+	var out []gamification.StreakSnapshot
+	for rows.Next() {
+		var s gamification.StreakSnapshot
+		var completedAt sql.NullTime
+		var graceDayID *uuid.UUID
+		if err := rows.Scan(&s.LocalDate, &s.Status, &completedAt, &s.GraceApplied, &graceDayID); err != nil {
+			return nil, fmt.Errorf("scan streak snapshot: %w", err)
+		}
+		if completedAt.Valid {
+			t := completedAt.Time
+			s.CompletedAt = &t
+		}
+		if graceDayID != nil {
+			id := graceDayID.String()
+			s.GraceDayID = &id
+		}
+		out = append(out, s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("scan streak snapshots rows: %w", err)
+	}
+	return out, nil
+}
+
+// getLatestPointBalanceTx reads the user's current confidence-point balance
+// inside the caller's tx so the rating-tiered reward grant and the
+// daily-mission completion grant see the post-write value (re-using the
+// same connection-scoped snapshot, avoiding the @@race window that the
+// pre-existing GetLatestPointBalance context-based read would open).
+func getLatestPointBalanceTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID) (int, error) {
+	row := tx.QueryRowContext(ctx,
+		`SELECT COALESCE(balance_after, 0) FROM confidence_point_ledger
+		 WHERE user_id = $1
+		 ORDER BY occurred_at DESC, id DESC
+		 LIMIT 1`,
+		userID,
+	)
+	var balance int
+	if err := row.Scan(&balance); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("fetch latest point balance: %w", err)
+	}
+	return balance, nil
+}
+
+// getLatestGraceBalanceTx reads the user's current grace-day balance inside
+// the caller's tx (see getLatestPointBalanceTx for the rationale).
+func getLatestGraceBalanceTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID) (int, error) {
+	row := tx.QueryRowContext(ctx,
+		`SELECT COALESCE(balance_after, 0) FROM grace_day_ledger
+		 WHERE user_id = $1
+		 ORDER BY created_at DESC, id DESC
+		 LIMIT 1`,
+		userID,
+	)
+	var balance int
+	if err := row.Scan(&balance); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("fetch latest grace balance: %w", err)
+	}
+	return balance, nil
 }
 
 func (r *PostgreSQLRepository) fetchAttemptByClientAttemptID(ctx context.Context, tx *sql.Tx, userID uuid.UUID, clientAttemptID string) (*ReviewAttempt, error) {

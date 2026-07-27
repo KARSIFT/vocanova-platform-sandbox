@@ -50,6 +50,60 @@ func (s *Service) EnsureTodaySnapshot(
 	)
 }
 
+// IncrementReviewsCompleted is a thin service-layer wrapper over the
+// repository method, used by transaction-scoped callers (P1/P2/P3
+// transactions) that need to record one review attempt against today's
+// daily mission and the user's activity summary. The reviews_completed
+// counter is capped at review_target by the SQL; the returned value is
+// the post-increment counter.
+func (s *Service) IncrementReviewsCompleted(
+	ctx context.Context,
+	tx *sql.Tx,
+	userID uuid.UUID,
+	localDate time.Time,
+	timezone string,
+	reviewTarget int,
+	correct bool,
+	skipped bool,
+) (int, error) {
+	return s.missions.IncrementReviewsCompleted(
+		ctx, tx, userID, localDate, timezone, reviewTarget, correct, skipped,
+	)
+}
+
+// IncrementConfidencePointsEarned adds amount to today's
+// daily_activity_summaries.confidence_points_earned (used by the P1 word-add
+// and P2 review/mission-completion writes to keep the activity summary in
+// sync with the confidence_point_ledger).
+func (s *Service) IncrementConfidencePointsEarned(
+	ctx context.Context,
+	tx *sql.Tx,
+	userID uuid.UUID,
+	localDate time.Time,
+	timezone string,
+	amount int,
+) error {
+	return s.missions.IncrementConfidencePointsEarned(
+		ctx, tx, userID, localDate, timezone, amount,
+	)
+}
+
+// MarkSnapshotCompleted transitions today's daily_mission_snapshots row to
+// status='completed' inside tx. The repository's WHERE status='open' guard
+// makes this idempotent — a retried or replayed transaction can never
+// double-complete the mission or double-award the +10 reward. The returned
+// bool is true iff the row was actually transitioned (i.e. the call
+// completed the mission for the first time today).
+func (s *Service) MarkSnapshotCompleted(
+	ctx context.Context,
+	tx *sql.Tx,
+	userID uuid.UUID,
+	localDate time.Time,
+	now time.Time,
+) (bool, error) {
+	return s.missions.MarkSnapshotCompleted(ctx, tx, userID, localDate, now)
+}
+
 // GetDailyMissionView returns the API view of today's daily mission for the
 // user, including the shared streak object. If the snapshot does not yet
 // exist, one is created lazily inside a read transaction; this is the
