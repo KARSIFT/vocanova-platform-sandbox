@@ -1,0 +1,125 @@
+schema_version: 1
+id: VOC-031
+slug: begin-milestone-p5-integrated-core-loop
+title: "Begin Milestone P5 \u2014 Integrated Core Loop"
+type: feature
+status: draft
+risk: R3
+planned_implementation_risk_floor: R3
+canonical_path: specs/changes/VOC-031-begin-milestone-p5-integrated-core-loop
+authority_model: a003-active
+requirement_source: docs/product/12-mvp-implementation-plan.md#5 (P5 paragraph) ;
+  docs/design/03-ui-ux-design.md ; docs/design/08-web-app-design.md ; docs/engineering/05-database-design.md#6,#13,#16
+  ; docs/engineering/06-backend-design.md#6,#7,#9,#14,#15 ; docs/engineering/07-api-contract-and-dto-design.md
+  ; docs/operations/10-development-workflow.md#7 ; docs/operations/11-devops-and-ci-cd.md#3
+  ; supplied free-text request (records five founder decisions)
+requirement_approval_status: founder-approved
+base_branch: develop
+base_sha: 96d008ec84e7f63ad630c28c246bf0f103d8047d
+target_branch: develop
+approved_candidate_sha: not-set-until-adoption
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: false
+production_impact: unknown
+rollback_required: true
+owners:
+  decision: founder
+  package_preparation: planner
+  implementation: unassigned
+  independent_verification: Claude Code
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+  mock_inventory: mock-inventory.md
+  staging_evidence: staging-evidence.md
+dependencies:
+- id: VOC-031-DEP-01
+  status: "open-before-p5-acceptance; P5 builds on the A1 auth foundation (VOC-025),\
+    \ the P1 content/learning foundation (VOC-026), the P2 reviews module (VOC-027),\
+    \ the P3 aifeedback module (VOC-028), and the P4 missions/gamification modules\
+    \ plus the user_settings table (VOC-030). The DOC-12 A1\u2192P1\u2192P2\u2192\
+    P3\u2192P4 acceptance chain must pass before P5 can be accepted; in-repository\
+    \ evidence exists for each (VOC-025-T05, VOC-026-T05, VOC-027-T04, VOC-028-T05,\
+    \ VOC-030-T06) but live staging evidence for all five remains blocked by the missing\
+    \ F3 staging environment (carried forward through each milestone's own DEP chain)."
+- id: VOC-031-DEP-02
+  status: open-before-staging-evidence; the F3 staging environment does not yet exist
+    (carried from VOC-025-DEP-01 / VOC-026-DEP-03 / VOC-027-DEP-02 / VOC-028-DEP-04
+    / VOC-030-DEP-02), so live P5 staging/rollback evidence in T11 cannot be executed
+    and the DOC-12 P5 acceptance gate cannot itself be declared complete by this work
+    alone.
+- id: VOC-031-DEP-03
+  status: "open-before-production-enablement; per VOC-031-D07, account deletion's\
+    \ production enablement requires the DOC-05 \xA716 \"subject to legal review before\
+    \ production\" sign-off plus an explicit founder go/no-go, distinct from and in\
+    \ addition to the ordinary R2/L1 production-readiness gate. This does not block\
+    \ T00-T11's build/test work against non-production data, only the future production-activation\
+    \ decision."
+- id: VOC-031-DEP-04
+  status: "open-before-T00; confirmed at draft time (2026-07-27) that no Playwright,\
+    \ axe-core, or Lighthouse CI tooling exists anywhere in this repository \u2014\
+    \ T07/T08 (Playwright + axe-core) and T09 (Lighthouse CI) are net-new CI dependencies,\
+    \ not incremental wiring. The adopted base must reconcile CI runner browser dependencies,\
+    \ job time budget, and new devDependencies before those tasks begin, on top of\
+    \ the already-established Go/Huma/chi, PostgreSQL+Ent+Atlas, OpenAPI generation,\
+    \ and existing CI workflow structure confirmed present through VOC-025/026/027/028/030."
+- id: VOC-031-DEP-05
+  status: "open-before-T01; VOC-031-D03 is a genuine new product ambiguity this draft\
+    \ surfaces but does not resolve \u2014 whether the onboarding gate applies retroactively\
+    \ to every pre-existing account (including non-production staging/test identities\
+    \ from VOC-025\u2013VOC-030, all of which are currently onboarding_status='not_started')\
+    \ or only to accounts created after this package's activation. T01's tasks/acceptance\
+    \ criteria are written against the literal (apply-to-everyone) default; the founder\
+    \ must confirm or override this before T01 is implemented."
+affected_areas:
+- apps/api/business/users
+- apps/api/business/accounts
+- apps/api/business/auth
+- apps/api/ent/schema
+- apps/api/migrations
+- apps/api/app/api
+- apps/api/openapi/vocanova.openapi.json
+- packages/api-client
+- apps/web/src/app/onboarding
+- apps/web/src/app/(app)/settings
+- apps/web/src/middleware.ts
+- apps/web/tests/e2e
+- .github/workflows
+- package.json
+implementation:
+  authorized: false
+  required: true
+  status: draft
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: unknown
+  deployment: not-authorized-by-this-package
+  automatic_merge: false
+  migration_required: true
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
+blocking_reasons: "not adopted; VOC-031-D02\u2013D03, D05\u2013D07, and D09 require\
+  \ founder confirmation at adoption (D01, D04, D08 are supplied/derived, not open);\
+  \ VOC-031-DEP-01 through DEP-05 remain open/tracked as documented (staging evidence\
+  \ blocked by missing F3, production account-deletion enablement gated separately,\
+  \ new CI tooling reconciliation needed, onboarding-gate retroactivity ambiguity\
+  \ unresolved)."
