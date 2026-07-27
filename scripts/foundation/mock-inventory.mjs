@@ -157,8 +157,9 @@ export function validateMockInventory() {
   // VOC-027 P2 review routes (due-queue read and submission), the
   // VOC-028-T04 sentence-feedback write/report routes, the
   // VOC-030-T04 daily-mission/progress reads, the
-  // VOC-031-T01 onboarding read/submit routes, and the
-  // VOC-031-T02 settings read/write routes were invented.
+  // VOC-031-T01 onboarding read/submit routes, the
+  // VOC-031-T02 settings read/write routes, and the
+  // VOC-031-T03 email-change request/consume routes were invented.
   const allowedAPIPaths = [
     /^\/api\/v1\/me$/,
     /^\/api\/v1\/auth(?:\/|$)/,
@@ -174,6 +175,8 @@ export function validateMockInventory() {
     /^\/api\/v1\/progress$/,
     /^\/api\/v1\/onboarding$/,
     /^\/api\/v1\/settings$/,
+    /^\/api\/v1\/settings\/email-change-links$/,
+    /^\/api\/v1\/settings\/email-change-links\/consume$/,
   ];
   const apiRouteFiles = globSync("**/*.go", { cwd: apiRouteRoot });
   for (const file of apiRouteFiles) {
@@ -183,7 +186,7 @@ export function validateMockInventory() {
       const apiPath = match[1];
       if (!allowedAPIPaths.some((allowed) => allowed.test(apiPath))) {
         errors.push(
-          `${file}: API path ${apiPath} outside the approved A1/P1/P2/P4-T00/T04/P5-T01/T02 boundary`,
+          `${file}: API path ${apiPath} outside the approved A1/P1/P2/P4-T00/T04/P5-T01/T02/T03 boundary`,
         );
       }
     }
@@ -192,7 +195,7 @@ export function validateMockInventory() {
   // Verify no unexpected business modules. VOC-030-T00 introduces the
   // `missions` and `gamification` modules; T01-T03 will wire them into
   // the existing P1/P2/P3 transactions. VOC-031-T00 introduces the
-  // `users` module; T03 will add the `accounts` module.
+  // `users` module; T03 adds the `accounts` module.
   const allowedBusinessModules = new Set([
     "auth",
     "content",
@@ -202,13 +205,14 @@ export function validateMockInventory() {
     "missions",
     "gamification",
     "users",
+    "accounts",
   ]);
   for (const entry of readdirSync(apiBusinessRoot, {
     withFileTypes: true,
   })) {
     if (entry.isDirectory() && !allowedBusinessModules.has(entry.name)) {
       errors.push(
-        `apps/api/business/${entry.name}: unexpected business module outside the approved A1/P1/P2/P4-T00 boundary`,
+        `apps/api/business/${entry.name}: unexpected business module outside the approved A1/P1/P2/P4-T00/P5-T03 boundary`,
       );
     }
   }
@@ -216,8 +220,8 @@ export function validateMockInventory() {
   // Verify no unexpected Ent schemas. VOC-030-T00 introduces six new
   // tables: daily_mission_snapshots, daily_activity_summaries,
   // confidence_point_ledger, streak_states, grace_day_ledger, and
-  // user_settings. VOC-031-T00 adds user_onboarding_profiles; T03/T04
-  // will add email_change_links and account_deletion_requests.
+  // user_settings. VOC-031-T00 adds user_onboarding_profiles; T03
+  // adds email_change_links; T04 will add account_deletion_requests.
   const allowedSchemaFiles = new Set([
     "canonicalword.go",
     "externalidentity.go",
@@ -241,6 +245,7 @@ export function validateMockInventory() {
     "gracedayledger.go",
     "usersettings.go",
     "useronboardingprofile.go",
+    "emailchangelink.go",
   ]);
   for (const entry of readdirSync(apiSchemaRoot, { withFileTypes: true })) {
     if (
@@ -249,7 +254,7 @@ export function validateMockInventory() {
       !allowedSchemaFiles.has(entry.name)
     ) {
       errors.push(
-        `apps/api/ent/schema/${entry.name}: unexpected schema outside the approved A1/P1/P2/P4-T00 boundary`,
+        `apps/api/ent/schema/${entry.name}: unexpected schema outside the approved A1/P1/P2/P4-T00/P5-T03 boundary`,
       );
     }
   }
@@ -258,8 +263,9 @@ export function validateMockInventory() {
   // user_settings / mission_tables / gamification_tables migrations in
   // DOC-05 §18 order after ai_feedback_attempts. VOC-031-T00 adds the
   // user_onboarding_profiles migration in DOC-05 §18 order after the
-  // P4 gamification_tables migration; T03/T04 will add the
-  // email_change_links and account_deletion_requests migrations.
+  // P4 gamification_tables migration; T03 adds the
+  // email_change_links migration; T04 will add the
+  // account_deletion_requests migration.
   const allowedMigrationFiles = new Set([
     "20260724210000_identity_foundation.sql",
     "20260724210001_oauth_state.sql",
@@ -272,6 +278,7 @@ export function validateMockInventory() {
     "20260725130001_voc030_p4_mission_tables.sql",
     "20260725130002_voc030_p4_gamification_tables.sql",
     "20260725140000_voc031_p5_user_onboarding_profiles.sql",
+    "20260725140001_voc031_p5_email_change_links.sql",
   ]);
   for (const entry of readdirSync(apiMigrationRoot, {
     withFileTypes: true,
@@ -282,7 +289,7 @@ export function validateMockInventory() {
       !allowedMigrationFiles.has(entry.name)
     ) {
       errors.push(
-        `apps/api/migrations/${entry.name}: unexpected migration outside the approved A1/P1/P2/T00 boundary`,
+        `apps/api/migrations/${entry.name}: unexpected migration outside the approved A1/P1/P2/T00/P5-T03 boundary`,
       );
     }
   }

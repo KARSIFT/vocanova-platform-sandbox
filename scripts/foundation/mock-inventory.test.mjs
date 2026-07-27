@@ -3,9 +3,12 @@ import test from "node:test";
 
 import { validateMockInventory } from "./mock-inventory.mjs";
 
-// VOC-030-T04 baseline: the existing allow list (T00–T04
-// boundaries, T05 mock retirements, no-P5) is enforced.
-test("VOC-030-T04 mock dispositions and protected boundaries are respected", () => {
+// VOC-031-T03: the protected-boundary allow list now includes the
+// T03 email-change routes (`/api/v1/settings/email-change-links`),
+// the `accounts` business module, the `email_change_links` Ent
+// schema, and the `email_change_links` migration, in addition to
+// the previously adopted A1/P1/P2/P4-T00/P5-T01/T02 boundaries.
+test("VOC-031-T03 mock inventory accepts the email-change backend boundary", () => {
   assert.deepEqual(validateMockInventory(), []);
 });
 
