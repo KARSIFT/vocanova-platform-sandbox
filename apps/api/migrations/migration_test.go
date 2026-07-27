@@ -352,3 +352,54 @@ func TestVOC031P5UserOnboardingProfilesMigrationCarriesDatabaseInvariants(t *tes
 		t.Errorf("user_onboarding_profiles migration contains forbidden ON DELETE CASCADE")
 	}
 }
+
+// TestVOC031P5EmailChangeLinksMigrationCarriesDatabaseInvariants
+// covers the migration invariants for VOC-031-T03. The migration
+// creates the email_change_links table per VOC-031-D05: it mirrors
+// magic_links' token-hash, 15-minute expiry, environment-scoping,
+// and single-use discipline exactly, with three deliberate
+// differences (user_id NOT NULL, new_email instead of email, no
+// email-uniqueness constraint) that are themselves invariant
+// requirements.
+func TestVOC031P5EmailChangeLinksMigrationCarriesDatabaseInvariants(t *testing.T) {
+	sql, err := os.ReadFile("20260725140001_voc031_p5_email_change_links.sql")
+	if err != nil {
+		t.Fatalf("read voc-031 p5 email_change_links migration: %v", err)
+	}
+	text := string(sql)
+	required := []string{
+		"CREATE TABLE email_change_links",
+		"user_id uuid NOT NULL REFERENCES users(id)",
+		"ON DELETE RESTRICT",
+		"new_email text NOT NULL",
+		"new_email <> ''",
+		"token_hash bytea NOT NULL UNIQUE",
+		"octet_length(token_hash) = 32",
+		"environment text NOT NULL",
+		"environment <> ''",
+		"expires_at > created_at",
+		"expires_at <= created_at + interval '15 minutes'",
+		"consumed_at IS NULL OR consumed_at >= created_at",
+		"revoked_at IS NULL OR revoked_at >= created_at",
+		"consumed_at IS NULL OR revoked_at IS NULL",
+		"ON email_change_links (expires_at)",
+		"WHERE consumed_at IS NULL AND revoked_at IS NULL",
+		"ON email_change_links (user_id)",
+	}
+	for _, invariant := range required {
+		if !strings.Contains(text, invariant) {
+			t.Errorf("email_change_links migration missing invariant %q", invariant)
+		}
+	}
+	for _, forbidden := range []string{
+		"session_token", "magic_link_token", "access_token", "refresh_token",
+		"oauth_state_token", "email_change_link_token",
+	} {
+		if strings.Contains(text, forbidden) {
+			t.Errorf("email_change_links migration contains forbidden raw bearer column %q", forbidden)
+		}
+	}
+	if strings.Contains(text, "ON DELETE CASCADE") {
+		t.Errorf("email_change_links migration contains forbidden ON DELETE CASCADE")
+	}
+}

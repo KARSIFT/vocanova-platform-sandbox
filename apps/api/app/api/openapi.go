@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/accounts"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/aifeedback"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/auth"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/content"
@@ -32,8 +33,9 @@ func NewContractAPI() huma.API {
 	contractAPI.UseMiddleware(withHumaContext)
 
 	// Register auth routes for OpenAPI generation using a placeholder service.
+	authRepo := auth.NewMemoryRepository()
 	svc := auth.NewService(
-		auth.NewMemoryRepository(),
+		authRepo,
 		&email.Fake{},
 		auth.NewFakeOAuthProvider(&auth.OAuthIdentity{Subject: "openapi-sub", Email: "user@example.com", EmailVerified: true}),
 		clock.Real{},
@@ -85,6 +87,25 @@ func NewContractAPI() huma.API {
 		}
 		return profile.Status, nil
 	})
+
+	// VOC-031-T03: register the email-change routes on the
+	// contract. The accounts service is constructed against the
+	// same auth.MemoryRepository the contract is already using
+	// and a fresh in-memory accounts repository; the limiter
+	// and email sender are the same fixed-window / Fake
+	// instances so the contract generation never panics on a
+	// missing dependency.
+	accountsRepo := accounts.NewMemoryRepository()
+	accountsLimiter := auth.NewFixedWindowRateLimiter(clock.Real{}, time.Minute, 10)
+	accountsSvc := accounts.NewService(accountsRepo, authRepo, &email.Fake{}, clock.Real{}, accountsLimiter, accounts.Config{
+		Environment: "openapi", BaseURL: "https://example.com",
+		EmailChangePath: "/auth/email-change", EmailChangeLinkLifetime: 15 * time.Minute,
+		RateLimit: accounts.EmailChangeRateLimitConfig{
+			RequestWindow: time.Minute, RequestLimit: 10,
+			ConsumeWindow: time.Minute, ConsumeLimit: 10,
+		},
+	})
+	RegisterEmailChangeLinks(contractAPI, accountsSvc, svc)
 
 	// Register content routes for OpenAPI generation using empty in-memory repos.
 	contentSvc := content.NewService(

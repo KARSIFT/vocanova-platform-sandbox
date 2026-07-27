@@ -88,6 +88,63 @@
         ],
         "type": "object"
       },
+      "ConsumeEmailChangeLinkDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/ConsumeEmailChangeLinkDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "changedAt": {
+            "description": "When the email change took effect",
+            "format": "date-time",
+            "type": "string"
+          },
+          "email": {
+            "description": "The new email address that is now in effect on users.email",
+            "format": "email",
+            "type": "string"
+          },
+          "previousEmail": {
+            "description": "The sign-in email address that was in effect before the change",
+            "format": "email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "previousEmail",
+          "changedAt"
+        ],
+        "type": "object"
+      },
+      "ConsumeEmailChangeLinkInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/ConsumeEmailChangeLinkInputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "token": {
+            "description": "The single-use token from the email-change confirmation link",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "type": "object"
+      },
       "ConsumeMagicLinkInputBody": {
         "additionalProperties": false,
         "properties": {
@@ -704,6 +761,29 @@
         },
         "required": [
           "reason"
+        ],
+        "type": "object"
+      },
+      "RequestEmailChangeLinkInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/RequestEmailChangeLinkInputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "newEmail": {
+            "description": "The destination email the requester wants to switch to",
+            "format": "email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "newEmail"
         ],
         "type": "object"
       },
@@ -2347,6 +2427,85 @@
           }
         },
         "summary": "Update the requester's settings",
+        "tags": [
+          "Settings"
+        ]
+      }
+    },
+    "/api/v1/settings/email-change-links": {
+      "post": {
+        "operationId": "RequestEmailChangeLink",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestEmailChangeLinkInputBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Invalid new email"
+          },
+          "401": {
+            "description": "Authentication is required"
+          },
+          "403": {
+            "description": "Invalid CSRF token"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        },
+        "summary": "Request a single-use email-change link",
+        "tags": [
+          "Settings"
+        ]
+      }
+    },
+    "/api/v1/settings/email-change-links/consume": {
+      "post": {
+        "operationId": "ConsumeEmailChangeLink",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsumeEmailChangeLinkInputBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsumeEmailChangeLinkDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Invalid or expired email change link"
+          },
+          "403": {
+            "description": "Invalid CSRF token"
+          },
+          "409": {
+            "description": "New email is already registered to another account"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        },
+        "summary": "Consume a single-use email-change link",
         "tags": [
           "Settings"
         ]

@@ -34,6 +34,7 @@ func (User) Edges() []ent.Edge {
 		edge.To("external_identities", ExternalIdentity.Type),
 		edge.To("sessions", Session.Type),
 		edge.To("magic_links", MagicLink.Type),
+		edge.To("email_change_links", EmailChangeLink.Type),
 		edge.To("user_words", UserWord.Type),
 		edge.To("review_attempts", ReviewAttempt.Type),
 		edge.To("learner_sentences", LearnerSentence.Type),

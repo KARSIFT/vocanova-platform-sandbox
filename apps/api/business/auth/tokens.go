@@ -26,6 +26,32 @@ func generateToken() (string, []byte, error) {
 	return base64.URLEncoding.EncodeToString(b), hash[:], nil
 }
 
+// NewTokenAndHash is the exported wrapper around generateToken used by
+// downstream business modules (notably accounts/email_change.go for
+// VOC-031-T03). It returns a 32-random-byte URL-safe base64 token and
+// its SHA-256 hash. The raw token is the only form the caller should
+// ever embed in a confirmation link; only the hash is persisted.
+func NewTokenAndHash() (string, []byte, error) {
+	return generateToken()
+}
+
+// TokenAndHash decodes a base64 token (the form the requester supplies
+// at consume time) and returns its raw bytes plus the SHA-256 hash
+// the persistence layer stored. Exported so downstream modules
+// (email-change in VOC-031-T03) can use the same secret-handling
+// discipline as the magic-link flow without duplicating the
+// base64-URL-decode + SHA-256 logic. The hash returned here is
+// byte-identical to what NewTokenAndHash would have produced for
+// the same raw bytes, so a magic-link row and an email-change-link
+// row written from the same raw token are indistinguishable to a
+// future audit.
+//
+// Returns an error on an empty token, non-base64 input, or a
+// decoded length that is not exactly 32 bytes.
+func TokenAndHash(token string) ([]byte, []byte, error) {
+	return tokenAndHash(token)
+}
+
 func hashTokenString(token string) string {
 	hash := sha256.Sum256([]byte(token))
 	return base64.URLEncoding.EncodeToString(hash[:])

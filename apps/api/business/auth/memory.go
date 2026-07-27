@@ -107,6 +107,20 @@ func (r *MemoryRepository) SetUserStatus(id uuid.UUID, status string) error {
 	return nil
 }
 
+// UpsertUser is a test helper that installs a user with a
+// specific ID. The default CreateUser allocates a random UUID
+// and several downstream tests need a deterministic one so the
+// auth-side identity and the in-memory fixture's user table
+// stay aligned. Not part of the production Repository contract.
+func (r *MemoryRepository) UpsertUser(u *User) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.users[u.ID] = u
+	if u.Email != "" {
+		r.usersByEmail[u.Email] = u
+	}
+}
+
 func (r *MemoryRepository) CreateSession(ctx context.Context, userID uuid.UUID, tokenHash []byte, createdAt, expiresAt time.Time) (*Session, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -141,6 +155,23 @@ func (r *MemoryRepository) RevokeSession(ctx context.Context, id uuid.UUID, revo
 	}
 	s.RevokedAt = &revokedAt
 	return nil
+}
+
+// RevokeAllSessionsForUser revokes every active session for a user in
+// the in-memory store. Mirrors PostgreSQLRepository.RevokeAllSessionsForUser
+// so service tests can exercise the same account-deletion path.
+func (r *MemoryRepository) RevokeAllSessionsForUser(ctx context.Context, userID uuid.UUID, revokedAt time.Time) (int64, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var n int64
+	for _, s := range r.sessions {
+		if s.UserID == userID && s.RevokedAt == nil {
+			t := revokedAt
+			s.RevokedAt = &t
+			n++
+		}
+	}
+	return n, nil
 }
 
 func (r *MemoryRepository) CreateMagicLink(ctx context.Context, email string, tokenHash []byte, environment string, createdAt, expiresAt time.Time) (*MagicLink, error) {
