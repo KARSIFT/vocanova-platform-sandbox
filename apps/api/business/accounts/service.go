@@ -123,7 +123,7 @@ type EmailLink struct {
 // the email body includes. In production, the link is only ever
 // delivered through the email sender — the API layer must not echo
 // it back to the requester.
-func (s *Service) RequestEmailChangeLink(ctx context.Context, userID uuid.UUID, clientIP, newEmail string) (*EmailLink, error) {
+func (s *Service) RequestEmailChangeLink(ctx context.Context, userID uuid.UUID, clientIP, sessionToken, newEmail string) (*EmailLink, error) {
 	if userID == uuid.Nil {
 		return nil, errors.New("user id required")
 	}
@@ -133,6 +133,15 @@ func (s *Service) RequestEmailChangeLink(ctx context.Context, userID uuid.UUID, 
 	}
 
 	if allowed, err := s.limiter.Allow(ctx, auth.KeyForIP("emailchange.request", clientIP)); err != nil {
+		return nil, fmt.Errorf("rate limit: %w", err)
+	} else if !allowed {
+		return nil, ErrEmailChangeRateLimited
+	}
+	// Per-session limit alongside the per-IP one above (VOC-031-D05: "rate-
+	// limited by both IP and the requesting user's session") - an attacker
+	// with a valid session rotating IPs, or multiple sessions on one IP,
+	// must still be bounded.
+	if allowed, err := s.limiter.Allow(ctx, auth.KeyForSession("emailchange.request", sessionToken)); err != nil {
 		return nil, fmt.Errorf("rate limit: %w", err)
 	} else if !allowed {
 		return nil, ErrEmailChangeRateLimited
@@ -206,8 +215,13 @@ func (s *Service) emailChangeURL(token, newEmail string) string {
 // failure does not block the user. Per the spec the notification
 // is required as a security control, so production wiring must
 // treat it as such even though the function does not abort.
-func (s *Service) ConsumeEmailChangeLink(ctx context.Context, clientIP, token string) (*EmailChangeResult, error) {
+func (s *Service) ConsumeEmailChangeLink(ctx context.Context, clientIP, sessionToken, token string) (*EmailChangeResult, error) {
 	if allowed, err := s.limiter.Allow(ctx, auth.KeyForIP("emailchange.consume", clientIP)); err != nil {
+		return nil, fmt.Errorf("rate limit: %w", err)
+	} else if !allowed {
+		return nil, ErrEmailChangeRateLimited
+	}
+	if allowed, err := s.limiter.Allow(ctx, auth.KeyForSession("emailchange.consume", sessionToken)); err != nil {
 		return nil, fmt.Errorf("rate limit: %w", err)
 	} else if !allowed {
 		return nil, ErrEmailChangeRateLimited

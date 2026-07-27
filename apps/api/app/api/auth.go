@@ -18,6 +18,13 @@ func authHumaContext(ctx context.Context) huma.Context {
 	panic("huma context middleware not installed")
 }
 
+// sessionTokenFromHuma reads the raw session bearer token from the request
+// cookie, for handlers that need to rate-limit per-session (in addition to
+// per-IP) rather than just resolving the requester's identity.
+func sessionTokenFromHuma(c huma.Context, svc *auth.Service) string {
+	return sessionCookieValue(c, svc.SessionCookieName())
+}
+
 // clientIPFromHuma extracts a best-effort client IP from the Huma context.
 func clientIPFromHuma(c huma.Context) string {
 	if xff := c.Header("X-Forwarded-For"); xff != "" {
