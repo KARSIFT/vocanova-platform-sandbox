@@ -72,7 +72,7 @@ import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
 const ONBOARDING_COOKIE_VALUE = "not_started";
-const CORE_LOOK_TEST_TIMEOUT_MS = 90_000;
+const CORE_LOOP_TEST_TIMEOUT_MS = 90_000;
 
 test.describe("Core loop end-to-end (VOC-031-T08)", () => {
   test("auth -> onboarding -> discover -> save -> review -> sentence -> AI feedback -> progress -> settings -> logout -> rejection", async ({
@@ -83,7 +83,7 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
       testInfo.project.name !== "home-desktop-1280",
       "T08 scope is one representative desktop width >=1024px (mirrors T07a); mobile projects are T07b's accessibility scope.",
     );
-    test.setTimeout(CORE_LOOK_TEST_TIMEOUT_MS);
+    test.setTimeout(CORE_LOOP_TEST_TIMEOUT_MS);
 
     // ----- 1. Auth: set the session + CSRF + onboarding cookies.
     //
