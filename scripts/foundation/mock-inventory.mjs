@@ -509,6 +509,34 @@ export function validateMockInventory() {
     }
   }
 
+  // VOC-031-T07a: the accessibility-automation scaffolding must
+  // remain present for the duration of the package. T07b
+  // (multi-screen / multi-viewport coverage) and T08 (full
+  // DOC-10 §7 core-loop E2E) both build on top of this
+  // harness, so a regression that drops any of the
+  // scaffolding files would silently re-open the
+  // "no accessibility test in CI" gap the package exists to
+  // close. The check intentionally stops at the scaffolding
+  // surface (config + test directory + CI workflow) and does
+  // not pin the specific test files inside tests/e2e/ - T07b
+  // is free to add, rename, or remove individual specs.
+  const t07aScaffolding = [
+    "apps/web/playwright.config.ts",
+    "apps/web/tests/e2e/README.md",
+    "apps/web/tests/e2e/home-accessibility.spec.ts",
+    "apps/web/tests/e2e/axe-helper.ts",
+    "apps/web/tests/e2e/mock-api-server.mjs",
+    ".github/workflows/accessibility.yml",
+  ];
+  for (const file of t07aScaffolding) {
+    const filePath = path.join(repositoryRoot, file);
+    if (!exists(filePath)) {
+      errors.push(
+        `${file}: T07a accessibility-automation scaffolding is missing; T07a acceptance requires the harness`,
+      );
+    }
+  }
+
   return errors;
 }
 
@@ -529,6 +557,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     );
     process.exitCode = 1;
   } else {
-    process.stdout.write("VOC-030-T06 mock inventory validation passed.\n");
+    process.stdout.write(
+      "VOC-031-T07a mock inventory validation passed (T07a scaffolding + T06 cross-cutting reliability deliverables present).\n",
+    );
   }
 }

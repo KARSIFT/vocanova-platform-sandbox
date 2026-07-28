@@ -1,0 +1,15 @@
+node_modules
+.next
+.turbo
+out
+build
+dist
+coverage
+pnpm-lock.yaml
+*.min.js
+*.min.css
+
+apps/web/playwright.config.ts
+apps/web/tests/
+apps/web/test-results/
+apps/web/playwright-report/

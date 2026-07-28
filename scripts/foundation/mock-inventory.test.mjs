@@ -32,3 +32,13 @@ test("VOC-030-T06 mock inventory accepts the T06 cross-cutting test files", () =
 test("VOC-031-T06 mock inventory accepts the P5 cross-cutting reliability deliverables", () => {
   assert.deepEqual(validateMockInventory(), []);
 });
+
+// VOC-031-T07a: the accessibility-automation scaffolding
+// (Playwright config, tests/e2e/ tree, axe-helper, mock API
+// server, CI workflow) is present and the P5-forbidden
+// invariant continues to hold. This test re-runs the same code
+// path as the ones above; it is separately named to make the
+// T07a acceptance criterion visible in the test runner output.
+test("VOC-031-T07a mock inventory accepts the accessibility-automation scaffolding", () => {
+  assert.deepEqual(validateMockInventory(), []);
+});

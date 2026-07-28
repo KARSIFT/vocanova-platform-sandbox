@@ -1,0 +1,110 @@
+name: accessibility
+
+# VOC-031-T07a: the first browser-driven test harness this
+# repository has ever had (Playwright + axe-core). This workflow
+# runs the accessibility scan suite built under apps/web/tests/e2e/
+# against a production build of @vocanova/web, on every PR that
+# touches the web app or its tests. See apps/web/tests/e2e/README.md
+# "CI runner / browser-dependency reconciliation (VOC-031-DEP-04)"
+# for the rationale for separating this from the generic pipeline.yml
+# `ci` job (which runs pnpm validate against the karsift-ai-infra
+# reusable workflow and intentionally does not install Playwright).
+#
+# The workflow is wired as a required job (per DOC-10 §7 Level 2
+# "selected Playwright" + the T07a acceptance criterion's
+# "wired into CI as a new job"). It is intentionally NOT folded
+# into pipeline.yml's `ci` job because that job's contract is
+# `pnpm run format:check lint typecheck test build` and adding a
+# multi-minute browser install + production build would regress
+# PR feedback time for every PR regardless of whether e2e
+# coverage applies.
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - "apps/web/**"
+      - "apps/web/tests/**"
+      - "apps/web/playwright.config.ts"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/accessibility.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: accessibility-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  accessibility:
+    name: accessibility (Playwright + axe-core)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      # actions/checkout v4.2.2, pinned to the immutable commit
+      # documented at
+      # https://github.com/actions/checkout/releases/tag/v4.2.2
+      - name: Check out reviewed revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      # actions/setup-node v7.0.0, pinned to the immutable commit
+      # documented at
+      # https://github.com/actions/setup-node/releases/tag/v7.0.0
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Install pnpm
+        run: corepack enable && corepack prepare pnpm@11.14.0 --activate
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build API client + design tokens
+        # pnpm run build:packages is what pnpm test runs; it
+        # populates packages/*/dist which the web build picks up
+        # via workspace:* symlinks. Running it explicitly here
+        # keeps the workflow's failure surface readable.
+        run: pnpm run build:packages
+
+      - name: Build @vocanova/web production bundle
+        # Production build, not `next dev` - matches VOC-031-R04's
+        # "no hot-reload variance in CI" rule that T07b/T09 inherit.
+        run: pnpm --filter @vocanova/web build
+
+      - name: Install Playwright Chromium
+        # `--with-deps` installs the system libraries Chromium
+        # needs on ubuntu-latest. The browser version is pinned
+        # transitively through the locked @playwright/test version,
+        # so no separate version flag is needed.
+        run: pnpm --filter @vocanova/web exec playwright install --with-deps chromium
+
+      - name: Run accessibility suite
+        env:
+          CI: "1"
+        run: pnpm --filter @vocanova/web test:e2e
+
+      # actions/upload-artifact v4, pinned to the immutable commit
+      # documented at
+      # https://github.com/actions/upload-artifact/releases/tag/v4
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7
+
+      - name: Upload Playwright test results on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: playwright-test-results
+          path: apps/web/test-results/
+          retention-days: 7

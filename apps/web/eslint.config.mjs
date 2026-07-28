@@ -15,5 +15,14 @@ export default defineConfig([
       ...nextPlugin.configs["core-web-vitals"].rules,
     },
   },
-  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),
+  globalIgnores([
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+    "playwright.config.ts",
+    "tests/**",
+    "test-results/**",
+    "playwright-report/**",
+  ]),
 ]);
