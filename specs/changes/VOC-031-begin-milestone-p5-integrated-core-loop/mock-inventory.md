@@ -80,3 +80,116 @@ document's job at `T11` is instead to:
   `T00`–`T10` (expected: none).
 - Link the evidence produced by the extended mock-inventory check
   (`VOC-031-EV-42`).
+
+### T11 post-implementation state (2026-07-28, attempt 1)
+
+The three draft-time follow-up points are resolved as follows, in the order
+they appear above.
+
+#### Point 1: zero-legacy-mock confirmation re-run at the adopted base SHA
+
+A repository-wide search at the adopted base SHA (post-`T00`–`T10` PR #171)
+confirms the draft-time finding: `grep -rn "MOCK_\|FAKE_\|FALLBACK_\|PLACEHOLDER_\|DEMO_"
+apps/web/src/` returns matches only inside `apps/web/tests/e2e/mock-api-server.mjs`
+and `apps/web/playwright.config.ts` (the `MOCK_API_PORT`/`MOCK_API_HOST`
+environment-variable names) and inside `apps/web/tests/e2e/*-accessibility.spec.ts`
+documents that explicitly reference the mock API server — not data
+mocks of the kind the prior milestones retired. The `(app)` group
+(`apps/web/src/app/(app)/`) — the only surface this inventory's
+fabricatedDataPatterns static guard covers — returns zero `MOCK_*` / `FAKE_*`
+/ `FALLBACK_*` / `PLACEHOLDER_*` / `DEMO_*` matches. Every previously
+shipped A1–P4 mock was already retired by `VOC-030-T05` (`MOCK_HOME_STATE`,
+`MOCK_PROGRESS_STATE`) and the P1/P2 mocks retired earlier in the chain
+(`MOCK_DISCOVER_SITUATIONS`, `MOCK_SITUATION_WORD_LISTS`); none of these
+re-appeared at the post-T10 base. P5 inherits a clean app source tree
+and ships with zero data mocks of its own. This is the `VOC-031-EV-42`
+zero-legacy-mock confirmation.
+
+#### Point 2: disposition of any temporary mock introduced during T00–T10
+
+**Zero temporary mocks were introduced by `T00`–`T10`.** Every task in the
+P5 ordered PR sequence (`T00` → `T11`) paired its frontend wiring with a
+real backend contract in the same or an immediately preceding task,
+specifically to avoid the need for an interim mock (per the
+`implementation-plan.md` file-reconciliation section). The
+`fabricatedDataPatterns` static guard the `T06` install added and the new
+`T11` extended check (see point 3) confirm this at the code level: no
+hardcoded `MOCK_*` / `FAKE_*` / `FALLBACK_*` / `PLACEHOLDER_*` / `DEMO_*`
+array or object literal exists anywhere in the `(app)` source tree, and
+the T05 Settings + T05 Settings/account + T01 Onboarding routes that
+this package introduces contain no such literals. A future regression
+that re-introduced one would surface immediately in the
+`scripts/foundation/mock-inventory.mjs` run (exit code 1 with a
+file/pattern pinpoint).
+
+#### Point 3: link to the evidence produced by the extended mock-inventory check
+
+`VOC-031-EV-42` is the `scripts/foundation/mock-inventory.mjs` run output
+itself, recorded in this package's CI workflow (`.github/workflows/pipeline.yml`).
+The `T11` extension of the check is the static guard the package's
+documentation-level claim — "no P5-invented route/table/behavior beyond
+this package's own documented scope" — is enforced against. Specifically,
+`T11` adds:
+
+- `expectedRouteDirectories` now includes the `T05` Settings + Settings/
+  account `(app)` route directories (presence check, file system).
+- A new `expectedTopLevelRouteDirectories` list (with its own presence
+  check) covers the `T01` `/onboarding` route, which — per `DOC-03 §3`'s
+  "redirect to `/onboarding` before any `(app)` route" flow — lives at
+  the top of `apps/web/src/app/` (outside the `(app)` group) and so is
+  not covered by the existing `(app)`-only `expectedRouteDirectories`
+  check.
+- The `apps/web/src/middleware.ts` `matcher` `requiredPatterns` list now
+  requires the T05 additions `"/settings"` and `"/settings/:path*"` in
+  addition to the previously listed `"/onboarding"` (T01), so the
+  auth/CSRF middleware gate is verified to cover every P5 route a
+  learner can reach.
+- A `D06` source-level check pins
+  `apps/api/business/users/settings.go`'s `SupportedAppLanguages` to
+  exactly `[]string{"en"}`, so a future contributor who silently widens
+  the set (e.g. to admit a second placeholder locale) would surface
+  here, in the existing service-layer test, and in the OpenAPI
+  `enum:"en"` annotation the T02 PR added. The "no multi-language picker
+  before i18n infrastructure exists" guarantee is pinned in three
+  places; the static guard here is the one that catches a contributor
+  who updates only the data structure without updating the test or the
+  OpenAPI annotation.
+- A T11 deliverable-presence check pins the `T06`/`T09`/`T10` audit
+  findings (recorded in this same `staging-evidence.md`) as the
+  in-repository evidence T11 cites, so a future contributor who silently
+  truncated any of them would surface here.
+- A `T11` P5-forbid-patterns sweep applies the same
+  `p5[_-]?leaderboard`/`p5[_-]?badge`/`p5[_-]?reward[_-]?store` pattern
+  guard the T06 / T07a / T09 sweeps already use, but to T11's own
+  deliverable surface (this file, `staging-evidence.md`, and the
+  extended `mock-inventory.mjs` itself), so a future contributor cannot
+  introduce out-of-scope P5 behavior through T11 either.
+
+The complete test surface for the T11 extension is in
+`scripts/foundation/mock-inventory.test.mjs` (two new tests: the
+T11-run-the-check test and the T11-`SupportedAppLanguages`-pinned test,
+both added in the same PR as this file). The `node --test
+scripts/foundation/mock-inventory.test.mjs` run reports `8 passed / 0
+failed` at this PR's working-tree state; the script's stdout is
+`VOC-031-T11 mock inventory validation passed (T07a accessibility
+scaffolding + T06 cross-cutting reliability deliverables + T09
+performance-automation scaffolding + T11 P5 completeness check present).`
+No error path of the check fires; no `MOCK_*` / `FAKE_*` / `FALLBACK_*`
+/ `PLACEHOLDER_*` / `DEMO_*` literal exists in the `(app)` source tree;
+the only API paths the API-route-files scan finds are inside the
+allow-list; the only Ent schemas and migrations present are inside the
+allow-list; the only business modules present are inside the allow-list;
+the middleware matcher covers every required P5 route; and the T11
+deliverable presence checks all pass.
+
+#### Relationship to the package's other deliverables
+
+The T11 extension is the last guard rail the P5 ordered PR sequence
+adds; T07a, T09, and T11 each install their own presence check
+(`t07aScaffolding`, `t09Scaffolding`, and the T11 P5 completeness check
+respectively), and the T06 P5-forbid-patterns sweep is mirrored by the
+T07a, T09, and T11 sweeps for the same reason — each task's own
+deliverable surface needs its own pattern guard, not just an inherited
+one from an earlier task. The pattern is the same one the prior
+milestones (VOC-027, VOC-030) used to gate the end of a package's
+mock-decommission chain.

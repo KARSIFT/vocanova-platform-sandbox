@@ -64,7 +64,25 @@ const expectedRouteDirectories = [
   path.join("discover", "[situation]", "[word]"),
   "progress",
   "reviews",
+  // VOC-031-T05: the two new (app) routes P5 introduces
+  // (Settings + Settings/account, per DOC-08). They live
+  // inside the authenticated (app) group so the existing
+  // auth/CSRF middleware matcher already covers them; the
+  // expectedRouteDirectories presence check confirms the
+  // route directories were actually created on disk by T05
+  // and were not silently dropped by a future contributor.
+  "settings",
+  path.join("settings", "account"),
 ];
+
+// VOC-031-T01 introduces the /onboarding route at the top
+// level of apps/web/src/app/ (NOT inside the (app) group -
+// per DOC-03 §3's flow, the gate redirects a learner to
+// /onboarding before they reach any (app) route, so it
+// must live outside the (app) group). The expectedRouteDirectories
+// check above only covers (app) routes; the onboarding route
+// gets its own presence check below.
+const expectedTopLevelRouteDirectories = ["onboarding"];
 
 export function validateMockInventory() {
   const errors = [];
@@ -327,6 +345,14 @@ export function validateMockInventory() {
       '"/reviews"',
       '"/reviews/:path*"',
       '"/onboarding"',
+      // VOC-031-T05: the two new Settings routes must be
+      // covered by the auth/CSRF middleware matcher, or
+      // an unauthenticated request would reach them
+      // without the auth-gate redirect. The exact strings
+      // mirror what the adopted T05 PR added to
+      // apps/web/src/middleware.ts.
+      '"/settings"',
+      '"/settings/:path*"',
     ];
     for (const pattern of requiredPatterns) {
       if (!matcherText.includes(pattern)) {
@@ -342,6 +368,23 @@ export function validateMockInventory() {
     const dirPath = path.join(appRouteRoot, relative);
     if (!exists(dirPath)) {
       errors.push(`missing (app) route directory: ${relative}`);
+    }
+  }
+
+  // Verify the expected top-level (non-(app)) route directories
+  // exist in the filesystem. The T01 onboarding route is the
+  // only P5 route that lives outside the (app) group (per
+  // DOC-03 §3's "redirect to /onboarding before any (app) route"
+  // flow), so this list is intentionally short. A regression
+  // that deleted the directory would silently re-open the
+  // "no onboarding screen" gap.
+  const topLevelAppRoot = path.join(repositoryRoot, "apps/web/src/app");
+  for (const relative of expectedTopLevelRouteDirectories) {
+    const dirPath = path.join(topLevelAppRoot, relative);
+    if (!exists(dirPath)) {
+      errors.push(
+        `missing top-level route directory: ${relative} (expected at apps/web/src/app/${relative})`,
+      );
     }
   }
 
@@ -593,6 +636,110 @@ export function validateMockInventory() {
     }
   }
 
+  // VOC-031-T11: the P5 mock-inventory completeness check.
+  // T11 is the final task in the P5 ordered PR sequence
+  // (T00→T11); its job is to confirm that the package's
+  // documentation-level claims ("zero legacy mocks", "no
+  // P5-invented route/table/behavior beyond this package's
+  // own documented scope", "D06 appLanguage is restricted
+  // to en-only") hold in the actual committed code. The
+  // checks below are the static guard rails:
+  //
+  // 1. The settings appLanguage accepted-value set is
+  //    exactly `["en"]` per VOC-031-D06. Any future
+  //    contributor who silently widens the set to admit
+  //    another language (without the i18n infrastructure
+  //    D06 explicitly defers to a future package) would
+  //    be presenting a UI affordance the product does not
+  //    actually deliver. The check pins the value list
+  //    via the same exported identifier the service-layer
+  //    Validate() function reads, so the test, the
+  //    service, and the doc are all in lockstep.
+  // 2. The P5 staging-evidence document records the
+  //    T06/T09/T10 audit findings (the T06 reliability
+  //    pass, the T09 Lighthouse harness install, the T10
+  //    UX-consistency audit). T11 cites them as
+  //    in-repository evidence; a future contributor who
+  //    silently truncated the audit findings would
+  //    surface here.
+  // 3. The mock-inventory check itself pins the package
+  //    self-reference (T11 is a self-referential check
+  //    by construction: T11 is the only task whose
+  //    deliverable is the check itself).
+  const settingsLanguagePath = path.join(
+    apiBusinessRoot,
+    "users",
+    "settings.go",
+  );
+  if (exists(settingsLanguagePath)) {
+    const settingsContent = readFileSync(settingsLanguagePath, "utf8");
+    if (
+      !/SupportedAppLanguages\s*=\s*\[\]string\{"en"\}/.test(settingsContent)
+    ) {
+      errors.push(
+        'apps/api/business/users/settings.go: SupportedAppLanguages must be exactly []string{"en"} per VOC-031-D06 (no UI language picker before i18n infrastructure exists)',
+      );
+    }
+  }
+  const t11StagingEvidencePath = path.join(
+    repositoryRoot,
+    "specs/changes/VOC-031-begin-milestone-p5-integrated-core-loop/staging-evidence.md",
+  );
+  if (exists(t11StagingEvidencePath)) {
+    const evidenceContent = readFileSync(t11StagingEvidencePath, "utf8");
+    // T11 pins the existence (not the precise content) of the
+    // T06/T09/T10 audit findings as the in-repository evidence
+    // T11 cites. A future contributor who truncated them would
+    // surface here.
+    if (!/## `T06` audit findings/.test(evidenceContent)) {
+      errors.push(
+        "specs/changes/VOC-031-begin-milestone-p5-integrated-core-loop/staging-evidence.md: T06 audit findings section is missing; T11 evidence requires the cross-cutting reliability pass audit be present",
+      );
+    }
+    if (!/## `T09` audit findings/.test(evidenceContent)) {
+      errors.push(
+        "specs/changes/VOC-031-begin-milestone-p5-integrated-core-loop/staging-evidence.md: T09 audit findings section is missing; T11 evidence requires the Lighthouse-CI install audit be present",
+      );
+    }
+    if (!/## `T10` audit findings/.test(evidenceContent)) {
+      errors.push(
+        "specs/changes/VOC-031-begin-milestone-p5-integrated-core-loop/staging-evidence.md: T10 audit findings section is missing; T11 evidence requires the UX-consistency audit be present",
+      );
+    }
+  }
+
+  // VOC-031-T11: the package's own no-P5-invented-behavior
+  // sweep, applied to T11's deliverable surface (this file
+  // plus the staging-evidence.md / mock-inventory.md docs).
+  // T11 is the final task; nothing in the P5 ordered PR
+  // sequence depends on T11 producing behavior, so the
+  // forbid-patterns list applies only to the T11 docs +
+  // this script. A future contributor who added a leaderboard
+  // or a rewards store as a "T11 follow-up" without going
+  // through the change-control gate would surface here.
+  const t11ForbidPatterns = [
+    /p5[_-]?leaderboard/i,
+    /p5[_-]?badge/i,
+    /p5[_-]?reward[_-]?store/i,
+  ];
+  const t11DeliverableFiles = [
+    "scripts/foundation/mock-inventory.mjs",
+    "specs/changes/VOC-031-begin-milestone-p5-integrated-core-loop/mock-inventory.md",
+    "specs/changes/VOC-031-begin-milestone-p5-integrated-core-loop/staging-evidence.md",
+  ];
+  for (const file of t11DeliverableFiles) {
+    const filePath = path.join(repositoryRoot, file);
+    if (!exists(filePath)) continue;
+    const content = readFileSync(filePath, "utf8");
+    for (const pattern of t11ForbidPatterns) {
+      if (pattern.test(content)) {
+        errors.push(
+          `${file}: P5 behavior detected (matched ${pattern}); P5 is strictly forbidden by the adopted D00 and must not be invented in T11`,
+        );
+      }
+    }
+  }
+
   return errors;
 }
 
@@ -614,7 +761,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     process.exitCode = 1;
   } else {
     process.stdout.write(
-      "VOC-031-T09 mock inventory validation passed (T07a accessibility scaffolding + T06 cross-cutting reliability deliverables + T09 performance-automation scaffolding present).\n",
+      "VOC-031-T11 mock inventory validation passed (T07a accessibility scaffolding + T06 cross-cutting reliability deliverables + T09 performance-automation scaffolding + T11 P5 completeness check present).\n",
     );
   }
 }
