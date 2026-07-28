@@ -169,7 +169,12 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     await expect(
       page.getByRole("heading", { name: "Daily review target" }),
     ).toBeVisible();
-    await page.getByRole("radio", { name: "15" }).check();
+    // force: true - the underlying <input> is visually hidden (sr-only)
+    // behind a styled <label>, so Playwright's default actionability check
+    // (which requires the target to be visible) times out waiting for it
+    // to become visible. force bypasses that check while still performing
+    // a real check() on the input (dispatches the change event normally).
+    await page.getByRole("radio", { name: "15" }).check({ force: true });
     const onboardingResponsePromise = page.waitForResponse(
       (response) =>
         response.url().includes("/api/v1/onboarding") &&
