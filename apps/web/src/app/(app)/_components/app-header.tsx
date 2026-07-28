@@ -59,7 +59,7 @@ export function AppHeader() {
           onClick={handleLogout}
           disabled={status.type === "loading"}
           aria-busy={status.type === "loading"}
-          className="min-h-[var(--spacing-xl)] rounded-md border border-neutral-300 px-[var(--spacing-sm)] py-[var(--spacing-xs)] text-sm font-medium text-neutral-900 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="min-h-11 rounded-md border border-neutral-300 px-[var(--spacing-md)] py-[var(--spacing-xs)] text-sm font-medium text-neutral-900 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {status.type === "loading" ? "Signing out..." : "Log out"}
         </button>

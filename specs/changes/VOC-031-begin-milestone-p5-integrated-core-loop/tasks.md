@@ -265,7 +265,10 @@ pass.
 - Acceptance criteria: `VOC-031-AC-10`
 - Tests: `VOC-031-TEST-40`
 - Evidence: `VOC-031-EV-40`
-- Status: pending
+- Status: completed — audit recorded in
+  `specs/changes/VOC-031-begin-milestone-p5-integrated-core-loop/staging-evidence.md`'s
+  `T10 audit findings` section; two gaps fixed (bottom-nav token
+  consistency, app-header logout-button 44px touch target).
 
 Design-principle audit against DOC-03 §1 (one clear action per screen,
 practical-over-academic framing, encouraging non-gamified tone, mobile-first)

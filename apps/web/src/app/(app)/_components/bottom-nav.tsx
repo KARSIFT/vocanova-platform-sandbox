@@ -25,16 +25,16 @@ export function BottomNav() {
             key={item.href}
             href={item.href}
             aria-current={isActive ? "page" : undefined}
-            className={`flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-600 ${
+            className={`flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary-600 ${
               isActive
-                ? "font-semibold text-blue-700"
+                ? "font-semibold text-primary-700"
                 : "font-normal text-neutral-600"
             }`}
           >
             <span
               aria-hidden="true"
               className={`h-0.5 w-8 rounded-full ${
-                isActive ? "bg-blue-700" : "bg-transparent"
+                isActive ? "bg-primary-700" : "bg-transparent"
               }`}
             />
             {item.label}

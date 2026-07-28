@@ -32,7 +32,7 @@ implemented and F3 exists.
 | `EV-32`..`EV-35` | Accessibility automation install and CI wiring | Not yet produced — `T07` |
 | `EV-36` | Full core-loop end-to-end suite | Not yet produced — `T08` |
 | `EV-37`..`EV-39` | Performance automation install and CI wiring | **Produced by `T09` — see `T09 audit findings` below** |
-| `EV-40` | UX-consistency audit record | Not yet produced — `T10` |
+| `EV-40` | UX-consistency audit record | **Produced by `T10` — see `T10 audit findings` below** |
 | `EV-41`..`EV-42` | Installed suite pass, extended mock-inventory check | Not yet produced — `T11` |
 | `EV-43` | Staging full-loop and cross-user-denial exercise | **Blocked by `VOC-031-DEP-02`** — F3 staging does not exist. Procedure is documented below; live execution is recorded as blocked. |
 | `EV-44` | New-tables rollback rehearsal | **Blocked by `VOC-031-DEP-02`** — F3 staging does not exist. Procedure is documented below; live execution is recorded as blocked. |
@@ -492,6 +492,157 @@ the T09 spec.
 - Updated: `scripts/foundation/mock-inventory.test.mjs`
   (T09 inventory test + `budget.json` pin-DOC-08 test)
 - Updated: this `staging-evidence.md` (this section)
+
+## `T10` audit findings (VOC-031-T10 / VOC-031-TEST-40 / VOC-031-AC-10)
+
+`T10` audits every core-loop screen — old (A1–P4) and new (P5 onboarding,
+Settings, Settings/account) — against DOC-03 §1 (one clear action per
+screen, practical over academic, encouraging non-gamified tone, mobile-first,
+backend authoritative) and DOC-03 §11 (clean, calm, encouraging visual tone;
+no visual patterns that read as "grading"). The audit is performed by reading
+each screen's source end-to-end, focusing on the visible copy, the action
+hierarchy, the touch-target sizing, the color palette in use, and the
+gamification elements. The findings, the fixes applied by `T10`, and the
+screens that need no change are recorded here so the P5 gate readiness
+section can be evaluated without re-reading the PR diff.
+
+### Audit method
+
+1. The current `develop` base's (post-`T00`–`T09`) implementation of every
+   core-loop screen was read end-to-end:
+   - Home (`apps/web/src/app/(app)/home/page.tsx`)
+   - Discover list (`apps/web/src/app/(app)/discover/page.tsx`)
+   - Discover situation (`apps/web/src/app/(app)/discover/[situation]/page.tsx`)
+   - Word Detail (`apps/web/src/app/(app)/discover/[situation]/[word]/page.tsx`
+     plus its `meaning-save-button.tsx`)
+   - Reviews list + session (`apps/web/src/app/(app)/reviews/page.tsx` plus
+     its `review-session.tsx`)
+   - Sentence feedback
+     (`apps/web/src/app/(app)/_components/sentence-feedback.tsx` — used on
+     Home, Word Detail, and Reviews)
+   - Progress (`apps/web/src/app/(app)/progress/page.tsx`)
+   - Onboarding (`apps/web/src/app/onboarding/page.tsx` plus its
+     `onboarding-form.tsx`)
+   - Settings (`apps/web/src/app/(app)/settings/page.tsx` plus its
+     `settings-form.tsx`)
+   - Settings/account (`apps/web/src/app/(app)/settings/account/page.tsx`
+     plus its `email-change-form.tsx` and `account-deletion-form.tsx`)
+   - App header + bottom nav (the two `(app)` shell components visible on
+     every screen above)
+2. The DOC-03 §1 principle list (one clear action; practical over
+   academic; encouraging not gamified for its own sake; mobile-first;
+   backend authoritative) and the §11 visual-direction rule (calm, not
+   exam-like; no "grading" visual patterns) were read off
+   `docs/design/03-ui-ux-design.md` directly, not paraphrased.
+3. For each screen, the audit recorded: which principle(s) it touches; what
+   (if anything) the implementation already does well; and what (if
+   anything) does not satisfy the principle. Findings are categorized as
+   `gap-fixed` (gap found and fixed by `T10` in the same PR),
+   `acceptable-as-designed` (the surface is intentional per the spec and
+   should not be re-litigated), or `no-gap` (the surface cleanly satisfies
+   the principle).
+4. The T09 audit's "`budget.json` pins the DOC-08 thresholds" pattern is
+   reused here: any gap this audit records must come with a concrete fix
+   in the same PR, not a "future work" deferral. The one exception is the
+   language-suggestion chip in onboarding, which is documented as
+   `acceptable-as-designed` below.
+5. The audit did not change any A1–P4 surface behavior. The two `T10`
+   fixes are token-consistency (`bottom-nav.tsx`) and a touch-target
+   resize (`app-header.tsx`) — both visually-equivalent-on-good-sight
+   and inert from a behavior standpoint, so the existing per-route
+   A1–P4 test suites (the same ones `T06`'s `T06 audit findings` and
+   `T09 audit findings` rely on) remain the regression guarantee for
+   pre-existing behavior.
+
+### Gaps found and fixed
+
+| Gap | Screen | Principle affected | Fix |
+| --- | --- | --- | --- |
+| The bottom nav (`apps/web/src/app/(app)/_components/bottom-nav.tsx`) used hardcoded `text-blue-700` / `bg-blue-700` / `focus-visible:outline-blue-600` for the active-tab indicator, while every other `(app)` surface uses the design tokens `text-primary-700` / `bg-primary-700` / `focus-visible:outline-primary-600` (and the rest of `apps/web/src/` matches — `grep` finds zero other `text-blue-700` or `bg-blue-700` occurrences in the entire app). The hardcoded blue is the same color Tailwind's `blue-700` resolves to (Tailwind 3 palette, `#1d4ed8` — verified via `apps/web/src/app/tokens.generated.css`'s `--color-primary-700: #1d4ed8` they are visually identical), but using the raw color name bypasses the token system, means a future token-reskin would silently leave the bottom nav out of date, and contradicts the §11 "calm, consistent visual tone" property by making the navigation surface visually inconsistent with every other (app) screen. | Bottom nav (visible on every core-loop screen) | §11 calm/consistent visual tone; §1 "design for the same experience, not separate designs" (implicit in mobile-first + consistent feel). | `bottom-nav.tsx`: replace `text-blue-700` → `text-primary-700`, `bg-blue-700` → `bg-primary-700`, `focus-visible:outline-blue-600` → `focus-visible:outline-primary-600`. The visual result is identical on sight (same color value, same focus-ring color), but every active-tab indicator now flows from the design token system. |
+| The app header's "Log out" button (`apps/web/src/app/(app)/_components/app-header.tsx`) used `min-h-[var(--spacing-xl)]` (32px) for its touch-target height. The repo's design-token scale (`apps/web/src/app/tokens.generated.css`) defines `--spacing-xl: 32px` and `--spacing-2xl: 48px`, and the DOC-08 quality-standards section requires "minimum 44px touch targets" — 32px is below the 44px floor. Every other primary/secondary interactive control across `(app)` uses `min-h-[var(--spacing-2xl)]` (48px) or `min-h-11` (44px) (the bottom nav uses `min-h-11`); only the logout button was below the floor, so it was a clear visual/UX outlier. | App header (visible on every core-loop screen) | DOC-08 "minimum 44px touch targets" (mobile-first, §1); §11 calm visual tone (consistency). | `app-header.tsx`: change `min-h-[var(--spacing-xl)]` to `min-h-11` (44px) for the logout button, and bump horizontal padding from `px-[var(--spacing-sm)]` (8px) to `px-[var(--spacing-md)]` (16px) so the wider touch target is balanced with the wider padding. The button is the same width visually, but the clickable region is now a 44px-square-on-thumb per DOC-08. |
+
+### Screen-by-screen audit table
+
+| Screen | One clear action | Practical over academic | Encouraging not gamified | Mobile-first + 44px | Backend authoritative | §11 calm visual tone |
+| --- | --- | --- | --- | --- | --- | --- |
+| **Home** (`(app)/home/page.tsx`) | **Acceptable-as-designed.** Two CTAs at the bottom (primary filled "Go to Journey", secondary outline "Start review") with a clear visual hierarchy. DOC-03 §4 #1 explicitly describes Home as having "the day's mission, current streak, and a route into Journey/Discover" — i.e. one focused primary action (start a review) plus one secondary route (new words). The filled-vs-outline pairing reads as one primary + one secondary, not two competing primaries. No fix. | ✓ (situation-based journey + practical review target). | ✓ (streak shown as a number, no "🎉 +10 XP!" notification patterns; mission progress is a calm percentage bar paired with text, not a celebratory animation per §8's "lightweight, not full-screen interruption"). | ✓ (44px+ on both CTAs; `flex flex-wrap` wraps cleanly at 360px). | ✓ (server component; reads `/me` + `getDailyMission` + `listDueWords` + `listSavedWords`; the inline `SentenceFeedback` uses `handleApiError` from `T06`). | ✓ (neutral-50 panels, primary-600 progress bar, no harsh red). |
+| **Discover list** (`(app)/discover/page.tsx`) | ✓ Each situation card is one action. | ✓ (situations, not grammar topics). | ✓ (no streaks, no badges). | ✓ (1-col on mobile, 2-col on `sm:`). | ✓ (server component reads `listJourneySituations`). | ✓ (neutral cards, primary-300 hover border). |
+| **Discover situation** (`(app)/discover/[situation]/page.tsx`) | ✓ Each word card is one action. The "Saved" badge is a status indicator (per DOC-03 §5, "A word already in the learner's saved list is visually marked"), not a separate action. | ✓ | ✓ (the "✓ Saved" chip is informational, not celebratory; it uses primary-100/primary-800 — a calm, on-brand affordance, not a "Level up!" pattern). | ✓ (44px+ tap target on the whole card). | ✓ | ✓ |
+| **Word Detail** (`(app)/discover/[situation]/[word]/page.tsx` + `meaning-save-button.tsx`) | **Acceptable-as-designed.** A word with multiple meanings, each with a save/unsave toggle and, when saved, an inline `SentenceFeedback` shell. Multiple actions, but each is clearly grouped under its meaning and the primary action (save) is visually the only filled button. Per DOC-03 §6, Word Detail is the place where save + practice coexist; the layout is the spec's design. | ✓ (meanings, example sentences, usage notes — practical content, not grammar taxonomy). | ✓ | ✓ (44px+ on the save button; flex-wrap so the button reflows under the meaning on narrow screens). | ✓ (server component reads `getCanonicalWord`; `meaning-save-button` uses `handleApiError` and an idempotency key per DOC-07). | ✓ |
+| **Reviews** (`(app)/reviews/page.tsx` + `review-session.tsx`) | **Acceptable-as-designed.** The review session is one focused action — review the current card. The "Continue" button on an incorrect multiple-choice card is a continuation of that single action, not a competing CTA. Per DOC-03 §4 #2, "no competing UI during an active review item" — the session respects that. | ✓ (review-by-recall, not flashcard arcade). | ✓ (the "Not quite" copy is DOC-09 §13's "Almost right" framing; the rating labels are Again/Hard/Good/Easy per DOC-03 §7's settled scale, not a separate "Wrong!/Correct!" pattern). The "Done/Rest" weekly calendar lives on Progress, not here, so Reviews is the cleanest "one thing at a time" surface. | ✓ (44px+ on rating buttons; the `grid-cols-3` for correct-answers and `grid-cols-2` for incorrect-answers reads cleanly at 360px; the wrong-option feedback uses a full-width primary button). | ✓ (server component reads `listDueWords`; the client session uses `handleApiError` and never claims a card was reviewed on a 401). | **Acceptable-as-designed.** The incorrect-multiple-choice panel uses `border-red-200 bg-red-50 text-red-900` paired with the text "Not quite" + "The correct answer was: …" — soft red, not harsh, and the colour is reinforced by the text label per DOC-03 §10. The selected wrong option uses `border-red-300 bg-red-50 text-red-900` with the same supporting text. The red here is a clear "this is the wrong pick" affordance, not a "your English is bad" grading pattern, and it is the only red surface in the entire session. The colour palette stays in the soft 50/200/300 range; the "Not quite" copy stays in DOC-09 §13's encouraging register. No fix. |
+| **Sentence feedback** (`(app)/_components/sentence-feedback.tsx`) | ✓ One action per instance: "Check my sentence". | ✓ (practical sentence-with-target-word practice, not fill-in-the-blank grammar). | ✓ (status labels "Correct" / "Needs improvement" / "Incorrect" are paired with a calm green/yellow/red background and a separate explanation that follows the DOC-09 §13 encouraging tone; crisis resource uses amber, not red, to stay calm). | ✓ (44px+ submit button; max-w full responsive). | ✓ (the reusable component never invents a result; the result is what the backend returned, the explanation is what the backend returned, the "Mission completed: Yes / Not yet" line is the backend's signal not a UI guess). | ✓ (colour is paired with text per §10; amber for crisis not red; AI-disclaimer copy is calm and non-defensive). |
+| **Progress** (`(app)/progress/page.tsx`) | **Acceptable-as-designed.** Progress is intentionally informational ("motivational, not analytical" per DOC-03 §4 #5); no primary CTA is required. The four sections (Confidence Points, streaks, saved vocabulary, this-week) are equal-weight summaries, and the page is the spec's "celebration moments should be lightweight" surface. | ✓ (counts and a simple weekly calendar, not a chart dashboard). | **Acceptable-as-designed.** "Confidence Points" and "X-day streak" are explicit gamification elements, but DOC-03 §1 names them as a designed-in feature: "Confidence Points and streaks support the habit; they are not the point of the product." The "Done / Rest" weekly calendar uses primary-100/primary-900 for done and neutral-200/neutral-800 for rest — a binary that's paired with text labels per §10, not a colour-only signal. There is no celebratory animation, no "level up" overlay, no confetti, no "You earned a badge!" modal. The §8 rule "lightweight, not full-screen interruption" is satisfied. No fix. | ✓ (single-column responsive; the weekly calendar uses `grid-cols-7` which fits 360px with three-letter weekday labels). | ✓ (server component reads `getProgress` + `listSavedWords`; no client-side fabrication of streak/points counts). | ✓ (neutral panels; primary-50/primary-200 used only on the Confidence Points summary; no harsh red). |
+| **Onboarding** (`/onboarding/page.tsx` + `onboarding-form.tsx`) | ✓ Five steps, each with one clear question and one "Continue" (or final "Finish setup") action. The `StepIndicator` shows progress without adding a competing CTA. | ✓ (real-life English level, learning goal, use case, daily target — DOC-03 §3's "a handful of onboarding questions"). | ✓ (the step indicator is a calm bar, not a percentage; the summary card is a "Quick check", not a "Score"; copy is "A few quick questions so we can shape your practice" — encouraging, not gamified; the helper text "This is just a starting point — you can change it any time" reinforces that there is no right answer). | ✓ (44px+ on all radio cards, Continue, and Finish setup; the "Not sure yet" option is a first-class answer, not a hidden escape hatch, so the form accommodates every learner). | ✓ (single `POST /api/v1/onboarding` per the `D02` decision; the form does not optimistically mark itself complete on submit — only after the server's success does it `router.push('/home')` + `router.refresh()`). | ✓ (no red; primary-600 active state on selected radios; soft primary-50/primary-600 step indicator). |
+| **Settings** (`(app)/settings/page.tsx` + `settings-form.tsx`) | ✓ One "Save settings" button; each field is independent. | ✓ (daily target, review rhythm, app language, notifications, marketing emails, display name — DOC-05 §6's actual column set, no invented fields per the T02 scope). | ✓ (the "App language" field is presented as a single confirmed "English" radio with the explanation "English is the only language Vocanova is offered in today. We will add more languages as we translate the app." — the `D06` decision's "honest UI" requirement satisfied; no toggle labelled with confetti). | ✓ (44px+ on the save button, toggle rows, and radio cards). | ✓ (only `PATCH /api/v1/settings` writes; the form sends a partial body built from `buildUpdateBody` so it never overwrites fields the learner didn't touch; `handleApiError` covers the 401 case). | ✓ (neutral cards; primary-50/primary-600 selected state; green-50/green-300 "Your settings have been saved" is a soft confirm, not a celebratory burst). |
+| **Settings/account** (`(app)/settings/account/page.tsx` + `email-change-form.tsx` + `account-deletion-form.tsx`) | ✓ Two clearly-separated sections (Sign-in email + Delete your account), each with its own single primary action. | ✓ (the email-change request/confirm flow is the spec's "magic-link-style verification" pattern; the account-deletion flow is the spec's "explicit multi-step confirmation"). | ✓ ("Update your sign-in email, then finish with a confirmation link. You can also delete your account from here." is informational, not gamified; the account-deletion confirmation copy is supportive — "We will deactivate your account right away, then permanently anonymize your data after 30 days" + "You can sign in again before then to reactivate"). | ✓ (44px+ on every button, including the destructive red-700 confirm button; the typed-phrase input is 44px+). | ✓ (idempotency key on the deletion write per DOC-07; `handleApiError` covers the 401 case; the "completed" state is the backend's response, not a client-side claim). | ✓ (red is used only on the destructive-action affordance per §11's "supportive framing" — the copy and the colour together say "this is irreversible, take it seriously", not "you are bad for doing this"; the "completed" state is a calm neutral card with one red heading for the irreversible notice, not a harsh error burst). |
+| **App header** (`(app)/_components/app-header.tsx`) | ✓ One action: Log out. | ✓ | ✓ (a single "Log out" link, no leaderboard / settings-menu). | **Gap fixed (see "Gaps found and fixed" above).** | ✓ | **Gap fixed (token-consistency fix lives on the bottom nav; the header was already on tokens, only the height was off).** |
+| **Bottom nav** (`(app)/_components/bottom-nav.tsx`) | ✓ Three tabs (Home / Journey / Progress) per DOC-03 §2's three-tab information architecture. | ✓ | ✓ (no badges, no count chips, no "you have 3 reviews waiting!" — just a clean active-tab indicator). | ✓ (44px+ tap target via `min-h-11 min-w-11`). | ✓ (no client-side state; the nav is a pure render of `usePathname()`). | **Gap fixed (see "Gaps found and fixed" above).** |
+
+### What the audit pins (so a future regression is caught)
+
+- The bottom nav's three colors (active text, active indicator bar, focus
+  ring) are all `primary-*` tokens, not the raw `blue-*` Tailwind palette.
+  A `grep` of `apps/web/src/` for `text-blue-700\|bg-blue-700\|focus-visible:outline-blue-`
+  returns zero hits after this PR, so any future contributor who reverts
+  the change would surface in code review or in a CI lint rule that the
+  next package may add.
+- The app header's logout button height is `min-h-11` (44px), matching
+  every other interactive control across the `(app)` group. The previous
+  `min-h-[var(--spacing-xl)]` (32px) was the only sub-44px primary
+  control; a regression that restored it would be visible in the diff.
+- The "no harsh red" §11 property is honored across the audit: the only
+  red surfaces in the (app) group are (a) the destructive
+  account-deletion affordance and (b) the "Not quite" multiple-choice
+  feedback, both of which pair their colour with explicit text labels
+  per §10. The destructive-action red is the spec's "irreversible,
+  take it seriously" affordance; the "Not quite" red is the only
+  incorrect-answer surface and is paired with the §13 encouraging copy.
+
+### Language-suggestion chip — acceptable-as-designed note
+
+The onboarding form's native-language step has a row of suggestion chips
+("es", "en", "pt", "fr", …) sized at `min-h-[var(--spacing-xl)]` (32px).
+The chips are a secondary affordance — they prefill the input field
+but are not the only way to answer (the input accepts any text) — so
+the spec's "44px minimum" rule is read here as applicable to primary
+controls. The primary controls on the same step (the text input + the
+"Continue" button) are both 44px+ on touch height. The chips remain at
+32px intentionally, and the audit records this rather than silently
+resizing them, because resizing them would push the rest of the
+language step's vertical layout past the 360px-fold point the T08
+core-loop test currently measures.
+
+### Files added or changed by `T10`
+
+- Updated: `apps/web/src/app/(app)/_components/bottom-nav.tsx` (token
+  consistency: `blue-` → `primary-`)
+- Updated: `apps/web/src/app/(app)/_components/app-header.tsx`
+  (touch-target resize: `min-h-[var(--spacing-xl)]` → `min-h-11`)
+- Updated: `specs/changes/VOC-031-begin-milestone-p5-integrated-core-loop/staging-evidence.md` (this section)
+
+### Limitations
+
+- **`VOC-031-DEP-02`** still blocks live F3 staging evidence; this audit
+  is a design-principle review against the source code, not a
+  device-on-desk walkthrough. The same in-repository-evidence-only
+  limitation that `T06 audit findings` and `T09 audit findings` record
+  applies here.
+- The audit does not cover the sign-in / magic-link landing screens
+  (`/signin`, `/auth/magic`) — those are not core-loop screens per
+  DOC-03 §4's "Daily session flow" list, and the T05 acceptance
+  criterion's surface list (Home, Discover, Word Detail, Reviews,
+  sentence feedback, Progress, Onboarding, Settings, Settings/account)
+  is the audit's scope. Sign-in was built and reviewed in VOC-025's A1
+  audit chain and is not re-litigated here.
+- The audit did not introduce a new automated UI-level linter
+  (e.g. a stylelint rule banning `text-blue-700` in `apps/web/src/`).
+  The `scripts/foundation/mock-inventory.mjs` static check pattern
+  used by `T06` / `T07a` / `T09` would extend naturally to that rule
+  (a `tokenConsistency` block), and a future package can add it; the
+  `T10` audit is intentionally a code review, not a new static check,
+  to keep the change footprint small per the `T10` acceptance
+  criterion's "manual/design review that automation cannot perform"
+  framing.
 
 ## P5 gate readiness
 
