@@ -547,7 +547,7 @@ function DailyReviewTargetStep({
           in Settings any time.
         </p>
       </div>
-      <ul
+      <div
         role="radiogroup"
         aria-label="Daily review target"
         className="grid grid-cols-2 gap-[var(--spacing-sm)] sm:grid-cols-4"
@@ -555,7 +555,7 @@ function DailyReviewTargetStep({
         {DAILY_REVIEW_TARGETS.map((target) => {
           const checked = value === target;
           return (
-            <li key={target}>
+            <div key={target}>
               <label
                 className={`flex min-h-[var(--spacing-2xl)] cursor-pointer items-center justify-center rounded-md border p-[var(--spacing-sm)] text-base font-medium transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary-700 ${
                   checked
@@ -573,10 +573,10 @@ function DailyReviewTargetStep({
                 />
                 {target}
               </label>
-            </li>
+            </div>
           );
         })}
-      </ul>
+      </div>
       <SummaryCard state={state} dailyReviewTarget={value} />
     </div>
   );

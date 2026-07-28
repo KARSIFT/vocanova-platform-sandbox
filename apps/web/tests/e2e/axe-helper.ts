@@ -107,6 +107,22 @@ export interface KeyboardReachableOptions {
    */
   minFocusable?: number;
   /**
+   * Minimum number of distinct Tab stops expected while walking the
+   * page. Defaults to `minFocusable`. This is deliberately a
+   * separate number: a native `<input type="radio">` group sharing
+   * one `name` is a SINGLE Tab stop (the browser moves focus into,
+   * not through, the group - options within it are cycled with
+   * arrow keys, per native radio semantics), even though every
+   * option independently matches the focusable-elements selector
+   * `countFocusableElements` counts. A screen built from one or
+   * more radio groups therefore has fewer Tab stops than focusable
+   * elements without that being an accessibility defect; pass this
+   * explicitly on such a screen instead of lowering `minFocusable`
+   * (which would also weaken the "do these elements exist at all"
+   * check).
+   */
+  minTabStops?: number;
+  /**
    * Maximum number of Tab presses to attempt while looking for
    * focus movement. Defaults to 30 (well above the number of
    * focusable elements on any single core-loop screen).
@@ -129,9 +145,10 @@ export async function countFocusableElements(page: Page): Promise<number> {
 
 /**
  * assertKeyboardReachable asserts that the current page has at
- * least `options.minFocusable` focusable elements AND that the
- * first `options.minFocusable` of them are reachable by pressing
- * Tab sequentially. This is the explicit, screen-by-screen
+ * least `options.minFocusable` focusable elements AND that at
+ * least `options.minTabStops` (defaults to `options.minFocusable`)
+ * distinct Tab stops are reachable by pressing Tab sequentially.
+ * This is the explicit, screen-by-screen
  * keyboard-reachability check the T07b acceptance criterion
  * requires (axe-core alone does not exhaustively verify
  * tab order across a page).
@@ -148,6 +165,7 @@ export async function assertKeyboardReachable(
   options: KeyboardReachableOptions = {},
 ): Promise<void> {
   const minFocusable = options.minFocusable ?? 1;
+  const minTabStops = options.minTabStops ?? minFocusable;
   const maxTabs = options.maxTabs ?? 30;
 
   const total = await countFocusableElements(page);
@@ -163,11 +181,22 @@ export async function assertKeyboardReachable(
   // receives focus. The test passes if we observe at least
   // `minFocusable` distinct elements across the press sequence -
   // i.e. focus is moving, not just staying on <body>.
+  //
+  // Distinctness is tracked by DOM element identity (a Set kept on
+  // `window` across evaluate calls), not by a tag+text signature.
+  // A tag+text signature collapses radio-group and toggle-row
+  // members that carry no text of their own (their label lives in
+  // a sibling element) into a single entry, which undercounts a
+  // screen that has many same-shaped controls (e.g. a bank of
+  // review-target radios) even though every one of them is
+  // genuinely, individually reachable by Tab.
   await page.evaluate(() => {
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
     document.body.focus();
+    (window as unknown as { __e2eSeenFocusable?: Set<Element> }).__e2eSeenFocusable =
+      new Set();
   });
 
   const seenTags: string[] = [];
@@ -178,20 +207,26 @@ export async function assertKeyboardReachable(
       if (!el || el === document.body) {
         return "";
       }
+      const seen = (window as unknown as { __e2eSeenFocusable: Set<Element> })
+        .__e2eSeenFocusable;
+      if (seen.has(el)) {
+        return "";
+      }
+      seen.add(el);
       const text = (el.textContent ?? "").trim().slice(0, 24);
       return `${el.tagName.toLowerCase()}${text ? `:${text}` : ""}`;
     });
-    if (tag && !seenTags.includes(tag)) {
+    if (tag) {
       seenTags.push(tag);
     }
-    if (seenTags.length >= minFocusable) {
+    if (seenTags.length >= minTabStops) {
       return;
     }
   }
 
-  if (seenTags.length < minFocusable) {
+  if (seenTags.length < minTabStops) {
     throw new Error(
-      `Tabbing through the page reached only ${seenTags.length} focusable elements; expected at least ${minFocusable}. ` +
+      `Tabbing through the page reached only ${seenTags.length} Tab stops; expected at least ${minTabStops}. ` +
         `Seen: ${seenTags.join(", ")}`,
     );
   }

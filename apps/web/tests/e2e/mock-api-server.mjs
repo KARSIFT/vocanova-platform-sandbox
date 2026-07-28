@@ -21,6 +21,14 @@
 //   GET /api/v1/me
 //     200 -> { onboardingStatus: "completed", ... }
 //     401 if ?fail=me is set (used to verify the auth-gate path)
+//     onboardingStatus is overridden to the value of the
+//     `e2e_onboarding_status` cookie when present (see the
+//     onboarding-accessibility.spec.ts comment for why a cookie,
+//     not page.route(), is the only way a Playwright test can
+//     influence this response: both the Next.js middleware and
+//     the /onboarding Server Component fetch this endpoint
+//     directly, server-to-server, which never passes through the
+//     browser's network stack that page.route() intercepts).
 //
 //   GET /api/v1/onboarding
 //     200 -> { status: "not_started", ... }  (no completed profile yet)
@@ -65,6 +73,27 @@ import { createServer } from "node:http";
 
 const PORT = Number(process.env.MOCK_API_PORT ?? 8080);
 const HOST = process.env.MOCK_API_HOST ?? "127.0.0.1";
+
+const ONBOARDING_STATUSES = new Set(["not_started", "in_progress", "completed"]);
+
+function parseCookies(header) {
+  const cookies = {};
+  if (!header) {
+    return cookies;
+  }
+  for (const part of header.split(";")) {
+    const idx = part.indexOf("=");
+    if (idx === -1) {
+      continue;
+    }
+    const key = part.slice(0, idx).trim();
+    const value = part.slice(idx + 1).trim();
+    if (key) {
+      cookies[key] = decodeURIComponent(value);
+    }
+  }
+  return cookies;
+}
 
 function jsonResponse(res, status, body) {
   const payload = JSON.stringify(body);
@@ -257,8 +286,13 @@ const server = createServer((req, res) => {
       jsonResponse(res, 401, { error: "unauthorized" });
       return;
     }
-    logLine(req, 200);
-    jsonResponse(res, 200, currentUser);
+    const cookies = parseCookies(req.headers.cookie);
+    const onboardingStatusOverride = cookies.e2e_onboarding_status;
+    const responseBody = ONBOARDING_STATUSES.has(onboardingStatusOverride)
+      ? { ...currentUser, onboardingStatus: onboardingStatusOverride }
+      : currentUser;
+    logLine(req, 200, { onboardingStatus: responseBody.onboardingStatus });
+    jsonResponse(res, 200, responseBody);
     return;
   }
 

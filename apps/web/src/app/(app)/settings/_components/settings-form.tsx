@@ -123,7 +123,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
           How many saved words would you like to review each day? Changes take
           effect from your next local day.
         </p>
-        <ul
+        <div
           role="radiogroup"
           aria-label="Daily review target"
           className="grid grid-cols-2 gap-[var(--spacing-sm)] sm:grid-cols-4"
@@ -131,7 +131,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
           {DAILY_REVIEW_TARGETS.map((target) => {
             const checked = state.dailyReviewTarget === target;
             return (
-              <li key={target}>
+              <div key={target}>
                 <label
                   className={`flex min-h-[var(--spacing-2xl)] cursor-pointer items-center justify-center rounded-md border p-[var(--spacing-sm)] text-base font-medium transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary-700 ${
                     checked
@@ -149,10 +149,10 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
                   />
                   {target}
                 </label>
-              </li>
+              </div>
             );
           })}
-        </ul>
+        </div>
       </fieldset>
 
       <fieldset className="space-y-[var(--spacing-md)]">
