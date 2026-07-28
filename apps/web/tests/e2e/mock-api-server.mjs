@@ -607,9 +607,14 @@ const server = createServer(async (req, res) => {
   }
   if (req.method === "OPTIONS") {
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
+    // Every custom header @vocanova/api-client ever sets
+    // (packages/api-client/src/index.ts) - Idempotency-Key was
+    // missing here initially and only surfaced once a mutation that
+    // actually uses it (save word) ran in CI, the same silent
+    // "blocked by CORS policy" failure pattern as the first gap.
     res.setHeader(
       "Access-Control-Allow-Headers",
-      "Content-Type, X-CSRF-Token",
+      "Content-Type, X-CSRF-Token, Idempotency-Key",
     );
     res.writeHead(204);
     res.end();
