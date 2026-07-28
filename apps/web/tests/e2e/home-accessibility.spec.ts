@@ -13,7 +13,12 @@
 // covered here is explicitly T07b's scope - see the package's
 // tasks.md. Adding a second project/viewport here would silently
 // expand T07a's scope and is forbidden by the T07a acceptance
-// criterion.
+// criterion. The T07b follow-up also added two mobile projects
+// (mobile-360, mobile-430) to the Playwright config; this test
+// self-skips on those projects so T07a keeps running on exactly
+// ONE representative desktop width >=1024px, as its own scope
+// required. T07b's home-mobile-accessibility.spec.ts is the
+// follow-up that scans /home at 360 and 430.
 
 import { expect, test } from "@playwright/test";
 
@@ -25,7 +30,17 @@ import {
 test.describe("Home accessibility (VOC-031-T07a)", () => {
   test("Home renders with zero critical or serious axe-core violations at 1280x720", async ({
     page,
-  }) => {
+  }, testInfo) => {
+    // T07a explicitly covers ONE representative desktop width
+    // >=1024px. The mobile projects added by T07b (mobile-360
+    // and mobile-430) are out of T07a's scope; the equivalent
+    // coverage for those viewports lives in T07b's
+    // home-mobile-accessibility.spec.ts.
+    test.skip(
+      testInfo.project.name !== "home-desktop-1280",
+      "T07a scope is one representative desktop width >=1024px; mobile viewports are T07b's scope.",
+    );
+
     // The mock API server (started by playwright.config.ts's
     // webServer entries) handles /api/v1/me + the home page's data
     // reads. The auth-gate middleware reads the same /api/v1/me
