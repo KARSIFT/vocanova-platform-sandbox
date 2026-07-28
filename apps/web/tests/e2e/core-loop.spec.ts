@@ -169,12 +169,17 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     await expect(
       page.getByRole("heading", { name: "Daily review target" }),
     ).toBeVisible();
-    // force: true - the underlying <input> is visually hidden (sr-only)
-    // behind a styled <label>, so Playwright's default actionability check
-    // (which requires the target to be visible) times out waiting for it
-    // to become visible. force bypasses that check while still performing
-    // a real check() on the input (dispatches the change event normally).
-    await page.getByRole("radio", { name: "15" }).check({ force: true });
+    // The underlying <input> is visually hidden (sr-only) behind a styled
+    // <label> - checking it directly (even with force: true) reached the
+    // DOM node but the click never propagated to a real POST /api/v1/
+    // onboarding request (waitForResponse below then hung the full 90s).
+    // Clicking the visible label text instead is a real user interaction -
+    // the browser's native label-for-input association activates the
+    // radio and fires onChange normally, same as a real click would.
+    await page
+      .getByRole("radiogroup", { name: "Daily review target" })
+      .getByText("15", { exact: true })
+      .click();
     const onboardingResponsePromise = page.waitForResponse(
       (response) =>
         response.url().includes("/api/v1/onboarding") &&
