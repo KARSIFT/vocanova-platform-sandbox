@@ -83,7 +83,7 @@ const CHROME_FLAGS = [
 const LAYOUTS = [
   {
     name: "mobile-360",
-    emulatedFormFactor: "mobile",
+    formFactor: "mobile",
     screenEmulation: {
       mobile: true,
       width: 360,
@@ -94,7 +94,7 @@ const LAYOUTS = [
   },
   {
     name: "mobile-430",
-    emulatedFormFactor: "mobile",
+    formFactor: "mobile",
     screenEmulation: {
       mobile: true,
       width: 430,
@@ -105,7 +105,7 @@ const LAYOUTS = [
   },
   {
     name: "desktop-1280",
-    emulatedFormFactor: "desktop",
+    formFactor: "desktop",
     screenEmulation: {
       mobile: false,
       width: 1280,
@@ -144,7 +144,7 @@ function buildLighthouseSettings({ layout, screen }) {
   // adds flakiness from the throttling proxy itself.
   return {
     onlyCategories: ["performance", "accessibility", "best-practices"],
-    emulatedFormFactor: layout.emulatedFormFactor,
+    formFactor: layout.formFactor,
     throttlingMethod: "simulate",
     throttling: {
       // Lighthouse default `simulate` throttling. The exact
@@ -165,7 +165,7 @@ function buildLighthouseSettings({ layout, screen }) {
     },
     // Use a stable user-agent per layout - Lighthouse ships a
     // `desktop` and `mobile` UA out of the box; we keep the
-    // default for each `emulatedFormFactor` so the audit
+    // default for each `formFactor` so the audit
     // results match a stock Lighthouse run.
     extraHeaders: {
       "X-Lighthouse-T09-Screen": screen.name,
