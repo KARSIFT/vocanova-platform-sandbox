@@ -1,0 +1,35 @@
+{
+  "$schema": "https://raw.githubusercontent.com/GoogleChrome/lighthouse-ci/main/docs/configuration.md",
+  "_comment": "VOC-031-T09: DOC-08 performance budgets, mirrored verbatim from tests/lighthouse/assertions.mjs's DOC_08_THRESHOLDS. The mock-inventory test in scripts/foundation/mock-inventory.test.mjs loads this file and asserts these exact threshold values, so a change here must be matched by an equal change in assertions.mjs (and by an update to DOC-08 / the T09 acceptance criterion). Lowering a threshold here without those updates would be a 'weaken a check' event per AGENTS.md.",
+  "version": 1,
+  "budgets": [
+    {
+      "path": "/*",
+      "resourceCounts": [
+        { "resourceType": "third-party", "budget": 0 },
+        { "resourceType": "total", "budget": 60 }
+      ],
+      "resourceSizes": [
+        { "resourceType": "script", "budget": 250 },
+        { "resourceType": "stylesheet", "budget": 50 },
+        { "resourceType": "image", "budget": 100 },
+        { "resourceType": "font", "budget": 100 },
+        { "resourceType": "third-party", "budget": 0 },
+        { "resourceType": "total", "budget": 500 }
+      ],
+      "timings": [
+        { "metric": "first-contentful-paint", "budget": 2000 },
+        { "metric": "largest-contentful-paint", "budget": 3000 },
+        { "metric": "interactive", "budget": 4000 },
+        { "metric": "total-blocking-time", "budget": 300 },
+        { "metric": "cumulative-layout-shift", "budget": 0.1 },
+        { "metric": "speed-index", "budget": 4000 }
+      ],
+      "scores": {
+        "performance": 0.85,
+        "accessibility": 0.95,
+        "best-practices": 0.9
+      }
+    }
+  ]
+}

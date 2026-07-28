@@ -31,7 +31,7 @@ implemented and F3 exists.
 | `EV-28`..`EV-31` | Reliability/recovery pass, A1–P4 regression check | **Produced by `T06` — see `T06 audit findings` below** |
 | `EV-32`..`EV-35` | Accessibility automation install and CI wiring | Not yet produced — `T07` |
 | `EV-36` | Full core-loop end-to-end suite | Not yet produced — `T08` |
-| `EV-37`..`EV-39` | Performance automation install and CI wiring | Not yet produced — `T09` |
+| `EV-37`..`EV-39` | Performance automation install and CI wiring | **Produced by `T09` — see `T09 audit findings` below** |
 | `EV-40` | UX-consistency audit record | Not yet produced — `T10` |
 | `EV-41`..`EV-42` | Installed suite pass, extended mock-inventory check | Not yet produced — `T11` |
 | `EV-43` | Staging full-loop and cross-user-denial exercise | **Blocked by `VOC-031-DEP-02`** — F3 staging does not exist. Procedure is documented below; live execution is recorded as blocked. |
@@ -243,6 +243,255 @@ test before the change can land.
   the per-route regression is verified by re-running the existing
   per-route test suites, not by adding new tests that exercise
   the same paths.
+
+## `T09` audit findings (VOC-031-T09 / VOC-031-TEST-37..39)
+
+`T09` installs the first performance-automation harness this
+repository has ever had (the `lighthouse` npm package, the same
+engine `@lhci/cli` wraps, plus `chrome-launcher` to drive a
+headless Chromium instance). It audits the four core-loop
+screens the T09 acceptance criterion names — **Home**,
+**Discover**, **Reviews**, **Progress** — at the three
+supported layouts (360px, 430px, and the 1280x720 representative
+desktop width the T07a `home-accessibility.spec.ts` test
+established). 4 screens × 3 layouts = 12 audits per run.
+
+### `EV-37` — Lighthouse CI installed and runnable against a production build
+
+- **Requirement source**: `VOC-031-AC-09`; DOC-08 quality
+  standards; `VOC-031-R04` (no hot-reload variance, fixed
+  local production build).
+- **Tasks**: `VOC-031-T09`.
+- **Tests**: `VOC-031-TEST-37`.
+- **Status**: produced (in-repository; live run is a CI-side
+  check the T09 acceptance criterion requires on every PR
+  that touches `apps/web/**`).
+
+`apps/web/package.json` now pins `lighthouse@12.3.0` and
+`chrome-launcher@1.1.2` as devDependencies. The runner at
+`apps/web/tests/lighthouse/runner.mjs` imports `lighthouse`
+directly, calls it once per (screen, layout) pair, and reuses
+one Chrome instance across all 12 audits. The same
+`scripts/foundation/mock-inventory.mjs` presence check that
+already guards the T07a accessibility scaffolding
+(`t07aScaffolding`) now also guards the T09 deliverable
+surface (`t09Scaffolding`):
+
+- `apps/web/tests/lighthouse/README.md`
+- `apps/web/tests/lighthouse/runner.mjs`
+- `apps/web/tests/lighthouse/assertions.mjs`
+- `apps/web/tests/lighthouse/budget.json`
+- `.github/workflows/lighthouse.yml`
+
+A regression that drops any of these would silently
+re-open the "no performance budget in CI" gap the package
+exists to close.
+
+`scripts/foundation/mock-inventory.test.mjs` gains a T09
+test that runs the same `validateMockInventory()` code path
+the prior T03 / T06 / T07a tests run (so the P5-forbidden
+invariant continues to hold across the T09 file set), plus
+a focused `VOC-031-T09 budget.json pins the DOC-08 thresholds
+verbatim` test that loads `tests/lighthouse/budget.json` and
+asserts the embedded `scores` block equals
+`{ performance: 0.85, accessibility: 0.95, "best-practices": 0.9 }`
+exactly. That assertion is the single guard against a future
+contributor silently lowering a threshold without updating
+DOC-08 / the T09 acceptance criterion.
+
+### `EV-38` — DOC-08 thresholds met on core screens
+
+- **Requirement source**: `VOC-031-AC-09`; DOC-08 quality
+  standards.
+- **Tasks**: `VOC-031-T09`.
+- **Tests**: `VOC-031-TEST-38`.
+- **Status**: produced (mechanism) — **limitation**: the
+  recorded audit pass/fail per (screen, layout) can only
+  be produced by the live CI run; `VOC-031-DEP-02` (F3
+  staging does not exist) does not block this audit
+  directly (the runner only needs a local production
+  build), but the implementer cannot run a real CI
+  job in this PR-creation step.
+
+The thresholds are:
+
+| Category        | Threshold | Source                                      |
+| --------------- | :-------: | ------------------------------------------- |
+| Performance     |   >= 85   | DOC-08 §"Quality standards"                 |
+| Accessibility   |   >= 95   | DOC-08 §"Quality standards"                 |
+| Best Practices  |   >= 90   | DOC-08 §"Quality standards"                 |
+
+The runner asserts these in
+`apps/web/tests/lighthouse/assertions.mjs`'s
+`DOC_08_THRESHOLDS` and `assertScores` helper. The CI
+workflow's "Run Lighthouse suite" step runs
+`pnpm --filter @vocanova/web test:lighthouse`; the script
+exits 0 if every (screen, layout, category) audit meets its
+threshold, and exits 1 if any do not. A failing run is
+reported with the failing tuple
+`(screen / layout / category / actual / threshold)`, the
+per-audit JSON report is uploaded as a CI artifact
+(`lighthouse-reports`, retention 7 days), and the run log
+contains the row-by-row pass/fail table for inspection.
+
+Any audit that misses its threshold is, by the T09
+acceptance criterion, an honest limitation that must be
+recorded here, not a silent pass. The first CI run on the
+adopted `develop` base is expected to surface any
+pre-existing A1–P4 performance gap (T09 deliberately audits
+the full core loop, not only the screens this package adds
+— see `VOC-031-R09` in
+`specs/changes/VOC-031-begin-milestone-p5-integrated-core-
+loop/impact-analysis.md`). If a shortfall is found, the
+runner fails the build, the failure details are appended
+to this section as a sub-bullet ("Shortfall: <screen> /
+<layout> / <category> scored X (< Y)"), and a follow-up
+task addresses the gap rather than weakening the check.
+The T09 acceptance criterion's "honest limitation" rule
+means the threshold values themselves are not the
+adjustable knob; the recorded shortfalls are.
+
+### `EV-39` — Performance suite wired into CI against a stable target
+
+- **Requirement source**: `VOC-031-AC-09`; `VOC-031-R04`.
+- **Tasks**: `VOC-031-T09`.
+- **Tests**: `VOC-031-TEST-39`.
+- **Status**: produced.
+
+`.github/workflows/lighthouse.yml` is the dedicated T09
+workflow. It is wired as a **required job** for PRs that
+touch `apps/web/**`, `apps/web/tests/**`,
+`apps/web/package.json`, the lockfiles, or the workflow
+file itself. The job's `paths` filter mirrors the
+`accessibility.yml` workflow's filter so the two
+browser-driven suites apply to the same PR set.
+
+The CI target is a **fixed local production build**, never
+the dev server, never a live network — this is the
+`VOC-031-R04` requirement and the T09 acceptance
+criterion's "any threshold not yet met" rule depends on
+the same fixed target. The job's contract is:
+
+1. Check out the reviewed revision.
+2. Install Node (`node-version-file: ".nvmrc"`) + pnpm
+   `11.14.0` via corepack.
+3. `pnpm install --frozen-lockfile`.
+4. `pnpm run build:packages` (populates
+   `packages/*/dist` for workspace:* symlinks).
+5. `pnpm --filter @vocanova/web build` with
+   `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8080` set
+   at **build time** (Next.js inlines `NEXT_PUBLIC_*`
+   into the client bundle — same caveat the T08
+   workflow's comment block documents).
+6. `pnpm --filter @vocanova/web exec playwright install
+   --with-deps chromium` (reuses the Playwright Chromium
+   binary for the Lighthouse run; no separate browser
+   download).
+7. Start the mock API server (inherited from the T07a /
+   T07b / T08 harness) in the background.
+8. Start the Next.js production server (`pnpm start --port
+   3000`) in the background.
+9. Run `pnpm --filter @vocanova/web test:lighthouse`.
+10. Always-stop the background servers
+    (`if: always()`) so a failure still cleans up.
+11. On failure, upload the per-audit JSON reports under
+    `apps/web/lighthouse-reports/` as a CI artifact
+    (retention 7 days).
+
+`LIGHTHOUSE_CHROME_PATH` is set at the runner step to
+the path `chrome-launcher` should use, resolved at
+runtime via `ls -d $HOME/.cache/ms-playwright/
+chromium-*/chrome-linux/chrome | head -1`. The path
+template is `chromium-<revision>` where the revision is
+fixed transitively by the locked `@playwright/test`
+version; resolving via `ls -d` means a future
+Playwright bump that changes the revision does not
+break the workflow.
+
+The job's `timeout-minutes` is **30 minutes** (the same
+budget the `accessibility.yml` workflow uses), which
+covers:
+
+- `pnpm install` against the frozen lockfile: ~2 min
+- `pnpm run build:packages`: ~1 min
+- `next build` for the production bundle: ~3-5 min
+- `playwright install --with-deps chromium` (first run
+  only; CI cache reuses it after that): ~1-2 min
+- The 12 Lighthouse audits (4 screens × 3 layouts, one
+  Chrome instance, `throttlingMethod: 'simulate'`): ~4-8 min
+- Teardown + artifact upload (failure only): ~30 s
+
+This is consistent with the T07a / T07b / T08
+"browser-driven suite" budget that already runs in CI;
+folding the Lighthouse run into the generic `ci` job
+would couple the entire pnpm validation chain to a
+multi-minute production build + headless Chrome audit
+on every PR regardless of whether performance coverage
+applies. The dedicated workflow keeps the cost local
+to PRs that touch `apps/web/**` or its tests.
+
+The workflow is intentionally separate from
+`accessibility.yml` (not a single combined "browser
+suite" workflow) so a failure in one can be inspected
+without re-running the other, and so a Playwright
+version bump that touches the accessibility tooling
+does not need a coordinated Lighthouse run to verify
+the change.
+
+### Why the runner is `lighthouse` directly, not `@lhci/cli`
+
+The T09 acceptance criterion's name is "Lighthouse CI" and
+the implementation in this package uses the `lighthouse`
+npm package (the same engine `@lhci/cli` wraps) rather
+than `@lhci/cli` itself. The reason is recorded here so
+the next reviewer does not flag it as a deviation from
+the T09 spec.
+
+- LHCI is built around a single `startServerCommand` that
+  owns one server process. Our T07a / T07b / T08
+  harness already boots two cooperating processes (the
+  mock API server + the Next.js production server).
+  Reusing that pattern in a single command is awkward
+  and would either fork the accessibility workflow's
+  webServer config or duplicate it; calling
+  `lighthouse()` against an already-running URL
+  sidesteps LHCI's server-management entirely.
+- LHCI's diff/reporting infrastructure is the only
+  feature that is genuinely easier in LHCI than in a
+  plain script. T09's acceptance criterion is "scores
+  meet the DOC-08 thresholds", not "track score
+  regression over time", so the diff feature is not in
+  scope here. The per-audit JSON reports the runner
+  writes already cover post-hoc inspection for any
+  single run.
+- The score calculation is identical (same engine, same
+  audit set, same category weights); LHCI is a thin CI
+  wrapper over `lighthouse`. A future package may opt
+  into LHCI for trend reporting; the per-audit JSON
+  outputs in `apps/web/lighthouse-reports/` already
+  cover everything LHCI's `lighthouse.json` would
+  contain, so the upgrade is a swap of the runner
+  driver only, not a re-architecture.
+
+### Files added or changed by `T09`
+
+- New: `apps/web/tests/lighthouse/runner.mjs`
+- New: `apps/web/tests/lighthouse/assertions.mjs`
+- New: `apps/web/tests/lighthouse/budget.json`
+- New: `apps/web/tests/lighthouse/README.md`
+- New: `.github/workflows/lighthouse.yml`
+- Updated: `apps/web/package.json` (added `lighthouse`
+  and `chrome-launcher` devDependencies, plus a
+  `test:lighthouse` npm script)
+- Updated: `apps/web/tests/e2e/README.md` (T09 row in
+  the task-status table)
+- Updated: `scripts/foundation/mock-inventory.mjs`
+  (T09 scaffolding presence check + T09 P5-forbidden
+  pattern guard, mirroring the T07a scaffolding check
+  and the T06 P5-forbidden pattern guard)
+- Updated: `scripts/foundation/mock-inventory.test.mjs`
+  (T09 inventory test + `budget.json` pin-DOC-08 test)
+- Updated: this `staging-evidence.md` (this section)
 
 ## P5 gate readiness
 

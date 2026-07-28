@@ -6,3 +6,6 @@ apps/web/next-env.d.ts
 .pnpm-store/
 .DS_Store
 coverage/
+# VOC-031-T09: per-audit Lighthouse reports. Runtime artifacts
+# (regenerated on every CI run); not source-controlled.
+apps/web/lighthouse-reports/

@@ -11,6 +11,7 @@
     "typecheck": "next typegen && tsc --noEmit --pretty false",
     "typecheck:e2e": "tsc -p tests/tsconfig.json --noEmit --pretty false",
     "test:e2e": "playwright test",
+    "test:lighthouse": "node tests/lighthouse/runner.mjs",
     "generate:tokens": "node scripts/generate-tokens-css.mjs"
   },
   "dependencies": {
@@ -29,6 +30,8 @@
     "@types/react-dom": "19.2.3",
     "@vocanova/design-tokens": "workspace:*",
     "axe-core": "4.12.1",
+    "chrome-launcher": "1.1.2",
+    "lighthouse": "12.3.0",
     "tailwindcss": "4.3.3"
   }
 }

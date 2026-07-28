@@ -537,6 +537,62 @@ export function validateMockInventory() {
     }
   }
 
+  // VOC-031-T09: the performance-automation harness (Lighthouse
+  // CI, net-new in this repository per VOC-031-D00) must
+  // remain present for the duration of the package. The
+  // check is the same surface-level pattern the T07a
+  // scaffolding check uses: directory + entry-point runner
+  // + threshold source-of-truth + CI workflow. A regression
+  // that drops any of these would silently re-open the
+  // "no performance budget in CI" gap the package exists
+  // to close - the DOC-08 quality-standards thresholds
+  // (Performance 85+ / Accessibility 95+ / Best Practices
+  // 90+) would go un-enforced.
+  //
+  // The check is intentionally NOT extended to pin
+  // individual `apps/web/lighthouse-reports/*.json` files:
+  // those are runtime artifacts, written per-audit, and
+  // gitignored - a future T09 hardening is free to add,
+  // remove, or rename them.
+  const t09Scaffolding = [
+    "apps/web/tests/lighthouse/README.md",
+    "apps/web/tests/lighthouse/runner.mjs",
+    "apps/web/tests/lighthouse/assertions.mjs",
+    "apps/web/tests/lighthouse/budget.json",
+    ".github/workflows/lighthouse.yml",
+  ];
+  for (const file of t09Scaffolding) {
+    const filePath = path.join(repositoryRoot, file);
+    if (!exists(filePath)) {
+      errors.push(
+        `${file}: T09 performance-automation scaffolding is missing; T09 acceptance requires the harness`,
+      );
+    }
+  }
+
+  // VOC-031-T09: the T09 runner and assertions are the T09
+  // deliverables. The T06-forbid-patterns check is mirrored
+  // here so a future contributor cannot introduce out-of-
+  // scope P5 behavior (leaderboards, badges, rewards store)
+  // through a T09 file either.
+  const t09ForbidPatterns = [
+    /p5[_-]?leaderboard/i,
+    /p5[_-]?badge/i,
+    /p5[_-]?reward[_-]?store/i,
+  ];
+  for (const file of t09Scaffolding) {
+    const filePath = path.join(repositoryRoot, file);
+    if (!exists(filePath)) continue;
+    const content = readFileSync(filePath, "utf8");
+    for (const pattern of t09ForbidPatterns) {
+      if (pattern.test(content)) {
+        errors.push(
+          `${file}: P5 behavior detected (matched ${pattern}); P5 is strictly forbidden by the adopted D00 and must not be invented in T09`,
+        );
+      }
+    }
+  }
+
   return errors;
 }
 
@@ -558,7 +614,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     process.exitCode = 1;
   } else {
     process.stdout.write(
-      "VOC-031-T07a mock inventory validation passed (T07a scaffolding + T06 cross-cutting reliability deliverables present).\n",
+      "VOC-031-T09 mock inventory validation passed (T07a accessibility scaffolding + T06 cross-cutting reliability deliverables + T09 performance-automation scaffolding present).\n",
     );
   }
 }

@@ -10,7 +10,7 @@ created). Subsequent tasks extend it:
 | T07a      | shipped  | This directory + `playwright.config.ts` + a single Home scan at 1280x720 + the mock API server. **Scaffolding only.**                        |
 | T07b      | shipped  | Every remaining core-loop screen (Discover, Discover/[situation], Discover/[situation]/[word], Reviews, Progress, Onboarding, Settings, Settings/account) plus Home at the 360px and 430px viewports. Explicit keyboard-reachability and non-color-only-feedback assertions on top of the axe scan (axe alone is not sufficient for the T07b acceptance criterion's full wording). |
 | T08       | shipped  | The DOC-10 §7 full core-loop functional flow (auth → onboarding → discover → save → review session → sentence submission → deterministic AI feedback → progress update → settings change → logout → unauthenticated-access rejection). One Playwright test, one representative desktop width (mirrors T07a's "ONE representative desktop width" scope; mobile projects self-skip). |
-| T09       | future   | Lighthouse CI budgets (separate harness; this directory's Playwright config does not host it).                                               |
+| T09       | shipped  | Lighthouse CI budgets in a separate directory (`apps/web/tests/lighthouse/`). 4 screens × 3 layouts = 12 audits, asserting the DOC-08 quality-standards thresholds (Performance 85+, Accessibility 95+, Best Practices 90+) against the same fixed local production build this directory's Playwright config serves. Wired into CI as `.github/workflows/lighthouse.yml`, mirroring this directory's `accessibility.yml` separation pattern. |
 
 ## T07b screen × viewport coverage matrix
 

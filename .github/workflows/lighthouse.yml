@@ -1,0 +1,189 @@
+name: lighthouse
+
+# VOC-031-T09: performance automation, net-new in this
+# repository. Runs the `lighthouse` npm package (the same
+# engine `@lhci/cli` wraps) against a fixed local production
+# build of @vocanova/web at the three supported layouts
+# (360px, 430px, 1280x720) for the four screens the T09
+# acceptance criterion names (Home, Discover, Reviews,
+# Progress), asserting the DOC-08 quality-standards
+# thresholds:
+#
+#   Performance    >= 85
+#   Accessibility  >= 95
+#   Best Practices >= 90
+#
+# Mirrors the .github/workflows/accessibility.yml workflow
+# pattern from T07a: separate job, NOT folded into
+# pipeline.yml's `ci` job, because the `ci` job's contract
+# is `pnpm run format:check lint typecheck test build` and
+# adding a multi-minute production build + headless Chrome
+# audit run would regress PR feedback time for every PR
+# regardless of whether performance coverage applies. The
+# dedicated workflow keeps the cost local to PRs that touch
+# `apps/web/**` or its tests.
+#
+# The first-time browser install is the same trade-off
+# T07a's `accessibility.yml` already accepts (see that
+# workflow's "CI runner / browser-dependency reconciliation"
+# note, VOC-031-DEP-04); the lighthouse run reuses the
+# Chromium binary the Playwright install already pulled in,
+# so the per-job cost is dominated by `next build` (3-5 min)
+# + the 12 Lighthouse audits (~4-8 min) + a possible
+# artifact upload, well inside the 30-minute timeout budget.
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - "apps/web/**"
+      - "apps/web/tests/**"
+      - "apps/web/package.json"
+      - "apps/web/pnpm-lock.yaml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/lighthouse.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lighthouse-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  lighthouse:
+    name: lighthouse (DOC-08 budgets)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      # actions/checkout v4.2.2, pinned to the immutable commit
+      # documented at
+      # https://github.com/actions/checkout/releases/tag/v4.2.2
+      - name: Check out reviewed revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      # actions/setup-node v7.0.0, pinned to the immutable commit
+      # documented at
+      # https://github.com/actions/setup-node/releases/tag/v7.0.0
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Install pnpm
+        run: corepack enable && corepack prepare pnpm@11.14.0 --activate
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build API client + design tokens
+        # pnpm run build:packages is what pnpm test runs; it
+        # populates packages/*/dist which the web build picks
+        # up via workspace:* symlinks. Running it explicitly
+        # here keeps the workflow's failure surface readable.
+        run: pnpm run build:packages
+
+      - name: Build @vocanova/web production bundle
+        # Production build, not `next dev` - matches
+        # VOC-031-R04's "no hot-reload variance in CI" rule
+        # that the T09 acceptance criterion inherits from
+        # the T07b accessibility automation. The build
+        # embeds the mock API URL into the client bundle
+        # (NEXT_PUBLIC_API_BASE_URL is inlined at build
+        # time, not at runtime, exactly the same way the
+        # T08 / T07b workflow handles it - see
+        # .github/workflows/accessibility.yml's "Build
+        # @vocanova/web production bundle" step for the
+        # full rationale).
+        env:
+          API_BASE_URL: "http://127.0.0.1:8080"
+          NEXT_PUBLIC_API_BASE_URL: "http://127.0.0.1:8080"
+        run: pnpm --filter @vocanova/web build
+
+      - name: Install Playwright Chromium
+        # `--with-deps` installs the system libraries
+        # Chromium needs on ubuntu-latest. The lighthouse
+        # runner reuses this binary (it shells out to
+        # `chrome-launcher`, which finds the Chromium
+        # Playwright installed at the default cache path).
+        # A separate `playwright install` would double the
+        # download cost; the runner's `LIGHTHOUSE_CHROME_PATH`
+        # env explicitly points at the Playwright cache
+        # below to make the reuse explicit.
+        run: pnpm --filter @vocanova/web exec playwright install --with-deps chromium
+
+      - name: Start mock API server
+        # The T07a / T07b / T08 harness's mock API server.
+        # Started in the background and kept running for the
+        # duration of the job. The runner waits for
+        # http://127.0.0.1:3000 (the Next.js production
+        # server) to become ready and assumes the mock API
+        # is already up; the two servers start in parallel
+        # below.
+        run: |
+          node apps/web/tests/e2e/mock-api-server.mjs &
+          echo $! > /tmp/mock-api.pid
+
+      - name: Start Next.js production server
+        # Same `next start` invocation the accessibility
+        # workflow uses. NEXT_PUBLIC_API_BASE_URL is set
+        # again at runtime so the server-side SSR path
+        # (the (app) layout's data reads) reaches the
+        # mock API; the value was also inlined at build
+        # time, so the client bundle and the SSR path
+        # agree on the API base URL.
+        env:
+          API_BASE_URL: "http://127.0.0.1:8080"
+          NEXT_PUBLIC_API_BASE_URL: "http://127.0.0.1:8080"
+          PORT: "3000"
+        run: |
+          pnpm --filter @vocanova/web start --port 3000 &
+          echo $! > /tmp/next.pid
+
+      - name: Run Lighthouse suite
+        # `LIGHTHOUSE_CHROME_PATH` points the runner at
+        # the Chromium binary Playwright installed above,
+        # so the runner reuses that browser instead of
+        # asking chrome-launcher to find one on $PATH.
+        # The Playwright cache path is
+        # `~/.cache/ms-playwright/chromium-<revision>/chrome-linux/chrome`
+        # on ubuntu-latest, and the revision is fixed
+        # transitively by the locked `@playwright/test`
+        # version. We resolve the directory with `ls -d`
+        # rather than hard-coding the revision so a future
+        # Playwright bump that changes the revision does
+        # not break this step.
+        env:
+          CI: "1"
+          LIGHTHOUSE_URL_PREFIX: "http://127.0.0.1:3000"
+          LIGHTHOUSE_CHROME_PATH: "$(ls -d $HOME/.cache/ms-playwright/chromium-*/chrome-linux/chrome | head -1)"
+        run: pnpm --filter @vocanova/web test:lighthouse
+
+      - name: Stop test servers
+        # Always runs (`if: always()`) so a failure in the
+        # runner still cleans up the background processes
+        # before the job times out.
+        if: always()
+        run: |
+          if [ -f /tmp/mock-api.pid ]; then kill "$(cat /tmp/mock-api.pid)" 2>/dev/null || true; fi
+          if [ -f /tmp/next.pid ]; then kill "$(cat /tmp/next.pid)" 2>/dev/null || true; fi
+
+      # actions/upload-artifact v4, pinned to the immutable
+      # commit documented at
+      # https://github.com/actions/upload-artifact/releases/tag/v4
+      - name: Upload Lighthouse reports on failure
+        # The per-audit JSON reports are written to
+        # apps/web/lighthouse-reports/. Uploading only on
+        # failure keeps the artifact size reasonable and
+        # matches the pattern the accessibility workflow
+        # uses for Playwright reports.
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: lighthouse-reports
+          path: apps/web/lighthouse-reports/
+          retention-days: 7

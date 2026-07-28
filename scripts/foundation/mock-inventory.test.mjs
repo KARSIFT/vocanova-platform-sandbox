@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import { validateMockInventory } from "./mock-inventory.mjs";
 
@@ -36,9 +39,46 @@ test("VOC-031-T06 mock inventory accepts the P5 cross-cutting reliability delive
 // VOC-031-T07a: the accessibility-automation scaffolding
 // (Playwright config, tests/e2e/ tree, axe-helper, mock API
 // server, CI workflow) is present and the P5-forbidden
-// invariant continues to hold. This test re-runs the same code
-// path as the ones above; it is separately named to make the
-// T07a acceptance criterion visible in the test runner output.
+// invariant continues to hold. This test re-runs the same
+// code path as the ones above; it is separately named to
+// make the T07a acceptance criterion visible in the test
+// runner output.
 test("VOC-031-T07a mock inventory accepts the accessibility-automation scaffolding", () => {
   assert.deepEqual(validateMockInventory(), []);
+});
+
+// VOC-031-T09: the performance-automation harness
+// (apps/web/tests/lighthouse/ tree + CI workflow) is present
+// and the P5-forbidden invariant continues to hold across
+// it. This test re-runs the same code path as the ones
+// above; it is separately named to make the T09 acceptance
+// criterion visible in the test runner output.
+//
+// The T09 acceptance criterion requires that the DOC-08
+// thresholds (Performance 85+ / Accessibility 95+ / Best
+// Practices 90+) be the single source of truth for the
+// runner's assertion logic. The thresholds live in
+// `tests/lighthouse/assertions.mjs` (the file the runner
+// imports) and are mirrored in `tests/lighthouse/budget.json`
+// so the budget file is consumable by a future LHCI
+// configuration. To keep the two files in lockstep, this
+// test loads `budget.json` and asserts it contains the
+// exact values the T09 acceptance criterion names, so a
+// drift surfaces here.
+test("VOC-031-T09 mock inventory accepts the performance-automation harness", () => {
+  assert.deepEqual(validateMockInventory(), []);
+});
+
+test("VOC-031-T09 budget.json pins the DOC-08 thresholds verbatim", () => {
+  const budgetPath = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../../apps/web/tests/lighthouse/budget.json",
+  );
+  const budget = JSON.parse(readFileSync(budgetPath, "utf8"));
+  const scores = budget?.budgets?.[0]?.scores ?? {};
+  assert.deepEqual(
+    scores,
+    { performance: 0.85, accessibility: 0.95, "best-practices": 0.9 },
+    "T09 budget.json scores must mirror DOC-08 (Performance 85+ / Accessibility 95+ / Best Practices 90+) exactly",
+  );
 });
