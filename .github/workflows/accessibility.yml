@@ -76,6 +76,30 @@ jobs:
       - name: Build @vocanova/web production bundle
         # Production build, not `next dev` - matches VOC-031-R04's
         # "no hot-reload variance in CI" rule that T07b/T09 inherit.
+        #
+        # NEXT_PUBLIC_API_BASE_URL must be set HERE, at build time, not
+        # just in playwright.config.ts's webServer env for the later
+        # `pnpm start` - Next.js inlines NEXT_PUBLIC_* vars into the
+        # client bundle during `next build`, so setting it only at
+        # runtime has no effect on already-compiled client code. Without
+        # it, the client fell back to api.ts's own default
+        # ("http://localhost:8080"), which is NOT equivalent to the mock
+        # server's actual "http://127.0.0.1:8080" in this environment -
+        # "localhost" can resolve to the IPv6 loopback (::1) first, where
+        # nothing is listening (the mock server binds 127.0.0.1 only per
+        # mock-api-server.mjs's HOST constant), causing every client-side
+        # mutation (anything not fetched by a server component) to fail
+        # at the network level with no HTTP response ever received - the
+        # app's own error UI ("We couldn't save your answers") then masks
+        # what looks identical to a slow/hanging request. Live failure:
+        # VOC-031-T08's core-loop test hung 90s on the onboarding
+        # submit - 3 different "fix the test interaction" attempts
+        # (force-check, then label-click) missed this because the app's
+        # displayed error was misleading, and GETs (server-fetched) kept
+        # working throughout, masking that only client-side POSTs failed.
+        env:
+          API_BASE_URL: "http://127.0.0.1:8080"
+          NEXT_PUBLIC_API_BASE_URL: "http://127.0.0.1:8080"
         run: pnpm --filter @vocanova/web build
 
       - name: Install Playwright Chromium
