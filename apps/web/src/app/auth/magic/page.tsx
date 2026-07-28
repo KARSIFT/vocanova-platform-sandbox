@@ -9,7 +9,10 @@ export default function MagicLinkPage() {
     <Suspense
       fallback={
         <main className="grid min-h-screen place-items-center p-6">
-          <div className="w-full max-w-md rounded-xl border border-neutral-200 bg-white p-[var(--spacing-lg)] shadow-sm">
+          {/* max-w-[28rem] (not max-w-md): see the token-collision note on
+              /onboarding's page.tsx - tokens.generated.css's --spacing-md
+              (16px) shadows the intended 28rem max-w-md container size. */}
+          <div className="w-full max-w-[28rem] rounded-xl border border-neutral-200 bg-white p-[var(--spacing-lg)] shadow-sm">
             <h1 className="text-2xl font-semibold text-neutral-900">
               Sign in link
             </h1>

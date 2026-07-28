@@ -17,7 +17,12 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
   return (
     <main className="grid min-h-screen place-items-center p-6">
-      <div className="w-full max-w-md space-y-[var(--spacing-lg)] rounded-xl border border-neutral-200 bg-white p-[var(--spacing-lg)] shadow-sm">
+      {/* max-w-[28rem] (not max-w-md): this repo's tokens.generated.css only
+          defines a --spacing-* scale, so Tailwind resolves the named
+          max-w-md utility to --spacing-md (16px) instead of the intended
+          28rem, collapsing this card to a single-character column. See
+          the matching note on /onboarding's page.tsx. */}
+      <div className="w-full max-w-[28rem] space-y-[var(--spacing-lg)] rounded-xl border border-neutral-200 bg-white p-[var(--spacing-lg)] shadow-sm">
         <div className="space-y-[var(--spacing-xs)]">
           <h1 className="text-2xl font-semibold text-neutral-900">
             Sign in to Vocanova
