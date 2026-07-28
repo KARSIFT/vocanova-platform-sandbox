@@ -582,6 +582,40 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  // CORS: the web app (127.0.0.1:3000/3100) and this mock API
+  // (127.0.0.1:8080) are different origins by browser same-origin
+  // rules (different port = different origin), even though both are
+  // loopback. Server-side fetches (Next.js server components/route
+  // handlers reading data for SSR) aren't subject to CORS at all -
+  // only browser-initiated fetches are - which is why GETs kept
+  // working throughout while every client-side mutation failed:
+  // credentials: "include" + a custom X-CSRF-Token header force the
+  // browser to send a preflight OPTIONS request, and this server
+  // had no CORS handling at all, so the preflight failed with no
+  // Access-Control-Allow-Origin header and the browser blocked the
+  // real request before it ever reached here (net::ERR_FAILED,
+  // visible only in the browser console, not as an HTTP response -
+  // which is why it looked like a hang rather than a clean error).
+  // Access-Control-Allow-Origin must echo the specific request
+  // origin (not "*") because credentialed requests forbid a
+  // wildcard origin per the CORS spec.
+  const requestOrigin = req.headers.origin;
+  if (requestOrigin) {
+    res.setHeader("Access-Control-Allow-Origin", requestOrigin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Vary", "Origin");
+  }
+  if (req.method === "OPTIONS") {
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, X-CSRF-Token",
+    );
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
   const url = new URL(req.url, `http://${req.headers.host ?? `${HOST}:${PORT}`}`);
   const cookies = parseCookies(req.headers.cookie);
 
