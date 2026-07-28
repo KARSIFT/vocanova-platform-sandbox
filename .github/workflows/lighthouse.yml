@@ -157,11 +157,18 @@ jobs:
         # rather than hard-coding the revision so a future
         # Playwright bump that changes the revision does
         # not break this step.
+        #
+        # `env:` values are not shell-expanded by GitHub
+        # Actions (only `run:` script bodies are), so the
+        # `ls -d ...` command substitution must be resolved
+        # inside the `run:` step itself, not passed as a
+        # literal `env:` string.
         env:
           CI: "1"
           LIGHTHOUSE_URL_PREFIX: "http://127.0.0.1:3000"
-          LIGHTHOUSE_CHROME_PATH: "$(ls -d $HOME/.cache/ms-playwright/chromium-*/chrome-linux/chrome | head -1)"
-        run: pnpm --filter @vocanova/web test:lighthouse
+        run: |
+          export LIGHTHOUSE_CHROME_PATH="$(ls -d "$HOME"/.cache/ms-playwright/chromium-*/chrome-linux/chrome | head -1)"
+          pnpm --filter @vocanova/web test:lighthouse
 
       - name: Stop test servers
         # Always runs (`if: always()`) so a failure in the
