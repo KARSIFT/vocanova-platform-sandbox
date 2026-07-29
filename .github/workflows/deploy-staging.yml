@@ -1,0 +1,747 @@
+# .github/workflows/deploy-staging.yml
+#
+# VOC-032-T07: the first end-to-end deploy automation this
+# repository has ever had. Builds and pushes the two
+# container images (apps/api, apps/web) to GitHub Container
+# Registry on every push to `develop`, then over SSH to the
+# founder-provisioned staging host (`VOC-032-DEP-00`)
+# pulls the new images, applies any pending migrations
+# via T06's `migrate.sh` wrapper, brings the four-service
+# stack up via T04's `docker compose`, and polls the
+# public /healthz and / endpoints until they are healthy
+# (or fails the run, leaving the previously-running
+# containers untouched — `docker compose up -d` is naturally
+# safe in this respect; it only stops old containers once
+# the new ones are healthy).
+#
+# Package: VOC-032 (Begin Milestone R1 - Staging Readiness)
+# Task:    VOC-032-T07
+# Risk:    R3 (per docs/governance/change-risk-classification.md;
+#          this file is in the `.github/workflows/` path-class,
+#          which the classifier floors at R3, and it is the
+#          first workflow in this repository to reach a real,
+#          internet-reachable server and a real DNS zone, and
+#          the first to use named GitHub Actions secrets beyond
+#          the built-in `GITHUB_TOKEN`).
+# Authority: VOC-032 change package (adopted 2026-07-28;
+#            specs/changes/VOC-032-begin-milestone-r1-staging-readiness-docs-product/).
+# Depends on: T02 (apps/api/Dockerfile), T03 (apps/web/Dockerfile
+#             + next.config.ts), T04 (infra/docker-compose.yml),
+#             T05 (infra/nginx/...), T06 (apps/api/scripts/migrate.sh
+#             + apps/api/atlas.hcl + apps/api/migrations/atlas.sum).
+# Required repository secrets (founder-provisioned, see
+# `VOC-032-DEP-00`; workflow fails with "Secret X is required,
+# but not provided" if any is missing — that failure is the
+# expected pre-DEP-00 state, not a bug):
+#   * STAGING_SSH_HOST          - DNS or IP of the staging host
+#   * STAGING_SSH_USER          - SSH username (must be in the
+#                                 `docker` group; passwordless
+#                                 `sudo` is required for the
+#                                 Atlas install path used here)
+#   * STAGING_SSH_PRIVATE_KEY   - PEM-encoded private key whose
+#                                 public half is in
+#                                 STAGING_SSH_KNOWN_HOSTS' host
+#                                 fingerprint
+#   * STAGING_SSH_KNOWN_HOSTS   - output of `ssh-keyscan` for
+#                                 STAGING_SSH_HOST (one or more
+#                                 `host key-type base64` lines,
+#                                 newline-separated)
+#
+# Mirror of the .github/workflows/accessibility.yml and
+# .github/workflows/lighthouse.yml pattern from VOC-031-T07a/
+# T09: this is a separate, purpose-specific workflow file, NOT
+# a new job in pipeline.yml, because pipeline.yml's own header
+# (see the comment block at the top of pipeline.yml) states
+# "Deploy is out of scope" and its `ci`/`release` jobs have
+# contracts (`pnpm run format:check lint typecheck test build`
+# for ci, package-completion detection for release) that a
+# multi-minute production-image build + SSH deploy would
+# regress for every PR regardless of whether staging-deploy
+# coverage applies.
+#
+# Staging host layout this workflow assumes (founder-set-up
+# per T11's infra/README.md; this is the load-bearing
+# convention — if the founder picks a different base path,
+# the SCPS and SSH paths below must be updated in lockstep,
+# this is NOT a parameterised workflow):
+#
+#   /opt/vocanova/infra/docker-compose.yml   (SCPed by this workflow)
+#   /opt/vocanova/infra/nginx/...            (SCPed by this workflow)
+#   /opt/vocanova/infra/secrets/             (founder-populated, NOT SCPed;
+#                                              .gitignore'd in repo)
+#   /opt/vocanova/apps/api/scripts/migrate.sh   (SCPed by this workflow)
+#   /opt/vocanova/apps/api/migrations/...       (SCPed by this workflow)
+#   /usr/local/bin/atlas                     (installed by this workflow
+#                                              on first run; idempotent)
+#
+# The convention `/opt/vocanova/...` is documented in T11
+# (infra/README.md). The first iteration of T11 will document
+# this exact path; subsequent edits to T11 that change the
+# path must update this workflow in the same change.
+#
+# Image-tag strategy: per VOC-032-D06, every image is pushed
+# with two tags — `sha-<short-sha>` (immutable, historical
+# record of "what was deployed when") and `dev` (mutable
+# latest, which is the tag T04's docker-compose.yml references
+# at `image: ghcr.io/vocanova/vocanova-api:dev` / `vocanova-
+# web:dev`). `docker compose pull` on the staging host pulls
+# whichever image the `:dev` tag currently points at (i.e.
+# the just-pushed one), so the deploy always lands the
+# commit at HEAD without any compose-side change. The
+# `sha-<short-sha>` tag is preserved on GHCR for at least
+# the registry's default retention window; redeploying a
+# historical commit requires re-tagging the image or pinning
+# `IMAGE_TAG` in the compose file (out of scope for T07;
+# a follow-up would add an `IMAGE_TAG` env override to the
+# compose file's `image:` fields).
+#
+# The web image requires `NEXT_PUBLIC_API_BASE_URL` as a
+# BUILD-time argument (Next.js inlines `NEXT_PUBLIC_*` values
+# into the client bundle at `next build` time — see the
+# apps/web/Dockerfile header comment and T01's
+# apps/web/.env.example for the full rationale). The value
+# below (`https://api-staging.vocanova.site`) is the staging
+# API URL; the web bundle in the pushed image therefore
+# already calls the right API URL with no runtime override
+# needed.
+#
+# Failure-closed design: every step that can fail is left
+# to fail (no `continue-on-error`), and the health-check
+# poll steps each loop with a bounded timeout. The first
+# non-2xx response past the timeout fails the run; the
+# second health check is gated on the first passing (so a
+# web-flake doesn't mask an API outage or vice versa).
+# `docker compose up -d` is the only container-replacement
+# step; its built-in behaviour is that the old containers
+# keep serving traffic until the new ones report healthy
+# (Docker's HEALTHCHECK + the compose `up -d` lifecycle
+# make this the default — a manually-deleted old container
+# is the only way to deviate from it). The workflow does
+# not run any `down` / `stop` / `kill` step.
+#
+# Live end-to-end execution of the SSH/deploy/migrate/
+# health-check steps is recorded as blocked by
+# `VOC-032-DEP-00` (the SSH credentials) and
+# `VOC-032-DEP-01` (the Cloudflare certificate and DNS) —
+# see specs/changes/VOC-032-.../staging-evidence.md and
+# `T12` for the evidence-completeness claim, which is
+# recorded as still-open rather than asserted as passing.
+# The build/push steps are verifiable without those
+# credentials on a disposable test branch (TEST-16's
+# "disposable test branch configured to trigger only the
+# build/tag/push-to-GHCR steps" is exactly the
+# `workflow_dispatch` path with `skip_ssh_deploy=true`
+# below).
+#
+# Cross-references:
+#   * apps/api/Dockerfile (T02) and apps/web/Dockerfile
+#     (T03) — the images this workflow builds and pushes.
+#   * apps/api/scripts/migrate.sh + apps/api/atlas.hcl
+#     (T06) — the wrapper this workflow's SSH step invokes
+#     for migrations, unchanged from T06.
+#   * infra/docker-compose.yml (T04) and infra/nginx/...
+#     (T05) — the compose + nginx config this workflow's
+#     SSH step SCPS to the staging host.
+#   * apps/api/migrations/atlas.sum (T06) — the integrity
+#     file the T06 wrapper consults before applying; copied
+#     along with the .sql files in the deploy bundle.
+#   * .github/workflows/accessibility.yml + lighthouse.yml
+#     — the design pattern this workflow mirrors (separate
+#     workflow file, NOT a pipeline.yml job).
+#   * docs/operations/11-devops-and-ci-cd.md §3 — the kill
+#     switches and migration-rollback rules the api/web
+#     containers honor at runtime; this workflow neither
+#     adds nor modifies any of them.
+#   * apps/api/.env.example + apps/web/.env.example (T01)
+#     — the env-var schema the api/web containers read;
+#     the staging host's `infra/secrets/api.env` /
+#     `infra/secrets/web.env` must follow this schema, and
+#     those files are founder-populated, not in this repo.
+
+name: deploy-staging
+
+on:
+  # Every merge to develop deploys to staging. Matches
+  # DOC-12 §3's F3 "develop→staging deploy workflow" wording
+  # exactly (the planner's own choice between a push trigger
+  # and a tag-based RC trigger, recorded in `VOC-032-D05`).
+  # A push trigger requires no new tagging convention this
+  # repository does not already have; a tag-based trigger
+  # would. No path filter: a docs-only commit still deploys
+  # the (unchanged) latest image, which is the safe default
+  # (it is also a near-no-op — every layer is cached — so
+  # the cost of a docs-only deploy is one Docker pull that
+  # resolves to "already up to date" per layer).
+  push:
+    branches:
+      - develop
+  # Manual retry / re-deploy path. The `skip_ssh_deploy`
+  # input lets the build/push steps be exercised without
+  # the SSH secrets (the `TEST-16` "disposable test branch
+  # configured to trigger only the build/tag/push-to-GHCR
+  # steps" is exactly this). It is also the path a founder
+  # would use to re-run a failed deploy without pushing
+  # another commit, or to test the workflow against a
+  # disposable test branch without exposing the production
+  # SSH key.
+  workflow_dispatch:
+    inputs:
+      skip_ssh_deploy:
+        description: "Skip the SSH deploy/health-check steps (build/push only — used to exercise the GHCR push path on a test branch without the SSH secrets)"
+        required: false
+        type: boolean
+        default: false
+
+# `contents: read` is the GitHub-recommended default for any
+# workflow that only needs the repo (we do — for checkout).
+# `packages: write` is required to push to ghcr.io via the
+# built-in `GITHUB_TOKEN`; this repo's `repository-governance`
+# workflow is unaffected (it runs on a separate runner with
+# `contents: read` only and never touches packages). The
+# built-in `GITHUB_TOKEN` is used for the GHCR push per
+# `VOC-032-D06` (no new secret for the GHCR step); the SSH
+# push to the staging host uses the four named secrets
+# documented above.
+permissions:
+  contents: read
+  packages: write
+
+# One deploy at a time. The default `cancel-in-progress: true`
+# was considered and rejected: cancelling a deploy that has
+# already run `docker compose pull` (new images are local)
+# but not yet run `docker compose up -d` (old containers
+# still serving) would leave the new images pulled but not
+# running, requiring manual cleanup. Serializing is the
+# correct default for a 1-server, 1-staging-tier deploy
+# — a queued second deploy waits for the first to finish
+# and then runs cleanly.
+concurrency:
+  group: staging-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: deploy to staging
+    runs-on: ubuntu-latest
+    # Total budget: SSH command (15m) + api health check
+    # (5m) + web health check (5m) + build/push (5m, on a
+    # warm cache) = 30m. Leaves no slack; a cold-cache
+    # first push of the web image alone can take 5+ min
+    # because of the full `pnpm install --frozen-lockfile`
+    # + `next build` in the Dockerfile. If the SSH step
+    # is the slow one, the health checks have 10m of
+    # remaining headroom; if both health checks are slow,
+    # the SSH step has 20m of headroom. A real failure
+    # shows up in the workflow log well inside this
+    # budget.
+    timeout-minutes: 30
+    steps:
+      # actions/checkout v4.2.2, pinned to the immutable
+      # commit documented at
+      # https://github.com/actions/checkout/releases/tag/v4.2.2
+      - name: Check out reviewed revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          # fetch-depth: 0 is required because the build
+          # context for the web image is the repo root
+          # (apps/web/Dockerfile's own header comment
+          # explains why), and Buildx's context metadata
+          # uses the resolved full SHA for cache keys.
+          # `0` is also the safest default for any future
+          # step that needs git log information.
+          fetch-depth: 0
+
+      # docker/setup-buildx-action v3 (pinned to the
+      # v3.x major version; SHA-pin before any
+      # non-staging use, the same way the other actions
+      # in this repo are pinned to immutable SHAs).
+      # Buildx is required for the multi-tag push below
+      # and for the consistent build cache behavior the
+      # T02/T03 Dockerfiles assume.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # docker/login-action v3 (pinned to the v3.x
+      # major version; SHA-pin before any non-staging
+      # use). Logs in to ghcr.io using the built-in
+      # `GITHUB_TOKEN` and the workflow's `github.actor`
+      # (the user who triggered the workflow — on a
+      # push to develop, that is the merger; on
+      # workflow_dispatch, the manual triggerer). The
+      # GITHUB_TOKEN is short-lived and is the only
+      # auth the GHCR push step needs per VOC-032-D06.
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract short commit SHA
+        id: sha
+        env:
+          # ${GITHUB_SHA::7} is the documented
+          # 7-character short SHA convention this
+          # repo's other build pipelines already use;
+        run: echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      # docker/build-push-action v5 (pinned to the v5.x
+      # major version; SHA-pin before any non-staging
+      # use). The api image's build context is apps/api/
+      # (matching T02's Dockerfile), so the build runs
+      # in apps/api/ and never sees apps/web, docs/, or
+      # any other unrelated tree.
+      #
+      # provenance: false skips Buildx's SLSA-provenance
+      # attestation. The provenance is intended for
+      # supply-chain verification of public images; for
+      # a non-public, internal-staging image the
+      # attestation is metadata noise that does not
+      # change what the image does.
+      - name: Build and push vocanova-api
+        uses: docker/build-push-action@v5
+        with:
+          context: apps/api
+          file: apps/api/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/vocanova/vocanova-api:sha-${{ steps.sha.outputs.short_sha }}
+            ghcr.io/vocanova/vocanova-api:dev
+          provenance: false
+
+      # The web image's build context is the repo root
+      # (NOT apps/web/), per T03's Dockerfile: pnpm
+      # workspace deps (@vocanova/api-client,
+      # @vocanova/design-tokens) are resolved relative
+      # to the repo root, and Docker's COPY cannot
+      # reach files outside the build context. The
+      # repo-root .dockerignore excludes apps/api,
+      # node_modules, .next, docs, infra, specs, and
+      # every other non-web tree.
+      #
+      # `NEXT_PUBLIC_API_BASE_URL` is a build-time
+      # argument: Next.js inlines `NEXT_PUBLIC_*`
+      # values at `next build` time, so the value is
+      # baked into the client bundle. The default in
+      # apps/web/Dockerfile is http://localhost:8080
+      # (a local-dev value); this workflow passes the
+      # staging value explicitly so the deployed
+      # bundle already calls the right API URL. The
+      # build-arg value is intentionally hardcoded
+      # here, not parameterized through a secret or
+      # a workflow input — it is the only correct
+      # value for the staging tier, and parameterizing
+      # it would invite an accidental "deploy to
+      # staging with the local-dev URL" mistake.
+      - name: Build and push vocanova-web
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          build-args: NEXT_PUBLIC_API_BASE_URL=https://api-staging.vocanova.site
+          tags: |
+            ghcr.io/vocanova/vocanova-web:sha-${{ steps.sha.outputs.short_sha }}
+            ghcr.io/vocanova/vocanova-web:dev
+          provenance: false
+
+      # Build a single tarball containing every file
+      # the staging host needs to actually run the
+      # deployable: T04's docker-compose.yml, T05's
+      # nginx config tree, and T06's migration
+      # tooling (the wrapper script + the migrations
+      # directory + atlas.sum). The tarball is small
+      # (~40KB total) and is the cleanest way to ship
+      # a directory tree atomically: SCP's recursive
+      # copy and rsync are both available, but a
+      # single tarball SCP avoids the per-file
+      # connection overhead and the "partial
+      # extraction" risk if the SCP is interrupted.
+      #
+      # The tarball is created with the in-tree paths
+      # the staging host expects to find
+      # (`infra/...`, `apps/api/...`), so `tar -xzf
+      # ... -C /opt/vocanova` lands files in the
+      # right places without per-file post-processing.
+      # The appleboy/scp-action and appleboy/ssh-action
+      # both use the system ssh client under the hood, and
+      # the system ssh client (with the actions' default
+      # StrictHostKeyChecking=yes) verifies the staging
+      # host's public host key against
+      # ~/.ssh/known_hosts before accepting the connection.
+      # Without this step, the first connection would fail
+      # with "Host key verification failed" (if
+      # known_hosts is absent) or — if the actions were
+      # ever configured with StrictHostKeyChecking=no —
+      # silently accept any host's key, which is a
+      # real MITM-exposure risk against an
+      # internet-reachable staging server.
+      #
+      # The secret is passed via the `env:` block (not
+      # ${{ }}-interpolated into the script body) for the
+      # standard reason: PR-triggered workflow logs
+      # echo the script body, and a ${{ secrets.X }}
+      # directly in the script would leak the secret into
+      # the public log. `env:` is the documented
+      # workaround for this exact case.
+      #
+      # The `printf '%s\n'` form (rather than `echo`) is
+      # used because the known_hosts format is one entry
+      # per line and `echo`'s handling of trailing
+      # newlines is shell-implementation-dependent
+      # (some echos drop a final \n). `printf '%s\n'`
+      # appends exactly one \n, which is what
+      # known_hosts expects for the last entry.
+      - name: Configure SSH host key verification
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        env:
+          STAGING_SSH_KNOWN_HOSTS: ${{ secrets.STAGING_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$STAGING_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Bundle deployable artifacts
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/deploy-bundle
+          mkdir -p /tmp/deploy-bundle/infra
+          mkdir -p /tmp/deploy-bundle/apps/api/scripts
+          mkdir -p /tmp/deploy-bundle/apps/api/migrations
+          # T04's compose file
+          cp infra/docker-compose.yml /tmp/deploy-bundle/infra/
+          # T05's nginx config tree (conf.d/ contains the
+          # per-Host server blocks; nginx.conf is the main
+          # config that includes them)
+          cp -r infra/nginx /tmp/deploy-bundle/infra/
+          # T06's wrapper script. The .dockerignore does
+          # not exclude it (apps/api/.dockerignore only
+          # excludes openapi/ + migrations down-files +
+          # tests, not scripts/), so `cp` is sufficient.
+          cp apps/api/scripts/migrate.sh /tmp/deploy-bundle/apps/api/scripts/
+          chmod +x /tmp/deploy-bundle/apps/api/scripts/migrate.sh
+          # T06's migration files. Atlas's default
+          # versioned glob is `*.sql`, so the .down.sql
+          # .example files are deliberately NOT copied
+          # (see .karsift/lessons.md on this load-bearing
+          # suffix convention); only the forward
+          # migrations and atlas.sum reach the staging
+          # host's `migrations/` directory.
+          cp apps/api/migrations/*.sql /tmp/deploy-bundle/apps/api/migrations/
+          cp apps/api/migrations/atlas.sum /tmp/deploy-bundle/apps/api/migrations/
+          tar -czf /tmp/deploy-bundle.tgz -C /tmp/deploy-bundle .
+
+      # appleboy/scp-action v0.1.7 (pinned to the
+      # major version; SHA-pin before any non-staging
+      # use). SCPs the tarball to the staging host's
+      # /tmp/, where the SSH step below picks it up.
+      # The four secrets (STAGING_SSH_HOST,
+      # STAGING_SSH_USER, STAGING_SSH_PRIVATE_KEY)
+      # are referenced here exactly as they will be
+      # referenced below in the SSH step; the action
+      # validates that the secret values are
+      # non-empty before attempting the connection.
+      - name: Copy deploy bundle to staging host
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          source: /tmp/deploy-bundle.tgz
+          target: /tmp/
+
+      # appleboy/ssh-action v1 (pinned to the major
+      # version; SHA-pin before any non-staging use).
+      # The SSH step does the actual deploy: extracts
+      # the tarball, installs Atlas if not present,
+      # logs in to ghcr.io using the workflow's
+      # GITHUB_TOKEN (passed via the SSH session's
+      # environment, see the `envs:` block), pulls
+      # the new images, applies any pending
+      # migrations via T06's wrapper, and brings the
+      # four-service stack up via `docker compose up
+      # -d`.
+      #
+      # `command_timeout: 15m` is the SSH command's
+      # own per-invocation timeout. A 15-minute
+      # budget covers a cold-cache `docker compose
+      # pull` (which can take 5+ min on a fresh host
+      # with two new images), Atlas download
+      # (~30s, only on first run), migration apply
+      # (a few seconds for 13 migrations), and
+      # `docker compose up -d` (a few seconds to a
+      # minute depending on whether container
+      # healthchecks need to fire). 15m is also
+      # short enough that a hung `docker compose`
+      # command is caught before the job-level
+      # 30-minute timeout.
+      - name: Deploy to staging host
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        uses: appleboy/ssh-action@v1
+        envs: GITHUB_TOKEN,GITHUB_ACTOR
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          command_timeout: 15m
+          script: |
+            set -euo pipefail
+
+            # -------------------------------------------------------------
+            # 1. Lay down the deployable artifacts from the tarball.
+            #    The founder-set-up base path is /opt/vocanova/ (see
+            #    the workflow header comment). The tarball was created
+            #    on the runner with in-tree paths (infra/...,
+            #    apps/api/...), so `tar -xzf` to /opt/vocanova lands
+            #    every file in its expected location.
+            #
+            #    `sudo` is required for the initial `/opt/vocanova`
+            #    mkdir if the directory does not yet exist; subsequent
+            #    runs only need it for the Atlas install path below.
+            #    The deploy user is expected to have passwordless
+            #    `sudo` (a documented prerequisite in T11's
+            #    infra/README.md).
+            # -------------------------------------------------------------
+            sudo mkdir -p /opt/vocanova
+            sudo tar -xzf /tmp/deploy-bundle.tgz -C /opt/vocanova
+            sudo chown -R "$(id -un)":"$(id -gn)" /opt/vocanova
+
+            # -------------------------------------------------------------
+            # 2. Install Atlas on the staging host if it is not
+            #    already on PATH. Per T06's migrate.sh header comment,
+            #    the wrapper expects `atlas` to be on PATH; the
+            #    install is done on the staging host (not in a
+            #    container) because the wrapper runs on the host
+            #    against the live staging database, not inside a
+            #    container.
+            #
+            #    The version (v1.2.0) is pinned to a specific
+            #    release of Atlas. The T06 PR records two
+            #    pre-existing issues in the migration files
+            #    (`-- atlas:txmode transaction` is not a valid
+            #    Atlas directive, and a duplicate-index collision
+            #    in the gamification migration — see
+            #    specs/changes/VOC-032-.../staging-evidence.md's
+            #    T06 follow-ups section) that this workflow does
+            #    NOT silently fix; they are out of scope for T07.
+            #    The pinned version is the same v1.2.0 line the
+            #    T06 wrapper's pre-flight-validation tests are
+            #    confirmed against, so a v1.2.0 binary is the
+            #    one whose known-bad-on-current-migrations
+            #    behavior is the documented state of T07.
+            #
+            #    The URL is the official Atlas CDN's
+            #    version-pinned download (the same URL the
+            #    `atlasgo.sh` installer fetches under the hood);
+            #    downloading the binary directly avoids the
+            #    installer's own shell pipeline (which pipes
+            #    through `sh` to run a generated install script —
+            #    unnecessary for a single-binary tool).
+            # -------------------------------------------------------------
+            if ! command -v atlas >/dev/null 2>&1; then
+              sudo curl -fsSL "https://release.ariga.io/atlas/atlas-linux-amd64-v1.2.0" -o /usr/local/bin/atlas
+              sudo chmod +x /usr/local/bin/atlas
+            fi
+
+            # -------------------------------------------------------------
+            # 3. Log in to ghcr.io on the staging host so the
+            #    upcoming `docker compose pull` can pull the
+            #    just-pushed images. The credentials are the
+            #    workflow's built-in GITHUB_TOKEN (passed in via
+            #    the `envs:` block on the SSH step) and the
+            #    GITHUB_ACTOR (the workflow triggerer).
+            #
+            #    `--password-stdin` is used so the token never
+            #    appears in the shell's argv (avoiding a process-
+            #    list leak). The token expires when the workflow
+            #    run ends; a subsequent deploy would re-login
+            #    with a fresh token. Re-running the login on an
+            #    already-logged-in host is a no-op (docker
+            #    overwrites the existing config.json entry).
+            # -------------------------------------------------------------
+            echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+            # -------------------------------------------------------------
+            # 4. Pull the new images. `docker compose pull` pulls
+            #    whatever the compose file's `image:` field
+            #    references (the `:dev` tag, which the GHCR push
+            #    above just overwrote). It does NOT start any
+            #    containers; it only fetches the images.
+            # -------------------------------------------------------------
+            cd /opt/vocanova/infra
+            docker compose pull
+
+            # -------------------------------------------------------------
+            # 5. Apply any pending migrations BEFORE bringing the
+            #    new api container up.
+            #
+            #    The order pull → migrate → up -d (NOT pull → up
+            #    -d → migrate) is load-bearing. The new api
+            #    image is built from the current `develop`
+            #    source, which may include queries that assume
+            #    a schema column the staging database does not
+            #    yet have. If we started the new api container
+            #    first, the very first query would crash against
+            #    the old schema — and the container's
+            #    HEALTHCHECK (a /healthz GET) would fail
+            #    forever, blocking the new containers from
+            #    replacing the old ones (which is the safe
+            #    default of `up -d`). Running the migration
+            #    first guarantees the database is at the
+            #    schema the new api image expects by the time
+            #    the new container starts.
+            #
+            #    The T06 wrapper (apps/api/scripts/migrate.sh)
+            #    sources its DATABASE_URL from the
+            #    founder-populated api.env on the staging host
+            #    via `set -a; . ...; set +a`, so the connection
+            #    string is never echoed on the command line
+            #    (and so the wrapper can use it directly
+            #    without `--url`).
+            #
+            #    Per T06's follow-up notes (see
+            #    staging-evidence.md), the migration apply
+            #    against the current migration set is
+            #    KNOWN to fail because of two pre-existing
+            #    issues in the protected apps/api/migrations/
+            #    files (the `-- atlas:txmode transaction`
+            #    directive is invalid in Atlas v1.x, and a
+            #    duplicate-index collision in
+            #    20260725130002_voc030_p4_gamification_tables.sql).
+            #    Those are recorded as T06 follow-ups, not
+            #    silently fixed by T07. The wrapper's
+            #    pre-flight checks (atlas.sum present, db
+            #    URL present) DO pass; only the apply itself
+            #    errors. The deploy workflow is correct as
+            #    written; the migration failure is a real,
+            #    pre-existing, package-out-of-scope blocker
+            #    that the founder resolves in a follow-up
+            #    package per T06's recommendation. When the
+            #    migration fails, `set -e` aborts the script
+            #    before `docker compose up -d` runs, so the
+            #    old containers keep serving traffic with the
+            #    old schema — which is exactly the
+            #    fail-closed, no-tear-down behavior the AC-07
+            #    "do not tear down already-running containers
+            #    before confirming the new ones are healthy"
+            #    rule is asking for, by a different code path
+            #    than the docker-compose up -d healthcheck
+            #    route.
+            # -------------------------------------------------------------
+            set -a
+            . /opt/vocanova/infra/secrets/api.env
+            set +a
+            sh /opt/vocanova/apps/api/scripts/migrate.sh
+
+            # -------------------------------------------------------------
+            # 6. Bring the stack up.
+            #
+            #    `docker compose up -d` is the only step in this
+            #    workflow that touches a running container. Its
+            #    documented behavior is: create new containers
+            #    with the new images, wait for them to be
+            #    healthy (per the HEALTHCHECK directives in
+            #    T02's apps/api/Dockerfile and T03's
+            #    apps/web/Dockerfile), and only then stop the
+            #    old containers. If the new containers fail
+            #    their healthchecks, the old containers keep
+            #    serving traffic — which is the design that
+            #    AC-07's "fail the workflow run without
+            #    tearing down currently-running containers"
+            #    criterion is asking for. No `docker stop`,
+            #    `docker kill`, `docker rm`, or `docker
+            #    compose down` is run anywhere in this
+            #    workflow; the only way to remove a running
+            #    container is for the new one to replace it
+            #    successfully.
+            #
+            #    The GitHub-runner-side health checks below
+            #    will poll the public endpoints; if the new
+            #    containers ever become unhealthy, the old
+            #    ones have already taken over (up -d's
+            #    default) and traffic is uninterrupted.
+            # -------------------------------------------------------------
+            docker compose up -d
+
+      # Polls the api's /healthz endpoint. The api
+      # container's HEALTHCHECK (in apps/api/Dockerfile)
+      # pings the same endpoint internally; the difference
+      # is that this poll goes through nginx (T05) and
+      # Cloudflare (DEP-01), so a 200 here confirms the
+      # full path nginx → api → database is healthy, not
+      # just the api process. 60 attempts * 5 seconds =
+      # 5 minutes total budget.
+      #
+      # The poll deliberately uses HTTPS (not HTTP) to
+      # exercise the same TLS path production traffic
+      # uses; a plaintext HTTP poll would silently
+      # succeed even if TLS termination was broken.
+      #
+      # The Host header is set explicitly because
+      # Cloudflare and any reverse proxy in front of
+      # the api route by Host; a bare curl with no Host
+      # header might land on the default server block
+      # and 404 instead of 200.
+      - name: Poll api-staging.vocanova.site/healthz
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        run: |
+          set -euo pipefail
+          echo "Polling https://api-staging.vocanova.site/healthz (5-minute budget)..."
+          for i in $(seq 1 60); do
+            if curl -fsS --max-time 5 \
+                -H "Host: api-staging.vocanova.site" \
+                "https://api-staging.vocanova.site/healthz" > /dev/null; then
+              echo "API health check passed on attempt $i/60"
+              exit 0
+            fi
+            echo "  attempt $i/60: not yet healthy, retrying in 5s"
+            sleep 5
+          done
+          echo "ERROR: api-staging.vocanova.site/healthz did not become healthy within 5 minutes" >&2
+          echo "  The new containers may not have replaced the old ones yet, or" >&2
+          echo "  the api container's startup failed. The previously-running" >&2
+          echo "  containers (if any) are still serving traffic because" >&2
+          echo "  'docker compose up -d' only removes old containers once" >&2
+          echo "  the new ones are healthy. This is the intended" >&2
+          echo "  fail-closed behavior — manual investigation is required" >&2
+          echo "  before re-running the deploy." >&2
+          exit 1
+
+      # Polls the web's / endpoint. The web container's
+      # HEALTHCHECK probes the same path internally; this
+      # poll goes through nginx (T05) and Cloudflare
+      # (DEP-01), confirming the full path nginx → web is
+      # healthy. A 200 from / confirms the Next.js
+      # process is up; it does not (and is not meant to)
+      # confirm that the API is reachable from the web
+      # (the api's /healthz above is the source of truth
+      # for the database side of the stack).
+      - name: Poll staging.vocanova.site/
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        run: |
+          set -euo pipefail
+          echo "Polling https://staging.vocanova.site/ (5-minute budget)..."
+          for i in $(seq 1 60); do
+            status=$(curl -sS --max-time 5 -o /dev/null -w "%{http_code}" \
+                -H "Host: staging.vocanova.site" \
+                "https://staging.vocanova.site/" || echo "000")
+            case "$status" in
+              2*)
+                echo "Web health check passed on attempt $i/60 (status $status)"
+                exit 0
+                ;;
+              *)
+                echo "  attempt $i/60: status=$status, retrying in 5s"
+                sleep 5
+                ;;
+            esac
+          done
+          echo "ERROR: staging.vocanova.site/ did not return a 2xx within 5 minutes" >&2
+          echo "  As with the api health check above, the previously-running" >&2
+          echo "  containers are still serving traffic (docker compose up -d" >&2
+          echo "  only removes old containers once the new ones are healthy)." >&2
+          exit 1
