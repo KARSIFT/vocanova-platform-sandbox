@@ -63,6 +63,11 @@ type ProductionConfig struct {
 	EmailProviderAPIKey  string
 	EmailFrom            string
 	EmailProviderTimeout time.Duration
+
+	GoogleClientID     string
+	GoogleClientSecret string
+	GoogleOAuthScopes  string
+	GoogleOAuthTimeout time.Duration
 }
 
 // LoadProductionConfig reads the production configuration from the
@@ -98,6 +103,11 @@ func LoadProductionConfig() (ProductionConfig, error) {
 		EmailProviderAPIKey:  os.Getenv("EMAIL_PROVIDER_API_KEY"),
 		EmailFrom:            os.Getenv("EMAIL_FROM"),
 		EmailProviderTimeout: getenvDuration("EMAIL_PROVIDER_TIMEOUT", 10*time.Second),
+
+		GoogleClientID:     os.Getenv("GOOGLE_OAUTH_CLIENT_ID"),
+		GoogleClientSecret: os.Getenv("GOOGLE_OAUTH_CLIENT_SECRET"),
+		GoogleOAuthScopes:  os.Getenv("GOOGLE_OAUTH_SCOPES"),
+		GoogleOAuthTimeout: getenvDuration("GOOGLE_OAUTH_TIMEOUT", 8*time.Second),
 	}
 
 	if cfg.DatabaseURL == "" {
@@ -229,6 +239,59 @@ func buildEmailSender(cfg ProductionConfig) (email.Sender, error) {
 	return sender, nil
 }
 
+// buildOAuthProvider returns the auth.OAuthProvider the production
+// wiring should use, applying the T15 fallback rules that mirror
+// T14's buildEmailSender shape:
+//
+//   - When GOOGLE_OAUTH_ENABLED is "false", always return
+//     NewFakeOAuthProvider. The auth service's kill switch
+//     short-circuits OAuthStart with ErrOAuthDisabled before the
+//     provider is reached, so the fake is never exercised in
+//     practice; the wiring still has to return a non-nil provider
+//     so NewService can be constructed.
+//   - When GOOGLE_OAUTH_CLIENT_ID is unset (or empty), return
+//     NewFakeOAuthProvider. The real provider requires a client
+//     ID; falling back keeps staging runnable with Google
+//     sign-in disabled at the provider layer rather than
+//     crashing at startup.
+//   - When GOOGLE_OAUTH_CLIENT_ID is set, also require
+//     GOOGLE_OAUTH_CLIENT_SECRET - NewGoogleOAuthProvider
+//     validates this is non-empty. A misconfigured credential
+//     (ID set but secret missing) is a hard startup error:
+//     silently falling back to FakeOAuthProvider would hide a
+//     real configuration mistake.
+//
+// The decision is logged to stderr (matching buildEmailSender's
+// style) so an operator running the binary interactively can see
+// which provider is wired without having to read the env file.
+// The log line never includes the client secret.
+func buildOAuthProvider(cfg ProductionConfig) (auth.OAuthProvider, error) {
+	fakeIdentity := &auth.OAuthIdentity{Subject: "production-fake-sub", Email: "user@example.com", EmailVerified: true}
+	if !cfg.OAuthOn {
+		fmt.Fprintf(os.Stderr, "api: oauth provider=FakeOAuthProvider (GOOGLE_OAUTH_ENABLED=false)\n")
+		return auth.NewFakeOAuthProvider(fakeIdentity), nil
+	}
+	if cfg.GoogleClientID == "" {
+		fmt.Fprintf(os.Stderr, "api: oauth provider=FakeOAuthProvider (GOOGLE_OAUTH_CLIENT_ID unset; Google sign-in disabled at the provider layer)\n")
+		return auth.NewFakeOAuthProvider(fakeIdentity), nil
+	}
+	if cfg.GoogleClientSecret == "" {
+		return nil, errors.New("GOOGLE_OAUTH_CLIENT_SECRET is required when GOOGLE_OAUTH_CLIENT_ID is set")
+	}
+	provider, err := auth.NewGoogleOAuthProvider(auth.GoogleOAuthConfig{
+		ClientID:     cfg.GoogleClientID,
+		ClientSecret: cfg.GoogleClientSecret,
+		RedirectURI:  cfg.OAuthRedirect,
+		Scopes:       cfg.GoogleOAuthScopes,
+		Timeout:      cfg.GoogleOAuthTimeout,
+	})
+	if err != nil {
+		return nil, err
+	}
+	fmt.Fprintf(os.Stderr, "api: oauth provider=GoogleOAuthProvider client_id=%q redirect_uri=%q\n", cfg.GoogleClientID, cfg.OAuthRedirect)
+	return provider, nil
+}
+
 // HealthzInput is intentionally empty - /healthz takes no parameters.
 type HealthzInput struct{}
 
@@ -287,13 +350,10 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 		return nil, nil, fmt.Errorf("build email sender: %w", err)
 	}
 
-	oauthProvider := auth.OAuthProvider(auth.NewFakeOAuthProvider(
-		&auth.OAuthIdentity{Subject: "production-fake-sub", Email: "user@example.com", EmailVerified: true},
-	))
-	// T15 will replace the fake with a real Google OAuth provider
-	// when GOOGLE_OAUTH_CLIENT_ID / _SECRET are provisioned
-	// (VOC-032-DEP-07). The kill switch remains the same.
-	_ = oauthProvider
+	oauthProvider, err := buildOAuthProvider(cfg)
+	if err != nil {
+		return nil, nil, fmt.Errorf("build oauth provider: %w", err)
+	}
 
 	authCfg := auth.Config{
 		Environment:            cfg.Environment,

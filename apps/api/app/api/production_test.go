@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/auth"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/email"
 )
 
@@ -398,4 +399,151 @@ func TestLoadProductionConfig_EmailProviderTimeoutDefaults(t *testing.T) {
 	cfg, err := LoadProductionConfig()
 	require.NoError(t, err)
 	assert.Greater(t, cfg.EmailProviderTimeout, time.Duration(0))
+}
+
+// TestBuildOAuthProvider_FallsBackToFakeWhenKillSwitchOff covers
+// the first T15 fallback rule: when GOOGLE_OAUTH_ENABLED is
+// "false" the production wiring always uses FakeOAuthProvider,
+// even if a real client ID is also configured. The kill switch
+// wins.
+func TestBuildOAuthProvider_FallsBackToFakeWhenKillSwitchOff(t *testing.T) {
+	cfg := newProductionTestConfig()
+	cfg.OAuthOn = false
+	cfg.GoogleClientID = "should-be-ignored"
+	cfg.GoogleClientSecret = "should-be-ignored"
+
+	p, err := buildOAuthProvider(cfg)
+	require.NoError(t, err)
+	_, ok := p.(*auth.FakeOAuthProvider)
+	assert.True(t, ok, "kill switch off must force FakeOAuthProvider even when credentials are also set")
+}
+
+// TestBuildOAuthProvider_FallsBackToFakeWhenNoClientID covers
+// the second T15 fallback rule: when the kill switch is on but
+// no client ID is set, the wiring falls back to FakeOAuthProvider
+// so staging can still run with Google sign-in off at the
+// provider layer rather than crashing at startup.
+func TestBuildOAuthProvider_FallsBackToFakeWhenNoClientID(t *testing.T) {
+	cfg := newProductionTestConfig()
+	cfg.OAuthOn = true
+	cfg.GoogleClientID = ""
+
+	p, err := buildOAuthProvider(cfg)
+	require.NoError(t, err)
+	_, ok := p.(*auth.FakeOAuthProvider)
+	assert.True(t, ok, "missing client ID must fall back to FakeOAuthProvider rather than fail")
+}
+
+// TestBuildOAuthProvider_BuildsGoogleProviderWhenFullyConfigured
+// covers the happy path: with the kill switch on, a non-empty
+// client ID, client secret, and redirect URI, the wiring
+// constructs a real GoogleOAuthProvider.
+func TestBuildOAuthProvider_BuildsGoogleProviderWhenFullyConfigured(t *testing.T) {
+	cfg := newProductionTestConfig()
+	cfg.OAuthOn = true
+	cfg.GoogleClientID = "test-client-id"
+	cfg.GoogleClientSecret = "test-client-secret"
+	cfg.GoogleOAuthTimeout = 5 * time.Second
+	cfg.GoogleOAuthScopes = "openid email profile https://www.googleapis.com/auth/drive.readonly"
+
+	p, err := buildOAuthProvider(cfg)
+	require.NoError(t, err)
+	gp, ok := p.(*auth.GoogleOAuthProvider)
+	require.True(t, ok, "fully-configured wiring must produce a real GoogleOAuthProvider")
+	assert.Equal(t, "test-client-id", gp.ClientID)
+	assert.Equal(t, "test-client-secret", gp.ClientSecret)
+	assert.Equal(t, "https://api-staging.vocanova.site/auth/oauth/google/callback", gp.RedirectURI)
+	assert.Equal(t, "openid email profile https://www.googleapis.com/auth/drive.readonly", gp.Scopes, "fully-configured wiring must forward custom scopes verbatim")
+	assert.Equal(t, 5*time.Second, gp.Client.Timeout, "fully-configured wiring must honor the custom timeout")
+}
+
+// TestBuildOAuthProvider_DefaultsScopes covers the scopes
+// default: when GOOGLE_OAUTH_SCOPES is unset, the production
+// wiring uses the auth package's DefaultGoogleOAuthScopes
+// ("openid email profile") rather than crashing or producing
+// an empty scope set.
+func TestBuildOAuthProvider_DefaultsScopes(t *testing.T) {
+	cfg := newProductionTestConfig()
+	cfg.OAuthOn = true
+	cfg.GoogleClientID = "test-client-id"
+	cfg.GoogleClientSecret = "test-client-secret"
+	cfg.GoogleOAuthScopes = ""
+
+	p, err := buildOAuthProvider(cfg)
+	require.NoError(t, err)
+	gp := p.(*auth.GoogleOAuthProvider)
+	assert.Equal(t, auth.DefaultGoogleOAuthScopes, gp.Scopes, "missing GOOGLE_OAUTH_SCOPES must fall back to the default scope set")
+}
+
+// TestBuildOAuthProvider_DefaultsTimeout covers the timeout
+// default: when GOOGLE_OAUTH_TIMEOUT is unset, the production
+// wiring uses a positive default rather than the net/http zero
+// value (which disables timeouts entirely).
+func TestBuildOAuthProvider_DefaultsTimeout(t *testing.T) {
+	cfg := newProductionTestConfig()
+	cfg.OAuthOn = true
+	cfg.GoogleClientID = "test-client-id"
+	cfg.GoogleClientSecret = "test-client-secret"
+	cfg.GoogleOAuthTimeout = 0
+
+	p, err := buildOAuthProvider(cfg)
+	require.NoError(t, err)
+	gp := p.(*auth.GoogleOAuthProvider)
+	assert.Greater(t, gp.Client.Timeout, time.Duration(0))
+}
+
+// TestBuildOAuthProvider_HardErrorsOnMissingSecret covers the
+// "client ID set but client secret missing" path: a half-
+// configured real provider is a hard startup error, not a
+// silent FakeOAuthProvider fallback. Silently falling back
+// here would hide a real configuration mistake.
+func TestBuildOAuthProvider_HardErrorsOnMissingSecret(t *testing.T) {
+	cfg := newProductionTestConfig()
+	cfg.OAuthOn = true
+	cfg.GoogleClientID = "test-client-id"
+	cfg.GoogleClientSecret = ""
+
+	_, err := buildOAuthProvider(cfg)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "GOOGLE_OAUTH_CLIENT_SECRET")
+}
+
+// TestLoadProductionConfig_ReadsGoogleOAuthEnvVars covers the
+// T15/T01 contract: every env var the production wiring reads
+// for the Google OAuth provider is exposed on ProductionConfig
+// with the correct value. This is the half of T01's
+// VOC-032-TEST-05 .env.example-completeness check that focuses
+// specifically on the T15 additions.
+func TestLoadProductionConfig_ReadsGoogleOAuthEnvVars(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://example/db")
+	t.Setenv("BASE_URL", "https://staging.vocanova.site")
+	t.Setenv("OAUTH_REDIRECT_URI", "https://api-staging.vocanova.site/auth/oauth/google/callback")
+	t.Setenv("SESSION_COOKIE_DOMAIN", "staging.vocanova.site")
+	t.Setenv("GOOGLE_OAUTH_CLIENT_ID", "real-google-client-id")
+	t.Setenv("GOOGLE_OAUTH_CLIENT_SECRET", "real-google-client-secret")
+	t.Setenv("GOOGLE_OAUTH_SCOPES", "openid email profile")
+	t.Setenv("GOOGLE_OAUTH_TIMEOUT", "7s")
+
+	cfg, err := LoadProductionConfig()
+	require.NoError(t, err)
+	assert.Equal(t, "real-google-client-id", cfg.GoogleClientID)
+	assert.Equal(t, "real-google-client-secret", cfg.GoogleClientSecret)
+	assert.Equal(t, "openid email profile", cfg.GoogleOAuthScopes)
+	assert.Equal(t, 7*time.Second, cfg.GoogleOAuthTimeout)
+}
+
+// TestLoadProductionConfig_GoogleOAuthTimeoutDefaults covers
+// the timeout default: when GOOGLE_OAUTH_TIMEOUT is unset, the
+// production wiring uses a positive default rather than the
+// net/http zero value (which disables timeouts entirely).
+func TestLoadProductionConfig_GoogleOAuthTimeoutDefaults(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://example/db")
+	t.Setenv("BASE_URL", "https://staging.vocanova.site")
+	t.Setenv("OAUTH_REDIRECT_URI", "https://api-staging.vocanova.site/auth/oauth/google/callback")
+	t.Setenv("SESSION_COOKIE_DOMAIN", "staging.vocanova.site")
+	t.Setenv("GOOGLE_OAUTH_TIMEOUT", "")
+
+	cfg, err := LoadProductionConfig()
+	require.NoError(t, err)
+	assert.Greater(t, cfg.GoogleOAuthTimeout, time.Duration(0))
 }
