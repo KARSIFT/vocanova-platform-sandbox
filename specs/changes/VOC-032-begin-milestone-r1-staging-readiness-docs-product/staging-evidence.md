@@ -40,7 +40,7 @@ completes staging acceptance per DOC-12 §5.
 | `EV-08`..`EV-09` | `apps/web` Dockerfile builds and serves | **Produced by `T03`** — `apps/web/Dockerfile`, `apps/web/next.config.ts`. |
 | `EV-10`..`EV-11` | Compose stack validates and comes up healthy locally | **Produced by `T04`** — `docker-compose.yml`. |
 | `EV-12`..`EV-13` | nginx config valid, routes correctly, real-IP scoped | **Produced by `T05`** — nginx configuration file(s). Live Cloudflare-certificate verification recorded separately below (blocked). |
-| `EV-14`..`EV-15` | Atlas applies the full migration set; re-apply is a no-op; down-files not auto-discovered | **Produced by `T06`** — `apps/api/atlas.hcl`, `apps/api/scripts/migrate.sh`. |
+| `EV-14`..`EV-15` | Atlas applies the full migration set; re-apply is a no-op; down-files not auto-discovered | **T06 tooling delivered** — `apps/api/atlas.hcl`, `apps/api/scripts/migrate.sh`, `apps/api/migrations/atlas.sum`. **Two pre-existing migration-file issues block `EV-14`'s end-to-end pass against the actual migration set; see "T06 follow-ups" section below.** The pre-flight-validation half of `EV-15` (down-files not auto-discovered) is exercised by `apps/api/migrations/atlas_tooling_test.go::TestMigrationsDirectoryHasNoForwardDiscoveredDownFiles`; the end-to-end apply half is blocked until the two follow-ups close. |
 | `EV-16`..`EV-17` | Deploy workflow valid, build/push succeeds, fails closed on bad health check | **Produced by `T07`** — `.github/workflows/deploy-staging.yml` (or equivalent). Live SSH-deploy execution recorded separately below (blocked). |
 | `EV-18`..`EV-20` | AI-evaluation gate passes at thresholds, fails on violation, wired as required check | **Produced by `T08`** — evaluation-gate command + CI wiring. |
 | `EV-21` | Live migration and rollback rehearsal | **Blocked by `VOC-032-DEP-00`/`DEP-01`** — real server/credentials do not yet exist. Procedure documented below; live execution recorded as blocked. |
@@ -140,3 +140,138 @@ any prior milestone's own gate passed. Each of P1–P5 would still need its own
 staging exercise, run against this now-real environment and recorded in its
 own `staging-evidence.md`, before that milestone's DOC-12 §5 gate can be
 declared complete. This document records VOC-032's own R1 evidence only.
+
+## T06 follow-ups: pre-existing migration-file issues block `EV-14` end-to-end
+
+`T06` delivers the Atlas tooling (`apps/api/atlas.hcl`,
+`apps/api/scripts/migrate.sh`, `apps/api/migrations/atlas.sum`) and
+the in-process pre-flight-validation tests for the wrapper. Two
+pre-existing issues in the protected `apps/api/migrations/*.sql`
+files were discovered while implementing the apply end-to-end
+test; per the implementer prompt's protected-area rule, `T06`
+records them as follow-ups rather than silently editing the
+migrations in scope. **Both are small, narrowly-scoped fixes**
+that can each be a single follow-up PR (or a single combined PR
+of ~5 lines diff per file plus one new atlas.sum).
+
+### Follow-up 1: `-- atlas:txmode transaction` is not a valid Atlas directive
+
+Every file in `apps/api/migrations/*.sql` (13 files, VOC-025
+through VOC-031) starts with the comment:
+
+    -- atlas:txmode transaction
+
+Atlas v1.x's `atlas:txmode` directive accepts exactly three
+values: `none`, `file`, and `all` (and `all` is rejected inside a
+per-file directive — it is global-only). The literal value
+`transaction` is not in that set; Atlas errors with
+`unknown txmode "transaction" found in file directive "<name>.sql"`
+and `atlas migrate apply` aborts before running any SQL.
+Confirmed locally against Atlas v1.2.0-canary (downloaded
+2026-07-29 from `https://release.ariga.io/atlas/atlas-linux-amd64-latest.zip`)
+and a fresh disposable Postgres 16.
+
+Fix (minimum diff): either delete the `-- atlas:txmode
+transaction` line from every file, or change it to
+`-- atlas:txmode file`. The current intent of the comment
+("wrap this file in its own transaction") is the default Atlas
+behavior with no directive at all, so deleting the line is the
+cleanest fix and matches the actual default.
+
+### Follow-up 2: duplicate `streak_states_user_id_key` index in `20260725130002_voc030_p4_gamification_tables.sql`
+
+`apps/api/migrations/20260725130002_voc030_p4_gamification_tables.sql`
+defines `streak_states` at line 31-45 with `user_id uuid NOT NULL
+UNIQUE` (line 33), and then explicitly creates the same index at
+lines 47-48:
+
+    CREATE UNIQUE INDEX streak_states_user_id_key
+      ON streak_states (user_id);
+
+Postgres auto-creates a unique index named
+`<table>_<column>_key` for any inline `UNIQUE` column
+constraint, so the explicit `CREATE UNIQUE INDEX` collides with
+the auto-generated one and the apply errors with
+`relation "streak_states_user_id_key" already exists (42P07)`
+on the very first apply against a fresh database. Confirmed
+locally against a fresh disposable Postgres 16 with the
+directive from follow-up 1 also fixed (so the only remaining
+error is the duplicate index).
+
+Fix (minimum diff): remove either the inline `UNIQUE` from line
+33 (keep just `NOT NULL`) or remove the explicit
+`CREATE UNIQUE INDEX streak_states_user_id_key` on lines 47-48.
+Removing the explicit CREATE UNIQUE INDEX is the smaller diff
+(the inline UNIQUE documents the column-level constraint
+clearly and Postgres enforces the same invariant either way).
+
+### Combined fix size and what T06 already guarantees
+
+Both follow-ups are mechanical, file-local edits that do not
+change any column or constraint semantics. Combined, the diff
+is:
+
+  * `apps/api/migrations/*.sql` (13 files) — 1 line each
+    deleted (the invalid directive) for follow-up 1.
+  * `apps/api/migrations/20260725130002_voc030_p4_gamification_tables.sql`
+    — 2 lines deleted (the explicit CREATE UNIQUE INDEX) for
+    follow-up 2.
+  * `apps/api/migrations/atlas.sum` — regenerated by
+    `atlas migrate hash --dir file://migrations` and committed.
+  * No changes to any column, type, constraint, index name, or
+    row-data semantics; the existing `migration_test.go` string-
+    invariant tests still pass unchanged.
+
+`T06`'s own deliverables — the `atlas.hcl` config, the
+`migrate.sh` wrapper, the `atlas.sum` integrity file, and the
+new `atlas_tooling_test.go` Go tests — are independent of
+these two follow-ups and remain in place. The wrapper's
+pre-flight-validation behavior (missing DATABASE_URL, missing
+Atlas binary, missing atlas.sum, missing migrations dir, non-
+file:// URL) is verified by ten passing Go tests; the wrapper
+also successfully applies a clean migration set end-to-end
+against a fresh disposable Postgres when both follow-ups are
+fixed (manually verified locally; an integration test that
+exercises the wrapper against a real Postgres is not added
+here because the follow-ups are not yet applied — adding such a
+test now would re-fail the same way Atlas does against the
+current migrations, providing no additional signal over the
+upstream-bug evidence already documented above).
+
+### Recommended handling for the founder
+
+Either of the two patterns below is acceptable; the first is
+the minimum-blast-radius option and is what `T06`'s implementer
+recommends:
+
+  1. **T06 follow-up PR (single, ~5-line diff per file).** Open
+     a new change package (e.g. `VOC-033`) with one task that
+     applies the two minimum-diff fixes above, regenerates
+     `atlas.sum`, and re-runs `T06`'s tests. The new package
+     re-uses the existing migration-test invariants in
+     `apps/api/migrations/migration_test.go` and T06's new
+     `atlas_tooling_test.go` as its regression suite, and adds
+     a single end-to-end test that exercises the wrapper
+     against a fresh disposable Postgres to confirm the full
+     apply path now succeeds. This is a small, low-risk,
+     well-scoped PR that does not change any product behavior.
+
+  2. **Narrow exception in T06's scope (founder decision).**
+     The implementer's protection-against-scope-expansion rule
+     is conservative; if the founder judges the two fixes to
+     be obviously within the spirit of T06 ("add Atlas
+     tooling that applies the existing migrations"), the
+     fixes can be folded into T06 as a single, clearly-
+     disclosed commit. This path requires the founder to
+     explicitly grant the scope exception (the implementer
+     does not grant their own), and the PR description
+     should name the two follow-ups and explain why the
+     exception is being applied rather than spinning out a
+     new package.
+
+Either way, `T06` itself is now in a state where the founder
+can review and merge the tooling as-is, and the two follow-ups
+can be handled in a tightly-scoped follow-up. `EV-14`'s
+end-to-end pass can be recorded as complete once both follow-
+ups are applied and the integration test (added in the
+follow-up package) passes.

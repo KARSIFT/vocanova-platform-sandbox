@@ -82,3 +82,83 @@ lockfile) and is silently ignored rather than erroring - Lighthouse just
 falls back to its own default form factor ("mobile"), defeating the point of
 the mobile/desktop layout matrix this test suite deliberately covers. Use
 `formFactor` only.
+
+## 2026-07-29: Atlas v1.x's `-- atlas:txmode transaction` directive is INVALID
+
+`apps/api/migrations/*.sql` (VOC-025 through VOC-031, 13 files in total)
+each start with the header comment `-- atlas:txmode transaction`. Atlas
+v1.x (the only version this repo will plausibly be on, given the
+2026-07-29 era) accepts exactly three `atlas:txmode` values: `none`,
+`file`, and `all` (and `all` is rejected inside a per-file directive -
+it is global-only). The literal value `transaction` is not in that
+set; Atlas errors with `unknown txmode "transaction" found in file
+directive "<name>.sql"` and `atlas migrate apply` aborts before
+running any SQL. Confirmed by downloading Atlas v1.2.0-canary and
+applying the existing migration set against a fresh disposable
+Postgres 16 - every migration is rejected at the directive-parsing
+step, so the entire apply fails. **This means the existing
+`apps/api/migrations/*.sql` files cannot be applied by Atlas as
+written.** The T06 deliverable (apps/api/atlas.hcl + the
+apps/api/scripts/migrate.sh wrapper + apps/api/migrations/atlas.sum)
+adds the tooling but does not silently fix the directive - that fix
+touches the protected `apps/api/migrations` area, which the VOC-032
+package scopes T06 as "read-only, tooling only". The T06 PR's PR
+description records the directive bug as a VOC-032-T06 follow-up
+needing a separate (small) package or an explicit, narrow exception
+in T06's own scope; either way, the apply command in the wrapper
+will fail against the current migration set with the above error,
+and `atlas migrate apply` is not silently passing this.
+
+If you are touching Atlas tooling or the migration files for any
+reason, the fix for the directive is one of:
+  1. Change `-- atlas:txmode transaction` to `-- atlas:txmode file`
+     in every *.sql file (file = default, so omitting the directive
+     entirely also works; deleting the line is the minimum-diff
+     change). `file` means "wrap this file in its own transaction",
+     which is exactly what the original `transaction` comment was
+     trying to express. The T06 wrapper's comment block anticipates
+     this fix and explicitly does not override the per-file
+     txmode from the CLI.
+  2. If a global "all migrations in one transaction" semantic is
+     actually wanted, set `txmode = "all"` in the `dev` env block of
+     apps/api/atlas.hcl and remove the per-file directives (Atlas
+     rejects `atlas:txmode all` inside a file). Today, every file
+     has its own BEGIN/COMMIT boundary implicit in the
+     `file`-mode default, so option (1) is the safe minimum.
+
+If you're reviewing T06 and see this lesson, the existing migration
+files are not Atlas-applicable and that is a pre-existing
+incompatibility the package documented as a follow-up rather than
+silently editing in scope. Don't assume the migration apply works
+in staging until both this directive is fixed and the separate
+duplicate-index bug in
+`apps/api/migrations/20260725130002_voc030_p4_gamification_tables.sql`
+(line 33's `user_id uuid NOT NULL UNIQUE` plus line 47-48's
+`CREATE UNIQUE INDEX streak_states_user_id_key` collide - Postgres
+auto-creates a unique index named `<table>_<col>_key` for the
+inline UNIQUE constraint, and the explicit CREATE UNIQUE INDEX then
+errors with `relation "<table>_<col>_key" already exists (42P07)`)
+is also resolved. The T06 PR's notes section points at both.
+
+## 2026-07-29: Atlas's default forward-apply file glob is `*.sql`; the `.example` suffix is the load-bearing protection for recovery down-files
+
+`apps/api/migrations/README.md` already states the recovery
+`.down.sql.example` files are "deliberately not executable by Atlas
+and exist only for disposable recovery rehearsal". The mechanism is
+Atlas's default versioned-mode file glob, which is `*.sql` (and
+NOT `*.sql` OR `*.down.sql` OR `*.down.sql.example`). Confirmed by
+renaming one `.down.sql.example` to `.down.sql` in a temp
+directory: Atlas immediately picks it up as a forward migration and
+tries to apply it (in this case, `DROP TABLE magic_links;` against
+an empty database fails the test, but the point is that the file
+was applied at all). The `.example` suffix is what keeps recovery
+down-files outside the glob, and
+`apps/api/migrations/atlas_tooling_test.go::TestMigrationsDirectoryHasNoForwardDiscoveredDownFiles`
+guards the naming convention (fails fast if any file ending in
+`.down.sql` - without the `.example` suffix - is ever committed).
+If you are adding a recovery down-file, the convention is
+`<version-prefix>_<table>.down.sql.example` (note: `.example` is
+part of the extension, so the file appears as a single
+dot-separated name to most tooling and is sorted distinctly from
+the `.sql` and `.down.sql` files in directory listings). Don't
+"tidy up" the suffix - it's load-bearing.
