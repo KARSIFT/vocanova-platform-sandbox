@@ -1,0 +1,41 @@
+# apps/api/.dockerignore
+#
+# Keep the build context for apps/api/Dockerfile small and free of
+# anything that should not be COPYed into the build stage. The
+# final image is multi-stage so most of these never reach the
+# runtime layer, but excluding them at the build-context level
+# keeps the `docker build` cache line stable across code-only
+# changes (e.g. swapping a test fixture should not invalidate
+# the `go mod download` layer).
+
+# Generated code that the test suite regenerates on demand -
+# building a production binary never needs it. ent/ is kept
+# because the production wiring imports generated packages from
+# it; openapi/ is excluded because the production binary does
+# not embed the spec.
+openapi/
+
+# Migration down-files are deliberately not executable by Atlas
+# and are not needed for a build of the Go binary. The forward
+# SQL files are similarly unused by `go build`.
+migrations/*.down.sql.example
+migrations/README.md
+
+# Local-only / test-only files. None of these are imported by
+# the production binary, but COPYing them inflates the build
+# context and (more importantly) the on-disk builder stage.
+**/*_test.go
+**/testdata/
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Editor / OS noise. Not expected in this repo, but harmless to
+# keep ignoring in case a developer machine adds them locally.
+.git/
+.gitignore
+.gitattributes
+.idea/
+.vscode/
+.DS_Store
