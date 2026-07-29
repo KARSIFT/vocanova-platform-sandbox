@@ -1,0 +1,109 @@
+# .dockerignore (repo root)
+#
+# Build-context exclusions for
+# `docker build -f apps/web/Dockerfile .` - the
+# build the VOC-032-T03 task defines and
+# VOC-032-TEST-08 exercises. This file is
+# consulted ONLY when the build context is the
+# repo root, which is currently the case for the
+# web Dockerfile only - the apps/api Dockerfile
+# uses apps/api/ as its build context and is
+# governed by apps/api/.dockerignore instead, not
+# this one. Any future Docker build that uses the
+# repo root as its context will inherit these
+# exclusions; if such a build needs something
+# excluded here, prefer adding a more specific
+# .dockerignore at the relevant sub-tree rather
+# than relaxing this one.
+
+# Version control and build context metadata.
+# `.git/` is the obvious one (never bake git
+# history into an image); `.gitattributes` is
+# pulled in transitively by some tools and is
+# not needed in the build; `.github/` holds the
+# workflows (none of which the image needs -
+# CI runs them on a separate runner).
+.git/
+.gitattributes
+.github/
+
+# Dependency installations. pnpm writes the
+# workspace's `node_modules/` trees during the
+# build stage's `pnpm install` step; they are
+# not part of the build CONTEXT and must not
+# pollute it (re-including them would either
+# make COPY copy them uselessly or, worse,
+# shadow the freshly-installed deps).
+node_modules/
+**/node_modules/
+
+# Build outputs and dependency caches. The
+# apps/api binary, the apps/web .next/ tree,
+# pnpm's content-addressable store, and any
+# compiled workspace package dist/ trees are
+# all produced by their own build steps, not
+# consumed as build-context input. apps/web/-
+# playwright-report/, apps/web/test-results/,
+# and apps/web/lighthouse-reports/ are runtime
+# test artifacts (also gitignored, but
+# re-asserted here for the build context).
+apps/api/
+apps/web/.next/
+apps/web/playwright-report/
+apps/web/test-results/
+apps/web/lighthouse-reports/
+.pnpm-store/
+packages/*/dist/
+
+# Non-build documentation. The web image does
+# not need docs/, infra/, specs/, or the
+# karsift-ai-infra submodule's own source.
+# apps/web/scripts/ is excluded because the
+# only thing in it - generate-tokens-css.mjs -
+# is invoked at development time only and its
+# generated output is already committed at
+# apps/web/src/app/tokens.generated.css.
+docs/
+infra/
+specs/
+karsift-ai-infra/
+.karsift/
+tooling/
+apps/web/scripts/
+
+# Test-only files. apps/web/tests/ and the
+# Playwright config are not part of the
+# production build.
+apps/web/tests/
+apps/web/playwright.config.ts
+
+# Local-only configuration. `.env*` matches
+# .env, .env.local, .env.production, etc. - any
+# of which a developer machine or staging host
+# might drop into the working tree. They are
+# never part of a Docker build context. Note
+# this also matches apps/web/.env.example and
+# apps/api/.env.example; that is intentional -
+# neither is loaded by Next.js or pnpm at build
+# time, and excluding them keeps the context
+# tight. Both .env.example files remain in the
+# source tree via the normal `COPY apps/web`
+# step in the Dockerfile (which is a different
+# source than this exclusion list applies to
+# for the apps/web/ subtree, but .env* is
+# still excluded by this rule; the Dockerfile
+# does not COPY .env.example into the runtime
+# image and the apps/web/ build step doesn't
+# read it).
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Editor and OS noise. Mirrors the apps/api/
+# .dockerignore's intent for the web build's
+# context too.
+.idea/
+.vscode/
+.DS_Store
+*.swp
