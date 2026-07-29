@@ -38,10 +38,11 @@ func run() error {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	api, err := contract.NewProductionAPI(cfg, nil)
+	api, db, err := contract.NewProductionAPI(cfg, nil)
 	if err != nil {
 		return fmt.Errorf("build api: %w", err)
 	}
+	defer db.Close()
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,

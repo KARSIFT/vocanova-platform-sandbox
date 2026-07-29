@@ -181,7 +181,7 @@ func TestLoadProductionConfig_FallsBackToRedirectWhenAllowlistEmpty(t *testing.T
 // known-down at startup must not produce a runnable server.
 func TestNewProductionAPI_RequiresDatabaseReachability(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://invalid:invalid@127.0.0.1:1/db?connect_timeout=1")
-	_, err := NewProductionAPI(newProductionTestConfig(), nil)
+	_, _, err := NewProductionAPI(newProductionTestConfig(), nil)
 	require.Error(t, err, "NewProductionAPI must refuse to build a server when the database is unreachable")
 	assert.Contains(t, err.Error(), "ping database")
 }
@@ -196,9 +196,10 @@ func TestNewProductionAPI_BuildsWithReachableDatabase(t *testing.T) {
 	defer sqlDB.Close()
 	mock.ExpectPing()
 
-	api, err := NewProductionAPI(newProductionTestConfig(), sqlDB)
+	api, returnedDB, err := NewProductionAPI(newProductionTestConfig(), sqlDB)
 	require.NoError(t, err)
 	require.NotNil(t, api)
+	assert.Same(t, sqlDB, returnedDB, "NewProductionAPI must return the same *sql.DB the caller supplied so it can be closed on shutdown")
 
 	// /healthz should be registered.
 	w := httptest.NewRecorder()

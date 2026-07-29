@@ -92,6 +92,30 @@ func TestRequestMagicLinkEndpointInvalidEmailStill422(t *testing.T) {
 	assert.Equal(t, http.StatusUnprocessableEntity, w.Code)
 }
 
+func TestRequestMagicLinkEndpointDisabledReturns503NotCrash(t *testing.T) {
+	api, svc, _, _, _ := testAuthAPI(t)
+	svc.SetKillSwitches(&auth.KillSwitches{MagicLinkEnabled: false, OAuthEnabled: true, NewSignupsEnabled: true})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/magic-links", strings.NewReader(`{"email":"user@example.com"}`))
+	req.Header.Set("Content-Type", "application/json")
+	api.Adapter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+}
+
+func TestOAuthStartEndpointDisabledReturns503NotCrash(t *testing.T) {
+	api, svc, _, _, _ := testAuthAPI(t)
+	svc.SetKillSwitches(&auth.KillSwitches{MagicLinkEnabled: true, OAuthEnabled: false, NewSignupsEnabled: true})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/oauth/google/start", strings.NewReader(`{"redirectUri":"https://test.example.com/app"}`))
+	req.Header.Set("Content-Type", "application/json")
+	api.Adapter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+}
+
 func TestConsumeMagicLinkEndpointSetsCookiesAndReturnsUser(t *testing.T) {
 	api, _, _, fake, _ := testAuthAPI(t)
 

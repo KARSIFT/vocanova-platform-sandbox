@@ -125,6 +125,9 @@ func RegisterAuth(api huma.API, svc *auth.Service) {
 		Path:        "/api/v1/auth/magic-links",
 		Summary:     "Request a magic sign-in link",
 		Tags:        []string{"Authentication"},
+		Responses: map[string]*huma.Response{
+			"503": {Description: "Magic link sign-in is disabled"},
+		},
 	}, func(ctx context.Context, input *RequestMagicLinkInput) (*RequestMagicLinkOutput, error) {
 		c := authHumaContext(ctx)
 		if err := svc.RequestMagicLink(ctx, clientIPFromHuma(c), input.Body.Email); err != nil {
@@ -139,6 +142,9 @@ func RegisterAuth(api huma.API, svc *auth.Service) {
 		Path:        "/api/v1/auth/magic-links/consume",
 		Summary:     "Consume a magic sign-in link",
 		Tags:        []string{"Authentication"},
+		Responses: map[string]*huma.Response{
+			"503": {Description: "Magic link sign-in, or new sign-ups, is disabled"},
+		},
 	}, func(ctx context.Context, input *ConsumeMagicLinkInput) (*ConsumeMagicLinkOutput, error) {
 		c := authHumaContext(ctx)
 		user, session, token, err := svc.ConsumeMagicLink(ctx, clientIPFromHuma(c), input.Body.Token, input.Body.Email)
@@ -162,6 +168,10 @@ func RegisterAuth(api huma.API, svc *auth.Service) {
 		Summary:       "Start a Google OAuth sign-in flow",
 		Tags:          []string{"Authentication"},
 		DefaultStatus: 200,
+		Responses: map[string]*huma.Response{
+			"404": {Description: "OAuth provider not configured"},
+			"503": {Description: "Google OAuth sign-in is disabled"},
+		},
 	}, func(ctx context.Context, input *OAuthStartInput) (*OAuthStartOutput, error) {
 		c := authHumaContext(ctx)
 		url, stateToken, err := svc.OAuthStart(ctx, clientIPFromHuma(c), input.Body.RedirectURI)
@@ -183,6 +193,7 @@ func RegisterAuth(api huma.API, svc *auth.Service) {
 		Tags:        []string{"Authentication"},
 		Responses: map[string]*huma.Response{
 			"302": {Description: "Redirect to the authenticated application"},
+			"503": {Description: "Google OAuth sign-in, or new sign-ups, is disabled"},
 		},
 	}, func(ctx context.Context, input *OAuthCallbackInput) (*OAuthCallbackOutput, error) {
 		c := authHumaContext(ctx)
@@ -262,6 +273,12 @@ func mapAuthError(err error) huma.StatusError {
 		return huma.Error401Unauthorized("oauth provider failed")
 	case err == auth.ErrOAuthNotConfigured:
 		return huma.Error404NotFound("oauth provider not configured")
+	case err == auth.ErrMagicLinkDisabled:
+		return huma.Error503ServiceUnavailable("magic link sign-in is disabled")
+	case err == auth.ErrOAuthDisabled:
+		return huma.Error503ServiceUnavailable("google oauth sign-in is disabled")
+	case err == auth.ErrSignupsDisabled:
+		return huma.Error503ServiceUnavailable("new sign-ups are disabled")
 	default:
 		return huma.Error500InternalServerError("internal error")
 	}

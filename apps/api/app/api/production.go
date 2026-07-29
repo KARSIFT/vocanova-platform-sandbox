@@ -204,17 +204,22 @@ type HealthzOutput struct {
 // A failure to open or ping the database returns a non-nil error
 // and no huma.API - the server must not start serving traffic when
 // the database is unreachable.
-func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, error) {
+//
+// The opened (or supplied) *sql.DB is always returned alongside the
+// huma.API so the caller can close it during graceful shutdown -
+// NewProductionAPI never closes a database connection it hands
+// back to a caller that is still using it.
+func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, error) {
 	if db == nil {
 		conn, err := sql.Open("postgres", cfg.DatabaseURL)
 		if err != nil {
-			return nil, fmt.Errorf("open database: %w", err)
+			return nil, nil, fmt.Errorf("open database: %w", err)
 		}
 		pingCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := conn.PingContext(pingCtx); err != nil {
 			_ = conn.Close()
-			return nil, fmt.Errorf("ping database: %w", err)
+			return nil, nil, fmt.Errorf("ping database: %w", err)
 		}
 		db = conn
 	}
@@ -361,7 +366,7 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, error) {
 
 	RegisterHealthz(api, db)
 
-	return api, nil
+	return api, db, nil
 }
 
 // RegisterHealthz installs the unauthenticated GET /healthz probe.
