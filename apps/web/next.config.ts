@@ -40,11 +40,18 @@
 // Adding options here outside an approved change
 // package is out of scope per the scope discipline
 // in this package's implementation plan.
+//
+// `__dirname` below is intentionally the CJS global, not derived from
+// `import.meta.url`: Next.js always transpiles next.config.ts to
+// CommonJS (via SWC) before executing it, and in that CJS wrapper
+// `__dirname` is already an implicit function parameter. Redeclaring it
+// with `const __dirname = ...` is a duplicate-declaration SyntaxError
+// inside that CJS wrapper, which makes Node's module-syntax detection
+// silently fall back to treating this file as an ES module - where
+// `exports`/`require` don't exist, breaking `next build` with
+// "ReferenceError: exports is not defined in ES module scope".
 
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig = {
   output: "standalone",

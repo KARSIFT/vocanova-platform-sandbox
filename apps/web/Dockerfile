@@ -187,38 +187,13 @@ COPY packages ./packages
 # Next.js's anonymous telemetry, which would
 # otherwise pop prompts that hang
 # non-interactive builds.
-#
-# __NEXT_NODE_NATIVE_TS_LOADER_ENABLED=true:
-# use Node.js's native TypeScript resolver to
-# load next.config.ts. The default Next.js
-# 16.2.10 loader compiles next.config.ts to a
-# CommonJS .js file via SWC and then `require`s
-# it, which fails with "ReferenceError: exports
-# is not defined in ES module scope" against
-# this project's apps/web/package.json, which
-# declares `"type": "module"` and therefore
-# treats every .js file as ESM. Node 22.10+
-# ships a native TypeScript resolver that uses
-# `import()` to load next.config.ts directly,
-# sidestepping the SWC -> .js -> require
-# pipeline. The repo's .nvmrc pins Node 24.18.0,
-# which has this feature; setting the opt-in env
-# var here is what makes the build hermetic and
-# removes the need for a separate runtime-time
-# configuration file. T07's deploy workflow (a
-# follow-on task in this package) will need to
-# either inherit this env var (if it builds the
-# image the same way) or set it explicitly in
-# the workflow step that invokes `docker build`.
 ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV __NEXT_NODE_NATIVE_TS_LOADER_ENABLED=true
 
 # `next build` (the web's `build` script) reads
 # NEXT_PUBLIC_API_BASE_URL and the
-# __NEXT_NODE_NATIVE_TS_LOADER_ENABLED /
-# NEXT_TELEMETRY_DISABLED flags set above. Its
+# NEXT_TELEMETRY_DISABLED flag set above. Its
 # output of interest, apps/web/.next/standalone/,
 # is the artifact the runtime stage below copies.
 RUN pnpm --filter @vocanova/web... build
