@@ -45,12 +45,13 @@ type RateLimitConfig struct {
 
 // Service implements magic-link, OAuth, session, and logout lifecycle.
 type Service struct {
-	repo        Repository
-	emailSender email.Sender
-	oauth       OAuthProvider
-	clock       clock.Clock
-	limiter     RateLimiter
-	cfg         Config
+	repo         Repository
+	emailSender  email.Sender
+	oauth        OAuthProvider
+	clock        clock.Clock
+	limiter      RateLimiter
+	cfg          Config
+	killSwitches *KillSwitches
 }
 
 // NewService creates an auth service.
@@ -81,6 +82,9 @@ func (s *Service) OAuthStateLifetime() time.Duration { return s.cfg.OAuthStateLi
 
 // RequestMagicLink creates a single-use magic link and sends it to the email.
 func (s *Service) RequestMagicLink(ctx context.Context, clientIP, emailAddr string) error {
+	if s.killSwitches != nil && !s.killSwitches.MagicLinkEnabled {
+		return ErrMagicLinkDisabled
+	}
 	allowed, err := s.limiter.Allow(ctx, KeyForIP("magic.request", clientIP))
 	if err != nil {
 		return fmt.Errorf("rate limit: %w", err)
@@ -132,6 +136,9 @@ func (s *Service) magicLinkURL(token, email string) string {
 // ConsumeMagicLink verifies a magic link, creates/links the user, and issues a
 // session. The returned token is the opaque bearer that callers set as a cookie.
 func (s *Service) ConsumeMagicLink(ctx context.Context, clientIP, token, emailAddr string) (*User, *Session, string, error) {
+	if s.killSwitches != nil && !s.killSwitches.MagicLinkEnabled {
+		return nil, nil, "", ErrMagicLinkDisabled
+	}
 	allowed, err := s.limiter.Allow(ctx, KeyForIP("magic.consume", clientIP))
 	if err != nil {
 		return nil, nil, "", fmt.Errorf("rate limit: %w", err)
@@ -165,6 +172,9 @@ func (s *Service) ConsumeMagicLink(ctx context.Context, clientIP, token, emailAd
 
 	user, err := s.repo.GetUserByEmail(ctx, emailAddr)
 	if err != nil {
+		if s.killSwitches != nil && !s.killSwitches.NewSignupsEnabled {
+			return nil, nil, "", ErrSignupsDisabled
+		}
 		// Create a verified user from the magic link.
 		user, err = s.repo.CreateUser(ctx, emailAddr, &now)
 		if err != nil {
@@ -193,6 +203,9 @@ func (s *Service) ConsumeMagicLink(ctx context.Context, clientIP, token, emailAd
 // URL and the raw state token to set as a cookie. The appReturnURL is the
 // application destination the user should be sent to after successful callback.
 func (s *Service) OAuthStart(ctx context.Context, clientIP, appReturnURL string) (string, string, error) {
+	if s.killSwitches != nil && !s.killSwitches.OAuthEnabled {
+		return "", "", ErrOAuthDisabled
+	}
 	if !s.OAuthConfigured() {
 		return "", "", ErrOAuthNotConfigured
 	}
@@ -226,6 +239,9 @@ func (s *Service) OAuthStart(ctx context.Context, clientIP, appReturnURL string)
 // and creates/links the internal identity and session. It returns the
 // application return URL that was supplied at the start of the flow.
 func (s *Service) OAuthCallback(ctx context.Context, clientIP, code, state, cookieState string) (*User, *Session, string, string, error) {
+	if s.killSwitches != nil && !s.killSwitches.OAuthEnabled {
+		return nil, nil, "", "", ErrOAuthDisabled
+	}
 	if !s.OAuthConfigured() {
 		return nil, nil, "", "", ErrOAuthNotConfigured
 	}
@@ -302,6 +318,9 @@ func (s *Service) resolveOAuthIdentity(ctx context.Context, identity *OAuthIdent
 	// if one exists, otherwise create a new verified user.
 	user, err := s.repo.GetUserByEmail(ctx, emailAddr)
 	if err != nil {
+		if s.killSwitches != nil && !s.killSwitches.NewSignupsEnabled {
+			return nil, ErrSignupsDisabled
+		}
 		user, err = s.repo.CreateUser(ctx, emailAddr, &now)
 		if err != nil {
 			return nil, fmt.Errorf("create user: %w", err)

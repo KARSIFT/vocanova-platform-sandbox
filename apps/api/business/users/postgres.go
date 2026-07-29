@@ -208,6 +208,29 @@ func validOnboardingStatus(s string) bool {
 	return false
 }
 
+// GetStoredUserSettings implements UserSettingsReader against the
+// user_settings schema. The D04 seed-eligibility decision the
+// users.Service makes in CompleteOnboarding re-reads the stored
+// daily_review_target to decide between SeedCreateRow,
+// SeedOverwriteDefault, and SeedPreserveExisting (VOC-031-D04).
+// Mirrors the MemoryRepository implementation: when no row exists
+// yet, returns Stored=false so the service picks SeedCreateRow.
+func (r *PostgreSQLRepository) GetStoredUserSettings(ctx context.Context, userID uuid.UUID) (StoredUserSettings, error) {
+	row := r.db.QueryRowContext(ctx,
+		`SELECT daily_review_target FROM user_settings WHERE user_id = $1`,
+		userID,
+	)
+	var target int
+	err := row.Scan(&target)
+	if errors.Is(err, sql.ErrNoRows) {
+		return StoredUserSettings{Stored: false}, nil
+	}
+	if err != nil {
+		return StoredUserSettings{}, fmt.Errorf("fetch stored user settings: %w", err)
+	}
+	return StoredUserSettings{Stored: true, DailyReviewTarget: target}, nil
+}
+
 // GetSettings returns the requester's Settings projection. The
 // user_settings row may not exist yet; in that case every field
 // is filled from the user_settings schema defaults (the values
