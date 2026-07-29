@@ -58,6 +58,11 @@ type ProductionConfig struct {
 	MagicLinkOn  bool
 	OAuthOn      bool
 	NewSignupsOn bool
+
+	EmailProviderURL     string
+	EmailProviderAPIKey  string
+	EmailFrom            string
+	EmailProviderTimeout time.Duration
 }
 
 // LoadProductionConfig reads the production configuration from the
@@ -88,6 +93,11 @@ func LoadProductionConfig() (ProductionConfig, error) {
 		MagicLinkOn:     getenvBool("EMAIL_MAGIC_LINK_ENABLED", true),
 		OAuthOn:         getenvBool("GOOGLE_OAUTH_ENABLED", true),
 		NewSignupsOn:    getenvBool("NEW_USER_SIGNUP_ENABLED", true),
+
+		EmailProviderURL:     os.Getenv("EMAIL_PROVIDER_URL"),
+		EmailProviderAPIKey:  os.Getenv("EMAIL_PROVIDER_API_KEY"),
+		EmailFrom:            os.Getenv("EMAIL_FROM"),
+		EmailProviderTimeout: getenvDuration("EMAIL_PROVIDER_TIMEOUT", 10*time.Second),
 	}
 
 	if cfg.DatabaseURL == "" {
@@ -175,6 +185,50 @@ type Healthchecker interface {
 	PingContext(ctx context.Context) error
 }
 
+// buildEmailSender returns the email.Sender the production wiring
+// should use, applying the T14 fallback rules:
+//
+//   - When EMAIL_MAGIC_LINK_ENABLED is "false", always return
+//     Fake{}. The auth service will reject magic-link requests
+//     outright (and accounts.NewService will not call the sender
+//     for magic-link sends), so the real sender is never reached;
+//     Fake{} is correct here.
+//   - When EMAIL_PROVIDER_API_KEY is unset (or empty), return
+//     Fake{}. The real provider requires an API key; falling back
+//     keeps staging runnable with magic-link delivery disabled at
+//     the provider layer rather than crashing at startup.
+//   - When EMAIL_PROVIDER_API_KEY is set, also require
+//     EMAIL_PROVIDER_URL and EMAIL_FROM - NewHTTPSender validates
+//     these are non-empty. A misconfigured URL or missing From is
+//     a hard startup error: silently falling back to Fake{} would
+//     hide a real configuration mistake.
+//
+// The decision is logged to stderr (matching cmd/api/main.go's
+// logging style) so an operator running the binary interactively
+// can see which sender is wired without having to read the env
+// file. The log line never includes the API key.
+func buildEmailSender(cfg ProductionConfig) (email.Sender, error) {
+	if !cfg.MagicLinkOn {
+		fmt.Fprintf(os.Stderr, "api: email sender=Fake (EMAIL_MAGIC_LINK_ENABLED=false)\n")
+		return &email.Fake{}, nil
+	}
+	if cfg.EmailProviderAPIKey == "" {
+		fmt.Fprintf(os.Stderr, "api: email sender=Fake (EMAIL_PROVIDER_API_KEY unset; magic-link delivery disabled at the provider layer)\n")
+		return &email.Fake{}, nil
+	}
+	sender, err := email.NewHTTPSender(email.HTTPSenderConfig{
+		URL:     cfg.EmailProviderURL,
+		APIKey:  cfg.EmailProviderAPIKey,
+		From:    cfg.EmailFrom,
+		Timeout: cfg.EmailProviderTimeout,
+	})
+	if err != nil {
+		return nil, err
+	}
+	fmt.Fprintf(os.Stderr, "api: email sender=HTTPSender url=%s from=%q\n", cfg.EmailProviderURL, cfg.EmailFrom)
+	return sender, nil
+}
+
 // HealthzInput is intentionally empty - /healthz takes no parameters.
 type HealthzInput struct{}
 
@@ -228,12 +282,10 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	authRepo := auth.NewPostgreSQLRepository(db)
 	limiter := auth.NewFixedWindowRateLimiter(clk, time.Minute, 10)
 
-	mailer := email.Sender(&email.Fake{})
-	// EMAIL_MAGIC_LINK_ENABLED and the real transactional-email
-	// implementation are intentionally separated: T00 ships
-	// Fake{} for now (T14 adds the real one). The kill switch
-	// gates the auth path; the wire below stays trivial.
-	_ = mailer
+	mailer, err := buildEmailSender(cfg)
+	if err != nil {
+		return nil, nil, fmt.Errorf("build email sender: %w", err)
+	}
 
 	oauthProvider := auth.OAuthProvider(auth.NewFakeOAuthProvider(
 		&auth.OAuthIdentity{Subject: "production-fake-sub", Email: "user@example.com", EmailVerified: true},
@@ -261,7 +313,7 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 			SameSite:       http.SameSiteStrictMode,
 		},
 	}
-	authSvc := auth.NewService(authRepo, &email.Fake{}, oauthProvider, clk, limiter, authCfg)
+	authSvc := auth.NewService(authRepo, mailer, oauthProvider, clk, limiter, authCfg)
 	authSvc.SetKillSwitches(&auth.KillSwitches{
 		MagicLinkEnabled:  cfg.MagicLinkOn,
 		OAuthEnabled:      cfg.OAuthOn,
@@ -289,7 +341,7 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	accountsRepo := accounts.NewPostgreSQLRepository(db)
 	accountsIdem := accountsIdempotencyAdapter{store: learningIdem}
 	accountsLimiter := auth.NewFixedWindowRateLimiter(clk, time.Minute, 10)
-	accountsSvc := accounts.NewService(accountsRepo, authRepo, &email.Fake{}, accountsIdem, clk, accountsLimiter, accounts.Config{
+	accountsSvc := accounts.NewService(accountsRepo, authRepo, mailer, accountsIdem, clk, accountsLimiter, accounts.Config{
 		Environment:               cfg.Environment,
 		BaseURL:                   cfg.BaseURL,
 		EmailChangePath:           "/auth/email-change",

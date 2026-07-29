@@ -48,7 +48,7 @@ completes staging acceptance per DOC-12 §5.
 | `EV-23` | `infra/README.md` accuracy | **Produced by `T11`.** |
 | `EV-24`..`EV-25` | Installed-suite pass at final SHA; mock-inventory confirmation | **Produced by `T12` — see `T12 evidence` below.** |
 | `EV-26` | DOC-11 §1 amendment accuracy | **Produced by `T13`** — `docs/operations/11-devops-and-ci-cd.md`. |
-| `EV-27` | Real email sender: request-construction unit test | **Produced by `T14`.** |
+| `EV-27` | Real email sender: request-construction unit test | **Produced by `T14`.** `apps/api/foundation/email/http.go` (`HTTPSender`, provider-agnostic JSON POST with `Authorization: Bearer <key>`) and `apps/api/foundation/email/http_test.go` (16 tests covering URL/APIKey/From validation, recipient/subject/body construction, Bearer auth, 2xx/non-2xx handling, context cancellation, the never-log-APIKey contract) all pass against a fake `httptest.NewServer` transport; no real provider call is made from CI. The production wiring (`apps/api/app/api/production.go::buildEmailSender`) constructs the real `HTTPSender` when `EMAIL_PROVIDER_API_KEY`/`URL`/`FROM` are set and the `EMAIL_MAGIC_LINK_ENABLED` kill switch is on, and falls back to `email.Fake{}` otherwise - covered by `apps/api/app/api/production_test.go::TestBuildEmailSender_*` (5 tests, all pass). `EMAIL_PROVIDER_URL`/`EMAIL_PROVIDER_API_KEY`/`EMAIL_FROM`/`EMAIL_PROVIDER_TIMEOUT` are documented in `apps/api/.env.example` and read by `LoadProductionConfig`; the timeout defaults to `10s` and `TestLoadProductionConfig_EmailProviderTimeoutDefaults` asserts a positive default. |
 | `EV-28` | Real email sender: one live staging delivery | **Blocked by `VOC-032-DEP-07`** — no email-provider account exists yet. |
 | `EV-29` | Real Google OAuth provider: token/userinfo unit test | **Produced by `T15`.** |
 | `EV-30` | Real Google OAuth provider: one live staging exchange | **Blocked by `VOC-032-DEP-07`** — no Google Cloud OAuth client exists yet. |
@@ -275,3 +275,101 @@ can be handled in a tightly-scoped follow-up. `EV-14`'s
 end-to-end pass can be recorded as complete once both follow-
 ups are applied and the integration test (added in the
 follow-up package) passes.
+
+## T14 evidence: real email sender
+
+`T14` adds `apps/api/foundation/email.HTTPSender`, a
+provider-agnostic JSON-POST `email.Sender` implementation that
+authenticates with `Authorization: Bearer <EMAIL_PROVIDER_API_KEY>`
+and posts a `{"from","to","subject","text","html"}` body. This
+shape is compatible with Resend, SendGrid v3, and Postmark's
+token-auth mode out of the box; providers with a different wire
+format can be supported by a future, narrower T14-follow-up
+package rather than blocking R1.
+
+The production wiring in `apps/api/app/api/production.go`
+(`buildEmailSender`) applies the T14 fallback rules:
+
+1. `EMAIL_MAGIC_LINK_ENABLED=false` → always `email.Fake{}`
+   (the auth service rejects magic-link requests outright, so
+   the real sender is never reached).
+2. `EMAIL_PROVIDER_API_KEY` unset (and kill switch on) → always
+   `email.Fake{}`. Staging can run with magic-link delivery off
+   at the provider layer rather than crashing at startup.
+3. All of `EMAIL_PROVIDER_URL`, `EMAIL_PROVIDER_API_KEY`,
+   `EMAIL_FROM` set → real `HTTPSender`. A half-configured
+   sender (key set but URL or From missing) is a hard startup
+   error, not a silent `Fake{}` fallback; silently falling
+   back would hide a real configuration mistake.
+
+The selected sender is logged to stderr (`api: email
+sender=HTTPSender url=... from=...` or
+`api: email sender=Fake (reason)`) so an operator running the
+binary interactively can confirm which path is wired without
+reading the env file. The log line never includes the API key.
+
+### Unit-tested evidence (passes locally, in CI)
+
+`apps/api/foundation/email/http_test.go` exercises:
+
+- `NewHTTPSender` validation: missing `URL`/`APIKey`/`From` each
+  return a descriptive error (`TestNewHTTPSender_RequiresURL`,
+  `_RequiresAPIKey`, `_RequiresFrom`).
+- `NewHTTPSender` timeout default: a zero/negative
+  `cfg.Timeout` produces a positive `Client.Timeout`
+  (`TestNewHTTPSender_DefaultsTimeout`); an explicit
+  `cfg.Timeout` is honored (`TestNewHTTPSender_HonorsCustomTimeout`).
+- `HTTPSender.Send` request construction: a representative
+  magic-link message produces the correct JSON body
+  (`{"from","to","subject","text","html"}` matching the source
+  message's recipient, subject, and both text/HTML bodies), the
+  correct `Authorization: Bearer <key>` header, the correct
+  `Content-Type: application/json`, and a stable
+  `User-Agent: vocanova-api/1.0`
+  (`TestHTTPSender_BuildsCorrectMagicLinkRequest`).
+- Multi-recipient path: every recipient is forwarded in the
+  JSON array (`TestHTTPSender_MultipleRecipients`).
+- Input validation: empty recipients, empty subject, empty
+  body, and recipient missing email each return a descriptive
+  error before any HTTP call (`TestHTTPSender_ReturnsErrorOnEmptyRecipients`,
+  `_ReturnsErrorOnEmptySubject`, `_ReturnsErrorOnEmptyBody`,
+  `_RejectsRecipientMissingEmail`).
+- Response handling: any 2xx is treated as success
+  (`TestHTTPSender_Treats2xxAsSuccess`, parameterised over
+  200/201/202/204); any 3xx/4xx/5xx is surfaced as an error
+  whose message intentionally does NOT include the response
+  body (a provider may return debug details we do not want to
+  echo) (`TestHTTPSender_TreatsNon2xxAsError`, parameterised
+  over 400/401/403/422/500/502/503).
+- Context cancellation: a cancelled context aborts the
+  in-flight send (`TestHTTPSender_RespectsContext`).
+- The never-log-APIKey contract: HTTPSender has no logging
+  paths; the regression test `TestHTTPSender_NeverLogsAPIKey`
+  exists as a load-bearing reminder that a future refactor
+  adding a logging call must remove the API key from any
+  logged payload.
+
+`apps/api/app/api/production_test.go` exercises the wiring
+(`TestBuildEmailSender_FallsBackToFakeWhenKillSwitchOff`,
+`_FallsBackToFakeWhenNoAPIKey`,
+`_BuildsHTTPSenderWhenFullyConfigured`,
+`_HardErrorsOnMisconfiguredHTTPSender`,
+`_HardErrorsOnMissingFrom`) and the env-var reads
+(`TestLoadProductionConfig_ReadsEmailProviderEnvVars`,
+`_EmailProviderTimeoutDefaults`).
+
+All `T14` tests pass against a fake `httptest.NewServer`
+transport; no real provider call is made from CI. This satisfies
+`EV-27`.
+
+### Live-evidence block (recorded as blocked)
+
+`EV-28` — one real magic-link email actually delivered to a
+founder-controlled test inbox in staging — remains blocked by
+`VOC-032-DEP-07` (no email-provider account/API key exists yet).
+The unit-tested code path above is the load-bearing piece; the
+one live send is recorded, not asserted, and is exercised once
+during `T09`'s rehearsal or later founder staging acceptance.
+The procedure is the same as the staging-evidence plan above
+(section "`EV-28` — Real email sender: one live staging
+delivery").

@@ -17,6 +17,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/email"
 )
 
 // fakeHealthchecker is a small Healthchecker stub that returns
@@ -271,3 +273,129 @@ func newHealthzOnlyAPI(t *testing.T, db Healthchecker) huma.API {
 // (which uses os.Setenv under the hood) and t.Setenv cleans up
 // after itself.
 var _ = os.Getenv
+
+// TestBuildEmailSender_FallsBackToFakeWhenKillSwitchOff covers
+// the first T14 fallback rule: when EMAIL_MAGIC_LINK_ENABLED is
+// "false" the production wiring always uses Fake{}, even if a
+// real API key is also configured. The kill switch wins.
+func TestBuildEmailSender_FallsBackToFakeWhenKillSwitchOff(t *testing.T) {
+	cfg := newProductionTestConfig()
+	cfg.MagicLinkOn = false
+	cfg.EmailProviderURL = "https://api.example.com/emails"
+	cfg.EmailProviderAPIKey = "should-be-ignored"
+	cfg.EmailFrom = "Vocanova <[email protected]>"
+
+	s, err := buildEmailSender(cfg)
+	require.NoError(t, err)
+	_, ok := s.(*email.Fake)
+	assert.True(t, ok, "kill switch off must force Fake{} even when a credential is also set")
+}
+
+// TestBuildEmailSender_FallsBackToFakeWhenNoAPIKey covers the
+// second T14 fallback rule: when the kill switch is on but no API
+// key is set, the wiring falls back to Fake{} so staging can
+// still run with magic-link delivery off at the provider layer
+// rather than crashing at startup.
+func TestBuildEmailSender_FallsBackToFakeWhenNoAPIKey(t *testing.T) {
+	cfg := newProductionTestConfig()
+	cfg.MagicLinkOn = true
+	cfg.EmailProviderAPIKey = ""
+
+	s, err := buildEmailSender(cfg)
+	require.NoError(t, err)
+	_, ok := s.(*email.Fake)
+	assert.True(t, ok, "missing API key must fall back to Fake{} rather than fail")
+}
+
+// TestBuildEmailSender_BuildsHTTPSenderWhenFullyConfigured covers
+// the happy path: with the kill switch on, a non-empty API key,
+// URL, and From, the wiring constructs a real HTTPSender.
+func TestBuildEmailSender_BuildsHTTPSenderWhenFullyConfigured(t *testing.T) {
+	cfg := newProductionTestConfig()
+	cfg.MagicLinkOn = true
+	cfg.EmailProviderURL = "https://api.example.com/emails"
+	cfg.EmailProviderAPIKey = "test-key"
+	cfg.EmailFrom = "Vocanova <[email protected]>"
+	cfg.EmailProviderTimeout = 5 * time.Second
+
+	s, err := buildEmailSender(cfg)
+	require.NoError(t, err)
+	hs, ok := s.(*email.HTTPSender)
+	require.True(t, ok, "fully-configured wiring must produce a real HTTPSender")
+	assert.Equal(t, "https://api.example.com/emails", hs.URL)
+	assert.Equal(t, "test-key", hs.APIKey)
+	assert.Equal(t, "Vocanova <[email protected]>", hs.From)
+	assert.Equal(t, 5*time.Second, hs.Client.Timeout)
+}
+
+// TestBuildEmailSender_HardErrorsOnMisconfiguredHTTPSender covers
+// the "API key set but URL or From missing" path: a half-
+// configured real sender is a hard startup error, not a silent
+// Fake{} fallback. Silently falling back here would hide a real
+// configuration mistake.
+func TestBuildEmailSender_HardErrorsOnMisconfiguredHTTPSender(t *testing.T) {
+	cfg := newProductionTestConfig()
+	cfg.MagicLinkOn = true
+	cfg.EmailProviderAPIKey = "test-key"
+	cfg.EmailProviderURL = ""
+	cfg.EmailFrom = "Vocanova <[email protected]>"
+
+	_, err := buildEmailSender(cfg)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "URL is required")
+}
+
+// TestBuildEmailSender_HardErrorsOnMissingFrom covers the
+// second half-configured path: API key and URL set but no From
+// address. Same hard-error posture as the missing-URL case.
+func TestBuildEmailSender_HardErrorsOnMissingFrom(t *testing.T) {
+	cfg := newProductionTestConfig()
+	cfg.MagicLinkOn = true
+	cfg.EmailProviderAPIKey = "test-key"
+	cfg.EmailProviderURL = "https://api.example.com/emails"
+	cfg.EmailFrom = ""
+
+	_, err := buildEmailSender(cfg)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "From is required")
+}
+
+// TestLoadProductionConfig_ReadsEmailProviderEnvVars covers the
+// T01/T14 contract: every env var the production wiring reads
+// for the email provider is exposed on ProductionConfig with the
+// correct value. This is the half of T01's
+// VOC-032-TEST-05 .env.example-completeness check that focuses
+// specifically on the T14 additions.
+func TestLoadProductionConfig_ReadsEmailProviderEnvVars(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://example/db")
+	t.Setenv("BASE_URL", "https://staging.vocanova.site")
+	t.Setenv("OAUTH_REDIRECT_URI", "https://api-staging.vocanova.site/auth/oauth/google/callback")
+	t.Setenv("SESSION_COOKIE_DOMAIN", "staging.vocanova.site")
+	t.Setenv("EMAIL_PROVIDER_URL", "https://api.example.com/emails")
+	t.Setenv("EMAIL_PROVIDER_API_KEY", "k")
+	t.Setenv("EMAIL_FROM", "Vocanova <[email protected]>")
+	t.Setenv("EMAIL_PROVIDER_TIMEOUT", "7s")
+
+	cfg, err := LoadProductionConfig()
+	require.NoError(t, err)
+	assert.Equal(t, "https://api.example.com/emails", cfg.EmailProviderURL)
+	assert.Equal(t, "k", cfg.EmailProviderAPIKey)
+	assert.Equal(t, "Vocanova <[email protected]>", cfg.EmailFrom)
+	assert.Equal(t, 7*time.Second, cfg.EmailProviderTimeout)
+}
+
+// TestLoadProductionConfig_EmailProviderTimeoutDefaults covers
+// the timeout default: when EMAIL_PROVIDER_TIMEOUT is unset, the
+// production wiring uses a positive default rather than the
+// net/http zero value (which disables timeouts entirely).
+func TestLoadProductionConfig_EmailProviderTimeoutDefaults(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://example/db")
+	t.Setenv("BASE_URL", "https://staging.vocanova.site")
+	t.Setenv("OAUTH_REDIRECT_URI", "https://api-staging.vocanova.site/auth/oauth/google/callback")
+	t.Setenv("SESSION_COOKIE_DOMAIN", "staging.vocanova.site")
+	t.Setenv("EMAIL_PROVIDER_TIMEOUT", "")
+
+	cfg, err := LoadProductionConfig()
+	require.NoError(t, err)
+	assert.Greater(t, cfg.EmailProviderTimeout, time.Duration(0))
+}
