@@ -1,0 +1,373 @@
+# infra/docker-compose.yml
+#
+# VOC-032-T04: docker compose file for the staging host.
+#
+# Package: VOC-032 (Begin Milestone R1 - Staging Readiness)
+# Task:    VOC-032-T04
+# Risk:    R3 (per docs/governance/change-risk-classification.md; this
+#          file is in the `infra/` path-class, which the classifier
+#          floors at R3).
+# Authority: VOC-032 change package (adopted 2026-07-28;
+#            specs/changes/VOC-032-begin-milestone-r1-staging-readiness-docs-product/).
+# Depends on: T02 (apps/api/Dockerfile), T03 (apps/web/Dockerfile +
+#             next.config.ts); the nginx service's actual config
+#             lands in T05.
+#
+# This file wires four services for the staging host per the
+# founder's deploy-shape decision (VOC-032-D01): self-hosted Docker
+# Compose (postgres + api + web) fronted by nginx, with TLS
+# terminated at nginx via a Cloudflare origin certificate
+# (VOC-032-DEP-01).
+#
+# Cross-references:
+#   * apps/api/Dockerfile (T02) - the api service builds this image.
+#   * apps/web/Dockerfile (T03) - the web service builds this image,
+#     which requires the build argument NEXT_PUBLIC_API_BASE_URL
+#     (see apps/web/.env.example for the staging value).
+#   * apps/api/.env.example (T01) - schema the api service's
+#     env_file must follow; the api service refuses to start
+#     without every [REQUIRED] variable.
+#   * apps/web/.env.example (T01) - schema for any founder-
+#     populated web env overrides.
+#   * infra/nginx/ (T05) - nginx service mounts its config and TLS
+#     material from here; this file's T05 PR is what populates
+#     them. The mount paths below MUST exist on the staging host
+#     before `docker compose up`.
+#   * infra/secrets/ (this PR) - env_files and TLS certs the
+#     founder must populate on the staging host; the .gitignore
+#     in that directory keeps them out of git.
+#   * infra/README.md (T11) - human-readable description of how
+#     the pieces fit together and how to deploy.
+#
+# Operating procedure (local validation, then staging deploy):
+#   * `docker compose -f infra/docker-compose.yml config`
+#       Validates this file's schema and resolves env_file
+#       references. Does not require the env files to exist.
+#       (VOC-032-TEST-10.)
+#   * `docker compose -f infra/docker-compose.yml build`
+#       Builds the api and web images locally.
+#   * `docker compose -f infra/docker-compose.yml up -d`
+#       Brings up the four-service stack. Requires the
+#       founder-populated env files in infra/secrets/ and the
+#       nginx config in infra/nginx/ (T05). (VOC-032-TEST-11,
+#       once T05 lands.)
+#   * `docker compose -f infra/docker-compose.yml down`
+#       Stops the stack. Does NOT remove the postgres named
+#       volume.
+#   * `docker compose -f infra/docker-compose.yml down -v`
+#       DESTRUCTIVE: also drops the postgres volume.
+#
+# Secret-handling rules (recorded for the implementer and the
+# independent reviewer):
+#   1. No secret value is written into this file. Every
+#      credential (postgres password, API URLs, AI-provider
+#      key, OAuth secrets, session secret, Cloudflare TLS
+#      cert/key) is referenced by path only. `env_file` paths
+#      point at untracked host files in `infra/secrets/`, which
+#      its own `.gitignore` keeps out of git.
+#   2. Only the nginx service publishes host ports (80, 443).
+#      The postgres, api, and web services are reachable only
+#      on the internal `vocanova-net` Docker network. This is
+#      the explicit mitigation for VOC-032-R03 (port-exposure
+#      risk in impact-analysis.md): if you find yourself
+#      adding a `ports:` block to a non-nginx service, you are
+#      opening the database or an internal API port to the
+#      internet, which this package's impact analysis
+#      explicitly forbids.
+#   3. The web image's NEXT_PUBLIC_API_BASE_URL is a build-time
+#      argument, NOT a runtime environment variable. Next.js
+#      inlines NEXT_PUBLIC_* values into the client bundle at
+#      `next build` time; setting it at runtime is a no-op. The
+#      build arg below defaults to http://localhost:8080 (a
+#      no-frills local-dev value); for staging, the founder sets
+#      NEXT_PUBLIC_API_BASE_URL in the host shell or in
+#      `infra/.env` (compose's standard implicit-load file)
+#      before `docker compose build`.
+#   4. Restart policy is `unless-stopped` on every service. A
+#      manual `docker compose stop` survives a host reboot; a
+#      host crash brings the stack back up. `always` is not
+#      used - it would mask a misconfigured service that fails
+#      immediately on restart.
+
+name: vocanova-staging
+
+# Shared logging driver (json-file with size-rotation) applied
+# to every service via the `*default-logging` YAML anchor below.
+# 10 MB x 3 files = 30 MB per service; predictable on a 2 vCPU /
+# 4 GB staging host (DOC-11 §1 staging tier) and easy for the
+# founder to grep via `docker compose logs`.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # ---------------------------------------------------------------------------
+  # postgres
+  #
+  # Official postgres image, persistent named volume, healthcheck
+  # via `pg_isready`. The actual `POSTGRES_PASSWORD` is read from
+  # infra/secrets/postgres.env (untracked, founder-populated).
+  # The user and database name are hardcoded below - both are
+  # non-secret and have to agree with the api service's
+  # `DATABASE_URL` value in infra/secrets/api.env. The founder
+  # generates both env files in lock-step; infra/README.md (T11)
+  # will document that requirement.
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: vocanova-postgres
+    restart: unless-stopped
+    environment:
+      # Non-secret. Hardcoded (not in env_file) so the founder
+      # cannot accidentally point the api's DATABASE_URL at a
+      # different user or database.
+      POSTGRES_USER: vocanova
+      POSTGRES_DB: vocanova
+    env_file:
+      # Long form with `required: false` so `docker compose
+      # config` (VOC-032-TEST-10) validates before the founder
+      # populates infra/secrets/postgres.env on the staging
+      # host. The file is still REQUIRED at runtime - if it
+      # is absent when the stack starts, the postgres image
+      # will not have a POSTGRES_PASSWORD and the container
+      # will refuse to initialize the database. Compose's
+      # `required: false` only relaxes the config-time
+      # existence check, not the runtime semantics.
+      - path: ./secrets/postgres.env
+        required: false
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      # pg_isready returns 0 when the named database is
+      # accepting connections. `-U vocanova -d vocanova`
+      # matches the POSTGRES_USER/POSTGRES_DB above; if
+      # either is ever changed, change the healthcheck in
+      # lockstep.
+      test: ["CMD-SHELL", "pg_isready -U vocanova -d vocanova"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - vocanova-net
+    # NO `ports:` block. The database is reachable only on the
+    # internal vocanova-net network (VOC-032-R03 mitigation).
+    # The api service reaches it at hostname `postgres:5432`.
+    logging: *default-logging
+
+  # ---------------------------------------------------------------------------
+  # api
+  #
+  # Built from apps/api/Dockerfile (T02). Reads its environment
+  # from infra/secrets/api.env (untracked, founder-populated),
+  # which must contain every [REQUIRED] variable documented in
+  # apps/api/.env.example (T01) - most critically DATABASE_URL,
+  # BASE_URL, OAUTH_REDIRECT_URI, and SESSION_COOKIE_DOMAIN.
+  # The api refuses to start without these
+  # (LoadProductionConfig in apps/api/app/api/production.go
+  # returns an error for any missing required var).
+  #
+  # `depends_on.condition: service_healthy` means compose waits
+  # for the postgres healthcheck to pass before starting the
+  # api, which is the explicit AC-04 requirement: "api
+  # reporting healthy once postgres is healthy".
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+    image: ghcr.io/vocanova/vocanova-api:dev
+    container_name: vocanova-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      # Long form with `required: false` so `docker compose
+      # config` (VOC-032-TEST-10) validates before the founder
+      # populates infra/secrets/api.env. The file is still
+      # REQUIRED at runtime - the api image's
+      # LoadProductionConfig returns an error and refuses to
+      # start if any of the [REQUIRED] variables documented
+      # in apps/api/.env.example is missing, so a missing
+      # api.env fails loudly and immediately, not silently.
+      - path: ./secrets/api.env
+        required: false
+    healthcheck:
+      # wget probe against the api's own /healthz, which
+      # pings the database and returns 200 only when the
+      # database is reachable. The probe is a GET (not HEAD)
+      # because the /healthz route is registered with huma
+      # as MethodGet only; the huma/chi combination does
+      # not auto-implement HEAD for GET routes, so a HEAD
+      # probe would return 405. -O /dev/null discards the
+      # tiny JSON body; --tries=1 fails fast; `|| exit 1`
+      # ensures the HEALTHCHECK fails on any non-2xx
+      # response.
+      test: ["CMD-SHELL", "wget --quiet --tries=1 -O /dev/null http://127.0.0.1:8080/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - vocanova-net
+    # NO `ports:` block. The api is reachable only on the
+    # internal network, at hostname `api:8080` (which nginx
+    # and the web service consume). Exposing the api to the
+    # host bypasses the nginx reverse proxy and breaks TLS
+    # termination; it also lets a direct request to the
+    # origin set CF-Connecting-IP freely, defeating auth's
+    # IP-based rate limiting (VOC-032-R01).
+    logging: *default-logging
+
+  # ---------------------------------------------------------------------------
+  # web
+  #
+  # Built from apps/web/Dockerfile (T03). The Dockerfile
+  # REQUIRES the build context to be the monorepo root (not
+  # apps/web/) so pnpm can resolve workspace dependencies -
+  # see the Dockerfile's own header comment for the
+  # rationale. The build argument NEXT_PUBLIC_API_BASE_URL is
+  # what the browser bundle calls; for staging this MUST be
+  # the staging API URL (https://api-staging.vocanova.site)
+  # so the deployed bundle has the correct value inlined.
+  #
+  # Runtime env: API_BASE_URL is a server-side-only value the
+  # Next.js server reads at request time
+  # (apps/web/src/lib/env.ts getApiBaseURL). It points at the
+  # api service on the internal network - http://api:8080 -
+  # so the server-side middleware can reach the api directly,
+  # without going back out through nginx. Going via the
+  # internal network is faster and avoids a TLS round-trip
+  # for every server-side fetch.
+  # ---------------------------------------------------------------------------
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      args:
+        # ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
+        # reads the value from the host shell or from
+        # `infra/.env` (compose's implicit-load file) and
+        # falls back to http://localhost:8080 for an
+        # interactive local smoke test. For staging, the
+        # founder sets it before `docker compose build`. This
+        # is the standard compose pattern; the alternative
+        # (hardcoding the staging URL in this file) would
+        # make `docker compose build` always use the staging
+        # URL even in local dev.
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
+    image: ghcr.io/vocanova/vocanova-web:dev
+    container_name: vocanova-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      # Compose-internal address of the api service. NOT a
+      # secret; deliberately not in env_file so the founder
+      # cannot accidentally point the web's server-side
+      # fetch at an external URL.
+      API_BASE_URL: http://api:8080
+    healthcheck:
+      # Probes the lightweight `/` route that the
+      # Dockerfile's own HEALTHCHECK uses. The probe is
+      # intentionally shallow here: a 200 confirms the
+      # Next.js process is alive, not that the API is
+      # reachable. The api container's /healthz is the
+      # source of truth for the database; nginx (T05) is
+      # the right place for a deeper composite healthcheck
+      # if one is ever wanted.
+      test: ["CMD-SHELL", "wget --quiet --tries=1 -O /dev/null http://127.0.0.1:3000/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - vocanova-net
+    # NO `ports:` block. The web is reachable only on the
+    # internal network, at hostname `web:3000` (which nginx
+    # consumes). Same rationale as the api service above.
+    logging: *default-logging
+
+  # ---------------------------------------------------------------------------
+  # nginx
+  #
+  # The only service that publishes host ports (80, 443).
+  # Reads its config from infra/nginx/ (T05) and its TLS
+  # material from infra/secrets/nginx/ (Cloudflare origin
+  # cert/key, founder-provisioned per VOC-032-DEP-01). The T05
+  # PR is what populates the config; this service block
+  # exists now so the stack comes up once T05 lands.
+  #
+  # `depends_on` waits for both the web AND the api to be
+  # healthy before starting nginx - this is the AC-04
+  # requirement that nginx not start until its upstreams are
+  # ready (avoids the "502 Bad Gateway until the app is up"
+  # window during a fresh deploy).
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: vocanova-nginx
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # nginx main config (T05 produces infra/nginx/nginx.conf).
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # nginx site-level config fragments (T05 produces the
+      # staging.vocanova.site and api-staging.vocanova.site
+      # server blocks here, one per file under conf.d/).
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      # TLS material (Cloudflare origin cert/key -
+      # VOC-032-DEP-01). The founder generates the cert in
+      # the Cloudflare dashboard and drops cert.pem and
+      # key.pem into infra/secrets/nginx/ on the staging
+      # host. Self-signed substitutes are used for local-
+      # dev `docker compose up` (see VOC-032-TEST-12).
+      - ./secrets/nginx/cert.pem:/etc/nginx/certs/cert.pem:ro
+      - ./secrets/nginx/key.pem:/etc/nginx/certs/key.pem:ro
+    healthcheck:
+      # wget the local nginx port; any 2xx/3xx response
+      # is acceptable for "nginx is up" - the real
+      # routing checks are in VOC-032-TEST-12. The
+      # official nginx image's entrypoint already runs
+      # `nginx -t` before starting, so a config-syntax
+      # error fails the container start outright; this
+      # healthcheck just verifies the server is
+      # accepting connections.
+      test: ["CMD-SHELL", "wget --quiet --tries=1 -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - vocanova-net
+    logging: *default-logging
+
+volumes:
+  postgres-data:
+    # Named volume keeps the database across `docker compose
+    # down` invocations. `docker compose down -v` (DESTRUCTIVE)
+    # is the only compose-command way to drop the volume;
+    # `docker volume rm vocanova-postgres-data` is the manual
+    # equivalent. The explicit `name:` keeps the volume
+    # identifier stable across `down` / `up` cycles.
+    name: vocanova-postgres-data
+
+networks:
+  vocanova-net:
+    # Explicit `name:` so the network is stable across
+    # `docker compose down` / `up` cycles and so other tooling
+    # (e.g. `docker network inspect vocanova-net`) reaches it
+    # by a predictable identifier.
+    name: vocanova-net
+    driver: bridge
