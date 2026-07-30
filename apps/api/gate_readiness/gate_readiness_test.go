@@ -105,6 +105,22 @@ var inRepoEvidence = []evidenceRow{
 	{Path: "apps/api/business/aifeedback/threshold_gate_test.go", Source: "T08", EV: "EV-18..EV-20"},
 	{Path: "apps/api/business/aifeedback/evaluation.go", Source: "T08", EV: "EV-18..EV-20"},
 
+	// T10 - Live-provider AI evaluation pass
+	// (VOC-032-AC-10, EV-22). The library support
+	// (`live_eval.go` and its tests) and the
+	// runnable command (`cmd/eval-live/main.go` and
+	// its tests) together constitute the in-repo
+	// evidence T10 produces. The live execution
+	// itself remains blocked on `VOC-032-DEP-03`
+	// (staging AI-provider credentials not yet
+	// provisioned) and is recorded as blocked, not
+	// passing, in `staging-evidence.md` and the R1
+	// gate-readiness summary.
+	{Path: "apps/api/business/aifeedback/live_eval.go", Source: "T10", EV: "EV-22"},
+	{Path: "apps/api/business/aifeedback/live_eval_test.go", Source: "T10", EV: "EV-22"},
+	{Path: "apps/api/cmd/eval-live/main.go", Source: "T10", EV: "EV-22"},
+	{Path: "apps/api/cmd/eval-live/main_test.go", Source: "T10", EV: "EV-22"},
+
 	// T11 - infra/README.md update (VOC-032-AC-11, EV-23).
 	// T12's whole-point confirmation includes confirming
 	// this file's actual content matches the AC-11

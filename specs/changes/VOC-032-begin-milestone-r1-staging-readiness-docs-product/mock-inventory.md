@@ -106,6 +106,7 @@ this package leaves that zero-legacy-mock state — established by
 | Migration tooling | `apps/api/atlas.hcl`, `apps/api/scripts/migrate.sh`, `apps/api/migrations/atlas.sum` | T06 |
 | CI/CD | `.github/workflows/deploy-staging.yml` | T07 |
 | AI evaluation | `apps/api/business/aifeedback/threshold_gate.go` + `threshold_gate_test.go` (in-process gate, exercised by the standard `go test ./...` CI run) | T08 |
+| AI evaluation | `apps/api/business/aifeedback/live_eval.go` + `apps/api/cmd/eval-live/main.go` + their `*_test.go` files (T10's runnable one-shot live-evaluation command; the live execution itself is blocked on `VOC-032-DEP-03` and is recorded as a `staging-evidence.md` follow-up, not a CI check). The provider constructor is the real `NewOpenCodeFeedbackProvider`; the only mock in the test path is the test-only fake the unit tests inject via the `newProvider` function-variable seam. | T10 |
 | Gate readiness | `apps/api/gate_readiness/gate_readiness.go` + `gate_readiness_test.go` (cross-cutting EV-* evidence-presence check) | T12 |
 | Documentation | `infra/README.md` (T11's rewrite is a known follow-up; see below) | T11 (divergent) |
 | Documentation | `docs/operations/11-devops-and-ci-cd.md` §1 amendment (T13 is a known follow-up; see below) | T13 (divergent) |

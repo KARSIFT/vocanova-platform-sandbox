@@ -44,7 +44,7 @@ completes staging acceptance per DOC-12 §5.
 | `EV-16`..`EV-17` | Deploy workflow valid, build/push succeeds, fails closed on bad health check | **Produced by `T07`** — `.github/workflows/deploy-staging.yml` (or equivalent). Live SSH-deploy execution recorded separately below (blocked). |
 | `EV-18`..`EV-20` | AI-evaluation gate passes at thresholds, fails on violation, wired as required check | **Produced by `T08`** — evaluation-gate command + CI wiring. |
 | `EV-21` | Live migration and rollback rehearsal | **Partially produced on 2026-07-30.** `DEP-00`/`DEP-01` are resolved; the real deploy, live Atlas no-op check, disposable-copy rollback of all 12 approved down artifacts, 13-migration forward re-apply, exact schema comparison, and cleanup passed. The required disposable-identity/core-loop exercise remains blocked on `DEP-03` because staging AI is disabled and has no real provider credential. Details below; `T09` remains open. |
-| `EV-22` | Live-provider AI evaluation pass | **Blocked by `VOC-032-DEP-03`** — staging AI-provider credentials do not yet exist. Procedure documented below; live execution recorded as blocked. |
+| `EV-22` | Live-provider AI evaluation pass | **In-repo runnable procedure delivered; live execution blocked on `VOC-032-DEP-03`.** The `cmd/eval-live` command (`apps/api/cmd/eval-live/main.go`) and the supporting library (`apps/api/business/aifeedback/live_eval.go`) constitute the runnable one-shot procedure the founder will invoke once the staging AI-provider credentials are provisioned. The command's wiring is unit-tested against a fake provider (`apps/api/cmd/eval-live/main_test.go`) and the library's report shape is unit-tested (`apps/api/business/aifeedback/live_eval_test.go`); the live execution itself is recorded as blocked, not passing, in the `EV-22` section below. |
 | `EV-23` | `infra/README.md` accuracy | **DIVERGENT — see `T11` follow-up note below.** `infra/README.md` still contains the pre-VOC-005 placeholder text ("This directory is a non-deploying structural boundary. VOC-005 authorizes no Cloudflare, staging, production, release, or autonomous-development infrastructure."); `T11`'s rewrite to the AC-11 description of the docker-compose / nginx / Atlas layout has not been applied. Detected and t.Log-reported by `apps/api/gate_readiness/gate_readiness_test.go::TestT11InfraReadmeIsNotThePlaceholder`. |
 | `EV-24`..`EV-25` | Installed-suite pass at final SHA; mock-inventory confirmation | **Produced by `T12` — see `T12 evidence` and `R1 gate-readiness summary` sections below.** |
 | `EV-26` | DOC-11 §1 amendment accuracy | **DIVERGENT — see `T13` follow-up note below.** `docs/operations/11-devops-and-ci-cd.md` §1's target-infrastructure table still describes the pre-amendment "Cloudflare Workers via OpenNext + Render Web Service + Render PostgreSQL + vocanova.com" target; `T13`'s amendment to the package's real, built shape (self-hosted Docker Compose + nginx on the founder's server, vocanova.site) has not been applied. Detected and t.Log-reported by `apps/api/gate_readiness/gate_readiness_test.go::TestT13Doc11AmendmentApplied`. |
@@ -213,13 +213,183 @@ cost/rate ceiling required by DOC-12 §9.
 
 ### `EV-22` — Live-provider AI evaluation pass
 
-1. Confirm founder-provisioned staging AI-provider credentials exist and an
-   explicit cost/rate ceiling has been agreed for this run.
-2. Run `T08`'s evaluation harness (or a staging-specific invocation of the
-   same dataset) against `aifeedback.NewOpenCodeFeedbackProvider`.
-3. Record the resulting scores against every DOC-09 §23 threshold, plus
-   total cost and latency, below once run. Any threshold miss is a
-   release-blocking finding for R1, not a warning.
+The T10 deliverable is the runnable one-shot procedure the
+founder will invoke once the staging AI-provider credentials
+(`VOC-032-DEP-03`) are provisioned, plus the documented
+operator procedure for the live run. The actual live
+execution cannot happen from the implementer side: the
+credential does not exist, and inventing a real-provider
+result here would be a fabricated "release-blocking pass"
+that DOC-12 §9 ("protected live-provider evaluation
+outside CI with explicit cost limits") and AC-10's own
+"Result: pending — blocked by VOC-032-DEP-03" wording
+explicitly forbid.
+
+#### T10 in-repo deliverable (delivered at this SHA)
+
+`apps/api/business/aifeedback/live_eval.go` adds:
+
+- `LiveEvaluationReport` — the structured output of one
+  T10 run. Every field `EV-22` requires (provider, model,
+  dataset, spec, every per-threshold value, the violation
+  list, wall-clock duration, per-call latency summary
+  statistics, provider-call count, estimated input/output
+  char counts, operator-supplied cost in USD, pre-agreed
+  cost ceiling in USD, the cost-ceiling-exceeded flag,
+  start/finish timestamps, and operator notes) is a named
+  field, so the report the operator copies into this
+  document is machine-parseable and the missing-data case
+  is always explicit (a `-1.00` or `0.00` is a recorded
+  fact, not a silent omission).
+- `RunLiveEvaluation` — the deterministic library function
+  the cmd and any future test harness both call. It
+  reuses `RunEvaluation` and the existing
+  `ComputeGoldenThresholds` / `CheckGoldenThresholds`
+  (T08's gate logic) so the per-threshold computation is
+  identical between the CI gate and the live pass; the
+  only difference is which `FeedbackProvider` the
+  evaluation runs against.
+- `InstrumentedProvider` — a thin wrapper that records
+  per-call latency and rough input/output char counts
+  without changing the `FeedbackProvider` interface. The
+  wrapper is removed from the call path as soon as
+  `RunEvaluation` returns; it does not persist.
+- `FormatLiveEvaluationReport` — the deterministic
+  report renderer the cmd writes to stdout (and the
+  optional output file). The format is plain text and
+  contains every field on `LiveEvaluationReport`, so the
+  report is copy-pasteable into this section verbatim.
+- Three exported env-var name constants
+  (`LiveEvaluationCostCeilingUSDEnv`,
+  `LiveEvaluationCostUSDEnv`, `LiveEvaluationOutputEnv`)
+  so the operator procedure below can name the exact
+  variables and a future rename shows up as a test
+  failure rather than as a documentation drift.
+
+`apps/api/cmd/eval-live/main.go` adds the runnable
+command:
+
+- `apps/api/cmd/eval-live` is a single-package Go binary
+  in the existing `apps/api/cmd/<name>` convention (the
+  same shape `cmd/api`, `cmd/seed`, and `cmd/openapi`
+  follow). It reads the staging AI provider's base URL
+  and API key from `--base-url` / `--api-key` (or
+  `AI_PROVIDER_BASE_URL` / `AI_PROVIDER_API_KEY` env
+  vars) and constructs the real
+  `aifeedback.NewOpenCodeFeedbackProvider`. The provider
+  constructor is a package-level function variable
+  (`newProvider`) so the test suite can swap it for a
+  fake without needing a live OpenCode server; the swap
+  is a test seam, not a production-affecting
+  indirection.
+- The command's exit codes follow the T08 gate's
+  pass/fail semantics: `0` (no tracked threshold
+  violation and cost ceiling not exceeded), `1`
+  (release-blocking finding: any tracked threshold
+  violation OR cost ceiling exceeded), or `2`
+  (configuration error: missing required env var, bad
+  flag value, or unwritable output file path). Exit
+  code `1` is the operator signal that the run
+  produced a finding the founder must rule on before R1
+  acceptance; it is not a `panic` and does not abort
+  the report-write, so the structured report is
+  available for review even on failure.
+- The command's `--output` flag (or `EVAL_LIVE_OUTPUT`
+  env var) writes the same report to a file in
+  permission mode `0600` so the API key's
+  neighborhood on disk is not world-readable. The
+  command never logs the API key; the `TestRunEvalLive_DoesNotLogAPIKey`
+  test exercises the contract by injecting a known
+  sentinel value and asserting it does not appear on
+  either stdout or stderr.
+
+The T10 unit tests cover:
+
+- `InstrumentedProvider` wrapping the real provider,
+  recording latency and char counts, propagating
+  errors, and respecting context cancellation.
+- `summarizeLatencies` and `percentileNearestRank`
+  (deterministic nearest-rank percentile, NIST §7.2.1.1)
+  across zero/one/many inputs and edge cases
+  (clamping `p` to `[0, 100]`).
+- `RunLiveEvaluation`'s report shape against the
+  `NewMockProvider` (no production dependency), the
+  cost-ceiling-exceeded flag at the spec boundary
+  (ceiling = 0.5 with cost 0.4 / 0.7 / 999.0), operator
+  notes, and the wall-clock + latency summary
+  behavior with a measurable-delay provider.
+- The cmd's exit-code mapping (`0` / `1` / `2`) for:
+  missing required env vars, `--help`, a clean
+  run (provider that matches every dataset
+  expectation), a deliberately-violating provider,
+  cost-ceiling-exceeded, output-file written, output
+  file unwritable, and the API key never logged.
+- The env-var name constants — a future rename
+  fails the test on the rename commit, not as a
+  silent documentation drift in this file.
+
+#### Operator procedure for the live run (still blocked on `VOC-032-DEP-03`)
+
+Once the founder has provisioned the staging AI-provider
+credentials (base URL + API key, and the AI provider's
+model identifier the founder wants exercised), the live
+run is:
+
+1. Confirm `VOC-032-DEP-03` is resolved: the staging
+   AI-provider credential is present in the staging
+   environment (typically via `infra/secrets/api.env`,
+   the same untracked env file the T09 operator
+   execution used for `DATABASE_URL`).
+2. Agree an explicit cost ceiling in USD for the run
+   (DOC-12 §9) and a per-request timeout; export both
+   to the shell:
+   ```sh
+   export AI_PROVIDER_BASE_URL="..."
+   export AI_PROVIDER_API_KEY="..."
+   export AI_PROVIDER_MODEL="opencode-go/..."
+   export AI_PROVIDER_TIMEOUT="8s"
+   export EVAL_LIVE_COST_CEILING_USD="0.50"
+   ```
+3. Optionally pre-stage the billed-cost value
+   (operator can fill it in from the provider's
+   billing console after the run; if set, it must
+   be a non-negative number):
+   ```sh
+   export EVAL_LIVE_COST_USD="0.00"   # placeholder
+   ```
+4. Run the command from the staging host (or from
+   the developer's workstation against the staging
+   provider) and capture the rendered report:
+   ```sh
+   go run ./apps/api/cmd/eval-live \
+     --output /opt/vocanova/staging-evidence/eval-live-2026-MM-DD.txt
+   ```
+5. The report's "Result:" line is the operator's
+   pass/fail signal. A `Result: PASS` (exit 0) and
+   `CostCeilingExceeded: false` together satisfy
+   AC-10's "AI evaluation thresholds pass" half; any
+   `Result: FAIL` line is a release-blocking finding
+   for R1 per AC-10's explicit wording, and the
+   per-threshold violation messages list which
+   DOC-09 §23 thresholds missed.
+6. Paste the full report into the `EV-22` section
+   below this procedure, including the operator's
+   post-run `EVAL_LIVE_COST_USD` value (filled in
+   from the provider's billing console for the
+   run's window) and any `OperatorNotes` (e.g.
+   rate-limit warnings observed, retries
+   attempted, model-name discrepancies).
+7. Mark this `EV-22` row's status as satisfied in
+   the `T12 evidence` section (the gate-readiness
+   summary's "AI evaluation thresholds pass"
+   bullet).
+
+#### Live execution status
+
+**Blocked on `VOC-032-DEP-03`.** No live execution
+has been performed. The runnable procedure is in
+place; the founder's actions are the only remaining
+work for this row.
 
 ### `EV-28` — Real email sender: one live staging delivery
 
@@ -790,7 +960,7 @@ summary, exactly as `AC-12` requires.
 | **No unresolved critical/high blocker** | **Partial.** No `P0`/`P1` defect in this package's own work, but the `T06` follow-ups (invalid `-- atlas:txmode transaction` directive; duplicate `streak_states_user_id_key` index) are recorded as known blockers to `EV-14`'s end-to-end pass. The `T11` and `T13` follow-ups are also recorded as blockers to `AC-11` and `AC-13` respectively. | The `T06` follow-ups are small, file-local edits and are recommended as a tightly-scoped `VOC-033`-T06 PR (see the "T06 follow-ups" section above for the minimum diff). The `T11` and `T13` follow-ups are similarly small. None of these is a critical/high blocker for the `T00`–`T09` build/CI-wiring path, but they are blockers for declaring specific ACs fully satisfied. |
 | **All required tests pass** | **Satisfied (in-repo).** `go test ./...` from `apps/api/`, `go vet ./...`, `gofmt -l .`, `go build ./...`, and `bash scripts/governance/validate-governance.sh` all pass at the final SHA. The `apps/web` and `infra` trees are exercised by the `karsift-ai-infra` `ci.yml` reusable workflow, not by `T12`'s in-process check, and their evidence is per-PR. | In-repo check is `T12`'s. The `karsift-ai-infra ci.yml` results are produced by CI, not by `T12`. |
 | **Migration + rollback rehearsed** | **Procedure documented; live execution recorded as blocked.** `T09`'s procedure (apply → exercise → snapshot → roll back on the disposable copy → verify → re-apply forward → record) is fully specified in this document's "Staging exercise plan" section. The live execution itself is blocked on `VOC-032-DEP-00` / `DEP-01` (real server, real DNS). | Founder-owned: requires the real staging server to exist and the deploy to land at least once before the rehearsal can run. The `T06` follow-ups (above) also block the apply half from succeeding against the current migration set; both must close before `T09`'s forward-apply step is non-blocking. |
-| **AI evaluation thresholds pass** | **Mock-provider half satisfied; live-provider half recorded as blocked.** `T08`'s `RunGoldenGate` against `aifeedback.NewMockProvider()` passes every DOC-09 §23 threshold that the current `EvaluationResult` shape can measure (the `StructuredOutputValidAfterOneRepair` and `MeaningPreservation` thresholds are correctly reported as "not tracked" because the data shape cannot measure them yet, per `GoldenThresholdSpec.NotTracked` — this is the documented `T08` boundary, not a regression). `T10`'s live-provider pass is blocked on `VOC-032-DEP-03`. | Mock half: `T08`'s `TestGoldenSetThresholdsAgainstMockProvider` + `TestGoldenGateEnforcesViolatedThreshold` + `TestGoldenGatePassesOnCleanFixture` all pass. Live half: founder-owned, requires `DEP-03` resolution. |
+| **AI evaluation thresholds pass** | **Mock-provider half satisfied; live-provider half in-repo runnable procedure delivered but live execution recorded as blocked.** `T08`'s `RunGoldenGate` against `aifeedback.NewMockProvider()` passes every DOC-09 §23 threshold that the current `EvaluationResult` shape can measure (the `StructuredOutputValidAfterOneRepair` and `MeaningPreservation` thresholds are correctly reported as "not tracked" because the data shape cannot measure them yet, per `GoldenThresholdSpec.NotTracked` — this is the documented `T08` boundary, not a regression). `T10`'s runnable procedure is in place: the `cmd/eval-live` command and the `aifeedback.RunLiveEvaluation` library function together produce a structured `LiveEvaluationReport` (per-threshold values, violations, wall-clock + per-call latency summary, cost ceiling, operator notes) that the founder will record into the `EV-22` section once the staging AI-provider credentials (`VOC-032-DEP-03`) are provisioned. The live execution itself is blocked on `DEP-03`. | Mock half: `T08`'s `TestGoldenSetThresholdsAgainstMockProvider` + `TestGoldenGateEnforcesViolatedThreshold` + `TestGoldenGatePassesOnCleanFixture` all pass. In-repo runnable procedure: `T10`'s `live_eval_test.go` (12 tests, exercising the library's report shape, the percentile/duration statistics, the cost-ceiling flag, the operator-notes field) and `cmd/eval-live/main_test.go` (12 tests, exercising the cmd's env-var resolution, flag parsing, output-file write, no-leak-APIKey contract, and the three exit codes 0/1/2) all pass against a fake provider; no real OpenCode call is made from CI. Live half: founder-owned, requires `DEP-03` resolution. |
 | **Founder completes staging acceptance** | **Not started — founder-owned, out of scope of any package.** | This is a single human decision by the founder, recorded as a comment on the package's release issue (per the standard `karsift-ai-infra release.yml` flow). It cannot be satisfied by any code change. |
 | **Scope is frozen** | **Satisfied (in this package).** No new product scope introduced; only the `T00`–`T15` and `T12` deliverables. | Inherently a property of the package's own change-control discipline; `T12`'s role is to confirm no PR in this package introduced unapproved scope. |
 
@@ -815,7 +985,10 @@ limitation:
   blocked. Procedure documented; execution pending `DEP-00` /
   `DEP-01` resolution and the `T06` follow-ups closing.
 - **No live AI-evaluation pass.** `EV-22` is blocked on
-  `DEP-03`.
+  `DEP-03`. The runnable procedure (`cmd/eval-live` +
+  `aifeedback.RunLiveEvaluation` + the structured
+  `LiveEvaluationReport`) is in place; the founder's
+  actions are the only remaining work for this row.
 - **No live email send.** `EV-28` is blocked on `DEP-07`.
 - **No live Google OAuth exchange.** `EV-30` is blocked on
   `DEP-07`.
