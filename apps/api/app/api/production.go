@@ -292,6 +292,71 @@ func buildOAuthProvider(cfg ProductionConfig) (auth.OAuthProvider, error) {
 	return provider, nil
 }
 
+// buildAIProviders returns the (FeedbackProvider, SafetyClassifier) the
+// production wiring should hand to aifeedback.NewService, applying the
+// VOC-034-D00 fix for the literal-nil safety-classifier defect the old
+// inline construction had at this exact call site:
+//
+//   - When AI_PROVIDER=opencode AND AI_PROVIDER_API_KEY is set (the
+//     same condition the prior inline block used to select the real
+//     OpenCodeFeedbackProvider), return a real OpenCodeFeedbackProvider
+//     and a CompositeSafetyClassifier wrapping a real
+//     OpenCodeModerationProvider. This is the missing wiring that
+//     restores real AI-feedback generation on the production
+//     POST /api/v1/sentence-feedback route: every sentence that does
+//     not match a deterministic local weapon/self-harm pattern now
+//     reaches a real model-side classification instead of failing
+//     closed with SAFETY_MODERATION_UNAVAILABLE.
+//   - When that condition is false (AI_PROVIDER is anything other than
+//     "opencode", or AI_PROVIDER_API_KEY is empty), return
+//     aifeedback.NewMockProvider() for the feedback role and a
+//     CompositeSafetyClassifier wrapping MockProvider for the
+//     moderation role. This preserves the prior non-opencode / no-key
+//     fallback behavior exactly - the mock already implements both
+//     FeedbackProvider and ModerationProvider (see aifeedback.go).
+//
+// Both branches build the safety classifier via
+// NewCompositeSafetyClassifier(NewDefaultLocalAbuseChecker(), provider)
+// so the deterministic local checks run before any provider call
+// (composite ordering is unchanged; safety.go is not modified). The
+// moderation provider forces its own MaxRetries to 0 internally
+// (VOC-034-D03) regardless of the 1 carried in the shared
+// OpenCodeConfig struct; the feedback provider keeps MaxRetries=1 as
+// before. The two providers therefore share BaseURL / APIKey / Model
+// / Timeout configuration but apply different retry budgets, by
+// design - the latency-budget question against DOC-09 §18's 10s total
+// backend target is explicitly deferred to VOC-032-T10's live
+// threshold evaluation.
+//
+// The decision is logged to stderr (matching buildEmailSender /
+// buildOAuthProvider's style) so an operator running the binary
+// interactively can see which providers are wired without having to
+// read the env file. The log line never includes the API key, the
+// model string, or any request body.
+func buildAIProviders(cfg ProductionConfig) (aifeedback.FeedbackProvider, aifeedback.SafetyClassifier) {
+	if cfg.APIProvider == string(aifeedback.ProviderOpenCode) && cfg.APIKey != "" {
+		openCodeCfg := aifeedback.OpenCodeConfig{
+			BaseURL:    cfg.APIBaseURL,
+			APIKey:     cfg.APIKey,
+			Model:      cfg.APIModel,
+			Timeout:    cfg.APITimeout,
+			MaxRetries: 1,
+		}
+		fmt.Fprintf(os.Stderr, "api: ai feedback=OpenCodeFeedbackProvider ai moderation=OpenCodeModerationProvider (provider=opencode)\n")
+		return aifeedback.NewOpenCodeFeedbackProvider(openCodeCfg),
+			aifeedback.NewCompositeSafetyClassifier(
+				aifeedback.NewDefaultLocalAbuseChecker(),
+				aifeedback.NewOpenCodeModerationProvider(openCodeCfg),
+			)
+	}
+	fmt.Fprintf(os.Stderr, "api: ai feedback=MockProvider ai moderation=MockProvider (AI_PROVIDER != opencode or AI_PROVIDER_API_KEY unset; AI features fall back to in-memory mock)\n")
+	return aifeedback.NewMockProvider(),
+		aifeedback.NewCompositeSafetyClassifier(
+			aifeedback.NewDefaultLocalAbuseChecker(),
+			aifeedback.NewMockProvider(),
+		)
+}
+
 // HealthzInput is intentionally empty - /healthz takes no parameters.
 type HealthzInput struct{}
 
@@ -409,16 +474,7 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 		AccountDeletionPurgeDelay: accounts.DefaultAccountDeletionPurgeDelay,
 	})
 
-	aiProvider := aifeedback.FeedbackProvider(aifeedback.NewMockProvider())
-	if cfg.APIProvider == string(aifeedback.ProviderOpenCode) && cfg.APIKey != "" {
-		aiProvider = aifeedback.NewOpenCodeFeedbackProvider(aifeedback.OpenCodeConfig{
-			BaseURL:    cfg.APIBaseURL,
-			APIKey:     cfg.APIKey,
-			Model:      cfg.APIModel,
-			Timeout:    cfg.APITimeout,
-			MaxRetries: 1,
-		})
-	}
+	aiProvider, safetyClassifier := buildAIProviders(cfg)
 	aiGate := aifeedback.GenerationGate(aifeedback.NewAlwaysEnabledGate())
 	if !cfg.AIEnabled {
 		aiGate = aifeedback.NewDisabledGate()
@@ -426,7 +482,7 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	aifeedbackSvc := aifeedback.NewService(
 		aifeedback.NewPostgreSQLRepository(db, clk),
 		aiProvider,
-		nil,
+		safetyClassifier,
 		nil,
 		learningIdem,
 		nil,

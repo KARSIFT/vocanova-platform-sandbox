@@ -136,6 +136,16 @@ func NewCompositeSafetyClassifier(local LocalAbuseChecker, provider ModerationPr
 	}
 }
 
+// Provider returns the wrapped ModerationProvider. It is a minimal,
+// behavior-preserving accessor added for VOC-034-T01 so the production
+// wiring's buildAIProviders helper (apps/api/app/api/production.go) can be
+// unit-tested against the concrete provider type the wiring constructs
+// without exposing c.provider to callers that should not depend on it.
+// The method does not change the classifier's runtime behavior.
+func (c *CompositeSafetyClassifier) Provider() ModerationProvider {
+	return c.provider
+}
+
 // Classify runs local checks first. If no local match is found, it delegates to
 // the provider moderation provider. Provider errors are mapped to
 // SafetyModerationUnavailable.
