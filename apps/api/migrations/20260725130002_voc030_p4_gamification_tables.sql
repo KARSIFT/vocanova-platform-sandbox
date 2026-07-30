@@ -1,4 +1,4 @@
--- atlas:txmode transaction
+-- atlas:txmode file
 -- VOC-030-T00: confidence_point_ledger, streak_states, grace_day_ledger
 -- (DOC-05 §12). All append-only or per-user-unique. The two ledgers have
 -- append-only semantics (no cascading deletes) per DOC-05 §16. D02 adds
@@ -43,9 +43,6 @@ CREATE TABLE streak_states (
   CONSTRAINT streak_states_counts_nonnegative CHECK (current_streak_count >= 0 AND longest_streak_count >= 0),
   CONSTRAINT streak_states_status_valid CHECK (status IN ('active', 'at_risk', 'broken'))
 );
-
-CREATE UNIQUE INDEX streak_states_user_id_key
-  ON streak_states (user_id);
 
 CREATE TABLE grace_day_ledger (
   id uuid PRIMARY KEY,

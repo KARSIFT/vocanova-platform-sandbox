@@ -1,4 +1,4 @@
--- atlas:txmode transaction
+-- atlas:txmode file
 -- VOC-031-T03: email_change_links (DOC-06 §6, VOC-031-D05). Mirrors the
 -- magic_links table almost exactly, with three deliberate differences
 -- required because this is not a login mechanism:

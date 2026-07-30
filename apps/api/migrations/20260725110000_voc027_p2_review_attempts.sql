@@ -1,4 +1,4 @@
--- atlas:txmode transaction
+-- atlas:txmode file
 -- VOC-027-T00: review_attempts immutable-history table for spaced-repetition
 -- review submissions. Applied explicitly by migration tooling; the API process
 -- does not execute migrations at startup.

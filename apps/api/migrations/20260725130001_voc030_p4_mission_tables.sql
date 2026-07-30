@@ -1,4 +1,4 @@
--- atlas:txmode transaction
+-- atlas:txmode file
 -- VOC-030-T00: daily_mission_snapshots and daily_activity_summaries tables
 -- (DOC-05 §10). Both are owned by the missions module; records of truth remain
 -- review_attempts, learner_sentences, ai_feedback_attempts, and

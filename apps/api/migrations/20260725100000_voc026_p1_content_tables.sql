@@ -1,4 +1,4 @@
--- atlas:txmode transaction
+-- atlas:txmode file
 -- VOC-026-T00: P1 canonical content and user_words persistence. Applied explicitly
 -- by migration tooling; the API process does not execute migrations at startup.
 

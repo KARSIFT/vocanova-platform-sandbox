@@ -1,4 +1,4 @@
--- atlas:txmode transaction
+-- atlas:txmode file
 -- VOC-031-T04: account_deletion_requests (DOC-05 §16, DOC-06 §14,
 -- VOC-031-D07). One row per account that has been deactivated
 -- pending purge. The status field is the only state the sweep

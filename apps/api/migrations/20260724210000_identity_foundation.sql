@@ -1,4 +1,4 @@
--- atlas:txmode transaction
+-- atlas:txmode file
 -- VOC-025-T00: identity persistence foundation. Applied explicitly by migration tooling;
 -- the API process does not execute migrations at startup.
 

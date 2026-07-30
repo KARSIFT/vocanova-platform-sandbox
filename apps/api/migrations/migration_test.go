@@ -300,7 +300,7 @@ func TestVOC030P4GamificationTablesMigrationCarriesDatabaseInvariants(t *testing
 		"source_type IN ('daily_mission', 'streak', 'admin')",
 		"ON confidence_point_ledger (user_id, idempotency_key)\n  WHERE idempotency_key IS NOT NULL",
 		"ON grace_day_ledger (user_id, idempotency_key)\n  WHERE idempotency_key IS NOT NULL",
-		"ON streak_states (user_id)",
+		"  user_id uuid NOT NULL UNIQUE",
 	}
 	for _, invariant := range required {
 		if !strings.Contains(text, invariant) {

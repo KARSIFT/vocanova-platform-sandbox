@@ -1,4 +1,4 @@
--- atlas:txmode transaction
+-- atlas:txmode file
 -- VOC-028-T00: learner_sentences table for P3 original-sentence practice.
 -- Applied explicitly by migration tooling; the API process does not execute
 -- migrations at startup.

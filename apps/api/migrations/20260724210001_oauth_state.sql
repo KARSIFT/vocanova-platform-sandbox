@@ -1,4 +1,4 @@
--- atlas:txmode transaction
+-- atlas:txmode file
 -- VOC-025-T02: OAuth state persistence. Applied explicitly by migration tooling;
 -- the API process does not execute migrations at startup.
 

@@ -1,4 +1,4 @@
--- atlas:txmode transaction
+-- atlas:txmode file
 -- VOC-026-T02: Idempotency key persistence for user-words save. Applied
 -- explicitly by migration tooling; the API process does not execute migrations
 -- at startup.

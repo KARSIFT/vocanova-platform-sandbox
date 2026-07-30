@@ -1,4 +1,4 @@
--- atlas:txmode transaction
+-- atlas:txmode file
 -- VOC-031-T00: user_onboarding_profiles (DOC-05 §6) + the
 -- onboarding_status='completed' backfill for pre-existing accounts
 -- (VOC-031-D03, resolved at adoption 2026-07-27 founder-gate

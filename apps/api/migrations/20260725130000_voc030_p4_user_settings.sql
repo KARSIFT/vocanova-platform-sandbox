@@ -1,4 +1,4 @@
--- atlas:txmode transaction
+-- atlas:txmode file
 -- VOC-030-T00: user_settings table (DOC-05 §6). Schema-complete per D01; this
 -- package reads/writes only timezone and daily_review_target. No public
 -- Settings API/UI is built.
