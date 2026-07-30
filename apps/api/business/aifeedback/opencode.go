@@ -36,6 +36,36 @@ func DefaultOpenCodeConfig() OpenCodeConfig {
 	}
 }
 
+// openCodeTransport is the unexported, behavior-preserving session/HTTP layer
+// shared by OpenCodeFeedbackProvider and OpenCodeModerationProvider (VOC-034-D01).
+// It owns session creation, the retry loop, and the network/HTTP-status error
+// mapping so both providers get identical fail-closed transport behavior rather
+// than an independently-maintained copy that could drift (a correctness risk
+// for the moderation adapter in particular, where a divergent timeout/auth
+// mapping would silently change the safety outcome).
+type openCodeTransport struct {
+	config     OpenCodeConfig
+	client     *http.Client
+	providerID string
+	modelID    string
+}
+
+func newOpenCodeTransport(config OpenCodeConfig) *openCodeTransport {
+	if config.Model == "" {
+		config.Model = DefaultOpenCodeModel
+	}
+	if config.Timeout <= 0 {
+		config.Timeout = 8 * time.Second
+	}
+	providerID, modelID := splitOpenCodeModel(config.Model)
+	return &openCodeTransport{
+		config:     config,
+		client:     &http.Client{Timeout: config.Timeout},
+		providerID: providerID,
+		modelID:    modelID,
+	}
+}
+
 // OpenCodeFeedbackProvider implements FeedbackProvider against a real
 // `opencode serve` instance (VOC-028-D02: the founder's own OpenCode Go
 // account). `opencode serve` exposes its own session/message HTTP API - not
@@ -48,27 +78,14 @@ func DefaultOpenCodeConfig() OpenCodeConfig {
 // stays a single synchronous HTTP round trip per DOC-09 §18's 8s provider
 // timeout. Provider SDK/network types are confined to this adapter.
 type OpenCodeFeedbackProvider struct {
-	config     OpenCodeConfig
-	client     *http.Client
-	providerID string
-	modelID    string
+	*openCodeTransport
 }
 
 // NewOpenCodeFeedbackProvider creates a production adapter. The API key is kept
 // in the config struct and used only in request headers; it is never logged.
 func NewOpenCodeFeedbackProvider(config OpenCodeConfig) *OpenCodeFeedbackProvider {
-	if config.Model == "" {
-		config.Model = DefaultOpenCodeModel
-	}
-	if config.Timeout <= 0 {
-		config.Timeout = 8 * time.Second
-	}
-	providerID, modelID := splitOpenCodeModel(config.Model)
 	return &OpenCodeFeedbackProvider{
-		config:     config,
-		client:     &http.Client{Timeout: config.Timeout},
-		providerID: providerID,
-		modelID:    modelID,
+		openCodeTransport: newOpenCodeTransport(config),
 	}
 }
 
@@ -92,74 +109,108 @@ func (p *OpenCodeFeedbackProvider) GenerateFeedback(ctx context.Context, task Pr
 		return nil, fmt.Errorf("build request body: %w", err)
 	}
 
+	var result *ProviderFeedback
+	parseErr := p.sendWithRetry(ctx, body, func(statusCode int, respBody []byte) error {
+		feedback, perr := p.parseMessageResponse(statusCode, respBody)
+		if perr != nil {
+			return perr
+		}
+		result = feedback
+		return nil
+	})
+	if parseErr != nil {
+		return nil, parseErr
+	}
+	return result, nil
+}
+
+// openCodeSendParser is the per-attempt response parser passed to
+// openCodeTransport.sendWithRetry. It receives the HTTP status code and the
+// already-read response body, performs provider-specific parsing, and returns
+// any error. A non-nil error is treated by the transport as a candidate for
+// retry when the HTTP status is in the retryable set.
+type openCodeSendParser func(statusCode int, body []byte) error
+
+// sendWithRetry is the shared retry loop. It creates a fresh session per
+// attempt, sends messageBody, reads the response, and invokes parse for
+// provider-specific parsing. A network error or a parse error on a retryable
+// HTTP status retries up to MaxRetries times. The retry budget is the same
+// field the feedback adapter has always used (DOC-09 §18); moderation sets
+// MaxRetries to 0 at construction time to make its own budget explicit
+// (VOC-034-D03).
+func (t *openCodeTransport) sendWithRetry(ctx context.Context, messageBody []byte, parse openCodeSendParser) error {
 	var lastErr error
-	maxAttempts := p.config.MaxRetries + 1
+	maxAttempts := t.config.MaxRetries + 1
 	if maxAttempts < 1 {
 		maxAttempts = 1
 	}
 
 	for attempt := 0; attempt < maxAttempts; attempt++ {
-		feedback, retryable, err := p.attempt(ctx, body)
-		if err == nil {
-			return feedback, nil
+		statusCode, respBody, err := t.sendOnce(ctx, messageBody)
+		if err != nil {
+			lastErr = err
+			if attempt < maxAttempts-1 && isRetryableError(err) {
+				continue
+			}
+			return lastErr
 		}
-		lastErr = err
-		if attempt < maxAttempts-1 && retryable {
-			continue
+		if perr := parse(statusCode, respBody); perr != nil {
+			lastErr = perr
+			if attempt < maxAttempts-1 && isRetryableHTTPStatus(statusCode) {
+				continue
+			}
+			return lastErr
 		}
-		return nil, lastErr
+		return nil
 	}
 
-	return nil, lastErr
+	return lastErr
 }
 
-func (p *OpenCodeFeedbackProvider) attempt(ctx context.Context, messageBody []byte) (*ProviderFeedback, bool, error) {
-	sessionID, err := p.createSession(ctx)
+// sendOnce performs a single transport attempt: create a session, send the
+// message, read the response body. It does not retry, and it does not parse -
+// the caller decides what the response means via sendWithRetry's parser.
+func (t *openCodeTransport) sendOnce(ctx context.Context, messageBody []byte) (int, []byte, error) {
+	sessionID, err := t.createSession(ctx)
 	if err != nil {
-		return nil, errors.Is(err, ErrProviderTimeout), err
+		return 0, nil, err
 	}
 
-	url := strings.TrimRight(p.config.BaseURL, "/") + "/session/" + sessionID + "/message"
+	url := strings.TrimRight(t.config.BaseURL, "/") + "/session/" + sessionID + "/message"
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(messageBody))
 	if err != nil {
-		return nil, false, fmt.Errorf("create request: %w", err)
+		return 0, nil, fmt.Errorf("create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	if p.config.APIKey != "" {
-		req.Header.Set("Authorization", "Bearer "+p.config.APIKey)
+	if t.config.APIKey != "" {
+		req.Header.Set("Authorization", "Bearer "+t.config.APIKey)
 	}
 
-	resp, err := p.client.Do(req)
+	resp, err := t.client.Do(req)
 	if err != nil {
-		mapped := mapNetworkError(err)
-		return nil, isRetryableError(mapped), mapped
+		return 0, nil, mapNetworkError(err)
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
-		return nil, isRetryableHTTPStatus(resp.StatusCode), fmt.Errorf("read response body: %w", err)
+		return resp.StatusCode, nil, fmt.Errorf("read response body: %w", err)
 	}
-
-	feedback, err := p.parseMessageResponse(resp.StatusCode, respBody)
-	if err != nil {
-		return nil, isRetryableHTTPStatus(resp.StatusCode), err
-	}
-	return feedback, false, nil
+	return resp.StatusCode, respBody, nil
 }
 
-func (p *OpenCodeFeedbackProvider) createSession(ctx context.Context) (string, error) {
-	url := strings.TrimRight(p.config.BaseURL, "/") + "/session"
+func (t *openCodeTransport) createSession(ctx context.Context) (string, error) {
+	url := strings.TrimRight(t.config.BaseURL, "/") + "/session"
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader([]byte("{}")))
 	if err != nil {
 		return "", fmt.Errorf("create session request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	if p.config.APIKey != "" {
-		req.Header.Set("Authorization", "Bearer "+p.config.APIKey)
+	if t.config.APIKey != "" {
+		req.Header.Set("Authorization", "Bearer "+t.config.APIKey)
 	}
 
-	resp, err := p.client.Do(req)
+	resp, err := t.client.Do(req)
 	if err != nil {
 		return "", mapNetworkError(err)
 	}

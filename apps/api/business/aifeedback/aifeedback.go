@@ -51,6 +51,8 @@ const (
 const (
 	PromptVersionSentenceFeedbackV1 = "sentence-feedback-v1"
 	SchemaVersionFeedbackV1         = "feedback-schema-v1"
+	PromptVersionModerationV1       = "moderation-v1"
+	SchemaVersionModerationV1       = "moderation-schema-v1"
 )
 
 // Sources where a learner sentence may originate.
