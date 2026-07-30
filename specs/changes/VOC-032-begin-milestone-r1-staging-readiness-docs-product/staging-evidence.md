@@ -43,7 +43,7 @@ completes staging acceptance per DOC-12 §5.
 | `EV-14`..`EV-15` | Atlas applies the full migration set; re-apply is a no-op; down-files not auto-discovered | **T06 tooling delivered** — `apps/api/atlas.hcl`, `apps/api/scripts/migrate.sh`, `apps/api/migrations/atlas.sum`. **Two pre-existing migration-file issues block `EV-14`'s end-to-end pass against the actual migration set; see "T06 follow-ups" section below.** The pre-flight-validation half of `EV-15` (down-files not auto-discovered) is exercised by `apps/api/migrations/atlas_tooling_test.go::TestMigrationsDirectoryHasNoForwardDiscoveredDownFiles`; the end-to-end apply half is blocked until the two follow-ups close. |
 | `EV-16`..`EV-17` | Deploy workflow valid, build/push succeeds, fails closed on bad health check | **Produced by `T07`** — `.github/workflows/deploy-staging.yml` (or equivalent). Live SSH-deploy execution recorded separately below (blocked). |
 | `EV-18`..`EV-20` | AI-evaluation gate passes at thresholds, fails on violation, wired as required check | **Produced by `T08`** — evaluation-gate command + CI wiring. |
-| `EV-21` | Live migration and rollback rehearsal | **Blocked by `VOC-032-DEP-00`/`DEP-01`** — real server/credentials do not yet exist. Procedure documented below; live execution recorded as blocked. |
+| `EV-21` | Live migration and rollback rehearsal | **Partially produced on 2026-07-30.** `DEP-00`/`DEP-01` are resolved; the real deploy, live Atlas no-op check, disposable-copy rollback of all 12 approved down artifacts, 13-migration forward re-apply, exact schema comparison, and cleanup passed. The required disposable-identity/core-loop exercise remains blocked on `DEP-03` because staging AI is disabled and has no real provider credential. Details below; `T09` remains open. |
 | `EV-22` | Live-provider AI evaluation pass | **Blocked by `VOC-032-DEP-03`** — staging AI-provider credentials do not yet exist. Procedure documented below; live execution recorded as blocked. |
 | `EV-23` | `infra/README.md` accuracy | **DIVERGENT — see `T11` follow-up note below.** `infra/README.md` still contains the pre-VOC-005 placeholder text ("This directory is a non-deploying structural boundary. VOC-005 authorizes no Cloudflare, staging, production, release, or autonomous-development infrastructure."); `T11`'s rewrite to the AC-11 description of the docker-compose / nginx / Atlas layout has not been applied. Detected and t.Log-reported by `apps/api/gate_readiness/gate_readiness_test.go::TestT11InfraReadmeIsNotThePlaceholder`. |
 | `EV-24`..`EV-25` | Installed-suite pass at final SHA; mock-inventory confirmation | **Produced by `T12` — see `T12 evidence` and `R1 gate-readiness summary` sections below.** |
@@ -80,6 +80,136 @@ and their results appended to this document.
    data loss beyond what the down-scripts intentionally revert.
 7. Record every command, its timestamp, and its outcome below this list once
    run.
+
+#### 2026-07-30 operator execution — migration/rollback portion passed
+
+This is partial `EV-21` evidence, not a claim that `T09` is complete.
+Founder-provisioned SSH access to `ubuntu@130.185.123.152` was reachable.
+`deploy-staging` run `30571703073` had already deployed commit
+`8d9429b` successfully. Independent checks returned HTTP 200 from
+`https://staging.vocanova.site/` and from
+`https://api-staging.vocanova.site/healthz`; the API body reported
+`status=ok` and `database=ok`.
+
+The following live-database command used the deployed `T06` wrapper. The
+connection value was sourced from the founder-owned, untracked
+`infra/secrets/api.env`, rewritten only from the Compose hostname to the
+private container IP, and never printed:
+
+```sh
+cd /opt/vocanova/infra
+set -a
+. ./secrets/api.env
+set +a
+postgres_ip=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' vocanova-postgres)
+migration_database_url=$(printf "%s" "$DATABASE_URL" | sed "s/@postgres:5432/@${postgres_ip}:5432/")
+DATABASE_URL="$migration_database_url" sh /opt/vocanova/apps/api/scripts/migrate.sh
+```
+
+- Start: `2026-07-30T19:24:08Z`
+- End: `2026-07-30T19:24:09Z`
+- Outcome: PASS — Atlas v1.2.0 returned
+  `No migration files to execute`. The live Atlas ledger contained all 13
+  expected versions.
+
+The live database contained the expected 25 public application tables and
+zero application rows before the rehearsal. The operator then created the
+explicitly named disposable copy and restored a custom-format snapshot:
+
+```sh
+docker exec vocanova-postgres pg_dump \
+  -Fc -U vocanova -d vocanova \
+  -f /tmp/vocanova_t09_rehearsal_20260730.dump
+docker exec vocanova-postgres createdb \
+  -U vocanova -T template0 vocanova_t09_rehearsal_20260730
+docker exec vocanova-postgres pg_restore \
+  -U vocanova -d vocanova_t09_rehearsal_20260730 \
+  /tmp/vocanova_t09_rehearsal_20260730.dump
+```
+
+- Rehearsal start: `2026-07-30T19:25:39Z`
+- Copy restored: `2026-07-30T19:25:42Z`
+- Restored baseline: 25 public application tables and 13 Atlas revision
+  rows.
+
+Only the disposable database was selected for the rollback commands. Each
+approved `.down.sql.example` was piped to `psql -v ON_ERROR_STOP=1` in the
+following reverse order:
+
+```text
+20260725140002_voc031_p5_account_deletion_requests.down.sql.example
+20260725140001_voc031_p5_email_change_links.down.sql.example
+20260725140000_voc031_p5_user_onboarding_profiles.down.sql.example
+20260725130002_voc030_p4_gamification_tables.down.sql.example
+20260725130001_voc030_p4_mission_tables.down.sql.example
+20260725130000_voc030_p4_user_settings.down.sql.example
+20260725120001_voc028_p3_ai_feedback_attempts.down.sql.example
+20260725120000_voc028_p3_learner_sentences.down.sql.example
+20260725110000_voc027_p2_review_attempts.down.sql.example
+20260725100001_voc026_p1_idempotency_keys.down.sql.example
+20260725100000_voc026_p1_content_tables.down.sql.example
+20260724210000_identity_foundation.down.sql.example
+```
+
+The per-file command was:
+
+```sh
+docker exec -i vocanova-postgres psql \
+  -X -v ON_ERROR_STOP=1 -U vocanova \
+  -d vocanova_t09_rehearsal_20260730 \
+  < "/tmp/vocanova-t09-20260730/${rollback_file}"
+```
+
+- Rollback complete: `2026-07-30T19:25:45Z`
+- Outcome: PASS — all 12 artifacts completed without a SQL error. The only
+  remaining public application table was `oauth_states`, exactly matching
+  the repository inventory: `20260724210001_oauth_state.sql` has no approved
+  `.down.sql.example`.
+
+To let Atlas replay the complete forward set from version zero, the operator
+removed that empty OAuth table and the revision ledger **only from the
+disposable copy**:
+
+```sh
+docker exec vocanova-postgres psql \
+  -X -v ON_ERROR_STOP=1 -U vocanova \
+  -d vocanova_t09_rehearsal_20260730 \
+  -c "DROP TABLE public.oauth_states" \
+  -c "DROP SCHEMA atlas_schema_revisions CASCADE"
+```
+
+The same deployed wrapper was then run with a connection URL derived for
+`vocanova_t09_rehearsal_20260730`. It applied all 13 migrations (74 SQL
+statements) in 1.628 seconds and recreated 13 revision rows. Schema-only
+dumps of live `vocanova` and the re-applied disposable database were
+normalized only by removing PostgreSQL's random `\restrict`/`\unrestrict`
+tokens and compared with `diff -u`; the comparison had no output.
+
+- Forward re-apply complete: `2026-07-30T19:25:47Z`
+- Schema comparison: PASS — exact match
+- Rehearsal end: `2026-07-30T19:25:49Z`
+
+After verification, the disposable artifacts were removed:
+
+```sh
+docker exec vocanova-postgres dropdb \
+  -U vocanova --force vocanova_t09_rehearsal_20260730
+docker exec vocanova-postgres rm -f \
+  /tmp/vocanova_t09_rehearsal_20260730.dump
+rm -rf /tmp/vocanova-t09-20260730
+```
+
+- Cleanup complete: `2026-07-30T19:26:06Z`
+- Post-cleanup safety check: the disposable database no longer existed; the
+  live ledger still contained 13 revisions; `/healthz` still reported
+  `status=ok` and `database=ok`.
+
+The required create-user/save-word/complete-review/submit-sentence exercise
+was **not** run or fabricated. At this timestamp the real staging
+configuration reported `AI_FEATURES_ENABLED=false` and no
+`AI_PROVIDER_API_KEY`. That remaining portion of `EV-21`, and all of
+`EV-22`, require founder resolution of `VOC-032-DEP-03` plus the explicit
+cost/rate ceiling required by DOC-12 §9.
 
 ### `EV-22` — Live-provider AI evaluation pass
 
