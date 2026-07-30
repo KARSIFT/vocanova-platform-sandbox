@@ -68,12 +68,12 @@ mean, not their full syntax.
 `docker compose -f infra/docker-compose.yml` brings up four
 services on a single internal Docker network (`vocanova-net`):
 
-| Service   | Image                              | Port (host) | Reachable from           |
-|-----------|------------------------------------|-------------|--------------------------|
-| `postgres`| `postgres:16-alpine`               | none        | internal network only    |
-| `api`     | `apps/api/Dockerfile` (T02)        | none        | internal network only    |
-| `web`     | `apps/web/Dockerfile` (T03)        | none        | internal network only    |
-| `nginx`   | `nginx:1.27-alpine`                | 80, 443     | the internet (via CF)    |
+| Service    | Image                       | Port (host) | Reachable from        |
+| ---------- | --------------------------- | ----------- | --------------------- |
+| `postgres` | `postgres:16-alpine`        | none        | internal network only |
+| `api`      | `apps/api/Dockerfile` (T02) | none        | internal network only |
+| `web`      | `apps/web/Dockerfile` (T03) | none        | internal network only |
+| `nginx`    | `nginx:1.27-alpine`         | 80, 443     | the internet (via CF) |
 
 **Only `nginx` publishes host ports.** The database and the
 two app services are reachable only on the internal network
@@ -142,13 +142,13 @@ the staging host before the first `docker compose up`; the
 schemas are documented in the corresponding `.env.example`
 files, never in `docker-compose.yml` itself:
 
-| File                            | Owner    | Schema reference            |
-|---------------------------------|----------|-----------------------------|
-| `infra/secrets/postgres.env`    | founder  | inline (just `POSTGRES_PASSWORD=…`) |
-| `infra/secrets/api.env`         | founder  | `apps/api/.env.example` (T01)|
-| `infra/secrets/web.env`         | founder  | `apps/web/.env.example` (T01); may be empty/absent — the web has no required runtime env |
-| `infra/secrets/nginx/cert.pem`  | founder  | Cloudflare origin cert      |
-| `infra/secrets/nginx/key.pem`   | founder  | Cloudflare origin private key |
+| File                           | Owner   | Schema reference                                                                         |
+| ------------------------------ | ------- | ---------------------------------------------------------------------------------------- |
+| `infra/secrets/postgres.env`   | founder | inline (just `POSTGRES_PASSWORD=…`)                                                      |
+| `infra/secrets/api.env`        | founder | `apps/api/.env.example` (T01)                                                            |
+| `infra/secrets/web.env`        | founder | `apps/web/.env.example` (T01); may be empty/absent — the web has no required runtime env |
+| `infra/secrets/nginx/cert.pem` | founder | Cloudflare origin cert                                                                   |
+| `infra/secrets/nginx/key.pem`  | founder | Cloudflare origin private key                                                            |
 
 The four staging-tier repository secrets
 `STAGING_SSH_HOST` / `STAGING_SSH_USER` /
