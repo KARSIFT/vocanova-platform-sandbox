@@ -43,7 +43,7 @@ completes staging acceptance per DOC-12 §5.
 | `EV-14`..`EV-15` | Atlas applies the full migration set; re-apply is a no-op; down-files not auto-discovered | **T06 tooling delivered** — `apps/api/atlas.hcl`, `apps/api/scripts/migrate.sh`, `apps/api/migrations/atlas.sum`. **Two pre-existing migration-file issues block `EV-14`'s end-to-end pass against the actual migration set; see "T06 follow-ups" section below.** The pre-flight-validation half of `EV-15` (down-files not auto-discovered) is exercised by `apps/api/migrations/atlas_tooling_test.go::TestMigrationsDirectoryHasNoForwardDiscoveredDownFiles`; the end-to-end apply half is blocked until the two follow-ups close. |
 | `EV-16`..`EV-17` | Deploy workflow valid, build/push succeeds, fails closed on bad health check | **Produced by `T07`** — `.github/workflows/deploy-staging.yml` (or equivalent). Live SSH-deploy execution recorded separately below (blocked). |
 | `EV-18`..`EV-20` | AI-evaluation gate passes at thresholds, fails on violation, wired as required check | **Produced by `T08`** — evaluation-gate command + CI wiring. |
-| `EV-21` | Live migration and rollback rehearsal | **Partially produced on 2026-07-30.** `DEP-00`/`DEP-01` are resolved; the real deploy, live Atlas no-op check, disposable-copy rollback of all 12 approved down artifacts, 13-migration forward re-apply, exact schema comparison, and cleanup passed. The required disposable-identity/core-loop exercise remains blocked on `DEP-03` because staging AI is disabled and has no real provider credential. Details below; `T09` remains open. |
+| `EV-21` | Live migration and rollback rehearsal | **Passed on 2026-07-30/31.** The real deploy, live Atlas no-op check, disposable-copy rollback of all 12 approved down artifacts, 13-migration forward re-apply, exact schema comparison, and cleanup passed. After the real provider was enabled, a disposable identity also completed the save-word, review, and sentence-feedback core loop with persisted-row and cleanup proof. Details below and in `VOC-034`'s live evidence. |
 | `EV-22` | Live-provider AI evaluation pass | **In-repo runnable procedure delivered; live execution blocked on `VOC-032-DEP-03`.** The `cmd/eval-live` command (`apps/api/cmd/eval-live/main.go`) and the supporting library (`apps/api/business/aifeedback/live_eval.go`) constitute the runnable one-shot procedure the founder will invoke once the staging AI-provider credentials are provisioned. The command's wiring is unit-tested against a fake provider (`apps/api/cmd/eval-live/main_test.go`) and the library's report shape is unit-tested (`apps/api/business/aifeedback/live_eval_test.go`); the live execution itself is recorded as blocked, not passing, in the `EV-22` section below. |
 | `EV-23` | `infra/README.md` accuracy | **DIVERGENT — see `T11` follow-up note below.** `infra/README.md` still contains the pre-VOC-005 placeholder text ("This directory is a non-deploying structural boundary. VOC-005 authorizes no Cloudflare, staging, production, release, or autonomous-development infrastructure."); `T11`'s rewrite to the AC-11 description of the docker-compose / nginx / Atlas layout has not been applied. Detected and t.Log-reported by `apps/api/gate_readiness/gate_readiness_test.go::TestT11InfraReadmeIsNotThePlaceholder`. |
 | `EV-24`..`EV-25` | Installed-suite pass at final SHA; mock-inventory confirmation | **Produced by `T12` — see `T12 evidence` and `R1 gate-readiness summary` sections below.** |
@@ -54,7 +54,7 @@ completes staging acceptance per DOC-12 §5.
 | `EV-30` | Real Google OAuth provider: one live staging exchange | **Blocked by `VOC-032-DEP-07`** — no Google Cloud OAuth client exists yet. |
 | `EV-31` | Exact-SHA independent verification (per PR) | **Performed by Claude Code (different model binding) at each PR's exact final SHA** — this is not the implementer's evidence to record; it is produced by the independent-verification role and reported per-PR. |
 
-## Staging exercise plan (blocked by founder-provisioned credentials, not by a missing environment)
+## Staging exercise plan and execution
 
 Once `VOC-032-DEP-00`/`DEP-01`/`DEP-03` resolve and `T00`–`T08` are deployed
 to the real server at least once, the following exercises must be executed
@@ -81,10 +81,10 @@ and their results appended to this document.
 7. Record every command, its timestamp, and its outcome below this list once
    run.
 
-#### 2026-07-30 operator execution — migration/rollback portion passed
+#### 2026-07-30/31 operator execution — passed
 
-This is partial `EV-21` evidence, not a claim that `T09` is complete.
-Founder-provisioned SSH access to `ubuntu@130.185.123.152` was reachable.
+`EV-21` is complete. Founder-provisioned SSH access to
+`ubuntu@130.185.123.152` was reachable.
 `deploy-staging` run `30571703073` had already deployed commit
 `8d9429b` successfully. Independent checks returned HTTP 200 from
 `https://staging.vocanova.site/` and from
@@ -204,12 +204,35 @@ rm -rf /tmp/vocanova-t09-20260730
   live ledger still contained 13 revisions; `/healthz` still reported
   `status=ok` and `database=ok`.
 
-The required create-user/save-word/complete-review/submit-sentence exercise
-was **not** run or fabricated. At this timestamp the real staging
-configuration reported `AI_FEATURES_ENABLED=false` and no
-`AI_PROVIDER_API_KEY`. That remaining portion of `EV-21`, and all of
-`EV-22`, require founder resolution of `VOC-032-DEP-03` plus the explicit
-cost/rate ceiling required by DOC-12 §9.
+At the end of this 2026-07-30 migration rehearsal, the
+create-user/save-word/complete-review/submit-sentence portion was still
+blocked because staging AI was disabled. It was completed after the real
+provider was enabled and the VOC-034 moderation fix was deployed:
+
+- Fixed revision `f990e86efeef73730d747d53ea2d1ca7cd77bf84`
+  deployed successfully in run
+  [30618654496](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/30618654496).
+- A disposable-identity core loop ran from `2026-07-31T09:10:43Z` through
+  `09:10:57Z`: save-word and review requests returned HTTP 200, and the
+  real-provider sentence-feedback request returned HTTP 200 with no error
+  code and status `correct`.
+- Before cleanup, the scoped `users`, `user_words`, `review_attempts`,
+  `learner_sentences`, and successful `ai_feedback_attempts` rows each
+  counted exactly one. The feedback row recorded `provider=opencode` and
+  `model=opencode-go/hy3`.
+- Transactional cleanup deleted the disposable identity, session, word
+  fixture, saved word, review, sentence, feedback attempt, and idempotency
+  rows; post-cleanup counts for every scoped row group were zero.
+
+The complete sanitized identifiers, row counts, and timestamps are recorded
+in
+[`VOC-034` staging evidence](../VOC-034-production-ai-feedback-is-unreachable-because-no/staging-evidence.md),
+merged by PR
+[#229](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/229).
+The observed sentence-feedback latency was `13,423 ms`; this does not
+invalidate `EV-21`'s reachability, persistence, rollback, and cleanup
+criteria, and is carried explicitly to `T10` for evaluation against its
+release-blocking thresholds.
 
 ### `EV-22` — Live-provider AI evaluation pass
 
