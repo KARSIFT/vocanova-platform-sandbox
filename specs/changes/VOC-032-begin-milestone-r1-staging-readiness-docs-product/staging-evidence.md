@@ -40,12 +40,12 @@ DOC-12 §5.
 | `EV-06`..`EV-07` | `apps/api` Dockerfile builds and serves healthy | **Produced by `T02`** — `apps/api/Dockerfile`. |
 | `EV-08`..`EV-09` | `apps/web` Dockerfile builds and serves | **Produced by `T03`** — `apps/web/Dockerfile`, `apps/web/next.config.ts`. |
 | `EV-10`..`EV-11` | Compose stack validates and comes up healthy locally | **Produced by `T04`** — `docker-compose.yml`. |
-| `EV-12`..`EV-13` | nginx config valid, routes correctly, real-IP scoped | **Produced by `T05`** — nginx configuration file(s). Live Cloudflare-certificate verification recorded separately below (blocked). |
-| `EV-14`..`EV-15` | Atlas applies the full migration set; re-apply is a no-op; down-files not auto-discovered | **T06 tooling delivered** — `apps/api/atlas.hcl`, `apps/api/scripts/migrate.sh`, `apps/api/migrations/atlas.sum`. **Two pre-existing migration-file issues block `EV-14`'s end-to-end pass against the actual migration set; see "T06 follow-ups" section below.** The pre-flight-validation half of `EV-15` (down-files not auto-discovered) is exercised by `apps/api/migrations/atlas_tooling_test.go::TestMigrationsDirectoryHasNoForwardDiscoveredDownFiles`; the end-to-end apply half is blocked until the two follow-ups close. |
-| `EV-16`..`EV-17` | Deploy workflow valid, build/push succeeds, fails closed on bad health check | **Produced by `T07`** — `.github/workflows/deploy-staging.yml` (or equivalent). Live SSH-deploy execution recorded separately below (blocked). |
+| `EV-12`..`EV-13` | nginx config valid, routes correctly, real-IP scoped | **Produced by `T05`, live TLS confirmed.** nginx configuration file(s), plus a live Cloudflare-fronted HTTPS response observed on both public hostnames (see `EV-21`). |
+| `EV-14`..`EV-15` | Atlas applies the full migration set; re-apply is a no-op; down-files not auto-discovered | **T06 tooling delivered; end-to-end apply now passes.** `apps/api/atlas.hcl`, `apps/api/scripts/migrate.sh`, `apps/api/migrations/atlas.sum`. The two pre-existing migration-file issues that previously blocked `EV-14`'s end-to-end pass were fixed in `VOC-033` (see "T06 follow-ups" section below, now marked resolved); the live Atlas apply recorded under `EV-21` confirms the fix. The pre-flight-validation half of `EV-15` (down-files not auto-discovered) is exercised by `apps/api/migrations/atlas_tooling_test.go::TestMigrationsDirectoryHasNoForwardDiscoveredDownFiles`. |
+| `EV-16`..`EV-17` | Deploy workflow valid, build/push succeeds, fails closed on bad health check | **Produced by `T07`, live deploy confirmed.** `.github/workflows/deploy-staging.yml`, plus a real end-to-end SSH deploy to the founder's server (see `EV-21` and deploy run `30618654496`). The "fails closed on bad health check" half remains unit-tested only — no real health-check failure has been observed end-to-end. |
 | `EV-18`..`EV-20` | AI-evaluation gate passes at thresholds, fails on violation, wired as required check | **Produced by `T08`** — evaluation-gate command + CI wiring. |
 | `EV-21` | Live migration and rollback rehearsal | **Passed on 2026-07-30/31.** The real deploy, live Atlas no-op check, disposable-copy rollback of all 12 approved down artifacts, 13-migration forward re-apply, exact schema comparison, and cleanup passed. After the real provider was enabled, a disposable identity also completed the save-word, review, and sentence-feedback core loop with persisted-row and cleanup proof. Details below and in `VOC-034`'s live evidence. |
-| `EV-22` | Live-provider AI evaluation pass | **In-repo runnable procedure delivered; live execution blocked on `VOC-032-DEP-03`.** The `cmd/eval-live` command (`apps/api/cmd/eval-live/main.go`) and the supporting library (`apps/api/business/aifeedback/live_eval.go`) constitute the runnable one-shot procedure the founder will invoke once the staging AI-provider credentials are provisioned. The command's wiring is unit-tested against a fake provider (`apps/api/cmd/eval-live/main_test.go`) and the library's report shape is unit-tested (`apps/api/business/aifeedback/live_eval_test.go`); the live execution itself is recorded as blocked, not passing, in the `EV-22` section below. |
+| `EV-22` | Live-provider AI evaluation pass | **No longer blocked on `VOC-032-DEP-03`; result not recorded in this document.** The `cmd/eval-live` command (`apps/api/cmd/eval-live/main.go`) and the supporting library (`apps/api/business/aifeedback/live_eval.go`) constitute the runnable one-shot procedure. `DEP-03` is now resolved and the protected run has been performed, but its result is recorded in `T10`'s own evidence update, a separate change not yet merged into this document — this `T09` PR does not assert an `EV-22` outcome. |
 | `EV-23` | `infra/README.md` accuracy | **DIVERGENT — see `T11` follow-up note below.** `infra/README.md` still contains the pre-VOC-005 placeholder text ("This directory is a non-deploying structural boundary. VOC-005 authorizes no Cloudflare, staging, production, release, or autonomous-development infrastructure."); `T11`'s rewrite to the AC-11 description of the docker-compose / nginx / Atlas layout has not been applied. Detected and t.Log-reported by `apps/api/gate_readiness/gate_readiness_test.go::TestT11InfraReadmeIsNotThePlaceholder`. |
 | `EV-24`..`EV-25` | Installed-suite pass at final SHA; mock-inventory confirmation | **Produced by `T12` — see `T12 evidence` and `R1 gate-readiness summary` sections below.** |
 | `EV-26` | DOC-11 §1 amendment accuracy | **DIVERGENT — see `T13` follow-up note below.** `docs/operations/11-devops-and-ci-cd.md` §1's target-infrastructure table still describes the pre-amendment "Cloudflare Workers via OpenNext + Render Web Service + Render PostgreSQL + vocanova.com" target; `T13`'s amendment to the package's real, built shape (self-hosted Docker Compose + nginx on the founder's server, vocanova.site) has not been applied. Detected and t.Log-reported by `apps/api/gate_readiness/gate_readiness_test.go::TestT13Doc11AmendmentApplied`. |
@@ -426,10 +426,11 @@ run is:
 
 #### Live execution status
 
-**Blocked on `VOC-032-DEP-03`.** No live execution
-has been performed. The runnable procedure is in
-place; the founder's actions are the only remaining
-work for this row.
+**No longer blocked on `VOC-032-DEP-03`** — that credential is now
+resolved. The protected live run has been performed; its actual result is
+recorded in `T10`'s own evidence update, a separate change not yet merged
+into this document. This `T09` PR does not assert an `EV-22` outcome one
+way or the other — see `T10`'s own tracking issue for the result.
 
 ### `EV-28` — Real email sender: one live staging delivery
 
@@ -481,7 +482,15 @@ staging exercise, run against this now-real environment and recorded in its
 own `staging-evidence.md`, before that milestone's DOC-12 §5 gate can be
 declared complete. This document records VOC-032's own R1 evidence only.
 
-## T06 follow-ups: pre-existing migration-file issues block `EV-14` end-to-end
+## T06 follow-ups: pre-existing migration-file issues (RESOLVED by VOC-033)
+
+**Both follow-ups below are fixed as of `VOC-033`** (merged before this
+`T09` rehearsal ran) — every migration file now reads `-- atlas:txmode
+file`, and the duplicate `streak_states_user_id_key` index is removed. This
+section is preserved as the historical record of what was found and why
+(the fix itself is `VOC-033`'s diff, not this document's), not as a
+statement that these are still open. Do not re-fix these in a future `T06`
+follow-up package — they are closed.
 
 `T06` delivers the Atlas tooling (`apps/api/atlas.hcl`,
 `apps/api/scripts/migrate.sh`, `apps/api/migrations/atlas.sum`) and
@@ -1004,11 +1013,13 @@ summary, exactly as `AC-12` requires.
 | **Founder completes staging acceptance** | **Not started — founder-owned, out of scope of any package.** | This is a single human decision by the founder, recorded as a comment on the package's release issue (per the standard `karsift-ai-infra release.yml` flow). It cannot be satisfied by any code change. |
 | **Scope is frozen** | **Satisfied (in this package).** No new product scope introduced; only the `T00`–`T15` and `T12` deliverables. | Inherently a property of the package's own change-control discipline; `T12`'s role is to confirm no PR in this package introduced unapproved scope. |
 
-### Items this gate-readiness summary explicitly does NOT mark as passing
+### Items this gate-readiness summary records explicitly, passing or not
 
-The following items are not "passing" at the final SHA and are not
-the founder's call to wave through. Each is a recorded, factual
-limitation:
+Several of the items below now describe outcomes that passed (the live
+staging environment, live TLS, the migration rehearsal) — recorded here in
+detail because they were previously open items in this same list. The
+remainder are not "passing" at the final SHA and are not the founder's call
+to wave through; each is a recorded, factual limitation:
 
 - **The live staging environment has been brought up.** `T07`'s
   deploy workflow ran end-to-end against the real server
