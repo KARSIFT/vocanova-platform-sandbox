@@ -51,6 +51,13 @@ func withFakeProviderPerCall(t *testing.T, build func(cfg aifeedback.OpenCodeCon
 	t.Cleanup(func() { newProvider = prev })
 }
 
+func withFakeGeminiProviderPerCall(t *testing.T, build func(cfg aifeedback.GeminiConfig) aifeedback.FeedbackProvider) {
+	t.Helper()
+	prev := newGeminiProvider
+	newGeminiProvider = build
+	t.Cleanup(func() { newGeminiProvider = prev })
+}
+
 func TestRunEvalLive_MissingBaseURLExitsUsage(t *testing.T) {
 	withFakeProvider(t, aifeedback.ProviderFeedback{Status: aifeedback.LearningStatusCorrect})
 	stdout := &bytes.Buffer{}
@@ -360,6 +367,81 @@ func TestRunEvalLive_DoesNotLogAPIKey(t *testing.T) {
 	}
 	if strings.Contains(stderr.String(), secretKey) {
 		t.Fatalf("API key leaked into stderr: %s", stderr.String())
+	}
+}
+
+func TestRunEvalLive_ProviderSelectionRoutesToExpectedConstructor(t *testing.T) {
+	var (
+		openCodeCalls int
+		geminiCalls   int
+	)
+	withFakeProviderPerCall(t, func(cfg aifeedback.OpenCodeConfig) aifeedback.FeedbackProvider {
+		openCodeCalls++
+		return &expectationMatchingProvider{}
+	})
+	withFakeGeminiProviderPerCall(t, func(cfg aifeedback.GeminiConfig) aifeedback.FeedbackProvider {
+		geminiCalls++
+		return &expectationMatchingProvider{}
+	})
+
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+
+	code := runEvalLive([]string{
+		"--provider", "gemini",
+		"--api-key", "test-key",
+	}, stdout, stderr, time.Now)
+	if code != exitSuccess {
+		t.Fatalf("gemini provider path should complete successfully; got %d stderr=%s", code, stderr.String())
+	}
+	if geminiCalls != 1 || openCodeCalls != 0 {
+		t.Fatalf("expected gemini constructor only for --provider gemini; got gemini=%d opencode=%d", geminiCalls, openCodeCalls)
+	}
+
+	t.Setenv("AI_PROVIDER", providerGemini)
+	stdout.Reset()
+	stderr.Reset()
+	code = runEvalLive([]string{
+		"--api-key", "test-key",
+	}, stdout, stderr, time.Now)
+	if code != exitSuccess {
+		t.Fatalf("gemini env provider path should complete successfully; got %d stderr=%s", code, stderr.String())
+	}
+	if geminiCalls != 2 || openCodeCalls != 0 {
+		t.Fatalf("expected gemini constructor for AI_PROVIDER=gemini; got gemini=%d opencode=%d", geminiCalls, openCodeCalls)
+	}
+
+	t.Setenv("AI_PROVIDER", "")
+	stdout.Reset()
+	stderr.Reset()
+	code = runEvalLive([]string{
+		"--base-url", "http://example.invalid",
+		"--api-key", "test-key",
+	}, stdout, stderr, time.Now)
+	if code != exitSuccess {
+		t.Fatalf("default provider path should complete successfully; got %d stderr=%s", code, stderr.String())
+	}
+	if geminiCalls != 2 || openCodeCalls != 1 {
+		t.Fatalf("expected openCode constructor for default provider; got gemini=%d opencode=%d", geminiCalls, openCodeCalls)
+	}
+}
+
+func TestRunEvalLive_GeminiDoesNotRequireBaseURL(t *testing.T) {
+	withFakeProviderPerCall(t, func(cfg aifeedback.OpenCodeConfig) aifeedback.FeedbackProvider {
+		return &expectationMatchingProvider{}
+	})
+	withFakeGeminiProviderPerCall(t, func(cfg aifeedback.GeminiConfig) aifeedback.FeedbackProvider {
+		return &expectationMatchingProvider{}
+	})
+
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	code := runEvalLive([]string{
+		"--provider", "gemini",
+		"--api-key", "test-key",
+	}, stdout, stderr, time.Now)
+	if code == exitUsageError {
+		t.Fatalf("gemini provider should not fail usage check when base-url is unset; stderr=%s", stderr.String())
 	}
 }
 

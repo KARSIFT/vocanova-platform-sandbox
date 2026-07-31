@@ -1,7 +1,7 @@
 // Command eval-live runs the T10 live-provider AI
-// evaluation pass against the real OpenCode provider in
-// staging. It is the single command the founder runs once,
-// after VOC-032-DEP-03 (staging AI-provider credentials) is
+// evaluation pass against a real provider in staging. It is
+// the single command the founder runs once, after
+// VOC-032-DEP-03 (staging AI-provider credentials) is
 // resolved, to record EV-22's R1-gate evidence.
 //
 // The command is intentionally NOT invoked from CI. Normal
@@ -17,13 +17,18 @@
 //
 // Required environment variables:
 //
+//	AI_PROVIDER_API_KEY    - provider API key (never logged)
+//
+// Required only when provider is OpenCode:
+//
 //	AI_PROVIDER_BASE_URL   - the OpenCode server's base URL
-//	AI_PROVIDER_API_KEY    - the OpenCode API key (never logged)
 //
 // Optional environment variables (overridden by flags):
 //
+//	AI_PROVIDER           - provider selector ("opencode" or
+//	                       "gemini"; default: "opencode")
 //	AI_PROVIDER_MODEL     - "providerID/modelID" (default:
-//	                        DefaultOpenCodeModel)
+//	                        provider-specific)
 //	AI_PROVIDER_TIMEOUT   - per-request timeout (default: 8s)
 //	EVAL_LIVE_COST_USD          - post-run billed cost in USD
 //	EVAL_LIVE_COST_CEILING_USD  - pre-agreed cost ceiling
@@ -62,6 +67,9 @@ const (
 	exitSuccess         = 0
 	exitReleaseBlocking = 1
 	exitUsageError      = 2
+
+	providerOpenCode = string(aifeedback.ProviderOpenCode)
+	providerGemini   = "gemini"
 )
 
 // newProvider is the constructor the command uses to build
@@ -80,6 +88,10 @@ const (
 // real run.
 var newProvider = func(cfg aifeedback.OpenCodeConfig) aifeedback.FeedbackProvider {
 	return aifeedback.NewOpenCodeFeedbackProvider(cfg)
+}
+
+var newGeminiProvider = func(cfg aifeedback.GeminiConfig) aifeedback.FeedbackProvider {
+	return aifeedback.NewGeminiFeedbackProvider(cfg)
 }
 
 // stringFlagOrEnv returns the value of the named env var
@@ -149,9 +161,10 @@ func runEvalLive(args []string, stdout, stderr io.Writer, now func() time.Time) 
 	// on the command line. The flag is the per-invocation
 	// override; the env var is the per-environment default.
 	var (
+		provider   = fs.String("provider", stringFlagOrEnv("AI_PROVIDER", providerOpenCode), "provider to evaluate: opencode or gemini (env: AI_PROVIDER)")
 		baseURL    = fs.String("base-url", stringFlagOrEnv("AI_PROVIDER_BASE_URL", ""), "OpenCode server base URL (env: AI_PROVIDER_BASE_URL)")
 		apiKey     = fs.String("api-key", stringFlagOrEnv("AI_PROVIDER_API_KEY", ""), "OpenCode API key (env: AI_PROVIDER_API_KEY; never logged)")
-		model      = fs.String("model", stringFlagOrEnv("AI_PROVIDER_MODEL", aifeedback.DefaultOpenCodeModel), "model identifier (env: AI_PROVIDER_MODEL)")
+		model      = fs.String("model", stringFlagOrEnv("AI_PROVIDER_MODEL", ""), "model identifier (env: AI_PROVIDER_MODEL)")
 		timeout    = fs.Duration("timeout", durationFlagOrEnv("AI_PROVIDER_TIMEOUT", 8*time.Second), "per-request timeout (env: AI_PROVIDER_TIMEOUT)")
 		costUSD    = fs.Float64("cost", floatFlagOrEnv(aifeedback.LiveEvaluationCostUSDEnv, -1), "post-run billed cost in USD (env: EVAL_LIVE_COST_USD)")
 		ceilingUSD = fs.Float64("cost-ceiling", floatFlagOrEnv(aifeedback.LiveEvaluationCostCeilingUSDEnv, -1), "pre-agreed cost ceiling in USD; negative disables (env: EVAL_LIVE_COST_CEILING_USD)")
@@ -169,7 +182,7 @@ func runEvalLive(args []string, stdout, stderr io.Writer, now func() time.Time) 
 		fs.Usage()
 		return exitSuccess
 	}
-	if *baseURL == "" {
+	if *provider == providerOpenCode && *baseURL == "" {
 		fmt.Fprintln(stderr, "eval-live: --base-url (or AI_PROVIDER_BASE_URL) is required")
 		return exitUsageError
 	}
@@ -185,20 +198,37 @@ func runEvalLive(args []string, stdout, stderr io.Writer, now func() time.Time) 
 		}
 		_ = f.Close()
 	}
-	provider := newProvider(aifeedback.OpenCodeConfig{
-		BaseURL:    *baseURL,
-		APIKey:     *apiKey,
-		Model:      *model,
-		Timeout:    *timeout,
-		MaxRetries: 1,
-	})
+	var feedbackProvider aifeedback.FeedbackProvider
+	switch *provider {
+	case providerGemini:
+		geminiModel := *model
+		feedbackProvider = newGeminiProvider(aifeedback.GeminiConfig{
+			BaseURL:    *baseURL,
+			APIKey:     *apiKey,
+			Model:      geminiModel,
+			Timeout:    *timeout,
+			MaxRetries: 1,
+		})
+	default:
+		openCodeModel := *model
+		if openCodeModel == "" {
+			openCodeModel = aifeedback.DefaultOpenCodeModel
+		}
+		feedbackProvider = newProvider(aifeedback.OpenCodeConfig{
+			BaseURL:    *baseURL,
+			APIKey:     *apiKey,
+			Model:      openCodeModel,
+			Timeout:    *timeout,
+			MaxRetries: 1,
+		})
+	}
 	// Use the supplied now() for testability; main passes
 	// time.Now. RunLiveEvaluation measures its own
 	// startedAt/finishedAt internally, so now() is not
 	// strictly required - the parameter is kept for
 	// future use (e.g. pinning a clock in tests).
 	_ = now
-	report := aifeedback.RunLiveEvaluation(context.Background(), provider, aifeedback.LiveEvaluationOptions{
+	report := aifeedback.RunLiveEvaluation(context.Background(), feedbackProvider, aifeedback.LiveEvaluationOptions{
 		CostCeilingUSD: *ceilingUSD,
 		CostUSD:        *costUSD,
 		OperatorNotes:  *notes,
