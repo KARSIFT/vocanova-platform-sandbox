@@ -642,6 +642,81 @@ func TestBuildAIProviders_OpenCodeBranchUnchangedByGeminiAddition(t *testing.T) 
 	require.True(t, ok, "OpenCode branch must still wrap *aifeedback.OpenCodeModerationProvider when configured")
 }
 
+// TestLoadProductionConfig_GeminiDefaultsWhenEndpointVarsUnset covers the
+// VOC-035-D02 / VOC-035-AC-06 defaulting contract on the real
+// LoadProductionConfig path (not a hand-built ProductionConfig): with
+// AI_PROVIDER=gemini and a key set, an unset AI_PROVIDER_BASE_URL must
+// stay empty so aifeedback.GeminiConfig applies Google's own endpoint,
+// and an unset AI_PROVIDER_MODEL must resolve to gemini-2.5-flash. The
+// previous revision inherited OpenCode's loopback base URL and OpenCode's
+// model identifier here, which pointed the documented minimal Gemini
+// opt-in at the OpenCode host.
+func TestLoadProductionConfig_GeminiDefaultsWhenEndpointVarsUnset(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://example/db")
+	t.Setenv("BASE_URL", "https://staging.vocanova.site")
+	t.Setenv("OAUTH_REDIRECT_URI", "https://api-staging.vocanova.site/auth/oauth/google/callback")
+	t.Setenv("SESSION_COOKIE_DOMAIN", "staging.vocanova.site")
+	t.Setenv("AI_PROVIDER", "gemini")
+	t.Setenv("AI_PROVIDER_API_KEY", "real-gemini-key")
+	t.Setenv("AI_PROVIDER_BASE_URL", "")
+	t.Setenv("AI_PROVIDER_MODEL", "")
+
+	cfg, err := LoadProductionConfig()
+	require.NoError(t, err)
+	assert.Equal(t, "gemini", cfg.APIProvider)
+	assert.Empty(t, cfg.APIBaseURL, "unset AI_PROVIDER_BASE_URL must stay empty for Gemini so GeminiConfig applies Google's fixed endpoint, never OpenCode's loopback default")
+	assert.Equal(t, "gemini-2.5-flash", cfg.APIModel, "unset AI_PROVIDER_MODEL must default to Gemini's own model when AI_PROVIDER=gemini")
+
+	feedback, safety := buildAIProviders(cfg)
+	_, ok := feedback.(*aifeedback.GeminiFeedbackProvider)
+	require.True(t, ok, "the minimal documented Gemini opt-in (provider + key only) must select the real Gemini feedback provider")
+	sc, ok := safety.(*aifeedback.CompositeSafetyClassifier)
+	require.True(t, ok)
+	_, ok = sc.Provider().(*aifeedback.GeminiModerationProvider)
+	require.True(t, ok, "the minimal documented Gemini opt-in must select the real Gemini moderation provider")
+}
+
+// TestLoadProductionConfig_GeminiHonorsExplicitEndpointOverrides covers the
+// other half of VOC-035-D02: an operator who deliberately sets
+// AI_PROVIDER_BASE_URL / AI_PROVIDER_MODEL while running Gemini keeps
+// their override (test harness or Gemini-compatible proxy), so the
+// provider-aware defaulting only fills the unset case.
+func TestLoadProductionConfig_GeminiHonorsExplicitEndpointOverrides(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://example/db")
+	t.Setenv("BASE_URL", "https://staging.vocanova.site")
+	t.Setenv("OAUTH_REDIRECT_URI", "https://api-staging.vocanova.site/auth/oauth/google/callback")
+	t.Setenv("SESSION_COOKIE_DOMAIN", "staging.vocanova.site")
+	t.Setenv("AI_PROVIDER", "gemini")
+	t.Setenv("AI_PROVIDER_API_KEY", "real-gemini-key")
+	t.Setenv("AI_PROVIDER_BASE_URL", "https://gemini-proxy.example.com")
+	t.Setenv("AI_PROVIDER_MODEL", "gemini-2.5-pro")
+
+	cfg, err := LoadProductionConfig()
+	require.NoError(t, err)
+	assert.Equal(t, "https://gemini-proxy.example.com", cfg.APIBaseURL)
+	assert.Equal(t, "gemini-2.5-pro", cfg.APIModel)
+}
+
+// TestLoadProductionConfig_OpenCodeDefaultsUnchangedByGeminiDefaulting
+// proves the provider-aware defaulting did not move OpenCode's own
+// defaults: the default provider still resolves the loopback
+// `opencode serve` base URL and OpenCode's own model identifier.
+func TestLoadProductionConfig_OpenCodeDefaultsUnchangedByGeminiDefaulting(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://example/db")
+	t.Setenv("BASE_URL", "https://staging.vocanova.site")
+	t.Setenv("OAUTH_REDIRECT_URI", "https://api-staging.vocanova.site/auth/oauth/google/callback")
+	t.Setenv("SESSION_COOKIE_DOMAIN", "staging.vocanova.site")
+	t.Setenv("AI_PROVIDER", "")
+	t.Setenv("AI_PROVIDER_BASE_URL", "")
+	t.Setenv("AI_PROVIDER_MODEL", "")
+
+	cfg, err := LoadProductionConfig()
+	require.NoError(t, err)
+	assert.Equal(t, string(aifeedback.ProviderOpenCode), cfg.APIProvider)
+	assert.Equal(t, "http://127.0.0.1:4096", cfg.APIBaseURL)
+	assert.Equal(t, aifeedback.DefaultOpenCodeModel, cfg.APIModel)
+}
+
 // TestBuildAIProviders_FallsBackToMockWhenAPIKeyEmpty covers the first
 // VOC-034-D00 fallback rule: when AI_PROVIDER=opencode but
 // AI_PROVIDER_API_KEY is unset, the production wiring falls back to

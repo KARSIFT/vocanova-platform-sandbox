@@ -70,6 +70,50 @@ type ProductionConfig struct {
 	GoogleOAuthTimeout time.Duration
 }
 
+// AI-provider identifiers and per-provider connection defaults.
+// providerGemini has no aifeedback-package constant yet (adding one
+// would touch aifeedback.go, outside VOC-035-T01's declared file set),
+// so the selector value is named here instead of repeated as a literal.
+const (
+	providerGemini = "gemini"
+
+	// defaultOpenCodeBaseURL is the loopback `opencode serve` host an
+	// operator-hosted OpenCode deployment runs on.
+	defaultOpenCodeBaseURL = "http://127.0.0.1:4096"
+
+	// defaultGeminiModel mirrors aifeedback's own internal Gemini model
+	// default. It is repeated here (rather than read from aifeedback)
+	// so ServiceConfig telemetry records the model actually used instead
+	// of an empty string when AI_PROVIDER_MODEL is unset.
+	defaultGeminiModel = "gemini-2.5-flash"
+)
+
+// aiProviderBaseURL resolves AI_PROVIDER_BASE_URL for the selected
+// provider (VOC-035-D02). OpenCode has no usable endpoint without one,
+// so it keeps its loopback default. Gemini's REST endpoint is a fixed,
+// well-known Google host that aifeedback.GeminiConfig defaults
+// internally, so an unset variable must stay empty here - inheriting
+// OpenCode's loopback default would silently point Gemini requests at
+// the OpenCode host. An explicitly-set value is still honored for
+// either provider (test harness or Gemini-compatible proxy).
+func aiProviderBaseURL(provider string) string {
+	if provider == providerGemini {
+		return os.Getenv("AI_PROVIDER_BASE_URL")
+	}
+	return getenv("AI_PROVIDER_BASE_URL", defaultOpenCodeBaseURL)
+}
+
+// aiProviderModel resolves AI_PROVIDER_MODEL for the selected provider
+// (VOC-035-D02): the model identifier namespaces differ per provider,
+// so an unset variable defaults to that provider's own model rather
+// than to OpenCode's for every provider.
+func aiProviderModel(provider string) string {
+	if provider == providerGemini {
+		return getenv("AI_PROVIDER_MODEL", defaultGeminiModel)
+	}
+	return getenv("AI_PROVIDER_MODEL", aifeedback.DefaultOpenCodeModel)
+}
+
 // LoadProductionConfig reads the production configuration from the
 // process environment. It never falls back to silent defaults for
 // required values: a missing PORT / DATABASE_URL / SESSION_COOKIE_DOMAIN
@@ -79,6 +123,7 @@ type ProductionConfig struct {
 // founder can flip any individual flag off without re-deploying by
 // setting the corresponding env var to "false" (DOC-11 §3).
 func LoadProductionConfig() (ProductionConfig, error) {
+	aiProvider := getenv("AI_PROVIDER", string(aifeedback.ProviderOpenCode))
 	cfg := ProductionConfig{
 		Port:            getenv("PORT", "8080"),
 		DatabaseURL:     os.Getenv("DATABASE_URL"),
@@ -89,10 +134,10 @@ func LoadProductionConfig() (ProductionConfig, error) {
 		SessionDomain:   os.Getenv("SESSION_COOKIE_DOMAIN"),
 		SessionSecure:   getenvBool("SESSION_COOKIE_SECURE", true),
 		SessionLifetime: getenvDuration("SESSION_LIFETIME", 30*24*time.Hour),
-		APIProvider:     getenv("AI_PROVIDER", string(aifeedback.ProviderOpenCode)),
-		APIBaseURL:      getenv("AI_PROVIDER_BASE_URL", "http://127.0.0.1:4096"),
+		APIProvider:     aiProvider,
+		APIBaseURL:      aiProviderBaseURL(aiProvider),
 		APIKey:          os.Getenv("AI_PROVIDER_API_KEY"),
-		APIModel:        getenv("AI_PROVIDER_MODEL", aifeedback.DefaultOpenCodeModel),
+		APIModel:        aiProviderModel(aiProvider),
 		APITimeout:      getenvDuration("AI_PROVIDER_TIMEOUT", 8*time.Second),
 		AIEnabled:       getenvBool("AI_FEATURES_ENABLED", true),
 		MagicLinkOn:     getenvBool("EMAIL_MAGIC_LINK_ENABLED", true),
@@ -311,6 +356,18 @@ func buildOAuthProvider(cfg ProductionConfig) (auth.OAuthProvider, error) {
 //     fallback behavior exactly - the mock already implements both
 //     FeedbackProvider and ModerationProvider (see aifeedback.go).
 //
+// Each real branch builds one shared per-provider config struct
+// (OpenCodeConfig or GeminiConfig) that both roles read, so no
+// configuration can mix one provider's feedback adapter with another
+// provider's moderation adapter. cfg.APIProvider's literal value is
+// the sole selector, so exactly one branch is ever active
+// (VOC-035-D00). The Gemini branch passes cfg.APIBaseURL through
+// as-is: LoadProductionConfig leaves it empty unless
+// AI_PROVIDER_BASE_URL is explicitly set when AI_PROVIDER=gemini, so
+// GeminiConfig applies Google's own endpoint default, while an
+// operator who deliberately sets the variable keeps their override
+// (VOC-035-D02).
+//
 // Both branches build the safety classifier via
 // NewCompositeSafetyClassifier(NewDefaultLocalAbuseChecker(), provider)
 // so the deterministic local checks run before any provider call
@@ -345,7 +402,7 @@ func buildAIProviders(cfg ProductionConfig) (aifeedback.FeedbackProvider, aifeed
 				aifeedback.NewOpenCodeModerationProvider(openCodeCfg),
 			)
 	}
-	if cfg.APIProvider == "gemini" && cfg.APIKey != "" {
+	if cfg.APIProvider == providerGemini && cfg.APIKey != "" {
 		geminiCfg := aifeedback.GeminiConfig{
 			APIKey:     cfg.APIKey,
 			Model:      cfg.APIModel,
