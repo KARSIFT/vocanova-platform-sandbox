@@ -48,6 +48,7 @@ type ProductionConfig struct {
 	APIProvider     string
 	APIBaseURL      string
 	APIKey          string
+	APIAccountID    string
 	APIModel        string
 	OpenAIAPIKey    string
 	APIProviderID   string
@@ -75,7 +76,8 @@ type ProductionConfig struct {
 // would touch aifeedback.go, outside VOC-035-T01's declared file set),
 // so the selector value is named here instead of repeated as a literal.
 const (
-	providerGemini = "gemini"
+	providerGemini     = "gemini"
+	providerCloudflare = "cloudflare"
 
 	// defaultOpenCodeBaseURL is the loopback `opencode serve` host an
 	// operator-hosted OpenCode deployment runs on.
@@ -86,18 +88,21 @@ const (
 	// so ServiceConfig telemetry records the model actually used instead
 	// of an empty string when AI_PROVIDER_MODEL is unset.
 	defaultGeminiModel = "gemini-2.5-flash"
+
+	// defaultCloudflareModel mirrors aifeedback's internal Cloudflare
+	// model default so telemetry still records a concrete value when
+	// AI_PROVIDER_MODEL is unset.
+	defaultCloudflareModel = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
 )
 
 // aiProviderBaseURL resolves AI_PROVIDER_BASE_URL for the selected
-// provider (VOC-035-D02). OpenCode has no usable endpoint without one,
-// so it keeps its loopback default. Gemini's REST endpoint is a fixed,
-// well-known Google host that aifeedback.GeminiConfig defaults
-// internally, so an unset variable must stay empty here - inheriting
-// OpenCode's loopback default would silently point Gemini requests at
-// the OpenCode host. An explicitly-set value is still honored for
-// either provider (test harness or Gemini-compatible proxy).
+// provider. OpenCode has no usable endpoint without one, so it keeps
+// its loopback default. Gemini and Cloudflare both have fixed provider
+// hosts in their own config defaults, so an unset variable must stay
+// empty here instead of inheriting OpenCode's loopback default.
+// An explicitly-set value is still honored for any provider.
 func aiProviderBaseURL(provider string) string {
-	if provider == providerGemini {
+	if provider == providerGemini || provider == providerCloudflare {
 		return os.Getenv("AI_PROVIDER_BASE_URL")
 	}
 	return getenv("AI_PROVIDER_BASE_URL", defaultOpenCodeBaseURL)
@@ -110,6 +115,9 @@ func aiProviderBaseURL(provider string) string {
 func aiProviderModel(provider string) string {
 	if provider == providerGemini {
 		return getenv("AI_PROVIDER_MODEL", defaultGeminiModel)
+	}
+	if provider == providerCloudflare {
+		return getenv("AI_PROVIDER_MODEL", defaultCloudflareModel)
 	}
 	return getenv("AI_PROVIDER_MODEL", aifeedback.DefaultOpenCodeModel)
 }
@@ -137,6 +145,7 @@ func LoadProductionConfig() (ProductionConfig, error) {
 		APIProvider:     aiProvider,
 		APIBaseURL:      aiProviderBaseURL(aiProvider),
 		APIKey:          os.Getenv("AI_PROVIDER_API_KEY"),
+		APIAccountID:    os.Getenv("AI_PROVIDER_ACCOUNT_ID"),
 		APIModel:        aiProviderModel(aiProvider),
 		APITimeout:      getenvDuration("AI_PROVIDER_TIMEOUT", 8*time.Second),
 		AIEnabled:       getenvBool("AI_FEATURES_ENABLED", true),
@@ -350,6 +359,10 @@ func buildOAuthProvider(cfg ProductionConfig) (auth.OAuthProvider, error) {
 //   - When AI_PROVIDER=gemini AND AI_PROVIDER_API_KEY is set, return a
 //     real GeminiFeedbackProvider and a CompositeSafetyClassifier
 //     wrapping a real GeminiModerationProvider.
+//   - When AI_PROVIDER=cloudflare AND both AI_PROVIDER_API_KEY and
+//     AI_PROVIDER_ACCOUNT_ID are set, return a real
+//     CloudflareFeedbackProvider and a CompositeSafetyClassifier
+//     wrapping a real CloudflareModerationProvider.
 //   - When those conditions are false, return aifeedback.NewMockProvider()
 //     for the feedback role and a CompositeSafetyClassifier wrapping
 //     MockProvider for the moderation role. This preserves the prior
@@ -417,7 +430,23 @@ func buildAIProviders(cfg ProductionConfig) (aifeedback.FeedbackProvider, aifeed
 				aifeedback.NewGeminiModerationProvider(geminiCfg),
 			)
 	}
-	fmt.Fprintf(os.Stderr, "api: ai feedback=MockProvider ai moderation=MockProvider (AI_PROVIDER not configured for a real provider or AI_PROVIDER_API_KEY unset; AI features fall back to in-memory mock)\n")
+	if cfg.APIProvider == providerCloudflare && cfg.APIKey != "" && cfg.APIAccountID != "" {
+		cloudflareCfg := aifeedback.CloudflareConfig{
+			APIToken:   cfg.APIKey,
+			AccountID:  cfg.APIAccountID,
+			Model:      cfg.APIModel,
+			BaseURL:    cfg.APIBaseURL,
+			Timeout:    cfg.APITimeout,
+			MaxRetries: 1,
+		}
+		fmt.Fprintf(os.Stderr, "api: ai feedback=CloudflareFeedbackProvider ai moderation=CloudflareModerationProvider (provider=cloudflare)\n")
+		return aifeedback.NewCloudflareFeedbackProvider(cloudflareCfg),
+			aifeedback.NewCompositeSafetyClassifier(
+				aifeedback.NewDefaultLocalAbuseChecker(),
+				aifeedback.NewCloudflareModerationProvider(cloudflareCfg),
+			)
+	}
+	fmt.Fprintf(os.Stderr, "api: ai feedback=MockProvider ai moderation=MockProvider (AI_PROVIDER not configured for a complete real-provider config; AI features fall back to in-memory mock)\n")
 	return aifeedback.NewMockProvider(),
 		aifeedback.NewCompositeSafetyClassifier(
 			aifeedback.NewDefaultLocalAbuseChecker(),

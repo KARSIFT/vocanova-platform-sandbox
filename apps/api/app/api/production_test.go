@@ -53,6 +53,7 @@ func newProductionTestConfig() ProductionConfig {
 		APIProvider:     "opencode",
 		APIBaseURL:      "http://127.0.0.1:4096",
 		APIKey:          "test-key",
+		APIAccountID:    "",
 		APIModel:        "opencode-go/deepseek-v4-pro",
 		APITimeout:      8 * time.Second,
 		AIEnabled:       true,
@@ -624,6 +625,90 @@ func TestBuildAIProviders_GeminiFallsBackToMockWhenKeyMissing(t *testing.T) {
 	assert.True(t, ok, "missing AI_PROVIDER_API_KEY must fall back to MockProvider for Gemini moderation rather than pass a nil provider")
 }
 
+func TestBuildAIProviders_BuildsRealCloudflareProvidersWhenConfigured(t *testing.T) {
+	cfg := newProductionTestConfig()
+	cfg.APIProvider = "cloudflare"
+	cfg.APIKey = "test-cloudflare-token"
+	cfg.APIAccountID = "account-123"
+	cfg.APIBaseURL = "https://api.cloudflare.com/client/v4"
+	cfg.APIModel = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+	cfg.APITimeout = 7 * time.Second
+
+	feedback, safety := buildAIProviders(cfg)
+	require.NotNil(t, feedback)
+	require.NotNil(t, safety)
+
+	_, ok := feedback.(*aifeedback.CloudflareFeedbackProvider)
+	require.True(t, ok, "configured Cloudflare path must produce a real *aifeedback.CloudflareFeedbackProvider")
+
+	sc, ok := safety.(*aifeedback.CompositeSafetyClassifier)
+	require.True(t, ok)
+	_, ok = sc.Provider().(*aifeedback.CloudflareModerationProvider)
+	require.True(t, ok, "configured Cloudflare path must produce a composite classifier wrapping *aifeedback.CloudflareModerationProvider")
+}
+
+func TestBuildAIProviders_CloudflareFallsBackToMockWhenTokenMissing(t *testing.T) {
+	cfg := newProductionTestConfig()
+	cfg.APIProvider = "cloudflare"
+	cfg.APIKey = ""
+	cfg.APIAccountID = "account-123"
+
+	feedback, safety := buildAIProviders(cfg)
+	require.NotNil(t, feedback)
+	require.NotNil(t, safety)
+
+	_, ok := feedback.(*aifeedback.MockProvider)
+	assert.True(t, ok, "missing AI_PROVIDER_API_KEY must fall back to MockProvider for Cloudflare feedback")
+
+	sc, ok := safety.(*aifeedback.CompositeSafetyClassifier)
+	require.True(t, ok)
+	_, ok = sc.Provider().(*aifeedback.MockProvider)
+	assert.True(t, ok, "missing AI_PROVIDER_API_KEY must fall back to MockProvider for Cloudflare moderation")
+}
+
+func TestBuildAIProviders_CloudflareFallsBackToMockWhenAccountIDMissing(t *testing.T) {
+	cfg := newProductionTestConfig()
+	cfg.APIProvider = "cloudflare"
+	cfg.APIKey = "test-cloudflare-token"
+	cfg.APIAccountID = ""
+
+	feedback, safety := buildAIProviders(cfg)
+	require.NotNil(t, feedback)
+	require.NotNil(t, safety)
+
+	_, ok := feedback.(*aifeedback.MockProvider)
+	assert.True(t, ok, "missing AI_PROVIDER_ACCOUNT_ID must fall back to MockProvider for Cloudflare feedback")
+
+	sc, ok := safety.(*aifeedback.CompositeSafetyClassifier)
+	require.True(t, ok)
+	_, ok = sc.Provider().(*aifeedback.MockProvider)
+	assert.True(t, ok, "missing AI_PROVIDER_ACCOUNT_ID must fall back to MockProvider for Cloudflare moderation")
+}
+
+func TestBuildAIProviders_OpenCodeAndGeminiBranchesUnchangedByCloudflareAddition(t *testing.T) {
+	openCodeCfg := newProductionTestConfig()
+	openCodeCfg.APIProvider = string(aifeedback.ProviderOpenCode)
+	openCodeCfg.APIKey = "test-opencode-key"
+	openCodeFeedback, openCodeSafety := buildAIProviders(openCodeCfg)
+	_, ok := openCodeFeedback.(*aifeedback.OpenCodeFeedbackProvider)
+	require.True(t, ok, "OpenCode selection must remain unchanged after adding Cloudflare")
+	openCodeComposite, ok := openCodeSafety.(*aifeedback.CompositeSafetyClassifier)
+	require.True(t, ok)
+	_, ok = openCodeComposite.Provider().(*aifeedback.OpenCodeModerationProvider)
+	require.True(t, ok, "OpenCode moderation selection must remain unchanged after adding Cloudflare")
+
+	geminiCfg := newProductionTestConfig()
+	geminiCfg.APIProvider = "gemini"
+	geminiCfg.APIKey = "test-gemini-key"
+	geminiFeedback, geminiSafety := buildAIProviders(geminiCfg)
+	_, ok = geminiFeedback.(*aifeedback.GeminiFeedbackProvider)
+	require.True(t, ok, "Gemini selection must remain unchanged after adding Cloudflare")
+	geminiComposite, ok := geminiSafety.(*aifeedback.CompositeSafetyClassifier)
+	require.True(t, ok)
+	_, ok = geminiComposite.Provider().(*aifeedback.GeminiModerationProvider)
+	require.True(t, ok, "Gemini moderation selection must remain unchanged after adding Cloudflare")
+}
+
 func TestBuildAIProviders_OpenCodeBranchUnchangedByGeminiAddition(t *testing.T) {
 	cfg := newProductionTestConfig()
 	cfg.APIProvider = string(aifeedback.ProviderOpenCode)
@@ -695,6 +780,25 @@ func TestLoadProductionConfig_GeminiHonorsExplicitEndpointOverrides(t *testing.T
 	require.NoError(t, err)
 	assert.Equal(t, "https://gemini-proxy.example.com", cfg.APIBaseURL)
 	assert.Equal(t, "gemini-2.5-pro", cfg.APIModel)
+}
+
+func TestLoadProductionConfig_CloudflareDefaultsAndAccountID(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://example/db")
+	t.Setenv("BASE_URL", "https://staging.vocanova.site")
+	t.Setenv("OAUTH_REDIRECT_URI", "https://api-staging.vocanova.site/auth/oauth/google/callback")
+	t.Setenv("SESSION_COOKIE_DOMAIN", "staging.vocanova.site")
+	t.Setenv("AI_PROVIDER", "cloudflare")
+	t.Setenv("AI_PROVIDER_API_KEY", "test-cloudflare-token")
+	t.Setenv("AI_PROVIDER_ACCOUNT_ID", "account-123")
+	t.Setenv("AI_PROVIDER_BASE_URL", "")
+	t.Setenv("AI_PROVIDER_MODEL", "")
+
+	cfg, err := LoadProductionConfig()
+	require.NoError(t, err)
+	assert.Equal(t, "cloudflare", cfg.APIProvider)
+	assert.Equal(t, "account-123", cfg.APIAccountID)
+	assert.Empty(t, cfg.APIBaseURL, "unset AI_PROVIDER_BASE_URL must stay empty for Cloudflare so CloudflareConfig can apply its endpoint default")
+	assert.Equal(t, "@cf/meta/llama-3.3-70b-instruct-fp8-fast", cfg.APIModel, "unset AI_PROVIDER_MODEL must default to Cloudflare's model when AI_PROVIDER=cloudflare")
 }
 
 // TestLoadProductionConfig_OpenCodeDefaultsUnchangedByGeminiDefaulting
@@ -825,6 +929,7 @@ func TestLoadProductionConfig_ReadsAIProviderEnvVars(t *testing.T) {
 	t.Setenv("AI_PROVIDER", "opencode")
 	t.Setenv("AI_PROVIDER_BASE_URL", "https://opencode-staging.vocanova.site")
 	t.Setenv("AI_PROVIDER_API_KEY", "real-opencode-key")
+	t.Setenv("AI_PROVIDER_ACCOUNT_ID", "unused-for-opencode")
 	t.Setenv("AI_PROVIDER_MODEL", "opencode-go/hy3")
 	t.Setenv("AI_PROVIDER_TIMEOUT", "7s")
 
@@ -833,6 +938,7 @@ func TestLoadProductionConfig_ReadsAIProviderEnvVars(t *testing.T) {
 	assert.Equal(t, "opencode", cfg.APIProvider)
 	assert.Equal(t, "https://opencode-staging.vocanova.site", cfg.APIBaseURL)
 	assert.Equal(t, "real-opencode-key", cfg.APIKey)
+	assert.Equal(t, "unused-for-opencode", cfg.APIAccountID)
 	assert.Equal(t, "opencode-go/hy3", cfg.APIModel)
 	assert.Equal(t, 7*time.Second, cfg.APITimeout)
 }
