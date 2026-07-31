@@ -162,20 +162,21 @@ error code, or any file outside `apps/api`.
 
 ## VOC-035-AC-10 — Live Gemini evaluation is recorded honestly, pass or fail, once the founder provisions a key
 
-After `VOC-035-T00`–`T02` merge and the founder provisions a free Gemini API
-key at `aistudio.google.com`, `VOC-035-T03`'s live run of the extended
-`cmd/eval-live` against the real Gemini API is recorded in this package's own
-`staging-evidence.md`, including every `LiveEvaluationReport` field (per-
-threshold values, violations if any, latency statistics, provider-call count,
-cost fields), with an honest pass/fail/violation outcome. **No pass is
-asserted or implied anywhere in this package until this live run has actually
-executed** — this criterion's `Result` field stays `pending — blocked by
-VOC-035-DEP-00` until then, mirroring `VOC-034-AC-10`'s and `VOC-032`'s own
-"do not fabricate a pass" discipline.
+`VOC-035-T03`'s live run of the extended `cmd/eval-live` against the real
+Gemini API is recorded in this package's own `staging-evidence.md`, including
+every `LiveEvaluationReport` field (per-threshold values, violations if any,
+latency statistics, provider-call count, cost fields), with an honest
+pass/fail/violation outcome. **No pass is asserted or implied** — the live
+run executed (twice, 2026-08-01) and failed both times; see `staging-
+evidence.md`'s `EV-22`-equivalent section for the full record, including a
+real defect found in `T00`'s shipped default model and a rate-limiting
+finding on the substituted working model. Per the founder's explicit
+decision, this FAIL is recorded as the result, not retried further this
+round.
 
 - Requirement source: founder request ("recording the result honestly in this
   package's own staging-evidence.md... do not fabricate a pass")
 - Tasks: `VOC-035-T03`
 - Tests: `VOC-035-TEST-10`
 - Evidence: `VOC-035-EV-04`
-- Result: pending — blocked by `VOC-035-DEP-00`
+- Result: fail
