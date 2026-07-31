@@ -18,7 +18,7 @@ honestly, not retried until a pass appeared.**
   keys by the time this ran) and a second, more informative failure once a
   working model was substituted.
 
-## `EV-22`-equivalent — Live Gemini AI evaluation pass
+## `EV-22`-equivalent — Live Gemini AI evaluation result
 
 **Result: FAIL.** Run twice, 2026-08-01, once `VOC-035-DEP-00` was confirmed
 resolved and `T00`–`T02` had merged.
@@ -61,6 +61,45 @@ anything about Gemini's quality.
 - Cost: `$0.00` (free tier; `CostCeilingUSD=0.25`, not exceeded)
 - Result: **FAIL** — every threshold `0.000`
 
+Full verbatim `FormatLiveEvaluationReport` output, run 1:
+
+```
+=== T10 Live AI Evaluation Report ===
+Provider: unknown
+Model:
+Dataset: initial-dataset-v1
+Spec: doc09-v1
+StartedAt: 2026-07-31T20:02:59Z
+FinishedAt: 2026-07-31T20:03:05Z
+Duration: 6.501565153s
+ProviderCalls: 56
+EstimatedInputChars: 75370
+EstimatedOutputChars: 0
+CostUSD: -1.00
+CostCeilingUSD: 0.25
+CostCeilingExceeded: false
+LatencyMin: 71.731699ms
+LatencyMax: 199.532321ms
+LatencyMean: 116.074293ms
+LatencyP50: 112.412994ms
+LatencyP95: 154.423491ms
+OperatorNotes: VOC-035-T03 live evaluation, dispatched via diagnostic workflow
+--- Per-threshold computed values ---
+DatasetVersion=initial-dataset-v1 Total=56 Validated=56 ProviderCalled=0 Intercepted=0 Matched=0 ExpectedTotal=56
+Per-class: correctness=0/28, incorrect_target_use=0/0, self_harm_intercepted=0/0, safety_violations=0/0
+Correct-expected breakdown: got_correct=0, got_needs_improvement=0, got_incorrect=0, intercepted=0 (of 28)
+Repair: not tracked (run did not record repair attempts)
+Meaning: not tracked (run did not record corrected-sentence text comparison)
+Result: FAIL (3 tracked threshold(s) violated)
+  - structured_output_valid_first_response: observed=0.000 (0/56) spec=>= 0.990 (min)
+    structured-output valid first response 0.000 below spec >= 0.990 (provider returned valid feedback for 0 of 56 validated cases)
+  - overall_status_accuracy: observed=0.000 (0/56) spec=>= 0.900 (min)
+    overall status accuracy 0.000 below spec >= 0.900 (matched 0 of 56 cases with expectations)
+  - clearly_correct_accuracy: observed=0.000 (0/28) spec=>= 0.950 (min)
+    clearly-correct accuracy 0.000 below spec >= 0.950 (0 of 28 correctness cases matched)
+=== Result: FAIL (3 tracked threshold(s) violated) ===
+```
+
 ### Run 2 — `gemini-flash-latest` (working model, substituted for diagnosis only): still FAIL, but with real signal
 
 A raw API probe (outside the harness) confirmed `gemini-flash-latest` and
@@ -85,6 +124,45 @@ Re-running the full 56-case evaluation with `--model gemini-flash-latest`:
 - Result: **FAIL** — `structured_output_valid_first_response` 0.196 (11/56,
   need ≥0.990), `overall_status_accuracy` 0.179 (10/56, need ≥0.900),
   `clearly_correct_accuracy` 0.179 (5/28, need ≥0.950)
+
+Full verbatim `FormatLiveEvaluationReport` output, run 2:
+
+```
+=== T10 Live AI Evaluation Report ===
+Provider: unknown
+Model:
+Dataset: initial-dataset-v1
+Spec: doc09-v1
+StartedAt: 2026-07-31T20:10:37Z
+FinishedAt: 2026-07-31T20:11:53Z
+Duration: 1m16.197979784s
+ProviderCalls: 56
+EstimatedInputChars: 75370
+EstimatedOutputChars: 1801
+CostUSD: -1.00
+CostCeilingUSD: 0.25
+CostCeilingExceeded: false
+LatencyMin: 164.810673ms
+LatencyMax: 12.005086117s
+LatencyMean: 1.360654045s
+LatencyP50: 249.233101ms
+LatencyP95: 6.851370092s
+OperatorNotes: VOC-035-T03 live evaluation, dispatched via diagnostic workflow - model overridden to gemini-flash-latest, gemini-2.5-flash is blocked for new API keys (HTTP 404, confirmed live)
+--- Per-threshold computed values ---
+DatasetVersion=initial-dataset-v1 Total=56 Validated=56 ProviderCalled=11 Intercepted=0 Matched=10 ExpectedTotal=56
+Per-class: correctness=5/28, incorrect_target_use=0/0, self_harm_intercepted=0/0, safety_violations=0/0
+Correct-expected breakdown: got_correct=5, got_needs_improvement=1, got_incorrect=0, intercepted=0 (of 28)
+Repair: not tracked (run did not record repair attempts)
+Meaning: not tracked (run did not record corrected-sentence text comparison)
+Result: FAIL (3 tracked threshold(s) violated)
+  - structured_output_valid_first_response: observed=0.196 (11/56) spec=>= 0.990 (min)
+    structured-output valid first response 0.196 below spec >= 0.990 (provider returned valid feedback for 11 of 56 validated cases)
+  - overall_status_accuracy: observed=0.179 (10/56) spec=>= 0.900 (min)
+    overall status accuracy 0.179 below spec >= 0.900 (matched 10 of 56 cases with expectations)
+  - clearly_correct_accuracy: observed=0.179 (5/28) spec=>= 0.950 (min)
+    clearly-correct accuracy 0.179 below spec >= 0.950 (5 of 28 correctness cases matched)
+=== Result: FAIL (3 tracked threshold(s) violated) ===
+```
 
 ### Disposition
 
