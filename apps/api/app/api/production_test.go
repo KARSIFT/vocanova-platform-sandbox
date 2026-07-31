@@ -584,6 +584,64 @@ func TestBuildAIProviders_BuildsRealOpenCodeProvidersWhenConfigured(t *testing.T
 	_ = mp
 }
 
+func TestBuildAIProviders_BuildsRealGeminiProvidersWhenConfigured(t *testing.T) {
+	cfg := newProductionTestConfig()
+	cfg.APIProvider = "gemini"
+	cfg.APIKey = "test-key"
+	cfg.APIBaseURL = "https://generativelanguage.googleapis.com"
+	cfg.APIModel = "gemini-2.5-flash"
+	cfg.APITimeout = 7 * time.Second
+
+	feedback, safety := buildAIProviders(cfg)
+	require.NotNil(t, feedback, "buildAIProviders must never return a nil feedback provider on the configured path")
+	require.NotNil(t, safety, "buildAIProviders must never return a nil safety classifier on the configured path")
+
+	_, ok := feedback.(*aifeedback.GeminiFeedbackProvider)
+	require.True(t, ok, "configured Gemini path must produce a real *aifeedback.GeminiFeedbackProvider")
+
+	sc, ok := safety.(*aifeedback.CompositeSafetyClassifier)
+	require.True(t, ok, "configured path must produce a real *aifeedback.CompositeSafetyClassifier")
+
+	_, ok = sc.Provider().(*aifeedback.GeminiModerationProvider)
+	require.True(t, ok, "composite safety classifier must wrap a real *aifeedback.GeminiModerationProvider on the configured Gemini path")
+}
+
+func TestBuildAIProviders_GeminiFallsBackToMockWhenKeyMissing(t *testing.T) {
+	cfg := newProductionTestConfig()
+	cfg.APIProvider = "gemini"
+	cfg.APIKey = ""
+
+	feedback, safety := buildAIProviders(cfg)
+	require.NotNil(t, feedback)
+	require.NotNil(t, safety)
+
+	_, ok := feedback.(*aifeedback.MockProvider)
+	assert.True(t, ok, "missing AI_PROVIDER_API_KEY must fall back to MockProvider for Gemini feedback rather than fail")
+
+	sc, ok := safety.(*aifeedback.CompositeSafetyClassifier)
+	require.True(t, ok)
+	_, ok = sc.Provider().(*aifeedback.MockProvider)
+	assert.True(t, ok, "missing AI_PROVIDER_API_KEY must fall back to MockProvider for Gemini moderation rather than pass a nil provider")
+}
+
+func TestBuildAIProviders_OpenCodeBranchUnchangedByGeminiAddition(t *testing.T) {
+	cfg := newProductionTestConfig()
+	cfg.APIProvider = string(aifeedback.ProviderOpenCode)
+	cfg.APIKey = "test-key"
+
+	feedback, safety := buildAIProviders(cfg)
+	require.NotNil(t, feedback)
+	require.NotNil(t, safety)
+
+	_, ok := feedback.(*aifeedback.OpenCodeFeedbackProvider)
+	require.True(t, ok, "OpenCode branch must still produce *aifeedback.OpenCodeFeedbackProvider when configured")
+
+	sc, ok := safety.(*aifeedback.CompositeSafetyClassifier)
+	require.True(t, ok)
+	_, ok = sc.Provider().(*aifeedback.OpenCodeModerationProvider)
+	require.True(t, ok, "OpenCode branch must still wrap *aifeedback.OpenCodeModerationProvider when configured")
+}
+
 // TestBuildAIProviders_FallsBackToMockWhenAPIKeyEmpty covers the first
 // VOC-034-D00 fallback rule: when AI_PROVIDER=opencode but
 // AI_PROVIDER_API_KEY is unset, the production wiring falls back to

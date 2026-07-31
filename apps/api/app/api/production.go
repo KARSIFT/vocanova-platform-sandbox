@@ -301,17 +301,13 @@ func buildOAuthProvider(cfg ProductionConfig) (auth.OAuthProvider, error) {
 //     same condition the prior inline block used to select the real
 //     OpenCodeFeedbackProvider), return a real OpenCodeFeedbackProvider
 //     and a CompositeSafetyClassifier wrapping a real
-//     OpenCodeModerationProvider. This is the missing wiring that
-//     restores real AI-feedback generation on the production
-//     POST /api/v1/sentence-feedback route: every sentence that does
-//     not match a deterministic local weapon/self-harm pattern now
-//     reaches a real model-side classification instead of failing
-//     closed with SAFETY_MODERATION_UNAVAILABLE.
-//   - When that condition is false (AI_PROVIDER is anything other than
-//     "opencode", or AI_PROVIDER_API_KEY is empty), return
-//     aifeedback.NewMockProvider() for the feedback role and a
-//     CompositeSafetyClassifier wrapping MockProvider for the
-//     moderation role. This preserves the prior non-opencode / no-key
+//     OpenCodeModerationProvider.
+//   - When AI_PROVIDER=gemini AND AI_PROVIDER_API_KEY is set, return a
+//     real GeminiFeedbackProvider and a CompositeSafetyClassifier
+//     wrapping a real GeminiModerationProvider.
+//   - When those conditions are false, return aifeedback.NewMockProvider()
+//     for the feedback role and a CompositeSafetyClassifier wrapping
+//     MockProvider for the moderation role. This preserves the prior
 //     fallback behavior exactly - the mock already implements both
 //     FeedbackProvider and ModerationProvider (see aifeedback.go).
 //
@@ -349,7 +345,22 @@ func buildAIProviders(cfg ProductionConfig) (aifeedback.FeedbackProvider, aifeed
 				aifeedback.NewOpenCodeModerationProvider(openCodeCfg),
 			)
 	}
-	fmt.Fprintf(os.Stderr, "api: ai feedback=MockProvider ai moderation=MockProvider (AI_PROVIDER != opencode or AI_PROVIDER_API_KEY unset; AI features fall back to in-memory mock)\n")
+	if cfg.APIProvider == "gemini" && cfg.APIKey != "" {
+		geminiCfg := aifeedback.GeminiConfig{
+			APIKey:     cfg.APIKey,
+			Model:      cfg.APIModel,
+			BaseURL:    cfg.APIBaseURL,
+			Timeout:    cfg.APITimeout,
+			MaxRetries: 1,
+		}
+		fmt.Fprintf(os.Stderr, "api: ai feedback=GeminiFeedbackProvider ai moderation=GeminiModerationProvider (provider=gemini)\n")
+		return aifeedback.NewGeminiFeedbackProvider(geminiCfg),
+			aifeedback.NewCompositeSafetyClassifier(
+				aifeedback.NewDefaultLocalAbuseChecker(),
+				aifeedback.NewGeminiModerationProvider(geminiCfg),
+			)
+	}
+	fmt.Fprintf(os.Stderr, "api: ai feedback=MockProvider ai moderation=MockProvider (AI_PROVIDER not configured for a real provider or AI_PROVIDER_API_KEY unset; AI features fall back to in-memory mock)\n")
 	return aifeedback.NewMockProvider(),
 		aifeedback.NewCompositeSafetyClassifier(
 			aifeedback.NewDefaultLocalAbuseChecker(),
