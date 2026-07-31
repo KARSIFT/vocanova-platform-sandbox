@@ -15,20 +15,21 @@ some future package.
 
 ## Current status
 
-As of adoption (2026-07-28), no task has been implemented. Once `T00`–`T08`,
-`T11`, `T13`, and `T12` merge, their in-repository evidence can be recorded
-here without further external dependency; `T14`/`T15`'s unit-tested code
-paths can too. `T09` (migration/rollback rehearsal) and `T10` (live
-AI-evaluation pass) require the founder-provisioned credentials named in
-`VOC-032-DEP-00` (SSH access), `VOC-032-DEP-01` (Cloudflare certificate/DNS),
-and `VOC-032-DEP-03` (AI-provider staging credentials); `T14`/`T15`'s one
-live send/exchange require `VOC-032-DEP-07` (email-provider/Google-OAuth-
-client credentials) — these are narrower, concrete, credential-shaped
-blockers, not the open-ended "F3 does not exist" blocker every prior
-milestone recorded. No R1-gate-complete declaration is made here, and none
-can be made until every task is implemented, the founder-provisioned
-credentials exist, `T09`/`T10`/`T14`/`T15` actually run, and the founder
-completes staging acceptance per DOC-12 §5.
+`T00`–`T08`, `T14`, and `T15` have merged; `T12` has merged and recorded
+this document's gate-readiness summary. `T11` and `T13` remain open follow-
+ups (see their own divergence notes below). `VOC-032-DEP-00` (SSH access),
+`VOC-032-DEP-01` (Cloudflare certificate/DNS), and `VOC-032-DEP-03`
+(AI-provider staging credentials) are now resolved.
+`T09`'s migration/rollback rehearsal ran and passed (see `EV-21` below,
+including the disclosed caveat about the state the disposable copy was
+taken in). `T10`'s live AI-evaluation run and result are recorded in `T10`'s
+own evidence update, a separate change not yet merged into this document —
+this document does not assert an `EV-22` outcome. `T14`/`T15`'s one live
+send/exchange still require `VOC-032-DEP-07` (email-provider/Google-OAuth-
+client credentials). No R1-gate-complete declaration is made here, and none
+can be made until `T10`'s `EV-22` result is recorded here, `T14`/`T15`'s
+live evidence is recorded, and the founder completes staging acceptance per
+DOC-12 §5.
 
 ## Planned in-repository evidence (produced by `T00`–`T12`, recorded as each task merges)
 
@@ -233,6 +234,22 @@ The observed sentence-feedback latency was `13,423 ms`; this does not
 invalidate `EV-21`'s reachability, persistence, rollback, and cleanup
 criteria, and is carried explicitly to `T10` for evaluation against its
 release-blocking thresholds.
+
+**Disclosed limitation:** the rollback rehearsal (2026-07-30) and the
+core-loop exercise (2026-07-31) did not happen in the order `T09`'s own
+procedure describes (core-loop writes, then snapshot, then rollback/
+replay) — the disposable copy was taken from the live database while it
+held zero application rows (see above), a day before staging AI was
+enabled and the core-loop rows were created and deleted directly against
+the live database. Consequently, no `.down.sql.example` in this repository
+has been executed against populated tables, and the forward re-apply's "no
+unintended data loss" claim is satisfied vacuously (there was no data to
+lose) rather than by observing a populated table survive a down/up cycle.
+`AC-09`'s literal wording is still met — reachability, rollback, forward
+re-apply, and cleanup were all genuinely exercised — but this is weaker
+assurance than a populated-table rollback would give, and the gate-
+readiness summary below states this plainly rather than implying the
+stronger claim.
 
 ### `EV-22` — Live-provider AI evaluation pass
 
@@ -979,11 +996,11 @@ summary, exactly as `AC-12` requires.
 
 | R1 gate item (DOC-12 §5) | Status at the final SHA | How it is satisfied / what remains |
 | --- | --- | --- |
-| **Stable in staging** | **Recorded, not satisfied.** No real staging environment exists yet; `VOC-032-DEP-00` (SSH credentials) and `VOC-032-DEP-01` (Cloudflare certificate / DNS) are still open. The four-service docker-compose stack (`T04`–`T05`) has never been brought up against the real provisioned server. | Founder-owned: requires `DEP-00` and `DEP-01` resolution, then `T07`'s first end-to-end deploy run, then a non-trivial observation period of `/healthz`, `wget` probes, and the core-loop's non-AI paths. Cannot be demonstrated by a code package; requires the real environment. |
-| **No unresolved critical/high blocker** | **Partial.** No `P0`/`P1` defect in this package's own work, but the `T06` follow-ups (invalid `-- atlas:txmode transaction` directive; duplicate `streak_states_user_id_key` index) are recorded as known blockers to `EV-14`'s end-to-end pass. The `T11` and `T13` follow-ups are also recorded as blockers to `AC-11` and `AC-13` respectively. | The `T06` follow-ups are small, file-local edits and are recommended as a tightly-scoped `VOC-033`-T06 PR (see the "T06 follow-ups" section above for the minimum diff). The `T11` and `T13` follow-ups are similarly small. None of these is a critical/high blocker for the `T00`–`T09` build/CI-wiring path, but they are blockers for declaring specific ACs fully satisfied. |
+| **Stable in staging** | **Operational evidence recorded; final acceptance pending.** `VOC-032-DEP-00`/`DEP-01` are resolved. The four-service docker-compose stack deployed successfully to the founder's server; both public HTTPS endpoints returned HTTP 200 and `/healthz` reported `status=ok`/`database=ok` (see `EV-21`). | The deployment and rehearsal evidence are recorded under `EV-21`. The founder still owns the final staging-acceptance decision (below), and `T10`'s open finding separately prevents R1 acceptance now. |
+| **No unresolved critical/high blocker** | **Partial.** The `T06` migration-tooling follow-ups (invalid `-- atlas:txmode transaction` directive; duplicate `streak_states_user_id_key` index) that previously blocked `EV-14`'s end-to-end pass were fixed in `VOC-033` before this rehearsal ran. The `T11` and `T13` follow-ups remain open, recorded as blockers to `AC-11` and `AC-13` respectively; `T10` is now an observed release-blocking live-evaluation finding, tracked separately. | `T11`/`T13` are small, already-scoped follow-ups (see their own sections). `T10`'s finding requires an authorized provider/model or governance decision, tracked on its own issue — not a `T09` blocker. |
 | **All required tests pass** | **Satisfied (in-repo).** `go test ./...` from `apps/api/`, `go vet ./...`, `gofmt -l .`, `go build ./...`, and `bash scripts/governance/validate-governance.sh` all pass at the final SHA. The `apps/web` and `infra` trees are exercised by the `karsift-ai-infra` `ci.yml` reusable workflow, not by `T12`'s in-process check, and their evidence is per-PR. | In-repo check is `T12`'s. The `karsift-ai-infra ci.yml` results are produced by CI, not by `T12`. |
-| **Migration + rollback rehearsed** | **Procedure documented; live execution recorded as blocked.** `T09`'s procedure (apply → exercise → snapshot → roll back on the disposable copy → verify → re-apply forward → record) is fully specified in this document's "Staging exercise plan" section. The live execution itself is blocked on `VOC-032-DEP-00` / `DEP-01` (real server, real DNS). | Founder-owned: requires the real staging server to exist and the deploy to land at least once before the rehearsal can run. The `T06` follow-ups (above) also block the apply half from succeeding against the current migration set; both must close before `T09`'s forward-apply step is non-blocking. |
-| **AI evaluation thresholds pass** | **Mock-provider half satisfied; live-provider half in-repo runnable procedure delivered but live execution recorded as blocked.** `T08`'s `RunGoldenGate` against `aifeedback.NewMockProvider()` passes every DOC-09 §23 threshold that the current `EvaluationResult` shape can measure (the `StructuredOutputValidAfterOneRepair` and `MeaningPreservation` thresholds are correctly reported as "not tracked" because the data shape cannot measure them yet, per `GoldenThresholdSpec.NotTracked` — this is the documented `T08` boundary, not a regression). `T10`'s runnable procedure is in place: the `cmd/eval-live` command and the `aifeedback.RunLiveEvaluation` library function together produce a structured `LiveEvaluationReport` (per-threshold values, violations, wall-clock + per-call latency summary, cost ceiling, operator notes) that the founder will record into the `EV-22` section once the staging AI-provider credentials (`VOC-032-DEP-03`) are provisioned. The live execution itself is blocked on `DEP-03`. | Mock half: `T08`'s `TestGoldenSetThresholdsAgainstMockProvider` + `TestGoldenGateEnforcesViolatedThreshold` + `TestGoldenGatePassesOnCleanFixture` all pass. In-repo runnable procedure: `T10`'s `live_eval_test.go` (12 tests, exercising the library's report shape, the percentile/duration statistics, the cost-ceiling flag, the operator-notes field) and `cmd/eval-live/main_test.go` (12 tests, exercising the cmd's env-var resolution, flag parsing, output-file write, no-leak-APIKey contract, and the three exit codes 0/1/2) all pass against a fake provider; no real OpenCode call is made from CI. Live half: founder-owned, requires `DEP-03` resolution. |
+| **Migration + rollback rehearsed** | **Satisfied, with a disclosed limitation.** The live no-op apply, disposable-copy rollback of all 12 approved down artifacts, full 13-migration forward re-apply, and exact schema comparison all passed on 2026-07-30/31 — see `EV-21` above. The disposable copy was taken while the live database held zero application rows (the core-loop exercise that populates rows ran separately, a day later, directly against the live database, not against the disposable copy) — see `EV-21`'s "Disclosed limitation" note. `AC-09`'s literal criteria are met; a populated-table rollback was not exercised. | Exact commands, timestamps, and the disclosed ordering limitation are recorded under `EV-21`. A future package could re-run steps 3-6 in `T09`'s originally-specified order (core-loop writes before the snapshot) if stronger populated-table rollback assurance is ever required. |
+| **AI evaluation thresholds pass** | **Mock-provider half satisfied; live-provider half's result not yet recorded in this document.** `T08`'s `RunGoldenGate` against `aifeedback.NewMockProvider()` passes every DOC-09 §23 threshold that the current `EvaluationResult` shape can measure (the `StructuredOutputValidAfterOneRepair` and `MeaningPreservation` thresholds are correctly reported as "not tracked" because the data shape cannot measure them yet, per `GoldenThresholdSpec.NotTracked` — this is the documented `T08` boundary, not a regression). `VOC-032-DEP-03` is now resolved; `T10`'s protected live run has been performed, but its result is recorded in `T10`'s own evidence update, a separate change not yet merged into this document. | Mock half: `T08`'s `TestGoldenSetThresholdsAgainstMockProvider` + `TestGoldenGateEnforcesViolatedThreshold` + `TestGoldenGatePassesOnCleanFixture` all pass. Live half: see `T10`'s own tracking issue and evidence update, not this `T09` PR. |
 | **Founder completes staging acceptance** | **Not started — founder-owned, out of scope of any package.** | This is a single human decision by the founder, recorded as a comment on the package's release issue (per the standard `karsift-ai-infra release.yml` flow). It cannot be satisfied by any code change. |
 | **Scope is frozen** | **Satisfied (in this package).** No new product scope introduced; only the `T00`–`T15` and `T12` deliverables. | Inherently a property of the package's own change-control discipline; `T12`'s role is to confirm no PR in this package introduced unapproved scope. |
 
@@ -993,25 +1010,30 @@ The following items are not "passing" at the final SHA and are not
 the founder's call to wave through. Each is a recorded, factual
 limitation:
 
-- **No live staging environment has been brought up.** `T07`'s
-  deploy workflow has not been triggered end-to-end against a
-  real server. `EV-16`/`EV-17` are satisfied in the "YAML
-  valid, build/push succeeds" half only; the "fails closed
-  on bad health check" half is unit-tested but not
-  end-to-end-verified against a real server.
-- **No live Cloudflare TLS verification.** `T05`'s `EV-12`
-  /`EV-13` are satisfied in the "nginx -t validates, Host
-  header routes correctly" half only; the live
-  Cloudflare-issued-certificate verification is blocked on
-  `DEP-01`.
-- **No live migration-and-rollback rehearsal.** `EV-21` is
-  blocked. Procedure documented; execution pending `DEP-00` /
-  `DEP-01` resolution and the `T06` follow-ups closing.
-- **No live AI-evaluation pass.** `EV-22` is blocked on
-  `DEP-03`. The runnable procedure (`cmd/eval-live` +
-  `aifeedback.RunLiveEvaluation` + the structured
-  `LiveEvaluationReport`) is in place; the founder's
-  actions are the only remaining work for this row.
+- **The live staging environment has been brought up.** `T07`'s
+  deploy workflow ran end-to-end against the real server
+  (run `30618654496` and others referenced under `EV-21`).
+  `EV-16`/`EV-17`'s "fails closed on bad health check" half
+  is still exercised only by the unit tests, not by an
+  observed real health-check failure — that half remains
+  end-to-end-unverified, but the happy path is now real,
+  not simulated.
+- **Live Cloudflare TLS is in place.** `T05`'s `EV-12`/`EV-13`
+  were previously satisfied in the "nginx -t validates, Host
+  header routes correctly" half only; `https://staging.
+  vocanova.site/` and `https://api-staging.vocanova.site/`
+  now serve real traffic through Cloudflare (see `EV-21`),
+  confirming the live-certificate half as well.
+- **The live migration-and-rollback rehearsal passed, with a
+  disclosed limitation.** `EV-21` is satisfied — see its
+  "Disclosed limitation" note above for the populated-table
+  caveat.
+- **No live AI-evaluation result recorded in this document
+  yet.** `VOC-032-DEP-03` itself is now resolved, but `T10`'s
+  protected live-evaluation run and its result are recorded
+  in `T10`'s own evidence update, a separate change not yet
+  merged into this document — this PR does not assert an
+  `EV-22` outcome one way or the other.
 - **No live email send.** `EV-28` is blocked on `DEP-07`.
 - **No live Google OAuth exchange.** `EV-30` is blocked on
   `DEP-07`.
@@ -1051,11 +1073,9 @@ final SHA:
   which R1 gate items are package-satisfied and
   which are blocked-on-founder action; the actual
   "approved" decision is not `T12`'s to make.
-- **Resolution of `VOC-032-DEP-00` / `DEP-01` /
-  `DEP-03` / `DEP-07`.** These are credential and
-  DNS provisioning actions the planner/implementer
-  cannot perform; the founder is the only actor
-  with the relevant accounts.
+- **Resolution of `VOC-032-DEP-07`.** The email-provider
+  and Google OAuth credentials remain founder-owned.
+  `DEP-00`, `DEP-01`, and `DEP-03` are now resolved.
 - **The `VOC-032-D03` (staging subdomain naming)
   and `D04` (F3/R1 scope-folding) open decisions
   recorded at adoption.** `D03` was accepted as-is
