@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"strings"
 	"sync"
@@ -56,6 +57,23 @@ func withFakeGeminiProviderPerCall(t *testing.T, build func(cfg aifeedback.Gemin
 	prev := newGeminiProvider
 	newGeminiProvider = build
 	t.Cleanup(func() { newGeminiProvider = prev })
+}
+
+func withFakeCloudflareProviderPerCall(t *testing.T, build func(cfg aifeedback.CloudflareConfig) aifeedback.FeedbackProvider) {
+	t.Helper()
+	prev := newCloudflareProvider
+	newCloudflareProvider = build
+	t.Cleanup(func() { newCloudflareProvider = prev })
+}
+
+func withFakeRunLiveEvaluation(
+	t *testing.T,
+	run func(ctx context.Context, provider aifeedback.FeedbackProvider, opts aifeedback.LiveEvaluationOptions) aifeedback.LiveEvaluationReport,
+) {
+	t.Helper()
+	prev := runLiveEvaluation
+	runLiveEvaluation = run
+	t.Cleanup(func() { runLiveEvaluation = prev })
 }
 
 func TestRunEvalLive_MissingBaseURLExitsUsage(t *testing.T) {
@@ -442,6 +460,192 @@ func TestRunEvalLive_GeminiDoesNotRequireBaseURL(t *testing.T) {
 	}, stdout, stderr, time.Now)
 	if code == exitUsageError {
 		t.Fatalf("gemini provider should not fail usage check when base-url is unset; stderr=%s", stderr.String())
+	}
+}
+
+func TestRunEvalLive_CloudflareProviderSelectionAndValidation(t *testing.T) {
+	var (
+		openCodeCalls   int
+		geminiCalls     int
+		cloudflareCalls int
+	)
+	withFakeProviderPerCall(t, func(cfg aifeedback.OpenCodeConfig) aifeedback.FeedbackProvider {
+		openCodeCalls++
+		return &expectationMatchingProvider{}
+	})
+	withFakeGeminiProviderPerCall(t, func(cfg aifeedback.GeminiConfig) aifeedback.FeedbackProvider {
+		geminiCalls++
+		return &expectationMatchingProvider{}
+	})
+	withFakeCloudflareProviderPerCall(t, func(cfg aifeedback.CloudflareConfig) aifeedback.FeedbackProvider {
+		cloudflareCalls++
+		return &expectationMatchingProvider{}
+	})
+
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+
+	code := runEvalLive([]string{
+		"--provider", providerCloudflare,
+		"--api-key", "test-key",
+		"--account-id", "account-123",
+	}, stdout, stderr, time.Now)
+	if code != exitSuccess {
+		t.Fatalf("cloudflare provider path should complete successfully; got %d stderr=%s", code, stderr.String())
+	}
+	if cloudflareCalls != 1 || geminiCalls != 0 || openCodeCalls != 0 {
+		t.Fatalf("expected cloudflare constructor only; got cloudflare=%d gemini=%d opencode=%d", cloudflareCalls, geminiCalls, openCodeCalls)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	code = runEvalLive([]string{
+		"--provider", providerCloudflare,
+		"--api-key", "test-key",
+	}, stdout, stderr, time.Now)
+	if code != exitUsageError {
+		t.Fatalf("cloudflare without account-id should fail usage; got %d stderr=%s", code, stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "--account-id") {
+		t.Fatalf("stderr should mention account-id requirement; got: %s", stderr.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	t.Setenv("AI_PROVIDER", providerCloudflare)
+	t.Setenv("AI_PROVIDER_API_KEY", "env-key")
+	t.Setenv("AI_PROVIDER_ACCOUNT_ID", "env-account")
+	code = runEvalLive(nil, stdout, stderr, time.Now)
+	if code != exitSuccess {
+		t.Fatalf("cloudflare env provider path should complete successfully; got %d stderr=%s", code, stderr.String())
+	}
+	if cloudflareCalls != 2 || geminiCalls != 0 || openCodeCalls != 0 {
+		t.Fatalf("expected cloudflare constructor for AI_PROVIDER=cloudflare; got cloudflare=%d gemini=%d opencode=%d", cloudflareCalls, geminiCalls, openCodeCalls)
+	}
+}
+
+func TestRunEvalLive_CloudflareDoesNotRequireBaseURL(t *testing.T) {
+	withFakeCloudflareProviderPerCall(t, func(cfg aifeedback.CloudflareConfig) aifeedback.FeedbackProvider {
+		return &expectationMatchingProvider{}
+	})
+
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	code := runEvalLive([]string{
+		"--provider", providerCloudflare,
+		"--api-key", "test-key",
+		"--account-id", "account-123",
+	}, stdout, stderr, time.Now)
+	if code == exitUsageError {
+		t.Fatalf("cloudflare provider should not require base-url; stderr=%s", stderr.String())
+	}
+}
+
+func TestRunEvalLive_RequestIntervalWrapsProviderWhenPositive(t *testing.T) {
+	var (
+		capturedConfig   aifeedback.OpenCodeConfig
+		capturedProvider aifeedback.FeedbackProvider
+	)
+	withFakeProviderPerCall(t, func(cfg aifeedback.OpenCodeConfig) aifeedback.FeedbackProvider {
+		capturedConfig = cfg
+		return &expectationMatchingProvider{}
+	})
+	withFakeRunLiveEvaluation(t, func(ctx context.Context, provider aifeedback.FeedbackProvider, opts aifeedback.LiveEvaluationOptions) aifeedback.LiveEvaluationReport {
+		capturedProvider = provider
+		return aifeedback.LiveEvaluationReport{}
+	})
+
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	code := runEvalLive([]string{
+		"--base-url", "http://example.invalid",
+		"--api-key", "test-key",
+		"--request-interval", "1ms",
+	}, stdout, stderr, time.Now)
+	if code != exitSuccess {
+		t.Fatalf("expected exitSuccess; got %d stderr=%s", code, stderr.String())
+	}
+	if capturedConfig.BaseURL != "http://example.invalid" {
+		t.Fatalf("expected openCode constructor to be used with same config; got baseURL=%q", capturedConfig.BaseURL)
+	}
+	if _, ok := capturedProvider.(*pacedFeedbackProvider); !ok {
+		t.Fatalf("expected runLiveEvaluation provider to be wrapped in *pacedFeedbackProvider, got %T", capturedProvider)
+	}
+}
+
+func TestRunEvalLive_RequestIntervalEnvDefaultWrapsProvider(t *testing.T) {
+	t.Setenv("AI_PROVIDER_BASE_URL", "http://example.invalid")
+	t.Setenv("AI_PROVIDER_API_KEY", "test-key")
+	t.Setenv("EVAL_LIVE_REQUEST_INTERVAL", "1ms")
+	var capturedProvider aifeedback.FeedbackProvider
+	withFakeRunLiveEvaluation(t, func(ctx context.Context, provider aifeedback.FeedbackProvider, opts aifeedback.LiveEvaluationOptions) aifeedback.LiveEvaluationReport {
+		capturedProvider = provider
+		return aifeedback.LiveEvaluationReport{}
+	})
+
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	code := runEvalLive(nil, stdout, stderr, time.Now)
+	if code != exitSuccess {
+		t.Fatalf("request interval env default path should complete successfully; got %d stderr=%s", code, stderr.String())
+	}
+	if _, ok := capturedProvider.(*pacedFeedbackProvider); !ok {
+		t.Fatalf("expected env default request interval to wrap provider, got %T", capturedProvider)
+	}
+}
+
+func TestRunEvalLive_DefaultRequestIntervalDoesNotWrapProvider(t *testing.T) {
+	var capturedProvider aifeedback.FeedbackProvider
+	withFakeProviderPerCall(t, func(cfg aifeedback.OpenCodeConfig) aifeedback.FeedbackProvider {
+		return &expectationMatchingProvider{}
+	})
+	withFakeRunLiveEvaluation(t, func(ctx context.Context, provider aifeedback.FeedbackProvider, opts aifeedback.LiveEvaluationOptions) aifeedback.LiveEvaluationReport {
+		capturedProvider = provider
+		return aifeedback.LiveEvaluationReport{}
+	})
+
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	code := runEvalLive([]string{
+		"--base-url", "http://example.invalid",
+		"--api-key", "test-key",
+	}, stdout, stderr, time.Now)
+	if code != exitSuccess {
+		t.Fatalf("default request interval path should complete successfully; got %d stderr=%s", code, stderr.String())
+	}
+	if _, ok := capturedProvider.(*pacedFeedbackProvider); ok {
+		t.Fatalf("expected default request interval to leave provider unwrapped, got %T", capturedProvider)
+	}
+}
+
+func TestPacedFeedbackProvider_WrapsAndPassesThrough(t *testing.T) {
+	wrapped := &fakeFeedbackProvider{feedback: aifeedback.ProviderFeedback{Status: aifeedback.LearningStatusCorrect}}
+	provider := &pacedFeedbackProvider{
+		wrapped:  wrapped,
+		interval: time.Millisecond,
+	}
+	result, err := provider.GenerateFeedback(context.Background(), aifeedback.ProviderTask{})
+	if err != nil {
+		t.Fatalf("expected no error from wrapped provider, got %v", err)
+	}
+	if result == nil {
+		t.Fatal("expected wrapped provider result, got nil")
+	}
+}
+
+func TestPacedFeedbackProvider_RespectsContextCancellation(t *testing.T) {
+	provider := &pacedFeedbackProvider{
+		wrapped:  &fakeFeedbackProvider{feedback: aifeedback.ProviderFeedback{Status: aifeedback.LearningStatusCorrect}},
+		interval: 50 * time.Millisecond,
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	result, err := provider.GenerateFeedback(ctx, aifeedback.ProviderTask{})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context.Canceled, got err=%v", err)
+	}
+	if result != nil {
+		t.Fatalf("expected nil result when context is canceled, got %+v", result)
 	}
 }
 

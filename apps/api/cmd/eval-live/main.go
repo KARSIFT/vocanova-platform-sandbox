@@ -23,13 +23,24 @@
 //
 //	AI_PROVIDER_BASE_URL   - the OpenCode server's base URL
 //
+// Required only when provider is Cloudflare:
+//
+//	AI_PROVIDER_ACCOUNT_ID - Cloudflare account identifier
+//
 // Optional environment variables (overridden by flags):
 //
-//	AI_PROVIDER           - provider selector ("opencode" or
-//	                       "gemini"; default: "opencode")
+//	AI_PROVIDER           - provider selector ("opencode",
+//	                       "gemini", or "cloudflare";
+//	                       default: "opencode")
 //	AI_PROVIDER_MODEL     - "providerID/modelID" (default:
 //	                        provider-specific)
 //	AI_PROVIDER_TIMEOUT   - per-request timeout (default: 8s)
+//	EVAL_LIVE_REQUEST_INTERVAL - optional delay inserted
+//	                              before each provider call
+//	                              (default: 0, disabled).
+//	                              Added so live runs can pace
+//	                              requests on free-tier limits
+//	                              (especially Cloudflare).
 //	EVAL_LIVE_COST_USD          - post-run billed cost in USD
 //	EVAL_LIVE_COST_CEILING_USD  - pre-agreed cost ceiling
 //	                              (negative = no ceiling)
@@ -68,8 +79,9 @@ const (
 	exitReleaseBlocking = 1
 	exitUsageError      = 2
 
-	providerOpenCode = string(aifeedback.ProviderOpenCode)
-	providerGemini   = "gemini"
+	providerOpenCode   = string(aifeedback.ProviderOpenCode)
+	providerGemini     = "gemini"
+	providerCloudflare = "cloudflare"
 )
 
 // newProvider is the constructor the command uses to build
@@ -92,6 +104,32 @@ var newProvider = func(cfg aifeedback.OpenCodeConfig) aifeedback.FeedbackProvide
 
 var newGeminiProvider = func(cfg aifeedback.GeminiConfig) aifeedback.FeedbackProvider {
 	return aifeedback.NewGeminiFeedbackProvider(cfg)
+}
+
+var newCloudflareProvider = func(cfg aifeedback.CloudflareConfig) aifeedback.FeedbackProvider {
+	return aifeedback.NewCloudflareFeedbackProvider(cfg)
+}
+
+var runLiveEvaluation = func(ctx context.Context, provider aifeedback.FeedbackProvider, opts aifeedback.LiveEvaluationOptions) aifeedback.LiveEvaluationReport {
+	return aifeedback.RunLiveEvaluation(ctx, provider, opts)
+}
+
+type pacedFeedbackProvider struct {
+	wrapped  aifeedback.FeedbackProvider
+	interval time.Duration
+}
+
+func (p *pacedFeedbackProvider) GenerateFeedback(ctx context.Context, task aifeedback.ProviderTask) (*aifeedback.ProviderFeedback, error) {
+	if p.interval > 0 {
+		timer := time.NewTimer(p.interval)
+		defer timer.Stop()
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-timer.C:
+		}
+	}
+	return p.wrapped.GenerateFeedback(ctx, task)
 }
 
 // stringFlagOrEnv returns the value of the named env var
@@ -161,16 +199,18 @@ func runEvalLive(args []string, stdout, stderr io.Writer, now func() time.Time) 
 	// on the command line. The flag is the per-invocation
 	// override; the env var is the per-environment default.
 	var (
-		provider   = fs.String("provider", stringFlagOrEnv("AI_PROVIDER", providerOpenCode), "provider to evaluate: opencode or gemini (env: AI_PROVIDER)")
-		baseURL    = fs.String("base-url", stringFlagOrEnv("AI_PROVIDER_BASE_URL", ""), "OpenCode server base URL (env: AI_PROVIDER_BASE_URL)")
-		apiKey     = fs.String("api-key", stringFlagOrEnv("AI_PROVIDER_API_KEY", ""), "OpenCode API key (env: AI_PROVIDER_API_KEY; never logged)")
-		model      = fs.String("model", stringFlagOrEnv("AI_PROVIDER_MODEL", ""), "model identifier (env: AI_PROVIDER_MODEL)")
-		timeout    = fs.Duration("timeout", durationFlagOrEnv("AI_PROVIDER_TIMEOUT", 8*time.Second), "per-request timeout (env: AI_PROVIDER_TIMEOUT)")
-		costUSD    = fs.Float64("cost", floatFlagOrEnv(aifeedback.LiveEvaluationCostUSDEnv, -1), "post-run billed cost in USD (env: EVAL_LIVE_COST_USD)")
-		ceilingUSD = fs.Float64("cost-ceiling", floatFlagOrEnv(aifeedback.LiveEvaluationCostCeilingUSDEnv, -1), "pre-agreed cost ceiling in USD; negative disables (env: EVAL_LIVE_COST_CEILING_USD)")
-		output     = fs.String("output", stringFlagOrEnv(aifeedback.LiveEvaluationOutputEnv, ""), "optional output file path; report is also written here in addition to stdout (env: EVAL_LIVE_OUTPUT)")
-		notes      = fs.String("notes", stringFlagOrEnv("EVAL_LIVE_OPERATOR_NOTES", ""), "free-text notes appended to the report (env: EVAL_LIVE_OPERATOR_NOTES)")
-		help       = fs.Bool("help", false, "show usage information and exit")
+		provider        = fs.String("provider", stringFlagOrEnv("AI_PROVIDER", providerOpenCode), "provider to evaluate: opencode, gemini, or cloudflare (env: AI_PROVIDER)")
+		baseURL         = fs.String("base-url", stringFlagOrEnv("AI_PROVIDER_BASE_URL", ""), "OpenCode server base URL (env: AI_PROVIDER_BASE_URL)")
+		accountID       = fs.String("account-id", stringFlagOrEnv("AI_PROVIDER_ACCOUNT_ID", ""), "Cloudflare account ID (env: AI_PROVIDER_ACCOUNT_ID)")
+		apiKey          = fs.String("api-key", stringFlagOrEnv("AI_PROVIDER_API_KEY", ""), "provider API key (env: AI_PROVIDER_API_KEY; never logged)")
+		model           = fs.String("model", stringFlagOrEnv("AI_PROVIDER_MODEL", ""), "model identifier (env: AI_PROVIDER_MODEL)")
+		timeout         = fs.Duration("timeout", durationFlagOrEnv("AI_PROVIDER_TIMEOUT", 8*time.Second), "per-request timeout (env: AI_PROVIDER_TIMEOUT)")
+		requestInterval = fs.Duration("request-interval", durationFlagOrEnv("EVAL_LIVE_REQUEST_INTERVAL", 0), "delay before each provider call (env: EVAL_LIVE_REQUEST_INTERVAL)")
+		costUSD         = fs.Float64("cost", floatFlagOrEnv(aifeedback.LiveEvaluationCostUSDEnv, -1), "post-run billed cost in USD (env: EVAL_LIVE_COST_USD)")
+		ceilingUSD      = fs.Float64("cost-ceiling", floatFlagOrEnv(aifeedback.LiveEvaluationCostCeilingUSDEnv, -1), "pre-agreed cost ceiling in USD; negative disables (env: EVAL_LIVE_COST_CEILING_USD)")
+		output          = fs.String("output", stringFlagOrEnv(aifeedback.LiveEvaluationOutputEnv, ""), "optional output file path; report is also written here in addition to stdout (env: EVAL_LIVE_OUTPUT)")
+		notes           = fs.String("notes", stringFlagOrEnv("EVAL_LIVE_OPERATOR_NOTES", ""), "free-text notes appended to the report (env: EVAL_LIVE_OPERATOR_NOTES)")
+		help            = fs.Bool("help", false, "show usage information and exit")
 	)
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -184,6 +224,10 @@ func runEvalLive(args []string, stdout, stderr io.Writer, now func() time.Time) 
 	}
 	if *provider == providerOpenCode && *baseURL == "" {
 		fmt.Fprintln(stderr, "eval-live: --base-url (or AI_PROVIDER_BASE_URL) is required")
+		return exitUsageError
+	}
+	if *provider == providerCloudflare && *accountID == "" {
+		fmt.Fprintln(stderr, "eval-live: --account-id (or AI_PROVIDER_ACCOUNT_ID) is required")
 		return exitUsageError
 	}
 	if *apiKey == "" {
@@ -209,6 +253,15 @@ func runEvalLive(args []string, stdout, stderr io.Writer, now func() time.Time) 
 			Timeout:    *timeout,
 			MaxRetries: 1,
 		})
+	case providerCloudflare:
+		feedbackProvider = newCloudflareProvider(aifeedback.CloudflareConfig{
+			APIToken:   *apiKey,
+			AccountID:  *accountID,
+			Model:      *model,
+			BaseURL:    *baseURL,
+			Timeout:    *timeout,
+			MaxRetries: 1,
+		})
 	default:
 		openCodeModel := *model
 		if openCodeModel == "" {
@@ -222,13 +275,19 @@ func runEvalLive(args []string, stdout, stderr io.Writer, now func() time.Time) 
 			MaxRetries: 1,
 		})
 	}
+	if *requestInterval > 0 {
+		feedbackProvider = &pacedFeedbackProvider{
+			wrapped:  feedbackProvider,
+			interval: *requestInterval,
+		}
+	}
 	// Use the supplied now() for testability; main passes
 	// time.Now. RunLiveEvaluation measures its own
 	// startedAt/finishedAt internally, so now() is not
 	// strictly required - the parameter is kept for
 	// future use (e.g. pinning a clock in tests).
 	_ = now
-	report := aifeedback.RunLiveEvaluation(context.Background(), feedbackProvider, aifeedback.LiveEvaluationOptions{
+	report := runLiveEvaluation(context.Background(), feedbackProvider, aifeedback.LiveEvaluationOptions{
 		CostCeilingUSD: *ceilingUSD,
 		CostUSD:        *costUSD,
 		OperatorNotes:  *notes,
