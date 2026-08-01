@@ -68,8 +68,21 @@ type CookieConfig struct {
 	CSRName        string // double-submit cookie name
 	OAuthStateName string // OAuth state cookie name
 	Domain         string
-	Secure         bool
-	SameSite       http.SameSite
+
+	// OAuthStateDomain is the Domain attribute for the OAuth state cookie,
+	// intentionally separate from Domain. The state cookie only needs to
+	// round-trip between OAuthStart and the OAuth callback, both served
+	// from the API's own host - unlike the session/CSRF cookies, it has
+	// no reason to be scoped to a different (e.g. web-app) host. Leave
+	// empty for host-only scoping (no explicit Domain attribute), which
+	// is correct whenever the API host differs from Domain, including
+	// sibling subdomains (e.g. api-X.example.com vs X.example.com) where
+	// a cookie scoped to Domain would never be sent back to the API host
+	// by a real browser. See the T03 rehearsal finding this field fixes.
+	OAuthStateDomain string
+
+	Secure   bool
+	SameSite http.SameSite
 }
 
 // SessionCookie writes the session bearer cookie.
@@ -142,7 +155,7 @@ func OAuthStateCookie(cfg CookieConfig, token string, expiresAt time.Time) *http
 	return &http.Cookie{
 		Name:     cfg.OAuthStateName,
 		Value:    token,
-		Domain:   cfg.Domain,
+		Domain:   cfg.OAuthStateDomain,
 		Path:     "/",
 		Expires:  expiresAt,
 		HttpOnly: true,
@@ -156,7 +169,7 @@ func ClearOAuthStateCookie(cfg CookieConfig) *http.Cookie {
 	return &http.Cookie{
 		Name:     cfg.OAuthStateName,
 		Value:    "",
-		Domain:   cfg.Domain,
+		Domain:   cfg.OAuthStateDomain,
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,

@@ -554,8 +554,16 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 			CSRName:        "vocanova_csrf",
 			OAuthStateName: "vocanova_oauth_state",
 			Domain:         cfg.SessionDomain,
-			Secure:         cfg.SessionSecure,
-			SameSite:       http.SameSiteStrictMode,
+			// Intentionally NOT cfg.SessionDomain: the OAuth state cookie
+			// only round-trips between this API host's own start/callback
+			// endpoints, so it must be host-only (empty Domain), not
+			// scoped to the web app's hostname. A production/staging
+			// sibling-subdomain topology (api-X vs X) means a cookie
+			// scoped to SessionDomain is never sent back to this host by
+			// a real browser - found live via VOC-037-T03's rehearsal.
+			OAuthStateDomain: "",
+			Secure:           cfg.SessionSecure,
+			SameSite:         http.SameSiteStrictMode,
 		},
 	}
 	authSvc := auth.NewService(authRepo, mailer, oauthProvider, clk, limiter, authCfg)
