@@ -21,7 +21,15 @@ set -euo pipefail
 # Every check either passes or exits non-zero. A check that cannot be
 # evaluated (missing file, `sudo -u` unavailable) is a FAILURE, never a
 # silent pass: an unevaluated negative-access check is indistinguishable
-# from an unenforced one.
+# from an unenforced one. The one narrow carve-out is INS-11's live
+# impersonation probe when the invoking identity correctly has no
+# `sudo -u <other>` right (granting one cannot be done safely - see
+# report_unprobeable below): if the target user is independently
+# confirmed to have broad sudo of their own, that is affirmative proof
+# of a broken boundary and still FAILS the rehearsal; only the case
+# where neither a live probe nor independent-sudo evidence is available
+# downgrades to a WARN, because there is genuinely nothing further this
+# script can safely check.
 
 if [ "$#" -ne 2 ]; then
   echo "usage: $0 <staging_user> <production_user>" >&2
@@ -94,8 +102,10 @@ require_owner_not() {
 # A negative-access probe has three outcomes and only one of them is a
 # pass. Readable => the boundary is broken. Unreadable => the boundary
 # holds. Probe never ran (no sudo rights, missing account) => unknown,
-# which is reported as a failure, because an unevaluated check is
-# indistinguishable from an unenforced one.
+# handed to report_unprobeable(): a FAILURE if independent evidence
+# confirms the boundary is broken anyway, a WARN only when genuinely
+# nothing further can be safely established. See report_unprobeable's
+# own comment for why "unknown" is not automatically a silent pass.
 #
 # The probe's own exit status cannot be used to tell "unreadable" from
 # "sudo refused": both are exit 1. The inner shell therefore echoes a
@@ -157,14 +167,42 @@ require_untraversable_by() {
 # naming the real residual risk, not a silent pass and not a
 # script-breaking FAIL for a condition this rehearsal cannot safely test
 # further without creating the very escalation path it exists to catch.
+#
+# Detection deliberately does NOT use `sudo -n -l -U $user`: that query
+# itself requires the INVOKING identity to have sudo list rights over
+# $user, which a correctly least-privileged invoker (like
+# vocanova-production) does not have - confirmed live, `sudo -n -l -U
+# deploy` run as vocanova-production fails with "not allowed to execute
+# 'list'", silently returning empty and hiding a real, confirmed grant.
+# Group membership is checked instead: Ubuntu's standard blanket-sudo
+# mechanism is membership in the `sudo` (or `wheel`/`admin` on other
+# distros) group via the shipped `%sudo ALL=(ALL:ALL) ALL` default rule,
+# and group membership is queryable by any unprivileged user (`id -nG`
+# needs no special rights). This does not catch a custom per-user
+# sudoers.d grant that bypasses group membership entirely, but it does
+# catch the actual, confirmed mechanism in use on this host.
 report_unprobeable() {
   user="$1"
   kind="$2"
   target="$3"
 
-  own_grant="$(sudo -n -l -U "$user" 2>/dev/null | grep -E '\(ALL[[:space:]]*(:[[:space:]]*ALL)?\)[[:space:]]+(NOPASSWD:[[:space:]]*)?ALL$' || true)"
+  own_grant=""
+  for privileged_group in sudo wheel admin; do
+    if id -nG "$user" 2>/dev/null | tr ' ' '\n' | grep -qx "$privileged_group"; then
+      own_grant="member of the '$privileged_group' group (blanket sudo via the standard %$privileged_group sudoers default)"
+      break
+    fi
+  done
   if [ -n "$own_grant" ]; then
-    warn "cannot verify $user is $kind-blocked from $target by live probe (granting that probe right would itself be a privilege-escalation path); $user already has independent broad sudo ($own_grant) and can read anything as root regardless of file permissions - directory-based isolation does NOT hold against $user on this shared host. This is a real, disclosed residual risk, not a false pass."
+    # This is not "cannot verify" - it is affirmative, confirmed evidence
+    # that the negative-access property does NOT hold. $user already has
+    # independent broad sudo ($own_grant) and can therefore read $target
+    # as root regardless of what INS-9's file permissions say. A known
+    # breach must fail the rehearsal, not be downgraded to a warning -
+    # the only legitimate ways past this are narrowing $user's sudoers to
+    # remove the blanket grant, or an explicit founder-accepted waiver
+    # recorded against this specific finding.
+    fail "$user is NOT $kind-blocked from $target: $user already has independent broad sudo ($own_grant) and can read anything as root regardless of file permissions - directory-based isolation does NOT hold against $user on this shared host"
   else
     warn "cannot verify $user is $kind-blocked from $target by live probe (no safe impersonation right granted); $user has no independent broad sudo found, so INS-9's file-permission/ownership checks are the available evidence, not a live-probed guarantee."
   fi
