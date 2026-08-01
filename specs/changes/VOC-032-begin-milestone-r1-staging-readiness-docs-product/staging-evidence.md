@@ -424,13 +424,69 @@ run is:
    summary's "AI evaluation thresholds pass"
    bullet).
 
-#### Live execution status
+#### Live execution status — RESOLVED (2026-08-01), founder-accepted deviation
 
-**No longer blocked on `VOC-032-DEP-03`** — that credential is now
-resolved. The protected live run has been performed; its actual result is
-recorded in `T10`'s own evidence update, a separate change not yet merged
-into this document. This `T09` PR does not assert an `EV-22` outcome one
-way or the other — see `T10`'s own tracking issue for the result.
+`VOC-032-DEP-03` is resolved. The protected live evaluation was run against
+three real providers in total, across this package's own `T10` and two
+follow-up packages it spawned once the original provider proved unusable:
+
+1. **OpenCode** (`opencode-go/hy3`, this package's own originally-configured
+   provider): every one of 56 calls timed out inside the mandated 8-second
+   budget; 0% on every tracked threshold. Recorded in this section's own
+   history above (superseded by this final resolution) and in
+   `VOC-032-T10`'s original evidence.
+2. **Google Gemini** (`VOC-035`, a follow-up package): also FAIL — a stale
+   default model blocked for new API keys, then real signal (11/56) but
+   still below every threshold, attributable to free-tier rate-limiting on
+   an unpaced request burst. Full record:
+   `specs/changes/VOC-035-voc-032-t10-s-live-ai-evaluation-gate-ev-22-is/staging-evidence.md`.
+3. **Cloudflare Workers AI** (`VOC-036`, a second follow-up package): a real
+   code defect was found and fixed along the way (PR #253); three models
+   were then tried. The smallest, fastest model
+   (`@cf/meta/llama-3.1-8b-instruct-fp8-fast`) reached 100% reliability
+   (56/56 calls succeeded, 1.2–3.2s latency, comfortably inside budget) but
+   only 41% overall accuracy against DOC-09 §23's ≥90% bar, with 5
+   zero-tolerance over-correction defects. Larger models tried
+   (`llama-3.3-70b`, `llama-4-scout-17b`) were either too slow or had *worse*
+   over-correction rates. Full record:
+   `specs/changes/VOC-036-voc-032-t10-s-live-ai-evaluation-gate-ev-22-is/staging-evidence.md`.
+
+**Root-cause note, not yet acted on:** the identical "unnecessary correction
+on clearly-correct sentences" failure pattern across every model and
+provider tried strongly suggests the gap is in `apps/api/business/aifeedback/task.go`'s
+`developerPrompt()` itself — it defines the required output *shape* per
+status but never gives the model explicit grading criteria for *when* a
+sentence should be marked `correct` versus `needs_improvement`. This is
+flagged as a concrete, likely-high-value follow-up (a prompt fix, re-tested
+against the already-built Gemini/Cloudflare providers, potentially cheaper
+than adopting a paid tier) but was not pursued in this round — see the
+founder decision below.
+
+**Founder decision (2026-08-01):** no available provider meets DOC-09 §23's
+accuracy thresholds. Rather than continue evaluating providers or pursue the
+prompt-fix lead above before launch, the founder has explicitly decided to
+proceed to R1 with `AI_PROVIDER=cloudflare` /
+`AI_PROVIDER_MODEL=@cf/meta/llama-3.1-8b-instruct-fp8-fast` as the production
+AI-feedback provider — chosen for being free, 100% reliable, and fast, with
+the explicit acknowledgment that its measured accuracy (41% overall,
+structured-output validity and clearly-correct accuracy both below spec) is
+**below DOC-09 §23's release-blocking bar**. This is a deliberate, informed
+exception, not a silent threshold change: DOC-09 §23's thresholds are
+unchanged and remain the target; this package does not amend DOC-09. The
+founder's own stated reasoning: real user data is needed to further tune
+quality, and that data does not exist pre-launch — the provider will be
+revisited (via the prompt-fix lead, a stronger model, or a paid tier) once
+real usage exists. `AI_PROVIDER_API_KEY`/`AI_PROVIDER_ACCOUNT_ID` are
+founder-populated directly on the staging host's `infra/secrets/api.env` (not
+committed to this repository, per this package's own established
+convention) — this document does not assert that step has been completed,
+only that it is the founder's own decision and remaining action, outside any
+package's implementation authority.
+
+**`EV-22` disposition:** `VOC-032-AC-10`'s "AI evaluation thresholds pass"
+half is **not satisfied** and is recorded as such — this document does not
+claim otherwise. The R1 gate item this blocks is explicitly waived by the
+founder's own decision above, not by this document declaring it passed.
 
 ### `EV-28` — Real email sender: one live staging delivery
 
@@ -1009,7 +1065,7 @@ summary, exactly as `AC-12` requires.
 | **No unresolved critical/high blocker** | **Partial.** The `T06` migration-tooling follow-ups (invalid `-- atlas:txmode transaction` directive; duplicate `streak_states_user_id_key` index) that previously blocked `EV-14`'s end-to-end pass were fixed in `VOC-033` before this rehearsal ran. The `T11` and `T13` follow-ups remain open, recorded as blockers to `AC-11` and `AC-13` respectively; `T10` is now an observed release-blocking live-evaluation finding, tracked separately. | `T11`/`T13` are small, already-scoped follow-ups (see their own sections). `T10`'s finding requires an authorized provider/model or governance decision, tracked on its own issue — not a `T09` blocker. |
 | **All required tests pass** | **Satisfied (in-repo).** `go test ./...` from `apps/api/`, `go vet ./...`, `gofmt -l .`, `go build ./...`, and `bash scripts/governance/validate-governance.sh` all pass at the final SHA. The `apps/web` and `infra` trees are exercised by the `karsift-ai-infra` `ci.yml` reusable workflow, not by `T12`'s in-process check, and their evidence is per-PR. | In-repo check is `T12`'s. The `karsift-ai-infra ci.yml` results are produced by CI, not by `T12`. |
 | **Migration + rollback rehearsed** | **Satisfied, with a disclosed limitation.** The live no-op apply, disposable-copy rollback of all 12 approved down artifacts, full 13-migration forward re-apply, and exact schema comparison all passed on 2026-07-30/31 — see `EV-21` above. The disposable copy was taken while the live database held zero application rows (the core-loop exercise that populates rows ran separately, a day later, directly against the live database, not against the disposable copy) — see `EV-21`'s "Disclosed limitation" note. `AC-09`'s literal criteria are met; a populated-table rollback was not exercised. | Exact commands, timestamps, and the disclosed ordering limitation are recorded under `EV-21`. A future package could re-run steps 3-6 in `T09`'s originally-specified order (core-loop writes before the snapshot) if stronger populated-table rollback assurance is ever required. |
-| **AI evaluation thresholds pass** | **Mock-provider half satisfied; live-provider half's result not yet recorded in this document.** `T08`'s `RunGoldenGate` against `aifeedback.NewMockProvider()` passes every DOC-09 §23 threshold that the current `EvaluationResult` shape can measure (the `StructuredOutputValidAfterOneRepair` and `MeaningPreservation` thresholds are correctly reported as "not tracked" because the data shape cannot measure them yet, per `GoldenThresholdSpec.NotTracked` — this is the documented `T08` boundary, not a regression). `VOC-032-DEP-03` is now resolved; `T10`'s protected live run has been performed, but its result is recorded in `T10`'s own evidence update, a separate change not yet merged into this document. | Mock half: `T08`'s `TestGoldenSetThresholdsAgainstMockProvider` + `TestGoldenGateEnforcesViolatedThreshold` + `TestGoldenGatePassesOnCleanFixture` all pass. Live half: see `T10`'s own tracking issue and evidence update, not this `T09` PR. |
+| **AI evaluation thresholds pass** | **FAILED — release-blocking per DOC-09 §23; founder-accepted exception recorded for R1.** `T08`'s mock-provider gate passes every threshold the current `EvaluationResult` shape can measure. The live-provider half genuinely failed against all three real providers tried (OpenCode, Gemini, Cloudflare) — see `EV-22`'s "Live execution status" section above for the full record. The founder has explicitly decided to proceed to R1 with the best available option (Cloudflare, `llama-3.1-8b-instruct-fp8-fast`: 100% reliable, 41% accurate) despite it not meeting DOC-09 §23, to be revisited with real usage data. DOC-09 §23 itself is unchanged. | Mock half: `T08`'s tests all pass. Live half: genuinely failed; not satisfiable by any package without either a stronger available provider, a paid tier, or the flagged prompt-fix lead in `EV-22` — see that section for the founder's own decision and reasoning. |
 | **Founder completes staging acceptance** | **Not started — founder-owned, out of scope of any package.** | This is a single human decision by the founder, recorded as a comment on the package's release issue (per the standard `karsift-ai-infra release.yml` flow). It cannot be satisfied by any code change. |
 | **Scope is frozen** | **Satisfied (in this package).** No new product scope introduced; only the `T00`–`T15` and `T12` deliverables. | Inherently a property of the package's own change-control discipline; `T12`'s role is to confirm no PR in this package introduced unapproved scope. |
 
