@@ -1,0 +1,141 @@
+schema_version: 1
+id: VOC-038
+slug: voc-037-voc-037-t06-production-infrastructure
+title: 'VOC-037-T06: Production Infrastructure Provisioning'
+type: infra
+status: draft
+risk: R3
+planned_implementation_risk_floor: 'Not yet computed by running scripts/governance/classify-change-risk.sh
+  against a real file set, because this package has not been implemented and has no
+  actual diff yet. This package proposes R3 as a draft starting point because its
+  known target areas (a new .github/workflows/deploy-production.yml, infra/ compose
+  and secrets-path changes, and a GitHub Actions production environment) squarely
+  match docs/governance/protected-areas.md''s "Production infrastructure" and "Deployment
+  and rollback" rows and docs/governance/change-risk-classification.md''s R3 row (production
+  infrastructure, secrets, CI/CD). It does not reach R4 under that same document''s
+  question 1, because this task executes VOC-037-D00 and VOC-037-D01''s already-founder-accepted
+  decisions rather than deciding a new R4 matter itself. This is a draft proposal
+  for a human to review at adoption time, not a determination, and does not bind the
+  classifier''s own later, path-based run against the actual implementation PR diff.
+
+  '
+canonical_path: specs/changes/VOC-038-voc-037-voc-037-t06-production-infrastructure
+authority_model: a003-active
+requirement_source: 'GitHub issue #269 ("VOC-037: VOC-037-T06 - Production infrastructure
+  provisioning"), which dispatches task VOC-037-T06 from adopted package VOC-037 (specs/changes/VOC-037-begin-milestone-r2-production-readiness-docs).
+  Issue #269 records that this task was added as a follow-up after VOC-037''s adoption
+  (founder-gate delegate, 2026-08-01) because VOC-037''s original T00-T05 roster never
+  actually built the production target that T03 and T04 need to verify against; T00
+  and T01 only produced decision records, per those tasks'' own explicit non-goals.
+  This task (VOC-038) executes VOC-037-D00''s accepted decision (Option A-modified:
+  production co-located on the same physical host as staging, logically isolated,
+  portable to a future dedicated host) and VOC-037-D01''s accepted decision (corrected
+  mechanism 4A: a production-only directory tree distinct from staging''s, a separate
+  vocanova-production Compose project, and a separate least-privilege deploy user)
+  exactly as recorded in specs/changes/VOC-037-begin-milestone-r2-production-readiness-docs/t00-production-hosting-decision-record.md
+  and .../t01-production-secrets-decision-record.md. It does not make any new hosting,
+  secrets-mechanism, or architecture decision; per issue #269''s own framing, "it
+  does not make new decisions." This package''s own drafting run does not itself decide
+  anything either -- see specification.md''s open questions for what remains outstanding
+  (exact production hostname/DNS names, and the shared- host resource-limit values),
+  each of which VOC-037-T00/T01 already flagged as a founder-confirmable implementation-time
+  detail rather than a new decision this package must make.
+
+  '
+requirement_approval_status: 'not-approved. This package is a draft proposal only.
+  VOC-037-D00 and VOC-037-D01 are themselves already founder-accepted (2026-08-01),
+  and this package''s scope is bounded to executing those two accepted decisions without
+  reopening them -- but VOC-038 itself, as a new change package, has not been adopted,
+  and none of its tasks are implementation-authorized. Adoption, and each task''s
+  own separate implementation authorization, remain required per AGENTS.md''s change
+  workflow.
+
+  '
+base_branch: develop
+base_sha: not-set-until-adoption
+target_branch: develop
+approved_candidate_sha: not-set-until-adoption
+owners:
+  decision: founder
+  package_preparation: planner
+  implementation: unassigned
+  independent_verification: Claude Code
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: false
+production_impact: 'yes: provisions a new production compose project, secrets tree,
+  and deploy workflow on the shared staging/production host'
+rollback_required: true
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-038-DEP-00
+  status: 'satisfied, not blocking. VOC-037-D00 (production hosting/deploy-target
+    decision) is accepted; see specs/changes/VOC-037-begin-milestone-r2-production-readiness-docs/t00-production-hosting-decision-record.md.
+
+    '
+- id: VOC-038-DEP-01
+  status: 'satisfied, not blocking. VOC-037-D01 (production secrets management mechanism,
+    corrected 4A) is accepted; see specs/changes/VOC-037-begin-milestone-r2-production-readiness-docs/t01-production-secrets-decision-record.md.
+
+    '
+- id: VOC-038-DEP-02
+  status: 'open, not blocking adoption of this drafting pass, but blocking this package''s
+    own T00/T01 implementation tasks. The exact production hostname/DNS name is founder-confirmable
+    at implementation time per VOC-037-D00''s "final names to be founder-confirmed
+    during implementation" note; this package uses an explicit placeholder hostname
+    pending that confirmation (see specification.md open question 1).
+
+    '
+- id: VOC-038-DEP-03
+  status: 'open, not blocking adoption. VOC-037-T03 (kill-switch/rollback verification)
+    and VOC-037-T04 (monitoring/alerting readiness) depend on this package''s production
+    target actually existing, per VOC-037''s own tasks.md dependency note on VOC-037-T06.
+    This package does not itself complete T03/T04; it only unblocks them.
+
+    '
+affected_areas:
+- infra/
+- .github/workflows/deploy-production.yml
+- docs/operations/11-devops-and-ci-cd.md
+- infra/README.md
+- specs/changes/VOC-038-voc-037-voc-037-t06-production-infrastructure
+implementation:
+  authorized: false
+  required: true
+  status: draft
+  target_branch: develop
+  pull_request: null
+  authority_issue: 269
+release:
+  required: false
+  mode: not-authorized-by-this-package
+  production_impact: 'yes: production host/directory tree/secrets/deploy workflow
+    are created by this package''s own tasks'
+  deployment: not-authorized-by-this-package
+  automatic_merge: false
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
+blocking_reasons: 'not yet adopted. This package proposes execution of VOC-037-D00/D01''s
+  already- accepted decisions, but adoption, a human review of the two open questions
+  in specification.md (production hostname/DNS placeholder and shared-host resource-
+  limit values), and each task''s own separate implementation authorization all remain
+  outstanding before any task in tasks.md may be dispatched.
+
+  '
