@@ -41,7 +41,7 @@
 - Tasks: `VOC-037-T06`
 - Tests: `VOC-037-TEST-06`
 - Evidence: `VOC-037-EV-06`
-- Result: satisfied (2026-08-01) — see `VOC-037-EV-06` for the real deploy run, defects found/fixed live, and the on-host `INS-9`-`INS-11` rehearsal output (`PASS`)
+- Result: **NOT satisfied** (corrected 2026-08-01, later the same day) — an earlier "satisfied" result was based on running the rehearsal manually as root, which doesn't reflect the real deploy's non-root identity. Corrected: `INS-9`/`INS-10` pass; `INS-11` correctly FAILS with a confirmed, disclosed finding (staging's `deploy` user has independent blanket sudo via group membership, so directory-based isolation cannot be proven against it). See `VOC-037-EV-06`'s "Confirmed residual risk" section for the full record and remediation options.
 - Observable outcome: `/opt/vocanova/production/` exists, fully separate
   from `/opt/vocanova/infra/` (staging); a `vocanova-production` Compose
   project runs with explicit per-service resource limits; a `production`
