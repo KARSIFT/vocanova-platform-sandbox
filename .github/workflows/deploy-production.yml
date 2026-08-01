@@ -240,7 +240,17 @@ jobs:
               echo "BASE_URL=https://${PRODUCTION_API_HOST}:8443"
               echo "OAUTH_REDIRECT_URI=https://${PRODUCTION_API_HOST}:8443/auth/oauth/google/callback"
               echo "OAUTH_REDIRECT_ALLOWLIST=https://${PRODUCTION_WEB_HOST}:8443/onboarding,https://${PRODUCTION_WEB_HOST}:8443/home"
-              echo "SESSION_COOKIE_DOMAIN=${PRODUCTION_WEB_HOST}"
+              # Shared parent domain (e.g. ".vocanova.site"), NOT the bare
+              # web hostname: the session/CSRF cookies are set by the API
+              # host (api-X) but must also domain-match the web host (X) -
+              # a sibling subdomain, not a child. A bare web hostname value
+              # here means a real browser would reject the Set-Cookie from
+              # the API host entirely. .env.example already documents this;
+              # this line previously didn't follow its own documented
+              # convention (found live via VOC-037-T03's rehearsal + PR
+              # #276's review). staging's real host has always used the
+              # correct ".vocanova.site" form, set directly by the founder.
+              echo "SESSION_COOKIE_DOMAIN=.${PRODUCTION_WEB_HOST#*.}"
               echo "SESSION_COOKIE_SECURE=true"
               echo "SESSION_LIFETIME=720h"
               echo "SENTRY_ENVIRONMENT=production"

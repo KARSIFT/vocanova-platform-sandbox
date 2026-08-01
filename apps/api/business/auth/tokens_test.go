@@ -61,3 +61,17 @@ func TestSessionCookie_UnaffectedByOAuthStateDomain(t *testing.T) {
 	cookie := SessionCookie(cfg, "session-token", time.Now().Add(30*24*time.Hour))
 	assert.Equal(t, "production.vocanova.site", cookie.Domain)
 }
+
+// TestCSRFToken_UnaffectedByOAuthStateDomain covers the reviewed Low
+// finding: CSRFToken also uses cfg.Domain and must be equally unaffected
+// by the new OAuthStateDomain field, not just SessionCookie.
+func TestCSRFToken_UnaffectedByOAuthStateDomain(t *testing.T) {
+	cfg := CookieConfig{
+		CSRName:          "vocanova_csrf",
+		Domain:           "production.vocanova.site",
+		OAuthStateDomain: "",
+	}
+
+	_, cookie := CSRFToken(cfg)
+	assert.Equal(t, "production.vocanova.site", cookie.Domain)
+}
