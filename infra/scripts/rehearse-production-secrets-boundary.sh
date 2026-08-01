@@ -163,10 +163,12 @@ require_untraversable_by() {
 # $user have independent, pre-existing broad sudo rights of their own? If
 # so, directory/file permissions cannot prove isolation against that
 # user regardless of what INS-9 found - $user can always read anything
-# as root through their own grant. This is reported as an explicit WARN
-# naming the real residual risk, not a silent pass and not a
-# script-breaking FAIL for a condition this rehearsal cannot safely test
-# further without creating the very escalation path it exists to catch.
+# as root through their own grant, and that is reported as a FAIL, not a
+# warning: it is affirmative, confirmed evidence the boundary is broken,
+# not merely an unproven one. Only the genuinely-indeterminate case (no
+# probe possible AND no independent broad sudo found either) downgrades
+# to a WARN, since there is nothing further this rehearsal can safely
+# check without creating the very escalation path it exists to catch.
 #
 # Detection deliberately does NOT use `sudo -n -l -U $user`: that query
 # itself requires the INVOKING identity to have sudo list rights over
