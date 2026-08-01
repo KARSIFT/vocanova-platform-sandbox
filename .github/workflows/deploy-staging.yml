@@ -68,7 +68,17 @@
 #   /opt/vocanova/infra/docker-compose.yml   (SCPed by this workflow)
 #   /opt/vocanova/infra/nginx/...            (SCPed by this workflow)
 #   /opt/vocanova/infra/secrets/             (founder-populated, NOT SCPed;
-#                                              .gitignore'd in repo)
+#                                              .gitignore'd in repo - EXCEPT
+#                                              the AI_PROVIDER_* keys inside
+#                                              api.env, which this workflow's
+#                                              own "Sync AI-provider
+#                                              configuration" step writes
+#                                              from GitHub secrets on every
+#                                              deploy, per an explicit
+#                                              2026-08-01 founder directive;
+#                                              every other key/file here
+#                                              remains exclusively
+#                                              founder-populated)
 #   /opt/vocanova/apps/api/scripts/migrate.sh   (SCPed by this workflow)
 #   /opt/vocanova/apps/api/migrations/...       (SCPed by this workflow)
 #   /usr/local/bin/atlas                     (installed by this workflow
@@ -478,6 +488,57 @@ jobs:
       # short enough that a hung `docker compose`
       # command is caught before the job-level
       # 30-minute timeout.
+      # AI_PROVIDER_* is deliberately the ONE exception to this file's
+      # otherwise-strict "secrets/ is founder-populated, never written by
+      # this workflow" rule (see header comment). Founder directive
+      # (2026-08-01): every real AI-feedback provider evaluated
+      # (OpenCode/Gemini/Cloudflare, see VOC-032/VOC-035/VOC-036's own
+      # staging-evidence.md) fell short of DOC-09 §23's accuracy bar; rather
+      # than block launch on that, the founder explicitly chose to ship
+      # with the fastest, most reliable option available
+      # (Cloudflare/llama-3.1-8b-instruct-fp8-fast, 100% reliable but ~41%
+      # accurate) now and revisit once real usage data exists - and asked
+      # for this to be automatic (a GitHub secret), not another manual
+      # SSH-and-hand-edit step, once that specific decision was made.
+      # DATABASE_URL and every other secret in api.env remain exclusively
+      # founder-populated; this workflow touches no other key. If
+      # AI_PROVIDER is ever changed again (a different provider, a
+      # stronger/paid model, or reverted to manual control), the fix is
+      # here and in this repo's CURSOR_API_KEY-style secrets, not on the
+      # server.
+      - name: Sync AI-provider configuration from GitHub secrets
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        uses: appleboy/ssh-action@v1
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          command_timeout: 2m
+          envs: CLOUDFLARE_API_TOKEN,CLOUDFLARE_ACCOUNT_ID
+          script: |
+            set -euo pipefail
+            sudo mkdir -p /opt/vocanova/infra/secrets
+            sudo touch /opt/vocanova/infra/secrets/api.env
+            sudo chown "$(id -un)":"$(id -gn)" /opt/vocanova/infra/secrets/api.env
+            sed -i \
+              -e '/^AI_PROVIDER=/d' \
+              -e '/^AI_PROVIDER_API_KEY=/d' \
+              -e '/^AI_PROVIDER_ACCOUNT_ID=/d' \
+              -e '/^AI_PROVIDER_MODEL=/d' \
+              -e '/^AI_FEATURES_ENABLED=/d' \
+              /opt/vocanova/infra/secrets/api.env
+            {
+              echo "AI_PROVIDER=cloudflare"
+              echo "AI_PROVIDER_API_KEY=${CLOUDFLARE_API_TOKEN}"
+              echo "AI_PROVIDER_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID}"
+              echo "AI_PROVIDER_MODEL=@cf/meta/llama-3.1-8b-instruct-fp8-fast"
+              echo "AI_FEATURES_ENABLED=true"
+            } >> /opt/vocanova/infra/secrets/api.env
+            chmod 600 /opt/vocanova/infra/secrets/api.env
+
       - name: Deploy to staging host
         if: ${{ inputs.skip_ssh_deploy != true }}
         uses: appleboy/ssh-action@v1
