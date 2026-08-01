@@ -18,7 +18,7 @@ func TestOAuthStateCookie_DomainIsIndependentOfSessionDomain(t *testing.T) {
 	cfg := CookieConfig{
 		OAuthStateName:   "vocanova_oauth_state",
 		Domain:           "production.vocanova.site", // web app's hostname
-		OAuthStateDomain: "",                          // host-only: must NOT inherit Domain
+		OAuthStateDomain: "",                         // host-only: must NOT inherit Domain
 		Secure:           true,
 		SameSite:         http.SameSiteStrictMode,
 	}
