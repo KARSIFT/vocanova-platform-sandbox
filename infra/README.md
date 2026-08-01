@@ -29,6 +29,9 @@ infra/
 ├── docker-compose.yml         # four-service stack: postgres + api + web + nginx
 ├── docker-compose.production.yml   # VOC-037-T06 production stack (same-host isolated project)
 ├── scripts/
+│   ├── lib/killswitch-probes.sh                                  # shared kill-switch probes/assertions
+│   ├── rehearse-production-killswitch-rollback.sh                # VOC-037-T03 kill-switch + rollback rehearsal
+│   ├── rehearse-production-killswitch-rollback.selftest.sh       # disposable harness for the above
 │   ├── rehearse-production-secrets-boundary.sh          # VOC-037 INS-9..INS-11 rehearsal
 │   └── rehearse-production-secrets-boundary.selftest.sh # disposable-mirror harness for the above
 ├── nginx/
@@ -288,6 +291,22 @@ bash infra/scripts/rehearse-production-secrets-boundary.sh <staging_user> <produ
 # Against a disposable mirror of the production shape, with the negative
 # cases that prove the checker actually catches violations:
 sudo infra/scripts/rehearse-production-secrets-boundary.selftest.sh
+```
+
+### Verifying the kill switches and rollback
+
+```bash
+# On the production host, inside a maintenance window: toggles each of the
+# four DOC-11 §3 kill switches, checks the unrelated features stay
+# unaffected, then rolls back to an earlier published artifact and forward
+# again. api.env, the running image tag, and the disposable identities it
+# creates are all restored/removed on every exit path.
+bash infra/scripts/rehearse-production-killswitch-rollback.sh sha-<previous>
+
+# Anywhere with docker and go: runs the same probes against a disposable
+# Postgres and a locally built api binary, and proves each assertion fails
+# when the observed switch state is wrong.
+bash infra/scripts/rehearse-production-killswitch-rollback.selftest.sh
 ```
 
 The `apps/api/migrations/atlas.sum` integrity file is part

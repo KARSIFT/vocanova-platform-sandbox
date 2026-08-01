@@ -57,7 +57,9 @@
 - Tasks: `VOC-037-T03`
 - Tests: `VOC-037-TEST-03`
 - Evidence: `VOC-037-EV-03`
-- Result: pending
+- Result: pending — the rehearsal is implemented and self-tested
+  (`t03-killswitch-rollback-evidence.md`), but no toggle or rollback has been
+  performed against the production target yet, so this criterion is not met
 - Observable outcome: Each of the four named kill switches, toggled against the
   production target, observably changes application behavior as documented; a
   rollback-by-redeploy rehearsal against the production target completes without
