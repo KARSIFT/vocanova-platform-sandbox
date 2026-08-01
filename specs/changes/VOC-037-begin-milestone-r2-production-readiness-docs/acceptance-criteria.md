@@ -41,7 +41,7 @@
 - Tasks: `VOC-037-T06`
 - Tests: `VOC-037-TEST-06`
 - Evidence: `VOC-037-EV-06`
-- Result: pending
+- Result: satisfied (2026-08-01) — see `VOC-037-EV-06` for the real deploy run, defects found/fixed live, and the on-host `INS-9`-`INS-11` rehearsal output (`PASS`)
 - Observable outcome: `/opt/vocanova/production/` exists, fully separate
   from `/opt/vocanova/infra/` (staging); a `vocanova-production` Compose
   project runs with explicit per-service resource limits; a `production`

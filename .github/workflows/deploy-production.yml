@@ -14,10 +14,10 @@ on:
         type: string
         default: api-production.vocanova.site
       production_api_base_url:
-        description: "NEXT_PUBLIC_API_BASE_URL used at web image build time"
+        description: "NEXT_PUBLIC_API_BASE_URL used at web image build time - include :8443 while production and staging share one host (see D00 supersession note)"
         required: true
         type: string
-        default: https://api-production.vocanova.site
+        default: https://api-production.vocanova.site:8443
 
 permissions:
   contents: read
@@ -158,6 +158,56 @@ jobs:
             } >> /opt/vocanova/production/secrets/api.env
             chmod 600 /opt/vocanova/production/secrets/api.env
 
+      # BASE_URL/OAUTH_REDIRECT_URI/etc. are not secrets - they're
+      # non-sensitive config derived entirely from this workflow's own
+      # production_web_host/production_api_host inputs - so they're
+      # written here from workflow inputs rather than requiring a
+      # separate founder pre-population step the way DATABASE_URL and
+      # provider API keys do. Kill switches default OFF for
+      # email/OAuth/signups until real production credentials for those
+      # exist (VOC-032-DEP-07's production-tier equivalent); AI stays on
+      # per the sync step above. Found live during VOC-037-T06's first
+      # real deploy rehearsal (api container looped on "BASE_URL is
+      # required" until this was added).
+      - name: Write production application configuration
+        uses: appleboy/ssh-action@v1
+        env:
+          PRODUCTION_WEB_HOST: ${{ inputs.production_web_host }}
+          PRODUCTION_API_HOST: ${{ inputs.production_api_host }}
+        with:
+          host: ${{ secrets.PRODUCTION_SSH_HOST }}
+          username: ${{ secrets.PRODUCTION_SSH_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_PRIVATE_KEY }}
+          command_timeout: 2m
+          envs: PRODUCTION_WEB_HOST,PRODUCTION_API_HOST
+          script: |
+            set -euo pipefail
+            sed -i \
+              -e '/^ENVIRONMENT=/d' \
+              -e '/^BASE_URL=/d' \
+              -e '/^OAUTH_REDIRECT_URI=/d' \
+              -e '/^OAUTH_REDIRECT_ALLOWLIST=/d' \
+              -e '/^SESSION_COOKIE_DOMAIN=/d' \
+              -e '/^SESSION_COOKIE_SECURE=/d' \
+              -e '/^SESSION_LIFETIME=/d' \
+              -e '/^EMAIL_MAGIC_LINK_ENABLED=/d' \
+              -e '/^GOOGLE_OAUTH_ENABLED=/d' \
+              -e '/^NEW_USER_SIGNUP_ENABLED=/d' \
+              /opt/vocanova/production/secrets/api.env
+            {
+              echo "ENVIRONMENT=production"
+              echo "BASE_URL=https://${PRODUCTION_API_HOST}:8443"
+              echo "OAUTH_REDIRECT_URI=https://${PRODUCTION_API_HOST}:8443/auth/oauth/google/callback"
+              echo "OAUTH_REDIRECT_ALLOWLIST=https://${PRODUCTION_WEB_HOST}:8443/onboarding,https://${PRODUCTION_WEB_HOST}:8443/home"
+              echo "SESSION_COOKIE_DOMAIN=${PRODUCTION_WEB_HOST}"
+              echo "SESSION_COOKIE_SECURE=true"
+              echo "SESSION_LIFETIME=720h"
+              echo "EMAIL_MAGIC_LINK_ENABLED=false"
+              echo "GOOGLE_OAUTH_ENABLED=false"
+              echo "NEW_USER_SIGNUP_ENABLED=false"
+            } >> /opt/vocanova/production/secrets/api.env
+            chmod 600 /opt/vocanova/production/secrets/api.env
+
       - name: Deploy to production host
         uses: appleboy/ssh-action@v1
         env:
@@ -266,13 +316,23 @@ jobs:
               "$STAGING_DEPLOY_USER" \
               "$PRODUCTION_DEPLOY_USER"
 
+      # Port :8443 (not the default 443) because production and staging
+      # currently share one physical host (D00 supersession note, T06
+      # evidence): staging's nginx already owns the host's port 443, so
+      # production's nginx publishes on 8443 instead. Cloudflare proxies
+      # 8443 to any proxied hostname without extra configuration (it's
+      # one of Cloudflare's built-in alternate HTTPS ports), which is
+      # exactly why this works with zero Cloudflare-side changes - but
+      # every client (including these health checks) must include the
+      # port explicitly. Found live: the first real deploy's poll steps
+      # (unqualified :443) silently hit Cloudflare's 520 fallback instead
+      # of production's actual nginx.
       - name: Poll production API health endpoint
         run: |
           set -euo pipefail
           for i in $(seq 1 60); do
             if curl -fsS --max-time 5 \
-                -H "Host: ${{ inputs.production_api_host }}" \
-                "https://${{ inputs.production_api_host }}/healthz" > /dev/null; then
+                "https://${{ inputs.production_api_host }}:8443/healthz" > /dev/null; then
               echo "Production API health check passed on attempt $i/60"
               exit 0
             fi
@@ -286,8 +346,7 @@ jobs:
           set -euo pipefail
           for i in $(seq 1 60); do
             status=$(curl -sS --max-time 5 -o /dev/null -w "%{http_code}" \
-                -H "Host: ${{ inputs.production_web_host }}" \
-                "https://${{ inputs.production_web_host }}/" || echo "000")
+                "https://${{ inputs.production_web_host }}:8443/" || echo "000")
             if [[ "$status" == 2* ]]; then
               echo "Production web health check passed on attempt $i/60 (status $status)"
               exit 0

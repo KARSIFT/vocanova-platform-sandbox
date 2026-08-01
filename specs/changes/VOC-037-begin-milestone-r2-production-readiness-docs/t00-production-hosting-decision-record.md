@@ -173,3 +173,53 @@ host — see T06's evidence).
   direct instruction in conversation, not a new independent R4 judgment call
   — the founder explicitly chose "second server" over continued same-host
   troubleshooting).
+
+## Second supersession (2026-08-01) — the "second server" was staging's own host
+
+The address given for the "genuinely separate host" above (`130.185.123.152`)
+was verified live to already be running staging's real containers
+(`vocanova-nginx`/`vocanova-api`/`vocanova-web`/`vocanova-postgres`, owned by
+the `deploy` OS user, serving the real `staging.vocanova.site` on port 443
+with real staging data). It is not a second machine — it is staging's
+existing host. The founder, once informed, explicitly chose to keep
+production co-located here rather than wait for an actual second machine
+(see conversation record, 2026-08-01).
+
+- **Approved option reverts to Option A-modified (same host, logically
+  isolated, portable)** — the original founder decision earlier in this
+  document, not the "plain Option A" text in the first supersession above.
+  The shared-host CPU/RAM/fault-domain risk that decision's conditions
+  section describes is real and back in effect.
+- T01's corrected 4A mechanism (separate directory tree, separate deploy
+  user, separate Compose project, resource limits) is not "defense in
+  depth" as the first supersession claimed — it is load-bearing again,
+  exactly as originally designed, and was verified live to work (T06's
+  `INS-9`-`INS-11` rehearsal: PASS — see T06 evidence).
+- **New, previously unaddressed constraint found live: port collision.**
+  Staging's nginx already owns the host's ports 80/443. Production's nginx
+  publishes on 8081/8443 instead (already built into
+  `infra/docker-compose.production.yml`). Cloudflare proxies port 8443
+  automatically for any proxied hostname without any dashboard/API change
+  (one of Cloudflare's built-in alternate HTTPS ports) - so
+  `https://production.vocanova.site:8443/` and
+  `https://api-production.vocanova.site:8443/` work with zero Cloudflare
+  configuration, but every client (browsers, the web app's own API calls,
+  health checks) must include `:8443` explicitly. This is now baked into
+  `deploy-production.yml`'s defaults and into
+  `NEXT_PUBLIC_API_BASE_URL`/`BASE_URL`/`OAUTH_REDIRECT_URI` at deploy time.
+- TLS: a real Cloudflare Origin CA certificate (`*.vocanova.site` +
+  `vocanova.site`, 15-year validity) was installed at
+  `/opt/vocanova/production/secrets/nginx/{cert,key}.pem` — not the
+  throwaway self-signed cert T06's code originally generated for
+  verification, which Cloudflare's strict SSL mode correctly rejected
+  (`526` at the edge) before the real cert was installed.
+- Real end-to-end verification (2026-08-01): `https://production.vocanova.site:8443/`
+  → `200`; `https://api-production.vocanova.site:8443/healthz` → `200`,
+  `{"status":"ok","database":"ok"}`. Full stack (postgres, api, web, nginx)
+  healthy; all 13 migrations applied cleanly (the Atlas directive/duplicate-
+  index issues that blocked R1's first attempts were already fixed
+  upstream by `VOC-033`, confirmed live here).
+- This second supersession does not reopen `D01`'s approval — its
+  invariants and mechanism were correct for this exact scenario and needed
+  no substantive change, only the port/TLS/config-value fixes recorded in
+  T06's own evidence.

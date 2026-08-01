@@ -2,23 +2,20 @@
 
 ## Standing of `VOC-037-AC-06` at this revision
 
-`VOC-037-AC-06` is **not closed by this task** and is not claimed as closed.
-Its observable outcome has a repository half (deploy automation, compose
-project, isolation controls, rehearsal) and a host half (the tree actually
-existing on the shared host, the `production` GitHub Actions environment
-actually existing with founder-controlled reviewers, a real deploy run).
-The host half requires founder-held SSH credentials, founder-held GitHub
-repository-settings access, and provider credentials that no implementation
-environment has or should have. It is recorded below as outstanding, not as
-passing.
+**`VOC-037-AC-06` is SATISFIED (2026-08-01).** The founder provisioned real
+production infrastructure directly (GitHub `production` environment with
+required reviewers, all 6 `PRODUCTION_*` secrets, DNS, and SSH access), and
+a real `deploy-production` run was driven end-to-end by the founder-gate
+delegate, with real defects found and fixed live (see "Live deploy defects
+found and fixed" below) rather than passing on the first attempt.
 
 | AC-06 clause | Status |
 | --- | --- |
-| `/opt/vocanova/production/` exists, fully separate from `/opt/vocanova/infra/` | **Outstanding (host).** Deploy automation creates and isolates it; the tree does not exist yet. |
-| `vocanova-production` Compose project with explicit per-service resource limits | **Met (repository).** `infra/docker-compose.production.yml`, validated by `docker compose config`. |
-| `production` GitHub Actions environment with founder-controlled required reviewers | **Outstanding (founder).** The workflow declares `environment: production`; creating it and setting its reviewers is a repository-settings action only the founder can take. |
-| `deploy-production.yml` deploys without touching staging's tree, user, or Compose project | **Met in the workflow's own paths; outstanding as a live run.** Verified statically and by rehearsal; no run has occurred. |
-| Negative-access rehearsal proves staging cannot read production secrets (`INS-9`–`INS-11`) | **Executed against a disposable mirror, outstanding on the real host.** See `t01-production-secrets-boundary-evidence.md` (`VOC-037-EV-01`). |
+| `/opt/vocanova/production/` exists, fully separate from `/opt/vocanova/infra/` | **Met.** Verified live: `mode 750`, owned by `vocanova-production`, both directions of the negative-access rehearsal pass (see `INS-9`-`INS-11` below). |
+| `vocanova-production` Compose project with explicit per-service resource limits | **Met.** `infra/docker-compose.production.yml`; all 4 containers (`postgres`/`api`/`web`/`nginx`) running healthy under it. |
+| `production` GitHub Actions environment with founder-controlled required reviewers | **Met.** Created 2026-08-01 with `m-e-h-r-d-a-a-d` as required reviewer; both real deploy runs required and received that approval before executing. |
+| `deploy-production.yml` deploys without touching staging's tree, user, or Compose project | **Met.** Verified statically, by rehearsal, and by a real run against the real shared host. |
+| Negative-access rehearsal proves staging cannot read production secrets (`INS-9`–`INS-11`) | **Met, executed on the real host, not a mirror.** Full output below - `PASS` on every check. |
 
 ## Repository deliverables (implemented and verified here)
 
@@ -84,34 +81,126 @@ are per-service ceilings, so their sum may exceed 2 vCPU by design. Raising
 a limit in one file without lowering the other oversubscribes the host; both
 files carry that note.
 
-## Outstanding founder/operator actions before AC-06 can close
+## Founder-provisioned infrastructure (2026-08-01)
 
-1. Create the `production` GitHub Actions environment and set founder-
-   controlled required reviewers on it.
-2. Populate its `PRODUCTION_SSH_HOST`, `PRODUCTION_SSH_USER`,
-   `PRODUCTION_SSH_PRIVATE_KEY`, `PRODUCTION_SSH_KNOWN_HOSTS`,
-   `PRODUCTION_CLOUDFLARE_API_TOKEN`, and `PRODUCTION_CLOUDFLARE_ACCOUNT_ID`
-   secrets with production-tier values distinct from staging's (`INV-1`).
-3. Create the production deploy OS account on the shared host, distinct from
-   staging's, with passwordless `sudo`, and populate
-   `/opt/vocanova/production/secrets/` with the founder-held credentials and
-   the Cloudflare origin certificate.
-4. Confirm the production hostnames (the workflow's inputs default to
-   `production.vocanova.site` / `api-production.vocanova.site`, which
-   `VOC-037-D00` left as founder-confirmable placeholders) and point them at
-   the origin's `8443` port per `infra/README.md`.
-5. Run `deploy-production` once and attach the run log, the resulting
-   `/opt/vocanova/production/` listing, and the workflow's own rehearsal
-   output to this file.
+- GitHub `production` environment, required reviewer `m-e-h-r-d-a-a-d`.
+- `PRODUCTION_SSH_HOST`/`PRODUCTION_SSH_USER`/`PRODUCTION_SSH_PRIVATE_KEY`/
+  `PRODUCTION_SSH_KNOWN_HOSTS`/`PRODUCTION_CLOUDFLARE_API_TOKEN`/
+  `PRODUCTION_CLOUDFLARE_ACCOUNT_ID` — all 6 set.
+- Dedicated OS user `vocanova-production` on the shared host: `docker` group
+  membership, narrowly-scoped passwordless sudo
+  (`mkdir`/`tar`/`chown`/`touch`/`curl`/`chmod` only, not blanket `ALL`).
+- DNS: `production.vocanova.site` / `api-production.vocanova.site`,
+  Cloudflare-proxied A records to the shared host.
+- Real Cloudflare Origin CA certificate (`*.vocanova.site`/`vocanova.site`,
+  15-year validity) installed at
+  `/opt/vocanova/production/secrets/nginx/{cert,key}.pem`.
+
+## Live deploy defects found and fixed (2026-08-01)
+
+The real `deploy-production` run did not pass on the first attempt. Each
+defect below was found live, fixed, and re-verified - none was anticipated
+in advance:
+
+1. **Missing `POSTGRES_PASSWORD`.** First run: Postgres refused to
+   initialize with no superuser password (`postgres.env` had never been
+   populated on a brand-new host). Fixed by generating and setting a real
+   password in `/opt/vocanova/production/secrets/postgres.env` and the
+   matching `DATABASE_URL` in `api.env`.
+2. **`api.env` ownership mismatch.** The manual fix in (1) created
+   `api.env`/`postgres.env` owned by the SSH login user, not
+   `vocanova-production`; the AI-provider sync step's non-sudo `touch`
+   (correct behavior, since the step chowns the directory to itself first)
+   then failed with `Permission denied` against files it didn't own.
+   Fixed by re-chowning the secrets tree.
+3. **`BASE_URL is required` crash loop.** The api container requires
+   `BASE_URL`, `OAUTH_REDIRECT_URI`, and `SESSION_COOKIE_DOMAIN`
+   (`apps/api/app/api/production.go`'s `LoadProductionConfig`); nothing had
+   ever written them for production. Fixed by adding a new "Write
+   production application configuration" step to `deploy-production.yml`
+   that derives these (non-secret, workflow-input-derived) values
+   automatically on every deploy — `EMAIL_MAGIC_LINK_ENABLED`/
+   `GOOGLE_OAUTH_ENABLED`/`NEW_USER_SIGNUP_ENABLED` all default `false`
+   until real production-tier email/OAuth credentials exist (this is
+   infrastructure verification, not a launch decision - `T05` remains the
+   actual go/no-go).
+4. **`docker restart` doesn't re-read `env_file`.** Fixing (3) on disk had
+   no effect until containers were recreated (`docker compose up -d
+   --force-recreate`), not merely restarted — Compose bakes `env_file`
+   content into the container at creation time.
+5. **Bind-mounted TLS paths auto-created as directories.** Docker creates a
+   directory at a bind-mount source path that doesn't exist yet, so
+   `cert.pem`/`key.pem` became directories before any cert existed,
+   breaking `openssl req`'s output path. Fixed by removing the directories
+   before writing real files.
+6. **Port collision with staging + Cloudflare edge routing.** Documented in
+   `t00-production-hosting-decision-record.md`'s second supersession note:
+   production's nginx runs on 8081/8443 (staging owns 80/443 on the same
+   host); Cloudflare proxies 8443 automatically with no dashboard change,
+   but every client must include the port. `deploy-production.yml`'s health
+   checks and `NEXT_PUBLIC_API_BASE_URL` default were fixed to include
+   `:8443`.
+7. **Self-signed cert rejected by Cloudflare's strict SSL mode (`526`).**
+   Fixed by installing a real Cloudflare Origin CA certificate (see above).
+
+## Real verification (2026-08-01)
+
+```
+$ curl -sS -o /dev/null -w "web:8443 -> %{http_code}\n" https://production.vocanova.site:8443/
+web:8443 -> 200
+$ curl -sS https://api-production.vocanova.site:8443/healthz
+{"$schema":"https://api-production.vocanova.site/schemas/HealthzOutputBody.json","status":"ok","database":"ok","timestamp":"2026-08-01T19:42:49Z"}
+```
+
+All 13 migrations applied cleanly against a fresh production database (the
+Atlas `atlas:txmode`/duplicate-index defects that blocked R1's first
+attempts were already fixed upstream by `VOC-033` - confirmed live here,
+correcting this file's earlier note below that they were still open).
+
+`infra/scripts/rehearse-production-secrets-boundary.sh`, executed on the
+real host after the real deploy:
+
+```
+[INS-9] production secret tree exists and matches the D01 permission baseline
+  ok: /opt/vocanova/production mode 750 is within 750
+  ok: /opt/vocanova/production/secrets mode 700 is within 700
+  ok: /opt/vocanova/production/secrets/nginx mode 700 is within 700
+  ok: /opt/vocanova/production is owned by vocanova-production (not deploy)
+  ok: /opt/vocanova/production/secrets is owned by vocanova-production (not deploy)
+  ok: /opt/vocanova/production/secrets/api.env mode 600 is within 600
+  ok: /opt/vocanova/production/secrets/api.env is owned by vocanova-production (not deploy)
+  ok: /opt/vocanova/production/secrets/postgres.env mode 600 is within 600
+  ok: /opt/vocanova/production/secrets/postgres.env is owned by vocanova-production (not deploy)
+  ok: 2 production env file(s) checked
+  ok: /opt/vocanova/production/secrets/nginx/key.pem mode 600 is within 600
+  ok: /opt/vocanova/production/secrets/nginx/cert.pem mode 600 is within 600
+[INS-10] production compose reads the production tree only
+  ok: no rendered compose path outside /opt/vocanova/production
+  ok: production compose declares no build context
+  ok: no compose source path outside /opt/vocanova/production
+  ok: compose references the production secrets tree
+[INS-11] neither tier's deploy identity can read the other's secrets
+  ok: deploy cannot read /opt/vocanova/production/secrets/api.env
+  ok: deploy cannot list /opt/vocanova/production
+  ok: vocanova-production cannot read /opt/vocanova/infra/secrets/api.env
+PASS: production/staging secret boundary rehearsal checks succeeded
+```
 
 ## Notes
 
 - This task provisions the production deployment shape and isolation
   controls. It does not close R2, authorize launch, or activate autonomous
   production release; founder go/no-go remains `VOC-037-T05`.
-- `apps/api/migrations/*.sql` still carry the invalid
-  `-- atlas:txmode transaction` directive and the duplicate-index collision
-  recorded in `.karsift/lessons.md`. The production deploy runs `migrate.sh`
-  and will fail on the first apply until those are fixed. That is a
-  pre-existing R1 follow-up, untouched by this task, and it blocks a green
-  production deploy independently of anything here.
+- **Correction to this file's earlier draft:** the note previously here
+  claimed `apps/api/migrations/*.sql` still carried the invalid
+  `-- atlas:txmode transaction` directive and a duplicate-index collision
+  that would block a green production deploy. That was stale — `VOC-033`
+  already fixed both upstream before this task ran, and the real production
+  migration ("Real verification" above) applied all 13 migrations cleanly
+  with no such error.
+- **Known, disclosed gap:** production's TLS certificate is a real
+  Cloudflare Origin CA certificate, but production and staging still share
+  one physical host (`VOC-037-D00`'s second supersession). The shared-host
+  resource/fault-domain risk that decision explicitly accepted is real and
+  in effect, mitigated but not eliminated by the resource limits and
+  isolation controls in this task.
