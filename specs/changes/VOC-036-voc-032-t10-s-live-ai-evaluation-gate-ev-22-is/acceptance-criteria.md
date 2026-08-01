@@ -191,19 +191,18 @@ error code, any `VOC-035` file, or any file outside `apps/api`.
 
 ## VOC-036-AC-11 — Live Cloudflare evaluation is recorded honestly, pass or fail, once the founder provisions credentials, with rate-limit-aware pacing
 
-After `VOC-036-T00`–`T02` merge and the founder provisions a Cloudflare API
-token and account ID, `VOC-036-T03`'s live run of the extended `cmd/eval-live`
-against the real Cloudflare Workers AI API — invoked with a non-zero
-`--request-interval` explicitly chosen against the free tier's shared
-10,000-neurons/day pool and the 56-case golden set's own call count — is
-recorded in this package's own `staging-evidence.md`, including every
-`LiveEvaluationReport` field (per-threshold values, violations if any, latency
-statistics, provider-call count, cost fields) and the pacing interval actually
-used, with an honest pass/fail/violation outcome. **No pass is asserted or
-implied anywhere in this package until this live run has actually executed** —
-this criterion's `Result` field stays `pending — blocked by VOC-036-DEP-00`
-until then, mirroring `VOC-035-AC-10`'s and `VOC-032`'s own "do not fabricate a
-pass" discipline.
+`VOC-036-T03`'s live runs of the extended `cmd/eval-live` against the real
+Cloudflare Workers AI API — invoked with a non-zero `--request-interval` —
+are recorded in this package's own `staging-evidence.md`, including every
+`LiveEvaluationReport` field for each run and the pacing interval used, with
+an honest pass/fail/violation outcome. **No pass is asserted or implied** -
+the live run executed four times (2026-08-01): once exposing a real code
+defect (fixed in PR #253), then three different models tried against the
+fixed code, all FAIL. See `staging-evidence.md`'s `EV-22`-equivalent section
+for the full record, including the real defect found, the model comparison,
+and why DeepSeek was ruled out without a full run. Per the founder's explicit
+decision, this FAIL is recorded as the result, not retried further this
+round.
 
 - Requirement source: founder request ("recording the result honestly in this
   package's own staging-evidence.md... do not fabricate a pass"; "explicitly
@@ -211,4 +210,4 @@ pass" discipline.
 - Tasks: `VOC-036-T03`
 - Tests: `VOC-036-TEST-11`
 - Evidence: `VOC-036-EV-04`
-- Result: pending — blocked by `VOC-036-DEP-00`
+- Result: fail
