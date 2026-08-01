@@ -93,7 +93,12 @@ implementation-authorization are separate.
 - Acceptance criteria: `VOC-037-AC-03`
 - Tests: `VOC-037-TEST-03`
 - Evidence: `VOC-037-EV-03`
-- Status: pending
+- Status: implemented; live rehearsal outstanding. The rehearsal script,
+  its deterministic harness, the rollback deploy mode this repository
+  did not previously have, and the kill-switch deploy inputs are
+  delivered and verified in repository; `VOC-037-AC-03` stays open until
+  the founder-owned live run recorded in
+  `t03-killswitch-rollback-evidence.md` is executed.
 - Depends on: `VOC-037-T06` (needs the actual production target `T06` builds,
   not just T00's decision, to verify against)
 - Summary: Verify, against whatever production target `T00` decides, that the

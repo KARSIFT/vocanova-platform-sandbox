@@ -18,6 +18,43 @@ on:
         required: true
         type: string
         default: https://api-production.vocanova.site:8443
+      deploy_mode:
+        description: "build-and-deploy for a normal release; redeploy-existing-image for DOC-11 §3 rollback (redeploy a previously published artifact, no rebuild, no migration)"
+        required: true
+        type: choice
+        default: build-and-deploy
+        options:
+          - build-and-deploy
+          - redeploy-existing-image
+      existing_image_tag:
+        description: "Only for redeploy-existing-image: the sha-<short-sha> artifact tag to redeploy. Leave empty for build-and-deploy."
+        required: false
+        type: string
+        default: ""
+      ai_features_enabled:
+        description: "DOC-11 §3 kill switch: AI_FEATURES_ENABLED"
+        required: true
+        type: choice
+        default: "true"
+        options: ["true", "false"]
+      email_magic_link_enabled:
+        description: "DOC-11 §3 kill switch: EMAIL_MAGIC_LINK_ENABLED (needs production e-mail credentials before true is useful)"
+        required: true
+        type: choice
+        default: "false"
+        options: ["false", "true"]
+      google_oauth_enabled:
+        description: "DOC-11 §3 kill switch: GOOGLE_OAUTH_ENABLED (needs a production Google client before true is useful)"
+        required: true
+        type: choice
+        default: "false"
+        options: ["false", "true"]
+      new_user_signup_enabled:
+        description: "DOC-11 §3 kill switch: NEW_USER_SIGNUP_ENABLED"
+        required: true
+        type: choice
+        default: "false"
+        options: ["false", "true"]
 
 permissions:
   contents: read
@@ -53,7 +90,43 @@ jobs:
         id: sha
         run: echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
+      # DOC-11 §2 requires production to deploy one identifiable
+      # artifact, and §3's rollback is "redeploy the previous known-good
+      # artifact by digest" - which is only possible if a run can name
+      # an existing tag instead of building a new one. The two modes are
+      # mutually exclusive by construction: a rollback run that also
+      # rebuilt would not be redeploying the artifact it names.
+      - name: Resolve deploy mode and artifact tag
+        id: plan
+        env:
+          DEPLOY_MODE: ${{ inputs.deploy_mode }}
+          EXISTING_IMAGE_TAG: ${{ inputs.existing_image_tag }}
+          COMMIT_IMAGE_TAG: sha-${{ steps.sha.outputs.short_sha }}
+        run: |
+          set -euo pipefail
+          case "$DEPLOY_MODE" in
+            build-and-deploy)
+              if [ -n "$EXISTING_IMAGE_TAG" ]; then
+                echo "existing_image_tag must be empty for build-and-deploy" >&2
+                exit 1
+              fi
+              echo "image_tag=$COMMIT_IMAGE_TAG" >> "$GITHUB_OUTPUT"
+              ;;
+            redeploy-existing-image)
+              if ! printf '%s' "$EXISTING_IMAGE_TAG" | grep -qE '^sha-[0-9a-f]{7}$'; then
+                echo "existing_image_tag must be an immutable sha-<short-sha> tag, not '${EXISTING_IMAGE_TAG}'" >&2
+                exit 1
+              fi
+              echo "image_tag=$EXISTING_IMAGE_TAG" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "unknown deploy_mode '$DEPLOY_MODE'" >&2
+              exit 1
+              ;;
+          esac
+
       - name: Build and push vocanova-api
+        if: inputs.deploy_mode == 'build-and-deploy'
         uses: docker/build-push-action@v5
         with:
           context: apps/api
@@ -65,6 +138,7 @@ jobs:
           provenance: false
 
       - name: Build and push vocanova-web
+        if: inputs.deploy_mode == 'build-and-deploy'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -75,6 +149,22 @@ jobs:
             ghcr.io/karsift/vocanova-web:sha-${{ steps.sha.outputs.short_sha }}
             ghcr.io/karsift/vocanova-web:prod
           provenance: false
+
+      # A rollback that names a tag nobody ever published would fail
+      # later, on the host, with production already stopped. Resolving
+      # both manifests here fails the run before anything is touched,
+      # and records the exact digests the rollback restores.
+      - name: Confirm the artifact being redeployed exists
+        if: inputs.deploy_mode == 'redeploy-existing-image'
+        env:
+          IMAGE_TAG: ${{ steps.plan.outputs.image_tag }}
+        run: |
+          set -euo pipefail
+          for repository in vocanova-api vocanova-web; do
+            reference="ghcr.io/karsift/${repository}:${IMAGE_TAG}"
+            digest="$(docker buildx imagetools inspect "$reference" --format '{{.Manifest.Digest}}')"
+            echo "$reference -> $digest"
+          done
 
       - name: Configure SSH host key verification
         env:
@@ -100,7 +190,9 @@ jobs:
           cp infra/nginx-production/nginx.conf /tmp/production-deploy-bundle/nginx/
           cp infra/nginx-production/conf.d/*.conf /tmp/production-deploy-bundle/nginx/conf.d/
           cp infra/scripts/rehearse-production-secrets-boundary.sh /tmp/production-deploy-bundle/infra/scripts/
+          cp infra/scripts/rehearse-production-killswitch-rollback.sh /tmp/production-deploy-bundle/infra/scripts/
           chmod +x /tmp/production-deploy-bundle/infra/scripts/rehearse-production-secrets-boundary.sh
+          chmod +x /tmp/production-deploy-bundle/infra/scripts/rehearse-production-killswitch-rollback.sh
           cp apps/api/scripts/migrate.sh /tmp/production-deploy-bundle/apps/api/scripts/
           chmod +x /tmp/production-deploy-bundle/apps/api/scripts/migrate.sh
           cp apps/api/migrations/*.sql /tmp/production-deploy-bundle/apps/api/migrations/
@@ -121,12 +213,13 @@ jobs:
         env:
           PRODUCTION_CLOUDFLARE_API_TOKEN: ${{ secrets.PRODUCTION_CLOUDFLARE_API_TOKEN }}
           PRODUCTION_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.PRODUCTION_CLOUDFLARE_ACCOUNT_ID }}
+          PRODUCTION_AI_FEATURES_ENABLED: ${{ inputs.ai_features_enabled }}
         with:
           host: ${{ secrets.PRODUCTION_SSH_HOST }}
           username: ${{ secrets.PRODUCTION_SSH_USER }}
           key: ${{ secrets.PRODUCTION_SSH_PRIVATE_KEY }}
           command_timeout: 2m
-          envs: PRODUCTION_CLOUDFLARE_API_TOKEN,PRODUCTION_CLOUDFLARE_ACCOUNT_ID
+          envs: PRODUCTION_CLOUDFLARE_API_TOKEN,PRODUCTION_CLOUDFLARE_ACCOUNT_ID,PRODUCTION_AI_FEATURES_ENABLED
           script: |
             set -euo pipefail
             if [ -z "${PRODUCTION_CLOUDFLARE_API_TOKEN:-}" ] || [ -z "${PRODUCTION_CLOUDFLARE_ACCOUNT_ID:-}" ]; then
@@ -154,7 +247,7 @@ jobs:
               echo "AI_PROVIDER_API_KEY=${PRODUCTION_CLOUDFLARE_API_TOKEN}"
               echo "AI_PROVIDER_ACCOUNT_ID=${PRODUCTION_CLOUDFLARE_ACCOUNT_ID}"
               echo "AI_PROVIDER_MODEL=@cf/meta/llama-3.1-8b-instruct-fp8-fast"
-              echo "AI_FEATURES_ENABLED=true"
+              echo "AI_FEATURES_ENABLED=${PRODUCTION_AI_FEATURES_ENABLED}"
             } >> /opt/vocanova/production/secrets/api.env
             chmod 600 /opt/vocanova/production/secrets/api.env
 
@@ -201,24 +294,33 @@ jobs:
       # production_web_host/production_api_host inputs - so they're
       # written here from workflow inputs rather than requiring a
       # separate founder pre-population step the way DATABASE_URL and
-      # provider API keys do. Kill switches default OFF for
-      # email/OAuth/signups until real production credentials for those
-      # exist (VOC-032-DEP-07's production-tier equivalent); AI stays on
-      # per the sync step above. Found live during VOC-037-T06's first
-      # real deploy rehearsal (api container looped on "BASE_URL is
-      # required" until this was added).
+      # provider API keys do. Found live during VOC-037-T06's first real
+      # deploy rehearsal (api container looped on "BASE_URL is required"
+      # until this was added).
+      #
+      # The three auth kill switches come from this run's own inputs
+      # (defaulting off until real production e-mail/Google credentials
+      # exist - VOC-032-DEP-07's production-tier equivalent) rather than
+      # from hardcoded literals, so DOC-11 §3's switches are operable
+      # through the reviewed, environment-gated deploy path instead of
+      # by hand-editing api.env on the host. Every deploy re-asserts the
+      # requested state, which is also why a manual on-host toggle is
+      # not durable and must not be used as the operational mechanism.
       - name: Write production application configuration
         uses: appleboy/ssh-action@v1
         env:
           PRODUCTION_WEB_HOST: ${{ inputs.production_web_host }}
           PRODUCTION_API_HOST: ${{ inputs.production_api_host }}
-          PRODUCTION_SENTRY_RELEASE: sha-${{ steps.sha.outputs.short_sha }}
+          PRODUCTION_SENTRY_RELEASE: ${{ steps.plan.outputs.image_tag }}
+          PRODUCTION_EMAIL_MAGIC_LINK_ENABLED: ${{ inputs.email_magic_link_enabled }}
+          PRODUCTION_GOOGLE_OAUTH_ENABLED: ${{ inputs.google_oauth_enabled }}
+          PRODUCTION_NEW_USER_SIGNUP_ENABLED: ${{ inputs.new_user_signup_enabled }}
         with:
           host: ${{ secrets.PRODUCTION_SSH_HOST }}
           username: ${{ secrets.PRODUCTION_SSH_USER }}
           key: ${{ secrets.PRODUCTION_SSH_PRIVATE_KEY }}
           command_timeout: 2m
-          envs: PRODUCTION_WEB_HOST,PRODUCTION_API_HOST,PRODUCTION_SENTRY_RELEASE
+          envs: PRODUCTION_WEB_HOST,PRODUCTION_API_HOST,PRODUCTION_SENTRY_RELEASE,PRODUCTION_EMAIL_MAGIC_LINK_ENABLED,PRODUCTION_GOOGLE_OAUTH_ENABLED,PRODUCTION_NEW_USER_SIGNUP_ENABLED
           script: |
             set -euo pipefail
             sed -i \
@@ -245,9 +347,9 @@ jobs:
               echo "SESSION_LIFETIME=720h"
               echo "SENTRY_ENVIRONMENT=production"
               echo "SENTRY_RELEASE=${PRODUCTION_SENTRY_RELEASE}"
-              echo "EMAIL_MAGIC_LINK_ENABLED=false"
-              echo "GOOGLE_OAUTH_ENABLED=false"
-              echo "NEW_USER_SIGNUP_ENABLED=false"
+              echo "EMAIL_MAGIC_LINK_ENABLED=${PRODUCTION_EMAIL_MAGIC_LINK_ENABLED}"
+              echo "GOOGLE_OAUTH_ENABLED=${PRODUCTION_GOOGLE_OAUTH_ENABLED}"
+              echo "NEW_USER_SIGNUP_ENABLED=${PRODUCTION_NEW_USER_SIGNUP_ENABLED}"
             } >> /opt/vocanova/production/secrets/api.env
             chmod 600 /opt/vocanova/production/secrets/api.env
 
@@ -261,8 +363,10 @@ jobs:
           # The immutable per-commit tag, not the mutable `prod` tag, is
           # what production actually runs: DOC-11 §3's rollback model is
           # "redeploy the previous artifact by digest", which requires
-          # the deployed tag to identify one specific build.
-          PRODUCTION_IMAGE_SHA_TAG: ${{ steps.sha.outputs.short_sha }}
+          # the deployed tag to identify one specific build. In rollback
+          # mode this is the previously published tag the run named.
+          PRODUCTION_IMAGE_TAG_TO_DEPLOY: ${{ steps.plan.outputs.image_tag }}
+          PRODUCTION_DEPLOY_MODE: ${{ inputs.deploy_mode }}
           STAGING_DEPLOY_USER: ${{ secrets.STAGING_SSH_USER }}
           PRODUCTION_DEPLOY_USER: ${{ secrets.PRODUCTION_SSH_USER }}
         with:
@@ -270,7 +374,7 @@ jobs:
           username: ${{ secrets.PRODUCTION_SSH_USER }}
           key: ${{ secrets.PRODUCTION_SSH_PRIVATE_KEY }}
           command_timeout: 20m
-          envs: GITHUB_TOKEN,GITHUB_ACTOR,PRODUCTION_WEB_HOST,PRODUCTION_API_HOST,PRODUCTION_IMAGE_SHA_TAG,STAGING_DEPLOY_USER,PRODUCTION_DEPLOY_USER
+          envs: GITHUB_TOKEN,GITHUB_ACTOR,PRODUCTION_WEB_HOST,PRODUCTION_API_HOST,PRODUCTION_IMAGE_TAG_TO_DEPLOY,PRODUCTION_DEPLOY_MODE,STAGING_DEPLOY_USER,PRODUCTION_DEPLOY_USER
           script: |
             set -euo pipefail
 
@@ -297,7 +401,7 @@ jobs:
             sed -i "s/__PRODUCTION_API_HOST__/${PRODUCTION_API_HOST}/g" nginx/conf.d/20-api-production.conf
 
             export VOCANOVA_PRODUCTION_ROOT="/opt/vocanova/production"
-            export PRODUCTION_IMAGE_TAG="sha-${PRODUCTION_IMAGE_SHA_TAG}"
+            export PRODUCTION_IMAGE_TAG="${PRODUCTION_IMAGE_TAG_TO_DEPLOY}"
 
             # Pre-flight cross-tier guard. `docker compose config` folds
             # env_file entries into `environment:` and drops their paths,
@@ -350,7 +454,15 @@ jobs:
               echo "ERROR: DATABASE_URL does not target the expected Compose postgres service" >&2
               exit 1
             fi
-            DATABASE_URL="$migration_database_url" sh /opt/vocanova/production/apps/api/scripts/migrate.sh
+            # DOC-11 §3: never automatically reverse a production
+            # migration. A rollback run redeploys the application
+            # artifact only; the schema stays where it is, and a
+            # schema problem is corrected by a forward migration.
+            if [ "$PRODUCTION_DEPLOY_MODE" = "redeploy-existing-image" ]; then
+              echo "rollback mode: skipping migration apply (DOC-11 §3 forbids automatic migration reversal)"
+            else
+              DATABASE_URL="$migration_database_url" sh /opt/vocanova/production/apps/api/scripts/migrate.sh
+            fi
             unset migration_database_url
 
             docker compose -f docker-compose.production.yml -p vocanova-production up -d

@@ -226,6 +226,7 @@ secrets, and deploy user.
 │   ├── postgres.env
 │   └── nginx/{cert.pem,key.pem}
 ├── infra/scripts/rehearse-production-secrets-boundary.sh
+├── infra/scripts/rehearse-production-killswitch-rollback.sh
 └── apps/api/{scripts,migrations}/...
 ```
 
@@ -293,6 +294,52 @@ sudo infra/scripts/rehearse-production-secrets-boundary.selftest.sh
 The `apps/api/migrations/atlas.sum` integrity file is part
 of the deploy bundle; the `migrate.sh` wrapper refuses to
 proceed if it is missing.
+
+### Launch kill switches and rollback (DOC-11 §3)
+
+The four required kill switches live in
+`/opt/vocanova/production/secrets/api.env` and are re-asserted from
+`deploy-production`'s own inputs on every deploy:
+
+- `ai_features_enabled` → `AI_FEATURES_ENABLED` (default `true`). Off:
+  `POST /api/v1/sentence-feedback` answers 200 with error code
+  `AI_FEEDBACK_GENERATION_DISABLED`.
+- `email_magic_link_enabled` → `EMAIL_MAGIC_LINK_ENABLED` (default
+  `false`). Off: `POST /api/v1/auth/magic-links` answers 503.
+- `google_oauth_enabled` → `GOOGLE_OAUTH_ENABLED` (default `false`).
+  Off: `POST /api/v1/auth/oauth/google/start` answers 503. On, with no
+  production Google client provisioned yet, it answers 404 ("not
+  configured") — a different path, not a disabled one.
+- `new_user_signup_enabled` → `NEW_USER_SIGNUP_ENABLED` (default
+  `false`). Off: consuming a valid magic link for an address with no
+  existing account answers 503, and no user row is created. An existing
+  account can still sign in.
+
+Toggle a switch by re-running `deploy-production` with the input
+changed, not by editing `api.env` on the host: the workflow run is the
+reviewed, `production`-environment-gated, auditable path, and the next
+deploy overwrites any hand edit anyway. A switch change takes effect
+only when the container is recreated — Compose bakes `env_file` content
+in at creation time, so `docker restart` does not re-read it.
+
+Rollback is a `deploy-production` run with `deploy_mode` set to
+`redeploy-existing-image` and `existing_image_tag` set to the
+`sha-<short-sha>` of a previously deployed artifact. That mode builds
+nothing, deploys the tag it names, and **skips the migration
+apply** — DOC-11 §3 forbids
+reversing a production migration automatically; correct a schema
+problem with a forward migration instead.
+
+```bash
+# On the shared host: exercise all four switches and one
+# rollback/roll-forward cycle, then restore the tier's starting state.
+bash infra/scripts/rehearse-production-killswitch-rollback.sh \
+  api-production.vocanova.site sha-<previous-short-sha>
+
+# Anywhere, no docker and no production host needed: prove the rehearsal
+# above actually fails when a switch or the rollback path is broken.
+infra/scripts/rehearse-production-killswitch-rollback.selftest.sh
+```
 
 ## Local development and validation
 
