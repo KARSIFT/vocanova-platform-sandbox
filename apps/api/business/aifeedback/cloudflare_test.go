@@ -37,7 +37,7 @@ func TestCloudflareFeedbackProviderBuildsWorkersAIRequestShape(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"result":{"response":"{\"status\":\"correct\",\"target_word_used_correctly\":true,\"explanation\":\"Good sentence.\"}"},"success":true,"errors":[],"messages":[]}`))
+		_, _ = w.Write([]byte(`{"result":{"response":{"status":"correct","target_word_used_correctly":true,"explanation":"Good sentence."}},"success":true,"errors":[],"messages":[]}`))
 	}))
 	t.Cleanup(server.Close)
 
@@ -87,7 +87,7 @@ func TestCloudflareFeedbackProviderStatusesCovered(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
-				_, _ = w.Write([]byte(`{"result":{"response":` + strconvQuote(tc.responseText) + `},"success":true,"errors":[],"messages":[]}`))
+				_, _ = w.Write([]byte(`{"result":{"response":` + tc.responseText + `},"success":true,"errors":[],"messages":[]}`))
 			}))
 			t.Cleanup(server.Close)
 
@@ -125,7 +125,7 @@ func TestCloudflareModerationProviderAllOutcomeMappings(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
-				_, _ = w.Write([]byte(`{"result":{"response":"{\"outcome\":\"` + tc.outcome + `\",\"reason\":\"ok\"}"},"success":true,"errors":[],"messages":[]}`))
+				_, _ = w.Write([]byte(`{"result":{"response":{"outcome":"` + tc.outcome + `","reason":"ok"}},"success":true,"errors":[],"messages":[]}`))
 			}))
 			t.Cleanup(server.Close)
 
@@ -189,7 +189,7 @@ func TestCloudflareFeedbackProviderFailsClosedOnSuccessFalseEnvelope(t *testing.
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"result":{"response":"{\"status\":\"correct\"}"},"success":false,"errors":[{"message":"JSON Mode couldn't be met"}],"messages":[]}`))
+		_, _ = w.Write([]byte(`{"result":{"response":{"status":"correct"}},"success":false,"errors":[{"message":"JSON Mode couldn't be met"}],"messages":[]}`))
 	}))
 	t.Cleanup(server.Close)
 
@@ -209,7 +209,7 @@ func TestCloudflareFeedbackProviderFailsClosedOnMissingResultResponse(t *testing
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"result":{"response":"   "},"success":true,"errors":[],"messages":[]}`))
+		_, _ = w.Write([]byte(`{"result":{"response":null},"success":true,"errors":[],"messages":[]}`))
 	}))
 	t.Cleanup(server.Close)
 
@@ -249,7 +249,7 @@ func TestCloudflareModerationProviderFailsClosedOnUnrecognizedOutcome(t *testing
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"result":{"response":"{\"outcome\":\"maybe\"}"},"success":true,"errors":[],"messages":[]}`))
+		_, _ = w.Write([]byte(`{"result":{"response":{"outcome":"maybe"}},"success":true,"errors":[],"messages":[]}`))
 	}))
 	t.Cleanup(server.Close)
 
@@ -276,7 +276,7 @@ func TestCloudflareModerationProviderInjectionAttemptIsGradedAsData(t *testing.T
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"result":{"response":"{\"outcome\":\"allowed\",\"reason\":\"ok\"}"},"success":true,"errors":[],"messages":[]}`))
+		_, _ = w.Write([]byte(`{"result":{"response":{"outcome":"allowed","reason":"ok"}},"success":true,"errors":[],"messages":[]}`))
 	}))
 	t.Cleanup(server.Close)
 
