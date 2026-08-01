@@ -276,8 +276,8 @@ func parseCloudflareTextResponse(statusCode int, body []byte) (string, error) {
 		return "", fmt.Errorf("%w: cloudflare response success=false", ErrProviderInvalidResponse)
 	}
 
-	content := strings.TrimSpace(resp.Result.Response)
-	if content == "" {
+	content := strings.TrimSpace(string(resp.Result.Response))
+	if content == "" || content == "null" {
 		return "", ErrProviderInvalidResponse
 	}
 	if isProviderRefusal(content) {
@@ -302,9 +302,20 @@ type cloudflareResponseFormat struct {
 	JSONSchema map[string]any `json:"json_schema"`
 }
 
+// cloudflareRunResponse's Result.Response is json.RawMessage, not string.
+// Cloudflare's `response_format: {type: "json_schema", ...}` mode returns
+// `result.response` as an actual parsed JSON object matching the schema
+// (e.g. `{"status":"correct","explanation":"..."}`), not a JSON-encoded
+// string containing that object - confirmed live against the real API
+// (VOC-036-T03's first live-evaluation attempt: every one of 56 calls
+// failed with ProviderCalled=0 because `Response string` could never
+// successfully unmarshal an object). json.RawMessage captures the field's
+// raw bytes verbatim regardless of whether the underlying JSON is a string
+// or an object, which is exactly what downstream extractJSON/json.Unmarshal
+// already expects to receive - no other parsing logic changes needed.
 type cloudflareRunResponse struct {
 	Result struct {
-		Response string `json:"response"`
+		Response json.RawMessage `json:"response"`
 	} `json:"result"`
 	Success bool `json:"success"`
 	Errors  []struct {
