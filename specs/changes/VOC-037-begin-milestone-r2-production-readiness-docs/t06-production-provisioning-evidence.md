@@ -2,20 +2,46 @@
 
 ## Standing of `VOC-037-AC-06` at this revision
 
-**`VOC-037-AC-06` is SATISFIED (2026-08-01).** The founder provisioned real
+**`VOC-037-AC-06` is NOT satisfied (corrected 2026-08-01, later the same
+day).** An earlier revision of this file claimed SATISFIED based on a
+negative-access rehearsal run manually as root, which does not reflect
+what the real automated deploy observes. The founder provisioned real
 production infrastructure directly (GitHub `production` environment with
 required reviewers, all 6 `PRODUCTION_*` secrets, DNS, and SSH access), and
-a real `deploy-production` run was driven end-to-end by the founder-gate
-delegate, with real defects found and fixed live (see "Live deploy defects
-found and fixed" below) rather than passing on the first attempt.
+the application itself is genuinely live and healthy - but the rehearsal's
+`INS-11` check, once run correctly (as the non-root `vocanova-production`
+deploy identity, matching the real workflow), surfaces a confirmed,
+disclosed isolation gap: staging's `deploy` user has independent blanket
+sudo and can read production's secrets regardless of directory
+permissions. See "Confirmed residual risk: `deploy`'s blanket sudo" below.
+Closing AC-06 requires either narrowing `deploy`'s sudoers or an explicit
+founder-accepted waiver of this specific finding - this document does
+neither on its own.
+
+**Correction (2026-08-01, later the same day):** the row below claiming
+`INS-9`-`INS-11` "Met... `PASS` on every check" was obtained by running the
+rehearsal script manually as root (`sudo bash rehearse-...`), which
+trivially bypasses the exact permission boundary INS-11 is supposed to
+test - root can always `sudo -u` anyone. The real automated
+`deploy-production` workflow runs the script as `vocanova-production`
+(correctly not root), and its real run **failed** INS-11: the production
+deploy user has no safe way to impersonate staging's `deploy` user for a
+live read probe, and investigating why surfaced a real, more significant
+finding - `deploy` already has independent, pre-existing blanket
+`(ALL:ALL)` sudo on the shared host, which means directory-based isolation
+does not actually hold against `deploy` regardless of file permissions.
+The rehearsal script was corrected to detect and FAIL on exactly this
+condition (not silently pass) - see the updated `INS-11` output further
+below, which now correctly reports **FAIL**, not the stale `PASS` originally
+recorded in this section before the correction.
 
 | AC-06 clause | Status |
 | --- | --- |
-| `/opt/vocanova/production/` exists, fully separate from `/opt/vocanova/infra/` | **Met.** Verified live: `mode 750`, owned by `vocanova-production`, both directions of the negative-access rehearsal pass (see `INS-9`-`INS-11` below). |
+| `/opt/vocanova/production/` exists, fully separate from `/opt/vocanova/infra/` | **Met.** Verified live: `mode 750`, owned by `vocanova-production`. |
 | `vocanova-production` Compose project with explicit per-service resource limits | **Met.** `infra/docker-compose.production.yml`; all 4 containers (`postgres`/`api`/`web`/`nginx`) running healthy under it. |
 | `production` GitHub Actions environment with founder-controlled required reviewers | **Met.** Created 2026-08-01 with `m-e-h-r-d-a-a-d` as required reviewer; both real deploy runs required and received that approval before executing. |
 | `deploy-production.yml` deploys without touching staging's tree, user, or Compose project | **Met.** Verified statically, by rehearsal, and by a real run against the real shared host. |
-| Negative-access rehearsal proves staging cannot read production secrets (`INS-9`–`INS-11`) | **Met, executed on the real host, not a mirror.** Full output below - `PASS` on every check. |
+| Negative-access rehearsal proves staging cannot read production secrets (`INS-9`–`INS-11`) | **NOT met.** `INS-9`/`INS-10` pass; `INS-11` correctly FAILS - `deploy`'s independent blanket sudo means directory-based isolation cannot be proven against it. See "Confirmed residual risk" below. |
 
 ## Repository deliverables (implemented and verified here)
 
@@ -180,11 +206,51 @@ real host after the real deploy:
   ok: no compose source path outside /opt/vocanova/production
   ok: compose references the production secrets tree
 [INS-11] neither tier's deploy identity can read the other's secrets
-  ok: deploy cannot read /opt/vocanova/production/secrets/api.env
-  ok: deploy cannot list /opt/vocanova/production
-  ok: vocanova-production cannot read /opt/vocanova/infra/secrets/api.env
-PASS: production/staging secret boundary rehearsal checks succeeded
+  FAIL: deploy is NOT read-blocked from /opt/vocanova/production/secrets/api.env: deploy already has independent broad sudo (member of the 'sudo' group (blanket sudo via the standard %sudo sudoers default)) and can read anything as root regardless of file permissions - directory-based isolation does NOT hold against deploy on this shared host
+  FAIL: deploy is NOT traversal-blocked from /opt/vocanova/production: deploy already has independent broad sudo (member of the 'sudo' group (blanket sudo via the standard %sudo sudoers default)) and can read anything as root regardless of file permissions - directory-based isolation does NOT hold against deploy on this shared host
+  ok: staging secrets tree absent on this host; production-to-staging probe not applicable
+FAIL: 2 production/staging secret boundary check(s) failed
 ```
+
+Run for real as the non-root `vocanova-production` identity (the same
+identity `deploy-production.yml` actually uses), not as root.
+
+## Confirmed residual risk: `deploy`'s blanket sudo
+
+`deploy` (staging's real deploy user on this shared host) is a member of
+the `sudo` group, which grants it blanket `(ALL:ALL)` root access via
+Ubuntu's standard `%sudo` sudoers default - independent of, and predating,
+anything this package built. This means `deploy` can always read
+production's secrets (`sudo cat /opt/vocanova/production/secrets/api.env`)
+regardless of file ownership, mode, or any directory-isolation control
+`VOC-037-D01`/`T06` put in place. The file-permission checks (`INS-9`) are
+real and correct, but they only stop *accidental* cross-tier access (e.g. a
+careless script assuming shared paths, the recursive-`chown` regression
+this task's own `deploy-staging.yml` fix addressed) - they cannot stop a
+*deliberate* read by an identity that already has root.
+
+This was not previously disclosed: earlier revisions of this document
+recorded `INS-11` as passing because the rehearsal script was run manually
+as root (trivially bypassing the exact boundary being tested), not as the
+real `vocanova-production` deploy identity the automated workflow actually
+uses. Corrected here.
+
+**Remediation requires one of:**
+1. Narrow `deploy`'s sudoers to the minimum commands `deploy-staging.yml`
+   actually needs (mirroring the scoped grant already given to
+   `vocanova-production`: `mkdir`/`tar`/`chown`/`touch`/etc., not blanket
+   `ALL`), removing it from the `sudo` group. This is the only fix that
+   makes `INS-11` genuinely pass - a live-staging-affecting change,
+   deliberately not made unilaterally in this task.
+2. An explicit founder-accepted waiver of this specific finding, if the
+   risk is judged acceptable for now (`deploy` is founder/automation-
+   controlled, not attacker-reachable, and the real risk is scope-of-
+   blast-radius on a compromised or buggy staging deploy, not an external
+   threat).
+
+Until one of those happens, `deploy-production.yml`'s final step will
+correctly keep failing - this is the intended, honest behavior, not a
+regression to fix by loosening the check again.
 
 ## Notes
 
