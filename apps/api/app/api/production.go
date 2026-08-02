@@ -637,6 +637,9 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	humaCfg := huma.DefaultConfig("Vocanova API", "0.1.0")
 	humaCfg.Info.Description = "Explicit Vocanova HTTP DTO contract. Internal persistence models are not exposed."
 	mux := chi.NewMux()
+	corsOrigins := corsAllowedOrigins(cfg.OAuthReturnURLs)
+	mux.Use(corsMiddleware(corsOrigins))
+	fmt.Fprintf(os.Stderr, "api: cors allowed origins: %s\n", corsOriginsSummary(corsOrigins))
 	api := humachi.New(mux, humaCfg)
 	api.UseMiddleware(withHumaContext)
 	api.UseMiddleware(AuthMiddleware(authSvc))
