@@ -69,7 +69,7 @@
 - Tasks: `VOC-037-T04`
 - Tests: `VOC-037-TEST-04`
 - Evidence: `VOC-037-EV-04`
-- Result: pending
+- Result: **SATISFIED (2026-08-02)** — both halves verified live against real production infrastructure: a real Sentry test event (event ID `60c282e455a843ff9151a235ebb71dda`) and a real, rehearsed uptime-down alert (founder-confirmed received via Telegram). Uptime monitoring uses self-hosted Uptime Kuma rather than the literally-named Better Stack/UptimeRobot — UptimeRobot's free tier defaults to `HEAD` probes, which the production API's `GET`-only `/healthz` rejects with `405`, and the founder chose the self-hosted alternative over a paid plan once informed live. See `VOC-037-EV-04`'s "Disclosed deviation" note.
 - Observable outcome: A deliberately triggered test error is observed in Sentry
   for the production environment; a deliberate uptime-check failure produces a
   founder-reaching alert from Better Stack/UptimeRobot.

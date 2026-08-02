@@ -2,17 +2,35 @@
 
 ## Standing at this revision
 
-**Correction to this section's earlier text:** it previously claimed the
-in-repo/external split below "matches `VOC-037-TEST-04`." That was wrong
-and is struck. `VOC-037-TEST-04`'s own preconditions require Sentry AND
-Better Stack/UptimeRobot already configured, and its expected result
-requires both a Sentry event AND an uptime alert actually observed within
-a bounded time - there is no "repo scaffolding first, external verification
-later" split authorized anywhere in `test-plan.md`. `VOC-037-AC-04` and
-`VOC-037-TEST-04` are simply **not satisfied** at this revision, full stop -
-not partially satisfied, not on an authorized split. The in-repo
-deliverables below are real, correct, and necessary preconditions for
-AC-04, but they do not themselves satisfy it.
+**`VOC-037-AC-04` is SATISFIED (2026-08-02).** Both halves of the
+observable outcome — a deliberately triggered Sentry test error observed
+for the production environment, and a deliberate uptime-check failure
+producing a founder-reaching alert — were driven live against real
+production infrastructure and real founder-confirmed receipt, not
+simulated. See "Live verification (2026-08-02)" below for the actual
+event IDs, commands, and outputs.
+
+**Disclosed deviation from `VOC-037-TEST-04`'s literal wording:** the test
+plan names "Better Stack/UptimeRobot" specifically. UptimeRobot's free
+tier defaults HTTP monitors to `HEAD` requests and does not expose the
+HTTP-method setting to non-paying accounts; the production API's
+`/healthz` route only implements `GET` (confirmed live: `HEAD` returns
+`405 Method Not Allowed`), so a UptimeRobot free-tier monitor against the
+real endpoint cannot be made to report accurately without either a paid
+plan or weakening the endpoint. The founder, once informed of this
+constraint live, directed the switch to a self-hosted alternative
+(Uptime Kuma) instead of paying or working around it. This satisfies the
+AC's actual observable outcome (a real uptime-check failure produces a
+real founder-reaching alert) via a different, founder-approved tool than
+the one `VOC-037-TEST-04` names by example. Recorded here as a disclosed
+substitution, not silently treated as the literally-named tool.
+
+**Correction to this section's earlier text (superseded by the above):**
+it previously claimed the in-repo/external split below "matches
+`VOC-037-TEST-04`," then was corrected to record `AC-04`/`TEST-04` as not
+satisfied at all pending external verification. That external
+verification has now actually happened (below), so this section is
+updated again to SATISFIED.
 
 - In-repo deliverables for production monitoring are implemented and tested:
   - API-side Sentry wiring (env-driven, no-op when unset).
@@ -71,23 +89,58 @@ go test ./...
 
 Observed result: PASS for all packages, including `app/api` and `cmd/api`.
 
-## Founder-run live verification required to close AC-04
+## Live verification (2026-08-02)
 
-1. Confirm production GitHub environment contains:
-   - `PRODUCTION_SENTRY_DSN`
-   - `PRODUCTION_MONITORING_TEST_TOKEN`
-2. Run `deploy-production` once so `api.env` receives:
-   - `SENTRY_DSN`
-   - `SENTRY_ENVIRONMENT=production`
-   - `SENTRY_RELEASE=sha-<deployed-sha>`
-   - `MONITORING_TEST_TOKEN`
-3. Trigger a deliberate production test event:
-   - `curl -X POST "https://api-production.<founder-domain>:8443/ops/monitoring/sentry-test" -H "Authorization: Bearer <PRODUCTION_MONITORING_TEST_TOKEN>"`
-4. Confirm the event appears in the production Sentry project (include event ID from API response).
-5. Trigger a bounded uptime failure rehearsal for production (for example, short maintenance window that forces the monitored health endpoint non-2xx), then confirm Better Stack/UptimeRobot alerts the founder.
-6. Record timestamps, screenshots/links, and alert receiver details; then mark `VOC-037-AC-04` satisfied.
+**Sentry (error monitoring):**
+
+- `PRODUCTION_SENTRY_DSN`/`PRODUCTION_MONITORING_TEST_TOKEN` populated in the
+  `production` GitHub environment; `deploy-production` run wrote them into
+  `api.env` as `SENTRY_DSN`/`SENTRY_ENVIRONMENT=production`/
+  `SENTRY_RELEASE=sha-<deployed-sha>`/`MONITORING_TEST_TOKEN`.
+- Deliberate test event triggered against the real production API:
+  `POST https://api-production.vocanova.site:8443/ops/monitoring/sentry-test`
+  with the real bearer token.
+- Real event confirmed delivered and visible in the production Sentry
+  project: **event ID `60c282e455a843ff9151a235ebb71dda`**.
+- `sentryhttp` middleware (wired in `apps/api/cmd/api/main.go`) confirmed
+  live, so real request errors/panics reach Sentry, not just this
+  deliberate test route.
+
+**Uptime monitoring (self-hosted Uptime Kuma, substituted for
+Better Stack/UptimeRobot — see disclosed deviation above):**
+
+- Deployed at `/opt/vocanova/monitoring/` on the shared production host,
+  as its own `docker compose` project (`vocanova-uptime-kuma`), bound to
+  `127.0.0.1:3001` only (no new DNS/Cloudflare/firewall changes — the
+  dashboard is reached via SSH tunnel; background checks and alerting run
+  independent of whether the dashboard is exposed).
+- Two monitors created against real production URLs, `GET` method
+  (avoiding the `HEAD`-only free-tier limitation that ruled out
+  UptimeRobot): `https://api-production.vocanova.site:8443/healthz` and
+  `https://production.vocanova.site:8443/`, both confirmed initially `UP`
+  with real `200` responses.
+- Alert channel: Telegram bot (`@vocanova_alerts_bot`), configured with
+  the founder's real chat ID, test notification sent and founder-confirmed
+  received.
+- **Live down/up rehearsal, not simulated:** the API monitor's URL was
+  temporarily repointed to a real nonexistent path
+  (`/this-path-does-not-exist-live-test`) against the real host. Real
+  heartbeat observed: `status=0 msg="Request failed with status code 404"`.
+  Telegram alert for the down event founder-confirmed received. Monitor
+  then restored to the real `/healthz` URL and confirmed `UP` again -
+  the founder was not asked to simply trust the config; the alert path
+  was proven to fire end-to-end.
+- Dashboard admin credentials created (`mehrdad` / real password handed to
+  founder directly, not recorded in this document or any repository
+  file).
 
 ## Notes
 
 - This task adds monitoring instrumentation and safe test hooks only; it does not change launch authority or go/no-go gates (`VOC-037-T05` remains the founder gate).
 - The monitoring test endpoint is not registered unless `MONITORING_TEST_TOKEN` is set.
+- Uptime Kuma's admin credentials, the Telegram bot token, and the chat ID
+  are operational secrets for a founder-facing tool, not application
+  secrets; they are not stored in this repository. If the bot token needs
+  rotation, regenerate it via `@BotFather` and update Kuma's notification
+  config directly (SSH tunnel + dashboard, or the same socket.io scripting
+  approach used to set it up).
