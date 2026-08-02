@@ -2,21 +2,20 @@
 
 ## Standing of `VOC-037-AC-06` at this revision
 
-**`VOC-037-AC-06` is NOT satisfied (corrected 2026-08-01, later the same
-day).** An earlier revision of this file claimed SATISFIED based on a
-negative-access rehearsal run manually as root, which does not reflect
-what the real automated deploy observes. The founder provisioned real
-production infrastructure directly (GitHub `production` environment with
-required reviewers, all 6 `PRODUCTION_*` secrets, DNS, and SSH access), and
-the application itself is genuinely live and healthy - but the rehearsal's
-`INS-11` check, once run correctly (as the non-root `vocanova-production`
-deploy identity, matching the real workflow), surfaces a confirmed,
-disclosed isolation gap: staging's `deploy` user has independent blanket
-sudo and can read production's secrets regardless of directory
-permissions. See "Confirmed residual risk: `deploy`'s blanket sudo" below.
-Closing AC-06 requires either narrowing `deploy`'s sudoers or an explicit
-founder-accepted waiver of this specific finding - this document does
-neither on its own.
+**`VOC-037-AC-06` is NOT satisfied — accepted as a founder-waived residual
+risk (2026-08-02).** An earlier revision of this file claimed SATISFIED
+based on a negative-access rehearsal run manually as root, which does not
+reflect what the real automated deploy observes. The founder provisioned
+real production infrastructure directly (GitHub `production` environment
+with required reviewers, all 6 `PRODUCTION_*` secrets, DNS, and SSH
+access), and the application itself is genuinely live and healthy - but
+the rehearsal's `INS-11` check, once run correctly (as the non-root
+`vocanova-production` deploy identity, matching the real workflow),
+surfaces a confirmed, disclosed isolation gap: staging's real deploy
+identity, the `ubuntu` account, has independent blanket sudo and can read
+production's secrets regardless of directory permissions. See "Confirmed
+residual risk: `ubuntu`'s blanket sudo" below for the full finding and the
+founder's waiver decision.
 
 **Correction (2026-08-01, later the same day):** the row below claiming
 `INS-9`-`INS-11` "Met... `PASS` on every check" was obtained by running the
@@ -24,16 +23,24 @@ rehearsal script manually as root (`sudo bash rehearse-...`), which
 trivially bypasses the exact permission boundary INS-11 is supposed to
 test - root can always `sudo -u` anyone. The real automated
 `deploy-production` workflow runs the script as `vocanova-production`
-(correctly not root), and its real run **failed** INS-11: the production
-deploy user has no safe way to impersonate staging's `deploy` user for a
-live read probe, and investigating why surfaced a real, more significant
-finding - `deploy` already has independent, pre-existing blanket
-`(ALL:ALL)` sudo on the shared host, which means directory-based isolation
-does not actually hold against `deploy` regardless of file permissions.
-The rehearsal script was corrected to detect and FAIL on exactly this
-condition (not silently pass) - see the updated `INS-11` output further
-below, which now correctly reports **FAIL**, not the stale `PASS` originally
-recorded in this section before the correction.
+(correctly not root), and its real run **failed** INS-11.
+
+**Second correction (2026-08-02):** the first correction above, and the
+"Confirmed residual risk" section as originally written, named the
+account with independent blanket sudo as `deploy`. That was wrong.
+`deploy` is an OS account that exists on the host but has never actually
+been used - it is not in the `docker` group, owns nothing under
+`/opt/vocanova`, and `last`/`lastlog` show it has never logged in. The
+account `deploy-staging.yml` actually authenticates as (via the
+`STAGING_SSH_USER` secret) is `ubuntu` - confirmed by `/opt/vocanova/infra`
+and `/opt/vocanova/apps` being owned `ubuntu:ubuntu` after every staging
+deploy's `chown` step, and by `last` showing only `ubuntu`/`root` logins on
+this host. The rehearsal script itself was never wrong - it takes the
+staging user as a parameter and correctly tested whoever it was given; the
+error was in manually re-verifying with `deploy` as a stand-in instead of
+the real value. Re-run below against the real identity (`ubuntu`); the
+`INS-11` output and the "Confirmed residual risk" section are corrected
+accordingly.
 
 | AC-06 clause | Status |
 | --- | --- |
@@ -41,7 +48,7 @@ recorded in this section before the correction.
 | `vocanova-production` Compose project with explicit per-service resource limits | **Met.** `infra/docker-compose.production.yml`; all 4 containers (`postgres`/`api`/`web`/`nginx`) running healthy under it. |
 | `production` GitHub Actions environment with founder-controlled required reviewers | **Met.** Created 2026-08-01 with `m-e-h-r-d-a-a-d` as required reviewer; both real deploy runs required and received that approval before executing. |
 | `deploy-production.yml` deploys without touching staging's tree, user, or Compose project | **Met.** Verified statically, by rehearsal, and by a real run against the real shared host. |
-| Negative-access rehearsal proves staging cannot read production secrets (`INS-9`–`INS-11`) | **NOT met.** `INS-9`/`INS-10` pass; `INS-11` correctly FAILS - `deploy`'s independent blanket sudo means directory-based isolation cannot be proven against it. See "Confirmed residual risk" below. |
+| Negative-access rehearsal proves staging cannot read production secrets (`INS-9`–`INS-11`) | **NOT met — founder-waived.** `INS-9`/`INS-10` pass; `INS-11` correctly FAILS - `ubuntu` (staging's real deploy identity)'s independent, pre-existing blanket sudo means directory-based isolation cannot be proven against it. See "Confirmed residual risk" below for the finding and the founder's waiver. |
 
 ## Repository deliverables (implemented and verified here)
 
@@ -184,19 +191,20 @@ attempts were already fixed upstream by `VOC-033` - confirmed live here,
 correcting this file's earlier note below that they were still open).
 
 `infra/scripts/rehearse-production-secrets-boundary.sh`, executed on the
-real host after the real deploy:
+real host after the real deploy, as `vocanova-production`, against the
+real staging identity (`ubuntu`):
 
 ```
 [INS-9] production secret tree exists and matches the D01 permission baseline
   ok: /opt/vocanova/production mode 750 is within 750
   ok: /opt/vocanova/production/secrets mode 700 is within 700
   ok: /opt/vocanova/production/secrets/nginx mode 700 is within 700
-  ok: /opt/vocanova/production is owned by vocanova-production (not deploy)
-  ok: /opt/vocanova/production/secrets is owned by vocanova-production (not deploy)
+  ok: /opt/vocanova/production is owned by vocanova-production (not ubuntu)
+  ok: /opt/vocanova/production/secrets is owned by vocanova-production (not ubuntu)
   ok: /opt/vocanova/production/secrets/api.env mode 600 is within 600
-  ok: /opt/vocanova/production/secrets/api.env is owned by vocanova-production (not deploy)
+  ok: /opt/vocanova/production/secrets/api.env is owned by vocanova-production (not ubuntu)
   ok: /opt/vocanova/production/secrets/postgres.env mode 600 is within 600
-  ok: /opt/vocanova/production/secrets/postgres.env is owned by vocanova-production (not deploy)
+  ok: /opt/vocanova/production/secrets/postgres.env is owned by vocanova-production (not ubuntu)
   ok: 2 production env file(s) checked
   ok: /opt/vocanova/production/secrets/nginx/key.pem mode 600 is within 600
   ok: /opt/vocanova/production/secrets/nginx/cert.pem mode 600 is within 600
@@ -206,51 +214,68 @@ real host after the real deploy:
   ok: no compose source path outside /opt/vocanova/production
   ok: compose references the production secrets tree
 [INS-11] neither tier's deploy identity can read the other's secrets
-  FAIL: deploy is NOT read-blocked from /opt/vocanova/production/secrets/api.env: deploy already has independent broad sudo (member of the 'sudo' group (blanket sudo via the standard %sudo sudoers default)) and can read anything as root regardless of file permissions - directory-based isolation does NOT hold against deploy on this shared host
-  FAIL: deploy is NOT traversal-blocked from /opt/vocanova/production: deploy already has independent broad sudo (member of the 'sudo' group (blanket sudo via the standard %sudo sudoers default)) and can read anything as root regardless of file permissions - directory-based isolation does NOT hold against deploy on this shared host
+  FAIL: ubuntu is NOT read-blocked from /opt/vocanova/production/secrets/api.env: ubuntu already has independent broad sudo (member of the 'sudo' group (blanket sudo via the standard %sudo sudoers default)) and can read anything as root regardless of file permissions - directory-based isolation does NOT hold against ubuntu on this shared host
+  FAIL: ubuntu is NOT traversal-blocked from /opt/vocanova/production: ubuntu already has independent broad sudo (member of the 'sudo' group (blanket sudo via the standard %sudo sudoers default)) and can read anything as root regardless of file permissions - directory-based isolation does NOT hold against ubuntu on this shared host
   ok: staging secrets tree absent on this host; production-to-staging probe not applicable
 FAIL: 2 production/staging secret boundary check(s) failed
 ```
 
 Run for real as the non-root `vocanova-production` identity (the same
-identity `deploy-production.yml` actually uses), not as root.
+identity `deploy-production.yml` actually uses), not as root, and against
+`ubuntu` (the real value of the `STAGING_SSH_USER` secret), not `deploy`.
 
-## Confirmed residual risk: `deploy`'s blanket sudo
+## Confirmed residual risk: `ubuntu`'s blanket sudo
 
-`deploy` (staging's real deploy user on this shared host) is a member of
-the `sudo` group, which grants it blanket `(ALL:ALL)` root access via
-Ubuntu's standard `%sudo` sudoers default - independent of, and predating,
-anything this package built. This means `deploy` can always read
-production's secrets (`sudo cat /opt/vocanova/production/secrets/api.env`)
-regardless of file ownership, mode, or any directory-isolation control
-`VOC-037-D01`/`T06` put in place. The file-permission checks (`INS-9`) are
-real and correct, but they only stop *accidental* cross-tier access (e.g. a
-careless script assuming shared paths, the recursive-`chown` regression
-this task's own `deploy-staging.yml` fix addressed) - they cannot stop a
-*deliberate* read by an identity that already has root.
+`ubuntu` — the default cloud-provider admin account, and the actual
+identity `deploy-staging.yml` authenticates as via the `STAGING_SSH_USER`
+secret — is a member of the `sudo` group, which grants it blanket
+`(ALL:ALL)` root access via Ubuntu's standard `%sudo` sudoers default,
+independent of and predating anything this package built. This means
+`ubuntu` can always read production's secrets
+(`sudo cat /opt/vocanova/production/secrets/api.env`) regardless of file
+ownership, mode, or any directory-isolation control `VOC-037-D01`/`T06`
+put in place. The file-permission checks (`INS-9`) are real and correct,
+but they only stop *accidental* cross-tier access (e.g. a careless script
+assuming shared paths, the recursive-`chown` regression this task's own
+`deploy-staging.yml` fix addressed) - they cannot stop a *deliberate* read
+by an identity that already has root.
 
-This was not previously disclosed: earlier revisions of this document
-recorded `INS-11` as passing because the rehearsal script was run manually
-as root (trivially bypassing the exact boundary being tested), not as the
-real `vocanova-production` deploy identity the automated workflow actually
-uses. Corrected here.
+An OS account named `deploy` also exists on this host, but investigation
+(2026-08-02) confirmed it is unused: not in the `docker` group, owns
+nothing under `/opt/vocanova`, and `last`/`lastlog` show no login ever.
+Earlier revisions of this document incorrectly identified `deploy` as the
+account with the residual risk; the account that actually matters is
+`ubuntu`. This is corrected throughout this document.
 
-**Remediation requires one of:**
-1. Narrow `deploy`'s sudoers to the minimum commands `deploy-staging.yml`
-   actually needs (mirroring the scoped grant already given to
-   `vocanova-production`: `mkdir`/`tar`/`chown`/`touch`/etc., not blanket
-   `ALL`), removing it from the `sudo` group. This is the only fix that
-   makes `INS-11` genuinely pass - a live-staging-affecting change,
-   deliberately not made unilaterally in this task.
-2. An explicit founder-accepted waiver of this specific finding, if the
-   risk is judged acceptable for now (`deploy` is founder/automation-
-   controlled, not attacker-reachable, and the real risk is scope-of-
-   blast-radius on a compromised or buggy staging deploy, not an external
-   threat).
+**Remediation options considered:**
+1. Create a dedicated, least-privilege `staging-deploy` OS account
+   (mirroring the scoped grant already given to `vocanova-production`:
+   `docker` group membership plus narrow passwordless sudo for
+   `mkdir`/`tar`/`chown`/`touch`, not blanket `ALL`), move the
+   `STAGING_SSH_USER`/`STAGING_SSH_PRIVATE_KEY` secrets to it, re-chown
+   `/opt/vocanova/infra`/`/opt/vocanova/apps`, and re-test the staging
+   deploy pipeline end to end. This is the only fix that makes `INS-11`
+   genuinely pass. It was evaluated and **not done**: `ubuntu` is also the
+   account used for all interactive admin/SSH work on this host (including
+   by the founder-gate delegate), so this is materially riskier surgery
+   than originally scoped (narrowing an already-dedicated `deploy`
+   service account) — a live-staging-affecting change with real risk of
+   breaking staging deploys or admin access if done incorrectly.
+2. An explicit founder-accepted waiver of this specific finding.
+   **Chosen (2026-08-02).** The founder was given both options with the
+   real scope of (1) explained, and directed to proceed with the waiver
+   rather than the account-migration surgery. Rationale: `ubuntu` is
+   founder/automation-controlled, not attacker-reachable from outside the
+   host, and the real risk is blast-radius scope on a compromised or
+   buggy staging deploy, not an external threat. This residual risk stays
+   open and disclosed; it is not eliminated.
 
-Until one of those happens, `deploy-production.yml`'s final step will
-correctly keep failing - this is the intended, honest behavior, not a
-regression to fix by loosening the check again.
+`deploy-production.yml`'s final rehearsal step will continue to FAIL on
+every future run because of this — that is the intended, honest behavior
+of the check (an unremediated confirmed breach must fail, not warn), not
+a bug to route around. `VOC-037-AC-06` remains **NOT satisfied** on the
+letter of its observable outcome, accepted as a founder-waived residual
+risk rather than closed.
 
 ## Notes
 

@@ -178,8 +178,11 @@ host — see T06's evidence).
 
 The address given for the "genuinely separate host" above (`130.185.123.152`)
 was verified live to already be running staging's real containers
-(`vocanova-nginx`/`vocanova-api`/`vocanova-web`/`vocanova-postgres`, owned by
-the `deploy` OS user, serving the real `staging.vocanova.site` on port 443
+(`vocanova-nginx`/`vocanova-api`/`vocanova-web`/`vocanova-postgres`,
+deployed by the `ubuntu` OS user (the real value of the `STAGING_SSH_USER`
+secret — an earlier revision of this document incorrectly said `deploy`,
+an unused account on this host; see `VOC-037-EV-06`'s "Confirmed residual
+risk" section), serving the real `staging.vocanova.site` on port 443
 with real staging data). It is not a second machine — it is staging's
 existing host. The founder, once informed, explicitly chose to keep
 production co-located here rather than wait for an actual second machine
@@ -193,8 +196,13 @@ production co-located here rather than wait for an actual second machine
 - T01's corrected 4A mechanism (separate directory tree, separate deploy
   user, separate Compose project, resource limits) is not "defense in
   depth" as the first supersession claimed — it is load-bearing again,
-  exactly as originally designed, and was verified live to work (T06's
-  `INS-9`-`INS-11` rehearsal: PASS — see T06 evidence).
+  exactly as originally designed. **Correction (2026-08-02):** this line
+  previously claimed T06's `INS-9`-`INS-11` rehearsal fully PASSed — stale.
+  `INS-9`/`INS-10` pass, but `INS-11` correctly FAILS: `ubuntu` (staging's
+  real deploy identity) has independent pre-existing blanket sudo, so
+  directory-based isolation cannot be proven against it. Accepted as a
+  founder-waived residual risk, not a pass — see `VOC-037-EV-06`'s
+  "Confirmed residual risk" section for the full finding.
 - **New, previously unaddressed constraint found live: port collision.**
   Staging's nginx already owns the host's ports 80/443. Production's nginx
   publishes on 8081/8443 instead (already built into
