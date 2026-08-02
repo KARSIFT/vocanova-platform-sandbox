@@ -40,7 +40,7 @@ func TestCorsMiddleware_AllowedOriginGetsHeaders(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/healthz", nil)
+	req := httptest.NewRequest(http.MethodGet, "/cors-test/probe", nil)
 	req.Header.Set("Origin", "https://production.vocanova.site:8443")
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
@@ -59,7 +59,7 @@ func TestCorsMiddleware_DisallowedOriginGetsNoHeaders(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/healthz", nil)
+	req := httptest.NewRequest(http.MethodGet, "/cors-test/probe", nil)
 	req.Header.Set("Origin", "https://evil.example.com")
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
@@ -76,7 +76,7 @@ func TestCorsMiddleware_PreflightFromAllowedOrigin(t *testing.T) {
 		handlerCalled = true
 	}))
 
-	req := httptest.NewRequest(http.MethodOptions, "/api/v1/auth/oauth/google/start", nil)
+	req := httptest.NewRequest(http.MethodOptions, "/cors-test/preflight-target", nil)
 	req.Header.Set("Origin", "https://production.vocanova.site:8443")
 	req.Header.Set("Access-Control-Request-Method", "POST")
 	req.Header.Set("Access-Control-Request-Headers", "content-type")
@@ -97,7 +97,7 @@ func TestCorsMiddleware_PreflightFromDisallowedOriginGetsNoAccessControlHeaders(
 		t.Fatal("preflight must never reach the real handler")
 	}))
 
-	req := httptest.NewRequest(http.MethodOptions, "/api/v1/auth/oauth/google/start", nil)
+	req := httptest.NewRequest(http.MethodOptions, "/cors-test/preflight-target", nil)
 	req.Header.Set("Origin", "https://evil.example.com")
 	req.Header.Set("Access-Control-Request-Method", "POST")
 	rec := httptest.NewRecorder()
@@ -120,7 +120,7 @@ func TestCorsMiddleware_OptionsWithoutPreflightHeaderIsNotTreatedAsPreflight(t *
 		w.WriteHeader(http.StatusNoContent)
 	}))
 
-	req := httptest.NewRequest(http.MethodOptions, "/api/v1/healthz", nil)
+	req := httptest.NewRequest(http.MethodOptions, "/cors-test/probe", nil)
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 
