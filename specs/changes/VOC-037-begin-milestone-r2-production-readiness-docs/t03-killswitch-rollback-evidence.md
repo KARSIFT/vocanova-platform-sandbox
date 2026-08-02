@@ -11,20 +11,38 @@ real production target (`130.185.123.152`), the same pattern used for
 
 ## Standing of `VOC-037-AC-03`
 
-**NOT satisfied**, recorded honestly rather than as a partial pass. Three of
-four switches (`EMAIL_MAGIC_LINK_ENABLED`, `GOOGLE_OAUTH_ENABLED`, and
-`AI_FEATURES_ENABLED`) were verified to change *some* observable signal
-when toggled, but `AI_FEATURES_ENABLED` only at a log level, not the
-documented HTTP surface, and `NEW_USER_SIGNUP_ENABLED` was never toggled
-`true` or verified at all. The redeploy mechanism's recreate/health-check
-half was exercised; its `pull`/registry-auth half was not (session-specific
-failure, not re-demonstrated), and no true two-different-versions rollback
-was possible (only one production artifact exists so far). One genuine,
-previously undiscovered bug was found and is recorded below rather than
-hidden - Google OAuth cannot currently complete an authenticated sign-in
-end-to-end in either staging or production, for reasons unrelated to any
-kill switch. Closing `VOC-037-AC-03` requires completing these gaps or an
-explicit founder-accepted waiver; this record does neither on its own.
+**Still NOT satisfied, but materially advanced (2026-08-02)**, recorded
+honestly rather than as a partial pass either direction. What's now
+resolved since the original 2026-08-01 revision of this document:
+
+- **Both previously-disclosed OAuth-blocking bugs are fixed and verified
+  live**: the OAuth state cookie's cross-subdomain scoping (PR #276), and
+  a much larger finding - the API had no CORS support at all, blocking
+  every credentialed cross-origin browser request project-wide, not just
+  OAuth (PR #283, independently reviewed). `GOOGLE_OAUTH_ENABLED` is now
+  verified with real Google credentials producing a genuine authorization
+  URL from a real browser-originated preflight.
+- **A genuine two-different-artifact rollback is now proven**, not just
+  the recreate/health-check mechanism in isolation - a real artifact swap,
+  confirmed by an observable behavior difference (CORS present vs absent),
+  rolled back and forward again, both health-checked.
+
+What's still open:
+
+- `NEW_USER_SIGNUP_ENABLED` was never toggled `true` or verified at all -
+  completing this requires an actual human clicking through Google's
+  consent screen (or real magic-link delivery once an email provider is
+  configured), neither of which this founder-gate delegate can do alone.
+- `AI_FEATURES_ENABLED` is still only verified at the startup-log level,
+  not the documented HTTP surface (`/api/v1/sentence-feedback`), which
+  needs an authenticated session - same blocker as above.
+- The redeploy mechanism's `pull`/registry-auth half is still only
+  confirmed via the real `deploy-production` workflow's own success, not
+  independently re-demonstrated in a manual rehearsal.
+
+Closing `VOC-037-AC-03` requires completing the two remaining
+human-in-the-loop gaps or an explicit founder-accepted waiver of them;
+this record does neither on its own.
 
 ## Kill switch verification (2026-08-01, live against production)
 
@@ -52,29 +70,56 @@ those exist, so this verifies the kill-switch gate, not delivery.
 Toggle verified to produce the documented behavior change on both the start
 and callback endpoints.
 
-**Bug found while attempting a full round-trip (not a kill-switch defect):**
-`app/api/production.go` wires the OAuth CSRF-state cookie's `Domain` to
-`cfg.SessionDomain` (`SESSION_COOKIE_DOMAIN`, e.g. `production.vocanova.site`
-- the **web** app's hostname). But `OAuthStart`/`OAuthCallback` are served
-from the **API** host (`api-production.vocanova.site`), a sibling subdomain,
-not a child of the web hostname. A cookie scoped to `production.vocanova.site`
-is never sent by a real browser back to `api-production.vocanova.site`, so
-the callback always fails with "invalid or expired oauth state" for any
-real client, regardless of the kill switch or real Google credentials. This
-was only discoverable by attempting a genuine live round-trip (verified
-directly: `curl -i` on `Start` shows `Set-Cookie: ...Domain=production.vocanova.site`;
-the callback correctly rejects a request that can't present that cookie).
+**Bug found while attempting a full round-trip (not a kill-switch defect),
+fixed the same day (PR #276):** `app/api/production.go` originally wired
+the OAuth CSRF-state cookie's `Domain` to `cfg.SessionDomain`
+(`SESSION_COOKIE_DOMAIN`, e.g. `production.vocanova.site` - the **web**
+app's hostname). But `OAuthStart`/`OAuthCallback` are served from the
+**API** host (`api-production.vocanova.site`), a sibling subdomain, not a
+child of the web hostname, so the cookie was never sent back by a real
+browser. Fixed via a dedicated `OAuthStateDomain` field (host-only,
+independent of `SessionDomain`) - confirmed fixed live, later the same
+session, via the `Set-Cookie` header genuinely carrying no `Domain`
+attribute at all.
 
-This is a **pre-existing defect** in T14/T15's original wiring, not
-introduced by T03/T06 - staging has the identical `staging.vocanova.site` /
-`api-staging.vocanova.site` sibling-subdomain split, so the same bug exists
-there. It was never caught because no prior task attempted a full live
-OAuth round-trip (all prior evidence was blocked on `VOC-032-DEP-07`'s real
-Google credentials before reaching this cookie-domain step). **Not fixed by
-this task** - flagged as a concrete, diagnosed follow-up: the OAuth state
-cookie should not reuse `SESSION_COOKIE_DOMAIN`; it only needs to round-trip
-between the API host's own start/callback endpoints, so it should be
-host-only (no explicit `Domain`, or the API's own hostname).
+**Second, larger bug found 2026-08-02 while re-verifying `GOOGLE_OAUTH_ENABLED`
+with real Google credentials for the first time:** clicking "Sign in with
+Google" on the real deployed production web app failed client-side with
+"Unable to start Google sign-in", even though the cookie-domain fix above
+was already live. Root cause: the API had **no CORS support at all**,
+despite `docs/engineering/06-backend-design.md` §16 explicitly requiring a
+"CORS allowlist" as baseline security posture. Since the API and web app
+are sibling subdomains, every credentialed cross-origin browser request
+(not just OAuth - magic-link, sentence submission, review submission,
+anything with a JSON body) has always failed its CORS preflight with no
+`Access-Control-Allow-Origin` header, in both staging and production, for
+the whole lifetime of the project. Verified directly: the browser's
+`OPTIONS` preflight for `/api/v1/auth/oauth/google/start` received a bare
+`405` with no CORS headers.
+
+**Fixed same day** (PR #283, independently reviewed - PASS WITH
+NON-BLOCKING FINDINGS, including an executable spoofing-attempt harness
+against the real merged code) by adding a CORS allowlist middleware
+(`apps/api/app/api/cors.go`), deployed to production and confirmed live:
+
+```
+$ curl -i -X OPTIONS https://api-production.vocanova.site:8443/api/v1/auth/oauth/google/start \
+    -H "Origin: https://production.vocanova.site:8443" \
+    -H "Access-Control-Request-Method: POST"
+HTTP/2 204
+access-control-allow-credentials: true
+access-control-allow-headers: Content-Type, Authorization
+access-control-allow-methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
+access-control-allow-origin: https://production.vocanova.site:8443
+```
+
+With both bugs fixed, `POST /api/v1/auth/oauth/google/start` from a real
+browser now returns a genuine Google authorization URL built from the real
+`GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` (founder-provisioned
+2026-08-02), with a correctly host-scoped state cookie. The remaining gap
+to a fully-verified end-to-end sign-in is completing the actual Google
+consent screen in a real browser, which requires a human - see
+`NEW_USER_SIGNUP_ENABLED` below for what that would additionally verify.
 
 ### `NEW_USER_SIGNUP_ENABLED`
 
@@ -136,29 +181,62 @@ exercised in full instead:
    `https://api-production.vocanova.site:8443/healthz` → `200`,
    `{"status":"ok","database":"ok"}`.
 
-**Disclosed limitation:** this proves the redeploy/recreate/health-check
-mechanism works end-to-end, and that a fresh `docker compose pull` failing
-does not corrupt the running deployment (compose safely falls back rather
-than tearing down first) - but it does not prove a genuine two-different-
-versions rollback, since only one version has ever been deployed to
-production. That fuller test becomes possible once a second real
-production deploy exists.
+**Disclosed limitation (resolved below):** this proved the redeploy/
+recreate/health-check mechanism works end-to-end, and that a fresh
+`docker compose pull` failing does not corrupt the running deployment -
+but it did not prove a genuine two-different-versions rollback, since only
+one version had ever been deployed to production at that point.
 
-## Production state restored after rehearsal
+## Genuine two-artifact rollback rehearsal (2026-08-02)
+
+A second real production deploy (the CORS fix, PR #283/#284,
+`sha-36e91b3`) made this test possible for the first time - two distinct,
+genuinely different artifacts now exist (`sha-2560664`, the pre-CORS-fix
+version, and `sha-36e91b3`, current).
+
+1. Recorded the running artifact: `sha-36e91b3`.
+2. Rolled back: `docker compose up -d --pull never --force-recreate api web`
+   with `PRODUCTION_IMAGE_TAG=sha-2560664`. Both containers recreated,
+   reported healthy.
+3. **Confirmed the rollback genuinely changed running code, not just a
+   label:** re-ran the CORS preflight check against the rolled-back
+   version - `405` with no `Access-Control-Allow-Origin` header, exactly
+   the pre-fix behavior, proving `sha-2560664` was really running (not a
+   cosmetic swap). `/healthz` still `200` throughout.
+4. Rolled forward again: `PRODUCTION_IMAGE_TAG=sha-36e91b3`, same
+   recreate/health-check cycle.
+5. Confirmed restored: `/healthz` → `200`; CORS preflight → `204` with the
+   correct `Access-Control-Allow-Origin`/`Allow-Credentials`/`Allow-Methods`
+   headers again.
+
+This closes the previously-disclosed limitation: a real, observably
+different artifact was deployed, verified to actually be running (not
+assumed), and rolled forward again, with health checks passing at every
+step and zero downtime beyond the container recreate window.
+
+## Production state restored after this evidence was compiled
 
 `AI_FEATURES_ENABLED=true`, `EMAIL_MAGIC_LINK_ENABLED=false`,
-`GOOGLE_OAUTH_ENABLED=false`, `NEW_USER_SIGNUP_ENABLED=false` - the
-founder-decided safe launch defaults established when `VOC-037-T06` first
-deployed. Verified via the startup log and a final health check
-(`{"status":"ok","database":"ok"}`) after this evidence was compiled.
+`GOOGLE_OAUTH_ENABLED=true` (real Google credentials, wired 2026-08-02 -
+no longer the `false` safe default, since the switch itself and a real
+provider round-trip through `OAuthStart` are now both genuinely verified),
+`NEW_USER_SIGNUP_ENABLED=false` (still the founder-decided safe default -
+never toggled `true` in production, since no signup path has been
+completed end-to-end yet to observe it against). Verified via the startup
+log and a final health check (`{"status":"ok","database":"ok"}`) after
+this evidence was compiled, running artifact `sha-36e91b3`.
 
-## Follow-ups this task surfaced (not fixed here)
+## Follow-ups this task surfaced
 
-1. **OAuth state cookie domain bug** (above) - blocks Google sign-in from
-   ever completing, in staging and production, independent of real
-   credentials. Concrete, diagnosed fix identified but not applied in this
-   task (out of T03's scope; T03 verifies switches and rollback, not new
-   defect fixes).
-2. `NEW_USER_SIGNUP_ENABLED` and the HTTP-level half of
-   `AI_FEATURES_ENABLED` remain unverified end-to-end pending (1) and real
-   email-provider credentials.
+1. ~~**OAuth state cookie domain bug**~~ - **fixed** (PR #276, 2026-08-01),
+   confirmed live via a `Set-Cookie` header with no `Domain` attribute.
+2. ~~**No CORS support in the API**~~ - **fixed** (PR #283, 2026-08-02),
+   independently reviewed, deployed to production, confirmed live via a
+   genuine browser-shaped preflight request returning the correct
+   `Access-Control-*` headers.
+3. `NEW_USER_SIGNUP_ENABLED` and the HTTP-level half of
+   `AI_FEATURES_ENABLED` remain unverified end-to-end. Both bugs above that
+   were blocking this are now fixed, so the remaining blocker is purely
+   "a human needs to click through a real Google consent screen" (or a
+   real email provider needs to be configured for the magic-link path) -
+   not a code defect.
