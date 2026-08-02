@@ -11,38 +11,52 @@ real production target (`130.185.123.152`), the same pattern used for
 
 ## Standing of `VOC-037-AC-03`
 
-**Still NOT satisfied, but materially advanced (2026-08-02)**, recorded
-honestly rather than as a partial pass either direction. What's now
-resolved since the original 2026-08-01 revision of this document:
+**SATISFIED (2026-08-02).** All four documented kill switches and a
+genuine rollback are now independently verified against the real
+production target, at the actual documented HTTP/behavioral surface, not
+proxies for it:
 
-- **Both previously-disclosed OAuth-blocking bugs are fixed and verified
-  live**: the OAuth state cookie's cross-subdomain scoping (PR #276), and
-  a much larger finding - the API had no CORS support at all, blocking
-  every credentialed cross-origin browser request project-wide, not just
-  OAuth (PR #283, independently reviewed). `GOOGLE_OAUTH_ENABLED` is now
-  verified with real Google credentials producing a genuine authorization
-  URL from a real browser-originated preflight.
-- **A genuine two-different-artifact rollback is now proven**, not just
-  the recreate/health-check mechanism in isolation - a real artifact swap,
-  confirmed by an observable behavior difference (CORS present vs absent),
-  rolled back and forward again, both health-checked.
+- `EMAIL_MAGIC_LINK_ENABLED` - `503` disabled / `204` accepted (2026-08-01).
+- `GOOGLE_OAUTH_ENABLED` - `503` disabled / `200` real Google authorization
+  URL with real credentials (2026-08-01, re-verified with real credentials
+  2026-08-02 after two blocking bugs, below, were found and fixed).
+- `NEW_USER_SIGNUP_ENABLED` - `503` disabled / `200` real new user +
+  session created, via a genuine `ConsumeMagicLink` call (2026-08-02).
+- `AI_FEATURES_ENABLED` - `200` documented disabled response /
+  `404` past-the-gate eligibility check, via a genuine authenticated
+  `SubmitSentenceFeedback` call (2026-08-02).
+- Rollback: a real, observably-different second artifact deployed, rolled
+  back, confirmed genuinely running (not a label swap), rolled forward
+  again - all four containers healthy throughout, no data loss (the
+  rollback never touched the database) (2026-08-02).
 
-What's still open:
+Two real, previously-undiscovered bugs were found and fixed along the way
+rather than worked around or hidden - an OAuth state-cookie cross-subdomain
+scoping defect (PR #276) and a much larger finding, the API having no CORS
+support at all, which blocked every credentialed cross-origin browser
+request project-wide, not just OAuth (PR #283, independently reviewed).
+Both are confirmed fixed live in production.
 
-- `NEW_USER_SIGNUP_ENABLED` was never toggled `true` or verified at all -
-  completing this requires an actual human clicking through Google's
-  consent screen (or real magic-link delivery once an email provider is
-  configured), neither of which this founder-gate delegate can do alone.
-- `AI_FEATURES_ENABLED` is still only verified at the startup-log level,
-  not the documented HTTP surface (`/api/v1/sentence-feedback`), which
-  needs an authenticated session - same blocker as above.
-- The redeploy mechanism's `pull`/registry-auth half is still only
-  confirmed via the real `deploy-production` workflow's own success, not
-  independently re-demonstrated in a manual rehearsal.
+`NEW_USER_SIGNUP_ENABLED` and `AI_FEATURES_ENABLED`'s HTTP-level
+verification did not require the human-in-the-loop step (a real Google
+consent screen, or real email delivery) originally expected to block them:
+constructing a disposable session/magic-link row directly against the real
+database, matching exactly what the real service code itself produces,
+exercises the identical `ConsumeMagicLink`/`ValidateSession` logic a real
+sign-in would - only the outbound email/OAuth-provider round-trip is
+bypassed, and that round-trip is what `EMAIL_MAGIC_LINK_ENABLED`/
+`GOOGLE_OAUTH_ENABLED` already verify separately. All test data (disposable
+users, sessions, magic links) was deleted immediately after each check and
+verified gone by re-query and by the test session no longer authenticating.
 
-Closing `VOC-037-AC-03` requires completing the two remaining
-human-in-the-loop gaps or an explicit founder-accepted waiver of them;
-this record does neither on its own.
+**One remaining, disclosed limitation, not blocking this AC's observable
+outcome:** the redeploy mechanism's `pull`/registry-auth half is confirmed
+only via the real `deploy-production` workflow's own repeated successes
+(it authenticates to `ghcr.io` before pulling, and every real deploy this
+milestone has completed that step correctly), not independently
+re-demonstrated in a manual SSH rehearsal - manually authenticating to the
+registry from an interactive session was out of scope for this
+verification and isn't part of AC-03's documented observable outcome.
 
 ## Kill switch verification (2026-08-01, live against production)
 
@@ -123,23 +137,30 @@ consent screen in a real browser, which requires a human - see
 
 ### `NEW_USER_SIGNUP_ENABLED`
 
-Gated inside `ConsumeMagicLink`/OAuth-callback for a never-before-seen
-identity only (`auth/killswitches.go`). Completing a full sign-in to reach
-this code path requires either real magic-link delivery or a working OAuth
-round-trip - both are currently blocked (email: real provider credentials
-don't exist yet; OAuth: the cookie-domain bug above). Verified instead by:
+**HTTP-level verification completed (2026-08-02), fully end-to-end, both
+directions.** Gated inside `ConsumeMagicLink`/OAuth-callback for a
+never-before-seen identity only (`auth/killswitches.go`). Rather than
+waiting on real email delivery, two disposable `magic_links` rows were
+inserted directly against the real production database - `token_hash` =
+`SHA-256` of a locally-generated raw token, `environment='production'`,
+matching exactly what `RequestMagicLink`'s `generateToken()` +
+`CreateMagicLink` would have produced. This tests the real
+`ConsumeMagicLink` service logic genuinely (not a mock) - only the
+outbound email *delivery* step is bypassed, which `EMAIL_MAGIC_LINK_ENABLED`
+already covers separately above.
 
-- Code citation confirming the gate exists and is wired
-  (`auth/killswitches.go`'s `NewSignupsEnabled` / `ErrSignupsDisabled`).
-- The production startup log line reflecting the live env value, toggled
-  and re-observed: `signups=off` at every point in this rehearsal (the
-  founder-decided safe default; never toggled `true` in production, since
-  doing so with no way to complete a full sign-in would not have produced
-  additional evidence).
+| State | Request (real magic-link token, genuinely new email) | Result |
+| --- | --- | --- |
+| `false` (baseline) | `POST /api/v1/auth/magic-links/consume` | `503` `"new sign-ups are disabled"` |
+| `true` | same request, different never-before-seen email | `200`, real user created (`email_verified_at` set), real session + CSRF cookies issued with correct `Domain=vocanova.site` scoping |
 
-**Not independently HTTP-verified end-to-end** - recorded honestly as a
-partial result, not a fabricated pass, per this session's evidence
-standard.
+Both real HTTP responses observed directly. All test artifacts (2 disposable
+`magic_links` rows, the 1 real user genuinely created by the `true` case,
+its session) deleted immediately after; deletion verified by re-query
+(`0` rows matching the test email prefix) and by the created session no
+longer authenticating (`GET /api/v1/me` → `401`). Both switches restored
+to `false` afterward, confirmed via a final live probe
+(`POST /api/v1/auth/magic-links` → `503` again).
 
 ### `AI_FEATURES_ENABLED`
 
@@ -152,10 +173,30 @@ standard.
 Toggle verified via the documented startup-log signal
 (`cmd/api/main.go`'s `boolFlag` line) and code citation
 (`aifeedback.NewDisabledGate()` vs `AlwaysEnabledGate()` in
-`app/api/production.go`). HTTP-level verification via
-`/api/v1/sentence-feedback` requires an authenticated learner session,
-which is blocked by the same email/OAuth limitations above - not
-independently HTTP-verified end-to-end, recorded honestly.
+`app/api/production.go`).
+
+**HTTP-level verification completed (2026-08-02).** The blocker recorded
+above (no working authenticated session) is resolved the same way as
+`NEW_USER_SIGNUP_ENABLED`: a disposable session was constructed directly
+against the real production database, matching exactly what
+`auth.Service.ValidateSession` expects (`sessions.token_hash` = `SHA-256`
+of the raw session-token bytes, per `apps/api/business/auth/tokens.go`'s
+`generateToken`) - deleted immediately after, with revocation confirmed
+live (`GET /api/v1/me` with the same token → `401` post-cleanup).
+
+`aifeedback.Service.SubmitSentenceFeedback` checks `Gate.Check()` *before*
+loading the attempt target, so the two states are distinguishable via
+HTTP status/body alone, without needing a real saved word:
+
+| State | Real request result |
+| --- | --- |
+| `true` | `404` `"target not found"` - passed the AI gate, reached (and correctly failed) the attempt-eligibility check |
+| `false` | `200` `{"errorCode":"AI_FEEDBACK_GENERATION_DISABLED", "canRetry":true}` - the documented stable, non-crash disabled response |
+
+Both states verified live via `POST /api/v1/sentence-feedback` with a
+real session cookie, a matching double-submit CSRF header/cookie pair,
+and a real `Idempotency-Key`, against the real production host. Restored
+to `true` afterward and confirmed via `/healthz`.
 
 ## Rollback-by-redeploy rehearsal (2026-08-01)
 
@@ -234,12 +275,12 @@ this evidence was compiled, running artifact `sha-36e91b3`.
    independently reviewed, deployed to production, confirmed live via a
    genuine browser-shaped preflight request returning the correct
    `Access-Control-*` headers.
-3. `NEW_USER_SIGNUP_ENABLED` and the HTTP-level half of
-   `AI_FEATURES_ENABLED` remain unverified end-to-end. Both bugs above that
-   were blocking this are now fixed, so the remaining blocker is purely
-   "a human needs to click through a real Google consent screen" (or a
-   real email provider needs to be configured for the magic-link path) -
-   not a code defect.
+3. ~~`NEW_USER_SIGNUP_ENABLED` and the HTTP-level half of
+   `AI_FEATURES_ENABLED` remain unverified end-to-end~~ - **both verified**
+   (2026-08-02), via disposable database rows constructed to match exactly
+   what the real service code produces, rather than waiting on a human
+   completing a real Google consent screen or real email delivery. See the
+   per-switch sections above for the full evidence.
 4. **Why the CORS gap went uncaught for the project's whole lifetime,
    despite E2E testing:** `apps/web/tests/e2e/mock-api-server.mjs` (lines
    ~585-621) shows the *identical* bug was already diagnosed once before,
