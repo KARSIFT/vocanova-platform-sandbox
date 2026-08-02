@@ -122,15 +122,21 @@ is published.
 
 ## 10. Children's Privacy
 
-VocaNova is intended for learners within the approved product scope. Founder/legal
-review must confirm final age-related terms and jurisdiction requirements before
-publication.
+VocaNova requires users to be at least **13 years old** (founder decision,
+2026-08-02). VocaNova does not knowingly collect personal data from anyone
+under 13. If we learn an account belongs to a user under 13, we will take
+steps to delete the associated data.
 
 ## 11. International Processing
 
-Service providers may process data in different regions based on deployment and
-vendor configuration. Final region disclosures and transfer language require
-founder/legal confirmation at publication time.
+As of this document's last update, known processing locations include: application
+hosting in Turkey; error-monitoring (Sentry) in the EU (Germany); Cloudflare's
+global network for DNS/CDN/proxying. This list reflects current infrastructure and
+will change as vendors and hosting evolve. **Final cross-border transfer legal
+basis (e.g. GDPR standard contractual clauses, if applicable) depends on
+VocaNova's registered legal jurisdiction, which is not yet finalized (see the
+Founder Review Record below) — this section must be revisited once that is
+decided, before publication.**
 
 ## 12. Changes to This Policy
 
@@ -139,14 +145,25 @@ an updated effective date and, where required, additional notice.
 
 ## 13. Contact
 
-Contact details are `TBD` pending founder decision on support/legal inbox and
-publication process.
+Contact: **mr.groom.verge@gmail.com** (founder-designated support/privacy contact,
+2026-08-02). A dedicated `support@vocanova.site` address is planned once
+Cloudflare Email Routing is configured for the domain; this document should be
+updated to that address once it is live and verified receiving mail.
 
 ---
 
 ## Founder Review Record (Required Before Publication)
 
-- Reviewer: `TBD`
-- Decision: `pending`
-- Date: `TBD`
-- Notes: `TBD`
+- Reviewer: Founder (m-e-h-r-d-a-a-d)
+- Decision: **Reviewed and approved, with one item still open before publication**
+- Date: 2026-08-02
+- Notes: Data-collection description (§2) confirmed accurate against the actual
+  implemented product. Founder decisions made and applied to this draft:
+  minimum age 13 (§10); contact email `mr.groom.verge@gmail.com`, to be
+  upgraded to `support@vocanova.site` once Cloudflare Email Routing is
+  verified live (§13). **Still open, blocking publication:** VocaNova's
+  registered legal jurisdiction/governing law is not yet decided (pending
+  incorporation status) — §11's cross-border transfer language and the
+  parallel item in `terms-of-service.md` §14 both depend on it. This
+  document is founder-approved in substance but not yet cleared to publish
+  until that single item resolves.

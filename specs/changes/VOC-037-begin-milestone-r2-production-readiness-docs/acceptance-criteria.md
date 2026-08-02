@@ -30,7 +30,7 @@
 - Tasks: `VOC-037-T02`
 - Tests: `VOC-037-TEST-02`
 - Evidence: `VOC-037-EV-02`
-- Result: pending
+- Result: **SATISFIED (2026-08-02)** — both documents carry an explicit founder review/approval record (data-collection accuracy confirmed, minimum age set to 13, contact email decided). One item — governing law/jurisdiction — is genuinely undecided pending VocaNova's incorporation status and is recorded as blocking *publication* specifically, not blocking this review criterion: the AC requires a review/approval record to exist before publication, and it now does, with the remaining gap disclosed rather than hidden. Publication itself should not proceed until governing law resolves.
 - Observable outcome: A privacy policy and terms-of-service document each exist,
   accurately describe the data this application actually collects/processes, and
   carry an explicit founder review/approval record before either is published.

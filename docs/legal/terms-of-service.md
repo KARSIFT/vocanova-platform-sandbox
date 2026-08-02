@@ -18,8 +18,8 @@ publication.
 - You are responsible for maintaining control of your account access methods.
 - Authentication currently supports Google OAuth and email magic-link flows.
 
-Final eligibility language, including any age restrictions, requires founder/legal
-review before publication.
+You must be at least **13 years old** to use the Service (founder decision,
+2026-08-02).
 
 ## 3. Service Description
 
@@ -110,13 +110,19 @@ request account deletion per applicable process.
 
 ## 14. Governing Law and Dispute Resolution
 
-Governing law, venue, and dispute-resolution method are `TBD` and must be
-explicitly confirmed by founder/legal review before publication.
+Governing law, venue, and dispute-resolution method are `TBD`. This is
+genuinely unresolved pending VocaNova's incorporation/registered-jurisdiction
+decision, not an oversight — asked of the founder on 2026-08-02, who deferred
+it rather than naming a jurisdiction ahead of incorporation. **This section
+blocks publication** until decided; everything else in this document is
+founder-approved (see Founder Review Record below).
 
 ## 15. Contact
 
-Support/legal contact details are `TBD` pending founder decision on publication
-details.
+Contact: **mr.groom.verge@gmail.com** (founder-designated support/legal
+contact, 2026-08-02). A dedicated `support@vocanova.site` address is planned
+once Cloudflare Email Routing is configured for the domain; update this
+section to that address once it is live and verified receiving mail.
 
 ## 16. Changes to These Terms
 
@@ -127,7 +133,15 @@ date and additional notice where required.
 
 ## Founder Review Record (Required Before Publication)
 
-- Reviewer: `TBD`
-- Decision: `pending`
-- Date: `TBD`
-- Notes: `TBD`
+- Reviewer: Founder (m-e-h-r-d-a-a-d)
+- Decision: **Reviewed and approved, with one item still open before publication**
+- Date: 2026-08-02
+- Notes: Service description (§3), AI disclosures (§4), and kill-switch/
+  maintenance language (§8) confirmed accurate against the actual implemented
+  product. Founder decisions made and applied: minimum age 13 (§2); contact
+  email `mr.groom.verge@gmail.com`, to be upgraded to `support@vocanova.site`
+  once Cloudflare Email Routing is verified live (§15). **Still open, blocking
+  publication:** governing law/jurisdiction (§14, and the mirrored item in
+  `privacy-policy.md` §11) pending VocaNova's incorporation decision. This
+  document is founder-approved in substance but not yet cleared to publish
+  until that single item resolves.
