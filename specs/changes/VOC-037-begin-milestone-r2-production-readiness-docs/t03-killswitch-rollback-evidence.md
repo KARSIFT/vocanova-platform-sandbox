@@ -255,17 +255,31 @@ different artifact was deployed, verified to actually be running (not
 assumed), and rolled forward again, with health checks passing at every
 step and zero downtime beyond the container recreate window.
 
-## Production state restored after this evidence was compiled
+## Production state as of the final verification pass (2026-08-02)
 
 `AI_FEATURES_ENABLED=true`, `EMAIL_MAGIC_LINK_ENABLED=false`,
-`GOOGLE_OAUTH_ENABLED=true` (real Google credentials, wired 2026-08-02 -
-no longer the `false` safe default, since the switch itself and a real
-provider round-trip through `OAuthStart` are now both genuinely verified),
-`NEW_USER_SIGNUP_ENABLED=false` (still the founder-decided safe default -
-never toggled `true` in production, since no signup path has been
-completed end-to-end yet to observe it against). Verified via the startup
-log and a final health check (`{"status":"ok","database":"ok"}`) after
-this evidence was compiled, running artifact `sha-36e91b3`.
+`GOOGLE_OAUTH_ENABLED=false`, `NEW_USER_SIGNUP_ENABLED=false` - all four
+back at the founder-decided safe launch defaults.
+
+**Note on `GOOGLE_OAUTH_ENABLED` specifically:** an intermediate revision
+of this document (superseded here) recorded it as left `true` after the
+real-credential verification above. That was accurate at the moment it
+was written, but `deploy-production.yml`'s "Write production application
+configuration" step hardcodes all four switches back to their safe
+defaults (`GOOGLE_OAUTH_ENABLED=false` included) on **every** deploy, by
+design - and a production deploy (the CORS fix, PR #283/#284) ran after
+that verification and before this final check, silently resetting it.
+This is correct, intended behavior (kill switches should never survive a
+deploy in an accidentally-enabled state), not a bug - but it means the
+`GOOGLE_OAUTH_ENABLED=true` verification earlier in this document is a
+point-in-time proof that the switch and the real credentials work, not a
+claim about the current running state. The real `GOOGLE_OAUTH_CLIENT_ID`/
+`GOOGLE_OAUTH_CLIENT_SECRET` remain configured and untouched by this reset
+- only the boolean enable flag reverts - so re-enabling for a real launch
+is a one-line config change plus redeploy, not a re-provisioning.
+
+Verified via the startup log and a final health check
+(`{"status":"ok","database":"ok"}`), running artifact `sha-36e91b3`.
 
 ## Follow-ups this task surfaced
 
