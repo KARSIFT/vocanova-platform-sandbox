@@ -240,3 +240,24 @@ this evidence was compiled, running artifact `sha-36e91b3`.
    "a human needs to click through a real Google consent screen" (or a
    real email provider needs to be configured for the magic-link path) -
    not a code defect.
+4. **Why the CORS gap went uncaught for the project's whole lifetime,
+   despite E2E testing:** `apps/web/tests/e2e/mock-api-server.mjs` (lines
+   ~585-621) shows the *identical* bug was already diagnosed once before,
+   while building the E2E harness - its own comment describes the exact
+   same symptom (client-side mutations silently failing with
+   `net::ERR_FAILED`, no HTTP response, because the preflight had no
+   `Access-Control-Allow-Origin` header) and the exact same fix (echo the
+   specific request `Origin`, never a wildcard, since credentialed
+   requests forbid combining the two). The fix was applied **only to the
+   mock**, to unblock E2E test development, and never propagated to the
+   real `apps/api` server that the mock stands in for - so every E2E run
+   exercised realistic CORS behavior against a server that only existed in
+   tests, while the real deployed API had none. This is a process gap
+   worth closing generally, not just for this instance: a mock server's
+   security-relevant behavior (auth, CORS, CSRF) drifting from the real
+   server it substitutes for is exactly the failure mode this repo's
+   existing `scripts/foundation/mock-inventory` governance check already
+   polices for other kinds of mock/real divergence - CORS parity between
+   `mock-api-server.mjs` and the real API would be a natural, low-effort
+   extension of that same check, flagged here as a genuine follow-up but
+   not implemented in this task (out of scope for T03).
