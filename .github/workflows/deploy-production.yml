@@ -18,6 +18,11 @@ on:
         required: true
         type: string
         default: https://api-production.vocanova.site:8443
+      new_user_signup_allowlist:
+        description: "VOC-038-D00/D01: comma-separated emails admitted to sign up while NEW_USER_SIGNUP_ENABLED stays false (the L1 controlled-launch cohort). Leave empty to allowlist no one. Expanding the cohort is editing this input at the next dispatch - no code change."
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -213,12 +218,13 @@ jobs:
           PRODUCTION_WEB_HOST: ${{ inputs.production_web_host }}
           PRODUCTION_API_HOST: ${{ inputs.production_api_host }}
           PRODUCTION_SENTRY_RELEASE: sha-${{ steps.sha.outputs.short_sha }}
+          PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST: ${{ inputs.new_user_signup_allowlist }}
         with:
           host: ${{ secrets.PRODUCTION_SSH_HOST }}
           username: ${{ secrets.PRODUCTION_SSH_USER }}
           key: ${{ secrets.PRODUCTION_SSH_PRIVATE_KEY }}
           command_timeout: 2m
-          envs: PRODUCTION_WEB_HOST,PRODUCTION_API_HOST,PRODUCTION_SENTRY_RELEASE
+          envs: PRODUCTION_WEB_HOST,PRODUCTION_API_HOST,PRODUCTION_SENTRY_RELEASE,PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST
           script: |
             set -euo pipefail
             sed -i \
@@ -234,6 +240,7 @@ jobs:
               -e '/^EMAIL_MAGIC_LINK_ENABLED=/d' \
               -e '/^GOOGLE_OAUTH_ENABLED=/d' \
               -e '/^NEW_USER_SIGNUP_ENABLED=/d' \
+              -e '/^NEW_USER_SIGNUP_ALLOWLIST=/d' \
               /opt/vocanova/production/secrets/api.env
             {
               echo "ENVIRONMENT=production"
@@ -258,6 +265,7 @@ jobs:
               echo "EMAIL_MAGIC_LINK_ENABLED=false"
               echo "GOOGLE_OAUTH_ENABLED=false"
               echo "NEW_USER_SIGNUP_ENABLED=false"
+              echo "NEW_USER_SIGNUP_ALLOWLIST=${PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST}"
             } >> /opt/vocanova/production/secrets/api.env
             chmod 600 /opt/vocanova/production/secrets/api.env
 
