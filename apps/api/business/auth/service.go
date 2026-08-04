@@ -172,7 +172,7 @@ func (s *Service) ConsumeMagicLink(ctx context.Context, clientIP, token, emailAd
 
 	user, err := s.repo.GetUserByEmail(ctx, emailAddr)
 	if err != nil {
-		if s.killSwitches != nil && !s.killSwitches.NewSignupsEnabled {
+		if !s.killSwitches.signupAllowed(emailAddr) {
 			return nil, nil, "", ErrSignupsDisabled
 		}
 		// Create a verified user from the magic link.
@@ -318,7 +318,7 @@ func (s *Service) resolveOAuthIdentity(ctx context.Context, identity *OAuthIdent
 	// if one exists, otherwise create a new verified user.
 	user, err := s.repo.GetUserByEmail(ctx, emailAddr)
 	if err != nil {
-		if s.killSwitches != nil && !s.killSwitches.NewSignupsEnabled {
+		if !s.killSwitches.signupAllowed(emailAddr) {
 			return nil, ErrSignupsDisabled
 		}
 		user, err = s.repo.CreateUser(ctx, emailAddr, &now)

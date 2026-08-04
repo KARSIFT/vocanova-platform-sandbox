@@ -62,6 +62,14 @@ func normalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
 }
 
+// NormalizeEmail is the exported form of normalizeEmail, for callers
+// outside this package (e.g. the production-wiring layer building a
+// KillSwitches.SignupAllowlist from an env var) that need to
+// normalize an email the same way this package does internally.
+func NormalizeEmail(email string) string {
+	return normalizeEmail(email)
+}
+
 // CookieConfig holds session and CSRF cookie settings.
 type CookieConfig struct {
 	Name           string

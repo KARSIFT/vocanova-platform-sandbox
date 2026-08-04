@@ -85,6 +85,80 @@ func TestKillSwitches_NewSignupsDisabled(t *testing.T) {
 	assert.ErrorIs(t, err, ErrSignupsDisabled)
 }
 
+// TestKillSwitches_SignupAllowlistAdmitsListedEmail covers the
+// VOC-038-D00/D01 path: NEW_USER_SIGNUP_ENABLED=false still blocks
+// new signups in general, but a never-before-seen email present in
+// SignupAllowlist must be admitted anyway (case-insensitively).
+func TestKillSwitches_SignupAllowlistAdmitsListedEmail(t *testing.T) {
+	svc, _, fake, _ := testService(t)
+	svc.SetKillSwitches(&KillSwitches{
+		MagicLinkEnabled:  true,
+		OAuthEnabled:      true,
+		NewSignupsEnabled: false,
+		SignupAllowlist:   map[string]struct{}{"founder@example.com": {}},
+	})
+
+	if err := svc.RequestMagicLink(context.Background(), "127.0.0.1", "Founder@Example.com"); err != nil {
+		t.Fatalf("RequestMagicLink: %v", err)
+	}
+	msg, ok := fake.Last()
+	if !ok {
+		t.Fatalf("expected a sent email after RequestMagicLink")
+	}
+	rawToken := extractTokenFromURL(t, msg.BodyText)
+	_, _, _, err := svc.ConsumeMagicLink(context.Background(), "127.0.0.1", rawToken, "Founder@Example.com")
+	assert.NoError(t, err, "allowlisted email must be admitted even while signups are otherwise disabled")
+}
+
+// TestKillSwitches_SignupAllowlistIgnoresUnlistedEmail confirms the
+// allowlist is exclusionary: a non-allowlisted email still gets
+// ErrSignupsDisabled while NEW_USER_SIGNUP_ENABLED=false, so the
+// allowlist can never widen access beyond the named cohort.
+func TestKillSwitches_SignupAllowlistIgnoresUnlistedEmail(t *testing.T) {
+	svc, _, fake, _ := testService(t)
+	svc.SetKillSwitches(&KillSwitches{
+		MagicLinkEnabled:  true,
+		OAuthEnabled:      true,
+		NewSignupsEnabled: false,
+		SignupAllowlist:   map[string]struct{}{"founder@example.com": {}},
+	})
+
+	if err := svc.RequestMagicLink(context.Background(), "127.0.0.1", "outsider@example.com"); err != nil {
+		t.Fatalf("RequestMagicLink: %v", err)
+	}
+	msg, ok := fake.Last()
+	if !ok {
+		t.Fatalf("expected a sent email after RequestMagicLink")
+	}
+	rawToken := extractTokenFromURL(t, msg.BodyText)
+	_, _, _, err := svc.ConsumeMagicLink(context.Background(), "127.0.0.1", rawToken, "outsider@example.com")
+	assert.ErrorIs(t, err, ErrSignupsDisabled)
+}
+
+// TestKillSwitches_SignupAllowlistIgnoredWhenSignupsEnabled ensures
+// the allowlist has no effect once the blanket switch is open: it
+// must not accidentally start rejecting non-listed emails.
+func TestKillSwitches_SignupAllowlistIgnoredWhenSignupsEnabled(t *testing.T) {
+	svc, _, fake, _ := testService(t)
+	svc.SetKillSwitches(&KillSwitches{
+		MagicLinkEnabled:  true,
+		OAuthEnabled:      true,
+		NewSignupsEnabled: true,
+		SignupAllowlist:   map[string]struct{}{"founder@example.com": {}},
+	})
+
+	if err := svc.RequestMagicLink(context.Background(), "127.0.0.1", "anyone@example.com"); err != nil {
+		t.Fatalf("RequestMagicLink: %v", err)
+	}
+	msg, ok := fake.Last()
+	if !ok {
+		t.Fatalf("expected a sent email after RequestMagicLink")
+	}
+	rawToken := extractTokenFromURL(t, msg.BodyText)
+	_, _, _, err := svc.ConsumeMagicLink(context.Background(), "127.0.0.1", rawToken, "anyone@example.com")
+	assert.NoError(t, err, "allowlist must not narrow access when signups are broadly enabled")
+}
+
 // TestKillSwitches_AllEnabledWhenExplicit guards against an
 // accidental future regression where a service is constructed
 // with a non-nil *KillSwitches that someone forgot to populate:

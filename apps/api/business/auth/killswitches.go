@@ -35,9 +35,31 @@ type KillSwitches struct {
 	// on first verified sign-in" path inside ConsumeMagicLink
 	// and the OAuth callback. When false, an existing user can
 	// still sign in, but a never-before-seen email address is
-	// rejected with ErrSignupsDisabled. Magic-link / OAuth
-	// themselves are still gated by their own flags.
+	// rejected with ErrSignupsDisabled, unless it appears in
+	// SignupAllowlist. Magic-link / OAuth themselves are still
+	// gated by their own flags.
 	NewSignupsEnabled bool
+
+	// SignupAllowlist holds normalized (lowercased, trimmed) email
+	// addresses admitted to sign up even while NewSignupsEnabled is
+	// false, per VOC-038-D00/D01 (L1 controlled-launch cohort). It
+	// has no effect when NewSignupsEnabled is true - the blanket
+	// switch already admits everyone. A nil or empty map allowlists
+	// no one, matching pre-VOC-038 behavior.
+	SignupAllowlist map[string]struct{}
+}
+
+// signupAllowed reports whether a never-before-seen normalizedEmail
+// may be signed up right now: either the blanket NewSignupsEnabled
+// switch is open, or it's closed but normalizedEmail is present in
+// the founder-maintained SignupAllowlist. Callers must pass an
+// already-normalized email (see normalizeEmail).
+func (sw *KillSwitches) signupAllowed(normalizedEmail string) bool {
+	if sw == nil || sw.NewSignupsEnabled {
+		return true
+	}
+	_, ok := sw.SignupAllowlist[normalizedEmail]
+	return ok
 }
 
 // SetKillSwitches installs a kill-switch struct on the service.

@@ -178,6 +178,32 @@ func TestLoadProductionConfig_FallsBackToRedirectWhenAllowlistEmpty(t *testing.T
 	assert.Equal(t, []string{cfg.OAuthRedirect}, cfg.OAuthReturnURLs, "empty allowlist must fall back to OAUTH_REDIRECT_URI")
 }
 
+func TestLoadProductionConfig_ParseSignupAllowlist(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://example/db")
+	t.Setenv("BASE_URL", "https://staging.vocanova.site")
+	t.Setenv("OAUTH_REDIRECT_URI", "https://api-staging.vocanova.site/auth/oauth/google/callback")
+	t.Setenv("SESSION_COOKIE_DOMAIN", "staging.vocanova.site")
+	t.Setenv("NEW_USER_SIGNUP_ALLOWLIST", " Founder@Example.com , Tester@Example.com , ")
+
+	cfg, err := LoadProductionConfig()
+	require.NoError(t, err)
+	assert.Equal(t, map[string]struct{}{
+		"founder@example.com": {},
+		"tester@example.com":  {},
+	}, cfg.SignupAllowlist, "allowlist must be parsed, trimmed, and normalized to lowercase")
+}
+
+func TestLoadProductionConfig_SignupAllowlistNilWhenUnset(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://example/db")
+	t.Setenv("BASE_URL", "https://staging.vocanova.site")
+	t.Setenv("OAUTH_REDIRECT_URI", "https://api-staging.vocanova.site/auth/oauth/google/callback")
+	t.Setenv("SESSION_COOKIE_DOMAIN", "staging.vocanova.site")
+
+	cfg, err := LoadProductionConfig()
+	require.NoError(t, err)
+	assert.Nil(t, cfg.SignupAllowlist, "unset allowlist must allowlist no one, matching pre-VOC-038 behavior")
+}
+
 func TestLoadProductionConfig_MonitoringDefaultsAndOverrides(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://example/db")
 	t.Setenv("BASE_URL", "https://staging.vocanova.site")

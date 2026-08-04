@@ -44,6 +44,11 @@ type ProductionConfig struct {
 	MagicLinkPath   string
 	OAuthRedirect   string
 	OAuthReturnURLs []string
+	// SignupAllowlist holds normalized emails admitted to sign up
+	// even while NewSignupsOn is false (VOC-038-D00/D01). Built from
+	// NEW_USER_SIGNUP_ALLOWLIST, a comma-separated list, the same
+	// way OAuthReturnURLs is built from OAUTH_REDIRECT_ALLOWLIST.
+	SignupAllowlist map[string]struct{}
 	SessionDomain   string
 	SessionSecure   bool
 	SessionLifetime time.Duration
@@ -192,6 +197,14 @@ func LoadProductionConfig() (ProductionConfig, error) {
 		for _, p := range strings.Split(raw, ",") {
 			if u := strings.TrimSpace(p); u != "" {
 				cfg.OAuthReturnURLs = append(cfg.OAuthReturnURLs, u)
+			}
+		}
+	}
+	if raw := os.Getenv("NEW_USER_SIGNUP_ALLOWLIST"); raw != "" {
+		cfg.SignupAllowlist = make(map[string]struct{})
+		for _, e := range strings.Split(raw, ",") {
+			if e = auth.NormalizeEmail(e); e != "" {
+				cfg.SignupAllowlist[e] = struct{}{}
 			}
 		}
 	}
@@ -571,6 +584,7 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 		MagicLinkEnabled:  cfg.MagicLinkOn,
 		OAuthEnabled:      cfg.OAuthOn,
 		NewSignupsEnabled: cfg.NewSignupsOn,
+		SignupAllowlist:   cfg.SignupAllowlist,
 	})
 
 	usersRepo := users.NewPostgreSQLRepository(db)

@@ -4,7 +4,9 @@
 
 - Requirement source: `VOC-038-D00`
 - Tasks: `VOC-038-T00`
-- Result: pending
+- Result: composition/constraint founder-approved (PR #286); mechanism (env-var-backed
+  email allowlist) is Claude Code's engineering choice satisfying that constraint, documented
+  in tasks.md and this PR's description.
 - Observable outcome: A decision record names the chosen allowlist mechanism and initial
   cohort composition, with explicit founder approval.
 
@@ -12,7 +14,8 @@
 
 - Requirement source: `VOC-038-D00`'s accepted decision
 - Tasks: `VOC-038-T01`
-- Result: pending
+- Result: implemented and unit-tested (see `apps/api/business/auth/killswitches_test.go`,
+  `apps/api/app/api/production_test.go`); NOT YET verified live against production - pending.
 - Observable outcome: A non-allowlisted account cannot sign up or log in while
   `NEW_USER_SIGNUP_ENABLED=false`; an allowlisted account can, verified live against production.
 

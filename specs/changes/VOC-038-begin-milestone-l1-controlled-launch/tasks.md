@@ -6,10 +6,15 @@ implementation-authorization are separate, mirroring VOC-037's convention.
 
 ## VOC-038-T00 — Cohort/allowlist mechanism: decision record + design
 
-- Requirement source: `VOC-038-D00` (not yet defined — founder decision required;
-  see specification.md "Open question 1")
+- Requirement source: `VOC-038-D00` (founder decided initial composition directly on
+  PR #286: founder-only, expandable; see specification.md "Open question 1")
 - Acceptance criteria: `VOC-038-AC-00`
-- Status: pending
+- Status: implemented — mechanism is an explicit, normalized email allowlist
+  (`SignupAllowlist` on `auth.KillSwitches`, sourced from `NEW_USER_SIGNUP_ALLOWLIST`) checked
+  only when `NEW_USER_SIGNUP_ENABLED=false`, satisfying the founder's constraint that
+  expanding the cohort requires no code change (env var + redeploy only). This specific
+  technical mechanism was Claude Code's engineering choice, not a separate founder decision -
+  the founder decided composition/constraint, not the implementation shape.
 - Summary: Decision-record-only task (like VOC-037-T00/T02). Present allowlist-mechanism
   options (e.g. an explicit email allowlist checked at signup/login time, distinct from the
   blanket `NEW_USER_SIGNUP_ENABLED` switch) with a recommendation, for the founder to choose
@@ -19,7 +24,9 @@ implementation-authorization are separate, mirroring VOC-037's convention.
 
 - Requirement source: `VOC-038-D00`'s accepted decision
 - Acceptance criteria: `VOC-038-AC-01`
-- Status: pending
+- Status: implemented in code (auth.KillSwitches.SignupAllowlist, production.go env wiring,
+  apps/api/business/auth/service.go call sites); unit-tested; NOT yet verified live against
+  production - that verification is still outstanding before AC-01 can be marked satisfied.
 - Depends on: `VOC-038-T00`
 - Summary: Implement the chosen allowlist mechanism so `NEW_USER_SIGNUP_ENABLED=false` plus an
   explicit allowlist can admit a named small cohort while keeping signup closed to everyone
