@@ -62,5 +62,17 @@ go test ./...
 - `pnpm validate` stops at the first failing child command and preserves its output.
 - Go may download `go1.26.5` on first use. A network failure is not a passing API
   check; restore official toolchain access and rerun it.
+- An agent/CI sandbox may have an unreachable internal `GOPROXY` (e.g. a private-network
+  mirror) and/or `GOSUMDB=off` set by default. Neither is a repository requirement -
+  `go env GOPROXY` / `go env GOSUMDB` show the active values. If the toolchain download
+  or a module fetch fails, retry with the public defaults rather than assuming the
+  build is broken:
+  ```bash
+  GOPROXY=https://proxy.golang.org,direct GOSUMDB=sum.golang.org go build ./...
+  ```
+  `GOSUMDB=off` specifically blocks the Go *toolchain* download itself (distinct from
+  disabling module checksum verification, which it also does) - re-enabling it is
+  required to fetch a missing `go1.26.5`, e.g. via `go install golang.org/dl/go1.26.5@latest`
+  then `go1.26.5 download`.
 - No deployment, migration, integration, accessibility, staging, or production check
   exists in this foundation.

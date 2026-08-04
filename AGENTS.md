@@ -35,8 +35,7 @@ may refine them but may not weaken governance or security.
 
 ## Current validation
 
-The repository has no application package or pnpm scripts yet. For governance and
-documentation changes run, as applicable:
+For governance and documentation changes, run, as applicable:
 
 ```bash
 bash scripts/governance/validate-governance.sh
@@ -44,8 +43,16 @@ bash scripts/governance/classify-change-risk.sh
 git diff --check
 ```
 
-Discover future commands from the committed package scripts. Do not invent or report
-an unavailable check as passing.
+For `apps/web`, `apps/api`, or shared `packages/` changes, run the workspace validation
+documented in `docs/development.md` (prerequisites, exact commands, and troubleshooting
+live there — this section intentionally does not duplicate it):
+
+```bash
+pnpm validate   # or the narrower pnpm lint / typecheck / test / build
+```
+
+Discover future commands from the committed package scripts and `docs/development.md`.
+Do not invent or report an unavailable check as passing.
 
 ## Safety
 
