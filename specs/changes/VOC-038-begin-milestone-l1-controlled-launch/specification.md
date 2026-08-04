@@ -43,18 +43,24 @@ What does **not** yet exist, and is genuinely new L1 scope:
   thresholds (e.g., what error rate, what latency, what AI cost per day) that gate moving from
   "monitored limited cohort" to wider release (`T05`).
 
-## 3. Open questions (genuine founder decisions, not filled in by this package)
+## 3. Open questions — resolved by founder decision, 2026-08-05
 
-**Open question 1 — initial allowlist composition.** Who is actually in the founder/internal
-allowlist for the first cohort? Candidates in increasing order of exposure: founder-only,
-founder + a small named group of trusted testers, founder + testers + a small waitlist. This
-package does not choose one; `T00` is scoped as a decision-record-only task, exactly like
-VOC-037's `T00`/`T02` were for the production-hosting and legal-content decisions.
+**Open question 1 — initial allowlist composition (VOC-038-D00).** Resolved: founder-only for
+the initial cohort. The allowlist mechanism (`T00`/`T01`) must support adding named individuals
+later without a code change — composition may expand beyond founder-only over time at the
+founder's discretion. Decided directly by the founder on PR #286, bypassing `T00`'s
+decision-record-only step.
 
-**Open question 2 — expansion thresholds.** What error-rate, latency, and AI-cost-per-day
-numbers, sustained over what window, justify moving from the initial cohort to the next
-expansion tranche? This is a business/risk-tolerance decision, not a technical one — `T05` is
-scoped as a decision-record-only task for the same reason.
+**Open question 2 — expansion thresholds (VOC-038-D01).** Resolved: all of the following must
+hold simultaneously, sustained over a rolling 24-hour window, for 7 consecutive days, before
+expanding beyond the initial cohort:
+- Error rate < 1%
+- Latency (p95 response time) < 1.5s
+- AI cost < $15/day
+- Minimum sample size: at least 50 core-loop sessions/day (guards against low-traffic noise
+  falsely satisfying the thresholds)
+
+Decided directly by the founder on PR #286, bypassing `T05`'s decision-record-only step.
 
 ## 4. Non-goals
 
