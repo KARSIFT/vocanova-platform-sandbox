@@ -23,7 +23,9 @@
 
 - Requirement source: DOC-12 §5
 - Tasks: `VOC-038-T02`
-- Result: pending
+- Result: script exists, self-tested against a local fake server (5 scenarios, all pass),
+  wired into deploy-production.yml; NOT YET run against real production - pending a real
+  deploy to confirm it passes there too.
 - Observable outcome: A scripted smoke-test suite runs against production, checks health,
   auth reachability, kill-switch state, and the core-loop happy path, and currently passes.
 

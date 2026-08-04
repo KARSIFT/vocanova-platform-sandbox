@@ -452,3 +452,21 @@ jobs:
           done
           echo "ERROR: production web did not return 2xx within 5 minutes" >&2
           exit 1
+
+      # VOC-038-T02: replaces the manual curl/SSH checks used ad hoc
+      # during R2 with a scripted, repeatable suite. Expected
+      # kill-switch state mirrors the "Write production application
+      # configuration" step above (email/OAuth/signups off, AI on).
+      # SMOKE_TEST_SESSION_COOKIE is intentionally unset here - no
+      # founder-provisioned smoke-test account exists yet, so the
+      # core-loop check runs as a non-fatal SKIP until one is.
+      - name: Run production smoke-test suite
+        env:
+          EXPECT_MAGIC_LINK_ENABLED: "false"
+          EXPECT_OAUTH_ENABLED: "false"
+          EXPECT_NEW_SIGNUPS_ENABLED: "false"
+          EXPECT_AI_ENABLED: "true"
+        run: |
+          bash infra/scripts/smoke-test-production.sh \
+            "https://${{ inputs.production_api_host }}:8443" \
+            "https://${{ inputs.production_web_host }}:8443"

@@ -361,6 +361,39 @@ func TestHealthzHandler_ReportsOkWhenPingSucceeds(t *testing.T) {
 	assert.NotEmpty(t, body.Timestamp)
 }
 
+// TestHealthzHandler_ReportsKillSwitchState covers VOC-038-T02: the
+// smoke-test suite asserts kill-switch state via /healthz rather
+// than a state-mutating probe, so /healthz must report exactly the
+// switches it was registered with.
+func TestHealthzHandler_ReportsKillSwitchState(t *testing.T) {
+	db := &fakeHealthchecker{err: nil}
+	cfg := huma.DefaultConfig("Vocanova API", "0.1.0")
+	mux := chi.NewMux()
+	api := humachi.New(mux, cfg)
+	RegisterHealthz(api, db, KillSwitchStatus{
+		MagicLinkEnabled:  false,
+		OAuthEnabled:      false,
+		NewSignupsEnabled: false,
+		AIEnabled:         true,
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	api.Adapter().ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var body struct {
+		KillSwitches KillSwitchStatus `json:"kill_switches"`
+	}
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&body))
+	assert.Equal(t, KillSwitchStatus{
+		MagicLinkEnabled:  false,
+		OAuthEnabled:      false,
+		NewSignupsEnabled: false,
+		AIEnabled:         true,
+	}, body.KillSwitches)
+}
+
 // newHealthzOnlyAPI builds a real huma.API that only has the
 // /healthz route registered against db, so the runtime
 // assertions above can probe the handler in isolation without
@@ -370,7 +403,7 @@ func newHealthzOnlyAPI(t *testing.T, db Healthchecker) huma.API {
 	cfg := huma.DefaultConfig("Vocanova API", "0.1.0")
 	mux := chi.NewMux()
 	api := humachi.New(mux, cfg)
-	RegisterHealthz(api, db)
+	RegisterHealthz(api, db, KillSwitchStatus{})
 	return api
 }
 

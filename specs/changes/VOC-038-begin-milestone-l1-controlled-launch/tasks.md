@@ -36,7 +36,11 @@ implementation-authorization are separate, mirroring VOC-037's convention.
 
 - Requirement source: DOC-12 §5's "smoke tests" rollout step
 - Acceptance criteria: `VOC-038-AC-02`
-- Status: pending
+- Status: implemented (`infra/scripts/smoke-test-production.sh` + selftest harness,
+  wired into `deploy-production.yml` as a post-deploy step); NOT yet run against real
+  production - pending a real deploy. `.github/workflows/` and this task both fall under
+  the repo's R3 protected-paths policy, so this stays a PR for founder review, not a
+  self-merge.
 - Summary: A repeatable, scripted smoke-test suite runnable against production immediately
   after any deploy (health endpoints, auth flow reachability, kill-switch state assertions,
   core-loop happy path) — replacing the manual `curl`/SSH checks used ad hoc during R2. Should
