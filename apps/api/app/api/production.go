@@ -591,7 +591,22 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 			// a real browser - found live via VOC-037-T03's rehearsal.
 			OAuthStateDomain: "",
 			Secure:           cfg.SessionSecure,
-			SameSite:         http.SameSiteStrictMode,
+			// Lax, not Strict - matches OAuthStateCookie's own hardcoded
+			// SameSiteLaxMode in tokens.go, and for the identical reason:
+			// this session cookie is minted as the LAST hop of a redirect
+			// chain that began at Google (accounts.google.com -> this
+			// API's /callback -> the web app's /home), so the whole chain
+			// counts as cross-site-initiated for SameSite purposes even
+			// though every vocanova.site hop is same-site with each other.
+			// Strict cookies are never attached anywhere in a navigation
+			// chain that started cross-site, so the browser's request to
+			// /home carried no session cookie at all - found live via
+			// VOC-038-T03's first real founder sign-in attempt: OAuth
+			// completed successfully (302 with Set-Cookie, confirmed in
+			// nginx access logs), but the very next request landed back on
+			// /signin?returnTo=/home because middleware.ts's own /me check
+			// saw no cookie and treated the visitor as unauthenticated.
+			SameSite: http.SameSiteLaxMode,
 		},
 	}
 	authSvc := auth.NewService(authRepo, mailer, oauthProvider, clk, limiter, authCfg)
