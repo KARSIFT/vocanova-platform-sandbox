@@ -150,7 +150,9 @@ else
 fi
 
 oauth_status="$(curl -sS --max-time 10 -o /dev/null -w "%{http_code}" \
-  "$api_base_url/api/v1/auth/oauth/google/start?app_return_url=$web_base_url/home" || echo "000")"
+  -X POST -H "Content-Type: application/json" \
+  -d "{\"redirectUri\":\"$web_base_url/home\"}" \
+  "$api_base_url/api/v1/auth/oauth/google/start" || echo "000")"
 if [ "$expect_oauth" = "false" ]; then
   if [ "$oauth_status" = "503" ]; then
     pass "oauth start correctly refused (503) while disabled"

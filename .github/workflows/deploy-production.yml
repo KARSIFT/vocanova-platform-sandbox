@@ -516,14 +516,20 @@ jobs:
       # VOC-038-T02: replaces the manual curl/SSH checks used ad hoc
       # during R2 with a scripted, repeatable suite. Expected
       # kill-switch state mirrors the "Write production application
-      # configuration" step above (email/OAuth/signups off, AI on).
+      # configuration" step above (email/signups off, AI on).
+      # EXPECT_OAUTH_ENABLED mirrors the same secrets-present condition
+      # as GOOGLE_OAUTH_ENABLED there, instead of a hardcoded "false" -
+      # found live on VOC-038-T03's first real dispatch after adopting
+      # OAuth credentials: the real kill switch correctly flipped to
+      # true, but this hardcoded expectation still said false, failing
+      # the suite over a stale assumption rather than a real defect.
       # SMOKE_TEST_SESSION_COOKIE is intentionally unset here - no
       # founder-provisioned smoke-test account exists yet, so the
       # core-loop check runs as a non-fatal SKIP until one is.
       - name: Run production smoke-test suite
         env:
           EXPECT_MAGIC_LINK_ENABLED: "false"
-          EXPECT_OAUTH_ENABLED: "false"
+          EXPECT_OAUTH_ENABLED: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID != '' && secrets.GOOGLE_OAUTH_CLIENT_SECRET != '' }}
           EXPECT_NEW_SIGNUPS_ENABLED: "false"
           EXPECT_AI_ENABLED: "true"
         run: |

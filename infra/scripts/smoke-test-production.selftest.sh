@@ -62,9 +62,6 @@ class Handler(http.server.BaseHTTPRequestHandler):
         elif self.path == "/":
             self.send_response(200)
             self.end_headers()
-        elif self.path.startswith("/api/v1/auth/oauth/google/start"):
-            self.send_response(503 if scenario != "switches_on" else 302)
-            self.end_headers()
         elif self.path == "/api/v1/me" or self.path == "/api/v1/journey-situations":
             cookie = self.headers.get("Cookie", "")
             if cookie == "vocanova_session=smoke-test-token":
@@ -78,6 +75,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path == "/api/v1/auth/magic-links":
             self.send_response(503 if scenario != "switches_on" else 202)
+            self.end_headers()
+        elif self.path == "/api/v1/auth/oauth/google/start":
+            self.send_response(503 if scenario != "switches_on" else 200)
             self.end_headers()
         else:
             self.send_response(404)
