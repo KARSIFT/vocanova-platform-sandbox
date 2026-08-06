@@ -90,7 +90,21 @@ services:
       api:
         condition: service_healthy
     environment:
-      API_BASE_URL: http://api:8080
+      # NOT the internal http://api:8080 address: middleware.ts's
+      # getApiBaseURL() prefers API_BASE_URL over NEXT_PUBLIC_API_BASE_URL
+      # when running server-side, and that internal call is what actually
+      # backs every /onboarding, /home, etc. auth check. Found live on
+      # VOC-038-T03's first real founder sign-in: OAuth completed, a
+      # valid non-revoked session existed in the database, and the
+      # browser correctly sent the session cookie on the post-redirect
+      # request (confirmed in DevTools Network tab) - yet middleware
+      # still 307'd back to /signin, meaning its internal fetch to
+      # http://api:8080/api/v1/me was failing even though a plain `wget`
+      # to the same address from inside this same container succeeded.
+      # Using the same public HTTPS URL the browser itself already uses
+      # (proven reachable end-to-end) removes that unverified internal
+      # code path entirely instead of debugging it blind.
+      API_BASE_URL: https://api-production.vocanova.site
     healthcheck:
       test: ["CMD-SHELL", "wget --quiet --tries=1 -O /dev/null http://127.0.0.1:3000/ || exit 1"]
       interval: 30s
