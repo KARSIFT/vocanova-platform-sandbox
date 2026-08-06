@@ -104,7 +104,7 @@ services:
       # Using the same public HTTPS URL the browser itself already uses
       # (proven reachable end-to-end) removes that unverified internal
       # code path entirely instead of debugging it blind.
-      API_BASE_URL: https://api-production.vocanova.site
+      API_BASE_URL: https://api-production.vocanova.site:8443
     healthcheck:
       test: ["CMD-SHELL", "wget --quiet --tries=1 -O /dev/null http://127.0.0.1:3000/ || exit 1"]
       interval: 30s
