@@ -286,19 +286,14 @@ jobs:
               /opt/vocanova/production/secrets/api.env
             {
               echo "ENVIRONMENT=production"
-              # No :8443 here (unlike this workflow's own health-check
-              # curls further down, which still hit the origin port
-              # directly): BASE_URL/OAUTH_REDIRECT_URI/ALLOWLIST are
-              # embedded in browser-facing artifacts (OAuth redirects,
-              # magic-link/email-change emails) that traverse Cloudflare's
-              # edge, which now forwards the plain :443 hostname to the
-              # origin's 8443 (VOC-038-T03 prep, verified live via curl
-              # returning 200 on both api-production.vocanova.site/healthz
-              # and production.vocanova.site/ with no port). Confirm this
-              # Cloudflare rule stays in place before relying on it further.
-              echo "BASE_URL=https://${PRODUCTION_API_HOST}"
-              echo "OAUTH_REDIRECT_URI=https://${PRODUCTION_API_HOST}/api/v1/auth/oauth/google/callback"
-              echo "OAUTH_REDIRECT_ALLOWLIST=https://${PRODUCTION_WEB_HOST}/onboarding,https://${PRODUCTION_WEB_HOST}/home"
+              # Port :8443 is required for these browser-facing values too:
+              # live reproduction showed the unqualified host hits nginx's
+              # 444 catch-all instead of production's real listener. This
+              # matches the same Cloudflare/host-sharing finding already
+              # documented in the health-check comment below.
+              echo "BASE_URL=https://${PRODUCTION_API_HOST}:8443"
+              echo "OAUTH_REDIRECT_URI=https://${PRODUCTION_API_HOST}:8443/api/v1/auth/oauth/google/callback"
+              echo "OAUTH_REDIRECT_ALLOWLIST=https://${PRODUCTION_WEB_HOST}:8443/onboarding,https://${PRODUCTION_WEB_HOST}:8443/home"
               # Shared parent domain (e.g. ".vocanova.site"), NOT the bare
               # web hostname: the session/CSRF cookies are set by the API
               # host (api-X) but must also domain-match the web host (X) -
