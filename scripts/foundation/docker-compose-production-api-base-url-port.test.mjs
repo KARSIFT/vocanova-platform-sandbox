@@ -3,7 +3,9 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
-const PRODUCTION_COMPOSE_PATH = path.resolve("infra/docker-compose.production.yml");
+const PRODUCTION_COMPOSE_PATH = path.resolve(
+  "infra/docker-compose.production.yml",
+);
 const WEB_SERVICE_MARKER = "  web:";
 const WEB_ENVIRONMENT_MARKER = "    environment:";
 const WEB_HEALTHCHECK_MARKER = "    healthcheck:";
@@ -46,10 +48,7 @@ function extractApiBaseUrl(webEnvironmentBlock) {
     .split("\n")
     .find((candidateLine) => candidateLine.startsWith(API_BASE_URL_KEY));
 
-  assert.ok(
-    line,
-    "production compose web environment is missing API_BASE_URL",
-  );
+  assert.ok(line, "production compose web environment is missing API_BASE_URL");
 
   const apiBaseUrl = line.slice(API_BASE_URL_KEY.length).trim();
   assert.ok(
