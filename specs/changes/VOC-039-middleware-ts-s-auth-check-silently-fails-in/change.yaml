@@ -4,7 +4,7 @@ slug: middleware-ts-s-auth-check-silently-fails-in
 title: middleware.ts's Auth Check Silently Fails in Production Because Next.js Middleware
   Runs on the Edge Runtime, Not Node
 type: fix
-status: draft
+status: adopted
 risk: R3
 planned_implementation_risk_floor: Not yet computed by running scripts/governance/classify-change-risk.sh
   against a real file set - each task (T00-T02 below) needs its own approved, task-scoped
@@ -27,21 +27,23 @@ requirement_source: 'GitHub issue #297 ("middleware.ts''s auth check silently fa
   and two follow-up asks (a regression test that exercises the real Edge-vs-Node runtime
   difference, and structured logging distinguishing "fetch threw" / "got 401" / "got
   some other non-ok status" in the auth-check failure paths).'
-requirement_approval_status: 'Not yet approved. This package is drafted from the issue
-  directly per this run''s planner instructions; it has not been adopted by a founder
-  or technical steward. Issue #297 itself is not, on its own, evidence of founder
-  authorization to implement - only of a reported production defect that blocks VOC-038-T03.'
+requirement_approval_status: 'Approved. Founder merged PR #299 (this draft package''s
+  own plan PR) on 2026-08-06T07:07:46Z, adopting it. This follow-up commit records
+  that decision in change.yaml, since merging the plan PR only merges the draft
+  content and does not itself flip these fields - adopt.yml correctly refused to
+  open task issues until this adoption record exists (see its 2026-08-06T07:08:03Z
+  failure on PR #299''s merge: "this package was merged without being adopted").'
 base_branch: develop
 base_sha: d45f002b816509ff401448920d484743a9264819
 target_branch: develop
-approved_candidate_sha: not-set-until-adoption
+approved_candidate_sha: 0a6de36002f4619f63b192e621bbdc53fee12d04
 owners:
   decision: unassigned
   package_preparation: planner (drafting only; adoption remains a human decision)
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: adopted
+implementation_authorized: true
 automatic_merge_allowed: false
 production_impact: unknown until adopted and implemented - the fix itself (forcing
   apps/web/src/middleware.ts onto the Node runtime) is scoped to restore intended
@@ -70,7 +72,7 @@ affected_areas:
 - apps/web/tests
 - specs/changes/VOC-039-middleware-ts-s-auth-check-silently-fails-in
 implementation:
-  authorized: false
+  authorized: true
   required: true
   status: proposed
   target_branch: develop
@@ -84,16 +86,15 @@ release:
   automatic_merge: false
   migration_required: false
   rollback_required: true
-repository_adoption_status: not-adopted
-adoption_pr: null
-adoption_evidence: null
+repository_adoption_status: adopted
+adoption_pr: 299
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/299
 implementation_authority_before_adoption: false
-implementation_authority_status: not-exercised
+implementation_authority_status: exercised
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
-blocking_reasons: Adoption by a founder or technical steward, per this repository's
-  own AGENTS.md ("a chat prompt or issue alone is not implementation authority").
-  Individual tasks T00-T02 each additionally require their own task-scoped implementation
-  authorization/dispatch after adoption, mirroring VOC-037/VOC-038's convention.
+blocking_reasons: 'Repository-level adoption is resolved (PR 299). Individual tasks
+  T00-T02 each still require their own task-scoped implementation authorization/dispatch
+  after adoption, mirroring VOC-037/VOC-038''s convention.'
