@@ -1,0 +1,115 @@
+schema_version: 1
+id: VOC-043
+slug: draft-a-fix-for-github-issue-333-server-rendered
+title: Server-Rendered Pages' Own /api/v1/me Check Fails with 401 Immediately After
+  middleware.ts's Identical Check Succeeds, Blocking Real Onboarding After Google
+  Sign-In
+type: fix
+status: draft
+risk: R3
+planned_implementation_risk_floor: Not yet computed by running scripts/governance/classify-change-risk.sh
+  against a real file set - each task (T00-T01 below) needs its own approved, task-scoped
+  file list before the classifier means anything, consistent with how VOC-039/VOC-040/VOC-041/VOC-042
+  handled this field. This package proposes R3 for the change as a whole because it
+  directly touches apps/web/src/lib/api-server.ts, the server-side cookie-forwarding
+  path every authenticated server-rendered page in apps/web depends on for its own
+  /api/v1/me auth check - docs/governance/change-risk-classification.md names "authentication/authorization"
+  explicitly as an R3-floor category. This is a draft proposal for the reviewing human
+  at adoption time, not a determination.
+canonical_path: specs/changes/VOC-043-draft-a-fix-for-github-issue-333-server-rendered
+authority_model: a003-active
+requirement_source: 'GitHub issue #333 ("Server-rendered pages'' own /api/v1/me check
+  fails with 401 immediately after middleware.ts''s identical check succeeds, blocking
+  real onboarding after Google sign-in"), including its full body (the only content
+  on the issue at drafting time - no comments existed yet). The issue documents a
+  live reproduction against production (nginx access logs from three separate real
+  sign-in attempts, all showing an identical 200, 200, 401 pattern for the three server-side
+  /api/v1/me calls in one sign-in), what it explicitly ruled out (stale/duplicate
+  cookies, IP rate limiting, port/CORS/reachability), and names its own likely area
+  to investigate (apps/web/src/middleware.ts''s raw-header cookie forward succeeding
+  twice, versus apps/web/src/lib/api-server.ts''s cookies()-based reconstruction failing
+  once, for the same request) and suggested fix direction (unify the two cookie-forwarding
+  implementations).'
+requirement_approval_status: 'Not approved. This is a fresh draft package prepared
+  in response to issue #333; no founder or technical-steward adoption decision has
+  been recorded yet. Every adoption/authorization field below is left at its unadopted
+  default, per this planner''s own scope limits.'
+base_branch: develop
+base_sha: a48f4d928bbd796c99f49825bb80eb1eab8ac7db
+target_branch: develop
+approved_candidate_sha: null
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: false
+production_impact: unknown until adopted and implemented - the fix itself is scoped
+  to make a server-side cookie-forwarding path behave the same way a sibling path
+  (apps/web/src/middleware.ts) already does successfully, not to introduce new production-facing
+  behavior; the actual production_impact determination belongs to VOC-043-T00's implementer
+  and the independent verifier, not this draft.
+rollback_required: true
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-043-DEP-00
+  status: 'unresolved. Depends on issue #333''s reported reproduction remaining accurate
+    at implementation time - if a future comment on the issue reports a different
+    or additional cause (or that the direct fix did not resolve the reported 401),
+    VOC-043-T00 must be re-scoped before implementation, per this planner''s instructions
+    to ground the package in the request as given rather than a stale snapshot of
+    it.'
+- id: VOC-043-DEP-01
+  status: unresolved at drafting time. Depends on the reviewing human deciding whether
+    specification.md's open question 1 (confirming the fix actually resolves the reported
+    401, versus needing temporary diagnostic instrumentation first) changes this package's
+    scope before implementation begins.
+- id: VOC-043-DEP-02
+  status: unresolved at drafting time. Depends on the reviewing human deciding whether
+    specification.md's open question 2 (a broader audit of other possible cookies()-reconstruction
+    call sites) is warranted as a separate follow-up package.
+affected_areas:
+- apps/web/src/lib/api-server.ts
+- apps/web/tests/lib/api-server-cookie-forwarding.test.ts
+- specs/changes/VOC-043-draft-a-fix-for-github-issue-333-server-rendered
+implementation:
+  authorized: false
+  required: true
+  status: proposed
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: unknown-until-implemented
+  deployment: not-authorized-by-this-package
+  automatic_merge: false
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
+blocking_reasons: 'Repository-level adoption has not occurred. No task (T00-T01) may
+  be dispatched until a founder or technical-steward adoption decision is recorded
+  in this file (status: adopted and implementation_authorized: true), mirroring VOC-039/VOC-040/VOC-041/VOC-042''s
+  convention. specification.md''s open questions 1-3 (whether the direct fix alone
+  resolves the reported 401, whether a broader cookies()-reconstruction audit is warranted,
+  and whether any real user is currently stuck mid-onboarding) are unresolved and
+  should be reviewed at adoption time.'
