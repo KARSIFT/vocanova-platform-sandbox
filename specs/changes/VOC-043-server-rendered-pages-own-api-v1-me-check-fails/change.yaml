@@ -1,0 +1,111 @@
+schema_version: 1
+id: VOC-043
+slug: server-rendered-pages-own-api-v1-me-check-fails
+title: Server-Rendered Pages' Own /api/v1/me Check Fails with 401 Immediately After
+  middleware.ts's Identical Check Succeeds, Blocking Real Onboarding After Google
+  Sign-In
+type: fix
+status: draft
+risk: R3
+canonical_path: specs/changes/VOC-043-server-rendered-pages-own-api-v1-me-check-fails
+planned_implementation_risk_floor: Not yet computed by running scripts/governance/classify-change-risk.sh
+  against a real, task-scoped file list - consistent with how VOC-039/VOC-040/VOC-041/VOC-042
+  handled this field. This package proposes R3 for the change as a whole because the
+  most likely fix touches apps/web/src/lib/api-server.ts, a server-side auth-check
+  boundary that every protected route under apps/web/src/middleware.ts's matcher ultimately
+  depends on for a logged-in user to actually reach the page (not merely pass middleware).
+  This is a draft proposal for the reviewing human at adoption time, not a determination.
+authority_model: a003-active
+requirement_source: 'GitHub issue #333 ("Server-rendered pages'' own /api/v1/me check
+  fails with 401 immediately after middleware.ts''s identical check succeeds, blocking
+  real onboarding after Google sign-in"), including its full body (the only content
+  on the issue at drafting time - no comments existed yet). The issue documents a
+  three-times-reproduced live pattern against production (nginx access logs showing
+  200, 200, 401 for three server-side /api/v1/me calls in one request lifecycle, reproduced
+  even after fully clearing browser cookies), rules out stale/duplicate cookies and
+  IP-based rate limiting with cited evidence, names the two candidate call sites (apps/web/src/middleware.ts''s
+  raw request.headers.get("cookie") forward versus apps/web/src/lib/api-server.ts''s
+  next/headers cookies()-based reconstruction), and proposes - without asserting as
+  confirmed - that the implementer instrument both paths on a single real request
+  to find the exact divergence before fixing it.'
+requirement_approval_status: 'Not approved. This package is an unreviewed draft prepared
+  by the planner role in response to issue #333; no founder or technical-steward adoption
+  decision has been recorded. See owners and approval_status below.'
+base_branch: develop
+base_sha: a48f4d928bbd796c99f49825bb80eb1eab8ac7db
+target_branch: develop
+approved_candidate_sha: null
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: false
+production_impact: unknown
+rollback_required: true
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-043-DEP-00
+  status: 'unresolved. Depends on issue #333''s reported reproduction remaining accurate
+    at implementation time - if a later comment on the issue narrows or changes the
+    diagnosis, VOC-043-T00 must be re-scoped before implementation, per this planner''s
+    instructions to ground the package in the request as given rather than a stale
+    snapshot of it.'
+- id: VOC-043-DEP-01
+  status: unresolved. The issue explicitly asks the implementer to instrument both
+    cookie paths on a single real request before fixing anything, since the exact
+    divergence (encoding/escaping round-trip, a dropped cookie attribute, or something
+    else) is not yet confirmed empirically - only the two candidate call sites are
+    named. VOC-043-T00's actual code change depends on this instrumentation step's
+    real-request finding, not on this package's own unconfirmed hypothesis (see specification.md's
+    open questions).
+- id: VOC-043-DEP-02
+  status: unresolved. Depends on the reviewing human deciding whether the temporary
+    instrumentation/logging added to diagnose this (redacted per the issue's own instruction
+    not to log raw cookie values) must be removed before merge, or may remain as permanent
+    low-cardinality diagnostic logging - flagged as an open question rather than decided
+    by this draft.
+affected_areas:
+- apps/web/src/lib/api-server.ts
+- apps/web/src/middleware.ts
+- specs/changes/VOC-043-server-rendered-pages-own-api-v1-me-check-fails
+implementation:
+  authorized: false
+  required: true
+  status: not-authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: unknown-until-implemented
+  deployment: not-authorized-by-this-package
+  automatic_merge: false
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
+blocking_reasons: Repository-level adoption has not occurred. No task in tasks.md
+  is implementation-authorized. specification.md's open questions 1-3 (the unconfirmed
+  root cause pending real-request instrumentation, whether diagnostic logging should
+  be temporary or permanent, and whether this same divergence affects any other server
+  component beyond apps/web/src/app/onboarding/page.tsx that also calls createServerApiClient())
+  must be resolved or explicitly accepted by the reviewing human at adoption time.
