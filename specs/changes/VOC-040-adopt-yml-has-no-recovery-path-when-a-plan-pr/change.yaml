@@ -1,0 +1,99 @@
+schema_version: 1
+id: VOC-040
+slug: adopt-yml-has-no-recovery-path-when-a-plan-pr
+title: adopt.yml Has No Recovery Path When a Plan PR Merges Without Being Adopted
+  First
+type: fix
+status: draft
+risk: R1
+planned_implementation_risk_floor: Not yet computed by running scripts/governance/classify-change-risk.sh
+  against a real file set - this package's only in-repo-scoped task (T00 below) touches
+  AGENTS.md, a governance/documentation file, not application code, infrastructure-as-code,
+  or a migration. This is a draft proposal for the reviewing human at adoption time,
+  not a determination.
+canonical_path: specs/changes/VOC-040-adopt-yml-has-no-recovery-path-when-a-plan-pr
+authority_model: a003-active
+requirement_source: 'GitHub issue #301 ("adopt.yml has no recovery path when a plan
+  PR merges without being adopted first"), including its full body (the only content
+  on the issue at drafting time - no comments existed yet). The issue documents a
+  live incident on VOC-039''s adoption (PR #299 merged without the change.yaml adoption
+  edit; recovered via a follow-up PR #300 plus manually re-running the original failed
+  `adopt` job via `gh run rerun --failed`) and offers three alternative suggested
+  improvements, explicitly leaving the choice of "whichever is the better fit architecturally"
+  open.'
+requirement_approval_status: 'Not yet approved. This package is drafted from the issue
+  directly per this run''s planner instructions; it has not been adopted by a founder
+  or technical steward. Issue #301 itself is not, on its own, evidence of founder
+  authorization to implement - only of a reported process gap, explicitly marked "not
+  urgent/blocking" by its own author.'
+base_branch: develop
+base_sha: 0a6de36002f4619f63b192e621bbdc53fee12d04
+target_branch: develop
+approved_candidate_sha: not-set-until-adoption
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: false
+production_impact: none. This package touches only this repository's own AGENTS.md
+  documentation (VOC-040-T00); it does not touch any application code, production
+  configuration, or the shared karsift-ai-infra reusable workflows themselves. See
+  specification.md's scope section for why the issue's other two suggested improvements
+  are out of this repository's scope entirely.
+rollback_required: false
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-040-DEP-00
+  status: 'unresolved. VOC-040-T00 (documenting the gh run rerun --failed recovery
+    procedure in this repo''s AGENTS.md) depends on that procedure continuing to work
+    as described in issue #301 - i.e. that adopt.yml''s verify step re-reads change.yaml
+    from the target branch''s current tip rather than a frozen snapshot, and that
+    the original failed run has not been garbage-collected. Neither of these is controlled
+    by this repository; both are properties of the karsift-ai-infra-authored adopt.yml
+    and of GitHub Actions'' own run-retention window. If either changes, this documentation
+    would need revisiting.'
+affected_areas:
+- AGENTS.md
+- specs/changes/VOC-040-adopt-yml-has-no-recovery-path-when-a-plan-pr
+implementation:
+  authorized: false
+  required: true
+  status: proposed
+  target_branch: develop
+  pull_request: null
+  authority_issue: 301
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none
+  deployment: not-authorized-by-this-package
+  automatic_merge: false
+  migration_required: false
+  rollback_required: false
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
+blocking_reasons: Adoption by a founder or technical steward, per this repository's
+  own AGENTS.md ("a chat prompt or issue alone is not implementation authority").
+  Separately and out of this package's own control - see specification.md's scope
+  section - two of the issue's three suggested improvements (a workflow_dispatch entry
+  point on adopt.yml; a merge-blocking checklist item in plan.yml's draft PR body)
+  require a change to the KARSIFT/karsift-ai-infra repository, which this package
+  cannot touch and does not attempt to.
