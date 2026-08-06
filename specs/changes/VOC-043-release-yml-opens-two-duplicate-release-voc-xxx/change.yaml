@@ -1,0 +1,98 @@
+schema_version: 1
+id: VOC-043
+slug: release-yml-opens-two-duplicate-release-voc-xxx
+title: 'release.yml Opens Two Duplicate "Release: VOC-XXX" Issues for the Same Package'
+type: fix
+status: draft
+risk: R3
+planned_implementation_risk_floor: Not yet computed by running scripts/governance/classify-change-risk.sh
+  against a real, task-scoped file list - consistent with how VOC-039 through VOC-042
+  handled this field, that computation belongs to VOC-043-T00's own implementation
+  PR. This package proposes R3 for the change as a whole because it touches shared
+  CI/CD/release-gating workflow infrastructure (karsift-ai-infra/.github/workflows/release.yml)
+  that gates production promotion for every package this reusable workflow serves,
+  not only this repository - docs/governance/change-risk-classification.md names CI/CD
+  and release-gating workflow changes as at least an R3-floor category. This is a
+  draft proposal for the reviewing human at adoption time, not a determination.
+canonical_path: specs/changes/VOC-043-release-yml-opens-two-duplicate-release-voc-xxx
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: false
+production_impact: unknown
+rollback_required: true
+authority_model: a003-active
+requirement_source: 'GitHub issue #328 ("release.yml opens two duplicate ''Release:
+  VOC-XXX'' issues for the same package (VOC-039 got both #310 and #311)"), including
+  its full body (the only content on the issue at drafting time - no comments existed
+  yet). The issue documents a live reproduction (VOC-039''s task issues #303-305 closing
+  within seconds of each other, producing duplicate issues #310 and #311 with identical
+  bodies), a likely-cause analysis grounded in reading release.yml''s actual check-then-create
+  logic, and a named suggested fix (make issue-opening idempotent per package, via
+  an existing-issue re-check or a concurrency lock keyed on the package/change_id).'
+requirement_approval_status: not-approved. This draft package has not yet been reviewed
+  or adopted by a founder or technical steward. No task below is implementation-authorized.
+base_branch: develop
+base_sha: a48f4d928bbd796c99f49825bb80eb1eab8ac7db
+target_branch: develop
+approved_candidate_sha: null
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-043-DEP-00
+  status: 'unresolved. Depends on issue #328''s reported reproduction and likely-cause
+    analysis remaining accurate at implementation time - if a later comment on the
+    issue reports a different mechanism, VOC-043-T00 must be re-scoped before implementation.'
+- id: VOC-043-DEP-01
+  status: unresolved. Depends on the reviewing human confirming (or redirecting) specification.md's
+    open question 1 (the proposed two-job/concurrency-group design) before VOC-043-T00
+    is implemented.
+- id: VOC-043-DEP-02
+  status: unresolved. Depends on confirming how this repository actually consumes
+    karsift-ai-infra's release.yml (specification.md's open question 2), so this fix's
+    real-world effect on this repository's own future releases is known rather than
+    assumed.
+affected_areas:
+- karsift-ai-infra/.github/workflows/release.yml
+- specs/changes/VOC-043-release-yml-opens-two-duplicate-release-voc-xxx
+implementation:
+  authorized: false
+  required: true
+  status: proposed
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: unknown-until-implemented
+  deployment: not-authorized-by-this-package
+  automatic_merge: false
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
+blocking_reasons: 'Not yet adopted. This package requires founder/technical-steward
+  review and an explicit adoption decision (status: adopted, implementation_authorized:
+  true) before VOC-043-T00 may be dispatched. specification.md''s open questions 1-3
+  (concrete concurrency mechanism, this repository''s actual consumption path for
+  the fixed reusable workflow, and manual cleanup of the two already-open duplicate
+  issues #310/#311) should be considered at adoption time.'
