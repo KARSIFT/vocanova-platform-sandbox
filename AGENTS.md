@@ -33,6 +33,23 @@ may refine them but may not weaken governance or security.
 - Governance replacements are evaluated under the authority effective before them;
   they cannot authorize their own adoption.
 
+## Reporting a bug found outside the normal loop
+
+- If you (a human operator or an agent) discover a real bug while doing something
+  other than implementing an already-adopted task - live production debugging,
+  manual verification, monitoring, code review - do not hand-write and push a fix
+  PR directly. Open a plain, unlabeled GitHub issue describing the bug, its root
+  cause if known, evidence, and a suggested fix. An unlabeled issue on this repo
+  automatically triggers `plan-from-issue` (see `pipeline.yml`), which drafts a
+  real change package for founder review and adoption, keeping every fix inside
+  the same governed loop as planned work instead of bypassing it.
+- The exception is narrow, low-risk process/prep work explicitly requested in the
+  moment (e.g. wiring already-approved credentials into a deploy workflow) - not a
+  general license to hand-fix whatever looks broken.
+- Include enough in the issue for the planner to act without re-deriving your
+  diagnosis: exact reproduction steps or commands, the failing behavior, and (if
+  you found it) the root cause - not just a symptom description.
+
 ## Current validation
 
 For governance and documentation changes, run, as applicable:
