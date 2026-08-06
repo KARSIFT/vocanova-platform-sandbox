@@ -50,6 +50,36 @@ may refine them but may not weaken governance or security.
   diagnosis: exact reproduction steps or commands, the failing behavior, and (if
   you found it) the root cause - not just a symptom description.
 
+## Recovering from a merged plan PR that was not adopted first
+
+Issue #301 documents a live incident (VOC-039: PR #299 merged without adoption,
+recovered via PR #300 plus re-running the failed `adopt` run). Use this
+workaround when a `plan/` branch PR merges before its package `change.yaml` is
+set to `status: adopted` and `implementation.authorized: true`.
+
+1. Identify the original failed `adopt` workflow run for that merge. Confirm it
+   failed in "Verify the package was actually adopted" and names the unadopted
+   `change.yaml` path.
+2. Edit that package's `change.yaml` on the target branch to the adopted state
+   (`status: adopted` and `implementation.authorized: true`), as should have
+   happened before the merge.
+3. Re-run that exact failed run (not a fresh dispatch; `adopt.yml` has no
+   `workflow_dispatch` entry point in this repository) with:
+   `gh run rerun --failed <run-id>`
+4. Confirm the rerun now reads the updated target-branch tip and proceeds to
+   create the task issues.
+
+This recovery path depends on the original failed run still existing in GitHub
+Actions retention. If the run has been garbage-collected, this procedure will
+not work; use a manual remediation path such as VOC-039's follow-up PR #300
+approach instead.
+
+This section documents an operational workaround, not a structural fix. The
+underlying gap remains open and out of this repository's direct control: adding
+`workflow_dispatch` support to `adopt.yml` and adding earlier guardrails in
+`plan.yml` (see VOC-040 specification open question 1 in
+`specs/changes/VOC-040-adopt-yml-has-no-recovery-path-when-a-plan-pr/specification.md`).
+
 ## Current validation
 
 For governance and documentation changes, run, as applicable:
