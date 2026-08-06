@@ -21,6 +21,27 @@ interface CurrentUserResponse {
   onboardingStatus?: "not_started" | "in_progress" | "completed";
 }
 
+const AUTH_CHECK_FAILURE_EVENT = "middleware_auth_check_failure";
+
+function logAuthCheckFailure({
+  category,
+  routePath,
+  status,
+}: {
+  category: "fetch_threw" | "unauthorized_401" | "non_ok_response";
+  routePath: string;
+  status?: number;
+}): void {
+  console.error(
+    JSON.stringify({
+      event: AUTH_CHECK_FAILURE_EVENT,
+      category,
+      routePath,
+      ...(status === undefined ? {} : { status }),
+    }),
+  );
+}
+
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   const returnTo = new URLSearchParams({
     returnTo: `${request.nextUrl.pathname}${request.nextUrl.search}`,
@@ -41,13 +62,27 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       credentials: "include",
     });
   } catch {
+    logAuthCheckFailure({
+      category: "fetch_threw",
+      routePath: request.nextUrl.pathname,
+    });
     return NextResponse.redirect(signInUrl);
   }
 
   if (meResponse.status === 401) {
+    logAuthCheckFailure({
+      category: "unauthorized_401",
+      routePath: request.nextUrl.pathname,
+      status: meResponse.status,
+    });
     return NextResponse.redirect(signInUrl);
   }
   if (!meResponse.ok) {
+    logAuthCheckFailure({
+      category: "non_ok_response",
+      routePath: request.nextUrl.pathname,
+      status: meResponse.status,
+    });
     return NextResponse.redirect(signInUrl);
   }
 
