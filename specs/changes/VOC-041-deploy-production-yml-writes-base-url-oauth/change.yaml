@@ -1,0 +1,100 @@
+schema_version: 1
+id: VOC-041
+slug: deploy-production-yml-writes-base-url-oauth
+title: deploy-production.yml Writes BASE_URL/OAUTH_REDIRECT_URI/OAUTH_REDIRECT_ALLOWLIST
+  Without the Required :8443 Port, Breaking Real Google Sign-In via CORS
+type: fix
+status: draft
+risk: R3
+planned_implementation_risk_floor: Not yet computed by running scripts/governance/classify-change-risk.sh
+  against a real file set - each task (T00-T01 below) needs its own approved, task-scoped
+  file list before the classifier means anything, consistent with how VOC-039/VOC-040
+  handled this field. This package proposes R3 for the change as a whole because it
+  directly touches .github/workflows/deploy-production.yml, which writes the production
+  authentication/CORS configuration boundary consumed by apps/api/app/api/production.go's
+  corsAllowedOrigins - docs/governance/change-risk-classification.md names both "CI/CD"
+  and "authentication/authorization" explicitly as R3-floor categories regardless
+  of diff size (in this case, three string literals plus a comment). This is a draft
+  proposal for the reviewing human at adoption time, not a determination.
+canonical_path: specs/changes/VOC-041-deploy-production-yml-writes-base-url-oauth
+authority_model: a003-active
+requirement_source: 'GitHub issue #312 ("deploy-production.yml writes BASE_URL/OAUTH_REDIRECT_URI/OAUTH_REDIRECT_ALLOWLIST
+  without the required :8443 port, breaking real Google sign-in via CORS"), including
+  its full body (the only content on the issue at drafting time - no comments existed
+  yet). The issue documents a direct live reproduction against the production host
+  (nginx access/boot logs, the live api.env file via SSH, and a real browser sign-in
+  attempt) and names its own suggested fix (append :8443 to the three values, matching
+  the same workflow''s existing health-check step).'
+requirement_approval_status: Not yet approved by a founder or technical steward. This
+  package is a draft proposal only.
+base_branch: develop
+base_sha: 6e6a44c162249739626f3e3e27d5242f3c89ae94
+target_branch: develop
+approved_candidate_sha: null
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: false
+production_impact: unknown until adopted and implemented - the fix itself is scoped
+  to restore intended behavior of an OAuth/CORS configuration boundary that already
+  silently blocks real Google sign-in for every real user today, not to introduce
+  new production-facing behavior; the actual production_impact determination belongs
+  to VOC-041-T00's implementer and the independent verifier, not this draft.
+rollback_required: true
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-041-DEP-00
+  status: 'unresolved. Depends on issue #312''s reported reproduction remaining accurate
+    at implementation time - if a future comment on the issue reports a different
+    or additional cause, VOC-041-T00 must be re-scoped before implementation, per
+    this planner''s instructions to ground the package in the request as given rather
+    than a stale snapshot of it.'
+- id: VOC-041-DEP-01
+  status: unresolved. specification.md's open question 1 notes that production_api_base_url's
+    workflow-input default (line 20) is very likely affected by the same bug class
+    but is out of this package's stated scope - the reviewing human must decide whether
+    that input needs its own fix before or alongside this package's adoption.
+affected_areas:
+- .github/workflows/deploy-production.yml
+- specs/changes/VOC-041-deploy-production-yml-writes-base-url-oauth
+implementation:
+  authorized: false
+  required: true
+  status: proposed
+  target_branch: develop
+  pull_request: null
+  authority_issue: 312
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: unknown-until-implemented
+  deployment: not-authorized-by-this-package
+  automatic_merge: false
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
+blocking_reasons: Not yet adopted. Repository-level adoption and each task's own implementation
+  authorization are both outstanding, mirroring VOC-039/VOC-040's convention. specification.md's
+  open question 1 (production_api_base_url's default) and open question 2 (whether
+  the live host needs a manual interim correction) are also outstanding and should
+  be resolved at adoption time.
