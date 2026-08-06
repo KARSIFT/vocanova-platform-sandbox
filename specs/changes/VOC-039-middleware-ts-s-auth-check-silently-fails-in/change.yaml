@@ -1,0 +1,99 @@
+schema_version: 1
+id: VOC-039
+slug: middleware-ts-s-auth-check-silently-fails-in
+title: middleware.ts's Auth Check Silently Fails in Production Because Next.js Middleware
+  Runs on the Edge Runtime, Not Node
+type: fix
+status: draft
+risk: R3
+planned_implementation_risk_floor: Not yet computed by running scripts/governance/classify-change-risk.sh
+  against a real file set - each task (T00-T02 below) needs its own approved, task-scoped
+  file list before the classifier means anything, consistent with how VOC-037/VOC-038
+  handled this field. This package proposes R3 for the change as a whole because it
+  directly touches apps/web/src/middleware.ts, which implements the production authentication
+  gate for every protected route (/onboarding, /home, /discover, /progress, /reviews,
+  /settings) - docs/governance/change-risk-classification.md places "authentication/authorization"
+  changes at R3 regardless of how small the diff is (in this case, a single-line runtime
+  export plus additive logging). This is a draft proposal for the reviewing human
+  at adoption time, not a determination.
+canonical_path: specs/changes/VOC-039-middleware-ts-s-auth-check-silently-fails-in
+authority_model: a003-active
+requirement_source: 'GitHub issue #297 ("middleware.ts''s auth check silently fails
+  in production because Next.js Middleware runs on the Edge runtime, not Node"), including
+  its full body (the only content on the issue at drafting time - no comments existed
+  yet). The issue itself documents a direct production reproduction (SSH into vocanova-production-web,
+  comparing plain Node fetch vs. middleware''s own fetch against the same live session
+  cookie and API URL) and names its own suggested fix (`export const runtime = "nodejs";`)
+  and two follow-up asks (a regression test that exercises the real Edge-vs-Node runtime
+  difference, and structured logging distinguishing "fetch threw" / "got 401" / "got
+  some other non-ok status" in the auth-check failure paths).'
+requirement_approval_status: 'Not yet approved. This package is drafted from the issue
+  directly per this run''s planner instructions; it has not been adopted by a founder
+  or technical steward. Issue #297 itself is not, on its own, evidence of founder
+  authorization to implement - only of a reported production defect that blocks VOC-038-T03.'
+base_branch: develop
+base_sha: d45f002b816509ff401448920d484743a9264819
+target_branch: develop
+approved_candidate_sha: not-set-until-adoption
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: false
+production_impact: unknown until adopted and implemented - the fix itself (forcing
+  apps/web/src/middleware.ts onto the Node runtime) is scoped to restore intended
+  behavior of an auth gate that already silently fails for every real user today,
+  not to introduce new production-facing behavior; the actual production_impact determination
+  belongs to VOC-039-T00's implementer and the independent verifier, not this draft.
+rollback_required: true
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-039-DEP-00
+  status: 'unresolved. Depends on issue #297''s reported reproduction remaining accurate
+    at implementation time - if a future comment on the issue reports a different
+    or additional cause, VOC-039-T00 must be re-scoped before implementation, per
+    this planner''s instructions to ground the package in the request as given rather
+    than a stale snapshot of it.'
+affected_areas:
+- apps/web/src/middleware.ts
+- apps/web/tests
+- specs/changes/VOC-039-middleware-ts-s-auth-check-silently-fails-in
+implementation:
+  authorized: false
+  required: true
+  status: proposed
+  target_branch: develop
+  pull_request: null
+  authority_issue: 297
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: unknown-until-implemented
+  deployment: not-authorized-by-this-package
+  automatic_merge: false
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
+blocking_reasons: Adoption by a founder or technical steward, per this repository's
+  own AGENTS.md ("a chat prompt or issue alone is not implementation authority").
+  Individual tasks T00-T02 each additionally require their own task-scoped implementation
+  authorization/dispatch after adoption, mirroring VOC-037/VOC-038's convention.
