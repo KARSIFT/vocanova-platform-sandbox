@@ -11,6 +11,7 @@
     "typecheck": "next typegen && tsc --noEmit --pretty false",
     "typecheck:e2e": "tsc -p tests/tsconfig.json --noEmit --pretty false",
     "test:e2e": "playwright test",
+    "test:middleware": "node --import ./tests/middleware/extensionless-import-resolver.mjs --test \"tests/middleware/*.test.ts\"",
     "test:lighthouse": "node tests/lighthouse/runner.mjs",
     "generate:tokens": "node scripts/generate-tokens-css.mjs"
   },

@@ -23,6 +23,13 @@ interface CurrentUserResponse {
 
 const AUTH_CHECK_FAILURE_EVENT = "middleware_auth_check_failure";
 
+// `apps/web` has no shared server-side logger yet, and this package's scope
+// excludes introducing a logging dependency. A single-line JSON payload on
+// stderr is what the deployed `web` container's json-file log driver captures
+// (see infra/docker-compose.yml's `*default-logging`), so these lines are
+// greppable via `docker compose logs web` without SSH-time instrumentation.
+// The payload deliberately carries no cookie or credential material.
+
 function logAuthCheckFailure({
   category,
   routePath,
