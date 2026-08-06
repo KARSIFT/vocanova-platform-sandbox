@@ -1,0 +1,108 @@
+schema_version: 1
+id: VOC-042
+slug: infra-docker-compose-production-yml-hardcodes-web
+title: infra/docker-compose.production.yml Hardcodes web's API_BASE_URL Without the
+  Required :8443 Port, Still Breaking Real Google Sign-In After VOC-041
+type: fix
+status: draft
+risk: R3
+planned_implementation_risk_floor: Not yet computed by running scripts/governance/classify-change-risk.sh
+  against a real file set - each task (T00-T01 below) needs its own approved, task-scoped
+  file list before the classifier means anything, consistent with how VOC-039/VOC-040/VOC-041
+  handled this field. This package proposes R3 for the change as a whole because it
+  directly touches infra/docker-compose.production.yml, production infrastructure
+  configuration that sets the server-side value apps/web/src/middleware.ts depends
+  on for every protected route's auth check - docs/governance/change-risk-classification.md
+  names "production infrastructure" explicitly as an R3-floor category regardless
+  of diff size (in this case, one string literal). This is a draft proposal for the
+  reviewing human at adoption time, not a determination.
+canonical_path: specs/changes/VOC-042-infra-docker-compose-production-yml-hardcodes-web
+authority_model: a003-active
+requirement_source: 'GitHub issue #319 ("infra/docker-compose.production.yml hardcodes
+  web''s API_BASE_URL without the required :8443 port, still breaking real Google
+  sign-in after VOC-041"), including its full body (the only content on the issue
+  at drafting time - no comments existed yet). The issue documents a direct live reproduction
+  against the production host (a direct SSH docker exec confirming the running container''s
+  actual environment, nginx access logs from a real sign-in attempt, and a read of
+  apps/web/src/lib/env.ts''s getApiBaseURL()) and names its own suggested fix (append
+  :8443 to API_BASE_URL in the web service, matching VOC-041''s correction to the
+  API service''s own env values).'
+requirement_approval_status: Not yet approved. This package is a draft proposal only;
+  founder/technical-steward review and adoption have not occurred as of drafting time.
+base_branch: develop
+base_sha: a8ff2e34246e7b0bea9e01adc12260e2b495fb23
+target_branch: develop
+approved_candidate_sha: null
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: false
+production_impact: unknown until adopted and implemented - the fix itself is scoped
+  to restore intended behavior of a server-side API-reachability boundary that already
+  silently blocks every protected route's auth check for real users today, not to
+  introduce new production-facing behavior; the actual production_impact determination
+  belongs to VOC-042-T00's implementer and the independent verifier, not this draft.
+rollback_required: true
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-042-DEP-00
+  status: 'unresolved. Depends on issue #319''s reported reproduction remaining accurate
+    at implementation time - if a future comment on the issue reports a different
+    or additional cause, VOC-042-T00 must be re-scoped before implementation, per
+    this planner''s instructions to ground the package in the request as given rather
+    than a stale snapshot of it.'
+- id: VOC-042-DEP-01
+  status: unresolved. specification.md's open question 1 notes this is the third recurrence
+    of the same same-host-missing-port bug class across three different files - the
+    reviewing human must decide whether a broader audit is warranted as a separate
+    follow-up package before or alongside this package's adoption.
+- id: VOC-042-DEP-02
+  status: unresolved. specification.md's open question 2 notes the currently-running
+    production web container already has the broken value and this package's fix only
+    changes what a future recreation of that service uses - the reviewing human must
+    decide whether an interim manual recreate is needed.
+affected_areas:
+- infra/docker-compose.production.yml
+- specs/changes/VOC-042-infra-docker-compose-production-yml-hardcodes-web
+implementation:
+  authorized: false
+  required: true
+  status: draft
+  target_branch: develop
+  pull_request: null
+  authority_issue: 319
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: unknown-until-implemented
+  deployment: not-authorized-by-this-package
+  automatic_merge: false
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
+blocking_reasons: Repository-level adoption is not yet resolved - this package has
+  not been reviewed or adopted by a founder or technical steward. specification.md's
+  open questions 1-3 (broader-audit follow-up, interim manual container recreate,
+  and infra/docker-compose.yml's unaudited status) are each unresolved and must be
+  addressed by the reviewing human at or before adoption. No task below is implementation-authorized
+  until adoption is recorded and each task is individually dispatched.
