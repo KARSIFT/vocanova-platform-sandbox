@@ -3,7 +3,9 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
-const DEPLOY_WORKFLOW_PATH = path.resolve(".github/workflows/deploy-production.yml");
+const DEPLOY_WORKFLOW_PATH = path.resolve(
+  ".github/workflows/deploy-production.yml",
+);
 const STEP_START_MARKER = "- name: Write production application configuration";
 const STEP_END_MARKER = "- name: Deploy to production host";
 
