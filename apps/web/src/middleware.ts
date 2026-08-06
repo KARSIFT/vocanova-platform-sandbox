@@ -17,6 +17,8 @@ export const config = {
   ],
 };
 
+export const runtime = "nodejs";
+
 interface CurrentUserResponse {
   onboardingStatus?: "not_started" | "in_progress" | "completed";
 }
