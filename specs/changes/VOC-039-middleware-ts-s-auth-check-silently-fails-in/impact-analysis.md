@@ -49,6 +49,11 @@ is touched — this is a server-side runtime directive and logging change only.
   needs to be revisited before implementation.
 - `VOC-039-EV-00`, `VOC-039-EV-01`, `VOC-039-EV-02`: to be produced by
   `VOC-039-T00`/`T01`/`T02` respectively (real-environment reproduction result,
-  CI-passing regression test run, and log-line inspection output). None exists yet;
-  this package is a draft proposal, not evidence of any of these tasks having been
-  performed.
+  CI-passing regression test run, and log-line inspection output).
+  `VOC-039-EV-00` exists in part, as
+  `t00-node-runtime-middleware-evidence.md`: it records the build-artifact proof
+  that `runtime = "nodejs"` genuinely moves this middleware off the Edge runtime
+  under Next.js 16.2.10, plus a local production-build behavioral check, and states
+  explicitly that the deployed-environment element of `VOC-039-AC-00` (and therefore
+  `VOC-039-R00` above) is still open and cannot be closed by the implementer role.
+  `VOC-039-EV-01` and `VOC-039-EV-02` do not exist yet.

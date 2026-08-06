@@ -17,8 +17,38 @@ export const config = {
   ],
 };
 
+export const runtime = "nodejs";
+
 interface CurrentUserResponse {
   onboardingStatus?: "not_started" | "in_progress" | "completed";
+}
+
+const AUTH_CHECK_FAILURE_EVENT = "middleware_auth_check_failure";
+
+// `apps/web` has no shared server-side logger yet, and this package's scope
+// excludes introducing a logging dependency. A single-line JSON payload on
+// stderr is what the deployed `web` container's json-file log driver captures
+// (see infra/docker-compose.yml's `*default-logging`), so these lines are
+// greppable via `docker compose logs web` without SSH-time instrumentation.
+// The payload deliberately carries no cookie or credential material.
+
+function logAuthCheckFailure({
+  category,
+  routePath,
+  status,
+}: {
+  category: "fetch_threw" | "unauthorized_401" | "non_ok_response";
+  routePath: string;
+  status?: number;
+}): void {
+  console.error(
+    JSON.stringify({
+      event: AUTH_CHECK_FAILURE_EVENT,
+      category,
+      routePath,
+      ...(status === undefined ? {} : { status }),
+    }),
+  );
 }
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
@@ -41,13 +71,27 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       credentials: "include",
     });
   } catch {
+    logAuthCheckFailure({
+      category: "fetch_threw",
+      routePath: request.nextUrl.pathname,
+    });
     return NextResponse.redirect(signInUrl);
   }
 
   if (meResponse.status === 401) {
+    logAuthCheckFailure({
+      category: "unauthorized_401",
+      routePath: request.nextUrl.pathname,
+      status: meResponse.status,
+    });
     return NextResponse.redirect(signInUrl);
   }
   if (!meResponse.ok) {
+    logAuthCheckFailure({
+      category: "non_ok_response",
+      routePath: request.nextUrl.pathname,
+      status: meResponse.status,
+    });
     return NextResponse.redirect(signInUrl);
   }
 

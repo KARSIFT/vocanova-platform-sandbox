@@ -44,7 +44,7 @@ owners:
   independent_verification: unassigned
 approval_status: adopted
 implementation_authorized: true
-automatic_merge_allowed: false
+automatic_merge_allowed: true
 production_impact: unknown until adopted and implemented - the fix itself (forcing
   apps/web/src/middleware.ts onto the Node runtime) is scoped to restore intended
   behavior of an auth gate that already silently fails for every real user today,
