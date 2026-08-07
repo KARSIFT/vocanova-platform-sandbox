@@ -1,0 +1,113 @@
+schema_version: 1
+id: VOC-045
+slug: user-settings-upsert-omits-created-at-updated-at
+title: user_settings Upsert Omits created_at/updated_at from the INSERT Branch, Violating
+  NOT NULL and Blocking Every New User's Onboarding
+type: fix
+status: draft
+risk: R3
+canonical_path: specs/changes/VOC-045-user-settings-upsert-omits-created-at-updated-at
+planned_implementation_risk_floor: Not yet computed by running scripts/governance/classify-change-risk.sh
+  against a real, task-scoped file list - consistent with how VOC-039/VOC-040/VOC-041/VOC-042/VOC-043
+  handled this field. This package proposes R3 because the confirmed defect fully
+  blocks every genuinely new real user from completing onboarding in production (a
+  hard outage of the core signup path, not a degraded edge case), and the fix touches
+  two separate upsert call sites against a NOT NULL-constrained table (apps/api/business/users/postgres.go
+  and apps/api/business/gamification/repository.go) without itself requiring a schema
+  migration. This is a draft proposal for the reviewing human at adoption time, not
+  a determination.
+authority_model: a003-active
+requirement_source: 'GitHub issue #341 ("user_settings upsert omits created_at/updated_at
+  from the INSERT branch, violating NOT NULL and blocking every new user''s onboarding"),
+  including its full body (the only content on the issue at drafting time - no comments
+  existed yet). The issue documents a live production reproduction (a real, brand-new
+  user, first-ever sign-in, no prior user_settings row, submitting the onboarding
+  form and receiving a 400, with the exact underlying Postgres error text: `pq: null
+  value in column "created_at" of relation "user_settings" violates not-null constraint`),
+  cites the schema (apps/api/migrations/20260725130000_voc030_p4_user_settings.sql,
+  created_at/updated_at both NOT NULL with no DEFAULT), names both affected call sites
+  with their exact SQL (apps/api/business/users/postgres.go''s CompleteOnboarding
+  and apps/api/business/gamification/repository.go''s UpsertUserSettings), explains
+  why onboarding is the first code path to exercise a genuine INSERT rather than the
+  ON CONFLICT UPDATE branch, and proposes a fix (add created_at/updated_at to both
+  INSERT column lists and VALUES) plus a suggested regression-test approach.'
+requirement_approval_status: 'Not approved. This package is an unreviewed draft prepared
+  by the planner role in response to issue #341; no founder or technical-steward adoption
+  decision has been recorded. See owners and approval_status below.'
+base_branch: develop
+base_sha: fb1e1a33ad6b0cc58ea42c2c573e120d35fd8539
+target_branch: develop
+approved_candidate_sha: null
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: false
+production_impact: unknown
+rollback_required: true
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-045-DEP-00
+  status: 'unresolved. Depends on issue #341''s reported reproduction and root cause
+    remaining accurate at implementation time - if a later comment on the issue narrows
+    or corrects the diagnosis, VOC-045-T00/T01 must be re-scoped before implementation,
+    per this planner''s instructions to ground the package in the request as given
+    rather than a stale snapshot of it.'
+- id: VOC-045-DEP-01
+  status: unresolved. apps/api/business/gamification/repository.go's UpsertUserSettings
+    does not currently receive a time.Time/"now" parameter in scope the way apps/api/business/users/postgres.go's
+    CompleteOnboarding does - see specification.md's open question 1 for how each
+    call site should source its INSERT-branch timestamp value consistently with its
+    existing ON CONFLICT DO UPDATE branch's NOW() usage.
+- id: VOC-045-DEP-02
+  status: unresolved. Depends on the reviewing human confirming whether a schema-level
+    fix (e.g. a DEFAULT now() on created_at/updated_at, closing off this whole class
+    of omission at every future call site, not just these two) is in scope for this
+    package or deliberately deferred - see specification.md's open question 2. This
+    package's primary scope is the two known-broken call sites named in the issue,
+    not a schema migration, unless the reviewing human decides otherwise at adoption.
+affected_areas:
+- apps/api/business/users/postgres.go
+- apps/api/business/gamification/repository.go
+- apps/api/migrations/migration_test.go
+- specs/changes/VOC-045-user-settings-upsert-omits-created-at-updated-at
+implementation:
+  authorized: false
+  required: true
+  status: not-authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: unknown-until-implemented
+  deployment: not-authorized-by-this-package
+  automatic_merge: false
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
+blocking_reasons: Repository-level adoption has not occurred. No task in tasks.md
+  is implementation-authorized. specification.md's open questions 1-2 (how each call
+  site should consistently source its INSERT-branch timestamp, and whether a schema-level
+  DEFAULT now() fix is also in scope) must be resolved or explicitly accepted by the
+  reviewing human at adoption time.
