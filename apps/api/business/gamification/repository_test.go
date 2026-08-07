@@ -79,3 +79,47 @@ func TestRepositoryInsertGraceLedgerIdempotent(t *testing.T) {
 	require.NoError(t, tx.Commit())
 	require.NoError(t, mock.ExpectationsWereMet())
 }
+
+func TestRepositoryUpsertUserSettingsFreshInsertSuppliesTimestamps(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRepository(db)
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	timezone := "Europe/Madrid"
+	dailyReviewTarget := 30
+
+	mock.ExpectBegin()
+	mock.ExpectQuery("INSERT INTO user_settings \\(id, user_id, timezone, daily_review_target, created_at, updated_at\\)").
+		WillReturnRows(sqlmock.NewRows([]string{
+			"user_id",
+			"timezone",
+			"daily_review_target",
+			"review_interval_preset",
+			"notifications_enabled",
+			"marketing_emails_enabled",
+			"app_language",
+		}).AddRow(
+			userID,
+			timezone,
+			dailyReviewTarget,
+			"vocanova_default",
+			true,
+			false,
+			"en",
+		))
+	mock.ExpectCommit()
+
+	tx, err := db.Begin()
+	require.NoError(t, err)
+	got, err := repo.UpsertUserSettings(t.Context(), tx, userID, timezone, dailyReviewTarget)
+	require.NoError(t, err)
+	require.NoError(t, tx.Commit())
+
+	require.NotNil(t, got)
+	assert.Equal(t, userID, got.UserID)
+	assert.Equal(t, timezone, got.Timezone)
+	assert.Equal(t, dailyReviewTarget, got.DailyReviewTarget)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
