@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { ApiResponseError, VocanovaClient } from "@vocanova/api-client";
@@ -6,8 +6,8 @@ import { ApiResponseError, VocanovaClient } from "@vocanova/api-client";
 import { getApiBaseURL } from "./env";
 
 export async function createServerApiClient(): Promise<VocanovaClient> {
-  const cookieStore = await cookies();
-  const cookieHeader = cookieStore.toString();
+  const incomingHeaders = await headers();
+  const cookieHeader = incomingHeaders.get("cookie") ?? "";
 
   return new VocanovaClient({
     baseURL: getApiBaseURL(),
