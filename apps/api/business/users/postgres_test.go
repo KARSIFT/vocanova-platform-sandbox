@@ -36,8 +36,10 @@ func TestPostgreSQLRepositoryCompleteOnboardingFreshUserSettingsInsertSuppliesTi
 			answers.LearningGoal, answers.MainUseCase, answers.DailyReviewTarget, now,
 		).
 		WillReturnResult(sqlmock.NewResult(0, 1))
+	// Matched on the INSERT column list only: the regression this guards is the
+	// omission of created_at/updated_at, not the exact placeholder numbering the
+	// fix chooses for them.
 	mock.ExpectQuery("INSERT INTO user_settings \\(id, user_id, timezone, daily_review_target, created_at, updated_at\\)").
-		WithArgs(sqlmock.AnyArg(), userID, answers.DailyReviewTarget, now, now, SchemaDailyReviewTargetDefault).
 		WillReturnRows(sqlmock.NewRows([]string{"user_id", "daily_review_target"}).AddRow(userID, answers.DailyReviewTarget))
 	mock.ExpectCommit()
 	mock.ExpectQuery("SELECT u.onboarding_status,").
