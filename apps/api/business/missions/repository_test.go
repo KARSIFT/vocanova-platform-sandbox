@@ -19,6 +19,12 @@ import (
 // assuming how the SQL literal is wrapped.
 const dailyMissionSnapshotInsertColumnsPattern = `INSERT INTO daily_mission_snapshots \(\s*id,\s*user_id,\s*local_date,\s*timezone,\s*review_target,\s*reviews_completed,\s*policy_version,\s*status,\s*grace_applied,\s*created_at,\s*updated_at\s*\)`
 
+// missedSnapshotInsertColumnsPattern guards MarkSnapshotMissed's
+// fresh-insert column list the same way, for the same reason: its
+// ON CONFLICT DO UPDATE clause sets updated_at, which does nothing for the
+// first-insert branch that must supply both NOT NULL timestamps itself.
+const missedSnapshotInsertColumnsPattern = `INSERT INTO daily_mission_snapshots \(\s*id,\s*user_id,\s*local_date,\s*timezone,\s*review_target,\s*policy_version,\s*status,\s*created_at,\s*updated_at\s*\)`
+
 func newUUIDs(t *testing.T) (uuid.UUID, uuid.UUID) {
 	t.Helper()
 	return uuid.MustParse("00000000-0000-0000-0000-000000000001"),
@@ -59,6 +65,28 @@ func TestPostgreSQLRepositoryCreateDailyMissionSnapshot(t *testing.T) {
 	assert.Equal(t, "open", snap.Status)
 	assert.Equal(t, 20, snap.ReviewTarget)
 	assert.Equal(t, 0, snap.ReviewsCompleted)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestPostgreSQLRepositoryMarkSnapshotMissedSuppliesTimestamps(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRepository(db)
+	userID, _ := newUUIDs(t)
+	day := time.Date(2026, 7, 26, 0, 0, 0, 0, time.UTC)
+
+	mock.ExpectBegin()
+	mock.ExpectExec(missedSnapshotInsertColumnsPattern).
+		WithArgs(sqlmock.AnyArg(), userID, day, "UTC").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+
+	tx, err := db.Begin()
+	require.NoError(t, err)
+	require.NoError(t, repo.MarkSnapshotMissed(t.Context(), tx, userID, day, "UTC"))
+	require.NoError(t, tx.Commit())
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 

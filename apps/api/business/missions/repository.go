@@ -448,9 +448,11 @@ func (r *Repository) MarkSnapshotMissed(
 	}
 	if _, err := tx.ExecContext(ctx,
 		`INSERT INTO daily_mission_snapshots (
-			id, user_id, local_date, timezone, review_target, policy_version, status
+			id, user_id, local_date, timezone, review_target, policy_version, status,
+			created_at, updated_at
 		) VALUES (
-			$1, $2, $3, $4, 20, 'p4-mission-policy-v1', 'missed'
+			$1, $2, $3, $4, 20, 'p4-mission-policy-v1', 'missed',
+			NOW(), NOW()
 		)
 		ON CONFLICT (user_id, local_date) DO UPDATE
 		  SET status = CASE WHEN daily_mission_snapshots.status = 'open' THEN 'missed' ELSE daily_mission_snapshots.status END,
