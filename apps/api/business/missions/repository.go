@@ -214,9 +214,9 @@ func (r *Repository) IncrementReviewsCompleted(
 	if _, err := tx.ExecContext(ctx,
 		`INSERT INTO daily_activity_summaries (
 			id, user_id, local_date, timezone,
-			reviews_attempted, reviews_correct, reviews_skipped
+			reviews_attempted, reviews_correct, reviews_skipped, created_at, updated_at
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7
+			$1, $2, $3, $4, $5, $6, $7, NOW(), NOW()
 		)
 		ON CONFLICT (user_id, local_date) DO UPDATE
 		  SET reviews_attempted = daily_activity_summaries.reviews_attempted + EXCLUDED.reviews_attempted,
@@ -249,9 +249,9 @@ func (r *Repository) IncrementWordsAdded(
 	}
 	if _, err := tx.ExecContext(ctx,
 		`INSERT INTO daily_activity_summaries (
-			id, user_id, local_date, timezone, words_added
+			id, user_id, local_date, timezone, words_added, created_at, updated_at
 		) VALUES (
-			$1, $2, $3, $4, 1
+			$1, $2, $3, $4, 1, NOW(), NOW()
 		)
 		ON CONFLICT (user_id, local_date) DO UPDATE
 		  SET words_added = daily_activity_summaries.words_added + 1,
@@ -291,9 +291,9 @@ func (r *Repository) IncrementSentenceSubmitted(
 	}
 	if _, err := tx.ExecContext(ctx,
 		`INSERT INTO daily_activity_summaries (
-			id, user_id, local_date, timezone, sentences_submitted
+			id, user_id, local_date, timezone, sentences_submitted, created_at, updated_at
 		) VALUES (
-			$1, $2, $3, $4, 1
+			$1, $2, $3, $4, 1, NOW(), NOW()
 		)
 		ON CONFLICT (user_id, local_date) DO UPDATE
 		  SET sentences_submitted = daily_activity_summaries.sentences_submitted + 1,
@@ -331,9 +331,9 @@ func (r *Repository) IncrementAIFeedbackReceived(
 	}
 	if _, err := tx.ExecContext(ctx,
 		`INSERT INTO daily_activity_summaries (
-			id, user_id, local_date, timezone, ai_feedback_received
+			id, user_id, local_date, timezone, ai_feedback_received, created_at, updated_at
 		) VALUES (
-			$1, $2, $3, $4, 1
+			$1, $2, $3, $4, 1, NOW(), NOW()
 		)
 		ON CONFLICT (user_id, local_date) DO UPDATE
 		  SET ai_feedback_received = daily_activity_summaries.ai_feedback_received + 1,
@@ -361,9 +361,9 @@ func (r *Repository) IncrementConfidencePointsEarned(
 	}
 	if _, err := tx.ExecContext(ctx,
 		`INSERT INTO daily_activity_summaries (
-			id, user_id, local_date, timezone, confidence_points_earned
+			id, user_id, local_date, timezone, confidence_points_earned, created_at, updated_at
 		) VALUES (
-			$1, $2, $3, $4, $5
+			$1, $2, $3, $4, $5, NOW(), NOW()
 		)
 		ON CONFLICT (user_id, local_date) DO UPDATE
 		  SET confidence_points_earned = daily_activity_summaries.confidence_points_earned + EXCLUDED.confidence_points_earned,

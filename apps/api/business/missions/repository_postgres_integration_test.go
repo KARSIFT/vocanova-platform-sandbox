@@ -223,6 +223,119 @@ func TestGetDailyMissionViewForUserWithNoSnapshotAgainstRealPostgres(t *testing.
 	assert.False(t, updatedAt.IsZero(), "the lazily-created row persisted a non-null updated_at")
 }
 
+// TestDailyActivitySummaryFreshInsertPathsAgainstRealPostgres is
+// VOC-046-TEST-01: each daily_activity_summaries INSERT call site in this
+// repository file is exercised on a genuine first-write path, then the
+// persisted row is checked for non-null created_at/updated_at.
+func TestDailyActivitySummaryFreshInsertPathsAgainstRealPostgres(t *testing.T) {
+	localDate := time.Date(2026, 7, 27, 0, 0, 0, 0, time.UTC)
+
+	t.Run("IncrementReviewsCompleted", func(t *testing.T) {
+		db := newMigratedDisposablePostgres(t)
+		repo := NewRepository(db)
+		userID := insertTestUser(t, db)
+		createSnapshotInOwnTransaction(t, db, repo, userID, localDate, 20)
+		requireNoActivitySummaryFor(t, db, userID, localDate)
+
+		before := databaseNow(t, db)
+		tx, err := db.Begin()
+		require.NoError(t, err)
+		defer tx.Rollback()
+		newCount, err := repo.IncrementReviewsCompleted(t.Context(), tx, userID, localDate, "UTC", 20, true, false)
+		require.NoError(t, err)
+		require.Equal(t, 1, newCount)
+		require.NoError(t, tx.Commit())
+		after := databaseNow(t, db)
+
+		summary := readActivitySummary(t, db, userID, localDate)
+		assert.Equal(t, 1, summary.ReviewsAttempted)
+		assert.Equal(t, 1, summary.ReviewsCorrect)
+		assert.Equal(t, 0, summary.ReviewsSkipped)
+		assertTimestampWithin(t, "created_at", summary.CreatedAt, before, after)
+		assertTimestampWithin(t, "updated_at", summary.UpdatedAt, before, after)
+	})
+
+	t.Run("IncrementWordsAdded", func(t *testing.T) {
+		db := newMigratedDisposablePostgres(t)
+		repo := NewRepository(db)
+		userID := insertTestUser(t, db)
+		requireNoActivitySummaryFor(t, db, userID, localDate)
+
+		before := databaseNow(t, db)
+		tx, err := db.Begin()
+		require.NoError(t, err)
+		defer tx.Rollback()
+		require.NoError(t, repo.IncrementWordsAdded(t.Context(), tx, userID, localDate, "UTC", false))
+		require.NoError(t, tx.Commit())
+		after := databaseNow(t, db)
+
+		summary := readActivitySummary(t, db, userID, localDate)
+		assert.Equal(t, 1, summary.WordsAdded)
+		assertTimestampWithin(t, "created_at", summary.CreatedAt, before, after)
+		assertTimestampWithin(t, "updated_at", summary.UpdatedAt, before, after)
+	})
+
+	t.Run("IncrementSentenceSubmitted", func(t *testing.T) {
+		db := newMigratedDisposablePostgres(t)
+		repo := NewRepository(db)
+		userID := insertTestUser(t, db)
+		requireNoActivitySummaryFor(t, db, userID, localDate)
+
+		before := databaseNow(t, db)
+		tx, err := db.Begin()
+		require.NoError(t, err)
+		defer tx.Rollback()
+		require.NoError(t, repo.IncrementSentenceSubmitted(t.Context(), tx, userID, localDate, "UTC", false))
+		require.NoError(t, tx.Commit())
+		after := databaseNow(t, db)
+
+		summary := readActivitySummary(t, db, userID, localDate)
+		assert.Equal(t, 1, summary.SentencesSubmitted)
+		assertTimestampWithin(t, "created_at", summary.CreatedAt, before, after)
+		assertTimestampWithin(t, "updated_at", summary.UpdatedAt, before, after)
+	})
+
+	t.Run("IncrementAIFeedbackReceived", func(t *testing.T) {
+		db := newMigratedDisposablePostgres(t)
+		repo := NewRepository(db)
+		userID := insertTestUser(t, db)
+		requireNoActivitySummaryFor(t, db, userID, localDate)
+
+		before := databaseNow(t, db)
+		tx, err := db.Begin()
+		require.NoError(t, err)
+		defer tx.Rollback()
+		require.NoError(t, repo.IncrementAIFeedbackReceived(t.Context(), tx, userID, localDate, "UTC"))
+		require.NoError(t, tx.Commit())
+		after := databaseNow(t, db)
+
+		summary := readActivitySummary(t, db, userID, localDate)
+		assert.Equal(t, 1, summary.AIFeedbackReceived)
+		assertTimestampWithin(t, "created_at", summary.CreatedAt, before, after)
+		assertTimestampWithin(t, "updated_at", summary.UpdatedAt, before, after)
+	})
+
+	t.Run("IncrementConfidencePointsEarned", func(t *testing.T) {
+		db := newMigratedDisposablePostgres(t)
+		repo := NewRepository(db)
+		userID := insertTestUser(t, db)
+		requireNoActivitySummaryFor(t, db, userID, localDate)
+
+		before := databaseNow(t, db)
+		tx, err := db.Begin()
+		require.NoError(t, err)
+		defer tx.Rollback()
+		require.NoError(t, repo.IncrementConfidencePointsEarned(t.Context(), tx, userID, localDate, "UTC", 5))
+		require.NoError(t, tx.Commit())
+		after := databaseNow(t, db)
+
+		summary := readActivitySummary(t, db, userID, localDate)
+		assert.Equal(t, 5, summary.ConfidencePointsEarned)
+		assertTimestampWithin(t, "created_at", summary.CreatedAt, before, after)
+		assertTimestampWithin(t, "updated_at", summary.UpdatedAt, before, after)
+	})
+}
+
 // createSnapshotInOwnTransaction runs one CreateDailyMissionSnapshot call
 // in its own committed transaction, which is how the production read path
 // invokes it. Each call gets a fresh transaction so Postgres' NOW()
@@ -326,6 +439,53 @@ func countSnapshotsFor(t *testing.T, db *sql.DB, userID uuid.UUID, localDate tim
 		userID, localDate,
 	).Scan(&count))
 	return count
+}
+
+func requireNoActivitySummaryFor(t *testing.T, db *sql.DB, userID uuid.UUID, localDate time.Time) {
+	t.Helper()
+	var count int
+	require.NoError(t, db.QueryRow(
+		`SELECT count(*) FROM daily_activity_summaries WHERE user_id = $1 AND local_date = $2`,
+		userID, localDate,
+	).Scan(&count))
+	require.Equal(t, 0, count,
+		"precondition: the user must have no activity summary for this local date")
+}
+
+type activitySummaryRow struct {
+	ReviewsAttempted       int
+	ReviewsCorrect         int
+	ReviewsSkipped         int
+	WordsAdded             int
+	SentencesSubmitted     int
+	AIFeedbackReceived     int
+	ConfidencePointsEarned int
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
+}
+
+func readActivitySummary(t *testing.T, db *sql.DB, userID uuid.UUID, localDate time.Time) activitySummaryRow {
+	t.Helper()
+	var row activitySummaryRow
+	require.NoError(t, db.QueryRow(
+		`SELECT reviews_attempted, reviews_correct, reviews_skipped,
+		        words_added, sentences_submitted, ai_feedback_received,
+		        confidence_points_earned, created_at, updated_at
+		   FROM daily_activity_summaries
+		  WHERE user_id = $1 AND local_date = $2`,
+		userID, localDate,
+	).Scan(
+		&row.ReviewsAttempted,
+		&row.ReviewsCorrect,
+		&row.ReviewsSkipped,
+		&row.WordsAdded,
+		&row.SentencesSubmitted,
+		&row.AIFeedbackReceived,
+		&row.ConfidencePointsEarned,
+		&row.CreatedAt,
+		&row.UpdatedAt,
+	))
+	return row
 }
 
 // readSnapshotTimestamps reads the persisted created_at/updated_at back out
