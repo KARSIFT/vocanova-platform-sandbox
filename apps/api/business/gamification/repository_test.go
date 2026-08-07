@@ -80,6 +80,14 @@ func TestRepositoryInsertGraceLedgerIdempotent(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+// userSettingsInsertColumnsPattern matches the user_settings INSERT column
+// list only: the regression this guards is the omission of
+// created_at/updated_at, not the placeholder numbering or timestamp source the
+// fix chooses for them. sqlmock collapses each whitespace run in the actual
+// statement to a single space, so the pattern tolerates optional spaces around
+// the parentheses rather than assuming how the SQL literal is wrapped.
+const userSettingsInsertColumnsPattern = `INSERT INTO user_settings \(\s*id,\s*user_id,\s*timezone,\s*daily_review_target,\s*created_at,\s*updated_at\s*\)`
+
 func TestRepositoryUpsertUserSettingsFreshInsertSuppliesTimestamps(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
@@ -91,7 +99,7 @@ func TestRepositoryUpsertUserSettingsFreshInsertSuppliesTimestamps(t *testing.T)
 	dailyReviewTarget := 30
 
 	mock.ExpectBegin()
-	mock.ExpectQuery("INSERT INTO user_settings \\(id, user_id, timezone, daily_review_target, created_at, updated_at\\)").
+	mock.ExpectQuery(userSettingsInsertColumnsPattern).
 		WillReturnRows(sqlmock.NewRows([]string{
 			"user_id",
 			"timezone",

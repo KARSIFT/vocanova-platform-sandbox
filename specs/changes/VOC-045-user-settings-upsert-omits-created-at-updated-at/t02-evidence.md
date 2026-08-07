@@ -4,61 +4,89 @@
 
 - `apps/api/business/users/postgres_test.go`:
   `TestPostgreSQLRepositoryCompleteOnboardingFreshUserSettingsInsertSuppliesTimestamps`
-  exercises `CompleteOnboarding` with a fresh `user_settings` insert path and
-  requires the insert SQL to include `created_at` and `updated_at`.
+  drives `CompleteOnboarding` through a fresh `user_settings` insert (the
+  `sqlmock` expectation returns a row directly from the INSERT, so no
+  `ON CONFLICT` update branch is exercised) and requires the insert SQL to
+  include `created_at` and `updated_at`.
 - `apps/api/business/gamification/repository_test.go`:
-  `TestRepositoryUpsertUserSettingsFreshInsertSuppliesTimestamps` exercises
-  `UpsertUserSettings` with a fresh `user_settings` insert path and requires the
-  insert SQL to include `created_at` and `updated_at`.
+  `TestRepositoryUpsertUserSettingsFreshInsertSuppliesTimestamps` does the same
+  for `UpsertUserSettings`, and additionally asserts the returned
+  `UserSettingsRow` carries the expected user ID, timezone, and daily review
+  target (`VOC-045-AC-01`'s "returns the expected `UserSettingsRow`").
 
-Failing-first verification against pre-fix SQL:
+Each test matches on the INSERT column list only. It does not pin the
+placeholder numbering `T00`/`T01` chose, nor whether the timestamp is sourced
+from SQL `NOW()` or a threaded `now` parameter (`specification.md`'s open
+question 1), so either resolution of that open question satisfies both tests.
+`sqlmock` collapses every whitespace run in the actual statement to a single
+space before matching, so the shared `userSettingsInsertColumnsPattern` in each
+package tolerates optional whitespace around the parentheses rather than
+assuming how the SQL string literal happens to be wrapped — `CompleteOnboarding`
+keeps its column list on one line while `UpsertUserSettings` wraps it onto its
+own line, and both must match the same intent.
+
+### Failing-first verification
+
+Verified directly, not asserted. With `T00`'s and `T01`'s `created_at,
+updated_at` columns temporarily removed from both production statements (and
+then restored byte-for-byte):
 
 ```bash
-go test ./business/users ./business/gamification
+cd apps/api && go test ./business/gamification/... ./business/users/... \
+  -run 'FreshInsertSuppliesTimestamps|FreshUserSettingsInsertSuppliesTimestamps'
+--- FAIL: TestRepositoryUpsertUserSettingsFreshInsertSuppliesTimestamps (0.00s)
+FAIL	github.com/KARSIFT/vocanova-platform/apps/api/business/gamification	0.003s
+--- FAIL: TestPostgreSQLRepositoryCompleteOnboardingFreshUserSettingsInsertSuppliesTimestamps (0.00s)
+FAIL	github.com/KARSIFT/vocanova-platform/apps/api/business/users	0.003s
 ```
 
-Both new tests fail before T00/T01 SQL changes are applied, because the current
-queries still omit `created_at`/`updated_at` from the `INSERT INTO user_settings`
-column list.
+Against the post-fix code now in this branch's merge base (`T00` via
+`develop`, `T01` via PR #348), the full API suite passes:
 
-### Sequencing blocker — T02 cannot go green on its own
+```bash
+cd apps/api && go test ./...
+ok  	github.com/KARSIFT/vocanova-platform/apps/api/business/gamification	0.004s
+ok  	github.com/KARSIFT/vocanova-platform/apps/api/business/users	0.005s
+# ...all other packages ok / no test files; no FAIL lines
+```
 
-`VOC-045-AC-02` requires these tests to fail against the pre-fix code and pass
-against the post-fix code. Neither `VOC-045-T00` nor `VOC-045-T01` is present on
-`develop` or on this branch at the time of writing (`git log origin/develop`
-tips at `c1a25ca`, the package's task-issue roster commit; both call sites still
-carry the four-column INSERT). A test that satisfies AC-02's failing-first
-requirement therefore necessarily red-lights `pnpm test` / `go test ./...` until
-the T00 and T01 fixes land.
-
-This is a task-ordering problem, not a defect in the tests. Resolving it inside
-`VOC-045-T02` would require either editing the two production SQL statements
-that `VOC-045-T00`/`T01` explicitly own (scope expansion) or neutering the
-assertion so it no longer detects the defect (weakening a check to make the
-change pass). Neither is available to the implementer role. Merge `VOC-045-T00`
-and `VOC-045-T01` first; this branch turns green with no further edits once they
-are in the merge base.
-
-The insert-column matcher is deliberately the only constraint on the statement:
-it does not pin the placeholder numbering T00/T01 choose for `created_at` /
-`updated_at`, nor whether `UpsertUserSettings` sources its timestamp from SQL
-`NOW()` or a threaded `now` parameter (`specification.md`'s open question 1), so
-either resolution of that open question satisfies these tests.
+The earlier revision of this document recorded a sequencing blocker: `T00` and
+`T01` were not yet in this branch's merge base, so these tests necessarily
+red-lighted CI. That blocker is resolved — both fixes are now present and this
+branch is green with no change to either production statement by `T02`.
 
 ## Repository-wide inventory (VOC-045-EV-03)
 
-Search command:
+Search command (repository-wide, not scoped to `apps/api`):
 
 ```bash
-rg "INSERT INTO user_settings" apps/api
+rg "INSERT INTO user_settings"
 ```
 
-Runtime call sites found:
+Every runtime call site, with its `created_at`/`updated_at` status:
 
-1. `apps/api/business/users/postgres.go` — `CompleteOnboarding` upsert (`INSERT INTO user_settings`).
-2. `apps/api/business/users/postgres.go` — `UpdateSettings` upsert (`INSERT INTO user_settings`).
-3. `apps/api/business/gamification/repository.go` — `UpsertUserSettings` upsert (`INSERT INTO user_settings`).
+| # | Call site | Supplies `created_at`/`updated_at`? |
+|---|---|---|
+| 1 | `apps/api/business/users/postgres.go` — `CompleteOnboarding` | Yes, fixed by `VOC-045-T00` (`$5, $5` from the `now` parameter) |
+| 2 | `apps/api/business/gamification/repository.go` — `UpsertUserSettings` | Yes, fixed by `VOC-045-T01` (SQL `NOW(), NOW()`) |
+| 3 | `apps/api/business/users/postgres.go` — `UpdateSettings` (line 322) | **No** — see follow-up below |
 
-T00/T01 scope explicitly covers (1) and (3). Call site (2) is an additional
-fresh-insert path discovered by the required inventory step and needs explicit
-scope/deferral handling before AC-03 can be considered fully satisfied.
+The remaining matches are non-runtime: the two test files above, and this
+package's own specification, tasks, acceptance-criteria, test-plan, and
+implementation-plan documents.
+
+### Follow-up: call site 3 shares the same defect and is outside this package's scope
+
+`UpdateSettings`'s upsert omits `created_at`/`updated_at` from its INSERT
+column list in exactly the same way the two fixed call sites did, so a genuine
+first insert through it would hit the same `NOT NULL` violation. It is not named
+in issue #341, not in `specification.md`'s scope, and not owned by `T00`, `T01`,
+or `T02`, so `T02` deliberately does not fix it inline — that would be scope
+expansion into a protected data-access path. It is recorded here and in the
+implementation PR as a follow-up needing its own change package (or an explicit
+scope extension decided by the reviewing human).
+
+This is the same class of defect `specification.md`'s open question 2 anticipates:
+a schema-level `DEFAULT now()` on `user_settings.created_at`/`updated_at` would
+close off call site 3 and any future one at once. That decision remains with the
+reviewing human and is out of scope here.
