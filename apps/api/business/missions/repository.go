@@ -146,10 +146,10 @@ func (r *Repository) CreateDailyMissionSnapshot(
 	row := tx.QueryRowContext(ctx,
 		`INSERT INTO daily_mission_snapshots (
 			id, user_id, local_date, timezone, review_target, reviews_completed,
-			policy_version, status, grace_applied
+			policy_version, status, grace_applied, created_at, updated_at
 		) VALUES (
 			$1, $2, $3, $4, $5, 0,
-			$6, 'open', false
+			$6, 'open', false, NOW(), NOW()
 		)
 		ON CONFLICT (user_id, local_date) DO UPDATE
 		  SET timezone = EXCLUDED.timezone,

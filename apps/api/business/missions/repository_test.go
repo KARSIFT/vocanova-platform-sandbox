@@ -10,6 +10,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const createDailyMissionSnapshotInsertQueryPattern = `INSERT INTO daily_mission_snapshots \(
+			id, user_id, local_date, timezone, review_target, reviews_completed,
+			policy_version, status, grace_applied, created_at, updated_at`
+
 func newUUIDs(t *testing.T) (uuid.UUID, uuid.UUID) {
 	t.Helper()
 	return uuid.MustParse("00000000-0000-0000-0000-000000000001"),
@@ -26,7 +30,7 @@ func TestPostgreSQLRepositoryCreateDailyMissionSnapshot(t *testing.T) {
 	day := time.Date(2026, 7, 26, 0, 0, 0, 0, time.UTC)
 
 	mock.ExpectBegin()
-	mock.ExpectQuery("INSERT INTO daily_mission_snapshots").
+	mock.ExpectQuery(createDailyMissionSnapshotInsertQueryPattern).
 		WithArgs(
 			sqlmock.AnyArg(), userID, day, "UTC", 20, "p4-mission-policy-v1",
 		).
