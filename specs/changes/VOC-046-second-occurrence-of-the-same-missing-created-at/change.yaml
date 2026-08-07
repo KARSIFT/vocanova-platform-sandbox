@@ -1,0 +1,142 @@
+schema_version: 1
+id: VOC-046
+slug: second-occurrence-of-the-same-missing-created-at
+title: 'Second Occurrence of the Missing created_at/updated_at Bug Class: daily_mission_snapshots
+  INSERT Crashes GET /api/v1/daily-mission for Every New User, Plus a Repository-Wide
+  Audit'
+type: fix
+status: draft
+risk: R3
+canonical_path: specs/changes/VOC-046-second-occurrence-of-the-same-missing-created-at
+planned_implementation_risk_floor: Not yet computed by running scripts/governance/classify-change-risk.sh
+  against a real, task-scoped file list. This package proposes R3 because the confirmed
+  defect fully blocks every new user from reaching /home in production (a hard outage
+  of the core post-onboarding path, the same class of outage VOC-045 fixed for user_settings),
+  and its systemic-audit task (VOC-046-T02) may touch a currently-unknown number of
+  INSERT call sites across many files, none of which are known at drafting time to
+  require a schema migration. This is a draft proposal for the reviewing human at
+  adoption time, not a determination. If the audit in T02 surfaces a call site requiring
+  a migration or touching a materially more sensitive table, the reviewing human and
+  independent verifier should re-examine whether R3 still holds for that specific
+  task.
+authority_model: a003-active
+requirement_source: 'GitHub issue #352 ("Second occurrence of the same missing created_at/updated_at
+  bug class: daily_mission_snapshots INSERT crashes GET /api/v1/daily-mission for
+  every user with no mission yet today"), including its full body (the only content
+  on the issue at drafting time - no comments existed yet). The issue documents a
+  live production reproduction during VOC-038-T03''s core-loop validation (2026-08-07),
+  immediately after VOC-045 fixed the user_settings occurrence of this same bug class:
+  a real user who just completed onboarding lands on /home and receives a generic
+  500 ("Something went wrong / We couldn''t load your home data"), with nginx and
+  web-container log evidence (GET /api/v1/daily-mission -> 500, masked by the API''s
+  generic 500 handler rather than surfacing the underlying Postgres error the way
+  VOC-045''s user_settings occurrence happened to). It identifies the confirmed root
+  cause (apps/api/business/missions/repository.go''s CreateDailyMissionSnapshot omits
+  created_at/updated_at from its INSERT column list against daily_mission_snapshots,
+  which apps/api/migrations/20260725130001_voc030_p4_mission_tables.sql declares NOT
+  NULL with no DEFAULT), documents that this NOT-NULL-no-DEFAULT convention is deliberate
+  and repeats across all 13 migration files (explicit application-level timestamp
+  control via the injected clock.Clock abstraction, not DB-level defaults), and names
+  thirteen files containing INSERT INTO statements against application tables that
+  should be audited for the same omission. It proposes an immediate fix for the confirmed
+  crash plus a systemic audit, regression coverage per call site, and a schema-scanning
+  check to prevent a third undetected occurrence.'
+requirement_approval_status: Not approved. This package is a draft proposal only;
+  no founder or technical-steward adoption decision has been recorded. change.yaml's
+  own approval_status, implementation_authorized, and automatic_merge_allowed fields
+  are left at their unadopted defaults, as required by the planner role's own scope
+  rules.
+base_branch: develop
+base_sha: b6ecae02b944b7eb7462971616ae988a29ee9358
+target_branch: develop
+approved_candidate_sha: null
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: false
+production_impact: unknown
+rollback_required: true
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-046-DEP-00
+  status: 'unresolved. Depends on issue #352''s reported reproduction and root cause
+    remaining accurate at implementation time - if a later comment on the issue narrows
+    or corrects the diagnosis, VOC-046-T00 must be re-scoped before implementation.'
+- id: VOC-046-DEP-01
+  status: unresolved. VOC-046-T02's repository-wide audit scope (the thirteen files
+    the issue names, plus any INSERT INTO call site the audit itself discovers) is
+    not fully enumerated until the audit task itself runs; the exact number and location
+    of additional fixes needed is not knowable at drafting time. See specification.md's
+    open question 1.
+- id: VOC-046-DEP-02
+  status: unresolved. Depends on the reviewing human confirming whether the optional
+    schema-level or lint-style detection check the issue suggests (a test that walks
+    each migration's NOT-NULL-no-DEFAULT columns and confirms every discovered INSERT
+    statement supplies them) is in scope for this package or a separate follow-up.
+    See specification.md's open question 2.
+- id: VOC-046-DEP-03
+  status: unresolved. Depends on apps/api's generic 500 handling (which masked this
+    issue's underlying Postgres error, unlike VOC-045's user_settings occurrence)
+    remaining out of this package's scope or being explicitly pulled in by the reviewing
+    human. See specification.md's open question 3.
+affected_areas:
+- apps/api/business/missions/repository.go
+- apps/api/business/accounts/auth.go
+- apps/api/business/accounts/postgres.go
+- apps/api/business/accounts/service.go
+- apps/api/business/aifeedback/postgres.go
+- apps/api/business/auth/postgres.go
+- apps/api/business/gamification/repository.go
+- apps/api/business/gamification/rewards.go
+- apps/api/business/gamification/streak.go
+- apps/api/business/learning/postgres.go
+- apps/api/business/learning/postgres_idempotency.go
+- apps/api/business/reviews/postgres.go
+- apps/api/business/users/postgres.go
+- apps/api/business/users/seed.go
+- apps/api/migrations
+- specs/changes/VOC-046-second-occurrence-of-the-same-missing-created-at
+implementation:
+  authorized: false
+  required: true
+  status: proposed
+  target_branch: develop
+  pull_request: null
+  authority_issue: 352
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: unknown-until-implemented
+  deployment: not-authorized-by-this-package
+  automatic_merge: false
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
+blocking_reasons: 'Repository-level adoption has not occurred. No task in tasks.md
+  may be dispatched until a human founder/steward adopts this package (sets status:
+  adopted and implementation_authorized: true in a follow-up commit, per VOC-039 through
+  VOC-045''s convention), and each task still requires its own task-scoped implementation
+  authorization/dispatch after adoption. specification.md''s open questions 1-3 (the
+  full audit scope''s exact boundaries, whether the schema-scanning check is in scope,
+  and whether the generic-500-masking behavior is in scope) are flagged for the reviewing
+  human to resolve at or before adoption.'
