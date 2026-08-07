@@ -1,0 +1,106 @@
+schema_version: 1
+id: VOC-045
+slug: google-sign-in-re-prompts-for-account-selection
+title: Google Sign-In Unconditionally Requests prompt=consent, Re-Prompting Account
+  Selection/Consent on Every Sign-In Instead of Only When Actually Needed
+type: fix
+status: draft
+risk: R3
+planned_implementation_risk_floor: Not yet computed by running scripts/governance/classify-change-risk.sh
+  against a real task-scoped file list. This package proposes R3 for the change as
+  a whole because the confirmed root cause lives in apps/api/business/auth/google_oauth.go's
+  AuthURL method and apps/api/business/auth/service.go's OAuthStart, both squarely
+  inside the authentication/authorization area docs/governance/change-risk-classification.md
+  names as an R3-floor category. This is a draft proposal for the reviewing human
+  at adoption time, not a determination.
+canonical_path: specs/changes/VOC-045-google-sign-in-re-prompts-for-account-selection
+authority_model: a003-active
+requirement_source: 'GitHub issue #343 ("Google sign-in re-prompts for account selection/consent
+  on every sign-in instead of remembering an active session"), reporting founder feedback
+  from VOC-038-T03''s live core-loop validation on 2026-08-07: every Google sign-in
+  shows the account picker/consent screen again, even when there is no reason to expect
+  it (not signed out, same browser/session). The issue is explicitly marked not urgent
+  - the founder is not blocked and asked only that it be recorded for future work.
+  The issue itself names likely areas to investigate: whether apps/api/business/auth/service.go''s
+  OAuthStart builds the Google authorization URL with an unconditional prompt parameter,
+  and whether the app''s own session (SESSION_LIFETIME=720h per apps/api/.env.example)
+  actually persists as expected, separately from Google''s own OAuth prompt behavior.'
+requirement_approval_status: not-approved. This package has not been adopted. No field
+  in this file authorizes implementation.
+base_branch: develop
+base_sha: unknown - not recorded by this draft; the adopting human/workflow should
+  set this to the actual base_sha at adoption time, consistent with recent packages'
+  convention.
+target_branch: develop
+approved_candidate_sha: null
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: false
+production_impact: unknown until adopted and implemented. The investigation task (T00)
+  has no production effect by itself; any fix task's production_impact depends on
+  T00's findings and belongs to that task's own implementer and independent verifier,
+  not this draft.
+rollback_required: true
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-045-DEP-00
+  status: 'unresolved at drafting time. This package''s root-cause finding (see specification.md)
+    was made by directly reading apps/api/business/auth/google_oauth.go''s AuthURL
+    method during drafting, not merely inferred from the issue text. If a future comment
+    on issue #343 reports different or additional symptoms, such as the app-level
+    session itself also not persisting, VOC-045-T01 must be re-scoped before implementation.'
+- id: VOC-045-DEP-01
+  status: unresolved at drafting time. Depends on the reviewing human deciding whether
+    changing the unconditional prompt=consent behavior, which has been in place since
+    an existing code comment attributes it to task T15, requires product or founder
+    sign-off beyond routine R3 review, given it is a deliberate, documented, named
+    design decision in the existing code rather than an unintentional defect.
+affected_areas:
+- apps/api/business/auth/google_oauth.go
+- apps/api/business/auth/google_oauth_test.go
+- apps/api/business/auth/service.go
+- apps/api/business/auth/service_test.go
+- specs/changes/VOC-045-google-sign-in-re-prompts-for-account-selection
+implementation:
+  authorized: false
+  required: true
+  status: proposed
+  target_branch: develop
+  pull_request: null
+  authority_issue: 343
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: unknown-until-implemented
+  deployment: not-authorized-by-this-package
+  automatic_merge: false
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
+blocking_reasons: Not adopted. Requires founder/steward review of the proposed R3
+  classification, specification.md's open questions (particularly whether removing
+  prompt=consent's unconditional behavior needs explicit sign-off given it is a named,
+  intentional prior design decision rather than an accidental defect), and a decision
+  on whether T00 (investigation) and T01 (fix) should be dispatched together or T00
+  first with a re-scope checkpoint before T01.
