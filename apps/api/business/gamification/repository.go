@@ -164,8 +164,10 @@ func (r *Repository) UpsertUserSettings(ctx context.Context, tx *sql.Tx, userID 
 		return nil, fmt.Errorf("daily review target %d out of range [%d,%d]", dailyReviewTarget, MinDailyReviewTarget, MaxDailyReviewTarget)
 	}
 	row := tx.QueryRowContext(ctx,
-		`INSERT INTO user_settings (id, user_id, timezone, daily_review_target)
-		 VALUES ($1, $2, $3, $4)
+		`INSERT INTO user_settings (
+			id, user_id, timezone, daily_review_target, created_at, updated_at
+		)
+		 VALUES ($1, $2, $3, $4, NOW(), NOW())
 		 ON CONFLICT (user_id) DO UPDATE
 		   SET timezone = COALESCE(NULLIF(user_settings.timezone, 'UTC'), EXCLUDED.timezone),
 		       daily_review_target = CASE WHEN user_settings.daily_review_target <> 20
