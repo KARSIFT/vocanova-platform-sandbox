@@ -17,6 +17,7 @@ import (
 // statement to a single space, so the pattern tolerates optional spaces around
 // the parentheses rather than assuming how the SQL literal is wrapped.
 const userSettingsInsertColumnsPattern = `INSERT INTO user_settings \(\s*id,\s*user_id,\s*timezone,\s*daily_review_target,\s*created_at,\s*updated_at\s*\)`
+const updateSettingsInsertColumnsPattern = `INSERT INTO user_settings \(\s*id,\s*user_id,\s*timezone,\s*daily_review_target,\s*review_interval_preset,\s*notifications_enabled,\s*marketing_emails_enabled,\s*app_language,\s*created_at,\s*updated_at\s*\)`
 
 func TestPostgreSQLRepositoryCompleteOnboardingFreshUserSettingsInsertSuppliesTimestamps(t *testing.T) {
 	db, mock, err := sqlmock.New()
@@ -78,5 +79,60 @@ func TestPostgreSQLRepositoryCompleteOnboardingFreshUserSettingsInsertSuppliesTi
 	assert.Equal(t, OnboardingStatusCompleted, profile.Status)
 	assert.True(t, stored.Stored)
 	assert.Equal(t, answers.DailyReviewTarget, stored.DailyReviewTarget)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestPostgreSQLRepositoryUpdateSettingsFreshInsertSuppliesTimestamps(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewPostgreSQLRepository(db)
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000222")
+	now := time.Date(2026, 8, 7, 11, 0, 0, 0, time.UTC)
+	target := 25
+
+	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT daily_review_target, review_interval_preset,").
+		WithArgs(userID).
+		WillReturnRows(sqlmock.NewRows([]string{
+			"daily_review_target",
+			"review_interval_preset",
+			"notifications_enabled",
+			"marketing_emails_enabled",
+			"app_language",
+		}))
+	mock.ExpectQuery(updateSettingsInsertColumnsPattern).
+		WithArgs(
+			sqlmock.AnyArg(), userID, target, schemaReviewIntervalPresetDefault,
+			schemaNotificationsEnabledDefault, schemaMarketingEmailsEnabledDefault,
+			schemaAppLanguageDefault, now,
+		).
+		WillReturnRows(sqlmock.NewRows([]string{
+			"daily_review_target",
+			"review_interval_preset",
+			"notifications_enabled",
+			"marketing_emails_enabled",
+			"app_language",
+		}).AddRow(
+			target,
+			schemaReviewIntervalPresetDefault,
+			schemaNotificationsEnabledDefault,
+			schemaMarketingEmailsEnabledDefault,
+			schemaAppLanguageDefault,
+		))
+	mock.ExpectExec("UPDATE users SET display_name =").
+		WithArgs(userID, "Ana", now).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+
+	displayName := "Ana"
+	updated, err := repo.UpdateSettings(t.Context(), userID, SettingsUpdate{
+		DailyReviewTarget: &target,
+		DisplayName:       &displayName,
+	}, now)
+	require.NoError(t, err)
+	assert.Equal(t, target, updated.DailyReviewTarget)
+	assert.Equal(t, displayName, updated.DisplayName)
 	require.NoError(t, mock.ExpectationsWereMet())
 }

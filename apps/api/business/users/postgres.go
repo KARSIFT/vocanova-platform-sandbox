@@ -321,8 +321,8 @@ func (r *PostgreSQLRepository) UpdateSettings(ctx context.Context, userID uuid.U
 	row := tx.QueryRowContext(ctx,
 		`INSERT INTO user_settings (id, user_id, timezone, daily_review_target,
 		                           review_interval_preset, notifications_enabled,
-		                           marketing_emails_enabled, app_language)
-		 VALUES ($1, $2, 'UTC', $3, $4, $5, $6, $7)
+		                           marketing_emails_enabled, app_language, created_at, updated_at)
+		 VALUES ($1, $2, 'UTC', $3, $4, $5, $6, $7, $8, $8)
 		 ON CONFLICT (user_id) DO UPDATE
 		   SET daily_review_target = EXCLUDED.daily_review_target,
 		       review_interval_preset = EXCLUDED.review_interval_preset,
@@ -335,7 +335,7 @@ func (r *PostgreSQLRepository) UpdateSettings(ctx context.Context, userID uuid.U
 		uuid.New(), userID,
 		merged.DailyReviewTarget, merged.ReviewIntervalPreset,
 		merged.NotificationsEnabled, merged.MarketingEmailsEnabled,
-		merged.AppLanguage,
+		merged.AppLanguage, now,
 	)
 	if err := row.Scan(
 		&merged.DailyReviewTarget, &merged.ReviewIntervalPreset,
