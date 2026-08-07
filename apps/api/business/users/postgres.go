@@ -139,8 +139,8 @@ func (r *PostgreSQLRepository) CompleteOnboarding(ctx context.Context, userID uu
 	// guarded by the CASE so any non-default existing value is
 	// preserved (the spec's "never overwrite a customized row" rule).
 	row := tx.QueryRowContext(ctx,
-		`INSERT INTO user_settings (id, user_id, timezone, daily_review_target)
-		 VALUES ($1, $2, 'UTC', $3)
+		`INSERT INTO user_settings (id, user_id, timezone, daily_review_target, created_at, updated_at)
+		 VALUES ($1, $2, 'UTC', $3, $5, $5)
 		 ON CONFLICT (user_id) DO UPDATE
 		   SET daily_review_target = CASE WHEN user_settings.daily_review_target <> $4
 		                                  THEN user_settings.daily_review_target
@@ -148,7 +148,7 @@ func (r *PostgreSQLRepository) CompleteOnboarding(ctx context.Context, userID uu
 		                              END,
 		       updated_at = NOW()
 		 RETURNING user_id, daily_review_target`,
-		uuid.New(), userID, answers.DailyReviewTarget, SchemaDailyReviewTargetDefault,
+		uuid.New(), userID, answers.DailyReviewTarget, SchemaDailyReviewTargetDefault, now,
 	)
 	var (
 		storedID  uuid.UUID
