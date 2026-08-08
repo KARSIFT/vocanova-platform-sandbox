@@ -340,7 +340,7 @@ jobs:
       # attestation is metadata noise that does not
       # change what the image does.
       - name: Build and push vocanova-api
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: apps/api
           file: apps/api/Dockerfile
@@ -375,7 +375,7 @@ jobs:
       # it would invite an accidental "deploy to
       # staging with the local-dev URL" mistake.
       - name: Build and push vocanova-web
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: apps/web/Dockerfile
