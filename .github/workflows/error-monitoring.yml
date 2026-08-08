@@ -1,0 +1,204 @@
+name: error-monitoring
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  monitor:
+    name: monitor sentry issues
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query Sentry and open deduplicated bug issues
+        uses: actions/github-script@v7
+        env:
+          SENTRY_ORG: vocanova
+          SENTRY_API_TOKEN: ${{ secrets.SENTRY_API_TOKEN }}
+          WINDOW_MINUTES: "90"
+          SENTRY_PROJECT_MATRIX: >-
+            [{"project":"prod-api","environment":"production"},{"project":"prod-web","environment":"production"},{"project":"stage-api","environment":"staging"},{"project":"stage-web","environment":"staging"}]
+        with:
+          script: |
+            const requiredEnvNames = ["SENTRY_API_TOKEN", "SENTRY_ORG", "SENTRY_PROJECT_MATRIX", "WINDOW_MINUTES"];
+            for (const envName of requiredEnvNames) {
+              if (!process.env[envName] || process.env[envName].trim().length === 0) {
+                throw new Error(`Missing required environment variable: ${envName}`);
+              }
+            }
+
+            const sentryToken = process.env.SENTRY_API_TOKEN.trim();
+            const sentryOrg = process.env.SENTRY_ORG.trim();
+            const windowMinutes = Number(process.env.WINDOW_MINUTES);
+            if (!Number.isFinite(windowMinutes) || windowMinutes <= 0) {
+              throw new Error(`WINDOW_MINUTES must be a positive number; received: ${process.env.WINDOW_MINUTES}`);
+            }
+
+            let projectMatrix;
+            try {
+              projectMatrix = JSON.parse(process.env.SENTRY_PROJECT_MATRIX);
+            } catch (error) {
+              throw new Error(`SENTRY_PROJECT_MATRIX is invalid JSON: ${error.message}`);
+            }
+            if (!Array.isArray(projectMatrix) || projectMatrix.length === 0) {
+              throw new Error("SENTRY_PROJECT_MATRIX must be a non-empty JSON array");
+            }
+
+            const baseUrl = "https://sentry.io/api/0";
+            const headers = {
+              Authorization: `Bearer ${sentryToken}`,
+              Accept: "application/json",
+            };
+            const windowStartMs = Date.now() - windowMinutes * 60 * 1000;
+
+            function parseNextLink(linkHeader) {
+              if (!linkHeader) {
+                return null;
+              }
+              const parts = linkHeader.split(",");
+              for (const rawPart of parts) {
+                const part = rawPart.trim();
+                if (!part.includes('rel="next"')) {
+                  continue;
+                }
+                if (part.includes('results="false"')) {
+                  return null;
+                }
+                const match = part.match(/<([^>]+)>/);
+                if (match && match[1]) {
+                  return match[1];
+                }
+              }
+              return null;
+            }
+
+            async function fetchSentryJson(url) {
+              const response = await fetch(url, { headers });
+              const responseBody = await response.text();
+              if (!response.ok) {
+                throw new Error(
+                  `Sentry API request failed: ${response.status} ${response.statusText} for ${url}. Body: ${responseBody}`
+                );
+              }
+              let parsedBody;
+              try {
+                parsedBody = JSON.parse(responseBody);
+              } catch (error) {
+                throw new Error(`Sentry API returned non-JSON response for ${url}: ${error.message}`);
+              }
+              return { parsedBody, responseHeaders: response.headers };
+            }
+
+            async function listRecentUnresolvedIssues(project) {
+              const collectedIssues = [];
+              let nextUrl = `${baseUrl}/projects/${encodeURIComponent(sentryOrg)}/${encodeURIComponent(project)}/issues/?query=${encodeURIComponent("is:unresolved")}&sort=date&limit=100`;
+
+              while (nextUrl) {
+                const { parsedBody, responseHeaders } = await fetchSentryJson(nextUrl);
+                if (!Array.isArray(parsedBody)) {
+                  throw new Error(`Unexpected Sentry response for project ${project}: expected array`);
+                }
+                for (const issue of parsedBody) {
+                  const firstSeen = issue.firstSeen ? Date.parse(issue.firstSeen) : Number.NaN;
+                  if (!Number.isFinite(firstSeen) || firstSeen < windowStartMs) {
+                    continue;
+                  }
+                  collectedIssues.push(issue);
+                }
+                const linkHeader = responseHeaders.get("link");
+                nextUrl = parseNextLink(linkHeader);
+              }
+
+              return collectedIssues;
+            }
+
+            async function issueMarkerExists(marker) {
+              const searchResponse = await github.rest.search.issuesAndPullRequests({
+                q: `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open in:body "${marker}"`,
+                per_page: 1,
+              });
+              return searchResponse.data.total_count > 0;
+            }
+
+            function toRootCauseSummary(issue) {
+              const metadata = issue.metadata || {};
+              const metadataType = metadata.type || "";
+              const metadataValue = metadata.value || "";
+              const culprit = issue.culprit || "";
+              const segments = [];
+              if (metadataType || metadataValue) {
+                segments.push(`${metadataType}${metadataType && metadataValue ? ": " : ""}${metadataValue}`.trim());
+              }
+              if (culprit) {
+                segments.push(`culprit: ${culprit}`);
+              }
+              if (segments.length === 0) {
+                return "No stack-trace or root-cause summary was present on the Sentry issue list response.";
+              }
+              return segments.join("\n");
+            }
+
+            let createdCount = 0;
+            let deduplicatedCount = 0;
+            let scannedCount = 0;
+
+            for (const mapping of projectMatrix) {
+              if (!mapping.project || !mapping.environment) {
+                throw new Error(`Invalid project mapping entry: ${JSON.stringify(mapping)}`);
+              }
+
+              const sentryIssues = await listRecentUnresolvedIssues(mapping.project);
+              core.info(`Project ${mapping.project}: ${sentryIssues.length} unresolved issue(s) first seen within the last ${windowMinutes} minute(s).`);
+
+              for (const sentryIssue of sentryIssues) {
+                scannedCount += 1;
+                const stableId = String(sentryIssue.id || "").trim();
+                if (!stableId) {
+                  throw new Error(`Sentry issue missing stable id for project ${mapping.project}: ${JSON.stringify(sentryIssue)}`);
+                }
+
+                const marker = `sentry-issue-id:${stableId}`;
+                const alreadyExists = await issueMarkerExists(marker);
+                if (alreadyExists) {
+                  deduplicatedCount += 1;
+                  core.info(`Skip duplicate for marker ${marker}`);
+                  continue;
+                }
+
+                const issueTitle = `[${mapping.environment}] Sentry ${mapping.project} ${sentryIssue.shortId || stableId}: ${sentryIssue.title || "Untitled issue"}`;
+                const issueBody = [
+                  `<!-- ${marker} -->`,
+                  "",
+                  `Automated monitoring detected a new unresolved Sentry problem.`,
+                  "",
+                  `- Sentry organization: \`${sentryOrg}\``,
+                  `- Sentry project: \`${mapping.project}\``,
+                  `- Environment: \`${mapping.environment}\``,
+                  `- Sentry issue ID: \`${stableId}\``,
+                  `- Sentry short ID: \`${sentryIssue.shortId || "unknown"}\``,
+                  `- Sentry link: ${sentryIssue.permalink || "(no permalink returned)"}`,
+                  `- First seen: ${sentryIssue.firstSeen || "unknown"}`,
+                  `- Last seen: ${sentryIssue.lastSeen || "unknown"}`,
+                  `- Event count: ${sentryIssue.count || "unknown"}`,
+                  "",
+                  "Failing behavior:",
+                  `${sentryIssue.title || "Untitled issue"}`,
+                  "",
+                  "Root cause detail (from Sentry metadata):",
+                  toRootCauseSummary(sentryIssue),
+                ].join("\n");
+
+                await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: issueTitle,
+                  body: issueBody,
+                });
+                createdCount += 1;
+              }
+            }
+
+            core.info(`Monitoring run complete. scanned=${scannedCount}, created=${createdCount}, deduplicated=${deduplicatedCount}`);
