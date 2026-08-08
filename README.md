@@ -31,3 +31,4 @@ bounded executable change packages. Documents 00–13 were migrated and adopted 
 (VOC-007/VOC-008); DOC-14 was deliberately reconciled but not adopted (see
 [docs/README.md](docs/README.md) for the full index and each document's actual status -
 that index, not this paragraph, is the source of truth for migration state going forward).
+
