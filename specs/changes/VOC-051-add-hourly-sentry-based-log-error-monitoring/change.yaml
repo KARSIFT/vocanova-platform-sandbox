@@ -67,20 +67,23 @@ artifacts:
   release_plan: release-plan.md
 dependencies:
 - id: VOC-051-DEP-00
-  status: 'STILL UNRESOLVED after VOC-051-T00 ran. T00 produced VOC-051-EV-04 (t00-evidence.md)
-    as the VOC-051-TEST-09 "documented blocking constraint" outcome rather than the
-    confirmation outcome, and T00 is therefore recorded as blocked in tasks.md. T00
-    did narrow the question with vendor-published facts: Sentry documents no project-count
-    limit on any plan (so the assumed extra apps/web project is not plan-gated), and
-    an org-scoped read-only token is available on every plan but must be an internal-integration
-    token scoped to project:read + event:read, because the plain organization auth
-    token has a fixed, non-selectable scope set - see t00-evidence.md sections 1a and
-    1b. What remains unresolved is org-specific and needs signed-in access to the founder''s
-    Sentry organization, which no agent in this repository has: the plan tier and its
-    headroom (the free Developer plan caps 5,000 errors/month and 1 user seat, which
-    apps/web browser errors will draw against), the actual granted scope of the created
-    token, and the layout choice plus project inventory recorded into t00-evidence.md
-    section 3''s table. T01/T02/T03 remain blocked until a human fills that table.'
+  status: 'RESOLVED 2026-08-08. The founder confirmed signed-in access to the
+    real Sentry organization (slug vocanova, Developer/free plan, 5,000
+    errors/month pooled account-wide, 1 user seat), chose Layout B (four
+    projects: prod-api, prod-web, stage-api, stage-web - not the apps/api-precedent
+    Layout A), created an internal-integration token (vocanova-monitoring-agent)
+    scoped to Issue & Event: Read + Project: Read only, and provided all four DSN
+    values directly to the founder-gate overseer session. Five GitHub Actions
+    secrets are now set on the repository: PRODUCTION_SENTRY_DSN (updated in
+    place - see t00-evidence.md''s gate-status note: the founder had deleted the
+    pre-existing project it originally pointed to while cleaning up, which
+    silently disabled apps/api production error reporting until this fix; the
+    correction takes effect on apps/api''s next production deploy, not
+    retroactively), STAGING_SENTRY_DSN, PRODUCTION_WEB_SENTRY_DSN,
+    STAGING_WEB_SENTRY_DSN (all new), and SENTRY_API_TOKEN (new; note this is
+    the actual secret name - T03''s originally proposed SENTRY_API_AUTH_TOKEN
+    name is superseded). Full layout table in t00-evidence.md section 3.
+    T01/T02/T03 are unblocked.'
 - id: VOC-051-DEP-01
   status: unresolved at drafting time. Depends on the reviewing human deciding the
     exact GitHub API identity the new scheduled workflow uses to open issues (GITHUB_TOKEN

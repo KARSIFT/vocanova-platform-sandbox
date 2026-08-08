@@ -2,28 +2,32 @@
 
 Evidence for `VOC-051-T00` and `VOC-051-TEST-09`.
 
-## Gate status: BLOCKED — `VOC-051-T01` and `VOC-051-T02` must not start
+## Gate status: RESOLVED — `VOC-051-T01` and `VOC-051-T02` may proceed
 
-**`VOC-051-DEP-00` is NOT resolved.** This record is the "documented blocking
-constraint" branch of `VOC-051-TEST-09`'s expected result, not the "written
-confirmation" branch.
+**`VOC-051-DEP-00` is resolved as of 2026-08-08.** The founder confirmed
+signed-in access to the organization's real Sentry account, chose Layout B
+(§2), created all four projects, created a scoped internal-integration token,
+and provided all DSN values directly (through the founder-gate overseer
+session, not committed to this repository). This record is now the "written
+confirmation" branch of `VOC-051-TEST-09`'s expected result.
 
-Closing this task's GitHub task issue does **not** clear the precondition that
-`implementation-plan.md` places on `VOC-051-T01`/`VOC-051-T02` ("both depend on
-the confirmed Sentry project/DSN layout"). The gate lives in this package's own
-state, not in the task issue: `tasks.md` records `VOC-051-T00` as `blocked`, and
-records `VOC-051-T01`/`VOC-051-T02` as blocked on it. Whoever dispatches T01 or
-T02 must first see this file replaced by a completed layout record (§3 below,
-with its unknown cells filled by a human) and the corresponding `tasks.md` and
-`change.yaml` states flipped.
+§3's layout table below is filled. The following GitHub Actions secrets exist
+on `KARSIFT/vocanova-platform-sandbox` as of this resolution (values are not
+recorded in this file or anywhere else in the repository, per this file's own
+"DSN values are deliberately absent" rule below):
 
-The blocking constraint is the one named in §4: three org-specific facts that
-require signed-in access to the founder's Sentry organization, which this
-workspace does not have (no Sentry API token, no Sentry session, no GitHub
-Actions secret access — verified: no `SENTRY_*` value is present in this
-environment, and `AGENTS.md`'s "Safety" section says agents do not receive
-production secrets). Nothing in this repository can substitute for that access,
-and this task will not infer the answers from source code.
+- `PRODUCTION_SENTRY_DSN` — updated in place. **Important operational note:**
+  the founder deleted the pre-existing Sentry project this secret originally
+  pointed to (while cleaning up before creating the four new projects), which
+  silently disabled `apps/api` production error reporting for a window of
+  time. The secret has been corrected to point at the new `prod-api` project,
+  but the fix only takes effect on `apps/api`'s **next production deploy** —
+  it does not retroactively apply to the already-running container.
+- `STAGING_SENTRY_DSN` — new.
+- `PRODUCTION_WEB_SENTRY_DSN` — new.
+- `STAGING_WEB_SENTRY_DSN` — new.
+- `SENTRY_API_TOKEN` — new; internal-integration token scoped to `project:read`
+  + `event:read` per §1b, for `VOC-051-T02`'s hourly workflow.
 
 ## 1. What this task did establish
 
@@ -126,52 +130,50 @@ account-wide cap, Layout B's isolation benefit is partly illusory (the cap is
 per-account, not per-project), which is a point for Layout A; but that trade-off
 is a human decision about the founder's real org, not this task's to make.
 
-## 3. Layout record — to be completed by the human with Sentry access
+## 3. Layout record — confirmed by the founder 2026-08-08
 
-Everything below except the four bracketed unknowns is fixed by this repository's
-existing code and workflows and does not need confirming. Fill the brackets, or
-replace this table wholesale if Layout B is chosen, and this section becomes the
-written confirmation `VOC-051-TEST-09` asks for.
+**Layout B chosen** (§2): four projects, one per application per tier — not
+the `apps/api`-precedent Layout A. The founder's stated reasoning: stronger
+isolation per environment, accepted knowingly despite §2's noted caveat that
+the Developer plan's quota is pooled account-wide regardless of project count.
+`VOC-051-T01` must follow this table, not silently default to Layout A/apps/api's
+existing single-DSN-plus-tag pattern.
+
+**Sentry organization slug:** `vocanova` (organization ID `4511838056480768`).
 
 | App | Tier | Sentry project slug | GitHub Actions secret holding the DSN | Runtime env var | `SENTRY_ENVIRONMENT` value | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| `apps/api` | production | `[unknown — confirm]` | `PRODUCTION_SENTRY_DSN` (exists) | `SENTRY_DSN` | `production` | wired today |
-| `apps/api` | staging | `[unknown — confirm]` | `STAGING_SENTRY_DSN` (does not exist yet) | `SENTRY_DSN` | `staging` | not wired; `VOC-051-T01` adds |
-| `apps/web` | production | `[unknown — confirm]` | `PRODUCTION_WEB_SENTRY_DSN` (proposed) | `NEXT_PUBLIC_SENTRY_DSN` (proposed) | `production` | not wired; `VOC-051-T01` adds |
-| `apps/web` | staging | `[unknown — confirm]` | `STAGING_WEB_SENTRY_DSN` (proposed) | `NEXT_PUBLIC_SENTRY_DSN` (proposed) | `staging` | not wired; `VOC-051-T01` adds |
+| `apps/api` | production | `prod-api` | `PRODUCTION_SENTRY_DSN` (updated in place — see gate-status note above re: the deleted predecessor project) | `SENTRY_DSN` | `production` | wired today; secret corrected, takes effect next deploy |
+| `apps/api` | staging | `stage-api` | `STAGING_SENTRY_DSN` (new) | `SENTRY_DSN` | `staging` | not wired; `VOC-051-T01` adds |
+| `apps/web` | production | `prod-web` | `PRODUCTION_WEB_SENTRY_DSN` (new) | `NEXT_PUBLIC_SENTRY_DSN` (proposed — `VOC-051-T01` confirms) | `production` | not wired; `VOC-051-T01` adds |
+| `apps/web` | staging | `stage-web` | `STAGING_WEB_SENTRY_DSN` (new) | `NEXT_PUBLIC_SENTRY_DSN` (proposed — `VOC-051-T01` confirms) | `staging` | not wired; `VOC-051-T01` adds |
 
-Secret and variable names in the "proposed" rows follow the existing
-`PRODUCTION_SENTRY_DSN` / `PRODUCTION_WEB_HOST` naming convention in
-`.github/workflows/deploy-production.yml`; `VOC-051-T01` owns confirming them,
-including the `NEXT_PUBLIC_` prefix question that task already raises.
-
-The DSN **values** are deliberately absent and must never be written into this
-file or any other repository file — they belong in GitHub Actions secrets only.
-Recording the project slug and the mapping is what T00 needs; the secret material
-is not.
-
-Also to be recorded here at the same time: the Sentry **organization slug**
-(`[unknown — confirm]`), needed by `VOC-051-T02`'s API calls.
+All four secrets (plus `SENTRY_API_TOKEN` for `VOC-051-T02`) are already set on
+the repository as of this resolution. The DSN **values** are deliberately
+absent from this file and must never be written into this file or any other
+repository file — they were provided directly to the founder-gate overseer
+session and written straight to GitHub Actions secrets, never committed.
 
 ## 4. The three org-specific facts still required
 
-A human with signed-in access to the founder's Sentry organization must confirm
-and record, in §3 above:
+All three, confirmed 2026-08-08 and recorded in §3:
 
-1. **Plan tier and headroom.** Which plan the organization is on, and — if
-   Developer — whether the 5,000 errors/month cap and 1 user seat are acceptable
-   once `apps/web`'s browser errors start flowing on top of `apps/api`'s. Browser
-   error volume is typically higher and noisier than server-side volume, and
-   under `VOC-051-R01` every distinct issue can become a GitHub issue and thence
-   a `plan-from-issue` run, so quota exhaustion here degrades the monitoring this
-   package exists to add.
-2. **Token creation.** That an internal integration with exactly `project:read` +
-   `event:read` (§1b) can be created in this organization, and its actual granted
-   scope list once created — `VOC-051-TEST-02` checks the real configured scope,
-   not the intent.
-3. **Layout choice and project inventory.** Layout A or Layout B (§2), the
-   organization slug, the existing project slug(s), and the resulting per-tier
-   mapping filled into §3.
+1. **Plan tier and headroom.** Developer (free) plan confirmed. The founder was
+   told explicitly that the 5,000 errors/month cap is pooled account-wide
+   across all four projects, not per-project, and accepted that constraint
+   knowingly when choosing Layout B. `VOC-051-T02`'s implementer should treat
+   quota exhaustion as a real, live operating condition (see §5's existing
+   quota-interaction finding), not a theoretical edge case.
+2. **Token creation.** Confirmed possible. An internal integration named
+   `vocanova-monitoring-agent` was created, scoped to `Issue & Event: Read` +
+   `Project: Read` only (no write/admin on any resource), and its token is
+   stored as the `SENTRY_API_TOKEN` secret. `VOC-051-TEST-02` should still
+   verify the token's actual granted scope against the live API when T02 is
+   implemented, per this section's original caution — this record reflects
+   what was configured, not an independent re-check.
+3. **Layout choice and project inventory.** Layout B, organization slug
+   `vocanova`, four project slugs (`prod-api`, `prod-web`, `stage-api`,
+   `stage-web`), full per-tier mapping in §3.
 
 ## 5. Findings this task raises for the reviewing human
 

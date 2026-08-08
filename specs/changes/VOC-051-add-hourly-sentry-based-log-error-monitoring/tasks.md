@@ -7,14 +7,12 @@
 - Acceptance criteria: (gates `VOC-051-AC-00`, `VOC-051-AC-01`)
 - Tests: `VOC-051-TEST-09`
 - Evidence: `VOC-051-EV-04`
-- Status: blocked — `t00-evidence.md` (`VOC-051-EV-04`) records the
-  `VOC-051-TEST-09` "documented blocking constraint" outcome, not the
-  confirmation outcome. `VOC-051-DEP-00` stays unresolved: the three
-  org-specific facts in that file's §4 (plan tier and headroom, read-only
-  token creation, layout choice and project inventory) require signed-in
-  access to the founder's Sentry organization, which no agent in this
-  repository has. This task cannot reach `complete` until a human fills
-  `t00-evidence.md` §3's layout table and flips this status.
+- Status: complete — `t00-evidence.md` (`VOC-051-EV-04`) now records the
+  `VOC-051-TEST-09` "written confirmation" outcome. `VOC-051-DEP-00` is
+  resolved: the founder confirmed Sentry access, chose Layout B, created all
+  four projects, created a scoped internal-integration token, and all five
+  Sentry-related GitHub Actions secrets are set. See `t00-evidence.md` §3 for
+  the full layout record.
 
 Confirm, against the founder's actual Sentry organization, that adding an
 `apps/web` project (or reusing an existing one, if a new project is not
@@ -33,10 +31,11 @@ record the actual constraint for the reviewing human to resolve before
 - Acceptance criteria: `VOC-051-AC-00`, `VOC-051-AC-07`
 - Tests: `VOC-051-TEST-00`, `VOC-051-TEST-01`, `VOC-051-TEST-08`
 - Evidence: `VOC-051-EV-00`, `VOC-051-EV-03`
-- Status: blocked by `VOC-051-T00` (see that task's status above and
-  `t00-evidence.md` §4). Do not dispatch until `t00-evidence.md` §3's layout
-  table is filled and `VOC-051-T00` reads `complete`; the closure of
-  `VOC-051-T00`'s GitHub task issue on its own does not clear this gate.
+- Status: unblocked — `VOC-051-T00` is complete and `t00-evidence.md` §3's
+  layout table is filled. Follow that table exactly: Layout B (four projects),
+  `NEXT_PUBLIC_SENTRY_DSN` reading from `PRODUCTION_WEB_SENTRY_DSN`/
+  `STAGING_WEB_SENTRY_DSN`, not the Layout-A/apps/api single-DSN-plus-tag
+  pattern this task's own description below still describes generically.
 
 Add the `@sentry/nextjs` SDK to `apps/web`, following the official Next.js
 integration wizard's output shape for the App Router (instrumentation files,
@@ -69,13 +68,11 @@ different injection mechanism for `apps/web` than the one already proven for
 - Tests: `VOC-051-TEST-02`, `VOC-051-TEST-03`, `VOC-051-TEST-04`,
   `VOC-051-TEST-05`, `VOC-051-TEST-06`, `VOC-051-TEST-08`
 - Evidence: `VOC-051-EV-01`, `VOC-051-EV-03`
-- Status: blocked by `VOC-051-T00` (see that task's status above and
-  `t00-evidence.md` §4); the closure of `VOC-051-T00`'s GitHub task issue on
-  its own does not clear this gate. May proceed in
-  parallel with `VOC-051-T01` once `T00` genuinely completes, since the workflow's
-  Sentry-side query does not depend on `apps/web`'s own instrumentation
-  existing yet — it queries whatever Sentry projects/environments `T00`
-  confirms exist)
+- Status: unblocked — `VOC-051-T00` is complete. May proceed in parallel with
+  `VOC-051-T01`, since this workflow's Sentry-side query does not depend on
+  `apps/web`'s own instrumentation existing yet. Query all four projects
+  (`prod-api`, `prod-web`, `stage-api`, `stage-web`) per `t00-evidence.md` §3's
+  Layout B mapping, org slug `vocanova`, using the `SENTRY_API_TOKEN` secret.
 
 Add a new GitHub Actions workflow (proposed path:
 `.github/workflows/error-monitoring.yml`) triggered on an hourly `schedule:
@@ -117,28 +114,23 @@ would). The workflow must:
 - Acceptance criteria: `VOC-051-AC-01`
 - Tests: `VOC-051-TEST-02`
 - Evidence: `VOC-051-EV-01`
-- Status: blocked by `VOC-051-T00` (see that task's status above and
-  `t00-evidence.md` §4), whose confirmed layout this task's
-  documentation depends on. Note that `t00-evidence.md` §1b already narrows
-  the token type and scope this task documents, but does not confirm it
-  against the real organization. (This task's
-  actual secret-value provisioning is a human/founder action outside this
-  repository's own file changes — the implementer's role here is limited to
-  documenting the required secret name and its expected scope in
-  `VOC-051-T02`'s workflow file and this package's own README/impact
-  analysis, not to obtaining or entering the real token value, which agents
-  do not receive per `AGENTS.md`'s "Safety" section)
+- Status: unblocked and largely moot — `VOC-051-T00` is complete, and the
+  founder already created and set the token secret directly (ahead of this
+  task, through the founder-gate overseer session) as **`SENTRY_API_TOKEN`**,
+  not this task's originally proposed `SENTRY_API_AUTH_TOKEN` name. `VOC-051-T02`'s
+  workflow must reference the secret by its actual name, `SENTRY_API_TOKEN`.
+  This task's remaining scope is just to document that name/scope choice in
+  the package's README/impact analysis for the record, not to create anything.
 
-Document (do not attempt to obtain or set) the exact secret name the
-`VOC-051-T02` workflow expects (proposed: `SENTRY_API_AUTH_TOKEN`) and its
-required scope, so the human adopting/deploying this package knows exactly
-what to create in the repository's GitHub Actions secrets before the
-workflow can run successfully. If the secret is absent, `VOC-051-T02`'s
-workflow must fail clearly and immediately (not silently no-op the way
-`apps/api`'s optional `SENTRY_DSN` is allowed to, since this is a required
-secret for the monitoring workflow's entire purpose, not an optional
-enhancement) rather than running with a missing credential and producing a
-confusing downstream error.
+Document the exact secret name the `VOC-051-T02` workflow expects —
+**`SENTRY_API_TOKEN`** (already set; internal-integration token scoped to
+`project:read` + `event:read` only, per `t00-evidence.md` §3/§4) — so the
+record is accurate for future reference. If the secret is absent,
+`VOC-051-T02`'s workflow must fail clearly and immediately (not silently
+no-op the way `apps/api`'s optional `SENTRY_DSN` is allowed to, since this is
+a required secret for the monitoring workflow's entire purpose, not an
+optional enhancement) rather than running with a missing credential and
+producing a confusing downstream error.
 
 ## VOC-051-T04 — Update DOC-11 §1's Error monitoring row to record the new mechanism
 
