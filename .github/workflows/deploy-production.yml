@@ -150,7 +150,7 @@ jobs:
           tar -czf "$GITHUB_WORKSPACE/production-deploy-bundle.tgz" -C /tmp/production-deploy-bundle .
 
       - name: Copy deploy bundle to production host
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.PRODUCTION_SSH_HOST }}
           username: ${{ secrets.PRODUCTION_SSH_USER }}

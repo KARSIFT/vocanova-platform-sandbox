@@ -497,7 +497,7 @@ jobs:
       # non-empty before attempting the connection.
       - name: Copy deploy bundle to staging host
         if: ${{ inputs.skip_ssh_deploy != true }}
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.STAGING_SSH_HOST }}
           username: ${{ secrets.STAGING_SSH_USER }}
