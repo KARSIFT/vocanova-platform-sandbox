@@ -3,7 +3,7 @@ packages:
   - packages/*
 
 allowBuilds:
-  '@sentry/cli': true
+  "@sentry/cli": true
   sharp: false
 
 strictDepBuilds: true
