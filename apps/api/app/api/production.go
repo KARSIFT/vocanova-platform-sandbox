@@ -81,6 +81,12 @@ type ProductionConfig struct {
 	SentryEnvironment   string
 	SentryRelease       string
 	MonitoringTestToken string
+
+	// SyntheticSmokeTestEmail is the reserved identity of the
+	// deploy-seeded synthetic smoke-test account (VOC-050-T00). It is
+	// normalized at load time because every comparison against it
+	// happens on already-normalized addresses.
+	SyntheticSmokeTestEmail string
 }
 
 // AI-provider identifiers and per-provider connection defaults.
@@ -105,6 +111,14 @@ const (
 	// model default so telemetry still records a concrete value when
 	// AI_PROVIDER_MODEL is unset.
 	defaultCloudflareModel = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+
+	// defaultSyntheticSmokeTestEmail matches the default
+	// apps/api/scripts/seed-synthetic-smoke-user.sh seeds, so the
+	// address the deploy creates and the address the API refuses on
+	// every real sign-in path stay the same when neither side is
+	// configured explicitly. The `.invalid` TLD is reserved by
+	// RFC 2606 and can never receive mail.
+	defaultSyntheticSmokeTestEmail = "smoke-test-bot@synthetic.vocanova.invalid"
 )
 
 // aiProviderBaseURL resolves AI_PROVIDER_BASE_URL for the selected
@@ -178,6 +192,9 @@ func LoadProductionConfig() (ProductionConfig, error) {
 		SentryEnvironment:   getenv("SENTRY_ENVIRONMENT", getenv("ENVIRONMENT", "staging")),
 		SentryRelease:       os.Getenv("SENTRY_RELEASE"),
 		MonitoringTestToken: os.Getenv("MONITORING_TEST_TOKEN"),
+		SyntheticSmokeTestEmail: auth.NormalizeEmail(
+			getenv("VOCANOVA_SYNTHETIC_SMOKE_TEST_EMAIL", defaultSyntheticSmokeTestEmail),
+		),
 	}
 
 	if cfg.DatabaseURL == "" {
@@ -611,10 +628,11 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	}
 	authSvc := auth.NewService(authRepo, mailer, oauthProvider, clk, limiter, authCfg)
 	authSvc.SetKillSwitches(&auth.KillSwitches{
-		MagicLinkEnabled:  cfg.MagicLinkOn,
-		OAuthEnabled:      cfg.OAuthOn,
-		NewSignupsEnabled: cfg.NewSignupsOn,
-		SignupAllowlist:   cfg.SignupAllowlist,
+		MagicLinkEnabled:       cfg.MagicLinkOn,
+		OAuthEnabled:           cfg.OAuthOn,
+		NewSignupsEnabled:      cfg.NewSignupsOn,
+		SignupAllowlist:        cfg.SignupAllowlist,
+		ReservedSyntheticEmail: cfg.SyntheticSmokeTestEmail,
 	})
 
 	usersRepo := users.NewPostgreSQLRepository(db)
@@ -644,6 +662,7 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 		EmailChangePath:           "/auth/email-change",
 		EmailChangeLinkLifetime:   15 * time.Minute,
 		AccountDeletionPurgeDelay: accounts.DefaultAccountDeletionPurgeDelay,
+		ReservedSyntheticEmail:    cfg.SyntheticSmokeTestEmail,
 	})
 
 	aiProvider, safetyClassifier := buildAIProviders(cfg)

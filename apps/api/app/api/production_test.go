@@ -120,6 +120,7 @@ func TestLoadProductionConfig_DefaultsAreSensible(t *testing.T) {
 	t.Setenv("NEW_USER_SIGNUP_ENABLED", "")
 	t.Setenv("AI_PROVIDER", "")
 	t.Setenv("AI_PROVIDER_BASE_URL", "")
+	t.Setenv("VOCANOVA_SYNTHETIC_SMOKE_TEST_EMAIL", "")
 
 	cfg, err := LoadProductionConfig()
 	require.NoError(t, err)
@@ -131,6 +132,20 @@ func TestLoadProductionConfig_DefaultsAreSensible(t *testing.T) {
 	assert.True(t, cfg.NewSignupsOn, "NEW_USER_SIGNUP_ENABLED must default to true when unset")
 	assert.Equal(t, "opencode", cfg.APIProvider, "AI_PROVIDER must default to opencode when unset")
 	assert.Equal(t, "http://127.0.0.1:4096", cfg.APIBaseURL, "AI_PROVIDER_BASE_URL must default to local opencode serve when unset")
+	assert.Equal(t, "smoke-test-bot@synthetic.vocanova.invalid", cfg.SyntheticSmokeTestEmail, "VOCANOVA_SYNTHETIC_SMOKE_TEST_EMAIL must default to the reserved .invalid identity the deploy seed uses")
+}
+
+func TestLoadProductionConfig_NormalizesSyntheticSmokeTestEmail(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://example/db")
+	t.Setenv("BASE_URL", "https://staging.vocanova.site")
+	t.Setenv("OAUTH_REDIRECT_URI", "https://api-staging.vocanova.site/auth/oauth/google/callback")
+	t.Setenv("SESSION_COOKIE_DOMAIN", "staging.vocanova.site")
+	t.Setenv("VOCANOVA_SYNTHETIC_SMOKE_TEST_EMAIL", " Smoke-Test-Bot@Synthetic.Vocanova.Invalid ")
+
+	cfg, err := LoadProductionConfig()
+	require.NoError(t, err)
+	assert.Equal(t, "smoke-test-bot@synthetic.vocanova.invalid", cfg.SyntheticSmokeTestEmail,
+		"the reserved identity must be normalized so it matches the already-normalized addresses the auth paths compare against")
 }
 
 func TestLoadProductionConfig_HonorsExplicitDisables(t *testing.T) {

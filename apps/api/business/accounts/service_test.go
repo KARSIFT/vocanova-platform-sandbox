@@ -89,6 +89,7 @@ func newService(t *testing.T) (*Service, *MemoryRepository, *authRepoStub, *emai
 			RequestWindow: time.Hour, RequestLimit: 100,
 			SweepWindow: time.Hour, SweepLimit: 100,
 		},
+		ReservedSyntheticEmail: reservedSyntheticTestEmail,
 	})
 	return svc, repo, authRepo, fake, c
 }
@@ -192,6 +193,45 @@ func TestRequestEmailChangeLinkRejectsEmptyEmail(t *testing.T) {
 
 	_, err = svc.RequestEmailChangeLink(context.Background(), uid, "1.2.3.4", "sess-token", "no-domain@")
 	assert.ErrorIs(t, err, ErrEmailChangeInvalidEmail)
+}
+
+// reservedSyntheticTestEmail is VOC-050-T00's reserved synthetic
+// smoke-test identity. The email-change flow must refuse it for the
+// same reason the sign-in paths do: it is the only remaining way a
+// real account could come to hold the reserved address.
+const reservedSyntheticTestEmail = "smoke-test-bot@synthetic.vocanova.invalid"
+
+func TestRequestEmailChangeLinkRejectsReservedSyntheticEmail(t *testing.T) {
+	svc, repo, authRepo, fake, _ := newService(t)
+	uid := uuid.New()
+	authRepo.setUser(&auth.User{ID: uid, Email: "old@example.com", Status: "active"})
+
+	_, err := svc.RequestEmailChangeLink(context.Background(), uid, "1.2.3.4", "sess-token", "  Smoke-Test-Bot@Synthetic.Vocanova.Invalid ")
+
+	assert.ErrorIs(t, err, ErrEmailChangeInvalidEmail)
+	assert.Len(t, fake.Sent, 0)
+	assert.Len(t, repo.LinksForUser(uid), 0)
+}
+
+// TestConsumeEmailChangeLinkRejectsReservedSyntheticEmail covers the
+// confirm-time re-check: a link minted before the address was reserved
+// must not still be redeemable against it.
+func TestConsumeEmailChangeLinkRejectsReservedSyntheticEmail(t *testing.T) {
+	svc, repo, authRepo, _, c := newService(t)
+	uid := uuid.New()
+	authRepo.setUser(&auth.User{ID: uid, Email: "old@example.com", Status: "active"})
+	repo.SetUser(uid, "old@example.com")
+
+	rawToken, hash, err := auth.NewTokenAndHash()
+	require.NoError(t, err)
+	now := c.Now()
+	_, err = repo.CreateEmailChangeLink(context.Background(), uid, reservedSyntheticTestEmail, hash, "test", now, now.Add(15*time.Minute))
+	require.NoError(t, err)
+
+	_, err = svc.ConsumeEmailChangeLink(context.Background(), "1.2.3.4", "sess-token", rawToken)
+
+	assert.ErrorIs(t, err, ErrInvalidEmailChangeLink)
+	assert.Equal(t, "old@example.com", repo.UserEmail(uid))
 }
 
 // TestRequestEmailChangeLinkRequiresUserID ensures the service

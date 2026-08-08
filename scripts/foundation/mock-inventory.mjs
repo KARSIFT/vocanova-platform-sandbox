@@ -286,7 +286,8 @@ export function validateMockInventory() {
   // user_onboarding_profiles migration in DOC-05 §18 order after the
   // P4 gamification_tables migration; T03 adds the
   // email_change_links migration; T04 adds the
-  // account_deletion_requests migration.
+  // account_deletion_requests migration. VOC-050-T00 adds the
+  // synthetic smoke-test account marker on users.
   const allowedMigrationFiles = new Set([
     "20260724210000_identity_foundation.sql",
     "20260724210001_oauth_state.sql",
@@ -301,6 +302,7 @@ export function validateMockInventory() {
     "20260725140000_voc031_p5_user_onboarding_profiles.sql",
     "20260725140001_voc031_p5_email_change_links.sql",
     "20260725140002_voc031_p5_account_deletion_requests.sql",
+    "20260808141000_voc050_t00_synthetic_smoke_test_user.sql",
   ]);
   for (const entry of readdirSync(apiMigrationRoot, {
     withFileTypes: true,

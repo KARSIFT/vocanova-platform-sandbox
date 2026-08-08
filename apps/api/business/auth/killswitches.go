@@ -47,6 +47,16 @@ type KillSwitches struct {
 	// switch already admits everyone. A nil or empty map allowlists
 	// no one, matching pre-VOC-038 behavior.
 	SignupAllowlist map[string]struct{}
+
+	// ReservedSyntheticEmail is the identity of the deploy-seeded
+	// synthetic smoke-test account (VOC-050-T00). Every real
+	// sign-in path refuses it, so the account can only ever be
+	// created by the deploy-time seed and only ever authenticated
+	// by the CI-only minting mechanism built on top of it. An
+	// empty value reserves nothing, keeping every existing
+	// non-production wiring unchanged. Callers must pass an
+	// already-normalized address (see NormalizeEmail).
+	ReservedSyntheticEmail string
 }
 
 // signupAllowed reports whether a never-before-seen normalizedEmail
@@ -55,11 +65,24 @@ type KillSwitches struct {
 // the founder-maintained SignupAllowlist. Callers must pass an
 // already-normalized email (see normalizeEmail).
 func (sw *KillSwitches) signupAllowed(normalizedEmail string) bool {
+	if sw.IsReservedSyntheticEmail(normalizedEmail) {
+		return false
+	}
 	if sw == nil || sw.NewSignupsEnabled {
 		return true
 	}
 	_, ok := sw.SignupAllowlist[normalizedEmail]
 	return ok
+}
+
+// IsReservedSyntheticEmail reports whether normalizedEmail is the
+// reserved synthetic smoke-test identity. It is exported because the
+// accounts package must apply the same refusal to the email-change
+// flow: without it, a real user could move their own account onto the
+// reserved address and the next deploy's seed would find an account it
+// does not own sitting there.
+func (sw *KillSwitches) IsReservedSyntheticEmail(normalizedEmail string) bool {
+	return sw != nil && sw.ReservedSyntheticEmail != "" && normalizedEmail == sw.ReservedSyntheticEmail
 }
 
 // SetKillSwitches installs a kill-switch struct on the service.

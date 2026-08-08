@@ -70,6 +70,13 @@ type Config struct {
 	AccountDeletionSweepLimit int
 	RateLimit                 EmailChangeRateLimitConfig
 	AccountDeletionRateLimit  AccountDeletionRateLimitConfig
+
+	// ReservedSyntheticEmail mirrors auth.KillSwitches'
+	// ReservedSyntheticEmail (VOC-050-T00). The email-change flow is
+	// the one remaining way a real account could come to hold the
+	// reserved synthetic identity, so it applies the same refusal
+	// the sign-in paths do. An empty value reserves nothing.
+	ReservedSyntheticEmail string
 }
 
 // EmailChangeRateLimitConfig is the rate-limit shape T03 introduces.
@@ -239,7 +246,7 @@ func (s *Service) RequestEmailChangeLink(ctx context.Context, userID uuid.UUID, 
 		return nil, errors.New("user id required")
 	}
 	newEmail = strings.ToLower(strings.TrimSpace(newEmail))
-	if !isAcceptableEmail(newEmail) {
+	if !isAcceptableEmail(newEmail) || s.isReservedSyntheticEmail(newEmail) {
 		return nil, ErrEmailChangeInvalidEmail
 	}
 
@@ -284,6 +291,13 @@ func (s *Service) RequestEmailChangeLink(ctx context.Context, userID uuid.UUID, 
 	}
 	_ = link // link is constructed; the dispatch result is what matters.
 	return &EmailLink{Link: urlStr, NewEmail: newEmail}, nil
+}
+
+// isReservedSyntheticEmail reports whether an already-normalized
+// address is the reserved synthetic smoke-test identity.
+func (s *Service) isReservedSyntheticEmail(normalizedEmail string) bool {
+	reserved := strings.ToLower(strings.TrimSpace(s.cfg.ReservedSyntheticEmail))
+	return reserved != "" && normalizedEmail == reserved
 }
 
 func (s *Service) emailChangeURL(token, newEmail string) string {
@@ -355,6 +369,12 @@ func (s *Service) ConsumeEmailChangeLink(ctx context.Context, clientIP, sessionT
 	}
 	now := s.clock.Now()
 	if !link.Valid(now) {
+		return nil, ErrInvalidEmailChangeLink
+	}
+	// Re-checked at confirm time as well as request time: a link
+	// minted before the address was reserved must not still be
+	// redeemable against it.
+	if s.isReservedSyntheticEmail(link.NewEmail) {
 		return nil, ErrInvalidEmailChangeLink
 	}
 

@@ -98,6 +98,12 @@ func (s *Service) RequestMagicLink(ctx context.Context, clientIP, emailAddr stri
 		// Return the same generic result to avoid enumeration.
 		return nil
 	}
+	if s.killSwitches.IsReservedSyntheticEmail(emailAddr) {
+		// Never issue a real sign-in link for the synthetic
+		// smoke-test identity; the same generic result keeps the
+		// reserved address indistinguishable from any other.
+		return nil
+	}
 
 	now := s.clock.Now()
 	expiresAt := now.Add(s.cfg.MagicLinkLifetime)
@@ -150,6 +156,9 @@ func (s *Service) ConsumeMagicLink(ctx context.Context, clientIP, token, emailAd
 	emailAddr = normalizeEmail(emailAddr)
 	token = strings.TrimSpace(token)
 	if token == "" || emailAddr == "" {
+		return nil, nil, "", ErrInvalidMagicLink
+	}
+	if s.killSwitches.IsReservedSyntheticEmail(emailAddr) {
 		return nil, nil, "", ErrInvalidMagicLink
 	}
 
@@ -285,6 +294,9 @@ func (s *Service) OAuthCallback(ctx context.Context, clientIP, code, state, cook
 
 	emailAddr := normalizeEmail(identity.Email)
 	if emailAddr == "" {
+		return nil, nil, "", "", ErrOAuthProviderFailed
+	}
+	if s.killSwitches.IsReservedSyntheticEmail(emailAddr) {
 		return nil, nil, "", "", ErrOAuthProviderFailed
 	}
 

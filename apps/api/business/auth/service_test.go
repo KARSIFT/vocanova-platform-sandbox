@@ -87,6 +87,51 @@ func TestRequestMagicLinkEmptyEmailReturnsNoErrorAndNoEmail(t *testing.T) {
 	assert.Len(t, fake.Sent, 0)
 }
 
+// reservedSyntheticTestEmail is the address VOC-050-T00 reserves for
+// the deploy-seeded synthetic smoke-test account in these tests.
+const reservedSyntheticTestEmail = "smoke-test-bot@synthetic.vocanova.invalid"
+
+// reservedSyntheticKillSwitches leaves every real path enabled so the
+// tests below prove the refusal comes from the reserved-identity guard
+// alone, not from an incidentally-closed kill switch.
+func reservedSyntheticKillSwitches() *KillSwitches {
+	return &KillSwitches{
+		MagicLinkEnabled:       true,
+		OAuthEnabled:           true,
+		NewSignupsEnabled:      true,
+		ReservedSyntheticEmail: reservedSyntheticTestEmail,
+	}
+}
+
+func TestRequestMagicLinkReservedSyntheticEmailSendsNothing(t *testing.T) {
+	svc, repo, fake, _ := testService(t)
+	svc.SetKillSwitches(reservedSyntheticKillSwitches())
+
+	err := svc.RequestMagicLink(context.Background(), "1.2.3.4", "  Smoke-Test-Bot@Synthetic.Vocanova.Invalid ")
+
+	require.NoError(t, err)
+	assert.Len(t, fake.Sent, 0, "no sign-in link may be dispatched for the reserved synthetic identity")
+	assert.Len(t, repo.magicLinks, 0, "no magic link may be persisted for the reserved synthetic identity")
+}
+
+func TestConsumeMagicLinkRejectsReservedSyntheticEmail(t *testing.T) {
+	svc, _, _, _ := testService(t)
+	svc.SetKillSwitches(reservedSyntheticKillSwitches())
+
+	_, _, _, err := svc.ConsumeMagicLink(context.Background(), "1.2.3.4", "not-a-real-token", reservedSyntheticTestEmail)
+
+	assert.ErrorIs(t, err, ErrInvalidMagicLink)
+}
+
+func TestSignupAllowedRefusesReservedSyntheticEmailEvenWhenAllowlisted(t *testing.T) {
+	switches := reservedSyntheticKillSwitches()
+	switches.NewSignupsEnabled = false
+	switches.SignupAllowlist = map[string]struct{}{reservedSyntheticTestEmail: {}}
+
+	assert.False(t, switches.signupAllowed(reservedSyntheticTestEmail))
+	assert.False(t, switches.IsReservedSyntheticEmail("someone@example.com"))
+}
+
 func TestConsumeMagicLinkCreatesUserAndSession(t *testing.T) {
 	svc, repo, fake, c := testService(t)
 	ctx := context.Background()
@@ -439,6 +484,21 @@ func TestOAuthCallbackRejectsUnknownRedirectURI(t *testing.T) {
 
 	_, _, err := svc.OAuthStart(ctx, "1.2.3.4", "https://evil.example.com/callback")
 	assert.ErrorIs(t, err, ErrOAuthProviderFailed)
+}
+
+func TestOAuthCallbackRejectsReservedSyntheticEmail(t *testing.T) {
+	identity := &OAuthIdentity{Subject: "sub-123", Email: reservedSyntheticTestEmail, EmailVerified: true}
+	oauth := NewFakeOAuthProvider(identity)
+	svc, repo, _, _ := testServiceWithOAuth(t, oauth)
+	svc.SetKillSwitches(reservedSyntheticKillSwitches())
+	ctx := context.Background()
+
+	_, stateToken, err := svc.OAuthStart(ctx, "1.2.3.4", "https://test.example.com/app")
+	require.NoError(t, err)
+	_, _, _, _, err = svc.OAuthCallback(ctx, "1.2.3.4", "auth-code", stateToken, stateToken)
+
+	assert.ErrorIs(t, err, ErrOAuthProviderFailed)
+	assert.Len(t, repo.sessions, 0, "no session may be issued for the reserved synthetic identity")
 }
 
 func TestOAuthStartRateLimited(t *testing.T) {

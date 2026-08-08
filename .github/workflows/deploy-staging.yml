@@ -80,6 +80,12 @@
 #                                              remains exclusively
 #                                              founder-populated)
 #   /opt/vocanova/apps/api/scripts/migrate.sh   (SCPed by this workflow)
+#   /opt/vocanova/apps/api/scripts/seed-synthetic-smoke-user.sh
+#   /opt/vocanova/apps/api/scripts/seed-synthetic-smoke-user.sql
+#                                              (SCPed by this workflow;
+#                                              VOC-050-T00's idempotent
+#                                              synthetic smoke-test account
+#                                              seed, run after migrations)
 #   /opt/vocanova/apps/api/migrations/...       (SCPed by this workflow)
 #   /usr/local/bin/atlas                     (installed by this workflow
 #                                              on first run; idempotent)
@@ -162,6 +168,10 @@
 #   * apps/api/migrations/atlas.sum (T06) — the integrity
 #     file the T06 wrapper consults before applying; copied
 #     along with the .sql files in the deploy bundle.
+#   * apps/api/scripts/seed-synthetic-smoke-user.sh + .sql
+#     (VOC-050-T00) — the idempotent seed this workflow's
+#     SSH step runs immediately after migrations, while
+#     only Postgres is up.
 #   * .github/workflows/accessibility.yml + lighthouse.yml
 #     — the design pattern this workflow mirrors (separate
 #     workflow file, NOT a pipeline.yml job).
@@ -439,6 +449,12 @@ jobs:
           # tests, not scripts/), so `cp` is sufficient.
           cp apps/api/scripts/migrate.sh /tmp/deploy-bundle/apps/api/scripts/
           chmod +x /tmp/deploy-bundle/apps/api/scripts/migrate.sh
+          # VOC-050-T00's synthetic smoke-test account seed. The
+          # script and its SQL travel together; the script resolves
+          # the .sql file relative to its own directory.
+          cp apps/api/scripts/seed-synthetic-smoke-user.sh /tmp/deploy-bundle/apps/api/scripts/
+          cp apps/api/scripts/seed-synthetic-smoke-user.sql /tmp/deploy-bundle/apps/api/scripts/
+          chmod +x /tmp/deploy-bundle/apps/api/scripts/seed-synthetic-smoke-user.sh
           # T06's migration files. Atlas's default
           # versioned glob is `*.sql`, so the .down.sql
           # .example files are deliberately NOT copied
@@ -760,6 +776,17 @@ jobs:
             fi
             DATABASE_URL="$migration_database_url" sh /opt/vocanova/apps/api/scripts/migrate.sh
             unset migration_database_url
+
+            # VOC-050-T00: ensure the synthetic smoke-test account
+            # exists before the rest of the stack starts. The seed is
+            # idempotent, so it runs on every deploy; it reads the
+            # reserved identity from the api.env sourced above, which
+            # is the same value the API itself refuses on every real
+            # sign-in path. A seed failure aborts the deploy under
+            # `set -e` before `up -d`, leaving the running containers
+            # untouched - the same fail-closed shape as the migration
+            # step above.
+            sh /opt/vocanova/apps/api/scripts/seed-synthetic-smoke-user.sh
 
             # -------------------------------------------------------------
             # 6. Bring the stack up.
