@@ -24,6 +24,13 @@ amendments:
     approving_owner: founder
     resolution_recorded_in: specs/changes/VOC-032-begin-milestone-r1-staging-readiness-docs-product/change.yaml
     notes: "Supersedes the prior Render Web Service + Cloudflare Workers + Render PostgreSQL rows in §1's target-infrastructure table and the vocanova.com domain set, per VOC-032-D02 (resolved at adoption 2026-07-28, founder-gate delegation). The superseded rows are annotated, not silently deleted, consistent with this repository's existing convention for amending an approved document (see DOC-15 §17.0 and the A-003 active-authority notice in DOC-16). Detailed in §1's amendment note below."
+  - id: VOC-051-§1-amendment
+    title: "§1 Error monitoring row extended to cover apps/web browser-side reporting and the hourly Sentry-to-GitHub-issue monitoring workflow"
+    adopted_in: VOC-051
+    adopted_at: 2026-08-08
+    approving_owner: founder
+    resolution_recorded_in: specs/changes/VOC-051-add-hourly-sentry-based-log-error-monitoring/change.yaml
+    notes: "Sentry remains the error-monitoring tool §1 already named; nothing is superseded. This amendment records what VOC-051 added around it: apps/web now reports browser-side and server-side errors to Sentry (T01), Layout B gives each application a separate Sentry project per environment tier (four projects, per the package's t00-evidence.md §3), and .github/workflows/error-monitoring.yml queries all four hourly and opens one unlabeled GitHub issue per genuinely new problem so plan-from-issue drafts a governed change package from it (T02). The existing row text is annotated rather than rewritten, consistent with VOC-032-§1-amendment's convention. Detailed in §1's amendment note below."
 source_files:
   - path: 10-development-workflow.md
     sha256: 7fdd38cb7f877051907cc68e0930ece507fe3466dab3e008795c2827eeb21aaf
@@ -82,7 +89,7 @@ is currently deployed against — not a plan:
 | DNS/TLS/WAF/CDN (edge) | Cloudflare (narrowed role) — DNS, TLS, WAF, and CDN only; **no Cloudflare compute** (no Workers, no OpenNext, no Cloudflare D1/KV/Durable Objects/Queues/R2 at the edge) |
 | Atlas migration tooling | `apps/api/atlas.hcl` + `apps/api/scripts/migrate.sh` apply the existing `apps/api/migrations/*.sql` set; `.down.sql.example` files remain non-executable by Atlas per the existing `apps/api/migrations/README.md` rule |
 | Deploy automation | `.github/workflows/deploy-staging.yml` — build + tag by commit SHA + push to `ghcr.io` on every merge to `develop`, then SSH to the staging host, pull, apply migrations via the `T06` wrapper, `docker compose up -d`, poll `/healthz`; fails closed without tearing down currently-running containers if the health check does not pass within a bounded timeout |
-| Error monitoring | Sentry (unchanged) |
+| Error monitoring | Sentry — **extended 2026-08-08 by `VOC-051-§1-amendment`** to cover `apps/web` browser-side/server-side error reporting and an hourly Sentry-to-GitHub-issue monitoring workflow (see the amendment note below); the tool choice itself is unchanged |
 | Uptime monitoring | Better Stack / UptimeRobot (unchanged) |
 | Harness, Terraform/OpenTofu, Cloudflare D1/KV/Durable Objects/Queues/R2 | Deferred post-MVP (unchanged) |
 
@@ -107,6 +114,37 @@ the founder later wants to migrate to `vocanova.com` as the production domain, t
 separate, founder-approved DOC-11 amendment, not an implicit consequence of this one. Separate
 Google OAuth clients, AI-provider keys, and Sentry environments per environment tier; no
 production secrets ever reachable from preview/staging/CI (unchanged from v1.0).
+
+> **Amendment note (`VOC-051-§1-amendment`, adopted 2026-08-08 via VOC-051; founder as approving
+> owner).** Sentry remains the error-monitoring tool both tables above already name — this
+> amendment supersedes nothing and retires nothing. It records what VOC-051 built around that
+> unchanged choice, so the "Error monitoring" row no longer under-describes the mechanism actually
+> in place:
+>
+> - **`apps/web` now reports errors to Sentry** (`VOC-051-T01`), via `@sentry/nextjs` across the
+>   browser, server, and edge runtimes. Previously only `apps/api` did. The SDK is a no-op when its
+>   DSN is unset, matching `apps/api`'s existing behaviour, so an unconfigured environment reports
+>   nothing rather than failing.
+> - **The "separate Sentry environments per environment tier" requirement in the paragraph above is
+>   satisfied by separate Sentry *projects*, not only by the `environment` event tag.** VOC-051
+>   adopted a four-project layout — `prod-api`, `prod-web`, `stage-api`, `stage-web` under the
+>   `vocanova` organization — one per application per tier, each with its own DSN held in its own
+>   GitHub Actions secret. The per-tier `SENTRY_ENVIRONMENT` / `NEXT_PUBLIC_SENTRY_ENVIRONMENT` tag
+>   is still set on top of that. The full layout record, including which secret feeds which project,
+>   is in `specs/changes/VOC-051-add-hourly-sentry-based-log-error-monitoring/t00-evidence.md` §3.
+>   This also closed a gap: `apps/api` staging had no Sentry wiring at all before VOC-051.
+> - **Sentry data now feeds the governed change loop automatically.**
+>   `.github/workflows/error-monitoring.yml` runs hourly, queries all four projects for unresolved
+>   issues first seen in the preceding 90 minutes using a read-only (`project:read` + `event:read`)
+>   Sentry token held as the `SENTRY_API_TOKEN` Actions secret, and opens one plain unlabeled GitHub
+>   issue per genuinely new problem — deduplicated on a stable Sentry issue-ID marker embedded in the
+>   issue body — so `pipeline.yml`'s `plan-from-issue` job drafts a change package from it. This is
+>   the same route AGENTS.md's "Reporting a bug found outside the normal loop" requires of a human
+>   who spots a bug; it is observability feeding that existing loop, and it changes no release,
+>   deployment, or approval gate. The workflow holds `issues: write` and nothing else, and
+>   deliberately has no SSH access to either host.
+> - **Uptime/liveness monitoring is untouched** by this amendment — the "Uptime monitoring" row's
+>   Better Stack / UptimeRobot choice remains as stated and unimplemented here.
 
 ## 2. Release artifacts and deployment ordering
 

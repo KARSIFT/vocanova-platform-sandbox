@@ -1,33 +1,147 @@
 name: error-monitoring
 
+# Hourly Sentry -> GitHub-issue monitoring agent (VOC-051-T02).
+#
+# Queries the Sentry API for unresolved issues that were first seen recently
+# across all four Layout B projects (see the VOC-051 package's
+# `t00-evidence.md` §3) and opens one plain, UNLABELED GitHub issue per
+# genuinely new problem, so `pipeline.yml`'s `plan-from-issue` job drafts a
+# governed change package from it - the same route AGENTS.md's "Reporting a bug
+# found outside the normal loop" requires of a human. This workflow only ever
+# opens issues; it never adopts, approves, merges, or deploys anything.
+#
+# ## Required secret and its expected scope (VOC-051-AC-01 / TEST-02)
+#
+# `SENTRY_API_TOKEN` - a Sentry **internal-integration** token
+# (`vocanova-monitoring-agent`), scoped to exactly:
+#
+#   * `project:read`  - resolve the project this workflow queries
+#   * `event:read`    - list issues and their event metadata
+#
+# and NO write or admin scope on any resource. Those two are the minimum that
+# `GET /projects/{org}/{project}/issues/` accepts; anything narrower cannot list
+# issues at all, and every broader scope would grant mutation rights this
+# workflow never exercises. An internal-integration token (rather than a
+# personal token) is deliberate: the Sentry plan has a single user seat, so a
+# personal token would die with that seat. Full reasoning in the package's
+# `t00-evidence.md` §1b and `t02-evidence.md` §2.
+#
+# The secret is REQUIRED, not optional: if it is missing the run fails loudly
+# rather than silently reporting "no new problems" (VOC-051-T03).
+#
+# ## No SSH access (VOC-051-AC-05)
+#
+# This workflow deliberately declares and uses no SSH credential of any kind -
+# no `STAGING_SSH_*`, no `PRODUCTION_SSH_*`, no `appleboy/ssh-action` or
+# `appleboy/scp-action`, and no new equivalent. It talks to the Sentry HTTP API
+# and the GitHub API only, and never reaches either host.
+
 on:
   schedule:
     - cron: "0 * * * *"
   workflow_dispatch:
 
+# Only `issues: write` - deliberately no `contents:`, `deployments:`,
+# `packages:`, or `pull-requests:`. The GitHub App token minted below is
+# requested with the same single permission.
 permissions:
   issues: write
+
+# Serialized, never cancelled: two overlapping runs (an hourly schedule and a
+# manual `workflow_dispatch`, say) would each build their own
+# already-reported-marker index and could both decide the same Sentry issue is
+# new, creating duplicate issues and duplicate `plan-from-issue` runs
+# (`impact-analysis.md`'s VOC-051-R01). `cancel-in-progress: false` because a
+# run that is mid-way through creating issues must finish, not be killed.
+concurrency:
+  group: error-monitoring
+  cancel-in-progress: false
 
 jobs:
   monitor:
     name: monitor sentry issues
     runs-on: ubuntu-latest
     steps:
+      # `secrets` is not available in a step `if:` expression, so presence has
+      # to be established as a step output first.
+      - name: Detect whether GitHub App credentials are available
+        id: app-credentials
+        env:
+          KARSIFT_BOT_APP_ID: ${{ secrets.KARSIFT_BOT_APP_ID }}
+          KARSIFT_BOT_PRIVATE_KEY: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
+        run: |
+          if [ -n "$KARSIFT_BOT_APP_ID" ] && [ -n "$KARSIFT_BOT_PRIVATE_KEY" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Identity decision (specification.md open question 1): a GitHub App
+      # installation token, matching karsift-ai-infra's `adopt.yml` pattern,
+      # NOT the default `GITHUB_TOKEN`. This is load-bearing rather than
+      # stylistic: GitHub does not start new workflow runs from events created
+      # with the default `GITHUB_TOKEN`, so an issue opened that way would
+      # never trigger `pipeline.yml`'s `plan-from-issue` job - the entire point
+      # of filing it. The `|| github.token` fallback below keeps the run
+      # working (issue still filed, planner triggered by hand) if the App
+      # credentials are absent, and the script warns explicitly when it lands
+      # on that path instead of pretending the loop closed.
+      - name: Mint a GitHub App installation token
+        id: app-token
+        if: steps.app-credentials.outputs.available == 'true'
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.KARSIFT_BOT_APP_ID }}
+          private-key: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
+          permission-issues: write
+
       - name: Query Sentry and open deduplicated bug issues
         uses: actions/github-script@v7
         env:
           SENTRY_ORG: vocanova
           SENTRY_API_TOKEN: ${{ secrets.SENTRY_API_TOKEN }}
+          # Window decision (specification.md open question 4): a fixed
+          # look-back window, deliberately wider than the hourly cadence, with
+          # no persisted "last checked" state anywhere. The 30 minutes of
+          # overlap absorb a late/skipped cron tick (GitHub's scheduled
+          # triggers are best-effort and can be delayed or dropped under load)
+          # without needing an artifact, cache entry, or committed marker file
+          # that could itself go stale, be evicted, or need write permission
+          # this workflow deliberately does not have. The duplicate-check index
+          # below is what makes the overlap harmless.
           WINDOW_MINUTES: "90"
+          # Layout B per t00-evidence.md §3: one Sentry project per app per
+          # tier, so the project slug - not an `environment=` query filter - is
+          # what identifies the tier. Filtering by environment tag as well
+          # would silently drop any event that reached the project without the
+          # tag, which is exactly the class of problem this agent exists to
+          # notice.
           SENTRY_PROJECT_MATRIX: >-
             [{"project":"prod-api","environment":"production"},{"project":"prod-web","environment":"production"},{"project":"stage-api","environment":"staging"},{"project":"stage-web","environment":"staging"}]
+          USING_APP_TOKEN: ${{ steps.app-credentials.outputs.available }}
         with:
+          github-token: ${{ steps.app-token.outputs.token || github.token }}
           script: |
+            const MARKER_PREFIX = "sentry-issue-id:";
+            const ISSUE_PAGE_SIZE = 100;
+            // Bounds the duplicate-check index scan. Hitting this cap means
+            // the index is incomplete, which would risk duplicate issues, so
+            // the run fails instead of guessing.
+            const MAX_ISSUE_INDEX_PAGES = 40;
+
             const requiredEnvNames = ["SENTRY_API_TOKEN", "SENTRY_ORG", "SENTRY_PROJECT_MATRIX", "WINDOW_MINUTES"];
             for (const envName of requiredEnvNames) {
               if (!process.env[envName] || process.env[envName].trim().length === 0) {
                 throw new Error(`Missing required environment variable: ${envName}`);
               }
+            }
+
+            if (process.env.USING_APP_TOKEN !== "true") {
+              core.warning(
+                "KARSIFT_BOT_APP_ID/KARSIFT_BOT_PRIVATE_KEY are not set, so this run falls back to the default GITHUB_TOKEN. " +
+                  "Any issue it opens will NOT trigger pipeline.yml's plan-from-issue job (GitHub does not start workflow runs " +
+                  "from GITHUB_TOKEN-created events); planning must be started by hand for those issues."
+              );
             }
 
             const sentryToken = process.env.SENTRY_API_TOKEN.trim();
@@ -48,18 +162,21 @@ jobs:
             }
 
             const baseUrl = "https://sentry.io/api/0";
-            const headers = {
+            const sentryHeaders = {
               Authorization: `Bearer ${sentryToken}`,
               Accept: "application/json",
             };
             const windowStartMs = Date.now() - windowMinutes * 60 * 1000;
 
+            function markerFor(sentryIssueId) {
+              return `${MARKER_PREFIX}${sentryIssueId}`;
+            }
+
             function parseNextLink(linkHeader) {
               if (!linkHeader) {
                 return null;
               }
-              const parts = linkHeader.split(",");
-              for (const rawPart of parts) {
+              for (const rawPart of linkHeader.split(",")) {
                 const part = rawPart.trim();
                 if (!part.includes('rel="next"')) {
                   continue;
@@ -76,7 +193,7 @@ jobs:
             }
 
             async function fetchSentryJson(url) {
-              const response = await fetch(url, { headers });
+              const response = await fetch(url, { headers: sentryHeaders });
               const responseBody = await response.text();
               if (!response.ok) {
                 throw new Error(
@@ -92,35 +209,78 @@ jobs:
               return { parsedBody, responseHeaders: response.headers };
             }
 
-            async function listRecentUnresolvedIssues(project) {
+            // Server-side `firstSeen:-<window>m` does the filtering, and
+            // `sort=new` (newest first seen first) lets pagination stop at the
+            // first issue outside the window instead of walking every
+            // unresolved issue in the project. The client-side check is a
+            // belt-and-braces guard, not the primary filter.
+            async function listNewUnresolvedIssues(project) {
+              const query = `is:unresolved firstSeen:-${windowMinutes}m`;
+              let nextUrl =
+                `${baseUrl}/projects/${encodeURIComponent(sentryOrg)}/${encodeURIComponent(project)}/issues/` +
+                `?query=${encodeURIComponent(query)}&sort=new&limit=${ISSUE_PAGE_SIZE}`;
               const collectedIssues = [];
-              let nextUrl = `${baseUrl}/projects/${encodeURIComponent(sentryOrg)}/${encodeURIComponent(project)}/issues/?query=${encodeURIComponent("is:unresolved")}&sort=date&limit=100`;
 
               while (nextUrl) {
                 const { parsedBody, responseHeaders } = await fetchSentryJson(nextUrl);
                 if (!Array.isArray(parsedBody)) {
-                  throw new Error(`Unexpected Sentry response for project ${project}: expected array`);
+                  throw new Error(`Unexpected Sentry response for project ${project}: expected an array of issues`);
                 }
+                let reachedWindowEdge = false;
                 for (const issue of parsedBody) {
-                  const firstSeen = issue.firstSeen ? Date.parse(issue.firstSeen) : Number.NaN;
-                  if (!Number.isFinite(firstSeen) || firstSeen < windowStartMs) {
+                  const firstSeenMs = issue.firstSeen ? Date.parse(issue.firstSeen) : Number.NaN;
+                  if (!Number.isFinite(firstSeenMs)) {
                     continue;
+                  }
+                  if (firstSeenMs < windowStartMs) {
+                    reachedWindowEdge = true;
+                    break;
                   }
                   collectedIssues.push(issue);
                 }
-                const linkHeader = responseHeaders.get("link");
-                nextUrl = parseNextLink(linkHeader);
+                nextUrl = reachedWindowEdge ? null : parseNextLink(responseHeaders.get("link"));
               }
 
               return collectedIssues;
             }
 
-            async function issueMarkerExists(marker) {
-              const searchResponse = await github.rest.search.issuesAndPullRequests({
-                q: `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open in:body "${marker}"`,
-                per_page: 1,
-              });
-              return searchResponse.data.total_count > 0;
+            // Duplicate-check index (VOC-051-AC-04). Built once per run by
+            // paginating this repository's own issues and extracting every
+            // `sentry-issue-id:<id>` marker found in a body, rather than
+            // calling the Search API once per candidate: search is an
+            // eventually-consistent index, and an issue opened minutes earlier
+            // may not be findable yet, which is precisely how duplicates got
+            // created. `state: "all"` because a Sentry problem that already
+            // has a GitHub issue - open OR already closed as fixed - must not
+            // produce a second one.
+            async function loadReportedMarkers() {
+              const reportedMarkers = new Set();
+              const markerPattern = new RegExp(`${MARKER_PREFIX}([A-Za-z0-9_-]+)`, "g");
+              let page = 1;
+
+              while (page <= MAX_ISSUE_INDEX_PAGES) {
+                const { data: issues } = await github.rest.issues.listForRepo({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  state: "all",
+                  per_page: ISSUE_PAGE_SIZE,
+                  page,
+                });
+                for (const issue of issues) {
+                  for (const match of String(issue.body || "").matchAll(markerPattern)) {
+                    reportedMarkers.add(markerFor(match[1]));
+                  }
+                }
+                if (issues.length < ISSUE_PAGE_SIZE) {
+                  return reportedMarkers;
+                }
+                page += 1;
+              }
+
+              throw new Error(
+                `Could not index every existing issue within ${MAX_ISSUE_INDEX_PAGES} pages of ${ISSUE_PAGE_SIZE}. ` +
+                  "Refusing to continue, because an incomplete index would open duplicate issues."
+              );
             }
 
             function toRootCauseSummary(issue) {
@@ -132,73 +292,101 @@ jobs:
               if (metadataType || metadataValue) {
                 segments.push(`${metadataType}${metadataType && metadataValue ? ": " : ""}${metadataValue}`.trim());
               }
+              if (metadata.filename) {
+                segments.push(`file: ${metadata.filename}`);
+              }
               if (culprit) {
                 segments.push(`culprit: ${culprit}`);
               }
               if (segments.length === 0) {
                 return "No stack-trace or root-cause summary was present on the Sentry issue list response.";
               }
-              return segments.join("\n");
+              return segments.map((segment) => `- ${segment}`).join("\n");
             }
 
+            function buildIssueBody(sentryIssue, mapping, marker) {
+              const sentryTitle = sentryIssue.title || "Untitled issue";
+              return [
+                `<!-- ${marker} -->`,
+                "",
+                "Automated hourly Sentry monitoring (`.github/workflows/error-monitoring.yml`) detected a new",
+                "unresolved production/staging problem. Filed as a plain unlabeled issue so `plan-from-issue`",
+                "drafts a change package from it, per AGENTS.md's \"Reporting a bug found outside the normal loop\".",
+                "",
+                `- Environment: \`${mapping.environment}\``,
+                `- Sentry organization / project: \`${sentryOrg}\` / \`${mapping.project}\``,
+                `- Sentry issue (permalink, full stack trace and events): ${sentryIssue.permalink || "(no permalink returned by the Sentry API)"}`,
+                `- Sentry short ID: \`${sentryIssue.shortId || "unknown"}\``,
+                `- First seen: ${sentryIssue.firstSeen || "unknown"}`,
+                `- Last seen: ${sentryIssue.lastSeen || "unknown"}`,
+                `- Events so far: ${sentryIssue.count || "unknown"}`,
+                `- Users affected so far: ${sentryIssue.userCount === undefined ? "unknown" : sentryIssue.userCount}`,
+                "",
+                "## Failing behavior",
+                "",
+                sentryTitle,
+                "",
+                "## Root cause detail available from Sentry",
+                "",
+                toRootCauseSummary(sentryIssue),
+                "",
+                "## Reproduction",
+                "",
+                "This problem was observed in a real deployed environment rather than reproduced locally.",
+                "The Sentry permalink above carries the full stack trace, breadcrumbs, request context, and",
+                "every recorded event - start there rather than re-deriving the diagnosis.",
+                "",
+                `<sub>Duplicate-check marker: \`${marker}\` - do not remove or edit it, the monitoring workflow`,
+                "keys its duplicate check on this exact string, not on this issue's title.</sub>",
+              ].join("\n");
+            }
+
+            const reportedMarkers = await loadReportedMarkers();
+            core.info(`Duplicate-check index built: ${reportedMarkers.size} Sentry issue(s) already reported.`);
+
+            let scannedCount = 0;
             let createdCount = 0;
             let deduplicatedCount = 0;
-            let scannedCount = 0;
 
             for (const mapping of projectMatrix) {
               if (!mapping.project || !mapping.environment) {
                 throw new Error(`Invalid project mapping entry: ${JSON.stringify(mapping)}`);
               }
 
-              const sentryIssues = await listRecentUnresolvedIssues(mapping.project);
-              core.info(`Project ${mapping.project}: ${sentryIssues.length} unresolved issue(s) first seen within the last ${windowMinutes} minute(s).`);
+              const sentryIssues = await listNewUnresolvedIssues(mapping.project);
+              core.info(
+                `Project ${mapping.project} (${mapping.environment}): ${sentryIssues.length} unresolved issue(s) ` +
+                  `first seen within the last ${windowMinutes} minute(s).`
+              );
 
               for (const sentryIssue of sentryIssues) {
                 scannedCount += 1;
-                const stableId = String(sentryIssue.id || "").trim();
-                if (!stableId) {
-                  throw new Error(`Sentry issue missing stable id for project ${mapping.project}: ${JSON.stringify(sentryIssue)}`);
+                const sentryIssueId = String(sentryIssue.id || "").trim();
+                if (!sentryIssueId) {
+                  throw new Error(`Sentry issue is missing a stable id for project ${mapping.project}`);
                 }
 
-                const marker = `sentry-issue-id:${stableId}`;
-                const alreadyExists = await issueMarkerExists(marker);
-                if (alreadyExists) {
+                const marker = markerFor(sentryIssueId);
+                if (reportedMarkers.has(marker)) {
                   deduplicatedCount += 1;
-                  core.info(`Skip duplicate for marker ${marker}`);
+                  core.info(`Already reported, skipping: ${marker}`);
                   continue;
                 }
 
-                const issueTitle = `[${mapping.environment}] Sentry ${mapping.project} ${sentryIssue.shortId || stableId}: ${sentryIssue.title || "Untitled issue"}`;
-                const issueBody = [
-                  `<!-- ${marker} -->`,
-                  "",
-                  `Automated monitoring detected a new unresolved Sentry problem.`,
-                  "",
-                  `- Sentry organization: \`${sentryOrg}\``,
-                  `- Sentry project: \`${mapping.project}\``,
-                  `- Environment: \`${mapping.environment}\``,
-                  `- Sentry issue ID: \`${stableId}\``,
-                  `- Sentry short ID: \`${sentryIssue.shortId || "unknown"}\``,
-                  `- Sentry link: ${sentryIssue.permalink || "(no permalink returned)"}`,
-                  `- First seen: ${sentryIssue.firstSeen || "unknown"}`,
-                  `- Last seen: ${sentryIssue.lastSeen || "unknown"}`,
-                  `- Event count: ${sentryIssue.count || "unknown"}`,
-                  "",
-                  "Failing behavior:",
-                  `${sentryIssue.title || "Untitled issue"}`,
-                  "",
-                  "Root cause detail (from Sentry metadata):",
-                  toRootCauseSummary(sentryIssue),
-                ].join("\n");
-
-                await github.rest.issues.create({
+                const createdIssue = await github.rest.issues.create({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  title: issueTitle,
-                  body: issueBody,
+                  title: `[${mapping.environment}] ${sentryIssue.shortId || sentryIssueId}: ${sentryIssue.title || "Untitled issue"}`,
+                  body: buildIssueBody(sentryIssue, mapping, marker),
                 });
+                // Guards against the same Sentry issue appearing twice within
+                // a single run (e.g. if the matrix ever lists a project twice).
+                reportedMarkers.add(marker);
                 createdCount += 1;
+                core.info(`Opened issue #${createdIssue.data.number} for ${marker}`);
               }
             }
 
-            core.info(`Monitoring run complete. scanned=${scannedCount}, created=${createdCount}, deduplicated=${deduplicatedCount}`);
+            core.info(
+              `Monitoring run complete. scanned=${scannedCount}, created=${createdCount}, already-reported=${deduplicatedCount}`
+            );
