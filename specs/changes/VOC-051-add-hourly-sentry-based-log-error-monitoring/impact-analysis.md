@@ -2,15 +2,11 @@
 
 ## Security and privacy
 
-- **New secret**: a Sentry API auth token stored as a GitHub Actions secret
-  (proposed name: `SENTRY_API_AUTH_TOKEN`, final naming decided at
-  implementation time consistent with this repo's existing
-  `PRODUCTION_SENTRY_DSN`/`STAGING_SSH_HOST`-style secret-naming convention).
-  It must be read-only and least-privilege-scoped — see `specification.md`'s
-  open question 2 for why the exact Sentry scope combination is not pinned
-  down by this drafting pass. This token is a CI/CD secret only; it must never
-  be injected into `apps/api` or `apps/web`'s own runtime environment (it has
-  no application-layer use — only the monitoring workflow needs it).
+- **New secret**: a Sentry API auth token stored as the GitHub Actions secret
+  `SENTRY_API_TOKEN`, scoped to `project:read` + `event:read` only. This token
+  is a CI/CD secret only; it must never be injected into `apps/api` or
+  `apps/web` runtime environments (it has no application-layer use — only the
+  monitoring workflow needs it).
 - **New GitHub API write path**: the scheduled workflow calls the GitHub API
   to search and create issues. Its identity (default `GITHUB_TOKEN` vs. a
   GitHub App token) is an open question (`specification.md`'s open question 1)

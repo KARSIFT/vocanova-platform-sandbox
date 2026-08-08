@@ -32,8 +32,9 @@ human or an oversight loop happens to notice something.
 
 1. Wire `@sentry/nextjs` into `apps/web`, mirroring `apps/api`'s existing
    Sentry pattern (separate DSN per environment tier, disabled when unset).
-2. Add a read-only, least-privilege Sentry API auth token as a new GitHub
-   Actions secret.
+2. Use the repository-level GitHub Actions secret `SENTRY_API_TOKEN`
+   (already provisioned) for Sentry API access, scoped to `project:read` +
+   `event:read` only.
 3. Add a new hourly scheduled workflow that queries the Sentry API for new
    problems across both staging and production, with a duplicate-check
    guard (keyed on a stable Sentry issue identifier) before opening an
@@ -56,11 +57,10 @@ human or an oversight loop happens to notice something.
 - It does not adopt itself. `change.yaml` leaves every adoption/authorization
   field at its template default. No task in `tasks.md` may be dispatched
   until a real adoption decision is recorded.
-- It does not obtain, enter, or handle any real secret value — the Sentry
-  API auth token and per-environment DSNs are documented as required
-  preconditions for a human to provision, not something an agent does (per
-  `AGENTS.md`'s "Safety" section on agents not receiving production
-  secrets).
+- It does not obtain, enter, or handle any real secret value — the
+  per-environment DSNs and `SENTRY_API_TOKEN` are human-provisioned
+  repository secrets, not agent-managed values (per `AGENTS.md`'s "Safety"
+  section on agents not receiving production secrets).
 
 ## Open questions flagged for the reviewing human
 
