@@ -16,6 +16,7 @@
     "generate:tokens": "node scripts/generate-tokens-css.mjs"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.69.0",
     "@vocanova/api-client": "workspace:*",
     "next": "16.2.10",
     "react": "19.2.7",

@@ -52,10 +52,11 @@
 // "ReferenceError: exports is not defined in ES module scope".
 
 import path from "node:path";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig = {
   output: "standalone",
   outputFileTracingRoot: path.join(__dirname, "../.."),
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig);

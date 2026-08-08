@@ -70,6 +70,21 @@ jobs:
         id: sha
         run: echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
+      - name: Validate production Sentry DSN configuration for api/web
+        env:
+          PRODUCTION_SENTRY_DSN: ${{ secrets.PRODUCTION_SENTRY_DSN }}
+          PRODUCTION_WEB_SENTRY_DSN: ${{ secrets.PRODUCTION_WEB_SENTRY_DSN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PRODUCTION_SENTRY_DSN:-}" ] && [ -z "${PRODUCTION_WEB_SENTRY_DSN:-}" ]; then
+            echo "PRODUCTION_SENTRY_DSN / PRODUCTION_WEB_SENTRY_DSN both unset - proceeding with Sentry disabled for production"
+            exit 0
+          fi
+          if [ -z "${PRODUCTION_SENTRY_DSN:-}" ] || [ -z "${PRODUCTION_WEB_SENTRY_DSN:-}" ]; then
+            echo "PRODUCTION_SENTRY_DSN / PRODUCTION_WEB_SENTRY_DSN partially set - refusing half-configured production Sentry" >&2
+            exit 1
+          fi
+
       - name: Build and push vocanova-api
         uses: docker/build-push-action@v5
         with:
@@ -87,7 +102,11 @@ jobs:
           context: .
           file: apps/web/Dockerfile
           push: true
-          build-args: NEXT_PUBLIC_API_BASE_URL=${{ inputs.production_api_base_url || 'https://api-production.vocanova.site' }}
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=${{ inputs.production_api_base_url || 'https://api-production.vocanova.site' }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ secrets.PRODUCTION_WEB_SENTRY_DSN }}
+            NEXT_PUBLIC_SENTRY_ENVIRONMENT=production
+            NEXT_PUBLIC_SENTRY_RELEASE=sha-${{ steps.sha.outputs.short_sha }}
           tags: |
             ghcr.io/karsift/vocanova-web:sha-${{ steps.sha.outputs.short_sha }}
             ghcr.io/karsift/vocanova-web:prod
