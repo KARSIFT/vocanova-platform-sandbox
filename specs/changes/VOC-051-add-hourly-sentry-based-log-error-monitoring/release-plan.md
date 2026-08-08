@@ -1,8 +1,8 @@
-# VOC-050 — Release Plan
+# VOC-051 — Release Plan
 
 ## Release and deployment authorization
 
-Not authorized by this package. Merging any `VOC-050-T*` task's pull request
+Not authorized by this package. Merging any `VOC-051-T*` task's pull request
 into `develop` does not itself authorize production deployment or activation
 of the scheduled monitoring workflow's real effect (which depends on the
 `SENTRY_API_AUTH_TOKEN` secret and the per-environment DSN secrets actually
@@ -19,7 +19,7 @@ additional manual deploy step beyond that already-delegated automatic path.
 
 ## Preconditions, monitoring, and outcome
 
-- Exact revision: the final merged SHA of each `VOC-050-T*` task PR,
+- Exact revision: the final merged SHA of each `VOC-051-T*` task PR,
   recorded at merge time.
 - Checks: `pnpm validate` (T01), workflow-syntax/dry-run verification (T02),
   `scripts/governance/validate-governance.sh` and
@@ -30,11 +30,11 @@ additional manual deploy step beyond that already-delegated automatic path.
   detected risk floor at adoption time (see `change.yaml`'s
   `blocking_reasons`) and confirm the open questions in `specification.md`
   are resolved, not merely acknowledged.
-- Staged evidence: `VOC-050-EV-00` through `VOC-050-EV-04` per
+- Staged evidence: `VOC-051-EV-00` through `VOC-051-EV-04` per
   `impact-analysis.md`/`test-plan.md`.
 - Monitoring: the scheduled workflow's own GitHub Actions run history is its
   primary health signal — a run that fails outright (per
-  `impact-analysis.md`'s `VOC-050-R02`) is itself visible without additional
+  `impact-analysis.md`'s `VOC-051-R02`) is itself visible without additional
   tooling; the founder should periodically confirm the hourly cron is
   actually firing (GitHub can silently disable scheduled workflows in
   inactive repositories after 60 days with no other activity — not currently
@@ -73,7 +73,7 @@ additional manual deploy step beyond that already-delegated automatic path.
   per-environment DSN secret values must be provisioned by a human with
   repository secret-write access — no agent obtains or enters these values
   (per `AGENTS.md`'s "Safety" section).
-- Closure evidence: all `VOC-050-AC-*` acceptance criteria show `Result:
+- Closure evidence: all `VOC-051-AC-*` acceptance criteria show `Result:
   satisfied` with linked evidence; the scheduled workflow's first several
   real hourly runs (post-secret-provisioning) show correct, non-duplicating
   behavior.

@@ -1,4 +1,4 @@
-# VOC-050 — Add Hourly Sentry-Based Log/Error Monitoring Agent: Specification
+# VOC-051 — Add Hourly Sentry-Based Log/Error Monitoring Agent: Specification
 
 ## Objective and requirement source
 
@@ -117,7 +117,7 @@ must update every doc that describes that behavior in the same pull request" rul
 
 ## Decisions, contradictions, security, and privacy
 
-No `VOC-050-D00`-numbered decisions are defined here — this package is not
+No `VOC-051-D00`-numbered decisions are defined here — this package is not
 adopted, and per the template's own instruction, decisions are only defined
 "after approval." The following are recorded as **open questions** for the
 reviewing human instead of decisions this drafting pass makes unilaterally:
@@ -128,7 +128,7 @@ reviewing human instead of decisions this drafting pass makes unilaterally:
    its default permissions/audit trail differ from a named actor), or (b) a
    GitHub App installation token, the same pattern `karsift-ai-infra`'s
    `adopt.yml` already uses (`steps.app-token.outputs.token || github.token`
-   fallback). This package does not decide between them; `VOC-050-T02`'s
+   fallback). This package does not decide between them; `VOC-051-T02`'s
    implementer must propose one explicitly in that task's pull request
    description, not leave it implicit in the diff (same convention VOC-048-T01
    already follows for its own undecided design choice).
@@ -139,13 +139,13 @@ reviewing human instead of decisions this drafting pass makes unilaterally:
    drafting pass did not verify against the founder's actual Sentry
    plan/organization which concrete scope combination satisfies "org-scoped,
    read-only, least privilege" from the issue while still being sufficient for
-   the workflow's actual API calls. `VOC-050-T02`'s implementer must record the
+   the workflow's actual API calls. `VOC-051-T02`'s implementer must record the
    exact scope chosen and why in that task's pull request.
 3. **Sentry plan/tier capacity.** Whether the founder's existing Sentry
    organization/plan supports adding an `apps/web` project and issuing an
    additional read-only org-level API token (some free/starter tiers restrict
    project count or token scopes) is unconfirmed by this drafting pass — see
-   `VOC-050-DEP-00`. If the plan does not support it, `T01`'s scope may need to
+   `VOC-051-DEP-00`. If the plan does not support it, `T01`'s scope may need to
    change (e.g. reusing an existing project instead of creating a new one) and
    must be revisited with the reviewing human before implementation, not
    silently worked around.
@@ -157,7 +157,7 @@ reviewing human instead of decisions this drafting pass makes unilaterally:
    queries; whether the workflow persists a "last checked" timestamp (e.g. as
    a workflow artifact, a committed file, or simply always querying "last
    90 minutes" with the hourly cadence overlapping slightly for safety) is left
-   to `VOC-050-T02`'s implementer to propose, with the duplicate-check guard
+   to `VOC-051-T02`'s implementer to propose, with the duplicate-check guard
    (requirement 4 above) as the safety net regardless of which windowing
    approach is chosen.
 
@@ -183,4 +183,4 @@ include PII incidental to error context (user-visible URLs, possibly user IDs if
   this package. The only end-user-visible surface risk is if the Sentry SDK's
   own client-side error overlay (development-mode only, per `@sentry/nextjs`'s
   own defaults) were accidentally left enabled in production, which
-  `test-plan.md`'s `VOC-050-TEST-01` checks against explicitly.
+  `test-plan.md`'s `VOC-051-TEST-01` checks against explicitly.

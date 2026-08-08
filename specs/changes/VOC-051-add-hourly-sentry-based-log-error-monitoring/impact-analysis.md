@@ -1,4 +1,4 @@
-# VOC-050 — Impact Analysis
+# VOC-051 — Impact Analysis
 
 ## Security and privacy
 
@@ -25,7 +25,7 @@
   scope item 5). This is the central security property the issue itself
   asked for: an unattended hourly job must not hold a credential that grants
   raw host access to production. Confirmed as its own acceptance criterion
-  (`VOC-050-AC-05`) and test (`VOC-050-TEST-06`), not left as an implicit
+  (`VOC-051-AC-05`) and test (`VOC-051-TEST-06`), not left as an implicit
   assumption.
 - **New third-party data flow (browser → Sentry)**: `apps/web`'s Sentry SDK
   will, once wired, send browser-side error events (including stack traces,
@@ -35,7 +35,7 @@
   data-processor relationship for browser-originated data specifically (the
   backend, `apps/api`, already sends server-side error data to the same
   Sentry organization, so the vendor relationship itself is not new — only
-  the browser-data flow is). `VOC-050-T01`'s implementer must confirm whether
+  the browser-data flow is). `VOC-051-T01`'s implementer must confirm whether
   any existing privacy policy or DPA covers this addition, or flag it as an
   open item for the reviewing human if it does not — this package does not
   assume it is already covered.
@@ -59,36 +59,36 @@ that this prompt's own instructions already call out for a different case).
 ## Analytics and accessibility
 
 - **Analytics**: Not applicable. This package adds error-monitoring
-  instrumentation only; `VOC-050-T01`'s implementer must not configure the
+  instrumentation only; `VOC-051-T01`'s implementer must not configure the
   Sentry SDK to also capture performance/session-replay/analytics data beyond
   what's needed for error tracking unless a separate, explicitly approved
   package authorizes that broader scope.
 - **Accessibility**: Not applicable — no user-facing UI changes. The one
   concrete accessibility-adjacent risk is Sentry's own client-side error
   overlay (a debug UI `@sentry/nextjs` can render) leaking into production
-  builds; `VOC-050-TEST-01` checks this explicitly is disabled in the
+  builds; `VOC-051-TEST-01` checks this explicitly is disabled in the
   production/staging build configuration.
 
 ## Risks, dependencies, and evidence
 
-- `VOC-050-R00`: The exact Sentry API auth token scope available may not map
+- `VOC-051-R00`: The exact Sentry API auth token scope available may not map
   cleanly onto "read-only, least-privilege, both environments" — Sentry's own
   scope granularity may force a choice between "broader than strictly needed"
   and "insufficient for the actual API calls." Mitigated by requiring the
   implementer to record and justify the exact chosen scope
   (`specification.md`'s open question 2) rather than silently picking the
   broadest available scope for convenience.
-- `VOC-050-R01`: A scheduled workflow that autonomously opens GitHub issues
+- `VOC-051-R01`: A scheduled workflow that autonomously opens GitHub issues
   every hour, if the duplicate-check guard has a bug (e.g. a title-normalization
   mismatch that fails to recognize a re-worded but identical Sentry issue),
   could spam the issue tracker and, per `AGENTS.md`, each such issue
   auto-triggers `plan-from-issue` — meaning a duplicate-check bug here has a
   real downstream cost (spurious planning runs), not just tracker noise.
-  Mitigated by `VOC-050-AC-04`/`VOC-050-TEST-05`'s explicit repeated-run
+  Mitigated by `VOC-051-AC-04`/`VOC-051-TEST-05`'s explicit repeated-run
   non-duplication requirement and by embedding a stable Sentry issue-ID marker
   in the created issue's body (not relying on title-text matching alone) as
   the primary duplicate-check key, per `specification.md`'s scope item 4.
-- `VOC-050-R02`: A Sentry outage or API-shape change could make the workflow
+- `VOC-051-R02`: A Sentry outage or API-shape change could make the workflow
   fail silently (e.g. an empty/error response treated as "no new issues"
   rather than surfaced as a monitoring-workflow failure). Mitigated by
   requiring the workflow to fail its own GitHub Actions run (non-zero exit)
@@ -97,14 +97,14 @@ that this prompt's own instructions already call out for a different case).
   normal GitHub Actions run-failure visibility) rather than silently going
   dark — the same "never treat a missing integration ... as a pass" principle
   `CLAUDE.md` already states.
-- `VOC-050-DEP-00`, `VOC-050-DEP-01`, `VOC-050-DEP-02`: see `change.yaml`.
-- `VOC-050-EV-00`: `apps/web`'s Sentry wiring evidence (SDK present, DSN
+- `VOC-051-DEP-00`, `VOC-051-DEP-01`, `VOC-051-DEP-02`: see `change.yaml`.
+- `VOC-051-EV-00`: `apps/web`'s Sentry wiring evidence (SDK present, DSN
   read from environment, disabled-when-unset behavior confirmed, per-environment
-  DSN distinctness confirmed) — produced by `VOC-050-T01`.
-- `VOC-050-EV-01`: the scheduled workflow's own run evidence (a real or
+  DSN distinctness confirmed) — produced by `VOC-051-T01`.
+- `VOC-051-EV-01`: the scheduled workflow's own run evidence (a real or
   simulated run showing correct issue creation and duplicate-suppression) —
-  produced by `VOC-050-T02`.
-- `VOC-050-EV-02`: the DOC-11 documentation-consistency update — produced by
-  `VOC-050-T04`.
-- `VOC-050-EV-03`: deterministic validation command output — produced across
-  `VOC-050-T01`, `VOC-050-T02`, `VOC-050-T04`.
+  produced by `VOC-051-T02`.
+- `VOC-051-EV-02`: the DOC-11 documentation-consistency update — produced by
+  `VOC-051-T04`.
+- `VOC-051-EV-03`: deterministic validation command output — produced across
+  `VOC-051-T01`, `VOC-051-T02`, `VOC-051-T04`.

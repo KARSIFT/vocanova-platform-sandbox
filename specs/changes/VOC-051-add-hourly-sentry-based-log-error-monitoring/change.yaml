@@ -1,5 +1,5 @@
 schema_version: 1
-id: VOC-050
+id: VOC-051
 slug: add-hourly-sentry-based-log-error-monitoring
 title: Add Hourly Sentry-Based Log/Error Monitoring Agent That Files Issues on New
   Production/Staging Problems
@@ -19,7 +19,7 @@ planned_implementation_risk_floor: Not yet computed by running scripts/governanc
   consequence" rule, since the monitoring workflow and the web-side DSN it needs to
   be useful are one combined observability outcome. This is a draft proposal for the
   reviewing human at adoption time, not a determination.
-canonical_path: specs/changes/VOC-050-add-hourly-sentry-based-log-error-monitoring
+canonical_path: specs/changes/VOC-051-add-hourly-sentry-based-log-error-monitoring
 authority_model: a003-active
 requirement_source: 'GitHub issue #392 ("Add hourly Sentry-based log/error monitoring
   agent that files issues on new production/staging problems"). The issue itself cites
@@ -62,7 +62,7 @@ artifacts:
   test_plan: test-plan.md
   release_plan: release-plan.md
 dependencies:
-- id: VOC-050-DEP-00
+- id: VOC-051-DEP-00
   status: unresolved at drafting time. This package assumes a Sentry organization
     and project(s) already exist for apps/api (confirmed live - apps/api/go.mod already
     depends on github.com/getsentry/sentry-go v0.48.0 and apps/api/app/api/production.go
@@ -71,13 +71,13 @@ dependencies:
     existing Sentry plan/tier supports an additional project and a read-only org auth
     token (some Sentry plans gate API-token scopes or project counts) is not verified
     by this drafting pass and must be confirmed before T01/T02 begin.
-- id: VOC-050-DEP-01
+- id: VOC-051-DEP-01
   status: unresolved at drafting time. Depends on the reviewing human deciding the
     exact GitHub API identity the new scheduled workflow uses to open issues (GITHUB_TOKEN
     scoped to the default workflow permissions, a repository-scoped PAT, or a GitHub
     App installation token like the one karsift-ai-infra's adopt.yml already uses
     via `steps.app-token.outputs.token`) - see specification.md's open questions.
-- id: VOC-050-DEP-02
+- id: VOC-051-DEP-02
   status: unresolved at drafting time. Depends on the reviewing human confirming the
     Sentry API auth token's exact required scope (read-only issue/event access across
     both the staging and production Sentry environments/projects) against what Sentry's
@@ -91,7 +91,7 @@ affected_areas:
 - apps/web/.env.example
 - .github/workflows
 - docs/operations/11-devops-and-ci-cd.md
-- specs/changes/VOC-050-add-hourly-sentry-based-log-error-monitoring
+- specs/changes/VOC-051-add-hourly-sentry-based-log-error-monitoring
 implementation:
   authorized: false
   required: true

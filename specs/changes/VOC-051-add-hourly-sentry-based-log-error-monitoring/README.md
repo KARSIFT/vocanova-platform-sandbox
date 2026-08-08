@@ -1,4 +1,4 @@
-# VOC-050 — Add Hourly Sentry-Based Log/Error Monitoring Agent
+# VOC-051 — Add Hourly Sentry-Based Log/Error Monitoring Agent
 
 **Status: proposed, not adopted.** Nothing in this package is
 implementation-authorized. It is a draft response to
@@ -9,9 +9,9 @@ prepared for founder/steward review at adoption time.
 
 | Field | Value |
 |---|---|
-| Package ID | VOC-050 |
+| Package ID | VOC-051 |
 | Title | Add Hourly Sentry-Based Log/Error Monitoring Agent That Files Issues on New Production/Staging Problems |
-| Canonical path | `specs/changes/VOC-050-add-hourly-sentry-based-log-error-monitoring` |
+| Canonical path | `specs/changes/VOC-051-add-hourly-sentry-based-log-error-monitoring` |
 | Lifecycle state | `draft` (not adopted) |
 | Proposed risk | `R3` (see `change.yaml` for full reasoning; a draft proposal, not a determination) |
 | Owner | unassigned |
@@ -71,7 +71,7 @@ open issues; (2) the exact Sentry API auth token scope, given Sentry's own
 scope granularity is coarser than "read-only for exactly these two
 environments"; (3) whether the founder's actual Sentry plan/organization
 supports the assumed additional `apps/web` project and token — see
-`VOC-050-T00`, which exists specifically to confirm this before any code is
+`VOC-051-T00`, which exists specifically to confirm this before any code is
 written; and (4) the exact "since last check" state-tracking approach for the
 scheduled workflow.
 
@@ -92,6 +92,6 @@ Mirrors recent packages' convention (e.g. VOC-049, VOC-048, VOC-047):
 3. Confirm whether `apps/web`'s new browser-to-Sentry data flow needs a
    privacy-policy or DPA review before adoption (`impact-analysis.md`'s
    security/privacy section flags this as unresolved by this drafting pass).
-4. Adopt (or request changes to) this package, then dispatch `VOC-050-T00`
+4. Adopt (or request changes to) this package, then dispatch `VOC-051-T00`
    first, before any other task, consistent with this package's own
    scoping.
