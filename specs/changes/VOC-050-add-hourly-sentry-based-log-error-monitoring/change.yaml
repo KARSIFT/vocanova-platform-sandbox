@@ -1,0 +1,124 @@
+schema_version: 1
+id: VOC-050
+slug: add-hourly-sentry-based-log-error-monitoring
+title: Add Hourly Sentry-Based Log/Error Monitoring Agent That Files Issues on New
+  Production/Staging Problems
+type: feature
+status: draft
+risk: R3
+planned_implementation_risk_floor: Not yet computed by running scripts/governance/classify-change-risk.sh
+  against a real task-scoped file list. This package proposes R3 for the change as
+  a whole because it touches production infrastructure/secrets and CI/CD (a new Sentry
+  API auth token secret, a new scheduled GitHub Actions workflow that reads production/staging
+  Sentry data and calls the GitHub API to open issues), both squarely inside docs/governance/change-risk-classification.md's
+  R3 categories ("secrets", "CI/CD, rollback, security, governance enforcement, or
+  agent authority"). apps/web's new Sentry wiring (T01) is closer to R2 in isolation
+  (additive, non-destructive, mirrors an existing apps/api pattern) but this package
+  proposes the higher R3 floor for the package as a whole per docs/governance/change-risk-classification.md's
+  "splitting a change does not lower the classification if the parts produce one combined
+  consequence" rule, since the monitoring workflow and the web-side DSN it needs to
+  be useful are one combined observability outcome. This is a draft proposal for the
+  reviewing human at adoption time, not a determination.
+canonical_path: specs/changes/VOC-050-add-hourly-sentry-based-log-error-monitoring
+authority_model: a003-active
+requirement_source: 'GitHub issue #392 ("Add hourly Sentry-based log/error monitoring
+  agent that files issues on new production/staging problems"). The issue itself cites
+  docs/operations/11-devops-and-ci-cd.md (DOC-11) section 1''s "Error monitoring |
+  Sentry" row and its "Separate ... Sentry environments per environment tier" sentence
+  as the existing authority for Sentry being the project''s chosen error-monitoring
+  tool; this package proposes the concrete mechanism (a scheduled workflow polling
+  the Sentry API) as new scope DOC-11 does not itself specify.'
+requirement_approval_status: not-approved. This package has not been adopted. No field
+  in this file authorizes implementation.
+base_branch: develop
+base_sha: unknown - not recorded by this draft; the adopting human/workflow should
+  set this to the actual base_sha at adoption time, consistent with recent packages'
+  convention (see VOC-048's change.yaml).
+target_branch: develop
+approved_candidate_sha: null
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: false
+production_impact: unknown until adopted and implemented. T01 (apps/web Sentry wiring)
+  has direct but additive/non-destructive production_impact once a real DSN secret
+  exists (browser error events start flowing to Sentry; no user-facing behavior changes).
+  T02-T04 (the scheduled workflow) have no production *application* impact - they
+  only read Sentry and open GitHub issues - but do introduce a new scheduled CI/CD
+  process with its own secret, which is itself a protected-area effect per docs/governance/change-risk-classification.md's
+  R3 "CI/CD" category regardless of application-layer impact.
+rollback_required: true
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-050-DEP-00
+  status: unresolved at drafting time. This package assumes a Sentry organization
+    and project(s) already exist for apps/api (confirmed live - apps/api/go.mod already
+    depends on github.com/getsentry/sentry-go v0.48.0 and apps/api/app/api/production.go
+    already reads SENTRY_DSN) and that the same Sentry organization can host an apps/web
+    project and issue an org-scoped read-only API auth token. Whether the founder's
+    existing Sentry plan/tier supports an additional project and a read-only org auth
+    token (some Sentry plans gate API-token scopes or project counts) is not verified
+    by this drafting pass and must be confirmed before T01/T02 begin.
+- id: VOC-050-DEP-01
+  status: unresolved at drafting time. Depends on the reviewing human deciding the
+    exact GitHub API identity the new scheduled workflow uses to open issues (GITHUB_TOKEN
+    scoped to the default workflow permissions, a repository-scoped PAT, or a GitHub
+    App installation token like the one karsift-ai-infra's adopt.yml already uses
+    via `steps.app-token.outputs.token`) - see specification.md's open questions.
+- id: VOC-050-DEP-02
+  status: unresolved at drafting time. Depends on the reviewing human confirming the
+    Sentry API auth token's exact required scope (read-only issue/event access across
+    both the staging and production Sentry environments/projects) against what Sentry's
+    own token-scope model actually offers, since Sentry's org-auth-token scopes are
+    coarser-grained than "read-only for two specific environments only" - see specification.md's
+    open questions.
+affected_areas:
+- apps/web/src
+- apps/web/package.json
+- apps/web/next.config.ts
+- apps/web/.env.example
+- .github/workflows
+- docs/operations/11-devops-and-ci-cd.md
+- specs/changes/VOC-050-add-hourly-sentry-based-log-error-monitoring
+implementation:
+  authorized: false
+  required: true
+  status: proposed
+  target_branch: develop
+  pull_request: null
+  authority_issue: 392
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: unknown-until-implemented
+  deployment: not-authorized-by-this-package
+  automatic_merge: false
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
+blocking_reasons: Not adopted. Requires founder/steward review of the proposed R3
+  classification, specification.md's open questions (GitHub API identity for issue-filing,
+  exact Sentry token scope, and whether a Sentry organization/plan actually supports
+  the additional apps/web project and read-only org token), and confirmation that
+  scripts/governance/classify-change-risk.sh's actual detected floor for the real
+  task-scoped file list is not higher than the R3 proposed here.
