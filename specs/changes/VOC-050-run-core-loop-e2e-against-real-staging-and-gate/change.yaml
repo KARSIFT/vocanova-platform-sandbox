@@ -6,23 +6,7 @@ title: Seed a Synthetic Smoke-Test User, Run core-loop.spec.ts Against Real Stag
 type: feature
 status: adopted
 risk: R3
-planned_implementation_risk_floor: Measured during VOC-050-T02 by running scripts/governance/classify-change-risk.sh
-  against that task's real file list: the detected path floor is R3, established
-  by .github/workflows/deploy-staging.yml. The package-level risk was raised from
-  the drafted R2 to R3 accordingly (never lowered), because implement.yml derives
-  every task pull request's "Risk classification:" line from this field and
-  governance-policy.yml fails closed when a declared class sits below the detected
-  floor. T00 (apps/api/migrations) and T01 (apps/api/business/auth) are R3 path
-  classes as well, so R3 is the correct package-level floor for the remaining
-  tasks too. The original drafting note follows, unchanged. This package proposed
-  R2 for the change as
-  a whole because it adds CI/deploy-workflow gating and a disposable seeded test account
-  rather than changing real user-facing behavior - but two individual tasks (T00's
-  migration/seed touching apps/api/migrations, and T01's session-minting mechanism
-  touching apps/api/business/auth, an authentication protected area) may independently
-  float to a higher path-detected floor at classification time. This is a draft proposal
-  for the reviewing human at adoption time, not a determination, and the human may
-  reasonably set individual tasks higher than the package-level R2.
+planned_implementation_risk_floor: 'Measured during VOC-050-T02 by running scripts/governance/classify-change-risk.sh against that task''s real file list: the detected path floor is R3, established by .github/workflows/deploy-staging.yml. The package-level risk was raised from the drafted R2 to R3 accordingly (never lowered), because implement.yml derives every task pull request''s "Risk classification:" line from this field and governance-policy.yml fails closed when a declared class sits below the detected floor. T00 (apps/api/migrations) and T01 (apps/api/business/auth) are R3 path classes as well, so R3 is the correct package-level floor for the remaining tasks too. The original drafting note follows, unchanged. This package proposed R2 for the change as a whole because it adds CI/deploy-workflow gating and a disposable seeded test account rather than changing real user-facing behavior - but two individual tasks (T00''s migration/seed touching apps/api/migrations, and T01''s session-minting mechanism touching apps/api/business/auth, an authentication protected area) may independently float to a higher path-detected floor at classification time. This is a draft proposal for the reviewing human at adoption time, not a determination, and the human may reasonably set individual tasks higher than the package-level R2.'
 canonical_path: specs/changes/VOC-050-run-core-loop-e2e-against-real-staging-and-gate
 authority_model: a003-active
 requirement_source: 'GitHub issue #391 ("Run core-loop E2E against real staging and
