@@ -33,9 +33,9 @@ delegated path for this content, not granting a new one.
   the reviewing human decides at adoption time that the `auto_release_enabled`
   content riding along (per `specification.md`'s open question 2) warrants
   elevated review before this package's own promotion task is dispatched.
-- Staged evidence: none exists yet; this package is unadopted and
-  unimplemented. `VOC-049-T00`'s re-verification is the first evidence this
-  package produces.
+- Staged evidence: `VOC-049-T00` completed with implementation-time compare
+  output captured in `t00-evidence.md` (`VOC-049-EV-00`). `VOC-049-T01` remains
+  pending and must re-run T00 if `develop` moves before promotion.
 - Monitoring: after promotion, watch `deploy-production.yml`'s run for the
   resulting `main` push, and watch for any regression traceable to the
   promoted governance/infra-cleanup content itself (e.g. a status-sync
