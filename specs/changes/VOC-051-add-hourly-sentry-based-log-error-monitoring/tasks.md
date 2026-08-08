@@ -7,7 +7,14 @@
 - Acceptance criteria: (gates `VOC-051-AC-00`, `VOC-051-AC-01`)
 - Tests: `VOC-051-TEST-09`
 - Evidence: `VOC-051-EV-04`
-- Status: pending
+- Status: blocked — `t00-evidence.md` (`VOC-051-EV-04`) records the
+  `VOC-051-TEST-09` "documented blocking constraint" outcome, not the
+  confirmation outcome. `VOC-051-DEP-00` stays unresolved: the three
+  org-specific facts in that file's §4 (plan tier and headroom, read-only
+  token creation, layout choice and project inventory) require signed-in
+  access to the founder's Sentry organization, which no agent in this
+  repository has. This task cannot reach `complete` until a human fills
+  `t00-evidence.md` §3's layout table and flips this status.
 
 Confirm, against the founder's actual Sentry organization, that adding an
 `apps/web` project (or reusing an existing one, if a new project is not
@@ -26,7 +33,10 @@ record the actual constraint for the reviewing human to resolve before
 - Acceptance criteria: `VOC-051-AC-00`, `VOC-051-AC-07`
 - Tests: `VOC-051-TEST-00`, `VOC-051-TEST-01`, `VOC-051-TEST-08`
 - Evidence: `VOC-051-EV-00`, `VOC-051-EV-03`
-- Status: pending (depends on `VOC-051-T00`'s confirmed layout)
+- Status: blocked by `VOC-051-T00` (see that task's status above and
+  `t00-evidence.md` §4). Do not dispatch until `t00-evidence.md` §3's layout
+  table is filled and `VOC-051-T00` reads `complete`; the closure of
+  `VOC-051-T00`'s GitHub task issue on its own does not clear this gate.
 
 Add the `@sentry/nextjs` SDK to `apps/web`, following the official Next.js
 integration wizard's output shape for the App Router (instrumentation files,
@@ -59,8 +69,10 @@ different injection mechanism for `apps/web` than the one already proven for
 - Tests: `VOC-051-TEST-02`, `VOC-051-TEST-03`, `VOC-051-TEST-04`,
   `VOC-051-TEST-05`, `VOC-051-TEST-06`, `VOC-051-TEST-08`
 - Evidence: `VOC-051-EV-01`, `VOC-051-EV-03`
-- Status: pending (depends on `VOC-051-T00`'s confirmed layout; may proceed in
-  parallel with `VOC-051-T01` once `T00` completes, since the workflow's
+- Status: blocked by `VOC-051-T00` (see that task's status above and
+  `t00-evidence.md` §4); the closure of `VOC-051-T00`'s GitHub task issue on
+  its own does not clear this gate. May proceed in
+  parallel with `VOC-051-T01` once `T00` genuinely completes, since the workflow's
   Sentry-side query does not depend on `apps/web`'s own instrumentation
   existing yet — it queries whatever Sentry projects/environments `T00`
   confirms exist)
@@ -105,7 +117,11 @@ would). The workflow must:
 - Acceptance criteria: `VOC-051-AC-01`
 - Tests: `VOC-051-TEST-02`
 - Evidence: `VOC-051-EV-01`
-- Status: pending (depends on `VOC-051-T00`'s confirmed layout; this task's
+- Status: blocked by `VOC-051-T00` (see that task's status above and
+  `t00-evidence.md` §4), whose confirmed layout this task's
+  documentation depends on. Note that `t00-evidence.md` §1b already narrows
+  the token type and scope this task documents, but does not confirm it
+  against the real organization. (This task's
   actual secret-value provisioning is a human/founder action outside this
   repository's own file changes — the implementer's role here is limited to
   documenting the required secret name and its expected scope in
