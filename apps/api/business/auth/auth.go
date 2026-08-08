@@ -148,11 +148,13 @@ type OAuthIdentity struct {
 
 // Public errors returned by the service.
 var (
-	ErrInvalidMagicLink       = errors.New("invalid or expired magic link")
-	ErrAuthenticationRequired = errors.New("authentication required")
-	ErrUserDisabled           = errors.New("user disabled")
-	ErrRateLimited            = errors.New("rate limited")
-	ErrInvalidOAuthState      = errors.New("invalid or expired oauth state")
-	ErrOAuthProviderFailed    = errors.New("oauth provider failed")
-	ErrOAuthNotConfigured     = errors.New("oauth provider not configured")
+	ErrInvalidMagicLink             = errors.New("invalid or expired magic link")
+	ErrAuthenticationRequired       = errors.New("authentication required")
+	ErrUserDisabled                 = errors.New("user disabled")
+	ErrRateLimited                  = errors.New("rate limited")
+	ErrInvalidOAuthState            = errors.New("invalid or expired oauth state")
+	ErrOAuthProviderFailed          = errors.New("oauth provider failed")
+	ErrOAuthNotConfigured           = errors.New("oauth provider not configured")
+	ErrSyntheticSessionMintDisabled = errors.New("synthetic smoke-test session minting is disabled")
+	ErrSyntheticUserNotSeeded       = errors.New("synthetic smoke-test user is not seeded")
 )

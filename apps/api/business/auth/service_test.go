@@ -132,6 +132,49 @@ func TestSignupAllowedRefusesReservedSyntheticEmailEvenWhenAllowlisted(t *testin
 	assert.False(t, switches.IsReservedSyntheticEmail("someone@example.com"))
 }
 
+func TestMintSyntheticSmokeTestSessionRequiresReservedIdentity(t *testing.T) {
+	svc, _, _, _ := testService(t)
+
+	_, _, err := svc.MintSyntheticSmokeTestSession(context.Background())
+
+	assert.ErrorIs(t, err, ErrSyntheticSessionMintDisabled)
+}
+
+func TestMintSyntheticSmokeTestSessionRequiresSeededUser(t *testing.T) {
+	svc, _, _, _ := testService(t)
+	svc.SetKillSwitches(reservedSyntheticKillSwitches())
+
+	_, _, err := svc.MintSyntheticSmokeTestSession(context.Background())
+
+	assert.ErrorIs(t, err, ErrSyntheticUserNotSeeded)
+}
+
+func TestMintSyntheticSmokeTestSessionIssuesRealSessionForReservedIdentityOnly(t *testing.T) {
+	svc, repo, _, _ := testService(t)
+	svc.SetKillSwitches(reservedSyntheticKillSwitches())
+	ctx := context.Background()
+
+	_, err := repo.CreateUser(ctx, reservedSyntheticTestEmail, nil)
+	require.NoError(t, err)
+
+	session, token, err := svc.MintSyntheticSmokeTestSession(ctx)
+	require.NoError(t, err)
+	assert.NotNil(t, session)
+	assert.NotEmpty(t, token)
+	assert.Equal(t, "active", mustGetUser(t, repo, reservedSyntheticTestEmail).Status)
+
+	validated, err := svc.ValidateSession(ctx, token)
+	require.NoError(t, err)
+	assert.Equal(t, reservedSyntheticTestEmail, validated.Email)
+}
+
+func mustGetUser(t *testing.T, repo *MemoryRepository, email string) *User {
+	t.Helper()
+	user, err := repo.GetUserByEmail(context.Background(), email)
+	require.NoError(t, err)
+	return user
+}
+
 func TestConsumeMagicLinkCreatesUserAndSession(t *testing.T) {
 	svc, repo, fake, c := testService(t)
 	ctx := context.Background()

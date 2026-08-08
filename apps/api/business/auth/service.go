@@ -487,6 +487,26 @@ func (s *Service) ValidateCSRF(cookieValue, headerValue string) bool {
 	return ValidateCSRF(cookieValue, headerValue)
 }
 
+// MintSyntheticSmokeTestSession creates a real session for the reserved
+// deploy-seeded synthetic smoke-test account only.
+func (s *Service) MintSyntheticSmokeTestSession(ctx context.Context) (*Session, string, error) {
+	if s.killSwitches == nil || s.killSwitches.ReservedSyntheticEmail == "" {
+		return nil, "", ErrSyntheticSessionMintDisabled
+	}
+	user, err := s.repo.GetUserByEmail(ctx, s.killSwitches.ReservedSyntheticEmail)
+	if err != nil {
+		return nil, "", ErrSyntheticUserNotSeeded
+	}
+	if !user.Active() {
+		return nil, "", ErrUserDisabled
+	}
+	_, session, token, err := s.issueSession(ctx, user)
+	if err != nil {
+		return nil, "", err
+	}
+	return session, token, nil
+}
+
 // tokenAndHash decodes a base64 token and returns its SHA-256 hash.
 func tokenAndHash(token string) ([]byte, []byte, error) {
 	b, err := base64URLDecode(token)
