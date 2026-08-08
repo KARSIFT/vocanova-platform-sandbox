@@ -50,6 +50,26 @@ const CSRF_COOKIE_NAME = "vocanova_csrf";
 const MAX_REVIEW_CARDS = 8;
 const REVIEWED_TODAY_PATTERN = /(\d+) of \d+ words reviewed today/;
 
+// Cookies must be scoped to the shared parent domain, not just the web
+// app's own host: the app's server-side rendering/fetch paths send these
+// cookies on to api-staging.vocanova.site (a different subdomain from
+// staging.vocanova.site), mirroring deploy-production.yml's own
+// `SESSION_COOKIE_DOMAIN=.${HOST#*.}` computation and apps/api/.env.example's
+// documented `.vocanova.site` convention. Using Playwright's `url`-only
+// cookie form (as an earlier revision did) scopes the cookie to exactly
+// the web app's host and never reaches the API host, which independent
+// review flagged as a High finding blocking the real authenticated
+// journey from working as wired.
+function cookieDomainFor(baseURL: string): string {
+  const override = process.env.STAGING_SESSION_COOKIE_DOMAIN;
+  if (override) {
+    return override;
+  }
+  const host = new URL(baseURL).hostname;
+  const labels = host.split(".");
+  return `.${labels.slice(1).join(".")}`;
+}
+
 function requiredEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
@@ -179,9 +199,24 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
     }
 
     await test.step("1. authenticate with the minted synthetic session", async () => {
+      const domain = cookieDomainFor(baseURL);
       await context.addCookies([
-        { name: SESSION_COOKIE_NAME, value: sessionCookie, url: baseURL },
-        { name: CSRF_COOKIE_NAME, value: csrfToken, url: baseURL },
+        {
+          name: SESSION_COOKIE_NAME,
+          value: sessionCookie,
+          domain,
+          path: "/",
+          secure: true,
+          sameSite: "Lax",
+        },
+        {
+          name: CSRF_COOKIE_NAME,
+          value: csrfToken,
+          domain,
+          path: "/",
+          secure: true,
+          sameSite: "Lax",
+        },
       ]);
       await page.goto("/home");
       await completeOnboardingIfRedirected(page);
