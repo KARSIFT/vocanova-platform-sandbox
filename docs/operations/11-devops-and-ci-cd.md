@@ -7,7 +7,7 @@ status: approved
 owner: founder
 canonical_path: docs/operations/11-devops-and-ci-cd.md
 approved_at: 2026-07-21
-last_reviewed_at: 2026-07-30
+last_reviewed_at: 2026-08-08
 review_cycle: quarterly
 supersedes: null
 related_documents:
