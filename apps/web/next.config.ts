@@ -59,4 +59,21 @@ const nextConfig = {
   outputFileTracingRoot: path.join(__dirname, "../.."),
 };
 
-export default withSentryConfig(nextConfig);
+// VOC-051-T01: hand-adapted equivalent of the @sentry/nextjs wizard's
+// `withSentryConfig` options block. No `org`/`project`/`authToken` is set and
+// source-map upload is disabled outright: this package provisions only a
+// read-only Sentry API token for the monitoring workflow, never a build-time
+// upload token, so leaving upload enabled would make every build attempt (and
+// warn about) an upload it can never perform. `telemetry: false` keeps build
+// metadata from being sent to Sentry, and `excludeDebugStatements` strips the
+// SDK's own debug/logger statements from the built bundle so no Sentry debug
+// output can reach a browser console. (`excludeDebugStatements` is used rather
+// than the webpack-only `webpack.treeshake.removeDebugLogging` because
+// apps/web builds with Turbopack, where the webpack options are inert.)
+export default withSentryConfig(nextConfig, {
+  silent: true,
+  telemetry: false,
+  sourcemaps: { disable: true },
+  widenClientFileUpload: false,
+  bundleSizeOptimizations: { excludeDebugStatements: true },
+});
