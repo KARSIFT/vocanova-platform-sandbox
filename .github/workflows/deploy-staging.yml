@@ -286,7 +286,7 @@ jobs:
       # and for the consistent build cache behavior the
       # T02/T03 Dockerfiles assume.
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       # docker/login-action v3 (pinned to the v3.x
       # major version; SHA-pin before any non-staging
