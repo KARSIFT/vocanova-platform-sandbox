@@ -124,7 +124,7 @@ secret for the monitoring workflow's entire purpose, not an optional
 enhancement) rather than running with a missing credential and producing a
 confusing downstream error.
 
-## VOC-051-T04 — Update DOC-11 §1's "Error monitoring" row to record the new mechanism
+## VOC-051-T04 — Update DOC-11 §1's Error monitoring row to record the new mechanism
 
 - Requirement source: `AGENTS.md`'s documentation-consistency rule
 - Acceptance criteria: `VOC-051-AC-06`, `VOC-051-AC-07`
