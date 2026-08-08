@@ -9,3 +9,7 @@ coverage/
 # VOC-031-T09: per-audit Lighthouse reports. Runtime artifacts
 # (regenerated on every CI run); not source-controlled.
 apps/web/lighthouse-reports/
+# VOC-050-T02: output of the post-deploy staging core-loop run.
+# Uploaded as a workflow artifact on failure; never committed.
+apps/web/playwright-report-staging/
+apps/web/test-results-staging/

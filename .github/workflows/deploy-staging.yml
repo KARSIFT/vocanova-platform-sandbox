@@ -46,6 +46,18 @@
 #                                 STAGING_SSH_HOST (one or more
 #                                 `host key-type base64` lines,
 #                                 newline-separated)
+#   * STAGING_SMOKE_TEST_SESSION_MINT_TOKEN
+#                               - bearer token for VOC-050-T01's
+#                                 POST /ops/synthetic-smoke-test/session
+#                                 on api-staging.vocanova.site. Must
+#                                 equal the staging api container's
+#                                 own SMOKE_TEST_SESSION_MINT_TOKEN;
+#                                 the endpoint is not registered at
+#                                 all when that variable is unset, so
+#                                 a mismatch or an unset host-side
+#                                 value fails the post-deploy
+#                                 core-loop check rather than
+#                                 silently skipping it (VOC-050-T02).
 #
 # Mirror of the .github/workflows/accessibility.yml and
 # .github/workflows/lighthouse.yml pattern from VOC-031-T07a/
@@ -251,17 +263,18 @@ jobs:
     name: deploy to staging
     runs-on: ubuntu-latest
     # Total budget: SSH command (15m) + api health check
-    # (5m) + web health check (5m) + build/push (5m, on a
-    # warm cache) = 30m. Leaves no slack; a cold-cache
-    # first push of the web image alone can take 5+ min
-    # because of the full `pnpm install --frozen-lockfile`
-    # + `next build` in the Dockerfile. If the SSH step
-    # is the slow one, the health checks have 10m of
-    # remaining headroom; if both health checks are slow,
-    # the SSH step has 20m of headroom. A real failure
-    # shows up in the workflow log well inside this
+    # (5m) + web health check (5m) + post-deploy core-loop
+    # journey, including its Node/pnpm/Chromium setup (10m)
+    # + build/push (5m, on a warm cache) = 40m. Leaves no
+    # slack; a cold-cache first push of the web image alone
+    # can take 5+ min because of the full `pnpm install
+    # --frozen-lockfile` + `next build` in the Dockerfile.
+    # If the SSH step is the slow one, the health checks
+    # have 10m of remaining headroom; if both health checks
+    # are slow, the SSH step has 20m of headroom. A real
+    # failure shows up in the workflow log well inside this
     # budget.
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       # actions/checkout v4.2.2, pinned to the immutable
       # commit documented at
@@ -945,3 +958,114 @@ jobs:
           echo "  containers are still serving traffic (docker compose up -d" >&2
           echo "  only removes old containers once the new ones are healthy)." >&2
           exit 1
+
+      # ---------------------------------------------------------------
+      # VOC-050-T02: post-deploy authenticated core-loop journey.
+      #
+      # The two polls above prove the containers started and answer
+      # over TLS; neither proves a learner can actually use the
+      # product against the real API and real Postgres. This runs
+      # apps/web/tests/staging-e2e/core-loop.staging.spec.ts against
+      # https://staging.vocanova.site as the first real functional
+      # gate on a staging deploy (VOC-050-AC-03).
+      #
+      # Placement: after BOTH readiness polls rather than between
+      # them. The acceptance criterion asks for the journey to run
+      # once the api /healthz poll passes, which it does — but the
+      # journey drives the web tier, so starting it before
+      # staging.vocanova.site is confirmed serving would report web
+      # cold-start as a core-loop failure. The previous revision's
+      # independent review raised exactly this ordering risk.
+      #
+      # Fail-closed by construction: no continue-on-error on any step
+      # below, and the mint step exits non-zero rather than skipping
+      # the journey when its token or the endpoint is unavailable.
+      # ---------------------------------------------------------------
+      - name: Mint synthetic smoke-test session for the staging core-loop
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        id: mint_staging_session
+        env:
+          STAGING_SMOKE_TEST_SESSION_MINT_TOKEN: ${{ secrets.STAGING_SMOKE_TEST_SESSION_MINT_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${STAGING_SMOKE_TEST_SESSION_MINT_TOKEN:-}" ]; then
+            echo "ERROR: STAGING_SMOKE_TEST_SESSION_MINT_TOKEN is required for the staging core-loop check" >&2
+            echo "  It must match the staging api container's SMOKE_TEST_SESSION_MINT_TOKEN;" >&2
+            echo "  VOC-050-T01 does not register the mint endpoint at all when that is unset." >&2
+            exit 1
+          fi
+
+          response_json="$(curl -fsS --max-time 20 \
+            -X POST \
+            -H "Host: api-staging.vocanova.site" \
+            -H "Authorization: Bearer ${STAGING_SMOKE_TEST_SESSION_MINT_TOKEN}" \
+            -H "Accept: application/json" \
+            "https://api-staging.vocanova.site/ops/synthetic-smoke-test/session")"
+
+          session_cookie="$(printf '%s' "$response_json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["session_cookie"])')"
+          csrf_token="$(printf '%s' "$response_json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["csrf_token"])')"
+
+          if [ -z "$session_cookie" ] || [ -z "$csrf_token" ]; then
+            echo "ERROR: the session-mint endpoint returned an empty session or csrf value" >&2
+            exit 1
+          fi
+
+          # Both values are credential-shaped (they grant access to
+          # the synthetic account until it expires), and step outputs
+          # are not secrets. Register them for masking BEFORE they are
+          # written anywhere, so neither can surface in this run's log
+          # or in a Playwright trace uploaded on failure.
+          echo "::add-mask::$session_cookie"
+          echo "::add-mask::$csrf_token"
+
+          echo "session_cookie=$session_cookie" >> "$GITHUB_OUTPUT"
+          echo "csrf_token=$csrf_token" >> "$GITHUB_OUTPUT"
+          echo "Minted a synthetic smoke-test session for the staging core-loop check."
+
+      # actions/setup-node v7.0.0, pinned to the immutable commit
+      # documented at
+      # https://github.com/actions/setup-node/releases/tag/v7.0.0
+      - name: Set up Node for the staging core-loop check
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Install pnpm for the staging core-loop check
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        run: corepack enable && corepack prepare pnpm@11.14.0 --activate
+
+      - name: Install workspace dependencies for the staging core-loop check
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium for the staging core-loop check
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        run: pnpm --filter @vocanova/web exec playwright install --with-deps chromium
+
+      - name: Run the staging core-loop journey
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        env:
+          CI: "1"
+          STAGING_WEB_BASE_URL: "https://staging.vocanova.site"
+          E2E_SESSION_COOKIE: ${{ steps.mint_staging_session.outputs.session_cookie }}
+          E2E_CSRF_TOKEN: ${{ steps.mint_staging_session.outputs.csrf_token }}
+        run: |
+          pnpm --filter @vocanova/web exec playwright test \
+            --config playwright.staging.config.ts
+
+      - name: Upload the staging core-loop Playwright report on failure
+        if: ${{ failure() && inputs.skip_ssh_deploy != true }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: staging-core-loop-playwright-report
+          path: apps/web/playwright-report-staging/
+          retention-days: 7
+
+      - name: Upload the staging core-loop test results on failure
+        if: ${{ failure() && inputs.skip_ssh_deploy != true }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: staging-core-loop-test-results
+          path: apps/web/test-results-staging/
+          retention-days: 7

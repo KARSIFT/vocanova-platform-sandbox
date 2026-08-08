@@ -5,9 +5,17 @@ title: Seed a Synthetic Smoke-Test User, Run core-loop.spec.ts Against Real Stag
   and Hard-Block Auto-Promotion to Production on Its Failure
 type: feature
 status: adopted
-risk: R2
-planned_implementation_risk_floor: Not yet computed by running scripts/governance/classify-change-risk.sh
-  against a real task-scoped file list. This package proposes R2 for the change as
+risk: R3
+planned_implementation_risk_floor: Measured during VOC-050-T02 by running scripts/governance/classify-change-risk.sh
+  against that task's real file list: the detected path floor is R3, established
+  by .github/workflows/deploy-staging.yml. The package-level risk was raised from
+  the drafted R2 to R3 accordingly (never lowered), because implement.yml derives
+  every task pull request's "Risk classification:" line from this field and
+  governance-policy.yml fails closed when a declared class sits below the detected
+  floor. T00 (apps/api/migrations) and T01 (apps/api/business/auth) are R3 path
+  classes as well, so R3 is the correct package-level floor for the remaining
+  tasks too. The original drafting note follows, unchanged. This package proposed
+  R2 for the change as
   a whole because it adds CI/deploy-workflow gating and a disposable seeded test account
   rather than changing real user-facing behavior - but two individual tasks (T00's
   migration/seed touching apps/api/migrations, and T01's session-minting mechanism
