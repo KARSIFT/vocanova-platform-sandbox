@@ -474,3 +474,22 @@ func TestVOC031P5AccountDeletionRequestsMigrationCarriesDatabaseInvariants(t *te
 		}
 	}
 }
+
+func TestVOC050T00SyntheticSmokeUserMarkerMigrationCarriesDatabaseInvariants(t *testing.T) {
+	sql, err := os.ReadFile("20260808141000_voc050_t00_synthetic_smoke_test_user.sql")
+	if err != nil {
+		t.Fatalf("read voc-050 t00 synthetic smoke user migration: %v", err)
+	}
+	text := string(sql)
+	required := []string{
+		"ALTER TABLE users",
+		"ADD COLUMN is_synthetic_test_account boolean NOT NULL DEFAULT false",
+		"CREATE UNIQUE INDEX users_single_synthetic_test_account_idx",
+		"is_synthetic_test_account = true",
+	}
+	for _, invariant := range required {
+		if !strings.Contains(text, invariant) {
+			t.Errorf("synthetic smoke user marker migration missing invariant %q", invariant)
+		}
+	}
+}

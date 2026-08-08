@@ -120,6 +120,12 @@ jobs:
           chmod +x /tmp/production-deploy-bundle/infra/scripts/rehearse-production-secrets-boundary.sh
           cp apps/api/scripts/migrate.sh /tmp/production-deploy-bundle/apps/api/scripts/
           chmod +x /tmp/production-deploy-bundle/apps/api/scripts/migrate.sh
+          # VOC-050-T00's synthetic smoke-test account seed. The
+          # script and its SQL travel together; the script resolves
+          # the .sql file relative to its own directory.
+          cp apps/api/scripts/seed-synthetic-smoke-user.sh /tmp/production-deploy-bundle/apps/api/scripts/
+          cp apps/api/scripts/seed-synthetic-smoke-user.sql /tmp/production-deploy-bundle/apps/api/scripts/
+          chmod +x /tmp/production-deploy-bundle/apps/api/scripts/seed-synthetic-smoke-user.sh
           cp apps/api/migrations/*.sql /tmp/production-deploy-bundle/apps/api/migrations/
           cp apps/api/migrations/atlas.sum /tmp/production-deploy-bundle/apps/api/migrations/
           tar -czf "$GITHUB_WORKSPACE/production-deploy-bundle.tgz" -C /tmp/production-deploy-bundle .
@@ -429,6 +435,18 @@ jobs:
             fi
             DATABASE_URL="$migration_database_url" sh /opt/vocanova/production/apps/api/scripts/migrate.sh
             unset migration_database_url
+
+            # VOC-050-T00: ensure the synthetic smoke-test account
+            # exists before the rest of the stack starts. The seed is
+            # idempotent, so it runs on every deploy; it reads the
+            # reserved identity from the api.env sourced above, which
+            # is the same value the API itself refuses on every real
+            # sign-in path. A seed failure aborts the deploy under
+            # `set -e` before `up -d`, leaving the running containers
+            # untouched - the same fail-closed shape as the migration
+            # step above.
+            DOCKER_COMPOSE_CMD="docker compose -f docker-compose.production.yml -p vocanova-production" \
+              sh /opt/vocanova/production/apps/api/scripts/seed-synthetic-smoke-user.sh
 
             docker compose -f docker-compose.production.yml -p vocanova-production up -d
 

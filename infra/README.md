@@ -203,6 +203,10 @@ workflow file, not a one-sided edit):
 │   ├── nginx/...                       # SCPed by deploy-staging
 │   └── secrets/                        # founder-populated, NOT SCPed
 ├── apps/api/scripts/migrate.sh         # SCPed by deploy-staging
+├── apps/api/scripts/seed-synthetic-smoke-user.{sh,sql}
+│                                       # SCPed by deploy-staging; run after
+│                                       # migrations to seed the synthetic
+│                                       # smoke-test account (VOC-050-T00)
 ├── apps/api/migrations/                # SCPed by deploy-staging
 └── usr/local/bin/atlas                 # installed by deploy-staging (idempotent)
 ```
@@ -343,6 +347,37 @@ workflow and by `T09`'s rehearsal) is the wrapper at
 DATABASE_URL=postgres://vocanova:vocanova@127.0.0.1:5432/vocanova?sslmode=disable \
   sh apps/api/scripts/migrate.sh
 ```
+
+### Synthetic smoke-test account seed (VOC-050-T00)
+
+Both deploy workflows run
+`apps/api/scripts/seed-synthetic-smoke-user.sh` immediately after
+the migration wrapper, while only Postgres is up. It executes the
+idempotent SQL beside it and guarantees a single account exists for
+post-deploy smoke checks to authenticate as, without any human
+provisioning step. Running it again on the next deploy refreshes that
+account rather than creating a second one.
+
+The account is deliberately unmistakable and unreachable by real
+users:
+
+- its address is under the RFC 2606 `.invalid` TLD, which can never
+  receive mail (`smoke-test-bot@synthetic.vocanova.invalid` by
+  default; override with `VOCANOVA_SYNTHETIC_SMOKE_TEST_EMAIL` in
+  `api.env`, which the workflows source before invoking the script);
+- its row carries `users.is_synthetic_test_account`, and a partial
+  unique index allows at most one such row at a time;
+- the API refuses that address on every real authentication path -
+  magic-link request and consume, the OAuth callback, sign-up
+  admission (even via the allowlist), and the account email-change
+  flow - so the seed is the only thing that can create it;
+- the seed refuses to run at all if the reserved address is already
+  held by an account that is not already marked synthetic, rather
+  than adopting an account it does not own.
+
+The API reads the same `VOCANOVA_SYNTHETIC_SMOKE_TEST_EMAIL` value it
+refuses, so the seeded address and the reserved address must be
+configured in lockstep.
 
 The `T08` AI-evaluation-threshold CI gate is **not** an
 infra artifact — it is a Go test in
