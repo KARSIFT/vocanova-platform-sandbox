@@ -81,8 +81,10 @@ org owner, qualifies.
 
 This is a substantive narrowing of `specification.md`'s open question 2 for
 `VOC-051-T02`'s implementer, who still owns recording the final chosen scope and
-its justification in that task's pull request. It is recorded here rather than
-acted on because §4's confirmation has not happened.
+its justification in that task's pull request. §4's confirmation has since
+happened (see §3/§4 below); this subsection is left as-is because it
+correctly predicted the actual choice made (internal-integration token,
+`project:read` + `event:read`).
 
 ### 1c. In Sentry, an "environment" is a tag inside a project, not a project
 
@@ -125,10 +127,12 @@ quota, and per-project alert rules differ cleanly), at the cost of diverging fro
 `apps/api`'s existing single-DSN-plus-tag wiring, which `VOC-051-T01` is
 explicitly instructed to mirror rather than reinvent.
 
-Neither is chosen here. Under the Developer plan's shared 5,000 errors/month
-account-wide cap, Layout B's isolation benefit is partly illusory (the cap is
-per-account, not per-project), which is a point for Layout A; but that trade-off
-is a human decision about the founder's real org, not this task's to make.
+Neither was chosen by this task itself — that decision belonged to the human
+with access to the founder's real org. Under the Developer plan's shared
+5,000 errors/month account-wide cap, Layout B's isolation benefit is partly
+illusory (the cap is per-account, not per-project), which was a point for
+Layout A; the founder chose Layout B anyway (see §3/§4), knowingly accepting
+that trade-off.
 
 ## 3. Layout record — confirmed by the founder 2026-08-08
 
@@ -154,7 +158,7 @@ absent from this file and must never be written into this file or any other
 repository file — they were provided directly to the founder-gate overseer
 session and written straight to GitHub Actions secrets, never committed.
 
-## 4. The three org-specific facts still required
+## 4. The three org-specific facts (now confirmed)
 
 All three, confirmed 2026-08-08 and recorded in §3:
 
