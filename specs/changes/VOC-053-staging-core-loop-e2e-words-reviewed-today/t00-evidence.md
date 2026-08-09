@@ -687,3 +687,87 @@ re-investigation adds no new conclusion but does
 independently re-confirm the trace, narrowing the
 chance that the previous attempt's conclusion was
 inferred rather than re-checked.
+
+## Addendum — live verification of `findings/VOC-053-required-live-verification` item 1 (candidate a)
+
+Performed after this attempt's investigation, by the founder-gate
+delegate directly (not the AI implementer, which has no live-staging
+network access): item 1's exact check, plus a real Playwright run.
+
+**Diagnostic added**: PR [#458](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/458)
+added `recordHomeResponseDiagnostic()` to
+`tests/staging-e2e/core-loop.staging.spec.ts`, recording the `/home`
+document response's `cache-control`, `x-nextjs-cache`,
+`cf-cache-status`, `age`, and `vary` headers as test annotations on
+both step 1 (baseline) and step 7 (post-review) home loads. Merged to
+`develop`, triggering a real `deploy-staging.yml` run
+([31337990160](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/31337990160))
+against the actual persistent synthetic account.
+
+**Result** (from the run's Playwright HTML report, both loads):
+
+```
+step 1 (baseline):    status=200 date=Sun, 09 Aug 2026 21:57:48 GMT
+  age=(absent)
+  cache-control=private, no-cache, no-store, max-age=0, must-revalidate
+  x-nextjs-cache=(absent)
+  cf-cache-status=DYNAMIC
+  vary=rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding
+
+step 7 (post-review): status=200 date=Sun, 09 Aug 2026 21:57:56 GMT
+  age=(absent)
+  cache-control=private, no-cache, no-store, max-age=0, must-revalidate
+  x-nextjs-cache=(absent)
+  cf-cache-status=DYNAMIC
+  vary=rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding
+```
+
+The same run reproduced the underlying bug at step 7's assertion:
+`Expected: >= 3, Received: 0` (the page rendered "0 of 20 words
+reviewed today" per the failure's page snapshot, immediately after the
+diagnostic-annotated response was captured for the same navigation).
+
+Separately, a direct `curl -I` against the unauthenticated `/home` and
+`/api/v1/daily-mission` routes (same investigation pass) showed
+`cf-cache-status: DYNAMIC` with no `cache-control` header at all on
+either route, consistent with the authenticated result above.
+
+**Candidate (a) is now ruled out with direct live evidence**, not just
+static reading: `cache-control` is an explicit no-store directive on
+both loads (identical value, not merely absent), `x-nextjs-cache` never
+appears (Next.js's Full Route Cache is not involved in serving this
+route at all - consistent with the static finding that a Server
+Component reading `headers()` opts the route out of the Full Route
+Cache), and Cloudflare reports `DYNAMIC` both times (no CDN-edge
+caching). This satisfies `findings/VOC-053-required-live-verification`
+item 1 in full. Item 4 (real browser trace of the rendered text) is
+also satisfied incidentally by the same run's failure page snapshot,
+which shows the counter rendering "0 of 20" - a real DOM read, not a
+regex/rendering artifact.
+
+Items 2, 3, and 5 (direct `daily_mission_snapshots` row inspection, a
+fresh-account reproduction, and an out-of-band-cache network check)
+remain unconfirmed - this delegate has no staging database or DNS/
+network access. However, with candidate (a) now conclusively ruled out
+by direct evidence (not inference) and the previous static analysis
+already finding no decrement/dual-computation bug in the SQL or pure
+timezone function it could read, **candidate (b) - a real backend
+day-boundary/timezone bug in how the live HTTP handler resolves
+`now`/timezone per request (`VOC-053-DEP-01`, still open) - is now the
+leading candidate by elimination**, with candidate (c) (test-data
+interaction) remaining a live secondary possibility neither confirmed
+nor ruled out.
+
+### T01 entry condition met
+
+Per this evidence file's own "T01 entry conditions" section, the second
+bullet applies: live verification has narrowed the candidates enough
+(one of three ruled out with direct evidence, not inference) that
+`VOC-053-T01` may proceed, scoped to investigating and fixing candidate
+(b) first (resolving `VOC-053-DEP-01`'s still-open question of exactly
+where/how `apps/api/app/api/missions.go`'s handler resolves per-request
+`now`/timezone, per `apps/api/business/missions/repository.go` and
+`apps/api/business/gamification/timezone.go`), falling back to
+candidate (c) if (b)'s trace turns up no defect. T01 must still record
+its own evidence per `VOC-053-AC-00`/`VOC-053-AC-01` rather than treat
+this addendum as a substitute for that.
