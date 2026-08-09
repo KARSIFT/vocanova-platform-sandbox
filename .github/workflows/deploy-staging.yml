@@ -6,7 +6,9 @@
 # Registry on every push to `develop`, then over SSH to the
 # founder-provisioned staging host (`VOC-032-DEP-00`)
 # pulls the new images, applies any pending migrations
-# via T06's `migrate.sh` wrapper, brings the four-service
+# via T06's `migrate.sh` wrapper, runs both idempotent
+# seed steps (VOC-050 synthetic smoke user + VOC-052
+# canonical P1 discover content), brings the four-service
 # stack up via T04's `docker compose`, and polls the
 # public /healthz and / endpoints until they are healthy
 # (or fails the run, leaving the previously-running
@@ -98,6 +100,13 @@
 #                                              VOC-050-T00's idempotent
 #                                              synthetic smoke-test account
 #                                              seed, run after migrations)
+#   /opt/vocanova/apps/api/bin/p1-content-seed
+#                                              (built by this workflow from
+#                                              apps/api/cmd/seed and SCPed in
+#                                              the deploy bundle; runs after
+#                                              migrations and the synthetic
+#                                              smoke-user seed to upsert the
+#                                              canonical P1 discover content)
 #   /opt/vocanova/apps/api/migrations/...       (SCPed by this workflow)
 #   /usr/local/bin/atlas                     (installed by this workflow
 #                                              on first run; idempotent)
@@ -184,6 +193,11 @@
 #     (VOC-050-T00) — the idempotent seed this workflow's
 #     SSH step runs immediately after migrations, while
 #     only Postgres is up.
+#   * apps/api/cmd/seed + apps/api/cmd/seed/voc026-p1.json
+#     (VOC-052-T00) — built into /opt/vocanova/apps/api/bin/
+#     p1-content-seed during bundling, then run on the host
+#     (against the same private-IP-resolved DATABASE_URL the
+#     migration step uses) before the full stack starts.
 #   * .github/workflows/accessibility.yml + lighthouse.yml
 #     — the design pattern this workflow mirrors (separate
 #     workflow file, NOT a pipeline.yml job).
@@ -468,6 +482,7 @@ jobs:
           rm -rf /tmp/deploy-bundle
           mkdir -p /tmp/deploy-bundle/infra
           mkdir -p /tmp/deploy-bundle/apps/api/scripts
+          mkdir -p /tmp/deploy-bundle/apps/api/bin
           mkdir -p /tmp/deploy-bundle/apps/api/migrations
           # T04's compose file
           cp infra/docker-compose.yml /tmp/deploy-bundle/infra/
@@ -487,6 +502,13 @@ jobs:
           cp apps/api/scripts/seed-synthetic-smoke-user.sh /tmp/deploy-bundle/apps/api/scripts/
           cp apps/api/scripts/seed-synthetic-smoke-user.sql /tmp/deploy-bundle/apps/api/scripts/
           chmod +x /tmp/deploy-bundle/apps/api/scripts/seed-synthetic-smoke-user.sh
+          # VOC-052-T00's canonical P1 content seed binary. Build on the
+          # runner, then ship and run on the staging host so Postgres remains
+          # private (no new public database ingress from GitHub Actions).
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+            -o /tmp/deploy-bundle/apps/api/bin/p1-content-seed \
+            ./apps/api/cmd/seed
+          chmod +x /tmp/deploy-bundle/apps/api/bin/p1-content-seed
           # T06's migration files. Atlas's default
           # versioned glob is `*.sql`, so the .down.sql
           # .example files are deliberately NOT copied
@@ -526,9 +548,10 @@ jobs:
       # GITHUB_TOKEN (passed via the SSH session's
       # environment, see the `envs:` block), pulls
       # the new images, applies any pending
-      # migrations via T06's wrapper, and brings the
-      # four-service stack up via `docker compose up
-      # -d`.
+      # migrations via T06's wrapper, runs both
+      # idempotent seed steps, and brings the
+      # four-service stack up via `docker compose
+      # up -d`.
       #
       # `command_timeout: 15m` is the SSH command's
       # own per-invocation timeout. A 15-minute
@@ -873,7 +896,6 @@ jobs:
               exit 1
             fi
             DATABASE_URL="$migration_database_url" sh /opt/vocanova/apps/api/scripts/migrate.sh
-            unset migration_database_url
 
             # VOC-050-T00: ensure the synthetic smoke-test account
             # exists before the rest of the stack starts. The seed is
@@ -887,7 +909,17 @@ jobs:
             sh /opt/vocanova/apps/api/scripts/seed-synthetic-smoke-user.sh
 
             # -------------------------------------------------------------
-            # 6. Bring the stack up.
+            # 6. VOC-052-T00: seed canonical P1 discover content
+            #    after migrations + synthetic smoke-user seed, while only
+            # Postgres is up. The binary is built on the GitHub runner
+            # and copied in the deploy bundle to avoid exposing
+            # Postgres outside the private host network.
+            # -------------------------------------------------------------
+            DATABASE_URL="$migration_database_url" /opt/vocanova/apps/api/bin/p1-content-seed
+            unset migration_database_url
+
+            # -------------------------------------------------------------
+            # 7. Bring the stack up.
             #
             #    `docker compose up -d` is the full-stack replacement step in this
             #    workflow that touches a running container. Its
