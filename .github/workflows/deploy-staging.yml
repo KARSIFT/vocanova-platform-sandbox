@@ -1174,6 +1174,49 @@ jobs:
           pnpm --filter @vocanova/web exec playwright test \
             --config playwright.staging.config.ts
 
+      # VOC-053-DEP-00 diagnostic (temporary - see issue #453/VOC-053-T01):
+      # T01's independent review confirmed the implementer correctly
+      # declined a speculative fix without direct daily_mission_snapshots
+      # row evidence, which this environment's AI implementer/reviewer
+      # cannot reach. Dumps the synthetic smoke-test account's snapshot
+      # rows (reviews_completed, local_date, timezone, status, updated_at)
+      # for the last 3 days, plus the DB server's own now()/TimeZone,
+      # right after the E2E run above - `if: always()` so it captures
+      # state regardless of whether that run passed or failed. Uses
+      # `docker compose exec postgres psql` (same container-internal path
+      # seed-synthetic-smoke-user.sh already uses), not the private-
+      # bridge-IP path migrate.sh needs, since this runs from inside the
+      # already-up compose stack rather than host-side Atlas. Remove once
+      # VOC-053-DEP-00 is resolved.
+      - name: DIAGNOSTIC - dump synthetic account's daily_mission_snapshots rows
+        if: ${{ always() && inputs.skip_ssh_deploy != true }}
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          command_timeout: 1m
+          script: |
+            set -euo pipefail
+            cd /opt/vocanova
+            echo "--- DB server now() / TimeZone ---"
+            docker compose exec -T postgres \
+              psql --username vocanova --dbname vocanova \
+                --command "SELECT now(), current_setting('TimeZone');"
+            echo "--- synthetic account's daily_mission_snapshots (last 3 days) ---"
+            docker compose exec -T postgres \
+              psql --username vocanova --dbname vocanova \
+                --set=ON_ERROR_STOP=1 \
+                --command "
+                  SELECT dms.local_date, dms.timezone, dms.review_target,
+                         dms.reviews_completed, dms.status, dms.updated_at
+                  FROM daily_mission_snapshots dms
+                  JOIN users u ON u.id = dms.user_id
+                  WHERE u.email = 'smoke-test-bot@synthetic.vocanova.invalid'
+                  ORDER BY dms.local_date DESC
+                  LIMIT 3;
+                "
+
       - name: Upload the staging core-loop Playwright report on failure
         if: ${{ failure() && inputs.skip_ssh_deploy != true }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
