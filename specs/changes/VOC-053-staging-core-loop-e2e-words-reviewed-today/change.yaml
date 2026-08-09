@@ -3,7 +3,7 @@ id: VOC-053
 slug: staging-core-loop-e2e-words-reviewed-today
 title: Fix Staging Core-Loop E2E's Same-Run "Words Reviewed Today" Decrease
 type: bugfix
-status: draft
+status: adopted
 risk: R3
 planned_implementation_risk_floor: 'Not yet computed by running scripts/governance/classify-change-risk.sh
   against a real task-scoped file list, because the actual root cause (and therefore
@@ -50,9 +50,12 @@ requirement_source: 'GitHub issue #450 ("Staging core-loop E2E: ''words reviewed
   of it.
 
   '
-requirement_approval_status: not-approved
+requirement_approval_status: 'Approved. Founder-delegate (acting under the standing
+  founder-gate delegation for vocanova-platform-sandbox, confirmed explicitly this same
+  session) adopted this draft package on 2026-08-09, mirroring the established
+  convention of flipping adoption fields before merge so adopt.yml succeeds.'
 base_branch: develop
-base_sha: unknown-at-drafting-time
+base_sha: 730d820b8e4816505369d49bceb786325d27d24c
 target_branch: develop
 approved_candidate_sha: null
 owners:
@@ -60,8 +63,8 @@ owners:
   package_preparation: planner (drafting only; adoption remains a human decision)
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: adopted
+implementation_authorized: true
 automatic_merge_allowed: false
 production_impact: 'unknown until the root cause is confirmed and implemented. Candidate
   (a) (Next.js caching) and candidate (c) (test-data interaction) fixes are expected
@@ -119,7 +122,7 @@ affected_areas:
   itself; candidate c's fix, if confirmed, may touch a helper it uses)
 - specs/changes/VOC-053-staging-core-loop-e2e-words-reviewed-today
 implementation:
-  authorized: false
+  authorized: true
   required: true
   status: proposed
   target_branch: develop
