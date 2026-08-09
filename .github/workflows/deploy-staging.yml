@@ -1198,7 +1198,7 @@ jobs:
           command_timeout: 1m
           script: |
             set -euo pipefail
-            cd /opt/vocanova
+            cd /opt/vocanova/infra
             echo "--- DB server now() / TimeZone ---"
             docker compose exec -T postgres \
               psql --username vocanova --dbname vocanova \
