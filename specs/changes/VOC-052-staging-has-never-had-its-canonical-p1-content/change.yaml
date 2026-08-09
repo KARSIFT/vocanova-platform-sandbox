@@ -1,0 +1,171 @@
+schema_version: 1
+id: VOC-052
+slug: staging-has-never-had-its-canonical-p1-content
+title: Seed the Canonical P1 Content (journey_situations, canonical_words, and Related
+  Tables) on Staging and Production Deploy
+type: feature
+status: draft
+risk: R3
+planned_implementation_risk_floor: 'Not yet computed by running scripts/governance/classify-change-risk.sh
+  against a real task-scoped file list. This package proposes R3 for the change as
+  a whole because every task''s affected area sits inside .github/workflows/ (deploy-staging.yml
+  and, if T02 is adopted, deploy-production.yml), which docs/governance/change-risk-classification.md
+  floors at R3 as a CI/CD and deployment-pipeline path class, and because the new
+  step runs directly against the real staging (and possibly production) database during
+  a live deploy. The seed tool itself (apps/api/cmd/seed) is documented as idempotent
+  and additive (upsert-by-fixed-primary-key, no DELETE statements), which bounds the
+  blast radius, but running any new step against a real database in a real deploy
+  pipeline is squarely the kind of protected-area effect this repository''s risk floor
+  exists to catch regardless of how safe the tool itself looks in isolation. This
+  is a draft proposal for the reviewing human at adoption time, not a determination.
+
+  '
+canonical_path: specs/changes/VOC-052-staging-has-never-had-its-canonical-p1-content
+authority_model: a003-active
+requirement_source: 'GitHub issue #437 ("Staging has never had its canonical P1 content
+  seeded - real core-loop E2E fails at the discover step"). The issue reports that
+  VOC-050''s first real run of the staging core-loop E2E check (tests/staging-e2e/core-loop.staging.spec.ts,
+  run in deploy-staging.yml after every merge to develop) failed at the "discover
+  a situation and open a word" step with zero journey-situation links rendered on
+  the real /discover page, and traces the root cause to apps/api/migrations/20260725100000_voc026_p1_content_tables.sql
+  creating the P1 content schema (journey_situations, canonical_words, word_meanings,
+  word_examples, usage_notes, journey_words) with zero INSERT statements, combined
+  with deploy-staging.yml never building, copying, or running the existing idempotent
+  seed tool at apps/api/cmd/seed (which embeds voc026-p1.json and is documented in
+  its own doc comment as safe to rerun). The issue states every prior PR-time E2E/accessibility
+  check passed because those run against mock-api-server.mjs, which serves fixed fixture
+  content regardless of the real database, so this gap was invisible until VOC-050-T02
+  added the first real-backend staging check; it is explicit that this is not a regression
+  VOC-050 introduced. The issue''s "suggested direction" section proposes adding a
+  step to deploy-staging.yml (and, once its own SMOKE_TEST_SESSION_COOKIE is provisioned,
+  deploy-production.yml) that builds and runs apps/api/cmd/seed against the target
+  database after migrations apply, mirroring the existing seed-synthetic-smoke-user.sh
+  step''s placement and idempotency posture, and explicitly leaves exact placement/sequencing
+  to whoever picks it up.
+
+  '
+requirement_approval_status: 'Not yet reviewed. This package is a draft proposal only;
+  drafting a package is not adoption. A founder or founder-delegate must review and
+  adopt this package (flip status/approval_status/implementation_authorized) before
+  any implementation work may begin, per AGENTS.md''s change workflow.
+
+  '
+base_branch: develop
+base_sha: 1a9b4f39764c84a2f153ad6982a83d273f494158
+target_branch: develop
+approved_candidate_sha: null
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: false
+production_impact: 'unknown until adopted and implemented. T00 (deploy-staging.yml)
+  affects only the staging tier''s database content, additively (new rows via ON CONFLICT
+  DO UPDATE upserts by fixed seed IDs; no destructive statement in apps/api/cmd/seed''s
+  applySeed). T01 (the real-content staging E2E re-verification) has no production
+  effect at all. T02 (deploy-production.yml parity), if adopted, would run the same
+  idempotent seed against the real production database the first time deploy-production.yml''s
+  own real-backend core-loop check is activated - this package proposes it but flags
+  it as an open question in specification.md given production''s SMOKE_TEST_SESSION_COOKIE
+  is intentionally still unset today (see the issue''s own note on this).
+
+  '
+rollback_required: true
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-052-DEP-00
+  status: 'unresolved at drafting time. This package''s entire premise (the migration
+    file having zero INSERT statements, apps/api/cmd/seed existing and being documented
+    as idempotent, and deploy-staging.yml never building/copying/ running it) was
+    independently re-confirmed by reading the actual files during drafting, not merely
+    assumed from the issue text - see specification.md''s "Confirmed findings" section.
+
+    '
+- id: VOC-052-DEP-01
+  status: 'unresolved at drafting time. apps/api/cmd/seed is a plain `go build` target
+    with no existing cross-compiled artifact or CI step that produces one; unlike
+    apps/api/scripts/migrate.sh (a shell wrapper that installs a prebuilt Atlas binary)
+    or seed-synthetic-smoke-user.sh (raw SQL run through `docker compose exec postgres
+    psql`), the P1 content seed''s data lives embedded in a Go binary via //go:embed.
+    T00''s implementer must decide, and record as an explicit decision rather than
+    an unstated default, which of two viable mechanisms to use: (a) `go build` the
+    `apps/api/cmd/seed` binary on the GitHub Actions runner during deploy-staging.yml
+    (the runner already has the pinned Go toolchain available for apps/api''s own
+    `pnpm test:api` step) and SCP the resulting static binary to the staging host
+    as part of the existing deploy bundle, then run it there with DATABASE_URL pointed
+    at the private Postgres bridge IP the same way migrate.sh already does; or (b)
+    run `go run ./cmd/seed` (or a built binary) directly against the staging database
+    from the GitHub Actions runner itself, before or instead of going through SSH,
+    if the staging Postgres port is reachable from the runner (it currently is not
+    published to the internet per the workflow''s own header comment, so this path
+    would require a new, narrower exposure decision the implementer must flag rather
+    than assume). This package does not resolve which mechanism to use - see specification.md''s
+    open questions.
+
+    '
+- id: VOC-052-DEP-02
+  status: 'unresolved at drafting time. Whether deploy-production.yml should also
+    gain this step (T02) depends on a human decision this package cannot make on its
+    own: production''s real-backend core-loop smoke check already has its own session-minting
+    wiring from VOC-050-T04, but the founder has not yet made the decision to fully
+    activate production''s real-backend smoke gating the way staging''s now is. Adding
+    the P1 content seed to deploy-production.yml ahead of that activation decision
+    would be new, unrequested scope; deferring it would leave the production tier
+    with the same latent content gap staging had until this issue surfaced it. See
+    specification.md''s open questions and tasks.md''s T02 framing as conditional
+    on that human decision.
+
+    '
+affected_areas:
+- .github/workflows/deploy-staging.yml
+- .github/workflows/deploy-production.yml (conditional on VOC-052-DEP-02's resolution;
+  see T02)
+- tests/staging-e2e/core-loop.staging.spec.ts (no code change expected; re-run as
+  verification evidence)
+- apps/api/cmd/seed (read-only; this package builds and runs the existing tool, it
+  does not modify it)
+- specs/changes/VOC-052-staging-has-never-had-its-canonical-p1-content
+implementation:
+  authorized: false
+  required: true
+  status: proposed
+  target_branch: develop
+  pull_request: null
+  authority_issue: 437
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: unknown-until-implemented
+  deployment: not-authorized-by-this-package
+  automatic_merge: false
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
+blocking_reasons: 'Not adopted. Requires founder/steward review of the proposed R3
+  classification, resolution of VOC-052-DEP-01 (which of the two build/run mechanisms
+  T00 should use) and VOC-052-DEP-02 (whether T02''s deploy-production.yml parity
+  step is in scope now or deferred until production''s real-backend core-loop gating
+  is itself activated), and confirmation that scripts/governance/classify-change-risk.sh''s
+  actual detected floor for the real task-scoped file list is not higher than the
+  R3 proposed here.
+
+  '
