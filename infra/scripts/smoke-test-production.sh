@@ -6,9 +6,12 @@ set -euo pipefail
 # Replaces the manual curl/SSH checks used ad hoc during R2 (VOC-037)
 # with a scripted, callable-from-CI-or-standalone suite. Every check
 # either passes or fails explicitly; nothing is silently skipped
-# except the core-loop check, which requires a founder-provisioned
-# smoke-test session cookie that does not exist yet - that one prints
-# an explicit SKIP with the reason, not a silent pass.
+# except the core-loop check, which needs a smoke-test session cookie.
+# deploy-production.yml supplies one on every deploy since VOC-050-T04
+# (minted for the deploy-seeded synthetic account), so the SKIP now
+# only applies to a standalone run that does not set the variable -
+# and even then it is an explicit SKIP with a reason, not a silent
+# pass.
 #
 # Deliberately does not perform any state-mutating action against a
 # real target: it never actually requests a magic link or completes
@@ -28,7 +31,11 @@ set -euo pipefail
 #   EXPECT_OAUTH_ENABLED        (default: false)
 #   EXPECT_NEW_SIGNUPS_ENABLED  (default: false)
 #   EXPECT_AI_ENABLED           (default: true)
-#   SMOKE_TEST_SESSION_COOKIE   (default: unset - core-loop check is skipped)
+#   SMOKE_TEST_SESSION_COOKIE   (default: unset - core-loop check is
+#                                skipped). A whole `Cookie:` header
+#                                value, i.e. `vocanova_session=<opaque
+#                                session value>`, not the bare opaque
+#                                value on its own.
 #
 # Requires: curl, and either jq or python3 for JSON parsing.
 
@@ -167,12 +174,15 @@ else
   fi
 fi
 
-# 5. Core-loop happy path - requires a founder-provisioned smoke-test
-# account's session cookie. Not provisioned yet as of this writing, so
-# this check is an explicit, non-fatal SKIP rather than a silent pass
-# or a hard failure over something outside this task's scope.
+# 5. Core-loop happy path - requires the synthetic smoke-test account's
+# session cookie. deploy-production.yml mints one on every deploy
+# (VOC-050-T04), so this runs for real there; a standalone run without
+# the variable still gets an explicit, non-fatal SKIP rather than a
+# silent pass or a hard failure over an unprovisioned local shell.
+# Both requests are read-only, preserving this suite's no-side-effects
+# design.
 if [ -z "$smoke_session_cookie" ]; then
-  skip "core-loop happy path (SMOKE_TEST_SESSION_COOKIE not set - no smoke-test account provisioned yet)"
+  skip "core-loop happy path (SMOKE_TEST_SESSION_COOKIE not set - pass vocanova_session=<value> to run it)"
 else
   me_status="$(curl -sS --max-time 10 -o /dev/null -w "%{http_code}" \
     -H "Cookie: $smoke_session_cookie" \

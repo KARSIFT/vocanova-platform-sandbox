@@ -238,6 +238,40 @@ jobs:
             } >> /opt/vocanova/production/secrets/api.env
             chmod 600 /opt/vocanova/production/secrets/api.env
 
+      # VOC-050-T04: the production api container's own copy of the
+      # mint token, written from the same GitHub secret the post-deploy
+      # mint step authenticates with, so the two can never drift apart.
+      # Unlike the monitoring/OAuth syncs above this one is required,
+      # not optional-until-adopted: VOC-050-T01 does not register
+      # POST /ops/synthetic-smoke-test/session at all when
+      # SMOKE_TEST_SESSION_MINT_TOKEN is unset, so an empty value would
+      # turn the activated core-loop smoke check back into the SKIP that
+      # VOC-050-AC-05 exists to remove. Failing here fails the deploy
+      # before anything is restarted, which is the intended fail-closed
+      # behavior.
+      - name: Sync production smoke-test session mint token from GitHub secrets
+        uses: appleboy/ssh-action@v1
+        env:
+          PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN: ${{ secrets.PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN }}
+        with:
+          host: ${{ secrets.PRODUCTION_SSH_HOST }}
+          username: ${{ secrets.PRODUCTION_SSH_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_PRIVATE_KEY }}
+          command_timeout: 2m
+          envs: PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN
+          script: |
+            set -euo pipefail
+            if [ -z "${PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN:-}" ]; then
+              echo "PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN missing or empty - the production core-loop smoke check cannot run without it" >&2
+              exit 1
+            fi
+            sed -i \
+              -e '/^SMOKE_TEST_SESSION_MINT_TOKEN=/d' \
+              /opt/vocanova/production/secrets/api.env
+            echo "SMOKE_TEST_SESSION_MINT_TOKEN=${PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN}" \
+              >> /opt/vocanova/production/secrets/api.env
+            chmod 600 /opt/vocanova/production/secrets/api.env
+
       # Google OAuth is optional-until-adopted, same reasoning as the
       # monitoring sync above: skip cleanly while these secrets don't
       # exist, fail closed on a PARTIAL state. GOOGLE_OAUTH_ENABLED
@@ -557,6 +591,56 @@ jobs:
           echo "ERROR: production web did not return 2xx within 5 minutes" >&2
           exit 1
 
+      # VOC-050-T04: mint a real session for the deploy-seeded synthetic
+      # smoke-test account (VOC-050-T00) via VOC-050-T01's token-gated
+      # endpoint, so the smoke suite's core-loop section can authenticate
+      # as a real user without a magic-link email or an OAuth round-trip.
+      # Runs after both readiness polls, for the same reason the staging
+      # core-loop gate does: a request issued before the tier is serving
+      # would report cold start as a core-loop failure.
+      #
+      # Fail-closed by construction: no continue-on-error, and a missing
+      # secret or an unreachable/unregistered endpoint exits non-zero
+      # rather than falling back to the old SKIP.
+      - name: Mint synthetic smoke-test session for the production smoke suite
+        id: mint_production_session
+        env:
+          PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN: ${{ secrets.PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN }}
+          PRODUCTION_API_BASE_URL: https://${{ inputs.production_api_host || 'api-production.vocanova.site' }}:8443
+        run: |
+          set -euo pipefail
+          if [ -z "${PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN:-}" ]; then
+            echo "ERROR: PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN is required for the production core-loop smoke check" >&2
+            echo "  It is the same value the 'Sync production smoke-test session mint token' step writes" >&2
+            echo "  into the api container's SMOKE_TEST_SESSION_MINT_TOKEN; VOC-050-T01 does not register" >&2
+            echo "  the mint endpoint at all when that is unset." >&2
+            exit 1
+          fi
+
+          response_json="$(curl -fsS --max-time 20 \
+            -X POST \
+            -H "Authorization: Bearer ${PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN}" \
+            -H "Accept: application/json" \
+            "${PRODUCTION_API_BASE_URL}/ops/synthetic-smoke-test/session")"
+
+          session_token="$(printf '%s' "$response_json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["session_cookie"])')"
+          if [ -z "$session_token" ]; then
+            echo "ERROR: the production session-mint endpoint returned an empty session value" >&2
+            exit 1
+          fi
+
+          # The mint endpoint returns the OPAQUE session value, not a
+          # Cookie header pair, while smoke-test-production.sh passes
+          # SMOKE_TEST_SESSION_COOKIE straight through as a whole
+          # `Cookie:` header (see its section # 5. and case 5 of
+          # smoke-test-production.selftest.sh). The `vocanova_session=`
+          # name is therefore added here; without it the API would see
+          # no session cookie at all and the core-loop checks would 401
+          # instead of passing.
+          echo "::add-mask::$session_token"
+          echo "session_cookie=vocanova_session=$session_token" >> "$GITHUB_OUTPUT"
+          echo "Minted a synthetic smoke-test session for the production smoke suite."
+
       # VOC-038-T02: replaces the manual curl/SSH checks used ad hoc
       # during R2 with a scripted, repeatable suite. Expected
       # kill-switch state mirrors the "Write production application
@@ -567,15 +651,19 @@ jobs:
       # OAuth credentials: the real kill switch correctly flipped to
       # true, but this hardcoded expectation still said false, failing
       # the suite over a stale assumption rather than a real defect.
-      # SMOKE_TEST_SESSION_COOKIE is intentionally unset here - no
-      # founder-provisioned smoke-test account exists yet, so the
-      # core-loop check runs as a non-fatal SKIP until one is.
+      # VOC-050-T04: SMOKE_TEST_SESSION_COOKIE is now supplied from the
+      # mint step above (a full `vocanova_session=<opaque>` Cookie header
+      # value), so the suite's section # 5. runs its real
+      # GET /api/v1/me and GET /api/v1/journey-situations checks instead
+      # of the previous non-fatal SKIP. Both are read-only; the script's
+      # documented no-side-effects design is unchanged.
       - name: Run production smoke-test suite
         env:
           EXPECT_MAGIC_LINK_ENABLED: "false"
           EXPECT_OAUTH_ENABLED: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID != '' && secrets.GOOGLE_OAUTH_CLIENT_SECRET != '' }}
           EXPECT_NEW_SIGNUPS_ENABLED: "false"
           EXPECT_AI_ENABLED: "true"
+          SMOKE_TEST_SESSION_COOKIE: ${{ steps.mint_production_session.outputs.session_cookie }}
         run: |
           bash infra/scripts/smoke-test-production.sh \
             "https://${{ inputs.production_api_host || 'api-production.vocanova.site' }}:8443" \
