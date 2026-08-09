@@ -1,0 +1,109 @@
+name: dependabot-risk-classification
+
+# Auto-injects the "Risk classification: R#" line governance-policy.yml
+# requires, for dependabot[bot]-authored PRs only. Dependabot has no way
+# to write custom PR-body text itself (dependabot.yml's own header
+# comment already flags this as a known gap, since PR #371), so a human
+# was doing this by hand for every single Dependabot PR - the actual
+# trigger for this workflow existing, 2026-08-09.
+#
+# Classification rule:
+#   - github_actions ecosystem bumps (branch prefix
+#     dependabot/github_actions/*) always classify R4, a deliberate
+#     override above classify-change-risk.sh's own R3 floor for
+#     .github/workflows/* - these touch the CI/CD pipeline's own actions
+#     directly (secret handling, deploy behavior, third-party action
+#     trust), so they always require the founder's explicit "approved"
+#     comment regardless of how clean CI looks. Founder decision,
+#     2026-08-09.
+#   - Every other ecosystem (npm, gomod, ...) uses
+#     classify-change-risk.sh's own computed path-based floor, exactly
+#     matching what a human reviewing the diff would have typed by hand.
+#
+# Runs only on `opened`/`reopened`: Dependabot doesn't push further
+# commits to an existing PR without recreating it (which re-opens), so
+# there's nothing to re-classify on `synchronize`.
+on:
+  pull_request:
+    branches:
+      - develop
+    types:
+      - opened
+      - reopened
+
+permissions:
+  contents: read
+
+jobs:
+  classify:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out reviewed revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      # A GitHub App installation token, not the default GITHUB_TOKEN:
+      # matches this repo's own error-monitoring.yml precedent. Plain
+      # `pull_request` (not `pull_request_target`) runs triggered by
+      # Dependabot get a read-only GITHUB_TOKEN regardless of this
+      # workflow's own `permissions:` block (a GitHub platform security
+      # measure), so editing the PR body requires a real write-scoped
+      # identity.
+      - name: Check for GitHub App credentials
+        id: app-credentials
+        env:
+          APP_ID: ${{ secrets.KARSIFT_BOT_APP_ID }}
+        run: |
+          if [ -n "$APP_ID" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Mint a GitHub App installation token
+        id: app-token
+        if: steps.app-credentials.outputs.available == 'true'
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.KARSIFT_BOT_APP_ID }}
+          private-key: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
+
+      - name: Determine and inject risk classification
+        if: steps.app-credentials.outputs.available == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          body="$(gh pr view "$PR_NUMBER" --json body -q .body)"
+          if echo "$body" | grep -qiE '^[[:space:]]*Risk classification:[[:space:]]*R[0-4]\b'; then
+            echo "PR body already declares a risk classification - leaving as-is."
+            exit 0
+          fi
+
+          case "$HEAD_REF" in
+            dependabot/github_actions/*)
+              risk="R4"
+              ;;
+            *)
+              risk="$(bash scripts/governance/classify-change-risk.sh --base "$BASE_SHA" --head "$HEAD_SHA" \
+                | grep -oP '(?<=Detected path-based risk floor: )R[0-4]' | head -1)"
+              if [ -z "$risk" ]; then
+                risk="R1"
+              fi
+              ;;
+          esac
+
+          new_body="${body}
+
+          Risk classification: ${risk} (auto-classified for dependabot[bot] by .github/workflows/dependabot-risk-classification.yml)"
+
+          gh api -X PATCH "repos/${{ github.repository }}/pulls/${PR_NUMBER}" -f body="$new_body" > /dev/null
+          echo "Classified PR #$PR_NUMBER as $risk"
