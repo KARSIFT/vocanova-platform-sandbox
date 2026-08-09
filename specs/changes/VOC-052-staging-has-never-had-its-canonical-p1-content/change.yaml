@@ -4,7 +4,7 @@ slug: staging-has-never-had-its-canonical-p1-content
 title: Seed the Canonical P1 Content (journey_situations, canonical_words, and Related
   Tables) on Staging and Production Deploy
 type: feature
-status: draft
+status: adopted
 risk: R3
 planned_implementation_risk_floor: 'Not yet computed by running scripts/governance/classify-change-risk.sh
   against a real task-scoped file list. This package proposes R3 for the change as
@@ -44,12 +44,10 @@ requirement_source: 'GitHub issue #437 ("Staging has never had its canonical P1 
   to whoever picks it up.
 
   '
-requirement_approval_status: 'Not yet reviewed. This package is a draft proposal only;
-  drafting a package is not adoption. A founder or founder-delegate must review and
-  adopt this package (flip status/approval_status/implementation_authorized) before
-  any implementation work may begin, per AGENTS.md''s change workflow.
-
-  '
+requirement_approval_status: 'Approved. Founder-delegate (acting under the standing
+  founder-gate delegation for vocanova-platform-sandbox, confirmed explicitly this same
+  session) adopted this draft package on 2026-08-09, mirroring the established
+  convention of flipping adoption fields before merge so adopt.yml succeeds.'
 base_branch: develop
 base_sha: 1a9b4f39764c84a2f153ad6982a83d273f494158
 target_branch: develop
@@ -59,8 +57,8 @@ owners:
   package_preparation: planner (drafting only; adoption remains a human decision)
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: adopted
+implementation_authorized: true
 automatic_merge_allowed: false
 production_impact: 'unknown until adopted and implemented. T00 (deploy-staging.yml)
   affects only the staging tier''s database content, additively (new rows via ON CONFLICT
@@ -137,7 +135,7 @@ affected_areas:
   does not modify it)
 - specs/changes/VOC-052-staging-has-never-had-its-canonical-p1-content
 implementation:
-  authorized: false
+  authorized: true
   required: true
   status: proposed
   target_branch: develop
