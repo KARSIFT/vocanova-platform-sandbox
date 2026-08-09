@@ -161,7 +161,17 @@ jobs:
               throw new Error("SENTRY_PROJECT_MATRIX must be a non-empty JSON array");
             }
 
-            const baseUrl = "https://sentry.io/api/0";
+            // Regional, not the generic host: this org's DSNs (see
+            // t00-evidence.md) all resolve through ingest.de.sentry.io,
+            // meaning the org is provisioned in Sentry's EU/Germany data
+            // region. Sentry's region-isolated orgs require API calls to
+            // hit the matching regional host - the generic sentry.io host
+            // returns "401 Invalid token" for a region-isolated org's
+            // token even when the token itself is genuinely valid and
+            // installed correctly. Found live, 2026-08-09: every hourly
+            // run since this workflow shipped failed with exactly that
+            // error against https://sentry.io/api/0.
+            const baseUrl = "https://de.sentry.io/api/0";
             const sentryHeaders = {
               Authorization: `Bearer ${sentryToken}`,
               Accept: "application/json",
