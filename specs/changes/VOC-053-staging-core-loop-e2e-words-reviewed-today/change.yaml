@@ -1,0 +1,154 @@
+schema_version: 1
+id: VOC-053
+slug: staging-core-loop-e2e-words-reviewed-today
+title: Fix Staging Core-Loop E2E's Same-Run "Words Reviewed Today" Decrease
+type: bugfix
+status: draft
+risk: R3
+planned_implementation_risk_floor: 'Not yet computed by running scripts/governance/classify-change-risk.sh
+  against a real task-scoped file list, because the actual root cause (and therefore
+  the actual affected file set) is unknown at drafting time - see specification.md''s
+  open questions. This package proposes R3 as a draft ceiling covering both plausible
+  candidates'' most likely footprint: candidate (a) (Next.js caching) would touch
+  apps/web/src/lib/api-server.ts and/or apps/web/src/app/(app)/home/page.tsx under
+  apps/web/src/; candidate (b) (a real backend timezone/local-date bug) would touch
+  apps/api/business/missions/, apps/api/business/gamification/, and/or the live HTTP
+  handler, and could conditionally touch apps/api/migrations/ (a more sensitive protected
+  path) if a corrective migration turns out to be needed for already-written incorrect
+  rows. The actual floor must be confirmed by running the classifier against T01''s
+  real, post-investigation file list once the root cause is known, and may exceed
+  R3 if the migration path is taken. This is a draft proposal for the reviewing human
+  at adoption time, not a determination.
+
+  '
+canonical_path: specs/changes/VOC-053-staging-core-loop-e2e-words-reviewed-today
+authority_model: a003-active
+requirement_source: 'GitHub issue #450 ("Staging core-loop E2E: ''words reviewed today''
+  counter reads 1, then 0, moments later on the same account/run"). The issue reports
+  that on 2026-08-09, the first staging core-loop E2E run to get past the review-queue
+  race fixes (PRs #446/#448/#449) failed at tests/staging-e2e/core-loop.staging.spec.ts:375
+  (step 7, "progress reflects the completed reviews") with Expected: >= 1, Received:
+  0, in a run that completed in under 10 seconds total (run https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/31332238452).
+  The issue''s own timing analysis concludes reviewedBefore = 1 (recorded earlier
+  the same day by an earlier deploy run against the same persistent synthetic account)
+  and reviewedCards = 0 (the queue was already empty this run), so reviewedAfter,
+  read via a fresh page.goto("/home") roughly ten seconds later in the same test run,
+  returning 0 is a real same-day decrease with no midnight/day boundary crossed (~19:42
+  UTC). The issue traces where the number comes from (apps/web/src/app/(app)/home/page.tsx''s
+  Server Component calling client.getDailyMission() fresh on every request via apps/web/src/lib/api-server.ts''s
+  fetch with no explicit cache option) and lists three non-prescriptive candidate
+  root causes: (1) Next.js Data Cache/Full Route Cache staleness, (2) a real backend
+  day-boundary/timezone bug in how reviews_completed/local_date is computed, and (3)
+  a test-data artifact from the persistent synthetic account being reused across many
+  deploy runs the same night interacting with (1) or (2). The issue explicitly states
+  this is a new, different failure only reachable after PRs #446/#448/#449''s fixes,
+  not a re-litigation of those, and that resolving which candidate is correct needs
+  real HTTP header/cache-status inspection and/or backend query inspection this environment
+  does not have blind access to. The issue''s "Impact" section states this blocks
+  VOC-052-T01''s staging E2E evidence requirement, which blocks VOC-052''s completion,
+  which blocks PR #435 (the pending develop -> main release) and everything downstream
+  of it.
+
+  '
+requirement_approval_status: not-approved
+base_branch: develop
+base_sha: unknown-at-drafting-time
+target_branch: develop
+approved_candidate_sha: null
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: false
+production_impact: 'unknown until the root cause is confirmed and implemented. Candidate
+  (a) (Next.js caching) and candidate (c) (test-data interaction) fixes are expected
+  to have no production-database effect - candidate (a)''s fix changes only fetch-caching
+  behavior; candidate (c)''s fix changes only test/seeding tooling. Candidate (b)
+  (a real backend bug) would, if confirmed, mean the same computation defect exists
+  in production''s own reviews_completed/local_date path for real users - fixing it
+  would correct real users'' counters going forward, and could conditionally require
+  a data-correcting migration for already-written incorrect rows (an explicit, separately-flagged
+  decision; see specification.md open question 3 and impact-analysis.md''s VOC-053-R02),
+  which is a more sensitive protected-path effect than the code fix alone.
+
+  '
+rollback_required: true
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-053-DEP-00
+  status: 'unresolved at drafting time. Which of issue #450''s three non-prescriptive
+    candidates (or a fourth cause this drafting pass did not anticipate) is the real
+    root cause of the observed same-run, same-day decrease is not determined by this
+    package - it requires live staging HTTP response inspection and/or backend request-path
+    tracing this drafting pass could not perform. See specification.md open question
+    1 and VOC-053-T00.
+
+    '
+- id: VOC-053-DEP-01
+  status: 'unresolved at drafting time. This drafting pass located and independently
+    re-read apps/api/business/missions/repository.go''s read/write SQL and apps/api/business/gamification/timezone.go''s
+    pure LocalDate function and found no decrement or dual-computation bug in either
+    by static reading alone, but did not locate the specific HTTP handler (in apps/api/app/api/missions.go
+    or elsewhere) that resolves now/timezone per live request and calls them - so
+    whether that caller''s resolution could plausibly differ between two requests
+    seconds apart remains unconfirmed. See specification.md finding 5 and open question
+    2.
+
+    '
+affected_areas:
+- apps/web/src/lib/api-server.ts (candidate a; conditional on VOC-053-DEP-00's resolution)
+- apps/web/src/app/(app)/home/page.tsx (candidate a; conditional)
+- apps/api/business/missions/ (candidate b; conditional)
+- apps/api/business/gamification/ (candidate b; conditional)
+- apps/api/app/api/missions.go (candidate b; conditional; exact handler location unconfirmed
+  - see VOC-053-DEP-01)
+- apps/api/migrations/ (candidate b; conditional on a corrective-migration decision
+  - see VOC-053-R02; the most sensitive protected path any candidate could touch)
+- tests/staging-e2e/core-loop.staging.spec.ts (read-only for the step 7 assertion
+  itself; candidate c's fix, if confirmed, may touch a helper it uses)
+- specs/changes/VOC-053-staging-core-loop-e2e-words-reviewed-today
+implementation:
+  authorized: false
+  required: true
+  status: proposed
+  target_branch: develop
+  pull_request: null
+  authority_issue: 450
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: unknown-until-implemented
+  deployment: not-authorized-by-this-package
+  automatic_merge: false
+  migration_required: unknown-conditional-on-root-cause
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
+blocking_reasons: 'Not adopted. Requires founder/steward review of the proposed R3
+  classification (which may float higher once the root cause and its real file-level
+  footprint are known), resolution of VOC-053-DEP-00 (which candidate is the confirmed
+  root cause) before VOC-053-T01 can begin implementing a fix, resolution of VOC-053-DEP-01
+  (where/how the backend resolves now/timezone per request, needed to confirm or rule
+  out candidate b), and confirmation that scripts/governance/classify-change-risk.sh''s
+  actual detected floor for the real, post-investigation task-scoped file list is
+  not higher than the R3 proposed here.
+
+  '
