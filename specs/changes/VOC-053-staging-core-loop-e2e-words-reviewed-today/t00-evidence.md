@@ -771,3 +771,80 @@ where/how `apps/api/app/api/missions.go`'s handler resolves per-request
 candidate (c) if (b)'s trace turns up no defect. T01 must still record
 its own evidence per `VOC-053-AC-00`/`VOC-053-AC-01` rather than treat
 this addendum as a substitute for that.
+
+## Addendum 2 — live verification of `findings/VOC-053-required-live-verification` item 2 (daily_mission_snapshots row state)
+
+VOC-053-T01's attempt 1 (closed PR #460, per its own honest evidence)
+correctly declined a fix without this data. PR #461/#462 added a
+temporary SSH diagnostic to `deploy-staging.yml` (`docker compose exec
+postgres psql`, run right after the E2E journey, `if: always()`) that
+dumps the synthetic account's `daily_mission_snapshots` rows and the
+DB server's own `now()`/timezone. Two real deploy runs captured data:
+
+**DB server clock** (both runs): `now() = 2026-08-09 23:4X:XX+00`,
+`TimeZone = UTC` - the server's own clock and timezone setting are
+correct and consistent with the E2E run's real wall-clock time. No
+server-side clock skew.
+
+**`daily_mission_snapshots` state** (run
+[31342544145](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/31342544145),
+captured immediately after the E2E journey completed):
+
+```
+ local_date | timezone | review_target | reviews_completed | status |          updated_at
+------------+----------+---------------+-------------------+--------+------------------------------
+ 2026-08-09 | UTC      |            20 |                  0 | open   | 2026-08-09 08:06:03.51608+00
+(1 row)
+```
+
+Exactly **one** row exists for the current local date. `reviews_completed
+= 0`, and `updated_at` (08:06:03 UTC) predates this run entirely (the
+run itself started ~23:42 UTC) - nothing incremented this row during
+this run. The same run's Playwright output was `1 passed (10.5s)`: with
+`reviewedBefore = 0` (matching this row) and the review queue already
+empty (`reviewedCards = 0`, no due cards found this run), the assertion
+`reviewedAfter >= reviewedBefore + reviewedCards` was `0 >= 0 + 0` - a
+trivial pass that did **not** exercise the actual review-completion
+path (`IncrementReviewsCompleted`) at all.
+
+### Interpretation
+
+This run did not reproduce issue #450's original failure precondition
+(a nonzero `reviewedBefore` from residue, with real cards available to
+review in the same run) - the synthetic account's due-review queue is
+currently empty, so no run since this diagnostic was added has
+exercised the increment path. That means this addendum cannot directly
+confirm or refute candidate (b) by watching an increment happen and
+then disappear.
+
+It does add one new, real data point: with caching definitively ruled
+out (Addendum 1) and the DB server's own clock/timezone confirmed
+correct, `reviews_completed` genuinely holding `0` in the database
+itself (not just in a served response) for the entire day so far is
+consistent with candidate (b)'s day-boundary/`local_date` theory in a
+specific way - if the live HTTP handler's per-request `local_date`
+resolution (`VOC-053-DEP-01`, still open) is not perfectly stable
+across nearby requests, a request could read or create a *different*
+`daily_mission_snapshots` row (a different `local_date` value) than a
+sibling request seconds apart, independent of any caching layer. Only
+one row exists right now because this run's requests apparently
+resolved consistently, but issue #450's original failure - a real
+`reviewedBefore = 1` immediately followed by `reviewedAfter = 0` in the
+same run - would be explained by two nearby requests resolving
+*different* `local_date` values and therefore reading/creating two
+different rows, one with residual state from an earlier read and one
+freshly created at `reviews_completed = 0`.
+
+### Recommended T01 scope (unchanged from Addendum 1, now with DB confirmation of no anomalous historical data)
+
+`VOC-053-DEP-01` remains the concrete, actionable next step: trace and
+harden exactly how the live HTTP handler
+(`apps/api/app/api/missions.go`) resolves `now()`/timezone into a
+`local_date` value per request, and confirm whether two calls within
+the same request-handling window can produce different values (e.g.
+from `time.Now()` being called independently in more than one place, a
+per-request vs. per-connection clock source, or a timezone lookup that
+can itself vary). No corrective data migration is indicated by this
+addendum - the single existing row for today is internally consistent
+(no negative or decreasing history visible), so `migration_required`
+remains `unknown-conditional-on-root-cause`, not confirmed-needed.
