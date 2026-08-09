@@ -270,6 +270,17 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
 
       let reviewed = 0;
       while (reviewed < MAX_REVIEW_CARDS) {
+        // caughtUpHeading.isVisible() is a synchronous DOM snapshot, not
+        // an auto-retrying assertion - called right after navigation (or
+        // right after the previous card's submission), the review data
+        // can still be loading, so it reads false even when the queue is
+        // genuinely empty. Wait for the page to actually reach one of its
+        // two settled states first, the same signal the loop already
+        // trusts after each submission below, instead of trusting an
+        // instantaneous check. Found live, 2026-08-09: this raced ahead
+        // of an empty queue and reviewOneCard then waited the full test
+        // timeout for a card that was never going to appear.
+        await expect(caughtUpHeading.or(cardCounter).first()).toBeVisible();
         if (await caughtUpHeading.isVisible()) {
           break;
         }
