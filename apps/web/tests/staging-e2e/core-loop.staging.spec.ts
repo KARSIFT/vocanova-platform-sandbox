@@ -159,6 +159,25 @@ async function chooseWordLink(page: Page): Promise<Locator> {
 
 async function reviewOneCard(page: Page): Promise<void> {
   const showAnswerButton = page.getByRole("button", { name: "Show answer" });
+  const multipleChoiceGroup = page.getByRole("group", {
+    name: /^Choose the meaning for /,
+  });
+
+  // Same class of race as the outer loop's caught-up check (see its
+  // comment above): the card shell (counter, part-of-speech, word text)
+  // can render before the prompt-type-specific content (the flip
+  // button vs. the multiple-choice group) does, so a raw
+  // showAnswerButton.isVisible() snapshot taken right after the outer
+  // loop confirms "a card is showing" can still read false for a
+  // genuine flip-card prompt, falling through into the multiple-choice
+  // branch and hanging the full test timeout waiting for a group that
+  // this card will never render. Found live, 2026-08-09: screenshot
+  // showed a "Show answer" flip card fully rendered while the test was
+  // still stuck waiting on the multiple-choice locator. Wait for
+  // whichever one actually renders before branching, instead of
+  // trusting an instantaneous check.
+  await expect(showAnswerButton.or(multipleChoiceGroup).first()).toBeVisible();
+
   if (await showAnswerButton.isVisible()) {
     await showAnswerButton.click();
     await page.getByRole("button", { name: "Good" }).click();
@@ -168,11 +187,7 @@ async function reviewOneCard(page: Page): Promise<void> {
   // Multiple-choice prompt. Which option is correct is not knowable
   // from the rendered page, so the journey answers, then follows
   // whichever branch the app shows - both submit a real attempt.
-  await page
-    .getByRole("group", { name: /^Choose the meaning for / })
-    .getByRole("button")
-    .first()
-    .click();
+  await multipleChoiceGroup.getByRole("button").first().click();
 
   const ratingButton = page.getByRole("button", { name: "Good" });
   const continueButton = page.getByRole("button", { name: "Continue" });
