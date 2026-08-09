@@ -18,21 +18,21 @@
   "dependencies": {
     "@sentry/nextjs": "^10.69.0",
     "@vocanova/api-client": "workspace:*",
-    "next": "16.2.10",
-    "react": "19.2.7",
-    "react-dom": "19.2.7"
+    "next": "16.3.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",
-    "@next/eslint-plugin-next": "16.2.10",
-    "@playwright/test": "1.62.0",
+    "@next/eslint-plugin-next": "16.3.0",
+    "@playwright/test": "1.62.1",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "26.1.2",
-    "@types/react": "19.2.17",
-    "@types/react-dom": "19.2.3",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
     "@vocanova/design-tokens": "workspace:*",
-    "axe-core": "4.12.1",
-    "chrome-launcher": "1.1.2",
+    "axe-core": "4.13.0",
+    "chrome-launcher": "1.2.1",
     "lighthouse": "13.4.1",
     "tailwindcss": "4.3.3"
   }
