@@ -35,7 +35,7 @@
 // the account with saved words, a due-review backlog, or none.
 
 import { expect, test } from "@playwright/test";
-import type { Locator, Page } from "@playwright/test";
+import type { Locator, Page, TestInfo } from "@playwright/test";
 
 const SESSION_COOKIE_ENV = "E2E_SESSION_COOKIE";
 const CSRF_COOKIE_ENV = "E2E_CSRF_TOKEN";
@@ -89,6 +89,40 @@ async function readReviewedTodayCount(page: Page): Promise<number> {
     throw new Error(`Could not read the daily-mission counter from: ${text}`);
   }
   return Number(match[1]);
+}
+
+// VOC-053-DEP-00 diagnostic (temporary - see issue #452/VOC-053-T01):
+// records the /home document response's own caching-related headers on
+// both the baseline and post-review loads, so the next real staging run
+// produces the live evidence VOC-053-T00's review said was still missing
+// - specifically whether `x-nextjs-cache` reads HIT on the second load
+// (Next.js Full Route Cache serving stale content, candidate a) or the
+// response is otherwise identical in a way that would point at candidate
+// b/c instead. Remove once VOC-053-DEP-00 is resolved.
+function recordHomeResponseDiagnostic(
+  testInfo: TestInfo,
+  label: string,
+  response: Awaited<ReturnType<Page["goto"]>>,
+): void {
+  if (!response) {
+    testInfo.annotations.push({
+      type: "voc-053-diagnostic",
+      description: `${label}: page.goto() returned no response object`,
+    });
+    return;
+  }
+  const headers = response.headers();
+  const pick = (name: string) => headers[name] ?? "(absent)";
+  testInfo.annotations.push({
+    type: "voc-053-diagnostic",
+    description:
+      `${label}: status=${response.status()} ` +
+      `date=${pick("date")} age=${pick("age")} ` +
+      `cache-control=${pick("cache-control")} ` +
+      `x-nextjs-cache=${pick("x-nextjs-cache")} ` +
+      `cf-cache-status=${pick("cf-cache-status")} ` +
+      `vary=${pick("vary")}`,
+  });
 }
 
 async function completeOnboardingIfRedirected(page: Page): Promise<void> {
@@ -247,7 +281,8 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
           sameSite: "Lax",
         },
       ]);
-      await page.goto("/home");
+      const homeResponse = await page.goto("/home");
+      recordHomeResponseDiagnostic(testInfo, "step 1 (baseline)", homeResponse);
       await completeOnboardingIfRedirected(page);
       await expect(page).toHaveURL(/\/home(\?|$)/);
       await expect(
@@ -370,7 +405,8 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
     });
 
     await test.step("7. progress reflects the completed reviews", async () => {
-      await page.goto("/home");
+      const homeResponse = await page.goto("/home");
+      recordHomeResponseDiagnostic(testInfo, "step 7 (post-review)", homeResponse);
       const reviewedAfter = await readReviewedTodayCount(page);
       expect(reviewedAfter).toBeGreaterThanOrEqual(reviewedBefore + reviewedCards);
     });
