@@ -157,31 +157,44 @@ async function chooseWordLink(page: Page): Promise<Locator> {
   return wordItems.first().locator("a").first();
 }
 
-async function reviewOneCard(page: Page): Promise<void> {
+// Returns false when the queue turns out to be empty by the time this
+// function actually gets to interact with it, true when a card was
+// genuinely reviewed - the caller must treat false as "stop, don't
+// count this iteration," not a failure.
+async function reviewOneCard(page: Page): Promise<boolean> {
   const showAnswerButton = page.getByRole("button", { name: "Show answer" });
   const multipleChoiceGroup = page.getByRole("group", {
     name: /^Choose the meaning for /,
   });
+  const caughtUpHeading = page.getByRole("heading", {
+    name: "You're all caught up",
+    level: 2,
+  });
 
-  // Same class of race as the outer loop's caught-up check (see its
-  // comment above): the card shell (counter, part-of-speech, word text)
-  // can render before the prompt-type-specific content (the flip
-  // button vs. the multiple-choice group) does, so a raw
-  // showAnswerButton.isVisible() snapshot taken right after the outer
-  // loop confirms "a card is showing" can still read false for a
-  // genuine flip-card prompt, falling through into the multiple-choice
-  // branch and hanging the full test timeout waiting for a group that
-  // this card will never render. Found live, 2026-08-09: screenshot
-  // showed a "Show answer" flip card fully rendered while the test was
-  // still stuck waiting on the multiple-choice locator. Wait for
-  // whichever one actually renders before branching, instead of
-  // trusting an instantaneous check.
-  await expect(showAnswerButton.or(multipleChoiceGroup).first()).toBeVisible();
+  // Waits for any of THREE settled states, not just the two card-prompt
+  // types. Two independent races were already found live here,
+  // 2026-08-09: (1) the card shell can render before the prompt-type-
+  // specific content does, so checking only one type's button can miss
+  // the other type entirely; (2) between the outer loop confirming "a
+  // card is showing" and this function actually getting to interact
+  // with it, the queue can empty out from under it (the same
+  // outer-loop race, recurring one level up, still observed after
+  // fixing (1) alone). Rather than keep chasing this at the call site,
+  // this function now independently re-confirms whether a card still
+  // exists and tells the caller the truth instead of assuming its
+  // caller's earlier check is still valid.
+  await expect(
+    showAnswerButton.or(multipleChoiceGroup).or(caughtUpHeading).first(),
+  ).toBeVisible();
+
+  if (await caughtUpHeading.isVisible()) {
+    return false;
+  }
 
   if (await showAnswerButton.isVisible()) {
     await showAnswerButton.click();
     await page.getByRole("button", { name: "Good" }).click();
-    return;
+    return true;
   }
 
   // Multiple-choice prompt. Which option is correct is not knowable
@@ -194,9 +207,10 @@ async function reviewOneCard(page: Page): Promise<void> {
   await expect(ratingButton.or(continueButton)).toBeVisible();
   if (await ratingButton.isVisible()) {
     await ratingButton.click();
-    return;
+    return true;
   }
   await continueButton.click();
+  return true;
 }
 
 test.describe("Core loop against real staging (VOC-050-T02)", () => {
@@ -299,7 +313,12 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
         if (await caughtUpHeading.isVisible()) {
           break;
         }
-        await reviewOneCard(page);
+        const didReview = await reviewOneCard(page);
+        if (!didReview) {
+          // reviewOneCard independently found the queue already empty -
+          // trust it over this loop's own now-stale check above.
+          break;
+        }
         reviewed++;
         // The submission either advances to the next card or empties
         // the queue; both are settled states, so wait for one of them
