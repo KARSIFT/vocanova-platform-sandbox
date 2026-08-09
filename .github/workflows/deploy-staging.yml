@@ -197,7 +197,12 @@
 #     (VOC-052-T00) — built into /opt/vocanova/apps/api/bin/
 #     p1-content-seed during bundling, then run on the host
 #     (against the same private-IP-resolved DATABASE_URL the
-#     migration step uses) before the full stack starts.
+#     migration step uses) before the full stack starts. The
+#     build runs with `go build -C apps/api ./cmd/seed`
+#     because the Go module root is apps/api, not the
+#     repository root (there is no root go.mod or go.work),
+#     under a Go toolchain pinned from apps/api/go.mod by the
+#     `Set up Go for the P1 content seed build` step.
 #   * .github/workflows/accessibility.yml + lighthouse.yml
 #     — the design pattern this workflow mirrors (separate
 #     workflow file, NOT a pipeline.yml job).
@@ -475,6 +480,20 @@ jobs:
           printf '%s\n' "$STAGING_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
+      # actions/setup-go v7.0.0, pinned to the immutable commit
+      # documented at
+      # https://github.com/actions/setup-go/releases/tag/v7.0.0
+      #
+      # VOC-052-T00: the bundle step below builds apps/api/cmd/seed on the
+      # runner, so the Go version must come from the repository's own pin
+      # (apps/api/go.mod's `go`/`toolchain` directives) rather than from
+      # whatever the ubuntu-latest image happens to ship that week.
+      - name: Set up Go for the P1 content seed build
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: "apps/api/go.mod"
+
       - name: Bundle deployable artifacts
         if: ${{ inputs.skip_ssh_deploy != true }}
         run: |
@@ -505,9 +524,17 @@ jobs:
           # VOC-052-T00's canonical P1 content seed binary. Build on the
           # runner, then ship and run on the staging host so Postgres remains
           # private (no new public database ingress from GitHub Actions).
+          # `-C apps/api` is required: there is no root go.mod or go.work, so
+          # the module context only exists inside apps/api (the same reason
+          # package.json's build:api/test:api scripts cd there first). The
+          # -o path stays absolute so it is unaffected by that directory
+          # change. The build flags mirror apps/api/Dockerfile's, producing a
+          # static linux/amd64 binary that runs on the staging host without a
+          # Go toolchain or libc dependency.
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+            -C apps/api \
             -o /tmp/deploy-bundle/apps/api/bin/p1-content-seed \
-            ./apps/api/cmd/seed
+            ./cmd/seed
           chmod +x /tmp/deploy-bundle/apps/api/bin/p1-content-seed
           # T06's migration files. Atlas's default
           # versioned glob is `*.sql`, so the .down.sql
