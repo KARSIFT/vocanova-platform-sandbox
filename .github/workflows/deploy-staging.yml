@@ -628,6 +628,42 @@ jobs:
             } >> /opt/vocanova/infra/secrets/api.env
             chmod 600 /opt/vocanova/infra/secrets/api.env
 
+      # VOC-050-T02 added this workflow's own consumption of
+      # STAGING_SMOKE_TEST_SESSION_MINT_TOKEN (the "Mint synthetic
+      # smoke-test session" step below, as a bearer header sent to the
+      # api) but never added the corresponding host-side sync that
+      # would let the api container's own SMOKE_TEST_SESSION_MINT_TOKEN
+      # env var actually equal it - found live, 2026-08-09, first
+      # real post-VOC-050 staging deploy: the mint request failed
+      # because the api never registered the endpoint at all (unset
+      # token), not because of a value mismatch. Same
+      # sync-to-api.env pattern as the Sentry/AI-provider steps above.
+      - name: Sync staging smoke-test session-mint token from GitHub secrets
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        uses: appleboy/ssh-action@v1
+        env:
+          STAGING_SMOKE_TEST_SESSION_MINT_TOKEN: ${{ secrets.STAGING_SMOKE_TEST_SESSION_MINT_TOKEN }}
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          command_timeout: 2m
+          envs: STAGING_SMOKE_TEST_SESSION_MINT_TOKEN
+          script: |
+            set -euo pipefail
+            if [ -z "${STAGING_SMOKE_TEST_SESSION_MINT_TOKEN:-}" ]; then
+              echo "STAGING_SMOKE_TEST_SESSION_MINT_TOKEN unset - leaving the staging api's mint endpoint unregistered"
+              exit 0
+            fi
+            sudo mkdir -p /opt/vocanova/infra/secrets
+            sudo touch /opt/vocanova/infra/secrets/api.env
+            sudo chown "$(id -un)":"$(id -gn)" /opt/vocanova/infra/secrets/api.env
+            sed -i \
+              -e '/^SMOKE_TEST_SESSION_MINT_TOKEN=/d' \
+              /opt/vocanova/infra/secrets/api.env
+            echo "SMOKE_TEST_SESSION_MINT_TOKEN=${STAGING_SMOKE_TEST_SESSION_MINT_TOKEN}" >> /opt/vocanova/infra/secrets/api.env
+            chmod 600 /opt/vocanova/infra/secrets/api.env
+
       - name: Deploy to staging host
         if: ${{ inputs.skip_ssh_deploy != true }}
         uses: appleboy/ssh-action@v1
