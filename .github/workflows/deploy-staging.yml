@@ -1054,6 +1054,31 @@ jobs:
           echo "  only removes old containers once the new ones are healthy)." >&2
           exit 1
 
+      # Every deploy pushes and pulls a fresh pair of images; nothing
+      # ever removed the superseded layers/build cache, so the staging
+      # host's disk filled up after enough deploys accumulated - found
+      # live, 2026-08-09, "no space left on device" failing the P1
+      # content seed step (VOC-052-T00) mid-deploy. Placed after BOTH
+      # health checks pass, same reasoning as the core-loop journey
+      # below: only prune once the new containers are confirmed healthy,
+      # never on a failed deploy where the old images might still be
+      # needed for a manual rollback. `docker system prune -af` only
+      # removes images with no running container referencing them (an
+      # unused/dangling image, or one superseded by this same deploy)
+      # plus build cache - it does not touch anything the just-verified
+      # running stack depends on.
+      - name: Prune unused Docker images and build cache on staging host
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          command_timeout: 5m
+          script: |
+            set -euo pipefail
+            docker system prune -af
+
       # ---------------------------------------------------------------
       # VOC-050-T02: post-deploy authenticated core-loop journey.
       #
