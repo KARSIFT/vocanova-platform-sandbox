@@ -1,0 +1,82 @@
+schema_version: 1
+id: VOC-062
+slug: verification-dispatch-only-confirming-composer-2
+title: "Verification Dispatch Only \u2014 Confirming Composer 2.5 Is Not Blocked by\
+  \ Other-Models Quota Exhaustion"
+type: verification
+status: draft
+risk: R0
+planned_implementation_risk_floor: R0. This package proposes no application, workflow,
+  governance, or infrastructure changes. It exists solely to record that a planner
+  `workflow_dispatch` completed successfully when bound to Cursor's in-house `composer-2.5`
+  model, confirming that model is not blocked by Other-Models quota exhaustion. This
+  is a draft proposal for the reviewing human at adoption time, not a determination;
+  the path-based classifier would also detect R0 for this package directory alone.
+canonical_path: specs/changes/VOC-062-verification-dispatch-only-confirming-composer-2
+authority_model: a003-active
+requirement_source: 'Free-text planner request (2026-08-10): "VERIFICATION dispatch
+  only - confirming composer-2.5 (Cursor in-house model) isn''t blocked by the Other-Models
+  quota exhaustion. If this drafts a package, close/ignore it - not a real change
+  request." This is infrastructure/role-binding verification, not an approved product
+  or governance requirement.'
+requirement_approval_status: not-approved. This package has not been adopted. No field
+  in this file authorizes implementation. The originating request explicitly instructs
+  operators to close or ignore this package rather than adopt or implement it.
+base_branch: develop
+base_sha: "unknown \u2014 not recorded by this draft; irrelevant because this package\
+  \ must not be adopted or implemented."
+target_branch: develop
+approved_candidate_sha: null
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: false
+production_impact: none. No application code, workflow, configuration, or deployment
+  action is proposed or authorized by this package.
+rollback_required: false
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies: []
+affected_areas:
+- specs/changes/VOC-062-verification-dispatch-only-confirming-composer-2
+implementation:
+  authorized: false
+  required: false
+  status: not-applicable
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: false
+  mode: not-authorized-by-this-package
+  production_impact: none
+  deployment: not-authorized-by-this-package
+  automatic_merge: false
+  migration_required: false
+  rollback_required: false
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
+blocking_reasons: 'Not a real change request. The originating free-text dispatch explicitly
+  states: "If this drafts a package, close/ignore it - not a real change request."
+  Do not adopt, authorize, or dispatch any task from this package. Close the originating
+  plan PR without merging, or merge only as a historical record of successful planner/composer-2.5
+  verification, then leave this package permanently inert (same convention as VOC-048''s
+  permanently inert draft after its originating issue was closed without adoption).'
