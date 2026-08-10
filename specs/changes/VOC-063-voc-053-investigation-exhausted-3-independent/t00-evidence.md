@@ -25,31 +25,54 @@ File updated: `specs/changes/VOC-053-staging-core-loop-e2e-words-reviewed-today/
 ## VOC-053 change.yaml untouched
 
 Confirmed: `specs/changes/VOC-053-staging-core-loop-e2e-words-reviewed-today/change.yaml`
-adoption fields (`status: adopted`, `implementation_authorized: true`, etc.) were
-not modified.
+adoption fields (`status: adopted`, `implementation_authorized: true`,
+`implementation.authorized: true`) were not modified. Working-tree
+`git diff` against that file is empty.
 
-## GitHub issue closure
+## GitHub issue closure (`VOC-063-AC-00`)
 
 Per `.karsift/tasks.json`, the tracking issues are:
 
-| Task | Issue |
-|------|-------|
-| `VOC-053-T01` | [#453](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/453) |
-| `VOC-053-T02` | [#454](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/454) |
+| Task | Issue | State | VOC-063 supersession comment |
+|------|-------|-------|------------------------------|
+| `VOC-053-T01` | [#453](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/453) | **closed** (2026-08-10T06:55:50Z) | https://github.com/KARSIFT/vocanova-platform-sandbox/issues/453#issuecomment-5245093716 |
+| `VOC-053-T02` | [#454](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/454) | **closed** (2026-08-10T06:55:53Z) | https://github.com/KARSIFT/vocanova-platform-sandbox/issues/454#issuecomment-5245093842 |
 
-This implementer run had no `GH_TOKEN`/`GITHUB_TOKEN`; issues were not closed
-from this environment. The calling workflow or a follow-up step should close
-each still-open issue with a comment such as:
+Both issues were already closed as superseded (founder comments
+[5236880900](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/453#issuecomment-5236880900)
+/
+[5236881338](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/454#issuecomment-5236881338)).
+Remediation of VOC-063-T00 attempt 1's High finding added explicit
+VOC-063 / issue #473 supersession comments on each closed issue (comment IDs
+5245093716 and 5245093842 above). Comment body references VOC-063, issue #473,
+third-pass evidence, cancelled-not-completed status, and the forward path.
 
-> Superseded by [VOC-063](https://github.com/KARSIFT/vocanova-platform-sandbox/tree/develop/specs/changes/VOC-063-voc-053-investigation-exhausted-3-independent) (issue #473). VOC-053-T00 investigation is complete; all named root-cause candidates from issue #450 were exhausted by three independent passes with direct live evidence. No evidence-backed production fix was identified. Forward path: VOC-063 staging E2E step-7 retry hardening.
-
-Issue [#450](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/450) is
-intentionally left open.
+Issue [#450](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/450)
+remains **open** (confirmed via GitHub API after the supersession comments).
 
 ## Local deterministic checks
 
-```bash
-bash scripts/governance/validate-governance.sh
-bash scripts/governance/classify-change-risk.sh
-git diff --check
+Commands run during VOC-063-T00 remediation (2026-08-10):
+
+```text
+$ bash scripts/governance/validate-governance.sh
+Repository foundation validation passed.
+Governance structure validation passed.
+validate_exit=0
+
+$ bash scripts/governance/classify-change-risk.sh --files-from <T00 file list>
+R0	specs/changes/VOC-053-staging-core-loop-e2e-words-reviewed-today/README.md
+R0	specs/changes/VOC-053-staging-core-loop-e2e-words-reviewed-today/tasks.md
+R0	specs/changes/VOC-063-voc-053-investigation-exhausted-3-independent/t00-evidence.md
+Detected path-based risk floor: R0
+Path classification passed. Semantic consequences may require escalation by the independent verifier.
+classify_exit=0
+
+$ git diff --check
+diff_check_exit=0
 ```
+
+T00-scoped path floor is **R0** (documentation under `specs/changes/`). An
+unscoped working-tree classify may report R1 from an unrelated untracked
+`karsift-ai-infra/` checkout present in this runner; that path is outside
+VOC-063-T00 scope and is not part of this task's diff.
