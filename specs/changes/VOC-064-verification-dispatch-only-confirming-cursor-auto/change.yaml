@@ -1,0 +1,92 @@
+schema_version: 1
+id: VOC-064
+slug: verification-dispatch-only-confirming-cursor-auto
+title: "Verification Dispatch Only \u2014 Confirming Cursor/Auto Planner Path (Not\
+  \ a Real Change Request)"
+type: verification
+status: draft
+risk: R0
+planned_implementation_risk_floor: "Proposed R0. This package authorizes no product,\
+  \ workflow, governance, secret, migration, or production change. Its only purpose\
+  \ is to exercise the planner dispatch path (cursor/auto role binding) as a live\
+  \ verification that the bound planner completed a draft package without exhausting\
+  \ the Other-Models quota. No task-scoped application or CI file list is intended;\
+  \ scripts/governance/classify-change-risk.sh against this package directory alone\
+  \ should remain at the documentation/specs floor. This is a draft proposal for the\
+  \ reviewing human, not a determination \u2014 and the request itself says to close/ignore\
+  \ this package rather than adopt it.\n"
+canonical_path: specs/changes/VOC-064-verification-dispatch-only-confirming-cursor-auto
+authority_model: a003-active
+requirement_source: 'Free-text planner dispatch (not a GitHub issue): "VERIFICATION
+  dispatch only - confirming cursor/auto works and checking whether it avoids the
+  Other-Models quota exhaustion. If this drafts a package, close/ignore it - not a
+  real change request." This package exists solely so the calling workflow can observe
+  that the planner role bound to cursor/auto produced a complete draft under package
+  ID VOC-064. It is not implementation authority for any product or process change.
+
+  '
+requirement_approval_status: not-approved. This package has not been adopted. The
+  originating request explicitly says to close/ignore it. No field in this file authorizes
+  implementation.
+base_branch: develop
+base_sha: unknown - not recorded by this draft; do not adopt. If a human ever reconsidered
+  adoption (they should not), the adopting human/workflow would set this to the actual
+  base_sha at adoption time.
+target_branch: develop
+approved_candidate_sha: null
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: false
+production_impact: none. No application, workflow, secret, migration, or production
+  configuration change is in scope. Drafting this package is itself the verification
+  outcome the free-text request asked for.
+rollback_required: false
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies: []
+affected_areas:
+- specs/changes/VOC-064-verification-dispatch-only-confirming-cursor-auto
+implementation:
+  authorized: false
+  required: false
+  status: proposed
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: false
+  mode: not-authorized-by-this-package
+  production_impact: none
+  deployment: not-authorized-by-this-package
+  automatic_merge: false
+  migration_required: false
+  rollback_required: false
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
+blocking_reasons: 'Do not adopt. The originating free-text request is an explicit
+  verification-only dispatch and instructs the human operator to close/ignore this
+  package. Adoption would incorrectly create implementer task issues for work that
+  was never requested. Keep status: draft, approval_status: not-approved, and implementation_authorized:
+  false permanently for this package unless a separate, real change request supersedes
+  this verification intent.
+
+  '
