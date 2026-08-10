@@ -7,7 +7,7 @@
 - Acceptance criteria: `VOC-052-AC-00`, `VOC-052-AC-01`, `VOC-052-AC-04`
 - Tests: `VOC-052-TEST-00`, `VOC-052-TEST-01`, `VOC-052-TEST-04`
 - Evidence: `VOC-052-EV-00`
-- Status: pending
+- Status: done (PR #444; live and working on every staging deploy since)
 
 Add a step to `.github/workflows/deploy-staging.yml`, placed immediately after the
 existing `migrate.sh` invocation and its adjacent `seed-synthetic-smoke-user.sh`
@@ -34,8 +34,8 @@ deploy sequence.
 - Acceptance criteria: `VOC-052-AC-02`, `VOC-052-AC-03`
 - Tests: `VOC-052-TEST-02`, `VOC-052-TEST-03`
 - Evidence: `VOC-052-EV-01`
-- Status: pending — depends on `VOC-052-T00` landing and a real staging deploy
-  running with it in place
+- Status: done (see t01-evidence.md; discover step has passed on every real
+  staging deploy since T00 merged, no gap found)
 
 No source change is expected in this task. Its job is to produce and record
 verification evidence: after `VOC-052-T00`'s step is live in a real
@@ -58,12 +58,11 @@ not unrelated changes.
 - Acceptance criteria: `VOC-052-AC-05`
 - Tests: `VOC-052-TEST-05`
 - Evidence: `VOC-052-EV-02`
-- Status: pending — **not to be dispatched unless the adopting human explicitly
-  resolves `VOC-052-DEP-02` in favor of including this task's scope now.** If
-  the human instead decides this should wait until production's real-backend
-  core-loop smoke gating is separately activated, this task should be closed as
-  out-of-scope-for-now rather than implemented, and that decision recorded in
-  this package's adoption evidence.
+- Status: closed as out-of-scope-for-now (2026-08-10, founder-gate delegate).
+  `VOC-052-DEP-02` was not resolved in favor of dispatching this task -
+  production's real-backend core-loop smoke gating has not been separately
+  activated, so mirroring the seed step into `deploy-production.yml` has no
+  current consumer. Revisit if/when that activation happens.
 
 If dispatched, add the same class of step to `.github/workflows/deploy-production.yml`
 that `VOC-052-T00` added to `deploy-staging.yml`, in the equivalent position
