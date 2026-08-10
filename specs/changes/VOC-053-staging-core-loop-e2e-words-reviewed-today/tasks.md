@@ -7,7 +7,12 @@
 - Acceptance criteria: `VOC-053-AC-00`
 - Tests: `VOC-053-TEST-00`
 - Evidence: `VOC-053-EV-00`
-- Status: pending
+- Status: **complete** — investigation objective satisfied per three independent
+  investigation passes (VOC-053-T00 attempts 1 and 2 plus issue #473's third
+  pass with live staging/production access). Third-pass evidence:
+  https://github.com/KARSIFT/vocanova-platform-sandbox/issues/450#issuecomment-5238054774.
+  Closure rationale and supersession of the fix path: issue
+  [#473](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/473).
 
 No fix is written in this task. Its job is to determine, with direct
 evidence, which of issue #450's three candidates (Next.js fetch/route caching;
@@ -45,34 +50,16 @@ failure. Concretely:
 - Acceptance criteria: `VOC-053-AC-01`, `VOC-053-AC-02`
 - Tests: `VOC-053-TEST-01`, `VOC-053-TEST-02`
 - Evidence: `VOC-053-EV-01`
-- Status: pending — depends on `VOC-053-T00` producing a confirmed root cause;
-  do not begin this task's fix until T00's evidence names a specific,
-  evidence-backed cause
+- Status: **cancelled** — superseded by
+  [VOC-063](https://github.com/KARSIFT/vocanova-platform-sandbox/tree/develop/specs/changes/VOC-063-voc-053-investigation-exhausted-3-independent).
+  All named root-cause candidates from issue #450 were exhausted by three
+  independent investigation passes with direct live evidence; no
+  evidence-backed production fix was identified. See issue
+  [#473](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/473).
 
-Implement a fix scoped narrowly to `VOC-053-T00`'s confirmed cause:
-
-- If caching is confirmed: make the relevant fetch(es) in
-  `apps/web/src/lib/api-server.ts` and/or the `getDailyMission()` call site in
-  `apps/web/src/app/(app)/home/page.tsx` explicitly bypass Next.js's Data
-  Cache (e.g. `cache: "no-store"`, or the minimal explicit option that matches
-  the confirmed caching layer), rather than a broader, unrequested caching
-  policy change across `apps/web`.
-- If a backend computation bug is confirmed: fix the specific
-  timezone/local-date resolution defect in the traced request-handling path
-  (see `VOC-053-T00`), without changing `gamification.LocalDate`'s or
-  `missions.Repository`'s already-correct-as-read SQL/logic unless the bug is
-  actually located there once fully traced. If a corrective migration for
-  already-written incorrect rows is needed (per `specification.md` open
-  question 3), record that as a distinct, explicitly flagged decision in this
-  task's evidence rather than silently including or silently omitting it.
-- If a test-data interaction is confirmed: fix the interaction (e.g. a
-  concurrency-safety gap in how the persistent synthetic account's state is
-  read/written across simultaneous or near-simultaneous deploy runs), not the
-  reuse design itself.
-- Do not modify `tests/staging-e2e/core-loop.staging.spec.ts`'s step 7
-  assertion. If the fix requires any change to the spec file at all (e.g. a
-  helper it also uses), record why and confirm the change does not weaken
-  what step 7 checks.
+This task's original fix scope (production code changes scoped to a confirmed
+root cause) is preserved in git history but will not be implemented under
+VOC-053. Forward path: `VOC-063-T01` (staging E2E step-7 retry hardening).
 
 ## VOC-053-T02 — Verify the fix on real staging, including under the exact
 failure condition
@@ -82,17 +69,12 @@ failure condition
 - Acceptance criteria: `VOC-053-AC-03`, `VOC-053-AC-04`
 - Tests: `VOC-053-TEST-03`
 - Evidence: `VOC-053-EV-02`
-- Status: pending — depends on `VOC-053-T01` landing and a real staging
-  deploy running with it in place
+- Status: **cancelled** — superseded by
+  [VOC-063](https://github.com/KARSIFT/vocanova-platform-sandbox/tree/develop/specs/changes/VOC-063-voc-053-investigation-exhausted-3-independent).
+  Depends on `VOC-053-T01`, which was cancelled when the investigation found no
+  evidence-backed production defect to verify. See issue
+  [#473](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/473).
 
-No further source change is expected in this task (beyond fixing any gap this
-verification itself surfaces, narrowly, per `VOC-052-T01`'s own precedent for
-this kind of task). After `VOC-053-T01`'s fix is live in a real
-`deploy-staging.yml` run, confirm
-`tests/staging-e2e/core-loop.staging.spec.ts` passes step 7 reliably —
-specifically including at least one run where the synthetic account already
-has `reviewedBefore >= 1` from a prior run's residue (the same condition the
-2026-08-09 failure occurred under), not only a freshly-reset state that would
-not actually exercise the failure condition. Record the passing run's log and
-the specific `reviewedBefore`/`reviewedCards`/`reviewedAfter` values observed
-as evidence.
+This task's original verification scope is preserved in git history but will
+not be executed under VOC-053. Forward path: `VOC-063-T02` (real staging
+verification of hardened step 7).

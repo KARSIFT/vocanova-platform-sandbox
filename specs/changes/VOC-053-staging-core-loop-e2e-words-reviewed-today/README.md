@@ -51,3 +51,18 @@ See `test-plan.md`, `release-plan.md`, and `implementation-plan.md`. This
 package carries no standing approval; adoption, implementation authorization,
 independent verification, and any required human approval remain to be
 recorded against the exact implemented revision, per AGENTS.md and CLAUDE.md.
+
+## Supersession (VOC-063, 2026-08-10)
+
+`VOC-053-T00` completed its investigation objective: three independent passes
+(two `VOC-053-T00` implementer attempts plus issue #473's third pass with live
+staging/production access) ruled out all named root-cause candidates from issue
+#450 with direct evidence
+([third-pass comment](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/450#issuecomment-5238054774)).
+`VOC-053-T01` and `VOC-053-T02` are **cancelled** and superseded by
+[VOC-063](../VOC-063-voc-053-investigation-exhausted-3-independent/) (issue
+[#473](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/473)), which
+hardens staging core-loop E2E step 7 with bounded retry-and-reverify instead of
+pursuing a production fix no investigation pass located. Issue
+[#450](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/450) remains
+open for the original symptom. See `tasks.md` for per-task status.
