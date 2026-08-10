@@ -848,3 +848,80 @@ can itself vary). No corrective data migration is indicated by this
 addendum - the single existing row for today is internally consistent
 (no negative or decreasing history visible), so `migration_required`
 remains `unknown-conditional-on-root-cause`, not confirmed-needed.
+
+## Addendum 3 — candidate (a)/(b) exhausted; concurrency evidence for candidate (c)
+
+VOC-053-T01's second real attempt (PR #464, commit
+bc26914d5b99965c58496b57e1a8a63b19b00b84) re-traced candidate (b) end
+to end and found no defect: `GetDailyMissionView`'s date computation
+(`apps/api/business/gamification/timezone.go`'s `LocalDate`/
+`ResolveSettings`) is a pure, deterministic function of `now()` and a
+*stored* per-user timezone row - the request-time client-timezone
+override path exists in the code but is never exercised by the real
+frontend (`apps/web/src/lib/api-server.ts`'s `createServerApiClient`
+never sets a timezone header/param on the outbound `getDailyMission()`
+call), so both the step-1 and step-7 requests in the same E2E run
+resolve `local_date` from the exact same stored UTC row. With the
+account's stored timezone at UTC (confirmed live, Addendum 2) and no
+midnight boundary crossed in issue #450's own original report
+(~19:42 UTC), there is no code path by which two requests seconds
+apart in the same run should compute different `local_date` values.
+Independent review confirmed this trace and issued a further FAIL
+(T01 correctly declined to fabricate a fix for a defect that does not
+exist in the code).
+
+**Candidates (a) and (b) are now exhausted as this investigation can
+determine them**: (a) is ruled out by direct live evidence (Addendum
+1), (b) is ruled out by exhaustive, twice-independently-confirmed
+static tracing plus the live DB/timezone confirmation (Addendum 2)
+that finds no mechanism for the computation to vary.
+
+**New concrete evidence for candidate (c)**: this session triggered
+many staging deploys in quick succession over several hours. Checking
+`deploy-staging.yml`'s actual run history around the original
+issue #450 report window found two runs with **overlapping wall-clock
+execution**, both against the same persistent synthetic account:
+
+```
+run 31333372421: 2026-08-09T20:05:48Z -> 2026-08-09T20:09:11Z
+run 31333480918: 2026-08-09T20:08:20Z -> 2026-08-09T20:12:44Z
+```
+
+`31333480918` started (20:08:20) while `31333372421` was still running
+(ends 20:09:11) - a real ~51-second overlap. Both runs would have hit
+the same `daily_mission_snapshots` row for the synthetic account
+concurrently: seeding, reading the baseline, reviewing cards, and
+re-reading. This is not proof of the *exact* mechanism behind issue
+#450's original `reviewedBefore=1 -> reviewedAfter=0` observation
+(that specific run, 31332238452, did not have an overlapping
+predecessor in the window checked), but it is direct, confirmed
+evidence that this deploy pipeline's design - one shared, persistent
+synthetic account with no run-level isolation or locking - permits
+real concurrent access, which is exactly the mechanism candidate (c)
+describes.
+
+### Recommended disposition
+
+With (a) and (b) exhausted and (c) now supported by concrete (if not
+yet fully conclusive) evidence, the actionable next step is scoped
+differently than T01's original charter (a backend bug fix): either
+
+1. **Serialize/lock deploy-staging.yml runs** so at most one
+   E2E-journey-bearing deploy touches the synthetic account at a time
+   (a GitHub Actions concurrency group keyed on the workflow, not the
+   ref, would be the natural mechanism - `deploy-staging.yml` does not
+   currently have one scoped this way), or
+2. **Give each deploy run its own isolated synthetic account/local_date
+   scope** (a bigger redesign), or
+3. **Make the E2E assertion itself robust to concurrent residue**
+   (e.g. read-modify-verify against a per-run marker instead of a bare
+   count comparison).
+
+This is a real, scoped follow-up task, not something to force into
+T01's current shape. `VOC-053-T01`/`T02` as originally scoped assumed
+a code-level bug existed to fix; the evidence now says otherwise. The
+founder-gate delegate's recommendation is to close out the current T01
+PR (another honest "cannot fix what isn't broken" attempt) and open a
+new task scoped to deploy-run isolation, rather than continuing to
+dispatch T01 attempts against a hypothesis (b) that two independent
+investigation passes have now ruled out.
