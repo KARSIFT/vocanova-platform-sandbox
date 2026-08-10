@@ -49,6 +49,11 @@ const CSRF_COOKIE_NAME = "vocanova_csrf";
 // records why it stopped short of the caught-up state.
 const MAX_REVIEW_CARDS = 8;
 const REVIEWED_TODAY_PATTERN = /(\d+) of \d+ words reviewed today/;
+// VOC-063-T01: bounded step-7 re-read when the first /home load may be stale.
+// Four attempts (initial + three retries) with 1.5s between failures keeps the
+// loop under ~5s of deliberate waiting, well inside the staging journey timeout.
+const STEP_7_REVIEWED_COUNT_MAX_ATTEMPTS = 4;
+const STEP_7_REVIEWED_COUNT_RETRY_DELAY_MS = 1_500;
 
 // Cookies must be scoped to the shared parent domain, not just the web
 // app's own host: the app's server-side rendering/fetch paths send these
@@ -91,38 +96,44 @@ async function readReviewedTodayCount(page: Page): Promise<number> {
   return Number(match[1]);
 }
 
-// VOC-053-DEP-00 diagnostic (temporary - see issue #452/VOC-053-T01):
-// records the /home document response's own caching-related headers on
-// both the baseline and post-review loads, so the next real staging run
-// produces the live evidence VOC-053-T00's review said was still missing
-// - specifically whether `x-nextjs-cache` reads HIT on the second load
-// (Next.js Full Route Cache serving stale content, candidate a) or the
-// response is otherwise identical in a way that would point at candidate
-// b/c instead. Remove once VOC-053-DEP-00 is resolved.
-function recordHomeResponseDiagnostic(
+async function readReviewedTodayCountAfterReviews(
+  page: Page,
   testInfo: TestInfo,
-  label: string,
-  response: Awaited<ReturnType<Page["goto"]>>,
-): void {
-  if (!response) {
-    testInfo.annotations.push({
-      type: "voc-053-diagnostic",
-      description: `${label}: page.goto() returned no response object`,
-    });
-    return;
+  reviewedBefore: number,
+  reviewedCards: number,
+): Promise<number> {
+  const minimumExpected = reviewedBefore + reviewedCards;
+  const attemptValues: number[] = [];
+
+  for (let attempt = 1; attempt <= STEP_7_REVIEWED_COUNT_MAX_ATTEMPTS; attempt++) {
+    await page.goto("/home");
+    const reviewedAfter = await readReviewedTodayCount(page);
+    attemptValues.push(reviewedAfter);
+
+    if (reviewedAfter >= minimumExpected) {
+      if (attempt > 1) {
+        testInfo.annotations.push({
+          type: "step-7-retry",
+          description:
+            `reviewed-count read needed ${attempt} attempt(s) ` +
+            `(reviewedBefore=${reviewedBefore}, reviewedCards=${reviewedCards}, ` +
+            `minimumExpected=${minimumExpected}, values=${attemptValues.join(",")})`,
+        });
+      }
+      return reviewedAfter;
+    }
+
+    if (attempt < STEP_7_REVIEWED_COUNT_MAX_ATTEMPTS) {
+      await page.waitForTimeout(STEP_7_REVIEWED_COUNT_RETRY_DELAY_MS);
+    }
   }
-  const headers = response.headers();
-  const pick = (name: string) => headers[name] ?? "(absent)";
-  testInfo.annotations.push({
-    type: "voc-053-diagnostic",
-    description:
-      `${label}: status=${response.status()} ` +
-      `date=${pick("date")} age=${pick("age")} ` +
-      `cache-control=${pick("cache-control")} ` +
-      `x-nextjs-cache=${pick("x-nextjs-cache")} ` +
-      `cf-cache-status=${pick("cf-cache-status")} ` +
-      `vary=${pick("vary")}`,
-  });
+
+  throw new Error(
+    `Step 7 reviewed-today counter did not reach the expected minimum after ` +
+      `${STEP_7_REVIEWED_COUNT_MAX_ATTEMPTS} attempt(s): ` +
+      `reviewedBefore=${reviewedBefore}, reviewedCards=${reviewedCards}, ` +
+      `minimumExpected=${minimumExpected}, observed=[${attemptValues.join(", ")}]`,
+  );
 }
 
 async function completeOnboardingIfRedirected(page: Page): Promise<void> {
@@ -281,8 +292,7 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
           sameSite: "Lax",
         },
       ]);
-      const homeResponse = await page.goto("/home");
-      recordHomeResponseDiagnostic(testInfo, "step 1 (baseline)", homeResponse);
+      await page.goto("/home");
       await completeOnboardingIfRedirected(page);
       await expect(page).toHaveURL(/\/home(\?|$)/);
       await expect(
@@ -405,9 +415,12 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
     });
 
     await test.step("7. progress reflects the completed reviews", async () => {
-      const homeResponse = await page.goto("/home");
-      recordHomeResponseDiagnostic(testInfo, "step 7 (post-review)", homeResponse);
-      const reviewedAfter = await readReviewedTodayCount(page);
+      const reviewedAfter = await readReviewedTodayCountAfterReviews(
+        page,
+        testInfo,
+        reviewedBefore,
+        reviewedCards,
+      );
       expect(reviewedAfter).toBeGreaterThanOrEqual(reviewedBefore + reviewedCards);
     });
 
