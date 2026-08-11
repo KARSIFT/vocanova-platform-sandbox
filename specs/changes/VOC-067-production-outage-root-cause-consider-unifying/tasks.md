@@ -5,8 +5,9 @@
 - Requirement source: issue #485; `VOC-067-DEP-00`–`DEP-03`
 - Acceptance criteria: `VOC-067-AC-00` (and `VOC-067-AC-07` if alternate path)
 - Tests: `VOC-067-TEST-00`
-- Evidence: `VOC-067-EV-00`
-- Status: pending
+- Evidence: `VOC-067-EV-00` —
+  [`t00-edge-architecture-decision-record.md`](t00-edge-architecture-decision-record.md)
+- Status: **complete** (2026-08-11)
 
 Decision-record task only (no compose/workflow behavior change required in
 this PR beyond the package evidence file itself). Produce a decision record
@@ -55,7 +56,8 @@ In `infra/docker-compose.yml` and `infra/docker-compose.production.yml`
 - Acceptance criteria: `VOC-067-AC-02`
 - Tests: `VOC-067-TEST-02`
 - Evidence: `VOC-067-EV-02`
-- Status: pending — blocked on T00 choosing shared nginx (`VOC-067-DEP-00`)
+- Status: pending — **authorized** (T00 chose shared nginx; `VOC-067-DEP-00`
+  accepted)
 
 Implement the repository side of the shared edge per T00:
 
@@ -81,7 +83,7 @@ and reload semantics.
 - Acceptance criteria: `VOC-067-AC-03`, `VOC-067-AC-04`
 - Tests: `VOC-067-TEST-03`, `VOC-067-TEST-04`
 - Evidence: `VOC-067-EV-03`
-- Status: pending — depends on T02 (shared path)
+- Status: pending — depends on T02; **authorized** by T00 shared-nginx decision
 
 Update `.github/workflows/deploy-staging.yml` and
 `.github/workflows/deploy-production.yml` (and header comments) so that:
@@ -103,7 +105,9 @@ Update `.github/workflows/deploy-staging.yml` and
 - Tests: `VOC-067-TEST-05`
 - Evidence: `VOC-067-EV-04`
 - Status: pending — depends on T02/T03; should not land before origin `:443`
-  actually serves production (coordinate with T05 / T00 cutover order)
+  actually serves production (cutover order in
+  [`t00-edge-architecture-decision-record.md`](t00-edge-architecture-decision-record.md);
+  coordinate with T05)
 
 Remove `:8443` from production client-facing and deploy-emitted URLs that
 exist only because of the dual-nginx port split, including at least:
@@ -124,7 +128,9 @@ otherwise follow stale runbooks.
 - Acceptance criteria: `VOC-067-AC-06`
 - Tests: `VOC-067-TEST-06`
 - Evidence: `VOC-067-EV-05`
-- Status: pending — depends on T02–T04 per T00's cutover order
+- Status: pending — depends on T02–T04; cutover order and Cloudflare API
+  operator recorded in
+  [`t00-edge-architecture-decision-record.md`](t00-edge-architecture-decision-record.md)
 
 No large new feature code expected. Produce evidence that:
 

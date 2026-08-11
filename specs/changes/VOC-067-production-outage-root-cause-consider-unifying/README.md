@@ -1,9 +1,10 @@
 # VOC-067 — Unify Staging/Production nginx Into One Shared-but-Isolated Edge
 
-**Status: draft, not adopted.** Nothing in this package is implementation-authorized.
-It is a draft response to
-[issue #485](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/485),
-prepared for founder/steward review at adoption time.
+**Status: adopted, implementation authorized.** Founder decisions for
+`VOC-067-DEP-00` through `DEP-03` are recorded in
+[`t00-edge-architecture-decision-record.md`](t00-edge-architecture-decision-record.md)
+(`VOC-067-EV-00`). Response to
+[issue #485](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/485).
 
 ## Identity and lifecycle
 
@@ -12,13 +13,15 @@ prepared for founder/steward review at adoption time.
   Shared-but-Isolated Edge on :80/:443
 - Canonical path:
   `specs/changes/VOC-067-production-outage-root-cause-consider-unifying`
-- Lifecycle state: `draft` (not adopted, not authorized for implementation)
-- Proposed risk: `R4` (draft proposal only — see `change.yaml`'s
-  `planned_implementation_risk_floor`, not a determination). Path floor for
-  expected `infra/` and `.github/workflows/` edits is `R3`.
+- Lifecycle state: `adopted` (`implementation_authorized: true` per
+  `change.yaml`)
+- Risk: `R4` (founder-approved; revises `VOC-037-D00`/`D01` edge isolation in
+  part — see T00 decision record). Path floor for expected `infra/` and
+  `.github/workflows/` edits is `R3`.
 - Owner: unassigned (see `change.yaml`'s `owners` block)
-- Approval evidence: none yet — `approval_status: not-approved`,
-  `implementation_authorized: false`
+- Approval evidence: adoption PR #487; package adopted 2026-08-11 (PR #493);
+  edge-architecture decisions in
+  [`t00-edge-architecture-decision-record.md`](t00-edge-architecture-decision-record.md)
 - Target branch: `develop`
 - Linked GitHub issue:
   [#485](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/485)
@@ -80,25 +83,29 @@ fix is in scope regardless of whether shared nginx is adopted.
 - Does not itself edit Cloudflare settings in git (ops evidence only in T05).
 - Does not fold unrelated application-feature work into this package.
 
-## Open questions for the reviewing human
+## Resolved decisions (T00)
 
-See `specification.md`. The most important:
+See [`t00-edge-architecture-decision-record.md`](t00-edge-architecture-decision-record.md)
+(`VOC-067-EV-00`) for the full record. Summary:
 
-1. **`VOC-067-DEP-00`** — Adopt shared nginx, or keep dual nginx and harden
-   Cloudflare's origin-port override instead?
-2. **`VOC-067-DEP-01`** — Accept (or amend) the proposed lifecycle defaults:
-   dedicated shared-edge compose; routine deploys only `nginx -t` + reload;
-   recreate is rare/gated.
-3. **`VOC-067-DEP-02`** — Explicit acceptance that sharing the nginx *process*
-   supersedes the separate-ports / separate-nginx part of `VOC-037-D00`/`D01`.
+1. **`VOC-067-DEP-00`** — **Shared nginx** on host `80`/`443` (dual-nginx +
+   Cloudflare harden not pursued).
+2. **`VOC-067-DEP-01`** — Lifecycle defaults **accepted as proposed**
+   (dedicated shared-edge compose; routine deploys only `nginx -t` + reload;
+   recreate rare/gated; single `default_server`).
+3. **`VOC-067-DEP-02`** — Founder accepts superseding `VOC-037-D00`/`D01`'s
+   separate-nginx / separate-ports clause; config, certs, secrets, and
+   deploy-user write scopes remain isolated per tier.
+4. **`VOC-067-DEP-03`** — **Repository-driven Cloudflare API** cutover in
+   order: shared edge live on origin `:443` → remove remap → T04
+   port-normalization; rollback restores remap if edge checks fail.
+
+T02–T05 are authorized. T01 may proceed in parallel.
 
 ## Verification, approvals, release, and closure
 
-See `test-plan.md`, `release-plan.md`, and `implementation-plan.md`. This
-package carries no standing approval; adoption, implementation authorization,
-independent verification, and any required founder approval remain to be
-recorded against the exact implemented revision, per `AGENTS.md` and
-`CLAUDE.md`. Under active A-003, routine R3 does not by itself require standing
-technical-steward approval; the proposed R4 classification here (revising
-`VOC-037-D00`) does require founder authority if the shared-nginx path is
-chosen.
+See `test-plan.md`, `release-plan.md`, and `implementation-plan.md`.
+Independent verification must bind the exact implemented revision, per
+`AGENTS.md` and `CLAUDE.md`. Founder authority for the shared-nginx
+supersession of `VOC-037-D00` is recorded in T00; routine R3 tasks do not by
+themselves require standing technical-steward approval under active A-003.
