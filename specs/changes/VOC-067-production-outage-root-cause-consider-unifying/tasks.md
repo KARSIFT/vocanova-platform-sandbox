@@ -34,9 +34,12 @@ parallel.
 - Requirement source: issue #485; `VOC-067-DEP-04`
 - Acceptance criteria: `VOC-067-AC-01`
 - Tests: `VOC-067-TEST-01`
-- Evidence: `VOC-067-EV-01`
-- Status: pending — may proceed in parallel with T00; valuable even if
-  shared nginx is rejected
+- Evidence: `VOC-067-EV-01` —
+  [`t01-healthcheck-evidence.md`](t01-healthcheck-evidence.md)
+- Status: **complete** (2026-08-11) — repository fix already landed on
+  `develop` via `VOC-066` (commit `545a7ef`, PR #518); T01 evidence records
+  satisfaction and local probe verification. Live `docker inspect` on staging
+  and production nginx awaits the next normal deploy recreate (`VOC-066-DEP-02`).
 
 In `infra/docker-compose.yml` and `infra/docker-compose.production.yml`
 (and, if shared edge already exists when this lands, its compose file):
