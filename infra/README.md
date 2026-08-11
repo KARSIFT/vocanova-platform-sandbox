@@ -102,9 +102,9 @@ production hostnames from the same process (VOC-067-T02).
 
 **Shared edge** (`docker compose -f infra/docker-compose.shared-edge.yml`):
 
-| Service | Image               | Port (host) | Networks                                      |
-| ------- | ------------------- | ----------- | --------------------------------------------- |
-| `nginx` | `nginx:1.27-alpine` | 80, 443     | `vocanova-net` + `vocanova-production-net`    |
+| Service | Image               | Port (host) | Networks                                   |
+| ------- | ------------------- | ----------- | ------------------------------------------ |
+| `nginx` | `nginx:1.27-alpine` | 80, 443     | `vocanova-net` + `vocanova-production-net` |
 
 **Only the shared-edge nginx publishes host ports.** The database and the
 two app services are reachable only on their tier's internal network
@@ -306,12 +306,12 @@ Raising a limit in one compose file without lowering the other oversubscribes
 the host. CPU values are per-service ceilings, so their sum may exceed 2 by
 design.
 
-| Service       | Production      | Staging         | Shared edge   |
-| ------------- | --------------- | --------------- | ------------- |
-| postgres      | 768m / 1.00 cpu | 512m / 0.75 cpu | —             |
-| api           | 512m / 1.00 cpu | 384m / 0.75 cpu | —             |
-| web           | 512m / 1.00 cpu | 384m / 0.75 cpu | —             |
-| nginx (edge)  | —               | —               | 320m / 0.50 cpu |
+| Service      | Production      | Staging         | Shared edge     |
+| ------------ | --------------- | --------------- | --------------- |
+| postgres     | 768m / 1.00 cpu | 512m / 0.75 cpu | —               |
+| api          | 512m / 1.00 cpu | 384m / 0.75 cpu | —               |
+| web          | 512m / 1.00 cpu | 384m / 0.75 cpu | —               |
+| nginx (edge) | —               | —               | 320m / 0.50 cpu |
 
 ### Verifying the boundary
 
