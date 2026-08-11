@@ -281,19 +281,27 @@ load-bearing:
 
 **VOC-067-T02 (shared edge):** one nginx process (`vocanova-shared-edge-nginx`)
 binds host `80`/`443` and routes by `server_name` / SNI to each tier's
-upstream containers. Staging and production app stacks no longer publish
-their own nginx host ports. Cloudflare should use ordinary `edge :443 →
-origin :443` for **both** tiers — the production origin-port override to
-`:8443` was an interim workaround for dual nginx and is slated for removal
-in VOC-067-T05 after origin `:443` verification. Until T04/T05 complete,
-some deploy-emitted production URLs may still mention `:8443`; that is
-legacy port-qualification, not the target steady-state design.
+upstream containers on `vocanova-net` and `vocanova-production-net`.
+
+**Cutover dual-publish (required until T05):** Cloudflare still remaps
+production hostnames to origin `:8443` until VOC-067-T05. T00's ordered
+cutover keeps that remap active while origin `:443` is proven. Therefore
+`vocanova-production-nginx` continues to publish host `8081`/`8443` as a
+temporary bridge so production traffic via the remap does not black-hole
+when the shared edge lands. Staging no longer has a per-tier nginx; its
+public path is shared-edge only. Steady state after T05 is ordinary
+`edge :443 → origin :443` for both tiers with the production bridge
+retired. Until T04/T05 complete, some deploy-emitted production URLs may
+still mention `:8443`; that is cutover port-qualification, not the target
+steady-state design.
 
 Bring up order on the shared host:
 
 1. `docker compose -f docker-compose.yml up -d` (staging apps)
-2. `docker compose -f docker-compose.production.yml up -d` (production apps)
-3. `docker compose -f docker-compose.shared-edge.yml up -d` (public edge)
+2. `docker compose -f docker-compose.production.yml up -d` (production apps
+   + temporary `:8443` bridge nginx)
+3. `docker compose -f docker-compose.shared-edge.yml up -d` (shared edge on
+   `80`/`443` — `deploy-staging.yml` performs this controlled bring-up)
 
 Recreating the shared-edge container is rare and documented — ordinary
 deploys only `nginx -t` + reload (VOC-067-T03).
@@ -301,17 +309,19 @@ deploys only `nginx -t` + reload (VOC-067-T03).
 ### Shared-host resource budget
 
 Both stacks share one 2 vCPU / 4 GB host, so their memory limits are budgeted
-together — production ~1.9 GB, staging ~1.4 GB, leaving headroom for the host.
-Raising a limit in one compose file without lowering the other oversubscribes
+together — production ~1.9 GB (including the temporary cutover nginx),
+staging ~1.3 GB apps + shared edge ~320 MB, leaving headroom for the host.
+Raising a limit in one compose file without lowering another oversubscribes
 the host. CPU values are per-service ceilings, so their sum may exceed 2 by
 design.
 
-| Service      | Production      | Staging         | Shared edge     |
-| ------------ | --------------- | --------------- | --------------- |
-| postgres     | 768m / 1.00 cpu | 512m / 0.75 cpu | —               |
-| api          | 512m / 1.00 cpu | 384m / 0.75 cpu | —               |
-| web          | 512m / 1.00 cpu | 384m / 0.75 cpu | —               |
-| nginx (edge) | —               | —               | 320m / 0.50 cpu |
+| Service              | Production      | Staging         | Shared edge     |
+| -------------------- | --------------- | --------------- | --------------- |
+| postgres             | 768m / 1.00 cpu | 512m / 0.75 cpu | —               |
+| api                  | 512m / 1.00 cpu | 384m / 0.75 cpu | —               |
+| web                  | 512m / 1.00 cpu | 384m / 0.75 cpu | —               |
+| nginx (cutover :8443)| 192m / 0.50 cpu | —               | —               |
+| nginx (shared edge)  | —               | —               | 320m / 0.50 cpu |
 
 ### Verifying the boundary
 

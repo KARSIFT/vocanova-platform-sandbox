@@ -551,17 +551,18 @@ jobs:
               echo "::warning::Production secrets-boundary rehearsal FAILED INS-11 only on the disclosed, founder-waived finding (ubuntu's independent blanket sudo — see t06-production-provisioning-evidence.md). Deploy continues; this is a known accepted risk, not a new regression."
             fi
 
-      # Port :8443 (not the default 443) because production and staging
-      # currently share one physical host (D00 supersession note, T06
-      # evidence): staging's nginx already owns the host's port 443, so
-      # production's nginx publishes on 8443 instead. Cloudflare proxies
-      # 8443 to any proxied hostname without extra configuration (it's
-      # one of Cloudflare's built-in alternate HTTPS ports), which is
-      # exactly why this works with zero Cloudflare-side changes - but
-      # every client (including these health checks) must include the
-      # port explicitly. Found live: the first real deploy's poll steps
-      # (unqualified :443) silently hit Cloudflare's 520 fallback instead
-      # of production's actual nginx.
+      # Port :8443 (not the default 443) during VOC-067 cutover: shared-edge
+      # owns host 80/443 (VOC-067-T02), while production keeps a temporary
+      # nginx bridge on 8081/8443 until T05 removes the Cloudflare
+      # :443 → origin :8443 remap (T00 ordered cutover). These polls still
+      # target :8443 so they exercise the remap path Cloudflare still uses.
+      # After T05, switch these checks to ordinary :443 (T04/T05).
+      #
+      # Cloudflare proxies 8443 to any proxied hostname without extra
+      # configuration (it's one of Cloudflare's built-in alternate HTTPS
+      # ports). Found live: the first real deploy's poll steps (unqualified
+      # :443) silently hit Cloudflare's 520 fallback instead of production's
+      # actual nginx when the remap was the only public path.
       - name: Poll production API health endpoint
         run: |
           set -euo pipefail

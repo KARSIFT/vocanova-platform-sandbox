@@ -58,9 +58,11 @@ In `infra/docker-compose.yml` and `infra/docker-compose.production.yml`
 - Requirement source: issue #485 proposed direction; T00 shared-nginx decision
 - Acceptance criteria: `VOC-067-AC-02`
 - Tests: `VOC-067-TEST-02`
-- Evidence: `VOC-067-EV-02`
-- Status: pending — **authorized** (T00 chose shared nginx; `VOC-067-DEP-00`
-  accepted)
+- Evidence: `VOC-067-EV-02` —
+  [`t02-shared-edge-evidence.md`](t02-shared-edge-evidence.md)
+- Status: **complete** (2026-08-11) — repository shared-edge layout + temporary
+  `:8443` cutover bridge + staging controlled bring-up; live origin `:443`
+  Host-routing proof remains a host/ops limitation recorded in EV-02
 
 Implement the repository side of the shared edge per T00:
 

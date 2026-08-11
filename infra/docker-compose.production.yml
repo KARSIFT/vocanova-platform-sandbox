@@ -25,9 +25,12 @@
 # headroom for the host itself. Raising a limit here without
 # lowering staging's oversubscribes the host.
 #
-# Public HTTPS for production hostnames is served by vocanova-shared-edge-nginx
-# (infra/docker-compose.shared-edge.yml, VOC-067-T02) on host 80/443 — not by
-# a per-tier nginx container publishing 8081/8443.
+# Public HTTPS end state (after VOC-067-T05): vocanova-shared-edge-nginx on
+# host 80/443 (infra/docker-compose.shared-edge.yml). Until T05 removes the
+# Cloudflare :443 → origin :8443 remap, this compose keeps a temporary
+# production nginx cutover bridge on host 8081/8443 so the still-active
+# remap continues to hit a healthy origin listener (VOC-067-T02 dual-publish;
+# T00 ordered cutover). T05 removes the remap and retires this bridge.
 name: vocanova-production
 
 x-logging: &default-logging
@@ -117,6 +120,41 @@ services:
       start_period: 20s
     mem_limit: 512m
     cpus: 1.00
+    networks:
+      - vocanova-production-net
+    logging: *default-logging
+
+  # VOC-067-T02 temporary cutover bridge: publish 8081/8443 only while
+  # Cloudflare still remaps production hostnames to origin :8443 (T05).
+  # Primary public path is shared-edge on 80/443; do not treat this service
+  # as the steady-state edge. Cert paths match shared-edge production mounts
+  # (/etc/nginx/certs/production/) so the same conf.d tree loads in both.
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: vocanova-production-nginx
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    ports:
+      - "8081:80"
+      - "8443:443"
+    volumes:
+      - ${VOCANOVA_PRODUCTION_ROOT:-/opt/vocanova/production}/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ${VOCANOVA_PRODUCTION_ROOT:-/opt/vocanova/production}/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ${VOCANOVA_PRODUCTION_ROOT:-/opt/vocanova/production}/secrets/nginx/cert.pem:/etc/nginx/certs/production/cert.pem:ro
+      - ${VOCANOVA_PRODUCTION_ROOT:-/opt/vocanova/production}/secrets/nginx/key.pem:/etc/nginx/certs/production/key.pem:ro
+    healthcheck:
+      # Default-server /healthz probe (VOC-066); bare / returns 444.
+      test: ["CMD-SHELL", "wget --quiet --tries=1 -O /dev/null http://127.0.0.1/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    mem_limit: 192m
+    cpus: 0.50
     networks:
       - vocanova-production-net
     logging: *default-logging

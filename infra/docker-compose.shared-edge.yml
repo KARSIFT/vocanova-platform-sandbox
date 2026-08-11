@@ -9,11 +9,23 @@
 # Risk:    R3 path floor (infra/*); package R4 for VOC-037 edge supersession.
 #
 # Lifecycle:
-#   * Bring up after staging and production app stacks (postgres/api/web)
-#     are healthy — this compose project does not declare cross-project
-#     depends_on.
+#   * Bring up after staging app stack is healthy (deploy-staging.yml owns
+#     the controlled first-start / rare recreate). Production app stack and
+#     its Docker network should already exist on the shared host; this
+#     compose declares both networks as external and does not depend_on
+#     cross-project services.
 #   * Ordinary deploy-staging / deploy-production runs must NOT recreate
-#     this container (T03); they reload it after per-tier conf writes.
+#     this container as part of app deploys (T03); they reload it after
+#     per-tier conf writes. T02's staging bring-up uses `compose up -d`
+#     without --force-recreate so a missing container is created and an
+#     already-running one is left in place when the compose spec is unchanged.
+#
+# Cutover dual-publish (T00 / T05):
+#   * This process binds host 80/443 (primary path for both tiers).
+#   * Until T05 removes the Cloudflare production origin-port remap,
+#     vocanova-production-nginx continues to publish host 8081/8443 so
+#     edge :443 → origin :8443 traffic still has a listener. Do not drain
+#     that bridge in T02.
 #
 # Host layout (shared host):
 #   /opt/vocanova/infra/docker-compose.shared-edge.yml  (SCPed with staging bundle)

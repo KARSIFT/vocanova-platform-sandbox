@@ -65,14 +65,12 @@
 #      cert/key) is referenced by path only. `env_file` paths
 #      point at untracked host files in `infra/secrets/`, which
 #      its own `.gitignore` keeps out of git.
-#   2. Only the shared-edge nginx service (infra/docker-compose.shared-edge.yml,
-#      VOC-067-T02) publishes host ports (80, 443). The postgres, api, and web
-#      services are reachable only on the internal `vocanova-net` Docker
-#      network. This is the explicit mitigation for VOC-032-R03 (port-exposure
-#      risk in impact-analysis.md): if you find yourself adding a `ports:` block
-#      to a non-nginx service, you are opening the database or an internal API
-#      port to the internet, which this package's impact analysis explicitly
-#      forbids.
+#   2. Staging app services (postgres, api, web) publish no host ports —
+#      only the shared-edge nginx (infra/docker-compose.shared-edge.yml,
+#      VOC-067-T02) binds host 80/443 for this tier. (Production's temporary
+#      cutover nginx still publishes 8081/8443 until VOC-067-T05.) Internal
+#      services stay on `vocanova-net` only (VOC-032-R03 mitigation): do not
+#      add a `ports:` block to postgres/api/web.
 #   3. The web image's NEXT_PUBLIC_API_BASE_URL is a build-time
 #      argument, NOT a runtime environment variable. Next.js
 #      inlines NEXT_PUBLIC_* values into the client bundle at
