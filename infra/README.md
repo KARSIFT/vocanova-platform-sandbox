@@ -299,7 +299,7 @@ Bring up order on the shared host:
 
 1. `docker compose -f docker-compose.yml up -d` (staging apps)
 2. `docker compose -f docker-compose.production.yml up -d` (production apps
-   + temporary `:8443` bridge nginx)
+   plus temporary `:8443` bridge nginx)
 3. `docker compose -f docker-compose.shared-edge.yml up -d` (shared edge on
    `80`/`443` — `deploy-staging.yml` performs this controlled bring-up)
 
@@ -315,13 +315,13 @@ Raising a limit in one compose file without lowering another oversubscribes
 the host. CPU values are per-service ceilings, so their sum may exceed 2 by
 design.
 
-| Service              | Production      | Staging         | Shared edge     |
-| -------------------- | --------------- | --------------- | --------------- |
-| postgres             | 768m / 1.00 cpu | 512m / 0.75 cpu | —               |
-| api                  | 512m / 1.00 cpu | 384m / 0.75 cpu | —               |
-| web                  | 512m / 1.00 cpu | 384m / 0.75 cpu | —               |
-| nginx (cutover :8443)| 192m / 0.50 cpu | —               | —               |
-| nginx (shared edge)  | —               | —               | 320m / 0.50 cpu |
+| Service               | Production      | Staging         | Shared edge     |
+| --------------------- | --------------- | --------------- | --------------- |
+| postgres              | 768m / 1.00 cpu | 512m / 0.75 cpu | —               |
+| api                   | 512m / 1.00 cpu | 384m / 0.75 cpu | —               |
+| web                   | 512m / 1.00 cpu | 384m / 0.75 cpu | —               |
+| nginx (cutover :8443) | 192m / 0.50 cpu | —               | —               |
+| nginx (shared edge)   | —               | —               | 320m / 0.50 cpu |
 
 ### Verifying the boundary
 
