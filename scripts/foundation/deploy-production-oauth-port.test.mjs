@@ -10,10 +10,12 @@ const STEP_START_MARKER = "- name: Write production application configuration";
 const STEP_END_MARKER = "- name: Deploy to production host";
 
 const EXPECTED_CONFIG_LINES = [
-  'echo "BASE_URL=https://${PRODUCTION_API_HOST}:8443"',
-  'echo "OAUTH_REDIRECT_URI=https://${PRODUCTION_API_HOST}:8443/api/v1/auth/oauth/google/callback"',
-  'echo "OAUTH_REDIRECT_ALLOWLIST=https://${PRODUCTION_WEB_HOST}:8443/onboarding,https://${PRODUCTION_WEB_HOST}:8443/home"',
+  'echo "BASE_URL=https://${PRODUCTION_API_HOST}"',
+  'echo "OAUTH_REDIRECT_URI=https://${PRODUCTION_API_HOST}/api/v1/auth/oauth/google/callback"',
+  'echo "OAUTH_REDIRECT_ALLOWLIST=https://${PRODUCTION_WEB_HOST}/onboarding,https://${PRODUCTION_WEB_HOST}/home"',
 ];
+
+const FORBIDDEN_PORT_QUALIFICATION = /:8443/;
 
 function extractConfigStepBlock(workflowSource) {
   const stepStartIndex = workflowSource.indexOf(STEP_START_MARKER);
@@ -33,7 +35,7 @@ function extractConfigStepBlock(workflowSource) {
   return workflowSource.slice(stepStartIndex, stepEndIndex);
 }
 
-test("VOC-041-TEST-02: production OAuth/browser URLs stay :8443-qualified in config-writing step", () => {
+test("VOC-067-TEST-05: production OAuth/browser URLs use ordinary :443 hostnames (no :8443)", () => {
   const workflowSource = readFileSync(DEPLOY_WORKFLOW_PATH, "utf8");
   const configStepBlock = extractConfigStepBlock(workflowSource);
 
@@ -44,4 +46,10 @@ test("VOC-041-TEST-02: production OAuth/browser URLs stay :8443-qualified in con
       `Expected deploy-production config step to contain: ${expectedLine}`,
     );
   }
+
+  assert.doesNotMatch(
+    configStepBlock,
+    FORBIDDEN_PORT_QUALIFICATION,
+    "deploy-production config step must not emit :8443-qualified URLs",
+  );
 });
