@@ -13,11 +13,11 @@
 #             next.config.ts); the nginx service's actual config
 #             lands in T05.
 #
-# This file wires four services for the staging host per the
+# This file wires three application services for the staging host per the
 # founder's deploy-shape decision (VOC-032-D01): self-hosted Docker
-# Compose (postgres + api + web) fronted by nginx, with TLS
-# terminated at nginx via a Cloudflare origin certificate
-# (VOC-032-DEP-01).
+# Compose (postgres + api + web) fronted by the shared-edge nginx on
+# host 80/443 (VOC-067-T02), with TLS terminated at nginx via a
+# Cloudflare origin certificate (VOC-032-DEP-01).
 #
 # Cross-references:
 #   * apps/api/Dockerfile (T02) - the api service builds this image.
@@ -47,10 +47,10 @@
 #   * `docker compose -f infra/docker-compose.yml build`
 #       Builds the api and web images locally.
 #   * `docker compose -f infra/docker-compose.yml up -d`
-#       Brings up the four-service stack. Requires the
-#       founder-populated env files in infra/secrets/ and the
-#       nginx config in infra/nginx/ (T05). (VOC-032-TEST-11,
-#       once T05 lands.)
+#       Brings up the three-service app stack. Requires the
+#       founder-populated env files in infra/secrets/. Public
+#       HTTPS is served by vocanova-shared-edge-nginx
+#       (infra/docker-compose.shared-edge.yml).
 #   * `docker compose -f infra/docker-compose.yml down`
 #       Stops the stack. Does NOT remove the postgres named
 #       volume.
@@ -65,15 +65,14 @@
 #      cert/key) is referenced by path only. `env_file` paths
 #      point at untracked host files in `infra/secrets/`, which
 #      its own `.gitignore` keeps out of git.
-#   2. Only the nginx service publishes host ports (80, 443).
-#      The postgres, api, and web services are reachable only
-#      on the internal `vocanova-net` Docker network. This is
-#      the explicit mitigation for VOC-032-R03 (port-exposure
-#      risk in impact-analysis.md): if you find yourself
-#      adding a `ports:` block to a non-nginx service, you are
-#      opening the database or an internal API port to the
-#      internet, which this package's impact analysis
-#      explicitly forbids.
+#   2. Only the shared-edge nginx service (infra/docker-compose.shared-edge.yml,
+#      VOC-067-T02) publishes host ports (80, 443). The postgres, api, and web
+#      services are reachable only on the internal `vocanova-net` Docker
+#      network. This is the explicit mitigation for VOC-032-R03 (port-exposure
+#      risk in impact-analysis.md): if you find yourself adding a `ports:` block
+#      to a non-nginx service, you are opening the database or an internal API
+#      port to the internet, which this package's impact analysis explicitly
+#      forbids.
 #   3. The web image's NEXT_PUBLIC_API_BASE_URL is a build-time
 #      argument, NOT a runtime environment variable. Next.js
 #      inlines NEXT_PUBLIC_* values into the client bundle at
@@ -86,12 +85,11 @@
 #   4. Every service declares `mem_limit`/`cpus`. Since
 #      VOC-037-D00 accepted co-locating production on this
 #      same 2 vCPU / 4 GB host, an unbounded staging container
-#      could starve production and vice versa. The two compose
-#      files' memory limits are budgeted together: staging caps
-#      at ~1.4 GB and production (infra/docker-compose.production.yml)
-#      at ~1.9 GB, leaving headroom for the host itself. Raising
-#      a limit in either file without lowering the other
-#      oversubscribes the host.
+#      could starve production and vice versa. Staging, production,
+#      and the shared-edge compose files' memory limits are budgeted
+#      together (~1.4 GB staging + ~1.9 GB production + ~320 MB edge,
+#      see infra/README.md). Raising a limit in any file without
+#      lowering another oversubscribes the host.
 #   5. Restart policy is `unless-stopped` on every service. A
 #      manual `docker compose stop` survives a host reboot; a
 #      host crash brings the stack back up. `always` is not
@@ -305,66 +303,6 @@ services:
     # NO `ports:` block. The web is reachable only on the
     # internal network, at hostname `web:3000` (which nginx
     # consumes). Same rationale as the api service above.
-    logging: *default-logging
-
-  # ---------------------------------------------------------------------------
-  # nginx
-  #
-  # The only service that publishes host ports (80, 443).
-  # Reads its config from infra/nginx/ (T05) and its TLS
-  # material from infra/secrets/nginx/ (Cloudflare origin
-  # cert/key, founder-provisioned per VOC-032-DEP-01). The T05
-  # PR is what populates the config; this service block
-  # exists now so the stack comes up once T05 lands.
-  #
-  # `depends_on` waits for both the web AND the api to be
-  # healthy before starting nginx - this is the AC-04
-  # requirement that nginx not start until its upstreams are
-  # ready (avoids the "502 Bad Gateway until the app is up"
-  # window during a fresh deploy).
-  # ---------------------------------------------------------------------------
-  nginx:
-    image: nginx:1.27-alpine
-    container_name: vocanova-nginx
-    restart: unless-stopped
-    depends_on:
-      web:
-        condition: service_healthy
-      api:
-        condition: service_healthy
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      # nginx main config (T05 produces infra/nginx/nginx.conf).
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      # nginx site-level config fragments (T05 produces the
-      # staging.vocanova.site and api-staging.vocanova.site
-      # server blocks here, one per file under conf.d/).
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      # TLS material (Cloudflare origin cert/key -
-      # VOC-032-DEP-01). The founder generates the cert in
-      # the Cloudflare dashboard and drops cert.pem and
-      # key.pem into infra/secrets/nginx/ on the staging
-      # host. Self-signed substitutes are used for local-
-      # dev `docker compose up` (see VOC-032-TEST-12).
-      - ./secrets/nginx/cert.pem:/etc/nginx/certs/cert.pem:ro
-      - ./secrets/nginx/key.pem:/etc/nginx/certs/key.pem:ro
-    healthcheck:
-      # Probe the default-server /healthz location (VOC-066).
-      # A bare GET to http://127.0.0.1/ hits the catch-all and
-      # returns 444 by design (VOC-032-D03); /healthz is the
-      # deliberate exception that confirms nginx is accepting
-      # connections without weakening scanner hardening.
-      test: ["CMD-SHELL", "wget --quiet --tries=1 -O /dev/null http://127.0.0.1/healthz || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    mem_limit: 128m
-    cpus: 0.50
-    networks:
-      - vocanova-net
     logging: *default-logging
 
 volumes:

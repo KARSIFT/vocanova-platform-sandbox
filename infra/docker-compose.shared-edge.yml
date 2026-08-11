@@ -1,0 +1,74 @@
+# infra/docker-compose.shared-edge.yml
+#
+# VOC-067-T02: shared public edge — one nginx process on host 80/443
+# for both staging and production Host/SNI routing.
+#
+# Package: VOC-067 (shared nginx edge)
+# Authority: VOC-067-DEP-00 / DEP-01 (dedicated compose; recreate is
+#            rare — ordinary deploys only nginx -t + reload via T03).
+# Risk:    R3 path floor (infra/*); package R4 for VOC-037 edge supersession.
+#
+# Lifecycle:
+#   * Bring up after staging and production app stacks (postgres/api/web)
+#     are healthy — this compose project does not declare cross-project
+#     depends_on.
+#   * Ordinary deploy-staging / deploy-production runs must NOT recreate
+#     this container (T03); they reload it after per-tier conf writes.
+#
+# Host layout (shared host):
+#   /opt/vocanova/infra/docker-compose.shared-edge.yml  (SCPed with staging bundle)
+#   /opt/vocanova/infra/nginx-shared/                   (main + shared conf.d)
+#   /opt/vocanova/infra/nginx/conf.d/                   (staging 10-/20- vhosts)
+#   /opt/vocanova/production/nginx/conf.d/              (production 10-/20- vhosts)
+#
+# Local validation from repo root (override production paths):
+#   VOCANOVA_PRODUCTION_NGINX_CONF=$PWD/infra/nginx-production/conf.d \
+#   VOCANOVA_PRODUCTION_NGINX_CERT=$PWD/infra/secrets/nginx/cert.pem \
+#   VOCANOVA_PRODUCTION_NGINX_KEY=$PWD/infra/secrets/nginx/key.pem \
+#   docker compose -f infra/docker-compose.shared-edge.yml config
+
+name: vocanova-shared-edge
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: vocanova-shared-edge-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx-shared/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx-shared/conf.d:/etc/nginx/conf.d/shared:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d/staging:ro
+      - ${VOCANOVA_PRODUCTION_NGINX_CONF:-${VOCANOVA_PRODUCTION_ROOT:-/opt/vocanova/production}/nginx/conf.d}:/etc/nginx/conf.d/production:ro
+      - ./secrets/nginx/cert.pem:/etc/nginx/certs/staging/cert.pem:ro
+      - ./secrets/nginx/key.pem:/etc/nginx/certs/staging/key.pem:ro
+      - ${VOCANOVA_PRODUCTION_NGINX_CERT:-${VOCANOVA_PRODUCTION_ROOT:-/opt/vocanova/production}/secrets/nginx/cert.pem}:/etc/nginx/certs/production/cert.pem:ro
+      - ${VOCANOVA_PRODUCTION_NGINX_KEY:-${VOCANOVA_PRODUCTION_ROOT:-/opt/vocanova/production}/secrets/nginx/key.pem}:/etc/nginx/certs/production/key.pem:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 -O /dev/null http://127.0.0.1/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    mem_limit: 320m
+    cpus: 0.50
+    networks:
+      - vocanova-net
+      - vocanova-production-net
+    logging: *default-logging
+
+networks:
+  vocanova-net:
+    external: true
+    name: vocanova-net
+  vocanova-production-net:
+    external: true
+    name: vocanova-production-net
