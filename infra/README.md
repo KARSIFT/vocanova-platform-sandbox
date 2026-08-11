@@ -306,6 +306,27 @@ Bring up order on the shared host:
 Recreating the shared-edge container is rare and documented — ordinary
 deploys only `nginx -t` + reload (VOC-067-T03).
 
+### Per-tier deploy reload (VOC-067-T03)
+
+Neither `deploy-staging` nor `deploy-production` writes the other tier's
+nginx or secrets tree. Each pipeline updates only its own conf/certs path,
+then signals the shared edge with `docker exec` against
+`vocanova-shared-edge-nginx`:
+
+| Pipeline | Writes | Shared-edge signal |
+| --- | --- | --- |
+| `deploy-staging` | `/opt/vocanova/infra/nginx/`, `nginx-shared/` | Routine: `nginx -t` + `nginx -s reload` when the container exists. Rare: T02 first-start bring-up when absent. |
+| `deploy-production` | `/opt/vocanova/production/nginx/` | `nginx -t` + `nginx -s reload` when the container exists (skip if staging has not brought it up yet). |
+
+Failed `nginx -t` **fails the deploy closed** without reload — the
+in-memory config (both tiers) stays on the previous generation. Neither
+pipeline may `compose down` or recreate the shared-edge container on a
+routine deploy.
+
+Production's temporary `vocanova-production-nginx` cutover bridge
+(`:8443` until T05) is reloaded the same way after
+`deploy-production` writes production conf; it is not the shared edge.
+
 ### Shared-host resource budget
 
 Both stacks share one 2 vCPU / 4 GB host, so their memory limits are budgeted

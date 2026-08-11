@@ -87,8 +87,10 @@ and reload semantics.
 - Requirement source: issue #485 isolation bullets; `VOC-067-DEP-01`
 - Acceptance criteria: `VOC-067-AC-03`, `VOC-067-AC-04`
 - Tests: `VOC-067-TEST-03`, `VOC-067-TEST-04`
-- Evidence: `VOC-067-EV-03`
-- Status: pending — depends on T02; **authorized** by T00 shared-nginx decision
+- Evidence: `VOC-067-EV-03` —
+  [`t03-deploy-isolation-evidence.md`](t03-deploy-isolation-evidence.md)
+- Status: **complete** (2026-08-11) — deploy workflows updated for per-tier
+  write + `nginx -t` + reload only; routine deploys do not recreate shared edge
 
 Update `.github/workflows/deploy-staging.yml` and
 `.github/workflows/deploy-production.yml` (and header comments) so that:

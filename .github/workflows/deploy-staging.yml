@@ -170,11 +170,15 @@
 # replacement step; its built-in behaviour is that the old
 # containers keep serving traffic until the new ones report
 # healthy (Docker's HEALTHCHECK + the compose `up -d` lifecycle
-# make this the default). The VOC-067-T02 shared-edge handoff
-# may `docker stop`/`docker rm` the legacy vocanova-nginx
-# container only after shared-edge preflight succeeds, and
-# attempts to restart it if shared-edge start fails. The
-# workflow does not run `compose down` against the app stack.
+# make this the default). VOC-067-T03: when
+# `vocanova-shared-edge-nginx` already exists, ordinary deploys
+# only `docker exec nginx -t` + `nginx -s reload` after writing
+# staging's nginx conf — no shared-edge recreate. The rare
+# VOC-067-T02 first-start handoff may `docker stop`/`docker rm`
+# the legacy vocanova-nginx container only when the shared-edge
+# container is absent, after preflight succeeds, and attempts to
+# restart legacy nginx if shared-edge start fails. The workflow
+# does not run `compose down` against the app stack.
 #
 # Live end-to-end execution of the SSH/deploy/migrate/
 # health-check steps is recorded as blocked by
@@ -982,98 +986,107 @@ jobs:
             docker compose up -d postgres api web
 
             # -------------------------------------------------------------
-            # 8. VOC-067-T02: controlled shared-edge bring-up + port handoff.
+            # 8. VOC-067-T03: shared-edge reload (routine) or rare bring-up
+            #    (VOC-067-T02 first start / documented recreate).
             #
-            #    Staging owns docker-compose.shared-edge.yml under
-            #    /opt/vocanova/infra. This step creates the shared
-            #    container if missing and leaves an already-running
-            #    one in place when the compose spec is unchanged
-            #    (`up -d` without --force-recreate). Ordinary later
-            #    conf reloads are T03's nginx -t + reload path — not
-            #    a routine recreate.
+            #    Routine path: staging wrote only /opt/vocanova/infra/nginx
+            #    and nginx-shared (never /opt/vocanova/production). After app
+            #    containers are up, `docker exec nginx -t` against the running
+            #    shared-edge container; reload only on success. Failed nginx -t
+            #    aborts the deploy without reload — the in-memory config (both
+            #    tiers) stays on the previous generation (VOC-067-AC-04).
             #
-            #    Production nginx conf/certs are bind-mounted by the
-            #    Docker daemon (VOC-067-DEP-02). This script does not
-            #    read, chown, or extract into /opt/vocanova/production
-            #    as the staging user; Docker mounts are used only for
-            #    preflight/runtime.
+            #    Rare bring-up: when vocanova-shared-edge-nginx is absent,
+            #    staging owns docker-compose.shared-edge.yml under infra/ and
+            #    performs T02's controlled port handoff. Production conf/certs
+            #    are bind-mounted by the Docker daemon only (VOC-067-DEP-02);
+            #    this script does not chown or extract into production paths.
             #
-            #    Cutover safety (T00): production's temporary :8443
-            #    bridge is never stopped here. If production conf on
-            #    the host is not yet shared-edge-ready, fail closed
-            #    while legacy vocanova-nginx (if any) still serves.
+            #    Cutover safety (T00): production's temporary :8443 bridge is
+            #    never stopped here.
             # -------------------------------------------------------------
-            if [ ! -f /opt/vocanova/infra/docker-compose.shared-edge.yml ]; then
-              echo "ERROR: docker-compose.shared-edge.yml missing from staging infra tree" >&2
-              exit 1
-            fi
-            if ! docker network inspect vocanova-production-net >/dev/null 2>&1; then
-              echo "ERROR: vocanova-production-net missing; production stack must exist before shared edge can attach" >&2
-              exit 1
-            fi
-            # Production vhosts must use unambiguous container_name upstreams
-            # and /etc/nginx/certs/production/ paths before shared edge loads
-            # them on a dual-network process (ambiguous `web`/`api` would be
-            # unsafe). Inspect via Docker mount — staging user does not
-            # traverse /opt/vocanova/production directly.
-            if ! docker run --rm \
-                -v /opt/vocanova/production/nginx/conf.d:/conf:ro \
-                busybox:1.36 \
-                sh -c 'grep -q vocanova-production-web /conf/10-production-web.conf \
-                  && grep -q vocanova-production-api /conf/20-api-production.conf \
-                  && grep -q /etc/nginx/certs/production/ /conf/10-production-web.conf \
-                  && grep -q /etc/nginx/certs/production/ /conf/20-api-production.conf'; then
-              echo "ERROR: production nginx conf on host is not shared-edge-ready; deploy the VOC-067-T02 production revision first (T00 cutover order), then re-run staging deploy" >&2
-              exit 1
-            fi
-            docker compose -f docker-compose.shared-edge.yml -p vocanova-shared-edge config >/dev/null
-            # Disposable nginx -t with the same mount set as shared-edge compose
-            # before touching host ports / stopping legacy staging nginx.
-            docker run --rm \
-              -v /opt/vocanova/infra/nginx-shared/nginx.conf:/etc/nginx/nginx.conf:ro \
-              -v /opt/vocanova/infra/nginx-shared/conf.d:/etc/nginx/conf.d/shared:ro \
-              -v /opt/vocanova/infra/nginx/conf.d:/etc/nginx/conf.d/staging:ro \
-              -v /opt/vocanova/production/nginx/conf.d:/etc/nginx/conf.d/production:ro \
-              -v /opt/vocanova/infra/secrets/nginx/cert.pem:/etc/nginx/certs/staging/cert.pem:ro \
-              -v /opt/vocanova/infra/secrets/nginx/key.pem:/etc/nginx/certs/staging/key.pem:ro \
-              -v /opt/vocanova/production/secrets/nginx/cert.pem:/etc/nginx/certs/production/cert.pem:ro \
-              -v /opt/vocanova/production/secrets/nginx/key.pem:/etc/nginx/certs/production/key.pem:ro \
-              nginx:1.27-alpine nginx -t
+            SHARED_EDGE_CONTAINER=vocanova-shared-edge-nginx
 
-            # Hand off host 80/443: stop legacy staging nginx (if present), then
-            # start shared edge. On failure, attempt to restart legacy nginx.
-            if docker inspect vocanova-nginx >/dev/null 2>&1; then
-              docker stop vocanova-nginx
-            fi
-            if ! docker compose -f docker-compose.shared-edge.yml -p vocanova-shared-edge up -d; then
-              echo "ERROR: shared-edge compose up failed; attempting to restore vocanova-nginx" >&2
-              docker start vocanova-nginx 2>/dev/null || true
-              exit 1
-            fi
-            shared_edge_status=starting
-            for attempt in $(seq 1 30); do
-              shared_edge_status=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' vocanova-shared-edge-nginx 2>/dev/null || true)
-              if [ "$shared_edge_status" = "healthy" ]; then
-                break
+            if docker inspect "$SHARED_EDGE_CONTAINER" >/dev/null 2>&1; then
+              if ! docker exec "$SHARED_EDGE_CONTAINER" nginx -t; then
+                echo "ERROR: shared-edge nginx -t failed after staging conf update; deploy aborted without reload (previous config still active for both tiers)" >&2
+                exit 1
               fi
-              sleep 2
-            done
-            if [ "$shared_edge_status" != "healthy" ]; then
-              echo "ERROR: vocanova-shared-edge-nginx did not become healthy within 60 seconds; attempting to restore vocanova-nginx" >&2
-              docker compose -f docker-compose.shared-edge.yml -p vocanova-shared-edge logs --no-color --tail=100 nginx >&2
-              docker stop vocanova-shared-edge-nginx 2>/dev/null || true
-              docker start vocanova-nginx 2>/dev/null || true
-              exit 1
-            fi
-            if ! docker exec vocanova-shared-edge-nginx nginx -t; then
-              echo "ERROR: shared-edge nginx -t failed after start; attempting to restore vocanova-nginx" >&2
-              docker stop vocanova-shared-edge-nginx 2>/dev/null || true
-              docker start vocanova-nginx 2>/dev/null || true
-              exit 1
-            fi
-            # Shared edge healthy: retire legacy staging nginx container if present.
-            if docker inspect vocanova-nginx >/dev/null 2>&1; then
-              docker rm -f vocanova-nginx >/dev/null 2>&1 || true
+              docker exec "$SHARED_EDGE_CONTAINER" nginx -s reload
+              echo "Shared edge reloaded after staging nginx conf update (VOC-067-T03 routine path)"
+            else
+              if [ ! -f /opt/vocanova/infra/docker-compose.shared-edge.yml ]; then
+                echo "ERROR: docker-compose.shared-edge.yml missing from staging infra tree" >&2
+                exit 1
+              fi
+              if ! docker network inspect vocanova-production-net >/dev/null 2>&1; then
+                echo "ERROR: vocanova-production-net missing; production stack must exist before shared edge can attach" >&2
+                exit 1
+              fi
+              # Production vhosts must use unambiguous container_name upstreams
+              # and /etc/nginx/certs/production/ paths before shared edge loads
+              # them on a dual-network process (ambiguous `web`/`api` would be
+              # unsafe). Inspect via Docker read-only mount — staging user does
+              # not traverse /opt/vocanova/production directly.
+              if ! docker run --rm \
+                  -v /opt/vocanova/production/nginx/conf.d:/conf:ro \
+                  busybox:1.36 \
+                  sh -c 'grep -q vocanova-production-web /conf/10-production-web.conf \
+                    && grep -q vocanova-production-api /conf/20-api-production.conf \
+                    && grep -q /etc/nginx/certs/production/ /conf/10-production-web.conf \
+                    && grep -q /etc/nginx/certs/production/ /conf/20-api-production.conf'; then
+                echo "ERROR: production nginx conf on host is not shared-edge-ready; deploy the VOC-067-T02 production revision first (T00 cutover order), then re-run staging deploy" >&2
+                exit 1
+              fi
+              docker compose -f docker-compose.shared-edge.yml -p vocanova-shared-edge config >/dev/null
+              # Disposable nginx -t with the same mount set as shared-edge compose
+              # before touching host ports / stopping legacy staging nginx.
+              docker run --rm \
+                -v /opt/vocanova/infra/nginx-shared/nginx.conf:/etc/nginx/nginx.conf:ro \
+                -v /opt/vocanova/infra/nginx-shared/conf.d:/etc/nginx/conf.d/shared:ro \
+                -v /opt/vocanova/infra/nginx/conf.d:/etc/nginx/conf.d/staging:ro \
+                -v /opt/vocanova/production/nginx/conf.d:/etc/nginx/conf.d/production:ro \
+                -v /opt/vocanova/infra/secrets/nginx/cert.pem:/etc/nginx/certs/staging/cert.pem:ro \
+                -v /opt/vocanova/infra/secrets/nginx/key.pem:/etc/nginx/certs/staging/key.pem:ro \
+                -v /opt/vocanova/production/secrets/nginx/cert.pem:/etc/nginx/certs/production/cert.pem:ro \
+                -v /opt/vocanova/production/secrets/nginx/key.pem:/etc/nginx/certs/production/key.pem:ro \
+                nginx:1.27-alpine nginx -t
+
+              # Hand off host 80/443: stop legacy staging nginx (if present), then
+              # start shared edge. On failure, attempt to restart legacy nginx.
+              if docker inspect vocanova-nginx >/dev/null 2>&1; then
+                docker stop vocanova-nginx
+              fi
+              if ! docker compose -f docker-compose.shared-edge.yml -p vocanova-shared-edge up -d; then
+                echo "ERROR: shared-edge compose up failed; attempting to restore vocanova-nginx" >&2
+                docker start vocanova-nginx 2>/dev/null || true
+                exit 1
+              fi
+              shared_edge_status=starting
+              for attempt in $(seq 1 30); do
+                shared_edge_status=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' vocanova-shared-edge-nginx 2>/dev/null || true)
+                if [ "$shared_edge_status" = "healthy" ]; then
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$shared_edge_status" != "healthy" ]; then
+                echo "ERROR: vocanova-shared-edge-nginx did not become healthy within 60 seconds; attempting to restore vocanova-nginx" >&2
+                docker compose -f docker-compose.shared-edge.yml -p vocanova-shared-edge logs --no-color --tail=100 nginx >&2
+                docker stop vocanova-shared-edge-nginx 2>/dev/null || true
+                docker start vocanova-nginx 2>/dev/null || true
+                exit 1
+              fi
+              if ! docker exec vocanova-shared-edge-nginx nginx -t; then
+                echo "ERROR: shared-edge nginx -t failed after start; attempting to restore vocanova-nginx" >&2
+                docker stop vocanova-shared-edge-nginx 2>/dev/null || true
+                docker start vocanova-nginx 2>/dev/null || true
+                exit 1
+              fi
+              # Shared edge healthy: retire legacy staging nginx container if present.
+              if docker inspect vocanova-nginx >/dev/null 2>&1; then
+                docker rm -f vocanova-nginx >/dev/null 2>&1 || true
+              fi
             fi
 
       # Polls the api's /healthz endpoint. The api

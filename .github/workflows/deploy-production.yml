@@ -1,5 +1,14 @@
 name: deploy-production
 
+# VOC-067-T03: after writing only /opt/vocanova/production/nginx (never
+# /opt/vocanova/infra), production deploy runs `docker exec nginx -t` against
+# the running vocanova-shared-edge-nginx and reloads only on success. Failed
+# nginx -t fails the deploy closed without reload (VOC-067-AC-04). Production
+# does not recreate the shared-edge container; staging owns rare bring-up
+# (deploy-staging.yml). Reload is docker-exec only — no cross-tier filesystem
+# writes. The temporary vocanova-production-nginx cutover bridge (:8443 until
+# T05) receives the same nginx -t + reload treatment after compose up.
+#
 # Auto-deploys on every push to main (2026-08-08, founder's explicit, twice-
 # confirmed request - see AGENTS.md's "Release and deployment authority"
 # section): release.yml's own auto_release_enabled path is what actually
@@ -432,6 +441,20 @@ jobs:
             sed -i "s/__PRODUCTION_WEB_HOST__/${PRODUCTION_WEB_HOST}/g" nginx/conf.d/10-production-web.conf
             sed -i "s/__PRODUCTION_API_HOST__/${PRODUCTION_API_HOST}/g" nginx/conf.d/20-api-production.conf
 
+            # VOC-067-T03: reload shared edge after production nginx conf write.
+            # Production deploy user does not write /opt/vocanova/infra; reload
+            # is docker-exec only against the known shared-edge container.
+            if docker inspect vocanova-shared-edge-nginx >/dev/null 2>&1; then
+              if ! docker exec vocanova-shared-edge-nginx nginx -t; then
+                echo "ERROR: shared-edge nginx -t failed after production conf update; deploy aborted without reload (previous config still active for both tiers)" >&2
+                exit 1
+              fi
+              docker exec vocanova-shared-edge-nginx nginx -s reload
+              echo "Shared edge reloaded after production nginx conf update (VOC-067-T03)"
+            else
+              echo "vocanova-shared-edge-nginx not running; skipping shared-edge reload (staging deploy owns first start)"
+            fi
+
             export VOCANOVA_PRODUCTION_ROOT="/opt/vocanova/production"
             export PRODUCTION_IMAGE_TAG="sha-${PRODUCTION_IMAGE_SHA_TAG}"
 
@@ -502,6 +525,16 @@ jobs:
               sh /opt/vocanova/production/apps/api/scripts/seed-synthetic-smoke-user.sh
 
             docker compose -f docker-compose.production.yml -p vocanova-production up -d
+
+            # VOC-067-T03: reload production cutover bridge nginx (volume-mounted
+            # conf from this tree only). Fail closed on nginx -t; no recreate.
+            if docker inspect vocanova-production-nginx >/dev/null 2>&1; then
+              if ! docker exec vocanova-production-nginx nginx -t; then
+                echo "ERROR: production bridge nginx -t failed after conf update; deploy aborted without reload" >&2
+                exit 1
+              fi
+              docker exec vocanova-production-nginx nginx -s reload
+            fi
 
             # T06's rehearsal always runs and its output is always printed
             # in full. It is only allowed to NOT fail the deploy for the
