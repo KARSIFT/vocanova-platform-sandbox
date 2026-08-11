@@ -313,10 +313,10 @@ nginx or secrets tree. Each pipeline updates only its own conf/certs path,
 then signals the shared edge with `docker exec` against
 `vocanova-shared-edge-nginx`:
 
-| Pipeline | Writes | Shared-edge signal |
-| --- | --- | --- |
-| `deploy-staging` | `/opt/vocanova/infra/nginx/`, `nginx-shared/` | Routine: `nginx -t` + `nginx -s reload` when the container exists. Rare: T02 first-start bring-up when absent. |
-| `deploy-production` | `/opt/vocanova/production/nginx/` | `nginx -t` + `nginx -s reload` when the container exists (skip if staging has not brought it up yet). |
+| Pipeline            | Writes                                        | Shared-edge signal                                                                                             |
+| ------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `deploy-staging`    | `/opt/vocanova/infra/nginx/`, `nginx-shared/` | Routine: `nginx -t` + `nginx -s reload` when the container exists. Rare: T02 first-start bring-up when absent. |
+| `deploy-production` | `/opt/vocanova/production/nginx/`             | `nginx -t` + `nginx -s reload` when the container exists (skip if staging has not brought it up yet).          |
 
 Failed `nginx -t` **fails the deploy closed** without reload — the
 in-memory config (both tiers) stays on the previous generation. Neither
