@@ -67,8 +67,8 @@
 #      its own `.gitignore` keeps out of git.
 #   2. Staging app services (postgres, api, web) publish no host ports —
 #      only the shared-edge nginx (infra/docker-compose.shared-edge.yml,
-#      VOC-067-T02) binds host 80/443 for this tier. Production app services
-#      likewise publish no host ports (VOC-067-T04). Internal services stay
+#      VOC-067-T02) binds host 80/443 for this tier. (Production's temporary
+#      cutover nginx still publishes 8081/8443 until VOC-067-T05.) Internal
 #      services stay on `vocanova-net` only (VOC-032-R03 mitigation): do not
 #      add a `ports:` block to postgres/api/web.
 #   3. The web image's NEXT_PUBLIC_API_BASE_URL is a build-time
@@ -85,7 +85,7 @@
 #      same 2 vCPU / 4 GB host, an unbounded staging container
 #      could starve production and vice versa. Staging, production,
 #      and the shared-edge compose files' memory limits are budgeted
-#      together (~1.4 GB staging + ~1.7 GB production + ~320 MB edge,
+#      together (~1.4 GB staging + ~1.9 GB production + ~320 MB edge,
 #      see infra/README.md). Raising a limit in any file without
 #      lowering another oversubscribes the host.
 #   5. Restart policy is `unless-stopped` on every service. A

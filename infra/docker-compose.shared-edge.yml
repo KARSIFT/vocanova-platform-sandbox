@@ -20,8 +20,13 @@
 #     without --force-recreate so a missing container is created and an
 #     already-running one is left in place when the compose spec is unchanged.
 #
-# Steady state (VOC-067-T04): this process is the sole public edge on host
-# 80/443 for both tiers. Cloudflare maps edge :443 to origin :443.
+# Cutover dual-publish (T00 / T05):
+#   * This process binds host 80/443 (primary path for both tiers).
+#   * Until T05 removes the Cloudflare production origin-port remap,
+#     vocanova-production-nginx continues to publish host 8081/8443 so
+#     edge :443 → origin :8443 traffic still has a listener. Do not drain
+#     that bridge in T02.
+#
 # Host layout (shared host):
 #   /opt/vocanova/infra/docker-compose.shared-edge.yml  (SCPed with staging bundle)
 #   /opt/vocanova/infra/nginx-shared/                   (main + shared conf.d)

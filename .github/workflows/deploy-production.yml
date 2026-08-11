@@ -6,7 +6,8 @@ name: deploy-production
 # nginx -t fails the deploy closed without reload (VOC-067-AC-04). Production
 # does not recreate the shared-edge container; staging owns rare bring-up
 # (deploy-staging.yml). Reload is docker-exec only — no cross-tier filesystem
-# writes.
+# writes. The temporary vocanova-production-nginx cutover bridge (:8443 until
+# T05) receives the same nginx -t + reload treatment after compose up.
 #
 # Auto-deploys on every push to main (2026-08-08, founder's explicit, twice-
 # confirmed request - see AGENTS.md's "Release and deployment authority"
@@ -34,7 +35,7 @@ on:
         type: string
         default: api-production.vocanova.site
       production_api_base_url:
-        description: "NEXT_PUBLIC_API_BASE_URL baked into the web bundle at build time and called from the browser - ordinary HTTPS :443 on the public API hostname (VOC-067-T04; no origin-port remap)"
+        description: "NEXT_PUBLIC_API_BASE_URL baked into the web bundle at build time and called from the browser - no port, now that Cloudflare forwards the plain :443 hostname to the origin's 8443 (VOC-038-T03 prep; verify this Cloudflare rule is still in place before dispatching)"
         required: true
         type: string
         default: https://api-production.vocanova.site
@@ -365,11 +366,14 @@ jobs:
               /opt/vocanova/production/secrets/api.env
             {
               echo "ENVIRONMENT=production"
-              # VOC-067-T04: ordinary :443 hostnames — shared edge terminates
-              # TLS on host 80/443; Cloudflare maps edge :443 to origin :443.
-              echo "BASE_URL=https://${PRODUCTION_API_HOST}"
-              echo "OAUTH_REDIRECT_URI=https://${PRODUCTION_API_HOST}/api/v1/auth/oauth/google/callback"
-              echo "OAUTH_REDIRECT_ALLOWLIST=https://${PRODUCTION_WEB_HOST}/onboarding,https://${PRODUCTION_WEB_HOST}/home"
+              # Port :8443 is required for these browser-facing values too:
+              # live reproduction showed the unqualified host hits nginx's
+              # 444 catch-all instead of production's real listener. This
+              # matches the same Cloudflare/host-sharing finding already
+              # documented in the health-check comment below.
+              echo "BASE_URL=https://${PRODUCTION_API_HOST}:8443"
+              echo "OAUTH_REDIRECT_URI=https://${PRODUCTION_API_HOST}:8443/api/v1/auth/oauth/google/callback"
+              echo "OAUTH_REDIRECT_ALLOWLIST=https://${PRODUCTION_WEB_HOST}:8443/onboarding,https://${PRODUCTION_WEB_HOST}:8443/home"
               # Shared parent domain (e.g. ".vocanova.site"), NOT the bare
               # web hostname: the session/CSRF cookies are set by the API
               # host (api-X) but must also domain-match the web host (X) -
@@ -522,6 +526,16 @@ jobs:
 
             docker compose -f docker-compose.production.yml -p vocanova-production up -d
 
+            # VOC-067-T03: reload production cutover bridge nginx (volume-mounted
+            # conf from this tree only). Fail closed on nginx -t; no recreate.
+            if docker inspect vocanova-production-nginx >/dev/null 2>&1; then
+              if ! docker exec vocanova-production-nginx nginx -t; then
+                echo "ERROR: production bridge nginx -t failed after conf update; deploy aborted without reload" >&2
+                exit 1
+              fi
+              docker exec vocanova-production-nginx nginx -s reload
+            fi
+
             # T06's rehearsal always runs and its output is always printed
             # in full. It is only allowed to NOT fail the deploy for the
             # one specific, disclosed, founder-waived finding recorded in
@@ -570,14 +584,24 @@ jobs:
               echo "::warning::Production secrets-boundary rehearsal FAILED INS-11 only on the disclosed, founder-waived finding (ubuntu's independent blanket sudo — see t06-production-provisioning-evidence.md). Deploy continues; this is a known accepted risk, not a new regression."
             fi
 
-      # VOC-067-T04: ordinary HTTPS :443 — shared edge on origin 80/443 and
-      # Cloudflare edge :443 → origin :443 (remap removed in T05).
+      # Port :8443 (not the default 443) during VOC-067 cutover: shared-edge
+      # owns host 80/443 (VOC-067-T02), while production keeps a temporary
+      # nginx bridge on 8081/8443 until T05 removes the Cloudflare
+      # :443 → origin :8443 remap (T00 ordered cutover). These polls still
+      # target :8443 so they exercise the remap path Cloudflare still uses.
+      # After T05, switch these checks to ordinary :443 (T04/T05).
+      #
+      # Cloudflare proxies 8443 to any proxied hostname without extra
+      # configuration (it's one of Cloudflare's built-in alternate HTTPS
+      # ports). Found live: the first real deploy's poll steps (unqualified
+      # :443) silently hit Cloudflare's 520 fallback instead of production's
+      # actual nginx when the remap was the only public path.
       - name: Poll production API health endpoint
         run: |
           set -euo pipefail
           for i in $(seq 1 60); do
             if curl -fsS --max-time 5 \
-                "https://${{ inputs.production_api_host || 'api-production.vocanova.site' }}/healthz" > /dev/null; then
+                "https://${{ inputs.production_api_host || 'api-production.vocanova.site' }}:8443/healthz" > /dev/null; then
               echo "Production API health check passed on attempt $i/60"
               exit 0
             fi
@@ -591,7 +615,7 @@ jobs:
           set -euo pipefail
           for i in $(seq 1 60); do
             status=$(curl -sS --max-time 5 -o /dev/null -w "%{http_code}" \
-                "https://${{ inputs.production_web_host || 'production.vocanova.site' }}/" || echo "000")
+                "https://${{ inputs.production_web_host || 'production.vocanova.site' }}:8443/" || echo "000")
             if [[ "$status" == 2* ]]; then
               echo "Production web health check passed on attempt $i/60 (status $status)"
               exit 0
@@ -616,7 +640,7 @@ jobs:
         id: mint_production_session
         env:
           PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN: ${{ secrets.PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN }}
-          PRODUCTION_API_BASE_URL: https://${{ inputs.production_api_host || 'api-production.vocanova.site' }}
+          PRODUCTION_API_BASE_URL: https://${{ inputs.production_api_host || 'api-production.vocanova.site' }}:8443
         run: |
           set -euo pipefail
           if [ -z "${PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN:-}" ]; then
@@ -676,5 +700,5 @@ jobs:
           SMOKE_TEST_SESSION_COOKIE: ${{ steps.mint_production_session.outputs.session_cookie }}
         run: |
           bash infra/scripts/smoke-test-production.sh \
-            "https://${{ inputs.production_api_host || 'api-production.vocanova.site' }}" \
-            "https://${{ inputs.production_web_host || 'production.vocanova.site' }}"
+            "https://${{ inputs.production_api_host || 'api-production.vocanova.site' }}:8443" \
+            "https://${{ inputs.production_web_host || 'production.vocanova.site' }}:8443"

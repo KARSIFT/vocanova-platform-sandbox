@@ -1001,6 +1001,9 @@ jobs:
             #    performs T02's controlled port handoff. Production conf/certs
             #    are bind-mounted by the Docker daemon only (VOC-067-DEP-02);
             #    this script does not chown or extract into production paths.
+            #
+            #    Cutover safety (T00): production's temporary :8443 bridge is
+            #    never stopped here.
             # -------------------------------------------------------------
             SHARED_EDGE_CONTAINER=vocanova-shared-edge-nginx
 

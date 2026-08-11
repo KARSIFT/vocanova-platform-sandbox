@@ -110,11 +110,13 @@ Update `.github/workflows/deploy-staging.yml` and
   reversal once shared edge is live
 - Acceptance criteria: `VOC-067-AC-05`
 - Tests: `VOC-067-TEST-05`
-- Evidence: `VOC-067-EV-04`
-- Status: pending — depends on T02/T03; should not land before origin `:443`
-  actually serves production (cutover order in
-  [`t00-edge-architecture-decision-record.md`](t00-edge-architecture-decision-record.md);
-  coordinate with T05)
+- Evidence: `VOC-067-EV-04` —
+  [`t04-port-normalization-evidence.md`](t04-port-normalization-evidence.md)
+- Status: **blocked** (2026-08-11, attempt 2) — T00/DEP-03 requires T05
+  Cloudflare remap removal + `VOC-067-EV-05` **before** T04 URL/bridge
+  normalization. Attempt 1 prematurely removed the `:8443` bridge and
+  claimed remap-free steady state; attempt 2 restored the T03 cutover-safe
+  shape and recorded the gate. Re-dispatch only after EV-05 exists.
 
 Remove `:8443` from production client-facing and deploy-emitted URLs that
 exist only because of the dual-nginx port split, including at least:
