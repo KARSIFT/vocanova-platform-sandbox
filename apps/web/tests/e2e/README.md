@@ -8,9 +8,10 @@ created). Subsequent tasks extend it:
 | Task      | Status   | Adds                                                                                                                                          |
 | --------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | T07a      | shipped  | This directory + `playwright.config.ts` + a single Home scan at 1280x720 + the mock API server. **Scaffolding only.**                        |
-| T07b      | shipped  | Every remaining core-loop screen (Discover, Discover/[situation], Discover/[situation]/[word], Reviews, Progress, Onboarding, Settings, Settings/account) plus Home at the 360px and 430px viewports. Explicit keyboard-reachability and non-color-only-feedback assertions on top of the axe scan (axe alone is not sufficient for the T07b acceptance criterion's full wording). |
+| T07b      | shipped  | Every remaining core-loop screen (Discover, Discover/[situation], Discover/[situation]/[word], Reviews, Progress, Onboarding, Settings) plus Home at the 360px and 430px viewports. Explicit keyboard-reachability and non-color-only-feedback assertions on top of the axe scan (axe alone is not sufficient for the T07b acceptance criterion's full wording). |
 | T08       | shipped  | The DOC-10 §7 full core-loop functional flow (auth → onboarding → discover → save → review session → sentence submission → deterministic AI feedback → progress update → settings change → logout → unauthenticated-access rejection). One Playwright test, one representative desktop width (mirrors T07a's "ONE representative desktop width" scope; mobile projects self-skip). |
 | T09       | shipped  | Lighthouse CI budgets in a separate directory (`apps/web/tests/lighthouse/`). 4 screens × 3 layouts = 12 audits, asserting the DOC-08 quality-standards thresholds (Performance 85+, Accessibility 95+, Best Practices 90+) against the same fixed local production build this directory's Playwright config serves. Wired into CI as `.github/workflows/lighthouse.yml`, mirroring this directory's `accessibility.yml` separation pattern. |
+| VOC-073   | shipped  | Dedicated accessibility specs for four entry surfaces omitted from T07b: `/signin`, `/` (landing), `/auth/magic`, and `/settings/account` (extracted from `settings-accessibility.spec.ts` into its own file — no duplicate CI run for that screen). |
 
 ## T07b screen × viewport coverage matrix
 
@@ -24,7 +25,10 @@ created). Subsequent tasks extend it:
 | `/progress`                         |  T07b |  T07b |  T07b    |
 | `/onboarding`                       |  T07b |  T07b |  T07b    |
 | `/settings`                         |  T07b |  T07b |  T07b    |
-| `/settings/account`                 |  T07b |  T07b |  T07b    |
+| `/settings/account`                 | VOC-073 | VOC-073 | VOC-073 |
+| `/signin`                           | VOC-073 | VOC-073 | VOC-073 |
+| `/` (landing)                       | VOC-073 | VOC-073 | VOC-073 |
+| `/auth/magic`                       | VOC-073 | VOC-073 | VOC-073 |
 
 Every T07b cell above runs the same three checks:
 
@@ -78,8 +82,14 @@ tests/e2e/
   reviews-accessibility.spec.ts       <- T07b's /reviews scan
   progress-accessibility.spec.ts      <- T07b's /progress scan
   onboarding-accessibility.spec.ts    <- T07b's /onboarding scan
-  settings-accessibility.spec.ts      <- T07b's /settings and
-                                         /settings/account scans
+  settings-accessibility.spec.ts      <- T07b's /settings scan
+  settings-account-accessibility.spec.ts
+                                      <- VOC-073-T03's /settings/account
+                                         scan (extracted from
+                                         settings-accessibility.spec.ts)
+  signin-accessibility.spec.ts        <- VOC-073-T00's /signin scan
+  landing-accessibility.spec.ts       <- VOC-073-T01's / (landing) scan
+  auth-magic-accessibility.spec.ts    <- VOC-073-T02's /auth/magic scan
   core-loop.spec.ts                   <- T08's full core-loop
                                          functional flow (one
                                          representative desktop
@@ -137,7 +147,7 @@ The dedicated workflow's job time budget is **30 minutes**
 - `playwright install --with-deps chromium` (first run only;
   the GitHub-hosted runner image has no cached browser
   binaries): ~1-2 min
-- `playwright test` (three projects, ten screens, one browser):
+- `playwright test` (three projects, thirteen screens, one browser):
   ~1-3 min
 - teardown + report upload: ~30 s
 
