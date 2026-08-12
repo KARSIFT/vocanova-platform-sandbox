@@ -111,13 +111,23 @@ async function readReviewedTodayCountAfterReviews(
     attemptValues.push(reviewedAfter);
 
     if (reviewedAfter >= minimumExpected) {
+      const countsSummary =
+        `reviewedBefore=${reviewedBefore}, reviewedCards=${reviewedCards}, ` +
+        `reviewedAfter=${reviewedAfter}, minimumExpected=${minimumExpected}`;
+      testInfo.annotations.push({
+        type: "step-7-reviewed-counts",
+        description:
+          attempt > 1
+            ? `${countsSummary}, attempts=${attempt}, values=${attemptValues.join(",")}`
+            : countsSummary,
+      });
+      console.log(`[staging core-loop] step 7 reviewed counts: ${countsSummary}`);
       if (attempt > 1) {
         testInfo.annotations.push({
           type: "step-7-retry",
           description:
             `reviewed-count read needed ${attempt} attempt(s) ` +
-            `(reviewedBefore=${reviewedBefore}, reviewedCards=${reviewedCards}, ` +
-            `minimumExpected=${minimumExpected}, values=${attemptValues.join(",")})`,
+            `(values=${attemptValues.join(",")})`,
         });
       }
       return reviewedAfter;
@@ -370,6 +380,21 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
         // instead of a fixed delay.
         await expect(caughtUpHeading.or(cardCounter).first()).toBeVisible();
       }
+
+      // VOC-074-T02: step 7 must not pass vacuously when the queue was empty or
+      // caught up (reviewedAfter >= reviewedBefore + 0). Fail here, not in step 7.
+      expect(
+        reviewed,
+        "step 5 must review at least one card for the staging core-loop gate (VOC-074-T02)",
+      ).toBeGreaterThanOrEqual(1);
+
+      const step5Summary = `reviewedCards=${reviewed}`;
+      testInfo.annotations.push({
+        type: "step-5-reviewed-cards",
+        description: step5Summary,
+      });
+      console.log(`[staging core-loop] step 5 ${step5Summary}`);
+
       return reviewed;
     });
 

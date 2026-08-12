@@ -110,3 +110,24 @@ BEGIN
   END IF;
 END
 $seed$;
+
+-- VOC-074-T02 (VOC-074-DEP-03): mark at least one existing saved word due so
+-- repeat same-day staging core-loop runs can reach reviewedCards >= 1. When the
+-- account has no saved words yet, step 4 of the journey still creates one.
+UPDATE user_words uw
+SET next_review_at = NOW(),
+    updated_at = NOW()
+FROM users u
+WHERE uw.user_id = u.id
+  AND lower(u.email) = lower(trim(current_setting('vocanova.synthetic_smoke_test_email')))
+  AND u.deleted_at IS NULL
+  AND u.is_synthetic_test_account = true
+  AND uw.deleted_at IS NULL
+  AND uw.id = (
+    SELECT uw2.id
+    FROM user_words uw2
+    WHERE uw2.user_id = u.id
+      AND uw2.deleted_at IS NULL
+    ORDER BY uw2.updated_at DESC
+    LIMIT 1
+  );
