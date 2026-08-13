@@ -12,7 +12,17 @@ export function isMultipleChoiceOptionDisabled(
   return isSubmitting || phase === "feedback";
 }
 
-/** Learner actions (show answer, rate, continue) block only during submit. */
-export function isReviewActionDisabled(isSubmitting: boolean): boolean {
-  return isSubmitting;
+/**
+ * Post-submit learner actions (show answer, rate, continue) must stay locked
+ * while a submission is in flight *or* while a batch-end `listDueWords`
+ * refetch is replacing the queue. After `submitAttempt` succeeds, `advance()`
+ * may set `isRefetching` while the same card remains on screen; clearing only
+ * `isSubmitting` in `finally` would otherwise re-enable rate/continue and
+ * allow a duplicate `submitAttempt` (VOC-076-T01 remediation).
+ */
+export function isReviewActionDisabled(
+  isSubmitting: boolean,
+  isRefetching: boolean,
+): boolean {
+  return isSubmitting || isRefetching;
 }

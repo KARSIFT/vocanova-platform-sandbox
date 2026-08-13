@@ -20,10 +20,21 @@ describe("review-session prompt readiness (VOC-076-T01)", () => {
     assert.equal(isMultipleChoiceOptionDisabled("feedback", true), true);
   });
 
-  it("does not treat background refetch as a submit lock for learner actions", () => {
-    // isRefetching is intentionally excluded from isReviewActionDisabled so a
-    // slow listDueWords refetch cannot block the next card's interactions.
-    assert.equal(isReviewActionDisabled(false), false);
-    assert.equal(isReviewActionDisabled(true), true);
+  it("does not treat background refetch as a lock for multiple-choice options", () => {
+    // isRefetching is intentionally excluded from isMultipleChoiceOptionDisabled
+    // so a prompt-ready next card is interactable as soon as dueWords lands,
+    // even if the batch-end refetch flag has not cleared yet.
+    assert.equal(isMultipleChoiceOptionDisabled("prompt", false), false);
+  });
+
+  it("locks rate/continue/show-answer during submit and during batch-end refetch", () => {
+    // After submitAttempt succeeds, advance() may set isRefetching while the
+    // same card remains visible; isSubmitting clears in finally. Post-submit
+    // actions must stay disabled for the whole refetch to prevent duplicate
+    // submitAttempt calls (VOC-076-T01 independent-review remediation).
+    assert.equal(isReviewActionDisabled(false, false), false);
+    assert.equal(isReviewActionDisabled(true, false), true);
+    assert.equal(isReviewActionDisabled(false, true), true);
+    assert.equal(isReviewActionDisabled(true, true), true);
   });
 });

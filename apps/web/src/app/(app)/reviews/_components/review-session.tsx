@@ -317,7 +317,7 @@ export function ReviewSession({
           <button
             type="button"
             onClick={() => setPhase("rate")}
-            disabled={isReviewActionDisabled(isSubmitting)}
+            disabled={isReviewActionDisabled(isSubmitting, isRefetching)}
             className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors hover:bg-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Show answer
@@ -339,7 +339,7 @@ export function ReviewSession({
                   selectedOptionMeaningId: selectedOption ?? undefined,
                 })
               }
-              disabled={isReviewActionDisabled(isSubmitting)}
+              disabled={isReviewActionDisabled(isSubmitting, isRefetching)}
               className="mt-[var(--spacing-md)] w-full rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 transition-colors hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Continue
@@ -383,7 +383,7 @@ export function ReviewSession({
                             : undefined,
                       })
                     }
-                    disabled={isReviewActionDisabled(isSubmitting)}
+                    disabled={isReviewActionDisabled(isSubmitting, isRefetching)}
                     className="rounded-md border border-neutral-200 bg-neutral-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors hover:bg-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {RATING_LABELS[rating]}
