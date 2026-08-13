@@ -304,10 +304,10 @@ Cutover tooling (repository-driven, VOC-067-DEP-03; credentials VOC-072):
 Production holds two Cloudflare secrets. **Do not paste token values into git
 or chat.**
 
-| Secret | Purpose |
-| --- | --- |
+| Secret                                          | Purpose                                                                                                                                |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN` | Zone Read + Origin Rules Edit on `vocanova.site` — cutover script and `deploy-production.yml` `voc067_cloudflare_origin_cutover` modes |
-| `PRODUCTION_CLOUDFLARE_API_TOKEN` | Workers AI provider sync only (`AI_PROVIDER_API_KEY` during deploy) — **cannot** resolve the zone (issue #535) |
+| `PRODUCTION_CLOUDFLARE_API_TOKEN`               | Workers AI provider sync only (`AI_PROVIDER_API_KEY` during deploy) — **cannot** resolve the zone (issue #535)                         |
 
 Local or CI cutover commands accept `CLOUDFLARE_API_TOKEN` or the production
 names above. The script prefers
