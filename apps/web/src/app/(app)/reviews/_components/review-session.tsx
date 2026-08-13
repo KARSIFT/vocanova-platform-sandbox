@@ -383,7 +383,10 @@ export function ReviewSession({
                             : undefined,
                       })
                     }
-                    disabled={isReviewActionDisabled(isSubmitting, isRefetching)}
+                    disabled={isReviewActionDisabled(
+                      isSubmitting,
+                      isRefetching,
+                    )}
                     className="rounded-md border border-neutral-200 bg-neutral-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors hover:bg-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {RATING_LABELS[rating]}
