@@ -1,0 +1,129 @@
+schema_version: 1
+id: VOC-076
+slug: staging-core-loop-e2e-review-queue-answer-button
+title: "Staging Core-Loop E2E \u2014 Review-Queue Answer Button Stays Disabled"
+type: bugfix
+status: adopted
+risk: R2
+planned_implementation_risk_floor: "Measured during drafting by running scripts/governance/classify-change-risk.sh\
+  \ --files-from against the expected default task-scoped file list (apps/web/src/app/(app)/reviews/_components/review-session.tsx,\
+  \ apps/web/tests/staging-e2e/core-loop.staging.spec.ts): the detected path floor\
+  \ is R1. Including .github/workflows/deploy-staging.yml (only if T00 requires diagnostic\
+  \ enrichment or seed/reset helpers) raises the path floor to R3. This package proposes\
+  \ R2 for the change as a whole (not R1) because the staging core-loop gate is currently\
+  \ failing on develop deploys, and the observed symptom \u2014 multiple-choice answer\
+  \ buttons remaining disabled and non-interactive \u2014 may also affect real learners\
+  \ on the review queue if the cause is product-side (stuck isLoading / isRefetching\
+  \ / phase). If T00 confirms only a flaky wait condition with no product hang, adoption\
+  \ or the independent verifier may lower toward R1; if T00 forces deploy-staging.yml\
+  \ edits or confirms a systemic review-session hang for all users, raise to R3. This\
+  \ is a draft proposal for the reviewing human at adoption time, not a determination.\n"
+canonical_path: specs/changes/VOC-076-staging-core-loop-e2e-review-queue-answer-button
+authority_model: a003-active
+requirement_source: "GitHub issue #575 (\"Staging core-loop E2E: review-queue answer\
+  \ button stays disabled, test times out at 240s\"), opened after the develop-branch\
+  \ deploy-staging run triggered by VOC-075's merge failed. Run https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/31748423831\
+  \ \u2014 job `deploy to staging`, step `Run the staging core-loop journey`, failing\
+  \ at tests/staging-e2e/core-loop.staging.spec.ts:272:3 \u203A authenticated journey\
+  \ \u203A step \"5. work the review queue\". Playwright waited 240000ms for getByRole('group',\
+  \ { name: /^Choose the meaning for / }).getByRole('button').first() ; the locator\
+  \ resolved to a <button disabled ... aria-pressed=\"false\"> that never became enabled,\
+  \ then detached from the DOM. Call site: reviewOneCard \u2192 line 258 click. Root\
+  \ cause unknown at issue time; candidates include stuck loading/hydration, race\
+  \ between card content and disabled clearing, and staging-only backend latency.\n"
+requirement_approval_status: 'Approved. Founder merged plan PR #577 directly on 2026-08-13
+  (recovery per AGENTS.md''s ''Recovering from a merged plan PR that was not adopted
+  first'' procedure, issue #301 precedent). R2 classification accepted as proposed.'
+base_branch: develop
+base_sha: null
+target_branch: develop
+approved_candidate_sha: null
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: adopted
+implementation_authorized: true
+automatic_merge_allowed: true
+production_impact: 'conditional. If T00 confirms a product-side stuck-disabled state
+  in review-session.tsx (isLoading / isRefetching / phase), the fix changes production
+  review-queue interactivity for real users. If T00 confirms only a staging-E2E wait
+  / race defect, production UI behavior is unchanged and impact is limited to restoring
+  the staging core-loop gate signal.
+
+  '
+rollback_required: true
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-076-DEP-00
+  status: "unresolved at drafting time. Exact root cause of the disabled multiple-choice\
+    \ button on run 31748423831 is not settled \u2014 T00 must confirm with direct\
+    \ evidence. Drafting-time candidates (see specification.md): (1) isLoading stuck\
+    \ true because isSubmitting or isRefetching never clears after a prior card or\
+    \ queue refetch; (2) E2E race \u2014 reviewOneCard clicks the first MC button\
+    \ while it is still disabled without waiting for enabled; (3) staging-only backend\
+    \ latency on listDueWords / submitReview leaving isRefetching or isSubmitting\
+    \ elevated long enough to hit the 240s test timeout; (4) phase stuck such that\
+    \ buttons stay disabled while the card later detaches/re-renders. Evidence from\
+    \ the failure (aria-pressed=\"false\", disabled for full timeout, then detached)\
+    \ favors (1)\u2013(3) over a completed feedback-phase selection.\n"
+- id: VOC-076-DEP-01
+  status: "unresolved at drafting time. Whether .github/workflows/deploy-staging.yml\
+    \ must be edited (extra diagnostics around review-queue timing, or synthetic-account\
+    \ helpers) or whether the fix stays in apps/web review UI + staging-e2e only.\
+    \ Default proposed scope excludes deploy-staging.yml unless T00 evidence requires\
+    \ it \u2014 touching that path raises the path floor to R3.\n"
+- id: VOC-076-DEP-02
+  status: 'unresolved at drafting time. Interaction with VOC-074 (reviews_completed
+    / vacuous E2E pass). The current core-loop.staging.spec.ts already contains VOC-074-T02-style
+    hardening (fail when reviewedCards < 1). This package does not re-litigate VOC-074''s
+    increment bug; adoption should note that VOC-076 addresses a distinct step-5 disabled-button
+    timeout that blocks reaching those assertions. If VOC-074 tasks are still open
+    on develop, coordinate merge order so both packages'' evidence remains attributable.
+
+    '
+affected_areas:
+- "apps/web/src/app/(app)/reviews/_components/review-session.tsx (conditional \u2014\
+  \ primary product suspect for disabled MC buttons)"
+- "apps/web/tests/staging-e2e/core-loop.staging.spec.ts (conditional \u2014 wait/enabled\
+  \ assertions in reviewOneCard; T02 verification target)"
+- ".github/workflows/deploy-staging.yml (out of default scope; only if VOC-076-DEP-01\
+  \ expands \u2014 raises path floor to R3)"
+- apps/api/ (out of default scope; read-only investigation of review/list latency
+  logs unless T00 proves an API hang that must be fixed here)
+- specs/changes/VOC-076-staging-core-loop-e2e-review-queue-answer-button
+implementation:
+  authorized: true
+  required: true
+  status: proposed
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: conditional-on-product-vs-test-root-cause
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: adopted
+adoption_pr: 577
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/577
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
+blocking_reasons: None - adopted. VOC-076-DEP-00/01/02 remain open investigation questions
+  for T00 to resolve, per specification.md; they do not block T00 from starting.

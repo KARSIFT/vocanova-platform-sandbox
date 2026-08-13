@@ -66,16 +66,19 @@ artifacts:
   release_plan: release-plan.md
 dependencies:
 - id: VOC-072-DEP-00
-  status: 'unresolved at drafting time. Whether to broaden PRODUCTION_CLOUDFLARE_API_TOKEN
-    in place vs add a dedicated production secret for zone/Origin-Rules cutover only
-    (recommended: dedicated secret so Workers AI sync keeps least privilege). See
-    specification.md open question 1.
+  status: 'Resolved at T00: dedicated secret for zone read and Origin Rules
+    edit on vocanova.site; do not broaden PRODUCTION_CLOUDFLARE_API_TOKEN
+    (Workers AI sync keeps existing narrow scope). Reuse path rejected.
+    Recorded in t00-token-provisioning-evidence.md §1. Adopt PR #541 (plan
+    PR #537).
 
     '
 - id: VOC-072-DEP-01
-  status: 'unresolved at drafting time. Exact dedicated secret name if DEP-00 chooses
-    separation (draft default: PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN). See
-    specification.md open question 2.
+  status: 'Resolved at T00: PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN
+    in the GitHub production environment on KARSIFT/vocanova-platform-sandbox.
+    Provisioned presence confirmed via gh secret list --env production (added
+    2026-08-13T21:24:26Z; restored by VOC-077-T00 after evidence regression).
+    Recorded in t00-token-provisioning-evidence.md §5.
 
     '
 - id: VOC-067

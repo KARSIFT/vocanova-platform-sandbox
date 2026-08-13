@@ -12,8 +12,14 @@ set -euo pipefail
 # VOC067_OFFLINE_RULESET_FILE and does not call Cloudflare.
 #
 # Environment (accepts production-prefixed names from deploy-production.yml):
-#   CLOUDFLARE_API_TOKEN or PRODUCTION_CLOUDFLARE_API_TOKEN
-#     required for live --verify-only / --apply / --restore
+#   Token precedence (first non-empty wins):
+#     CLOUDFLARE_API_TOKEN
+#     PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN — VOC-072 cutover secret
+#       (Zone Read + Origin Rules Edit on vocanova.site; wired in
+#       deploy-production.yml voc067-cloudflare-cutover / --apply steps)
+#     PRODUCTION_CLOUDFLARE_API_TOKEN — legacy fallback during rotation only;
+#       Workers-AI-scoped token cannot resolve the zone (issue #535)
+#   Required for live --verify-only / --apply / --restore (unless offline fixture)
 #   CLOUDFLARE_ZONE_NAME (default: vocanova.site)
 #   VOC067_PRODUCTION_WEB_HOST (default: production.vocanova.site)
 #   VOC067_PRODUCTION_API_HOST (default: api-production.vocanova.site)
@@ -37,7 +43,7 @@ API_HOST="${VOC067_PRODUCTION_API_HOST:-api-production.vocanova.site}"
 ORIGIN_PORT="${VOC067_ORIGIN_PORT:-8443}"
 MUTATE_PY="$(cd "$(dirname "$0")" && pwd)/cloudflare_origin_port_remap.py"
 
-TOKEN="${CLOUDFLARE_API_TOKEN:-${PRODUCTION_CLOUDFLARE_API_TOKEN:-}}"
+TOKEN="${CLOUDFLARE_API_TOKEN:-${PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN:-${PRODUCTION_CLOUDFLARE_API_TOKEN:-}}}"
 OFFLINE_FILE="${VOC067_OFFLINE_RULESET_FILE:-}"
 
 mode=""
@@ -52,7 +58,7 @@ case "${1:-}" in
 esac
 
 if [ -z "$OFFLINE_FILE" ] && [ -z "$TOKEN" ]; then
-  echo "ERROR: CLOUDFLARE_API_TOKEN (or PRODUCTION_CLOUDFLARE_API_TOKEN) is required for --verify-only/--apply/--restore" >&2
+  echo "ERROR: CLOUDFLARE_API_TOKEN (or PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN / PRODUCTION_CLOUDFLARE_API_TOKEN) is required for --verify-only/--apply/--restore" >&2
   echo "Missing Cloudflare credentials is a VOC-067-TEST-06 failure, not a pass." >&2
   exit 1
 fi
@@ -90,13 +96,28 @@ cf_api() {
 }
 
 resolve_zone_id() {
-  python3 -c '
-import json, sys
+  ZONE_NAME="$ZONE_NAME" python3 -c '
+import json, os, sys
+zone_name = os.environ["ZONE_NAME"]
 payload = json.load(sys.stdin)
 zones = payload.get("result", [])
-if not zones:
-    raise SystemExit("ERROR: zone not found")
-print(zones[0]["id"])
+if zones:
+    print(zones[0]["id"])
+    sys.exit(0)
+errors = payload.get("errors", [])
+if errors:
+    msg = errors[0].get("message", "Cloudflare API error")
+    raise SystemExit(
+        f"ERROR: Cloudflare API rejected zone lookup for {zone_name!r}: {msg}"
+    )
+if not payload.get("success", True):
+    raise SystemExit(f"ERROR: Cloudflare zone lookup for {zone_name!r} failed")
+raise SystemExit(
+    f"ERROR: zone {zone_name!r} not found or token lacks Zone Read for that zone "
+    "(empty GET /zones result — check CLOUDFLARE_ZONE_NAME and use "
+    "PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN, not the Workers-AI-scoped "
+    "PRODUCTION_CLOUDFLARE_API_TOKEN)"
+)
 ' <<< "$(cf_api GET "/zones?name=${ZONE_NAME}")"
 }
 

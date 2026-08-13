@@ -299,24 +299,37 @@ Until T04 lands, deploy-emitted production URLs still mention `:8443`;
 that is a **hard gate** (readiness polls and OAuth values stay on `:8443`
 while the bridge exists), not the target steady-state design.
 
-Cutover tooling (repository-driven, VOC-067-DEP-03):
+Cutover tooling (repository-driven, VOC-067-DEP-03; credentials VOC-072):
+
+Production holds two Cloudflare secrets. **Do not paste token values into git
+or chat.**
+
+| Secret                                          | Purpose                                                                                                                                |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN` | Zone Read + Origin Rules Edit on `vocanova.site` — cutover script and `deploy-production.yml` `voc067_cloudflare_origin_cutover` modes |
+| `PRODUCTION_CLOUDFLARE_API_TOKEN`               | Workers AI provider sync only (`AI_PROVIDER_API_KEY` during deploy) — **cannot** resolve the zone (issue #535)                         |
+
+Local or CI cutover commands accept `CLOUDFLARE_API_TOKEN` or the production
+names above. The script prefers
+`PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN` over
+`PRODUCTION_CLOUDFLARE_API_TOKEN`.
 
 ```bash
 # 1. Confirm external :443 health (no API token required; does not prove
 #    remap absence while the :8443 bridge may still be running)
 infra/scripts/verify-voc067-cutover.sh
 
-# 2. Verify Cloudflare origin rules (token required; TEST-06 fail-closed)
-PRODUCTION_CLOUDFLARE_API_TOKEN=… \
+# 2. Verify Cloudflare origin rules (zone-capable token required; TEST-06 fail-closed)
+PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN=… \
   infra/scripts/cloudflare-remove-production-origin-port-remap.sh --verify-only
 
 # 3. Remove remap only after origin :443 is proven (founder/ops dispatch
 #    deploy-production.yml with voc067_cloudflare_origin_cutover=apply)
-PRODUCTION_CLOUDFLARE_API_TOKEN=… \
+PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN=… \
   infra/scripts/cloudflare-remove-production-origin-port-remap.sh --apply
 
 # Rollback: restore remap to :8443 if edge checks fail after removal
-PRODUCTION_CLOUDFLARE_API_TOKEN=… \
+PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN=… \
   infra/scripts/cloudflare-remove-production-origin-port-remap.sh --restore
 ```
 

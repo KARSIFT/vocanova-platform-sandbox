@@ -79,6 +79,19 @@ sections and current template/planner practice.
 Do not leave the change-package template value unexamined. Review this rule and set
 the field before the plan PR is reviewed.
 
+**Plan PRs are now independently reviewed too (added 2026-08-14):** a `plan_reviewer`
+role and `plan-review.yml` reusable workflow (karsift-ai-infra) check every `plan/`-
+branch PR - including this `automatic_merge_allowed` correctness rule - before a
+human adopts it. Before this, a plan PR's verdict stayed permanently PENDING (only
+`agent/`-branch implementation PRs were reviewed), so `merge-gate.yml`'s
+approve-and-merge could never find a passing verdict and always refused with "No
+passing independent verification found - not merging," forcing every plan PR to be
+merged by hand regardless of a founder `approved` comment. VOC-075's own plan PR
+(#574) hit exactly this on 2026-08-13 and had to be merged manually as a result. A
+plan PR that now passes `plan_reviewer` is eligible for the same approve-and-merge
+and (if `automatic_merge_allowed: true`) auto-merge paths as any implementation PR.
+See `plan-review.yml`'s header comment in karsift-ai-infra for the full mechanism.
+
 ## Reporting a bug found outside the normal loop
 
 - If you (a human operator or an agent) discover a real bug while doing something
@@ -113,6 +126,12 @@ Issue #301 documents a live incident (VOC-039: PR #299 merged without adoption,
 recovered via PR #300 plus re-running the failed `adopt` run). Use this
 workaround when a `plan/` branch PR merges before its package `change.yaml` is
 set to `status: adopted` and `implementation.authorized: true`.
+
+Note: the `plan_reviewer` independent review described above (added 2026-08-14)
+checks whether a plan PR's *proposal* is sound before merge - it does not check
+or enforce adoption-field state, and does not change this recovery procedure. A
+plan PR can pass `plan_reviewer` review and still merge unadopted; this section's
+steps remain the correct fix if that happens.
 
 1. Identify the original failed `adopt` workflow run for that merge. Confirm it
    failed in "Verify the package was actually adopted" and names the unadopted

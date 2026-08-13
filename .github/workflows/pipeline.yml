@@ -183,10 +183,17 @@ jobs:
   # line this job requires - the startsWith guard below skips this (and
   # review/remediate, which depend on it) for those PRs instead of failing a
   # check that would otherwise block even the human "approved"-comment merge
-  # path in merge-gate.yml. merge-gate.yml itself needs no such guard: a
-  # planning PR never declares a "Risk classification: R#" either, so it
-  # already falls into the existing fail-closed "requires founder approval"
-  # path on its own.
+  # path in merge-gate.yml.
+  #
+  # Planning PRs get their OWN review instead (the `plan-review` job below),
+  # not this one - added 2026-08-14 (founder-requested fix: "reviewer should
+  # review plan too"). Before this, a planning PR's verdict stayed
+  # permanently PENDING (nothing ever reviewed it), so it could never satisfy
+  # merge-gate's approve-and-merge or auto-merge paths regardless of risk
+  # class or automatic_merge_allowed - every single plan PR needed a direct
+  # manual merge with no automated check on the proposal's own soundness
+  # first. See plan-review's own job comment and
+  # karsift-ai-infra/.github/workflows/plan-review.yml for what it checks.
   extract-package-path:
     if: github.event_name == 'pull_request' && github.event.action != 'closed' && startsWith(github.head_ref, 'agent/')
     runs-on: ubuntu-latest
@@ -219,6 +226,24 @@ jobs:
       integration_branch: "develop"   # match the value used for implement, above
     secrets: inherit
 
+  # Independent review for a DRAFT change-package proposal (a "plan/"-branch
+  # PR) - added 2026-08-14, founder-requested fix: "reviewer should review
+  # plan too". Runs instead of `review` (never both - the two jobs' `if`
+  # conditions are mutually exclusive on head_ref prefix), and posts the same
+  # "**Independent verification - bound to commit ...**" / "VERDICT: ..."
+  # comment shape, so merge-gate.yml's existing verdict-parsing (unchanged)
+  # picks it up. `needs: ci` only, not extract-package-path, since a plan PR
+  # has no "Package path:" line to extract - plan-review.yml resolves the
+  # package path itself from the PR body's "New package directory: `...`"
+  # line (the one plan.yml always writes).
+  plan-review:
+    needs: ci
+    if: github.event_name == 'pull_request' && github.event.action != 'closed' && startsWith(github.head_ref, 'plan/')
+    uses: KARSIFT/karsift-ai-infra/.github/workflows/plan-review.yml@main
+    with:
+      pr_number: ${{ github.event.pull_request.number }}
+    secrets: inherit
+
   # Runs after ci and every review. A no-op unless ci failed outright or the
   # review verdict is FAIL - then it either re-dispatches the implementer
   # once (with the failure details attached) or, if that retry already
@@ -249,30 +274,38 @@ jobs:
       review_job_failed: ${{ needs.review.result == 'failure' }}
     secrets: inherit
 
-  # `needs: review` + the `always()` guard below fixes a real race: on a
-  # plain `pull_request` event this job used to run with no dependency on
-  # `review` at all, so it evaluated in parallel with (not after) review -
-  # and since `ci` finishes faster than a full independent-review pass,
-  # merge-gate's report-status routinely captured verdict=PENDING before
-  # review had posted anything, then never got another chance to look
-  # again (no further `pull_request` event fires unless something pushes a
-  # new commit). Auto-merge was structurally unable to fire on a normal
-  # single-commit PR - discovered on vocanova-platform-sandbox's first real
-  # attempt to exercise `auto_merge_enabled`. `always()` is required
-  # because a job depending on a *skipped* job is by default also skipped -
-  # and `review` is deliberately skipped both on `issue_comment` events (the
-  # human-"approved" merge path) and on planning PRs (`plan/`-prefixed head
-  # branch, no package for the reviewer to check yet) - both cases must
-  # still reach merge-gate so its status comment actually posts, rather than
-  # requiring review's specific 'success' result which a planning PR's
-  # deliberately-skipped review can never produce.
+  # `needs: [review, plan-review]` + the `always()` guard below fixes a real
+  # race: on a plain `pull_request` event this job used to run with no
+  # dependency on `review` at all, so it evaluated in parallel with (not
+  # after) review - and since `ci` finishes faster than a full
+  # independent-review pass, merge-gate's report-status routinely captured
+  # verdict=PENDING before review had posted anything, then never got
+  # another chance to look again (no further `pull_request` event fires
+  # unless something pushes a new commit). Auto-merge was structurally
+  # unable to fire on a normal single-commit PR - discovered on
+  # vocanova-platform-sandbox's first real attempt to exercise
+  # `auto_merge_enabled`. `always()` is required because a job depending on
+  # a *skipped* job is by default also skipped - and on any given event
+  # exactly one of `review`/`plan-review` runs (agent/ vs plan/ head_ref)
+  # while the other is always skipped, and both are skipped entirely on
+  # `issue_comment` events (the human-"approved" merge path) - all of that
+  # must still reach merge-gate so its status comment actually posts,
+  # rather than requiring either job's specific 'success' result.
+  #
+  # plan-review added to this needs/if 2026-08-14 (founder-requested fix:
+  # "reviewer should review plan too") - before this, merge-gate ran for
+  # planning PRs with no review dependency at all, which was harmless only
+  # because no review verdict could ever exist for them anyway (permanently
+  # PENDING). Now that plan-review can produce a real PASS, merge-gate must
+  # wait for it the same way it already waits for `review`, or it would
+  # again risk capturing a stale PENDING before plan-review finishes.
   merge-gate:
-    needs: review
+    needs: [review, plan-review]
     if: |
       always() &&
       (
         github.event_name == 'issue_comment' ||
-        (github.event_name == 'pull_request' && github.event.action != 'closed' && (needs.review.result == 'success' || needs.review.result == 'skipped'))
+        (github.event_name == 'pull_request' && github.event.action != 'closed' && (needs.review.result == 'success' || needs.review.result == 'skipped') && (needs.plan-review.result == 'success' || needs.plan-review.result == 'skipped'))
       )
     uses: KARSIFT/karsift-ai-infra/.github/workflows/merge-gate.yml@main
     with:

@@ -1,0 +1,120 @@
+schema_version: 1
+id: VOC-077
+slug: voc-072-t00-evidence-file-regressed-to-pending
+title: VOC-072-T00 Evidence File Regressed to Pending After Secret Was Already Provisioned
+type: bugfix
+status: adopted
+risk: R1
+planned_implementation_risk_floor: "Measured during drafting by running scripts/governance/classify-change-risk.sh\
+  \ --files-from against the expected task-scoped file list (VOC-072's t00-token-provisioning-evidence.md,\
+  \ change.yaml, and acceptance-criteria.md): detected path floor is R1 (established\
+  \ by change.yaml under specs/changes/). This package proposes R1 for the change\
+  \ as a whole \u2014 evidence and package-metadata correction only; no workflow,\
+  \ secret mutation, or production infrastructure change. The production secret already\
+  \ exists (confirmed 2026-08-13 via gh secret list); this package only restores the\
+  \ repository record to match that confirmed state. This is a draft proposal for\
+  \ the reviewing human at adoption time, not a determination.\n"
+canonical_path: specs/changes/VOC-077-voc-072-t00-evidence-file-regressed-to-pending
+authority_model: a003-active
+requirement_source: "GitHub issue #578 (\"VOC-072-T00 evidence file regressed to 'pending'\
+  \ after secret was already provisioned; both attempts now exhausted on stale evidence\"\
+  ). VOC-072-T00 (issue #543, PR #558) exhausted both automated attempts. Production\
+  \ secret PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN genuinely exists (gh secret\
+  \ list --env production, added 2026-08-13T21:24:26Z). PR #558 commit f49ffc50 correctly\
+  \ documented that and was down to one Medium finding (change.yaml DEP-01 still claimed\
+  \ production-environment presence outstanding). Commit 4b021050 then regressed t00-token-provisioning-evidence.md\
+  \ back to gate_status: pending_operator_execution with AC-00/TEST-00 marked NOT\
+  \ satisfied \u2014 contradicting reality. Independent review correctly FAILed. Founder\
+  \ approved comment on PR #558 correctly did not force-merge (merge-gate requires\
+  \ positive PASS proof). Fresh task/dispatch needed to correct evidence + DEP-01\
+  \ and unblock VOC-072-T01/T02.\n"
+requirement_approval_status: 'Approved. Founder merged plan PR #579 directly on 2026-08-13
+  (recovery per AGENTS.md''s ''Recovering from a merged plan PR that was not adopted
+  first'' procedure, issue #301 precedent). R1 classification accepted as proposed.'
+base_branch: develop
+base_sha: null
+target_branch: develop
+approved_candidate_sha: null
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: adopted
+implementation_authorized: true
+automatic_merge_allowed: true
+production_impact: "none expected. Corrects repository evidence and package dependency\
+  \ text under specs/changes/VOC-072-\u2026 so they match an already-provisioned production\
+  \ secret. Does not create, rotate, or delete secrets; does not edit deploy-production.yml\
+  \ or cutover scripts; does not run --apply / --verify-only. Unblocking VOC-072-T01/T02\
+  \ is a downstream consequence of accurate evidence, not a production action by this\
+  \ package.\n"
+rollback_required: true
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-077-DEP-00
+  status: 'unresolved at drafting time. Disposition of exhausted VOC-072-T00 (issue
+    #543) and open PR #558 once this package''s correction lands. Recommended default:
+    close PR #558 without merge after VOC-077-T00 merges (or after #558 is superseded
+    by the new task PR); treat VOC-072-T00''s AC-00 as satisfied by VOC-077-EV-00
+    evidence rather than redispatching #543. See specification.md open question 1.
+
+    '
+- id: VOC-077-DEP-01
+  status: "unresolved at drafting time. Whether to investigate why the implementer\
+    \ step on PR #558 regenerated t00-token-provisioning-evidence.md from a stale\
+    \ pending template instead of building on f49ffc50 \u2014 as a follow-up issue/package\
+    \ \u2014 or leave that root-cause out of this package's scope. Recommended default:\
+    \ out of scope here; open a separate unlabeled issue if adoption wants pipeline\
+    \ hardening. See specification.md open question 2.\n"
+- id: VOC-072
+  status: 'Adopted predecessor. VOC-072-T00 evidence and DEP-01 text are the correction
+    targets. VOC-072-T01/T02 remain blocked until AC-00 evidence correctly records
+    the provisioned secret. This package does not reopen VOC-072 scope, re-litigate
+    DEP-00 dedicated-secret choice, or implement T01 wiring / T02 verify-only.
+
+    '
+affected_areas:
+- specs/changes/VOC-072-same-request-as-github-issue-535-voc-067-t05/t00-token-provisioning-evidence.md
+- "specs/changes/VOC-072-same-request-as-github-issue-535-voc-067-t05/change.yaml\
+  \ (DEP-00/DEP-01 status text only \u2014 remove contradictory \"still outstanding\"\
+  \ / unresolved-drafting claims that deny provisioned presence)"
+- specs/changes/VOC-072-same-request-as-github-issue-535-voc-067-t05/acceptance-criteria.md
+  (VOC-072-AC-00 Result only, if needed to match evidence)
+- specs/changes/VOC-077-voc-072-t00-evidence-file-regressed-to-pending
+implementation:
+  authorized: true
+  required: true
+  status: proposed
+  target_branch: develop
+  pull_request: null
+  authority_issue: 588
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-expected-evidence-correction-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: adopted
+adoption_pr: 579
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/579
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
+blocking_reasons: 'None - adopted. VOC-077-DEP-00 (disposition of exhausted PR #558/issue
+  #543) and VOC-077-DEP-01 (whether the implementer regression is a separate follow-up)
+  remain open questions for T00 to resolve per specification.md; they do not block
+  T00 from starting.'
