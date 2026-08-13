@@ -47,7 +47,8 @@ run_cutover() {
 echo "selftest: live --verify-only without token fails closed (TEST-06)"
 set +e
 token_err="$(
-  env -u CLOUDFLARE_API_TOKEN -u PRODUCTION_CLOUDFLARE_API_TOKEN -u VOC067_OFFLINE_RULESET_FILE \
+  env -u CLOUDFLARE_API_TOKEN -u PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN \
+    -u PRODUCTION_CLOUDFLARE_API_TOKEN -u VOC067_OFFLINE_RULESET_FILE \
     "$cutover_script" --verify-only 2>&1
 )"
 token_rc=$?
