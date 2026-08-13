@@ -6,7 +6,7 @@
 - Tasks: `VOC-072-T00`
 - Tests: `VOC-072-TEST-00`
 - Evidence: `VOC-072-EV-00`
-- Result: pending
+- Result: satisfied
 
 Observable outcome: the GitHub **production** environment holds a secret (name
 recorded at adoption) whose Cloudflare API token is scoped at minimum to **Zone
@@ -15,6 +15,10 @@ label, scope summary, and secret name — **never** the secret value. If
 `VOC-072-DEP-00` chooses reuse, evidence explicitly records that
 `PRODUCTION_CLOUDFLARE_API_TOKEN` was replaced/broadened and that Workers AI
 sync was re-verified.
+
+**Standing (2026-08-13):** `PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN` is
+present in the production environment per `t00-token-provisioning-evidence.md`
+(gate_status `resolved`; restored by VOC-077-T00 after implementer regression).
 
 ## VOC-072-AC-01 — Cutover workflow and docs reference the zone-capable credential
 

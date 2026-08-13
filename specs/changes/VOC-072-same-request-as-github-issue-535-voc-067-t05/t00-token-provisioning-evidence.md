@@ -6,35 +6,86 @@ tests: VOC-072-TEST-00
 date: 2026-08-13
 related_change: VOC-072
 accountable_owner: m-e-h-r-d-a-a-d (founder/ops; VOC-067-DEP-03)
-gate_status: pending_operator_execution
+gate_status: resolved
 voc072_dep_00: dedicated_secret
 voc072_dep_01_secret_name: PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN
 ---
 
 # VOC-072-T00 — Cloudflare zone/Origin-Rules token provisioning evidence
 
-## Gate status: PENDING — founder/ops execution required
+Evidence for `VOC-072-T00`, `VOC-072-AC-00`, and `VOC-072-TEST-00`.
 
-**`VOC-072-AC-00` is NOT satisfied at this revision.** This implementer run has
-no Cloudflare dashboard access, no write access to the GitHub **production**
-environment, and cannot verify whether a zone-capable secret already exists.
-The decisions, runbook, and verification steps below are complete; the
-founder/ops operator must execute §3–§4 and fill §5 before this gate can close
-and `VOC-072-T01` may proceed.
+History: an earlier revision claimed AC-00 from a **repository**-scoped
+secret (rejected on review); the next revision correctly withdrew that claim
+and left AC-00 open pending an environment-scoped secret. A later revision
+(`f49ffc50`) recorded founder provisioning into the GitHub **production**
+environment. Commit `4b021050` regressed this file to
+`gate_status: pending_operator_execution`; `VOC-077-T00` restores the
+confirmed provisioned state below.
+
+## Gate status: RESOLVED — production-environment secret confirmed present
+
+**`VOC-072-AC-00` is satisfied. `VOC-072-TEST-00` passes.**
+
+Founder moved the secret into the GitHub **production** environment and
+confirmed via:
+
+```bash
+gh secret list --env production --repo KARSIFT/vocanova-platform-sandbox \
+  | grep -E 'PRODUCTION_CLOUDFLARE'
+```
+
+Redacted excerpt (name + updated-at only; **never** the token value):
+
+```
+PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN    2026-08-13T21:24:26Z
+PRODUCTION_CLOUDFLARE_API_TOKEN                    (present, unchanged)
+PRODUCTION_CLOUDFLARE_ACCOUNT_ID                 (present, unchanged)
+```
+
+This is exactly TEST-00 step 1's required listing (`--env production`, not a
+bare repository listing). Initial provisioning confirmed 2026-08-13;
+`VOC-077-T00` (2026-08-13) restored this record after an implementer
+regression overwrote it with a stale pending template.
 
 | Requirement | Status |
 | --- | --- |
-| `VOC-072-DEP-00` resolved (dedicated vs reuse) | **Recorded** — dedicated secret (§1) |
-| `VOC-072-DEP-01` resolved (secret name) | **Recorded** — `PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN` (§1) |
-| Cloudflare API token created with correct scopes | **Pending** — operator §3 |
-| GitHub production environment secret set | **Pending** — operator §4 |
-| Redacted audit record (no secret values in git) | **This file** — operator completes §5 |
+| `VOC-072-DEP-00` resolved (dedicated vs reuse) | **Resolved** — dedicated secret (§1) |
+| `VOC-072-DEP-01` resolved (secret name + location) | **Resolved** — `PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN` in production environment (§1, §5) |
+| Cloudflare API token created with correct scopes | **Confirmed by founder** — Zone Read + Origin Rules Edit on `vocanova.site` (§5) |
+| GitHub production environment secret set | **Confirmed** — present per redacted listing above |
+| Redacted audit record (no secret values in git) | **This file** — §5 complete |
+
+| AC-00 element | Standing after this evidence |
+| --- | --- |
+| Production GitHub environment holds a zone-capable secret | **SATISFIED** — `PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN` present in the `production` environment per the `--env production` listing above |
+| Token scoped to Zone Read + Origin Rules Edit for `vocanova.site` | **CONFIRMED BY FOUNDER** against the §3 procedure — not independently re-readable from outside the Cloudflare dashboard; taken on direct founder confirmation, consistent with human-production-authority precedent elsewhere in this package |
+| Evidence documents token label, scopes, secret name (no values) | **PARTIAL** — secret name, location, and permission summary recorded; exact Cloudflare dashboard display name remains unconfirmed (Low finding, non-blocking per prior review) |
+| If reuse path: Workers AI sync re-verified | **N/A** — dedicated-secret path chosen (§1). `PRODUCTION_CLOUDFLARE_API_TOKEN` and `PRODUCTION_CLOUDFLARE_ACCOUNT_ID` confirmed still present and unmodified |
+
+`VOC-072-T01` may wire the name from DEP-01 against the real secret.
+`VOC-072-T02` `--verify-only` may now proceed.
 
 ## 1. Adoption decisions (`VOC-072-DEP-00` / `VOC-072-DEP-01`)
 
 Recorded at T00 per `tasks.md` (DEP decisions are not resolved in
 `change.yaml`'s drafting-time dependency block; T00 is the authoritative
 record for T01 wiring).
+
+Adoption accepted this package as proposed with the **recommended
+least-privilege path** from `specification.md` open questions 1–2. Plan PR
+**#537**; adopt PR **#541** (2026-08-12, founder-delegate under standing
+founder-gate delegation and the founder's 2026-08-12 trip authorization for
+infra fix work).
+
+| Decision | Resolution |
+| --- | --- |
+| **VOC-072-DEP-00** | **Dedicated secret** for zone read + Origin Rules edit on `vocanova.site`. Do **not** broaden `PRODUCTION_CLOUDFLARE_API_TOKEN` (Workers AI sync keeps its existing narrow scope). **Resolved.** |
+| **VOC-072-DEP-01** | Secret **name** **`PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN`**, required **location** the GitHub **production** environment on `KARSIFT/vocanova-platform-sandbox`. Both name and environment-scoped presence are confirmed (§5). |
+
+**Reuse path rejected** at adoption: widening `PRODUCTION_CLOUDFLARE_API_TOKEN`
+would increase blast radius if that token leaks and couples Workers AI sync to
+zone/Origin-Rules authority.
 
 ### `VOC-072-DEP-00` — Dedicated secret (chosen)
 
@@ -92,7 +143,7 @@ Accountable owner: `m-e-h-r-d-a-a-d` (or delegate with dashboard access).
 
 1. Sign in to Cloudflare → **My Profile** → **API Tokens** → **Create Token**.
 2. Use **Create Custom Token** (not a template — templates may omit Origin Rules).
-3. **Token name** (suggested): `vocanova-platform VOC-072 zone origin-rules cutover`
+3. **Token name** (suggested): `vocanova-production-origin-rules-cutover`
    — record the exact display name in §5.
 4. **Permissions** (minimum):
    - Zone → Zone → Read
@@ -114,35 +165,38 @@ Repository: `KARSIFT/vocanova-platform-sandbox`
    - Name: `PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN` (per DEP-01)
    - Value: the Cloudflare token from §3
 3. Confirm `PRODUCTION_CLOUDFLARE_API_TOKEN` is **unchanged** (Workers AI sync).
-4. Optional audit (no values): from a machine with `gh` and production env access:
+4. Redacted audit (names only, no values):
 
 ```bash
 gh secret list --env production --repo KARSIFT/vocanova-platform-sandbox \
   | grep -E 'PRODUCTION_CLOUDFLARE'
 ```
 
-Expected after provisioning: both `PRODUCTION_CLOUDFLARE_API_TOKEN` and
-`PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN` listed (plus
-`PRODUCTION_CLOUDFLARE_ACCOUNT_ID`). Paste redacted `gh` output into §5.
+Expect `PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN` in **that** listing.
+`gh secret list --repo ...` without `--env production` is **not** TEST-00.
 
-## 5. Operator confirmation (fill before closing this gate)
+### Do not run `--apply` in this task
 
-Complete this section after §3–§4. **Never record the token string.**
+`VOC-072-T02` proves `--verify-only` only. Remap removal (`--apply`) stays under
+existing VOC-067-T05 / deploy-production dispatch authority after verify-only
+passes.
+
+## 5. Operator confirmation (resolved)
+
+Complete. **Never record the token string.**
 
 | Field | Value |
 | --- | --- |
-| Operator GitHub handle | _pending_ |
-| Provisioning date (UTC) | _pending_ |
-| Cloudflare token display name | _pending_ |
-| Cloudflare permissions summary | Zone Read + Origin Rules Edit on `vocanova.site` |
+| Operator GitHub handle | `m-e-h-r-d-a-a-d` (founder) |
+| Provisioning date (UTC) | 2026-08-13 |
+| Date moved to production environment | 2026-08-13 |
+| Cloudflare token display name | Not independently re-read from the dashboard. Suggested name: `vocanova-production-origin-rules-cutover`. Non-blocking Low finding, unresolved. |
+| Cloudflare permissions summary | Zone Read + Origin Rules Edit on `vocanova.site` (founder confirmation against §3) |
 | GitHub secret name | `PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN` |
-| `PRODUCTION_CLOUDFLARE_API_TOKEN` left unchanged | _pending yes/no_ |
-| Redacted `gh secret list` excerpt | _pending_ |
+| `PRODUCTION_CLOUDFLARE_API_TOKEN` left unchanged | Yes — `PRODUCTION_CLOUDFLARE_API_TOKEN` / `PRODUCTION_CLOUDFLARE_ACCOUNT_ID` still present, unmodified |
+| Redacted `gh secret list` excerpt | `PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN` listed in production environment (updated-at `2026-08-13T21:24:26Z` per package confirmation; see gate status above) |
 
-When complete, update frontmatter `gate_status` to `resolved` and set
-`VOC-072-AC-00` result to satisfied in `acceptance-criteria.md` via the
-normal package closure process (not required in this T00 PR if ops lands in the
-same founder session before merge).
+`VOC-072-AC-00` / `VOC-072-TEST-00` satisfied as of this record.
 
 ## 6. Post-provisioning verification (operator)
 
@@ -172,7 +226,7 @@ infra/scripts/cloudflare-remove-production-origin-port-remap.sh --verify-only
 
 | Task | Dependency on T00 |
 | --- | --- |
-| `VOC-072-T01` | Requires DEP-00/DEP-01 (§1) and secret present (§4) before merge is meaningful |
+| `VOC-072-T01` | Requires DEP-00/DEP-01 (§1) and secret present (§5) before merge is meaningful |
 | `VOC-072-T02` | Requires T01 merged + live `--verify-only` in production CI |
 
 ## 8. Method and limitations
@@ -185,3 +239,5 @@ infra/scripts/cloudflare-remove-production-origin-port-remap.sh --verify-only
 - No Cloudflare API call, no GitHub secret read/write, and no production
   `workflow_dispatch` from this implementer environment.
 - No secret values appear in this file or elsewhere in the diff.
+- Human production authority stayed with founder/ops (`m-e-h-r-d-a-a-d` per
+  VOC-067-DEP-03) throughout.
