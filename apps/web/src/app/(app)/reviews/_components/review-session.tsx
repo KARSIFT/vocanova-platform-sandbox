@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 
 import { DueWord, SubmitReviewBody } from "@vocanova/api-client";
 
@@ -10,9 +10,13 @@ import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
 import { handleApiError } from "@/lib/session";
 import { SentenceFeedback } from "../../_components/sentence-feedback";
 
-type Rating = "again" | "hard" | "good" | "easy";
+import {
+  isMultipleChoiceOptionDisabled,
+  isReviewActionDisabled,
+  type PromptPhase,
+} from "./review-session-prompt";
 
-type PromptPhase = "prompt" | "feedback" | "rate";
+type Rating = "again" | "hard" | "good" | "easy";
 
 const RATING_LABELS: Record<Rating, string> = {
   again: "Again",
@@ -59,12 +63,16 @@ export function ReviewSession({
   const promptType = currentCard
     ? determinePromptType(dueWords, currentIndex)
     : null;
-  const options =
-    currentCard && promptType === "multiple_choice"
-      ? buildMultipleChoiceOptions(dueWords, currentIndex)
-      : null;
+  const options = useMemo(() => {
+    if (!currentCard || promptType !== "multiple_choice") {
+      return null;
+    }
+    return buildMultipleChoiceOptions(dueWords, currentIndex);
+  }, [currentCard, currentIndex, dueWords, promptType]);
 
-  useEffect(() => {
+  // Reset prompt state before paint when the card changes so a new MC card
+  // never inherits phase === "feedback" from the prior card (VOC-076-T00).
+  useLayoutEffect(() => {
     setPhase("prompt");
     setSelectedOption(null);
     setErrorMessage(null);
@@ -167,8 +175,6 @@ export function ReviewSession({
     }
   };
 
-  const isLoading = isSubmitting || isRefetching;
-
   if (dueWords.length === 0 || completed) {
     return (
       <div className="flex flex-col items-center justify-center py-[var(--spacing-2xl)] text-center">
@@ -228,7 +234,10 @@ export function ReviewSession({
         </p>
       </div>
 
-      <div className="mt-[var(--spacing-md)] rounded-md border border-neutral-200 bg-white p-[var(--spacing-md)] shadow-sm">
+      <div
+        className="mt-[var(--spacing-md)] rounded-md border border-neutral-200 bg-white p-[var(--spacing-md)] shadow-sm"
+        aria-busy={isRefetching || isSubmitting}
+      >
         <div className="mb-[var(--spacing-lg)] text-center">
           <span className="inline-block rounded-full bg-neutral-100 px-[var(--spacing-sm)] py-[var(--spacing-xs)] text-sm text-neutral-700">
             {currentCard.partOfSpeech}
@@ -267,7 +276,10 @@ export function ReviewSession({
                 const isSelected = selectedOption === option.meaningId;
                 const isCorrect = option.meaningId === currentCard.meaningId;
                 const showCorrectness = phase === "feedback";
-                const isDisabled = isLoading || phase === "feedback";
+                const isDisabled = isMultipleChoiceOptionDisabled(
+                  phase,
+                  isSubmitting,
+                );
                 return (
                   <button
                     key={option.meaningId}
@@ -305,7 +317,7 @@ export function ReviewSession({
           <button
             type="button"
             onClick={() => setPhase("rate")}
-            disabled={isLoading}
+            disabled={isReviewActionDisabled(isSubmitting, isRefetching)}
             className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors hover:bg-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Show answer
@@ -327,7 +339,7 @@ export function ReviewSession({
                   selectedOptionMeaningId: selectedOption ?? undefined,
                 })
               }
-              disabled={isLoading}
+              disabled={isReviewActionDisabled(isSubmitting, isRefetching)}
               className="mt-[var(--spacing-md)] w-full rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 transition-colors hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Continue
@@ -371,7 +383,10 @@ export function ReviewSession({
                             : undefined,
                       })
                     }
-                    disabled={isLoading}
+                    disabled={isReviewActionDisabled(
+                      isSubmitting,
+                      isRefetching,
+                    )}
                     className="rounded-md border border-neutral-200 bg-neutral-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors hover:bg-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {RATING_LABELS[rating]}

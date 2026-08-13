@@ -1,0 +1,40 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+
+import {
+  isMultipleChoiceOptionDisabled,
+  isReviewActionDisabled,
+} from "../../src/app/(app)/reviews/_components/review-session-prompt";
+
+describe("review-session prompt readiness (VOC-076-T01)", () => {
+  it("enables multiple-choice options in prompt phase when not submitting", () => {
+    assert.equal(isMultipleChoiceOptionDisabled("prompt", false), false);
+  });
+
+  it("disables multiple-choice options during feedback after a selection", () => {
+    assert.equal(isMultipleChoiceOptionDisabled("feedback", false), true);
+  });
+
+  it("disables multiple-choice options while a submission is in flight", () => {
+    assert.equal(isMultipleChoiceOptionDisabled("prompt", true), true);
+    assert.equal(isMultipleChoiceOptionDisabled("feedback", true), true);
+  });
+
+  it("does not treat background refetch as a lock for multiple-choice options", () => {
+    // isRefetching is intentionally excluded from isMultipleChoiceOptionDisabled
+    // so a prompt-ready next card is interactable as soon as dueWords lands,
+    // even if the batch-end refetch flag has not cleared yet.
+    assert.equal(isMultipleChoiceOptionDisabled("prompt", false), false);
+  });
+
+  it("locks rate/continue/show-answer during submit and during batch-end refetch", () => {
+    // After submitAttempt succeeds, advance() may set isRefetching while the
+    // same card remains visible; isSubmitting clears in finally. Post-submit
+    // actions must stay disabled for the whole refetch to prevent duplicate
+    // submitAttempt calls (VOC-076-T01 independent-review remediation).
+    assert.equal(isReviewActionDisabled(false, false), false);
+    assert.equal(isReviewActionDisabled(true, false), true);
+    assert.equal(isReviewActionDisabled(false, true), true);
+    assert.equal(isReviewActionDisabled(true, true), true);
+  });
+});
