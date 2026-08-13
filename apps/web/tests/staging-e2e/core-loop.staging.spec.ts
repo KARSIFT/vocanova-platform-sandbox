@@ -255,7 +255,9 @@ async function reviewOneCard(page: Page): Promise<boolean> {
   // Multiple-choice prompt. Which option is correct is not knowable
   // from the rendered page, so the journey answers, then follows
   // whichever branch the app shows - both submit a real attempt.
-  await multipleChoiceGroup.getByRole("button").first().click();
+  const firstMcOption = multipleChoiceGroup.getByRole("button").first();
+  await expect(firstMcOption).toBeEnabled();
+  await firstMcOption.click();
 
   const ratingButton = page.getByRole("button", { name: "Good" });
   const continueButton = page.getByRole("button", { name: "Continue" });
