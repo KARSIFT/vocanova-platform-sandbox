@@ -45,36 +45,30 @@ may refine them but may not weaken governance or security.
 ### Drafting `automatic_merge_allowed` in `change.yaml`
 
 When drafting a change package, set `automatic_merge_allowed` in that package's
-`change.yaml` according to its declared risk class. The field is a **per-package
-opt-out** from auto-merge into `develop` when the project's `auto_merge_enabled`
-switch is on, CI is green, independent review passed, and merge-gate would otherwise
-allow merge. Merge-gate still hard-blocks R4 and unparseable risk regardless of this
-field. Setting `true` does **not** bypass risk classification, path-based floors,
-CI, independent verification, R4 founder authority, or EHR.
+`change.yaml` according to its declared risk class. **Only R4 requires founder
+approval** for merge into `develop` via merge-gate; R0–R3 packages must not use
+this field to opt out. The field gates auto-merge into `develop` when the
+project's `auto_merge_enabled` switch is on, CI is green, independent review has
+passed, and merge-gate would otherwise allow merge. Merge-gate still hard-blocks
+R4 and unparseable risk regardless of this field, and still requires a founder
+`approved` comment when the gate demands it (R4, unparseable risk, or a residual
+`automatic_merge_allowed: false` on an existing package). Setting `true` does
+**not** bypass risk classification, path-based floors, CI, independent
+verification, R4 founder authority, or EHR.
 
-**Drafting defaults by risk class:**
+**Drafting rule by risk class:**
 
-- **R0–R2:** draft with `automatic_merge_allowed: true` unless the package records a
-  specific, package-local reason to require founder eyes on the merge into
-  `develop`.
-- **R3:** decide case-by-case; set `true` or `false` with stated reasoning in
-  `change.yaml` (a comment on the field or an adjacent one-line note), same spirit as
-  `planned_implementation_risk_floor`. Routine R3 does not require standing founder
-  approval merely because of risk class, but some R3 packages may warrant founder
-  eyes on the merge (for example auth, secrets, or production infrastructure).
-- **R4:** set `automatic_merge_allowed: false` explicitly. This is redundant with
+- **R0–R3:** set `automatic_merge_allowed: true`. Do not set `false` to require
+  founder eyes on merge — sensitivity (auth, secrets, production infrastructure,
+  or similar) does not justify a non-R4 opt-out.
+- **R4:** set `automatic_merge_allowed: false`. This is redundant with
   merge-gate's R4 hard block but keeps the package record self-describing.
 
-**Justification:** Any deliberate `false` on an R0–R2 package must state why in
-`change.yaml`. R3 choices must likewise be justified — do not leave the value as an
-unexamined template inherit.
-
-**Doc reconciliation (VOC-068-DEP-00):** Operational semantics are already accurate in
-DOC-15 §17.2 (authority matrix: merge into `develop` when checks and review pass and
-the package has not opted out) and §17.3 (R0–R3 may auto-merge when not opted out;
-`automatic_merge_allowed: false` is the per-package opt-out). No DOC-15 edit is
-required for this drafting rule; the drift being corrected is between those
-sections and current template/planner practice.
+**Doc reconciliation (`VOC-075-DEP-00`):** DOC-15 §17.2/§17.3 may still describe
+a general per-package opt-out until `VOC-075-T02` resolves whether DOC-15 itself
+is edited to match approve-only-R4 drafting. Until then, merge-gate still
+mechanically honors `automatic_merge_allowed: false` when present, but planners
+must not draft that opt-out on non-R4 packages (founder instruction, issue #573).
 
 Do not leave the change-package template value unexamined. Review this rule and set
 the field before the plan PR is reviewed.
