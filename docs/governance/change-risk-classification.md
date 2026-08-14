@@ -19,6 +19,19 @@ technical-steward approval or founder approval merely because it is R3. R4 remai
 founder-controlled. EHR is an exceptional escalation condition, not a routine
 approval layer or risk class.
 
+## `automatic_merge_allowed` drafting
+
+Package-level `automatic_merge_allowed` in each change package's `change.yaml`
+gates auto-merge into `develop` when the project switch is on and all other
+merge-gate conditions pass. Drafting policy matches approve-only-R4 (founder
+instruction, [issue #573](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/573);
+see `AGENTS.md`): **R0–R3** packages must set `true`; **R4** packages must set
+`false` (self-describing; redundant with merge-gate's R4 hard block). Non-R4
+packages must not use this field to require founder approval on merge.
+Sensitivity (auth, secrets, production infrastructure, or similar) does not
+justify a non-R4 opt-out. Setting `true` does not bypass risk classification,
+path floors, CI, independent verification, R4 founder authority, or EHR.
+
 The completed A-003 transition was fixed at R4 with an R3 protected
 governance/authority effect and was approved under pre-A-003 governance. Its one-time
 migration approval is exhausted and cannot authorize another change. Canonical A-003
