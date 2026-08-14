@@ -1,0 +1,141 @@
+schema_version: 1
+id: VOC-078
+slug: voc-076-t02-no-real-staging-proof-the-review
+title: 'VOC-076-T02: No Real Staging Proof the Review-Queue Button Fix Works'
+type: bugfix
+status: draft
+risk: R2
+planned_implementation_risk_floor: 'Measured during drafting by running scripts/governance/classify-change-risk.sh
+  --files-from against the expected task-scoped file list. Evidence-only paths (this
+  package''s change.yaml plus VOC-076 t02-evidence.md / acceptance-criteria.md) floor
+  at R1. Including apps/web review-session.tsx and core-loop.staging.spec.ts (T01
+  remediation if staging still fails) also floors at R1. Including .github/workflows/deploy-staging.yml
+  would raise the path floor to R3 and is out of default scope. This package proposes
+  R2 for the change as a whole (not R1) because VOC-076-AC-03 remains unmet, issue
+  #575 stays open, and a residual product-side hang on the review queue may still
+  affect real learners if T00''s staging run fails and T01 must change review-session
+  again (same semantic rationale as VOC-076). If T00 records a green staging run with
+  no further product edit, adoption or the independent verifier may lower toward R1.
+  This is a draft proposal for the reviewing human at adoption time, not a determination.
+
+  '
+canonical_path: specs/changes/VOC-078-voc-076-t02-no-real-staging-proof-the-review
+authority_model: a003-active
+requirement_source: "GitHub issue #608 (\"VOC-076-T02: no real staging proof the review-queue\
+  \ button fix works (PR #598 merged with a FAIL verdict)\"). VOC-076-T00 and T01\
+  \ merged with passing independent-verification verdicts. VOC-076-T02's PR #598 was\
+  \ merged directly to develop despite VERDICT: FAIL. The reviewer's High finding:\
+  \ no real staging proof that step 5 (the review-queue interaction) completes past\
+  \ the multiple-choice click on the fixed revision \u2014 referencing staging run\
+  \ #227 (Actions run 31791701520), which still failed at toBeEnabled on a disabled\
+  \ MC button. The merged PR landed T02 evidence/package state (including a narrow\
+  \ gap fix for feedback-phase leftover MC groups during isRefetching) without a green\
+  \ deploy-staging run against that fixed revision. Issue #575 correctly remains open.\n"
+requirement_approval_status: not-approved. This package has not been adopted. No field
+  in this file authorizes implementation.
+base_branch: develop
+base_sha: unknown - not recorded by this draft; the adopting human/workflow should
+  set this to the actual base_sha at adoption time, consistent with recent packages'
+  convention.
+target_branch: develop
+approved_candidate_sha: null
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: 'conditional. If T00''s real staging run passes on the already-merged
+  VOC-076 tip (T01 + #598 gap fix) with evidence-only updates under specs/changes/,
+  production UI behavior is unchanged by this package. If T00 fails and T01 changes
+  review-session.tsx again, production review-queue interactivity for real learners
+  may change (same class of effect as VOC-076-T01/T02 gap fix).
+
+  '
+rollback_required: true
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-078-DEP-00
+  status: 'unresolved at drafting time. Disposition of VOC-076-T02 / PR #598 after
+    this package lands real staging PASS evidence. Recommended default: treat VOC-076-AC-03
+    / VOC-076-EV-02 as satisfied by VOC-078 evidence (update VOC-076 t02-evidence.md
+    and AC-03 Result accordingly); do not redispatch exhausted VOC-076-T02 attempt
+    budget. See specification.md open question 1.
+
+    '
+- id: VOC-078-DEP-01
+  status: 'unresolved at drafting time. Whether to open a separate unlabeled issue
+    about merge-gate / process allowing PR #598 to merge to develop with an independent-verification
+    VERDICT: FAIL. Recommended default: out of this package''s scope; verification
+    proof for #575 is in scope here, pipeline hardening is a follow-up. See specification.md
+    open question 2.
+
+    '
+- id: VOC-078-DEP-02
+  status: "unresolved at drafting time. Whether a post-#598 deploy-staging run against\
+    \ develop tip 26d85c1 (or later) already exists and is green, amber (pass without\
+    \ MC coverage), or still failing. T00 must settle this with a concrete run URL\
+    \ \u2014 do not invent a pass. Drafting-time note: issue #608 cites run #227 as\
+    \ still failing; the gap fix merged via #598 after that failure and has not been\
+    \ proven green on real staging in the package record.\n"
+- id: VOC-076
+  status: 'Adopted predecessor. T00/T01 passed review. T02 merged via PR #598 with
+    FAIL verdict and unmet AC-03 (no green staging proof). Gap-fix code from that
+    PR (shouldShowReviewCardPrompt / prompt-ready E2E waits) is on develop tip as
+    of drafting. This package does not re-litigate T00 root cause or reopen VOC-074;
+    it supplies the missing real staging proof (and a narrow remediation path if staging
+    still fails).
+
+    '
+affected_areas:
+- specs/changes/VOC-076-staging-core-loop-e2e-review-queue-answer-button/t02-evidence.md
+- specs/changes/VOC-076-staging-core-loop-e2e-review-queue-answer-button/acceptance-criteria.md
+  (VOC-076-AC-03 Result only, when real PASS evidence exists)
+- "apps/web/src/app/(app)/reviews/_components/review-session.tsx (conditional \u2014\
+  \ only if T00 staging still fails and T01 remediates)"
+- "apps/web/src/app/(app)/reviews/_components/review-session-prompt.ts (conditional\
+  \ \u2014 same)"
+- "apps/web/tests/staging-e2e/core-loop.staging.spec.ts (conditional \u2014 same)"
+- "apps/web/tests/lib/review-session-prompt-readiness.test.ts (conditional \u2014\
+  \ same)"
+- .github/workflows/deploy-staging.yml (out of default scope; raises path floor to
+  R3 if expanded)
+- specs/changes/VOC-078-voc-076-t02-no-real-staging-proof-the-review
+implementation:
+  authorized: false
+  required: true
+  status: proposed
+  target_branch: develop
+  pull_request: null
+  authority_issue: 608
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: conditional-on-evidence-only-vs-product-remediation
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
+blocking_reasons: Not adopted. Requires founder/steward review of the proposed R2
+  classification, specification.md open questions (VOC-076-T02 disposition; whether
+  FAIL-merge process hardening is a separate issue; current post-#598 staging run
+  status), and authorization before any task is dispatched.
