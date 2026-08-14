@@ -130,3 +130,4 @@ ehr: not-triggered
 standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
 blocking_reasons: None - adopted. VOC-078-DEP-00/01/02 remain open questions for T00 to resolve per specification.md;
   they do not block T00 from starting.
+# Adoption re-triggered 2026-08-14 via plan/-prefixed PR after the original adoption merge (PR #610) used a non-'plan/' branch name and never fired adopt.yml (pipeline.yml's adopt job requires startsWith(head.ref, 'plan/')). No content change beyond this note.
