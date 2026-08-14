@@ -1,35 +1,36 @@
 schema_version: 1
 id: VOC-075
 slug: governance-still-violates-approve-only-r4-28-non
-title: 'Governance still violates ''approve only R4'': remove non-R4 automatic_merge
-  opt-outs'
+title: 'Governance still violates ''approve only R4'': remove non-R4 automatic_merge opt-outs'
 type: process
-status: draft
+status: adopted
 risk: R3
-planned_implementation_risk_floor: "Not yet computed by running scripts/governance/classify-change-risk.sh\
-  \ against a real task-scoped file list. This package proposes R3 for the change\
-  \ as a whole when scope stays on AGENTS.md, specs/templates/change-package/, docs/governance/*.md\
-  \ (non-amendment), and flipping automatic_merge_allowed on already-adopted non-R4\
-  \ packages such as VOC-072 \u2014 those paths floor at R3 (or lower for ordinary\
-  \ specs/changes/*). Including a new lint under scripts/governance/ or tooling/governance/,\
-  \ or editing docs/operations/15-ai-native-product-and-engineering-operating-model.md\
-  \ (DOC-15), raises the path floor to R4 per .github/approved-policy/protected-paths.yaml\
-  \ \u2014 see specification.md open questions 1 and 3. This is a draft proposal for\
-  \ the reviewing human at adoption time, not a determination.\n"
+planned_implementation_risk_floor: 'Not yet computed by running scripts/governance/classify-change-risk.sh
+  against a real task-scoped file list. This package proposes R3 for the change as a whole when scope
+  stays on AGENTS.md, specs/templates/change-package/, docs/governance/*.md (non-amendment), and flipping
+  automatic_merge_allowed on already-adopted non-R4 packages such as VOC-072 — those paths floor at R3
+  (or lower for ordinary specs/changes/*). Including a new lint under scripts/governance/ or tooling/governance/,
+  or editing docs/operations/15-ai-native-product-and-engineering-operating-model.md (DOC-15), raises
+  the path floor to R4 per .github/approved-policy/protected-paths.yaml — see specification.md open questions
+  1 and 3. This is a draft proposal for the reviewing human at adoption time, not a determination.
+
+  '
 canonical_path: specs/changes/VOC-075-governance-still-violates-approve-only-r4-28-non
 authority_model: a003-active
-requirement_source: "GitHub issue #573 (\"Governance still violates 'approve only\
-  \ R4': 28 non-R4 packages carry automatic_merge_allowed: false, and AGENTS.md's\
-  \ R3 carve-out contradicts the founder's explicit rule\"), follow-up to VOC-068\
-  \ / issue #488. VOC-068 fixed R0\u2013R2 drafting defaults and the template silent-false,\
-  \ but introduced an R3 case-by-case carve-out in AGENTS.md that names auth/secrets/production\
-  \ infrastructure as reasons for an R3 package to still require founder approval\
-  \ on merge. The founder confirmed directly (2026-08-14) that only R4 should ever\
-  \ require founder approval \u2014 no R3 carve-out, no 'sensitive R3' exception.\
-  \ Repo scan on develop found 28 non-R4 packages still at automatic_merge_allowed:\
-  \ false; VOC-072 is called out as actively blocking merges that should not need\
-  \ founder attention under that rule.\n"
-requirement_approval_status: not-approved
+requirement_source: 'GitHub issue #573 ("Governance still violates ''approve only R4'': 28 non-R4 packages
+  carry automatic_merge_allowed: false, and AGENTS.md''s R3 carve-out contradicts the founder''s explicit
+  rule"), follow-up to VOC-068 / issue #488. VOC-068 fixed R0–R2 drafting defaults and the template silent-false,
+  but introduced an R3 case-by-case carve-out in AGENTS.md that names auth/secrets/production infrastructure
+  as reasons for an R3 package to still require founder approval on merge. The founder confirmed directly
+  (2026-08-14) that only R4 should ever require founder approval — no R3 carve-out, no ''sensitive R3''
+  exception. Repo scan on develop found 28 non-R4 packages still at automatic_merge_allowed: false; VOC-072
+  is called out as actively blocking merges that should not need founder attention under that rule.
+
+  '
+requirement_approval_status: 'Approved. Founder merged plan PR #574 directly on 2026-08-13 but adoption
+  fields were never flipped, so implementation was never authorized and no task issues opened - discovered
+  during 2026-08-14 repo health audit. Recovered per AGENTS.md''s ''Recovering from a merged plan PR that
+  was not adopted first'' procedure (issue #301 precedent).'
 base_branch: develop
 base_sha: null
 target_branch: develop
@@ -39,14 +40,13 @@ owners:
   package_preparation: planner (drafting only; adoption remains a human decision)
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: adopted
+implementation_authorized: true
 automatic_merge_allowed: true
-production_impact: 'none expected for application behavior. Documentation, template,
-  optional lint, and package-field backfill only. Future non-R4 task PRs stop requiring
-  a founder approved comment solely because change.yaml opted out. No change to merge-gate.yml
-  hard R4 block, release/deploy autonomy, secrets, or production infrastructure configuration
-  beyond the governance text that describes them.
+production_impact: 'none expected for application behavior. Documentation, template, optional lint, and
+  package-field backfill only. Future non-R4 task PRs stop requiring a founder approved comment solely
+  because change.yaml opted out. No change to merge-gate.yml hard R4 block, release/deploy autonomy, secrets,
+  or production infrastructure configuration beyond the governance text that describes them.
 
   '
 rollback_required: true
@@ -61,52 +61,48 @@ artifacts:
   release_plan: release-plan.md
 dependencies:
 - id: VOC-075-DEP-00
-  status: "unresolved at drafting time. Whether DOC-15 (\xA717.2/\xA717.3 opt-out\
-    \ wording) must be edited in the same PR under AGENTS.md's doc-reconciliation\
-    \ rule once non-R4 packages are forbidden from setting automatic_merge_allowed:\
-    \ false. DOC-15 currently describes a general per-package opt-out; retiring that\
-    \ for R0\u2013R3 may require a DOC-15 edit (R4 path floor). See specification.md\
-    \ open question 1.\n"
+  status: 'unresolved at drafting time. Whether DOC-15 (§17.2/§17.3 opt-out wording) must be edited in
+    the same PR under AGENTS.md''s doc-reconciliation rule once non-R4 packages are forbidden from setting
+    automatic_merge_allowed: false. DOC-15 currently describes a general per-package opt-out; retiring
+    that for R0–R3 may require a DOC-15 edit (R4 path floor). See specification.md open question 1.
+
+    '
 - id: VOC-075-DEP-01
-  status: 'unresolved at drafting time. Backfill scope for the 28 non-R4 packages
-    currently at automatic_merge_allowed: false. Issue #573 requires at least VOC-072
-    (actively blocking). VOC-068-DEP-02 left historical packages alone. See specification.md
-    open question 2.
+  status: 'unresolved at drafting time. Backfill scope for the 28 non-R4 packages currently at automatic_merge_allowed:
+    false. Issue #573 requires at least VOC-072 (actively blocking). VOC-068-DEP-02 left historical packages
+    alone. See specification.md open question 2.
 
     '
 - id: VOC-075-DEP-02
-  status: 'unresolved at drafting time. Whether this package includes a deterministic
-    lint/CI check that fails when automatic_merge_allowed: false is set without risk:
-    R4 (and a stated reason). scripts/governance/ and tooling/governance/ both floor
-    at R4. See specification.md open question 3.
+  status: 'unresolved at drafting time. Whether this package includes a deterministic lint/CI check that
+    fails when automatic_merge_allowed: false is set without risk: R4 (and a stated reason). scripts/governance/
+    and tooling/governance/ both floor at R4. See specification.md open question 3.
 
     '
 - id: VOC-068
-  status: 'Closed predecessor. Introduced the AGENTS.md drafting subsection and template
-    true default, but adopted R3 case-by-case with stated justification (VOC-068-DEP-01)
-    and forward-only (VOC-068-DEP-02). This package supersedes that R3 carve-out per
-    founder instruction 2026-08-14; it does not reopen VOC-068''s DOC-15 option-a
-    finding unless DEP-00 requires a new DOC-15 edit.
+  status: 'Closed predecessor. Introduced the AGENTS.md drafting subsection and template true default,
+    but adopted R3 case-by-case with stated justification (VOC-068-DEP-01) and forward-only (VOC-068-DEP-02).
+    This package supersedes that R3 carve-out per founder instruction 2026-08-14; it does not reopen VOC-068''s
+    DOC-15 option-a finding unless DEP-00 requires a new DOC-15 edit.
 
     '
 affected_areas:
-- "AGENTS.md (Drafting automatic_merge_allowed subsection \u2014 remove R3 carve-out)"
+- AGENTS.md (Drafting automatic_merge_allowed subsection — remove R3 carve-out)
 - specs/templates/change-package/change.yaml (comment block must match new rule)
 - specs/templates/change-package/README.md (drafting blurb must match new rule)
-- docs/governance/change-risk-classification.md (reconcile if it contains conflicting
-  carve-out language; drafting-time grep found none for automatic_merge specifically)
+- docs/governance/change-risk-classification.md (reconcile if it contains conflicting carve-out language;
+  drafting-time grep found none for automatic_merge specifically)
 - docs/governance/approval-matrix.md (same)
-- docs/operations/15-ai-native-product-and-engineering-operating-model.md (conditional
-  on VOC-075-DEP-00; R4 floor)
-- specs/changes/VOC-072-same-request-as-github-issue-535-voc-067-t05/change.yaml (required
-  backfill minimum per issue
+- docs/operations/15-ai-native-product-and-engineering-operating-model.md (conditional on VOC-075-DEP-00;
+  R4 floor)
+- specs/changes/VOC-072-same-request-as-github-issue-535-voc-067-t05/change.yaml (required backfill minimum
+  per issue
 - Other specs/changes/VOC-*/change.yaml listed in issue
-- scripts/governance/ and/or tooling/governance/ (conditional on VOC-075-DEP-02; R4
-  floor)
+- scripts/governance/ and/or tooling/governance/ (conditional on VOC-075-DEP-02; R4 floor)
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: not-started
+  status: proposed
   target_branch: develop
   pull_request: null
   authority_issue: null
@@ -118,15 +114,14 @@ release:
   automatic_merge: true
   migration_required: false
   rollback_required: true
-repository_adoption_status: not-adopted
-adoption_pr: null
-adoption_evidence: null
+repository_adoption_status: adopted
+adoption_pr: 574
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/574
 implementation_authority_before_adoption: false
-implementation_authority_status: not-authorized
+implementation_authority_status: not-exercised
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
-blocking_reasons: "Draft package \u2014 not adopted. Adoption must settle VOC-075-DEP-00\
-  \ (DOC-15), VOC-075-DEP-01 (backfill scope), and VOC-075-DEP-02 (lint / possible\
-  \ R4 raise) before implementation is authorized.\n"
+blocking_reasons: None - adopted. VOC-075's open dependencies remain investigation/scope questions for
+  T00 to resolve per specification.md; they do not block T00 from starting.
