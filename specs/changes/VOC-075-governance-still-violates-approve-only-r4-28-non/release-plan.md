@@ -13,11 +13,10 @@ No production user-facing effect is expected: changes are confined to
 governance drafting text, the change-package template, optional governance
 lint, and `automatic_merge_allowed` metadata on named packages.
 
-**Note on this package's own `automatic_merge_allowed`:** drafted as `true`
-because the package proposes R3 under the founder rule it encodes. If
-adoption raises the package to R4 (DOC-15 and/or lint paths), set this
-package's field to `false` at adoption so the record stays self-describing
-and consistent with the new rule.
+**Note on this package's own `automatic_merge_allowed`:** set to `false` with
+`risk: R4` because `VOC-075-DEP-00` option (a) includes DOC-15 edits (path
+floor R4). The field is self-describing and consistent with the approve-only-R4
+rule this package enforces.
 
 ## Preconditions, monitoring, and outcome
 

@@ -53,7 +53,8 @@ non-applicability: governance / template / package-metadata package.
   product work.** Backfill only removes an incorrect founder-approval gate;
   it does not implement VOC-072 tasks. No mitigation needed beyond clarity
   in T03 evidence.
-- `VOC-075-DEP-00`: Unresolved — DOC-15 reconciliation / possible R4 raise.
+- `VOC-075-DEP-00`: Resolved — option (a). DOC-15 edited under T02 to match
+  approve-only-R4; package risk raised to R4; `automatic_merge_allowed: false`.
 - `VOC-075-DEP-01`: Unresolved — backfill scope (VOC-072 only vs active vs
   all 28).
 - `VOC-075-DEP-02`: Unresolved — lint inclusion / possible R4 raise.
