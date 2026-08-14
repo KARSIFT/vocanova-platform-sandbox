@@ -6,7 +6,7 @@
 - Tasks: `VOC-078-T00` (and `VOC-078-T01` if T00 failed)
 - Tests: `VOC-078-TEST-00`, `VOC-078-TEST-02`
 - Evidence: `VOC-078-EV-00` (and `VOC-078-EV-01` if remediation ran)
-- Result: pending
+- Result: satisfied — run #230 on `26d85c1` (`VOC-078-EV-00`)
 
 Observable outcome:
 
@@ -32,7 +32,7 @@ Observable outcome:
 - Tasks: `VOC-078-T00` (and `VOC-078-T01` if needed)
 - Tests: `VOC-078-TEST-01`
 - Evidence: `VOC-078-EV-00` / `VOC-078-EV-01`
-- Result: pending
+- Result: satisfied — VOC-076 `t02-evidence.md` and `VOC-076-AC-03` aligned (`VOC-078-EV-00`)
 
 Observable outcome:
 
@@ -51,7 +51,7 @@ Observable outcome:
 - Tasks: `VOC-078-T00` / `VOC-078-T01`
 - Tests: `VOC-078-TEST-00`
 - Evidence: `VOC-078-EV-00` / `VOC-078-EV-01`
-- Result: pending
+- Result: pending — AC-00 met; issue #575 still `open` (workflow `GH_TOKEN` required to close)
 
 Observable outcome: GitHub issue #575 is closed only after AC-00 is met.
 Closing #575 while staging still fails, or while evidence still says
@@ -64,7 +64,7 @@ produced PASS, #575 stays open.
 - Tasks: `VOC-078-T00`, `VOC-078-T01`
 - Tests: `VOC-078-TEST-03`
 - Evidence: `VOC-078-EV-00`, `VOC-078-EV-01`
-- Result: pending
+- Result: satisfied — T01 N/A path; no product/workflow edits (`VOC-078-EV-01`)
 
 Observable outcome:
 
