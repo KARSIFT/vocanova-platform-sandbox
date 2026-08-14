@@ -5,17 +5,13 @@ title: 'Governance still violates ''approve only R4'': remove non-R4 automatic_m
   opt-outs'
 type: process
 status: adopted
-risk: R3
-planned_implementation_risk_floor: "Not yet computed by running scripts/governance/classify-change-risk.sh\
-  \ against a real task-scoped file list. This package proposes R3 for the change\
-  \ as a whole when scope stays on AGENTS.md, specs/templates/change-package/, docs/governance/*.md\
-  \ (non-amendment), and flipping automatic_merge_allowed on already-adopted non-R4\
-  \ packages such as VOC-072 \u2014 those paths floor at R3 (or lower for ordinary\
-  \ specs/changes/*). Including a new lint under scripts/governance/ or tooling/governance/,\
-  \ or editing docs/operations/15-ai-native-product-and-engineering-operating-model.md\
-  \ (DOC-15), raises the path floor to R4 per .github/approved-policy/protected-paths.yaml\
-  \ \u2014 see specification.md open questions 1 and 3. This is a draft proposal for\
-  \ the reviewing human at adoption time, not a determination.\n"
+risk: R4
+planned_implementation_risk_floor: "Raised to R4 under VOC-075-T02. VOC-075-DEP-00\
+  \ option (a) selected: DOC-15 (docs/operations/15-ai-native-product-and-engineering-operating-model.md)\
+  \ is edited to match approve-only-R4 drafting. That path floors at R4 per\
+  \ .github/approved-policy/protected-paths.yaml. Package risk and automatic_merge_allowed\
+  \ were re-declared to match (R4 / false). Founder approval is required on the exact\
+  \ revision that includes the DOC-15 edit.\n"
 canonical_path: specs/changes/VOC-075-governance-still-violates-approve-only-r4-28-non
 authority_model: a003-active
 requirement_source: "GitHub issue #573 (\"Governance still violates 'approve only\
@@ -33,7 +29,10 @@ requirement_approval_status: 'Approved. Founder merged plan PR #574 directly on 
   but adoption fields were never flipped, so implementation was never authorized and
   no task issues opened - discovered during 2026-08-14 repo health audit. Recovered
   per AGENTS.md''s ''Recovering from a merged plan PR that was not adopted first''
-  procedure (issue #301 precedent).'
+  procedure (issue #301 precedent). VOC-075-DEP-00 settled at VOC-075-T02 remediation
+  as option (a): DOC-15 edited to match approve-only-R4; package risk raised to R4;
+  automatic_merge_allowed set false. Founder approval still required on the exact
+  DOC-15 revision. DEP-01 and DEP-02 remain open for later tasks.'
 base_branch: develop
 base_sha: null
 target_branch: develop
@@ -45,12 +44,14 @@ owners:
   independent_verification: unassigned
 approval_status: adopted
 implementation_authorized: true
-automatic_merge_allowed: true
+# VOC-075 / issue #573: package risk is R4 (DOC-15 under DEP-00 option a) — self-describing false
+automatic_merge_allowed: false
 production_impact: 'none expected for application behavior. Documentation, template,
   optional lint, and package-field backfill only. Future non-R4 task PRs stop requiring
   a founder approved comment solely because change.yaml opted out. No change to merge-gate.yml
   hard R4 block, release/deploy autonomy, secrets, or production infrastructure configuration
-  beyond the governance text that describes them.
+  beyond the governance text that describes them. Effective class is R4 because T02
+  edits DOC-15 (VOC-075-DEP-00 option a); founder approval is required for that revision.
 
   '
 rollback_required: true
@@ -65,12 +66,11 @@ artifacts:
   release_plan: release-plan.md
 dependencies:
 - id: VOC-075-DEP-00
-  status: "unresolved at drafting time. Whether DOC-15 (\xA717.2/\xA717.3 opt-out\
-    \ wording) must be edited in the same PR under AGENTS.md's doc-reconciliation\
-    \ rule once non-R4 packages are forbidden from setting automatic_merge_allowed:\
-    \ false. DOC-15 currently describes a general per-package opt-out; retiring that\
-    \ for R0\u2013R3 may require a DOC-15 edit (R4 path floor). See specification.md\
-    \ open question 1.\n"
+  status: "resolved — option (a). DOC-15 \xA717.1/\xA717.2/\xA717.3 (and DG5-08 correction)\
+    \ edited under VOC-075-T02 so they no longer describe a general non-R4 founder-approval\
+    \ opt-out via automatic_merge_allowed. Package risk re-declared R4; automatic_merge_allowed\
+    \ set false. Recorded at T02 remediation (issue #573 / approve-only-R4). See\
+    \ specification.md open question 1; VOC-075-EV-02.\n"
 - id: VOC-075-DEP-01
   status: 'unresolved at drafting time. Backfill scope for the 28 non-R4 packages
     currently at automatic_merge_allowed: false. Issue #573 requires at least VOC-072
@@ -100,8 +100,8 @@ affected_areas:
 - docs/governance/change-risk-classification.md (reconcile if it contains conflicting
   carve-out language; drafting-time grep found none for automatic_merge specifically)
 - docs/governance/approval-matrix.md (same)
-- docs/operations/15-ai-native-product-and-engineering-operating-model.md (conditional
-  on VOC-075-DEP-00; R4 floor)
+- docs/operations/15-ai-native-product-and-engineering-operating-model.md (VOC-075-DEP-00
+  option a; R4 floor — included in T02)
 - specs/changes/VOC-072-same-request-as-github-issue-535-voc-067-t05/change.yaml (required
   backfill minimum per issue
 - Other specs/changes/VOC-*/change.yaml listed in issue
@@ -119,7 +119,7 @@ release:
   mode: not-authorized-by-this-package
   production_impact: none-expected
   deployment: not-authorized-by-this-package
-  automatic_merge: true
+  automatic_merge: false
   migration_required: false
   rollback_required: true
 repository_adoption_status: adopted
@@ -130,6 +130,7 @@ implementation_authority_status: not-exercised
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
-standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
-blocking_reasons: None - adopted. VOC-075's open dependencies remain investigation/scope
-  questions for T00 to resolve per specification.md; they do not block T00 from starting.
+standing_technical_steward_approval: not-required-solely-for-risk-class-under-active-A003
+blocking_reasons: 'None - adopted. VOC-075-DEP-00 resolved as option (a) at T02 (DOC-15
+  edited; package risk R4). VOC-075-DEP-01 and VOC-075-DEP-02 remain open for T03/T04.
+  Founder approval required on the exact revision that includes the DOC-15 edit.'

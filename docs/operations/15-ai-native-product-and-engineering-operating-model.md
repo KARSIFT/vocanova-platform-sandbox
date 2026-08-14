@@ -1566,10 +1566,11 @@ remediate (only on a FAIL verdict or a plain CI failure) - re-dispatches the imp
            attempt; if it fails again, stops and escalates to a human instead of trying a third time
     ↓
 merge-gate - risk-aware, fails closed: auto-merges into `develop` only when the project's
-             switch is on AND checks are green AND the verdict passed AND this specific
-             package hasn't opted itself out (`automatic_merge_allowed: false` in its own
-             change.yaml) - otherwise requires the founder's literal "approved" comment,
-             which is always a valid decision at any risk class, including R4/unparseable risk
+             switch is on AND checks are green AND the verdict passed AND the package has
+             `automatic_merge_allowed: true` (required for R0–R3; R4 packages must set
+             `false` and never auto-merge) - otherwise requires the founder's literal
+             "approved" comment, which is always a valid decision at any risk class,
+             including R4/unparseable risk
     ↓
 release - once every task in a package's roster is closed, opens one "Release: <package>" issue;
           exactly one founder "approved" reply promotes `develop` → `main` via a real PR
@@ -1588,7 +1589,7 @@ the `develop` → `main` promotion PR merging. Any hosted deployment is separate
 | Draft a change package from a request | `planner` role (model resolved from `karsift-ai-infra`'s `config/roles.yml` - not fixed to any one vendor) |
 | Implement an approved task | `implementer` role (same convention) |
 | Independently verify an implementation | `reviewer` role (same convention - **must** stay a different vendor from `implementer` when possible; see `config/roles.yml`'s own notes for when that's been temporarily compromised and why) |
-| Merge implementation PR into `develop` | Deterministic checks green + reviewer PASS + package not opted out, **or** founder's literal `approved` comment (valid at any risk class) |
+| Merge implementation PR into `develop` | Deterministic checks green + reviewer PASS + package `automatic_merge_allowed: true` (R0–R3; R4 requires `false` and never auto-merges), **or** founder's literal `approved` comment (valid at any risk class) |
 | Merge `develop` into `main` | Founder's literal `approved` reply on the package's release issue - one approval per completed package, not per PR |
 | Publish `main` to production | Not built - out of scope for the live pipeline today |
 
@@ -1596,10 +1597,12 @@ the `develop` → `main` promotion PR merging. Any hosted deployment is separate
 
 R0 through R3 implementation PRs may auto-merge into `develop` without founder approval, but only
 when all of the following hold: the project has explicitly enabled the auto-merge switch, CI is
-green, the reviewer's verdict passed, and the specific package hasn't set its own
-`automatic_merge_allowed: false` opt-out. R4, or a PR with no parseable risk declaration at all,
-never auto-merges regardless of any switch - both always require the founder's literal `approved`
-comment. Risk is read from a `Risk classification: R#` line in the PR body; a calling project may
+green, the reviewer's verdict passed, and the package has `automatic_merge_allowed: true` (required
+for R0–R3; planners must not set `false` on non-R4 packages — see `AGENTS.md` and issue #573 /
+VOC-075). R4 packages must set `automatic_merge_allowed: false` and never auto-merge regardless of
+any switch. A PR with no parseable risk declaration at all also never auto-merges — R4 and
+unparseable risk always require the founder's literal `approved` comment. Risk is read from a
+`Risk classification: R#` line in the PR body; a calling project may
 supply its own deterministic, path-based risk floor (this project's is
 `docs/governance/change-risk-classification.md` /
 `.github/approved-policy/protected-paths.yaml`) that an AI-proposed risk value can raise but never
@@ -2978,10 +2981,12 @@ Every implementation PR may merge into `develop` after required CI, specialist c
 
 *Correction 2026-07-24: superseded by A-003 §10 and the live pipeline - see §17.0. Verification is
 not vendor-locked to Claude (the `reviewer` role is config-driven, currently a temporary
-same-vendor compromise), the founder's `approved` comment is always a valid override at any risk
-class, and a per-package `automatic_merge_allowed: false` opt-out can require founder approval
-even when checks/review would otherwise pass. Preserved here as historical record, not current
-rule.*
+same-vendor compromise), and the founder's `approved` comment is always a valid override at any risk
+class. Preserved here as historical record, not current rule.*
+
+*Correction 2026-08-14 (VOC-075 / issue #573): approve-only-R4 drafting — only R4 packages set
+`automatic_merge_allowed: false`; R0–R3 packages must set `true` and must not use this field to
+require founder approval on merge. See §17.3 and `AGENTS.md`.*
 
 ### DG5-09 — Automatic staging
 

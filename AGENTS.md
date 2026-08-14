@@ -64,10 +64,11 @@ verification, R4 founder authority, or EHR.
 - **R4:** set `automatic_merge_allowed: false`. This is redundant with
   merge-gate's R4 hard block but keeps the package record self-describing.
 
-**Doc reconciliation (`VOC-075-DEP-00`):** DOC-15 §17.2/§17.3 may still describe
-a general per-package opt-out until `VOC-075-T02` resolves whether DOC-15 itself
-is edited to match approve-only-R4 drafting. Until then, merge-gate still
-mechanically honors `automatic_merge_allowed: false` when present, but planners
+**Doc reconciliation (`VOC-075-DEP-00`):** Resolved as option (a) under
+`VOC-075-T02`. DOC-15 §17.1–§17.3 (and DG5-08 correction) now match this
+approve-only-R4 drafting rule: only R4 packages set `automatic_merge_allowed:
+false`; R0–R3 must set `true`. Merge-gate still mechanically honors a residual
+`false` when present (e.g. historical packages not yet backfilled), but planners
 must not draft that opt-out on non-R4 packages (founder instruction, issue #573).
 
 Do not leave the change-package template value unexamined. Review this rule and set

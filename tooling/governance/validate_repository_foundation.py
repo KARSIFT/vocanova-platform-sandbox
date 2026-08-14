@@ -36,6 +36,41 @@ VOC002_PATH = "specs/changes/VOC-002-a003-governance-transition"
 VOC003_PATH = "specs/changes/VOC-003-a003-lifecycle-sync"
 VOC004_PATH = "specs/changes/VOC-004-canonical-adoption-doc-17-doc-18"
 
+# VOC-075-T04 / issue #573 (DEP-02 option a, DEP-01 option b): scan every
+# specs/changes/*/change.yaml and fail when automatic_merge_allowed: false is set
+# without risk: R4. Historical packages that still carried the pre-VOC-075
+# violation at T04 implementation time are grandfathered until a follow-up
+# backfill removes their false opt-out (see AGENTS.md approve-only-R4 rule).
+VOC075_HISTORICAL_NON_R4_FALSE_PACKAGE_IDS = frozenset({
+    "VOC-005",
+    "VOC-006",
+    "VOC-010",
+    "VOC-011",
+    "VOC-013",
+    "VOC-014",
+    "VOC-015",
+    "VOC-016",
+    "VOC-017",
+    "VOC-018",
+    "VOC-019",
+    "VOC-020",
+    "VOC-021",
+    "VOC-022",
+    "VOC-024",
+    "VOC-025",
+    "VOC-026",
+    "VOC-047",
+    "VOC-048",
+    "VOC-050",
+    "VOC-051",
+    "VOC-052",
+    "VOC-053",
+    "VOC-063",
+    "VOC-065",
+    "VOC-066",
+    "VOC-068",
+})
+
 REQUIRED_FILES = (
     "AGENTS.md",
     "CLAUDE.md",
@@ -868,6 +903,36 @@ def validate_governance_language(validation: Validation) -> None:
             validation.error(".github/pull_request_template.md", f"missing required field: {marker}")
 
 
+def parse_change_yaml_top_level_field(text: str, field: str) -> str | None:
+    match = re.search(rf"^{re.escape(field)}:\s*(\S+)\s*$", text, re.MULTILINE)
+    if not match:
+        return None
+    return match.group(1).strip("\"'")
+
+
+def validate_automatic_merge_drafting(validation: Validation) -> None:
+    changes_root = validation.root / "specs/changes"
+    if not changes_root.is_dir():
+        validation.error("specs/changes/", "change-package directory is missing")
+        return
+    for change_yaml in sorted(changes_root.glob("*/change.yaml")):
+        relative = change_yaml.relative_to(validation.root).as_posix()
+        text = validation.read(relative)
+        if parse_change_yaml_top_level_field(text, "automatic_merge_allowed") != "false":
+            continue
+        risk = parse_change_yaml_top_level_field(text, "risk") or ""
+        if risk == "R4":
+            continue
+        package_id = parse_change_yaml_top_level_field(text, "id") or ""
+        if package_id in VOC075_HISTORICAL_NON_R4_FALSE_PACKAGE_IDS:
+            continue
+        validation.error(
+            relative,
+            "automatic_merge_allowed: false requires risk: R4 (approve-only-R4; "
+            f"see AGENTS.md and VOC-075 / issue #573); found risk: {risk or 'missing'!r}",
+        )
+
+
 def validate_false_activation(validation: Validation) -> None:
     # AUTONOMOUS-RELEASE-AUTHORIZED-2026-08-08: protected-paths.yaml is now
     # legitimately authorized to say automatic_merge_allowed: true and
@@ -922,6 +987,7 @@ def validate_repository(root: Path) -> list[str]:
     validate_ownership(validation)
     validate_workflow(validation)
     validate_governance_language(validation)
+    validate_automatic_merge_drafting(validation)
     validate_false_activation(validation)
     return sorted(set(validation.errors))
 
