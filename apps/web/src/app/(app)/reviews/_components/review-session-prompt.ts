@@ -26,3 +26,15 @@ export function isReviewActionDisabled(
 ): boolean {
   return isSubmitting || isRefetching;
 }
+
+/**
+ * Batch-end `listDueWords` keeps the prior card mounted until the response
+ * arrives. Leaving that card's feedback UI (disabled MC options, locked
+ * continue/rate) visible is the run #227 / issue #575 staging failure mode:
+ * automation and learners both see a meaning-option group that never becomes
+ * interactable. While refetching, replace the prompt body with a busy status
+ * instead (VOC-076-T02 narrow gap).
+ */
+export function shouldShowReviewCardPrompt(isRefetching: boolean): boolean {
+  return !isRefetching;
+}
