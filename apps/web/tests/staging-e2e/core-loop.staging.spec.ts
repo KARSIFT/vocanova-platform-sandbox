@@ -216,31 +216,38 @@ async function chooseWordLink(page: Page): Promise<Locator> {
 // function actually gets to interact with it, true when a card was
 // genuinely reviewed - the caller must treat false as "stop, don't
 // count this iteration," not a failure.
+//
+// After Good/Continue, submitReview and (on batch end) listDueWords can
+// leave the prior card mounted in feedback with every MC option disabled.
+// Waiting only for a visible MC group / Card N of M then re-entering this
+// helper is the VOC-076 run #227 failure mode. Settle on a *prompt-ready*
+// control (enabled Show answer, enabled MC option) or caught-up before
+// returning, and require the same signal at entry.
 async function reviewOneCard(page: Page): Promise<boolean> {
-  const showAnswerButton = page.getByRole("button", { name: "Show answer" });
+  const showAnswerButton = page.getByRole("button", {
+    name: "Show answer",
+    disabled: false,
+  });
   const multipleChoiceGroup = page.getByRole("group", {
     name: /^Choose the meaning for /,
   });
+  const enabledMcOption = multipleChoiceGroup
+    .getByRole("button", { disabled: false })
+    .first();
   const caughtUpHeading = page.getByRole("heading", {
     name: "You're all caught up",
     level: 2,
   });
 
-  // Waits for any of THREE settled states, not just the two card-prompt
-  // types. Two independent races were already found live here,
-  // 2026-08-09: (1) the card shell can render before the prompt-type-
-  // specific content does, so checking only one type's button can miss
-  // the other type entirely; (2) between the outer loop confirming "a
-  // card is showing" and this function actually getting to interact
-  // with it, the queue can empty out from under it (the same
-  // outer-loop race, recurring one level up, still observed after
-  // fixing (1) alone). Rather than keep chasing this at the call site,
-  // this function now independently re-confirms whether a card still
-  // exists and tells the caller the truth instead of assuming its
-  // caller's earlier check is still valid.
-  await expect(
-    showAnswerButton.or(multipleChoiceGroup).or(caughtUpHeading).first(),
-  ).toBeVisible();
+  // Batch-end listDueWords and in-flight submitReview can exceed the
+  // default 20s expect timeout while the prior feedback card is still
+  // mounted; allow a longer settle window inside the 240s journey budget.
+  const PROMPT_READY_TIMEOUT_MS = 120_000;
+
+  const promptReady = () =>
+    showAnswerButton.or(enabledMcOption).or(caughtUpHeading).first();
+
+  await expect(promptReady()).toBeVisible({ timeout: PROMPT_READY_TIMEOUT_MS });
 
   if (await caughtUpHeading.isVisible()) {
     return false;
@@ -248,25 +255,39 @@ async function reviewOneCard(page: Page): Promise<boolean> {
 
   if (await showAnswerButton.isVisible()) {
     await showAnswerButton.click();
-    await page.getByRole("button", { name: "Good" }).click();
+    const goodButton = page.getByRole("button", {
+      name: "Good",
+      disabled: false,
+    });
+    await expect(goodButton).toBeVisible();
+    await goodButton.click();
+    await expect(promptReady()).toBeVisible({
+      timeout: PROMPT_READY_TIMEOUT_MS,
+    });
     return true;
   }
 
   // Multiple-choice prompt. Which option is correct is not knowable
   // from the rendered page, so the journey answers, then follows
   // whichever branch the app shows - both submit a real attempt.
-  const firstMcOption = multipleChoiceGroup.getByRole("button").first();
-  await expect(firstMcOption).toBeEnabled();
-  await firstMcOption.click();
+  // enabledMcOption is already the readiness signal (VOC-076-AC-02).
+  await enabledMcOption.click();
 
-  const ratingButton = page.getByRole("button", { name: "Good" });
-  const continueButton = page.getByRole("button", { name: "Continue" });
+  const ratingButton = page.getByRole("button", {
+    name: "Good",
+    disabled: false,
+  });
+  const continueButton = page.getByRole("button", {
+    name: "Continue",
+    disabled: false,
+  });
   await expect(ratingButton.or(continueButton)).toBeVisible();
   if (await ratingButton.isVisible()) {
     await ratingButton.click();
-    return true;
+  } else {
+    await continueButton.click();
   }
-  await continueButton.click();
+  await expect(promptReady()).toBeVisible({ timeout: PROMPT_READY_TIMEOUT_MS });
   return true;
 }
 

@@ -13,13 +13,12 @@ approval_status: not-approved
 implementation_authorized: false
 # Per AGENTS.md "Drafting automatic_merge_allowed": set per declared risk class
 # before the plan PR is reviewed — do not leave this as an unexamined inherit.
-# R0–R2: true unless the package records a specific reason to require founder
-# eyes on the merge into develop. R3: true or false with stated justification
-# (comment here or adjacent one-line note). R4: false (redundant with merge-gate's
-# R4 block; keeps the package record self-describing). Deliberate false on R0–R2
-# must state why. This field is a per-package opt-out from auto-merge, not a
-# substitute for risk classification, CI, independent verification, R4 founder
-# authority, or EHR.
+# R0–R3: true always. Do not set false to require founder eyes on merge;
+# sensitivity (auth, secrets, production infrastructure, or similar) does not
+# justify a non-R4 opt-out. R4: false (redundant with merge-gate's R4 hard
+# block; keeps the package record self-describing). Setting true does not bypass
+# risk classification, path-based floors, CI, independent verification, R4
+# founder authority, or EHR.
 automatic_merge_allowed: true
 production_impact: unknown
 rollback_required: true

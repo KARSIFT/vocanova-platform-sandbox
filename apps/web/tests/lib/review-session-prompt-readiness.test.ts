@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import {
   isMultipleChoiceOptionDisabled,
   isReviewActionDisabled,
+  shouldShowReviewCardPrompt,
 } from "../../src/app/(app)/reviews/_components/review-session-prompt";
 
 describe("review-session prompt readiness (VOC-076-T01)", () => {
@@ -36,5 +37,12 @@ describe("review-session prompt readiness (VOC-076-T01)", () => {
     assert.equal(isReviewActionDisabled(true, false), true);
     assert.equal(isReviewActionDisabled(false, true), true);
     assert.equal(isReviewActionDisabled(true, true), true);
+  });
+
+  it("hides the prior card prompt body while batch-end refetch is in flight (VOC-076-T02)", () => {
+    // Leaving the completed feedback MC fieldset mounted during listDueWords
+    // is the run #227 failure mode (disabled options, aria-pressed=false).
+    assert.equal(shouldShowReviewCardPrompt(false), true);
+    assert.equal(shouldShowReviewCardPrompt(true), false);
   });
 });

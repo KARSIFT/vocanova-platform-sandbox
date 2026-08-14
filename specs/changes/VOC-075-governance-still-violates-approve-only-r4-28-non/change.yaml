@@ -4,7 +4,7 @@ slug: governance-still-violates-approve-only-r4-28-non
 title: 'Governance still violates ''approve only R4'': remove non-R4 automatic_merge
   opt-outs'
 type: process
-status: draft
+status: adopted
 risk: R3
 planned_implementation_risk_floor: "Not yet computed by running scripts/governance/classify-change-risk.sh\
   \ against a real task-scoped file list. This package proposes R3 for the change\
@@ -29,7 +29,11 @@ requirement_source: "GitHub issue #573 (\"Governance still violates 'approve onl
   \ Repo scan on develop found 28 non-R4 packages still at automatic_merge_allowed:\
   \ false; VOC-072 is called out as actively blocking merges that should not need\
   \ founder attention under that rule.\n"
-requirement_approval_status: not-approved
+requirement_approval_status: 'Approved. Founder merged plan PR #574 directly on 2026-08-13
+  but adoption fields were never flipped, so implementation was never authorized and
+  no task issues opened - discovered during 2026-08-14 repo health audit. Recovered
+  per AGENTS.md''s ''Recovering from a merged plan PR that was not adopted first''
+  procedure (issue #301 precedent).'
 base_branch: develop
 base_sha: null
 target_branch: develop
@@ -39,8 +43,8 @@ owners:
   package_preparation: planner (drafting only; adoption remains a human decision)
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: adopted
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: 'none expected for application behavior. Documentation, template,
   optional lint, and package-field backfill only. Future non-R4 task PRs stop requiring
@@ -104,9 +108,9 @@ affected_areas:
 - scripts/governance/ and/or tooling/governance/ (conditional on VOC-075-DEP-02; R4
   floor)
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: not-started
+  status: proposed
   target_branch: develop
   pull_request: null
   authority_issue: null
@@ -118,15 +122,14 @@ release:
   automatic_merge: true
   migration_required: false
   rollback_required: true
-repository_adoption_status: not-adopted
-adoption_pr: null
-adoption_evidence: null
+repository_adoption_status: adopted
+adoption_pr: 574
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/574
 implementation_authority_before_adoption: false
-implementation_authority_status: not-authorized
+implementation_authority_status: not-exercised
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
-blocking_reasons: "Draft package \u2014 not adopted. Adoption must settle VOC-075-DEP-00\
-  \ (DOC-15), VOC-075-DEP-01 (backfill scope), and VOC-075-DEP-02 (lint / possible\
-  \ R4 raise) before implementation is authorized.\n"
+blocking_reasons: None - adopted. VOC-075's open dependencies remain investigation/scope
+  questions for T00 to resolve per specification.md; they do not block T00 from starting.
