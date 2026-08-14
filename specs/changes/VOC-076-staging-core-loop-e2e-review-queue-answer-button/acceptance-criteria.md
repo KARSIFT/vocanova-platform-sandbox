@@ -50,10 +50,10 @@ gate remain intact.
 ## VOC-076-AC-03 — Real staging verification proves step 5 completes past the MC click
 
 - Requirement source: issue #575; `specification.md` scope item 3
-- Tasks: `VOC-076-T02`
+- Tasks: `VOC-076-T02`, `VOC-078-T00` (real staging proof recorded post-#598)
 - Tests: `VOC-076-TEST-04`
-- Evidence: `VOC-076-EV-02`
-- Result: pending
+- Evidence: `VOC-076-EV-02`, `VOC-078-EV-00`
+- Result: satisfied
 
 A real `deploy-staging.yml` run after T01 merges executes
 `tests/staging-e2e/core-loop.staging.spec.ts` and completes step 5 without the

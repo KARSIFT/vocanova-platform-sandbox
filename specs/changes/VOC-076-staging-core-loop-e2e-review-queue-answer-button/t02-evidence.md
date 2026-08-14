@@ -12,9 +12,9 @@ evidence)
 
 | Criterion | Status |
 |-----------|--------|
-| VOC-076-AC-03 — step 5 completes past MC click on real staging | **Pending post-merge re-verification** (T01 run failed; narrow gap fixed in this revision; green `deploy-staging` run not yet available on the fixed revision) |
+| VOC-076-AC-03 — step 5 completes past MC click on real staging | **Satisfied** — post-#598 green run #230 on `26d85c1` (recorded by VOC-078-T00 / `VOC-078-EV-00`) |
 | VOC-076-AC-04 — package boundaries respected | **Pass** |
-| MC coverage (AC-03 rule) | **Met on failing T01 run #227** — MC fieldset + disabled option observed |
+| MC coverage (AC-03 rule) | **Met** — run #227 baseline MC fieldset; run #230 green core-loop on fixed revision (see VOC-078 `t00-evidence.md`) |
 
 T02 attempt 1 correctly recorded that T01 did **not** close issue #575 on real
 staging. Attempt 2 implements the **narrow gap** that verification surfaced
@@ -101,15 +101,14 @@ under the post-T01 disable rule.
 
 ## AC-03 status (honest)
 
-| Requirement | This revision |
-|-------------|---------------|
-| Real `deploy-staging.yml` run after the fix | **Not yet** — fix lives on `agent/voc-076-voc-076-t02`; implementer has no merge/deploy authority |
-| Step 5 completes past MC click | **Not yet evidenced** on a fixed revision |
-| MC coverage when MC was the failure mode | Satisfied on run #227 for diagnosis; must be re-confirmed on a green post-fix run |
+| Requirement | Status |
+|-------------|--------|
+| Real `deploy-staging.yml` run after the fix | **Satisfied** — run **#230** on `26d85c1` (PR #598 merge): https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/31803001550 |
+| Step 5 completes past MC click | **Satisfied** — core-loop journey green; no run #227 `toBeEnabled` / issue #575 disabled-button hang |
+| MC coverage when MC was the failure mode | **Satisfied** — see VOC-078 `t00-evidence.md` §MC coverage (run #227 MC baseline + post-fix green run) |
 
-**Do not treat run #227 as AC-03 closure.** After this revision merges to
-`develop`, record the new `deploy-staging` run URL here (or in a follow-up
-evidence amend) once step 5 passes with MC exercised.
+Recorded by **VOC-078-T00** (`VOC-078-EV-00`, 2026-08-14). Run #227 remains the
+historical FAIL baseline; it is not rewritten as a PASS.
 
 ## Package boundaries (VOC-076-AC-04)
 
@@ -128,7 +127,8 @@ evidence amend) once step 5 passes with MC exercised.
 | [31748423831](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/31748423831) #217 | `e3f732c` (pre-VOC-076; issue #575) | `multipleChoiceGroup…click()` | **240000ms** | Yes |
 | [31791692511](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/31791692511) #226 | `9b3d96f` (T00) | `multipleChoiceGroup…click()` | **240000ms** | Yes |
 | [31791701520](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/31791701520) #227 | `d305632` (T01) | `toBeEnabled` L259 | **20000ms** | Yes |
-| *(pending)* | this T02 gap-fix revision after merge | *(expect step 5 pass)* | — | required |
+| [31803001550](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/31803001550) #230 | `26d85c1` (T02 / #598) | *(none — step 5 pass)* | **16.5s** (full journey) | Yes (see VOC-078-EV-00) |
+| [31814202708](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/31814202708) #231 | `1664282` (later develop) | *(none — step 5 pass)* | **13.8s** (full journey) | Corroborating |
 
 ## Commands run during T02 remediation
 
@@ -152,6 +152,6 @@ No `deploy-staging` was dispatched from this role.
 
 | Test | Result |
 |------|--------|
-| VOC-076-TEST-04 | **Incomplete for AC-03 PASS** until a green post-fix staging run is recorded; diagnosis + gap fix documented |
-| VOC-076-AC-03 | **Not yet met** (blocked on post-merge `deploy-staging`) |
+| VOC-076-TEST-04 | **Pass** — green post-fix staging run #230 recorded (VOC-078-EV-00) |
+| VOC-076-AC-03 | **Satisfied** — run #230 on `26d85c1` |
 | VOC-076-AC-04 | **Pass** |
