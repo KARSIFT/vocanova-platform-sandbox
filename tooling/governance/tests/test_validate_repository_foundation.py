@@ -503,6 +503,25 @@ class RepositoryFoundationValidatorTests(unittest.TestCase):
         path.write_text(path.read_text(encoding="utf-8") + "automatic_merge: true\n", encoding="utf-8")
         self.assert_failure("false claim")
 
+    def test_non_r4_automatic_merge_false_fails(self) -> None:
+        self.replace(
+            "specs/changes/VOC-077-voc-072-t00-evidence-file-regressed-to-pending/change.yaml",
+            "automatic_merge_allowed: true",
+            "automatic_merge_allowed: false",
+        )
+        self.assert_failure("automatic_merge_allowed: false requires risk: R4")
+
+    def test_historical_non_r4_automatic_merge_false_exemption_passes(self) -> None:
+        # VOC-051 is grandfathered under VOC-075-T04 until a follow-up backfill
+        # flips its automatic_merge_allowed field.
+        text = (self.root / "specs/changes/VOC-051-add-hourly-sentry-based-log-error-monitoring/change.yaml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("automatic_merge_allowed: false", text)
+        self.assertIn("risk: R3", text)
+        result = self.run_validator()
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
     def test_internal_error_returns_two_and_fails_closed(self) -> None:
         spec = importlib.util.spec_from_file_location("foundation_validator", VALIDATOR)
         self.assertIsNotNone(spec)
