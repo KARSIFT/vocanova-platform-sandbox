@@ -277,7 +277,8 @@ export function ReviewSession({
                 <div className="space-y-[var(--spacing-sm)]">
                   {options.map((option) => {
                     const isSelected = selectedOption === option.meaningId;
-                    const isCorrect = option.meaningId === currentCard.meaningId;
+                    const isCorrect =
+                      option.meaningId === currentCard.meaningId;
                     const showCorrectness = phase === "feedback";
                     const isDisabled = isMultipleChoiceOptionDisabled(
                       phase,
@@ -378,7 +379,8 @@ export function ReviewSession({
                         type="button"
                         onClick={() =>
                           submitAttempt({
-                            result: rating === "again" ? "incorrect" : "correct",
+                            result:
+                              rating === "again" ? "incorrect" : "correct",
                             rating,
                             selectedOptionMeaningId:
                               promptType === "multiple_choice"
