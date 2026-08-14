@@ -47,7 +47,8 @@ owners:
   independent_verification: unassigned
 approval_status: adopted
 implementation_authorized: true
-automatic_merge_allowed: false
+# VOC-075 / issue #573: R3 — approve-only-R4; non-R4 packages must not opt out via this field
+automatic_merge_allowed: true
 production_impact: "expected once verify-only/--apply run with the new token. This\
   \ package does not itself remove the Cloudflare :443\u2192:8443 remap; it unblocks\
   \ the repository-driven API path VOC-067 already authorized. Mis-scoped or over-broad\
