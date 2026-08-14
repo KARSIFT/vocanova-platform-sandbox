@@ -52,6 +52,19 @@ VOC-002 was not an exception: it used the pre-A-003 requirements in full. Its
 technical-steward approval was a one-time migration requirement, is now exhausted,
 and is not a standing future rule.
 
+## `develop` merge and `automatic_merge_allowed`
+
+Under active A-003, routine R0–R3 work does not require founder approval
+merely because of risk class. Merge-gate may auto-merge an implementation PR
+into `develop` when CI is green, independent verification passed, the project
+auto-merge switch is on, and the package has `automatic_merge_allowed: true`
+(required for R0–R3 drafting per `AGENTS.md` and
+[issue #573](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/573)).
+R4 always requires founder approval; R4 packages must set
+`automatic_merge_allowed: false`. The founder's literal `approved` comment
+remains a valid override when the gate requires approval (R4, unparseable risk,
+or a residual `false` on an existing package).
+
 ## Independent verifier result
 
 The verifier reports `PASS`, `PASS WITH NON-BLOCKING FINDINGS`, or `FAIL`. Any open
