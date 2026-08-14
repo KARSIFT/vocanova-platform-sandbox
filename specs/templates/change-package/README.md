@@ -29,6 +29,7 @@ approvals, deployment/rollback controls, hosted activation, and closure evidence
 
 Set `automatic_merge_allowed` in `change.yaml` per the risk-class rule in
 `AGENTS.md` (subsection "Drafting `automatic_merge_allowed` in `change.yaml`")
-before the plan PR is reviewed. The template literal (`true`) matches routine
-R0–R2; R4 packages and deliberate opt-outs must set `false` with a stated
-reason in `change.yaml`.
+before the plan PR is reviewed. **R0–R3** packages must set `true`; **R4**
+packages must set `false` (self-describing; redundant with merge-gate's R4 hard
+block). The template literal (`true`) is correct for the default R0 risk class.
+Do not set `false` on non-R4 packages to require founder approval on merge.
