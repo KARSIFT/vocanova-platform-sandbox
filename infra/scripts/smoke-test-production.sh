@@ -2,6 +2,8 @@
 set -euo pipefail
 
 # VOC-038-T02 — repeatable production smoke-test suite.
+# VOC-085-T01 — content-aware journey-situations checks and detail API
+# verification (fail closed on HTTP 200 with an empty list).
 #
 # Replaces the manual curl/SSH checks used ad hoc during R2 (VOC-037)
 # with a scripted, callable-from-CI-or-standalone suite. Every check
@@ -65,6 +67,27 @@ skip() {
   echo "SKIP: $1"
 }
 
+# http_get_authed <url> <cookie> - performs one GET with the smoke cookie.
+# Sets _http_last_status and _http_last_body.
+_http_last_status=""
+_http_last_body=""
+http_get_authed() {
+  local url="$1" cookie="$2"
+  local tmp
+  tmp="$(mktemp)"
+  _http_last_status=""
+  _http_last_body=""
+  local status
+  status="$(curl -sS --max-time 10 -o "$tmp" -w "%{http_code}" \
+    -H "Cookie: $cookie" \
+    "$url" 2>/dev/null || echo "000")"
+  if [ -f "$tmp" ]; then
+    _http_last_body="$(cat "$tmp")"
+  fi
+  rm -f "$tmp"
+  _http_last_status="$status"
+}
+
 # json_field <json> <dotted.path> - reads a field via jq if available,
 # else falls back to python3. Both keep this script portable across a
 # GitHub Actions runner (jq preinstalled) and a founder's local shell
@@ -84,6 +107,41 @@ try:
 except Exception:
     sys.exit(1)
 ' "$json" "$path"
+  fi
+}
+
+# json_jq <json> <filter> - small jq-shaped queries used by the core-loop
+# content checks. The python3 fallback implements only the filters this
+# script needs so local shells without jq still work.
+json_jq() {
+  local json="$1" filter="$2"
+  if command -v jq >/dev/null 2>&1; then
+    printf '%s' "$json" | jq -er "$filter" 2>/dev/null
+  else
+    python3 -c '
+import json, sys
+try:
+    data = json.loads(sys.argv[1])
+    f = sys.argv[2]
+    if f == ".items | length":
+        print(len(data.get("items") or []))
+    elif f == ".items[0].slug // empty":
+        items = data.get("items") or []
+        print(items[0].get("slug") or "" if items else "")
+    elif f == ".situation.slug // empty":
+        print((data.get("situation") or {}).get("slug") or "")
+    elif f == ".meanings | length":
+        print(len(data.get("meanings") or []))
+    elif f == ".meanings[0].wordSlug // empty":
+        meanings = data.get("meanings") or []
+        print(meanings[0].get("wordSlug") or "" if meanings else "")
+    elif f == ".word.slug // empty":
+        print((data.get("word") or {}).get("slug") or "")
+    else:
+        sys.exit(1)
+except Exception:
+    sys.exit(1)
+' "$json" "$filter"
   fi
 }
 
@@ -193,13 +251,70 @@ else
     fail "GET /api/v1/me returned $me_status with smoke-test session (expected 200)"
   fi
 
-  situations_status="$(curl -sS --max-time 10 -o /dev/null -w "%{http_code}" \
-    -H "Cookie: $smoke_session_cookie" \
-    "$api_base_url/api/v1/journey-situations" || echo "000")"
-  if [ "$situations_status" = "200" ]; then
-    pass "GET /api/v1/journey-situations returned 200 with smoke-test session"
-  else
+  http_get_authed "$api_base_url/api/v1/journey-situations" "$smoke_session_cookie"
+  situations_status="$_http_last_status"
+  situations_body="$_http_last_body"
+  word_slug=""
+  if [ "$situations_status" != "200" ]; then
     fail "GET /api/v1/journey-situations returned $situations_status with smoke-test session (expected 200)"
+  elif [ -z "$situations_body" ]; then
+    fail "GET /api/v1/journey-situations returned 200 with an empty body"
+  else
+    situations_count="$(json_jq "$situations_body" '.items | length' || echo "")"
+    if [ -z "$situations_count" ] || [ "$situations_count" -lt 1 ] 2>/dev/null; then
+      fail "GET /api/v1/journey-situations returned 200 but items list is empty (expected canonical P1 content)"
+    else
+      pass "GET /api/v1/journey-situations returned 200 with $situations_count situation(s)"
+    fi
+
+    situation_slug="$(json_jq "$situations_body" '.items[0].slug // empty' || echo "")"
+    if [ -z "$situation_slug" ]; then
+      fail "journey-situations response missing first situation slug"
+    else
+      http_get_authed \
+        "$api_base_url/api/v1/journey-situations/$situation_slug" \
+        "$smoke_session_cookie"
+      situation_detail_status="$_http_last_status"
+      situation_detail_body="$_http_last_body"
+      if [ "$situation_detail_status" != "200" ]; then
+        fail "GET /api/v1/journey-situations/$situation_slug returned $situation_detail_status (expected 200)"
+      elif [ -z "$situation_detail_body" ]; then
+        fail "GET /api/v1/journey-situations/$situation_slug returned 200 with an empty body"
+      else
+        detail_situation_slug="$(json_jq "$situation_detail_body" '.situation.slug // empty' || echo "")"
+        meanings_count="$(json_jq "$situation_detail_body" '.meanings | length' || echo "")"
+        word_slug="$(json_jq "$situation_detail_body" '.meanings[0].wordSlug // empty' || echo "")"
+        if [ "$detail_situation_slug" != "$situation_slug" ]; then
+          fail "situation detail slug '$detail_situation_slug' does not match list slug '$situation_slug'"
+        elif [ -z "$meanings_count" ] || [ "$meanings_count" -lt 1 ] 2>/dev/null; then
+          fail "situation detail for $situation_slug has no meanings"
+        elif [ -z "$word_slug" ]; then
+          fail "situation detail for $situation_slug missing first wordSlug"
+        else
+          pass "GET /api/v1/journey-situations/$situation_slug returned situation with meanings"
+        fi
+      fi
+    fi
+
+    if [ -n "$word_slug" ]; then
+      http_get_authed \
+        "$api_base_url/api/v1/canonical-words/$word_slug" \
+        "$smoke_session_cookie"
+      word_detail_status="$_http_last_status"
+      word_detail_body="$_http_last_body"
+      if [ "$word_detail_status" != "200" ]; then
+        fail "GET /api/v1/canonical-words/$word_slug returned $word_detail_status (expected 200)"
+      elif [ -z "$word_detail_body" ]; then
+        fail "GET /api/v1/canonical-words/$word_slug returned 200 with an empty body"
+      else
+        detail_word_slug="$(json_jq "$word_detail_body" '.word.slug // empty' || echo "")"
+        if [ "$detail_word_slug" != "$word_slug" ]; then
+          fail "canonical word detail slug '$detail_word_slug' does not match requested slug '$word_slug'"
+        else
+          pass "GET /api/v1/canonical-words/$word_slug returned word detail"
+        fi
+      fi
+    fi
   fi
 fi
 
