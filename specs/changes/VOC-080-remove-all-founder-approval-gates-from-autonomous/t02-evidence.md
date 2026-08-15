@@ -6,35 +6,48 @@ Evidence for `VOC-080-AC-00`, `VOC-080-AC-04`, and `VOC-080-AC-05`. Tests:
 
 ## Task outcome
 
-`VOC-080-T02` makes plan-package adoption autonomous in
+`VOC-080-T02` completes autonomous plan-package adoption in
 `KARSIFT/karsift-ai-infra` `adopt.yml` and documents the caller-side reconcile
 dispatch. A merged `plan/`-branch PR with an exact-revision plan-review PASS,
-green CI, and (when present) passing governance validation transitions to
-`status: adopted` / `implementation_authorized: true` through adopt.yml's
-checked roster PR — no manual `change.yaml` flip and no founder `approved`
-comment. Reconcile dispatch repairs missed merge events idempotently.
+green plan-PR checks, and (when present) passing
+`scripts/governance/validate-governance.sh` transitions to `status: adopted` /
+`implementation_authorized: true` through adopt.yml's checked roster PR — no
+manual `change.yaml` flip and no founder `approved` comment. Reconcile
+dispatch repairs missed merge events idempotently and re-dispatches the root
+task when adoption exists but no agent PR has been opened yet.
 
 ## Infra delivery
 
 | Item | Location | Notes |
 |------|----------|-------|
 | Core autonomous adopt handoff | `karsift-ai-infra` PR [#37](https://github.com/KARSIFT/karsift-ai-infra/pull/37) (`da91f64`) | Initial adopt.yml autonomous path, roster PR, implement-first-task |
-| T02 polish + policy tests | This task's infra working-tree delta | Reconcile docs, governance re-check, audit fields, root-task redispatch, plan.yml/template text |
+| T02 remediation (this attempt) | Local `karsift-ai-infra/` working-tree delta vs `da91f64` | AC-00 audit fields, plan-PR checks + optional governance validate, `needs_root_dispatch`, adopt/plan/template header+body polish, expanded `tests/test_adoption_handoff.py` |
 
-Caller repos pin `@main`; adoption behavior is effective once the infra delta
-lands on `karsift-ai-infra` `main`.
+Caller repos pin `@main`. The T02 remediation delta must land on
+`karsift-ai-infra` `main` before production callers receive it; until then the
+authorizing evidence for this task is the inspected local delta plus PR #37.
+
+### Files changed in the T02 remediation delta
+
+- `.github/workflows/adopt.yml`
+- `.github/workflows/plan.yml`
+- `templates/project-repo/.github/workflows/pipeline.yml` (header comments)
+- `tests/test_adoption_handoff.py`
+- `CHANGELOG.md` (Unreleased note)
 
 ## Behavioral checklist (VOC-080-D01 / VOC-040)
 
 | Requirement | Implementation |
 |-------------|----------------|
-| Autonomous adoption after non-human gates | `Verify merged plan and independent review` + green `gh pr checks`; optional `validate-governance.sh` |
+| Autonomous adoption after non-human gates | `Verify merged plan and independent review`: PASS bound to `headRefOid`, green `gh pr checks`, optional `validate-governance.sh` |
 | No silent merged-as-draft | `Commit task roster` writes adopted/authorized fields atomically with `.karsift/tasks.json` |
 | Exact revision + review evidence recorded | `approved_candidate_sha`, `adoption_independent_verification_evidence`, `adoption_evidence` |
+| Risk + decisions recorded | `adoption_risk`, `adoption_resolved_decisions`, `adoption_deferred_decisions` |
 | Authority provenance recorded | `adoption_authority_provenance` cites active `authority_model` at adoption |
 | Idempotent reconcile without old event | Caller `pipeline.yml` `workflow_dispatch` `action=reconcile` + `plan_pr_number`; adopt reuses task issues and no-ops unchanged roster |
-| Root task dispatch after reconcile | `needs_root_dispatch` fires implement-first-task when adoption is complete but no agent PR exists yet |
-| Reconcile inputs documented | `adopt.yml` header + caller template `plan_pr_number` input |
+| Root task dispatch after reconcile | `Decide whether to dispatch the root task` sets `needs_root_dispatch` / `should_dispatch` when adoption is complete but no agent PR exists |
+| Reconcile inputs documented | `adopt.yml` header documents `action=reconcile` / `plan_pr_number`; caller template retains the inputs |
+| Plan-merge contract | `plan.yml` PR body and header describe automatic adopt — not a manual `change.yaml` flip |
 
 ## Reconcile dispatch (caller)
 
@@ -55,7 +68,9 @@ python3 -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
 Expected: all policy tests pass, including expanded
-`test_adoption_handoff.py` reconcile/adoption assertions.
+`test_adoption_handoff.py` reconcile/adoption assertions for AC-00 fields,
+plan-PR checks, header dispatch docs, `needs_root_dispatch`, and plan.yml
+manual-flip absence.
 
 ## Explicitly not done (other tasks)
 
@@ -63,6 +78,9 @@ Expected: all policy tests pass, including expanded
 - Full caller `pipeline.yml` / AGENTS.md / DOC-15 reconciliation (`VOC-080-T04`)
 - Live sandbox rehearsal (`VOC-080-T06`)
 - Authority activation (`VOC-080-T07`)
+- Pushing the T02 remediation delta to remote `karsift-ai-infra` `main`
+  (cross-repo land; this sandbox task leaves the delta in the local checkout
+  for inspection — DEP-03 sequencing)
 
 ## Limitations
 
@@ -70,3 +88,6 @@ Expected: all policy tests pass, including expanded
   on the rehearsal target (`VOC-080-T06`).
 - Reconcile still refuses packages whose merged plan head lacks a bound PASS
   verdict or green checks — by design (`VOC-080-D02`).
+- Until the remediation delta is on `karsift-ai-infra` `@main`, callers still
+  run the PR #37 behavior without the AC-00 audit-field / checks /
+  `needs_root_dispatch` polish.
