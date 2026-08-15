@@ -85,6 +85,33 @@ cf_api() {
       -H "Authorization: Bearer ${TOKEN}" \
       "${API_BASE}${path}")"
   fi
+  # Cloudflare does not create an entrypoint ruleset until the zone has at
+  # least one rule in this phase. Its API represents that valid empty state as
+  # HTTP 404 / code 10003, not as a 200 response with an empty rules array.
+  # For verify/remove, normalize only that exact response to an empty ruleset.
+  # Restore remains fail-closed because recreating a missing entrypoint is a
+  # different mutation from updating an existing ruleset.
+  if [ "$http_code" = "404" ] \
+    && [ "$method" = "GET" ] \
+    && [[ "$path" == */rulesets/phases/http_request_origin/entrypoint ]] \
+    && [ "$mode" != "restore" ] \
+    && python3 - "$tmp" <<'PY'
+import json
+import sys
+
+try:
+    payload = json.load(open(sys.argv[1], encoding="utf-8"))
+except (OSError, ValueError):
+    raise SystemExit(1)
+errors = payload.get("errors") or []
+raise SystemExit(0 if any(error.get("code") == 10003 for error in errors) else 1)
+PY
+  then
+    echo "Cloudflare has no http_request_origin entrypoint ruleset; treating it as no origin rules." >&2
+    printf '%s\n' '{"success":true,"result":{"id":"absent","rules":[]}}'
+    rm -f "$tmp"
+    return 0
+  fi
   if [[ ! "$http_code" =~ ^2 ]]; then
     echo "ERROR: Cloudflare API ${method} ${path} returned HTTP ${http_code}:" >&2
     cat "$tmp" >&2
@@ -132,7 +159,6 @@ load_ruleset_json() {
     cat "$OFFLINE_FILE"
     return
   fi
-  ZONE_ID="$(resolve_zone_id)"
   cf_api GET "/zones/${ZONE_ID}/rulesets/phases/http_request_origin/entrypoint"
 }
 
@@ -143,6 +169,12 @@ write_offline_output() {
   fi
 }
 
+if [ -z "$OFFLINE_FILE" ]; then
+  # Resolve outside command substitution so apply/restore API calls retain the
+  # zone id under `set -u`; assignments inside `$(load_ruleset_json)` occur in
+  # a subshell and cannot populate the caller's shell.
+  ZONE_ID="$(resolve_zone_id)"
+fi
 ruleset_json="$(load_ruleset_json)"
 if [ -z "$OFFLINE_FILE" ]; then
   RULESET_ID="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["result"]["id"])' <<<"$ruleset_json")"
