@@ -8,6 +8,12 @@ Tests: `VOC-080-TEST-06`.
 records rehearsal evidence only; it does **not** activate A-004 or flip
 `authority_model`.
 
+**Remediation (attempt 2):** Independent review of `29f13c57…` failed on an
+out-of-scope binary change under protected `tooling/governance/__pycache__/`.
+That churn is reverted to the pre-T06 tip (`81a961c`); this evidence file is
+the only intentional T06 tree delta versus that tip. No `__pycache__` or other
+`tooling/governance/` bytecode is part of this task’s deliverable.
+
 ## Task outcome
 
 `VOC-080-T06` rehearses the post-T01/T02/T03/T04/T05 no-founder-gate loops on
