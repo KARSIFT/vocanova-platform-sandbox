@@ -125,6 +125,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.end_headers()
                 return
             if self._authorized():
+                if scenario == "route_redirect_loop" and path == "/home":
+                    self.send_response(307)
+                    self.send_header("Location", "/home")
+                    self.end_headers()
+                    return
+                if scenario == "route_external_redirect" and path == "/home":
+                    self.send_response(307)
+                    self.send_header("Location", "https://example.invalid/")
+                    self.end_headers()
+                    return
                 if path == "/onboarding":
                     self.send_response(307)
                     self.send_header("Location", "/home")
@@ -318,6 +328,20 @@ stop_server
 echo "== case 11: protected route server error fails route sweep =="
 start_server route_auth_failure
 check "protected route HTTP 500 fails route sweep" fail \
+  env SMOKE_TEST_SESSION_COOKIE="vocanova_session=smoke-test-token" \
+  bash "$smoke_script" "$base_url" "$base_url"
+stop_server
+
+echo "== case 12: same-origin redirect loop fails route sweep =="
+start_server route_redirect_loop
+check "redirect loop fails instead of passing an unrendered route" fail \
+  env SMOKE_TEST_SESSION_COOKIE="vocanova_session=smoke-test-token" \
+  bash "$smoke_script" "$base_url" "$base_url"
+stop_server
+
+echo "== case 13: external redirect fails without forwarding the cookie =="
+start_server route_external_redirect
+check "external redirect is rejected before traversal" fail \
   env SMOKE_TEST_SESSION_COOKIE="vocanova_session=smoke-test-token" \
   bash "$smoke_script" "$base_url" "$base_url"
 stop_server
