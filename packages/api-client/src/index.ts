@@ -53,6 +53,30 @@ export interface OAuthStartResponse {
   url: string;
 }
 
+/**
+ * VOC-084-T01. Kill-switch state reported by GET /healthz. Field
+ * names match the API's snake_case JSON (apps/api production
+ * HealthzOutput).
+ */
+export interface KillSwitchStatus {
+  magic_link_enabled?: boolean;
+  oauth_enabled?: boolean;
+  new_signups_enabled?: boolean;
+  ai_enabled?: boolean;
+}
+
+/**
+ * VOC-084-T01. Unauthenticated liveness probe body. The handler
+ * returns HTTP 200 when healthy and 503 when unhealthy, but
+ * kill_switches are present in both cases.
+ */
+export interface HealthzResponse {
+  status: string;
+  database?: string;
+  timestamp?: string;
+  kill_switches?: KillSwitchStatus;
+}
+
 export interface Situation {
   id: string;
   slug: string;
@@ -391,6 +415,32 @@ export class VocanovaClient {
 
   constructor(private readonly options: VocanovaClientOptions) {
     this.fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
+  }
+
+  /**
+   * VOC-084-T01. Fetch GET /healthz for deploy-derived capability
+   * signals (kill switches). Unlike other client methods, this does
+   * not throw on HTTP 503 so callers can still read kill_switches
+   * when the database probe is unhealthy.
+   */
+  async getHealthz(init?: RequestInit): Promise<{
+    data: HealthzResponse;
+    response: Response;
+  }> {
+    const url = new URL("/healthz", this.options.baseURL);
+    const headers = new Headers(init?.headers);
+    if (!headers.has("Accept")) {
+      headers.set("Accept", "application/json");
+    }
+
+    const response = await this.fetch(url.toString(), {
+      ...init,
+      method: "GET",
+      headers,
+      credentials: this.options.credentials,
+    });
+    const data = (await response.json()) as HealthzResponse;
+    return { data, response };
   }
 
   async getCurrentUser(init?: RequestInit): Promise<{

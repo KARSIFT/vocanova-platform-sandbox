@@ -1,0 +1,148 @@
+schema_version: 1
+id: VOC-084
+slug: restore-repository-managed-google-sign-in-in
+title: Restore repository-managed Google sign-in in staging
+type: bugfix
+status: adopted
+risk: R3
+planned_implementation_risk_floor: "Measured during drafting by running scripts/governance/classify-change-risk.sh\
+  \ --files-from against the expected task-scoped file list (.github/workflows/deploy-staging.yml,\
+  \ apps/web/src/app/signin/page.tsx, apps/web/src/app/signin/_components/auth-forms.tsx,\
+  \ apps/web sign-in / capability tests, scripts/foundation or equivalent deploy-staging\
+  \ OAuth workflow tests, apps/api only if a minimal public capability read already\
+  \ exposed via /healthz needs a thin client helper, this package directory). Detected\
+  \ path floor: R3 (.github/workflows/deploy-staging.yml and apps/api/business/auth/killswitches.go\
+  \ when auth paths are in the measured set). This package proposes R3 for the change\
+  \ as a whole \u2014 a draft proposal for the reviewing human at adoption time, not\
+  \ a determination \u2014 because it changes protected staging deploy authentication/secret\
+  \ synchronization and the public sign-in surface. Independent verification and the\
+  \ reviewing human must still confirm each task's real file list and whether semantic\
+  \ escalation to R4 is warranted."
+canonical_path: specs/changes/VOC-084-restore-repository-managed-google-sign-in-in
+authority_model: a004-active
+requirement_source: 'GitHub issue #691 ("Restore repository-managed Google sign-in
+  in staging"), including the fully populated issue body and the clarifying comment
+  by m-e-h-r-d-a-a-d at 2026-08-15T21:38:52Z. Fresh 2026-08-16 evidence: POST https://api-staging.vocanova.site/api/v1/auth/oauth/google/start
+  with redirectUri=https://staging.vocanova.site/home returns HTTP 503; production
+  equivalent returns HTTP 200 targeting accounts.google.com with redirect_uri=https://api-production.vocanova.site/api/v1/auth/oauth/google/callback.
+  Staging API is healthy with GOOGLE_OAUTH_ENABLED=false and absent GOOGLE_OAUTH_CLIENT_ID
+  / GOOGLE_OAUTH_CLIENT_SECRET; NEW_USER_SIGNUP_ENABLED=false. deploy-production.yml
+  already synchronizes the repository Google OAuth pair, rejects a partial pair, derives
+  the canonical /api/v1 callback, and enables OAuth from actual pair availability;
+  deploy-staging.yml does not. Staging sign-in UI advertises "Continue with Google"
+  while the API reports OAuth disabled. Founder remediation directive dated 2026-08-16
+  authorizes issue creation, package adoption/implementation, PRs, workflow execution,
+  staging deployment, live verification, remediation, and closure without routine
+  approval. No Google Cloud mutation is authorized unless access already exists; otherwise
+  record the exact one-time external callback registration required.'
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
+base_branch: develop
+base_sha: unknown - not recorded by this draft; the adopting human/workflow should
+  set this to the actual base_sha at adoption time, consistent with recent packages'
+  convention.
+target_branch: develop
+approved_candidate_sha: 4a66fe3b1f01495511b8fdab31ab5717cec2e04a
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human/workflow decision
+    under active A-004)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
+automatic_merge_allowed: true
+production_impact: "no intentional production OAuth behavior change. Staging deploy\
+  \ and staging sign-in UI are the implementation boundary. Later develop\u2192main\
+  \ promotion must retain existing production OAuth sync behavior in deploy-production.yml.\
+  \ Mis-scoped edits that alter production credential sync, callback URI, or allowlist\
+  \ defaults would be a regression and are out of scope."
+rollback_required: true
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-084-DEP-00
+  status: 'resolved at drafting time by issue #691 verified evidence and drafting-time
+    repo read. Root cause is missing staging credential/config synchronization in
+    deploy-staging.yml (production already has the safe pair-sync pattern), plus stale
+    GOOGLE_OAUTH_ENABLED=false / absent client id+secret on the staging host, while
+    the web sign-in page unconditionally renders Continue with Google.'
+- id: VOC-084-DEP-01
+  status: unresolved at drafting time. Whether the existing Google OAuth client already
+    authorizes https://api-staging.vocanova.site/api/v1/auth/oauth/google/callback.
+    No Google Cloud Console mutation is authorized by this package unless access already
+    exists. If access/evidence is unavailable, finish repository/deployment work and
+    record the exact external configuration requirement without claiming it complete.
+    See specification.md open question 1.
+- id: VOC-084-DEP-02
+  status: 'unresolved at drafting time. Exact repository-workflow control surface
+    for the staging NEW_USER_SIGNUP_ALLOWLIST (recommended default: mirror deploy-production.yml''s
+    workflow_dispatch input new_user_signup_allowlist, default empty, written into
+    staging api.env with NEW_USER_SIGNUP_ENABLED=false). See specification.md open
+    question 2.'
+- id: VOC-038
+  status: Adopted predecessor. Established NEW_USER_SIGNUP_ALLOWLIST / SignupAllowlist
+    while NEW_USER_SIGNUP_ENABLED stays false, and production OAuth credential adoption
+    patterns this package mirrors for staging.
+- id: VOC-041
+  status: Adopted predecessor for production OAuth redirect/CORS deploy wiring lessons.
+    Staging must use the canonical staging API host callback (no obsolete port qualification);
+    do not regress production.
+- id: VOC-067
+  status: Adopted predecessor for staging/production isolation and shared-edge topology.
+    This package must preserve secret, directory, deploy-user, database, and Docker-network
+    isolation and the single shared-edge nginx architecture.
+affected_areas:
+- .github/workflows/deploy-staging.yml (Google OAuth pair sync, partial-pair rejection,
+  canonical OAUTH_REDIRECT_URI, GOOGLE_OAUTH_ENABLED from pair availability, NEW_USER_SIGNUP_ENABLED=false,
+  staging allowlist write, post-deploy OAuth-start check)
+- scripts/foundation/ or equivalent deterministic tests for deploy-staging OAuth/config
+  branches (both-present, both-absent, partial rejection, canonical callback, allowlist)
+- apps/web/src/app/signin/page.tsx and apps/web/src/app/signin/_components/auth-forms.tsx
+  (capability-gated Google button rendering)
+- apps/web tests for disabled-method rendering / capability consumption (unit, component,
+  or e2e as fits existing harness)
+- apps/api public capability surface only if the existing /healthz kill_switches.oauth_enabled
+  signal needs a thin documented web client helper (prefer reusing /healthz; do not
+  invent a parallel auth redesign)
+- infra/README.md or staging deploy docs only if current operator docs claim staging
+  OAuth is founder-manual-only and would become false
+- specs/changes/VOC-084-restore-repository-managed-google-sign-in-in
+implementation:
+  authorized: true
+  required: true
+  status: authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: staging-only-oauth-restore-no-intentional-production-change
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: adopted
+adoption_pr: 692
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/692
+implementation_authority_before_adoption: false
+implementation_authority_status: authorized
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A004
+blocking_reasons: none - adopted and implementation-authorized
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/692#issuecomment-5304386510
+adoption_risk: R3
+adoption_resolved_decisions:
+- VOC-084-DEP-00
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #692 at 4a66fe3b1f01495511b8fdab31ab5717cec2e04a'

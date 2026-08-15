@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 
+import { getSignInAuthCapabilities } from "@/lib/auth-capabilities";
+
 import { MagicLinkForm, OAuthButton } from "./_components/auth-forms";
 
 export const metadata: Metadata = {
   title: "Sign in — Vocanova",
-  description: "Sign in to Vocanova with email or Google.",
+  description: "Sign in to Vocanova.",
 };
 
 interface SignInPageProps {
@@ -14,6 +16,7 @@ interface SignInPageProps {
 export default async function SignInPage({ searchParams }: SignInPageProps) {
   const { returnTo } = await searchParams;
   const safeReturnTo = normalizeReturnTo(returnTo);
+  const { oauthEnabled } = await getSignInAuthCapabilities();
 
   return (
     <main className="grid min-h-screen place-items-center p-6">
@@ -32,13 +35,17 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           </p>
         </div>
 
-        <OAuthButton returnTo={safeReturnTo} />
+        {oauthEnabled ? (
+          <>
+            <OAuthButton returnTo={safeReturnTo} />
 
-        <div className="relative flex items-center gap-[var(--spacing-sm)]">
-          <div className="h-px flex-1 bg-neutral-200" />
-          <span className="text-sm text-neutral-500">or</span>
-          <div className="h-px flex-1 bg-neutral-200" />
-        </div>
+            <div className="relative flex items-center gap-[var(--spacing-sm)]">
+              <div className="h-px flex-1 bg-neutral-200" />
+              <span className="text-sm text-neutral-500">or</span>
+              <div className="h-px flex-1 bg-neutral-200" />
+            </div>
+          </>
+        ) : null}
 
         <MagicLinkForm returnTo={safeReturnTo} />
       </div>
