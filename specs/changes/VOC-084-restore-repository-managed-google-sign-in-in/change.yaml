@@ -3,7 +3,7 @@ id: VOC-084
 slug: restore-repository-managed-google-sign-in-in
 title: Restore repository-managed Google sign-in in staging
 type: bugfix
-status: draft
+status: adopted
 risk: R3
 planned_implementation_risk_floor: "Measured during drafting by running scripts/governance/classify-change-risk.sh\
   \ --files-from against the expected task-scoped file list (.github/workflows/deploy-staging.yml,\
@@ -35,22 +35,22 @@ requirement_source: 'GitHub issue #691 ("Restore repository-managed Google sign-
   staging deployment, live verification, remediation, and closure without routine
   approval. No Google Cloud mutation is authorized unless access already exists; otherwise
   record the exact one-time external callback registration required.'
-requirement_approval_status: 'approved requirement source in issue #691; package itself
-  remains not-approved until plan review and adoption under active A-004'
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: unknown - not recorded by this draft; the adopting human/workflow should
   set this to the actual base_sha at adoption time, consistent with recent packages'
   convention.
 target_branch: develop
-approved_candidate_sha: null
+approved_candidate_sha: 4a66fe3b1f01495511b8fdab31ab5717cec2e04a
 owners:
   decision: unassigned
   package_preparation: planner (drafting only; adoption remains a human/workflow decision
     under active A-004)
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: "no intentional production OAuth behavior change. Staging deploy\
   \ and staging sign-in UI are the implementation boundary. Later develop\u2192main\
@@ -116,9 +116,9 @@ affected_areas:
   OAuth is founder-manual-only and would become false
 - specs/changes/VOC-084-restore-repository-managed-google-sign-in-in
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: proposed
+  status: authorized
   target_branch: develop
   pull_request: null
   authority_issue: null
@@ -130,20 +130,19 @@ release:
   automatic_merge: true
   migration_required: false
   rollback_required: true
-repository_adoption_status: not-adopted
-adoption_pr: null
-adoption_evidence: null
+repository_adoption_status: adopted
+adoption_pr: 692
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/692
 implementation_authority_before_adoption: false
-implementation_authority_status: not-authorized
+implementation_authority_status: authorized
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A004
-blocking_reasons: Package is draft only. Awaiting exact-revision plan review, adoption
-  under active A-004, and subsequent task-scoped implementation authorization. Open
-  questions VOC-084-DEP-01 and VOC-084-DEP-02 remain for the reviewing human.
-adoption_independent_verification_evidence: null
-adoption_risk: null
-adoption_resolved_decisions: []
+blocking_reasons: none - adopted and implementation-authorized
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/692#issuecomment-5304386510
+adoption_risk: R3
+adoption_resolved_decisions:
+- VOC-084-DEP-00
 adoption_deferred_decisions: []
-adoption_authority_provenance: null
+adoption_authority_provenance: 'a004-active evaluated plan PR #692 at 4a66fe3b1f01495511b8fdab31ab5717cec2e04a'
