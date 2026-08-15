@@ -21,30 +21,31 @@ shared-edge. Live public HTTPS / WebSocket closure remains `VOC-081-T04`.
 
 ## Deliverables
 
-| Artifact | Path |
-| -------- | ---- |
-| Staging monitoring + shared-edge convergence | `.github/workflows/deploy-staging.yml` |
-| Production stale vhost retirement | `.github/workflows/deploy-production.yml` |
-| Operator ownership docs | `infra/README.md` |
-| Deploy convergence tests | `scripts/foundation/voc081-deploy-convergence.test.mjs` |
-| Topology test update (production isolation) | `scripts/foundation/voc081-monitoring-topology.test.mjs` |
+| Artifact                                     | Path                                                     |
+| -------------------------------------------- | -------------------------------------------------------- |
+| Staging monitoring + shared-edge convergence | `.github/workflows/deploy-staging.yml`                   |
+| Production stale vhost retirement            | `.github/workflows/deploy-production.yml`                |
+| Operator ownership docs                      | `infra/README.md`                                        |
+| Deploy convergence tests                     | `scripts/foundation/voc081-deploy-convergence.test.mjs`  |
+| Topology test update (production isolation)  | `scripts/foundation/voc081-monitoring-topology.test.mjs` |
 
 ## VOC-081-AC-04 (repository side)
 
-| Check | Result |
-| ----- | ------ |
-| Normal deploy creates/converges monitoring network + Kuma from repository Compose | PASS — `deploy-staging.yml` idempotently creates `vocanova-monitoring-net`, copies `infra/docker-compose.monitoring.yml` to `/opt/vocanova/monitoring/`, runs `docker compose … -p monitoring up -d` |
-| Shared-edge network/config applied with fail-closed `nginx -t` before reload/convergence | PASS — disposable `run_shared_edge_nginx_t` + `docker exec … nginx -t` before `nginx -s reload`; controlled `compose up -d` without `--force-recreate` on routine path |
-| Acceptance path does not require manual SSH, `docker network connect`, or ad hoc `docker rm` | PASS — workflow uses repository SCP + compose only |
-| Routine staging/production app deploys do not own monitoring/shared-edge orphan removal | PASS — production scoped `--remove-orphans` on `vocanova-production` only; monitoring `up -d` has no `--remove-orphans`; staging app `up -d` omits `--remove-orphans` |
-| Exactly one VocaNova nginx invariant preserved | PASS — no second nginx introduced; production still reloads `vocanova-shared-edge-nginx` only |
+| Check                                                                                        | Result                                                                                                                                                                                                      |
+| -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Normal deploy creates/converges monitoring network + Kuma from repository Compose            | PASS — `deploy-staging.yml` idempotently creates `vocanova-monitoring-net`, copies `infra/docker-compose.monitoring.yml` to `/opt/vocanova/monitoring/`, runs `docker compose … -p monitoring up -d`        |
+| Existing Kuma data backed up before first repository converge                                | PASS — marker-controlled cold backup stops the existing container, archives `kuma-data`, validates a non-empty archive, restricts it to mode `0600`, and records the marker only after Kuma returns healthy |
+| Shared-edge network/config applied with fail-closed `nginx -t` before reload/convergence     | PASS — disposable `run_shared_edge_nginx_t` + `docker exec … nginx -t` before `nginx -s reload`; controlled `compose up -d` without `--force-recreate` on routine path                                      |
+| Acceptance path does not require manual SSH, `docker network connect`, or ad hoc `docker rm` | PASS — workflow uses repository SCP + compose only                                                                                                                                                          |
+| Routine staging/production app deploys do not own monitoring/shared-edge orphan removal      | PASS — production scoped `--remove-orphans` on `vocanova-production` only; monitoring `up -d` has no `--remove-orphans`; staging app `up -d` omits `--remove-orphans`                                       |
+| Exactly one VocaNova nginx invariant preserved                                               | PASS — no second nginx introduced; production still reloads `vocanova-shared-edge-nginx` only                                                                                                               |
 
 ## VOC-081-AC-06 (deploy-side repository checks)
 
-| Check | Result |
-| ----- | ------ |
-| Deterministic tests cover deploy convergence safeguards | PASS — `voc081-deploy-convergence.test.mjs` |
-| Rollback credibility documented | PASS — release plan + `infra/README.md` backup section; live rollback owner/SHA in T04 |
+| Check                                                   | Result                                                                                                                                                                          |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Deterministic tests cover deploy convergence safeguards | PASS — `voc081-deploy-convergence.test.mjs`                                                                                                                                     |
+| Rollback credibility documented                         | PASS — repository deploy creates a validated first-converge archive and attempts to restart the prior Kuma container on backup/converge failure; live rollback owner/SHA in T04 |
 
 ## Commands inspected
 

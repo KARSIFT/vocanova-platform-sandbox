@@ -281,7 +281,11 @@ and the monitoring Compose file does not mount tier secrets. Shared edge
 reaches Kuma at `vocanova-uptime-kuma:3001` over this network — not via a
 public host publish. `deploy-staging.yml` converges the monitoring Compose
 project and applies controlled shared-edge `compose up -d` (no
-`--force-recreate`) with fail-closed `nginx -t` before reload.
+`--force-recreate`) with fail-closed health checks and `nginx -t` before
+reload. Before the first repository-managed converge, it stops Kuma briefly,
+creates and validates a mode-`0600` archive under
+`/opt/vocanova/monitoring/backups/`, and writes a durable convergence marker
+only after Kuma is healthy. Routine deploys do not repeat that cold backup.
 
 **Monitor vhost (`monitor.vocanova.site`, VOC-081-T02):** the shared edge
 loads `infra/nginx-shared/conf.d/30-monitor.vocanova.site.conf` via the
