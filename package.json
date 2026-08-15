@@ -33,6 +33,7 @@
     "@vocanova/design-tokens": "workspace:*",
     "eslint": "10.8.0",
     "prettier": "3.9.6",
+    "socket.io-client": "4.8.1",
     "typescript": "6.0.3"
   }
 }
