@@ -52,7 +52,6 @@ services:
     healthcheck:
       # Kuma 1.x ships this as executable but without a shebang. Invoking it
       # directly produces `exec format error`; run it through Node explicitly.
-      # (Bare CMD stranded deploy 31888512579 before shared-edge network join.)
       test: ["CMD", "node", "extra/healthcheck.js"]
       interval: 30s
       timeout: 5s

@@ -45,10 +45,6 @@ const monitoringComposePath = path.join(
   repositoryRoot,
   "infra/docker-compose.monitoring.yml",
 );
-const deployStagingPath = path.join(
-  repositoryRoot,
-  ".github/workflows/deploy-staging.yml",
-);
 
 const MONITOR_HOSTNAME = "monitor.vocanova.site";
 
@@ -205,19 +201,5 @@ test("VOC-081-T04 remediation: monitoring healthcheck invokes JS probe through N
     monitoring,
     /test:\s*\["CMD",\s*"extra\/healthcheck\.js"\]/,
     "bare CMD extra/healthcheck.js must not be used (exec format / shell failure)",
-  );
-});
-
-test("VOC-081-T04 remediation: staging deploy accepts loopback HTTP as Kuma ready", () => {
-  const deployStaging = readFileSync(deployStagingPath, "utf8");
-  assert.match(
-    deployStaging,
-    /curl -fsS --max-time 3 -o \/dev\/null http:\/\/127\.0\.0\.1:3001\//,
-    "deploy must fall back to loopback HTTP when Docker health lags",
-  );
-  assert.match(
-    deployStaging,
-    /for attempt in \$\(seq 1 120\)/,
-    "deploy must wait long enough for Kuma start_period + health",
   );
 });

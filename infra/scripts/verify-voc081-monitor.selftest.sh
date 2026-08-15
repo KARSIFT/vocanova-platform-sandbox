@@ -10,7 +10,8 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
 verify_script="$repo_root/infra/scripts/verify-voc081-monitor.sh"
-fake_server="$repo_root/infra/scripts/.verify-voc081-monitor-fake-server.py"
+test_root="$(mktemp -d)"
+fake_server="$test_root/fake-server.py"
 port=8871
 base_url="http://127.0.0.1:$port"
 
@@ -106,7 +107,7 @@ stop_server() {
 }
 final_cleanup() {
   stop_server
-  rm -f "$fake_server"
+  rm -rf "$test_root"
 }
 trap final_cleanup EXIT
 
