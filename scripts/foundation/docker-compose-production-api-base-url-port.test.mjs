@@ -10,7 +10,7 @@ const WEB_SERVICE_MARKER = "  web:";
 const WEB_ENVIRONMENT_MARKER = "    environment:";
 const WEB_HEALTHCHECK_MARKER = "    healthcheck:";
 const API_BASE_URL_KEY = "      API_BASE_URL:";
-const EXPECTED_API_BASE_URL = "https://api-production.vocanova.site:8443";
+const EXPECTED_API_BASE_URL = "https://api-production.vocanova.site";
 
 function extractWebEnvironmentBlock(composeSource) {
   const webServiceIndex = composeSource.indexOf(WEB_SERVICE_MARKER);
@@ -59,7 +59,7 @@ function extractApiBaseUrl(webEnvironmentBlock) {
   return apiBaseUrl;
 }
 
-test("VOC-042-TEST-02: web API_BASE_URL stays :8443-qualified in production compose", () => {
+test("VOC-079-TEST-03: web API_BASE_URL uses canonical HTTPS without :8443 (supersedes VOC-042-TEST-02 bridge-era assertion)", () => {
   const composeSource = readFileSync(PRODUCTION_COMPOSE_PATH, "utf8");
   const webEnvironmentBlock = extractWebEnvironmentBlock(composeSource);
   const apiBaseUrl = extractApiBaseUrl(webEnvironmentBlock);
@@ -68,5 +68,10 @@ test("VOC-042-TEST-02: web API_BASE_URL stays :8443-qualified in production comp
     apiBaseUrl,
     EXPECTED_API_BASE_URL,
     `Expected web API_BASE_URL to be ${EXPECTED_API_BASE_URL}, got ${apiBaseUrl}`,
+  );
+  assert.doesNotMatch(
+    apiBaseUrl,
+    /:8443/,
+    "production compose API_BASE_URL must not qualify port :8443 after VOC-079-T01",
   );
 });

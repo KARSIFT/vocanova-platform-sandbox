@@ -6,12 +6,10 @@ name: deploy-production
 # nginx -t fails the deploy closed without reload (VOC-067-AC-04). Production
 # does not recreate the shared-edge container; staging owns rare bring-up
 # (deploy-staging.yml). Reload is docker-exec only — no cross-tier filesystem
-# writes. The temporary vocanova-production-nginx cutover bridge (:8443 until
-# Cloudflare --verify-only confirms remap absence — VOC-067-T05 / AC-06)
-# receives the same nginx -t + reload treatment after compose up. Do not
-# retire that service, and do not switch the :8443 readiness polls below,
-# until t05-live-cutover-evidence.md records cloudflare_remap_api_status:
-# absent. T04 then removes remaining :8443 URL qualifications.
+# writes. VOC-079-T02: production compose defines only postgres/api/web;
+# project-scoped `compose up -d --remove-orphans` retires
+# vocanova-production-nginx when dropped from the file. Operational URLs use
+# canonical HTTPS :443 via the shared edge (VOC-079-T01).
 #
 # Auto-deploys on every push to main (2026-08-08, founder's explicit, twice-
 # confirmed request - see AGENTS.md's "Release and deployment authority"
@@ -39,7 +37,7 @@ on:
         type: string
         default: api-production.vocanova.site
       production_api_base_url:
-        description: "NEXT_PUBLIC_API_BASE_URL baked into the web bundle at build time and called from the browser - no port, now that Cloudflare forwards the plain :443 hostname to the origin's 8443 (VOC-038-T03 prep; verify this Cloudflare rule is still in place before dispatching)"
+        description: "NEXT_PUBLIC_API_BASE_URL baked into the web bundle at build time and called from the browser — canonical HTTPS :443 via shared edge (VOC-079-T01)"
         required: true
         type: string
         default: https://api-production.vocanova.site
@@ -49,7 +47,7 @@ on:
         type: string
         default: ""
       voc067_cloudflare_origin_cutover:
-        description: "VOC-067-T05 Cloudflare origin-port remap (repository-driven API). skip = normal deploy. verify-only and restore run only the Cloudflare script (no image build/deploy). apply deploys first, then removes the remap after smoke. Keep skip on ordinary deploys. Do not apply until shared-edge origin :443 is proven. Do not retire the :8443 bridge until verify-only reports remap absent."
+        description: "VOC-067-T05 Cloudflare origin-port remap (repository-driven API). skip = normal deploy. verify-only and restore run only the Cloudflare script (no image build/deploy). apply deploys first, then removes the remap after smoke. Keep skip on ordinary deploys."
         required: false
         type: choice
         options:
@@ -401,14 +399,11 @@ jobs:
               /opt/vocanova/production/secrets/api.env
             {
               echo "ENVIRONMENT=production"
-              # Port :8443 is required for these browser-facing values too:
-              # live reproduction showed the unqualified host hits nginx's
-              # 444 catch-all instead of production's real listener. This
-              # matches the same Cloudflare/host-sharing finding already
-              # documented in the health-check comment below.
-              echo "BASE_URL=https://${PRODUCTION_API_HOST}:8443"
-              echo "OAUTH_REDIRECT_URI=https://${PRODUCTION_API_HOST}:8443/api/v1/auth/oauth/google/callback"
-              echo "OAUTH_REDIRECT_ALLOWLIST=https://${PRODUCTION_WEB_HOST}:8443/onboarding,https://${PRODUCTION_WEB_HOST}:8443/home"
+              # VOC-079-T01: canonical HTTPS :443 via shared edge — no :8443
+              # port qualification in browser-facing OAuth/CORS values.
+              echo "BASE_URL=https://${PRODUCTION_API_HOST}"
+              echo "OAUTH_REDIRECT_URI=https://${PRODUCTION_API_HOST}/api/v1/auth/oauth/google/callback"
+              echo "OAUTH_REDIRECT_ALLOWLIST=https://${PRODUCTION_WEB_HOST}/onboarding,https://${PRODUCTION_WEB_HOST}/home"
               # Shared parent domain (e.g. ".vocanova.site"), NOT the bare
               # web hostname: the session/CSRF cookies are set by the API
               # host (api-X) but must also domain-match the web host (X) -
@@ -559,20 +554,7 @@ jobs:
             DOCKER_COMPOSE_CMD="docker compose -f docker-compose.production.yml -p vocanova-production" \
               sh /opt/vocanova/production/apps/api/scripts/seed-synthetic-smoke-user.sh
 
-            docker compose -f docker-compose.production.yml -p vocanova-production up -d
-
-            # VOC-067-T03: reload production cutover bridge nginx (volume-mounted
-            # conf from this tree only). Fail closed on nginx -t; no recreate.
-            # Keep this block until Cloudflare --verify-only confirms remap
-            # absence (VOC-067-AC-06); retiring the container first recreates
-            # issue #485 if the remap still targets origin :8443.
-            if docker inspect vocanova-production-nginx >/dev/null 2>&1; then
-              if ! docker exec vocanova-production-nginx nginx -t; then
-                echo "ERROR: production bridge nginx -t failed after conf update; deploy aborted without reload" >&2
-                exit 1
-              fi
-              docker exec vocanova-production-nginx nginx -s reload
-            fi
+            docker compose -f docker-compose.production.yml -p vocanova-production up -d --remove-orphans
 
             # T06's rehearsal always runs and its output is always printed
             # in full. It is only allowed to NOT fail the deploy for the
@@ -622,26 +604,14 @@ jobs:
               echo "::warning::Production secrets-boundary rehearsal FAILED INS-11 only on the disclosed, founder-waived finding (ubuntu's independent blanket sudo — see t06-production-provisioning-evidence.md). Deploy continues; this is a known accepted risk, not a new regression."
             fi
 
-      # HARD GATE until VOC-067-T04, and only after T05 records
-      # cloudflare_remap_api_status: absent: these polls must stay on :8443
-      # while vocanova-production-nginx still publishes 8443. Shared-edge
-      # owns host 80/443 (VOC-067-T02); the bridge exists so a still-active
-      # Cloudflare :443 → origin :8443 remap (T00 ordered cutover) keeps
-      # working. Switching these to :443 here is T04 scope and would fail
-      # readiness if remap is gone but this job still probes the bridge, or
-      # the reverse. Do not change the port in this task.
-      #
-      # Cloudflare proxies 8443 to any proxied hostname without extra
-      # configuration (it's one of Cloudflare's built-in alternate HTTPS
-      # ports). Found live: the first real deploy's poll steps (unqualified
-      # :443) silently hit Cloudflare's 520 fallback instead of production's
-      # actual nginx when the remap was the only public path.
+      # VOC-079-T01/T02: readiness polls, smoke, and session-mint target canonical
+      # HTTPS :443 through Cloudflare to shared-edge origin :443.
       - name: Poll production API health endpoint
         run: |
           set -euo pipefail
           for i in $(seq 1 60); do
             if curl -fsS --max-time 5 \
-                "https://${{ inputs.production_api_host || 'api-production.vocanova.site' }}:8443/healthz" > /dev/null; then
+                "https://${{ inputs.production_api_host || 'api-production.vocanova.site' }}/healthz" > /dev/null; then
               echo "Production API health check passed on attempt $i/60"
               exit 0
             fi
@@ -655,7 +625,7 @@ jobs:
           set -euo pipefail
           for i in $(seq 1 60); do
             status=$(curl -sS --max-time 5 -o /dev/null -w "%{http_code}" \
-                "https://${{ inputs.production_web_host || 'production.vocanova.site' }}:8443/" || echo "000")
+                "https://${{ inputs.production_web_host || 'production.vocanova.site' }}/" || echo "000")
             if [[ "$status" == 2* ]]; then
               echo "Production web health check passed on attempt $i/60 (status $status)"
               exit 0
@@ -680,7 +650,7 @@ jobs:
         id: mint_production_session
         env:
           PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN: ${{ secrets.PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN }}
-          PRODUCTION_API_BASE_URL: https://${{ inputs.production_api_host || 'api-production.vocanova.site' }}:8443
+          PRODUCTION_API_BASE_URL: https://${{ inputs.production_api_host || 'api-production.vocanova.site' }}
         run: |
           set -euo pipefail
           if [ -z "${PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN:-}" ]; then
@@ -740,12 +710,11 @@ jobs:
           SMOKE_TEST_SESSION_COOKIE: ${{ steps.mint_production_session.outputs.session_cookie }}
         run: |
           bash infra/scripts/smoke-test-production.sh \
-            "https://${{ inputs.production_api_host || 'api-production.vocanova.site' }}:8443" \
-            "https://${{ inputs.production_web_host || 'production.vocanova.site' }}:8443"
+            "https://${{ inputs.production_api_host || 'api-production.vocanova.site' }}" \
+            "https://${{ inputs.production_web_host || 'production.vocanova.site' }}"
 
-      # T00 step 4: remove remap only after this revision's origin path is
-      # healthy (smoke above still uses :8443 / the bridge). Then prove
-      # ordinary :443. Does not retire vocanova-production-nginx.
+      # T00 step 4: remove remap only after this revision's canonical :443 path
+      # is healthy (readiness/smoke above).
       - name: VOC-067-T05 Cloudflare origin-port remap (apply after healthy deploy)
         if: github.event_name == 'workflow_dispatch' && inputs.voc067_cloudflare_origin_cutover == 'apply'
         env:
