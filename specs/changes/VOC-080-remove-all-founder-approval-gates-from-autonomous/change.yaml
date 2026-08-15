@@ -170,3 +170,14 @@ autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
 blocking_reasons: none - adopted and implementation-authorized
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/628#issuecomment-5299569065
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-080-DEP-00
+- VOC-080-DEP-01
+- VOC-080-DEP-02
+- VOC-080-DEP-03
+- VOC-080-DEP-04
+- VOC-080-DEP-05
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a003-active evaluated plan PR #628 at 0d7ab1c642be612f978bd11d9ec6b87cd4c7e1e0'
