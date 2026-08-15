@@ -1025,13 +1025,77 @@ jobs:
             fi
 
             # VOC-081-T03: converge the isolated monitoring project from
-            # repository source. Reuses existing kuma-data on the host; never
-            # --remove-orphans (scoped project ownership only).
+            # repository source. The first repository-managed converge takes a
+            # cold, permission-restricted backup of the existing data before
+            # Compose may replace the container. A durable marker prevents
+            # routine app deploys from stopping Kuma for repeated backups.
             sudo mkdir -p /opt/vocanova/monitoring
-            cp /opt/vocanova/infra/docker-compose.monitoring.yml /opt/vocanova/monitoring/docker-compose.monitoring.yml
+            sudo install -m 0644 /opt/vocanova/infra/docker-compose.monitoring.yml /opt/vocanova/monitoring/docker-compose.monitoring.yml
             sudo chown "$(id -un)":"$(id -gn)" /opt/vocanova/monitoring/docker-compose.monitoring.yml
             docker compose -f /opt/vocanova/monitoring/docker-compose.monitoring.yml -p monitoring config >/dev/null
-            docker compose -f /opt/vocanova/monitoring/docker-compose.monitoring.yml -p monitoring up -d
+
+            MONITORING_ROOT=/opt/vocanova/monitoring
+            MONITORING_DATA="$MONITORING_ROOT/kuma-data"
+            MONITORING_MARKER="$MONITORING_ROOT/.repository-converged-voc081"
+            FIRST_MONITORING_CONVERGE=false
+            KUMA_WAS_RUNNING=false
+
+            if [ ! -f "$MONITORING_MARKER" ]; then
+              FIRST_MONITORING_CONVERGE=true
+              if [ ! -d "$MONITORING_DATA" ] || [ -z "$(sudo find "$MONITORING_DATA" -mindepth 1 -print -quit)" ]; then
+                echo "ERROR: existing Kuma data is missing or empty; refusing first repository converge" >&2
+                exit 1
+              fi
+
+              sudo mkdir -p "$MONITORING_ROOT/backups"
+              MONITORING_BACKUP="$MONITORING_ROOT/backups/kuma-data-pre-voc081-$(date -u +%Y%m%dT%H%M%SZ).tar.gz"
+              if [ "$(docker inspect --format '{{.State.Running}}' vocanova-uptime-kuma 2>/dev/null || true)" = "true" ]; then
+                KUMA_WAS_RUNNING=true
+                docker stop --time 30 vocanova-uptime-kuma >/dev/null
+              fi
+              if ! sudo tar -C "$MONITORING_ROOT" -czf "$MONITORING_BACKUP" kuma-data; then
+                echo "ERROR: Kuma pre-converge backup failed; restoring the previous container" >&2
+                if [ "$KUMA_WAS_RUNNING" = "true" ]; then
+                  docker start vocanova-uptime-kuma >/dev/null 2>&1 || true
+                fi
+                exit 1
+              fi
+              sudo chmod 0600 "$MONITORING_BACKUP"
+              if ! sudo test -s "$MONITORING_BACKUP" || ! sudo tar -tzf "$MONITORING_BACKUP" kuma-data/kuma.db >/dev/null; then
+                echo "ERROR: Kuma pre-converge backup validation failed; restoring the previous container" >&2
+                if [ "$KUMA_WAS_RUNNING" = "true" ]; then
+                  docker start vocanova-uptime-kuma >/dev/null 2>&1 || true
+                fi
+                exit 1
+              fi
+              echo "Created and validated first-converge Kuma backup: $MONITORING_BACKUP"
+            fi
+
+            if ! docker compose -f /opt/vocanova/monitoring/docker-compose.monitoring.yml -p monitoring up -d; then
+              echo "ERROR: monitoring Compose convergence failed" >&2
+              if [ "$KUMA_WAS_RUNNING" = "true" ]; then
+                docker start vocanova-uptime-kuma >/dev/null 2>&1 || true
+              fi
+              exit 1
+            fi
+
+            kuma_status=starting
+            for attempt in $(seq 1 45); do
+              kuma_status=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' vocanova-uptime-kuma 2>/dev/null || true)
+              if [ "$kuma_status" = "healthy" ]; then
+                break
+              fi
+              sleep 2
+            done
+            if [ "$kuma_status" != "healthy" ]; then
+              echo "ERROR: vocanova-uptime-kuma did not become healthy after repository convergence" >&2
+              docker compose -f /opt/vocanova/monitoring/docker-compose.monitoring.yml -p monitoring logs --no-color --tail=100 uptime-kuma >&2
+              exit 1
+            fi
+            if [ "$FIRST_MONITORING_CONVERGE" = "true" ]; then
+              sudo touch "$MONITORING_MARKER"
+              echo "Recorded successful first repository-managed Kuma convergence"
+            fi
 
             # Disposable nginx -t with the same mount set as shared-edge compose
             # before touching the running edge (VOC-081-T03 / VOC-067-AC-04).
@@ -1054,6 +1118,19 @@ jobs:
               # Controlled convergence when compose gains network membership or
               # nginx-shared changes — no --force-recreate on routine deploys.
               docker compose -f docker-compose.shared-edge.yml -p vocanova-shared-edge up -d
+              shared_edge_status=starting
+              for attempt in $(seq 1 45); do
+                shared_edge_status=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' "$SHARED_EDGE_CONTAINER" 2>/dev/null || true)
+                if [ "$shared_edge_status" = "healthy" ]; then
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$shared_edge_status" != "healthy" ]; then
+                echo "ERROR: shared edge did not become healthy after controlled convergence" >&2
+                docker compose -f docker-compose.shared-edge.yml -p vocanova-shared-edge logs --no-color --tail=100 nginx >&2
+                exit 1
+              fi
               if ! docker exec "$SHARED_EDGE_CONTAINER" nginx -t; then
                 echo "ERROR: shared-edge nginx -t failed after controlled convergence; deploy aborted without reload (previous config still active for both tiers)" >&2
                 exit 1

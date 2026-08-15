@@ -80,6 +80,54 @@ test("VOC-081-TEST-05: staging deploy converges monitoring from repository sourc
   }
 });
 
+test("VOC-081-TEST-05: first monitoring converge backs up existing data and waits for health", () => {
+  const deployStaging = readFileSync(deployStagingPath, "utf8");
+  const backupIndex = deployStaging.indexOf(
+    'sudo tar -C "$MONITORING_ROOT" -czf "$MONITORING_BACKUP" kuma-data',
+  );
+  const backupValidationIndex = deployStaging.indexOf(
+    'sudo test -s "$MONITORING_BACKUP"',
+  );
+  const monitoringUpIndex = deployStaging.indexOf(
+    "docker compose -f /opt/vocanova/monitoring/docker-compose.monitoring.yml -p monitoring up -d",
+  );
+  const markerIndex = deployStaging.indexOf('sudo touch "$MONITORING_MARKER"');
+
+  assert.match(
+    deployStaging,
+    /\.repository-converged-voc081/,
+    "first-converge backup must be guarded by a durable marker",
+  );
+  assert.match(
+    deployStaging,
+    /docker stop --time 30 vocanova-uptime-kuma/,
+    "Kuma must be stopped for a consistent first-converge data backup",
+  );
+  assert.ok(backupIndex >= 0, "deploy must create a Kuma data backup");
+  assert.ok(
+    backupValidationIndex > backupIndex,
+    "deploy must validate the backup after creating it",
+  );
+  assert.ok(
+    monitoringUpIndex > backupValidationIndex,
+    "backup must be validated before monitoring Compose convergence",
+  );
+  assert.ok(
+    markerIndex > monitoringUpIndex,
+    "first-converge marker must only be written after Compose convergence",
+  );
+  assert.match(
+    deployStaging,
+    /kuma_status[\s\S]*vocanova-uptime-kuma[\s\S]*healthy/,
+    "deploy must wait for Kuma health before continuing",
+  );
+  assert.match(
+    deployStaging,
+    /chmod 0600 "\$MONITORING_BACKUP"/,
+    "backup containing monitoring state must be permission-restricted",
+  );
+});
+
 test("VOC-081-TEST-05: fail-closed nginx -t precedes shared-edge reload or convergence", () => {
   const deployStaging = readFileSync(deployStagingPath, "utf8");
 
