@@ -1,0 +1,601 @@
+name: adopt (reusable)
+
+# The other half of plan.yml's split: plan.yml only ever drafts a package and
+# opens a PR for it - this workflow is what actually opens the per-task
+# tracking issues that carry real implementation authority, records their
+# sequential dependency edges, and starts the root task. A merged plan PR is
+# adopted automatically only after its exact head revision has a passing
+# independent plan-review verdict. Adoption and roster fields are written
+# together in the checked roster PR, closing the old merged-as-draft gap.
+# Re-running this workflow with the same merged PR safely reconciles it:
+# existing task issues are reused and an unchanged roster is a no-op. Callers
+# expose that recovery as workflow_dispatch action=reconcile with
+# plan_pr_number=<merged plan PR>. Reconcile also restarts the root task when
+# adoption landed but its implementation dispatch was missed.
+#
+# If the package's requirement_source records an originating issue (the one
+# that kicked off planning, if any - see plan.yml's source_issue_number),
+# that issue gets a closing comment pointing at the real task issue(s), so
+# anyone following the thread - human or another agent - can see where the
+# work actually landed.
+#
+# Also rewrites change.yaml's implementation.authority_issue to match the
+# task issue(s) just opened, for exactly one reason: when the draft is created
+# no task issue exists
+# yet - this workflow is what creates it - so whatever authority_issue a
+# human writes at that point can only be a guess or a leftover from the
+# package's requirement_source. implement.yml's own authority_issue check
+# only rejects a MISMATCH (an explicit wrong value), not an absent one, so a
+# stale guess (e.g. the originating issue number, correct in the old
+# single-issue-does-everything flow this replaced) fails every dispatch
+# against the real task issue with "authority_issue (N) does not match the
+# issue this run was dispatched for (M)" - found live adopting VOC-015, the
+# first package run through the new split flow end to end. For a
+# single-task package this sets authority_issue to that one issue number
+# directly; for a multi-task package there is no single authority issue by
+# construction, so it's cleared to null (implement.yml already treats an
+# explicit null the same as an absent key - see its own comment on `or ""`).
+
+on:
+  workflow_call:
+    inputs:
+      pr_number:
+        description: "The plan/-branch PR that just merged."
+        required: true
+        type: string
+    secrets:
+      CURSOR_API_KEY:
+        required: true
+      OPENAI_API_KEY:
+        required: false
+      OPENCODE_API_KEY:
+        required: false
+      OPENCODE_SECOND_API_KEY:
+        required: false
+      CLAUDE_CODE_OAUTH_TOKEN:
+        required: false
+      KARSIFT_BOT_APP_ID:
+        required: false
+      KARSIFT_BOT_PRIVATE_KEY:
+        required: false
+
+jobs:
+  adopt:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    outputs:
+      integration_branch: ${{ steps.target.outputs.branch }}
+      package_path: ${{ steps.locate.outputs.package_path }}
+      change_id: ${{ steps.issues.outputs.change_id }}
+      first_task_id: ${{ steps.issues.outputs.first_task_id }}
+      first_issue_number: ${{ steps.issues.outputs.first_issue_number }}
+      should_dispatch: ${{ steps.root-dispatch.outputs.needed }}
+    steps:
+      # Determined before checkout, without needing one: a plan/-branch PR
+      # can merge into "develop" or "main" or anything else a project uses as
+      # its integration_branch, and that's NOT necessarily this repo's
+      # default branch - checking out the wrong one here would silently
+      # commit the task roster to the wrong branch below.
+      - name: Determine the PR's target branch
+        id: target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          branch=$(gh pr view "${{ inputs.pr_number }}" --json baseRefName -q .baseRefName)
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.target.outputs.branch }}
+
+      - name: Check for GitHub App credentials
+        id: has-app
+        env:
+          APP_ID: ${{ secrets.KARSIFT_BOT_APP_ID }}
+        run: |
+          if [ -n "$APP_ID" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Mint App installation token
+        id: app-token
+        if: steps.has-app.outputs.configured == 'true'
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547
+        with:
+          app-id: ${{ secrets.KARSIFT_BOT_APP_ID }}
+          private-key: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
+
+      # The merged PR's body records the package path (see plan.yml's "Open
+      # PR" step: "New package directory: `...`") - parsed the same
+      # PR_BODY-through-env pattern pipeline.yml's own extract-package-path
+      # job uses, for the same script-injection reason (a PR body is text
+      # anyone who could open a PR controls).
+      - name: Locate the adopted package
+        id: locate
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
+          PR_BODY_SOURCE: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+          body=$(gh pr view "${{ inputs.pr_number }}" --json body -q .body)
+          path=$(echo "$body" | grep -oP '(?<=New package directory: `)[^`]+')
+          if [ -z "$path" ]; then
+            echo "No 'New package directory: \`...\`' line in PR #${{ inputs.pr_number }} - not a plan.yml-authored PR, or its format changed. Refusing to guess." >&2
+            exit 1
+          fi
+          echo "package_path=$path" >> "$GITHUB_OUTPUT"
+
+      # Re-check the exact-revision plan verdict so a reconciliation dispatch
+      # cannot bypass the non-human gates used by the merge path.
+      - name: Verify merged plan and independent review
+        id: verify
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
+        run: |
+          set -euo pipefail
+          pip install --quiet pyyaml
+          pr_json=$(gh pr view "${{ inputs.pr_number }}" --json state,mergedAt,headRefOid)
+          state=$(echo "$pr_json" | jq -r .state)
+          merged_at=$(echo "$pr_json" | jq -r '.mergedAt // ""')
+          head_sha=$(echo "$pr_json" | jq -r .headRefOid)
+          if [ "$state" != "MERGED" ] || [ -z "$merged_at" ]; then
+            echo "PR #${{ inputs.pr_number }} is not merged; refusing adoption." >&2
+            exit 1
+          fi
+          gh pr checks "${{ inputs.pr_number }}" --fail-fast
+          if [ -x scripts/governance/validate-governance.sh ]; then
+            bash scripts/governance/validate-governance.sh
+          fi
+          verification=$(gh api "repos/${{ github.repository }}/issues/${{ inputs.pr_number }}/comments" \
+            --jq '[.[] | select(.body | startswith("**Independent verification"))] | last')
+          verdict=$(echo "$verification" | jq -r '.body // ""')
+          if ! echo "$verdict" | grep -Fq "bound to commit \`$head_sha\`"; then
+            echo "No independent verification is bound to merged plan head $head_sha." >&2
+            exit 1
+          fi
+          if ! echo "$verdict" | grep -qE '^\*{0,2}VERDICT:[[:space:]]*PASS([[:space:]]+WITH NON-BLOCKING FINDINGS)?\b'; then
+            echo "Independent verification for $head_sha is not passing; refusing adoption." >&2
+            exit 1
+          fi
+          echo "plan_head_sha=$head_sha" >> "$GITHUB_OUTPUT"
+          echo "verification_url=$(echo "$verification" | jq -r '.html_url // ""')" >> "$GITHUB_OUTPUT"
+
+          python3 - "${{ steps.locate.outputs.package_path }}/change.yaml" "$GITHUB_OUTPUT" <<'PYEOF'
+          import re
+          import sys
+          import yaml
+
+          path, github_output = sys.argv[1:3]
+          data = yaml.safe_load(open(path))
+
+          req_source = str(data.get("requirement_source", ""))
+          m = re.search(r"/issues/(\d+)", req_source)
+          with open(github_output, "a") as f:
+              f.write(f"source_issue={m.group(1) if m else ''}\n")
+
+          print("Merged plan and exact-revision independent review verified.")
+          PYEOF
+
+      # Same parser plan.yml used to use before issue-opening moved here -
+      # see its own comment history for why this tolerates more than one
+      # house style of tasks.md rather than assuming one heading convention.
+      - name: Open one issue per task
+        id: issues
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
+        run: |
+          set -euo pipefail
+          package_path="${{ steps.locate.outputs.package_path }}"
+          change_id=$(basename "$package_path" | grep -oP '^[A-Z]+-\d+')
+          tasks_file="$package_path/tasks.md"
+          if [ ! -f "$tasks_file" ]; then
+            echo "No tasks.md found at $tasks_file - cannot open task issues." >&2
+            exit 1
+          fi
+
+          python3 - "$tasks_file" "$change_id" <<'PYEOF' > /tmp/tasks.tsv
+          import re
+          import sys
+
+          tasks_file, change_id = sys.argv[1:3]
+          # Scoped to THIS package's own change_id (e.g. "VOC-035"), not a
+          # bare org-wide prefix (e.g. "VOC") - an earlier version of this
+          # pattern stripped the package's own number off via
+          # `change_id.rsplit("-", 1)[0]`, intending something like a
+          # cross-package-agnostic prefix, but that made the regex
+          # (`VOC-\d+-T\d+`) match ANY package's task ID, not just this
+          # package's own. tasks.md prose routinely cross-references other
+          # packages' tasks by ID (e.g. "mirrors VOC-034-T01's own..." or
+          # "VOC-032-T10's own EV-22 evidence") - those inline mentions were
+          # being scanned as if they were this package's own roster entries,
+          # opening real tracking issues and roster rows for another
+          # package's task ID. Found live adopting VOC-035 (PR #232):
+          # `.karsift/tasks.json` came out with `VOC-034-T01` and
+          # `VOC-032-T10` spliced into VOC-035's own roster, both from
+          # cross-reference prose, neither a real VOC-035 task - auto-advance
+          # would have tried to dispatch an implementer against a task_id
+          # that doesn't exist in this package's own tasks.md. `T\d+[a-z]?`
+          # (not just `T\d+`) so a task split into lettered sub-tasks (e.g.
+          # T07 -> T07a/T07b) is still recognized the same way
+          # auto-advance.yml's own pattern needs to be - see that file's own
+          # note for the live gap this caused.
+          #
+          # Anchored to an actual markdown HEADING line (`#+` at the start,
+          # then the task ID immediately after), not "any line containing
+          # the task ID substring" - the previous version matched a task's
+          # own ID wherever it first appeared in the file, including a
+          # forward-reference to it in an EARLIER task's own prose (e.g.
+          # T00's body saying "...as authoritative for what VOC-049-T01 (if
+          # needed at all) actually promotes..."). Since dedup keeps only
+          # the first match per ID, that prose mention - not T01's real
+          # `## VOC-049-T01 — ...` heading further down - won, producing a
+          # garbled title. Found live adopting VOC-049
+          # (vocanova-platform-sandbox#379). Anchoring to the heading marker
+          # means a same-package cross-reference in body prose can never
+          # win over the task's own heading, however far below it appears.
+          pattern = re.compile(rf'^#+\s+({re.escape(change_id)}-T\d+[a-z]?)\b')
+          seen = set()
+          with open(tasks_file) as f:
+              for line in f:
+                  m = pattern.match(line)
+                  if not m or m.group(1) in seen:
+                      continue
+                  seen.add(m.group(1))
+                  title = line[m.end():].strip()
+                  title = re.sub(r'^[\s\-–—:.]+', '', title) or m.group(1)
+                  print(f"{m.group(1)}\t{title[:100]}")
+          PYEOF
+
+          # Labeled at creation so plan.yml's issue-triggered planning never
+          # mistakes one of its own task-tracking issues for a genuine new
+          # request to plan - see templates/project-repo/.github/workflows/
+          # pipeline.yml's plan-from-issue job, which only fires for issues
+          # with no karsift:* label at all.
+          gh label create "karsift:task" --color "1D76DB" \
+            --description "System-generated task-tracking issue - not a planning request" \
+            --force
+
+          count=0
+          previous_task_id=""
+          first_task_id=""
+          first_issue_number=""
+          echo "[" > /tmp/roster.json
+          while IFS=$'\t' read -r task_id title; do
+            [ -z "$task_id" ] && continue
+            count=$((count + 1))
+            expected_title="$change_id: $task_id - $title"
+
+            # Idempotency guard: without this, a retried run (e.g. `gh run
+            # rerun` after an earlier failure in a LATER step, like the
+            # "Commit task roster" push) re-executes this whole job from
+            # the top, including issue creation, with nothing to stop it
+            # opening a second (or third) issue for the same task - `gh
+            # issue create` has no built-in dedup. Same pattern
+            # release.yml's own check-and-open job already uses for its
+            # "Release: X" issue. Found live adopting VOC-049
+            # (vocanova-platform-sandbox) - two retries produced four
+            # orphaned duplicate task issues (#380-383) alongside the two
+            # real, roster-recognized ones (#378/#379).
+            # $title is free-form planner-authored prose from tasks.md and
+            # can contain jq-significant characters (e.g. a literal `"` -
+            # found live adopting VOC-051, karsift-ai-infra#21). `gh ...
+            # -q`/`--jq` only accepts a raw filter string with no separate
+            # argument-binding mechanism, so get the raw JSON first and
+            # filter it through a real `jq --arg`-bound invocation instead
+            # of splicing the title into filter text.
+            existing=$(gh issue list --state all --search "in:title \"$expected_title\"" --json number,title \
+              | jq --arg t "$expected_title" '[.[] | select(.title == $t)] | .[0].number')
+            if [ -n "$existing" ] && [ "$existing" != "null" ]; then
+              echo "Issue for $task_id already exists (#$existing) - reusing it, not creating a duplicate."
+              issue_number="$existing"
+            else
+              issue_url=$(gh issue create \
+                --title "$expected_title" \
+                --label "karsift:task" \
+                --body "$(cat <<EOF
+          Task \`$task_id\` from adopted package \`$change_id\` (\`$package_path\`).
+
+          Dispatch \`implement.yml\` with:
+
+          - change_id: \`$change_id\`
+          - package_path: \`$package_path\`
+          - task_id: \`$task_id\`
+          - issue_number: this issue's number
+          EOF
+          )")
+              issue_number=$(basename "$issue_url")
+            fi
+            if [ "$count" -eq 1 ]; then
+              first_task_id="$task_id"
+              first_issue_number="$issue_number"
+            fi
+            [ "$count" -gt 1 ] && echo "," >> /tmp/roster.json
+            if [ -n "$previous_task_id" ]; then
+              depends_on=$(jq -cn --arg dependency "$previous_task_id" '[$dependency]')
+            else
+              depends_on='[]'
+            fi
+            printf '{"task_id": %s, "issue": %s, "depends_on": %s}' \
+              "$(jq -Rn --arg v "$task_id" '$v')" "$issue_number" "$depends_on" >> /tmp/roster.json
+            previous_task_id="$task_id"
+          done < /tmp/tasks.tsv
+          echo "]" >> /tmp/roster.json
+
+          if [ "$count" -eq 0 ]; then
+            echo "Parsed zero tasks from $tasks_file - refusing to silently open nothing." >&2
+            exit 1
+          fi
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          echo "change_id=$change_id" >> "$GITHUB_OUTPUT"
+          echo "first_task_id=$first_task_id" >> "$GITHUB_OUTPUT"
+          echo "first_issue_number=$first_issue_number" >> "$GITHUB_OUTPUT"
+          echo "Opened $count task issue(s)."
+          jq . /tmp/roster.json
+
+      # release.yml's fixed roster of record - see plan.yml's former version
+      # of this same step for the full rationale (a project's own tasks.md
+      # prose is not something release.yml re-parses to determine
+      # completion).
+      #
+      # PR-based, not a direct push - this used to push straight to the
+      # integration branch (bookkeeping about issues that already exist,
+      # the reasoning went, not a content change needing its own review
+      # cycle). That broke the moment a calling project added branch
+      # protection requiring a PR (vocanova-platform-sandbox's
+      # require-pr-and-checks ruleset): the push was never actually
+      # authenticating as the App despite minting a token (see
+      # KARSIFT/karsift-ai-infra#13's own fix commit, since superseded by
+      # this one), and the project-side fix at the time was a broad,
+      # unconditional ruleset bypass for the App's identity - a bigger
+      # blast radius than this one narrow step actually needed. Opening a
+      # real PR (same pattern release.yml already uses for its own
+      # promotion PR) means this step needs no bypass authority at all -
+      # it goes through the same required-checks gate as any other change,
+      # and a calling project's branch protection no longer needs a
+      # special case for this identity.
+      - name: Commit task roster to a branch
+        id: commit
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
+        run: |
+          set -euo pipefail
+          package_path="${{ steps.locate.outputs.package_path }}"
+          mkdir -p "$package_path/.karsift"
+          cp /tmp/roster.json "$package_path/.karsift/tasks.json"
+
+          pip install --quiet pyyaml
+          python3 - "$package_path/change.yaml" /tmp/roster.json "${{ steps.verify.outputs.plan_head_sha }}" "${{ steps.verify.outputs.verification_url }}" <<'PYEOF'
+          import sys
+          import json
+          import yaml
+
+          change_path, roster_path, plan_head_sha, verification_url = sys.argv[1:5]
+          roster = json.load(open(roster_path))
+
+          data = yaml.safe_load(open(change_path))
+          impl = data.setdefault("implementation", {})
+          data["status"] = "adopted"
+          data["approved_candidate_sha"] = plan_head_sha
+          data["adoption_independent_verification_evidence"] = verification_url
+          data["adoption_risk"] = data.get("risk")
+          dependencies = data.get("dependencies") or []
+          resolved, deferred = [], []
+          for dependency in dependencies:
+              dep_id = dependency.get("id")
+              status = str(dependency.get("status", "")).lower()
+              if "defer" in status:
+                  deferred.append(dep_id)
+              elif "resolved" in status and "unresolved" not in status:
+                  resolved.append(dep_id)
+          data["adoption_resolved_decisions"] = resolved
+          data["adoption_deferred_decisions"] = deferred
+          data["adoption_authority_provenance"] = (
+              f"{data.get('authority_model', 'repository-governance')} evaluated plan PR "
+              f"#{int('${{ inputs.pr_number }}')} at {plan_head_sha}"
+          )
+          data["approval_status"] = "autonomously-adopted-after-independent-verification"
+          data["requirement_approval_status"] = (
+              "approved requirement; package adopted automatically after exact-revision "
+              "independent verification"
+          )
+          data["implementation_authorized"] = True
+          data["automatic_merge_allowed"] = True
+          data["implementation_authority_before_adoption"] = False
+          data["implementation_authority_status"] = "authorized"
+          data["blocking_reasons"] = "none - adopted and implementation-authorized"
+          impl["authorized"] = True
+          impl["status"] = "authorized"
+          impl["authority_issue"] = roster[0]["issue"] if len(roster) == 1 else None
+
+          # Found live on VOC-025-T00: nothing else in this pipeline ever set
+          # these three fields, so a package could pass "Verify the package
+          # was actually adopted" above (status != draft, implementation.
+          # authorized == true - both hand-edited by the founder at adoption)
+          # while repository_adoption_status stayed the human-authored
+          # draft's original "not-adopted" - and implement.yml's own prompt
+          # reads that stale value straight out of change.yaml and refuses to
+          # implement T00, citing "not-adopted" as the reason, even though
+          # this very job just finished opening real task issues for it. This
+          # job (the thing that actually makes adoption real - opening task
+          # issues) is the right place to also record that adoption happened,
+          # not something a human should have to remember as a separate
+          # manual edit at merge time.
+          data["repository_adoption_status"] = "adopted"
+          data["adoption_pr"] = int("${{ inputs.pr_number }}")
+          data["adoption_evidence"] = (
+              "https://github.com/${{ github.repository }}/pull/${{ inputs.pr_number }}"
+          )
+
+          with open(change_path, "w") as f:
+              yaml.safe_dump(data, f, sort_keys=False, default_flow_style=False)
+          PYEOF
+
+          change_id="${{ steps.issues.outputs.change_id }}"
+          branch="karsift/roster-$(echo "$change_id" | tr '[:upper:]' '[:lower:]')"
+
+          git config user.name "karsift-ai-infra-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add "$package_path/.karsift/tasks.json" "$package_path/change.yaml"
+          if git diff --cached --quiet; then
+            echo "Reconciliation is already complete; no roster or adoption changes remain."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "$(basename "$package_path" | grep -oP '^[A-Z]+-\d+'): record task-issue roster and authority_issue"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      # Same extraheader-precedence fix implement.yml's "Push branch" step
+      # documents (2026-07-28 incident) - actions/checkout's own persisted
+      # GITHUB_TOKEN credential takes precedence over whatever's embedded in
+      # the remote URL unless explicitly unset first.
+      - name: Push roster branch
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          if [ -n "$APP_TOKEN" ]; then
+            git config --local --unset-all http.https://github.com/.extraheader || true
+            git remote set-url origin "https://x-access-token:${APP_TOKEN}@github.com/${{ github.repository }}.git"
+          fi
+          git push -u origin "${{ steps.commit.outputs.branch }}"
+
+      # Same "No commits between" race release.yml's own promotion-PR step
+      # documents - harmless here too (nothing left to record if a
+      # concurrent roster-commit already covered this exact content), just
+      # not expected in practice since each package's branch name is unique.
+      - name: Open roster PR
+        id: roster-pr
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
+        run: |
+          set -euo pipefail
+          pr_url=$(gh pr create \
+            --base "${{ steps.target.outputs.branch }}" \
+            --head "${{ steps.commit.outputs.branch }}" \
+            --title "${{ steps.issues.outputs.change_id }}: record task-issue roster and authority_issue" \
+            --body "$(cat <<EOF
+          Deterministic bookkeeping, not a content change - records the task
+          issue roster this adoption run just opened (\`.karsift/tasks.json\`)
+          and the resulting \`implementation.authority_issue\`/
+          \`repository_adoption_status\`/\`adoption_pr\`/\`adoption_evidence\`
+          fields in \`change.yaml\`. No application, workflow, or governance
+          content is authored by this PR.
+
+          Risk classification: R1
+          EOF
+          )")
+          pr_number=$(basename "$pr_url")
+          echo "pr_number=$pr_number" >> "$GITHUB_OUTPUT"
+
+      # Same registration-then-watch pattern release.yml's own "Wait for
+      # every promotion PR check" step uses - see that step's own comment
+      # for why the stabilization wait is needed before `gh pr checks
+      # --watch` (a fresh PR's checks haven't registered yet, and watching
+      # too early sees zero checks and returns immediately as if nothing
+      # was required).
+      - name: Wait for roster PR checks
+        id: roster-checks
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.roster-pr.outputs.pr_number }}
+        run: |
+          set -euo pipefail
+          deadline=$((SECONDS + 300))
+          previous_count=0
+          stable_count=0
+          while true; do
+            check_count=$(gh pr view "$PR_NUMBER" --json statusCheckRollup -q '.statusCheckRollup | length')
+            if [ "$check_count" -gt 0 ] && [ "$check_count" -eq "$previous_count" ]; then
+              stable_count=$((stable_count + 1))
+            else
+              stable_count=0
+            fi
+            if [ "$stable_count" -ge 2 ]; then
+              break
+            fi
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "Roster PR #$PR_NUMBER checks did not register and stabilize within 5 minutes - refusing to merge." >&2
+              exit 1
+            fi
+            previous_count=$check_count
+            sleep 10
+          done
+          gh pr checks "$PR_NUMBER" --watch --fail-fast --interval 10
+          checked_sha=$(gh pr view "$PR_NUMBER" --json headRefOid -q .headRefOid)
+          checks_ok=$(gh pr checks "$PR_NUMBER" --json bucket -q \
+            'map(.bucket) | all(. == "pass" or . == "skipping")')
+          if [ "$checks_ok" != "true" ]; then
+            echo "Roster PR #$PR_NUMBER is not fully green after watch completed - refusing to merge." >&2
+            exit 1
+          fi
+          echo "head_sha=$checked_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Merge checked roster PR
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
+          PR_NUMBER: ${{ steps.roster-pr.outputs.pr_number }}
+          CHECKED_HEAD_SHA: ${{ steps.roster-checks.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          gh pr merge "$PR_NUMBER" --merge --match-head-commit "$CHECKED_HEAD_SHA"
+
+      - name: Close the loop back to the originating issue, if any
+        if: steps.commit.outputs.changed == 'true' && steps.verify.outputs.source_issue != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
+        run: |
+          set -euo pipefail
+          gh issue comment "${{ steps.verify.outputs.source_issue }}" --body \
+            "Adopted. ${{ steps.issues.outputs.count }} task issue(s) opened from the finalized package - see this repository's issue list for \`$(basename "${{ steps.locate.outputs.package_path }}" | grep -oP '^[A-Z]+-\d+')\`."
+
+      - name: Determine whether the root task needs dispatch
+        id: root-dispatch
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.commit.outputs.changed }}" = "true" ]; then
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          change_slug=$(echo "${{ steps.issues.outputs.change_id }}" | tr '[:upper:]' '[:lower:]')
+          task_slug=$(echo "${{ steps.issues.outputs.first_task_id }}" | tr '[:upper:]' '[:lower:]')
+          branch="agent/${change_slug}-${task_slug}"
+          pr_count=$(gh pr list --state all --head "$branch" --json number --jq 'length')
+          issue_state=$(gh issue view "${{ steps.issues.outputs.first_issue_number }}" --json state -q .state)
+          if [ "$issue_state" = "OPEN" ] && [ "$pr_count" = "0" ]; then
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Adoption is the authorization event for the entire ordered roster. Start
+  # its root task immediately; later tasks are released one at a time by
+  # auto-advance after the preceding task's PR actually merges and closes its
+  # issue. This removes the manual gap that encouraged dispatching every task
+  # in parallel and makes the safe path the automatic path.
+  implement-first-task:
+    needs: adopt
+    if: needs.adopt.outputs.should_dispatch == 'true'
+    uses: KARSIFT/karsift-ai-infra/.github/workflows/implement.yml@main
+    with:
+      change_id: ${{ needs.adopt.outputs.change_id }}
+      package_path: ${{ needs.adopt.outputs.package_path }}
+      task_id: ${{ needs.adopt.outputs.first_task_id }}
+      issue_number: ${{ needs.adopt.outputs.first_issue_number }}
+      attempt: "1"
+      integration_branch: ${{ needs.adopt.outputs.integration_branch }}
+    secrets: inherit

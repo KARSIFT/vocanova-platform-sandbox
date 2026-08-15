@@ -1,0 +1,361 @@
+name: review (reusable)
+
+# Runs the "reviewer" role: independent, read-only verification of an
+# implementation PR against its approved change package. Which model fills
+# this role is resolved from THIS repo's own config/roles.yml.
+#
+# Known limitation: the *model* is config-driven (roles.yml), but the
+# *execution step* below is still specific to whichever CLI/action fills the
+# role (its own install step, its own permission-profile/tool-restriction
+# flags). Swapping the reviewer role to a different vendor's CLI/action means
+# editing the "Run independent verification" step itself, not just
+# roles.yml - full run-time provider abstraction isn't built yet. Don't claim
+# more decoupling than exists.
+#
+# Current state (as of 2026-07-31): runs via a raw `cursor-agent` CLI
+# invocation (cursor.com - Cursor's own headless agent CLI, not a wrapper
+# action), reviewer-only - implementer and planner have their own separate
+# execution steps in their own files, moved to Cursor independently (see
+# their own files). Full execution-mechanism history (Claude Code ->
+# openai/codex-action -> OpenCode -> Cursor, and exactly why each move
+# happened - including the OpenCode-account incident that forced the last
+# one) lives in CHANGELOG.md's "review.yml" section, not here.
+#
+# Every claim below was checked against the real installed CLI
+# (`agent --version` reported 2026.07.23-e383d2b at migration time) in a
+# disposable sandbox, not assumed from fetched documentation - config/
+# roles.yml's own correction note and CHANGELOG.md's "review.yml" section
+# (the 2026-07-25 `opencode run --permissions` incident) document exactly
+# the failure mode this avoided repeating:
+#
+# - `--mode plan` is a first-class, documented CLI flag ("read-only/
+#   planning (analyze, propose plans, no edits)"), not something built out
+#   of a generated permission-profile file the way OpenCode's `reviewer`
+#   agent in `opencode.jsonc` needed. Verified live: asked directly, in
+#   plain language, to create a new file and delete an existing one "now,
+#   using your tools, do not just describe it", the CLI's own response
+#   refused ("this session is in plan-only mode, which blocks creating/
+#   deleting files with tools") and the working directory was provably
+#   unchanged afterward (the file to be deleted still existed, the file to
+#   be created did not). This is the equivalent of OpenCode's `reviewer`
+#   agent config / codex-action's `:read-only` profile - no "Configure
+#   opencode"-equivalent step is needed here.
+# - A fresh, never-before-seen working directory is workspace-untrusted by
+#   default and the CLI blocks waiting on an interactive trust prompt it can
+#   never receive non-interactively - reproduced live (exit 1, "Workspace
+#   Trust Required... Pass --trust, --yolo, or -f if you trust this
+#   directory"). This is the same *class* of bug as OpenCode's
+#   unenumerated-permission-key hang documented in CHANGELOG.md's "review.yml"
+#   section (a CI job silently stuck on a prompt it can't answer) - `--trust`
+#   is required every run for this reason. `--trust` only answers that one
+#   prompt; verified it grants no additional write permission on its own
+#   (still refuses file writes exactly as above) - `--mode plan` is what
+#   keeps the read-only guarantee, not `--trust`.
+# - The prompt is piped via stdin (`< /tmp/review-prompt.txt`), not passed as
+#   a positional argument - this sidesteps the exact `execve()` argument-
+#   length crash (`MAX_ARG_STRLEN`, "Argument list too long") documented
+#   below for `opencode run`'s old inline-argument form; a large real review
+#   prompt (full diff + every package doc) would hit the same OS limit here
+#   too if passed as an argument instead of via stdin. Verified live: a
+#   prompt piped via stdin with no positional prompt argument reaches the
+#   model normally (confirmed by an authentication-error response, i.e. it
+#   got past argument parsing, not a usage/argv error).
+# - `--output-format json` (non-streaming) is a single JSON object on stdout
+#   (`{"type":"result","subtype":...,"is_error":bool,"result":"<the actual
+#   response text>","session_id":...,"usage":{...}}`), not OpenCode's
+#   nd-JSON per-event stream - the "Extract verdict text" step below reads
+#   the whole file as one JSON document and pulls `.result` directly; no
+#   line-by-line event filtering is needed.
+#
+# implementer and planner stay on their existing roles for now - migrating
+# them to Cursor too is a separate, not-yet-done follow-up; do not assume
+# they've moved without checking their own workflow files' execution steps.
+#
+# Needs CURSOR_API_KEY as a repo/org secret on the calling project - same
+# Free-plan-org private-repo caveat documented elsewhere in this repo for
+# OPENAI_API_KEY/OPENCODE_API_KEY (org secrets can silently not reach a
+# private repo; set at repo level too if so). No second-account fallback
+# exists for Cursor the way OPENCODE_SECOND_API_KEY did - not needed yet,
+# add one only if a real quota-exhaustion incident on this account shows it
+# is.
+
+on:
+  workflow_call:
+    inputs:
+      pr_number:
+        required: true
+        type: string
+      package_path:
+        description: 'Path to the change package directory, e.g. "specs/changes/VOC-007-some-slug"'
+        required: true
+        type: string
+      integration_branch:
+        description: 'The calling project''s integration branch the package lives on - "develop" for a develop/main split, "main" for GitHub-flow-only projects.'
+        required: false
+        type: string
+        default: "develop"
+    secrets:
+      CURSOR_API_KEY:
+        required: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      # No repo checked out yet at this point - gh needs GH_REPO set
+      # explicitly rather than inferring it from a local git remote (same
+      # fix already applied in remediate.yml's own metadata-parsing step,
+      # for the identical reason).
+      - name: Fetch PR diff, metadata, and exact SHA
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh pr diff ${{ inputs.pr_number }} > /tmp/pr.diff
+          gh pr view ${{ inputs.pr_number }} --json body,title,headRefOid > /tmp/pr.json
+          echo "sha=$(jq -r .headRefOid /tmp/pr.json)" >> "$GITHUB_OUTPUT"
+
+      # Checks out the PR's own reviewed commit, not integration_branch -
+      # found live (VOC-022-T00) that checking out integration_branch here
+      # gave the reviewer a tree that genuinely did not contain the commit
+      # it was told to review, and no way to fetch it either (read-only
+      # Read/Grep/Glob tools, no Bash). Twice now this has produced a bad
+      # review: once the model asked an unanswerable question instead of a
+      # verdict (fixed in prompts/review.md), and once it correctly
+      # disclosed the limitation per that fix but still treated "commit
+      # unreachable" as a disqualifying Critical finding on an otherwise-
+      # clean structural review - the actual root cause was always that the
+      # commit really was unreachable, not a model quality problem either
+      # time. Checking out the exact reviewed SHA removes the root cause:
+      # the reviewer now has the real file tree for what it's reviewing.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.pr.outputs.sha }}
+
+      - name: Checkout karsift-ai-infra
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: KARSIFT/karsift-ai-infra
+          path: karsift-ai-infra
+
+      # Routes a remediate.yml retry (attempt 2) on a low-risk (R0/R1)
+      # package to a cheaper/faster model (config/roles.yml's
+      # `reviewer_fast_retry`) instead of the full `reviewer` model - see
+      # that role's comment for why this is scoped to retries only, never a
+      # first-pass review, and never R2+. Both attempt and risk are parsed
+      # here rather than plumbed as new inputs from pipeline.yml: attempt is
+      # already embedded in the PR body ("attempt N of 2", the same text
+      # remediate.yml itself parses), and risk is already in change.yaml,
+      # which this job reads anyway for the prompt below - no new wiring
+      # needed in the calling project's pipeline.yml.
+      - name: Resolve reviewer model
+        id: model
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          attempt=$(jq -r .body /tmp/pr.json | grep -oP '(?<=attempt )[0-9]+(?= of 2)' | head -1 || echo "1")
+          risk=$(grep -oP '^risk:\s*\K.*' "${{ inputs.package_path }}/change.yaml" 2>/dev/null | head -1 || echo "")
+
+          role="reviewer"
+          if [ "$attempt" -ge 2 ] && { [ "$risk" = "R0" ] || [ "$risk" = "R1" ]; }; then
+            fast=$(bash karsift-ai-infra/config/resolve-model.sh reviewer_fast_retry karsift-ai-infra/config/roles.yml || echo "")
+            if [ -n "$fast" ]; then
+              role="reviewer_fast_retry"
+            fi
+          fi
+          echo "Routing this review as: role=$role (attempt=$attempt, risk=${risk:-unknown})"
+
+          MODEL=$(bash karsift-ai-infra/config/resolve-model.sh "$role" karsift-ai-infra/config/roles.yml)
+          echo "model=$MODEL" >> "$GITHUB_OUTPUT"
+          echo "role=$role" >> "$GITHUB_OUTPUT"
+
+      # codex-action has no prompt-caching equivalent to Anthropic's, so the
+      # static-instructions/variable-content split that mattered for Claude
+      # Code CLI (system prompt vs. -p text) has no benefit here - back to
+      # one concatenated prompt file, prompts/review.md first.
+      #
+      # task_id extraction (2026-07-24 fix): implement.yml's PR body always
+      # contains "Implements task `<task_id>` from `<change_id>`" (see that
+      # workflow's "Open pull request" step). Multi-task packages get one PR
+      # per task, each reviewed independently before the package is done -
+      # pasting the *whole* acceptance-criteria.md with no task scope caused
+      # every non-final task's PR to fail review against AC that only a
+      # later task's PR is meant to satisfy (found live on VOC-024-T00, PR
+      # #61: reviewer correctly read AC-01..AC-05 in acceptance-criteria.md,
+      # correctly noticed the nested route/AC-01..03 weren't implemented,
+      # and failed a PR that was only ever scoped to AC-00/AC-04/AC-05 per
+      # tasks.md). Pasting tasks.md too and telling the reviewer which
+      # task_id is under review - the same context implement.yml already
+      # gives the implementer - lets it scope correctly instead of judging
+      # task N's diff against the full package's finished-state criteria.
+      - name: Build prompt
+        run: |
+          task_id=$(jq -r .body /tmp/pr.json | grep -oP '(?<=Implements task `)[^`]+' | head -1 || echo "")
+
+          {
+            cat karsift-ai-infra/prompts/review.md
+            echo
+            echo "## Reviewed commit SHA: ${{ steps.pr.outputs.sha }}"
+            if [ -n "$task_id" ]; then
+              echo
+              echo "## Task under review: $task_id"
+              echo
+              echo "This PR implements ONLY the task above, one of possibly several tasks"
+              echo "in this package (see tasks.md below). Scope your acceptance-criteria"
+              echo "assessment to the acceptance criteria this task's own tasks.md entry"
+              echo "declares for it, not the full package's acceptance-criteria.md - later"
+              echo "tasks are separate, independently reviewed PRs and are not yet"
+              echo "implemented by design. Do not fail this PR for not yet satisfying"
+              echo "another task's criteria."
+            fi
+            echo
+            echo "## Package under review"
+            echo
+            echo "### specification.md"
+            cat "${{ inputs.package_path }}/specification.md" 2>/dev/null || echo "(missing)"
+            echo
+            echo "### tasks.md (task breakdown and per-task scope)"
+            cat "${{ inputs.package_path }}/tasks.md" 2>/dev/null || echo "(missing)"
+            echo
+            echo "### acceptance-criteria.md (full package - see task scope note above)"
+            cat "${{ inputs.package_path }}/acceptance-criteria.md" 2>/dev/null || echo "(missing)"
+            echo
+            echo "### impact-analysis.md (protected areas, declared risk)"
+            cat "${{ inputs.package_path }}/impact-analysis.md" 2>/dev/null || echo "(missing)"
+            echo
+            echo "### change.yaml"
+            cat "${{ inputs.package_path }}/change.yaml" 2>/dev/null || echo "(missing)"
+            echo
+            echo "## PR metadata"
+            cat /tmp/pr.json
+            echo
+            echo "## Diff"
+            cat /tmp/pr.diff
+            echo
+            echo "## Lessons learned (.karsift/lessons.md, if present)"
+            cat .karsift/lessons.md 2>/dev/null || true
+          } > /tmp/review-prompt.txt
+
+      - name: Install Cursor CLI
+        run: |
+          curl https://cursor.com/install -fsS | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          # Verify the install actually worked before proceeding - found live
+          # (VOC-035-T03's evidence PR #242) that cursor.com/install can
+          # return a transient HTTP 500, and the `curl | bash` one-liner did
+          # NOT fail this step outright when that happened (bash on the
+          # right side of the pipe received truncated/empty input and still
+          # exited 0) - the job silently continued into the next step, which
+          # then failed with a cryptic, hard-to-diagnose "agent: command not
+          # found" / exit 127 instead of a clear install-failure message.
+          # This check fails loudly and immediately at the actual point of
+          # failure instead.
+          if ! "$HOME/.local/bin/agent" --version >/dev/null 2>&1; then
+            echo "::error::Cursor CLI install failed - agent binary not found/working at \$HOME/.local/bin/agent after install. This is usually a transient issue with cursor.com/install itself (e.g. an HTTP 500 from their endpoint, seen live) - rerun the job." >&2
+            exit 1
+          fi
+
+      # No allow-bot-users equivalent needed: cursor-agent has no
+      # actor-permission gate the way codex-action does (that check was
+      # specific to resolving a GitHub Actions actor identity against
+      # repo-collaborator permissions before running).
+      #
+      # --mode plan is the read-only enforcement (see header comment for the
+      # live verification of this) - no generated permission-profile file is
+      # needed the way OpenCode's `opencode.jsonc` was. --trust is required
+      # every run because a fresh runner workspace is untrusted by default
+      # and would otherwise block on an unanswerable interactive prompt (see
+      # header comment) - it does not grant write access on its own.
+      # --output-format json gives a single JSON object, not a per-event
+      # stream - see header comment; "Extract verdict text" below reads it
+      # as one document. The prompt is piped via stdin, not passed as a
+      # positional argument, for the same execve()-argument-length reason
+      # `opencode run` needed `--file` instead of an inline argument (see
+      # header comment; verified live this repo's own review prompt - full
+      # diff plus every package doc - can exceed the ~128KB single-argument
+      # limit on anything but a trivial PR).
+      #
+      # No second-account fallback exists for Cursor yet (see header
+      # comment) - if a real quota-exhaustion incident on this account shows
+      # one is needed, add it the same way OPENCODE_SECOND_API_KEY was
+      # added here, don't build it speculatively now.
+      #
+      # timeout-minutes bounds a real hang, not just a slow run - kept at 30
+      # to match this step's own prior OpenCode-era budget and
+      # implement.yml's large-diff budget; not yet re-tuned against real
+      # Cursor run durations, revisit if this proves too tight or too loose.
+      - name: Run independent verification
+        id: verify
+        timeout-minutes: 30
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          set -uo pipefail
+          source karsift-ai-infra/config/retry-helpers.sh
+          MODEL="${{ steps.model.outputs.model }}"
+          MODEL="${MODEL#cursor/}"
+          run_review() {
+            agent -p --trust --mode plan \
+              --model "$MODEL" \
+              --output-format json \
+              < /tmp/review-prompt.txt \
+              > /tmp/verdict-response.json 2> /tmp/cursor-stderr.log
+          }
+          # Transient-failure retry (same account/model, immediate) - see
+          # retry-helpers.sh's header comment for the live OpenCode incident
+          # this was originally built for; the heuristic (fast or
+          # content-free failures only) applies identically here.
+          retry_if_transient /tmp/cursor-stderr.log /tmp/verdict-response.json -- run_review
+          exit_code=$?
+          if [ "$exit_code" -ne 0 ]; then
+            cat /tmp/cursor-stderr.log >&2
+          fi
+          exit "$exit_code"
+
+      - name: Extract verdict text
+        run: |
+          python3 - <<'PYEOF'
+          import json
+
+          with open("/tmp/verdict-response.json") as f:
+              raw = f.read().strip()
+
+          if not raw:
+              raise SystemExit(
+                  "cursor-agent produced no output - see /tmp/cursor-stderr.log "
+                  "in this job's logs."
+              )
+
+          event = json.loads(raw)
+          if event.get("is_error"):
+              raise SystemExit(
+                  "cursor-agent reported an application-level error "
+                  f"(subtype={event.get('subtype')!r}): {event.get('result')!r}"
+              )
+
+          result = event.get("result", "")
+          if not result:
+              raise SystemExit("cursor-agent response had no 'result' text.")
+
+          with open("/tmp/verdict.md", "w") as f:
+              f.write(result)
+          PYEOF
+
+      - name: Show verdict
+        run: cat /tmp/verdict.md
+
+      - name: Post verification comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "**Independent verification - bound to commit \`${{ steps.pr.outputs.sha }}\`**"
+            echo
+            cat /tmp/verdict.md
+          } > /tmp/verdict-comment.md
+          gh pr comment ${{ inputs.pr_number }} --body-file /tmp/verdict-comment.md

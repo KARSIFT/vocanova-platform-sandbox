@@ -85,6 +85,14 @@ class Voc080WorkflowPolicyTests(unittest.TestCase):
         self.assertNotIn("issue_comment:", self.deploy_production)
         self.assertNotIn("founder_username", self.deploy_production)
 
+    def test_pipeline_remediate_has_no_founder_override_inputs(self):
+        remediate = self.pipeline.split("  remediate:", 1)[1].split(
+            "  merge-gate:", 1
+        )[0]
+        self.assertIn("remediate.yml@main", remediate)
+        self.assertNotIn("founder_username", remediate)
+        self.assertNotIn("approved", remediate)
+
     def test_live_docs_do_not_claim_founder_comment_engineering_gates(self):
         for relative in LIVE_DOC_PATHS:
             text = (REPOSITORY_ROOT / relative).read_text(encoding="utf-8")
