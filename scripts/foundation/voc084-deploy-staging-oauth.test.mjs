@@ -3,7 +3,7 @@
 // Runs via `pnpm test` → `node --test scripts/foundation/*.test.mjs`.
 
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
@@ -207,5 +207,120 @@ test("VOC-084-TEST-07 (partial): production OAuth sync semantics are unchanged",
     readFileSync(deployStagingPath, "utf8"),
     /\/opt\/vocanova\/production\/secrets\/api\.env/,
     "staging deploy must not write production secret paths",
+  );
+});
+
+const verifyOAuthStartScriptPath = path.join(
+  repositoryRoot,
+  "infra/scripts/verify-staging-oauth-start.sh",
+);
+const verifyOAuthStartSelftestPath = path.join(
+  repositoryRoot,
+  "infra/scripts/verify-staging-oauth-start.selftest.sh",
+);
+const t02EvidencePath = path.join(
+  repositoryRoot,
+  "specs/changes/VOC-084-restore-repository-managed-google-sign-in-in/t02-evidence.md",
+);
+
+test("VOC-084-TEST-06: deploy-staging wires live OAuth-start verification without following Google", () => {
+  const deployStaging = readFileSync(deployStagingPath, "utf8");
+
+  assert.ok(
+    existsSync(verifyOAuthStartScriptPath),
+    "verify-staging-oauth-start.sh must exist",
+  );
+  assert.ok(
+    existsSync(verifyOAuthStartSelftestPath),
+    "verify-staging-oauth-start.selftest.sh must exist",
+  );
+
+  const oauthStartStep = extractStepBlock(
+    deployStaging,
+    "Verify staging OAuth start initiation",
+  );
+
+  assert.match(
+    oauthStartStep,
+    /EXPECT_OAUTH_ENABLED: \$\{\{ secrets\.GOOGLE_OAUTH_CLIENT_ID != '' && secrets\.GOOGLE_OAUTH_CLIENT_SECRET != '' \}\}/,
+    "OAuth-start check must derive enabled expectation from repository pair availability",
+  );
+  assert.match(
+    oauthStartStep,
+    /verify-staging-oauth-start\.sh/,
+    "deploy-staging must invoke the dedicated OAuth-start verification script",
+  );
+
+  const verifyScript = readFileSync(verifyOAuthStartScriptPath, "utf8");
+  assert.match(
+    verifyScript,
+    /accounts\.google\.com/,
+    "verification script must require accounts.google.com authorization URL",
+  );
+  assert.match(
+    verifyScript,
+    new RegExp(
+      CANONICAL_STAGING_CALLBACK.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+    ),
+    "verification script must assert the canonical staging callback redirect_uri",
+  );
+  assert.doesNotMatch(
+    verifyScript,
+    /curl[^\n]*-L|--location/,
+    "verification script must not follow Google redirects",
+  );
+  assert.match(
+    verifyScript,
+    /503/,
+    "verification script must assert coherent disabled behavior",
+  );
+
+  const apiHealthIndex = deployStaging.indexOf(
+    "- name: Poll api-staging.vocanova.site/healthz",
+  );
+  const webHealthIndex = deployStaging.indexOf(
+    "- name: Poll staging.vocanova.site/",
+  );
+  const oauthStartIndex = deployStaging.indexOf(
+    "- name: Verify staging OAuth start initiation",
+  );
+  assert.ok(apiHealthIndex < oauthStartIndex);
+  assert.ok(webHealthIndex < oauthStartIndex);
+});
+
+test("VOC-084-TEST-07: public health polls remain before OAuth-start gate", () => {
+  const deployStaging = readFileSync(deployStagingPath, "utf8");
+
+  assert.match(deployStaging, /Poll api-staging\.vocanova\.site\/healthz/);
+  assert.match(deployStaging, /Poll staging\.vocanova\.site\//);
+  assert.match(deployStaging, /Verify staging OAuth start initiation/);
+});
+
+test("VOC-084-TEST-08: Google client callback disposition is precisely recorded", () => {
+  assert.ok(existsSync(t02EvidencePath), "t02-evidence.md must exist");
+
+  const evidence = readFileSync(t02EvidencePath, "utf8");
+
+  assert.match(
+    evidence,
+    /Google Cloud Console|Google OAuth client/i,
+    "T02 evidence must reference Google Cloud Console disposition",
+  );
+  assert.match(
+    evidence,
+    new RegExp(
+      CANONICAL_STAGING_CALLBACK.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+    ),
+    "T02 evidence must cite the exact staging callback URI",
+  );
+  assert.match(
+    evidence,
+    /authorized redirect|Authorized redirect|redirect URI/i,
+    "T02 evidence must describe the external redirect registration action",
+  );
+  assert.match(
+    evidence,
+    /not verified|not complete|external action|Console access unavailable|pending/i,
+    "T02 evidence must not claim Console authorization complete without evidence",
   );
 });
