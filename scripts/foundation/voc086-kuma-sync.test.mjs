@@ -8,7 +8,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-import { applyOperations, SyncApplyError } from "../../infra/monitoring/kuma-sync/apply.mjs";
+import {
+  applyOperations,
+  SyncApplyError,
+} from "../../infra/monitoring/kuma-sync/apply.mjs";
 import { inventoryEntryToDesiredMonitor } from "../../infra/monitoring/kuma-sync/monitor-payload.mjs";
 import { createMockKumaClient } from "../../infra/monitoring/kuma-sync/mock-client.mjs";
 import { planSyncOperations } from "../../infra/monitoring/kuma-sync/plan.mjs";
@@ -31,14 +34,19 @@ const repositoryRoot = path.resolve(
   "../..",
 );
 
-const monitorsPath = path.join(repositoryRoot, "infra/monitoring/monitors.yaml");
+const monitorsPath = path.join(
+  repositoryRoot,
+  "infra/monitoring/monitors.yaml",
+);
 const syntheticsPath = path.join(
   repositoryRoot,
   "infra/monitoring/synthetics.yaml",
 );
 
 function loadInventoryDocuments() {
-  const monitorsDocument = parseMonitoringYaml(readFileSync(monitorsPath, "utf8"));
+  const monitorsDocument = parseMonitoringYaml(
+    readFileSync(monitorsPath, "utf8"),
+  );
   const syntheticsDocument = parseMonitoringYaml(
     readFileSync(syntheticsPath, "utf8"),
   );
@@ -78,10 +86,9 @@ test("VOC-086-TEST-03: synchronizer updates changed monitors and is idempotent",
   const seeded = {};
   for (const entry of monitorsDocument.availability_monitors) {
     const desired = inventoryEntryToDesiredMonitor(entry, ownershipMarker);
-    const id =
-      entry.id.includes("production")
-        ? 100 + Object.keys(seeded).length
-        : 10 + Object.keys(seeded).length;
+    const id = entry.id.includes("production")
+      ? 100 + Object.keys(seeded).length
+      : 10 + Object.keys(seeded).length;
     seeded[id] = { ...desired, id };
   }
 
@@ -98,8 +105,8 @@ test("VOC-086-TEST-03: synchronizer updates changed monitors and is idempotent",
   const changedEntry = monitorsDocument.availability_monitors.find(
     (entry) => entry.id === "kuma.availability.staging.web",
   );
-  const targetId = Object.values(client.monitors).find(
-    (monitor) => monitor.description?.includes(changedEntry.id),
+  const targetId = Object.values(client.monitors).find((monitor) =>
+    monitor.description?.includes(changedEntry.id),
   )?.id;
   client.monitors[targetId] = {
     ...client.monitors[targetId],
@@ -200,7 +207,10 @@ test("VOC-086-TEST-04: adopt production monitors and preserve unrelated manual m
   assert.equal(manualMutations.length, 0);
 
   const adoptedWeb = client.monitors[1];
-  assert.match(adoptedWeb.description, /monitor_id=kuma\.availability\.production\.web/);
+  assert.match(
+    adoptedWeb.description,
+    /monitor_id=kuma\.availability\.production\.web/,
+  );
 
   const adoptedApi = client.monitors[2];
   assert.match(
@@ -314,7 +324,10 @@ test("VOC-086-TEST-07: sync tooling does not reference SQLite deployment paths",
   const forbidden = [/kuma\.db/i, /\bsqlite\b/i, /\/app\/data/i];
 
   for (const relativePath of syncFiles) {
-    const source = readFileSync(path.join(repositoryRoot, relativePath), "utf8");
+    const source = readFileSync(
+      path.join(repositoryRoot, relativePath),
+      "utf8",
+    );
     for (const pattern of forbidden) {
       assert.ok(
         !pattern.test(source),
