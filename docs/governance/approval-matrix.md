@@ -37,9 +37,9 @@ The one-time VOC-002 migration approval is exhausted and must never be reused.
 CODEOWNERS remains review routing and is not approval evidence.
 
 **Historical (pre-A-004 activation):** Under active A-003 / VOC-075, R4 engineering
-workflows required founder approval on merge; R4 founder authority remains unchanged
-in those historical records until A-004 activation supersedes engineering-workflow
-gates (issue #627). That policy is preserved in A-003 and VOC-075 audit evidence.
+workflows required founder approval on merge. R4 founder authority remains unchanged
+in those historical records. Active A-004 supersedes their engineering-workflow gates
+(issue #627) without rewriting A-003 or VOC-075 audit evidence.
 
 ## Approval evidence
 

@@ -116,7 +116,7 @@ The technical-steward requirement became effective immediately when PR #3 merged
 remained effective until A-003 activation. The historical qualified human steward is
 recorded in
 [technical-steward-appointment.md](technical-steward-appointment.md). Under active
-A-003 until A-004 activation, R4 merge required founder approval (historical). **Post-A-004:**
+Under A-003, R4 merge required founder approval (historical). **Active A-004:**
 routine R3 uses strengthened applicable controls and independent verification without
 standing steward or founder approval merely because it is R3; R4 requires stronger
 evidence but not a founder `approved` comment on engineering-workflow gates.
@@ -147,8 +147,8 @@ evidence, and risk.
 - `develop` and `main` are the only permanent branches.
 - Feature and change work occurs on short-lived isolated branches or worktrees.
 - Pull requests into `develop` require applicable deterministic checks and an
-  independent-verifier result. Protected changes also require the designated human
-  approval.
+  independent-verifier result. Protected changes also require their designated
+  protected-path and risk-specific non-human controls.
 - Working branches are normally squash-merged into `develop`.
 - `develop` is the integrated staging state; successful merges deploy to staging
   only after staging automation exists and is validated.
@@ -160,9 +160,9 @@ evidence, and risk.
   only when it is reversible, its stronger checks pass, and the approved release
   policy explicitly permits that change type. Automation is permission, not an
   obligation; a gate may always hold a release for investigation.
-- Under active A-003 until A-004 activation, routine R3 requires strengthened
-  applicable controls and independent verification without standing steward or
-  founder approval solely for being R3. **Post-A-004:** R4 requires stronger
+- Under active A-004, routine R3 requires strengthened applicable controls and
+  independent verification without standing steward or founder approval solely for
+  being R3. R4 requires stronger
   evidence but not a founder `approved` comment on merge/adopt/release/deploy.
 - Initial public launch and major launch decisions require founder **requirement
   clarification** before stable acceptance criteria; they are not engineering-workflow

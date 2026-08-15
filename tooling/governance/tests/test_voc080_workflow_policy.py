@@ -30,6 +30,8 @@ LIVE_FOUNDER_GATE_PHRASES = [
     "does not replace founder approval",
     "cannot reach `main` or production without founder",
     "reply `approved`",
+    "A-003 remains effective until `VOC-080-T07`",
+    "Under active A-003 until A-004 activation",
 ]
 
 

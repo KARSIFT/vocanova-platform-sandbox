@@ -125,7 +125,8 @@ change.
 - Tasks: `VOC-080-T00`, `VOC-080-T04`, `VOC-080-T07`
 - Tests: `VOC-080-TEST-08`
 - Evidence: `VOC-080-EV-00`, `VOC-080-EV-04`, `VOC-080-EV-07`
-- Result: pass — `VOC-080-EV-07` (`t07-evidence.md`); live proof `t06-evidence.md`
+- Result: activation candidate — deterministic doc/settings checks pass; final result
+  binds to canonical merge and post-merge validation of the exact T07 revision
 
 Observable outcome: AGENTS.md, CLAUDE.md, DOC-15/DOC-16 as applicable,
 A-004 (or settled amendment), governance matrices, templates, workflow
@@ -140,7 +141,7 @@ paths this package claims to clear.
 - Tasks: `VOC-080-T07`
 - Tests: `VOC-080-TEST-06`
 - Evidence: `VOC-080-EV-07`
-- Result: pass — `VOC-080-EV-07` (`t07-evidence.md`); live proof `t06-evidence.md`
+- Result: pending canonical merge of the exact independently reviewed T07 revision
 
 Observable outcome: after transition activation, VOC-079 (issue #624) and
 related recovery work can progress through adopt/merge/release without a
