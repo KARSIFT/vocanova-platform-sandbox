@@ -1079,6 +1079,8 @@ jobs:
               exit 1
             fi
 
+            # Wait for Docker's fail-closed Kuma health signal before applying
+            # shared-edge network/config changes.
             kuma_status=starting
             for attempt in $(seq 1 45); do
               kuma_status=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' vocanova-uptime-kuma 2>/dev/null || true)
