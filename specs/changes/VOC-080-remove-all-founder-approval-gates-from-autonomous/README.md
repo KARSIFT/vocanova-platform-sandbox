@@ -18,6 +18,8 @@ with independent verification bound to the approved plan revision. Risk is **R4*
 - Owner: autonomous implementer with independent verification
 - Approval evidence: PR #628 — `approval_status: approved`,
   `implementation_authorized: true`
+- Roster state: reconciliation pending until this recovery PR merges and the
+  `reconcile` dispatch for plan PR #628 completes
 - Target branch: `develop`
 - Linked GitHub issues:
   - [#627](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/627)
@@ -75,8 +77,9 @@ Live pain this package addresses (from #627):
    PRs, remediation, recovery, release, and deployment behaviors.
 7. **Rehearsal** (`VOC-080-T06`): prove the new loops in sandbox/dry-run
    before activation.
-8. **Activation** (`VOC-080-T07`): exact-revision independent verification and
-   recorded activation evidence enable the post-transition
+8. **Activation** (`VOC-080-T07`): one final exact-revision founder approval
+   under pre-transition authority plus independent verification and recorded
+   activation evidence enable the post-transition
    model so VOC-079 and later work need no founder `approved` comment.
 
 ## What this package deliberately does NOT do
@@ -102,14 +105,18 @@ The drafting questions were resolved at adoption as follows:
 3. `automatic_merge_allowed` neutralize vs retire (`VOC-080-DEP-02`).
 4. Cross-repo sequencing with `karsift-ai-infra` (`VOC-080-DEP-03`).
 5. Rehearsal venue and proof bar (`VOC-080-DEP-04`).
-6. Risk is **R4**. Activation requires exact-revision independent verification,
-   deterministic checks, rehearsal evidence, and rollback readiness—not another
-   founder approval comment.
+6. Risk is **R4**. Activation requires the one final exact-revision founder
+   transition approval, independent verification, deterministic checks,
+   rehearsal evidence, and rollback readiness.
 
 ## Verification, approvals, release, and closure
 
 See `test-plan.md`, `release-plan.md`, and `implementation-plan.md`.
 
 This package was adopted under the pre-transition authority recorded on PR #628.
-No later founder approval gate is required. Independent verification of each
-exact revision remains mandatory throughout.
+Task issues and `.karsift/tasks.json` are intentionally created by the
+post-merge idempotent reconcile run, not guessed in this recovery commit.
+The exact T07 activation revision still requires the final founder transition
+approval defined by the adopted plan. Independent verification of each exact
+revision remains mandatory throughout. After T07 activation, no later founder
+approval gate remains.

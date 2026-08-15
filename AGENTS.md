@@ -115,41 +115,27 @@ See `plan-review.yml`'s header comment in karsift-ai-infra for the full mechanis
   diagnosis: exact reproduction steps or commands, the failing behavior, and (if
   you found it) the root cause - not just a symptom description.
 
-## Recovering from a merged plan PR that was not adopted first
+## Reconciling a merged plan PR whose adoption handoff was missed
 
-Issue #301 documents a live incident (VOC-039: PR #299 merged without adoption,
-recovered via PR #300 plus re-running the failed `adopt` run). Use this
-workaround when a `plan/` branch PR merges before its package `change.yaml` is
-set to `status: adopted` and `implementation.authorized: true`.
+The reusable `adopt.yml` now validates the merged plan PR and its exact-revision
+independent verdict, records adoption fields, creates or reuses the task roster,
+and safely no-ops when reconciliation is already complete. Use the caller
+workflow's `reconcile` dispatch when GitHub did not deliver the plan PR's merged
+event or the original adoption run did not finish:
 
-Note: the `plan_reviewer` independent review described above (added 2026-08-14)
-checks whether a plan PR's *proposal* is sound before merge - it does not check
-or enforce adoption-field state, and does not change this recovery procedure. A
-plan PR can pass `plan_reviewer` review and still merge unadopted; this section's
-steps remain the correct fix if that happens.
+1. Confirm the source plan PR is merged, its head SHA has a PASS or PASS WITH
+   NON-BLOCKING FINDINGS plan-review comment, and its body names one package.
+2. Dispatch the caller workflow against the integration branch:
+   `gh workflow run pipeline.yml --ref develop -f action=reconcile -f plan_pr_number=<PR>`
+3. Confirm the run's `adopt` job reuses any existing task issues, merges the
+   checked roster/adoption record when a change is needed, and dispatches only
+   the first not-yet-dispatched task.
+4. Re-run the same reconcile command if the run is interrupted. Do not create a
+   second manual roster or guess issue numbers; reconciliation is idempotent.
 
-1. Identify the original failed `adopt` workflow run for that merge. Confirm it
-   failed in "Verify the package was actually adopted" and names the unadopted
-   `change.yaml` path.
-2. Edit that package's `change.yaml` on the target branch to the adopted state
-   (`status: adopted` and `implementation.authorized: true`), as should have
-   happened before the merge.
-3. Re-run that exact failed run (not a fresh dispatch; `adopt.yml` has no
-   `workflow_dispatch` entry point in this repository) with:
-   `gh run rerun --failed <run-id>`
-4. Confirm the rerun now reads the updated target-branch tip and proceeds to
-   create the task issues.
-
-This recovery path depends on the original failed run still existing in GitHub
-Actions retention. If the run has been garbage-collected, this procedure will
-not work; use a manual remediation path such as VOC-039's follow-up PR #300
-approach instead.
-
-This section documents an operational workaround, not a structural fix. The
-underlying gap remains open and out of this repository's direct control: adding
-`workflow_dispatch` support to `adopt.yml` and adding earlier guardrails in
-`plan.yml` (see VOC-040 specification open question 1 in
-`specs/changes/VOC-040-adopt-yml-has-no-recovery-path-when-a-plan-pr/specification.md`).
+Historical incidents VOC-039/PR #299 and VOC-079/PR #625 predate this recovery
+entry point. Their old failed-run workaround is audit evidence, not the current
+procedure.
 
 ## Current validation
 

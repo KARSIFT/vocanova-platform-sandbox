@@ -26,10 +26,9 @@ requirement_source: 'GitHub issue #627 ("Remove all founder approval gates from 
   checks, rollback, secrets isolation, least-privilege credentials, builder/verifier
   separation, or the requirement to ask when product requirements are genuinely ambiguous.
   Transition authority: evaluated under pre-transition (A-003) authority; this package
-  did not authorize its own adoption. The founder decision recorded for issue #627 and
-  plan PR #628 authorizes autonomous implementation and activation once deterministic
-  checks, rehearsal, rollback readiness, and exact-revision independent verification
-  pass; it removes any later founder approval gate.'
+  cannot authorize its own adoption. One final founder approval under current policy
+  is required for the exact transition revision, after which no later founder approval
+  gate remains.'
 requirement_approval_status: "approved by founder decision in issue #627 and exact plan\
   \ revision approval on PR #628; implementation is authorized subject to deterministic\
   \ checks and independent exact-revision verification."
@@ -44,7 +43,7 @@ owners:
   independent_verification: independent plan_reviewer/reviewer roles
 approval_status: approved
 implementation_authorized: true
-automatic_merge_allowed: true
+automatic_merge_allowed: false
 production_impact: 'expected for governance and automation behavior across this repository
   and KARSIFT/karsift-ai-infra consumers. No direct application-feature change. Removes
   founder `approved`-comment dependence from plan adoption, R4 merge, unparseable-risk
@@ -145,7 +144,7 @@ affected_areas:
 implementation:
   authorized: true
   required: true
-  status: authorized
+  status: authorized-pending-roster-reconciliation
   target_branch: develop
   pull_request: null
   authority_issue: null
@@ -154,18 +153,20 @@ release:
   mode: not-authorized-by-this-package
   production_impact: expected-governance-and-automation-authority-change
   deployment: not-authorized-by-this-package
-  automatic_merge: true
+  automatic_merge: false
   migration_required: false
   rollback_required: true
 repository_adoption_status: adopted
 adoption_pr: 628
 adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/628
 implementation_authority_before_adoption: false
-implementation_authority_status: authorized
+implementation_authority_status: authorized-pending-roster-reconciliation
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
-blocking_reasons: "Implementation is authorized. Transition activation remains gated by\
-  \ T00-T06 evidence, deterministic validation, independent verification, and rollback\
-  \ readiness; no founder approval comment is required."
+blocking_reasons: "Implementation is authorized, but task dispatch is blocked until the\
+  \ post-merge reconcile run creates the checked roster. Transition activation remains gated by\
+  \ T00-T06 evidence, deterministic validation, independent verification, rollback\
+  \ readiness, and the one final exact-revision founder approval required by the\
+  \ pre-transition authority."
