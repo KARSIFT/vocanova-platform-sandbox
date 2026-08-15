@@ -72,6 +72,61 @@ func TestReconcileStreakAdvancesOnConsecutiveCompletion(t *testing.T) {
 	assert.Equal(t, StreakStatusActive, rec.NewState.Status)
 }
 
+func TestReconcileStreakAdvancesWhenTodayAlreadyCompletedInSnapshots(t *testing.T) {
+	// Regression (VOC-082): after MarkSnapshotCompleted in the same call,
+	// the fetched snapshot list includes today as completed while
+	// currentCompletion=true. This must advance the streak using
+	// yesterday as the anchor, not return ErrInvalidStreakSnapshot.
+	now := time.Date(2026, 7, 26, 12, 0, 0, 0, time.UTC)
+	today := atLocalDate(t, "2026-07-26")
+	yesterday := atLocalDate(t, "2026-07-25")
+	state := StreakState{
+		CurrentStreakCount:     3,
+		LongestStreakCount:     3,
+		LastCompletedLocalDate: &yesterday,
+		Timezone:               "UTC",
+		Status:                 StreakStatusActive,
+	}
+	snapshots := []StreakSnapshot{
+		{LocalDate: yesterday, Status: MissionStatusCompleted},
+		{LocalDate: today, Status: MissionStatusCompleted},
+	}
+	rec, err := ReconcileStreak("user-1", now, state, GraceBalance{Balance: 0}, snapshots, true)
+	require.NoError(t, err)
+	assert.Equal(t, 4, rec.NewState.CurrentStreakCount)
+	assert.Equal(t, 4, rec.NewState.LongestStreakCount)
+	assert.Equal(t, StreakStatusActive, rec.NewState.Status)
+}
+
+func TestReconcileStreakFirstCompletionWhenTodayInSnapshots(t *testing.T) {
+	// Regression (VOC-082): first-ever completion with today already
+	// marked completed in the fetched list starts a streak of 1.
+	now := time.Date(2026, 7, 26, 12, 0, 0, 0, time.UTC)
+	today := atLocalDate(t, "2026-07-26")
+	state := StreakState{Timezone: "UTC"}
+	snapshots := []StreakSnapshot{
+		{LocalDate: today, Status: MissionStatusCompleted},
+	}
+	rec, err := ReconcileStreak("user-1", now, state, GraceBalance{Balance: 0}, snapshots, true)
+	require.NoError(t, err)
+	assert.Equal(t, 1, rec.NewState.CurrentStreakCount)
+	assert.Equal(t, 1, rec.NewState.LongestStreakCount)
+	assert.Equal(t, StreakStatusActive, rec.NewState.Status)
+}
+
+func TestReconcileStreakRejectsFutureLastGood(t *testing.T) {
+	// VOC-082-D01: genuinely future completed snapshots remain rejected.
+	now := time.Date(2026, 7, 26, 12, 0, 0, 0, time.UTC)
+	tomorrow := atLocalDate(t, "2026-07-27")
+	state := StreakState{Timezone: "UTC", Status: StreakStatusActive}
+	snapshots := []StreakSnapshot{
+		{LocalDate: tomorrow, Status: MissionStatusCompleted},
+	}
+	_, err := ReconcileStreak("user-1", now, state, GraceBalance{Balance: 0}, snapshots, true)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrInvalidStreakSnapshot)
+}
+
 func TestReconcileStreakEarnsGraceDayAt7(t *testing.T) {
 	now := time.Date(2026, 7, 26, 12, 0, 0, 0, time.UTC)
 	yesterday := atLocalDate(t, "2026-07-25")

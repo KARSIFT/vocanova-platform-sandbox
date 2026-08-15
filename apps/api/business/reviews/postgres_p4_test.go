@@ -353,17 +353,23 @@ func TestPostgreSQLRepositorySubmitReviewP4MissionCompletion(t *testing.T) {
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
 		WithArgs(sqlmock.AnyArg(), userID, day, "UTC", gamification.RewardDailyMissionDone).
 		WillReturnResult(sqlmock.NewResult(0, 1))
-	// Streak reconciliation: fetch recent snapshots and current grace balance.
+	// Streak reconciliation: fetch recent snapshots (includes today just
+	// marked completed, mirroring applyP4ReviewWiring's mark-then-fetch
+	// order) and current grace balance.
+	yesterday := time.Date(2026, 7, 25, 0, 0, 0, 0, time.UTC)
 	mock.ExpectQuery("SELECT local_date, status, completed_at, grace_applied, grace_day_id FROM daily_mission_snapshots").
 		WithArgs(userID, 14).
-		WillReturnRows(sqlmock.NewRows([]string{"local_date", "status", "completed_at", "grace_applied", "grace_day_id"}))
+		WillReturnRows(sqlmock.NewRows([]string{"local_date", "status", "completed_at", "grace_applied", "grace_day_id"}).
+			AddRow(yesterday, "completed", now, false, nil).
+			AddRow(day, "completed", now, false, nil))
 	mock.ExpectQuery("SELECT COALESCE\\(balance_after, 0\\) FROM grace_day_ledger").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}))
 	// ReconcileAndAdvance: GetStreakState on db.
 	mock.ExpectQuery("SELECT user_id, current_streak_count, longest_streak_count").
 		WithArgs(userID).
-		WillReturnRows(sqlmock.NewRows([]string{"user_id", "current_streak_count", "longest_streak_count", "last_completed_local_date", "last_activity_local_date", "timezone", "status", "created_at", "updated_at"}))
+		WillReturnRows(sqlmock.NewRows([]string{"user_id", "current_streak_count", "longest_streak_count", "last_completed_local_date", "last_activity_local_date", "timezone", "status", "created_at", "updated_at"}).
+			AddRow(userID, 19, 19, yesterday, yesterday, "UTC", "active", now, now))
 	// UpsertStreakState on tx.
 	mock.ExpectExec("INSERT INTO streak_states").
 		WillReturnResult(sqlmock.NewResult(0, 1))

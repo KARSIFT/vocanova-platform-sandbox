@@ -83,6 +83,12 @@
 #   /opt/vocanova/infra/docker-compose.shared-edge.yml
 #                                            (SCPed by this workflow;
 #                                              VOC-067-T02 shared edge)
+#   /opt/vocanova/infra/docker-compose.monitoring.yml
+#                                            (SCPed by this workflow;
+#                                              VOC-081-T03 monitoring source)
+#   /opt/vocanova/monitoring/docker-compose.monitoring.yml
+#                                            (converged from infra/ copy;
+#                                              kuma-data/ is host data only)
 #   /opt/vocanova/infra/nginx/...            (SCPed by this workflow;
 #                                              staging 10-/20- vhosts)
 #   /opt/vocanova/infra/nginx-shared/...     (SCPed by this workflow;
@@ -524,6 +530,8 @@ jobs:
           cp infra/docker-compose.yml /tmp/deploy-bundle/infra/
           # VOC-067-T02 shared-edge compose (controlled bring-up below)
           cp infra/docker-compose.shared-edge.yml /tmp/deploy-bundle/infra/
+          # VOC-081-T03 monitoring compose (converged on host under /opt/vocanova/monitoring)
+          cp infra/docker-compose.monitoring.yml /tmp/deploy-bundle/infra/
           # T05's nginx config tree (conf.d/ contains the
           # per-Host server blocks; nginx.conf is the main
           # config that includes them). Shared edge loads only
@@ -1007,13 +1015,128 @@ jobs:
             # -------------------------------------------------------------
             SHARED_EDGE_CONTAINER=vocanova-shared-edge-nginx
 
+            # VOC-081-T01/T03: the shared-edge and monitoring Compose models
+            # declare vocanova-monitoring-net as external. Staging-owned deploy
+            # creates it idempotently, converges Kuma, then applies controlled
+            # shared-edge network/config convergence with fail-closed nginx -t.
+            if ! docker network inspect vocanova-monitoring-net >/dev/null 2>&1; then
+              docker network create --driver bridge vocanova-monitoring-net >/dev/null
+              echo "Created dedicated vocanova-monitoring-net (VOC-081-T01)"
+            fi
+
+            # VOC-081-T03: converge the isolated monitoring project from
+            # repository source. The first repository-managed converge takes a
+            # cold, permission-restricted backup of the existing data before
+            # Compose may replace the container. A durable marker prevents
+            # routine app deploys from stopping Kuma for repeated backups.
+            sudo mkdir -p /opt/vocanova/monitoring
+            sudo install -m 0644 /opt/vocanova/infra/docker-compose.monitoring.yml /opt/vocanova/monitoring/docker-compose.monitoring.yml
+            sudo chown "$(id -un)":"$(id -gn)" /opt/vocanova/monitoring/docker-compose.monitoring.yml
+            docker compose -f /opt/vocanova/monitoring/docker-compose.monitoring.yml -p monitoring config >/dev/null
+
+            MONITORING_ROOT=/opt/vocanova/monitoring
+            MONITORING_DATA="$MONITORING_ROOT/kuma-data"
+            MONITORING_MARKER="$MONITORING_ROOT/.repository-converged-voc081"
+            FIRST_MONITORING_CONVERGE=false
+            KUMA_WAS_RUNNING=false
+
+            if [ ! -f "$MONITORING_MARKER" ]; then
+              FIRST_MONITORING_CONVERGE=true
+              if [ ! -d "$MONITORING_DATA" ] || [ -z "$(sudo find "$MONITORING_DATA" -mindepth 1 -print -quit)" ]; then
+                echo "ERROR: existing Kuma data is missing or empty; refusing first repository converge" >&2
+                exit 1
+              fi
+
+              sudo mkdir -p "$MONITORING_ROOT/backups"
+              MONITORING_BACKUP="$MONITORING_ROOT/backups/kuma-data-pre-voc081-$(date -u +%Y%m%dT%H%M%SZ).tar.gz"
+              if [ "$(docker inspect --format '{{.State.Running}}' vocanova-uptime-kuma 2>/dev/null || true)" = "true" ]; then
+                KUMA_WAS_RUNNING=true
+                docker stop --time 30 vocanova-uptime-kuma >/dev/null
+              fi
+              if ! sudo tar -C "$MONITORING_ROOT" -czf "$MONITORING_BACKUP" kuma-data; then
+                echo "ERROR: Kuma pre-converge backup failed; restoring the previous container" >&2
+                if [ "$KUMA_WAS_RUNNING" = "true" ]; then
+                  docker start vocanova-uptime-kuma >/dev/null 2>&1 || true
+                fi
+                exit 1
+              fi
+              sudo chmod 0600 "$MONITORING_BACKUP"
+              if ! sudo test -s "$MONITORING_BACKUP" || ! sudo tar -tzf "$MONITORING_BACKUP" kuma-data/kuma.db >/dev/null; then
+                echo "ERROR: Kuma pre-converge backup validation failed; restoring the previous container" >&2
+                if [ "$KUMA_WAS_RUNNING" = "true" ]; then
+                  docker start vocanova-uptime-kuma >/dev/null 2>&1 || true
+                fi
+                exit 1
+              fi
+              echo "Created and validated first-converge Kuma backup: $MONITORING_BACKUP"
+            fi
+
+            if ! docker compose -f /opt/vocanova/monitoring/docker-compose.monitoring.yml -p monitoring up -d; then
+              echo "ERROR: monitoring Compose convergence failed" >&2
+              if [ "$KUMA_WAS_RUNNING" = "true" ]; then
+                docker start vocanova-uptime-kuma >/dev/null 2>&1 || true
+              fi
+              exit 1
+            fi
+
+            kuma_status=starting
+            for attempt in $(seq 1 45); do
+              kuma_status=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' vocanova-uptime-kuma 2>/dev/null || true)
+              if [ "$kuma_status" = "healthy" ]; then
+                break
+              fi
+              sleep 2
+            done
+            if [ "$kuma_status" != "healthy" ]; then
+              echo "ERROR: vocanova-uptime-kuma did not become healthy after repository convergence" >&2
+              docker compose -f /opt/vocanova/monitoring/docker-compose.monitoring.yml -p monitoring logs --no-color --tail=100 uptime-kuma >&2
+              exit 1
+            fi
+            if [ "$FIRST_MONITORING_CONVERGE" = "true" ]; then
+              sudo touch "$MONITORING_MARKER"
+              echo "Recorded successful first repository-managed Kuma convergence"
+            fi
+
+            # Disposable nginx -t with the same mount set as shared-edge compose
+            # before touching the running edge (VOC-081-T03 / VOC-067-AC-04).
+            run_shared_edge_nginx_t() {
+              docker run --rm \
+                -v /opt/vocanova/infra/nginx-shared/nginx.conf:/etc/nginx/nginx.conf:ro \
+                -v /opt/vocanova/infra/nginx-shared/conf.d:/etc/nginx/conf.d/shared:ro \
+                -v /opt/vocanova/infra/nginx/conf.d:/etc/nginx/conf.d/staging:ro \
+                -v /opt/vocanova/production/nginx/conf.d:/etc/nginx/conf.d/production:ro \
+                -v /opt/vocanova/infra/secrets/nginx/cert.pem:/etc/nginx/certs/staging/cert.pem:ro \
+                -v /opt/vocanova/infra/secrets/nginx/key.pem:/etc/nginx/certs/staging/key.pem:ro \
+                -v /opt/vocanova/production/secrets/nginx/cert.pem:/etc/nginx/certs/production/cert.pem:ro \
+                -v /opt/vocanova/production/secrets/nginx/key.pem:/etc/nginx/certs/production/key.pem:ro \
+                nginx:1.27-alpine nginx -t
+            }
+
             if docker inspect "$SHARED_EDGE_CONTAINER" >/dev/null 2>&1; then
+              run_shared_edge_nginx_t
+              docker compose -f docker-compose.shared-edge.yml -p vocanova-shared-edge config >/dev/null
+              # Controlled convergence when compose gains network membership or
+              # nginx-shared changes — no --force-recreate on routine deploys.
+              docker compose -f docker-compose.shared-edge.yml -p vocanova-shared-edge up -d
+              shared_edge_status=starting
+              for attempt in $(seq 1 45); do
+                shared_edge_status=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' "$SHARED_EDGE_CONTAINER" 2>/dev/null || true)
+                if [ "$shared_edge_status" = "healthy" ]; then
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$shared_edge_status" != "healthy" ]; then
+                echo "ERROR: shared edge did not become healthy after controlled convergence" >&2
+                docker compose -f docker-compose.shared-edge.yml -p vocanova-shared-edge logs --no-color --tail=100 nginx >&2
+                exit 1
+              fi
               if ! docker exec "$SHARED_EDGE_CONTAINER" nginx -t; then
-                echo "ERROR: shared-edge nginx -t failed after staging conf update; deploy aborted without reload (previous config still active for both tiers)" >&2
+                echo "ERROR: shared-edge nginx -t failed after controlled convergence; deploy aborted without reload (previous config still active for both tiers)" >&2
                 exit 1
               fi
               docker exec "$SHARED_EDGE_CONTAINER" nginx -s reload
-              echo "Shared edge reloaded after staging nginx conf update (VOC-067-T03 routine path)"
+              echo "Shared edge converged and reloaded after staging deploy (VOC-067-T03 / VOC-081-T03 routine path)"
             else
               if [ ! -f /opt/vocanova/infra/docker-compose.shared-edge.yml ]; then
                 echo "ERROR: docker-compose.shared-edge.yml missing from staging infra tree" >&2
@@ -1039,18 +1162,7 @@ jobs:
                 exit 1
               fi
               docker compose -f docker-compose.shared-edge.yml -p vocanova-shared-edge config >/dev/null
-              # Disposable nginx -t with the same mount set as shared-edge compose
-              # before touching host ports / stopping legacy staging nginx.
-              docker run --rm \
-                -v /opt/vocanova/infra/nginx-shared/nginx.conf:/etc/nginx/nginx.conf:ro \
-                -v /opt/vocanova/infra/nginx-shared/conf.d:/etc/nginx/conf.d/shared:ro \
-                -v /opt/vocanova/infra/nginx/conf.d:/etc/nginx/conf.d/staging:ro \
-                -v /opt/vocanova/production/nginx/conf.d:/etc/nginx/conf.d/production:ro \
-                -v /opt/vocanova/infra/secrets/nginx/cert.pem:/etc/nginx/certs/staging/cert.pem:ro \
-                -v /opt/vocanova/infra/secrets/nginx/key.pem:/etc/nginx/certs/staging/key.pem:ro \
-                -v /opt/vocanova/production/secrets/nginx/cert.pem:/etc/nginx/certs/production/cert.pem:ro \
-                -v /opt/vocanova/production/secrets/nginx/key.pem:/etc/nginx/certs/production/key.pem:ro \
-                nginx:1.27-alpine nginx -t
+              run_shared_edge_nginx_t
 
               # Hand off host 80/443: stop legacy staging nginx (if present), then
               # start shared edge. On failure, attempt to restart legacy nginx.

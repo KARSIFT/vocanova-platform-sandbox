@@ -1,0 +1,69 @@
+# infra/docker-compose.monitoring.yml
+#
+# VOC-081-T00: repository source of truth for Uptime Kuma on the shared host.
+#
+# Package: VOC-081 (Route monitor.vocanova.site through shared edge)
+# Task:    VOC-081-T01 (network); T00 (Compose identity)
+# Risk:    R3 path floor (infra/*); package R4.
+# Authority: VOC-081 change package (adopted; specs/changes/VOC-081-route-monitor-vocanova-site-through-the/).
+#
+# Preserves the live Compose project identity established at VOC-037-T04:
+#   * project name `monitoring`
+#   * container name `vocanova-uptime-kuma`
+#   * persistent data at /opt/vocanova/monitoring/kuma-data
+#   * loopback-only host publish on port 3001 (VOC-081-D01)
+#
+# Joins vocanova-monitoring-net (external) so shared-edge nginx can reach Kuma
+# by container DNS without a public host publish (VOC-081-D01 / T01). Does NOT
+# attach to vocanova-net or vocanova-production-net. Vhost (T02) and deploy
+# workflow convergence (T03) are separate. First live converge must reuse
+# existing kuma-data per t00-evidence.md backup plan.
+#
+# Host layout (deploy target — T03 will SCP/converge this tree):
+#   /opt/vocanova/monitoring/
+#   ├── docker-compose.monitoring.yml   (or docker-compose.yml on host)
+#   └── kuma-data/                      (founder data; NOT SCPed by deploy)
+#
+# Local validation from repo root:
+#   docker compose -f infra/docker-compose.monitoring.yml config
+
+name: monitoring
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: vocanova-uptime-kuma
+    restart: unless-stopped
+    volumes:
+      # Bind the live host data directory. First converge (T03) must point at
+      # the existing /opt/vocanova/monitoring/kuma-data tree — never an empty
+      # replacement path (VOC-081-AC-00).
+      - ${VOCANOVA_MONITORING_ROOT:-/opt/vocanova/monitoring}/kuma-data:/app/data
+    ports:
+      # Loopback-only dashboard bind (VOC-081-D01). Shared edge reaches Kuma
+      # over vocanova-monitoring-net — not via a public host publish.
+      - "127.0.0.1:3001:3001"
+    healthcheck:
+      # Kuma 1.x ships this as executable but without a shebang. Invoking it
+      # directly produces `exec format error`; run it through Node explicitly.
+      test: ["CMD", "node", "extra/healthcheck.js"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    mem_limit: 256m
+    cpus: 0.50
+    logging: *default-logging
+    networks:
+      - vocanova-monitoring-net
+
+networks:
+  vocanova-monitoring-net:
+    external: true
+    name: vocanova-monitoring-net
