@@ -19,11 +19,11 @@ related_decisions:
 
 # 16 — Vocanova Autonomous Development Operating Model
 
-> **A-003 active-authority notice:** A-003 has been effectively active since
-> `2026-07-17T16:44:34Z`. **A-004** (issue #627 / VOC-080) supersedes A-003 founder
-> `approved`-comment gates on engineering workflows after `VOC-080-T07` activation.
-> Until then, A-003 remains effective. This notice does not alter historical DOC-16
-> adoption evidence below.
+> **A-004 active-authority notice:** A-004 has been effectively active since
+> `2026-08-15T08:30:00Z` (`VOC-080-T07`). A-004 supersedes A-003 founder
+> `approved`-comment gates on engineering workflows. A-003 remains authoritative
+> historical evidence. This notice does not alter historical DOC-16 adoption evidence
+> below.
 
 ## Status and precedence
 

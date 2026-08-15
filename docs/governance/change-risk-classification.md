@@ -13,13 +13,13 @@ steward, or founder.
 | R3 | Authentication/authorization; sensitive-data handling; schema migrations; billing implementation; secrets; production infrastructure; AI-provider controls; audio/voice storage; backups; CI/CD, rollback, security, governance enforcement, or agent authority | All applicable CI; specialist security/architecture/migration/deployment review; independent verifier; explicit protected-area evidence | No standing technical-steward or founder approval solely because work is R3; EHR only when exceptionally triggered | Strengthened controls required; controlled rollout and tested rollback/recovery required; destructive operations require restore evidence |
 | R4 | New or changed strategy, pricing, financial commitment, legal position, privacy policy, material product direction, public promise, user-trust posture, difficult-to-reverse action, initial public launch, or major launch | R3 checks when technical areas are affected; decision record; impact analysis; independent verification | **Post-A-004:** strengthened evidence and controls; no founder `approved` comment on engineering-workflow gates. Founder clarifies product/legal/strategy requirements before stable AC. **Pre-A-004 (historical):** founder approval on merge. | Explicit go/no-go evidence, rollback or contingency plan; no founder-comment merge gate after A-004 activation |
 
-The table above reflects the post-A-004 target reconciled in VOC-080-T04. **A-003
-remains the effective authority model until A-004 activation** (`VOC-080-T07`). The
-R0-R4 risk definitions and verification requirements remain. Routine R3 does not
-require standing technical-steward approval or founder approval merely because it is
-R3. After A-004 activation, R4 does not require a founder `approved` comment on
-merge, adoption, release, or deploy when non-founder gates pass. EHR is an exceptional
-escalation condition, not a routine approval layer or risk class.
+The table above reflects the post-A-004 authority reconciled in VOC-080-T04 and
+activated in VOC-080-T07. **A-004 is the effective authority model** for
+engineering-workflow gates. The R0-R4 risk definitions and verification requirements
+remain. Routine R3 does not require standing technical-steward approval or founder
+approval merely because it is R3. R4 does not require a founder `approved` comment
+on merge, adoption, release, or deploy when non-founder gates pass. EHR is an
+exceptional escalation condition, not a routine approval layer or risk class.
 
 ## `automatic_merge_allowed` drafting
 

@@ -29,7 +29,7 @@ verifier result; mark genuinely irrelevant standard sections `N/A` with one reas
 
 - Previous governance control:
 - Proposed governance control:
-- Active authority model (`A-003 active` until `VOC-080-T07`; then `A-004 active`):
+- Active authority model (`A-004 active` since `VOC-080-T07`):
 - Governance lifecycle impact (`none` or direction/approval/adoption/activation/sync):
 
 ## Risk and approvals

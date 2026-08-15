@@ -11,16 +11,14 @@ an accountable authority authorizes it. Both may be required.
   capacities for the completed VOC-002 migration, as recorded in
   [technical-steward-appointment.md](technical-steward-appointment.md)
 
-**Active model:** A-003 remains effective until A-004 activation (`VOC-080-T07`;
-see [a004-transition-state.yaml](a004-transition-state.yaml)). After A-004 activation
-(issue #627), engineering workflows require no founder `approved` comment at any
-risk class when deterministic checks and independent verification pass. R4 remains a
-strengthened evidence class; EHR applies only when an actual exceptional trigger
-exists.
+**Active model:** A-004 is effective for engineering-workflow gates (activated
+`VOC-080-T07`; see [a004-transition-state.yaml](a004-transition-state.yaml)).
+Engineering workflows require no founder `approved` comment at any risk class when
+deterministic checks and independent verification pass. R4 remains a strengthened evidence class; EHR applies only when an actual exceptional trigger exists.
 
-A-003 is effectively active for pre-transition engineering-workflow gates until T07.
-The historical steward role is retired as routine R3 approval authority. Routine R3
-does not require founder approval merely because it is R3.
+A-003 remains effectively active as historical governance evidence. The historical
+steward role is retired as routine R3 approval authority. Routine R3 does not require
+founder approval merely because it is R3.
 
 Builders may implement approved work but cannot self-approve or merge it. Independent
 verification remains separate from every human authority.

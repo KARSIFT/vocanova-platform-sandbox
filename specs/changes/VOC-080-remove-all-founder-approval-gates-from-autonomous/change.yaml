@@ -15,7 +15,7 @@ planned_implementation_risk_floor: "Adopted R4 determination. Expected paths inc
   \ governance replacements cannot authorize their own adoption. Path classifier and\
   \ independent verifier must re-measure each task's real file list.\n"
 canonical_path: specs/changes/VOC-080-remove-all-founder-approval-gates-from-autonomous
-authority_model: a003-active
+authority_model: a004-active
 requirement_source: 'GitHub issue #627 ("Remove all founder approval gates from autonomous
   engineering workflows"), effective request date 2026-08-15. Founder `m-e-h-r-d-a-a-d`
   directs that VocaNova''s governed engineering system must no longer require founder

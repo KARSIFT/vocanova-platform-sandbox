@@ -103,10 +103,11 @@ class Voc080WorkflowPolicyTests(unittest.TestCase):
                     msg=f"{relative} still contains live founder-gate phrase: {phrase}",
                 )
 
-    def test_claude_md_describes_post_a004_without_standing_founder_merge_gates(self):
+    def test_claude_md_describes_a004_active_without_standing_founder_merge_gates(self):
         claude = (REPOSITORY_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
-        self.assertIn("A-003 remains effective until A-004 activation", claude)
-        self.assertIn("no autonomous engineering workflow waits on a founder", claude)
+        self.assertIn("A-004 is the effective authority model", claude)
+        self.assertIn("No autonomous engineering workflow waits on a founder", claude)
+        self.assertNotIn("A-003 remains effective until A-004 activation", claude)
         self.assertNotRegex(
             claude,
             re.compile(

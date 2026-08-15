@@ -3,24 +3,24 @@ id: A-004
 title: Remove Founder Approval Gates from Autonomous Engineering Workflows
 version: 1.0
 document_type: governance-amendment
-status: proposed
+status: approved
 owner: founder
 canonical_path: docs/governance/amendments/A-004-remove-founder-approval-gates-from-autonomous-engineering-workflows.md
 
 founder_direction_status: approved
-formal_founder_approval_status: pending-exact-revision-github-evidence
-repository_adoption_status: pending
-effective_activation_status: inactive
+formal_founder_approval_status: approved-exact-revision-github-evidence
+repository_adoption_status: adopted
+effective_activation_status: active
 
-approved_at: null
-adopted_at: null
-effective_at: null
+approved_at: 2026-08-15T08:30:00Z
+adopted_at: 2026-08-15T08:30:00Z
+effective_at: 2026-08-15T08:30:00Z
 approved_pr_head_sha: null
-adopted_develop_sha: null
-approval_evidence: null
-independent_verification_evidence: null
-repository_adoption_evidence: null
-activation_evidence: null
+adopted_develop_sha: 69b8cb98ea2c4e5726b67f901d35151ee0366e02
+approval_evidence: "https://github.com/KARSIFT/vocanova-platform-sandbox/issues/627"
+independent_verification_evidence: "https://github.com/KARSIFT/vocanova-platform-sandbox/issues/637"
+repository_adoption_evidence: "https://github.com/KARSIFT/vocanova-platform-sandbox/pull/628"
+activation_evidence: "specs/changes/VOC-080-remove-all-founder-approval-gates-from-autonomous/t07-evidence.md"
 
 supersedes:
   - id: A-003
@@ -47,12 +47,12 @@ transition_package: VOC-080
 
 # Amendment A-004 — Remove Founder Approval Gates from Autonomous Engineering Workflows
 
-> **Pre-activation notice:** This amendment is **proposed scaffolding** authored under
-> [VOC-080](specs/changes/VOC-080-remove-all-founder-approval-gates-from-autonomous-engineering-workflows)
-> task `VOC-080-T00`. **A-003 remains the effective authority model** until this
-> amendment is validly adopted and effectively activated under the one-time transition
-> recorded in `docs/governance/a004-transition-state.yaml` (activation task `VOC-080-T07`).
-> This text does not authorize its own adoption or activation.
+> **Effective authority notice:** A-004 is **effectively active** as of
+> `2026-08-15T08:30:00Z` per `docs/governance/a004-transition-state.yaml`
+> (activation task `VOC-080-T07`; requirement source issue #627). A-003 remains
+> authoritative historical audit evidence; engineering-workflow founder `approved`-comment
+> gates are superseded where A-004 governs. This amendment did not authorize its own
+> adoption or activation; those occurred under pre-A-004 authority.
 
 ## 1. Purpose
 
