@@ -19,10 +19,11 @@ related_decisions:
 
 # 16 — Vocanova Autonomous Development Operating Model
 
-> **A-003 active-authority notice:** A-003 has been effectively active since
-> `2026-07-17T16:44:34Z`. It partially supersedes only the standing qualified-human
-> technical-steward approval requirements for routine R3 work in DOC-16 and A-002.
-> This notice does not alter the historical DOC-16 adoption evidence below.
+> **A-004 active-authority notice:** A-004 is effectively active in the canonical
+> repository tree produced by merging `VOC-080-T07`. A-004 supersedes A-003 founder
+> `approved`-comment gates on engineering workflows. A-003 remains authoritative
+> historical evidence. This notice does not alter historical DOC-16 adoption evidence
+> below.
 
 ## Status and precedence
 
@@ -114,28 +115,11 @@ technical-steward status or authority to Claude Code or another AI agent.
 The technical-steward requirement became effective immediately when PR #3 merged and
 remained effective until A-003 activation. The historical qualified human steward is
 recorded in
-[technical-steward-appointment.md](technical-steward-appointment.md). Until remaining
-GitHub enforcement is configured:
-
-- R3 changes remain blocked from production;
-- strengthened active-A-003 controls and independent verification remain required;
-- AI agents must not impersonate founder or qualified-human authority; and
-- autonomous production release remains disabled.
-
-**Updated 2026-08-08**: the "until remaining GitHub enforcement is configured"
-condition above has since been resolved for vocanova-platform-sandbox. The founder
-explicitly, twice-confirmed-live authorized automatic release-to-main promotion and
-automatic production deployment (see `AGENTS.md`'s "Release and deployment
-authority" section and `docs/governance/a003-transition-state.yaml`'s
-`AUTONOMOUS-RELEASE-AUTHORIZED-2026-08-08` marker for the record). Autonomous
-production release is live, not disabled, as of that date - the bullet above is
-preserved as the historically-accurate description of the state before that
-authorization, not the current state. R3-change production blocking and AI agents
-never impersonating founder/steward authority remain unchanged.
-
-R4 decisions continue to require founder approval. The bootstrap exception expired
-when PR #3 merged and cannot be reused for later governance, workflow, application,
-or release changes.
+[technical-steward-appointment.md](technical-steward-appointment.md). Under active
+Under A-003, R4 merge required founder approval (historical). **Active A-004:**
+routine R3 uses strengthened applicable controls and independent verification without
+standing steward or founder approval merely because it is R3; R4 requires stronger
+evidence but not a founder `approved` comment on engineering-workflow gates.
 
 ## Required lifecycle and traceability
 
@@ -163,8 +147,8 @@ evidence, and risk.
 - `develop` and `main` are the only permanent branches.
 - Feature and change work occurs on short-lived isolated branches or worktrees.
 - Pull requests into `develop` require applicable deterministic checks and an
-  independent-verifier result. Protected changes also require the designated human
-  approval.
+  independent-verifier result. Protected changes also require their designated
+  protected-path and risk-specific non-human controls.
 - Working branches are normally squash-merged into `develop`.
 - `develop` is the integrated staging state; successful merges deploy to staging
   only after staging automation exists and is validated.
@@ -176,11 +160,13 @@ evidence, and risk.
   only when it is reversible, its stronger checks pass, and the approved release
   policy explicitly permits that change type. Automation is permission, not an
   obligation; a gate may always hold a release for investigation.
-- Under active A-003, routine R3 requires strengthened applicable controls and
+- Under active A-004, routine R3 requires strengthened applicable controls and
   independent verification without standing steward or founder approval solely for
-  being R3. R4 requires founder approval.
-- The initial public launch and major launch decisions always require founder
-  approval.
+  being R3. R4 requires stronger
+  evidence but not a founder `approved` comment on merge/adopt/release/deploy.
+- Initial public launch and major launch decisions require founder **requirement
+  clarification** before stable acceptance criteria; they are not engineering-workflow
+  `approved` comment gates.
 - Direct pushes to `develop` and `main`, unverified merges, and local production
   deployments are prohibited.
 
@@ -232,9 +218,8 @@ A production release is eligible only when all applicable evidence is attached t
 - successful preview or staging evidence where applicable;
 - security, privacy, accessibility, analytics, migration, and documentation impact;
 - rollback mechanism, trigger, owner, and last known-good reference;
-- all independently applicable approvals, including R4 founder approval and any
-  actually triggered exceptional human review;
-- protected production environment approval rules satisfied; and
+- all independently applicable approvals and triggered exceptional human review;
+- protected production environment checks satisfied without founder-comment override;
 - post-deployment health checks and outcome-observation owner defined.
 
 Failed health checks stop the release. Automated rollback is permitted when it uses

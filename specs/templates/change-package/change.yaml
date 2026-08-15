@@ -11,14 +11,10 @@ canonical_path: specs/changes/VOC-000-replace-with-approved-slug
 
 approval_status: not-approved
 implementation_authorized: false
-# Per AGENTS.md "Drafting automatic_merge_allowed": set per declared risk class
-# before the plan PR is reviewed — do not leave this as an unexamined inherit.
-# R0–R3: true always. Do not set false to require founder eyes on merge;
-# sensitivity (auth, secrets, production infrastructure, or similar) does not
-# justify a non-R4 opt-out. R4: false (redundant with merge-gate's R4 hard
-# block; keeps the package record self-describing). Setting true does not bypass
-# risk classification, path-based floors, CI, independent verification, R4
-# founder authority, or EHR.
+# Per AGENTS.md "Drafting automatic_merge_allowed": set `true` for every risk class
+# including R4 (under active A-004). The field is audit-compatible; merge-gate does not treat
+# `false` as a founder-attention gate. Setting true does not bypass risk classification,
+# path-based floors, CI, independent verification, unparseable-risk fail-closed, or EHR.
 automatic_merge_allowed: true
 production_impact: unknown
 rollback_required: true

@@ -1,0 +1,291 @@
+name: remediate (reusable)
+
+# Closes the loop that used to require a human to notice: when the reviewer
+# returns FAIL, OR when CI itself fails outright (before review ever runs -
+# review needs a green CI to even start, see pipeline.yml's `review` job),
+# this automatically re-dispatches the implementer once, with the failure
+# details included as required reading, then - if that retry also fails -
+# stops and escalates to the authority issue instead of trying a third time.
+# Two attempts total, same cap implement.yml already enforced for its own
+# internal failures.
+#
+# The CI-failure path was added 2026-07-24 after finding it live: a plain CI
+# failure (a formatting slip, a cross-package module-resolution gap) left a
+# PR permanently stuck with no automatic retry, because review.yml never ran
+# to produce a verdict for this job to react to - the pre-existing FAIL-only
+# design had a blind spot for exactly the failure mode most likely on a
+# vendor swap's first real runs (gpt-5.3-codex's first two implement
+# attempts on VOC-018-T02 both needed a human to notice and push a fix by
+# hand). Requires pipeline.yml's `remediate` job to itself run on a CI
+# failure now (see that file), passing `ci_failed` through as an input.
+#
+# A PASS, PASS WITH NON-BLOCKING FINDINGS, or no verdict yet (review hasn't
+# posted, and CI didn't fail either) is still a no-op.
+
+on:
+  workflow_call:
+    inputs:
+      pr_number:
+        required: true
+        type: string
+      package_path:
+        description: 'Path to the change package directory, e.g. "specs/changes/VOC-007-some-slug"'
+        required: true
+        type: string
+      integration_branch:
+        required: false
+        type: string
+        default: "develop"
+      ci_failed:
+        description: "Whether the ci job on this PR failed outright (pipeline.yml passes needs.ci.result == 'failure')."
+        required: false
+        type: string
+        default: "false"
+      review_job_failed:
+        description: "Whether the review job itself errored before posting any verdict (pipeline.yml passes needs.review.result == 'failure'). Distinct from a genuine posted FAIL verdict - see decide step's comment for why this needs its own signal."
+        required: false
+        type: string
+        default: "false"
+    secrets:
+      KARSIFT_BOT_APP_ID:
+        required: false
+      KARSIFT_BOT_PRIVATE_KEY:
+        required: false
+
+jobs:
+  decide:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      pull-requests: write
+      issues: write
+    outputs:
+      should_retry: ${{ steps.parse.outputs.should_retry }}
+      change_id: ${{ steps.parse.outputs.change_id }}
+      task_id: ${{ steps.parse.outputs.task_id }}
+      issue_number: ${{ steps.parse.outputs.issue_number }}
+      next_attempt: ${{ steps.parse.outputs.next_attempt }}
+    steps:
+      # The PR body's exact wording is implement.yml's own template (see
+      # "Open PR" there) - this parses it back out. Both files must stay in
+      # sync; this is the one place outside implement.yml that depends on
+      # that exact format.
+      - name: Parse verdict, attempt, and package identity from the PR
+        id: parse
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          GH_REPO: ${{ github.repository }}
+          CI_FAILED: ${{ inputs.ci_failed }}
+          REVIEW_JOB_FAILED: ${{ inputs.review_job_failed }}
+        run: |
+          set -euo pipefail
+
+          # `gh pr view` / `gh issue comment` are porcelain commands that
+          # normally infer the target repo from a local git remote - this
+          # job never checks one out, so without GH_REPO set explicitly
+          # (env var `gh` respects for exactly this case) they fail with
+          # "not a git repository", not an auth or permissions error. Found
+          # via karsift-ai-infra-smoke-test PR #7: a genuine PASS verdict
+          # should have been a silent no-op here and instead errored the job.
+          body=$(gh pr view "$PR_NUMBER" --json body -q .body)
+
+          verdict=$(gh api "repos/${{ github.repository }}/issues/$PR_NUMBER/comments" \
+            --jq '[.[] | select(.body | startswith("**Independent verification"))] | last | .body // ""')
+
+          task_id=$(echo "$body" | grep -oP '(?<=Implements task `)[^`]+' | head -1 || echo "")
+          change_id=$(echo "$body" | grep -oP '(?<=from `)[^`]+(?=` \()' | head -1 || echo "")
+          issue_number=$(echo "$body" | grep -oP '(?<=Closes #)[0-9]+' | head -1 || echo "")
+          attempt=$(echo "$body" | grep -oP '(?<=attempt )[0-9]+(?= of 2)' | head -1 || echo "1")
+
+          echo "change_id=$change_id" >> "$GITHUB_OUTPUT"
+          echo "task_id=$task_id" >> "$GITHUB_OUTPUT"
+          echo "issue_number=$issue_number" >> "$GITHUB_OUTPUT"
+
+          # Two rounds of free-form-markdown guessing already failed here:
+          # first a bare '^FAIL' anchor missed the model's bolded "**FAIL**"
+          # (karsift-ai-infra-smoke-test's first real FAIL run), then the
+          # bold-tolerant fix that replaced it missed "## Verdict: **FAIL**"
+          # - a markdown heading with the bold token on the same line, not
+          # alone on its own line (vocanova-platform-sandbox VOC-013-T00's
+          # first real remediation-path run: a genuine FAIL verdict was
+          # posted, should_retry stayed false, and the retry silently never
+          # fired - again). prompts/review.md requires the reviewer's
+          # literal last line to be exactly "VERDICT: FAIL" (or PASS / PASS
+          # WITH NON-BLOCKING FINDINGS), with no markdown decoration - but a
+          # FOURTH occurrence (2026-07-25, VOC-025-T04 PR #76, the new
+          # OpenCode reviewer's first real run) posted "**VERDICT: FAIL**",
+          # the whole line wrapped in bold, and should_retry again read
+          # false on a genuine FAIL. A new model violating the same explicit
+          # instruction is exactly the scenario prompt compliance alone
+          # doesn't reliably survive. Added 0-2 leading/trailing '*'
+          # tolerance around the exact anchor IN ADDITION TO the prompt
+          # instruction (kept, not replaced) - merge-gate.yml's report-status
+          # job carries the identical fix and reasoning; keep both in sync.
+          # A FIFTH occurrence (2026-07-26, VOC-030-T00 PR #134, same
+          # reviewer model) posted "**VERDICT: FAIL** — H1 (...) blocks.
+          # H2 (...)" - a genuine FAIL with explanatory prose trailing the
+          # bold-closed token on the same line, which the exact end-anchor
+          # still missed. Changed the end-anchor to a word boundary instead
+          # of end-of-line so trailing prose no longer defeats the match -
+          # merge-gate.yml's report-status carries the identical fix; keep
+          # both in sync.
+          has_fail_verdict=false
+          if echo "$verdict" | grep -qE '^\*{0,2}VERDICT:[[:space:]]*FAIL\b'; then
+            has_fail_verdict=true
+          fi
+
+          # Found live on VOC-032-T01 PR #193: review.yml's opencode-install
+          # step failed outright (a transient "Failed to fetch version
+          # information" from opencode.ai) before the reviewer ever ran, so
+          # no verdict comment was posted at all - has_fail_verdict stayed
+          # false, CI_FAILED was false (ci passed), and this step would
+          # otherwise conclude "nothing to remediate" even though the review
+          # job's own conclusion was `failure`. merge-gate.yml correctly
+          # stays fail-closed either way (its `if` only proceeds on
+          # needs.review.result == 'success' or 'skipped', never 'failure'),
+          # but with should_retry=false too, the PR was simply stuck - no
+          # automatic path forward at all. A review job erroring before
+          # producing output is a distinct failure mode from a genuine
+          # posted FAIL verdict (there's no reviewer findings to hand the
+          # implementer as retry context), so it gets its own input rather
+          # than being folded into has_fail_verdict.
+          if [ "$CI_FAILED" != "true" ] && [ "$has_fail_verdict" = "false" ] && [ "$REVIEW_JOB_FAILED" != "true" ]; then
+            echo "should_retry=false" >> "$GITHUB_OUTPUT"
+            echo "next_attempt=" >> "$GITHUB_OUTPUT"
+            echo "No FAIL verdict, CI did not fail, and the review job itself did not error - nothing to remediate."
+            exit 0
+          fi
+
+          if [ -z "$task_id" ] || [ -z "$change_id" ] || [ -z "$issue_number" ]; then
+            echo "should_retry=false" >> "$GITHUB_OUTPUT"
+            echo "next_attempt=" >> "$GITHUB_OUTPUT"
+            echo "A retry condition is present but task_id/change_id/issue_number could not be parsed from the PR body - refusing to guess, leaving this for a human." >&2
+            exit 0
+          fi
+
+          next_attempt=$((attempt + 1))
+
+          if [ "$next_attempt" -gt 2 ]; then
+            echo "should_retry=false" >> "$GITHUB_OUTPUT"
+            echo "next_attempt=" >> "$GITHUB_OUTPUT"
+            reason="was reviewed and failed"
+            [ "$CI_FAILED" = "true" ] && reason="failed CI"
+            [ "$REVIEW_JOB_FAILED" = "true" ] && reason="hit a review-job error (no verdict was produced)"
+            gh issue comment "$issue_number" --body \
+              "Attempt $attempt of 2 $reason. Stopping - not retrying automatically. A human needs to look at task \`$task_id\` in \`$change_id\` (PR #$PR_NUMBER)."
+            exit 0
+          fi
+
+          echo "should_retry=true" >> "$GITHUB_OUTPUT"
+          echo "next_attempt=$next_attempt" >> "$GITHUB_OUTPUT"
+          if [ "$CI_FAILED" = "true" ]; then
+            echo "CI failed on attempt $attempt - will retry as attempt $next_attempt."
+          elif [ "$REVIEW_JOB_FAILED" = "true" ]; then
+            echo "Review job errored (no verdict) on attempt $attempt - will retry as attempt $next_attempt."
+          else
+            echo "FAIL verdict on attempt $attempt - will retry as attempt $next_attempt."
+          fi
+
+      # review.yml posts its own "**Independent verification" comment that
+      # implement.yml's "Fetch prior review findings, if this is a retry"
+      # step already knows how to find and hand to the implementer as
+      # required reading. A CI failure never produces that comment (review
+      # never ran), so the retry would otherwise be blind - no worse odds
+      # than the first attempt, defeating the point of a retry. Posting a
+      # comment in the SAME shape (the same "**Independent verification"
+      # prefix, the same "VERDICT: FAIL" anchor) reuses that exact mechanism
+      # for a CI failure without needing any change to implement.yml at all.
+      - name: Attach CI failure output as retry context, if CI failed
+        if: inputs.ci_failed == 'true' && steps.parse.outputs.next_attempt != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+
+          # remediate.yml runs as a job within the SAME overall workflow run
+          # as the ci job that just failed (pipeline.yml's `remediate` job
+          # calls this workflow directly, not via a separate dispatch) - so
+          # $GITHUB_RUN_ID here is already the right run to look in, no SHA-
+          # based run discovery needed.
+          ci_job_id=$(gh run view "$GITHUB_RUN_ID" --json jobs -q '.jobs[] | select(.name == "ci / ci") | .databaseId' | head -1)
+
+          if [ -n "$ci_job_id" ]; then
+            # Raw job log, timestamps/ANSI codes and all - noisier than a
+            # cleaned excerpt would be, but real signal beats a prettier
+            # blind retry. Tail-bounded so an unusually verbose failure
+            # (a long dependency-install log, say) doesn't blow out the
+            # implementer's prompt size.
+            log_tail=$(gh api "repos/${{ github.repository }}/actions/jobs/$ci_job_id/logs" | tail -150)
+          else
+            log_tail="(could not locate the ci / ci job's log for this run)"
+          fi
+
+          {
+            echo "**Independent verification - CI failure, not a reviewer verdict**"
+            echo
+            echo "VERDICT: FAIL"
+            echo
+            echo "CI failed on this attempt before independent review could run. Fix"
+            echo "whatever this points at, not just the symptom. Last ~150 lines of the"
+            echo "\`ci / ci\` job's log:"
+            echo
+            echo '```'
+            echo "$log_tail"
+            echo '```'
+          } > /tmp/ci-failure-comment.md
+          gh pr comment "$PR_NUMBER" --body-file /tmp/ci-failure-comment.md
+
+      # Same rationale as the CI-failure step above, for the other case
+      # review never produces a verdict comment: the review job itself
+      # errored (e.g. an install/network failure on the reviewer's own
+      # tooling, not a code-quality finding). Mirrors that step exactly,
+      # just pulling the "review / review" job's log instead of "ci / ci"'s.
+      - name: Attach review-job-error output as retry context, if the review job itself failed
+        if: inputs.review_job_failed == 'true' && steps.parse.outputs.next_attempt != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+
+          review_job_id=$(gh run view "$GITHUB_RUN_ID" --json jobs -q '.jobs[] | select(.name == "review / review") | .databaseId' | head -1)
+
+          if [ -n "$review_job_id" ]; then
+            log_tail=$(gh api "repos/${{ github.repository }}/actions/jobs/$review_job_id/logs" | tail -150)
+          else
+            log_tail="(could not locate the review / review job's log for this run)"
+          fi
+
+          {
+            echo "**Independent verification - review job error, not a reviewer verdict**"
+            echo
+            echo "VERDICT: FAIL"
+            echo
+            echo "The review job itself errored before producing any verdict (e.g. a"
+            echo "transient failure in the reviewer's own tooling, not a finding about"
+            echo "this PR's code). This is very likely unrelated to the implementation -"
+            echo "re-check the log below before assuming your prior change was at fault."
+            echo "Last ~150 lines of the \`review / review\` job's log:"
+            echo
+            echo '```'
+            echo "$log_tail"
+            echo '```'
+          } > /tmp/review-failure-comment.md
+          gh pr comment "$PR_NUMBER" --body-file /tmp/review-failure-comment.md
+
+  retry:
+    needs: decide
+    if: needs.decide.outputs.should_retry == 'true'
+    uses: KARSIFT/karsift-ai-infra/.github/workflows/implement.yml@main
+    with:
+      change_id: ${{ needs.decide.outputs.change_id }}
+      package_path: ${{ inputs.package_path }}
+      task_id: ${{ needs.decide.outputs.task_id }}
+      issue_number: ${{ needs.decide.outputs.issue_number }}
+      attempt: ${{ needs.decide.outputs.next_attempt }}
+      integration_branch: ${{ inputs.integration_branch }}
+    secrets: inherit

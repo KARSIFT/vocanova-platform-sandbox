@@ -11,26 +11,28 @@ steward, or founder.
 | R1 | Low-risk behavioral implementation; small blast radius; no sensitive data; backward compatible; independently reversible | Full installed baseline CI, acceptance evidence, independent verifier, preview when relevant | No founder or technical-steward approval | May release automatically after gates; tested revert, flag, or prior-artifact redeploy |
 | R2 | Moderate blast radius, cross-component change, non-destructive schema addition, API addition, significant dependency update, or operational change with tested recovery | R1 plus integration/contract, accessibility, migration, security, performance, or staging checks as applicable | Independent verifier; designated domain review may be required | May release automatically only with staged evidence, monitoring, named rollback owner, and tested recovery |
 | R3 | Authentication/authorization; sensitive-data handling; schema migrations; billing implementation; secrets; production infrastructure; AI-provider controls; audio/voice storage; backups; CI/CD, rollback, security, governance enforcement, or agent authority | All applicable CI; specialist security/architecture/migration/deployment review; independent verifier; explicit protected-area evidence | No standing technical-steward or founder approval solely because work is R3; EHR only when exceptionally triggered | Strengthened controls required; controlled rollout and tested rollback/recovery required; destructive operations require restore evidence |
-| R4 | New or changed strategy, pricing, financial commitment, legal position, privacy policy, material product direction, public promise, user-trust posture, difficult-to-reverse action, initial public launch, or major launch | R3 checks when technical areas are affected; decision record; impact analysis; independent verification | Founder | Founder approval required; explicit go/no-go and rollback or contingency plan |
+| R4 | New or changed strategy, pricing, financial commitment, legal position, privacy policy, material product direction, public promise, user-trust posture, difficult-to-reverse action, initial public launch, or major launch | R3 checks when technical areas are affected; decision record; impact analysis; independent verification | **Active A-004:** strengthened evidence and controls; no founder `approved` comment on engineering-workflow gates. Founder clarifies product/legal/strategy requirements before stable AC. **Pre-A-004 (historical):** founder approval on merge. | Explicit go/no-go evidence, rollback or contingency plan; no founder-comment merge gate under active A-004 |
 
-The table above is the current active-A-003 authority. The R0-R4 risk definitions and
-verification requirements remain, but routine R3 does not require standing
-technical-steward approval or founder approval merely because it is R3. R4 remains
-founder-controlled. EHR is an exceptional escalation condition, not a routine
-approval layer or risk class.
+The table above reflects the active A-004 authority reconciled in VOC-080-T04 and
+activated in VOC-080-T07. **A-004 is the effective authority model** for
+engineering-workflow gates. The R0-R4 risk definitions and verification requirements
+remain. Routine R3 does not require standing technical-steward approval or founder
+approval merely because it is R3. R4 does not require a founder `approved` comment
+on merge, adoption, release, or deploy when non-founder gates pass. EHR is an
+exceptional escalation condition, not a routine approval layer or risk class.
 
 ## `automatic_merge_allowed` drafting
 
-Package-level `automatic_merge_allowed` in each change package's `change.yaml`
-gates auto-merge into `develop` when the project switch is on and all other
-merge-gate conditions pass. Drafting policy matches approve-only-R4 (founder
-instruction, [issue #573](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/573);
-see `AGENTS.md`): **R0–R3** packages must set `true`; **R4** packages must set
-`false` (self-describing; redundant with merge-gate's R4 hard block). Non-R4
-packages must not use this field to require founder approval on merge.
-Sensitivity (auth, secrets, production infrastructure, or similar) does not
-justify a non-R4 opt-out. Setting `true` does not bypass risk classification,
-path floors, CI, independent verification, R4 founder authority, or EHR.
+Package-level `automatic_merge_allowed` in each change package's `change.yaml` is
+retained for audit compatibility. **Under active A-004** (`VOC-080-DEP-02`):
+
+- **R0–R4:** draft `true`. Do not set `false` to require founder attention on merge.
+- merge-gate ignores historical `false` as a founder-attention mechanism.
+- Missing CI, failed governance validation, non-PASS independent verification, or
+  unparseable risk still fail closed.
+
+**Historical (VOC-075 / issue #573, superseded by issue #627):** Under active A-003
+before activation, R0–R3 set `true` and R4 set `false` with merge-gate R4 founder block.
 
 The completed A-003 transition was fixed at R4 with an R3 protected
 governance/authority effect and was approved under pre-A-003 governance. Its one-time
@@ -84,9 +86,11 @@ technical-steward approval.
 
 ## Waivers
 
-Required deterministic security checks and R4 founder approval are not
-builder-waivable. Under active A-003, no waiver may recreate routine steward
-approval; EHR and independently applicable controls remain mandatory when triggered.
+Required deterministic security checks are not builder-waivable. **Under active A-004,** no
+founder `approved` comment may waive a failed or missing gate. Under active A-003
+until activation, R4 founder approval on merge was required (historical). No waiver
+may recreate routine steward approval; EHR and independently applicable controls
+remain mandatory when triggered.
 A time-limited waiver for another blocking check must name
 the authority, reason, scope, expiry, compensating control, follow-up issue, and
 rollback condition. The release record links the waiver.

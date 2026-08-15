@@ -5,21 +5,19 @@ name: pipeline
 # of) this repo's own governance/risk-classification workflows, if any.
 #
 # `plan` turns a request (free text, an existing document, or a GitHub issue's
-# whole thread) into a DRAFT change package (planner role, see plan.yml) - it
-# never adopts, authorizes, or implements anything, a human still does that by
-# hand, by reviewing and merging the draft PR. `adopt` then opens the real
-# per-task tracking issues, but only once that merge has happened - not at
-# draft time. `plan-from-issue` is what makes "anyone (a human, or another
-# agent - e.g. one that reads application logs and notices a bug) just opens
-# an issue" a valid way in: it auto-drafts a package from that issue, asking a
-# clarifying question back on the issue itself if there isn't enough to go on
-# yet, but a bare issue never becomes implementation authority on its own -
-# adoption is still the one required human decision point. Once a package is
-# adopted, `implement` (dispatched per task, same as before) carries on from
-# there.
+# whole thread) into a DRAFT change package (planner role, see plan.yml).
+# Independent plan review and merge-gate policy decide whether the exact draft
+# may merge; `adopt` then records adoption authority and opens the real per-task
+# tracking issues. A `reconcile` dispatch safely repairs the handoff if that
+# merge event was missed. `plan-from-issue` is what makes "anyone (a human, or
+# another agent - e.g. one that reads application logs and notices a bug) just
+# opens an issue" a valid way in: it auto-drafts a package from that issue,
+# asking a clarifying question back on the issue itself if there isn't enough
+# to go on yet, but a bare issue never becomes implementation authority on its
+# own. Once a package is adopted, `implement` (dispatched per task) and
+# `auto-advance` carry on from there.
 #
 # Copy this file into a project repo and fill in:
-#   - founder_username below (whose "approved" comment is a valid merge decision)
 #   - auto_merge_enabled, only once you have real evidence for this project's loop
 #   - integration_branch below - "develop" if this project splits develop/main,
 #     "main" if it's GitHub-flow-only (a single long-lived branch). Get this
@@ -54,7 +52,7 @@ on:
         description: "Which reusable workflow to run"
         required: true
         type: choice
-        options: [implement, plan]
+        options: [implement, plan, reconcile, reconcile-release]
         default: implement
       change_id:
         description: 'implement only: adopted package to implement from, e.g. "VOC-007"'
@@ -90,6 +88,14 @@ on:
         required: false
         type: string
         default: "VOC"
+      plan_pr_number:
+        description: "reconcile only: merged plan PR whose adoption/roster handoff must be repaired"
+        required: false
+        type: string
+      release_issue_number:
+        description: "reconcile-release only: release audit issue whose promotion handoff must be repaired"
+        required: false
+        type: string
 
 # Explicit floor for every job below, all of which call karsift-ai-infra's
 # reusable workflows via `uses:` with `secrets: inherit` and no
@@ -110,6 +116,7 @@ permissions:
   pull-requests: write
   actions: read
   checks: read
+  statuses: read
 
 jobs:
   implement:
@@ -161,17 +168,19 @@ jobs:
       integration_branch: "develop"   # match the value used for implement, above
     secrets: inherit
 
-  # The other half of plan.yml's split: opens the real per-task tracking
-  # issues (and, if this package traces back to an originating issue, closes
-  # the loop on it) only once a "plan/"-branch PR actually merges - i.e. only
-  # once a human has adopted the draft. See adopt.yml's header comment for
-  # why this is a separate step from drafting rather than happening at PR-open
-  # time.
+  # The other half of plan.yml's split: records adoption authority and opens
+  # the ordered per-task tracking issues (and, if this package traces back to
+  # an originating issue, closes the loop on it) once a "plan/"-branch PR merges
+  # with passing plan review and governance validation. See adopt.yml's header
+  # comment for why this is a separate step from drafting rather than at PR-open
+  # time. Use `reconcile` dispatch if the merge event or adoption run was missed.
   adopt:
-    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'plan/')
+    if: |
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'plan/')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.action == 'reconcile' && inputs.plan_pr_number != '')
     uses: KARSIFT/karsift-ai-infra/.github/workflows/adopt.yml@main
     with:
-      pr_number: ${{ github.event.pull_request.number }}
+      pr_number: ${{ github.event_name == 'workflow_dispatch' && inputs.plan_pr_number || github.event.pull_request.number }}
     secrets: inherit
 
   ci:
@@ -182,17 +191,14 @@ jobs:
   # rather than implementing one, so they never carry the "Package path:"
   # line this job requires - the startsWith guard below skips this (and
   # review/remediate, which depend on it) for those PRs instead of failing a
-  # check that would otherwise block even the human "approved"-comment merge
-  # path in merge-gate.yml.
+  # check that would otherwise block merge-gate. merge-gate.yml itself parses
+  # the plan package risk declaration and fails closed when it cannot determine
+  # a risk class.
   #
   # Planning PRs get their OWN review instead (the `plan-review` job below),
-  # not this one - added 2026-08-14 (founder-requested fix: "reviewer should
-  # review plan too"). Before this, a planning PR's verdict stayed
-  # permanently PENDING (nothing ever reviewed it), so it could never satisfy
-  # merge-gate's approve-and-merge or auto-merge paths regardless of risk
-  # class or automatic_merge_allowed - every single plan PR needed a direct
-  # manual merge with no automated check on the proposal's own soundness
-  # first. See plan-review's own job comment and
+  # not this one - added 2026-08-14. Before this, a planning PR's verdict
+  # stayed permanently PENDING (nothing ever reviewed it), so merge-gate could
+  # never see a passing verdict. See plan-review's own job comment and
   # karsift-ai-infra/.github/workflows/plan-review.yml for what it checks.
   extract-package-path:
     if: github.event_name == 'pull_request' && github.event.action != 'closed' && startsWith(github.head_ref, 'agent/')
@@ -227,8 +233,7 @@ jobs:
     secrets: inherit
 
   # Independent review for a DRAFT change-package proposal (a "plan/"-branch
-  # PR) - added 2026-08-14, founder-requested fix: "reviewer should review
-  # plan too". Runs instead of `review` (never both - the two jobs' `if`
+  # PR) - added 2026-08-14. Runs instead of `review` (never both - the two jobs' `if`
   # conditions are mutually exclusive on head_ref prefix), and posts the same
   # "**Independent verification - bound to commit ...**" / "VERDICT: ..."
   # comment shape, so merge-gate.yml's existing verdict-parsing (unchanged)
@@ -287,13 +292,11 @@ jobs:
   # `auto_merge_enabled`. `always()` is required because a job depending on
   # a *skipped* job is by default also skipped - and on any given event
   # exactly one of `review`/`plan-review` runs (agent/ vs plan/ head_ref)
-  # while the other is always skipped, and both are skipped entirely on
-  # `issue_comment` events (the human-"approved" merge path) - all of that
-  # must still reach merge-gate so its status comment actually posts,
+  # while the other is always skipped - all of that must still reach merge-gate
+  # so its status comment actually posts,
   # rather than requiring either job's specific 'success' result.
   #
-  # plan-review added to this needs/if 2026-08-14 (founder-requested fix:
-  # "reviewer should review plan too") - before this, merge-gate ran for
+  # plan-review added to this needs/if 2026-08-14 - before this, merge-gate ran for
   # planning PRs with no review dependency at all, which was harmless only
   # because no review verdict could ever exist for them anyway (permanently
   # PENDING). Now that plan-review can produce a real PASS, merge-gate must
@@ -303,41 +306,30 @@ jobs:
     needs: [review, plan-review]
     if: |
       always() &&
-      (
-        github.event_name == 'issue_comment' ||
-        (github.event_name == 'pull_request' && github.event.action != 'closed' && (needs.review.result == 'success' || needs.review.result == 'skipped') && (needs.plan-review.result == 'success' || needs.plan-review.result == 'skipped'))
-      )
+      github.event_name == 'pull_request' && github.event.action != 'closed' &&
+      (needs.review.result == 'success' || needs.review.result == 'skipped') &&
+      (needs.plan-review.result == 'success' || needs.plan-review.result == 'skipped')
     uses: KARSIFT/karsift-ai-infra/.github/workflows/merge-gate.yml@main
     with:
-      founder_username: "m-e-h-r-d-a-a-d"   # the GitHub login whose "approved" comment is a valid merge decision
       auto_merge_enabled: "true"      # proven live on this repo (VOC-012, VOC-014) for this project's loop
     secrets: inherit
 
-  # The gate above the per-task loop: exactly one human approval per
-  # completed change package (its full task roster closed), not per task -
-  # gates promotion from integration_branch to production_branch. Routes
-  # both `issues: closed` (package-completion detection) and
-  # `issue_comment` (the founder's "approved" reply on a "Release: ..."
-  # issue) to release.yml, which internally filters by event/action/issue
-  # title the same way merge-gate.yml's own jobs do. Deploy is out of scope -
-  # see release.yml's header comment.
+  # Promotes a completed package after its roster closes. `reconcile-release`
+  # retries an interrupted promotion without creating an approval path. Deploy
+  # is out of scope - see release.yml's header comment.
   release:
-    if: (github.event_name == 'issues' && github.event.action == 'closed') || github.event_name == 'issue_comment'
+    if: |
+      (github.event_name == 'issues' && github.event.action == 'closed') ||
+      (github.event_name == 'workflow_dispatch' && inputs.action == 'reconcile-release' && inputs.release_issue_number != '')
     uses: KARSIFT/karsift-ai-infra/.github/workflows/release.yml@main
     with:
-      founder_username: "m-e-h-r-d-a-a-d"   # same identity as merge-gate's founder_username, above
+      release_issue_number: ${{ inputs.release_issue_number }}
       integration_branch: "develop"   # match the value used elsewhere in this file
       production_branch: "main"
-      auto_release_enabled: "true"    # founder's explicit, twice-confirmed request (2026-08-08) -
-        # see AGENTS.md's "Release and deployment authority" section for the record. Release
-        # promotion (and, via deploy-production.yml's own push-to-main trigger, the resulting
-        # production deploy) now requires no founder "approved" comment - CI + independent
-        # review passing on every task PR that went into the package is the gate.
     secrets: inherit
 
-  # Fills the gap between adoption (one human decision, the whole roster at
-  # once) and release (one human decision, the whole completed package at
-  # once): dispatches the NEXT task in an adopted package's roster
+  # Fills the gap between adoption and release: dispatches the NEXT task in an
+  # adopted package's roster
   # automatically once the current task's tracking issue closes, so routine
   # task-to-task progression needs no further per-task human trigger. A
   # no-op on the package's last task (release's own check-completion above

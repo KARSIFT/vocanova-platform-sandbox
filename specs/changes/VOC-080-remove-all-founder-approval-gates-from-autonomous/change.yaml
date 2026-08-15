@@ -1,0 +1,183 @@
+schema_version: 1
+id: VOC-080
+slug: remove-all-founder-approval-gates-from-autonomous
+title: Remove All Founder Approval Gates from Autonomous Engineering Workflows
+type: process
+status: adopted
+risk: R4
+planned_implementation_risk_floor: "Adopted R4 determination. Expected paths include\
+  \ docs/governance/amendments/ (R4), docs/governance/a003-transition-state.yaml (R4),\
+  \ docs/operations/15-\u2026 (DOC-15, R4), scripts/governance/ and/or tooling/governance/\
+  \ (R4 if tests/lints land there), AGENTS.md / CLAUDE.md / specs/templates/ / docs/governance/\
+  \ (R3), and .github/workflows/pipeline.yml (R3). Semantic elevation to R4 is required\
+  \ because this package replaces governance authority for autonomous merge, package\
+  \ adoption, R4 progression, release, and production-deploy control, and because\
+  \ governance replacements cannot authorize their own adoption. Path classifier and\
+  \ independent verifier must re-measure each task's real file list.\n"
+canonical_path: specs/changes/VOC-080-remove-all-founder-approval-gates-from-autonomous
+authority_model: a004-active
+requirement_source: 'GitHub issue #627 ("Remove all founder approval gates from autonomous
+  engineering workflows"), effective request date 2026-08-15. Founder `m-e-h-r-d-a-a-d`
+  directs that VocaNova''s governed engineering system must no longer require founder
+  approval under any risk class or workflow condition. Agents and workflows progress
+  when deterministic checks, independent verification, scope, and other non-founder
+  gates pass. Supersedes the VOC-075 / issue #573 "approve only R4" policy for engineering-workflow
+  gates. Does not remove independent verification, CI, risk classification, protected-path
+  checks, rollback, secrets isolation, least-privilege credentials, builder/verifier
+  separation, or the requirement to ask when product requirements are genuinely ambiguous.
+  Transition authority: evaluated under pre-transition (A-003) authority; this package
+  cannot authorize its own adoption. Superseding issue comment #5301333790 explicitly
+  revokes the earlier one-time transition-approval clause. Exact-revision independent
+  verification and deterministic gates remain required; founder approval does not.'
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
+base_branch: develop
+base_sha: 5195ff1732b9e1a1658b339472b1dc1b71eb91a6
+target_branch: develop
+approved_candidate_sha: 0d7ab1c642be612f978bd11d9ec6b87cd4c7e1e0
+owners:
+  decision: founder decision recorded in issue
+  package_preparation: planner
+  implementation: autonomous implementer under the adopted task roster
+  independent_verification: independent plan_reviewer/reviewer roles
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
+automatic_merge_allowed: true
+production_impact: 'expected for governance and automation behavior across this repository
+  and KARSIFT/karsift-ai-infra consumers. No direct application-feature change. Removes
+  founder `approved`-comment dependence from plan adoption, R4 merge, unparseable-risk
+  handling, recovery, release promotion, and residual deploy/retry gates. Failed checks
+  remain fail-closed. Production deploy continues to follow push-to-main after auto-promotion;
+  residual environment-reviewer or comment gates in repository-controlled paths must
+  be removed or neutralized per acceptance criteria.
+
+  '
+rollback_required: true
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-080-DEP-00
+  status: 'resolved at adoption: create A-004 as a successor that supersedes A-003
+    only where A-003 (and VOC-075) require founder approval for engineering-workflow
+    gates; keep A-003 historical and effective until A-004 activation evidence is
+    recorded.
+
+    '
+- id: VOC-080-DEP-01
+  status: 'resolved at adoption: remove all workflow gates that wait on a founder
+    `approved` comment, including product/legal/strategy implementation workflows;
+    retain the obligation to ask the founder when product requirements are genuinely
+    ambiguous before drafting stable acceptance criteria. That is clarification, not
+    approval.
+
+    '
+- id: VOC-080-DEP-02
+  status: 'resolved at adoption: neutralize `automatic_merge_allowed` as a founder-attention
+    mechanism. New packages use true and merge-gate ignores historical false values;
+    missing or failed CI/review gates still fail closed.
+
+    '
+- id: VOC-080-DEP-03
+  status: 'resolved at adoption: land reusable-workflow behavior in karsift-ai-infra
+    first, prove on this sandbox, then activate calling-repo policy/docs and remove
+    `founder_username` / comment-gate wiring from pipeline.yml. Infra changes are
+    specified by this package; PRs land in the infra repository under that repo''s
+    process. See specification.md open question 4.
+
+    '
+- id: VOC-080-DEP-04
+  status: 'resolved at adoption: use this sandbox repository and karsift-ai-infra
+    self-ci / smoke harness as the non-production rehearsal; require recorded dry-run
+    evidence for adopt, R4 merge, reconcile-dispatch, release, and fail-closed unparseable-risk
+    paths before activation task closes. See specification.md open question 5.
+
+    '
+- id: VOC-080-DEP-05
+  status: 'resolved at adoption: Dependabot and other explicitly recognized dependency
+    bots require green deterministic CI and a parseable risk declaration but no founder
+    approval. They retain the documented no-agent-authored-code review exception;
+    unknown bot identities fail closed for correction.'
+- id: VOC-075
+  status: 'Adopted predecessor establishing approve-only-R4 drafting. This package
+    supersedes that policy for engineering-workflow founder gates per issue #627;
+    it does not rewrite VOC-075 historical evidence.
+
+    '
+- id: VOC-040
+  status: 'Documents the merged-but-unadopted recovery gap (no workflow_dispatch on
+    adopt.yml). This package''s reconciliation/dispatch requirement closes that gap
+    structurally in karsift-ai-infra rather than relying on gh run rerun alone.
+
+    '
+- id: VOC-079
+  status: 'Sibling R4 package (issue #624) currently subject to founder-approval architecture;
+    acceptance requires it can resume through the post-transition no-founder-approval
+    path after VOC-080 activation. Not implemented by this package.
+
+    '
+affected_areas:
+- docs/governance/amendments/ (A-004 successor or A-003 edit per DEP-00)
+- docs/governance/a003-transition-state.yaml (and/or successor transition-state)
+- docs/governance/approval-matrix.md
+- docs/governance/change-risk-classification.md
+- docs/governance/repository-settings.md
+- docs/governance/protected-areas.md
+- docs/governance/post-merge-activation-checklist.md
+- docs/governance/16-autonomous-development-operating-model.md
+- docs/operations/15-ai-native-product-and-engineering-operating-model.md
+- AGENTS.md
+- CLAUDE.md
+- specs/templates/change-package/
+- .github/workflows/pipeline.yml
+- .github/pull_request_template.md
+- .github/approved-policy/protected-paths.yaml (only if autonomy/authority markers
+  or R4 path floors require lockstep update)
+- scripts/governance/ and/or tooling/governance/ (tests/lints if in scope)
+- KARSIFT/karsift-ai-infra merge-gate.yml, adopt.yml, plan.yml, plan-review.yml, release.yml,
+  remediate.yml, prompts, README, config/roles.yml as required
+- GitHub repository/environment settings that still require founder reviewers on repository-controlled
+  release/deploy paths (ops, documented in repository-settings.md)
+- specs/changes/VOC-080-remove-all-founder-approval-gates-from-autonomous
+implementation:
+  authorized: true
+  required: true
+  status: authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: expected-governance-and-automation-authority-change
+  deployment: not-authorized-by-this-package
+  automatic_merge: false
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: adopted
+adoption_pr: 628
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/628
+implementation_authority_before_adoption: false
+implementation_authority_status: authorized
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
+blocking_reasons: none - adopted and implementation-authorized
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/628#issuecomment-5299569065
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-080-DEP-00
+- VOC-080-DEP-01
+- VOC-080-DEP-02
+- VOC-080-DEP-03
+- VOC-080-DEP-04
+- VOC-080-DEP-05
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a003-active evaluated plan PR #628 at 0d7ab1c642be612f978bd11d9ec6b87cd4c7e1e0'
