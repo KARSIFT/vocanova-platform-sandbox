@@ -1,7 +1,7 @@
 import { validateMonitoringInventory } from "../validate-inventory.mjs";
 import { applyOperations, SyncApplyError } from "./apply.mjs";
 import { planSyncOperations } from "./plan.mjs";
-import { createRedactingLogger } from "./redact.mjs";
+import { createRedactingLogger, redactSecrets } from "./redact.mjs";
 
 export class SyncValidationError extends Error {
   constructor(errors) {
@@ -61,8 +61,9 @@ export async function syncKumaMonitors({
 }
 
 export function formatSyncFailure(error) {
-  if (error instanceof SyncValidationError || error instanceof SyncApplyError) {
-    return error.message;
-  }
-  return String(error.message ?? error);
+  const raw =
+    error instanceof SyncValidationError || error instanceof SyncApplyError
+      ? error.message
+      : String(error?.message ?? error);
+  return redactSecrets(raw);
 }

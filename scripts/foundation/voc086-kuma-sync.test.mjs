@@ -8,6 +8,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
+import { EventEmitter } from "node:events";
+
 import {
   applyOperations,
   SyncApplyError,
@@ -19,6 +21,10 @@ import {
   createRedactingLogger,
   redactSecrets,
 } from "../../infra/monitoring/kuma-sync/redact.mjs";
+import {
+  authenticateAndLoadMonitors,
+  createMonitorListWaiter,
+} from "../../infra/monitoring/kuma-sync/auth-handshake.mjs";
 import {
   formatSyncFailure,
   syncKumaMonitors,
@@ -312,6 +318,7 @@ test("VOC-086-TEST-07: sync tooling does not reference SQLite deployment paths",
   const syncFiles = [
     "infra/monitoring/sync-kuma.mjs",
     "infra/monitoring/kuma-sync/apply.mjs",
+    "infra/monitoring/kuma-sync/auth-handshake.mjs",
     "infra/monitoring/kuma-sync/mock-client.mjs",
     "infra/monitoring/kuma-sync/monitor-metadata.mjs",
     "infra/monitoring/kuma-sync/monitor-payload.mjs",
@@ -337,7 +344,7 @@ test("VOC-086-TEST-07: sync tooling does not reference SQLite deployment paths",
   }
 });
 
-test("VOC-086-TEST-07: credential-like log fixtures are redacted", () => {
+test("VOC-086-TEST-09 (T01 subset): credential-like log fixtures and formatSyncFailure are redacted", () => {
   const fixture =
     "login failed password=super-secret-token KUMA_PASSWORD=abc123 Bearer eyJhbGciOiJIUzI1NiJ9";
   const redacted = redactSecrets(fixture);
@@ -357,6 +364,60 @@ test("VOC-086-TEST-07: credential-like log fixtures are redacted", () => {
   });
   logger.error("KUMA_PASSWORD=plain-secret-value");
   assert.ok(!lines[0].includes("plain-secret-value"));
+
+  const formatted = formatSyncFailure(
+    new Error("connect failed password=live-cli-secret-token"),
+  );
+  assert.ok(!formatted.includes("live-cli-secret-token"));
+  assert.match(formatted, /\[REDACTED\]/);
+});
+
+test("VOC-086-TEST-02 (client): monitorList pushed before login ack is still captured", async () => {
+  const socket = new EventEmitter();
+  socket.emit = function emitWithLoginRace(event, payload, callback) {
+    if (event === "login") {
+      // Simulate Uptime Kuma pushing monitorList before the login ack returns.
+      EventEmitter.prototype.emit.call(this, "monitorList", {
+        7: { id: 7, name: "seeded" },
+      });
+      callback({ ok: true });
+      return;
+    }
+    return EventEmitter.prototype.emit.call(this, event, payload, callback);
+  };
+
+  const monitors = await authenticateAndLoadMonitors(socket, {
+    username: "admin",
+    password: "not-a-real-password",
+    timeoutMs: 1000,
+  });
+
+  assert.equal(monitors[7].name, "seeded");
+});
+
+test("VOC-086-TEST-02 (client): failed login cancels monitorList waiter and does not hang", async () => {
+  const socket = new EventEmitter();
+  socket.emit = function emitLoginFailure(event, _payload, callback) {
+    if (event === "login") {
+      callback({ ok: false, msg: "password=should-not-leak-in-hang" });
+      return;
+    }
+    return EventEmitter.prototype.emit.call(this, event, _payload, callback);
+  };
+
+  await assert.rejects(
+    () =>
+      authenticateAndLoadMonitors(socket, {
+        username: "admin",
+        password: "not-a-real-password",
+        timeoutMs: 5000,
+      }),
+    /password=should-not-leak-in-hang|Kuma login failed/,
+  );
+
+  const waiter = createMonitorListWaiter(socket, 50);
+  waiter.cancel(new Error("cancelled for isolation"));
+  await assert.rejects(() => waiter.promise, /cancelled for isolation/);
 });
 
 test("VOC-086-TEST-04: plan detects duplicate managed monitor_id collisions", () => {
