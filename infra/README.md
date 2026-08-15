@@ -107,14 +107,14 @@ production hostnames from the same process (VOC-067-T02).
 
 **Shared edge** (`docker compose -f infra/docker-compose.shared-edge.yml`):
 
-| Service | Image               | Port (host) | Networks                                   |
-| ------- | ------------------- | ----------- | ------------------------------------------ |
+| Service | Image               | Port (host) | Networks                                                               |
+| ------- | ------------------- | ----------- | ---------------------------------------------------------------------- |
 | `nginx` | `nginx:1.27-alpine` | 80, 443     | `vocanova-net` + `vocanova-production-net` + `vocanova-monitoring-net` |
 
 **Monitoring** (`docker compose -f infra/docker-compose.monitoring.yml`):
 
-| Service       | Image                    | Port (host)           | Networks                 |
-| ------------- | ------------------------ | --------------------- | ------------------------ |
+| Service       | Image                    | Port (host)           | Networks                  |
+| ------------- | ------------------------ | --------------------- | ------------------------- |
 | `uptime-kuma` | `louislam/uptime-kuma:1` | `127.0.0.1:3001` only | `vocanova-monitoring-net` |
 
 The monitoring Compose project name is `monitoring`; the container is

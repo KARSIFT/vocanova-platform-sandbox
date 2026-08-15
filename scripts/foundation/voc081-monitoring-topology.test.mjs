@@ -50,7 +50,10 @@ const PUBLIC_KUMA_PORT_PATTERNS = [
 
 function serviceBlock(compose, serviceName) {
   const match = compose.match(
-    new RegExp(`^\\s{2}${serviceName}:\\s*$\\n([\\s\\S]*?)(?=^\\s{2}\\w|\\n\\w)`, "m"),
+    new RegExp(
+      `^\\s{2}${serviceName}:\\s*$\\n([\\s\\S]*?)(?=^\\s{2}\\w|\\n\\w)`,
+      "m",
+    ),
   );
   assert.ok(match, `${serviceName} service must exist in compose file`);
   return match[1];
@@ -101,7 +104,8 @@ test("VOC-081-TEST-01: Kuma is not on staging/production app networks", () => {
     "uptime-kuma must not attach to vocanova-production-net",
   );
 
-  const networksSection = monitoring.match(/^networks:\s*$\n([\s\S]*)/m)?.[1] ?? "";
+  const networksSection =
+    monitoring.match(/^networks:\s*$\n([\s\S]*)/m)?.[1] ?? "";
   assert.doesNotMatch(
     networksSection,
     /^\s{2}vocanova-net:/m,
