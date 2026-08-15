@@ -35,15 +35,26 @@ to this repository.
 
 ## T04 verification probe (live)
 
-Record redacted evidence in `t04-evidence.md` after T03 deploy:
+After T03 deploy convergence succeeds, run:
 
 ```bash
-# Public entry point — expect HTTPS success serving the Kuma application.
-curl -sS -o /dev/null -w '%{http_code}\n' https://monitor.vocanova.site/
+infra/scripts/verify-voc081-monitor.sh
+```
 
-# Browser verification — unauthenticated access must show Kuma's login, not an
-# authenticated administrative dashboard. A valid Kuma operator can then sign
-# in. Redact cookies and credentials from evidence.
+Record redacted output in `t04-evidence.md`. The script checks:
+
+- four app hostnames still return HTTP 2xx on canonical `:443`
+- `https://monitor.vocanova.site/` returns the Kuma application (follows
+  `/` → `/dashboard`; not 520/502)
+- socket.io Engine.IO polling handshake returns 2xx with a session id
+  (WebSocket upgrade advertised)
+- unauthenticated access shows the Kuma SPA / entry-page boundary
+  (VOC-081-DEP-00), not an authenticated session payload
+
+Offline harness (no real hostname required):
+
+```bash
+infra/scripts/verify-voc081-monitor.selftest.sh
 ```
 
 **FAIL** if Kuma administration is anonymously accessible or the only cited
