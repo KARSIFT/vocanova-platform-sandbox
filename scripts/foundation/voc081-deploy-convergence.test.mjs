@@ -123,6 +123,11 @@ test("VOC-081-TEST-05: first monitoring converge backs up existing data and wait
   );
   assert.match(
     deployStaging,
+    /curl -fsS --max-time 3 -o \/dev\/null http:\/\/127\.0\.0\.1:3001\//,
+    "deploy must accept loopback HTTP as Kuma readiness when Docker health lags",
+  );
+  assert.match(
+    deployStaging,
     /chmod 0600 "\$MONITORING_BACKUP"/,
     "backup containing monitoring state must be permission-restricted",
   );

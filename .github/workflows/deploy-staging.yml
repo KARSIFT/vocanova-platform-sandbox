@@ -1079,10 +1079,20 @@ jobs:
               exit 1
             fi
 
+            # Wait for Kuma readiness before shared-edge network/config apply.
+            # Prefer Docker health=healthy; also accept loopback HTTP on the
+            # published 127.0.0.1:3001 bind so a misconfigured healthcheck
+            # cannot strand a listening Kuma and skip shared-edge membership
+            # (VOC-081-T04 remediation after run 31888512579).
             kuma_status=starting
-            for attempt in $(seq 1 45); do
+            for attempt in $(seq 1 120); do
               kuma_status=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}missing{{end}}' vocanova-uptime-kuma 2>/dev/null || true)
               if [ "$kuma_status" = "healthy" ]; then
+                break
+              fi
+              if curl -fsS --max-time 3 -o /dev/null http://127.0.0.1:3001/; then
+                echo "Kuma loopback HTTP ready (docker health=$kuma_status); treating as ready for shared-edge convergence"
+                kuma_status=healthy
                 break
               fi
               sleep 2

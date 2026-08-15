@@ -35,6 +35,8 @@ infra/
 │   ├── cloudflare-remove-production-origin-port-remap.selftest.sh
 │   ├── cloudflare_origin_port_remap.py                   # shared mutation (script + selftest)
 │   ├── verify-voc067-cutover.sh                          # VOC-067-T05 external :443 checks
+│   ├── verify-voc081-monitor.sh                        # VOC-081-T04 monitor HTTPS/WebSocket/access checks
+│   ├── verify-voc081-monitor.selftest.sh               # disposable harness for the above
 │   ├── rehearse-production-secrets-boundary.sh          # VOC-037 INS-9..INS-11 rehearsal
 │   └── rehearse-production-secrets-boundary.selftest.sh # disposable-mirror harness for the above
 ├── nginx/
@@ -287,6 +289,15 @@ creates and validates a mode-`0600` archive under
 `/opt/vocanova/monitoring/backups/`, and writes a durable convergence marker
 only after Kuma is healthy. Routine deploys do not repeat that cold backup.
 
+**Kuma healthcheck (VOC-081-T04 remediation):** monitoring Compose must invoke
+`extra/healthcheck.js` through Node (`CMD` `node` …). Bare
+`CMD extra/healthcheck.js` has no shebang and fails under Docker (stranded
+deploy run
+[31888512579](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/31888512579)
+before shared-edge joined the monitoring network; fixed in #686). Staging
+deploy also treats loopback `http://127.0.0.1:3001/` as readiness when Docker
+health lags.
+
 **Monitor vhost (`monitor.vocanova.site`, VOC-081-T02):** the shared edge
 loads `infra/nginx-shared/conf.d/30-monitor.vocanova.site.conf` via the
 existing `include /etc/nginx/conf.d/shared/*.conf` in
@@ -306,7 +317,8 @@ removes any remaining live `30-monitor.conf` under the production nginx tree.
 **public Kuma login** through the proxied Cloudflare hostname. Kuma's own
 authentication is the authorization boundary; a proxied DNS record alone is
 not authorization. No unverified Cloudflare Access application is assumed.
-T04 records redacted live verification that the login is reachable and the
+T04 records redacted live verification via
+`infra/scripts/verify-voc081-monitor.sh` that the login is reachable and the
 administrative dashboard still requires Kuma authentication.
 
 ### Backup and first-converge migration (before live apply)
@@ -442,6 +454,17 @@ To roll back the retired production nginx bridge, redeploy a prior revision
 that still defined `vocanova-production-nginx` on `8081`/`8443`; the
 production deploy path recreates it from compose. Use `--restore` above only
 when Cloudflare must again target origin `:8443`.
+
+**Monitor hostname (VOC-081-T04):** after a successful staging deploy converges
+monitoring + shared edge, verify the public restoration:
+
+```bash
+infra/scripts/verify-voc081-monitor.sh
+infra/scripts/verify-voc081-monitor.selftest.sh   # offline harness only
+```
+
+Record redacted output in
+`specs/changes/VOC-081-route-monitor-vocanova-site-through-the/t04-evidence.md`.
 
 The same actions are available on `deploy-production.yml` via
 `workflow_dispatch` input `voc067_cloudflare_origin_cutover`
