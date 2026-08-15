@@ -116,6 +116,7 @@ permissions:
   pull-requests: write
   actions: read
   checks: read
+  statuses: read
 
 jobs:
   implement:
