@@ -2,22 +2,18 @@
 
 ## Release and deployment authorization
 
-This package does **not** authorize production application deployment by
-being merged as a draft or by adoption alone. Adoption under **current**
-A-003 / VOC-075 authority authorizes implementation PRs only.
+This adopted package authorizes implementation PRs; it does **not** authorize
+production application deployment merely by adoption.
 
-Proposed risk is **R4** (draft): governance authority replacement for
+Risk is **R4**: governance authority replacement for
 autonomous merge, adoption, R4 progression, release, and deploy control.
-`automatic_merge_allowed: false` is set on **this** package per the
-**current** AGENTS.md R4 drafting rule (self-describing under pre-
-transition policy). After T07 activation, drafting rules change per
-`VOC-080-DEP-02` and this package's own field is historical for that
-transition moment.
+`automatic_merge_allowed: true` records the adopted decision that R4 follows
+the same deterministic and independent-verification merge gate as R0–R3.
 
-Under current authority, founder adoption of this R4 package is required
-before task dispatch. Under transition rules in issue #627, **one final**
-founder approval on the exact activation revision (T07) is required; after
-that revision is effective, no later founder approval gate remains.
+Founder adoption was recorded on PR #628 under pre-transition authority.
+No later founder approval comment is required; T07 remains fail-closed on
+deterministic validation, exact-revision independent verification, rehearsal
+evidence, and rollback readiness.
 
 Existing 2026-08-08 auto-promote / push-to-main deploy remains the
 production path; T03 removes residual founder-comment / environment-
@@ -32,8 +28,8 @@ Preconditions:
 - T00–T05 merged with independent-verification PASS (or PASS WITH
   NON-BLOCKING FINDINGS) on exact SHAs.
 - T06 rehearsal evidence recorded on the settled venue.
-- T07 exact-revision founder approval recorded under pre-transition
-  authority before activation markers flip.
+- T07 exact-revision independent verification passes before activation
+  markers flip.
 
 Monitoring after activation:
 
@@ -80,8 +76,8 @@ Independent verifier (per `CLAUDE.md`) must:
 - Identify active authority model (**a003-active** until T07 activation;
   successor thereafter) and report every still-required R4 / EHR /
   adoption / activation gate.
-- On T07: confirm the final founder approval is bound to the exact
-  activation revision, and that post-activation no workflow waits on
+- On T07: confirm the independent verdict is bound to the exact activation
+  revision, and that post-activation no workflow waits on
   founder `approved` while non-founder controls remain.
 
 Closure requires acceptance-criteria results with evidence, not merely
