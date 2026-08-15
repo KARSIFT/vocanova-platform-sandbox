@@ -1,0 +1,130 @@
+schema_version: 1
+id: VOC-082
+slug: fix-500-on-the-review-that-completes-today-s
+title: Fix 500 on the review that completes today's mission
+type: bugfix
+status: draft
+risk: R2
+planned_implementation_risk_floor: 'Measured during drafting by running scripts/governance/classify-change-risk.sh
+  --files-from against the expected task-scoped file list (apps/api/business/gamification/streak.go,
+  apps/api/business/gamification/streak_test.go, apps/api/business/reviews/postgres.go
+  as read/confirm only unless a call-site bug is found, apps/web/tests/staging-e2e/core-loop.staging.spec.ts
+  as staging verification target, this package directory). Detected path floor: R1.
+  This package proposes R2 for the change as a whole (not R1) because the confirmed
+  defect fails POST /api/v1/reviews/submissions with HTTP 500 and rolls back the transaction
+  when the learner''s review reaches the daily target, leaving daily_mission_snapshots
+  at N-1/N with status open and no completion ledger entry. That is a user-facing
+  core-loop correctness failure for every account that hits today''s target, not a
+  test-only flake. Independent verification and the reviewing human must still confirm
+  each task''s real file list and whether semantic escalation to R3 is warranted.
+  This is a draft proposal for the reviewing human at adoption time, not a determination.'
+canonical_path: specs/changes/VOC-082-fix-500-on-the-review-that-completes-today-s
+authority_model: a004-active
+requirement_source: 'GitHub issue #675 ("Fix 500 on the review that completes today''s
+  mission"). Staging core-loop fails deterministically when the synthetic account
+  submits the review that reaches its daily target (20/20). Deploy run https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/31886780600
+  showed POST /api/v1/reviews/submissions returning 500 after clicking Good. Live
+  DB after rollback: today remains reviews_completed=19, review_target=20, status=open;
+  no daily-mission completion ledger entry. Confirmed code path: applyP4ReviewWiring
+  marks today complete, then fetches snapshots inside the same transaction and calls
+  ReconcileAndAdvance(..., currentCompletion=true). ReconcileStreak selects the newly
+  completed today snapshot as lastGood, computes gap <= 0, and returns ErrInvalidStreakSnapshot.
+  Issue requires treating a just-completed today snapshot as the current completion
+  (not an invalid prior anchor), preserving defensive rejection of genuinely future
+  snapshots, adding a regression test with today completed in the fetched list and
+  currentCompletion=true, verifying the 20th review commits snapshot / completion
+  reward / streak atomically, and re-running the staging core-loop successfully. Explicitly
+  separate from VOC-081 monitor routing.'
+requirement_approval_status: not-approved. This package has not been adopted. No field
+  in this file authorizes implementation.
+base_branch: develop
+base_sha: unknown - not recorded by this draft; the adopting human/workflow should
+  set this to the actual base_sha at adoption time, consistent with recent packages'
+  convention.
+target_branch: develop
+approved_candidate_sha: null
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human/workflow decision
+    under active A-004)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: expected after the fix lands on the production deploy path. The
+  same ReconcileStreak / applyP4ReviewWiring path serves staging and production. Until
+  fixed, any learner whose review first reaches review_target today can receive HTTP
+  500 and have the submission rolled back (mission stays open at target-1; no completion
+  reward; streak does not advance). The fix restores successful atomic commit of snapshot
+  completion, completion reward, and streak reconciliation for that request. No schema
+  migration anticipated.
+rollback_required: true
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-082-DEP-00
+  status: 'resolved at drafting time by issue #675''s verified evidence and independent
+    re-read of apps/api/business/gamification/streak.go (gap <= 0 / ErrInvalidStreakSnapshot
+    when lastGood equals today) and apps/api/business/reviews/postgres.go applyP4ReviewWiring
+    (marks snapshot completed, then fetches snaps including today, then ReconcileAndAdvance
+    with missionCompletedNow). T00 implements the required fix against that confirmed
+    cause; if implementer evidence shows a different primary cause, stop and record
+    it in t00-evidence.md before expanding scope.'
+- id: VOC-082-DEP-01
+  status: 'resolved at drafting time by issue #675 scope note. This package is isolated
+    from VOC-081 (monitor.vocanova.site / shared-edge routing). Do not fold monitor,
+    shared-edge, or deploy-topology work into these tasks.'
+- id: VOC-065
+  status: 'Adopted predecessor. Wired P4 missions/gamification into the live reviews
+    write path so reviews_completed increments. This package addresses a later failure
+    on the same path: the completing review that should mark the day done and reconcile
+    the streak.'
+- id: VOC-081
+  status: Separate in-flight/adopted package for monitor routing. Not a dependency
+    and not in scope for VOC-082 edits.
+affected_areas:
+- apps/api/business/gamification/streak.go (ReconcileStreak gap <= 0 handling when
+  lastGood is today and currentCompletion is true)
+- apps/api/business/gamification/streak_test.go (regression covering today completed
+  in snapshots with currentCompletion=true; future-snapshot rejection retained)
+- apps/api/business/reviews/postgres.go (read/confirm applyP4ReviewWiring call order;
+  edit only if T00 proves a call-site defect beyond streak.go)
+- apps/web/tests/staging-e2e/core-loop.staging.spec.ts (verification target for T01;
+  edit only if a narrow readiness assertion is required after the API fix, not as
+  a substitute for the streak fix)
+- specs/changes/VOC-082-fix-500-on-the-review-that-completes-today-s
+implementation:
+  authorized: false
+  required: true
+  status: proposed
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: expected-mission-completion-path-correctness
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A004
+blocking_reasons: Not adopted. Requires plan review and adoption under active A-004
+  of the proposed R2 classification (path floor R1), the confirmed ReconcileStreak
+  fix scope, isolation from VOC-081, and the T00 then T01 ordering.
