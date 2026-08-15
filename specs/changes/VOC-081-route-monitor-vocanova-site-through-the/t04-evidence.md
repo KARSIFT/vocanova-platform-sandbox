@@ -158,10 +158,10 @@ Socket.IO path negotiated WebSocket successfully, and an unauthenticated
 
 ## VOC-081-AC-07 — Sentry / error-monitoring
 
-| Check                                                        | Result                                                                                                                                             |
-| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.github/workflows/error-monitoring.yml` modified by VOC-081 | **PASS (zero behavioral change; not in this task diff)**                                                                                           |
-| Recent scheduled `error-monitoring` runs                     | **PASS** — e.g. [run 31887093187](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/31887093187) (`success`, 2026-08-15T13:23:42Z) |
+| Check                                                        | Result                                                                                                                                               |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.github/workflows/error-monitoring.yml` modified by VOC-081 | **PASS (zero behavioral change; not in this task diff)**                                                                                             |
+| Recent scheduled `error-monitoring` runs                     | **PASS** — latest [run 31889323582](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/31889323582) (`success`, 2026-08-15T14:13:24Z) |
 
 ## Monitoring window
 
