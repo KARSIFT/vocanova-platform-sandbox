@@ -63,8 +63,14 @@ test("VOC-086-TEST-00: canonical inventory schema accepts complete entries", () 
   }
 
   for (const synthetic of synthetics.synthetics) {
-    assert.ok(synthetic.workflow_ref, `synthetic ${synthetic.id} must have workflow_ref`);
-    assert.ok(synthetic.check_ref, `synthetic ${synthetic.id} must have check_ref`);
+    assert.ok(
+      synthetic.workflow_ref,
+      `synthetic ${synthetic.id} must have workflow_ref`,
+    );
+    assert.ok(
+      synthetic.check_ref,
+      `synthetic ${synthetic.id} must have check_ref`,
+    );
     assert.ok(
       Array.isArray(synthetic.coverage) && synthetic.coverage.length > 0,
       `synthetic ${synthetic.id} must declare coverage`,
@@ -200,7 +206,9 @@ synthetics:
   });
 
   assert.ok(
-    errors.some((error) => error.includes("duplicate id kuma.availability.staging.web")),
+    errors.some((error) =>
+      error.includes("duplicate id kuma.availability.staging.web"),
+    ),
     `expected duplicate availability id error, got: ${errors.join("; ")}`,
   );
   assert.ok(
