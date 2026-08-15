@@ -1536,23 +1536,27 @@ described (a distinct `plan`/`adopt` split before implementation even starts, an
 automatic remediation loop), and its actual authority/risk model is A-003 (Section 10 of that
 amendment - `docs/governance/amendments/A-003-governed-autonomous-engineering-authority.md`),
 not the original A-001 text below. This section is kept as historical record of the original
-design intent but the rule that actually governs `develop` merges today is A-003 §10 plus
-`karsift-ai-infra`'s own `merge-gate.yml` - see that repo's README for the definitive mechanism.
-Where this section conflicts with A-003 or the live pipeline, **A-003 and the live pipeline win.**
+design intent but the rule that actually governs `develop` merges today is A-003 §10
+(through A-004 activation) plus `karsift-ai-infra`'s own `merge-gate.yml` - see that
+repo's README for the definitive mechanism. **VOC-080 / A-004** (issue #627) reconciles
+this section for the post-activation no-founder-gate model; A-003 remains effective until
+`VOC-080-T07`. Where this section conflicts with A-004 after activation, **A-004 and the
+live pipeline win.**
 
-## 17.1 Canonical rule (as actually implemented)
+## 17.1 Canonical rule (as actually implemented; reconciled VOC-080-T04)
 
 The real, live pipeline stage flow is:
 
 ```text
 Request (free text, a document, or a GitHub issue thread)
     ↓
-plan - drafts a DRAFT change package (spec, acceptance criteria, tasks); never authorizes anything
+plan - drafts a DRAFT change package (spec, acceptance criteria, tasks); never authorizes alone
     ↓
-Human adoption - a founder reviews the draft, edits change.yaml to mark it approved/authorized,
-                 merges the draft PR
+plan-review - independent verifier reviews the draft proposal (plan/ branch PRs)
     ↓
-adopt - opens the real, numbered per-task tracking issue(s) only now, not before
+merge-gate - auto-merges when switch is on, checks green, verdict passed, risk parseable
+    ↓
+adopt - records adoption authority and opens per-task tracking issues; may reconcile via dispatch
     ↓
 implement (per task) - an implementer model writes the diff on a branch, opens a PR
     ↓
@@ -1561,56 +1565,51 @@ ci - deterministic checks (lint, typecheck, build, test, format)
 review - an independent verifier posts a structured, commit-bound PASS / PASS WITH
          NON-BLOCKING FINDINGS / FAIL verdict
     ↓
-remediate (only on a FAIL verdict or a plain CI failure) - re-dispatches the implementer once,
-           with the failure details attached, escalating to a stronger model on this last
-           attempt; if it fails again, stops and escalates to a human instead of trying a third time
+remediate (only on FAIL or plain CI failure) - re-dispatches implementer once, then escalates
     ↓
-merge-gate - risk-aware, fails closed: auto-merges into `develop` only when the project's
-             switch is on AND checks are green AND the verdict passed AND the package has
-             `automatic_merge_allowed: true` (required for R0–R3; R4 packages must set
-             `false` and never auto-merge) - otherwise requires the founder's literal
-             "approved" comment, which is always a valid decision at any risk class,
-             including R4/unparseable risk
+merge-gate - R0–R4 eligible when switch on, checks green, verdict passed, risk parseable;
+             no founder `approved` comment path (post-A-004); unparseable risk fails closed
     ↓
-release - once every task in a package's roster is closed, opens one "Release: <package>" issue;
-          exactly one founder "approved" reply promotes `develop` → `main` via a real PR
-          (never a direct push)
+release - when every task in a package's roster closes, promotes `develop` → `main` via PR
+          (no founder `approved` comment gate on repository-controlled path)
 ```
 
-There is no automatic staging deployment stage in the live system - `release.yml`'s scope ends at
-the `develop` → `main` promotion PR merging. Any hosted deployment is separate, not-yet-built work.
+There is no automatic staging deployment stage in the live system - `release.yml`'s scope
+ends at the `develop` → `main` promotion PR merging. Push-to-main production deploy follows
+`deploy-production.yml` (2026-08-08 delegation; no founder-comment retry gate).
 
-## 17.2 Authority matrix (as actually implemented)
+**Historical (pre-A-004 activation):** Human founder adoption of draft packages and
+founder `approved` comments on R4/unparseable-risk merge and release were required under
+A-003 / VOC-075. Issue #627 supersedes those engineering-workflow gates after activation.
+
+## 17.2 Authority matrix (as actually implemented; post-A-004 target)
 
 | Action | Required authority |
 |---|---|
-| Approve product vision, scope, and material behavior | Founder |
-| Approve/adopt a draft change package | Founder (editing `change.yaml`, merging the draft PR) |
-| Draft a change package from a request | `planner` role (model resolved from `karsift-ai-infra`'s `config/roles.yml` - not fixed to any one vendor) |
-| Implement an approved task | `implementer` role (same convention) |
-| Independently verify an implementation | `reviewer` role (same convention - **must** stay a different vendor from `implementer` when possible; see `config/roles.yml`'s own notes for when that's been temporarily compromised and why) |
-| Merge implementation PR into `develop` | Deterministic checks green + reviewer PASS + package `automatic_merge_allowed: true` (R0–R3; R4 requires `false` and never auto-merges), **or** founder's literal `approved` comment (valid at any risk class) |
-| Merge `develop` into `main` | Founder's literal `approved` reply on the package's release issue - one approval per completed package, not per PR |
-| Publish `main` to production | Not built - out of scope for the live pipeline today |
+| Approve product vision, scope, and material behavior | Founder (requirement clarification before stable AC) |
+| Adopt a draft change package | Autonomous after plan-review PASS + governance validation + merge (post-A-004); reconcile dispatch if handoff missed |
+| Draft a change package from a request | `planner` role (model from `karsift-ai-infra`'s `config/roles.yml`) |
+| Implement an approved task | `implementer` role |
+| Independently verify an implementation or plan | `reviewer` / `plan_reviewer` roles (builder/verifier separation) |
+| Merge plan or implementation PR into `develop` | Deterministic checks green + independent verifier PASS + parseable risk + `auto_merge_enabled` (R0–R4; no founder comment) |
+| Merge `develop` into `main` | Package roster complete + release checks pass (no founder `approved` comment) |
+| Publish `main` to production | Push-to-main deploy when gates pass; failed deploy fail-closed until remediation |
 
 ## 17.3 Risk and `develop`
 
-R0 through R3 implementation PRs may auto-merge into `develop` without founder approval, but only
-when all of the following hold: the project has explicitly enabled the auto-merge switch, CI is
-green, the reviewer's verdict passed, and the package has `automatic_merge_allowed: true` (required
-for R0–R3; planners must not set `false` on non-R4 packages — see `AGENTS.md` and issue #573 /
-VOC-075). R4 packages must set `automatic_merge_allowed: false` and never auto-merge regardless of
-any switch. A PR with no parseable risk declaration at all also never auto-merges — R4 and
-unparseable risk always require the founder's literal `approved` comment. Risk is read from a
-`Risk classification: R#` line in the PR body; a calling project may
-supply its own deterministic, path-based risk floor (this project's is
-`docs/governance/change-risk-classification.md` /
-`.github/approved-policy/protected-paths.yaml`) that an AI-proposed risk value can raise but never
-lower.
+R0 through R4 plan and implementation PRs may auto-merge into `develop` when the project
+switch is on, CI is green, the reviewer's verdict passed, and risk is parseable. All
+packages draft `automatic_merge_allowed: true` including R4 (`VOC-080-DEP-02`); the field
+is audit-compatible only. Unparseable risk fails closed for correction — no founder
+override and no auto-merge. Risk is read from a `Risk classification: R#` line in the PR
+body; path-based floors may raise but never lower the class.
 
-A reviewer's `PASS`/`PASS WITH NON-BLOCKING FINDINGS` verdict means the implementation appears
-technically acceptable and compliant with the approved specification. It does not authorize new
-product scope.
+A reviewer's `PASS`/`PASS WITH NON-BLOCKING FINDINGS` verdict means the implementation
+appears technically acceptable and compliant with the approved specification. It does not
+authorize new product scope.
+
+**Historical (VOC-075 / issue #573):** Before A-004 activation, R4 required founder
+approval on merge and R4 packages set `automatic_merge_allowed: false`.
 
 ## 17.4 Automation level, as evidenced
 
@@ -2813,7 +2812,9 @@ Implementation changes may merge into `develop` only after required deterministi
 
 ### DG1-07 — Production protection
 
-Merging into `main` and publication to production require founder approval during the MVP.
+Merging into `main` and publication to production require applicable release/deploy gates during the MVP (founder `approved` comment not a repository-controlled gate after 2026-08-08 / A-004).
+
+*Correction 2026-08-15 (VOC-080 / issue #627): see `AGENTS.md` "Release and deployment authority".*
 
 ## Decision Group 2 — Document and Decision Architecture
 
@@ -2988,6 +2989,10 @@ class. Preserved here as historical record, not current rule.*
 `automatic_merge_allowed: false`; R0–R3 packages must set `true` and must not use this field to
 require founder approval on merge. See §17.3 and `AGENTS.md`.*
 
+*Correction 2026-08-15 (VOC-080 / issue #627, post-A-004 activation): no founder `approved`
+comment on engineering-workflow gates at any risk class; all packages draft
+`automatic_merge_allowed: true` including R4. See A-004 and §17.3.*
+
 ### DG5-09 — Automatic staging
 
 Successful merges into `develop` automatically deploy to staging.
@@ -2997,7 +3002,9 @@ Successful merges into `develop` automatically deploy to staging.
 
 ### DG5-10 — Protected production
 
-Production publication occurs only from `main`, after founder approval of the release PR and protected production environment.
+Production publication occurs only from `main`, after release promotion checks pass and protected production environment gates (no founder `approved` comment on repository-controlled path since 2026-08-08; see `AGENTS.md`).
+
+*Correction 2026-08-15 (VOC-080 / issue #627): supersedes founder-approval gate on this path after A-004 activation.*
 
 ### DG5-11 — Sensitive code ownership
 

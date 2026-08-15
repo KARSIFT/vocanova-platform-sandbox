@@ -46,11 +46,13 @@ Configure a non-self-referential R4 control for these exact paths:
 /specs/changes/VOC-004-canonical-adoption-doc-17-doc-18/
 ```
 
-Under active A-003, that ruleset must continue non-self-referential verification and
-R4 founder enforcement but must not impose routine standing steward or founder
-approval merely because a change is R3. Where the GitHub plan supports organization-required
-workflows, run the policy gate from a separately protected default-branch or
-organization source. A status name produced solely by a workflow that the same pull
+Under active A-003 until A-004 activation, that ruleset must continue non-self-referential
+verification and R4 path-floor enforcement but must not impose routine standing steward
+or founder approval merely because a change is R3. **After A-004 activation**, R4
+engineering-workflow gates do not require founder click-approve on merge/adopt/release;
+strengthened evidence and independent verification remain required. Where the GitHub
+plan supports organization-required workflows, run the policy gate from a separately
+protected default-branch or organization source. A status name produced solely by a workflow that the same pull
 request can rewrite is not sufficient protection.
 
 Configure `main`:
@@ -59,21 +61,22 @@ Configure `main`:
 - accept only release pull requests from `develop` or the documented emergency path;
 - require release, staging, migration, rollback, and health-check gates;
 - enforce strengthened R3 gates without a standing steward/founder requirement solely
-  for R3, and require founder approval for R4 through rulesets/environments or a
-  reviewed approval-gate integration;
+  for R3; **post-A-004:** no founder environment-reviewer requirement on the
+  repository-controlled release/deploy path when promotion checks pass;
 - use merge commits for release promotion; and
-- prevent an AI or release-bot identity from bypassing required approvals.
+- prevent an AI or release-bot identity from bypassing required non-founder checks.
 
-GitHub cannot natively express every conditional R0-R4 approval combination using
+GitHub cannot natively express every conditional R0-R4 gate combination using
 CODEOWNERS alone. Use separate protected teams/environments and a reviewed gate that
-validates the effective risk class and attributable approvals. Keep autonomous merge
+validates the effective risk class and attributable evidence. Keep autonomous merge
 disabled until that gate is tested.
 
 Multiple owners on one CODEOWNERS pattern are alternatives: one matching owner can
 satisfy GitHub's native code-owner review requirement. They do not mean that every
-listed owner must approve. Under active A-003, enforce R4 founder authority and
-strengthened R3 gates independently; do not recreate a combined standing
-founder-and-steward requirement merely because both risk effects exist.
+listed owner must approve. Under active A-003 until A-004 activation, enforce R4
+founder authority on merge (historical). **Post-A-004:** enforce strengthened R3/R4
+evidence gates independently; do not recreate a combined standing founder-comment
+merge requirement.
 
 Enable repository security settings when available:
 
@@ -157,6 +160,7 @@ expired. The historical technical-steward appointment and completed dual-capacit
 VOC-002 approval remain permanent evidence, but the role is retired as routine R3
 authority and that migration approval cannot be reused. Under active A-003, routine R3
 uses strengthened technical gates and independent verification, while R4 founder
-authority remains unchanged. Automatic merge into `develop` is live (see above); RL1/RL2
-technical activation and autonomous production release remain disabled until
-separately implemented, tested, and proven.
+authority remains unchanged. Automatic merge into `develop` is live (see above);
+RL1/RL2 technical activation remain disabled until separately implemented, tested,
+and proven. **Post-A-004 activation** removes founder-comment gates on
+engineering-workflow merge/release/deploy paths; see `a004-transition-state.yaml`.

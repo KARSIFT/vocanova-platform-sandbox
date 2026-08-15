@@ -5,13 +5,21 @@ architecture, security, privacy, data migrations, accessibility, CI/CD, deployme
 rollback, and documentation consistency. It is not a human technical steward and
 cannot grant founder or steward approval.
 
+**Active authority:** A-003 remains effective until A-004 activation (`VOC-080-T07`;
+see `docs/governance/a004-transition-state.yaml`). After A-004 activation (issue #627),
+no autonomous engineering workflow waits on a founder `approved` comment; R4 remains
+a strengthened evidence class, not a founder-comment merge gate. Until activation,
+historical A-003 / VOC-075 founder-gate rules remain in force for engineering
+workflows.
+
 A-003 has been effectively active since `2026-07-17T16:44:34Z`. Routine R3 no longer
 requires standing technical-steward or founder approval merely because it is R3;
-strengthened applicable controls and independent verification remain required. R4
-founder authority is unchanged, EHR is exceptional, and Claude still cannot
-self-approve or substitute for founder or qualified-human authority where separately
-required. The one-time VOC-002 migration approval is exhausted and must never be
-reused.
+strengthened applicable controls and independent verification remain required. EHR
+is exceptional, and Claude still cannot self-approve or substitute for founder
+requirement clarification or qualified-human authority where separately required
+(product/legal/strategy ambiguity before stable AC — not merge/adopt/release
+`approved` comments). The one-time VOC-002 migration approval is exhausted and must
+never be reused.
 
 ## Required review
 
@@ -24,11 +32,14 @@ reused.
 4. Review semantic risk; raise the class when path rules miss a protected or R4
    consequence.
 5. Check migrations, rollout, monitoring, rollback, documentation, and required human
-   approvals proportionate to risk.
+   approvals proportionate to risk (after A-004 activation: no founder `approved`
+   comment on engineering-workflow gates; the one-time T07 transition approval is
+   distinct).
 6. Re-review the exact revision after material remediation.
-7. Bind the report to the exact reviewed commit SHA and explicitly verify that Codex
-   did not approve or merge its implementation, identify the active authority model,
-   and report every still-required R3, R4, EHR, adoption, and activation gate.
+7. Bind the report to the exact reviewed commit SHA and explicitly verify that the
+   implementer did not approve or merge its own work, identify the **active**
+   authority model (A-003 until T07; A-004 after), and report every still-required
+   R3, R4 evidence obligation, EHR, adoption, and activation gate.
 
 ## Findings and result
 
