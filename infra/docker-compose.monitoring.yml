@@ -3,7 +3,7 @@
 # VOC-081-T00: repository source of truth for Uptime Kuma on the shared host.
 #
 # Package: VOC-081 (Route monitor.vocanova.site through shared edge)
-# Task:    VOC-081-T00
+# Task:    VOC-081-T01 (network); T00 (Compose identity)
 # Risk:    R3 path floor (infra/*); package R4.
 # Authority: VOC-081 change package (adopted; specs/changes/VOC-081-route-monitor-vocanova-site-through-the/).
 #
@@ -13,9 +13,11 @@
 #   * persistent data at /opt/vocanova/monitoring/kuma-data
 #   * loopback-only host publish on port 3001 (VOC-081-D01)
 #
-# This file does NOT join vocanova-monitoring-net (VOC-081-T01) or wire the
-# shared-edge vhost (T02) or deploy workflow convergence (T03). First live
-# converge must reuse existing kuma-data per t00-evidence.md backup plan.
+# Joins vocanova-monitoring-net (external) so shared-edge nginx can reach Kuma
+# by container DNS without a public host publish (VOC-081-D01 / T01). Does NOT
+# attach to vocanova-net or vocanova-production-net. Vhost (T02) and deploy
+# workflow convergence (T03) are separate. First live converge must reuse
+# existing kuma-data per t00-evidence.md backup plan.
 #
 # Host layout (deploy target — T03 will SCP/converge this tree):
 #   /opt/vocanova/monitoring/
@@ -45,8 +47,7 @@ services:
       - ${VOCANOVA_MONITORING_ROOT:-/opt/vocanova/monitoring}/kuma-data:/app/data
     ports:
       # Loopback-only dashboard bind (VOC-081-D01). Shared edge reaches Kuma
-      # over the dedicated monitoring Docker network once T01 lands — not via
-      # a public host publish.
+      # over vocanova-monitoring-net — not via a public host publish.
       - "127.0.0.1:3001:3001"
     healthcheck:
       test: ["CMD", "extra/healthcheck.js"]
@@ -57,3 +58,10 @@ services:
     mem_limit: 256m
     cpus: 0.50
     logging: *default-logging
+    networks:
+      - vocanova-monitoring-net
+
+networks:
+  vocanova-monitoring-net:
+    external: true
+    name: vocanova-monitoring-net
