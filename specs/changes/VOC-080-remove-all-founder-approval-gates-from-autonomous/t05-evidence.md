@@ -11,8 +11,7 @@ Evidence for `VOC-080-AC-08`, `VOC-080-AC-02`, `VOC-080-AC-03`, and
 AC-08 surfaces. Coverage is delivered in **this caller repository** against
 pinned infra contract fixtures (so the PR diff is independently reviewable
 without a remote infra checkout), and mirrored as native
-`karsift-ai-infra/tests/*` modules in the local infra working tree for a
-follow-up infra landing.
+`karsift-ai-infra/tests/*` modules merged by infra PR #40.
 
 ## Caller delivery (this PR — authoritative for review)
 
@@ -43,7 +42,7 @@ python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py' -v
 Observed on this remediation attempt: **32** VOC-080 policy tests and **94**
 total tests under `tooling/governance/tests` passed.
 
-## Infra mirror (local checkout — not part of caller git tree)
+## Infra mirror (merged canonical coverage)
 
 Matching modules under the workspace `karsift-ai-infra/tests/`:
 
@@ -56,18 +55,17 @@ Matching modules under the workspace `karsift-ai-infra/tests/`:
 | `test_adoption_handoff.py` | Existing |
 | `test_release_policy.py` | Existing |
 
-Wired through `karsift-ai-infra/.github/workflows/self-ci.yml` job
-`policy-tests` once those files land on infra `main`.
+Merged to `KARSIFT/karsift-ai-infra` by PR #40 at merge commit
+`fcf2224b83c4c3060713a7e2944c7a53d5f1110d`. The suite is wired through
+`karsift-ai-infra/.github/workflows/self-ci.yml` job `policy-tests`.
 
 ```bash
 cd karsift-ai-infra
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-Observed locally: **25** infra policy tests passed. Landing these files on
-`KARSIFT/karsift-ai-infra` is a follow-up (implementer role here leaves
-caller-repo working-tree changes only; nested infra checkout is not this
-repo's tracked tree).
+Observed locally and in infra PR #40 CI: **26** infra policy tests passed;
+actionlint, shellcheck, YAML parse, and policy-tests were green before merge.
 
 ## Mapping to acceptance tests
 
@@ -86,8 +84,6 @@ Live end-to-end proof for TEST-00/04/05/06 remains `VOC-080-T06`.
 
 - Sandbox/live rehearsal (`VOC-080-T06`)
 - Authority activation (`VOC-080-T07`)
-- Pushing the mirrored infra test modules to `KARSIFT/karsift-ai-infra` `main`
-  (follow-up; caller fixtures keep AC-08 reviewable without that push)
 - Syncing infra `templates/project-repo/.../pipeline.yml` plan-review job to
   match the sandbox caller (template lag; noted, not expanded here)
 
