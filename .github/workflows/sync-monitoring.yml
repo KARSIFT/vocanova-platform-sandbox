@@ -1,0 +1,225 @@
+name: sync-monitoring
+
+# VOC-086-T02: repository workflow for Kuma monitor inventory sync and explicit
+# credential bootstrap/rotation.
+#
+# Applies `infra/monitoring/monitors.yaml` to live Uptime Kuma via authenticated
+# Socket.IO (`infra/monitoring/sync-kuma.mjs`). Credentials live only in the
+# GitHub `monitoring` environment (`KUMA_USERNAME`, `KUMA_PASSWORD`) and the
+# workflow runtime — never in git.
+#
+# Kuma is host-bound to 127.0.0.1:3001 (VOC-081-D01). Sync runs on the shared
+# host over SSH (staging-owned monitoring Compose) inside a disposable Node
+# container on `vocanova-monitoring-net`, not from the Actions runner directly.
+#
+# `rotate_credentials` is opt-in only. When true, invokes Kuma's official
+# `/app/extra/reset-password.js` through `docker exec -i` stdin (no argv
+# password). The generated credential is stored with `gh secret set` without
+# printing it. Existing Kuma sessions are invalidated once per rotation.
+# Normal sync runs never reset credentials.
+#
+# Required repository secrets (same host as staging deploy — VOC-032-DEP-00):
+#   STAGING_SSH_HOST, STAGING_SSH_USER, STAGING_SSH_PRIVATE_KEY,
+#   STAGING_SSH_KNOWN_HOSTS
+#
+# Required `monitoring` environment secrets (bootstrap via rotate_credentials
+# or manual ops provisioning):
+#   KUMA_USERNAME — existing admin username (preserved on rotation)
+#   KUMA_PASSWORD — strong password (generated on first rotate_credentials run)
+
+on:
+  workflow_dispatch:
+    inputs:
+      rotate_credentials:
+        description: >-
+          Bootstrap or rotate Kuma admin password via official reset-password.js
+          (invalidates existing sessions; stores KUMA_PASSWORD in monitoring env)
+        required: false
+        type: boolean
+        default: false
+      sync_inventory:
+        description: Apply repository monitor inventory to live Kuma via Socket.IO
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  secrets: write
+
+concurrency:
+  group: sync-monitoring
+  cancel-in-progress: false
+
+jobs:
+  sync-monitoring:
+    name: sync Kuma monitoring inventory
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: monitoring
+    steps:
+      - name: Check out reviewed revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - name: Configure SSH host key verification
+        env:
+          STAGING_SSH_KNOWN_HOSTS: ${{ secrets.STAGING_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$STAGING_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Generate strong Kuma password for rotation
+        if: ${{ inputs.rotate_credentials }}
+        id: generate_password
+        run: |
+          set -euo pipefail
+          password_file="$(mktemp)"
+          chmod 600 "$password_file"
+          openssl rand -base64 48 | tr -d '\n' > "$password_file"
+          echo "password_file=$password_file" >> "$GITHUB_OUTPUT"
+
+      - name: Bundle monitoring sync tree
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/monitoring-sync-bundle
+          mkdir -p /tmp/monitoring-sync-bundle/infra/scripts
+          cp -a infra/monitoring /tmp/monitoring-sync-bundle/infra/
+          cp infra/scripts/kuma-rotate-credentials.sh \
+            infra/scripts/sync-kuma-inventory.sh \
+            /tmp/monitoring-sync-bundle/infra/scripts/
+          tar -czf "$GITHUB_WORKSPACE/monitoring-sync-bundle.tgz" \
+            -C /tmp/monitoring-sync-bundle .
+          if [ "${{ inputs.rotate_credentials }}" = "true" ]; then
+            cp "${{ steps.generate_password.outputs.password_file }}" \
+              "$GITHUB_WORKSPACE/kuma-new-password.secret"
+            chmod 600 "$GITHUB_WORKSPACE/kuma-new-password.secret"
+          fi
+
+      - name: Copy monitoring sync bundle to host
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          source: monitoring-sync-bundle.tgz
+          target: /tmp/
+
+      - name: Copy rotation password file to host
+        if: ${{ inputs.rotate_credentials }}
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          source: kuma-new-password.secret
+          target: /tmp/
+
+      - name: Rotate Kuma credentials on host (explicit opt-in)
+        if: ${{ inputs.rotate_credentials }}
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          command_timeout: 5m
+          script: |
+            set -euo pipefail
+            bundle_root="/tmp/monitoring-sync-bundle"
+            rm -rf "$bundle_root"
+            mkdir -p "$bundle_root"
+            tar -xzf /tmp/monitoring-sync-bundle.tgz -C "$bundle_root"
+            chmod 600 /tmp/kuma-new-password.secret
+            chmod +x "$bundle_root/infra/scripts/kuma-rotate-credentials.sh"
+            export KUMA_NEW_PASSWORD_FILE=/tmp/kuma-new-password.secret
+            export KUMA_ROTATE_METADATA_FILE=/tmp/kuma-rotate-metadata.env
+            "$bundle_root/infra/scripts/kuma-rotate-credentials.sh"
+
+      - name: Copy Kuma username metadata from host
+        if: ${{ inputs.rotate_credentials }}
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          source: /tmp/kuma-rotate-metadata.env
+          target: /tmp/
+          rm: false
+
+      - name: Store rotated Kuma password in monitoring environment
+        if: ${{ inputs.rotate_credentials }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PASSWORD_FILE: ${{ steps.generate_password.outputs.password_file }}
+        run: |
+          set -euo pipefail
+          gh secret set KUMA_PASSWORD --env monitoring --body-file "$PASSWORD_FILE"
+          rm -f "$PASSWORD_FILE"
+
+      - name: Store preserved Kuma username in monitoring environment
+        if: ${{ inputs.rotate_credentials }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          metadata_file="/tmp/kuma-rotate-metadata.env"
+          if [ ! -f "$metadata_file" ]; then
+            echo "username metadata file missing; existing KUMA_USERNAME secret unchanged" >&2
+            exit 0
+          fi
+          username="$(sed -n 's/^KUMA_USERNAME=//p' "$metadata_file" | head -n 1)"
+          if [ -z "${username:-}" ]; then
+            echo "username metadata file did not contain KUMA_USERNAME" >&2
+            exit 1
+          fi
+          gh secret set KUMA_USERNAME --env monitoring --body "$username"
+          rm -f "$metadata_file"
+
+      - name: Sync monitor inventory after credential rotation
+        if: ${{ inputs.sync_inventory && inputs.rotate_credentials }}
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          command_timeout: 10m
+          script: |
+            set -euo pipefail
+            bundle_root="/tmp/monitoring-sync-bundle"
+            if [ ! -d "$bundle_root/infra/monitoring" ]; then
+              mkdir -p "$bundle_root"
+              tar -xzf /tmp/monitoring-sync-bundle.tgz -C "$bundle_root"
+            fi
+            chmod +x "$bundle_root/infra/scripts/sync-kuma-inventory.sh"
+            export MONITORING_SYNC_ROOT="$bundle_root/infra/monitoring"
+            export KUMA_USERNAME="$(sed -n 's/^KUMA_USERNAME=//p' /tmp/kuma-rotate-metadata.env | head -n 1)"
+            export KUMA_PASSWORD="$(cat /tmp/kuma-new-password.secret)"
+            "$bundle_root/infra/scripts/sync-kuma-inventory.sh"
+            rm -f /tmp/kuma-new-password.secret /tmp/kuma-rotate-metadata.env
+
+      - name: Sync monitor inventory to Kuma
+        if: ${{ inputs.sync_inventory && !inputs.rotate_credentials }}
+        uses: appleboy/ssh-action@v1
+        env:
+          KUMA_USERNAME: ${{ secrets.KUMA_USERNAME }}
+          KUMA_PASSWORD: ${{ secrets.KUMA_PASSWORD }}
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          command_timeout: 10m
+          envs: KUMA_USERNAME,KUMA_PASSWORD
+          script: |
+            set -euo pipefail
+            bundle_root="/tmp/monitoring-sync-bundle"
+            if [ ! -d "$bundle_root/infra/monitoring" ]; then
+              mkdir -p "$bundle_root"
+              tar -xzf /tmp/monitoring-sync-bundle.tgz -C "$bundle_root"
+            fi
+            chmod +x "$bundle_root/infra/scripts/sync-kuma-inventory.sh"
+            export MONITORING_SYNC_ROOT="$bundle_root/infra/monitoring"
+            "$bundle_root/infra/scripts/sync-kuma-inventory.sh"
