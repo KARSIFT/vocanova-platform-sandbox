@@ -1,0 +1,94 @@
+# Canonical Uptime Kuma availability monitor inventory (VOC-086-T00).
+# Applied by the Socket.IO synchronizer (VOC-086-T01); not mutated directly.
+
+schema_version: 1
+
+kuma:
+  ownership_marker: vocanova:repo-managed
+
+availability_monitors:
+  - id: kuma.availability.staging.web
+    name: Staging Web
+    environment: staging
+    owner: vocanova-platform
+    type: http
+    url: https://staging.vocanova.site/
+    expected_status: 200
+    expected_body: null
+    interval_seconds: 60
+    timeout_seconds: 30
+    retries: 2
+    severity: high
+    coverage:
+      - "page:staging.vocanova.site/"
+      - "feature:staging-web-availability"
+
+  - id: kuma.availability.staging.api-healthz
+    name: Staging API /healthz
+    environment: staging
+    owner: vocanova-platform
+    type: http
+    url: https://api-staging.vocanova.site/healthz
+    expected_status: 200
+    expected_body: '"status":"ok"'
+    interval_seconds: 60
+    timeout_seconds: 30
+    retries: 2
+    severity: high
+    coverage:
+      - "api:GET /healthz"
+      - "feature:staging-api-health"
+
+  - id: kuma.availability.production.web
+    name: Production Web
+    environment: production
+    owner: vocanova-platform
+    type: http
+    url: https://production.vocanova.site/
+    expected_status: 200
+    expected_body: null
+    interval_seconds: 60
+    timeout_seconds: 30
+    retries: 2
+    severity: critical
+    adoption:
+      match_name: Production Web
+      match_url: https://production.vocanova.site/
+    coverage:
+      - "page:production.vocanova.site/"
+      - "feature:production-web-availability"
+
+  - id: kuma.availability.production.api-healthz
+    name: Production API /healthz
+    environment: production
+    owner: vocanova-platform
+    type: http
+    url: https://api-production.vocanova.site/healthz
+    expected_status: 200
+    expected_body: '"status":"ok"'
+    interval_seconds: 60
+    timeout_seconds: 30
+    retries: 2
+    severity: critical
+    adoption:
+      match_name: Production API /healthz
+      match_url: https://api-production.vocanova.site/healthz
+    coverage:
+      - "api:GET /healthz"
+      - "feature:production-api-health"
+
+  - id: kuma.availability.monitor-host
+    name: Monitor host reachability
+    environment: shared
+    owner: vocanova-platform
+    type: http
+    url: https://monitor.vocanova.site/
+    expected_status: 200
+    expected_body: Uptime Kuma
+    interval_seconds: 60
+    timeout_seconds: 30
+    retries: 2
+    severity: high
+    coverage:
+      - "page:monitor.vocanova.site/"
+      - "feature:monitoring-edge-reachability"
