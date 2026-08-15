@@ -115,7 +115,10 @@ test("VOC-079-TEST-02: shared edge attaches to both tier networks", () => {
   const nginxServiceMatch = sharedEdge.match(
     /^\s{2}nginx:\s*$\n([\s\S]*?)(?=^\s{2}\w|\n\w)/m,
   );
-  assert.ok(nginxServiceMatch, "shared-edge compose must declare nginx service");
+  assert.ok(
+    nginxServiceMatch,
+    "shared-edge compose must declare nginx service",
+  );
   const nginxBlock = nginxServiceMatch[1];
   assert.match(
     nginxBlock,
