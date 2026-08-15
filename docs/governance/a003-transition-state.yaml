@@ -56,3 +56,12 @@ autonomous_production_release: enabled
 doc_17_repository_adoption: true
 doc_18_repository_adoption: true
 control_plane_implementation: false
+
+# A-004 successor transition (VOC-080): scaffolding only until T07 activation.
+# authority_model above remains a003-active until a004-transition-state.yaml
+# records effective_activation_status: active.
+successor_amendment: A-004
+successor_transition_package: VOC-080
+successor_transition_state_path: docs/governance/a004-transition-state.yaml
+successor_authority_model_pending: a004-active
+successor_effective_activation_status: inactive
