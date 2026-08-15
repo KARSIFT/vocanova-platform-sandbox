@@ -10,7 +10,7 @@ tests:
 date: 2026-08-15
 related_change: VOC-081
 accountable_owner: unassigned
-gate_status: repository-complete-live-network-create-pending
+gate_status: repository-complete-live-compose-converge-pending
 live_converge_claimed: false
 ---
 
@@ -45,6 +45,7 @@ those are T02–T04.
 | Kuma not on `vocanova-net` / `vocanova-production-net` | PASS |
 | No tier secret mounts in monitoring compose | PASS |
 | App deploy workflows do not own monitoring project | PASS |
+| Staging deploy idempotently creates the external network before any shared-edge Compose bring-up | PASS |
 
 ## VOC-081-TEST-02 — Exclusive 80/443 ownership; no public Kuma port
 
@@ -72,11 +73,12 @@ Result: **PASS** (all commands exit 0).
 
 ## Live converge status
 
-**Not performed in T01.** The external network `vocanova-monitoring-net` is
-declared in repository Compose but is not created or attached on the live host
-until T03 deploy convergence. Pre-T01 live baseline (issue #665): Kuma on
-`monitoring_default` only; shared edge on `vocanova-net` +
-`vocanova-production-net` only.
+The external network `vocanova-monitoring-net` is declared in repository
+Compose and the staging-owned shared-edge deploy path idempotently creates it
+before any possible Compose bring-up. T03 remains responsible for controlled
+Compose convergence of the already-running edge and Kuma containers. Pre-T01
+live baseline (issue #665): Kuma on `monitoring_default` only; shared edge on
+`vocanova-net` + `vocanova-production-net` only.
 
 ## Limitations
 

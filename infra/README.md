@@ -272,12 +272,14 @@ Identity preserved across first converge (VOC-081-AC-00):
 - Data bind: `/opt/vocanova/monitoring/kuma-data` → `/app/data`
 
 **Monitoring network (`vocanova-monitoring-net`, VOC-081-T01):** an external
-Docker bridge network created before first converge (T03 deploy path). Kuma and
+Docker bridge network idempotently created by the staging-owned shared-edge
+deploy path before any shared-edge Compose bring-up. Kuma and
 `vocanova-shared-edge-nginx` both join it. Staging (`vocanova-net`) and
 production (`vocanova-production-net`) app stacks do **not** join this network,
 and the monitoring Compose file does not mount tier secrets. Shared edge
 reaches Kuma at `vocanova-uptime-kuma:3001` over this network — not via a
-public host publish.
+public host publish. T03 performs the controlled Compose convergence that
+attaches the already-running edge and Kuma containers.
 
 ### Backup and first-converge migration (before T03 live apply)
 
