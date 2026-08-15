@@ -20,11 +20,14 @@
 #     without --force-recreate so a missing container is created and an
 #     already-running one is left in place when the compose spec is unchanged.
 #
-# Cutover (T00 / T05):
+# Cutover (VOC-079):
 #   * This process binds host 80/443 (primary path for both tiers).
-#   * Production keeps vocanova-production-nginx on 8081/8443 until T05
-#     records cloudflare_remap_api_status: absent. Do not retire that
-#     bridge while remap may still target origin :8443 (issue #485).
+#   * Production no longer publishes a separate nginx bridge on 8081/8443;
+#     vocanova-production-nginx is retired via project-scoped orphan removal
+#     on production deploy (VOC-079-T02). Cloudflare remap absence was
+#     confirmed before bridge retirement (VOC-079-T00 / cloudflare_remap_api_status:
+#     absent). Rollback: redeploy a prior revision to recreate the bridge, or
+#     use cloudflare-remove-production-origin-port-remap.sh --restore.
 #
 # Host layout (shared host):
 #   /opt/vocanova/infra/docker-compose.shared-edge.yml  (SCPed with staging bundle)
