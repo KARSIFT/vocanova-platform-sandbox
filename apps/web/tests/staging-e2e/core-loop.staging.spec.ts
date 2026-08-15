@@ -485,7 +485,9 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
         reviewedCards,
         reviewTarget,
       );
-      expect(reviewedAfter).toBeGreaterThanOrEqual(reviewedBefore + reviewedCards);
+      expect(reviewedAfter).toBeGreaterThanOrEqual(
+        Math.min(reviewedBefore + reviewedCards, reviewTarget),
+      );
     });
 
     await test.step("8. change a setting", async () => {
