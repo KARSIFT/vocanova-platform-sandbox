@@ -14,7 +14,8 @@ verify_script="$repo_root/infra/scripts/verify-voc067-cutover.sh"
 sample_ruleset="$(mktemp)"
 removed_ruleset="$(mktemp)"
 restored_ruleset="$(mktemp)"
-trap 'rm -f "$sample_ruleset" "$removed_ruleset" "$restored_ruleset"' EXIT
+fake_bin="$(mktemp -d)"
+trap 'rm -f "$sample_ruleset" "$removed_ruleset" "$restored_ruleset"; rm -rf "$fake_bin"' EXIT
 cat >"$sample_ruleset" <<'JSON'
 {
   "result": {
@@ -109,6 +110,60 @@ assert prod[0]["action_parameters"]["origin"]["port"] == 8443
 print("ok")
 PY
 echo "PASS"
+
+echo "selftest: live verify normalizes Cloudflare's missing-entrypoint 404 to absence"
+cat >"$fake_bin/curl" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+out=""
+previous=""
+for argument in "$@"; do
+  if [ "$previous" = "-o" ]; then
+    out="$argument"
+  fi
+  previous="$argument"
+done
+url="${!#}"
+if [[ "$url" == *'/zones?name='* ]]; then
+  printf '%s' '{"success":true,"result":[{"id":"zone-test"}]}' >"$out"
+  printf '200'
+elif [[ "$url" == *'/rulesets/phases/http_request_origin/entrypoint' ]]; then
+  printf '%s' '{"success":false,"result":null,"errors":[{"code":10003,"message":"could not find entrypoint ruleset in the http_request_origin phase"}]}' >"$out"
+  printf '404'
+else
+  printf '%s' '{"success":false,"errors":[{"code":99999,"message":"unexpected test URL"}]}' >"$out"
+  printf '500'
+fi
+SH
+chmod +x "$fake_bin/curl"
+set +e
+missing_out="$(PATH="$fake_bin:$PATH" CLOUDFLARE_API_TOKEN=test-token \
+  "$cutover_script" --verify-only 2>&1)"
+missing_rc=$?
+set -e
+if [ "$missing_rc" -eq 0 ] \
+  && echo "$missing_out" | grep -q "no http_request_origin entrypoint ruleset" \
+  && echo "$missing_out" | grep -q "OK: no origin rules remap"; then
+  echo "PASS"
+else
+  echo "FAIL: expected missing-entrypoint 404 to mean absent, got rc=$missing_rc out=$missing_out" >&2
+  exit 1
+fi
+
+echo "selftest: apply is an idempotent no-op when the entrypoint ruleset is absent"
+set +e
+missing_apply_out="$(PATH="$fake_bin:$PATH" CLOUDFLARE_API_TOKEN=test-token \
+  "$cutover_script" --apply 2>&1)"
+missing_apply_rc=$?
+set -e
+if [ "$missing_apply_rc" -eq 0 ] \
+  && echo "$missing_apply_out" | grep -q "Remap already absent" \
+  && echo "$missing_apply_out" | grep -q "OK: no origin rules remap"; then
+  echo "PASS"
+else
+  echo "FAIL: expected absent entrypoint apply no-op, got rc=$missing_apply_rc out=$missing_apply_out" >&2
+  exit 1
+fi
 
 echo "selftest: verify-voc067-cutover.sh syntax"
 bash -n "$verify_script"
