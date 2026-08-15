@@ -222,8 +222,14 @@ test("VOC-081-TEST-01: staging creates the external network before shared-edge b
     "docker compose -f docker-compose.shared-edge.yml -p vocanova-shared-edge up -d",
   );
 
-  assert.ok(inspectIndex >= 0, "staging deploy must inspect the monitoring network");
-  assert.ok(createIndex > inspectIndex, "network creation must follow its idempotent inspect guard");
+  assert.ok(
+    inspectIndex >= 0,
+    "staging deploy must inspect the monitoring network",
+  );
+  assert.ok(
+    createIndex > inspectIndex,
+    "network creation must follow its idempotent inspect guard",
+  );
   assert.ok(
     composeUpIndex > createIndex,
     "monitoring network must exist before shared-edge Compose bring-up",
