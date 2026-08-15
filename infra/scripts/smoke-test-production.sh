@@ -4,6 +4,8 @@ set -euo pipefail
 # VOC-038-T02 — repeatable production smoke-test suite.
 # VOC-085-T01 — content-aware journey-situations checks and detail API
 # verification (fail closed on HTTP 200 with an empty list).
+# VOC-085-T02 — authenticated non-mutating learning-route sweep (ten fixed
+# web routes plus API-derived discover situation/word routes).
 #
 # Replaces the manual curl/SSH checks used ad hoc during R2 (VOC-037)
 # with a scripted, callable-from-CI-or-standalone suite. Every check
@@ -54,6 +56,25 @@ expect_oauth="${EXPECT_OAUTH_ENABLED:-false}"
 expect_new_signups="${EXPECT_NEW_SIGNUPS_ENABLED:-false}"
 expect_ai="${EXPECT_AI_ENABLED:-true}"
 smoke_session_cookie="${SMOKE_TEST_SESSION_COOKIE:-}"
+situation_slug=""
+word_slug=""
+
+# VOC-085-TEST-06 fixed route inventory (keep in sync with
+# scripts/foundation/voc085-production-route-sweep.test.mjs).
+PRODUCTION_PUBLIC_WEB_ROUTES=(
+  "/"
+  "/signin"
+  "/auth/magic"
+)
+PRODUCTION_AUTHENTICATED_WEB_ROUTES=(
+  "/onboarding"
+  "/home"
+  "/discover"
+  "/reviews"
+  "/progress"
+  "/settings"
+  "/settings/account"
+)
 
 failures=0
 fail() {
@@ -86,6 +107,62 @@ http_get_authed() {
   fi
   rm -f "$tmp"
   _http_last_status="$status"
+}
+
+# web_get <path> <cookie> - GET a web route; sets _web_last_status and
+# _web_last_location (when the server returns a redirect).
+_web_last_status=""
+_web_last_location=""
+web_get() {
+  local route_path="$1" cookie="$2"
+  local url="${web_base_url}${route_path}"
+  local tmp hdr
+  tmp="$(mktemp)"
+  hdr="$(mktemp)"
+  _web_last_status=""
+  _web_last_location=""
+  local status
+  if [ -n "$cookie" ]; then
+    status="$(curl -sS --max-time 15 -o "$tmp" -D "$hdr" -w "%{http_code}" \
+      -H "Cookie: $cookie" \
+      "$url" 2>/dev/null || echo "000")"
+  else
+    status="$(curl -sS --max-time 15 -o "$tmp" -D "$hdr" -w "%{http_code}" \
+      "$url" 2>/dev/null || echo "000")"
+  fi
+  if [ -f "$hdr" ]; then
+    _web_last_location="$(
+      grep -i '^location:' "$hdr" | head -1 | cut -d' ' -f2- | tr -d '\r' || true
+    )"
+  fi
+  rm -f "$hdr" "$tmp"
+  _web_last_status="$status"
+}
+
+# assert_web_route_reachable <label> <path> <cookie> [require_auth]
+# Pass on 2xx. Pass on 3xx unless require_auth is true and Location targets
+# /signin (unauthenticated redirect). Fails on 4xx/5xx/network errors.
+assert_web_route_reachable() {
+  local label="$1" route_path="$2" cookie="$3"
+  local require_auth="${4:-false}"
+  web_get "$route_path" "$cookie"
+  local status="$_web_last_status"
+  local location="$_web_last_location"
+  case "$status" in
+    2*)
+      pass "$label returned HTTP $status"
+      ;;
+    3*)
+      if [ "$require_auth" = "true" ] && echo "$location" | grep -q '/signin'; then
+        fail "$label redirected to sign-in (HTTP $status Location: $location)"
+      else
+        pass "$label returned HTTP $status"
+      fi
+      ;;
+    *)
+      fail "$label returned HTTP $status (expected 2xx/3xx)"
+      ;;
+  esac
 }
 
 # json_field <json> <dotted.path> - reads a field via jq if available,
@@ -315,6 +392,47 @@ else
         fi
       fi
     fi
+  fi
+fi
+
+# 6. Authenticated learning-route sweep (VOC-085-T02). deploy-production.yml
+# always supplies SMOKE_TEST_SESSION_COOKIE after VOC-050-T04 session mint, so
+# this section fails closed when the cookie is missing rather than silently
+# skipping required coverage. Public routes are still requested without a
+# cookie; protected routes and API-derived discover paths require it. Every
+# request is a non-mutating GET — no magic links, OAuth completion, or
+# state-changing learning actions.
+if [ -z "$smoke_session_cookie" ]; then
+  fail "authenticated route sweep requires SMOKE_TEST_SESSION_COOKIE (fail closed; deploy-production.yml must mint one)"
+else
+  for route_path in "${PRODUCTION_PUBLIC_WEB_ROUTES[@]}"; do
+    assert_web_route_reachable \
+      "GET $web_base_url$route_path (public)" \
+      "$route_path" \
+      ""
+  done
+
+  for route_path in "${PRODUCTION_AUTHENTICATED_WEB_ROUTES[@]}"; do
+    assert_web_route_reachable \
+      "GET $web_base_url$route_path (authenticated)" \
+      "$route_path" \
+      "$smoke_session_cookie" \
+      "true"
+  done
+
+  if [ -z "$situation_slug" ] || [ -z "$word_slug" ]; then
+    fail "cannot derive dynamic discover routes without journey-situations content (situation_slug/word_slug missing)"
+  else
+    assert_web_route_reachable \
+      "GET $web_base_url/discover/$situation_slug (authenticated)" \
+      "/discover/$situation_slug" \
+      "$smoke_session_cookie" \
+      "true"
+    assert_web_route_reachable \
+      "GET $web_base_url/discover/$situation_slug/$word_slug (authenticated)" \
+      "/discover/$situation_slug/$word_slug" \
+      "$smoke_session_cookie" \
+      "true"
   fi
 fi
 
