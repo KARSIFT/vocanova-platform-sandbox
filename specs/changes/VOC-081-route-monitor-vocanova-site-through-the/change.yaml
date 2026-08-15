@@ -1,0 +1,166 @@
+schema_version: 1
+id: VOC-081
+slug: route-monitor-vocanova-site-through-the
+title: Route monitor.vocanova.site through the repository-managed shared edge
+type: infrastructure
+status: draft
+risk: R4
+planned_implementation_risk_floor: "Measured during drafting by running scripts/governance/classify-change-risk.sh\
+  \ --files-from against the expected task-scoped file list (infra/docker-compose.monitoring.yml,\
+  \ infra/docker-compose.shared-edge.yml, infra/nginx-shared/nginx.conf, infra/nginx-shared/conf.d/\
+  \ monitor vhost fragment(s), infra/README.md, .github/workflows/deploy-production.yml\
+  \ and/or deploy-staging.yml as needed for monitoring convergence, scripts/foundation/*\
+  \ topology tests, this package directory). Detected path floor: R3 (infra/* and\
+  \ deploy workflows). This package proposes R4 for the change as a whole \u2014 a\
+  \ draft proposal for the reviewing human at adoption time, not a determination \u2014\
+  \ because it changes the live public edge (shared-edge network membership and vhost\
+  \ set), restores a Cloudflare-fronted administrative monitoring UI, and alters production\
+  \ rollback/topology for the monitoring Compose project. Independent verification\
+  \ and the reviewing human must still confirm each task's real file list and whether\
+  \ any further semantic escalation applies.\n"
+canonical_path: specs/changes/VOC-081-route-monitor-vocanova-site-through-the
+authority_model: a004-active
+requirement_source: "GitHub issue #665 (\"Route monitor.vocanova.site through the\
+  \ repository-managed shared edge\"). Restores https://monitor.vocanova.site through\
+  \ the single repository-managed vocanova-shared-edge-nginx after VOC-079 retired\
+  \ the production nginx bridge. Live 2026-08-15 verification (issue #665; VOC-079-EV-03):\
+  \ Cloudflare proxied A for monitor.vocanova.site \u2192 130.185.123.152 returns\
+  \ HTTP 520; vocanova-uptime-kuma is healthy on 127.0.0.1:3001 only; live Compose\
+  \ project monitoring from /opt/vocanova/monitoring/docker-compose.yml is not present\
+  \ in this repository; stale /opt/vocanova/production/nginx/conf.d/30-monitor.conf\
+  \ proxies to vocanova-uptime-kuma:3001 but infra/nginx-shared/nginx.conf loads only\
+  \ production 10-*.conf / 20-*.conf; shared edge joins only vocanova-net and vocanova-production-net\
+  \ while Kuma joins only monitoring_default. VOC-079 single-nginx invariant (exactly\
+  \ one VocaNova nginx; ports 8081/8443 absent) must be preserved."
+requirement_approval_status: not-approved
+base_branch: develop
+base_sha: unknown - not recorded by this draft; the adopting human/workflow should
+  set this to the actual base_sha at adoption time, consistent with recent packages'
+  convention.
+target_branch: develop
+approved_candidate_sha: null
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human/workflow decision
+    under active A-004)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: 'expected. Restores monitor.vocanova.site through shared-edge origin
+  :443 via Cloudflare, adds a least-privilege Docker network between shared edge and
+  Uptime Kuma, brings the monitoring Compose definition under repository management,
+  and changes shared-edge network membership / vhost loading. A misconfigured vhost,
+  network, or deploy ownership boundary can affect the shared public edge (both app
+  tiers) or expose an administrative monitoring UI. Staging/production secret and
+  write isolation must not regress.
+
+  '
+rollback_required: true
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-081-DEP-00
+  status: "unresolved at drafting time. Access exposure for the Uptime Kuma UI behind\
+    \ monitor.vocanova.site: a Cloudflare-proxied DNS record is not authorization.\
+    \ If the UI is intended to be private, require repository-managed access control\
+    \ compatible with the current Cloudflare setup (recommended default: Cloudflare\
+    \ Access / Zero Trust application for monitor.vocanova.site, with redacted verification\
+    \ evidence). If public exposure is intentionally accepted, record that decision\
+    \ explicitly at adoption and still require Kuma's own authentication to remain\
+    \ enabled \u2014 do not treat DNS proxying alone as an access control. See specification.md\
+    \ open question 1.\n"
+- id: VOC-081-DEP-01
+  status: 'unresolved at drafting time. Exact repository path and deploy ownership
+    for the monitor vhost fragment so staging, production, shared-edge, and monitoring
+    Compose projects do not fight over writes. Recommended default: own the vhost
+    under infra/nginx-shared/ (or a dedicated infra/nginx-monitor/ tree mounted read-only
+    into shared-edge) rather than continuing to rely on production/nginx/conf.d/30-monitor.conf,
+    which is not loaded by the current shared-edge include globs and sits in the production
+    deploy write tree. See specification.md open question 2.
+
+    '
+- id: VOC-081-DEP-02
+  status: 'unresolved at drafting time. How shared-edge network membership changes
+    are applied without making routine app deploys recreate shared-edge, and without
+    accepting manual docker network connect. Recommended default: declare vocanova-monitoring-net
+    as an external network on both monitoring and shared-edge compose; create the
+    network declaratively from the repository deploy path; when shared-edge compose
+    gains the network, perform a controlled one-time compose convergence for the shared-edge
+    project (nginx -t fail-closed before reload/recreate), not as part of ordinary
+    staging/production app container recreate. See specification.md open question
+    3.
+
+    '
+- id: VOC-079
+  status: Adopted predecessor. Single shared-edge nginx on host 80/443; production
+    nginx bridge and ports 8081/8443 retired. VOC-079-EV-03 explicitly recorded monitor.vocanova.site
+    Cloudflare 520 as out of VOC-079 scope with Kuma healthy on loopback 3001.
+- id: VOC-067
+  status: Adopted predecessor. Introduced vocanova-shared-edge-nginx, per-tier conf
+    trees, fail-closed nginx -t + reload, and deploy isolation invariants this package
+    must preserve.
+- id: VOC-051
+  status: Adopted predecessor for Sentry hourly error-monitoring workflow. This package
+    must leave .github/workflows/error-monitoring.yml and Sentry error monitoring
+    unchanged and healthy (AC).
+affected_areas:
+- infra/docker-compose.monitoring.yml (new; repository source of truth for Uptime
+  Kuma)
+- infra/docker-compose.shared-edge.yml (join monitoring network; optional monitor
+  conf mount)
+- infra/nginx-shared/nginx.conf (include/load monitor vhost if not already covered
+  by shared/*.conf)
+- infra/nginx-shared/conf.d/ and/or infra/nginx-monitor/ (monitor.vocanova.site vhost;
+  exact path per VOC-081-DEP-01)
+- infra/README.md (monitoring + shared-edge topology / deploy ownership)
+- ".github/workflows/deploy-production.yml and/or .github/workflows/deploy-staging.yml\
+  \ (or a narrowly scoped monitoring convergence path invoked by the normal repository\
+  \ deploy workflow \u2014 create/converge monitoring network and Kuma; apply shared-edge\
+  \ network/config with fail-closed nginx -t)"
+- scripts/foundation/ (deterministic topology / port / ownership tests)
+- "Live host paths (ops via deploy only): /opt/vocanova/monitoring/ (compose + kuma-data),\
+  \ Docker networks, shared-edge container network membership \u2014 not manual SSH\
+  \ edits"
+- "Cloudflare DNS / Access for monitor.vocanova.site (ops evidence \u2014 not a git\
+  \ secret path)"
+- specs/changes/VOC-081-route-monitor-vocanova-site-through-the
+implementation:
+  authorized: false
+  required: true
+  status: not-authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: expected-monitor-hostname-via-shared-edge
+  deployment: not-authorized-by-this-package
+  automatic_merge: false
+  migration_required: true
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-authorized
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A004
+blocking_reasons: "draft package \u2014 not adopted; open questions VOC-081-DEP-00\u2013\
+  DEP-02 must be resolved or explicitly deferred in writing at adoption"
+adoption_independent_verification_evidence: null
+adoption_risk: null
+adoption_resolved_decisions: []
+adoption_deferred_decisions: []
+adoption_authority_provenance: null
