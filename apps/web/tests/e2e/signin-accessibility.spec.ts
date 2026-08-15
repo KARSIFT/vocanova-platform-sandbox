@@ -32,9 +32,9 @@ test.describe("Sign-in accessibility (VOC-073-T00)", () => {
       ).join("\n")}`,
     ).toEqual([]);
 
-    // OAuth button, email input, and submit button are the three
-    // sequential Tab stops on the initial render.
-    await assertKeyboardReachable(page, { minFocusable: 3, minTabStops: 3 });
+    // Email input and submit button are the two Tab stops when OAuth is
+    // disabled (mock /healthz reports oauth_enabled=false by default).
+    await assertKeyboardReachable(page, { minFocusable: 2, minTabStops: 2 });
 
     await assertNonColorOnlyFeedback(page, {
       contextLabel: "/signin",

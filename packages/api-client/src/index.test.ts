@@ -92,6 +92,35 @@ describe("VocanovaClient", () => {
     });
   });
 
+  it("sends GET /healthz and parses kill_switches without throwing on 503", async () => {
+    const fetch = (url: string, init: RequestInit): Promise<Response> => {
+      assert.equal(url, "https://api.example.com/healthz");
+      assert.equal(init.method, "GET");
+      assert.equal(new Headers(init.headers).get("Accept"), "application/json");
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            status: "unhealthy",
+            database: "unhealthy",
+            kill_switches: { oauth_enabled: true },
+          }),
+          {
+            headers: { "Content-Type": "application/json" },
+            status: 503,
+          },
+        ),
+      );
+    };
+
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: fetch as typeof globalThis.fetch,
+    });
+    const { data, response } = await client.getHealthz();
+    assert.equal(response.status, 503);
+    assert.equal(data.kill_switches?.oauth_enabled, true);
+  });
+
   it("sends GET /api/v1/journey-situations", async () => {
     const fetch = (url: string, init: RequestInit): Promise<Response> => {
       assert.equal(url, "https://api.example.com/api/v1/journey-situations");

@@ -40,7 +40,9 @@
 //
 // Endpoints:
 //
-//   GET    /healthz                                 -> 200 { status: "ok" }
+//   GET    /healthz                                 -> 200 { status, kill_switches }
+//             oauth_enabled follows MOCK_OAUTH_ENABLED
+//             (default false for honest disabled posture)
 //
 //   GET    /api/v1/me                                -> 200 CurrentUser
 //             401 if ?fail=me (T07b auth-gate path)
@@ -98,6 +100,7 @@ import { createServer } from "node:http";
 
 const PORT = Number(process.env.MOCK_API_PORT ?? 8080);
 const HOST = process.env.MOCK_API_HOST ?? "127.0.0.1";
+const MOCK_OAUTH_ENABLED = process.env.MOCK_OAUTH_ENABLED === "true";
 
 const ONBOARDING_STATUSES = new Set(["not_started", "in_progress", "completed"]);
 
@@ -626,7 +629,17 @@ const server = createServer(async (req, res) => {
 
   if (req.method === "GET" && url.pathname === "/healthz") {
     logLine(req, 200);
-    jsonResponse(res, 200, { status: "ok" });
+    jsonResponse(res, 200, {
+      status: "ok",
+      database: "ok",
+      timestamp: new Date().toISOString(),
+      kill_switches: {
+        magic_link_enabled: true,
+        oauth_enabled: MOCK_OAUTH_ENABLED,
+        new_signups_enabled: false,
+        ai_enabled: true,
+      },
+    });
     return;
   }
 
