@@ -39,7 +39,10 @@ function extractStepBlock(workflowSource, stepName) {
     `deploy-staging workflow is missing step: ${stepName}`,
   );
 
-  const nextStepIndex = workflowSource.indexOf("\n      - name:", stepStartIndex + 1);
+  const nextStepIndex = workflowSource.indexOf(
+    "\n      - name:",
+    stepStartIndex + 1,
+  );
   return workflowSource.slice(
     stepStartIndex,
     nextStepIndex === -1 ? workflowSource.length : nextStepIndex,
@@ -109,14 +112,20 @@ test("VOC-084-TEST-01: both credentials present sync safely to staging api.env",
     /GOOGLE_OAUTH_CLIENT_SECRET=\$\{STAGING_GOOGLE_OAUTH_CLIENT_SECRET\}/,
   );
   assert.match(oauthSync, /\/opt\/vocanova\/infra\/secrets\/api\.env/);
-  assert.match(oauthSync, /chmod 600 \/opt\/vocanova\/infra\/secrets\/api\.env/);
+  assert.match(
+    oauthSync,
+    /chmod 600 \/opt\/vocanova\/infra\/secrets\/api\.env/,
+  );
   assertCredentialsWrittenOnlyToApiEnv(oauthSync);
 
   assert.match(
     configStep,
     /STAGING_GOOGLE_OAUTH_ENABLED: \$\{\{ secrets\.GOOGLE_OAUTH_CLIENT_ID != '' && secrets\.GOOGLE_OAUTH_CLIENT_SECRET != '' \}\}/,
   );
-  assert.match(configStep, /echo "GOOGLE_OAUTH_ENABLED=\$\{STAGING_GOOGLE_OAUTH_ENABLED\}"/);
+  assert.match(
+    configStep,
+    /echo "GOOGLE_OAUTH_ENABLED=\$\{STAGING_GOOGLE_OAUTH_ENABLED\}"/,
+  );
 });
 
 test("VOC-084-TEST-02: both credentials absent converges to coherent disabled OAuth", () => {
@@ -130,15 +139,15 @@ test("VOC-084-TEST-02: both credentials absent converges to coherent disabled OA
     "Write staging application configuration",
   );
 
-  assert.match(
-    oauthSync,
-    /both unset - skipping \(OAuth not yet adopted\)/,
-  );
+  assert.match(oauthSync, /both unset - skipping \(OAuth not yet adopted\)/);
   assert.match(
     configStep,
     /STAGING_GOOGLE_OAUTH_ENABLED: \$\{\{ secrets\.GOOGLE_OAUTH_CLIENT_ID != '' && secrets\.GOOGLE_OAUTH_CLIENT_SECRET != '' \}\}/,
   );
-  assert.match(configStep, /echo "GOOGLE_OAUTH_ENABLED=\$\{STAGING_GOOGLE_OAUTH_ENABLED\}"/);
+  assert.match(
+    configStep,
+    /echo "GOOGLE_OAUTH_ENABLED=\$\{STAGING_GOOGLE_OAUTH_ENABLED\}"/,
+  );
 });
 
 test("VOC-084-TEST-03: canonical staging OAuth callback URI is exact", () => {
@@ -180,10 +189,7 @@ test("VOC-084-TEST-04: signup stays false; allowlist defaults empty and is workf
     configStep,
     /echo "NEW_USER_SIGNUP_ALLOWLIST=\$\{STAGING_NEW_USER_SIGNUP_ALLOWLIST\}"/,
   );
-  assert.match(
-    deployStaging,
-    /new_user_signup_allowlist:[\s\S]*default: ""/,
-  );
+  assert.match(deployStaging, /new_user_signup_allowlist:[\s\S]*default: ""/);
 });
 
 test("VOC-084-TEST-07 (partial): production OAuth sync semantics are unchanged", () => {
@@ -199,7 +205,7 @@ test("VOC-084-TEST-07 (partial): production OAuth sync semantics are unchanged",
   );
   assert.doesNotMatch(
     readFileSync(deployStagingPath, "utf8"),
-  /\/opt\/vocanova\/production\/secrets\/api\.env/,
+    /\/opt\/vocanova\/production\/secrets\/api\.env/,
     "staging deploy must not write production secret paths",
   );
 });
