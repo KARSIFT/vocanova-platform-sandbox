@@ -123,8 +123,9 @@ The monitoring Compose project name is `monitoring`; the container is
 `/app/data` inside the container). Port `3001` must not bind to `0.0.0.0` or
 `[::]` — loopback-only for local ops; shared edge reaches Kuma over
 `vocanova-monitoring-net` via container DNS (`vocanova-uptime-kuma:3001`).
-The monitor vhost (VOC-081-T02) and deploy workflow network create/converge
-(T03) are separate tasks.
+The monitor vhost (VOC-081-T02) loads through shared edge; deploy workflow
+convergence (VOC-081-T03) creates the monitoring network, converges Kuma, and
+applies controlled shared-edge network/config updates.
 
 **Only the shared-edge nginx publishes host ports 80/443.** The database and the
 two app services are reachable only on their tier's internal network
@@ -271,15 +272,16 @@ Identity preserved across first converge (VOC-081-AC-00):
 - Container name: `vocanova-uptime-kuma`
 - Data bind: `/opt/vocanova/monitoring/kuma-data` → `/app/data`
 
-**Monitoring network (`vocanova-monitoring-net`, VOC-081-T01):** an external
-Docker bridge network idempotently created by the staging-owned shared-edge
-deploy path before any shared-edge Compose bring-up. Kuma and
+**Monitoring network (`vocanova-monitoring-net`, VOC-081-T01/T03):** an external
+Docker bridge network idempotently created by the staging-owned deploy path
+before monitoring and shared-edge convergence. Kuma and
 `vocanova-shared-edge-nginx` both join it. Staging (`vocanova-net`) and
 production (`vocanova-production-net`) app stacks do **not** join this network,
 and the monitoring Compose file does not mount tier secrets. Shared edge
 reaches Kuma at `vocanova-uptime-kuma:3001` over this network — not via a
-public host publish. T03 performs the controlled Compose convergence that
-attaches the already-running edge and Kuma containers.
+public host publish. `deploy-staging.yml` converges the monitoring Compose
+project and applies controlled shared-edge `compose up -d` (no
+`--force-recreate`) with fail-closed `nginx -t` before reload.
 
 **Monitor vhost (`monitor.vocanova.site`, VOC-081-T02):** the shared edge
 loads `infra/nginx-shared/conf.d/30-monitor.vocanova.site.conf` via the
@@ -292,9 +294,8 @@ with WebSocket upgrade headers, and sets the standard reverse-proxy headers
 host-only `/opt/vocanova/production/nginx/conf.d/30-monitor.conf` is
 **not** loaded by shared edge (production globs are `10-*.conf` /
 `20-*.conf` only); repository retirement marker:
-`infra/nginx-production/conf.d/30-monitor.conf.superseded`. T03 removes any
-remaining live `30-monitor.conf` under the production nginx tree during
-deploy convergence.
+`infra/nginx-production/conf.d/30-monitor.conf.superseded`. Production deploy
+removes any remaining live `30-monitor.conf` under the production nginx tree.
 
 **Access exposure (`VOC-081-DEP-00`):** see
 `infra/monitoring/access-policy.md`. The adopted policy restores the existing
@@ -304,10 +305,11 @@ not authorization. No unverified Cloudflare Access application is assumed.
 T04 records redacted live verification that the login is reachable and the
 administrative dashboard still requires Kuma authentication.
 
-### Backup and first-converge migration (before T03 live apply)
+### Backup and first-converge migration (before live apply)
 
 Run on the shared host **before** the first repository-driven monitoring
-Compose converge (T03). Do not claim live converge from T00 alone.
+Compose converge (`deploy-staging.yml` after VOC-081-T03). Do not claim live
+converge from T00 alone.
 
 1. **Snapshot existing data.** While the current Kuma container is healthy:
    ```bash
@@ -320,7 +322,7 @@ Compose converge (T03). Do not claim live converge from T00 alone.
    Uptime Kuma state (not an empty directory created by mistake).
 3. **First converge must reuse data.** The repository Compose file binds
    `${VOCANOVA_MONITORING_ROOT:-/opt/vocanova/monitoring}/kuma-data`. The
-   first `compose up` after T03 must mount that existing tree. Empty
+   first `compose up` after VOC-081-T03 must mount that existing tree. Empty
    re-initialization is a FAIL for VOC-081-AC-00.
 4. **Post-converge check.** After T03/T04, confirm the dashboard still shows
    the pre-existing monitors (SSH tunnel to `127.0.0.1:3001` until the public
@@ -447,8 +449,9 @@ Bring up order on the shared host:
 
 1. `docker compose -f docker-compose.yml up -d` (staging apps)
 2. `docker compose -f docker-compose.production.yml up -d` (production apps)
-3. `docker compose -f docker-compose.shared-edge.yml up -d` (shared edge on
-   `80`/`443` — `deploy-staging.yml` performs this controlled bring-up)
+3. `deploy-staging.yml` converges monitoring (`docker-compose.monitoring.yml`
+   project `monitoring`) and shared edge on `80`/`443` — controlled
+   `compose up -d` with fail-closed `nginx -t` before reload
 
 Recreating the shared-edge container is rare and documented — ordinary
 deploys only `nginx -t` + reload (VOC-067-T03).
@@ -462,8 +465,8 @@ then signals the shared edge with `docker exec` against
 
 | Pipeline            | Writes                                        | Shared-edge signal                                                                                                                                                                                                                   |
 | ------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `deploy-staging`    | `/opt/vocanova/infra/nginx/`, `nginx-shared/` | Routine: `nginx -t` + `nginx -s reload` when the container exists. Rare: T02 first-start bring-up when absent.                                                                                                                       |
-| `deploy-production` | `/opt/vocanova/production/nginx/`             | Shared-edge: `nginx -t` + `nginx -s reload` when the container exists (skip if staging has not brought it up yet). Project-scoped `compose up -d --remove-orphans` retires containers dropped from the production compose file only. |
+| `deploy-staging`    | `/opt/vocanova/infra/nginx/`, `nginx-shared/`, monitoring compose | Routine: idempotent monitoring network + Kuma converge, disposable `nginx -t`, controlled shared-edge `compose up -d` (no `--force-recreate`), then `nginx -t` + `nginx -s reload` when the container exists. Rare: T02 first-start bring-up when absent. |
+| `deploy-production` | `/opt/vocanova/production/nginx/`             | Shared-edge: `nginx -t` + `nginx -s reload` when the container exists (skip if staging has not brought it up yet). Retires stale `30-monitor.conf`. Project-scoped `compose up -d --remove-orphans` retires containers dropped from the production compose file only. |
 
 Failed `nginx -t` **fails the deploy closed** without reload — the
 in-memory config (both tiers) stays on the previous generation. Neither

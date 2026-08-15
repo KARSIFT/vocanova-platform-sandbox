@@ -189,25 +189,19 @@ test("VOC-081-TEST-02: Kuma has no public port 3001 publish", () => {
   }
 });
 
-test("VOC-081-TEST-01: app deploy workflows do not own the monitoring project", () => {
+test("VOC-081-TEST-01: production deploy does not own the monitoring project", () => {
   const deployProduction = readFileSync(deployProductionPath, "utf8");
-  const deployStaging = readFileSync(deployStagingPath, "utf8");
 
-  for (const [label, workflow] of [
-    ["deploy-production", deployProduction],
-    ["deploy-staging", deployStaging],
-  ]) {
-    assert.doesNotMatch(
-      workflow,
-      /docker-compose\.monitoring\.yml/,
-      `${label} must not converge monitoring compose (T03 scope)`,
-    );
-    assert.doesNotMatch(
-      workflow,
-      /-p\s+monitoring\b/,
-      `${label} must not use compose project name monitoring`,
-    );
-  }
+  assert.doesNotMatch(
+    deployProduction,
+    /docker-compose\.monitoring\.yml/,
+    "deploy-production must not converge monitoring compose (staging-owned)",
+  );
+  assert.doesNotMatch(
+    deployProduction,
+    /-p\s+monitoring\b/,
+    "deploy-production must not use compose project name monitoring",
+  );
 });
 
 test("VOC-081-TEST-01: staging creates the external network before shared-edge bring-up", () => {

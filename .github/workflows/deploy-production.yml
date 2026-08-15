@@ -9,7 +9,10 @@ name: deploy-production
 # writes. VOC-079-T02: production compose defines only postgres/api/web;
 # project-scoped `compose up -d --remove-orphans` retires
 # vocanova-production-nginx when dropped from the file. Operational URLs use
-# canonical HTTPS :443 via the shared edge (VOC-079-T01).
+# canonical HTTPS :443 via the shared edge (VOC-079-T01). VOC-081-T03: retires
+# stale production/nginx/conf.d/30-monitor.conf (not loaded by shared edge);
+# monitoring Compose convergence is staging-owned — production reloads shared
+# edge only after its own 10-/20- conf writes.
 #
 # Auto-deploys on every push to main (2026-08-08, founder's explicit, twice-
 # confirmed request - see AGENTS.md's "Release and deployment authority"
@@ -470,6 +473,9 @@ jobs:
             cd /opt/vocanova/production
             sed -i "s/__PRODUCTION_WEB_HOST__/${PRODUCTION_WEB_HOST}/g" nginx/conf.d/10-production-web.conf
             sed -i "s/__PRODUCTION_API_HOST__/${PRODUCTION_API_HOST}/g" nginx/conf.d/20-api-production.conf
+            # VOC-081-T03: remove stale host-only monitor vhost. Shared edge loads
+            # monitor.vocanova.site from nginx-shared/conf.d/, not production 30-*.conf.
+            rm -f nginx/conf.d/30-monitor.conf
 
             # VOC-067-T03: reload shared edge after production nginx conf write.
             # Production deploy user does not write /opt/vocanova/infra; reload

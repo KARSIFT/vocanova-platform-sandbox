@@ -83,6 +83,12 @@
 #   /opt/vocanova/infra/docker-compose.shared-edge.yml
 #                                            (SCPed by this workflow;
 #                                              VOC-067-T02 shared edge)
+#   /opt/vocanova/infra/docker-compose.monitoring.yml
+#                                            (SCPed by this workflow;
+#                                              VOC-081-T03 monitoring source)
+#   /opt/vocanova/monitoring/docker-compose.monitoring.yml
+#                                            (converged from infra/ copy;
+#                                              kuma-data/ is host data only)
 #   /opt/vocanova/infra/nginx/...            (SCPed by this workflow;
 #                                              staging 10-/20- vhosts)
 #   /opt/vocanova/infra/nginx-shared/...     (SCPed by this workflow;
@@ -524,6 +530,8 @@ jobs:
           cp infra/docker-compose.yml /tmp/deploy-bundle/infra/
           # VOC-067-T02 shared-edge compose (controlled bring-up below)
           cp infra/docker-compose.shared-edge.yml /tmp/deploy-bundle/infra/
+          # VOC-081-T03 monitoring compose (converged on host under /opt/vocanova/monitoring)
+          cp infra/docker-compose.monitoring.yml /tmp/deploy-bundle/infra/
           # T05's nginx config tree (conf.d/ contains the
           # per-Host server blocks; nginx.conf is the main
           # config that includes them). Shared edge loads only
@@ -1007,23 +1015,51 @@ jobs:
             # -------------------------------------------------------------
             SHARED_EDGE_CONTAINER=vocanova-shared-edge-nginx
 
-            # VOC-081-T01: the shared-edge Compose model declares this as an
-            # external network, so every staging-owned shared-edge path must
-            # ensure it exists before a possible Compose bring-up. Creation is
-            # idempotent and repository-managed; T03 performs the controlled
-            # Compose convergence that attaches the running edge and Kuma.
+            # VOC-081-T01/T03: the shared-edge and monitoring Compose models
+            # declare vocanova-monitoring-net as external. Staging-owned deploy
+            # creates it idempotently, converges Kuma, then applies controlled
+            # shared-edge network/config convergence with fail-closed nginx -t.
             if ! docker network inspect vocanova-monitoring-net >/dev/null 2>&1; then
               docker network create --driver bridge vocanova-monitoring-net >/dev/null
               echo "Created dedicated vocanova-monitoring-net (VOC-081-T01)"
             fi
 
+            # VOC-081-T03: converge the isolated monitoring project from
+            # repository source. Reuses existing kuma-data on the host; never
+            # --remove-orphans (scoped project ownership only).
+            sudo mkdir -p /opt/vocanova/monitoring
+            cp /opt/vocanova/infra/docker-compose.monitoring.yml /opt/vocanova/monitoring/docker-compose.monitoring.yml
+            sudo chown "$(id -un)":"$(id -gn)" /opt/vocanova/monitoring/docker-compose.monitoring.yml
+            docker compose -f /opt/vocanova/monitoring/docker-compose.monitoring.yml -p monitoring config >/dev/null
+            docker compose -f /opt/vocanova/monitoring/docker-compose.monitoring.yml -p monitoring up -d
+
+            # Disposable nginx -t with the same mount set as shared-edge compose
+            # before touching the running edge (VOC-081-T03 / VOC-067-AC-04).
+            run_shared_edge_nginx_t() {
+              docker run --rm \
+                -v /opt/vocanova/infra/nginx-shared/nginx.conf:/etc/nginx/nginx.conf:ro \
+                -v /opt/vocanova/infra/nginx-shared/conf.d:/etc/nginx/conf.d/shared:ro \
+                -v /opt/vocanova/infra/nginx/conf.d:/etc/nginx/conf.d/staging:ro \
+                -v /opt/vocanova/production/nginx/conf.d:/etc/nginx/conf.d/production:ro \
+                -v /opt/vocanova/infra/secrets/nginx/cert.pem:/etc/nginx/certs/staging/cert.pem:ro \
+                -v /opt/vocanova/infra/secrets/nginx/key.pem:/etc/nginx/certs/staging/key.pem:ro \
+                -v /opt/vocanova/production/secrets/nginx/cert.pem:/etc/nginx/certs/production/cert.pem:ro \
+                -v /opt/vocanova/production/secrets/nginx/key.pem:/etc/nginx/certs/production/key.pem:ro \
+                nginx:1.27-alpine nginx -t
+            }
+
             if docker inspect "$SHARED_EDGE_CONTAINER" >/dev/null 2>&1; then
+              run_shared_edge_nginx_t
+              docker compose -f docker-compose.shared-edge.yml -p vocanova-shared-edge config >/dev/null
+              # Controlled convergence when compose gains network membership or
+              # nginx-shared changes — no --force-recreate on routine deploys.
+              docker compose -f docker-compose.shared-edge.yml -p vocanova-shared-edge up -d
               if ! docker exec "$SHARED_EDGE_CONTAINER" nginx -t; then
-                echo "ERROR: shared-edge nginx -t failed after staging conf update; deploy aborted without reload (previous config still active for both tiers)" >&2
+                echo "ERROR: shared-edge nginx -t failed after controlled convergence; deploy aborted without reload (previous config still active for both tiers)" >&2
                 exit 1
               fi
               docker exec "$SHARED_EDGE_CONTAINER" nginx -s reload
-              echo "Shared edge reloaded after staging nginx conf update (VOC-067-T03 routine path)"
+              echo "Shared edge converged and reloaded after staging deploy (VOC-067-T03 / VOC-081-T03 routine path)"
             else
               if [ ! -f /opt/vocanova/infra/docker-compose.shared-edge.yml ]; then
                 echo "ERROR: docker-compose.shared-edge.yml missing from staging infra tree" >&2
@@ -1049,18 +1085,7 @@ jobs:
                 exit 1
               fi
               docker compose -f docker-compose.shared-edge.yml -p vocanova-shared-edge config >/dev/null
-              # Disposable nginx -t with the same mount set as shared-edge compose
-              # before touching host ports / stopping legacy staging nginx.
-              docker run --rm \
-                -v /opt/vocanova/infra/nginx-shared/nginx.conf:/etc/nginx/nginx.conf:ro \
-                -v /opt/vocanova/infra/nginx-shared/conf.d:/etc/nginx/conf.d/shared:ro \
-                -v /opt/vocanova/infra/nginx/conf.d:/etc/nginx/conf.d/staging:ro \
-                -v /opt/vocanova/production/nginx/conf.d:/etc/nginx/conf.d/production:ro \
-                -v /opt/vocanova/infra/secrets/nginx/cert.pem:/etc/nginx/certs/staging/cert.pem:ro \
-                -v /opt/vocanova/infra/secrets/nginx/key.pem:/etc/nginx/certs/staging/key.pem:ro \
-                -v /opt/vocanova/production/secrets/nginx/cert.pem:/etc/nginx/certs/production/cert.pem:ro \
-                -v /opt/vocanova/production/secrets/nginx/key.pem:/etc/nginx/certs/production/key.pem:ro \
-                nginx:1.27-alpine nginx -t
+              run_shared_edge_nginx_t
 
               # Hand off host 80/443: stop legacy staging nginx (if present), then
               # start shared edge. On failure, attempt to restart legacy nginx.
