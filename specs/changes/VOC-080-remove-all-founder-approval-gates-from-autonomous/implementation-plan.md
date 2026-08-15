@@ -2,16 +2,16 @@
 
 ## Preconditions and protected areas
 
-Do not begin implementation until this package is adopted under **current**
-A-003 / VOC-075 authority (`status: adopted`, `approval_status` per house
-convention, `implementation_authorized: true` /
-`implementation.authorized: true`) and `VOC-080-DEP-00`–`DEP-04` are
-resolved or explicitly deferred in writing.
+This package is adopted under **current** A-003 / VOC-075 authority
+(`status: adopted`, `approval_status: approved`,
+`implementation_authorized: true` / `implementation.authorized: true`).
+`VOC-080-DEP-00`–`DEP-05` are resolved by the adoption record.
 
 Additionally:
 
-- Proposed package risk is **R4**. Under pre-transition rules, founder
-  adoption of this package is required before task dispatch.
+- Package risk is **R4**. The pre-transition adoption decision is recorded on
+  PR #628; task dispatch remains gated by deterministic checks and independent
+  verification, not a later founder comment.
 - Protected areas: `docs/governance/amendments/`, transition-state YAML,
   DOC-15, `scripts|tooling/governance/`, `AGENTS.md` / `CLAUDE.md`,
   `.github/workflows/pipeline.yml`, and cross-repo
@@ -38,8 +38,8 @@ Additionally:
    matrices/templates/repository-settings reconciliation.
 6. **`VOC-080-T05`** — Deterministic tests (may land with T01–T04).
 7. **`VOC-080-T06`** — Sandbox/dry-run rehearsal evidence.
-8. **`VOC-080-T07`** — Exact-revision founder approval (final) + activation
-   markers + VOC-079 unblock note.
+8. **`VOC-080-T07`** — Exact-revision founder approval (final), independent
+   verification, activation markers, and VOC-079 unblock note.
 
 Preserve compatible autonomous-merge / auto-release work from VOC-012 and
 the 2026-08-08 delegation. Do not rewrite historical package evidence.
@@ -66,9 +66,10 @@ Independent verification (per `CLAUDE.md`) must bind each exact commit SHA,
 confirm the implementer-role occupant did not approve/merge its own work,
 identify the **active** authority model (A-003 until T07; successor after),
 and report every still-required R3/R4/EHR/adoption/activation gate. Before
-T07, R4 founder transition approval remains required. After T07, verifier
-must confirm founder-comment gates are gone while non-founder controls
-remain.
+T07, R4 founder transition approval remains required. At T07, the verifier
+must bind its verdict and the founder approval to the exact activation
+revision, then confirm founder-comment gates are gone while non-founder
+controls remain.
 
 ## Deployment and rollback
 
@@ -80,15 +81,16 @@ retry-as-gate.
 
 Rollout sequence:
 
-1. Adopt/authorize VOC-080 under current authority; settle DEPs.
+1. Adopt/authorize VOC-080 under current authority; settle DEPs. **Complete via PR #628 and this recovery record.**
 2. Land T00–T05 (infra then caller docs/wiring).
 3. T06 rehearsal on sandbox/harness; record evidence.
-4. T07 exact-revision founder approval + activation.
+4. T07 exact-revision founder transition approval, independent verification,
+   and activation.
 5. Resume VOC-079 and normal packages on the new path.
 
 Rollback trigger: autonomy merges without verification; silent
 unadopted merges recur; docs contradict workflows; activation flipped
-without exact-revision founder approval; production deploy blocked by
+without exact-revision founder approval or independent verification; production deploy blocked by
 undocumented residual reviewer settings; or independent review FAIL.
 
 Rollback mechanism:
@@ -104,7 +106,8 @@ Rollback mechanism:
 4. Re-run governance validation; confirm merge-gate/adopt/release
    behavior matches the restored revision.
 
-Accountable owner: named in T07 evidence (unassigned at drafting).
+Accountable owner: autonomous implementation role, recorded by task issue and
+named in T07 evidence.
 Last-known-good reference: pre-T01 `karsift-ai-infra` merge-gate/adopt/
 release SHAs and this repo's pre-T04 AGENTS.md / pipeline.yml /
 A-003-active transition-state tip.

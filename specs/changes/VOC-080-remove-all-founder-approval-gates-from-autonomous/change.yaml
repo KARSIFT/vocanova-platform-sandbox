@@ -3,10 +3,9 @@ id: VOC-080
 slug: remove-all-founder-approval-gates-from-autonomous
 title: Remove All Founder Approval Gates from Autonomous Engineering Workflows
 type: process
-status: draft
+status: adopted
 risk: R4
-planned_implementation_risk_floor: "Draft proposal R4 for human review at adoption\
-  \ \u2014 not a determination. Expected paths include docs/governance/amendments/\
+planned_implementation_risk_floor: "Adopted R4 determination. Expected paths include docs/governance/amendments/\
   \ (R4), docs/governance/a003-transition-state.yaml (R4), docs/operations/15-\u2026\
   \ (DOC-15, R4), scripts/governance/ and/or tooling/governance/ (R4 if tests/lints\
   \ land there), AGENTS.md / CLAUDE.md / specs/templates/ / docs/governance/ (R3),\
@@ -27,25 +26,23 @@ requirement_source: 'GitHub issue #627 ("Remove all founder approval gates from 
   checks, rollback, secrets isolation, least-privilege credentials, builder/verifier
   separation, or the requirement to ask when product requirements are genuinely ambiguous.
   Transition authority: evaluated under pre-transition (A-003) authority; this package
-  cannot authorize its own adoption; one final founder approval under current policy
+  cannot authorize its own adoption. One final founder approval under current policy
   is required for the exact transition revision, after which no later founder approval
   gate remains.'
-requirement_approval_status: "not-approved \u2014 draft package only; adoption, exact-revision\
-  \ transition approval under pre-A-004 authority, and implementation authorization\
-  \ remain human decisions."
+requirement_approval_status: "approved by founder decision in issue #627 and exact plan\
+  \ revision approval on PR #628; implementation is authorized subject to deterministic\
+  \ checks and independent exact-revision verification."
 base_branch: develop
-base_sha: unknown - not recorded by this draft; the adopting human/workflow should
-  set this to the actual base_sha at adoption time, consistent with recent packages'
-  convention.
+base_sha: 5195ff1732b9e1a1658b339472b1dc1b71eb91a6
 target_branch: develop
-approved_candidate_sha: null
+approved_candidate_sha: 0d7ab1c642be612f978bd11d9ec6b87cd4c7e1e0
 owners:
-  decision: unassigned
-  package_preparation: planner (drafting only; adoption remains a human decision)
-  implementation: unassigned
-  independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+  decision: founder decision recorded in issue #627 and PR #628
+  package_preparation: planner
+  implementation: autonomous implementer under the adopted task roster
+  independent_verification: independent plan_reviewer/reviewer roles
+approval_status: approved
+implementation_authorized: true
 automatic_merge_allowed: false
 production_impact: 'expected for governance and automation behavior across this repository
   and KARSIFT/karsift-ai-infra consumers. No direct application-feature change. Removes
@@ -68,48 +65,41 @@ artifacts:
   release_plan: release-plan.md
 dependencies:
 - id: VOC-080-DEP-00
-  status: 'unresolved at drafting time. Amendment vehicle: new A-004 successor vs
-    in-place A-003 edit. Recommended default: A-004 that supersedes A-003 only where
+  status: 'resolved at adoption: create A-004 as a successor that supersedes A-003 only where
     A-003 (and VOC-075) require founder approval for engineering-workflow gates; keep
-    A-003 historical and effective until A-004 activation evidence is recorded. See
-    specification.md open question 1.
+    A-003 historical and effective until A-004 activation evidence is recorded.
 
     '
 - id: VOC-080-DEP-01
-  status: "unresolved at drafting time. Scope of \"no founder approval\" for product/legal/strategy\
-    \ R4 *decisions* (pricing, privacy policy, initial public launch go/no-go) versus\
-    \ engineering-workflow gates (adopt/merge/release/deploy/retry). Recommended default:\
-    \ remove all workflow gates that wait on a founder `approved` comment; retain\
+  status: "resolved at adoption: remove all workflow gates that wait on a founder\
+    \ `approved` comment, including product/legal/strategy implementation workflows; retain\
     \ the obligation to ask the founder when product requirements are genuinely ambiguous\
-    \ before drafting stable acceptance criteria \u2014 that ask is product clarification,\
-    \ not a merge/adopt/release approval gate. See specification.md open question\
-    \ 2.\n"
+    \ before drafting stable acceptance criteria. That is clarification, not approval.\n"
 - id: VOC-080-DEP-02
-  status: "unresolved at drafting time. Disposition of `automatic_merge_allowed`:\
-    \ (a) neutralize so R0\u2013R4 all draft `true` and merge-gate ignores `false`\
-    \ as a founder gate; (b) retire the field from new packages and stop reading it\
-    \ in merge-gate; (c) keep residual mechanical honor of historical `false` until\
-    \ a backfill. Recommended default: (a) with optional historical backfill, matching\
-    \ issue #627 \"retire or neutralize \u2026 as a founder-attention mechanism.\"\
-    \ See specification.md open question 3.\n"
+  status: "resolved at adoption: neutralize `automatic_merge_allowed` as a founder-attention\
+    \ mechanism. New packages use true and merge-gate ignores historical false values;\
+    \ missing or failed CI/review gates still fail closed.\n"
 - id: VOC-080-DEP-03
-  status: 'unresolved at drafting time. Cross-repo sequencing for KARSIFT/karsift-ai-infra
-    vs this calling repository. Recommended default: land reusable-workflow behavior
-    in karsift-ai-infra first (or in lockstep), prove on this sandbox, then activate
+  status: 'resolved at adoption: land reusable-workflow behavior in karsift-ai-infra
+    first, prove on this sandbox, then activate
     calling-repo policy/docs and remove `founder_username` / comment-gate wiring from
     pipeline.yml. Infra changes are specified by this package; PRs land in the infra
     repository under that repo''s process. See specification.md open question 4.
 
     '
 - id: VOC-080-DEP-04
-  status: 'unresolved at drafting time. Rehearsal venue and proof bar before declaring
-    the transition effective on VocaNova production consumers. Recommended default:
-    use this sandbox repository (and/or karsift-ai-infra self-ci / smoke harness)
+  status: 'resolved at adoption: use this sandbox repository and karsift-ai-infra self-ci
+    / smoke harness
     as the non-production rehearsal; require recorded dry-run evidence for adopt,
     R4 merge, reconcile-dispatch, release, and fail-closed unparseable-risk paths
     before activation task closes. See specification.md open question 5.
 
     '
+- id: VOC-080-DEP-05
+  status: 'resolved at adoption: Dependabot and other explicitly recognized dependency
+    bots require green deterministic CI and a parseable risk declaration but no founder
+    approval. They retain the documented no-agent-authored-code review exception; unknown
+    bot identities fail closed for correction.'
 - id: VOC-075
   status: 'Adopted predecessor establishing approve-only-R4 drafting. This package
     supersedes that policy for engineering-workflow founder gates per issue #627;
@@ -152,9 +142,9 @@ affected_areas:
   release/deploy paths (ops, documented in repository-settings.md)
 - specs/changes/VOC-080-remove-all-founder-approval-gates-from-autonomous
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: proposed
+  status: authorized-pending-roster-reconciliation
   target_branch: develop
   pull_request: null
   authority_issue: null
@@ -166,17 +156,17 @@ release:
   automatic_merge: false
   migration_required: false
   rollback_required: true
-repository_adoption_status: not-adopted
-adoption_pr: null
-adoption_evidence: null
+repository_adoption_status: adopted
+adoption_pr: 628
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/628
 implementation_authority_before_adoption: false
-implementation_authority_status: not-authorized
+implementation_authority_status: authorized-pending-roster-reconciliation
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
-blocking_reasons: "Draft only. Blocks until founder adoption of this R4 package under\
-  \ current A-003/VOC-075 authority, resolution or explicit deferral of VOC-080-DEP-00\u2013\
-  DEP-04, implementation_authorized: true, rehearsal evidence, and one final exact-revision\
-  \ founder approval for transition activation (after which founder approval gates\
-  \ are retired). Proposed package risk R4."
+blocking_reasons: "Implementation is authorized, but task dispatch is blocked until the\
+  \ post-merge reconcile run creates the checked roster. Transition activation remains gated by\
+  \ T00-T06 evidence, deterministic validation, independent verification, rollback\
+  \ readiness, and the one final exact-revision founder approval required by the\
+  \ pre-transition authority."

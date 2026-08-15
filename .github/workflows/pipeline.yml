@@ -9,7 +9,8 @@ name: pipeline
 # never adopts, authorizes, or implements anything, a human still does that by
 # hand, by reviewing and merging the draft PR. `adopt` then opens the real
 # per-task tracking issues, but only once that merge has happened - not at
-# draft time. `plan-from-issue` is what makes "anyone (a human, or another
+# draft time. A `reconcile` dispatch safely repairs the handoff if that merge
+# event was missed. `plan-from-issue` is what makes "anyone (a human, or another
 # agent - e.g. one that reads application logs and notices a bug) just opens
 # an issue" a valid way in: it auto-drafts a package from that issue, asking a
 # clarifying question back on the issue itself if there isn't enough to go on
@@ -54,7 +55,7 @@ on:
         description: "Which reusable workflow to run"
         required: true
         type: choice
-        options: [implement, plan]
+        options: [implement, plan, reconcile]
         default: implement
       change_id:
         description: 'implement only: adopted package to implement from, e.g. "VOC-007"'
@@ -90,6 +91,10 @@ on:
         required: false
         type: string
         default: "VOC"
+      plan_pr_number:
+        description: "reconcile only: merged plan PR whose adoption/roster handoff must be repaired"
+        required: false
+        type: string
 
 # Explicit floor for every job below, all of which call karsift-ai-infra's
 # reusable workflows via `uses:` with `secrets: inherit` and no
@@ -168,10 +173,12 @@ jobs:
   # why this is a separate step from drafting rather than happening at PR-open
   # time.
   adopt:
-    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'plan/')
+    if: |
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'plan/')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.action == 'reconcile' && inputs.plan_pr_number != '')
     uses: KARSIFT/karsift-ai-infra/.github/workflows/adopt.yml@main
     with:
-      pr_number: ${{ github.event.pull_request.number }}
+      pr_number: ${{ github.event_name == 'workflow_dispatch' && inputs.plan_pr_number || github.event.pull_request.number }}
     secrets: inherit
 
   ci:

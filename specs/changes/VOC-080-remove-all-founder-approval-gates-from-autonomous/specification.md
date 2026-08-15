@@ -143,38 +143,39 @@ Contradiction with VOC-075 / A-003 / AGENTS.md “R4 founder approval”:
 explicit supersession for **engineering-workflow gates** after activation;
 historical records preserved; cite issue #627.
 
-Open questions for the reviewing human:
+Adoption decisions (resolved on PR #628; implementation details remain subject
+to exact-revision independent verification):
 
-1. **`VOC-080-DEP-00` — Amendment vehicle.** Recommended: **A-004** successor
+1. **`VOC-080-DEP-00` — Amendment vehicle.** Use an **A-004** successor
    that supersedes A-003 only where founder approval is required for
    engineering-workflow gates; A-003 remains historical; activation flips
    `authority_model` / transition-state when evidence is complete.
-2. **`VOC-080-DEP-01` — Product/legal R4 decisions.** Recommended: workflow
+2. **`VOC-080-DEP-01` — Product/legal R4 decisions.** All approval workflow
    gates removed entirely; founder still answers genuine product/legal/
    strategy ambiguities as **requirement clarification** before a package
    has stable AC — not as an `approved` comment on merge/adopt/release.
-   Explicitly settle whether “initial public / major launch go/no-go” in
-   `approval-matrix.md` remains a product hold outside automation or is
-   also retired as a workflow gate.
-3. **`VOC-080-DEP-02` — `automatic_merge_allowed`.** Recommended: **(a)**
+   “Initial public / major launch go/no-go” may require requirements to be
+   clarified, but is not a founder approval gate.
+3. **`VOC-080-DEP-02` — `automatic_merge_allowed`.** Choose **(a)**:
    neutralize — all new packages draft `true` including R4; merge-gate no
    longer treats `false` as founder-attention; optional historical backfill;
    keep the field for audit/compat unless adoption prefers full retire (b).
-4. **`VOC-080-DEP-03` — Cross-repo sequencing.** Recommended: infra behavior
+4. **`VOC-080-DEP-03` — Cross-repo sequencing.** Land infra behavior
    PRs in `KARSIFT/karsift-ai-infra` first (or lockstep), caller
    `pipeline.yml` + docs after inputs stabilize; this package is the
    authorizing change package for the required behavior in both places.
-5. **`VOC-080-DEP-04` — Rehearsal.** Recommended: prove on
+5. **`VOC-080-DEP-04` — Rehearsal.** Prove on
    `vocanova-platform-sandbox` and/or infra self-ci/smoke before activation
    closes; record run URLs for adopt, R4 auto-merge, reconcile-dispatch,
    release, and unparseable-risk fail-closed.
-6. **Dependabot / non-agent PRs.** Settle whether Dependabot follows the same
-   CI-green auto-merge path (no founder) or a separate documented rule.
+6. **`VOC-080-DEP-05` — Dependabot / non-agent PRs.** Recognized dependency
+   bots follow the documented green-CI exception without founder approval;
+   unrecognized bot identities fail closed.
 7. **GitHub environment reviewers.** Confirm production (and any other)
    environment reviewer settings that still require founder click-approve
    are removed or documented as out-of-band ops with immediate
    doc follow-up per AGENTS.md settings rule.
-8. **Risk.** Accept proposed R4.
+8. **Risk.** R4 accepted.
 
 Security / privacy: no new personal-data handling. Bot App credentials stay
 secret-scoped. Audit evidence must not embed secret values. Separation of

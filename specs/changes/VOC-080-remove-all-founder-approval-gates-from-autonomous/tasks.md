@@ -1,7 +1,7 @@
 # VOC-080 — Tasks
 
-None of the tasks below is implementation-authorized by this package.
-Adoption and each task's own implementation authorization are separate.
+The tasks below are implementation-authorized by the adopted package and run
+in the recorded order subject to deterministic checks and independent review.
 Recommended order: **T00 → T01 → T02 → T03 → T04 → T05 → T06 → T07**.
 T05 may land incrementally with T01–T04 when that keeps each PR reviewable;
 T06 must not claim pass before T01–T04 mechanisms exist; T07 is last.
@@ -19,7 +19,7 @@ tracked tree.
 - Acceptance criteria: `VOC-080-AC-09`
 - Tests: `VOC-080-TEST-08`
 - Evidence: `VOC-080-EV-00` (`t00-evidence.md`)
-- Status: pending — blocked on package adoption
+- Status: pending — package adopted
 
 ### Required work
 
@@ -129,7 +129,7 @@ tracked tree.
    pass; no founder override of failed remediation.
 3. Identify and neutralize repository-controlled production environment
    **reviewer** requirements that still demand founder click-approve
-   (`VOC-080-DEP-01` / open question 7); document ops steps if settings
+   (`VOC-080-R05` / `VOC-080-AC-06` / open question 7); document ops steps if settings
    are changed outside git, with immediate doc follow-up in T04.
 
 ### Explicitly out of scope for this task
@@ -214,14 +214,15 @@ tracked tree.
 - Acceptance criteria: `VOC-080-AC-00`–`VOC-080-AC-10` as applicable
 - Tests: `VOC-080-TEST-06`, `VOC-080-TEST-08`
 - Evidence: `VOC-080-EV-07` (`t07-evidence.md`)
-- Status: pending — **last**; requires T06 rehearsal pass and one final
-  founder approval under **pre-transition** authority on the exact
+- Status: pending — **last**; requires T06 rehearsal pass, the final founder
+  transition approval, and independent verification bound to the exact
   activation revision
 
 ### Required work
 
-1. Under current A-003 / VOC-075 authority, obtain founder approval bound
-   to the **exact** activation revision (the final founder approval).
+1. Obtain the final founder transition approval and an independent PASS verdict
+   bound to the **exact** activation revision after all deterministic checks
+   and rehearsal evidence pass.
 2. Flip transition-state / amendment lifecycle to effective; set
    `authority_model` (or successor marker) consistently across
    `a003-transition-state.yaml` / successor, protected-paths lockstep
@@ -245,7 +246,6 @@ tracked tree.
 - T04 after infra contracts stabilize to avoid doc/code drift.
 - T06 before T07; T07 is the only task that makes the new authority
   effective.
-- No task may be dispatched before this package is adopted under
-  **current** authority (founder adoption of this R4 draft).
+- Tasks may dispatch because this package is adopted and implementation-authorized.
 - Closing issue #627 is gated on AC results with evidence, not task-issue
   closure alone.

@@ -1,9 +1,9 @@
 # VOC-080 — Remove All Founder Approval Gates from Autonomous Engineering Workflows
 
-**Status: draft, not adopted.** Nothing in this package is implementation-authorized.
-It is a draft response to
+**Status: adopted and implementation-authorized.** This package was approved on
+[PR #628](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/628) in response to
 [issue #627](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/627),
-prepared for founder review at adoption time (proposed **R4**).
+with independent verification bound to the approved plan revision. Risk is **R4**.
 
 ## Identity and lifecycle
 
@@ -11,13 +11,15 @@ prepared for founder review at adoption time (proposed **R4**).
 - Title: Remove All Founder Approval Gates from Autonomous Engineering Workflows
 - Canonical path:
   `specs/changes/VOC-080-remove-all-founder-approval-gates-from-autonomous`
-- Lifecycle state: `draft` (not adopted, not authorized for implementation)
-- Proposed risk: `R4` (draft proposal only — see `change.yaml`'s
+- Lifecycle state: `adopted` (implementation authorized)
+- Risk: `R4` (see `change.yaml`'s
   `planned_implementation_risk_floor`; path floors include R4 amendment /
   DOC-15 / governance tooling paths)
-- Owner: unassigned (see `change.yaml`'s `owners` block)
-- Approval evidence: none yet — `approval_status: not-approved`,
-  `implementation_authorized: false`
+- Owner: autonomous implementer with independent verification
+- Approval evidence: PR #628 — `approval_status: approved`,
+  `implementation_authorized: true`
+- Roster state: reconciliation pending until this recovery PR merges and the
+  `reconcile` dispatch for plan PR #628 completes
 - Target branch: `develop`
 - Linked GitHub issues:
   - [#627](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/627)
@@ -76,7 +78,8 @@ Live pain this package addresses (from #627):
 7. **Rehearsal** (`VOC-080-T06`): prove the new loops in sandbox/dry-run
    before activation.
 8. **Activation** (`VOC-080-T07`): one final exact-revision founder approval
-   under pre-transition authority; record activation; enable post-transition
+   under pre-transition authority plus independent verification and recorded
+   activation evidence enable the post-transition
    model so VOC-079 and later work need no founder `approved` comment.
 
 ## What this package deliberately does NOT do
@@ -89,12 +92,12 @@ Live pain this package addresses (from #627):
   never existed.
 - Not implementing VOC-079 bridge retirement (only unblocks its post-
   activation progression).
-- Not adopting, authorizing, implementing, or merging itself — and not
-  claiming the post-transition model authorizes this package's own adoption.
+- Not claiming the post-transition model authorized its own adoption; adoption
+  evidence remains the pre-transition decision recorded on PR #628.
 
-## Open questions for the reviewing human
+## Adoption decisions
 
-See `specification.md`. The most important at adoption:
+The drafting questions were resolved at adoption as follows:
 
 1. A-004 successor vs in-place A-003 edit (`VOC-080-DEP-00`).
 2. Product/legal R4 *decisions* vs engineering-workflow gates
@@ -102,14 +105,18 @@ See `specification.md`. The most important at adoption:
 3. `automatic_merge_allowed` neutralize vs retire (`VOC-080-DEP-02`).
 4. Cross-repo sequencing with `karsift-ai-infra` (`VOC-080-DEP-03`).
 5. Rehearsal venue and proof bar (`VOC-080-DEP-04`).
-6. Accept proposed **R4** and the one-final-founder-approval transition rule.
+6. Risk is **R4**. Activation requires the one final exact-revision founder
+   transition approval, independent verification, deterministic checks,
+   rehearsal evidence, and rollback readiness.
 
 ## Verification, approvals, release, and closure
 
 See `test-plan.md`, `release-plan.md`, and `implementation-plan.md`.
 
-Under **current** A-003 / VOC-075 authority (pre-activation): this R4 package
-requires founder adoption and exact-revision transition approval. After
-activation evidence is recorded, no later founder approval gate remains for
-engineering-workflow progression. Independent verification of each exact
-revision remains mandatory throughout.
+This package was adopted under the pre-transition authority recorded on PR #628.
+Task issues and `.karsift/tasks.json` are intentionally created by the
+post-merge idempotent reconcile run, not guessed in this recovery commit.
+The exact T07 activation revision still requires the final founder transition
+approval defined by the adopted plan. Independent verification of each exact
+revision remains mandatory throughout. After T07 activation, no later founder
+approval gate remains.
