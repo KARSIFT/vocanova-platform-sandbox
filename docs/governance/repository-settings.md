@@ -158,9 +158,10 @@ staging/production deployment anymore.
 The initial governance bootstrap merged through PR #3 and its one-time exception has
 expired. The historical technical-steward appointment and completed dual-capacity
 VOC-002 approval remain permanent evidence, but the role is retired as routine R3
-authority and that migration approval cannot be reused. Under active A-003, routine R3
-uses strengthened technical gates and independent verification, while R4 founder
-authority remains unchanged. Automatic merge into `develop` is live (see above);
-RL1/RL2 technical activation remain disabled until separately implemented, tested,
-and proven. **Post-A-004 activation** removes founder-comment gates on
-engineering-workflow merge/release/deploy paths; see `a004-transition-state.yaml`.
+authority and that migration approval cannot be reused. Under active A-003 (until `VOC-080-T07`), routine R3 uses strengthened technical
+gates and independent verification. **Historical (A-003 / VOC-075):** R4 required
+a founder `approved` comment on engineering-workflow merge gates. Automatic merge
+into `develop` is live (see above); RL1/RL2 technical activation remain disabled
+until separately implemented, tested, and proven. **Post-A-004 activation**
+removes founder-comment gates on engineering-workflow merge/release/deploy paths
+at every risk class including R4; see `a004-transition-state.yaml` and issue #627.
