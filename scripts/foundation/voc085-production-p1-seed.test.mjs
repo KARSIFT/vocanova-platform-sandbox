@@ -43,7 +43,10 @@ function deployHostScriptBlock(workflowYaml) {
   const scriptStart = workflowYaml.indexOf("script: |", start);
   assert.ok(scriptStart >= 0, "missing deploy host script block");
   const scriptBodyStart = workflowYaml.indexOf("\n", scriptStart) + 1;
-  const scriptEnd = workflowYaml.indexOf("\n      # VOC-079-T01", scriptBodyStart);
+  const scriptEnd = workflowYaml.indexOf(
+    "\n      # VOC-079-T01",
+    scriptBodyStart,
+  );
   assert.ok(scriptEnd > scriptBodyStart, "could not bound deploy host script");
   return workflowYaml.slice(scriptBodyStart, scriptEnd);
 }
@@ -98,7 +101,10 @@ test("VOC-085-TEST-01: P1 seed runs after migrations and synthetic-user seed, be
   );
 
   assert.ok(migrateIndex >= 0, "deploy host script must run migrate.sh");
-  assert.ok(syntheticIndex >= 0, "deploy host script must run synthetic-user seed");
+  assert.ok(
+    syntheticIndex >= 0,
+    "deploy host script must run synthetic-user seed",
+  );
   assert.ok(p1SeedIndex >= 0, "deploy host script must run p1-content-seed");
   assert.ok(upIndex >= 0, "deploy host script must run docker compose up -d");
 
@@ -143,11 +149,7 @@ test("VOC-085-TEST-02: P1 seed failure aborts before application convergence", (
   const tempDir = mkdtempSync(path.join(tmpdir(), "voc085-fail-closed-"));
   const failingSeed = path.join(tempDir, "p1-content-seed");
   const upMarker = path.join(tempDir, "up-ran");
-  writeFileSync(
-    failingSeed,
-    "#!/bin/sh\nexit 1\n",
-    { mode: 0o755 },
-  );
+  writeFileSync(failingSeed, "#!/bin/sh\nexit 1\n", { mode: 0o755 });
 
   const disposableScript = `
 set -euo pipefail
@@ -169,7 +171,11 @@ docker compose up -d --remove-orphans
     exitCode = error.status ?? 1;
   }
 
-  assert.notEqual(exitCode, 0, "failing P1 seed must abort the disposable deploy script");
+  assert.notEqual(
+    exitCode,
+    0,
+    "failing P1 seed must abort the disposable deploy script",
+  );
   assert.throws(
     () => readFileSync(upMarker, "utf8"),
     "application convergence must not run after a failing P1 seed under set -e",
