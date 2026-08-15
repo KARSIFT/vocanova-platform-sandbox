@@ -1,0 +1,495 @@
+name: release (reusable)
+
+# Promotes a completed package from the integration branch to the production
+# branch after its ordered roster closes. No founder comment is an authority
+# signal. A caller can idempotently retry a failed promotion by dispatching
+# action=reconcile-release with release_issue_number=<audit issue>. Deploy is
+# explicitly out of scope; this workflow only merges the promotion PR.
+#
+# A package's task roster is fixed once, at planning time, in
+# `<package_path>/.karsift/tasks.json` (written by plan.yml's "Commit task
+# roster" step: `[{"task_id": ..., "issue": <number>}, ...]`). This workflow
+# never re-parses a project's own tasks.md prose to figure out what "done"
+# means - that was tried for the per-task issue-opening step earlier and
+# broke against a real house-style mismatch (see plan.yml's task-parser
+# comment). The roster is the sole source of truth for package completion.
+# Packages that predate this file's existence (no .karsift/tasks.json) are
+# not covered - this only applies going forward.
+
+on:
+  workflow_call:
+    inputs:
+      founder_username:
+        description: 'Deprecated compatibility input; never used as release authority.'
+        required: false
+        type: string
+      release_issue_number:
+        description: 'Audit issue to reconcile after an interrupted promotion.'
+        required: false
+        type: string
+      integration_branch:
+        description: 'Branch a completed package promotes FROM, e.g. "develop".'
+        required: false
+        type: string
+        default: "develop"
+      production_branch:
+        description: 'Branch a completed package promotes TO, e.g. "main".'
+        required: false
+        type: string
+        default: "main"
+      auto_release_enabled:
+        description: 'Deprecated compatibility input; completed rosters promote automatically.'
+        required: false
+        type: string
+        default: "false"
+    secrets:
+      KARSIFT_BOT_APP_ID:
+        description: >
+          Required. GitHub App ID used to create and merge the promotion PR.
+          The default GITHUB_TOKEN is deliberately not used because GitHub
+          requires manual workflow approval on PRs it creates or updates.
+        required: true
+      KARSIFT_BOT_PRIVATE_KEY:
+        description: "Required, paired with KARSIFT_BOT_APP_ID."
+        required: true
+
+jobs:
+  # Fires on every issue closing. Cheap to no-op: most closed issues aren't a
+  # tracked task at all (wrong title shape), and this exits immediately for
+  # those. Split out of check-and-open (2026-08-07, VOC-043-T00) so
+  # change_id is available as a needs.identify.output for check-and-open's
+  # own concurrency group - a job-level concurrency: key can only reference
+  # needs.*.outputs or the event context directly, not a step output
+  # computed inside that same job, and change_id is only derivable via a
+  # shell grep step (GitHub Actions expressions have no regex/split
+  # function). This job itself needs no concurrency group: it only reads.
+  identify:
+    if: github.event_name == 'issues' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      is_task: ${{ steps.identify.outputs.is_task }}
+      change_id: ${{ steps.identify.outputs.change_id }}
+      package_path: ${{ steps.identify.outputs.package_path }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.integration_branch }}
+
+      - name: Identify the package this issue belongs to, if any
+        id: identify
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+        run: |
+          set -euo pipefail
+          # plan.yml titles task issues "<change_id>: <task_id> - <title>" -
+          # match that prefix; anything else isn't a tracked task issue.
+          change_id=$(echo "$ISSUE_TITLE" | grep -oP '^[A-Za-z][A-Za-z0-9]*-\d+(?=:)' || true)
+          if [ -z "$change_id" ]; then
+            echo "Closed issue title doesn't match '<CHANGE-ID>: ...' - not a tracked task issue, nothing to do."
+            echo "is_task=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          package_path=$(find specs/changes -maxdepth 1 -mindepth 1 -type d -name "${change_id}-*" | head -1 || true)
+          if [ -z "$package_path" ]; then
+            echo "No package directory found for $change_id under specs/changes/ on ${{ inputs.integration_branch }} - nothing to do."
+            echo "is_task=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          roster="$package_path/.karsift/tasks.json"
+          if [ ! -f "$roster" ]; then
+            echo "$package_path has no .karsift/tasks.json - package predates the release gate, or wasn't planner-authored. Nothing to do."
+            echo "is_task=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "is_task=true" >> "$GITHUB_OUTPUT"
+          echo "change_id=$change_id" >> "$GITHUB_OUTPUT"
+          echo "package_path=$package_path" >> "$GITHUB_OUTPUT"
+
+  # Serialized per change_id (not globally) so two packages' roster-closing
+  # events never wait on each other, but two near-simultaneous closes within
+  # the SAME package's roster do - closing the race behind issue #328 (two
+  # of VOC-039's task issues closing seconds apart both passed the
+  # "no existing 'Release: VOC-039' issue" check before either had created
+  # one, producing duplicate issues #310/#311). cancel-in-progress: false
+  # queues rather than cancels, so the second run's own re-check of "does a
+  # 'Release: <change_id>' issue already exist" only runs after the first
+  # run's gh issue create (if any) has actually completed.
+  check-and-open:
+    needs: identify
+    if: needs.identify.outputs.is_task == 'true'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: release-check-${{ github.repository }}-${{ needs.identify.outputs.change_id }}
+      cancel-in-progress: false
+    permissions:
+      issues: write
+      contents: read
+    outputs:
+      release_issue_number: ${{ steps.open-issue.outputs.issue_number }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.integration_branch }}
+
+      - name: Check whether every roster issue is now closed
+        id: completion
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          roster="${{ needs.identify.outputs.package_path }}/.karsift/tasks.json"
+          all_closed=true
+          while IFS= read -r n; do
+            state=$(gh issue view "$n" --json state -q .state)
+            if [ "$state" != "CLOSED" ]; then
+              all_closed=false
+              break
+            fi
+          done < <(jq -r '.[].issue' "$roster")
+          echo "all_closed=$all_closed" >> "$GITHUB_OUTPUT"
+
+      - name: Open the release audit issue, if complete and not already requested
+        id: open-issue
+        if: steps.completion.outputs.all_closed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          change_id="${{ needs.identify.outputs.change_id }}"
+          package_path="${{ needs.identify.outputs.package_path }}"
+          title="Release: $change_id"
+
+          existing=$(gh issue list --state open --search "in:title \"$title\"" --json number,title -q \
+            "[.[] | select(.title == \"$title\")] | .[0].number")
+          if [ -n "$existing" ] && [ "$existing" != "null" ]; then
+            echo "A '$title' issue (#$existing) is already open - not opening a second one."
+            echo "issue_number=$existing" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          roster_summary=$(jq -r '.[] | "- `\(.task_id)` (issue #\(.issue))"' "$package_path/.karsift/tasks.json")
+
+          # Labeled at creation so plan.yml's issue-triggered planning never
+          # mistakes this system-generated approval gate for a genuine new
+          # request to plan - see templates/project-repo/.github/workflows/
+          # pipeline.yml's plan-from-issue job, which only fires for issues
+          # with no karsift:* label at all.
+          gh label create "karsift:release" --color "5319E7" \
+            --description "System-generated release audit - not a planning request" \
+            --force
+
+          issue_url=$(gh issue create \
+            --title "$title" \
+            --label "karsift:release" \
+            --body "$(cat <<EOF
+          Every task in \`$change_id\`'s roster is now closed:
+
+          $roster_summary
+
+          This package is complete. It promotes \`${{ inputs.integration_branch }}\` to
+          \`${{ inputs.production_branch }}\` automatically after promotion-PR checks pass.
+          No founder approval comment is part of this path. If promotion is interrupted,
+          dispatch \`action=reconcile-release\` with this issue number.
+
+          **Deploy is out of scope here.** This only promotes the branch; any hosted
+          deployment is a separate step.
+          EOF
+          )")
+          echo "issue_number=$(basename "$issue_url")" >> "$GITHUB_OUTPUT"
+
+  # Runs whenever a completed roster has a release audit issue.
+  # Duplicates retry-promote's promotion-PR/wait-for-checks/merge steps
+  # rather than sharing them, because this job runs in the SAME workflow
+  # run as check-and-open (it already knows the issue number check-and-open
+  # just created/found, with no need to wait for a second issue_comment
+  # event). retry-promote is the idempotent recovery path if this attempt is
+  # interrupted or its checks fail.
+  auto-promote:
+    needs: [identify, check-and-open]
+    if: needs.check-and-open.outputs.release_issue_number != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Mint App installation token for promotion
+        id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547
+        with:
+          app-id: ${{ secrets.KARSIFT_BOT_APP_ID }}
+          private-key: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
+
+      # See retry-promote's own "Open or reuse the promotion PR" step for the
+      # "No commits between" race explanation - identical reasoning here.
+      - name: Open or reuse the promotion PR
+        id: promotion-pr
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          RELEASE_ISSUE_NUMBER: ${{ needs.check-and-open.outputs.release_issue_number }}
+        run: |
+          set -euo pipefail
+          promotion_body="$(cat <<EOF
+          Auto-promoted once issue #$RELEASE_ISSUE_NUMBER's package roster completed. No founder approval comment is a release gate.
+
+          Risk classification: R4
+
+          This PR promotes the already-reviewed integration branch to the production branch. It does not deploy production infrastructure itself, but it remains fail-closed: every PR check must pass before this workflow merges it.
+          EOF
+          )"
+          existing=$(gh pr list --base "${{ inputs.production_branch }}" --head "${{ inputs.integration_branch }}" --state open --json number -q '.[0].number' || true)
+          if [ -z "$existing" ] || [ "$existing" = "null" ]; then
+            create_output=$(gh pr create \
+              --base "${{ inputs.production_branch }}" \
+              --head "${{ inputs.integration_branch }}" \
+              --title "Release: promote ${{ inputs.integration_branch }} to ${{ inputs.production_branch }}" \
+              --body "$promotion_body" 2>&1) \
+              || {
+                if echo "$create_output" | grep -qi "No commits between"; then
+                  gh issue close "$RELEASE_ISSUE_NUMBER" --comment "Already promoted: ${{ inputs.production_branch }} already contains everything on ${{ inputs.integration_branch }} - a concurrent release most likely already brought this package's changes in. No new promotion PR was needed."
+                  echo "pr_number=" >> "$GITHUB_OUTPUT"
+                  exit 0
+                fi
+                echo "$create_output" >&2
+                exit 1
+              }
+            existing=$(echo "$create_output" | grep -oP '\d+$')
+          else
+            gh pr edit "$existing" --body "$promotion_body"
+          fi
+          echo "pr_number=$existing" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for every promotion PR check
+        id: promotion-checks
+        if: steps.promotion-pr.outputs.pr_number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.promotion-pr.outputs.pr_number }}
+        run: |
+          set -euo pipefail
+          deadline=$((SECONDS + 300))
+          previous_count=0
+          stable_count=0
+          while true; do
+            check_count=$(gh pr view "$PR_NUMBER" --json statusCheckRollup -q '.statusCheckRollup | length')
+            if [ "$check_count" -gt 0 ] && [ "$check_count" -eq "$previous_count" ]; then
+              stable_count=$((stable_count + 1))
+            else
+              stable_count=0
+            fi
+            if [ "$stable_count" -ge 2 ]; then
+              break
+            fi
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "Promotion PR #$PR_NUMBER checks did not register and stabilize within 5 minutes - refusing to merge." >&2
+              exit 1
+            fi
+            previous_count=$check_count
+            sleep 10
+          done
+          gh pr checks "$PR_NUMBER" --watch --fail-fast --interval 10
+          checked_sha=$(gh pr view "$PR_NUMBER" --json headRefOid -q .headRefOid)
+          checks_ok=$(gh pr checks "$PR_NUMBER" --json bucket -q \
+            'map(.bucket) | all(. == "pass" or . == "skipping")')
+          if [ "$checks_ok" != "true" ]; then
+            echo "Promotion PR #$PR_NUMBER is not fully green after watch completed - refusing to merge." >&2
+            exit 1
+          fi
+          echo "head_sha=$checked_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Merge checked promotion PR and close release issue
+        if: steps.promotion-pr.outputs.pr_number != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_NUMBER: ${{ steps.promotion-pr.outputs.pr_number }}
+          CHECKED_HEAD_SHA: ${{ steps.promotion-checks.outputs.head_sha }}
+          RELEASE_ISSUE_NUMBER: ${{ needs.check-and-open.outputs.release_issue_number }}
+        run: |
+          set -euo pipefail
+          gh pr merge "$PR_NUMBER" --merge --match-head-commit "$CHECKED_HEAD_SHA"
+          gh issue close "$RELEASE_ISSUE_NUMBER" --comment "Auto-promoted via PR #$PR_NUMBER after all promotion checks passed."
+
+  # Idempotent recovery for an interrupted or failed automatic promotion.
+  retry-promote:
+    if: github.event_name == 'workflow_dispatch' && inputs.release_issue_number != ''
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      checks: read
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.integration_branch }}
+
+      - name: Validate release audit and completed roster
+        id: validate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ISSUE_NUMBER: ${{ inputs.release_issue_number }}
+        run: |
+          set -euo pipefail
+          issue=$(gh issue view "$RELEASE_ISSUE_NUMBER" --json state,title,labels)
+          state=$(echo "$issue" | jq -r .state)
+          if [ "$state" = "CLOSED" ]; then
+            echo "Release audit #$RELEASE_ISSUE_NUMBER is already closed; nothing to reconcile."
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          title=$(echo "$issue" | jq -r .title)
+          labeled=$(echo "$issue" | jq -r '[.labels[].name] | index("karsift:release") != null')
+          change_id=${title#Release: }
+          if [ "$title" = "$change_id" ] || [ "$labeled" != "true" ]; then
+            echo "Issue #$RELEASE_ISSUE_NUMBER is not a release audit; refusing promotion." >&2
+            exit 1
+          fi
+          package_path=$(find specs/changes -maxdepth 1 -mindepth 1 -type d -name "${change_id}-*" | head -1 || true)
+          roster="$package_path/.karsift/tasks.json"
+          if [ -z "$package_path" ] || [ ! -f "$roster" ]; then
+            echo "No adopted roster found for $change_id; refusing promotion." >&2
+            exit 1
+          fi
+          while IFS= read -r task_issue; do
+            [ "$(gh issue view "$task_issue" --json state -q .state)" = "CLOSED" ] || {
+              echo "Task issue #$task_issue is not closed; refusing promotion." >&2
+              exit 1
+            }
+          done < <(jq -r '.[].issue' "$roster")
+          echo "needed=true" >> "$GITHUB_OUTPUT"
+
+      # A GitHub App token is mandatory on this path. PRs created by the
+      # default GITHUB_TOKEN require a maintainer to click "Approve workflows
+      # to run", even when the branch lives in the same repository. That is
+      # exactly what stalled vocanova-platform-sandbox's release PR #362.
+      # Using the already-installed KARSIFT bot identity lets the PR's checks
+      # start normally without weakening the repository's protection for
+      # genuine first-time external contributors.
+      - name: Mint App installation token for promotion
+        id: app-token
+        if: steps.validate.outputs.needed == 'true'
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547
+        with:
+          app-id: ${{ secrets.KARSIFT_BOT_APP_ID }}
+          private-key: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
+
+      # If two release audit issues land close together (e.g. two packages
+      # both complete before either promotion finishes), the first promotion
+      # carries the second package's changes into production_branch too -
+      # there's nothing left for the second one to promote. `gh pr create`
+      # fails outright in that case ("No commits between main and develop"),
+      # which used to fail this whole job and leave the issue open forever
+      # with no automatic path forward, even though the release's actual
+      # goal (the package's changes reaching production_branch) was already
+      # satisfied. Found live: VOC-020 and VOC-021's promotions started within
+      # seconds of each other, VOC-020's promotion (merged
+      # moments earlier) already brought main up to develop's tip including
+      # VOC-021, and VOC-021's own release run failed with exactly this
+      # error - required a manual close after manually confirming main
+      # already had VOC-021's real content. Now detected and treated as the
+      # success it actually is, not a failure.
+      - name: Open or reuse the promotion PR
+        id: promotion-pr
+        if: steps.validate.outputs.needed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          RELEASE_ISSUE_NUMBER: ${{ inputs.release_issue_number }}
+        run: |
+          set -euo pipefail
+          promotion_body="$(cat <<EOF
+          Reconciled automatic promotion for release audit issue #$RELEASE_ISSUE_NUMBER. No founder approval comment is a release gate.
+
+          Risk classification: R4
+
+          This PR promotes the already-reviewed integration branch to the production branch. It does not deploy production infrastructure, but it remains fail-closed: every PR check must pass before this workflow merges it.
+          EOF
+          )"
+          existing=$(gh pr list --base "${{ inputs.production_branch }}" --head "${{ inputs.integration_branch }}" --state open --json number -q '.[0].number' || true)
+          if [ -z "$existing" ] || [ "$existing" = "null" ]; then
+            create_output=$(gh pr create \
+              --base "${{ inputs.production_branch }}" \
+              --head "${{ inputs.integration_branch }}" \
+              --title "Release: promote ${{ inputs.integration_branch }} to ${{ inputs.production_branch }}" \
+              --body "$promotion_body" 2>&1) \
+              || {
+                if echo "$create_output" | grep -qi "No commits between"; then
+                  gh issue close "$RELEASE_ISSUE_NUMBER" --comment "Already promoted: ${{ inputs.production_branch }} already contains everything on ${{ inputs.integration_branch }}. No new promotion PR was needed."
+                  echo "pr_number=" >> "$GITHUB_OUTPUT"
+                  exit 0
+                fi
+                echo "$create_output" >&2
+                exit 1
+              }
+            existing=$(echo "$create_output" | grep -oP '\d+$')
+          else
+            # A retry may reuse a PR created by an earlier failed release
+            # run. Refresh its metadata so the conservative risk declaration
+            # and current approval evidence cannot remain stale.
+            gh pr edit "$existing" --body "$promotion_body"
+          fi
+          echo "pr_number=$existing" >> "$GITHUB_OUTPUT"
+
+      # Use the workflow token only for read-only check inspection. The App
+      # intentionally needs contents/issues/pull-requests write permission,
+      # not broad Actions/Checks access. A short registration wait closes the
+      # race where `gh pr checks --watch` is called before GitHub has created
+      # any check runs for the just-opened PR.
+      - name: Wait for every promotion PR check
+        id: promotion-checks
+        if: steps.promotion-pr.outputs.pr_number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.promotion-pr.outputs.pr_number }}
+        run: |
+          set -euo pipefail
+          deadline=$((SECONDS + 300))
+          previous_count=0
+          stable_count=0
+          while true; do
+            check_count=$(gh pr view "$PR_NUMBER" --json statusCheckRollup -q '.statusCheckRollup | length')
+            if [ "$check_count" -gt 0 ] && [ "$check_count" -eq "$previous_count" ]; then
+              stable_count=$((stable_count + 1))
+            else
+              stable_count=0
+            fi
+            if [ "$stable_count" -ge 2 ]; then
+              break
+            fi
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "Promotion PR #$PR_NUMBER checks did not register and stabilize within 5 minutes - refusing to merge." >&2
+              exit 1
+            fi
+            previous_count=$check_count
+            sleep 10
+          done
+          gh pr checks "$PR_NUMBER" --watch --fail-fast --interval 10
+          checked_sha=$(gh pr view "$PR_NUMBER" --json headRefOid -q .headRefOid)
+          checks_ok=$(gh pr checks "$PR_NUMBER" --json bucket -q \
+            'map(.bucket) | all(. == "pass" or . == "skipping")')
+          if [ "$checks_ok" != "true" ]; then
+            echo "Promotion PR #$PR_NUMBER is not fully green after watch completed - refusing to merge." >&2
+            exit 1
+          fi
+          echo "head_sha=$checked_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Merge checked promotion PR and close release issue
+        if: steps.promotion-pr.outputs.pr_number != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_NUMBER: ${{ steps.promotion-pr.outputs.pr_number }}
+          CHECKED_HEAD_SHA: ${{ steps.promotion-checks.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          # Bind the merge to the exact revision whose checks passed. If
+          # develop advances between the check watch and this command,
+          # GitHub rejects the merge instead of releasing an unchecked tip.
+          gh pr merge "$PR_NUMBER" --merge --match-head-commit "$CHECKED_HEAD_SHA"
+          gh issue close "${{ inputs.release_issue_number }}" --comment "Reconciled promotion via PR #$PR_NUMBER after all checks passed."
