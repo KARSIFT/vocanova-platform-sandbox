@@ -50,7 +50,9 @@ services:
       # over vocanova-monitoring-net — not via a public host publish.
       - "127.0.0.1:3001:3001"
     healthcheck:
-      test: ["CMD", "extra/healthcheck.js"]
+      # Kuma 1.x ships this as executable but without a shebang. Invoking it
+      # directly produces `exec format error`; run it through Node explicitly.
+      test: ["CMD", "node", "extra/healthcheck.js"]
       interval: 30s
       timeout: 5s
       retries: 3

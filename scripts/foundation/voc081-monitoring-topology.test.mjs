@@ -189,6 +189,16 @@ test("VOC-081-TEST-02: Kuma has no public port 3001 publish", () => {
   }
 });
 
+test("VOC-081-TEST-02: Kuma healthcheck invokes the JavaScript probe through Node", () => {
+  const monitoring = readFileSync(monitoringComposePath, "utf8");
+
+  assert.match(
+    monitoring,
+    /test:\s*\["CMD",\s*"node",\s*"extra\/healthcheck\.js"\]/,
+    "Kuma 1.x healthcheck script has no shebang and must be invoked through node",
+  );
+});
+
 test("VOC-081-TEST-01: production deploy does not own the monitoring project", () => {
   const deployProduction = readFileSync(deployProductionPath, "utf8");
 
