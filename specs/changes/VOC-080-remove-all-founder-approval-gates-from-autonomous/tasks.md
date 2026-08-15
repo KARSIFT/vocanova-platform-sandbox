@@ -214,15 +214,15 @@ tracked tree.
 - Acceptance criteria: `VOC-080-AC-00`–`VOC-080-AC-10` as applicable
 - Tests: `VOC-080-TEST-06`, `VOC-080-TEST-08`
 - Evidence: `VOC-080-EV-07` (`t07-evidence.md`)
-- Status: pending — **last**; requires T06 rehearsal pass, the final founder
-  transition approval, and independent verification bound to the exact
-  activation revision
+- Status: pending — **last**; requires T06 rehearsal pass, recorded superseding
+  no-approval requirement provenance, and independent verification bound to the
+  exact activation revision
 
 ### Required work
 
-1. Obtain the final founder transition approval and an independent PASS verdict
-   bound to the **exact** activation revision after all deterministic checks
-   and rehearsal evidence pass.
+1. Record issue #627 comment #5301333790, which explicitly revokes the earlier
+   one-time transition-approval clause, and obtain an independent PASS verdict bound
+   to the **exact** activation revision after deterministic checks and rehearsals pass.
 2. Flip transition-state / amendment lifecycle to effective; set
    `authority_model` (or successor marker) consistently across
    `a003-transition-state.yaml` / successor, protected-paths lockstep

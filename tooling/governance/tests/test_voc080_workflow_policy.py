@@ -116,6 +116,21 @@ class Voc080WorkflowPolicyTests(unittest.TestCase):
             ),
         )
 
+    def test_a004_activation_does_not_fabricate_or_require_approval(self):
+        state = (
+            REPOSITORY_ROOT / "docs/governance/a004-transition-state.yaml"
+        ).read_text(encoding="utf-8")
+        amendment = (
+            REPOSITORY_ROOT
+            / "docs/governance/amendments/A-004-remove-founder-approval-gates-from-autonomous-engineering-workflows.md"
+        ).read_text(encoding="utf-8")
+        for text in (state, amendment):
+            self.assertIn("not-required-explicitly-revoked", text)
+            self.assertNotIn("2026-08-15T08:30:00Z", text)
+            self.assertNotIn("approved-exact-revision-github-evidence", text)
+        self.assertIn("required-external-exact-revision-pass", state)
+        self.assertIn("issuecomment-5301333790", state)
+
 
 if __name__ == "__main__":
     unittest.main()

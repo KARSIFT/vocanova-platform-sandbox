@@ -65,5 +65,5 @@ successor_transition_package: VOC-080
 successor_transition_state_path: docs/governance/a004-transition-state.yaml
 successor_authority_model_pending: a004-active
 successor_effective_activation_status: active
-successor_effective_activation_at: 2026-08-15T08:30:00Z
+successor_effective_activation_at: "merge-time-of-voc-080-t07-pr"
 successor_activation_evidence: "specs/changes/VOC-080-remove-all-founder-approval-gates-from-autonomous/t07-evidence.md"

@@ -19,8 +19,8 @@ related_decisions:
 
 # 16 — Vocanova Autonomous Development Operating Model
 
-> **A-004 active-authority notice:** A-004 has been effectively active since
-> `2026-08-15T08:30:00Z` (`VOC-080-T07`). A-004 supersedes A-003 founder
+> **A-004 active-authority notice:** A-004 is effectively active in the canonical
+> repository tree produced by merging `VOC-080-T07`. A-004 supersedes A-003 founder
 > `approved`-comment gates on engineering workflows. A-003 remains authoritative
 > historical evidence. This notice does not alter historical DOC-16 adoption evidence
 > below.

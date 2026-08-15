@@ -38,8 +38,8 @@ Additionally:
    matrices/templates/repository-settings reconciliation.
 6. **`VOC-080-T05`** — Deterministic tests (may land with T01–T04).
 7. **`VOC-080-T06`** — Sandbox/dry-run rehearsal evidence.
-8. **`VOC-080-T07`** — Exact-revision founder approval (final), independent
-   verification, activation markers, and VOC-079 unblock note.
+8. **`VOC-080-T07`** — Exact-revision independent verification, activation
+   markers, no-approval clarification provenance, and VOC-079 unblock note.
 
 Preserve compatible autonomous-merge / auto-release work from VOC-012 and
 the 2026-08-08 delegation. Do not rewrite historical package evidence.
@@ -65,11 +65,10 @@ a pass for T06 live clauses.
 Independent verification (per `CLAUDE.md`) must bind each exact commit SHA,
 confirm the implementer-role occupant did not approve/merge its own work,
 identify the **active** authority model (A-003 until T07; successor after),
-and report every still-required R3/R4/EHR/adoption/activation gate. Before
-T07, R4 founder transition approval remains required. At T07, the verifier
-must bind its verdict and the founder approval to the exact activation
-revision, then confirm founder-comment gates are gone while non-founder
-controls remain.
+and report every still-required R3/R4/EHR/adoption/activation gate. At T07,
+the verifier must bind its verdict to the exact activation revision, confirm
+the earlier founder-approval clause was explicitly revoked, and verify that
+non-founder controls remain.
 
 ## Deployment and rollback
 
@@ -84,13 +83,13 @@ Rollout sequence:
 1. Adopt/authorize VOC-080 under current authority; settle DEPs. **Complete via PR #628 and this recovery record.**
 2. Land T00–T05 (infra then caller docs/wiring).
 3. T06 rehearsal on sandbox/harness; record evidence.
-4. T07 exact-revision founder transition approval, independent verification,
-   and activation.
+4. T07 exact-revision independent verification and activation, with the
+   no-approval requirement clarification recorded.
 5. Resume VOC-079 and normal packages on the new path.
 
 Rollback trigger: autonomy merges without verification; silent
-unadopted merges recur; docs contradict workflows; activation flipped
-without exact-revision founder approval or independent verification; production deploy blocked by
+unadopted merges recur; docs contradict workflows; activation flips without
+exact-revision independent verification; production deploy is blocked by
 undocumented residual reviewer settings; or independent review FAIL.
 
 Rollback mechanism:
@@ -102,7 +101,7 @@ Rollback mechanism:
    silent drift).
 3. Restore pre-transition authority markers so founder gates return
    **only** as the documented rollback model — without rewriting audit
-   history of what happened under the interim revisions.
+history of what happened under the interim revisions.
 4. Re-run governance validation; confirm merge-gate/adopt/release
    behavior matches the restored revision.
 

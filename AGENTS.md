@@ -7,8 +7,8 @@ may refine them but may not weaken governance or security.
 
 - Follow DOC-15, DOC-16, effective amendments, accepted decisions, and approved
   implementation-ready change specifications in that order. **A-004 is the effective
-  authority model** for engineering-workflow gates (activated `VOC-080-T07` /
-  `2026-08-15T08:30:00Z`; see `docs/governance/a004-transition-state.yaml`). A-004
+  authority model** for engineering-workflow gates (activated by canonical merge of
+  `VOC-080-T07`; see `docs/governance/a004-transition-state.yaml`). A-004
   (issue #627 / VOC-080) supersedes A-003 and VOC-075 only where they require founder
   `approved`-comment gates on engineering workflows. A-003 remains authoritative
   historical audit evidence.
@@ -171,9 +171,9 @@ Do not invent or report an unavailable check as passing.
   verification without standing technical-steward or founder approval merely for
   being R3. R4 engineering-workflow gates require no founder `approved` comment —
   only stronger evidence, validation, verification, rollout, monitoring, and rollback.
-  EHR is exceptional and must not become a standing approval layer. The one-time
-  A-004 transition approval at T07 is exhausted and must not be reused as an
-  engineering-workflow gate.
+  EHR is exceptional and must not become a standing approval layer. The proposed
+  one-time A-004 transition approval was explicitly revoked before activation and
+  must not be reintroduced as an engineering-workflow gate.
 - The only bootstrap exception is the initial DOC-16/A-002 adoption defined in
   DOC-16. It permits founder approval, independent Claude Code verification, and
   repository validation to adopt the framework without claiming steward approval.

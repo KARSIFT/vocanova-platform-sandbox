@@ -26,9 +26,9 @@ requirement_source: 'GitHub issue #627 ("Remove all founder approval gates from 
   checks, rollback, secrets isolation, least-privilege credentials, builder/verifier
   separation, or the requirement to ask when product requirements are genuinely ambiguous.
   Transition authority: evaluated under pre-transition (A-003) authority; this package
-  cannot authorize its own adoption. One final founder approval under current policy
-  is required for the exact transition revision, after which no later founder approval
-  gate remains.'
+  cannot authorize its own adoption. Superseding issue comment #5301333790 explicitly
+  revokes the earlier one-time transition-approval clause. Exact-revision independent
+  verification and deterministic gates remain required; founder approval does not.'
 requirement_approval_status: approved requirement; package adopted automatically after
   exact-revision independent verification
 base_branch: develop

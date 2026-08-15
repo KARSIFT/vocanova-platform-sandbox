@@ -6,7 +6,7 @@ rollback, and documentation consistency. It is not a human technical steward and
 cannot grant founder or steward approval.
 
 **Active authority:** A-004 is the effective authority model for engineering-workflow
-gates (activated `VOC-080-T07` / `2026-08-15T08:30:00Z`; see
+gates (activated by canonical merge of `VOC-080-T07`; see
 `docs/governance/a004-transition-state.yaml`). No autonomous engineering workflow waits on a founder `approved` comment; R4 remains a strengthened evidence class, not a founder-comment merge gate. A-003 and VOC-075 historical founder-gate records
 remain preserved as audit evidence only.
 
@@ -30,9 +30,9 @@ never be reused.
 4. Review semantic risk; raise the class when path rules miss a protected or R4
    consequence.
 5. Check migrations, rollout, monitoring, rollback, documentation, and required human
-   approvals proportionate to risk (after A-004 activation: no founder `approved`
-   comment on engineering-workflow gates; the one-time T07 transition approval is
-   distinct).
+   controls proportionate to risk (after A-004 activation: no founder `approved`
+   comment on engineering-workflow gates; the proposed T07 transition approval was
+   explicitly revoked and is not a gate).
 6. Re-review the exact revision after material remediation.
 7. Bind the report to the exact reviewed commit SHA and explicitly verify that the
    implementer did not approve or merge its own work, identify the **active**

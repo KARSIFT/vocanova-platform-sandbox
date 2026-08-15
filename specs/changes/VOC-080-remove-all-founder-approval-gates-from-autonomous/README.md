@@ -77,9 +77,8 @@ Live pain this package addresses (from #627):
    PRs, remediation, recovery, release, and deployment behaviors.
 7. **Rehearsal** (`VOC-080-T06`): prove the new loops in sandbox/dry-run
    before activation.
-8. **Activation** (`VOC-080-T07`): one final exact-revision founder approval
-   under pre-transition authority plus independent verification and recorded
-   activation evidence enable the post-transition
+8. **Activation** (`VOC-080-T07`): exact-revision independent verification,
+   deterministic checks, and recorded activation evidence enable the post-transition
    model so VOC-079 and later work need no founder `approved` comment.
 
 ## What this package deliberately does NOT do
@@ -105,9 +104,9 @@ The drafting questions were resolved at adoption as follows:
 3. `automatic_merge_allowed` neutralize vs retire (`VOC-080-DEP-02`).
 4. Cross-repo sequencing with `karsift-ai-infra` (`VOC-080-DEP-03`).
 5. Rehearsal venue and proof bar (`VOC-080-DEP-04`).
-6. Risk is **R4**. Activation requires the one final exact-revision founder
-   transition approval, independent verification, deterministic checks,
-   rehearsal evidence, and rollback readiness.
+6. Risk is **R4**. Activation requires exact-revision independent verification,
+   deterministic checks, rehearsal evidence, rollback readiness, and recorded
+   provenance for the superseding no-approval clarification.
 
 ## Verification, approvals, release, and closure
 
@@ -116,7 +115,7 @@ See `test-plan.md`, `release-plan.md`, and `implementation-plan.md`.
 This package was adopted under the pre-transition authority recorded on PR #628.
 Task issues and `.karsift/tasks.json` are intentionally created by the
 post-merge idempotent reconcile run, not guessed in this recovery commit.
-The exact T07 activation revision still requires the final founder transition
-approval defined by the adopted plan. Independent verification of each exact
-revision remains mandatory throughout. After T07 activation, no later founder
-approval gate remains.
+The adopted plan's earlier final-approval clause was explicitly revoked by the later
+founder requirement clarification in issue comment #5301333790. Independent
+verification of each exact revision remains mandatory throughout. T07 activation
+requires no founder or other human approval gate.

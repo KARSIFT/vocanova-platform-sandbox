@@ -1,141 +1,76 @@
-# VOC-080-EV-07 — T07 transition activation and post-activation unblock
+# VOC-080-EV-07 — T07 activation candidate and post-activation unblock
 
-Evidence for `VOC-080-AC-00` through `VOC-080-AC-10` (activation closure).
-Tests: `VOC-080-TEST-06`, `VOC-080-TEST-08`.
+Evidence for `VOC-080-AC-00` through `VOC-080-AC-10`.
 
-## Task outcome
+## Truthful activation semantics
 
-`VOC-080-T07` records the one-time A-004 transition activation under pre-A-004
-authority, flips `authority_model` to `a004-active`, synchronizes canonical docs and
-protected-path policy markers, and confirms VOC-079 / issue #624 can resume on the
-no-founder-gate engineering-workflow path.
+This revision declares A-004 active only in the canonical repository tree produced
+when the exact independently reviewed T07 head is merged. An unmerged PR is an
+activation candidate, not active repository authority. The merge commit and merge
+time are intentionally left to GitHub's immutable record; this file does not invent
+a future timestamp or claim a verdict before the independent reviewer posts it.
 
-**Authority state after this task:** `a004-active` (`effective_activation_at`:
-`2026-08-15T08:30:00Z`). The one-time founder transition approval for this revision
-is **exhausted** and must not be reused as a standing engineering-workflow gate.
+The earlier package text requested one final founder transition approval. The later,
+more specific founder direction revoked approval requirements for every condition,
+including T07. That superseding requirement is recorded in
+[issue #627 comment #5301333790](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/627#issuecomment-5301333790).
+The comment is requirement provenance, not approval of this revision. T07 requires
+deterministic gates and an independent exact-revision PASS, but no founder, human,
+agent, workflow, environment, or exceptional-risk approval.
 
-## Preconditions verified
+## Preconditions and live rehearsal evidence
 
-| Prerequisite | Evidence |
-|--------------|----------|
-| VOC-080 adopted under A-003 | PR [#628](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/628); `change.yaml` `status: adopted` |
-| T00–T05 merged with independent verification | PRs [#640](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/640)–[#644](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/644) |
-| T06 rehearsal PASS | [t06-evidence.md](t06-evidence.md) |
-| Infra merge-gate / adopt / release contracts | `VOC-080-EV-01`–`EV-03`; infra pin `489dd82` |
-| Production environment reviewers | `reviewers: null` (`VOC-080-EV-03`) |
+| Requirement | Evidence | Result |
+|---|---|---|
+| Package adoption and T00–T06 | Plan PR [#628](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/628), task PRs #640–#645 | Complete |
+| R4 automatic merge after non-human gates | Task PRs #640–#645 and their merge-gate runs | Pass |
+| Unparseable risk fails closed | Disposable PR [#646](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/646), merge-gate comment [#5301291620](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/646#issuecomment-5301291620) | Blocked and closed unmerged |
+| Release without founder interaction | Smoke run [31873626192](https://github.com/KARSIFT/karsift-ai-infra-smoke-test/actions/runs/31873626192), promotion PR [#12](https://github.com/KARSIFT/karsift-ai-infra-smoke-test/pull/12), release audit [#11](https://github.com/KARSIFT/karsift-ai-infra-smoke-test/issues/11) | Auto-promoted and audit closed |
+| Reconcile is idempotent | Final sandbox run [31874129346](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/31874129346) | 19-second success; no push, PR, duplicate issue, or root redispatch |
+| Rehearsal defects fixed at source | Infra PRs [#41](https://github.com/KARSIFT/karsift-ai-infra/pull/41), [#42](https://github.com/KARSIFT/karsift-ai-infra/pull/42), [#43](https://github.com/KARSIFT/karsift-ai-infra/pull/43); caller PR [#647](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/647) | All exact heads passed installed CI before merge |
+| Production environment reviewers | `VOC-080-EV-03` records `reviewers: null` | No environment approval gate |
 
-## Activation revision binding
+## Activation candidate
 
-| Field | Value / note |
-|-------|----------------|
-| Pre-task `develop` tip (`adopted_develop_sha`) | `69b8cb98ea2c4e5726b67f901d35151ee0366e02` |
-| `approved_pr_head_sha` | Binds to the **exact implementing PR head** at independent verification and founder transition approval; `null` in transition-state until the workflow commit SHA is recorded on the PR |
-| `frozen_source_sha256` (A-004) | `6668b49477549680193945cf7146ff0babc2c4a61c3a5b06f7da8cf48ad53c3d` |
+| Item | Evidence / required gate |
+|---|---|
 | Task issue | [#637](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/637) |
-| Requirement source | [#627](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/627) |
+| Activation PR | [#649](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/649) |
+| Builder/verifier separation | Implementer created the revision; reusable `review` independently evaluates its exact SHA |
+| Independent verification | Required external PASS on the exact final PR #649 head before merge; not pre-claimed in tracked state |
+| Effective moment | GitHub merge time for the exact reviewed PR #649 head |
+| Post-merge binding | GitHub PR merge commit/time and the exact-SHA review comment are canonical external evidence |
 
-Independent verifier and founder transition approval must bind to the same exact
-commit SHA as this task's implementing PR head. Post-merge, update
-`approved_pr_head_sha`, `approved_adopted_tree_sha`, `post_merge_validation_status`,
-and GitHub comment URLs in `a004-transition-state.yaml` if they differ from the
-pre-merge scaffold.
+`approved_pr_head_sha` and `adopted_develop_sha` remain null in the candidate because a
+commit cannot truthfully embed its own future SHA or merge commit. Validation permits
+that self-reference-safe representation and requires the external exact-revision gate.
 
-## One-time founder transition approval
+## Canonical activation artifacts
 
-| Item | Evidence |
-|------|----------|
-| Founder direction (requirement) | Issue [#627](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/627) (`m-e-h-r-d-a-a-d`, effective 2026-08-15) |
-| One-time transition approval (exact revision) | Recorded on this task's implementing PR (`VOC-080-T07`) before merge — binds activation revision SHA |
-| `migration_approval_status` | `exhausted-non-reusable` |
-| `migration_approval_exhausted` | `true` |
+- `docs/governance/a004-transition-state.yaml`: `authority_model: a004-active`,
+  active-on-canonical-merge lifecycle, no-approval clarification URL, rehearsal links.
+- A-004 amendment: active canonical-tree notice and revoked transition-approval clause.
+- A-003 successor pointer and protected-path policy: A-004 lockstep markers.
+- `AGENTS.md`, `CLAUDE.md`, DOC-16, matrices, repository settings, templates: A-004
+  is active after canonical merge; historical evidence remains historical.
+- `tooling/governance/validate_repository_foundation.py`: enforces the active A-004
+  state without fabricating approval or exact-revision evidence.
 
-Issue #627 authorizes preparation and adoption under pre-A-004 authority; it is not
-by itself the canonical exact-revision activation approval. The T07 PR founder
-`approved` comment (or equivalent recorded approval) on the activation revision
-satisfies A-004 §2.1 / §14.
+## VOC-079 / issue #624 unblock
 
-## Independent verification
+After this exact revision passes independent review and merges, VOC-079 may resume on
+the no-founder-approval engineering path. Its technical nginx cutover remains outside
+T07. Recovery PR [#626](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/626)
+is preserved for that package's own governed continuation.
 
-| Item | Evidence |
-|------|----------|
-| T00–T06 task PRs | PASS / PASS WITH NON-BLOCKING FINDINGS on exact SHAs (see `t01-evidence.md`–`t06-evidence.md`) |
-| T07 activation revision | Independent `review` / `plan_reviewer` PASS bound to implementing PR head SHA (task issue [#637](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/637)) |
-| Builder/verifier separation | Implementer did not approve or merge its own work (`VOC-080-TEST-07`) |
+## Acceptance closure
 
-## Activation artifacts
+AC-00 through AC-09 are supported by `t01-evidence.md` through `t06-evidence.md` plus
+the live rehearsal rows above. AC-10 becomes effective on canonical merge of this
+exact independently reviewed activation revision. No item treats a missing check,
+review, deployment, or external observation as passing.
 
-| Path | Change |
-|------|--------|
-| `docs/governance/a004-transition-state.yaml` | `authority_model: a004-active`, `effective_activation_status: active`, rehearsal + adoption evidence |
-| `docs/governance/amendments/A-004-…md` | `status: approved`, effective notice, synchronized frontmatter |
-| `docs/governance/a003-transition-state.yaml` | `successor_effective_activation_status: active` pointer only |
-| `.github/approved-policy/protected-paths.yaml` | `authority_model: a004-active`, `status: approved-a004-active` |
-| `AGENTS.md`, `CLAUDE.md`, DOC-16, matrices, templates, PR template | Post-activation authority language |
-| `tooling/governance/validate_repository_foundation.py` | `validate_a004_lifecycle` + protected-path lockstep |
-| `specs/changes/VOC-080…/change.yaml` | `authority_model: a004-active` |
-
-## VOC-080-TEST-08 — post-activation doc and settings check
-
-### Procedure 1 — live founder-gate phrase grep
-
-```bash
-rg -n "Founder approval is required for|Requires founder approval|Founder approves develop|Publication to production requires founder|does not replace founder approval|cannot reach \`main\` or production without founder|reply \`approved\`" \
-  docs/operations/15-ai-native-product-and-engineering-operating-model.md \
-  AGENTS.md CLAUDE.md \
-  docs/governance/approval-matrix.md \
-  docs/governance/change-risk-classification.md \
-  docs/governance/repository-settings.md \
-  docs/governance/protected-areas.md \
-  docs/governance/post-merge-activation-checklist.md \
-  docs/governance/16-autonomous-development-operating-model.md \
-  .github/workflows/pipeline.yml \
-  specs/templates/change-package/
-```
-
-Expected: no **live** engineering-workflow founder-gate claims; historical sections
-explicitly marked.
-
-### Procedure 2 — post-activation authority claims
-
-Canonical docs assert **A-004 active** for engineering-workflow gates; A-003/VOC-075
-founder-merge requirements appear only in historical context.
-
-### Procedure 3 — repository settings
-
-Production environment `reviewers: null` (recorded `VOC-080-EV-03`; no founder
-environment-reviewer on repository-controlled deploy path). `auto_merge_enabled` and
-`auto_release_enabled` remain `true` on this sandbox (`pipeline.yml`).
-
-## VOC-079 / issue #624 unblock (`VOC-080-AC-10`)
-
-After this activation:
-
-- [VOC-079](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/624) plan PR
-  [#625](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/625) merged-as-draft
-  failure class is recoverable via `workflow_dispatch` reconcile
-  (`VOC-080-EV-02` / `t06-evidence.md`).
-- R4 merge, adopt, release, and deploy paths no longer require founder `approved`
-  comments when non-founder gates pass.
-- VOC-079 **implementation** (nginx cutover) remains out of scope; only gate clearance
-  for post-activation progression is claimed here.
-
-## Acceptance criteria closure
-
-| AC | Result | Primary evidence |
-|----|--------|------------------|
-| AC-00 | **pass** | `t06-evidence.md` §1; `t02-evidence.md` |
-| AC-01 | **pass** | `t06-evidence.md` §2; `t01-evidence.md` |
-| AC-02 | **pass** | `t06-evidence.md` §4; `t05-evidence.md` |
-| AC-03 | **pass** | `t06-evidence.md` §5; `t05-evidence.md` |
-| AC-04 | **pass** | `t06-evidence.md` §1; `t02-evidence.md` |
-| AC-05 | **pass** | `t06-evidence.md` §3; `t02-evidence.md` |
-| AC-06 | **pass** | `t06-evidence.md` §6; `t03-evidence.md` |
-| AC-07 | **pass** | `t04-evidence.md`; `t05-evidence.md` |
-| AC-08 | **pass** | `t05-evidence.md` |
-| AC-09 | **pass** | `t04-evidence.md`; this file TEST-08 |
-| AC-10 | **pass** | § VOC-079 unblock above |
-
-## Deterministic validation (this task)
+## Deterministic validation
 
 ```bash
 bash scripts/governance/validate-governance.sh
@@ -144,34 +79,17 @@ python3 -m unittest discover -s tooling/governance/tests -p 'test_voc080*.py' -v
 git diff --check
 ```
 
-## Non-founder controls confirmed post-activation
+## Controls retained
 
-- Independent verification (plan_reviewer / review) remains mandatory
-- CI + governance validation remain fail-closed
-- Unparseable risk fails closed; no founder override
-- Builder/verifier separation; no self-review of same exact revision
-- EHR exceptional-only
-- Failed release/deploy remain fail-closed until remediation
-- RL1/RL2 technical activation remain **disabled** (unchanged by A-004)
+- Independent exact-revision verification and builder/verifier separation
+- CI, governance validation, protected-path floors, and fail-closed unknown risk
+- Secrets isolation and least-privilege credentials
+- Stronger R4 evidence, rollout, monitoring, rollback, and audit records
+- Failed release/deploy remediation remains fail-closed
+- RL1/RL2 technical activation remains disabled
 
-## Explicitly not done
+## Post-merge actions
 
-- VOC-079 technical cutover implementation
-- Closing issue [#627](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/627)
-  (requires merge of this activation PR + recorded post-merge validation)
-- Full VOC-080 develop→main promotion (roster closes when this task issue closes)
-
-## Limitations
-
-| Limitation | Impact |
-|------------|--------|
-| `approved_pr_head_sha` null until PR head bound | Verifier/founder must bind exact SHA on implementing PR; post-merge sync may update transition-state |
-| `post_merge_validation_status: pending` | Updates to `passed` after merge governance run URL recorded |
-| GitHub comment URLs | Scaffold uses issue links; exact comment URLs recorded at PR review time |
-
-## Overall T07 result
-
-**PASS pending exact-revision founder transition approval and independent verification
-on the implementing PR head SHA.** Activation markers, canonical docs, protected-path
-policy, and validation harness are flipped to `a004-active`. VOC-079 may resume on the
-no-founder-gate path subject only to remaining non-founder gates.
+After PR #649 merges: record its immutable merge SHA/time in issue #627, close #627
+only after the post-merge validation run passes, allow automatic develop-to-main
+promotion, monitor production deployment, and verify application/monitoring endpoints.

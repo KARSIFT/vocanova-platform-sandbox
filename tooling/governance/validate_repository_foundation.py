@@ -836,18 +836,18 @@ def validate_a004_lifecycle(validation: Validation) -> None:
         return
 
     frozen = state.get("frozen_source_sha256")
-    if frozen and frozen != full_sha:
+    if frozen and frozen != "null" and frozen != full_sha:
         validation.error(A004_STATE_PATH, "frozen A-004 source checksum mismatch")
 
     required_active = {
         "authority_model": "a004-active",
-        "transition_stage": "effectively-active",
-        "formal_founder_transition_approval_status": "approved-exact-revision",
-        "independent_verification_status": "passed-exact-revision",
-        "repository_adoption_status": "adopted",
+        "transition_stage": "active-upon-canonical-merge",
+        "formal_founder_transition_approval_status": "not-required-explicitly-revoked",
+        "independent_verification_status": "required-external-exact-revision-pass",
+        "repository_adoption_status": "activates-on-merge",
         "effective_activation_status": "active",
-        "migration_approval_status": "exhausted-non-reusable",
-        "migration_approval_exhausted": "true",
+        "migration_approval_status": "not-required-explicitly-revoked",
+        "migration_approval_exhausted": "not-applicable",
         "rehearsal_evidence_status": "complete",
         "exceptional_human_review_mode": "exceptional-only",
     }
@@ -855,8 +855,9 @@ def validate_a004_lifecycle(validation: Validation) -> None:
         if state.get(key) != value:
             validation.error(A004_STATE_PATH, f"active A-004 requires {key}: {value}")
 
-    if not re.fullmatch(r"[0-9a-f]{40}", state.get("adopted_develop_sha", "")):
-        validation.error(A004_STATE_PATH, "active A-004 requires adopted_develop_sha")
+    adopted_sha = state.get("adopted_develop_sha")
+    if adopted_sha and adopted_sha != "null" and not re.fullmatch(r"[0-9a-f]{40}", adopted_sha):
+        validation.error(A004_STATE_PATH, "adopted_develop_sha must be a full SHA or null until post-merge binding")
 
     approved_pr = state.get("approved_pr_head_sha")
     if approved_pr and approved_pr != "null" and not re.fullmatch(r"[0-9a-f]{40}", approved_pr):
@@ -864,8 +865,8 @@ def validate_a004_lifecycle(validation: Validation) -> None:
 
     active_metadata = {
         "status": "approved",
-        "formal_founder_approval_status": "approved-exact-revision-github-evidence",
-        "repository_adoption_status": "adopted",
+        "formal_founder_approval_status": "not-required-explicitly-revoked",
+        "repository_adoption_status": "activates-on-merge",
         "effective_activation_status": "active",
     }
     for key, value in active_metadata.items():

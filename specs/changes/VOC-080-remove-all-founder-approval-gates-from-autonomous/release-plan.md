@@ -12,9 +12,9 @@ A-003 is active. T02/T07 implement and activate the adopted decision that the
 post-transition R4 path uses deterministic and independent-verification gates
 without a later founder-comment gate.
 
-Founder adoption was recorded on PR #628 under pre-transition authority. The
-one final founder approval must bind the exact T07 activation revision. After
-activation, no later founder approval comment is required. T07 also remains
+Adoption was recorded on PR #628 under pre-transition authority. Superseding issue
+comment #5301333790 explicitly revokes the earlier one-time transition approval.
+T07 therefore requires no founder approval, while it remains
 fail-closed on deterministic validation, exact-revision independent
 verification, rehearsal evidence, and rollback readiness.
 
@@ -31,8 +31,8 @@ Preconditions:
 - T00–T05 merged with independent-verification PASS (or PASS WITH
   NON-BLOCKING FINDINGS) on exact SHAs.
 - T06 rehearsal evidence recorded on the settled venue.
-- T07 exact-revision founder transition approval and independent verification
-  pass before activation markers flip.
+- T07 exact-revision independent verification passes before activation merges;
+  the no-approval requirement provenance is recorded.
 
 Monitoring after activation:
 
@@ -65,7 +65,7 @@ docs describe the restored model.
 Accountable owner: T07 evidence. Last-known-good: pre-VOC-080-T01 infra
 SHAs + pre-T04 caller tip + A-003-active transition-state.
 
-## Independent verification, human approvals, and closure
+## Independent verification and closure
 
 Independent verifier (per `CLAUDE.md`) must:
 
@@ -79,9 +79,9 @@ Independent verifier (per `CLAUDE.md`) must:
 - Identify active authority model (**a003-active** until T07 activation;
   successor thereafter) and report every still-required R4 / EHR /
   adoption / activation gate.
-- On T07: confirm the founder transition approval and independent verdict are
-  bound to the exact activation revision, and that post-activation no workflow waits on
-  founder `approved` while non-founder controls remain.
+- On T07: confirm the independent verdict is bound to the exact activation revision,
+  the superseding no-approval clarification is recorded, and post-activation no
+  workflow waits on founder `approved` while non-founder controls remain.
 
 Closure requires acceptance-criteria results with evidence, not merely
 merged PRs. Repository merge, release to `main`, production deploy,

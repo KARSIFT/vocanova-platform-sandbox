@@ -17,11 +17,11 @@ CI, risk classification, protected-path checks, rollback requirements,
 secrets isolation, least-privilege credentials, builder/verifier separation,
 or the obligation to ask when product requirements are genuinely ambiguous.
 
-**Transition authority (issue #627):** this governance replacement is
-evaluated under the authority effective before it. It cannot authorize its
-own adoption. One final founder approval under current (A-003 / VOC-075)
-policy is required for the exact transition revision. Once that revision is
-effective, no later founder approval gate remains.
+**Transition authority (issue #627, superseding comment #5301333790):** this
+governance replacement is evaluated under the authority effective before it.
+It cannot authorize its own adoption. The founder's later direction explicitly
+revoked the earlier one-time transition-approval clause. Exact-revision independent
+verification and deterministic gates remain required; founder approval does not.
 
 ## Confirmed findings (from issue #627 and drafting-time repo read)
 
@@ -69,7 +69,7 @@ In scope:
    repository-settings documentation, and any autonomy markers that must
    move in lockstep.
 8. **Tests + rehearsal + activation** — harness coverage; sandbox/dry-run
-   proof; one-final-founder-approval activation; post-activation path for
+   proof; exact-revision independently verified activation; post-activation path for
    VOC-079 / #624.
 
 Non-goals / explicitly excluded:
@@ -114,8 +114,9 @@ authority, production-release control, governance amendments. EHR is not
 triggered by drafting. Application code, migrations, and product features
 are out of default scope.
 
-Under **active A-003** (until activation), R4 founder authority remains
-required for this package's adoption and transition activation.
+The package was adopted while A-003 was active. The superseding clarification on
+issue #627 removes founder approval from transition activation without weakening
+the pre-existing deterministic and independent-verification gates.
 
 ## Decisions, contradictions, security, and privacy
 
