@@ -70,12 +70,18 @@ node --test scripts/foundation/voc084-deploy-staging-oauth.test.mjs
 
 ## Google client callback authorization (`VOC-084-DEP-01`)
 
-**Status: external action required — not verified complete from this implementer run.**
+**Status: external action required — the staging callback is currently not authorized.**
 
-This implementer environment has no Google Cloud Console or Google Cloud API
-access to inspect whether the existing repository-managed OAuth 2.0 client
-already authorizes the staging callback. Repository work is complete; the
-remaining one-time operator action is:
+No Google Cloud Console or Google Cloud API access is available in this
+environment. A read-only pre-login probe was still possible without exposing
+the client ID: a working authorization request for the existing client was
+replayed to Google's authorization endpoint with only `redirect_uri` replaced
+by the canonical staging callback. Google returned an HTTP 200 error page
+containing `redirect_uri_mismatch`. No login or callback was completed.
+
+This confirms that the existing client does not currently authorize the
+staging callback. Repository work is complete; the remaining one-time operator
+action is:
 
 1. Open **Google Cloud Console → APIs & Services → Credentials**.
 2. Select the **same OAuth 2.0 Client ID** already used for production

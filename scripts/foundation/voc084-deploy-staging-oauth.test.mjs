@@ -259,6 +259,11 @@ test("VOC-084-TEST-06: deploy-staging wires live OAuth-start verification withou
   );
   assert.match(
     verifyScript,
+    /parsed\.hostname != "accounts\.google\.com"/,
+    "verification script must reject lookalike hostnames with an exact hostname comparison",
+  );
+  assert.match(
+    verifyScript,
     new RegExp(
       CANONICAL_STAGING_CALLBACK.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
     ),

@@ -65,6 +65,20 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.wfile.write(body)
             return
 
+        if scenario == "lookalike_host":
+            auth_url = (
+                "https://accounts.google.com.attacker.example/o/oauth2/v2/auth?"
+                f"client_id=test-client&redirect_uri={quote(canonical, safe='')}"
+                "&response_type=code&scope=openid+email+profile&state=test-state"
+            )
+            body = json.dumps({"url": auth_url}).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+
         self.send_response(503)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
@@ -144,6 +158,13 @@ echo "== case 4: fake 200 while disabled must fail =="
 start_server enabled
 check "enabled expectation against disabled server fails" fail \
   env EXPECT_OAUTH_ENABLED=false STAGING_API_HOST=127.0.0.1 \
+  bash "$verify_script" "$api_base" "$web_redirect"
+stop_server
+
+echo "== case 5: lookalike Google hostname must fail =="
+start_server lookalike_host
+check "Google lookalike hostname fails the enabled check" fail \
+  env EXPECT_OAUTH_ENABLED=true STAGING_API_HOST=127.0.0.1 \
   bash "$verify_script" "$api_base" "$web_redirect"
 stop_server
 

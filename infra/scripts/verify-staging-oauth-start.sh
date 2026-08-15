@@ -76,7 +76,7 @@ if not url:
     raise SystemExit("response JSON missing url field")
 
 parsed = urlparse(url)
-if parsed.scheme != "https" or "accounts.google.com" not in parsed.netloc:
+if parsed.scheme != "https" or parsed.hostname != "accounts.google.com":
     raise SystemExit(
         f"authorization URL host is not accounts.google.com: {parsed.netloc!r}"
     )
