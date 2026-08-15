@@ -48,7 +48,12 @@ const CSRF_COOKIE_NAME = "vocanova_csrf";
 // it is hit, the journey still proves the review path works and
 // records why it stopped short of the caught-up state.
 const MAX_REVIEW_CARDS = 8;
-const REVIEWED_TODAY_PATTERN = /(\d+) of \d+ words reviewed today/;
+const REVIEWED_TODAY_PATTERN = /(\d+) of (\d+) words reviewed today/;
+
+type ReviewedTodayProgress = {
+  reviewed: number;
+  target: number;
+};
 // VOC-063-T01: bounded step-7 re-read when the first /home load may be stale.
 // Four attempts (initial + three retries) with 1.5s between failures keeps the
 // loop under ~5s of deliberate waiting, well inside the staging journey timeout.
@@ -85,7 +90,7 @@ function requiredEnv(name: string): string {
   return value;
 }
 
-async function readReviewedTodayCount(page: Page): Promise<number> {
+async function readReviewedTodayProgress(page: Page): Promise<ReviewedTodayProgress> {
   const counter = page.getByText(REVIEWED_TODAY_PATTERN);
   await expect(counter).toBeVisible();
   const text = (await counter.textContent()) ?? "";
@@ -93,7 +98,12 @@ async function readReviewedTodayCount(page: Page): Promise<number> {
   if (!match) {
     throw new Error(`Could not read the daily-mission counter from: ${text}`);
   }
-  return Number(match[1]);
+  return { reviewed: Number(match[1]), target: Number(match[2]) };
+}
+
+async function readReviewedTodayCount(page: Page): Promise<number> {
+  const { reviewed } = await readReviewedTodayProgress(page);
+  return reviewed;
 }
 
 async function readReviewedTodayCountAfterReviews(
@@ -101,8 +111,11 @@ async function readReviewedTodayCountAfterReviews(
   testInfo: TestInfo,
   reviewedBefore: number,
   reviewedCards: number,
+  reviewTarget: number,
 ): Promise<number> {
-  const minimumExpected = reviewedBefore + reviewedCards;
+  // reviews_completed caps at review_target; extra submissions after the
+  // completing review do not raise the home counter (VOC-082-T01).
+  const minimumExpected = Math.min(reviewedBefore + reviewedCards, reviewTarget);
   const attemptValues: number[] = [];
 
   for (let attempt = 1; attempt <= STEP_7_REVIEWED_COUNT_MAX_ATTEMPTS; attempt++) {
@@ -333,8 +346,10 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
       ).toBeVisible();
     });
 
-    const reviewedBefore = await test.step("2. read the daily-mission baseline", async () =>
-      readReviewedTodayCount(page));
+    const { reviewed: reviewedBefore, target: reviewTarget } = await test.step(
+      "2. read the daily-mission baseline",
+      async () => readReviewedTodayProgress(page),
+    );
 
     await test.step("3. discover a situation and open a word", async () => {
       await page.goto("/discover");
@@ -468,6 +483,7 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
         testInfo,
         reviewedBefore,
         reviewedCards,
+        reviewTarget,
       );
       expect(reviewedAfter).toBeGreaterThanOrEqual(reviewedBefore + reviewedCards);
     });
