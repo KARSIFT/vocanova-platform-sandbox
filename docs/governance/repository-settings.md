@@ -46,9 +46,9 @@ Configure a non-self-referential R4 control for these exact paths:
 /specs/changes/VOC-004-canonical-adoption-doc-17-doc-18/
 ```
 
-Under active A-003 until A-004 activation, that ruleset must continue non-self-referential
-verification and R4 path-floor enforcement but must not impose routine standing steward
-or founder approval merely because a change is R3. **After A-004 activation**, R4
+Under active A-004, that ruleset must continue non-self-referential verification and
+R4 path-floor enforcement but must not impose a standing steward or founder approval.
+R4
 engineering-workflow gates do not require founder click-approve on merge/adopt/release;
 strengthened evidence and independent verification remain required. Where the GitHub
 plan supports organization-required workflows, run the policy gate from a separately
@@ -61,7 +61,7 @@ Configure `main`:
 - accept only release pull requests from `develop` or the documented emergency path;
 - require release, staging, migration, rollback, and health-check gates;
 - enforce strengthened R3 gates without a standing steward/founder requirement solely
-  for R3; **post-A-004:** no founder environment-reviewer requirement on the
+  for R3; no founder environment-reviewer requirement on the
   repository-controlled release/deploy path when promotion checks pass;
 - use merge commits for release promotion; and
 - prevent an AI or release-bot identity from bypassing required non-founder checks.
@@ -73,8 +73,8 @@ disabled until that gate is tested.
 
 Multiple owners on one CODEOWNERS pattern are alternatives: one matching owner can
 satisfy GitHub's native code-owner review requirement. They do not mean that every
-listed owner must approve. Under active A-003 until A-004 activation, enforce R4
-founder authority on merge (historical). **Post-A-004:** enforce strengthened R3/R4
+listed owner must approve. Under A-003, R4 founder authority applied on merge
+(historical). Under active A-004, enforce strengthened R3/R4
 evidence gates independently; do not recreate a combined standing founder-comment
 merge requirement.
 
@@ -158,10 +158,10 @@ staging/production deployment anymore.
 The initial governance bootstrap merged through PR #3 and its one-time exception has
 expired. The historical technical-steward appointment and completed dual-capacity
 VOC-002 approval remain permanent evidence, but the role is retired as routine R3
-authority and that migration approval cannot be reused. Under active A-003 (until `VOC-080-T07`), routine R3 uses strengthened technical
+authority and that migration approval cannot be reused. Under active A-004, routine R3 uses strengthened technical
 gates and independent verification. **Historical (A-003 / VOC-075):** R4 required
-a founder `approved` comment on engineering-workflow merge gates. Automatic merge
-into `develop` is live (see above); RL1/RL2 technical activation remain disabled
-until separately implemented, tested, and proven. **Post-A-004 activation**
-removes founder-comment gates on engineering-workflow merge/release/deploy paths
-at every risk class including R4; see `a004-transition-state.yaml` and issue #627.
+a founder `approved` comment on engineering-workflow merge gates before activation.
+Automatic merge into `develop` is live (see above); RL1/RL2 technical activation remain disabled
+until separately implemented, tested, and proven. **A-004 (active)** removes founder-comment
+gates on engineering-workflow merge/release/deploy paths at every risk class including R4;
+see `a004-transition-state.yaml` and issue #627.

@@ -30,6 +30,8 @@ LIVE_FOUNDER_GATE_PHRASES = [
     "does not replace founder approval",
     "cannot reach `main` or production without founder",
     "reply `approved`",
+    "A-003 remains effective until `VOC-080-T07`",
+    "Under active A-003 until A-004 activation",
 ]
 
 
@@ -103,10 +105,11 @@ class Voc080WorkflowPolicyTests(unittest.TestCase):
                     msg=f"{relative} still contains live founder-gate phrase: {phrase}",
                 )
 
-    def test_claude_md_describes_post_a004_without_standing_founder_merge_gates(self):
+    def test_claude_md_describes_a004_active_without_standing_founder_merge_gates(self):
         claude = (REPOSITORY_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
-        self.assertIn("A-003 remains effective until A-004 activation", claude)
-        self.assertIn("no autonomous engineering workflow waits on a founder", claude)
+        self.assertIn("A-004 is the effective authority model", claude)
+        self.assertIn("No autonomous engineering workflow waits on a founder", claude)
+        self.assertNotIn("A-003 remains effective until A-004 activation", claude)
         self.assertNotRegex(
             claude,
             re.compile(
@@ -114,6 +117,21 @@ class Voc080WorkflowPolicyTests(unittest.TestCase):
                 re.IGNORECASE | re.DOTALL,
             ),
         )
+
+    def test_a004_activation_does_not_fabricate_or_require_approval(self):
+        state = (
+            REPOSITORY_ROOT / "docs/governance/a004-transition-state.yaml"
+        ).read_text(encoding="utf-8")
+        amendment = (
+            REPOSITORY_ROOT
+            / "docs/governance/amendments/A-004-remove-founder-approval-gates-from-autonomous-engineering-workflows.md"
+        ).read_text(encoding="utf-8")
+        for text in (state, amendment):
+            self.assertIn("not-required-explicitly-revoked", text)
+            self.assertNotIn("2026-08-15T08:30:00Z", text)
+            self.assertNotIn("approved-exact-revision-github-evidence", text)
+        self.assertIn("required-external-exact-revision-pass", state)
+        self.assertIn("issuecomment-5301333790", state)
 
 
 if __name__ == "__main__":

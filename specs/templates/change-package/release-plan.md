@@ -18,6 +18,6 @@ last-known-good reference.
 
 Record verifier result, strengthened R3/R4 evidence obligations, remaining hosted
 controls, and explicit closure evidence. Do not conflate repository merge, release,
-activation, or closure. Under active A-003 until A-004 activation, R4 merge required
-founder approval (historical). **Post-A-004:** engineering-workflow gates require no
-founder `approved` comment; preserve triggered EHR evidence.
+activation, or closure. Historically under A-003, R4 merge required founder approval.
+**Under active A-004,** engineering-workflow gates require no founder `approved`
+comment; preserve triggered EHR evidence.

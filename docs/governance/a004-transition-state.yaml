@@ -1,52 +1,47 @@
 schema_version: 1
 amendment: A-004
 transition: VOC-080
-requirement_source: "GitHub issue #627 (effective 2026-08-15)"
+requirement_source: "GitHub issue #627, superseded by issue comment #5301333790 (2026-08-15)"
 frozen_source_sha256: null
 
-# Active authority remains A-003 until T07 flips effective_activation_status below.
-# Do not treat successor_authority_model as active in tooling until activation.
-authority_model: a003-active
+authority_model: a004-active
 successor_authority_model: a004-active
-transition_stage: pre-activation-scaffolding
-formal_founder_transition_approval_status: pending-exact-revision-github-evidence
-independent_verification_status: pending-exact-revision
-repository_adoption_status: pending
-effective_activation_status: inactive
+transition_stage: active-upon-canonical-merge
+formal_founder_transition_approval_status: not-required-explicitly-revoked
+independent_verification_status: required-external-exact-revision-pass
+repository_adoption_status: activates-on-merge
+effective_activation_status: active
 
 approved_pr_head_sha: null
 adopted_develop_sha: null
 approved_adopted_tree_sha: null
 formal_founder_transition_approval_at: null
-formal_founder_transition_approval_evidence: null
-independent_verification_evidence: null
-repository_adoption_at: null
-repository_adoption_evidence: null
-effective_activation_at: null
-post_merge_validation_status: not-run
+formal_founder_transition_approval_evidence: "https://github.com/KARSIFT/vocanova-platform-sandbox/issues/627#issuecomment-5301333790"
+independent_verification_evidence: "external exact-revision review on PR #649; required before merge"
+repository_adoption_at: "merge-time-of-voc-080-t07-pr"
+repository_adoption_evidence: "https://github.com/KARSIFT/vocanova-platform-sandbox/pull/649"
+effective_activation_at: "merge-time-of-voc-080-t07-pr"
+post_merge_validation_status: pending
 post_merge_validation_evidence: null
-activation_evidence: null
-rehearsal_evidence_status: pending
-rehearsal_evidence: null
+activation_evidence: "specs/changes/VOC-080-remove-all-founder-approval-gates-from-autonomous/t07-evidence.md"
+rehearsal_evidence_status: complete
+rehearsal_evidence: "specs/changes/VOC-080-remove-all-founder-approval-gates-from-autonomous/t06-evidence.md"
 
-# VOC-080 package adoption under pre-transition (A-003) authority — not A-004 adoption.
 voc_080_package_status: adopted
 voc_080_adoption_pr: 628
 voc_080_adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/628
 
-migration_approval_status: pending-one-time-transition
-migration_approval_exhausted: false
+migration_approval_status: not-required-explicitly-revoked
+migration_approval_exhausted: not-applicable
 exceptional_human_review_mode: exceptional-only
 
-# Mirror A-003 operational truth until activation reconciles autonomy markers if needed.
 rl1_technical_activation: false
 rl2_technical_activation: false
 control_plane_implementation: false
 doc_17_repository_adoption: true
 doc_18_repository_adoption: true
 
-# Inherits A-003 AUTONOMOUS-RELEASE-AUTHORIZED-2026-08-08 delegation until T07 review.
-# AUTONOMOUS-RELEASE-AUTHORIZED-2026-08-08
+# AUTONOMOUS-RELEASE-AUTHORIZED-2026-08-08 (inherited from A-003; unchanged by A-004)
 automatic_merge_allowed: true
 autonomous_merge_allowed: true
 production_deployment: enabled

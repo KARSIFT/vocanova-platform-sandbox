@@ -1554,12 +1554,11 @@ described (a distinct `plan`/`adopt` split before implementation even starts, an
 automatic remediation loop), and its actual authority/risk model is A-003 (Section 10 of that
 amendment - `docs/governance/amendments/A-003-governed-autonomous-engineering-authority.md`),
 not the original A-001 text below. This section is kept as historical record of the original
-design intent but the rule that actually governs `develop` merges today is A-003 §10
-(through A-004 activation) plus `karsift-ai-infra`'s own `merge-gate.yml` - see that
-repo's README for the definitive mechanism. **VOC-080 / A-004** (issue #627) reconciles
-this section for the post-activation no-founder-gate model; A-003 remains effective until
-`VOC-080-T07`. Where this section conflicts with A-004 after activation, **A-004 and the
-live pipeline win.**
+design intent. The rule that governed `develop` merges before VOC-080 was A-003 §10;
+the active rule is A-004 plus `karsift-ai-infra`'s `merge-gate.yml` - see that repo's
+README for the definitive mechanism. **VOC-080 / A-004** (issue #627 and superseding
+comment #5301333790) establishes the no-founder-gate model. Where this historical
+section conflicts with active A-004, **A-004 and the live pipeline win.**
 
 ## 17.1 Canonical rule (as actually implemented; reconciled VOC-080-T04)
 

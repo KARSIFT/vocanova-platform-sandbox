@@ -26,6 +26,8 @@ A003_PATH = "docs/governance/amendments/A-003-governed-autonomous-engineering-au
 A003_STATE_PATH = "docs/governance/a003-transition-state.yaml"
 A003_FROZEN_SHA256 = "f2b454653a33e6cb76a0eab37c01d48b0174227450c9ea255474f6aac59b4f83"
 A003_FROZEN_BODY_SHA256 = "ad05cc8c92047002288245574bc3b76e1cce6f54d43805039ad53393534af4e7"
+A004_PATH = "docs/governance/amendments/A-004-remove-founder-approval-gates-from-autonomous-engineering-workflows.md"
+A004_STATE_PATH = "docs/governance/a004-transition-state.yaml"
 DOC17_PATH = "docs/architecture/17-autonomous-development-architecture.md"
 DOC18_PATH = "docs/planning/18-autonomous-development-implementation-roadmap.md"
 DOC17_SOURCE_SHA256 = "8c9fd7b714e84d39f4b5e9d5c8a4cf8f00a3231b269e2d6dadf6e0ff7707693a"
@@ -808,13 +810,112 @@ def validate_a003_lifecycle(validation: Validation) -> None:
             validation.error("docs/governance/approval-matrix.md", f"missing A-003 authority marker: {marker}")
 
 
+def validate_a004_lifecycle(validation: Validation) -> None:
+    amendment = validation.read(A004_PATH)
+    state = validate_restricted_yaml(validation, A004_STATE_PATH)
+    metadata = frontmatter_values(amendment)
+    full_sha = hashlib.sha256(amendment.encode("utf-8")).hexdigest()
+
+    active = state.get("effective_activation_status") == "active" or metadata.get("effective_activation_status") == "active"
+    if not active:
+        expected_inactive = {
+            "authority_model": "a003-active",
+            "transition_stage": "pre-activation-scaffolding",
+            "formal_founder_transition_approval_status": "pending-exact-revision-github-evidence",
+            "independent_verification_status": "pending-exact-revision",
+            "repository_adoption_status": "pending",
+            "effective_activation_status": "inactive",
+            "migration_approval_status": "pending-one-time-transition",
+            "migration_approval_exhausted": "false",
+        }
+        for key, value in expected_inactive.items():
+            if state.get(key) != value:
+                validation.error(A004_STATE_PATH, f"inactive A-004 transition requires {key}: {value}")
+        if metadata.get("status") != "proposed":
+            validation.error(A004_PATH, "inactive A-004 metadata requires status: proposed")
+        return
+
+    frozen = state.get("frozen_source_sha256")
+    if frozen and frozen != "null" and frozen != full_sha:
+        validation.error(A004_STATE_PATH, "frozen A-004 source checksum mismatch")
+
+    required_active = {
+        "authority_model": "a004-active",
+        "transition_stage": "active-upon-canonical-merge",
+        "formal_founder_transition_approval_status": "not-required-explicitly-revoked",
+        "independent_verification_status": "required-external-exact-revision-pass",
+        "repository_adoption_status": "activates-on-merge",
+        "effective_activation_status": "active",
+        "migration_approval_status": "not-required-explicitly-revoked",
+        "migration_approval_exhausted": "not-applicable",
+        "rehearsal_evidence_status": "complete",
+        "exceptional_human_review_mode": "exceptional-only",
+    }
+    for key, value in required_active.items():
+        if state.get(key) != value:
+            validation.error(A004_STATE_PATH, f"active A-004 requires {key}: {value}")
+
+    adopted_sha = state.get("adopted_develop_sha")
+    if adopted_sha and adopted_sha != "null" and not re.fullmatch(r"[0-9a-f]{40}", adopted_sha):
+        validation.error(A004_STATE_PATH, "adopted_develop_sha must be a full SHA or null until post-merge binding")
+
+    approved_pr = state.get("approved_pr_head_sha")
+    if approved_pr and approved_pr != "null" and not re.fullmatch(r"[0-9a-f]{40}", approved_pr):
+        validation.error(A004_STATE_PATH, "approved_pr_head_sha must be a full SHA or null until bound")
+
+    active_metadata = {
+        "status": "approved",
+        "formal_founder_approval_status": "not-required-explicitly-revoked",
+        "repository_adoption_status": "activates-on-merge",
+        "effective_activation_status": "active",
+    }
+    for key, value in active_metadata.items():
+        if metadata.get(key) != value:
+            validation.error(A004_PATH, f"active A-004 metadata requires {key}: {value}")
+
+    if metadata.get("adopted_develop_sha") != state.get("adopted_develop_sha"):
+        validation.error(A004_PATH, "A-004 amendment adopted_develop_sha must match transition state")
+
+    for key in ("rl1_technical_activation", "rl2_technical_activation", "control_plane_implementation"):
+        if state.get(key) != "false":
+            validation.error(A004_STATE_PATH, f"{key} must remain false")
+    for key in ("doc_17_repository_adoption", "doc_18_repository_adoption"):
+        if state.get(key) != "true":
+            validation.error(A004_STATE_PATH, f"{key} must be true")
+
+    if "AUTONOMOUS-RELEASE-AUTHORIZED-2026-08-08" not in validation.read(A003_STATE_PATH):
+        validation.error(A004_STATE_PATH, "A-004 activation requires A-003 AUTONOMOUS-RELEASE-AUTHORIZED marker")
+
+    for key in (
+        "formal_founder_transition_approval_evidence",
+        "independent_verification_evidence",
+        "repository_adoption_evidence",
+        "activation_evidence",
+        "rehearsal_evidence",
+        "effective_activation_at",
+    ):
+        if not state.get(key) or state.get(key) == "null":
+            validation.error(A004_STATE_PATH, f"active A-004 requires {key}")
+
+    authority = validation.read("docs/governance/approval-matrix.md")
+    for marker in (
+        "A-004 is effective",
+        "no founder `approved` comment",
+        "R4 remains a strengthened evidence class",
+    ):
+        if marker not in authority:
+            validation.error("docs/governance/approval-matrix.md", f"missing A-004 authority marker: {marker}")
+
+
 def validate_ownership(validation: Validation) -> None:
     policy_path = ".github/approved-policy/protected-paths.yaml"
     policy_values = validate_restricted_yaml(validation, policy_path)
     policy = validation.read(policy_path)
+    a004_state = validate_restricted_yaml(validation, A004_STATE_PATH)
+    a004_active = a004_state.get("effective_activation_status") == "active"
     expected_policy_state = {
-        "status": "approved-a003-active",
-        "authority_model": "a003-active",
+        "status": "approved-a004-active" if a004_active else "approved-a003-active",
+        "authority_model": "a004-active" if a004_active else "a003-active",
         "hosted_enforcement_status": "not-activated",
         "rl1_technical_activation": "false",
         "rl2_technical_activation": "false",
@@ -984,6 +1085,7 @@ def validate_repository(root: Path) -> list[str]:
     validate_voc_004_package(validation)
     validate_doc_17_doc_18_adoption(validation)
     validate_a003_lifecycle(validation)
+    validate_a004_lifecycle(validation)
     validate_ownership(validation)
     validate_workflow(validation)
     validate_governance_language(validation)

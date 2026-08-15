@@ -3,24 +3,24 @@ id: A-004
 title: Remove Founder Approval Gates from Autonomous Engineering Workflows
 version: 1.0
 document_type: governance-amendment
-status: proposed
+status: approved
 owner: founder
 canonical_path: docs/governance/amendments/A-004-remove-founder-approval-gates-from-autonomous-engineering-workflows.md
 
-founder_direction_status: approved
-formal_founder_approval_status: pending-exact-revision-github-evidence
-repository_adoption_status: pending
-effective_activation_status: inactive
+founder_direction_status: superseded-by-no-approval-clarification
+formal_founder_approval_status: not-required-explicitly-revoked
+repository_adoption_status: activates-on-merge
+effective_activation_status: active
 
 approved_at: null
-adopted_at: null
-effective_at: null
+adopted_at: merge-time-of-voc-080-t07-pr
+effective_at: merge-time-of-voc-080-t07-pr
 approved_pr_head_sha: null
 adopted_develop_sha: null
-approval_evidence: null
-independent_verification_evidence: null
-repository_adoption_evidence: null
-activation_evidence: null
+approval_evidence: "https://github.com/KARSIFT/vocanova-platform-sandbox/issues/627#issuecomment-5301333790 (approval requirement explicitly revoked; not an approval)"
+independent_verification_evidence: "external exact-revision review on PR #649; required before merge"
+repository_adoption_evidence: "https://github.com/KARSIFT/vocanova-platform-sandbox/pull/649"
+activation_evidence: "specs/changes/VOC-080-remove-all-founder-approval-gates-from-autonomous/t07-evidence.md"
 
 supersedes:
   - id: A-003
@@ -47,12 +47,13 @@ transition_package: VOC-080
 
 # Amendment A-004 — Remove Founder Approval Gates from Autonomous Engineering Workflows
 
-> **Pre-activation notice:** This amendment is **proposed scaffolding** authored under
-> [VOC-080](specs/changes/VOC-080-remove-all-founder-approval-gates-from-autonomous-engineering-workflows)
-> task `VOC-080-T00`. **A-003 remains the effective authority model** until this
-> amendment is validly adopted and effectively activated under the one-time transition
-> recorded in `docs/governance/a004-transition-state.yaml` (activation task `VOC-080-T07`).
-> This text does not authorize its own adoption or activation.
+> **Effective authority notice:** A-004 is **effectively active in the canonical
+> repository tree produced by merging the exact independently reviewed
+> `VOC-080-T07` revision** per `docs/governance/a004-transition-state.yaml`
+> (requirement source issue #627 and superseding comment #5301333790). A-003 remains
+> authoritative historical audit evidence; engineering-workflow founder `approved`-comment
+> gates are superseded where A-004 governs. This amendment did not authorize its own
+> adoption or activation; those occurred under pre-A-004 authority.
 
 ## 1. Purpose
 
@@ -94,20 +95,20 @@ The governing principle after effective activation:
 
 A-004 has three separate governance lifecycle stages, mirroring A-003's pattern.
 
-### 2.1 Formal Founder Transition Approval
+### 2.1 Transition authority without an approval gate
 
-Founder direction in issue #627 authorizes preparation of this amendment but is not,
-by itself, canonical repository approval or effective activation.
+Issue #627 originally described a one-time transition approval. The founder's later,
+more specific direction explicitly revoked approval requirements for every condition,
+including this activation. That superseding requirement is recorded in
+[comment #5301333790](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/627#issuecomment-5301333790).
+It is a requirement clarification, not approval of a revision.
 
-The **one final** founder transition approval under pre-A-004 authority (active
-A-003 / VOC-075 policy) is required for the **exact activation revision** that
-flips `effective_activation_status` to `active`. That approval binds to the exact
-commit SHA recorded in `a004-transition-state.yaml` at activation (`VOC-080-T07`).
-
-Until that evidence exists:
+The transition still requires deterministic validation, independent verification
+bound to the exact activation revision, and canonical merge, but no founder or
+other human approval:
 
 ```text
-formal_founder_transition_approval_status: pending-exact-revision-github-evidence
+formal_founder_transition_approval_status: not-required-explicitly-revoked
 ```
 
 ### 2.2 Repository Adoption
@@ -118,8 +119,8 @@ A-004 becomes adopted repository governance only when:
    (active A-003);
 2. all required deterministic validation passes;
 3. required independent verification passes on the adoption revision;
-4. all currently required pre-transition approval evidence is recorded;
-5. the approved revision is merged into the canonical `develop` branch.
+4. the superseding no-approval requirement provenance is recorded; and
+5. the independently verified revision is merged into canonical `develop`.
 
 Repository adoption does not retroactively validate actions taken before adoption.
 
@@ -127,13 +128,17 @@ Repository adoption does not retroactively validate actions taken before adoptio
 
 Repository adoption and effective activation are distinct states.
 
-After adoption, A-004 becomes effective only when:
+Canonical merge of the activation revision makes A-004 effective only when:
 
-1. post-merge governance validation required for the transition succeeds;
-2. rehearsal evidence recorded under VOC-080 is complete (`VOC-080-T06`);
-3. the one-time exact-revision founder transition approval is recorded;
-4. independent verification of the **exact activation revision** passes;
-5. activation evidence is recorded in `a004-transition-state.yaml`.
+1. rehearsal evidence recorded under VOC-080 is complete (`VOC-080-T06`);
+2. deterministic governance validation of the **exact activation revision** passes;
+3. independent verification of that exact revision passes; and
+4. activation evidence and the merge-triggered lifecycle are recorded in
+   `a004-transition-state.yaml`.
+
+Post-merge governance validation is an immediate post-activation obligation. It
+confirms the canonical merged tree; it is not a logically impossible precondition to
+the merge that creates that tree. Failure requires fail-closed rollback and evidence.
 
 During any state where A-004 is adopted but not yet effective, **A-003 continues
 to govern** engineering-workflow founder gates.
@@ -220,13 +225,13 @@ R4 continues to identify changes with consequential scope: governance authority,
 protected effects, material autonomous-system expansion, and similarly strengthened
 evidence requirements.
 
-After A-004 activation, R4 **requires**:
+Under active A-004, R4 **requires**:
 
 - stronger specification, validation, independent verification, rollout, monitoring,
   and rollback evidence as defined by risk policy and protected-path floors;
 - traceable audit records bound to exact revisions.
 
-After A-004 activation, R4 **does not require**:
+Under active A-004, R4 **does not require**:
 
 - a founder `approved` comment on merge, adoption, release promotion, deploy, or
   remediation retry paths when all applicable non-founder gates pass.
@@ -387,13 +392,13 @@ Under governance effective before A-004 (active A-003):
 
 - this transition is an R4 governance decision with R3 protected technical effects;
 - VOC-080 was adopted under pre-transition authority;
-- one final exact-revision founder transition approval is required for the activation
-  revision (`VOC-080-T07`);
+- the later founder requirement clarification explicitly revokes the earlier
+  one-time transition-approval clause for `VOC-080-T07`;
 - post-transition rules do not authorize VOC-080 or A-004 retroactively.
 
-At activation, the one-time founder transition approval is recorded against the
-exact activation revision SHA. That approval is **exhausted** for this transition
-and must not be reused as a standing engineering-workflow gate.
+At activation, independent verification is recorded against the exact activation
+revision. No founder transition approval exists or is required; the revoked clause
+must not be reintroduced as a standing or one-time engineering-workflow gate.
 
 After valid effective activation of A-004:
 

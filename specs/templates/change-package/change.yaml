@@ -12,7 +12,7 @@ canonical_path: specs/changes/VOC-000-replace-with-approved-slug
 approval_status: not-approved
 implementation_authorized: false
 # Per AGENTS.md "Drafting automatic_merge_allowed": set `true` for every risk class
-# including R4 (post-A-004). The field is audit-compatible; merge-gate does not treat
+# including R4 (under active A-004). The field is audit-compatible; merge-gate does not treat
 # `false` as a founder-attention gate. Setting true does not bypass risk classification,
 # path-based floors, CI, independent verification, unparseable-risk fail-closed, or EHR.
 automatic_merge_allowed: true

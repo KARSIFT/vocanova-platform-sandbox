@@ -6,11 +6,12 @@ may refine them but may not weaken governance or security.
 ## Authority and scope
 
 - Follow DOC-15, DOC-16, effective amendments, accepted decisions, and approved
-  implementation-ready change specifications in that order. **A-003 remains the
-  effective authority model** until A-004 is validly activated (`VOC-080-T07`;
-  see `docs/governance/a004-transition-state.yaml`). A-004 (issue #627 / VOC-080)
-  supersedes A-003 and VOC-075 only where they require founder `approved`-comment
-  gates on engineering workflows, **after** that one-time activation.
+  implementation-ready change specifications in that order. **A-004 is the effective
+  authority model** for engineering-workflow gates (activated by canonical merge of
+  `VOC-080-T07`; see `docs/governance/a004-transition-state.yaml`). A-004
+  (issue #627 / VOC-080) supersedes A-003 and VOC-075 only where they require founder
+  `approved`-comment gates on engineering workflows. A-003 remains authoritative
+  historical audit evidence.
 - GitHub is the canonical repository record. Meaningful implementation requires an
   approved `VOC-###` change package with stable requirements and acceptance criteria;
   a chat prompt or issue alone is not implementation authority.
@@ -47,12 +48,12 @@ may refine them but may not weaken governance or security.
 ### Drafting `automatic_merge_allowed` in `change.yaml`
 
 When drafting a change package, set `automatic_merge_allowed` in that package's
-`change.yaml`. **After A-004 activation**, all packages draft `true` at every risk
+`change.yaml`. **Under active A-004**, all packages draft `true` at every risk
 class including R4 (`VOC-080-DEP-02`). The field is retained for audit compatibility;
-merge-gate no longer treats `false` as a founder-attention gate. Until activation,
-historical packages may still carry `false`; infra ignores it as a merge gate.
+merge-gate no longer treats `false` as a founder-attention gate. Historical packages
+may still carry `false`; infra ignores it as a merge gate.
 
-**Drafting rule (post-A-004 target; reconcile packages on adoption):**
+**Active A-004 drafting rule:**
 
 - **R0–R4:** set `automatic_merge_allowed: true`. Do not set `false` to require
   founder eyes on merge — sensitivity (auth, secrets, production infrastructure,
@@ -166,13 +167,13 @@ Do not invent or report an unavailable check as passing.
   production deploy themselves - see "Release and deployment authority" below for
   the one narrow, explicit exception (an automated pipeline path, not an agent
   acting on its own judgment).
-- Under active A-003 (until A-004 activation), routine R3 uses strengthened controls
-  and independent verification without standing technical-steward or founder approval
-  merely for being R3. **After A-004 activation**, R4 engineering-workflow gates
-  also require no founder `approved` comment — only stronger evidence, validation,
-  verification, rollout, monitoring, and rollback. EHR is exceptional and must not
-  become a standing approval layer. The one-time A-004 transition approval at T07
-  is not a reusable engineering-workflow gate.
+- Under **active A-004**, routine R3 uses strengthened controls and independent
+  verification without standing technical-steward or founder approval merely for
+  being R3. R4 engineering-workflow gates require no founder `approved` comment —
+  only stronger evidence, validation, verification, rollout, monitoring, and rollback.
+  EHR is exceptional and must not become a standing approval layer. The proposed
+  one-time A-004 transition approval was explicitly revoked before activation and
+  must not be reintroduced as an engineering-workflow gate.
 - The only bootstrap exception is the initial DOC-16/A-002 adoption defined in
   DOC-16. It permits founder approval, independent Claude Code verification, and
   repository validation to adopt the framework without claiming steward approval.
