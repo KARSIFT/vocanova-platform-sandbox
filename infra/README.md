@@ -113,9 +113,9 @@ production hostnames from the same process (VOC-067-T02).
 
 **Monitoring** (`docker compose -f infra/docker-compose.monitoring.yml`):
 
-| Service       | Image                    | Port (host)              | Networks        |
-| ------------- | ------------------------ | ------------------------ | --------------- |
-| `uptime-kuma` | `louislam/uptime-kuma:1` | `127.0.0.1:3001` only    | default project |
+| Service       | Image                    | Port (host)           | Networks        |
+| ------------- | ------------------------ | --------------------- | --------------- |
+| `uptime-kuma` | `louislam/uptime-kuma:1` | `127.0.0.1:3001` only | default project |
 
 The monitoring Compose project name is `monitoring`; the container is
 `vocanova-uptime-kuma`. Persistent data lives at
