@@ -32,7 +32,9 @@ Observable outcome:
 - Tasks: `VOC-079-T02`
 - Tests: `VOC-079-TEST-01`, `VOC-079-TEST-02`
 - Evidence: `VOC-079-EV-02`
-- Result: pending
+- Result: satisfied — PR #660 / `VOC-079-EV-02`; production Compose contains
+  only PostgreSQL, API, and web, with nginx/TLS material preserved for the
+  shared-edge read-only mounts
 
 Observable outcome: `infra/docker-compose.production.yml` has no `nginx`
 service and no `vocanova-production-nginx` / `8081:80` / `8443:443`
@@ -46,7 +48,9 @@ isolation is not weakened.
 - Tasks: `VOC-079-T02`, `VOC-079-T03`
 - Tests: `VOC-079-TEST-02`, `VOC-079-TEST-05`
 - Evidence: `VOC-079-EV-02`, `VOC-079-EV-03`
-- Result: pending
+- Result: satisfied — production run 31884987715 removed the orphaned bridge
+  declaratively; live inspection found one VocaNova nginx and no 8081/8443
+  listeners (`VOC-079-EV-03`)
 
 Observable outcome after normal production deployment:
 
@@ -62,7 +66,8 @@ Observable outcome after normal production deployment:
 - Tasks: `VOC-079-T03`
 - Tests: `VOC-079-TEST-05`
 - Evidence: `VOC-079-EV-03`
-- Result: pending
+- Result: satisfied — all four canonical external checks returned HTTP 200
+  after production convergence (`VOC-079-EV-03`)
 
 Observable outcome: shared edge continues Host/SNI routing for
 `staging.vocanova.site`, `api-staging.vocanova.site`,
@@ -76,7 +81,9 @@ external web/API checks pass through Cloudflare on canonical HTTPS URLs
 - Tasks: `VOC-079-T01`
 - Tests: `VOC-079-TEST-03`
 - Evidence: `VOC-079-EV-01`
-- Result: pending
+- Result: satisfied — PR #659 / `VOC-079-EV-01`; current compose, OAuth,
+  readiness, session-mint, smoke, and operator paths use canonical HTTPS
+  without `:8443`
 
 Observable outcome: current operational configuration
 (`infra/docker-compose.production.yml` `API_BASE_URL`,
@@ -91,7 +98,9 @@ are not rewritten as though the bridge never existed.
 - Tasks: `VOC-079-T02`
 - Tests: `VOC-079-TEST-04`
 - Evidence: `VOC-079-EV-02`
-- Result: pending
+- Result: satisfied — PR #660 / `VOC-079-EV-02`; scoped project writes and
+  orphan removal remain isolated, with fail-closed shared-edge validation and
+  reload retained
 
 Observable outcome:
 
@@ -110,7 +119,8 @@ Observable outcome:
 - Tasks: `VOC-079-T02`
 - Tests: `VOC-079-TEST-01`, `VOC-079-TEST-02`, `VOC-079-TEST-03`
 - Evidence: `VOC-079-EV-02`
-- Result: pending
+- Result: satisfied — `voc079-single-edge-invariants.test.mjs` replaces the
+  bridge-retention gate and passed CI on PR #660 (`VOC-079-EV-02`)
 
 Observable outcome: deterministic checks assert (a) production Compose has
 no nginx service, (b) only shared-edge Compose publishes host `80`/`443`,
@@ -125,7 +135,10 @@ end state once AC-00 is met.
 - Tasks: `VOC-079-T03`
 - Tests: `VOC-079-TEST-06`
 - Evidence: `VOC-079-EV-03`
-- Result: pending
+- Result: satisfied — normal production deployment rehearsed declarative bridge
+  removal; the autonomous production workflow owns rollback to last-known-good
+  revision `58f803b`, with Cloudflare restore limitations recorded in
+  `VOC-079-EV-03`
 
 Observable outcome:
 

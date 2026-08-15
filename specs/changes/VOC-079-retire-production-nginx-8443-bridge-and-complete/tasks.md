@@ -10,8 +10,8 @@ Order is mandatory: **T00 → T01 → T02 → T03**.
 - Acceptance criteria: `VOC-079-AC-00`
 - Tests: `VOC-079-TEST-00`
 - Evidence: `VOC-079-EV-00` (`t00-evidence.md` in this package directory)
-- Status: pending — blocked on package adoption; founder/ops production
-  environment authority for `verify-only`
+- Status: complete — authenticated verify-only run 31876429297 returned the
+  required no-remap result (`VOC-079-EV-00`)
 
 ### Required work
 
@@ -43,7 +43,7 @@ Order is mandatory: **T00 → T01 → T02 → T03**.
 - Acceptance criteria: `VOC-079-AC-04`
 - Tests: `VOC-079-TEST-03`
 - Evidence: `VOC-079-EV-01` (`t01-evidence.md`)
-- Status: pending — depends on `VOC-079-T00` (AC-00 / `absent` gate)
+- Status: complete — PR #659 merged after the resolved T00 gate
 
 ### Required work
 
@@ -78,7 +78,8 @@ Order is mandatory: **T00 → T01 → T02 → T03**.
   `VOC-079-AC-05`, `VOC-079-AC-06`
 - Tests: `VOC-079-TEST-01`, `VOC-079-TEST-02`, `VOC-079-TEST-04`
 - Evidence: `VOC-079-EV-02` (`t02-evidence.md`)
-- Status: pending — depends on `VOC-079-T00` and `VOC-079-T01`
+- Status: complete — PR #660 merged after T00/T01 and was promoted to
+  production in PR #662
 
 ### Required work
 
@@ -118,8 +119,8 @@ Order is mandatory: **T00 → T01 → T02 → T03**.
 - Acceptance criteria: `VOC-079-AC-02`, `VOC-079-AC-03`, `VOC-079-AC-07`
 - Tests: `VOC-079-TEST-05`, `VOC-079-TEST-06`
 - Evidence: `VOC-079-EV-03` (`t03-evidence.md`)
-- Status: pending — depends on `VOC-079-T02` merged and released/deployed
-  through the normal production workflow
+- Status: complete — production run 31884987715 converged the host and live
+  evidence is recorded in `VOC-079-EV-03`
 
 ### Required work
 
