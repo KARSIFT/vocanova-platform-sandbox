@@ -9,6 +9,7 @@ set -euo pipefail
 # against a local fake server in both a healthy and several broken
 # configurations and confirms it passes/fails as expected in each.
 # VOC-085-T01 — empty-content rejection and detail-endpoint fixtures.
+# VOC-085-T02 — route-sweep coverage, auth-cookie handling, fail-closed.
 #
 # Requires: python3, curl, bash. Runs entirely on 127.0.0.1; no
 # network access to any real host.
@@ -85,6 +86,19 @@ WORD_DETAIL = {
     }
 }
 
+PUBLIC_WEB_PATHS = {"/", "/signin", "/auth/magic"}
+AUTHENTICATED_WEB_PATHS = {
+    "/onboarding",
+    "/home",
+    "/discover",
+    "/reviews",
+    "/progress",
+    "/settings",
+    "/settings/account",
+    "/discover/airport",
+    "/discover/airport/boarding-pass",
+}
+
 class Handler(http.server.BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
@@ -99,6 +113,32 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def _authorized(self):
         return self.headers.get("Cookie", "") == SMOKE_COOKIE
+
+    def _serve_web(self, path):
+        if path in PUBLIC_WEB_PATHS:
+            self.send_response(200)
+            self.end_headers()
+            return
+        if path in AUTHENTICATED_WEB_PATHS:
+            if scenario == "route_auth_failure":
+                self.send_response(500)
+                self.end_headers()
+                return
+            if self._authorized():
+                if path == "/onboarding":
+                    self.send_response(307)
+                    self.send_header("Location", "/home")
+                    self.end_headers()
+                    return
+                self.send_response(200)
+                self.end_headers()
+                return
+            self.send_response(302)
+            self.send_header("Location", "/signin?returnTo=" + path)
+            self.end_headers()
+            return
+        self.send_response(404)
+        self.end_headers()
 
     def do_GET(self):
         if self.path == "/healthz":
@@ -119,9 +159,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 switches["magic_link_enabled"] = True
                 switches["oauth_enabled"] = True
             self._json(200, {"status": status, "database": database, "kill_switches": switches})
-        elif self.path == "/":
-            self.send_response(200)
-            self.end_headers()
+        elif self.path in PUBLIC_WEB_PATHS or self.path in AUTHENTICATED_WEB_PATHS:
+            self._serve_web(self.path)
         elif self.path == "/api/v1/me":
             if self._authorized():
                 self._json(200, {"ok": True})
@@ -210,7 +249,8 @@ check() {
 
 echo "== case 1: healthy target, defaults match =="
 start_server healthy
-check "healthy target passes with default expectations" pass \
+check "healthy target passes with default expectations and route sweep" pass \
+  env SMOKE_TEST_SESSION_COOKIE="vocanova_session=smoke-test-token" \
   bash "$smoke_script" "$base_url" "$base_url"
 stop_server
 
@@ -230,6 +270,7 @@ echo "== case 4: switches reported on, expectations set to match =="
 start_server switches_on
 check "matching non-default expectations pass" pass \
   env EXPECT_MAGIC_LINK_ENABLED=true EXPECT_OAUTH_ENABLED=true \
+      SMOKE_TEST_SESSION_COOKIE="vocanova_session=smoke-test-token" \
   bash "$smoke_script" "$base_url" "$base_url"
 stop_server
 
@@ -257,6 +298,26 @@ stop_server
 echo "== case 8: missing canonical word detail must fail =="
 start_server word_detail_missing
 check "missing canonical word detail fails the suite" fail \
+  env SMOKE_TEST_SESSION_COOKIE="vocanova_session=smoke-test-token" \
+  bash "$smoke_script" "$base_url" "$base_url"
+stop_server
+
+echo "== case 9: route sweep fails closed without a session cookie =="
+start_server healthy
+check "missing session cookie fails route sweep (not silent skip)" fail \
+  bash "$smoke_script" "$base_url" "$base_url"
+stop_server
+
+echo "== case 10: invalid session cookie fails authenticated route sweep =="
+start_server healthy
+check "malformed session cookie fails authenticated route coverage" fail \
+  env SMOKE_TEST_SESSION_COOKIE="vocanova_session=not-the-smoke-token" \
+  bash "$smoke_script" "$base_url" "$base_url"
+stop_server
+
+echo "== case 11: protected route server error fails route sweep =="
+start_server route_auth_failure
+check "protected route HTTP 500 fails route sweep" fail \
   env SMOKE_TEST_SESSION_COOKIE="vocanova_session=smoke-test-token" \
   bash "$smoke_script" "$base_url" "$base_url"
 stop_server
