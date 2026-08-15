@@ -101,7 +101,7 @@ Rollback mechanism:
    silent drift).
 3. Restore pre-transition authority markers so founder gates return
    **only** as the documented rollback model — without rewriting audit
-history of what happened under the interim revisions.
+   history of what happened under the interim revisions.
 4. Re-run governance validation; confirm merge-gate/adopt/release
    behavior matches the restored revision.
 

@@ -34,9 +34,9 @@ The following are R4 by decision type even when no protected path is changed:
 ## Ownership
 
 `CODEOWNERS` routes review; it is not approval evidence and does not express every
-required approval combination. Under active A-003, routine R3 ownership routing must
-not be interpreted as standing technical-steward or founder approval. **Post-A-004
-activation:** R4 path floors and strengthened evidence remain; founder `approved`
+required approval combination. Historically under A-003, routine R3 ownership routing
+did not imply standing technical-steward or founder approval. **Under active A-004,**
+R4 path floors and strengthened evidence remain; founder `approved`
 comments are not engineering-workflow merge gates. Claude Code may independently
 verify protected changes but is never a human approval authority.
 

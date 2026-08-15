@@ -128,12 +128,17 @@ Repository adoption does not retroactively validate actions taken before adoptio
 
 Repository adoption and effective activation are distinct states.
 
-After adoption, A-004 becomes effective only when:
+Canonical merge of the activation revision makes A-004 effective only when:
 
-1. post-merge governance validation required for the transition succeeds;
-2. rehearsal evidence recorded under VOC-080 is complete (`VOC-080-T06`);
-3. independent verification of the **exact activation revision** passes; and
-4. activation evidence is recorded in `a004-transition-state.yaml`.
+1. rehearsal evidence recorded under VOC-080 is complete (`VOC-080-T06`);
+2. deterministic governance validation of the **exact activation revision** passes;
+3. independent verification of that exact revision passes; and
+4. activation evidence and the merge-triggered lifecycle are recorded in
+   `a004-transition-state.yaml`.
+
+Post-merge governance validation is an immediate post-activation obligation. It
+confirms the canonical merged tree; it is not a logically impossible precondition to
+the merge that creates that tree. Failure requires fail-closed rollback and evidence.
 
 During any state where A-004 is adopted but not yet effective, **A-003 continues
 to govern** engineering-workflow founder gates.
@@ -220,13 +225,13 @@ R4 continues to identify changes with consequential scope: governance authority,
 protected effects, material autonomous-system expansion, and similarly strengthened
 evidence requirements.
 
-After A-004 activation, R4 **requires**:
+Under active A-004, R4 **requires**:
 
 - stronger specification, validation, independent verification, rollout, monitoring,
   and rollback evidence as defined by risk policy and protected-path floors;
 - traceable audit records bound to exact revisions.
 
-After A-004 activation, R4 **does not require**:
+Under active A-004, R4 **does not require**:
 
 - a founder `approved` comment on merge, adoption, release promotion, deploy, or
   remediation retry paths when all applicable non-founder gates pass.

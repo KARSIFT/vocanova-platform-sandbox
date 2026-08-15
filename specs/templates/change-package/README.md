@@ -29,7 +29,7 @@ deployment/rollback controls, hosted activation, and closure evidence.
 
 Set `automatic_merge_allowed` in `change.yaml` per `AGENTS.md` (subsection
 "Drafting `automatic_merge_allowed` in `change.yaml`") before the plan PR is
-reviewed. **Post-A-004 activation:** set `true` for **R0–R4**. The field is
+reviewed. **Under active A-004,** set `true` for **R0–R4**. The field is
 audit-compatible; merge-gate does not treat `false` as a founder-attention gate.
 Do not set `false` to require founder approval on merge.
 

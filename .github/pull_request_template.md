@@ -42,7 +42,7 @@ verifier result; mark genuinely irrelevant standard sections `N/A` with one reas
   - [ ] R3 — strengthened applicable controls and independent verification; no
         standing steward/founder approval solely because work is R3
   - [ ] R4 — strengthened evidence, validation, verification, rollout, monitoring,
-        rollback; **post-A-004:** no founder `approved` comment on engineering-workflow
+        rollback; **under active A-004:** no founder `approved` comment on engineering-workflow
         gates when non-founder gates pass
   - Historical VOC-002 migration — exhausted and permanently non-reusable
   - Historical initial DOC-16/A-002 bootstrap — expired with PR #3 and unavailable

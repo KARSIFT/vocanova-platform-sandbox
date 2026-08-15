@@ -25,9 +25,9 @@ verification remains separate from every human authority.
 
 | Change/action | Independent verification and controls | Human authority | Automation permission |
 |---|---|---|---|
-| Routine R0-R2 | Proportionate deterministic and independent verification | No founder or standing technical-steward approval for engineering-workflow gates (post-A-004) | Only where separately implemented and proven |
+| Routine R0-R2 | Proportionate deterministic and independent verification | No founder or standing technical-steward approval for engineering-workflow gates under active A-004 | Only where separately implemented and proven |
 | Routine R3 protected technical work | Strengthened risk-specific controls and independent verification | No standing technical-steward approval; no founder approval merely because work is R3 | Only where every applicable technical gate is implemented and proven |
-| R4 consequential decision/change | R3 controls too when technically protected; stronger evidence, rollout, monitoring, rollback | **Post-A-004:** no founder `approved` comment on merge/adopt/release/deploy; founder clarifies product/legal/strategy requirements before stable AC | Cannot bypass independent verification, CI, or fail-closed gates |
+| R4 consequential decision/change | R3 controls too when technically protected; stronger evidence, rollout, monitoring, rollback | **Active A-004:** no founder `approved` comment on merge/adopt/release/deploy; founder clarifies product/legal/strategy requirements before stable AC | Cannot bypass independent verification, CI, or fail-closed gates |
 | Initial public or predefined major launch | Independent release review and every applicable technical gate | Founder requirement **clarification** before stable AC; not an engineering-workflow `approved` comment gate | Publish only after applicable technical gates and activation evidence |
 | Emergency protective rollback using approved runbook | Post-action verification and permanent evidence | Pre-authorized runbook/incident authority; founder only for a new R4 product decision | Only a predefined safer-than-waiting action may execute automatically |
 | Change to CI/CD, ownership, approval, agent authority, or this matrix | Independent governance/security review and fail-closed validation | No founder or standing human approval gate; A-004's proposed one-time transition approval was explicitly revoked before activation | Cannot self-modify into effect |
@@ -61,7 +61,7 @@ and is not a standing future rule.
 
 ## `develop` merge and `automatic_merge_allowed`
 
-**Post-A-004 activation:** merge-gate may auto-merge plan and implementation PRs
+**Under active A-004,** merge-gate may auto-merge plan and implementation PRs
 into `develop` at R0–R4 when CI is green, independent verification passed, risk is
 parseable, the project auto-merge switch is on, and no blocking gate remains. All new
 packages draft `automatic_merge_allowed: true` including R4 (`VOC-080-DEP-02`); the

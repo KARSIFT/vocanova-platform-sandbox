@@ -48,12 +48,12 @@ may refine them but may not weaken governance or security.
 ### Drafting `automatic_merge_allowed` in `change.yaml`
 
 When drafting a change package, set `automatic_merge_allowed` in that package's
-`change.yaml`. **After A-004 activation**, all packages draft `true` at every risk
+`change.yaml`. **Under active A-004**, all packages draft `true` at every risk
 class including R4 (`VOC-080-DEP-02`). The field is retained for audit compatibility;
-merge-gate no longer treats `false` as a founder-attention gate. Until activation,
-historical packages may still carry `false`; infra ignores it as a merge gate.
+merge-gate no longer treats `false` as a founder-attention gate. Historical packages
+may still carry `false`; infra ignores it as a merge gate.
 
-**Drafting rule (post-A-004 target; reconcile packages on adoption):**
+**Active A-004 drafting rule:**
 
 - **R0–R4:** set `automatic_merge_allowed: true`. Do not set `false` to require
   founder eyes on merge — sensitivity (auth, secrets, production infrastructure,
