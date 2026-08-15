@@ -175,9 +175,33 @@ func ReconcileStreak(
 
 	gap := daysBetween(today, *lastGood)
 	if gap <= 0 {
-		// Defensive: a future "lastGood" date is impossible under the
-		// unique index, but be safe.
-		return StreakReconciliation{}, fmt.Errorf("%w: last good date %s is not before today %s", ErrInvalidStreakSnapshot, lastGood.Format("2006-01-02"), today.Format("2006-01-02"))
+		if currentCompletion && dateKey(*lastGood) == dateKey(today) {
+			// The caller just marked today completed in this same call
+			// (applyP4ReviewWiring: MarkSnapshotCompleted then fetch snaps).
+			// Today is a valid current completion, not an invalid anchor;
+			// reconcile using the most recent good day before today.
+			if prior := mostRecentGoodBefore(snapshots, today); prior != nil {
+				lastGood = prior
+			} else if state.LastCompletedLocalDate != nil && state.LastCompletedLocalDate.Before(today) {
+				d := *state.LastCompletedLocalDate
+				lastGood = &d
+			} else {
+				// First-ever completion today with no prior anchor.
+				newState := state
+				newState.CurrentStreakCount = 1
+				newState.LongestStreakCount = maxInt(state.LongestStreakCount, 1)
+				newState.LastCompletedLocalDate = &today
+				newState.LastActivityLocalDate = &today
+				newState.Status = StreakStatusActive
+				return StreakReconciliation{NewState: newState}, nil
+			}
+			gap = daysBetween(today, *lastGood)
+		}
+		if gap <= 0 {
+			// Defensive: a future "lastGood" date is impossible under the
+			// unique index, but be safe.
+			return StreakReconciliation{}, fmt.Errorf("%w: last good date %s is not before today %s", ErrInvalidStreakSnapshot, lastGood.Format("2006-01-02"), today.Format("2006-01-02"))
+		}
 	}
 
 	newState := state
@@ -328,6 +352,23 @@ func mostRecentGood(snaps []StreakSnapshot) *time.Time {
 	var best *time.Time
 	for _, s := range snaps {
 		if s.Status != MissionStatusCompleted && s.Status != MissionStatusProtected {
+			continue
+		}
+		if best == nil || s.LocalDate.After(*best) {
+			d := s.LocalDate
+			best = &d
+		}
+	}
+	return best
+}
+
+func mostRecentGoodBefore(snaps []StreakSnapshot, before time.Time) *time.Time {
+	var best *time.Time
+	for _, s := range snaps {
+		if s.Status != MissionStatusCompleted && s.Status != MissionStatusProtected {
+			continue
+		}
+		if !s.LocalDate.Before(before) {
 			continue
 		}
 		if best == nil || s.LocalDate.After(*best) {
