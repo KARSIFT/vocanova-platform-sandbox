@@ -281,6 +281,28 @@ reaches Kuma at `vocanova-uptime-kuma:3001` over this network — not via a
 public host publish. T03 performs the controlled Compose convergence that
 attaches the already-running edge and Kuma containers.
 
+**Monitor vhost (`monitor.vocanova.site`, VOC-081-T02):** the shared edge
+loads `infra/nginx-shared/conf.d/30-monitor.vocanova.site.conf` via the
+existing `include /etc/nginx/conf.d/shared/*.conf` in
+`infra/nginx-shared/nginx.conf`. The vhost terminates TLS with production
+origin certificates, inherits Cloudflare real-IP handling from
+`00-cloudflare-real-ip.conf`, reverse-proxies to `vocanova-uptime-kuma:3001`
+with WebSocket upgrade headers, and sets the standard reverse-proxy headers
+(`Host`, `X-Real-IP`, `X-Forwarded-For`, `X-Forwarded-Proto`). The stale
+host-only `/opt/vocanova/production/nginx/conf.d/30-monitor.conf` is
+**not** loaded by shared edge (production globs are `10-*.conf` /
+`20-*.conf` only); repository retirement marker:
+`infra/nginx-production/conf.d/30-monitor.conf.superseded`. T03 removes any
+remaining live `30-monitor.conf` under the production nginx tree during
+deploy convergence.
+
+**Access exposure (`VOC-081-DEP-00`):** see
+`infra/monitoring/access-policy.md`. The adopted policy is **Cloudflare
+Access (Zero Trust)** for `monitor.vocanova.site` plus Kuma's own
+authentication — a proxied DNS record alone is not authorization. Access
+is enforced at Cloudflare before traffic reaches origin nginx; T04 records
+redacted live verification.
+
 ### Backup and first-converge migration (before T03 live apply)
 
 Run on the shared host **before** the first repository-driven monitoring
@@ -512,14 +534,14 @@ docker compose -f infra/docker-compose.yml exec api wget -q -O- http://127.0.0.1
 docker compose -f infra/docker-compose.yml down
 ```
 
-The shared-edge `nginx -t` syntax check (VOC-067-TEST-02) is:
+The shared-edge `nginx -t` syntax check (VOC-067-TEST-02; monitor vhost
+included via `nginx-shared/conf.d/` since VOC-081-T02) is:
 
 ```bash
 sh infra/nginx/generate-dev-cert.sh   # if infra/secrets/nginx/ is empty
 
 # Substitute production placeholders for a local disposable check:
 mkdir -p /tmp/vocanova-nginx-prod-conf.d
-cp infra/nginx-production/conf.d/05-default.conf /tmp/vocanova-nginx-prod-conf.d/
 sed 's/__PRODUCTION_WEB_HOST__/production.vocanova.site/g;
      s/__PRODUCTION_API_HOST__/api-production.vocanova.site/g' \
   infra/nginx-production/conf.d/10-production-web.conf \
@@ -539,6 +561,22 @@ docker run --rm \
   -v $(pwd)/infra/secrets/nginx/cert.pem:/etc/nginx/certs/production/cert.pem:ro \
   -v $(pwd)/infra/secrets/nginx/key.pem:/etc/nginx/certs/production/key.pem:ro \
   nginx:1.27-alpine nginx -t
+```
+
+The monitor vhost (`30-monitor.vocanova.site.conf`) loads from the shared
+mount and needs no extra sed substitution. Confirm with:
+
+```bash
+docker run --rm \
+  -v $(pwd)/infra/nginx-shared/nginx.conf:/etc/nginx/nginx.conf:ro \
+  -v $(pwd)/infra/nginx-shared/conf.d:/etc/nginx/conf.d/shared:ro \
+  -v $(pwd)/infra/nginx/conf.d:/etc/nginx/conf.d/staging:ro \
+  -v /tmp/vocanova-nginx-prod-conf.d:/etc/nginx/conf.d/production:ro \
+  -v $(pwd)/infra/secrets/nginx/cert.pem:/etc/nginx/certs/staging/cert.pem:ro \
+  -v $(pwd)/infra/secrets/nginx/key.pem:/etc/nginx/certs/staging/key.pem:ro \
+  -v $(pwd)/infra/secrets/nginx/cert.pem:/etc/nginx/certs/production/cert.pem:ro \
+  -v $(pwd)/infra/secrets/nginx/key.pem:/etc/nginx/certs/production/key.pem:ro \
+  nginx:1.27-alpine nginx -T 2>/dev/null | grep -F 'server_name monitor.vocanova.site'
 ```
 
 Legacy per-tier staging-only `nginx -t` (superseded by shared edge):

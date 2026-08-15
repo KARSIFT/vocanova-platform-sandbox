@@ -1,0 +1,13 @@
+# RETIRED — do not restore as an active nginx fragment.
+#
+# VOC-081-T02 (VOC-081-DEP-01): monitor.vocanova.site is owned by the shared-edge
+# tree at infra/nginx-shared/conf.d/30-monitor.vocanova.site.conf, loaded via
+# include /etc/nginx/conf.d/shared/*.conf in infra/nginx-shared/nginx.conf.
+#
+# The historical live host path /opt/vocanova/production/nginx/conf.d/30-monitor.conf
+# proxied to vocanova-uptime-kuma:3001 but was invisible to vocanova-shared-edge-nginx
+# (production globs load only 10-*.conf and 20-*.conf). T03 deploy convergence
+# deletes any remaining 30-monitor.conf under the production nginx conf.d directory
+# so it cannot silently become a second source of truth.
+#
+# This marker is not copied by deploy-production (only *.conf files are bundled).
