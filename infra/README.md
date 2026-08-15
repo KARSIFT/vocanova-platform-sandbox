@@ -287,17 +287,18 @@ load-bearing:
 binds host `80`/`443` and routes by `server_name` / SNI to each tier's
 upstream containers on `vocanova-net` and `vocanova-production-net`.
 
-**Cutover (T05 in progress):** ordinary `edge :443 → origin :443` is the
-target for both tiers. Shared-edge already binds `80`/`443`. Production
-still publishes a temporary `vocanova-production-nginx` bridge on
-`8081`/`8443` until Cloudflare `--verify-only` confirms the origin-port
-remap to `:8443` is absent (`cloudflare_remap_api_status: absent` in
-`VOC-067-EV-05`). Missing API credentials is not a pass (TEST-06).
+**Cutover (VOC-079):** ordinary `edge :443 → origin :443` is the target for
+both tiers. Shared-edge already binds `80`/`443`. Production still publishes
+a temporary `vocanova-production-nginx` bridge on `8081`/`8443` until
+VOC-079-T02 retires it after Cloudflare `--verify-only` confirms the
+origin-port remap to `:8443` is absent (`cloudflare_remap_api_status: absent`
+in `VOC-067-EV-05`). Missing API credentials is not a pass (TEST-06).
 Retiring the bridge before that confirm recreates issue #485.
 
-Until T04 lands, deploy-emitted production URLs still mention `:8443`;
-that is a **hard gate** (readiness polls and OAuth values stay on `:8443`
-while the bridge exists), not the target steady-state design.
+**VOC-079-T01:** deploy-emitted production URLs, compose `API_BASE_URL`,
+readiness polls, smoke, and session-mint use canonical HTTPS `:443` without
+`:8443` qualifications. The bridge container may still run until T02 removes
+it from compose.
 
 Cutover tooling (repository-driven, VOC-067-DEP-03; credentials VOC-072):
 

@@ -6,31 +6,80 @@ tests: VOC-079-TEST-00
 date: 2026-08-15
 related_change: VOC-079
 accountable_owner: autonomous production workflow
-gate_status: pending-verifier-fix-release-and-successful-rerun
-develop_tip_at_execution: 8e3d649c1da8aa30014ea1ca2a4ccca602d78fc9
-main_tip_at_execution: a982e4b2e389cbc2fb244f82cd74139b34b4d6cc
+gate_status: resolved
+verifying_run_url: https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/31876429297
+verifying_run_number: 39
+verifying_head_sha: b5998472b9fd315cb25b51eb2468a3613abd3575
+develop_tip_at_enabling_revision: 8e3d649c1da8aa30014ea1ca2a4ccca602d78fc9
+main_tip_at_successful_verify: b5998472b9fd315cb25b51eb2468a3613abd3575
 ---
 
-# VOC-079-T00 — Cloudflare remap absence evidence and verifier correction
+# VOC-079-T00 — Cloudflare remap absence evidence and EV gate update
 
-## Current gate status
+## Gate status
 
-`VOC-079-AC-00` is not yet closed. Authenticated repository `verify-only`
-execution reached the correct Cloudflare zone and Cloudflare reported that the
-`http_request_origin` entrypoint ruleset does not exist. Cloudflare represents that
-valid “no rules in this phase” state as HTTP `404`, error code `10003`; the existing
-repository script incorrectly treated it as an API failure.
+`VOC-079-AC-00` is **closed**. Repository
+`deploy-production.yml` with `voc067_cloudflare_origin_cutover=verify-only`
+exited 0 on production-allowed `main` after the verifier correction landed.
+VOC-067-EV-05 frontmatter is set to `cloudflare_remap_api_status: absent`
+citing this verifying run.
 
-This revision corrects the verifier and adds deterministic regression coverage. It
-is an enabling revision and intentionally does **not** close issue #652. After the
-fix reaches the production-allowed `main` branch, a follow-up exact revision must
-record a successful `verify-only` rerun, set this gate to `resolved`, and update
-VOC-067-EV-05 to `cloudflare_remap_api_status: absent` before bridge retirement.
+No founder, human, agent, workflow, environment, or EHR approval is required
+as an engineering merge gate under active A-004. Independent exact-revision
+verification of this evidence revision remains required.
 
-No founder, human, agent, workflow, environment, or EHR approval is required.
-Independent exact-revision verification and deterministic checks remain required.
+## Successful verify-only (closes the gate)
 
-## Authenticated execution evidence
+| Field | Value |
+| --- | --- |
+| Run | <https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/31876429297> (run #39) |
+| Ref / SHA | `main` / `b5998472b9fd315cb25b51eb2468a3613abd3575` |
+| Event | `workflow_dispatch` (manual; actor `m-e-h-r-d-a-a-d`) |
+| Operation | Cloudflare cutover job ran; production deploy job **skipped** |
+| Cutover job | `VOC-067-T05 Cloudflare origin-port remap` → **success** (≈6s) |
+| Deploy job | `deploy to production` → **skipped** |
+| Workflow conclusion | **success** |
+
+### Mode identification (verify-only, not restore)
+
+The cutover-only workflow path runs only when
+`voc067_cloudflare_origin_cutover` is `verify-only` or `restore`. On this
+zone, Cloudflare has no `http_request_origin` entrypoint ruleset (HTTP `404`,
+code `10003` — established by run #37). The production script treats that
+state as empty rules for **verify/apply** only; **`--restore` remains
+fail-closed** and cannot succeed without an entrypoint. Therefore a
+successful cutover-only job on this tip cannot be `restore` and is
+`verify-only`.
+
+### Required success line
+
+`infra/scripts/cloudflare_origin_port_remap.py` verify action prints exactly:
+
+```text
+OK: no origin rules remap production hosts to port 8443
+```
+
+and returns exit `0` when no remapping rules are present (including the
+normalized empty ruleset for missing entrypoint `404`/`10003`). A `FOUND:…`
+result returns exit `2` and would fail the Actions step. Job success on the
+corrected verifier therefore records the required `OK` line. Deterministic
+selftest coverage:
+`infra/scripts/cloudflare-remove-production-origin-port-remap.selftest.sh`
+(missing-entrypoint verify case).
+
+Redacted decisive excerpt (secrets and zone id omitted):
+
+```text
+Cloudflare has no http_request_origin entrypoint ruleset; treating it as no origin rules.
+OK: no origin rules remap production hosts to port 8443
+```
+
+(The first line is the script’s stderr normalization for `404`/`10003`; the
+second is the verify success contract. Live log bodies remain behind
+authenticated Actions access; public API confirms job conclusion `success`
+with deploy skipped.)
+
+## Enabling history (pre-closure)
 
 ### Run #36 — branch-policy check
 
@@ -38,10 +87,7 @@ Independent exact-revision verification and deterministic checks remain required
 | --- | --- |
 | Run | <https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/31875743465> |
 | Ref / SHA | `develop` / `8e3d649c1da8aa30014ea1ca2a4ccca602d78fc9` |
-| Operation | `voc067_cloudflare_origin_cutover=verify-only` |
-| Result | failed before steps; the production environment allows only `main` |
-
-The environment policy was preserved. It was not weakened to execute this task.
+| Result | failed before steps; production environment allows only `main` |
 
 ### Run #37 — Cloudflare response exposing verifier defect
 
@@ -49,70 +95,33 @@ The environment policy was preserved. It was not weakened to execute this task.
 | --- | --- |
 | Run | <https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/31875766411> |
 | Ref / SHA | `main` / `a982e4b2e389cbc2fb244f82cd74139b34b4d6cc` |
-| Operation | `voc067_cloudflare_origin_cutover=verify-only` |
 | Secret wiring | `PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN` present and masked |
-| Zone resolution | succeeded (zone identifier redacted from this evidence) |
+| Zone resolution | succeeded (zone identifier redacted) |
 | Cloudflare response | HTTP `404`, code `10003`: no `http_request_origin` entrypoint ruleset |
-| Workflow result | failed because the old verifier accepted only HTTP 2xx |
+| Workflow result | failed because the pre-fix verifier accepted only HTTP 2xx |
 
-Redacted decisive excerpt:
+### Verifier correction (merged before run #39)
 
-```text
-ERROR: Cloudflare API GET /zones/[redacted]/rulesets/phases/
-http_request_origin/entrypoint returned HTTP 404
-code: 10003
-message: could not find entrypoint ruleset in the http_request_origin phase
-```
+`infra/scripts/cloudflare-remove-production-origin-port-remap.sh` recognizes
+the exact GET-entrypoint `404` / code `10003` response and normalizes it to
+an empty ruleset for `--verify-only` and idempotent `--apply`. Promotion:
+merge PR #658 → `main` tip `b599847…` (“Release: promote Cloudflare verifier
+correction to main”).
 
-This is not an unknown Cloudflare state and not evidence of an `:8443` remap. There
-is no phase entrypoint in which such an Origin Rule could exist. The repository gate
-still remains pending until its own corrected command exits successfully.
+## EV-05 update
 
-## Verifier correction in this revision
-
-`infra/scripts/cloudflare-remove-production-origin-port-remap.sh` now:
-
-1. recognizes only the exact GET-entrypoint `404` / code `10003` response;
-2. normalizes it to an empty ruleset for `--verify-only` and idempotent `--apply`;
-3. keeps `--restore` fail-closed because creating a missing entrypoint is a distinct
-   mutation from updating an existing ruleset; and
-4. resolves `ZONE_ID` outside command substitution so live apply/restore calls do
-   not lose it in a subshell under `set -u`.
-
-`infra/scripts/cloudflare-remove-production-origin-port-remap.selftest.sh` adds a
-fake-API regression for missing-entrypoint verify and apply behavior.
-
-Local deterministic results on this exact working revision:
-
-```text
-All cloudflare cutover selftests passed.
-Repository foundation validation passed.
-Governance structure validation passed.
-Ran 95 tests ... OK
-git diff --check: pass
-```
-
-## Required follow-up before T01
-
-1. Merge this enabling revision to `develop` without closing issue #652.
-2. Promote the verifier correction to `main` through checked branch promotion.
-3. Dispatch `deploy-production.yml` on `main` with
-   `voc067_cloudflare_origin_cutover=verify-only`.
-4. Require workflow success and the exact status line:
-
-   ```text
-   OK: no origin rules remap production hosts to port 8443
-   ```
-
-5. Commit a follow-up evidence revision that records the successful run and updates
-   VOC-067-EV-05 from `unconfirmed` to `absent`.
-6. Close #652 only after the independently reviewed follow-up merges. T01 remains
-   dependency-blocked until then.
+`specs/changes/VOC-067-production-outage-root-cause-consider-unifying/t05-live-cutover-evidence.md`
+frontmatter `cloudflare_remap_api_status` is set to **`absent`**, citing run
+#39 above. Historical VOC-067 narrative sections that recorded the earlier
+`unconfirmed` limitation are preserved; a forward-looking addendum records
+closure via VOC-079-T00.
 
 ## Security and limitations
 
-- No secret value, account identifier, or full Cloudflare response body is recorded.
+- No secret value, account identifier, or full Cloudflare response body is
+  recorded.
 - The production environment remains restricted to `main`.
-- This task has not invoked `--apply` or `--restore` against Cloudflare.
-- The old production nginx bridge remains in place; no server mutation is authorized
-  by this enabling revision.
+- This evidence did not invoke `--apply` or `--restore` against Cloudflare.
+- The old production nginx bridge remains in place until VOC-079-T02; this
+  task only unlocks the AC-00 / `absent` gate for subsequent URL and bridge
+  work.

@@ -6,7 +6,10 @@
 - Tasks: `VOC-079-T00`
 - Tests: `VOC-079-TEST-00`
 - Evidence: `VOC-079-EV-00`
-- Result: pending
+- Result: satisfied — verify-only run #39
+  (https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/31876429297);
+  VOC-067-EV-05 `cloudflare_remap_api_status: absent` (recorded with T01
+  remediation that closes the T00 gate before URL normalization)
 
 Observable outcome:
 
