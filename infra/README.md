@@ -287,18 +287,19 @@ load-bearing:
 binds host `80`/`443` and routes by `server_name` / SNI to each tier's
 upstream containers on `vocanova-net` and `vocanova-production-net`.
 
-**Cutover (VOC-079):** ordinary `edge :443 → origin :443` is the target for
-both tiers. Shared-edge already binds `80`/`443`. Production still publishes
-a temporary `vocanova-production-nginx` bridge on `8081`/`8443` until
-VOC-079-T02 retires it after Cloudflare `--verify-only` confirms the
-origin-port remap to `:8443` is absent (`cloudflare_remap_api_status: absent`
-in `VOC-067-EV-05`). Missing API credentials is not a pass (TEST-06).
-Retiring the bridge before that confirm recreates issue #485.
+**VOC-079 (single shared edge):** ordinary `edge :443 → origin :443` is the
+steady state for both tiers. Only `vocanova-shared-edge-nginx` binds host
+`80`/`443`. Production compose defines postgres, api, and web only; production
+nginx conf.d and TLS material remain on disk for shared-edge read-only mounts.
+`deploy-production.yml` uses project-scoped `compose up -d --remove-orphans`
+to retire `vocanova-production-nginx` when the bridge service is dropped from
+compose — no manual `docker rm`. Cloudflare remap absence was confirmed before
+bridge retirement (`cloudflare_remap_api_status: absent` in VOC-067-EV-05;
+see VOC-079-T00).
 
-**VOC-079-T01:** deploy-emitted production URLs, compose `API_BASE_URL`,
-readiness polls, smoke, and session-mint use canonical HTTPS `:443` without
-`:8443` qualifications. The bridge container may still run until T02 removes
-it from compose.
+Deploy-emitted production URLs, compose `API_BASE_URL`, readiness polls,
+smoke, and session-mint use canonical HTTPS `:443` without `:8443`
+qualifications (VOC-079-T01).
 
 Cutover tooling (repository-driven, VOC-067-DEP-03; credentials VOC-072):
 
@@ -316,8 +317,7 @@ names above. The script prefers
 `PRODUCTION_CLOUDFLARE_API_TOKEN`.
 
 ```bash
-# 1. Confirm external :443 health (no API token required; does not prove
-#    remap absence while the :8443 bridge may still be running)
+# 1. Confirm external :443 health (no API token required)
 infra/scripts/verify-voc067-cutover.sh
 
 # 2. Verify Cloudflare origin rules (zone-capable token required; TEST-06 fail-closed)
@@ -334,8 +334,10 @@ PRODUCTION_CLOUDFLARE_ZONE_ORIGIN_RULES_TOKEN=… \
   infra/scripts/cloudflare-remove-production-origin-port-remap.sh --restore
 ```
 
-Do **not** `docker stop/rm vocanova-production-nginx` until step 2 prints
-`OK: no origin rules remap production hosts to port 8443`.
+To roll back the retired production nginx bridge, redeploy a prior revision
+that still defined `vocanova-production-nginx` on `8081`/`8443`; the
+production deploy path recreates it from compose. Use `--restore` above only
+when Cloudflare must again target origin `:8443`.
 
 The same actions are available on `deploy-production.yml` via
 `workflow_dispatch` input `voc067_cloudflare_origin_cutover`
@@ -360,10 +362,10 @@ nginx or secrets tree. Each pipeline updates only its own conf/certs path,
 then signals the shared edge with `docker exec` against
 `vocanova-shared-edge-nginx`:
 
-| Pipeline            | Writes                                        | Shared-edge signal                                                                                                                                                                                                                                     |
-| ------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `deploy-staging`    | `/opt/vocanova/infra/nginx/`, `nginx-shared/` | Routine: `nginx -t` + `nginx -s reload` when the container exists. Rare: T02 first-start bring-up when absent.                                                                                                                                         |
-| `deploy-production` | `/opt/vocanova/production/nginx/`             | Shared-edge: `nginx -t` + `nginx -s reload` when the container exists (skip if staging has not brought it up yet). Cutover bridge: same `nginx -t` + reload against `vocanova-production-nginx` after compose up, until remap is API-confirmed absent. |
+| Pipeline            | Writes                                        | Shared-edge signal                                                                                                                                                                                                                   |
+| ------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `deploy-staging`    | `/opt/vocanova/infra/nginx/`, `nginx-shared/` | Routine: `nginx -t` + `nginx -s reload` when the container exists. Rare: T02 first-start bring-up when absent.                                                                                                                       |
+| `deploy-production` | `/opt/vocanova/production/nginx/`             | Shared-edge: `nginx -t` + `nginx -s reload` when the container exists (skip if staging has not brought it up yet). Project-scoped `compose up -d --remove-orphans` retires containers dropped from the production compose file only. |
 
 Failed `nginx -t` **fails the deploy closed** without reload — the
 in-memory config (both tiers) stays on the previous generation. Neither
@@ -373,8 +375,7 @@ routine deploy.
 ### Shared-host resource budget
 
 Both stacks share one 2 vCPU / 4 GB host, so their memory limits are budgeted
-together — production ~1.9 GB apps (including the temporary `:8443` nginx
-bridge at 192m), staging ~1.3 GB apps + shared edge
+together — production ~1.7 GB apps, staging ~1.3 GB apps + shared edge
 ~320 MB, leaving headroom for the host. Raising a limit in one compose file
 without lowering another oversubscribes the host. CPU values are per-service
 ceilings, so their sum may exceed 2 by design.
@@ -384,7 +385,6 @@ ceilings, so their sum may exceed 2 by design.
 | postgres       | 768m / 1.00 cpu | 512m / 0.75 cpu | —               |
 | api            | 512m / 1.00 cpu | 384m / 0.75 cpu | —               |
 | web            | 512m / 1.00 cpu | 384m / 0.75 cpu | —               |
-| nginx (bridge) | 192m / 0.50 cpu | —               | —               |
 | nginx (shared) | —               | —               | 320m / 0.50 cpu |
 
 ### Verifying the boundary
