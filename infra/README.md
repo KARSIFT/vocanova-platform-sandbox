@@ -29,6 +29,7 @@ infra/
 ├── docker-compose.yml         # three-service app stack: postgres + api + web
 ├── docker-compose.production.yml   # VOC-037-T06 production app stack (isolated project)
 ├── docker-compose.shared-edge.yml  # VOC-067-T02 shared nginx on host 80/443
+├── docker-compose.monitoring.yml   # VOC-081-T00 Uptime Kuma (isolated monitoring project)
 ├── scripts/
 │   ├── cloudflare-remove-production-origin-port-remap.sh   # VOC-067-T05 Cloudflare API cutover
 │   ├── cloudflare-remove-production-origin-port-remap.selftest.sh
@@ -110,7 +111,22 @@ production hostnames from the same process (VOC-067-T02).
 | ------- | ------------------- | ----------- | ------------------------------------------ |
 | `nginx` | `nginx:1.27-alpine` | 80, 443     | `vocanova-net` + `vocanova-production-net` |
 
-**Only the shared-edge nginx publishes host ports.** The database and the
+**Monitoring** (`docker compose -f infra/docker-compose.monitoring.yml`):
+
+| Service       | Image                    | Port (host)           | Networks        |
+| ------------- | ------------------------ | --------------------- | --------------- |
+| `uptime-kuma` | `louislam/uptime-kuma:1` | `127.0.0.1:3001` only | default project |
+
+The monitoring Compose project name is `monitoring`; the container is
+`vocanova-uptime-kuma`. Persistent data lives at
+`/opt/vocanova/monitoring/kuma-data` on the shared host (bind-mounted to
+`/app/data` inside the container). Port `3001` must not bind to `0.0.0.0` or
+`[::]` — loopback-only until the shared-edge vhost path (VOC-081-T02) serves
+`monitor.vocanova.site`. A dedicated external Docker network connecting Kuma
+and shared edge lands in VOC-081-T01; deploy workflow convergence lands in
+T03.
+
+**Only the shared-edge nginx publishes host ports 80/443.** The database and the
 two app services are reachable only on their tier's internal network
 — this is the explicit `VOC-032-R03` mitigation (a misconfigured
 `ports:` block exposing `postgres`'s `5432` to the host would
@@ -235,6 +251,55 @@ workflow file, not a one-sided edit):
 ├── apps/api/migrations/                # SCPed by deploy-staging
 └── usr/local/bin/atlas                 # installed by deploy-staging (idempotent)
 ```
+
+## Monitoring host layout (shared host, isolated Compose project)
+
+Uptime Kuma runs as its own Compose project, separate from staging,
+production, and shared-edge. The live data directory predates this repository
+file (VOC-037-T04); VOC-081-T00 makes the Compose definition
+repository-managed without changing the data path.
+
+```
+/opt/vocanova/monitoring/
+├── docker-compose.monitoring.yml   # repository source (T03 deploy convergence)
+└── kuma-data/                      # persistent Uptime Kuma state; NOT SCPed
+```
+
+Identity preserved across first converge (VOC-081-AC-00):
+
+- Compose project name: `monitoring`
+- Container name: `vocanova-uptime-kuma`
+- Data bind: `/opt/vocanova/monitoring/kuma-data` → `/app/data`
+
+### Backup and first-converge migration (before T03 live apply)
+
+Run on the shared host **before** the first repository-driven monitoring
+Compose converge (T03). Do not claim live converge from T00 alone.
+
+1. **Snapshot existing data.** While the current Kuma container is healthy:
+   ```bash
+   sudo tar -czf "/var/backups/vocanova-kuma-data-$(date -u +%Y%m%dT%H%M%SZ).tar.gz" \
+     -C /opt/vocanova/monitoring kuma-data
+   ```
+   Verify the archive is non-empty (`tar -tzf … | head`).
+2. **Confirm the bind path.** Ensure `/opt/vocanova/monitoring/kuma-data`
+   exists, is owned by the user that will run `docker compose`, and contains
+   Uptime Kuma state (not an empty directory created by mistake).
+3. **First converge must reuse data.** The repository Compose file binds
+   `${VOCANOVA_MONITORING_ROOT:-/opt/vocanova/monitoring}/kuma-data`. The
+   first `compose up` after T03 must mount that existing tree. Empty
+   re-initialization is a FAIL for VOC-081-AC-00.
+4. **Post-converge check.** After T03/T04, confirm the dashboard still shows
+   the pre-existing monitors (SSH tunnel to `127.0.0.1:3001` until the public
+   vhost is live). `docker inspect vocanova-uptime-kuma` should show the
+   bind source as `/opt/vocanova/monitoring/kuma-data`.
+5. **Rollback if data path is wrong.** Stop the new container without deleting
+   `kuma-data`; restore from the tarball in step 1 if the directory was
+   overwritten or recreated empty. Shared-edge rollback for the monitor
+   hostname is separate (VOC-081 release plan).
+
+Kuma admin credentials, Telegram notification tokens, and other operational
+secrets remain founder-managed and are not stored in this repository.
 
 ## Production host layout (same physical host, isolated tree)
 
@@ -411,6 +476,9 @@ proceed if it is missing.
 #    `required: false` on every env_file relaxes only the
 #    config-time existence check, not runtime semantics).
 docker compose -f infra/docker-compose.yml config
+
+# 1b. Validate the monitoring compose schema (VOC-081-T00).
+docker compose -f infra/docker-compose.monitoring.yml config
 
 # 2. Build the api and web images locally.
 docker compose -f infra/docker-compose.yml build
