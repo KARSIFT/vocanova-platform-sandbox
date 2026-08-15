@@ -95,16 +95,16 @@
 #                                              shared-edge main + http{})
 #   /opt/vocanova/infra/secrets/             (founder-populated, NOT SCPed;
 #                                              .gitignore'd in repo - EXCEPT
-#                                              the AI_PROVIDER_* keys inside
-#                                              api.env, which this workflow's
-#                                              own "Sync AI-provider
-#                                              configuration" step writes
-#                                              from GitHub secrets on every
-#                                              deploy, per an explicit
-#                                              2026-08-01 founder directive;
-#                                              every other key/file here
-#                                              remains exclusively
-#                                              founder-populated)
+#                                              keys this workflow writes on
+#                                              every deploy from GitHub secrets
+#                                              or workflow inputs: AI_PROVIDER_*,
+#                                              Sentry, smoke-mint token,
+#                                              Google OAuth client id/secret
+#                                              (VOC-084-T00), and canonical
+#                                              OAuth/signup config derived from
+#                                              repository state; DATABASE_URL
+#                                              and every other key/file here
+#                                              remains founder-populated)
 #   /opt/vocanova/apps/api/scripts/migrate.sh   (SCPed by this workflow)
 #   /opt/vocanova/apps/api/scripts/seed-synthetic-smoke-user.sh
 #   /opt/vocanova/apps/api/scripts/seed-synthetic-smoke-user.sql
@@ -236,8 +236,9 @@
 #   * apps/api/.env.example + apps/web/.env.example (T01)
 #     — the env-var schema the api/web containers read;
 #     the staging host's `infra/secrets/api.env` /
-#     `infra/secrets/web.env` must follow this schema, and
-#     those files are founder-populated, not in this repo.
+#     `infra/secrets/web.env` must follow this schema.
+#     api.env is partially workflow-managed (see header);
+#     web.env remains founder-populated, not in this repo.
 
 name: deploy-staging
 
@@ -272,6 +273,11 @@ on:
         required: false
         type: boolean
         default: false
+      new_user_signup_allowlist:
+        description: "VOC-038-D00/D01: comma-separated emails admitted to sign up while NEW_USER_SIGNUP_ENABLED stays false (the staging controlled-launch cohort). Leave empty to allowlist no one. Expanding the cohort is editing this input at the next dispatch - no code change."
+        required: false
+        type: string
+        default: ""
 
 # `contents: read` is the GitHub-recommended default for any
 # workflow that only needs the repo (we do — for checkout).
@@ -378,6 +384,24 @@ jobs:
           fi
           if [ -z "${STAGING_SENTRY_DSN:-}" ] || [ -z "${STAGING_WEB_SENTRY_DSN:-}" ]; then
             echo "STAGING_SENTRY_DSN / STAGING_WEB_SENTRY_DSN partially set - refusing half-configured staging Sentry" >&2
+            exit 1
+          fi
+
+      # VOC-084-T00: fail before build/SSH when exactly one Google OAuth
+      # repository secret is present. Mirrors deploy-production.yml's
+      # fail-closed partial-pair guard; credential values are never echoed.
+      - name: Validate staging Google OAuth credential pair
+        env:
+          GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+          GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GOOGLE_OAUTH_CLIENT_ID:-}" ] && [ -z "${GOOGLE_OAUTH_CLIENT_SECRET:-}" ]; then
+            echo "GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET both unset - proceeding with OAuth disabled for staging"
+            exit 0
+          fi
+          if [ -z "${GOOGLE_OAUTH_CLIENT_ID:-}" ] || [ -z "${GOOGLE_OAUTH_CLIENT_SECRET:-}" ]; then
+            echo "GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET partially set - refusing half-configured staging Google OAuth" >&2
             exit 1
           fi
 
@@ -624,24 +648,12 @@ jobs:
       # short enough that a hung `docker compose`
       # command is caught before the job-level
       # 30-minute timeout.
-      # AI_PROVIDER_* is deliberately the ONE exception to this file's
-      # otherwise-strict "secrets/ is founder-populated, never written by
-      # this workflow" rule (see header comment). Founder directive
-      # (2026-08-01): every real AI-feedback provider evaluated
-      # (OpenCode/Gemini/Cloudflare, see VOC-032/VOC-035/VOC-036's own
-      # staging-evidence.md) fell short of DOC-09 §23's accuracy bar; rather
-      # than block launch on that, the founder explicitly chose to ship
-      # with the fastest, most reliable option available
-      # (Cloudflare/llama-3.1-8b-instruct-fp8-fast, 100% reliable but ~41%
-      # accurate) now and revisit once real usage data exists - and asked
-      # for this to be automatic (a GitHub secret), not another manual
-      # SSH-and-hand-edit step, once that specific decision was made.
-      # DATABASE_URL and every other secret in api.env remain exclusively
-      # founder-populated; this workflow touches no other key. If
-      # AI_PROVIDER is ever changed again (a different provider, a
-      # stronger/paid model, or reverted to manual control), the fix is
-      # here and in this repo's CURSOR_API_KEY-style secrets, not on the
-      # server.
+      # Repository-managed api.env keys (AI provider, Sentry, smoke-mint
+      # token, Google OAuth pair, canonical OAuth/signup config — see
+      # header comment and VOC-084-T00) are written by dedicated sync/config
+      # steps below. DATABASE_URL and every other secret in api.env remain
+      # founder-populated. AI_PROVIDER changes belong here and in this
+      # repo's CURSOR_API_KEY-style secrets, not on the server.
       - name: Sync AI-provider configuration from GitHub secrets
         if: ${{ inputs.skip_ssh_deploy != true }}
         uses: appleboy/ssh-action@v1
@@ -743,6 +755,83 @@ jobs:
               -e '/^SMOKE_TEST_SESSION_MINT_TOKEN=/d' \
               /opt/vocanova/infra/secrets/api.env
             echo "SMOKE_TEST_SESSION_MINT_TOKEN=${STAGING_SMOKE_TEST_SESSION_MINT_TOKEN}" >> /opt/vocanova/infra/secrets/api.env
+            chmod 600 /opt/vocanova/infra/secrets/api.env
+
+      # VOC-084-T00: Google OAuth is optional-until-adopted, same reasoning as
+      # deploy-production.yml's monitoring/OAuth syncs: skip cleanly while both
+      # repository secrets are unset, fail closed on a PARTIAL state. Credential
+      # values are written only to the staging secret file with mode 0600 and
+      # are never logged. GOOGLE_OAUTH_ENABLED itself is written by the config
+      # step below, gated on whether both secrets are present in GitHub.
+      - name: Sync staging Google OAuth configuration from GitHub secrets
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        uses: appleboy/ssh-action@v1
+        env:
+          STAGING_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+          STAGING_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          command_timeout: 2m
+          envs: STAGING_GOOGLE_OAUTH_CLIENT_ID,STAGING_GOOGLE_OAUTH_CLIENT_SECRET
+          script: |
+            set -euo pipefail
+            if [ -z "${STAGING_GOOGLE_OAUTH_CLIENT_ID:-}" ] && [ -z "${STAGING_GOOGLE_OAUTH_CLIENT_SECRET:-}" ]; then
+              echo "GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET both unset - skipping (OAuth not yet adopted)"
+              exit 0
+            fi
+            if [ -z "${STAGING_GOOGLE_OAUTH_CLIENT_ID:-}" ] || [ -z "${STAGING_GOOGLE_OAUTH_CLIENT_SECRET:-}" ]; then
+              echo "GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET partially set - refusing a half-configured state" >&2
+              exit 1
+            fi
+            sudo mkdir -p /opt/vocanova/infra/secrets
+            sudo touch /opt/vocanova/infra/secrets/api.env
+            sudo chown "$(id -un)":"$(id -gn)" /opt/vocanova/infra/secrets/api.env
+            sed -i \
+              -e '/^GOOGLE_OAUTH_CLIENT_ID=/d' \
+              -e '/^GOOGLE_OAUTH_CLIENT_SECRET=/d' \
+              /opt/vocanova/infra/secrets/api.env
+            {
+              echo "GOOGLE_OAUTH_CLIENT_ID=${STAGING_GOOGLE_OAUTH_CLIENT_ID}"
+              echo "GOOGLE_OAUTH_CLIENT_SECRET=${STAGING_GOOGLE_OAUTH_CLIENT_SECRET}"
+            } >> /opt/vocanova/infra/secrets/api.env
+            chmod 600 /opt/vocanova/infra/secrets/api.env
+
+      # VOC-084-T00: canonical staging OAuth callback, redirect allowlist,
+      # GOOGLE_OAUTH_ENABLED from repository pair availability, and controlled
+      # signup posture (global kill switch stays off; allowlist defaults empty).
+      - name: Write staging application configuration
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        uses: appleboy/ssh-action@v1
+        env:
+          STAGING_NEW_USER_SIGNUP_ALLOWLIST: ${{ inputs.new_user_signup_allowlist || '' }}
+          STAGING_GOOGLE_OAUTH_ENABLED: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID != '' && secrets.GOOGLE_OAUTH_CLIENT_SECRET != '' }}
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          command_timeout: 2m
+          envs: STAGING_NEW_USER_SIGNUP_ALLOWLIST,STAGING_GOOGLE_OAUTH_ENABLED
+          script: |
+            set -euo pipefail
+            sudo mkdir -p /opt/vocanova/infra/secrets
+            sudo touch /opt/vocanova/infra/secrets/api.env
+            sudo chown "$(id -un)":"$(id -gn)" /opt/vocanova/infra/secrets/api.env
+            sed -i \
+              -e '/^OAUTH_REDIRECT_URI=/d' \
+              -e '/^OAUTH_REDIRECT_ALLOWLIST=/d' \
+              -e '/^GOOGLE_OAUTH_ENABLED=/d' \
+              -e '/^NEW_USER_SIGNUP_ENABLED=/d' \
+              -e '/^NEW_USER_SIGNUP_ALLOWLIST=/d' \
+              /opt/vocanova/infra/secrets/api.env
+            {
+              echo "OAUTH_REDIRECT_URI=https://api-staging.vocanova.site/api/v1/auth/oauth/google/callback"
+              echo "OAUTH_REDIRECT_ALLOWLIST=https://staging.vocanova.site/onboarding,https://staging.vocanova.site/home"
+              echo "GOOGLE_OAUTH_ENABLED=${STAGING_GOOGLE_OAUTH_ENABLED}"
+              echo "NEW_USER_SIGNUP_ENABLED=false"
+              echo "NEW_USER_SIGNUP_ALLOWLIST=${STAGING_NEW_USER_SIGNUP_ALLOWLIST}"
+            } >> /opt/vocanova/infra/secrets/api.env
             chmod 600 /opt/vocanova/infra/secrets/api.env
 
       - name: Deploy to staging host
