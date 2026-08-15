@@ -6,7 +6,9 @@ tests: VOC-067-TEST-06
 date: 2026-08-12
 related_change: VOC-067
 accountable_owner: m-e-h-r-d-a-a-d (founder; VOC-067-DEP-03)
-cloudflare_remap_api_status: unconfirmed
+cloudflare_remap_api_status: absent
+cloudflare_remap_absent_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/31876429297
+cloudflare_remap_absent_recorded_by: VOC-079-T00 / VOC-079-EV-00
 ---
 
 # VOC-067-T05 — Live cutover verification and rollback evidence
@@ -19,14 +21,26 @@ limitation, **not a pass**. External `:443` 200 does not prove remap absence
 while a host-side `:8443` bridge may still be running (pre-cutover
 remap → `:8443` also yields edge 200).
 
+**Frontmatter update (2026-08-15, VOC-079-T00):**
+`cloudflare_remap_api_status` is now **`absent`** after repository
+`verify-only` run
+[#39](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/31876429297)
+on `main` @ `b5998472b9fd315cb25b51eb2468a3613abd3575` reported
+`OK: no origin rules remap production hosts to port 8443`. Full redacted
+transcript and enabling history:
+`specs/changes/VOC-079-retire-production-nginx-8443-bridge-and-complete/t00-evidence.md`.
+Sections below that describe the earlier `unconfirmed` limitation are
+preserved as historical T05 narrative; they are superseded for the live
+gate by this frontmatter and §8.
+
 ## Summary
 
 | Requirement | Result |
 | --- | --- |
 | Shared edge serves both tiers on ordinary `:443` | **Pass (external)** — HTTPS checks succeed for all four hostnames (§2). Does **not** by itself prove remap absence. |
-| Cloudflare origin-port remap removed or absent | **Unconfirmed** — `cloudflare_remap_api_status: unconfirmed`. No production-token `--verify-only` / `--apply` transcript. TEST-06 fail-closed. |
+| Cloudflare origin-port remap removed or absent | **Absent (VOC-079-T00)** — `cloudflare_remap_api_status: absent`. Repository verify-only run #39; see §8 / VOC-079-EV-00. Historical §3 still records the earlier unconfirmed T05 attempt. |
 | Rollback documented and credible | **Pass (documented + offline rehearsal)** — `--restore` on the production script path; steps in §4. Live API rollback not rehearsed. |
-| Temporary `:8443` bridge | **Kept** — `vocanova-production-nginx` restored in compose and deploy reload. Must not be retired until this frontmatter is `absent`. |
+| Temporary `:8443` bridge | **Kept through VOC-079-T01** — retirement is VOC-079-T02 after URL normalization. Gate no longer blocks bridge retirement once `absent`. |
 
 T00 ordered cutover step 4 (Cloudflare API remap removal) is **not** complete.
 This revision restores a safe dual-publish repository state and fail-closed
@@ -195,26 +209,41 @@ bash scripts/governance/classify-change-risk.sh
 # (package remains R4 for VOC-037 edge supersession / dual-tier cutover)
 ```
 
-## 7. Follow-up (out of T05 repository scope; still required for AC-06)
+## 7. Follow-up (out of T05 repository scope; historical — see §8)
 
-- **Founder/ops** — run `--verify-only` with `PRODUCTION_CLOUDFLARE_API_TOKEN`;
-  `--apply` if remap is still present; paste the transcript into this file and
-  set `cloudflare_remap_api_status: absent`. Then a later revision may retire
-  the bridge.
-- **VOC-067-T04** — remove remaining `:8443` qualifications from
-  `API_BASE_URL`, deploy-emitted OAuth/health URLs, and deploy poll steps.
-  Hard-gated on this evidence recording `absent` (T00 order). Do not switch
-  deploy `:8443` polls in T05.
+- **Founder/ops** — ~~run `--verify-only`… set `absent`~~ **Done via VOC-079-T00**
+  (run #39; §8). Bridge retirement remains VOC-079-T02.
+- **VOC-067-T04** — superseded for operational URL normalization by
+  **VOC-079-T01** once this frontmatter is `absent`.
 - **Independent verifier** — bind exact commit SHA; do not treat missing
-  credentials as a pass; confirm the `:8443` bridge is still in compose while
-  status is `unconfirmed`.
+  credentials as a pass; while status was `unconfirmed`, the `:8443` bridge
+  had to remain in compose.
+
+## 8. Remap absence closed by VOC-079-T00 (2026-08-15)
+
+Repository `deploy-production.yml` `voc067_cloudflare_origin_cutover=verify-only`
+on production-allowed `main` tip
+`b5998472b9fd315cb25b51eb2468a3613abd3575` (after the VOC-079-T00 verifier
+correction that treats Cloudflare GET-entrypoint HTTP `404` / code `10003`
+as an empty ruleset):
+
+| Field | Value |
+| --- | --- |
+| Run | [#39](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/31876429297) |
+| Cutover job | success; deploy job skipped |
+| Required output | `OK: no origin rules remap production hosts to port 8443` |
+| Package evidence | VOC-079-EV-00 (`t00-evidence.md`) |
+
+This section supersedes the live remap gate previously recorded as
+`unconfirmed` in §3 for subsequent VOC-079 tasks. It does not rewrite the
+historical T05 attempt narrative above.
 
 ## Acceptance mapping
 
 | Criterion | Evidence |
 | --- | --- |
-| VOC-067-AC-06 — remap removed | **Not satisfied in this revision** (`unconfirmed`; TEST-06) |
+| VOC-067-AC-06 — remap removed | **Satisfied for the live gate via VOC-079-T00** (`absent`; §8). Historical T05 revision alone was `unconfirmed` (§3). |
 | VOC-067-AC-06 — both tiers healthy on `:443` | §2 external checks (circumstantial; not remap proof) |
-| VOC-067-TEST-06 | §2–5; credentials limitation recorded as failure of the remap clause |
+| VOC-067-TEST-06 | §2–5 historical limitation; §8 closes the remap clause |
 | Rollback credible | §4 + selftest `--restore` via the production script |
 | Issue #485 class not recreated by this PR | §5 bridge restored; gate test |
