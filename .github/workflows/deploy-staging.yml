@@ -1007,6 +1007,16 @@ jobs:
             # -------------------------------------------------------------
             SHARED_EDGE_CONTAINER=vocanova-shared-edge-nginx
 
+            # VOC-081-T01: the shared-edge Compose model declares this as an
+            # external network, so every staging-owned shared-edge path must
+            # ensure it exists before a possible Compose bring-up. Creation is
+            # idempotent and repository-managed; T03 performs the controlled
+            # Compose convergence that attaches the running edge and Kuma.
+            if ! docker network inspect vocanova-monitoring-net >/dev/null 2>&1; then
+              docker network create --driver bridge vocanova-monitoring-net >/dev/null
+              echo "Created dedicated vocanova-monitoring-net (VOC-081-T01)"
+            fi
+
             if docker inspect "$SHARED_EDGE_CONTAINER" >/dev/null 2>&1; then
               if ! docker exec "$SHARED_EDGE_CONTAINER" nginx -t; then
                 echo "ERROR: shared-edge nginx -t failed after staging conf update; deploy aborted without reload (previous config still active for both tiers)" >&2

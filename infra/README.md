@@ -107,24 +107,24 @@ production hostnames from the same process (VOC-067-T02).
 
 **Shared edge** (`docker compose -f infra/docker-compose.shared-edge.yml`):
 
-| Service | Image               | Port (host) | Networks                                   |
-| ------- | ------------------- | ----------- | ------------------------------------------ |
-| `nginx` | `nginx:1.27-alpine` | 80, 443     | `vocanova-net` + `vocanova-production-net` |
+| Service | Image               | Port (host) | Networks                                                               |
+| ------- | ------------------- | ----------- | ---------------------------------------------------------------------- |
+| `nginx` | `nginx:1.27-alpine` | 80, 443     | `vocanova-net` + `vocanova-production-net` + `vocanova-monitoring-net` |
 
 **Monitoring** (`docker compose -f infra/docker-compose.monitoring.yml`):
 
-| Service       | Image                    | Port (host)           | Networks        |
-| ------------- | ------------------------ | --------------------- | --------------- |
-| `uptime-kuma` | `louislam/uptime-kuma:1` | `127.0.0.1:3001` only | default project |
+| Service       | Image                    | Port (host)           | Networks                  |
+| ------------- | ------------------------ | --------------------- | ------------------------- |
+| `uptime-kuma` | `louislam/uptime-kuma:1` | `127.0.0.1:3001` only | `vocanova-monitoring-net` |
 
 The monitoring Compose project name is `monitoring`; the container is
 `vocanova-uptime-kuma`. Persistent data lives at
 `/opt/vocanova/monitoring/kuma-data` on the shared host (bind-mounted to
 `/app/data` inside the container). Port `3001` must not bind to `0.0.0.0` or
-`[::]` — loopback-only until the shared-edge vhost path (VOC-081-T02) serves
-`monitor.vocanova.site`. A dedicated external Docker network connecting Kuma
-and shared edge lands in VOC-081-T01; deploy workflow convergence lands in
-T03.
+`[::]` — loopback-only for local ops; shared edge reaches Kuma over
+`vocanova-monitoring-net` via container DNS (`vocanova-uptime-kuma:3001`).
+The monitor vhost (VOC-081-T02) and deploy workflow network create/converge
+(T03) are separate tasks.
 
 **Only the shared-edge nginx publishes host ports 80/443.** The database and the
 two app services are reachable only on their tier's internal network
@@ -270,6 +270,16 @@ Identity preserved across first converge (VOC-081-AC-00):
 - Compose project name: `monitoring`
 - Container name: `vocanova-uptime-kuma`
 - Data bind: `/opt/vocanova/monitoring/kuma-data` → `/app/data`
+
+**Monitoring network (`vocanova-monitoring-net`, VOC-081-T01):** an external
+Docker bridge network idempotently created by the staging-owned shared-edge
+deploy path before any shared-edge Compose bring-up. Kuma and
+`vocanova-shared-edge-nginx` both join it. Staging (`vocanova-net`) and
+production (`vocanova-production-net`) app stacks do **not** join this network,
+and the monitoring Compose file does not mount tier secrets. Shared edge
+reaches Kuma at `vocanova-uptime-kuma:3001` over this network — not via a
+public host publish. T03 performs the controlled Compose convergence that
+attaches the already-running edge and Kuma containers.
 
 ### Backup and first-converge migration (before T03 live apply)
 

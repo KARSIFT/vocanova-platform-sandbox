@@ -77,6 +77,7 @@ services:
     networks:
       - vocanova-net
       - vocanova-production-net
+      - vocanova-monitoring-net
     logging: *default-logging
 
 networks:
@@ -86,3 +87,6 @@ networks:
   vocanova-production-net:
     external: true
     name: vocanova-production-net
+  vocanova-monitoring-net:
+    external: true
+    name: vocanova-monitoring-net
