@@ -25,14 +25,14 @@
 # headroom for the host itself. Raising a limit here without
 # lowering staging's oversubscribes the host.
 #
-# Public HTTPS end state (after VOC-067-T05): vocanova-shared-edge-nginx on
-# host 80/443 (infra/docker-compose.shared-edge.yml). Until Cloudflare
-# --verify-only confirms the :443 → origin :8443 remap is absent
-# (VOC-067-AC-06 / TEST-06; missing token is not a pass), this compose
-# keeps a temporary production nginx cutover bridge on host 8081/8443 so
-# a still-active remap continues to hit a healthy origin listener
-# (VOC-067-T02 dual-publish; T00 ordered cutover). Retiring this service
-# before that API confirm recreates issue #485.
+# Public HTTPS: vocanova-shared-edge-nginx on host 80/443
+# (infra/docker-compose.shared-edge.yml). VOC-079-T01: web API_BASE_URL and
+# deploy-emitted OAuth/browser URLs use canonical HTTPS :443 (no :8443
+# qualification). This compose still keeps a temporary production nginx
+# cutover bridge on host 8081/8443 until VOC-079-T02 retires it after
+# cloudflare_remap_api_status: absent (VOC-067-AC-06 / TEST-06; missing
+# token is not a pass). Retiring the bridge before that gate recreates
+# issue #485.
 name: vocanova-production
 
 x-logging: &default-logging
@@ -113,7 +113,7 @@ services:
       # Using the same public HTTPS URL the browser itself already uses
       # (proven reachable end-to-end) removes that unverified internal
       # code path entirely instead of debugging it blind.
-      API_BASE_URL: https://api-production.vocanova.site:8443
+      API_BASE_URL: https://api-production.vocanova.site
     healthcheck:
       test: ["CMD-SHELL", "wget --quiet --tries=1 -O /dev/null http://127.0.0.1:3000/ || exit 1"]
       interval: 30s

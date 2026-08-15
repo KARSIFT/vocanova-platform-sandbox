@@ -10,10 +10,12 @@ const STEP_START_MARKER = "- name: Write production application configuration";
 const STEP_END_MARKER = "- name: Deploy to production host";
 
 const EXPECTED_CONFIG_LINES = [
-  'echo "BASE_URL=https://${PRODUCTION_API_HOST}:8443"',
-  'echo "OAUTH_REDIRECT_URI=https://${PRODUCTION_API_HOST}:8443/api/v1/auth/oauth/google/callback"',
-  'echo "OAUTH_REDIRECT_ALLOWLIST=https://${PRODUCTION_WEB_HOST}:8443/onboarding,https://${PRODUCTION_WEB_HOST}:8443/home"',
+  'echo "BASE_URL=https://${PRODUCTION_API_HOST}"',
+  'echo "OAUTH_REDIRECT_URI=https://${PRODUCTION_API_HOST}/api/v1/auth/oauth/google/callback"',
+  'echo "OAUTH_REDIRECT_ALLOWLIST=https://${PRODUCTION_WEB_HOST}/onboarding,https://${PRODUCTION_WEB_HOST}/home"',
 ];
+
+const FORBIDDEN_PORT_QUALIFICATION = /:8443/;
 
 function extractConfigStepBlock(workflowSource) {
   const stepStartIndex = workflowSource.indexOf(STEP_START_MARKER);
@@ -33,7 +35,7 @@ function extractConfigStepBlock(workflowSource) {
   return workflowSource.slice(stepStartIndex, stepEndIndex);
 }
 
-test("VOC-041-TEST-02: production OAuth/browser URLs stay :8443-qualified in config-writing step", () => {
+test("VOC-079-TEST-03: production OAuth/browser URLs use canonical HTTPS without :8443 (supersedes VOC-041-TEST-02 bridge-era assertion)", () => {
   const workflowSource = readFileSync(DEPLOY_WORKFLOW_PATH, "utf8");
   const configStepBlock = extractConfigStepBlock(workflowSource);
 
@@ -44,4 +46,16 @@ test("VOC-041-TEST-02: production OAuth/browser URLs stay :8443-qualified in con
       `Expected deploy-production config step to contain: ${expectedLine}`,
     );
   }
+
+  const emittedConfigLines = configStepBlock
+    .split("\n")
+    .filter((line) => /^\s*echo "BASE_URL=/.test(line) ||
+      /^\s*echo "OAUTH_REDIRECT_URI=/.test(line) ||
+      /^\s*echo "OAUTH_REDIRECT_ALLOWLIST=/.test(line))
+    .join("\n");
+  assert.doesNotMatch(
+    emittedConfigLines,
+    FORBIDDEN_PORT_QUALIFICATION,
+    "deploy-production config-writing step must not emit production :8443 URLs after VOC-079-T01",
+  );
 });
