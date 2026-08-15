@@ -21,11 +21,10 @@ task when adoption exists but no agent PR has been opened yet.
 | Item | Location | Notes |
 |------|----------|-------|
 | Core autonomous adopt handoff | `karsift-ai-infra` PR [#37](https://github.com/KARSIFT/karsift-ai-infra/pull/37) (`da91f64`) | Initial adopt.yml autonomous path, roster PR, implement-first-task |
-| T02 remediation (this attempt) | Local `karsift-ai-infra/` working-tree delta vs `da91f64` | AC-00 audit fields, plan-PR checks + optional governance validate, `needs_root_dispatch`, adopt/plan/template header+body polish, expanded `tests/test_adoption_handoff.py` |
+| T02 completion | `karsift-ai-infra` PR [#38](https://github.com/KARSIFT/karsift-ai-infra/pull/38) (`a9f0c6512bb87b45d4579e2f0bf5de607abc0df0`) | AC-00 audit fields, plan-PR checks + optional governance validation, missed-root-dispatch recovery, adopt/plan/template contract documentation, expanded `tests/test_adoption_handoff.py` |
 
-Caller repos pin `@main`. The T02 remediation delta must land on
-`karsift-ai-infra` `main` before production callers receive it; until then the
-authorizing evidence for this task is the inspected local delta plus PR #37.
+Caller repos pin `@main`; PR #38 is merged there, so callers receive the T02
+behavior rather than relying on an uncommitted local checkout.
 
 ### Files changed in the T02 remediation delta
 
@@ -33,7 +32,6 @@ authorizing evidence for this task is the inspected local delta plus PR #37.
 - `.github/workflows/plan.yml`
 - `templates/project-repo/.github/workflows/pipeline.yml` (header comments)
 - `tests/test_adoption_handoff.py`
-- `CHANGELOG.md` (Unreleased note)
 
 ## Behavioral checklist (VOC-080-D01 / VOC-040)
 
@@ -45,7 +43,7 @@ authorizing evidence for this task is the inspected local delta plus PR #37.
 | Risk + decisions recorded | `adoption_risk`, `adoption_resolved_decisions`, `adoption_deferred_decisions` |
 | Authority provenance recorded | `adoption_authority_provenance` cites active `authority_model` at adoption |
 | Idempotent reconcile without old event | Caller `pipeline.yml` `workflow_dispatch` `action=reconcile` + `plan_pr_number`; adopt reuses task issues and no-ops unchanged roster |
-| Root task dispatch after reconcile | `Decide whether to dispatch the root task` sets `needs_root_dispatch` / `should_dispatch` when adoption is complete but no agent PR exists |
+| Root task dispatch after reconcile | `Determine whether the root task needs dispatch` sets `root-dispatch.outputs.needed` / `should_dispatch` when adoption is complete but no agent PR exists |
 | Reconcile inputs documented | `adopt.yml` header documents `action=reconcile` / `plan_pr_number`; caller template retains the inputs |
 | Plan-merge contract | `plan.yml` PR body and header describe automatic adopt — not a manual `change.yaml` flip |
 
@@ -67,9 +65,10 @@ cd karsift-ai-infra
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-Expected: all policy tests pass, including expanded
+Observed on infra PR #38: policy tests, actionlint, shellcheck, and YAML parsing
+all passed. Policy coverage includes expanded
 `test_adoption_handoff.py` reconcile/adoption assertions for AC-00 fields,
-plan-PR checks, header dispatch docs, `needs_root_dispatch`, and plan.yml
+plan-PR checks, header dispatch docs, missed-root dispatch, and plan.yml
 manual-flip absence.
 
 ## Explicitly not done (other tasks)
@@ -78,9 +77,6 @@ manual-flip absence.
 - Full caller `pipeline.yml` / AGENTS.md / DOC-15 reconciliation (`VOC-080-T04`)
 - Live sandbox rehearsal (`VOC-080-T06`)
 - Authority activation (`VOC-080-T07`)
-- Pushing the T02 remediation delta to remote `karsift-ai-infra` `main`
-  (cross-repo land; this sandbox task leaves the delta in the local checkout
-  for inspection — DEP-03 sequencing)
 
 ## Limitations
 
@@ -88,6 +84,3 @@ manual-flip absence.
   on the rehearsal target (`VOC-080-T06`).
 - Reconcile still refuses packages whose merged plan head lacks a bound PASS
   verdict or green checks — by design (`VOC-080-D02`).
-- Until the remediation delta is on `karsift-ai-infra` `@main`, callers still
-  run the PR #37 behavior without the AC-00 audit-field / checks /
-  `needs_root_dispatch` polish.
