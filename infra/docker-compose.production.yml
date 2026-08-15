@@ -21,7 +21,7 @@
 # Resource limits are the shared-host contention mitigation D00
 # required. The host is 2 vCPU / 4 GB and now runs both tiers, so
 # the two compose files' memory limits are budgeted together:
-# production caps at ~1.9 GB and staging at ~1.4 GB, leaving
+# production caps at ~1.7 GB and staging at ~1.4 GB, leaving
 # headroom for the host itself. Raising a limit here without
 # lowering staging's oversubscribes the host.
 #
