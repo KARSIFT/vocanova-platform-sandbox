@@ -3,7 +3,7 @@ id: VOC-082
 slug: fix-500-on-the-review-that-completes-today-s
 title: Fix 500 on the review that completes today's mission
 type: bugfix
-status: draft
+status: adopted
 risk: R2
 planned_implementation_risk_floor: 'Measured during drafting by running scripts/governance/classify-change-risk.sh
   --files-from against the expected task-scoped file list (apps/api/business/gamification/streak.go,
@@ -35,22 +35,22 @@ requirement_source: 'GitHub issue #675 ("Fix 500 on the review that completes to
   currentCompletion=true, verifying the 20th review commits snapshot / completion
   reward / streak atomically, and re-running the staging core-loop successfully. Explicitly
   separate from VOC-081 monitor routing.'
-requirement_approval_status: not-approved. This package has not been adopted. No field
-  in this file authorizes implementation.
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: unknown - not recorded by this draft; the adopting human/workflow should
   set this to the actual base_sha at adoption time, consistent with recent packages'
   convention.
 target_branch: develop
-approved_candidate_sha: null
+approved_candidate_sha: 4e771f622f50f1bc6984365192e55638b416e515
 owners:
   decision: unassigned
   package_preparation: planner (drafting only; adoption remains a human/workflow decision
     under active A-004)
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: expected after the fix lands on the production deploy path. The
   same ReconcileStreak / applyP4ReviewWiring path serves staging and production. Until
@@ -102,9 +102,9 @@ affected_areas:
   a substitute for the streak fix)
 - specs/changes/VOC-082-fix-500-on-the-review-that-completes-today-s
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: proposed
+  status: authorized
   target_branch: develop
   pull_request: null
   authority_issue: null
@@ -116,15 +116,20 @@ release:
   automatic_merge: true
   migration_required: false
   rollback_required: true
-repository_adoption_status: not-adopted
-adoption_pr: null
-adoption_evidence: null
+repository_adoption_status: adopted
+adoption_pr: 676
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/676
 implementation_authority_before_adoption: false
-implementation_authority_status: not-exercised
+implementation_authority_status: authorized
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A004
-blocking_reasons: Not adopted. Requires plan review and adoption under active A-004
-  of the proposed R2 classification (path floor R1), the confirmed ReconcileStreak
-  fix scope, isolation from VOC-081, and the T00 then T01 ordering.
+blocking_reasons: none - adopted and implementation-authorized
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/676#issuecomment-5302469999
+adoption_risk: R2
+adoption_resolved_decisions:
+- VOC-082-DEP-00
+- VOC-082-DEP-01
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #676 at 4e771f622f50f1bc6984365192e55638b416e515'
