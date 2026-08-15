@@ -49,9 +49,12 @@ test("VOC-079-TEST-03: production OAuth/browser URLs use canonical HTTPS without
 
   const emittedConfigLines = configStepBlock
     .split("\n")
-    .filter((line) => /^\s*echo "BASE_URL=/.test(line) ||
-      /^\s*echo "OAUTH_REDIRECT_URI=/.test(line) ||
-      /^\s*echo "OAUTH_REDIRECT_ALLOWLIST=/.test(line))
+    .filter(
+      (line) =>
+        /^\s*echo "BASE_URL=/.test(line) ||
+        /^\s*echo "OAUTH_REDIRECT_URI=/.test(line) ||
+        /^\s*echo "OAUTH_REDIRECT_ALLOWLIST=/.test(line),
+    )
     .join("\n");
   assert.doesNotMatch(
     emittedConfigLines,
