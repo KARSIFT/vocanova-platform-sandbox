@@ -33,9 +33,11 @@ A-003 adoption and activation are completed historical facts:
 - [x] VOC-003 synchronizes canonical lifecycle fields without changing frozen A-003
       substantive policy.
 
-Under active A-003, routine R3 does not require a standing technical steward or
-founder approval merely because it is R3; R4 remains founder-controlled and EHR
-remains exceptional-only.
+Under active A-003 until A-004 activation, routine R3 does not require a standing
+technical steward or founder approval merely because it is R3; R4 merge required
+founder approval (historical, VOC-075). **Post-A-004 activation** (issue #627):
+engineering-workflow gates require no founder `approved` comment; R4 remains a
+strengthened evidence class. EHR remains exceptional-only.
 
 This checklist begins after the initial DOC-16/A-002 governance pull request merges.
 The bootstrap exception expires on that merge. No unchecked item is implied to be
@@ -65,8 +67,9 @@ Record an evidence link, accountable human, and completion date for every item.
       force pushes, and conditional R3/R4 approvals.
 - [ ] Configure a non-self-referential governance ruleset for the fixed R4 paths in
       [repository-settings.md](repository-settings.md).
-- [ ] Test strengthened R3 gates without routine steward/founder approval and unchanged
-      R4 founder enforcement before enabling any technical automation.
+- [ ] Test strengthened R3 gates without routine steward/founder approval and
+      post-A-004 no-founder-comment merge/release behavior before enabling any
+      technical automation.
 
 ## Engineering and deployment gates
 

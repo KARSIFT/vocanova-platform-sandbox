@@ -75,9 +75,9 @@ Approved implementation merges automatically into develop
         ↓
 Staging deploys automatically
         ↓
-Founder approves develop → main
+Package roster complete → develop → main when release checks pass
         ↓
-Founder approves publication of main to production
+Push to main → production deploy when gates pass (fail-closed on failure)
 ```
 
 The key principles are:
@@ -88,11 +88,17 @@ The key principles are:
 - Codex implements approved specifications.
 - Claude is the implementation-review authority for merges into `develop`.
 - The founder is not required to approve merges into `develop`.
-- The founder retains authority over product decisions, `develop` → `main`, and publication to production.
+- After A-004 activation, the founder is not required to post `approved` on
+  repository-controlled merge/release/deploy paths; founder still clarifies
+  genuine product/legal/strategy requirements before stable AC (see §17.2).
 - Automation responds to validated lifecycle state, not arbitrary Markdown changes.
 - AI review supplements deterministic CI; it does not replace it.
 - Agents operate with least privilege, explicit boundaries, complete auditability, and independent production controls.
 - The workflow must remain reversible through kill switches and protected release boundaries.
+
+*Historical overview wording required founder approval of `develop` → `main` and
+production publication. Issue #627 / VOC-080 supersedes those engineering-workflow
+gates after A-004 activation.*
 
 ---
 
@@ -1395,8 +1401,15 @@ Rules:
 - No direct pushes.
 - Changes arrive only through release pull requests.
 - Must remain deployable.
-- Founder approval is required for `develop` → `main`.
-- Publication to production requires founder approval.
+- `develop` → `main` proceeds when package roster completion and release checks
+  pass (no founder `approved` comment on the repository-controlled path after
+  A-004 activation; see §17.2 and `AGENTS.md`).
+- Publication to production follows push-to-main deploy when gates pass; failed
+  deploys stay fail-closed until remediation (no founder-comment override).
+
+*Historical (pre-A-004 / pre-2026-08-08): founder approval was required for
+`develop` → `main` and production publication. Issue #627 / VOC-080 supersedes
+those engineering-workflow gates after activation.*
 
 ### `develop`
 
@@ -1475,7 +1488,12 @@ Must include:
 - Staging verification.
 - Outstanding non-blocking issues.
 
-Requires founder approval.
+Merges when release checks pass (no founder `approved` comment gate after A-004
+activation; see §17.2). Interrupted promotion retries via `reconcile-release`
+dispatch.
+
+*Historical: release PRs required founder approval before A-004 / the 2026-08-08
+auto-release path.*
 
 ### Emergency PR
 
@@ -1536,23 +1554,27 @@ described (a distinct `plan`/`adopt` split before implementation even starts, an
 automatic remediation loop), and its actual authority/risk model is A-003 (Section 10 of that
 amendment - `docs/governance/amendments/A-003-governed-autonomous-engineering-authority.md`),
 not the original A-001 text below. This section is kept as historical record of the original
-design intent but the rule that actually governs `develop` merges today is A-003 §10 plus
-`karsift-ai-infra`'s own `merge-gate.yml` - see that repo's README for the definitive mechanism.
-Where this section conflicts with A-003 or the live pipeline, **A-003 and the live pipeline win.**
+design intent but the rule that actually governs `develop` merges today is A-003 §10
+(through A-004 activation) plus `karsift-ai-infra`'s own `merge-gate.yml` - see that
+repo's README for the definitive mechanism. **VOC-080 / A-004** (issue #627) reconciles
+this section for the post-activation no-founder-gate model; A-003 remains effective until
+`VOC-080-T07`. Where this section conflicts with A-004 after activation, **A-004 and the
+live pipeline win.**
 
-## 17.1 Canonical rule (as actually implemented)
+## 17.1 Canonical rule (as actually implemented; reconciled VOC-080-T04)
 
 The real, live pipeline stage flow is:
 
 ```text
 Request (free text, a document, or a GitHub issue thread)
     ↓
-plan - drafts a DRAFT change package (spec, acceptance criteria, tasks); never authorizes anything
+plan - drafts a DRAFT change package (spec, acceptance criteria, tasks); never authorizes alone
     ↓
-Human adoption - a founder reviews the draft, edits change.yaml to mark it approved/authorized,
-                 merges the draft PR
+plan-review - independent verifier reviews the draft proposal (plan/ branch PRs)
     ↓
-adopt - opens the real, numbered per-task tracking issue(s) only now, not before
+merge-gate - auto-merges when switch is on, checks green, verdict passed, risk parseable
+    ↓
+adopt - records adoption authority and opens per-task tracking issues; may reconcile via dispatch
     ↓
 implement (per task) - an implementer model writes the diff on a branch, opens a PR
     ↓
@@ -1561,56 +1583,51 @@ ci - deterministic checks (lint, typecheck, build, test, format)
 review - an independent verifier posts a structured, commit-bound PASS / PASS WITH
          NON-BLOCKING FINDINGS / FAIL verdict
     ↓
-remediate (only on a FAIL verdict or a plain CI failure) - re-dispatches the implementer once,
-           with the failure details attached, escalating to a stronger model on this last
-           attempt; if it fails again, stops and escalates to a human instead of trying a third time
+remediate (only on FAIL or plain CI failure) - re-dispatches implementer once, then escalates
     ↓
-merge-gate - risk-aware, fails closed: auto-merges into `develop` only when the project's
-             switch is on AND checks are green AND the verdict passed AND the package has
-             `automatic_merge_allowed: true` (required for R0–R3; R4 packages must set
-             `false` and never auto-merge) - otherwise requires the founder's literal
-             "approved" comment, which is always a valid decision at any risk class,
-             including R4/unparseable risk
+merge-gate - R0–R4 eligible when switch on, checks green, verdict passed, risk parseable;
+             no founder `approved` comment path (post-A-004); unparseable risk fails closed
     ↓
-release - once every task in a package's roster is closed, opens one "Release: <package>" issue;
-          exactly one founder "approved" reply promotes `develop` → `main` via a real PR
-          (never a direct push)
+release - when every task in a package's roster closes, promotes `develop` → `main` via PR
+          (no founder `approved` comment gate on repository-controlled path)
 ```
 
-There is no automatic staging deployment stage in the live system - `release.yml`'s scope ends at
-the `develop` → `main` promotion PR merging. Any hosted deployment is separate, not-yet-built work.
+There is no automatic staging deployment stage in the live system - `release.yml`'s scope
+ends at the `develop` → `main` promotion PR merging. Push-to-main production deploy follows
+`deploy-production.yml` (2026-08-08 delegation; no founder-comment retry gate).
 
-## 17.2 Authority matrix (as actually implemented)
+**Historical (pre-A-004 activation):** Human founder adoption of draft packages and
+founder `approved` comments on R4/unparseable-risk merge and release were required under
+A-003 / VOC-075. Issue #627 supersedes those engineering-workflow gates after activation.
+
+## 17.2 Authority matrix (as actually implemented; post-A-004 target)
 
 | Action | Required authority |
 |---|---|
-| Approve product vision, scope, and material behavior | Founder |
-| Approve/adopt a draft change package | Founder (editing `change.yaml`, merging the draft PR) |
-| Draft a change package from a request | `planner` role (model resolved from `karsift-ai-infra`'s `config/roles.yml` - not fixed to any one vendor) |
-| Implement an approved task | `implementer` role (same convention) |
-| Independently verify an implementation | `reviewer` role (same convention - **must** stay a different vendor from `implementer` when possible; see `config/roles.yml`'s own notes for when that's been temporarily compromised and why) |
-| Merge implementation PR into `develop` | Deterministic checks green + reviewer PASS + package `automatic_merge_allowed: true` (R0–R3; R4 requires `false` and never auto-merges), **or** founder's literal `approved` comment (valid at any risk class) |
-| Merge `develop` into `main` | Founder's literal `approved` reply on the package's release issue - one approval per completed package, not per PR |
-| Publish `main` to production | Not built - out of scope for the live pipeline today |
+| Approve product vision, scope, and material behavior | Founder (requirement clarification before stable AC) |
+| Adopt a draft change package | Autonomous after plan-review PASS + governance validation + merge (post-A-004); reconcile dispatch if handoff missed |
+| Draft a change package from a request | `planner` role (model from `karsift-ai-infra`'s `config/roles.yml`) |
+| Implement an approved task | `implementer` role |
+| Independently verify an implementation or plan | `reviewer` / `plan_reviewer` roles (builder/verifier separation) |
+| Merge plan or implementation PR into `develop` | Deterministic checks green + independent verifier PASS + parseable risk + `auto_merge_enabled` (R0–R4; no founder comment) |
+| Merge `develop` into `main` | Package roster complete + release checks pass (no founder `approved` comment) |
+| Publish `main` to production | Push-to-main deploy when gates pass; failed deploy fail-closed until remediation |
 
 ## 17.3 Risk and `develop`
 
-R0 through R3 implementation PRs may auto-merge into `develop` without founder approval, but only
-when all of the following hold: the project has explicitly enabled the auto-merge switch, CI is
-green, the reviewer's verdict passed, and the package has `automatic_merge_allowed: true` (required
-for R0–R3; planners must not set `false` on non-R4 packages — see `AGENTS.md` and issue #573 /
-VOC-075). R4 packages must set `automatic_merge_allowed: false` and never auto-merge regardless of
-any switch. A PR with no parseable risk declaration at all also never auto-merges — R4 and
-unparseable risk always require the founder's literal `approved` comment. Risk is read from a
-`Risk classification: R#` line in the PR body; a calling project may
-supply its own deterministic, path-based risk floor (this project's is
-`docs/governance/change-risk-classification.md` /
-`.github/approved-policy/protected-paths.yaml`) that an AI-proposed risk value can raise but never
-lower.
+R0 through R4 plan and implementation PRs may auto-merge into `develop` when the project
+switch is on, CI is green, the reviewer's verdict passed, and risk is parseable. All
+packages draft `automatic_merge_allowed: true` including R4 (`VOC-080-DEP-02`); the field
+is audit-compatible only. Unparseable risk fails closed for correction — no founder
+override and no auto-merge. Risk is read from a `Risk classification: R#` line in the PR
+body; path-based floors may raise but never lower the class.
 
-A reviewer's `PASS`/`PASS WITH NON-BLOCKING FINDINGS` verdict means the implementation appears
-technically acceptable and compliant with the approved specification. It does not authorize new
-product scope.
+A reviewer's `PASS`/`PASS WITH NON-BLOCKING FINDINGS` verdict means the implementation
+appears technically acceptable and compliant with the approved specification. It does not
+authorize new product scope.
+
+**Historical (VOC-075 / issue #573):** Before A-004 activation, R4 required founder
+approval on merge and R4 packages set `automatic_merge_allowed: false`.
 
 ## 17.4 Automation level, as evidenced
 
@@ -1675,9 +1692,16 @@ A release PR from `develop` to `main` must pass:
 - Confirmation that included changes are accepted.
 - Confirmation that no included change is blocked.
 - Claude release-risk review when configured.
-- Founder approval.
+- Package roster complete and promotion checks green (no founder `approved`
+  comment gate after A-004 activation).
 
-Claude release review supplements but does not replace founder approval.
+Independent release-risk review supplements deterministic promotion checks; it
+does not create a founder-comment merge gate. Failed checks stay fail-closed
+until remediation succeeds.
+
+*Historical: this checklist required founder approval and treated Claude review
+as non-replacing of that gate. Issue #627 / VOC-080 supersedes that after A-004
+activation.*
 
 ---
 
@@ -1704,24 +1728,28 @@ Production is published only from `main`.
 Required flow:
 
 ```text
-Release PR prepared
+Release PR prepared (roster complete)
         ↓
 Required checks and staging evidence complete
         ↓
-Founder approves develop → main
+develop → main promotion merges when release checks pass
         ↓
-Production workflow prepares deployment
+Push to main triggers production workflow
         ↓
-Protected production environment requests founder approval
+Protected production environment enforces non-human branch/policy gates
         ↓
-Founder approves publication
-        ↓
-Production deployment runs
+Production deployment runs (fail-closed on check failure)
         ↓
 Smoke tests and health checks run
         ↓
 Included changes become released
 ```
+
+*Historical (pre-A-004 / pre-2026-08-08): this flow required founder approval of
+`develop` → `main` and a founder click on the protected production environment.
+Repository-controlled path now has no founder-comment or founder-reviewer gate
+(see `repository-settings.md` and T03 evidence). Interrupted promotion retries
+via `reconcile-release`, not a founder comment.*
 
 Production must not deploy from:
 
@@ -1830,7 +1858,15 @@ Changes to governance, workflow, security, deployment, or agent authority are at
 
 An agent modifying these controls cannot be the sole reviewer of its own modification.
 
-Such changes may merge into `develop` after enhanced CI and Claude approval, but cannot reach `main` or production without founder approval.
+Such changes may merge into `develop` after enhanced CI and independent verification,
+then reach `main` / production only through the normal release and deploy gates
+(no founder `approved` comment on the repository-controlled path after A-004
+activation). Builder/verifier separation remains mandatory.
+
+*Historical: protected-control changes required founder approval before `main`
+and production. Issue #627 / VOC-080 supersedes that engineering-workflow gate
+after activation; non-founder controls (CI, independent verification, fail-closed
+risk parsing) remain.*
 
 ---
 
@@ -2701,8 +2737,13 @@ Initial automation and governance changes require:
 Codex implementation
 + deterministic CI
 + Claude review
-+ founder approval before main and production
++ applicable release/deploy gates before main and production
 ```
+
+*Historical bootstrap wording required founder approval before main and production.
+After A-004 activation (VOC-080 / issue #627), repository-controlled release and
+deploy paths do not use a founder `approved` comment; the one-time DOC-16/A-002
+bootstrap exception remains exhausted and non-reusable.*
 
 The system may not expand its own production authority.
 
@@ -2805,7 +2846,14 @@ A decision becomes official only after its required repository changes are revie
 
 ### DG1-05 — Founder authority
 
-The founder remains the final authority for product direction, scope, high-risk product decisions, `develop` → `main`, and production publication.
+The founder remains the final authority for product direction, scope, high-risk product
+decisions, and genuine product/legal/strategy requirement clarification before stable AC.
+`develop` → `main` and production publication on the repository-controlled path use
+release/deploy gates without a founder `approved` comment after A-004 activation
+(see DG1-07 and `AGENTS.md`).
+
+*Correction 2026-08-15 (VOC-080 / issue #627): supersedes founder-approval gates on
+merge/release/deploy engineering workflows; founder role as requirement clarifier remains.*
 
 ### DG1-06 — Controlled automation
 
@@ -2813,7 +2861,9 @@ Implementation changes may merge into `develop` only after required deterministi
 
 ### DG1-07 — Production protection
 
-Merging into `main` and publication to production require founder approval during the MVP.
+Merging into `main` and publication to production require applicable release/deploy gates during the MVP (founder `approved` comment not a repository-controlled gate after 2026-08-08 / A-004).
+
+*Correction 2026-08-15 (VOC-080 / issue #627): see `AGENTS.md` "Release and deployment authority".*
 
 ## Decision Group 2 — Document and Decision Architecture
 
@@ -2903,7 +2953,16 @@ Product decision-making, implementation, review, and production publication rema
 
 ### DG4-02 — Founder authority
 
-The founder retains final authority over product direction, scope, unresolved product ambiguity, `develop` → `main`, and production publication. Amendment A-001 removes routine founder approval from `develop`.
+The founder retains final authority over product direction, scope, and unresolved
+product/legal/strategy ambiguity (requirement clarification before stable AC).
+Amendment A-001 removes routine founder approval from `develop`. **Post-A-004
+activation:** `develop` → `main` and production publication on the
+repository-controlled path do not wait on a founder `approved` comment
+(see §17.2 and `AGENTS.md`).
+
+*Correction 2026-08-15 (VOC-080 / issue #627): engineering-workflow founder-comment
+gates removed after activation; historical A-003/VOC-075 R4 merge gates preserved
+as history only.*
 
 ### DG4-03 — ChatGPT boundary
 
@@ -2988,6 +3047,10 @@ class. Preserved here as historical record, not current rule.*
 `automatic_merge_allowed: false`; R0–R3 packages must set `true` and must not use this field to
 require founder approval on merge. See §17.3 and `AGENTS.md`.*
 
+*Correction 2026-08-15 (VOC-080 / issue #627, post-A-004 activation): no founder `approved`
+comment on engineering-workflow gates at any risk class; all packages draft
+`automatic_merge_allowed: true` including R4. See A-004 and §17.3.*
+
 ### DG5-09 — Automatic staging
 
 Successful merges into `develop` automatically deploy to staging.
@@ -2997,7 +3060,9 @@ Successful merges into `develop` automatically deploy to staging.
 
 ### DG5-10 — Protected production
 
-Production publication occurs only from `main`, after founder approval of the release PR and protected production environment.
+Production publication occurs only from `main`, after release promotion checks pass and protected production environment gates (no founder `approved` comment on repository-controlled path since 2026-08-08; see `AGENTS.md`).
+
+*Correction 2026-08-15 (VOC-080 / issue #627): supersedes founder-approval gate on this path after A-004 activation.*
 
 ### DG5-11 — Sensitive code ownership
 
@@ -3315,17 +3380,32 @@ Every approved merge into `develop` deploys automatically to staging and runs re
 *Correction 2026-07-24: see DG5-09's identical correction note above - never built. Preserved as
 historical record.*
 
-### DG10-07 — Founder-controlled main and production
+### DG10-07 — Main and production release gates
 
-The founder approves `develop` → `main` and publication of `main` to production.
+`develop` → `main` and publication of `main` to production proceed when package
+roster completion and release/deploy checks pass (no founder `approved` comment
+on the repository-controlled path after A-004 activation).
 
-### DG10-08 — No autonomous production
+*Historical: founder approved `develop` → `main` and production publication.
+Correction 2026-08-15 (VOC-080 / issue #627).*
 
-Agents may prepare releases and run checks but may not independently merge into `main` or publish to production.
+### DG10-08 — No autonomous production bypass
+
+Agents may prepare releases and run checks but may not bypass CI, independent
+verification, or fail-closed remediation. Automatic promotion and push-to-main
+deploy run only when those non-founder gates pass.
+
+*Historical wording forbade agents from merging to `main` or publishing without
+founder approval. Post-A-004, the repository-controlled auto-release/deploy path
+is authorized without a founder comment; agents still must not self-approve,
+self-merge their own exact revision, or override failed gates.*
 
 ### DG10-09 — Bootstrap protection
 
-The automation system cannot expand its own production authority or weaken controls without independent review and founder approval before `main`.
+The automation system cannot expand its own production authority or weaken
+controls without independent review and applicable release gates before `main`.
+
+*Historical: required founder approval before `main`. See A-004 / issue #627.*
 
 ### DG10-10 — Reviewable bootstrap packages
 
@@ -3350,9 +3430,11 @@ The following earlier concepts are explicitly superseded:
 3. Any initial pilot rule requiring the founder to manually approve the first implementation merges into `develop`.
 4. Any ten-pull-request waiting period before enabling Claude-approved `develop` auto-merge.
 5. Any wording that describes Claude as merely advisory for `develop` implementation merges.
-6. Any wording that allows an AI agent to merge into `main` or publish to production without founder approval.
+6. Any wording that requires a founder `approved` comment (or equivalent click) before merging into `main` or publishing to production on the repository-controlled path after A-004 activation (VOC-080 / issue #627). Non-founder gates — CI, independent verification, parseable risk, roster completion, fail-closed remediation — remain mandatory; no agent may self-review its own exact revision or override failed gates.
 
-The canonical rule is Amendment A-001.
+The canonical rule for `develop` merges was Amendment A-001, then A-003 §10;
+after A-004 activation the no-founder-gate engineering-workflow model in A-004
+and `AGENTS.md` governs adopt/merge/release/deploy.
 
 ---
 

@@ -35,9 +35,10 @@ The following are R4 by decision type even when no protected path is changed:
 
 `CODEOWNERS` routes review; it is not approval evidence and does not express every
 required approval combination. Under active A-003, routine R3 ownership routing must
-not be interpreted as standing technical-steward or founder approval. R4 founder
-authority remains unchanged. Claude Code may independently verify protected changes
-but is never a human approval authority.
+not be interpreted as standing technical-steward or founder approval. **Post-A-004
+activation:** R4 path floors and strengthened evidence remain; founder `approved`
+comments are not engineering-workflow merge gates. Claude Code may independently
+verify protected changes but is never a human approval authority.
 
 EHR may obtain qualified human expertise for an exceptional triggered matter. It
 must not become permanent ownership or a routine replacement approval layer.
