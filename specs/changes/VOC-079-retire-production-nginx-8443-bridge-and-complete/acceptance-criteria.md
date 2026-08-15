@@ -46,7 +46,8 @@ isolation is not weakened.
 - Tasks: `VOC-079-T02`, `VOC-079-T03`
 - Tests: `VOC-079-TEST-02`, `VOC-079-TEST-05`
 - Evidence: `VOC-079-EV-02`, `VOC-079-EV-03`
-- Result: pending
+- Result: pending — T03 attempt 1 blocked; `main` lacks T02; `:8443` bridge
+  still live (see `t03-evidence.md` §2–§3)
 
 Observable outcome after normal production deployment:
 
@@ -62,7 +63,8 @@ Observable outcome after normal production deployment:
 - Tasks: `VOC-079-T03`
 - Tests: `VOC-079-TEST-05`
 - Evidence: `VOC-079-EV-03`
-- Result: pending
+- Result: pending — external `:443` checks pass (T03 attempt 1 §3a); live
+  deploy convergence blocked until T02 on `main`
 
 Observable outcome: shared edge continues Host/SNI routing for
 `staging.vocanova.site`, `api-staging.vocanova.site`,
@@ -125,7 +127,9 @@ end state once AC-00 is met.
 - Tasks: `VOC-079-T03`
 - Tests: `VOC-079-TEST-06`
 - Evidence: `VOC-079-EV-03`
-- Result: pending
+- Result: satisfied (repository rollback documentation) — rollback owner
+  `m-e-h-r-d-a-a-d`; live rehearsal deferred to post-T02 deploy (T03 attempt 1
+  §5–§7)
 
 Observable outcome:
 
