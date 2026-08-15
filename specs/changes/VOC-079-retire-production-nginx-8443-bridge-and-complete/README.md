@@ -1,9 +1,9 @@
 # VOC-079 — Retire Production nginx :8443 Bridge and Complete the Single Shared-Edge Cutover
 
-**Status: draft, not adopted.** Nothing in this package is implementation-authorized.
-It is a draft response to
+**Status: adopted; implementation authorized.** The founder adopted this R4 package
+by approving plan PR #625 after independent plan review. It responds to
 [issue #624](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/624),
-prepared for founder review at adoption time (proposed **R4**).
+and is implemented only through its ordered governed tasks.
 
 ## Identity and lifecycle
 
@@ -11,13 +11,13 @@ prepared for founder review at adoption time (proposed **R4**).
 - Title: Retire Production nginx :8443 Bridge and Complete the Single Shared-Edge Cutover
 - Canonical path:
   `specs/changes/VOC-079-retire-production-nginx-8443-bridge-and-complete`
-- Lifecycle state: `draft` (not adopted, not authorized for implementation)
-- Proposed risk: `R4` (draft proposal only — see `change.yaml`'s
+- Lifecycle state: `adopted` (implementation authorized; no task authority exercised yet)
+- Accepted risk: `R4` (see `change.yaml`'s
   `planned_implementation_risk_floor`; measured path floor at drafting is
   **R3** for `infra/*` and deploy workflows)
-- Owner: unassigned (see `change.yaml`'s `owners` block)
-- Approval evidence: none yet — `approval_status: not-approved`,
-  `implementation_authorized: false`
+- Decision owner: `m-e-h-r-d-a-a-d` (founder)
+- Approval evidence: founder `approved` comment on PR #625 after independent
+  plan review of commit `364333c6e89226b99e96b34a3cda6cd59504b19c`
 - Target branch: `develop`
 - Linked GitHub issues:
   - [#624](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/624)
@@ -77,25 +77,22 @@ production to `:8443`. This package still requires repository-controlled
 - Not manual SSH edits or ad hoc `docker stop/rm` on the server.
 - Not rewriting historical VOC-041/VOC-042/VOC-067 evidence as if the bridge
   never existed.
-- Not adopting, authorizing, implementing, or merging itself.
+- Not bypassing ordered task authority, independent verification, or release gates.
 
-## Open questions for the reviewing human
+## Adopted decisions
 
-See `specification.md`. The most important at adoption:
-
-1. Disposition of unfinished VOC-067-T04/T05 and VOC-072-T02
-   (`VOC-079-DEP-00`).
-2. Exact orphan-removal mechanism scoped to the production compose project
-   (`VOC-079-DEP-01`).
-3. Confirm repository verify-only is mandatory before bridge retirement
-   (`VOC-079-DEP-02`).
-4. Accept proposed **R4** (path floor R3; semantic elevation for live edge
-   topology / rollback-path change).
+1. VOC-079 supersedes unfinished VOC-067-T04/T05 and VOC-072-T02 completion
+   work without resetting predecessor attempt budgets.
+2. Production cleanup uses Compose project-scoped `--remove-orphans`; the
+   shared-edge compose project is not targeted or recreated.
+3. Repository-controlled Cloudflare `verify-only` evidence is mandatory before
+   bridge retirement; dashboard confirmation alone is supporting context.
+4. Risk is **R4** (path floor R3; semantic elevation for live edge topology and
+   rollback-path change).
 
 ## Verification, approvals, release, and closure
 
 See `test-plan.md`, `release-plan.md`, and `implementation-plan.md`. This
-package carries no standing approval; R4 founder adoption, implementation
-authorization, independent verification of each exact revision, and
-production outcome evidence remain distinct gates per AGENTS.md and
-CLAUDE.md.
+package carries founder adoption and implementation authorization. Per-task
+independent verification of each exact revision and production outcome evidence
+remain distinct gates per AGENTS.md and CLAUDE.md.

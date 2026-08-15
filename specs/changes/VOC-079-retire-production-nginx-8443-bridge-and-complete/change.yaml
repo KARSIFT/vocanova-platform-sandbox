@@ -3,7 +3,7 @@ id: VOC-079
 slug: retire-production-nginx-8443-bridge-and-complete
 title: Retire Production nginx :8443 Bridge and Complete the Single Shared-Edge Cutover
 type: infrastructure
-status: draft
+status: adopted
 risk: R4
 planned_implementation_risk_floor: "Measured during drafting by running scripts/governance/classify-change-risk.sh\
   \ --files-from against the expected task-scoped file list (infra/docker-compose.production.yml,\
@@ -30,21 +30,27 @@ requirement_source: 'GitHub issue #624 ("Retire production nginx :8443 bridge an
   Issue #595 previously closed with a retain-bridge decision; founder direction on
   2026-08-15 supersedes that rationale and requires finishing the single-edge design
   through repository implementation (no manual SSH / ad hoc container removal). '
-requirement_approval_status: "not-approved \u2014 draft package only; adoption and\
-  \ R4 founder acceptance remain human decisions."
+requirement_approval_status: 'Approved by the founder (m-e-h-r-d-a-a-d) through the
+  exact `approved` comment on plan PR #625 at 2026-08-15T00:11:48Z, after independent
+  plan review of commit 364333c6e89226b99e96b34a3cda6cd59504b19c returned PASS
+  WITH NON-BLOCKING FINDINGS. The founder accepts R4 and resolves VOC-079-DEP-00
+  through DEP-02 as recorded below: VOC-079 supersedes the unfinished VOC-067-T04/T05
+  and VOC-072-T02 completion path without redistributing their attempt budgets;
+  production cleanup must use Docker Compose project-scoped `--remove-orphans`;
+  and repository-controlled Cloudflare verify-only evidence is mandatory before
+  bridge retirement. The recovery PR also makes the reviewer-requested rollback
+  rehearsal bar explicit.'
 base_branch: develop
-base_sha: unknown - not recorded by this draft; the adopting human/workflow should
-  set this to the actual base_sha at adoption time, consistent with recent packages'
-  convention.
+base_sha: 5195ff1732b9e1a1658b339472b1dc1b71eb91a6
 target_branch: develop
-approved_candidate_sha: null
+approved_candidate_sha: 364333c6e89226b99e96b34a3cda6cd59504b19c
 owners:
-  decision: unassigned
+  decision: m-e-h-r-d-a-a-d (founder)
   package_preparation: planner (drafting only; adoption remains a human decision)
-  implementation: unassigned
-  independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+  implementation: builder role, assigned per task by the governed pipeline
+  independent_verification: verifier role, assigned per task by the governed pipeline
+approval_status: adopted
+implementation_authorized: true
 automatic_merge_allowed: false
 production_impact: 'expected. Retiring vocanova-production-nginx and normalizing production
   URLs to ordinary :443 changes how production reaches the public internet and how
@@ -66,27 +72,20 @@ artifacts:
   release_plan: release-plan.md
 dependencies:
 - id: VOC-079-DEP-00
-  status: "unresolved at drafting time. Disposition of remaining VOC-067-T04 / VOC-067-AC-05\u2013\
-    AC-06 work and VOC-072-T02 verify-only gate once this package lands. Recommended\
-    \ default: this package supersedes the unfinished cutover steps; update VOC-067-EV-05\
-    \ / AC Results from VOC-079 evidence rather than redistributing exhausted VOC-067-T04/T05\
-    \ or VOC-072-T02 attempt budgets. See specification.md open question 1.\n"
+  status: 'resolved at adoption. VOC-079 supersedes the unfinished VOC-067-T04/T05
+    and VOC-072-T02 completion path. VOC-079 evidence updates VOC-067-EV-05 and
+    related current-state records without redistributing or silently resetting predecessor
+    attempt budgets.'
 - id: VOC-079-DEP-01
-  status: 'unresolved at drafting time. Exact scoped declarative orphan-removal mechanism
-    on production deploy (compose project-scoped flag vs equivalent) so vocanova-production-nginx
-    disappears without manual docker rm, without orphan-removing vocanova-shared-edge-nginx
-    or unrelated projects. See specification.md open question 2.
-
-    '
+  status: 'resolved at adoption. Use Docker Compose project-scoped `up -d --remove-orphans`
+    against the explicit `vocanova-production` compose project after the nginx service
+    is removed. The shared edge remains a distinct compose project and must not be
+    targeted or recreated by this cleanup.'
 - id: VOC-079-DEP-02
-  status: 'unresolved at drafting time. Whether founder dashboard confirmation of
-    no Origin Rules is accepted only as supporting context, or whether adoption requires
-    T00''s repository verify-only transcript before any bridge-retirement PR merges.
-    Recommended default (matches issue #624 AC): repository-controlled verify-only
-    is mandatory; dashboard alone is not sufficient. See specification.md open question
-    3.
-
-    '
+  status: 'resolved at adoption. T00 repository-controlled Cloudflare verify-only
+    transcript is mandatory before any bridge-retirement implementation merges.
+    Founder dashboard confirmation is supporting context, not sufficient acceptance
+    evidence by itself.'
 - id: VOC-067
   status: 'Adopted predecessor. Shared-edge layout (T02), deploy isolation (T03),
     and dual-publish bridge are on develop. VOC-067-EV-05 still records cloudflare_remap_api_status:
@@ -113,6 +112,8 @@ affected_areas:
 - scripts/foundation/voc067-cutover-bridge-gate.test.mjs (replace / supersede)
 - scripts/foundation/docker-compose-production-api-base-url-port.test.mjs
 - scripts/foundation/deploy-production-oauth-port.test.mjs
+- infra/scripts/verify-voc067-cutover.sh (if T03 extends the verifier; otherwise
+  execution-only evidence)
 - specs/changes/VOC-067-production-outage-root-cause-consider-unifying/t05-live-cutover-evidence.md
   (cloudflare_remap_api_status and related cutover notes)
 - docs/operations/ (only current operator docs that still treat :8443 as steady state)
@@ -120,7 +121,7 @@ affected_areas:
   \ verify-only / restore path \u2014 not a git path)"
 - specs/changes/VOC-079-retire-production-nginx-8443-bridge-and-complete
 implementation:
-  authorized: false
+  authorized: true
   required: true
   status: proposed
   target_branch: develop
@@ -134,15 +135,15 @@ release:
   automatic_merge: false
   migration_required: false
   rollback_required: true
-repository_adoption_status: not-adopted
-adoption_pr: null
-adoption_evidence: null
+repository_adoption_status: adopted
+adoption_pr: 625
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/625
 implementation_authority_before_adoption: false
-implementation_authority_status: not-authorized
+implementation_authority_status: not-exercised
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A003
-blocking_reasons: "Draft only. Blocks until founder adoption of this R4 package, resolution\
-  \ of VOC-079-DEP-00\u2013DEP-02 (or explicit deferral), and implementation_authorized:\
-  \ true. Path floor R3; proposed package risk R4. "
+blocking_reasons: 'None - adopted after founder approval on PR #625. T00 must still
+  produce repository-controlled Cloudflare verify-only evidence before any bridge-retirement
+  implementation merges; that is an ordered task gate, not a package-adoption blocker.'

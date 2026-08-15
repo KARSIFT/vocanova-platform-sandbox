@@ -109,8 +109,9 @@
      the production nginx bridge service definition and publish ports.
   2. Confirm Cloudflare
      `cloudflare-remove-production-origin-port-remap.sh --restore` (or
-     workflow `restore`) remains available; cite offline selftest and/or a
-     redacted live restore rehearsal if performed.
+     workflow `restore`) remains available and run the repository's offline
+     `--restore` selftest. A redacted live restore rehearsal may be cited if
+     incident response required one, but is not required solely for this test.
   3. Name rollback owner and monitoring window.
 - Expected result: rollback steps are specific, reversible, and do not
   require undocumented manual SSH as the primary path.

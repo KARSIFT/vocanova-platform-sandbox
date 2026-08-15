@@ -122,6 +122,10 @@ end state once AC-00 is met.
 - Tasks: `VOC-079-T03`
 - Tests: `VOC-079-TEST-06`
 - Evidence: `VOC-079-EV-03`
+- Outcome: the written rollback procedure names an accountable owner and monitoring
+  window, and the repository's production `--restore` path passes its offline
+  selftest. A live Cloudflare restore rehearsal is optional and must not be run
+  solely to satisfy this criterion when no rollback is needed.
 - Result: pending
 
 Observable outcome:
