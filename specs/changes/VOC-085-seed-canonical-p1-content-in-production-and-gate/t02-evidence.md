@@ -62,7 +62,7 @@ File added: `scripts/foundation/voc085-production-route-sweep.test.mjs`
 |---------------|----------------------------|
 | `VOC-085-AC-05` | Section **# 6** covers ten fixed + two API-derived discover routes with minted session |
 | `VOC-085-AC-06` | No manual DB edits; synthetic onboarding remains seed-owned (`voc085-production-p1-seed.test.mjs` TEST-08) |
-| `VOC-085-AC-07` (route tests) | Selftest cases 9–11 + foundation TEST-06/07 |
+| `VOC-085-AC-07` (route tests) | Selftest cases 9–13 + foundation TEST-06/07 |
 | `VOC-085-AC-08` | No topology change; foundation `voc079-*` guards + deploy shared-edge reload only |
 | `VOC-085-D05` | Recorded harness shape above; read-only GET sweep |
 | `VOC-085-D07` | Deploy workflow unchanged except invoking strengthened smoke suite |
@@ -86,21 +86,37 @@ Implementation run (2026-08-15):
 | `bash scripts/governance/validate-governance.sh` | pass |
 | `bash scripts/governance/classify-change-risk.sh --files-from …` | pass (floor R3 via smoke scripts) |
 | `git diff --check` | pass |
-| `bash infra/scripts/smoke-test-production.selftest.sh` | pass (11 cases) |
+| `bash infra/scripts/smoke-test-production.selftest.sh` | pass (13 cases after redirect-traversal follow-up) |
 | `node --test scripts/foundation/voc085-production-route-sweep.test.mjs` | pass (3 tests) |
 
 ## Live Cloudflare verification (`VOC-085-TEST-09`)
 
-Pending protected `deploy-production.yml` run after merge/promotion to `main`.
-Record in this section when available:
+Initial protected production deploy:
+https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/31913634189
 
-1. Deploy workflow run URL (redacted).
-2. Smoke suite section **# 5** PASS lines for non-empty journey-situations and
-   situation/word detail checks through Cloudflare hostnames.
-3. Smoke suite section **# 6** PASS lines for all ten fixed routes plus dynamic
-   discover routes.
-4. Optional operator confirmation:
-   `infra/scripts/verify-voc067-cutover.sh` on canonical `:443` hostnames.
+- Seed reported 7 situations, 39 words, 42 meanings, 42 examples, 126 notes,
+  and 42 journey-word links.
+- Authenticated smoke returned 200 for `/api/v1/me`, a non-empty list of 7
+  journey situations, real `airport` situation detail with meanings, and real
+  `boarding-pass` word detail.
+- Read-only host verification matched those canonical counts and confirmed the
+  synthetic account was active, verified, marked synthetic, and onboarding
+  completed.
+- The initial route sweep reached all ten fixed and both API-derived dynamic
+  routes, but seven protected routes returned internal 307 responses. Although
+  the checker rejected sign-in redirects, it did not traverse other redirects
+  to a final rendered response. Issue #706 was reopened rather than claiming
+  that weaker evidence complete.
+
+Follow-up behavior in this revision:
+
+- Traverse at most five relative same-origin redirects and require a final
+  2xx response.
+- Reject sign-in, missing-Location, protocol-relative/external, and looping
+  redirects before an explicit session cookie can leave the production origin.
+- Final post-follow-up deploy and stable-count/idempotency evidence is recorded
+  in issue #706's closure comment so the evidence can refer to the deployed
+  revision without creating an endless evidence-only redeploy cycle.
 
 ## Topology / isolation confirmation (`VOC-085-TEST-10`)
 
@@ -112,4 +128,7 @@ Repository-side evidence (no deploy topology change in this task):
 - Staging/production secret/directory isolation unchanged (no workflow edits beyond
   the existing smoke invocation).
 
-Live host confirmation remains part of the post-deploy operator record above.
+Initial live host verification found exactly one healthy shared-edge nginx, no
+production nginx, no listeners on 8081/8443, and healthy staging, production,
+and monitoring containers. The post-follow-up confirmation is recorded with
+the final deploy in issue #706.

@@ -140,29 +140,59 @@ web_get() {
 }
 
 # assert_web_route_reachable <label> <path> <cookie> [require_auth]
-# Pass on 2xx. Pass on 3xx unless require_auth is true and Location targets
-# /signin (unauthenticated redirect). Fails on 4xx/5xx/network errors.
+# Follow a bounded chain of relative, same-origin redirects and require a final
+# 2xx response. Sign-in, external/protocol-relative, missing-Location, and
+# looping redirect chains fail closed. The explicit cookie header is therefore
+# never forwarded outside web_base_url.
 assert_web_route_reachable() {
   local label="$1" route_path="$2" cookie="$3"
   local require_auth="${4:-false}"
-  web_get "$route_path" "$cookie"
-  local status="$_web_last_status"
-  local location="$_web_last_location"
-  case "$status" in
-    2*)
-      pass "$label returned HTTP $status"
-      ;;
-    3*)
-      if [ "$require_auth" = "true" ] && echo "$location" | grep -q '/signin'; then
-        fail "$label redirected to sign-in (HTTP $status Location: $location)"
-      else
-        pass "$label returned HTTP $status"
-      fi
-      ;;
-    *)
-      fail "$label returned HTTP $status (expected 2xx/3xx)"
-      ;;
-  esac
+  local current_path="$route_path"
+  local redirects=0
+
+  while true; do
+    web_get "$current_path" "$cookie"
+    local status="$_web_last_status"
+    local location="$_web_last_location"
+    case "$status" in
+      2*)
+        pass "$label reached final HTTP $status after $redirects redirect(s)"
+        return
+        ;;
+      3*)
+        if [ -z "$location" ]; then
+          fail "$label returned HTTP $status without a Location header"
+          return
+        fi
+        case "$location" in
+          /signin|/signin\?*)
+            fail "$label redirected to sign-in (HTTP $status Location: $location)"
+            return
+            ;;
+          //*)
+            fail "$label returned an unsafe protocol-relative redirect (Location: $location)"
+            return
+            ;;
+          /*)
+            ;;
+          *)
+            fail "$label returned a non-relative redirect (Location: $location)"
+            return
+            ;;
+        esac
+        redirects=$((redirects + 1))
+        if [ "$redirects" -gt 5 ]; then
+          fail "$label exceeded 5 same-origin redirects"
+          return
+        fi
+        current_path="$location"
+        ;;
+      *)
+        fail "$label returned HTTP $status (expected final 2xx)"
+        return
+        ;;
+    esac
+  done
 }
 
 # json_field <json> <dotted.path> - reads a field via jq if available,

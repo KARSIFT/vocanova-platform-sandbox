@@ -101,13 +101,28 @@ test("VOC-085-TEST-07: route sweep fails closed on missing session cookie and us
   );
   assert.match(
     smokeScript,
-    /assert_web_route_reachable[\s\S]*require_auth/,
-    "protected routes must distinguish sign-in redirects from in-app redirects",
+    /exceeded 5 same-origin redirects/,
+    "route traversal must be bounded and fail on redirect loops",
   );
   assert.match(
     smokeScript,
     /redirected to sign-in/,
     "sign-in redirects on protected routes must fail the suite",
+  );
+  assert.match(
+    smokeScript,
+    /unsafe protocol-relative redirect/,
+    "protocol-relative redirects must be rejected before forwarding the cookie",
+  );
+  assert.match(
+    smokeScript,
+    /non-relative redirect/,
+    "external redirects must be rejected before forwarding the cookie",
+  );
+  assert.match(
+    smokeScript,
+    /reached final HTTP \$status/,
+    "route sweep must require a final rendered 2xx after safe redirects",
   );
   assert.doesNotMatch(
     smokeScript,
