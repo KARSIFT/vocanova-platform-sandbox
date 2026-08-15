@@ -167,6 +167,18 @@ jobs:
           printf '%s\n' "$PRODUCTION_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
+      # actions/setup-go v7.0.0, pinned to the immutable commit documented at
+      # https://github.com/actions/setup-go/releases/tag/v7.0.0
+      #
+      # VOC-085-T00: the bundle step below builds apps/api/cmd/seed on the
+      # runner, so the Go version must come from the repository's own pin
+      # (apps/api/go.mod's `go`/`toolchain` directives) rather than from
+      # whatever the ubuntu-latest image happens to ship that week.
+      - name: Set up Go for the P1 content seed build
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: "apps/api/go.mod"
+
       - name: Bundle production deploy artifacts
         run: |
           set -euo pipefail
@@ -175,6 +187,7 @@ jobs:
           mkdir -p /tmp/production-deploy-bundle/nginx/conf.d
           mkdir -p /tmp/production-deploy-bundle/infra/scripts
           mkdir -p /tmp/production-deploy-bundle/apps/api/scripts
+          mkdir -p /tmp/production-deploy-bundle/apps/api/bin
           mkdir -p /tmp/production-deploy-bundle/apps/api/migrations
 
           cp infra/docker-compose.production.yml /tmp/production-deploy-bundle/
@@ -190,6 +203,21 @@ jobs:
           cp apps/api/scripts/seed-synthetic-smoke-user.sh /tmp/production-deploy-bundle/apps/api/scripts/
           cp apps/api/scripts/seed-synthetic-smoke-user.sql /tmp/production-deploy-bundle/apps/api/scripts/
           chmod +x /tmp/production-deploy-bundle/apps/api/scripts/seed-synthetic-smoke-user.sh
+          # VOC-085-T00: canonical P1 content seed binary. Build on the runner,
+          # then ship and run on the production host so Postgres remains
+          # private (no new public database ingress from GitHub Actions).
+          # `-C apps/api` is required: there is no root go.mod or go.work, so
+          # the module context only exists inside apps/api (the same reason
+          # package.json's build:api/test:api scripts cd there first). The
+          # -o path stays absolute so it is unaffected by that directory
+          # change. The build flags mirror apps/api/Dockerfile's, producing a
+          # static linux/amd64 binary that runs on the production host without a
+          # Go toolchain or libc dependency.
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+            -C apps/api \
+            -o /tmp/production-deploy-bundle/apps/api/bin/p1-content-seed \
+            ./cmd/seed
+          chmod +x /tmp/production-deploy-bundle/apps/api/bin/p1-content-seed
           cp apps/api/migrations/*.sql /tmp/production-deploy-bundle/apps/api/migrations/
           cp apps/api/migrations/atlas.sum /tmp/production-deploy-bundle/apps/api/migrations/
           tar -czf "$GITHUB_WORKSPACE/production-deploy-bundle.tgz" -C /tmp/production-deploy-bundle .
@@ -546,7 +574,6 @@ jobs:
               exit 1
             fi
             DATABASE_URL="$migration_database_url" sh /opt/vocanova/production/apps/api/scripts/migrate.sh
-            unset migration_database_url
 
             # VOC-050-T00: ensure the synthetic smoke-test account
             # exists before the rest of the stack starts. The seed is
@@ -559,6 +586,13 @@ jobs:
             # step above.
             DOCKER_COMPOSE_CMD="docker compose -f docker-compose.production.yml -p vocanova-production" \
               sh /opt/vocanova/production/apps/api/scripts/seed-synthetic-smoke-user.sh
+
+            # VOC-085-T00: seed canonical P1 discover content after migrations
+            # and the synthetic smoke-user seed, while only Postgres is up.
+            # The binary is built on the GitHub runner and copied in the deploy
+            # bundle to avoid exposing Postgres outside the private host network.
+            DATABASE_URL="$migration_database_url" /opt/vocanova/production/apps/api/bin/p1-content-seed
+            unset migration_database_url
 
             docker compose -f docker-compose.production.yml -p vocanova-production up -d --remove-orphans
 

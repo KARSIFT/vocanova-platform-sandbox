@@ -1,0 +1,149 @@
+schema_version: 1
+id: VOC-085
+slug: seed-canonical-p1-content-in-production-and-gate
+title: Seed canonical P1 content in production and gate real learning routes
+type: feature
+status: adopted
+risk: R3
+planned_implementation_risk_floor: "Measured during drafting by running scripts/governance/classify-change-risk.sh\
+  \ --files-from against the expected task-scoped file list (.github/workflows/deploy-production.yml,\
+  \ infra/scripts/smoke-test-production.sh, infra/scripts/smoke-test-production.selftest.sh,\
+  \ scripts/foundation or equivalent deploy/smoke tests, apps/api/cmd/seed as reuse-only,\
+  \ this package directory). Detected path floor: R3 (.github/workflows/deploy-production.yml\
+  \ and infra/scripts/smoke-test-production*.sh). This package proposes R3 for the\
+  \ change as a whole \u2014 a draft proposal for the reviewing human at adoption\
+  \ time, not a determination \u2014 because it changes the protected production deployment\
+  \ workflow, runs an idempotent canonical content upsert against the production-private\
+  \ database before application convergence, and strengthens production functional\
+  \ gates. Independent verification and the reviewing human must still confirm each\
+  \ task's real file list and whether semantic escalation to R4 is warranted."
+canonical_path: specs/changes/VOC-085-seed-canonical-p1-content-in-production-and-gate
+authority_model: a004-active
+requirement_source: 'GitHub issue #702 ("Seed canonical P1 content in production and
+  gate real learning routes"), including the fully populated issue body. Fresh 2026-08-16
+  evidence: promoted revision 62e381575d2585d2f02d69031b8e0119987d3757; read-only
+  production database reports journey_situations=0 while staging reports 7; production
+  public health and the latest deployment smoke suite are green, so present smoke
+  can pass with zero canonical learning content; deploy-staging.yml builds and runs
+  the existing idempotent apps/api/cmd/seed P1 content seed after migrations and the
+  synthetic account seed, before application convergence; deploy-production.yml bundles
+  migrations and the synthetic smoke-user seed but does not bundle or run the canonical
+  P1 content seed; production smoke only checks HTTP 200 for /api/v1/journey-situations
+  and does not assert a non-empty response, validate situation/word details, or sweep
+  real page routes; the synthetic-user SQL already deterministically refreshes onboarding_status=completed.
+  Founder/user remediation directive dated 2026-08-16 authorizes issue creation, package
+  adoption/implementation, PRs, workflow execution, deployment, live verification,
+  remediation, and closure without routine approval. This draft package still does
+  not adopt or authorize itself.'
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
+base_branch: develop
+base_sha: unknown - not recorded by this draft; the adopting human/workflow should
+  set this to the actual base_sha at adoption time, consistent with recent packages'
+  convention.
+target_branch: develop
+approved_candidate_sha: 0b06d60e70237dfcdca144cf9520270fc6ac693f
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human/workflow decision
+    under active A-004)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
+automatic_merge_allowed: true
+production_impact: expected. Production deploy will upsert repository-owned canonical
+  P1 content into the production-private database via the existing idempotent seed,
+  and production smoke/route gates will fail closed on empty or missing learning content
+  and missing authenticated learning routes. No schema migration. No intentional change
+  to staging/production isolation, shared-edge topology, or Cloudflare configuration.
+  Mis-scoped destructive reseeding or real-user mutation is out of scope and must
+  not occur.
+rollback_required: true
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-085-DEP-00
+  status: 'resolved at drafting time by issue #702 verified evidence and drafting-time
+    repo read. Root cause is intentional deferral of the VOC-052 production seed mirror
+    (VOC-052-T02 closed out-of-scope-for-now) plus production smoke that accepts HTTP
+    200 with an empty journey-situations list. Staging already builds/runs apps/api/cmd/seed
+    as p1-content-seed after migrations and synthetic-user seed; production does not.'
+- id: VOC-085-DEP-01
+  status: resolved at drafting time. Reuse the existing apps/api/cmd/seed binary and
+    embedded voc026-p1.json; do not replace or redesign the canonical dataset. Seed
+    semantics remain idempotent upsert-by-fixed-primary-key.
+- id: VOC-085-DEP-02
+  status: unresolved at drafting time only as an implementer shape choice (not a requirement
+    gap). Exact harness for the authenticated non-mutating route sweep (extend smoke-test-production.sh,
+    add a sibling script invoked by deploy-production.yml, or a narrowly scoped browser
+    harness) must preserve read-only checks, reuse the workflow-minted synthetic session,
+    and cover the ten fixed routes plus one real situation and one real word route
+    derived from the API. See specification.md open question 1.
+- id: VOC-052
+  status: Adopted predecessor. Seeded staging via deploy-staging.yml; production mirror
+    (T02) was deferred. This package completes the production half and adds fail-closed
+    content/route gates.
+- id: VOC-050
+  status: Adopted predecessor. Synthetic smoke-user seed, session mint, and production
+    smoke cookie plumbing this package reuses without inventing a parallel identity.
+- id: VOC-067
+  status: Adopted predecessor for staging/production isolation and shared-edge topology.
+    This package must preserve secret, directory, deploy-user, database, and Docker-network
+    isolation and the single shared-edge nginx architecture (no 8081/8443 regression).
+affected_areas:
+- .github/workflows/deploy-production.yml (build/bundle/run existing P1 content seed
+  after migrations and synthetic-user seed, before docker compose up -d; invoke strengthened
+  smoke/route gates)
+- infra/scripts/smoke-test-production.sh (fail closed on empty journey-situations;
+  validate at least one situation detail and one word detail from live identifiers)
+- infra/scripts/smoke-test-production.selftest.sh (and/or sibling production functional-gate
+  selftests for empty-content rejection, response parsing, route coverage, auth-cookie
+  handling, failure behavior)
+- scripts/foundation/ or equivalent deterministic tests for production deploy seed
+  ordering/bundling and fail-closed seed failure before up -d
+- Optional narrowly scoped production route-sweep script under infra/scripts/ if not
+  folded into smoke-test-production.sh (VOC-085-DEP-02)
+- apps/api/cmd/seed and apps/api/scripts/seed-synthetic-smoke-user.* as reuse/read-confirm
+  only (no dataset redesign; no manual live DB edits)
+- specs/changes/VOC-085-seed-canonical-p1-content-in-production-and-gate
+implementation:
+  authorized: true
+  required: true
+  status: authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: expected-canonical-p1-seed-and-content-aware-gates
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: adopted
+adoption_pr: 703
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/703
+implementation_authority_before_adoption: false
+implementation_authority_status: authorized
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A004
+blocking_reasons: none - adopted and implementation-authorized
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/703#issuecomment-5304536469
+adoption_risk: R3
+adoption_resolved_decisions:
+- VOC-085-DEP-01
+adoption_deferred_decisions:
+- VOC-085-DEP-00
+- VOC-052
+adoption_authority_provenance: 'a004-active evaluated plan PR #703 at 0b06d60e70237dfcdca144cf9520270fc6ac693f'
