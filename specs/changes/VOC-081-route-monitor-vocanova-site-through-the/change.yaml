@@ -3,7 +3,7 @@ id: VOC-081
 slug: route-monitor-vocanova-site-through-the
 title: Route monitor.vocanova.site through the repository-managed shared edge
 type: infrastructure
-status: draft
+status: adopted
 risk: R4
 planned_implementation_risk_floor: "Measured during drafting by running scripts/governance/classify-change-risk.sh\
   \ --files-from against the expected task-scoped file list (infra/docker-compose.monitoring.yml,\
@@ -32,21 +32,22 @@ requirement_source: "GitHub issue #665 (\"Route monitor.vocanova.site through th
   \ production 10-*.conf / 20-*.conf; shared edge joins only vocanova-net and vocanova-production-net\
   \ while Kuma joins only monitoring_default. VOC-079 single-nginx invariant (exactly\
   \ one VocaNova nginx; ports 8081/8443 absent) must be preserved."
-requirement_approval_status: not-approved
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: unknown - not recorded by this draft; the adopting human/workflow should
   set this to the actual base_sha at adoption time, consistent with recent packages'
   convention.
 target_branch: develop
-approved_candidate_sha: null
+approved_candidate_sha: 77b68eaf7fc68f89bb0985afd39742f13e9f5358
 owners:
   decision: unassigned
   package_preparation: planner (drafting only; adoption remains a human/workflow decision
     under active A-004)
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: 'expected. Restores monitor.vocanova.site through shared-edge origin
   :443 via Cloudflare, adds a least-privilege Docker network between shared edge and
@@ -134,9 +135,9 @@ affected_areas:
   \ secret path)"
 - specs/changes/VOC-081-route-monitor-vocanova-site-through-the
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: not-authorized
+  status: authorized
   target_branch: develop
   pull_request: null
   authority_issue: null
@@ -148,19 +149,18 @@ release:
   automatic_merge: false
   migration_required: true
   rollback_required: true
-repository_adoption_status: not-adopted
-adoption_pr: null
-adoption_evidence: null
+repository_adoption_status: adopted
+adoption_pr: 666
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/666
 implementation_authority_before_adoption: false
-implementation_authority_status: not-authorized
+implementation_authority_status: authorized
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A004
-blocking_reasons: "draft package \u2014 not adopted; open questions VOC-081-DEP-00\u2013\
-  DEP-02 must be resolved or explicitly deferred in writing at adoption"
-adoption_independent_verification_evidence: null
-adoption_risk: null
+blocking_reasons: none - adopted and implementation-authorized
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/666#issuecomment-5302350420
+adoption_risk: R4
 adoption_resolved_decisions: []
 adoption_deferred_decisions: []
-adoption_authority_provenance: null
+adoption_authority_provenance: 'a004-active evaluated plan PR #666 at 77b68eaf7fc68f89bb0985afd39742f13e9f5358'
