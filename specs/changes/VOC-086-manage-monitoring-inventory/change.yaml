@@ -3,7 +3,7 @@ id: VOC-086
 slug: manage-monitoring-inventory
 title: Manage monitoring inventory, synthetics, and monitoring-impact governance
 type: infrastructure
-status: draft
+status: adopted
 risk: R4
 planned_implementation_risk_floor: "Measured during drafting by running scripts/governance/classify-change-risk.sh\
   \ --files-from against the expected task-scoped file list (infra/monitoring/monitors.yaml,\
@@ -42,22 +42,22 @@ requirement_source: "GitHub issue #716 (\"Manage monitoring inventory, synthetic
   \ mechanism is needed. Founder/user remediation directive dated 2026-08-16 authorizes\
   \ issue/package/PR/workflow/deploy/verification/ remediation/closure actions without\
   \ routine approval. This draft package still does not adopt or authorize itself."
-requirement_approval_status: not-approved. This package has not been adopted. No field
-  in this file authorizes implementation.
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: unknown - not recorded by this draft; the adopting human/workflow should
   set this to the actual base_sha at adoption time, consistent with recent packages'
   convention.
 target_branch: develop
-approved_candidate_sha: null
+approved_candidate_sha: 53aceac82aa10a9c7e737357f794a5c376295e5e
 owners:
   decision: unassigned
   package_preparation: planner (drafting only; adoption remains a human/workflow decision
     under active A-004)
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: expected. After adoption and authorized task merges, a repository-managed
   monitoring inventory and Socket.IO synchronizer will create/update/adopt managed
@@ -159,12 +159,12 @@ affected_areas:
 - Live Kuma monitor inventory via supported Socket.IO only (no SQLite)
 - specs/changes/VOC-086-manage-monitoring-inventory
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: proposed
+  status: authorized
   target_branch: develop
   pull_request: null
-  authority_issue: 716
+  authority_issue: null
 release:
   required: true
   mode: not-authorized-by-this-package
@@ -173,17 +173,19 @@ release:
   automatic_merge: true
   migration_required: false
   rollback_required: true
-repository_adoption_status: not-adopted
-adoption_pr: null
-adoption_evidence: null
+repository_adoption_status: adopted
+adoption_pr: 717
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/717
 implementation_authority_before_adoption: false
-implementation_authority_status: not-exercised
+implementation_authority_status: authorized
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
-blocking_reasons: 'Not adopted. Requires plan review under active A-004, acceptance
-  or amendment of the proposed R4 classification (issue #716 proposed R3; measured
-  path floor is R4 because scripts/governance/* is in scope), resolution or deferred
-  recording of VOC-086-DEP-01 through VOC-086-DEP-03 shape choices, and exact-revision
-  independent verification before any implementation authorization.'
+blocking_reasons: none - adopted and implementation-authorized
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/717#issuecomment-5304737628
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-086-DEP-00
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #717 at 53aceac82aa10a9c7e737357f794a5c376295e5e'
