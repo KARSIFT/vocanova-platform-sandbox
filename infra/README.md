@@ -297,11 +297,12 @@ remaining live `30-monitor.conf` under the production nginx tree during
 deploy convergence.
 
 **Access exposure (`VOC-081-DEP-00`):** see
-`infra/monitoring/access-policy.md`. The adopted policy is **Cloudflare
-Access (Zero Trust)** for `monitor.vocanova.site` plus Kuma's own
-authentication — a proxied DNS record alone is not authorization. Access
-is enforced at Cloudflare before traffic reaches origin nginx; T04 records
-redacted live verification.
+`infra/monitoring/access-policy.md`. The adopted policy restores the existing
+**public Kuma login** through the proxied Cloudflare hostname. Kuma's own
+authentication is the authorization boundary; a proxied DNS record alone is
+not authorization. No unverified Cloudflare Access application is assumed.
+T04 records redacted live verification that the login is reachable and the
+administrative dashboard still requires Kuma authentication.
 
 ### Backup and first-converge migration (before T03 live apply)
 

@@ -20,51 +20,51 @@ live_converge_claimed: false
 
 This task delivers the **repository-side** shared-edge vhost for
 `monitor.vocanova.site` and encodes the adopted `VOC-081-DEP-00` access
-policy. It does **not** claim live Cloudflare Access provisioning complete,
-deploy workflow convergence, or public `https://monitor.vocanova.site/`
-restoration — those are T03–T04.
+policy. It does **not** claim deploy workflow convergence or public
+`https://monitor.vocanova.site/` restoration — those are T03–T04.
 
 ## VOC-081-DEP-00 / DEP-01 decisions implemented
 
-| Decision | Resolution |
-| --- | --- |
-| `VOC-081-DEP-00` | **Cloudflare Access (Zero Trust)** for `monitor.vocanova.site` plus Kuma authentication retained. Documented in `infra/monitoring/access-policy.md`. Proxied DNS alone is not authorization. |
-| `VOC-081-DEP-01` | Vhost owned under `infra/nginx-shared/conf.d/30-monitor.vocanova.site.conf`, loaded via existing `include /etc/nginx/conf.d/shared/*.conf`. Stale production `30-monitor.conf` superseded (marker + T03 removal). |
+| Decision         | Resolution                                                                                                                                                                                                                                                                                              |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VOC-081-DEP-00` | Restore the existing **public Kuma login** through the proxied Cloudflare hostname, with Kuma authentication retained as the authorization boundary. No unverified Cloudflare Access application is assumed. Documented in `infra/monitoring/access-policy.md`. Proxied DNS alone is not authorization. |
+| `VOC-081-DEP-01` | Vhost owned under `infra/nginx-shared/conf.d/30-monitor.vocanova.site.conf`, loaded via existing `include /etc/nginx/conf.d/shared/*.conf`. Stale production `30-monitor.conf` superseded (marker + T03 removal).                                                                                       |
 
 ## Repository deliverables
 
-| Artifact | Path |
-| --- | --- |
-| Monitor vhost | `infra/nginx-shared/conf.d/30-monitor.vocanova.site.conf` |
-| Access policy | `infra/monitoring/access-policy.md` |
-| Stale vhost retirement marker | `infra/nginx-production/conf.d/30-monitor.conf.superseded` |
-| Foundation tests | `scripts/foundation/voc081-monitor-vhost.test.mjs` |
-| Operator docs | `infra/README.md` (monitor vhost + access sections) |
-| Shared-edge main comment | `infra/nginx-shared/nginx.conf` |
-| This evidence | `specs/changes/VOC-081-route-monitor-vocanova-site-through-the/t02-evidence.md` |
+| Artifact                      | Path                                                                            |
+| ----------------------------- | ------------------------------------------------------------------------------- |
+| Monitor vhost                 | `infra/nginx-shared/conf.d/30-monitor.vocanova.site.conf`                       |
+| Access policy                 | `infra/monitoring/access-policy.md`                                             |
+| Stale vhost retirement marker | `infra/nginx-production/conf.d/30-monitor.conf.superseded`                      |
+| Foundation tests              | `scripts/foundation/voc081-monitor-vhost.test.mjs`                              |
+| Operator docs                 | `infra/README.md` (monitor vhost + access sections)                             |
+| Shared-edge main comment      | `infra/nginx-shared/nginx.conf`                                                 |
+| This evidence                 | `specs/changes/VOC-081-route-monitor-vocanova-site-through-the/t02-evidence.md` |
 
 ## VOC-081-TEST-03 — Shared edge loads monitor.vocanova.site vhost
 
-| Assertion | Result |
-| --- | --- |
-| `server_name monitor.vocanova.site` in repository vhost | PASS |
-| Production TLS cert paths (`/etc/nginx/certs/production/…`) | PASS |
-| Upstream `vocanova-uptime-kuma:3001` (monitoring network DNS) | PASS |
-| Reverse-proxy headers (`Host`, `X-Real-IP`, `X-Forwarded-For`, `X-Forwarded-Proto`) | PASS |
-| WebSocket upgrade (`Upgrade`, `Connection` map) | PASS |
-| Loaded via `nginx-shared/nginx.conf` → `shared/*.conf` include | PASS |
-| Not dependent on unloaded production `30-*.conf` glob | PASS |
-| No active `30-monitor.conf` in `infra/nginx-production/conf.d/` | PASS |
+| Assertion                                                                           | Result |
+| ----------------------------------------------------------------------------------- | ------ |
+| `server_name monitor.vocanova.site` in repository vhost                             | PASS   |
+| Production TLS cert paths (`/etc/nginx/certs/production/…`)                         | PASS   |
+| Upstream `vocanova-uptime-kuma:3001` (monitoring network DNS)                       | PASS   |
+| Reverse-proxy headers (`Host`, `X-Real-IP`, `X-Forwarded-For`, `X-Forwarded-Proto`) | PASS   |
+| WebSocket upgrade (`Upgrade`, `Connection` map)                                     | PASS   |
+| Loaded via `nginx-shared/nginx.conf` → `shared/*.conf` include                      | PASS   |
+| Not dependent on unloaded production `30-*.conf` glob                               | PASS   |
+| No active `30-monitor.conf` in `infra/nginx-production/conf.d/`                     | PASS   |
 
 ## VOC-081-TEST-04 — Access exposure control is explicit
 
-| Assertion | Result |
-| --- | --- |
-| Policy document references Cloudflare Access for `monitor.vocanova.site` | PASS |
-| Policy states proxied DNS is not authorization | PASS |
-| Kuma authentication must remain enabled | PASS |
-| T04 live verification probe defined (unauthenticated curl) | PASS |
-| Policy does not cite DNS proxying alone as the control | PASS |
+| Assertion                                                         | Result |
+| ----------------------------------------------------------------- | ------ |
+| Policy selects public Kuma login for `monitor.vocanova.site`      | PASS   |
+| Policy states proxied DNS is not authorization                    | PASS   |
+| Kuma authentication must remain enabled                           | PASS   |
+| Policy does not invent an unverified Cloudflare Access dependency | PASS   |
+| T04 live verification defined (HTTPS probe + login/auth boundary) | PASS   |
+| Policy does not cite DNS proxying alone as the control            | PASS   |
 
 ## Validation commands
 
@@ -94,7 +94,7 @@ documented shared-edge mount set (including `30-monitor.vocanova.site.conf`):
 
 ## Limitations
 
-- Live Cloudflare Access application state not verified here (T04).
+- Live Kuma login/authentication boundary not verified here (T04).
 - Host removal of stale `/opt/vocanova/production/nginx/conf.d/30-monitor.conf`
   deferred to T03 deploy convergence.
 - Public HTTPS / WebSocket through Cloudflare deferred to T04.

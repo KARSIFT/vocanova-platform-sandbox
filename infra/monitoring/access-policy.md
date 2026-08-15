@@ -2,50 +2,52 @@
 
 ## Decision
 
-**Private administrative surface via Cloudflare Access (Zero Trust).**
+**Public Uptime Kuma login, protected by Kuma's own authentication.**
 
-This is the package-recommended default for `VOC-081-DEP-00`. A proxied
-Cloudflare DNS A record is **not** authorization for the Uptime Kuma UI
-(`VOC-081-D02`). Origin nginx reverse-proxies Kuma only after Cloudflare
-Access has authenticated the operator at the edge.
+This preserves the pre-VOC-081 exposure model while moving routing under the
+repository-managed shared edge. A proxied Cloudflare DNS A record provides
+edge transport/proxying but is **not** authorization for the Uptime Kuma UI
+(`VOC-081-D02`). Kuma's own login remains enabled and is the administrative
+authorization boundary.
 
 ## Required controls
 
-| Layer | Control | Owner |
-| ----- | ------- | ----- |
-| Edge | Cloudflare Access application for hostname `monitor.vocanova.site` | Founder / ops (Cloudflare Zero Trust dashboard) |
-| Application | Uptime Kuma's own login remains enabled | Founder (Kuma admin credentials) |
+| Layer       | Control                                                           | Owner                    |
+| ----------- | ----------------------------------------------------------------- | ------------------------ |
+| Edge        | Proxied DNS/TLS for `monitor.vocanova.site`                       | Cloudflare configuration |
+| Application | Uptime Kuma login remains enabled and required for administration | Kuma configuration       |
 
 The repository vhost lives at
 `infra/nginx-shared/conf.d/30-monitor.vocanova.site.conf` and is loaded by
-`vocanova-shared-edge-nginx`. It does **not** implement Access JWT validation
-at origin — Access enforcement is expected at Cloudflare before requests reach
-the origin on `:443`.
+`vocanova-shared-edge-nginx`. It does not claim or depend on a Cloudflare
+Access application that is absent from the known configuration.
 
 ## Ops provisioning (not in git)
 
-1. In Cloudflare Zero Trust, create (or restore) an Access application for
-   `monitor.vocanova.site` with an identity provider and policy that denies
-   unauthenticated public access.
-2. Keep the DNS record proxied (orange-cloud) to `130.185.123.152` as today.
-3. Confirm Kuma authentication is still required after passing Access.
+1. Keep the DNS record proxied (orange-cloud) to `130.185.123.152` as today.
+2. Keep Kuma's own authentication enabled; do not enable anonymous
+   administrative access.
+3. Confirm an unauthenticated browser reaches Kuma's login rather than an
+   authenticated dashboard, then confirm a valid Kuma operator can sign in.
 
-Do not commit Cloudflare API tokens, Access service tokens, or Kuma admin
-passwords to this repository.
+Do not commit Cloudflare API tokens, session cookies, or Kuma admin passwords
+to this repository.
 
 ## T04 verification probe (live)
 
 Record redacted evidence in `t04-evidence.md` after T03 deploy:
 
 ```bash
-# Unauthenticated — expect Cloudflare Access challenge or deny, not Kuma HTML.
+# Public entry point — expect HTTPS success serving the Kuma application.
 curl -sS -o /dev/null -w '%{http_code}\n' https://monitor.vocanova.site/
 
-# Authenticated operator path — expect Kuma UI HTML after Access + Kuma login.
-# (browser session or Access service token; redact tokens in evidence)
+# Browser verification — unauthenticated access must show Kuma's login, not an
+# authenticated administrative dashboard. A valid Kuma operator can then sign
+# in. Redact cookies and credentials from evidence.
 ```
 
-**FAIL** if the only cited control is “DNS is proxied.”
+**FAIL** if Kuma administration is anonymously accessible or the only cited
+authorization control is “DNS is proxied.”
 
 ## Stale production vhost retirement
 

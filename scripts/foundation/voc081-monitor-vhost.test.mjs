@@ -132,7 +132,7 @@ test("VOC-081-TEST-03: production conf.d has no active 30-monitor.conf fragment"
   );
 });
 
-test("VOC-081-TEST-04: access exposure policy is explicit (Cloudflare Access, not DNS alone)", () => {
+test("VOC-081-TEST-04: access exposure policy is explicit (public Kuma login, not DNS alone)", () => {
   assert.ok(
     existsSync(accessPolicyPath),
     "access policy document must exist at infra/monitoring/access-policy.md",
@@ -142,8 +142,8 @@ test("VOC-081-TEST-04: access exposure policy is explicit (Cloudflare Access, no
 
   assert.match(
     policy,
-    /Cloudflare Access/i,
-    "policy must require Cloudflare Access for monitor.vocanova.site",
+    /Public Uptime Kuma login|public Kuma login/i,
+    "policy must select the public Kuma login exposure model",
   );
   assert.match(
     policy,
@@ -159,6 +159,11 @@ test("VOC-081-TEST-04: access exposure policy is explicit (Cloudflare Access, no
     policy,
     /Kuma.*auth|Uptime Kuma.*login/i,
     "policy must require Kuma authentication to remain enabled",
+  );
+  assert.match(
+    policy,
+    /does not claim or depend on a Cloudflare\s+Access application/i,
+    "policy must not invent an unverified Cloudflare Access dependency",
   );
   assert.match(
     policy,
