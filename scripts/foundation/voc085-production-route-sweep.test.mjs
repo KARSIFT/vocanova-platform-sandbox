@@ -131,8 +131,14 @@ test("VOC-085-TEST-10: production deploy still invokes the strengthened smoke su
   const smokeStepStart = deployProduction.indexOf(
     "name: Run production smoke-test suite",
   );
-  assert.ok(smokeStepStart >= 0, "missing Run production smoke-test suite step");
-  const smokeStepBlock = deployProduction.slice(smokeStepStart, smokeStepStart + 1200);
+  assert.ok(
+    smokeStepStart >= 0,
+    "missing Run production smoke-test suite step",
+  );
+  const smokeStepBlock = deployProduction.slice(
+    smokeStepStart,
+    smokeStepStart + 1200,
+  );
   assert.doesNotMatch(
     smokeStepBlock,
     /:8443/,
