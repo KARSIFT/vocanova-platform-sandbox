@@ -163,11 +163,7 @@ test("VOC-086-TEST-09 (remediation): host→runner metadata uses OpenSSH scp dow
     /appleboy\/scp-action/,
     "host→runner fetch must not use appleboy/scp-action (upload-only in this repo)",
   );
-  assert.match(
-    fetchStep,
-    /\bscp\b/,
-    "host→runner fetch must use OpenSSH scp",
-  );
+  assert.match(fetchStep, /\bscp\b/, "host→runner fetch must use OpenSSH scp");
   assert.match(
     fetchStep,
     /:\/tmp\/kuma-rotate-metadata\.env/,
