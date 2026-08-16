@@ -119,6 +119,11 @@ test("VOC-086-TEST-09: credential redaction and bootstrap stores secrets without
     /echo.*PASSWORD|printf.*password/i,
     "password storage must not echo generated credentials",
   );
+  assert.match(
+    storePasswordStep,
+    /kuma-new-password\.secret/,
+    "password store must delete the workspace password copy",
+  );
 
   const generateStep = extractStepBlock(
     workflow,
@@ -146,6 +151,74 @@ test("VOC-086-TEST-09: credential redaction and bootstrap stores secrets without
   assert.ok(existsSync(syncSelftestPath));
 });
 
+test("VOC-086-TEST-09 (remediation): host→runner metadata uses OpenSSH scp download", () => {
+  const workflow = readFileSync(workflowPath, "utf8");
+
+  const fetchStep = extractStepBlock(
+    workflow,
+    "Fetch Kuma username metadata from host",
+  );
+  assert.doesNotMatch(
+    fetchStep,
+    /appleboy\/scp-action/,
+    "host→runner fetch must not use appleboy/scp-action (upload-only in this repo)",
+  );
+  assert.match(
+    fetchStep,
+    /\bscp\b/,
+    "host→runner fetch must use OpenSSH scp",
+  );
+  assert.match(
+    fetchStep,
+    /:\/tmp\/kuma-rotate-metadata\.env/,
+    "scp source must be remote host path (user@host:/tmp/...)",
+  );
+  assert.match(fetchStep, /\/tmp\/kuma-rotate-metadata\.env/);
+
+  // Upload steps may still use appleboy/scp-action; the broken download step must not.
+  assert.doesNotMatch(
+    workflow,
+    /name: Copy Kuma username metadata from host/,
+    "removed the inverted appleboy SCP download step name",
+  );
+});
+
+test("VOC-086-TEST-09 (remediation): username store fails closed; rotation scrub always runs", () => {
+  const workflow = readFileSync(workflowPath, "utf8");
+  const rotateScript = readFileSync(rotateScriptPath, "utf8");
+
+  const storeUsernameStep = extractStepBlock(
+    workflow,
+    "Store preserved Kuma username in monitoring environment",
+  );
+  assert.match(storeUsernameStep, /exit 1/);
+  assert.doesNotMatch(
+    storeUsernameStep,
+    /existing KUMA_USERNAME secret unchanged/,
+    "missing metadata must not soft-skip username store",
+  );
+  assert.match(
+    rotateScript,
+    /refusing to continue without a preserved username/,
+    "rotate script must fail closed when username cannot be extracted",
+  );
+
+  const hostCleanupStep = extractStepBlock(
+    workflow,
+    "Remove host rotation credential material",
+  );
+  assert.match(hostCleanupStep, /always\(\) && inputs\.rotate_credentials/);
+  assert.match(hostCleanupStep, /kuma-new-password\.secret/);
+  assert.match(hostCleanupStep, /kuma-rotate-metadata\.env/);
+
+  const runnerCleanupStep = extractStepBlock(
+    workflow,
+    "Remove runner rotation credential material",
+  );
+  assert.match(runnerCleanupStep, /always\(\) && inputs\.rotate_credentials/);
+  assert.match(runnerCleanupStep, /kuma-new-password\.secret/);
+});
+
 test("VOC-086-TEST-07 (T02 extension): workflow and host scripts ban SQLite deployment paths", () => {
   const paths = [
     ".github/workflows/sync-monitoring.yml",
@@ -170,11 +243,16 @@ test("VOC-086-TEST-07 (T02 extension): workflow and host scripts ban SQLite depl
 
 test("VOC-086-TEST-02 (workflow): monitoring env secrets and Socket.IO sync wiring", () => {
   const workflow = readFileSync(workflowPath, "utf8");
+  const syncScript = readFileSync(syncScriptPath, "utf8");
 
   assert.match(workflow, /environment: monitoring/);
   assert.match(workflow, /KUMA_USERNAME/);
   assert.match(workflow, /KUMA_PASSWORD/);
   assert.match(workflow, /sync-kuma-inventory\.sh/);
-  assert.match(workflow, /vocanova-monitoring-net/);
-  assert.match(readFileSync(syncScriptPath, "utf8"), /sync-kuma\.mjs/);
+  assert.match(
+    syncScript,
+    /vocanova-monitoring-net/,
+    "Socket.IO sync attaches to vocanova-monitoring-net in the host sync script",
+  );
+  assert.match(syncScript, /sync-kuma\.mjs/);
 });

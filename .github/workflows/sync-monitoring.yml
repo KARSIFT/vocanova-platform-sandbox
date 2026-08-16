@@ -18,6 +18,10 @@ name: sync-monitoring
 # printing it. Existing Kuma sessions are invalidated once per rotation.
 # Normal sync runs never reset credentials.
 #
+# Host→runner metadata transfer uses OpenSSH `scp` (download). In this repo,
+# `appleboy/scp-action` is upload-only (runner→host); do not use it to fetch
+# `/tmp/kuma-rotate-metadata.env` from the remote host.
+#
 # Required repository secrets (same host as staging deploy — VOC-032-DEP-00):
 #   STAGING_SSH_HOST, STAGING_SSH_USER, STAGING_SSH_PRIVATE_KEY,
 #   STAGING_SSH_KNOWN_HOSTS
@@ -139,17 +143,9 @@ jobs:
             export KUMA_ROTATE_METADATA_FILE=/tmp/kuma-rotate-metadata.env
             "$bundle_root/infra/scripts/kuma-rotate-credentials.sh"
 
-      - name: Copy Kuma username metadata from host
-        if: ${{ inputs.rotate_credentials }}
-        uses: appleboy/scp-action@v1.0.0
-        with:
-          host: ${{ secrets.STAGING_SSH_HOST }}
-          username: ${{ secrets.STAGING_SSH_USER }}
-          key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
-          source: /tmp/kuma-rotate-metadata.env
-          target: /tmp/
-          rm: false
-
+      # Store the runner-local password immediately after a successful host
+      # reset so a later metadata-fetch failure cannot leave Kuma on a new
+      # password that was never written to GitHub secrets (AC-04).
       - name: Store rotated Kuma password in monitoring environment
         if: ${{ inputs.rotate_credentials }}
         env:
@@ -158,7 +154,30 @@ jobs:
         run: |
           set -euo pipefail
           gh secret set KUMA_PASSWORD --env monitoring --body-file "$PASSWORD_FILE"
-          rm -f "$PASSWORD_FILE"
+          rm -f "$PASSWORD_FILE" "$GITHUB_WORKSPACE/kuma-new-password.secret"
+
+      # appleboy/scp-action is runner→host upload only in this repository.
+      # Download host→runner metadata with OpenSSH scp so KUMA_USERNAME can be
+      # stored after rotation (AC-04).
+      - name: Fetch Kuma username metadata from host
+        if: ${{ inputs.rotate_credentials }}
+        env:
+          STAGING_SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
+          STAGING_SSH_USER: ${{ secrets.STAGING_SSH_USER }}
+          STAGING_SSH_PRIVATE_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          key_file="$(mktemp)"
+          chmod 600 "$key_file"
+          printf '%s\n' "$STAGING_SSH_PRIVATE_KEY" > "$key_file"
+          cleanup_key() { rm -f "$key_file"; }
+          trap cleanup_key EXIT
+          scp -i "$key_file" \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -o IdentitiesOnly=yes \
+            "${STAGING_SSH_USER}@${STAGING_SSH_HOST}:/tmp/kuma-rotate-metadata.env" \
+            /tmp/kuma-rotate-metadata.env
+          test -s /tmp/kuma-rotate-metadata.env
 
       - name: Store preserved Kuma username in monitoring environment
         if: ${{ inputs.rotate_credentials }}
@@ -168,8 +187,8 @@ jobs:
           set -euo pipefail
           metadata_file="/tmp/kuma-rotate-metadata.env"
           if [ ! -f "$metadata_file" ]; then
-            echo "username metadata file missing; existing KUMA_USERNAME secret unchanged" >&2
-            exit 0
+            echo "username metadata file missing after host→runner fetch; refusing soft-skip" >&2
+            exit 1
           fi
           username="$(sed -n 's/^KUMA_USERNAME=//p' "$metadata_file" | head -n 1)"
           if [ -z "${username:-}" ]; then
@@ -197,9 +216,9 @@ jobs:
             chmod +x "$bundle_root/infra/scripts/sync-kuma-inventory.sh"
             export MONITORING_SYNC_ROOT="$bundle_root/infra/monitoring"
             export KUMA_USERNAME="$(sed -n 's/^KUMA_USERNAME=//p' /tmp/kuma-rotate-metadata.env | head -n 1)"
-            export KUMA_PASSWORD="$(cat /tmp/kuma-new-password.secret)"
+            export KUMA_PASSWORD
+            KUMA_PASSWORD="$(cat /tmp/kuma-new-password.secret)"
             "$bundle_root/infra/scripts/sync-kuma-inventory.sh"
-            rm -f /tmp/kuma-new-password.secret /tmp/kuma-rotate-metadata.env
 
       - name: Sync monitor inventory to Kuma
         if: ${{ inputs.sync_inventory && !inputs.rotate_credentials }}
@@ -223,3 +242,25 @@ jobs:
             chmod +x "$bundle_root/infra/scripts/sync-kuma-inventory.sh"
             export MONITORING_SYNC_ROOT="$bundle_root/infra/monitoring"
             "$bundle_root/infra/scripts/sync-kuma-inventory.sh"
+
+      # Always scrub host rotation material after rotate_credentials, including
+      # sync_inventory=false and failed post-rotation sync paths.
+      - name: Remove host rotation credential material
+        if: ${{ always() && inputs.rotate_credentials }}
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          command_timeout: 2m
+          script: |
+            set -euo pipefail
+            rm -f /tmp/kuma-new-password.secret /tmp/kuma-rotate-metadata.env
+
+      - name: Remove runner rotation credential material
+        if: ${{ always() && inputs.rotate_credentials }}
+        env:
+          PASSWORD_FILE: ${{ steps.generate_password.outputs.password_file }}
+        run: |
+          set -euo pipefail
+          rm -f "${PASSWORD_FILE:-}" "$GITHUB_WORKSPACE/kuma-new-password.secret"

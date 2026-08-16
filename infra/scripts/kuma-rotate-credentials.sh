@@ -64,12 +64,17 @@ if grep -q 'Found user:' <<<"$reset_output"; then
   username="$(sed -n 's/.*Found user: //p' <<<"$reset_output" | head -n 1 | tr -d '\r')"
 fi
 
-if [ -n "$username" ]; then
-  echo "KUMA_USERNAME=${username}"
-  if [ -n "${KUMA_ROTATE_METADATA_FILE:-}" ]; then
-    umask 077
-    printf 'KUMA_USERNAME=%s\n' "$username" > "$KUMA_ROTATE_METADATA_FILE"
-  fi
+if [ -z "${username:-}" ]; then
+  echo "Kuma password reset succeeded but no username was reported; refusing to continue without a preserved username" >&2
+  exit 1
+fi
+
+# Username only (never the password). Workflow downloads this file host→runner via
+# OpenSSH scp — appleboy/scp-action is upload-only in this repository.
+echo "KUMA_USERNAME=${username}"
+if [ -n "${KUMA_ROTATE_METADATA_FILE:-}" ]; then
+  umask 077
+  printf 'KUMA_USERNAME=%s\n' "$username" > "$KUMA_ROTATE_METADATA_FILE"
 fi
 
 echo "Kuma admin password reset completed via ${RESET_SCRIPT_PATH} (existing sessions invalidated)."
