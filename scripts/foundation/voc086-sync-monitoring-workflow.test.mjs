@@ -109,7 +109,10 @@ test("VOC-086-TEST-09: credential redaction and bootstrap stores secrets without
     workflow,
     "Store rotated Kuma password in monitoring environment",
   );
-  assert.match(storePasswordStep, /gh secret set KUMA_PASSWORD --env monitoring/);
+  assert.match(
+    storePasswordStep,
+    /gh secret set KUMA_PASSWORD --env monitoring/,
+  );
   assert.match(storePasswordStep, /--body-file/);
   assert.doesNotMatch(
     storePasswordStep,
@@ -152,7 +155,10 @@ test("VOC-086-TEST-07 (T02 extension): workflow and host scripts ban SQLite depl
   const forbidden = [/kuma\.db/i, /\bsqlite\b/i, /\/app\/data/i];
 
   for (const relativePath of paths) {
-    const source = readFileSync(path.join(repositoryRoot, relativePath), "utf8");
+    const source = readFileSync(
+      path.join(repositoryRoot, relativePath),
+      "utf8",
+    );
     for (const pattern of forbidden) {
       assert.ok(
         !pattern.test(source),
