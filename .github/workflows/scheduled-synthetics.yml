@@ -108,8 +108,18 @@ jobs:
             infra/scripts/mint-synthetic-session.sh \
             "https://api-production.vocanova.site"
 
+      # Mirror deploy-production.yml's smoke kill-switch expectations.
+      # journey-content still runs the healthz section, which asserts
+      # oauth_enabled (and the other kill switches). A hardcoded
+      # EXPECT_OAUTH_ENABLED=false fails this synthetic when production
+      # OAuth is actually enabled — the same live miss documented on
+      # VOC-038-T03 / deploy-production.yml.
       - name: Run production journey content synthetic
         env:
+          EXPECT_MAGIC_LINK_ENABLED: "false"
+          EXPECT_OAUTH_ENABLED: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID != '' && secrets.GOOGLE_OAUTH_CLIENT_SECRET != '' }}
+          EXPECT_NEW_SIGNUPS_ENABLED: "false"
+          EXPECT_AI_ENABLED: "true"
           SMOKE_TEST_SESSION_COOKIE: ${{ steps.mint_production_session.outputs.session_cookie }}
         run: |
           set -euo pipefail
@@ -198,8 +208,15 @@ jobs:
             infra/scripts/mint-synthetic-session.sh \
             "https://api-production.vocanova.site"
 
+      # Same kill-switch env as deploy-production.yml / journey-content:
+      # route-sweep also runs healthz, so EXPECT_OAUTH_ENABLED must follow
+      # the secrets-present expression rather than the script default false.
       - name: Run production authenticated route/content sweep synthetic
         env:
+          EXPECT_MAGIC_LINK_ENABLED: "false"
+          EXPECT_OAUTH_ENABLED: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID != '' && secrets.GOOGLE_OAUTH_CLIENT_SECRET != '' }}
+          EXPECT_NEW_SIGNUPS_ENABLED: "false"
+          EXPECT_AI_ENABLED: "true"
           SMOKE_TEST_SESSION_COOKIE: ${{ steps.mint_production_session.outputs.session_cookie }}
         run: |
           set -euo pipefail

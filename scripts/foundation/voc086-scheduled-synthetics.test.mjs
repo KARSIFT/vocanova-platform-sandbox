@@ -11,7 +11,9 @@ import test from "node:test";
 import { redactSecrets } from "../../infra/monitoring/kuma-sync/redact.mjs";
 import {
   CANONICAL_CHECK_REFS,
+  EXPECT_OAUTH_ENABLED_FROM_SECRETS,
   SCHEDULED_SYNTHETICS_WORKFLOW,
+  extractTopLevelJobBlock,
   loadSyntheticsRegistry,
   validateScheduledSyntheticsFiles,
   validateScheduledSyntheticsWorkflow,
@@ -93,11 +95,31 @@ test("VOC-086-TEST-12: synthetic checks reuse mint secrets and mask sessions", (
   assert.match(workflowSource, /mint-synthetic-session\.sh/);
   assert.match(mintScript, /::add-mask::/);
   assert.match(mintScript, /SMOKE_TEST_SESSION_MINT_TOKEN/);
+  assert.match(
+    mintScript,
+    /empty session or csrf value/,
+    "mint script must fail closed when csrf_token is empty (deploy-staging parity)",
+  );
   assert.doesNotMatch(
     mintScript,
     /echo\s+["']?\$session/,
     "mint script must not echo the session variable",
   );
+
+  for (const jobId of [
+    "production-journey-content",
+    "production-authenticated-route-content-sweep",
+  ]) {
+    const jobBlock = extractTopLevelJobBlock(workflowSource, jobId);
+    assert.ok(jobBlock, `workflow must define job ${jobId}`);
+    assert.ok(
+      jobBlock.includes(EXPECT_OAUTH_ENABLED_FROM_SECRETS),
+      `${jobId} must set EXPECT_OAUTH_ENABLED from deploy-production's secrets-present expression`,
+    );
+    assert.match(jobBlock, /EXPECT_MAGIC_LINK_ENABLED: "false"/);
+    assert.match(jobBlock, /EXPECT_NEW_SIGNUPS_ENABLED: "false"/);
+    assert.match(jobBlock, /EXPECT_AI_ENABLED: "true"/);
+  }
 
   const fixture =
     "mint failed password=super-secret KUMA_PASSWORD=abc123 Bearer eyJhbGciOiJIUzI1NiJ9";
@@ -160,4 +182,44 @@ test("VOC-086-TEST-12: dispatcher error messages do not echo cookie values", () 
   const dispatcher = readFileSync(runSyntheticScriptPath, "utf8");
   assert.doesNotMatch(dispatcher, /echo\s+["']?\$SMOKE_TEST_SESSION_COOKIE/);
   assert.doesNotMatch(dispatcher, /printf\s+.*SMOKE_TEST_SESSION_COOKIE/);
+});
+
+test("VOC-086-TEST-11: production smoke-profile jobs fail closed without EXPECT_OAUTH_ENABLED", () => {
+  const workflowSource = readFileSync(workflowPath, "utf8");
+  const syntheticsDocument = loadSyntheticsRegistry(repositoryRoot);
+  const stripped = workflowSource.replaceAll(
+    EXPECT_OAUTH_ENABLED_FROM_SECRETS,
+    "EXPECT_OAUTH_ENABLED: false",
+  );
+  const journeyBlock = extractTopLevelJobBlock(
+    stripped,
+    "production-journey-content",
+  );
+  assert.ok(journeyBlock);
+  assert.ok(
+    !journeyBlock.includes(EXPECT_OAUTH_ENABLED_FROM_SECRETS),
+    "fixture must omit the secrets-present EXPECT_OAUTH_ENABLED expression",
+  );
+
+  const errors = validateScheduledSyntheticsWorkflow({
+    workflowSource: stripped,
+    syntheticsDocument,
+    repositoryRoot,
+  });
+  assert.ok(
+    errors.some(
+      (error) =>
+        error.includes("production-journey-content") &&
+        error.includes("EXPECT_OAUTH_ENABLED"),
+    ),
+    `validator must reject missing secrets-present EXPECT_OAUTH_ENABLED: ${errors.join("; ")}`,
+  );
+  assert.ok(
+    errors.some(
+      (error) =>
+        error.includes("production-authenticated-route-content-sweep") &&
+        error.includes("EXPECT_OAUTH_ENABLED"),
+    ),
+    `validator must reject missing secrets-present EXPECT_OAUTH_ENABLED on route-sweep: ${errors.join("; ")}`,
+  );
 });

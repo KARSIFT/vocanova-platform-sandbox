@@ -19,7 +19,8 @@ set -euo pipefail
 #
 # Outputs (when GITHUB_OUTPUT is set):
 #   session_cookie — opaque value or full Cookie header pair per prefix mode
-#   csrf_token     — when returned by the mint endpoint
+#   csrf_token     — required; mint fails closed if empty (deploy-staging
+#                    parity so staging Playwright gets a clear ops signal)
 
 if [ "$#" -lt 1 ]; then
   echo "usage: $0 <api_base_url> [api_host_header]" >&2
@@ -50,8 +51,8 @@ response_json="$(curl "${curl_args[@]}" "${api_base_url}/ops/synthetic-smoke-tes
 session_cookie="$(printf '%s' "$response_json" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("session_cookie") or "")')"
 csrf_token="$(printf '%s' "$response_json" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("csrf_token") or "")')"
 
-if [ -z "$session_cookie" ]; then
-  echo "the session-mint endpoint returned an empty session value" >&2
+if [ -z "$session_cookie" ] || [ -z "$csrf_token" ]; then
+  echo "the session-mint endpoint returned an empty session or csrf value" >&2
   exit 1
 fi
 
@@ -63,14 +64,10 @@ fi
 
 if [ -n "${GITHUB_OUTPUT:-}" ]; then
   echo "::add-mask::${session_cookie}"
-  if [ -n "$csrf_token" ]; then
-    echo "::add-mask::${csrf_token}"
-  fi
+  echo "::add-mask::${csrf_token}"
   {
     echo "session_cookie=${session_output}"
-    if [ -n "$csrf_token" ]; then
-      echo "csrf_token=${csrf_token}"
-    fi
+    echo "csrf_token=${csrf_token}"
   } >> "$GITHUB_OUTPUT"
 else
   echo "Minted a synthetic smoke-test session (values withheld from stdout)."

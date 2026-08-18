@@ -17,6 +17,31 @@ export const CANONICAL_CHECK_REFS = [
   "production-authenticated-route-content-sweep",
 ];
 
+// Same secrets-present expression as deploy-production.yml. Production
+// smoke profiles still run healthz kill-switch assertions.
+export const EXPECT_OAUTH_ENABLED_FROM_SECRETS =
+  "EXPECT_OAUTH_ENABLED: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID != '' && secrets.GOOGLE_OAUTH_CLIENT_SECRET != '' }}";
+
+const PRODUCTION_SMOKE_PROFILE_JOBS = [
+  "production-journey-content",
+  "production-authenticated-route-content-sweep",
+];
+
+export function extractTopLevelJobBlock(workflowSource, jobId) {
+  const escapedJobId = jobId.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const jobStart = new RegExp(`^  ${escapedJobId}:\\s*$`, "m");
+  const match = jobStart.exec(workflowSource);
+  if (!match) {
+    return "";
+  }
+  const start = match.index;
+  const afterHeader = start + match[0].length;
+  const rest = workflowSource.slice(afterHeader);
+  const nextJob = /^  [A-Za-z0-9_-]+:\s*$/m.exec(rest);
+  const end = nextJob ? afterHeader + nextJob.index : workflowSource.length;
+  return workflowSource.slice(start, end);
+}
+
 export function loadSyntheticsRegistry(repositoryRoot) {
   const syntheticsPath = path.join(
     repositoryRoot,
@@ -161,6 +186,30 @@ export function validateScheduledSyntheticsWorkflow({
     errors.push(
       "scheduled-synthetics workflow must not replace or call error-monitoring.yml",
     );
+  }
+
+  for (const jobId of PRODUCTION_SMOKE_PROFILE_JOBS) {
+    const jobBlock = extractTopLevelJobBlock(workflowSource, jobId);
+    if (!jobBlock) {
+      errors.push(
+        `scheduled-synthetics workflow missing job block for ${jobId}`,
+      );
+      continue;
+    }
+    if (!jobBlock.includes(EXPECT_OAUTH_ENABLED_FROM_SECRETS)) {
+      errors.push(
+        `${jobId} must set EXPECT_OAUTH_ENABLED from the same secrets-present expression as deploy-production.yml`,
+      );
+    }
+    if (!jobBlock.includes('EXPECT_MAGIC_LINK_ENABLED: "false"')) {
+      errors.push(`${jobId} must set EXPECT_MAGIC_LINK_ENABLED: "false"`);
+    }
+    if (!jobBlock.includes('EXPECT_NEW_SIGNUPS_ENABLED: "false"')) {
+      errors.push(`${jobId} must set EXPECT_NEW_SIGNUPS_ENABLED: "false"`);
+    }
+    if (!jobBlock.includes('EXPECT_AI_ENABLED: "true"')) {
+      errors.push(`${jobId} must set EXPECT_AI_ENABLED: "true"`);
+    }
   }
 
   return errors;

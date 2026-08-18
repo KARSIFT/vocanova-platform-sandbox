@@ -14,8 +14,15 @@ set -euo pipefail
 #     EXPECT_OAUTH_ENABLED (optional)
 #   production-journey-content:
 #     SMOKE_TEST_SESSION_COOKIE (required)
+#     EXPECT_OAUTH_ENABLED / EXPECT_MAGIC_LINK_ENABLED /
+#     EXPECT_NEW_SIGNUPS_ENABLED / EXPECT_AI_ENABLED (optional; defaults
+#     match smoke-test-production.sh — scheduled-synthetics.yml must set
+#     EXPECT_OAUTH_ENABLED from the same secrets-present expression as
+#     deploy-production.yml because this profile still asserts healthz
+#     kill switches)
 #   production-authenticated-route-content-sweep:
 #     SMOKE_TEST_SESSION_COOKIE (required)
+#     same EXPECT_* kill-switch env as production-journey-content
 #
 # staging-authenticated-core-journey is executed by the workflow via Playwright
 # directly (see scheduled-synthetics.yml) because it needs Node/Playwright setup.
