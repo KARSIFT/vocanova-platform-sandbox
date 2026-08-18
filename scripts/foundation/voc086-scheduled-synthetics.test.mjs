@@ -67,7 +67,7 @@ test("VOC-086-TEST-11: scheduled synthetics map to required stable IDs", () => {
   assert.ok(existsSync(runSyntheticScriptPath));
   const dispatcher = readFileSync(runSyntheticScriptPath, "utf8");
   for (const checkRef of CANONICAL_CHECK_REFS) {
-  if (checkRef === "staging-authenticated-core-journey") {
+    if (checkRef === "staging-authenticated-core-journey") {
       assert.match(
         dispatcher,
         /staging-authenticated-core-journey/,
