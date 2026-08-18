@@ -1,0 +1,207 @@
+name: scheduled-synthetics
+
+# VOC-086-T03: canonical scheduled synthetic checks under stable IDs from
+# infra/monitoring/synthetics.yaml.
+#
+# Responsibility split (VOC-086-D06):
+#   * Kuma (sync-monitoring.yml) — availability/TLS/basic API health
+#   * This workflow — authenticated behavior and OAuth expected-state checks
+#   * error-monitoring.yml — Sentry error monitoring (unchanged)
+#
+# Reuses deploy-time harness scripts and reserved synthetic accounts. Session
+# mint tokens are the same secrets deploy-staging.yml / deploy-production.yml
+# already write to the host api containers. Minted session values are masked
+# in logs; production route sweep remains non-mutating GET-only.
+#
+# Manual dispatch accepts an optional synthetic_id to run one check. Scheduled
+# hourly runs execute the full stable-ID set.
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+    inputs:
+      synthetic_id:
+        description: >-
+          Run a single synthetic by stable ID (empty = all five canonical checks)
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scheduled-synthetics
+  cancel-in-progress: false
+
+jobs:
+  staging-oauth-expected-state:
+    name: "synthetic.staging.oauth-expected-state"
+    if: >-
+      ${{ github.event_name != 'workflow_dispatch' || inputs.synthetic_id == '' ||
+          inputs.synthetic_id == 'synthetic.staging.oauth-expected-state' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out reviewed revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - name: Run staging OAuth expected-state check
+        env:
+          EXPECT_OAUTH_ENABLED: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID != '' && secrets.GOOGLE_OAUTH_CLIENT_SECRET != '' }}
+        run: |
+          set -euo pipefail
+          chmod +x infra/scripts/run-scheduled-synthetic.sh
+          infra/scripts/run-scheduled-synthetic.sh staging-oauth-expected-state
+
+  production-oauth-expected-state:
+    name: "synthetic.production.oauth-expected-state"
+    if: >-
+      ${{ github.event_name != 'workflow_dispatch' || inputs.synthetic_id == '' ||
+          inputs.synthetic_id == 'synthetic.production.oauth-expected-state' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - name: Check out reviewed revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - name: Run production OAuth expected-state check
+        env:
+          EXPECT_OAUTH_ENABLED: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID != '' && secrets.GOOGLE_OAUTH_CLIENT_SECRET != '' }}
+        run: |
+          set -euo pipefail
+          chmod +x infra/scripts/run-scheduled-synthetic.sh
+          infra/scripts/run-scheduled-synthetic.sh production-oauth-expected-state
+
+  production-journey-content:
+    name: "synthetic.production.journey-content"
+    if: >-
+      ${{ github.event_name != 'workflow_dispatch' || inputs.synthetic_id == '' ||
+          inputs.synthetic_id == 'synthetic.production.journey-content' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - name: Check out reviewed revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - name: Mint synthetic smoke-test session for production journey content
+        id: mint_production_session
+        env:
+          SMOKE_TEST_SESSION_MINT_TOKEN: ${{ secrets.PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SMOKE_TEST_SESSION_MINT_TOKEN:-}" ]; then
+            echo "PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN is required" >&2
+            exit 1
+          fi
+          chmod +x infra/scripts/mint-synthetic-session.sh
+          SESSION_COOKIE_PREFIX=vocanova_session \
+            infra/scripts/mint-synthetic-session.sh \
+            "https://api-production.vocanova.site"
+
+      - name: Run production journey content synthetic
+        env:
+          SMOKE_TEST_SESSION_COOKIE: ${{ steps.mint_production_session.outputs.session_cookie }}
+        run: |
+          set -euo pipefail
+          chmod +x infra/scripts/run-scheduled-synthetic.sh
+          infra/scripts/run-scheduled-synthetic.sh production-journey-content
+
+  staging-authenticated-core-journey:
+    name: "synthetic.staging.authenticated-core-journey"
+    if: >-
+      ${{ github.event_name != 'workflow_dispatch' || inputs.synthetic_id == '' ||
+          inputs.synthetic_id == 'synthetic.staging.authenticated-core-journey' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out reviewed revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - name: Mint synthetic smoke-test session for staging core-loop
+        id: mint_staging_session
+        env:
+          SMOKE_TEST_SESSION_MINT_TOKEN: ${{ secrets.STAGING_SMOKE_TEST_SESSION_MINT_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SMOKE_TEST_SESSION_MINT_TOKEN:-}" ]; then
+            echo "STAGING_SMOKE_TEST_SESSION_MINT_TOKEN is required" >&2
+            exit 1
+          fi
+          chmod +x infra/scripts/mint-synthetic-session.sh
+          infra/scripts/mint-synthetic-session.sh \
+            "https://api-staging.vocanova.site" \
+            "api-staging.vocanova.site"
+
+      - name: Set up Node for the staging core-loop synthetic
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Install pnpm for the staging core-loop synthetic
+        run: corepack enable && corepack prepare pnpm@11.14.0 --activate
+
+      - name: Install workspace dependencies for the staging core-loop synthetic
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium for the staging core-loop synthetic
+        run: pnpm --filter @vocanova/web exec playwright install --with-deps chromium
+
+      - name: Run staging authenticated core-loop synthetic
+        env:
+          CI: "1"
+          STAGING_WEB_BASE_URL: "https://staging.vocanova.site"
+          E2E_SESSION_COOKIE: ${{ steps.mint_staging_session.outputs.session_cookie }}
+          E2E_CSRF_TOKEN: ${{ steps.mint_staging_session.outputs.csrf_token }}
+        run: |
+          set -euo pipefail
+          pnpm --filter @vocanova/web exec playwright test \
+            --config playwright.staging.config.ts
+
+  production-authenticated-route-content-sweep:
+    name: "synthetic.production.authenticated-route-content-sweep"
+    if: >-
+      ${{ github.event_name != 'workflow_dispatch' || inputs.synthetic_id == '' ||
+          inputs.synthetic_id == 'synthetic.production.authenticated-route-content-sweep' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - name: Check out reviewed revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - name: Mint synthetic smoke-test session for production route sweep
+        id: mint_production_session
+        env:
+          SMOKE_TEST_SESSION_MINT_TOKEN: ${{ secrets.PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SMOKE_TEST_SESSION_MINT_TOKEN:-}" ]; then
+            echo "PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN is required" >&2
+            exit 1
+          fi
+          chmod +x infra/scripts/mint-synthetic-session.sh
+          SESSION_COOKIE_PREFIX=vocanova_session \
+            infra/scripts/mint-synthetic-session.sh \
+            "https://api-production.vocanova.site"
+
+      - name: Run production authenticated route/content sweep synthetic
+        env:
+          SMOKE_TEST_SESSION_COOKIE: ${{ steps.mint_production_session.outputs.session_cookie }}
+        run: |
+          set -euo pipefail
+          chmod +x infra/scripts/run-scheduled-synthetic.sh
+          infra/scripts/run-scheduled-synthetic.sh production-authenticated-route-content-sweep
