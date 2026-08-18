@@ -199,10 +199,20 @@ test("VOC-086-TEST-09 (remediation): environment-secret token is minted before r
   assert.match(preflightStep, /steps\.environment-token\.outputs\.token/);
   assert.match(preflightStep, /environments\/monitoring\/secrets\/public-key/);
 
-  const tokenIndex = workflow.indexOf("- name: Mint environment-secret writer token");
-  const generateIndex = workflow.indexOf("- name: Generate strong Kuma password");
-  const rotateIndex = workflow.indexOf("- name: Rotate Kuma credentials on host");
-  assert.ok(tokenIndex >= 0 && tokenIndex < generateIndex && generateIndex < rotateIndex);
+  const tokenIndex = workflow.indexOf(
+    "- name: Mint environment-secret writer token",
+  );
+  const generateIndex = workflow.indexOf(
+    "- name: Generate strong Kuma password",
+  );
+  const rotateIndex = workflow.indexOf(
+    "- name: Rotate Kuma credentials on host",
+  );
+  assert.ok(
+    tokenIndex >= 0 &&
+      tokenIndex < generateIndex &&
+      generateIndex < rotateIndex,
+  );
 });
 
 test("VOC-086-TEST-09 (remediation): host→runner proof and metadata use OpenSSH scp download", () => {
@@ -244,7 +254,9 @@ test("VOC-086-TEST-09 (remediation): reset proof is fresh and post-rotation sync
 
   assert.match(rotateScript, /rm -f "\$RESET_APPLIED_FILE"/);
   assert.match(rotateScript, /KUMA_RESET_ATTEMPT_ID is required/);
-  const resetSuccessIndex = rotateScript.indexOf('if [ "$reset_status" -ne 0 ]');
+  const resetSuccessIndex = rotateScript.indexOf(
+    'if [ "$reset_status" -ne 0 ]',
+  );
   const proofWriteIndex = rotateScript.indexOf("KUMA_RESET_APPLIED=%s");
   const usernameFailureIndex = rotateScript.indexOf(
     "refusing to continue without a preserved username",
