@@ -15,6 +15,19 @@ set -euo pipefail
 
 KUMA_CONTAINER="${KUMA_CONTAINER:-vocanova-uptime-kuma}"
 RESET_SCRIPT_PATH="${KUMA_RESET_SCRIPT_PATH:-/app/extra/reset-password.js}"
+RESET_APPLIED_FILE="${KUMA_RESET_APPLIED_FILE:-}"
+RESET_ATTEMPT_ID="${KUMA_RESET_ATTEMPT_ID:-}"
+
+# A previous successful run must never be accepted as proof for this attempt.
+# The marker contains no credential material and is written only after the
+# official reset tool returns success.
+if [ -n "$RESET_APPLIED_FILE" ]; then
+  rm -f "$RESET_APPLIED_FILE"
+  if [ -z "$RESET_ATTEMPT_ID" ]; then
+    echo "KUMA_RESET_ATTEMPT_ID is required when reset proof is requested" >&2
+    exit 1
+  fi
+fi
 
 redact_sensitive() {
   sed -E \
@@ -57,6 +70,11 @@ if [ "$reset_status" -ne 0 ]; then
   echo "Kuma password reset failed:" >&2
   redact_sensitive <<<"$reset_output" >&2
   exit "$reset_status"
+fi
+
+if [ -n "$RESET_APPLIED_FILE" ]; then
+  umask 077
+  printf 'KUMA_RESET_APPLIED=%s\n' "$RESET_ATTEMPT_ID" > "$RESET_APPLIED_FILE"
 fi
 
 username=""

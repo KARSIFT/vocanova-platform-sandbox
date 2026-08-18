@@ -68,7 +68,10 @@ test("VOC-086-TEST-08: rotate_credentials is opt-in; normal sync never resets", 
     workflow,
     "Rotate Kuma credentials on host (explicit opt-in)",
   );
-  assert.match(rotateStep, /if: \$\{\{ inputs\.rotate_credentials \}\}/);
+  assert.match(
+    rotateStep,
+    /if: \$\{\{ success\(\) && inputs\.rotate_credentials \}\}/,
+  );
   assert.match(rotateStep, /kuma-rotate-credentials\.sh/);
   assert.match(rotateScript, /extra\/reset-password\.js/);
 
@@ -113,6 +116,26 @@ test("VOC-086-TEST-09: credential redaction and bootstrap stores secrets without
     storePasswordStep,
     /gh secret set KUMA_PASSWORD --env monitoring/,
   );
+  assert.match(
+    storePasswordStep,
+    /steps\.environment-token\.outputs\.token/,
+    "environment secrets must use the write-scoped GitHub App token",
+  );
+  assert.doesNotMatch(
+    storePasswordStep,
+    /secrets\.GITHUB_TOKEN/,
+    "GITHUB_TOKEN cannot write environment secrets",
+  );
+  assert.match(
+    storePasswordStep,
+    /always\(\) && inputs\.rotate_credentials/,
+    "password recovery step must run when a post-reset action failure is possible",
+  );
+  assert.match(
+    storePasswordStep,
+    /KUMA_RESET_APPLIED=\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}/,
+    "password secret must require proof that this reset attempt succeeded",
+  );
   assert.match(storePasswordStep, /--body-file/);
   assert.doesNotMatch(
     storePasswordStep,
@@ -151,12 +174,43 @@ test("VOC-086-TEST-09: credential redaction and bootstrap stores secrets without
   assert.ok(existsSync(syncSelftestPath));
 });
 
-test("VOC-086-TEST-09 (remediation): host→runner metadata uses OpenSSH scp download", () => {
+test("VOC-086-TEST-09 (remediation): environment-secret token is minted before rotation", () => {
+  const workflow = readFileSync(workflowPath, "utf8");
+  assert.doesNotMatch(
+    workflow,
+    /^\s+secrets:\s+write\s*$/m,
+    "secrets is not a valid GITHUB_TOKEN workflow permission",
+  );
+
+  const tokenStep = extractStepBlock(
+    workflow,
+    "Mint environment-secret writer token",
+  );
+  assert.match(tokenStep, /actions\/create-github-app-token@v3/);
+  assert.match(tokenStep, /permission-environments: write/);
+  assert.match(tokenStep, /KARSIFT_BOT_APP_ID/);
+  assert.match(tokenStep, /KARSIFT_BOT_PRIVATE_KEY/);
+  assert.match(tokenStep, /success\(\) && inputs\.rotate_credentials/);
+
+  const preflightStep = extractStepBlock(
+    workflow,
+    "Verify environment-secret writer access",
+  );
+  assert.match(preflightStep, /steps\.environment-token\.outputs\.token/);
+  assert.match(preflightStep, /environments\/monitoring\/secrets\/public-key/);
+
+  const tokenIndex = workflow.indexOf("- name: Mint environment-secret writer token");
+  const generateIndex = workflow.indexOf("- name: Generate strong Kuma password");
+  const rotateIndex = workflow.indexOf("- name: Rotate Kuma credentials on host");
+  assert.ok(tokenIndex >= 0 && tokenIndex < generateIndex && generateIndex < rotateIndex);
+});
+
+test("VOC-086-TEST-09 (remediation): host→runner proof and metadata use OpenSSH scp download", () => {
   const workflow = readFileSync(workflowPath, "utf8");
 
   const fetchStep = extractStepBlock(
     workflow,
-    "Fetch Kuma username metadata from host",
+    "Fetch Kuma reset proof and username metadata from host",
   );
   assert.doesNotMatch(
     fetchStep,
@@ -170,12 +224,41 @@ test("VOC-086-TEST-09 (remediation): host→runner metadata uses OpenSSH scp dow
     "scp source must be remote host path (user@host:/tmp/...)",
   );
   assert.match(fetchStep, /\/tmp\/kuma-rotate-metadata\.env/);
+  assert.match(fetchStep, /:\/tmp\/kuma-reset-applied\.env/);
+  assert.match(
+    fetchStep,
+    /KUMA_RESET_APPLIED=\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}/,
+  );
 
   // Upload steps may still use appleboy/scp-action; the broken download step must not.
   assert.doesNotMatch(
     workflow,
     /name: Copy Kuma username metadata from host/,
     "removed the inverted appleboy SCP download step name",
+  );
+});
+
+test("VOC-086-TEST-09 (remediation): reset proof is fresh and post-rotation sync is success-gated", () => {
+  const workflow = readFileSync(workflowPath, "utf8");
+  const rotateScript = readFileSync(rotateScriptPath, "utf8");
+
+  assert.match(rotateScript, /rm -f "\$RESET_APPLIED_FILE"/);
+  assert.match(rotateScript, /KUMA_RESET_ATTEMPT_ID is required/);
+  const resetSuccessIndex = rotateScript.indexOf('if [ "$reset_status" -ne 0 ]');
+  const proofWriteIndex = rotateScript.indexOf("KUMA_RESET_APPLIED=%s");
+  const usernameFailureIndex = rotateScript.indexOf(
+    "refusing to continue without a preserved username",
+  );
+  assert.ok(resetSuccessIndex >= 0 && proofWriteIndex > resetSuccessIndex);
+  assert.ok(usernameFailureIndex > proofWriteIndex);
+
+  const rotatedSyncStep = extractStepBlock(
+    workflow,
+    "Sync monitor inventory after credential rotation",
+  );
+  assert.match(
+    rotatedSyncStep,
+    /if: \$\{\{ success\(\) && inputs\.sync_inventory && inputs\.rotate_credentials \}\}/,
   );
 });
 
