@@ -36,7 +36,10 @@ test("VOC-092-TEST-13: operations doc states harness scope, non-goals, and human
   );
   const doc = readFileSync(operatorDocPath, "utf8");
 
-  assert.match(doc, /Repository-managed OAuth callback E2E harness \(VOC-092\)/);
+  assert.match(
+    doc,
+    /Repository-managed OAuth callback E2E harness \(VOC-092\)/,
+  );
   assert.match(doc, /What the harness proves/i);
   assert.match(doc, /What the harness does not prove/i);
   assert.match(doc, /Google account login UI/i);
