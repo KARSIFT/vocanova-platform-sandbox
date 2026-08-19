@@ -17,8 +17,7 @@ date: 2026-08-19
 related_change: VOC-092
 accountable_owner: unassigned
 gate_status: repository-complete-exact-sha-ci-pending
-live_ci_claimed: true
-remediation_of: 83d2a6b159ccfdb9483fc56bb08bcf3daaea9b8e
+live_ci_claimed: false
 ---
 
 # VOC-092-T01 — Controlled-signup OAuth callback E2E CI wiring
@@ -47,17 +46,6 @@ test-auth route is introduced.
 | Local operator wrapper (dependency) | `infra/scripts/run-controlled-signup-oauth-e2e.sh` |
 | This evidence | `specs/changes/VOC-092-automate-controlled-google-signup-callback-e2e/t01-evidence.md` |
 
-## Remediation notes (attempt 2)
-
-Independent verification of `83d2a6b159ccfdb9483fc56bb08bcf3daaea9b8e` failed on:
-
-1. **Medium (M1)** — Missing `t01-evidence.md` (`VOC-092-EV-01`). This file
-   closes that traceability gap with repository validation, a green dedicated
-   workflow run URL, and fail-closed rehearsal results.
-
-Technical CI wiring from attempt 1 was retained; no harness or workflow behavior
-change was required beyond the evidence artifact.
-
 ## Acceptance mapping
 
 | Acceptance criterion | Repository result |
@@ -82,44 +70,17 @@ Results on the reviewed working tree:
 
 - six VOC-092 foundation tests passed;
 - governance structure validation passed;
-- local Docker-backed harness run passed both named cases (scrubbed excerpt below).
+- local Docker execution failed closed because this WSL workspace has no usable
+  Docker daemon.
 
 No real email address, OAuth code, state value, access token, refresh token, or
 session cookie value was used or recorded.
 
-### Scrubbed local harness excerpt
-
-Both cases emit only the two fixed outcome log lines allowed by the foundation
-redaction test:
-
-```
---- PASS: TestControlledSignupOAuth_AllowlistedCallbackSucceeds
-    controlled-signup OAuth allowlisted callback succeeded with redirect to onboarding and persisted auth rows
---- PASS: TestControlledSignupOAuth_UnlistedCallbackDenied
-    controlled-signup OAuth unlisted callback denied with HTTP 503 and no persisted user
-```
-
-## Green CI run (dedicated workflow)
-
-| Field | Value |
-| --- | --- |
-| Workflow | `controlled-signup-oauth-e2e.yml` |
-| Run number | **#5** |
-| Run ID | `32295470850` |
-| Job URL | https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32295470850/job/96205647779 |
-| Head SHA | `ac462d15d2db77637d1e4d4f5c79a1cf82131610` |
-| Pull request | #790 |
-| Conclusion | **success** |
-
-The job required Docker, ran
-`go test ./app/api/... -run ControlledSignupOAuth -count=1 -v`, and enforced
-named PASS output for both allowlisted and unlisted cases with no SKIP. Earlier
-attempt-1 revisions on the same branch (`4a41bca7`, `c160dc96`, `e6bc028a`,
-`83d2a6b1`) also passed runs #1–#4 of this workflow.
-
-The exact final remediation commit must re-pass this check and full repository
-CI before merge. Post-merge `develop` run URL and live staging synthetic proof
-remain T03 scope (`VOC-092-EV-03`).
+The exact final revision must pass the dedicated Docker-backed GitHub Actions
+check and full repository CI. A prior candidate passed that dedicated workflow,
+but this evidence does not claim the prior result for the current revision.
+Post-merge `develop` run URL and live staging synthetic proof remain T03 scope
+(`VOC-092-EV-03`).
 
 ## Fail-closed confirmation
 
@@ -128,7 +89,7 @@ remain T03 scope (`VOC-092-EV-03`).
 | Harness test failure | `set -euo pipefail` + `go test` non-zero exit | Workflow step fails on test failure (no `continue-on-error`, no `\|\| true`; foundation TEST-11 asserts both) |
 | Missing named PASS | Post-test `grep` for `TestControlledSignupOAuth_AllowlistedCallbackSucceeds` and `_UnlistedCallbackDenied` PASS lines | Simulated log without PASS line → grep exit 1 |
 | Silent SKIP | Post-test rejection when log contains `--- SKIP: TestControlledSignupOAuth_` | Simulated SKIP line → explicit `exit 1` with message *controlled-signup OAuth callback E2E cases must not skip* |
-| Missing Docker | Pre-test `docker version` / `docker info` | CI runner provides Docker; harness sources require explicit *docker not on PATH* locally instead of connecting elsewhere |
+| Missing Docker | Pre-test `docker version` / `docker info` | Local WSL check failed closed; exact-revision CI remains pending |
 | Staging/production coupling | Local runner host-argument denylist | Script exits 1 on `*vocanova.site*` / production host patterns |
 
 Operational-failure monitoring eligibility is conditional per AC-08: this workflow
