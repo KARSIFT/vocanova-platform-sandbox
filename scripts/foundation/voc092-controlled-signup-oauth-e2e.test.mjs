@@ -95,9 +95,15 @@ test("VOC-092-TEST-11: CI workflow executes harness on pull requests and develop
   assert.match(workflow, /docker version/);
   assert.match(workflow, /docker info/);
   assert.match(workflow, /cache-dependency-path: apps\/api\/go\.sum/);
-  assert.match(workflow, /TestControlledSignupOAuth_AllowlistedCallbackSucceeds/);
+  assert.match(
+    workflow,
+    /TestControlledSignupOAuth_AllowlistedCallbackSucceeds/,
+  );
   assert.match(workflow, /TestControlledSignupOAuth_UnlistedCallbackDenied/);
-  assert.match(workflow, /controlled-signup OAuth callback E2E cases must not skip/);
+  assert.match(
+    workflow,
+    /controlled-signup OAuth callback E2E cases must not skip/,
+  );
   assert.doesNotMatch(workflow, /continue-on-error:/);
   assert.doesNotMatch(workflow, /\|\|\s*true/);
   assert.match(
