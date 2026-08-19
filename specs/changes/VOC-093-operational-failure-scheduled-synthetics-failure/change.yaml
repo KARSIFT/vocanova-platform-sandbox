@@ -1,0 +1,118 @@
+schema_version: 1
+id: VOC-093
+slug: operational-failure-scheduled-synthetics-failure
+title: Fix scheduled-synthetics production route-sweep failure
+type: infrastructure
+status: draft
+risk: R3
+planned_implementation_risk_floor: Measured during drafting against the expected task-scoped
+  file list (infra/scripts/smoke-test-production.sh, infra/scripts/smoke-test-production.selftest.sh,
+  infra/scripts/run-scheduled-synthetic.sh, .github/workflows/scheduled-synthetics.yml,
+  infra/monitoring/synthetics.yaml, apps/web/ if a route regression is proven, scripts/foundation/voc085-production-route-sweep.test.mjs,
+  scripts/foundation/voc086-scheduled-synthetics.test.mjs, this package directory).
+  Detected path floor is R3 for infra/monitoring/ and infra/scripts/. Application
+  route fixes in apps/web/ remain R3 unless a task touches scripts/governance/. This
+  package proposes R3 for the change as a whole. That is a draft proposal for the
+  reviewing human at adoption time, not a determination. Independent verification
+  and the reviewing human must still confirm each task's real file list and whether
+  semantic escalation applies.
+canonical_path: specs/changes/VOC-093-operational-failure-scheduled-synthetics-failure
+authority_model: a004-active
+requirement_source: 'GitHub issue #771 (Operational failure: scheduled-synthetics
+  (failure)), opened by the VOC-088-T02 operational-failure-monitoring observer. Fresh
+  2026-08-19 evidence from the public run page and jobs API for https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32288703894:
+  scheduled-synthetics run #27, schedule-triggered on main at 7851d570f1dc245a3b310b9705b54b10585c9ea0,
+  conclusion failure after 9m 10s; only job synthetic.production.authenticated-route-content-sweep
+  failed with exit code 1 on the route-sweep smoke step (~5s); sibling job synthetic.production.journey-content
+  succeeded in the same run using the same harness with a narrower profile. This draft
+  package does not adopt or authorize itself.'
+requirement_approval_status: not-approved. This package has not been adopted. No field
+  in this file authorizes implementation.
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time
+target_branch: develop
+approved_candidate_sha: null
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: Possible if the root cause is a real production web route or API-content
+  regression surfaced by the non-mutating route sweep. The synthetic itself is read-only.
+  Any application fix restores expected production behavior rather than changing signup
+  policy, OAuth posture, or deploy kill switches.
+rollback_required: true
+monitoring_impact:
+  state: update
+  rationale: Remediates synthetic.production.authenticated-route-content-sweep after
+    run 32288703894 failed with smoke-test exit code 1. May adjust harness coverage
+    or registry metadata only if the fix requires it. No new stable monitor or synthetic
+    IDs.
+  synthetic_ids:
+  - synthetic.production.authenticated-route-content-sweep
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-093-DEP-00
+  status: 'resolved at drafting time. Issue #771 and run 32288703894 identify the
+    failing workflow (scheduled-synthetics), conclusion (failure), and failing job
+    (synthetic.production.authenticated-route-content-sweep) with public step-level
+    failure on the route-sweep smoke invocation.'
+- id: VOC-093-DEP-01
+  status: resolved at drafting time. VOC-085-T02 owns the route-sweep harness in smoke-test-production.sh
+    and voc085-production-route-sweep.test.mjs. VOC-086-T03 owns scheduled-synthetics.yml
+    wiring and the registry entry for synthetic.production.authenticated-route-content-sweep.
+- id: VOC-088
+  status: 'Adopted predecessor. operational-failure-monitoring.yml opened issue #771
+    via the sanitized failure-to-issue path. This package remediates the underlying
+    route-sweep failure; it must not weaken deduplication or sanitization.'
+- id: VOC-090
+  status: Adopted predecessor that fixed staging core-journey cancellation. Run 32288703894
+    shows staging core-journey success; this package is unrelated to staging timeout/caching
+    work except shared workflow file touch discipline.
+affected_areas:
+- infra/scripts/smoke-test-production.sh
+- infra/scripts/smoke-test-production.selftest.sh
+- infra/scripts/run-scheduled-synthetic.sh
+- .github/workflows/scheduled-synthetics.yml
+- infra/monitoring/synthetics.yaml
+- apps/web/ (only if T00 evidence proves a production route regression)
+- scripts/foundation/voc085-production-route-sweep.test.mjs
+- scripts/foundation/voc086-scheduled-synthetics.test.mjs
+- specs/changes/VOC-093-operational-failure-scheduled-synthetics-failure
+implementation:
+  authorized: false
+  required: true
+  status: proposed
+  target_branch: develop
+  pull_request: null
+  authority_issue: 771
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: unknown-until-implemented
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
+blocking_reasons: Not adopted. Requires plan review, adoption, and task-level independent
+  verification before implementation.
