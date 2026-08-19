@@ -173,7 +173,7 @@ test("VOC-084-TEST-03: canonical staging OAuth callback URI is exact", () => {
   assert.doesNotMatch(configStep, /:8443/);
 });
 
-test("VOC-084-TEST-04: signup stays false; allowlist defaults empty and is workflow-controlled", () => {
+test("VOC-084-TEST-04: signup stays false; allowlist is persistent-secret controlled", () => {
   const deployStaging = readFileSync(deployStagingPath, "utf8");
   const configStep = extractStepBlock(
     deployStaging,
@@ -183,13 +183,13 @@ test("VOC-084-TEST-04: signup stays false; allowlist defaults empty and is workf
   assert.match(configStep, /echo "NEW_USER_SIGNUP_ENABLED=false"/);
   assert.match(
     configStep,
-    /STAGING_NEW_USER_SIGNUP_ALLOWLIST: \$\{\{ inputs\.new_user_signup_allowlist \|\| '' \}\}/,
+    /STAGING_NEW_USER_SIGNUP_ALLOWLIST: \$\{\{ secrets\.STAGING_NEW_USER_SIGNUP_ALLOWLIST \}\}/,
   );
   assert.match(
     configStep,
     /echo "NEW_USER_SIGNUP_ALLOWLIST=\$\{STAGING_NEW_USER_SIGNUP_ALLOWLIST\}"/,
   );
-  assert.match(deployStaging, /new_user_signup_allowlist:[\s\S]*default: ""/);
+  assert.doesNotMatch(deployStaging, /new_user_signup_allowlist:/);
 });
 
 test("VOC-084-TEST-07 (partial): production OAuth sync semantics are unchanged", () => {
