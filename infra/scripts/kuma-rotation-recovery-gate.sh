@@ -4,7 +4,7 @@ set -euo pipefail
 # VOC-087-T02 — store/scrub decisions for Kuma credential rotation recovery.
 #
 # No credentials are accepted or printed. Callers pass only GitHub step
-# outcomes and proof-fetch booleans.
+# outcomes, proof-fetch booleans, and secret-store completion booleans.
 #
 # store-decision → STORE | SKIP_UNUSED | RETAIN
 # scrub-decision → SCRUB | RETAIN
@@ -17,10 +17,12 @@ to_bool() {
 }
 
 rotate="${ROTATE_HOST_OUTCOME:-}"
+preflight="${ROTATION_PREFLIGHT_OUTCOME:-}"
 proof_matches="$(to_bool "${PROOF_MATCHES:-false}")"
 host_reachable="$(to_bool "${HOST_REACHABLE:-false}")"
 proof_fetched="$(to_bool "${PROOF_FETCHED:-false}")"
 password_stored="$(to_bool "${PASSWORD_STORED:-false}")"
+username_stored="$(to_bool "${USERNAME_STORED:-false}")"
 recover_store_only="$(to_bool "${RECOVER_STORE_ONLY:-false}")"
 
 # Host was reachable and the reset-applied proof file is absent: this attempt
@@ -44,7 +46,7 @@ store_decision() {
 }
 
 scrub_decision() {
-  if [ "$password_stored" = "true" ]; then
+  if [ "$password_stored" = "true" ] && [ "$username_stored" = "true" ]; then
     echo SCRUB
     return
   fi
@@ -54,7 +56,10 @@ scrub_decision() {
     echo RETAIN
     return
   fi
-  if [ "$rotate" = "skipped" ]; then
+  # A failed/skipped preflight may mean it found the retained bundle that this
+  # gate exists to protect. Only a successful preflight makes a skipped rotate
+  # safe to scrub (for example, password generation/upload then failed).
+  if [ "$rotate" = "skipped" ] && [ "$preflight" = "success" ]; then
     echo SCRUB
     return
   fi

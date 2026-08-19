@@ -137,12 +137,30 @@ test("VOC-087-TEST-10: reset-success / proof-transfer-failure remains recoverabl
     "recover-store must never invoke reset-password.js",
   );
   assert.match(recoverStep, /kuma-new-password\.secret/);
+  assert.match(recoverStep, /kuma-reset-applied\.env/);
+  assert.match(recoverStep, /kuma-rotate-metadata\.env/);
+  assert.match(recoverStep, /KUMA_ROTATION_ATTEMPT_ID/);
+  assert.match(recoverStep, /metadata_attempt_id.*attempt_id/s);
+  assert.doesNotMatch(
+    recoverStep,
+    /if scp/,
+    "proof and username metadata are mandatory recovery inputs",
+  );
 
   const refuseStep = extractStepBlock(
     workflow,
     "Refuse combined rotate and recover-store",
   );
   assert.match(refuseStep, /recover never resets/);
+
+  const preflightStep = extractStepBlock(
+    workflow,
+    "Refuse a new rotation while recovery material exists",
+  );
+  assert.match(preflightStep, /id: rotation_preflight/);
+  assert.match(preflightStep, /kuma-new-password\.secret/);
+  assert.match(preflightStep, /kuma-reset-applied\.env/);
+  assert.match(preflightStep, /kuma-rotate-metadata\.env/);
 
   const scrubGateStep = extractStepBlock(
     workflow,
@@ -155,6 +173,13 @@ test("VOC-087-TEST-10: reset-success / proof-transfer-failure remains recoverabl
     /STORE_PASSWORD_STORED/,
     "scrub must key off password_stored output, not store step success (soft skip is not a store)",
   );
+  assert.match(
+    scrubGateStep,
+    /STORE_USERNAME_STORED/,
+    "scrub must require the username secret store as well as the password store",
+  );
+  assert.match(scrubGateStep, /RECOVER_USERNAME_STORED/);
+  assert.match(scrubGateStep, /ROTATION_PREFLIGHT_OUTCOME/);
   assert.doesNotMatch(
     scrubGateStep,
     /steps\.store_password\.outcome/,
@@ -212,6 +237,20 @@ test("VOC-087-TEST-10: reset-success / proof-transfer-failure remains recoverabl
   );
   assert.equal(
     runRecoveryGate("scrub-decision", {
+      ROTATE_HOST_OUTCOME: "skipped",
+      ROTATION_PREFLIGHT_OUTCOME: "failure",
+      PROOF_MATCHES: "false",
+      HOST_REACHABLE: "false",
+      PROOF_FETCHED: "false",
+      PASSWORD_STORED: "false",
+      USERNAME_STORED: "false",
+      RECOVER_STORE_ONLY: "false",
+    }),
+    "RETAIN",
+    "a preflight-blocked rotation must not scrub the retained bundle it found",
+  );
+  assert.equal(
+    runRecoveryGate("scrub-decision", {
       ROTATE_HOST_OUTCOME: "success",
       PROOF_MATCHES: "false",
       HOST_REACHABLE: "false",
@@ -253,10 +292,24 @@ test("VOC-087-TEST-10: reset-success / proof-transfer-failure remains recoverabl
       HOST_REACHABLE: "false",
       PROOF_FETCHED: "false",
       PASSWORD_STORED: "true",
+      USERNAME_STORED: "false",
+      RECOVER_STORE_ONLY: "false",
+    }),
+    "RETAIN",
+    "password-only secret storage must retain the host bundle",
+  );
+  assert.equal(
+    runRecoveryGate("scrub-decision", {
+      ROTATE_HOST_OUTCOME: "failure",
+      PROOF_MATCHES: "false",
+      HOST_REACHABLE: "false",
+      PROOF_FETCHED: "false",
+      PASSWORD_STORED: "true",
+      USERNAME_STORED: "true",
       RECOVER_STORE_ONLY: "false",
     }),
     "SCRUB",
-    "scrub is allowed only after a completed secret store",
+    "scrub is allowed only after both credential stores complete",
   );
 });
 

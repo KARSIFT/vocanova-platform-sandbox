@@ -89,6 +89,7 @@ export PROOF_MATCHES=false
 export HOST_REACHABLE=false
 export PROOF_FETCHED=false
 export PASSWORD_STORED=false
+export USERNAME_STORED=false
 export RECOVER_STORE_ONLY=false
 assert_gate store-decision RETAIN
 assert_gate scrub-decision RETAIN
@@ -101,6 +102,9 @@ export PASSWORD_STORED=false
 assert_gate store-decision STORE
 assert_gate scrub-decision RETAIN
 export PASSWORD_STORED=true
+export USERNAME_STORED=false
+assert_gate scrub-decision RETAIN
+export USERNAME_STORED=true
 assert_gate scrub-decision SCRUB
 
 export ROTATE_HOST_OUTCOME=failure
@@ -110,6 +114,7 @@ export PROOF_FETCHED=true
 export PASSWORD_STORED=false
 assert_gate store-decision STORE
 export PASSWORD_STORED=true
+export USERNAME_STORED=true
 assert_gate scrub-decision SCRUB
 
 export ROTATE_HOST_OUTCOME=failure
@@ -117,23 +122,30 @@ export PROOF_MATCHES=false
 export HOST_REACHABLE=true
 export PROOF_FETCHED=false
 export PASSWORD_STORED=false
+export USERNAME_STORED=false
 assert_gate store-decision SKIP_UNUSED
 assert_gate scrub-decision SCRUB
 
 export ROTATE_HOST_OUTCOME=skipped
+export ROTATION_PREFLIGHT_OUTCOME=success
 export PROOF_MATCHES=false
 export HOST_REACHABLE=false
 export PROOF_FETCHED=false
 export PASSWORD_STORED=false
 export RECOVER_STORE_ONLY=false
 assert_gate scrub-decision SCRUB
+export ROTATION_PREFLIGHT_OUTCOME=failure
+assert_gate scrub-decision RETAIN
 export RECOVER_STORE_ONLY=true
 assert_gate scrub-decision RETAIN
 export PASSWORD_STORED=true
+export USERNAME_STORED=false
+assert_gate scrub-decision RETAIN
+export USERNAME_STORED=true
 assert_gate scrub-decision SCRUB
 
-unset ROTATE_HOST_OUTCOME PROOF_MATCHES HOST_REACHABLE PROOF_FETCHED \
-  PASSWORD_STORED RECOVER_STORE_ONLY
+unset ROTATE_HOST_OUTCOME ROTATION_PREFLIGHT_OUTCOME PROOF_MATCHES HOST_REACHABLE PROOF_FETCHED \
+  PASSWORD_STORED USERNAME_STORED RECOVER_STORE_ONLY
 
 export KUMA_RESET_APPLIED_FILE="$test_root/kuma-reset-applied.env"
 export KUMA_RESET_ATTEMPT_ID="harness-attempt-1"
@@ -146,6 +158,11 @@ fi
 if ! grep -qx 'KUMA_RESET_APPLIED=harness-attempt-1' "$KUMA_RESET_APPLIED_FILE"; then
   echo "reset-applied proof file missing attempt id" >&2
   cat "$KUMA_RESET_APPLIED_FILE" >&2
+  exit 1
+fi
+if ! grep -qx 'KUMA_ROTATION_ATTEMPT_ID=harness-attempt-1' "$KUMA_ROTATE_METADATA_FILE"; then
+  echo "rotation metadata must be bound to the reset attempt" >&2
+  cat "$KUMA_ROTATE_METADATA_FILE" >&2
   exit 1
 fi
 if grep -q 'harness-strong-password-not-for-logs' <<<"$output_with_proof"; then
