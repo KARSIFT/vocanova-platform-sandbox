@@ -72,6 +72,7 @@ synthetics:
     timeout_seconds: 600
     retries: 1
     severity: high
+    mutating: true
     coverage:
       - "page:staging.vocanova.site/home"
       - "feature:staging-core-loop"

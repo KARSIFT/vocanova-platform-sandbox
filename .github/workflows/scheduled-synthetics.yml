@@ -138,6 +138,25 @@ jobs:
         with:
           fetch-depth: 0
 
+      # The browser journey mutates only the reserved synthetic account. Re-run
+      # the same idempotent repository seed used by deploy-staging so at least
+      # one previously saved word is due on repeated hourly runs. This avoids
+      # depending on wall-clock review scheduling or touching a real user.
+      - name: Refresh reserved staging synthetic review state
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          command_timeout: 2m
+          script: |
+            set -euo pipefail
+            cd /opt/vocanova
+            set -a
+            . /opt/vocanova/infra/secrets/api.env
+            set +a
+            sh /opt/vocanova/apps/api/scripts/seed-synthetic-smoke-user.sh
+
       - name: Mint synthetic smoke-test session for staging core-loop
         id: mint_staging_session
         env:

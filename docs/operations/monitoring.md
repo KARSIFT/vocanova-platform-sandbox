@@ -220,7 +220,11 @@ gh workflow run scheduled-synthetics.yml --ref main \
 
 Mint tokens (`STAGING_SMOKE_TEST_SESSION_MINT_TOKEN`,
 `PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN`) are masked in logs. Production
-route sweep remains non-mutating (`mutating: false` in registry).
+route sweep remains non-mutating (`mutating: false` in registry). The staging
+core-loop is explicitly `mutating: true`; immediately before each run its job
+reuses the deployment's idempotent synthetic-user seed over SSH to mark a saved
+word due for the reserved `.invalid` test account. This makes hourly review
+coverage deterministic without changing any real user's data.
 
 ### Sentry error monitoring (non-regression)
 
