@@ -16,10 +16,9 @@ set -euo pipefail
 #     SMOKE_TEST_SESSION_COOKIE (required)
 #     EXPECT_OAUTH_ENABLED / EXPECT_MAGIC_LINK_ENABLED /
 #     EXPECT_NEW_SIGNUPS_ENABLED / EXPECT_AI_ENABLED (optional; defaults
-#     match smoke-test-production.sh — scheduled-synthetics.yml must set
-#     EXPECT_OAUTH_ENABLED from the same secrets-present expression as
-#     deploy-production.yml because this profile still asserts healthz
-#     kill switches)
+#     match smoke-test-production.sh — scheduled-synthetics.yml must require
+#     EXPECT_OAUTH_ENABLED=true because this profile still asserts healthz
+#     kill switches and OAuth loss is an alert condition)
 #   production-authenticated-route-content-sweep:
 #     SMOKE_TEST_SESSION_COOKIE (required)
 #     same EXPECT_* kill-switch env as production-journey-content

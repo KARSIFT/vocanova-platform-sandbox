@@ -17,10 +17,15 @@ export const CANONICAL_CHECK_REFS = [
   "production-authenticated-route-content-sweep",
 ];
 
-// Same secrets-present expression as deploy-production.yml. Production
-// smoke profiles still run healthz kill-switch assertions.
-export const EXPECT_OAUTH_ENABLED_FROM_SECRETS =
-  "EXPECT_OAUTH_ENABLED: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID != '' && secrets.GOOGLE_OAUTH_CLIENT_SECRET != '' }}";
+// OAuth is an expected staging and production capability. Scheduled checks
+// must alert when it becomes disabled; they must not redefine a missing or
+// partial credential pair as a healthy disabled state.
+export const EXPECT_OAUTH_ENABLED_TRUE = 'EXPECT_OAUTH_ENABLED: "true"';
+
+const OAUTH_AVAILABILITY_JOBS = [
+  "staging-oauth-expected-state",
+  "production-oauth-expected-state",
+];
 
 const PRODUCTION_SMOKE_PROFILE_JOBS = [
   "production-journey-content",
@@ -72,7 +77,9 @@ export function validateScheduledSyntheticsRegistry(syntheticsDocument) {
   for (const checkRef of CANONICAL_CHECK_REFS) {
     const entry = byCheckRef.get(checkRef);
     if (!entry) {
-      errors.push(`scheduled synthetics registry missing check_ref ${checkRef}`);
+      errors.push(
+        `scheduled synthetics registry missing check_ref ${checkRef}`,
+      );
       continue;
     }
     if (entry.workflow_ref !== SCHEDULED_SYNTHETICS_WORKFLOW) {
@@ -114,7 +121,9 @@ export function validateScheduledSyntheticsWorkflow({
   }
 
   if (!workflowSource.includes("name: scheduled-synthetics")) {
-    errors.push("scheduled-synthetics workflow must declare name: scheduled-synthetics");
+    errors.push(
+      "scheduled-synthetics workflow must declare name: scheduled-synthetics",
+    );
   }
 
   if (!/schedule:\s*\n\s*- cron:/m.test(workflowSource)) {
@@ -188,7 +197,10 @@ export function validateScheduledSyntheticsWorkflow({
     );
   }
 
-  for (const jobId of PRODUCTION_SMOKE_PROFILE_JOBS) {
+  for (const jobId of [
+    ...OAUTH_AVAILABILITY_JOBS,
+    ...PRODUCTION_SMOKE_PROFILE_JOBS,
+  ]) {
     const jobBlock = extractTopLevelJobBlock(workflowSource, jobId);
     if (!jobBlock) {
       errors.push(
@@ -196,10 +208,17 @@ export function validateScheduledSyntheticsWorkflow({
       );
       continue;
     }
-    if (!jobBlock.includes(EXPECT_OAUTH_ENABLED_FROM_SECRETS)) {
+    if (!jobBlock.includes(EXPECT_OAUTH_ENABLED_TRUE)) {
       errors.push(
-        `${jobId} must set EXPECT_OAUTH_ENABLED from the same secrets-present expression as deploy-production.yml`,
+        `${jobId} must require EXPECT_OAUTH_ENABLED: "true" so loss of expected OAuth availability alerts`,
       );
+    }
+  }
+
+  for (const jobId of PRODUCTION_SMOKE_PROFILE_JOBS) {
+    const jobBlock = extractTopLevelJobBlock(workflowSource, jobId);
+    if (!jobBlock) {
+      continue;
     }
     if (!jobBlock.includes('EXPECT_MAGIC_LINK_ENABLED: "false"')) {
       errors.push(`${jobId} must set EXPECT_MAGIC_LINK_ENABLED: "false"`);

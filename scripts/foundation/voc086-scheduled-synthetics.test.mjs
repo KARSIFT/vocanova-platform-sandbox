@@ -11,7 +11,7 @@ import test from "node:test";
 import { redactSecrets } from "../../infra/monitoring/kuma-sync/redact.mjs";
 import {
   CANONICAL_CHECK_REFS,
-  EXPECT_OAUTH_ENABLED_FROM_SECRETS,
+  EXPECT_OAUTH_ENABLED_TRUE,
   SCHEDULED_SYNTHETICS_WORKFLOW,
   extractTopLevelJobBlock,
   loadSyntheticsRegistry,
@@ -107,15 +107,24 @@ test("VOC-086-TEST-12: synthetic checks reuse mint secrets and mask sessions", (
   );
 
   for (const jobId of [
+    "staging-oauth-expected-state",
+    "production-oauth-expected-state",
     "production-journey-content",
     "production-authenticated-route-content-sweep",
   ]) {
     const jobBlock = extractTopLevelJobBlock(workflowSource, jobId);
     assert.ok(jobBlock, `workflow must define job ${jobId}`);
     assert.ok(
-      jobBlock.includes(EXPECT_OAUTH_ENABLED_FROM_SECRETS),
-      `${jobId} must set EXPECT_OAUTH_ENABLED from deploy-production's secrets-present expression`,
+      jobBlock.includes(EXPECT_OAUTH_ENABLED_TRUE),
+      `${jobId} must require OAuth to remain enabled`,
     );
+  }
+
+  for (const jobId of [
+    "production-journey-content",
+    "production-authenticated-route-content-sweep",
+  ]) {
+    const jobBlock = extractTopLevelJobBlock(workflowSource, jobId);
     assert.match(jobBlock, /EXPECT_MAGIC_LINK_ENABLED: "false"/);
     assert.match(jobBlock, /EXPECT_NEW_SIGNUPS_ENABLED: "false"/);
     assert.match(jobBlock, /EXPECT_AI_ENABLED: "true"/);
@@ -184,12 +193,12 @@ test("VOC-086-TEST-12: dispatcher error messages do not echo cookie values", () 
   assert.doesNotMatch(dispatcher, /printf\s+.*SMOKE_TEST_SESSION_COOKIE/);
 });
 
-test("VOC-086-TEST-11: production smoke-profile jobs fail closed without EXPECT_OAUTH_ENABLED", () => {
+test("VOC-086-TEST-11: all OAuth availability jobs fail closed unless OAuth is required", () => {
   const workflowSource = readFileSync(workflowPath, "utf8");
   const syntheticsDocument = loadSyntheticsRegistry(repositoryRoot);
   const stripped = workflowSource.replaceAll(
-    EXPECT_OAUTH_ENABLED_FROM_SECRETS,
-    "EXPECT_OAUTH_ENABLED: false",
+    EXPECT_OAUTH_ENABLED_TRUE,
+    'EXPECT_OAUTH_ENABLED: "false"',
   );
   const journeyBlock = extractTopLevelJobBlock(
     stripped,
@@ -197,8 +206,8 @@ test("VOC-086-TEST-11: production smoke-profile jobs fail closed without EXPECT_
   );
   assert.ok(journeyBlock);
   assert.ok(
-    !journeyBlock.includes(EXPECT_OAUTH_ENABLED_FROM_SECRETS),
-    "fixture must omit the secrets-present EXPECT_OAUTH_ENABLED expression",
+    !journeyBlock.includes(EXPECT_OAUTH_ENABLED_TRUE),
+    "fixture must omit the enabled EXPECT_OAUTH_ENABLED requirement",
   );
 
   const errors = validateScheduledSyntheticsWorkflow({
@@ -210,16 +219,30 @@ test("VOC-086-TEST-11: production smoke-profile jobs fail closed without EXPECT_
     errors.some(
       (error) =>
         error.includes("production-journey-content") &&
-        error.includes("EXPECT_OAUTH_ENABLED"),
+        error.includes("expected OAuth availability"),
     ),
-    `validator must reject missing secrets-present EXPECT_OAUTH_ENABLED: ${errors.join("; ")}`,
+    `validator must reject a disabled OAuth expectation: ${errors.join("; ")}`,
   );
   assert.ok(
     errors.some(
       (error) =>
         error.includes("production-authenticated-route-content-sweep") &&
-        error.includes("EXPECT_OAUTH_ENABLED"),
+        error.includes("expected OAuth availability"),
     ),
-    `validator must reject missing secrets-present EXPECT_OAUTH_ENABLED on route-sweep: ${errors.join("; ")}`,
+    `validator must reject a disabled OAuth expectation on route-sweep: ${errors.join("; ")}`,
   );
+
+  for (const jobId of [
+    "staging-oauth-expected-state",
+    "production-oauth-expected-state",
+  ]) {
+    assert.ok(
+      errors.some(
+        (error) =>
+          error.includes(jobId) &&
+          error.includes("expected OAuth availability"),
+      ),
+      `validator must reject a disabled OAuth expectation on ${jobId}: ${errors.join("; ")}`,
+    );
+  }
 });

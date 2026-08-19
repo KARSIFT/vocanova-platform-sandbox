@@ -28,42 +28,49 @@ this revision records the repository non-regression half only.
 
 ## Remediation (post independent FAIL on `9208316e…`)
 
-| Finding | Fix |
-| --- | --- |
-| High — production smoke-profile jobs omitted `EXPECT_OAUTH_ENABLED` | `production-journey-content` and `production-authenticated-route-content-sweep` now mirror `deploy-production.yml`: `EXPECT_OAUTH_ENABLED` from the secrets-present expression, plus `EXPECT_MAGIC_LINK_ENABLED=false`, `EXPECT_NEW_SIGNUPS_ENABLED=false`, `EXPECT_AI_ENABLED=true`. Validator + TEST-11 fail closed if the secrets-present expression is missing on either job. |
-| Medium — missing `t03-evidence.md` | This file. |
-| Low — mint CSRF optional vs deploy-staging | `mint-synthetic-session.sh` now fails closed when `csrf_token` is empty (same signal as deploy-staging). Production jobs still only consume `session_cookie`; the mint endpoint contract returns both. |
-| Low — `fetch-depth: 0` on every synthetic job | Not changed in this remediation (non-functional clone cost). Follow-up: drop to default depth 1 if operators want cheaper scheduled clones. |
+| Finding                                                             | Fix                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| High — production smoke-profile jobs omitted `EXPECT_OAUTH_ENABLED` | `production-journey-content` and `production-authenticated-route-content-sweep` now require `EXPECT_OAUTH_ENABLED=true`, plus `EXPECT_MAGIC_LINK_ENABLED=false`, `EXPECT_NEW_SIGNUPS_ENABLED=false`, and `EXPECT_AI_ENABLED=true`. Validator + TEST-11 fail closed if the enabled OAuth expectation is missing on either job. |
+| Medium — missing `t03-evidence.md`                                  | This file.                                                                                                                                                                                                                                                                                                                    |
+| Low — mint CSRF optional vs deploy-staging                          | `mint-synthetic-session.sh` now fails closed when `csrf_token` is empty (same signal as deploy-staging). Production jobs still only consume `session_cookie`; the mint endpoint contract returns both.                                                                                                                        |
+| Low — `fetch-depth: 0` on every synthetic job                       | Not changed in this remediation (non-functional clone cost). Follow-up: drop to default depth 1 if operators want cheaper scheduled clones.                                                                                                                                                                                   |
+
+An additional pre-merge live review found that deriving the OAuth expectation
+from credential presence would allow a missing or partial pair plus HTTP 503 to
+pass as healthy. All four OAuth-aware jobs now require
+`EXPECT_OAUTH_ENABLED=true`; repository credential loss or a disabled live
+kill switch therefore alerts instead of redefining the expected state.
 
 ## Decision records for this task
 
-| Decision | Recorded choice |
-| --- | --- |
-| `VOC-086-DEP-03` packaging | One workflow (`.github/workflows/scheduled-synthetics.yml`) with **five discrete jobs** whose `name:` is the stable synthetic ID. Optional `workflow_dispatch.inputs.synthetic_id` runs one check; empty / schedule runs all five. Not a job matrix and not `workflow_call` sub-workflows. |
-| Harness reuse | Staging OAuth → `verify-staging-oauth-start.sh`; production OAuth → `verify-production-oauth-start.sh`; journey/route-sweep → `smoke-test-production.sh` profiles; staging core-loop → existing Playwright `playwright.staging.config.ts`. |
-| Mint secrets | `STAGING_SMOKE_TEST_SESSION_MINT_TOKEN` / `PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN`; values masked with `::add-mask::`. |
-| Production kill switches | Same `EXPECT_*` env as `deploy-production.yml` on both smoke-profile jobs, because those profiles still run the healthz kill-switch section. |
-| Sentry split (`VOC-086-D06`) | `.github/workflows/error-monitoring.yml` remains the Sentry path; scheduled synthetics neither call nor replace it. |
+| Decision                       | Recorded choice                                                                                                                                                                                                                                                                            |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `VOC-086-DEP-03` packaging     | One workflow (`.github/workflows/scheduled-synthetics.yml`) with **five discrete jobs** whose `name:` is the stable synthetic ID. Optional `workflow_dispatch.inputs.synthetic_id` runs one check; empty / schedule runs all five. Not a job matrix and not `workflow_call` sub-workflows. |
+| Harness reuse                  | Staging OAuth → `verify-staging-oauth-start.sh`; production OAuth → `verify-production-oauth-start.sh`; journey/route-sweep → `smoke-test-production.sh` profiles; staging core-loop → existing Playwright `playwright.staging.config.ts`.                                                 |
+| Mint secrets                   | `STAGING_SMOKE_TEST_SESSION_MINT_TOKEN` / `PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN`; values masked with `::add-mask::`.                                                                                                                                                                   |
+| OAuth availability             | Staging OAuth, production OAuth, production content, and production route-sweep jobs require `EXPECT_OAUTH_ENABLED=true`; the exact-callback verifiers therefore require HTTP 200 and never accept disabled 503 as healthy.                                                                |
+| Other production kill switches | `EXPECT_MAGIC_LINK_ENABLED=false`, `EXPECT_NEW_SIGNUPS_ENABLED=false`, and `EXPECT_AI_ENABLED=true` remain aligned with production posture on both smoke-profile jobs.                                                                                                                     |
+| Sentry split (`VOC-086-D06`)   | `.github/workflows/error-monitoring.yml` remains the Sentry path; scheduled synthetics neither call nor replace it.                                                                                                                                                                        |
 
 ## Repository deliverables
 
-| Artifact | Path |
-| --- | --- |
-| Scheduled synthetics workflow | `.github/workflows/scheduled-synthetics.yml` |
-| Synthetics registry | `infra/monitoring/synthetics.yaml` |
-| Dispatcher | `infra/scripts/run-scheduled-synthetic.sh` |
-| Shared mint script | `infra/scripts/mint-synthetic-session.sh` |
-| Production OAuth verifier | `infra/scripts/verify-production-oauth-start.sh` |
-| Wiring helper | `infra/monitoring/scheduled-synthetics.mjs` |
-| Deterministic tests | `scripts/foundation/voc086-scheduled-synthetics.test.mjs` |
-| This evidence | `specs/changes/VOC-086-manage-monitoring-inventory/t03-evidence.md` |
+| Artifact                      | Path                                                                |
+| ----------------------------- | ------------------------------------------------------------------- |
+| Scheduled synthetics workflow | `.github/workflows/scheduled-synthetics.yml`                        |
+| Synthetics registry           | `infra/monitoring/synthetics.yaml`                                  |
+| Dispatcher                    | `infra/scripts/run-scheduled-synthetic.sh`                          |
+| Shared mint script            | `infra/scripts/mint-synthetic-session.sh`                           |
+| Production OAuth verifier     | `infra/scripts/verify-production-oauth-start.sh`                    |
+| Wiring helper                 | `infra/monitoring/scheduled-synthetics.mjs`                         |
+| Deterministic tests           | `scripts/foundation/voc086-scheduled-synthetics.test.mjs`           |
+| This evidence                 | `specs/changes/VOC-086-manage-monitoring-inventory/t03-evidence.md` |
 
 ## Acceptance mapping
 
-| AC | Repository outcome |
-| --- | --- |
-| AC-06 (wiring) | Five stable IDs in registry + workflow job names; mint reuse/masking; production sweep `mutating: false` + `SMOKE_TEST_PROFILE=route-sweep`; TEST-11/12. Live green proof remains T05. |
-| AC-07 (non-regression) | TEST-13 asserts scheduled synthetics do not call/replace `error-monitoring.yml`; that workflow still names Sentry and keeps its hourly schedule. Live healthy posture remains T05. |
+| AC                     | Repository outcome                                                                                                                                                                     |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AC-06 (wiring)         | Five stable IDs in registry + workflow job names; mint reuse/masking; production sweep `mutating: false` + `SMOKE_TEST_PROFILE=route-sweep`; TEST-11/12. Live green proof remains T05. |
+| AC-07 (non-regression) | TEST-13 asserts scheduled synthetics do not call/replace `error-monitoring.yml`; that workflow still names Sentry and keeps its hourly schedule. Live healthy posture remains T05.     |
 
 ## Deterministic validation
 
