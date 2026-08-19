@@ -1,0 +1,56 @@
+name: voc090-t01-live-verify
+
+# VOC-090-T01: post-push live verification for scheduled-synthetics on develop.
+# The implementer GITHUB_TOKEN lacks actions:write during implement.yml; this
+# workflow runs on the task PR branch (which carries actions:write permission)
+# to dispatch staging-only proof and commit scrubbed t01-evidence.md before
+# pipeline review proceeds.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - develop
+
+concurrency:
+  group: voc090-t01-live-verify-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  actions: write
+  contents: write
+
+jobs:
+  live-verify:
+    if: github.head_ref == 'agent/voc-090-voc-090-t01'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Check out task branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Dispatch scheduled-synthetics and record evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          chmod +x specs/changes/VOC-090-operational-failure-scheduled-synthetics-cancelled/record-live-evidence.sh
+          specs/changes/VOC-090-operational-failure-scheduled-synthetics-cancelled/record-live-evidence.sh
+
+      - name: Push recorded evidence when updated
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          evidence="specs/changes/VOC-090-operational-failure-scheduled-synthetics-cancelled/t01-evidence.md"
+          if ! git diff --quiet "$evidence"; then
+            git config user.name "github-actions[bot]"
+            git config user.email "actions@users.noreply.github.com"
+            git add "$evidence"
+            git commit -m "VOC-090: record T01 live scheduled-synthetics verification"
+            git push origin "HEAD:${{ github.head_ref }}"
+          fi
