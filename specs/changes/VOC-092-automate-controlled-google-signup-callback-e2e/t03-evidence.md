@@ -121,6 +121,14 @@ Result: three VOC-088 staging-readiness tests passed on the task working tree.
 
 ## Live staging readiness
 
+Post-T02 `deploy-staging` run
+[32312272542](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32312272542)
+completed successfully on exact `develop` merge SHA
+`c78a537bf093a9986d49db695e0ecba1813883ea`. The repository workflow passed
+controlled-signup allowlist validation, public API/web health, the canonical
+OAuth-start readiness gate, hardened Chromium installation, and the staging
+browser core-loop journey.
+
 Public `/healthz` (2026-08-19):
 
 ```bash
@@ -154,15 +162,15 @@ The OAuth start response body is not copied here (it contains OAuth `state`).
 
 ## Scheduled synthetics
 
-Latest successful `scheduled-synthetics` run from `develop` on 2026-08-19
-(post VOC-092-T01 merge, with VOC-092 leaving the synthetic unchanged):
+Post-T02 successful `scheduled-synthetics` run from exact `develop` merge SHA
+`c78a537bf093a9986d49db695e0ecba1813883ea` on 2026-08-19:
 
 | Job | Conclusion | Run |
 | --- | --- | --- |
-| `synthetic.staging.oauth-expected-state` | success | [32293861885](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32293861885) ([job 96206705436](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32293861885/job/96206705436)) |
+| `synthetic.staging.oauth-expected-state` | success | [32312588151](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32312588151) ([job 96258426406](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32312588151/job/96258426406)) |
 
-Head SHA for that run: `7dfd3e000a6b3ed791cd09cd9ef174d8a650b25b` (`develop`).
-The job executed the merged VOC-088-T01 version of
+The job ran after the successful post-T02 deployment and executed the retained
+merged VOC-088-T01 version of
 `verify-staging-oauth-start.sh` with `EXPECT_OAUTH_ENABLED=true`, requiring
 `controlled_signup_ready: true` on `/healthz`.
 
