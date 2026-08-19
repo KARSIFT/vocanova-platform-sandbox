@@ -80,6 +80,57 @@ Optional harness (does not complete Google login):
 EXPECT_OAUTH_ENABLED=true bash infra/scripts/verify-staging-oauth-start.sh
 ```
 
+## Repository-managed OAuth callback E2E harness (VOC-092)
+
+CI and local operators can exercise the full application OAuth **callback**
+contract without interactive Google login. The harness drives the real
+`POST /api/v1/auth/oauth/google/start` and
+`GET /api/v1/auth/oauth/google/callback` handlers, validates the OAuth state
+cookie, runs the real `GoogleOAuthProvider` token and userinfo HTTP boundary
+against a localhost fake Google server inside the test process, and persists
+auth rows in disposable loopback PostgreSQL only. It mirrors staging controlled
+signup policy: `OAuthEnabled=true`, `NewSignupsEnabled=false`, and a non-empty
+controlled allowlist for the success case.
+
+### What the harness proves
+
+| Area | Coverage |
+| --- | --- |
+| OAuth start/callback HTTP contract | State cookie issuance and validation, callback query handling, redirect semantics |
+| Provider HTTP boundary | Real token exchange and userinfo fetch through `GoogleOAuthProvider` (not a runtime provider switch) |
+| Database persistence | User, external identity, and session rows on allowlisted success |
+| Controlled signup policy | Allowlisted first-time synthetic identity reaches the configured onboarding/home return URL without HTTP 503; unlisted synthetic identity receives the stable HTTP 503 new-signups-disabled body |
+| Isolation | No staging/production hosts, secrets, databases, or public test-auth routes |
+
+### What the harness does not prove
+
+- Google account login UI, consent screens, CAPTCHA, or account chooser
+- Google-side redirect URI registration drift or OAuth client configuration outside this repository
+- Real-user identity edge cases that require a human Google account
+
+The live staging synthetic `synthetic.staging.oauth-expected-state` and
+`verify-staging-oauth-start.sh` remain unchanged. They still assert OAuth start
+and readiness on staging; the callback harness adds complementary repository CI
+coverage only.
+
+### Run locally
+
+Requires Docker on PATH for disposable Postgres.
+
+```bash
+bash infra/scripts/run-controlled-signup-oauth-e2e.sh
+```
+
+Equivalent direct command:
+
+```bash
+pnpm test:controlled-signup-oauth-e2e
+```
+
+CI executes the same cases in
+`.github/workflows/controlled-signup-oauth-e2e.yml` on pull requests and on
+`develop`.
+
 ## Prove cohort preservation across automatic deploys
 
 After changing the secret, record two consecutive **push**-triggered
@@ -102,9 +153,17 @@ host environment manually.
 
 ## Human sign-in verification (no credentials in evidence)
 
-Repository automation proves OAuth **start** and readiness; completing Google
-login still requires a human operator. Use this checklist after the secret change
-has deployed:
+Repository automation proves OAuth **start**, readiness, and the application
+callback contract (see **Repository-managed OAuth callback E2E harness** above).
+Completing Google login against the real provider still requires a human operator.
+
+**Periodic real-provider audit:** run the checklist below after any auth callback
+handler, allowlist policy, or Google OAuth client/redirect change, and at least
+quarterly even when no such change occurred. A green callback harness or staging
+OAuth-start synthetic does not replace this audit.
+
+Use the checklist after the secret change has deployed (or during the quarterly
+audit):
 
 | Check                              | How to verify                                                                            | Expected result                                                                                                                             |
 | ---------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -193,3 +252,5 @@ TEST-11).
 - `docs/operations/11-devops-and-ci-cd.md` — staging deploy automation
 - `specs/changes/VOC-088-persist-controlled-staging-oauth-signup-and-auto/` —
   package specification, tasks, and evidence
+- `specs/changes/VOC-092-automate-controlled-google-signup-callback-e2e/` —
+  callback E2E harness specification and evidence
