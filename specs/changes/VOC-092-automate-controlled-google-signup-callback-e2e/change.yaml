@@ -76,6 +76,7 @@ affected_areas:
 - .github/workflows/ (CI job wiring for deterministic harness execution)
 - scripts/foundation/ (voc092 deterministic structure and redaction tests)
 - docs/operations/staging-controlled-signup.md (harness boundary and human audit)
+- docs/operations/README.md (operator index link if T02 touches the index)
 - specs/changes/VOC-088-persist-controlled-staging-oauth-signup-and-auto/t03-evidence.md
   (non-blocking review findings remediation only)
 - specs/changes/VOC-092-automate-controlled-google-signup-callback-e2e/

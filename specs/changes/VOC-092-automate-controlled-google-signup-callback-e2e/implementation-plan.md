@@ -82,7 +82,7 @@ Ordered steps:
 Deterministic (T00–T02):
 
 ```bash
-go test ./apps/api/... -run ControlledSignupOAuth -count=1
+(cd apps/api && go test ./... -run ControlledSignupOAuth -count=1)
 node --test scripts/foundation/voc092-controlled-signup-oauth-e2e.test.mjs
 node --test scripts/foundation/voc092-operator-docs.test.mjs
 node --test scripts/foundation/voc088-staging-readiness.test.mjs

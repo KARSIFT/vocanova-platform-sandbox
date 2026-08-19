@@ -41,7 +41,7 @@ and isolated from staging and production.
 ## VOC-092-AC-03 — Allowlisted synthetic identity reaches authenticated onboarding/home path
 
 - Requirement source: `VOC-092-D01`, `VOC-092-D02`, issue #769 requirement 2
-- Tasks: `VOC-092-T00`
+- Tasks: `VOC-092-T00`, `VOC-092-T03`
 - Tests: `VOC-092-TEST-05`
 - Evidence: `VOC-092-EV-00`, `VOC-092-EV-03`
 - Result: pending
@@ -54,7 +54,7 @@ HTTP 503.
 ## VOC-092-AC-04 — Unlisted synthetic identity receives stable HTTP 503 denial
 
 - Requirement source: `VOC-092-D02`, issue #769 requirement 3
-- Tasks: `VOC-092-T00`
+- Tasks: `VOC-092-T00`, `VOC-092-T03`
 - Tests: `VOC-092-TEST-06`
 - Evidence: `VOC-092-EV-00`, `VOC-092-EV-03`
 - Result: pending
@@ -103,7 +103,7 @@ evidence shows the live staging synthetic still passes.
 ## VOC-092-AC-08 — CI and deterministic tests wired with operational-failure eligibility
 
 - Requirement source: `VOC-092-D05`, issue #769 requirement 7
-- Tasks: `VOC-092-T01`
+- Tasks: `VOC-092-T01`, `VOC-092-T03`
 - Tests: `VOC-092-TEST-11`, `VOC-092-TEST-12`
 - Evidence: `VOC-092-EV-01`, `VOC-092-EV-03`
 - Result: pending
@@ -117,7 +117,7 @@ deduplication or sanitization.
 
 - Requirement source: `VOC-092-D07`, issue #769 requirement 8
 - Tasks: `VOC-092-T02`
-- Tests: `VOC-092-TEST-13`
+- Tests: `VOC-092-TEST-13`, `VOC-092-TEST-16`
 - Evidence: `VOC-092-EV-02`
 - Result: pending
 
@@ -128,7 +128,7 @@ UI still requires, and the periodic human real-provider audit procedure.
 
 - Requirement source: `VOC-092-D08`, issue #769 requirement 9
 - Tasks: `VOC-092-T02`
-- Tests: `VOC-092-TEST-14`
+- Tests: `VOC-092-TEST-14`, `VOC-092-TEST-16`
 - Evidence: `VOC-092-EV-02`
 - Result: pending
 
