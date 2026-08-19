@@ -40,6 +40,12 @@ set -euo pipefail
 #                                value, i.e. `vocanova_session=<opaque
 #                                session value>`, not the bare opaque
 #                                value on its own.
+#   SMOKE_TEST_PROFILE          (default: full) — VOC-086-T03 scheduled
+#                                synthetic profiles:
+#                                  full           — entire deploy suite
+#                                  journey-content — healthz + journey content
+#                                  route-sweep    — healthz + journey slugs +
+#                                                   authenticated route sweep
 #
 # Requires: curl, and either jq or python3 for JSON parsing.
 
@@ -56,8 +62,33 @@ expect_oauth="${EXPECT_OAUTH_ENABLED:-false}"
 expect_new_signups="${EXPECT_NEW_SIGNUPS_ENABLED:-false}"
 expect_ai="${EXPECT_AI_ENABLED:-true}"
 smoke_session_cookie="${SMOKE_TEST_SESSION_COOKIE:-}"
+smoke_profile="${SMOKE_TEST_PROFILE:-full}"
 situation_slug=""
 word_slug=""
+
+profile_runs_section() {
+  case "$smoke_profile" in
+    full)
+      return 0
+      ;;
+    journey-content)
+      case "$1" in
+        healthz|journey-content) return 0 ;;
+        *) return 1 ;;
+      esac
+      ;;
+    route-sweep)
+      case "$1" in
+        healthz|journey-content|route-sweep) return 0 ;;
+        *) return 1 ;;
+      esac
+      ;;
+    *)
+      echo "unknown SMOKE_TEST_PROFILE: $smoke_profile" >&2
+      exit 1
+      ;;
+  esac
+}
 
 # VOC-085-TEST-06 fixed route inventory (keep in sync with
 # scripts/foundation/voc085-production-route-sweep.test.mjs).
@@ -255,9 +286,15 @@ except Exception:
 echo "== VOC-038-T02 production smoke test =="
 echo "api:  $api_base_url"
 echo "web:  $web_base_url"
+echo "profile: $smoke_profile"
 echo
 
 # 1. Health endpoint
+if ! profile_runs_section healthz; then
+  echo "SMOKE TEST PASSED (profile $smoke_profile)"
+  exit 0
+fi
+
 healthz_body="$(curl -fsS --max-time 10 "$api_base_url/healthz" || true)"
 if [ -z "$healthz_body" ]; then
   fail "GET /healthz did not return a response"
@@ -289,11 +326,13 @@ else
 fi
 
 # 3. Web reachability
-web_status="$(curl -sS --max-time 10 -o /dev/null -w "%{http_code}" "$web_base_url/" || echo "000")"
-case "$web_status" in
-  2*) pass "GET $web_base_url/ returned $web_status" ;;
-  *) fail "GET $web_base_url/ returned $web_status (expected 2xx)" ;;
-esac
+if profile_runs_section web-reachability; then
+  web_status="$(curl -sS --max-time 10 -o /dev/null -w "%{http_code}" "$web_base_url/" || echo "000")"
+  case "$web_status" in
+    2*) pass "GET $web_base_url/ returned $web_status" ;;
+    *) fail "GET $web_base_url/ returned $web_status (expected 2xx)" ;;
+  esac
+fi
 
 # 4. Auth flow reachability (no side effects: never actually requests
 # a magic link or completes an OAuth flow). A disabled path must
@@ -303,6 +342,7 @@ esac
 # server responds at all (not a network error / raw proxy failure),
 # since actually exercising it would send a real email or write real
 # OAuth state.
+if profile_runs_section auth-reachability; then
 magic_status="$(curl -sS --max-time 10 -o /dev/null -w "%{http_code}" \
   -X POST -H "Content-Type: application/json" \
   -d '{"email":"smoke-test@vocanova.site"}' \
@@ -338,6 +378,7 @@ else
     fail "oauth start endpoint unreachable (network error)"
   fi
 fi
+fi
 
 # 5. Core-loop happy path - requires the synthetic smoke-test account's
 # session cookie. deploy-production.yml mints one on every deploy
@@ -346,8 +387,14 @@ fi
 # silent pass or a hard failure over an unprovisioned local shell.
 # Both requests are read-only, preserving this suite's no-side-effects
 # design.
-if [ -z "$smoke_session_cookie" ]; then
-  skip "core-loop happy path (SMOKE_TEST_SESSION_COOKIE not set - pass vocanova_session=<value> to run it)"
+if ! profile_runs_section journey-content; then
+  :
+elif [ -z "$smoke_session_cookie" ]; then
+  if [ "$smoke_profile" = "full" ]; then
+    skip "core-loop happy path (SMOKE_TEST_SESSION_COOKIE not set - pass vocanova_session=<value> to run it)"
+  else
+    fail "journey content checks require SMOKE_TEST_SESSION_COOKIE (fail closed)"
+  fi
 else
   me_status="$(curl -sS --max-time 10 -o /dev/null -w "%{http_code}" \
     -H "Cookie: $smoke_session_cookie" \
@@ -432,7 +479,9 @@ fi
 # cookie; protected routes and API-derived discover paths require it. Every
 # request is a non-mutating GET — no magic links, OAuth completion, or
 # state-changing learning actions.
-if [ -z "$smoke_session_cookie" ]; then
+if ! profile_runs_section route-sweep; then
+  :
+elif [ -z "$smoke_session_cookie" ]; then
   fail "authenticated route sweep requires SMOKE_TEST_SESSION_COOKIE (fail closed; deploy-production.yml must mint one)"
 else
   for route_path in "${PRODUCTION_PUBLIC_WEB_ROUTES[@]}"; do

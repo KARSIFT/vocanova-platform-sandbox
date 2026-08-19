@@ -29,9 +29,9 @@ synthetics:
     type: synthetic
     workflow_ref: .github/workflows/scheduled-synthetics.yml
     check_ref: production-oauth-expected-state
-    harness_script: infra/scripts/smoke-test-production.sh
+    harness_script: infra/scripts/verify-production-oauth-start.sh
     expected_status: 200
-    expected_body: null
+    expected_body: accounts.google.com
     schedule: "0 * * * *"
     timeout_seconds: 120
     retries: 1
