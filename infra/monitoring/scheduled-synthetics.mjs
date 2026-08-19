@@ -22,6 +22,16 @@ export const CANONICAL_CHECK_REFS = [
 // partial credential pair as a healthy disabled state.
 export const EXPECT_OAUTH_ENABLED_TRUE = 'EXPECT_OAUTH_ENABLED: "true"';
 
+export const STAGING_CORE_JOURNEY_CHECK_REF = "staging-authenticated-core-journey";
+export const STAGING_CORE_JOURNEY_SYNTHETIC_ID =
+  "synthetic.staging.authenticated-core-journey";
+export const STAGING_CORE_JOURNEY_JOB_TIMEOUT_MINUTES = 40;
+export const STAGING_CORE_JOURNEY_REGISTRY_TIMEOUT_SECONDS = 2400;
+export const PLAYWRIGHT_STAGING_JOURNEY_TIMEOUT_SECONDS = 240;
+// SSH command_timeout (2m) + session mint + conservative warm-cache install
+// ceiling documented in VOC-090-T00 evidence.
+export const STAGING_CORE_JOURNEY_SETUP_RESERVE_SECONDS = 16 * 60;
+
 const OAUTH_AVAILABILITY_JOBS = [
   "staging-oauth-expected-state",
   "production-oauth-expected-state",
@@ -45,6 +55,93 @@ export function extractTopLevelJobBlock(workflowSource, jobId) {
   const nextJob = /^  [A-Za-z0-9_-]+:\s*$/m.exec(rest);
   const end = nextJob ? afterHeader + nextJob.index : workflowSource.length;
   return workflowSource.slice(start, end);
+}
+
+export function parseJobTimeoutMinutes(jobBlock) {
+  const match = /timeout-minutes:\s*(\d+)/.exec(jobBlock ?? "");
+  return match ? Number(match[1]) : null;
+}
+
+export function validateStagingCoreJourneyBudget({
+  workflowSource,
+  syntheticsDocument,
+} = {}) {
+  const errors = [];
+  const jobBlock = extractTopLevelJobBlock(
+    workflowSource,
+    STAGING_CORE_JOURNEY_CHECK_REF,
+  );
+  if (!jobBlock) {
+    errors.push(
+      `scheduled-synthetics workflow missing job block for ${STAGING_CORE_JOURNEY_CHECK_REF}`,
+    );
+    return errors;
+  }
+
+  const entry = (syntheticsDocument?.synthetics ?? []).find(
+    (item) => item.id === STAGING_CORE_JOURNEY_SYNTHETIC_ID,
+  );
+  if (!entry) {
+    errors.push(
+      `scheduled synthetics registry missing id ${STAGING_CORE_JOURNEY_SYNTHETIC_ID}`,
+    );
+    return errors;
+  }
+
+  const jobTimeoutMinutes = parseJobTimeoutMinutes(jobBlock);
+  if (jobTimeoutMinutes === null) {
+    errors.push(
+      `${STAGING_CORE_JOURNEY_CHECK_REF} must declare timeout-minutes`,
+    );
+  } else if (jobTimeoutMinutes < entry.timeout_seconds / 60) {
+    errors.push(
+      `${STAGING_CORE_JOURNEY_CHECK_REF} timeout-minutes (${jobTimeoutMinutes}) must be >= registry timeout_seconds / 60 (${entry.timeout_seconds / 60})`,
+    );
+  } else if (entry.timeout_seconds !== jobTimeoutMinutes * 60) {
+    errors.push(
+      `${STAGING_CORE_JOURNEY_SYNTHETIC_ID} timeout_seconds (${entry.timeout_seconds}) must equal job timeout-minutes * 60 (${jobTimeoutMinutes * 60})`,
+    );
+  }
+
+  const jobTimeoutSeconds = (jobTimeoutMinutes ?? 0) * 60;
+  const minimumBudget =
+    PLAYWRIGHT_STAGING_JOURNEY_TIMEOUT_SECONDS +
+    STAGING_CORE_JOURNEY_SETUP_RESERVE_SECONDS;
+  if (jobTimeoutSeconds < minimumBudget) {
+    errors.push(
+      `${STAGING_CORE_JOURNEY_CHECK_REF} job wall clock (${jobTimeoutSeconds}s) must cover Playwright journey timeout (${PLAYWRIGHT_STAGING_JOURNEY_TIMEOUT_SECONDS}s) plus setup reserve (${STAGING_CORE_JOURNEY_SETUP_RESERVE_SECONDS}s)`,
+    );
+  }
+
+  if (!/cache:\s*["']pnpm["']/m.test(jobBlock)) {
+    errors.push(
+      `${STAGING_CORE_JOURNEY_CHECK_REF} must enable pnpm dependency caching via setup-node cache: pnpm`,
+    );
+  }
+
+  if (!jobBlock.includes("actions/cache@")) {
+    errors.push(
+      `${STAGING_CORE_JOURNEY_CHECK_REF} must restore Playwright browser cache via actions/cache`,
+    );
+  }
+
+  if (!jobBlock.includes("~/.cache/ms-playwright")) {
+    errors.push(
+      `${STAGING_CORE_JOURNEY_CHECK_REF} must cache Playwright browsers under ~/.cache/ms-playwright`,
+    );
+  }
+
+  const installIndex = jobBlock.indexOf(
+    "run: pnpm --filter @vocanova/web exec playwright install --with-deps chromium",
+  );
+  const cacheIndex = jobBlock.indexOf("actions/cache@");
+  if (installIndex >= 0 && cacheIndex >= 0 && cacheIndex > installIndex) {
+    errors.push(
+      `${STAGING_CORE_JOURNEY_CHECK_REF} must restore Playwright browser cache before playwright install`,
+    );
+  }
+
+  return errors;
 }
 
 export function loadSyntheticsRegistry(repositoryRoot) {
@@ -230,6 +327,13 @@ export function validateScheduledSyntheticsWorkflow({
       errors.push(`${jobId} must set EXPECT_AI_ENABLED: "true"`);
     }
   }
+
+  errors.push(
+    ...validateStagingCoreJourneyBudget({
+      workflowSource,
+      syntheticsDocument,
+    }),
+  );
 
   return errors;
 }

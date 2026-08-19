@@ -15,6 +15,11 @@ name: scheduled-synthetics
 #
 # Manual dispatch accepts an optional synthetic_id to run one check. Scheduled
 # hourly runs execute the full stable-ID set.
+#
+# Job wall clock: synthetic.staging.authenticated-core-journey uses
+# timeout-minutes aligned with infra/monitoring/synthetics.yaml
+# timeout_seconds for that check (workflow job budget, not Playwright's
+# per-test timeout in playwright.staging.config.ts).
 
 on:
   schedule:
@@ -132,7 +137,9 @@ jobs:
       ${{ github.event_name != 'workflow_dispatch' || inputs.synthetic_id == '' ||
           inputs.synthetic_id == 'synthetic.staging.authenticated-core-journey' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Matches deploy-staging.yml's proven post-deploy core-loop gate budget
+    # (VOC-090-D02). Registry timeout_seconds tracks this wall clock.
+    timeout-minutes: 40
     steps:
       - name: Check out reviewed revision
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -173,13 +180,27 @@ jobs:
             "https://api-staging.vocanova.site" \
             "api-staging.vocanova.site"
 
+      # actions/setup-node pnpm cache + explicit Playwright browser cache
+      # (VOC-090-T00). Run 32271016931 spent ~30m on uncached browser
+      # setup before the job wall clock cancelled; pnpm install was ~7s.
       - name: Set up Node for the staging core-loop synthetic
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version-file: ".nvmrc"
+          cache: "pnpm"
 
       - name: Install pnpm for the staging core-loop synthetic
         run: corepack enable && corepack prepare pnpm@11.14.0 --activate
+
+      # actions/cache v4.2.2, pinned to the immutable commit documented at
+      # https://github.com/actions/cache/releases/tag/v4.2.2
+      - name: Restore Playwright Chromium browser cache
+        uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            playwright-chromium-${{ runner.os }}-
 
       - name: Install workspace dependencies for the staging core-loop synthetic
         run: pnpm install --frozen-lockfile
