@@ -35,3 +35,19 @@ Do not set `false` to require founder approval on merge.
 
 **Historical (pre-A-004):** Under A-003 / VOC-075, R4 packages set `false` and R4
 merge required founder approval. That policy is preserved in historical records only.
+
+## `monitoring_impact` drafting
+
+When a package is newly created or its `change.yaml` is modified, declare
+`monitoring_impact` in `change.yaml` per VOC-086 and `AGENTS.md`:
+
+- `state: none|existing|add|update`
+- `none` requires a non-empty `rationale` and must not list IDs
+- `existing`, `add`, and `update` require at least one valid `monitor_ids` or
+  `synthetic_ids` entry from `infra/monitoring/monitors.yaml` and
+  `infra/monitoring/synthetics.yaml`
+- Page-route or critical API-endpoint changes fail CI when the change package
+  lacks a valid `monitoring_impact` declaration
+
+Historical packages whose `change.yaml` is untouched remain grandfathered until
+modified.

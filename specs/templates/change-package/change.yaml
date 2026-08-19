@@ -18,3 +18,14 @@ implementation_authorized: false
 automatic_merge_allowed: true
 production_impact: unknown
 rollback_required: true
+
+# Required when this package is newly created or change.yaml is modified (VOC-086).
+# Grandfathered historical packages stay exempt until their change.yaml changes.
+# state: none|existing|add|update
+#   none      -> non-empty rationale; no monitor_ids/synthetic_ids
+#   existing  -> valid IDs from infra/monitoring/ already cover the change
+#   add       -> valid new monitor_ids and/or synthetic_ids being introduced
+#   update    -> valid existing IDs being changed
+monitoring_impact:
+  state: none
+  rationale: REPLACE with why monitoring inventory is unchanged, or set state to existing|add|update with valid monitor_ids/synthetic_ids from infra/monitoring/.
