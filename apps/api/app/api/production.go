@@ -506,10 +506,11 @@ type HealthzInput struct{}
 // the probe should confirm reachability, not expose internals).
 type HealthzOutput struct {
 	Body struct {
-		Status       string           `json:"status" example:"ok" doc:"Either 'ok' or 'unhealthy'"`
-		Database     string           `json:"database" example:"ok" doc:"Either 'ok' or 'unhealthy'"`
-		Timestamp    string           `json:"timestamp" format:"date-time" doc:"Probe timestamp in RFC3339"`
-		KillSwitches KillSwitchStatus `json:"kill_switches" doc:"Current DOC-11 kill-switch state - not secret, and needed by VOC-038-T02's smoke-test suite to assert the deploy wrote the intended posture"`
+		Status                string           `json:"status" example:"ok" doc:"Either 'ok' or 'unhealthy'"`
+		Database              string           `json:"database" example:"ok" doc:"Either 'ok' or 'unhealthy'"`
+		Timestamp             string           `json:"timestamp" format:"date-time" doc:"Probe timestamp in RFC3339"`
+		KillSwitches          KillSwitchStatus `json:"kill_switches" doc:"Current DOC-11 kill-switch state - not secret, and needed by VOC-038-T02's smoke-test suite to assert the deploy wrote the intended posture"`
+		ControlledSignupReady bool             `json:"controlled_signup_ready" example:"false" doc:"True when OAuth is enabled, global signup is disabled, and at least one controlled first-time signup is permitted; never exposes allowlist emails or cohort size"`
 	}
 }
 
@@ -746,7 +747,12 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 		OAuthEnabled:      cfg.OAuthOn,
 		NewSignupsEnabled: cfg.NewSignupsOn,
 		AIEnabled:         cfg.AIEnabled,
-	})
+	}, ControlledSignupReady(
+		cfg.OAuthOn,
+		cfg.NewSignupsOn,
+		cfg.SignupAllowlist,
+		cfg.SyntheticSmokeTestEmail,
+	))
 	RegisterMonitoringSentryTest(api, cfg.MonitoringTestToken, cfg.Environment)
 	RegisterSyntheticSmokeTestSessionMint(api, authSvc, cfg.SmokeTestMintToken)
 
@@ -764,6 +770,26 @@ func newProductionReviewsRepository(db *sql.DB, clk clock.Clock, gamSvc *gamific
 	)
 }
 
+// ControlledSignupReady reports whether controlled first-time signup
+// is operational: OAuth enabled, global signup disabled, and at
+// least one non-reserved allowlisted identity may sign up. It never
+// inspects or exposes cohort size beyond this boolean.
+func ControlledSignupReady(oauthEnabled, newSignupsEnabled bool, allowlist map[string]struct{}, reservedSyntheticEmail string) bool {
+	if !oauthEnabled || newSignupsEnabled {
+		return false
+	}
+	for email := range allowlist {
+		if email == "" {
+			continue
+		}
+		if reservedSyntheticEmail != "" && email == reservedSyntheticEmail {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
 // RegisterHealthz installs the unauthenticated GET /healthz probe.
 // It pings the supplied database with a 2-second deadline; a
 // successful ping returns 200 with status="ok", an unsuccessful
@@ -771,7 +797,7 @@ func newProductionReviewsRepository(db *sql.DB, clk clock.Clock, gamSvc *gamific
 // body. /healthz is the only production route NewContractAPI
 // does not register, because the contract generator has no
 // production database to probe - it is T00-specific.
-func RegisterHealthz(api huma.API, db Healthchecker, switches KillSwitchStatus) {
+func RegisterHealthz(api huma.API, db Healthchecker, switches KillSwitchStatus, controlledSignupReady bool) {
 	huma.Register(api, huma.Operation{
 		OperationID: "GetHealthz",
 		Method:      http.MethodGet,
@@ -792,6 +818,7 @@ func RegisterHealthz(api huma.API, db Healthchecker, switches KillSwitchStatus) 
 		out.Body.Database = dbStatus
 		out.Body.Timestamp = time.Now().UTC().Format(time.RFC3339)
 		out.Body.KillSwitches = switches
+		out.Body.ControlledSignupReady = controlledSignupReady
 		if overall != "ok" {
 			return out, &huma.ErrorModel{
 				Status: http.StatusServiceUnavailable,
