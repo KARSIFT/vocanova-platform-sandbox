@@ -483,10 +483,9 @@ jobs:
           script: |
             set -euo pipefail
             bundle_root="/tmp/monitoring-sync-bundle"
-            if [ ! -d "$bundle_root/infra/monitoring" ]; then
-              mkdir -p "$bundle_root"
-              tar -xzf /tmp/monitoring-sync-bundle.tgz -C "$bundle_root"
-            fi
+            rm -rf "$bundle_root"
+            mkdir -p "$bundle_root"
+            tar -xzf /tmp/monitoring-sync-bundle.tgz -C "$bundle_root"
             chmod +x "$bundle_root/infra/scripts/sync-kuma-inventory.sh"
             export MONITORING_SYNC_ROOT="$bundle_root/infra/monitoring"
             export KUMA_USERNAME="$(sed -n 's/^KUMA_USERNAME=//p' /tmp/kuma-rotate-metadata.env | head -n 1)"
@@ -509,10 +508,9 @@ jobs:
           script: |
             set -euo pipefail
             bundle_root="/tmp/monitoring-sync-bundle"
-            if [ ! -d "$bundle_root/infra/monitoring" ]; then
-              mkdir -p "$bundle_root"
-              tar -xzf /tmp/monitoring-sync-bundle.tgz -C "$bundle_root"
-            fi
+            rm -rf "$bundle_root"
+            mkdir -p "$bundle_root"
+            tar -xzf /tmp/monitoring-sync-bundle.tgz -C "$bundle_root"
             chmod +x "$bundle_root/infra/scripts/sync-kuma-inventory.sh"
             export MONITORING_SYNC_ROOT="$bundle_root/infra/monitoring"
             "$bundle_root/infra/scripts/sync-kuma-inventory.sh"

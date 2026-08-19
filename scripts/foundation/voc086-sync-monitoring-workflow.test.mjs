@@ -89,6 +89,16 @@ test("VOC-086-TEST-08: rotate_credentials is opt-in; normal sync never resets", 
     /reset-password/,
     "inventory sync script must not reset credentials",
   );
+  assert.match(syncOnlyStep, /rm -rf "\$bundle_root"/);
+  assert.match(
+    syncOnlyStep,
+    /tar -xzf \/tmp\/monitoring-sync-bundle\.tgz/,
+  );
+  assert.doesNotMatch(
+    syncOnlyStep,
+    /if \[ ! -d "\$bundle_root\/infra\/monitoring" \]/,
+    "normal sync must execute the reviewed bundle, never a stale extracted tree",
+  );
 
   assert.doesNotMatch(
     rotateScript,
