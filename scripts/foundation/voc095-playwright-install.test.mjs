@@ -88,7 +88,11 @@ function assertCacheThenInstallContract(scopeSource, label) {
     /~\/\.cache\/ms-playwright/,
     `${label} must cache Playwright browsers`,
   );
-  assert.match(scopeSource, /actions\/cache@/, `${label} must use actions/cache`);
+  assert.match(
+    scopeSource,
+    /actions\/cache@/,
+    `${label} must use actions/cache`,
+  );
   assert.match(
     scopeSource,
     PLAYWRIGHT_CACHE_KEY,
@@ -105,7 +109,10 @@ function extractDeployStagingCoreLoopSection(workflowSource) {
   const start = workflowSource.indexOf(
     "Install workspace dependencies for the staging core-loop check",
   );
-  assert.ok(start >= 0, "deploy-staging must define core-loop dependency install");
+  assert.ok(
+    start >= 0,
+    "deploy-staging must define core-loop dependency install",
+  );
   const end = workflowSource.indexOf(
     "Upload the staging core-loop Playwright report on failure",
     start,
@@ -430,7 +437,10 @@ test("VOC-095-TEST-07: scheduled-synthetics.yml uses cache then install script",
     workflowSource,
     STAGING_CORE_JOURNEY_CHECK_REF,
   );
-  assert.ok(jobBlock, "scheduled-synthetics must define staging core-journey job");
+  assert.ok(
+    jobBlock,
+    "scheduled-synthetics must define staging core-journey job",
+  );
   assertCacheThenInstallContract(jobBlock, "scheduled-synthetics core-journey");
 });
 
@@ -459,9 +469,8 @@ test("VOC-095-TEST-08: browser test steps remain mandatory after install step", 
     "lighthouse install step",
   );
   assertStepBlockHasNoContinueOnError(
-    lighthouse.match(
-      /- name: Run Lighthouse suite[\s\S]*?(?=- name:)/m,
-    )?.[0] ?? "",
+    lighthouse.match(/- name: Run Lighthouse suite[\s\S]*?(?=- name:)/m)?.[0] ??
+      "",
     "lighthouse test step",
   );
 
