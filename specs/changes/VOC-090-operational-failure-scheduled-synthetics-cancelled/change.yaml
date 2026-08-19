@@ -1,0 +1,98 @@
+schema_version: 1
+id: VOC-090
+slug: operational-failure-scheduled-synthetics-cancelled
+title: Fix scheduled-synthetics cancellation from staging core-journey timeout
+type: infrastructure
+status: draft
+risk: R3
+planned_implementation_risk_floor: "Measured during drafting against the expected\
+  \ task-scoped file list (.github/workflows/scheduled-synthetics.yml, infra/monitoring/synthetics.yaml,\
+  \ infra/monitoring/scheduled-synthetics.mjs, scripts/foundation/ scheduled-synthetics\
+  \ tests, this package directory). Detected path floor is R3 for .github/workflows/\
+  \ and infra/monitoring/. This package proposes R3 for the change as a whole \u2014\
+  \ a draft proposal for the reviewing human at adoption time, not a determination.\
+  \ Independent verification and the reviewing human must still confirm each task's\
+  \ real file list and whether semantic escalation applies."
+canonical_path: specs/changes/VOC-090-operational-failure-scheduled-synthetics-cancelled
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: none-intentional. This package adjusts CI workflow timing and caching
+  for the staging authenticated core-loop synthetic only. It does not change application
+  behavior, production signup policy, Kuma inventory, or deploy gates. Production
+  synthetics in the same workflow are touched only if shared setup steps are refactored;
+  any such refactor must preserve existing production job behavior.
+rollback_required: true
+monitoring_impact:
+  state: update
+  rationale: Corrects timeout metadata for synthetic.staging.authenticated-core-journey
+    after fixing the hourly scheduled job budget that caused run 32271016931 to cancel
+    at 30 minutes. No new stable monitor or synthetic IDs.
+  synthetic_ids:
+  - synthetic.staging.authenticated-core-journey
+authority_model: a004-active
+requirement_source: 'GitHub issue #759 (Operational failure: scheduled-synthetics
+  (cancelled)), opened by the VOC-088-T02 operational-failure-monitoring observer.
+  Fresh 2026-08-19 evidence from the public run page for https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32271016931:
+  scheduled-synthetics run #22, schedule-triggered, conclusion cancelled after 30m
+  19s; job synthetic.staging.authenticated-core-journey exceeded maximum execution
+  time 30m0s; other jobs in the run completed. Drafting-time repo read: the job runs
+  uncached pnpm install and playwright install on every hourly tick before the Playwright
+  staging core-loop journey; deploy-staging.yml uses the same journey pattern with
+  timeout-minutes 40. This draft package does not adopt or authorize itself.'
+requirement_approval_status: not-approved
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only)
+  implementation: unassigned
+  independent_verification: unassigned
+dependencies:
+- id: VOC-090-DEP-00
+  status: 'resolved at drafting time. Issue #759 and run 32271016931 identify the
+    failing workflow (scheduled-synthetics), conclusion (cancelled), and failing job
+    (synthetic.staging.authenticated-core-journey) with public timeout annotation.'
+- id: VOC-090-DEP-01
+  status: resolved at drafting time. VOC-086-T03 merged scheduled-synthetics.yml and
+    infra/monitoring/synthetics.yaml with five canonical synthetic IDs. VOC-050-T02
+    owns apps/web/tests/staging-e2e/core-loop.staging.spec.ts and playwright.staging.config.ts
+    (240s journey timeout, MAX_REVIEW_CARDS=8).
+- id: VOC-088
+  status: 'Adopted predecessor. operational-failure-monitoring.yml opened issue #759
+    via the sanitized failure-to-issue path. This package remediates the underlying
+    timeout; it must not weaken deduplication or sanitization.'
+- id: VOC-086
+  status: Adopted predecessor for scheduled synthetics registry and workflow wiring.
+    validateScheduledSyntheticsFiles and voc086-scheduled-synthetics.test.mjs must
+    remain passing; extend or add voc090 tests rather than weakening VOC-086 guards.
+affected_areas:
+- .github/workflows/scheduled-synthetics.yml (staging core-journey job caching and
+  timeout)
+- infra/monitoring/synthetics.yaml (timeout_seconds alignment for staging core journey)
+- infra/monitoring/scheduled-synthetics.mjs (optional validator extension for job
+  budget)
+- scripts/foundation/ (deterministic workflow/registry budget tests)
+- specs/changes/VOC-090-operational-failure-scheduled-synthetics-cancelled
+implementation:
+  authorized: false
+  required: true
+  status: not-authorized
+  target_branch: develop
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-ci-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: not-authorized
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
+blocking_reasons: draft-not-adopted
