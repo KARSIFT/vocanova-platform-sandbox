@@ -46,7 +46,10 @@ function loadWorkflowSource() {
 }
 
 function loadStagingCoreJourneyJobBlock() {
-  return extractTopLevelJobBlock(loadWorkflowSource(), STAGING_CORE_JOURNEY_CHECK_REF);
+  return extractTopLevelJobBlock(
+    loadWorkflowSource(),
+    STAGING_CORE_JOURNEY_CHECK_REF,
+  );
 }
 
 test("VOC-090-TEST-00: root-cause evidence references run 32271016931 and dominant phase", () => {
