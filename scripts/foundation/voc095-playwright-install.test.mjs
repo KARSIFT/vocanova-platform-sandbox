@@ -54,25 +54,28 @@ function extractConstant(source, name) {
 }
 
 function runInstallScriptWithFixture({
-  depsAttemptsBeforeSuccess = Number.POSITIVE_INFINITY,
+  depsMode = "all-fail",
   createBrowserBinary = true,
+  packageManagerBusy = false,
 } = {}) {
   const fixtureRoot = mkdtempSync(path.join(tmpdir(), "voc095-playwright-"));
   const binDir = path.join(fixtureRoot, "bin");
   mkdirSync(binDir, { recursive: true });
 
-  let depsAttempts = 0;
   const homeDir = path.join(fixtureRoot, "home");
   mkdirSync(homeDir, { recursive: true });
   const browserDir = path.join(
     homeDir,
     ".cache/ms-playwright/chromium-fixture/chrome-linux",
   );
+  const mirrorListPath = path.join(fixtureRoot, "apt-mirrors.txt");
+  writeFileSync(mirrorListPath, "http://hosted-runner.invalid/ubuntu/\n");
 
   writeFileSync(
     path.join(binDir, "timeout"),
     `#!/usr/bin/env bash
 set -euo pipefail
+while [[ "\${1:-}" == --* ]]; do shift; done
 shift
 exec "$@"
 `,
@@ -82,6 +85,23 @@ exec "$@"
     path.join(binDir, "sleep"),
     `#!/usr/bin/env bash
 exit 0
+`,
+  );
+
+  writeFileSync(
+    path.join(binDir, "sudo"),
+    `#!/usr/bin/env bash
+set -euo pipefail
+if [[ "\${1:-}" == "-n" ]]; then shift; fi
+exec "$@"
+`,
+  );
+
+  writeFileSync(
+    path.join(binDir, "fuser"),
+    `#!/usr/bin/env bash
+if [[ "\${PACKAGE_MANAGER_BUSY}" == "1" ]]; then exit 0; fi
+exit 1
 `,
   );
 
@@ -106,10 +126,15 @@ if [[ "$cmd" == *"playwright install-deps chromium"* ]]; then
   fi
   attempts=$((attempts + 1))
   printf '%s' "$attempts" > "$counter_file"
-  if (( attempts >= DEPS_SUCCESS_ON )); then
-    exit 0
-  fi
-  exit 17
+  case "$DEPS_MODE" in
+    immediate-success) exit 0 ;;
+    primary-timeout-fallback-success)
+      grep -Fxq "https://archive.ubuntu.com/ubuntu/" "$MIRROR_LIST_PATH" && exit 0
+      exit 124
+      ;;
+    all-fail) exit 17 ;;
+    *) exit 65 ;;
+  esac
 fi
 echo "unexpected pnpm invocation: $cmd" >&2
 exit 64
@@ -118,9 +143,11 @@ exit 64
 
   chmodSync(path.join(binDir, "timeout"), 0o755);
   chmodSync(path.join(binDir, "sleep"), 0o755);
+  chmodSync(path.join(binDir, "sudo"), 0o755);
+  chmodSync(path.join(binDir, "fuser"), 0o755);
   chmodSync(path.join(binDir, "pnpm"), 0o755);
 
-  return spawnSync("bash", [installScriptPath], {
+  const result = spawnSync("bash", [installScriptPath], {
     cwd: repositoryRoot,
     encoding: "utf8",
     env: {
@@ -130,9 +157,16 @@ exit 64
       FIXTURE_ROOT: fixtureRoot,
       CREATE_BROWSER: createBrowserBinary ? "1" : "0",
       BROWSER_DIR: browserDir,
-      DEPS_SUCCESS_ON: String(depsAttemptsBeforeSuccess),
+      DEPS_MODE: depsMode,
+      MIRROR_LIST_PATH: mirrorListPath,
+      PLAYWRIGHT_APT_MIRROR_LIST_PATH: mirrorListPath,
+      GITHUB_ACTIONS: "true",
+      RUNNER_OS: "Linux",
+      RUNNER_ARCH: "X64",
+      PACKAGE_MANAGER_BUSY: packageManagerBusy ? "1" : "0",
     },
   });
+  return { ...result, fixtureRoot, mirrorListPath };
 }
 
 test("VOC-095-TEST-00: root-cause evidence references run 32299315180 and apt stall phase", () => {
@@ -182,8 +216,10 @@ test("VOC-095-TEST-01: install script declares timeout and retry constants", () 
   );
   assert.match(
     source,
-    /timeout\s+"?\$\{PLAYWRIGHT_DEPS_ATTEMPT_TIMEOUT_SECONDS\}"?/,
+    /timeout\s+--signal=TERM[\s\S]*--kill-after="\$\{PLAYWRIGHT_DEPS_KILL_GRACE_SECONDS\}"/,
   );
+  assert.match(source, /wait_for_package_manager_quiescence/);
+  assert.match(source, /sudo -n fuser/);
 });
 
 test("VOC-095-TEST-02: install script verifies Chromium binary after install", () => {
@@ -214,9 +250,7 @@ test("VOC-095-TEST-03: install script has no skip or bypass patterns", () => {
 });
 
 test("VOC-095-TEST-03b: install script fails closed when deps retries exhaust", () => {
-  const result = runInstallScriptWithFixture({
-    depsAttemptsBeforeSuccess: Number.POSITIVE_INFINITY,
-  });
+  const result = runInstallScriptWithFixture({ depsMode: "all-fail" });
 
   assert.notEqual(result.status, 0);
   assert.match(
@@ -227,9 +261,7 @@ test("VOC-095-TEST-03b: install script fails closed when deps retries exhaust", 
 });
 
 test("VOC-095-TEST-03c: install script succeeds when deps succeed and binary exists", () => {
-  const result = runInstallScriptWithFixture({
-    depsAttemptsBeforeSuccess: 1,
-  });
+  const result = runInstallScriptWithFixture({ depsMode: "immediate-success" });
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
   assert.match(result.stdout, /succeeded on attempt 1\/3/);
@@ -237,12 +269,56 @@ test("VOC-095-TEST-03c: install script succeeds when deps succeed and binary exi
 
 test("VOC-095-TEST-03d: install script fails closed when Chromium binary is missing", () => {
   const result = runInstallScriptWithFixture({
-    depsAttemptsBeforeSuccess: 1,
+    depsMode: "immediate-success",
     createBrowserBinary: false,
   });
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /Chromium binary not found/);
+});
+
+test("VOC-095-TEST-03e: primary timeout activates HTTPS fallback and succeeds", () => {
+  const result = runInstallScriptWithFixture({
+    depsMode: "primary-timeout-fallback-success",
+  });
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(
+    result.stdout,
+    /activated verified HTTPS Ubuntu archive fallback/,
+  );
+  assert.match(result.stdout, /succeeded on attempt 2\/3/);
+  assert.equal(
+    readFileSync(result.mirrorListPath, "utf8"),
+    "http://hosted-runner.invalid/ubuntu/\n",
+    "runner mirror list must be restored after the bounded fallback",
+  );
+});
+
+test("VOC-095-TEST-03f: primary and HTTPS fallback failure remains non-zero", () => {
+  const result = runInstallScriptWithFixture({ depsMode: "all-fail" });
+
+  assert.notEqual(result.status, 0);
+  assert.match(
+    result.stdout,
+    /activated verified HTTPS Ubuntu archive fallback/,
+  );
+  assert.match(result.stderr, /exhausted 3 attempts/);
+});
+
+test("VOC-095-TEST-03g: busy package-manager locks block a poisoned retry", () => {
+  const result = runInstallScriptWithFixture({
+    depsMode: "primary-timeout-fallback-success",
+    packageManagerBusy: true,
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /package-manager locks remained busy/);
+  assert.equal(
+    readFileSync(path.join(result.fixtureRoot, "deps-attempts.count"), "utf8"),
+    "1",
+    "a timed-out attempt with live locks must not start another apt process",
+  );
 });
 
 test("VOC-095-TEST-01b: install script exists at the repository-managed path", () => {
