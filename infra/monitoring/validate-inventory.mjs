@@ -51,11 +51,7 @@ const SYNTHETIC_REQUIRED_FIELDS = [
   "coverage",
 ];
 
-const VALID_ENVIRONMENTS = new Set([
-  "staging",
-  "production",
-  "shared",
-]);
+const VALID_ENVIRONMENTS = new Set(["staging", "production", "shared"]);
 
 const VALID_SEVERITIES = new Set(["low", "medium", "high", "critical"]);
 
@@ -253,7 +249,9 @@ function validateAvailabilityMonitor(monitor, errors) {
   }
 
   if (!VALID_MONITOR_TYPES.has(monitor.type)) {
-    errors.push(`${label}: type must be ${[...VALID_MONITOR_TYPES].join(", ")}`);
+    errors.push(
+      `${label}: type must be ${[...VALID_MONITOR_TYPES].join(", ")}`,
+    );
   }
 
   if (!isNonEmptyString(monitor.url)) {
@@ -280,11 +278,17 @@ function validateAvailabilityMonitor(monitor, errors) {
     errors.push(`${label}: expected_body must be a string or null`);
   }
 
-  if (!isNonNegativeInteger(monitor.interval_seconds) || monitor.interval_seconds <= 0) {
+  if (
+    !isNonNegativeInteger(monitor.interval_seconds) ||
+    monitor.interval_seconds <= 0
+  ) {
     errors.push(`${label}: interval_seconds must be a positive integer`);
   }
 
-  if (!isNonNegativeInteger(monitor.timeout_seconds) || monitor.timeout_seconds <= 0) {
+  if (
+    !isNonNegativeInteger(monitor.timeout_seconds) ||
+    monitor.timeout_seconds <= 0
+  ) {
     errors.push(`${label}: timeout_seconds must be a positive integer`);
   }
 
@@ -309,6 +313,32 @@ function validateAvailabilityMonitor(monitor, errors) {
       }
       if (!isNonEmptyString(monitor.adoption.match_url)) {
         errors.push(`${label}: adoption.match_url must be a non-empty string`);
+      }
+    }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(monitor, "notification_id_list")) {
+    const notificationIDList = monitor.notification_id_list;
+    if (
+      notificationIDList === null ||
+      typeof notificationIDList !== "object" ||
+      Array.isArray(notificationIDList)
+    ) {
+      errors.push(
+        `${label}: notification_id_list must be an object when present`,
+      );
+    } else {
+      for (const [notificationId, enabled] of Object.entries(
+        notificationIDList,
+      )) {
+        if (!/^[1-9]\d*$/.test(notificationId)) {
+          errors.push(
+            `${label}: notification_id_list keys must be positive integer IDs`,
+          );
+        }
+        if (typeof enabled !== "boolean") {
+          errors.push(`${label}: notification_id_list values must be booleans`);
+        }
       }
     }
   }
@@ -370,7 +400,10 @@ function validateSynthetic(synthetic, errors) {
     errors.push(`${label}: schedule must be a non-empty cron string`);
   }
 
-  if (!isNonNegativeInteger(synthetic.timeout_seconds) || synthetic.timeout_seconds <= 0) {
+  if (
+    !isNonNegativeInteger(synthetic.timeout_seconds) ||
+    synthetic.timeout_seconds <= 0
+  ) {
     errors.push(`${label}: timeout_seconds must be a positive integer`);
   }
 
