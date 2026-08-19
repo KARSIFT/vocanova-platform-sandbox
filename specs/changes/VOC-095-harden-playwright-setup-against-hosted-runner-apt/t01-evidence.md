@@ -38,13 +38,14 @@ node --test scripts/foundation/voc084-deploy-staging-oauth.test.mjs
 node --test scripts/foundation/voc088-deploy-staging-allowlist.test.mjs
 ```
 
-See command output below after local run completes.
+The scrubbed pass-count summary from the implementation-time runs follows.
 
 ### Test run output
 
 All foundation tests passed at implementation time:
 
-- `voc095-playwright-install.test.mjs`: 19 pass (includes VOC-095-TEST-04 through TEST-12)
+- `voc095-playwright-install.test.mjs`: 19 pass (includes VOC-095-TEST-04 through
+  TEST-10 and TEST-12; live TEST-11 remains deferred to T02)
 - `voc086-scheduled-synthetics.test.mjs`: 5 pass (VOC-086-TEST-11 regression)
 - `voc090-scheduled-synthetics-budget.test.mjs`: 6 pass
 - `voc084-deploy-staging-oauth.test.mjs`: 9 pass
