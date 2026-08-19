@@ -170,11 +170,61 @@ web_get() {
   _web_last_status="$status"
 }
 
+# coerce_same_origin_redirect_path <location>
+# Normalizes a Location header to a same-origin path under web_base_url.
+# Next.js middleware emits absolute URLs (for example
+# https://host/home); browsers follow those, so the harness must accept
+# same-origin absolutes while still rejecting external and sign-in targets.
+# Sets _redirect_next_path on success and _redirect_reject_reason on failure
+# (sign-in | protocol-relative | external).
+_redirect_next_path=""
+_redirect_reject_reason=""
+coerce_same_origin_redirect_path() {
+  local location="$1"
+  _redirect_next_path=""
+  _redirect_reject_reason=""
+
+  case "$location" in
+    //*)
+      _redirect_reject_reason="protocol-relative"
+      return 1
+      ;;
+  esac
+
+  local path=""
+  case "$location" in
+    /*)
+      path="$location"
+      ;;
+    "$web_base_url")
+      path="/"
+      ;;
+    "$web_base_url"/*)
+      path="${location#"$web_base_url"}"
+      ;;
+    *)
+      _redirect_reject_reason="external"
+      return 1
+      ;;
+  esac
+
+  case "$path" in
+    /signin|/signin\?*)
+      _redirect_reject_reason="sign-in"
+      return 1
+      ;;
+  esac
+
+  _redirect_next_path="$path"
+  return 0
+}
+
 # assert_web_route_reachable <label> <path> <cookie> [require_auth]
-# Follow a bounded chain of relative, same-origin redirects and require a final
-# 2xx response. Sign-in, external/protocol-relative, missing-Location, and
-# looping redirect chains fail closed. The explicit cookie header is therefore
-# never forwarded outside web_base_url.
+# Follow a bounded chain of same-origin redirects (relative or absolute on
+# web_base_url) and require a final 2xx response. Sign-in,
+# external/protocol-relative, missing-Location, and looping redirect chains
+# fail closed. The explicit cookie header is therefore never forwarded outside
+# web_base_url.
 assert_web_route_reachable() {
   local label="$1" route_path="$2" cookie="$3"
   local require_auth="${4:-false}"
@@ -195,28 +245,26 @@ assert_web_route_reachable() {
           fail "$label returned HTTP $status without a Location header"
           return
         fi
-        case "$location" in
-          /signin|/signin\?*)
-            fail "$label redirected to sign-in (HTTP $status Location: $location)"
-            return
-            ;;
-          //*)
-            fail "$label returned an unsafe protocol-relative redirect (Location: $location)"
-            return
-            ;;
-          /*)
-            ;;
-          *)
-            fail "$label returned a non-relative redirect (Location: $location)"
-            return
-            ;;
-        esac
+        if ! coerce_same_origin_redirect_path "$location"; then
+          case "$_redirect_reject_reason" in
+            sign-in)
+              fail "$label redirected to sign-in (HTTP $status Location: $location)"
+              ;;
+            protocol-relative)
+              fail "$label returned an unsafe protocol-relative redirect (Location: $location)"
+              ;;
+            *)
+              fail "$label returned a non-relative redirect (Location: $location)"
+              ;;
+          esac
+          return
+        fi
         redirects=$((redirects + 1))
         if [ "$redirects" -gt 5 ]; then
           fail "$label exceeded 5 same-origin redirects"
           return
         fi
-        current_path="$location"
+        current_path="$_redirect_next_path"
         ;;
       *)
         fail "$label returned HTTP $status (expected final 2xx)"

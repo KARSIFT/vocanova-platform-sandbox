@@ -1,0 +1,110 @@
+schema_version: 1
+id: VOC-095
+slug: harden-playwright-setup-against-hosted-runner-apt
+title: Harden Playwright setup against hosted-runner apt mirror stalls
+type: infrastructure
+status: adopted
+risk: R3
+planned_implementation_risk_floor: "Measured during drafting against the expected\
+  \ task-scoped file list (.github/workflows/accessibility.yml, .github/workflows/lighthouse.yml,\
+  \ .github/workflows/deploy-staging.yml, .github/workflows/scheduled-synthetics.yml,\
+  \ infra/scripts/install-playwright-chromium.sh, infra/monitoring/scheduled-synthetics.mjs,\
+  \ scripts/foundation/voc095-playwright-install.test.mjs, apps/web/tests/e2e/README.md,\
+  \ this package directory). Detected path floor is R3 for .github/workflows/ and\
+  \ infra/scripts/. This package proposes R3 for the change as a whole \u2014 a draft\
+  \ proposal for the reviewing human at adoption time, not a determination. Independent\
+  \ verification and the reviewing human must still confirm each task's real file\
+  \ list and whether semantic escalation applies."
+canonical_path: specs/changes/VOC-095-harden-playwright-setup-against-hosted-runner-apt
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
+automatic_merge_allowed: true
+production_impact: none-intentional. CI and staging-deploy browser setup reliability
+  only. No application behavior, signup policy, secret, database, or production kill-switch
+  posture changes.
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: Hardens repository-managed Playwright browser install steps in CI workflows.
+    No page routes, API endpoints, or stable monitor/synthetic IDs in infra/monitoring/
+    change. Existing synthetic.staging.authenticated-core-journey check wiring remains;
+    only the install contract becomes bounded and shared.
+authority_model: a004-active
+requirement_source: 'GitHub issue #792 (Harden Playwright setup against hosted-runner
+  apt mirror stalls). Fresh 2026-08-19 evidence from deploy-staging run https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32299315180
+  (attempts 1 and 2): application convergence completed but the workflow was cancelled
+  at the job timeout while `playwright install --with-deps chromium` waited on the
+  hosted Ubuntu package mirror. A separate accessibility attempt hit the same transient;
+  an exact-SHA rerun succeeded. Drafting-time repo read: four workflows invoke inline
+  `playwright install --with-deps chromium` (accessibility.yml, lighthouse.yml, deploy-staging.yml,
+  scheduled-synthetics.yml); only scheduled-synthetics.yml already restores ~/.cache/ms-playwright
+  before install. This draft package does not adopt or authorize itself.'
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only)
+  implementation: unassigned
+  independent_verification: unassigned
+dependencies:
+- id: VOC-095-DEP-00
+  status: 'resolved at drafting time. Issue #792 and run 32299315180 identify the
+    failing phase (Playwright `--with-deps` apt stall) and the merge commit fdde12daeccf521a5a8be171294eba79a138717b.'
+- id: VOC-095-DEP-01
+  status: "resolved at drafting time. VOC-031 owns the Playwright harness (accessibility.yml,\
+    \ lighthouse.yml, apps/web/playwright.config.ts). VOC-086 scheduled-synthetics.yml\
+    \ already caches ~/.cache/ms-playwright keyed on pnpm-lock.yaml \u2014 the pattern\
+    \ to extend."
+- id: VOC-095-DEP-02
+  status: resolved at drafting time. infra/monitoring/scheduled-synthetics.mjs validates
+    staging core-loop job wiring including cache-before-install ordering; T01 must
+    update that validator when the inline install command becomes the shared script.
+- id: VOC-032
+  status: Adopted predecessor. deploy-staging.yml core-loop gate must remain fail-closed;
+    this package only hardens the browser install step preceding it.
+affected_areas:
+- infra/scripts/install-playwright-chromium.sh (new bounded install contract)
+- .github/workflows/accessibility.yml
+- .github/workflows/lighthouse.yml
+- .github/workflows/deploy-staging.yml
+- .github/workflows/scheduled-synthetics.yml
+- infra/monitoring/scheduled-synthetics.mjs (validator alignment)
+- scripts/foundation/voc095-playwright-install.test.mjs
+- apps/web/tests/e2e/README.md (install contract documentation)
+- specs/changes/VOC-095-harden-playwright-setup-against-hosted-runner-apt
+implementation:
+  authorized: true
+  required: true
+  status: authorized
+  target_branch: develop
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-ci-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: authorized
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
+blocking_reasons: none - adopted and implementation-authorized
+approved_candidate_sha: 41335f512bcbbf6522e3dc57cd10c384531eca65
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/793#issuecomment-5348545291
+adoption_risk: R3
+adoption_resolved_decisions:
+- VOC-095-DEP-00
+- VOC-095-DEP-01
+- VOC-095-DEP-02
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #793 at 41335f512bcbbf6522e3dc57cd10c384531eca65'
+adoption_pr: 793
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/793

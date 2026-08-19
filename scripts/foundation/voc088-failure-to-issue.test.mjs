@@ -157,12 +157,19 @@ test("VOC-088-TEST-11: standalone App observer covers exact failure surface", ()
     assert.match(workflow, new RegExp(`\\b${conclusion}\\b`));
   }
   assert.match(workflow, /actions\/create-github-app-token@v3/);
+  assert.match(workflow, /permission-actions: read/);
+  assert.match(workflow, /permission-issues: write/);
   assert.match(workflow, /KARSIFT_BOT_APP_ID/);
   assert.match(workflow, /KARSIFT_BOT_PRIVATE_KEY/);
   assert.match(workflow, /steps\.app-token\.outputs\.token/);
   assert.doesNotMatch(workflow, /github-token:.*github\.token/);
   assert.doesNotMatch(workflow, /secrets\.GITHUB_TOKEN/);
   assert.match(workflow, /head_repository\.full_name == github\.repository/);
+  assert.match(workflow, /classify-deploy-concurrency-cancel\.sh/);
+  assert.match(
+    workflow,
+    /steps\.classify-cancel\.outputs\.skip_issue != 'true'/,
+  );
 
   const observedSources = [
     ".github/workflows/scheduled-synthetics.yml",
