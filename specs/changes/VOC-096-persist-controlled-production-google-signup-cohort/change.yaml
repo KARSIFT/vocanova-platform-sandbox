@@ -1,0 +1,108 @@
+schema_version: 1
+id: VOC-096
+slug: persist-controlled-production-google-signup-cohort
+title: Persist controlled production Google signup cohort
+type: infrastructure
+status: draft
+risk: R4
+planned_implementation_risk_floor: "Measured during drafting against the expected\
+  \ task-scoped file list (.github/workflows/deploy-production.yml, infra/scripts/validate-production-signup-allowlist.sh,\
+  \ infra/scripts/verify-production-oauth-start.sh, infra/monitoring/synthetics.yaml,\
+  \ .github/workflows/scheduled-synthetics.yml, scripts/foundation/voc096-*.test.mjs,\
+  \ docs/operations/production-controlled-signup.md, this package directory). Detected\
+  \ path floor is R3 for .github/workflows/ and infra/scripts/. This package proposes\
+  \ R4 for the change as a whole \u2014 a draft proposal for the reviewing human at\
+  \ adoption time, not a determination \u2014 because it changes production deploy\
+  \ signup-policy synchronization, production controlled-cohort persistence, and production\
+  \ OAuth/readiness synthetic expectations while Google OAuth is live. Independent\
+  \ verification and the reviewing human must still confirm each task's real file\
+  \ list and whether the path floor alone is sufficient."
+canonical_path: specs/changes/VOC-096-persist-controlled-production-google-signup-cohort
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: Restores persistent production controlled-signup cohort through
+  automatic and manual production deploys. No blanket NEW_USER_SIGNUP_ENABLED change.
+  No database migration. Staging secrets, databases, deploy users, and monitoring
+  inventory remain isolated.
+rollback_required: true
+monitoring_impact:
+  state: update
+  rationale: Extends synthetic.production.oauth-expected-state and its harness to
+    assert controlled_signup_ready on production /healthz when Google OAuth is enabled
+    and global signup remains disabled. Mirrors VOC-088 staging readiness coverage
+    without adding new monitor or synthetic IDs.
+  synthetic_ids:
+  - synthetic.production.oauth-expected-state
+authority_model: a004-active
+requirement_source: 'GitHub issue #809 (Persist controlled production Google signup
+  cohort). Fresh evidence: production Google OAuth is enabled; NEW_USER_SIGNUP_ENABLED
+  remains false; deploy-production.yml sources NEW_USER_SIGNUP_ALLOWLIST only from
+  the optional workflow_dispatch input new_user_signup_allowlist whose default is
+  empty; every automatic push deployment rewrites the runtime cohort to empty; the
+  encrypted repository secret PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST already exists
+  and must become the persistent source of truth; live public /healthz reports controlled_signup_ready=false,
+  consistent with the empty runtime cohort. This draft package does not adopt or authorize
+  itself.'
+requirement_approval_status: approved requirement; package not yet adopted
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only)
+  implementation: unassigned
+  independent_verification: unassigned
+dependencies:
+- id: VOC-096-DEP-00
+  status: resolved at drafting time. Use the existing repository secret PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST
+    as the sole production cohort source. Its production-prefixed name and workflow
+    tests must ensure only deploy-production.yml consumes it; deploy-staging.yml must
+    never reference it. The secret must be populated before the first post-T00 production
+    deployment when Google OAuth credentials are present.
+- id: VOC-096-DEP-01
+  status: resolved at drafting time. VOC-088-T01 already added controlled_signup_ready
+    to /healthz and production.go tests. This package extends production deploy persistence
+    and the production OAuth synthetic harness; it does not re-implement the API field.
+- id: VOC-096-DEP-02
+  status: resolved at drafting time. VOC-088-T00 established the staging pattern (validate-*-signup-allowlist.sh,
+    secret-backed deploy config, dispatch input removal, foundation tests). Production
+    work mirrors that pattern with production-prefixed secrets and hosts only.
+- id: VOC-096-DEP-03
+  status: resolved at drafting time. synthetic.production.oauth-expected-state and
+    verify-production-oauth-start.sh exist (VOC-086-T03) but do not yet assert controlled_signup_ready
+    on /healthz; staging harness does (VOC-088-T01).
+affected_areas:
+- .github/workflows/deploy-production.yml (secret-backed allowlist sync, remove ephemeral
+  dispatch input, fail-closed validation)
+- infra/scripts/validate-production-signup-allowlist.sh (new)
+- infra/scripts/verify-production-oauth-start.sh (controlled_signup_ready assertion)
+- infra/monitoring/synthetics.yaml (production readiness coverage metadata)
+- .github/workflows/scheduled-synthetics.yml (comment or wiring alignment only if
+  required)
+- scripts/foundation/voc096-deploy-production-allowlist.test.mjs (new)
+- scripts/foundation/voc096-production-readiness.test.mjs (new)
+- docs/operations/production-controlled-signup.md (new operator guide)
+- specs/changes/VOC-096-persist-controlled-production-google-signup-cohort/
+implementation:
+  authorized: false
+  required: true
+  status: not-authorized
+  target_branch: develop
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: production-controlled-signup-persistence-after-promotion
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: not-authorized
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
+blocking_reasons: package not adopted; implementation not authorized
