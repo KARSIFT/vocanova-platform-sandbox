@@ -3,7 +3,7 @@ id: VOC-090
 slug: operational-failure-scheduled-synthetics-cancelled
 title: Fix scheduled-synthetics cancellation from staging core-journey timeout
 type: infrastructure
-status: draft
+status: adopted
 risk: R3
 planned_implementation_risk_floor: "Measured during drafting against the expected\
   \ task-scoped file list (.github/workflows/scheduled-synthetics.yml, infra/monitoring/synthetics.yaml,\
@@ -14,8 +14,8 @@ planned_implementation_risk_floor: "Measured during drafting against the expecte
   \ Independent verification and the reviewing human must still confirm each task's\
   \ real file list and whether semantic escalation applies."
 canonical_path: specs/changes/VOC-090-operational-failure-scheduled-synthetics-cancelled
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: none-intentional. This package adjusts CI workflow timing and caching
   for the staging authenticated core-loop synthetic only. It does not change application
@@ -40,7 +40,8 @@ requirement_source: 'GitHub issue #759 (Operational failure: scheduled-synthetic
   uncached pnpm install and playwright install on every hourly tick before the Playwright
   staging core-loop journey; deploy-staging.yml uses the same journey pattern with
   timeout-minutes 40. This draft package does not adopt or authorize itself.'
-requirement_approval_status: not-approved
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: unknown - not recorded by this draft; set at adoption time
 target_branch: develop
@@ -76,10 +77,11 @@ affected_areas:
 - scripts/foundation/ (deterministic workflow/registry budget tests)
 - specs/changes/VOC-090-operational-failure-scheduled-synthetics-cancelled
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: not-authorized
+  status: authorized
   target_branch: develop
+  authority_issue: null
 release:
   required: true
   mode: not-authorized-by-this-package
@@ -88,11 +90,21 @@ release:
   automatic_merge: true
   migration_required: false
   rollback_required: true
-repository_adoption_status: not-adopted
+repository_adoption_status: adopted
 implementation_authority_before_adoption: false
-implementation_authority_status: not-authorized
+implementation_authority_status: authorized
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
-blocking_reasons: draft-not-adopted
+blocking_reasons: none - adopted and implementation-authorized
+approved_candidate_sha: 459b671a7716f233f09193a89f601a56cfa582a9
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/760#issuecomment-5344844782
+adoption_risk: R3
+adoption_resolved_decisions:
+- VOC-090-DEP-00
+- VOC-090-DEP-01
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #760 at 459b671a7716f233f09193a89f601a56cfa582a9'
+adoption_pr: 760
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/760
