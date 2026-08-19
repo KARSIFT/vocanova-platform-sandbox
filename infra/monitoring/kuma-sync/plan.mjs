@@ -46,7 +46,6 @@ export function planSyncOperations({
   }
 
   for (const entry of inventoryMonitors) {
-    const desired = inventoryEntryToDesiredMonitor(entry, ownershipMarker);
     let existing = managedByRepoId.get(entry.id);
 
     if (!existing && entry.adoption) {
@@ -67,6 +66,10 @@ export function planSyncOperations({
         existing = candidates[0];
       }
     }
+
+    const desired = inventoryEntryToDesiredMonitor(entry, ownershipMarker, {
+      remoteMonitor: existing?.monitor ?? null,
+    });
 
     if (!existing) {
       const urlCollision = unmanaged.find(

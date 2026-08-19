@@ -1,4 +1,4 @@
-// VOC-087-T00 — Live adoption identity and shared URL normalization tests.
+// VOC-087 — Kuma sync adoption identity, URL normalization, and notification preservation tests.
 //
 // Runs via `pnpm test` → `node --test scripts/foundation/*.test.mjs`.
 
@@ -9,6 +9,10 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 import { createMockKumaClient } from "../../infra/monitoring/kuma-sync/mock-client.mjs";
+import {
+  inventoryEntryToDesiredMonitor,
+  inventoryOwnsNotificationBindings,
+} from "../../infra/monitoring/kuma-sync/monitor-payload.mjs";
 import { planSyncOperations } from "../../infra/monitoring/kuma-sync/plan.mjs";
 import {
   monitorUrlsEqual,
@@ -61,8 +65,15 @@ function productionEntries(monitorsDocument) {
   };
 }
 
-function httpMonitorFixture({ id, name, url, keyword = "", description = "" }) {
-  return {
+function httpMonitorFixture({
+  id,
+  name,
+  url,
+  keyword = "",
+  description = "",
+  notificationIDList,
+}) {
+  const monitor = {
     id,
     type: "http",
     name,
@@ -78,6 +89,10 @@ function httpMonitorFixture({ id, name, url, keyword = "", description = "" }) {
     active: true,
     conditions: [],
   };
+  if (notificationIDList !== undefined) {
+    monitor.notificationIDList = notificationIDList;
+  }
+  return monitor;
 }
 
 function mutatingCalls(client) {
@@ -238,6 +253,12 @@ test("VOC-087-TEST-03: name mismatch still fails closed on unmanaged URL collisi
   );
 });
 
+function editPayloads(client) {
+  return client.calls
+    .filter((call) => call.op === "editMonitor")
+    .map((call) => call.monitor);
+}
+
 test("VOC-087-TEST-04: second sync is a no-op after production adoption", async () => {
   const { monitorsDocument, syntheticsDocument } = loadInventoryDocuments();
   const { api } = productionEntries(monitorsDocument);
@@ -273,6 +294,203 @@ test("VOC-087-TEST-04: second sync is a no-op after production adoption", async 
   });
   assert.equal(second.changed, 0);
   assert.equal(mutatingCalls(client).length, first.changed);
+});
+
+test("VOC-087-TEST-04 (notification): second sync is a no-op with preserved bindings", async () => {
+  const { monitorsDocument, syntheticsDocument } = loadInventoryDocuments();
+  const { api } = productionEntries(monitorsDocument);
+  const syntheticBindings = { "42": true, "99": true };
+
+  const initial = {
+    1: httpMonitorFixture({
+      id: 1,
+      name: LIVE_PRODUCTION_WEB.name,
+      url: LIVE_PRODUCTION_WEB.url,
+      notificationIDList: syntheticBindings,
+    }),
+    2: httpMonitorFixture({
+      id: 2,
+      name: LIVE_PRODUCTION_API.name,
+      url: LIVE_PRODUCTION_API.url,
+      keyword: api.expected_body,
+      notificationIDList: { "7": true },
+    }),
+  };
+
+  const client = createMockKumaClient(initial);
+  const first = await syncKumaMonitors({
+    monitorsDocument,
+    syntheticsDocument,
+    client,
+    logger: { info() {}, error() {} },
+  });
+  assert.ok(first.changed > 0);
+
+  for (const payload of editPayloads(client)) {
+    assert.deepEqual(
+      payload.notificationIDList,
+      initial[payload.id].notificationIDList,
+      "adopt/update must preserve remote notification bindings",
+    );
+  }
+
+  assert.deepEqual(client.monitors[1].notificationIDList, syntheticBindings);
+  assert.deepEqual(client.monitors[2].notificationIDList, { "7": true });
+
+  const second = await syncKumaMonitors({
+    monitorsDocument,
+    syntheticsDocument,
+    client,
+    logger: { info() {}, error() {} },
+  });
+  assert.equal(second.changed, 0);
+  assert.equal(mutatingCalls(client).length, first.changed);
+});
+
+test("VOC-087-TEST-06: adopt/update edit payloads retain remote notification bindings", async () => {
+  const { monitorsDocument, syntheticsDocument } = loadInventoryDocuments();
+  const { api } = productionEntries(monitorsDocument);
+  const webBindings = { "11": true };
+  const apiBindings = { "22": true };
+
+  const initial = {
+    1: httpMonitorFixture({
+      id: 1,
+      name: LIVE_PRODUCTION_WEB.name,
+      url: LIVE_PRODUCTION_WEB.url,
+      notificationIDList: webBindings,
+    }),
+    2: httpMonitorFixture({
+      id: 2,
+      name: LIVE_PRODUCTION_API.name,
+      url: LIVE_PRODUCTION_API.url,
+      keyword: api.expected_body,
+      notificationIDList: apiBindings,
+    }),
+  };
+
+  const client = createMockKumaClient(initial);
+  await syncKumaMonitors({
+    monitorsDocument,
+    syntheticsDocument,
+    client,
+    logger: { info() {}, error() {} },
+  });
+
+  const payloads = editPayloads(client);
+  assert.ok(payloads.length >= 2);
+  assert.deepEqual(
+    payloads.find((payload) => Number(payload.id) === 1)?.notificationIDList,
+    webBindings,
+  );
+  assert.deepEqual(
+    payloads.find((payload) => Number(payload.id) === 2)?.notificationIDList,
+    apiBindings,
+  );
+  assert.ok(
+    !payloads.some(
+      (payload) =>
+        payload.notificationIDList &&
+        Object.keys(payload.notificationIDList).length === 0,
+    ),
+    "edit payloads must not default to clearing notification bindings",
+  );
+});
+
+test("VOC-087-TEST-07: default desired monitor does not clear notifications on create", async () => {
+  const { monitorsDocument, syntheticsDocument } = loadInventoryDocuments();
+  const ownershipMarker = monitorsDocument.kuma.ownership_marker;
+  const { web } = productionEntries(monitorsDocument);
+
+  const desired = inventoryEntryToDesiredMonitor(web, ownershipMarker);
+  assert.equal(
+    "notificationIDList" in desired,
+    false,
+    "canonical inventory must not default notificationIDList on desired monitors",
+  );
+
+  const client = createMockKumaClient({});
+  await syncKumaMonitors({
+    monitorsDocument,
+    syntheticsDocument,
+    client,
+    requireCanonicalIds: false,
+    logger: { info() {}, error() {} },
+  });
+
+  const addCalls = client.calls.filter((call) => call.op === "add");
+  assert.ok(addCalls.length > 0);
+  for (const call of addCalls) {
+    assert.equal(
+      "notificationIDList" in (call.monitor ?? {}),
+      false,
+      "create must not invent notification destinations",
+    );
+  }
+});
+
+test("VOC-087-TEST-08: explicit inventory notification ownership is honored", () => {
+  const { monitorsDocument } = loadInventoryDocuments();
+  const ownershipMarker = monitorsDocument.kuma.ownership_marker;
+  const { web } = productionEntries(monitorsDocument);
+  const fixtureEntry = {
+    ...web,
+    notification_id_list: { "5": true },
+  };
+  const remoteMonitor = httpMonitorFixture({
+    id: 1,
+    name: web.name,
+    url: web.url,
+    notificationIDList: { "9": true },
+  });
+
+  const desired = inventoryEntryToDesiredMonitor(fixtureEntry, ownershipMarker, {
+    remoteMonitor,
+  });
+
+  assert.ok(inventoryOwnsNotificationBindings(fixtureEntry));
+  assert.deepEqual(desired.notificationIDList, { "5": true });
+  assert.notDeepEqual(desired.notificationIDList, remoteMonitor.notificationIDList);
+
+  const { operations } = planSyncOperations({
+    inventoryMonitors: [fixtureEntry],
+    remoteMonitors: { 1: remoteMonitor },
+    ownershipMarker,
+  });
+
+  assert.equal(operations.length, 1);
+  assert.equal(operations[0].type, "update");
+  assert.deepEqual(operations[0].desired.notificationIDList, { "5": true });
+});
+
+test("VOC-087-TEST-11: sync tooling does not reference SQLite deployment paths", () => {
+  const syncFiles = [
+    "infra/monitoring/sync-kuma.mjs",
+    "infra/monitoring/kuma-sync/apply.mjs",
+    "infra/monitoring/kuma-sync/auth-handshake.mjs",
+    "infra/monitoring/kuma-sync/mock-client.mjs",
+    "infra/monitoring/kuma-sync/monitor-metadata.mjs",
+    "infra/monitoring/kuma-sync/monitor-payload.mjs",
+    "infra/monitoring/kuma-sync/plan.mjs",
+    "infra/monitoring/kuma-sync/redact.mjs",
+    "infra/monitoring/kuma-sync/socket-client.mjs",
+    "infra/monitoring/kuma-sync/sync.mjs",
+  ];
+
+  const forbidden = [/kuma\.db/i, /\bsqlite\b/i, /\/app\/data/i];
+
+  for (const relativePath of syncFiles) {
+    const source = readFileSync(
+      path.join(repositoryRoot, relativePath),
+      "utf8",
+    );
+    for (const pattern of forbidden) {
+      assert.ok(
+        !pattern.test(source),
+        `${relativePath} must not reference SQLite deployment paths (${pattern})`,
+      );
+    }
+  }
 });
 
 test("VOC-087-TEST-05: unrelated manual monitors are not mutated", async () => {
@@ -339,7 +557,7 @@ test("VOC-087-TEST-14: package task does not dispatch live inventory apply", () 
   const evidence = readFileSync(
     path.join(
       repositoryRoot,
-      "specs/changes/VOC-087-make-the-first-repository-managed-kuma-sync-adopt/t00-evidence.md",
+      "specs/changes/VOC-087-make-the-first-repository-managed-kuma-sync-adopt/t01-evidence.md",
     ),
     "utf8",
   );
