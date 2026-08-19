@@ -16,7 +16,6 @@ live_deploy_claimed: true
 live_synthetics_claimed: true
 live_signin_claimed: true
 live_failure_fixture_claimed: true
-reviewed_sha: bind-at-independent-review
 ---
 
 # VOC-088-T03 — Operator procedure and deploy-and-verify evidence
@@ -135,7 +134,7 @@ only the date and scrubbed outcomes.
 
 | Check                              | Result | Scrubbed observation                                  |
 | ---------------------------------- | ------ | ----------------------------------------------------- |
-| Allowlisted first-time Google user | pass   | Reached staging without HTTP 503                      |
+| Allowlisted first-time Google user | pass   | Reached staging onboarding/home without HTTP 503      |
 | Unlisted Google user               | pass   | API callback returned the stable HTTP 503 denial body |
 
 These checks required interactive Google authentication and were not completed
