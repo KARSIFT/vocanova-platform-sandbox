@@ -45,6 +45,7 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - "infra/scripts/install-playwright-chromium.sh"
       - ".github/workflows/lighthouse.yml"
 
 permissions:
@@ -154,8 +155,9 @@ jobs:
         # so the runner reuses that browser instead of
         # asking chrome-launcher to find one on $PATH.
         # The Playwright cache path is
-        # `~/.cache/ms-playwright/chromium-<revision>/chrome-linux/chrome`
-        # on ubuntu-latest, and the revision is fixed
+        # `~/.cache/ms-playwright/chromium-<revision>/chrome-linux*/chrome`
+        # on ubuntu-latest (supporting Playwright's chrome-linux and
+        # chrome-linux64 layouts), and the revision is fixed
         # transitively by the locked `@playwright/test`
         # version. We resolve the directory with `ls -d`
         # rather than hard-coding the revision so a future
@@ -171,7 +173,7 @@ jobs:
           CI: "1"
           LIGHTHOUSE_URL_PREFIX: "http://127.0.0.1:3000"
         run: |
-          export LIGHTHOUSE_CHROME_PATH="$(ls -d "$HOME"/.cache/ms-playwright/chromium-*/chrome-linux/chrome | head -1)"
+          export LIGHTHOUSE_CHROME_PATH="$(ls -d "$HOME"/.cache/ms-playwright/chromium-*/chrome-linux*/chrome | head -1)"
           pnpm --filter @vocanova/web test:lighthouse
 
       - name: Stop test servers

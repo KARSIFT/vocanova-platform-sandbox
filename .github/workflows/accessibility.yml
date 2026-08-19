@@ -31,6 +31,7 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - "infra/scripts/install-playwright-chromium.sh"
       - ".github/workflows/accessibility.yml"
 
 permissions:

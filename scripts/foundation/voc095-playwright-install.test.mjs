@@ -20,6 +20,8 @@ import test from "node:test";
 import {
   STAGING_CORE_JOURNEY_CHECK_REF,
   extractTopLevelJobBlock,
+  loadSyntheticsRegistry,
+  validateStagingCoreJourneyBudget,
 } from "../../infra/monitoring/scheduled-synthetics.mjs";
 
 const repositoryRoot = path.resolve(
@@ -78,7 +80,9 @@ function assertCacheThenInstallContract(scopeSource, label) {
     INLINE_WITH_DEPS,
     `${label} must not use inline --with-deps`,
   );
-  const installIndex = scopeSource.indexOf("install-playwright-chromium.sh");
+  const installIndex = scopeSource.indexOf(
+    "run: bash infra/scripts/install-playwright-chromium.sh",
+  );
   assert.ok(
     installIndex >= 0,
     `${label} must invoke install-playwright-chromium.sh`,
@@ -90,8 +94,8 @@ function assertCacheThenInstallContract(scopeSource, label) {
   );
   assert.match(
     scopeSource,
-    /actions\/cache@/,
-    `${label} must use actions/cache`,
+    /actions\/cache@d4323d4df104b026a6aa633fdb11d772146be0bf/,
+    `${label} must use the pinned actions/cache revision`,
   );
   assert.match(
     scopeSource,
@@ -149,7 +153,7 @@ function runInstallScriptWithFixture({
   mkdirSync(homeDir, { recursive: true });
   const browserDir = path.join(
     homeDir,
-    ".cache/ms-playwright/chromium-fixture/chrome-linux",
+    ".cache/ms-playwright/chromium-fixture/chrome-linux64",
   );
   const mirrorListPath = path.join(fixtureRoot, "apt-mirrors.txt");
   writeFileSync(mirrorListPath, "http://hosted-runner.invalid/ubuntu/\n");
@@ -310,7 +314,7 @@ test("VOC-095-TEST-02: install script verifies Chromium binary after install", (
 
   assert.match(
     source,
-    /chromium-\*\/chrome-linux\/chrome/,
+    /chromium-\*\/chrome-linux\*\/chrome/,
     "script must verify the Playwright Chromium binary path",
   );
   assert.match(source, /verify_chromium_binary/);
@@ -415,11 +419,21 @@ test("VOC-095-TEST-01b: install script exists at the repository-managed path", (
 test("VOC-095-TEST-04: accessibility.yml uses cache then install script", () => {
   const workflowSource = readWorkflow(WORKFLOW_PATHS.accessibility);
   assertCacheThenInstallContract(workflowSource, "accessibility.yml");
+  assert.match(
+    workflowSource,
+    /paths:[\s\S]*infra\/scripts\/install-playwright-chromium\.sh/,
+    "installer changes must trigger accessibility",
+  );
 });
 
 test("VOC-095-TEST-05: lighthouse.yml uses cache then install script", () => {
   const workflowSource = readWorkflow(WORKFLOW_PATHS.lighthouse);
   assertCacheThenInstallContract(workflowSource, "lighthouse.yml");
+  assert.match(
+    workflowSource,
+    /paths:[\s\S]*infra\/scripts\/install-playwright-chromium\.sh/,
+    "installer changes must trigger Lighthouse",
+  );
 });
 
 test("VOC-095-TEST-06: deploy-staging.yml core-loop uses cache then install script", () => {
@@ -515,13 +529,55 @@ test("VOC-095-TEST-09: Lighthouse chrome path resolution stays shell-expanded", 
 
   assert.match(
     lighthouseRunStep,
-    /export LIGHTHOUSE_CHROME_PATH="\$\(ls -d/,
+    /export LIGHTHOUSE_CHROME_PATH="\$\(ls -d[\s\S]*chrome-linux\*\/chrome/,
     "LIGHTHOUSE_CHROME_PATH must be resolved inside run:",
   );
   assert.doesNotMatch(
     lighthouseRunStep.match(/env:[\s\S]*?run:/m)?.[0] ?? "",
     /LIGHTHOUSE_CHROME_PATH.*chromium-\*/,
     "LIGHTHOUSE_CHROME_PATH glob must not live in env:",
+  );
+});
+
+test("VOC-095-TEST-10: scheduled validator rejects missing or misordered shared install wiring", () => {
+  const workflowSource = readWorkflow(WORKFLOW_PATHS.scheduledSynthetics);
+  const syntheticsDocument = loadSyntheticsRegistry(repositoryRoot);
+  const installCommand =
+    "run: bash infra/scripts/install-playwright-chromium.sh";
+  const cacheAction = "actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf";
+
+  const missingInstallErrors = validateStagingCoreJourneyBudget({
+    workflowSource: workflowSource.replace(
+      installCommand,
+      "run: echo browser-installer-missing",
+    ),
+    syntheticsDocument,
+  });
+  assert.ok(
+    missingInstallErrors.some((error) =>
+      error.includes(
+        "must invoke infra/scripts/install-playwright-chromium.sh",
+      ),
+    ),
+    `validator must reject a missing shared installer: ${missingInstallErrors.join("; ")}`,
+  );
+
+  const cacheLine = `uses: ${cacheAction}`;
+  const misorderedSource = workflowSource
+    .replace(cacheLine, "uses: actions/checkout@cache-order-fixture")
+    .replace(
+      installCommand,
+      `${installCommand}\n\n      - name: Misordered Playwright cache fixture\n        uses: ${cacheAction}`,
+    );
+  const misorderedErrors = validateStagingCoreJourneyBudget({
+    workflowSource: misorderedSource,
+    syntheticsDocument,
+  });
+  assert.ok(
+    misorderedErrors.some((error) =>
+      error.includes("before install-playwright"),
+    ),
+    `validator must reject cache after installer: ${misorderedErrors.join("; ")}`,
   );
 });
 

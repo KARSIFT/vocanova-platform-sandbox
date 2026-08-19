@@ -1,7 +1,7 @@
 # VOC-095-T01 — Workflow wiring and validator alignment evidence
 
-Task: `VOC-095-T01`  
-Package: `VOC-095-harden-playwright-setup-against-hosted-runner-apt`  
+Task: `VOC-095-T01`
+Package: `VOC-095-harden-playwright-setup-against-hosted-runner-apt`
 Evidence class: `VOC-095-EV-01`
 
 ## Summary
@@ -13,14 +13,20 @@ Inline `playwright install --with-deps chromium` one-liners were removed.
 ordering for the staging authenticated core-journey job. Operator documentation
 in `apps/web/tests/e2e/README.md` references the shared contract.
 
+Exact-SHA browser checks exposed a Playwright 1.62 cache-layout change from
+`chrome-linux` to `chrome-linux64`. The shared verifier and Lighthouse resolver
+now accept both layouts via `chrome-linux*`, and deterministic fixtures use the
+current `chrome-linux64` layout. Accessibility and Lighthouse path filters also
+include the shared installer so future installer-only changes exercise both jobs.
+
 ## Workflow changes
 
-| Workflow | Cache key | Install step |
-|----------|-----------|--------------|
-| `accessibility.yml` | `playwright-chromium-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}` | `bash infra/scripts/install-playwright-chromium.sh` |
-| `lighthouse.yml` | same | same (`LIGHTHOUSE_CHROME_PATH` shell expansion unchanged in `run:`) |
-| `deploy-staging.yml` (core-loop) | same | same (`timeout-minutes: 40` unchanged) |
-| `scheduled-synthetics.yml` (core-journey job) | same (preserved) | script replaces inline install |
+| Workflow                                      | Cache key                                                                 | Install step                                                        |
+| --------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `accessibility.yml`                           | `playwright-chromium-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}` | `bash infra/scripts/install-playwright-chromium.sh`                 |
+| `lighthouse.yml`                              | same                                                                      | same (`LIGHTHOUSE_CHROME_PATH` shell expansion unchanged in `run:`) |
+| `deploy-staging.yml` (core-loop)              | same                                                                      | same (`timeout-minutes: 40` unchanged)                              |
+| `scheduled-synthetics.yml` (core-journey job) | same (preserved)                                                          | script replaces inline install                                      |
 
 ## Deterministic validation (recorded at implementation time)
 
@@ -38,7 +44,7 @@ See command output below after local run completes.
 
 All foundation tests passed at implementation time:
 
-- `voc095-playwright-install.test.mjs`: 18 pass (includes VOC-095-TEST-04 through TEST-12)
+- `voc095-playwright-install.test.mjs`: 19 pass (includes VOC-095-TEST-04 through TEST-12)
 - `voc086-scheduled-synthetics.test.mjs`: 5 pass (VOC-086-TEST-11 regression)
 - `voc090-scheduled-synthetics-budget.test.mjs`: 6 pass
 - `voc084-deploy-staging-oauth.test.mjs`: 9 pass

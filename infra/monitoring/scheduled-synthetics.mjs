@@ -22,7 +22,8 @@ export const CANONICAL_CHECK_REFS = [
 // partial credential pair as a healthy disabled state.
 export const EXPECT_OAUTH_ENABLED_TRUE = 'EXPECT_OAUTH_ENABLED: "true"';
 
-export const STAGING_CORE_JOURNEY_CHECK_REF = "staging-authenticated-core-journey";
+export const STAGING_CORE_JOURNEY_CHECK_REF =
+  "staging-authenticated-core-journey";
 export const STAGING_CORE_JOURNEY_SYNTHETIC_ID =
   "synthetic.staging.authenticated-core-journey";
 export const STAGING_CORE_JOURNEY_JOB_TIMEOUT_MINUTES = 40;
@@ -122,7 +123,11 @@ export function validateStagingCoreJourneyBudget({
   const pnpmActivateIndex = jobBlock.indexOf("corepack prepare pnpm@");
   const pnpmCacheIndex = jobBlock.search(/cache:\s*["']pnpm["']/);
   const pnpmInstallIndex = jobBlock.indexOf("pnpm install --frozen-lockfile");
-  if (pnpmCacheIndex >= 0 && pnpmActivateIndex >= 0 && pnpmCacheIndex < pnpmActivateIndex) {
+  if (
+    pnpmCacheIndex >= 0 &&
+    pnpmActivateIndex >= 0 &&
+    pnpmCacheIndex < pnpmActivateIndex
+  ) {
     errors.push(
       `${STAGING_CORE_JOURNEY_CHECK_REF} must activate pnpm via corepack before setup-node cache: pnpm`,
     );
@@ -137,9 +142,11 @@ export function validateStagingCoreJourneyBudget({
     );
   }
 
-  if (!jobBlock.includes("actions/cache@")) {
+  const playwrightCacheAction =
+    "actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf";
+  if (!jobBlock.includes(playwrightCacheAction)) {
     errors.push(
-      `${STAGING_CORE_JOURNEY_CHECK_REF} must restore Playwright browser cache via actions/cache`,
+      `${STAGING_CORE_JOURNEY_CHECK_REF} must restore Playwright browser cache via the pinned actions/cache revision`,
     );
   }
 
@@ -149,13 +156,15 @@ export function validateStagingCoreJourneyBudget({
     );
   }
 
-  const installIndex = jobBlock.indexOf("install-playwright-chromium.sh");
+  const installCommand =
+    "run: bash infra/scripts/install-playwright-chromium.sh";
+  const installIndex = jobBlock.indexOf(installCommand);
   if (installIndex < 0) {
     errors.push(
       `${STAGING_CORE_JOURNEY_CHECK_REF} must invoke infra/scripts/install-playwright-chromium.sh`,
     );
   }
-  const cacheIndex = jobBlock.indexOf("actions/cache@");
+  const cacheIndex = jobBlock.indexOf(playwrightCacheAction);
   if (installIndex >= 0 && cacheIndex >= 0 && cacheIndex > installIndex) {
     errors.push(
       `${STAGING_CORE_JOURNEY_CHECK_REF} must restore Playwright browser cache before install-playwright-chromium.sh`,

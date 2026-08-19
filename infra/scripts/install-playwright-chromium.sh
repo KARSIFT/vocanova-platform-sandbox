@@ -66,7 +66,9 @@ playwright_invoke() {
 verify_chromium_binary() {
   local candidate=""
   shopt -s nullglob
-  local matches=("$PLAYWRIGHT_CACHE_ROOT"/chromium-*/chrome-linux/chrome)
+  # Playwright used chrome-linux through 1.61 and uses chrome-linux64 in
+  # 1.62. Keep the verifier compatible with both locked-cache layouts.
+  local matches=("$PLAYWRIGHT_CACHE_ROOT"/chromium-*/chrome-linux*/chrome)
   shopt -u nullglob
 
   for candidate in "${matches[@]}"; do
@@ -75,7 +77,7 @@ verify_chromium_binary() {
     fi
   done
 
-  echo "Chromium binary not found under ${PLAYWRIGHT_CACHE_ROOT}/chromium-*/chrome-linux/chrome" >&2
+  echo "Chromium binary not found under ${PLAYWRIGHT_CACHE_ROOT}/chromium-*/chrome-linux*/chrome" >&2
   return 1
 }
 
