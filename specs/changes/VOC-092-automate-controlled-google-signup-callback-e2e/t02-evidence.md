@@ -57,8 +57,8 @@ callback or allowlist policy changes and at least quarterly.
 
 In `specs/changes/VOC-088-persist-controlled-staging-oauth-signup-and-auto/t03-evidence.md`:
 
-- Removed `reviewed_sha: bind-at-independent-review` until an independent
-  verifier binds the exact reviewed revision.
+- Replaced `reviewed_sha: bind-at-independent-review` with the exact VOC-088-T03
+  revision independently reviewed before merge.
 - Expanded the allowlisted first-time Google user row to
   `Reached staging onboarding/home without HTTP 503`.
 

@@ -16,6 +16,7 @@ live_deploy_claimed: true
 live_synthetics_claimed: true
 live_signin_claimed: true
 live_failure_fixture_claimed: true
+reviewed_sha: fc1c5eb7bce44c216e2def6247bde7af6a9f7f42
 ---
 
 # VOC-088-T03 — Operator procedure and deploy-and-verify evidence

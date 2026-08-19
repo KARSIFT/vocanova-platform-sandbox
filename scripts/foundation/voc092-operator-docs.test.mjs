@@ -76,10 +76,10 @@ test("VOC-092-TEST-14: VOC-088 t03 evidence placeholder removed and allowlisted 
     /bind-at-independent-review/,
     "reviewed_sha placeholder must not remain",
   );
-  assert.doesNotMatch(
+  assert.match(
     evidence,
-    /^reviewed_sha:/m,
-    "reviewed_sha must not carry a self-referential placeholder",
+    /^reviewed_sha: fc1c5eb7bce44c216e2def6247bde7af6a9f7f42$/m,
+    "reviewed_sha must identify the exact VOC-088-T03 revision independently reviewed before merge",
   );
 
   assert.match(
