@@ -42,17 +42,17 @@ In scope:
    cohort.
 3. Fail closed on malformed allowlist configuration (e.g. secret present but empty
    when controlled signup is expected). Expose only a non-sensitive readiness
-   count (number of allowlisted entries) or boolean in the deploy log, never email
-   values.
+   boolean in the deploy log, never a cohort size or email values.
 4. Extend `synthetic.staging.oauth-expected-state` (or add a sibling synthetic) to
    assert that when `GOOGLE_OAUTH_ENABLED=true` and `NEW_USER_SIGNUP_ENABLED=false`,
    the controlled cohort is non-empty (i.e. controlled first-time signup is
    operational). A pass requires the API's `/healthz` (or a new non-sensitive
-   readiness endpoint) to expose a `signup_allowlist_count > 0` fact.
+   readiness endpoint) to expose a boolean `controlled_signup_ready` fact.
 5. Add a repository-managed, deduplicated GitHub issue path for failed
    `scheduled-synthetics.yml`, `deploy-staging.yml`, and `deploy-production.yml`
-   runs. Use the automation App identity (`GITHUB_TOKEN`) so plain unlabeled
-   issues trigger `plan-from-issue`. Never include secrets, session values, OAuth
+   runs. Use a standalone `workflow_run` observer that mints an installation token
+   from the existing automation GitHub App credentials; the default `GITHUB_TOKEN`
+   cannot trigger `plan-from-issue`. Never include secrets, session values, OAuth
    state, raw user identifiers, or unfiltered container logs in the issue body.
 6. Deterministic tests for: secret precedence over dispatch input, redaction of
    email addresses, readiness synthetic failure/success, issue deduplication,
@@ -87,7 +87,9 @@ Non-goals / explicitly excluded:
   This is a draft proposal for the reviewing human at adoption time, never a
   determination.
 - Protected areas: `.github/workflows/deploy-staging.yml`,
-  `.github/workflows/deploy-production.yml`, staging secrets,
+  `.github/workflows/deploy-production.yml`,
+  `.github/workflows/operational-failure-monitoring.yml`, staging secrets,
+  `apps/api/app/api/production.go`, `apps/api/app/api/production_test.go`, and
   `infra/monitoring/synthetics.yaml`.
 - EHR: not triggered.
 - Active authority model: **A-004**. No founder `approved` comment is a
@@ -96,8 +98,8 @@ Non-goals / explicitly excluded:
 ## Decisions
 
 `VOC-088-D00`: The controlled staging signup allowlist must be persistently backed
-by a GitHub secret (staging-scoped or repository-level, implementer choice per
-`VOC-088-DEP-00`). `deploy-staging.yml` reads this secret and syncs it to
+by the repository secret `STAGING_NEW_USER_SIGNUP_ALLOWLIST` per
+`VOC-088-DEP-00`. `deploy-staging.yml` reads this secret and syncs it to
 `api.env` on every deploy. The `workflow_dispatch` input
 `new_user_signup_allowlist` must either be removed entirely or made additive-only
 (union with the secret), never a replacement. The secret is the single source of
@@ -108,24 +110,27 @@ explicitly admitted normalized emails in the persistent allowlist may create
 staging accounts. No blanket-enable path.
 
 `VOC-088-D02`: Deploy-staging.yml must fail closed when the allowlist secret is
-present but empty and `GOOGLE_OAUTH_ENABLED` is true, because that state means
+missing or empty and `GOOGLE_OAUTH_ENABLED` is true, because that state means
 controlled first-time signup is expected but no one can use it. The deploy log
-must expose only a count or boolean ("allowlist: N entries"), never email values.
+must expose only a boolean, never a cohort size or email values.
 
 `VOC-088-D03`: The staging OAuth/readiness synthetic must assert controlled
 signup readiness: when OAuth is enabled, global signup is disabled, and controlled
 signup is an expected capability, the synthetic fails if the controlled cohort is
 empty. This requires the API's `/healthz` or a dedicated non-sensitive endpoint to
-expose a `signup_allowlist_count` field (integer, no email values). The synthetic
-asserts `signup_allowlist_count > 0`.
+expose `controlled_signup_ready` as a boolean. The synthetic asserts that it is
+`true`; neither email values nor cohort cardinality are exposed.
 
 `VOC-088-D04`: Failed scheduled synthetics and deploy workflows open exactly one
-deduplicated, sanitized, plain unlabeled GitHub issue using the `GITHUB_TOKEN`
-App identity. The issue body contains the workflow name, run URL, failure step,
-and a sanitized summary. It never contains secrets, session values, OAuth state,
-raw user identifiers, or unfiltered container logs. Deduplication: if an open
-issue with the same fingerprint (workflow + failure category) already exists, no
-new issue is created.
+deduplicated, sanitized, plain unlabeled GitHub issue through a standalone
+`workflow_run` observer. The observer mints an installation token using
+`KARSIFT_BOT_APP_ID` and `KARSIFT_BOT_PRIVATE_KEY`; the default `GITHUB_TOKEN`
+must not be used to create the issue because its events do not trigger downstream
+workflows. The issue body contains the workflow name, conclusion, and run URL plus
+a sanitized fixed summary. It never contains secrets, session values, OAuth state,
+raw user identifiers, unfiltered logs, or failure-step output. Deduplication: if
+an open issue with the same stable workflow + conclusion fingerprint already
+exists, no new issue is created.
 
 `VOC-088-D05`: Responsibility separation is preserved:
 - Sentry (error-monitoring.yml): unexpected application errors
@@ -134,7 +139,8 @@ new issue is created.
 - Failure-to-issue agent: governed remediation for failed operational workflows
 
 `VOC-088-D06`: The failure-to-issue agent covers `scheduled-synthetics.yml`,
-`deploy-staging.yml`, and `deploy-production.yml`. It does not cover
+`deploy-staging.yml`, and `deploy-production.yml`, including failure, cancellation,
+and timeout conclusions. It does not cover
 `error-monitoring.yml` (which already opens issues from Sentry) or
 `sync-monitoring.yml` (which is a controlled manual dispatch, not scheduled).
 
@@ -142,30 +148,25 @@ new issue is created.
 logs, or test fixtures that resemble real users. Test fixtures use
 `@synthetic.vocanova.invalid` addresses only.
 
-## Contradictions / open questions
+## Resolved design choices
 
-1. **Secret scope** (`VOC-088-DEP-00`): Whether the allowlist secret is
-   repository-level or environment-scoped to staging is an implementer/operator
-   choice. Either satisfies the requirement as long as `deploy-staging.yml` can
-   read it and `deploy-production.yml` cannot accidentally use it.
-2. **Dispatch input behavior** (`VOC-088-D00`): removing the dispatch input
-   entirely is the simplest safe option. Making it additive (union with secret)
-   is acceptable but adds complexity. The implementer should choose based on
-   operator need; the reviewing human settles this at adoption.
-3. **Readiness endpoint shape** (`VOC-088-D03`): extending `/healthz` with a
-   `signup_allowlist_count` field vs. adding a new `/readiness` endpoint is an
-   implementer choice. `/healthz` already exposes kill-switch state; adding a
-   count is minimal. The reviewing human may prefer a separate endpoint if
-   `/healthz` is used by Docker HEALTHCHECK and the count could affect health
-   semantics.
-4. **Risk class:** measured path floor is R3. No R4 path is touched. Semantic
+1. **Secret scope** (`VOC-088-DEP-00`): use repository secret
+   `STAGING_NEW_USER_SIGNUP_ALLOWLIST`; only deploy-staging.yml may consume it.
+2. **Dispatch input behavior** (`VOC-088-D00`): remove the input; the persistent
+   secret is the sole source of truth.
+3. **Readiness endpoint shape** (`VOC-088-D03`): extend `/healthz` with the
+   informational boolean `controlled_signup_ready`; it does not change HTTP
+   health semantics.
+4. **Failure observer** (`VOC-088-DEP-01`): use a standalone `workflow_run`
+   observer and the existing automation GitHub App installation token.
+5. **Risk class:** measured path floor is R3. No R4 path is touched. Semantic
    risk (staging secrets, operational workflow changes) is R3-proportionate.
 
 ## Security and privacy
 
 - Email addresses only in GitHub secrets; never committed, never printed in logs,
   issues, workflow output, or evidence.
-- The readiness endpoint exposes only a count (integer), never email values.
+- The readiness endpoint exposes only a boolean, never cohort size or email values.
 - Failure-to-issue bodies are sanitized: no secrets, session values, OAuth state,
   raw user identifiers, or unfiltered container logs.
 - No production signup-policy change.

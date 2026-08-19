@@ -33,11 +33,12 @@ do not open governed GitHub issues.
 2. `NEW_USER_SIGNUP_ENABLED` stays `false`; only explicitly admitted emails sign up.
 3. Ephemeral dispatch-input removed or safely constrained so automatic deploys
    cannot silently erase the cohort.
-4. Fail closed on malformed config; expose only non-sensitive readiness count.
+4. Fail closed on malformed config; expose only a non-sensitive readiness boolean.
 5. Staging OAuth/readiness synthetic extended to fail when the controlled cohort is
    empty and controlled first-time signup is an expected capability.
-6. Repository-managed, deduplicated GitHub issue path for failed synthetics and
-   deploy/operational gates (staging and production).
+6. Repository-managed standalone observer for failed synthetics and
+   deploy/operational gates (staging and production), using the existing
+   automation GitHub App so created issues enter the issue-to-plan loop.
 7. Responsibility separation preserved (Sentry, Kuma, synthetics, failure-to-issue).
 8. Deterministic tests for secret precedence, redaction, readiness, deduplication,
    App-token triggering, and environment mapping.

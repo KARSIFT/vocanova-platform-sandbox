@@ -22,7 +22,7 @@ cohort without operator intervention.
 - Result: pending
 
 The `workflow_dispatch` input `new_user_signup_allowlist` is either removed or
-safely constrained so it cannot override the persistent secret. An automatic push
+otherwise cannot override the persistent secret. An automatic push
 deploy (no dispatch inputs) writes the secret-backed allowlist, not an empty
 string.
 
@@ -34,14 +34,14 @@ string.
 - Evidence: `VOC-088-EV-00`
 - Result: pending
 
-When `GOOGLE_OAUTH_ENABLED` is true and the persistent allowlist secret is present
-but empty, the deploy step fails closed (non-zero exit) rather than silently
-deploying with an empty cohort. Only a non-sensitive count or boolean is logged.
+When `GOOGLE_OAUTH_ENABLED` is true and the persistent allowlist secret is missing
+or empty, the deploy step fails closed (non-zero exit) rather than silently
+deploying with an empty cohort. Only a non-sensitive boolean is logged.
 
 ## VOC-088-AC-03 — Email addresses never in logs, issues, or evidence
 
 - Requirement source: `VOC-088-D07`
-- Tasks: `VOC-088-T00`, `VOC-088-T01`, `VOC-088-T02`
+- Tasks: `VOC-088-T00`, `VOC-088-T01`, `VOC-088-T02`, `VOC-088-T03`
 - Tests: `VOC-088-TEST-04`
 - Evidence: `VOC-088-EV-00`, `VOC-088-EV-01`, `VOC-088-EV-02`
 - Result: pending
@@ -59,11 +59,11 @@ addresses appear in test fixtures.
 - Result: pending
 
 When `GOOGLE_OAUTH_ENABLED=true` and `NEW_USER_SIGNUP_ENABLED=false`, the staging
-OAuth/readiness synthetic asserts that `signup_allowlist_count > 0`. The synthetic
+OAuth/readiness synthetic asserts that `controlled_signup_ready` is `true`. The synthetic
 fails when the controlled cohort is empty and controlled first-time signup is an
 expected staging capability.
 
-## VOC-088-AC-05 — Non-sensitive readiness endpoint exposes count only
+## VOC-088-AC-05 — Non-sensitive readiness endpoint exposes a boolean only
 
 - Requirement source: `VOC-088-D03`
 - Tasks: `VOC-088-T01`
@@ -72,8 +72,9 @@ expected staging capability.
 - Result: pending
 
 The API's `/healthz` (or a dedicated readiness endpoint) exposes
-`signup_allowlist_count` as an integer. It never exposes email values. The count
-is accurate and reflects the runtime allowlist.
+`controlled_signup_ready` as a boolean. It never exposes email values or cohort
+cardinality. The boolean accurately reflects whether the runtime policy permits
+at least one controlled first-time signup while global signup remains disabled.
 
 ## VOC-088-AC-06 — Failed workflows open exactly one deduplicated sanitized issue
 
@@ -83,12 +84,15 @@ is accurate and reflects the runtime allowlist.
 - Evidence: `VOC-088-EV-02`
 - Result: pending
 
-A failed `scheduled-synthetics.yml`, `deploy-staging.yml`, or
-`deploy-production.yml` run opens exactly one plain, unlabeled GitHub issue using
-the `GITHUB_TOKEN` App identity. A repeat failure with the same fingerprint
-creates no duplicate. The issue body contains the workflow name, run URL, failure
-step, and a sanitized summary. It never contains secrets, session values, OAuth
-state, raw user identifiers, or unfiltered container logs.
+A failed, cancelled, or timed-out `scheduled-synthetics.yml`,
+`deploy-staging.yml`, or `deploy-production.yml` run is observed by a standalone
+`workflow_run` workflow and opens exactly one plain, unlabeled GitHub issue using
+an installation token minted from `KARSIFT_BOT_APP_ID` and
+`KARSIFT_BOT_PRIVATE_KEY`. A repeat observation with the same fingerprint creates
+no duplicate. The issue body contains only the workflow name, conclusion, run URL,
+and a fixed sanitized summary. It never contains secrets, session values, OAuth
+state, raw user identifiers, step output, or unfiltered container logs. The issue
+event triggers `plan-from-issue`.
 
 ## VOC-088-AC-07 — Responsibility separation preserved
 
@@ -124,4 +128,5 @@ cohort.
 
 Evidence shows: a permitted first-time staging Google user can sign in; an unlisted
 user remains blocked; scheduled checks pass; a safe controlled failure fixture
-opens exactly one sanitized issue and a repeat creates no duplicate.
+proves deduplication and App-token-triggered planning without creating an
+uncontrolled recursive remediation chain.

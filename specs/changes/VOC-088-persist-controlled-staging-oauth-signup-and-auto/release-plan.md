@@ -8,8 +8,10 @@ comment is a merge/adopt/release gate.
 
 ## Preconditions, monitoring, and outcome
 
-- **Preconditions:** All four tasks (T00–T03) merged to develop. CI, governance
-  validation, and independent verification pass on each task PR.
+- **Preconditions:** Before T00 merges, an operator confirms the repository secret
+  `STAGING_NEW_USER_SIGNUP_ALLOWLIST` is populated; its value is never recorded.
+  All four tasks (T00–T03) then merge to develop. CI, governance validation, and
+  independent verification pass on each task PR.
 - **Exact revision:** recorded at task completion, not at drafting time.
 - **Monitoring:** staging OAuth/readiness synthetic
   (`synthetic.staging.oauth-expected-state`) must pass after deployment. The
@@ -18,15 +20,18 @@ comment is a merge/adopt/release gate.
 
 ## Rollback
 
-- **Trigger:** allowlist sync fails in production deploy; readiness synthetic
+- **Trigger:** staging allowlist sync fails; readiness synthetic
   produces false positives; failure-to-issue agent creates noisy or duplicate
   issues.
-- **Mechanism:** revert the package's task PRs from develop. Next push deploy
-  restores previous workflow behavior. The GitHub secret persists harmlessly.
-  No database rollback required.
+- **Mechanism:** preserve the secret-backed staging `api.env` value while
+  reverting T01/T02. Do not revert T00 while OAuth stays enabled because doing so
+  would restore the cohort-erasing behavior. If T00 must be reverted, first
+  disable staging OAuth through a repository-driven deployment, then revert T00.
+  The GitHub secret remains available for recovery. No database rollback required.
 - **Owner:** unassigned (set at adoption).
-- **Validation:** after rollback, confirm staging deploy succeeds with previous
-  behavior and scheduled synthetics pass.
+- **Validation:** after rollback, confirm the controlled cohort is preserved (or
+  OAuth is explicitly disabled), staging deploy succeeds, and scheduled
+  synthetics reflect the selected safe state.
 - **Last-known-good:** develop HEAD before each task PR merge.
 
 ## Independent verification, human approvals, and closure

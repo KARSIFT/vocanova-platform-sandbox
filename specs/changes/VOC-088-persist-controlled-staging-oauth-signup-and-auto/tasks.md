@@ -2,7 +2,7 @@
 
 None of the tasks below is implementation-authorized by this package.
 Adoption and each task's own implementation authorization are separate.
-Order is mandatory: **T00 → T01 → T02 → T03**.
+Order is mandatory: **secret bootstrap → T00 → T01 → T02 → T03**.
 
 ## VOC-088-T00 — Persist staging allowlist secret and constrain ephemeral dispatch input
 
@@ -16,19 +16,20 @@ Order is mandatory: **T00 → T01 → T02 → T03**.
 
 ### Required work
 
+0. Before this task PR merges, an operator must populate the repository secret
+   `STAGING_NEW_USER_SIGNUP_ALLOWLIST`. Record only confirmation that it exists,
+   never its value. This is required before the merge-triggered staging deploy.
 1. Modify `deploy-staging.yml`'s "Write staging application configuration" step
-   to read `NEW_USER_SIGNUP_ALLOWLIST` from a persistent GitHub secret (e.g.
-   `STAGING_NEW_USER_SIGNUP_ALLOWLIST`) instead of or in addition to the
-   `workflow_dispatch` input. The secret value is the single source of truth.
-2. Either remove the `new_user_signup_allowlist` dispatch input entirely, or
-   make it additive-only (union with the secret). It must never silently replace
-   or erase the persistent secret's value.
+   to read `NEW_USER_SIGNUP_ALLOWLIST` from the persistent repository secret
+   `STAGING_NEW_USER_SIGNUP_ALLOWLIST`. The secret is the single source of truth
+   and deploy-production.yml must not reference it.
+2. Remove the `new_user_signup_allowlist` dispatch input entirely.
 3. Add a fail-closed guard: when `GOOGLE_OAUTH_ENABLED` evaluates to true and the
    resolved allowlist is empty, the step exits non-zero with a non-sensitive
    diagnostic ("controlled signup cohort is empty; refusing to deploy with OAuth
    enabled and no allowlisted users"). Never print email addresses.
-4. Log only a non-sensitive count ("allowlist: N entries synced") or boolean,
-   never email values.
+4. Log only a non-sensitive boolean ("controlled signup ready: true"), never
+   cohort cardinality or email values.
 5. Add deterministic tests (`scripts/foundation/voc088-*.test.mjs` or equivalent)
    covering:
    - Secret precedence: secret present → secret value written to api.env.
@@ -45,8 +46,8 @@ Order is mandatory: **T00 → T01 → T02 → T03**.
 - Failure-to-issue agent (T02).
 - Operator docs or deploy-and-verify evidence (T03).
 - Production signup-policy change.
-- GitHub secret creation itself (that is an operator/founder action outside the
-  repository, documented in T03).
+- The secret value itself; it remains outside the repository. Confirmation that
+  the secret is populated is a mandatory pre-merge condition, not deferred to T03.
 
 ## VOC-088-T01 — Extend staging OAuth/readiness synthetic for controlled signup readiness
 
@@ -59,21 +60,22 @@ Order is mandatory: **T00 → T01 → T02 → T03**.
 ### Required work
 
 1. Extend the API's `/healthz` response (or add a dedicated non-sensitive
-   readiness field) to include `signup_allowlist_count` (integer) when
-   `NEW_USER_SIGNUP_ENABLED=false` and `SignupAllowlist` is non-nil. The field
-   must never expose email values.
+   readiness field) to include `controlled_signup_ready` (boolean). The field is
+   true when OAuth is enabled and the configured policy permits at least one
+   controlled signup while global signup remains disabled. It must never expose
+   email values or cohort cardinality.
 2. Extend `synthetic.staging.oauth-expected-state` (or add a sibling synthetic
    in `infra/monitoring/synthetics.yaml`) to assert that when
    `GOOGLE_OAUTH_ENABLED=true` and `NEW_USER_SIGNUP_ENABLED=false`, the
-   `/healthz` response contains `signup_allowlist_count > 0`. The synthetic fails
+   `/healthz` response contains `controlled_signup_ready: true`. The synthetic fails
    when the controlled cohort is empty.
 3. Update `scheduled-synthetics.yml`'s `staging-oauth-expected-state` job (or add
    a new job) to execute this extended check.
 4. Add deterministic tests covering:
-   - Readiness endpoint with non-empty allowlist → count > 0.
-   - Readiness endpoint with empty allowlist → count = 0.
-   - Synthetic failure path when count = 0.
-   - Synthetic success path when count > 0.
+   - Readiness endpoint with valid controlled policy → boolean true.
+   - Readiness endpoint with empty allowlist → boolean false.
+   - Synthetic failure path when boolean is false.
+   - Synthetic success path when boolean is true.
    - No email values in readiness response.
 5. Update `infra/monitoring/synthetics.yaml` coverage metadata if the synthetic
    gains new coverage.
@@ -95,22 +97,33 @@ Order is mandatory: **T00 → T01 → T02 → T03**.
 
 ### Required work
 
-1. Add a reusable mechanism (standalone workflow, composite action, or shell
-   script callable from workflow `if: failure()` steps) that:
-   - Opens a plain, unlabeled GitHub issue using `GITHUB_TOKEN`.
+1. Add a standalone `workflow_run` observer for completed runs of
+   `scheduled-synthetics.yml`, `deploy-staging.yml`, and
+   `deploy-production.yml` that:
+   - Handles failure, cancellation, and timeout conclusions, including early
+     failures that an inline handler would miss.
+   - Mints an installation token from `KARSIFT_BOT_APP_ID` and
+     `KARSIFT_BOT_PRIVATE_KEY` and uses it to open a plain, unlabeled issue.
+     The default `GITHUB_TOKEN` must not create the issue because its events do
+     not trigger `plan-from-issue`.
    - Deduplicates: if an open issue with the same fingerprint already exists, no
      new issue is created.
-   - Sanitizes the issue body: workflow name, run URL, failure step, and a
-     non-sensitive summary. Never includes secrets, session values, OAuth state,
-     raw user identifiers, or unfiltered container logs.
-2. Wire this mechanism into `scheduled-synthetics.yml`,
-   `deploy-staging.yml`, and `deploy-production.yml` as a failure handler.
+   - Sanitizes the issue body: workflow name, conclusion, run URL, and a fixed
+     non-sensitive summary. Never includes secrets, session values, OAuth
+     state, raw user identifiers, step output, or unfiltered container logs.
+   - Contains recursion guards; observer failures and controlled proof fixtures
+     cannot create an uncontrolled chain of remediation issues.
+2. Keep the observer external to the observed workflows; do not add duplicated
+   inline `if: failure()` handlers.
 3. Add deterministic tests covering:
    - First failure → exactly one issue created.
    - Repeat failure with same fingerprint → no duplicate.
    - Issue body contains no secrets or personal data.
    - Issue is plain and unlabeled (triggers `plan-from-issue`).
-   - `GITHUB_TOKEN` App identity is used (not a personal token).
+   - The existing automation GitHub App installation token is used (not the
+     default workflow token or a personal token), and the created issue triggers
+     `plan-from-issue`.
+   - Early failure, cancellation, and timeout conclusions are observed.
 4. Verify that `error-monitoring.yml` is not modified and its Sentry-only scope
    is preserved.
 
@@ -141,8 +154,9 @@ Order is mandatory: **T00 → T01 → T02 → T03**.
    - A permitted first-time staging Google user can sign in.
    - An unlisted user remains blocked (503).
    - Scheduled checks pass (staging OAuth/readiness synthetic green).
-   - A safe controlled failure fixture opens exactly one sanitized issue.
-   - A repeat controlled failure creates no duplicate issue.
+   - A safe controlled failure fixture proves exactly-once sanitized issue
+     handling and App-token-triggered planning without starting an uncontrolled
+     recursive remediation chain.
 3. All evidence must be scrubbed of email addresses, credentials, and personal
    data.
 
@@ -153,6 +167,7 @@ Order is mandatory: **T00 → T01 → T02 → T03**.
 
 ## Task ordering notes
 
+- Secret bootstrap blocks T00 merge and its automatic staging deploy.
 - T00 blocks the allowlist persistence required by T01's readiness check.
 - T01 blocks the synthetic readiness assertion that T02's failure agent monitors.
 - T02 blocks the end-to-end deploy-and-verify evidence in T03.

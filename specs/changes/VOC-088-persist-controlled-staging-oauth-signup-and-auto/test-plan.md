@@ -45,29 +45,29 @@
 - Expected result: No real-looking email addresses in output
 - Evidence: `VOC-088-EV-00`
 
-## VOC-088-TEST-05 — Readiness synthetic fails when allowlist count is 0
+## VOC-088-TEST-05 — Readiness synthetic fails when controlled signup is not ready
 
 - Covers: `VOC-088-AC-04`
-- Preconditions: Mock /healthz returning `signup_allowlist_count: 0`
+- Preconditions: Mock /healthz returning `controlled_signup_ready: false`
 - Procedure: Run the synthetic check logic; assert non-zero exit.
 - Expected result: Synthetic fails when controlled cohort is empty
 - Evidence: `VOC-088-EV-01`
 
-## VOC-088-TEST-06 — Readiness synthetic passes when allowlist count > 0
+## VOC-088-TEST-06 — Readiness synthetic passes when controlled signup is ready
 
 - Covers: `VOC-088-AC-04`
-- Preconditions: Mock /healthz returning `signup_allowlist_count: 2`
+- Preconditions: Mock /healthz returning `controlled_signup_ready: true`
 - Procedure: Run the synthetic check logic; assert zero exit.
 - Expected result: Synthetic passes when controlled cohort is non-empty
 - Evidence: `VOC-088-EV-01`
 
-## VOC-088-TEST-07 — Readiness endpoint exposes count but no emails
+## VOC-088-TEST-07 — Readiness endpoint exposes a boolean but no cohort metadata
 
 - Covers: `VOC-088-AC-05`
 - Preconditions: API unit test with a non-empty allowlist
 - Procedure: Call /healthz (or readiness endpoint); assert response contains
-  `signup_allowlist_count` as an integer ≥ 1 and no email-like strings.
-- Expected result: Count present; no email values exposed
+  `controlled_signup_ready` as a boolean and no email-like strings or count.
+- Expected result: Boolean present; no email values or cardinality exposed
 - Evidence: `VOC-088-EV-01`
 
 ## VOC-088-TEST-08 — First failure opens exactly one issue
@@ -98,13 +98,17 @@
 - Expected result: Issue body is safe for public visibility
 - Evidence: `VOC-088-EV-02`
 
-## VOC-088-TEST-11 — Responsibility separation preserved
+## VOC-088-TEST-11 — Observer identity, coverage, and responsibility separation
 
 - Covers: `VOC-088-AC-07`
 - Preconditions: Repository file inspection
-- Procedure: Assert `error-monitoring.yml` is unchanged by this package. Assert
-  the failure-to-issue mechanism does not open Sentry-sourced issues.
-- Expected result: Each monitoring concern retains its documented scope
+- Procedure: Assert `error-monitoring.yml` is unchanged; the standalone observer
+  covers the three exact workflow names and non-success conclusions (failure,
+  cancelled, timed_out); issue creation uses the automation GitHub App token and
+  never the default `GITHUB_TOKEN`; observer/self-test runs are not observed.
+- Expected result: Early failures and terminal non-success runs are caught, issue
+  events can trigger `plan-from-issue`, recursion is prevented, and each monitoring
+  concern retains its documented scope
 - Evidence: `VOC-088-EV-02`
 
 ## VOC-088-TEST-12 — Operator procedure documented
@@ -121,8 +125,9 @@
 - Covers: `VOC-088-AC-09`
 - Preconditions: Package merged and deployed to staging
 - Procedure: Execute the deploy-and-verify checklist: permitted user signs in,
-  unlisted user blocked, synthetics pass, controlled failure opens one issue,
-  repeat creates no duplicate.
+  unlisted user blocked, synthetics pass, and a bounded controlled fixture proves
+  one sanitized App-created issue, downstream planning, and deduplication without
+  triggering a recursive remediation chain.
 - Expected result: All five checklist items pass
 - Evidence: `VOC-088-EV-03`
 
