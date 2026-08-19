@@ -2,10 +2,12 @@
 
 ## Release and deployment authorization
 
-This package does not by itself authorize production deployment. After roster completion,
-the repository-controlled promotion path (develop → main → automatic
-`deploy-production.yml`) applies the merged workflow changes. Under active A-004, no
-founder `approved` comment is a merge/adopt/release gate.
+This package does not by itself authorize production deployment. After T01 merges, a
+separately reviewed controlled activation promotion uses the repository-controlled
+develop → main → automatic `deploy-production.yml` path so T02 can collect live
+evidence without a circular roster-completion dependency. After roster completion, the
+normal release reconciliation promotes any remaining documentation/evidence commits.
+Under active A-004, no founder `approved` comment is a merge/adopt/release gate.
 
 ## Preconditions, monitoring, and outcome
 
@@ -44,8 +46,8 @@ founder `approved` comment is a merge/adopt/release gate.
   in T02, redaction verified, staging/production isolation confirmed, rollback path
   documented.
 - Closure: all AC results with evidence in `t00-evidence.md`, `t01-evidence.md`, and
-  `t02-evidence.md`. Package closure follows roster completion and develop → main
-  promotion.
+  `t02-evidence.md`. Package closure follows roster completion and release
+  reconciliation after the controlled activation has supplied T02 live evidence.
 - EHR: not triggered.
 
 Do not conflate repository merge, release, activation, or closure. Historically under

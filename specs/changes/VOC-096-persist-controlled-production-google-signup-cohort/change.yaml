@@ -82,6 +82,7 @@ affected_areas:
 - .github/workflows/scheduled-synthetics.yml (comment or wiring alignment only if
   required)
 - scripts/foundation/voc096-deploy-production-allowlist.test.mjs (new)
+- scripts/foundation/voc088-deploy-staging-allowlist.test.mjs (tier-isolation assertion)
 - scripts/foundation/voc096-production-readiness.test.mjs (new)
 - docs/operations/production-controlled-signup.md (new operator guide)
 - specs/changes/VOC-096-persist-controlled-production-google-signup-cohort/

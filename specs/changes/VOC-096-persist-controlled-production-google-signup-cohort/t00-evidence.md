@@ -17,7 +17,7 @@ tests:
   - VOC-096-TEST-05
   - VOC-096-TEST-10
   - VOC-096-TEST-11
-date: 2026-08-19
+date: 2026-08-20
 related_change: VOC-096
 accountable_owner: unassigned
 gate_status: repository-complete-secret-bootstrap-confirmed-live-deploy-pending
@@ -47,7 +47,7 @@ deployment never references the production secret.
 | Secret-backed deployment | `.github/workflows/deploy-production.yml`                         |
 | Fail-closed validator    | `infra/scripts/validate-production-signup-allowlist.sh`           |
 | Deterministic tests      | `scripts/foundation/voc096-deploy-production-allowlist.test.mjs`  |
-| Isolation extension      | `scripts/foundation/voc088-deploy-staging-allowlist.test.mjs`   |
+| Isolation extension      | `scripts/foundation/voc088-deploy-staging-allowlist.test.mjs`     |
 
 ## Acceptance mapping
 
@@ -72,14 +72,12 @@ Additional required gates before merge:
 
 - full repository validation and independent exact-SHA review.
 
-Secret bootstrap confirmation: issue #809 and `VOC-096-DEP-00` record that
-`PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST` already exists in the repository secret
-inventory. This implementer run could not re-list repository secrets via the
-GitHub API from the sandbox runner (`gh secret list` returned no matching entry).
-Merge must not proceed until an operator confirms the secret remains populated
-when production Google OAuth credentials are present. Only its name and
-presence are checked; its value is not included in repository content, workflow
-output, issue/PR text, or this evidence.
+Secret bootstrap confirmation: on 2026-08-20, the operator independently
+re-listed repository secret metadata and confirmed that
+`PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST` is present. The encrypted value was not
+read, printed, or copied. Only the secret name and presence were checked; no
+cohort value or cardinality appears in repository content, workflow output,
+issue/PR text, or this evidence.
 
 ## Live deployment
 

@@ -54,7 +54,7 @@ Order is mandatory: **secret bootstrap confirmation → T00 → T01 → T02**.
 
 - Requirement source: `VOC-096-D06`, `VOC-096-D07`
 - Acceptance criteria: `VOC-096-AC-04`, `VOC-096-AC-05`, `VOC-096-AC-06`, `VOC-096-AC-08`
-- Tests: `VOC-096-TEST-06` through `VOC-096-TEST-09`, `VOC-096-TEST-11`
+- Tests: `VOC-096-TEST-06` through `VOC-096-TEST-09`
 - Evidence: `VOC-096-EV-01` (`t01-evidence.md`)
 - Status: pending — depends on `VOC-096-T00`
 
@@ -102,7 +102,11 @@ Order is mandatory: **secret bootstrap confirmation → T00 → T01 → T02**.
 2. Add or extend a foundation doc test (e.g. extend `voc092-operator-docs.test.mjs`
    or add `voc096-operator-docs.test.mjs`) asserting the production operator doc exists
    and references the correct secret/workflow names without example real emails.
-3. After T01 merges and promotes to production, record deploy-and-verify evidence in
+3. After T01 merges, use a separately reviewed controlled activation promotion from
+   `develop` to `main`, then monitor the automatic production deployment. This
+   activation is required before T02 may claim live evidence; it does not bypass the
+   normal exact-SHA review, merge, or deployment gates.
+4. After the controlled activation is green, record deploy-and-verify evidence in
    `t02-evidence.md`:
    - Successful production deploy run URL (scrubbed).
    - Live `/healthz` jq output showing `controlled_signup_ready: true` without cohort
@@ -110,7 +114,7 @@ Order is mandatory: **secret bootstrap confirmation → T00 → T01 → T02**.
    - `EXPECT_OAUTH_ENABLED=true bash infra/scripts/verify-production-oauth-start.sh` pass.
    - Scheduled `synthetic.production.oauth-expected-state` green.
    - Production route/content smoke references as applicable (no new interactive OAuth).
-4. All evidence must be scrubbed of email addresses, credentials, session material, and
+5. All evidence must be scrubbed of email addresses, credentials, session material, and
    personal data.
 
 ### Explicitly out of scope for this task
@@ -123,6 +127,8 @@ Order is mandatory: **secret bootstrap confirmation → T00 → T01 → T02**.
 - Secret bootstrap confirmation blocks T00 merge and its automatic production deploy.
 - T00 blocks the allowlist persistence required for live `controlled_signup_ready: true`.
 - T01 blocks the synthetic readiness assertion and harness checks used in T02 evidence.
+- A separately reviewed controlled activation promotion after T01 supplies the live
+  production state required by T02 without waiting for roster completion.
 - No task may be dispatched before this package is adopted and
   implementation-authorized.
 
