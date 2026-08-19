@@ -13,7 +13,9 @@ export function resolveNotificationIDList(entry, remoteMonitor) {
   if (inventoryOwnsNotificationBindings(entry)) {
     const owned = entry.notification_id_list;
     if (owned === null || typeof owned !== "object" || Array.isArray(owned)) {
-      return {};
+      throw new TypeError(
+        "notification_id_list must be an object when explicitly configured",
+      );
     }
     return structuredClone(owned);
   }
@@ -23,7 +25,10 @@ export function resolveNotificationIDList(entry, remoteMonitor) {
     return structuredClone(remote);
   }
 
-  return undefined;
+  // Kuma's supported add/edit Socket.IO handlers always iterate this mapping.
+  // An empty object means no destinations and is required for a safe create;
+  // it does not invent a notification binding.
+  return {};
 }
 
 const EDITABLE_MONITOR_FIELDS = [
@@ -83,10 +88,7 @@ export function inventoryEntryToDesiredMonitor(
     ignoreTls: false,
   };
 
-  const notificationIDList = resolveNotificationIDList(entry, remoteMonitor);
-  if (notificationIDList !== undefined) {
-    desired.notificationIDList = notificationIDList;
-  }
+  desired.notificationIDList = resolveNotificationIDList(entry, remoteMonitor);
 
   return desired;
 }
@@ -117,6 +119,20 @@ export function normalizeKeyword(value) {
   return String(value);
 }
 
+function normalizeNotificationIDList(value) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .sort(([left], [right]) =>
+        left.localeCompare(right, "en", { numeric: true }),
+      )
+      .map(([id, enabled]) => [String(id), Boolean(enabled)]),
+  );
+}
+
 export function monitorsMatch(actual, desired) {
   return (
     String(actual?.type ?? "") === String(desired.type) &&
@@ -129,6 +145,8 @@ export function monitorsMatch(actual, desired) {
     normalizeKeyword(actual?.keyword) === normalizeKeyword(desired.keyword) &&
     JSON.stringify(getAcceptedStatusCodes(actual)) ===
       JSON.stringify(desired.accepted_statuscodes.map(String)) &&
+    JSON.stringify(normalizeNotificationIDList(actual?.notificationIDList)) ===
+      JSON.stringify(normalizeNotificationIDList(desired.notificationIDList)) &&
     String(actual?.description ?? "") === String(desired.description ?? "")
   );
 }

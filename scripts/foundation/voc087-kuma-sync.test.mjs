@@ -397,16 +397,16 @@ test("VOC-087-TEST-06: adopt/update edit payloads retain remote notification bin
   );
 });
 
-test("VOC-087-TEST-07: default desired monitor does not clear notifications on create", async () => {
+test("VOC-087-TEST-07: create sends Kuma's required empty notification mapping", async () => {
   const { monitorsDocument, syntheticsDocument } = loadInventoryDocuments();
   const ownershipMarker = monitorsDocument.kuma.ownership_marker;
   const { web } = productionEntries(monitorsDocument);
 
   const desired = inventoryEntryToDesiredMonitor(web, ownershipMarker);
-  assert.equal(
-    "notificationIDList" in desired,
-    false,
-    "canonical inventory must not default notificationIDList on desired monitors",
+  assert.deepEqual(
+    desired.notificationIDList,
+    {},
+    "a create must satisfy Kuma's Socket.IO contract without inventing destinations",
   );
 
   const client = createMockKumaClient({});
@@ -421,10 +421,10 @@ test("VOC-087-TEST-07: default desired monitor does not clear notifications on c
   const addCalls = client.calls.filter((call) => call.op === "add");
   assert.ok(addCalls.length > 0);
   for (const call of addCalls) {
-    assert.equal(
-      "notificationIDList" in (call.monitor ?? {}),
-      false,
-      "create must not invent notification destinations",
+    assert.deepEqual(
+      call.monitor?.notificationIDList,
+      {},
+      "create must send the empty mapping required by Kuma",
     );
   }
 });
@@ -468,6 +468,64 @@ test("VOC-087-TEST-08: explicit inventory notification ownership is honored", ()
   assert.equal(operations.length, 1);
   assert.equal(operations[0].type, "update");
   assert.deepEqual(operations[0].desired.notificationIDList, { 5: true });
+
+  const otherwiseMatchingRemote = {
+    ...inventoryEntryToDesiredMonitor(web, ownershipMarker, {
+      remoteMonitor: { notificationIDList: { 9: true } },
+    }),
+    id: 2,
+  };
+  const ownershipOnly = planSyncOperations({
+    inventoryMonitors: [fixtureEntry],
+    remoteMonitors: { 2: otherwiseMatchingRemote },
+    ownershipMarker,
+  });
+  assert.equal(
+    ownershipOnly.operations.length,
+    1,
+    "an explicitly owned binding change must cause an update by itself",
+  );
+  assert.equal(ownershipOnly.operations[0].type, "update");
+  assert.deepEqual(ownershipOnly.operations[0].desired.notificationIDList, {
+    5: true,
+  });
+});
+
+test("VOC-087-TEST-08 (fail-closed): invalid notification ownership is rejected before connect", async () => {
+  const invalidValues = [
+    null,
+    [],
+    "5",
+    { 5: "true" },
+    { 0: true },
+    { destination: true },
+  ];
+
+  for (const invalidValue of invalidValues) {
+    const { monitorsDocument, syntheticsDocument } = loadInventoryDocuments();
+    monitorsDocument.availability_monitors[0].notification_id_list =
+      invalidValue;
+    let connectCalls = 0;
+    const client = {
+      async connect() {
+        connectCalls += 1;
+      },
+      async listMonitors() {
+        throw new Error("inventory validation must run before remote access");
+      },
+    };
+
+    await assert.rejects(
+      syncKumaMonitors({
+        monitorsDocument,
+        syntheticsDocument,
+        client,
+        logger: { info() {}, error() {} },
+      }),
+      /notification_id_list/,
+    );
+    assert.equal(connectCalls, 0);
+  }
 });
 
 test("VOC-087-TEST-11: sync tooling does not reference SQLite deployment paths", () => {
