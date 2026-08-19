@@ -64,9 +64,13 @@ permissions:
   contents: read
   packages: write
 
+# VOC-094-T00: queue superseded pending runs instead of cancelling them.
+# `cancel-in-progress: false` is unchanged — in-progress deploys must not
+# be interrupted after image pull (same rationale as deploy-staging.yml).
 concurrency:
   group: production-deploy
   cancel-in-progress: false
+  queue: max
 
 jobs:
   voc067-cloudflare-cutover:
