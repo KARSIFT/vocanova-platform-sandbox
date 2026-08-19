@@ -121,6 +121,11 @@ test("VOC-085-TEST-07: route sweep fails closed on missing session cookie and us
   );
   assert.match(
     smokeScript,
+    /coerce_same_origin_redirect_path/,
+    "same-origin absolute Location headers from Next.js must be normalized",
+  );
+  assert.match(
+    smokeScript,
     /reached final HTTP \$status/,
     "route sweep must require a final rendered 2xx after safe redirects",
   );
