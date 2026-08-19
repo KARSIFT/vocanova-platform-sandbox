@@ -60,6 +60,14 @@
 #                                 value fails the post-deploy
 #                                 core-loop check rather than
 #                                 silently skipping it (VOC-050-T02).
+#   * STAGING_NEW_USER_SIGNUP_ALLOWLIST
+#                               - comma-separated Google email
+#                                 addresses admitted to the staging
+#                                 controlled-signup cohort. Required
+#                                 whenever the Google OAuth pair is
+#                                 present. The workflow validates it
+#                                 without printing values and syncs it
+#                                 to staging api.env on every deploy.
 #
 # Mirror of the .github/workflows/accessibility.yml and
 # .github/workflows/lighthouse.yml pattern from VOC-031-T07a/
@@ -96,8 +104,8 @@
 #   /opt/vocanova/infra/secrets/             (founder-populated, NOT SCPed;
 #                                              .gitignore'd in repo - EXCEPT
 #                                              keys this workflow writes on
-#                                              every deploy from GitHub secrets
-#                                              or workflow inputs: AI_PROVIDER_*,
+#                                              every deploy from GitHub secrets:
+#                                              AI_PROVIDER_*,
 #                                              Sentry, smoke-mint token,
 #                                              Google OAuth client id/secret
 #                                              (VOC-084-T00), and canonical
@@ -273,11 +281,6 @@ on:
         required: false
         type: boolean
         default: false
-      new_user_signup_allowlist:
-        description: "VOC-038-D00/D01: comma-separated emails admitted to sign up while NEW_USER_SIGNUP_ENABLED stays false (the staging controlled-launch cohort). Leave empty to allowlist no one. Expanding the cohort is editing this input at the next dispatch - no code change."
-        required: false
-        type: string
-        default: ""
 
 # `contents: read` is the GitHub-recommended default for any
 # workflow that only needs the repo (we do — for checkout).
@@ -799,14 +802,25 @@ jobs:
             } >> /opt/vocanova/infra/secrets/api.env
             chmod 600 /opt/vocanova/infra/secrets/api.env
 
-      # VOC-084-T00: canonical staging OAuth callback, redirect allowlist,
-      # GOOGLE_OAUTH_ENABLED from repository pair availability, and controlled
-      # signup posture (global kill switch stays off; allowlist defaults empty).
+      # VOC-088-T00: validate the persistent controlled-signup secret on the
+      # runner before any configuration write. The validator emits only a
+      # readiness boolean and never the cohort size or email values.
+      - name: Validate staging controlled-signup allowlist
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        env:
+          STAGING_NEW_USER_SIGNUP_ALLOWLIST: ${{ secrets.STAGING_NEW_USER_SIGNUP_ALLOWLIST }}
+          STAGING_GOOGLE_OAUTH_ENABLED: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID != '' && secrets.GOOGLE_OAUTH_CLIENT_SECRET != '' }}
+        run: bash infra/scripts/validate-staging-signup-allowlist.sh
+
+      # VOC-084-T00/VOC-088-T00: canonical staging OAuth callback, redirect
+      # allowlist, GOOGLE_OAUTH_ENABLED from repository pair availability, and
+      # controlled signup posture. The global kill switch stays off; the
+      # persistent repository secret is the sole cohort source on every deploy.
       - name: Write staging application configuration
         if: ${{ inputs.skip_ssh_deploy != true }}
         uses: appleboy/ssh-action@v1
         env:
-          STAGING_NEW_USER_SIGNUP_ALLOWLIST: ${{ inputs.new_user_signup_allowlist || '' }}
+          STAGING_NEW_USER_SIGNUP_ALLOWLIST: ${{ secrets.STAGING_NEW_USER_SIGNUP_ALLOWLIST }}
           STAGING_GOOGLE_OAUTH_ENABLED: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID != '' && secrets.GOOGLE_OAUTH_CLIENT_SECRET != '' }}
         with:
           host: ${{ secrets.STAGING_SSH_HOST }}
@@ -816,6 +830,15 @@ jobs:
           envs: STAGING_NEW_USER_SIGNUP_ALLOWLIST,STAGING_GOOGLE_OAUTH_ENABLED
           script: |
             set -euo pipefail
+            if [ "${STAGING_GOOGLE_OAUTH_ENABLED}" = "true" ] && [ -z "${STAGING_NEW_USER_SIGNUP_ALLOWLIST:-}" ]; then
+              echo "controlled signup cohort is empty; refusing staging configuration with OAuth enabled" >&2
+              exit 1
+            fi
+            if [ "${STAGING_GOOGLE_OAUTH_ENABLED}" = "true" ]; then
+              echo "controlled signup ready: true"
+            else
+              echo "controlled signup ready: false"
+            fi
             sudo mkdir -p /opt/vocanova/infra/secrets
             sudo touch /opt/vocanova/infra/secrets/api.env
             sudo chown "$(id -un)":"$(id -gn)" /opt/vocanova/infra/secrets/api.env

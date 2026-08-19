@@ -20,7 +20,9 @@ synthetics:
     severity: high
     coverage:
       - "api:POST /api/v1/auth/oauth/google/start"
+      - "api:GET /healthz controlled_signup_ready"
       - "feature:staging-google-oauth"
+      - "feature:staging-controlled-signup-readiness"
 
   - id: synthetic.production.oauth-expected-state
     name: Production OAuth expected state and exact callback

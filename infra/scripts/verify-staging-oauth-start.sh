@@ -2,12 +2,15 @@
 set -euo pipefail
 
 # VOC-084-T02 — post-deploy staging OAuth-start initiation check.
+# VOC-088-T01 — when OAuth is expected enabled, also asserts
+# /healthz.controlled_signup_ready is true (non-sensitive readiness).
 #
 # POSTs /api/v1/auth/oauth/google/start without following Google or
 # completing OAuth. When EXPECT_OAUTH_ENABLED=true, requires HTTP 200,
-# an accounts.google.com authorization URL, and redirect_uri exactly
-# matching the canonical staging callback. When false, requires coherent
-# 503 disabled behavior (not a fake 200).
+# an accounts.google.com authorization URL, redirect_uri exactly
+# matching the canonical staging callback, and controlled_signup_ready
+# on /healthz. When false, requires coherent 503 disabled behavior
+# (not a fake 200).
 #
 # Usage:
 #   verify-staging-oauth-start.sh
@@ -93,6 +96,46 @@ PY
       record_fail "OAuth start response did not contain a valid Google authorization URL with the canonical callback"
     fi
   fi
+
+  healthz_file="$(mktemp)"
+  healthz_status="$(curl -sS --max-time 20 \
+    -o "$healthz_file" \
+    -w "%{http_code}" \
+    -H "Host: ${API_HOST}" \
+    "${api_base_url}/healthz" 2>/dev/null || true)"
+  if [ -z "$healthz_status" ]; then
+    healthz_status="000"
+  fi
+
+  if [ "$healthz_status" != "200" ]; then
+    record_fail "/healthz returned HTTP $healthz_status (expected 200 while OAuth is enabled)"
+  else
+    record_pass "/healthz returned HTTP 200"
+    if python3 - "$healthz_file" <<'PY'
+import json
+import re
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as fh:
+    body = fh.read()
+
+payload = json.loads(body)
+ready = payload.get("controlled_signup_ready")
+if ready is not True:
+    raise SystemExit(
+        f"controlled_signup_ready is not true: {ready!r}"
+    )
+
+if re.search(r'"[^"]*@[^"]+"', body):
+    raise SystemExit("healthz response must not expose email-like strings")
+PY
+    then
+      record_pass "controlled_signup_ready is true without exposing cohort metadata"
+    else
+      record_fail "/healthz did not report controlled_signup_ready=true without email metadata"
+    fi
+  fi
+  rm -f "$healthz_file"
 else
   if [ "$http_status" = "503" ]; then
     record_pass "OAuth start correctly refused with HTTP 503 while disabled"
