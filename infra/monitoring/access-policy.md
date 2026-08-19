@@ -39,9 +39,12 @@ After T03 deploy convergence succeeds, run:
 
 ```bash
 infra/scripts/verify-voc081-monitor.sh
+# VOC-086 full availability + topology closure:
+infra/scripts/verify-voc086-monitoring.sh
 ```
 
-Record redacted output in `t04-evidence.md`. The script checks:
+Record redacted output in package evidence (`t04-evidence.md` for VOC-081;
+`t05-evidence.md` for VOC-086). The VOC-081 script checks:
 
 - four app hostnames still return HTTP 2xx on canonical `:443`
 - `https://monitor.vocanova.site/` returns the Kuma application (follows

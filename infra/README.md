@@ -37,6 +37,11 @@ infra/
 │   ├── verify-voc067-cutover.sh                          # VOC-067-T05 external :443 checks
 │   ├── verify-voc081-monitor.sh                        # VOC-081-T04 monitor HTTPS/WebSocket/access checks
 │   ├── verify-voc081-monitor.selftest.sh               # disposable harness for the above
+│   ├── verify-voc086-monitoring.sh                     # VOC-086-T05 availability + topology + optional Socket.IO proof
+│   ├── verify-voc086-monitoring.selftest.sh            # disposable harness for the above
+│   ├── prove-kuma-inventory.sh                         # VOC-086-T05 read-only Socket.IO monitor-list proof
+│   ├── kuma-rotate-credentials.sh                      # VOC-086-T02 official Kuma password-reset wrapper
+│   ├── sync-kuma-inventory.sh                          # VOC-086-T02 Socket.IO inventory apply + proof
 │   ├── rehearse-production-secrets-boundary.sh          # VOC-037 INS-9..INS-11 rehearsal
 │   └── rehearse-production-secrets-boundary.selftest.sh # disposable-mirror harness for the above
 ├── nginx/
@@ -461,10 +466,17 @@ monitoring + shared edge, verify the public restoration:
 ```bash
 infra/scripts/verify-voc081-monitor.sh
 infra/scripts/verify-voc081-monitor.selftest.sh   # offline harness only
+infra/scripts/verify-voc086-monitoring.sh         # VOC-086 five URLs + topology + optional Socket.IO proof
+infra/scripts/verify-voc086-monitoring.selftest.sh
 ```
 
+Operator runbooks for adding monitors, credential bootstrap/rotation, rollback,
+and scheduled synthetics live in `docs/operations/monitoring.md`.
+
 Record redacted output in
-`specs/changes/VOC-081-route-monitor-vocanova-site-through-the/t04-evidence.md`.
+`specs/changes/VOC-081-route-monitor-vocanova-site-through-the/t04-evidence.md`
+(topology) and
+`specs/changes/VOC-086-manage-monitoring-inventory/t05-evidence.md` (inventory).
 
 The same actions are available on `deploy-production.yml` via
 `workflow_dispatch` input `voc067_cloudflare_origin_cutover`

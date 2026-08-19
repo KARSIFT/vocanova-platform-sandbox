@@ -315,6 +315,7 @@ test("VOC-086-TEST-07 (T02 extension): workflow and host scripts ban SQLite depl
     ".github/workflows/sync-monitoring.yml",
     "infra/scripts/kuma-rotate-credentials.sh",
     "infra/scripts/sync-kuma-inventory.sh",
+    "infra/scripts/prove-kuma-inventory.sh",
   ];
   const forbidden = [/kuma\.db/i, /\bsqlite\b/i, /\/app\/data/i];
 
@@ -346,4 +347,15 @@ test("VOC-086-TEST-02 (workflow): monitoring env secrets and Socket.IO sync wiri
     "Socket.IO sync attaches to vocanova-monitoring-net in the host sync script",
   );
   assert.match(syncScript, /sync-kuma\.mjs/);
+  assert.match(
+    syncScript,
+    /prove-kuma-inventory\.mjs/,
+    "inventory sync must run read-only Socket.IO proof after apply",
+  );
+  const bundleStep = extractStepBlock(workflow, "Bundle monitoring sync tree");
+  assert.match(
+    bundleStep,
+    /prove-kuma-inventory\.sh/,
+    "sync bundle must include the standalone prove script",
+  );
 });

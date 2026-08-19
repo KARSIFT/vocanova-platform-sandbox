@@ -117,6 +117,7 @@ jobs:
           cp -a infra/monitoring /tmp/monitoring-sync-bundle/infra/
           cp infra/scripts/kuma-rotate-credentials.sh \
             infra/scripts/sync-kuma-inventory.sh \
+            infra/scripts/prove-kuma-inventory.sh \
             /tmp/monitoring-sync-bundle/infra/scripts/
           tar -czf "$GITHUB_WORKSPACE/monitoring-sync-bundle.tgz" \
             -C /tmp/monitoring-sync-bundle .
