@@ -57,15 +57,12 @@ test("VOC-088-TEST-05/06: staging OAuth harness asserts controlled_signup_ready 
   const scheduledWorkflow = readFileSync(scheduledWorkflowPath, "utf8");
 
   assert.match(verifyScript, /controlled_signup_ready is not true/);
-  assert.match(verifyScript, /healthz response must not expose email-like strings/);
   assert.match(
-    synthetics,
-    /api:GET \/healthz controlled_signup_ready/,
+    verifyScript,
+    /healthz response must not expose email-like strings/,
   );
-  assert.match(
-    synthetics,
-    /feature:staging-controlled-signup-readiness/,
-  );
+  assert.match(synthetics, /api:GET \/healthz controlled_signup_ready/);
+  assert.match(synthetics, /feature:staging-controlled-signup-readiness/);
   assert.match(
     scheduledWorkflow,
     /verify-staging-oauth-start\.sh also asserts \/healthz\.controlled_signup_ready/,
@@ -92,6 +89,12 @@ test("VOC-088-TEST-05/06: disposable harness covers readiness pass and fail path
     0,
     `selftest failed:\nstdout: ${result.stdout}\nstderr: ${result.stderr}`,
   );
-  assert.match(result.stdout, /controlled_signup_ready=false fails the enabled readiness check/);
-  assert.match(result.stdout, /controlled_signup_ready=true passes the enabled readiness check/);
+  assert.match(
+    result.stdout,
+    /controlled_signup_ready=false fails the enabled readiness check/,
+  );
+  assert.match(
+    result.stdout,
+    /controlled_signup_ready=true passes the enabled readiness check/,
+  );
 });

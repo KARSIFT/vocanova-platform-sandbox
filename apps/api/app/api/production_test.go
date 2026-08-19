@@ -514,7 +514,7 @@ func TestHealthzHandler_ReportsControlledSignupReady(t *testing.T) {
 	require.NoError(t, err)
 
 	var body struct {
-		ControlledSignupReady bool `json:"controlled_signup_ready"`
+		ControlledSignupReady bool             `json:"controlled_signup_ready"`
 		KillSwitches          KillSwitchStatus `json:"kill_switches"`
 	}
 	require.NoError(t, json.Unmarshal(bodyBytes, &body))
