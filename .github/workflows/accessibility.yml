@@ -31,6 +31,7 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - "infra/scripts/install-playwright-chromium.sh"
       - ".github/workflows/accessibility.yml"
 
 permissions:
@@ -102,12 +103,21 @@ jobs:
           NEXT_PUBLIC_API_BASE_URL: "http://127.0.0.1:8080"
         run: pnpm --filter @vocanova/web build
 
+      # actions/cache v4.2.2, pinned to the immutable commit documented at
+      # https://github.com/actions/cache/releases/tag/v4.2.2
+      - name: Restore Playwright Chromium browser cache
+        uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            playwright-chromium-${{ runner.os }}-
+
       - name: Install Playwright Chromium
-        # `--with-deps` installs the system libraries Chromium
-        # needs on ubuntu-latest. The browser version is pinned
-        # transitively through the locked @playwright/test version,
-        # so no separate version flag is needed.
-        run: pnpm --filter @vocanova/web exec playwright install --with-deps chromium
+        # VOC-095: bounded install contract (browser cache + retry-limited
+        # deps install). See infra/scripts/install-playwright-chromium.sh
+        # and apps/web/tests/e2e/README.md.
+        run: bash infra/scripts/install-playwright-chromium.sh
 
       - name: Run accessibility suite
         env:

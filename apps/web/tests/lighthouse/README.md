@@ -125,10 +125,11 @@ pnpm --filter @vocanova/web start --port 3000 &
 pnpm --filter @vocanova/web test:lighthouse
 ```
 
-A local run needs a Chrome / Chromium binary on `$PATH`
-(this is the same browser the Playwright install pulls in,
-so a developer who has run `pnpm --filter @vocanova/web exec
-playwright install --with-deps chromium` already has it).
+A local run needs a Chrome / Chromium binary on `$PATH`. The repository-managed
+`bash infra/scripts/install-playwright-chromium.sh` command installs the same
+Playwright browser with bounded, fail-closed system-dependency handling. Local
+operators who cannot use that CI-oriented helper may run
+`playwright install chromium` and `playwright install-deps chromium` separately.
 Set `LIGHTHOUSE_CHROME_PATH=/abs/path/to/chrome` to point
 the runner at a specific binary.
 

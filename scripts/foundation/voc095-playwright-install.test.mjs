@@ -1,4 +1,4 @@
-// VOC-095-T00 — bounded Playwright Chromium install contract tests.
+// VOC-095-T00/T01 — bounded Playwright Chromium install contract tests.
 //
 // Runs via `node --test scripts/foundation/voc095-playwright-install.test.mjs`.
 
@@ -17,6 +17,13 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
+import {
+  STAGING_CORE_JOURNEY_CHECK_REF,
+  extractTopLevelJobBlock,
+  loadSyntheticsRegistry,
+  validateStagingCoreJourneyBudget,
+} from "../../infra/monitoring/scheduled-synthetics.mjs";
+
 const repositoryRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../..",
@@ -30,6 +37,22 @@ const evidencePath = path.join(
   repositoryRoot,
   "specs/changes/VOC-095-harden-playwright-setup-against-hosted-runner-apt/t00-evidence.md",
 );
+const t01EvidencePath = path.join(
+  repositoryRoot,
+  "specs/changes/VOC-095-harden-playwright-setup-against-hosted-runner-apt/t01-evidence.md",
+);
+
+const PLAYWRIGHT_CACHE_KEY =
+  /playwright-chromium-\$\{\{ runner\.os \}\}-\$\{\{ hashFiles\('pnpm-lock\.yaml'\) \}\}/;
+const INLINE_WITH_DEPS =
+  /pnpm --filter @vocanova\/web exec playwright install --with-deps chromium/;
+
+const WORKFLOW_PATHS = {
+  accessibility: ".github/workflows/accessibility.yml",
+  lighthouse: ".github/workflows/lighthouse.yml",
+  deployStaging: ".github/workflows/deploy-staging.yml",
+  scheduledSynthetics: ".github/workflows/scheduled-synthetics.yml",
+};
 
 const DENYLIST_PATTERNS = [
   /continue-on-error/i,
@@ -43,6 +66,70 @@ const DENYLIST_PATTERNS = [
 function readInstallScript() {
   assert.ok(existsSync(installScriptPath));
   return readFileSync(installScriptPath, "utf8");
+}
+
+function readWorkflow(relPath) {
+  const workflowPath = path.join(repositoryRoot, relPath);
+  assert.ok(existsSync(workflowPath), `${relPath} must exist`);
+  return readFileSync(workflowPath, "utf8");
+}
+
+function assertCacheThenInstallContract(scopeSource, label) {
+  assert.doesNotMatch(
+    scopeSource,
+    INLINE_WITH_DEPS,
+    `${label} must not use inline --with-deps`,
+  );
+  const installIndex = scopeSource.indexOf(
+    "run: bash infra/scripts/install-playwright-chromium.sh",
+  );
+  assert.ok(
+    installIndex >= 0,
+    `${label} must invoke install-playwright-chromium.sh`,
+  );
+  assert.match(
+    scopeSource,
+    /~\/\.cache\/ms-playwright/,
+    `${label} must cache Playwright browsers`,
+  );
+  assert.match(
+    scopeSource,
+    /actions\/cache@d4323d4df104b026a6aa633fdb11d772146be0bf/,
+    `${label} must use the pinned actions/cache revision`,
+  );
+  assert.match(
+    scopeSource,
+    PLAYWRIGHT_CACHE_KEY,
+    `${label} must use canonical cache key`,
+  );
+  const cacheIndex = scopeSource.indexOf("actions/cache@");
+  assert.ok(
+    cacheIndex >= 0 && cacheIndex < installIndex,
+    `${label} must restore Playwright cache before install script`,
+  );
+}
+
+function extractDeployStagingCoreLoopSection(workflowSource) {
+  const start = workflowSource.indexOf(
+    "Install workspace dependencies for the staging core-loop check",
+  );
+  assert.ok(
+    start >= 0,
+    "deploy-staging must define core-loop dependency install",
+  );
+  const end = workflowSource.indexOf(
+    "Upload the staging core-loop Playwright report on failure",
+    start,
+  );
+  return workflowSource.slice(start, end >= 0 ? end : workflowSource.length);
+}
+
+function assertStepBlockHasNoContinueOnError(stepBlock, label) {
+  assert.doesNotMatch(
+    stepBlock,
+    /continue-on-error:\s*true/,
+    `${label} must not use continue-on-error`,
+  );
 }
 
 function extractConstant(source, name) {
@@ -66,7 +153,7 @@ function runInstallScriptWithFixture({
   mkdirSync(homeDir, { recursive: true });
   const browserDir = path.join(
     homeDir,
-    ".cache/ms-playwright/chromium-fixture/chrome-linux",
+    ".cache/ms-playwright/chromium-fixture/chrome-linux64",
   );
   const mirrorListPath = path.join(fixtureRoot, "apt-mirrors.txt");
   writeFileSync(mirrorListPath, "http://hosted-runner.invalid/ubuntu/\n");
@@ -227,7 +314,7 @@ test("VOC-095-TEST-02: install script verifies Chromium binary after install", (
 
   assert.match(
     source,
-    /chromium-\*\/chrome-linux\/chrome/,
+    /chromium-\*\/chrome-linux\*\/chrome/,
     "script must verify the Playwright Chromium binary path",
   );
   assert.match(source, /verify_chromium_binary/);
@@ -327,4 +414,187 @@ test("VOC-095-TEST-01b: install script exists at the repository-managed path", (
     "install-playwright-chromium.sh",
   );
   assert.match(readInstallScript(), /install-playwright-chromium\.sh/);
+});
+
+test("VOC-095-TEST-04: accessibility.yml uses cache then install script", () => {
+  const workflowSource = readWorkflow(WORKFLOW_PATHS.accessibility);
+  assertCacheThenInstallContract(workflowSource, "accessibility.yml");
+  assert.match(
+    workflowSource,
+    /paths:[\s\S]*infra\/scripts\/install-playwright-chromium\.sh/,
+    "installer changes must trigger accessibility",
+  );
+});
+
+test("VOC-095-TEST-05: lighthouse.yml uses cache then install script", () => {
+  const workflowSource = readWorkflow(WORKFLOW_PATHS.lighthouse);
+  assertCacheThenInstallContract(workflowSource, "lighthouse.yml");
+  assert.match(
+    workflowSource,
+    /paths:[\s\S]*infra\/scripts\/install-playwright-chromium\.sh/,
+    "installer changes must trigger Lighthouse",
+  );
+});
+
+test("VOC-095-TEST-06: deploy-staging.yml core-loop uses cache then install script", () => {
+  const workflowSource = readWorkflow(WORKFLOW_PATHS.deployStaging);
+  assert.doesNotMatch(workflowSource, INLINE_WITH_DEPS);
+  assert.match(workflowSource, /timeout-minutes:\s*40/);
+
+  const coreLoopSection = extractDeployStagingCoreLoopSection(workflowSource);
+  assertCacheThenInstallContract(coreLoopSection, "deploy-staging core-loop");
+});
+
+test("VOC-095-TEST-07: scheduled-synthetics.yml uses cache then install script", () => {
+  const workflowSource = readWorkflow(WORKFLOW_PATHS.scheduledSynthetics);
+  const jobBlock = extractTopLevelJobBlock(
+    workflowSource,
+    STAGING_CORE_JOURNEY_CHECK_REF,
+  );
+  assert.ok(
+    jobBlock,
+    "scheduled-synthetics must define staging core-journey job",
+  );
+  assertCacheThenInstallContract(jobBlock, "scheduled-synthetics core-journey");
+});
+
+test("VOC-095-TEST-08: browser test steps remain mandatory after install step", () => {
+  const accessibility = readWorkflow(WORKFLOW_PATHS.accessibility);
+  const lighthouse = readWorkflow(WORKFLOW_PATHS.lighthouse);
+  const deployStaging = readWorkflow(WORKFLOW_PATHS.deployStaging);
+  const scheduled = readWorkflow(WORKFLOW_PATHS.scheduledSynthetics);
+
+  assertStepBlockHasNoContinueOnError(
+    accessibility.match(
+      /- name: Install Playwright Chromium[\s\S]*?(?=- name:)/m,
+    )?.[0] ?? "",
+    "accessibility install step",
+  );
+  assertStepBlockHasNoContinueOnError(
+    accessibility.match(
+      /- name: Run accessibility suite[\s\S]*?(?=- name:)/m,
+    )?.[0] ?? "",
+    "accessibility test step",
+  );
+  assertStepBlockHasNoContinueOnError(
+    lighthouse.match(
+      /- name: Install Playwright Chromium[\s\S]*?(?=- name:)/m,
+    )?.[0] ?? "",
+    "lighthouse install step",
+  );
+  assertStepBlockHasNoContinueOnError(
+    lighthouse.match(/- name: Run Lighthouse suite[\s\S]*?(?=- name:)/m)?.[0] ??
+      "",
+    "lighthouse test step",
+  );
+
+  const deployCoreLoop = extractDeployStagingCoreLoopSection(deployStaging);
+  assertStepBlockHasNoContinueOnError(
+    deployCoreLoop.match(
+      /- name: Install Playwright Chromium for the staging core-loop check[\s\S]*?(?=- name:)/m,
+    )?.[0] ?? "",
+    "deploy-staging core-loop install step",
+  );
+  assertStepBlockHasNoContinueOnError(
+    deployCoreLoop.match(
+      /- name: Run the staging core-loop journey[\s\S]*?(?=- name:)/m,
+    )?.[0] ?? "",
+    "deploy-staging core-loop test step",
+  );
+
+  const scheduledJob = extractTopLevelJobBlock(
+    scheduled,
+    STAGING_CORE_JOURNEY_CHECK_REF,
+  );
+  assertStepBlockHasNoContinueOnError(
+    scheduledJob.match(
+      /- name: Install Playwright Chromium for the staging core-loop synthetic[\s\S]*?(?=- name:)/m,
+    )?.[0] ?? "",
+    "scheduled-synthetics install step",
+  );
+  assertStepBlockHasNoContinueOnError(
+    scheduledJob.match(
+      /- name: Run staging authenticated core-loop synthetic[\s\S]*?(?=- name:)/m,
+    )?.[0] ?? "",
+    "scheduled-synthetics test step",
+  );
+});
+
+test("VOC-095-TEST-09: Lighthouse chrome path resolution stays shell-expanded", () => {
+  const workflowSource = readWorkflow(WORKFLOW_PATHS.lighthouse);
+  const lighthouseRunStep =
+    workflowSource.match(
+      /- name: Run Lighthouse suite[\s\S]*?(?=- name:)/m,
+    )?.[0] ?? "";
+
+  assert.match(
+    lighthouseRunStep,
+    /export LIGHTHOUSE_CHROME_PATH="\$\(ls -d[\s\S]*chrome-linux\*\/chrome/,
+    "LIGHTHOUSE_CHROME_PATH must be resolved inside run:",
+  );
+  assert.doesNotMatch(
+    lighthouseRunStep.match(/env:[\s\S]*?run:/m)?.[0] ?? "",
+    /LIGHTHOUSE_CHROME_PATH.*chromium-\*/,
+    "LIGHTHOUSE_CHROME_PATH glob must not live in env:",
+  );
+});
+
+test("VOC-095-TEST-10: scheduled validator rejects missing or misordered shared install wiring", () => {
+  const workflowSource = readWorkflow(WORKFLOW_PATHS.scheduledSynthetics);
+  const syntheticsDocument = loadSyntheticsRegistry(repositoryRoot);
+  const installCommand =
+    "run: bash infra/scripts/install-playwright-chromium.sh";
+  const cacheAction = "actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf";
+
+  const missingInstallErrors = validateStagingCoreJourneyBudget({
+    workflowSource: workflowSource.replace(
+      installCommand,
+      "run: echo browser-installer-missing",
+    ),
+    syntheticsDocument,
+  });
+  assert.ok(
+    missingInstallErrors.some((error) =>
+      error.includes(
+        "must invoke infra/scripts/install-playwright-chromium.sh",
+      ),
+    ),
+    `validator must reject a missing shared installer: ${missingInstallErrors.join("; ")}`,
+  );
+
+  const cacheLine = `uses: ${cacheAction}`;
+  const misorderedSource = workflowSource
+    .replace(cacheLine, "uses: actions/checkout@cache-order-fixture")
+    .replace(
+      installCommand,
+      `${installCommand}\n\n      - name: Misordered Playwright cache fixture\n        uses: ${cacheAction}`,
+    );
+  const misorderedErrors = validateStagingCoreJourneyBudget({
+    workflowSource: misorderedSource,
+    syntheticsDocument,
+  });
+  assert.ok(
+    misorderedErrors.some((error) =>
+      error.includes("before install-playwright"),
+    ),
+    `validator must reject cache after installer: ${misorderedErrors.join("; ")}`,
+  );
+});
+
+test("VOC-095-TEST-12: e2e README documents shared install contract", () => {
+  const readmePath = path.join(repositoryRoot, "apps/web/tests/e2e/README.md");
+  const readme = readFileSync(readmePath, "utf8");
+  const lighthouseReadme = readFileSync(
+    path.join(repositoryRoot, "apps/web/tests/lighthouse/README.md"),
+    "utf8",
+  );
+
+  assert.match(readme, /install-playwright-chromium\.sh/);
+  assert.match(readme, /~\/\.cache\/ms-playwright/);
+  assert.match(readme, /120 s|120 s per-attempt|bounded/i);
+  assert.match(readme, /install-deps chromium/);
+  assert.doesNotMatch(readme, INLINE_WITH_DEPS);
+  assert.match(lighthouseReadme, /install-playwright-chromium\.sh/);
+  assert.match(lighthouseReadme, /install-deps chromium/);
+  assert.doesNotMatch(lighthouseReadme, INLINE_WITH_DEPS);
 });

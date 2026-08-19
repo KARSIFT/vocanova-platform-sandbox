@@ -213,7 +213,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright Chromium for the staging core-loop synthetic
-        run: pnpm --filter @vocanova/web exec playwright install --with-deps chromium
+        run: bash infra/scripts/install-playwright-chromium.sh
 
       - name: Run staging authenticated core-loop synthetic
         env:

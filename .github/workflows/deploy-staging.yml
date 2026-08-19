@@ -1520,9 +1520,20 @@ jobs:
         if: ${{ inputs.skip_ssh_deploy != true }}
         run: pnpm install --frozen-lockfile
 
+      # actions/cache v4.2.2, pinned to the immutable commit documented at
+      # https://github.com/actions/cache/releases/tag/v4.2.2
+      - name: Restore Playwright Chromium browser cache for the staging core-loop check
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            playwright-chromium-${{ runner.os }}-
+
       - name: Install Playwright Chromium for the staging core-loop check
         if: ${{ inputs.skip_ssh_deploy != true }}
-        run: pnpm --filter @vocanova/web exec playwright install --with-deps chromium
+        run: bash infra/scripts/install-playwright-chromium.sh
 
       - name: Run the staging core-loop journey
         if: ${{ inputs.skip_ssh_deploy != true }}
