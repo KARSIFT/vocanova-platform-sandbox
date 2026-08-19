@@ -97,6 +97,8 @@ test("VOC-087-TEST-10: reset-success / proof-transfer-failure remains recoverabl
   );
   assert.match(rotateStep, /id: rotate_host/);
   const rotateScript = readFileSync(rotateScriptPath, "utf8");
+  assert.match(rotateScript, /coproc KUMA_RESET_PROCESS/);
+  assert.match(rotateScript, /Confirm New Password: /);
   assert.match(rotateScript, /Password reset successfully/);
   assert.match(rotateScript, /Logged in/);
   assert.ok(

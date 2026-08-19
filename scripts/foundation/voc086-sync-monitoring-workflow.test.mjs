@@ -95,6 +95,13 @@ test("VOC-086-TEST-08: rotate_credentials is opt-in; normal sync never resets", 
     /--new[-_]password/,
     "rotation must use stdin/container reset tool, not argv password flags",
   );
+  assert.match(rotateScript, /New Password: /);
+  assert.match(rotateScript, /Confirm New Password: /);
+  assert.doesNotMatch(
+    rotateScript,
+    /printf '%s\\n%s\\n'/,
+    "rotation must wait for each readline prompt instead of preloading and closing stdin",
+  );
 });
 
 test("VOC-086-TEST-09: credential redaction and bootstrap stores secrets without printing", () => {

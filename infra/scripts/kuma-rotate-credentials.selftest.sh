@@ -24,7 +24,9 @@ if [ "$1" = "exec" ] && [ "$2" = "-i" ]; then
   container="$3"
   shift 3
   if [ "$1" = "node" ] && [ "$2" = "/app/extra/reset-password.js" ]; then
+    printf 'New Password: '
     read -r line1 || true
+    printf 'Confirm New Password: '
     read -r line2 || true
     if [ -z "${line1:-}" ] || [ "$line1" != "$line2" ]; then
       echo "password mismatch" >&2
@@ -183,7 +185,9 @@ if [ "$1" = "inspect" ]; then
   exit 0
 fi
 if [ "$1" = "exec" ] && [ "$2" = "-i" ]; then
+  printf 'New Password: '
   read -r _line1 || true
+  printf 'Confirm New Password: '
   read -r _line2 || true
   echo "== Uptime Kuma Reset Password Tool =="
   echo "Found user: harness-admin"
@@ -221,7 +225,9 @@ if [ "$1" = "inspect" ]; then
   exit 0
 fi
 if [ "$1" = "exec" ] && [ "$2" = "-i" ]; then
+  printf 'New Password: '
   read -r _line1 || true
+  printf 'Confirm New Password: '
   read -r _line2 || true
   echo "== Uptime Kuma Reset Password Tool =="
   echo "Logged in."
