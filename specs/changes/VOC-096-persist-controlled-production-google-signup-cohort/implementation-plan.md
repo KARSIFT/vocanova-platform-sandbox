@@ -60,8 +60,10 @@ Ordered steps:
 Ordered steps:
 
 1. Write production operator documentation.
-2. After T01 promotes to production, capture scrubbed evidence per AC-10.
-3. Record evidence in `t02-evidence.md`.
+2. After T01 merges, open and independently review a controlled activation promotion
+   from `develop` to `main`; merge it only after exact-SHA checks pass.
+3. Monitor the automatic production deployment and capture scrubbed evidence per AC-10.
+4. Record evidence in `t02-evidence.md`.
 
 ## Validation and independent verification
 
@@ -84,11 +86,13 @@ obligations but no founder `approved` comment merge gate.
 ## Deployment and rollback
 
 - **Authorization:** this package does not authorize production deployment by itself.
-  Production deployment follows the normal develop → main promotion path after roster
-  completion.
+  The reviewed task changes use the repository-controlled `develop` → `main`
+  promotion path and automatic production workflow.
 - **Rollout:** confirm `PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST` populated. Merge T00 → T01
-  to develop; after promotion, automatic production deploy applies secret-backed cohort.
-  T02 records live evidence.
+  to `develop`; then use a separately reviewed controlled activation promotion to
+  `main`. The automatic production deploy applies the secret-backed cohort, and T02
+  records live evidence. After roster completion, the normal release reconciliation
+  promotes any remaining documentation/evidence commits.
 - **Rollback trigger:** production deploy fails closed unexpectedly; synthetic false
   positives; cohort accidentally erased by reverted workflow.
 - **Rollback mechanism:** revert task PRs on develop and promote a fix forward. Do not

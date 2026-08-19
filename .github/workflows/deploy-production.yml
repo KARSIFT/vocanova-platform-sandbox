@@ -22,7 +22,11 @@ name: deploy-production
 # PR that went into it. workflow_dispatch stays available as a manual
 # override/retry path with the same input defaults a push run resolves to
 # automatically (see each `inputs.X || 'default'` below) - nothing about
-# manual dispatch changed.
+# manual dispatch changed. VOC-096-T00: the production controlled-signup
+# cohort is sourced only from the repository secret
+# PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST on every deploy (push and dispatch);
+# the former workflow_dispatch allowlist input is removed so automatic
+# push deploys cannot silently erase the cohort.
 
 on:
   push:
@@ -44,11 +48,6 @@ on:
         required: true
         type: string
         default: https://api-production.vocanova.site
-      new_user_signup_allowlist:
-        description: "VOC-038-D00/D01: comma-separated emails admitted to sign up while NEW_USER_SIGNUP_ENABLED stays false (the L1 controlled-launch cohort). Leave empty to allowlist no one. Expanding the cohort is editing this input at the next dispatch - no code change."
-        required: false
-        type: string
-        default: ""
       voc067_cloudflare_origin_cutover:
         description: "VOC-067-T05 Cloudflare origin-port remap (repository-driven API). skip = normal deploy. verify-only and restore run only the Cloudflare script (no image build/deploy). apply deploys first, then removes the remap after smoke. Keep skip on ordinary deploys."
         required: false
@@ -386,6 +385,15 @@ jobs:
             } >> /opt/vocanova/production/secrets/api.env
             chmod 600 /opt/vocanova/production/secrets/api.env
 
+      # VOC-096-T00: validate the persistent controlled-signup secret on the
+      # runner before any configuration write. The validator emits only a
+      # readiness boolean and never the cohort size or email values.
+      - name: Validate production controlled-signup allowlist
+        env:
+          PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST: ${{ secrets.PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST }}
+          PRODUCTION_GOOGLE_OAUTH_ENABLED: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID != '' && secrets.GOOGLE_OAUTH_CLIENT_SECRET != '' }}
+        run: bash infra/scripts/validate-production-signup-allowlist.sh
+
       # BASE_URL/OAUTH_REDIRECT_URI/etc. are not secrets - they're
       # non-sensitive config derived entirely from this workflow's own
       # production_web_host/production_api_host inputs - so they're
@@ -407,7 +415,7 @@ jobs:
           PRODUCTION_WEB_HOST: ${{ inputs.production_web_host || 'production.vocanova.site' }}
           PRODUCTION_API_HOST: ${{ inputs.production_api_host || 'api-production.vocanova.site' }}
           PRODUCTION_SENTRY_RELEASE: sha-${{ steps.sha.outputs.short_sha }}
-          PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST: ${{ inputs.new_user_signup_allowlist }}
+          PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST: ${{ secrets.PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST }}
           PRODUCTION_GOOGLE_OAUTH_ENABLED: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID != '' && secrets.GOOGLE_OAUTH_CLIENT_SECRET != '' }}
         with:
           host: ${{ secrets.PRODUCTION_SSH_HOST }}
@@ -417,6 +425,15 @@ jobs:
           envs: PRODUCTION_WEB_HOST,PRODUCTION_API_HOST,PRODUCTION_SENTRY_RELEASE,PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST,PRODUCTION_GOOGLE_OAUTH_ENABLED
           script: |
             set -euo pipefail
+            if [ "${PRODUCTION_GOOGLE_OAUTH_ENABLED}" = "true" ] && [ -z "${PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST:-}" ]; then
+              echo "controlled signup cohort is empty; refusing production configuration with OAuth enabled" >&2
+              exit 1
+            fi
+            if [ "${PRODUCTION_GOOGLE_OAUTH_ENABLED}" = "true" ]; then
+              echo "controlled signup ready: true"
+            else
+              echo "controlled signup ready: false"
+            fi
             sed -i \
               -e '/^ENVIRONMENT=/d' \
               -e '/^BASE_URL=/d' \
