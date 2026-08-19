@@ -11,10 +11,10 @@ tests:
 date: 2026-08-19
 related_change: VOC-088
 accountable_owner: unassigned
-gate_status: complete
+gate_status: live-signin-pending
 live_deploy_claimed: true
 live_synthetics_claimed: true
-live_signin_claimed: true
+live_signin_claimed: false
 live_failure_fixture_claimed: true
 reviewed_sha: bind-at-independent-review
 ---
@@ -38,14 +38,14 @@ to `develop`.
 
 ## Acceptance mapping
 
-| Acceptance criterion      | Result  | Evidence section                              |
-| ------------------------- | ------- | --------------------------------------------- |
-| AC-08 operator procedure  | pass    | § Operator procedure, § Cohort preservation   |
-| AC-09 deploy/readiness    | pass    | § Live staging readiness, § Cohort preservation, § Scheduled synthetics |
-| AC-09 sign-in (listed)    | pass    | § Human Google sign-in verification           |
-| AC-09 sign-in (unlisted)  | pass    | § Human Google sign-in verification           |
-| AC-09 failure fixture     | pass    | § Operational failure fixture live proof       |
-| AC-03 no emails           | pass    | § Privacy and redaction                       |
+| Acceptance criterion     | Result  | Evidence section                                                        |
+| ------------------------ | ------- | ----------------------------------------------------------------------- |
+| AC-08 operator procedure | pass    | § Operator procedure, § Cohort preservation                             |
+| AC-09 deploy/readiness   | pass    | § Live staging readiness, § Cohort preservation, § Scheduled synthetics |
+| AC-09 sign-in (listed)   | pending | § Human Google sign-in verification                                     |
+| AC-09 sign-in (unlisted) | pending | § Human Google sign-in verification                                     |
+| AC-09 failure fixture    | pass    | § Operational failure fixture live proof                                |
+| AC-03 no emails          | pass    | § Privacy and redaction                                                 |
 
 ## Deterministic validation
 
@@ -130,36 +130,40 @@ VOC-088-T01 version of `verify-staging-oauth-start.sh` with
 
 ## Human Google sign-in verification
 
-Live sign-in verification was performed by an operator on 2026-08-19 against
-`https://staging.vocanova.site/signin` after the secret-backed deploy:
+No live sign-in pass is claimed. A privacy-preserving read-only aggregate query
+after the persistent cohort deployment found no non-synthetic staging account,
+so an allowlisted first-time Google sign-in has not yet completed. A separate
+unlisted Google identity has not performed the post-fix denial check either.
 
-| Check                              | Result | Notes                                                                         |
-| ---------------------------------- | ------ | ----------------------------------------------------------------------------- |
-| Allowlisted first-time Google user | pass   | Reached staging onboarding without HTTP 503                                   |
-| Unlisted Google user               | pass   | API callback returned HTTP 503 with `auth.ErrSignupsDisabled` stable body     |
+| Check                              | Result  | Required scrubbed observation                        |
+| ---------------------------------- | ------- | ---------------------------------------------------- |
+| Allowlisted first-time Google user | pending | Reaches staging onboarding without HTTP 503          |
+| Unlisted Google user               | pending | API callback returns the stable HTTP 503 denial body |
 
-No email addresses, OAuth codes, session cookies, or callback query strings are
-recorded in this evidence. The application-level allowlist/deny behavior is
-additionally covered by unit tests in
-`apps/api/business/auth/killswitches_test.go`.
+These checks require interactive Google authentication and cannot be completed
+by repository automation. Record only pass/fail after they occur; never record
+addresses, OAuth codes, session cookies, or callback query strings.
+Application-level allowlist/deny behavior remains covered by unit tests in
+`apps/api/business/auth/killswitches_test.go`, but unit coverage does not satisfy
+this live gate.
 
 ## Operational failure fixture live proof
 
 The `operational-failure-monitoring.yml` `workflow_run` observer requires
-presence on the default branch (`main`) to fire. After VOC-088 promotion to
-`main` (issue [#757](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/757)),
+presence on the default branch (`main`) to fire. After controlled activation PR
+[#757](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/757),
 the bounded cancellation fixture from
 `docs/operations/staging-controlled-signup.md` § "Controlled failure fixture"
 was executed:
 
-| Step | Observation                                                                                       |
-| ---- | ------------------------------------------------------------------------------------------------- |
-| 1    | `scheduled-synthetics.yml` dispatched with `synthetic_id=synthetic.staging.authenticated-core-journey` |
-| 2    | Run cancelled via `gh run cancel`; conclusion `cancelled`                                         |
-| 3    | `operational-failure-monitoring` observed the `workflow_run` event and created exactly one issue titled `Operational failure: scheduled-synthetics (cancelled)` with stable fingerprint marker `<!-- operational-failure:scheduled-synthetics:cancelled -->` |
-| 4    | App-created issue triggered `pipeline` run with `plan-from-issue` job queued; pipeline run cancelled before adoption to contain the fixture |
-| 5    | Repeat cancellation with first issue still open: observer ran successfully, no duplicate issue created (dedup confirmed) |
-| 6    | Proof issue closed with sanitized comment citing the two cancelled run IDs and two observer run IDs; no logs, credentials, or account data attached |
+| Step | Observation                                                                                                                                              |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | Reserved synthetic run `32254332061` cancelled; observer run `32254408718` succeeded                                                                     |
+| 2    | App-authored, unlabeled issue #758 contained only the stable marker, workflow, conclusion, canonical run URL, and fixed sanitization statement           |
+| 3    | Issue #758 started pipeline run `32254427766`; `plan-from-issue / plan` was in progress, proving App-token event propagation                             |
+| 4    | Pipeline run `32254427766` was cancelled before a fixture plan or PR could be created                                                                    |
+| 5    | Reserved synthetic run `32254478720` cancelled while issue #758 stayed open; observer run `32254555131` succeeded                                        |
+| 6    | Exactly one open issue matched the marker after the repeat, proving live deduplication; issue #758 then received a sanitized evidence comment and closed |
 
 Deterministic coverage of the observer's deduplication, sanitization, App-token
 identity, and recursion guards is in
@@ -176,3 +180,9 @@ No repository secret value, real email address, OAuth authorization code, OAuth
 
 Test fixtures elsewhere in VOC-088 use only `@synthetic.vocanova.invalid`
 addresses.
+
+## Remaining gate
+
+`live_failure_fixture_claimed: true` is backed by the run and issue records above.
+`live_signin_claimed: false` remains the sole incomplete AC-09 gate. This evidence
+and PR #756 must not be marked complete until both interactive sign-in rows pass.
