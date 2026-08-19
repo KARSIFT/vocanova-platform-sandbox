@@ -60,6 +60,23 @@ test("VOC-088-TEST-13: deploy-and-verify evidence file exists with required sect
   assert.match(evidence, /controlled_signup_ready/);
   assert.match(evidence, /synthetic\.staging\.oauth-expected-state/);
   assert.match(evidence, /operational-failure/);
+
+  assert.match(
+    evidence,
+    /live_signin_claimed:\s*true/,
+    "AC-09 requires live sign-in evidence (allowlisted success + unlisted 503)",
+  );
+  assert.match(
+    evidence,
+    /live_failure_fixture_claimed:\s*true/,
+    "AC-09 requires live controlled failure-fixture evidence (App-created issue + dedup)",
+  );
+  assert.match(
+    evidence,
+    /gate_status:\s*complete/,
+    "all five AC-09 checklist items must be recorded before gate passes",
+  );
+
   const addresses = evidence.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi);
   assert.deepEqual(addresses ?? [], []);
 });
