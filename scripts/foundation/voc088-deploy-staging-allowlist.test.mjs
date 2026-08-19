@@ -108,3 +108,9 @@ test("VOC-088 isolation: production deploy never consumes the staging secret", (
 
   assert.doesNotMatch(production, /STAGING_NEW_USER_SIGNUP_ALLOWLIST/);
 });
+
+test("VOC-088 isolation: staging deploy never consumes the production secret", () => {
+  const staging = readFileSync(workflowPath, "utf8");
+
+  assert.doesNotMatch(staging, /PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST/);
+});
