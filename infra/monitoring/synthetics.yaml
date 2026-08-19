@@ -40,7 +40,9 @@ synthetics:
     severity: critical
     coverage:
       - "api:POST /api/v1/auth/oauth/google/start"
+      - "api:GET /healthz controlled_signup_ready"
       - "feature:production-google-oauth"
+      - "feature:production-controlled-signup-readiness"
 
   - id: synthetic.production.journey-content
     name: Production journey content and real details
