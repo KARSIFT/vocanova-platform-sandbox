@@ -15,7 +15,7 @@ tests:
 date: 2026-08-19
 related_change: VOC-088
 accountable_owner: unassigned
-gate_status: repository-complete-secret-bootstrap-and-live-deploy-pending
+gate_status: repository-complete-secret-bootstrap-confirmed-live-deploy-pending
 live_deployment_claimed: false
 ---
 
@@ -66,8 +66,11 @@ Result: 16 tests passed, 0 failed.
 Additional required gates before merge:
 
 - full repository validation and independent exact-SHA review;
-- confirmation that `STAGING_NEW_USER_SIGNUP_ALLOWLIST` is populated. Only
-  existence is recorded; its value must never appear in evidence.
+
+Secret bootstrap confirmation: `STAGING_NEW_USER_SIGNUP_ALLOWLIST` was present
+in the repository secret inventory on 2026-08-19 before merge. Only its name and
+presence were checked; its value is not included in repository content, workflow
+output, issue/PR text, or this evidence.
 
 ## Live deployment
 
