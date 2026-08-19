@@ -255,6 +255,8 @@ test("VOC-094-TEST-05: observer workflow wires classifier before open-failure-is
     /FAILURE_RUN_ID: \$\{\{ github\.event\.workflow_run\.id \}\}/,
   );
   assert.match(workflow, /actions\/create-github-app-token@v3/);
+  assert.match(workflow, /permission-actions: read/);
+  assert.match(workflow, /permission-issues: write/);
   assert.doesNotMatch(workflow, /gh\s+run\s+view/i);
 
   const classifier = readFileSync(classifierPath, "utf8");

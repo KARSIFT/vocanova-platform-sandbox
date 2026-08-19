@@ -53,6 +53,8 @@ jobs:
             exit 1
           fi
 
+      # Issue write for open/dedupe; Actions read for bounded jobs metadata in
+      # classify-deploy-concurrency-cancel.sh (VOC-094-T00).
       - name: Mint issue-writer installation token
         id: app-token
         uses: actions/create-github-app-token@v3
@@ -60,6 +62,7 @@ jobs:
           app-id: ${{ secrets.KARSIFT_BOT_APP_ID }}
           private-key: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
           permission-issues: write
+          permission-actions: read
 
       - name: Classify benign deploy concurrency supersession
         id: classify-cancel

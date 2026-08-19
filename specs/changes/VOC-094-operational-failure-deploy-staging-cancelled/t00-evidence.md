@@ -40,5 +40,30 @@ failure:
    `operational-failure-monitoring.yml` so `cancelled` deploy conclusions
    with zero jobs do not open governed issues (fail-closed on API errors or
    non-zero job counts).
+3. Mint the App installation token with `permission-actions: read` alongside
+   `permission-issues: write` so the classifier's bounded jobs API call is
+   authorized in live runs (remediation for independent-review finding on
+   commit `064b9ca1`).
 
 No deploy script, health-check, or SSH semantics were changed.
+
+## Deterministic validation (VOC-094-EV-00 / TEST-06 regression)
+
+Recorded at remediation time (`2026-08-19`):
+
+```text
+$ node --test scripts/foundation/voc094-deploy-concurrency.test.mjs
+✔ VOC-094-TEST-00 through TEST-05 (7/7 pass)
+
+$ node --test scripts/foundation/voc088-failure-to-issue.test.mjs
+✔ VOC-088-TEST-08 through TEST-11 (4/4 pass)
+
+$ node --test scripts/foundation/voc084-deploy-staging-oauth.test.mjs
+✔ VOC-084 deploy-staging OAuth regression (9/9 pass)
+
+$ node --test scripts/foundation/voc088-deploy-staging-allowlist.test.mjs
+✔ VOC-088 deploy-staging allowlist regression (7/7 pass)
+```
+
+All suites exited 0; no deploy step removal, `continue-on-error`, or
+health/core-loop ordering changes observed in deploy workflow diffs.
