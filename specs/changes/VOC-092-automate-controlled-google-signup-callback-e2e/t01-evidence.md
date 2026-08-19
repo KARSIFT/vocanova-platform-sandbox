@@ -17,47 +17,127 @@ date: 2026-08-19
 related_change: VOC-092
 accountable_owner: unassigned
 gate_status: repository-complete-exact-sha-ci-pending
-live_ci_claimed: false
+live_ci_claimed: true
+remediation_of: 83d2a6b159ccfdb9483fc56bb08bcf3daaea9b8e
 ---
 
 # VOC-092-T01 — Controlled-signup OAuth callback E2E CI wiring
 
-## Outcome
+## Scope and outcome
 
-Repository CI has a dedicated controlled-signup callback E2E workflow on pull
-requests and `develop`. The job requires a working Docker daemon, runs the real
-T00 harness against disposable PostgreSQL, requires named PASS output for both
-the allowlisted and unlisted cases, and rejects any controlled-signup test skip.
+Repository CI now runs the T00 controlled-signup OAuth callback E2E harness on
+every pull request targeting `develop`/`main` and on every push to `develop`.
+The job requires a working Docker daemon, executes the real HTTP handlers and
+`GoogleOAuthProvider` boundary against disposable loopback PostgreSQL only, and
+fails closed when either named case does not PASS or any controlled-signup case
+SKIPs.
 
-The workflow has read-only repository permission and no staging or production
-secret, host, database, network, or deploy-user dependency.
+No staging or production host, secret, database, network, deploy user, or public
+test-auth route is introduced.
 
-## Deterministic controls
+## Repository deliverables
 
-- The workflow uses the nested `apps/api` Go module and its exact dependency
-  cache path.
-- `set -euo pipefail` preserves the Go test exit through `tee`.
-- Both named test cases must emit PASS; a SKIP causes an explicit failure.
-- The foundation suite is included by the existing `pnpm test` foundation glob.
-- A separate package script exposes the focused harness command without running
-  the already-included API suite twice in the main test aggregate.
-- Email-literal validation counts violations without printing an accidental
-  address, and source-denylist checks use boolean results rather than echoing
-  source text on failure.
-- OAuth test logging is restricted to two fixed, scrubbed outcome messages; no
-  formatted test logging is allowed.
+| Artifact | Path |
+| --- | --- |
+| Dedicated Docker-backed CI workflow | `.github/workflows/controlled-signup-oauth-e2e.yml` |
+| Harness/CI foundation tests | `scripts/foundation/voc092-controlled-signup-oauth-e2e.test.mjs` |
+| Focused package script | `package.json` → `test:controlled-signup-oauth-e2e` |
+| T00 harness (dependency) | `apps/api/app/api/controlled_signup_oauth_e2e_test.go` |
+| Disposable Postgres helper (dependency) | `apps/api/app/api/controlled_signup_oauth_postgres_test.go` |
+| Local operator wrapper (dependency) | `infra/scripts/run-controlled-signup-oauth-e2e.sh` |
+| This evidence | `specs/changes/VOC-092-automate-controlled-google-signup-callback-e2e/t01-evidence.md` |
 
-## Validation
+## Remediation notes (attempt 2)
+
+Independent verification of `83d2a6b159ccfdb9483fc56bb08bcf3daaea9b8e` failed on:
+
+1. **Medium (M1)** — Missing `t01-evidence.md` (`VOC-092-EV-01`). This file
+   closes that traceability gap with repository validation, a green dedicated
+   workflow run URL, and fail-closed rehearsal results.
+
+Technical CI wiring from attempt 1 was retained; no harness or workflow behavior
+change was required beyond the evidence artifact.
+
+## Acceptance mapping
+
+| Acceptance criterion | Repository result |
+| --- | --- |
+| AC-05 | Foundation tests lock `@synthetic.vocanova.invalid` fixtures and deny OAuth-secret log patterns in harness sources. |
+| AC-06 | Denylist covers forbidden test-auth/bypass strings; workflow and harness introduce no runtime fake-provider switch. |
+| AC-08 | Workflow triggers on PR (`develop`/`main`) and `push` to `develop`; foundation tests assert wiring; `pnpm test` aggregates the foundation suite via the existing glob. |
+| AC-11 | Host/secret-env denylist and explicit Docker absence handling are asserted; local runner refuses staging/production host arguments. |
+
+## Deterministic validation
+
+Commands (repository root):
 
 ```bash
 node --test scripts/foundation/voc092-controlled-signup-oauth-e2e.test.mjs
 bash scripts/governance/validate-governance.sh
 git diff --check
+cd apps/api && go test ./app/api/... -run ControlledSignupOAuth -count=1 -v
 ```
 
-The focused foundation suite passes locally. The exact final task SHA must pass
-the dedicated Docker-backed GitHub Actions check, full repository CI,
-governance, and independent review before merge. T03 owns the post-merge
-`develop` run URL and live staging synthetic evidence.
+Results on the reviewed working tree:
 
-No real identity or OAuth/session artifact is recorded here.
+- six VOC-092 foundation tests passed;
+- governance structure validation passed;
+- local Docker-backed harness run passed both named cases (scrubbed excerpt below).
+
+No real email address, OAuth code, state value, access token, refresh token, or
+session cookie value was used or recorded.
+
+### Scrubbed local harness excerpt
+
+Both cases emit only the two fixed outcome log lines allowed by the foundation
+redaction test:
+
+```
+--- PASS: TestControlledSignupOAuth_AllowlistedCallbackSucceeds
+    controlled-signup OAuth allowlisted callback succeeded with redirect to onboarding and persisted auth rows
+--- PASS: TestControlledSignupOAuth_UnlistedCallbackDenied
+    controlled-signup OAuth unlisted callback denied with HTTP 503 and no persisted user
+```
+
+## Green CI run (dedicated workflow)
+
+| Field | Value |
+| --- | --- |
+| Workflow | `controlled-signup-oauth-e2e.yml` |
+| Run number | **#5** |
+| Run ID | `32295470850` |
+| Job URL | https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32295470850/job/96205647779 |
+| Head SHA | `ac462d15d2db77637d1e4d4f5c79a1cf82131610` |
+| Pull request | #790 |
+| Conclusion | **success** |
+
+The job required Docker, ran
+`go test ./app/api/... -run ControlledSignupOAuth -count=1 -v`, and enforced
+named PASS output for both allowlisted and unlisted cases with no SKIP. Earlier
+attempt-1 revisions on the same branch (`4a41bca7`, `c160dc96`, `e6bc028a`,
+`83d2a6b1`) also passed runs #1–#4 of this workflow.
+
+The exact final remediation commit must re-pass this check and full repository
+CI before merge. Post-merge `develop` run URL and live staging synthetic proof
+remain T03 scope (`VOC-092-EV-03`).
+
+## Fail-closed confirmation
+
+| Control | Mechanism | Rehearsal result |
+| --- | --- | --- |
+| Harness test failure | `set -euo pipefail` + `go test` non-zero exit | Workflow step fails on test failure (no `continue-on-error`, no `\|\| true`; foundation TEST-11 asserts both) |
+| Missing named PASS | Post-test `grep` for `TestControlledSignupOAuth_AllowlistedCallbackSucceeds` and `_UnlistedCallbackDenied` PASS lines | Simulated log without PASS line → grep exit 1 |
+| Silent SKIP | Post-test rejection when log contains `--- SKIP: TestControlledSignupOAuth_` | Simulated SKIP line → explicit `exit 1` with message *controlled-signup OAuth callback E2E cases must not skip* |
+| Missing Docker | Pre-test `docker version` / `docker info` | CI runner provides Docker; harness sources require explicit *docker not on PATH* locally instead of connecting elsewhere |
+| Staging/production coupling | Local runner host-argument denylist | Script exits 1 on `*vocanova.site*` / production host patterns |
+
+Operational-failure monitoring eligibility is conditional per AC-08: this workflow
+is not in the `operational-failure-monitoring.yml` observed list; merge-gate
+fail-closed behavior is the primary CI gate.
+
+## Remaining gates
+
+- exact-SHA CI on the final remediation revision (including this evidence commit);
+- independent exact-SHA review;
+- T02 documentation/VOC-088 evidence remediation;
+- T03 post-merge `develop` CI URL and live staging synthetic proof.
