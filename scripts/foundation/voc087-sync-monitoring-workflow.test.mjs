@@ -109,6 +109,9 @@ test("VOC-087-TEST-10: reset-success / proof-transfer-failure remains recoverabl
   assert.match(fetchStep, /id: fetch_proof/);
   assert.match(fetchStep, /host_reachable=/);
   assert.match(fetchStep, /proof_fetched=/);
+  assert.match(fetchStep, /proof_absent=/);
+  assert.match(fetchStep, /proof_probe_status/);
+  assert.match(fetchStep, /exit 3/);
 
   const storeStep = extractStepBlock(
     workflow,
@@ -180,6 +183,7 @@ test("VOC-087-TEST-10: reset-success / proof-transfer-failure remains recoverabl
   );
   assert.match(scrubGateStep, /RECOVER_USERNAME_STORED/);
   assert.match(scrubGateStep, /ROTATION_PREFLIGHT_OUTCOME/);
+  assert.match(scrubGateStep, /PROOF_ABSENT/);
   assert.doesNotMatch(
     scrubGateStep,
     /steps\.store_password\.outcome/,
@@ -229,6 +233,7 @@ test("VOC-087-TEST-10: reset-success / proof-transfer-failure remains recoverabl
       PROOF_MATCHES: "false",
       HOST_REACHABLE: "false",
       PROOF_FETCHED: "false",
+      PROOF_ABSENT: "false",
       PASSWORD_STORED: "false",
       RECOVER_STORE_ONLY: "false",
     }),
@@ -242,6 +247,7 @@ test("VOC-087-TEST-10: reset-success / proof-transfer-failure remains recoverabl
       PROOF_MATCHES: "false",
       HOST_REACHABLE: "false",
       PROOF_FETCHED: "false",
+      PROOF_ABSENT: "false",
       PASSWORD_STORED: "false",
       USERNAME_STORED: "false",
       RECOVER_STORE_ONLY: "false",
@@ -255,6 +261,7 @@ test("VOC-087-TEST-10: reset-success / proof-transfer-failure remains recoverabl
       PROOF_MATCHES: "false",
       HOST_REACHABLE: "false",
       PROOF_FETCHED: "false",
+      PROOF_ABSENT: "false",
       PASSWORD_STORED: "false",
       RECOVER_STORE_ONLY: "false",
     }),
@@ -267,6 +274,7 @@ test("VOC-087-TEST-10: reset-success / proof-transfer-failure remains recoverabl
       PROOF_MATCHES: "false",
       HOST_REACHABLE: "false",
       PROOF_FETCHED: "false",
+      PROOF_ABSENT: "false",
       PASSWORD_STORED: "false",
       RECOVER_STORE_ONLY: "false",
     }),
@@ -279,6 +287,7 @@ test("VOC-087-TEST-10: reset-success / proof-transfer-failure remains recoverabl
       PROOF_MATCHES: "false",
       HOST_REACHABLE: "false",
       PROOF_FETCHED: "false",
+      PROOF_ABSENT: "false",
       PASSWORD_STORED: "false",
       RECOVER_STORE_ONLY: "false",
     }),
@@ -291,12 +300,43 @@ test("VOC-087-TEST-10: reset-success / proof-transfer-failure remains recoverabl
       PROOF_MATCHES: "false",
       HOST_REACHABLE: "false",
       PROOF_FETCHED: "false",
+      PROOF_ABSENT: "false",
       PASSWORD_STORED: "true",
       USERNAME_STORED: "false",
       RECOVER_STORE_ONLY: "false",
     }),
     "RETAIN",
     "password-only secret storage must retain the host bundle",
+  );
+  assert.equal(
+    runRecoveryGate("scrub-decision", {
+      ROTATE_HOST_OUTCOME: "failure",
+      ROTATION_PREFLIGHT_OUTCOME: "success",
+      PROOF_MATCHES: "false",
+      HOST_REACHABLE: "true",
+      PROOF_FETCHED: "false",
+      PROOF_ABSENT: "false",
+      PASSWORD_STORED: "false",
+      USERNAME_STORED: "false",
+      RECOVER_STORE_ONLY: "false",
+    }),
+    "RETAIN",
+    "reachability plus an inconclusive proof transfer must retain the last copy",
+  );
+  assert.equal(
+    runRecoveryGate("scrub-decision", {
+      ROTATE_HOST_OUTCOME: "failure",
+      ROTATION_PREFLIGHT_OUTCOME: "success",
+      PROOF_MATCHES: "false",
+      HOST_REACHABLE: "true",
+      PROOF_FETCHED: "false",
+      PROOF_ABSENT: "true",
+      PASSWORD_STORED: "false",
+      USERNAME_STORED: "false",
+      RECOVER_STORE_ONLY: "false",
+    }),
+    "SCRUB",
+    "only an explicit remote proof-absent result permits unused-copy cleanup",
   );
   assert.equal(
     runRecoveryGate("scrub-decision", {

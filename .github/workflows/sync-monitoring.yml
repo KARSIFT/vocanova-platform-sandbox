@@ -230,6 +230,7 @@ jobs:
           set -euo pipefail
           host_reachable=false
           proof_fetched=false
+          proof_absent=false
           proof_matches=false
           metadata_fetched=false
           key_file="$(mktemp)"
@@ -238,6 +239,7 @@ jobs:
             {
               echo "host_reachable=$host_reachable"
               echo "proof_fetched=$proof_fetched"
+              echo "proof_absent=$proof_absent"
               echo "proof_matches=$proof_matches"
               echo "metadata_fetched=$metadata_fetched"
             } >> "$GITHUB_OUTPUT"
@@ -252,21 +254,34 @@ jobs:
             exit 1
           fi
           host_reachable=true
-          if ssh "${ssh_opts[@]}" \
+          set +e
+          ssh "${ssh_opts[@]}" \
             "${STAGING_SSH_USER}@${STAGING_SSH_HOST}" \
-            "test -f /tmp/kuma-reset-applied.env"; then
-            scp "${ssh_opts[@]}" \
-              "${STAGING_SSH_USER}@${STAGING_SSH_HOST}:/tmp/kuma-reset-applied.env" \
-              /tmp/kuma-reset-applied.env
-            proof_fetched=true
-            if [ "$(cat /tmp/kuma-reset-applied.env)" = \
-              "KUMA_RESET_APPLIED=${{ github.run_id }}-${{ github.run_attempt }}" ]; then
-              proof_matches=true
-            else
-              echo "reset proof marker does not match this attempt" >&2
+            "if [ -f /tmp/kuma-reset-applied.env ]; then exit 0; else exit 3; fi"
+          proof_probe_status=$?
+          set -e
+          case "$proof_probe_status" in
+            0)
+              scp "${ssh_opts[@]}" \
+                "${STAGING_SSH_USER}@${STAGING_SSH_HOST}:/tmp/kuma-reset-applied.env" \
+                /tmp/kuma-reset-applied.env
+              proof_fetched=true
+              if [ "$(cat /tmp/kuma-reset-applied.env)" = \
+                "KUMA_RESET_APPLIED=${{ github.run_id }}-${{ github.run_attempt }}" ]; then
+                proof_matches=true
+              else
+                echo "reset proof marker does not match this attempt" >&2
+                exit 1
+              fi
+              ;;
+            3)
+              proof_absent=true
+              ;;
+            *)
+              echo "reset proof presence could not be determined; retaining recovery material" >&2
               exit 1
-            fi
-          fi
+              ;;
+          esac
           if ssh "${ssh_opts[@]}" \
             "${STAGING_SSH_USER}@${STAGING_SSH_HOST}" \
             "test -f /tmp/kuma-rotate-metadata.env"; then
@@ -295,6 +310,7 @@ jobs:
           ROTATE_HOST_OUTCOME: ${{ steps.rotate_host.outcome }}
           HOST_REACHABLE: ${{ steps.fetch_proof.outputs.host_reachable }}
           PROOF_FETCHED: ${{ steps.fetch_proof.outputs.proof_fetched }}
+          PROOF_ABSENT: ${{ steps.fetch_proof.outputs.proof_absent }}
         run: |
           set -euo pipefail
           password_stored=false
@@ -467,6 +483,7 @@ jobs:
           ROTATION_PREFLIGHT_OUTCOME: ${{ steps.rotation_preflight.outcome }}
           HOST_REACHABLE: ${{ steps.fetch_proof.outputs.host_reachable }}
           PROOF_FETCHED: ${{ steps.fetch_proof.outputs.proof_fetched }}
+          PROOF_ABSENT: ${{ steps.fetch_proof.outputs.proof_absent }}
           STORE_PASSWORD_STORED: ${{ steps.store_password.outputs.password_stored }}
           STORE_USERNAME_STORED: ${{ steps.store_username.outputs.username_stored }}
           RECOVER_PASSWORD_STORED: ${{ steps.recover_store.outputs.password_stored }}

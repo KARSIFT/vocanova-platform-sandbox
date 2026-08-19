@@ -21,16 +21,19 @@ preflight="${ROTATION_PREFLIGHT_OUTCOME:-}"
 proof_matches="$(to_bool "${PROOF_MATCHES:-false}")"
 host_reachable="$(to_bool "${HOST_REACHABLE:-false}")"
 proof_fetched="$(to_bool "${PROOF_FETCHED:-false}")"
+proof_absent="$(to_bool "${PROOF_ABSENT:-false}")"
 password_stored="$(to_bool "${PASSWORD_STORED:-false}")"
 username_stored="$(to_bool "${USERNAME_STORED:-false}")"
 recover_store_only="$(to_bool "${RECOVER_STORE_ONLY:-false}")"
 
-# Host was reachable and the reset-applied proof file is absent: this attempt
-# did not reset Kuma. A failed fetch (host unreachable) is *not* that proof.
+# Only the remote probe's explicit, reserved "absent" result proves that this
+# attempt did not write a reset marker. Reachability or a failed transfer alone
+# is inconclusive and must retain the recovery material.
 reset_did_not_happen() {
   [ "$rotate" != "success" ] &&
     [ "$host_reachable" = "true" ] &&
-    [ "$proof_fetched" = "false" ]
+    [ "$proof_fetched" = "false" ] &&
+    [ "$proof_absent" = "true" ]
 }
 
 store_decision() {

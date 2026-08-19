@@ -88,6 +88,7 @@ export ROTATE_HOST_OUTCOME=failure
 export PROOF_MATCHES=false
 export HOST_REACHABLE=false
 export PROOF_FETCHED=false
+export PROOF_ABSENT=false
 export PASSWORD_STORED=false
 export USERNAME_STORED=false
 export RECOVER_STORE_ONLY=false
@@ -98,6 +99,7 @@ export ROTATE_HOST_OUTCOME=success
 export PROOF_MATCHES=false
 export HOST_REACHABLE=false
 export PROOF_FETCHED=false
+export PROOF_ABSENT=false
 export PASSWORD_STORED=false
 assert_gate store-decision STORE
 assert_gate scrub-decision RETAIN
@@ -111,6 +113,7 @@ export ROTATE_HOST_OUTCOME=failure
 export PROOF_MATCHES=true
 export HOST_REACHABLE=true
 export PROOF_FETCHED=true
+export PROOF_ABSENT=false
 export PASSWORD_STORED=false
 assert_gate store-decision STORE
 export PASSWORD_STORED=true
@@ -121,6 +124,7 @@ export ROTATE_HOST_OUTCOME=failure
 export PROOF_MATCHES=false
 export HOST_REACHABLE=true
 export PROOF_FETCHED=false
+export PROOF_ABSENT=true
 export PASSWORD_STORED=false
 export USERNAME_STORED=false
 assert_gate store-decision SKIP_UNUSED
@@ -131,6 +135,7 @@ export ROTATION_PREFLIGHT_OUTCOME=success
 export PROOF_MATCHES=false
 export HOST_REACHABLE=false
 export PROOF_FETCHED=false
+export PROOF_ABSENT=false
 export PASSWORD_STORED=false
 export RECOVER_STORE_ONLY=false
 assert_gate scrub-decision SCRUB
@@ -144,7 +149,7 @@ assert_gate scrub-decision RETAIN
 export USERNAME_STORED=true
 assert_gate scrub-decision SCRUB
 
-unset ROTATE_HOST_OUTCOME ROTATION_PREFLIGHT_OUTCOME PROOF_MATCHES HOST_REACHABLE PROOF_FETCHED \
+unset ROTATE_HOST_OUTCOME ROTATION_PREFLIGHT_OUTCOME PROOF_MATCHES HOST_REACHABLE PROOF_FETCHED PROOF_ABSENT \
   PASSWORD_STORED USERNAME_STORED RECOVER_STORE_ONLY
 
 export KUMA_RESET_APPLIED_FILE="$test_root/kuma-reset-applied.env"
