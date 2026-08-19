@@ -1,0 +1,117 @@
+schema_version: 1
+id: VOC-088
+slug: persist-controlled-staging-oauth-signup-and-auto
+title: Persist controlled staging OAuth signup and auto-file operational failures
+type: infrastructure
+status: draft
+risk: R3
+planned_implementation_risk_floor: Measured during drafting against the expected task-scoped
+  file list (.github/workflows/deploy-staging.yml, .github/workflows/scheduled-synthetics.yml,
+  infra/monitoring/synthetics.yaml, infra/scripts/, scripts/foundation/ test files,
+  this package directory). Path floor is R3 for .github/workflows/ and infra/. This
+  package proposes R3 as a draft proposal for the reviewing human at adoption time,
+  not a determination. The path-based classifier and independent verification must
+  confirm each task's real file list at implementation time.
+canonical_path: specs/changes/VOC-088-persist-controlled-staging-oauth-signup-and-auto
+authority_model: a004-active
+requirement_source: 'GitHub issue #746 (Persist controlled staging OAuth signup and
+  auto-file operational failures). Fresh 2026-08-19 evidence: staging has GOOGLE_OAUTH_ENABLED=true
+  and NEW_USER_SIGNUP_ENABLED=false; NEW_USER_SIGNUP_ALLOWLIST is empty; deploy-staging.yml
+  sources allowlist only from the optional workflow_dispatch input new_user_signup_allowlist
+  whose default is empty; every automatic push deployment rewrites the allowlist to
+  empty; no persistent GitHub secret or staging environment variable exists for the
+  controlled cohort; the staging OAuth/readiness synthetic does not assert that controlled
+  first-time signup is operational; failed scheduled-synthetics and deploy workflows
+  do not open governed GitHub issues. This draft package does not adopt or authorize
+  itself.'
+requirement_approval_status: not-approved
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: No production signup-policy change. No production secret or database
+  mutation. Production deploy-production.yml gains the same failure-to-issue agent
+  path but does not change production signup behavior. The staging allowlist secret
+  persists the existing controlled cohort through automatic deploys. No application
+  schema migration.
+rollback_required: true
+monitoring_impact:
+  state: update
+  rationale: Extends the staging OAuth/readiness synthetic to assert that controlled
+    first-time signup readiness is operational (OAuth enabled + global signup disabled
+    + non-empty controlled cohort). Adds a governed workflow-failure issue path for
+    scheduled-synthetics and deployment workflows across staging and production. Does
+    not add new Kuma availability monitor IDs.
+  synthetic_ids:
+  - synthetic.staging.oauth-expected-state
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-088-DEP-00
+  status: Unresolved at drafting time. The exact GitHub secret name for the staging
+    controlled-cohort allowlist (e.g. STAGING_NEW_USER_SIGNUP_ALLOWLIST) is an implementer
+    naming choice; the requirement is that it is a persistent, staging-scoped secret
+    that deploy-staging.yml reads and syncs to api.env without printing email addresses.
+- id: VOC-088-DEP-01
+  status: Unresolved at drafting time as a workflow design choice. The failure-to-issue
+    agent may be a standalone workflow or a reusable composite action. It must use
+    the automation App identity (GITHUB_TOKEN or a GitHub App token) so plain unlabeled
+    issues trigger plan-from-issue. Exact deduplication key shape (e.g. workflow name
+    + run ID prefix, or a body fingerprint) is an implementer choice.
+- id: VOC-088-DEP-02
+  status: Resolved at drafting time. VOC-084 is merged; staging Google OAuth credentials
+    are live. The allowlist mechanism exists in application code (killswitches.go
+    SignupAllowlist) and deploy-staging.yml's "Write staging application configuration"
+    step. The gap is persistence only.
+- id: VOC-088-DEP-03
+  status: Resolved at drafting time. infra/monitoring/synthetics.yaml and scheduled-synthetics.yml
+    exist (VOC-086-T03). The staging OAuth expected-state synthetic exists as synthetic.staging.oauth-expected-state.
+    Extending it to assert readiness is additive.
+affected_areas:
+- .github/workflows/deploy-staging.yml (secret-backed allowlist sync, remove ephemeral
+  dispatch default)
+- .github/workflows/scheduled-synthetics.yml (controlled signup readiness assertion)
+- .github/workflows/deploy-production.yml (failure-to-issue agent, no signup-policy
+  change)
+- infra/monitoring/synthetics.yaml (readiness coverage update)
+- infra/scripts/ (readiness harness, failure-to-issue helper)
+- scripts/foundation/ (deterministic tests)
+- docs/operations/ (operator procedure for adding/removing cohort members)
+- specs/changes/VOC-088-persist-controlled-staging-oauth-signup-and-auto/
+implementation:
+  authorized: false
+  required: true
+  status: not-authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: no-production-signup-policy-change
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: not-authorized
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
+blocking_reasons: not-adopted
