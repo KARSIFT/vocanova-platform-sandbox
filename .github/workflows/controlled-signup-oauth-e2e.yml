@@ -45,4 +45,15 @@ jobs:
           cache-dependency-path: apps/api/go.sum
 
       - name: Run controlled-signup OAuth callback E2E harness
-        run: cd apps/api && go test ./app/api/... -run ControlledSignupOAuth -count=1 -v
+        run: |
+          set -euo pipefail
+          cd apps/api
+          test_log="$(mktemp)"
+          trap 'rm -f "$test_log"' EXIT
+          go test ./app/api/... -run ControlledSignupOAuth -count=1 -v | tee "$test_log"
+          grep -Eq '^--- PASS: TestControlledSignupOAuth_AllowlistedCallbackSucceeds ' "$test_log"
+          grep -Eq '^--- PASS: TestControlledSignupOAuth_UnlistedCallbackDenied ' "$test_log"
+          if grep -Eq '^--- SKIP: TestControlledSignupOAuth_' "$test_log"; then
+            echo "controlled-signup OAuth callback E2E cases must not skip" >&2
+            exit 1
+          fi
