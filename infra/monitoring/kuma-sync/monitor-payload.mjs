@@ -1,5 +1,31 @@
 import { buildDescription } from "./monitor-metadata.mjs";
 
+/**
+ * Optional inventory field `notification_id_list` takes explicit ownership of
+ * Kuma `notificationIDList`. When omitted, adopt/update preserve the remote
+ * monitor's existing bindings (VOC-087-D02 / VOC-087-DEP-03).
+ */
+export function inventoryOwnsNotificationBindings(entry) {
+  return Object.prototype.hasOwnProperty.call(entry, "notification_id_list");
+}
+
+export function resolveNotificationIDList(entry, remoteMonitor) {
+  if (inventoryOwnsNotificationBindings(entry)) {
+    const owned = entry.notification_id_list;
+    if (owned === null || typeof owned !== "object" || Array.isArray(owned)) {
+      return {};
+    }
+    return structuredClone(owned);
+  }
+
+  const remote = remoteMonitor?.notificationIDList;
+  if (remote !== null && remote !== undefined && typeof remote === "object") {
+    return structuredClone(remote);
+  }
+
+  return undefined;
+}
+
 const EDITABLE_MONITOR_FIELDS = [
   "type",
   "name",
@@ -22,13 +48,17 @@ const EDITABLE_MONITOR_FIELDS = [
   "ignoreTls",
 ];
 
-export function inventoryEntryToDesiredMonitor(entry, ownershipMarker) {
+export function inventoryEntryToDesiredMonitor(
+  entry,
+  ownershipMarker,
+  { remoteMonitor = null } = {},
+) {
   const keyword =
     entry.expected_body === null || entry.expected_body === undefined
       ? ""
       : String(entry.expected_body);
 
-  return {
+  const desired = {
     type: "http",
     name: entry.name,
     url: entry.url,
@@ -48,11 +78,17 @@ export function inventoryEntryToDesiredMonitor(entry, ownershipMarker) {
     }),
     active: true,
     conditions: [],
-    notificationIDList: {},
     upsideDown: false,
     maxredirects: 10,
     ignoreTls: false,
   };
+
+  const notificationIDList = resolveNotificationIDList(entry, remoteMonitor);
+  if (notificationIDList !== undefined) {
+    desired.notificationIDList = notificationIDList;
+  }
+
+  return desired;
 }
 
 export function getAcceptedStatusCodes(monitor) {
