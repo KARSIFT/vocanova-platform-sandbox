@@ -160,6 +160,17 @@ test("VOC-087-TEST-00: exact live monitor records produce adopt/update, not coll
   );
 });
 
+test("VOC-087-TEST-00A: supported Kuma 1.x payload omits newer conditions field", () => {
+  const { monitorsDocument } = loadInventoryDocuments();
+  const entry = monitorsDocument.availability_monitors[0];
+  const desired = inventoryEntryToDesiredMonitor(
+    entry,
+    monitorsDocument.kuma.ownership_marker,
+  );
+
+  assert.ok(!("conditions" in desired));
+});
+
 test("VOC-087-TEST-01: trailing-slash-only web URL still adopts rather than duplicate-creating", async () => {
   const { monitorsDocument, syntheticsDocument } = loadInventoryDocuments();
   const { api } = productionEntries(monitorsDocument);

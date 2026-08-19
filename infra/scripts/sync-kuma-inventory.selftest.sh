@@ -26,6 +26,11 @@ if ! grep -q 'sync-kuma.mjs' "$sync_script"; then
   exit 1
 fi
 
+if ! grep -q 'prove-kuma-inventory.mjs' "$sync_script"; then
+  echo "sync-kuma-inventory.sh must run read-only prove-kuma-inventory.mjs after apply" >&2
+  exit 1
+fi
+
 if ! grep -q 'socket.io-client' "$sync_script"; then
   echo "sync-kuma-inventory.sh must install socket.io-client in the disposable Node container" >&2
   exit 1

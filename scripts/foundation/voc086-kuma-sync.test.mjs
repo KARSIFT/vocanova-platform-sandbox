@@ -83,6 +83,12 @@ test("VOC-086-TEST-02: synchronizer creates missing managed monitors", async () 
     monitorsDocument.availability_monitors.length,
     "each inventory monitor should be created once",
   );
+  for (const call of addCalls) {
+    assert.ok(
+      !("conditions" in call.monitor),
+      "Kuma 1.23 add payloads must not send the unsupported conditions column",
+    );
+  }
 });
 
 test("VOC-086-TEST-03: synchronizer updates changed monitors and is idempotent", async () => {

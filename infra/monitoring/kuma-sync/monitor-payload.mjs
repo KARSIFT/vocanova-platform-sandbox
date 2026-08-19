@@ -46,7 +46,6 @@ const EDITABLE_MONITOR_FIELDS = [
   "accepted_statuscodes",
   "description",
   "active",
-  "conditions",
   "notificationIDList",
   "upsideDown",
   "maxredirects",
@@ -82,7 +81,6 @@ export function inventoryEntryToDesiredMonitor(
       ownershipMarker,
     }),
     active: true,
-    conditions: [],
     upsideDown: false,
     maxredirects: 10,
     ignoreTls: false,
@@ -147,7 +145,8 @@ export function monitorsMatch(actual, desired) {
       JSON.stringify(desired.accepted_statuscodes.map(String)) &&
     JSON.stringify(normalizeNotificationIDList(actual?.notificationIDList)) ===
       JSON.stringify(normalizeNotificationIDList(desired.notificationIDList)) &&
-    String(actual?.description ?? "") === String(desired.description ?? "")
+    String(actual?.description ?? "") === String(desired.description ?? "") &&
+    Boolean(actual?.active) === Boolean(desired.active)
   );
 }
 
@@ -157,9 +156,6 @@ export function snapshotMonitorForRollback(monitor) {
     if (field in monitor) {
       snapshot[field] = monitor[field];
     }
-  }
-  if (!("conditions" in snapshot)) {
-    snapshot.conditions = [];
   }
   return snapshot;
 }

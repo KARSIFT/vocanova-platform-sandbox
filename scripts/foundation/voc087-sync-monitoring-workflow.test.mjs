@@ -96,6 +96,17 @@ test("VOC-087-TEST-10: reset-success / proof-transfer-failure remains recoverabl
     "Rotate Kuma credentials on host (explicit opt-in)",
   );
   assert.match(rotateStep, /id: rotate_host/);
+  const rotateScript = readFileSync(rotateScriptPath, "utf8");
+  assert.match(rotateScript, /coproc KUMA_RESET_PROCESS/);
+  assert.match(rotateScript, /Confirm New Password: /);
+  assert.match(rotateScript, /Password reset successfully/);
+  assert.match(rotateScript, /Logged in/);
+  assert.ok(
+    rotateScript.indexOf(
+      "Kuma reset tool exited zero without verified reset and login markers",
+    ) < rotateScript.indexOf("KUMA_RESET_APPLIED=%s"),
+    "Kuma's zero exit alone must never create reset proof",
+  );
   assert.doesNotMatch(
     rotateStep,
     /reset-password\.js/,
