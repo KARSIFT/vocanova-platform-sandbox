@@ -29,6 +29,8 @@ import os
 import sys
 
 scenario = os.environ.get("FAKE_SCENARIO", "healthy")
+PORT = int(sys.argv[1])
+WEB_BASE = f"http://127.0.0.1:{PORT}"
 SMOKE_COOKIE = "vocanova_session=smoke-test-token"
 
 SITUATION_LIST = {
@@ -137,10 +139,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     return
                 if path == "/onboarding":
                     self.send_response(307)
-                    self.send_header("Location", "/home")
+                    # Production Next.js middleware emits absolute same-origin
+                    # Location URLs; the harness must follow those (VOC-093).
+                    self.send_header("Location", f"{WEB_BASE}/home")
                     self.end_headers()
                     return
                 self.send_response(200)
+                self.end_headers()
+                return
+            if scenario == "route_absolute_signin_redirect":
+                self.send_response(302)
+                self.send_header("Location", f"{WEB_BASE}/signin?returnTo={path}")
                 self.end_headers()
                 return
             self.send_response(302)
@@ -343,6 +352,13 @@ echo "== case 13: external redirect fails without forwarding the cookie =="
 start_server route_external_redirect
 check "external redirect is rejected before traversal" fail \
   env SMOKE_TEST_SESSION_COOKIE="vocanova_session=smoke-test-token" \
+  bash "$smoke_script" "$base_url" "$base_url"
+stop_server
+
+echo "== case 14: absolute same-origin sign-in redirect still fails closed =="
+start_server route_absolute_signin_redirect
+check "absolute same-origin sign-in redirect is rejected" fail \
+  env SMOKE_TEST_SESSION_COOKIE="vocanova_session=not-the-smoke-token" \
   bash "$smoke_script" "$base_url" "$base_url"
 stop_server
 
