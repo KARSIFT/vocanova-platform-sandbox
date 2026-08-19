@@ -584,10 +584,17 @@ test("VOC-095-TEST-10: scheduled validator rejects missing or misordered shared 
 test("VOC-095-TEST-12: e2e README documents shared install contract", () => {
   const readmePath = path.join(repositoryRoot, "apps/web/tests/e2e/README.md");
   const readme = readFileSync(readmePath, "utf8");
+  const lighthouseReadme = readFileSync(
+    path.join(repositoryRoot, "apps/web/tests/lighthouse/README.md"),
+    "utf8",
+  );
 
   assert.match(readme, /install-playwright-chromium\.sh/);
   assert.match(readme, /~\/\.cache\/ms-playwright/);
   assert.match(readme, /120 s|120 s per-attempt|bounded/i);
   assert.match(readme, /install-deps chromium/);
   assert.doesNotMatch(readme, INLINE_WITH_DEPS);
+  assert.match(lighthouseReadme, /install-playwright-chromium\.sh/);
+  assert.match(lighthouseReadme, /install-deps chromium/);
+  assert.doesNotMatch(lighthouseReadme, INLINE_WITH_DEPS);
 });
