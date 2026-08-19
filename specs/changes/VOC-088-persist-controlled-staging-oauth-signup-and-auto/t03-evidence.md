@@ -11,10 +11,10 @@ tests:
 date: 2026-08-19
 related_change: VOC-088
 accountable_owner: unassigned
-gate_status: live-signin-pending
+gate_status: complete
 live_deploy_claimed: true
 live_synthetics_claimed: true
-live_signin_claimed: false
+live_signin_claimed: true
 live_failure_fixture_claimed: true
 reviewed_sha: bind-at-independent-review
 ---
@@ -42,8 +42,8 @@ to `develop`.
 | ------------------------ | ------- | ----------------------------------------------------------------------- |
 | AC-08 operator procedure | pass    | § Operator procedure, § Cohort preservation                             |
 | AC-09 deploy/readiness   | pass    | § Live staging readiness, § Cohort preservation, § Scheduled synthetics |
-| AC-09 sign-in (listed)   | pending | § Human Google sign-in verification                                     |
-| AC-09 sign-in (unlisted) | pending | § Human Google sign-in verification                                     |
+| AC-09 sign-in (listed)   | pass    | § Human Google sign-in verification                                     |
+| AC-09 sign-in (unlisted) | pass    | § Human Google sign-in verification                                     |
 | AC-09 failure fixture    | pass    | § Operational failure fixture live proof                                |
 | AC-03 no emails          | pass    | § Privacy and redaction                                                 |
 
@@ -128,24 +128,21 @@ VOC-088-T01 version of `verify-staging-oauth-start.sh` with
 `EXPECT_OAUTH_ENABLED=true`, which requires `controlled_signup_ready: true` on
 `/healthz`.
 
-## Human Google sign-in verification
+## Human Google sign-in verification (2026-08-19)
 
-No live sign-in pass is claimed. A privacy-preserving read-only aggregate query
-after the persistent cohort deployment found no non-synthetic staging account,
-so an allowlisted first-time Google sign-in has not yet completed. A separate
-unlisted Google identity has not performed the post-fix denial check either.
+Both required interactive checks completed. This evidence intentionally records
+only the date and scrubbed outcomes.
 
-| Check                              | Result  | Required scrubbed observation                        |
-| ---------------------------------- | ------- | ---------------------------------------------------- |
-| Allowlisted first-time Google user | pending | Reaches staging onboarding without HTTP 503          |
-| Unlisted Google user               | pending | API callback returns the stable HTTP 503 denial body |
+| Check                              | Result | Scrubbed observation                                  |
+| ---------------------------------- | ------ | ----------------------------------------------------- |
+| Allowlisted first-time Google user | pass   | Reached staging without HTTP 503                      |
+| Unlisted Google user               | pass   | API callback returned the stable HTTP 503 denial body |
 
-These checks require interactive Google authentication and cannot be completed
-by repository automation. Record only pass/fail after they occur; never record
-addresses, OAuth codes, session cookies, or callback query strings.
+These checks required interactive Google authentication and were not completed
+by repository automation. No addresses, OAuth codes, session cookies, callback
+query strings, or other identity data were recorded.
 Application-level allowlist/deny behavior remains covered by unit tests in
-`apps/api/business/auth/killswitches_test.go`, but unit coverage does not satisfy
-this live gate.
+`apps/api/business/auth/killswitches_test.go`.
 
 ## Operational failure fixture live proof
 
@@ -181,8 +178,8 @@ No repository secret value, real email address, OAuth authorization code, OAuth
 Test fixtures elsewhere in VOC-088 use only `@synthetic.vocanova.invalid`
 addresses.
 
-## Remaining gate
+## Completion status
 
 `live_failure_fixture_claimed: true` is backed by the run and issue records above.
-`live_signin_claimed: false` remains the sole incomplete AC-09 gate. This evidence
-and PR #756 must not be marked complete until both interactive sign-in rows pass.
+`live_signin_claimed: true` is backed by the scrubbed interactive outcomes above.
+All VOC-088-T03 live evidence gates are complete.

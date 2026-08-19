@@ -66,14 +66,14 @@ test("VOC-088-TEST-13: deploy-and-verify evidence file exists with required sect
     /live_failure_fixture_claimed:\s*true/,
     "AC-09 requires live controlled failure-fixture evidence (App-created issue + dedup)",
   );
-  if (/live_signin_claimed:\s*false/.test(evidence)) {
-    assert.match(evidence, /gate_status:\s*live-signin-pending/);
-    assert.match(evidence, /Allowlisted first-time Google user \| pending/);
-    assert.match(evidence, /Unlisted Google user\s+\| pending/);
-  } else {
-    assert.match(evidence, /live_signin_claimed:\s*true/);
-    assert.match(evidence, /gate_status:\s*complete/);
-  }
+  assert.match(
+    evidence,
+    /live_signin_claimed:\s*true/,
+    "AC-09 requires both live Google sign-in outcomes",
+  );
+  assert.match(evidence, /gate_status:\s*complete/);
+  assert.match(evidence, /Allowlisted first-time Google user \| pass/);
+  assert.match(evidence, /Unlisted Google user\s+\| pass/);
 
   const addresses = evidence.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi);
   assert.deepEqual(addresses ?? [], []);
