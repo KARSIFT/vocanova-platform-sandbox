@@ -25,99 +25,66 @@ tests:
 date: 2026-08-19
 related_change: VOC-092
 accountable_owner: unassigned
+gate_status: repository-complete-exact-sha-review-pending
+live_google_ui_claimed: false
 ---
 
-# VOC-092-T00 — Ephemeral OAuth controlled-signup callback E2E harness
+# VOC-092-T00 — Ephemeral controlled-signup OAuth callback E2E
 
-## Scope and outcome
+## Outcome
 
-This task adds a repository-managed Go integration harness that exercises the
-real OAuth start and callback HTTP handlers, the real `GoogleOAuthProvider`
-token/userinfo HTTP boundary against a local fake Google server, and
-database-backed user/identity/session persistence in disposable loopback
-Postgres. Both allowlisted-success and unlisted-503 denial cases run with
-`OAuthEnabled=true`, `NewSignupsEnabled=false`, and a controlled
-`SignupAllowlist`. No production wiring, staging deploy configuration, CI
-workflow, or public test-auth route is changed in this task.
+The repository contains a full application-owned OAuth callback integration
+harness. It drives the real start and callback HTTP handlers, the real
+`GoogleOAuthProvider` token and userinfo request boundary, and the PostgreSQL auth
+repository. Google and PostgreSQL dependencies are disposable and bound to the
+test host only.
 
-## Repository deliverables
+The allowlisted synthetic case asserts onboarding redirect plus persisted user,
+external-identity, and session rows. The unlisted synthetic case asserts the
+stable HTTP 503 policy response and verifies that no auth rows were created.
+Global signup remains disabled in both cases.
 
-| Artifact | Path |
-| -------- | ---- |
-| OAuth callback E2E harness | `apps/api/app/api/controlled_signup_oauth_e2e_test.go` |
-| Disposable Postgres helper | `apps/api/app/api/controlled_signup_oauth_postgres_test.go` |
-| Optional local operator wrapper | `infra/scripts/run-controlled-signup-oauth-e2e.sh` |
+## Privacy and isolation
 
-## Acceptance mapping
+- Identity fixtures use only the reserved invalid synthetic domain.
+- Provider configuration, authorization code, and access token are fixed
+  test-only values; generated state and cookies remain ephemeral. None are
+  written to test output or evidence.
+- Session-cookie presence is reduced to a boolean before assertion so a failure
+  cannot make Testify render the cookie value.
+- The fake provider rejects an unexpected token form or missing bearer header
+  using generic errors that do not echo request values.
+- The harness ignores environment database URLs and creates its own loopback-only
+  disposable PostgreSQL container.
+- No application route, runtime provider switch, deploy configuration, public
+  hostname, repository secret, or live database is used.
+- This evidence does not claim to automate Google's interactive login UI.
 
-| Acceptance criterion | Repository result |
-| -------------------- | ----------------- |
-| AC-00 | Harness POSTs `/api/v1/auth/oauth/google/start`, captures OAuth state cookie, and GETs `/api/v1/auth/oauth/google/callback` through real `RegisterAuth` handlers. |
-| AC-01 | Real `GoogleOAuthProvider` with injectable `TokenURL` / `UserInfoURL` against `httptest` fake Google server; token and userinfo call counts asserted. |
-| AC-02 | Disposable `postgres:16-alpine` on `127.0.0.1` with forward migrations applied; user, external identity, and session rows asserted on success. Harness never reads `DATABASE_URL`. |
-| AC-03 | Allowlisted `@synthetic.vocanova.invalid` identity receives HTTP 302 redirect to configured onboarding return URL with persisted auth rows. |
-| AC-04 | Unlisted synthetic identity receives HTTP 503 with stable `new sign-ups are disabled` body; no user row created. |
-| AC-05 | Fixtures use `allowlisted-callback-e2e@synthetic.vocanova.invalid` and `unlisted-callback-e2e@synthetic.vocanova.invalid` only; reserved smoke-test bot email is configured but not used as a signup identity. Verbose test output omits OAuth codes, state, tokens, and cookie values (see log redaction section). |
-| AC-06 | Fake Google server is `httptest.NewServer` inside the test process only; no production provider switch or public test-auth route added. |
-| AC-11 | Shell wrapper refuses staging/production host arguments and accepts no arguments; Postgres container binds loopback only. |
+## Repository validation
 
-## Deterministic validation
+The predecessor revision passed repository CI at
+https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32291802092/job/96194078245.
+That job ran `cd apps/api && go test ./...`; the API package containing both
+controlled-signup cases passed. The exact final task revision must pass the same
+CI gate and a fresh independent review before merge.
 
-```bash
-cd apps/api && go test ./app/api/... -run ControlledSignupOAuth -count=1 -v
-```
+Local execution on the operator workstation failed closed because its installed
+Docker command is an unavailable environment shim. The tests did not skip or
+connect elsewhere. GitHub Actions is the authoritative disposable-container
+execution environment for this task.
 
-Scrubbed result (2026-08-19):
+## Plan-review reconciliation
 
-```
-=== RUN   TestControlledSignupOAuth_AllowlistedCallbackSucceeds
-    controlled_signup_oauth_e2e_test.go:310: controlled-signup OAuth allowlisted callback succeeded with redirect to onboarding and persisted auth rows
---- PASS: TestControlledSignupOAuth_AllowlistedCallbackSucceeds (7.25s)
-=== RUN   TestControlledSignupOAuth_UnlistedCallbackDenied
-    controlled_signup_oauth_e2e_test.go:346: controlled-signup OAuth unlisted callback denied with HTTP 503 and no persisted user
---- PASS: TestControlledSignupOAuth_UnlistedCallbackDenied (2.12s)
-PASS
-ok  	github.com/KARSIFT/vocanova-platform/apps/api/app/api	9.370s
-```
+This task reconciles the independent plan review before T00 merge:
 
-Optional local operator wrapper (same harness, scrubbed excerpt):
+- T03 ownership is recorded for AC-03, AC-04, and AC-08.
+- T01 TEST-12 no longer depends on T02 operator documentation; TEST-16 owns the
+  T02 documentation foundation test.
+- The optional operations index is represented in `affected_areas`.
+- The documented Go command runs from the nested `apps/api` module.
 
-```bash
-bash infra/scripts/run-controlled-signup-oauth-e2e.sh
-```
+## Remaining gates
 
-```
---- PASS: TestControlledSignupOAuth_AllowlistedCallbackSucceeds (2.14s)
---- PASS: TestControlledSignupOAuth_UnlistedCallbackDenied (2.13s)
-PASS
-ok  	github.com/KARSIFT/vocanova-platform/apps/api/app/api	4.281s
-```
-
-Result: 2 tests passed, 0 failed.
-
-## Log redaction (VOC-092-TEST-08)
-
-Verbose `-v` output contains only outcome summary lines from `t.Log`:
-
-- `controlled-signup OAuth allowlisted callback succeeded with redirect to onboarding and persisted auth rows`
-- `controlled-signup OAuth unlisted callback denied with HTTP 503 and no persisted user`
-
-The harness does not print authorization URLs, OAuth `code` or `state` query
-values, access tokens, session cookie values, or Set-Cookie headers on success
-or failure paths. Assertions validate outcomes without logging secret-bearing
-request/response fields.
-
-## Isolation notes
-
-- Postgres container name prefix: `voc092-controlled-signup-oauth-*`, bound to
-  `127.0.0.1` only.
-- Migrations applied from `apps/api/migrations/*.sql` in version order via direct
-  `db.Exec`; no Atlas CLI or environment `DATABASE_URL` consumption.
-- Harness skips cleanly when Docker is absent (`t.Skipf`); permanent CI wiring
-  is VOC-092-T01 scope.
-
-## Out of scope for this task
-
-CI workflow wiring, foundation tests, operations documentation, VOC-088 evidence
-remediation, and live staging synthetic verification belong to VOC-092-T01
-through T03.
+- exact-SHA CI after this evidence/redaction commit;
+- independent exact-SHA review;
+- T01 CI/foundation wiring and T03 live scheduled-synthetic evidence.

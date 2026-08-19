@@ -289,7 +289,7 @@ func TestControlledSignupOAuth_AllowlistedCallbackSucceeds(t *testing.T) {
 	assert.Equal(t, http.StatusFound, result.callbackStatus)
 	assert.Equal(t, controlledSignupE2EAppReturnURL, result.location)
 	require.NotNil(t, result.sessionCookie, "session cookie must be issued on success")
-	assert.NotEmpty(t, result.sessionCookie.Value)
+	assert.True(t, len(result.sessionCookie.Value) > 0, "session cookie must have a non-empty value")
 
 	assert.Equal(t, 1, countUsersByEmail(t, h.db, controlledSignupAllowlistedEmail))
 	assert.Equal(t, 1, countExternalIdentitiesByEmail(t, h.db, controlledSignupAllowlistedEmail))

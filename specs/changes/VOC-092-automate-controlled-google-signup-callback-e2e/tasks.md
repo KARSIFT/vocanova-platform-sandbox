@@ -93,7 +93,7 @@ Order is mandatory: **T00 → T01 → T02 → T03**.
 
 - Requirement source: `VOC-092-D07`, `VOC-092-D08`; issue #769 requirements 8–9
 - Acceptance criteria: `VOC-092-AC-09`, `VOC-092-AC-10`
-- Tests: `VOC-092-TEST-13`, `VOC-092-TEST-14`
+- Tests: `VOC-092-TEST-13`, `VOC-092-TEST-14`, `VOC-092-TEST-16`
 - Evidence: `VOC-092-EV-02` (`t02-evidence.md`)
 - Status: pending — depends on `VOC-092-T01`
 

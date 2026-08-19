@@ -119,10 +119,10 @@
 - Procedure:
   ```bash
   node --test scripts/foundation/voc092-controlled-signup-oauth-e2e.test.mjs
-  node --test scripts/foundation/voc092-operator-docs.test.mjs
   ```
-- Expected result: All VOC-092 foundation tests pass
-- Evidence: `VOC-092-EV-01`, `VOC-092-EV-02`
+- Expected result: The T01 harness/CI foundation tests pass without depending on
+  T02 documentation deliverables
+- Evidence: `VOC-092-EV-01`
 
 ## VOC-092-TEST-13 — Operations doc states harness boundary and human audit
 
@@ -152,6 +152,17 @@
   test files.
 - Expected result: Isolation preserved in committed harness
 - Evidence: `VOC-092-EV-00`, `VOC-092-EV-01`
+
+## VOC-092-TEST-16 — Operator documentation foundation tests pass
+
+- Covers: `VOC-092-AC-09`, `VOC-092-AC-10`
+- Preconditions: T02 documentation and evidence remediation committed
+- Procedure:
+  ```bash
+  node --test scripts/foundation/voc092-operator-docs.test.mjs
+  ```
+- Expected result: The T02 documentation boundary and VOC-088 evidence checks pass
+- Evidence: `VOC-092-EV-02`
 
 Include positive, negative, authorization, failure, migration, accessibility, and
 rollback coverage as applicable. Tests must not use secrets or production data.
