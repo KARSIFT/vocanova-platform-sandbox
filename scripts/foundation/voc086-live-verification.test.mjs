@@ -309,6 +309,66 @@ test("VOC-086-T05 harness: workflows and synthetics registry remain wired", () =
   assert.match(syncWorkflow, /prove-kuma-inventory\.sh/);
 });
 
+test("VOC-086-T05 harness: preprovisioned bootstrap bypasses only the unavailable secret writer", () => {
+  const workflow = readFileSync(syncWorkflowPath, "utf8");
+  assert.match(workflow, /preprovisioned_credentials:/);
+  assert.match(
+    workflow,
+    /inputs\.rotate_credentials && !inputs\.preprovisioned_credentials/,
+    "App token mint remains required for generated-credential rotation",
+  );
+
+  const prepareStart = workflow.indexOf(
+    "- name: Generate strong Kuma password for rotation",
+  );
+  const prepareEnd = workflow.indexOf("\n      - name:", prepareStart + 1);
+  const prepareStep = workflow.slice(prepareStart, prepareEnd);
+  assert.match(prepareStep, /secrets\.KUMA_USERNAME/);
+  assert.match(prepareStep, /secrets\.KUMA_PASSWORD/);
+  assert.match(
+    prepareStep,
+    /preprovisioned KUMA_USERNAME and KUMA_PASSWORD are both required/,
+  );
+  assert.match(
+    prepareStep,
+    /printf '%s' "\$KUMA_PASSWORD" > "\$password_file"/,
+  );
+  assert.doesNotMatch(
+    prepareStep,
+    /echo\s+["']?\$KUMA_PASSWORD|cat\s+["']?\$KUMA_PASSWORD/,
+  );
+
+  const passwordStoreStart = workflow.indexOf(
+    "- name: Store rotated Kuma password in monitoring environment",
+  );
+  const passwordStoreEnd = workflow.indexOf(
+    "\n      - name:",
+    passwordStoreStart + 1,
+  );
+  const passwordStoreStep = workflow.slice(
+    passwordStoreStart,
+    passwordStoreEnd,
+  );
+  assert.match(passwordStoreStep, /PREPROVISIONED_CREDENTIALS/);
+  assert.match(passwordStoreStep, /no environment-secret write required/);
+  assert.match(passwordStoreStep, /gh secret set KUMA_PASSWORD/);
+
+  const usernameStoreStart = workflow.indexOf(
+    "- name: Store preserved Kuma username in monitoring environment",
+  );
+  const usernameStoreEnd = workflow.indexOf(
+    "\n      - name:",
+    usernameStoreStart + 1,
+  );
+  const usernameStoreStep = workflow.slice(
+    usernameStoreStart,
+    usernameStoreEnd,
+  );
+  assert.match(usernameStoreStep, /EXPECTED_KUMA_USERNAME/);
+  assert.match(usernameStoreStep, /username.*!=.*EXPECTED_KUMA_USERNAME/s);
+  assert.match(usernameStoreStep, /gh secret set KUMA_USERNAME/);
+});
+
 test("VOC-086-TEST-10 live claim is evidence-gated (not satisfied by this harness)", () => {
   assert.ok(existsSync(t05EvidencePath), "t05-evidence.md must exist");
   const evidence = readFileSync(t05EvidencePath, "utf8");

@@ -6,23 +6,23 @@ governance on change packages.
 
 ## Responsibility split
 
-| Layer | Owner | Stable IDs | What it checks |
-| --- | --- | --- | --- |
-| **Kuma** (`sync-monitoring.yml`) | `infra/monitoring/monitors.yaml` | `kuma.availability.*` | Availability, TLS, basic HTTP/API health |
-| **Scheduled synthetics** (`scheduled-synthetics.yml`) | `infra/monitoring/synthetics.yaml` | `synthetic.*` | OAuth expected state, authenticated journeys, production content |
-| **Sentry** (`error-monitoring.yml`) | VOC-051 package | n/a (issue-driven) | Unresolved application errors → governed issues |
+| Layer                                                 | Owner                              | Stable IDs            | What it checks                                                   |
+| ----------------------------------------------------- | ---------------------------------- | --------------------- | ---------------------------------------------------------------- |
+| **Kuma** (`sync-monitoring.yml`)                      | `infra/monitoring/monitors.yaml`   | `kuma.availability.*` | Availability, TLS, basic HTTP/API health                         |
+| **Scheduled synthetics** (`scheduled-synthetics.yml`) | `infra/monitoring/synthetics.yaml` | `synthetic.*`         | OAuth expected state, authenticated journeys, production content |
+| **Sentry** (`error-monitoring.yml`)                   | VOC-051 package                    | n/a (issue-driven)    | Unresolved application errors → governed issues                  |
 
 Do not replace Sentry with Kuma page checks. Do not put authenticated app
 journeys in naive Kuma HTTP monitors.
 
 ## Canonical inventory
 
-| File | Purpose |
-| --- | --- |
-| `infra/monitoring/monitors.yaml` | Five availability monitors with stable IDs |
-| `infra/monitoring/synthetics.yaml` | Five scheduled synthetic checks with stable IDs |
-| `infra/monitoring/sync-kuma.mjs` | Socket.IO synchronizer (never SQLite) |
-| `infra/monitoring/prove-kuma-inventory.mjs` | Read-only Socket.IO proof (no mutation) |
+| File                                        | Purpose                                         |
+| ------------------------------------------- | ----------------------------------------------- |
+| `infra/monitoring/monitors.yaml`            | Five availability monitors with stable IDs      |
+| `infra/monitoring/synthetics.yaml`          | Five scheduled synthetic checks with stable IDs |
+| `infra/monitoring/sync-kuma.mjs`            | Socket.IO synchronizer (never SQLite)           |
+| `infra/monitoring/prove-kuma-inventory.mjs` | Read-only Socket.IO proof (no mutation)         |
 
 Ownership marker for managed Kuma monitors:
 `vocanova:repo-managed` embedded in the monitor description with
@@ -67,10 +67,10 @@ entry explicitly adopts them (`adoption.match_name` + `adoption.match_url`).
 
 Kuma credentials live only in the GitHub **`monitoring`** environment:
 
-| Secret | Purpose |
-| --- | --- |
+| Secret          | Purpose                                         |
+| --------------- | ----------------------------------------------- |
 | `KUMA_USERNAME` | Existing admin username (preserved on rotation) |
-| `KUMA_PASSWORD` | Strong password (generated on first bootstrap) |
+| `KUMA_PASSWORD` | Strong password (generated on first bootstrap)  |
 
 Host access uses the same repository secrets as staging deploy:
 `STAGING_SSH_HOST`, `STAGING_SSH_USER`, `STAGING_SSH_PRIVATE_KEY`,
@@ -82,14 +82,24 @@ bootstrap. The `sync-monitoring` workflow will not start without it.
 ### First-time bootstrap
 
 1. Create the GitHub `monitoring` environment on this repository.
-2. Dispatch `.github/workflows/sync-monitoring.yml` on `develop` (or `main`
-   after promotion):
+2. Dispatch `.github/workflows/sync-monitoring.yml` on `main`:
    - `rotate_credentials`: **true**
+   - `preprovisioned_credentials`: **false**
    - `sync_inventory`: **true**
 3. The workflow invokes Kuma's official `/app/extra/reset-password.js` via
    `docker exec -i` stdin (password never printed). It stores
    `KUMA_PASSWORD` with `gh secret set` and preserves the username.
 4. **All existing Kuma sessions are invalidated once** per rotation.
+
+The generated-credential path requires the repository automation App to have
+GitHub `Environments: write`. If that permission is unavailable, provision a
+strong `KUMA_USERNAME` / `KUMA_PASSWORD` pair directly in the `monitoring`
+environment using secure stdin (never a command-line literal), then dispatch
+the same workflow with `preprovisioned_credentials=true`. The workflow
+validates that both secrets exist, applies the stored password through the
+same official reset tool, confirms the reported username matches, and performs
+no environment-secret write. This fallback does not weaken proof, cleanup, or
+no-second-reset gates.
 
 The implementer `pipeline.yml` job has `actions: read` only and cannot
 create `workflow_dispatch` events. An operator or App token with
@@ -98,13 +108,35 @@ create `workflow_dispatch` events. An operator or App token with
 ### Normal sync (no credential reset)
 
 ```bash
-gh workflow run sync-monitoring.yml --ref develop \
+gh workflow run sync-monitoring.yml --ref main \
   -f rotate_credentials=false \
+  -f recover_store_only=false \
   -f sync_inventory=true
 ```
 
 Normal runs **never** reset credentials. Only set `rotate_credentials=true`
 when bootstrapping or when compromise is suspected.
+
+### Interrupted rotation recovery
+
+If rotation may have reset Kuma but either GitHub secret write did not finish,
+the workflow retains the host recovery bundle and exits non-zero. Do **not**
+start another rotation: preflight blocks a blind second reset. Use the
+store-only recovery path:
+
+```bash
+gh workflow run sync-monitoring.yml --ref main \
+  -f rotate_credentials=false \
+  -f recover_store_only=true \
+  -f sync_inventory=false
+```
+
+Recovery requires the retained password, reset proof, and username metadata to
+carry one matching attempt ID. It never invokes `reset-password.js`, and it
+scrubs the host bundle only after both environment secrets are stored. If the
+bundle is incomplete, the run fails closed and keeps the available material;
+coordinate credential recovery rather than deleting files or retrying reset.
+After recovery succeeds, dispatch the normal sync command above.
 
 After a successful apply, the same host container runs
 `prove-kuma-inventory.mjs` (read-only monitor-list). Workflow logs must show
@@ -173,16 +205,16 @@ canonical TEST-10 evidence.
 
 ### Scheduled synthetics
 
-Manual full run (must target `develop` until the workflow is on `main`):
+Manual full run:
 
 ```bash
-gh workflow run scheduled-synthetics.yml --ref develop
+gh workflow run scheduled-synthetics.yml --ref main
 ```
 
 Single check:
 
 ```bash
-gh workflow run scheduled-synthetics.yml --ref develop \
+gh workflow run scheduled-synthetics.yml --ref main \
   -f synthetic_id=synthetic.staging.oauth-expected-state
 ```
 
