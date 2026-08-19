@@ -102,8 +102,9 @@ test("VOC-087-TEST-10: reset-success / proof-transfer-failure remains recoverabl
   assert.match(rotateScript, /Password reset successfully/);
   assert.match(rotateScript, /Logged in/);
   assert.ok(
-    rotateScript.indexOf("Kuma reset tool exited zero without verified reset and login markers") <
-      rotateScript.indexOf("KUMA_RESET_APPLIED=%s"),
+    rotateScript.indexOf(
+      "Kuma reset tool exited zero without verified reset and login markers",
+    ) < rotateScript.indexOf("KUMA_RESET_APPLIED=%s"),
     "Kuma's zero exit alone must never create reset proof",
   );
   assert.doesNotMatch(
