@@ -82,7 +82,10 @@ function listWorkflowSources() {
 }
 
 test("VOC-092-TEST-11: CI workflow executes harness on pull requests and develop", () => {
-  assert.ok(existsSync(workflowPath), "controlled-signup-oauth-e2e workflow must exist");
+  assert.ok(
+    existsSync(workflowPath),
+    "controlled-signup-oauth-e2e workflow must exist",
+  );
 
   const workflow = readFileSync(workflowPath, "utf8");
 
@@ -90,11 +93,17 @@ test("VOC-092-TEST-11: CI workflow executes harness on pull requests and develop
   assert.match(workflow, /branches:\s*\n\s*- develop/);
   assert.match(workflow, /push:\s*\n\s*branches:\s*\n\s*- develop/);
   assert.match(workflow, /docker version/);
-  assert.match(workflow, new RegExp(HARNESS_GO_TEST_COMMAND.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(
+    workflow,
+    new RegExp(HARNESS_GO_TEST_COMMAND.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+  );
 });
 
 test("VOC-092-TEST-12: harness source files and package script are committed", () => {
-  assert.ok(existsSync(harnessTestPath), "controlled_signup_oauth_e2e_test.go must exist");
+  assert.ok(
+    existsSync(harnessTestPath),
+    "controlled_signup_oauth_e2e_test.go must exist",
+  );
   assert.ok(
     existsSync(postgresHarnessPath),
     "controlled_signup_oauth_postgres_test.go must exist",
@@ -118,17 +127,25 @@ test("VOC-092-TEST-12: harness source files and package script are committed", (
 
   const localRunner = readFileSync(localRunnerPath, "utf8");
   assert.match(localRunner, /ControlledSignupOAuth/);
-  assert.match(localRunner, /refusing to run with staging\/production host argument/);
+  assert.match(
+    localRunner,
+    /refusing to run with staging\/production host argument/,
+  );
 });
 
 test("VOC-092-TEST-07: harness fixtures use only synthetic.vocanova.invalid identities", () => {
   const harnessSources = readHarnessSources();
 
   const emailMatches = [
-    ...harnessSources.matchAll(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g),
+    ...harnessSources.matchAll(
+      /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g,
+    ),
   ].map((match) => match[0]);
 
-  assert.ok(emailMatches.length > 0, "harness must declare synthetic fixture emails");
+  assert.ok(
+    emailMatches.length > 0,
+    "harness must declare synthetic fixture emails",
+  );
   for (const email of emailMatches) {
     assert.match(
       email,
