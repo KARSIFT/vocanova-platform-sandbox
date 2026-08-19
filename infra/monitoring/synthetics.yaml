@@ -71,7 +71,9 @@ synthetics:
     expected_status: 200
     expected_body: null
     schedule: "0 * * * *"
-    timeout_seconds: 600
+    # GitHub Actions job wall clock (timeout-minutes: 40), not Playwright's
+    # per-test timeout in playwright.staging.config.ts (240s).
+    timeout_seconds: 2400
     retries: 1
     severity: high
     mutating: true
