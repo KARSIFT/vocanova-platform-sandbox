@@ -3,7 +3,7 @@ id: VOC-094
 slug: operational-failure-deploy-staging-cancelled
 title: Fix deploy-staging cancellation from concurrency queue supersession
 type: infrastructure
-status: draft
+status: adopted
 risk: R3
 planned_implementation_risk_floor: "Measured during drafting against the expected\
   \ task-scoped file list (.github/workflows/deploy-staging.yml, .github/workflows/deploy-production.yml,\
@@ -16,8 +16,8 @@ planned_implementation_risk_floor: "Measured during drafting against the expecte
   \ reviewing human must still confirm each task's real file list and whether semantic\
   \ escalation applies."
 canonical_path: specs/changes/VOC-094-operational-failure-deploy-staging-cancelled
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: none-intentional. Queue depth and observer filtering changes affect
   CI/deploy workflow scheduling only. No application behavior, signup policy, Kuma
@@ -38,7 +38,8 @@ requirement_source: 'GitHub issue #781 (Operational failure: deploy-staging (can
   repo read: deploy-staging.yml uses concurrency group staging-deploy with cancel-in-progress
   false and no queue: max; deploy-production.yml mirrors the same default single-pending-slot
   behavior on production-deploy. This draft package does not adopt or authorize itself.'
-requirement_approval_status: not-approved
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: unknown - not recorded by this draft; set at adoption time
 target_branch: develop
@@ -75,9 +76,9 @@ affected_areas:
 - scripts/foundation/voc094-deploy-concurrency.test.mjs (new deterministic queue tests)
 - specs/changes/VOC-094-operational-failure-deploy-staging-cancelled
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: not-authorized
+  status: authorized
   target_branch: develop
   authority_issue: null
 release:
@@ -88,11 +89,21 @@ release:
   automatic_merge: true
   migration_required: false
   rollback_required: true
-repository_adoption_status: not-adopted
+repository_adoption_status: adopted
 implementation_authority_before_adoption: false
-implementation_authority_status: not-authorized
+implementation_authority_status: authorized
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
-blocking_reasons: package not adopted; implementation not authorized
+blocking_reasons: none - adopted and implementation-authorized
+approved_candidate_sha: 674e31bba0497601b57d94c980d57c633ec29109
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/782#issuecomment-5346784904
+adoption_risk: R3
+adoption_resolved_decisions:
+- VOC-094-DEP-00
+- VOC-094-DEP-01
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #782 at 674e31bba0497601b57d94c980d57c633ec29109'
+adoption_pr: 782
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/782
