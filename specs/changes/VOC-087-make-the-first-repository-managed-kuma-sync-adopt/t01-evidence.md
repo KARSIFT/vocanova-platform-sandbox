@@ -32,10 +32,10 @@ does **not** claim live inventory apply, credential rotation recovery
 
 ## Notification ownership (`VOC-087-D02` / `VOC-087-DEP-03`)
 
-| Mode | Inventory shape | Edit payload behavior |
-| --- | --- | --- |
-| Preserve (default) | `notification_id_list` omitted | Copy remote `notificationIDList` into adopt/update payloads |
-| Explicit ownership | `notification_id_list` present on the availability monitor entry | Send the inventory-owned object (including `{}` when explicitly set) |
+| Mode               | Inventory shape                                                        | Edit payload behavior                                                                                           |
+| ------------------ | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Preserve (default) | `notification_id_list` omitted                                         | Copy remote `notificationIDList` into adopt/update payloads                                                     |
+| Explicit ownership | `notification_id_list` present as a positive-integer-to-boolean object | Send the inventory-owned object (including `{}` when explicitly set); reject malformed values before connecting |
 
 Implementation: `resolveNotificationIDList` and
 `inventoryOwnsNotificationBindings` in
@@ -43,17 +43,23 @@ Implementation: `resolveNotificationIDList` and
 remote monitor into `inventoryEntryToDesiredMonitor` for adopt/update paths
 in `infra/monitoring/kuma-sync/plan.mjs`.
 
-`monitorsMatch` does not compare `notificationIDList`, so preserved bindings
-do not cause drift on a second sync.
+`monitorsMatch` compares the resolved mapping. Preserve mode copies the remote
+mapping first, so it remains a no-op; an explicit ownership-only change now
+correctly produces an update.
+
+The deployed Kuma Socket.IO add/edit handlers iterate `notificationIDList`.
+Creates therefore send `{}` when the inventory does not own bindings. This is
+the supported empty-mapping contract and does not invent a notification
+destination. Adopt/update payloads continue to copy the remote mapping.
 
 ## Repository deliverables
 
-| Artifact | Path |
-| --- | --- |
-| Notification preserve/ownership helpers | `infra/monitoring/kuma-sync/monitor-payload.mjs` |
-| Planner remote-binding merge | `infra/monitoring/kuma-sync/plan.mjs` |
-| Deterministic protocol tests | `scripts/foundation/voc087-kuma-sync.test.mjs` |
-| This evidence | `specs/changes/VOC-087-make-the-first-repository-managed-kuma-sync-adopt/t01-evidence.md` |
+| Artifact                                | Path                                                                                      |
+| --------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Notification preserve/ownership helpers | `infra/monitoring/kuma-sync/monitor-payload.mjs`                                          |
+| Planner remote-binding merge            | `infra/monitoring/kuma-sync/plan.mjs`                                                     |
+| Deterministic protocol tests            | `scripts/foundation/voc087-kuma-sync.test.mjs`                                            |
+| This evidence                           | `specs/changes/VOC-087-make-the-first-repository-managed-kuma-sync-adopt/t01-evidence.md` |
 
 ## Deterministic validation
 
@@ -65,7 +71,9 @@ node --test scripts/foundation/voc086-kuma-sync.test.mjs
 git diff --check
 ```
 
-Tests use synthetic numeric notification IDs only (for example `{ "42": true }`).
+Tests also prove malformed ownership fails before the client connects and that
+create payloads contain the required empty mapping. Tests use synthetic numeric
+notification IDs only (for example `{ "42": true }`).
 No live Kuma password, notification destination, or session value appears in
 this evidence.
 
