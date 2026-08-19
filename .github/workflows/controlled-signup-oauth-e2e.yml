@@ -1,0 +1,59 @@
+name: controlled-signup-oauth-e2e
+
+# VOC-092-T01: deterministic CI execution of the repository-managed
+# controlled-signup OAuth callback E2E harness. Runs the real HTTP
+# handlers and GoogleOAuthProvider boundary against disposable loopback
+# Postgres only. Complements the generic pipeline `ci` job (which runs
+# `pnpm test` including `go test ./...`) with an explicit, Docker-backed
+# gate that cannot silently skip when the harness is required.
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+  push:
+    branches:
+      - develop
+
+permissions:
+  contents: read
+
+concurrency:
+  group: controlled-signup-oauth-e2e-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  controlled-signup-oauth-e2e:
+    name: controlled-signup OAuth callback E2E
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Require Docker for disposable Postgres
+        run: |
+          set -euo pipefail
+          docker version
+          docker info >/dev/null
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: apps/api/go.mod
+          cache-dependency-path: apps/api/go.sum
+
+      - name: Run controlled-signup OAuth callback E2E harness
+        run: |
+          set -euo pipefail
+          cd apps/api
+          test_log="$(mktemp)"
+          trap 'rm -f "$test_log"' EXIT
+          go test ./app/api/... -run ControlledSignupOAuth -count=1 -v | tee "$test_log"
+          grep -Eq '^--- PASS: TestControlledSignupOAuth_AllowlistedCallbackSucceeds ' "$test_log"
+          grep -Eq '^--- PASS: TestControlledSignupOAuth_UnlistedCallbackDenied ' "$test_log"
+          if grep -Eq '^--- SKIP: TestControlledSignupOAuth_' "$test_log"; then
+            echo "controlled-signup OAuth callback E2E cases must not skip" >&2
+            exit 1
+          fi

@@ -21,6 +21,7 @@
     "typecheck:packages": "tsc -b packages/api-client packages/design-tokens --pretty false",
     "test": "pnpm run build:packages && node --test scripts/foundation/*.test.mjs && pnpm --filter @vocanova/api-client test && pnpm --filter @vocanova/web test:middleware && pnpm run test:api",
     "test:api": "cd apps/api && go test ./...",
+    "test:controlled-signup-oauth-e2e": "cd apps/api && go test ./app/api/... -run ControlledSignupOAuth -count=1",
     "build": "pnpm run build:packages && pnpm run build:web && pnpm run build:api",
     "build:web": "pnpm --filter @vocanova/web build",
     "build:packages": "tsc -b packages/api-client packages/design-tokens --pretty false",
