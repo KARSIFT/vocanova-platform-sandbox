@@ -3,7 +3,7 @@ id: VOC-095
 slug: harden-playwright-setup-against-hosted-runner-apt
 title: Harden Playwright setup against hosted-runner apt mirror stalls
 type: infrastructure
-status: draft
+status: adopted
 risk: R3
 planned_implementation_risk_floor: "Measured during drafting against the expected\
   \ task-scoped file list (.github/workflows/accessibility.yml, .github/workflows/lighthouse.yml,\
@@ -16,8 +16,8 @@ planned_implementation_risk_floor: "Measured during drafting against the expecte
   \ verification and the reviewing human must still confirm each task's real file\
   \ list and whether semantic escalation applies."
 canonical_path: specs/changes/VOC-095-harden-playwright-setup-against-hosted-runner-apt
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: none-intentional. CI and staging-deploy browser setup reliability
   only. No application behavior, signup policy, secret, database, or production kill-switch
@@ -39,7 +39,8 @@ requirement_source: 'GitHub issue #792 (Harden Playwright setup against hosted-r
   `playwright install --with-deps chromium` (accessibility.yml, lighthouse.yml, deploy-staging.yml,
   scheduled-synthetics.yml); only scheduled-synthetics.yml already restores ~/.cache/ms-playwright
   before install. This draft package does not adopt or authorize itself.'
-requirement_approval_status: approved requirement from issue
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: unknown - not recorded by this draft; set at adoption time
 target_branch: develop
@@ -75,9 +76,9 @@ affected_areas:
 - apps/web/tests/e2e/README.md (install contract documentation)
 - specs/changes/VOC-095-harden-playwright-setup-against-hosted-runner-apt
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: not-authorized
+  status: authorized
   target_branch: develop
   authority_issue: null
 release:
@@ -88,11 +89,22 @@ release:
   automatic_merge: true
   migration_required: false
   rollback_required: true
-repository_adoption_status: not-adopted
+repository_adoption_status: adopted
 implementation_authority_before_adoption: false
-implementation_authority_status: not-authorized
+implementation_authority_status: authorized
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
-blocking_reasons: package not adopted; implementation not authorized
+blocking_reasons: none - adopted and implementation-authorized
+approved_candidate_sha: 41335f512bcbbf6522e3dc57cd10c384531eca65
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/793#issuecomment-5348545291
+adoption_risk: R3
+adoption_resolved_decisions:
+- VOC-095-DEP-00
+- VOC-095-DEP-01
+- VOC-095-DEP-02
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #793 at 41335f512bcbbf6522e3dc57cd10c384531eca65'
+adoption_pr: 793
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/793
