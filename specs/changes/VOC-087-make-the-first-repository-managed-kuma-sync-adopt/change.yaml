@@ -1,0 +1,155 @@
+schema_version: 1
+id: VOC-087
+slug: make-the-first-repository-managed-kuma-sync-adopt
+title: Make the first repository-managed Kuma sync adopt live monitors safely
+type: infrastructure
+status: draft
+risk: R3
+planned_implementation_risk_floor: Measured during drafting against the expected task-scoped
+  file list (infra/monitoring/monitors.yaml, infra/monitoring/kuma-sync/plan.mjs,
+  infra/monitoring/kuma-sync/monitor-payload.mjs and related kuma-sync modules, scripts/foundation
+  kuma-sync and sync-monitoring tests, .github/workflows/sync-monitoring.yml, infra/scripts
+  kuma rotation and inventory selftests, VOC-086 t01/t02 evidence files, this package
+  directory). Detected path floor is R3 for infra/monitoring, infra/scripts, and .github/workflows/sync-monitoring.yml.
+  This package proposes R3 for the change as a whole as a draft proposal for the reviewing
+  human at adoption time, not a determination. Independent verification and the reviewing
+  human must still confirm each task's real file list and whether semantic escalation
+  to R4 is warranted for first live inventory apply and credential rotation recovery.
+canonical_path: specs/changes/VOC-087-make-the-first-repository-managed-kuma-sync-adopt
+authority_model: a004-active
+requirement_source: 'GitHub issue #728 (Make the first repository-managed Kuma sync
+  adopt live monitors safely), including the fully populated issue body. Fresh 2026-08-19
+  read-only server verification of active live monitors: ''VocaNova Production API''
+  at https://api-production.vocanova.site/healthz and ''VocaNova Production Web''
+  at https://production.vocanova.site (no trailing slash). Merged VOC-086 inventory
+  instead declares adoption matches for ''Production API /healthz'' and ''Production
+  Web'', and the production web URL includes a trailing slash. infra/monitoring/kuma-sync/plan.mjs
+  requires exact name and URL matches, so it cannot adopt either live monitor and
+  fails closed on unmanaged URL collision (API) or can duplicate-create (web, where
+  trailing-slash mismatch also defeats exact URL collision). inventoryEntryToDesiredMonitor
+  sets notificationIDList to an empty object, which can strip existing notification
+  bindings on adopt/update. VOC-086 T01 evidence records the incorrect live adoption
+  names. T02 evidence describes obsolete rotation ordering after independently reviewed
+  remediation, and its two shell harnesses are documented but not executed by pnpm
+  test. This draft package still does not adopt or authorize itself.'
+requirement_approval_status: 'requirement recorded in GitHub issue #728; package not
+  adopted and not implementation-authorized'
+base_branch: develop
+base_sha: unknown - not recorded by this draft; the adopting human/workflow should
+  set this to the actual base_sha at adoption time, consistent with recent packages'
+  convention.
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human/workflow decision
+    under active A-004)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: expected after this package is merged and deployed, then a later
+  authorized sync-monitoring inventory apply. This package itself must not perform
+  the first live inventory apply. After deploy, the synchronizer must adopt the two
+  verified live production monitors without collision or duplicate create, preserve
+  remote notification bindings unless inventory explicitly owns them, and keep credential
+  rotation recoverable if reset succeeds but proof/metadata transfer fails. No application
+  schema migration. No intentional Cloudflare change. No direct SQLite mutation. Unrelated
+  manually owned Kuma monitors must be preserved. Credential or notification configuration
+  must not appear in logs, issues, or evidence.
+rollback_required: true
+monitoring_impact:
+  state: update
+  rationale: Corrects adoption identity and update payload behavior for the existing
+    repository-managed production availability monitors introduced by VOC-086, and
+    preserves notification bindings on later managed updates of every availability
+    monitor. Does not add new stable monitor or synthetic IDs.
+  monitor_ids:
+  - kuma.availability.production.web
+  - kuma.availability.production.api-healthz
+  - kuma.availability.staging.web
+  - kuma.availability.staging.api-healthz
+  - kuma.availability.monitor-host
+  synthetic_ids: []
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-087-DEP-00
+  status: 'resolved at drafting time by issue #728 and drafting-time repo read. Live
+    monitors are ''VocaNova Production API'' at https://api-production.vocanova.site/healthz
+    and ''VocaNova Production Web'' at https://production.vocanova.site. Inventory
+    match_name/match_url and production web trailing slash do not match. plan.mjs
+    uses exact string equality. inventoryEntryToDesiredMonitor sets notificationIDList
+    to {}.'
+- id: VOC-087-DEP-01
+  status: resolved at drafting time. pnpm test runs node --test scripts/foundation/*.test.mjs,
+    which only asserts the kuma-rotate-credentials and sync-kuma-inventory selftest
+    files exist. Those harnesses are not executed by the normal deterministic test
+    entry point.
+- id: VOC-087-DEP-02
+  status: unresolved at drafting time only as an implementer shape choice, not a requirement
+    gap. Exact workflow recovery shape for reset-success/proof-transfer-failure (retain
+    runner-local password until secret store succeeds, store from runner-local file
+    after rotate-step success even if proof fetch fails, and/or a store-only retry
+    that never resets again) must satisfy VOC-087-AC-05 without exposing credentials.
+    See specification.md open question 1.
+- id: VOC-087-DEP-03
+  status: unresolved at drafting time only as an implementer shape choice. Exact optional
+    inventory schema for explicit notification ownership (default preserve) may be
+    a reserved field on availability monitors or an equivalent documented extension.
+    Canonical monitors.yaml must remain preserve-by-default. See specification.md
+    open question 2.
+- id: VOC-086
+  status: Adopted predecessor. This package corrects first-apply safety defects in
+    the merged VOC-086 inventory, synchronizer, workflow, tests, and T01/T02 evidence.
+    VOC-086-T05 live inventory apply remains blocked until this package is merged
+    and deployed.
+- id: VOC-081
+  status: Adopted predecessor. Preserve loopback-only 3001, single shared-edge nginx,
+    and absence of 8081/8443.
+affected_areas:
+- infra/monitoring/monitors.yaml (production adoption name/url identity)
+- infra/monitoring/kuma-sync/plan.mjs (shared URL normalization for adopt and collision)
+- infra/monitoring/kuma-sync/monitor-payload.mjs (notification binding preservation)
+- infra/monitoring/kuma-sync related modules and scripts/foundation/voc086-kuma-sync.test.mjs
+  or voc087 equivalent
+- .github/workflows/sync-monitoring.yml (rotation recovery boundary; no live apply
+  in this package)
+- infra/scripts/kuma-rotate-credentials.sh and/or sync-monitoring workflow recovery/scrub
+  gating
+- infra/scripts/kuma-rotate-credentials.selftest.sh and infra/scripts/sync-kuma-inventory.selftest.sh
+  executed from pnpm test or equivalent CI entry point
+- scripts/foundation/voc086-sync-monitoring-workflow.test.mjs or voc087 equivalent
+- specs/changes/VOC-086-manage-monitoring-inventory/t01-evidence.md and t02-evidence.md
+  (stale evidence correction)
+- specs/changes/VOC-087-make-the-first-repository-managed-kuma-sync-adopt
+implementation:
+  authorized: false
+  required: true
+  status: not-authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: expected-after-merge-deploy-then-later-authorized-sync-monitoring-apply
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: not-authorized
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
+blocking_reasons: not-adopted; implementation not authorized
