@@ -1,0 +1,96 @@
+# Canonical scheduled synthetic check registry (VOC-086-T00).
+# Executed by the scheduled synthetics workflow (VOC-086-T03).
+
+schema_version: 1
+
+synthetics:
+  - id: synthetic.staging.oauth-expected-state
+    name: Staging OAuth expected state and exact callback
+    environment: staging
+    owner: vocanova-platform
+    type: synthetic
+    workflow_ref: .github/workflows/scheduled-synthetics.yml
+    check_ref: staging-oauth-expected-state
+    harness_script: infra/scripts/verify-staging-oauth-start.sh
+    expected_status: 200
+    expected_body: accounts.google.com
+    schedule: "0 * * * *"
+    timeout_seconds: 120
+    retries: 1
+    severity: high
+    coverage:
+      - "api:POST /api/v1/auth/oauth/google/start"
+      - "feature:staging-google-oauth"
+
+  - id: synthetic.production.oauth-expected-state
+    name: Production OAuth expected state and exact callback
+    environment: production
+    owner: vocanova-platform
+    type: synthetic
+    workflow_ref: .github/workflows/scheduled-synthetics.yml
+    check_ref: production-oauth-expected-state
+    harness_script: infra/scripts/verify-production-oauth-start.sh
+    expected_status: 200
+    expected_body: accounts.google.com
+    schedule: "0 * * * *"
+    timeout_seconds: 120
+    retries: 1
+    severity: critical
+    coverage:
+      - "api:POST /api/v1/auth/oauth/google/start"
+      - "feature:production-google-oauth"
+
+  - id: synthetic.production.journey-content
+    name: Production journey content and real details
+    environment: production
+    owner: vocanova-platform
+    type: synthetic
+    workflow_ref: .github/workflows/scheduled-synthetics.yml
+    check_ref: production-journey-content
+    harness_script: infra/scripts/smoke-test-production.sh
+    expected_status: 200
+    expected_body: null
+    schedule: "0 * * * *"
+    timeout_seconds: 300
+    retries: 1
+    severity: critical
+    coverage:
+      - "page:production.vocanova.site/discover"
+      - "feature:production-p1-content"
+
+  - id: synthetic.staging.authenticated-core-journey
+    name: Critical authenticated staging core-loop journey
+    environment: staging
+    owner: vocanova-platform
+    type: synthetic
+    workflow_ref: .github/workflows/scheduled-synthetics.yml
+    check_ref: staging-authenticated-core-journey
+    harness_script: apps/web/tests/staging-e2e/core-loop.staging.spec.ts
+    expected_status: 200
+    expected_body: null
+    schedule: "0 * * * *"
+    timeout_seconds: 600
+    retries: 1
+    severity: high
+    coverage:
+      - "page:staging.vocanova.site/home"
+      - "feature:staging-core-loop"
+
+  - id: synthetic.production.authenticated-route-content-sweep
+    name: Non-mutating production authenticated route and content sweep
+    environment: production
+    owner: vocanova-platform
+    type: synthetic
+    workflow_ref: .github/workflows/scheduled-synthetics.yml
+    check_ref: production-authenticated-route-content-sweep
+    harness_script: infra/scripts/smoke-test-production.sh
+    expected_status: 200
+    expected_body: null
+    schedule: "0 * * * *"
+    timeout_seconds: 300
+    retries: 1
+    severity: critical
+    mutating: false
+    coverage:
+      - "page:production.vocanova.site/"
+      - "feature:production-route-sweep"

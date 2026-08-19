@@ -1,0 +1,7 @@
+[
+{"task_id": "VOC-086-T00", "issue": 718, "depends_on": []},
+{"task_id": "VOC-086-T01", "issue": 719, "depends_on": ["VOC-086-T00"]},
+{"task_id": "VOC-086-T02", "issue": 720, "depends_on": ["VOC-086-T01"]},
+{"task_id": "VOC-086-T03", "issue": 721, "depends_on": ["VOC-086-T02"]},
+{"task_id": "VOC-086-T04", "issue": 722, "depends_on": ["VOC-086-T03"]},
+{"task_id": "VOC-086-T05", "issue": 723, "depends_on": ["VOC-086-T04"]}]

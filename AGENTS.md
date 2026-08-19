@@ -69,9 +69,29 @@ approval on merge. That policy is preserved in historical records only.
 Do not leave the change-package template value unexamined. Review this rule and set
 the field before the plan PR is reviewed.
 
+### Drafting `monitoring_impact` in `change.yaml`
+
+When a package is newly created or its `change.yaml` is modified, declare
+`monitoring_impact` in that package's `change.yaml` (`VOC-086-D07`). Historical
+packages whose `change.yaml` is untouched remain grandfathered.
+
+- **`state`:** exactly one of `none`, `existing`, `add`, or `update`.
+- **`none`:** requires a non-empty `rationale` and must not list `monitor_ids` or
+  `synthetic_ids`.
+- **`existing` / `add` / `update`:** require at least one valid stable ID from
+  `infra/monitoring/monitors.yaml` (`monitor_ids`) and/or
+  `infra/monitoring/synthetics.yaml` (`synthetic_ids`).
+- Page-route or critical API-endpoint additions/changes fail CI when the in-diff
+  package lacks a valid `monitoring_impact` declaration.
+
+CI (`scripts/governance/validate-monitoring-impact.sh`, invoked from
+`validate-governance.sh`) must receive the pull-request base and head SHAs
+(`--base` / `--head`, same pattern as `classify-change-risk.sh`). A pull_request
+run without a resolved changed-file range is fail-closed.
+
 **Plan PRs are independently reviewed:** a `plan_reviewer` role and
 `plan-review.yml` reusable workflow (karsift-ai-infra) check every `plan/`-branch PR
-— including this `automatic_merge_allowed` correctness rule — before merge. A plan PR
+— including the `automatic_merge_allowed` and `monitoring_impact` drafting rules — before merge. A plan PR
 that passes `plan_reviewer`, governance validation, and merge-gate may merge and
 trigger autonomous adoption without a founder `approved` comment (after A-004
 activation; infra behavior lands in VOC-080-T01/T02). See `plan-review.yml`'s header

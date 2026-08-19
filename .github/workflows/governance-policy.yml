@@ -32,7 +32,13 @@ jobs:
           fetch-depth: 0
 
       - name: Validate governance structure
-        run: bash scripts/governance/validate-governance.sh
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: >-
+          bash scripts/governance/validate-governance.sh
+          --base "$BASE_SHA"
+          --head "$HEAD_SHA"
 
       - name: Record pull-request body safely
         run: jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH" > "$RUNNER_TEMP/pr-body.md"

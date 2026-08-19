@@ -1,6 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+base=""
+head=""
+files_from=""
+
+usage() {
+  echo "Usage: $0 [--base SHA --head SHA | --files-from FILE]" >&2
+}
+
+while (($#)); do
+  case "$1" in
+    --base) base="${2:-}"; shift 2 ;;
+    --head) head="${2:-}"; shift 2 ;;
+    --files-from) files_from="${2:-}"; shift 2 ;;
+    -h|--help) usage; exit 0 ;;
+    *) usage; echo "Unknown argument: $1" >&2; exit 2 ;;
+  esac
+done
+
 required_files=(
   AGENTS.md
   CLAUDE.md
@@ -202,5 +220,16 @@ for path in "${r4_ruleset_paths[@]}"; do
 done
 
 bash -n scripts/governance/classify-change-risk.sh
+bash -n scripts/governance/validate-monitoring-impact.sh
 python3 tooling/governance/validate_repository_foundation.py --repository-root .
+
+monitoring_impact_args=()
+if [[ -n "$files_from" ]]; then
+  monitoring_impact_args+=(--files-from "$files_from")
+elif [[ -n "$base" && -n "$head" ]]; then
+  monitoring_impact_args+=(--base "$base" --head "$head")
+fi
+
+bash scripts/governance/validate-monitoring-impact.sh --declarations-only
+bash scripts/governance/validate-monitoring-impact.sh "${monitoring_impact_args[@]}"
 echo "Governance structure validation passed."

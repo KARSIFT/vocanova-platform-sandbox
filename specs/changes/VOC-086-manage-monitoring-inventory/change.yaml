@@ -1,0 +1,191 @@
+schema_version: 1
+id: VOC-086
+slug: manage-monitoring-inventory
+title: Manage monitoring inventory, synthetics, and monitoring-impact governance
+type: infrastructure
+status: adopted
+risk: R4
+planned_implementation_risk_floor: "Measured during drafting by running scripts/governance/classify-change-risk.sh\
+  \ --files-from against the expected task-scoped file list (infra/monitoring/monitors.yaml,\
+  \ infra/monitoring synthetics registry and Kuma synchronizer under infra/monitoring/,\
+  \ .github/workflows/sync-monitoring.yml and/or equivalent monitoring sync workflow,\
+  \ .github/workflows/scheduled-synthetics.yml and/or equivalent scheduled synthetics\
+  \ workflow, scripts/governance/validate-monitoring-impact.sh and any validate-governance.sh\
+  \ wiring that invokes it, docs under docs/operations/ or infra/ for monitoring operator\
+  \ docs, scripts/foundation deterministic tests, this package directory). Detected\
+  \ path floor: R4 (scripts/governance/*). Without the governance validator path the\
+  \ floor would be R3 for infra/monitoring and monitoring workflows. This package\
+  \ proposes R4 for the change as a whole \u2014 a draft proposal for the reviewing\
+  \ human at adoption time, not a determination \u2014 because governance validation\
+  \ under scripts/governance/ is in scope and because the work mutates live operational\
+  \ monitors and introduces monitoring credentials into GitHub Actions environments.\
+  \ Issue #716 proposed R3; the measured path floor raises the draft proposal to R4.\
+  \ Independent verification and the reviewing human must still confirm each task's\
+  \ real file list and whether further semantic escalation applies."
+canonical_path: specs/changes/VOC-086-manage-monitoring-inventory
+authority_model: a004-active
+requirement_source: "GitHub issue #716 (\"Manage monitoring inventory, synthetics,\
+  \ and monitoring-impact governance\"), including the fully populated issue body.\
+  \ Fresh 2026-08-16 evidence: promoted revision 96a1fd10155c605ba444e624928552f7b62b93d4;\
+  \ Kuma healthy at version 1.23.17 (louislam/uptime-kuma:1), host-bound only on 127.0.0.1:3001,\
+  \ on the isolated monitoring network and shared edge; repository owns Compose, vhost,\
+  \ access policy, and reachability verifier, but no monitor inventory or synchronizer;\
+  \ live inventory remains two active 60-second HTTP monitors (Production API /healthz\
+  \ and Production Web); missing staging web/API and independent https://monitor.vocanova.site\
+  \ reachability coverage; existing deploy synthetics cover staging OAuth/core loop\
+  \ and production OAuth/content/ authenticated fixed+dynamic routes but are deploy-only\
+  \ rather than a canonical scheduled synthetic inventory; hourly Sentry error-monitoring\
+  \ is healthy; no GitHub secret names exist yet for Kuma username/password (only\
+  \ smoke-mint/Sentry monitoring tokens); read-only deployed source confirms supported\
+  \ authenticated Socket.IO monitor events (add, editMonitor, monitor-list) and the\
+  \ official /app/extra/reset-password.js tool \u2014 no direct SQLite deployment\
+  \ mechanism is needed. Founder/user remediation directive dated 2026-08-16 authorizes\
+  \ issue/package/PR/workflow/deploy/verification/ remediation/closure actions without\
+  \ routine approval. This draft package still does not adopt or authorize itself."
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
+base_branch: develop
+base_sha: unknown - not recorded by this draft; the adopting human/workflow should
+  set this to the actual base_sha at adoption time, consistent with recent packages'
+  convention.
+target_branch: develop
+approved_candidate_sha: 53aceac82aa10a9c7e737357f794a5c376295e5e
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human/workflow decision
+    under active A-004)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
+automatic_merge_allowed: true
+production_impact: expected. After adoption and authorized task merges, a repository-managed
+  monitoring inventory and Socket.IO synchronizer will create/update/adopt managed
+  Uptime Kuma availability monitors (staging web, staging API /healthz, production
+  web, production API /healthz, independent monitor.vocanova.site reachability), a
+  one-time or explicit rotation credential bootstrap will store Kuma credentials in
+  GitHub secrets without printing them, and a scheduled synthetic registry/workflow
+  will run authenticated non-mutating checks using reserved synthetic accounts. No
+  application schema migration. No intentional Cloudflare configuration change. No
+  direct SQLite mutation. Manually owned unrelated Kuma monitors must be preserved
+  unless explicitly adopted. Mis-scoped credential logging, overwrite of unrelated
+  monitors, or topology regression is out of scope and must not occur.
+rollback_required: true
+monitoring_impact:
+  state: add
+  rationale: This package establishes the canonical monitor and synthetic stable IDs
+    and the monitoring_impact governance mechanism itself.
+  monitor_ids:
+  - kuma.availability.staging.web
+  - kuma.availability.staging.api-healthz
+  - kuma.availability.production.web
+  - kuma.availability.production.api-healthz
+  - kuma.availability.monitor-host
+  synthetic_ids:
+  - synthetic.staging.oauth-expected-state
+  - synthetic.production.oauth-expected-state
+  - synthetic.production.journey-content
+  - synthetic.staging.authenticated-core-journey
+  - synthetic.production.authenticated-route-content-sweep
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+dependencies:
+- id: VOC-086-DEP-00
+  status: 'resolved at drafting time by issue #716 verified evidence and drafting-time
+    repo read. Repository already owns infra/docker-compose.monitoring.yml, shared-edge
+    monitor vhost, access policy, and reachability verifier (VOC-081), but has no
+    infra/monitoring/monitors.yaml inventory and no Socket.IO synchronizer. Live Kuma
+    still holds only two unmanaged 60s HTTP monitors.'
+- id: VOC-086-DEP-01
+  status: unresolved at drafting time only as an implementer shape choice (not a requirement
+    gap). Exact language/runtime for the Kuma Socket.IO synchronizer (Node/TypeScript
+    under infra/monitoring/ or scripts/, or Python) must use authenticated Socket.IO
+    events add / editMonitor / monitor-list, never SQLite, never log credentials,
+    and must support prevalidation, ownership marker/tag, create/update/adopt, collision
+    detection, and compensating rollback on partial failure. See specification.md
+    open question 1.
+- id: VOC-086-DEP-02
+  status: 'unresolved at drafting time only as an implementer/ops shape choice. Exact
+    GitHub secret names and Actions environment for Kuma credentials (recommended
+    defaults: KUMA_USERNAME preserving the existing username, KUMA_PASSWORD for the
+    generated strong secret, stored only in the monitoring/sync workflow environment)
+    plus the workflow_dispatch input name for one-time rotate_credentials / bootstrap.
+    Normal sync must never reset credentials. See specification.md open question 2.'
+- id: VOC-086-DEP-03
+  status: unresolved at drafting time only as an implementer shape choice. Exact packaging
+    of scheduled synthetics (one workflow with a stable-ID job matrix vs discrete
+    workflow_call jobs) must cover the five required synthetic scenarios, reuse reserved
+    synthetic accounts and existing mint secrets, mask session values, and remain
+    non-mutating for production. See specification.md open question 3.
+- id: VOC-081
+  status: Adopted predecessor. Repository-managed Kuma Compose, monitoring network,
+    shared-edge vhost, access policy, and reachability verifier. This package must
+    preserve loopback-only 3001, single shared-edge nginx, and absence of 8081/8443.
+- id: VOC-051
+  status: Adopted predecessor for hourly Sentry error-monitoring. This package must
+    leave .github/workflows/error-monitoring.yml unchanged and healthy.
+- id: VOC-050
+  status: Adopted predecessor for synthetic smoke identity, session mint, and deploy-time
+    synthetic checks this package reuses for scheduled synthetics without inventing
+    a parallel identity.
+- id: VOC-067
+  status: Adopted predecessor for staging/production isolation and shared-edge topology.
+    This package must preserve secret, directory, deploy-user, database, and Docker-network
+    isolation.
+affected_areas:
+- infra/monitoring/monitors.yaml (new canonical availability inventory)
+- infra/monitoring/ synthetics registry and Kuma Socket.IO synchronizer (exact filenames
+  per VOC-086-DEP-01)
+- .github/workflows/sync-monitoring.yml or equivalent monitoring sync/deploy workflow
+  with optional rotate_credentials bootstrap input
+- .github/workflows/scheduled-synthetics.yml or equivalent scheduled synthetic registry/workflow
+- scripts/governance/validate-monitoring-impact.sh (new) and wiring from validate-governance.sh
+  and/or CI
+- change-package template / governance docs describing required monitoring_impact
+  field
+- docs/operations/monitoring.md or infra/README.md monitoring operator docs (add/change
+  monitors, credential bootstrap/rotation, rollback, ownership, proof)
+- scripts/foundation/ or equivalent deterministic protocol mocks and governance positive/negative
+  tests
+- GitHub Actions secrets/environment for Kuma credentials (ops via workflow bootstrap
+  only; never commit secrets)
+- Live Kuma monitor inventory via supported Socket.IO only (no SQLite)
+- specs/changes/VOC-086-manage-monitoring-inventory
+implementation:
+  authorized: true
+  required: true
+  status: authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: expected-kuma-inventory-sync-and-scheduled-synthetics
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: adopted
+adoption_pr: 717
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/717
+implementation_authority_before_adoption: false
+implementation_authority_status: authorized
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
+blocking_reasons: none - adopted and implementation-authorized
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/717#issuecomment-5304737628
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-086-DEP-00
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #717 at 53aceac82aa10a9c7e737357f794a5c376295e5e'
