@@ -45,8 +45,8 @@ evidence.
 
 | Acceptance criterion | Result | Evidence section |
 | --- | --- | --- |
-| AC-03 allowlisted synthetic reaches onboarding/home | pass | § Live `develop` CI, § Scrubbed harness log |
-| AC-04 unlisted synthetic receives HTTP 503 | pass | § Live `develop` CI, § Scrubbed harness log |
+| AC-03 allowlisted synthetic reaches onboarding/home | pass | § Live `develop` CI, § Scrubbed exact-job harness outcome |
+| AC-04 unlisted synthetic receives HTTP 503 | pass | § Live `develop` CI, § Scrubbed exact-job harness outcome |
 | AC-07 staging OAuth synthetic retained | pass | § Staging synthetic retention, § Live staging readiness |
 | AC-08 CI executes both cases fail-closed | pass | § Live `develop` CI, § Fail-closed confirmation |
 | AC-11 staging/production isolation preserved | pass | § Deterministic validation, § Privacy and redaction |
