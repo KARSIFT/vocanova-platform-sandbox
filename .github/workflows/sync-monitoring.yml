@@ -1,7 +1,8 @@
 name: sync-monitoring
 
 # VOC-086-T02: repository workflow for Kuma monitor inventory sync and explicit
-# credential bootstrap/rotation.
+# credential bootstrap/rotation. VOC-087-T02 closes reset-success /
+# proof-transfer-failure recovery (VOC-087-D04).
 #
 # Applies `infra/monitoring/monitors.yaml` to live Uptime Kuma via authenticated
 # Socket.IO (`infra/monitoring/sync-kuma.mjs`). Credentials live only in the
@@ -17,6 +18,12 @@ name: sync-monitoring
 # password). The generated credential is stored with `gh secret set` without
 # printing it. Existing Kuma sessions are invalidated once per rotation.
 # Normal sync runs never reset credentials.
+#
+# If host reset succeeds and proof/metadata transfer then fails, this workflow
+# fails closed, does not invoke reset-password.js again, and does not scrub the
+# last remaining password copy until store succeeds or a host fetch confirms
+# this attempt did not reset Kuma. `recover_store_only` stores a host-retained
+# password without resetting.
 #
 # Host→runner metadata transfer uses OpenSSH `scp` (download). In this repo,
 # `appleboy/scp-action` is upload-only (runner→host); do not use it to fetch
@@ -38,6 +45,13 @@ on:
         description: >-
           Bootstrap or rotate Kuma admin password via official reset-password.js
           (invalidates existing sessions; stores KUMA_PASSWORD in monitoring env)
+        required: false
+        type: boolean
+        default: false
+      recover_store_only:
+        description: >-
+          Store KUMA_PASSWORD from a host-retained rotation file without
+          invoking reset-password.js (VOC-087-D04 recover-store)
         required: false
         type: boolean
         default: false
@@ -66,13 +80,19 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Refuse combined rotate and recover-store
+        if: ${{ inputs.rotate_credentials && inputs.recover_store_only }}
+        run: |
+          echo "recover_store_only cannot be combined with rotate_credentials; recover never resets" >&2
+          exit 1
+
       # GITHUB_TOKEN cannot manage environment secrets. Mint the repository's
       # existing automation App identity with the exact permission required by
       # the environment-secret API. If the App lacks that grant, rotation
       # fails here before any password is generated or applied to Kuma.
       - name: Mint environment-secret writer token
         id: environment-token
-        if: ${{ success() && inputs.rotate_credentials }}
+        if: ${{ success() && (inputs.rotate_credentials || inputs.recover_store_only) }}
         uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ secrets.KARSIFT_BOT_APP_ID }}
@@ -80,7 +100,7 @@ jobs:
           permission-environments: write
 
       - name: Verify environment-secret writer access
-        if: ${{ success() && inputs.rotate_credentials }}
+        if: ${{ success() && (inputs.rotate_credentials || inputs.recover_store_only) }}
         env:
           GH_TOKEN: ${{ steps.environment-token.outputs.token }}
         run: |
@@ -100,7 +120,7 @@ jobs:
           chmod 600 ~/.ssh/known_hosts
 
       - name: Generate strong Kuma password for rotation
-        if: ${{ success() && inputs.rotate_credentials }}
+        if: ${{ success() && inputs.rotate_credentials && !inputs.recover_store_only }}
         id: generate_password
         run: |
           set -euo pipefail
@@ -120,7 +140,8 @@ jobs:
             /tmp/monitoring-sync-bundle/infra/scripts/
           tar -czf "$GITHUB_WORKSPACE/monitoring-sync-bundle.tgz" \
             -C /tmp/monitoring-sync-bundle .
-          if [ "${{ inputs.rotate_credentials }}" = "true" ]; then
+          if [ "${{ inputs.rotate_credentials }}" = "true" ] && \
+             [ "${{ inputs.recover_store_only }}" != "true" ]; then
             cp "${{ steps.generate_password.outputs.password_file }}" \
               "$GITHUB_WORKSPACE/kuma-new-password.secret"
             chmod 600 "$GITHUB_WORKSPACE/kuma-new-password.secret"
@@ -136,7 +157,7 @@ jobs:
           target: /tmp/
 
       - name: Copy rotation password file to host
-        if: ${{ success() && inputs.rotate_credentials }}
+        if: ${{ success() && inputs.rotate_credentials && !inputs.recover_store_only }}
         uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.STAGING_SSH_HOST }}
@@ -146,7 +167,8 @@ jobs:
           target: /tmp/
 
       - name: Rotate Kuma credentials on host (explicit opt-in)
-        if: ${{ success() && inputs.rotate_credentials }}
+        id: rotate_host
+        if: ${{ success() && inputs.rotate_credentials && !inputs.recover_store_only }}
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.STAGING_SSH_HOST }}
@@ -169,10 +191,12 @@ jobs:
             "$bundle_root/infra/scripts/kuma-rotate-credentials.sh"
 
       # appleboy/scp-action is runner→host upload only in this repository.
-      # Download the reset-applied proof before storing the password. This step
-      # deliberately runs after a failed rotation action because the official
-      # reset may have succeeded before later username extraction failed.
+      # Download proof independently of metadata. Reset may have succeeded
+      # before later username extraction failed (proof written, rotate_host
+      # failed). Emit reachability outputs even when a transfer fails so
+      # store/scrub can distinguish "reset did not happen" from "unknown".
       - name: Fetch Kuma reset proof and username metadata from host
+        id: fetch_proof
         if: ${{ always() && inputs.rotate_credentials && steps.generate_password.outcome == 'success' }}
         env:
           STAGING_SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
@@ -180,40 +204,114 @@ jobs:
           STAGING_SSH_PRIVATE_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
         run: |
           set -euo pipefail
+          host_reachable=false
+          proof_fetched=false
+          proof_matches=false
+          metadata_fetched=false
           key_file="$(mktemp)"
           chmod 600 "$key_file"
+          emit_outputs() {
+            {
+              echo "host_reachable=$host_reachable"
+              echo "proof_fetched=$proof_fetched"
+              echo "proof_matches=$proof_matches"
+              echo "metadata_fetched=$metadata_fetched"
+            } >> "$GITHUB_OUTPUT"
+            rm -f "$key_file"
+          }
+          trap emit_outputs EXIT
           printf '%s\n' "$STAGING_SSH_PRIVATE_KEY" > "$key_file"
-          cleanup_key() { rm -f "$key_file"; }
-          trap cleanup_key EXIT
-          scp -i "$key_file" \
-            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
-            -o IdentitiesOnly=yes \
-            "${STAGING_SSH_USER}@${STAGING_SSH_HOST}:/tmp/kuma-reset-applied.env" \
-            /tmp/kuma-reset-applied.env
-          test "$(cat /tmp/kuma-reset-applied.env)" = \
-            "KUMA_RESET_APPLIED=${{ github.run_id }}-${{ github.run_attempt }}"
-          scp -i "$key_file" \
-            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
-            -o IdentitiesOnly=yes \
-            "${STAGING_SSH_USER}@${STAGING_SSH_HOST}:/tmp/kuma-rotate-metadata.env" \
-            /tmp/kuma-rotate-metadata.env
-          test -s /tmp/kuma-rotate-metadata.env
+          ssh_opts=(-i "$key_file" -o UserKnownHostsFile="$HOME/.ssh/known_hosts" -o IdentitiesOnly=yes -o BatchMode=yes)
+          if ! ssh "${ssh_opts[@]}" \
+            "${STAGING_SSH_USER}@${STAGING_SSH_HOST}" "true"; then
+            echo "host unreachable for proof fetch" >&2
+            exit 1
+          fi
+          host_reachable=true
+          if ssh "${ssh_opts[@]}" \
+            "${STAGING_SSH_USER}@${STAGING_SSH_HOST}" \
+            "test -f /tmp/kuma-reset-applied.env"; then
+            scp "${ssh_opts[@]}" \
+              "${STAGING_SSH_USER}@${STAGING_SSH_HOST}:/tmp/kuma-reset-applied.env" \
+              /tmp/kuma-reset-applied.env
+            proof_fetched=true
+            if [ "$(cat /tmp/kuma-reset-applied.env)" = \
+              "KUMA_RESET_APPLIED=${{ github.run_id }}-${{ github.run_attempt }}" ]; then
+              proof_matches=true
+            else
+              echo "reset proof marker does not match this attempt" >&2
+              exit 1
+            fi
+          fi
+          if ssh "${ssh_opts[@]}" \
+            "${STAGING_SSH_USER}@${STAGING_SSH_HOST}" \
+            "test -f /tmp/kuma-rotate-metadata.env"; then
+            scp "${ssh_opts[@]}" \
+              "${STAGING_SSH_USER}@${STAGING_SSH_HOST}:/tmp/kuma-rotate-metadata.env" \
+              /tmp/kuma-rotate-metadata.env
+            test -s /tmp/kuma-rotate-metadata.env
+            metadata_fetched=true
+          fi
+          if [ "$proof_matches" != "true" ]; then
+            echo "matching reset proof not fetched" >&2
+            exit 1
+          fi
 
-      # Store only when this attempt produced the exact reset-applied proof.
-      # `always()` allows recovery from a post-reset metadata failure without
-      # ever replacing the secret when the host reset itself did not happen.
+      # Store when this attempt produced reset-applied proof, or when host
+      # rotation succeeded but proof/metadata transfer failed (VOC-087-D04).
+      # `always()` allows recovery without storing an unused password when the
+      # host reset itself did not happen. Post-reset rotate_host failure plus
+      # failed fetch must RETAIN, not soft-skip-then-scrub.
       - name: Store rotated Kuma password in monitoring environment
+        id: store_password
         if: ${{ always() && inputs.rotate_credentials && steps.generate_password.outcome == 'success' }}
         env:
           GH_TOKEN: ${{ steps.environment-token.outputs.token }}
           PASSWORD_FILE: ${{ steps.generate_password.outputs.password_file }}
+          ROTATE_HOST_OUTCOME: ${{ steps.rotate_host.outcome }}
+          HOST_REACHABLE: ${{ steps.fetch_proof.outputs.host_reachable }}
+          PROOF_FETCHED: ${{ steps.fetch_proof.outputs.proof_fetched }}
         run: |
           set -euo pipefail
-          test "$(cat /tmp/kuma-reset-applied.env 2>/dev/null)" = \
-            "KUMA_RESET_APPLIED=${{ github.run_id }}-${{ github.run_attempt }}"
-          test -s "$PASSWORD_FILE"
-          gh secret set KUMA_PASSWORD --env monitoring --body-file "$PASSWORD_FILE"
-          rm -f "$PASSWORD_FILE" "$GITHUB_WORKSPACE/kuma-new-password.secret"
+          password_stored=false
+          emit_store() {
+            echo "password_stored=$password_stored" >> "$GITHUB_OUTPUT"
+          }
+          trap emit_store EXIT
+          proof_matches=false
+          if [ -f /tmp/kuma-reset-applied.env ]; then
+            if [ "$(cat /tmp/kuma-reset-applied.env)" = \
+              "KUMA_RESET_APPLIED=${{ github.run_id }}-${{ github.run_attempt }}" ]; then
+              proof_matches=true
+            else
+              echo "reset proof marker does not match this attempt" >&2
+              exit 1
+            fi
+          fi
+          export PROOF_MATCHES="$proof_matches"
+          decision="$(bash infra/scripts/kuma-rotation-recovery-gate.sh store-decision)"
+          case "$decision" in
+            STORE)
+              if [ "$proof_matches" = "false" ]; then
+                echo "Proof transfer unavailable; storing from runner-local file after confirmed host rotation" >&2
+              fi
+              test -s "$PASSWORD_FILE"
+              gh secret set KUMA_PASSWORD --env monitoring --body-file "$PASSWORD_FILE"
+              rm -f "$PASSWORD_FILE" "$GITHUB_WORKSPACE/kuma-new-password.secret"
+              password_stored=true
+              ;;
+            SKIP_UNUSED)
+              echo "No reset proof and host rotation did not succeed; refusing to store generated password" >&2
+              ;;
+            RETAIN)
+              echo "Cannot confirm whether this attempt reset Kuma; retaining password copies" >&2
+              exit 1
+              ;;
+            *)
+              echo "unexpected store decision" >&2
+              exit 1
+              ;;
+          esac
 
       - name: Store preserved Kuma username in monitoring environment
         if: ${{ always() && inputs.rotate_credentials && steps.generate_password.outcome == 'success' }}
@@ -233,6 +331,44 @@ jobs:
           fi
           gh secret set KUMA_USERNAME --env monitoring --body "$username"
           rm -f "$metadata_file"
+
+      - name: Recover retained Kuma password from host (no reset)
+        id: recover_store
+        if: ${{ success() && inputs.recover_store_only }}
+        env:
+          GH_TOKEN: ${{ steps.environment-token.outputs.token }}
+          STAGING_SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
+          STAGING_SSH_USER: ${{ secrets.STAGING_SSH_USER }}
+          STAGING_SSH_PRIVATE_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          password_stored=false
+          key_file="$(mktemp)"
+          chmod 600 "$key_file"
+          emit_recover() {
+            echo "password_stored=$password_stored" >> "$GITHUB_OUTPUT"
+            rm -f "$key_file"
+          }
+          trap emit_recover EXIT
+          printf '%s\n' "$STAGING_SSH_PRIVATE_KEY" > "$key_file"
+          ssh_opts=(-i "$key_file" -o UserKnownHostsFile="$HOME/.ssh/known_hosts" -o IdentitiesOnly=yes -o BatchMode=yes)
+          scp "${ssh_opts[@]}" \
+            "${STAGING_SSH_USER}@${STAGING_SSH_HOST}:/tmp/kuma-new-password.secret" \
+            /tmp/kuma-recovered-password.secret
+          chmod 600 /tmp/kuma-recovered-password.secret
+          test -s /tmp/kuma-recovered-password.secret
+          gh secret set KUMA_PASSWORD --env monitoring --body-file /tmp/kuma-recovered-password.secret
+          rm -f /tmp/kuma-recovered-password.secret
+          password_stored=true
+          if scp "${ssh_opts[@]}" \
+            "${STAGING_SSH_USER}@${STAGING_SSH_HOST}:/tmp/kuma-rotate-metadata.env" \
+            /tmp/kuma-rotate-metadata.env 2>/dev/null; then
+            username="$(sed -n 's/^KUMA_USERNAME=//p' /tmp/kuma-rotate-metadata.env | head -n 1)"
+            if [ -n "${username:-}" ]; then
+              gh secret set KUMA_USERNAME --env monitoring --body "$username"
+            fi
+            rm -f /tmp/kuma-rotate-metadata.env
+          fi
 
       - name: Sync monitor inventory after credential rotation
         if: ${{ success() && inputs.sync_inventory && inputs.rotate_credentials }}
@@ -257,7 +393,7 @@ jobs:
             "$bundle_root/infra/scripts/sync-kuma-inventory.sh"
 
       - name: Sync monitor inventory to Kuma
-        if: ${{ success() && inputs.sync_inventory && !inputs.rotate_credentials }}
+        if: ${{ success() && inputs.sync_inventory && !inputs.rotate_credentials && !inputs.recover_store_only }}
         uses: appleboy/ssh-action@v1
         env:
           KUMA_USERNAME: ${{ secrets.KUMA_USERNAME }}
@@ -279,10 +415,31 @@ jobs:
             export MONITORING_SYNC_ROOT="$bundle_root/infra/monitoring"
             "$bundle_root/infra/scripts/sync-kuma-inventory.sh"
 
-      # Always scrub host rotation material after rotate_credentials, including
-      # sync_inventory=false and failed post-rotation sync paths.
+      - name: Decide rotation credential scrub
+        id: scrub_gate
+        if: ${{ always() && (inputs.rotate_credentials || inputs.recover_store_only) }}
+        env:
+          ROTATE_HOST_OUTCOME: ${{ steps.rotate_host.outcome }}
+          HOST_REACHABLE: ${{ steps.fetch_proof.outputs.host_reachable }}
+          PROOF_FETCHED: ${{ steps.fetch_proof.outputs.proof_fetched }}
+          STORE_PASSWORD_STORED: ${{ steps.store_password.outputs.password_stored }}
+          RECOVER_PASSWORD_STORED: ${{ steps.recover_store.outputs.password_stored }}
+          RECOVER_STORE_ONLY: ${{ inputs.recover_store_only }}
+        run: |
+          set -euo pipefail
+          password_stored=false
+          if [ "${STORE_PASSWORD_STORED:-}" = "true" ] || \
+             [ "${RECOVER_PASSWORD_STORED:-}" = "true" ]; then
+            password_stored=true
+          fi
+          export PASSWORD_STORED="$password_stored"
+          decision="$(bash infra/scripts/kuma-rotation-recovery-gate.sh scrub-decision)"
+          echo "decision=$decision" >> "$GITHUB_OUTPUT"
+
+      # Scrub host rotation material only after successful secret store, or when
+      # this attempt never applied a reset on the host (VOC-087-D04).
       - name: Remove host rotation credential material
-        if: ${{ always() && inputs.rotate_credentials }}
+        if: ${{ always() && (inputs.rotate_credentials || inputs.recover_store_only) && steps.scrub_gate.outputs.decision == 'SCRUB' }}
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.STAGING_SSH_HOST }}
@@ -295,10 +452,17 @@ jobs:
               /tmp/kuma-rotate-metadata.env
 
       - name: Remove runner rotation credential material
-        if: ${{ always() && inputs.rotate_credentials }}
+        if: ${{ always() && (inputs.rotate_credentials || inputs.recover_store_only) && steps.scrub_gate.outputs.decision == 'SCRUB' }}
         env:
           PASSWORD_FILE: ${{ steps.generate_password.outputs.password_file }}
         run: |
           set -euo pipefail
           rm -f "${PASSWORD_FILE:-}" "$GITHUB_WORKSPACE/kuma-new-password.secret" \
-            /tmp/kuma-reset-applied.env /tmp/kuma-rotate-metadata.env
+            /tmp/kuma-reset-applied.env /tmp/kuma-rotate-metadata.env \
+            /tmp/kuma-recovered-password.secret
+
+      - name: Fail closed when rotation credentials must be retained
+        if: ${{ always() && (inputs.rotate_credentials || inputs.recover_store_only) && steps.scrub_gate.outputs.decision == 'RETAIN' }}
+        run: |
+          echo "Host rotation may have reset Kuma but password was not stored; retaining credential material for recovery (no second reset-password.js)" >&2
+          exit 1
