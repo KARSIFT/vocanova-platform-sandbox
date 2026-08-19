@@ -7,11 +7,12 @@ import {
   isRepoManagedMonitor,
   parseManagedDescription,
 } from "./monitor-metadata.mjs";
+import { monitorUrlsEqual } from "./url-compare.mjs";
 
 function adoptionMatches(monitor, adoption) {
   return (
     String(monitor?.name ?? "") === String(adoption.match_name) &&
-    String(monitor?.url ?? "") === String(adoption.match_url)
+    monitorUrlsEqual(monitor?.url, adoption.match_url)
   );
 }
 
@@ -71,7 +72,7 @@ export function planSyncOperations({
       const urlCollision = unmanaged.find(
         ({ monitor }) =>
           !isRepoManagedMonitor(monitor, ownershipMarker) &&
-          String(monitor?.url ?? "") === String(entry.url),
+          monitorUrlsEqual(monitor?.url, entry.url),
       );
 
       if (urlCollision) {

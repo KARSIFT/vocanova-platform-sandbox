@@ -36,7 +36,7 @@ production Kuma, workflow bootstrap (`VOC-086-T02`), scheduled synthetics
 | Decision | Recorded choice |
 | --- | --- |
 | `VOC-086-DEP-01` synchronizer runtime | Node.js ESM under `infra/monitoring/kuma-sync/` + CLI `infra/monitoring/sync-kuma.mjs`; `socket.io-client` dependency |
-| Adoption match keys (existing production monitors) | Both `adoption.match_name` **and** `adoption.match_url` must match (`plan.mjs`); inventory values: `Production Web` / `https://production.vocanova.site/` and `Production API /healthz` / `https://api-production.vocanova.site/healthz` |
+| Adoption match keys (existing production monitors) | Both `adoption.match_name` **and** `adoption.match_url` must match (`plan.mjs`) using exact name equality and shared HTTP(S) trailing-slash URL comparison (`infra/monitoring/kuma-sync/url-compare.mjs`). **2026-08-19 live identity (VOC-087-D00):** `VocaNova Production Web` / `https://production.vocanova.site` and `VocaNova Production API` / `https://api-production.vocanova.site/healthz`. Supersedes the pre-VOC-087 inventory labels `Production Web` / `Production API /healthz`. |
 | Ownership marker | `vocanova:repo-managed` embedded in managed monitor description metadata |
 | Secret env names (`VOC-086-DEP-02`) | CLI reads `KUMA_URL` (default `http://127.0.0.1:3001`), `KUMA_USERNAME`, `KUMA_PASSWORD` — storage/bootstrap remains T02 |
 
