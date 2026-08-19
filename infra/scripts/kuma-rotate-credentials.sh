@@ -87,12 +87,17 @@ if [ -z "${username:-}" ]; then
   exit 1
 fi
 
-# Username only (never the password). Workflow downloads this file host→runner via
-# OpenSSH scp — appleboy/scp-action is upload-only in this repository.
+# Username and reset-attempt identity only (never the password). The workflow
+# downloads this file host→runner via OpenSSH scp — appleboy/scp-action is
+# upload-only in this repository. Binding the metadata to the reset proof keeps
+# a later store-only recovery from combining files from different attempts.
 echo "KUMA_USERNAME=${username}"
 if [ -n "${KUMA_ROTATE_METADATA_FILE:-}" ]; then
   umask 077
-  printf 'KUMA_USERNAME=%s\n' "$username" > "$KUMA_ROTATE_METADATA_FILE"
+  {
+    printf 'KUMA_ROTATION_ATTEMPT_ID=%s\n' "$RESET_ATTEMPT_ID"
+    printf 'KUMA_USERNAME=%s\n' "$username"
+  } > "$KUMA_ROTATE_METADATA_FILE"
 fi
 
 echo "Kuma admin password reset completed via ${RESET_SCRIPT_PATH} (existing sessions invalidated)."

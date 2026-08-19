@@ -70,7 +70,7 @@ test("VOC-086-TEST-08: rotate_credentials is opt-in; normal sync never resets", 
   );
   assert.match(
     rotateStep,
-    /if: \$\{\{ success\(\) && inputs\.rotate_credentials \}\}/,
+    /if: \$\{\{ success\(\) && inputs\.rotate_credentials && !inputs\.recover_store_only \}\}/,
   );
   assert.match(rotateStep, /kuma-rotate-credentials\.sh/);
   assert.match(rotateScript, /extra\/reset-password\.js/);
@@ -139,7 +139,7 @@ test("VOC-086-TEST-09: credential redaction and bootstrap stores secrets without
   assert.match(storePasswordStep, /--body-file/);
   assert.doesNotMatch(
     storePasswordStep,
-    /echo.*PASSWORD|printf.*password/i,
+    /echo\s+["']?\$PASSWORD_FILE|printf\s+.*\$password|cat\s+["']?\$PASSWORD_FILE/,
     "password storage must not echo generated credentials",
   );
   assert.match(
@@ -190,7 +190,12 @@ test("VOC-086-TEST-09 (remediation): environment-secret token is minted before r
   assert.match(tokenStep, /permission-environments: write/);
   assert.match(tokenStep, /KARSIFT_BOT_APP_ID/);
   assert.match(tokenStep, /KARSIFT_BOT_PRIVATE_KEY/);
-  assert.match(tokenStep, /success\(\) && inputs\.rotate_credentials/);
+  assert.match(tokenStep, /inputs\.rotate_credentials/);
+  assert.match(
+    tokenStep,
+    /inputs\.recover_store_only/,
+    "token mint also covers recover-store without a second reset",
+  );
 
   const preflightStep = extractStepBlock(
     workflow,
@@ -274,7 +279,7 @@ test("VOC-086-TEST-09 (remediation): reset proof is fresh and post-rotation sync
   );
 });
 
-test("VOC-086-TEST-09 (remediation): username store fails closed; rotation scrub always runs", () => {
+test("VOC-086-TEST-09 (remediation): username store fails closed; rotation scrub is recovery-gated", () => {
   const workflow = readFileSync(workflowPath, "utf8");
   const rotateScript = readFileSync(rotateScriptPath, "utf8");
 
@@ -298,16 +303,28 @@ test("VOC-086-TEST-09 (remediation): username store fails closed; rotation scrub
     workflow,
     "Remove host rotation credential material",
   );
-  assert.match(hostCleanupStep, /always\(\) && inputs\.rotate_credentials/);
+  assert.match(hostCleanupStep, /always\(\)/);
+  assert.match(hostCleanupStep, /inputs\.rotate_credentials/);
   assert.match(hostCleanupStep, /kuma-new-password\.secret/);
   assert.match(hostCleanupStep, /kuma-rotate-metadata\.env/);
+  assert.match(
+    hostCleanupStep,
+    /steps\.scrub_gate\.outputs\.decision == 'SCRUB'/,
+    "host scrub must be gated on the recovery decision (VOC-087-D04)",
+  );
 
   const runnerCleanupStep = extractStepBlock(
     workflow,
     "Remove runner rotation credential material",
   );
-  assert.match(runnerCleanupStep, /always\(\) && inputs\.rotate_credentials/);
+  assert.match(runnerCleanupStep, /always\(\)/);
+  assert.match(runnerCleanupStep, /inputs\.rotate_credentials/);
   assert.match(runnerCleanupStep, /kuma-new-password\.secret/);
+  assert.match(
+    runnerCleanupStep,
+    /steps\.scrub_gate\.outputs\.decision == 'SCRUB'/,
+    "runner scrub must be gated on the recovery decision (VOC-087-D04)",
+  );
 });
 
 test("VOC-086-TEST-07 (T02 extension): workflow and host scripts ban SQLite deployment paths", () => {

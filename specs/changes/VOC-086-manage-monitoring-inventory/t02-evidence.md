@@ -14,6 +14,7 @@ accountable_owner: unassigned
 gate_status: repository-complete-live-bootstrap-pending
 live_sync_claimed: false
 remediation_of: 29238096f3f605a8fde5bd65a6103d660059a0b2
+voc087_remediation: VOC-087-T02
 ---
 
 # VOC-086-T02 — Sync/deploy workflow and credential bootstrap
@@ -28,9 +29,36 @@ claim live credential bootstrap, inventory apply, or AC-05 closure (`VOC-086-T05
 
 | Finding | Fix |
 | --- | --- |
-| High — inverted `appleboy/scp-action` "download" | Replaced with OpenSSH `scp` host→runner fetch of `/tmp/kuma-rotate-metadata.env` (`Fetch Kuma username metadata from host`); `KUMA_PASSWORD` is stored from the runner-local file *before* that fetch so a transfer failure cannot strand a reset Kuma password outside GitHub secrets |
+| High — inverted `appleboy/scp-action` "download" | Replaced with OpenSSH `scp` host→runner fetch of reset-applied proof and `/tmp/kuma-rotate-metadata.env` |
 | Medium — username store soft-exit | Fail-closed `exit 1` when metadata missing; rotate script also fails if username cannot be extracted |
-| Medium — password material left on paths | Store step deletes workspace `kuma-new-password.secret`; `always()` host + runner scrub steps remove rotation files even when `sync_inventory=false` |
+| Medium — password material left on paths | Host + runner scrub steps remove rotation files when the recovery gate says SCRUB (store completed, or this attempt did not reset Kuma) |
+
+## VOC-087 rotation recovery boundary (`VOC-087-D04`, corrected by VOC-087-T02)
+
+Merged behavior is **proof-gated store**, not "store password before fetch":
+
+1. Host rotation runs once via `kuma-rotate-credentials.sh` → official
+   `reset-password.js` (stdin only). Proof is written after reset success and
+   before username extraction, so a later username failure still leaves
+   reset-applied proof on the host.
+2. Runner downloads reset-applied proof and username metadata via OpenSSH `scp`,
+   recording host reachability and whether the proof file was present.
+3. `KUMA_PASSWORD` is stored with `gh secret set --body-file` when the
+   reset-applied proof matches this attempt **or** host rotation succeeded but
+   proof transfer failed (recovery from the runner-local file).
+4. If reset may have been applied (`rotate_host` failed after proof write) and
+   proof transfer also failed, store and scrub **RETAIN**: the job fails closed,
+   does not store an unproven password over the existing secret, and does not
+   delete the last remaining copies. `recover_store_only` later stores the
+   host-retained file and never invokes `reset-password.js`.
+5. Scrub is gated on `password_stored=true`, or on proof that this attempt did
+   not reset Kuma (host reachable and proof file absent), or on rotate skipped.
+   A soft skip of store is not treated as store success.
+6. `reset-password.js` is never invoked a second time on a recovery retry.
+
+Both shell harnesses (`kuma-rotate-credentials.selftest.sh`,
+`sync-kuma-inventory.selftest.sh`) execute in CI via
+`scripts/foundation/voc087-sync-monitoring-workflow.test.mjs` (`pnpm test`).
 
 ## Decision records for this task
 
@@ -40,7 +68,7 @@ claim live credential bootstrap, inventory apply, or AC-05 closure (`VOC-086-T05
 | `rotate_credentials` input | `workflow_dispatch.inputs.rotate_credentials` (boolean, default `false`) |
 | Password reset path | Host `infra/scripts/kuma-rotate-credentials.sh` → `docker exec -i vocanova-uptime-kuma node /app/extra/reset-password.js` with stdin (no argv password) |
 | Secret storage | `gh secret set KUMA_PASSWORD --env monitoring --body-file` (never echoed); username preserved via host metadata file, OpenSSH scp download to runner, then `gh secret set KUMA_USERNAME` |
-| Host→runner transfer | OpenSSH `scp` only for metadata download; `appleboy/scp-action` remains upload-only (bundle + password file) |
+| Host→runner transfer | OpenSSH `scp` only for proof/metadata download; `appleboy/scp-action` remains upload-only (bundle + password file) |
 | Inventory apply path | Host `infra/scripts/sync-kuma-inventory.sh` → disposable `node:24-bookworm-slim` on `vocanova-monitoring-net` running `sync-kuma.mjs` |
 | Session invalidation | Documented in workflow header and rotation script output (one-time per rotation) |
 
@@ -52,7 +80,7 @@ claim live credential bootstrap, inventory apply, or AC-05 closure (`VOC-086-T05
 | Credential rotation script | `infra/scripts/kuma-rotate-credentials.sh` |
 | Inventory sync script | `infra/scripts/sync-kuma-inventory.sh` |
 | Disposable harnesses | `infra/scripts/kuma-rotate-credentials.selftest.sh`, `infra/scripts/sync-kuma-inventory.selftest.sh` |
-| Deterministic tests | `scripts/foundation/voc086-sync-monitoring-workflow.test.mjs` |
+| Deterministic tests | `scripts/foundation/voc086-sync-monitoring-workflow.test.mjs`, `scripts/foundation/voc087-sync-monitoring-workflow.test.mjs` |
 | This evidence | `specs/changes/VOC-086-manage-monitoring-inventory/t02-evidence.md` |
 
 ## Operator prerequisites (not in git)
@@ -62,6 +90,9 @@ claim live credential bootstrap, inventory apply, or AC-05 closure (`VOC-086-T05
 3. First run: `workflow_dispatch` with `rotate_credentials=true` and
    `sync_inventory=true` to bootstrap secrets and apply inventory.
 4. Subsequent runs: `sync_inventory=true` only (`rotate_credentials` stays false).
+5. If a rotate attempt reset Kuma but did not store the secret, dispatch
+   `recover_store_only=true` (never combined with `rotate_credentials`) to store
+   the host-retained password without a second reset.
 
 ## Validation commands (deterministic)
 
@@ -69,10 +100,12 @@ claim live credential bootstrap, inventory apply, or AC-05 closure (`VOC-086-T05
 bash infra/scripts/kuma-rotate-credentials.selftest.sh
 bash infra/scripts/sync-kuma-inventory.selftest.sh
 node --test scripts/foundation/voc086-sync-monitoring-workflow.test.mjs
+node --test scripts/foundation/voc087-sync-monitoring-workflow.test.mjs
 node --test scripts/foundation/voc086-kuma-sync.test.mjs
 ```
 
 ## Live bootstrap / sync
 
-Pending operator dispatch of `.github/workflows/sync-monitoring.yml` after merge.
-No live Kuma mutation is claimed in this evidence revision.
+Pending operator dispatch of `.github/workflows/sync-monitoring.yml` after merge
+and deploy of VOC-087. No live Kuma mutation is claimed in this evidence revision.
+First live inventory apply remains deferred (`VOC-086-T05` / `VOC-087-D03`).
