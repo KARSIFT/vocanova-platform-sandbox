@@ -164,7 +164,10 @@ test("VOC-088-TEST-11: standalone App observer covers exact failure surface", ()
   assert.doesNotMatch(workflow, /secrets\.GITHUB_TOKEN/);
   assert.match(workflow, /head_repository\.full_name == github\.repository/);
   assert.match(workflow, /classify-deploy-concurrency-cancel\.sh/);
-  assert.match(workflow, /steps\.classify-cancel\.outputs\.skip_issue != 'true'/);
+  assert.match(
+    workflow,
+    /steps\.classify-cancel\.outputs\.skip_issue != 'true'/,
+  );
 
   const observedSources = [
     ".github/workflows/scheduled-synthetics.yml",

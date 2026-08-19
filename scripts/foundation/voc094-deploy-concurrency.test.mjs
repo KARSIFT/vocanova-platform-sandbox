@@ -34,9 +34,7 @@ const openIssueHelperPath = path.join(
 );
 
 function readConcurrencyBlock(workflowText) {
-  const match = workflowText.match(
-    /^concurrency:\n((?:  .+\n)+)/m,
-  );
+  const match = workflowText.match(/^concurrency:\n((?:  .+\n)+)/m);
   assert.ok(match, "expected a concurrency block");
   return match[1];
 }
@@ -217,7 +215,10 @@ test("VOC-094-TEST-04: classifier remains fail-closed for real failures and ambi
     runClassifier({ conclusion: "cancelled", jobsTotalCount: 1 }).status,
     1,
   );
-  assert.equal(runClassifier({ conclusion: "cancelled", apiFails: true }).status, 1);
+  assert.equal(
+    runClassifier({ conclusion: "cancelled", apiFails: true }).status,
+    1,
+  );
   assert.equal(
     runClassifier({ conclusion: "cancelled", missingTotalCount: true }).status,
     1,
@@ -239,12 +240,20 @@ test("VOC-094-TEST-05: observer workflow wires classifier before open-failure-is
   const classifierIndex = workflow.indexOf(
     "infra/scripts/classify-deploy-concurrency-cancel.sh",
   );
-  const openIssueIndex = workflow.indexOf("infra/scripts/open-failure-issue.sh");
+  const openIssueIndex = workflow.indexOf(
+    "infra/scripts/open-failure-issue.sh",
+  );
   assert.notEqual(classifierIndex, -1);
   assert.notEqual(openIssueIndex, -1);
   assert.ok(classifierIndex < openIssueIndex);
-  assert.match(workflow, /steps\.classify-cancel\.outputs\.skip_issue != 'true'/);
-  assert.match(workflow, /FAILURE_RUN_ID: \$\{\{ github\.event\.workflow_run\.id \}\}/);
+  assert.match(
+    workflow,
+    /steps\.classify-cancel\.outputs\.skip_issue != 'true'/,
+  );
+  assert.match(
+    workflow,
+    /FAILURE_RUN_ID: \$\{\{ github\.event\.workflow_run\.id \}\}/,
+  );
   assert.match(workflow, /actions\/create-github-app-token@v3/);
   assert.doesNotMatch(workflow, /gh\s+run\s+view/i);
 
