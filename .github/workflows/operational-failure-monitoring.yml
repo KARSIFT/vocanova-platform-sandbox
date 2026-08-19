@@ -53,6 +53,8 @@ jobs:
             exit 1
           fi
 
+      # Issue write for open/dedupe; Actions read for bounded jobs metadata in
+      # classify-deploy-concurrency-cancel.sh (VOC-094-T00).
       - name: Mint issue-writer installation token
         id: app-token
         uses: actions/create-github-app-token@v3
@@ -60,8 +62,27 @@ jobs:
           app-id: ${{ secrets.KARSIFT_BOT_APP_ID }}
           private-key: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
           permission-issues: write
+          permission-actions: read
+
+      - name: Classify benign deploy concurrency supersession
+        id: classify-cancel
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+          FAILURE_WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          FAILURE_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          FAILURE_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          if infra/scripts/classify-deploy-concurrency-cancel.sh; then
+            echo "skip_issue=true" >> "$GITHUB_OUTPUT"
+            echo "Benign concurrency-superseded deploy cancellation; skipping issue creation"
+          else
+            echo "skip_issue=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Open or deduplicate sanitized operational issue
+        if: steps.classify-cancel.outputs.skip_issue != 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           GH_REPOSITORY: ${{ github.repository }}

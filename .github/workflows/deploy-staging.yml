@@ -296,18 +296,21 @@ permissions:
   contents: read
   packages: write
 
-# One deploy at a time. The default `cancel-in-progress: true`
+# One in-flight deploy at a time. `cancel-in-progress: true`
 # was considered and rejected: cancelling a deploy that has
 # already run `docker compose pull` (new images are local)
 # but not yet run `docker compose up -d` (old containers
 # still serving) would leave the new images pulled but not
-# running, requiring manual cleanup. Serializing is the
-# correct default for a 1-server, 1-staging-tier deploy
-# — a queued second deploy waits for the first to finish
-# and then runs cleanly.
+# running, requiring manual cleanup. `cancel-in-progress:
+# false` serializes in-progress work. `queue: max`
+# (VOC-094-T00) queues superseded *pending* runs instead
+# of cancelling them — GitHub's default single-pending-slot
+# behavior produced spurious `cancelled` conclusions with
+# zero jobs started (issue #781 / run 32290409156).
 concurrency:
   group: staging-deploy
   cancel-in-progress: false
+  queue: max
 
 jobs:
   deploy:
