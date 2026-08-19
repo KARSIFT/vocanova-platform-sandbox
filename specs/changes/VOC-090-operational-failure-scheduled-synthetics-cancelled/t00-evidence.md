@@ -41,8 +41,9 @@ exceeded (`VOC-090-D03` follow-up is not triggered).
 
 1. **Playwright browser caching** — `actions/cache` on `~/.cache/ms-playwright`
    keyed by `pnpm-lock.yaml`, restored before `playwright install`.
-2. **pnpm dependency caching** — `actions/setup-node` `cache: "pnpm"` before
-   `pnpm install --frozen-lockfile`.
+2. **pnpm dependency caching** — corepack activates pnpm first, then a second
+   `actions/setup-node` step with `cache: "pnpm"` (setup-node resolves the pnpm
+   store only when pnpm is on PATH), then `pnpm install --frozen-lockfile`.
 3. **Timeout alignment** — job `timeout-minutes` raised from 30 to **40**
    (parity with `deploy-staging.yml`'s proven post-deploy core-loop gate) and
    registry `synthetic.staging.authenticated-core-journey.timeout_seconds`

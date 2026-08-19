@@ -72,16 +72,26 @@ test("VOC-090-TEST-01: staging core-journey job declares pnpm caching", () => {
   assert.ok(jobBlock, "workflow must define staging core-journey job");
 
   const installIndex = jobBlock.indexOf("pnpm install --frozen-lockfile");
+  const pnpmActivateIndex = jobBlock.indexOf("corepack prepare pnpm@");
+  const pnpmCacheIndex = jobBlock.search(/cache:\s*["']pnpm["']/);
+
   assert.ok(installIndex >= 0, "job must run pnpm install --frozen-lockfile");
+  assert.ok(
+    pnpmActivateIndex >= 0,
+    "job must activate pnpm via corepack before setup-node cache: pnpm",
+  );
   assert.match(
     jobBlock,
     /cache:\s*["']pnpm["']/,
     "setup-node must enable pnpm caching before install",
   );
   assert.ok(
-    jobBlock.indexOf('cache: "pnpm"') < installIndex ||
-      jobBlock.indexOf("cache: 'pnpm'") < installIndex,
+    pnpmCacheIndex >= 0 && pnpmCacheIndex < installIndex,
     "pnpm cache must be configured before pnpm install",
+  );
+  assert.ok(
+    pnpmActivateIndex < pnpmCacheIndex,
+    "corepack pnpm activation must precede setup-node cache: pnpm",
   );
 });
 

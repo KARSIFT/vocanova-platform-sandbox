@@ -183,14 +183,21 @@ jobs:
       # actions/setup-node pnpm cache + explicit Playwright browser cache
       # (VOC-090-T00). Run 32271016931 spent ~30m on uncached browser
       # setup before the job wall clock cancelled; pnpm install was ~7s.
+      # setup-node cache: pnpm requires pnpm on PATH first (corepack), then a
+      # second setup-node invocation restores/saves the pnpm store.
       - name: Set up Node for the staging core-loop synthetic
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version-file: ".nvmrc"
-          cache: "pnpm"
 
       - name: Install pnpm for the staging core-loop synthetic
         run: corepack enable && corepack prepare pnpm@11.14.0 --activate
+
+      - name: Restore pnpm dependency cache for the staging core-loop synthetic
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
 
       # actions/cache v4.2.2, pinned to the immutable commit documented at
       # https://github.com/actions/cache/releases/tag/v4.2.2

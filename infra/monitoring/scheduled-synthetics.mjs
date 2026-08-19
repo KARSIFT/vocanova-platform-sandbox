@@ -119,6 +119,24 @@ export function validateStagingCoreJourneyBudget({
     );
   }
 
+  const pnpmActivateIndex = jobBlock.indexOf("corepack prepare pnpm@");
+  const pnpmCacheIndex = jobBlock.search(/cache:\s*["']pnpm["']/);
+  const pnpmInstallIndex = jobBlock.indexOf("pnpm install --frozen-lockfile");
+  if (pnpmCacheIndex >= 0 && pnpmActivateIndex >= 0 && pnpmCacheIndex < pnpmActivateIndex) {
+    errors.push(
+      `${STAGING_CORE_JOURNEY_CHECK_REF} must activate pnpm via corepack before setup-node cache: pnpm`,
+    );
+  }
+  if (
+    pnpmInstallIndex >= 0 &&
+    pnpmCacheIndex >= 0 &&
+    pnpmCacheIndex > pnpmInstallIndex
+  ) {
+    errors.push(
+      `${STAGING_CORE_JOURNEY_CHECK_REF} must configure setup-node cache: pnpm before pnpm install`,
+    );
+  }
+
   if (!jobBlock.includes("actions/cache@")) {
     errors.push(
       `${STAGING_CORE_JOURNEY_CHECK_REF} must restore Playwright browser cache via actions/cache`,
