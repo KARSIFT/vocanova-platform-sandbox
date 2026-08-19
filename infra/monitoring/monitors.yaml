@@ -40,11 +40,11 @@ availability_monitors:
       - "feature:staging-api-health"
 
   - id: kuma.availability.production.web
-    name: Production Web
+    name: VocaNova Production Web
     environment: production
     owner: vocanova-platform
     type: http
-    url: https://production.vocanova.site/
+    url: https://production.vocanova.site
     expected_status: 200
     expected_body: null
     interval_seconds: 60
@@ -52,14 +52,14 @@ availability_monitors:
     retries: 2
     severity: critical
     adoption:
-      match_name: Production Web
-      match_url: https://production.vocanova.site/
+      match_name: VocaNova Production Web
+      match_url: https://production.vocanova.site
     coverage:
       - "page:production.vocanova.site/"
       - "feature:production-web-availability"
 
   - id: kuma.availability.production.api-healthz
-    name: Production API /healthz
+    name: VocaNova Production API
     environment: production
     owner: vocanova-platform
     type: http
@@ -71,7 +71,7 @@ availability_monitors:
     retries: 2
     severity: critical
     adoption:
-      match_name: Production API /healthz
+      match_name: VocaNova Production API
       match_url: https://api-production.vocanova.site/healthz
     coverage:
       - "api:GET /healthz"
