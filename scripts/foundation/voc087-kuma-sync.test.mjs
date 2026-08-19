@@ -299,7 +299,7 @@ test("VOC-087-TEST-04: second sync is a no-op after production adoption", async 
 test("VOC-087-TEST-04 (notification): second sync is a no-op with preserved bindings", async () => {
   const { monitorsDocument, syntheticsDocument } = loadInventoryDocuments();
   const { api } = productionEntries(monitorsDocument);
-  const syntheticBindings = { "42": true, "99": true };
+  const syntheticBindings = { 42: true, 99: true };
 
   const initial = {
     1: httpMonitorFixture({
@@ -313,7 +313,7 @@ test("VOC-087-TEST-04 (notification): second sync is a no-op with preserved bind
       name: LIVE_PRODUCTION_API.name,
       url: LIVE_PRODUCTION_API.url,
       keyword: api.expected_body,
-      notificationIDList: { "7": true },
+      notificationIDList: { 7: true },
     }),
   };
 
@@ -335,7 +335,7 @@ test("VOC-087-TEST-04 (notification): second sync is a no-op with preserved bind
   }
 
   assert.deepEqual(client.monitors[1].notificationIDList, syntheticBindings);
-  assert.deepEqual(client.monitors[2].notificationIDList, { "7": true });
+  assert.deepEqual(client.monitors[2].notificationIDList, { 7: true });
 
   const second = await syncKumaMonitors({
     monitorsDocument,
@@ -350,8 +350,8 @@ test("VOC-087-TEST-04 (notification): second sync is a no-op with preserved bind
 test("VOC-087-TEST-06: adopt/update edit payloads retain remote notification bindings", async () => {
   const { monitorsDocument, syntheticsDocument } = loadInventoryDocuments();
   const { api } = productionEntries(monitorsDocument);
-  const webBindings = { "11": true };
-  const apiBindings = { "22": true };
+  const webBindings = { 11: true };
+  const apiBindings = { 22: true };
 
   const initial = {
     1: httpMonitorFixture({
@@ -435,22 +435,29 @@ test("VOC-087-TEST-08: explicit inventory notification ownership is honored", ()
   const { web } = productionEntries(monitorsDocument);
   const fixtureEntry = {
     ...web,
-    notification_id_list: { "5": true },
+    notification_id_list: { 5: true },
   };
   const remoteMonitor = httpMonitorFixture({
     id: 1,
     name: web.name,
     url: web.url,
-    notificationIDList: { "9": true },
+    notificationIDList: { 9: true },
   });
 
-  const desired = inventoryEntryToDesiredMonitor(fixtureEntry, ownershipMarker, {
-    remoteMonitor,
-  });
+  const desired = inventoryEntryToDesiredMonitor(
+    fixtureEntry,
+    ownershipMarker,
+    {
+      remoteMonitor,
+    },
+  );
 
   assert.ok(inventoryOwnsNotificationBindings(fixtureEntry));
-  assert.deepEqual(desired.notificationIDList, { "5": true });
-  assert.notDeepEqual(desired.notificationIDList, remoteMonitor.notificationIDList);
+  assert.deepEqual(desired.notificationIDList, { 5: true });
+  assert.notDeepEqual(
+    desired.notificationIDList,
+    remoteMonitor.notificationIDList,
+  );
 
   const { operations } = planSyncOperations({
     inventoryMonitors: [fixtureEntry],
@@ -460,7 +467,7 @@ test("VOC-087-TEST-08: explicit inventory notification ownership is honored", ()
 
   assert.equal(operations.length, 1);
   assert.equal(operations[0].type, "update");
-  assert.deepEqual(operations[0].desired.notificationIDList, { "5": true });
+  assert.deepEqual(operations[0].desired.notificationIDList, { 5: true });
 });
 
 test("VOC-087-TEST-11: sync tooling does not reference SQLite deployment paths", () => {
