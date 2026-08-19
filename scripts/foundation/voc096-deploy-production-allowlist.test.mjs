@@ -48,10 +48,7 @@ test("VOC-096-TEST-00/01: every deploy uses the persistent production secret", (
     workflow,
     /echo "NEW_USER_SIGNUP_ALLOWLIST=\$\{PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST\}"/,
   );
-  assert.match(
-    workflow,
-    /Validate production controlled-signup allowlist/,
-  );
+  assert.match(workflow, /Validate production controlled-signup allowlist/);
   assert.match(
     workflow,
     /bash infra\/scripts\/validate-production-signup-allowlist\.sh/,
