@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -457,7 +458,7 @@ func TestHealthzHandler_ReportsKillSwitchState(t *testing.T) {
 		OAuthEnabled:      false,
 		NewSignupsEnabled: false,
 		AIEnabled:         true,
-	})
+	}, false)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
@@ -476,6 +477,78 @@ func TestHealthzHandler_ReportsKillSwitchState(t *testing.T) {
 	}, body.KillSwitches)
 }
 
+func TestControlledSignupReady(t *testing.T) {
+	synthetic := "smoke@synthetic.vocanova.invalid"
+	allowlist := map[string]struct{}{
+		"member@synthetic.vocanova.invalid": {},
+	}
+
+	assert.True(t, ControlledSignupReady(true, false, allowlist, synthetic))
+	assert.False(t, ControlledSignupReady(true, false, nil, synthetic))
+	assert.False(t, ControlledSignupReady(true, false, map[string]struct{}{}, synthetic))
+	assert.False(t, ControlledSignupReady(true, false, map[string]struct{}{synthetic: {}}, synthetic))
+	assert.False(t, ControlledSignupReady(false, false, allowlist, synthetic))
+	assert.False(t, ControlledSignupReady(true, true, allowlist, synthetic))
+}
+
+// TestHealthzHandler_ReportsControlledSignupReady covers VOC-088-T01:
+// /healthz exposes controlled_signup_ready as a boolean only.
+func TestHealthzHandler_ReportsControlledSignupReady(t *testing.T) {
+	db := &fakeHealthchecker{err: nil}
+	cfg := huma.DefaultConfig("Vocanova API", "0.1.0")
+	mux := chi.NewMux()
+	api := humachi.New(mux, cfg)
+	RegisterHealthz(api, db, KillSwitchStatus{
+		MagicLinkEnabled:  false,
+		OAuthEnabled:      true,
+		NewSignupsEnabled: false,
+		AIEnabled:         true,
+	}, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	api.Adapter().ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	bodyBytes, err := io.ReadAll(w.Body)
+	require.NoError(t, err)
+
+	var body struct {
+		ControlledSignupReady bool `json:"controlled_signup_ready"`
+		KillSwitches          KillSwitchStatus `json:"kill_switches"`
+	}
+	require.NoError(t, json.Unmarshal(bodyBytes, &body))
+	assert.True(t, body.ControlledSignupReady)
+	assert.True(t, body.KillSwitches.OAuthEnabled)
+	assert.False(t, body.KillSwitches.NewSignupsEnabled)
+	assert.NotContains(t, string(bodyBytes), "member@synthetic.vocanova.invalid")
+	assert.NotContains(t, string(bodyBytes), "allowlist")
+}
+
+func TestHealthzHandler_ControlledSignupReadyFalseWhenCohortEmpty(t *testing.T) {
+	db := &fakeHealthchecker{err: nil}
+	cfg := huma.DefaultConfig("Vocanova API", "0.1.0")
+	mux := chi.NewMux()
+	api := humachi.New(mux, cfg)
+	RegisterHealthz(api, db, KillSwitchStatus{
+		MagicLinkEnabled:  false,
+		OAuthEnabled:      true,
+		NewSignupsEnabled: false,
+		AIEnabled:         true,
+	}, false)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	api.Adapter().ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var body struct {
+		ControlledSignupReady bool `json:"controlled_signup_ready"`
+	}
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&body))
+	assert.False(t, body.ControlledSignupReady)
+}
+
 // newHealthzOnlyAPI builds a real huma.API that only has the
 // /healthz route registered against db, so the runtime
 // assertions above can probe the handler in isolation without
@@ -485,7 +558,7 @@ func newHealthzOnlyAPI(t *testing.T, db Healthchecker) huma.API {
 	cfg := huma.DefaultConfig("Vocanova API", "0.1.0")
 	mux := chi.NewMux()
 	api := humachi.New(mux, cfg)
-	RegisterHealthz(api, db, KillSwitchStatus{})
+	RegisterHealthz(api, db, KillSwitchStatus{}, false)
 	return api
 }
 

@@ -24,12 +24,43 @@ import sys
 from urllib.parse import quote
 
 scenario = os.environ.get("FAKE_SCENARIO", "disabled")
+healthz_ready = os.environ.get("FAKE_HEALTHZ_READY", "")
 canonical = "${canonical_callback}"
 web_redirect = "${web_redirect}"
+
+def healthz_controlled_signup_ready():
+    if healthz_ready == "true":
+        return True
+    if healthz_ready == "false":
+        return False
+    return scenario == "enabled"
 
 class Handler(http.server.BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
+
+    def do_GET(self):
+        if self.path != "/healthz":
+            self.send_response(404)
+            self.end_headers()
+            return
+
+        body = json.dumps(
+            {
+                "status": "ok",
+                "database": "ok",
+                "controlled_signup_ready": healthz_controlled_signup_ready(),
+                "kill_switches": {
+                    "oauth_enabled": scenario == "enabled",
+                    "new_signups_enabled": False,
+                },
+            }
+        ).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def do_POST(self):
         if self.path != "/api/v1/auth/oauth/google/start":
@@ -88,14 +119,16 @@ http.server.HTTPServer(("127.0.0.1", int(sys.argv[1])), Handler).serve_forever()
 PYEOF
 
 start_server() {
-  FAKE_SCENARIO="$1" python3 "$fake_server" "$port" &
+  FAKE_SCENARIO="$1" FAKE_HEALTHZ_READY="${2:-}" python3 "$fake_server" "$port" &
   server_pid=$!
   for _ in $(seq 1 50); do
     status="$(curl -sS --max-time 1 -o /dev/null -w "%{http_code}" \
       -X POST -H "Content-Type: application/json" \
       -d "{\"redirectUri\":\"$web_redirect\"}" \
       "$api_base/api/v1/auth/oauth/google/start" 2>/dev/null || true)"
-    if [ "$status" = "200" ] || [ "$status" = "503" ]; then
+    healthz_status="$(curl -sS --max-time 1 -o /dev/null -w "%{http_code}" \
+      "$api_base/healthz" 2>/dev/null || true)"
+    if { [ "$status" = "200" ] || [ "$status" = "503" ]; } && [ "$healthz_status" = "200" ]; then
       return 0
     fi
     sleep 0.1
@@ -164,6 +197,20 @@ stop_server
 echo "== case 5: lookalike Google hostname must fail =="
 start_server lookalike_host
 check "Google lookalike hostname fails the enabled check" fail \
+  env EXPECT_OAUTH_ENABLED=true STAGING_API_HOST=127.0.0.1 \
+  bash "$verify_script" "$api_base" "$web_redirect"
+stop_server
+
+echo "== case 6: enabled OAuth with controlled_signup_ready=false must fail =="
+start_server enabled false
+check "controlled_signup_ready=false fails the enabled readiness check" fail \
+  env EXPECT_OAUTH_ENABLED=true STAGING_API_HOST=127.0.0.1 \
+  bash "$verify_script" "$api_base" "$web_redirect"
+stop_server
+
+echo "== case 7: enabled OAuth with controlled_signup_ready=true must pass =="
+start_server enabled true
+check "controlled_signup_ready=true passes the enabled readiness check" pass \
   env EXPECT_OAUTH_ENABLED=true STAGING_API_HOST=127.0.0.1 \
   bash "$verify_script" "$api_base" "$web_redirect"
 stop_server

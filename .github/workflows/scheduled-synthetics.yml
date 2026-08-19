@@ -52,6 +52,7 @@ jobs:
       - name: Run staging OAuth expected-state check
         env:
           EXPECT_OAUTH_ENABLED: "true"
+          # verify-staging-oauth-start.sh also asserts /healthz.controlled_signup_ready (VOC-088-T01)
         run: |
           set -euo pipefail
           chmod +x infra/scripts/run-scheduled-synthetic.sh

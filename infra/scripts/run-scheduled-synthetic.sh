@@ -9,7 +9,8 @@ set -euo pipefail
 #
 # Environment (per check_ref):
 #   staging-oauth-expected-state:
-#     EXPECT_OAUTH_ENABLED (optional)
+#     EXPECT_OAUTH_ENABLED (optional; when true, harness also asserts
+#     /healthz.controlled_signup_ready per VOC-088-T01)
 #   production-oauth-expected-state:
 #     EXPECT_OAUTH_ENABLED (optional)
 #   production-journey-content:
