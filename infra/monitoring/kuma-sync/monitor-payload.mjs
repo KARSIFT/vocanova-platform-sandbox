@@ -147,7 +147,8 @@ export function monitorsMatch(actual, desired) {
       JSON.stringify(desired.accepted_statuscodes.map(String)) &&
     JSON.stringify(normalizeNotificationIDList(actual?.notificationIDList)) ===
       JSON.stringify(normalizeNotificationIDList(desired.notificationIDList)) &&
-    String(actual?.description ?? "") === String(desired.description ?? "")
+    String(actual?.description ?? "") === String(desired.description ?? "") &&
+    Boolean(actual?.active) === Boolean(desired.active)
   );
 }
 

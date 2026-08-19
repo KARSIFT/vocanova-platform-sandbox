@@ -152,6 +152,80 @@ test("VOC-086-T05 harness: proveKumaInventory passes when live monitors match in
   assert.ok(proof.results.every((result) => result.status === "pass"));
 });
 
+test("VOC-086-T05 harness: proof preserves live notification bindings", () => {
+  const monitorsDocument = parseMonitoringYaml(
+    readFileSync(monitorsPath, "utf8"),
+  );
+  const remoteMonitors = {};
+
+  for (const [
+    index,
+    entry,
+  ] of monitorsDocument.availability_monitors.entries()) {
+    const desired = inventoryEntryToDesiredMonitor(entry, OWNERSHIP_MARKER);
+    remoteMonitors[String(index + 1)] = {
+      id: index + 1,
+      ...desired,
+      notificationIDList: { 7: true },
+    };
+  }
+
+  const proof = proveKumaInventory({
+    monitorsDocument,
+    remoteMonitors,
+    ownershipMarker: OWNERSHIP_MARKER,
+  });
+
+  assert.equal(proof.failures, 0);
+});
+
+test("VOC-086-T05 harness: duplicate live managed IDs fail closed", () => {
+  const monitorsDocument = parseMonitoringYaml(
+    readFileSync(monitorsPath, "utf8"),
+  );
+  const entry = monitorsDocument.availability_monitors[0];
+  const desired = inventoryEntryToDesiredMonitor(entry, OWNERSHIP_MARKER);
+
+  assert.throws(
+    () =>
+      proveKumaInventory({
+        monitorsDocument,
+        remoteMonitors: {
+          1: { id: 1, ...desired },
+          2: { id: 2, ...desired },
+        },
+        ownershipMarker: OWNERSHIP_MARKER,
+      }),
+    /duplicate live repository-managed monitor id/,
+  );
+});
+
+test("VOC-086-T05 harness: inactive canonical monitor fails proof", () => {
+  const monitorsDocument = parseMonitoringYaml(
+    readFileSync(monitorsPath, "utf8"),
+  );
+  const remoteMonitors = {};
+
+  for (const [
+    index,
+    entry,
+  ] of monitorsDocument.availability_monitors.entries()) {
+    const desired = inventoryEntryToDesiredMonitor(entry, OWNERSHIP_MARKER);
+    remoteMonitors[String(index + 1)] = { id: index + 1, ...desired };
+  }
+  remoteMonitors["1"].active = false;
+
+  const proof = proveKumaInventory({
+    monitorsDocument,
+    remoteMonitors,
+    ownershipMarker: OWNERSHIP_MARKER,
+  });
+
+  assert.equal(proof.failures, 1);
+  assert.equal(proof.results[0].status, "fail");
+  assert.equal(proof.results[0].metadata.active, false);
+});
+
 test("VOC-086-T05 harness: proveKumaInventory fails when a canonical monitor is missing", () => {
   const monitorsDocument = parseMonitoringYaml(
     readFileSync(monitorsPath, "utf8"),

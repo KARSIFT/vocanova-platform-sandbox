@@ -25,6 +25,11 @@ function indexRemoteMonitors(remoteMonitors, ownershipMarker) {
     const parsed = parseManagedDescription(monitor?.description);
 
     if (isRepoManagedMonitor(monitor, ownershipMarker) && parsed?.monitorId) {
+      if (managedByRepoId.has(parsed.monitorId)) {
+        throw new Error(
+          `duplicate live repository-managed monitor id: ${parsed.monitorId}`,
+        );
+      }
       managedByRepoId.set(parsed.monitorId, { kumaId, monitor });
       continue;
     }
@@ -100,9 +105,6 @@ export function proveKumaInventory({
       continue;
     }
 
-    const desired = inventoryEntryToDesiredMonitor(entry, ownershipMarker, {
-      remoteMonitor: null,
-    });
     const located = findInventoryMonitor(
       entry,
       { managedByRepoId, unmanaged },
@@ -120,6 +122,13 @@ export function proveKumaInventory({
       failures += 1;
       continue;
     }
+
+    // Preserve-by-default fields (currently notificationIDList) are resolved
+    // against the located live monitor. Building desired before lookup would
+    // falsely report drift for a correctly preserved notification binding.
+    const desired = inventoryEntryToDesiredMonitor(entry, ownershipMarker, {
+      remoteMonitor: located.monitor,
+    });
 
     const managed = isRepoManagedMonitor(located.monitor, ownershipMarker);
     if (!monitorsMatch(located.monitor, desired)) {
