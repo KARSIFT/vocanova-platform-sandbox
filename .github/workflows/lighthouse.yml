@@ -104,17 +104,21 @@ jobs:
           NEXT_PUBLIC_API_BASE_URL: "http://127.0.0.1:8080"
         run: pnpm --filter @vocanova/web build
 
+      # actions/cache v4.2.2, pinned to the immutable commit documented at
+      # https://github.com/actions/cache/releases/tag/v4.2.2
+      - name: Restore Playwright Chromium browser cache
+        uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            playwright-chromium-${{ runner.os }}-
+
       - name: Install Playwright Chromium
-        # `--with-deps` installs the system libraries
-        # Chromium needs on ubuntu-latest. The lighthouse
-        # runner reuses this binary (it shells out to
-        # `chrome-launcher`, which finds the Chromium
-        # Playwright installed at the default cache path).
-        # A separate `playwright install` would double the
-        # download cost; the runner's `LIGHTHOUSE_CHROME_PATH`
-        # env explicitly points at the Playwright cache
-        # below to make the reuse explicit.
-        run: pnpm --filter @vocanova/web exec playwright install --with-deps chromium
+        # VOC-095: bounded install contract (browser cache + retry-limited
+        # deps install). Lighthouse reuses the Playwright Chromium binary via
+        # LIGHTHOUSE_CHROME_PATH shell expansion in the Run Lighthouse suite step.
+        run: bash infra/scripts/install-playwright-chromium.sh
 
       - name: Start mock API server
         # The T07a / T07b / T08 harness's mock API server.

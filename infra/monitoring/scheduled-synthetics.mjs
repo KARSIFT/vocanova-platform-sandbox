@@ -149,13 +149,16 @@ export function validateStagingCoreJourneyBudget({
     );
   }
 
-  const installIndex = jobBlock.indexOf(
-    "run: pnpm --filter @vocanova/web exec playwright install --with-deps chromium",
-  );
+  const installIndex = jobBlock.indexOf("install-playwright-chromium.sh");
+  if (installIndex < 0) {
+    errors.push(
+      `${STAGING_CORE_JOURNEY_CHECK_REF} must invoke infra/scripts/install-playwright-chromium.sh`,
+    );
+  }
   const cacheIndex = jobBlock.indexOf("actions/cache@");
   if (installIndex >= 0 && cacheIndex >= 0 && cacheIndex > installIndex) {
     errors.push(
-      `${STAGING_CORE_JOURNEY_CHECK_REF} must restore Playwright browser cache before playwright install`,
+      `${STAGING_CORE_JOURNEY_CHECK_REF} must restore Playwright browser cache before install-playwright-chromium.sh`,
     );
   }
 

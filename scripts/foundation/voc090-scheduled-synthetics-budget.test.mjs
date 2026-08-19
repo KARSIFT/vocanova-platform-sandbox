@@ -97,16 +97,14 @@ test("VOC-090-TEST-01: staging core-journey job declares pnpm caching", () => {
 
 test("VOC-090-TEST-02: staging core-journey job declares Playwright browser caching", () => {
   const jobBlock = loadStagingCoreJourneyJobBlock();
-  const installIndex = jobBlock.indexOf(
-    "run: pnpm --filter @vocanova/web exec playwright install --with-deps chromium",
-  );
+  const installIndex = jobBlock.indexOf("install-playwright-chromium.sh");
 
   assert.ok(installIndex >= 0, "job must install Playwright Chromium");
   assert.match(jobBlock, /actions\/cache@/);
   assert.match(jobBlock, /~\/\.cache\/ms-playwright/);
   assert.ok(
     jobBlock.indexOf("actions/cache@") < installIndex,
-    "Playwright browser cache restore must precede playwright install",
+    "Playwright browser cache restore must precede install-playwright-chromium.sh",
   );
 });
 
