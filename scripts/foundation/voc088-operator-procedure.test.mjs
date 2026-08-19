@@ -25,7 +25,10 @@ const t03EvidencePath = path.join(
 );
 
 test("VOC-088-TEST-12: operator procedure documents secret update and verification", () => {
-  assert.ok(existsSync(operatorDocPath), "staging-controlled-signup.md must exist");
+  assert.ok(
+    existsSync(operatorDocPath),
+    "staging-controlled-signup.md must exist",
+  );
   const doc = readFileSync(operatorDocPath, "utf8");
 
   assert.match(doc, /STAGING_NEW_USER_SIGNUP_ALLOWLIST/);
@@ -36,7 +39,10 @@ test("VOC-088-TEST-12: operator procedure documents secret update and verificati
   assert.match(doc, /Prove cohort preservation across automatic deploys/i);
   assert.match(doc, /two consecutive/i);
   assert.match(doc, /push/i);
-  assert.doesNotMatch(doc, /@synthetic\.vocanova\.invalid/);
+  assert.match(doc, /gh run cancel RUN_ID/);
+  assert.match(doc, /plan-from-issue/);
+  assert.doesNotMatch(doc, /temporarily\s+pointing|deliberate.*failure/i);
+  assert.doesNotMatch(doc, /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
 });
 
 test("VOC-088-TEST-12: operations index links the staging controlled-signup guide", () => {
@@ -54,5 +60,6 @@ test("VOC-088-TEST-13: deploy-and-verify evidence file exists with required sect
   assert.match(evidence, /controlled_signup_ready/);
   assert.match(evidence, /synthetic\.staging\.oauth-expected-state/);
   assert.match(evidence, /operational-failure/);
-  assert.doesNotMatch(evidence, /@(?!synthetic\.vocanova\.invalid)[A-Za-z0-9._-]+\.[A-Za-z]{2,}/);
+  const addresses = evidence.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi);
+  assert.deepEqual(addresses ?? [], []);
 });

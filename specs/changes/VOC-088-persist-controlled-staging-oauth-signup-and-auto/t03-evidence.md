@@ -34,22 +34,22 @@ evidence.
 
 ## Repository deliverables
 
-| Artifact | Path |
-| --- | --- |
-| Operator procedure | `docs/operations/staging-controlled-signup.md` |
-| Operations index link | `docs/operations/README.md` |
-| Deterministic doc/evidence tests | `scripts/foundation/voc088-operator-procedure.test.mjs` |
-| This evidence | `specs/changes/VOC-088-persist-controlled-staging-oauth-signup-and-auto/t03-evidence.md` |
+| Artifact                         | Path                                                                                     |
+| -------------------------------- | ---------------------------------------------------------------------------------------- |
+| Operator procedure               | `docs/operations/staging-controlled-signup.md`                                           |
+| Operations index link            | `docs/operations/README.md`                                                              |
+| Deterministic doc/evidence tests | `scripts/foundation/voc088-operator-procedure.test.mjs`                                  |
+| This evidence                    | `specs/changes/VOC-088-persist-controlled-staging-oauth-signup-and-auto/t03-evidence.md` |
 
 ## Acceptance mapping
 
-| Acceptance criterion | Result |
-| --- | --- |
-| AC-08 | Operator procedure documents secret update, deploy pickup, cohort preservation, fail-closed rules, monitoring split, and human sign-in checklist without recording secret values. |
-| AC-09 (deploy/readiness) | Live staging shows `controlled_signup_ready: true`; consecutive push deploys preserve the cohort; staging OAuth/readiness synthetic is green. |
-| AC-09 (sign-in) | Proxy readiness evidence recorded below; full Google login proof is an operator checklist item (not recorded here). |
-| AC-09 (failure fixture) | Deterministic deduplication/sanitization proof from T02 cited; live App-created issue proof procedure documented; no live fixture run recorded in this revision. |
-| AC-03 | No email addresses, OAuth codes, session cookies, or secret values appear in docs, tests, or this evidence. |
+| Acceptance criterion     | Result                                                                                                                                                                            |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AC-08                    | Operator procedure documents secret update, deploy pickup, cohort preservation, fail-closed rules, monitoring split, and human sign-in checklist without recording secret values. |
+| AC-09 (deploy/readiness) | Live staging shows `controlled_signup_ready: true`; consecutive push deploys preserve the cohort; staging OAuth/readiness synthetic is green.                                     |
+| AC-09 (sign-in)          | Proxy readiness evidence recorded below; full Google login proof is an operator checklist item (not recorded here).                                                               |
+| AC-09 (failure fixture)  | Deterministic deduplication/sanitization proof from T02 cited; live App-created issue proof procedure documented; no live fixture run recorded in this revision.                  |
+| AC-03                    | No email addresses, OAuth codes, session cookies, or secret values appear in docs, tests, or this evidence.                                                                       |
 
 ## Deterministic validation
 
@@ -110,10 +110,10 @@ The response body is not copied here (it contains OAuth `state`).
 Two consecutive **push**-triggered `deploy-staging` successes on `develop`
 without a secret edit between them:
 
-| Run | Conclusion | Head SHA | Event | URL |
-| --- | --- | --- | --- | --- |
-| [32251102959](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32251102959) | success | `d7525f09c929` | push | deploy-staging |
-| [32252268728](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32252268728) | success | `adffeba987a5` | push | deploy-staging |
+| Run                                                                                          | Conclusion | Head SHA       | Event | URL            |
+| -------------------------------------------------------------------------------------------- | ---------- | -------------- | ----- | -------------- |
+| [32251102959](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32251102959) | success    | `d7525f09c929` | push  | deploy-staging |
+| [32252268728](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32252268728) | success    | `adffeba987a5` | push  | deploy-staging |
 
 GitHub Actions jobs API for run `32251102959` shows both allowlist steps
 succeeded on the later revision as well:
@@ -127,14 +127,16 @@ proof. The secret value itself is not read or recorded.
 
 ## Scheduled synthetics
 
-Latest hourly `scheduled-synthetics` run on 2026-08-19:
+Dedicated post-deploy `scheduled-synthetics` run from `develop` on 2026-08-19:
 
-| Job | Conclusion | Run |
-| --- | --- | --- |
-| `synthetic.staging.oauth-expected-state` | success | [32251417112](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32251417112) |
+| Job                                      | Conclusion | Run                                                                                          |
+| ---------------------------------------- | ---------- | -------------------------------------------------------------------------------------------- |
+| `synthetic.staging.oauth-expected-state` | success    | [32253164488](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32253164488) |
 
-This job executes `verify-staging-oauth-start.sh` with `EXPECT_OAUTH_ENABLED=true`,
-which now requires `controlled_signup_ready: true` on `/healthz` (VOC-088-T01).
+This manual stable-ID run used head `adffeba987a5` from `develop`, so it executed
+the merged VOC-088-T01 version of `verify-staging-oauth-start.sh` with
+`EXPECT_OAUTH_ENABLED=true`. That version requires
+`controlled_signup_ready: true` on `/healthz`.
 
 ## Human Google sign-in verification (operator checklist — not recorded here)
 
@@ -193,9 +195,5 @@ addresses.
 
 ## Limits
 
-- No `gh` authentication in the implementer sandbox; workflow metadata was
-  collected through the public GitHub REST API and direct staging HTTPS probes.
-- Job-log download returned `403` without credentials; step conclusions come from
-  the jobs API and live harness output instead of raw workflow logs.
 - Human Google login and the live operational-failure fixture require operator
   execution per the runbook and are explicitly not claimed here.

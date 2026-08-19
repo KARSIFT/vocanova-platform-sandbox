@@ -7,11 +7,11 @@ repository secret `STAGING_NEW_USER_SIGNUP_ALLOWLIST`. Only
 
 ## Policy
 
-| Setting | Staging value | Meaning |
-| --- | --- | --- |
-| `GOOGLE_OAUTH_ENABLED` | `true` when both `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET` repository secrets are present | Google sign-in is available |
-| `NEW_USER_SIGNUP_ENABLED` | always `false` | No blanket first-time signup |
-| `NEW_USER_SIGNUP_ALLOWLIST` | synced from `STAGING_NEW_USER_SIGNUP_ALLOWLIST` on every deploy | Only listed Google identities may create a staging account |
+| Setting                     | Staging value                                                                                             | Meaning                                                    |
+| --------------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `GOOGLE_OAUTH_ENABLED`      | `true` when both `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET` repository secrets are present | Google sign-in is available                                |
+| `NEW_USER_SIGNUP_ENABLED`   | always `false`                                                                                            | No blanket first-time signup                               |
+| `NEW_USER_SIGNUP_ALLOWLIST` | synced from `STAGING_NEW_USER_SIGNUP_ALLOWLIST` on every deploy                                           | Only listed Google identities may create a staging account |
 
 The former `workflow_dispatch` input `new_user_signup_allowlist` was removed.
 Automatic push deploys and manual dispatches both read the repository secret
@@ -31,13 +31,13 @@ Personal data rules:
 1. Open **GitHub → Settings → Secrets and variables → Actions → Repository
    secrets**.
 2. Edit `STAGING_NEW_USER_SIGNUP_ALLOWLIST`.
-3. Use a comma-separated list of Google account emails (no spaces required;
-   the API normalizes case and surrounding whitespace). Example shape only —
-   use real operator identities, never commit them:
-
-   `operator-a@example.com,operator-b@example.com`
-
-4. Save the secret. Do not record the value in chat, tickets, or evidence.
+3. Replace the value with the complete comma-separated cohort (no spaces
+   required; the API normalizes case and surrounding whitespace). GitHub does
+   not reveal the prior value, and saving replaces the whole secret, so obtain
+   the current cohort through the approved secure credential-management path
+   before adding or removing a member.
+4. Save the secret. Do not record the value in chat, tickets, terminal output,
+   or evidence.
 
 Removal is the same path: delete the address from the comma-separated list (or
 clear the entire secret only when staging Google OAuth is intentionally
@@ -95,10 +95,10 @@ empty, multiline, or malformed, the deploy fails before writing `api.env`. This
 is intentional: OAuth-enabled staging with an empty controlled cohort blocks
 every first-time Google signup.
 
-If you must temporarily disable controlled signup while keeping OAuth
-credentials, remove or empty the Google OAuth repository secrets first (or
-disable OAuth through the supported credential path documented in VOC-084), then
-adjust the allowlist. Do not deploy OAuth-enabled staging with an empty cohort.
+If staging must intentionally have no controlled cohort, keep the current secret
+until a separately reviewed repository change has disabled the OAuth capability.
+Do not bypass the validator, delete credentials as an ad hoc switch, or edit the
+host environment manually.
 
 ## Human sign-in verification (no credentials in evidence)
 
@@ -106,12 +106,12 @@ Repository automation proves OAuth **start** and readiness; completing Google
 login still requires a human operator. Use this checklist after the secret change
 has deployed:
 
-| Check | How to verify | Expected result |
-| --- | --- | --- |
-| Allowlisted first-time Google user | Sign in at `https://staging.vocanova.site/signin` with an identity present in the secret | Reaches staging home/onboarding without HTTP 503 |
-| Unlisted Google user | Attempt first-time sign-in with an identity **not** in the secret | Google may authenticate, but the API callback returns HTTP 503 with the stable "new sign-ups are disabled" body (`auth.ErrSignupsDisabled`) |
-| Scheduled readiness | Confirm latest `scheduled-synthetics` run | Job `synthetic.staging.oauth-expected-state` succeeded |
-| Cohort persistence | Two consecutive push deploy successes after secret edit | Both validate allowlist and log `controlled signup ready: true` |
+| Check                              | How to verify                                                                            | Expected result                                                                                                                             |
+| ---------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Allowlisted first-time Google user | Sign in at `https://staging.vocanova.site/signin` with an identity present in the secret | Reaches staging home/onboarding without HTTP 503                                                                                            |
+| Unlisted Google user               | Attempt first-time sign-in with an identity **not** in the secret                        | Google may authenticate, but the API callback returns HTTP 503 with the stable "new sign-ups are disabled" body (`auth.ErrSignupsDisabled`) |
+| Scheduled readiness                | Confirm latest `scheduled-synthetics` run                                                | Job `synthetic.staging.oauth-expected-state` succeeded                                                                                      |
+| Cohort persistence                 | Two consecutive push deploy successes after secret edit                                  | Both validate allowlist and log `controlled signup ready: true`                                                                             |
 
 Record only pass/fail and run URLs in evidence. Never paste email addresses,
 OAuth codes, session cookies, or callback query strings.
@@ -127,12 +127,12 @@ Issues are plain (no labels) so `plan-from-issue` can draft a change package.
 
 Responsibility split:
 
-| Layer | Workflow | Scope |
-| --- | --- | --- |
-| Sentry | `error-monitoring.yml` | Unexpected application errors |
-| Kuma | `sync-monitoring.yml` | Availability/TLS/basic health |
-| Synthetics | `scheduled-synthetics.yml` | OAuth expected state, authenticated journeys |
-| Failure-to-issue | `operational-failure-monitoring.yml` | Failed operational workflows only |
+| Layer            | Workflow                             | Scope                                        |
+| ---------------- | ------------------------------------ | -------------------------------------------- |
+| Sentry           | `error-monitoring.yml`               | Unexpected application errors                |
+| Kuma             | `sync-monitoring.yml`                | Availability/TLS/basic health                |
+| Synthetics       | `scheduled-synthetics.yml`           | OAuth expected state, authenticated journeys |
+| Failure-to-issue | `operational-failure-monitoring.yml` | Failed operational workflows only            |
 
 Expected signup denials (HTTP 503 for unlisted identities) are correct
 behavior and must not be sent to Sentry.
@@ -143,23 +143,45 @@ Use only after T00–T02 are on the default branch and App credentials exist.
 Goal: one sanitized App-created issue, `plan-from-issue` eligibility, and no
 duplicate on repeat.
 
-1. Choose a **non-production** failure that cannot recurse into the observer
-   itself (never break `operational-failure-monitoring.yml` on purpose).
-2. Safe pattern: on a disposable branch, dispatch `scheduled-synthetics.yml`
-   with `synthetic_id=synthetic.staging.oauth-expected-state` after temporarily
-   pointing `EXPECT_OAUTH_ENABLED` at `false` in that branch only, or after
-   introducing a deliberate, reviewed test-only harness failure. Merge the
-   disposable branch only through the normal governed loop; do not leave the
-   fixture on `develop`.
-3. Wait for the synthetic run to finish `failure`.
-4. Confirm `operational-failure-monitoring` ran for that `workflow_run` and
+1. Never break an application, deployment, or observer file for this proof.
+   Dispatch only the reserved staging browser synthetic from the default branch:
+
+   ```bash
+   gh workflow run scheduled-synthetics.yml \
+     --repo KARSIFT/vocanova-platform-sandbox \
+     --ref main \
+     -f synthetic_id=synthetic.staging.authenticated-core-journey
+   ```
+
+2. Resolve the new run ID, wait until it is queued or in progress, and cancel it.
+   Cancellation affects only the reserved synthetic account and creates no
+   application or production fault:
+
+   ```bash
+   gh run list \
+     --repo KARSIFT/vocanova-platform-sandbox \
+     --workflow scheduled-synthetics.yml \
+     --event workflow_dispatch \
+     --limit 1
+   gh run cancel RUN_ID --repo KARSIFT/vocanova-platform-sandbox
+   ```
+
+3. Wait for conclusion `cancelled`. Confirm
+   `operational-failure-monitoring` ran for that `workflow_run` and
    created **one** open issue titled
-   `Operational failure: scheduled-synthetics (failure)` whose body contains
+   `Operational failure: scheduled-synthetics (cancelled)` whose body contains
    only the workflow name, conclusion, run URL, fixed summary, and the marker
-   `<!-- operational-failure:scheduled-synthetics:failure -->`.
-5. Re-dispatch the same failure class while the issue remains open. Confirm the
-   observer exits without a second issue (deduplication).
-6. Close the proof issue through the normal planning/remediation path.
+   `<!-- operational-failure:scheduled-synthetics:cancelled -->`.
+4. Confirm the App-created issue started a `pipeline` run and that its
+   `plan-from-issue` job was queued or started. Cancel that pipeline run before it
+   can draft or adopt a fixture package; `pipeline` is not observed, so this
+   containment cannot recurse.
+5. Repeat steps 1–3 while the first issue remains open. Confirm the second
+   observer run exits successfully and the open-issue count for the marker stays
+   exactly one.
+6. Add a fixed, sanitized comment identifying the two cancelled run IDs and two
+   observer run IDs, then close the proof issue. Do not attach logs or account
+   data. A controlled cancellation needs no remediation package.
 
 Repository deterministic coverage lives in
 `scripts/foundation/voc088-failure-to-issue.test.mjs` (VOC-088-TEST-08 through
