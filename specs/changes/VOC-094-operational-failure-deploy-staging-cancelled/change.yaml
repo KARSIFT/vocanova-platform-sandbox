@@ -1,0 +1,98 @@
+schema_version: 1
+id: VOC-094
+slug: operational-failure-deploy-staging-cancelled
+title: Fix deploy-staging cancellation from concurrency queue supersession
+type: infrastructure
+status: draft
+risk: R3
+planned_implementation_risk_floor: "Measured during drafting against the expected\
+  \ task-scoped file list (.github/workflows/deploy-staging.yml, .github/workflows/deploy-production.yml,\
+  \ .github/workflows/operational-failure-monitoring.yml, infra/scripts/open-failure-issue.sh\
+  \ and/or a new bounded cancel-classifier helper, scripts/foundation/voc088-failure-to-issue.test.mjs,\
+  \ scripts/foundation/voc094-deploy-concurrency.test.mjs, this package directory).\
+  \ Detected path floor is R3 for .github/workflows/ and infra/scripts/. This package\
+  \ proposes R3 for the change as a whole \u2014 a draft proposal for the reviewing\
+  \ human at adoption time, not a determination. Independent verification and the\
+  \ reviewing human must still confirm each task's real file list and whether semantic\
+  \ escalation applies."
+canonical_path: specs/changes/VOC-094-operational-failure-deploy-staging-cancelled
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: none-intentional. Queue depth and observer filtering changes affect
+  CI/deploy workflow scheduling only. No application behavior, signup policy, Kuma
+  inventory, or production kill-switch posture changes.
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: Remediation adjusts GitHub Actions concurrency queue depth and the operational-failure
+    observer's handling of benign concurrency-superseded cancellations. No page routes,
+    API endpoints, or stable monitor/synthetic IDs in infra/monitoring/ change.
+authority_model: a004-active
+requirement_source: 'GitHub issue #781 (Operational failure: deploy-staging (cancelled)),
+  opened by the VOC-088-T02 operational-failure-monitoring observer. Fresh 2026-08-19
+  evidence from the public run page and GitHub Actions REST metadata for https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32290409156:
+  deploy-staging run #299, push-triggered on develop at 411fb60157d437e495fc07f599e268669f139e5a,
+  conclusion cancelled after ~2m 28s; public annotation "Canceling since a higher
+  priority waiting request for staging-deploy exists"; jobs API total_count 0. Drafting-time
+  repo read: deploy-staging.yml uses concurrency group staging-deploy with cancel-in-progress
+  false and no queue: max; deploy-production.yml mirrors the same default single-pending-slot
+  behavior on production-deploy. This draft package does not adopt or authorize itself.'
+requirement_approval_status: not-approved
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only)
+  implementation: unassigned
+  independent_verification: unassigned
+dependencies:
+- id: VOC-094-DEP-00
+  status: 'resolved at drafting time. Issue #781 and run 32290409156 identify the
+    failing workflow (deploy-staging), conclusion (cancelled), and public concurrency-supersession
+    annotation with zero jobs started.'
+- id: VOC-094-DEP-01
+  status: resolved at drafting time. VOC-032-T07 owns deploy-staging.yml concurrency
+    semantics (cancel-in-progress false by design). VOC-088-T02 owns operational-failure-monitoring.yml
+    and open-failure-issue.sh, which currently treat every cancelled conclusion as
+    actionable.
+- id: VOC-088
+  status: 'Adopted predecessor. operational-failure-monitoring.yml opened issue #781
+    via the sanitized failure-to-issue path. This package narrows which cancelled
+    deploy conclusions open issues; it must not weaken deduplication, sanitization,
+    App-token identity, or real failure/cancellation coverage.'
+- id: VOC-090
+  status: Adopted predecessor for scheduled-synthetics timeout cancellation. Unrelated
+    except shared discipline on .github/workflows/ edits and operational-failure issue
+    hygiene.
+affected_areas:
+- .github/workflows/deploy-staging.yml (concurrency queue: max)
+- .github/workflows/deploy-production.yml (concurrency queue: max for parity)
+- .github/workflows/operational-failure-monitoring.yml (benign supersession skip gate)
+- infra/scripts/open-failure-issue.sh and/or a new bounded cancel-classifier helper
+- scripts/foundation/voc088-failure-to-issue.test.mjs (regression + new cases)
+- scripts/foundation/voc094-deploy-concurrency.test.mjs (new deterministic queue tests)
+- specs/changes/VOC-094-operational-failure-deploy-staging-cancelled
+implementation:
+  authorized: false
+  required: true
+  status: not-authorized
+  target_branch: develop
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-ci-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: not-authorized
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
+blocking_reasons: package not adopted; implementation not authorized
