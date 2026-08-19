@@ -55,6 +55,13 @@ on:
         required: false
         type: boolean
         default: false
+      preprovisioned_credentials:
+        description: >-
+          Use existing monitoring-environment KUMA_USERNAME/KUMA_PASSWORD for
+          rotation when the automation App cannot write environment secrets
+        required: false
+        type: boolean
+        default: false
       sync_inventory:
         description: Apply repository monitor inventory to live Kuma via Socket.IO
         required: false
@@ -86,13 +93,19 @@ jobs:
           echo "recover_store_only cannot be combined with rotate_credentials; recover never resets" >&2
           exit 1
 
+      - name: Refuse invalid preprovisioned credential mode
+        if: ${{ inputs.preprovisioned_credentials && (!inputs.rotate_credentials || inputs.recover_store_only) }}
+        run: |
+          echo "preprovisioned_credentials requires rotate_credentials=true and recover_store_only=false" >&2
+          exit 1
+
       # GITHUB_TOKEN cannot manage environment secrets. Mint the repository's
       # existing automation App identity with the exact permission required by
       # the environment-secret API. If the App lacks that grant, rotation
       # fails here before any password is generated or applied to Kuma.
       - name: Mint environment-secret writer token
         id: environment-token
-        if: ${{ success() && (inputs.rotate_credentials || inputs.recover_store_only) }}
+        if: ${{ success() && ((inputs.rotate_credentials && !inputs.preprovisioned_credentials) || inputs.recover_store_only) }}
         uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ secrets.KARSIFT_BOT_APP_ID }}
@@ -100,7 +113,7 @@ jobs:
           permission-environments: write
 
       - name: Verify environment-secret writer access
-        if: ${{ success() && (inputs.rotate_credentials || inputs.recover_store_only) }}
+        if: ${{ success() && ((inputs.rotate_credentials && !inputs.preprovisioned_credentials) || inputs.recover_store_only) }}
         env:
           GH_TOKEN: ${{ steps.environment-token.outputs.token }}
         run: |
@@ -146,11 +159,23 @@ jobs:
       - name: Generate strong Kuma password for rotation
         if: ${{ success() && inputs.rotate_credentials && !inputs.recover_store_only }}
         id: generate_password
+        env:
+          PREPROVISIONED_CREDENTIALS: ${{ inputs.preprovisioned_credentials }}
+          KUMA_USERNAME: ${{ secrets.KUMA_USERNAME }}
+          KUMA_PASSWORD: ${{ secrets.KUMA_PASSWORD }}
         run: |
           set -euo pipefail
           password_file="$(mktemp)"
           chmod 600 "$password_file"
-          openssl rand -base64 48 | tr -d '\n' > "$password_file"
+          if [ "$PREPROVISIONED_CREDENTIALS" = "true" ]; then
+            if [ -z "${KUMA_USERNAME:-}" ] || [ -z "${KUMA_PASSWORD:-}" ]; then
+              echo "preprovisioned KUMA_USERNAME and KUMA_PASSWORD are both required" >&2
+              exit 1
+            fi
+            printf '%s' "$KUMA_PASSWORD" > "$password_file"
+          else
+            openssl rand -base64 48 | tr -d '\n' > "$password_file"
+          fi
           echo "password_file=$password_file" >> "$GITHUB_OUTPUT"
 
       - name: Bundle monitoring sync tree
@@ -161,6 +186,7 @@ jobs:
           cp -a infra/monitoring /tmp/monitoring-sync-bundle/infra/
           cp infra/scripts/kuma-rotate-credentials.sh \
             infra/scripts/sync-kuma-inventory.sh \
+            infra/scripts/prove-kuma-inventory.sh \
             /tmp/monitoring-sync-bundle/infra/scripts/
           tar -czf "$GITHUB_WORKSPACE/monitoring-sync-bundle.tgz" \
             -C /tmp/monitoring-sync-bundle .
@@ -311,6 +337,7 @@ jobs:
           HOST_REACHABLE: ${{ steps.fetch_proof.outputs.host_reachable }}
           PROOF_FETCHED: ${{ steps.fetch_proof.outputs.proof_fetched }}
           PROOF_ABSENT: ${{ steps.fetch_proof.outputs.proof_absent }}
+          PREPROVISIONED_CREDENTIALS: ${{ inputs.preprovisioned_credentials }}
         run: |
           set -euo pipefail
           password_stored=false
@@ -336,7 +363,11 @@ jobs:
                 echo "Proof transfer unavailable; storing from runner-local file after confirmed host rotation" >&2
               fi
               test -s "$PASSWORD_FILE"
-              gh secret set KUMA_PASSWORD --env monitoring --body-file "$PASSWORD_FILE"
+              if [ "$PREPROVISIONED_CREDENTIALS" = "true" ]; then
+                echo "Confirmed preprovisioned Kuma password was applied; no environment-secret write required"
+              else
+                gh secret set KUMA_PASSWORD --env monitoring --body-file "$PASSWORD_FILE"
+              fi
               rm -f "$PASSWORD_FILE" "$GITHUB_WORKSPACE/kuma-new-password.secret"
               password_stored=true
               ;;
@@ -358,6 +389,8 @@ jobs:
         if: ${{ always() && inputs.rotate_credentials && steps.generate_password.outcome == 'success' }}
         env:
           GH_TOKEN: ${{ steps.environment-token.outputs.token }}
+          PREPROVISIONED_CREDENTIALS: ${{ inputs.preprovisioned_credentials }}
+          EXPECTED_KUMA_USERNAME: ${{ secrets.KUMA_USERNAME }}
         run: |
           set -euo pipefail
           username_stored=false
@@ -375,7 +408,16 @@ jobs:
             echo "username metadata file did not contain KUMA_USERNAME" >&2
             exit 1
           fi
-          gh secret set KUMA_USERNAME --env monitoring --body "$username"
+          if [ "$PREPROVISIONED_CREDENTIALS" = "true" ]; then
+            if [ -z "${EXPECTED_KUMA_USERNAME:-}" ] || \
+               [ "$username" != "$EXPECTED_KUMA_USERNAME" ]; then
+              echo "reported Kuma username does not match the preprovisioned username" >&2
+              exit 1
+            fi
+            echo "Confirmed preprovisioned Kuma username; no environment-secret write required"
+          else
+            gh secret set KUMA_USERNAME --env monitoring --body "$username"
+          fi
           username_stored=true
 
       - name: Recover retained Kuma password from host (no reset)
@@ -441,10 +483,9 @@ jobs:
           script: |
             set -euo pipefail
             bundle_root="/tmp/monitoring-sync-bundle"
-            if [ ! -d "$bundle_root/infra/monitoring" ]; then
-              mkdir -p "$bundle_root"
-              tar -xzf /tmp/monitoring-sync-bundle.tgz -C "$bundle_root"
-            fi
+            rm -rf "$bundle_root"
+            mkdir -p "$bundle_root"
+            tar -xzf /tmp/monitoring-sync-bundle.tgz -C "$bundle_root"
             chmod +x "$bundle_root/infra/scripts/sync-kuma-inventory.sh"
             export MONITORING_SYNC_ROOT="$bundle_root/infra/monitoring"
             export KUMA_USERNAME="$(sed -n 's/^KUMA_USERNAME=//p' /tmp/kuma-rotate-metadata.env | head -n 1)"
@@ -467,10 +508,9 @@ jobs:
           script: |
             set -euo pipefail
             bundle_root="/tmp/monitoring-sync-bundle"
-            if [ ! -d "$bundle_root/infra/monitoring" ]; then
-              mkdir -p "$bundle_root"
-              tar -xzf /tmp/monitoring-sync-bundle.tgz -C "$bundle_root"
-            fi
+            rm -rf "$bundle_root"
+            mkdir -p "$bundle_root"
+            tar -xzf /tmp/monitoring-sync-bundle.tgz -C "$bundle_root"
             chmod +x "$bundle_root/infra/scripts/sync-kuma-inventory.sh"
             export MONITORING_SYNC_ROOT="$bundle_root/infra/monitoring"
             "$bundle_root/infra/scripts/sync-kuma-inventory.sh"

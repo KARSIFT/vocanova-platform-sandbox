@@ -89,11 +89,25 @@ test("VOC-086-TEST-08: rotate_credentials is opt-in; normal sync never resets", 
     /reset-password/,
     "inventory sync script must not reset credentials",
   );
+  assert.match(syncOnlyStep, /rm -rf "\$bundle_root"/);
+  assert.match(syncOnlyStep, /tar -xzf \/tmp\/monitoring-sync-bundle\.tgz/);
+  assert.doesNotMatch(
+    syncOnlyStep,
+    /if \[ ! -d "\$bundle_root\/infra\/monitoring" \]/,
+    "normal sync must execute the reviewed bundle, never a stale extracted tree",
+  );
 
   assert.doesNotMatch(
     rotateScript,
     /--new[-_]password/,
     "rotation must use stdin/container reset tool, not argv password flags",
+  );
+  assert.match(rotateScript, /New Password: /);
+  assert.match(rotateScript, /Confirm New Password: /);
+  assert.doesNotMatch(
+    rotateScript,
+    /printf '%s\\n%s\\n'/,
+    "rotation must wait for each readline prompt instead of preloading and closing stdin",
   );
 });
 
@@ -268,6 +282,16 @@ test("VOC-086-TEST-09 (remediation): reset proof is fresh and post-rotation sync
   );
   assert.ok(resetSuccessIndex >= 0 && proofWriteIndex > resetSuccessIndex);
   assert.ok(usernameFailureIndex > proofWriteIndex);
+  assert.match(rotateScript, /Password reset successfully/);
+  assert.match(rotateScript, /Logged in/);
+  const markerValidationIndex = rotateScript.indexOf(
+    "Kuma reset tool exited zero without verified reset and login markers",
+  );
+  assert.ok(
+    markerValidationIndex > resetSuccessIndex &&
+      proofWriteIndex > markerValidationIndex,
+    "reset proof must be written only after Kuma reset and login markers are verified",
+  );
 
   const rotatedSyncStep = extractStepBlock(
     workflow,
@@ -332,6 +356,7 @@ test("VOC-086-TEST-07 (T02 extension): workflow and host scripts ban SQLite depl
     ".github/workflows/sync-monitoring.yml",
     "infra/scripts/kuma-rotate-credentials.sh",
     "infra/scripts/sync-kuma-inventory.sh",
+    "infra/scripts/prove-kuma-inventory.sh",
   ];
   const forbidden = [/kuma\.db/i, /\bsqlite\b/i, /\/app\/data/i];
 
@@ -363,4 +388,21 @@ test("VOC-086-TEST-02 (workflow): monitoring env secrets and Socket.IO sync wiri
     "Socket.IO sync attaches to vocanova-monitoring-net in the host sync script",
   );
   assert.match(syncScript, /sync-kuma\.mjs/);
+  assert.match(
+    syncScript,
+    /--user "\$\(id -u\):\$\(id -g\)"/,
+    "disposable sync container must not leave root-owned npm files on the host",
+  );
+  assert.match(syncScript, /-e HOME=\/tmp/);
+  assert.match(
+    syncScript,
+    /prove-kuma-inventory\.mjs/,
+    "inventory sync must run read-only Socket.IO proof after apply",
+  );
+  const bundleStep = extractStepBlock(workflow, "Bundle monitoring sync tree");
+  assert.match(
+    bundleStep,
+    /prove-kuma-inventory\.sh/,
+    "sync bundle must include the standalone prove script",
+  );
 });

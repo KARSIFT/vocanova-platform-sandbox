@@ -1,17 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# VOC-086-T02 — Apply repository monitor inventory to live Kuma over Socket.IO.
+# VOC-086-T05 — read-only Socket.IO proof that live Kuma matches monitors.yaml.
 #
-# Runs the Node synchronizer in a disposable container attached to
-# vocanova-monitoring-net so Kuma's loopback-only publish remains unchanged.
+# Runs prove-kuma-inventory.mjs in a disposable container on
+# vocanova-monitoring-net. Requires KUMA_USERNAME/KUMA_PASSWORD (GitHub
+# monitoring environment secrets). Read-only; never mutates inventory.
 #
-# Required environment:
-#   KUMA_USERNAME, KUMA_PASSWORD — workflow secrets only; never commit.
-# Optional:
-#   KUMA_URL (default http://vocanova-uptime-kuma:3001)
-#   MONITORING_SYNC_ROOT (default: infra/monitoring beside this script)
-#   KUMA_CONTAINER, MONITORING_SYNC_NODE_IMAGE, MONITORING_SYNC_SOCKET_IO_VERSION
+# Usage (on shared host after credentials exist):
+#   KUMA_USERNAME=… KUMA_PASSWORD=… infra/scripts/prove-kuma-inventory.sh
 
 KUMA_CONTAINER="${KUMA_CONTAINER:-vocanova-uptime-kuma}"
 KUMA_URL="${KUMA_URL:-http://vocanova-uptime-kuma:3001}"
@@ -27,7 +24,7 @@ if [ -z "${KUMA_USERNAME:-}" ] || [ -z "${KUMA_PASSWORD:-}" ]; then
 fi
 
 if ! command -v docker >/dev/null 2>&1; then
-  echo "docker is required to sync Kuma inventory" >&2
+  echo "docker is required to prove Kuma inventory" >&2
   exit 1
 fi
 
@@ -38,11 +35,6 @@ fi
 
 if ! docker network inspect vocanova-monitoring-net >/dev/null 2>&1; then
   echo "vocanova-monitoring-net is missing; monitoring topology is not converged" >&2
-  exit 1
-fi
-
-if [ ! -f "$MONITORING_SYNC_ROOT/sync-kuma.mjs" ]; then
-  echo "sync-kuma.mjs not found under MONITORING_SYNC_ROOT=${MONITORING_SYNC_ROOT}" >&2
   exit 1
 fi
 
@@ -60,13 +52,11 @@ trap cleanup EXIT
 cp -a "$MONITORING_SYNC_ROOT/." "$work_dir/"
 
 docker run --rm \
-  --user "$(id -u):$(id -g)" \
   --network vocanova-monitoring-net \
-  -e HOME=/tmp \
   -e KUMA_URL="$KUMA_URL" \
   -e KUMA_USERNAME \
   -e KUMA_PASSWORD \
   -v "$work_dir:/work" \
   -w /work \
   "$MONITORING_SYNC_NODE_IMAGE" \
-  bash -c "set -euo pipefail; npm install --no-save socket.io-client@${MONITORING_SYNC_SOCKET_IO_VERSION}; node sync-kuma.mjs; node prove-kuma-inventory.mjs"
+  bash -c "set -euo pipefail; npm install --no-save socket.io-client@${MONITORING_SYNC_SOCKET_IO_VERSION}; node prove-kuma-inventory.mjs"

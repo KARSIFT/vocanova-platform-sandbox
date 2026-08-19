@@ -7,7 +7,7 @@ status: approved
 owner: founder
 canonical_path: docs/operations/11-devops-and-ci-cd.md
 approved_at: 2026-07-21
-last_reviewed_at: 2026-08-08
+last_reviewed_at: 2026-08-19
 review_cycle: quarterly
 supersedes: null
 related_documents:
@@ -31,6 +31,13 @@ amendments:
     approving_owner: founder
     resolution_recorded_in: specs/changes/VOC-051-add-hourly-sentry-based-log-error-monitoring/change.yaml
     notes: "Sentry remains the error-monitoring tool §1 already named; nothing is superseded. This amendment records what VOC-051 added around it: apps/web now reports browser-side and server-side errors to Sentry (T01), Layout B gives each application a separate Sentry project per environment tier (four projects, per the package's t00-evidence.md §3), and .github/workflows/error-monitoring.yml queries all four hourly and opens one unlabeled GitHub issue per genuinely new problem so plan-from-issue drafts a governed change package from it (T02). The existing row text is annotated rather than rewritten, consistent with VOC-032-§1-amendment's convention. Detailed in §1's amendment note below."
+  - id: VOC-086-§1-amendment
+    title: "§1 Uptime monitoring row amended from unimplemented Better Stack / UptimeRobot to repository-managed Kuma + scheduled synthetics"
+    adopted_in: VOC-086
+    adopted_at: 2026-08-19
+    approving_owner: autonomous-engineering (A-004)
+    resolution_recorded_in: specs/changes/VOC-086-manage-monitoring-inventory/change.yaml
+    notes: "Supersedes the unimplemented Better Stack / UptimeRobot uptime-monitoring choice. Availability/TLS/basic API health is Uptime Kuma (infra/monitoring/monitors.yaml, sync-monitoring.yml). Authenticated behavior is scheduled synthetics (infra/monitoring/synthetics.yaml, scheduled-synthetics.yml). Sentry remains the error-monitoring channel (VOC-051). Operator runbook: docs/operations/monitoring.md."
 source_files:
   - path: 10-development-workflow.md
     sha256: 7fdd38cb7f877051907cc68e0930ece507fe3466dab3e008795c2827eeb21aaf
@@ -70,7 +77,7 @@ Staging (from `develop`), Production (from `main`).
 | Container registry | GitHub Container Registry | Unchanged |
 | DNS/TLS/WAF/CDN | Cloudflare | **Narrowed 2026-07-30 by `VOC-032-§1-amendment`** to DNS/TLS/WAF/CDN only — Cloudflare no longer hosts compute (see amended baseline below) |
 | Error monitoring | Sentry | Unchanged |
-| Uptime monitoring | Better Stack / UptimeRobot | Unchanged |
+| Uptime monitoring | ~~Better Stack / UptimeRobot~~ | **Superseded 2026-08-19 by `VOC-086-§1-amendment`** |
 | Harness, Terraform/OpenTofu, Cloudflare D1/KV/Durable Objects/Queues/R2 | Deferred post-MVP | Unchanged |
 
 **Amended (v1.1) target infrastructure baseline** (2026-07-30, adopted via VOC-032; founder as
@@ -90,7 +97,7 @@ is currently deployed against — not a plan:
 | Atlas migration tooling | `apps/api/atlas.hcl` + `apps/api/scripts/migrate.sh` apply the existing `apps/api/migrations/*.sql` set; `.down.sql.example` files remain non-executable by Atlas per the existing `apps/api/migrations/README.md` rule |
 | Deploy automation | `.github/workflows/deploy-staging.yml` — build + tag by commit SHA + push to `ghcr.io` on every merge to `develop`, then SSH to the staging host, pull, apply migrations via the `T06` wrapper, `docker compose up -d`, poll `/healthz`; fails closed without tearing down currently-running containers if the health check does not pass within a bounded timeout |
 | Error monitoring | Sentry — **extended 2026-08-08 by `VOC-051-§1-amendment`** to cover `apps/web` browser-side/server-side error reporting and an hourly Sentry-to-GitHub-issue monitoring workflow (see the amendment note below); the tool choice itself is unchanged |
-| Uptime monitoring | Better Stack / UptimeRobot (unchanged) |
+| Uptime monitoring | Uptime Kuma (availability/TLS/basic API health) + scheduled synthetics (authenticated behavior) — **amended 2026-08-19 by `VOC-086-§1-amendment`**; Sentry remains the separate error-monitoring channel (VOC-051) |
 | Harness, Terraform/OpenTofu, Cloudflare D1/KV/Durable Objects/Queues/R2 | Deferred post-MVP (unchanged) |
 
 This table is an implementation target, not authority to procure vendors, incur spend, create
@@ -143,8 +150,25 @@ production secrets ever reachable from preview/staging/CI (unchanged from v1.0).
 >   who spots a bug; it is observability feeding that existing loop, and it changes no release,
 >   deployment, or approval gate. The workflow holds `issues: write` and nothing else, and
 >   deliberately has no SSH access to either host.
-> - **Uptime/liveness monitoring is untouched** by this amendment — the "Uptime monitoring" row's
->   Better Stack / UptimeRobot choice remains as stated and unimplemented here.
+> - **Uptime/liveness monitoring was untouched by VOC-051** — the "Uptime monitoring" row's
+>   Better Stack / UptimeRobot choice remained as stated and unimplemented here until
+>   `VOC-086-§1-amendment`.
+>
+> **Amendment note (`VOC-086-§1-amendment`, adopted 2026-08-19 via VOC-086).** The
+> "Uptime monitoring" Better Stack / UptimeRobot rows above were the **original
+> unimplemented choice**. They are **superseded as of 2026-08-19** by the
+> repository-managed split VOC-086 actually built:
+>
+> - **Availability / TLS / basic API health** is Uptime Kuma
+>   (`infra/monitoring/monitors.yaml`, applied by `.github/workflows/sync-monitoring.yml`
+>   over authenticated Socket.IO; never SQLite).
+> - **Authenticated behavior** (OAuth expected-state, journey content, core-loop,
+>   non-mutating production route sweep) is `.github/workflows/scheduled-synthetics.yml`
+>   under stable IDs in `infra/monitoring/synthetics.yaml`.
+> - **Application errors remain Sentry** via `.github/workflows/error-monitoring.yml`
+>   (VOC-051). Do not replace that path with Kuma page checks.
+>
+> Operator runbook: [monitoring.md](monitoring.md).
 
 ## 2. Release artifacts and deployment ordering
 
