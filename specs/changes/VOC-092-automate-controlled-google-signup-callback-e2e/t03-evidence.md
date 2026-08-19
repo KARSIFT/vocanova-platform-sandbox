@@ -70,31 +70,26 @@ The dedicated workflow requires Docker, runs
 unless both named cases report `PASS` and no `TestControlledSignupOAuth_` case
 `SKIP`s.
 
-## Scrubbed harness log (local disposable Postgres, 2026-08-19)
+## Scrubbed exact-job harness outcome (2026-08-19)
 
-Command:
-
-```bash
-cd apps/api && go test ./app/api/... -run ControlledSignupOAuth -count=1 -v
-```
-
-Scrubbed excerpt (outcome lines only; no OAuth codes, state, tokens, cookies, or
-authorization URLs):
+The following four outcome lines are from exact post-T02 Actions job
+[96257511360](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32312272570/job/96257511360).
+Workflow/step prefixes and timestamps were removed; no application log lines,
+OAuth codes, state, tokens, cookies, authorization URLs, or identity values were
+copied.
 
 ```
 === RUN   TestControlledSignupOAuth_AllowlistedCallbackSucceeds
-    controlled_signup_oauth_e2e_test.go:310: controlled-signup OAuth allowlisted callback succeeded with redirect to onboarding and persisted auth rows
---- PASS: TestControlledSignupOAuth_AllowlistedCallbackSucceeds (6.69s)
+--- PASS: TestControlledSignupOAuth_AllowlistedCallbackSucceeds (7.69s)
 === RUN   TestControlledSignupOAuth_UnlistedCallbackDenied
-    controlled_signup_oauth_e2e_test.go:346: controlled-signup OAuth unlisted callback denied with HTTP 503 and no persisted user
---- PASS: TestControlledSignupOAuth_UnlistedCallbackDenied (1.66s)
-PASS
-ok  	github.com/KARSIFT/vocanova-platform/apps/api/app/api	8.353s
+--- PASS: TestControlledSignupOAuth_UnlistedCallbackDenied (2.13s)
 ```
 
-The allowlisted case asserts redirect to the configured onboarding/home path
-without HTTP 503. The unlisted case asserts the stable new-signups-disabled HTTP
-503 response and no persisted user row.
+Those named tests assert, respectively, redirect to the configured
+onboarding/home path without HTTP 503 and the stable new-signups-disabled HTTP
+503 response with no persisted user row. The workflow's post-test guards require
+both exact `PASS` lines and reject any controlled-signup `SKIP`, so this excerpt
+and the successful job conclusion are bound to the same CI execution.
 
 ## Fail-closed confirmation
 
