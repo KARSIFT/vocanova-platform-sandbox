@@ -268,6 +268,16 @@ test("VOC-086-TEST-09 (remediation): reset proof is fresh and post-rotation sync
   );
   assert.ok(resetSuccessIndex >= 0 && proofWriteIndex > resetSuccessIndex);
   assert.ok(usernameFailureIndex > proofWriteIndex);
+  assert.match(rotateScript, /Password reset successfully/);
+  assert.match(rotateScript, /Logged in/);
+  const markerValidationIndex = rotateScript.indexOf(
+    "Kuma reset tool exited zero without verified reset and login markers",
+  );
+  assert.ok(
+    markerValidationIndex > resetSuccessIndex &&
+      proofWriteIndex > markerValidationIndex,
+    "reset proof must be written only after Kuma reset and login markers are verified",
+  );
 
   const rotatedSyncStep = extractStepBlock(
     workflow,
@@ -364,6 +374,12 @@ test("VOC-086-TEST-02 (workflow): monitoring env secrets and Socket.IO sync wiri
     "Socket.IO sync attaches to vocanova-monitoring-net in the host sync script",
   );
   assert.match(syncScript, /sync-kuma\.mjs/);
+  assert.match(
+    syncScript,
+    /--user "\$\(id -u\):\$\(id -g\)"/,
+    "disposable sync container must not leave root-owned npm files on the host",
+  );
+  assert.match(syncScript, /-e HOME=\/tmp/);
   assert.match(
     syncScript,
     /prove-kuma-inventory\.mjs/,

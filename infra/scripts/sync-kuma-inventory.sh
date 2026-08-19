@@ -60,7 +60,9 @@ trap cleanup EXIT
 cp -a "$MONITORING_SYNC_ROOT/." "$work_dir/"
 
 docker run --rm \
+  --user "$(id -u):$(id -g)" \
   --network vocanova-monitoring-net \
+  -e HOME=/tmp \
   -e KUMA_URL="$KUMA_URL" \
   -e KUMA_USERNAME \
   -e KUMA_PASSWORD \

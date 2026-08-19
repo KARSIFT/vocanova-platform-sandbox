@@ -32,6 +32,7 @@ if [ "$1" = "exec" ] && [ "$2" = "-i" ]; then
     fi
     echo "== Uptime Kuma Reset Password Tool =="
     echo "Found user: harness-admin"
+    echo "Logged in."
     echo "Password reset successfully."
     exit 0
   fi
@@ -185,6 +186,45 @@ if [ "$1" = "exec" ] && [ "$2" = "-i" ]; then
   read -r _line1 || true
   read -r _line2 || true
   echo "== Uptime Kuma Reset Password Tool =="
+  echo "Found user: harness-admin"
+  echo "Error: simulated internally caught reset failure"
+  echo "Finished."
+  exit 0
+fi
+echo "unexpected docker invocation: $*" >&2
+exit 99
+EOF
+chmod +x "$test_root/docker"
+
+rm -f "$KUMA_RESET_APPLIED_FILE" "$KUMA_ROTATE_METADATA_FILE"
+set +e
+false_success_output="$(KUMA_NEW_PASSWORD="false-success-harness-password" "$rotate_script" 2>&1)"
+false_success_status=$?
+set -e
+if [ "$false_success_status" -eq 0 ]; then
+  echo "rotate must reject Kuma's zero exit when reset/login markers are absent" >&2
+  exit 1
+fi
+if [ -e "$KUMA_RESET_APPLIED_FILE" ] || [ -e "$KUMA_ROTATE_METADATA_FILE" ]; then
+  echo "false reset success must not create proof or metadata" >&2
+  exit 1
+fi
+if grep -q 'false-success-harness-password' <<<"$false_success_output"; then
+  echo "password must not appear in false-success failure output" >&2
+  exit 1
+fi
+
+cat > "$test_root/docker" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+if [ "$1" = "inspect" ]; then
+  exit 0
+fi
+if [ "$1" = "exec" ] && [ "$2" = "-i" ]; then
+  read -r _line1 || true
+  read -r _line2 || true
+  echo "== Uptime Kuma Reset Password Tool =="
+  echo "Logged in."
   echo "Password reset successfully."
   exit 0
 fi
@@ -206,7 +246,7 @@ if grep -q 'another-harness-password' <<<"$missing_user_output"; then
   exit 1
 fi
 if [ ! -f "$KUMA_RESET_APPLIED_FILE" ]; then
-  echo "reset-applied proof must remain after post-reset username failure" >&2
+  echo "reset-applied proof must remain after verified reset with post-reset username failure" >&2
   exit 1
 fi
 if ! grep -qx 'KUMA_RESET_APPLIED=harness-attempt-1' "$KUMA_RESET_APPLIED_FILE"; then

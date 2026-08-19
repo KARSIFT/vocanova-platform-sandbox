@@ -72,6 +72,17 @@ if [ "$reset_status" -ne 0 ]; then
   exit "$reset_status"
 fi
 
+# Uptime Kuma 1.x catches reset errors internally and can still exit zero.
+# Require both its durable-reset marker and its immediate authenticated login
+# marker before treating the operation as successful. This prevents a false
+# reset proof from causing the workflow to store or scrub unusable credentials.
+if ! grep -qx 'Password reset successfully\.' <<<"$reset_output" ||
+   ! grep -qx 'Logged in\.' <<<"$reset_output"; then
+  echo "Kuma reset tool exited zero without verified reset and login markers:" >&2
+  redact_sensitive <<<"$reset_output" >&2
+  exit 1
+fi
+
 if [ -n "$RESET_APPLIED_FILE" ]; then
   umask 077
   printf 'KUMA_RESET_APPLIED=%s\n' "$RESET_ATTEMPT_ID" > "$RESET_APPLIED_FILE"
