@@ -19,7 +19,7 @@ const evidencePath = path.join(
   "specs/changes/VOC-097-make-live-evidence-tasks-operator-owned-and-self/t01-evidence.md",
 );
 
-test("VOC-097-TEST-02/03/04: caller binds lifecycle decisions to one PR head", () => {
+test("VOC-097 caller wiring binds lifecycle decisions to one PR head", () => {
   const pipeline = readFileSync(pipelinePath, "utf8");
   const exactBinding =
     "expected_head_sha: ${{ github.event.pull_request.head.sha }}";
@@ -30,7 +30,7 @@ test("VOC-097-TEST-02/03/04: caller binds lifecycle decisions to one PR head", (
   );
   assert.match(
     pipeline,
-    /cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' \}\}/,
+    /cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' && github\.event\.action != 'closed' \}\}/,
   );
   assert.equal(
     pipeline.split(exactBinding).length - 1,
@@ -45,6 +45,7 @@ test("VOC-097-TEST-05: evidence records the least-privilege shared policy", () =
 
   assert.match(evidence, /evidence_id:\s*VOC-097-EV-01/);
   assert.match(evidence, /gate_status:\s*complete/);
+  assert.match(evidence, /post_merge_source_run_claimed:\s*false/);
   assert.match(evidence, /VERDICT: WAITING FOR OPERATOR LIVE EVIDENCE/);
   assert.match(evidence, /should_retry=false/);
   assert.match(evidence, /implementer.*no.*actions.*permission/is);
