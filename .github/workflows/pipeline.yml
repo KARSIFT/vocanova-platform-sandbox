@@ -118,6 +118,13 @@ permissions:
   checks: read
   statuses: read
 
+# A synchronize event supersedes every older pipeline for the same PR. Cancel
+# the older run to avoid duplicate CI/reviewer cost; the exact-SHA inputs below
+# remain the correctness boundary if cancellation races with an active job.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   implement:
     if: github.event_name == 'workflow_dispatch' && inputs.action == 'implement'
@@ -230,6 +237,7 @@ jobs:
       pr_number: ${{ github.event.pull_request.number }}
       package_path: ${{ needs.extract-package-path.outputs.package_path }}
       integration_branch: "develop"   # match the value used for implement, above
+      expected_head_sha: ${{ github.event.pull_request.head.sha }}
     secrets: inherit
 
   # Independent review for a DRAFT change-package proposal (a "plan/"-branch
@@ -277,6 +285,7 @@ jobs:
       integration_branch: "develop"   # match the value used for implement, above
       ci_failed: ${{ needs.ci.result == 'failure' }}
       review_job_failed: ${{ needs.review.result == 'failure' }}
+      expected_head_sha: ${{ github.event.pull_request.head.sha }}
     secrets: inherit
 
   # `needs: [review, plan-review]` + the `always()` guard below fixes a real
@@ -312,6 +321,7 @@ jobs:
     uses: KARSIFT/karsift-ai-infra/.github/workflows/merge-gate.yml@main
     with:
       auto_merge_enabled: "true"      # proven live on this repo (VOC-012, VOC-014) for this project's loop
+      expected_head_sha: ${{ github.event.pull_request.head.sha }}
     secrets: inherit
 
   # Promotes a completed package after its roster closes. `reconcile-release`
