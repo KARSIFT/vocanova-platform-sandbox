@@ -66,7 +66,7 @@ When a task requires operator-owned live evidence:
 2. Add a machine-readable **evidence contract** at
    `<package-canonical-path>/.karsift/live-evidence/<task_id>.yaml`.
 3. Follow the field allowlist and metadata-only rules in
-   [`docs/operations/live-evidence.md`](../../docs/operations/live-evidence.md).
+   [`docs/operations/live-evidence.md`](../../../docs/operations/live-evidence.md).
 
 Each contract declares `ownership: operator` (or `live-actions`), allowlisted
 workflow identity (`workflow_file`, `workflow_name`, and/or `workflow_id`),
