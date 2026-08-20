@@ -36,7 +36,7 @@ Adoption did not record an alternate karsift convention. T00 confirms the
 | Job allowlist | `job_names` when the workflow has multiple jobs |
 | Trigger allowlist | `events` (for example `push`, `workflow_dispatch`, `schedule`) |
 | Branch | `branch` ref name |
-| SHA lineage | `sha_lineage`: `exact_pr_head`, `integration_ancestor`, or `exact_sha` |
+| SHA lineage | `sha_lineage.mode`: `exact_pr_head`, `integration_contains_pr_head`, or `exact_sha`; exact mode also requires `sha_lineage.sha` |
 | Conclusion | `conclusion` (default `success`) |
 | Staleness | optional `max_age` |
 | Dispatch | optional `dispatch` block; absent means observe-only |

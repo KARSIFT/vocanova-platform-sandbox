@@ -43,6 +43,13 @@ test("VOC-097-TEST-00: operator docs describe live-evidence declaration", () => 
   assert.match(doc, /workflow_file/);
   assert.match(doc, /job_names/);
   assert.match(doc, /sha_lineage/);
+  assert.match(doc, /integration_contains_pr_head/);
+  assert.match(
+    doc,
+    /task PR head SHA must be an ancestor of \(or equal to\) the run HEAD SHA/,
+  );
+  assert.match(doc, /sha_lineage\.sha/);
+  assert.doesNotMatch(doc, /sha_lineage:\s*integration_ancestor/);
   assert.match(doc, /fail closed|fails closed/i);
   assert.match(
     doc,

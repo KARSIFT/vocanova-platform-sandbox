@@ -57,7 +57,7 @@ package.
 | `job_names` | when the workflow has multiple jobs | Allowlisted job `name:` values that must succeed. Omit only for single-job workflows. |
 | `events` | yes | Allowlisted trigger set (`push`, `workflow_dispatch`, `schedule`, …). |
 | `branch` | yes | Required ref name for qualifying runs (for example `main`, `develop`). |
-| `sha_lineage` | yes | How the run's HEAD SHA relates to the task PR or integration tip (see below). |
+| `sha_lineage` | yes | Object describing how the run's HEAD SHA relates to the task PR (see below). |
 | `conclusion` | yes | Required success conclusion; default and recommended value is `success`. |
 | `max_age` | no | Staleness bound (for example `72h`) after which a run no longer qualifies. |
 | `dispatch` | no | When present, repo automation **may** dispatch this workflow with exactly these inputs; when absent, **observe-only**. |
@@ -67,13 +67,19 @@ Automation fails closed when identity is ambiguous or multiple candidates match.
 
 ### SHA lineage rules
 
-Declare exactly one lineage rule under `sha_lineage`:
+Declare exactly one lineage mode as `sha_lineage.mode`:
 
 | Rule | Meaning |
 | --- | --- |
 | `exact_pr_head` | Run HEAD SHA must equal the task PR head SHA at reconcile time. |
-| `integration_ancestor` | Run HEAD SHA must be an ancestor of (or equal to) the integration branch tip that contains the task PR. |
-| `exact_sha` | Run HEAD SHA must equal a pinned full SHA recorded in the contract (rare; prefer PR-head rules). |
+| `integration_contains_pr_head` | The task PR head SHA must be an ancestor of (or equal to) the run HEAD SHA, and the run HEAD SHA must be reachable from the current required integration `branch` tip. This prevents a successful run from before the task change from qualifying. |
+| `exact_sha` | Run HEAD SHA must equal the full 40-character SHA in `sha_lineage.sha` (rare; prefer PR-head rules). |
+
+For `exact_pr_head` and `integration_contains_pr_head`, the reconciler obtains the
+source SHA from the current task PR; authors must not copy it into the contract.
+For `exact_sha`, `sha_lineage.sha` is required and must be a full 40-character
+commit SHA. Unknown modes, missing nested fields, abbreviated SHAs, and a run
+whose source or integration ancestry cannot be proven all fail closed.
 
 Wrong branch, wrong SHA lineage, missing required jobs, non-success conclusions,
 or stale runs (past `max_age`) are rejected without waking the task and without
@@ -92,7 +98,8 @@ job_names:
 events:
   - push
 branch: main
-sha_lineage: integration_ancestor
+sha_lineage:
+  mode: integration_contains_pr_head
 conclusion: success
 max_age: 72h
 # No dispatch block — repository automation observes qualifying runs only.
@@ -111,7 +118,8 @@ job_names:
 events:
   - workflow_dispatch
 branch: main
-sha_lineage: exact_pr_head
+sha_lineage:
+  mode: exact_pr_head
 conclusion: success
 max_age: 24h
 dispatch:
