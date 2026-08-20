@@ -46,7 +46,13 @@ Every T07b cell above runs the same three checks:
 
 ```bash
 # One-time: install the Playwright browser. Chromium only.
-pnpm --filter @vocanova/web exec playwright install --with-deps chromium
+# CI uses infra/scripts/install-playwright-chromium.sh (browser cache +
+# bounded deps install); local operators may run that script or the
+# equivalent commands below.
+bash infra/scripts/install-playwright-chromium.sh
+# Or manually:
+# pnpm --filter @vocanova/web exec playwright install chromium
+# pnpm --filter @vocanova/web exec playwright install-deps chromium
 
 # Build the web app once (Playwright's webServer uses `pnpm start`
 # so the test runs against the production bundle, not the dev
@@ -144,33 +150,33 @@ The dedicated workflow's job time budget is **30 minutes**
 
 - pnpm install against the frozen lockfile: ~2 min
 - `next build` for the production bundle: ~3-5 min
-- `playwright install --with-deps chromium` (first run only;
-  the GitHub-hosted runner image has no cached browser
-  binaries): ~1-2 min
+- Playwright Chromium install via `install-playwright-chromium.sh`
+  (restores `~/.cache/ms-playwright` from `actions/cache` first;
+  bounded deps install with 120 s per-attempt timeout × 3 attempts):
+  ~1-2 min on warm cache, longer on cold cache or slow apt mirrors
 - `playwright test` (three projects, thirteen screens, one browser):
   ~1-3 min
 - teardown + report upload: ~30 s
 
-The first-time browser install is the largest unknown. It is
-**not** suppressed on cache miss: a CI run with a cached
-browser skips the install, but a clean-runner path always
-pays the full download cost. This is the same trade-off
-DOC-10 §7 "Level 2" already accepts for "selected Playwright"
-coverage.
+The first-time browser install is the largest unknown. A CI run with a
+restored browser cache may skip the Chromium download, but system deps
+are still installed with bounded retries. A clean-runner path pays the
+full download cost. This is the same trade-off DOC-10 §7 "Level 2"
+already accepts for "selected Playwright" coverage.
 
-Browser version pinning: the workflow invokes
-`pnpm exec playwright install --with-deps chromium` without
-specifying a version, so the browser that ships with the
-locked `@playwright/test` version is used. The lockfile pins
-the package version, so the browser version is effectively
-pinned by transitivity - no separate `playwright install
+Browser version pinning: the shared install script invokes
+`playwright install chromium` without specifying a version, so the
+browser that ships with the locked `@playwright/test` version is used.
+The lockfile pins the package version, so the browser version is
+effectively pinned by transitivity - no separate `playwright install
 --browser=...` config drift to manage.
 
-System dependencies (`--with-deps`) install the missing
-shared libraries Chromium needs on `ubuntu-latest`. This
-requires `apt-get`; the workflow only runs on PRs that
-satisfy the `paths` filter, so the cost is paid only when
-the e2e harness is actually exercised.
+System dependencies (`playwright install-deps chromium`) install the
+missing shared libraries Chromium needs on `ubuntu-latest`. The script
+uses explicit per-attempt timeouts and limited retries instead of an
+unbounded apt wait. The workflow only runs on PRs that satisfy the
+`paths` filter, so the cost is paid only when the e2e harness is
+actually exercised.
 
 ## T07b-specific timing notes
 

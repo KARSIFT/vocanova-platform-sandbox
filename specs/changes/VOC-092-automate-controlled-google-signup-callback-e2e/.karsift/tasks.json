@@ -1,0 +1,5 @@
+[
+{"task_id": "VOC-092-T00", "issue": 772, "depends_on": []},
+{"task_id": "VOC-092-T01", "issue": 773, "depends_on": ["VOC-092-T00"]},
+{"task_id": "VOC-092-T02", "issue": 774, "depends_on": ["VOC-092-T01"]},
+{"task_id": "VOC-092-T03", "issue": 775, "depends_on": ["VOC-092-T02"]}]

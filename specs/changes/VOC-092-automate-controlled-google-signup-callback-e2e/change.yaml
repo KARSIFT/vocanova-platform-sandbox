@@ -1,0 +1,126 @@
+schema_version: 1
+id: VOC-092
+slug: automate-controlled-google-signup-callback-e2e
+title: Automate controlled Google signup callback E2E safely
+type: infrastructure
+status: adopted
+risk: R3
+planned_implementation_risk_floor: Measured during drafting against the expected task-scoped
+  file list (apps/api/app/api/ and apps/api/business/auth/ integration tests, infra/scripts/
+  optional harness wrapper, .github/workflows/ CI wiring, scripts/foundation/ voc092
+  tests, docs/operations/, VOC-088 t03-evidence remediation, this package directory).
+  Detected path floor is R3 for apps/api/ auth paths and .github/workflows/. This
+  package proposes R3 as a draft proposal for the reviewing human at adoption time,
+  not a determination. Independent verification and the path-based classifier must
+  confirm each task's real file list and whether semantic escalation applies.
+canonical_path: specs/changes/VOC-092-automate-controlled-google-signup-callback-e2e
+authority_model: a004-active
+requirement_source: 'GitHub issue #769 (Automate controlled Google signup callback
+  E2E safely). VOC-088 required two manual Google sign-in checks because automation
+  verifies only OAuth start, canonical callback wiring, and controlled_signup_ready.
+  The repository needs repeatable E2E coverage of the application-owned OAuth callback
+  and controlled-signup policy path without storing or replaying real Google credentials,
+  cookies, authorization codes, OAuth state, or identity data. This draft package
+  does not adopt or authorize itself.'
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
+automatic_merge_allowed: true
+production_impact: No production signup-policy change. No production secret, database,
+  or runtime authentication bypass. Adds repository-managed CI-only and ephemeral
+  local E2E coverage using synthetic @synthetic.vocanova.invalid identities and a
+  local fake Google OAuth HTTP boundary. Staging and production deploy behavior unchanged
+  except documentation and VOC-088 evidence remediation.
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: 'Adds CI-only OAuth callback E2E coverage without changing infra/monitoring/monitors.yaml
+    or infra/monitoring/synthetics.yaml inventory. Existing synthetic.staging.oauth-expected-state
+    and its harness verify-staging-oauth-start.sh are retained unchanged per issue
+    #769 requirement 6.'
+dependencies:
+- id: VOC-092-DEP-00
+  status: Resolved at drafting time. VOC-088 is merged; staging controlled signup,
+    controlled_signup_ready on /healthz, verify-staging-oauth-start.sh, and synthetic.staging.oauth-expected-state
+    exist. Human sign-in evidence in VOC-088-T03 confirms allowlisted and unlisted
+    outcomes but is not repeatable automation.
+- id: VOC-092-DEP-01
+  status: Resolved at drafting time. GoogleOAuthProvider supports injectable TokenURL
+    and UserInfoURL (apps/api/business/auth/google_oauth.go). Existing httptest-based
+    provider tests and auth HTTP tests (auth_test.go, service_test.go) provide patterns.
+    FakeOAuthProvider exists for unit tests but does not exercise the real GoogleOAuthProvider
+    HTTP boundary or full start-to-callback HTTP path with database persistence.
+- id: VOC-092-DEP-02
+  status: Resolved at drafting time. Disposable Postgres integration test patterns
+    exist (atlas_apply_integration_test.go, repository_postgres_integration_test.go).
+    The harness must reuse an ephemeral database and must not connect to staging or
+    production databases.
+- id: VOC-092-DEP-03
+  status: Resolved at drafting time. VOC-088-T02 operational-failure-monitoring.yml
+    observes failed CI workflows when wired into the repository CI path. New CI jobs
+    must fail closed and surface through existing operational-failure coverage where
+    applicable without weakening deduplication or sanitization.
+affected_areas:
+- apps/api/app/api/ (OAuth start and callback HTTP handlers; integration harness)
+- apps/api/business/auth/ (GoogleOAuthProvider boundary; controlled-signup policy)
+- infra/scripts/ (optional thin wrapper to run harness locally; no staging bypass)
+- .github/workflows/ (CI job wiring for deterministic harness execution)
+- scripts/foundation/ (voc092 deterministic structure and redaction tests)
+- docs/operations/staging-controlled-signup.md (harness boundary and human audit)
+- docs/operations/README.md (operator index link if T02 touches the index)
+- specs/changes/VOC-088-persist-controlled-staging-oauth-signup-and-auto/t03-evidence.md
+  (non-blocking review findings remediation only)
+- specs/changes/VOC-092-automate-controlled-google-signup-callback-e2e/
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+implementation:
+  authorized: true
+  required: true
+  status: authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: no-production-signup-policy-change
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: authorized
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
+blocking_reasons: none - adopted and implementation-authorized
+approved_candidate_sha: 667f80c5b0ac3b79d74ea2f8d45eb91c0b129f63
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/770#issuecomment-5346630139
+adoption_risk: R3
+adoption_resolved_decisions:
+- VOC-092-DEP-00
+- VOC-092-DEP-01
+- VOC-092-DEP-02
+- VOC-092-DEP-03
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #770 at 667f80c5b0ac3b79d74ea2f8d45eb91c0b129f63'
+adoption_pr: 770
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/770
