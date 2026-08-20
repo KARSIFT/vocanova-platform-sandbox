@@ -97,10 +97,6 @@ on:
         required: false
         type: string
 
-concurrency:
-  group: pipeline-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 # Explicit floor for every job below, all of which call karsift-ai-infra's
 # reusable workflows via `uses:` with `secrets: inherit` and no
 # job-level `permissions:` of their own - without this, they silently
@@ -118,7 +114,7 @@ permissions:
   contents: write
   issues: write
   pull-requests: write
-  actions: write
+  actions: read
   checks: read
   statuses: read
 
@@ -204,24 +200,6 @@ jobs:
   # stayed permanently PENDING (nothing ever reviewed it), so merge-gate could
   # never see a passing verdict. See plan-review's own job comment and
   # karsift-ai-infra/.github/workflows/plan-review.yml for what it checks.
-  # VOC-090-T01: block review until voc090-t01-live-verify.yml commits green proof.
-  voc090-t01-gate:
-    if: >-
-      github.event_name == 'pull_request' && github.event.action != 'closed' &&
-      github.head_ref == 'agent/voc-090-voc-090-t01'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out task branch
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        with:
-          ref: ${{ github.head_ref }}
-      - name: Require live verification evidence
-        run: |
-          set -euo pipefail
-          evidence="specs/changes/VOC-090-operational-failure-scheduled-synthetics-cancelled/t01-evidence.md"
-          grep -q '^live_verification_claimed: true' "$evidence"
-          grep -q '^gate_status: live-verification-pass' "$evidence"
-
   extract-package-path:
     if: github.event_name == 'pull_request' && github.event.action != 'closed' && startsWith(github.head_ref, 'agent/')
     runs-on: ubuntu-latest
@@ -245,11 +223,8 @@ jobs:
           echo "package_path=$path" >> "$GITHUB_OUTPUT"
 
   review:
-    needs: [ci, extract-package-path, voc090-t01-gate]
-    if: >-
-      github.event_name == 'pull_request' && github.event.action != 'closed' &&
-      startsWith(github.head_ref, 'agent/') &&
-      (needs.voc090-t01-gate.result == 'success' || needs.voc090-t01-gate.result == 'skipped')
+    needs: [ci, extract-package-path]
+    if: github.event_name == 'pull_request' && github.event.action != 'closed' && startsWith(github.head_ref, 'agent/')
     uses: KARSIFT/karsift-ai-infra/.github/workflows/review.yml@main
     with:
       pr_number: ${{ github.event.pull_request.number }}

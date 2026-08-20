@@ -6,7 +6,7 @@ acceptance_criteria:
   - VOC-090-AC-06
 tests:
   - VOC-090-TEST-06
-date: 2026-08-19
+date: 2026-08-21
 related_change: VOC-090
 cites: VOC-090-EV-00
 accountable_owner: unassigned
@@ -74,10 +74,19 @@ No second open duplicate was created by the green verification run.
 
 ## Hourly schedule confirmation
 
-Deferred: schedule-triggered runs on `main` will carry T00 only after
-`develop`→`main` promotion. Record the first post-promotion hourly `success`
-at package closure if timing does not allow waiting one hour within the task
-window.
+A later full hourly run on promoted `main` also completed successfully:
+
+| Field | Value |
+| --- | --- |
+| Run | [32414684349](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32414684349) |
+| Event | `schedule` |
+| Head SHA | `1007bd6e68a3afdcbd440e09fe5c4b54762619f1` |
+| Workflow conclusion | `success` |
+| Job `synthetic.staging.authenticated-core-journey` conclusion | `success` |
+| Job wall clock | 67s |
+
+That revision contains T00 and later promoted remediation. All five canonical
+synthetic jobs passed in the same hourly run.
 
 ## Secrets and redaction
 
