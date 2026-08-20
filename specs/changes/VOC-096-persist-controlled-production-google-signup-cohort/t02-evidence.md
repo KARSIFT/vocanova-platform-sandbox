@@ -12,9 +12,9 @@ tests:
 date: 2026-08-20
 related_change: VOC-096
 accountable_owner: unassigned
-gate_status: repository-complete-live-production-pending
-live_production_claimed: false
-live_synthetic_claimed: false
+gate_status: complete
+live_production_claimed: true
+live_synthetic_claimed: true
 live_signin_claimed: false
 ---
 
@@ -23,10 +23,9 @@ live_signin_claimed: false
 ## Scope and outcome
 
 This task adds the secure operator runbook for production controlled Google signup
-and records repository-side deploy-and-verify structure. VOC-096-T00 and T01 are
-merged to `develop`; live production closure requires a separately reviewed
-controlled activation promotion to `main` followed by the automatic production
-deploy.
+and records the completed, scrubbed production deploy-and-verify result. VOC-096-T00
+and T01 were promoted through the separately checked controlled activation PR #817;
+the automatic production deploy and the dedicated production OAuth synthetic passed.
 
 ## Repository deliverables
 
@@ -42,9 +41,9 @@ deploy.
 | Acceptance criterion | Repository result | Evidence section |
 | --- | --- | --- |
 | AC-09 operator procedure | pass | § Operator procedure |
-| AC-10 deploy-and-verify checklist | repository-complete; live closure pending | § Pre-activation baseline, § Post-activation closure |
+| AC-10 deploy-and-verify checklist | pass | § Pre-activation baseline, § Post-activation closure |
 | AC-03 no emails in docs/evidence | pass | § Privacy and redaction |
-| AC-05 boolean-only `/healthz` | pre-activation baseline recorded | § Pre-activation baseline |
+| AC-05 boolean-only `/healthz` | pass | § Post-activation closure |
 
 ## Operator procedure
 
@@ -117,38 +116,31 @@ Latest successful pre-activation `deploy-production` push run on `main`:
 
 `develop` at implementation time includes merged VOC-096-T00/T01 (`4ac21fc`).
 
-## Post-activation closure (required after controlled promotion to `main`)
+## Post-activation closure (2026-08-20)
 
-After an independently reviewed controlled activation promotion merges VOC-096 to
-`main` and the automatic `deploy-production` run succeeds, update this evidence
-with scrubbed live proof:
+Controlled activation PR #817 merged to `main` at
+`0963e8db0502890581350b7134e19f72c3be3f0a`. The following evidence records only
+run identifiers, boolean state, and scrubbed outcomes:
 
-1. **Production deploy run URL** — push-triggered `deploy-production` success on
-   `main` with VOC-096 on the deployed SHA. Confirm **Validate production
-   controlled-signup allowlist** and **Write production application configuration**
-   (`controlled signup ready: true`) succeeded.
-2. **Live `/healthz`** — `jq '{status, controlled_signup_ready, kill_switches}'`
-   showing `controlled_signup_ready: true` without cohort metadata.
-3. **OAuth-start harness** — `EXPECT_OAUTH_ENABLED=true bash
-   infra/scripts/verify-production-oauth-start.sh` passes (HTTP 200 start,
-   `accounts.google.com`, canonical callback, readiness true).
-4. **Scheduled synthetic** — `synthetic.production.oauth-expected-state` green
-   on a `scheduled-synthetics` run from `main`.
-5. **Route/content smoke** — **Run production smoke-test suite** step green on
-   the same deploy run (`smoke-test-production.sh`).
+| Verification | Result | Evidence |
+| --- | --- | --- |
+| Production push deployment | pass | [`deploy-production` run 32316192584](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32316192584) completed successfully on the activation merge SHA |
+| Secret-backed validation and configuration | pass | The deploy's **Validate production controlled-signup allowlist** and **Write production application configuration** steps passed; no cohort data was inspected or copied |
+| Public production health | pass | `status: ok`; `controlled_signup_ready: true`; OAuth enabled; blanket new signup disabled; only boolean policy fields were retained |
+| Production OAuth start | pass | `EXPECT_OAUTH_ENABLED=true bash infra/scripts/verify-production-oauth-start.sh` returned HTTP 200, targeted `accounts.google.com`, retained the exact canonical production callback, and accepted boolean readiness without cohort metadata |
+| Production OAuth scheduled synthetic | pass | [`scheduled-synthetics` run 32316391341](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32316391341), job `synthetic.production.oauth-expected-state`, passed on the same `main` SHA |
+| Production route/content smoke | pass | **Run production smoke-test suite** (`smoke-test-production.sh`) passed in deploy run 32316192584, including the non-mutating route/content checks |
 
-Set `gate_status: complete`, `live_production_claimed: true`, and
-`live_synthetic_claimed: true` when all five items are recorded. Human Google
-sign-in verification (allowlisted pass, unlisted HTTP 503) remains optional
-operator evidence; record only scrubbed pass/fail if performed.
+No real-provider production sign-in is claimed. Interactive allowlisted/unlisted
+Google checks remain an operator audit and were not required for this automated
+deployment/readiness closure.
 
 ## Cohort preservation across automatic push deploys
 
-After activation, record two consecutive **push**-triggered `deploy-production`
-successes on `main` without a secret edit between them. Both must pass
-**Validate production controlled-signup allowlist** and log
-`controlled signup ready: true`. Together with live
-`controlled_signup_ready: true`, this closes VOC-096-AC-00 / AC-01 live proof.
+The activation supplied the first successful **push**-triggered production deploy:
+run 32316192584. The later normal package promotion is the second push-deploy
+checkpoint; root-package closure remains pending until that run independently
+passes validation and live readiness without a secret edit between the two runs.
 
 ## Privacy and redaction
 

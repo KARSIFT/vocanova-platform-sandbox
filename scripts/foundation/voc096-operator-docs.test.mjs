@@ -70,6 +70,17 @@ test("VOC-096-TEST-13: deploy-and-verify evidence file exists with required sect
   assert.match(evidence, /verify-production-oauth-start\.sh/);
   assert.match(evidence, /deploy-production/);
   assert.match(evidence, /smoke-test-production/);
+  assert.match(evidence, /gate_status:\s*complete/);
+  assert.match(evidence, /live_production_claimed:\s*true/);
+  assert.match(evidence, /live_synthetic_claimed:\s*true/);
+  assert.match(evidence, /live_signin_claimed:\s*false/);
+  assert.match(evidence, /Production push deployment\s*\|\s*pass/);
+  assert.match(evidence, /Public production health\s*\|\s*pass/);
+  assert.match(evidence, /Production OAuth start\s*\|\s*pass/);
+  assert.match(evidence, /Production OAuth scheduled synthetic\s*\|\s*pass/);
+  assert.match(evidence, /Production route\/content smoke\s*\|\s*pass/);
+  assert.match(evidence, /32316192584/);
+  assert.match(evidence, /32316391341/);
 
   const addresses = evidence.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi);
   assert.deepEqual(addresses ?? [], []);
