@@ -82,6 +82,25 @@ test("VOC-096-TEST-13: deploy-and-verify evidence file exists with required sect
   assert.match(evidence, /32316192584/);
   assert.match(evidence, /32316391341/);
 
+  const postActivation = evidence.split(
+    /## Post-activation closure \(2026-08-20\)/,
+  )[1];
+  assert.ok(postActivation, "post-activation evidence section must exist");
+  assert.match(postActivation, /"status":\s*"ok"/);
+  assert.match(postActivation, /"controlled_signup_ready":\s*true/);
+  assert.match(postActivation, /"oauth_enabled":\s*true/);
+  assert.match(postActivation, /"new_signups_enabled":\s*false/);
+  assert.match(postActivation, /PASS: OAuth start returned HTTP 200/);
+  assert.match(
+    postActivation,
+    /PASS: authorization URL targets accounts\.google\.com with canonical redirect_uri/,
+  );
+  assert.match(
+    postActivation,
+    /PASS: controlled_signup_ready is true without exposing cohort metadata/,
+  );
+  assert.match(postActivation, /PRODUCTION OAUTH-START VERIFICATION PASSED/);
+
   const addresses = evidence.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi);
   assert.deepEqual(addresses ?? [], []);
 });

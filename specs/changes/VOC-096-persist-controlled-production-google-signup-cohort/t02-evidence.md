@@ -29,21 +29,21 @@ the automatic production deploy and the dedicated production OAuth synthetic pas
 
 ## Repository deliverables
 
-| Artifact | Path |
-| --- | --- |
-| Operator procedure | `docs/operations/production-controlled-signup.md` |
-| Operations index link | `docs/operations/README.md` |
-| Deterministic doc/evidence tests | `scripts/foundation/voc096-operator-docs.test.mjs` |
-| This evidence | `specs/changes/VOC-096-persist-controlled-production-google-signup-cohort/t02-evidence.md` |
+| Artifact                         | Path                                                                                       |
+| -------------------------------- | ------------------------------------------------------------------------------------------ |
+| Operator procedure               | `docs/operations/production-controlled-signup.md`                                          |
+| Operations index link            | `docs/operations/README.md`                                                                |
+| Deterministic doc/evidence tests | `scripts/foundation/voc096-operator-docs.test.mjs`                                         |
+| This evidence                    | `specs/changes/VOC-096-persist-controlled-production-google-signup-cohort/t02-evidence.md` |
 
 ## Acceptance mapping
 
-| Acceptance criterion | Repository result | Evidence section |
-| --- | --- | --- |
-| AC-09 operator procedure | pass | § Operator procedure |
-| AC-10 deploy-and-verify checklist | pass | § Pre-activation baseline, § Post-activation closure |
-| AC-03 no emails in docs/evidence | pass | § Privacy and redaction |
-| AC-05 boolean-only `/healthz` | pass | § Post-activation closure |
+| Acceptance criterion              | Repository result | Evidence section                                     |
+| --------------------------------- | ----------------- | ---------------------------------------------------- |
+| AC-09 operator procedure          | pass              | § Operator procedure                                 |
+| AC-10 deploy-and-verify checklist | pass              | § Pre-activation baseline, § Post-activation closure |
+| AC-03 no emails in docs/evidence  | pass              | § Privacy and redaction                              |
+| AC-05 boolean-only `/healthz`     | pass              | § Post-activation closure                            |
 
 ## Operator procedure
 
@@ -110,9 +110,9 @@ confirms the T01 harness correctly fails closed when readiness is false.
 
 Latest successful pre-activation `deploy-production` push run on `main`:
 
-| Run | Conclusion | Head SHA | Event |
-| --- | --- | --- | --- |
-| [32313920181](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32313920181) | success | `0515c2923a40` | push |
+| Run                                                                                          | Conclusion | Head SHA       | Event |
+| -------------------------------------------------------------------------------------------- | ---------- | -------------- | ----- |
+| [32313920181](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32313920181) | success    | `0515c2923a40` | push  |
 
 `develop` at implementation time includes merged VOC-096-T00/T01 (`4ac21fc`).
 
@@ -122,14 +122,40 @@ Controlled activation PR #817 merged to `main` at
 `0963e8db0502890581350b7134e19f72c3be3f0a`. The following evidence records only
 run identifiers, boolean state, and scrubbed outcomes:
 
-| Verification | Result | Evidence |
-| --- | --- | --- |
-| Production push deployment | pass | [`deploy-production` run 32316192584](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32316192584) completed successfully on the activation merge SHA |
-| Secret-backed validation and configuration | pass | The deploy's **Validate production controlled-signup allowlist** and **Write production application configuration** steps passed; no cohort data was inspected or copied |
-| Public production health | pass | `status: ok`; `controlled_signup_ready: true`; OAuth enabled; blanket new signup disabled; only boolean policy fields were retained |
-| Production OAuth start | pass | `EXPECT_OAUTH_ENABLED=true bash infra/scripts/verify-production-oauth-start.sh` returned HTTP 200, targeted `accounts.google.com`, retained the exact canonical production callback, and accepted boolean readiness without cohort metadata |
-| Production OAuth scheduled synthetic | pass | [`scheduled-synthetics` run 32316391341](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32316391341), job `synthetic.production.oauth-expected-state`, passed on the same `main` SHA |
-| Production route/content smoke | pass | **Run production smoke-test suite** (`smoke-test-production.sh`) passed in deploy run 32316192584, including the non-mutating route/content checks |
+| Verification                               | Result | Evidence                                                                                                                                                                                                                                    |
+| ------------------------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Production push deployment                 | pass   | [`deploy-production` run 32316192584](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32316192584) completed successfully on the activation merge SHA                                                                     |
+| Secret-backed validation and configuration | pass   | The deploy's **Validate production controlled-signup allowlist** and **Write production application configuration** steps passed; no cohort data was inspected or copied                                                                    |
+| Public production health                   | pass   | `status: ok`; `controlled_signup_ready: true`; OAuth enabled; blanket new signup disabled; only boolean policy fields were retained                                                                                                         |
+| Production OAuth start                     | pass   | `EXPECT_OAUTH_ENABLED=true bash infra/scripts/verify-production-oauth-start.sh` returned HTTP 200, targeted `accounts.google.com`, retained the exact canonical production callback, and accepted boolean readiness without cohort metadata |
+| Production OAuth scheduled synthetic       | pass   | [`scheduled-synthetics` run 32316391341](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32316391341), job `synthetic.production.oauth-expected-state`, passed on the same `main` SHA                                     |
+| Production route/content smoke             | pass   | **Run production smoke-test suite** (`smoke-test-production.sh`) passed in deploy run 32316192584, including the non-mutating route/content checks                                                                                          |
+
+Scrubbed public health output collected after deploy run 32316192584:
+
+```json
+{
+  "status": "ok",
+  "controlled_signup_ready": true,
+  "kill_switches": {
+    "magic_link_enabled": false,
+    "oauth_enabled": true,
+    "new_signups_enabled": false,
+    "ai_enabled": true
+  }
+}
+```
+
+Scrubbed production OAuth-start harness output collected after the same deploy:
+
+```text
+VOC-086 production OAuth-start verification (EXPECT_OAUTH_ENABLED=true)
+PASS: OAuth start returned HTTP 200
+PASS: authorization URL targets accounts.google.com with canonical redirect_uri
+PASS: /healthz returned HTTP 200
+PASS: controlled_signup_ready is true without exposing cohort metadata
+PRODUCTION OAUTH-START VERIFICATION PASSED
+```
 
 No real-provider production sign-in is claimed. Interactive allowlisted/unlisted
 Google checks remain an operator audit and were not required for this automated
