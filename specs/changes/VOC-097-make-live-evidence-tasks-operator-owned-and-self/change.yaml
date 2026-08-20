@@ -1,0 +1,130 @@
+schema_version: 1
+id: VOC-097
+slug: make-live-evidence-tasks-operator-owned-and-self
+title: Make live-evidence tasks operator-owned and self-reconciling
+type: infrastructure
+status: draft
+risk: R3
+planned_implementation_risk_floor: "Measured during drafting against the expected\
+  \ task-scoped file list (KARSIFT/karsift-ai-infra remediate.yml, review.yml, merge-gate.yml,\
+  \ implement.yml, prompts/review.md, a new live-evidence reconcile workflow and helpers/tests;\
+  \ calling-repo AGENTS.md / docs/operations / specs/templates/change-package; optional\
+  \ .github/workflows/pipeline.yml caller wiring; scripts/foundation/voc097-* tests;\
+  \ this package directory). Detected path floor is R3 for .github/workflows/, AGENTS.md,\
+  \ and docs/governance/ if touched. This package proposes R3 for the change as a\
+  \ whole \u2014 a draft proposal for the reviewing human at adoption time, not a\
+  \ determination \u2014 because it changes remediation/agent-authority behavior and\
+  \ CI/CD lifecycle without amending A-004 or strategy documents. Independent verification\
+  \ and the reviewing human must still confirm each task's real file list and whether\
+  \ semantic escalation to R4 applies."
+canonical_path: specs/changes/VOC-097-make-live-evidence-tasks-operator-owned-and-self
+authority_model: a004-active
+requirement_source: 'GitHub issue #823 (Make live-evidence tasks operator-owned and
+  self-reconciling). Evidence-only tasks that require a live GitHub Actions run become
+  permanently stranded: the implementer lacks Actions API credentials, independent
+  review correctly rejects pending evidence, and remediation then treats missing operator
+  evidence as a code defect, consumes bounded retries, and may introduce unrelated
+  pipeline or task-specific workflow changes. Observed examples: PR #765 / task #762;
+  PR #789 / task #779 (VOC-093-T01); PR #791 / task #785 (VOC-094-T01). This draft
+  package does not adopt or authorize itself.'
+requirement_approval_status: "not-approved \u2014 drafting only; adoption is a separate\
+  \ A-004 plan-review / adopt decision"
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: none-intentional for application runtime. Changes governance automation
+  lifecycle for operator-owned live-evidence tasks across this repository and karsift-ai-infra
+  consumers. Does not change production deploy semantics, signup policy, secrets,
+  databases, Kuma inventory, or Sentry ingestion. Preserve existing risk classification,
+  exact-SHA review, branch protection, App-authenticated mutations, deployment isolation,
+  and release behavior.
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: "Governance-automation observability only. Lifecycle signals are boolean/state/count-style\
+    \ workflow outputs and sanitized run/job identifiers inside the governed task\
+    \ path \u2014 not application alerts and not new or changed entries in infra/monitoring/monitors.yaml\
+    \ or infra/monitoring/synthetics.yaml. Operational-failure observer and Sentry\
+    \ ingestion remain separate mechanisms and must not be merged with live-evidence\
+    \ waiting/reconcile signals."
+dependencies:
+- id: VOC-097-DEP-00
+  status: 'resolved at drafting time. Issue #823 states the implementer intentionally
+    lacks general GitHub Actions credentials; remediate.yml today retries on FAIL
+    / CI failure without distinguishing operator-owned pending live evidence from
+    implementation defects (karsift-ai-infra README Automated remediation; remediate.yml).'
+- id: VOC-097-DEP-01
+  status: "resolved at drafting time. Stranded live-evidence tasks identified by issue\
+    \ #823 and local roster files \u2014 VOC-093-T01 issue #779 (PR #789) and VOC-094-T01\
+    \ issue #785 (PR #791). VOC-093-T00 and VOC-094-T00 are the code predecessors;\
+    \ T01 tasks are evidence-only live verification."
+- id: VOC-097-DEP-02
+  status: "resolved at drafting time. Cross-repo pattern from VOC-080 / VOC-043 \u2014\
+    \ reusable workflow behavior lands in KARSIFT/karsift-ai-infra; this package authorizes\
+    \ the required outcome. Do not treat an untracked local karsift-ai-infra/ checkout\
+    \ as this repository's tracked tree."
+- id: VOC-097-DEP-03
+  status: "unresolved at drafting \u2014 confirm at adoption. Exact on-disk / issue\
+    \ declaration shape for the allowlisted live-evidence contract (see specification.md\
+    \ open question 1). Default proposal recorded as VOC-097-D03."
+- id: VOC-097-DEP-04
+  status: "unresolved at drafting \u2014 confirm at adoption. Default waiting timeout\
+    \ and escalation owner/path (see specification.md open question 2)."
+- id: VOC-093
+  status: Adopted predecessor. VOC-093-T01 (#779) is a stranded live route-sweep evidence
+    task this package must reconcile after the governed mechanism exists or via an
+    explicitly documented safe migration path.
+- id: VOC-094
+  status: Adopted predecessor. VOC-094-T01 (#785) is a stranded live deploy-verification
+    evidence task this package must reconcile after the governed mechanism exists
+    or via an explicitly documented safe migration path.
+- id: VOC-088
+  status: Adopted predecessor for operational-failure-monitoring.yml. Live-evidence
+    waiting/reconcile must remain a separate mechanism from failure-to-issue and must
+    not weaken sanitization, deduplication, or App-token identity.
+affected_areas:
+- KARSIFT/karsift-ai-infra/.github/workflows/remediate.yml
+- KARSIFT/karsift-ai-infra/.github/workflows/review.yml and/or prompts/review.md
+- KARSIFT/karsift-ai-infra/.github/workflows/merge-gate.yml (waiting-state awareness
+  only; do not weaken CI/exact-SHA gates)
+- KARSIFT/karsift-ai-infra/.github/workflows/implement.yml (least-privilege; no general
+  Actions credential grant)
+- KARSIFT/karsift-ai-infra new live-evidence reconcile workflow and helpers/tests
+- KARSIFT/karsift-ai-infra/README.md (lifecycle documentation)
+- calling-repo specs/templates/change-package/ (author declaration guidance)
+- calling-repo docs/operations/ (operator live-evidence procedure)
+- calling-repo AGENTS.md and/or docs/governance/ (declaration and waiting semantics;
+  only docs that currently claim contradictory behavior)
+- calling-repo .github/workflows/pipeline.yml (caller wiring / pin bump if required)
+- scripts/foundation/voc097-*.test.mjs (and/or infra self-ci fixtures)
+- specs/changes/VOC-097-make-live-evidence-tasks-operator-owned-and-self/
+implementation:
+  authorized: false
+  required: true
+  status: proposed
+  target_branch: develop
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-governance-automation-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: not-authorized
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
+blocking_reasons: "draft package \u2014 not adopted; implementation not authorized"
