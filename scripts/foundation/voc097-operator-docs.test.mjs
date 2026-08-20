@@ -66,7 +66,10 @@ test("VOC-097-TEST-00: t00 evidence records DEP-03 contract path resolution", ()
   assert.match(evidence, /VOC-097-AC-00/);
   assert.match(evidence, /VOC-097-DEP-03/);
   assert.match(evidence, /\.karsift\/live-evidence\/<task_id>\.yaml/);
-  assert.match(evidence, /gate_status:\s*repository-complete-automation-deferred/);
+  assert.match(
+    evidence,
+    /gate_status:\s*repository-complete-automation-deferred/,
+  );
 });
 
 test("VOC-097-TEST-01: change-package template mentions live-evidence ownership", () => {
@@ -77,15 +80,9 @@ test("VOC-097-TEST-01: change-package template mentions live-evidence ownership"
   assert.match(templateReadme, /\.karsift\/live-evidence/);
   assert.match(templateReadme, /operator-owned|ownership:\s*operator/i);
   assert.match(templateReadme, /docs\/operations\/live-evidence\.md/);
-  assert.doesNotMatch(
-    templateReadme,
-    /live-evidence.*TBD|TBD.*live-evidence/i,
-  );
+  assert.doesNotMatch(templateReadme, /live-evidence.*TBD|TBD.*live-evidence/i);
 
   assert.match(templateTasks, /live-evidence|live evidence/i);
   assert.match(templateTasks, /\.karsift\/live-evidence/);
-  assert.doesNotMatch(
-    templateTasks,
-    /live-evidence.*TBD|TBD.*live-evidence/i,
-  );
+  assert.doesNotMatch(templateTasks, /live-evidence.*TBD|TBD.*live-evidence/i);
 });
