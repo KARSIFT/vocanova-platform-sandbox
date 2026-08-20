@@ -80,6 +80,7 @@ jobs:
       - name: Run production OAuth expected-state check
         env:
           EXPECT_OAUTH_ENABLED: "true"
+          # verify-production-oauth-start.sh also asserts /healthz.controlled_signup_ready (VOC-096-T01)
         run: |
           set -euo pipefail
           chmod +x infra/scripts/run-scheduled-synthetic.sh
