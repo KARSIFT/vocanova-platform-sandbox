@@ -86,10 +86,13 @@ test("VOC-097-TEST-01: change-package template mentions live-evidence ownership"
   assert.match(templateReadme, /live-evidence|live evidence/i);
   assert.match(templateReadme, /\.karsift\/live-evidence/);
   assert.match(templateReadme, /operator-owned|ownership:\s*operator/i);
-  assert.match(templateReadme, /docs\/operations\/live-evidence\.md/);
+  const liveEvidenceLink =
+    /\[`docs\/operations\/live-evidence\.md`\]\(\.\.\/\.\.\/\.\.\/docs\/operations\/live-evidence\.md\)/;
+  assert.match(templateReadme, liveEvidenceLink);
   assert.doesNotMatch(templateReadme, /live-evidence.*TBD|TBD.*live-evidence/i);
 
   assert.match(templateTasks, /live-evidence|live evidence/i);
   assert.match(templateTasks, /\.karsift\/live-evidence/);
+  assert.match(templateTasks, liveEvidenceLink);
   assert.doesNotMatch(templateTasks, /live-evidence.*TBD|TBD.*live-evidence/i);
 });

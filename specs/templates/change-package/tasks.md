@@ -17,7 +17,7 @@ cannot dispatch (production deploy proof, scheduled synthetic on `main`, etc.):
   evidence** (not implementer Actions access).
 - Add `<package>/.karsift/live-evidence/<task_id>.yaml` with the allowlisted
   contract fields documented in
-  [`docs/operations/live-evidence.md`](../../docs/operations/live-evidence.md).
+  [`docs/operations/live-evidence.md`](../../../docs/operations/live-evidence.md).
 - Record in the task's `tNN-evidence.md` what the operator must trigger or wait
   for, using allowlisted metadata only (no logs, secrets, or tokens).
 - Do not expand scope into unrelated workflow or pipeline edits to manufacture
