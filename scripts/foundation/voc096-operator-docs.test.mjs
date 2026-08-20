@@ -76,7 +76,10 @@ test("VOC-096-TEST-13: deploy-and-verify evidence file exists with required sect
 });
 
 test("VOC-096-TEST-12: production doc cross-links staging without duplicating VOC-092 harness detail", () => {
-  assert.ok(existsSync(stagingDocPath), "staging-controlled-signup.md must exist");
+  assert.ok(
+    existsSync(stagingDocPath),
+    "staging-controlled-signup.md must exist",
+  );
   const productionDoc = readFileSync(operatorDocPath, "utf8");
   const stagingDoc = readFileSync(stagingDocPath, "utf8");
 
