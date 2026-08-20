@@ -10,7 +10,10 @@ const repositoryRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../..",
 );
-const pipelinePath = path.join(repositoryRoot, ".github/workflows/pipeline.yml");
+const pipelinePath = path.join(
+  repositoryRoot,
+  ".github/workflows/pipeline.yml",
+);
 const evidencePath = path.join(
   repositoryRoot,
   "specs/changes/VOC-097-make-live-evidence-tasks-operator-owned-and-self/t02-evidence.md",
@@ -30,12 +33,21 @@ test("VOC-097-T02 caller wires observe, timeout, and dispatch reconcile paths", 
     pipeline,
     /uses: KARSIFT\/karsift-ai-infra\/\.github\/workflows\/live-evidence-reconcile\.yml@main/,
   );
-  assert.match(pipeline, /mode: \$\{\{ github\.event_name == 'schedule' && 'timeout'/);
-  assert.match(pipeline, /workflow_run_id: \$\{\{ github\.event\.workflow_run\.id \|\| '' \}\}/);
+  assert.match(
+    pipeline,
+    /mode: \$\{\{ github\.event_name == 'schedule' && 'timeout'/,
+  );
+  assert.match(
+    pipeline,
+    /workflow_run_id: \$\{\{ github\.event\.workflow_run\.id \|\| '' \}\}/,
+  );
 });
 
 test("VOC-097-TEST-05: reconciler permissions stay off the implementer", () => {
-  assert.ok(existsSync(infraWorkflowPath), "local infra checkout must contain reconcile workflow");
+  assert.ok(
+    existsSync(infraWorkflowPath),
+    "local infra checkout must contain reconcile workflow",
+  );
   const workflow = readFileSync(infraWorkflowPath, "utf8");
   const implementFixture = readFileSync(
     path.join(
@@ -80,7 +92,10 @@ test("VOC-097-TEST-11: wake path chains review and merge-gate on exact head", ()
     workflow,
     /expected_head_sha: \$\{\{ needs\.reconcile\.outputs\.head_sha \}\}/,
   );
-  assert.match(workflow, /pr_number: \$\{\{ needs\.reconcile\.outputs\.pr_number \}\}/);
+  assert.match(
+    workflow,
+    /pr_number: \$\{\{ needs\.reconcile\.outputs\.pr_number \}\}/,
+  );
 });
 
 test("VOC-097-T02 evidence file records mechanism without secrets", () => {
