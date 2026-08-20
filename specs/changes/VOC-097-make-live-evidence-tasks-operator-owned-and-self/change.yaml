@@ -3,7 +3,7 @@ id: VOC-097
 slug: make-live-evidence-tasks-operator-owned-and-self
 title: Make live-evidence tasks operator-owned and self-reconciling
 type: infrastructure
-status: draft
+status: adopted
 risk: R3
 planned_implementation_risk_floor: "Measured during drafting against the expected\
   \ task-scoped file list (KARSIFT/karsift-ai-infra remediate.yml, review.yml, merge-gate.yml,\
@@ -27,8 +27,8 @@ requirement_source: 'GitHub issue #823 (Make live-evidence tasks operator-owned 
   pipeline or task-specific workflow changes. Observed examples: PR #765 / task #762;
   PR #789 / task #779 (VOC-093-T01); PR #791 / task #785 (VOC-094-T01). This draft
   package does not adopt or authorize itself.'
-requirement_approval_status: "not-approved \u2014 drafting only; adoption is a separate\
-  \ A-004 plan-review / adopt decision"
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: unknown - not recorded by this draft; set at adoption time
 target_branch: develop
@@ -37,8 +37,8 @@ owners:
   package_preparation: planner (drafting only)
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: none-intentional for application runtime. Changes governance automation
   lifecycle for operator-owned live-evidence tasks across this repository and karsift-ai-infra
@@ -107,9 +107,9 @@ affected_areas:
 - scripts/foundation/voc097-*.test.mjs (and/or infra self-ci fixtures)
 - specs/changes/VOC-097-make-live-evidence-tasks-operator-owned-and-self/
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: proposed
+  status: authorized
   target_branch: develop
   authority_issue: null
 release:
@@ -120,11 +120,22 @@ release:
   automatic_merge: true
   migration_required: false
   rollback_required: true
-repository_adoption_status: not-adopted
+repository_adoption_status: adopted
 implementation_authority_before_adoption: false
-implementation_authority_status: not-authorized
+implementation_authority_status: authorized
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
-blocking_reasons: "draft package \u2014 not adopted; implementation not authorized"
+blocking_reasons: none - adopted and implementation-authorized
+approved_candidate_sha: b54a6bb81643267147db3f211dc637cd25e3e6ba
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/824#issuecomment-5361842614
+adoption_risk: R3
+adoption_resolved_decisions:
+- VOC-097-DEP-00
+- VOC-097-DEP-01
+- VOC-097-DEP-02
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #824 at b54a6bb81643267147db3f211dc637cd25e3e6ba'
+adoption_pr: 824
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/824
