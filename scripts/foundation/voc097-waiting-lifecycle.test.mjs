@@ -44,7 +44,8 @@ test("VOC-097-TEST-05: evidence records the least-privilege shared policy", () =
   const evidence = readFileSync(evidencePath, "utf8");
 
   assert.match(evidence, /evidence_id:\s*VOC-097-EV-01/);
-  assert.match(evidence, /gate_status:\s*corrective-validation-pending/);
+  assert.match(evidence, /gate_status:\s*complete/);
+  assert.match(evidence, /post_merge_source_run_claimed:\s*false/);
   assert.match(evidence, /VERDICT: WAITING FOR OPERATOR LIVE EVIDENCE/);
   assert.match(evidence, /should_retry=false/);
   assert.match(evidence, /implementer.*no.*actions.*permission/is);

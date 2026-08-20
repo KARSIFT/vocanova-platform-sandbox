@@ -12,8 +12,9 @@ tests:
   - VOC-097-TEST-05
 date: 2026-08-21
 related_change: VOC-097
-gate_status: corrective-validation-pending
+gate_status: complete
 live_fixture_claimed: false
+post_merge_source_run_claimed: false
 ---
 
 # VOC-097-T01 — Waiting lifecycle and remediation suppression
@@ -100,7 +101,9 @@ The initial merge still deployed safely: staging deploy run `32424359429` and
 controlled-signup OAuth E2E run `32424359449` both passed at merge commit
 `435b61bb16074210e3ef015e873000a807ea459d`. This does not substitute for the
 pending corrective caller pipeline proof that the source run itself now ends
-successfully after its PR closes.
+successfully after its PR closes. That observation is a post-merge issue-closure
+condition, not evidence this commit can truthfully contain about its own future
+run (`post_merge_source_run_claimed: false`).
 
 ## Validation
 
