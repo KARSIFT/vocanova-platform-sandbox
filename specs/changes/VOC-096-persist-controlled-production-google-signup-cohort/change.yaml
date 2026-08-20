@@ -78,6 +78,7 @@ affected_areas:
   dispatch input, fail-closed validation)
 - infra/scripts/validate-production-signup-allowlist.sh (new)
 - infra/scripts/verify-production-oauth-start.sh (controlled_signup_ready assertion)
+- infra/scripts/verify-production-oauth-start.selftest.sh (disposable readiness fixtures)
 - infra/monitoring/synthetics.yaml (production readiness coverage metadata)
 - .github/workflows/scheduled-synthetics.yml (comment or wiring alignment only if
   required)
