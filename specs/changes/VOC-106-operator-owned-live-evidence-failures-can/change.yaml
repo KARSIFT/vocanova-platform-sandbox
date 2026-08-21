@@ -74,9 +74,10 @@ dependencies:
     \ karsift-ai-infra/ checkout as this repository's tracked tree."
 - id: VOC-106-DEP-03
   status: resolved at drafting time. WAITING FOR OPERATOR LIVE EVIDENCE already suppresses
-    remediation retry. The gap is genuine FAIL, CI failure, and stale/malformed/mismatched
-    contract states on the same operator-owned carrier, which must escalate without
-    consuming an implementation attempt.
+    remediation retry. The retry gap is genuine FAIL and CI failure on the same
+    operator-owned carrier, which must escalate without consuming an implementation
+    attempt. Stale results remain a no-op; malformed or mismatched ownership metadata
+    follows the separate fail-closed path.
 - id: VOC-097
   status: Adopted predecessor. Ownership contract path, waiting semantics, and reconcile
     path must remain authoritative; this package must not weaken them or grant implementer

@@ -37,12 +37,13 @@ same package.
    `- Automation ownership: live-actions` line inside that task's own `## <task_id>`
    stanza in canonical `tasks.md`. Do not infer ownership from prose. Prefer
    reusing VOC-102 ownership-classifier primitives where safe.
-3. If `ownership` is `operator` or `live-actions`: do **not** dispatch
-   `implement.yml` for review `FAIL`, CI failure, stale results, missing
-   evidence lifecycle states, or malformed/mismatched contracts. Emit a
+3. If a valid contract establishes `ownership` as `operator` or `live-actions`:
+   do **not** dispatch `implement.yml` for review `FAIL` or CI failure. Emit a
    sanitized escalate-operator / equivalent outcome per `VOC-106-D02`.
-4. Preserve `WAITING` suppression, `STALE` no-op, and `REVIEW_INFRA_FAILURE`
-   non-retry paths without consuming an implementation attempt.
+4. Preserve `WAITING` suppression, `STALE` no-op, missing-evidence lifecycle
+   handling, and `REVIEW_INFRA_FAILURE` non-retry paths without consuming an
+   implementation attempt. Route malformed or mismatched ownership metadata to
+   the separate fail-closed path in `VOC-106-D04`.
 5. If the task is ordinary (no live-evidence contract and no contradictory
    operator declaration): preserve today's bounded remediate → implement retry
    (attempt capped at 2).
