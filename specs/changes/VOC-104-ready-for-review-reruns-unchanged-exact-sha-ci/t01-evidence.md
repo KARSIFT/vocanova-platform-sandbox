@@ -1,9 +1,7 @@
 # VOC-104-T01 — Controlled draft-to-ready evidence
 
 evidence_id: `VOC-104-EV-01`
-gate_status: `qualified-proof-recorded`
 source_transition_claimed: `true`
-read_only_proof_claimed: `true`
 
 Package: `specs/changes/VOC-104-ready-for-review-reruns-unchanged-exact-sha-ci`
 Change: `VOC-104`
@@ -44,18 +42,21 @@ general implementer run was started for this operator-owned task.
 | Unique App-authored pre-merge attestation | PASS — present before merge |
 | `merge-gate / auto-merge` | PASS — success |
 
-## Qualified proof record
+## Authoritative proof state
 
-The adjacent `.karsift/live-evidence/VOC-104-T01.result.json` was written by the
-repository reconciler only after the read-only `verify-ready-for-review-reuse`
-workflow succeeded on the evidence-carrier head. The result contains only the
-contract-allowlisted workflow, run, job, SHA, conclusion, and bounded timing
-metadata. The trusted reconcile comment binds the resulting commit, and that
-post-reconcile head must still receive a fresh independent review before merge.
+Proof state is intentionally not duplicated as a mutable markdown flag. Before
+qualification, the adjacent
+`.karsift/live-evidence/VOC-104-T01.result.json` is absent and the task remains
+waiting. After the read-only `verify-ready-for-review-reuse` workflow succeeds
+on the exact carrier head, the repository reconciler alone writes that result.
+It contains only the contract-allowlisted workflow, run, job, SHA, conclusion,
+and bounded timing metadata. The trusted reconcile comment binds the resulting
+commit, and that post-reconcile head must receive a fresh independent review
+before merge.
 
-Any later evidence edit changes the carrier SHA and therefore requires another
-exact-head verifier run plus reconciliation. The markdown flags above never
-override that machine binding.
+Any later evidence edit changes the carrier SHA and invalidates that binding.
+The generated result must then be removed and requalified; prose never overrides
+the machine record.
 
 ## TEST-09 evidence split
 
