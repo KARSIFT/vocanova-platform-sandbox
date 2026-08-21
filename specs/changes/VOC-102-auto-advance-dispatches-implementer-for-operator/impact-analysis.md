@@ -48,9 +48,10 @@
 ## Risks, dependencies, and evidence
 
 - `VOC-102-R00`: **Ordinary tasks stalled** if ownership detection false-positives.
-  Mitigation: positive-dispatch tests; contract presence required for skip;
-  fail-closed only when metadata is required/contradictory, not when absent for
-  ordinary tasks.
+  Mitigation: positive-dispatch tests; contract presence required for skip; only
+  one exact marker inside the matching task stanza can declare that a contract is
+  required. Narrative prose is ignored, and absence of marker plus contract stays
+  ordinary.
 - `VOC-102-R01`: **Early release** if skip is mistaken for task completion.
   Mitigation: issue remains OPEN; TEST-07; release still keyed off issue close /
   check-completion.

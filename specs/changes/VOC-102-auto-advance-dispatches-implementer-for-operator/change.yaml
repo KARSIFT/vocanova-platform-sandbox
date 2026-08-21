@@ -11,8 +11,8 @@ planned_implementation_risk_floor:
   "Measured during drafting against the expected\
   \ task-scoped file list (KARSIFT/karsift-ai-infra/.github/workflows/auto-advance.yml,\
   \ related helper/tests and README; calling-repo .github/workflows/pipeline.yml\
-  \ pin/proof action; docs/operations/live-evidence.md and/or AGENTS.md only if current text\
-  \ would remain false; scripts/foundation/voc102-*.test.mjs and/or infra self-ci\
+  \ proof action; docs/operations/live-evidence.md and change-package template marker\
+  \ guidance; AGENTS.md only if current text would remain false; scripts/foundation/voc102-*.test.mjs and/or infra self-ci\
   \ fixtures; this package directory). Detected path floor is R3 for .github/workflows/\
   \ and governance-automation paths. This package proposes R3 for the change as a\
   \ whole \u2014 a draft proposal for the reviewing human at adoption time, not a\
@@ -108,10 +108,11 @@ affected_areas:
   - KARSIFT/karsift-ai-infra/.github/workflows/auto-advance.yml
   - KARSIFT/karsift-ai-infra deterministic evidence-carrier publisher helper/workflow,
     tests, and README for ownership gating and least-privilege waiting publication
-  - calling-repo docs/operations/live-evidence.md and/or AGENTS.md (only if current
-    text would otherwise remain false about auto-advance always dispatching implement)
-  - calling-repo .github/workflows/pipeline.yml (consume fixed auto-advance and add
-    the read-only exact-head proof action)
+  - calling-repo docs/operations/live-evidence.md and change-package planning/template
+    guidance for the exact task-stanza Automation ownership marker; AGENTS.md only
+    if current text would otherwise remain false
+  - calling-repo .github/workflows/pipeline.yml (already consumes auto-advance@main;
+    add the read-only exact-head proof action)
   - scripts/foundation/voc102-*.test.mjs and/or infra self-ci fixtures
   - specs/changes/VOC-102-auto-advance-dispatches-implementer-for-operator/
 implementation:

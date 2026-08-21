@@ -59,11 +59,13 @@
 ## VOC-102-TEST-06 — Contradictory metadata fail-closed
 
 - Covers: `VOC-102-AC-03`
-- Preconditions: Fixture where tasks.md (or equivalent governed declaration used by
-  the chosen checker) marks operator-owned live evidence but contract is absent or
-  `task_id` mismatches filename / roster id
-- Procedure: Run decision fixture.
-- Expected result: No implementer dispatch; fail-closed signal per `VOC-102-D04`.
+- Preconditions: Exact task stanzas with one allowlisted `Automation ownership`
+  marker and no contract, conflicting contract ownership, duplicate/invalid marker,
+  or contract `task_id` mismatch; plus unrelated prose containing similar words
+- Procedure: Run the structural stanza parser and decision fixture for every case.
+- Expected result: Required/conflicting/duplicate/invalid metadata produces no
+  implementer dispatch and a fail-closed signal per `VOC-102-D04`. Unrelated prose
+  is ignored, and absence of both marker and contract remains ordinary.
 - Evidence: `VOC-102-EV-00`
 
 ## VOC-102-TEST-07 — Last-task / no-next-task does not invent implement or early release

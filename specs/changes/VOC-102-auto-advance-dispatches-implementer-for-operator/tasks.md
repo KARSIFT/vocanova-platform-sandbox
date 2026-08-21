@@ -28,6 +28,10 @@ same package.
    path-specific PR/dispatch decision.
 2. Authoritative machine-readable source when present:
    `<package_path>/.karsift/live-evidence/<next_task_id>.yaml`.
+   The only secondary expectation signal is an exact
+   `- Automation ownership: operator` or
+   `- Automation ownership: live-actions` line inside that task's own `## <task_id>`
+   stanza in canonical `tasks.md`. Do not infer ownership from prose.
 3. If `ownership` is `operator` or `live-actions`: do **not** dispatch
    `implement.yml`; leave the next issue OPEN; select the separate deterministic
    clean evidence-carrier publisher defined by `VOC-102-D01/D02`.
@@ -50,10 +54,12 @@ same package.
    permission-boundary, and regression tests
    (infra self-ci and/or `scripts/foundation/voc102-*.test.mjs`).
 9. Update karsift-ai-infra README and calling-repo
-   `docs/operations/live-evidence.md` / AGENTS.md only where current text would
-   otherwise claim auto-advance always dispatches implement for every next task.
-10. Bump calling-repo `pipeline.yml` pin only if required to consume the fixed
-    reusable workflow; record the consumption mechanism in evidence.
+   `docs/operations/live-evidence.md` plus the change-package planning/template
+   guidance to define the exact automation-ownership marker. Update AGENTS.md only
+   if its current text would otherwise become false.
+10. Record that the caller already consumes reusable workflows at `@main`; no pin
+    bump is expected. If implementation discovers a different current reference,
+    reconcile it explicitly and record the actual consumption mechanism.
 11. Add the read-only `verify-auto-advance-live-evidence` workflow-dispatch action
     described by `VOC-102-D07`: on the exact carrier branch it validates a declared
     source run and waiting PR using only Actions/issue/PR metadata. Its caller and
@@ -84,6 +90,7 @@ same package.
 - **Acceptance requires operator-owned live evidence** (not implementer Actions
   access). Contract:
   `.karsift/live-evidence/VOC-102-T01.yaml`.
+- Automation ownership: operator
 
 ### Required work
 

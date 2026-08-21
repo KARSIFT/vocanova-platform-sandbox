@@ -36,6 +36,8 @@ closed-issue / open-issue / existing-PR guards, without consulting
 ## Required outcome (summary)
 
 1. Detect the next task ownership/mode from governed package data before dispatch.
+   A strict task-stanza `Automation ownership` marker signals when an operator
+   contract is required; narrative prose is never parsed.
 2. Do not dispatch the general implementer for operator-owned or live-evidence-only
    tasks.
 3. Leave the operator task open and use a deterministic non-LLM clean publisher

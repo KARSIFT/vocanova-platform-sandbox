@@ -36,7 +36,9 @@ Ordered steps:
    that ownership is not consulted today (no secrets).
 2. After next-task resolution and the open-issue guard, load
    `<package_path>/.karsift/live-evidence/<next_task_id>.yaml` when present. Do not
-   apply the existing-PR guard globally before ownership is known.
+   apply the existing-PR guard globally before ownership is known. Structurally
+   parse only the exact matching `tasks.md` stanza for the allowlisted
+   `Automation ownership` marker; never infer from prose.
 3. If ownership is `operator` or `live-actions`: select
    `prepare-live-evidence`; leave the issue open; do not call `implement.yml`.
 4. Run the separate clean publisher to create/reuse the task branch and draft
@@ -54,8 +56,10 @@ Ordered steps:
 7. Ensure last-task / no-next-task still no-ops toward release (no early release).
 8. Land deterministic positive / negative / malformed / publisher-idempotency /
    permission-boundary / regression tests.
-9. Align docs that would otherwise claim universal implement dispatch.
-10. Pin-bump calling `pipeline.yml` only if required; record consumption in evidence.
+9. Align infra/operator/template docs with skip-vs-dispatch behavior and the exact
+   task-stanza automation-ownership marker.
+10. Record the current `@main` reusable-workflow consumption (no pin bump expected);
+    if repository state differs at implementation time, reconcile it explicitly.
 11. Add a manually dispatched, read-only proof job to `pipeline.yml`. It accepts
     only a source run ID and waiting PR number, runs on the T01 carrier ref, reads
     Actions/issue/PR metadata but never logs or artifacts, and verifies: the

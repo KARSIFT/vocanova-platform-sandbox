@@ -4,8 +4,9 @@
 
 This package does not authorize production application deployment. Auto-advance
 behavior changes take effect when the karsift-ai-infra task PR merges to that
-repo's default branch and any required calling-repo pin lands on `develop` (then
-promotes via the repository-controlled release path). No founder `approved`
+repo's default branch; the caller already consumes `@main`. Calling-repo verifier,
+docs, and tests land on `develop` and then promote through the repository-controlled
+release path. No founder `approved`
 comment is a merge/adopt/release gate under active A-004.
 
 ## Preconditions, monitoring, and outcome

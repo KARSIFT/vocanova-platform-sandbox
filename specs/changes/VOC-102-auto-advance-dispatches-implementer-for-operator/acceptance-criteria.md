@@ -8,10 +8,12 @@
 - Evidence: `VOC-102-EV-00`
 - Result: pending
 
-Before auto-advance sets `should_dispatch=true`, it reads next-task ownership from
-governed package data. When
+Before auto-advance selects any path-specific PR/dispatch outcome, it reads
+next-task ownership from governed package data. When
 `<package_path>/.karsift/live-evidence/<next_task_id>.yaml` exists, that contract
-is the authoritative machine-readable ownership source.
+is the authoritative machine-readable ownership source. The only secondary
+expectation source is one exact allowlisted `Automation ownership` marker inside
+the matching task stanza; narrative prose is never interpreted.
 
 ## VOC-102-AC-01 — No implementer dispatch for operator-owned or live-evidence-only next tasks
 
@@ -53,10 +55,11 @@ open-issue and existing-PR guards.
 - Result: pending
 
 Malformed YAML, missing/unrecognized `ownership`, `task_id` mismatch, unreadable
-contracts, or contradictory operator-owned declarations without a valid contract
-do **not** dispatch the implementer. A sanitized, deduplicated failure marker is
-emitted instead of guessing. No carrier is created from malformed/untrusted path
-metadata.
+contracts, or an exact task-stanza operator/live-actions marker without a valid
+matching contract do **not** dispatch the implementer. Duplicate, invalid, or
+conflicting markers also fail closed. Absence of both marker and contract is the
+ordinary path. A sanitized, deduplicated failure marker is emitted instead of
+guessing. No carrier is created from malformed/untrusted path metadata.
 
 ## VOC-102-AC-04 — Final-roster release behavior preserved
 

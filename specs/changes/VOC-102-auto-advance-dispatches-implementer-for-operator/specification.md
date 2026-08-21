@@ -88,9 +88,14 @@ verifier govern each task PR.
 ## Decisions
 
 `VOC-102-D00`: Before auto-advance sets `should_dispatch=true`, it MUST determine
-next-task ownership from governed package data. The authoritative machine-readable
-source is
+next-task ownership and select any path-specific PR/dispatch decision, it MUST
+read governed package data. The authoritative machine-readable source is
 `<package_path>/.karsift/live-evidence/<next_task_id>.yaml` when that file exists.
+The only secondary expectation signal is an exact allowlisted marker inside the
+matching `## <next_task_id>` stanza of canonical `tasks.md`:
+`- Automation ownership: operator` or
+`- Automation ownership: live-actions`. The parser MUST match the heading and one
+marker structurally; it MUST NOT infer ownership from narrative prose.
 
 `VOC-102-D01`: If the contract declares `ownership: operator` or
 `ownership: live-actions`, auto-advance MUST NOT dispatch `implement.yml`. The
@@ -127,8 +132,10 @@ guards.
 
 `VOC-102-D04`: Fail closed on malformed YAML, missing required `ownership`,
 unrecognized ownership values, unreadable contracts, or contradictory metadata
-(task declared operator-owned live evidence in `tasks.md` / roster guidance without
-a valid contract, or contract `task_id` mismatch). Fail-closed means do **not**
+(the exact task-stanza automation marker exists without a valid matching contract,
+the marker conflicts with contract ownership, the marker is duplicated/invalid, or
+contract `task_id` mismatches). Absence of both a contract and marker means an
+ordinary task; no prose heuristic is permitted. Fail-closed means do **not**
 dispatch implementer. The same clean publisher posts one deduplicated sanitized
 failure marker on the task issue, but it MUST NOT create an evidence carrier from
 untrusted/malformed path metadata. The read-only classifier itself gains no write
@@ -172,9 +179,10 @@ upgrades, and cache-path warnings are out of scope follow-ups.
    carrier/fail-closed publisher may mint the App, scoped to contents/issues/PR
    writes; it receives no Actions-write or model credentials. This explicitly
    records the mutation surface identified by plan review.
-3. Confirmed fail-closed contradiction rule in `VOC-102-D04` when `tasks.md` prose
-   marks operator-owned live evidence but the contract file is absent (proposed:
-   no dispatch + sanitized escalation).
+3. Confirmed fail-closed contradiction rule in `VOC-102-D04`: only the exact
+   task-stanza `Automation ownership` marker may signal that a contract is required.
+   Missing/conflicting/duplicate contract-marker state produces no dispatch plus a
+   sanitized escalation; unrelated prose is never parsed.
 4. Confirmed proposed **R3**; exact implementation paths remain subject to the
    classifier and independent review.
 5. Confirmed T01 may dogfood this package (T00 close → T01 operator-owned → observe
