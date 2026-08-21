@@ -134,6 +134,20 @@ test("VOC-102 auto-advance consumes ownership gate outputs", () => {
     "infra auto-advance workflow must exist",
   );
   const workflow = readFileSync(infraAutoAdvancePath, "utf8");
+  const pipeline = readFileSync(pipelinePath, "utf8");
+  const callerBlock =
+    pipeline.split("  auto-advance:", 2)[1]?.split("\n  # Polls", 1)[0] ?? "";
+  assert.doesNotMatch(callerBlock, /secrets: inherit/);
+  for (const secret of [
+    "ANTHROPIC_API_KEY",
+    "OPENAI_API_KEY",
+    "OPENCODE_API_KEY",
+    "OPENCODE_SECOND_API_KEY",
+    "KARSIFT_BOT_APP_ID",
+    "KARSIFT_BOT_PRIVATE_KEY",
+  ]) {
+    assert.match(callerBlock, new RegExp(`${secret}: \\$\\{\\{ secrets\\.${secret} \\}\\}`));
+  }
   assert.match(workflow, /auto-advance-classifier\.py/);
   assert.match(workflow, /prepare-live-evidence:/);
   assert.match(workflow, /decision == 'prepare-live-evidence'/);

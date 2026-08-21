@@ -66,6 +66,12 @@ an explicit missing-`tasks.md` fail-closed contract and a named contract
 `task_id` mismatch test. All 104 policy tests passed hosted self-CI run
 `32483646424`, and `KARSIFT/karsift-ai-infra#78` merged as the final pinned
 revision `c7c47c54959f9c996f334c55084034ba9b0b91b4`.
+The final least-privilege/name review made the verifier's inner display segment
+explicit and replaced caller-wide `secrets: inherit` on auto-advance with the
+six-secret interface required by its ordinary implement and App publisher
+paths. All 104 policy tests passed hosted self-CI run `32484464143`, and
+`KARSIFT/karsift-ai-infra#79` merged as the final pinned revision
+`2967e907dfe2ad1c7af98bf603162b3bef431078`.
 
 ### Calling-repo foundation tests
 
@@ -119,6 +125,6 @@ Result: governance structure validation passed; detected path floor R4;
   was reviewed and corrected through the supervised split above; the failed run
   was not blindly retried.
 - Calling-repo runtime fixtures are byte-identical to the final infra merge
-  `c7c47c54959f9c996f334c55084034ba9b0b91b4`; runtime consumption remains
+  `2967e907dfe2ad1c7af98bf603162b3bef431078`; runtime consumption remains
   `KARSIFT/karsift-ai-infra/...@main`.
 - No secrets, logs, artifacts, or unrelated package live evidence recorded here.
