@@ -38,12 +38,13 @@
   outcome; merge remains fail-closed.
 - Evidence: `VOC-106-EV-00`
 
-## VOC-106-TEST-04 — Positive: ordinary implementer FAIL still retries
+## VOC-106-TEST-04 — Positive: ordinary implementer FAIL and CI failure still retry
 
 - Covers: `VOC-106-AC-02`
-- Preconditions: Exact-head review FAIL; **no** live-evidence contract; no
-  contradictory operator declaration; attempt 1 of 2
-- Procedure: Run remediation decision fixture.
+- Preconditions: Exact-head review FAIL or `ci_failed=true`; **no** live-evidence
+  contract; no contradictory operator declaration; attempt 1 of 2
+- Procedure: Run separate remediation decision fixtures for review FAIL and CI
+  failure.
 - Expected result: `should_retry=true` with next_attempt=2 and correct task /
   package / issue outputs.
 - Evidence: `VOC-106-EV-00`
@@ -104,16 +105,16 @@
 - Evidence: `VOC-106-EV-01` (and/or `VOC-106-EV-00` if fully covered by TEST-04
   fixture reused as live-adjacent proof — record which)
 
-## VOC-106-TEST-10 — Doc consistency when docs touched
+## VOC-106-TEST-10 — Operator docs describe ownership-gated remediation
 
 - Covers: `VOC-106-AC-07`
-- Preconditions: T00 may or may not edit infra README / live-evidence.md /
-  AGENTS.md
-- Procedure: If in diff, assert docs describe skip/escalate for operator-owned
-  tasks and retained retry for ordinary tasks. If untouched, assert they do not
-  claim universal implementer retry on every FAIL/CI failure.
-- Expected result: No false doc claim about remediation always dispatching
-  implement.
+- Preconditions: T00 edits the infra README and calling-repo
+  `docs/operations/live-evidence.md`; AGENTS.md may remain unchanged when policy
+  text stays accurate
+- Procedure: Assert operator docs describe skip/escalate for operator-owned
+  FAIL/CI tasks and retained bounded retry for ordinary tasks.
+- Expected result: Operators have an explicit, accurate state transition guide;
+  no doc claims remediation always dispatches implement.
 - Evidence: `VOC-106-EV-00`
 
 ## VOC-106-TEST-11 — Post-carrier verifier is exact-head and fail-closed

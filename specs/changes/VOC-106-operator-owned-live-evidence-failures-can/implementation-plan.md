@@ -28,7 +28,8 @@ under the same package.
 | karsift-ai-infra ownership/helper reuse                  | create/modify | Prefer reusing VOC-102 classifier primitives where safe       |
 | karsift-ai-infra README                                  | modify        | Document ownership-gated remediation                          |
 | karsift-ai-infra / calling-repo tests                    | create/modify | `voc106-*.test.mjs` and/or infra self-ci fixtures             |
-| `docs/operations/live-evidence.md` and/or AGENTS.md      | modify if needed | Only if text would remain false                            |
+| `docs/operations/live-evidence.md`                      | modify        | Document operator FAIL/CI escalation and ordinary retry      |
+| AGENTS.md                                               | modify if needed | Only if current policy text would become false             |
 | calling-repo `.github/workflows/pipeline.yml`            | modify        | Consume fixed remediate; add read-only exact-head proof action |
 | `specs/changes/VOC-106-.../t00-evidence.md`              | create/update | Commands + results                                            |
 

@@ -50,12 +50,12 @@ same package.
 6. Keep merge-gate fail-closed; do not invent PASS from ownership.
 7. Add deterministic workflow-policy and decision-helper tests covering operator
    WAITING, FAIL, CI failure, stale result, malformed/mismatched contract, and
-   ordinary implementer FAIL (infra self-ci and/or
+   ordinary implementer FAIL and CI failure (infra self-ci and/or
    `scripts/foundation/voc106-*.test.mjs`).
 8. Update karsift-ai-infra README and calling-repo
-   `docs/operations/live-evidence.md` only if current text would otherwise claim
-   remediation always retries the implementer on FAIL/CI failure. Update AGENTS.md
-   only if its current text would otherwise become false.
+   `docs/operations/live-evidence.md` to document ownership-gated remediation for
+   operator-owned FAIL/CI states and the retained ordinary bounded retry. Update
+   AGENTS.md only if its current text would otherwise become false.
 9. Record that the caller already consumes reusable workflows at `@main`; no pin
    bump is expected. If implementation discovers a different current reference,
    reconcile it explicitly and record the actual consumption mechanism.

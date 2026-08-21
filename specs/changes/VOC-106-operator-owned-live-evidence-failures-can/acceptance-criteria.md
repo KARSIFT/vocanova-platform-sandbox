@@ -79,8 +79,8 @@ to suppress remediation retry and does not consume an implementation attempt.
 - Result: pending
 
 Operator WAITING, FAIL, CI failure, stale, malformed/mismatched, ordinary FAIL,
-sanitization, and permission-boundary coverage exist and pass in CI or infra
-self-ci.
+ordinary CI failure, sanitization, and permission-boundary coverage exist and
+pass in CI or infra self-ci.
 
 ## VOC-106-AC-06 — Controlled sanitized workflow proof
 
@@ -97,7 +97,7 @@ that source run/job metadata. Ordinary implementer-owned FAIL still retries as
 intended. Evidence is metadata-only; no logs, artifacts, secrets, or manufactured
 unrelated-package live evidence.
 
-## VOC-106-AC-07 — Docs match ownership-gated remediation when touched
+## VOC-106-AC-07 — Operator docs describe ownership-gated remediation
 
 - Requirement source: AGENTS.md doc-consistency rule; `VOC-106-D01`, `VOC-106-D03`
 - Tasks: `VOC-106-T00`
@@ -105,11 +105,11 @@ unrelated-package live evidence.
 - Evidence: `VOC-106-EV-00`
 - Result: pending
 
-Infra README and any in-diff calling-repo operator/governance docs accurately
-state that remediation skips general implementer dispatch for operator-owned /
-live-evidence-only tasks and escalates instead — or those docs are left unchanged
-only when they already do not claim universal implementer retry on FAIL/CI
-failure.
+Infra README and calling-repo `docs/operations/live-evidence.md` accurately state
+that remediation skips general implementer dispatch for operator-owned /
+live-evidence-only FAIL/CI tasks and escalates instead, while ordinary tasks
+retain bounded retry. AGENTS.md changes only if current policy text would become
+false.
 
 ## VOC-106-AC-08 — Escalation and decide path remain least-privileged and sanitized
 
