@@ -1,0 +1,24 @@
+schema_version: 1
+task_id: VOC-105-T01
+ownership: operator
+
+workflow_file: pipeline.yml
+workflow_name: pipeline
+job_names:
+  - verify-ready-for-review-reuse / verify
+events:
+  - workflow_dispatch
+branch: agent/voc-105-voc-105-t01
+sha_lineage:
+  mode: exact_pr_head
+conclusion: success
+max_age: 72h
+# Observe-only. After T00 is live, a controlled draft-to-ready transition on an
+# unchanged base/head pair is the real operational proof that CI and model
+# review are skipped while merge-gate still re-evaluates. The operator records
+# allowlisted source run/job metadata (prior green run IDs, ready_for_review
+# run IDs, job conclusions only — never logs or secrets), then manually
+# dispatches pipeline.yml's read-only verify-ready-for-review-reuse action on
+# this deterministic task branch. That verifier must validate the source
+# metadata and reuse decision without reading logs or artifacts. Its own
+# successful workflow_dispatch run must equal the current carrier PR head.

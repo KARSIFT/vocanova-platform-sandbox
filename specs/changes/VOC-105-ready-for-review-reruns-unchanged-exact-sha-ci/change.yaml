@@ -1,0 +1,116 @@
+schema_version: 1
+id: VOC-105
+slug: ready-for-review-reruns-unchanged-exact-sha-ci
+title: Ready-for-review reruns unchanged exact-SHA CI and model review
+type: infrastructure
+status: draft
+risk: R4
+planned_implementation_risk_floor: "Measured during drafting against the expected\
+  \ task-scoped file list (KARSIFT/karsift-ai-infra reusable pipeline/ci/review/plan-review/merge-gate\
+  \ helpers and tests; calling-repo .github/workflows/pipeline.yml conditions and\
+  \ any narrow verify action; scripts/foundation/voc105-*.test.mjs and/or infra self-ci\
+  \ fixtures; docs only where current text would remain false; this package directory).\
+  \ Detected path floor is R3 for .github/workflows/ and governance-automation paths.\
+  \ This package proposes R4 for the change as a whole because it changes when CI\
+  \ and independent model review execute on ready_for_review \u2014 a semantic CI/CD\
+  \ verification gate. This is a draft proposal for the reviewing human at adoption\
+  \ time, not a determination. Independent verification must still confirm each task's\
+  \ real file list and whether further semantic escalation applies."
+canonical_path: specs/changes/VOC-105-ready-for-review-reruns-unchanged-exact-sha-ci
+authority_model: a004-active
+requirement_source: 'GitHub issue #872 (Ready-for-review reruns unchanged exact-SHA
+  CI and model review). Observed 2026-08-21: PR #868 head 744e5845f2e8a9ec717fe0c38144dbd3b594559d
+  had initial pipeline run 32492018782 pass then ready-for-review run 32492586621
+  repeat full CI and review; PR #869 head fe3cf7d60157317e0564d2dd4de751bd6109a5df
+  had initial run 32493543324 pass (live-evidence attestation true) then ready-for-review
+  run 32494037984 repeat full CI and review. Publisher recovery comment asked to retry
+  the same scoped plan with package ID VOC-105. This draft package does not adopt
+  or authorize itself.'
+requirement_approval_status: not-approved. This package has not been adopted. No field
+  in this file authorizes implementation.
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time
+target_branch: develop
+approved_candidate_sha: null
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: none-intentional for application runtime. Changes governance automation
+  so ready_for_review may reuse prior exact-SHA CI and trusted App-signed PASS evidence
+  when base/head are unchanged, instead of re-running full CI and model review. Does
+  not change production deploy semantics, signup policy, secrets, databases, Kuma
+  inventory, or Sentry ingestion.
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: Governance-automation CI/review skip-or-reuse only. No page routes, critical
+    API endpoints, or stable monitor/synthetic IDs in infra/monitoring/monitors.yaml
+    or infra/monitoring/synthetics.yaml are added or changed.
+dependencies:
+- id: VOC-105-DEP-00
+  status: 'resolved at drafting time. Issue #872 records sanitized observation that
+    ready_for_review repeated full CI and independent review for unchanged exact head
+    SHAs on PR #868 (runs 32492018782 then 32492586621) and PR #869 (runs 32493543324
+    then 32494037984).'
+- id: VOC-105-DEP-01
+  status: resolved at drafting time. Calling-repo pipeline.yml already subscribes
+    to ready_for_review so draft-aware merge-gate can re-evaluate an unchanged SHA
+    when evidence completes; today that event also starts ci and review/plan-review
+    unconditionally (action != closed).
+- id: VOC-105-DEP-02
+  status: "resolved at drafting time. Cross-repo pattern from VOC-080 / VOC-097 /\
+    \ VOC-102 \u2014 reusable workflow behavior lands in KARSIFT/karsift-ai-infra;\
+    \ this package authorizes the required outcome. Do not treat an untracked local\
+    \ karsift-ai-infra/ checkout as this repository's tracked tree."
+- id: VOC-105-DEP-03
+  status: resolved at drafting time. VOC-102 explicitly excluded duplicate exact-SHA
+    review fixes as a separate follow-up; this package is that focused root.
+- id: VOC-102
+  status: Adopted predecessor that deferred duplicate exact-SHA ready-for-review cost.
+    Used as scope-boundary evidence only; this package does not reopen VOC-102 code
+    work.
+affected_areas:
+- KARSIFT/karsift-ai-infra reusable workflow(s) and helpers that decide whether pull_request
+  ready_for_review must re-run CI and model review
+- KARSIFT/karsift-ai-infra ci.yml, review.yml, plan-review.yml, and/or merge-gate.yml
+  only as required to honor skip-or-reuse without weakening draft, exact-SHA, or trusted-verdict
+  gates
+- KARSIFT/karsift-ai-infra deterministic policy tests and README
+- calling-repo .github/workflows/pipeline.yml job conditions and any narrow read-only
+  proof/verify action
+- scripts/foundation/voc105-*.test.mjs and/or infra self-ci fixtures
+- docs that would otherwise claim ready_for_review always re-runs full CI and model
+  review
+- specs/changes/VOC-105-ready-for-review-reruns-unchanged-exact-sha-ci/
+implementation:
+  authorized: false
+  required: true
+  status: proposed
+  target_branch: develop
+  pull_request: null
+  authority_issue: 872
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-governance-automation-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
+blocking_reasons: Not adopted. Requires plan-review PASS on the exact draft revision,
+  adoption under active A-004, and implementation authorization before any task may
+  run.
