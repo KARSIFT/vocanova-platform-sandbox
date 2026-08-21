@@ -11,16 +11,27 @@ const repositoryRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../..",
 );
-const pipelinePath = path.join(repositoryRoot, ".github/workflows/pipeline.yml");
+const pipelinePath = path.join(
+  repositoryRoot,
+  ".github/workflows/pipeline.yml",
+);
 const liveEvidenceDocPath = path.join(
   repositoryRoot,
   "docs/operations/live-evidence.md",
 );
-const infraAutoAdvancePath = path.join(
+const fixtureInfraRoot = path.join(
   repositoryRoot,
-  "karsift-ai-infra/.github/workflows/auto-advance.yml",
+  "tooling/governance/fixtures/karsift-ai-infra",
 );
-const infraReadmePath = path.join(repositoryRoot, "karsift-ai-infra/README.md");
+const infraAutoAdvancePath = path.join(
+  fixtureInfraRoot,
+  ".github/workflows/auto-advance.yml",
+);
+const infraReadmePath = path.join(fixtureInfraRoot, "README.md");
+const infraOwnershipTestPath = path.join(
+  repositoryRoot,
+  "tooling/governance/tests/test_auto_advance_ownership.py",
+);
 
 function runInfraTests() {
   const result = spawnSync(
@@ -30,13 +41,13 @@ function runInfraTests() {
       "unittest",
       "discover",
       "-s",
-      "tests",
+      "tooling/governance/tests",
       "-p",
       "test_auto_advance_ownership.py",
       "-v",
     ],
     {
-      cwd: path.join(repositoryRoot, "karsift-ai-infra"),
+      cwd: repositoryRoot,
       encoding: "utf8",
     },
   );
@@ -69,13 +80,7 @@ test("VOC-102-TEST-10: docs describe skip vs dispatch when touched", () => {
 });
 
 test("VOC-102-TEST-11 through TEST-13: carrier, permissions, verifier", () => {
-  const source = readFileSync(
-    path.join(
-      repositoryRoot,
-      "karsift-ai-infra/tests/test_auto_advance_ownership.py",
-    ),
-    "utf8",
-  );
+  const source = readFileSync(infraOwnershipTestPath, "utf8");
   for (const method of [
     "test_voc102_test_11_evidence_path_is_strict_and_idempotent_helpers",
     "test_voc102_test_12_permission_boundary",
@@ -96,14 +101,21 @@ test("VOC-102 caller wiring exposes read-only verify-auto-advance-live-evidence 
     pipeline,
     /uses: KARSIFT\/karsift-ai-infra\/\.github\/workflows\/verify-auto-advance-live-evidence\.yml@main/,
   );
-  const verifyBlock = pipeline.split("verify-auto-advance-live-evidence:", 2)[1] ?? "";
-  assert.ok(verifyBlock.length > 0, "verify-auto-advance-live-evidence job must exist");
+  const verifyBlock =
+    pipeline.split("verify-auto-advance-live-evidence:", 2)[1] ?? "";
+  assert.ok(
+    verifyBlock.length > 0,
+    "verify-auto-advance-live-evidence job must exist",
+  );
   assert.match(verifyBlock, /actions: read/);
   assert.doesNotMatch(verifyBlock, /secrets: inherit/);
 });
 
 test("VOC-102 auto-advance consumes ownership gate outputs", () => {
-  assert.ok(existsSync(infraAutoAdvancePath), "infra auto-advance workflow must exist");
+  assert.ok(
+    existsSync(infraAutoAdvancePath),
+    "infra auto-advance workflow must exist",
+  );
   const workflow = readFileSync(infraAutoAdvancePath, "utf8");
   assert.match(workflow, /auto-advance-classifier\.py/);
   assert.match(workflow, /prepare-live-evidence:/);
@@ -115,9 +127,7 @@ test("VOC-102 auto-advance consumes ownership gate outputs", () => {
     /prepare-live-evidence:[\s\S]*auto-advance-carrier-publisher\.py[\s\S]*fail-closed:/,
   );
   assert.doesNotMatch(
-    workflow.match(
-      /prepare-live-evidence:[\s\S]*?fail-closed:/,
-    )[0],
+    workflow.match(/prepare-live-evidence:[\s\S]*?fail-closed:/)[0],
     /implement\.yml/,
   );
 });
