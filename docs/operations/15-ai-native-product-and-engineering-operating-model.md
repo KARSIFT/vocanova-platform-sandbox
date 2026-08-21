@@ -1633,6 +1633,10 @@ the expensive CI validation steps and model review while still emitting the rule
 `ci / ci` context through a named reuse marker and re-running deterministic merge-gate evaluation
 against the validated prior exact-SHA evidence. The marker is not new validation: it proves the
 reuse policy selected exact prior evidence, while checkout and application checks remain skipped.
+The prior and ready runs must resolve the complete reuse-critical shared-workflow set to the same
+authenticated policy SHA. The post-transition proof recomputes the latest eligible prior run and
+uses PR-specific App review and pre-merge transition attestations when GitHub clears closed-run PR
+associations; matching branch/head text alone is never proof of PR ownership.
 Otherwise the pipeline takes the normal full CI and review path (fail-closed toward verification,
 never toward merge). The shared merge gate also rechecks open/draft state and the reviewed base/head
 pair immediately before merging.

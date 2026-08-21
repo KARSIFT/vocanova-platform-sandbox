@@ -157,12 +157,15 @@
 - Covers: `VOC-104-AC-05`, `VOC-104-AC-06`
 - Preconditions: Source-run fixtures including wrong event/action, executed CI or
   model-review job on the ready_for_review run, failed merge-gate, drifted SHA,
-  and exact-head success cases
+  changed shared-policy SHA, a non-latest supplied prior run, absent/duplicate
+  App transition attestations, cross-PR branch/head reuse, and exact-head success
+  cases
 - Procedure: Exercise the verifier metadata adapter without logs or artifacts;
   assert the caller job is read-only and the T01 contract names the deterministic
   proof branch, `workflow_dispatch`, and `exact_pr_head`.
-- Expected result: Only a matching ready_for_review reuse run plus current proof
-  head succeeds. Every mismatch fails closed with a sanitized reason; the
+- Expected result: Only a matching ready_for_review reuse run, latest eligible
+  prior run, identical shared-policy SHA, PR-specific App bindings, and current
+  proof head succeeds. Every mismatch fails closed with a sanitized reason; the
   verifier has no mutation, model, deploy, or application-secret capability.
 - Evidence: `VOC-104-EV-00`
 

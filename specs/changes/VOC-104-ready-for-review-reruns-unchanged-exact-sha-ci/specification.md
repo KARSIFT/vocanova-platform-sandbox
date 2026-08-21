@@ -166,7 +166,13 @@ App-signed publisher comment shape used by merge-gate qualifies.
 `VOC-104-D06`: Exact-SHA stale-run protections and independent-role separation
 remain in force. A newer push still invalidates older runs. Implementer and
 reviewer remain different roles/vendors. This package must not create a path where
-the implementer can mint or impersonate the reusable PASS.
+the implementer can mint or impersonate the reusable PASS. Both source runs must
+resolve the complete reuse-critical shared-workflow set to the same authenticated
+policy SHA. The proof verifier must recompute the latest eligible prior run. If
+GitHub omits a closed run's PR association, branch/head equality is insufficient:
+the prior run requires its exact App review binding, and the ready run requires a
+unique App-authored pre-merge transition attestation bound to repository, PR,
+branch, base/head, ready/prior run IDs, and policy SHA.
 
 `VOC-104-D07`: Deterministic shared-infra policy tests cover at least: (positive)
 unchanged base/head + green required checks + trusted App PASS → skip CI/model
@@ -176,7 +182,9 @@ comments rejected; (attestation) required live-evidence attestation absent → f
 path / fail closed; (regression) `synchronize` / `opened` still run full CI and
 review. Calling-repository fixture/foundation coverage asserts the caller
 pipeline wires the reuse decision into `ci` / review / merge-gate conditions and
-still lists `ready_for_review` in PR types.
+still lists `ready_for_review` in PR types. Adversarial proof fixtures cover
+policy-SHA drift, a non-latest supplied prior run, missing/duplicate transition
+attestations, and separate PRs that reuse the same branch/head identity.
 
 The positive fixture must include two check suites on the same head: a completed
 prior pipeline with successful CI/publisher checks and the current

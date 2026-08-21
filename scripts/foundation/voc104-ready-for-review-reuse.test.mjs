@@ -33,6 +33,10 @@ const verifyWorkflowPath = path.join(
   ".github/workflows/verify-ready-for-review-reuse.yml",
 );
 const ciWorkflowPath = path.join(fixtureInfraRoot, ".github/workflows/ci.yml");
+const mergeWorkflowPath = path.join(
+  fixtureInfraRoot,
+  ".github/workflows/merge-gate.yml",
+);
 const pinPath = path.join(fixtureInfraRoot, "PINNED_SHA.txt");
 const fixtureTestsRoot = path.join(fixtureInfraRoot, "tests");
 const contractPath = path.join(
@@ -81,6 +85,8 @@ test("VOC-104-TEST-11: docs and caller wiring distinguish reuse from full path",
   assert.match(doc, /normal full CI and review path/);
   assert.match(infraReadme, /reuse-evidence/);
   assert.match(infraReadme, /fail-closed-to-full-path/);
+  assert.match(infraReadme, /authenticated shared-infra SHA/);
+  assert.match(infraReadme, /pre-merge record/);
   assert.match(pipeline, /ready-for-review-reuse/);
   assert.match(pipeline, /reuse_evidence:/);
   assert.match(
@@ -98,7 +104,7 @@ test("VOC-104-TEST-11: docs and caller wiring distinguish reuse from full path",
 test("VOC-104 fixture is pinned to the independently reviewed shared merge", () => {
   assert.equal(
     readFileSync(pinPath, "utf8").trim(),
-    "115363806bae4f3b3b8c90670f4dbbb0b361a00f",
+    "a592dd8fa8ea1718c0f2f632b648213b53a47e57",
   );
 });
 
@@ -121,6 +127,7 @@ test("VOC-104-TEST-12: verifier is read-only and contract-bound", () => {
   const pipeline = readFileSync(pipelinePath, "utf8");
   const verifier = readFileSync(verifyWorkflowPath, "utf8");
   const reuse = readFileSync(reuseWorkflowPath, "utf8");
+  const mergeGate = readFileSync(mergeWorkflowPath, "utf8");
   const contract = readFileSync(contractPath, "utf8");
   assert.match(pipeline, /verify-ready-for-review-reuse/);
   assert.match(
@@ -139,6 +146,8 @@ test("VOC-104-TEST-12: verifier is read-only and contract-bound", () => {
   assert.match(verifier, /expected_proof_head_sha:/);
   assert.match(reuse, /ready-for-review-reuse-runner\.py/);
   assert.match(reuse, /name: decide \(\$\{\{ inputs\.event_action \}\}\)/);
+  assert.match(mergeGate, /Publish immutable reuse transition attestation/);
+  assert.match(mergeGate, /policy_sha:/);
   assert.match(pipeline, /verify_reuse_proof_head_sha:/);
   assert.match(
     pipeline,

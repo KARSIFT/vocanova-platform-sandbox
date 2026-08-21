@@ -20,7 +20,14 @@ skip duplicate exact-SHA CI/model work, and merge-gate still re-evaluates the
 validated prior run identity. Reusable review records bind the exact pipeline run
 ID in addition to base/head and package/task identity. Controlled proof keeps the
 source transition PR/base/head/ref distinct from the later evidence-carrier SHA,
-and requires the workflow-controlled `decide (ready_for_review)` job marker.
+requires the workflow-controlled `decide (ready_for_review)` job marker, and
+recomputes the exact latest eligible prior run instead of trusting a supplied ID.
+Both source runs must resolve the complete reuse-policy workflow set to one
+identical authenticated shared-infra SHA. If GitHub clears a closed run's PR
+association, a prior run is admitted only through its exact App-authored review
+record on that PR. Optimized merge publishes one App-authored pre-merge record
+binding repository, PR, branch, base/head, ready/prior run IDs, and policy SHA;
+the post-transition verifier requires that unique attestation.
 Task-owned live evidence is also bound to the exact task identifier at production,
 duplicate-suppression, review-classification, and reuse-decision boundaries. The
 post-transition verifier requires GitHub's authenticated source PR object to record
@@ -37,7 +44,7 @@ context in `SUCCESS`; prior evidence can never replace a skipped or ambiguous
 current compatibility context.
 
 The VOC-104 workflow, policy, normalizer, and regression-test copies correspond
-to independently reviewed shared-infra merge `115363806bae4f3b3b8c90670f4dbbb0b361a00f`.
+to independently reviewed shared-infra merge `a592dd8fa8ea1718c0f2f632b648213b53a47e57`.
 
 ## auto-advance ownership (VOC-102)
 

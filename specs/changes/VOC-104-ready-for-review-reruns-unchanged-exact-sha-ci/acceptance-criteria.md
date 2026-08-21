@@ -69,6 +69,8 @@ not.
 Stale expected base/head pairs still refuse reuse. `opened` / `synchronize` /
 `reopened` still run full CI and review. Independent implementer/reviewer
 separation is unchanged; the implementer cannot mint reusable PASS authority.
+Shared policy-SHA drift forces the full path, and closed-run proof requires
+PR-specific App-authored review/transition bindings instead of inferred ownership.
 
 ## VOC-104-AC-05 — Deterministic shared-infra and calling-repo fixture coverage landed
 
@@ -83,7 +85,8 @@ separation is unchanged; the implementer cannot mint reusable PASS authority.
 Shared-infra policy tests and calling-repository fixture/foundation coverage exist
 and pass for positive reuse, deterministic negative `full-path`, uncertain
 `fail-closed-to-full-path`, draft non-merge, authority rejection, attestation
-absence, and non-ready_for_review regression cases.
+absence, policy-revision mismatch, latest-prior-run recomputation, cross-PR
+branch/head reuse, and non-ready_for_review regression cases.
 The calling-repository coverage also exercises the read-only post-transition
 verifier's exact-head and fail-closed metadata adapter; T01 supplies the separate
 live proof required to complete AC-06.
