@@ -18,16 +18,17 @@ active A-004.
 - **Exact revision:** recorded at task completion, not at drafting time.
 - **Monitoring:** No new or changed Kuma monitors/synthetics
   (`monitoring_impact.state: none`). Outcome signal is governance-operational:
-  safe unchanged ready_for_review runs skip CI/model review and still evaluate
-  merge-gate; unsafe cases take the full path; drafts never auto-merge; the
+  safe unchanged ready_for_review runs emit the required CI reuse marker, skip
+  full validation/model review, and still evaluate merge-gate; unsafe cases take
+  the full path; drafts never auto-merge; the
   exact-head proof verifier succeeds using metadata only.
 - **Outcome owner:** unassigned (set at adoption).
 - **Issue #872:** closes with package roster completion after T01 verification.
 
 ## Rollback
 
-- **Trigger:** Unsafe ready_for_review events skip CI/model review; drafts become
-  mergeable; or safe unchanged events incorrectly fail to reuse and create
+- **Trigger:** Unsafe ready_for_review events incorrectly reuse prior evidence;
+  drafts become mergeable; or safe unchanged events incorrectly fail to reuse and create
   operational incidents beyond acceptable redundant cost.
 - **Mechanism:** Revert T00 infra (and calling-repo wiring if any) through normal
   PR/release paths.

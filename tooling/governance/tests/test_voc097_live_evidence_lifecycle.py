@@ -66,6 +66,9 @@ class Voc097LiveEvidenceLifecycleTests(unittest.TestCase):
         script = script.replace("${{ github.event.pull_request.number }}", "1")
         script = script.replace("${{ inputs.expected_head_sha }}", "")
         script = script.replace("${{ inputs.expected_base_sha }}", "")
+        script = script.replace("${{ inputs.reuse_outcome }}", "")
+        script = script.replace("${{ inputs.reuse_prior_run_id }}", "")
+        script = script.replace("${{ inputs.current_ci_result }}", "success")
         gh_stub = """
         gh() {
           if [ "$1 $2 $3" = "pr view 1" ]; then
@@ -226,8 +229,12 @@ class Voc097LiveEvidenceLifecycleTests(unittest.TestCase):
         operator_permissions = reconcile.split("    permissions:", 1)[1].split(
             "    steps:", 1
         )[0]
-        self.assertIn("actions: read", operator_permissions)
-        self.assertNotIn("actions: write", operator_permissions)
+        self.assertIn("actions: write", operator_permissions)
+        app_token = reconcile.split("      - name: Mint separate operator token", 1)[
+            1
+        ].split("      - name: Reconcile declared live evidence", 1)[0]
+        self.assertNotIn("permission-actions:", app_token)
+        self.assertIn("permission-pull-requests: write", app_token)
 
     def test_caller_binds_exact_head_and_cancels_superseded_runs(self):
         self.assertIn(
@@ -246,7 +253,7 @@ class Voc097LiveEvidenceLifecycleTests(unittest.TestCase):
             self.pipeline.count(
                 "expected_head_sha: ${{ github.event.pull_request.head.sha }}"
             ),
-            4,
+            5,
         )
 
     def test_stale_run_never_retries_even_when_failed(self):

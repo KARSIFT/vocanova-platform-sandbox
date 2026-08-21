@@ -135,9 +135,11 @@ PR at evaluation time:
    fields used by merge-gate today.
 
 `VOC-104-D03`: When reuse is allowed, the `ready_for_review` pipeline run MUST
-skip full CI and skip model-invoking review / plan-review work, and MUST still
-run deterministic merge-gate re-evaluation so auto-merge can proceed for a newly
-non-draft PR. Skipped jobs must not leave merge-gate waiting forever on a missing
+skip full CI execution and skip model-invoking review / plan-review work, and MUST
+still run deterministic merge-gate re-evaluation so auto-merge can proceed for a newly
+non-draft PR. The reusable CI caller MUST emit the ruleset-required `ci / ci`
+context through a successful named reuse-marker step while checkout and the full
+application-validation step are skipped. Skipped jobs must not leave merge-gate waiting forever on a missing
 review dependency — merge-gate already tolerates a skipped review sibling via
 `always()`; the reuse path must preserve that reachability. The reuse decision
 and validated prior-run identity are passed to merge-gate. On `reuse-evidence`,
@@ -164,7 +166,13 @@ App-signed publisher comment shape used by merge-gate qualifies.
 `VOC-104-D06`: Exact-SHA stale-run protections and independent-role separation
 remain in force. A newer push still invalidates older runs. Implementer and
 reviewer remain different roles/vendors. This package must not create a path where
-the implementer can mint or impersonate the reusable PASS.
+the implementer can mint or impersonate the reusable PASS. Both source runs must
+resolve the complete reuse-critical shared-workflow set to the same authenticated
+policy SHA. The proof verifier must recompute the latest eligible prior run. If
+GitHub omits a closed run's PR association, branch/head equality is insufficient:
+the prior run requires its exact App review binding, and the ready run requires a
+unique App-authored pre-merge transition attestation bound to repository, PR,
+branch, base/head, ready/prior run IDs, and policy SHA.
 
 `VOC-104-D07`: Deterministic shared-infra policy tests cover at least: (positive)
 unchanged base/head + green required checks + trusted App PASS → skip CI/model
@@ -174,11 +182,14 @@ comments rejected; (attestation) required live-evidence attestation absent → f
 path / fail closed; (regression) `synchronize` / `opened` still run full CI and
 review. Calling-repository fixture/foundation coverage asserts the caller
 pipeline wires the reuse decision into `ci` / review / merge-gate conditions and
-still lists `ready_for_review` in PR types.
+still lists `ready_for_review` in PR types. Adversarial proof fixtures cover
+policy-SHA drift, a non-latest supplied prior run, missing/duplicate transition
+attestations, and separate PRs that reuse the same branch/head identity.
 
 The positive fixture must include two check suites on the same head: a completed
 prior pipeline with successful CI/publisher checks and the current
-`ready_for_review` run with those same job names intentionally skipped. It proves
+`ready_for_review` run with a successful reuse-only `ci / ci` context plus the
+publisher job intentionally skipped. It proves
 prior evidence is selected by run/check identity, the current run is excluded
 from eligibility evidence, and merge-gate still passes required-check and verdict
 evaluation. The paired negative fixture omits prior success and must take the
@@ -187,7 +198,8 @@ full path.
 `VOC-104-D08`: Controlled live proof uses a draft PR whose exact base/head already
 has green required checks and a trusted App PASS, then marks it ready. Evidence
 records allowlisted metadata only: prior run ID, ready_for_review run ID, job
-names/conclusions (CI/review skipped; merge-gate success), base/head SHAs, and
+names/conclusions (CI reuse marker successful, full validation/review skipped;
+merge-gate success), base/head SHAs, and
 boolean reuse decision. Forbidden: logs, artifacts, secrets, tokens, user
 identifiers. Preferred dogfood: after T00 is live, a controlled draft→ready
 transition (this package's own post-T00 carrier/proof PR or another short-lived

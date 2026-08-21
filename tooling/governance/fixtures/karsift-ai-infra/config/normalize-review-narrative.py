@@ -12,7 +12,7 @@ MAX_NARRATIVE_BYTES = 122_880
 RESERVED_BINDING = re.compile(
     r"(?:"
     r"Independent verification\s*-\s*bound to commit\b.*"
-    r"|(?:task_id|package_path|authority_issue|base_sha)\s*:.*"
+    r"|(?:task_id|package_path|authority_issue|base_sha|pipeline_run_id)\s*:.*"
     r")",
     re.IGNORECASE,
 )
@@ -74,7 +74,10 @@ def normalize_narrative(raw: bytes) -> str:
     consumer_verdicts = [
         line for line in normalized_lines if CONSUMER_VERDICT.search(line.strip())
     ]
-    if not VERDICT.fullmatch(final_line) or consumer_verdicts != [final_line]:
+    if (
+        not VERDICT.fullmatch(final_line)
+        or consumer_verdicts != [final_line]
+    ):
         raise NarrativeError(
             "Review narrative must end in one unambiguous machine verdict."
         )

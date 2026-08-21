@@ -5,14 +5,14 @@
 | Package                   | `VOC-104`                                                                            |
 | Title                     | Skip redundant ready-for-review CI and model review on unchanged exact SHA           |
 | Path                      | `specs/changes/VOC-104-ready-for-review-reruns-unchanged-exact-sha-ci`               |
-| Status                    | `draft` (not adopted; not implementation-authorized)                                 |
+| Status                    | `adopted`                                                                            |
 | Risk                      | `R4` (DOC-15 §17.3 path floor; each task diff is reclassified independently)         |
 | Authority model           | A-004 active                                                                         |
 | Requirement source        | GitHub issue [#872](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/872) |
 | Target branch             | `develop`                                                                            |
-| Approval                  | `not-approved`                                                                       |
-| Implementation authorized | `false`                                                                              |
-| `automatic_merge_allowed` | `true` (per AGENTS.md A-004 drafting rule)                                           |
+| Approval                  | `autonomously-adopted-after-independent-verification`                                |
+| Implementation authorized | `true`                                                                               |
+| `automatic_merge_allowed` | `true`                                                                               |
 
 ## Problem
 
@@ -40,8 +40,10 @@ changing the reviewed code or evidence.
    pair is unchanged, all required checks for that exact head are successful, and
    a trusted App-authored independent PASS verdict is bound to that exact
    base/head and task/package authority.
-3. In that safe unchanged case, skip full CI and model review and run only the
-   deterministic merge-gate re-evaluation needed to merge.
+3. In that safe unchanged case, run the eligibility decision, emit the required
+   `ci / ci` context through a successful reuse marker, skip checkout/full
+   application validation and model review, then run deterministic merge-gate
+   re-evaluation.
 4. Fail closed and run the normal path when the head or base changed, required
    checks are missing/non-successful, the verdict is missing/waiting/failing/
    malformed/untrusted, live-evidence attestation is required but absent, or
@@ -74,10 +76,11 @@ See `tasks.md` for full task definitions.
   deterministic remediation preflight (explicit separate focused roots per #872).
 - Change application, migration, signup-policy, secrets, database, or
   `infra/monitoring/` inventory ID behavior.
-- Self-adopt or self-authorize this package.
+- Change the package authority recorded by the governed adoption workflow.
 
 ## Verification, approvals, release, and closure
 
 See `test-plan.md`, `release-plan.md`, and `implementation-plan.md`.
 Under **active A-004**, engineering-workflow gates do not wait on a founder
-`approved` comment. This draft carries no adoption or implementation authority.
+`approved` comment. The governed plan-review/adoption workflow recorded this
+package's implementation authority before T00 began.

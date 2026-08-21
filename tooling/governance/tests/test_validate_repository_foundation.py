@@ -20,7 +20,13 @@ class RepositoryFoundationValidatorTests(unittest.TestCase):
         shutil.copytree(
             REPOSITORY_ROOT,
             self.root,
-            ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc"),
+            # The validator exercises tracked repository policy. Copying an
+            # installed pnpm tree into every synthetic fixture adds hundreds
+            # of megabytes and can turn this suite from seconds into many
+            # minutes without changing any assertion surface.
+            ignore=shutil.ignore_patterns(
+                ".git", "node_modules", "__pycache__", "*.pyc"
+            ),
         )
 
     def tearDown(self) -> None:
