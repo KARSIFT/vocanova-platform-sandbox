@@ -41,7 +41,7 @@ active A-004.
 
 - Each implementable task PR receives exact-SHA independent verification.
 - Under active A-004, no founder `approved` comment is an engineering-workflow merge
-  gate. Strengthened R3 evidence obligations: deterministic reuse-policy tests
+  gate. Strengthened R4 evidence obligations: deterministic reuse-policy tests
   pass; scope confirmed; T01 live metadata recorded under the operator-owned
   contract; sanitization and no-secret invariants preserved; draft non-merge and
   App-only verdict trust preserved.

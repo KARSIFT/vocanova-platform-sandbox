@@ -69,12 +69,12 @@ Non-goals / explicitly excluded:
 
 ## Risk and protected areas
 
-- **Draft package proposal:** **R3** (CI/CD verification-reuse lifecycle).
-- **Measured path floor at drafting:** **R3** for `.github/workflows/` and related
-  governance automation. The plan-review resolution confirms R3 for this package:
-  it changes CI/CD and governance enforcement, which the canonical classifier
-  names as R3, but does not decide an R4 product, legal, privacy, public-promise,
-  launch, or difficult-to-reverse matter. Each task PR still uses the highest
+- **Package classification:** **R4**.
+- **Measured path floor:** **R3** for `.github/workflows/` and related governance
+  automation, raised to **R4** because T00 must update the exact protected path
+  `docs/operations/15-ai-native-product-and-engineering-operating-model.md`.
+  The reuse behavior is semantically R3 CI/CD/governance enforcement, but the
+  package takes the highest applicable class. Each task PR still uses the highest
   builder, path-classifier, or independent-verifier result.
 - Protected areas: merge-gate draft blocking; App-only verdict trust; exact-SHA
   stale-run guards; independent implementer/reviewer separation; live-evidence
@@ -83,9 +83,8 @@ Non-goals / explicitly excluded:
 - Active authority model: **A-004**. No founder `approved` comment is a
   merge/adopt/release gate.
 
-The `risk: R3` value in `change.yaml` is the resolved package classification.
-The path-based classifier and independent verifier still govern each task PR and
-may raise its effective class if its actual diff introduces a higher consequence.
+The `risk: R4` value in `change.yaml` reflects the mandatory DOC-15 path floor.
+The path-based classifier and independent verifier still govern each task PR.
 
 ## Decisions
 
@@ -183,14 +182,14 @@ requiring its matching trusted publisher check (`review / publish-review` vs
 `plan-review / publish-plan-review`) and identity fields already enforced by
 merge-gate.
 
-## Resolved plan-review decisions (2026-08-21)
+## Resolved draft-refinement decisions (2026-08-21)
 
 1. Use one reusable, read-only eligibility workflow/helper surfaced as a caller
    job; caller conditions consume its machine decision.
 2. Cover both `agent/` implementation PRs and `plan/` package PRs, with their
    distinct trusted publisher checks and identity fields.
-3. Keep package risk at R3 under the canonical consequence-based definition;
-   actual task diffs remain subject to upward reclassification.
+3. Classify the package R4 because mandatory DOC-15 §17.3 work raises the R3
+   semantic CI/CD effect to the protected path floor; task diffs are reclassified.
 4. T01 will dogfood a controlled draft→ready transition after T00 is live, and
    records only run IDs, job conclusions, base/head SHAs, and the reuse boolean.
 

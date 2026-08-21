@@ -4,7 +4,7 @@ slug: ready-for-review-reruns-unchanged-exact-sha-ci
 title: Skip redundant ready-for-review CI and model review on unchanged exact SHA
 type: infrastructure
 status: draft
-risk: R3
+risk: R4
 planned_implementation_risk_floor:
   "Measured during drafting against the expected\
   \ task-scoped file list (KARSIFT/karsift-ai-infra caller pipeline template, ci.yml\
@@ -13,11 +13,11 @@ planned_implementation_risk_floor:
   \ docs/operations/15-ai-native-product-and-engineering-operating-model.md §17.3\
   \ and related ops docs when needed; scripts/foundation/voc104-*.test.mjs\
   \ and/or infra self-ci fixtures; this package directory). Detected path floor is\
-  \ R3 for .github/workflows/ and governance-automation paths. Plan review resolves\
-  \ this package as R3 under the canonical consequence-based definition: it changes\
-  \ CI/CD and governance enforcement but no R4 product, legal, privacy, public-promise,\
-  \ launch, or difficult-to-reverse matter. Each task's actual file list remains\
-  \ independently classified and may raise its effective class."
+  \ R3 for .github/workflows/ and governance-automation paths, raised to R4 because\
+  \ T00 must update docs/operations/15-ai-native-product-and-engineering-operating-model.md.\
+  \ The behavior is semantically R3 CI/CD/governance enforcement, but the package\
+  \ takes the highest applicable path floor. Each task's actual file list remains\
+  \ independently classified."
 canonical_path: specs/changes/VOC-104-ready-for-review-reruns-unchanged-exact-sha-ci
 authority_model: a004-active
 requirement_source:
@@ -76,12 +76,12 @@ dependencies:
       \ karsift-ai-infra/ checkout as this repository's tracked tree."
   - id: VOC-104-DEP-03
     status:
-      "resolved during plan review. Use one reusable, read-only eligibility\
+      "resolved during draft refinement. Use one reusable, read-only eligibility\
       \ workflow/helper surfaced as a caller job; caller conditions consume its machine\
       \ decision so ci/review/plan-review do not reimplement the predicate."
   - id: VOC-104-DEP-04
     status:
-      "resolved during plan review. Apply the optimization to both agent/ task\
+      "resolved during draft refinement. Apply the optimization to both agent/ task\
       \ PRs and plan/ planning PRs, with the matching trusted review check (review\
       \ / publish-review vs plan-review / publish-plan-review) and identity fields."
   - id: VOC-102

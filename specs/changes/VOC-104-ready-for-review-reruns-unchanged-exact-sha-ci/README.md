@@ -6,7 +6,7 @@
 | Title                     | Skip redundant ready-for-review CI and model review on unchanged exact SHA           |
 | Path                      | `specs/changes/VOC-104-ready-for-review-reruns-unchanged-exact-sha-ci`               |
 | Status                    | `draft` (not adopted; not implementation-authorized)                                 |
-| Risk                      | `R3` (resolved package class; each task diff is reclassified independently)          |
+| Risk                      | `R4` (DOC-15 §17.3 path floor; each task diff is reclassified independently)         |
 | Authority model           | A-004 active                                                                         |
 | Requirement source        | GitHub issue [#872](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/872) |
 | Target branch             | `develop`                                                                            |
