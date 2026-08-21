@@ -9,7 +9,7 @@ risk: R3
 planned_implementation_risk_floor: Measured during drafting against the expected task-scoped
   file list (KARSIFT/karsift-ai-infra/.github/workflows/remediate.yml, config/decide-remediation.py,
   related helpers/tests and README; calling-repo .github/workflows/pipeline.yml proof
-  action; docs/operations/live-evidence.md only if current text would remain false;
+  action; docs/operations/live-evidence.md ownership-gated remediation guidance;
   scripts/foundation/voc106-*.test.mjs and/or infra self-ci fixtures; this package
   directory). Detected path floor is R3 for .github/workflows/ and governance-automation
   paths. This package proposes R3 for the change as a whole because it changes semantic
@@ -93,8 +93,7 @@ affected_areas:
 - KARSIFT/karsift-ai-infra/config/decide-remediation.py and related helpers
 - KARSIFT/karsift-ai-infra deterministic policy tests and README for remediation ownership
   gating and sanitized operator/reconcile escalation
-- calling-repo docs/operations/live-evidence.md only if current wording would become
-  false
+- calling-repo docs/operations/live-evidence.md ownership-gated FAIL/CI guidance
 - calling-repo .github/workflows/pipeline.yml (add the read-only exact-head proof
   action)
 - scripts/foundation/voc106-*.test.mjs and/or infra self-ci fixtures
