@@ -41,6 +41,10 @@ git diff --check
   bundle because it contains governed workflow changes. The already-validated
   bundle from run `32535480267` was recovered without rerunning the model and
   published through the supervised workflow-change path.
+- Exact-SHA pipeline run `32536828808` passed repository tests and builds up to
+  the final API `go build`, which exited without compiler diagnostics. Its
+  generic model retry was cancelled as non-actionable runner/transient work;
+  the superseding exact-SHA run provides the binding CI result.
 - `karsift-ai-infra` remediate policy + ownership tests: **20 passed** (including
   VOC-106-TEST-00 through TEST-07 and TEST-11 matrix cases in
   `tests/test_remediate_ownership.py`).
