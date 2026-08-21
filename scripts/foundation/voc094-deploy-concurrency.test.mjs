@@ -270,12 +270,18 @@ test("VOC-094-TEST-05: observer workflow wires classifier before open-failure-is
   assert.notEqual(openIssueStepStart, -1);
   assert.ok(classifierStepStart < openIssueStepStart);
 
-  const classifierStep = workflow.slice(classifierStepStart, openIssueStepStart);
+  const classifierStep = workflow.slice(
+    classifierStepStart,
+    openIssueStepStart,
+  );
   assert.match(classifierStep, /GH_TOKEN: \$\{\{ github\.token \}\}/);
   assert.doesNotMatch(classifierStep, /steps\.app-token\.outputs\.token/);
 
   const openIssueStep = workflow.slice(openIssueStepStart);
-  assert.match(openIssueStep, /GH_TOKEN: \$\{\{ steps\.app-token\.outputs\.token \}\}/);
+  assert.match(
+    openIssueStep,
+    /GH_TOKEN: \$\{\{ steps\.app-token\.outputs\.token \}\}/,
+  );
   assert.doesNotMatch(openIssueStep, /GH_TOKEN: \$\{\{ github\.token \}\}/);
 
   const classifier = readFileSync(classifierPath, "utf8");
