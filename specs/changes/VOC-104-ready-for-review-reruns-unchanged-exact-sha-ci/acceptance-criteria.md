@@ -16,7 +16,7 @@ merge-gate proceed, and only when all other gates pass.
 
 - Requirement source: `VOC-104-D01`, `VOC-104-D02`, `VOC-104-D03`
 - Tasks: `VOC-104-T00`, `VOC-104-T01`
-- Tests: `VOC-104-TEST-02`, `VOC-104-TEST-08`, `VOC-104-TEST-09`
+- Tests: `VOC-104-TEST-02`, `VOC-104-TEST-08`
 - Evidence: `VOC-104-EV-00`, `VOC-104-EV-01`
 - Result: pending
 
@@ -92,7 +92,7 @@ Evidence is metadata-only (run IDs, job conclusions, SHAs, reuse boolean). No
 logs or secrets. T00 contributes the read-only verifier; T01 closes the live
 proof under the operator-owned contract.
 
-## VOC-104-AC-07 — Docs match reuse-vs-full-path behavior when touched
+## VOC-104-AC-07 — Docs match reuse-vs-full-path behavior
 
 - Requirement source: AGENTS.md doc-consistency rule; `VOC-104-D03`
 - Tasks: `VOC-104-T00`
@@ -100,8 +100,8 @@ proof under the operator-owned contract.
 - Evidence: `VOC-104-EV-00`
 - Result: pending
 
-Infra README and any in-diff calling-repo ops docs accurately state that
-`ready_for_review` may reuse prior exact-SHA CI and App PASS evidence when D02
-holds, otherwise runs the full path — or those docs are left unchanged only when
-they already do not claim every ready_for_review always re-runs full CI and model
-review.
+Infra README and calling-repo
+`docs/operations/15-ai-native-product-and-engineering-operating-model.md` §17.3
+must accurately state that a fresh `ready_for_review` pipeline evaluation may
+reuse prior exact-SHA CI and App PASS evidence when D02 holds, otherwise it runs
+the full path. Any other touched ops text must use the same distinction.

@@ -20,14 +20,14 @@ separate A-004 plan-review / adopt path.
 
 Drafting-time grounding:
 
-| Item | Current state |
-| ---- | ------------- |
-| Trigger | Caller `.github/workflows/pipeline.yml` includes `ready_for_review` so unchanged-SHA draft completion can re-enter merge evaluation |
-| CI / review | `ci`, `review`, and `plan-review` jobs run for every non-closed PR action, including `ready_for_review` |
-| Merge gate | Blocks `isDraft=true`; rechecks live base/head and `--match-head-commit` before merge |
-| Verdict authority | Only App-signed exact-head independent verification comments (not human/implementer text) |
-| Incident | PR #868 runs 32492018782 → 32492586621; PR #869 runs 32493543324 → 32494037984 (unchanged heads; full CI+review repeated) |
-| Deferred by | VOC-102-D08 explicitly left duplicate exact-SHA reviews to a separate follow-up |
+| Item              | Current state                                                                                                                       |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Trigger           | Caller `.github/workflows/pipeline.yml` includes `ready_for_review` so unchanged-SHA draft completion can re-enter merge evaluation |
+| CI / review       | `ci`, `review`, and `plan-review` jobs run for every non-closed PR action, including `ready_for_review`                             |
+| Merge gate        | Blocks `isDraft=true`; rechecks live base/head and `--match-head-commit` before merge                                               |
+| Verdict authority | Only App-signed exact-head independent verification comments (not human/implementer text)                                           |
+| Incident          | PR #868 runs 32492018782 → 32492586621; PR #869 runs 32493543324 → 32494037984 (unchanged heads; full CI+review repeated)           |
+| Deferred by       | VOC-102-D08 explicitly left duplicate exact-SHA reviews to a separate follow-up                                                     |
 
 ## Scope and non-goals
 
@@ -54,9 +54,8 @@ In scope:
    fixture/foundation coverage.
 9. Controlled live proof of the optimized draft→ready path with metadata-only
    evidence (run IDs and job conclusions).
-10. Update infra README and calling-repo ops docs only where current text would
-    otherwise claim every `ready_for_review` always re-runs full CI and model
-    review.
+10. Update infra README and calling-repo DOC-15 §17.3 so “fresh pipeline
+    evaluation” explicitly distinguishes safe exact-SHA reuse from the full path.
 
 Non-goals / explicitly excluded:
 
@@ -72,10 +71,11 @@ Non-goals / explicitly excluded:
 
 - **Draft package proposal:** **R3** (CI/CD verification-reuse lifecycle).
 - **Measured path floor at drafting:** **R3** for `.github/workflows/` and related
-  governance automation. Not proposed as R4; no authority-model or amendment docs.
-  Semantic escalation to R4 remains possible because the change decides when full
-  CI and independent model review may be skipped — the reviewing human and path
-  classifier govern each task PR.
+  governance automation. The plan-review resolution confirms R3 for this package:
+  it changes CI/CD and governance enforcement, which the canonical classifier
+  names as R3, but does not decide an R4 product, legal, privacy, public-promise,
+  launch, or difficult-to-reverse matter. Each task PR still uses the highest
+  builder, path-classifier, or independent-verifier result.
 - Protected areas: merge-gate draft blocking; App-only verdict trust; exact-SHA
   stale-run guards; independent implementer/reviewer separation; live-evidence
   attestation when required.
@@ -83,9 +83,9 @@ Non-goals / explicitly excluded:
 - Active authority model: **A-004**. No founder `approved` comment is a
   merge/adopt/release gate.
 
-The `risk: R3` value in `change.yaml` is a **draft proposal for the reviewing
-human at adoption time, never a determination**. The path-based classifier and
-independent verifier govern each task PR.
+The `risk: R3` value in `change.yaml` is the resolved package classification.
+The path-based classifier and independent verifier still govern each task PR and
+may raise its effective class if its actual diff introduces a higher consequence.
 
 ## Decisions
 
@@ -100,10 +100,11 @@ rule.
 today's full CI and applicable review path. The eligibility decision is computed
 once per pipeline run and exposed as a machine-readable outcome
 (`reuse-evidence` vs `full-path` vs `fail-closed-to-full-path`) consumed by `ci`,
-`review` / `plan-review`, and `merge-gate` job conditions. Default placement
-proposal (confirm at adoption — open question 1): a small reusable helper or
-caller job that inspects Actions/check/comment metadata only, then caller `if:`
-conditions skip `ci` and model review when outcome is `reuse-evidence`.
+`review` / `plan-review`, and `merge-gate` job conditions. Resolved placement: a
+small reusable, read-only eligibility workflow/helper runs as a caller job,
+inspects Actions/check/comment metadata only, and exposes the decision to caller
+`if:` conditions. The full CI/reviewer reusable workflows do not each reimplement
+the trust predicate.
 
 `VOC-104-D02`: Reuse is allowed only when all of the following hold for the live
 PR at evaluation time:
@@ -176,24 +177,22 @@ claiming a pre-ready run as the ready_for_review evidence.
 warnings, dependency alerts, and deterministic remediation preflight are out of
 scope follow-ups per issue #872.
 
-`VOC-104-D10` (proposed default; confirm at adoption — open question 2): The
-optimized path applies to both `agent/` task PRs and `plan/` planning PRs, each
+`VOC-104-D10`: The optimized path applies to both `agent/` task PRs and `plan/`
+planning PRs, each
 requiring its matching trusted publisher check (`review / publish-review` vs
 `plan-review / publish-plan-review`) and identity fields already enforced by
 merge-gate.
 
-## Open questions for the reviewing human
+## Resolved plan-review decisions (2026-08-21)
 
-1. Confirm `VOC-104-D01` placement: reusable eligibility helper plus caller `if:`
-   conditions (proposed default), versus pushing skip logic only into reusable
-   `ci.yml` / `review.yml` / `plan-review.yml` internals.
-2. Confirm `VOC-104-D10`: optimize both `agent/` and `plan/` PRs, or limit to
-   `agent/` task PRs only for the first landing.
-3. Confirm proposed **R3**, or raise in writing if verification-reuse for
-   skipping independent model review is treated as R4.
-4. Confirm T01 may dogfood a controlled draft→ready transition after T00 is live
-   (preferred), and that latency/compute evidence is limited to run IDs and job
-   conclusions.
+1. Use one reusable, read-only eligibility workflow/helper surfaced as a caller
+   job; caller conditions consume its machine decision.
+2. Cover both `agent/` implementation PRs and `plan/` package PRs, with their
+   distinct trusted publisher checks and identity fields.
+3. Keep package risk at R3 under the canonical consequence-based definition;
+   actual task diffs remain subject to upward reclassification.
+4. T01 will dogfood a controlled draft→ready transition after T00 is live, and
+   records only run IDs, job conclusions, base/head SHAs, and the reuse boolean.
 
 ## Data, migrations, analytics, and accessibility
 

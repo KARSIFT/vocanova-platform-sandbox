@@ -68,10 +68,12 @@
   CI+review).
 - `VOC-104-DEP-01`: Existing draft-aware ready_for_review + merge-gate draft block.
 - `VOC-104-DEP-02`: Cross-repo infra change ownership pattern.
-- `VOC-104-DEP-03`: Unresolved at drafting — reuse decision placement (open
-  question 1).
-- `VOC-104-DEP-04`: Unresolved at drafting — agent/ and plan/ coverage (open
-  question 2).
+- `VOC-104-DEP-03`: Resolved during plan review — one reusable, read-only
+  eligibility workflow/helper is exposed as a caller job; caller conditions
+  consume its machine decision.
+- `VOC-104-DEP-04`: Resolved during plan review — optimize both `agent/` and
+  `plan/` PRs, each with its matching trusted publisher check and identity
+  binding.
 - `VOC-104-EV-00`: T00 evidence — reuse-policy summary, deterministic test output,
   doc alignment notes (no secrets).
 - `VOC-104-EV-01`: T01 evidence — scrubbed ready_for_review run metadata proving

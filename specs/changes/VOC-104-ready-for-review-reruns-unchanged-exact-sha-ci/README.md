@@ -1,18 +1,18 @@
 # VOC-104 — Skip redundant ready-for-review CI and model review on unchanged exact SHA
 
-| Field                     | Value                                                                                          |
-| ------------------------- | ---------------------------------------------------------------------------------------------- |
-| Package                   | `VOC-104`                                                                                      |
-| Title                     | Skip redundant ready-for-review CI and model review on unchanged exact SHA                     |
-| Path                      | `specs/changes/VOC-104-ready-for-review-reruns-unchanged-exact-sha-ci`                          |
-| Status                    | `draft` (not adopted; not implementation-authorized)                                           |
-| Risk                      | `R3` (draft proposal for adoption review; path floor measured R3 — not a determination)        |
-| Authority model           | A-004 active                                                                                   |
-| Requirement source        | GitHub issue [#872](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/872)           |
-| Target branch             | `develop`                                                                                      |
-| Approval                  | `not-approved`                                                                                 |
-| Implementation authorized | `false`                                                                                        |
-| `automatic_merge_allowed` | `true` (per AGENTS.md A-004 drafting rule)                                                     |
+| Field                     | Value                                                                                |
+| ------------------------- | ------------------------------------------------------------------------------------ |
+| Package                   | `VOC-104`                                                                            |
+| Title                     | Skip redundant ready-for-review CI and model review on unchanged exact SHA           |
+| Path                      | `specs/changes/VOC-104-ready-for-review-reruns-unchanged-exact-sha-ci`               |
+| Status                    | `draft` (not adopted; not implementation-authorized)                                 |
+| Risk                      | `R3` (resolved package class; each task diff is reclassified independently)          |
+| Authority model           | A-004 active                                                                         |
+| Requirement source        | GitHub issue [#872](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/872) |
+| Target branch             | `develop`                                                                            |
+| Approval                  | `not-approved`                                                                       |
+| Implementation authorized | `false`                                                                              |
+| `automatic_merge_allowed` | `true` (per AGENTS.md A-004 drafting rule)                                           |
 
 ## Problem
 
@@ -57,10 +57,10 @@ changing the reviewed code or evidence.
 
 ## Tasks
 
-| Task | Summary                                                                 | Depends on |
-| ---- | ----------------------------------------------------------------------- | ---------- |
-| T00  | Ready-for-review reuse policy, fail-closed path, docs, deterministic tests | —          |
-| T01  | Controlled draft-to-ready optimized-path proof (operator-owned live evidence) | T00     |
+| Task | Summary                                                                       | Depends on |
+| ---- | ----------------------------------------------------------------------------- | ---------- |
+| T00  | Ready-for-review reuse policy, fail-closed path, docs, deterministic tests    | —          |
+| T01  | Controlled draft-to-ready optimized-path proof (operator-owned live evidence) | T00        |
 
 See `tasks.md` for full task definitions.
 

@@ -39,14 +39,14 @@ the same package.
    human/implementer comments as reusable authority (`VOC-104-D05`).
 5. Preserve exact-SHA stale-run protections and independent-role separation
    (`VOC-104-D06`). Non-`ready_for_review` PR activities keep today's full path.
-6. Apply the optimized path to both `agent/` and `plan/` PRs unless adoption
-   resolves open question 2 otherwise (`VOC-104-D10`).
+6. Apply the optimized path to both `agent/` and `plan/` PRs per the resolved
+   `VOC-104-D10` decision.
 7. Add deterministic shared-infra policy tests and calling-repository
    fixture/foundation coverage (`scripts/foundation/voc104-*.test.mjs` and/or
    infra self-ci) per `VOC-104-D07`.
-8. Update karsift-ai-infra README and calling-repo ops docs only where current
-   text would claim every `ready_for_review` always re-runs full CI and model
-   review.
+8. Update karsift-ai-infra README and calling-repo DOC-15 §17.3 so “fresh
+   pipeline evaluation” explicitly distinguishes safe exact-SHA reuse from the
+   normal full CI/model-review path.
 9. Record that the caller already consumes reusable workflows at `@main`; no pin
    bump is expected. If implementation discovers a different current reference,
    reconcile it explicitly and record the actual consumption mechanism.

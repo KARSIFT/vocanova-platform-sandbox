@@ -20,33 +20,33 @@ package.
 
 ### T00 — Reuse policy, fail-closed path, docs, deterministic tests
 
-| File / area | Action | Notes |
-| ----------- | ------ | ----- |
-| karsift-ai-infra ready_for_review reuse helper | create/modify | Pure decision output from Actions/check/comment metadata |
-| karsift-ai-infra pipeline template + ci/review/plan-review/merge-gate coordination | modify | Skip CI/model review only on safe ready_for_review reuse |
-| karsift-ai-infra README + policy tests | modify/create | Document reuse-vs-full-path; D02 matrix |
-| calling-repo `.github/workflows/pipeline.yml` | modify | Consume decision; add read-only exact-head proof action |
-| `scripts/foundation/voc104-*.test.mjs` and/or infra self-ci | create/modify | Caller wiring + policy fixtures |
-| `docs/operations/15-ai-native-product-and-engineering-operating-model.md` (and related) | modify if needed | Only if text would remain false |
-| `specs/changes/VOC-104-.../t00-evidence.md` | create | Commands + results |
+| File / area                                                                        | Action        | Notes                                                                       |
+| ---------------------------------------------------------------------------------- | ------------- | --------------------------------------------------------------------------- |
+| karsift-ai-infra ready_for_review reuse helper                                     | create/modify | Pure decision output from Actions/check/comment metadata                    |
+| karsift-ai-infra pipeline template + ci/review/plan-review/merge-gate coordination | modify        | Skip CI/model review only on safe ready_for_review reuse                    |
+| karsift-ai-infra README + policy tests                                             | modify/create | Document reuse-vs-full-path; D02 matrix                                     |
+| calling-repo `.github/workflows/pipeline.yml`                                      | modify        | Consume decision; add read-only exact-head proof action                     |
+| `scripts/foundation/voc104-*.test.mjs` and/or infra self-ci                        | create/modify | Caller wiring + policy fixtures                                             |
+| `docs/operations/15-ai-native-product-and-engineering-operating-model.md` §17.3    | modify        | Clarify fresh evaluation may reuse exact-SHA evidence or take the full path |
+| `specs/changes/VOC-104-.../t00-evidence.md`                                        | create        | Commands + results                                                          |
 
 Ordered steps:
 
 1. Confirm drafting-time diagnosis against current caller pipeline and reusable
    workflows: `ready_for_review` still starts full `ci` and review/plan-review
    even when base/head are unchanged (no secrets).
-2. Implement the reuse-eligibility decision per `VOC-104-D01`/`D02` (placement
-   per adoption resolution of open question 1).
+2. Implement the reusable, read-only eligibility workflow/helper and caller job
+   resolved in `VOC-104-D01`; enforce `VOC-104-D02` once in that boundary.
 3. Wire caller template and this repo's `pipeline.yml` so safe reuse skips CI and
    model review while merge-gate still runs and remains reachable when review
    siblings are skipped (`VOC-104-D03`).
 4. On any D02 failure, select the normal full path (`VOC-104-D04`).
 5. Preserve draft never auto-merges and App-only verdict trust (`VOC-104-D00`,
    `D05`, `D06`).
-6. Cover both `agent/` and `plan/` unless adoption narrows D10.
+6. Cover both `agent/` and `plan/` per resolved `VOC-104-D10`.
 7. Land deterministic shared-infra and calling-repo fixture tests (`VOC-104-D07`).
-8. Align infra/ops docs with reuse-vs-full-path behavior when current text would
-   otherwise remain false.
+8. Update infra README and calling-repo DOC-15 §17.3 to distinguish a fresh
+   readiness evaluation from an unconditional full CI/model-review replay.
 9. Record the current `@main` reusable-workflow consumption (no pin bump
    expected); if repository state differs at implementation time, reconcile it
    explicitly.
@@ -59,10 +59,10 @@ Ordered steps:
 
 ### T01 — Controlled draft-to-ready optimized-path proof
 
-| File / area | Action | Notes |
-| ----------- | ------ | ----- |
-| `specs/changes/VOC-104-.../t01-evidence.md` | create | Metadata-only live proof |
-| `.karsift/live-evidence/VOC-104-T01.yaml` | already drafted | Operator-owned contract |
+| File / area                                 | Action          | Notes                    |
+| ------------------------------------------- | --------------- | ------------------------ |
+| `specs/changes/VOC-104-.../t01-evidence.md` | create          | Metadata-only live proof |
+| `.karsift/live-evidence/VOC-104-T01.yaml`   | already drafted | Operator-owned contract  |
 
 Ordered steps:
 
