@@ -63,6 +63,8 @@ git diff --check
 - Calling-repo `pipeline.yml` exposes read-only
   `verify-remediate-operator-ownership` workflow dispatch (consumed at
   `KARSIFT/karsift-ai-infra/.github/workflows/verify-remediate-operator-ownership.yml@main`).
+  It reuses existing generic run/PR/change/task/package inputs so the complete
+  `workflow_dispatch` schema remains within GitHub's 25-input hard limit.
 - Infra README and `docs/operations/live-evidence.md` document ownership-gated
   FAIL/CI remediation and retained ordinary bounded retry.
 - VOC-106-TEST-08 / VOC-106-TEST-09 live proof remains operator-owned T01 work.
