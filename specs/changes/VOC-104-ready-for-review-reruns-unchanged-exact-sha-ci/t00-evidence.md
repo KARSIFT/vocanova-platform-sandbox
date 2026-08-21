@@ -50,6 +50,8 @@ Those corrections are included in the merged shared commit above.
   were verified byte-identical to the independently reviewed shared head.
 - Fixture tests always execute the tracked copy. They no longer prefer an incidental untracked
   `karsift-ai-infra/` checkout, which previously made results depend on the operator's filesystem.
+- Synthetic repository-validator fixtures exclude generated `node_modules`; this preserves their
+  tracked-source assertion surface while avoiding a full dependency-tree copy for every test case.
 - DOC-15 §17.3 and the fixture README distinguish safe exact-SHA reuse from the full fallback path.
 
 ## Commands and results
@@ -57,7 +59,8 @@ Those corrections are included in the merged shared commit above.
 | Command | Result |
 | --- | --- |
 | `python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py' -v` | PASS — 23 tests |
-| `python3 -m unittest tooling.governance.tests.test_ready_for_review_reuse -v` | PASS — wrapper executes the pinned shared suite |
+| `python3 -m unittest tooling.governance.tests.test_ready_for_review_reuse -v` | PASS — 2 calling tests, including an explicit green-evidence/draft auto-merge block |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py' -v` | PASS — 136 governance tests in 15.349 seconds |
 | `node --test scripts/foundation/voc104-ready-for-review-reuse.test.mjs` | PASS — 5 tests |
 | `node --test scripts/foundation/voc097-fixture-matrix.test.mjs` | PASS — 5 compatibility tests |
 | `pnpm validate` | Local environment reached API tests: 231/231 foundation, 28/28 client, and 16/16 web tests passed; the command then stopped because Docker Desktop WSL integration was unavailable to start disposable Postgres for two pre-existing OAuth tests |
@@ -70,6 +73,13 @@ Those corrections are included in the merged shared commit above.
 The exact-SHA GitHub CI run remains the required full validation authority because its runner has
 Docker available and executes the two disposable-Postgres OAuth tests. This file does not claim the
 local `pnpm validate` invocation passed.
+
+The first PR exact-SHA run (`32510529512`) passed full CI and independent review, but Repository
+Governance run `32510527837` failed because two older VOC-080 tests froze the workflow-dispatch
+option list before the new verifier action existed. Both assertions were updated to the authorized
+list. The independent review's Low finding about indirect draft coverage was also corrected with an
+explicit test that requires `is_draft == false` even when checks and verdict are green. A later
+exact-SHA run is required; the earlier review and CI are not reused across the corrective commit.
 
 ## Live proof boundary
 
