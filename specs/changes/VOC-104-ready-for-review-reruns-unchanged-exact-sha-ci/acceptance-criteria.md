@@ -71,7 +71,7 @@ separation is unchanged; the implementer cannot mint reusable PASS authority.
 - Requirement source: `VOC-104-D07`
 - Tasks: `VOC-104-T00`
 - Tests: `VOC-104-TEST-00` through `VOC-104-TEST-07`, `VOC-104-TEST-10`,
-  `VOC-104-TEST-11`, `VOC-104-TEST-11A`
+  `VOC-104-TEST-11`, `VOC-104-TEST-11A`, `VOC-104-TEST-12`
 - Evidence: `VOC-104-EV-00`
 - Result: pending
 
@@ -79,6 +79,9 @@ Shared-infra policy tests and calling-repository fixture/foundation coverage exi
 and pass for positive reuse, deterministic negative `full-path`, uncertain
 `fail-closed-to-full-path`, draft non-merge, authority rejection, attestation
 absence, and non-ready_for_review regression cases.
+The calling-repository coverage also exercises the read-only post-transition
+verifier's exact-head and fail-closed metadata adapter; T01 supplies the separate
+live proof required to complete AC-06.
 
 ## VOC-104-AC-06 — Controlled draft-to-ready optimized-path proof
 
