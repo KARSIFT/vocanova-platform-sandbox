@@ -31,11 +31,13 @@ exact-SHA reuse marker. Checkout and application validation remain skipped. This
 small compatibility context is necessary because GitHub evaluates the newest
 required check context; omitting the reusable CI caller changes its visible name
 to `ci` and leaves `ci / ci` unsatisfied even when prior evidence is valid. The
-post-transition verifier requires the marker to succeed and the full validation
-step to be skipped.
+post-transition verifier requires the marker to succeed and both checkout steps
+plus the full validation step to be skipped. Merge-gate also requires exactly one current `ci / ci`
+context in `SUCCESS`; prior evidence can never replace a skipped or ambiguous
+current compatibility context.
 
 The VOC-104 workflow, policy, normalizer, and regression-test copies correspond
-to independently reviewed shared-infra merge `d5c7786aa4957bec0b769815539fe0d63d0cbd4c`.
+to independently reviewed shared-infra merge `115363806bae4f3b3b8c90670f4dbbb0b361a00f`.
 
 ## auto-advance ownership (VOC-102)
 

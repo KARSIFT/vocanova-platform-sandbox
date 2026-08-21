@@ -68,6 +68,7 @@ class Voc097LiveEvidenceLifecycleTests(unittest.TestCase):
         script = script.replace("${{ inputs.expected_base_sha }}", "")
         script = script.replace("${{ inputs.reuse_outcome }}", "")
         script = script.replace("${{ inputs.reuse_prior_run_id }}", "")
+        script = script.replace("${{ inputs.current_ci_result }}", "success")
         gh_stub = """
         gh() {
           if [ "$1 $2 $3" = "pr view 1" ]; then

@@ -81,12 +81,29 @@ GPT-5.6 exact-SHA audit returned PASS with no actionable finding. It merged as
 jobs. The failed transition is retained as negative operational evidence and is not claimed as the
 T01 acceptance proof.
 
+Fresh VocaNova exact-head review and a separate GPT-5.6-sol audit then found three additional
+fail-closed gaps plus one stale summary: merge-time reuse did not bind the successful compatibility
+context to the current caller's CI result; an eligibility-job infrastructure failure ran full
+CI/review but its failed check could still poison merge-gate; and the proof verifier did not require
+both checkout steps to remain skipped. Shared PR `KARSIFT/karsift-ai-infra#92` repaired all three
+runtime paths and eliminated a duplicate inline full-path check filter so both production branches
+use the tested helper. The caller now passes its current `needs.ci.result`; skipped, duplicated, or
+ambiguous CI contexts fail closed. Checkout/evaluator failures produce
+`fail-closed-to-full-path`, and a successful replacement full CI/review may then satisfy merge-gate
+without reusing evidence.
+
+PR #92's exact reviewed head was `77d0250109796d0833341789fba53f5c8fee2993`; all 133 shared
+policy tests passed, exact-head CI run `32523028404` passed all four jobs, and a fresh independent
+GPT-5.6-sol exact-SHA audit returned PASS with no actionable finding after the live-shell-path
+correction. It merged as `115363806bae4f3b3b8c90670f4dbbb0b361a00f`; post-merge main CI is
+recorded by run `32523278467`, which passed all four jobs.
+
 ## Calling-repository adoption
 
 - `.github/workflows/pipeline.yml` consumes both reusable workflows at `@main` and supplies distinct
   source PR/base/head plus explicit evidence-carrier head inputs to the verifier.
 - The tracked fixture is pinned to shared merge
-  `d5c7786aa4957bec0b769815539fe0d63d0cbd4c`; 17 copied workflow, helper, template, and test files
+  `115363806bae4f3b3b8c90670f4dbbb0b361a00f`; 17 copied workflow, helper, template, and test files
   were verified byte-identical to the independently reviewed shared head.
 - Fixture tests always execute the tracked copy. They no longer prefer an incidental untracked
   `karsift-ai-infra/` checkout, which previously made results depend on the operator's filesystem.
@@ -98,7 +115,7 @@ T01 acceptance proof.
 
 | Command | Result |
 | --- | --- |
-| `python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py' -v` | PASS — 28 tests |
+| `python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py' -v` | PASS — 29 tests |
 | `python3 -m unittest tooling.governance.tests.test_ready_for_review_reuse -v` | PASS — 2 calling tests, including an explicit green-evidence/draft auto-merge block |
 | `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py' -v` | PASS — 137 governance tests after the final fixture-permission regression was added |
 | `node --test scripts/foundation/voc104-ready-for-review-reuse.test.mjs` | PASS — 6 tests |
