@@ -5,13 +5,13 @@
 | Package                   | `VOC-102`                                                                            |
 | Title                     | Stop auto-advance dispatching implementer for operator-owned live-evidence tasks     |
 | Path                      | `specs/changes/VOC-102-auto-advance-dispatches-implementer-for-operator`             |
-| Status                    | `draft`                                                                              |
-| Risk                      | `R3` (draft proposal; path-based floor and independent verification govern)          |
+| Status                    | `adopted`                                                                            |
+| Risk                      | `R4` (implemented workflow path floor; independently verified per task)              |
 | Authority model           | A-004 active                                                                         |
 | Requirement source        | GitHub issue [#863](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/863) |
 | Target branch             | `develop`                                                                            |
-| Approval                  | `not-approved`                                                                       |
-| Implementation authorized | `false`                                                                              |
+| Approval                  | `autonomously-adopted-after-independent-verification`                                |
+| Implementation authorized | `true`                                                                               |
 | `automatic_merge_allowed` | `true` (per AGENTS.md A-004 drafting rule)                                           |
 
 ## Problem

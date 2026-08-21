@@ -81,9 +81,11 @@ Non-goals / explicitly excluded:
 - Active authority model: **A-004**. No founder `approved` comment is a
   merge/adopt/release gate.
 
-The `risk: R3` value in `change.yaml` is a **draft proposal for the reviewing human
-at adoption time, never a determination**. The path-based classifier and independent
-verifier govern each task PR.
+The original R3 value was a **draft proposal for the reviewing human at adoption
+time, never a determination**. The implemented task touched the calling repository
+workflow and was therefore classified R4; `change.yaml` now records that current
+package risk while `adoption_risk: R3` preserves the historical adoption decision.
+The path-based classifier and independent verifier govern each task PR.
 
 ## Decisions
 
@@ -91,6 +93,12 @@ verifier govern each task PR.
 next-task ownership before selecting any path-specific PR/dispatch decision. The
 authoritative machine-readable source is
 `<package_path>/.karsift/live-evidence/<next_task_id>.yaml` when that file exists.
+That contract does not remove the package-context check: canonical `tasks.md`
+MUST remain readable, while next-task identity is validated against
+`.karsift/tasks.json` before classification. A missing or unreadable `tasks.md`
+fails closed even when a contract file exists. When a matching task stanza is
+present, it supplies only the secondary expectation signal described below; a
+valid contract remains authoritative when the readable file has no such stanza.
 The only secondary expectation signal is an exact allowlisted marker inside the
 matching `## <next_task_id>` stanza of canonical `tasks.md`:
 `- Automation ownership: operator` or

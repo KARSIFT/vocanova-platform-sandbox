@@ -11,9 +11,12 @@
 Before auto-advance selects any path-specific PR/dispatch outcome, it reads
 next-task ownership from governed package data. When
 `<package_path>/.karsift/live-evidence/<next_task_id>.yaml` exists, that contract
-is the authoritative machine-readable ownership source. The only secondary
-expectation source is one exact allowlisted `Automation ownership` marker inside
-the matching task stanza; narrative prose is never interpreted.
+is the authoritative machine-readable ownership source, while readable canonical
+`tasks.md` remains a mandatory package-context check and next-task identity is
+validated against `.karsift/tasks.json`; missing or unreadable `tasks.md` fails
+closed. A matching task stanza is required only to consume the secondary
+expectation source: one exact allowlisted `Automation ownership` marker inside
+that stanza. Narrative prose is never interpreted.
 
 ## VOC-102-AC-01 — No implementer dispatch for operator-owned or live-evidence-only next tasks
 
