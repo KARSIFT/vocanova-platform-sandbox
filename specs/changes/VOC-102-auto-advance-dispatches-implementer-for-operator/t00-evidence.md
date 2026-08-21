@@ -154,8 +154,15 @@ Result: governance structure validation passed; detected path floor R4;
   `d23c6780e5c9312c87ff0cfdb6542ef84e301939` also passed with two non-blocking
   clarity findings. The TEST-11 through TEST-13 wrapper now uses three exact
   unittest filters, and D00/AC-00 now state explicitly that canonical
-  `tasks.md` remains a mandatory roster cross-check even when the ownership
-  contract exists; missing roster data intentionally fails closed.
+  `tasks.md` remains a mandatory readable package-context check even when the
+  ownership contract exists; missing package context intentionally fails closed.
+- Independent review of commit
+  `f6daa6c08b26e14aa3d7984d5620d7e6789617ad` passed and found one remaining
+  wording mismatch: task identity is validated by `.karsift/tasks.json`, while
+  readable `tasks.md` is a mandatory package-context check and its matching
+  stanza is only needed for the secondary marker signal. D00/AC-00 now say that
+  precisely. Hosted exact-SHA CI job `32489936717` passed the full repository
+  validation, including the Docker-backed callback tests unavailable locally.
 - Controlled live workflow proof remains `VOC-102-T01` (`VOC-102-EV-01`).
 - The first automated attempt (pipeline `32476149809`) correctly refused to
   publish a protected workflow-file mutation. Its committed recovery artifact

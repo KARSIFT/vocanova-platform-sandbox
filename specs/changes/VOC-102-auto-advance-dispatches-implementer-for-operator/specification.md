@@ -93,10 +93,12 @@ The path-based classifier and independent verifier govern each task PR.
 next-task ownership before selecting any path-specific PR/dispatch decision. The
 authoritative machine-readable source is
 `<package_path>/.karsift/live-evidence/<next_task_id>.yaml` when that file exists.
-That contract does not replace the canonical task roster: `tasks.md` MUST remain
-readable and contain the matching task stanza so the classifier can cross-check
-that the requested next task is governed by the adopted package. A missing or
-unreadable roster fails closed even when a contract file exists.
+That contract does not remove the package-context check: canonical `tasks.md`
+MUST remain readable, while next-task identity is validated against
+`.karsift/tasks.json` before classification. A missing or unreadable `tasks.md`
+fails closed even when a contract file exists. When a matching task stanza is
+present, it supplies only the secondary expectation signal described below; a
+valid contract remains authoritative when the readable file has no such stanza.
 The only secondary expectation signal is an exact allowlisted marker inside the
 matching `## <next_task_id>` stanza of canonical `tasks.md`:
 `- Automation ownership: operator` or
