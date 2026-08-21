@@ -216,6 +216,10 @@ class Voc097LiveEvidenceReconcileTests(unittest.TestCase):
         )
         self.assertIsNotNone(write_api.body)
         self.assertNotIn(forbidden, write_api.body)
+        self.assertEqual(
+            write_api.body.splitlines().count("task_id: `VOC-097-T02`"),
+            1,
+        )
         with self.assertRaises(policy.ContractError):
             policy.evidence_json({**evidence, "arbitrary_output": "forbidden"})
 
@@ -455,7 +459,12 @@ VERDICT: PASS
         dispatch.assert_not_called()
 
     def test_voc097_test_14_duplicate_result_short_circuits_reconciliation(self):
-        task = SimpleNamespace(result_path="result.json", head_sha=HEAD, base_sha=BASE)
+        task = SimpleNamespace(
+            result_path="result.json",
+            head_sha=HEAD,
+            base_sha=BASE,
+            task_id="VOC-097-T02",
+        )
         task.pr_number = 12
 
         class AttestedApi:
@@ -466,10 +475,20 @@ VERDICT: PASS
                     "user": {"login": "karsift-ai-infra-bot[bot]", "type": "Bot"},
                     "body": (
                         "**Live-evidence reconcile — qualified**\n"
+                        "task_id: `VOC-097-T02`\n"
                         f"result_head_sha: `{HEAD}`\n"
                         f"base_sha: `{BASE}`"
                     ),
                 }]
+
+        class WrongTaskAttestedApi(AttestedApi):
+            def get_all(self, endpoint, key=None):
+                comments = super().get_all(endpoint, key)
+                comments[0]["body"] = comments[0]["body"].replace(
+                    "VOC-097-T02",
+                    "VOC-097-T03",
+                )
+                return comments
 
         with patch.object(
             runner,
@@ -477,6 +496,9 @@ VERDICT: PASS
             return_value='{"schema_version":1,"state":"qualified","run_id":12345}',
         ):
             self.assertTrue(runner.result_already_present(AttestedApi(), task))
+            self.assertFalse(
+                runner.result_already_present(WrongTaskAttestedApi(), task)
+            )
         self.assertIn(
             "group: live-evidence-reconcile-${{ github.repository }}",
             self.workflow,

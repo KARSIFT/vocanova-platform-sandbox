@@ -21,8 +21,12 @@ validated prior run identity. Reusable review records bind the exact pipeline ru
 ID in addition to base/head and package/task identity. Controlled proof keeps the
 source transition PR/base/head/ref distinct from the later evidence-carrier SHA,
 and requires the workflow-controlled `decide (ready_for_review)` job marker.
+Task-owned live evidence is also bound to the exact task identifier at production,
+duplicate-suppression, review-classification, and reuse-decision boundaries. The
+post-transition verifier requires GitHub's authenticated source PR object to record
+the PR as merged; a successful auto-merge job alone is not accepted as merge proof.
 The VOC-104 workflow, policy, normalizer, and regression-test copies correspond
-to independently reviewed shared-infra merge `6d5347b136f1993f8a4c2f6d49787b788a431bf8`.
+to independently reviewed shared-infra merge `d625b40f05b9b860dbf938de41f8ec837740a9fc`.
 
 ## auto-advance ownership (VOC-102)
 
