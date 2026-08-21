@@ -132,10 +132,13 @@ attempt. `STALE` and `REVIEW_INFRA_FAILURE` remain non-retrying.
 
 `VOC-106-D04`: Stale caller runs, missing qualifying evidence, and
 malformed/unreadable/contradictory ownership metadata MUST NOT dispatch the
-implementer and MUST NOT consume an implementation attempt. Prefer explicit
-fail-closed / escalate-operator / stale no-op outcomes over guessing ordinary
-ownership. Absence of both a contract and an automation-ownership marker means
-an ordinary implementer-owned task (same rule as VOC-102).
+implementer and MUST NOT consume an implementation attempt. A stale caller run
+MUST retain the `STALE` no-op. Missing evidence lifecycle states MUST retain
+their existing operator/reconcile handling. Malformed, unreadable, or
+contradictory ownership metadata MUST use an explicit fail-closed escalation;
+it MUST NOT be guessed as ordinary ownership. Absence of both a contract and an
+automation-ownership marker means an ordinary implementer-owned task (same rule
+as VOC-102).
 
 `VOC-106-D05`: Deterministic tests cover at least: operator WAITING (no retry);
 operator FAIL (no implementer; escalate); operator CI failure (no implementer;
