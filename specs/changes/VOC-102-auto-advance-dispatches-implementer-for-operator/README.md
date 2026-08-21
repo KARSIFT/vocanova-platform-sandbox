@@ -1,18 +1,18 @@
 # VOC-102 — Stop auto-advance dispatching implementer for operator-owned live-evidence tasks
 
-| Field | Value |
-|-------|-------|
-| Package | `VOC-102` |
-| Title | Stop auto-advance dispatching implementer for operator-owned live-evidence tasks |
-| Path | `specs/changes/VOC-102-auto-advance-dispatches-implementer-for-operator` |
-| Status | `draft` |
-| Risk | `R3` (draft proposal; path-based floor and independent verification govern) |
-| Authority model | A-004 active |
-| Requirement source | GitHub issue [#863](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/863) |
-| Target branch | `develop` |
-| Approval | `not-approved` |
-| Implementation authorized | `false` |
-| `automatic_merge_allowed` | `true` (per AGENTS.md A-004 drafting rule) |
+| Field                     | Value                                                                                |
+| ------------------------- | ------------------------------------------------------------------------------------ |
+| Package                   | `VOC-102`                                                                            |
+| Title                     | Stop auto-advance dispatching implementer for operator-owned live-evidence tasks     |
+| Path                      | `specs/changes/VOC-102-auto-advance-dispatches-implementer-for-operator`             |
+| Status                    | `draft`                                                                              |
+| Risk                      | `R3` (draft proposal; path-based floor and independent verification govern)          |
+| Authority model           | A-004 active                                                                         |
+| Requirement source        | GitHub issue [#863](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/863) |
+| Target branch             | `develop`                                                                            |
+| Approval                  | `not-approved`                                                                       |
+| Implementation authorized | `false`                                                                              |
+| `automatic_merge_allowed` | `true` (per AGENTS.md A-004 drafting rule)                                           |
 
 ## Problem
 
@@ -38,13 +38,15 @@ closed-issue / open-issue / existing-PR guards, without consulting
 1. Detect the next task ownership/mode from governed package data before dispatch.
 2. Do not dispatch the general implementer for operator-owned or live-evidence-only
    tasks.
-3. Leave the operator task open and clearly waiting for its dedicated
-   reconcile/evidence path.
+3. Leave the operator task open and use a deterministic non-LLM clean publisher
+   to create/reuse its draft evidence-carrier PR and sanitized waiting marker, so
+   the existing PR-centric reconciler has a valid attachment point.
 4. Continue automatic dispatch for ordinary implementation-owned tasks.
 5. Preserve final-roster release behavior (skipping implementer must not open
    release early).
 6. Fail closed on missing, malformed, or contradictory task ownership metadata.
-7. Add deterministic positive, negative, malformed-metadata, and regression tests.
+7. Add deterministic positive, negative, malformed-metadata, carrier-idempotency,
+   permission-boundary, and regression tests.
 8. Prove the behavior through a controlled, sanitized workflow event without
    manufacturing live evidence or exposing secrets.
 9. Keep this root focused; duplicate exact-SHA reviews, action-runtime upgrades,
@@ -52,10 +54,10 @@ closed-issue / open-issue / existing-PR guards, without consulting
 
 ## Tasks
 
-| Task | Summary | Depends on |
-|------|---------|------------|
-| T00 | Auto-advance ownership gate, fail-closed semantics, docs, deterministic tests | — |
-| T01 | Controlled sanitized workflow proof (operator-owned live evidence) | T00 |
+| Task | Summary                                                                       | Depends on |
+| ---- | ----------------------------------------------------------------------------- | ---------- |
+| T00  | Auto-advance ownership gate, fail-closed semantics, docs, deterministic tests | —          |
+| T01  | Controlled sanitized workflow proof (operator-owned live evidence)            | T00        |
 
 See `tasks.md` for full task definitions.
 

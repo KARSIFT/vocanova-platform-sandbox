@@ -25,8 +25,8 @@
 - Preconditions: Roster fixture where closed task has an open operator-owned next
   task with valid contract; no existing PR on agent branch
 - Procedure: Run auto-advance decision fixture (or workflow unit harness).
-- Expected result: `should_dispatch=false`; implement job not requested; next issue
-  remains conceptually open; waiting signal path invoked in fixture.
+- Expected result: decision is `prepare-live-evidence`; implement job is not
+  requested; next issue remains open; clean carrier publisher path is selected.
 - Evidence: `VOC-102-EV-00`
 
 ## VOC-102-TEST-03 — Positive: ordinary implementation next task still dispatches
@@ -82,8 +82,9 @@
   live-evidence contract present
 - Procedure: Observe sanitized pipeline/auto-advance run after predecessor close;
   confirm no `implement.yml` job for the operator-owned next task.
-- Expected result: Zero implementer dispatch; next issue still open with waiting
-  signal.
+- Expected result: Zero implementer dispatch; next issue still open with one
+  waiting marker, one deterministic draft carrier PR, and the contract-declared
+  pending evidence path ready for the existing reconciler.
 - Evidence: `VOC-102-EV-01` (metadata only)
 
 ## VOC-102-TEST-09 — Controlled or fixture proof: ordinary next still dispatches
@@ -109,7 +110,29 @@
   implement.
 - Evidence: `VOC-102-EV-00`
 
-Include positive, negative, malformed-metadata, authorization (no implementer
-Actions grant), and regression coverage as above. Tests must not use secrets or
+## VOC-102-TEST-11 — Evidence carrier is deterministic and idempotent
+
+- Covers: `VOC-102-AC-01`, `VOC-102-AC-05`, `VOC-102-AC-08`
+- Preconditions: Valid operator/live-actions contract with allowlisted
+  `evidence_path`; open task issue; no carrier, then an existing carrier
+- Procedure: Exercise clean publisher fixture twice.
+- Expected result: First call creates one deterministic task branch/draft PR and
+  pending evidence file; repeat reuses it and retains exactly one waiting marker.
+  No general implementer or LLM step is invoked.
+- Evidence: `VOC-102-EV-00`
+
+## VOC-102-TEST-12 — Permission and credential boundary
+
+- Covers: `VOC-102-AC-08`
+- Preconditions: Final reusable workflow/helper diff
+- Procedure: Assert classifier job remains contents/issues/pull-requests read;
+  assert only clean publisher references App credentials and only requests
+  contents/issues/pull-requests write; reject Actions-write, model-key exposure,
+  or `secrets: inherit` to a general implementer on operator/fail-closed paths.
+- Expected result: Least-privilege boundary is explicit and deterministic.
+- Evidence: `VOC-102-EV-00`
+
+Include positive, negative, malformed-metadata, carrier idempotency,
+authorization, and regression coverage as above. Tests must not use secrets or
 production data beyond public Actions metadata and issue fields already governed
 as sanitized.

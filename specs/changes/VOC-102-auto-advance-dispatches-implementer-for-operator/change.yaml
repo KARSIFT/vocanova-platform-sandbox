@@ -1,12 +1,14 @@
 schema_version: 1
 id: VOC-102
 slug: auto-advance-dispatches-implementer-for-operator
-title: Stop auto-advance dispatching implementer for operator-owned live-evidence
+title:
+  Stop auto-advance dispatching implementer for operator-owned live-evidence
   tasks
 type: infrastructure
 status: draft
 risk: R3
-planned_implementation_risk_floor: "Measured during drafting against the expected\
+planned_implementation_risk_floor:
+  "Measured during drafting against the expected\
   \ task-scoped file list (KARSIFT/karsift-ai-infra/.github/workflows/auto-advance.yml,\
   \ related helper/tests and README; optional calling-repo .github/workflows/pipeline.yml\
   \ pin bump; docs/operations/live-evidence.md and/or AGENTS.md only if current text\
@@ -18,14 +20,16 @@ planned_implementation_risk_floor: "Measured during drafting against the expecte
   \ each task's real file list and whether semantic escalation applies."
 canonical_path: specs/changes/VOC-102-auto-advance-dispatches-implementer-for-operator
 authority_model: a004-active
-requirement_source: 'GitHub issue #863 (Auto-advance dispatches implementer for operator-owned
+requirement_source:
+  "GitHub issue #863 (Auto-advance dispatches implementer for operator-owned
   live-evidence tasks). Closing VOC-098-T00 produced pipeline run 32462184971; auto-advance
   succeeded then started implement for VOC-098-T01 even though T01 was declared operator-owned
   live evidence and had to be cancelled manually. Drafting-time read of karsift-ai-infra
   auto-advance.yml confirms it sets should_dispatch=true for the next open roster
   task without reading .karsift/live-evidence/<task_id>.yaml ownership. This draft
-  package does not adopt or authorize itself.'
-requirement_approval_status: not-approved. This package has not been adopted. No field
+  package does not adopt or authorize itself."
+requirement_approval_status:
+  not-approved. This package has not been adopted. No field
   in this file authorizes implementation.
 base_branch: develop
 base_sha: unknown - not recorded by this draft; set at adoption time
@@ -38,54 +42,66 @@ owners:
 approval_status: not-approved
 implementation_authorized: false
 automatic_merge_allowed: true
-production_impact: none-intentional for application runtime. Changes governance automation
+production_impact:
+  none-intentional for application runtime. Changes governance automation
   so auto-advance skips general implementer dispatch when the next roster task is
   operator-owned or live-evidence-only. Does not change production deploy semantics,
   signup policy, secrets, databases, Kuma inventory, or Sentry ingestion.
 rollback_required: true
 monitoring_impact:
   state: none
-  rationale: Governance-automation dispatch gating only. No page routes, critical
+  rationale:
+    Governance-automation dispatch gating only. No page routes, critical
     API endpoints, or stable monitor/synthetic IDs in infra/monitoring/monitors.yaml
     or infra/monitoring/synthetics.yaml are added or changed. Live-evidence waiting
     and operational-failure observer remain separate mechanisms.
 dependencies:
-- id: VOC-102-DEP-00
-  status: 'resolved at drafting time. Issue #863 records sanitized observation that
-    closing VOC-098-T00 auto-advanced into an implementer run for operator-owned VOC-098-T01
-    (pipeline run 32462184971), requiring manual cancel.'
-- id: VOC-102-DEP-01
-  status: resolved at drafting time. VOC-097 established operator-owned live-evidence
-    contracts at <package>/.karsift/live-evidence/<task_id>.yaml with ownership operator
-    or live-actions, waiting lifecycle, and live-evidence-reconcile.yml. Auto-advance
-    does not yet consult that contract before dispatch.
-- id: VOC-102-DEP-02
-  status: "resolved at drafting time. Cross-repo pattern from VOC-080 / VOC-043 /\
-    \ VOC-097 \u2014 reusable workflow behavior lands in KARSIFT/karsift-ai-infra;\
-    \ this package authorizes the required outcome. Do not treat an untracked local\
-    \ karsift-ai-infra/ checkout as this repository's tracked tree."
-- id: VOC-102-DEP-03
-  status: "unresolved at drafting \u2014 confirm at adoption. Exact skip signaling\
-    \ shape when auto-advance declines dispatch (sanitized issue comment and/or machine-readable\
-    \ waiting marker) so the operator task is clearly waiting for reconcile-live-evidence\
-    \ without implying an implementer run (see specification.md open question 1)."
-- id: VOC-097
-  status: Adopted predecessor. Ownership contract path, waiting semantics, and reconcile
-    path must remain authoritative; this package must not weaken them or grant implementer
-    Actions credentials.
-- id: VOC-098
-  status: "Adopted predecessor whose T00\u2192T01 advance exhibited the bug. Used\
-    \ as sanitized incident evidence only; this package does not reopen VOC-098 code\
-    \ work."
+  - id: VOC-102-DEP-00
+    status:
+      "resolved at drafting time. Issue #863 records sanitized observation that
+      closing VOC-098-T00 auto-advanced into an implementer run for operator-owned VOC-098-T01
+      (pipeline run 32462184971), requiring manual cancel."
+  - id: VOC-102-DEP-01
+    status:
+      resolved at drafting time. VOC-097 established operator-owned live-evidence
+      contracts at <package>/.karsift/live-evidence/<task_id>.yaml with ownership operator
+      or live-actions, waiting lifecycle, and live-evidence-reconcile.yml. Auto-advance
+      does not yet consult that contract before dispatch.
+  - id: VOC-102-DEP-02
+    status:
+      "resolved at drafting time. Cross-repo pattern from VOC-080 / VOC-043 /\
+      \ VOC-097 \u2014 reusable workflow behavior lands in KARSIFT/karsift-ai-infra;\
+      \ this package authorizes the required outcome. Do not treat an untracked local\
+      \ karsift-ai-infra/ checkout as this repository's tracked tree."
+  - id: VOC-102-DEP-03
+    status:
+      "resolved after independent plan review. The current reconciler is PR-centric,
+      so an issue comment alone is insufficient. Auto-advance classification remains
+      read-only and selects a separate deterministic, non-LLM clean publisher that
+      creates/reuses a draft evidence-carrier PR and contract-declared pending evidence
+      path, then posts one sanitized waiting marker. That publisher alone mints the
+      existing App with contents/issues/pull-requests write; it receives no Actions-write
+      or model credentials. The existing reconciler algorithm and allowlists remain unchanged."
+  - id: VOC-097
+    status:
+      Adopted predecessor. Ownership contract path, waiting semantics, and reconcile
+      path must remain authoritative; this package must not weaken them or grant implementer
+      Actions credentials.
+  - id: VOC-098
+    status:
+      "Adopted predecessor whose T00\u2192T01 advance exhibited the bug. Used\
+      \ as sanitized incident evidence only; this package does not reopen VOC-098 code\
+      \ work."
 affected_areas:
-- KARSIFT/karsift-ai-infra/.github/workflows/auto-advance.yml
-- KARSIFT/karsift-ai-infra helpers/tests and README for auto-advance ownership gating
-- calling-repo docs/operations/live-evidence.md and/or AGENTS.md (only if current
-  text would otherwise remain false about auto-advance always dispatching implement)
-- calling-repo .github/workflows/pipeline.yml (pin bump only if required to consume
-  fixed auto-advance)
-- scripts/foundation/voc102-*.test.mjs and/or infra self-ci fixtures
-- specs/changes/VOC-102-auto-advance-dispatches-implementer-for-operator/
+  - KARSIFT/karsift-ai-infra/.github/workflows/auto-advance.yml
+  - KARSIFT/karsift-ai-infra deterministic evidence-carrier publisher helper/workflow,
+    tests, and README for ownership gating and least-privilege waiting publication
+  - calling-repo docs/operations/live-evidence.md and/or AGENTS.md (only if current
+    text would otherwise remain false about auto-advance always dispatching implement)
+  - calling-repo .github/workflows/pipeline.yml (pin bump only if required to consume
+    fixed auto-advance)
+  - scripts/foundation/voc102-*.test.mjs and/or infra self-ci fixtures
+  - specs/changes/VOC-102-auto-advance-dispatches-implementer-for-operator/
 implementation:
   authorized: false
   required: true
@@ -110,7 +126,9 @@ production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
-blocking_reasons: Not adopted. Requires plan-review independent verification and human
-  adoption under active A-004. Confirm proposed R3, DEP-03 skip-signaling shape, and
-  T01 controlled-proof procedure before implementation authorization.
+blocking_reasons:
+  Not adopted. Requires fresh exact-SHA plan-review independent verification
+  and adoption under active A-004. The earlier DEP-03 waiting-PR and mutation-permission
+  findings are resolved by the recorded deterministic clean carrier design; implementation
+  must preserve that boundary.
 approved_candidate_sha: null

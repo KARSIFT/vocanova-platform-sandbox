@@ -17,14 +17,16 @@ is the authoritative machine-readable ownership source.
 
 - Requirement source: `VOC-102-D01`, `VOC-102-D02`
 - Tasks: `VOC-102-T00`, `VOC-102-T01`
-- Tests: `VOC-102-TEST-02`, `VOC-102-TEST-08`
+- Tests: `VOC-102-TEST-02`, `VOC-102-TEST-08`, `VOC-102-TEST-11`
 - Evidence: `VOC-102-EV-00`, `VOC-102-EV-01`
 - Result: pending
 
 When next-task ownership is `operator` or `live-actions`, auto-advance does **not**
-start `implement.yml`. The next task issue remains open and is clearly marked as
-waiting for the dedicated reconcile/evidence path (sanitized signal per
-`VOC-102-D02`).
+start `implement.yml`. The next task issue remains open. A deterministic clean
+publisher creates/reuses a draft evidence-carrier PR containing only the
+contract-declared pending evidence path and posts one deduplicated sanitized
+waiting marker, giving the existing PR-centric reconciler a valid attachment
+point.
 
 ## VOC-102-AC-02 — Ordinary implementation next tasks still dispatch
 
@@ -49,8 +51,9 @@ open-issue and existing-PR guards.
 
 Malformed YAML, missing/unrecognized `ownership`, `task_id` mismatch, unreadable
 contracts, or contradictory operator-owned declarations without a valid contract
-do **not** dispatch the implementer. A sanitized failure/escalation signal is
-emitted instead of guessing.
+do **not** dispatch the implementer. A sanitized, deduplicated failure marker is
+emitted instead of guessing. No carrier is created from malformed/untrusted path
+metadata.
 
 ## VOC-102-AC-04 — Final-roster release behavior preserved
 
@@ -72,8 +75,9 @@ check-completion. Release still waits until the operator task actually closes.
 - Evidence: `VOC-102-EV-00`
 - Result: pending
 
-Positive dispatch, negative skip, malformed/contradictory fail-closed, and
-last-task/no-next regression coverage exist and pass in CI or infra self-ci.
+Positive dispatch, negative skip, deterministic carrier creation/reuse,
+least-privilege separation, malformed/contradictory fail-closed, and last-task /
+no-next regression coverage exist and pass in CI or infra self-ci.
 
 ## VOC-102-AC-06 — Controlled sanitized workflow proof
 
@@ -101,3 +105,17 @@ state that auto-advance skips general implementer dispatch for operator-owned /
 live-evidence-only next tasks and leaves them on the reconcile path — or those
 docs are left unchanged only when they already do not claim universal implement
 dispatch.
+
+## VOC-102-AC-08 — Classifier and clean publisher remain least-privileged
+
+- Requirement source: `VOC-102-D02`, `VOC-102-D04`
+- Tasks: `VOC-102-T00`
+- Tests: `VOC-102-TEST-11`, `VOC-102-TEST-12`
+- Evidence: `VOC-102-EV-00`
+- Result: pending
+
+The ownership classifier keeps read-only contents/issues/pull-request access and
+cannot mutate repository state. Only a separate clean, non-LLM publisher may
+mint the existing App for explicit contents/issues/pull-requests writes needed
+to create/reuse the carrier and marker. It has no Actions-write permission,
+model credentials, or `secrets: inherit` path into `implement.yml`.

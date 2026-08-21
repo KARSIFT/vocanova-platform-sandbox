@@ -14,8 +14,10 @@ same package.
 ## VOC-102-T00 — Auto-advance ownership gate, fail-closed semantics, docs, deterministic tests
 
 - Requirement source: issue #863; `VOC-102-D00`–`D06`, `D08`
-- Acceptance criteria: `VOC-102-AC-00` through `VOC-102-AC-05`, `VOC-102-AC-07`
-- Tests: `VOC-102-TEST-00` through `VOC-102-TEST-07`, `VOC-102-TEST-10`
+- Acceptance criteria: `VOC-102-AC-00` through `VOC-102-AC-05`, `VOC-102-AC-07`,
+  `VOC-102-AC-08`
+- Tests: `VOC-102-TEST-00` through `VOC-102-TEST-07`, `VOC-102-TEST-10` through
+  `VOC-102-TEST-12`
 - Evidence: `VOC-102-EV-00` (`t00-evidence.md` in this package directory)
 - Status: pending
 
@@ -28,23 +30,30 @@ same package.
 2. Authoritative machine-readable source when present:
    `<package_path>/.karsift/live-evidence/<next_task_id>.yaml`.
 3. If `ownership` is `operator` or `live-actions`: do **not** dispatch
-   `implement.yml`; leave the next issue OPEN; emit the sanitized waiting signal
-   resolved from `VOC-102-D02` / DEP-03.
-4. If the next task is ordinary implementation-owned (no contract; no contradictory
+   `implement.yml`; leave the next issue OPEN; select the separate deterministic
+   clean evidence-carrier publisher defined by `VOC-102-D01/D02`.
+4. That publisher creates/reuses the deterministic task branch/draft PR, writes
+   only the contract-declared pending evidence path, and posts one deduplicated
+   sanitized waiting marker. The classifier remains read-only; the publisher
+   alone may mint the App for contents/issues/pull-requests writes and receives no
+   model credentials or Actions-write permission.
+5. If the next task is ordinary implementation-owned (no contract; no contradictory
    operator declaration): preserve today's implementer dispatch attempt 1.
-5. Fail closed on missing-required / malformed / unrecognized / contradictory
-   ownership metadata per `VOC-102-D04` (no dispatch + sanitized escalation).
-6. Preserve final-roster release behavior per `VOC-102-D05` (skip ≠ complete).
-7. Add deterministic positive, negative, malformed-metadata, and regression tests
+6. Fail closed on missing-required / malformed / unrecognized / contradictory
+   ownership metadata per `VOC-102-D04` (no dispatch, no carrier from untrusted
+   paths, one sanitized publisher escalation).
+7. Preserve final-roster release behavior per `VOC-102-D05` (skip ≠ complete).
+8. Add deterministic positive, negative, malformed-metadata, carrier-idempotency,
+   permission-boundary, and regression tests
    (infra self-ci and/or `scripts/foundation/voc102-*.test.mjs`).
-8. Update karsift-ai-infra README and calling-repo
+9. Update karsift-ai-infra README and calling-repo
    `docs/operations/live-evidence.md` / AGENTS.md only where current text would
    otherwise claim auto-advance always dispatches implement for every next task.
-9. Bump calling-repo `pipeline.yml` pin only if required to consume the fixed
-   reusable workflow; record the consumption mechanism in evidence.
-10. Run applicable tests and governance validation for changed calling-repo paths;
+10. Bump calling-repo `pipeline.yml` pin only if required to consume the fixed
+    reusable workflow; record the consumption mechanism in evidence.
+11. Run applicable tests and governance validation for changed calling-repo paths;
     record commands and results in `t00-evidence.md` (no secrets).
-11. Do not address duplicate exact-SHA reviews, action-runtime upgrades, or
+12. Do not address duplicate exact-SHA reviews, action-runtime upgrades, or
     cache-path warnings (out of scope per `VOC-102-D08`).
 
 ### Explicitly out of scope for this task
@@ -75,8 +84,9 @@ same package.
    T00→T01 advance after T00 merges (T01 must not receive a general implementer).
 2. Prove an ordinary implementation-owned next task still dispatches as intended
    (deterministic fixture preferred; sanitized live observation allowed if needed).
-3. Confirm the operator-owned next task issue remained OPEN and shows the waiting /
-   reconcile signal (not silently abandoned).
+3. Confirm the operator-owned next task issue remained OPEN, exactly one draft
+   evidence-carrier PR was created/reused, the pending evidence path matched the
+   contract, and the sanitized waiting marker was deduplicated.
 4. Record allowlisted metadata only in `t01-evidence.md` (pipeline/auto-advance run
    IDs/URLs, conclusions, `should_dispatch` outcome, issue number, absence of
    implementer job). Never copy logs, secrets, sessions, OAuth data, cookies,

@@ -1,6 +1,7 @@
 schema_version: 1
 task_id: VOC-102-T01
 ownership: operator
+evidence_path: specs/changes/VOC-102-auto-advance-dispatches-implementer-for-operator/t01-evidence.md
 
 workflow_file: pipeline.yml
 workflow_name: pipeline

@@ -16,13 +16,13 @@ separate A-004 plan-review / adopt path.
 
 Drafting-time grounding:
 
-| Item | Current state |
-|------|---------------|
-| Auto-advance | `karsift-ai-infra/.github/workflows/auto-advance.yml` sets `should_dispatch=true` without ownership checks |
+| Item               | Current state                                                                                                                                 |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auto-advance       | `karsift-ai-infra/.github/workflows/auto-advance.yml` sets `should_dispatch=true` without ownership checks                                    |
 | Ownership contract | `<package>/.karsift/live-evidence/<task_id>.yaml` with `ownership: operator` or `live-actions` (VOC-097 / `docs/operations/live-evidence.md`) |
-| Incident | VOC-098-T00 close → pipeline run 32462184971 → implement started for VOC-098-T01 (operator-owned); manual cancel |
-| Reconcile path | `live-evidence-reconcile.yml` / `pipeline.yml` action `reconcile-live-evidence` (operator path; must remain the dedicated path) |
-| Release | Last-task close still belongs to release check-completion; auto-advance must not invent early release |
+| Incident           | VOC-098-T00 close → pipeline run 32462184971 → implement started for VOC-098-T01 (operator-owned); manual cancel                              |
+| Reconcile path     | `live-evidence-reconcile.yml` / `pipeline.yml` action `reconcile-live-evidence` (operator path; must remain the dedicated path)               |
+| Release            | Last-task close still belongs to release check-completion; auto-advance must not invent early release                                         |
 
 ## Scope and non-goals
 
@@ -33,9 +33,11 @@ In scope:
    consistency checks against task declaration where required).
 2. When next-task ownership is `operator` or `live-actions` (or equivalent
    live-evidence-only mode), **do not** call `implement.yml`.
-3. Leave the next task issue open and mark it clearly as waiting for the dedicated
-   reconcile/evidence path (sanitized comment and/or machine-readable marker —
-   see open question 1 / `VOC-102-D02`).
+3. Leave the next task issue open and route it to a deterministic, non-LLM
+   evidence-carrier publisher. That clean job creates or reuses the task branch/PR,
+   writes only the contract-declared pending evidence file, and posts a sanitized
+   stable waiting marker so the existing PR-centric reconciler has an attachment
+   point.
 4. Preserve automatic implementer dispatch for ordinary implementation-owned next
    tasks (no contract, or ownership that is implementation-owned).
 5. Preserve final-roster release behavior: skipping implementer for a non-final
@@ -56,8 +58,10 @@ In scope:
 Non-goals / explicitly excluded:
 
 - Granting the implementer general Actions credentials.
-- Changing VOC-097 reconcile algorithm, evidence allowlists, or remediation
-  waiting semantics beyond what auto-advance must cooperate with.
+- Changing VOC-097 reconcile matching, evidence allowlists, or remediation
+  waiting semantics. This package supplies the waiting PR that the existing
+  reconciler already requires; it does not teach the reconciler a second issue-only
+  evidence model.
 - Duplicate exact-SHA review fixes, action-runtime upgrades, cache-path warnings.
 - Application, migration, signup-policy, secrets, database, or
   `infra/monitoring/` inventory ID changes.
@@ -89,14 +93,21 @@ source is
 
 `VOC-102-D01`: If the contract declares `ownership: operator` or
 `ownership: live-actions`, auto-advance MUST NOT dispatch `implement.yml`. The
-next task issue remains OPEN and is left for the dedicated
-`reconcile-live-evidence` / live-evidence waiting path from VOC-097.
+next task issue remains OPEN. Instead, a deterministic non-LLM clean publisher
+creates or reuses the normal task branch and a draft evidence-carrier PR from the
+integration branch. The only generated content is the contract-declared pending
+evidence path and fixed privacy-safe waiting text. The existing PR-centric
+`reconcile-live-evidence` path can then discover and update that PR exactly as it
+does today.
 
-`VOC-102-D02` (proposed default; confirm at adoption — DEP-03): When skipping
-dispatch, auto-advance records a **sanitized** waiting signal on the next-task
-issue (App-authenticated comment and/or stable machine-readable marker) stating
-that the task is waiting for operator-owned live evidence / reconcile and that no
-implementer run was started. No logs, secrets, tokens, or personal data.
+`VOC-102-D02`: The read-only `advance` classifier emits a machine-readable
+decision (`implement`, `prepare-live-evidence`, `fail-closed`, or `none`) and does
+not mutate issues or branches. For `prepare-live-evidence`, a separate clean job
+mints the existing GitHub App with only `contents: write`, `issues: write`, and
+`pull-requests: write`; it receives no model key and no Actions-write permission.
+It creates/reuses the carrier PR and posts one deduplicated sanitized waiting
+marker on the task issue stating that no implementer run was started. The job
+must never use `secrets: inherit` to call the general implementer.
 
 `VOC-102-D03`: Ordinary implementation-owned next tasks (no live-evidence contract,
 and no contradictory operator-owned declaration) continue to dispatch
@@ -107,8 +118,10 @@ guards.
 unrecognized ownership values, unreadable contracts, or contradictory metadata
 (task declared operator-owned live evidence in `tasks.md` / roster guidance without
 a valid contract, or contract `task_id` mismatch). Fail-closed means do **not**
-dispatch implementer and emit a sanitized failure/escalation signal rather than
-guessing ownership.
+dispatch implementer. The same clean publisher posts one deduplicated sanitized
+failure marker on the task issue, but it MUST NOT create an evidence carrier from
+untrusted/malformed path metadata. The read-only classifier itself gains no write
+permission.
 
 `VOC-102-D05`: Skipping implementer for an operator-owned next task must not open
 or advance release. Release remains driven by final-roster completion / existing
@@ -128,20 +141,22 @@ unrelated package live evidence or copy secrets.
 `VOC-102-D08`: Keep root scope focused. Duplicate exact-SHA reviews, action-runtime
 upgrades, and cache-path warnings are out of scope follow-ups.
 
-## Open questions for the reviewing human
+## Adoption decisions recorded after independent plan review
 
-1. Confirm `VOC-102-D02` skip signaling (sanitized issue comment vs machine-readable
-   marker vs both). If `live-evidence-reconcile.yml` currently assumes a waiting PR
-   already exists, confirm whether skip-without-implementer is sufficient because
-   reconcile can attach evidence to the open task issue / later bookkeeping PR, or
-   whether a separate minimal waiting-PR path is required (must still not use the
-   general implementer).
-2. Confirm fail-closed contradiction rule in `VOC-102-D04` when `tasks.md` prose
+1. **Waiting carrier selected:** use the dedicated clean, deterministic
+   evidence-carrier job from `VOC-102-D01/D02`. An issue comment alone is not
+   sufficient because the current reconciler is PR-centric. This resolves
+   `VOC-102-DEP-03` without expanding the reconciler into an issue-only model.
+2. **Least privilege selected:** classification stays read-only. Only the clean
+   carrier/fail-closed publisher may mint the App, scoped to contents/issues/PR
+   writes; it receives no Actions-write or model credentials. This explicitly
+   records the mutation surface identified by plan review.
+3. Confirmed fail-closed contradiction rule in `VOC-102-D04` when `tasks.md` prose
    marks operator-owned live evidence but the contract file is absent (proposed:
    no dispatch + sanitized escalation).
-3. Confirm proposed **R3**, or raise in writing if auto-advance ownership gating is
-   treated as R4.
-4. Confirm T01 may dogfood this package (T00 close → T01 operator-owned → observe
+4. Confirmed proposed **R3**; exact implementation paths remain subject to the
+   classifier and independent review.
+5. Confirmed T01 may dogfood this package (T00 close → T01 operator-owned → observe
    zero implementer dispatch) plus a deterministic/fixture proof that ordinary
    next tasks still dispatch, without re-running VOC-098 live proof.
 
@@ -157,5 +172,7 @@ upgrades, and cache-path warnings are out of scope follow-ups.
 - Skip/fail signals and proof evidence are allowlisted metadata only (workflow/run
   IDs, conclusions, task IDs, boolean dispatch decisions). Forbidden: logs,
   artifacts, secrets, OAuth/session/cookie/token material, user identifiers.
-- Preserve App-authenticated mutation patterns already used by pipeline automation
-  where comments are posted.
+- The read-only classifier retains `issues`, `pull-requests`, and `contents` read.
+  Only the separate clean publisher references App credentials and requests
+  contents/issues/pull-requests write; neither job receives implementer/model
+  credentials or Actions-write authority.

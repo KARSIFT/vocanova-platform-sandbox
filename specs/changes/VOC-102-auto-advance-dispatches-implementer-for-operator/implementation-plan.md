@@ -19,15 +19,16 @@ tracked tree. Calling-repo doc/pin/test changes land here under the same package
 
 ### T00 — Ownership gate, fail-closed, docs, deterministic tests
 
-| File / area | Action | Notes |
-|-------------|--------|-------|
-| `karsift-ai-infra/.github/workflows/auto-advance.yml` | modify | Read next-task ownership before `should_dispatch=true` |
-| karsift-ai-infra helper (optional extract) | create/modify | Prefer small pure function for contract parse/classify if it keeps YAML readable |
-| karsift-ai-infra README | modify | Document skip vs dispatch |
-| karsift-ai-infra / calling-repo tests | create/modify | `voc102-*.test.mjs` and/or infra self-ci fixtures |
-| `docs/operations/live-evidence.md` and/or AGENTS.md | modify if needed | Only if text would remain false |
-| calling-repo `.github/workflows/pipeline.yml` | modify only if pin required | Consume fixed auto-advance |
-| `specs/changes/VOC-102-.../t00-evidence.md` | create | Commands + results |
+| File / area                                           | Action                      | Notes                                                                         |
+| ----------------------------------------------------- | --------------------------- | ----------------------------------------------------------------------------- |
+| `karsift-ai-infra/.github/workflows/auto-advance.yml` | modify                      | Read next-task ownership before `should_dispatch=true`                        |
+| karsift-ai-infra classifier helper                    | create/modify               | Pure decision output; no mutation credentials                                 |
+| karsift-ai-infra clean carrier publisher helper/job   | create/modify               | Deterministic pending evidence PR; App-scoped writes; no LLM or Actions-write |
+| karsift-ai-infra README                               | modify                      | Document skip vs dispatch                                                     |
+| karsift-ai-infra / calling-repo tests                 | create/modify               | `voc102-*.test.mjs` and/or infra self-ci fixtures                             |
+| `docs/operations/live-evidence.md` and/or AGENTS.md   | modify if needed            | Only if text would remain false                                               |
+| calling-repo `.github/workflows/pipeline.yml`         | modify only if pin required | Consume fixed auto-advance                                                    |
+| `specs/changes/VOC-102-.../t00-evidence.md`           | create                      | Commands + results                                                            |
 
 Ordered steps:
 
@@ -35,25 +36,31 @@ Ordered steps:
    that ownership is not consulted today (no secrets).
 2. After next-task resolution and existing open-issue / existing-PR guards, load
    `<package_path>/.karsift/live-evidence/<next_task_id>.yaml` when present.
-3. If ownership is `operator` or `live-actions`: set `should_dispatch=false`; leave
-   issue open; emit sanitized waiting signal (`VOC-102-D02`); do not call
-   `implement.yml`.
-4. If no contract and no contradictory operator declaration: preserve today's
+3. If ownership is `operator` or `live-actions`: select
+   `prepare-live-evidence`; leave the issue open; do not call `implement.yml`.
+4. Run the separate clean publisher to create/reuse the task branch and draft
+   evidence-carrier PR with only the contract-declared pending evidence path, and
+   post one deduplicated sanitized waiting marker. The classifier stays read-only;
+   the publisher alone mints the App for contents/issues/PR writes and receives no
+   model key or Actions-write permission.
+5. If no contract and no contradictory operator declaration: preserve today's
    `should_dispatch=true` path.
-5. If metadata malformed/contradictory/unrecognized: fail closed — no dispatch +
-   sanitized escalation (`VOC-102-D04`).
-6. Ensure last-task / no-next-task still no-ops toward release (no early release).
-7. Land deterministic positive / negative / malformed / regression tests.
-8. Align docs that would otherwise claim universal implement dispatch.
-9. Pin-bump calling `pipeline.yml` only if required; record consumption in evidence.
-10. Run applicable tests and governance validation; write `t00-evidence.md`.
+6. If metadata malformed/contradictory/unrecognized: fail closed — no dispatch,
+   no carrier from untrusted paths, and one sanitized publisher escalation
+   (`VOC-102-D04`).
+7. Ensure last-task / no-next-task still no-ops toward release (no early release).
+8. Land deterministic positive / negative / malformed / publisher-idempotency /
+   permission-boundary / regression tests.
+9. Align docs that would otherwise claim universal implement dispatch.
+10. Pin-bump calling `pipeline.yml` only if required; record consumption in evidence.
+11. Run applicable tests and governance validation; write `t00-evidence.md`.
 
 ### T01 — Controlled sanitized workflow proof
 
-| File / area | Action | Notes |
-|-------------|--------|-------|
-| `specs/changes/VOC-102-.../t01-evidence.md` | create | Metadata-only live proof |
-| `.karsift/live-evidence/VOC-102-T01.yaml` | already drafted | Operator-owned contract |
+| File / area                                 | Action          | Notes                    |
+| ------------------------------------------- | --------------- | ------------------------ |
+| `specs/changes/VOC-102-.../t01-evidence.md` | create          | Metadata-only live proof |
+| `.karsift/live-evidence/VOC-102-T01.yaml`   | already drafted | Operator-owned contract  |
 
 Ordered steps:
 
@@ -65,8 +72,9 @@ Ordered steps:
 3. Prove ordinary implementation next-task dispatch still occurs (fixture and/or
    sanitized observation of a non-operator next task). Prefer deterministic
    fixture if a second live package advance is unnecessary.
-4. Confirm T01 issue remained open and waiting signal present; do not manufacture
-   unrelated package evidence; no secrets in `t01-evidence.md`.
+4. Confirm T01 issue remained open, the deterministic draft carrier PR exists,
+   its pending evidence path matches the contract, and one waiting marker is
+   present; do not manufacture unrelated package evidence.
 5. Complete acceptance via dedicated reconcile/evidence path — not by dispatching
    the general implementer.
 
