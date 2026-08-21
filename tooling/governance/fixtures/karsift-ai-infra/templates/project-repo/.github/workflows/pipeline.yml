@@ -6,16 +6,16 @@ name: pipeline
 #
 # `plan` turns a request (free text, an existing document, or a GitHub issue's
 # whole thread) into a DRAFT change package (planner role, see plan.yml).
-# Independent plan review and merge-gate policy decide whether the exact draft
-# may merge; `adopt` then records adoption authority and opens the real per-task
-# tracking issues. A `reconcile` dispatch safely repairs the handoff if that
-# merge event was missed. `plan-from-issue` is what makes "anyone (a human, or
-# another agent - e.g. one that reads application logs and notices a bug) just
-# opens an issue" a valid way in: it auto-drafts a package from that issue,
-# asking a clarifying question back on the issue itself if there isn't enough
-# to go on yet, but a bare issue never becomes implementation authority on its
-# own. Once a package is adopted, `implement` (dispatched per task) and
-# `auto-advance` carry on from there.
+# Independent plan review and merge policy decide whether the exact draft may
+# merge; `adopt` then records authority and opens the real per-task tracking
+# issues. A reconcile dispatch repairs a missed handoff idempotently.
+# `plan-from-issue` is what makes "anyone (a human, or another
+# agent - e.g. one that reads application logs and notices a bug) just opens
+# an issue" a valid way in: it auto-drafts a package from that issue, asking a
+# clarifying question back on the issue itself if there isn't enough to go on
+# yet. A bare issue never becomes implementation authority on its own. Once a
+# package is adopted, `adopt.yml` starts the root task automatically and `auto-advance.yml`
+# releases each later task only after its predecessor merges.
 #
 # Copy this file into a project repo and fill in:
 #   - auto_merge_enabled, only once you have real evidence for this project's loop
@@ -41,11 +41,14 @@ name: pipeline
 
 on:
   pull_request:
-    # Draft-aware merge-gate must re-evaluate an unchanged exact SHA when its
-    # evidence is complete and the PR becomes ready for review.
+    # ready_for_review is required for draft-aware merge gating: completing
+    # evidence can leave the exact reviewed SHA unchanged, so GitHub's draft
+    # transition must give the gate a fresh event on that same SHA.
     types: [opened, synchronize, reopened, ready_for_review, closed]
+  # Polling avoids a workflow_run-on-pipeline recursion loop and can discover
+  # any workflow identity declared by a contract without a static name list.
   schedule:
-    - cron: "0 * * * *"
+    - cron: "17 * * * *"
   issue_comment:
     types: [created]
   issues:
@@ -97,23 +100,22 @@ on:
         required: false
         type: string
       release_issue_number:
-        description: "reconcile-release only: release audit issue whose promotion handoff must be repaired"
-        required: false
-        type: string
-      live_evidence_mode:
-        description: "reconcile-live-evidence only: poll, observe one run, or dispatch the declared workflow"
-        required: false
-        type: choice
-        options: [reconcile, observe, dispatch]
-        default: reconcile
-      live_evidence_run_id:
-        description: "reconcile-live-evidence observe only: successful Actions run id"
+        description: "reconcile-release only: release audit issue whose promotion must be retried"
         required: false
         type: string
       live_evidence_pr_number:
-        description: "reconcile-live-evidence dispatch only: waiting task PR number"
+        description: "reconcile-live-evidence only: optional target PR; required for declared dispatch"
         required: false
         type: string
+      live_evidence_run_id:
+        description: "reconcile-live-evidence only: optional Actions run id to observe immediately"
+        required: false
+        type: string
+      live_evidence_dispatch:
+        description: "reconcile-live-evidence only: dispatch exactly the target PR contract"
+        required: false
+        type: boolean
+        default: false
       verify_source_run_id:
         description: "verify-auto-advance-live-evidence only: predecessor close pipeline run id"
         required: false
@@ -159,32 +161,9 @@ on:
         required: false
         type: string
 
-# Explicit floor for the reusable jobs below that do not declare narrower
-# job-level permissions. Most call karsift-ai-infra workflows with
-# `secrets: inherit`; read-only verification jobs deliberately do not. Without
-# an explicit workflow or job floor, reusable callers silently
-# inherit whatever the repo's own default_workflow_permissions setting
-# grants, and a reusable workflow call can never get MORE access than its
-# caller has regardless of what the called workflow's own job declares.
-# This union covers every permission any called workflow
-# (implement/adopt/release/merge-gate/review/remediate/plan/auto-advance)
-# actually needs - added 2026-08-08 specifically so this repo's
-# default_workflow_permissions could be safely tightened from "write" to
-# "read" without breaking the pipeline; do not narrow this without
-# re-checking every called reusable workflow's own job-level permissions
-# first. The live-evidence reconciler has one narrower job-level exception:
-# Actions write is required only to dispatch the contract-allowlisted synthetic.
-permissions:
-  contents: write
-  issues: write
-  pull-requests: write
-  actions: read
-  checks: read
-  statuses: read
-
-# A synchronize event supersedes every older pipeline for the same PR. Cancel
-# the older run to avoid duplicate CI/reviewer cost; the exact-SHA inputs below
-# remain the correctness boundary if cancellation races with an active job.
+# A synchronize event supersedes every older pipeline for the same PR. This
+# prevents duplicate reviewer/model runs and stale remediation/merge decisions,
+# while issue and manual-dispatch runs retain unique groups.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' }}
@@ -239,12 +218,10 @@ jobs:
       integration_branch: "develop"   # match the value used for implement, above
     secrets: inherit
 
-  # The other half of plan.yml's split: records adoption authority and opens
-  # the ordered per-task tracking issues (and, if this package traces back to
-  # an originating issue, closes the loop on it) once a "plan/"-branch PR merges
-  # with passing plan review and governance validation. See adopt.yml's header
-  # comment for why this is a separate step from drafting rather than at PR-open
-  # time. Use `reconcile` dispatch if the merge event or adoption run was missed.
+  # The other half of plan.yml's split: opens the ordered per-task tracking
+  # issues and immediately starts only the root task once a "plan/"-branch PR
+  # merges. Later tasks are started by auto-advance after their predecessor
+  # merges. See adopt.yml for the dependency and direct-dispatch guards.
   adopt:
     if: |
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'plan/')) ||
@@ -276,19 +253,28 @@ jobs:
       # application checks; merge-gate still revalidates the prior run.
       reuse_evidence: ${{ needs.ready-for-review-reuse.outputs.outcome == 'reuse-evidence' }}
 
+  plan-review:
+    needs: [ready-for-review-reuse, ci]
+    if: |
+      always() &&
+      github.event_name == 'pull_request' && github.event.action != 'closed' &&
+      startsWith(github.head_ref, 'plan/') &&
+      needs.ci.result == 'success' &&
+      needs.ready-for-review-reuse.outputs.outcome != 'reuse-evidence'
+    uses: KARSIFT/karsift-ai-infra/.github/workflows/plan-review.yml@main
+    with:
+      pr_number: ${{ github.event.pull_request.number }}
+      expected_head_sha: ${{ github.event.pull_request.head.sha }}
+      expected_base_sha: ${{ github.event.pull_request.base.sha }}
+    secrets: inherit
+
   # Planning PRs (head branch prefixed "plan/" by plan.yml) create a package
   # rather than implementing one, so they never carry the "Package path:"
   # line this job requires - the startsWith guard below skips this (and
   # review/remediate, which depend on it) for those PRs instead of failing a
-  # check that would otherwise block merge-gate. merge-gate.yml itself parses
-  # the plan package risk declaration and fails closed when it cannot determine
-  # a risk class.
-  #
-  # Planning PRs get their OWN review instead (the `plan-review` job below),
-  # not this one - added 2026-08-14. Before this, a planning PR's verdict
-  # stayed permanently PENDING (nothing ever reviewed it), so merge-gate could
-  # never see a passing verdict. See plan-review's own job comment and
-  # karsift-ai-infra/.github/workflows/plan-review.yml for what it checks.
+  # check that would otherwise block the plan-review merge path. merge-gate.yml
+  # itself parses the plan package risk declaration and fails closed when it
+  # cannot determine a risk class.
   extract-package-path:
     needs: [ready-for-review-reuse]
     if: |
@@ -334,30 +320,6 @@ jobs:
       expected_base_sha: ${{ github.event.pull_request.base.sha }}
     secrets: inherit
 
-  # Independent review for a DRAFT change-package proposal (a "plan/"-branch
-  # PR) - added 2026-08-14. Runs instead of `review` (never both - the two jobs' `if`
-  # conditions are mutually exclusive on head_ref prefix), and posts the same
-  # "**Independent verification - bound to commit ...**" / "VERDICT: ..."
-  # comment shape, so merge-gate.yml's existing verdict-parsing (unchanged)
-  # picks it up. `needs: ci` only, not extract-package-path, since a plan PR
-  # has no "Package path:" line to extract - plan-review.yml resolves the
-  # package path itself from the PR body's "New package directory: `...`"
-  # line (the one plan.yml always writes).
-  plan-review:
-    needs: [ready-for-review-reuse, ci]
-    if: |
-      always() &&
-      github.event_name == 'pull_request' && github.event.action != 'closed' &&
-      startsWith(github.head_ref, 'plan/') &&
-      needs.ci.result == 'success' &&
-      needs.ready-for-review-reuse.outputs.outcome != 'reuse-evidence'
-    uses: KARSIFT/karsift-ai-infra/.github/workflows/plan-review.yml@main
-    with:
-      pr_number: ${{ github.event.pull_request.number }}
-      expected_head_sha: ${{ github.event.pull_request.head.sha }}
-      expected_base_sha: ${{ github.event.pull_request.base.sha }}
-    secrets: inherit
-
   # Runs after ci and every review. A no-op unless ci failed outright or the
   # review verdict is FAIL - then it either re-dispatches the implementer
   # once (with the failure details attached) or, if that retry already
@@ -390,39 +352,34 @@ jobs:
       expected_base_sha: ${{ github.event.pull_request.base.sha }}
     secrets: inherit
 
-  # `needs: [review, plan-review]` + the `always()` guard below fixes a real
-  # race: on a plain `pull_request` event this job used to run with no
-  # dependency on `review` at all, so it evaluated in parallel with (not
-  # after) review - and since `ci` finishes faster than a full
-  # independent-review pass, merge-gate's report-status routinely captured
-  # verdict=PENDING before review had posted anything, then never got
-  # another chance to look again (no further `pull_request` event fires
-  # unless something pushes a new commit). Auto-merge was structurally
-  # unable to fire on a normal single-commit PR - discovered on
-  # vocanova-platform-sandbox's first real attempt to exercise
-  # `auto_merge_enabled`. `always()` is required because a job depending on
-  # a *skipped* job is by default also skipped - and on any given event
-  # exactly one of `review`/`plan-review` runs (agent/ vs plan/ head_ref)
-  # while the other is always skipped - all of that must still reach merge-gate
-  # so its status comment actually posts,
-  # rather than requiring either job's specific 'success' result.
-  #
-  # plan-review added to this needs/if 2026-08-14 - before this, merge-gate ran for
-  # planning PRs with no review dependency at all, which was harmless only
-  # because no review verdict could ever exist for them anyway (permanently
-  # PENDING). Now that plan-review can produce a real PASS, merge-gate must
-  # wait for it the same way it already waits for `review`, or it would
-  # again risk capturing a stale PENDING before plan-review finishes.
+  # `needs: review` + the `always()` guard below fixes a real race: on a
+  # plain `pull_request` event this job used to run with no dependency on
+  # `review` at all, so it evaluated in parallel with (not after) review -
+  # and since `ci` finishes faster than a full independent-review pass,
+  # merge-gate's report-status routinely captured verdict=PENDING before
+  # review had posted anything, then never got another chance to look
+  # again (no further `pull_request` event fires unless something pushes a
+  # new commit). Auto-merge was structurally unable to fire on a normal
+  # single-commit PR - discovered on vocanova-platform-sandbox's first real
+  # attempt to exercise `auto_merge_enabled`. `always()` is required
+  # because a job depending on a *skipped* job is by default also skipped -
+  # and `review` is deliberately skipped on planning PRs (`plan/`-prefixed head
+  # branch, no implementation package for the task reviewer to check yet) - that case must
+  # still reach merge-gate so its status comment actually posts, rather than
+  # requiring review's specific 'success' result which a planning PR's
+  # deliberately-skipped review can never produce.
   merge-gate:
     needs: [ready-for-review-reuse, ci, review, plan-review]
     if: |
       always() &&
-      github.event_name == 'pull_request' && github.event.action != 'closed' &&
-      (needs.review.result == 'success' || needs.review.result == 'skipped') &&
-      (needs.plan-review.result == 'success' || needs.plan-review.result == 'skipped')
+      (
+        github.event_name == 'pull_request' && github.event.action != 'closed' &&
+        (needs.review.result == 'success' || needs.review.result == 'skipped') &&
+        (needs.plan-review.result == 'success' || needs.plan-review.result == 'skipped')
+      )
     uses: KARSIFT/karsift-ai-infra/.github/workflows/merge-gate.yml@main
     with:
-      auto_merge_enabled: "true"      # proven live on this repo (VOC-012, VOC-014) for this project's loop
+      auto_merge_enabled: "false"     # flip only after real evidence for this project's loop
       expected_head_sha: ${{ github.event.pull_request.head.sha }}
       expected_base_sha: ${{ github.event.pull_request.base.sha }}
       reuse_outcome: ${{ needs.ready-for-review-reuse.outputs.outcome }}
@@ -430,9 +387,8 @@ jobs:
       current_ci_result: ${{ needs.ci.result }}
     secrets: inherit
 
-  # Promotes a completed package after its roster closes. `reconcile-release`
-  # retries an interrupted promotion without creating an approval path. Deploy
-  # is out of scope - see release.yml's header comment.
+  # Promotes a completed package after its roster closes. reconcile-release
+  # retries an interrupted promotion without creating an approval path.
   release:
     if: |
       (github.event_name == 'issues' && github.event.action == 'closed') ||
@@ -444,12 +400,11 @@ jobs:
       production_branch: "main"
     secrets: inherit
 
-  # Fills the gap between adoption and release: dispatches the NEXT task in an
-  # adopted package's roster
+  # Fills the gap between adoption (one human decision, the whole roster at
+  # once) and release (one human decision, the whole completed package at
+  # once): dispatches the NEXT task in an adopted package's roster
   # automatically once the current task's tracking issue closes, so routine
-  # task-to-task progression needs no further per-task human trigger. For
-  # operator-owned / live-actions next tasks it prepares a deterministic
-  # evidence-carrier PR instead of starting implement.yml (VOC-102). A
+  # task-to-task progression needs no further per-task human trigger. A
   # no-op on the package's last task (release's own check-completion above
   # handles that transition instead) or if the next task is already
   # dispatched/done. Runs on the same `issues: closed` event as `release`
@@ -461,47 +416,15 @@ jobs:
     uses: KARSIFT/karsift-ai-infra/.github/workflows/auto-advance.yml@main
     with:
       integration_branch: "develop"   # match the value used elsewhere in this file
-    # Explicit allowlist: ordinary-task progression needs the active Cursor
-    # implementer, while operator/fail-closed jobs use only the App.
-    # Do not expose unrelated repository secrets to this reusable workflow.
+    # Narrow contract: ordinary tasks need the active implementer provider;
+    # operator-owned carrier publication uses only the GitHub App identity.
     secrets:
       CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
       KARSIFT_BOT_APP_ID: ${{ secrets.KARSIFT_BOT_APP_ID }}
       KARSIFT_BOT_PRIVATE_KEY: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
 
-  # Polls Actions metadata against declared live-evidence contracts while a
-  # task PR is waiting for operator-owned proof. The hourly run both qualifies
-  # matching evidence and handles bounded timeout escalation. Explicit manual
-  # observe/dispatch inputs are available for controlled operator recovery.
-  # There is deliberately no catch-all workflow_run trigger: that shape can
-  # observe this pipeline's own runs and create a recursive, wasteful loop.
-  live-evidence-reconcile:
-    if: |
-      github.event_name == 'schedule' ||
-      (github.event_name == 'workflow_dispatch' && inputs.action == 'reconcile-live-evidence')
-    # A called workflow cannot elevate beyond its caller. Keep the workflow-wide
-    # floor at Actions read and grant write only to this operator-owned job so it
-    # can dispatch the single workflow/input pair declared by a reviewed contract.
-    permissions:
-      actions: write
-      checks: read
-      contents: read
-      issues: read
-      pull-requests: read
-    uses: KARSIFT/karsift-ai-infra/.github/workflows/live-evidence-reconcile.yml@main
-    with:
-      mode: ${{ github.event_name == 'schedule' && 'reconcile' || inputs.live_evidence_mode }}
-      workflow_run_id: ${{ inputs.live_evidence_run_id }}
-      pr_number: ${{ inputs.live_evidence_pr_number }}
-    # Pass only the two operator identity inputs declared by the reusable
-    # workflow. Do not expose the caller's unrelated deploy/OAuth secrets.
-    secrets:
-      KARSIFT_BOT_APP_ID: ${{ secrets.KARSIFT_BOT_APP_ID }}
-      KARSIFT_BOT_PRIVATE_KEY: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
-
-  # Read-only post-carrier verifier for VOC-102 operator-owned live proof.
-  # Dispatch manually on the exact evidence-carrier branch ref after the T00→T01
-  # auto-advance run creates the carrier and records allowlisted source metadata.
+  # Read-only proof that an issues:closed source run took the operator-owned
+  # branch and created exactly one trusted draft evidence carrier.
   verify-auto-advance-live-evidence:
     if: github.event_name == 'workflow_dispatch' && inputs.action == 'verify-auto-advance-live-evidence'
     permissions:
@@ -518,7 +441,6 @@ jobs:
       package_path: ${{ inputs.verify_package_path }}
       integration_branch: "develop"
 
-  # Read-only post-transition verifier for VOC-104 operator-owned live proof.
   verify-ready-for-review-reuse:
     if: github.event_name == 'workflow_dispatch' && inputs.action == 'verify-ready-for-review-reuse'
     permissions:
@@ -533,3 +455,26 @@ jobs:
       expected_source_head_sha: ${{ inputs.verify_reuse_source_head_sha }}
       expected_source_base_sha: ${{ inputs.verify_reuse_source_base_sha }}
       expected_proof_head_sha: ${{ inputs.verify_reuse_proof_head_sha }}
+
+  # Separate operator path: hourly polling reads Actions metadata for waiting
+  # contracts. Manual mode can validate one run immediately or dispatch only a
+  # workflow/inputs declared by one target contract. A qualification writes a
+  # sanitized result commit, which naturally starts fresh exact-SHA PR review.
+  live-evidence-reconcile:
+    if: |
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.action == 'reconcile-live-evidence')
+    uses: KARSIFT/karsift-ai-infra/.github/workflows/live-evidence-reconcile.yml@main
+    permissions:
+      actions: write
+      checks: read
+      contents: read
+      issues: read
+      pull-requests: read
+    with:
+      mode: ${{ github.event_name == 'schedule' && 'reconcile' || (inputs.live_evidence_dispatch && 'dispatch' || (inputs.live_evidence_run_id != '' && 'observe' || 'reconcile')) }}
+      workflow_run_id: ${{ inputs.live_evidence_run_id || '' }}
+      pr_number: ${{ inputs.live_evidence_pr_number || '' }}
+    secrets:
+      KARSIFT_BOT_APP_ID: ${{ secrets.KARSIFT_BOT_APP_ID }}
+      KARSIFT_BOT_PRIVATE_KEY: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}

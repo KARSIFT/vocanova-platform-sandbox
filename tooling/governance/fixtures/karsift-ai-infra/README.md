@@ -13,6 +13,39 @@ They are not a second runtime source of truth. Callers still `uses:`
 VOC-097-, or VOC-102-related infra contracts change and record the new pin in
 evidence.
 
+VOC-104 adds the pinned `ready-for-review-reuse.yml` and
+`verify-ready-for-review-reuse.yml` contracts. The decision vocabulary is
+`reuse-evidence`, `full-path`, and `fail-closed-to-full-path`; only the first may
+skip duplicate exact-SHA CI/model work, and merge-gate still re-evaluates the
+validated prior run identity. Reusable review records bind the exact pipeline run
+ID in addition to base/head and package/task identity. Controlled proof keeps the
+source transition PR/base/head/ref distinct from the later evidence-carrier SHA,
+requires the workflow-controlled `decide (ready_for_review)` job marker, and
+recomputes the exact latest eligible prior run instead of trusting a supplied ID.
+Both source runs must resolve the complete reuse-policy workflow set to one
+identical authenticated shared-infra SHA. If GitHub clears a closed run's PR
+association, a prior run is admitted only through its exact App-authored review
+record on that PR. Optimized merge publishes one App-authored pre-merge record
+binding repository, PR, branch, base/head, ready/prior run IDs, and policy SHA;
+the post-transition verifier requires that unique attestation.
+Task-owned live evidence is also bound to the exact task identifier at production,
+duplicate-suppression, review-classification, and reuse-decision boundaries. The
+post-transition verifier requires GitHub's authenticated source PR object to record
+the PR as merged; a successful auto-merge job alone is not accepted as merge proof.
+On an eligible unchanged draft-to-ready transition, `ci.yml` still emits the
+repository ruleset's required `ci / ci` check context, but runs only a named
+exact-SHA reuse marker. Checkout and application validation remain skipped. This
+small compatibility context is necessary because GitHub evaluates the newest
+required check context; omitting the reusable CI caller changes its visible name
+to `ci` and leaves `ci / ci` unsatisfied even when prior evidence is valid. The
+post-transition verifier requires the marker to succeed and both checkout steps
+plus the full validation step to be skipped. Merge-gate also requires exactly one current `ci / ci`
+context in `SUCCESS`; prior evidence can never replace a skipped or ambiguous
+current compatibility context.
+
+The VOC-104 workflow, policy, normalizer, and regression-test copies correspond
+to independently reviewed shared-infra merge `a592dd8fa8ea1718c0f2f632b648213b53a47e57`.
+
 ## auto-advance ownership (VOC-102)
 
 Adoption starts the first task automatically. The adopted roster records an explicit
