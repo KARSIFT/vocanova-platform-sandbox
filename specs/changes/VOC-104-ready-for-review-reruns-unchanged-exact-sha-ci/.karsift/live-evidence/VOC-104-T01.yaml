@@ -1,0 +1,26 @@
+schema_version: 1
+task_id: VOC-104-T01
+ownership: operator
+
+workflow_file: pipeline.yml
+workflow_name: pipeline
+job_names:
+  - verify-ready-for-review-reuse / verify
+events:
+  - workflow_dispatch
+branch: agent/voc-104-voc-104-t01
+sha_lineage:
+  mode: exact_pr_head
+conclusion: success
+max_age: 72h
+# Observe-only. Closing T00 remains the operational setup: after the reuse policy
+# is live, the operator performs a controlled draft→ready transition on a PR whose
+# exact base/head already has green required checks and a trusted App PASS, then
+# records allowlisted ready_for_review run metadata (prior run ID, ready_for_review
+# run ID, skipped CI/review conclusions, successful merge-gate, unchanged SHAs).
+# After that metadata is committed to this deterministic carrier/proof branch, the
+# operator manually dispatches pipeline.yml's read-only
+# verify-ready-for-review-reuse action on this branch. The verifier must validate
+# the source run/job metadata without reading logs or artifacts. Its own successful
+# workflow_dispatch run must equal the current PR head, binding proof without
+# weakening reconciliation.
