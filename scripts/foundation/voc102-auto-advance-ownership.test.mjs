@@ -139,10 +139,7 @@ test("VOC-102 auto-advance consumes ownership gate outputs", () => {
     pipeline.split("  auto-advance:", 2)[1]?.split("\n  # Polls", 1)[0] ?? "";
   assert.doesNotMatch(callerBlock, /secrets: inherit/);
   for (const secret of [
-    "ANTHROPIC_API_KEY",
-    "OPENAI_API_KEY",
-    "OPENCODE_API_KEY",
-    "OPENCODE_SECOND_API_KEY",
+    "CURSOR_API_KEY",
     "KARSIFT_BOT_APP_ID",
     "KARSIFT_BOT_PRIVATE_KEY",
   ]) {
@@ -150,6 +147,15 @@ test("VOC-102 auto-advance consumes ownership gate outputs", () => {
       callerBlock,
       new RegExp(`${secret}: \\$\\{\\{ secrets\\.${secret} \\}\\}`),
     );
+  }
+  for (const obsolete of [
+    "ANTHROPIC_API_KEY",
+    "OPENAI_API_KEY",
+    "OPENCODE_API_KEY",
+    "OPENCODE_SECOND_API_KEY",
+    "CLAUDE_CODE_OAUTH_TOKEN",
+  ]) {
+    assert.doesNotMatch(callerBlock, new RegExp(`${obsolete}:`));
   }
   assert.match(workflow, /auto-advance-classifier\.py/);
   assert.match(workflow, /prepare-live-evidence:/);

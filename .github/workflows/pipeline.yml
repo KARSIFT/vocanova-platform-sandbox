@@ -400,14 +400,11 @@ jobs:
     uses: KARSIFT/karsift-ai-infra/.github/workflows/auto-advance.yml@main
     with:
       integration_branch: "develop"   # match the value used elsewhere in this file
-    # Explicit allowlist: ordinary-task progression still needs the configured
-    # implementer providers, while operator/fail-closed jobs use only the App.
+    # Explicit allowlist: ordinary-task progression needs the active Cursor
+    # implementer, while operator/fail-closed jobs use only the App.
     # Do not expose unrelated repository secrets to this reusable workflow.
     secrets:
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
-      OPENCODE_SECOND_API_KEY: ${{ secrets.OPENCODE_SECOND_API_KEY }}
+      CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
       KARSIFT_BOT_APP_ID: ${{ secrets.KARSIFT_BOT_APP_ID }}
       KARSIFT_BOT_PRIVATE_KEY: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
 

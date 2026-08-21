@@ -72,6 +72,12 @@ six-secret interface required by its ordinary implement and App publisher
 paths. All 104 policy tests passed hosted self-CI run `32484464143`, and
 `KARSIFT/karsift-ai-infra#79` merged as the final pinned revision
 `2967e907dfe2ad1c7af98bf603162b3bef431078`.
+Independent review then caught a blocking omission: the narrowed interface did
+not carry the required active `CURSOR_API_KEY` to ordinary `implement.yml`.
+The shared and caller interfaces now contain exactly Cursor plus the two App
+credentials; obsolete providers were removed. All 104 policy tests passed
+hosted self-CI run `32485638456`, and `KARSIFT/karsift-ai-infra#80` merged as
+the final pinned revision `ff2710fecad5459d4148104dbec7bc0f913d22f1`.
 
 ### Calling-repo foundation tests
 
@@ -125,6 +131,6 @@ Result: governance structure validation passed; detected path floor R4;
   was reviewed and corrected through the supervised split above; the failed run
   was not blindly retried.
 - Calling-repo runtime fixtures are byte-identical to the final infra merge
-  `2967e907dfe2ad1c7af98bf603162b3bef431078`; runtime consumption remains
+  `ff2710fecad5459d4148104dbec7bc0f913d22f1`; runtime consumption remains
   `KARSIFT/karsift-ai-infra/...@main`.
 - No secrets, logs, artifacts, or unrelated package live evidence recorded here.
