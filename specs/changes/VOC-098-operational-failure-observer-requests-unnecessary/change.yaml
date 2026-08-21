@@ -4,7 +4,7 @@ slug: operational-failure-observer-requests-unnecessary
 title: Remove unnecessary Actions permission from operational-failure observer App
   token
 type: infrastructure
-status: draft
+status: adopted
 risk: R3
 planned_implementation_risk_floor: "Measured during drafting against the expected\
   \ task-scoped file list (.github/workflows/operational-failure-monitoring.yml, infra/scripts/classify-deploy-concurrency-cancel.sh\
@@ -25,7 +25,8 @@ requirement_source: "GitHub issue #840 (Operational failure observer requests un
   \ grant Actions, so create-github-app-token fails before open-failure-issue.sh runs\
   \ \u2014 including for scheduled-synthetics failures that never need the classifier.\
   \ This draft package does not adopt or authorize itself."
-requirement_approval_status: not-approved; draft package only
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: unknown - not recorded by this draft; set at adoption time
 target_branch: develop
@@ -34,8 +35,8 @@ owners:
   package_preparation: planner (drafting only)
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: none-intentional for application runtime. Restores the repository-managed
   operational-failure observer's ability to mint an App installation token and open
@@ -81,9 +82,9 @@ affected_areas:
   would otherwise remain false)
 - specs/changes/VOC-098-operational-failure-observer-requests-unnecessary
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: not-authorized
+  status: authorized
   target_branch: develop
   authority_issue: null
 release:
@@ -94,11 +95,22 @@ release:
   automatic_merge: true
   migration_required: false
   rollback_required: true
-repository_adoption_status: not-adopted
+repository_adoption_status: adopted
 implementation_authority_before_adoption: false
-implementation_authority_status: not-authorized
+implementation_authority_status: authorized
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
-blocking_reasons: draft package awaiting plan review and adoption
+blocking_reasons: none - adopted and implementation-authorized
+approved_candidate_sha: 2fcb9ba7d119a97628945c58b3ccd1b2e3be88dd
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/841#issuecomment-5367010042
+adoption_risk: R3
+adoption_resolved_decisions:
+- VOC-098-DEP-00
+- VOC-098-DEP-01
+- VOC-098-DEP-02
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #841 at 2fcb9ba7d119a97628945c58b3ccd1b2e3be88dd'
+adoption_pr: 841
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/841
