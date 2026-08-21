@@ -423,6 +423,37 @@ class AutoAdvanceOwnershipTests(unittest.TestCase):
             )
             post.assert_called_once()
 
+    def test_voc102_test_11_closed_carrier_fails_closed_for_operator_cleanup(self):
+        body = ownership.carrier_pr_body(
+            change_id="VOC-102",
+            task_id="VOC-102-T01",
+            package_path=PACKAGE,
+            issue_number=866,
+            evidence_relative_path="t01-evidence.md",
+        )
+        with self.assertRaisesRegex(
+            publisher.PublisherError, "conflicting_existing_pr"
+        ):
+            publisher.validate_existing_pr(
+                pr={
+                    "number": 900,
+                    "title": "VOC-102: VOC-102-T01",
+                    "body": body,
+                    "state": "CLOSED",
+                    "isDraft": True,
+                    "author": {"login": "app/karsift-ai-infra-bot"},
+                    "headRefName": "agent/voc-102-voc-102-t01",
+                    "baseRefName": "develop",
+                },
+                branch="agent/voc-102-voc-102-t01",
+                integration_branch="develop",
+                change_id="VOC-102",
+                task_id="VOC-102-T01",
+                package_path=PACKAGE,
+                issue_number=866,
+                evidence_relative_path="t01-evidence.md",
+            )
+
     def test_voc102_test_11_existing_carrier_repairs_missing_evidence_file(self):
         task_id = "VOC-102-T01"
         evidence_relative = "t01-evidence.md"

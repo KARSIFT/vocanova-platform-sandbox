@@ -28,3 +28,7 @@ metadata fails closed. “No marker” means a readable task stanza has no owner
 or unreadable `tasks.md` cannot establish that condition and fails closed instead of guessing that
 the task is ordinary. The classifier and proof verifier stay read-only; only a clean publisher
 receives carrier writes, and the fail-closed notifier receives issue-write only.
+If that deterministic branch already belongs to a closed or merged carrier PR,
+publication fails closed with `conflicting_existing_pr`; it never silently
+reopens or replaces historical state. An operator must confirm why the carrier
+was closed before a governed restoration or cleanup/retry.

@@ -77,7 +77,14 @@ not carry the required active `CURSOR_API_KEY` to ordinary `implement.yml`.
 The shared and caller interfaces now contain exactly Cursor plus the two App
 credentials; obsolete providers were removed. All 104 policy tests passed
 hosted self-CI run `32485638456`, and `KARSIFT/karsift-ai-infra#80` merged as
-the final pinned revision `ff2710fecad5459d4148104dbec7bc0f913d22f1`.
+revision `ff2710fecad5459d4148104dbec7bc0f913d22f1`. The last non-blocking review
+findings were then closed in `KARSIFT/karsift-ai-infra#81`: the reusable project
+template now carries the same read-only verifier and exact three-secret
+auto-advance interface as the live caller, while a closed deterministic carrier
+is explicitly tested and documented as an operator-cleanup condition rather
+than silently reopened. All 105 shared policy tests passed hosted self-CI run
+`32486567566`; the final pinned revision is
+`1ab793a4f0af952628e50d7b3108d99233c564a6`.
 
 ### Calling-repo foundation tests
 
@@ -118,6 +125,8 @@ Result: governance structure validation passed; detected path floor R4;
   missing file/PR/marker states, rejects unexpected changed paths or untrusted
   carriers, and preserves evidence already recorded by an operator.
 - Fail-closed metadata posts a sanitized issue marker and creates no carrier.
+- A deterministic carrier branch attached to a closed or merged PR fails closed;
+  an operator must confirm the history before a governed restoration or retry.
 - Ordinary tasks retain the existing-PR guard and `implement.yml` attempt 1.
 - Calling-repo `pipeline.yml` exposes read-only
   `verify-auto-advance-live-evidence` for T01 exact-head proof.
@@ -131,6 +140,6 @@ Result: governance structure validation passed; detected path floor R4;
   was reviewed and corrected through the supervised split above; the failed run
   was not blindly retried.
 - Calling-repo runtime fixtures are byte-identical to the final infra merge
-  `ff2710fecad5459d4148104dbec7bc0f913d22f1`; runtime consumption remains
+  `1ab793a4f0af952628e50d7b3108d99233c564a6`; runtime consumption remains
   `KARSIFT/karsift-ai-infra/...@main`.
 - No secrets, logs, artifacts, or unrelated package live evidence recorded here.
