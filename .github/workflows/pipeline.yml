@@ -42,8 +42,6 @@ name: pipeline
 on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
-  workflow_run:
-    types: [completed]
   schedule:
     - cron: "0 * * * *"
   issue_comment:
@@ -100,6 +98,20 @@ on:
         description: "reconcile-release only: release audit issue whose promotion handoff must be repaired"
         required: false
         type: string
+      live_evidence_mode:
+        description: "reconcile-live-evidence only: poll, observe one run, or dispatch the declared workflow"
+        required: false
+        type: choice
+        options: [reconcile, observe, dispatch]
+        default: reconcile
+      live_evidence_run_id:
+        description: "reconcile-live-evidence observe only: successful Actions run id"
+        required: false
+        type: string
+      live_evidence_pr_number:
+        description: "reconcile-live-evidence dispatch only: waiting task PR number"
+        required: false
+        type: string
 
 # Explicit floor for every job below, all of which call karsift-ai-infra's
 # reusable workflows via `uses:` with `secrets: inherit` and no
@@ -118,7 +130,7 @@ permissions:
   contents: write
   issues: write
   pull-requests: write
-  actions: write
+  actions: read
   checks: read
   statuses: read
 
@@ -242,6 +254,7 @@ jobs:
       package_path: ${{ needs.extract-package-path.outputs.package_path }}
       integration_branch: "develop"   # match the value used for implement, above
       expected_head_sha: ${{ github.event.pull_request.head.sha }}
+      expected_base_sha: ${{ github.event.pull_request.base.sha }}
     secrets: inherit
 
   # Independent review for a DRAFT change-package proposal (a "plan/"-branch
@@ -259,6 +272,8 @@ jobs:
     uses: KARSIFT/karsift-ai-infra/.github/workflows/plan-review.yml@main
     with:
       pr_number: ${{ github.event.pull_request.number }}
+      expected_head_sha: ${{ github.event.pull_request.head.sha }}
+      expected_base_sha: ${{ github.event.pull_request.base.sha }}
     secrets: inherit
 
   # Runs after ci and every review. A no-op unless ci failed outright or the
@@ -290,6 +305,7 @@ jobs:
       ci_failed: ${{ needs.ci.result == 'failure' }}
       review_job_failed: ${{ needs.review.result == 'failure' }}
       expected_head_sha: ${{ github.event.pull_request.head.sha }}
+      expected_base_sha: ${{ github.event.pull_request.base.sha }}
     secrets: inherit
 
   # `needs: [review, plan-review]` + the `always()` guard below fixes a real
@@ -326,6 +342,7 @@ jobs:
     with:
       auto_merge_enabled: "true"      # proven live on this repo (VOC-012, VOC-014) for this project's loop
       expected_head_sha: ${{ github.event.pull_request.head.sha }}
+      expected_base_sha: ${{ github.event.pull_request.base.sha }}
     secrets: inherit
 
   # Promotes a completed package after its roster closes. `reconcile-release`
@@ -359,19 +376,19 @@ jobs:
       integration_branch: "develop"   # match the value used elsewhere in this file
     secrets: inherit
 
-  # Observes completed Actions runs against declared live-evidence contracts
-  # while a task PR is waiting for operator-owned proof. Never downloads logs
-  # or artifacts; wakes the task for a fresh exact-SHA review when evidence
-  # qualifies. Hourly schedule handles bounded timeout escalation only.
+  # Polls Actions metadata against declared live-evidence contracts while a
+  # task PR is waiting for operator-owned proof. The hourly run both qualifies
+  # matching evidence and handles bounded timeout escalation. Explicit manual
+  # observe/dispatch inputs are available for controlled operator recovery.
+  # There is deliberately no catch-all workflow_run trigger: that shape can
+  # observe this pipeline's own runs and create a recursive, wasteful loop.
   live-evidence-reconcile:
     if: |
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
       github.event_name == 'schedule' ||
       (github.event_name == 'workflow_dispatch' && inputs.action == 'reconcile-live-evidence')
     uses: KARSIFT/karsift-ai-infra/.github/workflows/live-evidence-reconcile.yml@main
     with:
-      mode: ${{ github.event_name == 'schedule' && 'timeout' || (github.event_name == 'workflow_dispatch' && 'dispatch' || 'observe') }}
-      workflow_run_id: ${{ github.event.workflow_run.id || '' }}
-      integration_branch: "develop"
-      auto_merge_enabled: "true"
+      mode: ${{ github.event_name == 'schedule' && 'reconcile' || inputs.live_evidence_mode }}
+      workflow_run_id: ${{ inputs.live_evidence_run_id }}
+      pr_number: ${{ inputs.live_evidence_pr_number }}
     secrets: inherit

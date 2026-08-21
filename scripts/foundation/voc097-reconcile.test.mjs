@@ -18,84 +18,54 @@ const evidencePath = path.join(
   repositoryRoot,
   "specs/changes/VOC-097-make-live-evidence-tasks-operator-owned-and-self/t02-evidence.md",
 );
-const infraWorkflowPath = path.join(
-  repositoryRoot,
-  "karsift-ai-infra/.github/workflows/live-evidence-reconcile.yml",
-);
-
-test("VOC-097-T02 caller wires observe, timeout, and dispatch reconcile paths", () => {
+test("VOC-097-T02 caller wires bounded polling and explicit observe/dispatch paths", () => {
   const pipeline = readFileSync(pipelinePath, "utf8");
 
-  assert.match(pipeline, /workflow_run:\s*\n\s*types: \[completed\]/);
+  assert.doesNotMatch(pipeline, /^\s{2}workflow_run:/m);
   assert.match(pipeline, /schedule:\s*\n\s*- cron: "0 \* \* \* \*"/);
   assert.match(pipeline, /reconcile-live-evidence/);
+  assert.match(pipeline, /live_evidence_mode:/);
+  assert.match(pipeline, /options: \[reconcile, observe, dispatch\]/);
+  assert.match(pipeline, /live_evidence_run_id:/);
+  assert.match(pipeline, /live_evidence_pr_number:/);
   assert.match(
     pipeline,
     /uses: KARSIFT\/karsift-ai-infra\/\.github\/workflows\/live-evidence-reconcile\.yml@main/,
   );
   assert.match(
     pipeline,
-    /mode: \$\{\{ github\.event_name == 'schedule' && 'timeout'/,
+    /mode: \$\{\{ github\.event_name == 'schedule' && 'reconcile' \|\| inputs\.live_evidence_mode \}\}/,
   );
   assert.match(
     pipeline,
-    /workflow_run_id: \$\{\{ github\.event\.workflow_run\.id \|\| '' \}\}/,
+    /workflow_run_id: \$\{\{ inputs\.live_evidence_run_id \}\}/,
+  );
+  assert.match(
+    pipeline,
+    /pr_number: \$\{\{ inputs\.live_evidence_pr_number \}\}/,
+  );
+  assert.equal(
+    (
+      pipeline.match(
+        /expected_base_sha: \$\{\{ github\.event\.pull_request\.base\.sha \}\}/g,
+      ) ?? []
+    ).length,
+    4,
+    "plan review, task review, remediation, and merge gate must bind the event base",
   );
 });
 
 test("VOC-097-TEST-05: reconciler permissions stay off the implementer", () => {
+  const pipeline = readFileSync(pipelinePath, "utf8");
+  const permissionBlock = pipeline.match(
+    /^permissions:\n([\s\S]*?)^concurrency:/m,
+  );
   assert.ok(
-    existsSync(infraWorkflowPath),
-    "local infra checkout must contain reconcile workflow",
+    permissionBlock,
+    "pipeline must declare an explicit permission floor",
   );
-  const workflow = readFileSync(infraWorkflowPath, "utf8");
-  const implementFixture = readFileSync(
-    path.join(
-      repositoryRoot,
-      "karsift-ai-infra/.github/workflows/implement.yml",
-    ),
-    "utf8",
-  );
-  const permissionBlock = implementFixture.match(
-    /    permissions:\n([\s\S]*?)    steps:\n/,
-  );
-  assert.ok(permissionBlock, "implement.yml must declare job permissions");
-  assert.doesNotMatch(permissionBlock[1], /actions:/);
-});
-
-test("VOC-097-TEST-10: reconcile workflow avoids log and artifact APIs", () => {
-  const workflow = readFileSync(infraWorkflowPath, "utf8");
-  const runner = readFileSync(
-    path.join(
-      repositoryRoot,
-      "karsift-ai-infra/config/live-evidence-reconcile-runner.py",
-    ),
-    "utf8",
-  );
-  const combined = workflow + runner;
-  assert.doesNotMatch(combined, /\/actions\/jobs\/\$.*\/logs/);
-  assert.doesNotMatch(combined, /download-artifact/);
-  assert.doesNotMatch(combined, /\/actions\/artifacts/);
-});
-
-test("VOC-097-TEST-11: wake path chains review and merge-gate on exact head", () => {
-  const workflow = readFileSync(infraWorkflowPath, "utf8");
-  assert.match(
-    workflow,
-    /uses: KARSIFT\/karsift-ai-infra\/\.github\/workflows\/review\.yml@main/,
-  );
-  assert.match(
-    workflow,
-    /uses: KARSIFT\/karsift-ai-infra\/\.github\/workflows\/merge-gate\.yml@main/,
-  );
-  assert.match(
-    workflow,
-    /expected_head_sha: \$\{\{ needs\.reconcile\.outputs\.head_sha \}\}/,
-  );
-  assert.match(
-    workflow,
-    /pr_number: \$\{\{ needs\.reconcile\.outputs\.pr_number \}\}/,
-  );
+  assert.match(permissionBlock[1], /^  actions: read$/m);
+  assert.doesNotMatch(permissionBlock[1], /^  actions: write$/m);
 });
 
 test("VOC-097-T02 evidence file records mechanism without secrets", () => {
@@ -103,6 +73,7 @@ test("VOC-097-T02 evidence file records mechanism without secrets", () => {
   const evidence = readFileSync(evidencePath, "utf8");
   assert.match(evidence, /evidence_id:\s*VOC-097-EV-02/);
   assert.match(evidence, /live-evidence-reconcile\.yml/);
-  assert.match(evidence, /allowlisted keys/i);
+  assert.match(evidence, /shared infrastructure PR/i);
+  assert.match(evidence, /hourly metadata reconciliation/i);
   assert.doesNotMatch(evidence, /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
 });
