@@ -1627,9 +1627,12 @@ authorize new product scope.
 
 Draft pull requests remain non-mergeable even when their current exact SHA passes CI and
 independent review. The caller subscribes to GitHub's `ready_for_review` activity so completing
-evidence and marking a draft ready starts a fresh pipeline evaluation on that unchanged SHA;
-the shared merge gate also rechecks open/draft state and the reviewed base/head pair immediately
-before merging.
+evidence and marking a draft ready starts a fresh pipeline evaluation on that unchanged SHA.
+When every reuse precondition holds for that event, the shared eligibility helper may skip repeating
+full CI and model review while still re-running deterministic merge-gate evaluation against the
+validated prior exact-SHA evidence; otherwise the pipeline takes the normal full CI and review path
+(fail-closed toward verification, never toward merge). The shared merge gate also rechecks open/draft
+state and the reviewed base/head pair immediately before merging.
 
 **Historical (VOC-075 / issue #573):** Before A-004 activation, R4 required founder
 approval on merge and R4 packages set `automatic_merge_allowed: false`.

@@ -56,7 +56,7 @@ on:
         description: "Which reusable workflow to run"
         required: true
         type: choice
-        options: [implement, plan, reconcile, reconcile-release, reconcile-live-evidence, verify-auto-advance-live-evidence]
+        options: [implement, plan, reconcile, reconcile-release, reconcile-live-evidence, verify-auto-advance-live-evidence, verify-ready-for-review-reuse]
         default: implement
       change_id:
         description: 'implement only: adopted package to implement from, e.g. "VOC-007"'
@@ -132,6 +132,26 @@ on:
         type: string
       verify_package_path:
         description: "verify-auto-advance-live-evidence only: canonical package directory path"
+        required: false
+        type: string
+      verify_ready_run_id:
+        description: "verify-ready-for-review-reuse only: ready_for_review pipeline run id"
+        required: false
+        type: string
+      verify_prior_run_id:
+        description: "verify-ready-for-review-reuse only: prior successful pipeline run id"
+        required: false
+        type: string
+      verify_reuse_pr_number:
+        description: "verify-ready-for-review-reuse only: proof pull request number"
+        required: false
+        type: string
+      verify_reuse_head_sha:
+        description: "verify-ready-for-review-reuse only: exact reviewed head SHA"
+        required: false
+        type: string
+      verify_reuse_base_sha:
+        description: "verify-ready-for-review-reuse only: exact reviewed base SHA"
         required: false
         type: string
 
@@ -230,8 +250,21 @@ jobs:
       pr_number: ${{ github.event_name == 'workflow_dispatch' && inputs.plan_pr_number || github.event.pull_request.number }}
     secrets: inherit
 
-  ci:
+  ready-for-review-reuse:
     if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    uses: KARSIFT/karsift-ai-infra/.github/workflows/ready-for-review-reuse.yml@main
+    with:
+      pr_number: ${{ github.event.pull_request.number }}
+      expected_head_sha: ${{ github.event.pull_request.head.sha }}
+      expected_base_sha: ${{ github.event.pull_request.base.sha }}
+      event_action: ${{ github.event.action }}
+      current_run_id: ${{ github.run_id }}
+
+  ci:
+    needs: [ready-for-review-reuse]
+    if: |
+      github.event_name == 'pull_request' && github.event.action != 'closed' &&
+      needs.ready-for-review-reuse.outputs.outcome != 'reuse-evidence'
     uses: KARSIFT/karsift-ai-infra/.github/workflows/ci.yml@main
 
   # Planning PRs (head branch prefixed "plan/" by plan.yml) create a package
@@ -248,7 +281,11 @@ jobs:
   # never see a passing verdict. See plan-review's own job comment and
   # karsift-ai-infra/.github/workflows/plan-review.yml for what it checks.
   extract-package-path:
-    if: github.event_name == 'pull_request' && github.event.action != 'closed' && startsWith(github.head_ref, 'agent/')
+    needs: [ready-for-review-reuse]
+    if: |
+      github.event_name == 'pull_request' && github.event.action != 'closed' &&
+      startsWith(github.head_ref, 'agent/') &&
+      needs.ready-for-review-reuse.outputs.outcome != 'reuse-evidence'
     runs-on: ubuntu-latest
     outputs:
       package_path: ${{ steps.extract.outputs.package_path }}
@@ -270,8 +307,11 @@ jobs:
           echo "package_path=$path" >> "$GITHUB_OUTPUT"
 
   review:
-    needs: [ci, extract-package-path]
-    if: github.event_name == 'pull_request' && github.event.action != 'closed' && startsWith(github.head_ref, 'agent/')
+    needs: [ready-for-review-reuse, ci, extract-package-path]
+    if: |
+      github.event_name == 'pull_request' && github.event.action != 'closed' &&
+      startsWith(github.head_ref, 'agent/') &&
+      needs.ready-for-review-reuse.outputs.outcome != 'reuse-evidence'
     uses: KARSIFT/karsift-ai-infra/.github/workflows/review.yml@main
     with:
       pr_number: ${{ github.event.pull_request.number }}
@@ -291,8 +331,11 @@ jobs:
   # package path itself from the PR body's "New package directory: `...`"
   # line (the one plan.yml always writes).
   plan-review:
-    needs: ci
-    if: github.event_name == 'pull_request' && github.event.action != 'closed' && startsWith(github.head_ref, 'plan/')
+    needs: [ready-for-review-reuse, ci]
+    if: |
+      github.event_name == 'pull_request' && github.event.action != 'closed' &&
+      startsWith(github.head_ref, 'plan/') &&
+      needs.ready-for-review-reuse.outputs.outcome != 'reuse-evidence'
     uses: KARSIFT/karsift-ai-infra/.github/workflows/plan-review.yml@main
     with:
       pr_number: ${{ github.event.pull_request.number }}
@@ -356,7 +399,7 @@ jobs:
   # wait for it the same way it already waits for `review`, or it would
   # again risk capturing a stale PENDING before plan-review finishes.
   merge-gate:
-    needs: [review, plan-review]
+    needs: [ready-for-review-reuse, review, plan-review]
     if: |
       always() &&
       github.event_name == 'pull_request' && github.event.action != 'closed' &&
@@ -367,6 +410,8 @@ jobs:
       auto_merge_enabled: "true"      # proven live on this repo (VOC-012, VOC-014) for this project's loop
       expected_head_sha: ${{ github.event.pull_request.head.sha }}
       expected_base_sha: ${{ github.event.pull_request.base.sha }}
+      reuse_outcome: ${{ needs.ready-for-review-reuse.outputs.outcome }}
+      reuse_prior_run_id: ${{ needs.ready-for-review-reuse.outputs.prior_run_id }}
     secrets: inherit
 
   # Promotes a completed package after its roster closes. `reconcile-release`
@@ -456,3 +501,18 @@ jobs:
       task_id: ${{ inputs.verify_task_id }}
       package_path: ${{ inputs.verify_package_path }}
       integration_branch: "develop"
+
+  # Read-only post-transition verifier for VOC-104 operator-owned live proof.
+  verify-ready-for-review-reuse:
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'verify-ready-for-review-reuse'
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+    uses: KARSIFT/karsift-ai-infra/.github/workflows/verify-ready-for-review-reuse.yml@main
+    with:
+      ready_run_id: ${{ inputs.verify_ready_run_id }}
+      prior_run_id: ${{ inputs.verify_prior_run_id }}
+      pr_number: ${{ inputs.verify_reuse_pr_number }}
+      expected_head_sha: ${{ inputs.verify_reuse_head_sha }}
+      expected_base_sha: ${{ inputs.verify_reuse_base_sha }}
