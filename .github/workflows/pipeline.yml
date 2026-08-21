@@ -56,7 +56,7 @@ on:
         description: "Which reusable workflow to run"
         required: true
         type: choice
-        options: [implement, plan, reconcile, reconcile-release, reconcile-live-evidence]
+        options: [implement, plan, reconcile, reconcile-release, reconcile-live-evidence, verify-auto-advance-live-evidence]
         default: implement
       change_id:
         description: 'implement only: adopted package to implement from, e.g. "VOC-007"'
@@ -112,6 +112,26 @@ on:
         type: string
       live_evidence_pr_number:
         description: "reconcile-live-evidence dispatch only: waiting task PR number"
+        required: false
+        type: string
+      verify_source_run_id:
+        description: "verify-auto-advance-live-evidence only: predecessor close pipeline run id"
+        required: false
+        type: string
+      verify_waiting_pr_number:
+        description: "verify-auto-advance-live-evidence only: draft evidence-carrier PR number"
+        required: false
+        type: string
+      verify_change_id:
+        description: "verify-auto-advance-live-evidence only: adopted package change id"
+        required: false
+        type: string
+      verify_task_id:
+        description: "verify-auto-advance-live-evidence only: operator-owned task id"
+        required: false
+        type: string
+      verify_package_path:
+        description: "verify-auto-advance-live-evidence only: canonical package directory path"
         required: false
         type: string
 
@@ -365,7 +385,9 @@ jobs:
   # Fills the gap between adoption and release: dispatches the NEXT task in an
   # adopted package's roster
   # automatically once the current task's tracking issue closes, so routine
-  # task-to-task progression needs no further per-task human trigger. A
+  # task-to-task progression needs no further per-task human trigger. For
+  # operator-owned / live-actions next tasks it prepares a deterministic
+  # evidence-carrier PR instead of starting implement.yml (VOC-102). A
   # no-op on the package's last task (release's own check-completion above
   # handles that transition instead) or if the next task is already
   # dispatched/done. Runs on the same `issues: closed` event as `release`
@@ -408,3 +430,22 @@ jobs:
     secrets:
       KARSIFT_BOT_APP_ID: ${{ secrets.KARSIFT_BOT_APP_ID }}
       KARSIFT_BOT_PRIVATE_KEY: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
+
+  # Read-only post-carrier verifier for VOC-102 operator-owned live proof.
+  # Dispatch manually on the exact evidence-carrier branch ref after the T00→T01
+  # auto-advance run creates the carrier and records allowlisted source metadata.
+  verify-auto-advance-live-evidence:
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'verify-auto-advance-live-evidence'
+    permissions:
+      actions: read
+      contents: read
+      issues: read
+      pull-requests: read
+    uses: KARSIFT/karsift-ai-infra/.github/workflows/verify-auto-advance-live-evidence.yml@main
+    with:
+      source_run_id: ${{ inputs.verify_source_run_id }}
+      waiting_pr_number: ${{ inputs.verify_waiting_pr_number }}
+      change_id: ${{ inputs.verify_change_id }}
+      task_id: ${{ inputs.verify_task_id }}
+      package_path: ${{ inputs.verify_package_path }}
+      integration_branch: "develop"

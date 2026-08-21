@@ -13,6 +13,9 @@
 When a task's acceptance depends on a live GitHub Actions run the implementer
 cannot dispatch (production deploy proof, scheduled synthetic on `main`, etc.):
 
+- Add the exact marker inside this task's own `## <task_id>` stanza:
+  `- Automation ownership: operator` or `- Automation ownership: live-actions`
+  (structural match only; narrative prose is never parsed).
 - State in the task body that acceptance requires **operator-owned live
   evidence** (not implementer Actions access).
 - Add `<package>/.karsift/live-evidence/<task_id>.yaml` with the allowlisted

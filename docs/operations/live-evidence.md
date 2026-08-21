@@ -167,8 +167,10 @@ not open operational-failure issues or application alerts.
 
 ## Author checklist
 
-1. In the package `tasks.md`, state which task(s) require operator-owned live
-   evidence and link to each contract path.
+1. In the package `tasks.md`, add the exact automation-ownership marker inside each
+   operator-owned task's own `## <task_id>` stanza:
+   `- Automation ownership: operator` or `- Automation ownership: live-actions`.
+   Link to each contract path.
 2. Add `<package>/.karsift/live-evidence/<task_id>.yaml` before or during the
    task that needs it.
 3. Document in the task evidence file (`tNN-evidence.md`) which contract fields
@@ -177,6 +179,11 @@ not open operational-failure issues or application alerts.
    reconcile after T01/T02, or operator-triggered runs that match the contract.
 5. Cross-link this guide from the change-package template notes when adding live
    evidence (see `specs/templates/change-package/README.md`).
+
+After VOC-102, when a predecessor task closes, `auto-advance.yml` skips general
+implementer dispatch for operator-owned / live-actions-only next tasks and instead
+creates a deterministic draft evidence-carrier PR plus a sanitized waiting marker.
+Ordinary next tasks still auto-dispatch `implement.yml` as before.
 
 ## Operator checklist
 
