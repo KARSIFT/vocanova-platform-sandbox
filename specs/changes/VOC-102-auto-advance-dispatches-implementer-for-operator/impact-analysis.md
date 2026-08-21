@@ -56,8 +56,11 @@
   check-completion.
 - `VOC-102-R02`: **Reconcile assumes waiting PR.** Mitigation: resolved DEP-03
   selects a deterministic non-implementer carrier publisher. Tests require a draft
-  PR with the contract-declared pending evidence path before declaring the operator
-  task safely waiting; an issue comment alone cannot pass.
+  PR with the strict task-ID-derived package-local evidence path before declaring
+  the operator task safely waiting; an issue comment alone cannot pass. The
+  unchanged VOC-097 contract schema receives no arbitrary-path field.
+- `VOC-102-R03`: **Docs drift** claiming universal implement dispatch.
+  Mitigation: AC-07 / TEST-10; AGENTS.md doc-consistency rule.
 - `VOC-102-R04`: **Mutation authority broadens silently.** Mitigation: `advance`
   remains read-only; only the clean publisher mints the App for explicit
   contents/issues/pull-requests writes, with no model or Actions-write credentials.
@@ -66,8 +69,6 @@
   separate metadata-only verifier on the exact carrier head. TEST-13 rejects a
   stale head, mismatched source event, or executed implement job. Existing
   reconciler lineage modes remain unchanged.
-- `VOC-102-R03`: **Docs drift** claiming universal implement dispatch.
-  Mitigation: AC-07 / TEST-10; AGENTS.md doc-consistency rule.
 - `VOC-102-DEP-00`: Issue #863 incident (VOC-098-T00→T01 spurious implement).
 - `VOC-102-DEP-01`: VOC-097 ownership contract and reconcile path.
 - `VOC-102-DEP-02`: Cross-repo infra change ownership pattern.

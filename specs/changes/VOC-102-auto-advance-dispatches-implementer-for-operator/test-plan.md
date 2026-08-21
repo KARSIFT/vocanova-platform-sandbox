@@ -86,7 +86,7 @@
   the read-only proof action on the exact carrier ref and reconcile that verifier
   run under the T01 contract.
 - Expected result: No implementer execution; next issue still open with one
-  waiting marker, one deterministic draft carrier PR, and the contract-declared
+  waiting marker, one deterministic draft carrier PR, and the governance-derived
   pending evidence path. The later verifier succeeds at `exact_pr_head`; the
   earlier transition is not misrepresented as containing a later PR head.
 - Evidence: `VOC-102-EV-01` (metadata only)
@@ -117,12 +117,15 @@
 ## VOC-102-TEST-11 — Evidence carrier is deterministic and idempotent
 
 - Covers: `VOC-102-AC-01`, `VOC-102-AC-05`, `VOC-102-AC-08`
-- Preconditions: Valid operator/live-actions contract with allowlisted
-  `evidence_path`; open task issue; no carrier, then an existing carrier
+- Preconditions: Valid operator/live-actions contract and a task ID that derives
+  a single `<package_path>/tNN-evidence.md` path; open task issue; no carrier, then
+  an existing carrier
 - Procedure: Exercise clean publisher fixture twice.
 - Expected result: First call creates one deterministic task branch/draft PR and
   pending evidence file; repeat reuses it and retains exactly one waiting marker.
-  No general implementer or LLM step is invoked.
+  No general implementer or LLM step is invoked. Unsafe/non-round-tripping task
+  IDs fail closed, and the contract remains valid under the unchanged VOC-097
+  schema (no `evidence_path` extension).
 - Evidence: `VOC-102-EV-00`
 
 ## VOC-102-TEST-12 — Permission and credential boundary

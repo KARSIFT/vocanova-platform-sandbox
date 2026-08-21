@@ -35,7 +35,7 @@ In scope:
    live-evidence-only mode), **do not** call `implement.yml`.
 3. Leave the next task issue open and route it to a deterministic, non-LLM
    evidence-carrier publisher. That clean job creates or reuses the task branch/PR,
-   writes only the contract-declared pending evidence file, and posts a sanitized
+   writes only the governance-derived pending evidence file, and posts a sanitized
    stable waiting marker so the existing PR-centric reconciler has an attachment
    point.
 4. Preserve automatic implementer dispatch for ordinary implementation-owned next
@@ -96,8 +96,13 @@ source is
 `ownership: live-actions`, auto-advance MUST NOT dispatch `implement.yml`. The
 next task issue remains OPEN. Instead, a deterministic non-LLM clean publisher
 creates or reuses the normal task branch and a draft evidence-carrier PR from the
-integration branch. The only generated content is the contract-declared pending
-evidence path and fixed privacy-safe waiting text. The existing PR-centric
+integration branch. The only generated content is the governance-derived pending
+evidence path and fixed privacy-safe waiting text. The path is not a contract
+field: derive it only from the already-validated task ID suffix using
+`<package_path>/t<digits><optional-letter>-evidence.md` (for example T01 becomes
+`t01-evidence.md`). Reject any task ID that cannot round-trip through that strict
+pattern. This keeps arbitrary paths outside the publisher and preserves the
+existing VOC-097 contract schema. The existing PR-centric
 `reconcile-live-evidence` path can then discover and update that PR exactly as it
 does today.
 

@@ -33,7 +33,7 @@ same package.
    `implement.yml`; leave the next issue OPEN; select the separate deterministic
    clean evidence-carrier publisher defined by `VOC-102-D01/D02`.
 4. That publisher creates/reuses the deterministic task branch/draft PR, writes
-   only the contract-declared pending evidence path, and posts one deduplicated
+   only the strict task-ID-derived `<package_path>/tNN-evidence.md` path, and posts one deduplicated
    sanitized waiting marker. The classifier remains read-only; the publisher
    alone may mint the App for contents/issues/pull-requests writes and receives no
    model credentials or Actions-write permission.
@@ -91,7 +91,7 @@ same package.
    (deterministic fixture preferred; sanitized live observation allowed if needed).
 3. Confirm the operator-owned next task issue remained OPEN, exactly one draft
    evidence-carrier PR was created/reused, the pending evidence path matched the
-   contract, and the sanitized waiting marker was deduplicated.
+   strict task-ID-derived convention, and the sanitized waiting marker was deduplicated.
 4. Record allowlisted metadata only in `t01-evidence.md` (pipeline/auto-advance run
    IDs/URLs, conclusions, `should_dispatch` outcome, issue number, absence of
    implementer job). Never copy logs, secrets, sessions, OAuth data, cookies,

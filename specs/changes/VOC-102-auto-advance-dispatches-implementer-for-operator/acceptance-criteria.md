@@ -24,9 +24,9 @@ is the authoritative machine-readable ownership source.
 When next-task ownership is `operator` or `live-actions`, auto-advance does **not**
 start `implement.yml`. The next task issue remains open. A deterministic clean
 publisher creates/reuses a draft evidence-carrier PR containing only the
-contract-declared pending evidence path and posts one deduplicated sanitized
+governance-derived `<package_path>/tNN-evidence.md` path and posts one deduplicated sanitized
 waiting marker, giving the existing PR-centric reconciler a valid attachment
-point.
+point. No non-schema `evidence_path` field is added to the live-evidence contract.
 
 ## VOC-102-AC-02 — Ordinary implementation next tasks still dispatch
 
@@ -85,7 +85,7 @@ no-next regression coverage exist and pass in CI or infra self-ci.
 - Requirement source: `VOC-102-D07`
 - Tasks: `VOC-102-T01`
 - Tests: `VOC-102-TEST-08`, `VOC-102-TEST-09`, `VOC-102-TEST-13`
-- Evidence: `VOC-102-EV-01`
+- Evidence: `VOC-102-EV-00`, `VOC-102-EV-01`
 - Result: pending
 
 The real T00-close event proves no implementer execution for the operator-owned

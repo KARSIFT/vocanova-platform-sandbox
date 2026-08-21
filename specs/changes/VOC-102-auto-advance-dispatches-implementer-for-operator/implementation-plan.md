@@ -39,7 +39,7 @@ Ordered steps:
 3. If ownership is `operator` or `live-actions`: select
    `prepare-live-evidence`; leave the issue open; do not call `implement.yml`.
 4. Run the separate clean publisher to create/reuse the task branch and draft
-   evidence-carrier PR with only the contract-declared pending evidence path, and
+   evidence-carrier PR with only the governance-derived pending evidence path, and
    post one deduplicated sanitized waiting marker. The classifier stays read-only;
    the publisher alone mints the App for contents/issues/PR writes and receives no
    model key or Actions-write permission.
@@ -81,8 +81,8 @@ Ordered steps:
    sanitized observation of a non-operator next task). Prefer deterministic
    fixture if a second live package advance is unnecessary.
 4. Confirm T01 issue remained open, the deterministic draft carrier PR exists,
-   its pending evidence path matches the contract, and one waiting marker is
-   present; do not manufacture unrelated package evidence.
+   its pending evidence path exactly matches the strict task-ID-derived convention,
+   and one waiting marker is present; do not manufacture unrelated package evidence.
 5. Commit the allowlisted source metadata to the carrier, then manually dispatch
    the read-only `verify-auto-advance` pipeline action on the exact carrier branch.
    It must validate the source event and carrier state without logs/artifacts.

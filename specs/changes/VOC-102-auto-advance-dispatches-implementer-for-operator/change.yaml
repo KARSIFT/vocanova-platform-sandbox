@@ -78,9 +78,10 @@ dependencies:
       "resolved after independent plan review. The current reconciler is PR-centric,
       so an issue comment alone is insufficient. Auto-advance classification remains
       read-only and selects a separate deterministic, non-LLM clean publisher that
-      creates/reuses a draft evidence-carrier PR and contract-declared pending evidence
-      path, then posts one sanitized waiting marker. That publisher alone mints the
-      existing App with contents/issues/pull-requests write; it receives no Actions-write
+      creates/reuses a draft evidence-carrier PR and a strict task-ID-derived package-local
+      evidence path, then posts one sanitized waiting marker. No evidence_path extension
+      is added to the unchanged VOC-097 contract schema. That publisher alone mints
+      the existing App with contents/issues/pull-requests write; it receives no Actions-write
       or model credentials. The existing reconciler algorithm and allowlists remain unchanged."
   - id: VOC-102-DEP-04
     status:
