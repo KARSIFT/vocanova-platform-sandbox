@@ -48,7 +48,12 @@ two low-severity test-coverage gaps. The follow-up strengthened the last-task
 no-op boundary and exercised full carrier re-entry at mocked external
 boundaries. All 99 policy tests passed hosted self-CI run `32479420670`, and
 `KARSIFT/karsift-ai-infra#74` merged as the final pinned revision
-`e296e6bf8fc7cb300de986872605ee92f1a9cec0`.
+`e296e6bf8fc7cb300de986872605ee92f1a9cec0`. A second exact-SHA review found
+two additional low-severity coverage gaps. Direct ordinary-stanza parsing and
+fail-closed marker trust, sanitization, and deduplication tests brought the
+suite to 100/100; hosted self-CI run `32481551754` passed and
+`KARSIFT/karsift-ai-infra#75` merged as the final pinned revision
+`29a76b99e9aa732096a5243433b21252585cfeeb`.
 
 ### Calling-repo foundation tests
 
@@ -102,6 +107,6 @@ Result: governance structure validation passed; detected path floor R4;
   was reviewed and corrected through the supervised split above; the failed run
   was not blindly retried.
 - Calling-repo runtime fixtures are byte-identical to the final infra merge
-  `e296e6bf8fc7cb300de986872605ee92f1a9cec0`; runtime consumption remains
+  `29a76b99e9aa732096a5243433b21252585cfeeb`; runtime consumption remains
   `KARSIFT/karsift-ai-infra/...@main`.
 - No secrets, logs, artifacts, or unrelated package live evidence recorded here.
