@@ -40,7 +40,7 @@ against vendored `karsift-ai-infra` policy fixtures plus the live caller
 
 | Artifact | Path |
 | --- | --- |
-| Vendored infra pin + policy fixtures | `tooling/governance/fixtures/karsift-ai-infra/` (`PINNED_SHA.txt` → `0ca6de2b5965237b310a64df1f2588a384e16d2c`) |
+| Vendored infra pin + policy fixtures | `tooling/governance/fixtures/karsift-ai-infra/` (`PINNED_SHA.txt` → `cd8f8c7440ec3c9eb92a6d886aa69a42c15034fa`) |
 | Waiting/remediation matrix | `tooling/governance/tests/test_voc097_live_evidence_lifecycle.py` |
 | Reconcile/sanitizer matrix | `tooling/governance/tests/test_voc097_live_evidence_reconcile.py` |
 | Shared loader | `tooling/governance/tests/voc097_fixtures.py` |
@@ -60,7 +60,7 @@ against vendored `karsift-ai-infra` policy fixtures plus the live caller
 | TEST-08 | Wrong event, branch, or SHA lineage fail-closed |
 | TEST-09 | Allowlisted metadata only in evidence JSON |
 | TEST-10 | Reconcile workflow/runner never references log or artifact APIs |
-| TEST-11 | One result commit then fresh exact-SHA PR review on caller pipeline |
+| TEST-11 | Executed two-observation fixture: first qualification performs one commit/comment/ref wake in order, duplicate observation performs none; normalized App review record then requires fresh exact-SHA caller review |
 | TEST-12 | Stale age and non-success conclusions rejected |
 | TEST-13 | 72-hour timeout marker is single-use |
 | TEST-14 | Duplicate qualified result short-circuits reconciliation |
@@ -87,9 +87,9 @@ Local results on the reviewed working tree:
 - `voc097-fixture-matrix.test.mjs`: 5 tests passed (matrix registry, pin, Python suite, method map, evidence structure).
 - All `voc097-*.test.mjs` foundation tests: 14 passed.
 - VOC-097 Python matrix: Ran 18 tests, all passed.
-- Full governance Python suite: Ran 113 tests, all passed (includes preserved VOC-080 regressions after fixture refresh).
+- Full governance Python suite on the generated implementation head: Ran 113 tests, all passed. The final operator correction reran the task-scoped Python matrix, repository governance validator, full workspace validation, and hosted exact-SHA gates rather than repeating the slow all-history temporary-copy suite.
 - `validate-governance.sh`: passed.
-- `classify-change-risk.sh`: reported R3 for this task diff.
+- `classify-change-risk.sh`: reported R4 for this task diff.
 - `git diff --check`: passed.
 
 No secrets, logs, OAuth material, personal identifiers, tokens, or credentials

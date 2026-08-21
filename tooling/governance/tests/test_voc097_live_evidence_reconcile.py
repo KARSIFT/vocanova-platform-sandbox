@@ -22,6 +22,10 @@ runner = load_policy_module(
     "live_evidence_reconcile_runner",
     "config/live-evidence-reconcile-runner.py",
 )
+normalizer = load_policy_module(
+    "normalize_review_narrative",
+    "config/normalize-review-narrative.py",
+)
 
 NOW = datetime(2026, 8, 21, 0, 0, tzinfo=timezone.utc)
 HEAD = "a" * 40
@@ -172,6 +176,63 @@ class Voc097LiveEvidenceReconcileTests(unittest.TestCase):
             ),
             4,
         )
+
+        task = SimpleNamespace(task_id="VOC-097-T02", pr_number=12)
+        evidence = {"run_id": 12345}
+        events = []
+
+        def record(name, result=None):
+            def callback(*_args, **_kwargs):
+                events.append(name)
+                return result
+
+            return callback
+
+        with (
+            patch.object(
+                runner,
+                "result_already_present",
+                side_effect=[False, True],
+            ),
+            patch.object(runner, "candidate_runs", return_value=[{"id": 12345}]),
+            patch.object(runner, "qualify", side_effect=record("qualify", evidence)),
+            patch.object(
+                runner,
+                "append_result_commit",
+                side_effect=record("append", "d" * 40),
+            ),
+            patch.object(
+                runner,
+                "post_qualified_comment",
+                side_effect=record("comment"),
+            ),
+            patch.object(
+                runner,
+                "advance_result_ref",
+                side_effect=record("advance"),
+            ),
+        ):
+            self.assertTrue(
+                runner.reconcile_task(object(), object(), task, NOW, None)
+            )
+            self.assertFalse(
+                runner.reconcile_task(object(), object(), task, NOW, None)
+            )
+        self.assertEqual(events, ["qualify", "append", "comment", "advance"])
+
+        narrative = normalizer.normalize_narrative(
+            b"""Reviewer preamble.
+**Independent verification - bound to commit `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`**
+task_id: `VOC-097-T02`
+package_path: `specs/changes/VOC-097-example`
+authority_issue: `12`
+base_sha: `cccccccccccccccccccccccccccccccccccccccc`
+No blocking findings.
+VERDICT: PASS
+"""
+        )
+        self.assertNotIn("bound to commit", narrative)
+        self.assertEqual(narrative.splitlines()[-1], "VERDICT: PASS")
 
     def test_voc097_test_12_stale_and_non_success_runs_are_rejected(self):
         contract = parsed_contract(max_age="1h")
