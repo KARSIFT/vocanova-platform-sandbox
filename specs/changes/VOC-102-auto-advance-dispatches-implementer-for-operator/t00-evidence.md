@@ -90,7 +90,13 @@ read-only verifier now derive the declaration from exactly one valid root
 `risk: R0` through `risk: R4` entry in the adopted package and fail closed on
 missing, duplicate, or malformed risk metadata. All 106 shared policy tests
 passed hosted self-CI run `32488299331`; `KARSIFT/karsift-ai-infra#82` merged as
-the final pinned revision `6817ccd9e2babe55a8b72858963d695e18655fc7`.
+revision `6817ccd9e2babe55a8b72858963d695e18655fc7`. The calling-repo exact-SHA
+review then found that a present but unreadable `tasks.md` stopped dispatch but
+raised before the sanitized fail-closed marker path. `KARSIFT/karsift-ai-infra#83`
+now converts filesystem and decoding failures into the allowlisted
+`unreadable_tasks_file` reason and proves permission/encoding fixtures. All 107
+shared policy tests passed hosted self-CI run `32491103732`; the final pinned
+revision is `4adebd61f4ede7bf767b630352792aba42a5acf7`.
 
 ### Calling-repo foundation tests
 
@@ -169,6 +175,6 @@ Result: governance structure validation passed; detected path floor R4;
   was reviewed and corrected through the supervised split above; the failed run
   was not blindly retried.
 - Calling-repo runtime fixtures are byte-identical to the final infra merge
-  `6817ccd9e2babe55a8b72858963d695e18655fc7`; runtime consumption remains
+  `4adebd61f4ede7bf767b630352792aba42a5acf7`; runtime consumption remains
   `KARSIFT/karsift-ai-infra/...@main`.
 - No secrets, logs, artifacts, or unrelated package live evidence recorded here.
