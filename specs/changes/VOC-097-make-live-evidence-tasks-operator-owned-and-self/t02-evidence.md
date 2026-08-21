@@ -27,7 +27,10 @@ caller_reviewed_implementation_sha: a78cc67e4703e9d49e55cad76ec545905986c65d
 live_fixture_claimed: false
 post_merge_source_run_claimed: false
 permission_compatibility_recovery_issue: 842
-permission_compatibility_recovery_claimed: false
+permission_compatibility_recovery_claimed: true
+permission_compatibility_validated_sha: 08bc3dbca46cfac48b996923950fcbd5d5751c15
+permission_compatibility_pipeline_run: 32459076430
+permission_compatibility_independent_review_pass: true
 ---
 
 # VOC-097-T02 — Allowlisted observe/dispatch reconciler
@@ -190,6 +193,13 @@ implementer authority.
 The repair keeps the workflow-wide floor at Actions read and grants Actions
 write only to the operator-owned `live-evidence-reconcile` caller job. Its other
 permissions remain read-only, its two App identity secrets remain explicit, and
-the implementer receives no Actions-write permission. Deterministic validation
-is pending on this revision; `permission_compatibility_recovery_claimed` remains
-false until exact-SHA hosted CI proves that the pipeline compiles and runs.
+the implementer receives no Actions-write permission.
+
+At exact implementation SHA `08bc3dbca46cfac48b996923950fcbd5d5751c15`,
+pipeline run `32459076430` compiled and passed CI, exact-SHA independent review,
+isolated App-signed verdict publication, remediation decision, and merge-gate
+reporting. The companion governance checks and controlled-signup OAuth callback
+E2E also passed. The independent verdict was PASS with no blocking findings;
+implementation remediation and automatic merge were skipped while the PR
+remained draft. This evidence-only update creates a new SHA and must itself pass
+fresh exact-SHA checks before merge; it does not self-attest.

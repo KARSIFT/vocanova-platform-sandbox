@@ -118,5 +118,18 @@ test("VOC-097-T02 evidence file records mechanism without secrets", () => {
   assert.match(evidence, /live-evidence-reconcile\.yml/);
   assert.match(evidence, /shared infrastructure PR/i);
   assert.match(evidence, /hourly metadata reconciliation/i);
+  assert.match(evidence, /permission_compatibility_recovery_claimed:\s*true/);
+  assert.match(
+    evidence,
+    /permission_compatibility_validated_sha:\s*[0-9a-f]{40}/,
+  );
+  assert.match(
+    evidence,
+    /permission_compatibility_pipeline_run:\s*[1-9][0-9]*/,
+  );
+  assert.match(
+    evidence,
+    /permission_compatibility_independent_review_pass:\s*true/,
+  );
   assert.doesNotMatch(evidence, /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
 });
