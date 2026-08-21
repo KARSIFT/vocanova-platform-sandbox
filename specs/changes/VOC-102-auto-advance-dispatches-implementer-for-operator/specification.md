@@ -87,9 +87,9 @@ verifier govern each task PR.
 
 ## Decisions
 
-`VOC-102-D00`: Before auto-advance sets `should_dispatch=true`, it MUST determine
-next-task ownership and select any path-specific PR/dispatch decision, it MUST
-read governed package data. The authoritative machine-readable source is
+`VOC-102-D00`: Auto-advance MUST read governed package data and determine
+next-task ownership before selecting any path-specific PR/dispatch decision. The
+authoritative machine-readable source is
 `<package_path>/.karsift/live-evidence/<next_task_id>.yaml` when that file exists.
 The only secondary expectation signal is an exact allowlisted marker inside the
 matching `## <next_task_id>` stanza of canonical `tasks.md`:

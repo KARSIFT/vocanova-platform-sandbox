@@ -14,7 +14,10 @@ same package.
 ## VOC-102-T00 — Auto-advance ownership gate, fail-closed semantics, docs, deterministic tests
 
 - Requirement source: issue #863; `VOC-102-D00`–`D08`
-- Acceptance criteria: `VOC-102-AC-00` through `VOC-102-AC-08`
+- Acceptance criteria: `VOC-102-AC-00` through `VOC-102-AC-05`, `VOC-102-AC-07`,
+  `VOC-102-AC-08`; T00 contributes the verifier implementation and deterministic
+  TEST-13 evidence to `VOC-102-AC-06`, which T01 closes with the controlled live
+  proof.
 - Tests: `VOC-102-TEST-00` through `VOC-102-TEST-07`, `VOC-102-TEST-10` through
   `VOC-102-TEST-13`
 - Evidence: `VOC-102-EV-00` (`t00-evidence.md` in this package directory)
