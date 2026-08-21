@@ -1,0 +1,122 @@
+schema_version: 1
+id: VOC-104
+slug: ready-for-review-reruns-unchanged-exact-sha-ci
+title: Skip redundant ready-for-review CI and model review on unchanged exact SHA
+type: infrastructure
+status: draft
+risk: R4
+planned_implementation_risk_floor:
+  "Measured during drafting against the expected\
+  \ task-scoped file list (KARSIFT/karsift-ai-infra caller pipeline template, ci.yml\
+  \ / review.yml / plan-review.yml / merge-gate.yml coordination or helper for ready_for_review\
+  \ reuse eligibility, policy tests, README; calling-repo .github/workflows/pipeline.yml;\
+  \ docs/operations/15-ai-native-product-and-engineering-operating-model.md §17.3\
+  \ and related ops docs when needed; scripts/foundation/voc104-*.test.mjs\
+  \ and/or infra self-ci fixtures; this package directory). Detected path floor is\
+  \ R3 for .github/workflows/ and governance-automation paths, raised to R4 because\
+  \ T00 must update docs/operations/15-ai-native-product-and-engineering-operating-model.md.\
+  \ The behavior is semantically R3 CI/CD/governance enforcement, but the package\
+  \ takes the highest applicable path floor. Each task's actual file list remains\
+  \ independently classified."
+canonical_path: specs/changes/VOC-104-ready-for-review-reruns-unchanged-exact-sha-ci
+authority_model: a004-active
+requirement_source:
+  "GitHub issue #872 (Ready-for-review reruns unchanged exact-SHA
+  CI and model review). Observed 2026-08-21: PR #868 head 744e5845f2e8a9ec717fe0c38144dbd3b594559d
+  (pipeline 32492018782 passed; ready_for_review 32492586621 repeated full CI and
+  review); PR #869 head fe3cf7d60157317e0564d2dd4de751bd6109a5df (pipeline 32493543324
+  passed with live-evidence attestation true; ready_for_review 32494037984 repeated
+  full CI and review). Publisher recovery comment 2026-08-21T15:11:04Z requests the
+  same scoped plan with package ID VOC-104. This draft package does not adopt or authorize
+  itself."
+requirement_approval_status: not-approved
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact:
+  none-intentional for application runtime. Changes governance automation
+  so an unchanged exact base/head ready_for_review transition reuses prior green required
+  checks and a trusted App-signed PASS verdict instead of repeating full CI and model
+  review, while still re-running deterministic merge-gate evaluation. Does not change
+  production deploy semantics, signup policy, secrets, databases, Kuma inventory,
+  or Sentry ingestion.
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale:
+    Governance-automation CI/review reuse only. No page routes, critical
+    API endpoints, or stable monitor/synthetic IDs in infra/monitoring/monitors.yaml
+    or infra/monitoring/synthetics.yaml are added or changed.
+dependencies:
+  - id: VOC-104-DEP-00
+    status:
+      "resolved at drafting time. Issue #872 records sanitized observation that
+      ready_for_review reran full CI and independent review for unchanged exact head
+      SHAs on PRs #868 and #869 (run IDs above)."
+  - id: VOC-104-DEP-01
+    status:
+      resolved at drafting time. Caller pipeline already subscribes to ready_for_review
+      so draft PRs can become merge-eligible without a new commit; merge-gate already
+      blocks draft PRs and rechecks open/draft state plus reviewed base/head immediately
+      before merge. The missing piece is skipping redundant CI and model review when
+      reuse is safe.
+  - id: VOC-104-DEP-02
+    status:
+      "resolved at drafting time. Cross-repo pattern from VOC-080 / VOC-097 /\
+      \ VOC-102 \u2014 reusable workflow behavior lands in KARSIFT/karsift-ai-infra;\
+      \ this package authorizes the required outcome. Do not treat an untracked local\
+      \ karsift-ai-infra/ checkout as this repository's tracked tree."
+  - id: VOC-104-DEP-03
+    status:
+      "resolved during draft refinement. Use one reusable, read-only eligibility\
+      \ workflow/helper surfaced as a caller job; caller conditions consume its machine\
+      \ decision so ci/review/plan-review do not reimplement the predicate."
+  - id: VOC-104-DEP-04
+    status:
+      "resolved during draft refinement. Apply the optimization to both agent/ task\
+      \ PRs and plan/ planning PRs, with the matching trusted review check (review\
+      \ / publish-review vs plan-review / publish-plan-review) and identity fields."
+  - id: VOC-102
+    status:
+      Adopted predecessor that explicitly deferred duplicate exact-SHA review
+      fixes to a separate follow-up. This package is that focused root.
+affected_areas:
+  - KARSIFT/karsift-ai-infra templates/project-repo/.github/workflows/pipeline.yml
+  - KARSIFT/karsift-ai-infra reusable ci / review / plan-review / merge-gate coordination
+    or ready_for_review reuse helper, policy tests, and README
+  - calling-repo .github/workflows/pipeline.yml
+  - calling-repo docs/operations/15-ai-native-product-and-engineering-operating-model.md
+    §17.3, plus related ops docs only when their current wording would become false
+  - scripts/foundation/voc104-*.test.mjs and/or infra self-ci fixtures
+  - specs/changes/VOC-104-ready-for-review-reruns-unchanged-exact-sha-ci/
+implementation:
+  authorized: false
+  required: true
+  status: not-authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-governance-automation-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: not-authorized
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
+blocking_reasons: draft package - not adopted; implementation not authorized
