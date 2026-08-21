@@ -28,6 +28,10 @@ metadata fails closed. “No marker” means a readable task stanza has no owner
 or unreadable `tasks.md` cannot establish that condition and fails closed instead of guessing that
 the task is ordinary. The classifier and proof verifier stay read-only; only a clean publisher
 receives carrier writes, and the fail-closed notifier receives issue-write only.
+Carrier PRs inherit their `Risk classification: R#` line from exactly one valid
+root `risk: R0` through `risk: R4` declaration in the adopted package's
+`change.yaml`. Missing, duplicate, or malformed risk metadata fails closed; the
+publisher does not over-classify every future carrier as R4.
 If that deterministic branch already belongs to a closed or merged carrier PR,
 publication fails closed with `conflicting_existing_pr`; it never silently
 reopens or replaces historical state. An operator must confirm why the carrier

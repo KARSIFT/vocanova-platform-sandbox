@@ -84,7 +84,13 @@ auto-advance interface as the live caller, while a closed deterministic carrier
 is explicitly tested and documented as an operator-cleanup condition rather
 than silently reopened. All 105 shared policy tests passed hosted self-CI run
 `32486567566`; the final pinned revision is
-`1ab793a4f0af952628e50d7b3108d99233c564a6`.
+`1ab793a4f0af952628e50d7b3108d99233c564a6`. The next exact-SHA review found
+that the generic carrier body still hardcoded R4. The shared publisher and
+read-only verifier now derive the declaration from exactly one valid root
+`risk: R0` through `risk: R4` entry in the adopted package and fail closed on
+missing, duplicate, or malformed risk metadata. All 106 shared policy tests
+passed hosted self-CI run `32488299331`; `KARSIFT/karsift-ai-infra#82` merged as
+the final pinned revision `6817ccd9e2babe55a8b72858963d695e18655fc7`.
 
 ### Calling-repo foundation tests
 
@@ -127,6 +133,8 @@ Result: governance structure validation passed; detected path floor R4;
 - Fail-closed metadata posts a sanitized issue marker and creates no carrier.
 - A deterministic carrier branch attached to a closed or merged PR fails closed;
   an operator must confirm the history before a governed restoration or retry.
+- Carrier PR risk is inherited from validated adopted-package metadata, rather
+  than hardcoded R4 for every future operator-owned task.
 - Ordinary tasks retain the existing-PR guard and `implement.yml` attempt 1.
 - Calling-repo `pipeline.yml` exposes read-only
   `verify-auto-advance-live-evidence` for T01 exact-head proof.
@@ -140,6 +148,6 @@ Result: governance structure validation passed; detected path floor R4;
   was reviewed and corrected through the supervised split above; the failed run
   was not blindly retried.
 - Calling-repo runtime fixtures are byte-identical to the final infra merge
-  `1ab793a4f0af952628e50d7b3108d99233c564a6`; runtime consumption remains
+  `6817ccd9e2babe55a8b72858963d695e18655fc7`; runtime consumption remains
   `KARSIFT/karsift-ai-infra/...@main`.
 - No secrets, logs, artifacts, or unrelated package live evidence recorded here.
