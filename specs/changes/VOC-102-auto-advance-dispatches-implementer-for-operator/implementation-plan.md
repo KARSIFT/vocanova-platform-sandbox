@@ -34,17 +34,20 @@ Ordered steps:
 
 1. Confirm drafting-time diagnosis against current `auto-advance.yml` HEAD; record
    that ownership is not consulted today (no secrets).
-2. After next-task resolution and existing open-issue / existing-PR guards, load
-   `<package_path>/.karsift/live-evidence/<next_task_id>.yaml` when present.
+2. After next-task resolution and the open-issue guard, load
+   `<package_path>/.karsift/live-evidence/<next_task_id>.yaml` when present. Do not
+   apply the existing-PR guard globally before ownership is known.
 3. If ownership is `operator` or `live-actions`: select
    `prepare-live-evidence`; leave the issue open; do not call `implement.yml`.
 4. Run the separate clean publisher to create/reuse the task branch and draft
    evidence-carrier PR with only the governance-derived pending evidence path, and
    post one deduplicated sanitized waiting marker. The classifier stays read-only;
    the publisher alone mints the App for contents/issues/PR writes and receives no
-   model key or Actions-write permission.
+   model key or Actions-write permission. Re-enter it when a deterministic carrier
+   already exists so partial publication can repair a missing derived evidence file
+   or marker; reject conflicting/untrusted PR state.
 5. If no contract and no contradictory operator declaration: preserve today's
-   `should_dispatch=true` path.
+   existing-PR guard, then preserve today's `should_dispatch=true` path.
 6. If metadata malformed/contradictory/unrecognized: fail closed — no dispatch,
    no carrier from untrusted paths, and one sanitized publisher escalation
    (`VOC-102-D04`).

@@ -82,7 +82,10 @@ dependencies:
       evidence path, then posts one sanitized waiting marker. No evidence_path extension
       is added to the unchanged VOC-097 contract schema. That publisher alone mints
       the existing App with contents/issues/pull-requests write; it receives no Actions-write
-      or model credentials. The existing reconciler algorithm and allowlists remain unchanged."
+      or model credentials. Operator-owned existing carriers re-enter the idempotent
+      publisher so partial file/marker publication can be repaired; the existing-PR
+      guard remains on the ordinary implement path. The existing reconciler algorithm
+      and allowlists remain unchanged."
   - id: VOC-102-DEP-04
     status:
       "resolved after independent plan review. The real T00-close run precedes

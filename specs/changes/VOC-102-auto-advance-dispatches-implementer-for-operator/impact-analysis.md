@@ -69,6 +69,11 @@
   separate metadata-only verifier on the exact carrier head. TEST-13 rejects a
   stale head, mismatched source event, or executed implement job. Existing
   reconciler lineage modes remain unchanged.
+- `VOC-102-R06`: **Partial publisher run strands an existing carrier.**
+  Mitigation: ownership classification precedes the path-specific existing-PR
+  decision; operator paths re-enter the idempotent publisher to validate and
+  repair missing derived evidence/marker state, while ordinary paths retain the
+  duplicate-implement guard. TEST-11 covers both partial boundaries.
 - `VOC-102-DEP-00`: Issue #863 incident (VOC-098-T00→T01 spurious implement).
 - `VOC-102-DEP-01`: VOC-097 ownership contract and reconcile path.
 - `VOC-102-DEP-02`: Cross-repo infra change ownership pattern.

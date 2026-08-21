@@ -114,6 +114,11 @@ mints the existing GitHub App with only `contents: write`, `issues: write`, and
 It creates/reuses the carrier PR and posts one deduplicated sanitized waiting
 marker on the task issue stating that no implementer run was started. The job
 must never use `secrets: inherit` to call the general implementer.
+The existing-PR check is path-specific, not a global early return: an operator
+decision re-enters the idempotent publisher to validate/reuse the deterministic
+carrier and repair a missing derived evidence file or waiting marker after a
+partial run. A conflicting or untrusted PR fails closed. The ordinary implement
+decision retains the existing-PR no-duplicate-dispatch guard.
 
 `VOC-102-D03`: Ordinary next tasks with no live-evidence contract and no
 contradictory operator-owned declaration continue to dispatch
@@ -139,6 +144,8 @@ bad/missing/contradictory metadata does not dispatch; (regression) last-task /
 no-next-task still no-ops toward release rather than inventing implement dispatch;
 and the post-carrier verifier rejects wrong repository/workflow/event/branch/task,
 an executed implement job, duplicate carrier/markers, logs/artifacts, or a stale PR.
+Publisher tests also cover re-entry after carrier creation but before marker/file
+completion.
 
 `VOC-102-D07`: Controlled proof uses a sanitized workflow event (for example this
 package's own T00→T01 advance after T00 merges) showing no executed implementer

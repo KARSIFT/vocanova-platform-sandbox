@@ -27,6 +27,9 @@ publisher creates/reuses a draft evidence-carrier PR containing only the
 governance-derived `<package_path>/tNN-evidence.md` path and posts one deduplicated sanitized
 waiting marker, giving the existing PR-centric reconciler a valid attachment
 point. No non-schema `evidence_path` field is added to the live-evidence contract.
+If a prior publisher attempt created the deterministic carrier but stopped before
+the derived evidence file or marker was complete, a repeated auto-advance event
+re-enters the clean publisher and repairs that state without creating duplicates.
 
 ## VOC-102-AC-02 — Ordinary implementation next tasks still dispatch
 

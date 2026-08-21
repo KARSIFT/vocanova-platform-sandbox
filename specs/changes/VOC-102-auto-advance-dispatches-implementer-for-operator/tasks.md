@@ -13,9 +13,8 @@ same package.
 
 ## VOC-102-T00 — Auto-advance ownership gate, fail-closed semantics, docs, deterministic tests
 
-- Requirement source: issue #863; `VOC-102-D00`–`D06`, `D08`
-- Acceptance criteria: `VOC-102-AC-00` through `VOC-102-AC-05`, `VOC-102-AC-07`,
-  `VOC-102-AC-08`
+- Requirement source: issue #863; `VOC-102-D00`–`D08`
+- Acceptance criteria: `VOC-102-AC-00` through `VOC-102-AC-08`
 - Tests: `VOC-102-TEST-00` through `VOC-102-TEST-07`, `VOC-102-TEST-10` through
   `VOC-102-TEST-13`
 - Evidence: `VOC-102-EV-00` (`t00-evidence.md` in this package directory)
@@ -24,9 +23,9 @@ same package.
 ### Required work
 
 1. Update `KARSIFT/karsift-ai-infra/.github/workflows/auto-advance.yml` so that,
-   after resolving the next roster task and applying existing open-issue /
-   existing-PR guards, it determines next-task ownership from governed package
-   data before setting `should_dispatch=true`.
+   after resolving the next roster task and confirming its issue is open, it
+   determines next-task ownership from governed package data before applying the
+   path-specific PR/dispatch decision.
 2. Authoritative machine-readable source when present:
    `<package_path>/.karsift/live-evidence/<next_task_id>.yaml`.
 3. If `ownership` is `operator` or `live-actions`: do **not** dispatch
@@ -37,8 +36,12 @@ same package.
    sanitized waiting marker. The classifier remains read-only; the publisher
    alone may mint the App for contents/issues/pull-requests writes and receives no
    model credentials or Actions-write permission.
+   An existing deterministic carrier is not a global early return: the operator
+   path re-enters this idempotent publisher so a prior partial run can repair a
+   missing evidence file or waiting marker. A conflicting/untrusted PR fails closed.
 5. If the next task is ordinary (no live-evidence contract and no contradictory
-   operator declaration): preserve today's implementer dispatch attempt 1.
+   operator declaration): apply the existing-PR guard and otherwise preserve
+   today's implementer dispatch attempt 1.
 6. Fail closed on missing-required / malformed / unrecognized / contradictory
    ownership metadata per `VOC-102-D04` (no dispatch, no carrier from untrusted
    paths, one sanitized publisher escalation).

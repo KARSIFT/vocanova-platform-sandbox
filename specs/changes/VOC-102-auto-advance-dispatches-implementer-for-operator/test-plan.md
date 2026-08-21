@@ -119,13 +119,16 @@
 - Covers: `VOC-102-AC-01`, `VOC-102-AC-05`, `VOC-102-AC-08`
 - Preconditions: Valid operator/live-actions contract and a task ID that derives
   a single `<package_path>/tNN-evidence.md` path; open task issue; no carrier, then
-  an existing carrier
-- Procedure: Exercise clean publisher fixture twice.
+  an existing complete carrier, then partial states with carrier but missing
+  evidence file or waiting marker
+- Procedure: Exercise auto-advance plus the clean publisher repeatedly across the
+  fresh, complete, and partial carrier fixtures.
 - Expected result: First call creates one deterministic task branch/draft PR and
   pending evidence file; repeat reuses it and retains exactly one waiting marker.
   No general implementer or LLM step is invoked. Unsafe/non-round-tripping task
   IDs fail closed, and the contract remains valid under the unchanged VOC-097
-  schema (no `evidence_path` extension).
+  schema (no `evidence_path` extension). Partial state is repaired rather than
+  suppressed by the ordinary existing-PR guard.
 - Evidence: `VOC-102-EV-00`
 
 ## VOC-102-TEST-12 — Permission and credential boundary

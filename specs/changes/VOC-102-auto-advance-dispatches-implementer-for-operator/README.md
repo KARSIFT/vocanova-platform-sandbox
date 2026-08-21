@@ -40,7 +40,8 @@ closed-issue / open-issue / existing-PR guards, without consulting
    tasks.
 3. Leave the operator task open and use a deterministic non-LLM clean publisher
    to create/reuse its draft evidence-carrier PR and sanitized waiting marker, so
-   the existing PR-centric reconciler has a valid attachment point.
+   the existing PR-centric reconciler has a valid attachment point. Re-entry must
+   repair a partial carrier/marker publication without duplicates.
 4. Continue automatic dispatch for ordinary tasks with no live-evidence contract.
 5. Preserve final-roster release behavior (skipping implementer must not open
    release early).
