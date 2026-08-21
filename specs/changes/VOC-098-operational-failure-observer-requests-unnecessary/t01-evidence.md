@@ -9,23 +9,23 @@ tests:
   - VOC-098-TEST-06
 date: 2026-08-21
 related_change: VOC-098
-gate_status: complete
-live_observer_claimed: true
 deduplication_claimed: true
 supporting_pre_lineage_fixture_claimed: true
 ---
 
 # VOC-098-T01 evidence — controlled live observer proof
 
-## Qualified contract outcome
+## Contract-controlled outcome
 
-The adjacent `VOC-098-T01.result.json` is the repository-controlled,
-App-attested source for the exact workflow run, job, SHA, timestamps, duration,
-and successful conclusion that satisfy the
-`integration_contains_pr_head` contract. The result contains allowlisted
-Actions metadata only. The earlier runs below remain supporting operational
-evidence for the create/dedupe inspection; they are not substituted for the
-contract-qualified result.
+The adjacent `.karsift/live-evidence/VOC-098-T01.result.json`, when present
+together with the trusted exact-head App attestation, is the only source that
+can satisfy the `integration_contains_pr_head` contract. The operator narrative
+does not independently claim that result. Before reconciliation, its absence is
+a waiting state; after reconciliation, the result contains allowlisted Actions
+metadata only and the independent reviewer evaluates it at the new exact head.
+The earlier runs below remain supporting operational evidence for the
+create/dedupe inspection; they are not substituted for the contract-controlled
+result.
 
 ## Supporting live outcome (not contract-qualified)
 
@@ -63,9 +63,9 @@ fixture twice. No application or production failure was manufactured.
 
 | Acceptance criterion | Status | Evidence |
 | --- | --- | --- |
-| VOC-098-AC-03 | pass | The adjacent qualified result records a successful default-branch observer run after the exact pre-result PR head entered main lineage. |
+| VOC-098-AC-03 | result-controlled | Satisfied only by the adjacent qualified result and its trusted exact-head App attestation; this narrative makes no independent live-result claim. |
 | VOC-098-AC-04 | pass | The first observation created one sanitized, unlabeled App-authored issue; the repeat retained exactly one marker owner and created no duplicate. |
-| VOC-098-TEST-05 | pass | The adjacent result record supplies the allowlisted workflow, run, job, conclusion, and exact-lineage metadata under a trusted App attestation. |
+| VOC-098-TEST-05 | result-controlled | Evaluated from the adjacent result record and trusted exact-head App attestation when reconciliation adds them. |
 | VOC-098-TEST-06 | pass | Create-or-dedupe, App identity class, marker ownership, sanitization, and duplicate count recorded above. |
 
 This file records only allowlisted operational metadata. It does not contain
