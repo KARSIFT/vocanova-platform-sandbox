@@ -67,7 +67,7 @@ Those corrections are included in the merged shared commit above.
 - `.github/workflows/pipeline.yml` consumes both reusable workflows at `@main` and supplies distinct
   source PR/base/head plus explicit evidence-carrier head inputs to the verifier.
 - The tracked fixture is pinned to shared merge
-  `d625b40f05b9b860dbf938de41f8ec837740a9fc`; 15 copied workflow, helper, template, and test files
+  `d625b40f05b9b860dbf938de41f8ec837740a9fc`; 16 copied workflow, helper, template, and test files
   were verified byte-identical to the independently reviewed shared head.
 - Fixture tests always execute the tracked copy. They no longer prefer an incidental untracked
   `karsift-ai-infra/` checkout, which previously made results depend on the operator's filesystem.
@@ -81,7 +81,7 @@ Those corrections are included in the merged shared commit above.
 | --- | --- |
 | `python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py' -v` | PASS — 28 tests |
 | `python3 -m unittest tooling.governance.tests.test_ready_for_review_reuse -v` | PASS — 2 calling tests, including an explicit green-evidence/draft auto-merge block |
-| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py' -v` | PASS — 136 governance tests in 15.349 seconds |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py' -v` | PASS — 137 governance tests after the final fixture-permission regression was added |
 | `node --test scripts/foundation/voc104-ready-for-review-reuse.test.mjs` | PASS — 5 tests |
 | `node --test scripts/foundation/voc097-fixture-matrix.test.mjs` | PASS — 5 compatibility tests |
 | `pnpm validate` | Local environment reached API tests: 231/231 foundation, 28/28 client, and 16/16 web tests passed; the command then stopped because Docker Desktop WSL integration was unavailable to start disposable Postgres for two pre-existing OAuth tests |
@@ -94,6 +94,13 @@ Those corrections are included in the merged shared commit above.
 The exact-SHA GitHub CI run remains the required full validation authority because its runner has
 Docker available and executes the two disposable-Postgres OAuth tests. This file does not claim the
 local `pnpm validate` invocation passed.
+
+A final read-only exact-SHA audit caught one omitted file in the first repin: the tracked
+`live-evidence-reconcile.yml` still granted Actions write to the App and only Actions read to the
+workflow token, while the pinned runner dispatches with the workflow token. The shared merge already
+contained the correct least-privilege split. The fixture was recopied from that merge, the
+byte-identical file count was corrected from 15 to 16, and deterministic caller tests now require
+Actions write on the dedicated workflow token while forbidding Actions permission on the App token.
 
 The first PR exact-SHA run (`32510529512`) passed full CI and independent review, but Repository
 Governance run `32510527837` failed because two older VOC-080 tests froze the workflow-dispatch

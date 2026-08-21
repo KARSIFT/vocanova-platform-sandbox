@@ -230,6 +230,18 @@ class Voc097LiveEvidenceReconcileTests(unittest.TestCase):
         self.assertNotIn("download-artifact", combined)
         self.assertNotIn("steps_url", combined)
 
+    def test_declared_dispatch_uses_the_actions_write_workflow_token(self):
+        permissions = self.workflow.split("    permissions:\n", 1)[1].split(
+            "    steps:\n", 1
+        )[0]
+        self.assertIn("actions: write", permissions)
+        self.assertIn('read_token = os.environ.get("GITHUB_TOKEN", "")', self.runner_source)
+        self.assertIn(
+            "dispatch_once(\n                read_api,\n                write_api,\n                read_api,",
+            self.runner_source,
+        )
+        self.assertIn("actions_api.mutate(", self.runner_source)
+
     def test_voc097_test_11_qualification_is_one_commit_then_fresh_pr_review(self):
         self.assertIn("append_result_commit", self.runner_source)
         self.assertIn("result_already_present", self.runner_source)
