@@ -122,30 +122,54 @@ class Voc097LiveEvidenceLifecycleTests(unittest.TestCase):
           return 97
         }}
         """
-        with tempfile.TemporaryDirectory() as scratch:
-            verdict_path = Path(scratch) / "review-verdict.md"
-            script = script.replace("/tmp/review-verdict.md", str(verdict_path))
-            output_path = Path(scratch) / "github-output"
-            env = {
-                **os.environ,
-                "GITHUB_OUTPUT": str(output_path),
-                "PR_NUMBER": "12",
-                "GH_REPO": "KARSIFT/example",
-                "CI_FAILED": str(ci_failed).lower(),
-                "REVIEW_JOB_FAILED": "false",
-                "EXPECTED_HEAD_SHA": head,
-                "EXPECTED_BASE_SHA": base,
-                "PACKAGE_PATH": package,
-            }
-            completed = subprocess.run(
-                ["bash", "-c", textwrap.dedent(gh_stub) + script],
-                cwd=FIXTURE_INFRA_ROOT,
-                env=env,
-                text=True,
-                capture_output=True,
-                check=False,
-            )
-            return completed, output_path.read_text(encoding="utf-8")
+        package_root = FIXTURE_INFRA_ROOT / "pr-head" / package
+        package_root.mkdir(parents=True, exist_ok=True)
+        tasks_md = package_root / "tasks.md"
+        tasks_md.write_text(
+            textwrap.dedent(
+                """\
+                # Tasks
+
+                ## VOC-097-T02
+
+                Ordinary implementer-owned lifecycle fixture task.
+                """
+            ),
+            encoding="utf-8",
+        )
+        try:
+            with tempfile.TemporaryDirectory() as scratch:
+                verdict_path = Path(scratch) / "review-verdict.md"
+                script = script.replace("/tmp/review-verdict.md", str(verdict_path))
+                output_path = Path(scratch) / "github-output"
+                env = {
+                    **os.environ,
+                    "GITHUB_OUTPUT": str(output_path),
+                    "PR_NUMBER": "12",
+                    "GH_REPO": "KARSIFT/example",
+                    "CI_FAILED": str(ci_failed).lower(),
+                    "REVIEW_JOB_FAILED": "false",
+                    "EXPECTED_HEAD_SHA": head,
+                    "EXPECTED_BASE_SHA": base,
+                    "PACKAGE_PATH": package,
+                }
+                completed = subprocess.run(
+                    ["bash", "-c", textwrap.dedent(gh_stub) + script],
+                    cwd=FIXTURE_INFRA_ROOT,
+                    env=env,
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                )
+                return completed, output_path.read_text(encoding="utf-8")
+        finally:
+            if tasks_md.is_file():
+                tasks_md.unlink()
+            for parent in (package_root, *package_root.parents):
+                if parent == FIXTURE_INFRA_ROOT / "pr-head":
+                    break
+                if parent.is_dir() and not any(parent.iterdir()):
+                    parent.rmdir()
 
     def test_voc097_test_02_waiting_marker_is_machine_detectable_and_fail_dominant(self):
         waiting = "VERDICT: WAITING FOR OPERATOR LIVE EVIDENCE"

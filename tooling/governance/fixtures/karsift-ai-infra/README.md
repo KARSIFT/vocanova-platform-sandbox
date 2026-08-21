@@ -271,9 +271,9 @@ non-`ready_for_review` activity selects the normal full CI and review path
 Only App-signed publisher comments qualify; human or implementer text never authorizes reuse.
 A qualifying publisher record binds its exact pipeline run ID as well as the base/head and
 package/task identity, preventing evidence from different base revisions from being combined.
-Reuse also requires GitHub's authenticated `referenced_workflows` metadata to show that the
-eligibility helper, CI, task review, plan review, and merge gate all resolved to one identical
-shared-infrastructure commit in both runs. A mutable `@main` policy change therefore forces the
+Reuse also requires GitHub's authenticated shared-infra SHA lineage via `referenced_workflows`
+metadata to show that the eligibility helper, CI, task review, plan review, and merge gate all
+resolved to one identical shared-infrastructure commit in both runs. A mutable `@main` policy change therefore forces the
 full path even when the application base/head did not change. Merge-gate repeats this revision
 comparison independently before it can authorize merge.
 A separate read-only `verify-ready-for-review-reuse.yml` workflow validates controlled live proof
@@ -284,8 +284,8 @@ workflow-controlled `decide (ready_for_review)` job marker. If GitHub has cleare
 `pull_requests` array, the verifier never infers ownership from a matching branch/head alone. A
 prior run is admitted only when an App-authored review comment on that exact PR binds its run ID,
 base/head, and package/task identity. Before optimized auto-merge, merge-gate also publishes one
-App-authored transition attestation binding repository, PR number, branch, base/head, ready run,
-selected prior run, and shared-policy SHA; the post-merge verifier requires that unique record.
+pre-merge record: an App-authored transition attestation binding repository, PR number, branch,
+base/head, ready run, selected prior run, and shared-policy SHA; the post-merge verifier requires that unique record.
 The verifier also recomputes the latest eligible prior run strictly before the ready run and
 requires it to equal the declared prior run ID, so proof cannot substitute a different valid run.
 
@@ -313,10 +313,10 @@ Adoption starts the first task automatically. The adopted roster records an expl
 `depends_on` edge from every later task to its predecessor, and `auto-advance.yml` releases the
 next task only after the preceding task's implementation PR merges and its tracking issue closes.
 For an ordinary next task, it preserves the existing deterministic-branch guard and dispatches
-`implement.yml` attempt 1. For a task with a valid operator/live-actions contract at
-`<package>/.karsift/live-evidence/<task_id>.yaml`, it does not execute the general implementer:
-a separate clean App-scoped job creates or repairs one deterministic draft evidence-carrier PR
-and one sanitized waiting marker. The task's own `tasks.md` stanza may declare the exact secondary
+`implement.yml` attempt 1. For a task with a valid `operator` or `live-actions` contract at
+`<package>/.karsift/live-evidence/<task_id>.yaml`, auto-advance instead prepares one
+deterministic draft evidence-carrier PR and one sanitized waiting marker via a separate clean
+App-scoped job; it does not execute the general implementer. The task's own `tasks.md` stanza may declare the exact secondary
 expectation marker `- Automation ownership: operator` or
 `- Automation ownership: live-actions`; a missing required contract, malformed contract, invalid
 or duplicate marker, or marker/contract conflict fails closed. Narrative prose is never parsed as

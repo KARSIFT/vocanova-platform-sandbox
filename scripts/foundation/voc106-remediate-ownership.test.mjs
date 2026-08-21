@@ -70,18 +70,9 @@ test("VOC-106-TEST-00 through TEST-07: remediation ownership classifier fixtures
 test("VOC-106-TEST-10: docs describe ownership-gated remediation", () => {
   const liveEvidenceDoc = readFileSync(liveEvidenceDocPath, "utf8");
   const infraReadme = readFileSync(infraReadmePath, "utf8");
-  assert.match(
-    liveEvidenceDoc,
-    /`remediate\.yml` does \*\*not\*\* dispatch/,
-  );
-  assert.match(
-    liveEvidenceDoc,
-    /retain today's bounded remediation retry/,
-  );
-  assert.match(
-    infraReadme,
-    /suppress `implement\.yml`/,
-  );
+  assert.match(liveEvidenceDoc, /`remediate\.yml` does \*\*not\*\* dispatch/);
+  assert.match(liveEvidenceDoc, /retain today's bounded remediation retry/);
+  assert.match(infraReadme, /suppress `implement\.yml`/);
 });
 
 test("VOC-106-TEST-11: caller wiring exposes read-only verify-remediate-operator-ownership action", () => {
