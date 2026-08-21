@@ -235,7 +235,7 @@ class Voc097LiveEvidenceReconcileTests(unittest.TestCase):
             self.pipeline.count(
                 "expected_head_sha: ${{ github.event.pull_request.head.sha }}"
             ),
-            4,
+            5,
         )
 
         task = SimpleNamespace(task_id="VOC-097-T02", pr_number=12)
@@ -325,6 +325,8 @@ VERDICT: PASS
         script = script.replace("${{ github.event.pull_request.number }}", "12")
         script = script.replace("${{ inputs.expected_head_sha }}", HEAD)
         script = script.replace("${{ inputs.expected_base_sha }}", BASE)
+        script = script.replace("${{ inputs.reuse_outcome }}", "")
+        script = script.replace("${{ inputs.reuse_prior_run_id }}", "")
         script = script.replace("${{ github.repository }}", "KARSIFT/example")
         script = script.replace("karsift-ai-infra/config/", "config/")
         old_head = "e" * 40

@@ -283,10 +283,10 @@ Adoption starts the first task automatically. The adopted roster records an expl
 `depends_on` edge from every later task to its predecessor, and `auto-advance.yml` releases the
 next task only after the preceding task's implementation PR merges and its tracking issue closes.
 For an ordinary next task, it preserves the existing deterministic-branch guard and dispatches
-`implement.yml` attempt 1. For a task with a valid operator/live-actions contract at
-`<package>/.karsift/live-evidence/<task_id>.yaml`, it does not execute the general implementer:
-a separate clean App-scoped job creates or repairs one deterministic draft evidence-carrier PR
-and one sanitized waiting marker. The task's own `tasks.md` stanza may declare the exact secondary
+`implement.yml` attempt 1. For a task with a valid `operator` or `live-actions` contract at
+`<package>/.karsift/live-evidence/<task_id>.yaml`, auto-advance instead prepares one
+deterministic draft evidence-carrier PR and sanitized waiting marker via a separate clean
+App-scoped job rather than executing the general implementer. The task's own `tasks.md` stanza may declare the exact secondary
 expectation marker `- Automation ownership: operator` or
 `- Automation ownership: live-actions`; a missing required contract, malformed contract, invalid
 or duplicate marker, or marker/contract conflict fails closed. Narrative prose is never parsed as

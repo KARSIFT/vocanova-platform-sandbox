@@ -34,8 +34,8 @@ test("VOC-097 caller wiring binds lifecycle decisions to one PR head", () => {
   );
   assert.equal(
     pipeline.split(exactBinding).length - 1,
-    4,
-    "plan review, task review, remediation, and merge gate must receive the triggering PR SHA",
+    5,
+    "plan review, task review, remediation, merge gate, and ready-for-review reuse must receive the triggering PR SHA",
   );
 });
 

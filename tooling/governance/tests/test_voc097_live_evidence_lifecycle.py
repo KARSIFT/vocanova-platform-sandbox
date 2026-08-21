@@ -66,6 +66,8 @@ class Voc097LiveEvidenceLifecycleTests(unittest.TestCase):
         script = script.replace("${{ github.event.pull_request.number }}", "1")
         script = script.replace("${{ inputs.expected_head_sha }}", "")
         script = script.replace("${{ inputs.expected_base_sha }}", "")
+        script = script.replace("${{ inputs.reuse_outcome }}", "")
+        script = script.replace("${{ inputs.reuse_prior_run_id }}", "")
         gh_stub = """
         gh() {
           if [ "$1 $2 $3" = "pr view 1" ]; then
@@ -246,7 +248,7 @@ class Voc097LiveEvidenceLifecycleTests(unittest.TestCase):
             self.pipeline.count(
                 "expected_head_sha: ${{ github.event.pull_request.head.sha }}"
             ),
-            4,
+            5,
         )
 
     def test_stale_run_never_retries_even_when_failed(self):

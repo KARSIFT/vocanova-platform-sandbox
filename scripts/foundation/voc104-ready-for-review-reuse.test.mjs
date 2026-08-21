@@ -11,7 +11,10 @@ const repositoryRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../..",
 );
-const pipelinePath = path.join(repositoryRoot, ".github/workflows/pipeline.yml");
+const pipelinePath = path.join(
+  repositoryRoot,
+  ".github/workflows/pipeline.yml",
+);
 const docPath = path.join(
   repositoryRoot,
   "docs/operations/15-ai-native-product-and-engineering-operating-model.md",
