@@ -146,7 +146,10 @@ test("VOC-102 auto-advance consumes ownership gate outputs", () => {
     "KARSIFT_BOT_APP_ID",
     "KARSIFT_BOT_PRIVATE_KEY",
   ]) {
-    assert.match(callerBlock, new RegExp(`${secret}: \\$\\{\\{ secrets\\.${secret} \\}\\}`));
+    assert.match(
+      callerBlock,
+      new RegExp(`${secret}: \\$\\{\\{ secrets\\.${secret} \\}\\}`),
+    );
   }
   assert.match(workflow, /auto-advance-classifier\.py/);
   assert.match(workflow, /prepare-live-evidence:/);
