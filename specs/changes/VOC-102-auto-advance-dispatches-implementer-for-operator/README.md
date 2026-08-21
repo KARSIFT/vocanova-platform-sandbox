@@ -41,7 +41,7 @@ closed-issue / open-issue / existing-PR guards, without consulting
 3. Leave the operator task open and use a deterministic non-LLM clean publisher
    to create/reuse its draft evidence-carrier PR and sanitized waiting marker, so
    the existing PR-centric reconciler has a valid attachment point.
-4. Continue automatic dispatch for ordinary implementation-owned tasks.
+4. Continue automatic dispatch for ordinary tasks with no live-evidence contract.
 5. Preserve final-roster release behavior (skipping implementer must not open
    release early).
 6. Fail closed on missing, malformed, or contradictory task ownership metadata.

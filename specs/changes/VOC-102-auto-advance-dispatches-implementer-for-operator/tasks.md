@@ -37,7 +37,7 @@ same package.
    sanitized waiting marker. The classifier remains read-only; the publisher
    alone may mint the App for contents/issues/pull-requests writes and receives no
    model credentials or Actions-write permission.
-5. If the next task is ordinary implementation-owned (no contract; no contradictory
+5. If the next task is ordinary (no live-evidence contract and no contradictory
    operator declaration): preserve today's implementer dispatch attempt 1.
 6. Fail closed on missing-required / malformed / unrecognized / contradictory
    ownership metadata per `VOC-102-D04` (no dispatch, no carrier from untrusted
@@ -51,9 +51,11 @@ same package.
    otherwise claim auto-advance always dispatches implement for every next task.
 10. Bump calling-repo `pipeline.yml` pin only if required to consume the fixed
     reusable workflow; record the consumption mechanism in evidence.
-11. Add the read-only `verify-auto-advance` workflow-dispatch action described by
-    `VOC-102-D07`: on the exact carrier branch it validates a declared source run
-    and waiting PR using only Actions/issue/PR metadata. It must never read logs or
+11. Add the read-only `verify-auto-advance-live-evidence` workflow-dispatch action
+    described by `VOC-102-D07`: on the exact carrier branch it validates a declared
+    source run and waiting PR using only Actions/issue/PR metadata. Its caller and
+    reusable inner job MUST produce the exact contract job display name
+    `verify-auto-advance-live-evidence / verify`. It must never read logs or
     artifacts and must receive no writes, model keys, deploy secrets, or application
     secrets.
 12. Run applicable tests and governance validation for changed calling-repo paths;
@@ -87,7 +89,7 @@ same package.
    operator-owned / live-evidence-only, auto-advance completes with no executed
    `implement.yml` job for that task. Dogfood this package's own T00→T01 advance
    after T00 merges (T01 must not receive a general implementer).
-2. Prove an ordinary implementation-owned next task still dispatches as intended
+2. Prove an ordinary no-contract next task still dispatches as intended
    (deterministic fixture preferred; sanitized live observation allowed if needed).
 3. Confirm the operator-owned next task issue remained OPEN, exactly one draft
    evidence-carrier PR was created/reused, the pending evidence path matched the

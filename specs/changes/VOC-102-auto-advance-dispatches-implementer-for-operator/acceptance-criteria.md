@@ -36,8 +36,8 @@ point. No non-schema `evidence_path` field is added to the live-evidence contrac
 - Evidence: `VOC-102-EV-00`, `VOC-102-EV-01`
 - Result: pending
 
-When the next task is ordinary implementation-owned (no live-evidence contract and
-no contradictory operator-owned declaration), auto-advance still sets
+When the next task is ordinary (no live-evidence contract and no contradictory
+operator-owned declaration), auto-advance still sets
 `should_dispatch=true` and invokes `implement.yml` attempt 1 after existing
 open-issue and existing-PR guards.
 
@@ -83,7 +83,7 @@ no-next regression coverage exist and pass in CI or infra self-ci.
 ## VOC-102-AC-06 — Controlled sanitized workflow proof
 
 - Requirement source: `VOC-102-D07`
-- Tasks: `VOC-102-T01`
+- Tasks: `VOC-102-T00`, `VOC-102-T01`
 - Tests: `VOC-102-TEST-08`, `VOC-102-TEST-09`, `VOC-102-TEST-13`
 - Evidence: `VOC-102-EV-00`, `VOC-102-EV-01`
 - Result: pending

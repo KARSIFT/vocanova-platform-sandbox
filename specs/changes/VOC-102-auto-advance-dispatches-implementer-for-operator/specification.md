@@ -38,8 +38,8 @@ In scope:
    writes only the governance-derived pending evidence file, and posts a sanitized
    stable waiting marker so the existing PR-centric reconciler has an attachment
    point.
-4. Preserve automatic implementer dispatch for ordinary implementation-owned next
-   tasks (no contract, or ownership that is implementation-owned).
+4. Preserve automatic implementer dispatch for ordinary next tasks with no
+   live-evidence contract and no contradictory operator declaration.
 5. Preserve final-roster release behavior: skipping implementer for a non-final
    operator task must not open release; closing the final task (including after
    operator evidence completes) still drives release as today.
@@ -49,8 +49,8 @@ In scope:
 7. Deterministic positive, negative, malformed-metadata, and regression tests.
 8. Two-stage controlled proof: the real operator-owned transition executes no
    implementer and creates the carrier; a later read-only verifier on the exact
-   carrier head validates that source metadata. Ordinary implementation-owned
-   dispatch remains covered by deterministic/live-safe evidence.
+   carrier head validates that source metadata. Ordinary no-contract task dispatch
+   remains covered by deterministic/live-safe evidence.
 9. Update infra README and calling-repo operator docs only where current text would
    otherwise claim auto-advance always dispatches implement for every next task.
 10. Calling-repo `pipeline.yml` consumes the fixed reusable workflow and exposes
@@ -115,8 +115,8 @@ It creates/reuses the carrier PR and posts one deduplicated sanitized waiting
 marker on the task issue stating that no implementer run was started. The job
 must never use `secrets: inherit` to call the general implementer.
 
-`VOC-102-D03`: Ordinary implementation-owned next tasks (no live-evidence contract,
-and no contradictory operator-owned declaration) continue to dispatch
+`VOC-102-D03`: Ordinary next tasks with no live-evidence contract and no
+contradictory operator-owned declaration continue to dispatch
 `implement.yml` attempt 1 exactly as today after existing open-issue / existing-PR
 guards.
 

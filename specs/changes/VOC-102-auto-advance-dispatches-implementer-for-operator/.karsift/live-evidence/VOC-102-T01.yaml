@@ -16,8 +16,9 @@ max_age: 72h
 # Observe-only. Closing T00 remains the real operational proof: it must create the
 # T01 carrier without executing implement.yml. After the carrier exists, the
 # operator records that source run's allowlisted metadata and manually dispatches
-# pipeline.yml's read-only verify-auto-advance action on this deterministic task
-# branch. The verifier must validate the source run/job metadata, open task,
-# single carrier, and deduplicated marker without reading logs or artifacts. Its
+# pipeline.yml's read-only verify-auto-advance-live-evidence action on this
+# deterministic task branch. The verifier must validate the source run/job
+# metadata, open task, single carrier, and deduplicated marker without reading
+# logs or artifacts. Its
 # own successful workflow_dispatch run must equal the current carrier PR head,
 # breaking the pre-carrier lineage cycle without weakening reconciliation.

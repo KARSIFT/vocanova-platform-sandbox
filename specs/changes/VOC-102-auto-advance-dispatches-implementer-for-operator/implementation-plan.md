@@ -84,7 +84,9 @@ Ordered steps:
    its pending evidence path exactly matches the strict task-ID-derived convention,
    and one waiting marker is present; do not manufacture unrelated package evidence.
 5. Commit the allowlisted source metadata to the carrier, then manually dispatch
-   the read-only `verify-auto-advance` pipeline action on the exact carrier branch.
+   the read-only `verify-auto-advance-live-evidence` pipeline action on the exact
+   carrier branch. Its caller job plus reusable inner job MUST emit the contract's
+   exact display name `verify-auto-advance-live-evidence / verify`.
    It must validate the source event and carrier state without logs/artifacts.
 6. Reconcile the successful exact-PR-head verifier run through the dedicated
    live-evidence path — never through the general implementer.
