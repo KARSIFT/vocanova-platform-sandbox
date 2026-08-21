@@ -2,62 +2,80 @@
 
 Task: `VOC-104-T00` — Ready-for-review reuse policy, fail-closed path, docs, deterministic tests.
 
-## Summary
+Evidence date: 2026-08-21
 
-Implemented VOC-104 ready_for_review exact-SHA evidence reuse across shared infra and the calling
-repository:
+## Outcome
 
-- Added read-only reuse eligibility workflow (`ready-for-review-reuse.yml`) and policy modules.
-- Wired caller `pipeline.yml` and infra template so `reuse-evidence` skips CI/model review while
-  merge-gate still runs with validated prior-run identity.
-- Extended merge-gate with reuse-aware required-check and publisher evaluation.
-- Added read-only live-proof verifier (`verify-ready-for-review-reuse.yml`) for T01.
-- Updated DOC-15 §17.3 and infra README to distinguish safe reuse from the full path.
-- Added deterministic policy tests and caller foundation coverage.
+The shared reusable-workflow implementation and the VocaNova caller adoption are complete. A
+`ready_for_review` event may reuse an earlier exact-base/exact-head successful pipeline and trusted
+App-published review only when every deterministic precondition passes. The current event still
+runs merge-gate. Any ineligibility or evaluation uncertainty takes the normal full CI and model
+review path; draft PRs remain non-mergeable.
 
-Cross-repo note: primary reusable-workflow behavior lands in the local `karsift-ai-infra/` checkout
-included with this implementation run; the calling repo consumes those workflows at
-`KARSIFT/karsift-ai-infra/...@main` after infra merge.
+The implementation keeps three identities separate:
 
-## Commands run
+1. the prior successful full pipeline run that produced reusable CI/review evidence;
+2. the source PR transition run that proves the unchanged draft-to-ready event;
+3. the later evidence-carrier head used by the read-only T01 verifier.
 
-```bash
-cd karsift-ai-infra && python3 -m unittest tests.test_ready_for_review_reuse -v
-cd .. && node --test scripts/foundation/voc104-ready-for-review-reuse.test.mjs
-bash scripts/governance/validate-governance.sh
-bash scripts/governance/classify-change-risk.sh
-git diff --check
-```
+Human or implementer comments cannot authorize reuse. The trusted review record binds the prior
+pipeline run ID, exact base/head, package/task identity, and authority issue. The merge gate
+independently revalidates the prior run and the current intentionally skipped caller jobs.
 
-## Results
+## Shared infrastructure provenance
 
-| Check | Result |
+The reusable behavior was independently reviewed and merged first:
+
+| Evidence | Result |
 | --- | --- |
-| `python3 -m unittest tests.test_ready_for_review_reuse -v` (karsift-ai-infra) | PASS — 15 tests |
-| `node --test scripts/foundation/voc104-ready-for-review-reuse.test.mjs` | PASS — 4 tests |
-| `bash scripts/governance/validate-governance.sh` | PASS |
-| `bash scripts/governance/classify-change-risk.sh` | PASS — detected path floor R4 (DOC-15 §17.3) |
-| `git diff --check` | PASS |
+| Shared PR | `KARSIFT/karsift-ai-infra#88` — merged |
+| Independently reviewed head | `b5a6cece5e15294ac2dbdd5d467efdd5e6760a8a` |
+| Shared merge commit | `03ac50126be3ef77155d75beaf7aeb4cc3f23df9` |
+| Exact-head CI | run `32508879849` — all four policy jobs passed |
+| Post-merge main CI | run `32509652055` — passed |
+| Shared policy suite | PASS — 126 tests |
+| Independent exact-SHA review | PASS — no actionable correctness finding after remediation |
 
-## Reusable workflow consumption
+Independent review found and the implementation corrected proof-lineage ambiguity, missing
+base-binding, unrelated-check eligibility, an unreachable reuse decision, untrusted metadata
+lookalikes, missing ready-event provenance, and an empty workflow-run PR-association fallback.
+Those corrections are included in the merged shared commit above.
 
-Calling repo `pipeline.yml` continues to consume shared workflows at `@main` (no pin bump in this
-task). New jobs added:
+## Calling-repository adoption
 
-- `KARSIFT/karsift-ai-infra/.github/workflows/ready-for-review-reuse.yml@main`
-- `KARSIFT/karsift-ai-infra/.github/workflows/verify-ready-for-review-reuse.yml@main`
+- `.github/workflows/pipeline.yml` consumes both reusable workflows at `@main` and supplies distinct
+  source PR/base/head plus explicit evidence-carrier head inputs to the verifier.
+- The tracked fixture is pinned to shared merge
+  `03ac50126be3ef77155d75beaf7aeb4cc3f23df9`; 14 copied workflow, helper, template, and test files
+  were verified byte-identical to the independently reviewed shared head.
+- Fixture tests always execute the tracked copy. They no longer prefer an incidental untracked
+  `karsift-ai-infra/` checkout, which previously made results depend on the operator's filesystem.
+- DOC-15 §17.3 and the fixture README distinguish safe exact-SHA reuse from the full fallback path.
 
-Existing merge-gate consumption remains `@main` with new optional inputs `reuse_outcome` and
-`reuse_prior_run_id`.
+## Commands and results
 
-## Live proof
+| Command | Result |
+| --- | --- |
+| `python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py' -v` | PASS — 23 tests |
+| `python3 -m unittest tooling.governance.tests.test_ready_for_review_reuse -v` | PASS — wrapper executes the pinned shared suite |
+| `node --test scripts/foundation/voc104-ready-for-review-reuse.test.mjs` | PASS — 5 tests |
+| `node --test scripts/foundation/voc097-fixture-matrix.test.mjs` | PASS — 5 compatibility tests |
+| `pnpm validate` | Local environment reached API tests: 231/231 foundation, 28/28 client, and 16/16 web tests passed; the command then stopped because Docker Desktop WSL integration was unavailable to start disposable Postgres for two pre-existing OAuth tests |
+| `cd apps/api && go test ./... -skip 'TestControlledSignupOAuth_(AllowlistedCallbackSucceeds\|UnlistedCallbackDenied)'` | PASS — complete non-container API suite |
+| `pnpm run build` | PASS — packages, production web build, and API build |
+| `bash scripts/governance/validate-governance.sh --files-from <changed-files>` | PASS |
+| `bash scripts/governance/classify-change-risk.sh --files-from <changed-files>` | PASS — R4 floor |
+| `git diff --check origin/develop` | PASS |
 
-Controlled draft→ready live proof remains operator-owned under `VOC-104-T01`
-(`.karsift/live-evidence/VOC-104-T01.yaml`). T00 supplies the read-only verifier implementation and
-deterministic TEST-12 coverage only.
+The exact-SHA GitHub CI run remains the required full validation authority because its runner has
+Docker available and executes the two disposable-Postgres OAuth tests. This file does not claim the
+local `pnpm validate` invocation passed.
 
-## Limitations
+## Live proof boundary
 
-- Infra changes in this run are present in the accompanying `karsift-ai-infra/` working tree and
-  require a separate infra PR merge before callers observe the behavior on `@main`.
-- No production credentials, logs, artifacts, or user identifiers were used in validation.
+The controlled draft-to-ready optimized-path proof remains operator-owned under `VOC-104-T01` and
+its `.karsift/live-evidence/VOC-104-T01.yaml` contract. T00 supplies the implementation,
+deterministic coverage, and read-only verifier only; it does not claim the T01 live transition.
+
+No production credentials, logs, artifacts, application sessions, OAuth data, or user identifiers
+were used or recorded.

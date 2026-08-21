@@ -327,6 +327,7 @@ VERDICT: PASS
         script = script.replace("${{ inputs.expected_base_sha }}", BASE)
         script = script.replace("${{ inputs.reuse_outcome }}", "")
         script = script.replace("${{ inputs.reuse_prior_run_id }}", "")
+        script = script.replace("${{ github.run_id }}", "200")
         script = script.replace("${{ github.repository }}", "KARSIFT/example")
         script = script.replace("karsift-ai-infra/config/", "config/")
         old_head = "e" * 40

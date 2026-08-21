@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from pathlib import Path
 import re
 import subprocess
 import sys
@@ -19,10 +18,11 @@ from verify_ready_for_review_reuse import (
     verify_ready_jobs,
     verify_ready_run,
 )
-
-
-PR_NUMBER_RE = re.compile(r"^[1-9][0-9]*$")
-RUN_ID_RE = re.compile(r"^[1-9][0-9]*$")
+from ready_for_review_reuse import (
+    classify_verdict,
+    parse_identity_lines,
+    trusted_review_comment,
+)
 
 
 class VerificationError(RuntimeError):
@@ -77,14 +77,31 @@ def load_jobs(api: GitHubApi, run_id: int) -> list[dict]:
     return jobs
 
 
+def load_comments(api: GitHubApi, pr_number: int) -> list[dict]:
+    payload = json.loads(
+        api.gh(
+            [
+                "api",
+                "--paginate",
+                "--slurp",
+                f"repos/{api.repository}/issues/{pr_number}/comments?per_page=100",
+            ]
+        )
+    )
+    if not isinstance(payload, list) or any(not isinstance(page, list) for page in payload):
+        raise VerificationError("comment_set_invalid")
+    return [comment for page in payload for comment in page]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repository", default=os.environ.get("GITHUB_REPOSITORY", ""))
     parser.add_argument("--ready-run-id", type=int, required=True)
     parser.add_argument("--prior-run-id", type=int, required=True)
-    parser.add_argument("--pr-number", type=int, required=True)
-    parser.add_argument("--expected-head-sha", required=True)
-    parser.add_argument("--expected-base-sha", required=True)
+    parser.add_argument("--source-pr-number", type=int, required=True)
+    parser.add_argument("--expected-source-head-sha", required=True)
+    parser.add_argument("--expected-source-base-sha", required=True)
+    parser.add_argument("--expected-proof-head-sha", required=True)
     parser.add_argument("--current-ref", default=os.environ.get("GITHUB_SHA", ""))
     args = parser.parse_args()
 
@@ -94,41 +111,40 @@ def main() -> int:
         or not args.repository
         or args.ready_run_id <= 0
         or args.prior_run_id <= 0
-        or args.pr_number <= 0
+        or args.source_pr_number <= 0
     ):
         print("required read-only verification inputs are missing", file=sys.stderr)
         return 2
 
     try:
-        if not re.fullmatch(r"[0-9a-f]{40}", args.expected_head_sha):
-            raise VerificationError("invalid_head_sha")
-        if not re.fullmatch(r"[0-9a-f]{40}", args.expected_base_sha):
-            raise VerificationError("invalid_base_sha")
+        if not re.fullmatch(r"[0-9a-f]{40}", args.expected_source_head_sha):
+            raise VerificationError("invalid_source_head_sha")
+        if not re.fullmatch(r"[0-9a-f]{40}", args.expected_source_base_sha):
+            raise VerificationError("invalid_source_base_sha")
+        if not re.fullmatch(r"[0-9a-f]{40}", args.expected_proof_head_sha):
+            raise VerificationError("invalid_proof_head_sha")
 
         api = GitHubApi(token, args.repository)
-        pr = json.loads(
+        source_pr = json.loads(
             api.gh(
                 [
-                    "pr",
-                    "view",
-                    str(args.pr_number),
-                    "--json",
-                    "headRefName,headRefOid,baseRefOid",
+                    "api",
+                    f"/repos/{args.repository}/pulls/{args.source_pr_number}",
                 ]
             )
         )
-        head_ref = str(pr.get("headRefName") or "")
-        live_head = str(pr.get("headRefOid") or "").lower()
-        live_base = str(pr.get("baseRefOid") or "").lower()
-        if live_head != args.expected_head_sha.lower():
-            raise VerificationError("live_head_mismatch")
-        if live_base != args.expected_base_sha.lower():
-            raise VerificationError("live_base_mismatch")
+        head_ref = str((source_pr.get("head") or {}).get("ref") or "")
+        source_head = str((source_pr.get("head") or {}).get("sha") or "").lower()
+        source_base = str((source_pr.get("base") or {}).get("sha") or "").lower()
+        if source_head != args.expected_source_head_sha.lower():
+            raise VerificationError("source_head_mismatch")
+        if source_base != args.expected_source_base_sha.lower():
+            raise VerificationError("source_base_mismatch")
 
         require(
             verify_current_ref(
                 current_ref=args.current_ref,
-                expected_head_sha=live_head,
+                expected_head_sha=args.expected_proof_head_sha.lower(),
             )
         )
 
@@ -144,8 +160,11 @@ def main() -> int:
             verify_ready_run(
                 run=ready_run,
                 repository=args.repository,
-                pr_number=args.pr_number,
-                expected_head_sha=live_head,
+                pr_number=args.source_pr_number,
+                expected_head_sha=source_head,
+                expected_base_sha=source_base,
+                expected_head_ref=head_ref,
+                source_pr=source_pr,
             )
         )
         require(
@@ -167,9 +186,13 @@ def main() -> int:
             verify_prior_run(
                 run=prior_run,
                 repository=args.repository,
-                pr_number=args.pr_number,
-                expected_head_sha=live_head,
+                pr_number=args.source_pr_number,
+                expected_head_sha=source_head,
+                expected_base_sha=source_base,
+                expected_head_ref=head_ref,
                 prior_run_id=args.prior_run_id,
+                ready_run_id=args.ready_run_id,
+                source_pr=source_pr,
             )
         )
         require(
@@ -178,7 +201,34 @@ def main() -> int:
                 head_ref=head_ref,
             )
         )
-    except (VerificationError, OSError, ValueError, json.JSONDecodeError) as exc:
+        identity = parse_identity_lines(
+            body=str(source_pr.get("body") or ""),
+            head_ref=head_ref,
+        )
+        if identity is None:
+            raise VerificationError("identity_metadata_mismatch")
+        task_id, package_path, authority_issue, _ = identity
+        verdict_body = trusted_review_comment(
+            comments=load_comments(api, args.source_pr_number),
+            head_sha=source_head,
+            base_sha=source_base,
+            task_id=task_id,
+            package_path=package_path,
+            authority_issue=authority_issue,
+            pipeline_run_id=args.prior_run_id,
+        )
+        if not verdict_body:
+            raise VerificationError("prior_review_binding_missing")
+        if classify_verdict(verdict_body) not in {"PASS", "PASS_WITH_FINDINGS"}:
+            raise VerificationError("prior_review_not_passing")
+    except (
+        VerificationError,
+        OSError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        json.JSONDecodeError,
+    ) as exc:
         reason = str(exc) if isinstance(exc, VerificationError) else "verification_internal_error"
         print(f"verify failed: {reason}", file=sys.stderr)
         return 1
@@ -188,9 +238,10 @@ def main() -> int:
             {
                 "ready_run_id": args.ready_run_id,
                 "prior_run_id": args.prior_run_id,
-                "pr_number": args.pr_number,
-                "head_sha": args.expected_head_sha.lower(),
-                "base_sha": args.expected_base_sha.lower(),
+                "source_pr_number": args.source_pr_number,
+                "source_head_sha": args.expected_source_head_sha.lower(),
+                "source_base_sha": args.expected_source_base_sha.lower(),
+                "proof_head_sha": args.expected_proof_head_sha.lower(),
                 "verify_result": "pass",
             },
             sort_keys=True,

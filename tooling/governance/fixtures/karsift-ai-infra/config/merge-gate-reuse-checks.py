@@ -26,7 +26,14 @@ def main() -> int:
     pr_checks = json.loads(open(args.pr_checks_file, encoding="utf-8").read())
     prior_jobs: list[dict] = []
     if args.prior_jobs_file:
-        prior_jobs = json.loads(open(args.prior_jobs_file, encoding="utf-8").read())
+        prior_payload = json.loads(
+            open(args.prior_jobs_file, encoding="utf-8").read()
+        )
+        if not isinstance(prior_payload, dict) or not isinstance(
+            prior_payload.get("jobs"), list
+        ):
+            raise ValueError("invalid prior jobs payload")
+        prior_jobs = prior_payload["jobs"]
 
     if args.mode == "checks":
         if args.reuse_outcome == "reuse-evidence" and prior_jobs:

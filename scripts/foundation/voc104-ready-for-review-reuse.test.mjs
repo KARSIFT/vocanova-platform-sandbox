@@ -2,7 +2,7 @@
 
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
@@ -32,54 +32,35 @@ const verifyWorkflowPath = path.join(
   fixtureInfraRoot,
   ".github/workflows/verify-ready-for-review-reuse.yml",
 );
+const pinPath = path.join(fixtureInfraRoot, "PINNED_SHA.txt");
+const fixtureTestsRoot = path.join(fixtureInfraRoot, "tests");
 const contractPath = path.join(
   repositoryRoot,
   "specs/changes/VOC-104-ready-for-review-reruns-unchanged-exact-sha-ci/.karsift/live-evidence/VOC-104-T01.yaml",
 );
-const localInfraRoot = path.join(repositoryRoot, "karsift-ai-infra");
-
 function runInfraTests(extraArgs = []) {
-  const result = existsSync(localInfraRoot)
-    ? spawnSync(
-        "python3",
-        [
-          "-m",
-          "unittest",
-          "discover",
-          "-s",
-          path.join(localInfraRoot, "tests"),
-          "-p",
-          "test_ready_for_review_reuse.py",
-          ...extraArgs,
-          "-v",
-        ],
-        {
-          cwd: localInfraRoot,
-          encoding: "utf8",
-          env: {
-            ...process.env,
-            PYTHONPATH: path.join(localInfraRoot, "config"),
-          },
-        },
-      )
-    : spawnSync(
-        "python3",
-        [
-          "-m",
-          "unittest",
-          "tooling.governance.tests.test_ready_for_review_reuse",
-          ...extraArgs,
-          "-v",
-        ],
-        {
-          cwd: repositoryRoot,
-          encoding: "utf8",
-          env: {
-            ...process.env,
-            PYTHONPATH: path.join(fixtureInfraRoot, "config"),
-          },
-        },
-      );
+  const result = spawnSync(
+    "python3",
+    [
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      fixtureTestsRoot,
+      "-p",
+      "test_*.py",
+      ...extraArgs,
+      "-v",
+    ],
+    {
+      cwd: fixtureInfraRoot,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        PYTHONPATH: path.join(fixtureInfraRoot, "config"),
+      },
+    },
+  );
   assert.equal(
     result.status,
     0,
@@ -108,6 +89,13 @@ test("VOC-104-TEST-11: docs and caller wiring distinguish reuse from full path",
   assert.match(pipeline, /reuse_prior_run_id:/);
 });
 
+test("VOC-104 fixture is pinned to the independently reviewed shared merge", () => {
+  assert.equal(
+    readFileSync(pinPath, "utf8").trim(),
+    "03ac50126be3ef77155d75beaf7aeb4cc3f23df9",
+  );
+});
+
 test("VOC-104-TEST-01: ready_for_review remains subscribed", () => {
   const pipeline = readFileSync(pipelinePath, "utf8");
   assert.match(
@@ -132,7 +120,17 @@ test("VOC-104-TEST-12: verifier is read-only and contract-bound", () => {
   assert.doesNotMatch(verifyBlock, /secrets: inherit/);
   assert.match(verifier, /jobs:\s+verify:/);
   assert.match(verifier, /name: verify/);
+  assert.match(verifier, /source_pr_number:/);
+  assert.match(verifier, /expected_source_head_sha:/);
+  assert.match(verifier, /expected_source_base_sha:/);
+  assert.match(verifier, /expected_proof_head_sha:/);
   assert.match(reuse, /ready-for-review-reuse-runner\.py/);
+  assert.match(reuse, /name: decide \(\$\{\{ inputs\.event_action \}\}\)/);
+  assert.match(pipeline, /verify_reuse_proof_head_sha:/);
+  assert.match(
+    pipeline,
+    /expected_proof_head_sha: \$\{\{ inputs\.verify_reuse_proof_head_sha \}\}/,
+  );
   assert.match(contract, /verify-ready-for-review-reuse \/ verify/);
   assert.match(contract, /exact_pr_head/);
   assert.match(contract, /workflow_dispatch/);

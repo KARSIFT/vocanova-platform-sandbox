@@ -183,8 +183,29 @@ jobs:
             exit 0
           fi
           prior_jobs_available=false
-          if [ "$reuse_outcome" = "reuse-evidence" ] && [[ "$reuse_prior_run_id" =~ ^[0-9]+$ ]]; then
-            if gh api "repos/${{ github.repository }}/actions/runs/$reuse_prior_run_id/jobs?per_page=100" > /tmp/prior-jobs.json; then
+          current_run_id="${{ github.run_id }}"
+          if [ "$reuse_outcome" = "reuse-evidence" ] &&
+             [[ "$reuse_prior_run_id" =~ ^[0-9]+$ ]] &&
+             [ "$reuse_prior_run_id" -lt "$current_run_id" ] &&
+             gh api "repos/${{ github.repository }}/actions/runs/$reuse_prior_run_id" > /tmp/prior-run.json; then
+            prior_run_valid=$(jq -r \
+              --argjson run_id "$reuse_prior_run_id" \
+              --arg head_sha "$head_sha" \
+              --arg base_sha "$base_sha" \
+              --arg head_ref "$head_ref" \
+              --argjson pr_number "$pr_number" \
+              '.id == $run_id and .name == "pipeline" and
+               .path == ".github/workflows/pipeline.yml" and
+               .event == "pull_request" and .head_sha == $head_sha and
+               .head_branch == $head_ref and .status == "completed" and
+               .conclusion == "success" and
+               ([.pull_requests[]? | select(
+                 .number == $pr_number and .base.sha == $base_sha and
+                 .head.sha == $head_sha
+               )] | length) == 1' \
+              /tmp/prior-run.json || echo "false")
+            if [ "$prior_run_valid" = "true" ] &&
+               gh api "repos/${{ github.repository }}/actions/runs/$reuse_prior_run_id/jobs?per_page=100" > /tmp/prior-jobs.json; then
               prior_total=$(jq -r '.total_count // 0' /tmp/prior-jobs.json)
               prior_len=$(jq -r '.jobs | length' /tmp/prior-jobs.json)
               if [ "$prior_total" = "$prior_len" ] && [ "$prior_len" -gt 0 ] && [ "$prior_len" -le 100 ]; then
@@ -192,12 +213,16 @@ jobs:
               fi
             fi
           fi
-          if [ "$reuse_outcome" = "reuse-evidence" ] && [ "$prior_jobs_available" = "true" ]; then
-            checks_ok=$(python3 karsift-ai-infra/config/merge-gate-reuse-checks.py checks \
-              --pr-checks-file /tmp/pr-checks.json \
-              --prior-jobs-file /tmp/prior-jobs.json \
-              --head-ref "$head_ref" \
-              --reuse-outcome "$reuse_outcome" || echo "false")
+          if [ "$reuse_outcome" = "reuse-evidence" ]; then
+            if [ "$prior_jobs_available" = "true" ]; then
+              checks_ok=$(python3 karsift-ai-infra/config/merge-gate-reuse-checks.py checks \
+                --pr-checks-file /tmp/pr-checks.json \
+                --prior-jobs-file /tmp/prior-jobs.json \
+                --head-ref "$head_ref" \
+                --reuse-outcome "$reuse_outcome" || echo "false")
+            else
+              checks_ok=false
+            fi
           else
             checks_ok=$(jq -r \
               '[.[] | select( ((.name|startswith("merge-gate")) or (.name|startswith("remediate"))) | not )] | map(.state) | all(. == "SUCCESS" or . == "SKIPPED")' \
@@ -252,12 +277,16 @@ jobs:
             echo "verdict=PENDING" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if [ "$reuse_outcome" = "reuse-evidence" ] && [ "$prior_jobs_available" = "true" ]; then
-            review_check_ok=$(python3 karsift-ai-infra/config/merge-gate-reuse-checks.py publisher \
-              --pr-checks-file /tmp/pr-checks.json \
-              --prior-jobs-file /tmp/prior-jobs.json \
-              --head-ref "$head_ref" \
-              --reuse-outcome "$reuse_outcome" || echo "false")
+          if [ "$reuse_outcome" = "reuse-evidence" ]; then
+            if [ "$prior_jobs_available" = "true" ]; then
+              review_check_ok=$(python3 karsift-ai-infra/config/merge-gate-reuse-checks.py publisher \
+                --pr-checks-file /tmp/pr-checks.json \
+                --prior-jobs-file /tmp/prior-jobs.json \
+                --head-ref "$head_ref" \
+                --reuse-outcome "$reuse_outcome" || echo "false")
+            else
+              review_check_ok=false
+            fi
           else
             review_check_ok=$(jq -r --arg name "$review_check" \
               '[.[] | select(.name == $name)] | length > 0 and all(.state == "SUCCESS")' \
@@ -270,6 +299,10 @@ jobs:
 
           review_header="**Independent verification - bound to commit \`$head_sha\`**"
           base_line="base_sha: \`$base_sha\`"
+          run_line=""
+          if [ "$reuse_outcome" = "reuse-evidence" ]; then
+            run_line="pipeline_run_id: \`$reuse_prior_run_id\`"
+          fi
           verdict=$(gh api --paginate --slurp \
             "repos/${{ github.repository }}/issues/$pr_number/comments?per_page=100" \
             | jq -r \
@@ -278,6 +311,7 @@ jobs:
               --arg package "$package_line" \
               --arg issue "$issue_line" \
               --arg base "$base_line" \
+              --arg run "$run_line" \
               '[.[][] | select(
                 .user.login == "karsift-ai-infra-bot[bot]" and
                 .user.type == "Bot" and
@@ -285,6 +319,7 @@ jobs:
                 ((.body | split("\n") | index($header)) != null) and
                 ((.body | split("\n") | index($package)) != null) and
                 ((.body | split("\n") | index($base)) != null) and
+                ($run == "" or ((.body | split("\n") | index($run)) != null)) and
                 ($task == "" or ((.body | split("\n") | index($task)) != null)) and
                 ($issue == "" or ((.body | split("\n") | index($issue)) != null))
               )] | sort_by(.created_at, .id) | last | .body // ""')

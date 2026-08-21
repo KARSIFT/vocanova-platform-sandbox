@@ -40,6 +40,7 @@ on:
 
 jobs:
   decide:
+    name: decide (${{ inputs.event_action }})
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -47,13 +48,22 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      outcome: ${{ steps.decide.outputs.outcome }}
-      reason: ${{ steps.decide.outputs.reason }}
-      prior_run_id: ${{ steps.decide.outputs.prior_run_id }}
+      outcome: ${{ steps.decide.outputs.outcome || steps.full-path.outputs.outcome || 'fail-closed-to-full-path' }}
+      reason: ${{ steps.decide.outputs.reason || steps.full-path.outputs.reason || 'helper_failed' }}
+      prior_run_id: ${{ steps.decide.outputs.prior_run_id || '' }}
     steps:
+      - name: Select the normal path for non-ready activity
+        id: full-path
+        if: inputs.event_action != 'ready_for_review'
+        run: |
+          echo "outcome=full-path" >> "$GITHUB_OUTPUT"
+          echo "reason=not_ready_for_review" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        if: inputs.event_action == 'ready_for_review'
 
       - name: Checkout shared reuse policy
+        if: inputs.event_action == 'ready_for_review'
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: ${{ job.workflow_repository }}
@@ -63,6 +73,7 @@ jobs:
 
       - name: Evaluate ready_for_review reuse eligibility
         id: decide
+        if: inputs.event_action == 'ready_for_review'
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PYTHONPATH: karsift-ai-infra/config
