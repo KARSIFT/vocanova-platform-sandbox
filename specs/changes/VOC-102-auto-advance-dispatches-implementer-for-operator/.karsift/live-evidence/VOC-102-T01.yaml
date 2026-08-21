@@ -1,0 +1,24 @@
+schema_version: 1
+task_id: VOC-102-T01
+ownership: operator
+
+workflow_file: pipeline.yml
+workflow_name: pipeline
+job_names:
+  - verify-auto-advance-live-evidence / verify
+events:
+  - workflow_dispatch
+branch: agent/voc-102-voc-102-t01
+sha_lineage:
+  mode: exact_pr_head
+conclusion: success
+max_age: 72h
+# Observe-only. Closing T00 remains the real operational proof: it must create the
+# T01 carrier without executing implement.yml. After the carrier exists, the
+# operator records that source run's allowlisted metadata and manually dispatches
+# pipeline.yml's read-only verify-auto-advance-live-evidence action on this
+# deterministic task branch. The verifier must validate the source run/job
+# metadata, open task, single carrier, and deduplicated marker without reading
+# logs or artifacts. Its
+# own successful workflow_dispatch run must equal the current carrier PR head,
+# breaking the pre-carrier lineage cycle without weakening reconciliation.

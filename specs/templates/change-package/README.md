@@ -62,7 +62,8 @@ must not be "fixed" with unrelated pipeline edits.
 
 When a task requires operator-owned live evidence:
 
-1. Mark the task in `tasks.md` (see template notes in `tasks.md`).
+1. Mark the task in `tasks.md` with the exact automation-ownership marker inside that
+   task's own `## <task_id>` stanza (see template notes in `tasks.md`).
 2. Add a machine-readable **evidence contract** at
    `<package-canonical-path>/.karsift/live-evidence/<task_id>.yaml`.
 3. Follow the field allowlist and metadata-only rules in
