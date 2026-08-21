@@ -51,3 +51,31 @@ When a package is newly created or its `change.yaml` is modified, declare
 
 Historical packages whose `change.yaml` is untouched remain grandfathered until
 modified.
+
+## Operator-owned live evidence (VOC-097)
+
+Some tasks need acceptance proof from a **live GitHub Actions run** after deploy or
+schedule — for example production route sweeps or deploy-verification jobs. The
+implementation agent intentionally lacks general Actions dispatch/inspect
+credentials; missing operator-owned live evidence is **not** a code defect and
+must not be "fixed" with unrelated pipeline edits.
+
+When a task requires operator-owned live evidence:
+
+1. Mark the task in `tasks.md` (see template notes in `tasks.md`).
+2. Add a machine-readable **evidence contract** at
+   `<package-canonical-path>/.karsift/live-evidence/<task_id>.yaml`.
+3. Follow the field allowlist and metadata-only rules in
+   [`docs/operations/live-evidence.md`](../../../docs/operations/live-evidence.md).
+
+Each contract declares `ownership: operator` (or `live-actions`), allowlisted
+workflow identity (`workflow_file`, `workflow_name`, and/or `workflow_id`),
+optional `job_names`, required `events`, `branch`, `sha_lineage`, and
+`conclusion`, optional `max_age`, and an optional `dispatch` block when repo
+automation may trigger the run (otherwise observe-only). Automation fails closed
+on ambiguous identity, wrong branch/SHA lineage, missing jobs, or non-success
+conclusions.
+
+Waiting, reconcile, and timeout behavior are implemented in karsift-ai-infra
+(VOC-097-T01 onward); this template and operator guide define the author-facing
+contract shape only.

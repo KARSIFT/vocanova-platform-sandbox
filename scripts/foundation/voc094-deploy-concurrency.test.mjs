@@ -255,9 +255,34 @@ test("VOC-094-TEST-05: observer workflow wires classifier before open-failure-is
     /FAILURE_RUN_ID: \$\{\{ github\.event\.workflow_run\.id \}\}/,
   );
   assert.match(workflow, /actions\/create-github-app-token@v3/);
-  assert.match(workflow, /permission-actions: read/);
+  assert.doesNotMatch(workflow, /permission-actions:/);
   assert.match(workflow, /permission-issues: write/);
+  assert.match(workflow, /^permissions:\n  contents: read\n  actions: read$/m);
   assert.doesNotMatch(workflow, /gh\s+run\s+view/i);
+
+  const classifierStepStart = workflow.indexOf(
+    "Classify benign deploy concurrency supersession",
+  );
+  const openIssueStepStart = workflow.indexOf(
+    "Open or deduplicate sanitized operational issue",
+  );
+  assert.notEqual(classifierStepStart, -1);
+  assert.notEqual(openIssueStepStart, -1);
+  assert.ok(classifierStepStart < openIssueStepStart);
+
+  const classifierStep = workflow.slice(
+    classifierStepStart,
+    openIssueStepStart,
+  );
+  assert.match(classifierStep, /GH_TOKEN: \$\{\{ github\.token \}\}/);
+  assert.doesNotMatch(classifierStep, /steps\.app-token\.outputs\.token/);
+
+  const openIssueStep = workflow.slice(openIssueStepStart);
+  assert.match(
+    openIssueStep,
+    /GH_TOKEN: \$\{\{ steps\.app-token\.outputs\.token \}\}/,
+  );
+  assert.doesNotMatch(openIssueStep, /GH_TOKEN: \$\{\{ github\.token \}\}/);
 
   const classifier = readFileSync(classifierPath, "utf8");
   assert.match(classifier, /\/actions\/runs\/\$\{FAILURE_RUN_ID\}\/jobs/);

@@ -181,8 +181,12 @@ Terminal `failure`, `cancelled`, or `timed_out` conclusions on
 `scheduled-synthetics.yml`, `deploy-staging.yml`, and `deploy-production.yml`
 are observed by `.github/workflows/operational-failure-monitoring.yml`. That
 observer mints a GitHub App installation token (`KARSIFT_BOT_APP_ID` /
-`KARSIFT_BOT_PRIVATE_KEY`) and calls `infra/scripts/open-failure-issue.sh`.
-Issues are plain (no labels) so `plan-from-issue` can draft a change package.
+`KARSIFT_BOT_PRIVATE_KEY`) with **issues write only** and passes it to
+`infra/scripts/open-failure-issue.sh` for create/dedupe. Deploy benign-cancel
+classification (`classify-deploy-concurrency-cancel.sh`) uses the job
+`GITHUB_TOKEN` with workflow `actions: read` for bounded jobs metadata — never
+the App token for Actions API reads. Issues are plain (no labels) so
+`plan-from-issue` can draft a change package.
 
 Responsibility split:
 

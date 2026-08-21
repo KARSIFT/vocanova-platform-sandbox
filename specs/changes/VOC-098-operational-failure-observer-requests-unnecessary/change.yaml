@@ -1,0 +1,116 @@
+schema_version: 1
+id: VOC-098
+slug: operational-failure-observer-requests-unnecessary
+title: Remove unnecessary Actions permission from operational-failure observer App
+  token
+type: infrastructure
+status: adopted
+risk: R3
+planned_implementation_risk_floor: "Measured during drafting against the expected\
+  \ task-scoped file list (.github/workflows/operational-failure-monitoring.yml, infra/scripts/classify-deploy-concurrency-cancel.sh\
+  \ if wiring-only, scripts/foundation/voc088-failure-to-issue.test.mjs, scripts/foundation/voc094-deploy-concurrency.test.mjs,\
+  \ docs/operations/staging-controlled-signup.md if the dual-token contract is documented\
+  \ there, this package directory). Detected path floor is R3 for .github/workflows/\
+  \ and infra/scripts/. This package proposes R3 for the change as a whole \u2014\
+  \ a draft proposal for the reviewing human at adoption time, not a determination.\
+  \ Independent verification and the reviewing human must still confirm each task's\
+  \ real file list and whether semantic escalation applies."
+canonical_path: specs/changes/VOC-098-operational-failure-observer-requests-unnecessary
+authority_model: a004-active
+requirement_source: "GitHub issue #840 (Operational failure observer requests unnecessary\
+  \ Actions permission). Drafting-time repo read of .github/workflows/operational-failure-monitoring.yml:\
+  \ the Mint issue-writer installation token step requests permission-issues: write\
+  \ and permission-actions: read together; VOC-094 added Actions read so classify-deploy-concurrency-cancel.sh\
+  \ can call the Actions jobs API. The repository GitHub App installation does not\
+  \ grant Actions, so create-github-app-token fails before open-failure-issue.sh runs\
+  \ \u2014 including for scheduled-synthetics failures that never need the classifier.\
+  \ This draft package does not adopt or authorize itself."
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
+automatic_merge_allowed: true
+production_impact: none-intentional for application runtime. Restores the repository-managed
+  operational-failure observer's ability to mint an App installation token and open
+  or deduplicate sanitized issues when watched workflows end non-successfully. No
+  application, signup, secret, database, or Kuma inventory changes.
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: Changes only how the operational-failure observer mints and scopes tokens
+    for issue write versus bounded Actions metadata reads. No page routes, critical
+    API endpoints, or stable monitor/synthetic IDs in infra/monitoring/monitors.yaml
+    or infra/monitoring/synthetics.yaml are added or changed.
+dependencies:
+- id: VOC-098-DEP-00
+  status: 'resolved at drafting time. Issue #840 states the App token request includes
+    Actions read that the installation does not grant; token mint fails before the
+    sanitized issue writer runs.'
+- id: VOC-098-DEP-01
+  status: 'resolved at drafting time. VOC-088-T02 owns operational-failure-monitoring.yml
+    and open-failure-issue.sh (App-authored issues, sanitization, marker dedupe, concurrency
+    serialization). VOC-094-T00 added permission-actions: read and classify-deploy-concurrency-cancel.sh
+    for benign deploy cancel classification.'
+- id: VOC-098-DEP-02
+  status: resolved at drafting time. docs/operations/staging-controlled-signup.md
+    already documents a controlled cancelled scheduled-synthetics fixture for observer
+    live proof; T01 reuses that pattern rather than inventing a new failure mechanism.
+- id: VOC-088
+  status: Adopted predecessor. This package must not weaken App-only issue creation,
+    sanitization, marker deduplication, fail-closed observer behavior, or serialized
+    concurrency.
+- id: VOC-094
+  status: Adopted predecessor that introduced App-token Actions read for the benign-cancel
+    classifier. This package keeps the classifier and its fail-closed semantics while
+    moving Actions API reads off the App installation token.
+affected_areas:
+- .github/workflows/operational-failure-monitoring.yml (App token least privilege;
+  classifier token wiring; job permissions floor)
+- infra/scripts/classify-deploy-concurrency-cancel.sh (wiring-only if needed; behavior
+  preserved)
+- scripts/foundation/voc088-failure-to-issue.test.mjs
+- scripts/foundation/voc094-deploy-concurrency.test.mjs
+- docs/operations/staging-controlled-signup.md (dual-token contract if current text
+  would otherwise remain false)
+- specs/changes/VOC-098-operational-failure-observer-requests-unnecessary
+implementation:
+  authorized: true
+  required: true
+  status: authorized
+  target_branch: develop
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-observer-auth-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: authorized
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
+blocking_reasons: none - adopted and implementation-authorized
+approved_candidate_sha: 2fcb9ba7d119a97628945c58b3ccd1b2e3be88dd
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/841#issuecomment-5367010042
+adoption_risk: R3
+adoption_resolved_decisions:
+- VOC-098-DEP-00
+- VOC-098-DEP-01
+- VOC-098-DEP-02
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #841 at 2fcb9ba7d119a97628945c58b3ccd1b2e3be88dd'
+adoption_pr: 841
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/841
