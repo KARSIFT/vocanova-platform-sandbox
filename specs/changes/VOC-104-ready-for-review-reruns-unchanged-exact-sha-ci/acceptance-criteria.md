@@ -99,7 +99,8 @@ proof under the operator-owned contract.
 
 ## VOC-104-AC-07 — Docs match reuse-vs-full-path behavior
 
-- Requirement source: AGENTS.md doc-consistency rule; `VOC-104-D03`
+- Requirement source: AGENTS.md doc-consistency rule; `specification.md` scope
+  item 10; `VOC-104-D07`
 - Tasks: `VOC-104-T00`
 - Tests: `VOC-104-TEST-11`
 - Evidence: `VOC-104-EV-00`
