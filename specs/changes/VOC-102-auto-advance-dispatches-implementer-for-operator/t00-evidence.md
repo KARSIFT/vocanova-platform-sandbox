@@ -61,7 +61,11 @@ constant. All 101 policy tests passed hosted self-CI run `32482230478`, and
 the full first-create carrier path and the complete verifier rejection matrix.
 All 103 policy tests passed hosted self-CI run `32482997528`, and
 `KARSIFT/karsift-ai-infra#77` merged as the final pinned revision
-`66453989577218bcd4ddff731276beeb57092ef0`.
+`66453989577218bcd4ddff731276beeb57092ef0`. Boundary review then requested
+an explicit missing-`tasks.md` fail-closed contract and a named contract
+`task_id` mismatch test. All 104 policy tests passed hosted self-CI run
+`32483646424`, and `KARSIFT/karsift-ai-infra#78` merged as the final pinned
+revision `c7c47c54959f9c996f334c55084034ba9b0b91b4`.
 
 ### Calling-repo foundation tests
 
@@ -115,6 +119,6 @@ Result: governance structure validation passed; detected path floor R4;
   was reviewed and corrected through the supervised split above; the failed run
   was not blindly retried.
 - Calling-repo runtime fixtures are byte-identical to the final infra merge
-  `66453989577218bcd4ddff731276beeb57092ef0`; runtime consumption remains
+  `c7c47c54959f9c996f334c55084034ba9b0b91b4`; runtime consumption remains
   `KARSIFT/karsift-ai-infra/...@main`.
 - No secrets, logs, artifacts, or unrelated package live evidence recorded here.

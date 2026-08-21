@@ -24,5 +24,7 @@ task has a valid `operator` or `live-actions` contract at
 draft evidence-carrier PR and posts one sanitized waiting marker without executing the general
 implementer. A repeat event repairs a partial carrier publication but preserves any existing
 operator evidence. Missing-required, malformed, invalid, duplicate, or conflicting ownership
-metadata fails closed. The classifier and proof verifier stay read-only; only a clean publisher
+metadata fails closed. “No marker” means a readable task stanza has no ownership marker; a missing
+or unreadable `tasks.md` cannot establish that condition and fails closed instead of guessing that
+the task is ordinary. The classifier and proof verifier stay read-only; only a clean publisher
 receives carrier writes, and the fail-closed notifier receives issue-write only.
