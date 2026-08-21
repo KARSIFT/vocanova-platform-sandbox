@@ -54,7 +54,8 @@ class Voc080WorkflowPolicyTests(unittest.TestCase):
 
     def test_pipeline_exposes_reconcile_dispatches(self):
         self.assertIn(
-            "options: [implement, plan, reconcile, reconcile-release]", self.pipeline
+            "options: [implement, plan, reconcile, reconcile-release, reconcile-live-evidence]",
+            self.pipeline,
         )
         self.assertIn("inputs.action == 'reconcile'", self.pipeline)
         self.assertIn("inputs.action == 'reconcile-release'", self.pipeline)
