@@ -295,10 +295,15 @@ VERDICT: PASS
         self.assertEqual(narrative.splitlines()[-1], "VERDICT: PASS")
         for workflow in (self.review, read_fixture(".github/workflows/plan-review.yml")):
             self.assertIn("normalize-review-narrative.py", workflow)
+            self.assertIn("extract-cursor-result.py", workflow)
             self.assertLess(
                 workflow.index("normalize-review-narrative.py"),
                 workflow.index("Build verification record for isolated publisher"),
             )
+        self.assertTrue(
+            (FIXTURE_INFRA_ROOT / "config/extract-cursor-result.py").is_file(),
+            "every review helper referenced by the pinned workflows must be vendored",
+        )
 
         merge_gate = read_fixture(".github/workflows/merge-gate.yml")
         script = self._workflow_run_block(
