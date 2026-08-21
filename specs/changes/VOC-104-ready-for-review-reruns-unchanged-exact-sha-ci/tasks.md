@@ -17,8 +17,9 @@ the same package.
 - Acceptance criteria: `VOC-104-AC-00` through `VOC-104-AC-05`, `VOC-104-AC-07`;
   T00 contributes the verifier implementation and deterministic TEST-12 evidence
   to `VOC-104-AC-06`, which T01 closes with the controlled live proof.
-- Tests: `VOC-104-TEST-00` through `VOC-104-TEST-07`, `VOC-104-TEST-10`,
-  `VOC-104-TEST-11`, `VOC-104-TEST-11A`, `VOC-104-TEST-12`
+- Tests: `VOC-104-TEST-00` through `VOC-104-TEST-07` (including
+  `VOC-104-TEST-04A`), `VOC-104-TEST-10`, `VOC-104-TEST-11`,
+  `VOC-104-TEST-11A`, `VOC-104-TEST-12`
 - Evidence: `VOC-104-EV-00` (`t00-evidence.md` in this package directory)
 - Status: pending
 
@@ -33,7 +34,9 @@ the same package.
    `.github/workflows/pipeline.yml` so that on `ready_for_review`, when reuse is
    allowed, `ci` and model-invoking `review` / `plan-review` are skipped while
    `merge-gate` still runs and remains reachable when review siblings are
-   skipped.
+   skipped. Pass the validated prior-run identity and reuse outcome to merge-gate
+   so current intentionally skipped names cannot hide or invalidate the prior
+   successful CI/publisher evidence.
 3. Enforce all `VOC-104-D02` preconditions. Emit `full-path` for a deterministic
    ineligibility and `fail-closed-to-full-path` for evaluation uncertainty; both
    take normal full CI + review (`VOC-104-D04`).
@@ -45,7 +48,8 @@ the same package.
    `VOC-104-D10` decision.
 7. Add deterministic shared-infra policy tests and calling-repository
    fixture/foundation coverage (`scripts/foundation/voc104-*.test.mjs` and/or
-   infra self-ci) per `VOC-104-D07`.
+   infra self-ci) per `VOC-104-D07`, including prior-success/current-skipped
+   same-name check supersession and the missing-prior-success negative case.
 8. Update karsift-ai-infra README and calling-repo DOC-15 §17.3 so “fresh
    pipeline evaluation” explicitly distinguishes safe exact-SHA reuse from the
    normal full CI/model-review path.

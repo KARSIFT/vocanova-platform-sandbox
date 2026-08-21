@@ -118,9 +118,11 @@ PR at evaluation time:
    enforces).
 2. Every required check for that exact head is `SUCCESS` or an explicitly
    allowed `SKIPPED` state under the same exclusion set merge-gate already uses
-   for its own in-flight `merge-gate/*` and `remediate/*` names — required CI and
-   trusted review publisher checks from a prior run on this exact head must be
-   successful.
+   for its own in-flight `merge-gate/*` and `remediate/*` names. Required CI and
+   trusted review publisher checks must be `SUCCESS` in one completed prior
+   pipeline run on this exact head. The helper identifies that prior run and its
+   job/check identities explicitly, excludes the current `ready_for_review`
+   `github.run_id`, and does not rely on an ambiguous latest-by-name PR rollup.
 3. A trusted App-authored independent verification comment exists, signed by the
    dedicated publisher identity already used by merge-gate
    (`karsift-ai-infra-bot[bot]`), bound to the exact head SHA, exact base SHA, and
@@ -137,7 +139,13 @@ skip full CI and skip model-invoking review / plan-review work, and MUST still
 run deterministic merge-gate re-evaluation so auto-merge can proceed for a newly
 non-draft PR. Skipped jobs must not leave merge-gate waiting forever on a missing
 review dependency — merge-gate already tolerates a skipped review sibling via
-`always()`; the reuse path must preserve that reachability.
+`always()`; the reuse path must preserve that reachability. The reuse decision
+and validated prior-run identity are passed to merge-gate. On `reuse-evidence`,
+merge-gate treats current intentional CI/review skips as replaced only by that
+validated prior `SUCCESS` evidence and App-signed exact-SHA verdict. It must not
+re-require a current-run publisher `SUCCESS` or let a current skipped check
+supersede prior success in a name-only rollup. Without a valid reuse decision,
+existing full-path check and verdict requirements remain unchanged.
 
 `VOC-104-D04`: When any `VOC-104-D02` precondition deterministically fails, emit
 `full-path` and run normal full CI + applicable review (not an invented merge).
@@ -167,6 +175,14 @@ path / fail closed; (regression) `synchronize` / `opened` still run full CI and
 review. Calling-repository fixture/foundation coverage asserts the caller
 pipeline wires the reuse decision into `ci` / review / merge-gate conditions and
 still lists `ready_for_review` in PR types.
+
+The positive fixture must include two check suites on the same head: a completed
+prior pipeline with successful CI/publisher checks and the current
+`ready_for_review` run with those same job names intentionally skipped. It proves
+prior evidence is selected by run/check identity, the current run is excluded
+from eligibility evidence, and merge-gate still passes required-check and verdict
+evaluation. The paired negative fixture omits prior success and must take the
+full path.
 
 `VOC-104-D08`: Controlled live proof uses a draft PR whose exact base/head already
 has green required checks and a trusted App PASS, then marks it ready. Evidence

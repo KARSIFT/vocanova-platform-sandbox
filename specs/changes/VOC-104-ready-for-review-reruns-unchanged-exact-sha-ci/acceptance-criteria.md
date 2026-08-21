@@ -25,14 +25,16 @@ for that exact head are successful, and a trusted App-authored PASS (or PASS WIT
 NON-BLOCKING FINDINGS) is bound to that exact base/head and package/task
 authority (with live-evidence attestation present when required), the pipeline
 skips full CI and model review and still runs deterministic merge-gate
-re-evaluation.
+re-evaluation. The current ready run's intentionally skipped same-name checks do
+not supersede the distinct prior pipeline's validated successful CI/publisher
+evidence during merge-gate evaluation.
 
 ## VOC-104-AC-02 — Fail closed to the normal path when reuse is unsafe
 
 - Requirement source: `VOC-104-D04`
 - Tasks: `VOC-104-T00`
-- Tests: `VOC-104-TEST-03`, `VOC-104-TEST-04`, `VOC-104-TEST-05`,
-  `VOC-104-TEST-06`, `VOC-104-TEST-11A`
+- Tests: `VOC-104-TEST-03`, `VOC-104-TEST-04`, `VOC-104-TEST-04A`,
+  `VOC-104-TEST-05`, `VOC-104-TEST-06`, `VOC-104-TEST-11A`
 - Evidence: `VOC-104-EV-00`
 - Result: pending
 
@@ -70,8 +72,9 @@ separation is unchanged; the implementer cannot mint reusable PASS authority.
 
 - Requirement source: `VOC-104-D07`
 - Tasks: `VOC-104-T00`
-- Tests: `VOC-104-TEST-00` through `VOC-104-TEST-07`, `VOC-104-TEST-10`,
-  `VOC-104-TEST-11`, `VOC-104-TEST-11A`, `VOC-104-TEST-12`
+- Tests: `VOC-104-TEST-00` through `VOC-104-TEST-07` (including
+  `VOC-104-TEST-04A`), `VOC-104-TEST-10`, `VOC-104-TEST-11`,
+  `VOC-104-TEST-11A`, `VOC-104-TEST-12`
 - Evidence: `VOC-104-EV-00`
 - Result: pending
 

@@ -70,6 +70,12 @@
 - `VOC-104-R04`: **Scope creep** into deprecated inputs / Node warnings /
   dependency alerts / remediation preflight.
   Mitigation: D09; explicit non-goals in README and tasks.
+- `VOC-104-R05`: **Same-head check supersession** if the current ready run's
+  intentionally skipped CI/publisher check names obscure the completed prior
+  run's successes in GitHub's latest-name rollup.
+  Mitigation: D02/D03 select and carry a distinct prior run/check identity,
+  exclude the current run, and make merge-gate consume that validated reuse
+  decision; TEST-02 and TEST-04A cover both directions.
 - `VOC-104-DEP-00`: Issue #872 incident (PRs #868 / #869 duplicate ready_for_review
   CI+review).
 - `VOC-104-DEP-01`: Existing draft-aware ready_for_review + merge-gate draft block.

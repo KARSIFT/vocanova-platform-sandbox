@@ -22,11 +22,17 @@
 
 - Covers: `VOC-104-AC-01`
 - Preconditions: Fixture ready_for_review event; live base/head equal expected
-  pair; required checks SUCCESS for that head; trusted App PASS bound to exact
-  base/head and package/task identity; attestation not required or true
-- Procedure: Run reuse-eligibility helper / pipeline condition fixture.
+  pair; a distinct completed prior pipeline run has required checks SUCCESS for
+  that head and a trusted App PASS bound to exact base/head and package/task
+  identity; attestation not required or true. The current ready run exposes the
+  same CI/publisher check names as intentional `SKIPPED` states.
+- Procedure: Run reuse-eligibility, pipeline-condition, and merge-gate fixtures.
+  Assert the helper excludes the current `github.run_id`, selects prior
+  successful run/check identities, and does not use latest-name rollup semantics
+  to locate reusable success.
 - Expected result: outcome `reuse-evidence`; CI and model review skipped;
-  merge-gate still selected to run.
+  merge-gate still selected and its required-check plus verdict evaluation pass
+  using the validated prior-run identity despite current same-name skips.
 - Evidence: `VOC-104-EV-00`
 
 ## VOC-104-TEST-03 — Negative: base or head drift forces full path
@@ -45,6 +51,17 @@
   failed, or otherwise non-successful
 - Procedure: Run reuse decision fixture for each case.
 - Expected result: Outcome `full-path`; full CI + review path selected.
+- Evidence: `VOC-104-EV-00`
+
+## VOC-104-TEST-04A — Negative: current skipped names cannot replace missing prior success
+
+- Covers: `VOC-104-AC-02`, `VOC-104-AC-05`
+- Preconditions: Current ready_for_review run has intentionally skipped
+  CI/publisher job names, but no distinct completed prior run supplies successful
+  required CI and publisher checks on the exact base/head.
+- Procedure: Run reuse-eligibility, pipeline-condition, and merge-gate fixtures.
+- Expected result: No reusable evidence is inferred from current skipped checks;
+  outcome `full-path`; current CI + review run normally.
 - Evidence: `VOC-104-EV-00`
 
 ## VOC-104-TEST-05 — Negative: missing / WAITING / FAIL / PENDING / malformed / untrusted verdict
