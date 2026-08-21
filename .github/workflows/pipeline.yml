@@ -127,7 +127,8 @@ on:
 # default_workflow_permissions could be safely tightened from "write" to
 # "read" without breaking the pipeline; do not narrow this without
 # re-checking every called reusable workflow's own job-level permissions
-# first.
+# first. The live-evidence reconciler has one narrower job-level exception:
+# Actions write is required only to dispatch the contract-allowlisted synthetic.
 permissions:
   contents: write
   issues: write
@@ -388,6 +389,15 @@ jobs:
     if: |
       github.event_name == 'schedule' ||
       (github.event_name == 'workflow_dispatch' && inputs.action == 'reconcile-live-evidence')
+    # A called workflow cannot elevate beyond its caller. Keep the workflow-wide
+    # floor at Actions read and grant write only to this operator-owned job so it
+    # can dispatch the single workflow/input pair declared by a reviewed contract.
+    permissions:
+      actions: write
+      checks: read
+      contents: read
+      issues: read
+      pull-requests: read
     uses: KARSIFT/karsift-ai-infra/.github/workflows/live-evidence-reconcile.yml@main
     with:
       mode: ${{ github.event_name == 'schedule' && 'reconcile' || inputs.live_evidence_mode }}

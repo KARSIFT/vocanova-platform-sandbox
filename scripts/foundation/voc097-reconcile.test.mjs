@@ -60,6 +60,16 @@ test("VOC-097-T02 caller wires bounded polling and explicit observe/dispatch pat
     operatorJob,
     /^\s{4}secrets:\n\s{6}KARSIFT_BOT_APP_ID: \$\{\{ secrets\.KARSIFT_BOT_APP_ID \}\}\n\s{6}KARSIFT_BOT_PRIVATE_KEY: \$\{\{ secrets\.KARSIFT_BOT_PRIVATE_KEY \}\}/m,
   );
+  assert.match(
+    operatorJob,
+    /^\s{4}permissions:\n\s{6}actions: write\n\s{6}checks: read\n\s{6}contents: read\n\s{6}issues: read\n\s{6}pull-requests: read/m,
+    "only the operator-owned caller job may dispatch the contract-allowlisted workflow",
+  );
+  assert.equal(
+    (pipeline.match(/^\s{6}actions: write$/gm) ?? []).length,
+    1,
+    "Actions write must remain isolated to the live-evidence caller job",
+  );
   assert.equal(
     (
       pipeline.match(
@@ -82,6 +92,16 @@ test("VOC-097-TEST-05: reconciler permissions stay off the implementer", () => {
   );
   assert.match(permissionBlock[1], /^  actions: read$/m);
   assert.doesNotMatch(permissionBlock[1], /^  actions: write$/m);
+
+  const implementerJob = pipeline
+    .split("  implement:", 2)[1]
+    ?.split("\n  plan:", 1)[0];
+  assert.ok(implementerJob, "implementer job must exist");
+  assert.doesNotMatch(
+    implementerJob,
+    /^\s{6}actions: write$/m,
+    "implementer must not inherit operator Actions-write authority",
+  );
 });
 
 test("VOC-097-T02 evidence file records mechanism without secrets", () => {
