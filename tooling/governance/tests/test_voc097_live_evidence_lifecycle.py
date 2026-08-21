@@ -95,7 +95,7 @@ class Voc097LiveEvidenceLifecycleTests(unittest.TestCase):
                 output.seek(0)
                 return completed, output.read().decode()
 
-    def _execute_waiting_remediation_path(self):
+    def _execute_remediation_path(self, verdict: str, *, ci_failed: bool = False):
         head = "a" * 40
         base = "b" * 40
         package = "specs/changes/VOC-097-example"
@@ -112,7 +112,7 @@ class Voc097LiveEvidenceLifecycleTests(unittest.TestCase):
             return 0
           fi
           if [ "$1" = "api" ]; then
-            printf '%s\\n' '[[{{"id":1,"created_at":"2026-08-21T00:00:00Z","user":{{"login":"karsift-ai-infra-bot[bot]","type":"Bot"}},"body":"**Independent verification - bound to commit `{head}`**\\ntask_id: `VOC-097-T02`\\npackage_path: `{package}`\\nauthority_issue: `34`\\nbase_sha: `{base}`\\nVERDICT: WAITING FOR OPERATOR LIVE EVIDENCE"}}]]'
+            printf '%s\\n' '[[{{"id":1,"created_at":"2026-08-21T00:00:00Z","user":{{"login":"karsift-ai-infra-bot[bot]","type":"Bot"}},"body":"**Independent verification - bound to commit `{head}`**\\ntask_id: `VOC-097-T02`\\npackage_path: `{package}`\\nauthority_issue: `34`\\nbase_sha: `{base}`\\nVERDICT: {verdict}"}}]]'
             return 0
           fi
           printf 'unexpected gh invocation: %s\\n' "$*" >&2
@@ -128,7 +128,7 @@ class Voc097LiveEvidenceLifecycleTests(unittest.TestCase):
                 "GITHUB_OUTPUT": str(output_path),
                 "PR_NUMBER": "12",
                 "GH_REPO": "KARSIFT/example",
-                "CI_FAILED": "false",
+                "CI_FAILED": str(ci_failed).lower(),
                 "REVIEW_JOB_FAILED": "false",
                 "EXPECTED_HEAD_SHA": head,
                 "EXPECTED_BASE_SHA": base,
@@ -175,7 +175,9 @@ class Voc097LiveEvidenceLifecycleTests(unittest.TestCase):
         retry_output = self.remediate_workflow.index('echo "should_retry=true"')
         self.assertLess(waiting_guard, retry_output)
         self.assertIn('echo "should_retry=false"', self.remediate_workflow)
-        result, output = self._execute_waiting_remediation_path()
+        result, output = self._execute_remediation_path(
+            "WAITING FOR OPERATOR LIVE EVIDENCE"
+        )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("should_retry=false", output)
         self.assertIn("next_attempt=", output)
@@ -204,6 +206,16 @@ class Voc097LiveEvidenceLifecycleTests(unittest.TestCase):
         )
         self.assertIn('decision" != "RETRY"', self.remediate_workflow)
         self.assertIn('echo "should_retry=true"', self.remediate_workflow)
+        for verdict, ci_failed in (("FAIL", False), ("PASS", True)):
+            with self.subTest(verdict=verdict, ci_failed=ci_failed):
+                result, output = self._execute_remediation_path(
+                    verdict,
+                    ci_failed=ci_failed,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("should_retry=true", output)
+                self.assertIn("next_attempt=2", output)
+                self.assertNotIn("waiting_for_operator_live_evidence=true", output)
 
     def test_voc097_test_05_implementer_has_no_general_actions_permission(self):
         permissions = self.implement_workflow.split("    permissions:\n", 1)[1].split(

@@ -133,7 +133,12 @@ test("VOC-097-T03 Python fixture matrix passes", () => {
   const result = runPythonTests("test_voc097_*.py");
   const combined = `${result.stdout}\n${result.stderr}`;
   assert.equal(result.status, 0, combined || "python unittest failed");
-  assert.match(combined, /Ran 18 tests/);
+  const count = combined.match(/Ran (\d+) tests/)?.[1];
+  assert.ok(count, "Python unittest summary must report its executed test count");
+  assert.ok(
+    Number(count) >= MATRIX.length,
+    `expected at least ${MATRIX.length} Python tests, received ${count}`,
+  );
 });
 
 test("VOC-097-T03 matrix methods exist in the Python modules", () => {

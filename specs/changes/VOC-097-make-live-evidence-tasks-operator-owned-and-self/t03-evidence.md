@@ -53,7 +53,7 @@ against vendored `karsift-ai-infra` policy fixtures plus the live caller
 | --- | --- |
 | TEST-02 | Machine-readable `WAITING` marker, fail-dominant classifier, trusted review prompt contract |
 | TEST-03 | Executed remediate decision step consumes an exact-head App-authored `WAITING` review, emits `should_retry=false`, and never schedules a next attempt |
-| TEST-04 | Genuine `FAIL` and CI failure still enter bounded `RETRY` |
+| TEST-04 | Executed remediate decision step enters bounded retry for both an exact-head `FAIL` review and an independent CI failure |
 | TEST-05 | Implementer workflow has no `actions` permission; operator reconcile keeps read-only caller floor |
 | TEST-06 | Wrong workflow identity fail-closed |
 | TEST-07 | Missing/failed required job fail-closed |
