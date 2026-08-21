@@ -107,7 +107,7 @@ inside the matching `## <task_id>` stanza of canonical `tasks.md`:
 `- Automation ownership: live-actions`. The parser MUST match the heading and
 one marker structurally; it MUST NOT infer ownership from narrative prose.
 
-`VOC-106-D01`: If the contract declares `ownership: operator` or
+`VOC-106-D01`: If a valid contract declares `ownership: operator` or
 `ownership: live-actions`, remediation MUST NOT dispatch `implement.yml`,
 regardless of review `FAIL`, CI failure, review-job infrastructure failure
 already handled separately, stale caller run, or missing evidence lifecycle

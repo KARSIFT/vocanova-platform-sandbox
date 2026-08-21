@@ -25,10 +25,12 @@ Narrative prose is never interpreted.
 
 When ownership is `operator` or `live-actions`, remediation does **not** start
 `implement.yml` for review `FAIL`, CI failure, stale results, or missing evidence
-lifecycle states. The condition routes to a sanitized, bounded
-operator/reconcile escalation. Malformed or mismatched ownership metadata is
-handled separately by the fail-closed rule in `VOC-106-AC-03`. Merge remains
-fail-closed.
+lifecycle states. Review `FAIL` and CI failure route to a sanitized, bounded
+operator/reconcile escalation. Stale results retain the existing non-retrying
+stale no-op, while missing evidence lifecycle states retain their existing
+operator/reconcile handling without consuming an implementation attempt.
+Malformed or mismatched ownership metadata is handled separately by the
+fail-closed rule in `VOC-106-AC-03`. Merge remains fail-closed.
 
 ## VOC-106-AC-02 — Ordinary implementer-owned remediation retained
 
