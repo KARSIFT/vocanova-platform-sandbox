@@ -4,18 +4,18 @@ slug: operator-owned-live-evidence-failures-can
 title: Stop remediation dispatching the general implementer for operator-owned live-evidence
   failures
 type: infrastructure
-status: draft
+status: adopted
 risk: R3
 planned_implementation_risk_floor: Measured during drafting against the expected task-scoped
   file list (KARSIFT/karsift-ai-infra/.github/workflows/remediate.yml, config/decide-remediation.py,
   related helpers/tests and README; calling-repo .github/workflows/pipeline.yml proof
-  action; docs/operations/live-evidence.md ownership-gated remediation guidance;
-  scripts/foundation/voc106-*.test.mjs and/or infra self-ci fixtures; this package
-  directory). Detected path floor is R3 for .github/workflows/ and governance-automation
-  paths. This package proposes R3 for the change as a whole because it changes semantic
-  CI/CD remediation dispatch. Independent verification must still confirm each task's
-  real file list and whether further semantic escalation applies. This is a draft
-  proposal for the reviewing human at adoption time, never a determination.
+  action; docs/operations/live-evidence.md ownership-gated remediation guidance; scripts/foundation/voc106-*.test.mjs
+  and/or infra self-ci fixtures; this package directory). Detected path floor is R3
+  for .github/workflows/ and governance-automation paths. This package proposes R3
+  for the change as a whole because it changes semantic CI/CD remediation dispatch.
+  Independent verification must still confirm each task's real file list and whether
+  further semantic escalation applies. This is a draft proposal for the reviewing
+  human at adoption time, never a determination.
 canonical_path: specs/changes/VOC-106-operator-owned-live-evidence-failures-can
 authority_model: a004-active
 requirement_source: 'GitHub issue #882 (Operator-owned live-evidence failures can
@@ -30,8 +30,8 @@ requirement_source: 'GitHub issue #882 (Operator-owned live-evidence failures ca
   WAITING is already suppressed; genuine FAIL on the same operator-owned carrier can
   still become an implementation retry. This draft package does not adopt or authorize
   itself.'
-requirement_approval_status: not-approved. This package has not been adopted. No field
-  in this file authorizes implementation.
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: unknown - not recorded by this draft; set at adoption time
 target_branch: develop
@@ -40,15 +40,15 @@ owners:
   package_preparation: planner (drafting only; adoption remains a human decision)
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: none-intentional for application runtime. Changes governance automation
   so remediation never dispatches the general implementer for operator-owned or live-evidence-only
-  review FAIL or CI failure; preserves stale no-op and missing-evidence handling; and routes
-  malformed or mismatched ownership metadata to a separate fail-closed escalation. Does
-  not change production deploy semantics, signup policy, secrets, databases, Kuma inventory,
-  or Sentry ingestion.
+  review FAIL or CI failure; preserves stale no-op and missing-evidence handling;
+  and routes malformed or mismatched ownership metadata to a separate fail-closed
+  escalation. Does not change production deploy semantics, signup policy, secrets,
+  databases, Kuma inventory, or Sentry ingestion.
 rollback_required: true
 monitoring_impact:
   state: none
@@ -75,10 +75,10 @@ dependencies:
     \ karsift-ai-infra/ checkout as this repository's tracked tree."
 - id: VOC-106-DEP-03
   status: resolved at drafting time. WAITING FOR OPERATOR LIVE EVIDENCE already suppresses
-    remediation retry. The retry gap is genuine FAIL and CI failure on the same
-    operator-owned carrier, which must escalate without consuming an implementation
-    attempt. Stale results remain a no-op; malformed or mismatched ownership metadata
-    follows the separate fail-closed path.
+    remediation retry. The retry gap is genuine FAIL and CI failure on the same operator-owned
+    carrier, which must escalate without consuming an implementation attempt. Stale
+    results remain a no-op; malformed or mismatched ownership metadata follows the
+    separate fail-closed path.
 - id: VOC-097
   status: Adopted predecessor. Ownership contract path, waiting semantics, and reconcile
     path must remain authoritative; this package must not weaken them or grant implementer
@@ -100,12 +100,12 @@ affected_areas:
 - scripts/foundation/voc106-*.test.mjs and/or infra self-ci fixtures
 - specs/changes/VOC-106-operator-owned-live-evidence-failures-can/
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: proposed
+  status: authorized
   target_branch: develop
   pull_request: null
-  authority_issue: 882
+  authority_issue: null
 release:
   required: true
   mode: not-authorized-by-this-package
@@ -114,17 +114,23 @@ release:
   automatic_merge: true
   migration_required: false
   rollback_required: true
-repository_adoption_status: not-adopted
-adoption_pr: null
-adoption_evidence: null
+repository_adoption_status: adopted
+adoption_pr: 883
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/883
 implementation_authority_before_adoption: false
-implementation_authority_status: not-exercised
+implementation_authority_status: authorized
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
-blocking_reasons: Not adopted. Requires plan-review PASS (or PASS WITH NON-BLOCKING
-  FINDINGS), governance validation, and A-004 adopt path before any task may be implemented.
-  Risk classification remains a draft proposal until the path classifier and independent
-  verifier govern each task PR.
-approved_candidate_sha: null
+blocking_reasons: none - adopted and implementation-authorized
+approved_candidate_sha: fb5d853b25432965599dc04dcd7f13fc84a8cb7c
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/883#issuecomment-5376277575
+adoption_risk: R3
+adoption_resolved_decisions:
+- VOC-106-DEP-00
+- VOC-106-DEP-01
+- VOC-106-DEP-02
+- VOC-106-DEP-03
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #883 at fb5d853b25432965599dc04dcd7f13fc84a8cb7c'
