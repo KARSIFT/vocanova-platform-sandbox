@@ -25,7 +25,8 @@ const MATRIX = [
   {
     testId: "VOC-097-TEST-02",
     module: "test_voc097_live_evidence_lifecycle.py",
-    method: "test_voc097_test_02_waiting_marker_is_machine_detectable_and_fail_dominant",
+    method:
+      "test_voc097_test_02_waiting_marker_is_machine_detectable_and_fail_dominant",
   },
   {
     testId: "VOC-097-TEST-03",
@@ -55,12 +56,14 @@ const MATRIX = [
   {
     testId: "VOC-097-TEST-08",
     module: "test_voc097_live_evidence_reconcile.py",
-    method: "test_voc097_test_08_wrong_event_branch_and_sha_lineage_are_rejected",
+    method:
+      "test_voc097_test_08_wrong_event_branch_and_sha_lineage_are_rejected",
   },
   {
     testId: "VOC-097-TEST-09",
     module: "test_voc097_live_evidence_reconcile.py",
-    method: "test_voc097_test_09_qualifying_output_contains_allowlisted_metadata_only",
+    method:
+      "test_voc097_test_09_qualifying_output_contains_allowlisted_metadata_only",
   },
   {
     testId: "VOC-097-TEST-10",
@@ -70,7 +73,8 @@ const MATRIX = [
   {
     testId: "VOC-097-TEST-11",
     module: "test_voc097_live_evidence_reconcile.py",
-    method: "test_voc097_test_11_qualification_is_one_commit_then_fresh_pr_review",
+    method:
+      "test_voc097_test_11_qualification_is_one_commit_then_fresh_pr_review",
   },
   {
     testId: "VOC-097-TEST-12",
@@ -85,7 +89,8 @@ const MATRIX = [
   {
     testId: "VOC-097-TEST-14",
     module: "test_voc097_live_evidence_reconcile.py",
-    method: "test_voc097_test_14_duplicate_result_short_circuits_reconciliation",
+    method:
+      "test_voc097_test_14_duplicate_result_short_circuits_reconciliation",
   },
 ];
 
@@ -127,11 +132,7 @@ test("VOC-097-T03 vendored infra pin is recorded for fixture replay", () => {
 test("VOC-097-T03 Python fixture matrix passes", () => {
   const result = runPythonTests("test_voc097_*.py");
   const combined = `${result.stdout}\n${result.stderr}`;
-  assert.equal(
-    result.status,
-    0,
-    combined || "python unittest failed",
-  );
+  assert.equal(result.status, 0, combined || "python unittest failed");
   assert.match(combined, /Ran 18 tests/);
 });
 
