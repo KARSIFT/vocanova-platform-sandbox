@@ -134,7 +134,10 @@ test("VOC-097-T03 Python fixture matrix passes", () => {
   const combined = `${result.stdout}\n${result.stderr}`;
   assert.equal(result.status, 0, combined || "python unittest failed");
   const count = combined.match(/Ran (\d+) tests/)?.[1];
-  assert.ok(count, "Python unittest summary must report its executed test count");
+  assert.ok(
+    count,
+    "Python unittest summary must report its executed test count",
+  );
   assert.ok(
     Number(count) >= MATRIX.length,
     `expected at least ${MATRIX.length} Python tests, received ${count}`,
