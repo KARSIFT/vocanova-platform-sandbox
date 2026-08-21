@@ -53,9 +53,10 @@ class Voc080MergeGatePolicyTests(unittest.TestCase):
             self.merge_gate,
         )
 
-    def test_failed_or_missing_verdict_blocks_auto_merge(self):
+    def test_failed_waiting_or_missing_verdict_blocks_auto_merge(self):
         auto_merge = self.merge_gate.split("  auto-merge:", 1)[1]
         self.assertIn("verdict != 'FAIL'", auto_merge)
+        self.assertIn("verdict != 'WAITING'", auto_merge)
         self.assertIn("verdict != 'PENDING'", auto_merge)
         self.assertIn("checks_ok == 'true'", auto_merge)
 
