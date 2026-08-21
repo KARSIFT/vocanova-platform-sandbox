@@ -28,6 +28,14 @@ const infraAutoAdvancePath = path.join(
   ".github/workflows/auto-advance.yml",
 );
 const infraReadmePath = path.join(fixtureInfraRoot, "README.md");
+const infraVerifierPath = path.join(
+  fixtureInfraRoot,
+  ".github/workflows/verify-auto-advance-live-evidence.yml",
+);
+const contractPath = path.join(
+  repositoryRoot,
+  "specs/changes/VOC-102-auto-advance-dispatches-implementer-for-operator/.karsift/live-evidence/VOC-102-T01.yaml",
+);
 const infraOwnershipTestPath = path.join(
   repositoryRoot,
   "tooling/governance/tests/test_auto_advance_ownership.py",
@@ -71,7 +79,7 @@ test("VOC-102-TEST-10: docs describe skip vs dispatch when touched", () => {
   );
   assert.match(
     infraReadme,
-    /operator-owned or live-actions-only.*auto-advance instead prepares/is,
+    /valid `operator` or `live-actions` contract.*auto-advance instead prepares/is,
   );
   assert.doesNotMatch(
     infraReadme,
@@ -92,6 +100,8 @@ test("VOC-102-TEST-11 through TEST-13: carrier, permissions, verifier", () => {
 
 test("VOC-102 caller wiring exposes read-only verify-auto-advance-live-evidence action", () => {
   const pipeline = readFileSync(pipelinePath, "utf8");
+  const verifier = readFileSync(infraVerifierPath, "utf8");
+  const contract = readFileSync(contractPath, "utf8");
   assert.match(
     pipeline,
     /verify-auto-advance-live-evidence/,
@@ -109,6 +119,13 @@ test("VOC-102 caller wiring exposes read-only verify-auto-advance-live-evidence 
   );
   assert.match(verifyBlock, /actions: read/);
   assert.doesNotMatch(verifyBlock, /secrets: inherit/);
+  assert.match(verifier, /jobs:\s+verify:/);
+  assert.doesNotMatch(
+    verifier,
+    /name: verify-auto-advance-live-evidence \/ verify/,
+  );
+  assert.match(verifier, /GITHUB_TOKEN: \$\{\{ github\.token \}\}/);
+  assert.match(contract, /- verify-auto-advance-live-evidence \/ verify/);
 });
 
 test("VOC-102 auto-advance consumes ownership gate outputs", () => {

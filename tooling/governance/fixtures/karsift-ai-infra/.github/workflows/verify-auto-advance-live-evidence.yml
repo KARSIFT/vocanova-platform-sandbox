@@ -29,14 +29,13 @@ on:
         required: true
         type: string
       integration_branch:
-        description: "Integration branch the source run executed against."
+        description: "Integration branch used as the evidence-carrier PR base."
         required: false
         type: string
         default: "develop"
 
 jobs:
   verify:
-    name: verify-auto-advance-live-evidence / verify
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -56,6 +55,7 @@ jobs:
 
       - name: Verify source run and carrier metadata
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           PYTHONPATH: karsift-ai-infra/config
         run: |
           set -euo pipefail

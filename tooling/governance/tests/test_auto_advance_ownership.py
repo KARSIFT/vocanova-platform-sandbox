@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 import sys
@@ -7,7 +8,9 @@ import unittest
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
-FIXTURE_INFRA_ROOT = REPOSITORY_ROOT / "tooling" / "governance" / "fixtures" / "karsift-ai-infra"
+FIXTURE_INFRA_ROOT = (
+    REPOSITORY_ROOT / "tooling/governance/fixtures/karsift-ai-infra"
+)
 CONFIG = FIXTURE_INFRA_ROOT / "config"
 
 
@@ -26,6 +29,10 @@ ownership = load_module("auto_advance_ownership", CONFIG / "auto_advance_ownersh
 verifier = load_module(
     "verify_auto_advance_live_evidence",
     CONFIG / "verify_auto_advance_live_evidence.py",
+)
+publisher = load_module(
+    "auto_advance_carrier_publisher",
+    CONFIG / "auto-advance-carrier-publisher.py",
 )
 
 
@@ -58,7 +65,8 @@ class AutoAdvanceOwnershipTests(unittest.TestCase):
             FIXTURE_INFRA_ROOT / ".github/workflows/auto-advance.yml"
         ).read_text()
         cls.verify_workflow = (
-            FIXTURE_INFRA_ROOT / ".github/workflows/verify-auto-advance-live-evidence.yml"
+            FIXTURE_INFRA_ROOT
+            / ".github/workflows/verify-auto-advance-live-evidence.yml"
         ).read_text()
 
     def test_voc102_test_00_contract_path_is_authoritative(self):
@@ -133,6 +141,15 @@ class AutoAdvanceOwnershipTests(unittest.TestCase):
             result = ownership.classify_next_task(str(package), "VOC-102-T01", "")
             self.assertEqual(result.decision, "fail-closed")
 
+            (contract_dir / "VOC-102-T01.yaml").write_text(
+                contract_yaml("VOC-102-T01") + "evidence_path: t01-evidence.md\n",
+                encoding="utf-8",
+            )
+            invalid_schema = ownership.classify_next_task(
+                str(package), "VOC-102-T01", ""
+            )
+            self.assertEqual(invalid_schema.decision, "fail-closed")
+
     def test_voc102_test_05_missing_or_unrecognized_ownership_fail_closed(self):
         cases = [
             ("schema_version: 1\ntask_id: VOC-102-T01\n", "missing ownership"),
@@ -188,6 +205,30 @@ class AutoAdvanceOwnershipTests(unittest.TestCase):
             ordinary = ownership.classify_next_task(str(package), "VOC-000-T00", prose)
             self.assertEqual(ordinary.decision, "implement")
 
+    def test_voc102_test_06_invalid_marker_and_structural_heading_fail_closed(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            package = Path(scratch) / "pkg"
+            package.mkdir()
+            invalid = ownership.classify_next_task(
+                str(package),
+                "VOC-102-T01",
+                "## VOC-102-T01 — target\n\n- Automation ownership: robot\n",
+            )
+            self.assertEqual(invalid.reason, "invalid_automation_marker")
+
+            duplicate_stanza = ownership.classify_next_task(
+                str(package),
+                "VOC-102-T01",
+                "## VOC-102-T01\n\n## VOC-102-T01 — duplicate\n",
+            )
+            self.assertEqual(duplicate_stanza.reason, "duplicate_task_stanza")
+
+            prefix_only = ownership.parse_automation_ownership_markers(
+                "## VOC-102-T01a — other\n\n- Automation ownership: operator\n",
+                "VOC-102-T01",
+            )
+            self.assertEqual(prefix_only, ())
+
     def test_voc102_test_07_last_task_is_out_of_scope_for_classifier(self):
         # The advance job no-ops before classification when there is no next task.
         self.assertIn(
@@ -221,8 +262,37 @@ class AutoAdvanceOwnershipTests(unittest.TestCase):
                 change_id="VOC-102",
                 task_id="VOC-102-T01",
                 package_path=PACKAGE,
+                issue_number=866,
+                evidence_relative_path="t01-evidence.md",
             )
         )
+
+        pending = ownership.pending_evidence_body(
+            "VOC-102-T01", "VOC-102", PACKAGE
+        )
+        self.assertEqual(
+            publisher.evidence_file_action(
+                None, has_trusted_pr=True, pending_body=pending
+            ),
+            "create",
+        )
+        completed = pending + "\nsource_run_id: `123`\n"
+        self.assertEqual(
+            publisher.evidence_file_action(
+                completed, has_trusted_pr=True, pending_body=pending
+            ),
+            "preserve",
+        )
+        with self.assertRaises(publisher.PublisherError):
+            publisher.evidence_file_action(
+                completed, has_trusted_pr=False, pending_body=pending
+            )
+        allowed = f"{PACKAGE}/t01-evidence.md"
+        publisher.validate_carrier_changed_paths({allowed}, allowed)
+        with self.assertRaises(publisher.PublisherError):
+            publisher.validate_carrier_changed_paths(
+                {allowed, ".github/workflows/pipeline.yml"}, allowed
+            )
 
     def test_voc102_test_12_permission_boundary(self):
         advance_block = self.auto_advance.split("  advance:", 1)[1].split("  prepare-live-evidence:", 1)[0]
@@ -237,42 +307,79 @@ class AutoAdvanceOwnershipTests(unittest.TestCase):
         self.assertNotIn("implement.yml", publisher_block)
         self.assertNotIn("secrets: inherit", publisher_block)
         self.assertIn("uses: KARSIFT/karsift-ai-infra/.github/workflows/implement.yml@main", implement_block)
+        fail_block = self.auto_advance.split("  fail-closed:", 1)[1].split("  implement:", 1)[0]
+        self.assertIn("permission-issues: write", fail_block)
+        self.assertNotIn("permission-contents", fail_block)
+        self.assertNotIn("permission-pull-requests", fail_block)
         verify_permissions = self.verify_workflow.split("    permissions:", 1)[1].split("    steps:", 1)[0]
         self.assertIn("actions: read", verify_permissions)
         self.assertNotIn("actions: write", verify_permissions)
         self.assertNotIn("create-github-app-token", self.verify_workflow)
+        self.assertIn("GITHUB_TOKEN: ${{ github.token }}", self.verify_workflow)
+        self.assertNotIn("name: verify-auto-advance-live-evidence / verify", self.verify_workflow)
+
+        publisher_source = (
+            CONFIG / "auto-advance-carrier-publisher.py"
+        ).read_text()
+        verifier_runner = (
+            CONFIG / "verify-auto-advance-live-evidence-runner.py"
+        ).read_text()
+        self.assertIn("target = clone_dir / evidence_path", publisher_source)
+        self.assertNotIn("target = clone_dir / evidence_relative_path", publisher_source)
+        self.assertIn("default_branch", verifier_runner)
+        self.assertIn("closedAt", verifier_runner)
+        self.assertIn(".karsift/tasks.json", verifier_runner)
+        self.assertNotRegex(verifier_runner, r"[\"']logs[\"']")
+        self.assertNotRegex(verifier_runner, r"[\"']artifacts[\"']")
 
     def test_voc102_test_13_verifier_fail_closed_and_exact_head(self):
+        closed = datetime(2026, 8, 21, 11, 0, tzinfo=timezone.utc)
+        closed_at = closed.isoformat().replace("+00:00", "Z")
+        source_run = {
+            "repository": {"full_name": "KARSIFT/example"},
+            "name": "pipeline",
+            "display_title": "VOC-102: VOC-102-T00 - implementation",
+            "event": "issues",
+            "head_branch": "main",
+            "path": ".github/workflows/pipeline.yml",
+            "status": "completed",
+            "conclusion": "success",
+            "created_at": (closed + timedelta(seconds=2)).isoformat().replace(
+                "+00:00", "Z"
+            ),
+        }
         source_ok = verifier.verify_source_run(
-            run={
-                "repository": {"full_name": "KARSIFT/example"},
-                "event": "issues",
-                "head_branch": "develop",
-                "path": ".github/workflows/pipeline.yml",
-                "conclusion": "success",
-            },
+            run=source_run,
             repository="KARSIFT/example",
-            integration_branch="develop",
+            default_branch="main",
+            predecessor_title=source_run["display_title"],
+            predecessor_closed_at=closed_at,
         )
         self.assertTrue(source_ok.ok)
 
+        wrong_branch = dict(source_run)
+        wrong_branch["head_branch"] = "develop"
         source_bad = verifier.verify_source_run(
-            run={
-                "repository": {"full_name": "KARSIFT/example"},
-                "event": "workflow_dispatch",
-                "head_branch": "develop",
-                "path": ".github/workflows/pipeline.yml",
+            run=wrong_branch,
+            repository="KARSIFT/example",
+            default_branch="main",
+            predecessor_title=source_run["display_title"],
+            predecessor_closed_at=closed_at,
+        )
+        self.assertEqual(source_bad.reason, "wrong_default_branch")
+
+        jobs = [
+            {"name": "auto-advance / advance", "conclusion": "success"},
+            {
+                "name": "auto-advance / prepare-live-evidence",
                 "conclusion": "success",
             },
-            repository="KARSIFT/example",
-            integration_branch="develop",
-        )
-        self.assertEqual(source_bad.reason, "wrong_event")
-
-        implement_bad = verifier.verify_no_implement_job(
-            [{"name": "auto-advance / implement / implement", "conclusion": "success"}],
-            "VOC-102-T01",
-        )
+            {"name": "auto-advance / fail-closed", "conclusion": "skipped"},
+            {"name": "auto-advance / implement", "conclusion": "skipped"},
+        ]
+        self.assertTrue(verifier.verify_source_jobs(jobs).ok)
+        jobs[-1]["conclusion"] = "success"
+        implement_bad = verifier.verify_source_jobs(jobs)
         self.assertEqual(implement_bad.reason, "implement_job_executed")
 
         pr_body = ownership.carrier_pr_body(
@@ -284,39 +391,60 @@ class AutoAdvanceOwnershipTests(unittest.TestCase):
         )
         carrier_ok = verifier.verify_carrier_state(
             pr={
+                "number": 1,
                 "title": "VOC-102: VOC-102-T01",
                 "body": pr_body,
+                "state": "OPEN",
+                "isDraft": True,
+                "author": {"login": "app/karsift-ai-infra-bot"},
                 "headRefName": ownership.branch_name("VOC-102", "VOC-102-T01"),
                 "headRefOid": "a" * 40,
+                "baseRefName": "develop",
             },
             prs_on_branch=[{"number": 1}],
-            comments=[{"body": ownership.WAITING_MARKER_PREFIX}],
+            comments=[{
+                "body": ownership.WAITING_MARKER_PREFIX,
+                "author": {"login": "app/karsift-ai-infra-bot"},
+            }],
             change_id="VOC-102",
             task_id="VOC-102-T01",
             package_path=PACKAGE,
-            evidence_exists=True,
+            issue_number=866,
+            integration_branch="develop",
+            evidence_text="source_run_id: `123`\n",
+            source_run_id=123,
             current_ref="a" * 40,
         )
         self.assertTrue(carrier_ok.ok)
 
+        stale_pr = {
+            "number": 1,
+            "title": "VOC-102: VOC-102-T01",
+            "body": pr_body,
+            "state": "OPEN",
+            "isDraft": True,
+            "author": {"login": "app/karsift-ai-infra-bot"},
+            "headRefName": ownership.branch_name("VOC-102", "VOC-102-T01"),
+            "headRefOid": "a" * 40,
+            "baseRefName": "develop",
+        }
         stale = verifier.verify_carrier_state(
-            pr={
-                "title": "VOC-102: VOC-102-T01",
-                "body": pr_body,
-                "headRefName": ownership.branch_name("VOC-102", "VOC-102-T01"),
-                "headRefOid": "a" * 40,
-            },
+            pr=stale_pr,
             prs_on_branch=[{"number": 1}],
-            comments=[{"body": ownership.WAITING_MARKER_PREFIX}],
+            comments=[{
+                "body": ownership.WAITING_MARKER_PREFIX,
+                "author": {"login": "app/karsift-ai-infra-bot"},
+            }],
             change_id="VOC-102",
             task_id="VOC-102-T01",
             package_path=PACKAGE,
-            evidence_exists=True,
+            issue_number=866,
+            integration_branch="develop",
+            evidence_text="source_run_id: `123`\n",
+            source_run_id=123,
             current_ref="b" * 40,
         )
-        self.assertEqual(stale.reason, "stale_pr_head")
-
-        self.assertIn('name: verify-auto-advance-live-evidence / verify', self.verify_workflow)
+        self.assertEqual(stale.reason, "stale_or_invalid_carrier")
 
 
 if __name__ == "__main__":

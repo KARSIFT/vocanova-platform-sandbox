@@ -8,14 +8,16 @@ from pathlib import Path
 import re
 from typing import Literal
 
-from live_evidence_reconcile import ContractError, parse_contract_yaml
+from live_evidence_reconcile import (
+    ContractError,
+    parse_contract_yaml,
+    validate_contract,
+)
 
 
 TASK_ID_RE = re.compile(r"^[A-Za-z][A-Za-z0-9]*-\d+-T\d+[a-z]?$")
 EVIDENCE_SUFFIX_RE = re.compile(r"-T(\d+[a-z]?)$")
-MARKER_LINE_RE = re.compile(
-    r"^- Automation ownership: (operator|live-actions)\s*$"
-)
+MARKER_FIELD_PREFIX = "- Automation ownership:"
 WAITING_MARKER_PREFIX = (
     "VOC-102: Live-evidence carrier prepared; no implementer run was started."
 )
@@ -44,18 +46,23 @@ def derive_evidence_relative_path(task_id: str) -> str:
 
 
 def parse_automation_ownership_markers(tasks_md: str, task_id: str) -> tuple[str, ...]:
-    heading = f"## {task_id}"
-    start = tasks_md.find(heading)
-    if start < 0:
+    heading_re = re.compile(
+        rf"^##[ \t]+{re.escape(task_id)}(?:[ \t]+(?:—|-).*)?[ \t]*$",
+        re.MULTILINE,
+    )
+    headings = list(heading_re.finditer(tasks_md))
+    if not headings:
         return ()
-    section_start = start + len(heading)
+    if len(headings) != 1:
+        raise ValueError("duplicate_task_stanza")
+    section_start = headings[0].end()
     next_heading = tasks_md.find("\n## ", section_start)
     section = tasks_md[section_start:] if next_heading < 0 else tasks_md[section_start:next_heading]
     markers: list[str] = []
     for line in section.splitlines():
-        match = MARKER_LINE_RE.fullmatch(line.rstrip())
-        if match:
-            markers.append(match.group(1))
+        stripped = line.rstrip()
+        if stripped.startswith(MARKER_FIELD_PREFIX):
+            markers.append(stripped.removeprefix(MARKER_FIELD_PREFIX).strip())
     return tuple(markers)
 
 
@@ -65,13 +72,7 @@ def _load_contract_ownership(contract_path: Path, expected_task_id: str) -> str:
     except OSError as exc:
         raise ContractError("unreadable_contract") from exc
     data = parse_contract_yaml(text)
-    task_id = data.get("task_id")
-    if not isinstance(task_id, str) or task_id != expected_task_id:
-        raise ContractError("task_id_mismatch")
-    ownership = data.get("ownership")
-    if ownership not in {"operator", "live-actions"}:
-        raise ContractError("invalid_ownership")
-    return ownership
+    return validate_contract(data, expected_task_id).ownership
 
 
 def classify_next_task(
@@ -82,10 +83,15 @@ def classify_next_task(
     if not TASK_ID_RE.fullmatch(next_task_id):
         return Classification("fail-closed", "invalid_task_id")
 
-    markers = parse_automation_ownership_markers(tasks_md or "", next_task_id)
+    try:
+        markers = parse_automation_ownership_markers(tasks_md or "", next_task_id)
+    except ValueError as exc:
+        return Classification("fail-closed", str(exc))
     if len(markers) > 1:
         return Classification("fail-closed", "duplicate_automation_marker")
     marker = markers[0] if markers else None
+    if marker is not None and marker not in {"operator", "live-actions"}:
+        return Classification("fail-closed", "invalid_automation_marker")
 
     contract_path = Path(package_path) / ".karsift/live-evidence" / f"{next_task_id}.yaml"
     contract_exists = contract_path.is_file()
@@ -141,16 +147,19 @@ def carrier_pr_body(
 ) -> str:
     return "\n".join(
         [
-            f"Operator-owned live-evidence carrier for `{task_id}` from `{change_id}`.",
+            f"Implements task `{task_id}` from `{change_id}` (`{package_path}`).",
             "",
-            f"Pending evidence path: `{package_path}/{evidence_relative_path}`",
+            f"Closes #{issue_number}.",
             "",
-            "No implementer run was started. Repository-controlled reconcile observes",
-            "the declared live-evidence contract after operator proof arrives.",
+            "Operator-owned live-evidence carrier. No general implementer run was",
+            "executed for this task. Repository-controlled reconciliation observes the",
+            "declared contract after operator proof arrives.",
+            "",
+            "Risk classification: R4",
             "",
             f"Package path: `{package_path}`",
             "",
-            f"Tracking issue: #{issue_number}",
+            f"Pending evidence path: `{package_path}/{evidence_relative_path}`",
             "",
         ]
     )
@@ -169,12 +178,17 @@ def is_valid_carrier_pr(
     change_id: str,
     task_id: str,
     package_path: str,
+    issue_number: int,
+    evidence_relative_path: str,
 ) -> bool:
     expected_title = f"{change_id}: {task_id}"
     if pr_title.strip() != expected_title:
         return False
-    if f"Package path: `{package_path}`" not in pr_body:
-        return False
-    if f"Pending evidence path: `{package_path}/" not in pr_body:
-        return False
-    return True
+    expected_body = carrier_pr_body(
+        change_id=change_id,
+        task_id=task_id,
+        package_path=package_path,
+        issue_number=issue_number,
+        evidence_relative_path=evidence_relative_path,
+    )
+    return pr_body.strip() == expected_body.strip()

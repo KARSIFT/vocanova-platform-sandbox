@@ -35,19 +35,22 @@ def main() -> int:
     parser.add_argument("--package-path", required=True)
     parser.add_argument("--next-task-id", required=True)
     parser.add_argument("--change-id", required=True)
-    parser.add_argument("--issue-number", required=True)
+    parser.add_argument("--issue-number", type=int, required=True)
     args = parser.parse_args()
 
     tasks_md_path = Path(args.package_path) / "tasks.md"
-    tasks_md = tasks_md_path.read_text(encoding="utf-8") if tasks_md_path.is_file() else ""
-    classification = classify_next_task(args.package_path, args.next_task_id, tasks_md)
+    if not tasks_md_path.is_file():
+        classification = Classification("fail-closed", "missing_tasks_file")
+    else:
+        tasks_md = tasks_md_path.read_text(encoding="utf-8")
+        classification = classify_next_task(args.package_path, args.next_task_id, tasks_md)
     write_output(
         classification,
         {
             "change_id": args.change_id,
             "package_path": args.package_path,
             "task_id": args.next_task_id,
-            "issue_number": args.issue_number,
+            "issue_number": str(args.issue_number),
         },
     )
     if classification.decision == "fail-closed":

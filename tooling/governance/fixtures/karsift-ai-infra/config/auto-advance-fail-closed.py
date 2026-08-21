@@ -6,10 +6,15 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 
 from auto_advance_ownership import FAIL_CLOSED_MARKER_PREFIX
+
+
+SAFE_REASON_RE = re.compile(r"^[a-z][a-z0-9_]{0,79}$")
+TRUSTED_BOT_LOGINS = {"app/karsift-ai-infra-bot", "karsift-ai-infra-bot"}
 
 
 def issue_has_marker(repo: str, issue_number: int, token: str, prefix: str) -> bool:
@@ -33,7 +38,15 @@ def issue_has_marker(repo: str, issue_number: int, token: str, prefix: str) -> b
         env=env,
     )
     comments = json.loads(completed.stdout)["comments"]
-    return any(prefix in comment.get("body", "") for comment in comments)
+    matches = [comment for comment in comments if prefix in comment.get("body", "")]
+    if any(
+        (comment.get("author") or {}).get("login") not in TRUSTED_BOT_LOGINS
+        for comment in matches
+    ):
+        raise ValueError("untrusted_fail_closed_marker")
+    if len(matches) > 1:
+        raise ValueError("duplicate_fail_closed_marker")
+    return bool(matches)
 
 
 def main() -> int:
@@ -48,11 +61,18 @@ def main() -> int:
     if not args.repository or not args.token:
         print("repository and token are required", file=sys.stderr)
         return 2
+    if not SAFE_REASON_RE.fullmatch(args.reason):
+        print("invalid fail-closed reason", file=sys.stderr)
+        return 2
 
     prefix = f"{FAIL_CLOSED_MARKER_PREFIX} `{args.task_id}`"
-    if issue_has_marker(args.repository, args.issue_number, args.token, prefix):
-        print("fail-closed marker already present", file=sys.stderr)
-        return 0
+    try:
+        if issue_has_marker(args.repository, args.issue_number, args.token, prefix):
+            print("fail-closed marker already present", file=sys.stderr)
+            return 0
+    except (subprocess.SubprocessError, ValueError, json.JSONDecodeError):
+        print("fail-closed marker validation failed", file=sys.stderr)
+        return 1
 
     body = (
         f"{prefix} ({args.reason}). "

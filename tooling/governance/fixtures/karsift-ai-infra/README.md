@@ -19,7 +19,10 @@ Adoption starts the first task automatically. The adopted roster records an expl
 `depends_on` edge from every later task to its predecessor, and `auto-advance.yml` releases the
 next task only after the preceding task's implementation PR merges and its tracking issue closes.
 For ordinary implementation tasks it dispatches `implement.yml` attempt 1. When the next roster
-task is operator-owned or live-actions-only (declared in
-`<package>/.karsift/live-evidence/<task_id>.yaml`), auto-advance instead prepares a deterministic
-draft evidence-carrier PR and posts a sanitized waiting marker without starting the implementer;
-the existing live-evidence reconciler remains the operator path. Implementer jobs are serialized per change package.
+task has a valid `operator` or `live-actions` contract at
+`<package>/.karsift/live-evidence/<task_id>.yaml`, auto-advance instead prepares a deterministic
+draft evidence-carrier PR and posts one sanitized waiting marker without executing the general
+implementer. A repeat event repairs a partial carrier publication but preserves any existing
+operator evidence. Missing-required, malformed, invalid, duplicate, or conflicting ownership
+metadata fails closed. The classifier and proof verifier stay read-only; only a clean publisher
+receives carrier writes, and the fail-closed notifier receives issue-write only.

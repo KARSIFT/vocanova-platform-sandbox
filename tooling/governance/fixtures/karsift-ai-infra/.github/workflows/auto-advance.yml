@@ -217,9 +217,7 @@ jobs:
     if: needs.advance.outputs.decision == 'fail-closed'
     runs-on: ubuntu-latest
     permissions:
-      contents: read
       issues: read
-      pull-requests: read
     steps:
       - name: Checkout shared auto-advance policy
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -237,9 +235,7 @@ jobs:
           private-key: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
-          permission-contents: write
           permission-issues: write
-          permission-pull-requests: write
 
       - name: Post sanitized fail-closed marker
         env:

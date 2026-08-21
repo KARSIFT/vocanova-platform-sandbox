@@ -183,7 +183,10 @@ not open operational-failure issues or application alerts.
 After VOC-102, when a predecessor task closes, `auto-advance.yml` skips general
 implementer dispatch for operator-owned / live-actions-only next tasks and instead
 creates a deterministic draft evidence-carrier PR plus a sanitized waiting marker.
-Ordinary next tasks still auto-dispatch `implement.yml` as before.
+Ordinary next tasks still auto-dispatch `implement.yml` as before. Contract/schema
+errors and missing, invalid, duplicate, or conflicting task-stanza markers fail
+closed. A repeated event repairs a missing carrier file, PR, or marker without
+overwriting evidence already recorded by the operator.
 
 ## Operator checklist
 
