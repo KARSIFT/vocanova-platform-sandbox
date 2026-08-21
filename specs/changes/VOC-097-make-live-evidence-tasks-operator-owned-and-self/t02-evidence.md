@@ -26,6 +26,11 @@ caller_reviewed_base_sha: ff736a2782748c9bcd59b6d0352402d9c9deacdb
 caller_reviewed_implementation_sha: a78cc67e4703e9d49e55cad76ec545905986c65d
 live_fixture_claimed: false
 post_merge_source_run_claimed: false
+permission_compatibility_recovery_issue: 842
+permission_compatibility_recovery_claimed: true
+permission_compatibility_validated_sha: 08bc3dbca46cfac48b996923950fcbd5d5751c15
+permission_compatibility_pipeline_run: 32459076430
+permission_compatibility_independent_review_pass: true
 ---
 
 # VOC-097-T02 — Allowlisted observe/dispatch reconciler
@@ -174,3 +179,27 @@ reviewed in the shared repository rather than through an untracked local folder.
 No secret, log content, OAuth value, personal identifier, token, or credential
 is recorded. T03 owns the complete deterministic cross-repo fixture matrix; T05
 owns controlled live proof (`live_fixture_claimed: false`).
+
+## Post-completion permission compatibility recovery
+
+Shared infrastructure later separated contract-allowlisted Actions dispatch
+from GitHub App evidence writes. The reusable workflow therefore requires
+`actions: write`, but the VocaNova caller still exposed only the workflow-wide
+`actions: read` floor. GitHub rejected the caller at workflow startup before any
+job could run. Focused recovery issue #842 records the sanitized failure and
+authorizes a compatibility repair without changing the application or widening
+implementer authority.
+
+The repair keeps the workflow-wide floor at Actions read and grants Actions
+write only to the operator-owned `live-evidence-reconcile` caller job. Its other
+permissions remain read-only, its two App identity secrets remain explicit, and
+the implementer receives no Actions-write permission.
+
+At exact implementation SHA `08bc3dbca46cfac48b996923950fcbd5d5751c15`,
+pipeline run `32459076430` compiled and passed CI, exact-SHA independent review,
+isolated App-signed verdict publication, remediation decision, and merge-gate
+reporting. The companion governance checks and controlled-signup OAuth callback
+E2E also passed. The independent verdict was PASS with no blocking findings;
+implementation remediation and automatic merge were skipped while the PR
+remained draft. This evidence-only update creates a new SHA and must itself pass
+fresh exact-SHA checks before merge; it does not self-attest.
