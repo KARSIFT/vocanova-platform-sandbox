@@ -71,7 +71,8 @@ check-completion. Release still waits until the operator task actually closes.
 
 - Requirement source: `VOC-102-D06`
 - Tasks: `VOC-102-T00`
-- Tests: `VOC-102-TEST-00` through `VOC-102-TEST-07`
+- Tests: `VOC-102-TEST-00` through `VOC-102-TEST-07`, `VOC-102-TEST-11`
+  through `VOC-102-TEST-13`
 - Evidence: `VOC-102-EV-00`
 - Result: pending
 
@@ -83,14 +84,16 @@ no-next regression coverage exist and pass in CI or infra self-ci.
 
 - Requirement source: `VOC-102-D07`
 - Tasks: `VOC-102-T01`
-- Tests: `VOC-102-TEST-08`, `VOC-102-TEST-09`
+- Tests: `VOC-102-TEST-08`, `VOC-102-TEST-09`, `VOC-102-TEST-13`
 - Evidence: `VOC-102-EV-01`
 - Result: pending
 
-A controlled, sanitized workflow event proves zero implementer dispatch for an
-operator-owned next task, and that an ordinary implementation next task still
-dispatches as intended. Evidence is metadata-only; no secrets; no manufactured
-unrelated-package live evidence.
+The real T00-close event proves no implementer execution for the operator-owned
+T01 and creates its carrier. A later read-only verifier, manually dispatched on
+the exact carrier head, validates that source run/job metadata and carrier state;
+its successful run supplies the reconcilable `exact_pr_head` evidence. An ordinary
+implementation next task still dispatches as intended. Evidence is metadata-only;
+no logs, artifacts, secrets, or manufactured unrelated-package live evidence.
 
 ## VOC-102-AC-07 — Docs match skip-vs-dispatch behavior when touched
 
@@ -110,7 +113,7 @@ dispatch.
 
 - Requirement source: `VOC-102-D02`, `VOC-102-D04`
 - Tasks: `VOC-102-T00`
-- Tests: `VOC-102-TEST-11`, `VOC-102-TEST-12`
+- Tests: `VOC-102-TEST-11` through `VOC-102-TEST-13`
 - Evidence: `VOC-102-EV-00`
 - Result: pending
 
@@ -119,3 +122,5 @@ cannot mutate repository state. Only a separate clean, non-LLM publisher may
 mint the existing App for explicit contents/issues/pull-requests writes needed
 to create/reuse the carrier and marker. It has no Actions-write permission,
 model credentials, or `secrets: inherit` path into `implement.yml`.
+The proof verifier is independently read-only and receives no App write token,
+model/deploy/application secret, or Actions-write permission.

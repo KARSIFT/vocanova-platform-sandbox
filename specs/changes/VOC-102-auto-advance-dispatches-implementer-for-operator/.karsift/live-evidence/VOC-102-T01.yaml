@@ -6,18 +6,19 @@ evidence_path: specs/changes/VOC-102-auto-advance-dispatches-implementer-for-ope
 workflow_file: pipeline.yml
 workflow_name: pipeline
 job_names:
-  - auto-advance
+  - verify-auto-advance-live-evidence / verify
 events:
-  - issues
-branch: develop
+  - workflow_dispatch
+branch: agent/voc-102-voc-102-t01
 sha_lineage:
-  mode: integration_contains_pr_head
+  mode: exact_pr_head
 conclusion: success
 max_age: 72h
-# Observe-only: after VOC-102-T00 is live, closing T00 (or an equivalent controlled
-# predecessor close) must produce an auto-advance decision that does NOT start
-# implement.yml for this operator-owned T01. Qualifying evidence is a successful
-# pipeline/auto-advance run whose lineage contains the T00 tip, with scrubbed
-# metadata showing should_dispatch=false (or equivalent) and zero implementer
-# jobs for VOC-102-T01. Ordinary-dispatch proof may use deterministic fixtures
-# recorded in t01-evidence.md. Do not invent unrelated workflow edits.
+# Observe-only. Closing T00 remains the real operational proof: it must create the
+# T01 carrier without executing implement.yml. After the carrier exists, the
+# operator records that source run's allowlisted metadata and manually dispatches
+# pipeline.yml's read-only verify-auto-advance action on this deterministic task
+# branch. The verifier must validate the source run/job metadata, open task,
+# single carrier, and deduplicated marker without reading logs or artifacts. Its
+# own successful workflow_dispatch run must equal the current carrier PR head,
+# breaking the pre-carrier lineage cycle without weakening reconciliation.

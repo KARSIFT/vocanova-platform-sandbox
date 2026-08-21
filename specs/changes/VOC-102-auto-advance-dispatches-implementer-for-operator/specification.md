@@ -47,13 +47,14 @@ In scope:
    contradictory (for example tasks.md declares operator-owned live evidence but
    no valid contract exists, or contract ownership is unrecognized), or unreadable.
 7. Deterministic positive, negative, malformed-metadata, and regression tests.
-8. Controlled sanitized workflow proof that an operator-owned next task yields
-   zero implementer dispatch, while an ordinary implementation next task still
-   dispatches.
+8. Two-stage controlled proof: the real operator-owned transition executes no
+   implementer and creates the carrier; a later read-only verifier on the exact
+   carrier head validates that source metadata. Ordinary implementation-owned
+   dispatch remains covered by deterministic/live-safe evidence.
 9. Update infra README and calling-repo operator docs only where current text would
    otherwise claim auto-advance always dispatches implement for every next task.
-10. Calling-repo `pipeline.yml` pin bump only if required to consume the fixed
-    reusable workflow.
+10. Calling-repo `pipeline.yml` consumes the fixed reusable workflow and exposes
+    the narrow, manually dispatched, read-only exact-head verifier action.
 
 Non-goals / explicitly excluded:
 
@@ -130,18 +131,26 @@ release check-completion behavior after the operator task actually closes.
 `VOC-102-D06`: Deterministic tests cover at least: (positive) ordinary next task
 dispatches; (negative) operator/live-actions next task does not dispatch; (malformed)
 bad/missing/contradictory metadata does not dispatch; (regression) last-task /
-no-next-task still no-ops toward release rather than inventing implement dispatch.
+no-next-task still no-ops toward release rather than inventing implement dispatch;
+and the post-carrier verifier rejects wrong repository/workflow/event/branch/task,
+an executed implement job, duplicate carrier/markers, logs/artifacts, or a stale PR.
 
 `VOC-102-D07`: Controlled proof uses a sanitized workflow event (for example this
-package's own T00→T01 advance after T00 merges, and/or a fixture) showing zero
-implementer jobs for an operator-owned next task, plus retained dispatch for an
-ordinary implementation next task. Evidence is metadata-only. Do not manufacture
-unrelated package live evidence or copy secrets.
+package's own T00→T01 advance after T00 merges) showing no executed implementer
+job for an operator-owned next task, plus retained dispatch for an ordinary
+implementation next task. Because that real transition creates the T01 carrier
+after its run starts, it cannot itself satisfy a PR-head lineage rule. T00 MUST
+therefore also provide a read-only `pipeline.yml` workflow-dispatch proof action.
+After the carrier exists and the source run's allowlisted metadata is recorded,
+the operator dispatches that verifier on the deterministic T01 branch. It validates
+the source run/job metadata and carrier state without logs or artifacts; its own
+successful run MUST use `exact_pr_head`. Evidence is metadata-only. Do not
+manufacture unrelated package live evidence or copy secrets.
 
 `VOC-102-D08`: Keep root scope focused. Duplicate exact-SHA reviews, action-runtime
 upgrades, and cache-path warnings are out of scope follow-ups.
 
-## Adoption decisions recorded after independent plan review
+## Proposed decisions resolving independent plan review
 
 1. **Waiting carrier selected:** use the dedicated clean, deterministic
    evidence-carrier job from `VOC-102-D01/D02`. An issue comment alone is not
@@ -159,6 +168,10 @@ upgrades, and cache-path warnings are out of scope follow-ups.
 5. Confirmed T01 may dogfood this package (T00 close → T01 operator-owned → observe
    zero implementer dispatch) plus a deterministic/fixture proof that ordinary
    next tasks still dispatch, without re-running VOC-098 live proof.
+6. **Two-stage live proof selected:** the T00-close event proves the deployed
+   behavior and creates the carrier; a later read-only verifier run on the exact
+   carrier head validates that source metadata and provides reconcilable SHA
+   lineage. A pre-carrier run is never claimed to contain a later PR head.
 
 ## Data, migrations, analytics, and accessibility
 

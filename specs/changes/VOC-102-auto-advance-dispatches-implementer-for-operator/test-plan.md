@@ -80,11 +80,15 @@
 - Covers: `VOC-102-AC-01`, `VOC-102-AC-06`
 - Preconditions: T00 live; operator-owned next task (preferred: this package T01);
   live-evidence contract present
-- Procedure: Observe sanitized pipeline/auto-advance run after predecessor close;
-  confirm no `implement.yml` job for the operator-owned next task.
-- Expected result: Zero implementer dispatch; next issue still open with one
+- Procedure: Observe sanitized pipeline/auto-advance metadata after predecessor
+  close; confirm the reusable implement job did not execute for the operator-owned
+  next task. After the carrier exists and source metadata is recorded, dispatch
+  the read-only proof action on the exact carrier ref and reconcile that verifier
+  run under the T01 contract.
+- Expected result: No implementer execution; next issue still open with one
   waiting marker, one deterministic draft carrier PR, and the contract-declared
-  pending evidence path ready for the existing reconciler.
+  pending evidence path. The later verifier succeeds at `exact_pr_head`; the
+  earlier transition is not misrepresented as containing a later PR head.
 - Evidence: `VOC-102-EV-01` (metadata only)
 
 ## VOC-102-TEST-09 — Controlled or fixture proof: ordinary next still dispatches
@@ -132,7 +136,20 @@
 - Expected result: Least-privilege boundary is explicit and deterministic.
 - Evidence: `VOC-102-EV-00`
 
+## VOC-102-TEST-13 — Post-carrier verifier is exact-head and fail-closed
+
+- Covers: `VOC-102-AC-05`, `VOC-102-AC-06`, `VOC-102-AC-08`
+- Preconditions: Source-run and carrier fixtures, including wrong event/branch,
+  executed implement job, duplicate carrier/marker, stale PR, and exact-head cases
+- Procedure: Exercise the verifier metadata adapter without logs or artifacts;
+  assert the caller job is read-only and the T01 contract names the deterministic
+  task branch, `workflow_dispatch`, and `exact_pr_head`.
+- Expected result: Only the matching source run plus single current carrier/marker
+  succeeds. Every mismatch fails closed with a sanitized reason; the verifier has
+  no mutation, model, deploy, or application-secret capability.
+- Evidence: `VOC-102-EV-00`
+
 Include positive, negative, malformed-metadata, carrier idempotency,
-authorization, and regression coverage as above. Tests must not use secrets or
-production data beyond public Actions metadata and issue fields already governed
-as sanitized.
+authorization, verifier lineage, and regression coverage as above. Tests must not
+use secrets or production data beyond public Actions metadata and issue fields
+already governed as sanitized.

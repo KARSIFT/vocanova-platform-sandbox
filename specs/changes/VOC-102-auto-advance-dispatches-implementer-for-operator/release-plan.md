@@ -17,7 +17,8 @@ comment is a merge/adopt/release gate under active A-004.
 - **Monitoring:** No new or changed Kuma monitors/synthetics
   (`monitoring_impact.state: none`). Outcome signal is governance-operational:
   operator-owned next tasks yield zero implementer dispatch; ordinary next tasks
-  still dispatch; release still waits for final task close.
+  still dispatch; the exact-head proof verifier succeeds using metadata only; and
+  release still waits for final task close.
 - **Outcome owner:** unassigned (set at adoption).
 - **Issue #863:** closes with package roster completion after T01 verification.
 

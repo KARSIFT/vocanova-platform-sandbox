@@ -10,8 +10,8 @@ risk: R3
 planned_implementation_risk_floor:
   "Measured during drafting against the expected\
   \ task-scoped file list (KARSIFT/karsift-ai-infra/.github/workflows/auto-advance.yml,\
-  \ related helper/tests and README; optional calling-repo .github/workflows/pipeline.yml\
-  \ pin bump; docs/operations/live-evidence.md and/or AGENTS.md only if current text\
+  \ related helper/tests and README; calling-repo .github/workflows/pipeline.yml\
+  \ pin/proof action; docs/operations/live-evidence.md and/or AGENTS.md only if current text\
   \ would remain false; scripts/foundation/voc102-*.test.mjs and/or infra self-ci\
   \ fixtures; this package directory). Detected path floor is R3 for .github/workflows/\
   \ and governance-automation paths. This package proposes R3 for the change as a\
@@ -82,6 +82,14 @@ dependencies:
       path, then posts one sanitized waiting marker. That publisher alone mints the
       existing App with contents/issues/pull-requests write; it receives no Actions-write
       or model credentials. The existing reconciler algorithm and allowlists remain unchanged."
+  - id: VOC-102-DEP-04
+    status:
+      "resolved after independent plan review. The real T00-close run precedes
+      carrier creation and is never claimed to contain the later PR head. After
+      recording its allowlisted metadata, a separate read-only pipeline verifier
+      is manually dispatched on the deterministic T01 carrier branch. The verifier
+      validates the source run and carrier state; its own successful run must equal
+      the current PR head under the existing exact_pr_head lineage mode."
   - id: VOC-097
     status:
       Adopted predecessor. Ownership contract path, waiting semantics, and reconcile
@@ -98,8 +106,8 @@ affected_areas:
     tests, and README for ownership gating and least-privilege waiting publication
   - calling-repo docs/operations/live-evidence.md and/or AGENTS.md (only if current
     text would otherwise remain false about auto-advance always dispatching implement)
-  - calling-repo .github/workflows/pipeline.yml (pin bump only if required to consume
-    fixed auto-advance)
+  - calling-repo .github/workflows/pipeline.yml (consume fixed auto-advance and add
+    the read-only exact-head proof action)
   - scripts/foundation/voc102-*.test.mjs and/or infra self-ci fixtures
   - specs/changes/VOC-102-auto-advance-dispatches-implementer-for-operator/
 implementation:
@@ -128,7 +136,7 @@ ehr: not-triggered
 standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
 blocking_reasons:
   Not adopted. Requires fresh exact-SHA plan-review independent verification
-  and adoption under active A-004. The earlier DEP-03 waiting-PR and mutation-permission
-  findings are resolved by the recorded deterministic clean carrier design; implementation
-  must preserve that boundary.
+  and adoption under active A-004. DEP-03 waiting-PR/mutation findings and DEP-04
+  pre-carrier lineage finding are resolved by the clean carrier plus two-stage
+  exact-head proof design; implementation must preserve those boundaries.
 approved_candidate_sha: null

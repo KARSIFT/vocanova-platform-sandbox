@@ -5,7 +5,7 @@
 - Do not begin until the package is adopted and implementation-authorized.
 - Protected areas: `karsift-ai-infra` `auto-advance.yml` dispatch gate; implementer
   least-privilege; release check-completion boundary; VOC-097 live-evidence
-  contracts and reconcile path; calling-repo `pipeline.yml` only for pin bump.
+  contracts and reconcile path; calling-repo `pipeline.yml` verifier wiring.
 - Prerequisites: VOC-097 ownership contract path and reconcile mechanism exist;
   issue #863 records the spurious-dispatch incident; this draft is adopted under
   A-004.
@@ -19,16 +19,16 @@ tracked tree. Calling-repo doc/pin/test changes land here under the same package
 
 ### T00 — Ownership gate, fail-closed, docs, deterministic tests
 
-| File / area                                           | Action                      | Notes                                                                         |
-| ----------------------------------------------------- | --------------------------- | ----------------------------------------------------------------------------- |
-| `karsift-ai-infra/.github/workflows/auto-advance.yml` | modify                      | Read next-task ownership before `should_dispatch=true`                        |
-| karsift-ai-infra classifier helper                    | create/modify               | Pure decision output; no mutation credentials                                 |
-| karsift-ai-infra clean carrier publisher helper/job   | create/modify               | Deterministic pending evidence PR; App-scoped writes; no LLM or Actions-write |
-| karsift-ai-infra README                               | modify                      | Document skip vs dispatch                                                     |
-| karsift-ai-infra / calling-repo tests                 | create/modify               | `voc102-*.test.mjs` and/or infra self-ci fixtures                             |
-| `docs/operations/live-evidence.md` and/or AGENTS.md   | modify if needed            | Only if text would remain false                                               |
-| calling-repo `.github/workflows/pipeline.yml`         | modify only if pin required | Consume fixed auto-advance                                                    |
-| `specs/changes/VOC-102-.../t00-evidence.md`           | create                      | Commands + results                                                            |
+| File / area                                           | Action           | Notes                                                                         |
+| ----------------------------------------------------- | ---------------- | ----------------------------------------------------------------------------- |
+| `karsift-ai-infra/.github/workflows/auto-advance.yml` | modify           | Read next-task ownership before `should_dispatch=true`                        |
+| karsift-ai-infra classifier helper                    | create/modify    | Pure decision output; no mutation credentials                                 |
+| karsift-ai-infra clean carrier publisher helper/job   | create/modify    | Deterministic pending evidence PR; App-scoped writes; no LLM or Actions-write |
+| karsift-ai-infra README                               | modify           | Document skip vs dispatch                                                     |
+| karsift-ai-infra / calling-repo tests                 | create/modify    | `voc102-*.test.mjs` and/or infra self-ci fixtures                             |
+| `docs/operations/live-evidence.md` and/or AGENTS.md   | modify if needed | Only if text would remain false                                               |
+| calling-repo `.github/workflows/pipeline.yml`         | modify           | Consume fixed auto-advance; add read-only exact-head proof action             |
+| `specs/changes/VOC-102-.../t00-evidence.md`           | create           | Commands + results                                                            |
 
 Ordered steps:
 
@@ -53,7 +53,14 @@ Ordered steps:
    permission-boundary / regression tests.
 9. Align docs that would otherwise claim universal implement dispatch.
 10. Pin-bump calling `pipeline.yml` only if required; record consumption in evidence.
-11. Run applicable tests and governance validation; write `t00-evidence.md`.
+11. Add a manually dispatched, read-only proof job to `pipeline.yml`. It accepts
+    only a source run ID and waiting PR number, runs on the T01 carrier ref, reads
+    Actions/issue/PR metadata but never logs or artifacts, and verifies: the
+    source was the expected `issues: closed` pipeline run on `develop`; the
+    ownership decision did not execute the reusable implement job; T01 remains
+    open; and exactly one matching carrier and waiting marker exist. It has no
+    write, model, deploy, or application-secret path.
+12. Run applicable tests and governance validation; write `t00-evidence.md`.
 
 ### T01 — Controlled sanitized workflow proof
 
@@ -66,17 +73,21 @@ Ordered steps:
 
 1. Ensure T00 is live on the branch auto-advance executes from (expected after
    infra merge + calling-repo pin if any).
-2. Use this package's T00→T01 advance (and/or a controlled fixture) so next task is
-   operator-owned; record scrubbed auto-advance / pipeline metadata showing
-   `should_dispatch=false` and **zero** `implement.yml` jobs for that next task.
+2. Use this package's T00→T01 advance so the next task is operator-owned; record
+   scrubbed auto-advance / pipeline metadata showing `prepare-live-evidence` and
+   no executed `implement.yml` job for that next task. This operational run starts
+   before it creates the carrier and is not falsely claimed as PR-head lineage.
 3. Prove ordinary implementation next-task dispatch still occurs (fixture and/or
    sanitized observation of a non-operator next task). Prefer deterministic
    fixture if a second live package advance is unnecessary.
 4. Confirm T01 issue remained open, the deterministic draft carrier PR exists,
    its pending evidence path matches the contract, and one waiting marker is
    present; do not manufacture unrelated package evidence.
-5. Complete acceptance via dedicated reconcile/evidence path — not by dispatching
-   the general implementer.
+5. Commit the allowlisted source metadata to the carrier, then manually dispatch
+   the read-only `verify-auto-advance` pipeline action on the exact carrier branch.
+   It must validate the source event and carrier state without logs/artifacts.
+6. Reconcile the successful exact-PR-head verifier run through the dedicated
+   live-evidence path — never through the general implementer.
 
 ## Validation and independent verification
 

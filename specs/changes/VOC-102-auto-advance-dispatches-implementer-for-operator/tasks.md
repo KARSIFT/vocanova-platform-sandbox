@@ -17,7 +17,7 @@ same package.
 - Acceptance criteria: `VOC-102-AC-00` through `VOC-102-AC-05`, `VOC-102-AC-07`,
   `VOC-102-AC-08`
 - Tests: `VOC-102-TEST-00` through `VOC-102-TEST-07`, `VOC-102-TEST-10` through
-  `VOC-102-TEST-12`
+  `VOC-102-TEST-13`
 - Evidence: `VOC-102-EV-00` (`t00-evidence.md` in this package directory)
 - Status: pending
 
@@ -51,9 +51,14 @@ same package.
    otherwise claim auto-advance always dispatches implement for every next task.
 10. Bump calling-repo `pipeline.yml` pin only if required to consume the fixed
     reusable workflow; record the consumption mechanism in evidence.
-11. Run applicable tests and governance validation for changed calling-repo paths;
+11. Add the read-only `verify-auto-advance` workflow-dispatch action described by
+    `VOC-102-D07`: on the exact carrier branch it validates a declared source run
+    and waiting PR using only Actions/issue/PR metadata. It must never read logs or
+    artifacts and must receive no writes, model keys, deploy secrets, or application
+    secrets.
+12. Run applicable tests and governance validation for changed calling-repo paths;
     record commands and results in `t00-evidence.md` (no secrets).
-12. Do not address duplicate exact-SHA reviews, action-runtime upgrades, or
+13. Do not address duplicate exact-SHA reviews, action-runtime upgrades, or
     cache-path warnings (out of scope per `VOC-102-D08`).
 
 ### Explicitly out of scope for this task
@@ -79,9 +84,9 @@ same package.
 
 1. After T00 is live on the branch auto-advance executes from, perform a
    **controlled** sanitized workflow proof that when the next roster task is
-   operator-owned / live-evidence-only, auto-advance completes with **zero**
-   `implement.yml` jobs for that task. Preferred dogfood: this package's own
-   T00→T01 advance after T00 merges (T01 must not receive a general implementer).
+   operator-owned / live-evidence-only, auto-advance completes with no executed
+   `implement.yml` job for that task. Dogfood this package's own T00→T01 advance
+   after T00 merges (T01 must not receive a general implementer).
 2. Prove an ordinary implementation-owned next task still dispatches as intended
    (deterministic fixture preferred; sanitized live observation allowed if needed).
 3. Confirm the operator-owned next task issue remained OPEN, exactly one draft
@@ -91,7 +96,10 @@ same package.
    IDs/URLs, conclusions, `should_dispatch` outcome, issue number, absence of
    implementer job). Never copy logs, secrets, sessions, OAuth data, cookies,
    tokens, or user identifiers.
-5. Do not manufacture live evidence for unrelated packages (do not re-run VOC-098
+5. Commit those allowlisted source metadata to the carrier, manually dispatch the
+   read-only proof action on `agent/voc-102-voc-102-t01`, and require its run HEAD
+   to equal the current carrier PR head before reconciliation.
+6. Do not manufacture live evidence for unrelated packages (do not re-run VOC-098
    T01 proof as part of this task). Do not expand scope into unrelated pipeline
    edits; waiting/reconcile are handled by governed automation after VOC-097.
 
