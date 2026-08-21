@@ -1,0 +1,21 @@
+schema_version: 1
+task_id: VOC-098-T01
+ownership: operator
+
+workflow_file: operational-failure-monitoring.yml
+workflow_name: operational-failure-monitoring
+job_names:
+  - open governed issue for operational failure
+events:
+  - workflow_run
+branch: main
+sha_lineage:
+  mode: integration_contains_pr_head
+conclusion: success
+max_age: 72h
+# Observe-only: the operator triggers a controlled watched non-success (preferred:
+# cancel a dispatched synthetic.staging.authenticated-core-journey run per
+# docs/operations/staging-controlled-signup.md). Automation must not invent
+# unrelated workflow edits. Qualifying evidence is a successful observer run whose
+# HEAD lineage contains the T01 PR tip after T00 is on main. Issue create/dedupe
+# confirmation remains in t01-evidence.md (metadata only).
