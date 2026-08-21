@@ -32,6 +32,7 @@ const verifyWorkflowPath = path.join(
   fixtureInfraRoot,
   ".github/workflows/verify-ready-for-review-reuse.yml",
 );
+const ciWorkflowPath = path.join(fixtureInfraRoot, ".github/workflows/ci.yml");
 const pinPath = path.join(fixtureInfraRoot, "PINNED_SHA.txt");
 const fixtureTestsRoot = path.join(fixtureInfraRoot, "tests");
 const contractPath = path.join(
@@ -81,8 +82,13 @@ test("VOC-104-TEST-11: docs and caller wiring distinguish reuse from full path",
   assert.match(infraReadme, /reuse-evidence/);
   assert.match(infraReadme, /fail-closed-to-full-path/);
   assert.match(pipeline, /ready-for-review-reuse/);
+  assert.match(pipeline, /reuse_evidence:/);
   assert.match(
     pipeline,
+    /needs\.ready-for-review-reuse\.outputs\.outcome == 'reuse-evidence'/,
+  );
+  assert.doesNotMatch(
+    pipeline.split("  ci:", 2)[1].split("  extract-package-path:", 1)[0],
     /needs\.ready-for-review-reuse\.outputs\.outcome != 'reuse-evidence'/,
   );
   assert.match(pipeline, /reuse_outcome:/);
@@ -92,8 +98,15 @@ test("VOC-104-TEST-11: docs and caller wiring distinguish reuse from full path",
 test("VOC-104 fixture is pinned to the independently reviewed shared merge", () => {
   assert.equal(
     readFileSync(pinPath, "utf8").trim(),
-    "d625b40f05b9b860dbf938de41f8ec837740a9fc",
+    "d5c7786aa4957bec0b769815539fe0d63d0cbd4c",
   );
+});
+
+test("VOC-104 required CI context uses a marker instead of duplicate validation", () => {
+  const workflow = readFileSync(ciWorkflowPath, "utf8");
+  assert.match(workflow, /reuse_evidence:/);
+  assert.match(workflow, /Record exact-SHA CI evidence reuse/);
+  assert.match(workflow, /if: \$\{\{ !inputs\.reuse_evidence \}\}/);
 });
 
 test("VOC-104-TEST-01: ready_for_review remains subscribed", () => {

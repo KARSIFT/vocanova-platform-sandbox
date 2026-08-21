@@ -70,12 +70,14 @@
 - `VOC-104-R04`: **Scope creep** into deprecated inputs / Node warnings /
   dependency alerts / remediation preflight.
   Mitigation: D09; explicit non-goals in README and tasks.
-- `VOC-104-R05`: **Same-head check supersession** if the current ready run's
-  intentionally skipped CI/publisher check names obscure the completed prior
-  run's successes in GitHub's latest-name rollup.
+- `VOC-104-R05`: **Same-head check supersession or ruleset starvation** if the
+  current ready run's check names obscure the completed prior run's successes in
+  GitHub's latest-name rollup, or omitting the reusable CI caller fails to emit
+  the ruleset's exact required `ci / ci` context.
   Mitigation: D02/D03 select and carry a distinct prior run/check identity,
-  exclude the current run, and make merge-gate consume that validated reuse
-  decision; TEST-02 and TEST-04A cover both directions.
+  exclude the current run, always invoke the CI caller with a named reuse marker
+  that skips checkout/application validation, and make merge-gate consume that
+  validated reuse decision; TEST-02 and TEST-04A cover both directions.
 - `VOC-104-DEP-00`: Issue #872 incident (PRs #868 / #869 duplicate ready_for_review
   CI+review).
 - `VOC-104-DEP-01`: Existing draft-aware ready_for_review + merge-gate draft block.
@@ -89,5 +91,6 @@
 - `VOC-104-EV-00`: T00 evidence — reuse-policy summary, deterministic test output,
   doc alignment notes (no secrets).
 - `VOC-104-EV-01`: T01 evidence — scrubbed ready_for_review run metadata proving
-  skipped CI/model review and successful merge-gate re-evaluation on unchanged
-  exact SHA (operator-owned live evidence).
+  a successful required CI reuse marker, skipped full validation/model review,
+  and successful merge-gate re-evaluation on unchanged exact SHA
+  (operator-owned live evidence).

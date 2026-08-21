@@ -24,13 +24,15 @@
 - Preconditions: Fixture ready_for_review event; live base/head equal expected
   pair; a distinct completed prior pipeline run has required checks SUCCESS for
   that head and a trusted App PASS bound to exact base/head and package/task
-  identity; attestation not required or true. The current ready run exposes the
-  same CI/publisher check names as intentional `SKIPPED` states.
+  identity; attestation not required or true. The current ready run exposes a
+  successful required `ci / ci` context whose reuse marker succeeds and whose
+  full validation step is `SKIPPED`; the publisher check is intentionally skipped.
 - Procedure: Run reuse-eligibility, pipeline-condition, and merge-gate fixtures.
   Assert the helper excludes the current `github.run_id`, selects prior
   successful run/check identities, and does not use latest-name rollup semantics
   to locate reusable success.
-- Expected result: outcome `reuse-evidence`; CI and model review skipped;
+- Expected result: outcome `reuse-evidence`; CI application validation and model review skipped,
+  required `ci / ci` reuse marker successful;
   merge-gate still selected and its required-check plus verdict evaluation pass
   using the validated prior-run identity despite current same-name skips.
 - Evidence: `VOC-104-EV-00`
@@ -91,7 +93,7 @@
   publisher shape qualifies.
 - Evidence: `VOC-104-EV-00`
 
-## VOC-104-TEST-08 — Controlled workflow: ready_for_review skips CI/review on unchanged SHA
+## VOC-104-TEST-08 — Controlled workflow: ready_for_review reuses CI/review on unchanged SHA
 
 - Covers: `VOC-104-AC-01`, `VOC-104-AC-06`
 - Preconditions: T00 live; controlled draft PR with prior green CI + App PASS on
@@ -99,8 +101,9 @@
 - Procedure: Mark ready; observe ready_for_review run metadata; after metadata is
   recorded, dispatch the read-only proof action on the exact PR head and
   reconcile under the T01 contract.
-- Expected result: CI and model review jobs skipped; merge-gate runs; evidence
-  metadata-only. Verifier succeeds at `exact_pr_head`.
+- Expected result: Required CI reuse marker succeeds, full validation and model
+  review are skipped, merge-gate runs, and evidence is metadata-only. Verifier
+  succeeds at `exact_pr_head`.
 - Evidence: `VOC-104-EV-01` (metadata only)
 
 ## VOC-104-TEST-09 — Controlled or fixture proof: unsafe ready_for_review still takes full path

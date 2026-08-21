@@ -24,8 +24,10 @@ On `ready_for_review`, when the live base/head pair is unchanged, required check
 for that exact head are successful, and a trusted App-authored PASS (or PASS WITH
 NON-BLOCKING FINDINGS) is bound to that exact base/head and package/task
 authority (with live-evidence attestation present when required), the pipeline
-skips full CI and model review and still runs deterministic merge-gate
-re-evaluation. The current ready run's intentionally skipped same-name checks do
+skips full CI execution and model review, emits a successful ruleset-required
+`ci / ci` context whose named reuse marker succeeds while application validation
+is skipped, and still runs deterministic merge-gate re-evaluation. The current
+ready run's intentionally skipped publisher check does
 not supersede the distinct prior pipeline's validated successful CI/publisher
 evidence during merge-gate evaluation.
 
@@ -95,7 +97,8 @@ live proof required to complete AC-06.
 - Result: pending
 
 After T00 is live, a controlled draft→ready transition on an unchanged exact SHA
-shows CI and model review skipped and merge-gate re-evaluated successfully.
+shows the required CI reuse marker succeeded, full CI validation and model review
+were skipped, and merge-gate re-evaluated successfully.
 Evidence is metadata-only (run IDs, job conclusions, SHAs, reuse boolean). No
 logs or secrets. T00 contributes the read-only verifier; T01 closes the live
 proof under the operator-owned contract.

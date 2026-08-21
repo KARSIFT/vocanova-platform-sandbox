@@ -70,8 +70,9 @@ Ordered steps:
    after infra merge + calling-repo wiring consumed from `@main`).
 2. Prepare or select a controlled draft PR whose exact base/head already has green
    required checks and a trusted App PASS; mark it ready_for_review.
-3. Record scrubbed metadata showing CI and model review skipped and merge-gate
-   re-evaluated on that ready_for_review run.
+3. Record scrubbed metadata showing the CI reuse marker passed, full application
+   validation and model review were skipped, and merge-gate re-evaluated on that
+   ready_for_review run.
 4. Prove unsafe cases still take the full path via deterministic fixtures (preferred)
    or sanitized observation.
 5. Commit allowlisted source metadata to the proof/carrier branch, then manually

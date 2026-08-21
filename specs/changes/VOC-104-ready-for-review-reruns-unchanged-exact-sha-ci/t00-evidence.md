@@ -20,7 +20,8 @@ The implementation keeps three identities separate:
 
 Human or implementer comments cannot authorize reuse. The trusted review record binds the prior
 pipeline run ID, exact base/head, package/task identity, and authority issue. The merge gate
-independently revalidates the prior run and the current intentionally skipped caller jobs.
+independently revalidates the prior run, the current successful `ci / ci` reuse marker, and the
+current intentionally skipped publisher jobs.
 
 ## Shared infrastructure provenance
 
@@ -62,12 +63,30 @@ base-binding, unrelated-check eligibility, an unreachable reuse decision, untrus
 lookalikes, missing ready-event provenance, and an empty workflow-run PR-association fallback.
 Those corrections are included in the merged shared commit above.
 
+The first controlled ready transition exposed a further integration defect that deterministic
+fixtures had not modeled: run `32519935689` correctly selected `reuse-evidence`, skipped the
+application validation and model publisher work, and reached merge-gate, but GitHub displayed the
+skipped reusable caller as `ci` while the repository ruleset requires `ci / ci`. Auto-merge therefore
+failed closed rather than bypassing policy. Shared PR `KARSIFT/karsift-ai-infra#91` repairs the
+contract by always invoking the reusable CI job: on reuse it emits the required `ci / ci` context
+through a named successful marker while checkout and full application validation remain skipped.
+The post-transition verifier requires exactly that marker and rejects any proof where full
+validation ran. The policy also separates eligibility-time caller names from merge-time required
+contexts and removes the publisher tuple-slice coupling found during review.
+
+PR #91's exact reviewed head was `a9ffd87b11511ecf85b22b274b643343f6b45df1`; all 132 shared
+policy tests passed, exact-head CI run `32520591657` passed all four jobs, and an independent
+GPT-5.6 exact-SHA audit returned PASS with no actionable finding. It merged as
+`d5c7786aa4957bec0b769815539fe0d63d0cbd4c`; post-merge main CI run `32520933802` passed all four
+jobs. The failed transition is retained as negative operational evidence and is not claimed as the
+T01 acceptance proof.
+
 ## Calling-repository adoption
 
 - `.github/workflows/pipeline.yml` consumes both reusable workflows at `@main` and supplies distinct
   source PR/base/head plus explicit evidence-carrier head inputs to the verifier.
 - The tracked fixture is pinned to shared merge
-  `d625b40f05b9b860dbf938de41f8ec837740a9fc`; 16 copied workflow, helper, template, and test files
+  `d5c7786aa4957bec0b769815539fe0d63d0cbd4c`; 17 copied workflow, helper, template, and test files
   were verified byte-identical to the independently reviewed shared head.
 - Fixture tests always execute the tracked copy. They no longer prefer an incidental untracked
   `karsift-ai-infra/` checkout, which previously made results depend on the operator's filesystem.
@@ -82,9 +101,9 @@ Those corrections are included in the merged shared commit above.
 | `python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py' -v` | PASS — 28 tests |
 | `python3 -m unittest tooling.governance.tests.test_ready_for_review_reuse -v` | PASS — 2 calling tests, including an explicit green-evidence/draft auto-merge block |
 | `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py' -v` | PASS — 137 governance tests after the final fixture-permission regression was added |
-| `node --test scripts/foundation/voc104-ready-for-review-reuse.test.mjs` | PASS — 5 tests |
+| `node --test scripts/foundation/voc104-ready-for-review-reuse.test.mjs` | PASS — 6 tests |
 | `node --test scripts/foundation/voc097-fixture-matrix.test.mjs` | PASS — 5 compatibility tests |
-| `pnpm validate` | Local environment reached API tests: 231/231 foundation, 28/28 client, and 16/16 web tests passed; the command then stopped because Docker Desktop WSL integration was unavailable to start disposable Postgres for two pre-existing OAuth tests |
+| `pnpm validate` | Local environment reached API tests: 232/232 foundation, 28/28 client, and 16/16 web tests passed; the command then stopped because Docker Desktop WSL integration was unavailable to start disposable Postgres for two pre-existing OAuth tests |
 | `cd apps/api && go test ./... -skip 'TestControlledSignupOAuth_(AllowlistedCallbackSucceeds\|UnlistedCallbackDenied)'` | PASS — complete non-container API suite |
 | `pnpm run build` | PASS — packages, production web build, and API build |
 | `bash scripts/governance/validate-governance.sh --files-from <changed-files>` | PASS |
@@ -101,6 +120,8 @@ workflow token, while the pinned runner dispatches with the workflow token. The 
 contained the correct least-privilege split. The fixture was recopied from that merge, the
 byte-identical file count was corrected from 15 to 16, and deterministic caller tests now require
 Actions write on the dedicated workflow token while forbidding Actions permission on the App token.
+The later required-context repair adds the reusable `ci.yml` fixture, bringing the current pinned
+byte-identical contract set to 17 files.
 
 The first PR exact-SHA run (`32510529512`) passed full CI and independent review, but Repository
 Governance run `32510527837` failed because two older VOC-080 tests froze the workflow-dispatch

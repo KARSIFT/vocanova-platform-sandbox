@@ -25,8 +25,17 @@ Task-owned live evidence is also bound to the exact task identifier at productio
 duplicate-suppression, review-classification, and reuse-decision boundaries. The
 post-transition verifier requires GitHub's authenticated source PR object to record
 the PR as merged; a successful auto-merge job alone is not accepted as merge proof.
+On an eligible unchanged draft-to-ready transition, `ci.yml` still emits the
+repository ruleset's required `ci / ci` check context, but runs only a named
+exact-SHA reuse marker. Checkout and application validation remain skipped. This
+small compatibility context is necessary because GitHub evaluates the newest
+required check context; omitting the reusable CI caller changes its visible name
+to `ci` and leaves `ci / ci` unsatisfied even when prior evidence is valid. The
+post-transition verifier requires the marker to succeed and the full validation
+step to be skipped.
+
 The VOC-104 workflow, policy, normalizer, and regression-test copies correspond
-to independently reviewed shared-infra merge `d625b40f05b9b860dbf938de41f8ec837740a9fc`.
+to independently reviewed shared-infra merge `d5c7786aa4957bec0b769815539fe0d63d0cbd4c`.
 
 ## auto-advance ownership (VOC-102)
 

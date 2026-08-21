@@ -32,9 +32,9 @@ the same package.
    exact meanings defined by `VOC-104-D01`.
 2. Wire the caller pipeline template and this repository's
    `.github/workflows/pipeline.yml` so that on `ready_for_review`, when reuse is
-   allowed, `ci` and model-invoking `review` / `plan-review` are skipped while
-   `merge-gate` still runs and remains reachable when review siblings are
-   skipped. Pass the validated prior-run identity and reuse outcome to merge-gate
+   allowed, expensive `ci` validation and model-invoking `review` / `plan-review`
+   are skipped while a successful ruleset-compatible `ci / ci` reuse marker is
+   emitted and `merge-gate` still runs. Pass the validated prior-run identity and reuse outcome to merge-gate
    so current intentionally skipped names cannot hide or invalidate the prior
    successful CI/publisher evidence.
 3. Enforce all `VOC-104-D02` preconditions. Emit `full-path` for a deterministic
@@ -59,7 +59,8 @@ the same package.
 10. Add the read-only `verify-ready-for-review-reuse` workflow-dispatch action
     described by `VOC-104-D08`: on the exact proof PR branch it validates a
     declared ready_for_review source run using only Actions/check metadata (prior
-    run ID, ready_for_review run ID, skipped CI/review jobs, successful
+    run ID, ready_for_review run ID, successful CI reuse marker, skipped full
+    validation/review work, successful
     merge-gate, unchanged base/head). Its caller and reusable inner job MUST
     produce the exact contract job display name
     `verify-ready-for-review-reuse / verify`. It must never read logs or
@@ -96,11 +97,13 @@ the same package.
    has green required checks and a trusted App-authored PASS (preferred: a
    short-lived controlled proof PR or this package's deterministic evidence
    carrier after T00 merge).
-2. Confirm the ready_for_review pipeline run skipped full CI and model review,
-   still ran merge-gate re-evaluation, and did not merge while draft.
+2. Confirm the ready_for_review pipeline run emitted the successful `ci / ci`
+   reuse marker, skipped full CI validation and model review, and still ran
+   merge-gate re-evaluation.
 3. Record allowlisted metadata only in `t01-evidence.md`: prior successful run
-   ID, ready_for_review run ID, job names/conclusions (CI/review skipped;
-   merge-gate success), base/head SHAs, reuse decision boolean. Never copy logs,
+   ID, ready_for_review run ID, job names/conclusions (CI reuse marker successful,
+   full validation/review skipped; merge-gate success), base/head SHAs, reuse
+   decision boolean. Never copy logs,
    secrets, sessions, OAuth data, cookies, tokens, or user identifiers.
 4. Commit those allowlisted source metadata to the carrier/proof branch, manually
    dispatch the read-only `verify-ready-for-review-reuse` pipeline action on that
