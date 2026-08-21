@@ -13,7 +13,7 @@ the same package.
 
 ## VOC-104-T00 — Ready-for-review reuse policy, fail-closed path, docs, deterministic tests
 
-- Requirement source: issue #872; `VOC-104-D00`–`D07`, `D09`, `D10`
+- Requirement source: issue #872; `VOC-104-D00`–`D10`
 - Acceptance criteria: `VOC-104-AC-00` through `VOC-104-AC-05`, `VOC-104-AC-07`;
   T00 contributes the verifier implementation and deterministic TEST-12 evidence
   to `VOC-104-AC-06`, which T01 closes with the controlled live proof.

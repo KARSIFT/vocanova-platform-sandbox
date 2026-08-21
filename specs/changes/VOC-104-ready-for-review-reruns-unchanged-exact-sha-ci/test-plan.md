@@ -113,8 +113,9 @@
 - Preconditions: T00 must edit the infra README and calling-repo DOC-15 §17.3;
   caller `pipeline.yml` is in scope.
 - Procedure: Assert caller wires reuse decision into CI/review/merge-gate
-  conditions. Assert both mandatory documentation files are in the task diff and
-  distinguish `reuse-evidence` from the normal and fail-closed full paths.
+  conditions. Assert T00's cross-repository work product and evidence include
+  both mandatory documentation updates and distinguish `reuse-evidence` from
+  the normal and fail-closed full paths.
 - Expected result: Both mandatory docs are updated consistently; caller wiring
   is present.
 - Evidence: `VOC-104-EV-00`
