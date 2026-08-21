@@ -57,7 +57,11 @@ suite to 100/100; hosted self-CI run `32481551754` passed and
 full missing-file carrier repair coverage and use of the production marker
 constant. All 101 policy tests passed hosted self-CI run `32482230478`, and
 `KARSIFT/karsift-ai-infra#76` merged as the final pinned revision
-`268be51d7781c499e36a4d35634c397ee0d2e4d9`.
+`268be51d7781c499e36a4d35634c397ee0d2e4d9`. The final breadth review requested
+the full first-create carrier path and the complete verifier rejection matrix.
+All 103 policy tests passed hosted self-CI run `32482997528`, and
+`KARSIFT/karsift-ai-infra#77` merged as the final pinned revision
+`66453989577218bcd4ddff731276beeb57092ef0`.
 
 ### Calling-repo foundation tests
 
@@ -111,6 +115,6 @@ Result: governance structure validation passed; detected path floor R4;
   was reviewed and corrected through the supervised split above; the failed run
   was not blindly retried.
 - Calling-repo runtime fixtures are byte-identical to the final infra merge
-  `268be51d7781c499e36a4d35634c397ee0d2e4d9`; runtime consumption remains
+  `66453989577218bcd4ddff731276beeb57092ef0`; runtime consumption remains
   `KARSIFT/karsift-ai-infra/...@main`.
 - No secrets, logs, artifacts, or unrelated package live evidence recorded here.
