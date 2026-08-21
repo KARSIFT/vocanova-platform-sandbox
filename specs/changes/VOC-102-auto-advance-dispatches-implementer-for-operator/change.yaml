@@ -12,11 +12,10 @@ planned_implementation_risk_floor: "Measured during drafting against the expecte
   \ action; docs/operations/live-evidence.md and change-package template marker guidance;\
   \ AGENTS.md only if current text would remain false; scripts/foundation/voc102-*.test.mjs\
   \ and/or infra self-ci fixtures; this package directory). Detected path floor is\
-  \ R3 for .github/workflows/ and governance-automation paths. This package proposes\
-  \ R3 for the change as a whole \u2014 a draft proposal for the reviewing human at\
-  \ adoption time, not a determination. Independent verification and the reviewing\
-  \ human must still confirm each task's real file list and whether semantic escalation\
-  \ applies."
+  \ R3 for .github/workflows/ and governance-automation paths. Adoption and implementation\
+  \ review raised the change as a whole to R4 because it changes semantic CI/CD dispatch\
+  \ and GitHub App write behavior. Independent verification must still confirm each\
+  \ task's real file list and whether further semantic escalation applies."
 canonical_path: specs/changes/VOC-102-auto-advance-dispatches-implementer-for-operator
 authority_model: a004-active
 requirement_source: 'GitHub issue #863 (Auto-advance dispatches implementer for operator-owned

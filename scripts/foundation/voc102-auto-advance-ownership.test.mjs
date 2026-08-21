@@ -36,12 +36,7 @@ const contractPath = path.join(
   repositoryRoot,
   "specs/changes/VOC-102-auto-advance-dispatches-implementer-for-operator/.karsift/live-evidence/VOC-102-T01.yaml",
 );
-const infraOwnershipTestPath = path.join(
-  repositoryRoot,
-  "tooling/governance/tests/test_auto_advance_ownership.py",
-);
-
-function runInfraTests() {
+function runInfraTests(extraArgs = []) {
   const result = spawnSync(
     "python3",
     [
@@ -52,6 +47,7 @@ function runInfraTests() {
       "tooling/governance/tests",
       "-p",
       "test_auto_advance_ownership.py",
+      ...extraArgs,
       "-v",
     ],
     {
@@ -88,14 +84,7 @@ test("VOC-102-TEST-10: docs describe skip vs dispatch when touched", () => {
 });
 
 test("VOC-102-TEST-11 through TEST-13: carrier, permissions, verifier", () => {
-  const source = readFileSync(infraOwnershipTestPath, "utf8");
-  for (const method of [
-    "test_voc102_test_11_evidence_path_is_strict_and_idempotent_helpers",
-    "test_voc102_test_12_permission_boundary",
-    "test_voc102_test_13_verifier_fail_closed_and_exact_head",
-  ]) {
-    assert.match(source, new RegExp(`def ${method}\\(`));
-  }
+  runInfraTests(["-k", "test_voc102_test_1"]);
 });
 
 test("VOC-102 caller wiring exposes read-only verify-auto-advance-live-evidence action", () => {

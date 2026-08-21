@@ -142,6 +142,14 @@ Result: governance structure validation passed; detected path floor R4;
 
 ## notes
 
+- Independent review of calling-repo commit
+  `6f636da1755cc9439669a9fe4a71b2f6b817bba0` passed with two non-blocking
+  findings. The stale drafting-time R3 sentence now records the adopted R4
+  semantic floor, and the Node TEST-11 through TEST-13 wrapper now executes the
+  matching behavioral Python cases instead of checking only for method names.
+  The focused Node suite remains 5/5, governance validation reports R4, and the
+  repeated full local validation again reached 226/226 foundation tests before
+  the same disclosed Docker-unavailable boundary in the two API callback tests.
 - Controlled live workflow proof remains `VOC-102-T01` (`VOC-102-EV-01`).
 - The first automated attempt (pipeline `32476149809`) correctly refused to
   publish a protected workflow-file mutation. Its committed recovery artifact
