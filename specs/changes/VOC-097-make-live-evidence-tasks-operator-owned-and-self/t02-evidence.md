@@ -19,16 +19,16 @@ tests:
   - VOC-097-TEST-14
 date: 2026-08-21
 related_change: VOC-097
-gate_status: caller-exact-sha-review-pending
+gate_status: complete
 shared_infrastructure_merged: true
-caller_exact_sha_reviewed: false
+caller_exact_sha_reviewed: true
 live_fixture_claimed: false
 post_merge_source_run_claimed: false
 ---
 
 # VOC-097-T02 — Allowlisted observe/dispatch reconciler
 
-## Current gate
+## Completion gate
 
 The shared implementation is complete and merged. Shared infrastructure PR
 `KARSIFT/karsift-ai-infra#49` was independently reviewed at exact head
@@ -38,8 +38,20 @@ including 67 policy tests. The squash merge commit
 `1225131895157faf4ae83bc959b44fb888b101d0` then passed post-merge `main`
 self-CI run `32437762124`. Shared issue #48 was closed only after that evidence.
 
-This caller PR still requires its own exact-SHA CI and independent review, so
-the T02 gate remains pending and no caller completion is claimed yet.
+The caller implementation at exact head
+`a78cc67e4703e9d49e55cad76ec545905986c65d` passed pipeline run
+`32443838227`. Its caller CI, independent review, isolated App-signed verdict
+publication, remediation decision, and draft-aware merge-gate status all
+succeeded. The implementation retry and automatic merge jobs were both
+skipped. Repository-governance runs `32443837515` and `32443837542` passed, and
+the separately hosted controlled-signup OAuth callback E2E run `32443837624`
+passed the database-backed coverage unavailable in the local WSL environment.
+
+The PR remained draft throughout that proof. The merge-gate status recorded a
+draft block and did not claim it would auto-merge, proving that a reviewed draft
+no longer wastes three impossible merge attempts or turns a healthy pipeline
+red. The final evidence-only revision still requires the ordinary exact-SHA
+checks and independent verification before the PR is marked ready.
 
 This record replaces an earlier incorrect claim that an untracked nested
 `karsift-ai-infra/` checkout was bundled in the VocaNova PR. It was not tracked
@@ -56,6 +68,17 @@ The shared infrastructure PR adds:
 | `config/live-evidence-reconcile-runner.py` | GitHub metadata adapter and idempotent result commit |
 | `.github/workflows/live-evidence-reconcile.yml` | Serialized, App-authenticated reusable operator job |
 | `tests/test_live_evidence_reconcile.py` | Deterministic positive and negative policy coverage |
+
+Live caller proof also exposed four shared reliability defects in the review
+and merge lifecycle. They were handled as separate focused shared issues and
+merged changes before T02 completion: clean publisher repository context and
+sanitized diagnostics (`#50`/PR `#51`), bounded handling of content-free
+reviewer responses without implementation retry (`#52`/PR `#53`), the minimal
+pull-request comment permission for the clean publisher (`#54`/PR `#56`), and
+draft-aware merge gating with `ready_for_review` re-entry (`#57`/PR `#58`).
+Each shared change passed hosted self-CI and exact-SHA independent review; the
+consumer run above proves the combined behavior on the unchanged governed
+caller path.
 
 The implementation:
 
@@ -124,15 +147,21 @@ reviewed in the shared repository rather than through an untracked local folder.
 - Independent shared review: exact-SHA GPT-5.6 PASS with no Critical/High
   findings after base/head, publisher, merge, remediation, adoption, retry, and
   live-evidence consumer hardening.
+- Shared follow-up main self-CI runs `32441512514`, `32442555892`, and
+  `32443715487` passed after the review-output, publisher-permission, and
+  draft-gate repairs respectively.
 - VocaNova caller focused tests passed. Governance validation passed and path
-  classification reported R4 because the governance regression assertion was
-  updated. `pnpm validate` passed workspace, formatting, lint, type checks, 216
-  foundation tests, package/web tests, and package builds up to the API suite;
-  its two
+  classification reported R4. `pnpm validate` passed workspace, formatting,
+  lint, type checks, 216 foundation tests, and package/web tests before its two
   database-backed OAuth tests could not start because Docker is unavailable in
-  this WSL environment. A separate `pnpm build` passed for packages, web, and
-  API. Hosted exact-SHA CI remains required and must supply the missing
-  database-backed evidence after the shared PR is merged.
+  this WSL environment. Hosted exact-SHA runs supplied that missing evidence:
+  caller pipeline `32443838227`, governance `32443837515` and `32443837542`,
+  and OAuth callback E2E `32443837624` all passed on caller implementation SHA
+  `a78cc67e4703e9d49e55cad76ec545905986c65d`.
+- The exact-SHA task reviewer and its isolated publisher succeeded in
+  `32443838227`; the published record is bound to the caller base/head, task,
+  package, and authority issue. Remediation retry and draft auto-merge were
+  skipped.
 
 No secret, log content, OAuth value, personal identifier, token, or credential
 is recorded. T03 owns the complete deterministic cross-repo fixture matrix; T05
