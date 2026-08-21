@@ -51,7 +51,7 @@ function read(relativePath) {
 function validateContractYaml(relativePath, taskId) {
   const modulePath = path.join(
     repositoryRoot,
-    "karsift-ai-infra/config/live_evidence_reconcile.py",
+    "tooling/governance/fixtures/karsift-ai-infra/config/live_evidence_reconcile.py",
   );
   const filePath = path.join(repositoryRoot, relativePath);
   const script = `
