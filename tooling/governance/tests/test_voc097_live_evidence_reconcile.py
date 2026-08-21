@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 import json
 import os
+import re
 import subprocess
 import tempfile
 import textwrap
@@ -304,6 +305,17 @@ VERDICT: PASS
             (FIXTURE_INFRA_ROOT / "config/extract-cursor-result.py").is_file(),
             "every review helper referenced by the pinned workflows must be vendored",
         )
+        for workflow_path in (FIXTURE_INFRA_ROOT / ".github/workflows").glob("*.yml"):
+            workflow = workflow_path.read_text(encoding="utf-8")
+            references = re.findall(
+                r"karsift-ai-infra/((?:config|prompts)/[A-Za-z0-9._/-]+)",
+                workflow,
+            )
+            for relative in references:
+                self.assertTrue(
+                    (FIXTURE_INFRA_ROOT / relative).is_file(),
+                    f"{workflow_path.name} references missing fixture {relative}",
+                )
 
         merge_gate = read_fixture(".github/workflows/merge-gate.yml")
         script = self._workflow_run_block(
