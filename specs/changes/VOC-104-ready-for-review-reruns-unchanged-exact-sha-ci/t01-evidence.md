@@ -1,9 +1,9 @@
 # VOC-104-T01 — Controlled draft-to-ready evidence
 
 evidence_id: `VOC-104-EV-01`
-gate_status: `source-transition-complete-proof-pending`
+gate_status: `qualified-proof-recorded`
 source_transition_claimed: `true`
-read_only_proof_claimed: `false`
+read_only_proof_claimed: `true`
 
 Package: `specs/changes/VOC-104-ready-for-review-reruns-unchanged-exact-sha-ci`
 Change: `VOC-104`
@@ -44,14 +44,27 @@ general implementer run was started for this operator-owned task.
 | Unique App-authored pre-merge attestation | PASS — present before merge |
 | `merge-gate / auto-merge` | PASS — success |
 
-## Remaining proof step
+## Qualified proof record
 
-The next commit on this carrier records only this allowlisted metadata. The
-operator must then dispatch the read-only `verify-ready-for-review-reuse`
-workflow against that exact carrier head with the two run IDs, source PR, and
-source base/head above. Until that exact-head workflow succeeds and repository
-reconciliation records it, `read_only_proof_claimed` remains `false` and this
-task is not complete.
+The adjacent `.karsift/live-evidence/VOC-104-T01.result.json` was written by the
+repository reconciler only after the read-only `verify-ready-for-review-reuse`
+workflow succeeded on the evidence-carrier head. The result contains only the
+contract-allowlisted workflow, run, job, SHA, conclusion, and bounded timing
+metadata. The trusted reconcile comment binds the resulting commit, and that
+post-reconcile head must still receive a fresh independent review before merge.
+
+Any later evidence edit changes the carrier SHA and therefore requires another
+exact-head verifier run plus reconciliation. The markdown flags above never
+override that machine binding.
+
+## TEST-09 evidence split
+
+- The positive live optimized path is recorded here as `VOC-104-EV-01` and
+  satisfies `VOC-104-TEST-08` plus the positive side of `VOC-104-TEST-09`.
+- The unsafe-path/full-path matrix is recorded in `VOC-104-EV-00`
+  (`t00-evidence.md`) through `VOC-104-TEST-03` to `VOC-104-TEST-06`; T01 does
+  not manufacture a second live failure to duplicate those deterministic
+  fail-closed cases.
 
 No workflow logs, artifacts, secrets, tokens, sessions, OAuth data, cookies,
 email addresses, or other user identifiers were read or recorded.
