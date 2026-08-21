@@ -39,11 +39,16 @@ git diff --check
 cd karsift-ai-infra && python3 -m unittest tests.test_auto_advance_ownership -v
 ```
 
-Result: 98/98 policy tests passed locally. Exact infra head
+Result: the initial 98/98 policy tests passed locally. Exact infra head
 `e2822ea134fb12561c74c4532076beafe7a8a246` passed hosted self-CI run
 `32478477231` (actionlint, shellcheck, YAML parse, and policy tests), then merged
 through `KARSIFT/karsift-ai-infra#73` as
-`8f87d0354602db207c1b67c4996a26f1e244c683`.
+`8f87d0354602db207c1b67c4996a26f1e244c683`. Exact-SHA review then identified
+two low-severity test-coverage gaps. The follow-up strengthened the last-task
+no-op boundary and exercised full carrier re-entry at mocked external
+boundaries. All 99 policy tests passed hosted self-CI run `32479420670`, and
+`KARSIFT/karsift-ai-infra#74` merged as the final pinned revision
+`e296e6bf8fc7cb300de986872605ee92f1a9cec0`.
 
 ### Calling-repo foundation tests
 
@@ -96,7 +101,7 @@ Result: governance structure validation passed; detected path floor R4;
   publish a protected workflow-file mutation. Its committed recovery artifact
   was reviewed and corrected through the supervised split above; the failed run
   was not blindly retried.
-- Calling-repo fixtures are byte-identical to infra merge
-  `8f87d0354602db207c1b67c4996a26f1e244c683`; runtime consumption remains
+- Calling-repo runtime fixtures are byte-identical to the final infra merge
+  `e296e6bf8fc7cb300de986872605ee92f1a9cec0`; runtime consumption remains
   `KARSIFT/karsift-ai-infra/...@main`.
 - No secrets, logs, artifacts, or unrelated package live evidence recorded here.
