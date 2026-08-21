@@ -43,23 +43,25 @@ Ordered steps:
    head when present. Reuse or mirror VOC-102 structural ownership classification
    (contract authoritative; exact `Automation ownership` marker secondary; no
    prose inference).
-3. If ownership is `operator` or `live-actions`: do **not** set
-   `should_retry=true`; do **not** call `implement.yml`; emit sanitized
-   escalate-operator / equivalent outcome for FAIL, CI failure, and
-   malformed/mismatched/missing-required contract states per `VOC-106-D01/D02/D04`.
+3. If a valid contract establishes ownership as `operator` or `live-actions`, do
+   **not** set `should_retry=true` and do **not** call `implement.yml`; emit a
+   sanitized escalate-operator / equivalent outcome for review FAIL or CI
+   failure per `VOC-106-D01/D02`.
 4. Preserve existing `WAITING` suppression (no attempt consumed).
 5. Preserve existing `STALE` and `REVIEW_INFRA_FAILURE` non-retry paths (no
    attempt consumed).
-6. If the task is ordinary (no contract and no contradictory operator
+6. Route malformed, mismatched, or missing-required ownership metadata to the
+   separate fail-closed path in `VOC-106-D04`.
+7. If the task is ordinary (no contract and no contradictory operator
    declaration): preserve today's bounded RETRY path.
-7. Ensure merge-gate behavior is untouched and remains fail-closed.
-8. Land deterministic tests covering the AC-05 matrix.
-9. Align infra/operator docs with ownership-gated remediation only where current
-   text would become false.
-10. Record the current `@main` reusable-workflow consumption (no pin bump
+8. Ensure merge-gate behavior is untouched and remains fail-closed.
+9. Land deterministic tests covering the AC-05 matrix.
+10. Align infra/operator docs with ownership-gated FAIL/CI escalation, explicit
+    stale/malformed handling, and retained ordinary bounded retry.
+11. Record the current `@main` reusable-workflow consumption (no pin bump
     expected); if repository state differs at implementation time, reconcile it
     explicitly.
-11. Add a manually dispatched, read-only proof job to `pipeline.yml`. It accepts
+12. Add a manually dispatched, read-only proof job to `pipeline.yml`. It accepts
     only allowlisted source-run / PR identity inputs, runs on the T01 carrier
     ref, reads Actions/issue/PR metadata but never logs or artifacts, and
     verifies: the source remediate decision did not execute the reusable

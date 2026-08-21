@@ -43,18 +43,20 @@ Drafting-time read of `karsift-ai-infra/config/decide-remediation.py` confirms
 
 1. Resolve task ownership from the exact reviewed PR head and the adopted
    live-evidence contract before any remediation retry.
-2. Never dispatch the general implementer for an operator-owned or
-   live-evidence-only task, regardless of review FAIL, CI failure, or
-   stale/malformed/mismatched live-evidence state.
+2. Never dispatch the general implementer when a valid contract establishes an
+   operator-owned or live-evidence-only task and review FAIL or CI failure
+   occurs.
 3. Keep merge behavior fail-closed.
-4. Route the condition to a sanitized, bounded operator/reconcile escalation
-   that cannot leak logs, identity data, credentials, or evidence payloads.
+4. Route operator FAIL/CI to a sanitized, bounded operator/reconcile escalation;
+   preserve stale no-op and missing-evidence handling; route malformed or
+   mismatched ownership metadata to a separate fail-closed escalation. No path
+   may leak logs, identity data, credentials, or evidence payloads.
 5. Preserve normal bounded remediation for implementer-owned tasks.
 6. Treat stale/missing evidence lifecycle states deliberately so they cannot
    deadlock or consume an implementation attempt.
 7. Add deterministic workflow-policy and decision-helper tests covering
    operator WAITING, FAIL, CI failure, stale result, malformed contract, and
-   ordinary implementer FAIL.
+   ordinary implementer FAIL and CI failure.
 8. Prove the behavior through a controlled, sanitized, non-destructive live
    workflow event without manufacturing unrelated evidence or exposing secrets.
 9. Keep this root focused; Node runtime deprecations, action-input migration,

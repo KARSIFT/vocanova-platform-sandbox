@@ -45,9 +45,10 @@ implementation_authorized: false
 automatic_merge_allowed: true
 production_impact: none-intentional for application runtime. Changes governance automation
   so remediation never dispatches the general implementer for operator-owned or live-evidence-only
-  tasks, regardless of review FAIL, CI failure, or stale/malformed/mismatched live-evidence
-  state. Does not change production deploy semantics, signup policy, secrets, databases,
-  Kuma inventory, or Sentry ingestion.
+  review FAIL or CI failure; preserves stale no-op and missing-evidence handling; and routes
+  malformed or mismatched ownership metadata to a separate fail-closed escalation. Does
+  not change production deploy semantics, signup policy, secrets, databases, Kuma inventory,
+  or Sentry ingestion.
 rollback_required: true
 monitoring_impact:
   state: none

@@ -66,7 +66,9 @@
 - `VOC-106-DEP-01`: VOC-097 ownership contract; VOC-102 auto-advance gate;
   remaining remediation gap.
 - `VOC-106-DEP-02`: Cross-repo infra change ownership pattern.
-- `VOC-106-DEP-03`: WAITING already suppressed; FAIL/CI/stale/malformed still open.
+- `VOC-106-DEP-03`: WAITING and STALE already suppress retry; the open retry gap
+  is operator-owned FAIL/CI, while malformed metadata needs an explicit
+  fail-closed path.
 - `VOC-106-EV-00`: T00 evidence — ownership-gate summary, deterministic test
   output, doc alignment notes (no secrets).
 - `VOC-106-EV-01`: T01 evidence — scrubbed remediate / pipeline run metadata

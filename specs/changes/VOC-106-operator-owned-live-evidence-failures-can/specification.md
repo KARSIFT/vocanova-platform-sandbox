@@ -34,13 +34,14 @@ In scope:
    ownership from the exact reviewed PR head and the adopted package's
    `.karsift/live-evidence/<task_id>.yaml` contract (with fail-closed package
    context checks consistent with VOC-102 ownership classification).
-2. When ownership is `operator` or `live-actions` (or equivalent
-   live-evidence-only mode), **never** dispatch the general implementer —
-   including for review `FAIL`, CI failure, stale results, missing evidence
-   lifecycle states, or malformed/mismatched contracts.
+2. When a valid contract establishes ownership as `operator` or `live-actions`
+   (or equivalent live-evidence-only mode), **never** dispatch the general
+   implementer for review `FAIL` or CI failure.
 3. Keep merge behavior fail-closed.
-4. Route operator-owned failure/escalation conditions to a sanitized, bounded
-   operator/reconcile escalation that cannot leak logs, identity data,
+4. Route operator-owned review `FAIL` / CI failure to a sanitized, bounded
+   operator/reconcile escalation. Preserve stale no-op and existing
+   missing-evidence handling, and route malformed/mismatched ownership metadata
+   to a separate fail-closed escalation. No path may leak logs, identity data,
    credentials, or evidence payloads.
 5. Preserve normal bounded remediation (attempt 1 → attempt 2, then stop) for
    ordinary implementer-owned tasks with no live-evidence contract and no
@@ -49,12 +50,12 @@ In scope:
    deadlock the task or consume an implementation attempt.
 7. Deterministic workflow-policy and decision-helper tests covering operator
    WAITING, FAIL, CI failure, stale result, malformed contract, and ordinary
-   implementer FAIL.
+   implementer FAIL and CI failure.
 8. Controlled, non-destructive live proof after T00 is live, with a read-only
    exact-head verifier for reconcilable SHA lineage.
-9. Update infra README and calling-repo operator docs only where current text
-   would otherwise claim remediation always retries the implementer on FAIL/CI
-   failure regardless of ownership.
+9. Update infra README and calling-repo operator docs with the ownership-gated
+   FAIL/CI behavior, explicit stale/malformed paths, and retained ordinary
+   bounded retry.
 10. Calling-repo `pipeline.yml` consumes the fixed reusable workflow and exposes
     the narrow, manually dispatched, read-only exact-head verifier action.
 
