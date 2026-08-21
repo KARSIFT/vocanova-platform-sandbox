@@ -4,12 +4,17 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 import json
+import os
+import subprocess
+import tempfile
+import textwrap
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
 from voc097_fixtures import (
     CALLER_PIPELINE,
+    FIXTURE_INFRA_ROOT,
     load_policy_module,
     read_fixture,
 )
@@ -142,19 +147,74 @@ class Voc097LiveEvidenceReconcileTests(unittest.TestCase):
         )
 
     def test_voc097_test_09_qualifying_output_contains_allowlisted_metadata_only(self):
+        forbidden = "forbidden-sensitive-fixture"
         evidence = policy.qualify_run(
             parsed_contract(),
-            run_fixture(),
-            jobs_fixture(),
+            run_fixture(
+                logs=forbidden,
+                artifacts=forbidden,
+                token=forbidden,
+                cookie=forbidden,
+                credential=forbidden,
+                actor={"login": forbidden},
+            ),
+            [
+                {**job, "output": forbidden, "user": forbidden}
+                for job in jobs_fixture()
+            ],
             pr_head_sha=HEAD,
             now=NOW,
         )
-        serialized = json.loads(policy.evidence_json(evidence))
+        evidence_json = policy.evidence_json(evidence)
+        serialized = json.loads(evidence_json)
         self.assertEqual(serialized["state"], "qualified")
         self.assertEqual(serialized["job_ids"], [7001, 7002])
-        self.assertNotIn("logs", serialized)
-        self.assertNotIn("artifacts", serialized)
-        self.assertNotIn("actor", serialized)
+        self.assertNotIn(forbidden, evidence_json)
+
+        class ReadApi:
+            repository = "KARSIFT/example"
+
+            def get(self, endpoint):
+                if endpoint != "repos/KARSIFT/example/pulls/12":
+                    raise AssertionError(f"unexpected read endpoint: {endpoint}")
+                return {
+                    "state": "open",
+                    "merged_at": None,
+                    "head": {
+                        "sha": HEAD,
+                        "ref": "agent/voc-097-t02",
+                        "repo": {"full_name": self.repository},
+                    },
+                    "base": {"sha": BASE},
+                }
+
+        class WriteApi:
+            repository = "KARSIFT/example"
+            body = None
+
+            def mutate(self, method, endpoint, payload):
+                if method != "POST" or endpoint != "repos/KARSIFT/example/issues/12/comments":
+                    raise AssertionError(f"unexpected write: {method} {endpoint}")
+                self.body = payload["body"]
+                return {"id": 1}
+
+        task = SimpleNamespace(
+            task_id="VOC-097-T02",
+            pr_number=12,
+            head_sha=HEAD,
+            head_ref="agent/voc-097-t02",
+            base_sha=BASE,
+        )
+        write_api = WriteApi()
+        runner.post_qualified_comment(
+            ReadApi(),
+            write_api,
+            task,
+            {**evidence, "logs": forbidden, "token": forbidden},
+            "d" * 40,
+        )
+        self.assertIsNotNone(write_api.body)
+        self.assertNotIn(forbidden, write_api.body)
         with self.assertRaises(policy.ContractError):
             policy.evidence_json({**evidence, "arbitrary_output": "forbidden"})
 
@@ -233,6 +293,62 @@ VERDICT: PASS
         )
         self.assertNotIn("bound to commit", narrative)
         self.assertEqual(narrative.splitlines()[-1], "VERDICT: PASS")
+        for workflow in (self.review, read_fixture(".github/workflows/plan-review.yml")):
+            self.assertIn("normalize-review-narrative.py", workflow)
+            self.assertLess(
+                workflow.index("normalize-review-narrative.py"),
+                workflow.index("Build verification record for isolated publisher"),
+            )
+
+        merge_gate = read_fixture(".github/workflows/merge-gate.yml")
+        script = self._workflow_run_block(
+            merge_gate,
+            "Determine risk class, checks, and verification status",
+        )
+        script = script.replace("${{ github.event.pull_request.number }}", "12")
+        script = script.replace("${{ inputs.expected_head_sha }}", HEAD)
+        script = script.replace("${{ inputs.expected_base_sha }}", BASE)
+        script = script.replace("${{ github.repository }}", "KARSIFT/example")
+        script = script.replace("karsift-ai-infra/config/", "config/")
+        old_head = "e" * 40
+        gh_stub = f"""
+        gh() {{
+          if [ "$1 $2 $3" = "pr view 12" ]; then
+            printf '%s\\n' '{{"body":"Risk classification: R4\\nImplements task `VOC-097-T02`\\nPackage path: `specs/changes/VOC-097-example`\\nCloses #34","author":{{"login":"fixture"}},"headRefName":"agent/voc-097-t02","headRefOid":"{HEAD}","baseRefOid":"{BASE}","isDraft":false}}'
+            return 0
+          fi
+          if [ "$1 $2 $3" = "pr checks 12" ]; then
+            printf '%s\\n' '[{{"name":"ci / ci","state":"SUCCESS"}},{{"name":"review / publish-review","state":"SUCCESS"}}]'
+            return 0
+          fi
+          if [ "$1" = "api" ]; then
+            printf '%s\\n' '[[{{"id":1,"created_at":"2026-08-21T00:00:00Z","user":{{"login":"karsift-ai-infra-bot[bot]","type":"Bot"}},"body":"**Independent verification - bound to commit `{old_head}`**\\ntask_id: `VOC-097-T02`\\npackage_path: `specs/changes/VOC-097-example`\\nauthority_issue: `34`\\nbase_sha: `{BASE}`\\nVERDICT: PASS"}}]]'
+            return 0
+          fi
+          printf 'unexpected gh invocation: %s\\n' "$*" >&2
+          return 97
+        }}
+        """
+        with tempfile.TemporaryDirectory() as scratch:
+            checks_path = os.path.join(scratch, "pr-checks.json")
+            verdict_path = os.path.join(scratch, "review-verdict.md")
+            script = script.replace("/tmp/pr-checks.json", checks_path)
+            script = script.replace("/tmp/review-verdict.md", verdict_path)
+            output_path = os.path.join(scratch, "github-output")
+            env = {**os.environ, "GITHUB_OUTPUT": output_path}
+            result = subprocess.run(
+                ["bash", "-c", textwrap.dedent(gh_stub) + script],
+                cwd=FIXTURE_INFRA_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            with open(output_path, encoding="utf-8") as output_file:
+                outputs = output_file.read()
+            self.assertIn("checks_ok=true", outputs)
+            self.assertIn("verdict=PENDING", outputs)
 
     def test_voc097_test_12_stale_and_non_success_runs_are_rejected(self):
         contract = parsed_contract(max_age="1h")
@@ -361,6 +477,26 @@ VERDICT: PASS
         self.assertNotIn("operational-failure-monitoring", combined)
         self.assertNotIn("open-failure-issue.sh", combined)
         self.assertNotIn("karsift-live-evidence", observer)
+
+    @staticmethod
+    def _workflow_run_block(workflow, step_name):
+        lines = workflow.splitlines()
+        marker = f"- name: {step_name}"
+        step_index = next(
+            index for index, line in enumerate(lines) if line.strip() == marker
+        )
+        run_index = next(
+            index
+            for index in range(step_index + 1, len(lines))
+            if lines[index].strip() == "run: |"
+        )
+        run_indent = len(lines[run_index]) - len(lines[run_index].lstrip())
+        block = []
+        for line in lines[run_index + 1 :]:
+            if line.strip() and len(line) - len(line.lstrip()) <= run_indent:
+                break
+            block.append(line)
+        return textwrap.dedent("\n".join(block))
 
 
 if __name__ == "__main__":

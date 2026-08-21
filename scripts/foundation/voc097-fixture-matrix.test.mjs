@@ -126,7 +126,7 @@ test("VOC-097-T03 matrix declares TEST-02 through TEST-14 without gaps", () => {
 test("VOC-097-T03 vendored infra pin is recorded for fixture replay", () => {
   assert.ok(existsSync(fixturePinPath), "PINNED_SHA.txt must exist");
   const pin = readFileSync(fixturePinPath, "utf8").trim();
-  assert.match(pin, /^[0-9a-f]{40}$/);
+  assert.equal(pin, "cd8f8c7440ec3c9eb92a6d886aa69a42c15034fa");
 });
 
 test("VOC-097-T03 Python fixture matrix passes", () => {

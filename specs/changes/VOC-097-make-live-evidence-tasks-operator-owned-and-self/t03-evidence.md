@@ -58,11 +58,11 @@ against vendored `karsift-ai-infra` policy fixtures plus the live caller
 | TEST-06 | Wrong workflow identity fail-closed |
 | TEST-07 | Missing/failed required job fail-closed |
 | TEST-08 | Wrong event, branch, or SHA lineage fail-closed |
-| TEST-09 | Allowlisted metadata only in evidence JSON |
+| TEST-09 | Hostile log/artifact/token/cookie/credential/user fields are injected, then proven absent from evidence JSON and the qualified comment |
 | TEST-10 | Reconcile workflow/runner never references log or artifact APIs |
 | TEST-11 | Executed two-observation fixture: first qualification performs one commit/comment/ref wake in order, duplicate observation performs none; normalized App review record then requires fresh exact-SHA caller review |
 | TEST-12 | Stale age and non-success conclusions rejected |
-| TEST-13 | 72-hour timeout marker is single-use |
+| TEST-13 | Executed two-tick post-timeout fixture produces one escalation comment and no result, ref, wake, or dispatch effect |
 | TEST-14 | Duplicate qualified result short-circuits reconciliation |
 | (supporting) | Caller hourly reconcile without `workflow_run` recursion; live-evidence paths stay separate from operational-failure observer |
 
@@ -87,7 +87,7 @@ Local results on the reviewed working tree:
 - `voc097-fixture-matrix.test.mjs`: 5 tests passed (matrix registry, pin, Python suite, method map, evidence structure).
 - All `voc097-*.test.mjs` foundation tests: 14 passed.
 - VOC-097 Python matrix: Ran 18 tests, all passed.
-- Full governance Python suite on the generated implementation head: Ran 113 tests, all passed. The final operator correction reran the task-scoped Python matrix, repository governance validator, full workspace validation, and hosted exact-SHA gates rather than repeating the slow all-history temporary-copy suite.
+- Full governance Python suite on the generated implementation head: Ran 113 tests, all passed. The final operator correction reran the task-scoped Python matrix, repository governance validator, and full workspace validation rather than repeating the slow all-history temporary-copy suite. Hosted exact-SHA gates are deliberately not claimed by this commit; the PR checks remain the canonical evidence and must pass on this exact head before readiness.
 - `validate-governance.sh`: passed.
 - `classify-change-risk.sh`: reported R4 for this task diff.
 - `git diff --check`: passed.
