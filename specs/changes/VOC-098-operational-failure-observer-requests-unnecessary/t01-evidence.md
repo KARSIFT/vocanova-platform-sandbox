@@ -9,26 +9,23 @@ tests:
   - VOC-098-TEST-06
 date: 2026-08-21
 related_change: VOC-098
-gate_status: awaiting-contract-qualified-run
-live_observer_claimed: false
+gate_status: complete
+live_observer_claimed: true
 deduplication_claimed: true
 supporting_pre_lineage_fixture_claimed: true
 ---
 
-# VOC-098-T01 evidence — controlled observer proof pending exact lineage
+# VOC-098-T01 evidence — controlled live observer proof
 
-## Current gate
+## Qualified contract outcome
 
-The observer repair has demonstrated the intended live behavior, including
-deduplication, but the runs below predate this task PR head and therefore do
-**not** satisfy the adjacent `integration_contains_pr_head` contract. The gate
-remains open until the repository-controlled reconciler records a new
-qualifying observer run after this exact pre-result PR head is contained by
-`main`.
-
-`live_observer_claimed: false` is deliberate. The earlier runs are retained as
-supporting operational evidence and as the completed create/dedupe inspection;
-they are not presented as the contract-qualified run.
+The adjacent `VOC-098-T01.result.json` is the repository-controlled,
+App-attested source for the exact workflow run, job, SHA, timestamps, duration,
+and successful conclusion that satisfy the
+`integration_contains_pr_head` contract. The result contains allowlisted
+Actions metadata only. The earlier runs below remain supporting operational
+evidence for the create/dedupe inspection; they are not substituted for the
+contract-qualified result.
 
 ## Supporting live outcome (not contract-qualified)
 
@@ -62,13 +59,13 @@ fixture twice. No application or production failure was manufactured.
 - A scrubbed metadata-only proof comment was added, then fixture issue #849 was
   closed on `2026-08-21`.
 
-## Acceptance mapping before reconcile
+## Acceptance mapping
 
 | Acceptance criterion | Status | Evidence |
 | --- | --- | --- |
-| VOC-098-AC-03 | pending | The supporting cancellations invoked the repaired observer successfully, but a new run must satisfy the exact PR-head lineage contract. |
+| VOC-098-AC-03 | pass | The adjacent qualified result records a successful default-branch observer run after the exact pre-result PR head entered main lineage. |
 | VOC-098-AC-04 | pass | The first observation created one sanitized, unlabeled App-authored issue; the repeat retained exactly one marker owner and created no duplicate. |
-| VOC-098-TEST-05 | pending | Awaiting the repository-controlled result record for a new contract-qualified observer run. |
+| VOC-098-TEST-05 | pass | The adjacent result record supplies the allowlisted workflow, run, job, conclusion, and exact-lineage metadata under a trusted App attestation. |
 | VOC-098-TEST-06 | pass | Create-or-dedupe, App identity class, marker ownership, sanitization, and duplicate count recorded above. |
 
 This file records only allowlisted operational metadata. It does not contain

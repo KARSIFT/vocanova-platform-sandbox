@@ -1,0 +1,17 @@
+{
+  "branch": "main",
+  "completed_at": "2026-08-21T08:41:20Z",
+  "conclusion": "success",
+  "duration_seconds": 9,
+  "event": "workflow_run",
+  "head_sha": "a378d1a2a6bc1238aaaa9d99b6a641b371e52119",
+  "job_ids": [
+    96717576855
+  ],
+  "run_id": 32464313236,
+  "schema_version": 1,
+  "started_at": "2026-08-21T08:41:11Z",
+  "state": "qualified",
+  "workflow_file": "operational-failure-monitoring.yml",
+  "workflow_name": "operational-failure-monitoring"
+}
