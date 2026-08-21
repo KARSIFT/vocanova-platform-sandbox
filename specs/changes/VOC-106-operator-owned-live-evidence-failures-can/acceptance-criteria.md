@@ -19,14 +19,16 @@ Narrative prose is never interpreted.
 
 - Requirement source: `VOC-106-D01`, `VOC-106-D02`
 - Tasks: `VOC-106-T00`, `VOC-106-T01`
-- Tests: `VOC-106-TEST-02`, `VOC-106-TEST-03`, `VOC-106-TEST-08`
+- Tests: `VOC-106-TEST-01`, `VOC-106-TEST-03`, `VOC-106-TEST-07`, `VOC-106-TEST-08`
 - Evidence: `VOC-106-EV-00`, `VOC-106-EV-01`
 - Result: pending
 
 When ownership is `operator` or `live-actions`, remediation does **not** start
-`implement.yml` for review `FAIL`, CI failure, stale results, missing evidence
-lifecycle states, or malformed/mismatched contracts. The condition routes to a
-sanitized, bounded operator/reconcile escalation. Merge remains fail-closed.
+`implement.yml` for review `FAIL`, CI failure, stale results, or missing evidence
+lifecycle states. The condition routes to a sanitized, bounded
+operator/reconcile escalation. Malformed or mismatched ownership metadata is
+handled separately by the fail-closed rule in `VOC-106-AC-03`. Merge remains
+fail-closed.
 
 ## VOC-106-AC-02 — Ordinary implementer-owned remediation retained
 
@@ -45,7 +47,7 @@ genuine review `FAIL` (attempt capped at 2), then stops. `WAITING`, `STALE`, and
 
 - Requirement source: `VOC-106-D04`
 - Tasks: `VOC-106-T00`
-- Tests: `VOC-106-TEST-05`, `VOC-106-TEST-06`, `VOC-106-TEST-07`
+- Tests: `VOC-106-TEST-05`, `VOC-106-TEST-06`
 - Evidence: `VOC-106-EV-00`
 - Result: pending
 

@@ -110,8 +110,9 @@ one marker structurally; it MUST NOT infer ownership from narrative prose.
 `VOC-106-D01`: If the contract declares `ownership: operator` or
 `ownership: live-actions`, remediation MUST NOT dispatch `implement.yml`,
 regardless of review `FAIL`, CI failure, review-job infrastructure failure
-already handled separately, stale caller run, missing evidence lifecycle state,
-or malformed/mismatched contract content. Merge behavior remains fail-closed.
+already handled separately, stale caller run, or missing evidence lifecycle
+state. Malformed or mismatched ownership metadata is governed by the separate
+fail-closed rule in `VOC-106-D04`. Merge behavior remains fail-closed.
 
 `VOC-106-D02`: For operator-owned / live-evidence-only conditions that would
 previously have become `RETRY`, remediation MUST route to a sanitized, bounded
