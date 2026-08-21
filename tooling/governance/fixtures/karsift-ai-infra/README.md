@@ -22,7 +22,7 @@ ID in addition to base/head and package/task identity. Controlled proof keeps th
 source transition PR/base/head/ref distinct from the later evidence-carrier SHA,
 and requires the workflow-controlled `decide (ready_for_review)` job marker.
 The VOC-104 workflow, policy, normalizer, and regression-test copies correspond
-to independently reviewed shared-infra merge `03ac50126be3ef77155d75beaf7aeb4cc3f23df9`.
+to independently reviewed shared-infra merge `6d5347b136f1993f8a4c2f6d49787b788a431bf8`.
 
 ## auto-advance ownership (VOC-102)
 

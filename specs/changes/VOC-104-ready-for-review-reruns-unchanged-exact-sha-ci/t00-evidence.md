@@ -36,6 +36,15 @@ The reusable behavior was independently reviewed and merged first:
 | Shared policy suite | PASS — 126 tests |
 | Independent exact-SHA review | PASS — no actionable correctness finding after remediation |
 
+A follow-up exact-SHA review of the calling-repository adoption found two Low shared-contract
+gaps. Shared PR `KARSIFT/karsift-ai-infra#89` corrected both before T00 promotion: helper checkout
+is pinned to the resolved reusable-workflow revision, and trusted verdict selection now uses the
+same `(created_at, id)` ordering in eligibility and merge-gate. Its independently reviewed head
+was `8638d8ee3f20623af831b656acf71f7150944907`, exact-head CI run `32512506670` passed all four
+jobs, independent review returned PASS with no actionable finding, and the correction merged as
+`6d5347b136f1993f8a4c2f6d49787b788a431bf8`. Post-merge main CI run `32512727314`
+also passed all four jobs.
+
 Independent review found and the implementation corrected proof-lineage ambiguity, missing
 base-binding, unrelated-check eligibility, an unreachable reuse decision, untrusted metadata
 lookalikes, missing ready-event provenance, and an empty workflow-run PR-association fallback.
@@ -46,7 +55,7 @@ Those corrections are included in the merged shared commit above.
 - `.github/workflows/pipeline.yml` consumes both reusable workflows at `@main` and supplies distinct
   source PR/base/head plus explicit evidence-carrier head inputs to the verifier.
 - The tracked fixture is pinned to shared merge
-  `03ac50126be3ef77155d75beaf7aeb4cc3f23df9`; 14 copied workflow, helper, template, and test files
+  `6d5347b136f1993f8a4c2f6d49787b788a431bf8`; 14 copied workflow, helper, template, and test files
   were verified byte-identical to the independently reviewed shared head.
 - Fixture tests always execute the tracked copy. They no longer prefer an incidental untracked
   `karsift-ai-infra/` checkout, which previously made results depend on the operator's filesystem.
@@ -58,7 +67,7 @@ Those corrections are included in the merged shared commit above.
 
 | Command | Result |
 | --- | --- |
-| `python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py' -v` | PASS — 23 tests |
+| `python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py' -v` | PASS — 24 tests |
 | `python3 -m unittest tooling.governance.tests.test_ready_for_review_reuse -v` | PASS — 2 calling tests, including an explicit green-evidence/draft auto-merge block |
 | `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py' -v` | PASS — 136 governance tests in 15.349 seconds |
 | `node --test scripts/foundation/voc104-ready-for-review-reuse.test.mjs` | PASS — 5 tests |
