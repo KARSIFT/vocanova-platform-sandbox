@@ -35,7 +35,7 @@
 - Preconditions: ready_for_review fixture where live head or base differs from
   expected pair
 - Procedure: Run reuse decision fixture.
-- Expected result: No reuse; full CI + review path selected.
+- Expected result: Outcome `full-path`; full CI + review path selected.
 - Evidence: `VOC-104-EV-00`
 
 ## VOC-104-TEST-04 — Negative: missing or non-successful required checks force full path
@@ -44,7 +44,7 @@
 - Preconditions: Unchanged base/head but a required check is missing, pending,
   failed, or otherwise non-successful
 - Procedure: Run reuse decision fixture for each case.
-- Expected result: No reuse; full path.
+- Expected result: Outcome `full-path`; full CI + review path selected.
 - Evidence: `VOC-104-EV-00`
 
 ## VOC-104-TEST-05 — Negative: missing / WAITING / FAIL / PENDING / malformed / untrusted verdict
@@ -53,7 +53,7 @@
 - Preconditions: Fixtures for each bad verdict class, including wrong App
   identity and wrong base/head binding
 - Procedure: Run reuse decision fixture for each case.
-- Expected result: No reuse; full path.
+- Expected result: Outcome `full-path`; full CI + review path selected.
 - Evidence: `VOC-104-EV-00`
 
 ## VOC-104-TEST-06 — Negative: required live-evidence attestation absent
@@ -61,7 +61,7 @@
 - Covers: `VOC-104-AC-02`
 - Preconditions: Fixture where attestation is required and absent/false
 - Procedure: Run reuse decision fixture.
-- Expected result: No reuse; full path / fail closed.
+- Expected result: Outcome `full-path`; full CI + review path selected.
 - Evidence: `VOC-104-EV-00`
 
 ## VOC-104-TEST-07 — Human and implementer comments are rejected as reusable authority
@@ -103,20 +103,32 @@
 - Preconditions: Fixtures for `opened`, `synchronize`, and `reopened` with
   otherwise reuse-eligible evidence
 - Procedure: Run reuse / pipeline condition fixtures.
-- Expected result: Full CI + review path; reuse applies only to
-  `ready_for_review`.
+- Expected result: Outcome `full-path`; full CI + review path selected because
+  reuse applies only to `ready_for_review`.
 - Evidence: `VOC-104-EV-00`
 
 ## VOC-104-TEST-11 — Doc consistency and caller wiring fixture
 
 - Covers: `VOC-104-AC-05`, `VOC-104-AC-07`
-- Preconditions: T00 may or may not edit infra README / operating-model docs;
-  caller `pipeline.yml` is in scope
+- Preconditions: T00 must edit the infra README and calling-repo DOC-15 §17.3;
+  caller `pipeline.yml` is in scope.
 - Procedure: Assert caller wires reuse decision into CI/review/merge-gate
-  conditions. If docs are in diff, assert they describe reuse-vs-full-path
-  correctly; if untouched, assert they do not claim every ready_for_review always
-  re-runs full CI and model review.
-- Expected result: No false doc claim; caller wiring present.
+  conditions. Assert both mandatory documentation files are in the task diff and
+  distinguish `reuse-evidence` from the normal and fail-closed full paths.
+- Expected result: Both mandatory docs are updated consistently; caller wiring
+  is present.
+- Evidence: `VOC-104-EV-00`
+
+## VOC-104-TEST-11A — Eligibility evaluation uncertainty fails closed
+
+- Covers: `VOC-104-AC-02`, `VOC-104-AC-05`
+- Preconditions: Fixtures for API failure, malformed metadata response, helper
+  execution failure, and an unknown/missing machine outcome.
+- Procedure: Run the decision/helper and caller-condition fixtures for each
+  uncertain evaluation case.
+- Expected result: The helper emits `fail-closed-to-full-path` when it can; the
+  caller treats that value and any unknown/missing outcome as full CI + review,
+  never as reusable evidence.
 - Evidence: `VOC-104-EV-00`
 
 ## VOC-104-TEST-12 — Post-transition verifier is exact-head and fail-closed

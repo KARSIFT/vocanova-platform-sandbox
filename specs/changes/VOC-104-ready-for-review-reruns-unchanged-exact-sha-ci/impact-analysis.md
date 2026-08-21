@@ -32,6 +32,12 @@
 - **Cross-repo:** Primary behavior change is in `KARSIFT/karsift-ai-infra`
   pipeline template / reuse helper and related reusable-job conditions; the
   calling repo wires the same decision and the narrow read-only proof action.
+- **Protected paths:** The calling repository's
+  `.github/workflows/pipeline.yml` is an R3 CI/governance surface. Its mandatory
+  `docs/operations/15-ai-native-product-and-engineering-operating-model.md`
+  §17.3 update is an R4 protected path and sets the package floor. Shared-infra
+  pipeline/reuse workflow files and their policy tests are also explicitly in
+  T00 scope.
 - **Release:** Unchanged final-roster / develop→main promotion semantics.
 
 ## Data and migrations

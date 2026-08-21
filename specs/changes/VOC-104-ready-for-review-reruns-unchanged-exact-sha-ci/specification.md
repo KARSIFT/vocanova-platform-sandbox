@@ -103,7 +103,12 @@ once per pipeline run and exposed as a machine-readable outcome
 small reusable, read-only eligibility workflow/helper runs as a caller job,
 inspects Actions/check/comment metadata only, and exposes the decision to caller
 `if:` conditions. The full CI/reviewer reusable workflows do not each reimplement
-the trust predicate.
+the trust predicate. The outcome contract is exact: `reuse-evidence` means all
+D02 predicates passed; `full-path` means the event is not eligible or a D02
+predicate deterministically failed; `fail-closed-to-full-path` means the helper
+could not make a trustworthy decision because metadata, API access, parsing, or
+its own execution failed. Callers run the same full CI/review path for either
+non-reuse outcome, but retain the distinct value for tests and diagnosis.
 
 `VOC-104-D02`: Reuse is allowed only when all of the following hold for the live
 PR at evaluation time:
@@ -134,13 +139,15 @@ non-draft PR. Skipped jobs must not leave merge-gate waiting forever on a missin
 review dependency — merge-gate already tolerates a skipped review sibling via
 `always()`; the reuse path must preserve that reachability.
 
-`VOC-104-D04`: When any `VOC-104-D02` precondition fails, fail closed by running
-the normal full CI + applicable review path (not by inventing a merge). Do not
-guess. Explicit fail-closed triggers include: base or head changed; required
-checks missing or non-successful; verdict missing / WAITING / FAIL / PENDING /
-malformed / untrusted; live-evidence attestation required but absent; package /
-task / authority identity mismatch; non-boolean or invalid draft state handling
-errors already fail closed in merge-gate and must remain so.
+`VOC-104-D04`: When any `VOC-104-D02` precondition deterministically fails, emit
+`full-path` and run normal full CI + applicable review (not an invented merge).
+Examples include: base or head changed; required checks missing or
+non-successful; verdict missing / WAITING / FAIL / PENDING / malformed /
+untrusted; live-evidence attestation required but absent; package / task /
+authority identity mismatch. When evaluation itself is uncertain or fails — for
+example an API, parsing, metadata-shape, permission, or helper execution error —
+emit `fail-closed-to-full-path` and run that same full path. Invalid draft-state
+handling already fails closed in merge-gate and must remain so. Do not guess.
 
 `VOC-104-D05`: Human comments, implementer comments, and any non-App review text
 MUST NEVER be treated as reusable verification authority. Only the existing

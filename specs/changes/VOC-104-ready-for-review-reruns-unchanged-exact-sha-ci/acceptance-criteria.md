@@ -31,7 +31,8 @@ re-evaluation.
 
 - Requirement source: `VOC-104-D04`
 - Tasks: `VOC-104-T00`
-- Tests: `VOC-104-TEST-03`, `VOC-104-TEST-04`, `VOC-104-TEST-05`, `VOC-104-TEST-06`
+- Tests: `VOC-104-TEST-03`, `VOC-104-TEST-04`, `VOC-104-TEST-05`,
+  `VOC-104-TEST-06`, `VOC-104-TEST-11A`
 - Evidence: `VOC-104-EV-00`
 - Result: pending
 
@@ -70,13 +71,14 @@ separation is unchanged; the implementer cannot mint reusable PASS authority.
 - Requirement source: `VOC-104-D07`
 - Tasks: `VOC-104-T00`
 - Tests: `VOC-104-TEST-00` through `VOC-104-TEST-07`, `VOC-104-TEST-10`,
-  `VOC-104-TEST-11`
+  `VOC-104-TEST-11`, `VOC-104-TEST-11A`
 - Evidence: `VOC-104-EV-00`
 - Result: pending
 
 Shared-infra policy tests and calling-repository fixture/foundation coverage exist
-and pass for positive reuse, negative full-path, draft non-merge, authority
-rejection, attestation absence, and non-ready_for_review regression cases.
+and pass for positive reuse, deterministic negative `full-path`, uncertain
+`fail-closed-to-full-path`, draft non-merge, authority rejection, attestation
+absence, and non-ready_for_review regression cases.
 
 ## VOC-104-AC-06 — Controlled draft-to-ready optimized-path proof
 

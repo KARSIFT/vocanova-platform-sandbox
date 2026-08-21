@@ -17,8 +17,8 @@ the same package.
 - Acceptance criteria: `VOC-104-AC-00` through `VOC-104-AC-05`, `VOC-104-AC-07`;
   T00 contributes the verifier implementation and deterministic TEST-12 evidence
   to `VOC-104-AC-06`, which T01 closes with the controlled live proof.
-- Tests: `VOC-104-TEST-00` through `VOC-104-TEST-07`, `VOC-104-TEST-10` through
-  `VOC-104-TEST-12`
+- Tests: `VOC-104-TEST-00` through `VOC-104-TEST-07`, `VOC-104-TEST-10`,
+  `VOC-104-TEST-11`, `VOC-104-TEST-11A`, `VOC-104-TEST-12`
 - Evidence: `VOC-104-EV-00` (`t00-evidence.md` in this package directory)
 - Status: pending
 
@@ -27,14 +27,16 @@ the same package.
 1. Add a deterministic ready_for_review reuse-eligibility decision to shared
    infra (helper and/or reusable workflow coordination per `VOC-104-D01`) that
    inspects only Actions/check/comment metadata and emits a machine-readable
-   outcome (`reuse-evidence` vs full path).
+   outcome: `reuse-evidence`, `full-path`, or `fail-closed-to-full-path`, with the
+   exact meanings defined by `VOC-104-D01`.
 2. Wire the caller pipeline template and this repository's
    `.github/workflows/pipeline.yml` so that on `ready_for_review`, when reuse is
    allowed, `ci` and model-invoking `review` / `plan-review` are skipped while
    `merge-gate` still runs and remains reachable when review siblings are
    skipped.
-3. Enforce all `VOC-104-D02` preconditions; on any failure take the normal full
-   CI + review path (`VOC-104-D04`).
+3. Enforce all `VOC-104-D02` preconditions. Emit `full-path` for a deterministic
+   ineligibility and `fail-closed-to-full-path` for evaluation uncertainty; both
+   take normal full CI + review (`VOC-104-D04`).
 4. Preserve draft never auto-merges (`VOC-104-D00`) and reject
    human/implementer comments as reusable authority (`VOC-104-D05`).
 5. Preserve exact-SHA stale-run protections and independent-role separation
