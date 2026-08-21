@@ -1,0 +1,22 @@
+schema_version: 1
+task_id: VOC-102-T01
+ownership: operator
+
+workflow_file: pipeline.yml
+workflow_name: pipeline
+job_names:
+  - auto-advance
+events:
+  - issues
+branch: develop
+sha_lineage:
+  mode: integration_contains_pr_head
+conclusion: success
+max_age: 72h
+# Observe-only: after VOC-102-T00 is live, closing T00 (or an equivalent controlled
+# predecessor close) must produce an auto-advance decision that does NOT start
+# implement.yml for this operator-owned T01. Qualifying evidence is a successful
+# pipeline/auto-advance run whose lineage contains the T00 tip, with scrubbed
+# metadata showing should_dispatch=false (or equivalent) and zero implementer
+# jobs for VOC-102-T01. Ordinary-dispatch proof may use deterministic fixtures
+# recorded in t01-evidence.md. Do not invent unrelated workflow edits.
