@@ -54,6 +54,8 @@ Order is mandatory: **T00 → T01**.
 - Acceptance criteria: `VOC-094-AC-05`, `VOC-094-AC-06`
 - Tests: `VOC-094-TEST-07`
 - Evidence: `VOC-094-EV-01` (`t01-evidence.md`)
+- Live-evidence contract: `.karsift/live-evidence/VOC-094-T01.yaml` (operator-owned;
+  governed reconcile per `docs/operations/live-evidence.md`)
 - Status: pending — depends on `VOC-094-T00`
 
 ### Required work
