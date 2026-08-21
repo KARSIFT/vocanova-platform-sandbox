@@ -95,6 +95,55 @@ class Voc097LiveEvidenceLifecycleTests(unittest.TestCase):
                 output.seek(0)
                 return completed, output.read().decode()
 
+    def _execute_waiting_remediation_path(self):
+        head = "a" * 40
+        base = "b" * 40
+        package = "specs/changes/VOC-097-example"
+        script = self._run_block(
+            self.remediate_workflow,
+            "Parse verdict, attempt, and package identity from the PR",
+        )
+        script = script.replace("${{ github.repository }}", "KARSIFT/example")
+        script = script.replace("karsift-ai-infra/config/", "config/")
+        gh_stub = f"""
+        gh() {{
+          if [ "$1 $2 $3" = "pr view 12" ]; then
+            printf '%s\\n' '{{"body":"Implements task `VOC-097-T02` from `VOC-097` (`{package}`).\\n\\nCloses #34.\\n\\nPackage path: `{package}`\\n\\nImplemented by the implementer role (attempt 1 of 2).","headRefOid":"{head}","baseRefOid":"{base}"}}'
+            return 0
+          fi
+          if [ "$1" = "api" ]; then
+            printf '%s\\n' '[[{{"id":1,"created_at":"2026-08-21T00:00:00Z","user":{{"login":"karsift-ai-infra-bot[bot]","type":"Bot"}},"body":"**Independent verification - bound to commit `{head}`**\\ntask_id: `VOC-097-T02`\\npackage_path: `{package}`\\nauthority_issue: `34`\\nbase_sha: `{base}`\\nVERDICT: WAITING FOR OPERATOR LIVE EVIDENCE"}}]]'
+            return 0
+          fi
+          printf 'unexpected gh invocation: %s\\n' "$*" >&2
+          return 97
+        }}
+        """
+        with tempfile.TemporaryDirectory() as scratch:
+            verdict_path = Path(scratch) / "review-verdict.md"
+            script = script.replace("/tmp/review-verdict.md", str(verdict_path))
+            output_path = Path(scratch) / "github-output"
+            env = {
+                **os.environ,
+                "GITHUB_OUTPUT": str(output_path),
+                "PR_NUMBER": "12",
+                "GH_REPO": "KARSIFT/example",
+                "CI_FAILED": "false",
+                "REVIEW_JOB_FAILED": "false",
+                "EXPECTED_HEAD_SHA": head,
+                "EXPECTED_BASE_SHA": base,
+                "PACKAGE_PATH": package,
+            }
+            completed = subprocess.run(
+                ["bash", "-c", textwrap.dedent(gh_stub) + script],
+                cwd=FIXTURE_INFRA_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            return completed, output_path.read_text(encoding="utf-8")
+
     def test_voc097_test_02_waiting_marker_is_machine_detectable_and_fail_dominant(self):
         waiting = "VERDICT: WAITING FOR OPERATOR LIVE EVIDENCE"
         failure = "VERDICT: FAIL"
@@ -126,6 +175,12 @@ class Voc097LiveEvidenceLifecycleTests(unittest.TestCase):
         retry_output = self.remediate_workflow.index('echo "should_retry=true"')
         self.assertLess(waiting_guard, retry_output)
         self.assertIn('echo "should_retry=false"', self.remediate_workflow)
+        result, output = self._execute_waiting_remediation_path()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("should_retry=false", output)
+        self.assertIn("next_attempt=", output)
+        self.assertIn("waiting_for_operator_live_evidence=true", output)
+        self.assertNotIn("should_retry=true", output)
 
     def test_voc097_test_04_genuine_fail_and_ci_failure_still_retry(self):
         common = {"expected_sha": "a" * 40, "current_sha": "a" * 40}
