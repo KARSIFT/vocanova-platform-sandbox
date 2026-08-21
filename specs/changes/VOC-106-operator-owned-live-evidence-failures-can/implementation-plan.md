@@ -68,7 +68,7 @@ Ordered steps:
     implement job for the operator-owned task; escalation metadata is present;
     ordinary implementer-owned retry remains covered by fixture/live-safe
     evidence. It has no write, model, deploy, or application-secret path.
-12. Run applicable tests and governance validation; write `t00-evidence.md`.
+13. Run applicable tests and governance validation; write `t00-evidence.md`.
 
 ### T01 — Controlled sanitized workflow proof
 

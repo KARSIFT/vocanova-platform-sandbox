@@ -55,8 +55,10 @@ genuine review `FAIL` (attempt capped at 2), then stops. `WAITING`, `STALE`, and
 
 Stale caller runs, missing qualifying evidence, and
 malformed/unreadable/contradictory ownership metadata do **not** dispatch the
-implementer and do **not** consume an implementation attempt. Fail-closed /
-escalate-operator outcomes are used instead of guessing ordinary ownership.
+implementer and do **not** consume an implementation attempt. Stale caller runs
+retain the `STALE` no-op. Missing evidence retains existing operator/reconcile
+handling. Malformed, unreadable, or contradictory ownership metadata uses an
+explicit fail-closed escalation instead of guessing ordinary ownership.
 
 ## VOC-106-AC-04 — Operator WAITING remains suppressed without retry
 
