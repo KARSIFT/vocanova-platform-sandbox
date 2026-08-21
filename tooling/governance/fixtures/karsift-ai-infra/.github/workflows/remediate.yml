@@ -83,6 +83,8 @@ jobs:
       waiting_for_operator_live_evidence: ${{ steps.parse.outputs.waiting_for_operator_live_evidence }}
       review_infrastructure_failure: ${{ steps.parse.outputs.review_infrastructure_failure }}
       stale_run: ${{ steps.parse.outputs.stale_run }}
+      operator_escalation: ${{ steps.parse.outputs.operator_escalation }}
+      ownership_fail_closed: ${{ steps.parse.outputs.ownership_fail_closed }}
     steps:
       - name: Checkout karsift-ai-infra policy helpers
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -90,6 +92,13 @@ jobs:
           repository: KARSIFT/karsift-ai-infra
           path: karsift-ai-infra
           persist-credentials: false
+
+      - name: Checkout exact PR head for governed ownership metadata
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.expected_head_sha }}
+          persist-credentials: false
+          path: pr-head
 
       # The PR body's exact wording is implement.yml's own template (see
       # "Open PR" there) - this parses it back out. Both files must stay in
@@ -156,6 +165,8 @@ jobs:
           echo "waiting_for_operator_live_evidence=false" >> "$GITHUB_OUTPUT"
           echo "review_infrastructure_failure=false" >> "$GITHUB_OUTPUT"
           echo "stale_run=false" >> "$GITHUB_OUTPUT"
+          echo "operator_escalation=false" >> "$GITHUB_OUTPUT"
+          echo "ownership_fail_closed=false" >> "$GITHUB_OUTPUT"
 
           # CI/review-job failure inputs belong to the caller run's head, not
           # whichever head happens to be live when this reusable job starts.
@@ -255,6 +266,62 @@ jobs:
             echo "should_retry=false" >> "$GITHUB_OUTPUT"
             echo "next_attempt=" >> "$GITHUB_OUTPUT"
             echo "A retry condition is present but task_id/change_id/issue_number could not be parsed from the PR body - refusing to guess, leaving this for a human." >&2
+            exit 0
+          fi
+
+          # VOC-106: resolve governed ownership from the exact reviewed PR head
+          # before any implementer retry. Operator-owned / live-evidence-only
+          # FAIL/CI states escalate instead of dispatching implement.yml.
+          ownership="ordinary"
+          ownership_reason=""
+          package_root="pr-head/$PACKAGE_PATH"
+          if [ -d "$package_root" ]; then
+            export PYTHONPATH=karsift-ai-infra/config
+            python3 karsift-ai-infra/config/remediate-ownership-classifier.py \
+              --package-path "$package_root" \
+              --task-id "$task_id"
+            ownership=$(grep '^ownership=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2-)
+            ownership_reason=$(grep '^ownership_reason=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2-)
+          else
+            ownership="fail-closed"
+            ownership_reason="missing_package_path"
+          fi
+
+          decision=$(python3 karsift-ai-infra/config/decide-remediation.py \
+            --expected-sha "$EXPECTED_HEAD_SHA" \
+            --current-sha "$head_sha" \
+            --review-state "$review_state" \
+            --ci-failed "$CI_FAILED" \
+            --review-job-failed "$REVIEW_JOB_FAILED" \
+            --ownership "$ownership")
+
+          if [ "$decision" = "ESCALATE_OPERATOR" ]; then
+            echo "should_retry=false" >> "$GITHUB_OUTPUT"
+            echo "next_attempt=" >> "$GITHUB_OUTPUT"
+            echo "operator_escalation=true" >> "$GITHUB_OUTPUT"
+            if [ "$CI_FAILED" = "true" ]; then
+              echo "escalation_reason=ci_failure" >> "$GITHUB_OUTPUT"
+            else
+              echo "escalation_reason=review_fail" >> "$GITHUB_OUTPUT"
+            fi
+            echo "escalation_ownership=$ownership" >> "$GITHUB_OUTPUT"
+            echo "Operator-owned / live-evidence-only task - remediation will escalate without dispatching the implementer."
+            exit 0
+          fi
+
+          if [ "$decision" = "FAIL_CLOSED" ]; then
+            echo "should_retry=false" >> "$GITHUB_OUTPUT"
+            echo "next_attempt=" >> "$GITHUB_OUTPUT"
+            echo "ownership_fail_closed=true" >> "$GITHUB_OUTPUT"
+            echo "ownership_fail_closed_reason=$ownership_reason" >> "$GITHUB_OUTPUT"
+            echo "Malformed or unreadable ownership metadata - remediation will fail closed without dispatching the implementer."
+            exit 0
+          fi
+
+          if [ "$decision" != "RETRY" ]; then
+            echo "should_retry=false" >> "$GITHUB_OUTPUT"
+            echo "next_attempt=" >> "$GITHUB_OUTPUT"
+            echo "Unexpected post-ownership remediation decision '$decision' - refusing to dispatch." >&2
             exit 0
           fi
 
@@ -373,6 +440,65 @@ jobs:
             exit 0
           fi
           gh pr comment "$PR_NUMBER" --body-file /tmp/review-failure-comment.md
+
+      - name: Record sanitized operator remediation escalation without implementer retry
+        if: steps.parse.outputs.operator_escalation == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
+          EXPECTED_BASE_SHA: ${{ inputs.expected_base_sha }}
+        run: |
+          set -euo pipefail
+          live_pair=$(gh pr view "$PR_NUMBER" --json headRefOid,baseRefOid,state)
+          if [ "$(jq -r .state <<<"$live_pair")" != "OPEN" ] ||
+             [ "$(jq -r .headRefOid <<<"$live_pair")" != "$EXPECTED_HEAD_SHA" ] ||
+             [ "$(jq -r .baseRefOid <<<"$live_pair")" != "$EXPECTED_BASE_SHA" ]; then
+            echo "PR base/head pair changed before operator escalation publication; suppressing stale comment."
+            exit 0
+          fi
+          export PYTHONPATH=karsift-ai-infra/config
+          python3 karsift-ai-infra/config/remediate-escalate-operator.py \
+            --repository "$GH_REPO" \
+            --token "$GH_TOKEN" \
+            --task-id "${{ steps.parse.outputs.task_id }}" \
+            --package-path "${{ inputs.package_path }}" \
+            --pr-number "$PR_NUMBER" \
+            --run-id "$GITHUB_RUN_ID" \
+            --head-sha "$EXPECTED_HEAD_SHA" \
+            --base-sha "$EXPECTED_BASE_SHA" \
+            --reason "${{ steps.parse.outputs.escalation_reason }}" \
+            --ownership "${{ steps.parse.outputs.escalation_ownership }}"
+
+      - name: Record sanitized remediation ownership fail-closed without implementer retry
+        if: steps.parse.outputs.ownership_fail_closed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
+          EXPECTED_BASE_SHA: ${{ inputs.expected_base_sha }}
+        run: |
+          set -euo pipefail
+          live_pair=$(gh pr view "$PR_NUMBER" --json headRefOid,baseRefOid,state)
+          if [ "$(jq -r .state <<<"$live_pair")" != "OPEN" ] ||
+             [ "$(jq -r .headRefOid <<<"$live_pair")" != "$EXPECTED_HEAD_SHA" ] ||
+             [ "$(jq -r .baseRefOid <<<"$live_pair")" != "$EXPECTED_BASE_SHA" ]; then
+            echo "PR base/head pair changed before ownership fail-closed publication; suppressing stale comment."
+            exit 0
+          fi
+          export PYTHONPATH=karsift-ai-infra/config
+          python3 karsift-ai-infra/config/remediate-fail-closed.py \
+            --repository "$GH_REPO" \
+            --token "$GH_TOKEN" \
+            --task-id "${{ steps.parse.outputs.task_id }}" \
+            --package-path "${{ inputs.package_path }}" \
+            --pr-number "$PR_NUMBER" \
+            --run-id "$GITHUB_RUN_ID" \
+            --head-sha "$EXPECTED_HEAD_SHA" \
+            --base-sha "$EXPECTED_BASE_SHA" \
+            --reason "${{ steps.parse.outputs.ownership_fail_closed_reason }}"
 
   retry:
     needs: decide
