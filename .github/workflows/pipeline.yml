@@ -393,4 +393,8 @@ jobs:
       mode: ${{ github.event_name == 'schedule' && 'reconcile' || inputs.live_evidence_mode }}
       workflow_run_id: ${{ inputs.live_evidence_run_id }}
       pr_number: ${{ inputs.live_evidence_pr_number }}
-    secrets: inherit
+    # Pass only the two operator identity inputs declared by the reusable
+    # workflow. Do not expose the caller's unrelated deploy/OAuth secrets.
+    secrets:
+      KARSIFT_BOT_APP_ID: ${{ secrets.KARSIFT_BOT_APP_ID }}
+      KARSIFT_BOT_PRIVATE_KEY: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}

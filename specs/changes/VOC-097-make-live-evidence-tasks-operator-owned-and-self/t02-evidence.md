@@ -22,6 +22,8 @@ related_change: VOC-097
 gate_status: complete
 shared_infrastructure_merged: true
 caller_exact_sha_reviewed: true
+caller_reviewed_base_sha: ff736a2782748c9bcd59b6d0352402d9c9deacdb
+caller_reviewed_implementation_sha: a78cc67e4703e9d49e55cad76ec545905986c65d
 live_fixture_claimed: false
 post_merge_source_run_claimed: false
 ---
@@ -50,8 +52,11 @@ passed the database-backed coverage unavailable in the local WSL environment.
 The PR remained draft throughout that proof. The merge-gate status recorded a
 draft block and did not claim it would auto-merge, proving that a reviewed draft
 no longer wastes three impossible merge attempts or turns a healthy pipeline
-red. The final evidence-only revision still requires the ordinary exact-SHA
-checks and independent verification before the PR is marked ready.
+red. The `caller_exact_sha_reviewed` field is explicitly bound to the
+implementation base/head pair recorded in frontmatter, not to later
+evidence-only commits. Evidence-only revisions do not self-attest: the current
+PR revision must still pass GitHub's external exact-SHA checks and independent
+verification before the PR is marked ready.
 
 This record replaces an earlier incorrect claim that an untracked nested
 `karsift-ai-infra/` checkout was bundled in the VocaNova PR. It was not tracked
@@ -112,8 +117,10 @@ sanitized requested state. The exact PR head/ref and immutable target/default
 branch snapshots are checked before reservation and again immediately before
 dispatch.
 
-The implementer has no Actions credential. Read access uses the caller's normal
-token; mutations use a separately minted, repository-scoped GitHub App token.
+The implementer has no Actions credential. The caller passes the operator job
+only the two declared GitHub App identity secrets rather than using catch-all
+secret inheritance. Read access uses the caller's normal token; mutations use a
+separately minted, repository-scoped GitHub App token.
 The token action is pinned to a post-fix immutable revision that honors the
 three explicit `permission-*` inputs rather than inheriting the App's complete
 installation permissions.

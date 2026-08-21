@@ -49,6 +49,17 @@ test("VOC-097-T02 caller wires bounded polling and explicit observe/dispatch pat
     pipeline,
     /pr_number: \$\{\{ inputs\.live_evidence_pr_number \}\}/,
   );
+  const operatorJob = pipeline.split("  live-evidence-reconcile:", 2)[1];
+  assert.ok(operatorJob, "operator reconciliation job must exist");
+  assert.doesNotMatch(
+    operatorJob,
+    /^\s{4}secrets: inherit$/m,
+    "operator job must not inherit unrelated caller secrets",
+  );
+  assert.match(
+    operatorJob,
+    /^\s{4}secrets:\n\s{6}KARSIFT_BOT_APP_ID: \$\{\{ secrets\.KARSIFT_BOT_APP_ID \}\}\n\s{6}KARSIFT_BOT_PRIVATE_KEY: \$\{\{ secrets\.KARSIFT_BOT_PRIVATE_KEY \}\}/m,
+  );
   assert.equal(
     (
       pipeline.match(
@@ -77,6 +88,12 @@ test("VOC-097-T02 evidence file records mechanism without secrets", () => {
   assert.ok(existsSync(evidencePath), "t02-evidence.md must exist");
   const evidence = readFileSync(evidencePath, "utf8");
   assert.match(evidence, /evidence_id:\s*VOC-097-EV-02/);
+  assert.match(evidence, /caller_exact_sha_reviewed:\s*true/);
+  assert.match(evidence, /caller_reviewed_base_sha:\s*[0-9a-f]{40}/);
+  assert.match(
+    evidence,
+    /caller_reviewed_implementation_sha:\s*[0-9a-f]{40}/,
+  );
   assert.match(evidence, /live-evidence-reconcile\.yml/);
   assert.match(evidence, /shared infrastructure PR/i);
   assert.match(evidence, /hourly metadata reconciliation/i);
