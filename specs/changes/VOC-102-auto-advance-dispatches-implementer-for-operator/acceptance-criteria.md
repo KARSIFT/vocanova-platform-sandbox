@@ -11,7 +11,9 @@
 Before auto-advance selects any path-specific PR/dispatch outcome, it reads
 next-task ownership from governed package data. When
 `<package_path>/.karsift/live-evidence/<next_task_id>.yaml` exists, that contract
-is the authoritative machine-readable ownership source. The only secondary
+is the authoritative machine-readable ownership source, while readable canonical
+`tasks.md` and its matching task stanza remain a mandatory roster cross-check;
+missing or unreadable roster data fails closed. The only secondary
 expectation source is one exact allowlisted `Automation ownership` marker inside
 the matching task stanza; narrative prose is never interpreted.
 

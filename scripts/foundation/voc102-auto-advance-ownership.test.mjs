@@ -84,7 +84,14 @@ test("VOC-102-TEST-10: docs describe skip vs dispatch when touched", () => {
 });
 
 test("VOC-102-TEST-11 through TEST-13: carrier, permissions, verifier", () => {
-  runInfraTests(["-k", "test_voc102_test_1"]);
+  runInfraTests([
+    "-k",
+    "test_voc102_test_11",
+    "-k",
+    "test_voc102_test_12",
+    "-k",
+    "test_voc102_test_13",
+  ]);
 });
 
 test("VOC-102 caller wiring exposes read-only verify-auto-advance-live-evidence action", () => {

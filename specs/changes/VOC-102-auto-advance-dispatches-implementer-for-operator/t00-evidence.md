@@ -150,6 +150,12 @@ Result: governance structure validation passed; detected path floor R4;
   The focused Node suite remains 5/5, governance validation reports R4, and the
   repeated full local validation again reached 226/226 foundation tests before
   the same disclosed Docker-unavailable boundary in the two API callback tests.
+- Independent review of corrected commit
+  `d23c6780e5c9312c87ff0cfdb6542ef84e301939` also passed with two non-blocking
+  clarity findings. The TEST-11 through TEST-13 wrapper now uses three exact
+  unittest filters, and D00/AC-00 now state explicitly that canonical
+  `tasks.md` remains a mandatory roster cross-check even when the ownership
+  contract exists; missing roster data intentionally fails closed.
 - Controlled live workflow proof remains `VOC-102-T01` (`VOC-102-EV-01`).
 - The first automated attempt (pipeline `32476149809`) correctly refused to
   publish a protected workflow-file mutation. Its committed recovery artifact
