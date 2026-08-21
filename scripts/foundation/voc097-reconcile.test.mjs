@@ -22,6 +22,11 @@ test("VOC-097-T02 caller wires bounded polling and explicit observe/dispatch pat
   const pipeline = readFileSync(pipelinePath, "utf8");
 
   assert.doesNotMatch(pipeline, /^\s{2}workflow_run:/m);
+  assert.match(
+    pipeline,
+    /types: \[opened, synchronize, reopened, ready_for_review, closed\]/,
+    "an unchanged reviewed draft SHA must be rechecked when it becomes ready",
+  );
   assert.match(pipeline, /schedule:\s*\n\s*- cron: "0 \* \* \* \*"/);
   assert.match(pipeline, /reconcile-live-evidence/);
   assert.match(pipeline, /live_evidence_mode:/);

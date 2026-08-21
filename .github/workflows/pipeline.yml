@@ -41,7 +41,9 @@ name: pipeline
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, closed]
+    # Draft-aware merge-gate must re-evaluate an unchanged exact SHA when its
+    # evidence is complete and the PR becomes ready for review.
+    types: [opened, synchronize, reopened, ready_for_review, closed]
   schedule:
     - cron: "0 * * * *"
   issue_comment:

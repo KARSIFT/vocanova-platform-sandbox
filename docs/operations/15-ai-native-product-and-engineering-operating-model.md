@@ -1625,6 +1625,12 @@ A reviewer's `PASS`/`PASS WITH NON-BLOCKING FINDINGS` verdict means the implemen
 appears technically acceptable and compliant with the approved specification. It does not
 authorize new product scope.
 
+Draft pull requests remain non-mergeable even when their current exact SHA passes CI and
+independent review. The caller subscribes to GitHub's `ready_for_review` activity so completing
+evidence and marking a draft ready starts a fresh pipeline evaluation on that unchanged SHA;
+the shared merge gate also rechecks open/draft state and the reviewed base/head pair immediately
+before merging.
+
 **Historical (VOC-075 / issue #573):** Before A-004 activation, R4 required founder
 approval on merge and R4 packages set `automatic_merge_allowed: false`.
 

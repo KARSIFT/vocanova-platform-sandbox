@@ -99,6 +99,8 @@ installation permissions.
 
 VocaNova's `/.github/workflows/pipeline.yml` uses:
 
+- `ready_for_review` re-entry so an evidence-complete draft is re-evaluated on
+  its unchanged exact SHA before merge;
 - hourly metadata reconciliation for matching evidence and bounded timeout;
 - explicit manual `reconcile`, `observe`, and `dispatch` modes;
 - an explicit run ID only for `observe`;
