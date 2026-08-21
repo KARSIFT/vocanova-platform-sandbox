@@ -39,7 +39,7 @@ comment is a merge/adopt/release gate under active A-004.
 
 - Each implementable task PR receives exact-SHA independent verification.
 - Under active A-004, no founder `approved` comment is an engineering-workflow merge
-  gate. R3 evidence obligations: deterministic ownership-gate tests pass; scope
+  gate. R4 evidence obligations: deterministic ownership-gate tests pass; scope
   confirmed; T01 live metadata recorded under the operator-owned contract;
   sanitization and no-secret invariants preserved; release boundary preserved.
 - Closure: AC results with evidence in `t00-evidence.md` and `t01-evidence.md`.

@@ -5,7 +5,7 @@ title: Stop auto-advance dispatching implementer for operator-owned live-evidenc
   tasks
 type: infrastructure
 status: adopted
-risk: R3
+risk: R4
 planned_implementation_risk_floor: "Measured during drafting against the expected\
   \ task-scoped file list (KARSIFT/karsift-ai-infra/.github/workflows/auto-advance.yml,\
   \ related helper/tests and README; calling-repo .github/workflows/pipeline.yml proof\

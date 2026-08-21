@@ -81,9 +81,11 @@ Non-goals / explicitly excluded:
 - Active authority model: **A-004**. No founder `approved` comment is a
   merge/adopt/release gate.
 
-The `risk: R3` value in `change.yaml` is a **draft proposal for the reviewing human
-at adoption time, never a determination**. The path-based classifier and independent
-verifier govern each task PR.
+The original R3 value was a **draft proposal for the reviewing human at adoption
+time, never a determination**. The implemented task touched the calling repository
+workflow and was therefore classified R4; `change.yaml` now records that current
+package risk while `adoption_risk: R3` preserves the historical adoption decision.
+The path-based classifier and independent verifier govern each task PR.
 
 ## Decisions
 
