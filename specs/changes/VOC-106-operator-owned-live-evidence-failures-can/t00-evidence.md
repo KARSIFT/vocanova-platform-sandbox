@@ -33,6 +33,14 @@ git diff --check
 
 ## results
 
+- Shared-infrastructure PR `KARSIFT/karsift-ai-infra#94` merged at exact head
+  `d0405f43fa66beb6642835dcbd40d346cba528db` (merge
+  `54573e94e62e671f023f521a07770b1d30889591`). Hosted `actionlint`,
+  `shellcheck`, YAML parse, and policy-test jobs all passed.
+- The original isolated publisher correctly refused the calling-repository
+  bundle because it contains governed workflow changes. The already-validated
+  bundle from run `32535480267` was recovered without rerunning the model and
+  published through the supervised workflow-change path.
 - `karsift-ai-infra` remediate policy + ownership tests: **20 passed** (including
   VOC-106-TEST-00 through TEST-07 and TEST-11 matrix cases in
   `tests/test_remediate_ownership.py`).
