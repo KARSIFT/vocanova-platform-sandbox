@@ -96,7 +96,11 @@ raised before the sanitized fail-closed marker path. `KARSIFT/karsift-ai-infra#8
 now converts filesystem and decoding failures into the allowlisted
 `unreadable_tasks_file` reason and proves permission/encoding fixtures. All 107
 shared policy tests passed hosted self-CI run `32491103732`; the final pinned
-revision is `4adebd61f4ede7bf767b630352792aba42a5acf7`.
+runtime revision was `4adebd61f4ede7bf767b630352792aba42a5acf7`. A final
+coverage-clarity review requested the missing-roster case explicitly include a
+valid operator contract. `KARSIFT/karsift-ai-infra#84` adds that pairing; all
+107 policy tests passed hosted self-CI run `32491935201`. The final pinned
+revision is `32111ceea3bb1b1aa1ae947ee35fbdbd1c1290c9`.
 
 ### Calling-repo foundation tests
 
@@ -175,6 +179,6 @@ Result: governance structure validation passed; detected path floor R4;
   was reviewed and corrected through the supervised split above; the failed run
   was not blindly retried.
 - Calling-repo runtime fixtures are byte-identical to the final infra merge
-  `4adebd61f4ede7bf767b630352792aba42a5acf7`; runtime consumption remains
+  `32111ceea3bb1b1aa1ae947ee35fbdbd1c1290c9`; runtime consumption remains
   `KARSIFT/karsift-ai-infra/...@main`.
 - No secrets, logs, artifacts, or unrelated package live evidence recorded here.
