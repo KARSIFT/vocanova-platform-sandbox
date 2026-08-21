@@ -20,6 +20,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 # Serialize the list-then-create deduplication transaction. A constant group is
 # intentional: failures from different observed workflows must not race while
@@ -53,8 +54,9 @@ jobs:
             exit 1
           fi
 
-      # Issue write for open/dedupe; Actions read for bounded jobs metadata in
-      # classify-deploy-concurrency-cancel.sh (VOC-094-T00).
+      # Issues write only — matches the App installation grant (VOC-098-D00).
+      # Bounded Actions jobs metadata for classify-deploy-concurrency-cancel.sh
+      # uses the job GITHUB_TOKEN (actions: read at the workflow permissions floor).
       - name: Mint issue-writer installation token
         id: app-token
         uses: actions/create-github-app-token@v3
@@ -62,12 +64,11 @@ jobs:
           app-id: ${{ secrets.KARSIFT_BOT_APP_ID }}
           private-key: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
           permission-issues: write
-          permission-actions: read
 
       - name: Classify benign deploy concurrency supersession
         id: classify-cancel
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ github.token }}
           GH_REPOSITORY: ${{ github.repository }}
           FAILURE_WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
           FAILURE_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
