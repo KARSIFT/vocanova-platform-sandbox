@@ -250,8 +250,73 @@ VERDICT: PASS
     def test_voc097_test_13_timeout_is_bounded_and_marker_is_single_use(self):
         self.assertFalse(policy.timed_out(NOW - timedelta(hours=71), NOW))
         self.assertTrue(policy.timed_out(NOW - timedelta(hours=72), NOW))
-        self.assertIn("karsift-live-evidence-timeout", self.runner_source)
-        self.assertIn("comment_exists", self.runner_source)
+
+        comments = []
+        mutations = []
+        task = SimpleNamespace(
+            task_id="VOC-097-T02",
+            issue_number=34,
+            pr_number=12,
+            head_sha=HEAD,
+            waiting_since=NOW - timedelta(hours=72),
+        )
+
+        class ReadApi:
+            repository = "KARSIFT/example"
+
+            def get_all(self, endpoint, key=None):
+                self.assert_comments_endpoint(endpoint)
+                return comments
+
+            @staticmethod
+            def assert_comments_endpoint(endpoint):
+                if endpoint != "repos/KARSIFT/example/issues/34/comments":
+                    raise AssertionError(f"unexpected read endpoint: {endpoint}")
+
+        class WriteApi:
+            repository = "KARSIFT/example"
+
+            def mutate(self, method, endpoint, payload):
+                mutations.append((method, endpoint, payload))
+                comments.append({
+                    "user": {
+                        "login": "karsift-ai-infra-bot[bot]",
+                        "type": "Bot",
+                    },
+                    "body": payload["body"],
+                })
+                return {"id": 1}
+
+        with (
+            patch.object(runner, "result_already_present", return_value=False),
+            patch.object(runner, "candidate_runs", return_value=[]),
+            patch.object(runner, "append_result_commit") as append_result,
+            patch.object(runner, "post_qualified_comment") as qualified_comment,
+            patch.object(runner, "advance_result_ref") as advance_result,
+            patch.object(runner, "dispatch_once") as dispatch,
+        ):
+            self.assertFalse(
+                runner.reconcile_task(ReadApi(), WriteApi(), task, NOW, None)
+            )
+            self.assertFalse(
+                runner.reconcile_task(
+                    ReadApi(),
+                    WriteApi(),
+                    task,
+                    NOW + timedelta(hours=1),
+                    None,
+                )
+            )
+
+        self.assertEqual(len(mutations), 1)
+        method, endpoint, payload = mutations[0]
+        self.assertEqual(method, "POST")
+        self.assertEqual(endpoint, "repos/KARSIFT/example/issues/34/comments")
+        self.assertIn("karsift-live-evidence-timeout", payload["body"])
+        append_result.assert_not_called()
+        qualified_comment.assert_not_called()
+        advance_result.assert_not_called()
+        dispatch.assert_not_called()
 
     def test_voc097_test_14_duplicate_result_short_circuits_reconciliation(self):
         task = SimpleNamespace(result_path="result.json", head_sha=HEAD, base_sha=BASE)
