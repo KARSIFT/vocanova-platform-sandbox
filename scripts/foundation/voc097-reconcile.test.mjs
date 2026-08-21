@@ -88,7 +88,11 @@ test("VOC-097-T02 evidence file records mechanism without secrets", () => {
   assert.ok(existsSync(evidencePath), "t02-evidence.md must exist");
   const evidence = readFileSync(evidencePath, "utf8");
   assert.match(evidence, /evidence_id:\s*VOC-097-EV-02/);
-  assert.match(evidence, /caller_exact_sha_reviewed:\s*true/);
+  assert.match(
+    evidence,
+    /caller_recorded_implementation_pair_reviewed:\s*true/,
+  );
+  assert.doesNotMatch(evidence, /caller_exact_sha_reviewed:/);
   assert.match(evidence, /caller_reviewed_base_sha:\s*[0-9a-f]{40}/);
   assert.match(evidence, /caller_reviewed_implementation_sha:\s*[0-9a-f]{40}/);
   assert.match(evidence, /live-evidence-reconcile\.yml/);

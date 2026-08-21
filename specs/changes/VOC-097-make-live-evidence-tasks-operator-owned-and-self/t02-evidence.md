@@ -21,7 +21,7 @@ date: 2026-08-21
 related_change: VOC-097
 gate_status: complete
 shared_infrastructure_merged: true
-caller_exact_sha_reviewed: true
+caller_recorded_implementation_pair_reviewed: true
 caller_reviewed_base_sha: ff736a2782748c9bcd59b6d0352402d9c9deacdb
 caller_reviewed_implementation_sha: a78cc67e4703e9d49e55cad76ec545905986c65d
 live_fixture_claimed: false
@@ -52,11 +52,12 @@ passed the database-backed coverage unavailable in the local WSL environment.
 The PR remained draft throughout that proof. The merge-gate status recorded a
 draft block and did not claim it would auto-merge, proving that a reviewed draft
 no longer wastes three impossible merge attempts or turns a healthy pipeline
-red. The `caller_exact_sha_reviewed` field is explicitly bound to the
-implementation base/head pair recorded in frontmatter, not to later
-evidence-only commits. Evidence-only revisions do not self-attest: the current
-PR revision must still pass GitHub's external exact-SHA checks and independent
-verification before the PR is marked ready.
+red. The `caller_recorded_implementation_pair_reviewed` field describes only the
+implementation base/head pair recorded beside it in frontmatter. It does not
+claim that this evidence file's current commit reviewed itself. Evidence-only
+revisions do not self-attest: the current PR revision must still pass GitHub's
+external exact-SHA checks and independent verification before the PR is marked
+ready.
 
 This record replaces an earlier incorrect claim that an untracked nested
 `karsift-ai-infra/` checkout was bundled in the VocaNova PR. It was not tracked
@@ -67,12 +68,12 @@ now delivered through its own governed issue and PR.
 
 The shared infrastructure PR adds:
 
-| Component | Responsibility |
-| --- | --- |
-| `config/live_evidence_reconcile.py` | Strict contract parsing, qualification, sanitization, timeout policy |
-| `config/live-evidence-reconcile-runner.py` | GitHub metadata adapter and idempotent result commit |
-| `.github/workflows/live-evidence-reconcile.yml` | Serialized, App-authenticated reusable operator job |
-| `tests/test_live_evidence_reconcile.py` | Deterministic positive and negative policy coverage |
+| Component                                       | Responsibility                                                       |
+| ----------------------------------------------- | -------------------------------------------------------------------- |
+| `config/live_evidence_reconcile.py`             | Strict contract parsing, qualification, sanitization, timeout policy |
+| `config/live-evidence-reconcile-runner.py`      | GitHub metadata adapter and idempotent result commit                 |
+| `.github/workflows/live-evidence-reconcile.yml` | Serialized, App-authenticated reusable operator job                  |
+| `tests/test_live_evidence_reconcile.py`         | Deterministic positive and negative policy coverage                  |
 
 Live caller proof also exposed four shared reliability defects in the review
 and merge lifecycle. They were handled as separate focused shared issues and
