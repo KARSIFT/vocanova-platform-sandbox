@@ -14,17 +14,17 @@
 
 ### T00 — Diagnose and fix production route-sweep failure
 
-| File | Action | Notes |
-|------|--------|-------|
-| `infra/scripts/smoke-test-production.sh` | modify (likely) | Fix harness if false negative proven |
-| `infra/scripts/smoke-test-production.selftest.sh` | modify (likely) | Regression fixture for failing case |
-| `infra/scripts/run-scheduled-synthetic.sh` | inspect | Unlikely change; verify profile wiring |
-| `.github/workflows/scheduled-synthetics.yml` | inspect | Change only if env miswire proven |
-| `infra/monitoring/synthetics.yaml` | inspect | Update only if budget/metadata must change |
-| `apps/web/` | modify (conditional) | Production route fix if regression proven |
-| `scripts/foundation/voc085-production-route-sweep.test.mjs` | modify (likely) | Lock fix or fixture |
-| `scripts/foundation/voc086-scheduled-synthetics.test.mjs` | inspect | Must remain green |
-| `specs/changes/VOC-093-.../t00-evidence.md` | create | Failing check + fix rationale |
+| File                                                        | Action               | Notes                                      |
+| ----------------------------------------------------------- | -------------------- | ------------------------------------------ |
+| `infra/scripts/smoke-test-production.sh`                    | modify (likely)      | Fix harness if false negative proven       |
+| `infra/scripts/smoke-test-production.selftest.sh`           | modify (likely)      | Regression fixture for failing case        |
+| `infra/scripts/run-scheduled-synthetic.sh`                  | inspect              | Unlikely change; verify profile wiring     |
+| `.github/workflows/scheduled-synthetics.yml`                | inspect              | Change only if env miswire proven          |
+| `infra/monitoring/synthetics.yaml`                          | inspect              | Update only if budget/metadata must change |
+| `apps/web/`                                                 | modify (conditional) | Production route fix if regression proven  |
+| `scripts/foundation/voc085-production-route-sweep.test.mjs` | modify (likely)      | Lock fix or fixture                        |
+| `scripts/foundation/voc086-scheduled-synthetics.test.mjs`   | inspect              | Must remain green                          |
+| `specs/changes/VOC-093-.../t00-evidence.md`                 | create               | Failing check + fix rationale              |
 
 Ordered steps:
 
@@ -35,13 +35,14 @@ Ordered steps:
 
 ### T01 — Record live verification
 
-| File | Action | Notes |
-|------|--------|-------|
+| File                                        | Action | Notes                           |
+| ------------------------------------------- | ------ | ------------------------------- |
 | `specs/changes/VOC-093-.../t01-evidence.md` | create | Green workflow_dispatch run URL |
 
 Ordered steps:
 
-1. Dispatch `scheduled-synthetics.yml` from `develop` after T00 merge.
+1. After T00 is released to protected `main`, use the repository-controlled
+   reconciler to dispatch `scheduled-synthetics.yml` at the exact deployed SHA.
 2. Record success evidence; confirm no duplicate failure fingerprint issue.
 3. Optionally note first green schedule-triggered hourly run when available.
 
