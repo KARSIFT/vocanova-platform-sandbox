@@ -27,7 +27,8 @@ const stranded = [
     branch: "develop",
     workflowFile: "scheduled-synthetics.yml",
     jobName: "synthetic.production.authenticated-route-content-sweep",
-    lineage: "exact_pr_head",
+    lineage: "exact_sha",
+    exactSha: "4fc78ff66ba8e0b681302191921f46107a706d01",
     requiresDispatch: true,
   },
   {
@@ -110,6 +111,10 @@ for (const item of stranded) {
     assert.match(contract, new RegExp(`- ${item.jobName}`));
     assert.match(contract, new RegExp(`mode: ${item.lineage}`));
     assert.match(contract, new RegExp(`branch: ${item.branch}`));
+
+    if (item.exactSha) {
+      assert.match(contract, new RegExp(`sha: ${item.exactSha}`));
+    }
 
     if (item.requiresDispatch) {
       assert.match(contract, /^dispatch:/m);

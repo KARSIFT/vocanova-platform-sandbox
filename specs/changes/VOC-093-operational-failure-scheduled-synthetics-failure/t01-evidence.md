@@ -6,7 +6,7 @@ acceptance_criteria:
   - VOC-093-AC-05
 tests:
   - VOC-093-TEST-06
-date: 2026-08-21
+date: 2026-08-22
 related_change: VOC-093
 cites: VOC-093-EV-00
 gate_status: waiting-for-operator-live-evidence
@@ -14,6 +14,7 @@ live_verification_claimed: false
 live_evidence_contract: specs/changes/VOC-093-operational-failure-scheduled-synthetics-failure/.karsift/live-evidence/VOC-093-T01.yaml
 t00_merge_sha: c755bc3e1cadb903a0c8528251c16d1c4421e11d
 t00_merge_pr: 783
+migration_base_sha: 4fc78ff66ba8e0b681302191921f46107a706d01
 ---
 
 # VOC-093-T01 — Live production route-sweep verification
@@ -54,7 +55,7 @@ Machine-readable contract:
 | Job         | `synthetic.production.authenticated-route-content-sweep`              |
 | Event       | `workflow_dispatch`                                                   |
 | Branch ref  | protected integration branch `develop`                                |
-| SHA lineage | `exact_pr_head`                                                       |
+| SHA lineage | `exact_sha` pinned to the reviewed protected-branch migration base    |
 | Dispatch    | `synthetic_id=synthetic.production.authenticated-route-content-sweep` |
 
 Qualifying proof is recorded only in allowlisted reconcile metadata
@@ -62,10 +63,17 @@ Qualifying proof is recorded only in allowlisted reconcile metadata
 qualification). No logs, secrets, session values, OAuth state, or personal data
 belong in this file.
 
+The initial in-place reset made the branch identical to `develop`, and GitHub
+closed the empty PR before a waiting review could run. This evidence-only
+recovery pins the exact protected `develop` revision that the reset selected.
+It keeps workflow dispatch on the protected branch while giving GitHub a
+reviewable contract diff; the reconciler still writes the result and triggers a
+fresh exact-SHA review before merge.
+
 ## Operator action (after waiting review)
 
 1. Confirm PR #789 shows `VERDICT: WAITING FOR OPERATOR LIVE EVIDENCE` and the
-   contract on the current head SHA (see VOC-097-T04 migration record).
+   exact protected-branch SHA declared by the reviewed contract.
 2. Dispatch or observe only through repository-controlled reconcile on protected
    branch `develop` — for
    example `pipeline.yml` with `action=reconcile-live-evidence` and

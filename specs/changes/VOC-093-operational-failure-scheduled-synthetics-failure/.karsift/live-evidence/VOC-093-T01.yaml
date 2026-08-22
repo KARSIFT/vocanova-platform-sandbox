@@ -9,7 +9,8 @@ events:
   - workflow_dispatch
 branch: develop
 sha_lineage:
-  mode: exact_pr_head
+  mode: exact_sha
+  sha: 4fc78ff66ba8e0b681302191921f46107a706d01
 conclusion: success
 max_age: 72h
 dispatch:
