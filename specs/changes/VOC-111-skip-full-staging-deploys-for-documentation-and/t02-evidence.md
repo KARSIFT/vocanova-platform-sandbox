@@ -59,6 +59,22 @@ that GitHub delivered and processed the push event during the observation window
 | `Repository Governance` | `32576777887` | `push` / `develop` | success |
 | `controlled-signup-oauth-e2e` | `32576777783` | `push` / `develop` | success |
 
+## Completion-carrier reconciliation
+
+| Item | Value |
+|------|-------|
+| Primary T02 evidence PR | #929 |
+| Reviewed head SHA | `814663eea3a5378a8863d442c26c8046996468b0` |
+| Integration SHA | `bbd8278ce703ec56caf6bca9b322abbfa7148e85` |
+| Merged at | `2026-08-22T14:08:22Z` |
+| Evidence merge outcome | pass |
+| Completion publication outcome | incomplete — post-merge bookkeeping retained the initial PR-body event snapshot from before its authority metadata was corrected |
+
+This governed follow-up changes only this evidence file. It makes no new live
+absence claim and does not alter application, workflow, or infrastructure behavior.
+Its normal exact-SHA review and merge provide a fresh, correctly formed event for
+the authoritative task-completion marker on issue #924.
+
 ## Acceptance mapping
 
 | ID | Result |
