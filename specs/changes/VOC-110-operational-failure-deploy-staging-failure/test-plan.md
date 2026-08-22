@@ -34,7 +34,7 @@
 
 ## VOC-110-TEST-03 — Container runtime check is merge-gating and path-aware
 
-- Covers: `VOC-110-AC-01`, `VOC-110-D05`
+- Covers: `VOC-110-AC-02`, `VOC-110-D06`
 - Preconditions: T00 evidence and task PR
 - Procedure: Inspect `pipeline.yml` and deterministic fixture. Assert root manifest,
   lockfile, `apps/web/**`, and relevant shared-package changes run the Docker job;
