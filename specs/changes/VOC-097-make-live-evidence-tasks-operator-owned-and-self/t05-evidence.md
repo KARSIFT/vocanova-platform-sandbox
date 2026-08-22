@@ -15,6 +15,12 @@ live_reconcile_claimed: true
 observer_health_claimed: true
 waiting_proof_run: 32456592473
 reconcile_proof_run: 32493488150
+carrier_pr: 869
+pre_reconcile_head_sha: c9ea8b9a639613ff12781c03a4795518c9e7768b
+post_reconcile_head_sha: fe3cf7d60157317e0564d2dd4de751bd6109a5df
+post_reconcile_pipeline_run: 32493543324
+post_wake_review_comment: 5371433025
+ready_for_review_pipeline_run: 32494037984
 reviewed_sha: bind-at-independent-review
 rollback_owner: revert karsift-ai-infra live-evidence-reconcile and caller pipeline wiring; restore prior remediate behavior; leave audit evidence files
 last_known_good_sha: 4fc78ff66ba8e0b681302191921f46107a706d01
@@ -59,26 +65,39 @@ section claims the hosted positive control (`live_fixture_claimed: true`).
 
 ## 2. Qualifying reconcile wake and fresh exact-SHA review gate (VOC-097-AC-06 live; TEST-11)
 
-Controlled fixture: operator-owned carrier on the **VOC-102-T01** path, which
-consumes the same `live-evidence-reconcile` reusable workflow delivered in
-VOC-097-T02.
+Controlled fixture: operator-owned carrier PR **#869** (`VOC-102-T01`) on branch
+`agent/voc-102-voc-102-t01`, consuming the same `live-evidence-reconcile`
+reusable workflow delivered in VOC-097-T02.
+
+### 2a. Observed qualifying run and reconcile wake
 
 | Step | Run / artifact | Result |
 | --- | --- | --- |
-| Reconcile dispatch | [32493488150](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32493488150) on `agent/voc-102-voc-102-t01` | `live-evidence-reconcile / reconcile` **success** |
+| Pre-reconcile carrier head | `c9ea8b9a639613ff12781c03a4795518c9e7768b` | Waiting review comment `5371368031`: `VERDICT: WAITING FOR OPERATOR LIVE EVIDENCE` |
+| Observed qualifying verifier | [32493135121](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32493135121) | `verify-auto-advance-live-evidence / verify` **success** on pre-reconcile head |
+| Reconcile dispatch | [32493488150](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32493488150) | `live-evidence-reconcile / reconcile` **success** |
+| Post-reconcile head commit | `fe3cf7d60157317e0564d2dd4de751bd6109a5df` | App-authored `VOC-102-T01: record qualified live evidence` |
 | Allowlisted qualification record | `specs/changes/VOC-102-auto-advance-dispatches-implementer-for-operator/.karsift/live-evidence/VOC-102-T01.result.json` | `state: qualified`, `run_id: 32493135121`, sanitized metadata only |
-| Post-carrier verifier | [32493135121](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32493135121) | `verify-auto-advance-live-evidence / verify` **success** |
-| Duplicate reconcile on same carrier | [32542667963](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32542667963) (VOC-106 path) | reconcile success; prior `VOC-106-T01.result.json` shows idempotent `qualified` state without double-wake |
+| Reconcile wake comment | `5371380320` | `LIVE_EVIDENCE: READY FOR RE-REVIEW`; `result_head_sha: fe3cf7d60157317e0564d2dd4de751bd6109a5df` |
+| Duplicate reconcile (VOC-106) | [32542667963](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32542667963) | Idempotent `qualified` state without double-wake |
 
-Wake semantics (one commit/comment/ref effect per qualifying run identity) and
-the requirement that merge-gate bind to the **post-reconcile** head — not an
-earlier PASS — are also locked deterministically in
-`tooling/governance/tests/test_voc097_live_evidence_reconcile.py` TEST-11/14 and
-were exercised on the VOC-097-T02 implementation draft at run
-[32443838227](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32443838227):
-independent review and remediation decision succeeded, `remediate / retry` and
-`merge-gate / auto-merge` were skipped while the PR remained draft pending a new
-exact-SHA verdict.
+### 2b. Post-reconcile head requires fresh exact-SHA review (prior waiting verdict insufficient)
+
+After reconcile advanced the PR head to `fe3cf7…`, the ordinary `pull_request`
+pipeline re-ran on that **new** head. The prior waiting verdict on
+`c9ea8b9…` did **not** satisfy merge-gate.
+
+| Step | Run / comment | Result |
+| --- | --- | --- |
+| Post-reconcile pipeline | [32493543324](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32493543324) (`pull_request` / `synchronize`) | `ci / ci` **success**; `review / review` **success**; `remediate / retry` **skipped** |
+| Fresh independent review | Comment `5371433025` bound to `fe3cf7d60157317e0564d2dd4de751bd6109a5df` | `VERDICT: PASS WITH NON-BLOCKING FINDINGS`; `live-evidence attestation: true` |
+| Merge-gate on post-reconcile head (draft) | Comment `5371434946` | **BLOCKED** — draft; prior waiting verdict on `c9ea8b9…` not reused |
+| `ready_for_review` re-entry | [32494037984](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32494037984) on unchanged head `fe3cf7…` | Fresh review `5371489276`; `merge-gate / auto-merge` **success**; PR merged |
+
+Deterministic wake/dedup semantics remain locked in
+`tooling/governance/tests/test_voc097_live_evidence_reconcile.py` TEST-11/14;
+this section claims the hosted end-to-end sequence above
+(`live_reconcile_claimed: true`).
 
 ## 3. Observer / Sentry separation remains healthy (VOC-097-AC-10; TEST-16)
 
@@ -111,7 +130,7 @@ the operator path documented in `t04-evidence.md` and
 
 | Criterion / test | Result |
 | --- | --- |
-| VOC-097-AC-06 / TEST-11 | **Met (live)** — reconcile run `32493488150` qualified carrier metadata; verifier run `32493135121` success; merge remains gated on fresh exact-SHA review after wake |
+| VOC-097-AC-06 / TEST-11 | **Met (live)** — reconcile `32493488150` → post-reconcile head `fe3cf7…`; pipeline `32493543324` + review `5371433025` on new head; prior waiting on `c9ea8b9…` insufficient; merge after `ready_for_review` `32494037984` |
 | VOC-097-AC-10 / TEST-16 | **Met (live)** — observer skipped on success-only window; Sentry monitor green; no coupling markers in waiting/reconcile paths |
 | VOC-097-AC-02 (live supplement) | **Met (live)** — waiting run `32456592473` skipped remediation retry |
 

@@ -65,6 +65,7 @@ test("VOC-097-TEST-11 live claim is evidence-gated (reconcile wake + fresh revie
 
   assert.match(evidence, /live-evidence-reconcile/);
   assert.match(evidence, /fresh exact-SHA/i);
+  assert.match(evidence, /post-reconcile/i);
   assert.ok(
     existsSync(voc102ResultPath),
     "qualified result fixture must exist",
@@ -84,6 +85,54 @@ test("VOC-097-TEST-11 live claim is evidence-gated (reconcile wake + fresh revie
     const reconcileRun = frontMatterFlag(evidence, "reconcile_proof_run");
     assert.match(reconcileRun, /^\d+$/, "reconcile_proof_run must be numeric");
     assert.match(evidence, new RegExp(reconcileRun));
+
+    const postReconcileHead = frontMatterFlag(
+      evidence,
+      "post_reconcile_head_sha",
+    );
+    assert.match(
+      postReconcileHead,
+      /^[0-9a-f]{40}$/,
+      "post_reconcile_head_sha must be a full git SHA",
+    );
+    assert.match(evidence, new RegExp(postReconcileHead));
+
+    const postReconcilePipeline = frontMatterFlag(
+      evidence,
+      "post_reconcile_pipeline_run",
+    );
+    assert.match(
+      postReconcilePipeline,
+      /^\d+$/,
+      "post_reconcile_pipeline_run must be numeric",
+    );
+    assert.match(evidence, new RegExp(postReconcilePipeline));
+
+    const postWakeReview = frontMatterFlag(
+      evidence,
+      "post_wake_review_comment",
+    );
+    assert.match(
+      postWakeReview,
+      /^\d+$/,
+      "post_wake_review_comment must be numeric",
+    );
+    assert.match(evidence, new RegExp(postWakeReview));
+
+    const preReconcileHead = frontMatterFlag(
+      evidence,
+      "pre_reconcile_head_sha",
+    );
+    assert.notEqual(
+      preReconcileHead,
+      postReconcileHead,
+      "pre- and post-reconcile heads must differ to prove fresh review gate",
+    );
+    assert.match(
+      evidence,
+      /prior waiting|prior WAITING|insufficient/i,
+      "live reconcile proof must state prior waiting verdict is insufficient",
+    );
   }
 });
 
