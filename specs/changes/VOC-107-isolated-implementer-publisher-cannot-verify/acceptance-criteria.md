@@ -6,7 +6,7 @@
 - Tasks: `VOC-107-T00`
 - Tests: `VOC-107-TEST-00`, `VOC-107-TEST-01`, `VOC-107-TEST-04`
 - Evidence: `VOC-107-EV-00`
-- Result: pending
+- Result: passed
 
 When the implementer produces committed changes, the recovery/publish bundle
 contains every task-branch-only commit from the recorded integration-anchor SHA
@@ -19,7 +19,7 @@ does not squash prior task commits into the current attempt.
 - Tasks: `VOC-107-T00`
 - Tests: `VOC-107-TEST-01`, `VOC-107-TEST-02`, `VOC-107-TEST-04`
 - Evidence: `VOC-107-EV-00`
-- Result: pending
+- Result: passed
 
 In a clean bare repository that has fetched only the integration branch, an
 attempt-2 (including rebase-derived) integration-anchored bundle verifies and
@@ -32,7 +32,7 @@ does not require fetching the prior task-PR head.
 - Tasks: `VOC-107-T00`
 - Tests: `VOC-107-TEST-03`, `VOC-107-TEST-05`
 - Evidence: `VOC-107-EV-00`
-- Result: pending
+- Result: passed
 
 The isolated clean publisher, exact published SHA check, integration ancestry
 check (against the integration anchor), workflow-path deny rule over the full
@@ -45,7 +45,7 @@ remain enforced. The App token stays off the model-controlled runner.
 - Tasks: `VOC-107-T00`
 - Tests: `VOC-107-TEST-06`
 - Evidence: `VOC-107-EV-00`
-- Result: pending
+- Result: passed
 
 The implementer/remediation attempt cap remains two. The package does not add a
 third model attempt and does not define “thin bundle missing publisher
@@ -58,7 +58,7 @@ that failure class by construction for the covered remediation lineage.
 - Tasks: `VOC-107-T00`
 - Tests: `VOC-107-TEST-00` through `VOC-107-TEST-05`
 - Evidence: `VOC-107-EV-00`
-- Result: pending
+- Result: passed
 
 Positive attempt-2 / rebase-derived import, negative malformed/stale incomplete
 lineage, and attempt-1 regression fixtures exist and pass in CI or infra self-ci.
@@ -69,7 +69,7 @@ lineage, and attempt-1 regression fixtures exist and pass in CI or infra self-ci
 - Tasks: `VOC-107-T00`
 - Tests: `VOC-107-TEST-07`
 - Evidence: `VOC-107-EV-00`
-- Result: pending
+- Result: passed
 
 Infra README (and calling-repo docs only if otherwise false) accurately state that
 implementer publish bundles are integration-anchored complete task lineages for
@@ -82,7 +82,7 @@ bundle is always publisher-sufficient.
 - Tasks: `VOC-107-T00`
 - Tests: `VOC-107-TEST-08`
 - Evidence: `VOC-107-EV-00`
-- Result: pending
+- Result: passed
 
 Task evidence and related issue/review records use allowlisted metadata only.
 No logs, artifacts, secrets, or user identifiers are copied into the package or
