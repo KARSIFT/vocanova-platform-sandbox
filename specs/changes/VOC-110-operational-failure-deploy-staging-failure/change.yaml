@@ -31,7 +31,7 @@ base_sha: unknown - not recorded by this draft; set at adoption time
 target_branch: develop
 owners:
   decision: unassigned
-  package_preparation: planner (drafting only; adoption remains a human decision)
+  package_preparation: planner (drafting only; adoption remains a separate repository-controlled decision)
   implementation: unassigned
   independent_verification: unassigned
 approval_status: not-approved

@@ -37,7 +37,7 @@ founder `approved` comment is a merge/adopt/release gate under active A-004.
   plan if failure persists.
 - **Last-known-good:** `develop` HEAD before T00 merge (exact SHA at task time).
 
-## Independent verification, human approvals, and closure
+## Independent verification, authority, and closure
 
 - Each task PR receives exact-SHA independent verification.
 - Under active A-004, no founder `approved` comment is an engineering-workflow

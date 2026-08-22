@@ -120,7 +120,7 @@ defect exposed by timing, or an unrelated staging host issue.
 verification. The CI gate must exercise the real Dockerfile/runtime boundary and
 must block merge-gate when that check fails.
 
-## Open questions for the reviewing human
+## Adoption/review checks
 
 1. Accept proposed **R3** for the `.github/workflows/pipeline.yml` merge-gate change,
    or raise the exact task risk during adoption if semantic escalation applies.
