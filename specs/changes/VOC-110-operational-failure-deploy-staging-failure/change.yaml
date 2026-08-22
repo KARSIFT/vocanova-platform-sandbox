@@ -1,0 +1,111 @@
+schema_version: 1
+id: VOC-110
+slug: operational-failure-deploy-staging-failure
+title: Fix deploy-staging failure after dependabot integration merge
+type: infrastructure
+status: draft
+risk: R3
+planned_implementation_risk_floor: "Measured during drafting against the expected\
+  \ task-scoped file list (.github/workflows/deploy-staging.yml if miswiring is proven,\
+  \ infra/scripts/ if a harness fix is proven, apps/web/ and/or packages/ if a dependency\
+  \ or staging core-loop regression is proven, apps/web/tests/staging-e2e/ if test\
+  \ updates are required, scripts/foundation/voc084-deploy-staging-oauth.test.mjs,\
+  \ scripts/foundation/voc088-deploy-staging-allowlist.test.mjs, scripts/foundation/voc095-playwright-install.test.mjs\
+  \ and/or a new voc110-*.test.mjs fixture, this package directory). Detected path\
+  \ floor is R3 for .github/workflows/, infra/scripts/, and apps/web/. This package\
+  \ proposes R3 for the change as a whole \u2014 a draft proposal for the reviewing\
+  \ human at adoption time, not a determination. Independent verification and the\
+  \ reviewing human must still confirm each task's real file list and whether semantic\
+  \ escalation applies."
+canonical_path: specs/changes/VOC-110-operational-failure-deploy-staging-failure
+authority_model: a004-active
+requirement_source: 'GitHub issue #911 (Operational failure: deploy-staging (failure)),
+  opened by the VOC-088-T02 operational-failure-monitoring observer. Fresh 2026-08-22
+  evidence from the public run page and GitHub Actions REST metadata for https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32566405628:
+  deploy-staging run #364, push-triggered on develop at f25e4ccf5fc28dcc5b14a438fbdc4f93e5c53a46
+  after merge of Dependabot PR #859 (eight npm minor/patch updates), conclusion failure
+  after ~8m 28s with job deploy to staging exit code 1; Docker build attestations
+  present; public annotations reference missing Playwright report paths on failure
+  artifact upload. Failing workflow step not resolved at drafting time (logs require
+  authenticated access). This draft package does not adopt or authorize itself.'
+requirement_approval_status: not-approved
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: unknown-until-implemented. Staging deploy gate failure blocked
+  landing the Dependabot integration merge on the staging host until remediated. A
+  fix restores expected staging behavior; production impact follows only through the
+  normal develop-to-main promotion path after roster completion.
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: Remediates an actionable deploy-staging failure surfaced by the operational-failure
+    observer. No page routes, critical API endpoints, or stable monitor/synthetic
+    IDs in infra/monitoring/ are added or changed unless T00 evidence proves a separate
+    inventory gap (default out of scope).
+dependencies:
+- id: VOC-110-DEP-00
+  status: 'resolved at drafting time. Issue #911 and run 32566405628 identify the
+    failing workflow (deploy-staging), conclusion (failure), trigger (Dependabot PR
+    #859 merge to develop), head SHA, duration, and public exit-code-1 annotation.
+    Job-level failing step remains for T00 log review.'
+- id: VOC-110-DEP-01
+  status: "resolved at drafting time. VOC-032-T07 owns deploy-staging.yml semantics;\
+    \ VOC-050-T02 owns the post-deploy staging core-loop gate; VOC-095-T00 owns bounded\
+    \ Playwright install via infra/scripts/install-playwright-chromium.sh. VOC-094\
+    \ already fixed concurrency queue supersession \u2014 this run is not that failure\
+    \ class (job ran ~8m, conclusion failure not cancelled)."
+- id: VOC-088
+  status: 'Adopted predecessor. operational-failure-monitoring.yml opened issue #911
+    via the sanitized failure-to-issue path. This package remediates the underlying
+    deploy failure; it must not weaken deduplication, sanitization, or real failure
+    coverage.'
+- id: VOC-094
+  status: Adopted predecessor for benign deploy cancellation filtering. Unrelated
+    except shared deploy-staging.yml touch discipline.
+- id: VOC-095
+  status: Adopted predecessor for bounded Playwright install. Run duration and public
+    annotations suggest failure after install/deploy phases rather than an install
+    timeout; T00 must confirm via logs.
+affected_areas:
+- .github/workflows/deploy-staging.yml (only if T00 proves miswiring)
+- "infra/scripts/ (OAuth verify, Playwright install, or related harness \u2014 if\
+  \ proven)"
+- apps/web/ and/or packages/ (if dependency regression breaks staging runtime or UI)
+- apps/web/tests/staging-e2e/core-loop.staging.spec.ts (if test contract update required)
+- scripts/foundation/voc084-deploy-staging-oauth.test.mjs (regression)
+- scripts/foundation/voc088-deploy-staging-allowlist.test.mjs (regression)
+- scripts/foundation/voc095-playwright-install.test.mjs (regression)
+- scripts/foundation/voc110-*.test.mjs (new deterministic fixture if warranted)
+- specs/changes/VOC-110-operational-failure-deploy-staging-failure/
+implementation:
+  authorized: false
+  required: true
+  status: not-authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: unknown-until-implemented
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: not-authorized
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
+blocking_reasons: package not adopted; implementation not authorized

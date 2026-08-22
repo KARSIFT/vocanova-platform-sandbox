@@ -1,0 +1,14 @@
+schema_version: 1
+task_id: VOC-110-T01
+ownership: operator
+
+workflow_file: deploy-staging.yml
+job_names:
+  - deploy to staging
+events:
+  - push
+branch: develop
+sha_lineage:
+  mode: integration_contains_pr_head
+conclusion: success
+max_age: 72h
