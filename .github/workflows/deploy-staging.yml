@@ -3,7 +3,8 @@
 # VOC-032-T07: the first end-to-end deploy automation this
 # repository has ever had. Builds and pushes the two
 # container images (apps/api, apps/web) to GitHub Container
-# Registry on every push to `develop`, then over SSH to the
+# Registry on runtime/deploy-relevant pushes to `develop` (or
+# manual dispatch), then over SSH to the
 # founder-provisioned staging host (`VOC-032-DEP-00`)
 # pulls the new images, applies any pending migrations
 # via T06's `migrate.sh` wrapper, runs both idempotent

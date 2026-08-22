@@ -25,9 +25,6 @@ const evidencePath = path.join(
   "specs/changes/VOC-111-skip-full-staging-deploys-for-documentation-and/t00-evidence.md",
 );
 
-const PUSH_PATH_PATTERN =
-  /^([^/]+$|apps\/|packages\/|infra\/|tests\/staging-e2e\/|\.github\/workflows\/deploy-staging\.yml|scripts\/foundation\/voc111-deploy-staging-paths\.test\.mjs)/;
-
 const EXPECTED_PUSH_PATHS = [
   "*",
   "apps/**",
@@ -74,7 +71,19 @@ function extractPushPaths(source) {
 }
 
 function pathSelectsPushDeploy(changedPath) {
-  return PUSH_PATH_PATTERN.test(changedPath);
+  return extractPushPaths(readWorkflow()).some((glob) => {
+    if (glob === "*") {
+      return !changedPath.includes("/");
+    }
+    if (glob.endsWith("/**")) {
+      return changedPath.startsWith(glob.slice(0, -2));
+    }
+    assert.ok(
+      !glob.includes("*"),
+      `test matcher must explicitly support workflow glob ${glob}`,
+    );
+    return changedPath === glob;
+  });
 }
 
 test("VOC-111-TEST-00: evidence references issue #920 runs and missing path filter", () => {
