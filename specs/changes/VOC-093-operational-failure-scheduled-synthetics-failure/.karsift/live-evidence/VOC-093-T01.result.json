@@ -1,0 +1,16 @@
+{
+  "branch": "main",
+  "completed_at": "2026-08-22T08:51:08Z",
+  "conclusion": "success",
+  "duration_seconds": 26,
+  "event": "workflow_dispatch",
+  "head_sha": "a508647ea5a345f06c975b086c76f8cd40b1624d",
+  "job_ids": [
+    97008230059
+  ],
+  "run_id": 32563350971,
+  "schema_version": 1,
+  "started_at": "2026-08-22T08:50:42Z",
+  "state": "qualified",
+  "workflow_file": "scheduled-synthetics.yml"
+}
