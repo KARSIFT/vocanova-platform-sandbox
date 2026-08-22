@@ -188,6 +188,18 @@ errors and missing, invalid, duplicate, or conflicting task-stanza markers fail
 closed. A repeated event repairs a missing carrier file, PR, or marker without
 overwriting evidence already recorded by the operator.
 
+After VOC-106, when an operator-owned / live-evidence-only task PR receives a
+genuine review `FAIL` or outright CI failure, `remediate.yml` does **not** dispatch
+the general implementer. Remediation resolves ownership from
+`<package>/.karsift/live-evidence/<task_id>.yaml` (and the exact automation-ownership
+marker in `tasks.md` when present) at the exact reviewed PR head, then posts a
+sanitized operator/reconcile escalation with allowlisted metadata only.
+`WAITING`, stale caller runs, and reviewer-infrastructure failures remain
+non-retrying without consuming an implementation attempt. Malformed or contradictory
+ownership metadata uses a separate fail-closed escalation instead of guessing
+ordinary ownership. Ordinary implementer-owned tasks with no live-evidence contract
+retain today's bounded remediation retry (attempt capped at 2).
+
 ## Operator checklist
 
 1. Confirm the task PR shows the waiting marker (after T01) and the contract

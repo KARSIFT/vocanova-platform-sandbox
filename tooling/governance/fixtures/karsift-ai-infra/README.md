@@ -1,17 +1,18 @@
-# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00)
+# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106)
 
 These copies are deterministic fixtures for caller-repo policy regressions.
 They mirror `KARSIFT/karsift-ai-infra` at the SHA in `PINNED_SHA.txt` so
 `tooling/governance/tests/test_voc080_*.py`,
-`tooling/governance/tests/test_voc097_*.py`, and
-`tooling/governance/tests/test_auto_advance_ownership.py` can assert
-merge/adopt/release/remediate/plan-review/live-evidence/auto-advance/role
+`tooling/governance/tests/test_voc097_*.py`,
+`tooling/governance/tests/test_auto_advance_ownership.py`,
+`tooling/governance/tests/test_remediate_ownership.py`, and related suites can
+assert merge/adopt/release/remediate/plan-review/live-evidence/auto-advance/role
 contracts without cloning the infra repository in CI.
 
 They are not a second runtime source of truth. Callers still `uses:`
 `KARSIFT/karsift-ai-infra/...@main`. Update the fixtures when VOC-080-,
-VOC-097-, or VOC-102-related infra contracts change and record the new pin in
-evidence.
+VOC-097-, VOC-102-, VOC-104-, or VOC-106-related infra contracts change and
+record the new pin in evidence.
 
 VOC-104 adds the pinned `ready-for-review-reuse.yml` and
 `verify-ready-for-review-reuse.yml` contracts. The decision vocabulary is
@@ -43,9 +44,6 @@ plus the full validation step to be skipped. Merge-gate also requires exactly on
 context in `SUCCESS`; prior evidence can never replace a skipped or ambiguous
 current compatibility context.
 
-The VOC-104 workflow, policy, normalizer, and regression-test copies correspond
-to independently reviewed shared-infra merge `a592dd8fa8ea1718c0f2f632b648213b53a47e57`.
-
 ## auto-advance ownership (VOC-102)
 
 Adoption starts the first task automatically. The adopted roster records an explicit
@@ -69,3 +67,26 @@ If that deterministic branch already belongs to a closed or merged carrier PR,
 publication fails closed with `conflicting_existing_pr`; it never silently
 reopens or replaces historical state. An operator must confirm why the carrier
 was closed before a governed restoration or cleanup/retry.
+
+## remediation ownership gate (VOC-106)
+
+`remediate.yml` resolves task ownership from the exact reviewed PR head before any
+implementer retry. Valid `operator` or `live-actions` contracts suppress `implement.yml`
+dispatch for review `FAIL` and CI failure, posting a sanitized operator/reconcile
+escalation instead. Malformed or contradictory ownership metadata uses a separate
+fail-closed escalation. Ordinary implementer-owned tasks retain the bounded retry.
+WAITING / STALE / review-infra failures remain non-retrying and do not consume an
+implementation attempt. A separate read-only
+`verify-remediate-operator-ownership.yml` workflow validates controlled remediate
+proof from Actions, issue, and PR metadata only—never logs or artifacts. Its
+runner extracts the source run's associated PR base SHA from the
+`pull_requests` list object (never by stringifying that list).
+
+The implementer job deliberately has no `actions` permission and receives no
+general Actions inspection/dispatch credential. Operator reconciliation is a
+separate repository-controlled responsibility; adding it must not broaden the
+implementer's permissions or secrets.
+
+The VOC-106 workflow, policy, verifier, and regression-test copies correspond to
+shared-infra merge `db164eb3905a96b74b039ab6aa36944408bf0a44`, including the
+hosted verifier base-SHA adapter fix recorded in this package's T00 remediation.
