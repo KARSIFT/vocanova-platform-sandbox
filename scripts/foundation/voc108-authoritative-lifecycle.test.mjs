@@ -85,6 +85,14 @@ test("VOC-108-TEST-07: terminal gates wake cheap release evaluation", () => {
   assert.match(release, /github\.event_name == 'pull_request'/);
   assert.match(release, /github\.event_name == 'workflow_run'/);
   assert.match(release, /github\.event_name == 'check_run'/);
+  assert.match(
+    release,
+    /github\.event\.check_run\.pull_requests\[0\]\.base\.ref == 'main'/,
+  );
+  assert.match(
+    release,
+    /github\.event\.check_run\.pull_requests\[0\]\.head\.ref == 'develop'/,
+  );
 });
 
 test("VOC-108-TEST-04 through TEST-08: one marker validator and merge authority", () => {
@@ -128,6 +136,6 @@ test("VOC-108-TEST-08: caller and shared docs name marker-bound authority", () =
 test("VOC-108 fixture is pinned to the consumed shared merge", () => {
   assert.equal(
     readFileSync(path.join(fixtureRoot, "PINNED_SHA.txt"), "utf8").trim(),
-    "ee1b0a8ea8263a6671e753a6d3e80d15c855ddf4",
+    "9af4cb66a09b4bb8a6170353ff349db7b330dbf4",
   );
 });
