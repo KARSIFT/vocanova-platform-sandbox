@@ -103,6 +103,8 @@ test("VOC-108-TEST-04 through TEST-08: one marker validator and merge authority"
   );
   assert.match(sharedAdvance, /task-completion-runner\.py validate-task/);
   assert.match(sharedAdvance, /authoritative caller-merge marker; safe no-op/);
+  assert.doesNotMatch(sharedAdvance, /check-completion/);
+  assert.match(sharedAdvance, /serialized convergence evaluator/);
   assert.match(sharedRelease, /task-completion-runner\.py validate-roster/);
   assert.match(sharedRelease, /authoritative-checks-runner\.py/);
   assert.match(sharedRelease, /--pull-request-file \/tmp\/release-pr\.json/);
@@ -136,6 +138,6 @@ test("VOC-108-TEST-08: caller and shared docs name marker-bound authority", () =
 test("VOC-108 fixture is pinned to the consumed shared merge", () => {
   assert.equal(
     readFileSync(path.join(fixtureRoot, "PINNED_SHA.txt"), "utf8").trim(),
-    "9af4cb66a09b4bb8a6170353ff349db7b330dbf4",
+    "e27efbcec395415e494a898dfddd9f93183c6ff9",
   );
 });

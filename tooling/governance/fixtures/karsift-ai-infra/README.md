@@ -95,7 +95,7 @@ hosted verifier base-SHA adapter fix recorded in this package's T00 remediation.
 ## authoritative lifecycle state (VOC-108)
 
 The current fixture pin advances to shared-infra merge
-`9af4cb66a09b4bb8a6170353ff349db7b330dbf4`. Adoption, merge/reuse, and release
+`e27efbcec395415e494a898dfddd9f93183c6ff9`. Adoption, merge/reuse, and release
 select the newest authoritative attempt per logical exact-SHA gate from complete
 paginated histories and bind the selected evidence to the authenticated pull
 request's repository, number, base, and head. The merge gate writes one App-authored
@@ -111,3 +111,6 @@ The pinned caller template also retains the read-only
 `verify-remediate-operator-ownership` dispatch surface used by live callers.
 External `check_run` wake-ups invoke release evaluation only when the check is
 attached to the `develop` → `main` promotion pull request.
+Auto-advance comments and diagnostics use the current serialized-convergence
+name, preventing the retired `check-completion` job name from becoming false
+operator guidance.

@@ -467,8 +467,8 @@ jobs:
   # further per-task human trigger. For
   # operator-owned / live-actions next tasks it prepares a deterministic
   # evidence-carrier PR instead of starting implement.yml (VOC-102). A
-  # no-op on the package's last task (release's own check-completion above
-  # handles that transition instead) or if the next task is already
+  # no-op on the package's last task (release's serialized convergence
+  # evaluator above handles that transition instead) or if the next task is already
   # dispatched/done. Runs on the same `issues: closed` event as `release`
   # above - both are safe to fire together, since each package/task can
   # only ever be in the "next task exists" or "roster complete" state, never

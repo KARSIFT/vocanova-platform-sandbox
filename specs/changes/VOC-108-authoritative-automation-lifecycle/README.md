@@ -40,7 +40,7 @@ validation/model time and temporarily advanced release state too early.
    without rerunning expensive unchanged-SHA CI or independent review.
 6. Add deterministic fixtures for duplicate runs, stale failure/later pass,
    later failure/older pass, cross-repository references, premature closure,
-   check-completion races, and duplicate merge triggers.
+   release-evaluation races, and duplicate merge triggers.
 
 ## Task
 
