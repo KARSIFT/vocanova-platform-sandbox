@@ -81,9 +81,17 @@ test("VOC-108-TEST-07: terminal gates wake cheap release evaluation", () => {
 
 test("VOC-108-TEST-04 through TEST-08: one marker validator and merge authority", () => {
   assert.match(sharedMerge, /task-completion-runner\.py publish/);
+  assert.match(
+    sharedMerge,
+    /Publish task completion marker and close linked task issue\s+if: startsWith\(github\.event\.pull_request\.head\.ref, 'agent\/'\)/,
+  );
   assert.match(sharedAdvance, /task-completion-runner\.py validate-task/);
+  assert.match(sharedAdvance, /authoritative caller-merge marker; safe no-op/);
   assert.match(sharedRelease, /task-completion-runner\.py validate-roster/);
   assert.match(sharedRelease, /authoritative-checks-runner\.py/);
+  assert.match(sharedRelease, /--pull-request-file \/tmp\/release-pr\.json/);
+  assert.match(sharedMerge, /--pull-request-file \/tmp\/merge-pr\.json/);
+  assert.match(sharedMerge, /reject_foreign_repository_closing_text/);
   assert.match(sharedRelease, /group: release-converge-/);
   assert.equal(
     (sharedRelease.match(/gh pr merge/g) ?? []).length,
@@ -104,6 +112,6 @@ test("VOC-108-TEST-08: caller and shared docs name marker-bound authority", () =
 test("VOC-108 fixture is pinned to the consumed shared merge", () => {
   assert.equal(
     readFileSync(path.join(fixtureRoot, "PINNED_SHA.txt"), "utf8").trim(),
-    "4bc84d25679d92ed487dbed118fa6b5119d90df1",
+    "81b8c21d5216647a720009deed148587cbc264bd",
   );
 });

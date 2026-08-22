@@ -95,11 +95,14 @@ hosted verifier base-SHA adapter fix recorded in this package's T00 remediation.
 ## authoritative lifecycle state (VOC-108)
 
 The current fixture pin advances to shared-infra merge
-`4bc84d25679d92ed487dbed118fa6b5119d90df1`. Adoption, merge/reuse, and release
+`81b8c21d5216647a720009deed148587cbc264bd`. Adoption, merge/reuse, and release
 select the newest authoritative attempt per logical exact-SHA gate from complete
-paginated histories. The merge gate writes one App-authored caller-merge marker
-before emitting the task close event; auto-advance and release validate that same
-marker against live PR state. Cross-repository references are non-closing.
+paginated histories and bind the selected evidence to the authenticated pull
+request's repository, number, base, and head. The merge gate writes one App-authored
+caller-merge marker only for task branches before emitting the task close event;
+auto-advance and release validate that same marker against live PR state. A
+premature close is a safe wake-up no-op. Foreign qualified closing references are
+rejected at merge time, while cross-repository links remain non-closing.
 Automatic, reconcile, promotion-PR, check-provider, and external-workflow wake-ups
 share one serialized promotion evaluator and one exact-head merge command. Shared
 instructions explicitly define issue closure as a wake-up hint rather than task
