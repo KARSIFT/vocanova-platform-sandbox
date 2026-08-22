@@ -26,6 +26,7 @@ Do not copy secrets, workflow logs, session values, OAuth data, or personal data
 
 | Item | Value |
 |------|-------|
+| T02 evidence PR | #928 |
 | T01 task PR | #927 |
 | T01 reviewed head SHA | `6ab4bdb18509533d66e69496f6a0627a45df6e33` |
 | Integration push SHA | `34ef014f39423be05ac212f9aadd7cf38cb11d6d` |
