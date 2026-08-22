@@ -52,15 +52,18 @@ Order is mandatory: **T00 → T01**.
 - Acceptance criteria: `VOC-093-AC-04`, `VOC-093-AC-05`
 - Tests: `VOC-093-TEST-06`
 - Evidence: `VOC-093-EV-01` (`t01-evidence.md`)
+- Live-evidence contract: `.karsift/live-evidence/VOC-093-T01.yaml` (operator-owned;
+  governed reconcile per `docs/operations/live-evidence.md`)
 - Status: pending — depends on `VOC-093-T00`
 
 ### Required work
 
-1. After T00 merges to `develop`, dispatch `scheduled-synthetics.yml` via
-   `workflow_dispatch` with `synthetic_id`:
-   `synthetic.production.authenticated-route-content-sweep` (preferred) or empty
-   for the full suite. Record which mode was used.
-2. Confirm conclusion `success` and job
+1. After T00 merges to `develop`, enter the operator-owned waiting state. The
+   repository-controlled live-evidence reconciler (not the implementer) may
+   dispatch `scheduled-synthetics.yml` on protected branch `develop` via the
+   contract's allowlisted `workflow_dispatch` input:
+   `synthetic_id=synthetic.production.authenticated-route-content-sweep`.
+2. Through allowlisted reconcile metadata, confirm conclusion `success` and job
    `synthetic.production.authenticated-route-content-sweep` success. Record run
    URL, total duration, and job duration — no secrets or personal data.
 3. Confirm no new open issue exists with marker
@@ -73,6 +76,7 @@ Order is mandatory: **T00 → T01**.
 ### Explicitly out of scope for this task
 
 - Code changes (T00 owns all fixes).
+- Implementer-owned Actions dispatch or inspection.
 - Closing issue #771 manually outside the normal package roster closure path.
 
 ## Task ordering notes
