@@ -54,25 +54,30 @@ Order is mandatory: **T00 → T01**.
 - Acceptance criteria: `VOC-094-AC-05`, `VOC-094-AC-06`
 - Tests: `VOC-094-TEST-07`
 - Evidence: `VOC-094-EV-01` (`t01-evidence.md`)
+- Live-evidence contract: `.karsift/live-evidence/VOC-094-T01.yaml` (operator-owned;
+  governed reconcile per `docs/operations/live-evidence.md`)
 - Status: pending — depends on `VOC-094-T00`
 
 ### Required work
 
-1. After T00 merges to `develop`, confirm a `deploy-staging` run for the latest
-   integration commit completes with conclusion `success`. Record run URL and duration
-   (no secrets).
+1. After T00 merges to `develop`, enter the operator-owned waiting state. Through
+   repository-controlled observe/reconcile (not implementer Actions access), confirm
+   a `deploy-staging` run for the latest integration commit completes with conclusion
+   `success`. Record only allowlisted run metadata and duration (no secrets).
 2. Demonstrate benign supersession handling using one of:
-   - **Preferred:** controlled triple-push or merge sequence on `develop` that
-     produces a superseded pending cancel without blocking the latest deploy; record
-     scrubbed run IDs and confirm no **new** open issue with marker
+   - **Preferred:** an operator-controlled triple-push or merge sequence on `develop`
+     that produces a superseded pending cancel without blocking the latest deploy;
+     record scrubbed run IDs and confirm no **new** open issue with marker
      `<!-- operational-failure:deploy-staging:cancelled -->` beyond issue #781; or
-   - **Fallback (open question 3):** deterministic fixture proof from T00 plus green
-     latest deploy, documented explicitly in `t01-evidence.md`.
+   - **Fallback (open question 3):** deterministic fixture proof from T00 plus a
+     green latest deploy observed by repository-controlled reconcile, documented
+     explicitly in `t01-evidence.md`.
 3. Note whether issue #781 can close under normal roster closure after verification.
 
 ### Explicitly out of scope for this task
 
 - Code changes (T00 owns all workflow/script edits).
+- Implementer-owned Actions dispatch or inspection.
 - Manual issue closure outside the governed roster path.
 
 ## Task ordering notes

@@ -63,11 +63,12 @@ session mint usage remain correct. `operational-failure-monitoring.yml` and
 - Evidence: `VOC-093-EV-01`
 - Result: pending
 
-After T00 merges to `develop`, an operator-triggered `workflow_dispatch` of
-`scheduled-synthetics.yml` completes with conclusion `success` and job
-`synthetic.production.authenticated-route-content-sweep` success. Evidence
-records the run URL and duration without secrets, session values, or personal
-data.
+After T00 merges to `develop` and a production release containing it reaches
+protected `main`, a repository-controlled `workflow_dispatch` of
+`scheduled-synthetics.yml` at the exact deployed SHA completes with conclusion
+`success` and job `synthetic.production.authenticated-route-content-sweep`
+success. Evidence records the run URL and duration without secrets, session
+values, or personal data.
 
 ## VOC-093-AC-05 — No spurious duplicate operational issue for the same fingerprint
 

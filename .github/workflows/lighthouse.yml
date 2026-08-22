@@ -61,11 +61,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      # actions/checkout v4.2.2, pinned to the immutable commit
+      # actions/checkout v7.0.1, pinned to the immutable commit
       # documented at
-      # https://github.com/actions/checkout/releases/tag/v4.2.2
+      # https://github.com/actions/checkout/releases/tag/v7.0.1
       - name: Check out reviewed revision
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       # actions/setup-node v7.0.0, pinned to the immutable commit
       # documented at
@@ -105,10 +105,10 @@ jobs:
           NEXT_PUBLIC_API_BASE_URL: "http://127.0.0.1:8080"
         run: pnpm --filter @vocanova/web build
 
-      # actions/cache v4.2.2, pinned to the immutable commit documented at
-      # https://github.com/actions/cache/releases/tag/v4.2.2
+      # actions/cache v6.1.0, pinned to the immutable commit documented at
+      # https://github.com/actions/cache/releases/tag/v6.1.0
       - name: Restore Playwright Chromium browser cache
-        uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}

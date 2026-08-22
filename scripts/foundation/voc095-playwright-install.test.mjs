@@ -94,7 +94,7 @@ function assertCacheThenInstallContract(scopeSource, label) {
   );
   assert.match(
     scopeSource,
-    /actions\/cache@d4323d4df104b026a6aa633fdb11d772146be0bf/,
+    /actions\/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9/,
     `${label} must use the pinned actions/cache revision`,
   );
   assert.match(
@@ -544,7 +544,7 @@ test("VOC-095-TEST-10: scheduled validator rejects missing or misordered shared 
   const syntheticsDocument = loadSyntheticsRegistry(repositoryRoot);
   const installCommand =
     "run: bash infra/scripts/install-playwright-chromium.sh";
-  const cacheAction = "actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf";
+  const cacheAction = "actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9";
 
   const missingInstallErrors = validateStagingCoreJourneyBudget({
     workflowSource: workflowSource.replace(

@@ -1,0 +1,19 @@
+schema_version: 1
+task_id: VOC-093-T01
+ownership: operator
+
+workflow_file: scheduled-synthetics.yml
+job_names:
+  - synthetic.production.authenticated-route-content-sweep
+events:
+  - workflow_dispatch
+branch: main
+sha_lineage:
+  mode: exact_sha
+  sha: a508647ea5a345f06c975b086c76f8cd40b1624d
+conclusion: success
+max_age: 72h
+dispatch:
+  workflow_file: scheduled-synthetics.yml
+  inputs:
+    synthetic_id: synthetic.production.authenticated-route-content-sweep

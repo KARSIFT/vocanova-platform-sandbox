@@ -1,0 +1,16 @@
+{
+  "branch": "develop",
+  "completed_at": "2026-08-22T09:00:47Z",
+  "conclusion": "success",
+  "duration_seconds": 211,
+  "event": "push",
+  "head_sha": "2d81955fb57c440422e63df0a23d73a4b1ea6f11",
+  "job_ids": [
+    97008944330
+  ],
+  "run_id": 32563636531,
+  "schema_version": 1,
+  "started_at": "2026-08-22T08:57:16Z",
+  "state": "qualified",
+  "workflow_file": "deploy-staging.yml"
+}
