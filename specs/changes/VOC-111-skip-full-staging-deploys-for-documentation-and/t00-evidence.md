@@ -59,6 +59,11 @@ fail-closed allowlist in `.github/workflows/deploy-staging.yml`:
 | Staging e2e gate | `tests/staging-e2e/**` |
 | Workflow + selector tests | `.github/workflows/deploy-staging.yml`, `scripts/foundation/voc111-deploy-staging-paths.test.mjs` |
 
+The explicit root-level `tests/staging-e2e/**` entry preserves the approved D03
+surface for a future root staging suite. The current browser gate lives under
+`apps/web/tests/staging-e2e/**`, so it is selected by `apps/**`; TEST-04 covers both
+the current location and the reserved root-level location.
+
 Merges touching only paths outside this list (for example `docs/**`, `specs/**`,
 `.karsift/**`) do **not** schedule the workflow on push. `workflow_dispatch` is
 unchanged — always eligible for manual retry/redeploy.

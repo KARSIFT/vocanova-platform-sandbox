@@ -139,6 +139,7 @@ test("VOC-111-TEST-04: infra/deploy assets and staging e2e changes remain select
     "infra/docker-compose.yml",
     "infra/nginx/staging.conf",
     "infra/scripts/validate-staging-signup-allowlist.sh",
+    "apps/web/tests/staging-e2e/core-loop.staging.spec.ts",
     "tests/staging-e2e/core-loop.staging.spec.ts",
     "tests/staging-e2e/playwright.config.ts",
   ]) {
@@ -203,7 +204,7 @@ test("VOC-111-TEST-08: workflow_dispatch and selected-push deploy semantics pres
   assert.match(concurrencyBlock, /queue: max/);
   assert.match(workflow, /docker\/build-push-action/);
   assert.match(workflow, /STAGING_SSH_HOST/);
-  assert.match(workflow, /core-loop\.staging\.spec\.ts/);
+  assert.match(workflow, /--config playwright\.staging\.config\.ts/);
 
   const dispatchBlock = workflow.slice(
     workflow.indexOf("workflow_dispatch:"),
