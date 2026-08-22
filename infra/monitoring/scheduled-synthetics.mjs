@@ -143,7 +143,7 @@ export function validateStagingCoreJourneyBudget({
   }
 
   const playwrightCacheAction =
-    "actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf";
+    "actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9";
   if (!jobBlock.includes(playwrightCacheAction)) {
     errors.push(
       `${STAGING_CORE_JOURNEY_CHECK_REF} must restore Playwright browser cache via the pinned actions/cache revision`,
