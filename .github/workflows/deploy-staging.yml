@@ -251,20 +251,26 @@
 name: deploy-staging
 
 on:
-  # Every merge to develop deploys to staging. Matches
-  # DOC-12 §3's F3 "develop→staging deploy workflow" wording
-  # exactly (the planner's own choice between a push trigger
-  # and a tag-based RC trigger, recorded in `VOC-032-D05`).
-  # A push trigger requires no new tagging convention this
-  # repository does not already have; a tag-based trigger
-  # would. No path filter: a docs-only commit still deploys
-  # the (unchanged) latest image, which is the safe default
-  # (it is also a near-no-op — every layer is cached — so
-  # the cost of a docs-only deploy is one Docker pull that
-  # resolves to "already up to date" per layer).
+  # Push to develop deploys to staging when changed files match the
+  # fail-closed runtime/deploy allowlist below (VOC-111-D03). Matches
+  # DOC-12 §3's F3 "develop→staging deploy workflow" wording (the
+  # planner's own choice between a push trigger and a tag-based RC
+  # trigger, recorded in `VOC-032-D05`). Merges that touch only
+  # documentation (`docs/**`), governed package material (`specs/**`),
+  # evidence carriers (for example `.karsift/**`), or other paths
+  # outside the allowlist do **not** schedule this workflow on push —
+  # use `workflow_dispatch` below for manual retry/redeploy.
   push:
     branches:
       - develop
+    paths:
+      - "*"
+      - "apps/**"
+      - "packages/**"
+      - "infra/**"
+      - "tests/staging-e2e/**"
+      - ".github/workflows/deploy-staging.yml"
+      - "scripts/foundation/voc111-deploy-staging-paths.test.mjs"
   # Manual retry / re-deploy path. The `skip_ssh_deploy`
   # input lets the build/push steps be exercised without
   # the SSH secrets (the `TEST-16` "disposable test branch
