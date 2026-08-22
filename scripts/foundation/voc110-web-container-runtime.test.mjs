@@ -17,6 +17,15 @@ const pipelinePath = path.join(
   ".github/workflows/pipeline.yml",
 );
 const webPackagePath = path.join(repositoryRoot, "apps/web/package.json");
+const rootPackagePath = path.join(repositoryRoot, "package.json");
+const apiClientPackagePath = path.join(
+  repositoryRoot,
+  "packages/api-client/package.json",
+);
+const eslintConfigPackagePath = path.join(
+  repositoryRoot,
+  "packages/eslint-config/package.json",
+);
 const lockfilePath = path.join(repositoryRoot, "pnpm-lock.yaml");
 const evidencePath = path.join(
   repositoryRoot,
@@ -70,15 +79,30 @@ test("VOC-110-TEST-00: evidence records run 32566405628 and failing web health p
   assert.doesNotMatch(evidence, /vocanova_session=/);
 });
 
-test("VOC-110-TEST-01: paired Next.js packages are stable 16.3.2", () => {
+test("VOC-110-TEST-01: Next.js repair preserves every PR #859 update", () => {
+  const rootPackage = JSON.parse(readFileSync(rootPackagePath, "utf8"));
   const webPackage = JSON.parse(readFileSync(webPackagePath, "utf8"));
+  const apiClientPackage = JSON.parse(
+    readFileSync(apiClientPackagePath, "utf8"),
+  );
+  const eslintConfigPackage = JSON.parse(
+    readFileSync(eslintConfigPackagePath, "utf8"),
+  );
   const lockfile = readFileSync(lockfilePath, "utf8");
 
+  assert.equal(rootPackage.devDependencies.eslint, "10.8.1");
+  assert.equal(rootPackage.devDependencies["socket.io-client"], "4.8.3");
+  assert.equal(webPackage.dependencies["@sentry/nextjs"], "^10.70.0");
   assert.equal(webPackage.dependencies.next, "16.3.2");
+  assert.equal(webPackage.devDependencies["@axe-core/playwright"], "4.13.0");
   assert.equal(
     webPackage.devDependencies["@next/eslint-plugin-next"],
     "16.3.2",
   );
+  assert.equal(webPackage.devDependencies["@types/node"], "26.2.0");
+  assert.equal(apiClientPackage.devDependencies["@types/node"], "26.2.0");
+  assert.equal(eslintConfigPackage.dependencies.eslint, "10.8.1");
+  assert.equal(eslintConfigPackage.dependencies["typescript-eslint"], "8.67.0");
   assert.match(lockfile, /next@16\.3\.2/);
   assert.match(lockfile, /@next\/eslint-plugin-next@16\.3\.2/);
   assert.doesNotMatch(lockfile, /next@16\.3\.1/);
