@@ -34,6 +34,9 @@ None. No product analytics instrumentation or user-facing UI changes.
 - `VOC-111-R01`: **Low operational risk** — skipped non-runtime pushes no longer
   refresh staging immediately after docs-only merges. Acceptable per issue #920; manual
   `workflow_dispatch` remains for explicit redeploy.
+- Protected staging surfaces remain unchanged: the full selected-push job, SSH and
+  secrets handling, `tests/staging-e2e/core-loop.staging.spec.ts`, health/OAuth gates,
+  concurrency queueing, and `operational-failure-monitoring.yml` observer wiring.
 - `VOC-111-DEP-00`: Issue #920 sanitized run metadata (`32568473144`, `32568622178`,
   `32572863842`).
 - `VOC-111-DEP-01`: Current deploy-staging push trigger and stale near-no-op comment.

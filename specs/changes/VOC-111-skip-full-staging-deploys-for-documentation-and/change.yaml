@@ -25,7 +25,8 @@ requirement_source: 'GitHub issue #920 (Skip full staging deploys for documentat
   full staging deployment; runtime/deployment-relevant changes must remain fail-closed
   selected; workflow_dispatch unchanged; staging host semantics unchanged; add deterministic
   positive and negative selector tests; update stale near-no-op documentation; live
-  proof of one skipped docs/evidence push and one runtime-selected case. This draft
+  proof of one skipped docs/evidence push plus deterministic proof that
+  runtime-relevant paths remain selected. This draft
   package does not adopt or authorize itself.
 
   '
