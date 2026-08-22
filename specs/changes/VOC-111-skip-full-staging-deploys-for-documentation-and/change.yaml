@@ -1,0 +1,131 @@
+schema_version: 1
+id: VOC-111
+slug: skip-full-staging-deploys-for-documentation-and
+title: Skip full staging deploys for documentation and evidence-only pushes
+type: infrastructure
+status: draft
+risk: R3
+planned_implementation_risk_floor: 'Measured during drafting against the expected
+  task-scoped file list (.github/workflows/deploy-staging.yml, scripts/foundation/voc111-deploy-staging-paths.test.mjs,
+  docs/operations/11-devops-and-ci-cd.md and/or deploy-staging header comments, this
+  package directory). The detected path floor is R3 because .github/workflows/ is
+  changed. This package proposes R3 for the change as a whole; this is a draft proposal
+  for the reviewing human at adoption time, not a determination. Independent verification
+  must still confirm each task''s real file list and whether semantic escalation applies.
+
+  '
+canonical_path: specs/changes/VOC-111-skip-full-staging-deploys-for-documentation-and
+authority_model: a004-active
+requirement_source: 'GitHub issue #920 (Skip full staging deploys for documentation
+  and evidence-only pushes). deploy-staging.yml currently runs the complete image-build,
+  registry-push, SSH deploy, public probe, OAuth check, and authenticated browser
+  journey on every push to develop, including plan-only merge 86df6779, roster-only
+  merge 60822aa5, and evidence-only merge PR #917 (run 32572863842, ~3m39s with unchanged
+  runtime inputs). Required outcome: docs/package/evidence-only pushes must not start
+  full staging deployment; runtime/deployment-relevant changes must remain fail-closed
+  selected; workflow_dispatch unchanged; staging host semantics unchanged; add deterministic
+  positive and negative selector tests; update stale near-no-op documentation; live
+  proof of one skipped docs/evidence push plus deterministic proof that
+  runtime-relevant paths remain selected. This draft
+  package does not adopt or authorize itself.
+
+  '
+requirement_approval_status: 'not-approved. This package has not been adopted. No
+  field in this file authorizes implementation.
+
+  '
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time
+target_branch: develop
+approved_candidate_sha: null
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: 'none-intentional for application runtime. Changes when push-triggered
+  deploy-staging runs on develop; production deploy filtering and release-promotion
+  policy remain out of scope per issue #920.
+
+  '
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: 'Push-selection gating for deploy-staging only. No page routes, critical
+    API endpoints, or stable monitor/synthetic IDs in infra/monitoring/ are added
+    or changed. Existing staging synthetics continue to observe the last deployed
+    runtime until a runtime-relevant push triggers a new deploy.
+
+    '
+dependencies:
+- id: VOC-111-DEP-00
+  status: 'resolved at drafting time. Issue #920 records sanitized run metadata for
+    plan-only merge 86df6779 (run 32568473144), roster-only merge 60822aa5 (run 32568622178),
+    and evidence-only merge PR #917 (run 32572863842) without logs, credentials, or
+    personal data.
+
+    '
+- id: VOC-111-DEP-01
+  status: 'resolved at drafting time. deploy-staging.yml push trigger has no path
+    filter and its header comment claims docs-only deploys are a near-no-op because
+    Docker layers are cached; current behavior still runs the full workflow including
+    SSH deploy and browser gates.
+
+    '
+- id: VOC-111-DEP-02
+  status: 'resolved at drafting time. VOC-032-T07 owns deploy-staging semantics; VOC-094
+    owns concurrency queue posture; VOC-050/VOC-084/VOC-088 own post-deploy gates;
+    VOC-110 added merge-gating container runtime checks in pipeline.yml for relevant
+    web changes but did not add push selection to deploy-staging itself.
+
+    '
+- id: VOC-111-DEP-03
+  status: 'resolved at drafting time. Production deploy filtering (.github/workflows/deploy-production.yml)
+    and release-promotion policy are explicitly out of scope for this package.
+
+    '
+affected_areas:
+- .github/workflows/deploy-staging.yml
+- scripts/foundation/voc111-deploy-staging-paths.test.mjs
+- docs/operations/11-devops-and-ci-cd.md and/or deploy-staging header comments
+- specs/changes/VOC-111-skip-full-staging-deploys-for-documentation-and/
+implementation:
+  authorized: false
+  required: true
+  status: proposed
+  target_branch: develop
+  pull_request: null
+  authority_issue: 920
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-staging-push-selection-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A004
+blocking_reasons: 'Not adopted. Requires plan review, adoption, and independent verification
+  before any task is implementation-authorized.
+
+  '
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
