@@ -126,6 +126,12 @@ test("VOC-108-TEST-08: caller and shared docs name marker-bound authority", () =
   );
   assert.match(authorityDocs, /closed state alone cannot advance/i);
   assert.match(authorityDocs, /App-authored completion marker/i);
+  assert.match(sharedMerge, /publish the immutable task-completion/i);
+  assert.match(
+    sharedMerge,
+    /Publish task completion marker and close linked task issue/,
+  );
+  assert.doesNotMatch(sharedMerge, /see "Close linked task issue" below/);
   assert.match(
     sharedCallerTemplate,
     /options: \[[^\]]*verify-remediate-operator-ownership\]/,
@@ -139,6 +145,6 @@ test("VOC-108-TEST-08: caller and shared docs name marker-bound authority", () =
 test("VOC-108 fixture is pinned to the consumed shared merge", () => {
   assert.equal(
     readFileSync(path.join(fixtureRoot, "PINNED_SHA.txt"), "utf8").trim(),
-    "ef8fee85e32efa22c551ea66c575703d481e0e18",
+    "d3108dfdef34e2f98c028916e95c36130d329132",
   );
 });

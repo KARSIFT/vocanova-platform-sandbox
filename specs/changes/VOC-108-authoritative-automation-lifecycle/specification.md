@@ -70,7 +70,8 @@ material, user identifiers, and repository secrets.
 
 ## Scope boundaries
 
-This package is R3 governance automation. It does not alter application code,
+This package has an R4 actual task floor (R3 at plan adoption) because it changes
+pinned governance workflow fixtures. It does not alter application code,
 runtime deployment configuration, databases, Google OAuth policy, Kuma/Sentry
 inventory, or secret values. Scheduled-synthetic branch selection, operational
 failure marker cleanup, Node action upgrades, and historical stranded issue

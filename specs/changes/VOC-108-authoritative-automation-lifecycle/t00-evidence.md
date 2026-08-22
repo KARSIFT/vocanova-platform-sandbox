@@ -26,7 +26,9 @@ shared_infra_convergence_docs_pr: 108
 shared_infra_convergence_docs_head_sha: e2c2fbcd7215fca30d655e7c9a474fbbeecf2a13
 shared_infra_roster_authority_pr: 109
 shared_infra_roster_authority_head_sha: b110511b47cb6cd2bec41669740484e7eeab32bd
-shared_infra_merge_sha: ef8fee85e32efa22c551ea66c575703d481e0e18
+shared_infra_completion_contract_pr: 110
+shared_infra_completion_contract_head_sha: 10aa2360f5afdb90928fbc5ec4bca8950283071b
+shared_infra_merge_sha: d3108dfdef34e2f98c028916e95c36130d329132
 shared_infra_self_ci_run: 32549356794
 shared_infra_cleanup_ci_run: 32549968092
 shared_infra_docs_ci_run: 32550666898
@@ -35,6 +37,7 @@ shared_infra_template_parity_ci_run: 32552045142
 shared_infra_wake_scope_ci_run: 32552792770
 shared_infra_convergence_docs_ci_run: 32553150853
 shared_infra_roster_authority_ci_run: 32554159067
+shared_infra_completion_contract_ci_run: 32554548156
 ```
 
 ## Implemented behavior
@@ -64,28 +67,30 @@ shared_infra_roster_authority_ci_run: 32554159067
 
 ## Shared-infrastructure evidence
 
-| Evidence | Result |
-| --- | --- |
-| Shared PR | `KARSIFT/karsift-ai-infra#102` merged |
-| Exact shared head | `844f012ed65d161cca9a3dd4078867b8c00f2c3c` |
-| Whitespace follow-up | `KARSIFT/karsift-ai-infra#103` exact head `71a221c0a80fed7d8ee9f5a2eaf1f5cdcaee52df` merged |
-| Authority-doc follow-up | `KARSIFT/karsift-ai-infra#104` exact head `9dbc7195484eda8f09782171004a1ea071892871` merged |
-| Exact-SHA review remediation | `KARSIFT/karsift-ai-infra#105` exact head `3b70855d74aeb18e30ce757be7863c96a754e8a6` merged |
-| Caller-template parity follow-up | `KARSIFT/karsift-ai-infra#106` exact head `f63d6b9360d47d78171e04fbb167a02be9531554` merged |
-| Promotion-check wake scoping | `KARSIFT/karsift-ai-infra#107` exact head `5758b3e5691d3bcf33aa29ba95742e2629ae8d8e` merged |
-| Convergence-name documentation | `KARSIFT/karsift-ai-infra#108` exact head `e2c2fbcd7215fca30d655e7c9a474fbbeecf2a13` merged |
-| Authoritative roster-PR checks | `KARSIFT/karsift-ai-infra#109` exact head `b110511b47cb6cd2bec41669740484e7eeab32bd` merged |
-| Final consumed shared merge | `ef8fee85e32efa22c551ea66c575703d481e0e18` |
-| Hosted self-CI | run `32549356794`: actionlint, shellcheck, YAML parse, and 175 policy tests passed |
-| Follow-up hosted self-CI | run `32549968092`: actionlint, shellcheck, YAML parse, and 175 policy tests passed |
-| Authority-doc hosted self-CI | run `32550666898`: actionlint, shellcheck, YAML parse, and 176 policy tests passed |
-| Review-remediation hosted self-CI | run `32551381890`: actionlint, shellcheck, YAML parse, and 179 policy tests passed |
-| Template-parity hosted self-CI | run `32552045142`: actionlint, shellcheck, YAML parse, and 180 policy tests passed |
-| Wake-scope hosted self-CI | run `32552792770`: actionlint, shellcheck, YAML parse, and 180 policy tests passed |
-| Convergence-doc hosted self-CI | run `32553150853`: actionlint, shellcheck, YAML parse, and 180 policy tests passed |
-| Roster-authority hosted self-CI | run `32554159067`: actionlint, shellcheck, YAML parse, and 181 policy tests passed |
-| Live selector replay | PR `#904` exact head selected the later successful attempt; obsolete failures did not poison the result |
-| Cross-repository reference | PR `KARSIFT/karsift-ai-infra#102` passed closing-keyword-plus-target validation |
+| Evidence                           | Result                                                                                                  |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Shared PR                          | `KARSIFT/karsift-ai-infra#102` merged                                                                   |
+| Exact shared head                  | `844f012ed65d161cca9a3dd4078867b8c00f2c3c`                                                              |
+| Whitespace follow-up               | `KARSIFT/karsift-ai-infra#103` exact head `71a221c0a80fed7d8ee9f5a2eaf1f5cdcaee52df` merged             |
+| Authority-doc follow-up            | `KARSIFT/karsift-ai-infra#104` exact head `9dbc7195484eda8f09782171004a1ea071892871` merged             |
+| Exact-SHA review remediation       | `KARSIFT/karsift-ai-infra#105` exact head `3b70855d74aeb18e30ce757be7863c96a754e8a6` merged             |
+| Caller-template parity follow-up   | `KARSIFT/karsift-ai-infra#106` exact head `f63d6b9360d47d78171e04fbb167a02be9531554` merged             |
+| Promotion-check wake scoping       | `KARSIFT/karsift-ai-infra#107` exact head `5758b3e5691d3bcf33aa29ba95742e2629ae8d8e` merged             |
+| Convergence-name documentation     | `KARSIFT/karsift-ai-infra#108` exact head `e2c2fbcd7215fca30d655e7c9a474fbbeecf2a13` merged             |
+| Authoritative roster-PR checks     | `KARSIFT/karsift-ai-infra#109` exact head `b110511b47cb6cd2bec41669740484e7eeab32bd` merged             |
+| Completion-contract documentation  | `KARSIFT/karsift-ai-infra#110` exact head `10aa2360f5afdb90928fbc5ec4bca8950283071b` merged             |
+| Final consumed shared merge        | `d3108dfdef34e2f98c028916e95c36130d329132`                                                              |
+| Hosted self-CI                     | run `32549356794`: actionlint, shellcheck, YAML parse, and 175 policy tests passed                      |
+| Follow-up hosted self-CI           | run `32549968092`: actionlint, shellcheck, YAML parse, and 175 policy tests passed                      |
+| Authority-doc hosted self-CI       | run `32550666898`: actionlint, shellcheck, YAML parse, and 176 policy tests passed                      |
+| Review-remediation hosted self-CI  | run `32551381890`: actionlint, shellcheck, YAML parse, and 179 policy tests passed                      |
+| Template-parity hosted self-CI     | run `32552045142`: actionlint, shellcheck, YAML parse, and 180 policy tests passed                      |
+| Wake-scope hosted self-CI          | run `32552792770`: actionlint, shellcheck, YAML parse, and 180 policy tests passed                      |
+| Convergence-doc hosted self-CI     | run `32553150853`: actionlint, shellcheck, YAML parse, and 180 policy tests passed                      |
+| Roster-authority hosted self-CI    | run `32554159067`: actionlint, shellcheck, YAML parse, and 181 policy tests passed                      |
+| Completion-contract hosted self-CI | run `32554548156`: actionlint, shellcheck, YAML parse, and 182 policy tests passed                      |
+| Live selector replay               | PR `#904` exact head selected the later successful attempt; obsolete failures did not poison the result |
+| Cross-repository reference         | PR `KARSIFT/karsift-ai-infra#102` passed closing-keyword-plus-target validation                         |
 
 ## Caller verification
 
