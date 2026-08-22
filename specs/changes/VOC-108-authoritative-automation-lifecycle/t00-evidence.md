@@ -55,6 +55,9 @@ shared_infra_convergence_docs_ci_run: 32553150853
   wake-ups converge on one per-package serialized evaluator and one exact-head
   merge command. Terminal external workflow events wake evaluation without
   rerunning unchanged-SHA CI or the reviewer model.
+- The caller and reusable caller template explicitly reject an empty
+  `check_run.pull_requests` association before reading the promotion PR's base
+  and head, so unattached provider checks fail closed at the wake boundary.
 
 ## Shared-infrastructure evidence
 
