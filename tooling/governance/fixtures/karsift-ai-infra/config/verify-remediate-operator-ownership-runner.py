@@ -13,6 +13,7 @@ import sys
 
 from live_evidence_reconcile import parse_contract_yaml, validate_contract
 from verify_remediate_operator_ownership import (
+    expected_base_sha_from_run,
     verify_carrier_state,
     verify_source_jobs,
     verify_source_run,
@@ -146,7 +147,7 @@ def main() -> int:
             )
         )
         expected_head_sha = str(pr.get("headRefOid") or "")
-        expected_base_sha = str(run.get("pull_requests") or [{}])[0].get("base", {}).get("sha", "")
+        expected_base_sha = expected_base_sha_from_run(run)
         if not expected_base_sha:
             expected_base_sha = str(
                 json.loads(

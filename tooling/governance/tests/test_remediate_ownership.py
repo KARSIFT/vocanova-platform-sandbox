@@ -227,6 +227,27 @@ class RemediateOwnershipTests(unittest.TestCase):
         ).read_text()
         self.assertNotRegex(runner_source, r'["\']logs["\']')
         self.assertNotRegex(runner_source, r'["\']artifacts["\']')
+        # Guard the hosted adapter: stringifying pull_requests then indexing [0]
+        # yields "[" and AttributeError on .get — never a usable base SHA.
+        self.assertNotRegex(
+            runner_source,
+            r'str\(\s*run\.get\(\s*["\']pull_requests["\']',
+        )
+        self.assertIn("expected_base_sha_from_run(run)", runner_source)
+
+        base_sha = "b" * 40
+        self.assertEqual(
+            verifier.expected_base_sha_from_run(
+                {"pull_requests": [{"number": 1, "base": {"sha": base_sha}}]}
+            ),
+            base_sha,
+        )
+        self.assertEqual(verifier.expected_base_sha_from_run({"pull_requests": []}), "")
+        self.assertEqual(verifier.expected_base_sha_from_run({}), "")
+        self.assertEqual(
+            verifier.expected_base_sha_from_run({"pull_requests": ["not-a-dict"]}),
+            "",
+        )
 
         jobs = [
             {"name": "remediate / decide", "conclusion": "success"},

@@ -23,6 +23,24 @@ class VerificationResult:
     reason: str = ""
 
 
+def expected_base_sha_from_run(run: dict) -> str:
+    """Extract the Actions run's associated PR base SHA without stringifying the list.
+
+    `str(run["pull_requests"])[0]` yields `"["` and then crashes on `.get`; keep the
+    list indexed and fall back to empty when the association is absent.
+    """
+    pull_requests = run.get("pull_requests") or []
+    if not isinstance(pull_requests, list) or not pull_requests:
+        return ""
+    first = pull_requests[0]
+    if not isinstance(first, dict):
+        return ""
+    base = first.get("base") or {}
+    if not isinstance(base, dict):
+        return ""
+    return str(base.get("sha") or "")
+
+
 def verify_source_run(
     *,
     run: dict,
