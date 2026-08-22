@@ -1,0 +1,123 @@
+schema_version: 1
+id: VOC-107
+slug: isolated-implementer-publisher-cannot-verify
+title: Isolated implementer publisher cannot verify incremental remediation bundles
+type: infrastructure
+status: draft
+risk: R3
+planned_implementation_risk_floor: Measured during drafting against the expected task-scoped
+  file list (KARSIFT/karsift-ai-infra/.github/workflows/implement.yml bundle and publish
+  steps, related helpers/tests and README; calling-repo scripts/foundation/voc107-*.test.mjs
+  and/or infra self-ci Git fixtures; this package directory; calling-repo docs only
+  if current wording would become false). Detected path floor is R3 for .github/workflows/
+  and governance-automation paths. This package proposes R3 for the change as a whole
+  because it changes semantic CI/CD implementer publication lineage. Independent verification
+  must still confirm each task's real file list and whether further semantic escalation
+  applies. This is a draft proposal for the reviewing human at adoption time, never
+  a determination.
+canonical_path: specs/changes/VOC-107-isolated-implementer-publisher-cannot-verify
+authority_model: a004-active
+requirement_source: 'GitHub issue #891 (Isolated implementer publisher cannot verify
+  incremental remediation bundles). Observed run 32539352323: a supervised remediation
+  run produced a valid committed fix and recovery bundle, but the clean isolated publisher
+  rejected the bundle before publication because it fetched only the integration branch
+  while the incremental bundle declared the existing task-PR head (or a locally rebased
+  derivative) as a prerequisite. Root cause: implement.yml creates recovery/publish
+  bundles from base_sha..HEAD; on remediation, base_sha can be the existing PR head
+  or a rebase-derived tip not reachable from the integration tip the publisher fetches.
+  git bundle verify correctly refuses the thin bundle. Required outcome: complete
+  task-branch-only lineage anchored to reviewed integration; preserve isolated publisher
+  controls and two-attempt cap; add deterministic end-to-end Git fixture including
+  rebase-derived lineage and a negative malformed/stale case. This draft package does
+  not adopt or authorize itself.'
+requirement_approval_status: not-approved. This package has not been adopted. No field
+  in this file authorizes implementation.
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: none-intentional for application runtime. Changes governance automation
+  so implementer recovery/publish bundles carry complete task-branch-only lineage
+  anchored to the reviewed integration tip, allowing the clean isolated publisher
+  to verify and import remediation commits without fetching the prior task-PR head.
+  Does not change production deploy semantics, signup policy, secrets, databases,
+  Kuma inventory, or Sentry ingestion.
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: Governance-automation implementer bundle/publish lineage only. No page
+    routes, critical API endpoints, or stable monitor/synthetic IDs in infra/monitoring/monitors.yaml
+    or infra/monitoring/synthetics.yaml are added or changed.
+dependencies:
+- id: VOC-107-DEP-00
+  status: 'resolved at drafting time. Issue #891 records sanitized observation that
+    isolated publisher rejected a valid remediation recovery bundle (run 32539352323)
+    because the thin base_sha..HEAD bundle prerequisite was absent from a clean bare
+    repository containing only the integration branch.'
+- id: VOC-107-DEP-01
+  status: resolved at drafting time. Drafting-time read of karsift-ai-infra .github/workflows/implement.yml
+    confirms Bundle committed work creates base_sha..HEAD and the publish job fetches
+    only integration_branch before bundle verify. On attempt 2+, Create implementation
+    branch sets base_sha to HEAD after checkout/rebase of the existing agent branch,
+    which is not necessarily an integration ancestor object present in the publisher's
+    bare repo.
+- id: VOC-107-DEP-02
+  status: "resolved at drafting time. Cross-repo pattern from VOC-080 / VOC-097 /\
+    \ VOC-102 / VOC-104 / VOC-106 \u2014 reusable workflow behavior lands in KARSIFT/karsift-ai-infra;\
+    \ this package authorizes the required outcome. Do not treat an untracked local\
+    \ karsift-ai-infra/ checkout as this repository's tracked tree."
+- id: VOC-107-DEP-03
+  status: resolved at drafting time. The soft-reset commit step must continue to use
+    the pre-model tip (today's base_sha) so attempt-2 does not squash prior published
+    task commits into the new attempt. Bundle and publish ancestry must use a separate
+    integration-anchored range.
+affected_areas:
+- KARSIFT/karsift-ai-infra/.github/workflows/implement.yml
+- KARSIFT/karsift-ai-infra deterministic Git/policy fixtures and README for implementer
+  bundle lineage and isolated publication
+- scripts/foundation/voc107-*.test.mjs and/or infra self-ci fixtures
+- calling-repo docs only when current wording would become false
+- specs/changes/VOC-107-isolated-implementer-publisher-cannot-verify/
+implementation:
+  authorized: false
+  required: true
+  status: proposed
+  target_branch: develop
+  pull_request: null
+  authority_issue: 891
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-governance-automation-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+adoption_pr: null
+adoption_evidence: null
+implementation_authority_before_adoption: false
+implementation_authority_status: not-exercised
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
+blocking_reasons: Not adopted. Requires plan-review and governed adoption before any
+  implementation task may be dispatched.
+approved_candidate_sha: null
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
