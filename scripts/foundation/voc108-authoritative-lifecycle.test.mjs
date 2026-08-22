@@ -85,10 +85,7 @@ test("VOC-108-TEST-07: terminal gates wake cheap release evaluation", () => {
   assert.match(release, /github\.event_name == 'pull_request'/);
   assert.match(release, /github\.event_name == 'workflow_run'/);
   assert.match(release, /github\.event_name == 'check_run'/);
-  assert.match(
-    release,
-    /github\.event\.check_run\.pull_requests\[0\] != null/,
-  );
+  assert.match(release, /github\.event\.check_run\.pull_requests\[0\] != null/);
   assert.match(
     release,
     /github\.event\.check_run\.pull_requests\[0\]\.base\.ref == 'main'/,
