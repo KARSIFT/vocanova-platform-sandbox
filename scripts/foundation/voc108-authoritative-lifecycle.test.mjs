@@ -40,6 +40,13 @@ const sharedCallerTemplate = readFileSync(
 );
 const authorityDocs = [
   readFileSync(path.join(repositoryRoot, "AGENTS.md"), "utf8"),
+  readFileSync(
+    path.join(
+      repositoryRoot,
+      "docs/operations/15-ai-native-product-and-engineering-operating-model.md",
+    ),
+    "utf8",
+  ),
   pipeline,
   readFileSync(path.join(fixtureRoot, "README.md"), "utf8"),
   readFileSync(path.join(fixtureRoot, "prompts/plan.md"), "utf8"),
@@ -104,7 +111,7 @@ test("VOC-108-TEST-04 through TEST-08: one marker validator and merge authority"
 test("VOC-108-TEST-08: caller and shared docs name marker-bound authority", () => {
   assert.doesNotMatch(
     authorityDocs,
-    /roster closes|issue closing is what triggers promotion|release-approval issue|release promotion \(one human decision/i,
+    /roster closes|every task in a package's roster closes|issue closing is what triggers promotion|release-approval issue|release promotion \(one human decision/i,
   );
   assert.match(authorityDocs, /closed state alone cannot advance/i);
   assert.match(authorityDocs, /App-authored completion marker/i);
