@@ -82,7 +82,8 @@ Order is mandatory: **T00 → T01**.
 
 ## Task ordering notes
 
-- T00 blocks T01: live proof requires the route-sweep fix on `develop`.
+- T00 blocks T01: live proof requires a deployed `main` revision that contains
+  the route-sweep fix merged through `develop`.
 - No task may be dispatched before this package is adopted and
   implementation-authorized.
 
