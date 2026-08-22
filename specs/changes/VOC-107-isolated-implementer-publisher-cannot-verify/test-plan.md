@@ -29,9 +29,9 @@
 - Covers: `VOC-107-AC-01`, `VOC-107-AC-04`
 - Preconditions: Fixture that rebases attempt-1 commits onto a newer integration
   tip (new SHAs), then adds attempt-2 commits
-- Procedure: Build the integration-anchored bundle from the post-rebase tip
-  through attempt-2 HEAD; verify/import in a clean bare repo containing only the
-  new integration tip.
+- Procedure: Build the bundle from the new integration-anchor tip through
+  attempt-2 HEAD, including the locally rebased attempt-1 commits; verify/import
+  in a clean bare repo containing only that new integration tip.
 - Expected result: Verify and import succeed despite locally recreated bases;
   publication is not stranded by rebase-derived prerequisites.
 - Evidence: `VOC-107-EV-00`

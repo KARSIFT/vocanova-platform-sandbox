@@ -56,7 +56,7 @@ that failure class by construction for the covered remediation lineage.
 
 - Requirement source: `VOC-107-D05`
 - Tasks: `VOC-107-T00`
-- Tests: `VOC-107-TEST-00` through `VOC-107-TEST-05`, `VOC-107-TEST-07`
+- Tests: `VOC-107-TEST-00` through `VOC-107-TEST-05`
 - Evidence: `VOC-107-EV-00`
 - Result: pending
 
