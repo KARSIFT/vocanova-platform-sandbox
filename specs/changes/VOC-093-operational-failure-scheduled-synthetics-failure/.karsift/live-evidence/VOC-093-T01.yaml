@@ -7,9 +7,10 @@ job_names:
   - synthetic.production.authenticated-route-content-sweep
 events:
   - workflow_dispatch
-branch: develop
+branch: main
 sha_lineage:
-  mode: exact_pr_head
+  mode: exact_sha
+  sha: a508647ea5a345f06c975b086c76f8cd40b1624d
 conclusion: success
 max_age: 72h
 dispatch:

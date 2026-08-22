@@ -58,10 +58,11 @@ Order is mandatory: **T00 → T01**.
 
 ### Required work
 
-1. After T00 merges to `develop`, enter the operator-owned waiting state. The
+1. After T00 merges to `develop` and a production release containing it reaches
+   protected `main`, enter the operator-owned waiting state. The
    repository-controlled live-evidence reconciler (not the implementer) may
-   dispatch `scheduled-synthetics.yml` on protected branch `develop` via the
-   contract's allowlisted `workflow_dispatch` input:
+   dispatch `scheduled-synthetics.yml` on the exact protected `main` revision
+   declared by the contract, using only its allowlisted `workflow_dispatch` input:
    `synthetic_id=synthetic.production.authenticated-route-content-sweep`.
 2. Through allowlisted reconcile metadata, confirm conclusion `success` and job
    `synthetic.production.authenticated-route-content-sweep` success. Record run
@@ -81,7 +82,8 @@ Order is mandatory: **T00 → T01**.
 
 ## Task ordering notes
 
-- T00 blocks T01: live proof requires the route-sweep fix on `develop`.
+- T00 blocks T01: live proof requires a deployed `main` revision that contains
+  the route-sweep fix merged through `develop`.
 - No task may be dispatched before this package is adopted and
   implementation-authorized.
 

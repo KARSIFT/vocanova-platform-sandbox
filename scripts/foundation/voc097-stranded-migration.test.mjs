@@ -24,10 +24,11 @@ const stranded = [
     pr: "789",
     packageDir:
       "specs/changes/VOC-093-operational-failure-scheduled-synthetics-failure",
-    branch: "develop",
+    branch: "main",
     workflowFile: "scheduled-synthetics.yml",
     jobName: "synthetic.production.authenticated-route-content-sweep",
-    lineage: "exact_pr_head",
+    lineage: "exact_sha",
+    exactSha: "a508647ea5a345f06c975b086c76f8cd40b1624d",
     requiresDispatch: true,
   },
   {
@@ -111,6 +112,10 @@ for (const item of stranded) {
     assert.match(contract, new RegExp(`mode: ${item.lineage}`));
     assert.match(contract, new RegExp(`branch: ${item.branch}`));
 
+    if (item.exactSha) {
+      assert.match(contract, new RegExp(`sha: ${item.exactSha}`));
+    }
+
     if (item.requiresDispatch) {
       assert.match(contract, /^dispatch:/m);
     } else {
@@ -135,10 +140,10 @@ test("VOC-097-TEST-15: VOC-093 pollution must not ship in caller pipeline", () =
   assert.doesNotMatch(pipeline, /voc-093-t01-live-verify/);
 });
 
-test("VOC-097-TEST-15: dispatch contracts target the protected integration branch", () => {
+test("VOC-097-TEST-15: production dispatch contracts target the protected production branch", () => {
   const contract = read(
     "specs/changes/VOC-093-operational-failure-scheduled-synthetics-failure/.karsift/live-evidence/VOC-093-T01.yaml",
   );
-  assert.match(contract, /^branch: develop$/m);
+  assert.match(contract, /^branch: main$/m);
   assert.doesNotMatch(contract, /^branch: agent\//m);
 });

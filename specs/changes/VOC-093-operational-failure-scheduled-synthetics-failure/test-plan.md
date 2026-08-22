@@ -62,10 +62,12 @@
 ## VOC-093-TEST-06 — Live workflow_dispatch route sweep completes success
 
 - Covers: `VOC-093-AC-04`, `VOC-093-AC-05`
-- Preconditions: T00 merged to `develop`
-- Procedure: Operator dispatches `scheduled-synthetics.yml` targeting
-  `synthetic.production.authenticated-route-content-sweep`; inspect run conclusion
-  and job status and duration.
+- Preconditions: T00 merged through `develop` into the exact deployed protected
+  `main` SHA declared by the live-evidence contract
+- Procedure: The repository-controlled reconciler dispatches
+  `scheduled-synthetics.yml` on that protected `main` revision, targeting
+  `synthetic.production.authenticated-route-content-sweep`; inspect only the
+  allowlisted run conclusion, job status, and duration metadata.
 - Expected result: Conclusion `success`; route-sweep job success; no duplicate open
   failure fingerprint issue
 - Evidence: `VOC-093-EV-01`
