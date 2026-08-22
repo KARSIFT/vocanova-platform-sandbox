@@ -79,8 +79,8 @@ Non-goals / explicitly excluded:
 
 ## Risk and protected areas
 
-- **Draft package proposal:** **R3** (`.github/workflows/`, `infra/scripts/`,
-  possible `apps/web/` / `packages/`).
+- **Draft package proposal:** **R3** (`.github/workflows/pipeline.yml`, with R1/R2
+  application manifest and lockfile changes).
 - **Measured path floor at drafting:** **R3**. Not R4 unless a task touches
   `scripts/governance/*`.
 - Protected areas: `.github/workflows/deploy-staging.yml`, staging SSH deploy path,

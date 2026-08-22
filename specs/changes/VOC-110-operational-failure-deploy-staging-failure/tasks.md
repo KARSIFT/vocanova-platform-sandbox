@@ -6,7 +6,7 @@ Order is mandatory: **T00 → T01**.
 
 ## VOC-110-T00 — Diagnose and fix deploy-staging failure from run 32566405628
 
-- Requirement source: issue #911; `VOC-110-D00`–`D05`
+- Requirement source: issue #911; `VOC-110-D00`–`D06`
 - Acceptance criteria: `VOC-110-AC-00`, `VOC-110-AC-01`, `VOC-110-AC-02`
 - Tests: `VOC-110-TEST-00` through `VOC-110-TEST-05`, applicable deploy-staging
   regression tests from VOC-084, VOC-088, and VOC-095
@@ -52,7 +52,7 @@ Order is mandatory: **T00 → T01**.
 
 ## VOC-110-T01 — Record live verification that deploy-staging succeeds on develop
 
-- Requirement source: issue #911; `VOC-110-D00`, `VOC-110-D06`
+- Requirement source: issue #911 remediation outcome; `VOC-110-D00`
 - Acceptance criteria: `VOC-110-AC-03`, `VOC-110-AC-04`
 - Tests: `VOC-110-TEST-06`
 - Evidence: `VOC-110-EV-01` (`t01-evidence.md`)

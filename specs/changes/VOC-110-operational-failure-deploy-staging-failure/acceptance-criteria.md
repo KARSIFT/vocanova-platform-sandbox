@@ -31,7 +31,7 @@ checks, no skipped staging core-loop gate, no weakened OAuth-start check.
 
 ## VOC-110-AC-02 — Deterministic regression coverage for the fix
 
-- Requirement source: `VOC-110-D03`
+- Requirement source: `VOC-110-D03`, `VOC-110-D06`
 - Tasks: `VOC-110-T00`
 - Tests: `VOC-110-TEST-04`, `VOC-110-TEST-05`, regression `VOC-084-TEST-*`,
   `VOC-088-TEST-*`, `VOC-095-TEST-*` deploy-staging wiring as applicable
@@ -47,7 +47,7 @@ remain green.
 
 ## VOC-110-AC-03 — Live verification: post-fix deploy-staging succeeds on develop
 
-- Requirement source: issue #911 remediation outcome; `VOC-110-D00`, `VOC-110-D06`
+- Requirement source: issue #911 remediation outcome; `VOC-110-D00`
 - Tasks: `VOC-110-T01`
 - Tests: `VOC-110-TEST-06`
 - Evidence: `VOC-110-EV-01`

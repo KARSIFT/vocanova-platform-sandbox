@@ -35,7 +35,7 @@ journey; no standalone accessibility scope unless the chosen fix demands it.
   green deploy proof.
 - `VOC-110-R01`: **Mis-scoped dependency revert** — reverting all eight Dependabot
   bumps without log evidence could hide a smaller fix. Mitigation: `VOC-110-D05` and
-  AC-01/TEST-03 require explicit package-level traceability.
+  AC-01/TEST-01 require explicit package-level traceability.
 - `VOC-110-R02`: **False fix on environmental staging fault** — SSH/host issues
   unrelated to PR #859 could recur. Mitigation: T00 must record causal link; T01 live
   proof on the next push-triggered deploy.
