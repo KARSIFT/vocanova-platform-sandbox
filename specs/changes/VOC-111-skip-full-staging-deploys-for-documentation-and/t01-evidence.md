@@ -47,8 +47,9 @@ not select push-triggered deploy.
 | Item | Value |
 |------|-------|
 | Fixture task issue | #923 |
-| Fixture task PR | pending — bound when the task PR opens |
-| Fixture task head SHA | pending — exact reviewed head before merge |
+| Fixture task PR | #927 |
+| Initial published fixture SHA | `9b4bdade260f0d3be125aaa597ca4c539fd44527` |
+| Final reviewed head SHA | bound by the exact-head PR checks; T02 records it after merge |
 | Integration push SHA | pending — T02 records after this task merges |
 | Fixture revision | `1` |
 | Exact changed paths | `specs/changes/VOC-111-skip-full-staging-deploys-for-documentation-and/t01-evidence.md` |
@@ -65,6 +66,12 @@ not select push-triggered deploy.
 | `.github/workflows/deploy-staging.yml` touched | no |
 | `tests/staging-e2e/**` touched | no |
 | Post-merge absence claimed in this file | no |
+
+The initial published SHA above is the exact pre-merge carrier revision that made
+the PR number available. This metadata-binding revision necessarily changes the PR
+head; its final exact reviewed head is authoritative in the PR check suite and is
+copied into T02 only after merge. This avoids presenting the initial SHA as the
+final reviewed revision or creating a self-referential hash claim.
 
 ## Validation (implement-time)
 
