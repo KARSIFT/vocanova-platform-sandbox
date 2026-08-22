@@ -68,9 +68,9 @@ dependencies:
   status: Adopted predecessor for benign deploy cancellation filtering. Unrelated
     except shared deploy-staging.yml touch discipline.
 - id: VOC-095
-  status: Adopted predecessor for bounded Playwright install. Run duration and public
-    annotations suggest failure after install/deploy phases rather than an install
-    timeout; T00 must confirm via logs.
+  status: Adopted predecessor for bounded Playwright install. Ruled out for this
+    incident because the web health poll failed before the Playwright install and
+    core-loop steps were reached.
 affected_areas:
 - .github/workflows/pipeline.yml (merge-gating production-image boot/HTTP smoke job)
 - apps/web/package.json (paired Next.js runtime and ESLint plugin 16.3.2 repair)

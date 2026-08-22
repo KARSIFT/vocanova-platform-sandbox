@@ -54,7 +54,7 @@ pending — root cause confirmed; implementation and regression-gate proof pendi
 | Class | Ruled in/out | Rationale |
 |-------|----------------|-----------|
 | VOC-094 concurrency supersession | **Out** | Conclusion `failure`, job ran ~8m (not `cancelled` ~2m with zero jobs) |
-| VOC-095 Playwright install timeout | **Unlikely** | Duration well below 40m job timeout; install script bounded since VOC-095 |
+| VOC-095 Playwright install timeout | **Out** | Web health failed before Playwright install/core-loop steps were reached |
 | Actionable deploy step failure | **In** | Web health poll failed after image deploy |
 | Exact failing step | **Confirmed** | `Poll staging.vocanova.site/` |
 | Direct dependency regression | **Confirmed** | Next.js 16.3.1 standalone output omitted required runtime helper |

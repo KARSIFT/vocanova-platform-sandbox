@@ -31,8 +31,8 @@ Confirmed root-cause bounds:
 
 - **Not VOC-094:** job ran ~8m with conclusion `failure`, not `cancelled` with
   zero jobs and a concurrency-supersession annotation.
-- **Not VOC-095:** total duration is well below the 40-minute job timeout; public
-  signals point past image build/push rather than an unbounded Playwright install stall.
+- **Not VOC-095:** the web health poll failed before Playwright install or the core-loop
+  steps were reached; this was not an install stall or workflow timeout.
 - **Post-build runtime failure:** both images built and the staging API health poll
   passed. The public web poll failed while `vocanova-web` restarted.
 - **Dependency cause:** PR #859 moved Next.js 16.3.0 to 16.3.1. The runtime error
@@ -133,8 +133,5 @@ must block merge-gate when that check fails.
 - No application schema migration unless T00 proves an unrelated data defect requiring
   a separate governed package.
 - No intentional staging database mutation beyond existing deploy seed/migrate steps.
-- Possible product UI fix if core-loop failure is a rendering or routing regression.
-- No analytics change — evidence-backed non-applicability unless a route fix
-  incidentally touches analytics (record in task PR if so).
-- Accessibility impact follows any UI fix; no standalone a11y scope unless required
-  by the chosen fix (record in task PR).
+- No product UI, route, analytics, or accessibility behavior change; the confirmed
+  defect is the standalone container artifact and its missing pre-merge runtime gate.

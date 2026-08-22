@@ -34,11 +34,8 @@ by deploy-staging.
 
 ## Analytics and accessibility
 
-No analytics changes unless a UI fix incidentally touches analytics instrumentation
-(record in task PR if so).
-
-Accessibility impact follows any route or component fix required for the core-loop
-journey; no standalone accessibility scope unless the chosen fix demands it.
+No analytics or accessibility behavior changes. The confirmed scope is a dependency
+artifact repair plus CI runtime verification; no route or component work is authorized.
 
 ## Risks, dependencies, and evidence
 
