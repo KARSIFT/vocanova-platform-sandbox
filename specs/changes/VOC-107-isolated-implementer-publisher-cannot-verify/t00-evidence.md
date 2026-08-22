@@ -34,10 +34,12 @@ git diff --check
 ## results
 
 - Shared-infrastructure PR `KARSIFT/karsift-ai-infra#100` merged at
-  `3b968d89b1a958db1eaa7d20748549f5c3d3658e`.
+  `3b968d89b1a958db1eaa7d20748549f5c3d3658e`. Review-follow-up PR
+  `KARSIFT/karsift-ai-infra#101` merged at
+  `da07d3b14f76b59e9a1bd470cecb6441dbe7338a`.
 - Hosted shared-infrastructure `actionlint`, `shellcheck`, YAML parsing, and
-  policy-test jobs passed in run `32544512478`; the local suite passed all 154
-  tests.
+  policy-test jobs passed in runs `32544512478` and `32544915367`; the final
+  local suite passed all 155 tests.
 - The implementer now records `integration_sha` separately from the pre-model
   `base_sha`. Soft reset continues to use `base_sha`; bundle creation,
   publisher ancestry, and the denied-workflow scan use the integration anchor.
@@ -54,6 +56,10 @@ git diff --check
   is required.
 - The plan-review wording ambiguity in TEST-02 and the AC-04/TEST-07 mapping
   drift were corrected without changing authorized scope.
+- Exact-SHA review on caller PR #897 passed with two Low findings. PR #101 added
+  a distinct-tip real-Git assertion proving soft reset stages only the
+  model-authored change while preserving the prior task commit in history. All
+  AC-00 through AC-06 `Result` fields now match this evidence's complete gate.
 
 - Local `pnpm validate` passed workspace validation, formatting, lint, type
   checks, 235 foundation tests, 28 API-client tests, 16 web middleware/lib
