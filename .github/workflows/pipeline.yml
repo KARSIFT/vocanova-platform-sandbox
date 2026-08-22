@@ -520,6 +520,7 @@ jobs:
     if: |
       always() &&
       github.event_name == 'pull_request' && github.event.action != 'closed' &&
+      needs.web-container-runtime.result == 'success' &&
       (needs.review.result == 'success' || needs.review.result == 'skipped') &&
       (needs.plan-review.result == 'success' || needs.plan-review.result == 'skipped')
     uses: KARSIFT/karsift-ai-infra/.github/workflows/merge-gate.yml@main

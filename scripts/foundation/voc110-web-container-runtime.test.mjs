@@ -113,6 +113,11 @@ test("VOC-110-TEST-03: merge-gate waits on web-container-runtime", () => {
   const mergeGateBlock = extractJobBlock(pipeline, "merge-gate");
 
   assert.match(mergeGateBlock, /needs:[\s\S]*web-container-runtime/);
+  assert.match(
+    mergeGateBlock,
+    /needs\.web-container-runtime\.result == 'success'/,
+    "merge-gate must fail closed when the web container runtime job fails",
+  );
 });
 
 test("VOC-110-TEST-04: development workflow documents the shipped-artifact gate", () => {
