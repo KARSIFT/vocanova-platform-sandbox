@@ -2,7 +2,7 @@
 
 None of the tasks below is implementation-authorized by this package.
 Adoption and each task's own implementation authorization are separate.
-Order is mandatory: **T00 → T01**.
+Order is mandatory: **T00 → T01 → T02**.
 
 ## VOC-111-T00 — Add fail-closed push selection, selector tests, and doc updates
 
@@ -20,9 +20,9 @@ Order is mandatory: **T00 → T01**.
    secrets, SSH transcripts, cookies, OAuth state, tokens, or personal data.
 2. Implement **push-only** path selection on `.github/workflows/deploy-staging.yml`
    using the explicit runtime/deploy allowlist in `VOC-111-D03`. Prefer GitHub's native
-   `on.push.paths` allowlist when it can express the required patterns; if root-file
-   detection requires a companion check, document the approach in evidence and keep
-   selection fail-closed.
+   `on.push.paths` allowlist. Select every repository-root file with a root-only
+   pattern so a newly introduced root build/runtime input cannot silently bypass
+   staging deployment.
 3. Ensure merges that touch **only** non-allowlisted paths (for example `docs/**`,
    `specs/**` plan/roster/evidence carriers, `.karsift/**` lesson files) do **not**
    schedule the deploy workflow on push.
@@ -35,7 +35,8 @@ Order is mandatory: **T00 → T01**.
 6. Add `scripts/foundation/voc111-deploy-staging-paths.test.mjs` with deterministic
    positive and negative fixtures, including:
    - docs-only and specs/evidence-only negative cases;
-   - `apps/web/**`, `apps/api/**`, `packages/**`, `infra/**`, root manifest/lockfile,
+   - `apps/web/**`, `apps/api/**`, `packages/**`, `infra/**`, representative current
+     root manifests/lockfiles and an otherwise-unlisted future root filename,
      `tests/staging-e2e/**`, and `.github/workflows/deploy-staging.yml` positive cases;
    - a regression case proving the selector test file itself is allowlisted.
 7. Update the stale deploy-staging header comment and, if needed,
@@ -49,46 +50,73 @@ Order is mandatory: **T00 → T01**.
 
 ### Explicitly out of scope for this task
 
-- Live post-merge absence proof (T01).
+- Governed docs-only fixture merge (T01) and live post-merge absence proof (T02).
 - Production deploy filtering or release-promotion changes.
 - Weakening health checks, OAuth guards, core-loop ordering, or concurrency posture.
 - Changing operational-failure observer behavior except as required by unchanged
   failure semantics on **selected** pushes.
 
-## VOC-111-T01 — Record live verification that docs/evidence-only pushes skip deploy-staging
+## VOC-111-T01 — Merge a governed docs-only selector fixture
+
+- Requirement source: issue #920 required outcome item 7; `VOC-111-D01`, `VOC-111-D06`
+- Acceptance criteria: `VOC-111-AC-01`
+- Tests: `VOC-111-TEST-10`
+- Evidence: `VOC-111-EV-01` (`t01-evidence.md`)
+- Status: pending — depends on `VOC-111-T00`
+### Required work
+
+1. After T00 merges to `develop`, update only this package's `t01-evidence.md` into
+   the deterministic docs-only fixture carrier. Do not change application,
+   infrastructure, workflow, root, shared-package, or staging-e2e paths.
+2. Record the fixture PR number and its exact pre-merge head SHA. The future
+   integration merge SHA is deliberately left for T02 because it does not exist
+   until this task PR merges.
+3. Run governance validation and `git diff --check`; independently verify that the
+   entire task diff is under `specs/changes/VOC-111-.../` and therefore outside the
+   deploy allowlist.
+4. Merge through the normal exact-SHA task lifecycle. That merge creates the bounded
+   `develop` push which T02 observes; T01 must not claim the post-merge absence result.
+
+### Explicitly out of scope for this task
+
+- Code changes or selector changes (T00 owns them).
+- Actions queries or claims that no run exists (T02 owns post-merge observation).
+- Production deploy behavior.
+
+## VOC-111-T02 — Record live absence proof for the T01 fixture push
 
 - Requirement source: issue #920 required outcome item 7; `VOC-111-D01`, `VOC-111-D06`
 - Acceptance criteria: `VOC-111-AC-01`
 - Tests: `VOC-111-TEST-07`
-- Evidence: `VOC-111-EV-01` (`t01-evidence.md`)
-- Status: pending — depends on `VOC-111-T00`
+- Evidence: `VOC-111-EV-02` (`t02-evidence.md`)
+- Status: pending — depends on `VOC-111-T01`
 - Automation ownership: operator
 
 ### Required work
 
-1. After T00 merges to `develop`, verify push selection with operator-owned metadata
-   only (not implementer Actions access). Use a merge to `develop` whose changed-file
-   set includes **only** documentation, governed package material under `specs/**`,
-   and/or evidence carriers — for example this package's own `t01-evidence.md` update
-   or another governed docs/evidence-only task PR.
-2. Record in `t01-evidence.md` the integration push SHA, merge timestamp, and an
-   allowlisted Actions query result showing **zero** `deploy-staging` workflow runs
-   whose `head_sha` equals that push and whose `event` is `push` on `develop`.
-3. Confirm the verification does not weaken or fabricate deployment evidence. Do not
-   paste logs, secrets, or personal data.
-4. Note that governed live-evidence reconcile (VOC-097) is **not** used for this
-   negative case because no success run exists to observe; operator metadata in
-   `t01-evidence.md` is the acceptance carrier.
+1. After T01 merges, resolve its exact `develop` integration push SHA and merge
+   timestamp using operator-owned repository metadata only.
+2. Confirm T01's merged changed-file set is limited to the declared docs/specs
+   fixture surface.
+3. Query Actions metadata and record in `t02-evidence.md` that exactly zero
+   `deploy-staging` runs have `event=push`, `head_branch=develop`, and `head_sha`
+   equal to the T01 integration SHA. Record only the SHA, timestamp, PR/run count,
+   and scrubbed outcome; never logs, credentials, or personal data.
+4. Keep the T02 carrier draft until that negative evidence is complete. Do not use
+   governed success-run reconciliation: the accepted outcome intentionally has no
+   workflow run to observe.
 
 ### Explicitly out of scope for this task
 
-- Code changes (T00 owns all workflow/test/doc edits).
-- Implementer-owned Actions dispatch or log inspection.
-- Proving production deploy behavior.
+- Repository code or workflow changes.
+- Implementer-owned Actions access or dispatch.
+- Production deploy behavior.
 
 ## Task ordering notes
 
-- T00 blocks T01: push selection must be on `develop` before live absence proof.
+- T00 blocks T01: push selection must be on `develop` before the fixture merge.
+- T01 blocks T02: only T01's completed merge supplies a non-circular integration SHA
+  whose absence of deploy runs can be observed honestly.
 - No task may be dispatched before this package is adopted and
   implementation-authorized.
 

@@ -41,7 +41,8 @@ None. No product analytics instrumentation or user-facing UI changes.
   packages own adjacent deploy semantics; this package must not weaken them.
 - `VOC-111-DEP-03`: Production deploy filtering explicitly out of scope.
 - `VOC-111-EV-00`: T00 evidence — issue table, allowlist, deterministic test results.
-- `VOC-111-EV-01`: T01 evidence — operator absence metadata for docs/evidence-only push.
+- `VOC-111-EV-01`: T01 evidence — governed docs-only fixture carrier.
+- `VOC-111-EV-02`: T02 evidence — operator zero-run metadata for T01's completed push.
 
 ## Monitoring
 

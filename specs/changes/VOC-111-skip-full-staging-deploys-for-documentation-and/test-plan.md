@@ -46,13 +46,14 @@
 - Expected result: Selection for push trigger
 - Evidence: `VOC-111-EV-00`
 
-## VOC-111-TEST-05 — Root manifest and lockfile changes remain selected
+## VOC-111-TEST-05 — Every repository-root file remains selected
 
 - Covers: `VOC-111-AC-02`
 - Preconditions: T00 task branch
 - Procedure: Run positive fixtures for `package.json`, `pnpm-lock.yaml`,
-  `pnpm-workspace.yaml`, and at least one other documented root Docker/workspace input
-  if present in the allowlist.
+  `pnpm-workspace.yaml`, hidden root build inputs, and an otherwise-unlisted future
+  root filename. Assert the root-only pattern does not accidentally match nested
+  docs/specs files.
 - Expected result: Selection for push trigger
 - Evidence: `VOC-111-EV-00`
 
@@ -69,12 +70,12 @@
 ## VOC-111-TEST-07 — Live docs/evidence-only push produces no deploy-staging run
 
 - Covers: `VOC-111-AC-01`
-- Preconditions: T00 merged to `develop`; operator-owned verification after T01 task PR
-  merge or other governed docs/evidence-only push
-- Procedure: Operator records push SHA and queries Actions metadata showing zero
-  matching `deploy-staging` `push` runs on `develop` for that SHA. Read `t01-evidence.md`.
+- Preconditions: T00 and the separate T01 docs-only fixture merged to `develop`
+- Procedure: Operator resolves T01's completed integration SHA and changed-file set,
+  then queries Actions metadata showing zero matching `deploy-staging` `push` runs on
+  `develop` for that SHA. Read `t02-evidence.md`.
 - Expected result: Absence proof with allowlisted metadata only
-- Evidence: `VOC-111-EV-01`
+- Evidence: `VOC-111-EV-02`
 
 ## VOC-111-TEST-08 — workflow_dispatch and selected-push deploy semantics preserved
 
@@ -95,6 +96,17 @@
   assert they describe skipped non-runtime pushes rather than cached near-no-op deploys.
 - Expected result: Documentation matches implemented behavior
 - Evidence: `VOC-111-EV-00`
+
+## VOC-111-TEST-10 — Governed fixture is docs/specs-only and non-circular
+
+- Covers: `VOC-111-AC-01`
+- Preconditions: T00 merged; T01 task PR open
+- Procedure: Inspect the exact T01 task diff and assert every changed path is under
+  this package in `specs/changes/**`; assert T01 records only pre-merge fixture
+  metadata and leaves integration-SHA/run-absence claims to T02.
+- Expected result: T01 can merge to create a bounded non-runtime push without claiming
+  evidence about its own future merge
+- Evidence: `VOC-111-EV-01`
 
 Include positive, negative, authorization, failure, migration, accessibility, and
 rollback coverage as applicable. Tests must not use secrets or production data.

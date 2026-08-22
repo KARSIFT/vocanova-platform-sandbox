@@ -15,15 +15,16 @@ has no path filter. Evidence contains no secrets, full logs, or personal data.
 ## VOC-111-AC-01 — Push selection skips non-runtime merges
 
 - Requirement source: `VOC-111-D01`, `VOC-111-D04`
-- Tasks: `VOC-111-T00`, `VOC-111-T01`
-- Tests: `VOC-111-TEST-01`, `VOC-111-TEST-02`, `VOC-111-TEST-07`
-- Evidence: `VOC-111-EV-00`, `VOC-111-EV-01`
+- Tasks: `VOC-111-T00`, `VOC-111-T01`, `VOC-111-T02`
+- Tests: `VOC-111-TEST-01`, `VOC-111-TEST-02`, `VOC-111-TEST-07`, `VOC-111-TEST-10`
+- Evidence: `VOC-111-EV-00`, `VOC-111-EV-01`, `VOC-111-EV-02`
 - Result: pending
 
 After T00 merges to `develop`, a push whose changed-file set includes only
 documentation, governed change-package material under `specs/**`, and/or package
-evidence carriers does **not** schedule `deploy-staging`. T01 records operator-owned
-metadata proving zero matching workflow runs for the verified push SHA.
+evidence carriers does **not** schedule `deploy-staging`. T01 creates the governed
+docs-only fixture push; T02 records operator-owned metadata proving zero matching
+workflow runs for that already-completed integration SHA.
 
 ## VOC-111-AC-02 — Runtime/deployment-relevant pushes remain fail-closed selected
 
@@ -34,7 +35,8 @@ metadata proving zero matching workflow runs for the verified push SHA.
 - Result: pending
 
 Deterministic selector tests prove that changes under `apps/**`, `packages/**`,
-`infra/**`, root workspace manifests/lockfiles, `tests/staging-e2e/**`, and edits to
+`infra/**`, every repository-root file (including future filenames),
+`tests/staging-e2e/**`, and edits to
 `.github/workflows/deploy-staging.yml` or the selector test file itself remain
 selected for push-triggered deploy. No runtime-relevant fixture silently bypasses
 deployment.

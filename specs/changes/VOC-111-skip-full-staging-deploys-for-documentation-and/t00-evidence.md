@@ -59,7 +59,7 @@ extensions with matching tests.
 | ID | Result |
 |----|--------|
 | VOC-111-AC-00 | pending |
-| VOC-111-AC-01 | partial — live absence proof deferred to T01 |
+| VOC-111-AC-01 | partial — T01 fixture and T02 live absence proof remain |
 | VOC-111-AC-02 | pending |
 | VOC-111-AC-03 | pending |
 | VOC-111-AC-04 | pending |

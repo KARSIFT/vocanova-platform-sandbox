@@ -30,24 +30,38 @@ Ordered steps:
 3. Preserve full deploy job behavior for selected pushes and unchanged
    `workflow_dispatch`.
 4. Add deterministic selector tests covering negative docs/specs/evidence cases and
-   positive runtime/deploy cases, including root manifests and shared packages.
+   positive runtime/deploy cases, including current and future root filenames and
+   shared packages.
 5. Remove stale near-no-op documentation from workflow comments and DevOps docs.
 6. Run applicable validation; record command results in `t00-evidence.md`.
 
-### T01 — Record live verification
+### T01 — Merge the governed docs-only fixture
 
 | File | Action | Notes |
 |------|--------|-------|
-| `specs/changes/VOC-111-.../t01-evidence.md` | create/update | Operator absence proof metadata |
-| `.karsift/live-evidence/VOC-111-T01.yaml` | **not used** | Negative case; see `VOC-111-D06` |
+| `specs/changes/VOC-111-.../t01-evidence.md` | update | Sole fixture path; pre-merge metadata only |
 
 Ordered steps:
 
-1. After T00 merges to `develop`, merge a governed docs/evidence-only change.
-2. Operator queries Actions metadata and records zero matching `deploy-staging` push
-   runs for the verified SHA in `t01-evidence.md`.
-3. Independent verifier confirms metadata-only evidence satisfies AC-01 without
-   fabricated deployment claims.
+1. After T00 merges, prepare an exact-SHA task PR changing only `t01-evidence.md`.
+2. Independently verify its entire diff is under this package in `specs/**` and that
+   it contains no post-merge absence claim.
+3. Merge normally; its integration SHA becomes the bounded fixture observed by T02.
+
+### T02 — Record operator-owned live absence proof
+
+| File | Action | Notes |
+|------|--------|-------|
+| `specs/changes/VOC-111-.../t02-evidence.md` | update | T01 merge SHA, timestamp, zero-run query metadata |
+| `.karsift/live-evidence/VOC-111-T02.yaml` | **not used** | Negative case has no success run; see `VOC-111-D06` |
+
+Ordered steps:
+
+1. Resolve T01's completed integration SHA and verify its changed-file set.
+2. Operator queries Actions metadata and records exactly zero matching
+   `deploy-staging` push runs for that SHA in `t02-evidence.md`.
+3. Independent verifier confirms the bounded negative evidence without fabricated
+   deployment claims.
 
 ## Validation and independent verification
 
@@ -67,8 +81,10 @@ Independent verifier (exact reviewed task PR SHA):
 - Confirm push allowlist matches `VOC-111-D03` and tests cover every declared class.
 - Confirm `workflow_dispatch` and selected-push deploy steps/concurrency unchanged.
 - Confirm documentation no longer claims docs-only near-no-op deploys.
-- For T01, confirm operator absence metadata is allowlisted and bound to the exact
-  reviewed docs/evidence-only push SHA.
+- For T01, confirm the exact task diff is the governed docs-only fixture and contains
+  no future-merge claim.
+- For T02, confirm operator absence metadata is allowlisted and bound to T01's exact
+  completed integration push SHA.
 
 ## Deployment and rollback
 

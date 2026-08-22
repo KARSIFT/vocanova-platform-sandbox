@@ -34,9 +34,8 @@ A-004 plan-review / adopt path.
    - Application code (`apps/**`)
    - Shared packages (`packages/**`)
    - Infrastructure/deploy assets (`infra/**`)
-   - Root workspace manifests and lockfiles (`package.json`, `pnpm-lock.yaml`,
-     `pnpm-workspace.yaml`, and other root files that affect Docker/workspace builds
-     such as `.dockerignore`, `.npmrc`)
+   - Every repository-root file (`*`), including workspace manifests, lockfiles,
+     Docker/build configuration, and future root-level runtime inputs
    - Staging post-deploy gate inputs (`tests/staging-e2e/**`)
    - The deploy workflow and its selector tests (`.github/workflows/deploy-staging.yml`,
      `scripts/foundation/voc111-deploy-staging-paths.test.mjs`)
@@ -48,8 +47,10 @@ A-004 plan-review / adopt path.
 5. Add deterministic positive and negative selector tests, including root-file and
    shared-package cases, so a runtime-affecting path cannot silently bypass deployment.
 6. Update stale documentation/comments that describe docs-only deploys as a near-no-op.
-7. Operator-owned live verification (T01) that a docs/evidence-only merge to `develop`
-   produces **no** `deploy-staging` workflow run for that push SHA.
+7. A governed docs-only fixture task (T01), followed by operator-owned live
+   verification (T02) that its known integration push SHA produces **no**
+   `deploy-staging` workflow run. The fixture and observation are separate so the
+   evidence never claims facts about its own future merge.
 
 ### Non-goals / explicitly excluded
 
@@ -93,7 +94,7 @@ allowlist must produce **no** `deploy-staging` workflow run.
 
 | Class | Paths / patterns |
 |-------|------------------|
-| Root workspace / Docker inputs | `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.dockerignore`, `.npmrc`, and any other root file documented in T00 evidence as affecting image/workspace build |
+| Repository-root inputs | `*` (root files only), so current and future root-level build/runtime inputs fail closed; this intentionally also selects rare root documentation edits |
 | Application | `apps/**` |
 | Shared packages | `packages/**` |
 | Deploy bundle / host assets | `infra/**` |
@@ -107,12 +108,14 @@ can interact with concurrency queueing).
 `VOC-111-D05`: Deterministic tests in T00 prove both:
 
 - **Negative:** representative docs/specs/evidence-only file lists do **not** select deploy.
-- **Positive:** representative `apps/**`, `packages/**`, `infra/**`, root manifest,
-  and workflow/test edits **do** select deploy.
+- **Positive:** representative `apps/**`, `packages/**`, `infra/**`, current and
+  future repository-root filenames, and workflow/test edits **do** select deploy.
 
-`VOC-111-D06`: Live verification (T01) uses operator-owned metadata only. Absence of
-a workflow run is recorded in `t01-evidence.md`; governed live-evidence reconcile
-(VOC-097) expects success runs and therefore does **not** apply to the negative case.
+`VOC-111-D06`: T01 is a separately reviewed docs-only fixture merge. Live
+verification (T02) uses operator-owned metadata only after that merge supplies a
+stable integration SHA. Absence of a workflow run is recorded in `t02-evidence.md`;
+governed live-evidence reconcile (VOC-097) expects success runs and therefore does
+**not** apply to the negative case.
 
 ## Data, migrations, analytics, and accessibility
 
@@ -127,7 +130,7 @@ personal data.
 
 ## Open questions
 
-None at drafting time. If implementation discovers a changed path that affects the
-deploy bundle but is outside the drafted allowlist (for example a newly introduced
-root manifest), T00 must extend the allowlist and tests in the same task PR rather
-than deferring silently.
+None at drafting time. Every root file is deliberately selected. If implementation
+discovers a nested path that affects the deploy bundle but is outside the drafted
+allowlist, T00 must extend the allowlist and tests in the same task PR rather than
+deferring silently.

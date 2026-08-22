@@ -41,8 +41,8 @@ observations.
 1. Pushes to `develop` that change only documentation, governed change-package
    material, or evidence must **not** start the full staging deployment.
 2. Runtime/deployment-relevant changes must continue to trigger fail-closed staging
-   deployment (application code, shared packages, infra/deploy assets, root workspace
-   manifests/lockfiles, staging e2e tests, and the deploy workflow/selector tests).
+   deployment (application code, shared packages, infra/deploy assets, every
+   repository-root file, staging e2e tests, and the deploy workflow/selector tests).
 3. `workflow_dispatch` remains available for explicit retry/redeploy with existing
    behavior.
 4. Staging database, secrets, directories, Docker networks, deploy-user isolation,
@@ -60,7 +60,8 @@ observations.
 | Task | Summary | Depends on |
 |------|---------|------------|
 | T00 | Add fail-closed push selection, selector tests, and doc updates | — |
-| T01 | Record live verification that docs/evidence-only pushes skip deploy-staging | T00 |
+| T01 | Merge a governed docs-only selector fixture | T00 |
+| T02 | Record live zero-run proof for the completed T01 fixture push | T01 |
 
 See `tasks.md` for full task definitions.
 
