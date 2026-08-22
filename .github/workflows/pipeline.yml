@@ -287,8 +287,10 @@ jobs:
   # that can affect the shipped @vocanova/web standalone artifact. Builds
   # apps/web/Dockerfile locally (no registry push, no repository secrets),
   # starts the image, requires HTTP 2xx from `/`, verifies the container stays
-  # running, and always cleans up. Irrelevant plan/docs-only diffs take a
-  # cheap success path without building an image.
+  # running, and always cleans up. Any repo-root file is treated as relevant
+  # so Docker-context controls such as .dockerignore fail closed; the gate's
+  # own workflow/test paths are also relevant. Other plan/docs-only diffs take
+  # a cheap success path without building an image.
   web-container-runtime:
     name: web container runtime
     needs: [ready-for-review-reuse]
@@ -311,7 +313,7 @@ jobs:
         run: |
           set -euo pipefail
           if git diff --name-only "$BASE_SHA...$HEAD_SHA" | grep -Eq \
-            '^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|apps/web/|packages/)'; then
+            '^([^/]+$|apps/web/|packages/|\.github/workflows/pipeline\.yml|scripts/foundation/voc110-web-container-runtime\.test\.mjs)'; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
@@ -320,7 +322,7 @@ jobs:
       - name: Skip — no web runtime surface changed
         if: steps.paths.outputs.relevant != 'true'
         run: |
-          echo "No root manifest, lockfile, apps/web, or packages changes — skipping Docker runtime smoke."
+          echo "No web-runtime, root-context, or gate-definition changes — skipping Docker runtime smoke."
 
       - name: Build, boot, and HTTP-smoke the production web image
         if: steps.paths.outputs.relevant == 'true'

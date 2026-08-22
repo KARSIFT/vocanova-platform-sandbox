@@ -36,10 +36,9 @@ const devWorkflowPath = path.join(
   "docs/operations/10-development-workflow.md",
 );
 
-const RELEVANT_PATH_PATTERN =
-  /git diff --name-only[\s\S]*grep -Eq[\s\S]*\^\(package\\\.json\|pnpm-lock\\\.yaml\|pnpm-workspace\\\.yaml\|apps\/web\/\|packages\/\)/;
+const WORKFLOW_PATH_PATTERN = String.raw`'^([^/]+$|apps/web/|packages/|\.github/workflows/pipeline\.yml|scripts/foundation/voc110-web-container-runtime\.test\.mjs)'`;
 const WEB_RUNTIME_PATH_PATTERN =
-  /^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|apps\/web\/|packages\/)/;
+  /^([^/]+$|apps\/web\/|packages\/|\.github\/workflows\/pipeline\.yml|scripts\/foundation\/voc110-web-container-runtime\.test\.mjs)/;
 
 const DENYLIST_PATTERNS = [
   /continue-on-error:\s*true/,
@@ -114,7 +113,10 @@ test("VOC-110-TEST-03: pipeline defines path-aware web-container-runtime job", (
   const jobBlock = extractJobBlock(pipeline, "web-container-runtime");
 
   assert.match(jobBlock, /name: web container runtime/);
-  assert.match(jobBlock, RELEVANT_PATH_PATTERN);
+  assert.ok(
+    jobBlock.includes(WORKFLOW_PATH_PATTERN),
+    "workflow and fixture must use the same fail-closed path selector",
+  );
   assert.match(
     jobBlock,
     /Skip — no web runtime surface changed/,
@@ -135,10 +137,14 @@ test("VOC-110-TEST-03: pipeline defines path-aware web-container-runtime job", (
     "package.json",
     "pnpm-lock.yaml",
     "pnpm-workspace.yaml",
+    ".dockerignore",
+    "eslint.config.js",
     "apps/web/Dockerfile",
     "apps/web/src/app/page.tsx",
     "packages/api-client/src/index.ts",
     "packages/design-tokens/package.json",
+    ".github/workflows/pipeline.yml",
+    "scripts/foundation/voc110-web-container-runtime.test.mjs",
   ]) {
     assert.match(
       changedPath,

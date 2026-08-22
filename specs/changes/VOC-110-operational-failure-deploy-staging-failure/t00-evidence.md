@@ -71,7 +71,7 @@ remains T01)
 | Rollback (documented only) | Pin both packages back to **16.3.0** if 16.3.2 cannot pass image-runtime proof |
 | Other PR #859 updates | Preserved (no bulk revert) |
 | Changed files | `apps/web/package.json`, `pnpm-lock.yaml`, `.github/workflows/pipeline.yml`, `scripts/foundation/voc110-web-container-runtime.test.mjs`, `docs/operations/10-development-workflow.md` |
-| Preventive gate | `pipeline.yml` job `web-container-runtime` — path-aware local Docker build/boot/HTTP 2xx; `merge-gate` depends on it |
+| Preventive gate | `pipeline.yml` job `web-container-runtime` — fail-closed for every repo-root Docker-context control, web/workspace source, and its own gate definitions; local Docker build/boot/HTTP 2xx; `merge-gate` requires its success |
 
 ## T00 completion checklist
 
