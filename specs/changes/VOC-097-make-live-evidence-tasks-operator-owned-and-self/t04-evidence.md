@@ -23,10 +23,10 @@ after operator reconcile and fresh exact-SHA review on each task PR).
 
 ## Stranded baseline (issue #823)
 
-| Task | Issue | PR | Pollution / blocker |
-|------|-------|-----|---------------------|
+| Task          | Issue                                                                   | PR                                                                    | Pollution / blocker                                                                                                          |
+| ------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `VOC-093-T01` | [#779](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/779) | [#789](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/789) | Branch added a one-off `voc-093-t01-live-verify` pipeline job (~228 lines) to manufacture evidence; live proof still pending |
-| `VOC-094-T01` | [#785](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/785) | [#791](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/791) | Evidence-only branch; AC-05(a) green head deploy still pending after run #306 timeout |
+| `VOC-094-T01` | [#785](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/785) | [#791](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/791) | Evidence-only branch; AC-05(a) green head deploy still pending after run #306 timeout                                        |
 
 Both tasks already had T00 code fixes merged to `develop` (PR #783 and PR #788).
 
@@ -53,23 +53,26 @@ roster/issue wiring stays intact.
 
 ### VOC-093-T01 (#779 / #789)
 
-| Item | Value |
-|------|-------|
-| Contract | `specs/changes/VOC-093-operational-failure-scheduled-synthetics-failure/.karsift/live-evidence/VOC-093-T01.yaml` |
-| Removed scope | Entire `voc-093-t01-live-verify` job from `.github/workflows/pipeline.yml` (never merge) |
-| Qualification | Declared `dispatch` on `scheduled-synthetics.yml` with `synthetic_id=synthetic.production.authenticated-route-content-sweep`; `exact_pr_head` on ref `agent/voc-093-voc-093-t01` |
-| Operator dispatch example | `workflow_dispatch` `pipeline.yml` with `action=reconcile-live-evidence`, `live_evidence_mode=dispatch`, `live_evidence_pr_number=789` |
+| Item                      | Value                                                                                                                                                                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Contract                  | `specs/changes/VOC-093-operational-failure-scheduled-synthetics-failure/.karsift/live-evidence/VOC-093-T01.yaml`                                                                                                          |
+| Removed scope             | Entire `voc-093-t01-live-verify` job from `.github/workflows/pipeline.yml` (never merge)                                                                                                                                  |
+| Qualification             | Declared `dispatch` on `scheduled-synthetics.yml` with `synthetic_id=synthetic.production.authenticated-route-content-sweep`; `exact_pr_head` on protected ref `develop` after #789 is reset to the current `develop` tip |
+| Operator dispatch example | `workflow_dispatch` `pipeline.yml` with `action=reconcile-live-evidence`, `live_evidence_mode=dispatch`, `live_evidence_pr_number=789`                                                                                    |
 
-Prefer reconcile dispatch over manual workflow edits. Observe-only is supported
-once a matching successful `workflow_dispatch` run exists on the task branch.
+Prefer reconcile dispatch over manual workflow edits. The protected-branch gate
+intentionally rejects dispatch to `agent/*` refs; after reset, #789's PR head and
+the `develop` dispatch run head are equal, satisfying `exact_pr_head`. Observe-only
+is supported once a matching successful `workflow_dispatch` run exists on
+`develop`.
 
 ### VOC-094-T01 (#785 / #791)
 
-| Item | Value |
-|------|-------|
-| Contract | `specs/changes/VOC-094-operational-failure-deploy-staging-cancelled/.karsift/live-evidence/VOC-094-T01.yaml` |
-| Qualification | Observe-only successful `deploy-staging` `push` on `develop` with `integration_contains_pr_head` (requires PR head SHA equal to `develop` tip at observation time) |
-| Prior partial proof | Classifier skip + queue posture from the stranded `t01-evidence.md` revision is preserved in the waiting-path template |
+| Item                     | Value                                                                                                                                                                          |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Contract                 | `specs/changes/VOC-094-operational-failure-deploy-staging-cancelled/.karsift/live-evidence/VOC-094-T01.yaml`                                                                   |
+| Qualification            | Observe-only successful `deploy-staging` `push` on `develop` with `integration_contains_pr_head` (requires PR head SHA equal to `develop` tip at observation time)             |
+| Prior partial proof      | Classifier skip + queue posture from the stranded `t01-evidence.md` revision is preserved in the waiting-path template                                                         |
 | Operator observe example | After the next green head deploy, `workflow_dispatch` `pipeline.yml` with `action=reconcile-live-evidence`, `live_evidence_mode=observe`, `live_evidence_run_id=<scrubbed id>` |
 
 Run #306 (`32293128673`) remains a non-qualifying timeout cancel and must not be
@@ -77,20 +80,20 @@ treated as supersession evidence.
 
 ## Repository deliverables
 
-| Artifact | Path |
-| --- | --- |
-| VOC-093 contract | `specs/changes/VOC-093-operational-failure-scheduled-synthetics-failure/.karsift/live-evidence/VOC-093-T01.yaml` |
-| VOC-094 contract | `specs/changes/VOC-094-operational-failure-deploy-staging-cancelled/.karsift/live-evidence/VOC-094-T01.yaml` |
-| VOC-093 waiting evidence | `specs/changes/VOC-093-operational-failure-scheduled-synthetics-failure/t01-evidence.md` |
-| VOC-094 waiting evidence | `specs/changes/VOC-094-operational-failure-deploy-staging-cancelled/t01-evidence.md` |
-| Package task cross-links | `specs/changes/VOC-093-*/tasks.md`, `specs/changes/VOC-094-*/tasks.md` |
-| TEST-15 lock | `scripts/foundation/voc097-stranded-migration.test.mjs` |
-| This evidence | `specs/changes/VOC-097-make-live-evidence-tasks-operator-owned-and-self/t04-evidence.md` |
+| Artifact                 | Path                                                                                                             |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| VOC-093 contract         | `specs/changes/VOC-093-operational-failure-scheduled-synthetics-failure/.karsift/live-evidence/VOC-093-T01.yaml` |
+| VOC-094 contract         | `specs/changes/VOC-094-operational-failure-deploy-staging-cancelled/.karsift/live-evidence/VOC-094-T01.yaml`     |
+| VOC-093 waiting evidence | `specs/changes/VOC-093-operational-failure-scheduled-synthetics-failure/t01-evidence.md`                         |
+| VOC-094 waiting evidence | `specs/changes/VOC-094-operational-failure-deploy-staging-cancelled/t01-evidence.md`                             |
+| Package task cross-links | `specs/changes/VOC-093-*/tasks.md`, `specs/changes/VOC-094-*/tasks.md`                                           |
+| TEST-15 lock             | `scripts/foundation/voc097-stranded-migration.test.mjs`                                                          |
+| This evidence            | `specs/changes/VOC-097-make-live-evidence-tasks-operator-owned-and-self/t04-evidence.md`                         |
 
 ## Acceptance mapping
 
-| AC | Result |
-| --- | --- |
+| AC    | Result                                                                                                                                                                                                                                                                                                              |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | AC-08 | **migration complete, live closure pending** — both tasks have valid contracts, waiting-path evidence, documented safe reset for #789 pipeline pollution, and operator reconcile instructions; issue/PR closure awaits qualifying runs + fresh exact-SHA review + merge (or further migration notes if reset fails) |
 
 ## Deterministic validation

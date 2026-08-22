@@ -25,20 +25,20 @@ Actions runs.
 
 ## Result summary
 
-| Criterion | Status |
-|-----------|--------|
-| VOC-093-AC-04 (green route-sweep run) | **Waiting** — governed reconcile only |
+| Criterion                                              | Status                                            |
+| ------------------------------------------------------ | ------------------------------------------------- |
+| VOC-093-AC-04 (green route-sweep run)                  | **Waiting** — governed reconcile only             |
 | VOC-093-AC-05 (no duplicate failure fingerprint issue) | **Satisfied** — issue #771 is the sole open owner |
-| T00 dependency gate | **Satisfied** — harness fix merged to `develop` |
+| T00 dependency gate                                    | **Satisfied** — harness fix merged to `develop`   |
 
 ## T00 dependency gate
 
-| Item | Value |
-|------|-------|
-| Task | `VOC-093-T00` (issue #778, closed `completed`) |
-| Merge PR | https://github.com/KARSIFT/vocanova-platform-sandbox/pull/783 |
-| Merge SHA | `c755bc3e1cadb903a0c8528251c16d1c4421e11d` |
-| Fix path | Harness (`coerce_same_origin_redirect_path` in `smoke-test-production.sh`) |
+| Item              | Value                                                                         |
+| ----------------- | ----------------------------------------------------------------------------- |
+| Task              | `VOC-093-T00` (issue #778, closed `completed`)                                |
+| Merge PR          | https://github.com/KARSIFT/vocanova-platform-sandbox/pull/783                 |
+| Merge SHA         | `c755bc3e1cadb903a0c8528251c16d1c4421e11d`                                    |
+| Fix path          | Harness (`coerce_same_origin_redirect_path` in `smoke-test-production.sh`)    |
 | Prior failure run | https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32288703894 |
 
 T00 evidence: `t00-evidence.md` (`VOC-093-EV-00`).
@@ -48,14 +48,14 @@ T00 evidence: `t00-evidence.md` (`VOC-093-EV-00`).
 Machine-readable contract:
 `.karsift/live-evidence/VOC-093-T01.yaml`
 
-| Field | Declared value |
-|-------|----------------|
-| Workflow | `scheduled-synthetics.yml` |
-| Job | `synthetic.production.authenticated-route-content-sweep` |
-| Event | `workflow_dispatch` |
-| Branch ref | `agent/voc-093-voc-093-t01` |
-| SHA lineage | `exact_pr_head` |
-| Dispatch | `synthetic_id=synthetic.production.authenticated-route-content-sweep` |
+| Field       | Declared value                                                        |
+| ----------- | --------------------------------------------------------------------- |
+| Workflow    | `scheduled-synthetics.yml`                                            |
+| Job         | `synthetic.production.authenticated-route-content-sweep`              |
+| Event       | `workflow_dispatch`                                                   |
+| Branch ref  | protected integration branch `develop`                                |
+| SHA lineage | `exact_pr_head`                                                       |
+| Dispatch    | `synthetic_id=synthetic.production.authenticated-route-content-sweep` |
 
 Qualifying proof is recorded only in allowlisted reconcile metadata
 (`.karsift/live-evidence/VOC-093-T01.result.json` on a new PR head after
@@ -66,7 +66,8 @@ belong in this file.
 
 1. Confirm PR #789 shows `VERDICT: WAITING FOR OPERATOR LIVE EVIDENCE` and the
    contract on the current head SHA (see VOC-097-T04 migration record).
-2. Dispatch or observe only through repository-controlled reconcile — for
+2. Dispatch or observe only through repository-controlled reconcile on protected
+   branch `develop` — for
    example `pipeline.yml` with `action=reconcile-live-evidence` and
    `live_evidence_mode=dispatch` plus `live_evidence_pr_number=789`, or hourly
    polling once a qualifying run exists.
@@ -81,7 +82,7 @@ issue is expected when the route sweep succeeds.
 
 ## Acceptance mapping
 
-| ID | Result |
-|----|--------|
+| ID            | Result                                   |
+| ------------- | ---------------------------------------- |
 | VOC-093-AC-04 | **waiting** — reconcile-bound live proof |
-| VOC-093-AC-05 | **satisfied** at migration baseline |
+| VOC-093-AC-05 | **satisfied** at migration baseline      |

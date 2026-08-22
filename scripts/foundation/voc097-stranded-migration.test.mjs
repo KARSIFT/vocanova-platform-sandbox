@@ -24,7 +24,7 @@ const stranded = [
     pr: "789",
     packageDir:
       "specs/changes/VOC-093-operational-failure-scheduled-synthetics-failure",
-    branch: "agent/voc-093-voc-093-t01",
+    branch: "develop",
     workflowFile: "scheduled-synthetics.yml",
     jobName: "synthetic.production.authenticated-route-content-sweep",
     lineage: "exact_pr_head",
@@ -133,4 +133,12 @@ for (const item of stranded) {
 test("VOC-097-TEST-15: VOC-093 pollution must not ship in caller pipeline", () => {
   const pipeline = read(".github/workflows/pipeline.yml");
   assert.doesNotMatch(pipeline, /voc-093-t01-live-verify/);
+});
+
+test("VOC-097-TEST-15: dispatch contracts target the protected integration branch", () => {
+  const contract = read(
+    "specs/changes/VOC-093-operational-failure-scheduled-synthetics-failure/.karsift/live-evidence/VOC-093-T01.yaml",
+  );
+  assert.match(contract, /^branch: develop$/m);
+  assert.doesNotMatch(contract, /^branch: agent\//m);
 });

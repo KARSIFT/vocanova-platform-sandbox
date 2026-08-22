@@ -7,7 +7,7 @@ job_names:
   - synthetic.production.authenticated-route-content-sweep
 events:
   - workflow_dispatch
-branch: agent/voc-093-voc-093-t01
+branch: develop
 sha_lineage:
   mode: exact_pr_head
 conclusion: success
