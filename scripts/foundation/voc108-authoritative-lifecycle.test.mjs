@@ -31,6 +31,19 @@ const sharedAdvance = readFileSync(
   path.join(fixtureRoot, ".github/workflows/auto-advance.yml"),
   "utf8",
 );
+const authorityDocs = [
+  readFileSync(path.join(repositoryRoot, "AGENTS.md"), "utf8"),
+  pipeline,
+  readFileSync(path.join(fixtureRoot, "README.md"), "utf8"),
+  readFileSync(path.join(fixtureRoot, "prompts/plan.md"), "utf8"),
+  readFileSync(
+    path.join(
+      fixtureRoot,
+      "templates/project-repo/.github/workflows/pipeline.yml",
+    ),
+    "utf8",
+  ),
+].join("\n");
 
 test("VOC-108-TEST-00 through TEST-09: pinned shared policy suite", () => {
   const result = spawnSync(
@@ -79,9 +92,18 @@ test("VOC-108-TEST-04 through TEST-08: one marker validator and merge authority"
   );
 });
 
+test("VOC-108-TEST-08: caller and shared docs name marker-bound authority", () => {
+  assert.doesNotMatch(
+    authorityDocs,
+    /roster closes|issue closing is what triggers promotion|release-approval issue|release promotion \(one human decision/i,
+  );
+  assert.match(authorityDocs, /closed state alone cannot advance/i);
+  assert.match(authorityDocs, /App-authored completion marker/i);
+});
+
 test("VOC-108 fixture is pinned to the consumed shared merge", () => {
   assert.equal(
     readFileSync(path.join(fixtureRoot, "PINNED_SHA.txt"), "utf8").trim(),
-    "0b57bb07f38eb66bf773b7208b258bcb3ffddd07",
+    "4bc84d25679d92ed487dbed118fa6b5119d90df1",
   );
 });

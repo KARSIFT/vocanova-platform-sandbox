@@ -47,8 +47,9 @@ current compatibility context.
 ## auto-advance ownership (VOC-102)
 
 Adoption starts the first task automatically. The adopted roster records an explicit
-`depends_on` edge from every later task to its predecessor, and `auto-advance.yml` releases the
-next task only after the preceding task's implementation PR merges and its tracking issue closes.
+`depends_on` edge from every later task to its predecessor. `auto-advance.yml` releases the next
+task only after one valid App-authored completion marker proves the preceding task's exact reviewed
+caller PR merged. The issue-close event is only a wake-up hint; closed state alone cannot advance.
 For ordinary implementation tasks it dispatches `implement.yml` attempt 1. When the next roster
 task has a valid `operator` or `live-actions` contract at
 `<package>/.karsift/live-evidence/<task_id>.yaml`, auto-advance instead prepares a deterministic
@@ -94,10 +95,12 @@ hosted verifier base-SHA adapter fix recorded in this package's T00 remediation.
 ## authoritative lifecycle state (VOC-108)
 
 The current fixture pin advances to shared-infra merge
-`0b57bb07f38eb66bf773b7208b258bcb3ffddd07`. Adoption, merge/reuse, and release
+`4bc84d25679d92ed487dbed118fa6b5119d90df1`. Adoption, merge/reuse, and release
 select the newest authoritative attempt per logical exact-SHA gate from complete
 paginated histories. The merge gate writes one App-authored caller-merge marker
 before emitting the task close event; auto-advance and release validate that same
 marker against live PR state. Cross-repository references are non-closing.
 Automatic, reconcile, promotion-PR, check-provider, and external-workflow wake-ups
-share one serialized promotion evaluator and one exact-head merge command.
+share one serialized promotion evaluator and one exact-head merge command. Shared
+instructions explicitly define issue closure as a wake-up hint rather than task
+completion authority.

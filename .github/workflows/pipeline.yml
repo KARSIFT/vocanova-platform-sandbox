@@ -223,7 +223,7 @@ jobs:
   # kick off planning just by opening an issue - no manual workflow_dispatch
   # needed. Gated on the issue carrying NO karsift:* label at open time,
   # since this system's own issue-creation (adopt.yml's task issues,
-  # release.yml's release-approval issues) always labels what it opens - see
+  # release.yml's release-audit issues) always labels what it opens - see
   # those files' own comments. An unlabeled issue is, by construction,
   # something this system didn't create itself.
   #
@@ -437,9 +437,10 @@ jobs:
       current_ci_result: ${{ needs.ci.result }}
     secrets: inherit
 
-  # Promotes a completed package after its roster closes. `reconcile-release`
-  # retries an interrupted promotion without creating an approval path. Deploy
-  # is out of scope - see release.yml's header comment.
+  # Promotes only after every roster task has a valid App-authored marker for
+  # its exact merged caller PR. Issue closure and terminal checks are wake-up
+  # hints, not completion authority. `reconcile-release` retries convergence.
+  # Deploy is out of scope - see release.yml's header comment.
   release:
     needs: [merge-gate]
     if: |
@@ -458,9 +459,10 @@ jobs:
     secrets: inherit
 
   # Fills the gap between adoption and release: dispatches the NEXT task in an
-  # adopted package's roster
-  # automatically once the current task's tracking issue closes, so routine
-  # task-to-task progression needs no further per-task human trigger. For
+  # adopted package's roster once a valid App marker proves the current task's
+  # exact reviewed caller PR merged. The issue-close event only wakes evaluation;
+  # closed state alone cannot advance. Routine task-to-task progression needs no
+  # further per-task human trigger. For
   # operator-owned / live-actions next tasks it prepares a deterministic
   # evidence-carrier PR instead of starting implement.yml (VOC-102). A
   # no-op on the package's last task (release's own check-completion above
