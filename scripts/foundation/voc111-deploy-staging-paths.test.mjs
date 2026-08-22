@@ -25,7 +25,6 @@ const evidencePath = path.join(
   "specs/changes/VOC-111-skip-full-staging-deploys-for-documentation-and/t00-evidence.md",
 );
 
-const WORKFLOW_PATH_GLOB = String.raw`"([^"]+)"`;
 const PUSH_PATH_PATTERN =
   /^([^/]+$|apps\/|packages\/|infra\/|tests\/staging-e2e\/|\.github\/workflows\/deploy-staging\.yml|scripts\/foundation\/voc111-deploy-staging-paths\.test\.mjs)/;
 
@@ -52,6 +51,26 @@ function extractPushPathsBlock(source) {
     "deploy-staging.yml must define workflow_dispatch",
   );
   return source.slice(pushStart, dispatchStart);
+}
+
+function extractPushPaths(source) {
+  const pushBlock = extractPushPathsBlock(source);
+  const pathsStart = pushBlock.indexOf("    paths:");
+  assert.ok(
+    pathsStart >= 0,
+    "deploy-staging.yml push trigger must define paths",
+  );
+
+  return [...pushBlock.slice(pathsStart).matchAll(/^      - (.+)$/gm)].map(
+    ([, value]) => {
+      const trimmed = value.trim();
+      const quote = trimmed.at(0);
+      if ((quote === '"' || quote === "'") && trimmed.at(-1) === quote) {
+        return trimmed.slice(1, -1);
+      }
+      return trimmed;
+    },
+  );
 }
 
 function pathSelectsPushDeploy(changedPath) {
@@ -196,16 +215,9 @@ test("VOC-111-TEST-09: stale near-no-op documentation removed", () => {
 });
 
 test("VOC-111 push allowlist: workflow paths block matches VOC-111-D03", () => {
-  const pushBlock = extractPushPathsBlock(readWorkflow());
-
-  assert.match(pushBlock, /paths:/);
-  for (const glob of EXPECTED_PUSH_PATHS) {
-    assert.match(
-      pushBlock,
-      new RegExp(
-        `${WORKFLOW_PATH_GLOB.replace('([^"]+)', glob.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))}`,
-      ),
-      `push.paths must include ${glob}`,
-    );
-  }
+  assert.deepEqual(
+    extractPushPaths(readWorkflow()),
+    EXPECTED_PUSH_PATHS,
+    "push.paths must be the exact closed VOC-111-D03 allowlist",
+  );
 });

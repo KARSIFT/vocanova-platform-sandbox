@@ -19,8 +19,8 @@ tests:
   - VOC-111-TEST-09
 date: 2026-08-22
 related_change: VOC-111
-gate_status: complete — AC-00 through AC-04 satisfied at T00 implementation time;
-  live docs-only absence proof remains T01/T02
+gate_status: task-complete — T00-owned portions are satisfied; shared AC-01 remains
+  partial until T01/T02 record live docs-only absence proof
 live_deployment_claimed: false
 ---
 
