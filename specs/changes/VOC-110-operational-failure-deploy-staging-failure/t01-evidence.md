@@ -53,6 +53,26 @@ No duplicate open operational-failure issue exists for the
 The exact SHA is the T00 merge commit, so the successful deployment proves the
 runtime fix that was independently reviewed and merged in PR #916.
 
+## Contract-lineage correction
+
+The adopted contract initially used `integration_contains_pr_head`. That mode
+would require a `develop` deployment to contain this still-unmerged T01 evidence
+carrier commit, so no run could ever qualify. The first observe attempt therefore
+left the task waiting without publishing evidence.
+
+Before qualification, the operator corrected the contract to `exact_sha` and
+pinned it to the T00 merge commit above. This preserves the intended requirement:
+the successful run must deploy the exact revision containing the runtime fix. The
+repository-controlled reconciler then independently validated the run against
+that corrected contract; no result is accepted without its App-authored,
+exact-result-head attestation and a subsequent independent review.
+
+An initial qualified result was followed by this narrative completion, which
+changed the PR head and intentionally invalidated that result's exact-head
+attestation. The stale result was removed before this revision so the normal
+WAITING → reconcile → attested-result → re-review sequence can run again. This
+document will not be edited after the fresh reconciler result is appended.
+
 ## VOC-110-AC-04 — Operational-failure fingerprint
 
 A read-only search of open issues containing the stable
