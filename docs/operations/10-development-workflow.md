@@ -134,7 +134,11 @@ boundaries, AI structured-output parsing, migrations) 90%+.
 
 CI levels: **Level 1** (fast PR checks — format, lint, typecheck, unit tests, generated/OpenAPI
 drift, build, basic security); **Level 2** (full PR checks — PostgreSQL integration, migration
-tests, contract tests, component tests, selected Playwright, Claude review); **Level 3**
+tests, contract tests, component tests, selected Playwright, Claude review, and the pipeline
+`web container runtime` job for pull requests that touch the root manifest, lockfile,
+`apps/web/**`, or any `packages/**` path: it builds `apps/web/Dockerfile`, boots the local
+smoke image without registry push or repository secrets, requires HTTP 2xx from `/`, verifies
+the container remains running, and always cleans up); **Level 3**
 (post-merge staging checks); **Level 4** (production release checks).
 
 ## 8. Database migrations

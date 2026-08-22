@@ -1,11 +1,13 @@
-# VOC-110-T00 evidence — drafting-time run metadata
+# VOC-110-T00 evidence — root cause, fix, and validation
 
-Initially recorded from public Actions metadata, then refined with privacy-safe,
-read-only workflow and runtime diagnosis. T00 must add implementation validation.
+Recorded from public Actions metadata, read-only runtime diagnosis, and T00
+implementation validation. No secrets, SSH transcripts, session cookies, OAuth
+state, tokens, personal data, or complete application logs.
 
 ## gate_status
 
-pending — root cause confirmed; implementation and regression-gate proof pending
+complete — AC-00 through AC-02 satisfied at implementation time (live deploy proof
+remains T01)
 
 ## Run 32566405628 (deploy-staging #364)
 
@@ -60,21 +62,54 @@ pending — root cause confirmed; implementation and regression-gate proof pendi
 | Direct dependency regression | **Confirmed** | Next.js 16.3.1 standalone output omitted required runtime helper |
 | Preventive CI gap | **Confirmed** | Source build passed; production image was never booted before merge |
 
-## T00 completion checklist (implementer)
+## Fix summary (VOC-110-D04 / D05 / D06)
+
+| Item | Value |
+|------|-------|
+| Causal link | Direct consequence of Dependabot PR #859 moving `next` 16.3.0 → 16.3.1 |
+| Repair | Paired `next` and `@next/eslint-plugin-next` upgraded to stable **16.3.2** |
+| Rollback (documented only) | Pin both packages back to **16.3.0** if 16.3.2 cannot pass image-runtime proof |
+| Other PR #859 updates | Preserved (no bulk revert) |
+| Changed files | `apps/web/package.json`, `pnpm-lock.yaml`, `.github/workflows/pipeline.yml`, `scripts/foundation/voc110-web-container-runtime.test.mjs`, `docs/operations/10-development-workflow.md` |
+| Preventive gate | `pipeline.yml` job `web-container-runtime` — path-aware local Docker build/boot/HTTP 2xx; `merge-gate` depends on it |
+
+## T00 completion checklist
 
 - [x] Record failing workflow step name and sanitized failure class
 - [x] Document causal link to Dependabot PR #859 Next.js bump
-- [ ] Apply fix and record changed files
-- [ ] Run deterministic tests and record command results below
-- [ ] Set `gate_status` to `complete` when AC-00 through AC-02 satisfied
+- [x] Apply fix and record changed files
+- [x] Run deterministic tests and record command results below
+- [x] Set `gate_status` to `complete` when AC-00 through AC-02 satisfied
 
 ## commands
 
-_To be filled at implementation time._
+```bash
+node --test scripts/foundation/voc110-web-container-runtime.test.mjs
+node --test scripts/foundation/voc084-deploy-staging-oauth.test.mjs
+node --test scripts/foundation/voc088-deploy-staging-allowlist.test.mjs
+node --test scripts/foundation/voc095-playwright-install.test.mjs
+docker build -f apps/web/Dockerfile --build-arg NEXT_PUBLIC_API_BASE_URL=http://localhost:8080 -t vocanova-web:voc110 .
+# start container, require HTTP 2xx from /, verify still running, remove container
+pnpm validate
+bash scripts/governance/validate-governance.sh
+bash scripts/governance/classify-change-risk.sh
+git diff --check
+```
 
 ## results
 
-_To be filled at implementation time._
+| Command | Result |
+|---------|--------|
+| `node --test scripts/foundation/voc110-web-container-runtime.test.mjs` | pass (5/5) |
+| `node --test scripts/foundation/voc084-deploy-staging-oauth.test.mjs` | pass |
+| `node --test scripts/foundation/voc088-deploy-staging-allowlist.test.mjs` | pass |
+| `node --test scripts/foundation/voc095-playwright-install.test.mjs` | pass (36/36) |
+| `docker build -f apps/web/Dockerfile -t vocanova-web:voc110 .` | pass |
+| Local container boot + HTTP smoke (`/` returned HTTP 200, container stayed running) | pass |
+| `pnpm validate` | pass (Node engine warning only: runner 24.5.0 vs `.nvmrc` 24.18.0) |
+| `bash scripts/governance/validate-governance.sh` | pass |
+| `bash scripts/governance/classify-change-risk.sh` | path floor R3 (`.github/workflows/pipeline.yml`) |
+| `git diff --check` | pass |
 
 ## privacy
 
