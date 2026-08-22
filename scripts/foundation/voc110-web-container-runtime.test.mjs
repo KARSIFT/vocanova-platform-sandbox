@@ -17,6 +17,7 @@ const pipelinePath = path.join(
   ".github/workflows/pipeline.yml",
 );
 const webPackagePath = path.join(repositoryRoot, "apps/web/package.json");
+const lockfilePath = path.join(repositoryRoot, "pnpm-lock.yaml");
 const evidencePath = path.join(
   repositoryRoot,
   "specs/changes/VOC-110-operational-failure-deploy-staging-failure/t00-evidence.md",
@@ -28,6 +29,8 @@ const devWorkflowPath = path.join(
 
 const RELEVANT_PATH_PATTERN =
   /git diff --name-only[\s\S]*grep -Eq[\s\S]*\^\(package\\\.json\|pnpm-lock\\\.yaml\|pnpm-workspace\\\.yaml\|apps\/web\/\|packages\/\)/;
+const WEB_RUNTIME_PATH_PATTERN =
+  /^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|apps\/web\/|packages\/)/;
 
 const DENYLIST_PATTERNS = [
   /continue-on-error:\s*true/,
@@ -69,12 +72,17 @@ test("VOC-110-TEST-00: evidence records run 32566405628 and failing web health p
 
 test("VOC-110-TEST-01: paired Next.js packages are stable 16.3.2", () => {
   const webPackage = JSON.parse(readFileSync(webPackagePath, "utf8"));
+  const lockfile = readFileSync(lockfilePath, "utf8");
 
   assert.equal(webPackage.dependencies.next, "16.3.2");
   assert.equal(
     webPackage.devDependencies["@next/eslint-plugin-next"],
     "16.3.2",
   );
+  assert.match(lockfile, /next@16\.3\.2/);
+  assert.match(lockfile, /@next\/eslint-plugin-next@16\.3\.2/);
+  assert.doesNotMatch(lockfile, /next@16\.3\.1/);
+  assert.doesNotMatch(lockfile, /@next\/eslint-plugin-next@16\.3\.1/);
 });
 
 test("VOC-110-TEST-03: pipeline defines path-aware web-container-runtime job", () => {
@@ -98,6 +106,35 @@ test("VOC-110-TEST-03: pipeline defines path-aware web-container-runtime job", (
   assert.match(jobBlock, /trap cleanup EXIT/);
   assert.match(jobBlock, /docker rm -f/);
   assert.match(jobBlock, /docker rmi -f/);
+
+  for (const changedPath of [
+    "package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    "apps/web/Dockerfile",
+    "apps/web/src/app/page.tsx",
+    "packages/api-client/src/index.ts",
+    "packages/design-tokens/package.json",
+  ]) {
+    assert.match(
+      changedPath,
+      WEB_RUNTIME_PATH_PATTERN,
+      `${changedPath} must select the Docker runtime smoke`,
+    );
+  }
+
+  for (const changedPath of [
+    "apps/api/go.mod",
+    "docs/operations/README.md",
+    "specs/changes/VOC-110/example.md",
+    ".github/workflows/scheduled-synthetics.yml",
+  ]) {
+    assert.doesNotMatch(
+      changedPath,
+      WEB_RUNTIME_PATH_PATTERN,
+      `${changedPath} must take the cheap no-op path`,
+    );
+  }
 
   for (const pattern of DENYLIST_PATTERNS) {
     assert.doesNotMatch(
