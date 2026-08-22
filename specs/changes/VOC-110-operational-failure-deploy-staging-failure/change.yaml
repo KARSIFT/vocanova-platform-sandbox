@@ -1,33 +1,30 @@
 schema_version: 1
 id: VOC-110
 slug: operational-failure-deploy-staging-failure
-title: Fix deploy-staging failure after dependabot integration merge
+title: Restore staging web after Next.js standalone regression and add a container runtime gate
 type: infrastructure
 status: draft
 risk: R3
 planned_implementation_risk_floor: "Measured during drafting against the expected\
-  \ task-scoped file list (.github/workflows/deploy-staging.yml if miswiring is proven,\
-  \ infra/scripts/ if a harness fix is proven, apps/web/ and/or packages/ if a dependency\
-  \ or staging core-loop regression is proven, apps/web/tests/staging-e2e/ if test\
-  \ updates are required, scripts/foundation/voc084-deploy-staging-oauth.test.mjs,\
-  \ scripts/foundation/voc088-deploy-staging-allowlist.test.mjs, scripts/foundation/voc095-playwright-install.test.mjs\
-  \ and/or a new voc110-*.test.mjs fixture, this package directory). Detected path\
-  \ floor is R3 for .github/workflows/, infra/scripts/, and apps/web/. This package\
-  \ proposes R3 for the change as a whole \u2014 a draft proposal for the reviewing\
-  \ human at adoption time, not a determination. Independent verification and the\
-  \ reviewing human must still confirm each task's real file list and whether semantic\
-  \ escalation applies."
+  \ task-scoped file list (.github/workflows/pipeline.yml for the merge-gating Docker\
+  \ runtime smoke job, apps/web/package.json and pnpm-lock.yaml for the paired Next.js\
+  \ 16.3.2 repair, deterministic workflow tests, and this package directory). The\
+  \ path floor is R3 because .github/workflows/ is changed. Generic apps/web paths\
+  \ alone are R1 and the root lockfile is R2. This package proposes R3 for the change\
+  \ as a whole; exact-task independent verification must still confirm the real file\
+  \ list and any semantic escalation."
 canonical_path: specs/changes/VOC-110-operational-failure-deploy-staging-failure
 authority_model: a004-active
-requirement_source: 'GitHub issue #911 (Operational failure: deploy-staging (failure)),
-  opened by the VOC-088-T02 operational-failure-monitoring observer. Fresh 2026-08-22
-  evidence from the public run page and GitHub Actions REST metadata for https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32566405628:
-  deploy-staging run #364, push-triggered on develop at f25e4ccf5fc28dcc5b14a438fbdc4f93e5c53a46
-  after merge of Dependabot PR #859 (eight npm minor/patch updates), conclusion failure
-  after ~8m 28s with job deploy to staging exit code 1; Docker build attestations
-  present; public annotations reference missing Playwright report paths on failure
-  artifact upload. Failing workflow step not resolved at drafting time (logs require
-  authenticated access). This draft package does not adopt or authorize itself.'
+requirement_source: 'GitHub issue #911 and its 2026-08-22 operator diagnosis comment.
+  The VOC-088-T02 observer opened the issue after deploy-staging run 32566405628 failed
+  on develop at f25e4ccf5fc28dcc5b14a438fbdc4f93e5c53a46. Read-only workflow and host
+  diagnosis confirmed that Poll staging.vocanova.site/ failed: the API stayed healthy,
+  the public web returned HTTP 502, and vocanova-web restarted because Next.js 16.3.1
+  standalone output omitted an @swc/helpers ESM module on Node 24. This matches upstream
+  vercel/next.js issue #97358; stable 16.3.2 includes the backport from #97372/#97453.
+  The same diagnosis identified the missing preventive check: source builds passed,
+  but CI never booted the shipped Docker artifact. This draft package does not adopt
+  or authorize itself.'
 requirement_approval_status: not-approved
 base_branch: develop
 base_sha: unknown - not recorded by this draft; set at adoption time
@@ -40,23 +37,22 @@ owners:
 approval_status: not-approved
 implementation_authorized: false
 automatic_merge_allowed: true
-production_impact: unknown-until-implemented. Staging deploy gate failure blocked
-  landing the Dependabot integration merge on the staging host until remediated. A
-  fix restores expected staging behavior; production impact follows only through the
-  normal develop-to-main promotion path after roster completion.
+production_impact: Staging web is currently unavailable with HTTP 502 while staging
+  API and production remain healthy and isolated. The repair restores staging first;
+  production receives it only through normal develop-to-main promotion after roster
+  completion.
 rollback_required: true
 monitoring_impact:
-  state: none
-  rationale: Remediates an actionable deploy-staging failure surfaced by the operational-failure
-    observer. No page routes, critical API endpoints, or stable monitor/synthetic
-    IDs in infra/monitoring/ are added or changed unless T00 evidence proves a separate
-    inventory gap (default out of scope).
+  state: existing
+  monitor_ids:
+  - kuma.availability.staging.web
+  synthetic_ids:
+  - synthetic.staging.authenticated-core-journey
 dependencies:
 - id: VOC-110-DEP-00
-  status: 'resolved at drafting time. Issue #911 and run 32566405628 identify the
-    failing workflow (deploy-staging), conclusion (failure), trigger (Dependabot PR
-    #859 merge to develop), head SHA, duration, and public exit-code-1 annotation.
-    Job-level failing step remains for T00 log review.'
+  status: 'resolved at plan refinement time. Issue #911, run 32566405628, read-only
+    host state, and sanitized runtime diagnostics identify the failing web health-poll
+    step and the Next.js 16.3.1 standalone @swc/helpers omission.'
 - id: VOC-110-DEP-01
   status: "resolved at drafting time. VOC-032-T07 owns deploy-staging.yml semantics;\
     \ VOC-050-T02 owns the post-deploy staging core-loop gate; VOC-095-T00 owns bounded\
@@ -76,15 +72,11 @@ dependencies:
     annotations suggest failure after install/deploy phases rather than an install
     timeout; T00 must confirm via logs.
 affected_areas:
-- .github/workflows/deploy-staging.yml (only if T00 proves miswiring)
-- "infra/scripts/ (OAuth verify, Playwright install, or related harness \u2014 if\
-  \ proven)"
-- apps/web/ and/or packages/ (if dependency regression breaks staging runtime or UI)
-- apps/web/tests/staging-e2e/core-loop.staging.spec.ts (if test contract update required)
-- scripts/foundation/voc084-deploy-staging-oauth.test.mjs (regression)
-- scripts/foundation/voc088-deploy-staging-allowlist.test.mjs (regression)
-- scripts/foundation/voc095-playwright-install.test.mjs (regression)
-- scripts/foundation/voc110-*.test.mjs (new deterministic fixture if warranted)
+- .github/workflows/pipeline.yml (merge-gating production-image boot/HTTP smoke job)
+- apps/web/package.json (paired Next.js runtime and ESLint plugin 16.3.2 repair)
+- pnpm-lock.yaml
+- scripts/foundation/voc110-web-container-runtime.test.mjs
+- docs/operations/10-development-workflow.md (document the new merge gate)
 - specs/changes/VOC-110-operational-failure-deploy-staging-failure/
 implementation:
   authorized: false
@@ -96,7 +88,7 @@ implementation:
 release:
   required: true
   mode: not-authorized-by-this-package
-  production_impact: unknown-until-implemented
+  production_impact: dependency/runtime and CI reliability fix after staging proof
   deployment: not-authorized-by-this-package
   automatic_merge: true
   migration_required: false

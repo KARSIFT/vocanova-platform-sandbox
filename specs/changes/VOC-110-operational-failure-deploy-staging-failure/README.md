@@ -1,9 +1,9 @@
-# VOC-110 — Fix deploy-staging failure after dependabot integration merge
+# VOC-110 — Restore staging web and gate the shipped container runtime
 
 | Field | Value |
 |-------|-------|
 | Package | `VOC-110` |
-| Title | Fix deploy-staging failure after dependabot integration merge |
+| Title | Restore staging web after Next.js standalone regression and add a container runtime gate |
 | Path | `specs/changes/VOC-110-operational-failure-deploy-staging-failure` |
 | Status | `draft` |
 | Risk | `R3` (draft proposal; path-based floor and independent verification govern) |
@@ -21,19 +21,20 @@ The governed operational-failure observer (VOC-088-T02) opened
 after [deploy-staging run #364](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32566405628)
 ended with conclusion `failure`.
 
-Public run metadata (2026-08-22, push to `develop` at 09:59 UTC, head
-`f25e4ccf5fc28dcc5b14a438fbdc4f93e5c53a46`) shows:
+Run metadata and privacy-safe read-only diagnosis (2026-08-22, push to `develop`
+at 09:59 UTC, head `f25e4ccf5fc28dcc5b14a438fbdc4f93e5c53a46`) show:
 
 - Total duration **~8m 28s** — the `deploy to staging` job ran **~8m 23s** and
   exited **1** (not a workflow timeout, not a concurrency-queue cancellation).
 - Trigger: merge of Dependabot PR **#859** (`dependabot/npm_and_yarn/develop/minor-and-patch`,
   eight npm minor/patch updates).
-- Public annotations include missing Playwright report paths on the failure
-  artifact-upload steps (`apps/web/playwright-report-staging/`,
-  `apps/web/test-results-staging/`) and a benign Go cache restore warning
-  (`go.mod` not found at repo root).
-- Two Docker build attestations were produced — build/push steps likely completed
-  before the failing step.
+- The API health step passed, then `Poll staging.vocanova.site/` exhausted its
+  five-minute budget while the public web returned HTTP 502.
+- `vocanova-web` was restarting because the Next.js 16.3.1 standalone output
+  omitted an `@swc/helpers` ESM module on Node 24. Production remained on its
+  isolated prior image and healthy.
+- The failure matches upstream vercel/next.js issue #97358; stable Next.js 16.3.2
+  contains the 16.3 backport from #97372/#97453.
 
 This is distinct from:
 
@@ -42,18 +43,18 @@ This is distinct from:
   install after deploy convergence.
 - **VOC-090** — scheduled-synthetics **cancellation** (timeout), not deploy-staging.
 
-The exact failing workflow step is **not determined at drafting time** (job logs
-require authenticated access). T00 must identify it and apply the smallest correct
-fix.
+The merged dependency PR passed source build, lint, type, browser, and governance
+checks because none booted the production Docker artifact. That missing runtime
+boundary is part of the root cause, not an optional follow-up.
 
 ## Required outcome (summary)
 
-1. Record run 32566405628 root-cause metadata and the failing step from job logs
-   at implementation time (sanitized — no secrets, sessions, or personal data).
-2. Fix the identified defect in the smallest correct surface (application,
-   staging core-loop test, deploy script, or workflow wiring — bounded by evidence).
-3. Extend deterministic tests to lock the fix or a regression fixture matching
-   the failure mode.
+1. Upgrade `next` and `@next/eslint-plugin-next` together from 16.3.1 to stable
+   16.3.2; use 16.3.0 only as rollback if 16.3.2 cannot boot successfully.
+2. Add a merge-gating CI job that builds the real `apps/web/Dockerfile`, starts
+   the image, confirms the container remains running, and requires HTTP 2xx.
+3. Add deterministic workflow tests that prove relevant web/dependency changes
+   execute this runtime check and that merge-gate waits for it.
 4. Record operator-owned live evidence that a post-fix `deploy-staging` run on
    `develop` reaches conclusion `success` including the staging core-loop gate.
 

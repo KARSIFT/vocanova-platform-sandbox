@@ -6,47 +6,51 @@
 - Preconditions: T00 evidence file drafted at implementation time
 - Procedure: Read `t00-evidence.md`; assert it names run 32566405628, head SHA
   `f25e4ccf5fc28dcc5b14a438fbdc4f93e5c53a46`, Dependabot PR #859 context, job
-  `deploy to staging`, conclusion `failure`, and the log-identified failing step.
+  `deploy to staging`, conclusion `failure`, failing step
+  `Poll staging.vocanova.site/`, HTTP 502 impact, and the Next.js 16.3.1 standalone
+  `@swc/helpers` omission.
 - Expected result: Evidence bounds remediation to the real deploy failure, not
   VOC-094 cancellation or VOC-095 install-timeout classes
 - Evidence: `VOC-110-EV-00`
 
-## VOC-110-TEST-01 — Fix diff matches recorded failure mode
+## VOC-110-TEST-01 — Next.js 16.3.2 repair matches recorded failure mode
 
 - Covers: `VOC-110-AC-01`
 - Preconditions: T00 task branch with fix
-- Procedure: Independent reviewer compares task PR diff to `t00-evidence.md` failing
-  step and failure class; confirm the change targets that surface.
-- Expected result: No unrelated scope expansion; causal link documented when non-obvious
+- Procedure: Assert `next` and `@next/eslint-plugin-next` are both stable 16.3.2,
+  the lockfile agrees, and the other seven PR #859 updates remain present.
+- Expected result: Targeted upstream-fixed dependency repair; no bulk revert
 - Evidence: `VOC-110-EV-00`
 
-## VOC-110-TEST-02 — deploy-staging.yml retains fail-closed deploy contract
+## VOC-110-TEST-02 — Real production web image boots and serves HTTP
 
 - Covers: `VOC-110-AC-01`
 - Preconditions: T00 changes merged or in task branch
-- Procedure: Read `.github/workflows/deploy-staging.yml`; assert no new
-  `continue-on-error: true` on deploy/health/OAuth/core-loop steps; assert core-loop
-  still runs after both health polls; assert VOC-094 concurrency block unchanged
-  unless explicitly justified in evidence.
-- Expected result: Deploy workflow contract preserved aside from any proven miswiring fix
+- Procedure: Build `apps/web/Dockerfile`, start the resulting image without secrets,
+  assert the container remains running, and poll its root route for HTTP 2xx; always
+  remove the test container/image.
+- Expected result: The exact shipped standalone boundary is runnable on Node 24
 - Evidence: `VOC-110-EV-00`
 
-## VOC-110-TEST-03 — Dependabot context recorded when dependency-related
+## VOC-110-TEST-03 — Container runtime check is merge-gating and path-aware
 
 - Covers: `VOC-110-AC-01`, `VOC-110-D05`
 - Preconditions: T00 evidence and task PR
-- Procedure: If fix touches lockfile or package versions, assert task PR or evidence
-  names the affected package(s) from PR #859 group.
-- Expected result: Dependency remediation is traceable, not a silent bulk revert
+- Procedure: Inspect `pipeline.yml` and deterministic fixture. Assert root manifest,
+  lockfile, `apps/web/**`, and relevant shared-package changes run the Docker job;
+  irrelevant plan/docs-only changes take the cheap no-op path; merge-gate depends on
+  the job; runtime failure cannot be converted to success; cleanup always executes.
+- Expected result: Relevant deployable-artifact regressions block merge without
+  imposing a Docker build on irrelevant changes
 - Evidence: `VOC-110-EV-00`
 
-## VOC-110-TEST-04 — New or extended deterministic fixture passes
+## VOC-110-TEST-04 — Deterministic workflow fixture passes
 
 - Covers: `VOC-110-AC-02`
-- Preconditions: T00 adds voc110 or extends existing foundation tests
+- Preconditions: T00 adds `voc110-web-container-runtime.test.mjs`
 - Procedure: Run `node --test scripts/foundation/voc110-*.test.mjs` (and any extended
   suites named in `t00-evidence.md`).
-- Expected result: All VOC-110 foundation tests exit 0
+- Expected result: All VOC-110 foundation tests exit 0 and lock the real gate contract
 - Evidence: `VOC-110-EV-00`
 
 ## VOC-110-TEST-05 — Deploy-staging regression foundation suites remain green

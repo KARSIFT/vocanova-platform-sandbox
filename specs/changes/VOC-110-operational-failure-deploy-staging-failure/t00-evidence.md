@@ -1,12 +1,11 @@
 # VOC-110-T00 evidence — drafting-time run metadata
 
-Recorded at **drafting time** from the public GitHub Actions REST API and run
-page (no authentication required for run-level metadata). T00 must extend this
-file with log-derived failing-step detail at implementation time.
+Initially recorded from public Actions metadata, then refined with privacy-safe,
+read-only workflow and runtime diagnosis. T00 must add implementation validation.
 
 ## gate_status
 
-pending — failing workflow step not yet identified from job logs
+pending — root cause confirmed; implementation and regression-gate proof pending
 
 ## Run 32566405628 (deploy-staging #364)
 
@@ -38,19 +37,33 @@ pending — failing workflow step not yet identified from job logs
 - Benign warning: Go cache restore — `go.mod` not found at repository root (expected;
   Go module lives under `apps/api/`).
 
+## Confirmed failure chain (sanitized)
+
+- The API health poll completed successfully.
+- `Poll staging.vocanova.site/` failed after its five-minute budget; independent
+  public probing returned HTTP 502.
+- Read-only container state showed `vocanova-web` restarting while the staging API,
+  production containers, shared edge, and monitoring remained isolated and healthy.
+- The bounded runtime error was a missing `@swc/helpers` ESM module from the Next.js
+  16.3.1 standalone artifact on Node 24. No full log or server transcript is retained.
+- This matches upstream vercel/next.js issue #97358. Next.js 16.3.2 includes the
+  16.3 backport from #97372/#97453.
+
 ## Drafting-time classification bounds
 
 | Class | Ruled in/out | Rationale |
 |-------|----------------|-----------|
 | VOC-094 concurrency supersession | **Out** | Conclusion `failure`, job ran ~8m (not `cancelled` ~2m with zero jobs) |
 | VOC-095 Playwright install timeout | **Unlikely** | Duration well below 40m job timeout; install script bounded since VOC-095 |
-| Actionable deploy step failure | **Leading** | Exit code 1 after substantial job runtime; Docker build artifacts produced |
-| Exact failing step | **Open** | Requires authenticated job log access in T00 |
+| Actionable deploy step failure | **In** | Web health poll failed after image deploy |
+| Exact failing step | **Confirmed** | `Poll staging.vocanova.site/` |
+| Direct dependency regression | **Confirmed** | Next.js 16.3.1 standalone output omitted required runtime helper |
+| Preventive CI gap | **Confirmed** | Source build passed; production image was never booted before merge |
 
 ## T00 completion checklist (implementer)
 
-- [ ] Record failing workflow step name and sanitized failure class from job logs
-- [ ] Document causal link (or lack thereof) to Dependabot PR #859 package bumps
+- [x] Record failing workflow step name and sanitized failure class
+- [x] Document causal link to Dependabot PR #859 Next.js bump
 - [ ] Apply fix and record changed files
 - [ ] Run deterministic tests and record command results below
 - [ ] Set `gate_status` to `complete` when AC-00 through AC-02 satisfied

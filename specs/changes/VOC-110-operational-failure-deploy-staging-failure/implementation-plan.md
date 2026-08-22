@@ -17,21 +17,26 @@
 
 | File | Action | Notes |
 |------|--------|-------|
-| `specs/changes/VOC-110-.../t00-evidence.md` | create/update | Run metadata + log-derived failing step |
-| `apps/web/`, `packages/`, `pnpm-lock.yaml` | modify (if proven) | Dependency or UI regression fix |
-| `apps/web/tests/staging-e2e/` | modify (if proven) | Stale assertion updates |
-| `infra/scripts/` | modify (if proven) | Harness/OAuth/Playwright helper fix |
-| `.github/workflows/deploy-staging.yml` | modify (if proven) | Minimal miswiring only |
-| `scripts/foundation/voc110-*.test.mjs` | create (if warranted) | Regression fixture |
+| `specs/changes/VOC-110-.../t00-evidence.md` | update | Confirmed run/root-cause metadata and validation |
+| `apps/web/package.json` | modify | Paired `next` / `@next/eslint-plugin-next` 16.3.2 repair |
+| `pnpm-lock.yaml` | modify | Frozen lockfile for the paired repair |
+| `.github/workflows/pipeline.yml` | modify | Path-aware, merge-gating production Docker boot/HTTP job |
+| `scripts/foundation/voc110-web-container-runtime.test.mjs` | create | Workflow path/command/merge-gate contract |
+| `docs/operations/10-development-workflow.md` | modify | Document shipped-artifact gate |
 | Existing voc084/voc088/voc095 foundation tests | regression | Must remain green |
 
 Ordered steps:
 
-1. Pull run 32566405628 job metadata and logs; record failing step in evidence.
-2. Choose remediation surface per evidence (application, test, harness, or workflow).
-3. Implement smallest correct fix; preserve fail-closed deploy semantics.
-4. Add/extend deterministic tests.
-5. Run applicable validation commands; record in `t00-evidence.md`.
+1. Record the confirmed `Poll staging.vocanova.site/` failure and sanitized runtime
+   diagnosis in evidence.
+2. Upgrade the paired Next.js packages to stable 16.3.2 and refresh the frozen lock.
+3. Add a pipeline job that detects relevant paths, builds the real web Dockerfile,
+   starts the image, asserts it remains running, requires HTTP 2xx, and always cleans
+   up. Make merge-gate depend on this job so failure cannot merge.
+4. Add deterministic workflow tests for relevant/irrelevant paths, runtime commands,
+   cleanup, and merge-gate dependency; document the gate.
+5. Run applicable validation and a real Docker build/run proof; record results in
+   `t00-evidence.md`.
 
 ### T01 — Record live verification
 
@@ -58,6 +63,8 @@ node --test scripts/foundation/voc088-deploy-staging-allowlist.test.mjs
 node --test scripts/foundation/voc095-playwright-install.test.mjs
 # plus any other deploy-staging wiring tests named in the task PR
 pnpm validate                                              # if apps/web/ or packages/ changed
+docker build -f apps/web/Dockerfile -t vocanova-web:voc110 .
+# start the image, require it remains running and serves HTTP 2xx, then remove it
 bash scripts/governance/validate-governance.sh             # if invoked by CI on changed paths
 bash scripts/governance/classify-change-risk.sh            # confirm task path floor
 git diff --check
@@ -81,7 +88,8 @@ evidence under active A-004.
   completion.
 - **Rollback trigger:** Fix introduces staging regression, breaks core-loop gate
   falsely, or reintroduces deploy-staging failures.
-- **Rollback mechanism:** Revert T00 commits on `develop`; re-run deploy-staging.
+- **Rollback mechanism:** pin the paired Next.js packages back to 16.3.0 through a
+  governed PR if 16.3.2 cannot satisfy the image-runtime gate; re-run deploy-staging.
 - **Owner:** unassigned (set at adoption).
 - **Last-known-good:** `develop` HEAD immediately before T00 merge (record exact SHA
   at task completion).

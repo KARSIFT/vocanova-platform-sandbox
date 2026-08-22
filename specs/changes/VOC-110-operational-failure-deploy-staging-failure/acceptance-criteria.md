@@ -9,9 +9,10 @@
 - Result: pending
 
 Task evidence identifies run 32566405628 as an **actionable deploy-staging failure**
-(job `deploy to staging`, conclusion `failure`, exit code 1, ~8m duration, head
-`f25e4cc…` after Dependabot PR #859 merge) and names the **failing workflow step**
-from job logs without copying secrets or personal data.
+and records the confirmed chain: API health passed, `Poll staging.vocanova.site/`
+failed, public web returned 502, and the Next.js 16.3.1 standalone container restarted
+because its artifact omitted an `@swc/helpers` ESM module on Node 24. Evidence contains
+no secrets, full logs, or personal data.
 
 ## VOC-110-AC-01 — Smallest correct fix applied for the identified failure mode
 
@@ -21,7 +22,10 @@ from job logs without copying secrets or personal data.
 - Evidence: `VOC-110-EV-00`
 - Result: pending
 
-The task PR fixes the defect evidenced in AC-00 in the smallest correct surface.
+The task PR moves `next` and `@next/eslint-plugin-next` together to stable 16.3.2
+while preserving the other PR #859 updates. The resulting production Docker image
+boots, remains running, and serves HTTP 2xx. Next.js 16.3.0 remains the documented
+rollback only if 16.3.2 cannot prove healthy.
 Deploy fail-closed semantics remain: no `continue-on-error`, no removed health
 checks, no skipped staging core-loop gate, no weakened OAuth-start check.
 
@@ -34,13 +38,16 @@ checks, no skipped staging core-loop gate, no weakened OAuth-start check.
 - Evidence: `VOC-110-EV-00`
 - Result: pending
 
-New or extended foundation tests lock the corrected behavior or a fixture matching
-the failure mode from AC-00. Existing deploy-staging deterministic suites remain
-green.
+The repository pipeline contains a merge-gating container-runtime job that, for
+relevant dependency/web changes, builds `apps/web/Dockerfile`, starts the image,
+asserts it remains running, and requires HTTP 2xx. It safely avoids the expensive
+build for irrelevant package-plan/docs-only diffs. Deterministic workflow tests lock
+path selection, cleanup, and merge-gate dependency. Existing deploy-staging suites
+remain green.
 
 ## VOC-110-AC-03 — Live verification: post-fix deploy-staging succeeds on develop
 
-- Requirement source: issue #911 remediation outcome; `VOC-110-D04`
+- Requirement source: issue #911 remediation outcome; `VOC-110-D00`, `VOC-110-D06`
 - Tasks: `VOC-110-T01`
 - Tests: `VOC-110-TEST-06`
 - Evidence: `VOC-110-EV-01`

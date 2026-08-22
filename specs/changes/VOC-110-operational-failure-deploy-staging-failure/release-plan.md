@@ -14,9 +14,10 @@ founder `approved` comment is a merge/adopt/release gate under active A-004.
   merge in order; CI, governance validation, and independent verification pass on
   each task PR.
 - **Exact revision:** recorded at task completion, not at drafting time.
-- **Monitoring:** No new Kuma monitors or synthetics (`monitoring_impact.state: none`).
-  Outcome signal is operational: post-fix `deploy-staging` runs on `develop` reach
-  `success` including the staging core-loop gate.
+- **Monitoring:** Existing `kuma.availability.staging.web` and
+  `synthetic.staging.authenticated-core-journey` cover the affected surface; no new
+  monitor is needed. Outcome signals are the pre-merge production-image runtime gate
+  and a post-fix `deploy-staging` success including the staging core-loop.
 - **Outcome owner:** unassigned (set at adoption).
 - **Issue #911:** closes with package roster completion after T01 verification;
   fingerprint `deploy-staging:failure` must not accumulate duplicate open issues
@@ -26,9 +27,10 @@ founder `approved` comment is a merge/adopt/release gate under active A-004.
 
 - **Trigger:** T00 fix fails T01 live proof; staging core-loop or health checks
   regress; new `deploy-staging:failure` issues open for the same root cause class.
-- **Mechanism:** Revert T00 commits on `develop`; confirm staging deploy on prior
-  SHA if needed via `workflow_dispatch`; promote revert through normal release path
-  if already on `main`.
+- **Mechanism:** Pin the paired Next.js packages back to 16.3.0 through a governed
+  PR if 16.3.2 cannot pass the image-runtime gate; confirm staging recovery through
+  deploy-staging. Promote the rollback through the normal release path if already
+  on `main`.
 - **Owner:** unassigned (set at adoption).
 - **Validation:** After rollback, record whether deploy-staging succeeds on
   `develop` without the T00 change; do not close issue #911 without a new governed

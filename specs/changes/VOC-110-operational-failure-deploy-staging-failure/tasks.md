@@ -15,31 +15,27 @@ Order is mandatory: **T00 → T01**.
 
 ### Required work
 
-1. Read run 32566405628 job logs for `deploy to staging` at implementation time
-   (`gh run view`, Actions REST jobs API, or equivalent authorized access). Record
-   in `t00-evidence.md`:
-   - failing step name and conclusion;
-   - sanitized failure class (e.g. core-loop assertion, OAuth check, health poll,
-     SSH/migration, image build, Playwright install);
-   - whether PR #859's dependency diff plausibly caused the failure.
-   Do not copy secrets, SSH output, session cookies, OAuth state, tokens, or personal
-   data into evidence.
-2. Compare public metadata already recorded at drafting time (duration, Docker build
-   artifacts, Playwright artifact-upload warnings) with the log-identified failing step.
-3. Implement the smallest correct fix per `VOC-110-D01`:
-   - **Application path:** `apps/web/` and/or `packages/` when staging runtime/UI
-     regressed after the Dependabot merge.
-   - **Test path:** `apps/web/tests/staging-e2e/` when the product is correct but
-     the journey assertion is stale.
-   - **Harness path:** `infra/scripts/` when a verify/install/mint helper is wrong.
-   - **Workflow path:** minimal `deploy-staging.yml` change only when miswiring is
-     proven unrelated to spurious dependency blame.
-4. If the fix is reverting or pinning a specific Dependabot bump, document which
-   package and why in the task PR (do not silently revert the entire PR #859 group).
-5. Extend deterministic tests (`scripts/foundation/voc110-*.test.mjs` and/or
-   existing voc084/voc088/voc095 deploy-staging suites) to lock the fix.
+1. Record in `t00-evidence.md` the confirmed failure chain and only bounded metadata:
+   `Poll staging.vocanova.site/` failed after API health passed; the staging web
+   returned 502; Next.js 16.3.1 standalone omitted an `@swc/helpers` ESM runtime
+   module on Node 24. Do not copy secrets, SSH transcripts, cookies, OAuth state,
+   tokens, full logs, or personal data.
+2. Upgrade `next` and `@next/eslint-plugin-next` together to stable 16.3.2 and refresh
+   `pnpm-lock.yaml`. Preserve the other PR #859 updates. Use 16.3.0 only as rollback
+   if 16.3.2 cannot pass the real image-runtime proof.
+3. Add a path-aware job to `.github/workflows/pipeline.yml` that, for changes capable
+   of affecting the web runtime (`package.json`, `pnpm-lock.yaml`, `apps/web/**`, and
+   relevant shared `packages/**`), builds `apps/web/Dockerfile`, starts the image,
+   verifies the container stays running, and requires HTTP 2xx. It must always clean
+   up and must not use secrets or publish the smoke image.
+4. Make `merge-gate` wait for that job and fail closed when it fails. Keep a cheap
+   success/no-op path for irrelevant plan/docs-only diffs to avoid unnecessary image
+   builds without creating a bypass for root manifests or the lockfile.
+5. Add deterministic `voc110` workflow tests for path selection, build/run/HTTP and
+   cleanup commands, and merge-gate dependency. Update the development workflow doc.
 6. Run applicable commands and record results in `t00-evidence.md`:
-   - new/extended VOC-110 foundation tests;
+   - VOC-110 foundation tests;
+   - a local or exact-SHA CI Docker build/start/HTTP proof using the real Dockerfile;
    - deploy-staging regression foundation tests touched by the diff;
    - `pnpm validate` if `apps/web/` or `packages/` changed;
    - `bash scripts/governance/validate-governance.sh` when required for changed paths;
@@ -48,14 +44,15 @@ Order is mandatory: **T00 → T01**.
 ### Explicitly out of scope for this task
 
 - Live post-merge `deploy-staging` proof (T01).
-- Changing operational-failure-monitoring.yml or benign-cancel classifier (VOC-094).
+- Changing `operational-failure-monitoring.yml`, `deploy-staging.yml`, or the
+  benign-cancel classifier (VOC-094).
 - Weakening deploy concurrency, health checks, OAuth guards, or core-loop ordering.
 - Production deploy or scheduled-synthetics changes unless T00 proves a shared
   regression requiring explicit scope expansion (default: out of scope).
 
 ## VOC-110-T01 — Record live verification that deploy-staging succeeds on develop
 
-- Requirement source: issue #911; `VOC-110-D04`
+- Requirement source: issue #911; `VOC-110-D00`, `VOC-110-D06`
 - Acceptance criteria: `VOC-110-AC-03`, `VOC-110-AC-04`
 - Tests: `VOC-110-TEST-06`
 - Evidence: `VOC-110-EV-01` (`t01-evidence.md`)

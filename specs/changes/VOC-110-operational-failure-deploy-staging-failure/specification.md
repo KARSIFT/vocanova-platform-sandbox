@@ -1,4 +1,4 @@
-# VOC-110 — Fix deploy-staging failure after dependabot integration merge: Specification
+# VOC-110 — Restore staging web and gate the shipped container runtime: Specification
 
 ## Objective and requirement source
 
@@ -9,8 +9,8 @@ Remediate the operational failure recorded in
 **This draft package does not adopt or authorize itself**; adoption remains a
 separate A-004 plan-review / adopt path.
 
-Primary evidence (issue #911 + public run page and Actions REST metadata for run
-32566405628):
+Primary evidence (issue #911, Actions metadata/logs, public probes, and read-only
+container diagnosis for run 32566405628):
 
 | Item | Value |
 |------|-------|
@@ -19,49 +19,49 @@ Primary evidence (issue #911 + public run page and Actions REST metadata for run
 | Head branch / SHA | `develop` @ `f25e4ccf5fc28dcc5b14a438fbdc4f93e5c53a46` |
 | Conclusion | `failure` (workflow wall clock ~8m 28s) |
 | Job | `deploy to staging` (~8m 23s, exit code 1) |
+| Failing step | `Poll staging.vocanova.site/` after API health passed |
+| Live impact | Staging web HTTP 502; staging API and production healthy/isolated |
+| Runtime cause | Next.js 16.3.1 standalone artifact omitted an `@swc/helpers` ESM module on Node 24 |
 | Trigger commit | Merge PR **#859** — Dependabot `minor-and-patch` npm group (eight updates) |
 | Public artifacts | Two Docker build attestations produced during the run |
 | Public annotations | Process exit code 1; Playwright report/test-results paths missing on failure upload; benign Go cache restore warning |
 | Issue origin | VOC-088-T02 `operational-failure-monitoring.yml` sanitized issue body |
 
-Drafting-time bounding (not a root-cause determination):
+Confirmed root-cause bounds:
 
 - **Not VOC-094:** job ran ~8m with conclusion `failure`, not `cancelled` with
   zero jobs and a concurrency-supersession annotation.
 - **Not VOC-095:** total duration is well below the 40-minute job timeout; public
   signals point past image build/push rather than an unbounded Playwright install stall.
-- **Likely post-build phase:** Docker build artifacts exist; duration fits build/push
-  plus SSH deploy and post-deploy gates (health checks, OAuth start check, staging
-  core-loop Playwright journey per VOC-050-T02).
-- **Dependabot context:** the failing run's head is the first integration commit
-  carrying eight npm minor/patch bumps — dependency regression is a leading hypothesis
-  until logs name the failing step.
-
-The exact failing workflow step and remediation surface are **open until T00 reads
-job logs** at implementation time.
+- **Post-build runtime failure:** both images built and the staging API health poll
+  passed. The public web poll failed while `vocanova-web` restarted.
+- **Dependency cause:** PR #859 moved Next.js 16.3.0 to 16.3.1. The runtime error
+  matches upstream issue #97358 exactly. Stable 16.3.2 contains the 16.3 backport
+  from upstream #97372/#97453.
+- **Preventive-control gap:** repository validation ran `next build` but never
+  started the standalone production image, so all pre-merge checks could pass while
+  the deployable artifact was unable to boot.
 
 ## Scope and non-goals
 
 In scope:
 
-1. Read run 32566405628 job logs for `deploy to staging` at implementation time.
-   Record the failing step name and sanitized failure class in `t00-evidence.md`
-   (no secrets, SSH output, session cookies, OAuth state, tokens, or personal data).
-2. Fix the identified root cause in the smallest correct surface:
-   - **Application / dependency regression** — fix `apps/web/`, shared `packages/`,
-     or lockfile-resolved behavior when evidence shows staging runtime or UI broke
-     after the Dependabot merge.
-   - **Staging core-loop test** — update `apps/web/tests/staging-e2e/` when evidence
-     shows the product is correct but the journey assertion is stale.
-   - **Deploy harness / script** — fix `infra/scripts/` (OAuth verify, Playwright
-     install, session mint helpers) when evidence shows wiring or harness defect.
-   - **Workflow wiring** — minimal `deploy-staging.yml` change only when evidence
-     shows misconfiguration unrelated to the dependency bump.
-3. Preserve fail-closed deploy semantics: no `continue-on-error`, no skipped health
+1. Record the confirmed failing step and sanitized failure class in
+   `t00-evidence.md` (no secrets, SSH transcript, session cookies, OAuth state,
+   tokens, personal data, or complete application logs).
+2. Upgrade `next` and `@next/eslint-plugin-next` together from 16.3.1 to stable
+   16.3.2. Pin 16.3.0 only as the documented rollback if 16.3.2 cannot satisfy the
+   container-runtime proof.
+3. Add a merge-gating CI job for relevant web/dependency changes that builds the
+   real `apps/web/Dockerfile`, starts the image, verifies the container remains
+   running, and requires HTTP 2xx from its root route. A source `next build` or
+   string-only fixture is not sufficient evidence.
+4. Preserve fail-closed deploy semantics: no `continue-on-error`, no skipped health
    checks, no weakened OAuth or core-loop ordering (VOC-050, VOC-084, VOC-088).
-4. Extend deterministic tests to lock the fix or a regression fixture matching T00
-   evidence.
-5. Live verification (T01): after T00 merges to `develop`, record a `deploy-staging`
+5. Add deterministic workflow tests proving the runtime job runs for relevant paths,
+   safely no-ops for irrelevant plan/docs-only diffs, cleans up its container, and
+   is a dependency of merge-gate.
+6. Live verification (T01): after T00 merges to `develop`, record a `deploy-staging`
    run for a revision containing the fix that reaches conclusion `success`.
 
 Non-goals / explicitly excluded:
@@ -72,8 +72,7 @@ Non-goals / explicitly excluded:
   issue #911).
 - Reverting Dependabot routing to `main` or bypassing governed integration for future
   dependency updates.
-- Broad dependency rollback without evidence; if the fix is pinning or reverting one
-  package, T00 must document which bump caused the failure.
+- Reverting the other seven package updates from PR #859.
 - Modifying production deploy semantics, signup policy, Kuma inventory, or migrations
   unless T00 proves a separate defect requiring its own package.
 - Self-adoption / self-authorization of this package.
@@ -97,9 +96,9 @@ Non-goals / explicitly excluded:
 started, exit code 1, ~8m duration), not a benign concurrency supersession or a
 Playwright-install timeout class failure.
 
-`VOC-110-D01`: T00 must name the failing workflow step from job logs before choosing
-the remediation surface. Drafting-time hypotheses (dependency regression vs harness
-vs deploy step) are not decisions.
+`VOC-110-D01`: The failing step is `Poll staging.vocanova.site/`; the product image
+failed before OAuth/core-loop execution because Next.js 16.3.1 standalone output
+omitted an SWC helper required on Node 24.
 
 `VOC-110-D02`: Evidence and fixes stay within VOC-088 sanitization boundaries: bounded
 metadata in issues and package evidence; job logs inform T00 but are not copied into
@@ -109,25 +108,25 @@ issue bodies or committed evidence files.
 proves the gate assertion is wrong — in that case adjust tests or product behavior,
 do not skip the gate.
 
-`VOC-110-D04`: If logs show SSH/migration/health failure unrelated to PR #859's npm
-bumps, T00 still fixes that defect but must record the causal link (or lack thereof)
-explicitly so reviewers can scope escalation if it is environmental.
+`VOC-110-D04`: The repair target is Next.js 16.3.2, which contains the upstream
+16.3 backport. Next.js 16.3.0 is the rollback only if the repaired production image
+cannot boot and serve HTTP.
 
 `VOC-110-D05`: Dependabot PR #859 is context, not automatic blame. The task PR must
 record whether the fix is a direct consequence of a listed package bump, a latent
 defect exposed by timing, or an unrelated staging host issue.
 
+`VOC-110-D06`: A deployable-artifact regression requires deployable-artifact
+verification. The CI gate must exercise the real Dockerfile/runtime boundary and
+must block merge-gate when that check fails.
+
 ## Open questions for the reviewing human
 
-1. Accept proposed **R3**, or raise in writing if the adopting human treats
-   deploy-staging remediation touching `apps/web/` after a dependency merge as R4
-   operational risk.
-2. After T00 log review, confirm whether the fix belongs in application code,
-   staging E2E tests, infra scripts, or workflow wiring — the task PR must record
-   the chosen branch.
-3. If the root cause is a Dependabot bump that cannot be safely adapted in-repo,
-   is a targeted revert of that bump within scope, or does it require a separate
-   dependency-governance package?
+1. Accept proposed **R3** for the `.github/workflows/pipeline.yml` merge-gate change,
+   or raise the exact task risk during adoption if semantic escalation applies.
+2. Confirm the CI cost-control path matcher remains fail-closed for root manifests,
+   `pnpm-lock.yaml`, `apps/web/**`, and shared package changes that can affect the
+   standalone artifact.
 
 ## Data, migrations, analytics, and accessibility
 

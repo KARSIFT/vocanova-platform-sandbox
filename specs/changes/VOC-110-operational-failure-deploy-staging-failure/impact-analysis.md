@@ -29,17 +29,18 @@ journey; no standalone accessibility scope unless the chosen fix demands it.
 
 ## Risks, dependencies, and evidence
 
-- `VOC-110-R00`: **Staging deploy blocked** — run 32566405628 left `develop` without
-  a successful staging deploy for head `f25e4cc…` until remediated. Mitigation: T00
-  fix + T01 green deploy proof.
+- `VOC-110-R00`: **Staging web outage** — run 32566405628 deployed a web container
+  that restarts and leaves the public staging web host at HTTP 502. Staging API and
+  production remain healthy and isolated. Mitigation: T00 image/runtime fix + T01
+  green deploy proof.
 - `VOC-110-R01`: **Mis-scoped dependency revert** — reverting all eight Dependabot
   bumps without log evidence could hide a smaller fix. Mitigation: `VOC-110-D05` and
   AC-01/TEST-03 require explicit package-level traceability.
 - `VOC-110-R02`: **False fix on environmental staging fault** — SSH/host issues
   unrelated to PR #859 could recur. Mitigation: T00 must record causal link; T01 live
   proof on the next push-triggered deploy.
-- `VOC-110-DEP-00`: Issue #911 and run 32566405628 (resolved at drafting for identity
-  and public metadata; failing step pending T00 logs).
+- `VOC-110-DEP-00`: Issue #911, run 32566405628, and sanitized read-only runtime
+  diagnosis (resolved: web health poll failed due Next.js 16.3.1 standalone output).
 - `VOC-110-DEP-01`: VOC-032/VOC-050/VOC-095 deploy-staging building blocks (resolved
   at drafting as predecessors).
 - `VOC-110-EV-00`: `t00-evidence.md` — root cause, failing step, fix commands/results.
