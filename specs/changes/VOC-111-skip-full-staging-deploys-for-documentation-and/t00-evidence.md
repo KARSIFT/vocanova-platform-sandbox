@@ -64,7 +64,8 @@ Merges touching only paths outside this list (for example `docs/**`, `specs/**`,
 unchanged — always eligible for manual retry/redeploy.
 
 Deterministic selector tests in `scripts/foundation/voc111-deploy-staging-paths.test.mjs`
-mirror this allowlist via `PUSH_PATH_PATTERN` and assert positive/negative fixtures.
+parse this allowlist from the workflow, require its exact closed contents, and evaluate
+positive/negative fixtures through `pathSelectsPushDeploy`.
 
 ## Changed files (T00)
 
