@@ -52,8 +52,10 @@ class Voc080AdoptionReconcilePolicyTests(unittest.TestCase):
             self.pipeline,
         )
 
-    def test_release_retry_is_dispatch_driven_without_founder_comment(self):
-        self.assertIn("  retry-promote:", self.release)
+    def test_release_reconcile_converges_without_founder_comment(self):
+        self.assertIn("  converge:", self.release)
+        self.assertIn("group: release-converge-", self.release)
+        self.assertEqual(self.release.count("gh pr merge"), 1)
         self.assertNotIn("COMMENT_AUTHOR", self.release)
         self.assertNotIn("COMMENT_BODY", self.release)
         self.assertIn("inputs.release_issue_number != ''", self.release)

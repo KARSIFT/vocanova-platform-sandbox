@@ -1,0 +1,120 @@
+schema_version: 1
+id: VOC-108
+slug: authoritative-automation-lifecycle
+title: Authoritative automation lifecycle state
+type: infrastructure
+status: adopted
+risk: R4
+planned_implementation_risk_floor: Measured at drafting against KARSIFT/karsift-ai-infra
+  reusable workflow, lifecycle-helper, test, and README paths plus caller foundation-test
+  and package-evidence paths if required. The detected semantic CI/CD and .github/workflows
+  floor is R3. This is a draft proposal for independent classification, never a determination;
+  the real task file list remains subject to the path classifier and verifier.
+canonical_path: specs/changes/VOC-108-authoritative-automation-lifecycle
+authority_model: a004-active
+requirement_source: 'GitHub issue #903. During VOC-107, historical failed check runs
+  on an exact SHA poisoned later successful evidence, an upstream cross-repository
+  closing reference prematurely closed caller task #893, issue closure alone opened
+  release state before caller evidence merged, and overlapping release/check paths
+  emitted contradictory decisions around promotion PR #902. Required: latest authoritative
+  exact-SHA evidence, non-closing cross-repository references, caller-merge-bound
+  task completion, one idempotent release merge authority, terminal-check re-evaluation
+  without unchanged-SHA CI reruns, and deterministic race fixtures. This draft neither
+  adopts nor authorizes itself.'
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
+base_branch: develop
+base_sha: unknown - set at adoption time
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains separately gated)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
+automatic_merge_allowed: true
+production_impact: none intentional for application runtime. Changes engineering lifecycle
+  orchestration and audit evidence only; no application, deployment, database, signup,
+  secret, or monitoring-inventory behavior changes.
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: Governance-automation state selection and release orchestration only.
+    No page route, critical API endpoint, monitor ID, or synthetic ID is added or
+    changed.
+dependencies:
+- id: VOC-108-DEP-00
+  status: 'resolved at drafting time. Issue #903 records sanitized live observations
+    from plan PR #892, caller task #893, and release PR #902 without logs, credentials,
+    OAuth material, or user identifiers.'
+- id: VOC-108-DEP-01
+  status: resolved at drafting time. Current shared adopt.yml aggregates every check
+    run attached to the exact head and therefore lets obsolete failures poison later
+    successful reruns. Current merge-gate/reuse and release consumers likewise evaluate
+    raw or multi-attempt check history instead of selecting one authoritative run
+    per logical gate.
+- id: VOC-108-DEP-02
+  status: resolved at drafting time. Current release.yml derives package completion
+    from roster issue CLOSED state; merge-gate explicitly closes the linked issue
+    after a caller PR merge, but a cross-repository closing reference can independently
+    create the same CLOSED state without caller evidence.
+- id: VOC-108-DEP-03
+  status: resolved at drafting time. Shared workflow changes land in KARSIFT/karsift-ai-infra
+    and callers consume reusable workflows at @main. Caller contract fixtures/evidence
+    land here only if required.
+affected_areas:
+- KARSIFT/karsift-ai-infra/.github/workflows/adopt.yml
+- KARSIFT/karsift-ai-infra/.github/workflows/merge-gate.yml
+- KARSIFT/karsift-ai-infra/.github/workflows/release.yml
+- KARSIFT/karsift-ai-infra/.github/workflows/auto-advance.yml
+- KARSIFT/karsift-ai-infra/.github/workflows/implement.yml and prompts when cross-repository
+  PR text is produced
+- KARSIFT/karsift-ai-infra/config lifecycle helpers, tests, and README
+- .github/workflows/pipeline.yml and/or the shared caller workflow template for the terminal external-check wake entrypoint
+- caller foundation contract tests and docs for the wake-path and lifecycle contracts
+- specs/changes/VOC-108-authoritative-automation-lifecycle/
+implementation:
+  authorized: true
+  required: true
+  status: authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: 905
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-governance-automation-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: adopted
+adoption_pr: 904
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/904
+implementation_authority_before_adoption: false
+implementation_authority_status: authorized
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
+blocking_reasons: none - adopted and implementation-authorized
+approved_candidate_sha: dfb11cacb089aac09844d34507cb287465b1a6e0
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/904#issuecomment-5377505149
+adoption_risk: R3
+adoption_resolved_decisions:
+- VOC-108-DEP-00
+- VOC-108-DEP-01
+- VOC-108-DEP-02
+- VOC-108-DEP-03
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #904 at dfb11cacb089aac09844d34507cb287465b1a6e0'

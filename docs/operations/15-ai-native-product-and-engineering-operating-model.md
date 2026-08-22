@@ -1587,8 +1587,9 @@ remediate (only on FAIL or plain CI failure) - re-dispatches implementer once, t
 merge-gate - R0–R4 eligible when switch on, checks green, verdict passed, risk parseable;
              no founder `approved` comment path (post-A-004); unparseable risk fails closed
     ↓
-release - when every task in a package's roster closes, promotes `develop` → `main` via PR
-          (no founder `approved` comment gate on repository-controlled path)
+release - when every roster task has an App-authored completion marker proving its exact
+          reviewed caller PR merged, promotes `develop` → `main` via PR; issue closure is
+          only a wake-up hint (no founder `approved` comment gate on repository-controlled path)
 ```
 
 There is no automatic staging deployment stage in the live system - `release.yml`'s scope

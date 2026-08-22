@@ -21,7 +21,18 @@ const evidencePath = path.join(
 test("VOC-097-T02 caller wires bounded polling and explicit observe/dispatch paths", () => {
   const pipeline = readFileSync(pipelinePath, "utf8");
 
-  assert.doesNotMatch(pipeline, /^\s{2}workflow_run:/m);
+  const workflowRun = pipeline
+    .split("  workflow_run:", 2)[1]
+    ?.split("  workflow_dispatch:", 1)[0];
+  assert.ok(
+    workflowRun,
+    "terminal prerequisite workflows must wake authoritative release evaluation",
+  );
+  assert.doesNotMatch(
+    workflowRun,
+    /pipeline/,
+    "the pipeline must not observe itself and create a recursive wake loop",
+  );
   assert.match(
     pipeline,
     /types: \[opened, synchronize, reopened, ready_for_review, closed\]/,
