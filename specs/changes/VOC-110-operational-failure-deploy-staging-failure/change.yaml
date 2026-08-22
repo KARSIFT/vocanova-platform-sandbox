@@ -1,18 +1,19 @@
 schema_version: 1
 id: VOC-110
 slug: operational-failure-deploy-staging-failure
-title: Restore staging web after Next.js standalone regression and add a container runtime gate
+title: Restore staging web after Next.js standalone regression and add a container
+  runtime gate
 type: infrastructure
-status: draft
+status: adopted
 risk: R3
-planned_implementation_risk_floor: "Measured during drafting against the expected\
-  \ task-scoped file list (.github/workflows/pipeline.yml for the merge-gating Docker\
-  \ runtime smoke job, apps/web/package.json and pnpm-lock.yaml for the paired Next.js\
-  \ 16.3.2 repair, deterministic workflow tests, and this package directory). The\
-  \ path floor is R3 because .github/workflows/ is changed. Generic apps/web paths\
-  \ alone are R1 and the root lockfile is R2. This package proposes R3 for the change\
-  \ as a whole; exact-task independent verification must still confirm the real file\
-  \ list and any semantic escalation."
+planned_implementation_risk_floor: Measured during drafting against the expected task-scoped
+  file list (.github/workflows/pipeline.yml for the merge-gating Docker runtime smoke
+  job, apps/web/package.json and pnpm-lock.yaml for the paired Next.js 16.3.2 repair,
+  deterministic workflow tests, and this package directory). The path floor is R3
+  because .github/workflows/ is changed. Generic apps/web paths alone are R1 and the
+  root lockfile is R2. This package proposes R3 for the change as a whole; exact-task
+  independent verification must still confirm the real file list and any semantic
+  escalation.
 canonical_path: specs/changes/VOC-110-operational-failure-deploy-staging-failure
 authority_model: a004-active
 requirement_source: 'GitHub issue #911 and its 2026-08-22 operator diagnosis comment.
@@ -25,17 +26,19 @@ requirement_source: 'GitHub issue #911 and its 2026-08-22 operator diagnosis com
   The same diagnosis identified the missing preventive check: source builds passed,
   but CI never booted the shipped Docker artifact. This draft package does not adopt
   or authorize itself.'
-requirement_approval_status: not-approved
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: unknown - not recorded by this draft; set at adoption time
 target_branch: develop
 owners:
   decision: unassigned
-  package_preparation: planner (drafting only; adoption remains a separate repository-controlled decision)
+  package_preparation: planner (drafting only; adoption remains a separate repository-controlled
+    decision)
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: Staging web is currently unavailable with HTTP 502 while staging
   API and production remain healthy and isolated. The repair restores staging first;
@@ -68,9 +71,9 @@ dependencies:
   status: Adopted predecessor for benign deploy cancellation filtering. Unrelated
     except shared deploy-staging.yml touch discipline.
 - id: VOC-095
-  status: Adopted predecessor for bounded Playwright install. Ruled out for this
-    incident because the web health poll failed before the Playwright install and
-    core-loop steps were reached.
+  status: Adopted predecessor for bounded Playwright install. Ruled out for this incident
+    because the web health poll failed before the Playwright install and core-loop
+    steps were reached.
 affected_areas:
 - .github/workflows/pipeline.yml (merge-gating production-image boot/HTTP smoke job)
 - apps/web/package.json (paired Next.js runtime and ESLint plugin 16.3.2 repair)
@@ -79,9 +82,9 @@ affected_areas:
 - docs/operations/10-development-workflow.md (document the new merge gate)
 - specs/changes/VOC-110-operational-failure-deploy-staging-failure/
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: not-authorized
+  status: authorized
   target_branch: develop
   pull_request: null
   authority_issue: null
@@ -93,11 +96,21 @@ release:
   automatic_merge: true
   migration_required: false
   rollback_required: true
-repository_adoption_status: not-adopted
+repository_adoption_status: adopted
 implementation_authority_before_adoption: false
-implementation_authority_status: not-authorized
+implementation_authority_status: authorized
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
-blocking_reasons: package not adopted; implementation not authorized
+blocking_reasons: none - adopted and implementation-authorized
+approved_candidate_sha: 0ea8aa6cc18f2ce5c407bd38560ee13953edf9e5
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/912#issuecomment-5379820790
+adoption_risk: R3
+adoption_resolved_decisions:
+- VOC-110-DEP-00
+- VOC-110-DEP-01
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #912 at 0ea8aa6cc18f2ce5c407bd38560ee13953edf9e5'
+adoption_pr: 912
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/912
