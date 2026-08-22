@@ -65,7 +65,10 @@ test("VOC-097-TEST-11 live claim is evidence-gated (reconcile wake + fresh revie
 
   assert.match(evidence, /live-evidence-reconcile/);
   assert.match(evidence, /fresh exact-SHA/i);
-  assert.ok(existsSync(voc102ResultPath), "qualified result fixture must exist");
+  assert.ok(
+    existsSync(voc102ResultPath),
+    "qualified result fixture must exist",
+  );
 
   if (claimed === "true") {
     assert.match(
