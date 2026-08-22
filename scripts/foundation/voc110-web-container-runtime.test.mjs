@@ -113,6 +113,11 @@ test("VOC-110-TEST-03: pipeline defines path-aware web-container-runtime job", (
   const jobBlock = extractJobBlock(pipeline, "web-container-runtime");
 
   assert.match(jobBlock, /name: web container runtime/);
+  assert.match(
+    jobBlock,
+    /ref: \$\{\{ github\.event\.pull_request\.head\.sha \}\}/,
+    "Docker runtime smoke must build the reviewed PR head SHA",
+  );
   assert.ok(
     jobBlock.includes(WORKFLOW_PATH_PATTERN),
     "workflow and fixture must use the same fail-closed path selector",
