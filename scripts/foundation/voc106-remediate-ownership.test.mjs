@@ -94,12 +94,23 @@ test("VOC-106-TEST-11: caller wiring exposes read-only verify-remediate-operator
   assert.ok(verifyBlock.length > 0, "verify job must exist");
   assert.match(verifyBlock, /actions: read/);
   assert.doesNotMatch(verifyBlock, /secrets: inherit/);
-  assert.match(verifyBlock, /source_run_id: \$\{\{ inputs\.live_evidence_run_id \}\}/);
-  assert.match(verifyBlock, /pr_number: \$\{\{ inputs\.live_evidence_pr_number \}\}/);
+  assert.match(
+    verifyBlock,
+    /source_run_id: \$\{\{ inputs\.live_evidence_run_id \}\}/,
+  );
+  assert.match(
+    verifyBlock,
+    /pr_number: \$\{\{ inputs\.live_evidence_pr_number \}\}/,
+  );
   const dispatchBlock =
-    pipeline.split("  workflow_dispatch:", 2)[1]?.split("\n# Explicit floor", 1)[0] ?? "";
+    pipeline
+      .split("  workflow_dispatch:", 2)[1]
+      ?.split("\n# Explicit floor", 1)[0] ?? "";
   const dispatchInputs = dispatchBlock.match(/^      [a-z][a-z0-9_]+:/gm) ?? [];
-  assert.ok(dispatchInputs.length <= 25, "workflow_dispatch must stay within GitHub's 25-input limit");
+  assert.ok(
+    dispatchInputs.length <= 25,
+    "workflow_dispatch must stay within GitHub's 25-input limit",
+  );
   assert.match(verifier, /jobs:\s+verify:/);
   assert.match(contract, /- verify-remediate-operator-ownership \/ verify/);
   assert.match(remediate, /remediate-ownership-classifier\.py/);
