@@ -1,4 +1,4 @@
-# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106)
+# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106, VOC-108)
 
 These copies are deterministic fixtures for caller-repo policy regressions.
 They mirror `KARSIFT/karsift-ai-infra` at the SHA in `PINNED_SHA.txt` so
@@ -11,7 +11,7 @@ contracts without cloning the infra repository in CI.
 
 They are not a second runtime source of truth. Callers still `uses:`
 `KARSIFT/karsift-ai-infra/...@main`. Update the fixtures when VOC-080-,
-VOC-097-, VOC-102-, VOC-104-, or VOC-106-related infra contracts change and
+VOC-097-, VOC-102-, VOC-104-, VOC-106-, or VOC-108-related infra contracts change and
 record the new pin in evidence.
 
 VOC-104 adds the pinned `ready-for-review-reuse.yml` and
@@ -90,3 +90,14 @@ implementer's permissions or secrets.
 The VOC-106 workflow, policy, verifier, and regression-test copies correspond to
 shared-infra merge `db164eb3905a96b74b039ab6aa36944408bf0a44`, including the
 hosted verifier base-SHA adapter fix recorded in this package's T00 remediation.
+
+## authoritative lifecycle state (VOC-108)
+
+The current fixture pin advances to shared-infra merge
+`0b57bb07f38eb66bf773b7208b258bcb3ffddd07`. Adoption, merge/reuse, and release
+select the newest authoritative attempt per logical exact-SHA gate from complete
+paginated histories. The merge gate writes one App-authored caller-merge marker
+before emitting the task close event; auto-advance and release validate that same
+marker against live PR state. Cross-repository references are non-closing.
+Automatic, reconcile, promotion-PR, check-provider, and external-workflow wake-ups
+share one serialized promotion evaluator and one exact-head merge command.

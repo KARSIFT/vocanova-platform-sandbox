@@ -4,46 +4,69 @@ Task: `VOC-108-T00` — Authoritative lifecycle evidence and idempotent advancem
 
 Evidence date: 2026-08-22
 
-## Outcome
+```yaml
+gate_status: caller-merge-pending
+shared_infra_merged: true
+caller_pr_merged: false
+live_lifecycle_claimed: false
+shared_infra_pr: 102
+shared_infra_exact_head_sha: 844f012ed65d161cca9a3dd4078867b8c00f2c3c
+shared_infra_cleanup_pr: 103
+shared_infra_cleanup_head_sha: 71a221c0a80fed7d8ee9f5a2eaf1f5cdcaee52df
+shared_infra_merge_sha: 0b57bb07f38eb66bf773b7208b258bcb3ffddd07
+shared_infra_self_ci_run: 32549356794
+shared_infra_cleanup_ci_run: 32549968092
+```
 
-Shared lifecycle helpers and workflow integrations implement authoritative exact-SHA
-check selection, caller-merge-bound task completion markers, cross-repository
-non-closing references, serialized promotion convergence, and terminal external
-check re-evaluation without unchanged-SHA CI reruns.
+## Implemented behavior
 
-## Shared infrastructure
+- Adoption, merge/reuse, and release select the newest authoritative attempt
+  for each logical gate from complete paginated exact-SHA histories. Workflow
+  run identity filters observer-generated check noise while retaining the
+  pull-request, push, scheduled, and dispatched prerequisite workflows used by
+  release.
+- The merge gate publishes one strict App-authored marker only after the exact
+  caller PR is observed merged. Auto-advance and release validate that same
+  marker against live issue and PR state; issue closure alone is insufficient.
+- Caller task PRs retain their local closing binding. Cross-repository text is
+  generated and validated as a fully qualified non-closing reference.
+- Automatic, reconcile, promotion-PR, third-party check, and external workflow
+  wake-ups converge on one per-package serialized evaluator and one exact-head
+  merge command. Terminal external workflow events wake evaluation without
+  rerunning unchanged-SHA CI or the reviewer model.
 
-Implementation lives in the workspace `karsift-ai-infra/` checkout aligned with
-`KARSIFT/karsift-ai-infra@main` policy helpers. Key modules:
+## Shared-infrastructure evidence
 
-| Module | Purpose |
+| Evidence | Result |
 | --- | --- |
-| `config/authoritative_checks.py` | Latest authoritative gate selection |
-| `config/task_completion.py` | Caller-merge completion markers |
-| `config/cross_repo_reference.py` | Non-closing cross-repo reference policy |
-| `config/promotion_evaluator.py` | Serialized promotion decisions |
-| `config/release_reevaluation.py` | Terminal external-check wake |
+| Shared PR | `KARSIFT/karsift-ai-infra#102` merged |
+| Exact shared head | `844f012ed65d161cca9a3dd4078867b8c00f2c3c` |
+| Whitespace follow-up | `KARSIFT/karsift-ai-infra#103` exact head `71a221c0a80fed7d8ee9f5a2eaf1f5cdcaee52df` merged |
+| Final consumed shared merge | `0b57bb07f38eb66bf773b7208b258bcb3ffddd07` |
+| Hosted self-CI | run `32549356794`: actionlint, shellcheck, YAML parse, and 175 policy tests passed |
+| Follow-up hosted self-CI | run `32549968092`: actionlint, shellcheck, YAML parse, and 175 policy tests passed |
+| Live selector replay | PR `#904` exact head selected the later successful attempt; obsolete failures did not poison the result |
+| Cross-repository reference | PR `KARSIFT/karsift-ai-infra#102` passed closing-keyword-plus-target validation |
 
-Workflow integrations: `adopt.yml`, `merge-gate.yml`, `auto-advance.yml`,
-`release.yml`, `implement.yml`, and caller `pipeline.yml` `check_run` trigger.
+## Caller verification
 
-## Commands and results
+The caller PR adds both event paths needed for release observation:
 
-| Command | Result |
-| --- | --- |
-| `PYTHONPATH=karsift-ai-infra/config python3 -m unittest discover -s karsift-ai-infra/tests -p 'test_*.py' -v` | Run by independent verification on exact reviewed head |
-| `bash scripts/governance/validate-governance.sh` | Run on caller evidence PR |
-| `bash scripts/governance/classify-change-risk.sh` | Run on caller evidence PR |
+- `pull_request` promotion evaluation waits for the caller merge gate, so
+  caller CI/review reaches terminal state before the release evaluator runs;
+- `workflow_run: completed` observes repository-controlled external workflows,
+  while `check_run: completed` covers non-Actions check providers.
 
-## Caller consumption
+`scripts/foundation/voc108-authoritative-lifecycle.test.mjs` runs the pinned
+shared policy suite and validates this caller wiring. Governance validation,
+risk classification (actual path floor `R4`), full workspace validation,
+exact-SHA independent review, and caller merge remain to be recorded by the
+governed PR checks.
 
-- `.github/workflows/pipeline.yml` adds `check_run: completed` to wake cheap release
-  re-evaluation through shared `release.yml`.
-- This evidence file records metadata only. No credentials, logs, OAuth material,
-  user identifiers, or secrets were used or recorded.
+## Live-proof boundary
 
-## Live proof boundary
-
-Full hosted exact-SHA CI, shared-infra merge, and governed caller lifecycle proof
-remain for independent verification after shared `karsift-ai-infra` promotion and
-caller PR merge. This file does not self-record its own commit SHA.
+This pre-merge file does not claim its own future merge or issue-close event.
+After the exact caller PR merges, the App-authored task marker, task state,
+release audit, promotion run, and idempotent duplicate/reconcile outcome are
+recorded as sanitized GitHub issue comments. No logs, credentials, tokens,
+sessions, OAuth material, secrets, or user identifiers are recorded here.

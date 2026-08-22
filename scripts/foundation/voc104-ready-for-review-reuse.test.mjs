@@ -104,7 +104,7 @@ test("VOC-104-TEST-11: docs and caller wiring distinguish reuse from full path",
 test("VOC-104 fixture is pinned to the independently reviewed shared merge", () => {
   assert.equal(
     readFileSync(pinPath, "utf8").trim(),
-    "db164eb3905a96b74b039ab6aa36944408bf0a44",
+    "0b57bb07f38eb66bf773b7208b258bcb3ffddd07",
   );
 });
 
