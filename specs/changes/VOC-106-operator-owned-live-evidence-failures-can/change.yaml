@@ -1,0 +1,136 @@
+schema_version: 1
+id: VOC-106
+slug: operator-owned-live-evidence-failures-can
+title: Stop remediation dispatching the general implementer for operator-owned live-evidence
+  failures
+type: infrastructure
+status: adopted
+risk: R3
+planned_implementation_risk_floor: Measured during drafting against the expected task-scoped
+  file list (KARSIFT/karsift-ai-infra/.github/workflows/remediate.yml, config/decide-remediation.py,
+  related helpers/tests and README; calling-repo .github/workflows/pipeline.yml proof
+  action; docs/operations/live-evidence.md ownership-gated remediation guidance; scripts/foundation/voc106-*.test.mjs
+  and/or infra self-ci fixtures; this package directory). Detected path floor is R3
+  for .github/workflows/ and governance-automation paths. This package proposes R3
+  for the change as a whole because it changes semantic CI/CD remediation dispatch.
+  Independent verification must still confirm each task's real file list and whether
+  further semantic escalation applies. This is a draft proposal for the reviewing
+  human at adoption time, never a determination.
+canonical_path: specs/changes/VOC-106-operator-owned-live-evidence-failures-can
+authority_model: a004-active
+requirement_source: 'GitHub issue #882 (Operator-owned live-evidence failures can
+  dispatch the general implementer). During supervised completion of VOC-104-T01,
+  a documentation-only edit after live-evidence reconciliation invalidated the exact-head
+  attestation. Independent review correctly failed closed, but the remediation path
+  then selected the general implementer even though the adopted task contract declares
+  ownership operator and the task explicitly excludes code implementation. Cancelled
+  workflow 32529860337 on carrier PR #879; branch head remained unchanged. Drafting-time
+  read of karsift-ai-infra config/decide-remediation.py confirms RETRY on CI failure
+  or review FAIL without consulting .karsift/live-evidence/<task_id>.yaml ownership.
+  WAITING is already suppressed; genuine FAIL on the same operator-owned carrier can
+  still become an implementation retry. This draft package does not adopt or authorize
+  itself.'
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
+automatic_merge_allowed: true
+production_impact: none-intentional for application runtime. Changes governance automation
+  so remediation never dispatches the general implementer for operator-owned or live-evidence-only
+  review FAIL or CI failure; preserves stale no-op and missing-evidence handling;
+  and routes malformed or mismatched ownership metadata to a separate fail-closed
+  escalation. Does not change production deploy semantics, signup policy, secrets,
+  databases, Kuma inventory, or Sentry ingestion.
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: Governance-automation remediation ownership gating only. No page routes,
+    critical API endpoints, or stable monitor/synthetic IDs in infra/monitoring/monitors.yaml
+    or infra/monitoring/synthetics.yaml are added or changed. Live-evidence waiting
+    and operational-failure observer remain separate mechanisms.
+dependencies:
+- id: VOC-106-DEP-00
+  status: 'resolved at drafting time. Issue #882 records sanitized observation that
+    remediation selected the general implementer for operator-owned VOC-104-T01 after
+    an exact-head FAIL (carrier PR #879; cancelled workflow 32529860337). Manual cancel
+    prevented branch mutation.'
+- id: VOC-106-DEP-01
+  status: resolved at drafting time. VOC-097 established operator-owned live-evidence
+    contracts at <package>/.karsift/live-evidence/<task_id>.yaml with ownership operator
+    or live-actions. VOC-102 gated auto-advance before implementer dispatch. Remediation
+    (remediate.yml / decide-remediation.py) still decides RETRY from CI/review state
+    and PR-body task identity without independently resolving that contract.
+- id: VOC-106-DEP-02
+  status: "resolved at drafting time. Cross-repo pattern from VOC-080 / VOC-097 /\
+    \ VOC-102 \u2014 reusable workflow behavior lands in KARSIFT/karsift-ai-infra;\
+    \ this package authorizes the required outcome. Do not treat an untracked local\
+    \ karsift-ai-infra/ checkout as this repository's tracked tree."
+- id: VOC-106-DEP-03
+  status: resolved at drafting time. WAITING FOR OPERATOR LIVE EVIDENCE already suppresses
+    remediation retry. The retry gap is genuine FAIL and CI failure on the same operator-owned
+    carrier, which must escalate without consuming an implementation attempt. Stale
+    results remain a no-op; malformed or mismatched ownership metadata follows the
+    separate fail-closed path.
+- id: VOC-097
+  status: Adopted predecessor. Ownership contract path, waiting semantics, and reconcile
+    path must remain authoritative; this package must not weaken them or grant implementer
+    Actions credentials.
+- id: VOC-102
+  status: Adopted predecessor that gated auto-advance. This package closes the parallel
+    remediation gap; it does not reopen VOC-102 code work.
+- id: VOC-104
+  status: Adopted predecessor whose supervised T01 completion exhibited the bug (sanitized
+    incident evidence only). This package does not reopen VOC-104 code work.
+affected_areas:
+- KARSIFT/karsift-ai-infra/.github/workflows/remediate.yml
+- KARSIFT/karsift-ai-infra/config/decide-remediation.py and related helpers
+- KARSIFT/karsift-ai-infra deterministic policy tests and README for remediation ownership
+  gating and sanitized operator/reconcile escalation
+- calling-repo docs/operations/live-evidence.md ownership-gated FAIL/CI guidance
+- calling-repo .github/workflows/pipeline.yml (add the read-only exact-head proof
+  action)
+- scripts/foundation/voc106-*.test.mjs and/or infra self-ci fixtures
+- specs/changes/VOC-106-operator-owned-live-evidence-failures-can/
+implementation:
+  authorized: true
+  required: true
+  status: authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-governance-automation-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: adopted
+adoption_pr: 883
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/883
+implementation_authority_before_adoption: false
+implementation_authority_status: authorized
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
+blocking_reasons: none - adopted and implementation-authorized
+approved_candidate_sha: fb5d853b25432965599dc04dcd7f13fc84a8cb7c
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/883#issuecomment-5376277575
+adoption_risk: R3
+adoption_resolved_decisions:
+- VOC-106-DEP-00
+- VOC-106-DEP-01
+- VOC-106-DEP-02
+- VOC-106-DEP-03
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #883 at fb5d853b25432965599dc04dcd7f13fc84a8cb7c'

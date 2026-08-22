@@ -1,0 +1,24 @@
+schema_version: 1
+task_id: VOC-106-T01
+ownership: operator
+
+workflow_file: pipeline.yml
+workflow_name: pipeline
+job_names:
+  - verify-remediate-operator-ownership / verify
+events:
+  - workflow_dispatch
+branch: agent/voc-106-voc-106-t01
+sha_lineage:
+  mode: exact_pr_head
+conclusion: success
+max_age: 72h
+# Observe-only. Closing T00 remains the operational setup: after the remediation
+# ownership gate is live, the operator performs a controlled exact-head FAIL or
+# CI-failure scenario on an operator-owned evidence carrier (preferred: this
+# package's own T01 carrier), records allowlisted remediate-run metadata proving
+# should_retry=false and zero implement.yml execution, then manually dispatches
+# pipeline.yml's read-only verify-remediate-operator-ownership action on this
+# deterministic task branch. The verifier must validate the source run/job
+# metadata without reading logs or artifacts. Its own successful
+# workflow_dispatch run must equal the current carrier PR head.
