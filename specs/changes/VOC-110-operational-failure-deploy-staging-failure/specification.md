@@ -124,9 +124,9 @@ must block merge-gate when that check fails.
 
 1. Accept proposed **R3** for the `.github/workflows/pipeline.yml` merge-gate change,
    or raise the exact task risk during adoption if semantic escalation applies.
-2. Confirm the CI cost-control path matcher remains fail-closed for root manifests,
-   `pnpm-lock.yaml`, `apps/web/**`, and shared package changes that can affect the
-   standalone artifact.
+2. Confirm the CI cost-control path matcher remains fail-closed for root
+   `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `apps/web/**`, and every
+   `packages/**` change that can affect the monorepo build context.
 
 ## Data, migrations, analytics, and accessibility
 

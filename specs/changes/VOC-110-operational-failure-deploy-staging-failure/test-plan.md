@@ -36,8 +36,9 @@
 
 - Covers: `VOC-110-AC-02`, `VOC-110-D06`
 - Preconditions: T00 evidence and task PR
-- Procedure: Inspect `pipeline.yml` and deterministic fixture. Assert root manifest,
-  lockfile, `apps/web/**`, and relevant shared-package changes run the Docker job;
+- Procedure: Inspect `pipeline.yml` and deterministic fixture. Assert root
+  `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `apps/web/**`, and every
+  `packages/**` change run the Docker job;
   irrelevant plan/docs-only changes take the cheap no-op path; merge-gate depends on
   the job; runtime failure cannot be converted to success; cleanup always executes.
 - Expected result: Relevant deployable-artifact regressions block merge without

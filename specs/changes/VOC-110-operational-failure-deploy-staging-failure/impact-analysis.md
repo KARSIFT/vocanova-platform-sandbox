@@ -50,8 +50,9 @@ artifact repair plus CI runtime verification; no route or component work is auth
   unrelated to PR #859 could recur. Mitigation: T00 must record causal link; T01 live
   proof on the next push-triggered deploy.
 - `VOC-110-R03`: **False-negative path bypass** — an incomplete matcher could skip
-  runtime validation for a deployable-artifact change. Mitigation: root manifests,
-  `pnpm-lock.yaml`, `apps/web/**`, and relevant shared packages are explicitly tested;
+  runtime validation for a deployable-artifact change. Mitigation: root
+  `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `apps/web/**`, and every
+  `packages/**` change are explicitly tested;
   ambiguous runtime-affecting paths select the Docker job rather than the no-op path.
 - `VOC-110-R04`: **False-positive merge block or wasted CI** — building the image for
   unrelated plan/docs changes would waste runner time, while flaky polling could block

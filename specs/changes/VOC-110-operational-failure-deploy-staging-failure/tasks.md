@@ -24,8 +24,9 @@ Order is mandatory: **T00 → T01**.
    `pnpm-lock.yaml`. Preserve the other PR #859 updates. Use 16.3.0 only as rollback
    if 16.3.2 cannot pass the real image-runtime proof.
 3. Add a path-aware job to `.github/workflows/pipeline.yml` that, for changes capable
-   of affecting the web runtime (`package.json`, `pnpm-lock.yaml`, `apps/web/**`, and
-   relevant shared `packages/**`), builds `apps/web/Dockerfile`, starts the image,
+   of affecting the web runtime (root `package.json`, `pnpm-lock.yaml`,
+   `pnpm-workspace.yaml`, `apps/web/**`, or any `packages/**` path), builds
+   `apps/web/Dockerfile`, starts the image,
    verifies the container stays running, and requires HTTP 2xx. It must always clean
    up and must not use secrets or publish the smoke image.
 4. Make `merge-gate` wait for that job and fail closed when it fails. Keep a cheap
