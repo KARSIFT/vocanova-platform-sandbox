@@ -187,7 +187,7 @@ test("VOC-110-TEST-03: pipeline defines a fail-closed path selector", () => {
   }
 });
 
-test("VOC-110-TEST-03: merge-gate waits on web-container-runtime", () => {
+test("VOC-110-TEST-03b: merge-gate waits on web-container-runtime", () => {
   const pipeline = readPipeline();
   const mergeGateBlock = extractJobBlock(pipeline, "merge-gate");
 
