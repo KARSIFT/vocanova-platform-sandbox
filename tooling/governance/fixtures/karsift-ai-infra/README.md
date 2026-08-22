@@ -95,7 +95,7 @@ hosted verifier base-SHA adapter fix recorded in this package's T00 remediation.
 ## authoritative lifecycle state (VOC-108)
 
 The current fixture pin advances to shared-infra merge
-`e27efbcec395415e494a898dfddd9f93183c6ff9`. Adoption, merge/reuse, and release
+`ef8fee85e32efa22c551ea66c575703d481e0e18`. Adoption, merge/reuse, and release
 select the newest authoritative attempt per logical exact-SHA gate from complete
 paginated histories and bind the selected evidence to the authenticated pull
 request's repository, number, base, and head. The merge gate writes one App-authored
@@ -114,3 +114,6 @@ attached to the `develop` → `main` promotion pull request.
 Auto-advance comments and diagnostics use the current serialized-convergence
 name, preventing the retired `check-completion` job name from becoming false
 operator guidance.
+The generated adoption roster PR is evaluated through the same paginated,
+exact-identity newest-attempt selector as the merged plan head. Its complete
+green logical set must stabilize on one unchanged head before exact-SHA merge.
