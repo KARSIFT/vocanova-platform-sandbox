@@ -15,7 +15,7 @@
 
 ## VOC-110-TEST-01 — Next.js 16.3.2 repair matches recorded failure mode
 
-- Covers: `VOC-110-AC-01`
+- Covers: `VOC-110-AC-01`, `VOC-110-D04`, `VOC-110-D06`
 - Preconditions: T00 task branch with fix
 - Procedure: Assert `next` and `@next/eslint-plugin-next` are both stable 16.3.2,
   the lockfile agrees, and the other seven PR #859 updates remain present.
