@@ -58,8 +58,9 @@ dependencies:
     status: >-
       resolved at drafting time. Current shared adopt.yml aggregates every check
       run attached to the exact head and therefore lets obsolete failures poison
-      later successful reruns. Current release.yml likewise evaluates raw check
-      history instead of one authoritative run per logical gate.
+      later successful reruns. Current merge-gate/reuse and release consumers
+      likewise evaluate raw or multi-attempt check history instead of selecting
+      one authoritative run per logical gate.
   - id: VOC-108-DEP-02
     status: >-
       resolved at drafting time. Current release.yml derives package completion

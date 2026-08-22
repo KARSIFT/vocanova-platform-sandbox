@@ -4,6 +4,10 @@
 
 - Shared reusable workflows for adoption, task closure/advancement, merge gates,
   and release promotion.
+- The caller event surface that wakes a cheap release re-evaluation when a
+  required external check or workflow reaches a terminal conclusion; this may
+  add or extend a `check_run`/`workflow_run`-class entrypoint while keeping the
+  expensive CI and reviewer jobs undispatched.
 - Shared deterministic state-selection/completion helpers and self-CI fixtures.
 - Cross-repository PR text policy in the implementer prompt/workflow paths that
   can describe work outside the caller repository.
