@@ -1,0 +1,17 @@
+{
+  "branch": "agent/voc-106-voc-106-t01",
+  "completed_at": "2026-08-22T01:09:48Z",
+  "conclusion": "success",
+  "duration_seconds": 12,
+  "event": "workflow_dispatch",
+  "head_sha": "bb4c522ffe94bab05f480a1871e10e8a1647f979",
+  "job_ids": [
+    96955348941
+  ],
+  "run_id": 32542602092,
+  "schema_version": 1,
+  "started_at": "2026-08-22T01:09:36Z",
+  "state": "qualified",
+  "workflow_file": "pipeline.yml",
+  "workflow_name": "pipeline"
+}
