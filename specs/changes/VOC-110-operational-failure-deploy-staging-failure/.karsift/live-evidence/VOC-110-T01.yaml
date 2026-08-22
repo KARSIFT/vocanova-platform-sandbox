@@ -9,6 +9,7 @@ events:
   - push
 branch: develop
 sha_lineage:
-  mode: integration_contains_pr_head
+  mode: exact_sha
+  sha: 07a1f268b2d1f7fb338874fbfe838dda373c4955
 conclusion: success
 max_age: 72h
