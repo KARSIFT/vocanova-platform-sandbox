@@ -47,7 +47,10 @@ function extractPushPathsBlock(source) {
   const pushStart = source.indexOf("  push:");
   assert.ok(pushStart >= 0, "deploy-staging.yml must define on.push");
   const dispatchStart = source.indexOf("  workflow_dispatch:", pushStart);
-  assert.ok(dispatchStart > pushStart, "deploy-staging.yml must define workflow_dispatch");
+  assert.ok(
+    dispatchStart > pushStart,
+    "deploy-staging.yml must define workflow_dispatch",
+  );
   return source.slice(pushStart, dispatchStart);
 }
 
@@ -199,7 +202,9 @@ test("VOC-111 push allowlist: workflow paths block matches VOC-111-D03", () => {
   for (const glob of EXPECTED_PUSH_PATHS) {
     assert.match(
       pushBlock,
-      new RegExp(`${WORKFLOW_PATH_GLOB.replace("([^\"]+)", glob.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))}`),
+      new RegExp(
+        `${WORKFLOW_PATH_GLOB.replace('([^"]+)', glob.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))}`,
+      ),
       `push.paths must include ${glob}`,
     );
   }
