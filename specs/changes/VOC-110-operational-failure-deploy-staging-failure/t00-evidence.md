@@ -100,7 +100,7 @@ git diff --check
 
 | Command | Result |
 |---------|--------|
-| `node --test scripts/foundation/voc110-web-container-runtime.test.mjs` | pass (5/5) |
+| `node --test scripts/foundation/voc110-web-container-runtime.test.mjs` | pass (7/7) |
 | `node --test scripts/foundation/voc084-deploy-staging-oauth.test.mjs` | pass |
 | `node --test scripts/foundation/voc088-deploy-staging-allowlist.test.mjs` | pass |
 | `node --test scripts/foundation/voc095-playwright-install.test.mjs` | pass (36/36) |

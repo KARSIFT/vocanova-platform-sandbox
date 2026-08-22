@@ -108,7 +108,7 @@ test("VOC-110-TEST-01: Next.js repair preserves every PR #859 update", () => {
   assert.doesNotMatch(lockfile, /@next\/eslint-plugin-next@16\.3\.1/);
 });
 
-test("VOC-110-TEST-03: pipeline defines path-aware web-container-runtime job", () => {
+test("VOC-110-TEST-02: production web image smoke is exact-SHA and fail-closed", () => {
   const pipeline = readPipeline();
   const jobBlock = extractJobBlock(pipeline, "web-container-runtime");
 
@@ -118,6 +118,31 @@ test("VOC-110-TEST-03: pipeline defines path-aware web-container-runtime job", (
     /ref: \$\{\{ github\.event\.pull_request\.head\.sha \}\}/,
     "Docker runtime smoke must build the reviewed PR head SHA",
   );
+  assert.match(jobBlock, /docker build -f apps\/web\/Dockerfile/);
+  assert.match(jobBlock, /docker run -d/);
+  assert.match(jobBlock, /--add-host=host\.docker\.internal:host-gateway/);
+  assert.match(
+    jobBlock,
+    /curl --silent --output \/dev\/null --write-out '%\{http_code\}'/,
+  );
+  assert.match(jobBlock, /docker inspect --format '\{\{\.State\.Running\}\}'/);
+  assert.match(jobBlock, /trap cleanup EXIT/);
+  assert.match(jobBlock, /docker rm -f/);
+  assert.match(jobBlock, /docker rmi -f/);
+
+  for (const pattern of DENYLIST_PATTERNS) {
+    assert.doesNotMatch(
+      jobBlock,
+      pattern,
+      `web-container-runtime must not contain bypass pattern ${pattern}`,
+    );
+  }
+});
+
+test("VOC-110-TEST-03: pipeline defines a fail-closed path selector", () => {
+  const pipeline = readPipeline();
+  const jobBlock = extractJobBlock(pipeline, "web-container-runtime");
+
   assert.ok(
     jobBlock.includes(WORKFLOW_PATH_PATTERN),
     "workflow and fixture must use the same fail-closed path selector",
@@ -127,16 +152,6 @@ test("VOC-110-TEST-03: pipeline defines path-aware web-container-runtime job", (
     /Skip — no web runtime surface changed/,
     "irrelevant diffs must take the cheap no-op path",
   );
-  assert.match(jobBlock, /docker build -f apps\/web\/Dockerfile/);
-  assert.match(jobBlock, /docker run -d/);
-  assert.match(
-    jobBlock,
-    /curl --silent --output \/dev\/null --write-out '%\{http_code\}'/,
-  );
-  assert.match(jobBlock, /docker inspect --format '\{\{\.State\.Running\}\}'/);
-  assert.match(jobBlock, /trap cleanup EXIT/);
-  assert.match(jobBlock, /docker rm -f/);
-  assert.match(jobBlock, /docker rmi -f/);
 
   for (const changedPath of [
     "package.json",
@@ -170,14 +185,6 @@ test("VOC-110-TEST-03: pipeline defines path-aware web-container-runtime job", (
       `${changedPath} must take the cheap no-op path`,
     );
   }
-
-  for (const pattern of DENYLIST_PATTERNS) {
-    assert.doesNotMatch(
-      jobBlock,
-      pattern,
-      `web-container-runtime must not contain bypass pattern ${pattern}`,
-    );
-  }
 });
 
 test("VOC-110-TEST-03: merge-gate waits on web-container-runtime", () => {
@@ -198,4 +205,19 @@ test("VOC-110-TEST-04: development workflow documents the shipped-artifact gate"
   assert.match(doc, /web container runtime/i);
   assert.match(doc, /apps\/web\/Dockerfile/);
   assert.match(doc, /HTTP 2xx/);
+});
+
+test("VOC-110-TEST-05: deploy-staging regression suites have passing evidence", () => {
+  const evidenceLines = readFileSync(evidencePath, "utf8").split("\n");
+
+  for (const suite of [
+    "voc084-deploy-staging-oauth.test.mjs",
+    "voc088-deploy-staging-allowlist.test.mjs",
+    "voc095-playwright-install.test.mjs",
+  ]) {
+    const resultLine = evidenceLines.find(
+      (line) => line.includes(suite) && /\|\s*pass/.test(line),
+    );
+    assert.ok(resultLine, `${suite} must have an explicit passing result`);
+  }
 });

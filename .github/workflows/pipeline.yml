@@ -348,6 +348,7 @@ jobs:
             -t "$image_tag" .
 
           docker run -d --name "$container_name" \
+            --add-host=host.docker.internal:host-gateway \
             -e API_BASE_URL=http://host.docker.internal:8080 \
             -e PORT=3000 \
             -e HOSTNAME=0.0.0.0 \
