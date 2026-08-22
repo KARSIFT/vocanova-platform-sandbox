@@ -494,8 +494,8 @@ class RepositoryFoundationValidatorTests(unittest.TestCase):
     def test_unpinned_external_action_fails(self) -> None:
         self.replace(
             ".github/workflows/repository-governance.yml",
-            "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
-            "actions/checkout@v4",
+            "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+            "actions/checkout@v7",
         )
         self.assert_failure("not pinned")
 

@@ -331,11 +331,11 @@ jobs:
     # budget.
     timeout-minutes: 40
     steps:
-      # actions/checkout v4.2.2, pinned to the immutable
+      # actions/checkout v7.0.1, pinned to the immutable
       # commit documented at
-      # https://github.com/actions/checkout/releases/tag/v4.2.2
+      # https://github.com/actions/checkout/releases/tag/v7.0.1
       - name: Check out reviewed revision
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           # fetch-depth: 0 is required because the build
           # context for the web image is the repo root
