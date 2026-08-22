@@ -18,11 +18,14 @@ shared_infra_docs_pr: 104
 shared_infra_docs_head_sha: 9dbc7195484eda8f09782171004a1ea071892871
 shared_infra_review_remediation_pr: 105
 shared_infra_review_remediation_head_sha: 3b70855d74aeb18e30ce757be7863c96a754e8a6
-shared_infra_merge_sha: 81b8c21d5216647a720009deed148587cbc264bd
+shared_infra_template_parity_pr: 106
+shared_infra_template_parity_head_sha: f63d6b9360d47d78171e04fbb167a02be9531554
+shared_infra_merge_sha: ee1b0a8ea8263a6671e753a6d3e80d15c855ddf4
 shared_infra_self_ci_run: 32549356794
 shared_infra_cleanup_ci_run: 32549968092
 shared_infra_docs_ci_run: 32550666898
 shared_infra_review_remediation_ci_run: 32551381890
+shared_infra_template_parity_ci_run: 32552045142
 ```
 
 ## Implemented behavior
@@ -56,11 +59,13 @@ shared_infra_review_remediation_ci_run: 32551381890
 | Whitespace follow-up | `KARSIFT/karsift-ai-infra#103` exact head `71a221c0a80fed7d8ee9f5a2eaf1f5cdcaee52df` merged |
 | Authority-doc follow-up | `KARSIFT/karsift-ai-infra#104` exact head `9dbc7195484eda8f09782171004a1ea071892871` merged |
 | Exact-SHA review remediation | `KARSIFT/karsift-ai-infra#105` exact head `3b70855d74aeb18e30ce757be7863c96a754e8a6` merged |
-| Final consumed shared merge | `81b8c21d5216647a720009deed148587cbc264bd` |
+| Caller-template parity follow-up | `KARSIFT/karsift-ai-infra#106` exact head `f63d6b9360d47d78171e04fbb167a02be9531554` merged |
+| Final consumed shared merge | `ee1b0a8ea8263a6671e753a6d3e80d15c855ddf4` |
 | Hosted self-CI | run `32549356794`: actionlint, shellcheck, YAML parse, and 175 policy tests passed |
 | Follow-up hosted self-CI | run `32549968092`: actionlint, shellcheck, YAML parse, and 175 policy tests passed |
 | Authority-doc hosted self-CI | run `32550666898`: actionlint, shellcheck, YAML parse, and 176 policy tests passed |
 | Review-remediation hosted self-CI | run `32551381890`: actionlint, shellcheck, YAML parse, and 179 policy tests passed |
+| Template-parity hosted self-CI | run `32552045142`: actionlint, shellcheck, YAML parse, and 180 policy tests passed |
 | Live selector replay | PR `#904` exact head selected the later successful attempt; obsolete failures did not poison the result |
 | Cross-repository reference | PR `KARSIFT/karsift-ai-infra#102` passed closing-keyword-plus-target validation |
 

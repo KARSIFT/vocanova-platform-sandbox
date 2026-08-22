@@ -31,18 +31,19 @@ const sharedAdvance = readFileSync(
   path.join(fixtureRoot, ".github/workflows/auto-advance.yml"),
   "utf8",
 );
+const sharedCallerTemplate = readFileSync(
+  path.join(
+    fixtureRoot,
+    "templates/project-repo/.github/workflows/pipeline.yml",
+  ),
+  "utf8",
+);
 const authorityDocs = [
   readFileSync(path.join(repositoryRoot, "AGENTS.md"), "utf8"),
   pipeline,
   readFileSync(path.join(fixtureRoot, "README.md"), "utf8"),
   readFileSync(path.join(fixtureRoot, "prompts/plan.md"), "utf8"),
-  readFileSync(
-    path.join(
-      fixtureRoot,
-      "templates/project-repo/.github/workflows/pipeline.yml",
-    ),
-    "utf8",
-  ),
+  sharedCallerTemplate,
 ].join("\n");
 
 test("VOC-108-TEST-00 through TEST-09: pinned shared policy suite", () => {
@@ -107,11 +108,19 @@ test("VOC-108-TEST-08: caller and shared docs name marker-bound authority", () =
   );
   assert.match(authorityDocs, /closed state alone cannot advance/i);
   assert.match(authorityDocs, /App-authored completion marker/i);
+  assert.match(
+    sharedCallerTemplate,
+    /options: \[[^\]]*verify-remediate-operator-ownership\]/,
+  );
+  assert.match(
+    sharedCallerTemplate,
+    /\n  verify-remediate-operator-ownership:\n/,
+  );
 });
 
 test("VOC-108 fixture is pinned to the consumed shared merge", () => {
   assert.equal(
     readFileSync(path.join(fixtureRoot, "PINNED_SHA.txt"), "utf8").trim(),
-    "81b8c21d5216647a720009deed148587cbc264bd",
+    "ee1b0a8ea8263a6671e753a6d3e80d15c855ddf4",
   );
 });
