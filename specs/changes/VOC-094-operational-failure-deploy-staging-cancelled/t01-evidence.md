@@ -7,7 +7,7 @@ acceptance_criteria:
 tests:
   - VOC-094-TEST-07
   - VOC-088-TEST-09
-date: 2026-08-21
+date: 2026-08-22
 related_change: VOC-094
 cites: VOC-094-EV-00
 gate_status: waiting-for-operator-live-evidence
@@ -15,6 +15,7 @@ live_deployment_claimed: false
 live_evidence_contract: specs/changes/VOC-094-operational-failure-deploy-staging-cancelled/.karsift/live-evidence/VOC-094-T01.yaml
 t00_merge_sha: 7dfd3e000a6b3ed791cd09cd9ef174d8a650b25b
 t00_merge_pr: 788
+migration_base_sha: 2d81955fb57c440422e63df0a23d73a4b1ea6f11
 ---
 
 # VOC-094-T01 — Live verification: queue posture, supersession hygiene, develop deploy
@@ -26,12 +27,12 @@ values, or personal data.
 
 ## T00 merge baseline
 
-| Item | Value |
-|------|-------|
-| Integration branch | `develop` |
-| T00 merge commit | `7dfd3e000a6b3ed791cd09cd9ef174d8a650b25b` |
-| T00 merge PR | https://github.com/KARSIFT/vocanova-platform-sandbox/pull/788 |
-| Merged at | `2026-08-19T19:27:27Z` |
+| Item               | Value                                                         |
+| ------------------ | ------------------------------------------------------------- |
+| Integration branch | `develop`                                                     |
+| T00 merge commit   | `7dfd3e000a6b3ed791cd09cd9ef174d8a650b25b`                    |
+| T00 merge PR       | https://github.com/KARSIFT/vocanova-platform-sandbox/pull/788 |
+| Merged at          | `2026-08-19T19:27:27Z`                                        |
 
 T00 changes (`queue: max`, benign-cancel classifier, observer wiring) are on
 `develop` at the commit above.
@@ -41,18 +42,25 @@ T00 changes (`queue: max`, benign-cancel classifier, observer wiring) are on
 Machine-readable contract:
 `.karsift/live-evidence/VOC-094-T01.yaml`
 
-| Field | Declared value |
-|-------|----------------|
-| Workflow | `deploy-staging.yml` |
-| Job | `deploy to staging` |
-| Events | `push`, `workflow_dispatch` |
-| Branch | `develop` |
-| SHA lineage | `integration_contains_pr_head` |
-| Mode | observe-only (no `dispatch` block) |
+| Field       | Declared value                                    |
+| ----------- | ------------------------------------------------- |
+| Workflow    | `deploy-staging.yml`                              |
+| Job         | `deploy to staging`                               |
+| Events      | `push`, `workflow_dispatch`                       |
+| Branch      | `develop`                                         |
+| SHA lineage | `exact_sha` pinned to the deployed migration base |
+| Mode        | observe-only (no `dispatch` block)                |
 
 Qualifying proof is recorded only in allowlisted reconcile metadata
 (`.karsift/live-evidence/VOC-094-T01.result.json`). No secrets or personal data
 belong in governed comments or this evidence file.
+
+The in-place branch reset made PR #791 identical to `develop`, so GitHub closed
+the empty PR before a waiting review could run. This evidence-only carrier pins
+the exact protected `develop` revision selected by the migration. That revision
+completed the full staging deployment, health/OAuth checks, and browser core-loop
+through the normal workflow. The reconciler must still qualify the run and write
+the result before a fresh exact-SHA review may pass.
 
 ## Prior deterministic proof retained (AC-05(b) partial)
 
@@ -85,18 +93,17 @@ fingerprint issue was observed at migration time.
 
 ## Operator action (after waiting review)
 
-1. Confirm PR #791 shows `VERDICT: WAITING FOR OPERATOR LIVE EVIDENCE`, the
-   contract on the current head SHA, and an empty diff from `develop` (see
-   VOC-097-T04 migration record).
-2. After the next successful `deploy-staging` `push` on `develop`, allow hourly
-   reconcile or dispatch manual `observe` with the successful run id only.
+1. Confirm PR #791 shows `VERDICT: WAITING FOR OPERATOR LIVE EVIDENCE` and the
+   exact protected `develop` SHA declared by the reviewed contract.
+2. Allow hourly reconcile or dispatch manual `observe` with the successful run
+   id only; the run must match the contract's pinned SHA.
 3. After reconcile writes `VOC-094-T01.result.json`, ensure fresh exact-SHA
    independent review on the new PR head before merge.
 
 ## Acceptance mapping
 
-| ID | Result |
-|----|--------|
-| VOC-094-AC-05(a) | **waiting** — green head deploy via reconcile |
+| ID               | Result                                                                       |
+| ---------------- | ---------------------------------------------------------------------------- |
+| VOC-094-AC-05(a) | **waiting** — green head deploy via reconcile                                |
 | VOC-094-AC-05(b) | **partial** — deterministic + queue proof retained; live head deploy pending |
-| VOC-094-AC-06 | **satisfied** at migration baseline |
+| VOC-094-AC-06    | **satisfied** at migration baseline                                          |

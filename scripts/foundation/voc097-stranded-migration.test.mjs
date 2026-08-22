@@ -40,7 +40,8 @@ const stranded = [
     branch: "develop",
     workflowFile: "deploy-staging.yml",
     jobName: "deploy to staging",
-    lineage: "integration_contains_pr_head",
+    lineage: "exact_sha",
+    exactSha: "2d81955fb57c440422e63df0a23d73a4b1ea6f11",
     requiresDispatch: false,
   },
 ];
