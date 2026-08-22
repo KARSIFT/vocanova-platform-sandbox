@@ -10,10 +10,12 @@ untrusted evidence fails closed.
 
 ## VOC-108-AC-01 — Repository-safe task references
 
-Generated cross-repository PR/evidence text contains no `close`, `closes`,
-`closed`, `fix`, `fixes`, `fixed`, `resolve`, `resolves`, or `resolved` keyword
-that targets a caller issue. The caller implementation PR retains its expected
-local task binding.
+Generated cross-repository PR/evidence text contains no GitHub-recognized closing
+keyword followed by a caller issue target (`close`/`closes`/`closed`,
+`fix`/`fixes`/`fixed`, or `resolve`/`resolves`/`resolved`, case-insensitive, using
+GitHub's keyword-plus-issue-reference grammar). Tests MUST inspect parsed issue
+targets rather than naively banning those words from ordinary prose. The caller
+implementation PR retains its expected local task binding.
 
 ## VOC-108-AC-02 — Caller-merge-bound completion
 

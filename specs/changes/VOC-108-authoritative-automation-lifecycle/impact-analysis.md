@@ -16,8 +16,9 @@
 
 ## Risk
 
-The proposed risk is R3 because an incorrect decision could block valid work or
-promote incomplete integration state. The design reduces that risk with exact
+The adopted plan proposed R3. The actual task floor is R4 because the package
+changes pinned governance workflow fixtures whose decisions can block valid work
+or promote incomplete integration state. The design reduces that risk with exact
 repository/PR/base/head binding, latest-attempt semantics, App-authored immutable
 completion markers, per-release serialization, negative fixtures, and
 fail-closed ambiguity handling.

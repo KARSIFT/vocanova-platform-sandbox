@@ -4,7 +4,7 @@ slug: authoritative-automation-lifecycle
 title: Authoritative automation lifecycle state
 type: infrastructure
 status: adopted
-risk: R3
+risk: R4
 planned_implementation_risk_floor: Measured at drafting against KARSIFT/karsift-ai-infra
   reusable workflow, lifecycle-helper, test, and README paths plus caller foundation-test
   and package-evidence paths if required. The detected semantic CI/CD and .github/workflows
@@ -71,7 +71,8 @@ affected_areas:
 - KARSIFT/karsift-ai-infra/.github/workflows/implement.yml and prompts when cross-repository
   PR text is produced
 - KARSIFT/karsift-ai-infra/config lifecycle helpers, tests, and README
-- caller pipeline/foundation contract tests and docs only if required
+- .github/workflows/pipeline.yml and/or the shared caller workflow template for the terminal external-check wake entrypoint
+- caller foundation contract tests and docs for the wake-path and lifecycle contracts
 - specs/changes/VOC-108-authoritative-automation-lifecycle/
 implementation:
   authorized: true

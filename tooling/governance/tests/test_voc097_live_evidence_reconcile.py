@@ -347,32 +347,77 @@ VERDICT: PASS
         script = script.replace("${{ github.run_id }}", "200")
         script = script.replace("${{ github.repository }}", "KARSIFT/example")
         script = script.replace("karsift-ai-infra/config/", "config/")
+        script = script.replace(
+            "PYTHONPATH=karsift-ai-infra/config",
+            f"PYTHONPATH={FIXTURE_INFRA_ROOT / 'config'}",
+        )
         old_head = "e" * 40
         gh_stub = f"""
         gh() {{
-          if [ "$1 $2 $3" = "pr view 12" ]; then
+          if [ "$1 $2 ${{3:-}}" = "pr view 12" ]; then
             printf '%s\\n' '{{"body":"Risk classification: R4\\nImplements task `VOC-097-T02`\\nPackage path: `specs/changes/VOC-097-example`\\nCloses #34","author":{{"login":"fixture"}},"headRefName":"agent/voc-097-t02","headRefOid":"{HEAD}","baseRefOid":"{BASE}","isDraft":false}}'
             return 0
           fi
-          if [ "$1 $2 $3" = "pr checks 12" ]; then
+          if [ "$1 $2 ${{3:-}}" = "pr checks 12" ]; then
             printf '%s\\n' '[{{"name":"ci / ci","state":"SUCCESS"}},{{"name":"review / publish-review","state":"SUCCESS"}}]'
             return 0
           fi
           if [ "$1" = "api" ]; then
-            printf '%s\\n' '[[{{"id":1,"created_at":"2026-08-21T00:00:00Z","user":{{"login":"karsift-ai-infra-bot[bot]","type":"Bot"}},"body":"**Independent verification - bound to commit `{old_head}`**\\ntask_id: `VOC-097-T02`\\npackage_path: `specs/changes/VOC-097-example`\\nauthority_issue: `34`\\nbase_sha: `{BASE}`\\nVERDICT: PASS"}}]]'
+            case "$*" in
+              *"/commits/{HEAD}/check-runs?per_page=100"*)
+                printf '%s\\n' '[{{"total_count":2,"check_runs":[{{"id":11,"name":"ci / ci","status":"completed","conclusion":"success","app":{{"slug":"github-actions"}},"started_at":"2026-08-21T00:00:01Z","head_sha":"{HEAD}","details_url":"https://github.com/KARSIFT/example/actions/runs/301/job/1"}},{{"id":12,"name":"review / publish-review","status":"completed","conclusion":"success","app":{{"slug":"github-actions"}},"started_at":"2026-08-21T00:00:02Z","head_sha":"{HEAD}","details_url":"https://github.com/KARSIFT/example/actions/runs/301/job/2"}}]}}]'
+                ;;
+              *"/pulls/12"*)
+                printf '%s\n' '{{"number":12,"head":{{"sha":"{HEAD}","repo":{{"full_name":"KARSIFT/example"}}}},"base":{{"sha":"{BASE}","repo":{{"full_name":"KARSIFT/example"}}}}}}'
+                ;;
+              *"/commits/{HEAD}/status?per_page=100"*)
+                printf '%s\\n' '[{{"total_count":0,"statuses":[]}}]'
+                ;;
+              *"/actions/runs/301"*)
+                printf '%s\\n' '{{"id":301,"event":"pull_request","head_sha":"{HEAD}","path":".github/workflows/pipeline.yml","repository":{{"full_name":"KARSIFT/example"}}}}'
+                ;;
+              *"/issues/12/comments?per_page=100"*)
+                printf '%s\\n' '[[{{"id":1,"created_at":"2026-08-21T00:00:00Z","user":{{"login":"karsift-ai-infra-bot[bot]","type":"Bot"}},"body":"**Independent verification - bound to commit `{old_head}`**\\ntask_id: `VOC-097-T02`\\npackage_path: `specs/changes/VOC-097-example`\\nauthority_issue: `34`\\nbase_sha: `{BASE}`\\nVERDICT: PASS"}}]]'
+                ;;
+              *)
+                printf 'unexpected gh api invocation: %s\\n' "$*" >&2
+                return 97
+                ;;
+            esac
             return 0
           fi
           printf 'unexpected gh invocation: %s\\n' "$*" >&2
           return 97
         }}
+        export -f gh
         """
         with tempfile.TemporaryDirectory() as scratch:
+            gh_path = os.path.join(scratch, "gh")
+            with open(gh_path, "w", encoding="utf-8") as gh_file:
+                gh_file.write(
+                    "#!/usr/bin/env bash\n"
+                    + textwrap.dedent(gh_stub)
+                    + '\ngh "$@"\n'
+                )
+            os.chmod(gh_path, 0o755)
             checks_path = os.path.join(scratch, "pr-checks.json")
             verdict_path = os.path.join(scratch, "review-verdict.md")
             script = script.replace("/tmp/pr-checks.json", checks_path)
             script = script.replace("/tmp/review-verdict.md", verdict_path)
+            for name in (
+                "merge-pr.json",
+                "merge-check-runs.json",
+                "merge-statuses.json",
+                "merge-authoritative.json",
+            ):
+                script = script.replace(f"/tmp/{name}", os.path.join(scratch, name))
             output_path = os.path.join(scratch, "github-output")
-            env = {**os.environ, "GITHUB_OUTPUT": output_path}
+            env = {
+                **os.environ,
+                "GITHUB_OUTPUT": output_path,
+                "GITHUB_REPOSITORY": "KARSIFT/example",
+                "PATH": scratch + os.pathsep + os.environ["PATH"],
+            }
             result = subprocess.run(
                 ["bash", "-c", textwrap.dedent(gh_stub) + script],
                 cwd=FIXTURE_INFRA_ROOT,
@@ -520,7 +565,10 @@ VERDICT: PASS
 
     def test_caller_polls_without_workflow_run_recursion(self):
         self.assertIn('cron: "0 * * * *"', self.pipeline)
-        self.assertNotIn("  workflow_run:", self.pipeline)
+        workflow_run = self.pipeline.split("  workflow_run:", 1)[1].split(
+            "  workflow_dispatch:", 1
+        )[0]
+        self.assertNotIn("pipeline", workflow_run)
         self.assertIn("reconcile-live-evidence", self.pipeline)
         self.assertIn("live_evidence_run_id", self.pipeline)
 

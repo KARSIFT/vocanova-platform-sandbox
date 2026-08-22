@@ -3,13 +3,13 @@
 | Field | Value |
 | --- | --- |
 | Package | `VOC-108` |
-| Status | `draft` |
-| Risk | `R3` (draft proposal; independently classified per task) |
+| Status | `adopted` |
+| Risk | `R4` actual task floor (`R3` at plan adoption; pinned governance fixtures establish R4) |
 | Authority model | A-004 active |
 | Requirement source | GitHub issue [#903](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/903) |
 | Target branch | `develop` |
-| Approval | `not-approved` |
-| Implementation authorized | `false` |
+| Approval | `autonomously-adopted-after-independent-verification` |
+| Implementation authorized | `true` |
 | `automatic_merge_allowed` | `true` |
 
 ## Problem
@@ -40,7 +40,7 @@ validation/model time and temporarily advanced release state too early.
    without rerunning expensive unchanged-SHA CI or independent review.
 6. Add deterministic fixtures for duplicate runs, stale failure/later pass,
    later failure/older pass, cross-repository references, premature closure,
-   check-completion races, and duplicate merge triggers.
+   release-evaluation races, and duplicate merge triggers.
 
 ## Task
 
@@ -48,7 +48,7 @@ validation/model time and temporarily advanced release state too early.
 and deterministic fixtures in `KARSIFT/karsift-ai-infra`, with caller-side
 contract/evidence updates only where required.
 
-This draft does not adopt or authorize itself. It deliberately excludes the
+The adopted package does not broaden its own authority. It deliberately excludes the
 scheduled-synthetics branch-selection footgun, stale operational-failure marker
 lifecycle, Node runtime deprecations, historical issue cleanup, application
 behavior, deployments, OAuth policy, secrets, databases, and monitoring

@@ -1,4 +1,4 @@
-# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106)
+# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106, VOC-108)
 
 These copies are deterministic fixtures for caller-repo policy regressions.
 They mirror `KARSIFT/karsift-ai-infra` at the SHA in `PINNED_SHA.txt` so
@@ -11,7 +11,7 @@ contracts without cloning the infra repository in CI.
 
 They are not a second runtime source of truth. Callers still `uses:`
 `KARSIFT/karsift-ai-infra/...@main`. Update the fixtures when VOC-080-,
-VOC-097-, VOC-102-, VOC-104-, or VOC-106-related infra contracts change and
+VOC-097-, VOC-102-, VOC-104-, VOC-106-, or VOC-108-related infra contracts change and
 record the new pin in evidence.
 
 VOC-104 adds the pinned `ready-for-review-reuse.yml` and
@@ -47,8 +47,9 @@ current compatibility context.
 ## auto-advance ownership (VOC-102)
 
 Adoption starts the first task automatically. The adopted roster records an explicit
-`depends_on` edge from every later task to its predecessor, and `auto-advance.yml` releases the
-next task only after the preceding task's implementation PR merges and its tracking issue closes.
+`depends_on` edge from every later task to its predecessor. `auto-advance.yml` releases the next
+task only after one valid App-authored completion marker proves the preceding task's exact reviewed
+caller PR merged. The issue-close event is only a wake-up hint; closed state alone cannot advance.
 For ordinary implementation tasks it dispatches `implement.yml` attempt 1. When the next roster
 task has a valid `operator` or `live-actions` contract at
 `<package>/.karsift/live-evidence/<task_id>.yaml`, auto-advance instead prepares a deterministic
@@ -90,3 +91,32 @@ implementer's permissions or secrets.
 The VOC-106 workflow, policy, verifier, and regression-test copies correspond to
 shared-infra merge `db164eb3905a96b74b039ab6aa36944408bf0a44`, including the
 hosted verifier base-SHA adapter fix recorded in this package's T00 remediation.
+
+## authoritative lifecycle state (VOC-108)
+
+The current fixture pin advances to shared-infra merge
+`d3108dfdef34e2f98c028916e95c36130d329132`. Adoption, merge/reuse, and release
+select the newest authoritative attempt per logical exact-SHA gate from complete
+paginated histories and bind the selected evidence to the authenticated pull
+request's repository, number, base, and head. The merge gate writes one App-authored
+caller-merge marker only for task branches before emitting the task close event;
+auto-advance and release validate that same marker against live PR state. A
+premature close is a safe wake-up no-op. Foreign qualified closing references are
+rejected at merge time, while cross-repository links remain non-closing.
+Automatic, reconcile, promotion-PR, check-provider, and external-workflow wake-ups
+share one serialized promotion evaluator and one exact-head merge command. Shared
+instructions explicitly define issue closure as a wake-up hint rather than task
+completion authority.
+The pinned caller template also retains the read-only
+`verify-remediate-operator-ownership` dispatch surface used by live callers.
+External `check_run` wake-ups invoke release evaluation only when the check is
+attached to the `develop` → `main` promotion pull request.
+Auto-advance comments and diagnostics use the current serialized-convergence
+name, preventing the retired `check-completion` job name from becoming false
+operator guidance.
+The generated adoption roster PR is evaluated through the same paginated,
+exact-identity newest-attempt selector as the merged plan head. Its complete
+green logical set must stabilize on one unchanged head before exact-SHA merge.
+The merge-gate App credential contract names both authoritative completion
+actions: publish the immutable task marker, then close the linked task so the
+release observer receives its authenticated wake-up events.

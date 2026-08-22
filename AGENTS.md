@@ -221,10 +221,11 @@ Do not invent or report an unavailable check as passing.
 no founder `approved` comment when applicable gates pass:
 
 - `karsift-ai-infra`'s `release.yml` promotes completed packages from `develop` to
-  `main` automatically when the roster closes and promotion checks pass (see
-  `pipeline.yml`'s `release` job). CI and independent review having already passed
-  on every task PR that went into the package is the gate. The release audit issue
-  still opens for visibility; it closes once promotion succeeds.
+  `main` only when every roster entry has one valid App-authored completion marker
+  bound to its live exact reviewed caller-PR merge and the newest promotion checks
+  pass (see `pipeline.yml`'s `release` job). Issue closure is only a wake-up hint;
+  closed state alone cannot advance. The release audit issue opens for visibility
+  and closes once promotion succeeds.
 - `deploy-production.yml` triggers on every push to `main` (in addition to manual
   `workflow_dispatch` as fallback/retry). A successful promotion PR merge produces
   that push, so deployment follows automatically with no separate dispatch step.

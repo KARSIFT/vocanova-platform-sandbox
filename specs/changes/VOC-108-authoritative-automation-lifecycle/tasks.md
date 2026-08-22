@@ -9,7 +9,7 @@ authorization are separate.
 - Acceptance criteria: `VOC-108-AC-00` through `VOC-108-AC-07`
 - Tests: `VOC-108-TEST-00` through `VOC-108-TEST-09`
 - Evidence: `VOC-108-EV-00` (`t00-evidence.md`)
-- Status: pending
+- Status: implemented — exact caller merge and post-merge evidence pending
 
 ### Required work
 
