@@ -23,24 +23,6 @@ class VerificationResult:
     reason: str = ""
 
 
-def expected_base_sha_from_run(run: dict) -> str:
-    """Extract the Actions run's associated PR base SHA without stringifying the list.
-
-    `str(run["pull_requests"])[0]` yields `"["` and then crashes on `.get`; keep the
-    list indexed and fall back to empty when the association is absent.
-    """
-    pull_requests = run.get("pull_requests") or []
-    if not isinstance(pull_requests, list) or not pull_requests:
-        return ""
-    first = pull_requests[0]
-    if not isinstance(first, dict):
-        return ""
-    base = first.get("base") or {}
-    if not isinstance(base, dict):
-        return ""
-    return str(base.get("sha") or "")
-
-
 def verify_source_run(
     *,
     run: dict,
@@ -61,11 +43,15 @@ def verify_source_run(
     if not isinstance(pull_requests, list) or len(pull_requests) != 1:
         return VerificationResult(False, "source_pr_mismatch")
     source_pr = pull_requests[0]
+    if not isinstance(source_pr, dict):
+        return VerificationResult(False, "source_pr_mismatch")
     if source_pr.get("number") != pr_number:
         return VerificationResult(False, "source_pr_mismatch")
-    if source_pr.get("head", {}).get("sha") != expected_head_sha:
+    head = source_pr.get("head")
+    base = source_pr.get("base")
+    if not isinstance(head, dict) or head.get("sha") != expected_head_sha:
         return VerificationResult(False, "source_head_mismatch")
-    if source_pr.get("base", {}).get("sha") != expected_base_sha:
+    if not isinstance(base, dict) or base.get("sha") != expected_base_sha:
         return VerificationResult(False, "source_base_mismatch")
     return VerificationResult(True)
 

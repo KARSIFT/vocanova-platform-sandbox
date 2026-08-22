@@ -24,11 +24,12 @@ High: hosted
 `verify-remediate-operator-ownership-runner.py` extracted base SHA via
 `str(run.get("pull_requests") or [{}])[0].get(...)`, which stringifies the list
 to `"[{...}]"`, indexes the character `"["`, and raises `AttributeError` before
-the PR-view fallback. Fixed by adding pure helper
-`expected_base_sha_from_run` and calling it from the runner (fixture + infra).
+the PR-view fallback. Fixed by adding fail-closed helper
+`associated_base_sha` and calling it from the runner (fixture + infra).
 TEST-11 now asserts the helper and forbids the `str(run.get("pull_requests"`
-pattern. Medium: `PINNED_SHA.txt` updated to infra merge
-`54573e94e62e671f023f521a07770b1d30889591`. Low: fixture README restored to
+pattern. Malformed source associations now return a policy refusal instead of
+raising. Medium: `PINNED_SHA.txt` updated to infra merge
+`db164eb3905a96b74b039ab6aa36944408bf0a44`. Low: fixture README restored to
 pinned-contract framing with an explicit VOC-106 section.
 
 ## commands
@@ -49,26 +50,30 @@ git diff --check
 
 ## results
 
-- Shared-infrastructure PR `KARSIFT/karsift-ai-infra#94` merged at
-  `54573e94e62e671f023f521a07770b1d30889591`. Hosted `actionlint`,
-  `shellcheck`, YAML parse, and policy-test jobs all passed on that merge.
-- Attempt-2 verifier base-SHA fix applied in calling-repo fixtures
-  (`tooling/governance/fixtures/karsift-ai-infra/config/`) and prepared in the
-  local untracked `karsift-ai-infra/` tree (same three files). This implementer
-  session had no GitHub credentials to open the follow-up infra PR; `@main`
-  still needs that one-line adapter helper merged before T01's hosted
-  `verify-remediate-operator-ownership` dispatch can succeed against live
-  Actions metadata.
+- Shared-infrastructure PR `KARSIFT/karsift-ai-infra#95` merged at
+  `db164eb3905a96b74b039ab6aa36944408bf0a44`, following the original #94
+  ownership-gate merge. Hosted `actionlint`, `shellcheck`, YAML parse, and
+  policy-test jobs all passed; 148 shared-infrastructure unit tests passed
+  locally before publication.
+- Attempt-2 verifier base-SHA fix is synchronized from that merged `@main`
+  source into the calling-repo fixtures. T01's hosted
+  `verify-remediate-operator-ownership` dispatch can therefore exercise the
+  corrected adapter against live Actions metadata.
 - `python3 -m unittest tooling.governance.tests.test_remediate_ownership -v`:
   **9 passed** (TEST-00–07, TEST-11 including base-SHA helper regression).
 - `node --test scripts/foundation/voc106-remediate-ownership.test.mjs`:
   **3 passed** (TEST-00–07 matrix via unittest, TEST-10 docs, TEST-11 wiring).
-- Local infra `test_remediation_ownership.py`: **6 passed** (includes base-SHA
-  extraction regression).
+- Local infra unit suite: **148 passed** (includes base-SHA extraction and
+  malformed-association regressions).
 - `validate-governance.sh`: **passed**.
 - `classify-change-risk.sh`: **passed** (path floor R4 on fixture/governance
   paths; no PR risk declaration in this local run).
 - `git diff --check`: **passed**.
+- Local `pnpm validate` passed workspace, formatting, lint, type checks, 235
+  foundation tests, API-client tests, and web middleware tests. It reached the
+  API suite and stopped only because this WSL environment has no Docker command
+  for the two disposable-Postgres controlled-signup tests; hosted exact-SHA CI
+  remains the acceptance evidence for those tests.
 
 ## implementation notes
 
@@ -85,7 +90,7 @@ git diff --check
 - Infra README and `docs/operations/live-evidence.md` document ownership-gated
   FAIL/CI remediation and retained ordinary bounded retry.
 - Fixture pin: `tooling/governance/fixtures/karsift-ai-infra/PINNED_SHA.txt` →
-  `54573e94e62e671f023f521a07770b1d30889591`.
+  `db164eb3905a96b74b039ab6aa36944408bf0a44`.
 - VOC-106-TEST-08 / VOC-106-TEST-09 live proof remains operator-owned T01 work.
 
 No secrets, logs, artifacts, or unrelated package live evidence recorded here.

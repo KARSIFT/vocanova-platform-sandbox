@@ -28,6 +28,10 @@ verifier = load_module(
     "verify_remediate_operator_ownership",
     CONFIG / "verify_remediate_operator_ownership.py",
 )
+verifier_runner = load_module(
+    "verify_remediate_operator_ownership_runner",
+    CONFIG / "verify-remediate-operator-ownership-runner.py",
+)
 
 
 def contract_yaml(task_id: str, ownership_value: str = "operator") -> str:
@@ -233,20 +237,38 @@ class RemediateOwnershipTests(unittest.TestCase):
             runner_source,
             r'str\(\s*run\.get\(\s*["\']pull_requests["\']',
         )
-        self.assertIn("expected_base_sha_from_run(run)", runner_source)
+        self.assertIn("associated_base_sha(run)", runner_source)
 
         base_sha = "b" * 40
         self.assertEqual(
-            verifier.expected_base_sha_from_run(
+            verifier_runner.associated_base_sha(
                 {"pull_requests": [{"number": 1, "base": {"sha": base_sha}}]}
             ),
             base_sha,
         )
-        self.assertEqual(verifier.expected_base_sha_from_run({"pull_requests": []}), "")
-        self.assertEqual(verifier.expected_base_sha_from_run({}), "")
+        self.assertEqual(verifier_runner.associated_base_sha({"pull_requests": []}), "")
+        self.assertEqual(verifier_runner.associated_base_sha({}), "")
         self.assertEqual(
-            verifier.expected_base_sha_from_run({"pull_requests": ["not-a-dict"]}),
+            verifier_runner.associated_base_sha({"pull_requests": ["not-a-dict"]}),
             "",
+        )
+
+        malformed = {
+            "repository": {"full_name": "KARSIFT/example"},
+            "name": "pipeline",
+            "path": ".github/workflows/pipeline.yml",
+            "event": "pull_request",
+            "status": "completed",
+            "pull_requests": [{"number": 1, "head": None, "base": None}],
+        }
+        self.assertFalse(
+            verifier.verify_source_run(
+                run=malformed,
+                repository="KARSIFT/example",
+                pr_number=1,
+                expected_head_sha="a" * 40,
+                expected_base_sha=base_sha,
+            ).ok
         )
 
         jobs = [

@@ -88,5 +88,5 @@ separate repository-controlled responsibility; adding it must not broaden the
 implementer's permissions or secrets.
 
 The VOC-106 workflow, policy, verifier, and regression-test copies correspond to
-shared-infra merge `54573e94e62e671f023f521a07770b1d30889591`, plus the hosted
-verifier base-SHA adapter fix recorded in this package's T00 remediation.
+shared-infra merge `db164eb3905a96b74b039ab6aa36944408bf0a44`, including the
+hosted verifier base-SHA adapter fix recorded in this package's T00 remediation.
