@@ -49,7 +49,7 @@ export const BENCHMARK_QUESTIONS = [
 ];
 
 const CODEX_MODEL = "gpt-5.6-sol";
-const CURSOR_MODEL = "composer-2.5";
+const CURSOR_MODEL = "auto";
 
 function sha256File(relativePath) {
   return createHash("sha256")
@@ -421,8 +421,6 @@ function captureCursorDiscovery() {
         "stream-json",
         "--mode",
         "ask",
-        "--sandbox",
-        "enabled",
         "--trust",
         "--model",
         CURSOR_MODEL,
@@ -438,12 +436,11 @@ function captureCursorDiscovery() {
     const skillReads = completedReadPaths.filter(
       (readPath) => readPath === navigatorRelativePath,
     );
-    const initializedInRequestedCwd = events.some(
-      (event) =>
-        event.type === "system" &&
-        event.subtype === "init" &&
-        path.resolve(event.cwd ?? "") === cwd,
+    const initialization = events.find(
+      (event) => event.type === "system" && event.subtype === "init",
     );
+    const initializedInRequestedCwd =
+      path.resolve(initialization?.cwd ?? "") === cwd;
     const succeeded = events.some(
       (event) =>
         event.type === "result" &&
@@ -457,7 +454,8 @@ function captureCursorDiscovery() {
         succeeded && initializedInRequestedCwd && skillReads.length > 0
           ? "pass"
           : "fail",
-      model: CURSOR_MODEL,
+      model: initialization?.model ?? CURSOR_MODEL,
+      permission_mode: initialization?.permissionMode ?? "ask",
       structured_event_count: events.length,
       completed_read_tool_call_count: completedReadPaths.length,
       canonical_skill_reads: [...new Set(skillReads)],
