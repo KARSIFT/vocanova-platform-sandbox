@@ -1,42 +1,48 @@
 # VOC-112-T00 evidence — skill framework, adapters, and validation
 
-Draft carrier for implementation evidence. Do not record secrets, credentials, session
-values, OAuth material, personal data, or complete CI logs.
+Do not record secrets, credentials, session values, OAuth material, personal data, or
+complete CI logs.
 
 ## gate_status
 
-pending — populate at T00 implementation time
+pass — T00 framework, adapters contract, provenance schema, and validation landed
 
 ## Scope implemented
 
-Record the exact files added for:
+| File | Action |
+|------|--------|
+| `.agents/skills/README.md` | created — one-source architecture, frontmatter, budgets, governance precedence |
+| `.agents/skills/provenance.schema.yaml` | created — immutable per-skill record schema (`repository-native`, `adapted`) |
+| `.claude/skills/README.md` | created — adapter loader contract (`${CLAUDE_PROJECT_DIR}` one-line loader) |
+| `scripts/foundation/voc112-agent-skills.test.mjs` | created — data-driven validator with positive/negative fixtures |
+| `docs/development/agent-skills.md` | created — skeleton sections (completed in T04) |
 
-- `.agents/skills/README.md`
-- `.agents/skills/provenance.schema.yaml` (immutable per-skill schema)
-- `.claude/skills/README.md`
-- `scripts/foundation/voc112-agent-skills.test.mjs`
-- `docs/development/agent-skills.md` skeleton
+No canonical skill bodies were added in T00; later tasks add skill directories and
+`PROVENANCE.yaml` records without editing the T00 validator or schema.
 
 ## Validation commands
 
 | Command | Result | Notes |
 |---------|--------|-------|
-| `node --test scripts/foundation/voc112-agent-skills.test.mjs` | pending | |
-| `bash scripts/governance/validate-governance.sh` | pending | if AGENTS.md unchanged in T00, note N/A |
-| `bash scripts/governance/classify-change-risk.sh` | pending | |
-| `git diff --check` | pending | |
+| `node --test scripts/foundation/voc112-agent-skills.test.mjs` | pass | 9 tests, 0 failures; exact adapter target, opt-in metadata parity, denylist attribution, and strict provenance fixtures included |
+| `bash scripts/governance/validate-governance.sh` | pass | AGENTS.md unchanged in T00 |
+| `bash scripts/governance/classify-change-risk.sh` | pass | path floor R1 reported |
+| `git diff --check` | pass | no whitespace errors |
 
 ## Adapter/canonical parity sample
 
-Record a table of skill names validated in T00 (may be README-only bootstrap until later tasks add bodies).
+T00 introduces framework files only; no skill subdirectories yet.
 
 | Skill | Canonical path | Claude adapter | Symlink |
 |-------|----------------|----------------|---------|
-| pending | pending | pending | none expected |
+| _(none — T01/T02/T03 add skills)_ | — | — | none |
 
-Also record that the validator dynamically discovers per-skill `PROVENANCE.yaml` files and
-that T01/T02/T03 require no shared registry or validator edit.
+The validator dynamically discovers `.agents/skills/*/SKILL.md` and requires matching
+`.claude/skills/*/SKILL.md` adapters, per-skill `PROVENANCE.yaml`, and manifest
+coverage. Parallel tasks add conforming skill directories without a shared registry or
+T00 validator edit.
 
 ## Acceptance mapping
 
-- `VOC-112-AC-00` / `VOC-112-EV-00` — complete when validation passes and parity table recorded.
+- `VOC-112-AC-00` / `VOC-112-EV-00` — framework validation passes; parity table recorded;
+  T01–T03 can add skills in parallel.
