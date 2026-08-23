@@ -5,7 +5,7 @@ upstream_repo: https://github.com/testdino-hq/playwright-skill
 upstream_commit: d3be9ca4d7303e2aee3eba4842963abf573117b0
 upstream_path: SKILL.md
 upstream_sha256: 4929cff14de61f93d72cbbef192edc880cf2fc244572effcc3bf8724610284ba
-local_sha256: b9829d1d18ab48ca522c0c6bab9f200a524040b5810f481b1595b2f607bf7209
+local_sha256: bbf0716b0473745cab398fab0784582e6526b3e6aeaad068207443af7db8dd21
 license: MIT
 adaptation_notes: >
   Scoped to apps/web @playwright/test 1.62.1; repository commands only; removed global/unpinned installs and third-party automation guidance.
@@ -15,4 +15,4 @@ committed_files:
   - path: LICENSE
     sha256: 9b745cd92c3dfb415f5adefb81ff71674dd6a764cba8aa3ab14a920d1ab272ec
   - path: SKILL.md
-    sha256: b9829d1d18ab48ca522c0c6bab9f200a524040b5810f481b1595b2f607bf7209
+    sha256: bbf0716b0473745cab398fab0784582e6526b3e6aeaad068207443af7db8dd21

@@ -196,6 +196,16 @@ test("VOC-112-TEST-09: shared skills include repository adaptations and provenan
       assert.equal(provenance.source, "repository-native");
       assert.match(
         skillSource,
+        /https:\/\/react\.dev\/reference\/react\/Profiler/,
+        "react-next-performance must cite current official React guidance",
+      );
+      assert.match(
+        skillSource,
+        /https:\/\/nextjs\.org\/docs\/app\/guides\/production-checklist/,
+        "react-next-performance must cite current official Next.js guidance",
+      );
+      assert.match(
+        skillSource,
         new RegExp(VERCEL_REJECTED_UPSTREAM),
         "react-next-performance must record Vercel source rejection",
       );
@@ -213,6 +223,16 @@ test("VOC-112-TEST-09: shared skills include repository adaptations and provenan
     if (skillName === "playwright-browser-testing") {
       assert.match(skillSource, /@playwright\/test/);
       assert.match(skillSource, /apps\/web/);
+      assert.match(
+        skillSource,
+        /infra\/scripts\/install-playwright-chromium\.sh/,
+        "must use the repository-owned browser provisioning prerequisite",
+      );
+      assert.doesNotMatch(
+        skillSource,
+        /browsers? install(?:s|ed)?[^\n]*pnpm install/i,
+        "pnpm dependency installation must not be described as browser provisioning",
+      );
       assert.doesNotMatch(
         skillSource,
         /npm install -g|@latest|npx playwright install(?!.*frozen)/i,

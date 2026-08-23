@@ -7,8 +7,9 @@ description: Use when optimizing React 19 or Next.js 16 web performance in apps/
 
 Repository-native guidance for `apps/web` (Next.js `16.3.x`, React `19.2.x`). Authoritative docs:
 
-- [React docs — performance](https://react.dev/reference/react)
-- [Next.js docs — optimizing](https://nextjs.org/docs/app/building-your-application/optimizing)
+- [React Profiler](https://react.dev/reference/react/Profiler)
+- [Next.js production checklist](https://nextjs.org/docs/app/guides/production-checklist)
+- [Next.js Server and Client Components](https://nextjs.org/docs/app/getting-started/server-and-client-components)
 
 ## Governance precedence
 
@@ -66,13 +67,13 @@ When this skill conflicts with `AGENTS.md`, `CLAUDE.md`, approved change package
 
 ## Validation
 
-| Check | Command |
-|-------|---------|
-| Typecheck | `pnpm --filter @vocanova/web typecheck` |
-| Build | `pnpm --filter @vocanova/web build` |
-| E2E / a11y | `pnpm --filter @vocanova/web test:e2e` |
-| Lighthouse | `pnpm --filter @vocanova/web test:lighthouse` |
-| Full workspace | `pnpm validate` |
+| Check          | Command                                       |
+| -------------- | --------------------------------------------- |
+| Typecheck      | `pnpm --filter @vocanova/web typecheck`       |
+| Build          | `pnpm --filter @vocanova/web build`           |
+| E2E / a11y     | `pnpm --filter @vocanova/web test:e2e`        |
+| Lighthouse     | `pnpm --filter @vocanova/web test:lighthouse` |
+| Full workspace | `pnpm validate`                               |
 
 ## Safety
 

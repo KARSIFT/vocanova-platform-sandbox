@@ -37,17 +37,26 @@ pnpm --filter @vocanova/web test:e2e
 pnpm --filter @vocanova/web typecheck:e2e
 ```
 
-Playwright browsers install via the workspace lockfile during `pnpm install --frozen-lockfile`. **Do not** run global Playwright installs or unpinned `npx playwright` downloads.
+`pnpm install --frozen-lockfile` installs the pinned package, not its Chromium
+binary. Provision Chromium separately with the repository-owned prerequisite:
+
+```bash
+bash infra/scripts/install-playwright-chromium.sh
+```
+
+That script invokes the workspace-pinned Playwright version and is the path used by
+CI. Follow `apps/web/tests/e2e/README.md`; **do not** run global Playwright installs
+or unpinned `npx playwright` downloads.
 
 ## Layout
 
-| Path | Purpose |
-|------|---------|
-| `apps/web/playwright.config.ts` | Projects, webServer, reporters |
-| `apps/web/tests/e2e/*.spec.ts` | Core-loop and accessibility specs |
-| `apps/web/tests/e2e/axe-helper.ts` | Shared axe assertions |
-| `apps/web/tests/e2e/mock-api-server.mjs` | Local API stub for SSR |
-| `apps/web/tests/staging-e2e/` | Staging-only flows (separate config) |
+| Path                                     | Purpose                              |
+| ---------------------------------------- | ------------------------------------ |
+| `apps/web/playwright.config.ts`          | Projects, webServer, reporters       |
+| `apps/web/tests/e2e/*.spec.ts`           | Core-loop and accessibility specs    |
+| `apps/web/tests/e2e/axe-helper.ts`       | Shared axe assertions                |
+| `apps/web/tests/e2e/mock-api-server.mjs` | Local API stub for SSR               |
+| `apps/web/tests/staging-e2e/`            | Staging-only flows (separate config) |
 
 ## Writing tests
 

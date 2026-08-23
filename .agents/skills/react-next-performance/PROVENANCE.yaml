@@ -8,4 +8,4 @@ authoritative_sources:
   - .karsift/lessons.md
 committed_files:
   - path: SKILL.md
-    sha256: 20a945567551b22d521d381f4e252a6c32890ce793e3fb36ebc6aec6a21871cd
+    sha256: f6e6ca2401e11eee8605ee8b08c08f8cbd3c11765e70afdfb9f819f56083a009
