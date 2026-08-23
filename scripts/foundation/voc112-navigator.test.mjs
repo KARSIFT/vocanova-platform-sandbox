@@ -30,7 +30,11 @@ const REQUIRED_ROUTES = [
   {
     id: "web",
     label: "Web UI / Next.js",
-    pathTokens: ["apps/web/", "docs/design/08-web-app-design.md", "docs/development.md"],
+    pathTokens: [
+      "apps/web/",
+      "docs/design/08-web-app-design.md",
+      "docs/development.md",
+    ],
   },
   {
     id: "api",
@@ -44,7 +48,10 @@ const REQUIRED_ROUTES = [
   {
     id: "database",
     label: "Database / migrations",
-    pathTokens: ["apps/api/migrations/", "docs/engineering/05-database-design.md"],
+    pathTokens: [
+      "apps/api/migrations/",
+      "docs/engineering/05-database-design.md",
+    ],
   },
   {
     id: "auth",
@@ -89,11 +96,7 @@ const REQUIRED_ROUTES = [
   {
     id: "validation",
     label: "Validation / tests",
-    pathTokens: [
-      "docs/development.md",
-      "pnpm validate",
-      "scripts/foundation/",
-    ],
+    pathTokens: ["docs/development.md", "pnpm validate", "scripts/foundation/"],
   },
   {
     id: "lifecycle",
@@ -133,7 +136,11 @@ function pathExists(candidate) {
     }
     return readdirSync(resolvedDir).some((entry) => entry.startsWith(prefix));
   }
-  return Boolean(statSync(path.resolve(repositoryRoot, candidate), { throwIfNoEntry: false }));
+  return Boolean(
+    statSync(path.resolve(repositoryRoot, candidate), {
+      throwIfNoEntry: false,
+    }),
+  );
 }
 
 function extractBacktickPaths(source) {
@@ -196,7 +203,9 @@ test("VOC-112-TEST-07: navigator stays compact and states governance precedence"
   const body = parseSkillBody(source);
   const bodyBytes = Buffer.byteLength(body, "utf8");
   const bodyLines = body.split(/\r?\n/).length;
-  const descriptionMatch = source.match(/^---\r?\n[\s\S]*?description:\s*(.+)\r?\n/);
+  const descriptionMatch = source.match(
+    /^---\r?\n[\s\S]*?description:\s*(.+)\r?\n/,
+  );
   assert.ok(descriptionMatch, "navigator must declare description frontmatter");
   const description = descriptionMatch[1].replace(/^["']|["']$/g, "");
 
