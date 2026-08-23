@@ -1,0 +1,18 @@
+schema_version: 1
+skill_name: context-mapping
+source: adapted
+upstream_repo: https://github.com/addyosmani/agent-skills
+upstream_commit: 5a5ea45e806f82273549fd85e60adb95d55f510d
+upstream_path: skills/context-engineering/SKILL.md
+upstream_sha256: ff9d4e5706bdd2eb7de1bfed569f1f42d28e478979ce6fcc32e617e7861b491d
+local_sha256: 7b3d72d5128e6295735faa7d44578d143ac5bc000192a43bc539a48f2d2361ba
+license: MIT
+adaptation_notes: >
+  Renamed to context-mapping; routed through vocanova-repo-navigator and docs/development.md; removed profile-mutation examples; added governance precedence and safety rules.
+retained_license_paths:
+  - LICENSE
+committed_files:
+  - path: LICENSE
+    sha256: 6f202f8bd568cd730dbb2b0d1f8e243bc74c2fa1f64dbce9b2c7ea08bd5c9fd7
+  - path: SKILL.md
+    sha256: 7b3d72d5128e6295735faa7d44578d143ac5bc000192a43bc539a48f2d2361ba

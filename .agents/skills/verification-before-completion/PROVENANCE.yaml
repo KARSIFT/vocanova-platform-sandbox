@@ -1,0 +1,18 @@
+schema_version: 1
+skill_name: verification-before-completion
+source: adapted
+upstream_repo: https://github.com/obra/superpowers
+upstream_commit: b36e0829c6d0140e93cfef2ca599b1b07d4a7797
+upstream_path: skills/verification-before-completion/SKILL.md
+upstream_sha256: 2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3
+local_sha256: 995868ab8cef678c58f34126044ada02260f56b2792c5941150502f2a8cb9ede
+license: MIT
+adaptation_notes: >
+  Mapped claims to pnpm validate, pnpm test, go test, and foundation/governance commands from docs/development.md.
+retained_license_paths:
+  - LICENSE
+committed_files:
+  - path: LICENSE
+    sha256: a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400
+  - path: SKILL.md
+    sha256: 995868ab8cef678c58f34126044ada02260f56b2792c5941150502f2a8cb9ede

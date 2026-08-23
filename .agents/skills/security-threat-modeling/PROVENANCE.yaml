@@ -1,0 +1,20 @@
+schema_version: 1
+skill_name: security-threat-modeling
+source: adapted
+upstream_repo: https://github.com/openai/skills
+upstream_commit: 49f948faa9258a0c61caceaf225e179651397431
+upstream_path: skills/.curated/security-threat-model/SKILL.md
+upstream_sha256: 1283c0dd62a8104d9edda4583569b5d8510b4ddaa45120687c999250fd96bad2
+local_sha256: c97376298949c19da9aa800834d4728888ba8b07fb23d62334745d7133a13e9c
+license: Apache-2.0
+adaptation_notes: >
+  Renamed skill to security-threat-modeling; vocanova paths; condensed prompt template; removed interactive pause gates; added governance precedence.
+retained_license_paths:
+  - LICENSE.txt
+committed_files:
+  - path: LICENSE.txt
+    sha256: 4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9
+  - path: SKILL.md
+    sha256: c97376298949c19da9aa800834d4728888ba8b07fb23d62334745d7133a13e9c
+  - path: references/prompt-template.md
+    sha256: 50ac3085672be958ea0cd9e44067cc921e6a40700176387bb0641cf8e95b55a3
