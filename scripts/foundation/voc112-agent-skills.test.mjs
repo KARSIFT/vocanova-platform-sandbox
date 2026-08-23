@@ -61,7 +61,8 @@ export const FORBIDDEN_PATTERNS = [
   },
   {
     id: "unpinned-latest",
-    pattern: /@latest\b|npm\s+install\s+-g\b|pnpm\s+add\s+-g\b|yarn\s+global\s+add\b/i,
+    pattern:
+      /@latest\b|npm\s+install\s+-g\b|pnpm\s+add\s+-g\b|yarn\s+global\s+add\b/i,
     description: "unpinned global or @latest installs",
   },
   {
@@ -287,12 +288,7 @@ function expectedAdapterBody(skillName) {
 }
 
 function resolveAdapterTarget(projectDir, skillName) {
-  return path.resolve(
-    projectDir,
-    ".agents/skills",
-    skillName,
-    "SKILL.md",
-  );
+  return path.resolve(projectDir, ".agents/skills", skillName, "SKILL.md");
 }
 
 function collectMarkdownReferences(body, skillDir) {
@@ -370,7 +366,9 @@ function validateProvenanceRecord(skillName, skillDir, schema) {
 
   for (const field of recordType.requiredFields) {
     if (record[field] === undefined || record[field] === null) {
-      errors.push(`${skillName}: PROVENANCE.yaml missing required field ${field}`);
+      errors.push(
+        `${skillName}: PROVENANCE.yaml missing required field ${field}`,
+      );
     }
   }
 
@@ -409,7 +407,10 @@ function validateProvenanceRecord(skillName, skillDir, schema) {
   }
 
   if (source === "repository-native") {
-    if (!Array.isArray(record.authoritative_sources) || record.authoritative_sources.length === 0) {
+    if (
+      !Array.isArray(record.authoritative_sources) ||
+      record.authoritative_sources.length === 0
+    ) {
       errors.push(
         `${skillName}: repository-native provenance requires authoritative_sources`,
       );
@@ -463,16 +464,22 @@ function validateSkillMarkdown(skillName, skillDir, options = {}) {
   if (!fields.description) {
     errors.push(`${skillName}: missing frontmatter description`);
   } else if (fields.description.length > BUDGETS.descriptionMaxChars) {
-    errors.push(`${skillName}: description exceeds ${BUDGETS.descriptionMaxChars} characters`);
+    errors.push(
+      `${skillName}: description exceeds ${BUDGETS.descriptionMaxChars} characters`,
+    );
   }
 
   const bodyBytes = Buffer.byteLength(body, "utf8");
   const bodyLines = body.split(/\r?\n/).length;
   if (bodyBytes > BUDGETS.skillBodyMaxBytes) {
-    errors.push(`${skillName}: SKILL.md body exceeds ${BUDGETS.skillBodyMaxBytes} bytes`);
+    errors.push(
+      `${skillName}: SKILL.md body exceeds ${BUDGETS.skillBodyMaxBytes} bytes`,
+    );
   }
   if (bodyLines > BUDGETS.skillBodyMaxLines) {
-    errors.push(`${skillName}: SKILL.md body exceeds ${BUDGETS.skillBodyMaxLines} lines`);
+    errors.push(
+      `${skillName}: SKILL.md body exceeds ${BUDGETS.skillBodyMaxLines} lines`,
+    );
   }
 
   for (const refPath of collectMarkdownReferences(body, skillDir)) {
@@ -484,7 +491,9 @@ function validateSkillMarkdown(skillName, skillDir, options = {}) {
   if (!options.skipForbiddenScan) {
     for (const rule of FORBIDDEN_PATTERNS) {
       if (rule.pattern.test(source)) {
-        errors.push(`${skillName}: forbidden pattern ${rule.id} (${rule.description})`);
+        errors.push(
+          `${skillName}: forbidden pattern ${rule.id} (${rule.description})`,
+        );
       }
     }
   }
@@ -515,7 +524,9 @@ function validateAdapter(skillName, canonicalFields, claudeRoot, options = {}) {
   const normalizedBody = parsed.body.replace(/\s+$/u, "");
   const expectedNormalized = expectedBody.replace(/\s+$/u, "");
   if (normalizedBody !== expectedNormalized.trimEnd()) {
-    errors.push(`${skillName} adapter: body must be the exact one-line loader contract`);
+    errors.push(
+      `${skillName} adapter: body must be the exact one-line loader contract`,
+    );
   }
 
   if (!options.skipForbiddenScan) {
@@ -603,7 +614,11 @@ export function validateAgentSkillsTree(rootDir = repositoryRoot) {
   return errors;
 }
 
-function writeSkillFixture(root, skillName, { canonicalBody, adapterBody, provenance }) {
+function writeSkillFixture(
+  root,
+  skillName,
+  { canonicalBody, adapterBody, provenance },
+) {
   const canonicalDir = path.join(root, ".agents/skills", skillName);
   const claudeDir = path.join(root, ".claude/skills", skillName);
   mkdirSync(canonicalDir, { recursive: true });
@@ -645,7 +660,10 @@ test("VOC-112-TEST-02: adapter loader contract resolves from root and nested cwd
   const claudeProjectDir = repositoryRoot;
   const nestedWorkingDir = path.join(repositoryRoot, "apps/web");
   const target = resolveAdapterTarget(claudeProjectDir, skillName);
-  const nestedResolvedTarget = resolveAdapterTarget(claudeProjectDir, skillName);
+  const nestedResolvedTarget = resolveAdapterTarget(
+    claudeProjectDir,
+    skillName,
+  );
 
   assert.notEqual(
     nestedWorkingDir,
@@ -671,7 +689,9 @@ test("VOC-112-TEST-02: adapter loader contract resolves from root and nested cwd
   });
 
   const adapterErrors = validateAgentSkillsTree(fixtureRoot).filter((message) =>
-    message.includes("adapter: body must be the exact one-line loader contract"),
+    message.includes(
+      "adapter: body must be the exact one-line loader contract",
+    ),
   );
   assert.equal(adapterErrors.length, 1);
 });
@@ -745,7 +765,9 @@ committed_files:
 
   const errors = validateAgentSkillsTree(fixtureRoot);
   assert.ok(
-    errors.some((message) => message.includes("extra.txt missing from PROVENANCE.yaml manifest")),
+    errors.some((message) =>
+      message.includes("extra.txt missing from PROVENANCE.yaml manifest"),
+    ),
     `expected uncovered-file error, got: ${errors.join("; ")}`,
   );
 });
