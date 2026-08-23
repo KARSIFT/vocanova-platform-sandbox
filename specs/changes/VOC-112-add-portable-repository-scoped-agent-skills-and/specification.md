@@ -142,7 +142,7 @@ minimum:
 | Web UI / Next.js | `apps/web/`, `docs/design/08-web-app-design.md`, `docs/development.md` |
 | API / Go backend | `apps/api/`, `docs/engineering/06-backend-design.md`, `docs/engineering/07-api-contract-and-dto-design.md` |
 | Database / migrations | `apps/api/migrations/`, `docs/engineering/05-database-design.md` |
-| Auth / OAuth | `apps/web/src/app/auth/`, VOC-084/VOC-092 ops docs under `docs/operations/` |
+| Auth / OAuth | `apps/web/src/app/auth/`, `docs/operations/staging-controlled-signup.md`, `docs/operations/production-controlled-signup.md`, relevant packages under `specs/changes/` |
 | Content seed | `apps/api/cmd/seed/` |
 | Deploy / infra / shared edge | `infra/`, `.github/workflows/deploy-*.yml`, `docs/operations/11-devops-and-ci-cd.md`, `scripts/foundation/voc079-single-edge-invariants.test.mjs` |
 | Monitoring | `infra/monitoring/`, `docs/operations/monitoring.md` |
@@ -206,10 +206,11 @@ and personal-data harvesting. Evidence files contain bounded metadata only.
 
 ## Open questions
 
-1. **T02 upstream pins:** Independent adoption review must confirm each shared skill's
+1. **T02 upstream pins:** T02 independent verification must confirm each shared skill's
    chosen upstream repository/commit is license-compatible and security-acceptable before
-   merge. Planner intentionally does not fix upstream SHAs in this draft. Exact review has
-   already established that `vercel-labs/agent-skills` at
+   the T02 task PR merges. Package adoption does not resolve this implementation-time
+   dependency, and the planner intentionally does not fix upstream SHAs in this draft.
+   Exact review has already established that `vercel-labs/agent-skills` at
    `dd089a8c752c966dee8bf0f27cb625ba193ffd9e` has no detected or committed license;
    its React skill must not be copied or adapted. Author React/Next guidance independently
    from current official React/Next documentation or select an explicitly licensed source,
