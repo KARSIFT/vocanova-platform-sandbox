@@ -1,7 +1,6 @@
 [
-  {"task_id": "VOC-112-T00", "issue": null, "depends_on": []},
-  {"task_id": "VOC-112-T01", "issue": null, "depends_on": ["VOC-112-T00"]},
-  {"task_id": "VOC-112-T02", "issue": null, "depends_on": ["VOC-112-T00"]},
-  {"task_id": "VOC-112-T03", "issue": null, "depends_on": ["VOC-112-T00"]},
-  {"task_id": "VOC-112-T04", "issue": null, "depends_on": ["VOC-112-T01", "VOC-112-T02", "VOC-112-T03"]}
-]
+{"task_id": "VOC-112-T00", "issue": 935, "depends_on": []},
+{"task_id": "VOC-112-T01", "issue": 936, "depends_on": ["VOC-112-T00"]},
+{"task_id": "VOC-112-T02", "issue": 937, "depends_on": ["VOC-112-T01"]},
+{"task_id": "VOC-112-T03", "issue": 938, "depends_on": ["VOC-112-T02"]},
+{"task_id": "VOC-112-T04", "issue": 939, "depends_on": ["VOC-112-T03"]}]
