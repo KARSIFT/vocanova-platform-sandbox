@@ -212,7 +212,7 @@ jobs:
       - name: Install the reviewed Cursor CLI build
         env:
           INSTALLER_SHA256: b1af27b9556c5f1c58d166742dbb33425ebd90a4bbd7e5453d66b920bf1f9f6b
-          EXPECTED_CURSOR_VERSION: 2026.07.23-e383d2b
+          EXPECTED_CURSOR_VERSION: 2026.08.11-e8db854
         run: |
           set -euo pipefail
           installer="$RUNNER_TEMP/cursor-install.sh"
