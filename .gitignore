@@ -19,3 +19,4 @@ apps/web/test-results-staging/
 graphify-out/
 .graphify_python
 scripts/graphify/.venv/
+scripts/graphify/.runtime-home/

@@ -5,21 +5,27 @@ upstream_repo: https://github.com/Graphify-Labs/graphify
 upstream_commit: b2cd36267456c166788c95be6e68574064a92a42
 upstream_path: LICENSE
 upstream_sha256: cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30
-local_sha256: 89017f8e46e57cd6772bfd72dfd282d686db9ed4c456dde1a7b1853c43860210
+local_sha256: 3fa98d6da30d14a69676caa41819b5afceb261dc5302af4aab45779c1a116d27
 license: Apache-2.0
 adaptation_notes: >
   Repository-owned opt-in pilot skill and locked runner under scripts/graphify/;
-  code-only extraction, query logging disabled, provider credentials stripped,
-  no automatic invocation, and hint-only navigation language. Upstream CLI/skill
-  install flows are explicitly excluded.
+  code-only extraction, query logging disabled, hermetic credential isolation,
+  a repository target boundary, exact runtime inventory verification, no automatic
+  invocation, and hint-only navigation language. RUNTIME-MANIFEST.yaml records
+  reviewed runner hashes. Upstream CLI/skill install flows are explicitly excluded.
 retained_license_paths:
   - LICENSE
+  - LICENSE-MIT
 retained_notice_paths:
   - NOTICE
 committed_files:
   - path: LICENSE
     sha256: cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30
+  - path: LICENSE-MIT
+    sha256: 36ecff6bbb97aca1be64e95f42538cf796adde5864edac583e620643c096931a
   - path: NOTICE
     sha256: 3448ea175bba09f6fed8a743000139fb4c7112de83f164355b5540b158576621
+  - path: RUNTIME-MANIFEST.yaml
+    sha256: 00679ca7d33d0d1d6217874527442152f4846f4a7ea7aece2596865a714d2e70
   - path: SKILL.md
-    sha256: 89017f8e46e57cd6772bfd72dfd282d686db9ed4c456dde1a7b1853c43860210
+    sha256: 3fa98d6da30d14a69676caa41819b5afceb261dc5302af4aab45779c1a116d27

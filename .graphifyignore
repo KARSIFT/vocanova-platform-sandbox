@@ -37,6 +37,7 @@ graphify-out/
 
 # Local isolated runtime (operator setup only)
 scripts/graphify/.venv/
+scripts/graphify/.runtime-home/
 
 # Large binaries and archives
 **/*.zip

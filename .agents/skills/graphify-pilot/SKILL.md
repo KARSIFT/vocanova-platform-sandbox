@@ -26,8 +26,9 @@ Graphify builds a **local code-relationship index** (tree-sitter AST extraction)
 The locked runtime is **not** installed during ordinary agent sessions.
 
 1. Review pins in `scripts/graphify/runtime-identity.yaml` and `scripts/graphify/requirements.lock`.
-2. Run **`bash scripts/graphify/setup.sh`** once to create `scripts/graphify/.venv/` from the hash-locked lockfile.
-3. Confirm identity with **`bash scripts/graphify/check`**.
+2. Confirm Python 3.12 or newer is available (the reviewed NumPy wheel pin requires it).
+3. Run **`bash scripts/graphify/setup.sh`** once to create `scripts/graphify/.venv/` from the hash-locked, binary-only lockfile.
+4. The setup delegates to the check, which compares every installed runtime distribution with the reviewed lock.
 
 If setup was skipped or the lock identity mismatches, the check exits non-zero with remediation guidance. The check and run scripts perform **no download, upgrade, global fallback, hook registration, or user-profile mutation**.
 
@@ -46,6 +47,7 @@ bash scripts/graphify/run.sh apps/api
 ```
 
 Output directory defaults to `graphify-out/` (override with `GRAPHIFY_OUTPUT_DIR` for disposable runs).
+The target must resolve to the repository or a directory beneath it. The runner starts Graphify with an empty environment plus a minimal allowlist and an isolated repository-local home, so session credentials and user-profile credential chains are unavailable.
 
 ## What agents must not do
 

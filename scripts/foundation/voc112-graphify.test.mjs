@@ -6,10 +6,11 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import {
   cpSync,
+  chmodSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
-  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -32,6 +33,10 @@ const skillPath = path.join(
 const graphifyIgnorePath = path.join(repositoryRoot, ".graphifyignore");
 const identityPath = path.join(graphifyHome, "runtime-identity.yaml");
 const requirementsLockPath = path.join(graphifyHome, "requirements.lock");
+const runtimeManifestPath = path.join(
+  repositoryRoot,
+  ".agents/skills/graphify-pilot/RUNTIME-MANIFEST.yaml",
+);
 
 const REQUIRED_IGNORE_PATTERNS = [
   ".env",
@@ -95,22 +100,78 @@ function parseIdentityYaml(source) {
   return record;
 }
 
-function runCheck(graphifyHomeOverride) {
-  return spawnSync("bash", [path.join(graphifyHome, "check")], {
-    cwd: repositoryRoot,
-    env: {
-      ...process.env,
-      GRAPHIFY_HOME: graphifyHomeOverride,
-    },
+function runCheck(fixtureHome) {
+  return spawnSync("bash", [path.join(fixtureHome, "check")], {
+    cwd: path.resolve(fixtureHome, "../.."),
+    env: process.env,
     encoding: "utf8",
   });
 }
 
 function copyGraphifyFixtureWithoutVenv() {
-  const fixtureRoot = mkdtempSync(path.join(tmpdir(), "graphify-fixture-"));
-  cpSync(graphifyHome, fixtureRoot, { recursive: true });
-  rmSync(path.join(fixtureRoot, ".venv"), { recursive: true, force: true });
-  return fixtureRoot;
+  const fixtureRepository = mkdtempSync(
+    path.join(tmpdir(), "graphify-fixture-"),
+  );
+  const fixtureHome = path.join(fixtureRepository, "scripts/graphify");
+  mkdirSync(path.dirname(fixtureHome), { recursive: true });
+  cpSync(graphifyHome, fixtureHome, { recursive: true });
+  rmSync(path.join(fixtureHome, ".venv"), { recursive: true, force: true });
+  writeFileSync(path.join(fixtureRepository, ".graphifyignore"), ".env\n");
+  return { fixtureRepository, fixtureHome };
+}
+
+function lockedDistributions() {
+  return [...readText(requirementsLockPath).matchAll(/^([\w.-]+==[^\s\\]+)/gm)]
+    .map((match) => match[1].toLowerCase().replace(/[_.]+/g, "-"))
+    .sort();
+}
+
+function parseRuntimeManifest(source) {
+  return [
+    ...source.matchAll(/  - path: ([^\n]+)\n    sha256: ([a-f0-9]{64})/g),
+  ].map((match) => ({ path: match[1], sha256: match[2] }));
+}
+
+function addValidRuntimeFixture(fixtureHome) {
+  const binDirectory = path.join(fixtureHome, ".venv/bin");
+  mkdirSync(binDirectory, { recursive: true });
+
+  const pythonPath = path.join(binDirectory, "python");
+  const inventory = lockedDistributions()
+    .map((distribution) => `printf '%s\\n' '${distribution}'`)
+    .join("\n");
+  writeFileSync(
+    pythonPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+if [[ "$*" == "-m pip list --format=freeze" ]]; then
+${inventory}
+  exit 0
+fi
+if [[ "$*" == "-m pip check" ]]; then
+  exit 0
+fi
+exit 2
+`,
+  );
+  chmodSync(pythonPath, 0o755);
+
+  const cliPath = path.join(binDirectory, "graphify");
+  writeFileSync(
+    cliPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+if [[ "\${1:-}" == "--version" ]]; then
+  echo "graphify 0.9.48"
+  exit 0
+fi
+{
+  printf 'ARG=<%s>\\n' "$@"
+  env | LC_ALL=C sort
+} > "$HOME/invocation.txt"
+`,
+  );
+  chmodSync(cliPath, 0o755);
 }
 
 test("VOC-112-TEST-10: graphify pilot is opt-in, code-only, and hash-locked", () => {
@@ -132,6 +193,8 @@ test("VOC-112-TEST-10: graphify pilot is opt-in, code-only, and hash-locked", ()
   const identity = parseIdentityYaml(readText(identityPath));
   assert.equal(identity.pypi_package, "graphifyy");
   assert.equal(identity.pypi_version, "0.9.48");
+  assert.equal(identity.python_min, "3.12");
+  assert.equal(identity.locked_distribution_count, "30");
   assert.equal(
     identity.upstream_commit,
     "b2cd36267456c166788c95be6e68574064a92a42",
@@ -149,15 +212,29 @@ test("VOC-112-TEST-10: graphify pilot is opt-in, code-only, and hash-locked", ()
     identity.requirements_lock_sha256,
     "requirements.lock digest must match runtime identity",
   );
-  assert.match(readText(requirementsLockPath), /graphifyy==0\.9\.48/);
+  const lockSource = readText(requirementsLockPath);
+  assert.match(lockSource, /graphifyy==0\.9\.48/);
+  assert.equal(lockedDistributions().length, 30);
+  const pinStarts = [...lockSource.matchAll(/^[\w.-]+==/gm)].map(
+    (match) => match.index,
+  );
+  for (const [position, start] of pinStarts.entries()) {
+    const packageBlock = lockSource.slice(
+      start,
+      pinStarts[position + 1] ?? lockSource.length,
+    );
+    assert.match(packageBlock, /--hash=sha256:[a-f0-9]{64}/);
+  }
 
   const runScript = readText(path.join(graphifyHome, "run.sh"));
   assert.match(runScript, /--code-only/);
   assert.match(runScript, /GRAPHIFY_QUERY_LOG_DISABLE=1/);
+  assert.match(runScript, /exec env -i/);
+  assert.match(runScript, /target must remain inside the repository/);
   assert.match(
     runScript,
-    /unset OPENAI_API_KEY/,
-    "runner must strip provider credentials",
+    /HOME="\$RUNTIME_HOME"/,
+    "runner must isolate the user profile",
   );
 
   const checkScript = readText(path.join(graphifyHome, "check"));
@@ -166,6 +243,21 @@ test("VOC-112-TEST-10: graphify pilot is opt-in, code-only, and hash-locked", ()
     /pip\s+install|uv\s+tool|pipx\s+install|curl\s+|wget\s+/i,
     "check must not download packages",
   );
+  assert.match(checkScript, /pip list --format=freeze/);
+  assert.match(checkScript, /pip check/);
+
+  const setupScript = readText(path.join(graphifyHome, "setup.sh"));
+  assert.match(setupScript, /--require-hashes/);
+  assert.match(setupScript, /--only-binary=:all:/);
+  assert.doesNotMatch(setupScript, /pip install --upgrade/);
+
+  for (const source of [runScript, checkScript, setupScript]) {
+    assert.doesNotMatch(
+      source,
+      /GRAPHIFY_HOME="\$\{GRAPHIFY_HOME/,
+      "runtime location must not be environment-overridable",
+    );
+  }
 
   for (const marker of FORBIDDEN_RUNNER_MARKERS) {
     assert.doesNotMatch(
@@ -197,49 +289,132 @@ test("VOC-112-TEST-10: graphify pilot is opt-in, code-only, and hash-locked", ()
   const gitignore = readText(path.join(repositoryRoot, ".gitignore"));
   assert.match(gitignore, /graphify-out\//);
   assert.match(gitignore, /scripts\/graphify\/\.venv\//);
+  assert.match(gitignore, /scripts\/graphify\/\.runtime-home\//);
 
   const treeErrors = validateAgentSkillsTree();
   assert.deepEqual(treeErrors, [], treeErrors.join("\n"));
 });
 
+test("VOC-112-TEST-10 supplemental: provenance-covered runtime manifest is exact", () => {
+  const entries = parseRuntimeManifest(readText(runtimeManifestPath));
+  assert.deepEqual(
+    entries.map((entry) => entry.path),
+    [
+      "scripts/graphify/setup.sh",
+      "scripts/graphify/check",
+      "scripts/graphify/run.sh",
+      "scripts/graphify/runtime-identity.yaml",
+      "scripts/graphify/requirements.in",
+      "scripts/graphify/requirements.lock",
+      ".graphifyignore",
+    ],
+  );
+
+  for (const entry of entries) {
+    const resolved = path.resolve(repositoryRoot, entry.path);
+    assert.ok(
+      resolved.startsWith(`${repositoryRoot}${path.sep}`),
+      `runtime manifest path escapes repository: ${entry.path}`,
+    );
+    assert.equal(
+      sha256Hex(readFileSync(resolved)),
+      entry.sha256,
+      `runtime manifest digest mismatch: ${entry.path}`,
+    );
+  }
+});
+
 test("VOC-112-TEST-11: check fails closed without locked runtime", () => {
-  const fixtureRoot = copyGraphifyFixtureWithoutVenv();
+  const { fixtureRepository, fixtureHome } = copyGraphifyFixtureWithoutVenv();
   try {
-    const result = runCheck(fixtureRoot);
+    const result = runCheck(fixtureHome);
     assert.notEqual(result.status, 0, "check must fail when .venv is absent");
     assert.match(
       result.stderr,
       /locked runtime missing|run: bash scripts\/graphify\/setup\.sh/i,
     );
   } finally {
-    rmSync(fixtureRoot, { recursive: true, force: true });
+    rmSync(fixtureRepository, { recursive: true, force: true });
   }
 });
 
 test("VOC-112-TEST-11 supplemental: check passes with valid locked runtime", () => {
-  const venvPython = path.join(graphifyHome, ".venv/bin/python");
-  if (!statSync(venvPython, { throwIfNoEntry: false })) {
-    return;
+  const { fixtureRepository, fixtureHome } = copyGraphifyFixtureWithoutVenv();
+  try {
+    addValidRuntimeFixture(fixtureHome);
+    const result = runCheck(fixtureHome);
+    assert.equal(
+      result.status,
+      0,
+      `expected check to pass with locked runtime: ${result.stderr}`,
+    );
+    assert.match(result.stdout, /locked runtime identity OK/);
+    assert.match(result.stdout, /30 distributions/);
+  } finally {
+    rmSync(fixtureRepository, { recursive: true, force: true });
   }
-
-  const result = runCheck(graphifyHome);
-  assert.equal(
-    result.status,
-    0,
-    `expected check to pass with locked runtime: ${result.stderr}`,
-  );
-  assert.match(result.stdout, /locked runtime identity OK/);
 });
 
 test("VOC-112-TEST-10 supplemental: identity mismatch fails closed", () => {
-  const fixtureRoot = copyGraphifyFixtureWithoutVenv();
+  const { fixtureRepository, fixtureHome } = copyGraphifyFixtureWithoutVenv();
   try {
-    const tamperedLock = path.join(fixtureRoot, "requirements.lock");
+    const tamperedLock = path.join(fixtureHome, "requirements.lock");
     writeFileSync(tamperedLock, "# tampered\n", "utf8");
-    const result = runCheck(fixtureRoot);
+    const result = runCheck(fixtureHome);
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /digest mismatch/i);
   } finally {
-    rmSync(fixtureRoot, { recursive: true, force: true });
+    rmSync(fixtureRepository, { recursive: true, force: true });
+  }
+});
+
+test("VOC-112-TEST-11 supplemental: runner is hermetic and repository-bounded", () => {
+  const { fixtureRepository, fixtureHome } = copyGraphifyFixtureWithoutVenv();
+  try {
+    addValidRuntimeFixture(fixtureHome);
+    const target = path.join(fixtureRepository, "apps/api");
+    mkdirSync(target, { recursive: true });
+
+    const result = spawnSync(
+      "bash",
+      [path.join(fixtureHome, "run.sh"), target],
+      {
+        cwd: fixtureRepository,
+        env: {
+          ...process.env,
+          OPENAI_API_KEY: "must-not-reach-child",
+          AWS_ACCESS_KEY_ID: "must-not-reach-child",
+          VOC112_SECRET_SENTINEL: "must-not-reach-child",
+        },
+        encoding: "utf8",
+      },
+    );
+    assert.equal(result.status, 0, result.stderr);
+
+    const invocation = readText(
+      path.join(fixtureHome, ".runtime-home/invocation.txt"),
+    );
+    assert.match(invocation, /ARG=<extract>/);
+    assert.match(invocation, /ARG=<--code-only>/);
+    assert.match(
+      invocation,
+      new RegExp(`ARG=<${target.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}>`),
+    );
+    assert.match(invocation, /GRAPHIFY_QUERY_LOG_DISABLE=1/);
+    assert.match(invocation, /GRAPHIFY_QUERY_LOG=\/dev\/null/);
+    assert.doesNotMatch(
+      invocation,
+      /OPENAI_API_KEY|AWS_ACCESS_KEY_ID|VOC112_SECRET_SENTINEL/,
+    );
+
+    const escaped = spawnSync(
+      "bash",
+      [path.join(fixtureHome, "run.sh"), tmpdir()],
+      { cwd: fixtureRepository, env: process.env, encoding: "utf8" },
+    );
+    assert.notEqual(escaped.status, 0);
+    assert.match(escaped.stderr, /target must remain inside the repository/);
+  } finally {
+    rmSync(fixtureRepository, { recursive: true, force: true });
   }
 });
