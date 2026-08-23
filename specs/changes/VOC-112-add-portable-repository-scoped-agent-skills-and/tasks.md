@@ -158,7 +158,8 @@ Order is mandatory: **T00 → (T01 ∥ T02 ∥ T03) → T04**.
    - exits non-zero with clear message when runtime missing — **no global auto-install**.
 3. Add opt-in skill `.agents/skills/graphify-pilot/SKILL.md` (+ Claude adapter) stating
    graph output is hint-only, verification must use current source, and automatic invocation
-   is disabled until T04 evidence says otherwise.
+   remains disabled throughout VOC-112. Any later enablement requires a separate governed
+   change with Graphify-specific measurements and acceptance gates.
 4. Gitignore default graph output directories unless T03/T04 evidence explicitly justifies
    committing them (expected: remain ignored).
 5. Add deterministic coverage in task-local
@@ -212,7 +213,8 @@ Order is mandatory: **T00 → (T01 ∥ T02 ∥ T03) → T04**.
 ### Explicitly out of scope for this task
 
 - Application code changes beyond documentation/agent tooling already introduced.
-- Enabling Graphify automatic invocation without positive benchmark evidence.
+- Enabling Graphify automatic invocation. Graduation from the opt-in pilot is outside
+  VOC-112 even if the navigator benchmark passes.
 
 ## Task ordering notes
 

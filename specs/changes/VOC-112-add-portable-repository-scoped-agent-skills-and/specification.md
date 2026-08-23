@@ -66,7 +66,8 @@ A-004 plan-review / adopt path.
      data, and large/noisy artifacts;
    - do not commit generated graph output unless deterministic evidence proves benefit;
    - treat graph output as navigation hint; verify consequential claims in current source;
-   - remain explicit/opt-in until measurement demonstrates reliable automatic use;
+   - remain explicit/opt-in throughout VOC-112; any later automatic invocation requires
+     a separate governed change with Graphify-specific measurement and acceptance gates;
    - keep setup an explicit operator action into a repository-local isolated environment;
      ordinary skill/runner use never downloads, upgrades, falls back to a global install,
      mutates a user profile, installs hooks, or injects always-on instructions;
@@ -86,7 +87,8 @@ A-004 plan-review / adopt path.
   rules via skill prose.
 - Committing unpinned third-party skill content without provenance.
 - Replacing canonical repository documentation with generated or skill-local knowledge.
-- Auto-enabling Graphify during normal agent sessions before T04 measurement evidence.
+- Auto-enabling Graphify during normal agent sessions; graduation from the opt-in pilot is
+  outside VOC-112 and requires a separate governed change.
 - Self-adoption / self-authorization of this package.
 
 ## Risk and protected areas
