@@ -53,8 +53,9 @@ No product analytics or UI accessibility changes.
 - `VOC-112-R04`: **Unpinned upstream content** — stale or tampered third-party skills.
   Mitigation: provenance hashes/commits; no `@latest` installs.
 - `VOC-112-R05`: **Graphify false authority** — agents treat graph hints as truth.
-  Mitigation: opt-in pilot, hint-only language, source verification requirement, no default
-  auto-enable until T04 evidence.
+  Mitigation: opt-in pilot throughout VOC-112, hint-only language, source verification
+  requirement, and no automatic invocation in this package. Any later enablement requires
+  a separate governed change with Graphify-specific measurement and acceptance gates.
 - `VOC-112-R06`: **Graphify supply chain / local runtime** — the published package uses
   broad transitive ranges and upstream install can mutate agent configuration. Mitigation:
   exact upstream/package pin plus reviewed transitive lock/hashes, repository-local isolated
