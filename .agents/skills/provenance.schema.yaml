@@ -1,0 +1,111 @@
+# VOC-112-T00 — immutable per-skill provenance record schema.
+# Later tasks add PROVENANCE.yaml under each skill directory; do not edit this
+# schema or the T00 validator merely to register a skill.
+
+schema_version: 1
+
+description: >
+  Each canonical skill directory must include PROVENANCE.yaml conforming to exactly
+  one record type below. The voc112-agent-skills validator discovers records
+  dynamically and checks committed-file manifests.
+
+record_types:
+  repository-native:
+    source_value: repository-native
+    required_fields:
+      - schema_version
+      - skill_name
+      - source
+      - authoritative_sources
+      - committed_files
+    field_rules:
+      schema_version:
+        type: integer
+        const: 1
+      skill_name:
+        type: string
+        pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      source:
+        type: string
+        const: repository-native
+      authoritative_sources:
+        type: array
+        min_items: 1
+        items:
+          type: string
+      committed_files:
+        $ref: "#/definitions/committed_files_manifest"
+
+  adapted:
+    source_value: adapted
+    required_fields:
+      - schema_version
+      - skill_name
+      - source
+      - upstream_repo
+      - upstream_commit
+      - upstream_path
+      - upstream_sha256
+      - local_sha256
+      - license
+      - adaptation_notes
+      - committed_files
+    optional_fields:
+      - retained_license_paths
+      - retained_notice_paths
+    field_rules:
+      schema_version:
+        type: integer
+        const: 1
+      skill_name:
+        type: string
+        pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      source:
+        type: string
+        const: adapted
+      upstream_repo:
+        type: string
+      upstream_commit:
+        type: string
+        pattern: "^[0-9a-f]{7,40}$"
+      upstream_path:
+        type: string
+      upstream_sha256:
+        type: string
+        pattern: "^[0-9a-f]{64}$"
+      local_sha256:
+        type: string
+        pattern: "^[0-9a-f]{64}$"
+      license:
+        type: string
+      adaptation_notes:
+        type: string
+      retained_license_paths:
+        type: array
+        items:
+          type: string
+      retained_notice_paths:
+        type: array
+        items:
+          type: string
+      committed_files:
+        $ref: "#/definitions/committed_files_manifest"
+
+definitions:
+  sha256_hex:
+    type: string
+    pattern: "^[0-9a-f]{64}$"
+
+  committed_files_manifest:
+    type: array
+    min_items: 1
+    items:
+      type: object
+      required_fields:
+        - path
+        - sha256
+      field_rules:
+        path:
+          type: string
+        sha256:
+          $ref: "#/definitions/sha256_hex"
