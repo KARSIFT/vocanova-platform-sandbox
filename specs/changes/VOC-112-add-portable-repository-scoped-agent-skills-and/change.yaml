@@ -1,0 +1,127 @@
+schema_version: 1
+id: VOC-112
+slug: add-portable-repository-scoped-agent-skills-and
+title: Add portable repository-scoped agent skills and codebase navigation
+type: infrastructure
+status: draft
+risk: R3
+planned_implementation_risk_floor: 'Measured during drafting against the expected
+  task-scoped file list (.agents/skills/**, .claude/skills/**, scripts/foundation/voc112-*.test.mjs,
+  scripts/graphify/** or equivalent repo-owned runner, per-skill PROVENANCE.yaml records,
+  .graphifyignore, .gitignore, docs/development/agent-skills.md, AGENTS.md pointer, and
+  this package directory).
+  AGENTS.md is in scope and carries an R3 path floor; agent-instruction and repository-governance
+  semantics apply even though application runtime is unchanged. This package proposes
+  R3 for the change as a whole; this is a draft proposal for the reviewing human at
+  adoption time, not a determination. Independent verification must still confirm
+  each task''s real file list and whether semantic escalation applies.
+
+  '
+canonical_path: specs/changes/VOC-112-add-portable-repository-scoped-agent-skills-and
+authority_model: a004-active
+requirement_source: 'GitHub issue #933 (Add portable repository-scoped agent skills
+  and codebase navigation). Agents repeatedly rediscover repository structure and
+  operational invariants; personal/global skills are not portable across devices or
+  CI checkouts; duplicate agent-specific copies drift; broad third-party skill installs
+  can waste context, download unpinned tools, read sensitive files, or make stale
+  generated knowledge look authoritative. Required: canonical skills under .agents/skills/<name>/SKILL.md;
+  cross-agent discovery without personal installation; minimal Claude adapters under
+  .claude/skills/ that load canonical skills only (no Git symlinks); deterministic
+  drift and safety validation; vocanova-repo-navigator router skill; security-reviewed
+  pinned shared engineering skills; Graphify pilot in code-only opt-in mode; measurement
+  and documentation. No product/runtime/deployment behavior change. This draft package
+  does not adopt or authorize itself.
+
+  '
+requirement_approval_status: approved requirement pending package adoption
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: none-intentional. Repository-scoped agent instructions, validation,
+  and optional local navigation tooling only; no application routes, APIs, databases,
+  deploy bundles, or monitoring inventory changes.
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: 'Agent skill framework, documentation, and deterministic foundation tests
+    only. No page routes, critical API endpoints, or stable monitor/synthetic IDs
+    in infra/monitoring/ are added or changed.
+
+    '
+dependencies:
+- id: VOC-112-DEP-00
+  status: 'resolved at drafting time. Issue #933 states the problem, required outcomes,
+    acceptance principle, and explicit non-goals (no product/runtime/deployment behavior
+    change; repository instructions override skill prose).'
+- id: VOC-112-DEP-01
+  status: resolved at drafting time. AGENTS.md and CLAUDE.md are protected agent-instruction
+    surfaces (R3 floor). Any pointer update must preserve governance precedence and
+    must not weaken security or authority rules.
+- id: VOC-112-DEP-02
+  status: resolved at drafting time. docs/development.md and docs/operations/10-development-workflow.md
+    already document validation tiers and repository layout; skills must route to
+    these authoritative sources rather than duplicate them.
+- id: VOC-112-DEP-03
+  status: open at drafting time for T02 only. Shared engineering skills require exact
+    upstream repository, commit, path, compatible license, separate upstream/local
+    hashes, adaptation notes, and retained notices chosen during implementation and
+    recorded in task-isolated per-skill PROVENANCE.yaml records; planner does not
+    pre-commit to unverified upstream SHAs. Vercel's reviewed unlicensed React skill is
+    explicitly rejected as a copy/adaptation source.
+- id: VOC-112-DEP-04
+  status: open at drafting time for T03 only. Graphify upstream identity has moved
+    (Graphify-Labs/graphify releases such as v0.9.48; PyPI package graphifyy). T03
+    must pin an exact reviewed commit/tag, package, and complete transitive lock with
+    hashes before enabling the pilot skill.
+affected_areas:
+- .agents/skills/
+- .claude/skills/
+- .agents/skills/provenance.schema.yaml
+- .agents/skills/*/PROVENANCE.yaml
+- scripts/foundation/voc112-*.test.mjs
+- scripts/graphify/ (or equivalent repo-owned runner/check)
+- .graphifyignore
+- .gitignore
+- docs/development/agent-skills.md
+- AGENTS.md (short pointer only; no governance weakening)
+- specs/changes/VOC-112-add-portable-repository-scoped-agent-skills-and/
+implementation:
+  authorized: false
+  required: true
+  status: not-authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-agent-tooling-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: not-authorized
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A004
+blocking_reasons: package not adopted; implementation not authorized
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
