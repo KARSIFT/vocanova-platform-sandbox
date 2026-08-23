@@ -3,18 +3,18 @@ id: VOC-112
 slug: add-portable-repository-scoped-agent-skills-and
 title: Add portable repository-scoped agent skills and codebase navigation
 type: infrastructure
-status: draft
+status: adopted
 risk: R3
 planned_implementation_risk_floor: 'Measured during drafting against the expected
   task-scoped file list (.agents/skills/**, .claude/skills/**, scripts/foundation/voc112-*.test.mjs,
   scripts/graphify/** or equivalent repo-owned runner, per-skill PROVENANCE.yaml records,
-  .graphifyignore, .gitignore, docs/development/agent-skills.md, AGENTS.md pointer, and
-  this package directory).
-  AGENTS.md is in scope and carries an R3 path floor; agent-instruction and repository-governance
-  semantics apply even though application runtime is unchanged. This package proposes
-  R3 for the change as a whole; this is a draft proposal for the reviewing human at
-  adoption time, not a determination. Independent verification must still confirm
-  each task''s real file list and whether semantic escalation applies.
+  .graphifyignore, .gitignore, docs/development/agent-skills.md, AGENTS.md pointer,
+  and this package directory). AGENTS.md is in scope and carries an R3 path floor;
+  agent-instruction and repository-governance semantics apply even though application
+  runtime is unchanged. This package proposes R3 for the change as a whole; this is
+  a draft proposal for the reviewing human at adoption time, not a determination.
+  Independent verification must still confirm each task''s real file list and whether
+  semantic escalation applies.
 
   '
 canonical_path: specs/changes/VOC-112-add-portable-repository-scoped-agent-skills-and
@@ -33,7 +33,8 @@ requirement_source: 'GitHub issue #933 (Add portable repository-scoped agent ski
   does not adopt or authorize itself.
 
   '
-requirement_approval_status: approved requirement pending package adoption
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: unknown - not recorded by this draft; set at adoption time
 target_branch: develop
@@ -42,8 +43,8 @@ owners:
   package_preparation: planner (drafting only; adoption remains a human decision)
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: none-intentional. Repository-scoped agent instructions, validation,
   and optional local navigation tooling only; no application routes, APIs, databases,
@@ -74,8 +75,8 @@ dependencies:
     upstream repository, commit, path, compatible license, separate upstream/local
     hashes, adaptation notes, and retained notices chosen during implementation and
     recorded in task-isolated per-skill PROVENANCE.yaml records; planner does not
-    pre-commit to unverified upstream SHAs. Vercel's reviewed unlicensed React skill is
-    explicitly rejected as a copy/adaptation source.
+    pre-commit to unverified upstream SHAs. Vercel's reviewed unlicensed React skill
+    is explicitly rejected as a copy/adaptation source.
 - id: VOC-112-DEP-04
   status: open at drafting time for T03 only. Graphify upstream identity has moved
     (Graphify-Labs/graphify releases such as v0.9.48; PyPI package graphifyy). T03
@@ -94,9 +95,9 @@ affected_areas:
 - AGENTS.md (short pointer only; no governance weakening)
 - specs/changes/VOC-112-add-portable-repository-scoped-agent-skills-and/
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: not-authorized
+  status: authorized
   target_branch: develop
   pull_request: null
   authority_issue: null
@@ -108,14 +109,14 @@ release:
   automatic_merge: true
   migration_required: false
   rollback_required: true
-repository_adoption_status: not-adopted
+repository_adoption_status: adopted
 implementation_authority_before_adoption: false
-implementation_authority_status: not-authorized
+implementation_authority_status: authorized
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A004
-blocking_reasons: package not adopted; implementation not authorized
+blocking_reasons: none - adopted and implementation-authorized
 artifacts:
   readme: README.md
   specification: specification.md
@@ -125,3 +126,14 @@ artifacts:
   tasks: tasks.md
   test_plan: test-plan.md
   release_plan: release-plan.md
+approved_candidate_sha: ab3ff615c086f1f45648fcdffc53e23fdcdf877f
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/934#issuecomment-5388202689
+adoption_risk: R3
+adoption_resolved_decisions:
+- VOC-112-DEP-00
+- VOC-112-DEP-01
+- VOC-112-DEP-02
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #934 at ab3ff615c086f1f45648fcdffc53e23fdcdf877f'
+adoption_pr: 934
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/934
