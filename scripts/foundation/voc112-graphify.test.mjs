@@ -86,7 +86,10 @@ function parseIdentityYaml(source) {
       continue;
     }
     const key = line.slice(0, separator).trim();
-    const value = line.slice(separator + 1).trim().replace(/^["']|["']$/g, "");
+    const value = line
+      .slice(separator + 1)
+      .trim()
+      .replace(/^["']|["']$/g, "");
     record[key] = value;
   }
   return record;
@@ -129,7 +132,10 @@ test("VOC-112-TEST-10: graphify pilot is opt-in, code-only, and hash-locked", ()
   const identity = parseIdentityYaml(readText(identityPath));
   assert.equal(identity.pypi_package, "graphifyy");
   assert.equal(identity.pypi_version, "0.9.48");
-  assert.equal(identity.upstream_commit, "b2cd36267456c166788c95be6e68574064a92a42");
+  assert.equal(
+    identity.upstream_commit,
+    "b2cd36267456c166788c95be6e68574064a92a42",
+  );
   assert.match(identity.upstream_repo, /Graphify-Labs\/graphify/);
 
   const requirementsIn = readText(path.join(graphifyHome, "requirements.in"));
@@ -162,8 +168,16 @@ test("VOC-112-TEST-10: graphify pilot is opt-in, code-only, and hash-locked", ()
   );
 
   for (const marker of FORBIDDEN_RUNNER_MARKERS) {
-    assert.doesNotMatch(runScript, marker, `run.sh must not contain: ${marker}`);
-    assert.doesNotMatch(checkScript, marker, `check must not contain: ${marker}`);
+    assert.doesNotMatch(
+      runScript,
+      marker,
+      `run.sh must not contain: ${marker}`,
+    );
+    assert.doesNotMatch(
+      checkScript,
+      marker,
+      `check must not contain: ${marker}`,
+    );
     assert.doesNotMatch(
       readText(path.join(graphifyHome, "setup.sh")),
       /graphify\s+install|hook\s+install/i,
@@ -174,7 +188,11 @@ test("VOC-112-TEST-10: graphify pilot is opt-in, code-only, and hash-locked", ()
   assert.match(body, /hint/i);
   assert.match(body, /verify.*current source/i);
   assert.match(body, /Automatic invocation is disabled/i);
-  assert.match(body, /graphify install/i, "must warn against upstream install flows");
+  assert.match(
+    body,
+    /graphify install/i,
+    "must warn against upstream install flows",
+  );
 
   const gitignore = readText(path.join(repositoryRoot, ".gitignore"));
   assert.match(gitignore, /graphify-out\//);
