@@ -1,0 +1,15 @@
+# VOC-112-T03 — pinned Graphify pilot runtime identity (immutable for this package).
+# The check script verifies these digests and package version before any invocation.
+
+schema_version: 1
+upstream_repo: https://github.com/Graphify-Labs/graphify
+upstream_tag: v0.9.48
+upstream_commit: b2cd36267456c166788c95be6e68574064a92a42
+pypi_package: graphifyy
+pypi_version: 0.9.48
+python_min: "3.12"
+locked_distribution_count: 30
+requirements_in_sha256: 2e0de381a27faa39bf1d5d28cb6f5f7a8e8fb5a33cc43fe413a983d0f05e1ae6
+requirements_lock_sha256: 492f681c167b6d8da7b0970a9dec66e477470343424ec4eb34aa7e33a16e0a5a
+venv_relative: .venv
+graphify_cli_relative: .venv/bin/graphify

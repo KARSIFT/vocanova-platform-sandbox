@@ -1,0 +1,19 @@
+# VOC-112-T03 — reviewed runtime files outside this skill directory.
+# PROVENANCE.yaml hashes this manifest; tests verify each referenced file hash.
+
+schema_version: 1
+files:
+  - path: scripts/graphify/setup.sh
+    sha256: b2f0f4913547f07fcbc4d7923acc34ef2a46e90e6db7449537a5ab4fa8d3245b
+  - path: scripts/graphify/check
+    sha256: 3e864fe1ff1677fc44d0a87a7645ee83dffe51a64468ccbb2860af484ccf766c
+  - path: scripts/graphify/run.sh
+    sha256: 21927b541c45e98b035dc003ef5ce82aef5a63a9b19241d4974b7d4ed6d2ed5b
+  - path: scripts/graphify/runtime-identity.yaml
+    sha256: e312b9e119414077c0e1acbfc2a962193c6b9768a7d983d33e1979cf5af2fbdd
+  - path: scripts/graphify/requirements.in
+    sha256: 2e0de381a27faa39bf1d5d28cb6f5f7a8e8fb5a33cc43fe413a983d0f05e1ae6
+  - path: scripts/graphify/requirements.lock
+    sha256: 492f681c167b6d8da7b0970a9dec66e477470343424ec4eb34aa7e33a16e0a5a
+  - path: .graphifyignore
+    sha256: 5c13d1a77336136c831eabcea2ef4a82f234c34d431cae5409af4d62354fc04f

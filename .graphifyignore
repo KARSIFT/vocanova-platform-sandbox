@@ -1,0 +1,63 @@
+# VOC-112-T03 — repository-owned Graphify ignore rules (merged with .gitignore by Graphify).
+# Excludes secrets, generated/vendor trees, runtime data, and large/noisy artifacts.
+
+# Secrets and credentials
+.env
+.env.*
+**/.env
+**/.env.*
+**/credentials*
+**/*secret*
+**/*token*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+
+# Dependencies and package stores
+node_modules/
+.pnpm-store/
+vendor/
+**/vendor/
+
+# Build and generated output
+dist/
+.next/
+coverage/
+*.tsbuildinfo
+**/__pycache__/
+**/*.py[cod]
+apps/web/lighthouse-reports/
+apps/web/playwright-report-staging/
+apps/web/test-results-staging/
+
+# Graphify pilot output (navigation hints only; verify in current source)
+graphify-out/
+.graphify_python
+
+# Local isolated runtime (operator setup only)
+scripts/graphify/.venv/
+scripts/graphify/.runtime-home/
+
+# Large binaries and archives
+**/*.zip
+**/*.tar
+**/*.tar.gz
+**/*.tgz
+**/*.7z
+**/*.jar
+**/*.wasm
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.gif
+**/*.webp
+**/*.ico
+**/*.pdf
+**/*.mp4
+**/*.mov
+
+# Git and IDE metadata
+.git/
+.cursor/
+.claude/
