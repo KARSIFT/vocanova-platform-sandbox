@@ -16,7 +16,7 @@ complete — T03 implementation recorded 2026-08-23
 | Transitive environment lock/hash identity | `scripts/graphify/requirements.lock` (`sha256:492f681c167b6d8da7b0970a9dec66e477470343424ec4eb34aa7e33a16e0a5a`) | Generated with `pip-compile --generate-hashes` |
 | Runtime compatibility | Python `>=3.12`; 30 locked runtime distributions | The reviewed `numpy==2.5.2` pin requires Python 3.12 or newer |
 | Per-skill provenance | `.agents/skills/graphify-pilot/PROVENANCE.yaml` | Adapted record covers the local skill and a transitively verified runtime manifest |
-| Retained license/NOTICE | `LICENSE`, `LICENSE-MIT`, `NOTICE` under `.agents/skills/graphify-pilot/` | Byte-identical to upstream commit `b2cd362…`; NOTICE's historical MIT reference is complete |
+| Retained license/NOTICE | `LICENSE`, `LICENSE-MIT`, `NOTICE` under `.agents/skills/graphify-pilot/` | Byte-identical to upstream commit `b2cd362…`; NOTICE's historical MIT reference is complete and the `LICENSE` digest `cfc7749b…` is verified upstream, not a placeholder |
 
 ## Pilot configuration checklist
 
@@ -28,7 +28,7 @@ complete — T03 implementation recorded 2026-08-23
 | Skill marked opt-in / auto-invocation disabled | pass | `disable-model-invocation: true` in canonical skill and adapter |
 | Generated graph output gitignored by default | pass | `.gitignore` lists `graphify-out/` and `.graphify_python` |
 | Runner fails safely without global install | pass | `scripts/graphify/check` exits non-zero when `.venv` absent |
-| Ordinary use makes no download/upgrade/network setup action | pass | Only `setup.sh` installs; `check`/`run.sh` are offline |
+| Ordinary use makes no download/upgrade/network setup action | pass | Only explicit `setup.sh` installs from the hash-locked lockfile; no unpinned upgrade; `check`/`run.sh` are offline |
 | No provider auto-detection or provider credentials | pass | Runner starts with `env -i`, an isolated repository-local home, and only a minimal non-secret allowlist |
 | No hooks, always-on injection, or user-profile mutation | pass | Scripts avoid `graphify install` / `hook install`; skill forbids them |
 | Repository target boundary | pass | Realpath containment rejects targets outside the checkout, including symlink escapes |
