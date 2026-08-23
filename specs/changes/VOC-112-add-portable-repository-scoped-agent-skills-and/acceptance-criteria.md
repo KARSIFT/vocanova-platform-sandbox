@@ -10,9 +10,10 @@
 
 A fresh checkout contains `.agents/skills/` and matching `.claude/skills/` adapters for
 every skill introduced by merged tasks. Adapters load canonical skills only; no Git
-symlinks. `scripts/foundation/voc112-agent-skills.test.mjs` passes in `pnpm test` and
-fails closed on adapter drift, missing provenance, forbidden patterns, broken references,
-or budget violations.
+symlinks. Each skill owns a schema-valid `PROVENANCE.yaml`; parallel tasks do not edit a
+shared registry or T00's data-driven validator. `scripts/foundation/voc112-agent-skills.test.mjs`
+passes in `pnpm test` and fails closed on adapter drift, missing provenance, forbidden
+patterns, broken references, uncovered committed files, or budget violations.
 
 ## VOC-112-AC-01 — `vocanova-repo-navigator` routes without duplicating governance
 
@@ -34,9 +35,11 @@ full copies of `AGENTS.md` or canonical governance documents.
 - Evidence: `VOC-112-EV-02`
 - Result: pending
 
-Exactly seven shared skills exist with complete provenance records, repository-specific
-safety adaptations (validation tiers, forbidden secret/log behavior, stack references),
-matching Claude adapters, and passing validation. No unpinned upstream content.
+Exactly seven shared skills exist with complete per-skill provenance records, separate
+upstream/local hashes where adapted, compatible retained licenses/notices, complete
+committed-file security review, repository-specific safety adaptations (validation tiers,
+forbidden secret/log behavior, stack references), matching Claude adapters, and passing
+validation. The reviewed unlicensed Vercel React skill is not copied or adapted.
 
 ## VOC-112-AC-03 — Graphify pilot is opt-in, code-only, and safely bounded
 
@@ -46,10 +49,12 @@ matching Claude adapters, and passing validation. No unpinned upstream content.
 - Evidence: `VOC-112-EV-03`
 - Result: pending
 
-Graphify is pinned with recorded provenance, exposed only through an explicit opt-in
-skill and repository-owned runner/check, runs in code-only mode with query logging disabled
-and repository ignore rules, does not commit generated graph output by default, and fails
-safely when prerequisites are missing without global auto-install.
+Graphify is pinned to an exact upstream/package plus reviewed transitive lock/hashes,
+exposed only through an explicit opt-in skill and repository-local isolated runner/check,
+runs in code-only mode with query logging disabled and repository ignore rules, does not
+commit generated graph output by default, and fails safely when prerequisites are missing
+without normal-use downloads, global fallback, provider auto-detection, hooks, always-on
+instruction injection, or profile mutation.
 
 ## VOC-112-AC-04 — Measurement, discovery, and documentation complete the acceptance principle
 
@@ -59,9 +64,11 @@ safely when prerequisites are missing without global auto-install.
 - Evidence: `VOC-112-EV-04`
 - Result: pending
 
-Deterministic benchmark evidence shows navigator-assisted navigation improves or does not
-regress cost and correctness versus baseline on representative questions. Discovery is
-demonstrated from repository root and a nested directory. `docs/development/agent-skills.md`
+Controlled same-runtime benchmark evidence derived from structured traces shows
+navigator-assisted navigation improves or does not regress cost and correctness versus
+baseline on representative questions. Current hosted Cursor discovery is demonstrated from
+repository root and a nested directory; Claude evidence is truthful about any unavoidable
+interactive-credential limitation. `docs/development/agent-skills.md`
 and the `AGENTS.md` pointer document one-source architecture, updating pinned upstream
 material, Graphify limitations, and safe use. No product/runtime/deployment behavior change.
 

@@ -13,7 +13,9 @@ pending — populate at T03 implementation time
 | Graphify upstream repository | pending | e.g. Graphify-Labs/graphify |
 | Graphify upstream commit/tag | pending | exact reviewed revision |
 | Runtime package (`graphifyy`) | pending | exact version |
-| Provenance registry entry | pending | `.agents/skills/provenance.yaml` |
+| Transitive environment lock/hash identity | pending | complete reviewed set |
+| Per-skill provenance | pending | `.agents/skills/graphify-pilot/PROVENANCE.yaml` |
+| Retained license/NOTICE | pending | Apache-2.0 obligations |
 
 ## Pilot configuration checklist
 
@@ -25,6 +27,10 @@ pending — populate at T03 implementation time
 | Skill marked opt-in / auto-invocation disabled | pending | |
 | Generated graph output gitignored by default | pending | |
 | Runner fails safely without global install | pending | exit code + message |
+| Ordinary use makes no download/upgrade/network setup action | pending | explicit setup only |
+| No provider auto-detection or provider credentials | pending | code-only process environment |
+| No hooks, always-on injection, or user-profile mutation | pending | |
+| Locked repository-local runtime identity verified | pending | absent/mismatch/valid cases |
 | Hint-only language in skill | pending | verify in source |
 
 ## Validation commands

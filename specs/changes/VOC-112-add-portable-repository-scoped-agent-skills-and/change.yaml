@@ -7,8 +7,9 @@ status: draft
 risk: R3
 planned_implementation_risk_floor: 'Measured during drafting against the expected
   task-scoped file list (.agents/skills/**, .claude/skills/**, scripts/foundation/voc112-*.test.mjs,
-  scripts/graphify/** or equivalent repo-owned runner, .agents/skills/provenance.yaml,
-  docs/development/agent-skills.md, AGENTS.md pointer, and this package directory).
+  scripts/graphify/** or equivalent repo-owned runner, per-skill PROVENANCE.yaml records,
+  .graphifyignore, .gitignore, docs/development/agent-skills.md, AGENTS.md pointer, and
+  this package directory).
   AGENTS.md is in scope and carries an R3 path floor; agent-instruction and repository-governance
   semantics apply even though application runtime is unchanged. This package proposes
   R3 for the change as a whole; this is a draft proposal for the reviewing human at
@@ -70,21 +71,25 @@ dependencies:
     these authoritative sources rather than duplicate them.
 - id: VOC-112-DEP-03
   status: open at drafting time for T02 only. Shared engineering skills require exact
-    upstream repository, commit, path, license, and content hash pins chosen during
-    implementation and recorded in .agents/skills/provenance.yaml; planner does not
-    pre-commit to unverified upstream SHAs.
+    upstream repository, commit, path, compatible license, separate upstream/local
+    hashes, adaptation notes, and retained notices chosen during implementation and
+    recorded in task-isolated per-skill PROVENANCE.yaml records; planner does not
+    pre-commit to unverified upstream SHAs. Vercel's reviewed unlicensed React skill is
+    explicitly rejected as a copy/adaptation source.
 - id: VOC-112-DEP-04
   status: open at drafting time for T03 only. Graphify upstream identity has moved
     (Graphify-Labs/graphify releases such as v0.9.48; PyPI package graphifyy). T03
-    must pin an exact reviewed commit/tag and record provenance before enabling the
-    pilot skill.
+    must pin an exact reviewed commit/tag, package, and complete transitive lock with
+    hashes before enabling the pilot skill.
 affected_areas:
 - .agents/skills/
 - .claude/skills/
-- .agents/skills/provenance.yaml
-- scripts/foundation/voc112-agent-skills.test.mjs
-- scripts/foundation/voc112-navigation-benchmark.test.mjs
+- .agents/skills/provenance.schema.yaml
+- .agents/skills/*/PROVENANCE.yaml
+- scripts/foundation/voc112-*.test.mjs
 - scripts/graphify/ (or equivalent repo-owned runner/check)
+- .graphifyignore
+- .gitignore
 - docs/development/agent-skills.md
 - AGENTS.md (short pointer only; no governance weakening)
 - specs/changes/VOC-112-add-portable-repository-scoped-agent-skills-and/

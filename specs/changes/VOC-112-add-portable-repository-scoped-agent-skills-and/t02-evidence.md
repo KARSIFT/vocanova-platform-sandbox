@@ -9,13 +9,13 @@ pending — populate at T02 implementation time
 
 ## Shared skill provenance table
 
-| Skill directory | Upstream repo | Upstream commit | Path | License | content_sha256 |
-|-----------------|---------------|-----------------|------|---------|----------------|
+| Skill directory | Source/commit/path | License + retained notice | Upstream SHA-256 | Local manifest SHA-256 | Adaptation/rejection note |
+|-----------------|--------------------|---------------------------|-----------------|-----------------------|---------------------------|
 | context-mapping | pending | pending | pending | pending | pending |
 | systematic-debugging | pending | pending | pending | pending | pending |
 | verification-before-completion | pending | pending | pending | pending | pending |
 | github-actions-efficiency | pending | pending | pending | pending | pending |
-| react-next-performance | pending | pending | pending | pending | pending |
+| react-next-performance | repository-native/current official docs | N/A for copied text | N/A | pending | record unlicensed Vercel source rejection |
 | playwright-browser-testing | pending | pending | pending | pending | pending |
 | security-threat-modeling | pending | pending | pending | pending | pending |
 
@@ -27,6 +27,12 @@ Record reviewer identity (or agent role), date, and confirmation that each skill
 - references repository validation tiers;
 - contains no unpinned install or hidden network instructions;
 - remains subordinate to `AGENTS.md`/canonical docs.
+- reviewed every committed instruction, script, reference, asset, license, and notice;
+- removed environment/credential greps, raw CI log ingestion, unpinned/global Playwright
+  installs, and generic human-review pauses.
+
+Record the exact finding that Vercel's reviewed React skill had no compatible license and
+was not copied or adapted.
 
 ## Validation commands
 

@@ -29,7 +29,7 @@ A-004 plan-review / adopt path.
    - allowed YAML frontmatter (`name`, `description`; optional fields documented);
    - adapter/canonical name parity;
    - adapter loader contract (points at canonical path; no procedural steps beyond load);
-   - provenance registry completeness for adapted upstream skills;
+   - task-isolated `PROVENANCE.yaml` completeness for every canonical skill;
    - forbidden instruction patterns (secret/credential search, raw CI log exfiltration,
      `latest`/unpinned downloads, hidden network actions, user-profile mutation);
    - referenced-file existence;
@@ -51,11 +51,15 @@ A-004 plan-review / adopt path.
    - React/Next.js performance guidance;
    - Playwright/browser testing;
    - security threat modeling.
-   Each records exact upstream repository, commit, path, license, and content hash in
-   `.agents/skills/provenance.yaml`.
+   Each skill carries its own `.agents/skills/<name>/PROVENANCE.yaml`, validated from
+   the T00-owned schema without later tasks editing a shared registry. Adapted material
+   records separate upstream and local hashes, adaptation notes, and retained license/
+   NOTICE paths. Repository-native material records the authoritative documentation
+   sources used to author it.
 7. **Graphify pilot** — evaluate as complementary code-relationship index, not a
    replacement for the navigator or direct source inspection:
-   - pin exact reviewed Graphify version and provenance;
+   - pin an exact reviewed Graphify commit, package version, and complete transitive
+     environment lock with hashes;
    - code-only/local mode; no document/image semantic extraction; no LLM auto-detection;
    - force query logging off;
    - repository-owned ignore rules excluding secrets, generated/vendor content, runtime
@@ -63,8 +67,11 @@ A-004 plan-review / adopt path.
    - do not commit generated graph output unless deterministic evidence proves benefit;
    - treat graph output as navigation hint; verify consequential claims in current source;
    - remain explicit/opt-in until measurement demonstrates reliable automatic use;
-   - provide pinned repository-owned runner/check with clear prerequisite and safe
-     failure when runtime missing — never auto-install globally.
+   - keep setup an explicit operator action into a repository-local isolated environment;
+     ordinary skill/runner use never downloads, upgrades, falls back to a global install,
+     mutates a user profile, installs hooks, or injects always-on instructions;
+   - provide a repository-owned runner/check with clear prerequisite and safe failure
+     when the locked local runtime is missing or mismatched.
 8. **Verification and documentation** — navigation benchmark harness; discovery proof
    from repository root and a nested directory; operator-facing doc at
    `docs/development/agent-skills.md`; short `AGENTS.md` pointer preserving governance
@@ -98,11 +105,16 @@ A-004 plan-review / adopt path.
 
 `VOC-112-D00`: **One canonical source.** Every skill's authoritative procedure lives
 only under `.agents/skills/<name>/`. Claude adapters and any future agent-specific
-stubs may only load that file.
+stubs may only load that file. The Claude adapter repeats only the canonical discovery
+metadata required by Claude and uses this sole body instruction (with `<name>` replaced):
+`Load and follow the sole canonical procedure at
+${CLAUDE_PROJECT_DIR}/.agents/skills/<name>/SKILL.md completely.` The project-root
+substitution makes the target independent of the starting/nested working directory.
 
 `VOC-112-D01`: **No symlinks.** Adapter parity is enforced by deterministic tests, not
 Git symlink indirection, to preserve Windows/device portability and avoid discovery
-regressions noted in issue #933.
+regressions noted in issue #933. Validation requires exact metadata parity and the exact
+single-instruction body template; any additional adapter procedure fails closed.
 
 `VOC-112-D02`: **Governance precedence.** When skill prose conflicts with `AGENTS.md`,
 `CLAUDE.md`, approved change packages, tests, or source code, the repository sources
@@ -144,28 +156,42 @@ duplicate full governance text inline.
 `VOC-112-D06`: **Shared skill set is fixed to seven** named in issue #933. Additional
 skills require a separate governed package.
 
-`VOC-112-D07`: **Provenance registry.** `.agents/skills/provenance.yaml` lists every
-adapted upstream skill with `upstream_repo`, `upstream_commit`, `upstream_path`,
-`license`, `content_sha256`, and `adapted_at_commit` (this repository). Native skills
-(`vocanova-repo-navigator`, framework docs) declare `source: repository-native`.
+`VOC-112-D07`: **Task-isolated provenance.** T00 owns an immutable schema at
+`.agents/skills/provenance.schema.yaml`; every canonical skill owns
+`.agents/skills/<name>/PROVENANCE.yaml`. The validator discovers these records
+dynamically, so parallel T01/T02/T03 branches add files without editing one registry or
+the T00 validator. Adapted skills record `upstream_repo`, `upstream_commit`,
+`upstream_path`, `upstream_sha256`, `local_sha256`, `license`, retained license/NOTICE
+paths, and adaptation notes. Native skills declare `source: repository-native` and their
+authoritative documentation sources. All committed instructions, scripts, references,
+assets, licenses, and notices are included in the review and local-hash manifest.
 
 `VOC-112-D08`: **Graphify opt-in.** Provide skill `graphify-pilot` (or equivalent name)
 disabled by default for automatic invocation (`disable-model-invocation: true` or
 documented explicit opt-in only). Runner lives under repository control
 (`scripts/graphify/`). Default pilot uses `--code-only`, logging disabled, and
-`.graphifyignore` aligned to repository secret/generated paths.
+`.graphifyignore` aligned to repository secret/generated paths. The reviewed Graphify
+commit/package and every transitive dependency are locked with hashes in an isolated
+repository-local environment. Setup is a separate explicit operator command; the normal
+runner is offline/fail-closed and must never use upstream `install`, provider
+auto-detection, agent hooks, always-on AGENTS/CLAUDE injection, a global executable, or a
+user profile.
 
-`VOC-112-D09`: **Measurement harness.** T04 runs a deterministic benchmark script with
-representative navigation questions and records baseline (no navigator) vs
-navigator-assisted metrics: files touched, search/grep operations (simulated or counted),
-elapsed time, answer correctness against a keyed rubric, and approximate context
-character budget for skill metadata consumed.
+`VOC-112-D09`: **Measured agent benchmark.** T04 runs controlled baseline and
+navigator-assisted sessions against fixed questions, the same repository revision,
+model/runtime version, permissions, and keyed correctness rubric. Metrics are derived from
+the structured run/tool trace rather than hand-entered or hardcoded values: files opened,
+search operations, elapsed time, correctness, and context/usage metadata exposed by the
+runtime. A deterministic test validates the captured metadata, exact revisions, rubric,
+and threshold calculations; it does not simulate the measurements.
 
-`VOC-112-D10`: **Discovery evidence.** T04 records that canonical skills are listed
-from repository root and from at least one nested working directory (recommended:
-`apps/web/`) using the active hosted agent runtime where feasible without interactive
-login; where runtime proof requires operator access, record metadata-only evidence in
-`t04-evidence.md` without secrets.
+`VOC-112-D10`: **Real discovery evidence.** T04 uses the current hosted Cursor runtime to
+list or invoke a repository skill from the repository root and from at least one nested
+working directory (recommended: `apps/web/`); static filesystem assertions are not a
+substitute. It also exercises Claude Code from both locations when an already-authorized
+non-interactive runtime is available. If Claude requires new interactive credentials, the
+evidence must say `not-executed-external-credential-required` and must not claim a pass.
+Evidence is metadata-only and contains no prompts, raw logs, secrets, or personal data.
 
 ## Data, migrations, analytics, and accessibility
 
@@ -182,10 +208,15 @@ and personal-data harvesting. Evidence files contain bounded metadata only.
 
 1. **T02 upstream pins:** Independent adoption review must confirm each shared skill's
    chosen upstream repository/commit is license-compatible and security-acceptable before
-   merge. Planner intentionally does not fix upstream SHAs in this draft.
+   merge. Planner intentionally does not fix upstream SHAs in this draft. Exact review has
+   already established that `vercel-labs/agent-skills` at
+   `dd089a8c752c966dee8bf0f27cb625ba193ffd9e` has no detected or committed license;
+   its React skill must not be copied or adapted. Author React/Next guidance independently
+   from current official React/Next documentation or select an explicitly licensed source,
+   and record the rejection decision.
 2. **T03 Graphify pin:** Implementer selects the exact Graphify-Labs/graphify tag/commit
-   and matching `graphifyy` PyPI version during T03; record in provenance before enabling
-   the pilot skill.
+   and matching `graphifyy` PyPI version during T03, then produces and reviews the complete
+   transitive lock/hash set before enabling the pilot skill.
 3. **Cursor discovery path:** If a future Cursor release requires an additional project
    marker beyond `.agents/skills/`, T00/T04 may add the smallest compatible marker in the
    same task PR after verifying discovery — not a separate scope expansion.

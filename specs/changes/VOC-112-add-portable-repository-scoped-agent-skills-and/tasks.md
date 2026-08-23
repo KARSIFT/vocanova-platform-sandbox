@@ -17,21 +17,26 @@ Order is mandatory: **T00 → (T01 ∥ T02 ∥ T03) → T04**.
 1. Create `.agents/skills/README.md` documenting the one-source architecture, directory
    layout, frontmatter rules, reference-file conventions, and governance precedence
    (`VOC-112-D02`).
-2. Create `.agents/skills/provenance.yaml` schema and initial entries for repository-native
-   skills; adapted entries are added by later tasks but validation must exist in T00.
+2. Create immutable `.agents/skills/provenance.schema.yaml`. Each later skill owns a
+   `.agents/skills/<name>/PROVENANCE.yaml`; there is no shared registry for parallel tasks
+   to edit.
 3. Define the Claude adapter contract in `.claude/skills/README.md` and implement a
-   shared adapter template pattern: each adapter's entire procedural content is limited to
-   loading `.agents/skills/<name>/SKILL.md`. No Git symlinks.
+   shared adapter template pattern: discovery metadata matches the canonical skill and the
+   entire body is the exact one-line loader from `VOC-112-D00`, using
+   `${CLAUDE_PROJECT_DIR}` to load `.agents/skills/<name>/SKILL.md`. No Git symlinks.
 4. Add `scripts/foundation/voc112-agent-skills.test.mjs` enforcing:
    - canonical/adapters name parity;
    - allowed frontmatter;
    - adapter loader contract;
-   - provenance completeness for skills marked adapted;
+   - `${CLAUDE_PROJECT_DIR}` target resolution from root and nested cwd fixtures;
+   - dynamically discovered per-skill provenance completeness;
    - forbidden-pattern denylist (`VOC-112-D03`);
    - referenced files exist;
    - description and SKILL.md size budgets (`VOC-112-D04`).
 5. Wire the test into existing `pnpm test` foundation coverage (no new workflow required
    unless classifier demands it for unrelated reasons).
+   The validator must be data-driven: T01/T02/T03 add conforming skill directories and do
+   not edit the validator or a central registry simply to register themselves.
 6. Add `docs/development/agent-skills.md` skeleton sections (completed in T04) so T00 can
    link validation commands.
 7. Record commands and results in `t00-evidence.md`:
@@ -61,9 +66,11 @@ Order is mandatory: **T00 → (T01 ∥ T02 ∥ T03) → T04**.
    `VOC-112-D05` with progressive disclosure; optional `reference.md` for extended routes
    only if within budgets.
 2. Add matching `.claude/skills/vocanova-repo-navigator/SKILL.md` adapter per T00 contract.
-3. Register `source: repository-native` provenance entry.
-4. Extend validation fixtures if needed for navigator-specific references (paths must exist
-   at implementation time).
+3. Add `.agents/skills/vocanova-repo-navigator/PROVENANCE.yaml` with
+   `source: repository-native` and authoritative source paths.
+4. Do not edit the T00 validator or shared framework files; navigator references must pass
+   the generic validator as implemented. Put navigator-specific coverage in
+   `scripts/foundation/voc112-navigator.test.mjs`.
 5. Record review notes in `t01-evidence.md`: confirm no large `AGENTS.md`/governance paste,
    budgets pass, validation green.
 
@@ -81,9 +88,8 @@ Order is mandatory: **T00 → (T01 ∥ T02 ∥ T03) → T04**.
 
 ### Required work
 
-1. For each required skill domain, choose an upstream source, pin exact commit/path, record
-   license and `content_sha256` in `.agents/skills/provenance.yaml`, and adapt content into
-   `.agents/skills/<skill-name>/SKILL.md`:
+1. For each required skill domain, choose an upstream source and create
+   `.agents/skills/<skill-name>/SKILL.md` plus task-local `PROVENANCE.yaml`:
    - `context-mapping`
    - `systematic-debugging`
    - `verification-before-completion`
@@ -92,21 +98,36 @@ Order is mandatory: **T00 → (T01 ∥ T02 ∥ T03) → T04**.
    - `playwright-browser-testing`
    - `security-threat-modeling`
    Skill directory names may use kebab-case equivalents; validation must enforce a stable
-   one-to-one mapping documented in provenance.
+   one-to-one mapping documented in provenance. Adapted records include exact upstream
+   repository/commit/path, compatible license, `upstream_sha256`, `local_sha256`, retained
+   license/NOTICE paths, adaptation notes, and a manifest covering every committed file.
 2. Adapt generic upstream instructions to this repository:
    - cite `docs/development.md` validation tiers instead of inventing commands;
    - forbid secret/credential/log exfiltration;
    - reference real paths (`apps/web`, `apps/api`, `scripts/foundation`, `.github/workflows`);
    - preserve fail-closed governance behavior.
 3. Add Claude adapters for each skill.
-4. Store optional upstream snapshot excerpts under `.agents/skills/<skill-name>/upstream/`
+4. Do not edit T00's validator/schema or any central registry. Store optional upstream
+   snapshot excerpts under `.agents/skills/<skill-name>/upstream/`
    only when needed for hash verification; do not duplicate entire upstream repos.
-5. Record security-review summary and hash table in `t02-evidence.md` (no secrets/logs).
-6. Re-run `voc112-agent-skills` and governance validation as applicable.
+5. Review every committed instruction, script, reference, asset, license, and notice—not
+   only SKILL.md or denylist matches. Record the security review and hash table in
+   `t02-evidence.md` (no secrets/logs).
+6. Record that `vercel-labs/agent-skills` commit
+   `dd089a8c752c966dee8bf0f27cb625ba193ffd9e` was rejected as a React skill copy/adaptation
+   source because it has no detected or committed license. Author React/Next guidance
+   independently from official current React/Next documentation or use an explicitly
+   licensed source.
+7. Explicitly remove unsafe upstream behavior: no environment/credential greps; no raw CI
+   log ingestion; no unpinned/global Playwright installs; no generic human-review pause;
+   use repository-pinned Playwright and repository validation commands.
+8. Re-run `voc112-agent-skills` and governance validation as applicable.
+   Put domain/security assertions in task-local
+   `scripts/foundation/voc112-shared-skills.test.mjs`; do not edit T00's validator.
 
 ### Explicitly out of scope for this task
 
-- Navigator changes except provenance/registry updates required for validation.
+- Navigator changes.
 - Graphify pilot (T03).
 - Installing unpinned global tools or fetching `@latest` dependencies during agent runs.
 
@@ -120,12 +141,18 @@ Order is mandatory: **T00 → (T01 ∥ T02 ∥ T03) → T04**.
 
 ### Required work
 
-1. Pin Graphify upstream (repository tag/commit) and runtime package version; record in
-   `.agents/skills/provenance.yaml`.
+1. Pin Graphify upstream repository/tag/commit, runtime package version, complete transitive
+   dependency lock with hashes, and local adapted skill/runner hashes in
+   `.agents/skills/graphify-pilot/PROVENANCE.yaml`; retain Apache-2.0 license/NOTICE files.
 2. Add repository-owned runner/check under `scripts/graphify/` (exact filenames at
    implementer discretion) that:
-   - documents prerequisites explicitly;
-   - runs code-only extraction with query logging disabled;
+   - provides a separate explicit operator setup into a repository-local isolated
+     environment using only the reviewed lock/hash set;
+   - normal use refuses a missing/mismatched environment and performs no download,
+     upgrade, global fallback, profile mutation, installer call, hooks, or always-on
+     instruction injection;
+   - runs code-only extraction with query logging disabled and every provider credential
+     unavailable to the Graphify process so backend auto-detection cannot occur;
    - applies `.graphifyignore` excluding `.env*`, secrets, `node_modules`, build output,
      vendor/generated trees, runtime data, and large binary artifacts;
    - exits non-zero with clear message when runtime missing — **no global auto-install**.
@@ -134,8 +161,10 @@ Order is mandatory: **T00 → (T01 ∥ T02 ∥ T03) → T04**.
    is disabled until T04 evidence says otherwise.
 4. Gitignore default graph output directories unless T03/T04 evidence explicitly justifies
    committing them (expected: remain ignored).
-5. Add deterministic test coverage in `voc112-agent-skills.test.mjs` or sibling fixture for
-   ignore rules, opt-in markers, and forbidden auto-enable patterns.
+5. Add deterministic coverage in task-local
+   `scripts/foundation/voc112-graphify.test.mjs` for ignore rules, opt-in markers,
+   lock/hash identity, and forbidden auto-enable/install/provider/hook patterns without
+   editing the T00-owned generic validator.
 6. Record pilot limitations and pin table in `t03-evidence.md`.
 
 ### Explicitly out of scope for this task
@@ -155,13 +184,18 @@ Order is mandatory: **T00 → (T01 ∥ T02 ∥ T03) → T04**.
 ### Required work
 
 1. Add `scripts/foundation/voc112-navigation-benchmark.test.mjs` (or script + test wrapper)
-   with a fixed set of representative navigation questions keyed to expected authoritative
-   paths/commands. Record baseline vs navigator-assisted metrics in `t04-evidence.md`:
-   files opened, search operations, elapsed time, correctness score, skill metadata
-   character budget.
-2. Demonstrate skill discovery from repository root and from a nested directory (recommended
-   `apps/web/`). Record metadata-only evidence; if hosted runtime proof requires operator
-   access, document what was observed without interactive secrets.
+   with fixed representative questions and expected authoritative paths/commands. Run
+   controlled baseline and navigator-assisted agent sessions using the same exact revision,
+   model/runtime version, permissions, and rubric. Derive files opened, search operations,
+   elapsed time, correctness, and available context/usage metrics from structured traces;
+   the deterministic test validates captured evidence and calculations and must not simulate
+   or hardcode successful measurements.
+2. Demonstrate actual hosted Cursor skill discovery/invocation from repository root and a
+   nested directory (recommended `apps/web/`). Also exercise Claude Code from both locations
+   when an already-authorized non-interactive runtime exists. Static filesystem assertions
+   are not runtime proof; if Claude needs new interactive credentials, record
+   `not-executed-external-credential-required` without claiming pass. Evidence remains
+   metadata-only, with no prompts, raw logs, secrets, or personal data.
 3. Complete `docs/development/agent-skills.md`: installation scope, one-source architecture,
    updating pinned upstream material, Graphify limitations, safe use, validation commands.
 4. Add a short `AGENTS.md` subsection pointing to canonical skills and stating governance
@@ -184,6 +218,9 @@ Order is mandatory: **T00 → (T01 ∥ T02 ∥ T03) → T04**.
 
 - T00 blocks all other tasks.
 - T01, T02, and T03 may proceed in parallel after T00 merges.
+- Their write surfaces are disjoint: every skill owns its `PROVENANCE.yaml`; T00 owns the
+  immutable provenance schema and data-driven validator. A task requiring a shared-file
+  change must be serialized instead of creating predictable merge conflicts.
 - T04 requires T01–T03 so measurement covers the full skill set and Graphify pilot.
 - No task may be dispatched before this package is adopted and implementation-authorized.
 

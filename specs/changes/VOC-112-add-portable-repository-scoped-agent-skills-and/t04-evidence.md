@@ -10,7 +10,9 @@ pending — populate at T04 implementation time
 ## Navigation benchmark results
 
 Representative questions and keyed expected authoritative targets are defined in
-`scripts/foundation/voc112-navigation-benchmark.test.mjs` at implementation time.
+`scripts/foundation/voc112-navigation-benchmark.test.mjs` at implementation time. Every
+row below is derived from sanitized structured traces from controlled same-revision,
+same-model/runtime sessions; hand-entered or hardcoded success values are invalid.
 
 | Question ID | Baseline files | Navigator files | Baseline searches | Navigator searches | Baseline time | Navigator time | Baseline correct | Navigator correct | Skill metadata chars |
 |-------------|----------------|-----------------|-------------------|--------------------|---------------|----------------|------------------|-------------------|----------------------|
@@ -21,13 +23,15 @@ and cost metrics versus baseline per benchmark script declarations.
 
 ## Discovery evidence
 
-| Context | Method | Result | Notes |
-|---------|--------|--------|-------|
-| Repository root | pending | pending | list/discover canonical skills |
-| Nested cwd (`apps/web/` recommended) | pending | pending | same skill set discoverable |
+| Runtime | Context | Version/method | Result | Notes |
+|---------|---------|----------------|--------|-------|
+| Hosted Cursor | Repository root | pending | pending | actual list/invocation |
+| Hosted Cursor | Nested cwd (`apps/web/` recommended) | pending | pending | actual list/invocation |
+| Claude Code | Repository root | pending | pending | pass or `not-executed-external-credential-required` |
+| Claude Code | Nested cwd (`apps/web/` recommended) | pending | pending | pass or same truthful limitation |
 
-If hosted-runtime proof requires operator observation, record run environment and outcome
-metadata only.
+Static filesystem assertions do not satisfy runtime discovery. Record runtime/revision and
+outcome metadata only—no prompts, raw logs, secrets, or personal data.
 
 ## Documentation and governance pointer
 

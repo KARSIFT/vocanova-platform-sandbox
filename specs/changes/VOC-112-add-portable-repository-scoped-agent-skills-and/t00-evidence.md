@@ -12,7 +12,7 @@ pending — populate at T00 implementation time
 Record the exact files added for:
 
 - `.agents/skills/README.md`
-- `.agents/skills/provenance.yaml` (schema + native entries)
+- `.agents/skills/provenance.schema.yaml` (immutable per-skill schema)
 - `.claude/skills/README.md`
 - `scripts/foundation/voc112-agent-skills.test.mjs`
 - `docs/development/agent-skills.md` skeleton
@@ -33,6 +33,9 @@ Record a table of skill names validated in T00 (may be README-only bootstrap unt
 | Skill | Canonical path | Claude adapter | Symlink |
 |-------|----------------|----------------|---------|
 | pending | pending | pending | none expected |
+
+Also record that the validator dynamically discovers per-skill `PROVENANCE.yaml` files and
+that T01/T02/T03 require no shared registry or validator edit.
 
 ## Acceptance mapping
 
