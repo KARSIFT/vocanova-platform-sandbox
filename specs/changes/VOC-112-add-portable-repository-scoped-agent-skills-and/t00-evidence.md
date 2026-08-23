@@ -24,7 +24,7 @@ No canonical skill bodies were added in T00; later tasks add skill directories a
 
 | Command | Result | Notes |
 |---------|--------|-------|
-| `node --test scripts/foundation/voc112-agent-skills.test.mjs` | pass | 8 tests, 0 failures |
+| `node --test scripts/foundation/voc112-agent-skills.test.mjs` | pass | 9 tests, 0 failures; exact adapter target, opt-in metadata parity, denylist attribution, and strict provenance fixtures included |
 | `bash scripts/governance/validate-governance.sh` | pass | AGENTS.md unchanged in T00 |
 | `bash scripts/governance/classify-change-risk.sh` | pass | path floor R1 reported |
 | `git diff --check` | pass | no whitespace errors |

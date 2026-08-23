@@ -49,9 +49,9 @@ record_types:
       - local_sha256
       - license
       - adaptation_notes
+      - retained_license_paths
       - committed_files
     optional_fields:
-      - retained_license_paths
       - retained_notice_paths
     field_rules:
       schema_version:
@@ -76,12 +76,14 @@ record_types:
       local_sha256:
         type: string
         pattern: "^[0-9a-f]{64}$"
+        meaning: SHA-256 of the adapted canonical SKILL.md bytes
       license:
         type: string
       adaptation_notes:
         type: string
       retained_license_paths:
         type: array
+        min_items: 1
         items:
           type: string
       retained_notice_paths:
@@ -97,6 +99,7 @@ definitions:
     pattern: "^[0-9a-f]{64}$"
 
   committed_files_manifest:
+    description: Every committed skill artifact except PROVENANCE.yaml itself.
     type: array
     min_items: 1
     items:

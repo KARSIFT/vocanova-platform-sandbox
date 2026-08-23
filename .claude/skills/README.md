@@ -9,8 +9,9 @@ and instructs Claude to load exactly one file from the canonical tree.
 For each skill named `<name>`:
 
 1. Create `.claude/skills/<name>/SKILL.md`.
-2. YAML frontmatter `name` and `description` must match
-   `.agents/skills/<name>/SKILL.md` exactly.
+2. Every allowed YAML frontmatter field must match
+   `.agents/skills/<name>/SKILL.md` exactly, including
+   `disable-model-invocation: true` for opt-in-only skills.
 3. The adapter body must be **exactly** this single line (replace `<name>`):
 
    ```
