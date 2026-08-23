@@ -1,89 +1,72 @@
 # VOC-112-T04 evidence — navigation benchmark, discovery, and documentation
 
-Metrics and metadata only — no secrets, prompts, raw logs, or personal data.
+Metadata only: no secrets, prompts, raw logs, response bodies, or personal data.
 
 ## gate_status
 
-pass — T04 benchmark, discovery evidence, documentation, and governance checks recorded 2026-08-23
+`hosted-cursor-discovery-pending`
 
-## Navigation benchmark results
+The benchmark and Claude Code discovery are complete. T04 must remain draft until an
+authorized hosted Cursor runtime captures both root and nested discovery from structured
+runtime events. Filesystem enumeration or static path resolution is not accepted as proof.
 
-Representative questions and keyed authoritative targets are defined in
-`scripts/foundation/voc112-navigation-benchmark-run.mjs` (`BENCHMARK_QUESTIONS`).
-Traces are captured in `scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json`
-and regenerated at test time via `voc112-navigation-benchmark.test.mjs` so the revision
-binding matches `git rev-parse HEAD`.
+## Real navigation benchmark
 
-Aggregate metrics (baseline vs navigator-assisted, same runner revision):
+Capture kind: `real-agent-structured-trace`. Subject revision:
+`d29b179db2eb32a7ef8cc21156bb797be5d3fdd9`. Runtime: Codex CLI `0.149.0`, model
+`gpt-5.6-sol`, read-only sandbox, ephemeral sessions, personal configuration ignored.
+Three fixed questions were each run once as baseline and once with the canonical
+`vocanova-repo-navigator` explicitly invoked. Pair order alternated. Raw traces existed
+only in process memory; the committed fixture contains sanitized derived metrics.
 
-| Metric | Baseline | Navigator-assisted | Delta |
-|--------|----------|--------------------|-------|
-| Total files opened | 318 | 27 | −291 |
-| Total search operations | 59 | 10 | −49 |
-| Total elapsed (ms) | 235 | 0 | −235 |
-| Correct answers | 0 / 10 | 10 / 10 | +10 |
+| Metric                  | Baseline  | Navigator-assisted | Delta      |
+| ----------------------- | --------- | ------------------ | ---------- |
+| Keyed correct answers   | 1 / 3     | 3 / 3              | +2         |
+| Repository files opened | 13        | 3                  | -10        |
+| Search operations       | 6         | 3                  | -3         |
+| Tool calls              | 7         | 6                  | -1         |
+| Elapsed time            | 65,182 ms | 48,757 ms          | -16,425 ms |
+| Input tokens            | 215,002   | 180,897            | -34,105    |
+| Output tokens           | 1,420     | 775                | -645       |
 
-Per-question sample (files / searches / correct):
+The keyed threshold requires full navigator correctness, correctness non-regression,
+no increase in repository files/searches, and at most one additional skill-read tool call
+per question. The capture passes all thresholds and also improves every recorded aggregate.
 
-| Question ID | Baseline files | Navigator files | Baseline searches | Navigator searches | Baseline correct | Navigator correct | Skill metadata chars |
-|-------------|----------------|-----------------|-------------------|--------------------|------------------|-------------------|----------------------|
-| nav-q01 | 26 | 3 | 6 | 1 | false | true | 1829 |
-| nav-q02 | 34 | 3 | 6 | 1 | false | true | 1829 |
-| nav-q03 | 39 | 2 | 6 | 1 | false | true | 1829 |
-| nav-q04 | 34 | 4 | 6 | 1 | false | true | 1829 |
-| nav-q05 | 29 | 1 | 5 | 1 | false | true | 1829 |
-| nav-q06 | 29 | 4 | 6 | 1 | false | true | 1829 |
-| nav-q07 | 31 | 2 | 6 | 1 | false | true | 1829 |
-| nav-q08 | 31 | 4 | 6 | 1 | false | true | 1829 |
-| nav-q09 | 35 | 2 | 6 | 1 | false | true | 1829 |
-| nav-q10 | 30 | 2 | 6 | 1 | false | true | 1829 |
+Fixture: `scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json`.
 
-**Acceptance threshold:** navigator-assisted path improves or does not regress correctness
-and cost metrics versus baseline (zero-regression thresholds on files, searches, elapsed
-time, and correctness). Navigator reduces searches and files opened while achieving full
-rubric correctness.
+## Runtime discovery
 
-## Discovery evidence
+| Runtime                                   | Context               | Evidence                                                                          | Result  |
+| ----------------------------------------- | --------------------- | --------------------------------------------------------------------------------- | ------- |
+| Claude Code `2.1.229` / `claude-sonnet-5` | repository root       | structured `Read` event for canonical navigator plus success marker               | pass    |
+| Claude Code `2.1.229` / `claude-sonnet-5` | nested `apps/web` cwd | structured `Read` event resolves the same canonical navigator plus success marker | pass    |
+| Hosted Cursor                             | repository root       | real structured capture required                                                  | pending |
+| Hosted Cursor                             | nested `apps/web` cwd | real structured capture required                                                  | pending |
 
-Fixture: `scripts/foundation/fixtures/voc112-skill-discovery-evidence.json`
+Fixture: `scripts/foundation/fixtures/voc112-skill-discovery-evidence.json`.
 
-| Runtime | Context | Version/method | Result | Notes |
-|---------|---------|----------------|--------|-------|
-| Hosted Cursor | Repository root | filesystem-enumeration-and-runtime-skill-registry | pass | 9 canonical skills; `vocanova-repo-navigator` present; `CURSOR_AGENT` env marker |
-| Hosted Cursor | Nested cwd (`apps/web/`) | project-root-adapter-target-resolution | pass | `${CLAUDE_PROJECT_DIR}`-style resolution reaches canonical navigator path from nested cwd |
-| Claude Code | Repository root | cli-non-interactive-probe | not-executed-external-credential-required | `claude` CLI not installed in hosted implementer runtime |
-| Claude Code | Nested cwd (`apps/web/`) | cli-non-interactive-probe | not-executed-external-credential-required | same limitation |
+## One-source architecture and documentation
 
-Static filesystem layout alone is insufficient; the hosted Cursor rows record runtime
-enumeration and nested adapter-target resolution. Claude rows are truthful about the
-external-credential limitation.
+- Canonical instructions: `.agents/skills/<name>/SKILL.md`.
+- Claude Code adapters: `.claude/skills/<name>/SKILL.md`; frontmatter is mirrored and
+  the sole body loads the canonical file through `${CLAUDE_PROJECT_DIR}`.
+- No per-device skill installation is required after checkout.
+- `docs/development/agent-skills.md` documents scope, updates, explicit evidence capture,
+  Graphify limitations, and safe use.
+- `AGENTS.md` points to the documentation without weakening A-004 or safety rules.
 
-## Documentation and governance pointer
+## Validation
 
-| Artifact | Result | Notes |
-|----------|--------|-------|
-| `docs/development/agent-skills.md` complete | pass | installation, one-source architecture, upstream updates, Graphify limits, safe use |
-| `AGENTS.md` pointer added | pass | `## Agent skills` subsection; governance precedence preserved |
-| `bash scripts/governance/validate-governance.sh` | pass | |
-| `bash scripts/governance/classify-change-risk.sh` | pass | R3 floor from `AGENTS.md` |
-
-## Validation commands
-
-| Command | Result |
-|---------|--------|
-| `node --test scripts/foundation/voc112-agent-skills.test.mjs` | pass |
-| `node --test scripts/foundation/voc112-navigation-benchmark.test.mjs` | pass (5 tests) |
-| `node --test scripts/foundation/voc112-*.test.mjs` | pass (54 tests) |
-| `pnpm test` | not run separately (foundation glob covered above) |
-| `git diff --check` | pass |
-
-## Acceptance principle sign-off
-
-1. One authoritative copy of each skill exists in `.agents/skills/` with matching Claude adapters.
-2. Supported agents discover skills from the repository checkout without personal installation.
-3. Deterministic foundation tests prevent adapter drift, missing provenance, and unsafe instructions.
-4. Measured benchmark evidence shows navigator-assisted navigation improves cost and correctness versus baseline on representative questions.
+| Command                                                               | Result                                   |
+| --------------------------------------------------------------------- | ---------------------------------------- |
+| `node --test scripts/foundation/voc112-agent-skills.test.mjs`         | pending final head                       |
+| `node --test scripts/foundation/voc112-navigation-benchmark.test.mjs` | intentionally pending hosted Cursor rows |
+| `node --test scripts/foundation/voc112-*.test.mjs`                    | pending final head                       |
+| `bash scripts/governance/validate-governance.sh`                      | pending final head                       |
+| `bash scripts/governance/classify-change-risk.sh`                     | pending final head                       |
+| `git diff --check`                                                    | pending final head                       |
 
 ## Acceptance mapping
 
-- `VOC-112-AC-04` / `VOC-112-EV-04` — benchmark, discovery, docs, and governance checks complete.
+- `VOC-112-AC-04` / `VOC-112-EV-04` — pending only the two real hosted Cursor discovery rows.

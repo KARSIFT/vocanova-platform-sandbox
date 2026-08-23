@@ -1,48 +1,36 @@
 {
-  "schema_version": 1,
-  "revision": "680db499a05acdc1d2efba6a63454ae2dedd6426",
-  "recorded_at": "2026-08-23T22:23:36.528Z",
-  "runtime_metadata": {
-    "env_markers": [],
-    "node": "v22.23.2"
-  },
+  "schema_version": 2,
+  "recorded_at": "2026-08-23T22:38:30.068Z",
   "discoveries": [
     {
-      "runtime": "hosted-cursor",
       "context": "repository-root",
-      "method": "filesystem-enumeration-and-runtime-skill-registry",
+      "cwd": ".",
       "result": "pass",
-      "canonical_skill_count": 9,
-      "navigator_path_exists": true,
-      "skill_names_sample": [
-        "context-mapping",
-        "github-actions-efficiency",
-        "graphify-pilot",
-        "playwright-browser-testing",
-        "react-next-performance"
-      ]
+      "model": "claude-sonnet-5",
+      "structured_event_count": 22,
+      "canonical_skill_reads": [
+        ".agents/skills/vocanova-repo-navigator/SKILL.md"
+      ],
+      "runtime": "claude-code",
+      "runtime_version": "2.1.229 (Claude Code)"
     },
     {
-      "runtime": "hosted-cursor",
       "context": "nested-cwd-apps-web",
-      "method": "project-root-adapter-target-resolution",
+      "cwd": "apps/web",
       "result": "pass",
-      "nested_cwd": "apps/web/",
-      "resolved_canonical_target": "/home/runner/work/vocanova-platform-sandbox/vocanova-platform-sandbox/.agents/skills/vocanova-repo-navigator/SKILL.md"
-    },
-    {
+      "model": "claude-sonnet-5",
+      "structured_event_count": 37,
+      "canonical_skill_reads": [
+        ".agents/skills/vocanova-repo-navigator/SKILL.md"
+      ],
       "runtime": "claude-code",
-      "context": "repository-root",
-      "method": "cli-non-interactive-probe",
-      "result": "not-executed-external-credential-required",
-      "notes": "claude CLI not installed in this runtime"
-    },
-    {
-      "runtime": "claude-code",
-      "context": "nested-cwd-apps-web",
-      "method": "cli-non-interactive-probe",
-      "result": "not-executed-external-credential-required",
-      "notes": "claude CLI not installed in this runtime"
+      "runtime_version": "2.1.229 (Claude Code)"
     }
-  ]
+  ],
+  "capture_kind": "real-agent-structured-trace",
+  "subject_revision": "d29b179db2eb32a7ef8cc21156bb797be5d3fdd9",
+  "source_hashes": {
+    "navigator_skill_sha256": "b58be5905c7f8027c4f28423d2033459698209aecbde93996bdbeffb05fadbce",
+    "agents_sha256": "c8f63138efcc70d299a77e0ee1e4d7593e687c3fa7b2ecc55d810792588ef147"
+  }
 }

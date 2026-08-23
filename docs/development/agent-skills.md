@@ -31,14 +31,23 @@ node --test scripts/foundation/voc112-navigation-benchmark.test.mjs
 pnpm test   # includes foundation tests
 ```
 
-Regenerate navigation benchmark traces after rubric or navigator routing changes:
+Capture fresh navigation/discovery evidence after rubric or navigator routing changes.
+These are explicit, authenticated operator actions; the deterministic test validates the
+committed sanitized capture and never starts an agent or performs a network request:
 
 ```bash
-node scripts/foundation/voc112-navigation-benchmark-run.mjs
+node scripts/foundation/voc112-navigation-benchmark-run.mjs --capture-codex
+node scripts/foundation/voc112-navigation-benchmark-run.mjs --capture-claude-discovery
+# Run only in the authorized hosted Cursor environment:
+node scripts/foundation/voc112-navigation-benchmark-run.mjs --capture-cursor-discovery
 ```
 
 Benchmark and discovery evidence fixtures live under
-`scripts/foundation/fixtures/` and bind to the current `git rev-parse HEAD`.
+`scripts/foundation/fixtures/`. They bind to an exact ancestor revision plus hashes of
+`AGENTS.md` and the canonical navigator skill, so a later evidence-only commit cannot
+silently change the measured inputs. Raw runtime traces, prompts, and response bodies are
+not written; only sanitized runtime identity, usage/count metrics, repository paths, and
+rubric results are retained. Never pass or print a credential on the command line.
 
 ## Updating pinned upstream material
 

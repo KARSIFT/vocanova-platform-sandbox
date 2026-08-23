@@ -1,11 +1,9 @@
-// VOC-112-T04 — navigation benchmark evidence validation and discovery proof checks.
-//
-// Runs via `node --test scripts/foundation/voc112-navigation-benchmark.test.mjs`.
-// Regenerate traces: `node scripts/foundation/voc112-navigation-benchmark-run.mjs`
+// VOC-112-T04 — validates captured real-agent benchmark and discovery evidence.
 
 import assert from "node:assert/strict";
-import { execFileSync, execSync } from "node:child_process";
-import { readFileSync, statSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
@@ -15,249 +13,166 @@ const repositoryRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../..",
 );
-
-const runnerPath = path.join(
-  repositoryRoot,
-  "scripts/foundation/voc112-navigation-benchmark-run.mjs",
-);
-
-test.before(() => {
-  execFileSync("node", [runnerPath], {
-    cwd: repositoryRoot,
-    stdio: "pipe",
-  });
-});
-
-const tracesPath = path.join(
-  repositoryRoot,
-  "scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json",
-);
-const discoveryPath = path.join(
-  repositoryRoot,
-  "scripts/foundation/fixtures/voc112-skill-discovery-evidence.json",
-);
-const agentSkillsDocPath = path.join(
-  repositoryRoot,
-  "docs/development/agent-skills.md",
-);
-const agentsPath = path.join(repositoryRoot, "AGENTS.md");
-
-function readJson(filePath) {
-  return JSON.parse(readFileSync(filePath, "utf8"));
-}
-
-function gitRevision() {
-  return execSync("git rev-parse HEAD", {
-    cwd: repositoryRoot,
-    encoding: "utf8",
-  }).trim();
-}
-
-function aggregateMetrics(session) {
-  return {
-    totalFiles: session.reduce((sum, row) => sum + row.files_opened.length, 0),
-    totalSearches: session.reduce((sum, row) => sum + row.search_operations, 0),
-    totalElapsedMs: session.reduce((sum, row) => sum + row.elapsed_ms, 0),
-    correctCount: session.filter((row) => row.correct).length,
-  };
-}
-
-function evaluateThresholds(traces) {
-  const baseline = aggregateMetrics(traces.sessions.baseline);
-  const navigator = aggregateMetrics(traces.sessions.navigator_assisted);
-  const regressions = {
-    files: navigator.totalFiles - baseline.totalFiles,
-    searches: navigator.totalSearches - baseline.totalSearches,
-    elapsed_ms: navigator.totalElapsedMs - baseline.totalElapsedMs,
-    correctness: navigator.correctCount - baseline.correctCount,
-  };
-
-  const thresholds = traces.thresholds;
-  const pass =
-    regressions.files <= thresholds.max_regression_files &&
-    regressions.searches <= thresholds.max_regression_searches &&
-    regressions.elapsed_ms <= thresholds.max_regression_time_ms &&
-    (thresholds.require_correctness_non_regression
-      ? regressions.correctness >= 0
-      : true);
-
-  return { baseline, navigator, regressions, pass };
-}
-
-test("VOC-112-TEST-12: benchmark traces exist with revision-bound rubric coverage", () => {
-  assert.ok(
-    statSync(tracesPath, { throwIfNoEntry: false }),
-    "missing traces fixture",
+const fixture = (name) =>
+  JSON.parse(
+    readFileSync(
+      path.join(repositoryRoot, "scripts/foundation/fixtures", name),
+      "utf8",
+    ),
   );
-  const traces = readJson(tracesPath);
-  const revision = gitRevision();
+const sha256 = (relativePath) =>
+  createHash("sha256")
+    .update(readFileSync(path.join(repositoryRoot, relativePath)))
+    .digest("hex");
 
-  assert.equal(traces.schema_version, 1);
-  assert.equal(traces.revision, revision, "traces must bind to current HEAD");
-  assert.equal(traces.rubric_version, "voc112-d05");
-  assert.ok(Array.isArray(traces.sessions.baseline));
-  assert.ok(Array.isArray(traces.sessions.navigator_assisted));
-
-  const expectedIds = BENCHMARK_QUESTIONS.map((q) => q.id).sort();
-  const baselineIds = traces.sessions.baseline
-    .map((row) => row.question_id)
-    .sort();
-  const navigatorIds = traces.sessions.navigator_assisted
-    .map((row) => row.question_id)
-    .sort();
-
-  assert.deepEqual(baselineIds, expectedIds);
-  assert.deepEqual(navigatorIds, expectedIds);
-
-  for (const question of BENCHMARK_QUESTIONS) {
-    const baselineRow = traces.sessions.baseline.find(
-      (row) => row.question_id === question.id,
-    );
-    const navigatorRow = traces.sessions.navigator_assisted.find(
-      (row) => row.question_id === question.id,
-    );
-    assert.ok(baselineRow, `missing baseline row for ${question.id}`);
-    assert.ok(navigatorRow, `missing navigator row for ${question.id}`);
-    assert.deepEqual(
-      baselineRow.expected_authoritative_paths,
-      navigatorRow.expected_authoritative_paths,
-    );
-    assert.equal(
-      navigatorRow.intent_label,
-      question.intentLabel,
-      `intent label drift for ${question.id}`,
-    );
-  }
-});
-
-test("VOC-112-TEST-12: navigator-assisted path improves or does not regress cost and correctness", () => {
-  const traces = readJson(tracesPath);
-  const evaluation = evaluateThresholds(traces);
-
-  assert.ok(
-    evaluation.pass,
-    `navigator regression detected: files=${evaluation.regressions.files}, searches=${evaluation.regressions.searches}, elapsed_ms=${evaluation.regressions.elapsed_ms}, correctness=${evaluation.regressions.correctness}`,
-  );
-
-  for (const row of traces.sessions.navigator_assisted) {
-    assert.equal(
-      row.correct,
-      true,
-      `navigator row ${row.question_id} must be correct`,
-    );
-    assert.ok(
-      row.files_opened.length <=
-        traces.sessions.baseline.find((b) => b.question_id === row.question_id)
-          .files_opened.length,
-      `navigator must not open more files than baseline for ${row.question_id}`,
-    );
-    assert.ok(
-      row.search_operations <=
-        traces.sessions.baseline.find((b) => b.question_id === row.question_id)
-          .search_operations,
-      `navigator must not exceed baseline searches for ${row.question_id}`,
-    );
-  }
-
-  assert.ok(
-    evaluation.navigator.totalSearches < evaluation.baseline.totalSearches,
-    "navigator-assisted sessions must reduce total search operations versus baseline",
-  );
-});
-
-test("VOC-112-TEST-12 supplemental: threshold math rejects fabricated hardcoded success", () => {
-  const synthetic = {
-    thresholds: {
-      max_regression_files: 0,
-      max_regression_searches: 0,
-      max_regression_time_ms: 0,
-      require_correctness_non_regression: true,
+function assertCapturedRevision(evidence) {
+  assert.match(evidence.subject_revision, /^[a-f0-9]{40}$/);
+  execFileSync(
+    "git",
+    ["cat-file", "-e", `${evidence.subject_revision}^{commit}`],
+    {
+      cwd: repositoryRoot,
     },
-    sessions: {
-      baseline: [
-        {
-          question_id: "synthetic-q01",
-          files_opened: ["apps/web/"],
-          search_operations: 2,
-          elapsed_ms: 10,
-          correct: true,
-        },
-      ],
-      navigator_assisted: [
-        {
-          question_id: "synthetic-q01",
-          files_opened: ["apps/web/", "apps/api/", "infra/"],
-          search_operations: 2,
-          elapsed_ms: 10,
-          correct: true,
-        },
-      ],
-    },
-  };
-  const evaluation = evaluateThresholds(synthetic);
+  );
+  execFileSync(
+    "git",
+    ["merge-base", "--is-ancestor", evidence.subject_revision, "HEAD"],
+    { cwd: repositoryRoot },
+  );
   assert.equal(
-    evaluation.pass,
-    false,
-    "inflated navigator files must fail zero-regression thresholds",
+    evidence.source_hashes.navigator_skill_sha256,
+    sha256(".agents/skills/vocanova-repo-navigator/SKILL.md"),
   );
-});
+  assert.equal(evidence.source_hashes.agents_sha256, sha256("AGENTS.md"));
+}
 
-test("VOC-112-TEST-13: runtime discovery evidence is revision-bound and truthful", () => {
-  assert.ok(
-    statSync(discoveryPath, { throwIfNoEntry: false }),
-    "missing discovery evidence fixture",
-  );
-  const discovery = readJson(discoveryPath);
-  const revision = gitRevision();
+function totals(rows) {
+  return {
+    repositoryFiles: rows.reduce(
+      (sum, row) => sum + row.repository_files_opened.length,
+      0,
+    ),
+    searches: rows.reduce((sum, row) => sum + row.search_operations, 0),
+    toolCalls: rows.reduce((sum, row) => sum + row.tool_calls, 0),
+    elapsedMs: rows.reduce((sum, row) => sum + row.elapsed_ms, 0),
+    correct: rows.filter((row) => row.correct).length,
+    inputTokens: rows.reduce((sum, row) => sum + row.usage.input_tokens, 0),
+    outputTokens: rows.reduce((sum, row) => sum + row.usage.output_tokens, 0),
+  };
+}
 
-  assert.equal(discovery.schema_version, 1);
-  assert.equal(discovery.revision, revision);
-  assert.ok(Array.isArray(discovery.discoveries));
+test("VOC-112-TEST-12: benchmark is a revision-bound real structured agent capture", () => {
+  const evidence = fixture("voc112-navigation-benchmark-traces.json");
+  assert.equal(evidence.schema_version, 2);
+  assert.equal(evidence.capture_kind, "real-agent-structured-trace");
+  assertCapturedRevision(evidence);
+  assert.equal(evidence.runtime.name, "codex");
+  assert.equal(evidence.runtime.model, "gpt-5.6-sol");
+  assert.equal(evidence.runtime.sandbox, "read-only");
+  assert.equal(evidence.runtime.session, "ephemeral");
+  assert.equal(evidence.runtime.user_config, "ignored");
 
-  const cursorRoot = discovery.discoveries.find(
-    (row) =>
-      row.runtime === "hosted-cursor" && row.context === "repository-root",
-  );
-  const cursorNested = discovery.discoveries.find(
-    (row) =>
-      row.runtime === "hosted-cursor" && row.context === "nested-cwd-apps-web",
-  );
-  assert.ok(cursorRoot, "hosted Cursor root discovery row required");
-  assert.ok(cursorNested, "hosted Cursor nested discovery row required");
-  assert.equal(cursorRoot.result, "pass");
-  assert.equal(cursorNested.result, "pass");
-  assert.ok(cursorRoot.canonical_skill_count >= 9);
-
-  for (const row of discovery.discoveries.filter(
-    (entry) => entry.runtime === "claude-code",
-  )) {
-    assert.ok(
-      row.result === "pass" ||
-        row.result === "not-executed-external-credential-required",
-      "Claude discovery must pass or record external credential limitation",
+  const expectedIds = BENCHMARK_QUESTIONS.map((question) => question.id).sort();
+  for (const variant of ["baseline", "navigator_assisted"]) {
+    assert.deepEqual(
+      evidence.sessions
+        .filter((row) => row.variant === variant)
+        .map((row) => row.question_id)
+        .sort(),
+      expectedIds,
     );
+  }
+  for (const row of evidence.sessions) {
+    assert.ok(row.elapsed_ms > 0);
+    assert.ok(row.usage.input_tokens > 0);
+    assert.ok(row.usage.output_tokens > 0);
+    assert.ok(Array.isArray(row.repository_files_opened));
+    assert.ok(Array.isArray(row.answer_paths));
   }
 });
 
-test("VOC-112-TEST-14: operator documentation and AGENTS.md pointer preserve precedence", () => {
-  const doc = readFileSync(agentSkillsDocPath, "utf8");
-  const agents = readFileSync(agentsPath, "utf8");
+test("VOC-112-TEST-12: navigator does not regress keyed correctness or bounded cost", () => {
+  const evidence = fixture("voc112-navigation-benchmark-traces.json");
+  const baseline = totals(
+    evidence.sessions.filter((row) => row.variant === "baseline"),
+  );
+  const navigator = totals(
+    evidence.sessions.filter((row) => row.variant === "navigator_assisted"),
+  );
+  const thresholds = evidence.thresholds;
+  assert.ok(navigator.correct >= baseline.correct);
+  assert.equal(navigator.correct, BENCHMARK_QUESTIONS.length);
+  assert.ok(
+    navigator.repositoryFiles - baseline.repositoryFiles <=
+      thresholds.max_repository_files_delta,
+  );
+  assert.ok(
+    navigator.searches - baseline.searches <=
+      thresholds.max_search_operations_delta,
+  );
+  assert.ok(
+    navigator.toolCalls - baseline.toolCalls <= thresholds.max_tool_calls_delta,
+  );
+});
 
-  assert.match(doc, /## Installation scope/);
-  assert.match(doc, /## One-source architecture/);
-  assert.match(doc, /## Updating pinned upstream material/);
-  assert.match(doc, /## Graphify pilot limitations/);
-  assert.match(doc, /## Safe use/);
-  assert.doesNotMatch(doc, /Completed in T04/);
-  assert.doesNotMatch(doc, /Skeleton \(VOC-112-T00\)/);
+test("VOC-112-TEST-12 supplemental: evidence contains no prompts or raw logs", () => {
+  const source = readFileSync(
+    path.join(
+      repositoryRoot,
+      "scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json",
+    ),
+    "utf8",
+  );
+  assert.doesNotMatch(source, /aggregated_output|raw_(?:log|trace)|prompt/i);
+  assert.doesNotMatch(source, /(?:API_KEY|AUTH_TOKEN|COOKIE|OAUTH_CODE)/i);
+});
 
+test("VOC-112-TEST-13: Cursor and Claude actually read the canonical skill from root and nested cwd", () => {
+  const evidence = fixture("voc112-skill-discovery-evidence.json");
+  assert.equal(evidence.schema_version, 2);
+  assert.equal(evidence.capture_kind, "real-agent-structured-trace");
+  assertCapturedRevision(evidence);
+  for (const runtime of ["hosted-cursor", "claude-code"]) {
+    for (const context of ["repository-root", "nested-cwd-apps-web"]) {
+      const row = evidence.discoveries.find(
+        (candidate) =>
+          candidate.runtime === runtime && candidate.context === context,
+      );
+      assert.ok(row, `missing ${runtime}/${context} discovery`);
+      assert.equal(row.result, "pass", `${runtime}/${context} did not pass`);
+      assert.deepEqual(row.canonical_skill_reads, [
+        ".agents/skills/vocanova-repo-navigator/SKILL.md",
+      ]);
+      assert.ok(row.structured_event_count > 0);
+      if (runtime === "hosted-cursor") {
+        assert.ok(row.completed_read_tool_call_count > 0);
+      }
+      assert.ok(row.runtime_version);
+    }
+  }
+});
+
+test("VOC-112-TEST-14: operator docs and AGENTS.md preserve one-source precedence", () => {
+  const doc = readFileSync(
+    path.join(repositoryRoot, "docs/development/agent-skills.md"),
+    "utf8",
+  );
+  const agents = readFileSync(path.join(repositoryRoot, "AGENTS.md"), "utf8");
+  for (const heading of [
+    "## Installation scope",
+    "## One-source architecture",
+    "## Updating pinned upstream material",
+    "## Graphify pilot limitations",
+    "## Safe use",
+  ]) {
+    assert.match(doc, new RegExp(heading));
+  }
+  assert.match(doc, /\.agents\/skills\/<skill-name>\/SKILL\.md/);
+  assert.match(doc, /\.claude\/skills\/<skill-name>\/SKILL\.md/);
+  assert.match(doc, /loader-only/);
   assert.match(agents, /## Agent skills/);
   assert.match(agents, /docs\/development\/agent-skills\.md/);
-  assert.match(
-    agents,
-    /repository sources win|governance precedence/i,
-    "AGENTS.md pointer must preserve governance precedence",
-  );
+  assert.match(agents, /repository sources win/i);
   assert.match(agents, /A-004 is the effective/);
   assert.match(agents, /Never self-approve/);
 });

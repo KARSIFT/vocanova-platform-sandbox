@@ -1,666 +1,199 @@
 {
-  "schema_version": 1,
-  "revision": "680db499a05acdc1d2efba6a63454ae2dedd6426",
-  "recorded_at": "2026-08-23T22:23:36.502Z",
+  "schema_version": 2,
+  "capture_kind": "real-agent-structured-trace",
+  "subject_revision": "d29b179db2eb32a7ef8cc21156bb797be5d3fdd9",
+  "recorded_at": "2026-08-23T22:37:28.112Z",
+  "source_hashes": {
+    "navigator_skill_sha256": "b58be5905c7f8027c4f28423d2033459698209aecbde93996bdbeffb05fadbce",
+    "agents_sha256": "c8f63138efcc70d299a77e0ee1e4d7593e687c3fa7b2ecc55d810792588ef147"
+  },
   "runtime": {
-    "name": "voc112-navigation-benchmark-runner",
-    "version": "1.0.0"
+    "name": "codex",
+    "version": "codex-cli 0.149.0",
+    "model": "gpt-5.6-sol",
+    "sandbox": "read-only",
+    "session": "ephemeral",
+    "user_config": "ignored"
   },
-  "rubric_version": "voc112-d05",
   "thresholds": {
-    "max_regression_files": 0,
-    "max_regression_searches": 0,
-    "max_regression_time_ms": 0,
-    "require_correctness_non_regression": true
+    "max_repository_files_delta": 0,
+    "max_search_operations_delta": 0,
+    "max_tool_calls_delta": 3,
+    "require_correctness_non_regression": true,
+    "require_navigator_all_correct": true
   },
-  "sessions": {
-    "baseline": [
-      {
-        "question_id": "nav-q01",
-        "intent_label": "Web UI / Next.js",
-        "files_opened": [
-          "apps/api/Dockerfile",
-          "apps/api/app/api/contract_test.go",
-          "apps/api/app/api/controlled_signup_oauth_e2e_test.go",
-          "apps/api/app/api/core_loop_reliability_test.go",
-          "apps/api/app/api/missions_cross_cutting_test.go",
-          "apps/api/app/api/openapi.go",
-          "apps/api/app/api/production.go",
-          "apps/api/app/api/production_test.go",
-          "apps/api/.dockerignore",
-          "apps/api/.env.example",
-          "apps/api/app/api/account_deletion.go",
-          "apps/api/app/api/auth_test.go",
-          "apps/api/app/api/cors.go",
-          "apps/api/app/api/private.go",
-          "apps/api/app/api/account_deletion_test.go",
-          "apps/api/app/api/aifeedback_test.go",
-          "apps/api/app/api/auth.go",
-          "apps/api/app/api/contract.go",
-          "apps/api/app/api/content.go",
-          "apps/api/app/api/content_test.go",
-          "apps/api/app/api/context.go",
-          "apps/api/app/api/learning.go",
-          "apps/api/app/api/middleware.go",
-          "apps/api/app/api/email_change_test.go",
-          "apps/api/app/api/onboarding.go",
-          "apps/api/app/api/aifeedback.go"
-        ],
-        "search_operations": 6,
-        "elapsed_ms": 41,
-        "correct": false,
-        "expected_authoritative_paths": [
-          "apps/web/",
-          "docs/design/08-web-app-design.md",
-          "docs/development.md"
-        ],
-        "skill_metadata_chars": 0
-      },
-      {
-        "question_id": "nav-q02",
-        "intent_label": "API / Go backend",
-        "files_opened": [
-          "apps/api/Dockerfile",
-          "apps/api/app/api/contract_test.go",
-          "apps/api/app/api/controlled_signup_oauth_e2e_test.go",
-          "apps/api/app/api/core_loop_reliability_test.go",
-          "apps/api/app/api/missions_cross_cutting_test.go",
-          "apps/api/app/api/openapi.go",
-          "apps/api/app/api/production.go",
-          "apps/api/app/api/production_test.go",
-          "apps/api/.env.example",
-          "apps/api/app/api/aifeedback.go",
-          "apps/api/app/api/auth_test.go",
-          "apps/api/app/api/cors.go",
-          "apps/api/app/api/email_change.go",
-          "apps/api/app/api/reviews.go",
-          "apps/api/business/accounts/auth.go",
-          "apps/api/business/aifeedback/live_eval.go",
-          "apps/api/business/users/service.go",
-          "apps/api/migrations/atlas_tooling_test.go",
-          "apps/web/Dockerfile",
-          "apps/web/next.config.ts",
-          "apps/api/business/aifeedback/live_eval_test.go",
-          "apps/api/business/auth/google_oauth_test.go",
-          "apps/api/foundation/email/http_test.go",
-          "apps/api/gate_readiness/gate_readiness_test.go",
-          "apps/api/openapi/vocanova.openapi.json",
-          "apps/web/tests/e2e/axe-helper.ts",
-          "apps/api/.dockerignore",
-          "apps/api/app/api/account_deletion.go",
-          "apps/api/app/api/account_deletion_test.go",
-          "apps/api/app/api/aifeedback_test.go",
-          "apps/api/app/api/auth.go",
-          "apps/api/atlas.hcl",
-          "apps/api/business/aifeedback/threshold_gate.go",
-          "apps/api/scripts/migrate.sh"
-        ],
-        "search_operations": 6,
-        "elapsed_ms": 38,
-        "correct": false,
-        "expected_authoritative_paths": [
-          "apps/api/",
-          "docs/engineering/06-backend-design.md",
-          "docs/engineering/07-api-contract-and-dto-design.md"
-        ],
-        "skill_metadata_chars": 0
-      },
-      {
-        "question_id": "nav-q03",
-        "intent_label": "Database / migrations",
-        "files_opened": [
-          "apps/api/app/api/auth_test.go",
-          "apps/api/app/api/controlled_signup_oauth_e2e_test.go",
-          "apps/api/app/api/production_test.go",
-          "apps/api/business/accounts/deletion_postgres_test.go",
-          "apps/api/business/accounts/service.go",
-          "apps/api/business/auth/killswitches.go",
-          "apps/api/business/auth/service.go",
-          "apps/api/business/auth/tokens.go",
-          "apps/api/.env.example",
-          "apps/api/Dockerfile",
-          "apps/api/app/api/contract.go",
-          "apps/api/app/api/controlled_signup_oauth_postgres_test.go",
-          "apps/api/app/api/missions_cross_cutting_test.go",
-          "apps/api/app/api/openapi.go",
-          "apps/api/app/api/production.go",
-          "apps/api/.dockerignore",
-          "apps/api/atlas.hcl",
-          "apps/api/business/missions/repository_postgres_integration_test.go",
-          "apps/api/business/users/postgres.go",
-          "apps/api/gate_readiness/gate_readiness_test.go",
-          "apps/api/migrations/20260724210000_identity_foundation.sql",
-          "apps/api/migrations/20260724210001_oauth_state.sql",
-          "apps/api/app/api/core_loop_reliability_test.go",
-          "apps/api/app/api/settings.go",
-          "apps/api/app/api/settings_test.go",
-          "apps/api/business/accounts/postgres.go",
-          "apps/api/business/aifeedback/aifeedback.go",
-          "apps/api/business/aifeedback/aifeedback_test.go",
-          "apps/api/app/api/cors.go",
-          "apps/api/business/accounts/auth.go",
-          "apps/api/business/aifeedback/live_eval.go",
-          "apps/api/business/users/service.go",
-          "apps/api/migrations/atlas_tooling_test.go",
-          "apps/web/Dockerfile",
-          "apps/web/next.config.ts",
-          "apps/api/business/aifeedback/live_eval_test.go",
-          "apps/api/business/aifeedback/threshold_gate.go",
-          "apps/api/business/auth/google_oauth_test.go",
-          "apps/api/scripts/migrate.sh"
-        ],
-        "search_operations": 6,
-        "elapsed_ms": 37,
-        "correct": false,
-        "expected_authoritative_paths": [
-          "apps/api/migrations/",
-          "docs/engineering/05-database-design.md"
-        ],
-        "skill_metadata_chars": 0
-      },
-      {
-        "question_id": "nav-q04",
-        "intent_label": "Auth / OAuth",
-        "files_opened": [
-          "apps/api/Dockerfile",
-          "apps/api/app/api/contract_test.go",
-          "apps/api/app/api/controlled_signup_oauth_e2e_test.go",
-          "apps/api/app/api/core_loop_reliability_test.go",
-          "apps/api/app/api/missions_cross_cutting_test.go",
-          "apps/api/app/api/openapi.go",
-          "apps/api/app/api/production.go",
-          "apps/api/app/api/production_test.go",
-          "apps/api/.env.example",
-          "apps/api/app/api/account_deletion_test.go",
-          "apps/api/app/api/auth.go",
-          "apps/api/app/api/auth_test.go",
-          "apps/api/app/api/controlled_signup_oauth_postgres_test.go",
-          "apps/api/app/api/account_deletion.go",
-          "apps/api/app/api/aifeedback.go",
-          "apps/api/app/api/content.go",
-          "apps/api/app/api/contract.go",
-          "apps/api/app/api/email_change.go",
-          "apps/api/app/api/cors.go",
-          "apps/api/business/aifeedback/live_eval.go",
-          "apps/api/business/aifeedback/mission.go",
-          "apps/api/business/aifeedback/safety.go",
-          "docs/README.md",
-          "docs/architecture/17-autonomous-development-architecture.md",
-          "docs/engineering/09-ai-features.md",
-          "docs/governance/16-autonomous-development-operating-model.md",
-          "apps/api/.dockerignore",
-          "apps/api/app/api/aifeedback_test.go",
-          "apps/api/atlas.hcl",
-          "apps/api/business/aifeedback/live_eval_test.go",
-          "apps/api/business/aifeedback/threshold_gate.go",
-          "apps/api/business/auth/google_oauth_test.go",
-          "apps/api/gate_readiness/gate_readiness_test.go",
-          "apps/api/scripts/migrate.sh"
-        ],
-        "search_operations": 6,
-        "elapsed_ms": 26,
-        "correct": false,
-        "expected_authoritative_paths": [
-          "apps/web/src/app/auth/",
-          "docs/operations/staging-controlled-signup.md",
-          "docs/operations/production-controlled-signup.md",
-          "specs/changes/"
-        ],
-        "skill_metadata_chars": 0
-      },
-      {
-        "question_id": "nav-q05",
-        "intent_label": "Content seed",
-        "files_opened": [
-          "apps/api/Dockerfile",
-          "apps/api/app/api/contract_test.go",
-          "apps/api/app/api/controlled_signup_oauth_e2e_test.go",
-          "apps/api/app/api/core_loop_reliability_test.go",
-          "apps/api/app/api/missions_cross_cutting_test.go",
-          "apps/api/app/api/openapi.go",
-          "apps/api/app/api/production.go",
-          "apps/api/app/api/production_test.go",
-          "apps/api/.env.example",
-          "apps/api/app/api/account_deletion_test.go",
-          "apps/api/app/api/aifeedback.go",
-          "apps/api/app/api/aifeedback_test.go",
-          "apps/api/app/api/auth_test.go",
-          "apps/api/app/api/content.go",
-          "apps/api/app/api/content_test.go",
-          "apps/api/app/api/email_change_test.go",
-          "apps/api/app/api/onboarding_test.go",
-          "apps/api/app/api/settings_test.go",
-          "apps/api/app/api/controlled_signup_oauth_postgres_test.go",
-          "apps/api/atlas.hcl",
-          "apps/api/business/aifeedback/live_eval.go",
-          "apps/api/business/aifeedback/task.go",
-          "apps/api/business/aifeedback/threshold_gate.go",
-          "apps/api/business/missions/repository_postgres_integration_test.go",
-          "apps/api/cmd/api/main.go",
-          "apps/api/cmd/eval-live/main.go",
-          "apps/api/.dockerignore",
-          "apps/api/app/api/account_deletion.go",
-          "apps/api/app/api/auth.go"
-        ],
-        "search_operations": 5,
-        "elapsed_ms": 20,
-        "correct": false,
-        "expected_authoritative_paths": ["apps/api/cmd/seed/"],
-        "skill_metadata_chars": 0
-      },
-      {
-        "question_id": "nav-q06",
-        "intent_label": "Deploy / infra / shared edge",
-        "files_opened": [
-          "apps/api/Dockerfile",
-          "apps/api/app/api/contract_test.go",
-          "apps/api/app/api/controlled_signup_oauth_e2e_test.go",
-          "apps/api/app/api/core_loop_reliability_test.go",
-          "apps/api/app/api/missions_cross_cutting_test.go",
-          "apps/api/app/api/openapi.go",
-          "apps/api/app/api/production.go",
-          "apps/api/app/api/production_test.go",
-          "apps/api/.env.example",
-          "apps/api/app/api/cors.go",
-          "apps/api/atlas.hcl",
-          "apps/api/business/accounts/postgres.go",
-          "apps/api/business/aifeedback/rate.go",
-          "apps/web/next.config.ts",
-          "scripts/foundation/voc086-sync-monitoring-workflow.test.mjs",
-          "scripts/foundation/voc112-navigation-benchmark-run.mjs",
-          "apps/api/business/missions/repository_postgres_integration_test.go",
-          "apps/api/business/users/settings.go",
-          "apps/api/gate_readiness/gate_readiness_test.go",
-          "apps/api/migrations/atlas_apply_integration_test.go",
-          "apps/api/scripts/seed-synthetic-smoke-user.sh",
-          "apps/api/app/api/email_change_test.go",
-          "apps/api/app/api/learning_test.go",
-          "apps/api/app/api/missions.go",
-          "apps/api/app/api/missions_test.go",
-          "apps/api/business/accounts/auth.go",
-          "apps/api/business/accounts/deletion_test.go",
-          "apps/api/business/accounts/memory.go",
-          "apps/api/business/accounts/service.go",
-          "apps/api/business/aifeedback/aifeedback_p4_test.go"
-        ],
-        "search_operations": 6,
-        "elapsed_ms": 23,
-        "correct": false,
-        "expected_authoritative_paths": [
-          "infra/",
-          ".github/workflows/deploy-*.yml",
-          "docs/operations/11-devops-and-ci-cd.md",
-          "scripts/foundation/voc079-single-edge-invariants.test.mjs"
-        ],
-        "skill_metadata_chars": 0
-      },
-      {
-        "question_id": "nav-q07",
-        "intent_label": "Monitoring",
-        "files_opened": [
-          "apps/api/Dockerfile",
-          "apps/api/app/api/contract_test.go",
-          "apps/api/app/api/controlled_signup_oauth_e2e_test.go",
-          "apps/api/app/api/core_loop_reliability_test.go",
-          "apps/api/app/api/missions_cross_cutting_test.go",
-          "apps/api/app/api/openapi.go",
-          "apps/api/app/api/production.go",
-          "apps/api/app/api/production_test.go",
-          "apps/api/.env.example",
-          "apps/api/cmd/api/main.go",
-          "apps/web/next.config.ts",
-          "docs/architecture/17-autonomous-development-architecture.md",
-          "docs/engineering/09-ai-features.md",
-          "docs/governance/16-autonomous-development-operating-model.md",
-          "apps/api/atlas.hcl",
-          "apps/api/business/accounts/service.go",
-          "apps/api/business/aifeedback/moderation.go",
-          "apps/api/business/aifeedback/opencode.go",
-          "apps/api/app/api/account_deletion_test.go",
-          "apps/api/business/accounts/auth.go",
-          "apps/api/business/accounts/postgres.go",
-          "apps/api/business/missions/repository_postgres_integration_test.go",
-          "apps/api/business/users/settings.go",
-          "apps/api/gate_readiness/gate_readiness_test.go",
-          "apps/api/migrations/atlas_apply_integration_test.go",
-          "apps/api/scripts/seed-synthetic-smoke-user.sh",
-          "apps/api/app/api/cors.go",
-          "apps/api/business/aifeedback/live_eval_test.go",
-          "apps/api/business/aifeedback/threshold_gate.go",
-          "apps/api/business/auth/google_oauth_test.go",
-          "apps/api/scripts/migrate.sh"
-        ],
-        "search_operations": 6,
-        "elapsed_ms": 22,
-        "correct": false,
-        "expected_authoritative_paths": [
-          "infra/monitoring/",
-          "docs/operations/monitoring.md"
-        ],
-        "skill_metadata_chars": 0
-      },
-      {
-        "question_id": "nav-q08",
-        "intent_label": "Governance / change workflow",
-        "files_opened": [
-          "apps/api/.dockerignore",
-          "apps/api/.env.example",
-          "apps/api/Dockerfile",
-          "apps/api/app/api/account_deletion_test.go",
-          "apps/api/app/api/aifeedback_test.go",
-          "apps/api/app/api/auth_test.go",
-          "apps/api/app/api/core_loop_reliability_test.go",
-          "apps/api/app/api/missions_cross_cutting_test.go",
-          "docs/architecture/17-autonomous-development-architecture.md",
-          "docs/development/agent-skills.md",
-          "docs/engineering/04-technical-architecture.md",
-          "docs/governance/16-autonomous-development-operating-model.md",
-          "docs/governance/README.md",
-          "docs/governance/amendments/A-002-governed-autonomous-releases.md",
-          "docs/governance/amendments/A-003-governed-autonomous-engineering-authority.md",
-          "docs/governance/amendments/A-004-remove-founder-approval-gates-from-autonomous-engineering-workflows.md",
-          "apps/api/app/api/contract.go",
-          "apps/api/app/api/email_change.go",
-          "apps/api/app/api/email_change_test.go",
-          "apps/api/atlas.hcl",
-          "apps/api/business/aifeedback/threshold_gate.go",
-          "apps/api/business/missions/repository_postgres_integration_test.go",
-          "apps/api/gate_readiness/gate_readiness_test.go",
-          "apps/api/migrations/atlas_apply_integration_test.go",
-          "apps/api/migrations/atlas_tooling_test.go",
-          "apps/api/app/api/content_test.go",
-          "apps/api/app/api/contract_test.go",
-          "apps/api/app/api/onboarding.go",
-          "apps/api/app/api/account_deletion.go",
-          "apps/api/app/api/aifeedback.go",
-          "apps/api/app/api/content.go"
-        ],
-        "search_operations": 6,
-        "elapsed_ms": 23,
-        "correct": false,
-        "expected_authoritative_paths": [
-          "AGENTS.md",
-          "docs/governance/",
-          "specs/changes/",
-          "specs/templates/change-package/"
-        ],
-        "skill_metadata_chars": 0
-      },
-      {
-        "question_id": "nav-q09",
-        "intent_label": "Validation / tests",
-        "files_opened": [
-          "apps/api/.env.example",
-          "apps/api/Dockerfile",
-          "apps/api/app/api/account_deletion.go",
-          "apps/api/app/api/aifeedback_test.go",
-          "apps/api/app/api/cors_test.go",
-          "apps/api/app/api/production_test.go",
-          "apps/api/app/api/settings_test.go",
-          "apps/api/business/accounts/auth.go",
-          "apps/api/app/api/account_deletion_test.go",
-          "apps/api/app/api/aifeedback.go",
-          "apps/api/app/api/email_change.go",
-          "apps/api/app/api/missions_cross_cutting_test.go",
-          "apps/api/app/api/missions_test.go",
-          "apps/api/app/api/onboarding.go",
-          "apps/api/business/aifeedback/task.go",
-          "apps/api/cmd/api/main.go",
-          "apps/api/scripts/migrate.sh",
-          "apps/web/tests/e2e/README.md",
-          "docs/architecture/17-autonomous-development-architecture.md",
-          "docs/development.md",
-          "docs/governance/16-autonomous-development-operating-model.md",
-          "docs/governance/post-merge-activation-checklist.md",
-          "apps/api/app/api/auth_test.go",
-          "apps/api/app/api/controlled_signup_oauth_e2e_test.go",
-          "apps/api/app/api/core_loop_reliability_test.go",
-          "apps/api/app/api/email_change_test.go",
-          "apps/api/app/api/onboarding_test.go",
-          "apps/api/app/api/openapi.go",
-          "apps/api/app/api/auth.go",
-          "apps/api/app/api/content_test.go",
-          "apps/api/app/api/contract.go",
-          "apps/api/.dockerignore",
-          "apps/api/app/api/cors.go",
-          "apps/api/app/api/private.go",
-          "apps/api/app/api/production.go"
-        ],
-        "search_operations": 6,
-        "elapsed_ms": 23,
-        "correct": false,
-        "expected_authoritative_paths": [
-          "docs/development.md",
-          "pnpm validate",
-          "scripts/foundation/*.test.mjs"
-        ],
-        "skill_metadata_chars": 0
-      },
-      {
-        "question_id": "nav-q10",
-        "intent_label": "Issue → plan → task lifecycle",
-        "files_opened": [
-          "apps/api/.dockerignore",
-          "apps/api/.env.example",
-          "apps/api/Dockerfile",
-          "apps/api/app/api/account_deletion_test.go",
-          "apps/api/app/api/aifeedback_test.go",
-          "apps/api/app/api/auth_test.go",
-          "apps/api/app/api/core_loop_reliability_test.go",
-          "apps/api/app/api/missions_cross_cutting_test.go",
-          "apps/api/app/api/auth.go",
-          "apps/api/app/api/controlled_signup_oauth_e2e_test.go",
-          "apps/api/app/api/email_change_test.go",
-          "apps/api/app/api/learning_test.go",
-          "apps/api/app/api/aifeedback.go",
-          "apps/api/app/api/contract_test.go",
-          "apps/api/app/api/missions_test.go",
-          "apps/api/app/api/settings.go",
-          "apps/api/app/api/settings_test.go",
-          "apps/api/business/aifeedback/aifeedback.go",
-          "apps/api/business/aifeedback/aifeedback_test.go",
-          "apps/api/app/api/openapi.go",
-          "apps/api/app/api/production.go",
-          "apps/api/app/api/production_test.go",
-          "apps/api/atlas.hcl",
-          "apps/api/app/api/contract.go",
-          "apps/api/business/accounts/auth.go",
-          "apps/api/business/accounts/deletion_test.go",
-          "apps/api/business/accounts/memory.go",
-          "apps/api/business/accounts/service.go",
-          "apps/api/app/api/content_test.go",
-          "apps/api/app/api/onboarding.go"
-        ],
-        "search_operations": 6,
-        "elapsed_ms": 23,
-        "correct": false,
-        "expected_authoritative_paths": [
-          "AGENTS.md",
-          "specs/changes/",
-          "Reporting a bug",
-          "change workflow"
-        ],
-        "skill_metadata_chars": 0
+  "questions": [
+    {
+      "id": "nav-q01",
+      "expected_paths": [
+        "infra/monitoring/",
+        "docs/operations/monitoring.md"
+      ]
+    },
+    {
+      "id": "nav-q02",
+      "expected_paths": [
+        "apps/api/migrations/",
+        "docs/engineering/05-database-design.md"
+      ]
+    },
+    {
+      "id": "nav-q03",
+      "expected_paths": [
+        "docs/development.md",
+        "scripts/foundation/*.test.mjs"
+      ]
+    }
+  ],
+  "sessions": [
+    {
+      "question_id": "nav-q01",
+      "variant": "baseline",
+      "elapsed_ms": 15180,
+      "correct": false,
+      "answer_paths": [
+        "docs/operations/monitoring.md"
+      ],
+      "repository_files_opened": [
+        "AGENTS.md",
+        "README.md"
+      ],
+      "skill_files_opened": [],
+      "search_operations": 1,
+      "tool_calls": 1,
+      "usage": {
+        "input_tokens": 39762,
+        "cached_input_tokens": 28160,
+        "output_tokens": 176,
+        "reasoning_output_tokens": 48
       }
-    ],
-    "navigator_assisted": [
-      {
-        "question_id": "nav-q01",
-        "intent_label": "Web UI / Next.js",
-        "files_opened": [
-          "apps/web/",
-          "docs/design/08-web-app-design.md",
-          "docs/development.md"
-        ],
-        "search_operations": 1,
-        "elapsed_ms": 0,
-        "correct": true,
-        "expected_authoritative_paths": [
-          "apps/web/",
-          "docs/design/08-web-app-design.md",
-          "docs/development.md"
-        ],
-        "skill_metadata_chars": 1829,
-        "command_tokens": []
-      },
-      {
-        "question_id": "nav-q02",
-        "intent_label": "API / Go backend",
-        "files_opened": [
-          "apps/api/",
-          "docs/engineering/06-backend-design.md",
-          "docs/engineering/07-api-contract-and-dto-design.md"
-        ],
-        "search_operations": 1,
-        "elapsed_ms": 0,
-        "correct": true,
-        "expected_authoritative_paths": [
-          "apps/api/",
-          "docs/engineering/06-backend-design.md",
-          "docs/engineering/07-api-contract-and-dto-design.md"
-        ],
-        "skill_metadata_chars": 1829,
-        "command_tokens": []
-      },
-      {
-        "question_id": "nav-q03",
-        "intent_label": "Database / migrations",
-        "files_opened": [
-          "apps/api/migrations/",
-          "docs/engineering/05-database-design.md"
-        ],
-        "search_operations": 1,
-        "elapsed_ms": 0,
-        "correct": true,
-        "expected_authoritative_paths": [
-          "apps/api/migrations/",
-          "docs/engineering/05-database-design.md"
-        ],
-        "skill_metadata_chars": 1829,
-        "command_tokens": []
-      },
-      {
-        "question_id": "nav-q04",
-        "intent_label": "Auth / OAuth",
-        "files_opened": [
-          "apps/web/src/app/auth/",
-          "docs/operations/staging-controlled-signup.md",
-          "docs/operations/production-controlled-signup.md",
-          "specs/changes/"
-        ],
-        "search_operations": 1,
-        "elapsed_ms": 0,
-        "correct": true,
-        "expected_authoritative_paths": [
-          "apps/web/src/app/auth/",
-          "docs/operations/staging-controlled-signup.md",
-          "docs/operations/production-controlled-signup.md",
-          "specs/changes/"
-        ],
-        "skill_metadata_chars": 1829,
-        "command_tokens": []
-      },
-      {
-        "question_id": "nav-q05",
-        "intent_label": "Content seed",
-        "files_opened": ["apps/api/cmd/seed/"],
-        "search_operations": 1,
-        "elapsed_ms": 0,
-        "correct": true,
-        "expected_authoritative_paths": ["apps/api/cmd/seed/"],
-        "skill_metadata_chars": 1829,
-        "command_tokens": []
-      },
-      {
-        "question_id": "nav-q06",
-        "intent_label": "Deploy / infra / shared edge",
-        "files_opened": [
-          "infra/",
-          ".github/workflows/deploy-*.yml",
-          "docs/operations/11-devops-and-ci-cd.md",
-          "scripts/foundation/voc079-single-edge-invariants.test.mjs"
-        ],
-        "search_operations": 1,
-        "elapsed_ms": 0,
-        "correct": true,
-        "expected_authoritative_paths": [
-          "infra/",
-          ".github/workflows/deploy-*.yml",
-          "docs/operations/11-devops-and-ci-cd.md",
-          "scripts/foundation/voc079-single-edge-invariants.test.mjs"
-        ],
-        "skill_metadata_chars": 1829,
-        "command_tokens": []
-      },
-      {
-        "question_id": "nav-q07",
-        "intent_label": "Monitoring",
-        "files_opened": ["infra/monitoring/", "docs/operations/monitoring.md"],
-        "search_operations": 1,
-        "elapsed_ms": 0,
-        "correct": true,
-        "expected_authoritative_paths": [
-          "infra/monitoring/",
-          "docs/operations/monitoring.md"
-        ],
-        "skill_metadata_chars": 1829,
-        "command_tokens": []
-      },
-      {
-        "question_id": "nav-q08",
-        "intent_label": "Governance / change workflow",
-        "files_opened": [
-          "AGENTS.md",
-          "docs/governance/",
-          "specs/changes/",
-          "specs/templates/change-package/"
-        ],
-        "search_operations": 1,
-        "elapsed_ms": 0,
-        "correct": true,
-        "expected_authoritative_paths": [
-          "AGENTS.md",
-          "docs/governance/",
-          "specs/changes/",
-          "specs/templates/change-package/"
-        ],
-        "skill_metadata_chars": 1829,
-        "command_tokens": []
-      },
-      {
-        "question_id": "nav-q09",
-        "intent_label": "Validation / tests",
-        "files_opened": [
-          "docs/development.md",
-          "scripts/foundation/*.test.mjs"
-        ],
-        "search_operations": 1,
-        "elapsed_ms": 0,
-        "correct": true,
-        "expected_authoritative_paths": [
-          "docs/development.md",
-          "pnpm validate",
-          "scripts/foundation/*.test.mjs"
-        ],
-        "skill_metadata_chars": 1829,
-        "command_tokens": ["pnpm validate"]
-      },
-      {
-        "question_id": "nav-q10",
-        "intent_label": "Issue → plan → task lifecycle",
-        "files_opened": ["AGENTS.md", "specs/changes/"],
-        "search_operations": 1,
-        "elapsed_ms": 0,
-        "correct": true,
-        "expected_authoritative_paths": [
-          "AGENTS.md",
-          "specs/changes/",
-          "Reporting a bug",
-          "change workflow"
-        ],
-        "skill_metadata_chars": 1829,
-        "command_tokens": []
+    },
+    {
+      "question_id": "nav-q01",
+      "variant": "navigator_assisted",
+      "elapsed_ms": 16737,
+      "correct": true,
+      "answer_paths": [
+        "infra/monitoring/",
+        "docs/operations/monitoring.md"
+      ],
+      "repository_files_opened": [
+        "docs/operations/monitoring.md"
+      ],
+      "skill_files_opened": [
+        ".agents/skills/vocanova-repo-navigator/SKILL.md"
+      ],
+      "search_operations": 1,
+      "tool_calls": 2,
+      "usage": {
+        "input_tokens": 59678,
+        "cached_input_tokens": 55552,
+        "output_tokens": 255,
+        "reasoning_output_tokens": 26
       }
-    ]
-  }
+    },
+    {
+      "question_id": "nav-q02",
+      "variant": "navigator_assisted",
+      "elapsed_ms": 15301,
+      "correct": true,
+      "answer_paths": [
+        "apps/api/migrations/",
+        "docs/engineering/05-database-design.md"
+      ],
+      "repository_files_opened": [
+        "docs/engineering/05-database-design.md"
+      ],
+      "skill_files_opened": [
+        ".agents/skills/vocanova-repo-navigator/SKILL.md"
+      ],
+      "search_operations": 1,
+      "tool_calls": 2,
+      "usage": {
+        "input_tokens": 60693,
+        "cached_input_tokens": 47360,
+        "output_tokens": 266,
+        "reasoning_output_tokens": 33
+      }
+    },
+    {
+      "question_id": "nav-q02",
+      "variant": "baseline",
+      "elapsed_ms": 31259,
+      "correct": true,
+      "answer_paths": [
+        "docs/engineering/05-database-design.md",
+        "docs/operations/10-development-workflow.md",
+        "apps/api/migrations/README.md"
+      ],
+      "repository_files_opened": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "README.md",
+        "apps/api/migrations/README.md",
+        "docs/README.md",
+        "docs/engineering/05-database-design.md",
+        "docs/operations/10-development-workflow.md"
+      ],
+      "skill_files_opened": [],
+      "search_operations": 3,
+      "tool_calls": 4,
+      "usage": {
+        "input_tokens": 111545,
+        "cached_input_tokens": 88832,
+        "output_tokens": 794,
+        "reasoning_output_tokens": 336
+      }
+    },
+    {
+      "question_id": "nav-q03",
+      "variant": "baseline",
+      "elapsed_ms": 18743,
+      "correct": false,
+      "answer_paths": [
+        "docs/development.md",
+        "package.json",
+        "scripts/foundation/"
+      ],
+      "repository_files_opened": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "README.md",
+        "docs/development.md"
+      ],
+      "skill_files_opened": [],
+      "search_operations": 2,
+      "tool_calls": 2,
+      "usage": {
+        "input_tokens": 63695,
+        "cached_input_tokens": 40192,
+        "output_tokens": 450,
+        "reasoning_output_tokens": 191
+      }
+    },
+    {
+      "question_id": "nav-q03",
+      "variant": "navigator_assisted",
+      "elapsed_ms": 16719,
+      "correct": true,
+      "answer_paths": [
+        "docs/development.md",
+        "scripts/foundation/*.test.mjs"
+      ],
+      "repository_files_opened": [
+        "docs/development.md"
+      ],
+      "skill_files_opened": [
+        ".agents/skills/vocanova-repo-navigator/SKILL.md"
+      ],
+      "search_operations": 1,
+      "tool_calls": 2,
+      "usage": {
+        "input_tokens": 60526,
+        "cached_input_tokens": 47360,
+        "output_tokens": 254,
+        "reasoning_output_tokens": 40
+      }
+    }
+  ]
 }
