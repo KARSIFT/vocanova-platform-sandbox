@@ -20,30 +20,34 @@ Three fixed questions were each run once as baseline and once with the canonical
 `vocanova-repo-navigator` explicitly invoked. Pair order alternated. Raw traces existed
 only in process memory; the committed fixture contains sanitized derived metrics.
 
-| Metric                  | Baseline  | Navigator-assisted | Delta      |
-| ----------------------- | --------- | ------------------ | ---------- |
-| Keyed correct answers   | 1 / 3     | 3 / 3              | +2         |
-| Repository files opened | 13        | 3                  | -10        |
-| Search operations       | 6         | 3                  | -3         |
-| Tool calls              | 7         | 6                  | -1         |
-| Elapsed time            | 65,182 ms | 48,757 ms          | -16,425 ms |
-| Input tokens            | 215,002   | 180,897            | -34,105    |
-| Output tokens           | 1,420     | 775                | -645       |
+| Metric                                                           | Baseline  | Navigator-assisted | Delta      |
+| ---------------------------------------------------------------- | --------- | ------------------ | ---------- |
+| Keyed correct answers                                            | 1 / 3     | 3 / 3              | +2         |
+| Readable repository files referenced by completed command events | 13        | 3                  | -10        |
+| Search operations                                                | 6         | 3                  | -3         |
+| Tool calls                                                       | 7         | 6                  | -1         |
+| Elapsed time                                                     | 65,182 ms | 48,757 ms          | -16,425 ms |
+| Input tokens                                                     | 215,002   | 180,897            | -34,105    |
+| Output tokens                                                    | 1,420     | 775                | -645       |
 
 The keyed threshold requires full navigator correctness, correctness non-regression,
 no increase in repository files/searches, and at most one additional skill-read tool call
 per question. The capture passes all thresholds and also improves every recorded aggregate.
+Because this Codex CLI version emits repository reads inside structured completed-command
+events rather than as a separate first-class read event, the file metric counts only
+existing readable repository paths referenced by those completed events. It is an explicit
+trace-derived proxy, not a claim that every runtime read is observable.
 
 Fixture: `scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json`.
 
 ## Runtime discovery
 
-| Runtime                                   | Context               | Evidence                                                                          | Result  |
-| ----------------------------------------- | --------------------- | --------------------------------------------------------------------------------- | ------- |
-| Claude Code `2.1.229` / `claude-sonnet-5` | repository root       | structured `Read` event for canonical navigator plus success marker               | pass    |
-| Claude Code `2.1.229` / `claude-sonnet-5` | nested `apps/web` cwd | structured `Read` event resolves the same canonical navigator plus success marker | pass    |
-| Hosted Cursor `2026.08.11-e8db854` / Auto | repository root       | 26 structured events; 2 completed read calls including the canonical navigator   | pass    |
-| Hosted Cursor `2026.08.11-e8db854` / Auto | nested `apps/web` cwd | 34 structured events; completed read call for the same canonical navigator        | pass    |
+| Runtime                                   | Context               | Evidence                                                                          | Result |
+| ----------------------------------------- | --------------------- | --------------------------------------------------------------------------------- | ------ |
+| Claude Code `2.1.229` / `claude-sonnet-5` | repository root       | structured `Read` event for canonical navigator plus success marker               | pass   |
+| Claude Code `2.1.229` / `claude-sonnet-5` | nested `apps/web` cwd | structured `Read` event resolves the same canonical navigator plus success marker | pass   |
+| Hosted Cursor `2026.08.11-e8db854` / Auto | repository root       | 26 structured events; 2 completed read calls including the canonical navigator    | pass   |
+| Hosted Cursor `2026.08.11-e8db854` / Auto | nested `apps/web` cwd | 34 structured events; completed read call for the same canonical navigator        | pass   |
 
 Fixture: `scripts/foundation/fixtures/voc112-skill-discovery-evidence.json`.
 The sanitized hosted capture came from workflow run `32673904614` against subject
@@ -62,16 +66,16 @@ was removed before the final PR head.
 
 ## Validation
 
-| Command                                                               | Result                                   |
-| --------------------------------------------------------------------- | ---------------------------------------- |
-| `node --test scripts/foundation/voc112-agent-skills.test.mjs`         | pass                                     |
-| `node --test scripts/foundation/voc112-navigation-benchmark.test.mjs` | 5/5 pass                                 |
-| `node --test scripts/foundation/voc112-*.test.mjs`                    | pass                                     |
-| `bash scripts/governance/validate-governance.sh`                      | pass                                     |
-| `bash scripts/governance/classify-change-risk.sh`                     | R3                                       |
-| `git diff --check`                                                    | pass                                     |
+| Command                                                               | Result                                                                                                                                                                                |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `node --test scripts/foundation/voc112-agent-skills.test.mjs`         | pass                                                                                                                                                                                  |
+| `node --test scripts/foundation/voc112-navigation-benchmark.test.mjs` | 6/6 pass                                                                                                                                                                              |
+| `node --test scripts/foundation/voc112-*.test.mjs`                    | pass                                                                                                                                                                                  |
+| `bash scripts/governance/validate-governance.sh`                      | pass                                                                                                                                                                                  |
+| `bash scripts/governance/classify-change-risk.sh`                     | R3                                                                                                                                                                                    |
+| `git diff --check`                                                    | pass                                                                                                                                                                                  |
 | `pnpm validate`                                                       | executed locally; stopped only at the two Docker-backed OAuth API tests because Docker is unavailable in this WSL checkout; all preceding phases passed; exact-SHA hosted CI required |
-| `pnpm build`                                                          | pass (packages, web, API)                 |
+| `pnpm build`                                                          | pass (packages, web, API)                                                                                                                                                             |
 
 ## Acceptance mapping
 

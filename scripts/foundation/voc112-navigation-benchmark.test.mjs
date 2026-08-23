@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import test from "node:test";
 import { BENCHMARK_QUESTIONS } from "./voc112-navigation-benchmark-run.mjs";
 
@@ -83,6 +83,10 @@ test("VOC-112-TEST-12: benchmark is a revision-bound real structured agent captu
   assert.equal(evidence.runtime.sandbox, "read-only");
   assert.equal(evidence.runtime.session, "ephemeral");
   assert.equal(evidence.runtime.user_config, "ignored");
+  assert.equal(
+    evidence.runtime.file_observation,
+    "readable-repository-paths-referenced-in-completed-command-events",
+  );
 
   const expectedIds = BENCHMARK_QUESTIONS.map((question) => question.id).sort();
   for (const variant of ["baseline", "navigator_assisted"]) {
@@ -101,6 +105,26 @@ test("VOC-112-TEST-12: benchmark is a revision-bound real structured agent captu
     assert.ok(Array.isArray(row.repository_files_opened));
     assert.ok(Array.isArray(row.answer_paths));
   }
+});
+
+test("VOC-112-TEST-12: importing the capture module has no CLI side effects", () => {
+  const runnerUrl = pathToFileURL(
+    path.join(
+      repositoryRoot,
+      "scripts/foundation/voc112-navigation-benchmark-run.mjs",
+    ),
+  ).href;
+  const result = spawnSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "--eval",
+      `process.argv[2] = "--capture-codex"; await import(${JSON.stringify(runnerUrl)});`,
+    ],
+    { cwd: repositoryRoot, encoding: "utf8" },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, "");
 });
 
 test("VOC-112-TEST-12: navigator does not regress keyed correctness or bounded cost", () => {

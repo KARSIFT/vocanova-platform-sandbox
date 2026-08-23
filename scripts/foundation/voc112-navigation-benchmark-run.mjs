@@ -9,10 +9,8 @@ import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const repositoryRoot = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "../..",
-);
+const modulePath = fileURLToPath(import.meta.url);
+const repositoryRoot = path.resolve(path.dirname(modulePath), "../..");
 const fixturesDirectory = path.join(
   repositoryRoot,
   "scripts/foundation/fixtures",
@@ -262,6 +260,8 @@ function captureCodexBenchmark() {
       sandbox: "read-only",
       session: "ephemeral",
       user_config: "ignored",
+      file_observation:
+        "readable-repository-paths-referenced-in-completed-command-events",
     },
     thresholds: {
       max_repository_files_delta: 0,
@@ -468,8 +468,15 @@ function captureCursorDiscovery() {
   );
 }
 
-const action = process.argv[2];
-if (action === "--capture-codex") captureCodexBenchmark();
-else if (action === "--capture-claude-discovery") captureClaudeDiscovery();
-else if (action === "--capture-cursor-discovery") captureCursorDiscovery();
-else if (action) throw new Error(`unknown action: ${action}`);
+function runCli(action) {
+  if (action === "--capture-codex") captureCodexBenchmark();
+  else if (action === "--capture-claude-discovery") captureClaudeDiscovery();
+  else if (action === "--capture-cursor-discovery") captureCursorDiscovery();
+  else if (action) throw new Error(`unknown action: ${action}`);
+}
+
+// Importing BENCHMARK_QUESTIONS from a test or another tool must never start a
+// credentialed capture merely because that parent process has extra argv data.
+if (process.argv[1] && path.resolve(process.argv[1]) === modulePath) {
+  runCli(process.argv[2]);
+}

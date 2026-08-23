@@ -13,7 +13,8 @@
     "model": "gpt-5.6-sol",
     "sandbox": "read-only",
     "session": "ephemeral",
-    "user_config": "ignored"
+    "user_config": "ignored",
+    "file_observation": "readable-repository-paths-referenced-in-completed-command-events"
   },
   "thresholds": {
     "max_repository_files_delta": 0,
