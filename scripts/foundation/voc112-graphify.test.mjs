@@ -49,6 +49,7 @@ const FORBIDDEN_RUNNER_MARKERS = [
   /pipx\s+install/i,
   /@latest\b/,
   /npm\s+install\s+-g/i,
+  /pip\s+install\s+--upgrade/i,
 ];
 
 function sha256Hex(content) {
@@ -192,6 +193,18 @@ test("VOC-112-TEST-10: graphify pilot is opt-in, code-only, and hash-locked", ()
     body,
     /graphify install/i,
     "must warn against upstream install flows",
+  );
+
+  const provenance = readText(
+    path.join(repositoryRoot, ".agents/skills/graphify-pilot/PROVENANCE.yaml"),
+  );
+  assert.match(provenance, /LICENSE-MIT/);
+  assert.ok(
+    statSync(
+      path.join(repositoryRoot, ".agents/skills/graphify-pilot/LICENSE-MIT"),
+      { throwIfNoEntry: false },
+    ),
+    "NOTICE references LICENSE-MIT; file must be committed",
   );
 
   const gitignore = readText(path.join(repositoryRoot, ".gitignore"));

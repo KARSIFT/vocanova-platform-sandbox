@@ -15,7 +15,7 @@ complete — T03 implementation recorded 2026-08-23
 | Runtime package (`graphifyy`) | `0.9.48` | PyPI package name uses double-y |
 | Transitive environment lock/hash identity | `scripts/graphify/requirements.lock` (`sha256:492f681c167b6d8da7b0970a9dec66e477470343424ec4eb34aa7e33a16e0a5a`) | Generated with `pip-compile --generate-hashes` |
 | Per-skill provenance | `.agents/skills/graphify-pilot/PROVENANCE.yaml` | Adapted record with local SKILL.md hash |
-| Retained license/NOTICE | `LICENSE`, `NOTICE` under `.agents/skills/graphify-pilot/` | Upstream commit `b2cd362…` |
+| Retained license/NOTICE | `LICENSE`, `LICENSE-MIT`, `NOTICE` under `.agents/skills/graphify-pilot/` | Upstream commit `b2cd362…`; `LICENSE` digest `cfc7749b…` verified against upstream `LICENSE` at that commit (not a placeholder) |
 
 ## Pilot configuration checklist
 
@@ -27,7 +27,7 @@ complete — T03 implementation recorded 2026-08-23
 | Skill marked opt-in / auto-invocation disabled | pass | `disable-model-invocation: true` in canonical skill and adapter |
 | Generated graph output gitignored by default | pass | `.gitignore` lists `graphify-out/` and `.graphify_python` |
 | Runner fails safely without global install | pass | `scripts/graphify/check` exits non-zero when `.venv` absent |
-| Ordinary use makes no download/upgrade/network setup action | pass | Only `setup.sh` installs; `check`/`run.sh` are offline |
+| Ordinary use makes no download/upgrade/network setup action | pass | Only explicit `setup.sh` installs from hash-locked lockfile; no unpinned `pip install --upgrade`; `check`/`run.sh` are offline |
 | No provider auto-detection or provider credentials | pass | Runner unsets common LLM API key env vars before exec |
 | No hooks, always-on injection, or user-profile mutation | pass | Scripts avoid `graphify install` / `hook install`; skill forbids them |
 | Locked repository-local runtime identity verified | pass | `runtime-identity.yaml` digests + version check; mismatch test in foundation suite |

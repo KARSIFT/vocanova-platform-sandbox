@@ -47,7 +47,7 @@ if ! command -v python3 >/dev/null 2>&1; then
 fi
 
 python3 -m venv "$VENV_DIR"
-"$VENV_DIR/bin/python" -m pip install --upgrade pip setuptools wheel >/dev/null
+# Install only from the reviewed hash-locked lockfile — no unpinned bootstrap upgrades.
 "$VENV_DIR/bin/python" -m pip install --require-hashes -r "$REQUIREMENTS_LOCK" >/dev/null
 
 installed_version="$("$VENV_DIR/bin/graphify" --version 2>/dev/null | awk '{print $NF}')"
