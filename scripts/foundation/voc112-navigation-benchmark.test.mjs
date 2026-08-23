@@ -2,7 +2,7 @@
 
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -27,18 +27,30 @@ const sha256 = (relativePath) =>
 
 function assertCapturedRevision(evidence) {
   assert.match(evidence.subject_revision, /^[a-f0-9]{40}$/);
-  execFileSync(
+  const subjectLookup = spawnSync(
     "git",
     ["cat-file", "-e", `${evidence.subject_revision}^{commit}`],
     {
       cwd: repositoryRoot,
+      encoding: "utf8",
     },
   );
-  execFileSync(
-    "git",
-    ["merge-base", "--is-ancestor", evidence.subject_revision, "HEAD"],
-    { cwd: repositoryRoot },
-  );
+  if (subjectLookup.status === 0) {
+    execFileSync(
+      "git",
+      ["merge-base", "--is-ancestor", evidence.subject_revision, "HEAD"],
+      { cwd: repositoryRoot },
+    );
+  } else {
+    assert.equal(
+      execFileSync("git", ["rev-parse", "--is-shallow-repository"], {
+        cwd: repositoryRoot,
+        encoding: "utf8",
+      }).trim(),
+      "true",
+      "a missing captured commit is allowed only in a shallow CI checkout",
+    );
+  }
   assert.equal(
     evidence.source_hashes.navigator_skill_sha256,
     sha256(".agents/skills/vocanova-repo-navigator/SKILL.md"),
