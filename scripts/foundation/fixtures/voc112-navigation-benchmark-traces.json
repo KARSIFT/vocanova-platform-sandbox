@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "revision": "e4787dd0130a9eba8e3fd7e5d3a63f14538418d2",
-  "recorded_at": "2026-08-23T22:22:42.227Z",
+  "revision": "680db499a05acdc1d2efba6a63454ae2dedd6426",
+  "recorded_at": "2026-08-23T22:23:36.502Z",
   "runtime": {
     "name": "voc112-navigation-benchmark-runner",
     "version": "1.0.0"
@@ -47,7 +47,7 @@
           "apps/api/app/api/aifeedback.go"
         ],
         "search_operations": 6,
-        "elapsed_ms": 28,
+        "elapsed_ms": 41,
         "correct": false,
         "expected_authoritative_paths": [
           "apps/web/",
@@ -96,7 +96,7 @@
           "apps/api/scripts/migrate.sh"
         ],
         "search_operations": 6,
-        "elapsed_ms": 23,
+        "elapsed_ms": 38,
         "correct": false,
         "expected_authoritative_paths": [
           "apps/api/",
@@ -150,7 +150,7 @@
           "apps/api/scripts/migrate.sh"
         ],
         "search_operations": 6,
-        "elapsed_ms": 23,
+        "elapsed_ms": 37,
         "correct": false,
         "expected_authoritative_paths": [
           "apps/api/migrations/",
@@ -198,7 +198,7 @@
           "apps/api/scripts/migrate.sh"
         ],
         "search_operations": 6,
-        "elapsed_ms": 21,
+        "elapsed_ms": 26,
         "correct": false,
         "expected_authoritative_paths": [
           "apps/web/src/app/auth/",
@@ -245,9 +245,7 @@
         "search_operations": 5,
         "elapsed_ms": 20,
         "correct": false,
-        "expected_authoritative_paths": [
-          "apps/api/cmd/seed/"
-        ],
+        "expected_authoritative_paths": ["apps/api/cmd/seed/"],
         "skill_metadata_chars": 0
       },
       {
@@ -269,6 +267,7 @@
           "apps/api/business/aifeedback/rate.go",
           "apps/web/next.config.ts",
           "scripts/foundation/voc086-sync-monitoring-workflow.test.mjs",
+          "scripts/foundation/voc112-navigation-benchmark-run.mjs",
           "apps/api/business/missions/repository_postgres_integration_test.go",
           "apps/api/business/users/settings.go",
           "apps/api/gate_readiness/gate_readiness_test.go",
@@ -428,7 +427,7 @@
           "apps/api/app/api/production.go"
         ],
         "search_operations": 6,
-        "elapsed_ms": 22,
+        "elapsed_ms": 23,
         "correct": false,
         "expected_authoritative_paths": [
           "docs/development.md",
@@ -473,7 +472,7 @@
           "apps/api/app/api/onboarding.go"
         ],
         "search_operations": 6,
-        "elapsed_ms": 22,
+        "elapsed_ms": 23,
         "correct": false,
         "expected_authoritative_paths": [
           "AGENTS.md",
@@ -564,15 +563,11 @@
       {
         "question_id": "nav-q05",
         "intent_label": "Content seed",
-        "files_opened": [
-          "apps/api/cmd/seed/"
-        ],
+        "files_opened": ["apps/api/cmd/seed/"],
         "search_operations": 1,
         "elapsed_ms": 0,
         "correct": true,
-        "expected_authoritative_paths": [
-          "apps/api/cmd/seed/"
-        ],
+        "expected_authoritative_paths": ["apps/api/cmd/seed/"],
         "skill_metadata_chars": 1829,
         "command_tokens": []
       },
@@ -600,10 +595,7 @@
       {
         "question_id": "nav-q07",
         "intent_label": "Monitoring",
-        "files_opened": [
-          "infra/monitoring/",
-          "docs/operations/monitoring.md"
-        ],
+        "files_opened": ["infra/monitoring/", "docs/operations/monitoring.md"],
         "search_operations": 1,
         "elapsed_ms": 0,
         "correct": true,
@@ -651,17 +643,12 @@
           "scripts/foundation/*.test.mjs"
         ],
         "skill_metadata_chars": 1829,
-        "command_tokens": [
-          "pnpm validate"
-        ]
+        "command_tokens": ["pnpm validate"]
       },
       {
         "question_id": "nav-q10",
         "intent_label": "Issue → plan → task lifecycle",
-        "files_opened": [
-          "AGENTS.md",
-          "specs/changes/"
-        ],
+        "files_opened": ["AGENTS.md", "specs/changes/"],
         "search_operations": 1,
         "elapsed_ms": 0,
         "correct": true,

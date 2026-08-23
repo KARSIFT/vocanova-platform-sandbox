@@ -90,10 +90,7 @@ export const BENCHMARK_QUESTIONS = [
     id: "nav-q07",
     intentLabel: "Monitoring",
     prompt: "Where is monitoring configuration documented?",
-    expectedPaths: [
-      "infra/monitoring/",
-      "docs/operations/monitoring.md",
-    ],
+    expectedPaths: ["infra/monitoring/", "docs/operations/monitoring.md"],
   },
   {
     id: "nav-q08",
@@ -190,10 +187,7 @@ function runBaselineSession(question) {
       { cwd: repositoryRoot, encoding: "utf8" },
     );
     if (result.status === 0 && result.stdout.trim()) {
-      const hits = result.stdout
-        .trim()
-        .split(/\r?\n/)
-        .slice(0, 8);
+      const hits = result.stdout.trim().split(/\r?\n/).slice(0, 8);
       for (const hit of hits) {
         if (!filesOpened.includes(hit)) {
           filesOpened.push(hit);
@@ -209,8 +203,8 @@ function runBaselineSession(question) {
   ];
   const correct = expected.every((token) => {
     if (token.includes("/") || token.endsWith(".md")) {
-      return filesOpened.some(
-        (file) => file.includes(token.replace(/\/$/, "")),
+      return filesOpened.some((file) =>
+        file.includes(token.replace(/\/$/, "")),
       );
     }
     return filesOpened.some((file) => file.includes(token));
@@ -293,10 +287,13 @@ function runNavigatorSession(question, navigator) {
 }
 
 function listCanonicalSkills() {
-  return execSync("find .agents/skills -mindepth 1 -maxdepth 1 -type d ! -name '.*'", {
-    cwd: repositoryRoot,
-    encoding: "utf8",
-  })
+  return execSync(
+    "find .agents/skills -mindepth 1 -maxdepth 1 -type d ! -name '.*'",
+    {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+    },
+  )
     .trim()
     .split(/\r?\n/)
     .filter(Boolean)
@@ -357,7 +354,9 @@ function buildDiscoveryEvidence(revision) {
     repositoryRoot,
     ".agents/skills/vocanova-repo-navigator/SKILL.md",
   );
-  const nestedResolution = adapterTargetFromNestedCwd("vocanova-repo-navigator");
+  const nestedResolution = adapterTargetFromNestedCwd(
+    "vocanova-repo-navigator",
+  );
   const claudeRoot = claudeDiscoveryStatus();
   const claudeNested = claudeDiscoveryStatus();
 
@@ -446,7 +445,8 @@ function main() {
   console.log(`Wrote ${discoveryPath}`);
 }
 
-const isMain = process.argv[1] &&
+const isMain =
+  process.argv[1] &&
   fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
 
 if (isMain) {

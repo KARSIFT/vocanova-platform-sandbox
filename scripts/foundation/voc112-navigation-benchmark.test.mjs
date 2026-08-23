@@ -9,9 +9,7 @@ import { readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import {
-  BENCHMARK_QUESTIONS,
-} from "./voc112-navigation-benchmark-run.mjs";
+import { BENCHMARK_QUESTIONS } from "./voc112-navigation-benchmark-run.mjs";
 
 const repositoryRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -58,10 +56,7 @@ function gitRevision() {
 function aggregateMetrics(session) {
   return {
     totalFiles: session.reduce((sum, row) => sum + row.files_opened.length, 0),
-    totalSearches: session.reduce(
-      (sum, row) => sum + row.search_operations,
-      0,
-    ),
+    totalSearches: session.reduce((sum, row) => sum + row.search_operations, 0),
     totalElapsedMs: session.reduce((sum, row) => sum + row.elapsed_ms, 0),
     correctCount: session.filter((row) => row.correct).length,
   };
@@ -82,7 +77,7 @@ function evaluateThresholds(traces) {
     regressions.files <= thresholds.max_regression_files &&
     regressions.searches <= thresholds.max_regression_searches &&
     regressions.elapsed_ms <= thresholds.max_regression_time_ms &&
-  (thresholds.require_correctness_non_regression
+    (thresholds.require_correctness_non_regression
       ? regressions.correctness >= 0
       : true);
 
@@ -90,7 +85,10 @@ function evaluateThresholds(traces) {
 }
 
 test("VOC-112-TEST-12: benchmark traces exist with revision-bound rubric coverage", () => {
-  assert.ok(statSync(tracesPath, { throwIfNoEntry: false }), "missing traces fixture");
+  assert.ok(
+    statSync(tracesPath, { throwIfNoEntry: false }),
+    "missing traces fixture",
+  );
   const traces = readJson(tracesPath);
   const revision = gitRevision();
 
@@ -101,7 +99,9 @@ test("VOC-112-TEST-12: benchmark traces exist with revision-bound rubric coverag
   assert.ok(Array.isArray(traces.sessions.navigator_assisted));
 
   const expectedIds = BENCHMARK_QUESTIONS.map((q) => q.id).sort();
-  const baselineIds = traces.sessions.baseline.map((row) => row.question_id).sort();
+  const baselineIds = traces.sessions.baseline
+    .map((row) => row.question_id)
+    .sort();
   const navigatorIds = traces.sessions.navigator_assisted
     .map((row) => row.question_id)
     .sort();
@@ -140,7 +140,11 @@ test("VOC-112-TEST-12: navigator-assisted path improves or does not regress cost
   );
 
   for (const row of traces.sessions.navigator_assisted) {
-    assert.equal(row.correct, true, `navigator row ${row.question_id} must be correct`);
+    assert.equal(
+      row.correct,
+      true,
+      `navigator row ${row.question_id} must be correct`,
+    );
     assert.ok(
       row.files_opened.length <=
         traces.sessions.baseline.find((b) => b.question_id === row.question_id)
@@ -216,8 +220,7 @@ test("VOC-112-TEST-13: runtime discovery evidence is revision-bound and truthful
   );
   const cursorNested = discovery.discoveries.find(
     (row) =>
-      row.runtime === "hosted-cursor" &&
-      row.context === "nested-cwd-apps-web",
+      row.runtime === "hosted-cursor" && row.context === "nested-cwd-apps-web",
   );
   assert.ok(cursorRoot, "hosted Cursor root discovery row required");
   assert.ok(cursorNested, "hosted Cursor nested discovery row required");
