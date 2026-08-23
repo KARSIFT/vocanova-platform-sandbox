@@ -30,8 +30,7 @@ export const SHARED_SKILL_NAMES = [
   "security-threat-modeling",
 ];
 
-const VERCEL_REJECTED_UPSTREAM =
-  "dd089a8c752c966dee8bf0f27cb625ba193ffd9e";
+const VERCEL_REJECTED_UPSTREAM = "dd089a8c752c966dee8bf0f27cb625ba193ffd9e";
 
 const REPOSITORY_ADAPTATION_MARKERS = [
   "docs/development.md",
@@ -40,11 +39,7 @@ const REPOSITORY_ADAPTATION_MARKERS = [
   "repository sources win",
 ];
 
-const SAFETY_MARKERS = [
-  /(?:Never|Do not)/i,
-  /\.env/,
-  /raw CI log/i,
-];
+const SAFETY_MARKERS = [/(?:Never|Do not)/i, /\.env/, /raw CI log/i];
 
 function readSkill(skillName) {
   return readFileSync(
@@ -133,7 +128,10 @@ test("VOC-112-TEST-08: exactly seven shared skills with canonical and Claude ada
       skillName,
       "SKILL.md",
     );
-    assert.ok(statSync(canonicalPath).isFile(), `${skillName} canonical missing`);
+    assert.ok(
+      statSync(canonicalPath).isFile(),
+      `${skillName} canonical missing`,
+    );
     assert.ok(statSync(adapterPath).isFile(), `${skillName} adapter missing`);
   }
 
@@ -148,7 +146,8 @@ test("VOC-112-TEST-09: shared skills include repository adaptations and provenan
 
     assert.equal(provenance.skill_name, skillName);
     assert.ok(
-      provenance.source === "adapted" || provenance.source === "repository-native",
+      provenance.source === "adapted" ||
+        provenance.source === "repository-native",
       `${skillName}: provenance source must be adapted or repository-native`,
     );
 
@@ -177,7 +176,10 @@ test("VOC-112-TEST-09: shared skills include repository adaptations and provenan
         "local_sha256",
         "license",
       ]) {
-        assert.ok(provenance[field], `${skillName}: missing adapted field ${field}`);
+        assert.ok(
+          provenance[field],
+          `${skillName}: missing adapted field ${field}`,
+        );
       }
       assert.match(provenance.upstream_repo, /^https:\/\//);
       assert.match(provenance.upstream_commit, /^[0-9a-f]{7,40}$/);
