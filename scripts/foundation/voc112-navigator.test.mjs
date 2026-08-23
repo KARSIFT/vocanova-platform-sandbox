@@ -129,18 +129,59 @@ function pathExists(candidate) {
   if (candidate.includes("*")) {
     const dir = path.dirname(candidate);
     const base = path.basename(candidate);
-    const prefix = base.replace(/\*.*$/, "");
     const resolvedDir = path.resolve(repositoryRoot, dir);
     if (!statSync(resolvedDir, { throwIfNoEntry: false })?.isDirectory()) {
       return false;
     }
-    return readdirSync(resolvedDir).some((entry) => entry.startsWith(prefix));
+    return readdirSync(resolvedDir).some((entry) =>
+      globBasenameMatches(entry, base),
+    );
   }
   return Boolean(
     statSync(path.resolve(repositoryRoot, candidate), {
       throwIfNoEntry: false,
     }),
   );
+}
+
+function globBasenameMatches(entry, pattern) {
+  const expression = pattern
+    .split("*")
+    .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join(".*");
+  return new RegExp(`^${expression}$`).test(entry);
+}
+
+function parseRoutingRows(body) {
+  const rows = new Map();
+  for (const line of body.split(/\r?\n/)) {
+    const match = line.match(/^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|$/);
+    if (!match || match[1] === "Intent" || /^-+$/.test(match[1])) {
+      continue;
+    }
+    rows.set(match[1], match[2]);
+  }
+  return rows;
+}
+
+function missingRequiredRouteMappings(body) {
+  const rows = parseRoutingRows(body);
+  const missing = [];
+
+  for (const route of REQUIRED_ROUTES) {
+    const row = rows.get(route.label);
+    if (!row) {
+      missing.push(`${route.id}:row`);
+      continue;
+    }
+    for (const token of [...route.pathTokens, ...(route.extraTokens ?? [])]) {
+      if (!row.includes(token)) {
+        missing.push(`${route.id}:${token}`);
+      }
+    }
+  }
+
+  return missing;
 }
 
 function extractBacktickPaths(source) {
@@ -154,27 +195,11 @@ test("VOC-112-TEST-06: navigator covers required domains with existing targets",
   assert.match(body, /## Routing table/);
   assert.match(body, /\| Intent \| Start here \|/);
 
-  for (const route of REQUIRED_ROUTES) {
-    assert.match(
-      body,
-      new RegExp(route.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
-      `missing routing row label: ${route.label}`,
-    );
-    for (const token of route.pathTokens) {
-      assert.match(
-        body,
-        new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
-        `missing path token ${token} for ${route.id}`,
-      );
-    }
-    for (const token of route.extraTokens ?? []) {
-      assert.match(
-        body,
-        new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
-        `missing lifecycle token ${token} for ${route.id}`,
-      );
-    }
-  }
+  assert.deepEqual(
+    missingRequiredRouteMappings(body),
+    [],
+    "every required path and lifecycle token must be in its named routing row",
+  );
 
   const referencedPaths = extractBacktickPaths(body).filter(
     (token) =>
@@ -196,6 +221,25 @@ test("VOC-112-TEST-06: navigator covers required domains with existing targets",
     [],
     `navigator references paths that do not exist: ${missing.join(", ")}`,
   );
+});
+
+test("VOC-112-TEST-06: misplaced routes and false glob matches fail closed", () => {
+  const body = parseSkillBody(readNavigatorSkill());
+  const misplaced = body
+    .replace("`docs/operations/staging-controlled-signup.md`, ", "")
+    .replace(
+      "| Web UI / Next.js |",
+      "| Web UI / Next.js | `docs/operations/staging-controlled-signup.md`,",
+    );
+
+  assert.ok(
+    missingRequiredRouteMappings(misplaced).includes(
+      "auth:docs/operations/staging-controlled-signup.md",
+    ),
+    "a token moved to another row must not satisfy the auth route",
+  );
+  assert.equal(globBasenameMatches("example.test.mjs", "*.test.mjs"), true);
+  assert.equal(globBasenameMatches("README.md", "*.test.mjs"), false);
 });
 
 test("VOC-112-TEST-07: navigator stays compact and states governance precedence", () => {
