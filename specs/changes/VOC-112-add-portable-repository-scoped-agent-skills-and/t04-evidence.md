@@ -4,11 +4,12 @@ Metadata only: no secrets, prompts, raw logs, response bodies, or personal data.
 
 ## gate_status
 
-`hosted-cursor-discovery-pending`
+`complete`
 
-The benchmark and Claude Code discovery are complete. T04 must remain draft until an
-authorized hosted Cursor runtime captures both root and nested discovery from structured
-runtime events. Filesystem enumeration or static path resolution is not accepted as proof.
+The benchmark plus Claude Code and hosted Cursor root/nested discovery are complete.
+Filesystem enumeration, static path resolution, model prose, and path mentions are not
+accepted as proof; the captured Cursor rows require completed read-tool events for the
+canonical skill.
 
 ## Real navigation benchmark
 
@@ -41,10 +42,13 @@ Fixture: `scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json`.
 | ----------------------------------------- | --------------------- | --------------------------------------------------------------------------------- | ------- |
 | Claude Code `2.1.229` / `claude-sonnet-5` | repository root       | structured `Read` event for canonical navigator plus success marker               | pass    |
 | Claude Code `2.1.229` / `claude-sonnet-5` | nested `apps/web` cwd | structured `Read` event resolves the same canonical navigator plus success marker | pass    |
-| Hosted Cursor                             | repository root       | real structured capture required                                                  | pending |
-| Hosted Cursor                             | nested `apps/web` cwd | real structured capture required                                                  | pending |
+| Hosted Cursor `2026.08.11-e8db854` / Auto | repository root       | 26 structured events; 2 completed read calls including the canonical navigator   | pass    |
+| Hosted Cursor `2026.08.11-e8db854` / Auto | nested `apps/web` cwd | 34 structured events; completed read call for the same canonical navigator        | pass    |
 
 Fixture: `scripts/foundation/fixtures/voc112-skill-discovery-evidence.json`.
+The sanitized hosted capture came from workflow run `32673904614` against subject
+revision `00f220bbbd4bd5db51cb94912453227bae54fa3d`; the evidence-only workflow carrier
+was removed before the final PR head.
 
 ## One-source architecture and documentation
 
@@ -60,13 +64,15 @@ Fixture: `scripts/foundation/fixtures/voc112-skill-discovery-evidence.json`.
 
 | Command                                                               | Result                                   |
 | --------------------------------------------------------------------- | ---------------------------------------- |
-| `node --test scripts/foundation/voc112-agent-skills.test.mjs`         | pending final head                       |
-| `node --test scripts/foundation/voc112-navigation-benchmark.test.mjs` | intentionally pending hosted Cursor rows |
-| `node --test scripts/foundation/voc112-*.test.mjs`                    | pending final head                       |
-| `bash scripts/governance/validate-governance.sh`                      | pending final head                       |
-| `bash scripts/governance/classify-change-risk.sh`                     | pending final head                       |
-| `git diff --check`                                                    | pending final head                       |
+| `node --test scripts/foundation/voc112-agent-skills.test.mjs`         | pass                                     |
+| `node --test scripts/foundation/voc112-navigation-benchmark.test.mjs` | 5/5 pass                                 |
+| `node --test scripts/foundation/voc112-*.test.mjs`                    | pass                                     |
+| `bash scripts/governance/validate-governance.sh`                      | pass                                     |
+| `bash scripts/governance/classify-change-risk.sh`                     | R3                                       |
+| `git diff --check`                                                    | pass                                     |
+| `pnpm validate`                                                       | executed locally; stopped only at the two Docker-backed OAuth API tests because Docker is unavailable in this WSL checkout; all preceding phases passed; exact-SHA hosted CI required |
+| `pnpm build`                                                          | pass (packages, web, API)                 |
 
 ## Acceptance mapping
 
-- `VOC-112-AC-04` / `VOC-112-EV-04` — pending only the two real hosted Cursor discovery rows.
+- `VOC-112-AC-04` / `VOC-112-EV-04` — complete.

@@ -25,10 +25,7 @@
   "questions": [
     {
       "id": "nav-q01",
-      "expected_paths": [
-        "infra/monitoring/",
-        "docs/operations/monitoring.md"
-      ]
+      "expected_paths": ["infra/monitoring/", "docs/operations/monitoring.md"]
     },
     {
       "id": "nav-q02",
@@ -39,10 +36,7 @@
     },
     {
       "id": "nav-q03",
-      "expected_paths": [
-        "docs/development.md",
-        "scripts/foundation/*.test.mjs"
-      ]
+      "expected_paths": ["docs/development.md", "scripts/foundation/*.test.mjs"]
     }
   ],
   "sessions": [
@@ -51,13 +45,8 @@
       "variant": "baseline",
       "elapsed_ms": 15180,
       "correct": false,
-      "answer_paths": [
-        "docs/operations/monitoring.md"
-      ],
-      "repository_files_opened": [
-        "AGENTS.md",
-        "README.md"
-      ],
+      "answer_paths": ["docs/operations/monitoring.md"],
+      "repository_files_opened": ["AGENTS.md", "README.md"],
       "skill_files_opened": [],
       "search_operations": 1,
       "tool_calls": 1,
@@ -73,16 +62,9 @@
       "variant": "navigator_assisted",
       "elapsed_ms": 16737,
       "correct": true,
-      "answer_paths": [
-        "infra/monitoring/",
-        "docs/operations/monitoring.md"
-      ],
-      "repository_files_opened": [
-        "docs/operations/monitoring.md"
-      ],
-      "skill_files_opened": [
-        ".agents/skills/vocanova-repo-navigator/SKILL.md"
-      ],
+      "answer_paths": ["infra/monitoring/", "docs/operations/monitoring.md"],
+      "repository_files_opened": ["docs/operations/monitoring.md"],
+      "skill_files_opened": [".agents/skills/vocanova-repo-navigator/SKILL.md"],
       "search_operations": 1,
       "tool_calls": 2,
       "usage": {
@@ -101,12 +83,8 @@
         "apps/api/migrations/",
         "docs/engineering/05-database-design.md"
       ],
-      "repository_files_opened": [
-        "docs/engineering/05-database-design.md"
-      ],
-      "skill_files_opened": [
-        ".agents/skills/vocanova-repo-navigator/SKILL.md"
-      ],
+      "repository_files_opened": ["docs/engineering/05-database-design.md"],
+      "skill_files_opened": [".agents/skills/vocanova-repo-navigator/SKILL.md"],
       "search_operations": 1,
       "tool_calls": 2,
       "usage": {
@@ -176,16 +154,9 @@
       "variant": "navigator_assisted",
       "elapsed_ms": 16719,
       "correct": true,
-      "answer_paths": [
-        "docs/development.md",
-        "scripts/foundation/*.test.mjs"
-      ],
-      "repository_files_opened": [
-        "docs/development.md"
-      ],
-      "skill_files_opened": [
-        ".agents/skills/vocanova-repo-navigator/SKILL.md"
-      ],
+      "answer_paths": ["docs/development.md", "scripts/foundation/*.test.mjs"],
+      "repository_files_opened": ["docs/development.md"],
+      "skill_files_opened": [".agents/skills/vocanova-repo-navigator/SKILL.md"],
       "search_operations": 1,
       "tool_calls": 2,
       "usage": {

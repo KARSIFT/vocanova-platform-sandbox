@@ -286,7 +286,8 @@ function cursorCompletedReadPaths(events, cwd) {
     if (event.type !== "tool_call" || event.subtype !== "completed") continue;
     const toolCall = event.tool_call?.readToolCall;
     const requestedPath = toolCall?.args?.path;
-    if (typeof requestedPath !== "string" || !toolCall.result?.success) continue;
+    if (typeof requestedPath !== "string" || !toolCall.result?.success)
+      continue;
     const absolutePath = path.isAbsolute(requestedPath)
       ? requestedPath
       : path.resolve(cwd, requestedPath);

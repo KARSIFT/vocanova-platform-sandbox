@@ -197,52 +197,6 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' }}
 
 jobs:
-  # VOC-112-T04 temporary evidence carrier. This job exists only on the task
-  # branch, emits a sanitized metadata fixture, and is removed before merge.
-  voc112-cursor-discovery-evidence:
-    if: github.event_name == 'workflow_dispatch' && inputs.action == 'reconcile' && inputs.change_id == 'VOC-112' && inputs.task_id == 'VOC-112-T04'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - name: Check out the evidence subject
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          fetch-depth: 0
-
-      - name: Install the reviewed Cursor CLI build
-        env:
-          INSTALLER_SHA256: b1af27b9556c5f1c58d166742dbb33425ebd90a4bbd7e5453d66b920bf1f9f6b
-          EXPECTED_CURSOR_VERSION: 2026.08.11-e8db854
-        run: |
-          set -euo pipefail
-          installer="$RUNNER_TEMP/cursor-install.sh"
-          curl -fsSL https://cursor.com/install -o "$installer"
-          printf '%s  %s\n' "$INSTALLER_SHA256" "$installer" | sha256sum --check
-          bash "$installer" >/dev/null
-          actual="$($HOME/.local/bin/agent --version)"
-          test "$actual" = "$EXPECTED_CURSOR_VERSION"
-          mkdir -p "$RUNNER_TEMP/voc112-bin"
-          ln -s "$HOME/.local/bin/agent" "$RUNNER_TEMP/voc112-bin/cursor-agent"
-          echo "$RUNNER_TEMP/voc112-bin" >> "$GITHUB_PATH"
-
-      - name: Capture sanitized root and nested discovery metadata
-        env:
-          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
-        run: |
-          set -euo pipefail
-          node scripts/foundation/voc112-navigation-benchmark-run.mjs --capture-cursor-discovery
-          node --test scripts/foundation/voc112-navigation-benchmark.test.mjs
-
-      - name: Upload sanitized evidence only
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: voc112-hosted-cursor-discovery
-          path: scripts/foundation/fixtures/voc112-skill-discovery-evidence.json
-          if-no-files-found: error
-          retention-days: 1
-
   implement:
     if: github.event_name == 'workflow_dispatch' && inputs.action == 'implement'
     uses: KARSIFT/karsift-ai-infra/.github/workflows/implement.yml@main
