@@ -1,0 +1,11 @@
+schema_version: 1
+skill_name: react-next-performance
+source: repository-native
+authoritative_sources:
+  - apps/web/package.json
+  - docs/development.md
+  - docs/design/08-web-app-design.md
+  - .karsift/lessons.md
+committed_files:
+  - path: SKILL.md
+    sha256: f6e6ca2401e11eee8605ee8b08c08f8cbd3c11765e70afdfb9f819f56083a009
