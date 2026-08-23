@@ -179,6 +179,14 @@ pnpm validate   # or the narrower pnpm lint / typecheck / test / build
 Discover future commands from the committed package scripts and `docs/development.md`.
 Do not invent or report an unavailable check as passing.
 
+## Agent skills
+
+Repository-scoped skills live under `.agents/skills/` with Claude loader adapters in
+`.claude/skills/`. See `docs/development/agent-skills.md` for installation scope,
+validation commands, pinned upstream updates, Graphify pilot limits, and safe use.
+When skill prose conflicts with this file, `CLAUDE.md`, approved change packages,
+tests, or source code, the repository sources win.
+
 ## Safety
 
 - Never commit secrets, credentials, production configuration, or unnecessary

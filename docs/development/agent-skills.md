@@ -3,42 +3,92 @@
 Repository-scoped agent skills give every supported agent one authoritative copy of
 each procedure from a fresh checkout, with deterministic safety validation.
 
-> **Skeleton (VOC-112-T00):** Operator sections marked *completed in T04* are
-> placeholders until the documentation task lands.
-
 ## Installation scope
 
-*Completed in T04.* Skills ship in-repo under `.agents/skills/`; no personal or
-global installation is required for discovery from the repository root.
+Skills ship in-repo under `.agents/skills/` and `.claude/skills/` (Claude loader
+adapters). No personal or global installation is required for discovery from the
+repository root. Cursor, Codex, and compatible agents read the canonical tree
+directly; Claude adapters load canonical skills via `${CLAUDE_PROJECT_DIR}` so nested
+working directories still resolve the same authoritative files.
 
 ## One-source architecture
 
 - **Canonical tree:** `.agents/skills/<skill-name>/SKILL.md`
-- **Claude adapters:** `.claude/skills/<skill-name>/SKILL.md` (loader-only)
+- **Claude adapters:** `.claude/skills/<skill-name>/SKILL.md` (loader-only; no Git
+  symlinks)
 - **Architecture reference:** `.agents/skills/README.md`
 - **Adapter contract:** `.claude/skills/README.md`
+- **Repository navigator:** `.agents/skills/vocanova-repo-navigator/SKILL.md`
 
-Governance precedence: `AGENTS.md`, `CLAUDE.md`, approved change packages, tests,
-and source code override skill prose.
+Governance precedence: when skill prose conflicts with `AGENTS.md`, `CLAUDE.md`,
+approved change packages, tests, or source code, the **repository sources win**.
 
 ## Validation
 
 ```bash
 node --test scripts/foundation/voc112-agent-skills.test.mjs
+node --test scripts/foundation/voc112-navigation-benchmark.test.mjs
 pnpm test   # includes foundation tests
 ```
 
+Regenerate navigation benchmark traces after rubric or navigator routing changes:
+
+```bash
+node scripts/foundation/voc112-navigation-benchmark-run.mjs
+```
+
+Benchmark and discovery evidence fixtures live under
+`scripts/foundation/fixtures/` and bind to the current `git rev-parse HEAD`.
+
 ## Updating pinned upstream material
 
-*Completed in T04.* Adapted skills record upstream identity and hashes in per-skill
-`PROVENANCE.yaml` (see `.agents/skills/provenance.schema.yaml`).
+Adapted skills (shared engineering skills, Graphify pilot) record upstream identity,
+separate upstream/local hashes, retained licenses, and adaptation notes in per-skill
+`.agents/skills/<name>/PROVENANCE.yaml`. The schema is immutable at
+`.agents/skills/provenance.schema.yaml` (T00-owned).
+
+To update adapted material:
+
+1. Choose a reviewed upstream commit with a compatible license; do not copy unlicensed
+   sources (the Vercel `agent-skills` React guidance at commit
+   `dd089a8c752c966dee8bf0f27cb625ba193ffd9e` is explicitly rejected).
+2. Adapt content for this repository (`docs/development.md` validation tiers, real
+   paths, governance fail-closed behavior).
+3. Update `PROVENANCE.yaml` committed-file manifest hashes and adaptation notes.
+4. Run `node --test scripts/foundation/voc112-agent-skills.test.mjs` and task-local
+   shared-skill or Graphify tests as applicable.
+
+Repository-native skills (for example `vocanova-repo-navigator`) declare
+`source: repository-native` and list authoritative documentation sources in provenance.
 
 ## Graphify pilot limitations
 
-*Completed in T04.* Graphify remains explicit opt-in; ordinary agent sessions do not
-auto-invoke the pilot skill.
+The `graphify-pilot` skill is **opt-in only** (`disable-model-invocation: true`).
+Ordinary agent sessions do not auto-invoke it. Graduation to always-on use requires a
+separate governed change with Graphify-specific measurement and acceptance gates.
+
+- **Explicit setup:** operators run `bash scripts/graphify/setup.sh` once; ordinary
+  skill and runner use fail closed when the locked local runtime is missing.
+- **Code-only:** extraction uses `--code-only`; query logging is disabled; provider
+  credentials are unavailable to the Graphify process.
+- **Hint-only output:** `graphify-out/` is gitignored by default; verify consequential
+  claims in current source before acting.
+- **No ordinary-use downloads:** `scripts/graphify/check` and `run.sh` do not install,
+  upgrade, or mutate user profiles.
+
+See `.agents/skills/graphify-pilot/SKILL.md` and `specs/changes/VOC-112-*/t03-evidence.md`.
 
 ## Safe use
 
-*Completed in T04.* Skills must not be used to exfiltrate secrets, credentials, CI
-logs, or personal data. Follow `AGENTS.md` for governed change workflow.
+Skills are instruction surfaces, not authority grants. They must not be used to:
+
+- print, export, or grep environment secrets, `.env*` files, credentials, cookies,
+  OAuth material, session tokens, or personal data;
+- paste or export raw CI logs containing secrets;
+- run unpinned global installs (`@latest`, `npm install -g`, etc.) or hidden network
+  fetches outside repository tooling;
+- mutate user-profile or global agent configuration outside this repository.
+
+For governed implementation work, follow `AGENTS.md` (issue → plan → task lifecycle).
+Use `vocanova-repo-navigator` to find authoritative paths; do not treat skill prose as
+a substitute for canonical docs or approved change packages.

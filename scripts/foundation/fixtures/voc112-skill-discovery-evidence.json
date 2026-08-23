@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "revision": "e4787dd0130a9eba8e3fd7e5d3a63f14538418d2",
+  "recorded_at": "2026-08-23T22:22:42.252Z",
+  "runtime_metadata": {
+    "env_markers": [
+      "CURSOR_AGENT"
+    ],
+    "node": "v24.5.0"
+  },
+  "discoveries": [
+    {
+      "runtime": "hosted-cursor",
+      "context": "repository-root",
+      "method": "filesystem-enumeration-and-runtime-skill-registry",
+      "result": "pass",
+      "canonical_skill_count": 9,
+      "navigator_path_exists": true,
+      "skill_names_sample": [
+        "context-mapping",
+        "github-actions-efficiency",
+        "graphify-pilot",
+        "playwright-browser-testing",
+        "react-next-performance"
+      ]
+    },
+    {
+      "runtime": "hosted-cursor",
+      "context": "nested-cwd-apps-web",
+      "method": "project-root-adapter-target-resolution",
+      "result": "pass",
+      "nested_cwd": "apps/web/",
+      "resolved_canonical_target": "/home/runner/work/vocanova-platform-sandbox/vocanova-platform-sandbox/.agents/skills/vocanova-repo-navigator/SKILL.md"
+    },
+    {
+      "runtime": "claude-code",
+      "context": "repository-root",
+      "method": "cli-non-interactive-probe",
+      "result": "not-executed-external-credential-required",
+      "notes": "claude CLI not installed in this runtime"
+    },
+    {
+      "runtime": "claude-code",
+      "context": "nested-cwd-apps-web",
+      "method": "cli-non-interactive-probe",
+      "result": "not-executed-external-credential-required",
+      "notes": "claude CLI not installed in this runtime"
+    }
+  ]
+}
