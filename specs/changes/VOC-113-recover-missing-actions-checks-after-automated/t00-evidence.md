@@ -157,6 +157,11 @@ commit is `a4899e17fc9eab6e37ea802fce129ea30634e8c3`.
 Shared PR #131 synchronized the canonical template's operator comment with the
 path-aware behavior; all 231 policy tests and four hosted checks passed. Its
 `main` merge commit is `255678b41fb29b27c42d4632f807b42682c29430`.
+The next caller review found that the live caller's honest empty recovery-only
+base-SHA metadata had not been mirrored into the canonical template. Shared PR
+#132 synchronized that template and added positive/negative regression checks;
+all 231 policy tests and four hosted checks passed. Its `main` merge commit is
+`091fabdf9cf074396339750c7a58d215fbdc9aec`.
 
 ## VOC-112 provenance repair (`VOC-113-D11`)
 
