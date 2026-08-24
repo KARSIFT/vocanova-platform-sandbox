@@ -31,6 +31,11 @@ or complete CI logs.
   infra changes above.
 - `tooling/governance/fixtures/karsift-ai-infra/README.md` — VOC-117 contract note.
 - `tooling/governance/tests/test_voc117_role_bindings.py` — caller fixture regressions.
+- `scripts/foundation/voc097-fixture-matrix.test.mjs`,
+  `scripts/foundation/voc104-ready-for-review-reuse.test.mjs`, and
+  `scripts/foundation/voc108-authoritative-lifecycle.test.mjs` — pin assertions
+  advanced to the VOC-117 fixture merge so `pnpm test` / pre-push validation stay
+  aligned with `PINNED_SHA.txt`.
 
 ## Authoritative stored role mapping (VOC-117-D00)
 
@@ -87,6 +92,8 @@ the exact GitHub merge commit `27a44b2…`; it does not infer or predeclare a SH
 | `bash scripts/governance/classify-change-risk.sh` | pass | Detected path floor `R4` |
 | `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pass | 167 tests after exact-pin reconciliation |
 | `python3 -m unittest discover -s tooling/governance/tests -p 'test_voc117*.py'` | pass | 7 tests |
+| `node --test scripts/foundation/voc097-fixture-matrix.test.mjs scripts/foundation/voc104-ready-for-review-reuse.test.mjs scripts/foundation/voc108-authoritative-lifecycle.test.mjs` | pass | 25 tests after pin advance to `27a44b2…` |
+| `bash karsift-ai-infra/config/run-app-checks.sh` | pass | pre-push deterministic CI (attempt-2 repair) |
 | `git diff --check` | pass | No whitespace or patch-format errors |
 
 ## Acceptance mapping

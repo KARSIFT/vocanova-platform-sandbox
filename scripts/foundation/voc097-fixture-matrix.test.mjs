@@ -126,9 +126,10 @@ test("VOC-097-T03 matrix declares TEST-02 through TEST-14 without gaps", () => {
 test("VOC-097-T03 vendored infra pin is recorded for fixture replay", () => {
   assert.ok(existsSync(fixturePinPath), "PINNED_SHA.txt must exist");
   const pin = readFileSync(fixturePinPath, "utf8").trim();
-  // VOC-106 advances the same pinned fixture set while preserving the full
-  // VOC-097 regression matrix; keep this exact rather than accepting any SHA.
-  assert.equal(pin, "c5d8bccfa8676bd367b53ad5f6f9a51a40c99405");
+  // VOC-117 advances the pinned fixture to the reviewed karsift-ai-infra merge
+  // while preserving the full VOC-097 regression matrix; keep this exact rather
+  // than accepting any SHA.
+  assert.equal(pin, "27a44b298f1c234a94e02127eaeb55d66b28e30d");
 });
 
 test("VOC-097-T03 Python fixture matrix passes", () => {
