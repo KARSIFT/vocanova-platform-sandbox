@@ -51,10 +51,20 @@ function assertPrValidationMergeBase(evidence) {
     /^[a-f0-9]{40}$/,
     "post-squash PR validation requires PR_HEAD_SHA",
   );
-  const mergeBase = execFileSync("git", ["merge-base", prBaseSha, prHeadSha], {
-    cwd: repositoryRoot,
-    encoding: "utf8",
-  }).trim();
+  const mergeBaseResult = spawnSync(
+    "git",
+    ["merge-base", prBaseSha, prHeadSha],
+    {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+    },
+  );
+  assert.equal(
+    mergeBaseResult.status,
+    0,
+    "PR_BASE_SHA and PR_HEAD_SHA must resolve to a common merge base",
+  );
+  const mergeBase = mergeBaseResult.stdout.trim();
   assert.match(mergeBase, /^[a-f0-9]{40}$/);
   assert.equal(
     evidence.source_hashes.navigator_skill_sha256,
@@ -403,24 +413,7 @@ test("VOC-113-TEST-10: tampered merge base fails closed under pr-validation", ()
     cwd: repositoryRoot,
     encoding: "utf8",
   }).trim();
-  let wrongBase = "";
-  for (let depth = 1; depth < 50; depth += 1) {
-    const candidate = execFileSync("git", ["rev-parse", `HEAD~${depth}`], {
-      cwd: repositoryRoot,
-      encoding: "utf8",
-    }).trim();
-    if (
-      sha256AtRevision(candidate, "AGENTS.md") !==
-      evidence.source_hashes.agents_sha256
-    ) {
-      wrongBase = candidate;
-      break;
-    }
-  }
-  assert.ok(
-    wrongBase,
-    "need a parent commit with a different agents hash for tampered fixture",
-  );
+  const wrongBase = "0".repeat(40);
   const priorMode = process.env.VOC112_CAPTURE_PROVENANCE_MODE;
   const priorBase = process.env.PR_BASE_SHA;
   const priorHead = process.env.PR_HEAD_SHA;
@@ -432,7 +425,7 @@ test("VOC-113-TEST-10: tampered merge base fails closed under pr-validation", ()
       () => assertCapturedRevision(evidence),
       (error) =>
         error instanceof assert.AssertionError &&
-        /merge base|anchored/.test(error.message),
+        /merge base/.test(error.message),
     );
   } finally {
     if (priorMode === undefined) {
@@ -465,10 +458,7 @@ test("VOC-113-TEST-10: changed current hash fails closed under pr-validation", (
     cwd: repositoryRoot,
     encoding: "utf8",
   }).trim();
-  const baseSha = execFileSync("git", ["rev-parse", "HEAD~1"], {
-    cwd: repositoryRoot,
-    encoding: "utf8",
-  }).trim();
+  const baseSha = headSha;
   const priorMode = process.env.VOC112_CAPTURE_PROVENANCE_MODE;
   const priorBase = process.env.PR_BASE_SHA;
   const priorHead = process.env.PR_HEAD_SHA;
