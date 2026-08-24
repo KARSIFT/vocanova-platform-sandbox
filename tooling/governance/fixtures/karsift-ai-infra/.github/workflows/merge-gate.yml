@@ -460,6 +460,7 @@ jobs:
           permission-pull-requests: write
           permission-actions: write
           permission-checks: read
+          permission-statuses: read
 
       - name: Publish immutable reuse transition attestation
         if: inputs.reuse_outcome == 'reuse-evidence'

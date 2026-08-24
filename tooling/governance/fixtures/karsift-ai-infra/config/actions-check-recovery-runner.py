@@ -58,7 +58,14 @@ def gh(
 
 
 def gh_api(token: str, repository: str, path: str, *, read_failure: str) -> Any:
-    return json.loads(gh(["api", path], token=token, repository=repository, read_failure=read_failure))
+    return json.loads(
+        gh(
+            ["api", path],
+            token=token,
+            repository=repository,
+            read_failure=read_failure,
+        )
+    )
 
 
 def gh_api_paginate(
@@ -332,6 +339,8 @@ def main() -> int:
         return 1
 
     deadline = time.time() + timeout_seconds
+    gate_summary = initial_gate_summary
+    workflow_runs = initial_workflow_runs
     while time.time() < deadline:
         try:
             _, gate_summary, workflow_runs = run_metadata_phase(
@@ -359,8 +368,6 @@ def main() -> int:
             return 0
         time.sleep(POLL_INTERVAL_SECONDS)
 
-    gate_summary = load_gate_summary(token, args.repository, target_sha)
-    workflow_runs = load_workflow_runs(token, args.repository, target_sha)
     missing = collect_missing(
         mode,
         gate_summary,

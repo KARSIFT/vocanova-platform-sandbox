@@ -115,12 +115,15 @@ Other ways of advancing `develop` are covered by the hourly exact-tip wake.
 Recovery metadata reads are fail-closed prerequisites: every App mint path that
 feeds `actions-check-recovery-runner.py` (`merge-gate.yml` post-merge recovery,
 `release.yml` converge recovery, and `recover-actions-checks.yml`) must request
-explicit read scopes — at minimum `permission-checks: read`,
-`permission-actions: read`, and `permission-contents: read` — in addition to
-the existing narrow mutation scopes. When a metadata endpoint fails, the runner
-emits one sanitized endpoint class (`check_runs_read_failed`,
-`workflow_runs_read_failed`, or `commit_metadata_read_failed`) and aborts before
-bounded wait or workflow dispatch.
+the complete endpoint contract: `permission-checks: read` for check runs,
+`permission-statuses: read` for combined commit status, and the existing
+`permission-actions: write` grant, which includes workflow-run discovery as well
+as allowlisted dispatch. Contents and Pull requests remain read or write according
+to the carrier's existing mutation role. The App installation must grant every
+requested permission; otherwise token minting fails closed. When a metadata
+endpoint fails, the runner emits one sanitized endpoint class
+(`check_runs_read_failed`, `workflow_runs_read_failed`, or
+`commit_metadata_read_failed`) and aborts before dispatch planning.
 
 This table is an implementation target, not authority to procure vendors, incur spend, create
 infrastructure, deploy, or release. Each such action requires its own approved change package and

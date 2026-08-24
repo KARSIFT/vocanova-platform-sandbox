@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import re
 import sys
 import unittest
 from importlib.util import module_from_spec, spec_from_file_location
@@ -31,6 +32,30 @@ runner = load_runner()
 HEAD_SHA = "a" * 40
 REPOSITORY = "KARSIFT/example"
 TOKEN = "test-token"
+
+
+def mint_permissions(workflow: str, step_name: str) -> dict[str, str]:
+    marker = f"- name: {step_name}"
+    self_contained = workflow.split(marker, 1)[1].split("\n      - name:", 1)[0]
+    pairs = re.findall(
+        r"^\s+(permission-[a-z-]+):\s+(read|write)\s*$",
+        self_contained,
+        re.MULTILINE,
+    )
+    keys = [key for key, _ in pairs]
+    if len(keys) != len(set(keys)):
+        raise AssertionError(f"duplicate permission input in {step_name}")
+    return dict(pairs)
+
+
+def require_permissions(actual: dict[str, str], expected: dict[str, str]) -> None:
+    missing = {
+        key: value
+        for key, value in expected.items()
+        if actual.get(key) != value
+    }
+    if missing:
+        raise AssertionError(f"missing or incorrect recovery permissions: {missing}")
 
 
 def completed_process(returncode: int = 0, stdout: str = "") -> mock.Mock:
@@ -81,15 +106,68 @@ class Voc114RecoveryMetadataTests(unittest.TestCase):
         reusable = (ROOT / ".github/workflows/recover-actions-checks.yml").read_text(
             encoding="utf-8"
         )
-        for workflow in (merge_gate, release, reusable):
-            self.assertIn("permission-checks: read", workflow)
-        for workflow in (merge_gate, release):
-            self.assertIn("permission-actions: write", workflow)
-            self.assertIn("permission-contents: write", workflow)
-        self.assertIn("permission-actions: read", reusable)
-        self.assertIn("permission-contents: read", reusable)
-        self.assertIn("permission-pull-requests: read", reusable)
-        self.assertIn("permission-actions: write", reusable)
+        mutation_contract = {
+            "permission-actions": "write",
+            "permission-checks": "read",
+            "permission-statuses": "read",
+            "permission-contents": "write",
+            "permission-pull-requests": "write",
+        }
+        reusable_contract = {
+            "permission-actions": "write",
+            "permission-checks": "read",
+            "permission-statuses": "read",
+            "permission-contents": "read",
+            "permission-pull-requests": "read",
+        }
+        require_permissions(
+            mint_permissions(merge_gate, "Mint App installation token"),
+            mutation_contract,
+        )
+        require_permissions(
+            mint_permissions(
+                release,
+                "Mint App installation token for release mutation",
+            ),
+            mutation_contract,
+        )
+        require_permissions(
+            mint_permissions(
+                reusable,
+                "Mint App installation token for recovery dispatch",
+            ),
+            reusable_contract,
+        )
+
+    def test_missing_read_permissions_fail_the_mint_contract_model(self):
+        complete = {
+            "permission-actions": "write",
+            "permission-checks": "read",
+            "permission-statuses": "read",
+            "permission-contents": "read",
+            "permission-pull-requests": "read",
+        }
+        for missing_key in (
+            "permission-actions",
+            "permission-checks",
+            "permission-statuses",
+            "permission-contents",
+            "permission-pull-requests",
+        ):
+            incomplete = dict(complete)
+            del incomplete[missing_key]
+            with self.subTest(missing_key=missing_key):
+                with self.assertRaises(AssertionError):
+                    require_permissions(incomplete, complete)
+
+    def test_duplicate_permission_inputs_fail_the_mint_contract_model(self):
+        malformed = """- name: Recovery
+        with:
+          permission-actions: write
+          permission-actions: read
+"""
+        with self.assertRaisesRegex(AssertionError, "duplicate permission"):
+            mint_permissions(malformed, "Recovery")
 
     def test_check_runs_read_failure_is_localized(self):
         with mock.patch(
@@ -242,9 +320,12 @@ class Voc114RecoveryMetadataTests(unittest.TestCase):
             TOKEN,
         ]
         stderr = io.StringIO()
-        with mock.patch.object(sys, "argv", argv), mock.patch.object(sys, "stderr", stderr):
+        with mock.patch.object(runner, "plan_recovery_dispatches") as plan_mock, mock.patch.object(
+            sys, "argv", argv
+        ), mock.patch.object(sys, "stderr", stderr):
             result = runner.main()
         self.assertEqual(result, 1)
+        plan_mock.assert_not_called()
         dispatch_mock.assert_not_called()
         self.assertIn(runner.CHECK_RUNS_READ_FAILED, stderr.getvalue())
 
@@ -285,9 +366,12 @@ class Voc114RecoveryMetadataTests(unittest.TestCase):
             TOKEN,
         ]
         stderr = io.StringIO()
-        with mock.patch.object(sys, "argv", argv), mock.patch.object(sys, "stderr", stderr):
+        with mock.patch.object(runner, "plan_recovery_dispatches") as plan_mock, mock.patch.object(
+            sys, "argv", argv
+        ), mock.patch.object(sys, "stderr", stderr):
             result = runner.main()
         self.assertEqual(result, 1)
+        plan_mock.assert_not_called()
         dispatch_mock.assert_not_called()
         self.assertIn(runner.WORKFLOW_RUNS_READ_FAILED, stderr.getvalue())
 
@@ -323,9 +407,12 @@ class Voc114RecoveryMetadataTests(unittest.TestCase):
             TOKEN,
         ]
         stderr = io.StringIO()
-        with mock.patch.object(sys, "argv", argv), mock.patch.object(sys, "stderr", stderr):
+        with mock.patch.object(runner, "plan_recovery_dispatches") as plan_mock, mock.patch.object(
+            sys, "argv", argv
+        ), mock.patch.object(sys, "stderr", stderr):
             result = runner.main()
         self.assertEqual(result, 1)
+        plan_mock.assert_not_called()
         dispatch_mock.assert_not_called()
         self.assertIn(runner.COMMIT_METADATA_READ_FAILED, stderr.getvalue())
 

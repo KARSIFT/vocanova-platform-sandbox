@@ -69,7 +69,7 @@ jobs:
           private-key: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
           permission-actions: write
           permission-checks: read
-          permission-actions: read
+          permission-statuses: read
           permission-contents: read
           permission-pull-requests: read
 

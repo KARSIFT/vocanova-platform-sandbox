@@ -47,6 +47,8 @@ test("VOC-114-TEST-01 through TEST-05: fixture recovery metadata policy tests", 
 test("VOC-114 caller docs describe recovery App read contract", () => {
   const devopsOperations = readFileSync(devopsOperationsPath, "utf8");
   assert.match(devopsOperations, /permission-checks: read/);
+  assert.match(devopsOperations, /permission-statuses: read/);
+  assert.match(devopsOperations, /permission-actions: write/);
   assert.match(devopsOperations, /check_runs_read_failed/);
   assert.match(devopsOperations, /workflow_runs_read_failed/);
   assert.match(devopsOperations, /commit_metadata_read_failed/);
@@ -67,8 +69,14 @@ test("VOC-114 fixture mirror declares recovery mint read scopes", () => {
   );
   for (const workflow of [mergeGate, release, reusable]) {
     assert.match(workflow, /permission-checks: read/);
+    assert.match(workflow, /permission-statuses: read/);
   }
-  assert.match(reusable, /permission-actions: read/);
+  assert.match(reusable, /permission-actions: write/);
+  assert.equal(
+    reusable.match(/^\s+permission-actions:/gm)?.length,
+    1,
+    "the recovery mint must declare Actions once; write includes read capability",
+  );
   assert.match(reusable, /permission-contents: read/);
   const runner = readFileSync(
     path.join(fixtureInfraRoot, "config/actions-check-recovery-runner.py"),

@@ -223,6 +223,7 @@ jobs:
           permission-pull-requests: write
           permission-actions: write
           permission-checks: read
+          permission-statuses: read
 
       - name: Validate the full roster from caller-merge markers
         id: roster

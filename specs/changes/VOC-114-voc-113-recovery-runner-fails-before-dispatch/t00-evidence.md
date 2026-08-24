@@ -17,63 +17,62 @@ Authority issue: `KARSIFT/vocanova-platform-sandbox#958`
 | Blocked downstream | VOC-113-T01; promotion PR #947 lacks genuine exact-head required checks |
 | Prior mutation posture | Merge, task-completion publication, and issue closure succeeded before the recovery metadata-read phase failed |
 
-## Verified root cause (`VOC-114-D00`, `VOC-114-D01`, `VOC-114-D05`)
+## Verified cause boundary (`VOC-114-D00`, `VOC-114-D01`, `VOC-114-D05`)
 
-Code review of the shared recovery mint paths on pre-T00 `karsift-ai-infra`
-`main` (`PINNED_SHA.txt` → `d3108dfdef34e2f98c028916e95c36130d329132`) shows
-every App token feeding `actions-check-recovery-runner.py`
-(`merge-gate.yml` post-merge recovery, `release.yml` converge recovery,
-`recover-actions-checks.yml`) invoked `actions/create-github-app-token` without
-any `permission-*` inputs. The runner's metadata phase calls GitHub REST
-endpoints for:
+The two live runs prove that the App installation token used by recovery lacked
+effective access at the first metadata phase; they do not identify the rejected
+endpoint because pre-T00 code collapsed every `gh` failure to
+`github_metadata_read_failed`. Code review also shows that all three mint paths
+feeding `actions-check-recovery-runner.py` omitted explicit `permission-*`
+inputs. Omission alone is **not** a verified cause: the token action documents
+that an omitted permission list inherits the installation's permissions. The
+available metadata therefore supports an effective App-permission failure, but
+does not distinguish a missing App/installation grant from an endpoint-specific
+denial. T01 owns that live installation confirmation.
 
-- commit check-runs and commit status aggregation (`/commits/{sha}/check-runs`,
-  `/commits/{sha}/status`) — requires effective **Checks read**
-- workflow-run discovery (`/actions/runs?head_sha=…`) — requires effective
-  **Actions read**
-- commit file metadata (`/commits/{sha}`) — requires effective **Contents read**
-- promotion target validation (`/pulls/{number}`) — requires effective **Pull
-  requests read**
+The complete REST permission contract is:
 
-When `create-github-app-token` is called without explicit `permission-*`
-inputs, the minted installation token does not reliably carry the read scopes
-needed for those metadata calls even though the hosting workflow job declares
-`checks: read` / `actions: read` on `GITHUB_TOKEN`. The `gh` adapter used by
-the recovery runner authenticates with the **App installation token**, not the
-workflow `GITHUB_TOKEN`, so job-level read permissions do not satisfy the
-metadata phase.
+- `/commits/{sha}/check-runs`: **Checks read**
+- `/commits/{sha}/status`: **Commit statuses read** (distinct from Checks)
+- `/actions/runs?head_sha=…`: **Actions read**, satisfied by the existing
+  **Actions write** grant also required for allowlisted workflow dispatch
+- `/commits/{sha}`: **Contents read**
+- `/pulls/{number}`: **Pull requests read**
 
-The live failure class therefore matches an App **mint-scope** defect: recovery
-attempted metadata reads with a token that lacked explicitly requested Checks,
-Actions, and Contents read. Pre-T00 code also collapsed every `gh` failure to the
-generic `github_metadata_read_failed`, hiding which endpoint class failed.
+T00 makes that contract explicit at every mint site. This is fail-closed in two
+places: `actions/create-github-app-token` refuses a requested permission that the
+installation has not been granted, and the runner refuses any endpoint failure
+before dispatch planning. Workflow-job `GITHUB_TOKEN` permissions are irrelevant
+to these calls because the runner authenticates with the minted App token.
 
-**Installation-scope note (operator-owned before T01):** If live recovery still
-fails after the mint contract lands, verify the KARSIFT GitHub App installation
-on the caller repository grants repository-level **Checks: Read**, **Actions:
-Read and write**, and **Contents: Read and write** (write is already required for
-merge/release mutation). T01 operator proof owns that confirmation; T00 does not
-weaken fail-closed behavior when installation grants are absent.
+**Installation contract for the T01 operator:** confirm the KARSIFT App and its
+caller-repository installation grant Checks read, Commit statuses read, Actions
+read/write, Contents read/write, and Pull requests read/write at the levels
+requested by the applicable carrier. Existing Issues write remains required by
+the merge/release mutation path. Do not weaken the requested contract if minting
+fails; update the App/installation grant and retry through T01.
 
-`permission-statuses: read` was not added: commit status aggregation uses the
-same metadata phase as check-runs and is covered by explicit `permission-checks:
-read` on every recovery mint path.
+Primary references: GitHub's REST documentation assigns Checks read to the
+[check-runs endpoint](https://docs.github.com/en/rest/checks/runs), Commit
+statuses read to the [combined-status endpoint](https://docs.github.com/en/rest/commits/statuses?apiVersion=2022-11-28),
+and the token action documents inherited permissions plus fail-closed explicit
+requests in its [permission inputs](https://github.com/actions/create-github-app-token/blob/main/README.md?plain=1).
 
 ## Remediation applied (T00)
 
-Deterministic contract changes land in this caller repository under
-`tooling/governance/fixtures/karsift-ai-infra/` and must be mirrored byte-for-byte
-into `KARSIFT/karsift-ai-infra` before live recovery can succeed on `@main`.
-The companion shared-infra PR must use `Relates to KARSIFT/vocanova-platform-sandbox#958`
-(non-closing). `PINNED_SHA.txt` advances only after that shared PR merges.
+The primary implementation merged in
+`KARSIFT/karsift-ai-infra#136` from reviewed head
+`72b3742f41bed1e7306b9dccc20a700a2bc467ec` as immutable merge
+`30cc0a6f443b95e45527b03094767b8357b0a2dc`. The caller fixture is synchronized
+to that merge and `PINNED_SHA.txt` advances to the same SHA.
 
 | Target | Change |
 |--------|--------|
 | `config/actions-check-recovery-runner.py` | Localized metadata-read failures to `check_runs_read_failed`, `workflow_runs_read_failed`, and `commit_metadata_read_failed`; extracted `run_metadata_phase()` so read failures abort before dispatch planning |
-| `.github/workflows/merge-gate.yml` | App mint requests mutation scopes (`permission-contents/issues/pull-requests: write`, `permission-actions: write`) plus `permission-checks: read` |
-| `.github/workflows/release.yml` | Same read/write mint contract on converge recovery token |
-| `.github/workflows/recover-actions-checks.yml` | App mint requests `permission-actions: write`, `permission-checks: read`, `permission-actions: read`, `permission-contents: read`, and `permission-pull-requests: read` |
-| `tests/test_voc114_actions_check_recovery.py` | Deterministic positive read contract, endpoint-class negatives, and no-dispatch-after-read-failure coverage for both modes |
+| `.github/workflows/merge-gate.yml` | App mint explicitly preserves Contents/Issues/Pull requests/Actions write and adds Checks read plus Commit statuses read |
+| `.github/workflows/release.yml` | Same complete read/write contract on the converge recovery token |
+| `.github/workflows/recover-actions-checks.yml` | App mint requests Actions write exactly once, Checks read, Commit statuses read, Contents read, and Pull requests read |
+| `tests/test_voc114_actions_check_recovery.py` | Twelve deterministic cases cover both positive modes, complete and omitted mint contracts, duplicate input rejection, endpoint classes, and no planning/dispatch after read failure |
 | `README.md` (shared + fixture) | Documents recovery metadata read contract and sanitized endpoint classes |
 | `docs/operations/11-devops-and-ci-cd.md` | Documents caller-facing recovery App read contract and endpoint classes |
 
@@ -86,15 +85,17 @@ only on allowlisted workflows; no broadened mutation grants were introduced.
 Commands run at implementation time (2026-08-24):
 
 ```text
-# karsift-ai-infra checkout (local, mirrors fixture content)
-PYTHONPATH=config python3 -m unittest discover -s tests -p 'test_*voc113*'
-  → Ran 30 tests — OK
-PYTHONPATH=config python3 -m unittest discover -s tests -p 'test_*voc114*'
-  → Ran 10 tests — OK
+# karsift-ai-infra PR #136, head 72b3742f41bed1e7306b9dccc20a700a2bc467ec
+PYTHONPATH=config python3 -m unittest discover -s tests -p 'test_*.py' -v
+  → Ran 254 tests — OK
+git diff --check
+  → no conflicts
+self-ci: actionlint, shellcheck, yaml-parse, policy-tests
+  → all passed before merge 30cc0a6f443b95e45527b03094767b8357b0a2dc
 
 # caller fixture mirror (authoritative for this PR)
 PYTHONPATH=config python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*voc114*'
-  → Ran 10 tests — OK
+  → Ran 12 tests — OK
 node --test scripts/foundation/voc114-actions-check-recovery.test.mjs
   → 3 tests — OK
 node --test scripts/foundation/voc113-actions-check-recovery.test.mjs
@@ -107,13 +108,12 @@ git diff --check
   → no conflicts
 ```
 
-## Shared-infra adoption dependency
+## Shared-infra adoption state
 
-Live recovery on `@main` remains blocked until the byte-identical remediation
-merges in `KARSIFT/karsift-ai-infra`. Record the shared PR URL and exact reviewed
-head SHA in this section once that PR is opened and reviewed. T01 operator proof
-depends on both this caller task PR and the shared-infra merge being live on the
-branch the caller pipeline executes from.
+The source dependency is satisfied by merged PR
+`https://github.com/KARSIFT/karsift-ai-infra/pull/136` at exact merge
+`30cc0a6f443b95e45527b03094767b8357b0a2dc`. T01 still waits for this caller
+task PR to merge so its pipeline executes the pinned template revision.
 
 ## T01 dependency
 
