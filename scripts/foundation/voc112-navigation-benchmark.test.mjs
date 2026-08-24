@@ -431,11 +431,17 @@ test("VOC-112-TEST-14: operator docs and AGENTS.md preserve one-source precedenc
 });
 
 test("VOC-113-TEST-10: original capture mode requires and accepts true subject ancestry", () => {
-  const evidence = fixture("voc112-navigation-benchmark-traces.json");
   const headSha = execFileSync("git", ["rev-parse", "HEAD"], {
     cwd: repositoryRoot,
     encoding: "utf8",
   }).trim();
+  const evidence = {
+    ...fixture("voc112-navigation-benchmark-traces.json"),
+    // The checked-out head exists even in CI's depth-1 clone and is a true
+    // ancestor of itself, so this positive is deterministic without hidden
+    // history while exercising the strict pr-ancestry branch.
+    subject_revision: headSha,
+  };
   withProvenanceEnv("pr-ancestry", headSha, headSha, () =>
     assertCapturedRevision(evidence),
   );
