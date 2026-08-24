@@ -5,7 +5,9 @@
 > dispatch contract recorded below was insufficient. The causal correction keeps
 > recovery on the same VOC-114 outcome and moves Actions reads/dispatch to a
 > narrowly scoped job `GITHUB_TOKEN`; see `t01-evidence.md` and shared-infra PR
-> `#143`. The original record remains below as historical evidence.
+> `#143`. Live release run `32727465136` then exposed the separate PR-ruleset
+> association gap resolved by D07 and shared-infra PR `#144`. The original record
+> remains below as historical evidence.
 
 Task: `VOC-114-T00` — Restore recovery metadata-read token contract, localize
 errors, add tests.
@@ -57,6 +59,8 @@ endpoint failure before dispatch planning.
 **Final installation contract:** no App installation expansion is required.
 Keep the App mutation-only and ensure both the caller and called recovery jobs
 declare the job-token permissions above. Missing job scope is a hard failure.
+Release alone additionally declares Commit statuses write for D07; this does not
+broaden the mutation App and cannot replace genuine Actions evidence.
 
 Primary references: GitHub's REST documentation assigns Checks read to the
 [check-runs endpoint](https://docs.github.com/en/rest/checks/runs), Commit
@@ -70,9 +74,11 @@ The primary implementation merged in `KARSIFT/karsift-ai-infra#136` from
 reviewed head `72b3742f41bed1e7306b9dccc20a700a2bc467ec` as immutable merge
 `30cc0a6f443b95e45527b03094767b8357b0a2dc`. Live T01 execution then exposed
 adjacent causal defects in the same recovery mechanism. Those corrections
-merged as source PRs #137 through #142, culminating in immutable merge
-`bdc6736568827103b48255521f4bc83d5103bd3b`. The caller fixture is synchronized
-to that final source merge and `PINNED_SHA.txt` advances to the same SHA.
+merged as source PRs #137 through #144. PRs #137–#142 culminated in
+`bdc6736568827103b48255521f4bc83d5103bd3b`; token separation landed at
+`9d7e334f917643c42bb4b7a062c8fcddecc7927f`; and the D07 ruleset bridge landed
+at immutable merge `6999e2beda5bbf00028fae04ca0e65324fc59afa`. The caller
+fixture and `PINNED_SHA.txt` advance to that final source merge.
 
 | Target | Change |
 |--------|--------|
@@ -80,7 +86,8 @@ to that final source merge and `PINNED_SHA.txt` advances to the same SHA.
 | `.github/workflows/merge-gate.yml` | Job token supplies recovery Actions/metadata access; App mint remains Contents/Issues/Pull requests write only |
 | `.github/workflows/release.yml` | Same separated job-token recovery and App mutation contract on converge |
 | `.github/workflows/recover-actions-checks.yml` | Uses the job token with Actions write plus Checks/Statuses/Contents/Pull requests read; hosted verification uses valid repository context |
-| Source PRs #137–#143 | Removed invalid `gh api --repo` use, bound promotion evidence to required contexts, fixed hosted verification and provenance, and separated recovery dispatch from the App mutation token after live authorization failure |
+| Source PRs #137–#144 | Removed invalid `gh api --repo` use, bound promotion evidence to required contexts, fixed hosted verification and provenance, separated recovery dispatch from the App mutation token, and added the success-only D07 ruleset attestation bridge after live merge-policy failure |
+| `config/promotion_status_attestation.py` + runner | Accept only the three genuine successful expected-workflow contexts, revalidate the live promotion PR/SHA, and publish narrowly derived same-SHA ruleset statuses using the release job token |
 | `.github/workflows/repository-governance.yml` | Keeps actual pull requests in `pr-validation` (and fixture-changing originals in strict `pr-ancestry`), while authenticated promotion recovery of the immutable `develop` tip uses the existing `squash-safe-push` contract because the promotion aggregates already-squashed task commits |
 | `tests/test_voc114_actions_check_recovery.py` and caller tests | Deterministic coverage includes both positive modes, separated token contracts, endpoint classes, no planning/dispatch after read failure, required-context filtering, hosted verifier CLI contracts, exact target resolution, and fixture pin assertions |
 | `README.md` (shared + fixture) | Documents recovery metadata read contract and sanitized endpoint classes |
@@ -109,9 +116,15 @@ PYTHONPATH=config python3 -m unittest discover -s tests -p 'test_*.py' -v
 actionlint; shellcheck; YAML parse; policy tests; git diff --check
   → all passed across source PRs #137–#142
 
+# karsift-ai-infra PR #144, head 46c4cc1ceae5845b49e57e38d6d7fa399ed73ff4
+python3 -m unittest discover -s tests
+  → Ran 265 tests — OK
+actionlint; shellcheck; YAML parse; policy tests; git diff --check
+  → all passed before merge 6999e2beda5bbf00028fae04ca0e65324fc59afa
+
 # caller fixture mirror (authoritative for this PR)
 PYTHONPATH=config python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*voc114*'
-  → Ran 12 tests — OK
+  → Ran 15 tests — OK
 node --test scripts/foundation/voc114-actions-check-recovery.test.mjs
   → 3 tests — OK
 node --test scripts/foundation/voc113-actions-check-recovery.test.mjs
@@ -122,10 +135,12 @@ node --test scripts/foundation/voc097-fixture-matrix.test.mjs \
   scripts/foundation/voc113-actions-check-recovery.test.mjs \
   scripts/foundation/voc114-actions-check-recovery.test.mjs
   → 25 tests — OK
+pnpm run build:packages && node --test scripts/foundation/*.test.mjs
+  → 337 tests — OK
 PYTHONPATH=tooling/governance/fixtures/karsift-ai-infra/config \
   python3 -m unittest discover \
   -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'
-  → Ran 176 tests — OK
+  → Ran 181 tests — OK
 PYTHONPATH=tooling/governance/tests python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'
   → 160 tests — OK
 bash scripts/governance/validate-governance.sh
@@ -140,11 +155,11 @@ git diff --check
 
 The source dependency is satisfied by merged PRs
 `https://github.com/KARSIFT/karsift-ai-infra/pull/136` through
-`https://github.com/KARSIFT/karsift-ai-infra/pull/142`. The authoritative final
+`https://github.com/KARSIFT/karsift-ai-infra/pull/144`. The authoritative final
 source revision and caller fixture pin are both
-`bdc6736568827103b48255521f4bc83d5103bd3b`. T01 still waits for this caller
-task PR to merge so its evidence-only carrier can execute the trusted pinned
-template revision.
+`6999e2beda5bbf00028fae04ca0e65324fc59afa`. The additional source/caller PR
+boundary is required because the previous corrections were already merged; it
+does not create a new plan or task.
 
 ## T01 dependency
 

@@ -115,7 +115,8 @@ VOC-108 originally advanced the fixture to shared-infra merge
 `3fd40f52aba602fab8399482bc5b772731675d1a`, and VOC-114 now advances the
 consolidated fixture pin through `30cc0a6f443b95e45527b03094767b8357b0a2dc`
 and `bdc6736568827103b48255521f4bc83d5103bd3b` to
-`9d7e334f917643c42bb4b7a062c8fcddecc7927f`.
+`9d7e334f917643c42bb4b7a062c8fcddecc7927f`, then to
+`6999e2beda5bbf00028fae04ca0e65324fc59afa`.
 Adoption, merge/reuse, and release
 select the newest authoritative attempt per logical exact-SHA gate from complete
 paginated histories and bind the selected evidence to the authenticated pull
@@ -152,8 +153,8 @@ Immediate post-merge recovery is limited to governed `agent/` task branches;
 other integration advances rely on that hourly exact-tip wake.
 
 VOC-114 (VOC-113 recovery metadata-read fix) pins shared-infra merge
-`9d7e334f917643c42bb4b7a062c8fcddecc7927f`, including the live-proof
-corrections from PRs #137 through #143. Recovery metadata reads and allowlisted
+`6999e2beda5bbf00028fae04ca0e65324fc59afa`, including the live-proof
+corrections from PRs #137 through #144. Recovery metadata reads and allowlisted
 dispatches use narrowly job-scoped `GITHUB_TOKEN` permissions: Actions write plus
 Checks, Commit statuses, Contents, and Pull requests read. App tokens remain
 limited to App-identity release mutations and no longer depend on an installation
@@ -164,6 +165,11 @@ contexts, ignoring unrelated checks when the three required contexts have
 succeeded. Both hosted verification adapters
 also use valid `gh api` repository context. The contract is covered by
 `tests/test_voc114_actions_check_recovery.py`.
+Release additionally grants its job token Commit statuses write. After genuine
+exact-head checks from the three expected workflows pass, it publishes only the
+three ruleset-required same-SHA status attestations. The attestations link to the
+release run and are excluded from authoritative selection, so they cannot replace
+the underlying Actions evidence; the App token remains mutation-only.
 The caller template exposes the existing integration resolver/recovery pair to
 operator dispatch without accepting a free-form target SHA, closing the
 default-branch schedule bootstrap gap encountered during the live proof.

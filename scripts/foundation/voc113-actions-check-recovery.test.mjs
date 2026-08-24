@@ -194,7 +194,7 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
   assert.match(devopsOperations, /Missing Actions activation recovery/);
   assert.match(
     devopsOperations,
-    /do not toggle PR state or create check\/status records/,
+    /do not toggle PR state or create unbacked check\/status\s+records/,
   );
   assert.doesNotMatch(
     mergeGate.split("Recover missing integration", 1)[1] ?? "",

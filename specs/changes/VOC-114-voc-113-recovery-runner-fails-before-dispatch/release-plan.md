@@ -45,7 +45,9 @@ engineering-workflow gates. Required evidence:
 2. Deterministic read-contract fixtures (`VOC-114-TEST-01`–`05`).
 3. Operator-owned live evidence for T01 (`VOC-114-TEST-06`, `VOC-114-TEST-07`)
    per `docs/operations/live-evidence.md`.
-4. Preserved VOC-113 no-fabrication posture and VOC-108 authoritative selection.
+4. Preserved VOC-113 no-unbacked-fabrication posture and VOC-108 authoritative
+   selection; D07 ruleset attestations are derived from and excluded from that
+   selection.
 
 Closure: all roster tasks carry valid App-authored completion markers bound to
 their exact reviewed caller-PR merges, and T01 live evidence shows both recovery

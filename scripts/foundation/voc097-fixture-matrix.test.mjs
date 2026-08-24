@@ -128,7 +128,7 @@ test("VOC-097-T03 vendored infra pin is recorded for fixture replay", () => {
   const pin = readFileSync(fixturePinPath, "utf8").trim();
   // VOC-106 advances the same pinned fixture set while preserving the full
   // VOC-097 regression matrix; keep this exact rather than accepting any SHA.
-  assert.equal(pin, "9d7e334f917643c42bb4b7a062c8fcddecc7927f");
+  assert.equal(pin, "6999e2beda5bbf00028fae04ca0e65324fc59afa");
 });
 
 test("VOC-097-T03 Python fixture matrix passes", () => {

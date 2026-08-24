@@ -57,6 +57,7 @@ test("VOC-114 caller docs describe the recovery job-token contract", () => {
   assert.match(devopsOperations, /`GITHUB_TOKEN`/);
   assert.match(devopsOperations, /`checks: read`/);
   assert.match(devopsOperations, /`statuses: read`/);
+  assert.match(devopsOperations, /`statuses: write`/);
   assert.match(devopsOperations, /`actions: write`/);
   assert.match(
     devopsOperations,
@@ -80,11 +81,15 @@ test("VOC-114 fixture mirror separates recovery and mutation tokens", () => {
     path.join(fixtureInfraRoot, ".github/workflows/recover-actions-checks.yml"),
     "utf8",
   );
-  for (const workflow of [mergeGate, release, reusable]) {
+  for (const workflow of [mergeGate, reusable]) {
     assert.match(workflow, /checks: read/);
     assert.match(workflow, /statuses: read/);
     assert.match(workflow, /actions: write/);
   }
+  assert.match(release, /checks: read/);
+  assert.match(release, /statuses: write/);
+  assert.match(release, /promotion-status-attestation-runner\.py/);
+  assert.match(release, /actions: write/);
   assert.doesNotMatch(
     reusable,
     /Mint App installation token for recovery dispatch/,

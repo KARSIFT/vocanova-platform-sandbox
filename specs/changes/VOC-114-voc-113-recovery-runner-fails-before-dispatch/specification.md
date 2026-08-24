@@ -48,7 +48,9 @@ separate A-004 plan-review / adopt path.
 ### Non-goals / explicitly excluded
 
 - Weakening or removing required ruleset checks.
-- Synthesizing successful check runs or commit statuses.
+- Synthesizing successful check runs or unbacked commit statuses. A narrowly
+  derived ruleset attestation backed by genuine exact-head workflow success is
+  permitted only under `VOC-114-D07`.
 - Manually merging promotion PR #947 or bypassing release converge.
 - Broader VOC-113 redesign beyond the metadata-read / token-contract defect.
 - Expanding App mutation permissions beyond what recovery already requires.
@@ -77,7 +79,8 @@ recovery dispatch is attempted.
 allowlisted workflow dispatch MUST use the short-lived job `GITHUB_TOKEN`, with
 explicit **Actions write**, **Checks read**, **Commit statuses read**, **Contents
 read**, and **Pull requests read** permissions on each applicable caller/called
-job. The App token remains limited to the existing Contents/Issues/Pull requests
+job. The release job alone additionally receives **Commit statuses write** for
+the ruleset bridge defined by D07. The App token remains limited to the existing Contents/Issues/Pull requests
 mutation scopes required for App-identity merge, PR, marker, and issue operations;
 it MUST NOT be a dependency for Actions metadata or dispatch.
 
@@ -114,6 +117,17 @@ branch. The machine contract observes job
 NOT use `integration_contains_pr_head` for a run on `develop`, because the
 unmerged carrier head cannot be an ancestor of that integration run.
 
+`VOC-114-D07` (added after live run `32727465136`): GitHub does not attach
+successful `workflow_dispatch` recovery runs to promotion PR required contexts.
+After recovery and authoritative selection prove successful exact-head runs from
+the expected governance-policy, repository-governance, and pipeline workflows,
+the release job MAY publish same-SHA success statuses for only
+`governance-policy`, `validate`, and `ci / ci`. It MUST revalidate the open PR
+identity first, link attestations to the release run, exclude them from future
+evidence selection, and keep the App mutation token separate. Unbacked statuses,
+foreign workflows, neutral/failing evidence, ruleset bypass, and manual merge
+remain forbidden.
+
 ## Data, migrations, analytics, and accessibility
 
 None. Governance-automation recovery fix only.
@@ -137,6 +151,8 @@ forbidden.
    Actions metadata/dispatch and leaves the App mutation-only.
 2. **Resolved — Statuses read:** combined commit-status metadata requires an
    explicit job-level `statuses: read` grant alongside `checks: read`.
-3. **Historical integration SHA:** If `develop` has advanced beyond `b97e9575…`,
+3. **Resolved — ruleset bridge:** release alone requires `statuses: write` for
+   D07; recovery and selection continue to require genuine Actions evidence.
+4. **Historical integration SHA:** If `develop` has advanced beyond `b97e9575…`,
    live integration_push proof may target the still-relevant missing-run SHA
    recorded in evidence rather than forcing a stale SHA re-dispatch.
