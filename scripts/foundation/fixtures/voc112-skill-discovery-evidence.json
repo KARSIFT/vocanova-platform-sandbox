@@ -14,10 +14,10 @@
       "runtime": "claude-code",
       "runtime_version": "2.1.229 (Claude Code)",
       "captured_at": "2026-08-23T22:38:30.068Z",
-      "subject_revision": "d29b179db2eb32a7ef8cc21156bb797be5d3fdd9",
+      "subject_revision": "4ab089df7227f31ddd561bc161f246433598da33",
       "source_hashes": {
         "navigator_skill_sha256": "b58be5905c7f8027c4f28423d2033459698209aecbde93996bdbeffb05fadbce",
-        "agents_sha256": "c8f63138efcc70d299a77e0ee1e4d7593e687c3fa7b2ecc55d810792588ef147"
+        "agents_sha256": "0f7bfa1c1e6f27e8ab787373c1e5112b86079170e476f45df0fc765a5c95740d"
       }
     },
     {
@@ -32,10 +32,10 @@
       "runtime": "claude-code",
       "runtime_version": "2.1.229 (Claude Code)",
       "captured_at": "2026-08-23T22:38:30.068Z",
-      "subject_revision": "d29b179db2eb32a7ef8cc21156bb797be5d3fdd9",
+      "subject_revision": "4ab089df7227f31ddd561bc161f246433598da33",
       "source_hashes": {
         "navigator_skill_sha256": "b58be5905c7f8027c4f28423d2033459698209aecbde93996bdbeffb05fadbce",
-        "agents_sha256": "c8f63138efcc70d299a77e0ee1e4d7593e687c3fa7b2ecc55d810792588ef147"
+        "agents_sha256": "0f7bfa1c1e6f27e8ab787373c1e5112b86079170e476f45df0fc765a5c95740d"
       }
     },
     {
@@ -52,10 +52,10 @@
       "runtime": "hosted-cursor",
       "runtime_version": "2026.08.11-e8db854",
       "captured_at": "2026-08-23T23:32:56.948Z",
-      "subject_revision": "00f220bbbd4bd5db51cb94912453227bae54fa3d",
+      "subject_revision": "4ab089df7227f31ddd561bc161f246433598da33",
       "source_hashes": {
         "navigator_skill_sha256": "b58be5905c7f8027c4f28423d2033459698209aecbde93996bdbeffb05fadbce",
-        "agents_sha256": "c8f63138efcc70d299a77e0ee1e4d7593e687c3fa7b2ecc55d810792588ef147"
+        "agents_sha256": "0f7bfa1c1e6f27e8ab787373c1e5112b86079170e476f45df0fc765a5c95740d"
       }
     },
     {
@@ -72,10 +72,10 @@
       "runtime": "hosted-cursor",
       "runtime_version": "2026.08.11-e8db854",
       "captured_at": "2026-08-23T23:32:56.948Z",
-      "subject_revision": "00f220bbbd4bd5db51cb94912453227bae54fa3d",
+      "subject_revision": "4ab089df7227f31ddd561bc161f246433598da33",
       "source_hashes": {
         "navigator_skill_sha256": "b58be5905c7f8027c4f28423d2033459698209aecbde93996bdbeffb05fadbce",
-        "agents_sha256": "c8f63138efcc70d299a77e0ee1e4d7593e687c3fa7b2ecc55d810792588ef147"
+        "agents_sha256": "0f7bfa1c1e6f27e8ab787373c1e5112b86079170e476f45df0fc765a5c95740d"
       }
     }
   ],
