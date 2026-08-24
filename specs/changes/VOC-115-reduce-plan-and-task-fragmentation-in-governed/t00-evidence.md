@@ -69,8 +69,9 @@ packages are not retroactively rejected at adoption time.
 
 `karsift-ai-infra/tests/test_package_task_policy.py` and mirrored fixture copy exercise:
 
-- `VOC-902-T00` / `VOC-902-T01` with `merge-order-dependency` split reason and preserved order.
-- four-task package with and without package-level justification.
+- a two-task package with a concretely explained `merge-order-dependency` boundary and
+  preserved order;
+- a four-task package with and without package-level justification.
 
 ## Shared-infra carrier and fixture pin
 
@@ -93,6 +94,9 @@ The caller fixture content is synchronized to the exact final shared-infra merge
 | `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pass | 158 tests |
 | `python3 -m unittest discover -s tooling/governance/tests -p 'test_voc115*.py'` | pass | 12 tests |
 | `python3 -m unittest discover -s tests -p 'test_*.py'` in `KARSIFT/karsift-ai-infra` | pass | 242 tests on merge source |
+| `node --test scripts/foundation/*.test.mjs` (via `pnpm run test`) | pass | 333 tests, including revision-bound navigation evidence |
+| `pnpm run build` | pass | packages, production web build, and Go API build |
+| `pnpm run validate` | environment-limited | Format, lint, typecheck, 333 foundation tests, client tests, and middleware tests passed; two existing OAuth integration cases could not start PostgreSQL because Docker is unavailable in this WSL session. Repository CI retains the Docker-backed gate. |
 | `git diff --check` | pass | No whitespace or patch-format errors |
 
 ## Acceptance mapping
