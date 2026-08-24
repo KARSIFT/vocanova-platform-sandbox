@@ -24,10 +24,18 @@ const sha256 = (relativePath) =>
   createHash("sha256")
     .update(readFileSync(path.join(repositoryRoot, relativePath)))
     .digest("hex");
+const sha256AtRevision = (revision, relativePath) =>
+  createHash("sha256")
+    .update(
+      execFileSync("git", ["show", `${revision}:${relativePath}`], {
+        cwd: repositoryRoot,
+      }),
+    )
+    .digest("hex");
 
 function assertCapturedRevision(evidence) {
   assert.match(evidence.subject_revision, /^[a-f0-9]{40}$/);
-  const subjectLookup = spawnSync(
+  let subjectLookup = spawnSync(
     "git",
     ["cat-file", "-e", `${evidence.subject_revision}^{commit}`],
     {
@@ -35,22 +43,54 @@ function assertCapturedRevision(evidence) {
       encoding: "utf8",
     },
   );
-  if (subjectLookup.status === 0) {
-    execFileSync(
-      "git",
-      ["merge-base", "--is-ancestor", evidence.subject_revision, "HEAD"],
-      { cwd: repositoryRoot },
-    );
-  } else {
+  if (subjectLookup.status !== 0) {
     assert.equal(
       execFileSync("git", ["rev-parse", "--is-shallow-repository"], {
         cwd: repositoryRoot,
         encoding: "utf8",
       }).trim(),
       "true",
-      "a missing captured commit is allowed only in a shallow CI checkout",
+      "a full checkout must already contain the captured commit",
+    );
+    const deepen = spawnSync(
+      "git",
+      ["fetch", "--no-tags", "--quiet", "--unshallow", "origin"],
+      { cwd: repositoryRoot, encoding: "utf8", timeout: 120_000 },
+    );
+    assert.equal(
+      deepen.status,
+      0,
+      `failed to deepen shallow checkout for captured revision: ${deepen.stderr}`,
+    );
+    subjectLookup = spawnSync(
+      "git",
+      ["cat-file", "-e", `${evidence.subject_revision}^{commit}`],
+      { cwd: repositoryRoot, encoding: "utf8" },
     );
   }
+  assert.equal(
+    subjectLookup.status,
+    0,
+    "captured commit object is unavailable",
+  );
+  execFileSync(
+    "git",
+    ["merge-base", "--is-ancestor", evidence.subject_revision, "HEAD"],
+    { cwd: repositoryRoot },
+  );
+  assert.equal(
+    evidence.source_hashes.navigator_skill_sha256,
+    sha256AtRevision(
+      evidence.subject_revision,
+      ".agents/skills/vocanova-repo-navigator/SKILL.md",
+    ),
+    "navigator hash must bind to the captured revision",
+  );
+  assert.equal(
+    evidence.source_hashes.agents_sha256,
+    sha256AtRevision(evidence.subject_revision, "AGENTS.md"),
+    "AGENTS.md hash must bind to the captured revision",
+  );
   assert.equal(
     evidence.source_hashes.navigator_skill_sha256,
     sha256(".agents/skills/vocanova-repo-navigator/SKILL.md"),
