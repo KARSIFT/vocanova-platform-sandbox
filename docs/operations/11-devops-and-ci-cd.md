@@ -111,6 +111,10 @@ a stranded current `develop` tip without duplicating already-successful runs;
 `reconcile-release` re-enters the same promotion recovery path idempotently.
 Immediate post-merge recovery is scoped to governed `agent/` task branches.
 Other ways of advancing `develop` are covered by the hourly exact-tip wake.
+For bounded operator recovery of the current integration tip, dispatch
+`pipeline.yml` with `action=recover-integration-push`. The workflow resolves the
+current `develop` SHA internally and accepts no caller-supplied target SHA, then
+reuses the same genuine-workflow, exact-SHA, idempotent recovery contract.
 
 Recovery metadata reads are fail-closed prerequisites: every App mint path that
 feeds `actions-check-recovery-runner.py` (`merge-gate.yml` post-merge recovery,

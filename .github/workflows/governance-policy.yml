@@ -37,6 +37,7 @@ jobs:
         id: shas
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           RECOVERY_PR: ${{ inputs.recovery_pr_number }}
         run: |
           set -euo pipefail
