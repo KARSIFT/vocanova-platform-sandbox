@@ -88,6 +88,7 @@ jobs:
       - name: Select strict capture provenance mode
         id: provenance
         env:
+          WORKFLOW_EVENT: ${{ github.event_name }}
           EVENT_KIND: ${{ steps.shas.outputs.event_kind }}
           BASE_SHA: ${{ steps.shas.outputs.base_sha }}
           HEAD_SHA: ${{ steps.shas.outputs.head_sha }}
@@ -96,7 +97,8 @@ jobs:
           mode=squash-safe-push
           if [ "$EVENT_KIND" = "pull_request" ]; then
             mode=pr-validation
-            if ! git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- \
+            if [ "$WORKFLOW_EVENT" = "pull_request" ] && \
+              ! git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- \
               scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json; then
               mode=pr-ancestry
             fi
