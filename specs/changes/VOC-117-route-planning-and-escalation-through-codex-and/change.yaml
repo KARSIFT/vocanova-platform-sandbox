@@ -4,7 +4,7 @@ slug: route-planning-and-escalation-through-codex-and
 title: Route planning and review through Cursor Grok 4.6 Standard and align implementer
   escalation
 type: infrastructure
-status: draft
+status: adopted
 risk: R4
 planned_implementation_risk_floor: 'R4. This package changes authoritative AI role
   bindings in KARSIFT/karsift-ai-infra/config/roles.yml, workflow model-string handling
@@ -27,20 +27,20 @@ requirement_source: 'GitHub issue #978 (Route planning and escalation through Co
   package does not adopt or authorize itself.
 
   '
-requirement_approval_status: not-approved. This package has not been adopted. No field
-  in this file authorizes implementation.
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: unknown - not recorded by this draft; set at adoption time if needed
 target_branch: develop
-approved_candidate_sha: null
+approved_candidate_sha: f1077122f7013d58ce6ccbe2c66e90c0b4a13994
 owners:
   decision: unassigned
   package_preparation: planner (drafting only; adoption remains a human/autonomous
     governed decision)
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: 'none-intentional for application runtime. This package changes
   AI model selection and routing configuration only. It does not change product behavior,
@@ -115,12 +115,12 @@ affected_areas:
   become false
 - specs/changes/VOC-117-route-planning-and-escalation-through-codex-and/
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: proposed
+  status: authorized
   target_branch: develop
   pull_request: null
-  authority_issue: 978
+  authority_issue: 980
 release:
   required: true
   mode: not-authorized-by-this-package
@@ -129,12 +129,12 @@ release:
   automatic_merge: true
   migration_required: false
   rollback_required: true
-repository_adoption_status: not-adopted
+repository_adoption_status: adopted
 production_deployment: disabled
 autonomous_production_release: enabled
 ehr: not-triggered
 standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
-blocking_reasons: draft package; not adopted; implementation not authorized
+blocking_reasons: none - adopted and implementation-authorized
 artifacts:
   readme: README.md
   specification: specification.md
@@ -144,3 +144,16 @@ artifacts:
   tasks: tasks.md
   test_plan: test-plan.md
   release_plan: release-plan.md
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/979#issuecomment-5402134770
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-117-DEP-00
+- VOC-117-DEP-01
+- VOC-117-DEP-03
+- VOC-117-DEP-04
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #979 at f1077122f7013d58ce6ccbe2c66e90c0b4a13994'
+implementation_authority_before_adoption: false
+implementation_authority_status: authorized
+adoption_pr: 979
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/979
