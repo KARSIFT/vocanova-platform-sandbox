@@ -23,6 +23,8 @@ or complete CI logs.
   groupings; default `T00`.
 - `specs/templates/change-package/tasks.md` — one-task default, split-reason rules,
   exceptional multi-task justification heading.
+- `.github/workflows/repository-governance.yml` — installs the pinned PyYAML test
+  dependency so CI executes the same parser regression as planning and adoption.
 
 ### Shared infra primary source (`KARSIFT/karsift-ai-infra`, same T00)
 
