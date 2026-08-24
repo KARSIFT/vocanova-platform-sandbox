@@ -97,9 +97,17 @@ every affected or unknown entry.
 
 ## Implementation plan and tasks
 
+Design the largest safe coherent package for the complete outcome. A broad plan may
+contain several tasks, but use the minimum sufficient number of maximal tasks and
+default to one end-to-end task and implementation PR whenever technically possible.
+Task IDs are minimum-sufficient outcome traceability groupings; they are not
+component, file-type, layer, skill, or review-convenience buckets. Every task after
+the first must record an explicit allowed split reason and concrete explanation when
+a genuine boundary makes combined delivery unsafe.
+
 | Task ID | Description | Acceptance criteria | Dependencies | Owner |
 |---|---|---|---|---|
-| VOC-###-T01 | Bounded task | AC-01 | None | Codex |
+| VOC-###-T00 | One end-to-end outcome | AC-01 | None | Codex |
 
 Record the technical approach, components, sequence, compatibility, and known risks.
 

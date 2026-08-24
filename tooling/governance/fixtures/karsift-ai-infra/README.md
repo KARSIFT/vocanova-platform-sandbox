@@ -1,9 +1,10 @@
-# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106, VOC-108)
+# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106, VOC-108, VOC-115)
 
 These copies are deterministic fixtures for caller-repo policy regressions.
 They mirror `KARSIFT/karsift-ai-infra` at the SHA in `PINNED_SHA.txt` so
 `tooling/governance/tests/test_voc080_*.py`,
 `tooling/governance/tests/test_voc097_*.py`,
+`tooling/governance/tests/test_voc115_package_task_policy.py`,
 `tooling/governance/tests/test_auto_advance_ownership.py`,
 `tooling/governance/tests/test_remediate_ownership.py`, and related suites can
 assert merge/adopt/release/remediate/plan-review/live-evidence/auto-advance/role
@@ -11,8 +12,23 @@ contracts without cloning the infra repository in CI.
 
 They are not a second runtime source of truth. Callers still `uses:`
 `KARSIFT/karsift-ai-infra/...@main`. Update the fixtures when VOC-080-,
-VOC-097-, VOC-102-, VOC-104-, VOC-106-, or VOC-108-related infra contracts change and
+VOC-097-, VOC-102-, VOC-104-, VOC-106-, VOC-108-, or VOC-115-related infra contracts change and
 record the new pin in evidence.
+
+## package/task defaults (VOC-115)
+
+Planning now chooses the largest safe coherent package for the complete user or
+business outcome. A plan may be broad or massive and contain several tasks, but it
+must use the minimum sufficient number of maximal tasks; one end-to-end task and
+implementation PR is the default whenever technically possible. Backend, frontend,
+contracts, tests, docs, configuration, skills, and rollback evidence stay together
+when they serve the same outcome. `config/package_task_policy.py` and
+`package-task-policy-runner.py` fail closed when a second or later task lacks an
+allowed split reason with a concrete explanation, or when more than three tasks lack
+package-level justification. `plan.yml` enforces this in the planner retry loop for
+newly drafted packages. Line, file, component, skill, repository, or layer counts and
+convenience are never sufficient split reasons. The caller fixture must pin the exact
+reviewed shared-infra merge that provides this contract.
 
 VOC-104 adds the pinned `ready-for-review-reuse.yml` and
 `verify-ready-for-review-reuse.yml` contracts. The decision vocabulary is
@@ -94,8 +110,9 @@ hosted verifier base-SHA adapter fix recorded in this package's T00 remediation.
 
 ## authoritative lifecycle state (VOC-108)
 
-The current fixture pin advances to shared-infra merge
-`d3108dfdef34e2f98c028916e95c36130d329132`. Adoption, merge/reuse, and release
+VOC-108 originally advanced the fixture to shared-infra merge
+`d3108dfdef34e2f98c028916e95c36130d329132`; the current consolidated fixture pin is
+`3fd40f52aba602fab8399482bc5b772731675d1a`. Adoption, merge/reuse, and release
 select the newest authoritative attempt per logical exact-SHA gate from complete
 paginated histories and bind the selected evidence to the authenticated pull
 request's repository, number, base, and head. The merge gate writes one App-authored
