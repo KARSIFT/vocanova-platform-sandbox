@@ -76,10 +76,22 @@ test("VOC-097-T02 caller wires bounded polling and explicit observe/dispatch pat
     /^\s{4}permissions:\n\s{6}actions: write\n\s{6}checks: read\n\s{6}contents: read\n\s{6}issues: read\n\s{6}pull-requests: read/m,
     "only the operator-owned caller job may dispatch the contract-allowlisted workflow",
   );
+  const integrationRecoveryJob = pipeline
+    .split("  recover-integration-push:", 2)[1]
+    ?.split("\n  implement:", 1)[0];
+  assert.ok(
+    integrationRecoveryJob,
+    "scheduled exact-SHA integration recovery job must exist",
+  );
+  assert.match(
+    integrationRecoveryJob,
+    /^\s{4}permissions:\n\s{6}actions: write\n\s{6}checks: read\n\s{6}contents: read\n\s{6}pull-requests: read/m,
+    "integration recovery may write Actions only through its dedicated job",
+  );
   assert.equal(
     (pipeline.match(/^\s{6}actions: write$/gm) ?? []).length,
-    1,
-    "Actions write must remain isolated to the live-evidence caller job",
+    2,
+    "Actions write must remain isolated to live-evidence and exact-SHA recovery jobs",
   );
   assert.equal(
     (

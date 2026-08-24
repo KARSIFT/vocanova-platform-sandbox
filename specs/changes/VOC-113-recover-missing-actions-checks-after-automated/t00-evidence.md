@@ -115,6 +115,13 @@ a mutation-free no-op. All four shared self-CI checks passed before merge; the
 final shared `main` commit is
 `97b380b77d08adbf14952df17ee8d11e6f521b15`.
 
+The first caller CI run after adding the scheduled wake correctly failed an
+older VOC-097 least-privilege assertion that allowed exactly one Actions-write
+job. The assertion now names and constrains both authorized jobs—the
+live-evidence reconciler and exact-SHA integration recovery—while continuing to
+prove the implementer and workflow-level permission floor have no Actions-write
+authority. The full foundation suite passes with 333 tests.
+
 ## VOC-112 provenance repair (`VOC-113-D11`)
 
 Repository Governance supplies `PR_BASE_SHA` and `PR_HEAD_SHA` and selects
