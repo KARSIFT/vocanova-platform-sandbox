@@ -1,0 +1,147 @@
+schema_version: 1
+id: VOC-113
+slug: recover-missing-actions-checks-after-automated
+title: Recover missing Actions checks after automated merges and release PR creation
+type: infrastructure
+status: draft
+risk: R4
+planned_implementation_risk_floor: "R4. T00 changes CI/CD lifecycle orchestration\
+  \ and must repair the exact-provenance gate in .github/workflows/repository-governance.yml\
+  \ and scripts/foundation/voc112-navigation-benchmark.test.mjs. Strict ancestry/hash\
+  \ verification is a governance gate; the package must preserve fail-closed behavior.\
+  \ This is a draft proposal, not a determination; the path classifier and independent\
+  \ verifier remain authoritative.\n"
+canonical_path: specs/changes/VOC-113-recover-missing-actions-checks-after-automated
+authority_model: a004-active
+requirement_source: "GitHub issue #948 (Recover missing Actions checks after automated\
+  \ merges and release PR creation). Live evidence 2026-08-24: final VOC-112 task\
+  \ PR merged to develop without push workflows on the squash commit; release automation\
+  \ opened promotion PR #947 without pull-request workflows or required checks; close/reopen\
+  \ and draft/ready transitions did not recover checks; reconcile-release reused the\
+  \ release audit and PR but could not merge because exact-head required checks do\
+  \ not exist. Active ruleset correctly requires governance-policy, validate, and\
+  \ ci / ci \u2014 must not weaken or synthesize statuses. Required: durable repository-managed\
+  \ recovery for App-driven task merges and promotion PR creation; documented trigger/token/event\
+  \ behavior; App auth preserved; exact SHA receives normal required validation/independent\
+  \ review/merge-gate evidence; explicit reusable-workflow or dispatch orchestration\
+  \ where event recursion suppression makes implicit triggers unreliable; fail closed;\
+  \ no duplicate promotion PRs/releases/recursion/status fabrication; deterministic\
+  \ tests; bounded timeout with sanitized diagnostics; complete PR #947 only after\
+  \ genuine exact-head checks; verify post-promotion workflows before closing remediation.\
+  \ Additional requirement source: live Repository Governance failure on plan PR\
+  \ #949, which proved the VOC-112 strict capture-ancestry mode rejects later PRs\
+  \ after the accepted squash discarded intermediate capture commits; D11/AC-07\
+  \ require exact merge-base anchoring without weakening current hash validation.\
+  \ This draft package does not adopt or authorize itself.\n"
+requirement_approval_status: not-approved; draft package only
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: 'none-intentional for application runtime. Changes engineering
+  lifecycle orchestration so App-driven merges and promotion PR creation recover missing
+  downstream Actions runs on the exact SHA. Completing promotion PR #947 after genuine
+  checks may promote already-reviewed develop history to main and thereby trigger
+  the existing automatic production deploy path; that is recovery of the stranded
+  VOC-112 release handoff, not a new deploy policy. No application, signup, secret,
+  database, or monitoring-inventory behavior changes.
+
+  '
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: 'Governance-automation recovery for missing Actions workflow activation
+    only. No page routes, critical API endpoints, or stable monitor/synthetic IDs
+    in infra/monitoring/monitors.yaml or infra/monitoring/synthetics.yaml are added
+    or changed. Existing production/staging monitors continue to observe deployed
+    environments; recovering promotion checks does not alter monitor inventory.
+
+    '
+dependencies:
+- id: VOC-113-DEP-00
+  status: "resolved at drafting time. Issue #948 records sanitized live observations\
+    \ for the VOC-112 develop squash without push workflows, promotion PR #947 without\
+    \ required checks, failed close/reopen and draft/ready recovery, and reconcile-release\
+    \ reuse without a merge decision \u2014 without logs, credentials, OAuth material,\
+    \ or user identifiers.\n"
+- id: VOC-113-DEP-01
+  status: 'resolved at drafting time. merge-gate.yml already mints an App installation
+    token and refuses github.token merges specifically so pull_request:closed can
+    reach adopt; release.yml creates/merges promotion PRs with App credentials and
+    evaluates authoritative exact-head checks. The observed failure is missing downstream
+    workflow activation, not absence of App merge identity.
+
+    '
+- id: VOC-113-DEP-02
+  status: "resolved at drafting time. Cross-repo pattern from VOC-080 / VOC-097 /\
+    \ VOC-104 / VOC-107 / VOC-108 \u2014 reusable workflow behavior lands in KARSIFT/karsift-ai-infra;\
+    \ this package authorizes the required outcome. Do not treat an untracked local\
+    \ karsift-ai-infra/ checkout as this repository's tracked tree. Caller consumes\
+    \ reusable workflows at @main.\n"
+- id: VOC-113-DEP-03
+  status: 'resolved at drafting time. Active branch ruleset requires governance-policy,
+    validate, and ci / ci. Recovery must start genuine workflow runs bound to the
+    exact SHA; synthesizing check runs or force-passing statuses is forbidden.
+
+    '
+- id: VOC-113-DEP-04
+  status: 'open at drafting time for T00. Exact GitHub trigger/token/event root cause
+    (event suppression, App permission gap, workflow approval friction, or other)
+    must be determined from live metadata and documented in t00-evidence.md; planner
+    does not invent a root cause beyond the observed missing-run symptom.
+
+    '
+- id: VOC-108
+  status: 'Adopted predecessor owning authoritative exact-head check selection and
+    idempotent release converge. This package must reuse that fail-closed selection
+    and must not reintroduce aggregate/raw check-history poisoning.
+
+    '
+affected_areas:
+- KARSIFT/karsift-ai-infra/.github/workflows/merge-gate.yml
+- KARSIFT/karsift-ai-infra/.github/workflows/release.yml
+- KARSIFT/karsift-ai-infra recovery helper(s), policy tests, and README
+- .github/workflows/pipeline.yml and/or shared caller template for recovery dispatch,
+  verify-promotion-check-recovery, and verify-post-promotion-workflow actions
+- .github/workflows/repository-governance.yml
+- scripts/foundation/voc112-navigation-benchmark.test.mjs and its deterministic fixtures
+- scripts/foundation/voc113-*.test.mjs and/or infra self-ci fixtures
+- AGENTS.md and/or ops docs only when current claims become false
+- specs/changes/VOC-113-recover-missing-actions-checks-after-automated/
+implementation:
+  authorized: false
+  required: true
+  status: not-authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-governance-automation-recovery-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
+blocking_reasons: "draft package \u2014 not adopted; implementation not authorized"
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
