@@ -1,0 +1,24 @@
+schema_version: 1
+task_id: VOC-113-T01
+ownership: operator
+
+# Read-only verifier added by T00 (VOC-113-D10). Proves promotion PR #947 has
+# genuine required exact-head checks without fabricating statuses or merging.
+workflow_file: pipeline.yml
+workflow_name: pipeline
+job_names:
+  - verify-promotion-check-recovery / verify
+events:
+  - workflow_dispatch
+branch: develop
+sha_lineage:
+  mode: exact_pr_head
+conclusion: success
+max_age: 72h
+dispatch:
+  workflow_file: pipeline.yml
+  inputs:
+    action: verify-promotion-check-recovery
+    # T00 must declare a matching workflow_dispatch input (for example
+    # promotion_pr_number) for the live fixture PR #947. Do not invent
+    # undeclared inputs here beyond what T00 wires into pipeline.yml.

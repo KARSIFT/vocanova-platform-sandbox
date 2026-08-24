@@ -1,0 +1,18 @@
+schema_version: 1
+task_id: VOC-113-T02
+ownership: operator
+
+# After promotion PR #947 merges, observe the normal main push deploy path for
+# a SHA that contains the promoted integration history.
+workflow_file: deploy-production.yml
+job_names:
+  - deploy to production
+events:
+  - push
+branch: main
+sha_lineage:
+  mode: integration_contains_pr_head
+conclusion: success
+max_age: 72h
+# Observe-only — promotion merge produces the push; do not dispatch deploy from
+# this contract.
