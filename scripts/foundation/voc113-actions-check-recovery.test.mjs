@@ -100,6 +100,15 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
     pipeline.split("\n  ci:", 2)[1]?.split("\n  plan-review:", 1)[0] ?? "";
   assert.match(ciBlock, /inputs\.action == 'recover-promotion-pr-checks'/);
   assert.doesNotMatch(pipeline, /\n  recover-promotion-pr-checks:/);
+  const dispatchInputBlock =
+    pipeline.split("  workflow_dispatch:", 2)[1]?.split("\n# Explicit floor", 1)[0] ??
+    "";
+  assert.ok(
+    [...dispatchInputBlock.matchAll(/^      [a-z0-9_]+:$/gm)].length <= 25,
+    "GitHub accepts at most 25 workflow_dispatch inputs",
+  );
+  assert.doesNotMatch(pipeline, /verify_reuse_proof_head_sha:/);
+  assert.match(pipeline, /expected_proof_head_sha: \$\{\{ github\.sha \}\}/);
   assert.match(pipeline, /verify-promotion-check-recovery/);
   assert.match(pipeline, /verify-post-promotion-workflow/);
   assert.match(

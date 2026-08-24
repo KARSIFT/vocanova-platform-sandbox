@@ -75,6 +75,14 @@ self-CI checks passed before merge; the corrected shared `main` commit is
 full staging deploy when the normal integration push deploy is absent, rather
 than treating a validation-only run as deployment equivalence.
 
+Semantic Actions lint then caught GitHub's 25-input `workflow_dispatch` limit
+before a corrected caller push: the new promotion input had raised the caller
+to 26. Shared PR #123 removed the redundant caller-supplied proof-head input and
+derives that trusted value from `github.sha`; all four self-CI checks passed and
+the final shared `main` commit is
+`6a24385c8b16ee77318572022b13f91669705cef`. Deterministic policy now enforces
+the 25-input ceiling.
+
 ## VOC-112 provenance repair (`VOC-113-D11`)
 
 Repository Governance now runs capture provenance in `pr-validation` mode for

@@ -165,10 +165,6 @@ on:
         description: "verify-ready-for-review-reuse only: exact source reviewed base SHA"
         required: false
         type: string
-      verify_reuse_proof_head_sha:
-        description: "verify-ready-for-review-reuse only: exact evidence-carrier head SHA"
-        required: false
-        type: string
 
 # Explicit floor for the reusable jobs below that do not declare narrower
 # job-level permissions. Most call karsift-ai-infra workflows with
@@ -657,7 +653,7 @@ jobs:
       source_pr_number: ${{ inputs.verify_reuse_source_pr_number }}
       expected_source_head_sha: ${{ inputs.verify_reuse_source_head_sha }}
       expected_source_base_sha: ${{ inputs.verify_reuse_source_base_sha }}
-      expected_proof_head_sha: ${{ inputs.verify_reuse_proof_head_sha }}
+      expected_proof_head_sha: ${{ github.sha }}
 
   # Read-only post-carrier verifier for VOC-106 operator-owned remediate proof.
   # Dispatch manually on the exact evidence-carrier branch ref after the T00→T01
