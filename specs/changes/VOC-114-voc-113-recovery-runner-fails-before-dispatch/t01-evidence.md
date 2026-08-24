@@ -54,9 +54,16 @@ tasks:
   `bdc6736568827103b48255521f4bc83d5103bd3b`; made the final read-only
   verifier judge only the three authoritative promotion contexts instead of
   allowing unrelated failed or pending workflows to veto exact-head proof.
+- shared-infra PR `#143`: reviewed head
+  `b712752cbd20da6ae5d91853f593f989872f092a`, merge
+  `9d7e334f917643c42bb4b7a062c8fcddecc7927f`; after release run
+  `32724415871` failed at `workflow_dispatch_failed`, separated the recovery
+  Actions token from the App mutation token. Recovery now uses job-scoped
+  Actions write plus Checks/Statuses/Contents/Pull requests read, while the App
+  token remains limited to PR/issue/content mutations.
 
 The caller fixture is pinned to shared-infra merge
-`bdc6736568827103b48255521f4bc83d5103bd3b`. Caller corrective PR `#970`
+`9d7e334f917643c42bb4b7a062c8fcddecc7927f`. Caller corrective PR `#970`
 merged as `c3455941463c0ded5630ea309b50f94a6cd546af`; final pin-sync PR `#971`
 merged as `172648f555b0eacedeb44fef707e6edf3cc60372`; promotion recovery provenance
 PR `#972` merged as `51c4d261d940c0e96a66238992c5380384729bb2`; final
@@ -75,7 +82,8 @@ Operator workflow-dispatch run `32715579496` ran on carrier head
 
 - `resolve-integration-recovery-target`, job `97395972560`: `success`;
 - `recover-integration-push / recover`, job `97396003037`: `success`;
-- App token mint step: `success`;
+- legacy App token mint step: `success` (this idempotent no-op did not exercise
+  the later-failing Actions dispatch endpoint and is superseded by PR `#143`);
 - exact-SHA recovery step: `success`;
 - observed integration SHA:
   `c718f6b49ad6a9a4f1d26eb4319347f6220a8d54`.
@@ -91,7 +99,8 @@ Operator reconcile run `32714169687` completed successfully:
 
 - release identify job `97391797255`: `success`;
 - release converge job `97391833289`: `success`;
-- App-backed recovery step: `success`;
+- legacy App-backed recovery step: `success` because required evidence was already
+  present; it did not prove an App-authenticated missing-check dispatch;
 - authoritative promotion-check selection step: `success`.
 
 The newest authoritative genuine GitHub Actions checks selected for promotion
@@ -134,6 +143,13 @@ status was performed.
   `success` on exact promotion head
   `0b0d866533e0100f6dfe37e3109f040ddde37bd6` using the corrected
   `squash-safe-push` path.
+- post-carrier release run `32724415871`, release-converge job `97423057295`:
+  failed closed at `workflow_dispatch_failed`. Repository installation metadata
+  confirmed `karsift-ai-infra-bot` has Contents/Issues/Pull requests/Workflows
+  permissions but no Actions permission. Manual diagnostic dispatches
+  `32724752006`, `32724766278`, and `32724769924` all succeeded on exact head
+  `a07ea8c0cdaf060ff8a75db2b1436eebeecf2d52`, isolating authorization—not the
+  allowlist, workflow inputs, or target identity—as the remaining defect.
 
 Each failure remained fail-closed and produced no fabricated check or manual
 promotion merge.

@@ -7,8 +7,8 @@ status: adopted
 risk: R4
 planned_implementation_risk_floor: 'R4. T00 changes CI/CD lifecycle orchestration
   in KARSIFT/karsift-ai-infra (merge-gate, release, recover-actions-checks) and the
-  shared actions-check-recovery runner used for exact-SHA gate metadata reads. App
-  installation/token read capabilities for Checks and Actions metadata are in scope.
+  shared actions-check-recovery runner used for exact-SHA gate metadata reads. The
+  separated job-token read/dispatch and App mutation contracts are in scope.
   This is a draft proposal for the reviewing human at adoption time, not a determination;
   the path classifier and independent verifier remain authoritative.
 
@@ -21,9 +21,9 @@ requirement_source: 'GitHub issue #956 (VOC-113 recovery runner fails before dis
   push workflows with actions-check-recovery: github_metadata_read_failed; reconcile-release
   run 32696549963 job 97339655608 failed Recover missing exact-head promotion checks
   with the same error; no recovery dispatch in either mode; promotion PR #947 remains
-  blocked for VOC-113-T01. Required: ensure App installation/token used by merge-gate,
-  release, and recover-actions-checks has explicit read capabilities for exact-SHA
-  metadata endpoints (especially Checks read); localize runner failures to sanitized
+  blocked for VOC-113-T01. Required: ensure the dedicated job token used by merge-gate,
+  release, and recover-actions-checks has explicit Actions and read capabilities for
+  exact-SHA metadata endpoints while the App remains mutation-only; localize runner failures to sanitized
   endpoint classes; add policy/runner tests; re-run live integration recovery and
   reconcile-release without weakening rulesets, fabricating checks, or manually merging
   #947. This draft package does not adopt or authorize itself.
@@ -78,9 +78,10 @@ dependencies:
 - id: VOC-114-DEP-02
   status: 'resolved at drafting time. merge-gate report-status and adopt.yml already
     document that exact-SHA gate metadata via REST check-runs/status endpoints requires
-    effective Checks read (and Actions read for related paths). Recovery currently
-    mints App tokens without explicit read permission requests and collapses all gh
-    failures to github_metadata_read_failed.
+    effective Checks read (and Actions read for related paths). Initial recovery
+    used App tokens without an effective Actions grant and collapsed all gh failures
+    to github_metadata_read_failed; live run 32724415871 later proved Actions dispatch
+    must use the dedicated job token instead.
 
     '
 - id: VOC-114-DEP-03
@@ -107,7 +108,7 @@ affected_areas:
 - KARSIFT/karsift-ai-infra/.github/workflows/recover-actions-checks.yml
 - KARSIFT/karsift-ai-infra/tests/test_voc113_actions_check_recovery.py and related
   policy tests
-- karsift-ai-infra README and/or ops docs when current App permission claims become
+- karsift-ai-infra README and/or ops docs when current recovery-token claims become
   false
 - specs/changes/VOC-114-voc-113-recovery-runner-fails-before-dispatch/
 implementation:

@@ -116,15 +116,13 @@ For bounded operator recovery of the current integration tip, dispatch
 current `develop` SHA internally and accepts no caller-supplied target SHA, then
 reuses the same genuine-workflow, exact-SHA, idempotent recovery contract.
 
-Recovery metadata reads are fail-closed prerequisites: every App mint path that
-feeds `actions-check-recovery-runner.py` (`merge-gate.yml` post-merge recovery,
-`release.yml` converge recovery, and `recover-actions-checks.yml`) must request
-the complete endpoint contract: `permission-checks: read` for check runs,
-`permission-statuses: read` for combined commit status, and the existing
-`permission-actions: write` grant, which includes workflow-run discovery as well
-as allowlisted dispatch. Contents and Pull requests remain read or write according
-to the carrier's existing mutation role. The App installation must grant every
-requested permission; otherwise token minting fails closed. When a metadata
+Recovery metadata reads are fail-closed prerequisites. The merge-gate,
+release-converge, and standalone recovery jobs use their short-lived
+`GITHUB_TOKEN` with explicit `actions: write`, `checks: read`, `statuses: read`,
+and the required Contents/Pull requests access. That job token discovers workflow
+runs and dispatches only the runner's allowlisted genuine workflows. The App token
+remains limited to PR, issue, and content mutations that require App identity, so
+recovery does not depend on installation-level Actions permission. When a metadata
 endpoint fails, the runner emits one sanitized endpoint class
 (`check_runs_read_failed`, `workflow_runs_read_failed`, or
 `commit_metadata_read_failed`) and aborts before dispatch planning.

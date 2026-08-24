@@ -1,5 +1,12 @@
 # VOC-114-T00 — Evidence
 
+> Post-completion correction: live release run `32724415871` proved that the
+> installed automation App does not carry Actions permission, so the App-token
+> dispatch contract recorded below was insufficient. The causal correction keeps
+> recovery on the same VOC-114 outcome and moves Actions reads/dispatch to a
+> narrowly scoped job `GITHUB_TOKEN`; see `t01-evidence.md` and shared-infra PR
+> `#143`. The original record remains below as historical evidence.
+
 Task: `VOC-114-T00` — Restore recovery metadata-read token contract, localize
 errors, add tests.
 
@@ -19,7 +26,7 @@ Authority issue: `KARSIFT/vocanova-platform-sandbox#958`
 
 ## Verified cause boundary (`VOC-114-D00`, `VOC-114-D01`, `VOC-114-D05`)
 
-The two live runs prove that the App installation token used by recovery lacked
+The two initial live runs prove that the App installation token used by recovery lacked
 effective access at the first metadata phase; they do not identify the rejected
 endpoint because pre-T00 code collapsed every `gh` failure to
 `github_metadata_read_failed`. Code review also shows that all three mint paths
@@ -39,18 +46,17 @@ The complete REST permission contract is:
 - `/commits/{sha}`: **Contents read**
 - `/pulls/{number}`: **Pull requests read**
 
-T00 makes that contract explicit at every mint site. This is fail-closed in two
-places: `actions/create-github-app-token` refuses a requested permission that the
-installation has not been granted, and the runner refuses any endpoint failure
-before dispatch planning. Workflow-job `GITHUB_TOKEN` permissions are irrelevant
-to these calls because the runner authenticates with the minted App token.
+The initial T00 revision made that contract explicit at every mint site, but
+post-carrier release run `32724415871` proved the installed App has no Actions
+grant and cannot dispatch. The final contract is therefore separated and remains
+fail-closed: job `GITHUB_TOKEN`s carry Actions write plus Checks/Statuses/Contents/
+Pull requests read for metadata and allowlisted dispatch; App tokens carry only
+Contents/Issues/Pull requests mutation permissions. The runner still refuses any
+endpoint failure before dispatch planning.
 
-**Installation contract for the T01 operator:** confirm the KARSIFT App and its
-caller-repository installation grant Checks read, Commit statuses read, Actions
-read/write, Contents read/write, and Pull requests read/write at the levels
-requested by the applicable carrier. Existing Issues write remains required by
-the merge/release mutation path. Do not weaken the requested contract if minting
-fails; update the App/installation grant and retry through T01.
+**Final installation contract:** no App installation expansion is required.
+Keep the App mutation-only and ensure both the caller and called recovery jobs
+declare the job-token permissions above. Missing job scope is a hard failure.
 
 Primary references: GitHub's REST documentation assigns Checks read to the
 [check-runs endpoint](https://docs.github.com/en/rest/checks/runs), Commit
@@ -71,18 +77,18 @@ to that final source merge and `PINNED_SHA.txt` advances to the same SHA.
 | Target | Change |
 |--------|--------|
 | `config/actions-check-recovery-runner.py` | Localized metadata-read failures to `check_runs_read_failed`, `workflow_runs_read_failed`, and `commit_metadata_read_failed`; extracted `run_metadata_phase()` so read failures abort before dispatch planning |
-| `.github/workflows/merge-gate.yml` | App mint explicitly preserves Contents/Issues/Pull requests/Actions write and adds Checks read plus Commit statuses read |
-| `.github/workflows/release.yml` | Same complete read/write contract on the converge recovery token |
-| `.github/workflows/recover-actions-checks.yml` | App mint requests Actions write exactly once, Checks read, Commit statuses read, Contents read, and Pull requests read; hosted verification uses valid repository context |
-| Source PRs #137–#142 | Removed invalid `gh api --repo` use in recovery/verification, bound promotion suppression, completion, and final verification to required contexts, replaced incompatible paginated `gh api --slurp --jq` usage with standalone `jq`, and added a bounded caller `recover-integration-push` dispatch whose target is the internally resolved current `develop` head rather than a free-form SHA |
+| `.github/workflows/merge-gate.yml` | Job token supplies recovery Actions/metadata access; App mint remains Contents/Issues/Pull requests write only |
+| `.github/workflows/release.yml` | Same separated job-token recovery and App mutation contract on converge |
+| `.github/workflows/recover-actions-checks.yml` | Uses the job token with Actions write plus Checks/Statuses/Contents/Pull requests read; hosted verification uses valid repository context |
+| Source PRs #137–#143 | Removed invalid `gh api --repo` use, bound promotion evidence to required contexts, fixed hosted verification and provenance, and separated recovery dispatch from the App mutation token after live authorization failure |
 | `.github/workflows/repository-governance.yml` | Keeps actual pull requests in `pr-validation` (and fixture-changing originals in strict `pr-ancestry`), while authenticated promotion recovery of the immutable `develop` tip uses the existing `squash-safe-push` contract because the promotion aggregates already-squashed task commits |
-| `tests/test_voc114_actions_check_recovery.py` and caller tests | Deterministic coverage includes both positive modes, complete and omitted mint contracts, duplicate input rejection, endpoint classes, no planning/dispatch after read failure, required-context filtering, hosted verifier CLI contracts, exact target resolution, and fixture pin assertions |
+| `tests/test_voc114_actions_check_recovery.py` and caller tests | Deterministic coverage includes both positive modes, separated token contracts, endpoint classes, no planning/dispatch after read failure, required-context filtering, hosted verifier CLI contracts, exact target resolution, and fixture pin assertions |
 | `README.md` (shared + fixture) | Documents recovery metadata read contract and sanitized endpoint classes |
-| `docs/operations/11-devops-and-ci-cd.md` | Documents caller-facing recovery App read contract, endpoint classes, and bounded operator integration recovery |
+| `docs/operations/11-devops-and-ci-cd.md` | Documents caller-facing separated recovery/mutation contract, endpoint classes, and bounded operator integration recovery |
 
-Mutation posture is unchanged except for the declared read scopes required by
-the metadata phase. Recovery dispatch still uses `permission-actions: write`
-only on allowlisted workflows; no broadened mutation grants were introduced.
+App mutation posture is unchanged. Actions write exists only on dedicated job
+tokens that dispatch allowlisted recovery workflows; no App Actions grant or
+broadened mutation grant was introduced.
 
 ## Validation results
 

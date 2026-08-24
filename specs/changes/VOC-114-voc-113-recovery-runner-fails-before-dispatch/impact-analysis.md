@@ -2,10 +2,11 @@
 
 ## Security and privacy
 
-Recovery orchestration continues to mint short-lived GitHub App installation tokens.
-This package adds **read** scopes required for exact-SHA metadata (Checks, Actions,
-and existing Contents reads) while preserving the existing narrow mutation set
-(contents/issues/PR write; Actions write only on dispatch paths already authorized).
+Recovery orchestration uses two short-lived repository credentials with distinct
+responsibilities. Dedicated job `GITHUB_TOKEN`s receive Actions write and
+Checks/Statuses/Contents/Pull requests read for exact-SHA recovery. GitHub App
+tokens retain the narrow Contents/Issues/Pull requests mutation set and do not
+receive Actions access.
 
 Risk if implemented incorrectly: under-privileged reads leave recovery fail-closed
 (blocking promotion); over-broad mutation grants would expand blast radius beyond
@@ -30,16 +31,16 @@ None. No product analytics instrumentation or user-facing UI changes.
   successful metadata reads — could miss absent required checks or recurse
   incorrectly. Mitigation: fail closed before dispatch; endpoint-class errors;
   deterministic no-dispatch-after-read-failure tests.
-- `VOC-114-R01`: **Medium operational risk** — App installation permission changes
-  outside git may be required and are operator-owned. Mitigation: document exact
-  grants in T00 evidence; T01 fails closed until grants exist.
+- `VOC-114-R01`: **Medium operational risk** — a missing caller/called job
+  permission can strand recovery. Mitigation: explicit job-level grants in both
+  layers, deterministic permission tests, and fail-closed runtime reads.
 - `VOC-114-R02`: **Medium release risk** — unblocking PR #947 after genuine checks
   promotes already-reviewed `develop` history and may trigger automatic production
   deploy. Acceptable as recovery of the stranded VOC-112 handoff; not a new deploy
   policy. Rollback remains revert/redeploy prior artifact.
 - `VOC-114-R03`: **Low documentation risk** — stale README claims about App token
   scopes. Mitigation: update false claims in the same task PR.
-- Protected surfaces: App-token merge/release/recovery paths, VOC-108 authoritative
+- Protected surfaces: App-token merge/release mutation paths, job-token recovery paths, VOC-108 authoritative
   check selection, VOC-113 recovery invariants, branch ruleset required contexts.
 - `VOC-114-DEP-00`: Issue #956 sanitized observations.
 - `VOC-114-DEP-01`: VOC-113-T00 merged but broken at metadata read.

@@ -8,12 +8,12 @@
 - Evidence: `VOC-114-EV-00`
 - Result: pending
 
-`t00-evidence.md` records issue #956 observations and documents the verified
-metadata-read failure class (including whether installation grants, mint
-`permission-*` inputs, or both were required). Evidence contains no secrets,
-full logs, or personal data.
+`t00-evidence.md` records issue #956 plus post-carrier run `32724415871` and
+documents the verified metadata/dispatch credential boundary: recovery uses the
+job token; App identity remains mutation-only. Evidence contains no secrets, full
+logs, or personal data.
 
-## VOC-114-AC-01 — Recovery metadata reads succeed under declared App token contract
+## VOC-114-AC-01 — Recovery succeeds under the separated token contract
 
 - Requirement source: `VOC-114-D01`, `VOC-114-D03`
 - Tasks: `VOC-114-T00`
@@ -22,10 +22,11 @@ full logs, or personal data.
 - Result: pending
 
 For both `integration_push` and `promotion_pr` modes, the recovery runner can
-read exact-SHA check-runs, commit status, and workflow-run metadata using the
-minted App token from merge-gate, release converge, and
-`recover-actions-checks.yml`. Existing mutation permissions remain unchanged
-except for explicitly declared read scopes required by the metadata phase.
+read exact-SHA check-runs, commit status, workflow-run, commit, and PR metadata
+and dispatch allowlisted genuine workflows using a job `GITHUB_TOKEN` carrying
+Actions write plus Checks/Statuses/Contents/Pull requests read. App tokens used
+by merge-gate and release retain only the existing Contents/Issues/Pull requests
+mutation scopes and are not used for Actions reads or dispatch.
 
 ## VOC-114-AC-02 — Sanitized endpoint-class diagnostics replace generic metadata failure
 

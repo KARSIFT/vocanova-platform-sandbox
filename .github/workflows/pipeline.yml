@@ -179,8 +179,8 @@ on:
 # default_workflow_permissions could be safely tightened from "write" to
 # "read" without breaking the pipeline; do not narrow this without
 # re-checking every called reusable workflow's own job-level permissions
-# first. The live-evidence reconciler has one narrower job-level exception:
-# Actions write is required only to dispatch the contract-allowlisted synthetic.
+# first. Job-level Actions-write exceptions are limited to live-evidence dispatch
+# and exact-SHA recovery in recover-integration-push, merge-gate, and release.
 permissions:
   contents: write
   issues: write
@@ -269,6 +269,7 @@ jobs:
       checks: read
       contents: read
       pull-requests: read
+      statuses: read
     with:
       recovery_mode: integration_push
       target_sha: ${{ needs.resolve-integration-recovery-target.outputs.target_sha }}
@@ -616,6 +617,13 @@ jobs:
       needs.web-container-runtime.result == 'success' &&
       (needs.review.result == 'success' || needs.review.result == 'skipped') &&
       (needs.plan-review.result == 'success' || needs.plan-review.result == 'skipped')
+    permissions:
+      actions: write
+      checks: read
+      contents: write
+      issues: write
+      pull-requests: write
+      statuses: read
     uses: KARSIFT/karsift-ai-infra/.github/workflows/merge-gate.yml@main
     with:
       auto_merge_enabled: "true"      # proven live on this repo (VOC-012, VOC-014) for this project's loop
@@ -643,6 +651,13 @@ jobs:
           github.event.check_run.pull_requests[0].head.ref == 'develop') ||
         (github.event_name == 'workflow_run' && github.event.action == 'completed')
       )
+    permissions:
+      actions: write
+      checks: read
+      contents: write
+      issues: write
+      pull-requests: write
+      statuses: read
     uses: KARSIFT/karsift-ai-infra/.github/workflows/release.yml@main
     with:
       release_issue_number: ${{ inputs.release_issue_number }}
