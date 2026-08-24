@@ -136,6 +136,13 @@ the shared `main` merge commit is
 Shared PR #128 mirrored the explicit recovery prerequisite into the canonical
 caller template and passed the same 226-test/four-check gate; its shared
 `main` merge commit is `4edfb2d979b86df9cdacc10d5de5120e46763417`.
+The subsequent exact-SHA review passed with three Low findings; all were
+resolved in shared PR #129 and this caller fixture. Neutral terminal workflows
+are retryable rather than merely timing out, the canonical caller template
+preserves the live caller's null guard for check runs without an associated
+pull request, and the remaining reuse-workflow checkout pins are synchronized.
+Shared PR #129 passed 227 policy tests and all four hosted checks; its `main`
+merge commit is `1f6c1477d708ea89b1d875fa7684e358538d03a5`.
 
 ## VOC-112 provenance repair (`VOC-113-D11`)
 
