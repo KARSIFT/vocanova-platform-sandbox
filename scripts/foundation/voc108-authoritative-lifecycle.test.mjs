@@ -134,7 +134,7 @@ test("VOC-108-TEST-08: caller and shared docs name marker-bound authority", () =
   assert.doesNotMatch(sharedMerge, /see "Close linked task issue" below/);
   assert.match(
     sharedCallerTemplate,
-    /options: \[[^\]]*verify-remediate-operator-ownership\]/,
+    /options: \[[^\]]*verify-remediate-operator-ownership[^\]]*\]/,
   );
   assert.match(
     sharedCallerTemplate,

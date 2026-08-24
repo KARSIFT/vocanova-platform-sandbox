@@ -10,12 +10,19 @@ on:
       - edited
       - synchronize
       - reopened
+  workflow_dispatch:
+    inputs:
+      recovery_pr_number:
+        description: "VOC-113 recovery only: promotion PR whose exact head needs governance-policy"
+        required: false
+        type: string
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
-  group: governance-policy-${{ github.event.pull_request.number }}
+  group: governance-policy-${{ github.event.pull_request.number || inputs.recovery_pr_number || github.run_id }}
   cancel-in-progress: true
 
 jobs:
@@ -26,27 +33,60 @@ jobs:
     steps:
       # actions/checkout v7.0.1, pinned to the immutable commit documented at
       # https://github.com/actions/checkout/releases/tag/v7.0.1
+      - name: Resolve governance validation SHAs
+        id: shas
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RECOVERY_PR: ${{ inputs.recovery_pr_number }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -z "$RECOVERY_PR" ]; then
+            echo "Manual governance recovery requires a promotion PR number; refusing." >&2
+            exit 1
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if ! [[ "$RECOVERY_PR" =~ ^[1-9][0-9]*$ ]]; then
+              echo "Recovery promotion PR number is malformed; refusing." >&2
+              exit 1
+            fi
+            pr_json=$(gh pr view "$RECOVERY_PR" --json baseRefOid,headRefOid)
+            echo "base_sha=$(jq -r .baseRefOid <<<"$pr_json")" >> "$GITHUB_OUTPUT"
+            echo "head_sha=$(jq -r .headRefOid <<<"$pr_json")" >> "$GITHUB_OUTPUT"
+            echo "checkout_sha=$(jq -r .headRefOid <<<"$pr_json")" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "head_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+            echo "checkout_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Check out reviewed revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+          ref: ${{ steps.shas.outputs.checkout_sha }}
 
       - name: Validate governance structure
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ steps.shas.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.shas.outputs.head_sha }}
         run: >-
           bash scripts/governance/validate-governance.sh
           --base "$BASE_SHA"
           --head "$HEAD_SHA"
 
       - name: Record pull-request body safely
+        if: github.event_name == 'pull_request'
         run: jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH" > "$RUNNER_TEMP/pr-body.md"
+
+      - name: Record recovery pull-request body safely
+        if: github.event_name == 'workflow_dispatch' && inputs.recovery_pr_number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr view "${{ inputs.recovery_pr_number }}" --json body -q .body > "$RUNNER_TEMP/pr-body.md"
 
       - name: Enforce path-based risk floor
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ steps.shas.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.shas.outputs.head_sha }}
         run: >-
           bash scripts/governance/classify-change-risk.sh
           --base "$BASE_SHA"

@@ -16,8 +16,8 @@ sha_lineage:
   mode: exact_pr_head
 conclusion: success
 max_age: 72h
-dispatch:
-  workflow_file: pipeline.yml
-  inputs:
-    action: verify-post-promotion-workflow
-    promotion_pr_number: "947"
+
+# Operator dispatches pipeline.yml directly on the exact carrier branch with
+# action=verify-post-promotion-workflow and promotion_pr_number=947. The
+# reconciler observes the result but intentionally never dispatches pipeline.yml,
+# preventing self-recursion through the pipeline workflow.

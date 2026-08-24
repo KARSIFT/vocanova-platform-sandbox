@@ -288,6 +288,10 @@ on:
         required: false
         type: boolean
         default: false
+      recovery_target_sha:
+        description: "VOC-113 recovery only: immutable integration SHA that must equal the dispatched ref tip"
+        required: false
+        type: string
 
 # `contents: read` is the GitHub-recommended default for any
 # workflow that only needs the repo (we do — for checkout).
@@ -338,6 +342,17 @@ jobs:
     # budget.
     timeout-minutes: 40
     steps:
+      - name: Validate immutable recovery target
+        if: github.event_name == 'workflow_dispatch' && inputs.recovery_target_sha != ''
+        env:
+          RECOVERY_TARGET_SHA: ${{ inputs.recovery_target_sha }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$RECOVERY_TARGET_SHA" =~ ^[0-9a-f]{40}$ ]] || [ "$RECOVERY_TARGET_SHA" != "${{ github.sha }}" ]; then
+            echo "Recovery target no longer matches the dispatched branch tip; refusing." >&2
+            exit 1
+          fi
+
       # actions/checkout v7.0.1, pinned to the immutable
       # commit documented at
       # https://github.com/actions/checkout/releases/tag/v7.0.1

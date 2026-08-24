@@ -9,9 +9,20 @@ on:
     branches:
       - develop
       - main
+  workflow_dispatch:
+    inputs:
+      recovery_pr_number:
+        description: "VOC-113 recovery only: promotion PR whose exact head needs validate"
+        required: false
+        type: string
+      recovery_target_sha:
+        description: "VOC-113 recovery only: immutable integration SHA that must equal the dispatched ref tip"
+        required: false
+        type: string
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   validate:
@@ -19,11 +30,48 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
+      - name: Resolve repository governance SHAs
+        id: shas
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RECOVERY_PR: ${{ inputs.recovery_pr_number }}
+          RECOVERY_TARGET_SHA: ${{ inputs.recovery_target_sha }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "$RECOVERY_TARGET_SHA" ]; then
+            if ! [[ "$RECOVERY_TARGET_SHA" =~ ^[0-9a-f]{40}$ ]] || [ "$RECOVERY_TARGET_SHA" != "${{ github.sha }}" ]; then
+              echo "Recovery target no longer matches the dispatched branch tip; refusing." >&2
+              exit 1
+            fi
+          fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "$RECOVERY_PR" ]; then
+            if ! [[ "$RECOVERY_PR" =~ ^[1-9][0-9]*$ ]]; then
+              echo "Recovery promotion PR number is malformed; refusing." >&2
+              exit 1
+            fi
+            pr_json=$(gh pr view "$RECOVERY_PR" --json baseRefOid,headRefOid)
+            echo "base_sha=$(jq -r .baseRefOid <<<"$pr_json")" >> "$GITHUB_OUTPUT"
+            echo "head_sha=$(jq -r .headRefOid <<<"$pr_json")" >> "$GITHUB_OUTPUT"
+            echo "checkout_sha=$(jq -r .headRefOid <<<"$pr_json")" >> "$GITHUB_OUTPUT"
+            echo "event_kind=pull_request" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "head_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+            echo "checkout_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+            echo "event_kind=pull_request" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=" >> "$GITHUB_OUTPUT"
+            echo "head_sha=" >> "$GITHUB_OUTPUT"
+            echo "checkout_sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            echo "event_kind=push" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Check out repository
         # actions/checkout v7.0.1, verified from the official repository.
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+          ref: ${{ steps.shas.outputs.checkout_sha }}
       - name: Set up Python
         # actions/setup-python v7.0.0, verified from the official repository.
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
@@ -34,9 +82,28 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version-file: ".nvmrc"
+      - name: Select strict capture provenance mode
+        id: provenance
+        env:
+          EVENT_KIND: ${{ steps.shas.outputs.event_kind }}
+          BASE_SHA: ${{ steps.shas.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.shas.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          mode=squash-safe-push
+          if [ "$EVENT_KIND" = "pull_request" ]; then
+            mode=pr-validation
+            if ! git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- \
+              scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json; then
+              mode=pr-ancestry
+            fi
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
       - name: Validate agent-skill capture provenance with full history
         env:
-          VOC112_CAPTURE_PROVENANCE_MODE: ${{ github.event_name == 'pull_request' && 'pr-ancestry' || 'squash-safe-push' }}
+          VOC112_CAPTURE_PROVENANCE_MODE: ${{ steps.provenance.outputs.mode }}
+          PR_BASE_SHA: ${{ steps.shas.outputs.base_sha }}
+          PR_HEAD_SHA: ${{ steps.shas.outputs.head_sha }}
         run: node --test scripts/foundation/voc112-navigation-benchmark.test.mjs
       - name: Run repository-foundation unit tests
         run: python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py' -v
@@ -49,10 +116,10 @@ jobs:
           bash -n scripts/governance/validate-monitoring-impact.sh
       - name: Validate existing governance
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ steps.shas.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.shas.outputs.head_sha }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
+          if [ "${{ steps.shas.outputs.event_kind }}" = "pull_request" ]; then
             bash scripts/governance/validate-governance.sh --base "$BASE_SHA" --head "$HEAD_SHA"
           else
             bash scripts/governance/validate-governance.sh
