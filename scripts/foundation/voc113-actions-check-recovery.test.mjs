@@ -179,7 +179,7 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
   assert.match(repositoryGovernance, /WORKFLOW_EVENT:.*github\.event_name/);
   assert.match(
     repositoryGovernance,
-    /\[ "\$WORKFLOW_EVENT" = "pull_request" \].*git diff --quiet/s,
+    /\[ "\$EVENT_KIND" = "pull_request" \].*\[ "\$WORKFLOW_EVENT" = "pull_request" \].*mode=pr-validation/s,
   );
   assert.match(
     readFileSync(governancePolicyPath, "utf8"),
