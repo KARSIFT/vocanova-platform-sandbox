@@ -374,6 +374,15 @@ function writeDiscoveryRows(runtimeName, runtimeVersion, rows) {
   writeFileSync(discoveryPath, `${JSON.stringify(evidence, null, 2)}\n`);
 }
 
+export function classifyClaudeFailure(result) {
+  const diagnostic = `${result.stderr ?? ""}\n${result.stdout ?? ""}`;
+  return /(?:not logged in|please log in|authentication required|unauthorized|missing[^\n]*(?:credential|api key)|invalid[^\n]*api key)/i.test(
+    diagnostic,
+  )
+    ? "not-executed-external-credential-required"
+    : "fail";
+}
+
 function captureClaudeDiscovery() {
   const version = commandVersion("claude");
   const discoveries = [
@@ -398,7 +407,7 @@ function captureClaudeDiscovery() {
       return {
         context,
         cwd: path.relative(repositoryRoot, cwd).replaceAll("\\", "/") || ".",
-        result: "not-executed-external-credential-required",
+        result: classifyClaudeFailure(result),
         model: "unavailable",
         structured_event_count: 0,
         canonical_skill_reads: [],

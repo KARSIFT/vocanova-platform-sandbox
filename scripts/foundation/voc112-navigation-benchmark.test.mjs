@@ -9,6 +9,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import test from "node:test";
 import {
   BENCHMARK_QUESTIONS,
+  classifyClaudeFailure,
   mergeDiscoveryRows,
 } from "./voc112-navigation-benchmark-run.mjs";
 
@@ -133,6 +134,13 @@ test("VOC-112-TEST-12: benchmark is a revision-bound real structured agent captu
     assert.ok(row.usage.output_tokens > 0);
     assert.ok(Array.isArray(row.repository_files_opened));
     assert.ok(Array.isArray(row.answer_paths));
+    if (row.variant === "navigator_assisted") {
+      assert.deepEqual(row.skill_files_opened, [
+        ".agents/skills/vocanova-repo-navigator/SKILL.md",
+      ]);
+    } else {
+      assert.deepEqual(row.skill_files_opened, []);
+    }
   }
 });
 
@@ -263,6 +271,17 @@ test("VOC-112-TEST-13: later runtime capture preserves truthful credential limit
   assert.deepEqual(
     merged.discoveries.find((row) => row.runtime === "claude-code"),
     limitedClaudeRow,
+  );
+});
+
+test("VOC-112-TEST-13: Claude failures are not all mislabeled as credential limitations", () => {
+  assert.equal(
+    classifyClaudeFailure({ stderr: "Authentication required: please log in" }),
+    "not-executed-external-credential-required",
+  );
+  assert.equal(
+    classifyClaudeFailure({ stderr: "process crashed while parsing output" }),
+    "fail",
   );
 });
 
