@@ -129,3 +129,10 @@ integration recovery wake; it is a mutation-free no-op after both required
 integration workflows have completed successfully.
 Immediate post-merge recovery is limited to governed `agent/` task branches;
 other integration advances rely on that hourly exact-tip wake.
+
+VOC-114 (VOC-113 recovery metadata-read fix) adds explicit App mint read scopes
+on merge-gate, release converge, and `recover-actions-checks.yml`, localized
+endpoint-class diagnostics in `actions-check-recovery-runner.py`, and
+deterministic policy tests in `tests/test_voc114_actions_check_recovery.py`.
+The tracked fixture copy under this directory carries the same contract ahead
+of the next shared-infra pin advance recorded in `PINNED_SHA.txt`.

@@ -5,6 +5,8 @@ errors, add tests.
 
 Evidence date: 2026-08-24
 
+Authority issue: `KARSIFT/vocanova-platform-sandbox#958`
+
 ## Issue #956 observations (metadata-only)
 
 | Item | Value |
@@ -18,7 +20,8 @@ Evidence date: 2026-08-24
 ## Verified root cause (`VOC-114-D00`, `VOC-114-D01`, `VOC-114-D05`)
 
 Code review of the shared recovery mint paths on pre-T00 `karsift-ai-infra`
-`main` shows every App token feeding `actions-check-recovery-runner.py`
+`main` (`PINNED_SHA.txt` → `d3108dfdef34e2f98c028916e95c36130d329132`) shows
+every App token feeding `actions-check-recovery-runner.py`
 (`merge-gate.yml` post-merge recovery, `release.yml` converge recovery,
 `recover-actions-checks.yml`) invoked `actions/create-github-app-token` without
 any `permission-*` inputs. The runner's metadata phase calls GitHub REST
@@ -58,14 +61,21 @@ read` on every recovery mint path.
 
 ## Remediation applied (T00)
 
+Deterministic contract changes land in this caller repository under
+`tooling/governance/fixtures/karsift-ai-infra/` and must be mirrored byte-for-byte
+into `KARSIFT/karsift-ai-infra` before live recovery can succeed on `@main`.
+The companion shared-infra PR must use `Relates to KARSIFT/vocanova-platform-sandbox#958`
+(non-closing). `PINNED_SHA.txt` advances only after that shared PR merges.
+
 | Target | Change |
 |--------|--------|
-| `actions-check-recovery-runner.py` | Localized metadata-read failures to `check_runs_read_failed`, `workflow_runs_read_failed`, and `commit_metadata_read_failed`; metadata-read exceptions abort before bounded wait or dispatch planning |
-| `merge-gate.yml` | App mint now requests `permission-contents/issues/pull-requests: write`, `permission-actions: write`, and `permission-checks: read` |
-| `release.yml` | Same read/write mint contract on converge recovery token |
-| `recover-actions-checks.yml` | App mint now requests `permission-actions: write`, `permission-checks: read`, `permission-contents: read`, `permission-pull-requests: read` |
+| `config/actions-check-recovery-runner.py` | Localized metadata-read failures to `check_runs_read_failed`, `workflow_runs_read_failed`, and `commit_metadata_read_failed`; extracted `run_metadata_phase()` so read failures abort before dispatch planning |
+| `.github/workflows/merge-gate.yml` | App mint requests mutation scopes (`permission-contents/issues/pull-requests: write`, `permission-actions: write`) plus `permission-checks: read` |
+| `.github/workflows/release.yml` | Same read/write mint contract on converge recovery token |
+| `.github/workflows/recover-actions-checks.yml` | App mint requests `permission-actions: write`, `permission-checks: read`, `permission-actions: read`, `permission-contents: read`, and `permission-pull-requests: read` |
 | `tests/test_voc114_actions_check_recovery.py` | Deterministic positive read contract, endpoint-class negatives, and no-dispatch-after-read-failure coverage for both modes |
-| `README.md` | Documents recovery metadata read contract and sanitized endpoint classes |
+| `README.md` (shared + fixture) | Documents recovery metadata read contract and sanitized endpoint classes |
+| `docs/operations/11-devops-and-ci-cd.md` | Documents caller-facing recovery App read contract and endpoint classes |
 
 Mutation posture is unchanged except for the declared read scopes required by
 the metadata phase. Recovery dispatch still uses `permission-actions: write`
@@ -73,22 +83,37 @@ only on allowlisted workflows; no broadened mutation grants were introduced.
 
 ## Validation results
 
-Commands run from `karsift-ai-infra/` at implementation time (2026-08-24):
+Commands run at implementation time (2026-08-24):
 
 ```text
-python3 -m unittest discover -s tests -p 'test_*voc113*'  → Ran 30 tests — OK
-python3 -m unittest discover -s tests -p 'test_*voc114*'  → Ran 9 tests — OK
-python3 -m unittest tests.test_release_policy tests.test_merge_gate_policy
-  → Ran 14 tests — OK
+# karsift-ai-infra checkout (local, mirrors fixture content)
+PYTHONPATH=config python3 -m unittest discover -s tests -p 'test_*voc113*'
+  → Ran 30 tests — OK
+PYTHONPATH=config python3 -m unittest discover -s tests -p 'test_*voc114*'
+  → Ran 10 tests — OK
+
+# caller fixture mirror (authoritative for this PR)
+PYTHONPATH=config python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*voc114*'
+  → Ran 10 tests — OK
+node --test scripts/foundation/voc114-actions-check-recovery.test.mjs
+  → 3 tests — OK
+node --test scripts/foundation/voc113-actions-check-recovery.test.mjs
+  → existing VOC-113 caller tests — OK
+bash scripts/governance/validate-governance.sh
+  → passed
+bash scripts/governance/classify-change-risk.sh
+  → path floor R4 (package + infra fixture paths)
+git diff --check
+  → no conflicts
 ```
 
-Caller governance validation (no caller workflow paths changed in T00):
+## Shared-infra adoption dependency
 
-```text
-bash scripts/governance/validate-governance.sh  → passed
-bash scripts/governance/classify-change-risk.sh → path floor R1 (karsift-ai-infra/)
-git diff --check → no conflicts
-```
+Live recovery on `@main` remains blocked until the byte-identical remediation
+merges in `KARSIFT/karsift-ai-infra`. Record the shared PR URL and exact reviewed
+head SHA in this section once that PR is opened and reviewed. T01 operator proof
+depends on both this caller task PR and the shared-infra merge being live on the
+branch the caller pipeline executes from.
 
 ## T01 dependency
 

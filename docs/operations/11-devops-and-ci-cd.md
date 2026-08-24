@@ -112,6 +112,16 @@ a stranded current `develop` tip without duplicating already-successful runs;
 Immediate post-merge recovery is scoped to governed `agent/` task branches.
 Other ways of advancing `develop` are covered by the hourly exact-tip wake.
 
+Recovery metadata reads are fail-closed prerequisites: every App mint path that
+feeds `actions-check-recovery-runner.py` (`merge-gate.yml` post-merge recovery,
+`release.yml` converge recovery, and `recover-actions-checks.yml`) must request
+explicit read scopes — at minimum `permission-checks: read`,
+`permission-actions: read`, and `permission-contents: read` — in addition to
+the existing narrow mutation scopes. When a metadata endpoint fails, the runner
+emits one sanitized endpoint class (`check_runs_read_failed`,
+`workflow_runs_read_failed`, or `commit_metadata_read_failed`) and aborts before
+bounded wait or workflow dispatch.
+
 This table is an implementation target, not authority to procure vendors, incur spend, create
 infrastructure, deploy, or release. Each such action requires its own approved change package and
 the authority applicable at execution time. The v1.1 rows above describe the staging tier that
