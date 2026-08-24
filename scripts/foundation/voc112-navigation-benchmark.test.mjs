@@ -175,6 +175,29 @@ function totals(rows) {
   };
 }
 
+function withProvenanceEnv(mode, baseSha, headSha, callback) {
+  const prior = {
+    mode: process.env.VOC112_CAPTURE_PROVENANCE_MODE,
+    base: process.env.PR_BASE_SHA,
+    head: process.env.PR_HEAD_SHA,
+  };
+  process.env.VOC112_CAPTURE_PROVENANCE_MODE = mode;
+  process.env.PR_BASE_SHA = baseSha;
+  process.env.PR_HEAD_SHA = headSha;
+  try {
+    callback();
+  } finally {
+    for (const [name, value] of [
+      ["VOC112_CAPTURE_PROVENANCE_MODE", prior.mode],
+      ["PR_BASE_SHA", prior.base],
+      ["PR_HEAD_SHA", prior.head],
+    ]) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
+}
+
 test("VOC-112-TEST-12: benchmark is a revision-bound real structured agent capture", () => {
   const evidence = fixture("voc112-navigation-benchmark-traces.json");
   assert.equal(evidence.schema_version, 2);
@@ -404,6 +427,32 @@ test("VOC-112-TEST-14: operator docs and AGENTS.md preserve one-source precedenc
   assert.match(
     governanceWorkflow,
     /node --test scripts\/foundation\/voc112-navigation-benchmark\.test\.mjs/,
+  );
+});
+
+test("VOC-113-TEST-10: original capture mode requires and accepts true subject ancestry", () => {
+  const evidence = fixture("voc112-navigation-benchmark-traces.json");
+  const headSha = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  }).trim();
+  withProvenanceEnv("pr-ancestry", headSha, headSha, () =>
+    assertCapturedRevision(evidence),
+  );
+});
+
+test("VOC-113-TEST-10: later post-squash PR accepts merge-base anchored hashes", () => {
+  const evidence = {
+    ...fixture("voc112-navigation-benchmark-traces.json"),
+    // Models a capture commit discarded by squash and no longer fetchable.
+    subject_revision: "0".repeat(40),
+  };
+  const headSha = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  }).trim();
+  withProvenanceEnv("pr-validation", headSha, headSha, () =>
+    assertCapturedRevision(evidence),
   );
 });
 

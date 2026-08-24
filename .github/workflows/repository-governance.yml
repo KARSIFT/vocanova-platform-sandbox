@@ -71,9 +71,26 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version-file: ".nvmrc"
+      - name: Select strict capture provenance mode
+        id: provenance
+        env:
+          EVENT_KIND: ${{ steps.shas.outputs.event_kind }}
+          BASE_SHA: ${{ steps.shas.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.shas.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          mode=squash-safe-push
+          if [ "$EVENT_KIND" = "pull_request" ]; then
+            mode=pr-validation
+            if ! git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- \
+              scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json; then
+              mode=pr-ancestry
+            fi
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
       - name: Validate agent-skill capture provenance with full history
         env:
-          VOC112_CAPTURE_PROVENANCE_MODE: ${{ steps.shas.outputs.event_kind == 'pull_request' && 'pr-validation' || 'squash-safe-push' }}
+          VOC112_CAPTURE_PROVENANCE_MODE: ${{ steps.provenance.outputs.mode }}
           PR_BASE_SHA: ${{ steps.shas.outputs.base_sha }}
           PR_HEAD_SHA: ${{ steps.shas.outputs.head_sha }}
         run: node --test scripts/foundation/voc112-navigation-benchmark.test.mjs

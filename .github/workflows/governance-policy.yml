@@ -22,7 +22,7 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: governance-policy-${{ github.event.pull_request.number }}
+  group: governance-policy-${{ github.event.pull_request.number || inputs.recovery_pr_number || github.run_id }}
   cancel-in-progress: true
 
 jobs:

@@ -66,6 +66,15 @@ returned by their actual GitHub API calls. REST-shaped positive and negative
 fixtures cover both corrections. The shared repository passed all 216 policy
 tests before PR #121 was opened.
 
+Independent review of caller head `bed8670c438920da83dadd95b6bfaeb9b5f2e7b0`
+found blocking verifier/carrier binding, contract-input, provenance-mode, test
+coverage, recovery-concurrency, and completion-publication ordering defects.
+All findings were remediated in shared follow-up PR #122, whose four exact-head
+self-CI checks passed before merge; the corrected shared `main` commit is
+`b8d244a6d0a87ddf775675516b7bc8444d73300e`. Recovery now also performs the
+full staging deploy when the normal integration push deploy is absent, rather
+than treating a validation-only run as deployment equivalence.
+
 ## VOC-112 provenance repair (`VOC-113-D11`)
 
 Repository Governance now runs capture provenance in `pr-validation` mode for

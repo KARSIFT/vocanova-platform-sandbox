@@ -116,6 +116,10 @@ on:
         description: "reconcile-live-evidence dispatch, verify-remediate-operator-ownership, and VOC-113 verify/recovery: target PR number"
         required: false
         type: string
+      promotion_pr_number:
+        description: "VOC-113 read-only recovery/verifier target promotion PR number"
+        required: false
+        type: string
       live_evidence_run_id:
         description: "reconcile-live-evidence only: optional Actions run id to observe immediately"
         required: false
@@ -410,7 +414,6 @@ jobs:
         (github.event_name == 'workflow_dispatch' && inputs.action == 'reconcile-release' && inputs.release_issue_number != '') ||
         (github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'develop') ||
         (github.event_name == 'check_run' && github.event.action == 'completed' &&
-          github.event.check_run.pull_requests[0] != null &&
           github.event.check_run.pull_requests[0].base.ref == 'main' &&
           github.event.check_run.pull_requests[0].head.ref == 'develop') ||
         (github.event_name == 'workflow_run' && github.event.action == 'completed')
@@ -427,8 +430,8 @@ jobs:
   # reviewed caller PR merged. The issue-close event only wakes evaluation;
   # closed state alone cannot advance. Routine task-to-task progression needs
   # no further per-task human trigger. A
-  # no-op on the package's last task (release's serialized convergence
-  # evaluator above handles that transition instead) or if the next task is already
+  # no-op on the package's last task (release's own check-completion above
+  # handles that transition instead) or if the next task is already
   # dispatched/done. Runs on the same `issues: closed` event as `release`
   # above - both are safe to fire together, since each package/task can
   # only ever be in the "next task exists" or "roster complete" state, never
@@ -503,7 +506,7 @@ jobs:
       pull-requests: read
     uses: KARSIFT/karsift-ai-infra/.github/workflows/verify-promotion-check-recovery.yml@main
     with:
-      promotion_pr_number: ${{ inputs.live_evidence_pr_number }}
+      promotion_pr_number: ${{ inputs.promotion_pr_number }}
 
   verify-post-promotion-workflow:
     if: github.event_name == 'workflow_dispatch' && inputs.action == 'verify-post-promotion-workflow'
@@ -513,7 +516,7 @@ jobs:
       pull-requests: read
     uses: KARSIFT/karsift-ai-infra/.github/workflows/verify-post-promotion-workflow.yml@main
     with:
-      promotion_pr_number: ${{ inputs.live_evidence_pr_number }}
+      promotion_pr_number: ${{ inputs.promotion_pr_number }}
 
   # Separate operator path: hourly polling reads Actions metadata for waiting
   # contracts. Manual mode can validate one run immediately or dispatch only a

@@ -91,6 +91,11 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
   const release = readFileSync(releaseWorkflowPath, "utf8");
 
   assert.match(pipeline, /recover-promotion-pr-checks/);
+  assert.match(pipeline, /promotion_pr_number:/);
+  assert.match(
+    pipeline,
+    /promotion_pr_number: \$\{\{ inputs\.promotion_pr_number \}\}/,
+  );
   const ciBlock =
     pipeline.split("\n  ci:", 2)[1]?.split("\n  plan-review:", 1)[0] ?? "";
   assert.match(ciBlock, /inputs\.action == 'recover-promotion-pr-checks'/);
@@ -108,6 +113,12 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
   assert.match(governancePolicy, /recovery_pr_number/);
   assert.match(repositoryGovernance, /recovery_pr_number/);
   assert.match(repositoryGovernance, /pr-validation/);
+  assert.match(repositoryGovernance, /pr-ancestry/);
+  assert.match(repositoryGovernance, /Select strict capture provenance mode/);
+  assert.match(
+    readFileSync(governancePolicyPath, "utf8"),
+    /inputs\.recovery_pr_number \|\| github\.run_id/,
+  );
   assert.match(
     mergeGate,
     /Recover missing integration push workflows for merged SHA/,
@@ -134,6 +145,10 @@ test("VOC-113-TEST-08/09 contracts bind read-only verifier job names", () => {
   assert.match(contractT02, /verify-post-promotion-workflow \/ verify/);
   assert.match(contractT01, /exact_pr_head/);
   assert.match(contractT02, /exact_pr_head/);
+  assert.doesNotMatch(contractT01, /^dispatch:/m);
+  assert.doesNotMatch(contractT02, /^dispatch:/m);
+  assert.match(contractT01, /promotion_pr_number=947/);
+  assert.match(contractT02, /promotion_pr_number=947/);
 });
 
 test("VOC-113-TEST-12: verifier jobs are read-only", () => {
