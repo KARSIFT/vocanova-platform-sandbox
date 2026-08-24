@@ -116,7 +116,8 @@ VOC-108 originally advanced the fixture to shared-infra merge
 consolidated fixture pin through `30cc0a6f443b95e45527b03094767b8357b0a2dc`
 and `bdc6736568827103b48255521f4bc83d5103bd3b` to
 `9d7e334f917643c42bb4b7a062c8fcddecc7927f`, then to
-`6999e2beda5bbf00028fae04ca0e65324fc59afa`.
+`6999e2beda5bbf00028fae04ca0e65324fc59afa`, and finally to
+`c5d8bccfa8676bd367b53ad5f6f9a51a40c99405`.
 Adoption, merge/reuse, and release
 select the newest authoritative attempt per logical exact-SHA gate from complete
 paginated histories and bind the selected evidence to the authenticated pull
@@ -153,8 +154,9 @@ Immediate post-merge recovery is limited to governed `agent/` task branches;
 other integration advances rely on that hourly exact-tip wake.
 
 VOC-114 (VOC-113 recovery metadata-read fix) pins shared-infra merge
-`6999e2beda5bbf00028fae04ca0e65324fc59afa`, including the live-proof
-corrections from PRs #137 through #144. Recovery metadata reads and allowlisted
+`c5d8bccfa8676bd367b53ad5f6f9a51a40c99405`, including the live-proof
+corrections from PRs #137 through #145 and the project-template correction that
+keeps Statuses write on release alone. Recovery metadata reads and allowlisted
 dispatches use narrowly job-scoped `GITHUB_TOKEN` permissions: Actions write plus
 Checks, Commit statuses, Contents, and Pull requests read. App tokens remain
 limited to App-identity release mutations and no longer depend on an installation
