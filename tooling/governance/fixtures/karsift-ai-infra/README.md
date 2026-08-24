@@ -114,7 +114,7 @@ VOC-108 originally advanced the fixture to shared-infra merge
 `d3108dfdef34e2f98c028916e95c36130d329132`; VOC-115 then advanced it to
 `3fd40f52aba602fab8399482bc5b772731675d1a`, and VOC-114 now advances the
 consolidated fixture pin through `30cc0a6f443b95e45527b03094767b8357b0a2dc`
-to `da61963aeaa0e566e499e63139132cbe86c3cd6b`.
+to `4c0395aff2a4599160308f7f37c593b75c7394b6`.
 Adoption, merge/reuse, and release
 select the newest authoritative attempt per logical exact-SHA gate from complete
 paginated histories and bind the selected evidence to the authenticated pull
@@ -151,8 +151,8 @@ Immediate post-merge recovery is limited to governed `agent/` task branches;
 other integration advances rely on that hourly exact-tip wake.
 
 VOC-114 (VOC-113 recovery metadata-read fix) pins shared-infra merge
-`da61963aeaa0e566e499e63139132cbe86c3cd6b`, including the live-proof
-corrections from PRs #137 through #140. All three recovery App mints declare
+`4c0395aff2a4599160308f7f37c593b75c7394b6`, including the live-proof
+corrections from PRs #137 through #141. All three recovery App mints declare
 Checks read, Commit statuses read, and the Actions write capability already
 needed for allowlisted dispatch (which also covers workflow-run discovery), plus
 the carrier's existing Contents/Pull requests posture. The runner uses valid
@@ -164,3 +164,5 @@ also use valid `gh api` repository context. The contract is covered by
 The caller template exposes the existing integration resolver/recovery pair to
 operator dispatch without accepting a free-form target SHA, closing the
 default-branch schedule bootstrap gap encountered during the live proof.
+Its paginated commit query pipes slurped pages to standalone `jq`, avoiding the
+GitHub CLI's invalid `--slurp` plus `--jq` combination.
