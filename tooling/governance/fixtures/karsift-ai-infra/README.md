@@ -113,7 +113,8 @@ hosted verifier base-SHA adapter fix recorded in this package's T00 remediation.
 VOC-108 originally advanced the fixture to shared-infra merge
 `d3108dfdef34e2f98c028916e95c36130d329132`; VOC-115 then advanced it to
 `3fd40f52aba602fab8399482bc5b772731675d1a`, and VOC-114 now advances the
-consolidated fixture pin to `30cc0a6f443b95e45527b03094767b8357b0a2dc`.
+consolidated fixture pin through `30cc0a6f443b95e45527b03094767b8357b0a2dc`
+to `3f4745006cb86eb766913896a20fd399c539c72e`.
 Adoption, merge/reuse, and release
 select the newest authoritative attempt per logical exact-SHA gate from complete
 paginated histories and bind the selected evidence to the authenticated pull
@@ -150,9 +151,12 @@ Immediate post-merge recovery is limited to governed `agent/` task branches;
 other integration advances rely on that hourly exact-tip wake.
 
 VOC-114 (VOC-113 recovery metadata-read fix) pins shared-infra merge
-`30cc0a6f443b95e45527b03094767b8357b0a2dc`. All three recovery App mints declare
+`3f4745006cb86eb766913896a20fd399c539c72e`, including the live-proof
+corrections from PRs #137 and #138. All three recovery App mints declare
 Checks read, Commit statuses read, and the Actions write capability already
 needed for allowlisted dispatch (which also covers workflow-run discovery), plus
-the carrier's existing Contents/Pull requests posture. The runner reports
-sanitized endpoint-class failures and stops before dispatch planning, with the
-contract covered by `tests/test_voc114_actions_check_recovery.py`.
+the carrier's existing Contents/Pull requests posture. The runner uses valid
+`gh api` invocation, reports sanitized endpoint-class failures, binds promotion
+dispatch suppression to required contexts, and ignores unrelated checks when
+the three required contexts have succeeded. The contract is covered by
+`tests/test_voc114_actions_check_recovery.py`.

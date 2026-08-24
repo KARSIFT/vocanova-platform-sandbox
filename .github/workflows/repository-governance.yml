@@ -34,6 +34,7 @@ jobs:
         id: shas
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           RECOVERY_PR: ${{ inputs.recovery_pr_number }}
           RECOVERY_TARGET_SHA: ${{ inputs.recovery_target_sha }}
         run: |

@@ -19,6 +19,14 @@ const devopsOperationsPath = path.join(
   repositoryRoot,
   "docs/operations/11-devops-and-ci-cd.md",
 );
+const repositoryGovernancePath = path.join(
+  repositoryRoot,
+  ".github/workflows/repository-governance.yml",
+);
+const governancePolicyPath = path.join(
+  repositoryRoot,
+  ".github/workflows/governance-policy.yml",
+);
 
 function runInfraTests(pattern) {
   const result = spawnSync(
@@ -83,4 +91,15 @@ test("VOC-114 fixture mirror declares recovery mint read scopes", () => {
     "utf8",
   );
   assert.doesNotMatch(runner, /github_metadata_read_failed/);
+});
+
+test("VOC-114 recovery workflows resolve PR metadata before checkout", () => {
+  for (const workflowPath of [repositoryGovernancePath, governancePolicyPath]) {
+    const workflow = readFileSync(workflowPath, "utf8");
+    const resolveStep = workflow
+      .split("- name: Resolve ", 2)[1]
+      .split("\n      - name:", 1)[0];
+    assert.match(resolveStep, /GH_REPO: \$\{\{ github\.repository \}\}/);
+    assert.match(resolveStep, /gh pr view/);
+  }
 });
