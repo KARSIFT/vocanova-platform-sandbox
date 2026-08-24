@@ -63,7 +63,7 @@ on:
         description: "Which reusable workflow to run"
         required: true
         type: choice
-        options: [implement, plan, reconcile, reconcile-release, reconcile-live-evidence, verify-auto-advance-live-evidence, verify-ready-for-review-reuse, verify-remediate-operator-ownership]
+        options: [implement, plan, reconcile, reconcile-release, reconcile-live-evidence, verify-auto-advance-live-evidence, verify-ready-for-review-reuse, verify-remediate-operator-ownership, recover-promotion-pr-checks, verify-promotion-check-recovery, verify-post-promotion-workflow]
         default: implement
       change_id:
         description: 'implement only: adopted package to implement from, e.g. "VOC-007"'
@@ -163,6 +163,10 @@ on:
         type: string
       verify_reuse_proof_head_sha:
         description: "verify-ready-for-review-reuse only: exact evidence-carrier head SHA"
+        required: false
+        type: string
+      promotion_pr_number:
+        description: "VOC-113 recovery/verify only: promotion pull request number"
         required: false
         type: string
 
@@ -670,3 +674,31 @@ jobs:
       task_id: ${{ inputs.task_id }}
       package_path: ${{ inputs.package_path }}
       integration_branch: "develop"
+
+  # VOC-113 recovery dispatch: runs genuine CI for a promotion PR head already
+  # checked out on the integration branch ref. Never fabricates statuses.
+  recover-promotion-pr-checks:
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'recover-promotion-pr-checks'
+    uses: KARSIFT/karsift-ai-infra/.github/workflows/ci.yml@main
+
+  # Read-only post-carrier verifier for VOC-113 promotion exact-head proof.
+  verify-promotion-check-recovery:
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'verify-promotion-check-recovery'
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+    uses: KARSIFT/karsift-ai-infra/.github/workflows/verify-promotion-check-recovery.yml@main
+    with:
+      promotion_pr_number: ${{ inputs.promotion_pr_number }}
+
+  # Read-only post-carrier verifier for VOC-113 post-promotion workflow proof.
+  verify-post-promotion-workflow:
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'verify-post-promotion-workflow'
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+    uses: KARSIFT/karsift-ai-infra/.github/workflows/verify-post-promotion-workflow.yml@main
+    with:
+      promotion_pr_number: ${{ inputs.promotion_pr_number }}

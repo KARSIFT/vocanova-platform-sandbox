@@ -42,7 +42,7 @@ function assertCapturedRevision(evidence) {
   assert.match(evidence.subject_revision, /^[a-f0-9]{40}$/);
   const mode = process.env.VOC112_CAPTURE_PROVENANCE_MODE ?? "local";
   assert.ok(
-    ["local", "pr-ancestry", "squash-safe-push"].includes(mode),
+    ["local", "pr-ancestry", "pr-validation", "squash-safe-push"].includes(mode),
     `unknown capture provenance mode: ${mode}`,
   );
   const subjectLookup = spawnSync(
@@ -69,27 +69,97 @@ function assertCapturedRevision(evidence) {
         "a full local checkout must already contain the captured commit",
       );
     }
-  } else {
-    if (mode !== "squash-safe-push") {
-      execFileSync(
+    if (mode === "pr-validation") {
+      const prBaseSha = process.env.PR_BASE_SHA;
+      const prHeadSha = process.env.PR_HEAD_SHA;
+      assert.match(
+        prBaseSha ?? "",
+        /^[a-f0-9]{40}$/,
+        "post-squash PR validation requires PR_BASE_SHA",
+      );
+      assert.match(
+        prHeadSha ?? "",
+        /^[a-f0-9]{40}$/,
+        "post-squash PR validation requires PR_HEAD_SHA",
+      );
+      const mergeBase = execFileSync(
         "git",
-        ["merge-base", "--is-ancestor", evidence.subject_revision, "HEAD"],
-        { cwd: repositoryRoot },
+        ["merge-base", prBaseSha, prHeadSha],
+        { cwd: repositoryRoot, encoding: "utf8" },
+      ).trim();
+      assert.match(mergeBase, /^[a-f0-9]{40}$/);
+      assert.equal(
+        evidence.source_hashes.navigator_skill_sha256,
+        sha256AtRevision(
+          mergeBase,
+          ".agents/skills/vocanova-repo-navigator/SKILL.md",
+        ),
+        "navigator hash must be anchored in the PR merge base",
+      );
+      assert.equal(
+        evidence.source_hashes.agents_sha256,
+        sha256AtRevision(mergeBase, "AGENTS.md"),
+        "AGENTS.md hash must be anchored in the PR merge base",
       );
     }
-    assert.equal(
-      evidence.source_hashes.navigator_skill_sha256,
-      sha256AtRevision(
-        evidence.subject_revision,
-        ".agents/skills/vocanova-repo-navigator/SKILL.md",
-      ),
-      "navigator hash must bind to the captured revision",
+  } else {
+    const ancestry = spawnSync(
+      "git",
+      ["merge-base", "--is-ancestor", evidence.subject_revision, "HEAD"],
+      { cwd: repositoryRoot },
     );
-    assert.equal(
-      evidence.source_hashes.agents_sha256,
-      sha256AtRevision(evidence.subject_revision, "AGENTS.md"),
-      "AGENTS.md hash must bind to the captured revision",
-    );
+    const ancestryProven = ancestry.status === 0;
+    if (!ancestryProven && mode !== "squash-safe-push") {
+      const prBaseSha = process.env.PR_BASE_SHA;
+      const prHeadSha = process.env.PR_HEAD_SHA;
+      assert.match(
+        prBaseSha ?? "",
+        /^[a-f0-9]{40}$/,
+        "post-squash PR validation requires PR_BASE_SHA",
+      );
+      assert.match(
+        prHeadSha ?? "",
+        /^[a-f0-9]{40}$/,
+        "post-squash PR validation requires PR_HEAD_SHA",
+      );
+      const mergeBase = execFileSync(
+        "git",
+        ["merge-base", prBaseSha, prHeadSha],
+        { cwd: repositoryRoot, encoding: "utf8" },
+      ).trim();
+      assert.match(mergeBase, /^[a-f0-9]{40}$/);
+      assert.equal(
+        evidence.source_hashes.navigator_skill_sha256,
+        sha256AtRevision(
+          mergeBase,
+          ".agents/skills/vocanova-repo-navigator/SKILL.md",
+        ),
+        "navigator hash must be anchored in the PR merge base",
+      );
+      assert.equal(
+        evidence.source_hashes.agents_sha256,
+        sha256AtRevision(mergeBase, "AGENTS.md"),
+        "AGENTS.md hash must be anchored in the PR merge base",
+      );
+    }
+    if (ancestryProven && mode === "pr-ancestry") {
+      // Original capture PR path: ancestry plus captured-revision binding below.
+    }
+    if (ancestryProven && mode !== "squash-safe-push") {
+      assert.equal(
+        evidence.source_hashes.navigator_skill_sha256,
+        sha256AtRevision(
+          evidence.subject_revision,
+          ".agents/skills/vocanova-repo-navigator/SKILL.md",
+        ),
+        "navigator hash must bind to the captured revision",
+      );
+      assert.equal(
+        evidence.source_hashes.agents_sha256,
+        sha256AtRevision(evidence.subject_revision, "AGENTS.md"),
+        "AGENTS.md hash must bind to the captured revision",
+      );
+    }
   }
   assert.equal(
     evidence.source_hashes.navigator_skill_sha256,
@@ -335,10 +405,111 @@ test("VOC-112-TEST-14: operator docs and AGENTS.md preserve one-source precedenc
   assert.match(agents, /Never self-approve/);
   assert.match(governanceWorkflow, /fetch-depth: 0/);
   assert.match(governanceWorkflow, /VOC112_CAPTURE_PROVENANCE_MODE:/);
-  assert.match(governanceWorkflow, /pr-ancestry/);
+  assert.match(governanceWorkflow, /pr-validation/);
   assert.match(governanceWorkflow, /squash-safe-push/);
+  assert.match(governanceWorkflow, /PR_BASE_SHA:/);
+  assert.match(governanceWorkflow, /PR_HEAD_SHA:/);
   assert.match(
     governanceWorkflow,
     /node --test scripts\/foundation\/voc112-navigation-benchmark\.test\.mjs/,
   );
+});
+
+test("VOC-113-TEST-10: tampered merge base fails closed under pr-validation", () => {
+  const evidence = fixture("voc112-navigation-benchmark-traces.json");
+  const headSha = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  }).trim();
+  let wrongBase = "";
+  for (let depth = 1; depth < 50; depth += 1) {
+    const candidate = execFileSync("git", ["rev-parse", `HEAD~${depth}`], {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+    }).trim();
+    if (
+      sha256AtRevision(candidate, "AGENTS.md") !==
+      evidence.source_hashes.agents_sha256
+    ) {
+      wrongBase = candidate;
+      break;
+    }
+  }
+  assert.ok(
+    wrongBase,
+    "need a parent commit with a different agents hash for tampered fixture",
+  );
+  const priorMode = process.env.VOC112_CAPTURE_PROVENANCE_MODE;
+  const priorBase = process.env.PR_BASE_SHA;
+  const priorHead = process.env.PR_HEAD_SHA;
+  process.env.VOC112_CAPTURE_PROVENANCE_MODE = "pr-validation";
+  process.env.PR_BASE_SHA = wrongBase;
+  process.env.PR_HEAD_SHA = headSha;
+  try {
+    assert.throws(
+      () => assertCapturedRevision(evidence),
+      (error) =>
+        error instanceof assert.AssertionError &&
+        /merge base|anchored/.test(error.message),
+    );
+  } finally {
+    if (priorMode === undefined) {
+      delete process.env.VOC112_CAPTURE_PROVENANCE_MODE;
+    } else {
+      process.env.VOC112_CAPTURE_PROVENANCE_MODE = priorMode;
+    }
+    if (priorBase === undefined) {
+      delete process.env.PR_BASE_SHA;
+    } else {
+      process.env.PR_BASE_SHA = priorBase;
+    }
+    if (priorHead === undefined) {
+      delete process.env.PR_HEAD_SHA;
+    } else {
+      process.env.PR_HEAD_SHA = priorHead;
+    }
+  }
+});
+
+test("VOC-113-TEST-10: changed current hash fails closed under pr-validation", () => {
+  const evidence = {
+    ...fixture("voc112-navigation-benchmark-traces.json"),
+    source_hashes: {
+      navigator_skill_sha256: "f".repeat(64),
+      agents_sha256: sha256("AGENTS.md"),
+    },
+  };
+  const headSha = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  }).trim();
+  const baseSha = execFileSync("git", ["rev-parse", "HEAD~1"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  }).trim();
+  const priorMode = process.env.VOC112_CAPTURE_PROVENANCE_MODE;
+  const priorBase = process.env.PR_BASE_SHA;
+  const priorHead = process.env.PR_HEAD_SHA;
+  process.env.VOC112_CAPTURE_PROVENANCE_MODE = "pr-validation";
+  process.env.PR_BASE_SHA = baseSha;
+  process.env.PR_HEAD_SHA = headSha;
+  try {
+    assert.throws(() => assertCapturedRevision(evidence));
+  } finally {
+    if (priorMode === undefined) {
+      delete process.env.VOC112_CAPTURE_PROVENANCE_MODE;
+    } else {
+      process.env.VOC112_CAPTURE_PROVENANCE_MODE = priorMode;
+    }
+    if (priorBase === undefined) {
+      delete process.env.PR_BASE_SHA;
+    } else {
+      process.env.PR_BASE_SHA = priorBase;
+    }
+    if (priorHead === undefined) {
+      delete process.env.PR_HEAD_SHA;
+    } else {
+      process.env.PR_HEAD_SHA = priorHead;
+    }
+  }
 });

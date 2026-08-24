@@ -120,3 +120,6 @@ green logical set must stabilize on one unchanged head before exact-SHA merge.
 The merge-gate App credential contract names both authoritative completion
 actions: publish the immutable task marker, then close the linked task so the
 release observer receives its authenticated wake-up events.
+Close/reopen or draft/ready transitions on a promotion pull request do not
+recover missing required checks; VOC-113 recovery dispatches genuine allowlisted
+workflows for the exact SHA with a bounded 1800-second fail-closed wait.
