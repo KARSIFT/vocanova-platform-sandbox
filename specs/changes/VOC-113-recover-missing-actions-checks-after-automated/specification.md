@@ -146,6 +146,14 @@ the reviewed head. A non-ancestor capture that is not anchored in the merge base
 or whose current hash changed, fails closed. T00 adds deterministic original-PR,
 post-squash-next-PR, tampered-base, and changed-current fixtures.
 
+`VOC-113-D12`: T00 also adds a read-only
+`verify-post-promotion-workflow` dispatch action with job display name
+`verify-post-promotion-workflow / verify`. Given allowlisted promotion PR #947,
+it resolves the PR's merged result SHA and verifies the expected post-promotion
+workflow and job succeeded for that exact SHA. It reads Actions/PR metadata only,
+does not dispatch a deploy, and binds its own successful run to the T02 carrier
+through `exact_pr_head`.
+
 ## Data, migrations, analytics, and accessibility
 
 None. Governance-automation recovery only; no database, product analytics, or UI

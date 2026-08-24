@@ -92,10 +92,12 @@ fabrication.
 - Evidence: `VOC-113-EV-02`
 - Result: pending
 
-After #947 merges to `main`, operator-owned live evidence confirms the expected
-post-promotion workflows ran for the promotion result SHA (at minimum the
-repository's normal `main` push path such as `deploy-production` when selected).
-Issue #948 / this remediation closes only after that evidence is recorded.
+After #947 merges to `main`, operator-owned live evidence from
+`verify-post-promotion-workflow / verify` confirms the expected post-promotion
+workflow ran for #947's exact merge-result SHA (at minimum the repository's
+normal `main` push path such as `deploy-production` when selected). The verifier
+run is itself bound to the exact T02 carrier head. Issue #948 / this remediation
+closes only after that evidence is recorded.
 
 ## VOC-113-AC-07 — Provenance validation accepts later PRs without trusting discarded history
 

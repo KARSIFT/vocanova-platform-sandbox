@@ -29,6 +29,7 @@
 | `.github/workflows/repository-governance.yml` | modify | Supply exact pull-request merge-base context to strict provenance validation |
 | `scripts/foundation/voc112-navigation-benchmark.test.mjs` + fixtures | modify | Original ancestry or accepted-squash merge-base anchoring; strict negative cases |
 | Shared/caller verify reusable workflow (if split like VOC-104) | create | Read-only promotion exact-head check verification |
+| Caller post-promotion verifier | create/modify | Resolve #947 merge result and verify expected exact-SHA workflow metadata (`VOC-113-D12`) |
 | `scripts/foundation/voc113-*.test.mjs` | create if caller contract needs it | Mirror infra invariants + verify job naming |
 | karsift-ai-infra README; AGENTS.md / ops docs | modify when claims become false | Document recovery + timeout; do not claim close/reopen recovers checks |
 
@@ -47,12 +48,14 @@ Ordered steps:
    (`VOC-113-D07`).
 7. Add read-only `verify-promotion-check-recovery` dispatch + job display name
    contract (`VOC-113-D10`) for T01 live evidence.
-8. Update docs whose current claims would become false; record that caller
+8. Add read-only `verify-post-promotion-workflow` dispatch + job display name
+   contract (`VOC-113-D12`) for T02 live evidence.
+9. Update docs whose current claims would become false; record that caller
    consumes `@main` (reconcile pin only if reality differs).
-9. Repair the post-squash-next-PR provenance regression per `VOC-113-D11` and
+10. Repair the post-squash-next-PR provenance regression per `VOC-113-D11` and
    exercise original ancestry, accepted merge-base anchoring, tampered base, and
    changed-current cases.
-10. Run applicable validation; record results in `t00-evidence.md`.
+11. Run applicable validation; record results in `t00-evidence.md`.
 
 ### T01 — Recover and complete promotion PR #947 after genuine exact-head checks
 

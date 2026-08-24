@@ -104,8 +104,10 @@
 - Covers: `VOC-113-AC-06`
 - Preconditions: T01 complete (PR #947 merged); operator-owned contract
   `.karsift/live-evidence/VOC-113-T02.yaml`
-- Procedure: Resolve promotion result SHA on `main`; confirm expected
-  post-promotion workflow run(s) for that SHA; read `t02-evidence.md`.
+- Procedure: Dispatch `verify-post-promotion-workflow` on the exact T02 carrier;
+  assert it resolves PR #947's merge-result SHA and confirms the allowlisted
+  post-promotion workflow/job succeeded for that exact SHA; read
+  `t02-evidence.md`.
 - Expected result: Post-promotion evidence complete before remediation closure
 - Evidence: `VOC-113-EV-02`
 

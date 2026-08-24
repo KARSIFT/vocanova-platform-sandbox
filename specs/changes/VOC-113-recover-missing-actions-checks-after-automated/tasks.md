@@ -14,7 +14,7 @@ KARSIFT/vocanova-platform-sandbox#<task>` and MUST NOT use a closing keyword.
 
 ## VOC-113-T00 — Diagnose missing-run behavior; implement durable recovery, tests, and docs
 
-- Requirement source: issue #948; `VOC-113-D00`–`D07`, `VOC-113-D09`–`D11`
+- Requirement source: issue #948; `VOC-113-D00`–`D07`, `VOC-113-D09`–`D12`
 - Acceptance criteria: `VOC-113-AC-00` through `VOC-113-AC-04`, `VOC-113-AC-07`
 - Tests: `VOC-113-TEST-00` through `VOC-113-TEST-07`, `VOC-113-TEST-10`
 - Evidence: `VOC-113-EV-00` (`t00-evidence.md` in this package directory)
@@ -55,6 +55,8 @@ KARSIFT/vocanova-platform-sandbox#<task>` and MUST NOT use a closing keyword.
    metadata only, produces job display name
    `verify-promotion-check-recovery / verify`, never merges, never fabricates
    statuses, and receives no model keys, deploy secrets, or application secrets.
+   Its workflow input is `promotion_pr_number`; the T01 contract binds it to
+   fixture PR #947 and the deterministic T01 carrier branch.
 10. Update karsift-ai-infra README and calling-repo docs (AGENTS.md and/or ops
     docs) only where current claims would become false — in particular, do not
     leave text implying close/reopen or draft/ready recovers missing checks.
@@ -64,7 +66,11 @@ KARSIFT/vocanova-platform-sandbox#<task>` and MUST NOT use a closing keyword.
 12. Repair the VOC-112 capture-provenance gate per `VOC-113-D11`. Preserve strict
     original-capture ancestry, add merge-base anchoring for later post-squash PRs,
     and fail closed on an unanchored capture or any base/current hash mismatch.
-13. Run applicable commands and record results in `t00-evidence.md`:
+13. Add the read-only `verify-post-promotion-workflow` action from
+    `VOC-113-D12`. It accepts `promotion_pr_number`, resolves the merged result,
+    verifies the expected workflow/job on that exact SHA, and never dispatches
+    deployment or reads logs.
+14. Run applicable commands and record results in `t00-evidence.md`:
     - infra policy / self-ci tests added or updated by this task;
     - caller `node --test scripts/foundation/voc113-*.test.mjs` when present;
     - `node --test scripts/foundation/voc112-navigation-benchmark.test.mjs` in
@@ -134,7 +140,8 @@ KARSIFT/vocanova-platform-sandbox#<task>` and MUST NOT use a closing keyword.
    operator-owned repository metadata only.
 2. Confirm expected post-promotion workflows ran for that SHA — at minimum the
    repository's normal `main` push path (for example `deploy-production` when
-   selected by existing policy). Record allowlisted run metadata only.
+   selected by existing policy). Record allowlisted run metadata only, then
+   dispatch the D12 read-only verifier on the exact T02 carrier head.
 3. Close issue #948 / this remediation only after that live evidence is complete.
    Issue closure is a wake-up/visibility signal, not completion proof by itself.
 4. Acceptance requires **operator-owned live evidence** per

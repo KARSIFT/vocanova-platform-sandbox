@@ -10,7 +10,7 @@ job_names:
   - verify-promotion-check-recovery / verify
 events:
   - workflow_dispatch
-branch: develop
+branch: agent/voc-113-voc-113-t01
 sha_lineage:
   mode: exact_pr_head
 conclusion: success
@@ -19,6 +19,4 @@ dispatch:
   workflow_file: pipeline.yml
   inputs:
     action: verify-promotion-check-recovery
-    # T00 must declare a matching workflow_dispatch input (for example
-    # promotion_pr_number) for the live fixture PR #947. Do not invent
-    # undeclared inputs here beyond what T00 wires into pipeline.yml.
+    promotion_pr_number: "947"
