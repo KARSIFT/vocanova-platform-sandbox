@@ -95,10 +95,10 @@ jobs:
         run: |
           set -euo pipefail
           mode=squash-safe-push
-          if [ "$EVENT_KIND" = "pull_request" ]; then
+          if [ "$EVENT_KIND" = "pull_request" ] && \
+            [ "$WORKFLOW_EVENT" = "pull_request" ]; then
             mode=pr-validation
-            if [ "$WORKFLOW_EVENT" = "pull_request" ] && \
-              ! git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- \
+            if ! git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- \
               scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json; then
               mode=pr-ancestry
             fi
