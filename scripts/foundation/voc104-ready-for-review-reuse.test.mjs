@@ -149,10 +149,7 @@ test("VOC-104-TEST-12: verifier is read-only and contract-bound", () => {
   assert.match(mergeGate, /Publish immutable reuse transition attestation/);
   assert.match(mergeGate, /policy_sha:/);
   assert.doesNotMatch(pipeline, /verify_reuse_proof_head_sha:/);
-  assert.match(
-    pipeline,
-    /expected_proof_head_sha: \$\{\{ github\.sha \}\}/,
-  );
+  assert.match(pipeline, /expected_proof_head_sha: \$\{\{ github\.sha \}\}/);
   assert.match(contract, /verify-ready-for-review-reuse \/ verify/);
   assert.match(contract, /exact_pr_head/);
   assert.match(contract, /workflow_dispatch/);
