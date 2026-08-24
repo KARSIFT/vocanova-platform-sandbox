@@ -48,7 +48,7 @@ declared workflow dispatches.
 
 | Path                             | Behavior                                                                                                                                                                                                                |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Task merge → integration SHA     | `merge-gate.yml` runs `actions-check-recovery-runner.py` after App merge for agent task PRs; dispatches `repository-governance.yml` and the full `deploy-staging.yml` workflow when push workflows are absent           |
+| Task merge → integration SHA     | `merge-gate.yml` runs `actions-check-recovery-runner.py` after App merge for agent task PRs; always recovers `repository-governance.yml`, and recovers full `deploy-staging.yml` only when the merged paths match the VOC-111 deploy selector |
 | Promotion PR / reconcile-release | `release.yml` runs the same runner in `promotion_pr` mode before authoritative gate selection; dispatches `governance-policy.yml`, `repository-governance.yml`, and `pipeline.yml` action `recover-promotion-pr-checks` |
 | Bounded wait                     | **1800 seconds** (30 minutes), poll interval 30 seconds; timeout fails closed with sanitized diagnostics naming mode, SHA, missing contexts, and pending/failed counts                                                  |
 | Read-only verifiers              | `verify-promotion-check-recovery / verify` (T01) and `verify-post-promotion-workflow / verify` (T02) validate Actions/PR metadata only                                                                                  |
@@ -154,6 +154,9 @@ promotion verifier sanitizes status-API failures, and the hourly wake performs
 a read-only exact-head preflight before invoking the reusable recovery. Shared
 PR #130 passed 231 policy tests and all four hosted checks; its `main` merge
 commit is `a4899e17fc9eab6e37ea802fce129ea30634e8c3`.
+Shared PR #131 synchronized the canonical template's operator comment with the
+path-aware behavior; all 231 policy tests and four hosted checks passed. Its
+`main` merge commit is `255678b41fb29b27c42d4632f807b42682c29430`.
 
 ## VOC-112 provenance repair (`VOC-113-D11`)
 
