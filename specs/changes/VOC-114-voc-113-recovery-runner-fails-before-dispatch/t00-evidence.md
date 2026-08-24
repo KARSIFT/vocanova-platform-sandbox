@@ -64,8 +64,8 @@ The primary implementation merged in `KARSIFT/karsift-ai-infra#136` from
 reviewed head `72b3742f41bed1e7306b9dccc20a700a2bc467ec` as immutable merge
 `30cc0a6f443b95e45527b03094767b8357b0a2dc`. Live T01 execution then exposed
 adjacent causal defects in the same recovery mechanism. Those corrections
-merged as source PRs #137 through #141, culminating in immutable merge
-`4c0395aff2a4599160308f7f37c593b75c7394b6`. The caller fixture is synchronized
+merged as source PRs #137 through #142, culminating in immutable merge
+`bdc6736568827103b48255521f4bc83d5103bd3b`. The caller fixture is synchronized
 to that final source merge and `PINNED_SHA.txt` advances to the same SHA.
 
 | Target | Change |
@@ -74,7 +74,7 @@ to that final source merge and `PINNED_SHA.txt` advances to the same SHA.
 | `.github/workflows/merge-gate.yml` | App mint explicitly preserves Contents/Issues/Pull requests/Actions write and adds Checks read plus Commit statuses read |
 | `.github/workflows/release.yml` | Same complete read/write contract on the converge recovery token |
 | `.github/workflows/recover-actions-checks.yml` | App mint requests Actions write exactly once, Checks read, Commit statuses read, Contents read, and Pull requests read; hosted verification uses valid repository context |
-| Source PRs #137–#141 | Removed invalid `gh api --repo` use in recovery/verification, bound promotion suppression and completion to required contexts, replaced incompatible paginated `gh api --slurp --jq` usage with standalone `jq`, and added a bounded caller `recover-integration-push` dispatch whose target is the internally resolved current `develop` head rather than a free-form SHA |
+| Source PRs #137–#142 | Removed invalid `gh api --repo` use in recovery/verification, bound promotion suppression, completion, and final verification to required contexts, replaced incompatible paginated `gh api --slurp --jq` usage with standalone `jq`, and added a bounded caller `recover-integration-push` dispatch whose target is the internally resolved current `develop` head rather than a free-form SHA |
 | `tests/test_voc114_actions_check_recovery.py` and caller tests | Deterministic coverage includes both positive modes, complete and omitted mint contracts, duplicate input rejection, endpoint classes, no planning/dispatch after read failure, required-context filtering, hosted verifier CLI contracts, exact target resolution, and fixture pin assertions |
 | `README.md` (shared + fixture) | Documents recovery metadata read contract and sanitized endpoint classes |
 | `docs/operations/11-devops-and-ci-cd.md` | Documents caller-facing recovery App read contract, endpoint classes, and bounded operator integration recovery |
@@ -96,11 +96,11 @@ git diff --check
 self-ci: actionlint, shellcheck, yaml-parse, policy-tests
   → all passed before merge 30cc0a6f443b95e45527b03094767b8357b0a2dc
 
-# karsift-ai-infra final corrective merge 4c0395aff2a4599160308f7f37c593b75c7394b6
+# karsift-ai-infra final corrective merge bdc6736568827103b48255521f4bc83d5103bd3b
 PYTHONPATH=config python3 -m unittest discover -s tests -p 'test_*.py' -v
-  → Ran 259 tests — OK
+  → Ran 260 tests — OK
 actionlint; shellcheck; YAML parse; policy tests; git diff --check
-  → all passed across source PRs #137–#141
+  → all passed across source PRs #137–#142
 
 # caller fixture mirror (authoritative for this PR)
 PYTHONPATH=config python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*voc114*'
@@ -118,7 +118,7 @@ node --test scripts/foundation/voc097-fixture-matrix.test.mjs \
 PYTHONPATH=tooling/governance/fixtures/karsift-ai-infra/config \
   python3 -m unittest discover \
   -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'
-  → Ran 175 tests — OK
+  → Ran 176 tests — OK
 PYTHONPATH=tooling/governance/tests python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'
   → 160 tests — OK
 bash scripts/governance/validate-governance.sh
@@ -133,9 +133,9 @@ git diff --check
 
 The source dependency is satisfied by merged PRs
 `https://github.com/KARSIFT/karsift-ai-infra/pull/136` through
-`https://github.com/KARSIFT/karsift-ai-infra/pull/141`. The authoritative final
+`https://github.com/KARSIFT/karsift-ai-infra/pull/142`. The authoritative final
 source revision and caller fixture pin are both
-`4c0395aff2a4599160308f7f37c593b75c7394b6`. T01 still waits for this caller
+`bdc6736568827103b48255521f4bc83d5103bd3b`. T01 still waits for this caller
 task PR to merge so its evidence-only carrier can execute the trusted pinned
 template revision.
 
