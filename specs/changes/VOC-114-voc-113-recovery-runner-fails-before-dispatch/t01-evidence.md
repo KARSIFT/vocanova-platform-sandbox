@@ -1,10 +1,122 @@
-# VOC-114-T01 — Evidence (pending operator live evidence)
+# VOC-114-T01 — Operator live recovery evidence
 
-Deterministic evidence carrier created by auto-advance (VOC-102).
-No implementer run was started for this operator-owned task.
+Date: `2026-08-24`
 
-Package: `specs/changes/VOC-114-voc-113-recovery-runner-fails-before-dispatch`
-Change: `VOC-114`
+This record contains allowlisted metadata only. No Actions logs, credentials,
+token values, or application data are included. Auto-advance created draft
+carrier PR `#969`; no implementer run was started for this operator-owned task.
 
-Record allowlisted metadata only when operator evidence is available.
-See docs/operations/live-evidence.md.
+## Exact identities
+
+- Evidence carrier: PR `#969`, branch
+  `agent/voc-114-voc-114-t01`.
+- Integration and promotion head: `c718f6b49ad6a9a4f1d26eb4319347f6220a8d54`.
+- Promotion PR: `#947`, `develop` → `main`, open and mergeable when observed.
+- T00 shared-infra baseline: PR `#136`, reviewed head
+  `72b3742d5cd3ed1561534908d34286869befbe53`, merge
+  `30cc0a6f443b95e45527b03094767b8357b0a2dc`.
+- T00 caller baseline: PR `#961`, reviewed head
+  `675cb8448f33f9226e1eb0b874a4e4407d1d321a`, merge
+  `c718f6b49ad6a9a4f1d26eb4319347f6220a8d54`.
+
+## Live-proof corrections kept in the same outcome
+
+Hosted proof exposed additional defects that were causal to this exact recovery
+outcome. They were corrected under VOC-114 rather than split into new plans or
+tasks:
+
+- shared-infra PR `#137`: reviewed head
+  `227ab75db1aef59e9ef1ec2cb64ffcd880652823`, merge
+  `053ad6f396113b306822d749ae8db26194a00ec6`; removed unsupported `--repo`
+  from the recovery runner's `gh api` calls;
+- shared-infra PR `#138`: reviewed head
+  `7fa9a328e332628c0162aefc6a247e500c001929`, merge
+  `3f4745006cb86eb766913896a20fd399c539c72e`; bound promotion suppression
+  to required contexts and made completion independent of unrelated checks;
+- shared-infra PR `#139`: reviewed head
+  `b5f3847826f59b3890679009ebd42c93dc90a117`, merge
+  `2562b5463248308f285c35cf26aa838e2d3215e2`; corrected both hosted
+  verifier adapters to use valid `gh api` repository context;
+- shared-infra PR `#140`: reviewed head
+  `4af16640091099821befec2df8497c4c5ed73f71`, merge
+  `da61963aeaa0e566e499e63139132cbe86c3cd6b`; exposed the existing
+  integration resolver/recovery pair to bounded operator dispatch without a
+  free-form target SHA;
+- shared-infra PR `#141`: reviewed head
+  `37fadcaf7c10b1b73ee0463d31a7310c0d2985d4`, merge
+  `4c0395aff2a4599160308f7f37c593b75c7394b6`; corrected the resolver's
+  invalid `gh api --slurp --jq` combination.
+
+The caller fixture is pinned to shared-infra merge
+`4c0395aff2a4599160308f7f37c593b75c7394b6`. The caller recovery workflows
+also set repository context before their pre-checkout PR reads.
+
+## Integration-push proof
+
+Operator workflow-dispatch run `32715579496` ran on carrier head
+`a58f654ff0d8c629146080184b0d9750ab95f45c` and resolved the current
+`develop` head internally; the operator supplied no target SHA.
+
+- `resolve-integration-recovery-target`, job `97395972560`: `success`;
+- `recover-integration-push / recover`, job `97396003037`: `success`;
+- App token mint step: `success`;
+- exact-SHA recovery step: `success`;
+- observed integration SHA:
+  `c718f6b49ad6a9a4f1d26eb4319347f6220a8d54`.
+
+The recovery preflight observed the already-successful genuine workflow evidence
+for that exact head and completed without fabricating a status. This is the
+intended idempotent no-op result after the required integration workflows are
+already green.
+
+## Promotion recovery and authoritative selection
+
+Operator reconcile run `32714169687` completed successfully:
+
+- release identify job `97391797255`: `success`;
+- release converge job `97391833289`: `success`;
+- App-backed recovery step: `success`;
+- authoritative promotion-check selection step: `success`.
+
+The newest authoritative genuine GitHub Actions checks selected for promotion
+head `c718f6b49ad6a9a4f1d26eb4319347f6220a8d54` were:
+
+- `governance-policy`, check/job `97386188937`: `success`;
+- `validate`, check/job `97391497933`: `success`;
+- `ci / ci`, check/job `97386226716`: `success`.
+
+Earlier failed `validate` attempts remain visible as history and were not
+rewritten. The authoritative selector chose the newer successful exact-head
+attempt. PR `#947` remained open and mergeable; no manual merge or synthetic
+status was performed.
+
+## Sanitized intermediate findings
+
+- run `32712323463`: recovery stopped with the sanitized metadata-read failure
+  before the invalid `gh api --repo` correction;
+- run `32713089936`: cancelled after promotion dispatch suppression waited on
+  its own recovery workflow rather than the required context;
+- run `32713755797`, job `97390553833`: `validate` failed because pre-checkout
+  PR resolution lacked repository context;
+- verifier run `32714394902`, job `97392466710`: failed in the read-only verify
+  step before the hosted verifier CLI correction;
+- integration run `32715323592`, resolver job `97395209442`: failed before
+  recovery because `gh api` rejects combined `--slurp` and `--jq` flags.
+
+Each failure remained fail-closed and produced no fabricated check or manual
+promotion merge.
+
+## Deterministic validation
+
+- shared-infra focused VOC-113/VOC-114 suite: `47` tests, pass;
+- shared-infra full suite after the final correction: `259` tests, pass;
+- caller focused Node recovery/pin/policy suite: `25` tests, pass;
+- pinned shared-infra fixture suite: `175` tests, pass;
+- caller governance suite: `160` tests, pass;
+- repository governance validation: pass;
+- `git diff --check`: pass.
+
+The contract-bound `verify-promotion-check-recovery / verify` dispatch is made
+after this evidence commit so GitHub can bind the run to the carrier's exact PR
+head. Its final run metadata is intentionally external to this self-referential
+file and is consumed by `.karsift/live-evidence/VOC-114-T01.yaml`.
