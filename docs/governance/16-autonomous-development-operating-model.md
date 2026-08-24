@@ -144,10 +144,12 @@ evidence, and risk.
 
 ### Package and task defaults
 
-A coherent objective normally maps to one change package. A new package normally maps
-to one end-to-end implementation task unless a concrete split boundary from the
-operating model requires more. Size labels, file counts, component counts, and
-code-vs-tests-vs-docs boundaries are review signals, not automatic split rules.
+Choose the largest safe coherent package that completes the full user or business
+outcome. A plan may be broad or massive and contain several tasks, but it must use
+the minimum sufficient number of maximal tasks. One end-to-end implementation task
+and pull request remains the default whenever technically possible. Size labels,
+file/component/skill counts, and code-vs-tests-vs-docs boundaries are review signals,
+not automatic split rules.
 
 ### In-scope causal remediation
 

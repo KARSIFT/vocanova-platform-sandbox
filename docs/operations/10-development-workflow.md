@@ -93,10 +93,11 @@ production history → Releases/deployments.
 
 Priorities P0 (critical: outage, data loss, active security incident) through P3 (post-MVP
 polish); most planned work is P2. Sizes XS/S/M/L are reviewability signals for humans and
-planners — they do not automatically command package, task, or pull-request splitting. A
-coherent objective normally maps to one change package and one end-to-end implementation task
-unless a concrete merge-order, rollback, authority/risk, execution-environment, evidence, or
-reliable-review boundary requires otherwise.
+planners — they do not automatically command package, task, or pull-request splitting. Choose
+the largest safe coherent package for the full outcome. A broad plan may contain several tasks,
+but it must use the minimum sufficient number of maximal tasks; one end-to-end task and PR is
+the default unless a concrete merge-order, rollback, authority/risk, execution-environment,
+post-merge-evidence, or demonstrated reviewability boundary makes combined delivery unsafe.
 
 ## 5. Definition of Ready / Definition of Done
 
@@ -115,8 +116,9 @@ additionally required for release work).
 
 One coherent outcome per PR; unrelated work becomes a separate issue. Preferred size is
 100–500 meaningful changed lines (under 200 for fixes). Larger diffs are review signals, not
-automatic split commands — split only when a concrete outcome, rollback, risk, or reviewability
-boundary genuinely requires separate carriers. Conventional Commits
+automatic split commands — split only when a concrete authority, independent-release, rollback,
+hard-dependency, ownership, environment, post-merge-evidence, or demonstrated reviewability
+boundary makes the largest coherent carrier unsafe. Conventional Commits
 (`feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `build`, `ci`, `perf`, `security`, `revert`); no
 AI agent names in commit messages. PR body must cover: summary, linked issue, requirement sources,
 scope, implementation, acceptance criteria, testing performed, security/database/API/environment

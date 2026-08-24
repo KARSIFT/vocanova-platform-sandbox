@@ -17,8 +17,8 @@ or complete CI logs.
 - `docs/operations/15-ai-native-product-and-engineering-operating-model.md` — replaced
   seven-task authentication example with one end-to-end task; documented split-reason
   allowlist and exceptional >3-task packages.
-- `docs/governance/16-autonomous-development-operating-model.md` — one-package/one-task
-  default and bounded in-scope causal remediation.
+- `docs/governance/16-autonomous-development-operating-model.md` — largest-safe-coherent
+  package, minimum-sufficient maximal tasks, and bounded in-scope causal remediation.
 - `docs/templates/change-specification.md` — task IDs as minimum-sufficient outcome
   groupings; default `T00`.
 - `specs/templates/change-package/tasks.md` — one-task default, split-reason rules,
@@ -26,8 +26,10 @@ or complete CI logs.
 
 ### Shared infra primary source (`KARSIFT/karsift-ai-infra`, same T00)
 
-- `prompts/plan.md` — one-task default and explicit split-reason allowlist.
+- `prompts/plan.md` — largest-safe-coherent unit, maximal-task default, and split allowlist.
 - `prompts/plan-review.md` — multi-task scrutiny, split reasons, causal-remediation boundary.
+- `prompts/implement.md` and `prompts/review.md` — keep causally related implementation,
+  tests, docs, configuration, contracts, and evidence together in the named task.
 - `config/package_task_policy.py` — deterministic parser/validator.
 - `config/package-task-policy-runner.py` — CLI used by workflows/tests.
 - `.github/workflows/plan.yml` — planner retry loop enforces task policy after YAML parse.
@@ -45,12 +47,13 @@ packages are not retroactively rejected at adoption time.
 
 ## Adopted policy wording (summary)
 
-- **Default:** one coherent objective → one package → one end-to-end implementation task →
-  one outcome-sized implementation PR per repository when possible.
+- **Default:** choose the largest safe coherent package for the complete outcome. A broad or
+  massive plan may contain several tasks, but it uses the minimum sufficient number of maximal
+  tasks; one end-to-end task and implementation PR remains the default when possible.
 - **Task IDs:** minimum-sufficient outcome traceability groupings; not component/file/layer/skill
   buckets.
 - **Stay together by default:** code, tests, docs, migration/config, and same-carrier evidence.
-- **Allowed split reasons (tasks after the first):**
+- **Allowed split reasons (tasks after the first, with a concrete explanation):**
   `merge-order-dependency`, `independently-releasable-unit`,
   `distinct-owner-authority-risk-boundary`, `mutually-exclusive-execution-environment`,
   `post-merge-evidence-not-in-carrier`, `single-pr-review-size-boundary` (requires concrete
@@ -73,14 +76,13 @@ packages are not retroactively rejected at adoption time.
 
 | Item | Value |
 |------|-------|
-| Coordinated infra source | `karsift-ai-infra/` in this T00 working tree |
+| Coordinated infra source | `KARSIFT/karsift-ai-infra` PRs #134 and #135 under this T00 |
 | Caller fixture directory | `tooling/governance/fixtures/karsift-ai-infra/` |
 | Prior pin | `d3108dfdef34e2f98c028916e95c36130d329132` |
-| New pin | pending exact reviewed `KARSIFT/karsift-ai-infra` merge for this T00 |
+| New pin | `3fd40f52aba602fab8399482bc5b772731675d1a` |
 
-The caller fixture content is synchronized to the primary infra changes in this task. Update
-`PINNED_SHA.txt` to the exact reviewed shared-infra merge SHA when that carrier lands; runtime
-callers continue to `uses:` `KARSIFT/karsift-ai-infra/...@main`.
+The caller fixture content is synchronized to the exact final shared-infra merge SHA in
+`PINNED_SHA.txt`; runtime callers continue to `uses:` `KARSIFT/karsift-ai-infra/...@main`.
 
 ## Validation commands
 
@@ -88,9 +90,9 @@ callers continue to `uses:` `KARSIFT/karsift-ai-infra/...@main`.
 |---------|--------|-------|
 | `bash scripts/governance/validate-governance.sh` | pass | Repository foundation + monitoring declarations |
 | `bash scripts/governance/classify-change-risk.sh` | pass | Detected path floor `R4` |
-| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pass | 156 tests |
-| `python3 -m unittest discover -s tooling/governance/tests -p 'test_voc115*.py'` | pass | 10 tests |
-| `python3 -m unittest discover -s tests -p 'test_*.py'` in `karsift-ai-infra` | pass | 240 tests |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pass | 158 tests |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_voc115*.py'` | pass | 12 tests |
+| `python3 -m unittest discover -s tests -p 'test_*.py'` in `KARSIFT/karsift-ai-infra` | pass | 242 tests on merge source |
 | `git diff --check` | pass | No whitespace or patch-format errors |
 
 ## Acceptance mapping

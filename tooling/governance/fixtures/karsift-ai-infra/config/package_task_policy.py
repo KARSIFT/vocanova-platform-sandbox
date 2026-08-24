@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic package task roster policy (VOC-115)."""
+"""Deterministic largest-safe-coherent task policy (VOC-115)."""
 
 from __future__ import annotations
 
@@ -72,7 +72,8 @@ MULTI_TASK_JUSTIFICATION_HEADING = re.compile(
     re.MULTILINE | re.IGNORECASE,
 )
 CHANGE_ID_RE = re.compile(r"^([A-Z][A-Z0-9]*-\d+)-", re.IGNORECASE)
-REVIEW_SIZE_EXPLANATION_MIN_LEN = 30
+SPLIT_EXPLANATION_MIN_LEN = 20
+REVIEW_SIZE_EXPLANATION_MIN_LEN = 40
 MULTI_TASK_JUSTIFICATION_MIN_LEN = 40
 EXCEPTIONAL_TASK_COUNT = 3
 
@@ -110,23 +111,16 @@ def parse_task_sections(tasks_md: str, change_id: str) -> list[TaskSection]:
         start = match.end()
         end = headings[index + 1].start() if index + 1 < len(headings) else len(tasks_md)
         body = tasks_md[start:end]
-        split_reason = None
-        split_explanation = None
         reason_matches = list(SPLIT_REASON_LINE_RE.finditer(body))
-        if reason_matches:
-            if len(reason_matches) != 1:
-                raise PackageTaskPolicyError(
-                    "duplicate_split_reason", task_id
-                )
-            slug = reason_matches[0].group(1).lower()
-            split_reason = slug
-            split_explanation = (reason_matches[0].group(2) or "").strip() or None
+        if len(reason_matches) > 1:
+            raise PackageTaskPolicyError("duplicate_split_reason", task_id)
+        reason = reason_matches[0] if reason_matches else None
         sections.append(
             TaskSection(
                 task_id=task_id,
                 body=body,
-                split_reason=split_reason,
-                split_explanation=split_explanation,
+                split_reason=reason.group(1).lower() if reason else None,
+                split_explanation=((reason.group(2) or "").strip() or None) if reason else None,
             )
         )
 
@@ -153,19 +147,18 @@ def package_level_multi_task_justification(tasks_md: str) -> str | None:
 def _validate_split_reason(section: TaskSection) -> None:
     if section.split_reason is None:
         raise PackageTaskPolicyError("missing_split_reason", section.task_id)
-
-    slug = section.split_reason.lower()
-    if slug in INVALID_SPLIT_REASON_SLUGS:
+    if section.split_reason in INVALID_SPLIT_REASON_SLUGS:
         raise PackageTaskPolicyError("invalid_split_reason_slug", section.task_id)
-    if slug not in ALLOWED_SPLIT_REASONS:
+    if section.split_reason not in ALLOWED_SPLIT_REASONS:
         raise PackageTaskPolicyError("unknown_split_reason", section.task_id)
-    if slug == "single-pr-review-size-boundary":
-        explanation = (section.split_explanation or "").strip()
-        if len(explanation) < REVIEW_SIZE_EXPLANATION_MIN_LEN:
-            raise PackageTaskPolicyError(
-                "review_size_boundary_requires_explanation",
-                section.task_id,
-            )
+    explanation = (section.split_explanation or "").strip()
+    minimum = (
+        REVIEW_SIZE_EXPLANATION_MIN_LEN
+        if section.split_reason == "single-pr-review-size-boundary"
+        else SPLIT_EXPLANATION_MIN_LEN
+    )
+    if len(explanation) < minimum:
+        raise PackageTaskPolicyError("split_reason_requires_explanation", section.task_id)
 
 
 def validate_package_tasks(tasks_md: str, change_id: str) -> list[TaskSection]:
@@ -173,9 +166,7 @@ def validate_package_tasks(tasks_md: str, change_id: str) -> list[TaskSection]:
     for index, section in enumerate(sections):
         if index == 0:
             if section.split_reason is not None:
-                raise PackageTaskPolicyError(
-                    "first_task_must_not_split", section.task_id
-                )
+                raise PackageTaskPolicyError("first_task_must_not_split", section.task_id)
             continue
         _validate_split_reason(section)
 
@@ -183,7 +174,6 @@ def validate_package_tasks(tasks_md: str, change_id: str) -> list[TaskSection]:
         justification = package_level_multi_task_justification(tasks_md)
         if not justification or len(justification) < MULTI_TASK_JUSTIFICATION_MIN_LEN:
             raise PackageTaskPolicyError("missing_multi_task_justification")
-
     return sections
 
 

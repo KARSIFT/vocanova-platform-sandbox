@@ -97,6 +97,19 @@ trigger autonomous adoption without a founder `approved` comment (after A-004
 activation; infra behavior lands in VOC-080-T01/T02). See `plan-review.yml`'s header
 comment in karsift-ai-infra for the full mechanism.
 
+### Largest safe coherent plans and tasks
+
+Choose the largest safe coherent change package that completes the whole user or
+business outcome. A plan may be broad or massive and contain several tasks, but it
+must use the minimum sufficient number of maximal tasks. Default to one end-to-end
+task and one implementation PR whenever technically possible, keeping related code,
+contracts, tests, docs, configuration, migrations, skills, and rollback evidence
+together. Split only for a concretely explained authority/owner, independent release
+or rollback, hard dependency, environment, post-merge evidence, or demonstrated
+reviewability boundary. Line, file, component, skill, repository, and layer counts,
+or convenience, are never sufficient split reasons. This does not authorize mixing
+unrelated outcomes or weakening risk, security, exact-SHA review, or protected checks.
+
 ## Reporting a bug found outside the normal loop
 
 - If you (a human operator or an agent) discover a real bug while doing something

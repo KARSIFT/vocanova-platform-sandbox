@@ -60,45 +60,32 @@ content grounded in the request - not the template's own placeholder text
 genuinely unknown, say so explicitly as an open question; don't invent a
 plausible-sounding answer to make the package look complete.
 
-Default to **one coherent objective per package** and **one end-to-end
-implementation task** unless a concrete split boundary genuinely requires more.
-A normal coherent feature, bug, or governance change should produce exactly one task
-that can carry code, tests, documentation, migration/config updates, and
-acceptance evidence in the same implementation carrier PR (or its governed
-workflow). Task IDs are minimum-sufficient outcome traceability groupings, not
-component, file-type, layer, or review-convenience buckets.
+Design the package as the **largest safe, coherent change unit** that completes the
+whole user or business outcome. A plan may be broad or massive and may contain
+several tasks, but it must use the minimum sufficient number of tasks, and every
+task must itself be as large and outcome-complete as is safely practical.
 
-Do **not** split code vs tests, docs vs code, evidence-only follow-ups, or
-several related skills/components merely because they touch different directories
-or files. `L` sizing, changed-line counts, file counts, component counts, and
-skill counts are review signals only; they are never sufficient split reasons by
-themselves.
+Default to one end-to-end implementation task and one implementation pull request
+whenever technically possible. Keep backend, frontend, contracts, migrations,
+tests, documentation, configuration, and rollback evidence together when they
+serve the same outcome. Adding or updating several related skills, including their
+configuration, documentation, and tests, is one task by default.
 
-When more than one task is genuinely required, every task after the first must
-record an explicit allowed split reason in its own `tasks.md` stanza:
+Split only when a concrete boundary makes combined delivery unsafe or impossible:
+different authority or owner, independent release or rollback, a hard dependency
+that cannot land in the same unit, an environment boundary, post-merge evidence
+that cannot exist earlier, or demonstrated reviewability failure for the change.
+Line count, file count, component count, skill count, repository count, code versus
+tests or docs, and implementation convenience are never sufficient split reasons.
+Coordinated pull requests in different repositories may still represent one task.
 
-```markdown
-- Split reason: <allowed-slug> — concrete explanation tied to the boundary
-```
-
-Allowed split-reason slugs:
-
-- `merge-order-dependency`
-- `independently-releasable-unit`
-- `distinct-owner-authority-risk-boundary`
-- `mutually-exclusive-execution-environment`
-- `post-merge-evidence-not-in-carrier`
-- `single-pr-review-size-boundary` (requires a concrete reviewability explanation;
-  a size label or line count alone is insufficient)
-
-Invalid by themselves: `small`, file type, tests vs code, docs vs code, general
-review convenience, evidence-only carriers, or any size/file/component/skill
-threshold.
-
-Packages with more than three tasks are exceptional. Add a
-`## Package-level multi-task justification` section explaining why consolidation
-is unsafe. Match whatever task-list convention the template and recent packages
-already use for headings, evidence references, and dependency prose.
+For every task after the first, record the allowed split reason and explain why the
+work cannot safely remain in the preceding task. More than three tasks is
+exceptional and requires explicit justification for every boundary. Do not mix
+unrelated outcomes merely to make a package larger, and do not weaken security,
+risk, exact-revision review, or protected checks to avoid a legitimate split.
+Each task still needs clear requirement and acceptance-criteria references and
+must follow the calling repository's task-list convention.
 
 **If the request is to promote/sync the integration branch's current state to the
 production branch** (not a request for new application/workflow content - the work

@@ -23,6 +23,8 @@ class Voc115PackageTaskPolicyTests(unittest.TestCase):
     def setUpClass(cls):
         cls.plan_prompt = read_fixture("prompts/plan.md")
         cls.plan_review_prompt = read_fixture("prompts/plan-review.md")
+        cls.implement_prompt = read_fixture("prompts/implement.md")
+        cls.review_prompt = read_fixture("prompts/review.md")
         cls.plan_workflow = read_fixture(".github/workflows/plan.yml")
         cls.voc115_tasks = (
             REPOSITORY_ROOT
@@ -30,17 +32,33 @@ class Voc115PackageTaskPolicyTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
     def test_planner_prompt_defaults_to_one_task(self):
+        self.assertIn("largest safe, coherent change unit", self.plan_prompt)
+        self.assertIn("broad or massive", self.plan_prompt)
+        self.assertIn("minimum sufficient number of tasks", self.plan_prompt)
         self.assertIn("one end-to-end", self.plan_prompt)
         self.assertIn("implementation task", self.plan_prompt)
         self.assertNotIn("small,\nordered", self.plan_prompt)
 
     def test_plan_review_requires_split_reasons_for_extra_tasks(self):
-        self.assertIn("merge-order-dependency", self.plan_review_prompt)
-        self.assertIn("Package-level multi-task justification", self.plan_review_prompt)
-        self.assertIn("In-scope causal remediation", self.plan_review_prompt)
+        normalized = " ".join(self.plan_review_prompt.split())
+        self.assertIn("minimum sufficient number of maximal tasks", normalized)
+        self.assertIn("hard dependency", normalized)
+        self.assertIn("More than three tasks is exceptional", normalized)
 
     def test_plan_workflow_enforces_task_policy_in_retry_loop(self):
         self.assertIn("package-task-policy-runner.py validate", self.plan_workflow)
+        self.assertIn("minimum sufficient number of maximal tasks", self.plan_workflow)
+
+    def test_implement_and_review_prompts_keep_causal_work_together(self):
+        self.assertIn("whole named task", self.implement_prompt)
+        self.assertIn("causally in scope", self.implement_prompt)
+        normalized = " ".join(self.review_prompt.split())
+        self.assertIn("largest safe coherent unit", normalized)
+        self.assertIn("Do not request a split", normalized)
+
+    def test_fixture_is_pinned_to_final_shared_source_merge(self):
+        pin = (FIXTURE_INFRA_ROOT / "PINNED_SHA.txt").read_text(encoding="utf-8").strip()
+        self.assertEqual(pin, "3fd40f52aba602fab8399482bc5b772731675d1a")
 
     def test_voc115_package_is_one_task_by_default(self):
         sections = validate_package_tasks(self.voc115_tasks, "VOC-115")
@@ -56,7 +74,7 @@ class Voc115PackageTaskPolicyTests(unittest.TestCase):
         doc16 = (
             REPOSITORY_ROOT / "docs/governance/16-autonomous-development-operating-model.md"
         ).read_text(encoding="utf-8")
-        self.assertIn("one end-to-end implementation task", doc16)
+        self.assertIn("one end-to-end implementation task", doc16.lower())
         self.assertIn("In-scope causal remediation", doc16)
 
     def test_doc15_replaced_seven_task_example(self):
@@ -86,6 +104,19 @@ class Voc115PackageTaskPolicyTests(unittest.TestCase):
         with self.assertRaises(PackageTaskPolicyError) as ctx:
             validate_package_tasks(text, "VOC-999")
         self.assertEqual(ctx.exception.code, "invalid_split_reason_slug")
+
+    def test_allowed_slug_without_concrete_explanation_fails_closed(self):
+        text = """# VOC-999 — Tasks
+
+## VOC-999-T00 — First
+
+## VOC-999-T01 — Second
+
+- Split reason: merge-order-dependency
+"""
+        with self.assertRaises(PackageTaskPolicyError) as ctx:
+            validate_package_tasks(text, "VOC-999")
+        self.assertEqual(ctx.exception.code, "split_reason_requires_explanation")
 
 
 if __name__ == "__main__":

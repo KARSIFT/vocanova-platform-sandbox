@@ -679,9 +679,9 @@ jobs:
               echo
               echo "---"
               if printf '%s' "$yaml_error" | grep -q 'tasks.md:'; then
-                echo "Your previous attempt violated package task policy with this exact error:"
+                echo "Your previous attempt violated largest-safe-coherent task policy with this exact error:"
                 echo "$yaml_error"
-                echo "Draft one end-to-end task by default. If more than one task is genuinely required, every task after the first must include an allowed '- Split reason: <slug>' line. Packages with more than three tasks also need a '## Package-level multi-task justification' section."
+                echo "Draft the minimum sufficient number of maximal tasks. Use one end-to-end task whenever technically possible. Every later task needs an allowed '- Split reason: <slug> — <concrete explanation>' line, and more than three tasks need package-level justification."
               else
                 echo "Your previous attempt wrote invalid YAML and failed to parse with this exact error:"
                 echo "$yaml_error"

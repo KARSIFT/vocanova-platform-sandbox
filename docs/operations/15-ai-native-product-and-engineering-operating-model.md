@@ -933,10 +933,13 @@ Codex may refine internal details only within approved product and architecture 
 
 ## 10.10 Tasks
 
-The default for every new package is **one end-to-end implementation task** that can carry
-code, tests, documentation, migration/config updates, and acceptance evidence in the same
-implementation carrier PR or its governed workflow. Task IDs are minimum-sufficient outcome
-traceability groupings — not component, file-type, layer, or review-convenience buckets.
+Choose the **largest safe coherent change package** that completes the whole user or business
+outcome. A plan may be broad or massive and contain several tasks, but it must use the minimum
+sufficient number of maximal tasks. The default whenever technically possible is **one
+end-to-end implementation task and one implementation PR** carrying code, tests,
+documentation, migration/config updates, and acceptance evidence together. Task IDs are
+minimum-sufficient outcome traceability groupings — not component, file-type, layer, skill,
+or review-convenience buckets.
 
 Additional tasks are allowed only when at least one concrete boundary exists:
 
@@ -948,7 +951,8 @@ Additional tasks are allowed only when at least one concrete boundary exists:
 6. change too large for reliable single-PR review (requires a concrete reviewability
    explanation; size labels or line counts alone are insufficient).
 
-Every task after the first must record an explicit split reason from that allowlist. Packages
+Every task after the first must record an explicit split reason and concrete explanation from
+that allowlist. Packages
 with more than three tasks are exceptional and require package-level justification for why
 consolidation is unsafe.
 
@@ -958,6 +962,9 @@ Example:
 - [ ] VOC-023-T00 Implement approved authentication end to end (schema, service, API, UI,
       tests, documentation, and acceptance evidence in one carrier).
 ```
+
+Adding or updating several related skills, including their adapters, configuration,
+documentation, and regression tests, is one task by default.
 
 ## 10.11 Test plan
 
