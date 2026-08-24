@@ -81,7 +81,7 @@ function normalizePath(value) {
   return value.replaceAll("\\", "/").replace(/^\.\//, "").replace(/\/$/, "");
 }
 
-function pathMatches(actual, expected) {
+export function pathMatches(actual, expected) {
   const normalizedActual = normalizePath(actual);
   const normalizedExpected = normalizePath(expected);
   if (normalizedExpected.includes("*")) {

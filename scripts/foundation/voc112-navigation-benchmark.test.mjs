@@ -11,6 +11,7 @@ import {
   BENCHMARK_QUESTIONS,
   classifyClaudeFailure,
   mergeDiscoveryRows,
+  pathMatches,
 } from "./voc112-navigation-benchmark-run.mjs";
 
 const repositoryRoot = path.resolve(
@@ -134,6 +135,17 @@ test("VOC-112-TEST-12: benchmark is a revision-bound real structured agent captu
     assert.ok(row.usage.output_tokens > 0);
     assert.ok(Array.isArray(row.repository_files_opened));
     assert.ok(Array.isArray(row.answer_paths));
+    const question = BENCHMARK_QUESTIONS.find(
+      (candidate) => candidate.id === row.question_id,
+    );
+    assert.ok(question, `unknown benchmark question: ${row.question_id}`);
+    assert.equal(
+      row.correct,
+      question.expectedPaths.every((expected) =>
+        row.answer_paths.some((actual) => pathMatches(actual, expected)),
+      ),
+      `stored correctness does not match the keyed rubric for ${row.question_id}/${row.variant}`,
+    );
     if (row.variant === "navigator_assisted") {
       assert.deepEqual(row.skill_files_opened, [
         ".agents/skills/vocanova-repo-navigator/SKILL.md",
