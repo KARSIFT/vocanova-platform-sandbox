@@ -144,6 +144,17 @@ pull request, and the remaining reuse-workflow checkout pins are synchronized.
 Shared PR #129 passed 227 policy tests and all four hosted checks; its `main`
 merge commit is `1f6c1477d708ea89b1d875fa7684e358538d03a5`.
 
+The next exact-SHA review identified two Medium recovery-policy mismatches and
+two Low operational gaps; all four were resolved in shared PR #130. Integration
+recovery now mirrors the VOC-111 staging path selector, so documentation-only
+merges recover governance without forcing a deploy, while runtime/root/deploy
+changes still require the full staging workflow. Promotion recovery requires a
+literal successful check-run conclusion (neutral is insufficient). The
+promotion verifier sanitizes status-API failures, and the hourly wake performs
+a read-only exact-head preflight before invoking the reusable recovery. Shared
+PR #130 passed 231 policy tests and all four hosted checks; its `main` merge
+commit is `a4899e17fc9eab6e37ea802fce129ea30634e8c3`.
+
 ## VOC-112 provenance repair (`VOC-113-D11`)
 
 Repository Governance supplies `PR_BASE_SHA` and `PR_HEAD_SHA` and selects
