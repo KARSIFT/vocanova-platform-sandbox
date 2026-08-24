@@ -130,3 +130,23 @@ test("VOC-114 recovery workflows resolve PR metadata before checkout", () => {
     assert.match(resolveStep, /gh pr view/);
   }
 });
+
+test("VOC-114 canonical promotion uses squash-safe provenance on its associated check", () => {
+  const workflow = readFileSync(repositoryGovernancePath, "utf8");
+  const provenance = workflow
+    .split("- name: Select strict capture provenance mode", 2)[1]
+    .split("\n      - name:", 1)[0];
+  assert.match(provenance, /PR_BASE_REF:.*pull_request\.base\.ref/);
+  assert.match(provenance, /PR_HEAD_REF:.*pull_request\.head\.ref/);
+  assert.match(
+    provenance,
+    /PR_HEAD_REPOSITORY:.*pull_request\.head\.repo\.full_name/,
+  );
+  assert.match(provenance, /CURRENT_REPOSITORY:.*github\.repository/);
+  assert.match(
+    provenance,
+    /PR_BASE_REF.*main[\s\S]*PR_HEAD_REF.*develop[\s\S]*PR_HEAD_REPOSITORY.*CURRENT_REPOSITORY[\s\S]*mode=squash-safe-push/,
+  );
+  assert.match(provenance, /else[\s\S]*mode=pr-validation/);
+  assert.match(provenance, /git diff --quiet[\s\S]*mode=pr-ancestry/);
+});

@@ -92,15 +92,25 @@ jobs:
           EVENT_KIND: ${{ steps.shas.outputs.event_kind }}
           BASE_SHA: ${{ steps.shas.outputs.base_sha }}
           HEAD_SHA: ${{ steps.shas.outputs.head_sha }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          CURRENT_REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
           mode=squash-safe-push
           if [ "$EVENT_KIND" = "pull_request" ] && \
             [ "$WORKFLOW_EVENT" = "pull_request" ]; then
-            mode=pr-validation
-            if ! git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- \
-              scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json; then
-              mode=pr-ancestry
+            if [ "$PR_BASE_REF" = "main" ] && \
+              [ "$PR_HEAD_REF" = "develop" ] && \
+              [ "$PR_HEAD_REPOSITORY" = "$CURRENT_REPOSITORY" ]; then
+              mode=squash-safe-push
+            else
+              mode=pr-validation
+              if ! git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- \
+                scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json; then
+                mode=pr-ancestry
+              fi
             fi
           fi
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
