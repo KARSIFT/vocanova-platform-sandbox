@@ -10,7 +10,7 @@ planning unless a real split boundary exists.
 
 - Requirement source: issue #962; `VOC-115-D00` through `VOC-115-D11`
 - Acceptance criteria: `VOC-115-AC-00` through `VOC-115-AC-06`
-- Tests: `VOC-115-TEST-00` through `VOC-115-TEST-09`
+- Tests: `VOC-115-TEST-00` through `VOC-115-TEST-10`
 - Evidence: `VOC-115-EV-00` (`t00-evidence.md` in this package directory)
 - Status: pending
 
@@ -53,6 +53,8 @@ planning unless a real split boundary exists.
    - justified multi-task package retains correct sequencing;
    - in-scope causal remediation remains under the active package while unrelated or
      authority-expanding work requires a new plan.
+   - every new or modified `change.yaml` is parsed by the same YAML implementation
+     used by adoption before the plan merge gate passes.
 8. Update template wording and any mirrored fixture/tests in the same task so no
    canonical source still implies the old fragmentation default after merge.
 9. Record changed files, commands, and results in `t00-evidence.md`:

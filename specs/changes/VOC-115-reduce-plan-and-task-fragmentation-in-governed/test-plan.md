@@ -110,5 +110,17 @@
   files, directories, components, and changed lines does not create extra tasks.
 - Evidence: `VOC-115-EV-00`
 
+## VOC-115-TEST-10 — Adoption-compatible YAML parsing fails before plan merge
+
+- Covers: `VOC-115-AC-05`
+- Preconditions: governance validation runs against a plan diff containing a new or
+  modified `change.yaml`
+- Procedure: validate one syntactically valid package and one fixture with an
+  unescaped apostrophe in a single-quoted YAML scalar using the same PyYAML loader as
+  adoption.
+- Expected result: the valid package passes; invalid YAML fails the plan gate with a
+  localized parse error before merge or adoption.
+- Evidence: `VOC-115-EV-00`
+
 Include positive, negative, authorization, failure, migration, accessibility, and
 rollback coverage as applicable. Tests must not use secrets or production data.
