@@ -60,10 +60,45 @@ content grounded in the request - not the template's own placeholder text
 genuinely unknown, say so explicitly as an open question; don't invent a
 plausible-sounding answer to make the package look complete.
 
-Break the work into a task list where each task is independently implementable and
-reviewable in one pull request by the existing implementer/reviewer loop - small,
-ordered, each with clear requirement/acceptance-criteria references, matching
-whatever task-list convention the template and recent packages already use.
+Default to **one coherent objective per package** and **one end-to-end
+implementation task** unless a concrete split boundary genuinely requires more.
+A normal coherent feature, bug, or governance change should produce exactly one task
+that can carry code, tests, documentation, migration/config updates, and
+acceptance evidence in the same implementation carrier PR (or its governed
+workflow). Task IDs are minimum-sufficient outcome traceability groupings, not
+component, file-type, layer, or review-convenience buckets.
+
+Do **not** split code vs tests, docs vs code, evidence-only follow-ups, or
+several related skills/components merely because they touch different directories
+or files. `L` sizing, changed-line counts, file counts, component counts, and
+skill counts are review signals only; they are never sufficient split reasons by
+themselves.
+
+When more than one task is genuinely required, every task after the first must
+record an explicit allowed split reason in its own `tasks.md` stanza:
+
+```markdown
+- Split reason: <allowed-slug> — concrete explanation tied to the boundary
+```
+
+Allowed split-reason slugs:
+
+- `merge-order-dependency`
+- `independently-releasable-unit`
+- `distinct-owner-authority-risk-boundary`
+- `mutually-exclusive-execution-environment`
+- `post-merge-evidence-not-in-carrier`
+- `single-pr-review-size-boundary` (requires a concrete reviewability explanation;
+  a size label or line count alone is insufficient)
+
+Invalid by themselves: `small`, file type, tests vs code, docs vs code, general
+review convenience, evidence-only carriers, or any size/file/component/skill
+threshold.
+
+Packages with more than three tasks are exceptional. Add a
+`## Package-level multi-task justification` section explaining why consolidation
+is unsafe. Match whatever task-list convention the template and recent packages
+already use for headings, evidence references, and dependency prose.
 
 **If the request is to promote/sync the integration branch's current state to the
 production branch** (not a request for new application/workflow content - the work

@@ -107,6 +107,13 @@ comment in karsift-ai-infra for the full mechanism.
   automatically triggers `plan-from-issue` (see `pipeline.yml`), which drafts a
   real change package for independent review and autonomous adoption, keeping every
   fix inside the same governed loop as planned work instead of bypassing it.
+- **In-scope causal remediation under an active package:** when a defect is
+  causally related to the work already authorized by an adopted package and stays
+  within that package's original objective, acceptance criteria, risk ceiling, and
+  protected-area scope, remediation may remain on the same implementation carrier
+  or task roster instead of opening a separate issue/plan. This does not authorize
+  unrelated bug fixes, changed product intent, authority expansion, or protected-area
+  scope creep to ride along for convenience.
 - The only exception (as of 2026-08-08) is GitHub repository/environment *settings*
   changes made via the GitHub API or web UI - branch protection, environment
   deployment-branch policies, security toggles (secret scanning, Dependabot), and

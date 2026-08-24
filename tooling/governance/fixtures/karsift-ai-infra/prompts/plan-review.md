@@ -59,22 +59,37 @@ correctness of code that does not exist yet. Judge:
    (e.g. one field claims something is resolved while another still describes it
    as outstanding) is not adoption-ready even if each file is individually
    well-written.
-5. **Task breakdown soundness**: if `tasks.md` declares multiple tasks, check that
-   task dependencies are declared in the correct direction (a task that must run
-   *before* another is the earlier one's dependency, not the reverse) and that
+5. **Task breakdown soundness**: the default for a coherent request is one package
+   with one end-to-end task. If `tasks.md` declares more than one task, verify that
+   every task after the first records an explicit allowed split reason from this
+   set: `merge-order-dependency`, `independently-releasable-unit`,
+   `distinct-owner-authority-risk-boundary`, `mutually-exclusive-execution-environment`,
+   `post-merge-evidence-not-in-carrier`, or `single-pr-review-size-boundary` (the
+   last requires a concrete reviewability explanation; size labels or line counts
+   alone are insufficient). Reject packages that split code vs tests, docs vs
+   code, evidence-only follow-ups, or several related skills/components without a
+   real boundary. Packages with more than three tasks are exceptional and must
+   include a substantive `## Package-level multi-task justification` section. Also
+   verify task dependencies are declared in the correct direction (a task that must
+   run *before* another is the earlier one's dependency, not the reverse) and that
    the acceptance criteria assigned to each task are actually achievable within
    that task's stated scope. Also check `.karsift/tasks.json` (if present) agrees
    with `tasks.md`'s prose - both files must state the same dependency order;
    drift between the human-readable and machine-readable copies is a real defect,
    not a wording nitpick, because automation reads the JSON file and will
    mis-sequence work if it disagrees with the prose.
-6. **Protected areas and impact analysis**: does `impact-analysis.md` correctly
+6. **In-scope causal remediation vs new-plan scope**: confirm the package and
+   canonical policy references distinguish work that may remain under the active
+   package/carrier when it stays within the original objective, acceptance
+   criteria, risk ceiling, and protected-area scope from unrelated or
+   authority-expanding follow-up that still requires a new issue/plan.
+7. **Protected areas and impact analysis**: does `impact-analysis.md` correctly
    name every protected path, migration, secret, or production-infrastructure
    surface the specification actually touches? An impact analysis that misses a
    real protected area is a Critical or High finding, the same severity it would
    be in an implementation review, because it will not get caught later - it is
    input to the person adopting this package.
-7. **Rollback and release fields**: are `rollback_required` and the `release`
+8. **Rollback and release fields**: are `rollback_required` and the `release`
    block's `production_impact` consistent with the package's own stated scope?
 
 ## Findings and verdict

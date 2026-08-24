@@ -97,9 +97,15 @@ every affected or unknown entry.
 
 ## Implementation plan and tasks
 
+Default to one end-to-end implementation task per package. Task IDs are
+minimum-sufficient outcome traceability groupings; they are not component,
+file-type, layer, or review-convenience buckets. Every task after the first must
+record an explicit allowed split reason when a genuine boundary requires multiple
+tasks.
+
 | Task ID | Description | Acceptance criteria | Dependencies | Owner |
 |---|---|---|---|---|
-| VOC-###-T01 | Bounded task | AC-01 | None | Codex |
+| VOC-###-T00 | One end-to-end outcome | AC-01 | None | Codex |
 
 Record the technical approach, components, sequence, compatibility, and known risks.
 

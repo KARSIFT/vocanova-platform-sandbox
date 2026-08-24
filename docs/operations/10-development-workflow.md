@@ -92,8 +92,11 @@ implementation work → GitHub Issues; status → GitHub Projects; release scope
 production history → Releases/deployments.
 
 Priorities P0 (critical: outage, data loss, active security incident) through P3 (post-MVP
-polish); most planned work is P2. Sizes XS/S/M/L — Codex should never receive an `L` issue directly;
-split it first.
+polish); most planned work is P2. Sizes XS/S/M/L are reviewability signals for humans and
+planners — they do not automatically command package, task, or pull-request splitting. A
+coherent objective normally maps to one change package and one end-to-end implementation task
+unless a concrete merge-order, rollback, authority/risk, execution-environment, evidence, or
+reliable-review boundary requires otherwise.
 
 ## 5. Definition of Ready / Definition of Done
 
@@ -110,8 +113,10 @@ additionally required for release work).
 
 ## 6. Pull-request standards
 
-One coherent outcome per PR; unrelated work becomes a separate issue. Preferred size 100–500
-meaningful changed lines (under 200 for fixes; over 800 normally split). Conventional Commits
+One coherent outcome per PR; unrelated work becomes a separate issue. Preferred size is
+100–500 meaningful changed lines (under 200 for fixes). Larger diffs are review signals, not
+automatic split commands — split only when a concrete outcome, rollback, risk, or reviewability
+boundary genuinely requires separate carriers. Conventional Commits
 (`feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `build`, `ci`, `perf`, `security`, `revert`); no
 AI agent names in commit messages. PR body must cover: summary, linked issue, requirement sources,
 scope, implementation, acceptance criteria, testing performed, security/database/API/environment

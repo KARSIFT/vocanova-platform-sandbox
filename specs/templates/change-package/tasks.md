@@ -1,6 +1,16 @@
 # VOC-000 — Tasks
 
-## VOC-000-T00 — REPLACE WITH APPROVED TASK
+None of the tasks below is implementation-authorized by this package.
+Adoption and each task's own implementation authorization are separate.
+
+The default for a coherent objective is **one end-to-end implementation task**
+covering code, tests, documentation, migration/config updates, and acceptance
+evidence in the same carrier unless a concrete split boundary requires more.
+Every task after the first must record `- Split reason: <allowed-slug>` from the
+planner/plan-review allowlist. Packages with more than three tasks require a
+`## Package-level multi-task justification` section.
+
+## VOC-000-T00 — REPLACE WITH ONE END-TO-END OUTCOME
 
 - Requirement source: `VOC-000-D00`
 - Acceptance criteria: `VOC-000-AC-00`

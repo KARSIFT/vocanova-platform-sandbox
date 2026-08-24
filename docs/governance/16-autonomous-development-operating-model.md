@@ -142,6 +142,22 @@ Trivial R0 corrections may use a linked issue or a concise pull-request descript
 instead of a full change package, but they must still identify objective, scope,
 evidence, and risk.
 
+### Package and task defaults
+
+A coherent objective normally maps to one change package. A new package normally maps
+to one end-to-end implementation task unless a concrete split boundary from the
+operating model requires more. Size labels, file counts, component counts, and
+code-vs-tests-vs-docs boundaries are review signals, not automatic split rules.
+
+### In-scope causal remediation
+
+A causally related defect discovered while implementing, verifying, merging,
+promoting, or reconciling an active package may remain under that package only when
+it stays within the original objective, acceptance criteria, risk ceiling, and
+protected-area scope. Unrelated scope, changed product intent, an authority or risk
+boundary not already covered by the active package, or work that cannot honestly
+satisfy the original acceptance criteria still requires a new issue and plan.
+
 ## Branch and merge behavior
 
 - `develop` and `main` are the only permanent branches.
