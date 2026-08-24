@@ -1,0 +1,83 @@
+{
+  "schema_version": 3,
+  "recorded_at": "2026-08-23T23:32:56.948Z",
+  "discoveries": [
+    {
+      "context": "repository-root",
+      "cwd": ".",
+      "result": "pass",
+      "model": "claude-sonnet-5",
+      "structured_event_count": 22,
+      "canonical_skill_reads": [
+        ".agents/skills/vocanova-repo-navigator/SKILL.md"
+      ],
+      "runtime": "claude-code",
+      "runtime_version": "2.1.229 (Claude Code)",
+      "captured_at": "2026-08-23T22:38:30.068Z",
+      "subject_revision": "37e7506130ff39513b9420d9bffc4b5957af0311",
+      "source_hashes": {
+        "navigator_skill_sha256": "b58be5905c7f8027c4f28423d2033459698209aecbde93996bdbeffb05fadbce",
+        "agents_sha256": "5ba216ffcfcd1797c5da661226573ae12ef204ee8a7d63de2b118a6e4cb0806f"
+      }
+    },
+    {
+      "context": "nested-cwd-apps-web",
+      "cwd": "apps/web",
+      "result": "pass",
+      "model": "claude-sonnet-5",
+      "structured_event_count": 37,
+      "canonical_skill_reads": [
+        ".agents/skills/vocanova-repo-navigator/SKILL.md"
+      ],
+      "runtime": "claude-code",
+      "runtime_version": "2.1.229 (Claude Code)",
+      "captured_at": "2026-08-23T22:38:30.068Z",
+      "subject_revision": "37e7506130ff39513b9420d9bffc4b5957af0311",
+      "source_hashes": {
+        "navigator_skill_sha256": "b58be5905c7f8027c4f28423d2033459698209aecbde93996bdbeffb05fadbce",
+        "agents_sha256": "5ba216ffcfcd1797c5da661226573ae12ef204ee8a7d63de2b118a6e4cb0806f"
+      }
+    },
+    {
+      "context": "repository-root",
+      "cwd": ".",
+      "result": "pass",
+      "model": "Auto",
+      "permission_mode": "default",
+      "structured_event_count": 26,
+      "completed_read_tool_call_count": 2,
+      "canonical_skill_reads": [
+        ".agents/skills/vocanova-repo-navigator/SKILL.md"
+      ],
+      "runtime": "hosted-cursor",
+      "runtime_version": "2026.08.11-e8db854",
+      "captured_at": "2026-08-23T23:32:56.948Z",
+      "subject_revision": "37e7506130ff39513b9420d9bffc4b5957af0311",
+      "source_hashes": {
+        "navigator_skill_sha256": "b58be5905c7f8027c4f28423d2033459698209aecbde93996bdbeffb05fadbce",
+        "agents_sha256": "5ba216ffcfcd1797c5da661226573ae12ef204ee8a7d63de2b118a6e4cb0806f"
+      }
+    },
+    {
+      "context": "nested-cwd-apps-web",
+      "cwd": "apps/web",
+      "result": "pass",
+      "model": "Auto",
+      "permission_mode": "default",
+      "structured_event_count": 34,
+      "completed_read_tool_call_count": 1,
+      "canonical_skill_reads": [
+        ".agents/skills/vocanova-repo-navigator/SKILL.md"
+      ],
+      "runtime": "hosted-cursor",
+      "runtime_version": "2026.08.11-e8db854",
+      "captured_at": "2026-08-23T23:32:56.948Z",
+      "subject_revision": "37e7506130ff39513b9420d9bffc4b5957af0311",
+      "source_hashes": {
+        "navigator_skill_sha256": "b58be5905c7f8027c4f28423d2033459698209aecbde93996bdbeffb05fadbce",
+        "agents_sha256": "5ba216ffcfcd1797c5da661226573ae12ef204ee8a7d63de2b118a6e4cb0806f"
+      }
+    }
+  ],
+  "capture_kind": "real-agent-structured-trace"
+}

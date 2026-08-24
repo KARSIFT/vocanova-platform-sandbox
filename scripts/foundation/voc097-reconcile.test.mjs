@@ -76,10 +76,22 @@ test("VOC-097-T02 caller wires bounded polling and explicit observe/dispatch pat
     /^\s{4}permissions:\n\s{6}actions: write\n\s{6}checks: read\n\s{6}contents: read\n\s{6}issues: read\n\s{6}pull-requests: read/m,
     "only the operator-owned caller job may dispatch the contract-allowlisted workflow",
   );
+  const integrationRecoveryJob = pipeline
+    .split("  recover-integration-push:", 2)[1]
+    ?.split("\n  implement:", 1)[0];
+  assert.ok(
+    integrationRecoveryJob,
+    "scheduled exact-SHA integration recovery job must exist",
+  );
+  assert.match(
+    integrationRecoveryJob,
+    /^\s{4}permissions:\n\s{6}actions: write\n\s{6}checks: read\n\s{6}contents: read\n\s{6}pull-requests: read\n\s{6}statuses: read/m,
+    "integration recovery may write Actions only through its dedicated job",
+  );
   assert.equal(
     (pipeline.match(/^\s{6}actions: write$/gm) ?? []).length,
-    1,
-    "Actions write must remain isolated to the live-evidence caller job",
+    4,
+    "Actions write must remain isolated to live-evidence, integration recovery, merge-gate, and release jobs",
   );
   assert.equal(
     (
@@ -87,8 +99,17 @@ test("VOC-097-T02 caller wires bounded polling and explicit observe/dispatch pat
         /expected_base_sha: \$\{\{ github\.event\.pull_request\.base\.sha \}\}/g,
       ) ?? []
     ).length,
-    5,
+    4,
     "plan review, task review, remediation, merge gate, and ready-for-review reuse must bind the event base",
+  );
+  const reuseBlock =
+    pipeline
+      .split("\n  ready-for-review-reuse:", 2)[1]
+      ?.split("\n  ci:", 1)[0] ?? "";
+  assert.match(reuseBlock, /github\.event\.pull_request\.base\.sha \|\| ''/);
+  assert.doesNotMatch(
+    reuseBlock,
+    /github\.event\.pull_request\.base\.sha \|\| github\.sha/,
   );
 });
 

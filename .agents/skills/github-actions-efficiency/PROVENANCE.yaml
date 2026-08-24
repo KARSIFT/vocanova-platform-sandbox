@@ -1,0 +1,20 @@
+schema_version: 1
+skill_name: github-actions-efficiency
+source: adapted
+upstream_repo: https://github.com/github/awesome-copilot
+upstream_commit: 83561bd7d8a46fcda0581aedabdf8eac7cb196b6
+upstream_path: skills/github-actions-efficiency/SKILL.md
+upstream_sha256: 9c41e860468e5c88d83ab6eec70c585b0f122facec2632ea65497b3389139e43
+local_sha256: 7c72123a2a544b02996819a68dcde17fbfdad49466167d17f8852168edfb309b
+license: MIT
+adaptation_notes: >
+  Repository workflow paths; JSON-only gh inspection; condensed references/actions.md; forbids raw CI log exfiltration and governance weakening.
+retained_license_paths:
+  - LICENSE
+committed_files:
+  - path: LICENSE
+    sha256: e32449d23085399adc1222f7a17408b730550258e51627c153cb108ca9955823
+  - path: SKILL.md
+    sha256: 7c72123a2a544b02996819a68dcde17fbfdad49466167d17f8852168edfb309b
+  - path: references/actions.md
+    sha256: 1fd10be3d8009795e3aadf6e1ce52f79fcee1f19fcf0ce924c3a4fd19ca0c7ef

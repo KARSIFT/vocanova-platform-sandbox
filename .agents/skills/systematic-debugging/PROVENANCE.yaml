@@ -1,0 +1,18 @@
+schema_version: 1
+skill_name: systematic-debugging
+source: adapted
+upstream_repo: https://github.com/obra/superpowers
+upstream_commit: b36e0829c6d0140e93cfef2ca599b1b07d4a7797
+upstream_path: skills/systematic-debugging/SKILL.md
+upstream_sha256: 808fc5717aa88ad65efff312b11c186294d3e6ee301afb584e2f86599b137787
+local_sha256: 091fd15690865ba07d2cc30e139bd5fa7ac25eff41f6135d492a402843e3a4fa
+license: MIT
+adaptation_notes: >
+  Repository validation tiers, safety rules, removed secret/credential examples and human-review pauses; linked verification-before-completion skill.
+retained_license_paths:
+  - LICENSE
+committed_files:
+  - path: LICENSE
+    sha256: a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400
+  - path: SKILL.md
+    sha256: 091fd15690865ba07d2cc30e139bd5fa7ac25eff41f6135d492a402843e3a4fa

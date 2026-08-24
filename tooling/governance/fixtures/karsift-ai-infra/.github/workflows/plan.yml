@@ -119,8 +119,120 @@ on:
         description: "Optional, paired with KARSIFT_BOT_APP_ID."
         required: false
 
+# A needs-info reply can start while the preceding publisher is still
+# finishing. Serialize runs for the same source issue so the later run can
+# observe the first run's authoritative linkage before spending model cost.
+# Non-issue dispatches retain independent concurrency via github.run_id.
+concurrency:
+  group: karsift-plan-source-${{ github.repository_id }}-${{ inputs.source_issue_number || github.run_id }}
+  cancel-in-progress: false
+
 jobs:
+  source-authority:
+    runs-on: ubuntu-latest
+    outputs:
+      proceed: ${{ steps.guard.outputs.proceed }}
+      reason: ${{ steps.guard.outputs.reason }}
+    permissions:
+      issues: read
+      pull-requests: read
+    steps:
+      - name: Reconcile source issue before planner execution
+        id: guard
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_ISSUE: ${{ inputs.source_issue_number }}
+          TRUSTED_PUBLISHER: ${{ secrets.KARSIFT_BOT_APP_ID != '' && secrets.KARSIFT_BOT_PRIVATE_KEY != '' && 'karsift-ai-infra-bot[bot]' || 'github-actions[bot]' }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SOURCE_ISSUE" ]; then
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+            echo "reason=not_issue_driven" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! [[ "$SOURCE_ISSUE" =~ ^[1-9][0-9]*$ ]]; then
+            echo "Source issue is malformed; refusing planner execution." >&2
+            exit 1
+          fi
+
+          issue=$(gh api "repos/$GH_REPO/issues/$SOURCE_ISSUE")
+          if jq -e 'has("pull_request")' >/dev/null <<<"$issue"; then
+            echo "Source authority must be an issue, not a pull request." >&2
+            exit 1
+          fi
+          comments=$(gh api --paginate --slurp \
+            "repos/$GH_REPO/issues/$SOURCE_ISSUE/comments?per_page=100")
+          pulls=$(gh api --paginate --slurp \
+            "repos/$GH_REPO/pulls?state=all&per_page=100")
+          binding="In response to issue #$SOURCE_ISSUE."
+          authority_marker="<!-- karsift-plan-source-issue:$SOURCE_ISSUE -->"
+          legacy_prefix=$(printf '%s\n%s\n\n%s' \
+            'Draft change package proposed by the planner role (model resolved from' \
+            'karsift-ai-infra/config/roles.yml).' "$binding")
+          link_prefix="Draft change package proposed: https://github.com/$GH_REPO/pull/"
+          comment_prs=$(jq -c --arg prefix "$link_prefix" \
+            --arg publisher "$TRUSTED_PUBLISHER" '
+            [.[][] | select(
+              .user.login == $publisher and
+              .user.type == "Bot" and
+              (.body | startswith($prefix))
+            ) | (.body | ltrimstr($prefix))
+              | select(test("^[1-9][0-9]*$")) | tonumber] | unique' <<<"$comments")
+          body_prs=$(jq -c --arg marker "$authority_marker" \
+            --arg legacy "$legacy_prefix" \
+            --arg publisher "$TRUSTED_PUBLISHER" '
+            [.[][] | select(
+              .user.login == $publisher and
+              .user.type == "Bot" and
+              (.head.ref | startswith("plan/")) and
+              (((.body // "") | startswith($marker)) or
+               ((.body // "") | startswith($legacy)))
+            ) | .number] | unique' <<<"$pulls")
+          linked_prs=$(jq -cn --argjson comments "$comment_prs" \
+            --argjson bodies "$body_prs" '$comments + $bodies | unique')
+          linked_count=$(jq 'length' <<<"$linked_prs")
+          if [ "$linked_count" -gt 1 ]; then
+            echo "Source issue has ambiguous trusted plan linkage; refusing planner execution." >&2
+            exit 1
+          fi
+          if [ "$linked_count" = "1" ]; then
+            linked_number=$(jq -r '.[0]' <<<"$linked_prs")
+            linked=$(gh api "repos/$GH_REPO/pulls/$linked_number")
+            if ! jq -e --arg marker "$authority_marker" \
+              --arg legacy "$legacy_prefix" \
+              --arg publisher "$TRUSTED_PUBLISHER" '
+              .user.login == $publisher and
+              .user.type == "Bot" and
+              (.head.ref | startswith("plan/")) and
+              (((.body // "") | startswith($marker)) or
+               ((.body // "") | startswith($legacy)))
+            ' >/dev/null <<<"$linked"; then
+              echo "Trusted plan linkage does not match its source authority; refusing planner execution." >&2
+              exit 1
+            fi
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "reason=already_planned" >> "$GITHUB_OUTPUT"
+            echo "Source issue already has one trusted plan; planner execution is a no-op."
+            exit 0
+          fi
+          if jq -e '[.labels[].name] | index("karsift:planned") != null' \
+            >/dev/null <<<"$issue"; then
+            echo "Source issue is marked planned without unique trusted linkage; refusing planner execution." >&2
+            exit 1
+          fi
+          if [ "$(jq -r .state <<<"$issue")" != "open" ]; then
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "reason=source_closed" >> "$GITHUB_OUTPUT"
+            echo "Source issue is closed; planner execution is a no-op."
+            exit 0
+          fi
+          echo "proceed=true" >> "$GITHUB_OUTPUT"
+          echo "reason=unplanned_open_source" >> "$GITHUB_OUTPUT"
+
   plan:
+    needs: source-authority
+    if: needs.source-authority.outputs.proceed == 'true'
     runs-on: ubuntu-latest
     outputs:
       base_sha: ${{ steps.branch.outputs.base_sha }}
@@ -136,13 +248,13 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ inputs.integration_branch }}
           persist-credentials: false
 
       - name: Checkout karsift-ai-infra
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: KARSIFT/karsift-ai-infra
           path: karsift-ai-infra
@@ -539,12 +651,22 @@ jobs:
             done < <(find "$package_path" -type f \( -name '*.yaml' -o -name '*.yml' \) -print0 2>/dev/null)
 
             if [ -z "$yaml_error" ]; then
-              exit 0
+              change_id=$(basename "$package_path" | grep -oP '^[A-Z]+-\d+')
+              set +e
+              task_error=$(python3 karsift-ai-infra/config/package-task-policy-runner.py validate \
+                --package-path "$package_path" \
+                --change-id "$change_id" 2>&1)
+              task_status=$?
+              set -e
+              if [ "$task_status" -eq 0 ]; then
+                exit 0
+              fi
+              yaml_error="tasks.md: $task_error"
             fi
 
-            echo "::warning::Planner wrote invalid YAML on attempt $attempt: $yaml_error"
+            echo "::warning::Planner wrote invalid package output on attempt $attempt: $yaml_error"
             if [ "$attempt" -eq "$max_attempts" ]; then
-              echo "Planner produced invalid YAML after $max_attempts attempts, giving up:" >&2
+              echo "Planner produced invalid package policy after $max_attempts attempts, giving up:" >&2
               echo "$yaml_error" >&2
               exit 1
             fi
@@ -556,9 +678,15 @@ jobs:
               cat "$prompt_file"
               echo
               echo "---"
-              echo "Your previous attempt wrote invalid YAML and failed to parse with this exact error:"
-              echo "$yaml_error"
-              echo "Write the full package again from scratch. Before finishing, re-check every YAML file you write for strictly valid syntax: consistent indentation throughout each block, no unquoted scalar containing \": \" (quote the whole value instead), and proper block-scalar markers (| or >) for any multi-line prose value."
+              if printf '%s' "$yaml_error" | grep -q 'tasks.md:'; then
+                echo "Your previous attempt violated largest-safe-coherent task policy with this exact error:"
+                echo "$yaml_error"
+                echo "Draft the minimum sufficient number of maximal tasks. Use one end-to-end task whenever technically possible. Every later task needs an allowed '- Split reason: <slug> — <concrete explanation>' line, and more than three tasks need package-level justification."
+              else
+                echo "Your previous attempt wrote invalid YAML and failed to parse with this exact error:"
+                echo "$yaml_error"
+                echo "Write the full package again from scratch. Before finishing, re-check every YAML file you write for strictly valid syntax: consistent indentation throughout each block, no unquoted scalar containing \": \" (quote the whole value instead), and proper block-scalar markers (| or >) for any multi-line prose value."
+              fi
             } > "$retry_prompt"
             prompt_file="$retry_prompt"
             attempt=$((attempt + 1))
@@ -724,15 +852,109 @@ jobs:
       issues: write
       pull-requests: write
     steps:
+      # This is the clean publisher's first step and covers both possible
+      # planner results. The workflow-level concurrency closes the
+      # list/create race; this fresh read catches authority changes made
+      # while the planner was running before either result can mutate state.
+      - name: Revalidate source issue before plan publication
+        id: source-guard
+        if: needs.plan.outputs.needs_info == 'true' || needs.plan.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_ISSUE: ${{ inputs.source_issue_number }}
+          TRUSTED_PUBLISHER: ${{ secrets.KARSIFT_BOT_APP_ID != '' && secrets.KARSIFT_BOT_PRIVATE_KEY != '' && 'karsift-ai-infra-bot[bot]' || 'github-actions[bot]' }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SOURCE_ISSUE" ]; then
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! [[ "$SOURCE_ISSUE" =~ ^[1-9][0-9]*$ ]]; then
+            echo "Source issue is malformed; refusing plan publication." >&2
+            exit 1
+          fi
+
+          issue=$(gh api "repos/$GH_REPO/issues/$SOURCE_ISSUE")
+          if jq -e 'has("pull_request")' >/dev/null <<<"$issue"; then
+            echo "Source authority must be an issue, not a pull request." >&2
+            exit 1
+          fi
+          comments=$(gh api --paginate --slurp \
+            "repos/$GH_REPO/issues/$SOURCE_ISSUE/comments?per_page=100")
+          pulls=$(gh api --paginate --slurp \
+            "repos/$GH_REPO/pulls?state=all&per_page=100")
+          binding="In response to issue #$SOURCE_ISSUE."
+          authority_marker="<!-- karsift-plan-source-issue:$SOURCE_ISSUE -->"
+          legacy_prefix=$(printf '%s\n%s\n\n%s' \
+            'Draft change package proposed by the planner role (model resolved from' \
+            'karsift-ai-infra/config/roles.yml).' "$binding")
+          link_prefix="Draft change package proposed: https://github.com/$GH_REPO/pull/"
+          comment_prs=$(jq -c --arg prefix "$link_prefix" \
+            --arg publisher "$TRUSTED_PUBLISHER" '
+            [.[][] | select(
+              .user.login == $publisher and
+              .user.type == "Bot" and
+              (.body | startswith($prefix))
+            ) | (.body | ltrimstr($prefix))
+              | select(test("^[1-9][0-9]*$")) | tonumber] | unique' <<<"$comments")
+          body_prs=$(jq -c --arg marker "$authority_marker" \
+            --arg legacy "$legacy_prefix" \
+            --arg publisher "$TRUSTED_PUBLISHER" '
+            [.[][] | select(
+              .user.login == $publisher and
+              .user.type == "Bot" and
+              (.head.ref | startswith("plan/")) and
+              (((.body // "") | startswith($marker)) or
+               ((.body // "") | startswith($legacy)))
+            ) | .number] | unique' <<<"$pulls")
+          linked_prs=$(jq -cn --argjson comments "$comment_prs" \
+            --argjson bodies "$body_prs" '$comments + $bodies | unique')
+          linked_count=$(jq 'length' <<<"$linked_prs")
+          if [ "$linked_count" -gt 1 ]; then
+            echo "Source issue has ambiguous trusted plan linkage; refusing plan publication." >&2
+            exit 1
+          fi
+          if [ "$linked_count" = "1" ]; then
+            linked_number=$(jq -r '.[0]' <<<"$linked_prs")
+            linked=$(gh api "repos/$GH_REPO/pulls/$linked_number")
+            if ! jq -e --arg marker "$authority_marker" \
+              --arg legacy "$legacy_prefix" \
+              --arg publisher "$TRUSTED_PUBLISHER" '
+              .user.login == $publisher and
+              .user.type == "Bot" and
+              (.head.ref | startswith("plan/")) and
+              (((.body // "") | startswith($marker)) or
+               ((.body // "") | startswith($legacy)))
+            ' >/dev/null <<<"$linked"; then
+              echo "Trusted plan linkage does not match its source authority; refusing plan publication." >&2
+              exit 1
+            fi
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "Source issue already has one trusted plan; publication is a no-op."
+            exit 0
+          fi
+          if jq -e '[.labels[].name] | index("karsift:planned") != null' \
+            >/dev/null <<<"$issue"; then
+            echo "Source issue is marked planned without unique trusted linkage; refusing plan publication." >&2
+            exit 1
+          fi
+          if [ "$(jq -r .state <<<"$issue")" != "open" ]; then
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "Source issue is closed; publication is a no-op."
+            exit 0
+          fi
+          echo "proceed=true" >> "$GITHUB_OUTPUT"
+
       - name: Download clarifying question
-        if: needs.plan.outputs.needs_info == 'true'
+        if: needs.plan.outputs.needs_info == 'true' && steps.source-guard.outputs.proceed == 'true'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: plan-${{ needs.plan.outputs.package_id }}-needs-info
           path: /tmp/planner-needs-info
 
       - name: Post clarifying question from clean runner
-        if: needs.plan.outputs.needs_info == 'true'
+        if: needs.plan.outputs.needs_info == 'true' && steps.source-guard.outputs.proceed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -760,7 +982,7 @@ jobs:
               --add-label "karsift:needs-info"
 
       - name: Download planned package bundle
-        if: needs.plan.outputs.has_changes == 'true'
+        if: needs.plan.outputs.has_changes == 'true' && steps.source-guard.outputs.proceed == 'true'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: plan-${{ needs.plan.outputs.package_id }}-bundle
@@ -768,7 +990,7 @@ jobs:
 
       - name: Check for GitHub App credentials
         id: has-app
-        if: needs.plan.outputs.has_changes == 'true'
+        if: needs.plan.outputs.has_changes == 'true' && steps.source-guard.outputs.proceed == 'true'
         env:
           APP_ID: ${{ secrets.KARSIFT_BOT_APP_ID }}
         run: |
@@ -780,7 +1002,7 @@ jobs:
 
       - name: Mint least-privilege App token on the clean runner
         id: app-token
-        if: needs.plan.outputs.has_changes == 'true' && steps.has-app.outputs.configured == 'true'
+        if: needs.plan.outputs.has_changes == 'true' && steps.source-guard.outputs.proceed == 'true' && steps.has-app.outputs.configured == 'true'
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
         with:
           app-id: ${{ secrets.KARSIFT_BOT_APP_ID }}
@@ -793,7 +1015,7 @@ jobs:
 
       - name: Validate and publish exact planned package
         id: publish
-        if: needs.plan.outputs.has_changes == 'true'
+        if: needs.plan.outputs.has_changes == 'true' && steps.source-guard.outputs.proceed == 'true'
         env:
           PUBLISH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
           PUBLISH_BRANCH: ${{ needs.plan.outputs.branch }}
@@ -865,7 +1087,7 @@ jobs:
       # draft. The value above is read again from the immutable bundle here.
       - name: Open draft PR from clean runner
         id: pr
-        if: needs.plan.outputs.has_changes == 'true'
+        if: needs.plan.outputs.has_changes == 'true' && steps.source-guard.outputs.proceed == 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
           # This publisher intentionally has no checkout. Bind gh explicitly
@@ -877,14 +1099,17 @@ jobs:
         run: |
           set -euo pipefail
           {
-            echo "Draft change package proposed by the planner role (model resolved from"
-            echo "karsift-ai-infra/config/roles.yml)."
-            echo
             if [ -n "$SOURCE_ISSUE" ]; then
               if ! [[ "$SOURCE_ISSUE" =~ ^[1-9][0-9]*$ ]]; then
                 echo "Source issue is malformed; refusing PR creation." >&2
                 exit 1
               fi
+              echo "<!-- karsift-plan-source-issue:$SOURCE_ISSUE -->"
+            fi
+            echo "Draft change package proposed by the planner role (model resolved from"
+            echo "karsift-ai-infra/config/roles.yml)."
+            echo
+            if [ -n "$SOURCE_ISSUE" ]; then
               echo "In response to issue #$SOURCE_ISSUE."
             fi
             if [ -n "$SOURCE_DOCUMENT_PATH" ]; then
@@ -914,7 +1139,7 @@ jobs:
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
       - name: Link source issue to the draft PR
-        if: needs.plan.outputs.has_changes == 'true' && inputs.source_issue_number != ''
+        if: needs.plan.outputs.has_changes == 'true' && steps.source-guard.outputs.proceed == 'true' && inputs.source_issue_number != ''
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
           GH_REPO: ${{ github.repository }}

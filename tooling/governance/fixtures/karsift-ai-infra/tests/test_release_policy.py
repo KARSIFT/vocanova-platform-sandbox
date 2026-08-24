@@ -42,6 +42,7 @@ class ReleasePolicyTests(unittest.TestCase):
         )[1].split(") ||", 1)[0]
         self.assertIn("github.event.check_run.pull_requests[0].base.ref == 'main'", check_wake)
         self.assertIn("github.event.check_run.pull_requests[0].head.ref == 'develop'", check_wake)
+        self.assertIn("github.event.check_run.pull_requests[0] != null", check_wake)
 
     def test_promotion_checks_are_paginated_authoritative_and_sha_bound(self):
         self.assertIn("authoritative-checks-runner.py", self.release)
@@ -50,6 +51,17 @@ class ReleasePolicyTests(unittest.TestCase):
         self.assertIn('headRefOid <<<"$live")" != "$CHECKED_HEAD_SHA', self.release)
         self.assertNotIn("statusCheckRollup", self.release)
         self.assertNotIn("gh pr checks", self.release)
+
+    def test_ruleset_attestation_is_narrow_and_precedes_merge(self):
+        self.assertIn("statuses: write", self.release)
+        self.assertIn("promotion-status-attestation-runner.py", self.release)
+        for context in ("governance-policy", "validate", "ci / ci"):
+            self.assertIn(f'--exclude-status-context "{context}"', self.release)
+        attest = self.release.index("Attest recovered required contexts")
+        merge = self.release.index("Perform the single exact-head merge decision")
+        self.assertLess(attest, merge)
+        self.assertIn("GH_TOKEN: ${{ github.token }}", self.release[attest:merge])
+        self.assertIn("steps.app-token.outputs.token", self.release[merge:])
 
 
 if __name__ == "__main__":

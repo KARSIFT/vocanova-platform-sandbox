@@ -15,3 +15,8 @@ apps/web/lighthouse-reports/
 # Uploaded as a workflow artifact on failure; never committed.
 apps/web/playwright-report-staging/
 apps/web/test-results-staging/
+# VOC-112-T03: Graphify pilot output and local locked runtime (operator setup only).
+graphify-out/
+.graphify_python
+scripts/graphify/.venv/
+scripts/graphify/.runtime-home/

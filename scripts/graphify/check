@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# VOC-112-T03 — fail-closed prerequisite check for the Graphify pilot runtime.
+# Performs no download, upgrade, hook registration, or network access.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GRAPHIFY_HOME="$SCRIPT_DIR"
+REPO_ROOT="$(cd "$GRAPHIFY_HOME/../.." && pwd)"
+IDENTITY_FILE="$GRAPHIFY_HOME/runtime-identity.yaml"
+REQUIREMENTS_IN="$GRAPHIFY_HOME/requirements.in"
+REQUIREMENTS_LOCK="$GRAPHIFY_HOME/requirements.lock"
+
+die() {
+  echo "graphify-pilot check: $*" >&2
+  exit 1
+}
+
+require_file() {
+  [[ -f "$1" ]] || die "missing required file: $1"
+}
+
+sha256_file() {
+  sha256sum "$1" | awk '{print $1}'
+}
+
+read_identity_field() {
+  local key="$1"
+  awk -F': ' -v key="$key" '$1 == key {gsub(/^["'\'']|["'\'']$/, "", $2); print $2; exit}' "$IDENTITY_FILE"
+}
+
+require_file "$IDENTITY_FILE"
+require_file "$REQUIREMENTS_IN"
+require_file "$REQUIREMENTS_LOCK"
+
+expected_in_hash="$(read_identity_field requirements_in_sha256)"
+expected_lock_hash="$(read_identity_field requirements_lock_sha256)"
+actual_in_hash="$(sha256_file "$REQUIREMENTS_IN")"
+actual_lock_hash="$(sha256_file "$REQUIREMENTS_LOCK")"
+
+[[ "$actual_in_hash" == "$expected_in_hash" ]] || die "requirements.in digest mismatch; run bash scripts/graphify/setup.sh after reviewing lock changes"
+[[ "$actual_lock_hash" == "$expected_lock_hash" ]] || die "requirements.lock digest mismatch; run bash scripts/graphify/setup.sh after reviewing lock changes"
+
+venv_relative="$(read_identity_field venv_relative)"
+cli_relative="$(read_identity_field graphify_cli_relative)"
+VENV_DIR="$GRAPHIFY_HOME/$venv_relative"
+GRAPHIFY_CLI="$GRAPHIFY_HOME/$cli_relative"
+
+[[ -x "$GRAPHIFY_CLI" ]] || die "locked runtime missing at $GRAPHIFY_CLI — run: bash scripts/graphify/setup.sh"
+
+installed_version="$("$GRAPHIFY_CLI" --version 2>/dev/null | awk '{print $NF}')"
+expected_version="$(read_identity_field pypi_version)"
+[[ "$installed_version" == "$expected_version" ]] || die "installed graphify version mismatch (expected $expected_version, got $installed_version)"
+
+expected_distributions="$({
+  awk '/^[[:alnum:]_.-]+==/ {
+    distribution = tolower($1)
+    gsub(/[_.]+/, "-", distribution)
+    print distribution
+  }' "$REQUIREMENTS_LOCK"
+} | LC_ALL=C sort)"
+
+installed_distributions="$({
+  PIP_DISABLE_PIP_VERSION_CHECK=1 "$VENV_DIR/bin/python" -m pip list --format=freeze 2>/dev/null \
+    | awk -F'==' '
+        NF == 2 {
+          name = tolower($1)
+          gsub(/[_.]+/, "-", name)
+          if (name != "pip" && name != "setuptools") {
+            print name "==" $2
+          }
+        }
+      '
+} | LC_ALL=C sort)"
+
+[[ "$installed_distributions" == "$expected_distributions" ]] \
+  || die "installed distribution inventory differs from the reviewed lock; rerun: bash scripts/graphify/setup.sh"
+
+installed_count="$(printf '%s\n' "$installed_distributions" | awk 'NF {count++} END {print count + 0}')"
+expected_count="$(read_identity_field locked_distribution_count)"
+[[ "$installed_count" == "$expected_count" ]] \
+  || die "installed distribution count mismatch (expected $expected_count, got $installed_count)"
+
+PIP_DISABLE_PIP_VERSION_CHECK=1 "$VENV_DIR/bin/python" -m pip check >/dev/null \
+  || die "installed locked runtime has unsatisfied dependencies"
+
+[[ -f "$REPO_ROOT/.graphifyignore" ]] || die "missing repository .graphifyignore"
+
+echo "graphify-pilot check: locked runtime identity OK (graphify $installed_version; $installed_count distributions)"

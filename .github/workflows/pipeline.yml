@@ -63,7 +63,7 @@ on:
         description: "Which reusable workflow to run"
         required: true
         type: choice
-        options: [implement, plan, reconcile, reconcile-release, reconcile-live-evidence, verify-auto-advance-live-evidence, verify-ready-for-review-reuse, verify-remediate-operator-ownership]
+        options: [implement, plan, reconcile, reconcile-release, reconcile-live-evidence, verify-auto-advance-live-evidence, verify-ready-for-review-reuse, recover-integration-push, recover-promotion-pr-checks, verify-promotion-check-recovery, verify-post-promotion-workflow, verify-remediate-operator-ownership]
         default: implement
       change_id:
         description: 'implement only: adopted package to implement from, e.g. "VOC-007"'
@@ -118,7 +118,11 @@ on:
         required: false
         type: string
       live_evidence_pr_number:
-        description: "reconcile-live-evidence dispatch only: waiting task PR number"
+        description: "reconcile-live-evidence dispatch, verify-remediate-operator-ownership, and VOC-113 verify/recovery: target PR number"
+        required: false
+        type: string
+      promotion_pr_number:
+        description: "VOC-113 read-only recovery/verifier target promotion PR number"
         required: false
         type: string
       verify_source_run_id:
@@ -161,10 +165,6 @@ on:
         description: "verify-ready-for-review-reuse only: exact source reviewed base SHA"
         required: false
         type: string
-      verify_reuse_proof_head_sha:
-        description: "verify-ready-for-review-reuse only: exact evidence-carrier head SHA"
-        required: false
-        type: string
 
 # Explicit floor for the reusable jobs below that do not declare narrower
 # job-level permissions. Most call karsift-ai-infra workflows with
@@ -179,8 +179,8 @@ on:
 # default_workflow_permissions could be safely tightened from "write" to
 # "read" without breaking the pipeline; do not narrow this without
 # re-checking every called reusable workflow's own job-level permissions
-# first. The live-evidence reconciler has one narrower job-level exception:
-# Actions write is required only to dispatch the contract-allowlisted synthetic.
+# first. Job-level Actions-write exceptions are limited to live-evidence dispatch
+# and exact-SHA recovery in recover-integration-push, merge-gate, and release.
 permissions:
   contents: write
   issues: write
@@ -197,6 +197,88 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' }}
 
 jobs:
+  # Hourly secondary wake for an integration merge whose original post-merge
+  # recovery attempt timed out or was interrupted. The reusable recovery is
+  # exact-SHA bound and serialized. Its read-only preflight is a mutation-free
+  # no-op once every workflow selected by the integration tip's path policy has
+  # completed successfully.
+  resolve-integration-recovery-target:
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.action == 'recover-integration-push')
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      target_sha: ${{ steps.target.outputs.target_sha }}
+      recovery_needed: ${{ steps.target.outputs.recovery_needed }}
+    steps:
+      - name: Resolve current integration head
+        id: target
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          target_sha=$(gh api "repos/${{ github.repository }}/git/ref/heads/develop" --jq .object.sha)
+          if ! [[ "$target_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Current integration head is unavailable; refusing recovery." >&2
+            exit 1
+          fi
+          echo "target_sha=$target_sha" >> "$GITHUB_OUTPUT"
+
+          changed_paths=$(gh api --paginate --slurp \
+            "repos/${{ github.repository }}/commits/$target_sha?per_page=100" |
+            jq '[.[] | .files[]?.filename]')
+          deploy_required=false
+          while IFS= read -r changed_path; do
+            case "$changed_path" in
+              */*) ;;
+              *) deploy_required=true ;;
+            esac
+            case "$changed_path" in
+              apps/*|packages/*|infra/*|tests/staging-e2e/*|.github/workflows/deploy-staging.yml|scripts/foundation/voc111-deploy-staging-paths.test.mjs)
+                deploy_required=true
+                ;;
+            esac
+          done < <(jq -r '.[]' <<<"$changed_paths")
+
+          workflow_runs=$(gh api --paginate --slurp \
+            "repos/${{ github.repository }}/actions/runs?head_sha=$target_sha&per_page=100")
+          has_successful_run() {
+            local workflow_path=".github/workflows/$1"
+            jq -e --arg path "$workflow_path" \
+              'any(.[] | .workflow_runs[]?; .path == $path and .status == "completed" and .conclusion == "success")' \
+              >/dev/null <<<"$workflow_runs"
+          }
+          recovery_needed=false
+          if ! has_successful_run repository-governance.yml ||
+             { [ "$deploy_required" = true ] && ! has_successful_run deploy-staging.yml; }; then
+            recovery_needed=true
+          fi
+          echo "recovery_needed=$recovery_needed" >> "$GITHUB_OUTPUT"
+
+  recover-integration-push:
+    needs: resolve-integration-recovery-target
+    if: >-
+      needs.resolve-integration-recovery-target.result == 'success' &&
+      needs.resolve-integration-recovery-target.outputs.target_sha != '' &&
+      ((github.event_name == 'schedule' && needs.resolve-integration-recovery-target.outputs.recovery_needed == 'true') ||
+       (github.event_name == 'workflow_dispatch' && inputs.action == 'recover-integration-push'))
+    uses: KARSIFT/karsift-ai-infra/.github/workflows/recover-actions-checks.yml@main
+    permissions:
+      actions: write
+      checks: read
+      contents: read
+      pull-requests: read
+      statuses: read
+    with:
+      recovery_mode: integration_push
+      target_sha: ${{ needs.resolve-integration-recovery-target.outputs.target_sha }}
+      branch_ref: develop
+      timeout_seconds: "1800"
+    secrets:
+      KARSIFT_BOT_APP_ID: ${{ secrets.KARSIFT_BOT_APP_ID }}
+      KARSIFT_BOT_PRIVATE_KEY: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
+
   implement:
     if: github.event_name == 'workflow_dispatch' && inputs.action == 'implement'
     uses: KARSIFT/karsift-ai-infra/.github/workflows/implement.yml@main
@@ -262,20 +344,28 @@ jobs:
     secrets: inherit
 
   ready-for-review-reuse:
-    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    if: |
+      (github.event_name == 'pull_request' && github.event.action != 'closed') ||
+      (github.event_name == 'workflow_dispatch' && inputs.action == 'recover-promotion-pr-checks')
     uses: KARSIFT/karsift-ai-infra/.github/workflows/ready-for-review-reuse.yml@main
     with:
-      pr_number: ${{ github.event.pull_request.number }}
-      expected_head_sha: ${{ github.event.pull_request.head.sha }}
-      expected_base_sha: ${{ github.event.pull_request.base.sha }}
-      event_action: ${{ github.event.action }}
+      pr_number: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || inputs.promotion_pr_number }}
+      expected_head_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      # Recovery always takes the full CI path, so base-SHA reuse metadata is
+      # intentionally absent instead of falsely identifying the develop tip as
+      # both the promotion PR head and base.
+      expected_base_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
+      event_action: ${{ github.event_name == 'pull_request' && github.event.action || 'recovery' }}
       current_run_id: ${{ github.run_id }}
 
   ci:
     needs: [ready-for-review-reuse]
     if: |
       always() &&
-      github.event_name == 'pull_request' && github.event.action != 'closed'
+      (
+        (github.event_name == 'pull_request' && github.event.action != 'closed') ||
+        (github.event_name == 'workflow_dispatch' && inputs.action == 'recover-promotion-pr-checks')
+      )
     uses: KARSIFT/karsift-ai-infra/.github/workflows/ci.yml@main
     with:
       # GitHub rulesets evaluate the newest required `ci / ci` context. Keep
@@ -489,7 +579,7 @@ jobs:
     with:
       pr_number: ${{ github.event.pull_request.number }}
       package_path: ${{ needs.extract-package-path.outputs.package_path }}
-      integration_branch: "develop"   # match the value used for implement, above
+      integration_branch: "develop" # match the value used for implement, above
       ci_failed: ${{ needs.ci.result == 'failure' }}
       review_job_failed: ${{ needs.review.result == 'failure' }}
       expected_head_sha: ${{ github.event.pull_request.head.sha }}
@@ -527,6 +617,13 @@ jobs:
       needs.web-container-runtime.result == 'success' &&
       (needs.review.result == 'success' || needs.review.result == 'skipped') &&
       (needs.plan-review.result == 'success' || needs.plan-review.result == 'skipped')
+    permissions:
+      actions: write
+      checks: read
+      contents: write
+      issues: write
+      pull-requests: write
+      statuses: read
     uses: KARSIFT/karsift-ai-infra/.github/workflows/merge-gate.yml@main
     with:
       auto_merge_enabled: "true"      # proven live on this repo (VOC-012, VOC-014) for this project's loop
@@ -554,6 +651,13 @@ jobs:
           github.event.check_run.pull_requests[0].head.ref == 'develop') ||
         (github.event_name == 'workflow_run' && github.event.action == 'completed')
       )
+    permissions:
+      actions: write
+      checks: read
+      contents: write
+      issues: write
+      pull-requests: write
+      statuses: write
     uses: KARSIFT/karsift-ai-infra/.github/workflows/release.yml@main
     with:
       release_issue_number: ${{ inputs.release_issue_number }}
@@ -650,7 +754,7 @@ jobs:
       source_pr_number: ${{ inputs.verify_reuse_source_pr_number }}
       expected_source_head_sha: ${{ inputs.verify_reuse_source_head_sha }}
       expected_source_base_sha: ${{ inputs.verify_reuse_source_base_sha }}
-      expected_proof_head_sha: ${{ inputs.verify_reuse_proof_head_sha }}
+      expected_proof_head_sha: ${{ github.sha }}
 
   # Read-only post-carrier verifier for VOC-106 operator-owned remediate proof.
   # Dispatch manually on the exact evidence-carrier branch ref after the T00→T01
@@ -670,3 +774,25 @@ jobs:
       task_id: ${{ inputs.task_id }}
       package_path: ${{ inputs.package_path }}
       integration_branch: "develop"
+
+  # Read-only post-carrier verifier for VOC-113 promotion exact-head proof.
+  verify-promotion-check-recovery:
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'verify-promotion-check-recovery'
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+    uses: KARSIFT/karsift-ai-infra/.github/workflows/verify-promotion-check-recovery.yml@main
+    with:
+      promotion_pr_number: ${{ inputs.promotion_pr_number }}
+
+  # Read-only post-carrier verifier for VOC-113 post-promotion workflow proof.
+  verify-post-promotion-workflow:
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'verify-post-promotion-workflow'
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+    uses: KARSIFT/karsift-ai-infra/.github/workflows/verify-post-promotion-workflow.yml@main
+    with:
+      promotion_pr_number: ${{ inputs.promotion_pr_number }}

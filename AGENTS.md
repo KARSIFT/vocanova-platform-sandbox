@@ -97,6 +97,19 @@ trigger autonomous adoption without a founder `approved` comment (after A-004
 activation; infra behavior lands in VOC-080-T01/T02). See `plan-review.yml`'s header
 comment in karsift-ai-infra for the full mechanism.
 
+### Largest safe coherent plans and tasks
+
+Choose the largest safe coherent change package that completes the whole user or
+business outcome. A plan may be broad or massive and contain several tasks, but it
+must use the minimum sufficient number of maximal tasks. Default to one end-to-end
+task and one implementation PR whenever technically possible, keeping related code,
+contracts, tests, docs, configuration, migrations, skills, and rollback evidence
+together. Split only for a concretely explained authority/owner, independent release
+or rollback, hard dependency, environment, post-merge evidence, or demonstrated
+reviewability boundary. Line, file, component, skill, repository, and layer counts,
+or convenience, are never sufficient split reasons. This does not authorize mixing
+unrelated outcomes or weakening risk, security, exact-SHA review, or protected checks.
+
 ## Reporting a bug found outside the normal loop
 
 - If you (a human operator or an agent) discover a real bug while doing something
@@ -107,6 +120,13 @@ comment in karsift-ai-infra for the full mechanism.
   automatically triggers `plan-from-issue` (see `pipeline.yml`), which drafts a
   real change package for independent review and autonomous adoption, keeping every
   fix inside the same governed loop as planned work instead of bypassing it.
+- **In-scope causal remediation under an active package:** when a defect is
+  causally related to the work already authorized by an adopted package and stays
+  within that package's original objective, acceptance criteria, risk ceiling, and
+  protected-area scope, remediation may remain on the same implementation carrier
+  or task roster instead of opening a separate issue/plan. This does not authorize
+  unrelated bug fixes, changed product intent, authority expansion, or protected-area
+  scope creep to ride along for convenience.
 - The only exception (as of 2026-08-08) is GitHub repository/environment *settings*
   changes made via the GitHub API or web UI - branch protection, environment
   deployment-branch policies, security toggles (secret scanning, Dependabot), and
@@ -178,6 +198,14 @@ pnpm validate   # or the narrower pnpm lint / typecheck / test / build
 
 Discover future commands from the committed package scripts and `docs/development.md`.
 Do not invent or report an unavailable check as passing.
+
+## Agent skills
+
+Repository-scoped skills live under `.agents/skills/` with Claude loader adapters in
+`.claude/skills/`. See `docs/development/agent-skills.md` for installation scope,
+validation commands, pinned upstream updates, Graphify pilot limits, and safe use.
+When skill prose conflicts with this file, `CLAUDE.md`, approved change packages,
+tests, or source code, the repository sources win.
 
 ## Safety
 

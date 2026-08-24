@@ -29,7 +29,9 @@ class AdoptionHandoffPolicyTests(unittest.TestCase):
         mint = self.merge_gate.index("- name: Mint App installation token")
         merge = self.merge_gate.index("- name: Merge automatically")
         self.assertLess(mint, merge)
-        merge_block = self.merge_gate[merge:]
+        merge_block = self.merge_gate[merge:].split(
+            "- name: Publish task completion marker", 1
+        )[0]
         self.assertIn("GH_TOKEN: ${{ steps.app-token.outputs.token }}", merge_block)
         self.assertNotIn("GH_TOKEN: ${{ github.token }}", merge_block)
 
@@ -71,7 +73,7 @@ class AdoptionHandoffPolicyTests(unittest.TestCase):
 
     def test_caller_template_has_reconciliation_dispatch(self):
         self.assertIn(
-            "options: [implement, plan, reconcile, reconcile-release, reconcile-live-evidence, verify-auto-advance-live-evidence, verify-ready-for-review-reuse, verify-remediate-operator-ownership]",
+            "options: [implement, plan, reconcile, reconcile-release, reconcile-live-evidence, verify-auto-advance-live-evidence, verify-ready-for-review-reuse, recover-integration-push, recover-promotion-pr-checks, verify-promotion-check-recovery, verify-post-promotion-workflow, verify-remediate-operator-ownership]",
             self.template,
         )
         self.assertIn("plan_pr_number:", self.template)

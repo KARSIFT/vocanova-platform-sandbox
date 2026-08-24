@@ -100,6 +100,51 @@ is currently deployed against — not a plan:
 | Uptime monitoring | Uptime Kuma (availability/TLS/basic API health) + scheduled synthetics (authenticated behavior) — **amended 2026-08-19 by `VOC-086-§1-amendment`**; Sentry remains the separate error-monitoring channel (VOC-051) |
 | Harness, Terraform/OpenTofu, Cloudflare D1/KV/Durable Objects/Queues/R2 | Deferred post-MVP (unchanged) |
 
+### Missing Actions activation recovery
+
+If GitHub does not activate required workflows after an App-driven task merge or
+promotion-PR creation, do not toggle PR state or create unbacked check/status
+records. The
+repository-managed recovery path dispatches the genuine governance, validation,
+and path-required deployment workflows for an immutable SHA, waits only for
+successful terminal evidence, and times out fail-closed. Its hourly wake repairs
+a stranded current `develop` tip without duplicating already-successful runs;
+`reconcile-release` re-enters the same promotion recovery path idempotently.
+Immediate post-merge recovery is scoped to governed `agent/` task branches.
+Other ways of advancing `develop` are covered by the hourly exact-tip wake.
+For bounded operator recovery of the current integration tip, dispatch
+`pipeline.yml` with `action=recover-integration-push`. The workflow resolves the
+current `develop` SHA internally and accepts no caller-supplied target SHA, then
+reuses the same genuine-workflow, exact-SHA, idempotent recovery contract.
+
+Recovery metadata reads are fail-closed prerequisites. The merge-gate,
+release-converge, and standalone recovery jobs use their short-lived
+`GITHUB_TOKEN` with explicit `actions: write`, `checks: read`, `statuses: read`,
+and the required Contents/Pull requests access. That job token discovers workflow
+runs and dispatches only the runner's allowlisted genuine workflows. The App token
+remains limited to PR, issue, and content mutations that require App identity, so
+recovery does not depend on installation-level Actions permission. When a metadata
+endpoint fails, the runner emits one sanitized endpoint class
+(`check_runs_read_failed`, `workflow_runs_read_failed`, or
+`commit_metadata_read_failed`) and aborts before dispatch planning.
+
+GitHub does not associate successful manual recovery runs with the promotion
+PR's required ruleset contexts. The release job therefore receives the additional
+`statuses: write` capability. Only after the trusted selector proves genuine
+successful exact-head runs from the expected governance-policy,
+repository-governance, and pipeline workflows does it revalidate the open PR and
+publish same-SHA success attestations for `governance-policy`, `validate`, and
+`ci / ci`. Those derived statuses link to the release run and are excluded from
+future evidence selection, so they satisfy the repository ruleset but can never
+replace the underlying Actions evidence. The App token remains mutation-only.
+
+The canonical same-repository `develop` → `main` promotion PR validates capture
+provenance with the same `squash-safe-push` contract as exact-head recovery. That
+promotion aggregates already-squashed task commits, so original-commit ancestry
+is not a valid requirement. Ordinary PRs retain `pr-validation`, and PRs that
+change the capture fixture retain strict `pr-ancestry`; a fork or any other
+base/head branch pair cannot select the promotion exception.
+
 This table is an implementation target, not authority to procure vendors, incur spend, create
 infrastructure, deploy, or release. Each such action requires its own approved change package and
 the authority applicable at execution time. The v1.1 rows above describe the staging tier that

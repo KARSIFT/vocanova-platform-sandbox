@@ -251,8 +251,12 @@ class Voc097LiveEvidenceReconcileTests(unittest.TestCase):
             self.pipeline.count(
                 "expected_head_sha: ${{ github.event.pull_request.head.sha }}"
             ),
-            5,
+            4,
         )
+        reuse_block = self.pipeline.split("  ready-for-review-reuse:", 1)[1].split(
+            "\n  ci:", 1
+        )[0]
+        self.assertIn("github.event.pull_request.head.sha || github.sha", reuse_block)
 
         task = SimpleNamespace(task_id="VOC-097-T02", pr_number=12)
         evidence = {"run_id": 12345}

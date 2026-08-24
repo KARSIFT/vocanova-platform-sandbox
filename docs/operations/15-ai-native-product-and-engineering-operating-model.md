@@ -279,7 +279,7 @@ Acceptance criteria and tasks use stable identifiers such as:
 
 ```text
 AC-01
-VOC-023-T01
+VOC-023-T00
 ```
 
 Stable identifiers must remain traceable across files, issues, branches, pull requests, releases, and audit records.
@@ -933,19 +933,38 @@ Codex may refine internal details only within approved product and architecture 
 
 ## 10.10 Tasks
 
-Tasks are small, ordered, verifiable, and stable.
+Choose the **largest safe coherent change package** that completes the whole user or business
+outcome. A plan may be broad or massive and contain several tasks, but it must use the minimum
+sufficient number of maximal tasks. The default whenever technically possible is **one
+end-to-end implementation task and one implementation PR** carrying code, tests,
+documentation, migration/config updates, and acceptance evidence together. Task IDs are
+minimum-sufficient outcome traceability groupings — not component, file-type, layer, skill,
+or review-convenience buckets.
+
+Additional tasks are allowed only when at least one concrete boundary exists:
+
+1. hard merge-order dependency;
+2. independently releasable or rollbackable unit;
+3. distinct owner, authority, or risk boundary;
+4. mutually exclusive execution environment;
+5. post-merge evidence that cannot be produced in the implementation carrier; or
+6. change too large for reliable single-PR review (requires a concrete reviewability
+   explanation; size labels or line counts alone are insufficient).
+
+Every task after the first must record an explicit split reason and concrete explanation from
+that allowlist. Packages
+with more than three tasks are exceptional and require package-level justification for why
+consolidation is unsafe.
 
 Example:
 
 ```markdown
-- [ ] VOC-023-T01 Add the approved authentication schema.
-- [ ] VOC-023-T02 Implement the authentication service.
-- [ ] VOC-023-T03 Implement sign-in API behavior.
-- [ ] VOC-023-T04 Build the sign-in interface.
-- [ ] VOC-023-T05 Add unit and integration tests.
-- [ ] VOC-023-T06 Update affected documentation.
-- [ ] VOC-023-T07 Provide acceptance-criteria evidence.
+- [ ] VOC-023-T00 Implement approved authentication end to end (schema, service, API, UI,
+      tests, documentation, and acceptance evidence in one carrier).
 ```
+
+Adding or updating several related skills, including their adapters, configuration,
+documentation, and regression tests, is one task by default.
 
 ## 10.11 Test plan
 
