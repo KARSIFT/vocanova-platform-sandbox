@@ -95,6 +95,14 @@ commit is `3c156312d50856aa937b161b45d0132308b59040`. Caller-side tests now reje
 fetchable non-ancestor in original-capture mode, and the immutable historical
 capture subjects are restored rather than falsely reissued.
 
+The next exact-SHA review passed with only two Low findings. Shared follow-up
+PR #125 synchronized the caller fixture to the current checkout pin and added
+explicit second-wake coverage: an invocation that observes active exact-SHA
+recovery workflows waits without dispatching duplicates, while completion
+still requires successful terminal evidence. All four shared self-CI checks
+passed before merge; the final shared `main` commit is
+`d82a905fbecb497ce8346e5cf13e1001a0f13f85`.
+
 ## VOC-112 provenance repair (`VOC-113-D11`)
 
 Repository Governance supplies `PR_BASE_SHA` and `PR_HEAD_SHA` and selects
