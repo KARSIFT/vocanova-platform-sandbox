@@ -106,7 +106,8 @@ test("VOC-097-T02 caller wires bounded polling and explicit observe/dispatch pat
     pipeline
       .split("\n  ready-for-review-reuse:", 2)[1]
       ?.split("\n  ci:", 1)[0] ?? "";
-  assert.match(
+  assert.match(reuseBlock, /github\.event\.pull_request\.base\.sha \|\| ''/);
+  assert.doesNotMatch(
     reuseBlock,
     /github\.event\.pull_request\.base\.sha \|\| github\.sha/,
   );

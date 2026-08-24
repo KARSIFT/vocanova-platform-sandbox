@@ -27,6 +27,10 @@ const stagingDeployPath = path.join(
   repositoryRoot,
   ".github/workflows/deploy-staging.yml",
 );
+const devopsOperationsPath = path.join(
+  repositoryRoot,
+  "docs/operations/11-devops-and-ci-cd.md",
+);
 const fixtureInfraRoot = path.join(
   repositoryRoot,
   "tooling/governance/fixtures/karsift-ai-infra",
@@ -97,6 +101,7 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
   const governancePolicy = readFileSync(governancePolicyPath, "utf8");
   const repositoryGovernance = readFileSync(repositoryGovernancePath, "utf8");
   const stagingDeploy = readFileSync(stagingDeployPath, "utf8");
+  const devopsOperations = readFileSync(devopsOperationsPath, "utf8");
   const mergeGate = readFileSync(mergeWorkflowPath, "utf8");
   const release = readFileSync(releaseWorkflowPath, "utf8");
 
@@ -115,6 +120,14 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
       ?.split("\n  ci:", 1)[0] ?? "";
   assert.match(reuseBlock, /inputs\.action == 'recover-promotion-pr-checks'/);
   assert.match(reuseBlock, /event_action:.*'recovery'/);
+  assert.match(
+    reuseBlock,
+    /expected_base_sha:.*github\.event\.pull_request\.base\.sha \|\| ''/,
+  );
+  assert.doesNotMatch(
+    reuseBlock,
+    /expected_base_sha:.*github\.event\.pull_request\.base\.sha \|\| github\.sha/,
+  );
   assert.doesNotMatch(pipeline, /\n  recover-promotion-pr-checks:/);
   const dispatchInputBlock =
     pipeline
@@ -149,6 +162,10 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
     /uses: KARSIFT\/karsift-ai-infra\/\.github\/workflows\/verify-post-promotion-workflow\.yml@main/,
   );
   assert.match(governancePolicy, /recovery_pr_number/);
+  assert.match(
+    governancePolicy,
+    /Manual governance recovery requires a promotion PR number; refusing\./,
+  );
   assert.match(repositoryGovernance, /recovery_pr_number/);
   assert.match(repositoryGovernance, /recovery_target_sha/);
   assert.match(repositoryGovernance, /RECOVERY_TARGET_SHA/);
@@ -167,6 +184,11 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
   );
   assert.match(mergeGate, /actions-check-recovery-runner\.py/);
   assert.match(release, /Recover missing exact-head promotion checks/);
+  assert.match(devopsOperations, /Missing Actions activation recovery/);
+  assert.match(
+    devopsOperations,
+    /do not toggle PR state or create check\/status records/,
+  );
   assert.doesNotMatch(
     mergeGate.split("Recover missing integration", 1)[1] ?? "",
     /github\.token merge/i,

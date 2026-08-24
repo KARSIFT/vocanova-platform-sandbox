@@ -100,6 +100,16 @@ is currently deployed against — not a plan:
 | Uptime monitoring | Uptime Kuma (availability/TLS/basic API health) + scheduled synthetics (authenticated behavior) — **amended 2026-08-19 by `VOC-086-§1-amendment`**; Sentry remains the separate error-monitoring channel (VOC-051) |
 | Harness, Terraform/OpenTofu, Cloudflare D1/KV/Durable Objects/Queues/R2 | Deferred post-MVP (unchanged) |
 
+### Missing Actions activation recovery
+
+If GitHub does not activate required workflows after an App-driven task merge or
+promotion-PR creation, do not toggle PR state or create check/status records. The
+repository-managed recovery path dispatches the genuine governance, validation,
+and path-required deployment workflows for an immutable SHA, waits only for
+successful terminal evidence, and times out fail-closed. Its hourly wake repairs
+a stranded current `develop` tip without duplicating already-successful runs;
+`reconcile-release` re-enters the same promotion recovery path idempotently.
+
 This table is an implementation target, not authority to procure vendors, incur spend, create
 infrastructure, deploy, or release. Each such action requires its own approved change package and
 the authority applicable at execution time. The v1.1 rows above describe the staging tier that

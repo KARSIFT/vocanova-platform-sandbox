@@ -40,7 +40,10 @@ jobs:
           RECOVERY_PR: ${{ inputs.recovery_pr_number }}
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "$RECOVERY_PR" ]; then
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -z "$RECOVERY_PR" ]; then
+            echo "Manual governance recovery requires a promotion PR number; refusing." >&2
+            exit 1
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             if ! [[ "$RECOVERY_PR" =~ ^[1-9][0-9]*$ ]]; then
               echo "Recovery promotion PR number is malformed; refusing." >&2
               exit 1
