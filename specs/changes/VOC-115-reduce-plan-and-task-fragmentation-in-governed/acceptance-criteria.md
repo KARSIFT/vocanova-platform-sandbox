@@ -71,13 +71,16 @@ criteria, risk ceiling, and protected-area scope.
 
 - Requirement source: `VOC-115-D06`, `VOC-115-D09`
 - Tasks: `VOC-115-T00`
-- Tests: `VOC-115-TEST-08`
+- Tests: `VOC-115-TEST-08`, `VOC-115-TEST-10`
 - Evidence: `VOC-115-EV-00`
 - Result: pending
 
 Updated docs, prompts, validation, and mirrored fixtures preserve exact-SHA
 independent verification, deterministic risk floors, protected-branch checks, and
 fail-closed behavior. No acceptance criterion claims reduced review rigor.
+Every new or modified `change.yaml` is parsed with the same YAML implementation used
+by adoption before a plan can merge, so syntax-invalid authority metadata fails at
+the plan gate rather than after merge.
 
 ## VOC-115-AC-06 — Related multi-skill work remains one traceability grouping
 

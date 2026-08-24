@@ -43,6 +43,7 @@ Record the exact command lines and results for:
 - `VOC-115-AC-04` / `VOC-115-EV-00` — in-scope causal remediation stays bounded under
   the active package while unrelated work still requires a new plan.
 - `VOC-115-AC-05` / `VOC-115-EV-00` — exact-SHA review, risk floors, protected-branch
-  gates, and fail-closed behavior remain unchanged.
+  gates, fail-closed behavior, and adoption-compatible pre-merge YAML parsing remain
+  unchanged or strengthened.
 - `VOC-115-AC-06` / `VOC-115-EV-00` — the related multi-skill regression stays one
   plan, one outcome grouping, and one task.

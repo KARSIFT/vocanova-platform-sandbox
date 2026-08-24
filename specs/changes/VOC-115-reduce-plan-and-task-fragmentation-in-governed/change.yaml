@@ -25,7 +25,7 @@ requirement_source: 'GitHub issue #962 (Reduce plan and task fragmentation in go
   tests, split-reason enforcement, justified multi-task coverage, and docs/tests proving
   in-scope causal failures may remain under the active package while unrelated or
   authority-expanding work still requires a new plan. The issue-thread audit further
-  identifies DOC-15's seven-task component example and development-workflow `L`/800-line
+  identifies DOC-15''s seven-task component example and development-workflow `L`/800-line
   splitting rules as contradictory size-driven contributors; it requires one
   outcome-sized PR by default, minimum-sufficient task-ID traceability groupings, and
   an explicit multi-skill one-plan/one-task regression. This draft package does not
