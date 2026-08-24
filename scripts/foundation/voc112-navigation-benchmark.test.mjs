@@ -7,7 +7,10 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import test from "node:test";
-import { BENCHMARK_QUESTIONS } from "./voc112-navigation-benchmark-run.mjs";
+import {
+  BENCHMARK_QUESTIONS,
+  mergeDiscoveryRows,
+} from "./voc112-navigation-benchmark-run.mjs";
 
 const repositoryRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -205,9 +208,8 @@ test("VOC-112-TEST-12 supplemental: evidence contains no prompts or raw logs", (
 
 test("VOC-112-TEST-13: Cursor and Claude actually read the canonical skill from root and nested cwd", () => {
   const evidence = fixture("voc112-skill-discovery-evidence.json");
-  assert.equal(evidence.schema_version, 2);
+  assert.equal(evidence.schema_version, 3);
   assert.equal(evidence.capture_kind, "real-agent-structured-trace");
-  assertCapturedRevision(evidence);
   for (const runtime of ["hosted-cursor", "claude-code"]) {
     for (const context of ["repository-root", "nested-cwd-apps-web"]) {
       const row = evidence.discoveries.find(
@@ -215,6 +217,7 @@ test("VOC-112-TEST-13: Cursor and Claude actually read the canonical skill from 
           candidate.runtime === runtime && candidate.context === context,
       );
       assert.ok(row, `missing ${runtime}/${context} discovery`);
+      assertCapturedRevision(row);
       assert.equal(row.result, "pass", `${runtime}/${context} did not pass`);
       assert.deepEqual(row.canonical_skill_reads, [
         ".agents/skills/vocanova-repo-navigator/SKILL.md",
@@ -226,6 +229,53 @@ test("VOC-112-TEST-13: Cursor and Claude actually read the canonical skill from 
       assert.ok(row.runtime_version);
     }
   }
+});
+
+test("VOC-112-TEST-13: later runtime capture preserves truthful credential limitations", () => {
+  const sourceHashes = {
+    navigator_skill_sha256: sha256(
+      ".agents/skills/vocanova-repo-navigator/SKILL.md",
+    ),
+    agents_sha256: sha256("AGENTS.md"),
+  };
+  const limitedClaudeRow = {
+    runtime: "claude-code",
+    runtime_version: "fixture",
+    context: "repository-root",
+    cwd: ".",
+    result: "not-executed-external-credential-required",
+    model: "unavailable",
+    structured_event_count: 0,
+    canonical_skill_reads: [],
+    captured_at: "2026-08-24T00:00:00.000Z",
+    subject_revision: "a".repeat(40),
+    source_hashes: sourceHashes,
+  };
+  const merged = mergeDiscoveryRows(
+    { discoveries: [limitedClaudeRow] },
+    "hosted-cursor",
+    "fixture",
+    [
+      {
+        context: "repository-root",
+        cwd: ".",
+        result: "pass",
+        structured_event_count: 1,
+        canonical_skill_reads: [
+          ".agents/skills/vocanova-repo-navigator/SKILL.md",
+        ],
+      },
+    ],
+    {
+      captured_at: "2026-08-24T00:01:00.000Z",
+      subject_revision: "b".repeat(40),
+      source_hashes: sourceHashes,
+    },
+  );
+  assert.deepEqual(
+    merged.discoveries.find((row) => row.runtime === "claude-code"),
+    limitedClaudeRow,
+  );
 });
 
 test("VOC-112-TEST-14: operator docs and AGENTS.md preserve one-source precedence", () => {

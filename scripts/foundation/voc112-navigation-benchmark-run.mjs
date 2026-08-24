@@ -305,41 +305,72 @@ function discoveryPrompt() {
 function readDiscoveryEvidence() {
   try {
     const evidence = JSON.parse(readFileSync(discoveryPath, "utf8"));
-    evidence.discoveries = (evidence.discoveries ?? []).filter(
-      (row) =>
-        Array.isArray(row.canonical_skill_reads) &&
-        Number.isInteger(row.structured_event_count),
-    );
+    evidence.discoveries = (evidence.discoveries ?? [])
+      .filter(
+        (row) =>
+          typeof row.runtime === "string" &&
+          typeof row.context === "string" &&
+          typeof row.result === "string" &&
+          Array.isArray(row.canonical_skill_reads) &&
+          Number.isInteger(row.structured_event_count),
+      )
+      .map((row) => ({
+        ...row,
+        captured_at: row.captured_at ?? evidence.recorded_at,
+        subject_revision: row.subject_revision ?? evidence.subject_revision,
+        source_hashes: row.source_hashes ?? evidence.source_hashes,
+      }));
     return evidence;
   } catch {
     return {
-      schema_version: 2,
-      subject_revision: gitRevision(),
+      schema_version: 3,
       discoveries: [],
     };
   }
 }
 
-function writeDiscoveryRows(runtimeName, runtimeVersion, rows) {
-  const evidence = readDiscoveryEvidence();
-  evidence.schema_version = 2;
-  evidence.capture_kind = "real-agent-structured-trace";
-  evidence.subject_revision = gitRevision();
-  evidence.recorded_at = new Date().toISOString();
-  evidence.source_hashes = {
-    navigator_skill_sha256: sha256File(navigatorRelativePath),
-    agents_sha256: sha256File("AGENTS.md"),
+export function mergeDiscoveryRows(
+  evidence,
+  runtimeName,
+  runtimeVersion,
+  rows,
+  capture,
+) {
+  return {
+    schema_version: 3,
+    capture_kind: "real-agent-structured-trace",
+    recorded_at: capture.captured_at,
+    discoveries: [
+      ...(evidence.discoveries ?? []).filter(
+        (row) => row.runtime !== runtimeName,
+      ),
+      ...rows.map((row) => ({
+        ...row,
+        runtime: runtimeName,
+        runtime_version: runtimeVersion,
+        captured_at: capture.captured_at,
+        subject_revision: capture.subject_revision,
+        source_hashes: capture.source_hashes,
+      })),
+    ],
   };
-  evidence.discoveries = [
-    ...(evidence.discoveries ?? []).filter(
-      (row) => row.runtime !== runtimeName,
-    ),
-    ...rows.map((row) => ({
-      ...row,
-      runtime: runtimeName,
-      runtime_version: runtimeVersion,
-    })),
-  ];
+}
+
+function writeDiscoveryRows(runtimeName, runtimeVersion, rows) {
+  const evidence = mergeDiscoveryRows(
+    readDiscoveryEvidence(),
+    runtimeName,
+    runtimeVersion,
+    rows,
+    {
+      captured_at: new Date().toISOString(),
+      subject_revision: gitRevision(),
+      source_hashes: {
+        navigator_skill_sha256: sha256File(navigatorRelativePath),
+        agents_sha256: sha256File("AGENTS.md"),
+      },
+    },
+  );
   writeFileSync(discoveryPath, `${JSON.stringify(evidence, null, 2)}\n`);
 }
 
@@ -366,7 +397,11 @@ function captureClaudeDiscovery() {
     if (result.status !== 0) {
       return {
         context,
+        cwd: path.relative(repositoryRoot, cwd).replaceAll("\\", "/") || ".",
         result: "not-executed-external-credential-required",
+        model: "unavailable",
+        structured_event_count: 0,
+        canonical_skill_reads: [],
       };
     }
     const events = parseJsonLines(result.stdout, "claude-code");

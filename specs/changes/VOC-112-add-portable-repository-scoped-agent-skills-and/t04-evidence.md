@@ -55,6 +55,8 @@ Fixture: `scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json`.
 | Hosted Cursor `2026.08.11-e8db854` / Auto | nested `apps/web` cwd | 34 structured events; completed read call for the same canonical navigator        | pass   |
 
 Fixture: `scripts/foundation/fixtures/voc112-skill-discovery-evidence.json`.
+Each runtime row carries its own capture timestamp, subject revision, and source hashes;
+later runtime captures preserve earlier pass, fail, or external-credential-limitation rows.
 The sanitized hosted capture came from workflow run `32673904614` against subject
 revision `00f220bbbd4bd5db51cb94912453227bae54fa3d`; the evidence-only workflow carrier
 was removed before the final PR head.
@@ -74,7 +76,7 @@ was removed before the final PR head.
 | Command                                                               | Result                                                                                                                                                                                |
 | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `node --test scripts/foundation/voc112-agent-skills.test.mjs`         | pass                                                                                                                                                                                  |
-| `node --test scripts/foundation/voc112-navigation-benchmark.test.mjs` | 6/6 pass                                                                                                                                                                              |
+| `node --test scripts/foundation/voc112-navigation-benchmark.test.mjs` | 7/7 pass                                                                                                                                                                              |
 | `node --test scripts/foundation/voc112-*.test.mjs`                    | pass                                                                                                                                                                                  |
 | `bash scripts/governance/validate-governance.sh`                      | pass                                                                                                                                                                                  |
 | `bash scripts/governance/classify-change-risk.sh`                     | R3                                                                                                                                                                                    |
