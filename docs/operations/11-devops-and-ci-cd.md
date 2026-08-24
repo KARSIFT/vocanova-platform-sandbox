@@ -109,6 +109,8 @@ and path-required deployment workflows for an immutable SHA, waits only for
 successful terminal evidence, and times out fail-closed. Its hourly wake repairs
 a stranded current `develop` tip without duplicating already-successful runs;
 `reconcile-release` re-enters the same promotion recovery path idempotently.
+Immediate post-merge recovery is scoped to governed `agent/` task branches.
+Other ways of advancing `develop` are covered by the hourly exact-tip wake.
 
 This table is an implementation target, not authority to procure vendors, incur spend, create
 infrastructure, deploy, or release. Each such action requires its own approved change package and

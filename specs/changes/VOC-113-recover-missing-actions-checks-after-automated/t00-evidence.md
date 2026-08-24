@@ -162,6 +162,12 @@ base-SHA metadata had not been mirrored into the canonical template. Shared PR
 #132 synchronized that template and added positive/negative regression checks;
 all 231 policy tests and four hosted checks passed. Its `main` merge commit is
 `091fabdf9cf074396339750c7a58d215fbdc9aec`.
+The final review reported three Low hardening opportunities. Shared PR #133 now
+starts immediate integration recovery only after a successful merge step,
+validates that an open promotion PR owns the exact target SHA and branch before
+dispatch, and documents the hourly-wake coverage for non-agent integration
+advances. All 232 policy tests and four hosted checks passed. Its `main` merge
+commit is `9cb00a241a0d4fc77e50482b42eed3151e842dc8`.
 
 ## VOC-112 provenance repair (`VOC-113-D11`)
 
