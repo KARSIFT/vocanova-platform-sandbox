@@ -6,7 +6,7 @@
 - Preconditions: T00 evidence drafted at implementation time
 - Procedure: Read `t00-evidence.md`; assert it names PR #954 merge SHA, pipeline
   runs 32696249484 and 32696549963, immediate pre-dispatch failure, blocked PR
-  #947, and a concrete documented token/installation explanation (not a guess).
+  #947, and the verified job-token/App-token separation (not a guess).
 - Expected result: Diagnosis is metadata-only and bounds remediation to read-capability
   restoration plus localized diagnostics
 - Evidence: `VOC-114-EV-00`
@@ -14,7 +14,7 @@
 ## VOC-114-TEST-01 — Integration_push metadata read succeeds under declared contract
 
 - Covers: `VOC-114-AC-01`, `VOC-114-D03`
-- Preconditions: T00 task branch with runner and mint updates
+- Preconditions: T00 task branch with runner and job-token permission updates
 - Procedure: Deterministic fixture simulates `integration_push` metadata phase with
   token contract including Checks/Actions/Contents read; assert check-runs, status,
   workflow-run, and commit file reads succeed and recovery may proceed to wait/dispatch
@@ -48,7 +48,7 @@
 
 - Covers: `VOC-114-AC-03`, `VOC-114-D03`
 - Preconditions: T00 task branch
-- Procedure: Fixtures/model tests where mint contract omits Checks or Actions read;
+- Procedure: Fixtures/model tests where the job contract omits Checks or Actions access;
   assert the corresponding endpoint class is emitted and recovery exits non-zero
   before wait/dispatch.
 - Expected result: Fail-closed refusal; no dispatch side effects

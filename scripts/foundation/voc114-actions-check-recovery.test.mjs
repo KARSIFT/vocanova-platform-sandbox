@@ -52,17 +52,22 @@ test("VOC-114-TEST-01 through TEST-05: fixture recovery metadata policy tests", 
   runInfraTests("test_*voc114*");
 });
 
-test("VOC-114 caller docs describe recovery App read contract", () => {
+test("VOC-114 caller docs describe the recovery job-token contract", () => {
   const devopsOperations = readFileSync(devopsOperationsPath, "utf8");
-  assert.match(devopsOperations, /permission-checks: read/);
-  assert.match(devopsOperations, /permission-statuses: read/);
-  assert.match(devopsOperations, /permission-actions: write/);
+  assert.match(devopsOperations, /`GITHUB_TOKEN`/);
+  assert.match(devopsOperations, /`checks: read`/);
+  assert.match(devopsOperations, /`statuses: read`/);
+  assert.match(devopsOperations, /`actions: write`/);
+  assert.match(
+    devopsOperations,
+    /App token[\s\S]*limited to PR, issue, and content mutations/,
+  );
   assert.match(devopsOperations, /check_runs_read_failed/);
   assert.match(devopsOperations, /workflow_runs_read_failed/);
   assert.match(devopsOperations, /commit_metadata_read_failed/);
 });
 
-test("VOC-114 fixture mirror declares recovery mint read scopes", () => {
+test("VOC-114 fixture mirror separates recovery and mutation tokens", () => {
   const mergeGate = readFileSync(
     path.join(fixtureInfraRoot, ".github/workflows/merge-gate.yml"),
     "utf8",
@@ -76,16 +81,16 @@ test("VOC-114 fixture mirror declares recovery mint read scopes", () => {
     "utf8",
   );
   for (const workflow of [mergeGate, release, reusable]) {
-    assert.match(workflow, /permission-checks: read/);
-    assert.match(workflow, /permission-statuses: read/);
+    assert.match(workflow, /checks: read/);
+    assert.match(workflow, /statuses: read/);
+    assert.match(workflow, /actions: write/);
   }
-  assert.match(reusable, /permission-actions: write/);
-  assert.equal(
-    reusable.match(/^\s+permission-actions:/gm)?.length,
-    1,
-    "the recovery mint must declare Actions once; write includes read capability",
+  assert.doesNotMatch(
+    reusable,
+    /Mint App installation token for recovery dispatch/,
   );
-  assert.match(reusable, /permission-contents: read/);
+  assert.match(reusable, /GH_TOKEN: \$\{\{ github\.token \}\}/);
+  assert.doesNotMatch(reusable, /steps\.app-token\.outputs\.token/);
   const runner = readFileSync(
     path.join(fixtureInfraRoot, "config/actions-check-recovery-runner.py"),
     "utf8",

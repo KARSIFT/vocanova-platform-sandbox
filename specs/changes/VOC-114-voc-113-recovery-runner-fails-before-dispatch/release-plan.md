@@ -21,7 +21,7 @@ active A-004.
 |-------|-------|---------------|------------------|
 | Plan merge | plan reviewer + merge-gate | Draft package; `automatic_merge_allowed: true`; valid `monitoring_impact` | Adopted package on `develop` |
 | T00 merge | implementer + independent verifier | Adoption + task authorization; infra `Relates to` PRs | `VOC-114-EV-00`, green deterministic read-contract tests |
-| T01 | operator + independent verifier | T00 live; any documented installation grants applied | `VOC-114-EV-01` — both recovery modes live; #947 genuine exact-head checks |
+| T01 | operator + independent verifier | T00 live; separated job/App token contract active | `VOC-114-EV-01` — both recovery modes live; #947 genuine exact-head checks |
 | VOC-113-T01/T02 | operator + VOC-113 roster | T01 unblocks #947 merge path | Existing VOC-113 evidence contracts |
 
 Monitoring inventory unchanged (`monitoring_impact.state: none`).
@@ -30,11 +30,11 @@ Monitoring inventory unchanged (`monitoring_impact.state: none`).
 
 | Item | Value |
 |------|-------|
-| Trigger | Recovery dispatches without readable metadata; over-broad App scopes; localized errors leak secrets; false merge eligibility |
+| Trigger | Recovery dispatches without readable metadata; over-broad job or App scopes; localized errors leak secrets; false merge eligibility |
 | Mechanism | Revert T00 infra changes; `reconcile-release` remains available as wake path while revert lands |
 | Owner | Implementer PR + independent verification |
 | Validation | Deterministic absent-permission tests fail on unsafe behavior; release converge remains fail-closed without exact-head success |
-| Last-known-good | Pre-T00 recovery runner and App mint configuration on consumed karsift-ai-infra `@main` |
+| Last-known-good | Pre-T00 recovery runner/token configuration on consumed karsift-ai-infra `@main` |
 
 ## Independent verification, human approvals, and closure
 

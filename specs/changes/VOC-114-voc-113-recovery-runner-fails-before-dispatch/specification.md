@@ -3,8 +3,10 @@
 ## Objective and requirement source
 
 Repair the VOC-113 recovery runner so it can read exact-SHA gate metadata with
-the KARSIFT App installation token, emit actionable sanitized diagnostics when
-reads fail, and only then proceed to bounded wait and genuine workflow dispatch.
+a repository-scoped short-lived credential, emit actionable sanitized diagnostics
+when reads fail, and only then proceed to bounded wait and genuine workflow
+dispatch. Live causal evidence authorizes separating the job Actions credential
+from the App mutation identity when the installed App lacks Actions permission.
 
 **Requirement source:** [GitHub issue #956](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/956).
 
@@ -26,16 +28,17 @@ separate A-004 plan-review / adopt path.
 
 ### In scope
 
-1. Restore effective App token read capability for the recovery runner's exact-SHA
-   metadata phase (check-runs, commit status, Actions workflow runs, commit file
-   list as already invoked by `actions-check-recovery-runner.py`).
-2. Request and document the minimum read permissions on every App mint path that
-   feeds recovery (merge-gate post-merge recovery, release converge recovery,
-   `recover-actions-checks.yml` reusable workflow).
+1. Restore effective repository-scoped read capability for the recovery runner's
+   exact-SHA metadata phase (check-runs, commit status, Actions workflow runs,
+   commit file list as already invoked by `actions-check-recovery-runner.py`).
+2. Grant the minimum job-token permissions on every recovery path (merge-gate
+   post-merge recovery, release converge recovery, and
+   `recover-actions-checks.yml`) while keeping App tokens mutation-only.
 3. Localize sanitized runner errors to endpoint classes without response bodies,
    tokens, logs, or user data.
-4. Preserve existing narrow mutation permissions (contents/issues/PR write,
-   actions write only where dispatch is already authorized).
+4. Preserve existing narrow App mutation permissions (contents/issues/PR write)
+   and grant Actions write only to the job tokens that perform allowlisted
+   recovery dispatch.
 5. Add deterministic tests for positive read contract, absent-permission fail-closed,
    and no-dispatch-after-read-failure for both `integration_push` and
    `promotion_pr` modes.
@@ -55,8 +58,8 @@ separate A-004 plan-review / adopt path.
 
 ## Risk and protected areas
 
-- **Draft package proposal:** **R4** (CI/CD lifecycle orchestration and App token
-  read contract for exact-SHA gate metadata).
+- **Draft package proposal:** **R4** (CI/CD lifecycle orchestration and recovery
+  credential contract for exact-SHA gate metadata).
 - Protected areas: App-token merge/release mutation paths, VOC-108 authoritative
   exact-head selection, VOC-113 no-fabrication invariants, branch ruleset required
   contexts, `recover-actions-checks` recursion guards.
@@ -70,13 +73,13 @@ separate A-004 plan-review / adopt path.
 bounded wait and workflow dispatch. A metadata-read failure MUST abort before any
 recovery dispatch is attempted.
 
-`VOC-114-D01`: The KARSIFT App installation token used by recovery MUST include
-effective read access for every endpoint the runner calls in its metadata phase:
-at minimum **Checks read** for commit check-runs/status aggregation and
-**Actions read** for workflow-run discovery, plus **Contents read** for commit
-file metadata already used by integration_push staging selection. Mutation scopes
-remain the existing narrow set required for merge, PR create, and allowlisted
-dispatch.
+`VOC-114-D01` (amended by live run `32724415871`): Recovery metadata reads and
+allowlisted workflow dispatch MUST use the short-lived job `GITHUB_TOKEN`, with
+explicit **Actions write**, **Checks read**, **Commit statuses read**, **Contents
+read**, and **Pull requests read** permissions on each applicable caller/called
+job. The App token remains limited to the existing Contents/Issues/Pull requests
+mutation scopes required for App-identity merge, PR, marker, and issue operations;
+it MUST NOT be a dependency for Actions metadata or dispatch.
 
 `VOC-114-D02`: When a metadata read fails, the runner MUST emit a sanitized
 endpoint-class error — one of `check_runs_read_failed`, `workflow_runs_read_failed`,
@@ -94,12 +97,12 @@ lands in `KARSIFT/karsift-ai-infra`; caller evidence/docs land here when claims
 would become false. Do not treat an untracked local `karsift-ai-infra/` checkout
 as this repo's tracked tree.
 
-`VOC-114-D05`: GitHub App **installation-level** permission grants (repository
-settings outside git) may be required if the App is not already granted Checks
-and Actions read at installation scope. When needed, record the required
-installation permission change in T00 evidence and treat live proof (T01) as
-operator-owned; do not weaken the fail-closed contract when installation grants
-are missing.
+`VOC-114-D05` (resolved by live run `32724415871`): The installed App has the
+required mutation permissions but no Actions grant. Do not expand its installation
+permissions merely to combine unrelated capabilities in one token. Keep Actions
+metadata/dispatch on the explicit job-token boundary from D01 and record the
+observed installation contract in T00/T01 evidence. Missing job permissions remain
+fail-closed.
 
 `VOC-114-D06`: Live T01 reuses the existing promotion fixture (PR #947, release
 issue #946) and integration SHA `b97e9575…` only as metadata anchors. Completing
@@ -117,23 +120,23 @@ None. Governance-automation recovery fix only.
 
 ## Security, privacy, and authorization
 
-No new long-lived secrets. App installation tokens remain short-lived and scoped.
+No new long-lived secrets. App installation tokens and job tokens remain short-lived
+and scoped to distinct mutation and recovery responsibilities.
 Evidence and diagnostics remain metadata-only (SHAs, run/job IDs, check names,
 conclusions, sanitized error classes). Forbidden: logs, credentials, OAuth/session
 material, tokens, user identifiers, personal data.
 
-Expanding read permissions is lower risk than dispatching without authoritative
-metadata, but over-broad mutation grants remain forbidden.
+Granting recovery reads/Actions write only on dedicated jobs is lower risk than
+dispatching without authoritative metadata; over-broad mutation grants remain
+forbidden.
 
 ## Open questions
 
-1. **Installation vs mint scope:** T00 must confirm whether failure is resolved
-   solely by `permission-checks: read` / `permission-actions: read` on
-   `create-github-app-token`, by installation-level App permission grants, or
-   both. Do not guess in this draft beyond the issue's leading hypothesis.
-2. **Statuses read necessity:** If commit status aggregation still fails after
-   Checks read is restored, T00 may add `permission-statuses: read` or document
-   why Checks read alone suffices via REST — subject to fail-closed tests.
+1. **Resolved — credential boundary:** live run `32724415871` and installation
+   metadata proved the App has no Actions permission. D01 uses the job token for
+   Actions metadata/dispatch and leaves the App mutation-only.
+2. **Resolved — Statuses read:** combined commit-status metadata requires an
+   explicit job-level `statuses: read` grant alongside `checks: read`.
 3. **Historical integration SHA:** If `develop` has advanced beyond `b97e9575…`,
    live integration_push proof may target the still-relevant missing-run SHA
    recorded in evidence rather than forcing a stale SHA re-dispatch.

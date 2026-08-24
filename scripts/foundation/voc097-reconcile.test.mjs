@@ -85,13 +85,13 @@ test("VOC-097-T02 caller wires bounded polling and explicit observe/dispatch pat
   );
   assert.match(
     integrationRecoveryJob,
-    /^\s{4}permissions:\n\s{6}actions: write\n\s{6}checks: read\n\s{6}contents: read\n\s{6}pull-requests: read/m,
+    /^\s{4}permissions:\n\s{6}actions: write\n\s{6}checks: read\n\s{6}contents: read\n\s{6}pull-requests: read\n\s{6}statuses: read/m,
     "integration recovery may write Actions only through its dedicated job",
   );
   assert.equal(
     (pipeline.match(/^\s{6}actions: write$/gm) ?? []).length,
-    2,
-    "Actions write must remain isolated to live-evidence and exact-SHA recovery jobs",
+    4,
+    "Actions write must remain isolated to live-evidence, integration recovery, merge-gate, and release jobs",
   );
   assert.equal(
     (

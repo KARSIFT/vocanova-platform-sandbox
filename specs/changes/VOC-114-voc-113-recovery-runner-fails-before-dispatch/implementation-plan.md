@@ -4,7 +4,8 @@
 
 - Do not begin until the package is adopted and implementation-authorized.
 - Protected areas: `KARSIFT/karsift-ai-infra` merge-gate / release / recovery
-  mutation paths, App installation token minting, VOC-108 authoritative check
+  mutation paths, App installation token minting, job-token recovery dispatch,
+  VOC-108 authoritative check
   selection, VOC-113 no-fabrication invariants, branch ruleset required contexts.
 - Prerequisites: VOC-113-T00 recovery mechanism merged; App credentials
   (`KARSIFT_BOT_APP_ID` / `KARSIFT_BOT_PRIVATE_KEY`) configured; issue #956 live
@@ -22,26 +23,26 @@
 |--------|--------|-------|
 | `specs/changes/VOC-114-.../t00-evidence.md` | create/update | Diagnosis + validation results (metadata-only) |
 | `karsift-ai-infra/config/actions-check-recovery-runner.py` | modify | Endpoint-class errors; abort before dispatch on read failure |
-| `karsift-ai-infra/.github/workflows/merge-gate.yml` | modify | App mint read scopes for post-merge recovery token |
-| `karsift-ai-infra/.github/workflows/release.yml` | modify | App mint read scopes for converge recovery token |
-| `karsift-ai-infra/.github/workflows/recover-actions-checks.yml` | modify | App mint read scopes for reusable recovery job |
+| `karsift-ai-infra/.github/workflows/merge-gate.yml` | modify | Job-token recovery scopes; mutation-only App mint |
+| `karsift-ai-infra/.github/workflows/release.yml` | modify | Job-token converge recovery; mutation-only App mint |
+| `karsift-ai-infra/.github/workflows/recover-actions-checks.yml` | modify | Job-token metadata/dispatch scopes |
 | `karsift-ai-infra/tests/test_voc113_actions_check_recovery.py` | modify/extend | VOC-114 read-contract and no-dispatch negatives |
 | Additional focused VOC-114 policy tests | create if cleaner | Absent-permission endpoint-class fixtures |
-| karsift-ai-infra README; ops docs | modify when claims become false | Document required App read contract |
+| karsift-ai-infra README; package/ops docs | modify when claims become false | Document separated token contract |
 
 Ordered steps:
 
-1. Record issue #956 observations and verify whether failure is mint-scope,
-   installation-scope, or both (`VOC-114-D05`).
-2. Add minimum `permission-checks: read`, `permission-actions: read`, and any
-   additional read scope proven necessary to every App mint feeding recovery.
+1. Record issue #956 plus live run `32724415871` and the verified App/job-token
+   boundary (`VOC-114-D05`).
+2. Put Actions write and required metadata reads on each dedicated recovery job;
+   remove Actions/Checks/Statuses requests from mutation App mints.
 3. Localize `gh` adapter failures to `check_runs_read_failed`,
    `workflow_runs_read_failed`, `commit_metadata_read_failed`.
 4. Guard dispatch planning/execution so metadata-read failures exit before wait
    or dispatch.
 5. Extend deterministic tests for both recovery modes and absent-permission
    negatives.
-6. Update docs whose current App permission claims would become false.
+6. Update docs whose recovery credential or App permission claims would become false.
 7. Run applicable validation; record results in `t00-evidence.md`.
 
 ### T01 — Live recovery proof and unblock promotion PR #947
@@ -53,8 +54,8 @@ Ordered steps:
 
 Ordered steps:
 
-1. Apply any documented App installation permission grants (operator-owned if
-   outside git).
+1. Confirm the explicit job-token recovery permissions are active; do not expand
+   the App installation for Actions access.
 2. Re-run integration_push recovery for documented SHA `b97e9575…` (or T00
    recorded still-blocking SHA).
 3. Dispatch `reconcile-release` for release issue #946; confirm promotion PR #947
@@ -83,8 +84,8 @@ git diff --check
 
 Independent verifier (exact reviewed task PR SHA):
 
-- Confirm read scopes are minimum necessary and mutation posture unchanged except
-  declared reads.
+- Confirm job-token read/dispatch scopes are minimum necessary and App mutation
+  posture is not broadened.
 - Confirm endpoint-class errors contain no secrets and generic
   `github_metadata_read_failed` is not used for localized endpoint failures.
 - Confirm no dispatch after metadata-read failure in deterministic fixtures.

@@ -26,16 +26,15 @@ KARSIFT/vocanova-platform-sandbox#<task>` and MUST NOT use a closing keyword.
    `b97e9575…`, pipeline runs 32696249484 and 32696549963, immediate
    `github_metadata_read_failed`, blocked PR #947 / VOC-113-T01). Determine and
    document the verified token/installation cause using allowlisted metadata only.
-2. Update every App mint path that feeds `actions-check-recovery-runner.py`
-   (merge-gate post-merge recovery, release converge recovery,
-   `recover-actions-checks.yml`) to request the minimum read scopes required by
-   the runner's metadata phase (`permission-checks: read`,
-   `permission-actions: read`, and any additional read scope T00 proves
-   necessary such as contents/status reads). Preserve existing narrow mutation
-   permissions.
-3. If the App installation lacks required repository permissions at installation
-   scope, document the exact grants needed in `t00-evidence.md` for operator
-   action before T01 (do not weaken fail-closed behavior when grants are absent).
+2. Update every path that feeds `actions-check-recovery-runner.py` (merge-gate
+   post-merge recovery, release converge recovery, and
+   `recover-actions-checks.yml`) so recovery uses the job `GITHUB_TOKEN` with
+   Actions write plus Checks/Statuses/Contents/Pull requests read. Preserve App
+   tokens solely for their existing Contents/Issues/Pull requests mutations.
+3. Record the observed App installation permissions in `t00-evidence.md`. If the
+   App lacks Actions permission, do not broaden the installation: keep Actions
+   reads/dispatch on the dedicated job-token boundary and fail closed when that
+   job grant is absent.
 4. Refactor `actions-check-recovery-runner.py` (and shared `gh` adapter if
    extracted) so check-runs, workflow-runs, and commit-metadata failures raise
    sanitized endpoint classes per `VOC-114-D02` instead of one generic
@@ -47,9 +46,9 @@ KARSIFT/vocanova-platform-sandbox#<task>` and MUST NOT use a closing keyword.
    - positive metadata read under declared token contract for both modes;
    - absent read permission fail-closed with correct endpoint class;
    - no dispatch after metadata-read failure;
-   - preserved mutation permission posture (no broadening beyond recovery needs).
-7. Update karsift-ai-infra README and/or calling-repo ops docs only where current
-   App permission claims would become false after the fix.
+   - token separation and preserved mutation posture (no App Actions broadening).
+7. Update karsift-ai-infra README and calling-repo/package docs wherever the
+   recovery credential or App permission claims would otherwise become false.
 8. Run applicable validation and record results in `t00-evidence.md`:
    - infra policy / self-ci tests added or updated by this task;
    - `bash scripts/governance/validate-governance.sh` when required for changed
@@ -79,8 +78,8 @@ KARSIFT/vocanova-platform-sandbox#<task>` and MUST NOT use a closing keyword.
 ### Required work
 
 1. After T00 is live on the branch the caller pipeline executes from, confirm
-   any documented App installation permission grants from T00 evidence are applied
-   (operator-owned when outside git).
+   the job-token Actions/metadata grants and mutation-only App contract from T00
+   are active; no App installation expansion is required.
 2. Re-run integration_push recovery for the documented merged SHA
    `b97e9575fd30671c336a2e92ca00db6e29b86416` (or the still-blocking SHA recorded
    in T00 evidence if `develop` advanced). Verify the run progresses past
