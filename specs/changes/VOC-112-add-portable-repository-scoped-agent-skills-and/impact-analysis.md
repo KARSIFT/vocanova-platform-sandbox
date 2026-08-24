@@ -20,7 +20,9 @@ or authority overreach. Mitigations:
 
 - **Primary write surfaces:** `.agents/skills/**`, `.claude/skills/**`,
   `scripts/foundation/voc112-*.test.mjs`, `scripts/graphify/**`, `.graphifyignore`,
-  `.gitignore`, `docs/development/agent-skills.md`, short `AGENTS.md` subsection.
+  `.gitignore`, `docs/development/agent-skills.md`, short `AGENTS.md` subsection, and
+  `.github/workflows/repository-governance.yml` for offline full-history provenance
+  validation.
 - **Preserve unchanged:** application runtime, deploy workflows semantics, database schemas,
   auth/OAuth behavior, monitoring inventory, secret values, branch protection, and merge/release
   automation except incidental doc/skills presence in the monorepo.
@@ -64,6 +66,10 @@ No product analytics or UI accessibility changes.
 - `VOC-112-R07`: **Unsupported redistribution** — public skill text may lack a compatible
   license. Mitigation: reject unlicensed sources (including the reviewed Vercel React skill),
   retain required license/NOTICE files, and author repository-native guidance where needed.
+- `VOC-112-R08`: **Capture provenance missing in shallow application CI** — exact capture
+  commits may not exist in a depth-limited checkout. Mitigation: keep ordinary foundation
+  tests offline/non-mutating and require exact commit ancestry plus captured/current source
+  hashes in the full-history Repository Governance gate.
 - `VOC-112-DEP-00`: Issue #933 requirement thread (resolved at drafting).
 - `VOC-112-DEP-01`: Protected agent instructions (`AGENTS.md`, `CLAUDE.md`) (resolved).
 - `VOC-112-DEP-02`: Existing development workflow docs (resolved).
