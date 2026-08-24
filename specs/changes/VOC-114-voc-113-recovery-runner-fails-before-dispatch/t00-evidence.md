@@ -92,7 +92,7 @@ negative assertions at immutable merge
 | `.github/workflows/recover-actions-checks.yml`                 | Uses the job token with Actions write plus Checks/Statuses/Contents/Pull requests read; hosted verification uses valid repository context                                                                                                                                                                                                |
 | Source PRs #137–#145                                           | Removed invalid `gh api --repo` use, bound promotion evidence to required contexts, fixed hosted verification and provenance, separated recovery dispatch from the App mutation token, added the success-only D07 ruleset attestation bridge after live merge-policy failure, and corrected the template's release-only permission scope |
 | `config/promotion_status_attestation.py` + runner              | Accept only the three genuine successful expected-workflow contexts, revalidate the live promotion PR/SHA, and publish narrowly derived same-SHA ruleset statuses using the release job token                                                                                                                                            |
-| `.github/workflows/repository-governance.yml`                  | Keeps actual pull requests in `pr-validation` (and fixture-changing originals in strict `pr-ancestry`), while authenticated promotion recovery of the immutable `develop` tip uses the existing `squash-safe-push` contract because the promotion aggregates already-squashed task commits                                               |
+| `.github/workflows/repository-governance.yml`                  | Keeps ordinary pull requests in `pr-validation` (and fixture-changing originals in strict `pr-ancestry`), while authenticated promotion recovery and the same-repository `develop` → `main` promotion PR use the existing `squash-safe-push` contract because promotion aggregates already-squashed task commits                         |
 | `tests/test_voc114_actions_check_recovery.py` and caller tests | Deterministic coverage includes both positive modes, separated token contracts, endpoint classes, no planning/dispatch after read failure, required-context filtering, hosted verifier CLI contracts, exact target resolution, and fixture pin assertions                                                                                |
 | `README.md` (shared + fixture)                                 | Documents recovery metadata read contract and sanitized endpoint classes                                                                                                                                                                                                                                                                 |
 | `docs/operations/11-devops-and-ci-cd.md`                       | Documents caller-facing separated recovery/mutation contract, endpoint classes, and bounded operator integration recovery                                                                                                                                                                                                                |
@@ -136,7 +136,7 @@ actionlint; shellcheck; YAML parse; policy tests; git diff --check
 PYTHONPATH=config python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*voc114*'
   → Ran 15 tests — OK
 node --test scripts/foundation/voc114-actions-check-recovery.test.mjs
-  → 4 tests — OK
+  → 5 tests — OK
 node --test scripts/foundation/voc113-actions-check-recovery.test.mjs
   → existing VOC-113 caller tests — OK
 node --test scripts/foundation/voc097-fixture-matrix.test.mjs \
@@ -146,7 +146,7 @@ node --test scripts/foundation/voc097-fixture-matrix.test.mjs \
   scripts/foundation/voc114-actions-check-recovery.test.mjs
   → 25 tests — OK
 pnpm run build:packages && node --test scripts/foundation/*.test.mjs
-  → 337 tests — OK
+  → 338 tests — OK
 PYTHONPATH=tooling/governance/fixtures/karsift-ai-infra/config \
   python3 -m unittest discover \
   -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'

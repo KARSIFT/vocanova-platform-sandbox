@@ -82,9 +82,11 @@ push-provenance refinement PR `#973` merged as
 `0b0d866533e0100f6dfe37e3109f040ddde37bd6`; token-sync PR `#975` merged as
 `f18acca8322131eadfaf9bc963352f8980e9d6f7`.
 The caller recovery workflows set repository context before their pre-checkout
-PR reads. Exact-`develop` promotion recovery uses `squash-safe-push`, matching
-the immutable integration tip; actual pull-request events retain
-`pr-validation` and strict `pr-ancestry` for original fixture-changing changes.
+PR reads. Exact-`develop` promotion recovery and the canonical same-repository
+`develop` → `main` promotion PR use `squash-safe-push`, matching the immutable
+integration tip. Ordinary pull-request events retain `pr-validation` and strict
+`pr-ancestry` for original fixture-changing changes; forks and other branch pairs
+cannot select the promotion exception.
 
 ## Integration-push proof
 
@@ -178,6 +180,19 @@ status was performed.
   merged as `6999e2beda5bbf00028fae04ca0e65324fc59afa`: release-only Statuses
   write, exact expected-workflow/PR/SHA validation, same-SHA ruleset
   attestations, future-selector exclusion, and ruleset-propagation retries.
+- caller PR `#976` passed fresh exact-head CI and independent review after the
+  reviewer caught and the same PR corrected a template permission inversion. It
+  merged to `develop` as `dd7383ff4257632078bff46eebbbcfa7f2f1f451` and its
+  integration-push recovery succeeded; shared-infra PR `#145` is the pinned
+  immutable source correction for that finding.
+- release run `32733575823`, converge job `97451846259`: genuine exact-head
+  recovery, authoritative selection, and all three D07 ruleset attestations
+  succeeded. GitHub still rejected the merge because the PR-associated
+  Repository Governance `validate` check had already failed under original-PR
+  ancestry semantics. A success status cannot erase a failed check run with the
+  same required context. The same task therefore now selects `squash-safe-push`
+  directly for the canonical same-repository `develop` → `main` PR while
+  preserving strict modes for ordinary and fixture-changing PRs.
 
 Each failure remained fail-closed and produced no fabricated check or manual
 promotion merge.
@@ -187,7 +202,7 @@ promotion merge.
 - shared-infra focused VOC-113/VOC-114 suite: `48` tests, pass;
 - shared-infra full suite after the final correction: `265` tests, pass;
 - caller focused Node recovery/pin/policy suite: `25` tests, pass;
-- caller full foundation suite after package build: `337` tests, pass;
+- caller full foundation suite after package build: `338` tests, pass;
 - pinned shared-infra fixture suite: `181` tests, pass;
 - caller governance suite: `160` tests, pass;
 - repository governance validation: pass;

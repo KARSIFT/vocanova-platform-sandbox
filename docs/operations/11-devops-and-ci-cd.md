@@ -138,6 +138,13 @@ publish same-SHA success attestations for `governance-policy`, `validate`, and
 future evidence selection, so they satisfy the repository ruleset but can never
 replace the underlying Actions evidence. The App token remains mutation-only.
 
+The canonical same-repository `develop` → `main` promotion PR validates capture
+provenance with the same `squash-safe-push` contract as exact-head recovery. That
+promotion aggregates already-squashed task commits, so original-commit ancestry
+is not a valid requirement. Ordinary PRs retain `pr-validation`, and PRs that
+change the capture fixture retain strict `pr-ancestry`; a fork or any other
+base/head branch pair cannot select the promotion exception.
+
 This table is an implementation target, not authority to procure vendors, incur spend, create
 infrastructure, deploy, or release. Each such action requires its own approved change package and
 the authority applicable at execution time. The v1.1 rows above describe the staging tier that
