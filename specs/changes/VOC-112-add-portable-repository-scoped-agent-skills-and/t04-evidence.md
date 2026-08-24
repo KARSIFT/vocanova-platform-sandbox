@@ -38,6 +38,11 @@ events rather than as a separate first-class read event, the file metric counts 
 existing readable repository paths referenced by those completed events. It is an explicit
 trace-derived proxy, not a claim that every runtime read is observable.
 
+Revision validation is fail closed: full checkouts require each captured commit locally;
+shallow checkouts first deepen from `origin`, then require the commit, prove it is an
+ancestor of HEAD, and compare both recorded source hashes with the captured blobs and the
+current files. A depth-1 clone reproduction passed this path and ended unshallowed.
+
 Fixture: `scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json`.
 
 ## Runtime discovery
