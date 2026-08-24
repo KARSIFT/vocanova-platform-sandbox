@@ -7,14 +7,14 @@ Evidence date: 2026-08-24
 
 ## Issue #948 observations (metadata-only)
 
-| Observation | Result |
-| --- | --- |
-| Final VOC-112 task PR merged to `develop` | No `push` workflows observed for the integration squash commit |
-| Release automation opened promotion PR #947 | No pull-request workflows / required checks on the exact head |
-| Close/reopen and draft/ready transitions | Did not recreate missing required checks |
-| `reconcile-release` | Reused release audit and PR #947; merge remained fail-closed without exact-head checks |
-| User-authenticated merge of roster PR #953 | Branch advanced, but no `push` workflows or promotion-PR synchronize checks were observed for the new integration SHA |
-| Active ruleset contexts | `governance-policy`, `validate`, `ci / ci` remain required and were not weakened |
+| Observation                                 | Result                                                                                                                |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Final VOC-112 task PR merged to `develop`   | No `push` workflows observed for the integration squash commit                                                        |
+| Release automation opened promotion PR #947 | No pull-request workflows / required checks on the exact head                                                         |
+| Close/reopen and draft/ready transitions    | Did not recreate missing required checks                                                                              |
+| `reconcile-release`                         | Reused release audit and PR #947; merge remained fail-closed without exact-head checks                                |
+| User-authenticated merge of roster PR #953  | Branch advanced, but no `push` workflows or promotion-PR synchronize checks were observed for the new integration SHA |
+| Active ruleset contexts                     | `governance-policy`, `validate`, `ci / ci` remain required and were not weakened                                      |
 
 ## Verified trigger/token/event behavior (`VOC-113-DEP-04`)
 
@@ -46,12 +46,12 @@ declared workflow dispatches.
 
 ## Recovery mechanism (T00)
 
-| Path | Behavior |
-| --- | --- |
-| Task merge → integration SHA | `merge-gate.yml` runs `actions-check-recovery-runner.py` after App merge for agent task PRs; dispatches `repository-governance.yml` and `deploy-staging.yml` (`skip_ssh_deploy=true`) when push workflows are absent |
+| Path                             | Behavior                                                                                                                                                                                                                |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Task merge → integration SHA     | `merge-gate.yml` runs `actions-check-recovery-runner.py` after App merge for agent task PRs; dispatches `repository-governance.yml` and the full `deploy-staging.yml` workflow when push workflows are absent           |
 | Promotion PR / reconcile-release | `release.yml` runs the same runner in `promotion_pr` mode before authoritative gate selection; dispatches `governance-policy.yml`, `repository-governance.yml`, and `pipeline.yml` action `recover-promotion-pr-checks` |
-| Bounded wait | **1800 seconds** (30 minutes), poll interval 30 seconds; timeout fails closed with sanitized diagnostics naming mode, SHA, missing contexts, and pending/failed counts |
-| Read-only verifiers | `verify-promotion-check-recovery / verify` (T01) and `verify-post-promotion-workflow / verify` (T02) validate Actions/PR metadata only |
+| Bounded wait                     | **1800 seconds** (30 minutes), poll interval 30 seconds; timeout fails closed with sanitized diagnostics naming mode, SHA, missing contexts, and pending/failed counts                                                  |
+| Read-only verifiers              | `verify-promotion-check-recovery / verify` (T01) and `verify-post-promotion-workflow / verify` (T02) validate Actions/PR metadata only                                                                                  |
 
 Caller consumes reusable workflows at `@main`. Shared behavior merged through
 `KARSIFT/karsift-ai-infra` PR #121 after all four exact-head self-CI checks
@@ -83,28 +83,41 @@ the final shared `main` commit is
 `6a24385c8b16ee77318572022b13f91669705cef`. Deterministic policy now enforces
 the 25-input ceiling.
 
+Independent review of caller head `37f6386f9445c43224bac332a6b12255cde3e3bc`
+then found four fail-open or evidence-integrity defects and one dead helper:
+original-capture provenance could fall back to merge-base validation for a
+fetchable non-ancestor, queued/in-progress workflows could satisfy integration
+recovery, skipped required checks could count as success, and historical
+capture subjects had been rewritten without a recapture. Shared PR #124
+corrected workflow/check conclusion handling and removed the dead helper; all
+four exact-head self-CI checks passed before its merge. The final shared `main`
+commit is `3c156312d50856aa937b161b45d0132308b59040`. Caller-side tests now reject a
+fetchable non-ancestor in original-capture mode, and the immutable historical
+capture subjects are restored rather than falsely reissued.
+
 ## VOC-112 provenance repair (`VOC-113-D11`)
 
-Repository Governance now runs capture provenance in `pr-validation` mode for
-pull requests, supplying `PR_BASE_SHA` and `PR_HEAD_SHA`. Original capture PRs
-still prove subject ancestry when present; later post-squash PRs pass when
-expected immutable source hashes are anchored in the merge base and unchanged at
-the reviewed head.
+Repository Governance supplies `PR_BASE_SHA` and `PR_HEAD_SHA` and selects
+`pr-ancestry` when a pull request changes a capture fixture. That mode now
+requires the recorded subject to be a true ancestor of the reviewed head and
+has no merge-base fallback. Later pull requests that leave the historical
+fixtures unchanged use `pr-validation`: their expected immutable source hashes
+must be anchored in the merge base and unchanged at the reviewed head.
 
 ## Validation results
 
 Commands run on the T00 task branch working tree:
 
-| Command | Result |
-| --- | --- |
-| `python3 -m unittest tests.test_voc113_actions_check_recovery -v` (fixture infra root) | PASS |
-| `node --test scripts/foundation/voc113-actions-check-recovery.test.mjs` | PASS |
-| `VOC112_CAPTURE_PROVENANCE_MODE=squash-safe-push node --test scripts/foundation/voc112-navigation-benchmark.test.mjs` | PASS |
-| `VOC112_CAPTURE_PROVENANCE_MODE=pr-validation` with PR base/head SHAs (post-squash fixture mode) | PASS |
-| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | PASS — 146 tests |
-| `bash scripts/governance/validate-governance.sh --base <integration-sha> --head HEAD` | PASS |
-| `bash scripts/governance/classify-change-risk.sh --base <integration-sha> --head HEAD` | PASS — R4 floor |
-| `git diff --check <integration-sha>..HEAD` | PASS |
+| Command                                                                                                               | Result           |
+| --------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `python3 -m unittest tests.test_voc113_actions_check_recovery -v` (fixture infra root)                                | PASS             |
+| `node --test scripts/foundation/voc113-actions-check-recovery.test.mjs`                                               | PASS             |
+| `VOC112_CAPTURE_PROVENANCE_MODE=squash-safe-push node --test scripts/foundation/voc112-navigation-benchmark.test.mjs` | PASS             |
+| `VOC112_CAPTURE_PROVENANCE_MODE=pr-validation` with PR base/head SHAs (post-squash fixture mode)                      | PASS             |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'`                                             | PASS — 146 tests |
+| `bash scripts/governance/validate-governance.sh --base <integration-sha> --head HEAD`                                 | PASS             |
+| `bash scripts/governance/classify-change-risk.sh --base <integration-sha> --head HEAD`                                | PASS — R4 floor  |
+| `git diff --check <integration-sha>..HEAD`                                                                            | PASS             |
 
 ## Out of scope for T00
 

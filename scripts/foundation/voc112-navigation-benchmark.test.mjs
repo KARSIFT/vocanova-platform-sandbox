@@ -118,24 +118,21 @@ function assertCapturedRevision(evidence) {
       assertPrValidationMergeBase(evidence);
     }
   } else {
-    if (mode === "pr-validation") {
-      assertPrValidationMergeBase(evidence);
-    }
     const ancestry = spawnSync(
       "git",
       ["merge-base", "--is-ancestor", evidence.subject_revision, "HEAD"],
       { cwd: repositoryRoot },
     );
     const ancestryProven = ancestry.status === 0;
-    if (
-      !ancestryProven &&
-      mode !== "squash-safe-push" &&
-      mode !== "pr-validation"
-    ) {
-      assertPrValidationMergeBase(evidence);
+    if (mode === "pr-ancestry") {
+      assert.equal(
+        ancestry.status,
+        0,
+        "original capture subject must be an ancestor of the reviewed head",
+      );
     }
-    if (ancestryProven && mode === "pr-ancestry") {
-      // Original capture PR path: ancestry plus captured-revision binding below.
+    if (mode === "pr-validation") {
+      assertPrValidationMergeBase(evidence);
     }
     if (ancestryProven && mode !== "squash-safe-push") {
       assert.equal(
@@ -444,6 +441,37 @@ test("VOC-113-TEST-10: original capture mode requires and accepts true subject a
   };
   withProvenanceEnv("pr-ancestry", headSha, headSha, () =>
     assertCapturedRevision(evidence),
+  );
+});
+
+test("VOC-113-TEST-10: original capture mode rejects a fetchable non-ancestor", () => {
+  const headSha = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  }).trim();
+  const nonAncestor = execFileSync("git", ["commit-tree", "HEAD^{tree}"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+    input: "deterministic non-ancestor fixture\n",
+    env: {
+      ...process.env,
+      GIT_AUTHOR_NAME: "VocaNova Fixture",
+      GIT_AUTHOR_EMAIL: "fixture.invalid",
+      GIT_COMMITTER_NAME: "VocaNova Fixture",
+      GIT_COMMITTER_EMAIL: "fixture.invalid",
+      GIT_AUTHOR_DATE: "2026-08-24T00:00:00Z",
+      GIT_COMMITTER_DATE: "2026-08-24T00:00:00Z",
+    },
+  }).trim();
+  const evidence = {
+    ...fixture("voc112-navigation-benchmark-traces.json"),
+    subject_revision: nonAncestor,
+  };
+  withProvenanceEnv("pr-ancestry", headSha, headSha, () =>
+    assert.throws(
+      () => assertCapturedRevision(evidence),
+      /original capture subject must be an ancestor/,
+    ),
   );
 });
 
