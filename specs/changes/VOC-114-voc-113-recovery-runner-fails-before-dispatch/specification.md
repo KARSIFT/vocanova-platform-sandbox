@@ -104,7 +104,12 @@ are missing.
 `VOC-114-D06`: Live T01 reuses the existing promotion fixture (PR #947, release
 issue #946) and integration SHA `b97e9575…` only as metadata anchors. Completing
 #947 remains subject to VOC-108 authoritative exact-head success and VOC-113
-no-fabrication rules.
+no-fabrication rules. After recovery, the operator MUST dispatch the existing
+read-only `verify-promotion-check-recovery` action on the exact T01 evidence-carrier
+branch. The machine contract observes job
+`verify-promotion-check-recovery / verify` with `exact_pr_head` lineage; it MUST
+NOT use `integration_contains_pr_head` for a run on `develop`, because the
+unmerged carrier head cannot be an ancestor of that integration run.
 
 ## Data, migrations, analytics, and accessibility
 

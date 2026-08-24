@@ -84,7 +84,10 @@
 - Procedure: Operator dispatches `reconcile-release` for release issue #946 (or
   observes equivalent release converge recovery); assert promotion PR #947 exact
   head receives genuine required checks and becomes merge-eligible under VOC-108
-  selection; read `t01-evidence.md`.
+  selection. Then dispatch `pipeline.yml` on the exact T01 carrier branch with
+  `action=verify-promotion-check-recovery` and `promotion_pr_number=947`; require
+  job `verify-promotion-check-recovery / verify` on the carrier's exact PR head.
+  Read `t01-evidence.md` for the complementary both-mode metadata.
 - Expected result: #947 unblocked for VOC-113-T01; no fabricated statuses; merge
   only via release converge after genuine success
 - Evidence: `VOC-114-EV-01`

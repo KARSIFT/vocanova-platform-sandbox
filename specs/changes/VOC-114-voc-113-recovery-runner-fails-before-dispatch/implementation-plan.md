@@ -61,7 +61,9 @@ Ordered steps:
    exact-head recovery progresses past metadata read.
 4. Confirm genuine required checks on #947's exact head; allow release converge
    to merge only under VOC-108 success.
-5. Record metadata-only evidence; do not manually merge #947.
+5. Dispatch the read-only `verify-promotion-check-recovery` action on the exact
+   T01 carrier head and require job `verify-promotion-check-recovery / verify`.
+6. Record metadata-only evidence; do not manually merge #947.
 
 ## Validation and independent verification
 

@@ -92,10 +92,15 @@ KARSIFT/vocanova-platform-sandbox#<task>` and MUST NOT use a closing keyword.
 4. Confirm required contexts succeed for #947's exact head (`governance-policy`,
    `validate`, `ci / ci` or current equivalents) and release converge remains
    fail-closed until VOC-108 authoritative selection reports success.
-5. Record only allowlisted metadata in `t01-evidence.md` (SHAs, run/job IDs,
+5. Dispatch `pipeline.yml` on the exact T01 evidence-carrier branch with
+   `action=verify-promotion-check-recovery` and `promotion_pr_number=947`.
+   Require job `verify-promotion-check-recovery / verify` to succeed on the
+   carrier's exact PR head; the live-evidence contract must not try to prove a
+   carrier commit through a `develop` run that cannot contain it.
+6. Record only allowlisted metadata in `t01-evidence.md` (SHAs, run/job IDs,
    check names, conclusions, sanitized error classes if any intermediate failure
    occurred, promotion PR head SHA). No logs or secrets.
-6. Acceptance requires **operator-owned live evidence** per
+7. Acceptance requires **operator-owned live evidence** per
    `docs/operations/live-evidence.md`.
 
 ### Explicitly out of scope for this task

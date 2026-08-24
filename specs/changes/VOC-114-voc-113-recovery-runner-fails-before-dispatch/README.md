@@ -48,7 +48,8 @@ related Actions read) on the App token used for recovery.
    is absent, and never dispatch after a metadata-read failure.
 4. Re-run live integration recovery and `reconcile-release`; require genuine
    exact-head contexts before promotion PR #947 can complete (unblocking
-   VOC-113-T01).
+   VOC-113-T01), then bind the result to the exact T01 carrier head through the
+   existing read-only `verify-promotion-check-recovery / verify` action.
 
 Do not weaken ruleset contexts, fabricate checks/statuses, manually merge #947,
 or copy logs/secrets into evidence.

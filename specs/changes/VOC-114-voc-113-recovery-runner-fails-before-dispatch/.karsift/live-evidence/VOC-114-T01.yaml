@@ -2,23 +2,23 @@ schema_version: 1
 task_id: VOC-114-T01
 ownership: operator
 
-# Observe reconcile-release recovery on develop after T00 restores metadata reads.
-# Integration_push recovery for merged SHA b97e9575… is recorded separately in
-# t01-evidence.md (metadata only); automation must not fabricate checks or merge
-# promotion PR #947.
+# Read-only verifier added by VOC-113-T00. It proves that promotion PR #947 has
+# genuine required exact-head checks after VOC-114 recovery, without fabricating
+# statuses or merging. Integration_push recovery for the applicable develop SHA
+# is recorded separately in t01-evidence.md (metadata only).
 workflow_file: pipeline.yml
 workflow_name: pipeline
 job_names:
-  - release
+  - verify-promotion-check-recovery / verify
 events:
   - workflow_dispatch
-branch: develop
+branch: agent/voc-114-voc-114-t01
 sha_lineage:
-  mode: integration_contains_pr_head
+  mode: exact_pr_head
 conclusion: success
 max_age: 72h
 
-# Operator dispatches pipeline.yml on develop with action=reconcile-release and
-# release_issue_number=946. The reconciler observes the result but intentionally
-# never dispatches pipeline.yml itself, preventing self-recursion through the
-# pipeline workflow.
+# After reconcile-release completes, the operator dispatches pipeline.yml on the
+# exact T01 evidence-carrier branch with action=verify-promotion-check-recovery
+# and promotion_pr_number=947. The reconciler observes that read-only result but
+# never dispatches pipeline.yml itself, preventing self-recursion.

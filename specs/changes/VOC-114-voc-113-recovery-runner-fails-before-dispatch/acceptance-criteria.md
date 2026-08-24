@@ -66,7 +66,9 @@ Operator-owned live evidence shows: (a) integration_push recovery for the
 documented merged SHA progresses past metadata read and creates or observes
 genuine push/validation runs; (b) `reconcile-release` for release issue #946
 progresses past metadata read and creates or observes genuine pull-request checks
-for promotion PR #947's exact head. No fabricated statuses.
+for promotion PR #947's exact head; and (c) the existing read-only
+`verify-promotion-check-recovery / verify` job succeeds on the exact T01 carrier
+PR head. No fabricated statuses.
 
 ## VOC-114-AC-05 — Promotion PR #947 unblocked for VOC-113-T01 completion
 
@@ -79,8 +81,9 @@ for promotion PR #947's exact head. No fabricated statuses.
 After live recovery, promotion PR #947's exact head receives genuine required
 checks (`governance-policy`, `validate`, `ci / ci` or current ruleset equivalents)
 and becomes eligible for release converge merge under VOC-108 authoritative
-selection. Metadata-only evidence; merge occurs only via release converge after
-genuine success, not by manual intervention or status fabrication.
+selection. The exact-carrier verifier independently confirms those contexts.
+Metadata-only evidence; merge occurs only via release converge after genuine
+success, not by manual intervention or status fabrication.
 
 Acceptance criteria must be observable, stable, security-aware, and bidirectionally
 traceable to requirements, tasks, tests, and evidence.
