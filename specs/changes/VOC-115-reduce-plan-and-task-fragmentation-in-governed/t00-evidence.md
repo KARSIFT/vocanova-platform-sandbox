@@ -43,7 +43,8 @@ packages are not retroactively rejected at adoption time.
 - `tooling/governance/fixtures/karsift-ai-infra/**` — synced copies of the infra changes above.
 - `tooling/governance/fixtures/karsift-ai-infra/README.md` — VOC-115 contract note.
 - `tooling/governance/tests/test_voc115_package_task_policy.py` — caller regressions for docs,
-  prompts, workflows, and validator behavior.
+  prompts, workflows, validator behavior, justified multi-task advancement, and
+  adoption-compatible YAML parsing.
 
 ## Adopted policy wording (summary)
 
@@ -73,6 +74,10 @@ packages are not retroactively rejected at adoption time.
   preserved order;
 - a four-task package with and without package-level justification.
 
+Caller coverage then carries that justified two-task order into the existing
+`next_roster_task` implementation and verifies that adoption writes the predecessor
+dependency while auto-advance requires completion proof before selecting the next row.
+
 ## Shared-infra carrier and fixture pin
 
 | Item | Value |
@@ -91,8 +96,8 @@ The caller fixture content is synchronized to the exact final shared-infra merge
 |---------|--------|-------|
 | `bash scripts/governance/validate-governance.sh` | pass | Repository foundation + monitoring declarations |
 | `bash scripts/governance/classify-change-risk.sh` | pass | Detected path floor `R4` |
-| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pass | 158 tests |
-| `python3 -m unittest discover -s tooling/governance/tests -p 'test_voc115*.py'` | pass | 12 tests |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pass | 160 tests |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_voc115*.py'` | pass | 14 tests |
 | `python3 -m unittest discover -s tests -p 'test_*.py'` in `KARSIFT/karsift-ai-infra` | pass | 242 tests on merge source |
 | `node --test scripts/foundation/*.test.mjs` (via `pnpm run test`) | pass | 333 tests, including revision-bound navigation evidence |
 | `pnpm run build` | pass | packages, production web build, and Go API build |
@@ -107,10 +112,13 @@ The caller fixture content is synchronized to the exact final shared-infra merge
   evidence-only fragmentation by default.
 - `VOC-115-AC-02` / `VOC-115-EV-00` — missing/invalid split reasons and >3-task packages fail
   closed; size-only reasons rejected.
-- `VOC-115-AC-03` / `VOC-115-EV-00` — justified multi-task fixture preserves ordered tasks.
+- `VOC-115-AC-03` / `VOC-115-EV-00` — justified multi-task fixture preserves ordered tasks,
+  adoption dependency edges, completion-proof gating, and next-roster selection.
 - `VOC-115-AC-04` / `VOC-115-EV-00` — docs/prompts distinguish bounded in-scope remediation vs
   new-plan follow-up.
 - `VOC-115-AC-05` / `VOC-115-EV-00` — exact-SHA review, risk floors, protected-branch language,
-  fail-closed validation, and adoption-compatible YAML parsing unchanged.
+  and fail-closed behavior remain; the plan gate and adoption both use PyYAML
+  `safe_load`, with a valid package passing and an unescaped single-quoted apostrophe
+  failing before the draft PR is opened.
 - `VOC-115-AC-06` / `VOC-115-EV-00` — related multi-skill request remains one task in validator
   regressions.

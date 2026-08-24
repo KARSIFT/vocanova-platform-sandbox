@@ -279,7 +279,7 @@ Acceptance criteria and tasks use stable identifiers such as:
 
 ```text
 AC-01
-VOC-023-T01
+VOC-023-T00
 ```
 
 Stable identifiers must remain traceable across files, issues, branches, pull requests, releases, and audit records.

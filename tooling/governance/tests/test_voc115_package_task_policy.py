@@ -6,6 +6,8 @@ from pathlib import Path
 import sys
 import unittest
 
+import yaml
+
 from voc080_fixtures import FIXTURE_INFRA_ROOT, REPOSITORY_ROOT, read_fixture
 
 FIXTURE_CONFIG = FIXTURE_INFRA_ROOT / "config"
@@ -16,6 +18,7 @@ from package_task_policy import (  # noqa: E402
     PackageTaskPolicyError,
     validate_package_tasks,
 )
+from auto_advance_ownership import next_roster_task  # noqa: E402
 
 
 class Voc115PackageTaskPolicyTests(unittest.TestCase):
@@ -26,6 +29,8 @@ class Voc115PackageTaskPolicyTests(unittest.TestCase):
         cls.implement_prompt = read_fixture("prompts/implement.md")
         cls.review_prompt = read_fixture("prompts/review.md")
         cls.plan_workflow = read_fixture(".github/workflows/plan.yml")
+        cls.adopt_workflow = read_fixture(".github/workflows/adopt.yml")
+        cls.auto_advance_workflow = read_fixture(".github/workflows/auto-advance.yml")
         cls.voc115_tasks = (
             REPOSITORY_ROOT
             / "specs/changes/VOC-115-reduce-plan-and-task-fragmentation-in-governed/tasks.md"
@@ -117,6 +122,61 @@ class Voc115PackageTaskPolicyTests(unittest.TestCase):
         with self.assertRaises(PackageTaskPolicyError) as ctx:
             validate_package_tasks(text, "VOC-999")
         self.assertEqual(ctx.exception.code, "split_reason_requires_explanation")
+
+    def test_justified_multi_task_package_preserves_sequential_advancement(self):
+        text = """# VOC-999 — Tasks
+
+## VOC-999-T00 — Merge the independently owned contract
+
+## VOC-999-T01 — Implement the dependent runtime
+
+- Split reason: merge-order-dependency — runtime cannot land until the independently merged contract exists.
+"""
+        sections = validate_package_tasks(text, "VOC-999")
+        self.assertEqual(
+            [section.task_id for section in sections],
+            ["VOC-999-T00", "VOC-999-T01"],
+        )
+
+        roster = [
+            {"task_id": "VOC-999-T00", "issue": 100, "depends_on": []},
+            {
+                "task_id": "VOC-999-T01",
+                "issue": 101,
+                "depends_on": ["VOC-999-T00"],
+            },
+        ]
+        self.assertEqual(
+            next_roster_task(roster, "VOC-999-T00"),
+            ("VOC-999-T01", 101),
+        )
+        self.assertIsNone(next_roster_task(roster, "VOC-999-T01"))
+        self.assertIn(
+            'depends_on=$(jq -cn --arg dependency "$previous_task_id"',
+            self.adopt_workflow,
+        )
+        self.assertIn('previous_task_id="$task_id"', self.adopt_workflow)
+        self.assertIn("task-completion-runner.py validate-task", self.auto_advance_workflow)
+        self.assertIn("next_roster_task(roster, closed)", self.auto_advance_workflow)
+
+    def test_plan_gate_uses_adoption_yaml_loader_and_rejects_bad_apostrophe(self):
+        plan_loader = 'yaml.safe_load(open(sys.argv[1]))'
+        adoption_loader = 'data = yaml.safe_load(open(path))'
+        self.assertIn(plan_loader, self.plan_workflow)
+        self.assertIn(adoption_loader, self.adopt_workflow)
+        self.assertLess(
+            self.plan_workflow.index(plan_loader),
+            self.plan_workflow.index("- name: Open draft PR from clean runner"),
+        )
+
+        change_yaml = (
+            REPOSITORY_ROOT
+            / "specs/changes/VOC-115-reduce-plan-and-task-fragmentation-in-governed/change.yaml"
+        ).read_text(encoding="utf-8")
+        self.assertEqual(yaml.safe_load(change_yaml)["id"], "VOC-115")
+        invalid = "id: VOC-999\nrequirement_source: 'founder's request'\n"
+        with self.assertRaises(yaml.YAMLError):
+            yaml.safe_load(invalid)
 
 
 if __name__ == "__main__":
