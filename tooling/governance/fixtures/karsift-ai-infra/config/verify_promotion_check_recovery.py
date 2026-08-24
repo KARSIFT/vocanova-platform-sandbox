@@ -29,8 +29,11 @@ def verify_promotion_pr_identity(
     pr_number: int,
     expected_head_sha: str | None = None,
 ) -> VerificationResult:
-    if pr.get("state") not in {"OPEN", "MERGED"}:
+    state = pr.get("state")
+    if state not in {"open", "closed"}:
         return VerificationResult(False, "promotion_pr_not_terminal_or_open")
+    if state == "closed" and pr.get("merged") is not True:
+        return VerificationResult(False, "promotion_pr_closed_without_merge")
     head = pr.get("head") or {}
     base = pr.get("base") or {}
     head_repo = (head.get("repo") or {}).get("full_name")

@@ -91,6 +91,10 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
   const release = readFileSync(releaseWorkflowPath, "utf8");
 
   assert.match(pipeline, /recover-promotion-pr-checks/);
+  const ciBlock =
+    pipeline.split("\n  ci:", 2)[1]?.split("\n  plan-review:", 1)[0] ?? "";
+  assert.match(ciBlock, /inputs\.action == 'recover-promotion-pr-checks'/);
+  assert.doesNotMatch(pipeline, /\n  recover-promotion-pr-checks:/);
   assert.match(pipeline, /verify-promotion-check-recovery/);
   assert.match(pipeline, /verify-post-promotion-workflow/);
   assert.match(

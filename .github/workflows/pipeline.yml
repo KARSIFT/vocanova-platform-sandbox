@@ -63,7 +63,7 @@ on:
         description: "Which reusable workflow to run"
         required: true
         type: choice
-        options: [implement, plan, reconcile, reconcile-release, reconcile-live-evidence, verify-auto-advance-live-evidence, verify-ready-for-review-reuse, verify-remediate-operator-ownership, recover-promotion-pr-checks, verify-promotion-check-recovery, verify-post-promotion-workflow]
+        options: [implement, plan, reconcile, reconcile-release, reconcile-live-evidence, verify-auto-advance-live-evidence, verify-ready-for-review-reuse, recover-promotion-pr-checks, verify-promotion-check-recovery, verify-post-promotion-workflow, verify-remediate-operator-ownership]
         default: implement
       change_id:
         description: 'implement only: adopted package to implement from, e.g. "VOC-007"'
@@ -275,7 +275,10 @@ jobs:
     needs: [ready-for-review-reuse]
     if: |
       always() &&
-      github.event_name == 'pull_request' && github.event.action != 'closed'
+      (
+        (github.event_name == 'pull_request' && github.event.action != 'closed') ||
+        (github.event_name == 'workflow_dispatch' && inputs.action == 'recover-promotion-pr-checks')
+      )
     uses: KARSIFT/karsift-ai-infra/.github/workflows/ci.yml@main
     with:
       # GitHub rulesets evaluate the newest required `ci / ci` context. Keep
@@ -670,12 +673,6 @@ jobs:
       task_id: ${{ inputs.task_id }}
       package_path: ${{ inputs.package_path }}
       integration_branch: "develop"
-
-  # VOC-113 recovery dispatch: runs genuine CI for a promotion PR head already
-  # checked out on the integration branch ref. Never fabricates statuses.
-  recover-promotion-pr-checks:
-    if: github.event_name == 'workflow_dispatch' && inputs.action == 'recover-promotion-pr-checks'
-    uses: KARSIFT/karsift-ai-infra/.github/workflows/ci.yml@main
 
   # Read-only post-carrier verifier for VOC-113 promotion exact-head proof.
   verify-promotion-check-recovery:

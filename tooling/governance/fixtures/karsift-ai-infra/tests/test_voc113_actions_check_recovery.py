@@ -19,7 +19,10 @@ from actions_check_recovery import (  # noqa: E402
     select_gate_evidence,
     validate_mode,
 )
-from verify_post_promotion_workflow import verify_post_promotion_run  # noqa: E402
+from verify_post_promotion_workflow import (  # noqa: E402
+    verify_post_promotion_run,
+    verify_promotion_merged,
+)
 from verify_promotion_check_recovery import (  # noqa: E402
     verify_promotion_pr_identity,
     verify_required_checks,
@@ -47,6 +50,14 @@ def evaluate_summary(checks: list[dict]) -> dict:
 
 
 class ActionsCheckRecoveryTests(unittest.TestCase):
+    def test_recovery_reuses_ci_job_id_for_required_context(self):
+        template = (
+            ROOT / "templates/project-repo/.github/workflows/pipeline.yml"
+        ).read_text(encoding="utf-8")
+        ci_block = template.split("  ci:", 1)[1].split("\n  plan-review:", 1)[0]
+        self.assertIn("inputs.action == 'recover-promotion-pr-checks'", ci_block)
+        self.assertNotIn("\n  recover-promotion-pr-checks:", template)
+
     def test_promotion_required_contexts_are_ruleset_equivalents(self):
         self.assertEqual(
             required_contexts("promotion_pr"),
@@ -146,8 +157,34 @@ class ActionsCheckRecoveryTests(unittest.TestCase):
     def test_verify_promotion_pr_identity_rejects_non_promotion_pair(self):
         pr = {
             "number": 947,
-            "state": "OPEN",
+            "state": "open",
             "head": {"sha": HEAD_SHA, "ref": "feature", "repo": {"full_name": REPOSITORY}},
+            "base": {"ref": "main"},
+        }
+        result = verify_promotion_pr_identity(
+            pr, repository=REPOSITORY, pr_number=947
+        )
+        self.assertFalse(result.ok)
+
+    def test_verify_promotion_pr_identity_accepts_rest_shape(self):
+        pr = {
+            "number": 947,
+            "state": "open",
+            "merged": False,
+            "head": {"sha": HEAD_SHA, "ref": "develop", "repo": {"full_name": REPOSITORY}},
+            "base": {"ref": "main"},
+        }
+        result = verify_promotion_pr_identity(
+            pr, repository=REPOSITORY, pr_number=947
+        )
+        self.assertTrue(result.ok)
+
+    def test_closed_unmerged_promotion_is_rejected(self):
+        pr = {
+            "number": 947,
+            "state": "closed",
+            "merged": False,
+            "head": {"sha": HEAD_SHA, "ref": "develop", "repo": {"full_name": REPOSITORY}},
             "base": {"ref": "main"},
         }
         result = verify_promotion_pr_identity(
@@ -186,6 +223,20 @@ class ActionsCheckRecoveryTests(unittest.TestCase):
         ]
         result = verify_post_promotion_run(
             runs, repository=REPOSITORY, merge_sha=HEAD_SHA
+        )
+        self.assertTrue(result.ok)
+
+    def test_verify_merged_promotion_accepts_rest_shape(self):
+        pr = {
+            "number": 947,
+            "state": "closed",
+            "merged": True,
+            "merge_commit_sha": HEAD_SHA,
+            "head": {"ref": "develop", "repo": {"full_name": REPOSITORY}},
+            "base": {"ref": "main"},
+        }
+        result = verify_promotion_merged(
+            pr, repository=REPOSITORY, pr_number=947
         )
         self.assertTrue(result.ok)
 

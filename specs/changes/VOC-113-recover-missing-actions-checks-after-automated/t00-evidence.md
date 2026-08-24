@@ -53,9 +53,18 @@ declared workflow dispatches.
 | Bounded wait | **1800 seconds** (30 minutes), poll interval 30 seconds; timeout fails closed with sanitized diagnostics naming mode, SHA, missing contexts, and pending/failed counts |
 | Read-only verifiers | `verify-promotion-check-recovery / verify` (T01) and `verify-post-promotion-workflow / verify` (T02) validate Actions/PR metadata only |
 
-Caller consumes reusable workflows at `@main`. Shared behavior lands in
-`KARSIFT/karsift-ai-infra` (fixture copy under
+Caller consumes reusable workflows at `@main`. Shared behavior merged through
+`KARSIFT/karsift-ai-infra` PR #121 after all four exact-head self-CI checks
+passed; the shared `main` merge commit is
+`d9c4b3ed2fa6aa5b3cbd5db18c4858ec83409be1` (fixture copy under
 `tooling/governance/fixtures/karsift-ai-infra` for deterministic tests).
+
+Pre-publication review caught and corrected two live-contract defects: recovery
+now reuses the existing caller `ci` job ID so the genuine required context stays
+`ci / ci`, and the read-only promotion verifiers consume the REST PR fields
+returned by their actual GitHub API calls. REST-shaped positive and negative
+fixtures cover both corrections. The shared repository passed all 216 policy
+tests before PR #121 was opened.
 
 ## VOC-112 provenance repair (`VOC-113-D11`)
 

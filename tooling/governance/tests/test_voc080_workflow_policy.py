@@ -54,7 +54,7 @@ class Voc080WorkflowPolicyTests(unittest.TestCase):
 
     def test_pipeline_exposes_reconcile_dispatches(self):
         self.assertIn(
-            "options: [implement, plan, reconcile, reconcile-release, reconcile-live-evidence, verify-auto-advance-live-evidence, verify-ready-for-review-reuse, verify-remediate-operator-ownership, recover-promotion-pr-checks, verify-promotion-check-recovery, verify-post-promotion-workflow]",
+            "options: [implement, plan, reconcile, reconcile-release, reconcile-live-evidence, verify-auto-advance-live-evidence, verify-ready-for-review-reuse, recover-promotion-pr-checks, verify-promotion-check-recovery, verify-post-promotion-workflow, verify-remediate-operator-ownership]",
             self.pipeline,
         )
         self.assertIn("inputs.action == 'reconcile'", self.pipeline)

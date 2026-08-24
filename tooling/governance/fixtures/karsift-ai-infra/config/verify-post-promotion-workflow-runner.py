@@ -96,7 +96,7 @@ def main() -> int:
                 pr_number=args.promotion_pr_number,
             )
         )
-        merge_sha = (pr.get("mergeCommit") or {}).get("oid")
+        merge_sha = pr.get("merge_commit_sha")
         if not isinstance(merge_sha, str):
             raise VerificationError("missing_merge_commit")
         require(verify_current_ref(args.current_ref, merge_sha))

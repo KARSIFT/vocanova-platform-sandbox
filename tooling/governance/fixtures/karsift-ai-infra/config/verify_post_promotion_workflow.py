@@ -19,12 +19,11 @@ class VerificationResult:
 
 
 def verify_promotion_merged(pr: dict, *, repository: str, pr_number: int) -> VerificationResult:
-    if pr.get("state") != "MERGED":
+    if pr.get("state") != "closed" or pr.get("merged") is not True:
         return VerificationResult(False, "promotion_pr_not_merged")
     if pr.get("number") != pr_number:
         return VerificationResult(False, "wrong_pr_number")
-    merge_commit = pr.get("mergeCommit") or {}
-    sha = merge_commit.get("oid")
+    sha = pr.get("merge_commit_sha")
     if not isinstance(sha, str) or not SHA_RE.fullmatch(sha):
         return VerificationResult(False, "missing_merge_commit")
     base = pr.get("base") or {}
