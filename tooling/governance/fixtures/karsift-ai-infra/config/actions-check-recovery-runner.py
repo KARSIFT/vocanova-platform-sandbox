@@ -31,29 +31,59 @@ from actions_check_recovery import (
     staging_deploy_required,
 )
 
+CHECK_RUNS_READ_FAILED = "check_runs_read_failed"
+WORKFLOW_RUNS_READ_FAILED = "workflow_runs_read_failed"
+COMMIT_METADATA_READ_FAILED = "commit_metadata_read_failed"
+
 
 class RunnerError(RuntimeError):
     """Sanitized fail-closed runner refusal."""
 
 
-def gh(args: list[str], *, token: str, repository: str) -> str:
+def gh(
+    args: list[str],
+    *,
+    token: str,
+    repository: str,
+    read_failure: str,
+) -> str:
     env = os.environ.copy()
     env["GH_TOKEN"] = token
     env["GH_REPO"] = repository
-    command = ["gh", *args, "--repo", repository]
+    # `gh api` has no `--repo` flag. Endpoints already contain the explicit
+    # repository and GH_REPO keeps the CLI context deterministic.
+    command = ["gh", *args]
     completed = subprocess.run(command, capture_output=True, text=True, check=False, env=env)
     if completed.returncode != 0:
-        raise RunnerError("github_metadata_read_failed")
+        raise RunnerError(read_failure)
     return completed.stdout.strip()
 
 
-def gh_api(token: str, repository: str, path: str) -> Any:
-    return json.loads(gh(["api", path], token=token, repository=repository))
+def gh_api(token: str, repository: str, path: str, *, read_failure: str) -> Any:
+    return json.loads(
+        gh(
+            ["api", path],
+            token=token,
+            repository=repository,
+            read_failure=read_failure,
+        )
+    )
 
 
-def gh_api_paginate(token: str, repository: str, path: str) -> list[dict]:
+def gh_api_paginate(
+    token: str,
+    repository: str,
+    path: str,
+    *,
+    read_failure: str,
+) -> list[dict]:
     payload = json.loads(
-        gh(["api", "--paginate", "--slurp", path], token=token, repository=repository)
+        gh(
+            ["api", "--paginate", "--slurp", path],
+            token=token,
+            repository=repository,
+            read_failure=read_failure,
+        )
     )
     if not isinstance(payload, list):
         raise RunnerError("invalid_paginated_payload")
@@ -72,12 +102,14 @@ def load_gate_summary(token: str, repository: str, head_sha: str) -> dict:
         token,
         repository,
         f"repos/{repository}/commits/{head_sha}/check-runs?per_page=100",
+        read_failure=CHECK_RUNS_READ_FAILED,
     )
     statuses_pages = json.loads(
         gh(
             ["api", "--paginate", "--slurp", f"repos/{repository}/commits/{head_sha}/status?per_page=100"],
             token=token,
             repository=repository,
+            read_failure=CHECK_RUNS_READ_FAILED,
         )
     )
     return select_gate_evidence(
@@ -88,12 +120,12 @@ def load_gate_summary(token: str, repository: str, head_sha: str) -> dict:
 
 
 def load_workflow_runs(token: str, repository: str, head_sha: str) -> list[dict]:
-    runs = gh_api_paginate(
+    return gh_api_paginate(
         token,
         repository,
         f"repos/{repository}/actions/runs?head_sha={head_sha}&per_page=100",
+        read_failure=WORKFLOW_RUNS_READ_FAILED,
     )
-    return runs
 
 
 def load_changed_paths(token: str, repository: str, head_sha: str) -> list[str]:
@@ -107,6 +139,7 @@ def load_changed_paths(token: str, repository: str, head_sha: str) -> list[str]:
             ],
             token=token,
             repository=repository,
+            read_failure=COMMIT_METADATA_READ_FAILED,
         )
     )
     if not isinstance(payload, list) or not payload:
@@ -121,6 +154,28 @@ def load_changed_paths(token: str, repository: str, head_sha: str) -> list[str]:
                 raise RunnerError("invalid_commit_path")
             paths.append(path)
     return paths
+
+
+def load_promotion_target(
+    token: str,
+    repository: str,
+    pr_number: int,
+    *,
+    target_sha: str,
+    branch_ref: str,
+) -> None:
+    pull_request = gh_api(
+        token,
+        repository,
+        f"repos/{repository}/pulls/{pr_number}",
+        read_failure=COMMIT_METADATA_READ_FAILED,
+    )
+    validate_promotion_target(
+        pull_request,
+        target_sha=target_sha,
+        branch_ref=branch_ref,
+        pr_number=pr_number,
+    )
 
 
 def dispatch_workflow(
@@ -184,6 +239,37 @@ def collect_missing(
     return missing
 
 
+def run_metadata_phase(
+    *,
+    mode: str,
+    token: str,
+    repository: str,
+    target_sha: str,
+    branch_ref: str,
+    pr_number: int | None,
+) -> tuple[bool, dict, list[dict]]:
+    """Read exact-SHA metadata; fail closed before dispatch planning."""
+
+    integration_deploy_required = True
+    if mode == "integration_push":
+        integration_deploy_required = staging_deploy_required(
+            load_changed_paths(token, repository, target_sha)
+        )
+    else:
+        if pr_number is None:
+            raise RecoveryError("missing_pr_number")
+        load_promotion_target(
+            token,
+            repository,
+            pr_number,
+            target_sha=target_sha,
+            branch_ref=branch_ref,
+        )
+    gate_summary = load_gate_summary(token, repository, target_sha)
+    workflow_runs = load_workflow_runs(token, repository, target_sha)
+    return integration_deploy_required, gate_summary, workflow_runs
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repository", required=True)
@@ -213,23 +299,15 @@ def main() -> int:
 
     dispatched: list[str] = []
     try:
-        integration_deploy_required = True
-        if mode == "integration_push":
-            integration_deploy_required = staging_deploy_required(
-                load_changed_paths(token, args.repository, target_sha)
-            )
-        else:
-            if pr_number is None:
-                raise RecoveryError("missing_pr_number")
-            validate_promotion_target(
-                gh_api(token, args.repository, f"repos/{args.repository}/pulls/{pr_number}"),
+        integration_deploy_required, initial_gate_summary, initial_workflow_runs = (
+            run_metadata_phase(
+                mode=mode,
+                token=token,
+                repository=args.repository,
                 target_sha=target_sha,
                 branch_ref=args.branch_ref,
                 pr_number=pr_number,
             )
-        initial_gate_summary = load_gate_summary(token, args.repository, target_sha)
-        initial_workflow_runs = load_workflow_runs(
-            token, args.repository, target_sha
         )
         if not recovery_complete(
             mode=mode,
@@ -248,6 +326,7 @@ def main() -> int:
                 ),
                 initial_workflow_runs,
                 head_sha=target_sha,
+                gate_summary=initial_gate_summary,
             )
             for plan in plans:
                 dispatch_workflow(
@@ -263,9 +342,21 @@ def main() -> int:
         return 1
 
     deadline = time.time() + timeout_seconds
+    gate_summary = initial_gate_summary
+    workflow_runs = initial_workflow_runs
     while time.time() < deadline:
-        gate_summary = load_gate_summary(token, args.repository, target_sha)
-        workflow_runs = load_workflow_runs(token, args.repository, target_sha)
+        try:
+            _, gate_summary, workflow_runs = run_metadata_phase(
+                mode=mode,
+                token=token,
+                repository=args.repository,
+                target_sha=target_sha,
+                branch_ref=args.branch_ref,
+                pr_number=pr_number,
+            )
+        except (RunnerError, RecoveryError) as exc:
+            print(f"actions-check-recovery: {exc}", file=sys.stderr)
+            return 1
         if recovery_complete(
             mode=mode,
             gate_summary=gate_summary,
@@ -280,8 +371,6 @@ def main() -> int:
             return 0
         time.sleep(POLL_INTERVAL_SECONDS)
 
-    gate_summary = load_gate_summary(token, args.repository, target_sha)
-    workflow_runs = load_workflow_runs(token, args.repository, target_sha)
     missing = collect_missing(
         mode,
         gate_summary,

@@ -3,7 +3,9 @@ from __future__ import annotations
 import sys
 import unittest
 import re
+from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -38,6 +40,17 @@ from verify_promotion_check_recovery import (  # noqa: E402
 HEAD_SHA = "a" * 40
 BASE_SHA = "b" * 40
 REPOSITORY = "KARSIFT/example"
+
+
+def load_hosted_runner(filename: str, module_name: str):
+    path = ROOT / "config" / filename
+    spec = spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"unable to load runner module from {path}")
+    module = module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def gate_payload(checks: list[dict]) -> dict:
@@ -98,13 +111,18 @@ class ActionsCheckRecoveryTests(unittest.TestCase):
         reusable = (ROOT / ".github/workflows/recover-actions-checks.yml").read_text(
             encoding="utf-8"
         )
-        self.assertIn("if: github.event_name == 'schedule'", resolver)
+        self.assertIn("inputs.action == 'recover-integration-push'", resolver)
         self.assertIn("git/ref/heads/develop", resolver)
         self.assertIn('[[ "$target_sha" =~ ^[0-9a-f]{40}$ ]]', resolver)
         self.assertIn("recovery_needed:", resolver)
         self.assertIn("has_successful_run", resolver)
         self.assertIn("deploy_required", resolver)
+        changed_paths_query = resolver.split("changed_paths=", 1)[1].split(
+            "deploy_required", 1
+        )[0]
+        self.assertNotIn("--jq", changed_paths_query)
         self.assertIn("outputs.recovery_needed == 'true'", recovery)
+        self.assertIn("inputs.action == 'recover-integration-push'", recovery)
         self.assertIn("recovery_mode: integration_push", recovery)
         self.assertIn(
             "target_sha: ${{ needs.resolve-integration-recovery-target.outputs.target_sha }}",
@@ -113,6 +131,20 @@ class ActionsCheckRecoveryTests(unittest.TestCase):
         self.assertIn("actions: write", recovery)
         self.assertIn("actions-check-recovery-${{ inputs.recovery_mode }}-${{ inputs.target_sha }}", reusable)
         self.assertIn("cancel-in-progress: false", reusable)
+
+    def test_operator_can_invoke_integration_recovery_without_free_form_sha(self):
+        template = (
+            ROOT / "templates/project-repo/.github/workflows/pipeline.yml"
+        ).read_text(encoding="utf-8")
+        dispatch_inputs = template.split("  workflow_dispatch:", 1)[1].split(
+            "\n# A synchronize event", 1
+        )[0]
+        self.assertIn("recover-integration-push", dispatch_inputs)
+        self.assertNotIn("integration_recovery_target_sha:", dispatch_inputs)
+        resolver = template.split(
+            "  resolve-integration-recovery-target:", 1
+        )[1].split("\n  recover-integration-push:", 1)[0]
+        self.assertIn("git/ref/heads/develop", resolver)
 
     def test_promotion_required_contexts_are_ruleset_equivalents(self):
         self.assertEqual(
@@ -347,6 +379,39 @@ class ActionsCheckRecoveryTests(unittest.TestCase):
         self.assertIn("if status_request.returncode != 0:", runner)
         self.assertIn('VerificationError("github_metadata_read_failed")', runner)
 
+    def test_hosted_verifiers_use_environment_repo_context_for_gh_api(self):
+        runner_files = (
+            "verify-promotion-check-recovery-runner.py",
+            "verify-post-promotion-workflow-runner.py",
+        )
+        for filename in runner_files:
+            runner = load_hosted_runner(
+                filename,
+                filename.removesuffix(".py").replace("-", "_") + "_test",
+            )
+            with self.subTest(runner=runner.__name__), mock.patch(
+                "subprocess.run",
+                return_value=mock.Mock(returncode=0, stdout="{}"),
+            ) as run_mock:
+                self.assertEqual(
+                    runner.gh_api(
+                        "test-token",
+                        REPOSITORY,
+                        f"repos/{REPOSITORY}/pulls/947",
+                    ),
+                    {},
+                )
+                command = run_mock.call_args.args[0]
+                self.assertEqual(command[:2], ["gh", "api"])
+                self.assertNotIn("--repo", command)
+                self.assertEqual(
+                    run_mock.call_args.kwargs["env"]["GH_REPO"], REPOSITORY
+                )
+                self.assertNotIn(
+                    '"--repo"',
+                    (ROOT / "config" / filename).read_text(encoding="utf-8"),
+                )
+
     def test_wrong_sha_workflow_runs_remain_missing(self):
         runs = [
             {
@@ -461,7 +526,8 @@ class ActionsCheckRecoveryTests(unittest.TestCase):
             "Recover missing integration push workflows for merged SHA", 1
         )[1]
         self.assertIn("steps.merge.outcome == 'success'", recovery_block)
-        self.assertIn("steps.app-token.outputs.token", recovery_block)
+        self.assertIn("GH_TOKEN: ${{ github.token }}", recovery_block)
+        self.assertNotIn("steps.app-token.outputs.token", recovery_block)
 
     def test_promotion_recovery_requires_exact_open_pr_head(self):
         valid = {
@@ -548,6 +614,48 @@ class ActionsCheckRecoveryTests(unittest.TestCase):
                 }
             )
         summary = evaluate_summary(checks)
+        result = verify_required_checks(summary, head_sha=HEAD_SHA)
+        self.assertTrue(result.ok)
+
+    def test_verify_required_checks_ignores_unrelated_non_green_contexts(self):
+        checks = []
+        for index, name in enumerate(required_contexts("promotion_pr"), start=1):
+            checks.append(
+                {
+                    "head_sha": HEAD_SHA,
+                    "id": index,
+                    "name": name,
+                    "status": "completed",
+                    "conclusion": "success",
+                    "app": {"slug": "github-actions"},
+                    "started_at": f"2026-08-24T00:00:{index:02d}Z",
+                }
+            )
+        checks.extend(
+            [
+                {
+                    "head_sha": HEAD_SHA,
+                    "id": 10,
+                    "name": "release / converge",
+                    "status": "completed",
+                    "conclusion": "failure",
+                    "app": {"slug": "github-actions"},
+                    "started_at": "2026-08-24T00:01:00Z",
+                },
+                {
+                    "head_sha": HEAD_SHA,
+                    "id": 11,
+                    "name": "optional observation",
+                    "status": "in_progress",
+                    "conclusion": None,
+                    "app": {"slug": "github-actions"},
+                    "started_at": "2026-08-24T00:01:01Z",
+                },
+            ]
+        )
+        summary = evaluate_summary(checks)
+        self.assertEqual(summary["failed"], 1)
+        self.assertEqual(summary["pending"], 1)
         result = verify_required_checks(summary, head_sha=HEAD_SHA)
         self.assertTrue(result.ok)
 

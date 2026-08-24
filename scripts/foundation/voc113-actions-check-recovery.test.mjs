@@ -149,6 +149,8 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
   assert.match(pipeline, /has_successful_run/);
   assert.match(pipeline, /deploy_required/);
   assert.match(pipeline, /outputs\.recovery_needed == 'true'/);
+  assert.match(pipeline, /inputs\.action == 'recover-integration-push'/);
+  assert.doesNotMatch(dispatchInputBlock, /integration_recovery_target_sha:/);
   assert.match(
     pipeline,
     /target_sha: \$\{\{ needs\.resolve-integration-recovery-target\.outputs\.target_sha \}\}/,
@@ -174,6 +176,11 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
   assert.match(repositoryGovernance, /pr-validation/);
   assert.match(repositoryGovernance, /pr-ancestry/);
   assert.match(repositoryGovernance, /Select strict capture provenance mode/);
+  assert.match(repositoryGovernance, /WORKFLOW_EVENT:.*github\.event_name/);
+  assert.match(
+    repositoryGovernance,
+    /\[ "\$EVENT_KIND" = "pull_request" \].*\[ "\$WORKFLOW_EVENT" = "pull_request" \].*mode=pr-validation/s,
+  );
   assert.match(
     readFileSync(governancePolicyPath, "utf8"),
     /inputs\.recovery_pr_number \|\| github\.run_id/,
@@ -187,7 +194,7 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
   assert.match(devopsOperations, /Missing Actions activation recovery/);
   assert.match(
     devopsOperations,
-    /do not toggle PR state or create check\/status records/,
+    /do not toggle PR state or create unbacked check\/status\s+records/,
   );
   assert.doesNotMatch(
     mergeGate.split("Recover missing integration", 1)[1] ?? "",

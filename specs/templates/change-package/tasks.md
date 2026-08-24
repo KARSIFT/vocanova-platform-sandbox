@@ -1,6 +1,18 @@
 # VOC-000 — Tasks
 
-## VOC-000-T00 — REPLACE WITH APPROVED TASK
+None of the tasks below is implementation-authorized by this package.
+Adoption and each task's own implementation authorization are separate.
+
+Choose the largest safe coherent package for the complete outcome. A broad plan may
+contain several tasks, but use the minimum sufficient number of maximal tasks. The
+default whenever technically possible is **one end-to-end implementation task and
+one implementation PR** covering code, tests, documentation, migration/config
+updates, and acceptance evidence together. Every task after the first must record
+`- Split reason: <allowed-slug> — <concrete explanation>` from the
+planner/plan-review allowlist. Packages with more than three tasks require a
+`## Package-level multi-task justification` section.
+
+## VOC-000-T00 — REPLACE WITH ONE END-TO-END OUTCOME
 
 - Requirement source: `VOC-000-D00`
 - Acceptance criteria: `VOC-000-AC-00`

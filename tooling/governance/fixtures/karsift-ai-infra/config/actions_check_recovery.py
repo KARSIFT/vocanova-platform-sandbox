@@ -20,6 +20,12 @@ PROMOTION_REQUIRED_CONTEXTS: tuple[str, ...] = (
     "ci / ci",
 )
 
+PROMOTION_WORKFLOW_CONTEXTS: dict[str, str] = {
+    "governance-policy.yml": "governance-policy",
+    "repository-governance.yml": "validate",
+    "pipeline.yml": "ci / ci",
+}
+
 INTEGRATION_PUSH_WORKFLOWS: tuple[str, ...] = (
     "repository-governance.yml",
     "deploy-staging.yml",
@@ -129,10 +135,18 @@ def select_gate_evidence(
     head_sha: str,
 ) -> dict[str, Any]:
     expected = {"head_sha": validate_sha(head_sha, "head_sha")}
+    # Promotion recovery publishes same-SHA status attestations only after the
+    # genuine required workflow checks pass. Those bridge GitHub's ruleset,
+    # but must never replace the underlying Actions evidence used here.
+    statuses = [
+        item
+        for item in flatten_statuses(statuses_payload)
+        if item.get("context") not in PROMOTION_REQUIRED_CONTEXTS
+    ]
     try:
         selected = select_authoritative(
             flatten_check_runs(check_runs_payload),
-            flatten_statuses(statuses_payload),
+            statuses,
             expected=expected,
         )
     except EvidenceError as exc:
@@ -253,8 +267,9 @@ def suppress_active_or_successful_dispatches(
     workflow_runs: Iterable[dict[str, Any]],
     *,
     head_sha: str,
+    gate_summary: dict[str, Any] | None = None,
 ) -> list[DispatchPlan]:
-    """Avoid duplicate dispatches while an exact-SHA recovery is already active."""
+    """Avoid duplicate dispatches bound to the evidence each plan produces."""
 
     validated_sha = validate_sha(head_sha, "head_sha")
     already_running = {
@@ -269,7 +284,22 @@ def suppress_active_or_successful_dispatches(
             )
         )
     }
-    return [plan for plan in plans if plan.workflow_file not in already_running]
+    context_states = {
+        item.get("name"): item.get("state")
+        for item in (gate_summary or {}).get("checks", [])
+        if item.get("kind") == "check_run"
+        and item.get("workflow") == "github-actions"
+    }
+    promotion_dispatch = any(plan.workflow_file == "pipeline.yml" for plan in plans)
+    remaining: list[DispatchPlan] = []
+    for plan in plans:
+        context = PROMOTION_WORKFLOW_CONTEXTS.get(plan.workflow_file)
+        if promotion_dispatch and context is not None:
+            if context_states.get(context) not in {"SUCCESS", "PENDING"}:
+                remaining.append(plan)
+        elif plan.workflow_file not in already_running:
+            remaining.append(plan)
+    return remaining
 
 
 def recovery_complete(
@@ -290,10 +320,6 @@ def recovery_complete(
     if push_workflows and missing_push_workflow_runs(
         workflow_runs, head_sha=head_sha, required_workflows=push_workflows
     ):
-        return False
-    if gate_summary.get("pending", 0) > 0:
-        return False
-    if gate_summary.get("failed", 0) > 0:
         return False
     return True
 
