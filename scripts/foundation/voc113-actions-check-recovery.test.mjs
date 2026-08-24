@@ -11,7 +11,10 @@ const repositoryRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../..",
 );
-const pipelinePath = path.join(repositoryRoot, ".github/workflows/pipeline.yml");
+const pipelinePath = path.join(
+  repositoryRoot,
+  ".github/workflows/pipeline.yml",
+);
 const governancePolicyPath = path.join(
   repositoryRoot,
   ".github/workflows/governance-policy.yml",
@@ -101,7 +104,10 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
   assert.match(governancePolicy, /recovery_pr_number/);
   assert.match(repositoryGovernance, /recovery_pr_number/);
   assert.match(repositoryGovernance, /pr-validation/);
-  assert.match(mergeGate, /Recover missing integration push workflows for merged SHA/);
+  assert.match(
+    mergeGate,
+    /Recover missing integration push workflows for merged SHA/,
+  );
   assert.match(mergeGate, /actions-check-recovery-runner\.py/);
   assert.match(release, /Recover missing exact-head promotion checks/);
   assert.doesNotMatch(
@@ -112,7 +118,10 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
 
 test("VOC-113-TEST-08/09 contracts bind read-only verifier job names", () => {
   const verifyPromotion = readFileSync(verifyPromotionWorkflowPath, "utf8");
-  const verifyPostPromotion = readFileSync(verifyPostPromotionWorkflowPath, "utf8");
+  const verifyPostPromotion = readFileSync(
+    verifyPostPromotionWorkflowPath,
+    "utf8",
+  );
   const contractT01 = readFileSync(contractT01Path, "utf8");
   const contractT02 = readFileSync(contractT02Path, "utf8");
   assert.match(verifyPromotion, /name: verify/);

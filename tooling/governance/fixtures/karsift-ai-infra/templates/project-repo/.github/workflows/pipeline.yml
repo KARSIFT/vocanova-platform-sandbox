@@ -113,7 +113,7 @@ on:
         required: false
         type: string
       live_evidence_pr_number:
-        description: "reconcile-live-evidence only: optional target PR; required for declared dispatch"
+        description: "reconcile-live-evidence dispatch, verify-remediate-operator-ownership, and VOC-113 verify/recovery: target PR number"
         required: false
         type: string
       live_evidence_run_id:
@@ -167,10 +167,6 @@ on:
         type: string
       verify_reuse_proof_head_sha:
         description: "verify-ready-for-review-reuse only: exact evidence-carrier head SHA"
-        required: false
-        type: string
-      promotion_pr_number:
-        description: "VOC-113 recovery/verify only: promotion pull request number"
         required: false
         type: string
 
@@ -508,7 +504,7 @@ jobs:
       pull-requests: read
     uses: KARSIFT/karsift-ai-infra/.github/workflows/verify-promotion-check-recovery.yml@main
     with:
-      promotion_pr_number: ${{ inputs.promotion_pr_number }}
+      promotion_pr_number: ${{ inputs.live_evidence_pr_number }}
 
   verify-post-promotion-workflow:
     if: github.event_name == 'workflow_dispatch' && inputs.action == 'verify-post-promotion-workflow'
@@ -518,7 +514,7 @@ jobs:
       pull-requests: read
     uses: KARSIFT/karsift-ai-infra/.github/workflows/verify-post-promotion-workflow.yml@main
     with:
-      promotion_pr_number: ${{ inputs.promotion_pr_number }}
+      promotion_pr_number: ${{ inputs.live_evidence_pr_number }}
 
   # Separate operator path: hourly polling reads Actions metadata for waiting
   # contracts. Manual mode can validate one run immediately or dispatch only a

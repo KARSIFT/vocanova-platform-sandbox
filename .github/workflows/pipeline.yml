@@ -118,7 +118,7 @@ on:
         required: false
         type: string
       live_evidence_pr_number:
-        description: "reconcile-live-evidence dispatch only: waiting task PR number"
+        description: "reconcile-live-evidence dispatch, verify-remediate-operator-ownership, and VOC-113 verify/recovery: target PR number"
         required: false
         type: string
       verify_source_run_id:
@@ -163,10 +163,6 @@ on:
         type: string
       verify_reuse_proof_head_sha:
         description: "verify-ready-for-review-reuse only: exact evidence-carrier head SHA"
-        required: false
-        type: string
-      promotion_pr_number:
-        description: "VOC-113 recovery/verify only: promotion pull request number"
         required: false
         type: string
 
@@ -690,7 +686,7 @@ jobs:
       pull-requests: read
     uses: KARSIFT/karsift-ai-infra/.github/workflows/verify-promotion-check-recovery.yml@main
     with:
-      promotion_pr_number: ${{ inputs.promotion_pr_number }}
+      promotion_pr_number: ${{ inputs.live_evidence_pr_number }}
 
   # Read-only post-carrier verifier for VOC-113 post-promotion workflow proof.
   verify-post-promotion-workflow:
@@ -701,4 +697,4 @@ jobs:
       pull-requests: read
     uses: KARSIFT/karsift-ai-infra/.github/workflows/verify-post-promotion-workflow.yml@main
     with:
-      promotion_pr_number: ${{ inputs.promotion_pr_number }}
+      promotion_pr_number: ${{ inputs.live_evidence_pr_number }}

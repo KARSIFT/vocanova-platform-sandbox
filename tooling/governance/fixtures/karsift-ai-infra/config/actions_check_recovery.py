@@ -185,7 +185,7 @@ def plan_recovery_dispatches(
                 ref=branch_ref,
                 inputs={
                     "action": "recover-promotion-pr-checks",
-                    "promotion_pr_number": pr_value,
+                    "live_evidence_pr_number": pr_value,
                 },
             ),
         ]

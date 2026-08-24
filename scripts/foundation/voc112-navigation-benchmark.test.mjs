@@ -38,11 +38,46 @@ const sha256AtRevision = (revision, relativePath) =>
     )
     .digest("hex");
 
+function assertPrValidationMergeBase(evidence) {
+  const prBaseSha = process.env.PR_BASE_SHA;
+  const prHeadSha = process.env.PR_HEAD_SHA;
+  assert.match(
+    prBaseSha ?? "",
+    /^[a-f0-9]{40}$/,
+    "post-squash PR validation requires PR_BASE_SHA",
+  );
+  assert.match(
+    prHeadSha ?? "",
+    /^[a-f0-9]{40}$/,
+    "post-squash PR validation requires PR_HEAD_SHA",
+  );
+  const mergeBase = execFileSync("git", ["merge-base", prBaseSha, prHeadSha], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  }).trim();
+  assert.match(mergeBase, /^[a-f0-9]{40}$/);
+  assert.equal(
+    evidence.source_hashes.navigator_skill_sha256,
+    sha256AtRevision(
+      mergeBase,
+      ".agents/skills/vocanova-repo-navigator/SKILL.md",
+    ),
+    "navigator hash must be anchored in the PR merge base",
+  );
+  assert.equal(
+    evidence.source_hashes.agents_sha256,
+    sha256AtRevision(mergeBase, "AGENTS.md"),
+    "AGENTS.md hash must be anchored in the PR merge base",
+  );
+}
+
 function assertCapturedRevision(evidence) {
   assert.match(evidence.subject_revision, /^[a-f0-9]{40}$/);
   const mode = process.env.VOC112_CAPTURE_PROVENANCE_MODE ?? "local";
   assert.ok(
-    ["local", "pr-ancestry", "pr-validation", "squash-safe-push"].includes(mode),
+    ["local", "pr-ancestry", "pr-validation", "squash-safe-push"].includes(
+      mode,
+    ),
     `unknown capture provenance mode: ${mode}`,
   );
   const subjectLookup = spawnSync(
@@ -70,77 +105,24 @@ function assertCapturedRevision(evidence) {
       );
     }
     if (mode === "pr-validation") {
-      const prBaseSha = process.env.PR_BASE_SHA;
-      const prHeadSha = process.env.PR_HEAD_SHA;
-      assert.match(
-        prBaseSha ?? "",
-        /^[a-f0-9]{40}$/,
-        "post-squash PR validation requires PR_BASE_SHA",
-      );
-      assert.match(
-        prHeadSha ?? "",
-        /^[a-f0-9]{40}$/,
-        "post-squash PR validation requires PR_HEAD_SHA",
-      );
-      const mergeBase = execFileSync(
-        "git",
-        ["merge-base", prBaseSha, prHeadSha],
-        { cwd: repositoryRoot, encoding: "utf8" },
-      ).trim();
-      assert.match(mergeBase, /^[a-f0-9]{40}$/);
-      assert.equal(
-        evidence.source_hashes.navigator_skill_sha256,
-        sha256AtRevision(
-          mergeBase,
-          ".agents/skills/vocanova-repo-navigator/SKILL.md",
-        ),
-        "navigator hash must be anchored in the PR merge base",
-      );
-      assert.equal(
-        evidence.source_hashes.agents_sha256,
-        sha256AtRevision(mergeBase, "AGENTS.md"),
-        "AGENTS.md hash must be anchored in the PR merge base",
-      );
+      assertPrValidationMergeBase(evidence);
     }
   } else {
+    if (mode === "pr-validation") {
+      assertPrValidationMergeBase(evidence);
+    }
     const ancestry = spawnSync(
       "git",
       ["merge-base", "--is-ancestor", evidence.subject_revision, "HEAD"],
       { cwd: repositoryRoot },
     );
     const ancestryProven = ancestry.status === 0;
-    if (!ancestryProven && mode !== "squash-safe-push") {
-      const prBaseSha = process.env.PR_BASE_SHA;
-      const prHeadSha = process.env.PR_HEAD_SHA;
-      assert.match(
-        prBaseSha ?? "",
-        /^[a-f0-9]{40}$/,
-        "post-squash PR validation requires PR_BASE_SHA",
-      );
-      assert.match(
-        prHeadSha ?? "",
-        /^[a-f0-9]{40}$/,
-        "post-squash PR validation requires PR_HEAD_SHA",
-      );
-      const mergeBase = execFileSync(
-        "git",
-        ["merge-base", prBaseSha, prHeadSha],
-        { cwd: repositoryRoot, encoding: "utf8" },
-      ).trim();
-      assert.match(mergeBase, /^[a-f0-9]{40}$/);
-      assert.equal(
-        evidence.source_hashes.navigator_skill_sha256,
-        sha256AtRevision(
-          mergeBase,
-          ".agents/skills/vocanova-repo-navigator/SKILL.md",
-        ),
-        "navigator hash must be anchored in the PR merge base",
-      );
-      assert.equal(
-        evidence.source_hashes.agents_sha256,
-        sha256AtRevision(mergeBase, "AGENTS.md"),
-        "AGENTS.md hash must be anchored in the PR merge base",
-      );
+    if (
+      !ancestryProven &&
+      mode !== "squash-safe-push" &&
+      mode !== "pr-validation"
+    ) {
+      assertPrValidationMergeBase(evidence);
     }
     if (ancestryProven && mode === "pr-ancestry") {
       // Original capture PR path: ancestry plus captured-revision binding below.
