@@ -14,9 +14,9 @@ KARSIFT/vocanova-platform-sandbox#<task>` and MUST NOT use a closing keyword.
 
 ## VOC-113-T00 — Diagnose missing-run behavior; implement durable recovery, tests, and docs
 
-- Requirement source: issue #948; `VOC-113-D00`–`D07`, `VOC-113-D09`, `VOC-113-D10`
-- Acceptance criteria: `VOC-113-AC-00` through `VOC-113-AC-04`
-- Tests: `VOC-113-TEST-00` through `VOC-113-TEST-07`
+- Requirement source: issue #948; `VOC-113-D00`–`D07`, `VOC-113-D09`–`D11`
+- Acceptance criteria: `VOC-113-AC-00` through `VOC-113-AC-04`, `VOC-113-AC-07`
+- Tests: `VOC-113-TEST-00` through `VOC-113-TEST-07`, `VOC-113-TEST-10`
 - Evidence: `VOC-113-EV-00` (`t00-evidence.md` in this package directory)
 - Status: pending
 
@@ -61,9 +61,14 @@ KARSIFT/vocanova-platform-sandbox#<task>` and MUST NOT use a closing keyword.
 11. Record that the caller already consumes reusable workflows at `@main`; no pin
     bump is expected. If implementation discovers a different current reference,
     reconcile it explicitly and record the actual consumption mechanism.
-12. Run applicable commands and record results in `t00-evidence.md`:
+12. Repair the VOC-112 capture-provenance gate per `VOC-113-D11`. Preserve strict
+    original-capture ancestry, add merge-base anchoring for later post-squash PRs,
+    and fail closed on an unanchored capture or any base/current hash mismatch.
+13. Run applicable commands and record results in `t00-evidence.md`:
     - infra policy / self-ci tests added or updated by this task;
     - caller `node --test scripts/foundation/voc113-*.test.mjs` when present;
+    - `node --test scripts/foundation/voc112-navigation-benchmark.test.mjs` in
+      original-PR and post-squash-next-PR fixture modes;
     - `bash scripts/governance/validate-governance.sh` when required for changed
       calling-repo paths;
     - `bash scripts/governance/classify-change-risk.sh` when required;

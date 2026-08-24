@@ -97,5 +97,18 @@ post-promotion workflows ran for the promotion result SHA (at minimum the
 repository's normal `main` push path such as `deploy-production` when selected).
 Issue #948 / this remediation closes only after that evidence is recorded.
 
+## VOC-113-AC-07 — Provenance validation accepts later PRs without trusting discarded history
+
+- Requirement source: live plan-PR #949 failure; `VOC-113-D11`
+- Tasks: `VOC-113-T00`
+- Tests: `VOC-113-TEST-10`
+- Evidence: `VOC-113-EV-00`
+- Result: pending
+
+The original capture PR still requires subject-commit ancestry and exact hashes.
+A later PR based on the accepted squash passes only when the expected source
+hashes are already anchored in its merge base and remain unchanged at its exact
+head. Missing, tampered, or changed hashes fail closed.
+
 Acceptance criteria must be observable, stable, security-aware, and bidirectionally
 traceable to requirements, tasks, tests, and evidence.

@@ -6,7 +6,7 @@
 | Title | Recover missing Actions checks after automated merges and release PR creation |
 | Path | `specs/changes/VOC-113-recover-missing-actions-checks-after-automated` |
 | Status | `draft` |
-| Risk | `R3` (draft proposal; path-based floor and independent verification govern) |
+| Risk | `R4` (draft proposal; governance-workflow provenance gate and independent verification govern) |
 | Authority model | A-004 active |
 | Requirement source | GitHub issue [#948](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/948) |
 | Target branch | `develop` |
@@ -69,8 +69,7 @@ Under **active A-004**, engineering-workflow gates do not wait on a founder
 
 ## Risk note
 
-This package **proposes R3** because it changes CI/CD lifecycle orchestration
-(`.github/workflows` / karsift-ai-infra release and merge-gate paths). The
+This package **proposes R4** because it changes CI/CD lifecycle orchestration and
+must repair the strict provenance gate executed by Repository Governance. The
 path-based classifier and independent verifier remain authoritative; this draft
-proposal is not a determination. Touching DOC-15 or `scripts/governance/*`
-would raise the path floor to R4.
+proposal is not a determination.

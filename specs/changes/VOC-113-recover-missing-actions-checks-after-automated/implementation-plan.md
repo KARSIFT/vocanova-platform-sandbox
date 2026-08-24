@@ -26,6 +26,8 @@
 | Shared recovery helper(s) under `karsift-ai-infra/config/` | create/modify | Detect missing exact-SHA required runs; dispatch/orchestrate; timeout; diagnostics |
 | Infra policy tests | create/modify | Task-merge and release-PR positive/negative fixtures |
 | Caller `.github/workflows/pipeline.yml` and/or template | modify as needed | Recovery wake entrypoint if required; add `verify-promotion-check-recovery` dispatch (`VOC-113-D10`) |
+| `.github/workflows/repository-governance.yml` | modify | Supply exact pull-request merge-base context to strict provenance validation |
+| `scripts/foundation/voc112-navigation-benchmark.test.mjs` + fixtures | modify | Original ancestry or accepted-squash merge-base anchoring; strict negative cases |
 | Shared/caller verify reusable workflow (if split like VOC-104) | create | Read-only promotion exact-head check verification |
 | `scripts/foundation/voc113-*.test.mjs` | create if caller contract needs it | Mirror infra invariants + verify job naming |
 | karsift-ai-infra README; AGENTS.md / ops docs | modify when claims become false | Document recovery + timeout; do not claim close/reopen recovers checks |
@@ -47,7 +49,10 @@ Ordered steps:
    contract (`VOC-113-D10`) for T01 live evidence.
 8. Update docs whose current claims would become false; record that caller
    consumes `@main` (reconcile pin only if reality differs).
-9. Run applicable validation; record results in `t00-evidence.md`.
+9. Repair the post-squash-next-PR provenance regression per `VOC-113-D11` and
+   exercise original ancestry, accepted merge-base anchoring, tampered base, and
+   changed-current cases.
+10. Run applicable validation; record results in `t00-evidence.md`.
 
 ### T01 — Recover and complete promotion PR #947 after genuine exact-head checks
 

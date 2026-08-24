@@ -109,5 +109,16 @@
 - Expected result: Post-promotion evidence complete before remediation closure
 - Evidence: `VOC-113-EV-02`
 
+## VOC-113-TEST-10 — Squash-aware provenance remains strict on future PRs
+
+- Covers: `VOC-113-AC-07`, `VOC-113-D11`
+- Preconditions: T00 task branch with the repaired provenance validator
+- Procedure: Run deterministic graph fixtures for (a) the original capture PR
+  with true subject ancestry, (b) the next PR based on an accepted squash with
+  expected hashes anchored in its merge base, (c) an unanchored/tampered merge
+  base, and (d) a changed current canonical source hash.
+- Expected result: (a) and (b) pass; (c) and (d) fail closed
+- Evidence: `VOC-113-EV-00`
+
 Include positive, negative, authorization, failure, migration, accessibility, and
 rollback coverage as applicable. Tests must not use secrets or production data.

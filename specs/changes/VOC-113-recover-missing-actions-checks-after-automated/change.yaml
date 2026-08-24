@@ -4,19 +4,13 @@ slug: recover-missing-actions-checks-after-automated
 title: Recover missing Actions checks after automated merges and release PR creation
 type: infrastructure
 status: draft
-risk: R3
-planned_implementation_risk_floor: "Measured during drafting against the expected\
-  \ task-scoped file list (KARSIFT/karsift-ai-infra merge-gate.yml, release.yml, recovery\
-  \ helpers/tests/README; calling-repo .github/workflows/pipeline.yml and/or shared\
-  \ caller template when a dispatch/wake entrypoint is required; scripts/foundation/voc113-*.test.mjs\
-  \ and/or infra self-ci fixtures; AGENTS.md and/or ops docs only when current claims\
-  \ become false; this package directory). Detected path floor is R3 for .github/workflows/\
-  \ and CI/CD governance-automation paths. Touching scripts/governance/* or docs/operations/15-ai-native-product-and-engineering-operating-model.md\
-  \ would raise the path floor to R4 \u2014 prefer karsift-ai-infra README / AGENTS.md\
-  \ updates unless a DOC-15 claim becomes false. This package proposes R3 for the\
-  \ change as a whole; this is a draft proposal for the reviewing human at adoption\
-  \ time, not a determination. Independent verification must still confirm each task's\
-  \ real file list and whether semantic escalation applies.\n"
+risk: R4
+planned_implementation_risk_floor: "R4. T00 changes CI/CD lifecycle orchestration\
+  \ and must repair the exact-provenance gate in .github/workflows/repository-governance.yml\
+  \ and scripts/foundation/voc112-navigation-benchmark.test.mjs. Strict ancestry/hash\
+  \ verification is a governance gate; the package must preserve fail-closed behavior.\
+  \ This is a draft proposal, not a determination; the path classifier and independent\
+  \ verifier remain authoritative.\n"
 canonical_path: specs/changes/VOC-113-recover-missing-actions-checks-after-automated
 authority_model: a004-active
 requirement_source: "GitHub issue #948 (Recover missing Actions checks after automated\
@@ -112,6 +106,8 @@ affected_areas:
 - KARSIFT/karsift-ai-infra recovery helper(s), policy tests, and README
 - .github/workflows/pipeline.yml and/or shared caller template when an explicit dispatch/reconcile
   wake entrypoint or verify-promotion-check-recovery action is required
+- .github/workflows/repository-governance.yml
+- scripts/foundation/voc112-navigation-benchmark.test.mjs and its deterministic fixtures
 - scripts/foundation/voc113-*.test.mjs and/or infra self-ci fixtures
 - AGENTS.md and/or ops docs only when current claims become false
 - specs/changes/VOC-113-recover-missing-actions-checks-after-automated/
@@ -134,7 +130,7 @@ repository_adoption_status: not-adopted
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
-standing_technical_steward_approval: not-required-solely-for-routine-R3-under-active-A004
+standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
 blocking_reasons: "draft package \u2014 not adopted; implementation not authorized"
 artifacts:
   readme: README.md

@@ -66,11 +66,12 @@ separate A-004 plan-review / adopt path.
 
 ## Risk and protected areas
 
-- **Draft package proposal:** **R3** (CI/CD lifecycle orchestration).
-- **Measured path floor at drafting:** **R3** for `.github/workflows` /
-  karsift-ai-infra reusable workflows. **R4** if a task edits
-  `scripts/governance/*` or
-  `docs/operations/15-ai-native-product-and-engineering-operating-model.md`.
+- **Draft package proposal:** **R4** (CI/CD lifecycle orchestration plus a
+  repository-governance exact-provenance gate correction).
+- **Measured package floor at drafting:** **R4** because T00 must update
+  `.github/workflows/repository-governance.yml` and
+  `scripts/foundation/voc112-navigation-benchmark.test.mjs` without weakening
+  exact-hash verification.
 - Protected areas: App-token merge/release mutation paths, exact-SHA authoritative
   check selection (VOC-108), release converge idempotency, branch ruleset
   required contexts, production promotion/deploy wake path.
@@ -136,6 +137,15 @@ statuses and never merging. T01's live-evidence contract observes that verify
 job on the T01 PR (`exact_pr_head`). Completing the promotion merge remains
 release converge's job after those genuine checks exist.
 
+`VOC-113-D11`: The VOC-112 provenance gate MUST remain strict across squash
+merges and subsequent pull requests. The original capture PR must prove that
+its subject commits are ancestors of its reviewed head. A later PR based on the
+accepted squash may instead prove that each capture's expected immutable source
+hash was already anchored in the pull request merge base and is unchanged at
+the reviewed head. A non-ancestor capture that is not anchored in the merge base,
+or whose current hash changed, fails closed. T00 adds deterministic original-PR,
+post-squash-next-PR, tampered-base, and changed-current fixtures.
+
 ## Data, migrations, analytics, and accessibility
 
 None. Governance-automation recovery only; no database, product analytics, or UI
@@ -166,3 +176,8 @@ material, tokens, user identifiers, personal data.
 4. **Caller entrypoint shape:** Whether recovery is embedded solely inside
    merge-gate/release converge, exposed as a new `pipeline.yml` dispatch action,
    or both, is left to implementation provided D03–D06 hold and docs stay true.
+5. **Bootstrap provenance:** Plan PR #949 uses a content-neutral merge parent
+   containing the original VOC-112 capture commits so the pre-fix validator can
+   verify real ancestry. T00 may use the same content-neutral ancestry bridge;
+   the permanent D11 correction must merge in T00 so later task PRs need no such
+   bridge.

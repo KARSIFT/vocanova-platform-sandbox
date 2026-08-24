@@ -40,6 +40,11 @@ None. No product analytics instrumentation or user-facing UI changes.
 - `VOC-113-R03`: **Low documentation risk** — stale docs claiming close/reopen or
   draft/ready recover missing checks. Mitigation: update false claims in the
   same task PR.
+- `VOC-113-R04`: **High governance availability risk** — the VOC-112 validator
+  proves its squash but rejects every later PR because discarded capture commits
+  are no longer ancestors. Mitigation: retain ancestry for the original capture
+  PR and require exact source hashes anchored in the later PR merge base plus the
+  reviewed head; add strict tamper negatives.
 - Protected surfaces: App-token merge/release paths, ruleset required contexts,
   VOC-108 check selection, release converge concurrency.
 - `VOC-113-DEP-00`: Issue #948 sanitized observations.
@@ -61,5 +66,5 @@ None. No product analytics instrumentation or user-facing UI changes.
 Active authority model: **A-004**. No founder `approved` comment is required for
 engineering-workflow merge/adopt/release gates. EHR not triggered.
 
-This draft proposes **R3**; the path classifier and independent verifier remain
+This draft proposes **R4**; the path classifier and independent verifier remain
 authoritative.
