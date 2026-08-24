@@ -81,6 +81,19 @@ test("VOC-114 fixture mirror separates recovery and mutation tokens", () => {
     path.join(fixtureInfraRoot, ".github/workflows/recover-actions-checks.yml"),
     "utf8",
   );
+  const template = readFileSync(
+    path.join(
+      fixtureInfraRoot,
+      "templates/project-repo/.github/workflows/pipeline.yml",
+    ),
+    "utf8",
+  );
+  const templateMergeGate = template
+    .split("\n  merge-gate:\n", 2)[1]
+    .split("\n  release:\n", 1)[0];
+  const templateRelease = template
+    .split("\n  release:\n", 2)[1]
+    .split("\n  auto-advance:\n", 1)[0];
   for (const workflow of [mergeGate, reusable]) {
     assert.match(workflow, /checks: read/);
     assert.match(workflow, /statuses: read/);
@@ -90,6 +103,10 @@ test("VOC-114 fixture mirror separates recovery and mutation tokens", () => {
   assert.match(release, /statuses: write/);
   assert.match(release, /promotion-status-attestation-runner\.py/);
   assert.match(release, /actions: write/);
+  assert.match(templateMergeGate, /statuses: read/);
+  assert.doesNotMatch(templateMergeGate, /statuses: write/);
+  assert.match(templateRelease, /statuses: write/);
+  assert.doesNotMatch(templateRelease, /statuses: read/);
   assert.doesNotMatch(
     reusable,
     /Mint App installation token for recovery dispatch/,

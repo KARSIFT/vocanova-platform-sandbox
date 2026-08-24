@@ -66,10 +66,15 @@ tasks:
   `6999e2beda5bbf00028fae04ca0e65324fc59afa`; added the D07
   ruleset-attestation bridge after genuine recovery passed but GitHub still
   reported the promotion PR blocked.
+- shared-infra PR `#145`: reviewed head
+  `73a63d42345ff54619d257e4857fc4166a2785af`, merge
+  `c5d8bccfa8676bd367b53ad5f6f9a51a40c99405`; corrected the project template
+  so only release receives Statuses write and added job-scoped negative tests.
 
 The caller fixture first pinned token separation at shared-infra merge
 `9d7e334f917643c42bb4b7a062c8fcddecc7927f` and now pins the complete D07
-contract at `6999e2beda5bbf00028fae04ca0e65324fc59afa`. Caller corrective PR `#970`
+contract, including the template permission correction, at
+`c5d8bccfa8676bd367b53ad5f6f9a51a40c99405`. Caller corrective PR `#970`
 merged as `c3455941463c0ded5630ea309b50f94a6cd546af`; final pin-sync PR `#971`
 merged as `172648f555b0eacedeb44fef707e6edf3cc60372`; promotion recovery provenance
 PR `#972` merged as `51c4d261d940c0e96a66238992c5380384729bb2`; final
