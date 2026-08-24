@@ -13,15 +13,17 @@ Evidence date: 2026-08-24
 | Release automation opened promotion PR #947 | No pull-request workflows / required checks on the exact head |
 | Close/reopen and draft/ready transitions | Did not recreate missing required checks |
 | `reconcile-release` | Reused release audit and PR #947; merge remained fail-closed without exact-head checks |
+| User-authenticated merge of roster PR #953 | Branch advanced, but no `push` workflows or promotion-PR synchronize checks were observed for the new integration SHA |
 | Active ruleset contexts | `governance-policy`, `validate`, `ci / ci` remain required and were not weakened |
 
 ## Verified trigger/token/event behavior (`VOC-113-DEP-04`)
 
-GitHub does not treat App installation-token merges and pull-request mutations as
-ordinary user pushes or pull-request fan-out in every case. When the mutation
-identity is the GitHub App rather than a repository `push` from a default
-`GITHUB_TOKEN` merge, downstream `push` and `pull_request` workflow activation
-can be absent even though branch tips and PR heads move successfully.
+Repository metadata proves that downstream event fan-out is unreliable for the
+API-driven mutations used in this lifecycle. It was absent after the GitHub App
+task/plan mutations and also after the operator merged roster PR #953 with the
+authenticated GitHub CLI OAuth identity. This rules out an App-only explanation.
+Issue events and explicit `workflow_dispatch` runs continued to activate, while
+the affected branch tips and PR heads still moved successfully.
 
 Promotion PR #947 (`develop`→`main`) is a branch-to-branch pull request whose
 head ref is the protected integration branch itself. GitHub did not attach the
@@ -29,7 +31,10 @@ normal pull-request validation fan-out to that exact head SHA after App-driven
 PR creation. Manual close/reopen and draft/ready transitions did not recreate
 the missing ruleset contexts.
 
-The durable fix is explicit `workflow_dispatch` orchestration bound to the exact
+GitHub metadata does not expose a more specific server-side suppression cause;
+the verified contract is therefore the event/token behavior above, not a guess
+about an undocumented internal cause. The durable fix is explicit
+`workflow_dispatch` orchestration bound to the exact
 SHA (VOC-113-D03): recovery dispatches genuine allowlisted workflows and polls
 for real check-run metadata. It never fabricates statuses or weakens the
 ruleset.
@@ -70,9 +75,10 @@ Commands run on the T00 task branch working tree:
 | `node --test scripts/foundation/voc113-actions-check-recovery.test.mjs` | PASS |
 | `VOC112_CAPTURE_PROVENANCE_MODE=squash-safe-push node --test scripts/foundation/voc112-navigation-benchmark.test.mjs` | PASS |
 | `VOC112_CAPTURE_PROVENANCE_MODE=pr-validation` with PR base/head SHAs (post-squash fixture mode) | PASS |
-| `bash scripts/governance/validate-governance.sh` | PASS (after run) |
-| `bash scripts/governance/classify-change-risk.sh` | PASS (after run) |
-| `git diff --check` | PASS (after run) |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | PASS — 146 tests |
+| `bash scripts/governance/validate-governance.sh --base <integration-sha> --head HEAD` | PASS |
+| `bash scripts/governance/classify-change-risk.sh --base <integration-sha> --head HEAD` | PASS — R4 floor |
+| `git diff --check <integration-sha>..HEAD` | PASS |
 
 ## Out of scope for T00
 
