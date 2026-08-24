@@ -28,6 +28,10 @@ requirement_source: "GitHub issue #948 (Recover missing Actions checks after aut
   \ no duplicate promotion PRs/releases/recursion/status fabrication; deterministic\
   \ tests; bounded timeout with sanitized diagnostics; complete PR #947 only after\
   \ genuine exact-head checks; verify post-promotion workflows before closing remediation.\
+  \ Additional requirement source: live Repository Governance failure on plan PR\
+  \ #949, which proved the VOC-112 strict capture-ancestry mode rejects later PRs\
+  \ after the accepted squash discarded intermediate capture commits; D11/AC-07\
+  \ require exact merge-base anchoring without weakening current hash validation.\
   \ This draft package does not adopt or authorize itself.\n"
 requirement_approval_status: not-approved; draft package only
 base_branch: develop
@@ -104,8 +108,8 @@ affected_areas:
 - KARSIFT/karsift-ai-infra/.github/workflows/merge-gate.yml
 - KARSIFT/karsift-ai-infra/.github/workflows/release.yml
 - KARSIFT/karsift-ai-infra recovery helper(s), policy tests, and README
-- .github/workflows/pipeline.yml and/or shared caller template when an explicit dispatch/reconcile
-  wake entrypoint or verify-promotion-check-recovery action is required
+- .github/workflows/pipeline.yml and/or shared caller template for recovery dispatch,
+  verify-promotion-check-recovery, and verify-post-promotion-workflow actions
 - .github/workflows/repository-governance.yml
 - scripts/foundation/voc112-navigation-benchmark.test.mjs and its deterministic fixtures
 - scripts/foundation/voc113-*.test.mjs and/or infra self-ci fixtures
