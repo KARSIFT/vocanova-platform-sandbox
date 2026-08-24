@@ -3,14 +3,16 @@ id: VOC-113
 slug: recover-missing-actions-checks-after-automated
 title: Recover missing Actions checks after automated merges and release PR creation
 type: infrastructure
-status: draft
+status: adopted
 risk: R4
-planned_implementation_risk_floor: "R4. T00 changes CI/CD lifecycle orchestration\
-  \ and must repair the exact-provenance gate in .github/workflows/repository-governance.yml\
-  \ and scripts/foundation/voc112-navigation-benchmark.test.mjs. Strict ancestry/hash\
-  \ verification is a governance gate; the package must preserve fail-closed behavior.\
-  \ This is a draft proposal, not a determination; the path classifier and independent\
-  \ verifier remain authoritative.\n"
+planned_implementation_risk_floor: 'R4. T00 changes CI/CD lifecycle orchestration
+  and must repair the exact-provenance gate in .github/workflows/repository-governance.yml
+  and scripts/foundation/voc112-navigation-benchmark.test.mjs. Strict ancestry/hash
+  verification is a governance gate; the package must preserve fail-closed behavior.
+  This is a draft proposal, not a determination; the path classifier and independent
+  verifier remain authoritative.
+
+  '
 canonical_path: specs/changes/VOC-113-recover-missing-actions-checks-after-automated
 authority_model: a004-active
 requirement_source: "GitHub issue #948 (Recover missing Actions checks after automated\
@@ -28,12 +30,13 @@ requirement_source: "GitHub issue #948 (Recover missing Actions checks after aut
   \ no duplicate promotion PRs/releases/recursion/status fabrication; deterministic\
   \ tests; bounded timeout with sanitized diagnostics; complete PR #947 only after\
   \ genuine exact-head checks; verify post-promotion workflows before closing remediation.\
-  \ Additional requirement source: live Repository Governance failure on plan PR\
-  \ #949, which proved the VOC-112 strict capture-ancestry mode rejects later PRs\
-  \ after the accepted squash discarded intermediate capture commits; D11/AC-07\
-  \ require exact merge-base anchoring without weakening current hash validation.\
-  \ This draft package does not adopt or authorize itself.\n"
-requirement_approval_status: not-approved; draft package only
+  \ Additional requirement source: live Repository Governance failure on plan PR #949,\
+  \ which proved the VOC-112 strict capture-ancestry mode rejects later PRs after\
+  \ the accepted squash discarded intermediate capture commits; D11/AC-07 require\
+  \ exact merge-base anchoring without weakening current hash validation. This draft\
+  \ package does not adopt or authorize itself.\n"
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: unknown - not recorded by this draft; set at adoption time
 target_branch: develop
@@ -42,8 +45,8 @@ owners:
   package_preparation: planner (drafting only; adoption remains a human decision)
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: 'none-intentional for application runtime. Changes engineering
   lifecycle orchestration so App-driven merges and promotion PR creation recover missing
@@ -116,9 +119,9 @@ affected_areas:
 - AGENTS.md and/or ops docs only when current claims become false
 - specs/changes/VOC-113-recover-missing-actions-checks-after-automated/
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: not-authorized
+  status: authorized
   target_branch: develop
   pull_request: null
   authority_issue: null
@@ -130,12 +133,12 @@ release:
   automatic_merge: true
   migration_required: false
   rollback_required: true
-repository_adoption_status: not-adopted
+repository_adoption_status: adopted
 production_deployment: disabled
 autonomous_production_release: disabled
 ehr: not-triggered
 standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
-blocking_reasons: "draft package \u2014 not adopted; implementation not authorized"
+blocking_reasons: none - adopted and implementation-authorized
 artifacts:
   readme: README.md
   specification: specification.md
@@ -145,3 +148,17 @@ artifacts:
   tasks: tasks.md
   test_plan: test-plan.md
   release_plan: release-plan.md
+approved_candidate_sha: bcd2fe4bc2d577bd96180d96e31987bb28156da1
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/949#issuecomment-5390094738
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-113-DEP-00
+- VOC-113-DEP-01
+- VOC-113-DEP-02
+- VOC-113-DEP-03
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #949 at bcd2fe4bc2d577bd96180d96e31987bb28156da1'
+implementation_authority_before_adoption: false
+implementation_authority_status: authorized
+adoption_pr: 949
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/949
