@@ -41,13 +41,16 @@ user-interface accessibility effect.
 - `VOC-115-R04`: **Low release risk** because no runtime deployment change is
   intended; rollback is documentation/prompt/validator reversion.
 - Protected surfaces: `AGENTS.md`, `DOC-15`, `DOC-16`, package templates,
-  `tooling/governance/`, mirrored `karsift-ai-infra` planner/plan-review/adopt
+  `docs/operations/10-development-workflow.md`, `tooling/governance/`, the primary
+  `KARSIFT/karsift-ai-infra` planner/plan-review/validation source, mirrored infra
   fixtures, and task-sequencing tests.
 - `VOC-115-DEP-00`: issue #962 provides the change objective and acceptance evidence.
 - `VOC-115-DEP-01`: A-004 is active; founder comment gates stay removed, while
   exact-SHA independent verification and fail-closed enforcement remain mandatory.
 - `VOC-115-DEP-02`: current planner/adopt behavior still encodes fragmentation.
 - `VOC-115-DEP-03`: canonical docs still need reconciliation with the new default.
+- `VOC-115-DEP-04`: the audited seven-task example and fixed `L`/800-line split
+  rules contradict anti-artificial-splitting and coherent-PR policy.
 - `VOC-115-EV-00`: T00 evidence — changed policy text, file list, validation results,
   and regression tests demonstrating one-task default plus justified multi-task
   preservation.

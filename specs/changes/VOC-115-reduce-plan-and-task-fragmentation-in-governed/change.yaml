@@ -24,7 +24,11 @@ requirement_source: 'GitHub issue #962 (Reduce plan and task fragmentation in go
   auto-advance for genuine multi-task packages. Acceptance evidence requires planner
   tests, split-reason enforcement, justified multi-task coverage, and docs/tests proving
   in-scope causal failures may remain under the active package while unrelated or
-  authority-expanding work still requires a new plan. This draft package does not
+  authority-expanding work still requires a new plan. The issue-thread audit further
+  identifies DOC-15's seven-task component example and development-workflow `L`/800-line
+  splitting rules as contradictory size-driven contributors; it requires one
+  outcome-sized PR by default, minimum-sufficient task-ID traceability groupings, and
+  an explicit multi-skill one-plan/one-task regression. This draft package does not
   adopt or authorize itself.
 
   '
@@ -84,10 +88,19 @@ dependencies:
     and workflow docs must be reconciled together with automation and tests.
 
     '
+- id: VOC-115-DEP-04
+  status: 'resolved at drafting time. Issue #962 audit comment identifies the exact
+    contradictory rules in DOC-15 sections 10.10, 24.20, and DG5-05 plus the `L` and
+    800-line split directives in docs/operations/10-development-workflow.md. T00 owns
+    reconciling those current-state sources around outcome/risk/rollback boundaries.
+
+    '
 affected_areas:
+- docs/operations/10-development-workflow.md
 - docs/operations/15-ai-native-product-and-engineering-operating-model.md
 - docs/governance/16-autonomous-development-operating-model.md
 - AGENTS.md
+- docs/templates/change-specification.md
 - specs/templates/change-package/
 - specs/changes/VOC-115-reduce-plan-and-task-fragmentation-in-governed/
 - tooling/governance/
@@ -97,6 +110,8 @@ affected_areas:
 - tooling/governance/fixtures/karsift-ai-infra/.github/workflows/adopt.yml
 - tooling/governance/fixtures/karsift-ai-infra/config/auto_advance_ownership.py
 - tooling/governance/fixtures/karsift-ai-infra/tests/
+- 'external primary source in the same T00: KARSIFT/karsift-ai-infra prompts,
+  lifecycle validation, and tests; caller fixture must pin the exact reviewed infra merge'
 implementation:
   authorized: false
   required: true

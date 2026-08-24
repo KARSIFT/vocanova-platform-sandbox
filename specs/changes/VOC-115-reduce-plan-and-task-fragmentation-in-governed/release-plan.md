@@ -17,7 +17,7 @@ A-004.
 | Phase | Owner | Preconditions | Outcome evidence |
 |-------|-------|---------------|------------------|
 | Plan merge | plan reviewer + merge-gate | Draft package; `automatic_merge_allowed: true`; valid `monitoring_impact` | Adopted package on `develop` |
-| T00 merge | implementer + independent verifier | Adoption + task authorization | `VOC-115-EV-00` — docs/prompts/templates/validation/tests updated together |
+| T00 coordinated source + carrier merge | implementer + independent verifier | Adoption + task authorization; reviewed shared-infra PR precedes caller fixture pin | `VOC-115-EV-00` — primary infra SHA and caller docs/prompts/templates/validation/tests updated together under one task |
 | Post-merge effect | repository maintainers + future planner/implementer/reviewer runs | T00 merged to integration branch | Future coherent work drafts one task by default; justified multi-task cases still sequence correctly |
 
 Monitoring inventory remains unchanged (`monitoring_impact.state: none`).

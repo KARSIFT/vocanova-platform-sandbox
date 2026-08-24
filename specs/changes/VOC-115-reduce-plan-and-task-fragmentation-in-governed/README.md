@@ -30,6 +30,8 @@ Issue #962 records concrete cost:
 | Adopt opens one issue per task and later tasks wait for predecessor merge | Every extra task pays a full CI, review, remediation, merge, and completion cycle |
 | Bugs found outside an already adopted task require a fresh issue → plan → adopt loop | In-scope causal fixes cannot stay with the active package/carrier |
 | VOC-113 → VOC-114 recovery sequence | A post-merge in-scope failure required a new plan, new roster, and extra serial tasks before the original promotion could continue |
+| DOC-15 §10.10 says tasks are "small" and models one authentication outcome as seven component/test/docs/evidence tasks | Agents receive a normative-looking fragmentation example that conflicts with DOC-15's anti-gaming and coherent-PR rules |
+| `docs/operations/10-development-workflow.md` says `L` work must split and PRs over 800 lines normally split | File/line volume becomes a task boundary even when outcome, risk, and rollback remain coherent |
 
 The result is higher elapsed time, GitHub Actions usage, model/token usage, issue
 count, PR count, and operator attention without proportional safety benefit.
@@ -48,6 +50,11 @@ count, PR count, and operator attention without proportional safety benefit.
    mirrored fixtures/tests together while preserving exact-SHA review, path-based
    risk floors, protected-branch rules, fail-closed checks, and justified
    sequential advancement for genuine multi-task packages.
+5. Make one outcome-sized implementation PR the default, treat size only as a
+   reviewability signal, and define task IDs as the minimum-sufficient traceability
+   grouping for an outcome rather than as component/file/test/docs/evidence buckets.
+6. Prove the rule with the user's concrete example: adding several related skills,
+   their configuration, documentation, and tests is one plan and one task.
 
 ## Tasks
 

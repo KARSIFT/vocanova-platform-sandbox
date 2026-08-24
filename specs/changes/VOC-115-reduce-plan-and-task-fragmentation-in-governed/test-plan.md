@@ -98,5 +98,17 @@
   gates.
 - Evidence: `VOC-115-EV-00`
 
+## VOC-115-TEST-09 — Related skills remain one plan and one task
+
+- Covers: `VOC-115-AC-06`
+- Preconditions: updated primary planner prompt, package validator, and pinned
+  caller fixture
+- Procedure: exercise the planner/validator regression with one request to add
+  several related agent skills plus their configuration, adapters, documentation,
+  and tests.
+- Expected result: one package contains one end-to-end task; the number of skills,
+  files, directories, components, and changed lines does not create extra tasks.
+- Evidence: `VOC-115-EV-00`
+
 Include positive, negative, authorization, failure, migration, accessibility, and
 rollback coverage as applicable. Tests must not use secrets or production data.

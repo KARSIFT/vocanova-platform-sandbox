@@ -38,6 +38,14 @@ separate A-004-governed decision.
    sequential auto-advance behavior.
 7. Update change-package templates and mirrored consumer fixtures/tests so they stay
    consistent with the new policy.
+8. Reconcile DOC-15's seven-task component example and the development workflow's
+   `L`/800-line split directives with DOC-15's anti-artificial-splitting and
+   coherent-PR requirements.
+9. Define task IDs as minimum-sufficient traceability groupings and make one
+   outcome-sized implementation PR the default. Size remains a reviewability signal,
+   never a sufficient split reason by itself.
+10. Update the primary `KARSIFT/karsift-ai-infra` prompt/validation contract and its
+    caller fixture in the same T00; the fixture alone is not runtime truth.
 
 ### Non-goals / explicitly excluded
 
@@ -92,6 +100,10 @@ concrete boundary exists:
 5. post-merge evidence that cannot be produced in the implementation carrier; or
 6. change size too large for reliable single-PR review.
 
+The sixth boundary requires a concrete reviewability explanation tied to cognitive
+load, risk isolation, or rollback. An `L` label, file count, component count, skill
+count, or changed-line threshold alone does not satisfy it.
+
 `VOC-115-D04`: Every task after the first must record an explicit **split reason**
 from the allowlist in `VOC-115-D03`. Reasons such as "small", file type, tests vs
 code, docs vs code, or general review convenience are insufficient by themselves.
@@ -116,6 +128,17 @@ dependency order, and operator/live-evidence handling remain intact.
 `VOC-115-D09`: Canonical docs, planner/plan-review prompts, templates, validation,
 and mirrored consumer fixtures/tests must be updated together in the same package so
 no source claims the old fragmentation rule after the new one lands.
+
+`VOC-115-D10`: One coherent outcome defaults to one outcome-sized implementation PR
+per repository. Fixed size labels and changed-line thresholds are review signals,
+not automatic plan, task, or PR split rules. When a cross-repository contract needs
+one PR in each repository, those coordinated carriers may remain one task.
+
+`VOC-115-D11`: Task IDs are minimum-sufficient traceability groupings around
+independently meaningful outcomes. Components, files, skills, schema/service/API/UI
+layers, tests, docs, and same-carrier evidence remain in one task when they jointly
+deliver the same outcome. In particular, adding several related skills plus their
+configuration, adapters, documentation, and tests is one plan and one task.
 
 ## Data, migrations, analytics, and accessibility
 
@@ -145,3 +168,7 @@ explicit boundary rules, deterministic regression tests, and fail-closed validat
    way that clearly distinguishes in-scope causal remediation from an unrelated bug
    discovered incidentally during the same work, so automation and reviewers remain
    fail-closed on scope creep.
+4. **Cross-repository delivery:** the shared-infra source and caller fixture require
+   separate repository PRs, but both are one T00. Evidence must bind the caller pin
+   to the exact reviewed infra merge so the extra carrier does not become another
+   plan/task.

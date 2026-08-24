@@ -19,6 +19,7 @@ When T00 is implemented, record:
 5. Validation commands run and their outcomes.
 6. Any justified multi-task regression fixture used to prove sequential advancement
    remained intact.
+7. The shared-infra PR, exact reviewed merge SHA, and matching caller fixture pin.
 
 ## Validation commands
 
@@ -29,6 +30,7 @@ Record the exact command lines and results for:
 | `bash scripts/governance/validate-governance.sh` | pending | Run if changed paths require it |
 | `bash scripts/governance/classify-change-risk.sh` | pending | Expected to confirm protected governance/workflow floor |
 | `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pending | Include any narrower targeted governance test command if added |
+| `python3 -m unittest discover -s tests -p 'test_*.py'` in `KARSIFT/karsift-ai-infra` | pending | Run primary prompt/validation lifecycle tests before pinning the caller fixture |
 | `git diff --check` | pending | No whitespace or patch-format errors |
 
 ## Acceptance mapping
@@ -42,3 +44,5 @@ Record the exact command lines and results for:
   the active package while unrelated work still requires a new plan.
 - `VOC-115-AC-05` / `VOC-115-EV-00` — exact-SHA review, risk floors, protected-branch
   gates, and fail-closed behavior remain unchanged.
+- `VOC-115-AC-06` / `VOC-115-EV-00` — the related multi-skill regression stays one
+  plan, one outcome grouping, and one task.
