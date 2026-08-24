@@ -46,7 +46,9 @@ None. No product analytics instrumentation or user-facing UI changes.
   PR and require exact source hashes anchored in the later PR merge base plus the
   reviewed head; add strict tamper negatives.
 - Protected surfaces: App-token merge/release paths, ruleset required contexts,
-  VOC-108 check selection, release converge concurrency.
+  VOC-108 check selection, release converge concurrency,
+  `.github/workflows/repository-governance.yml`, and
+  `scripts/foundation/voc112-navigation-benchmark.test.mjs`.
 - `VOC-113-DEP-00`: Issue #948 sanitized observations.
 - `VOC-113-DEP-01`: Existing App-token merge/release posture.
 - `VOC-113-DEP-02`: Cross-repo karsift-ai-infra ownership pattern.

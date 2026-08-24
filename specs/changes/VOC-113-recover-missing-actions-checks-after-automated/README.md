@@ -50,6 +50,10 @@ The active ruleset correctly requires `governance-policy`, `validate`, and
     genuine exact-head checks pass.
 11. Verify post-promotion workflows and close the remediation only after live
     evidence is complete.
+12. Repair the post-squash provenance gate so the original capture PR proves
+    subject ancestry while later PRs prove unchanged exact hashes anchored in
+    their accepted merge base; tampered or changed inputs remain fail-closed
+    (`VOC-113-D11`, `VOC-113-AC-07`).
 
 ## Tasks
 
