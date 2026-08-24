@@ -44,7 +44,8 @@ engineering-workflow gates. Required evidence:
 
 1. Exact-SHA independent verification for R4 T00 (and any caller contract PR),
    including original-capture ancestry and later-PR merge-base anchoring.
-2. Deterministic recovery fixtures (`VOC-113-TEST-01`–`07`).
+2. Deterministic recovery fixtures (`VOC-113-TEST-01`–`07`) and strict
+   post-squash provenance fixtures (`VOC-113-TEST-10`).
 3. Operator-owned live evidence for T01 (`VOC-113-TEST-08`) and T02
    (`VOC-113-TEST-09`) per `docs/operations/live-evidence.md`.
 4. Preserved App-token mutation posture, ruleset contexts, and VOC-108

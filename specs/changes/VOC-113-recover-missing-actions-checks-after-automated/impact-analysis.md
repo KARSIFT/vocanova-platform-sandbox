@@ -47,6 +47,7 @@ None. No product analytics instrumentation or user-facing UI changes.
   reviewed head; add strict tamper negatives.
 - Protected surfaces: App-token merge/release paths, ruleset required contexts,
   VOC-108 check selection, release converge concurrency,
+  `.github/workflows/pipeline.yml`,
   `.github/workflows/repository-governance.yml`, and
   `scripts/foundation/voc112-navigation-benchmark.test.mjs`.
 - `VOC-113-DEP-00`: Issue #948 sanitized observations.

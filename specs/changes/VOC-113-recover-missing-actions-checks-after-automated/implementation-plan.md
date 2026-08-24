@@ -62,7 +62,7 @@ Ordered steps:
 | Target | Action | Notes |
 |--------|--------|-------|
 | `t01-evidence.md` | update | Allowlisted PR #947 / check / merge metadata |
-| `.karsift/live-evidence/VOC-113-T01.yaml` | observe | Operator-owned contract |
+| `.karsift/live-evidence/VOC-113-T01.yaml` | dispatch/observe | Exact-carrier read-only verifier contract |
 
 Ordered steps:
 
@@ -70,16 +70,18 @@ Ordered steps:
    repository-controlled recovery / `reconcile-release` (not implementer
    Actions credentials) against the existing release audit and PR #947.
 2. Confirm genuine required checks appear for #947's exact head and succeed.
-3. Allow release converge to merge only under VOC-108 authoritative success;
+3. Dispatch `verify-promotion-check-recovery` on the exact T01 carrier head and
+   require `verify-promotion-check-recovery / verify` success under D10.
+4. Allow release converge to merge only under VOC-108 authoritative success;
    record metadata-only evidence.
-4. Do not fabricate statuses; do not open a second promotion PR.
+5. Do not fabricate statuses; do not open a second promotion PR.
 
 ### T02 — Verify post-promotion workflows and close remediation
 
 | Target | Action | Notes |
 |--------|--------|-------|
 | `t02-evidence.md` | update | Post-promotion run metadata on `main` |
-| `.karsift/live-evidence/VOC-113-T02.yaml` | observe | Operator-owned contract |
+| `.karsift/live-evidence/VOC-113-T02.yaml` | dispatch/observe | Exact-carrier read-only verifier contract |
 
 Ordered steps:
 
@@ -87,7 +89,9 @@ Ordered steps:
 2. Confirm expected post-promotion workflows ran for that SHA (at minimum the
    normal `main` push path such as `deploy-production` when selected by existing
    policy).
-3. Record metadata-only evidence; close issue #948 / remediation only after
+3. Dispatch `verify-post-promotion-workflow` on the exact T02 carrier head and
+   require `verify-post-promotion-workflow / verify` success under D12.
+4. Record metadata-only evidence; close issue #948 / remediation only after
    verification.
 
 ## Validation and independent verification

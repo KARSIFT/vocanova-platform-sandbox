@@ -50,6 +50,9 @@ separate A-004 plan-review / adopt path.
     only after genuine exact-head required checks succeed.
 11. Verify post-promotion workflows on `main` and close the remediation only after
     that live evidence is complete.
+12. Repair the strict VOC-112 provenance gate so later PRs can prove unchanged
+    capture hashes anchored in their accepted squash merge base while original
+    capture PRs still require true subject ancestry (`VOC-113-D11`).
 
 ### Non-goals / explicitly excluded
 
