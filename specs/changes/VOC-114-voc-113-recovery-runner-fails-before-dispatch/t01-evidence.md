@@ -10,7 +10,10 @@ carrier PR `#969`; no implementer run was started for this operator-owned task.
 
 - Evidence carrier: PR `#969`, branch
   `agent/voc-114-voc-114-t01`.
-- Integration and promotion head: `c718f6b49ad6a9a4f1d26eb4319347f6220a8d54`.
+- Initial live-proof integration and promotion head:
+  `c718f6b49ad6a9a4f1d26eb4319347f6220a8d54`.
+- Final trusted caller and promotion head after consuming all causal fixes:
+  `172648f555b0eacedeb44fef707e6edf3cc60372`.
 - Promotion PR: `#947`, `develop` → `main`, open and mergeable when observed.
 - T00 shared-infra baseline: PR `#136`, reviewed head
   `72b3742d5cd3ed1561534908d34286869befbe53`, merge
@@ -45,10 +48,17 @@ tasks:
 - shared-infra PR `#141`: reviewed head
   `37fadcaf7c10b1b73ee0463d31a7310c0d2985d4`, merge
   `4c0395aff2a4599160308f7f37c593b75c7394b6`; corrected the resolver's
-  invalid `gh api --slurp --jq` combination.
+  invalid `gh api --slurp --jq` combination;
+- shared-infra PR `#142`: reviewed head
+  `041d912c58d335ce3faea0d309b52e6d7d0389b3`, merge
+  `bdc6736568827103b48255521f4bc83d5103bd3b`; made the final read-only
+  verifier judge only the three authoritative promotion contexts instead of
+  allowing unrelated failed or pending workflows to veto exact-head proof.
 
 The caller fixture is pinned to shared-infra merge
-`4c0395aff2a4599160308f7f37c593b75c7394b6`. The caller recovery workflows
+`bdc6736568827103b48255521f4bc83d5103bd3b`. Caller corrective PR `#970`
+merged as `c3455941463c0ded5630ea309b50f94a6cd546af`; final pin-sync PR `#971`
+merged as `172648f555b0eacedeb44fef707e6edf3cc60372`. The caller recovery workflows
 also set repository context before their pre-checkout PR reads.
 
 ## Integration-push proof
@@ -101,17 +111,23 @@ status was performed.
 - verifier run `32714394902`, job `97392466710`: failed in the read-only verify
   step before the hosted verifier CLI correction;
 - integration run `32715323592`, resolver job `97395209442`: failed before
-  recovery because `gh api` rejects combined `--slurp` and `--jq` flags.
+  recovery because `gh api` rejects combined `--slurp` and `--jq` flags;
+- verifier run `32719387468`, job `97407364112`: failed closed after the
+  caller correction advanced the promotion head and invalidated the older
+  exact-head check set;
+- verifier run `32719947496`, job `97409037642`: failed closed because the
+  verifier still counted an unrelated failed `release / converge` workflow,
+  leading to shared-infra PR `#142` and caller pin-sync PR `#971`.
 
 Each failure remained fail-closed and produced no fabricated check or manual
 promotion merge.
 
 ## Deterministic validation
 
-- shared-infra focused VOC-113/VOC-114 suite: `47` tests, pass;
-- shared-infra full suite after the final correction: `259` tests, pass;
+- shared-infra focused VOC-113/VOC-114 suite: `48` tests, pass;
+- shared-infra full suite after the final correction: `260` tests, pass;
 - caller focused Node recovery/pin/policy suite: `25` tests, pass;
-- pinned shared-infra fixture suite: `175` tests, pass;
+- pinned shared-infra fixture suite: `176` tests, pass;
 - caller governance suite: `160` tests, pass;
 - repository governance validation: pass;
 - `git diff --check`: pass.
