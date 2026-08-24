@@ -7,6 +7,10 @@ responsibilities. Dedicated job `GITHUB_TOKEN`s receive Actions write and
 Checks/Statuses/Contents/Pull requests read for exact-SHA recovery. GitHub App
 tokens retain the narrow Contents/Issues/Pull requests mutation set and do not
 receive Actions access.
+Release alone receives Statuses write to bridge verified manual recovery runs
+into the three repository ruleset contexts. The bridge revalidates the open PR,
+accepts only genuine successful expected-workflow evidence, and excludes its own
+derived statuses from future evidence selection.
 
 Risk if implemented incorrectly: under-privileged reads leave recovery fail-closed
 (blocking promotion); over-broad mutation grants would expand blast radius beyond
@@ -40,6 +44,10 @@ None. No product analytics instrumentation or user-facing UI changes.
   policy. Rollback remains revert/redeploy prior artifact.
 - `VOC-114-R03`: **Low documentation risk** — stale README claims about App token
   scopes. Mitigation: update false claims in the same task PR.
+- `VOC-114-R04`: **High integrity risk** if a derived status could replace genuine
+  workflow evidence. Mitigation: fixed context/workflow allowlist, exact-SHA and
+  live-PR binding, success-only evidence, release-run link, selector exclusion,
+  release-only Statuses write, and no App/ruleset bypass.
 - Protected surfaces: App-token merge/release mutation paths, job-token recovery paths, VOC-108 authoritative
   check selection, VOC-113 recovery invariants, branch ruleset required contexts.
 - `VOC-114-DEP-00`: Issue #956 sanitized observations.

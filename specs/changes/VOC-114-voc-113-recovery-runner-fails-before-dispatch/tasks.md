@@ -49,7 +49,11 @@ KARSIFT/vocanova-platform-sandbox#<task>` and MUST NOT use a closing keyword.
    - token separation and preserved mutation posture (no App Actions broadening).
 7. Update karsift-ai-infra README and calling-repo/package docs wherever the
    recovery credential or App permission claims would otherwise become false.
-8. Run applicable validation and record results in `t00-evidence.md`:
+8. If genuine successful manual promotion recovery runs are not attached to the
+   PR ruleset contexts, implement D07 in the same task: release-only Statuses
+   write, exact PR revalidation, narrow same-SHA attestations, evidence-selection
+   exclusion, and deterministic negative tests. Do not add another task.
+9. Run applicable validation and record results in `t00-evidence.md`:
    - infra policy / self-ci tests added or updated by this task;
    - `bash scripts/governance/validate-governance.sh` when required for changed
      calling-repo paths;
@@ -59,7 +63,7 @@ KARSIFT/vocanova-platform-sandbox#<task>` and MUST NOT use a closing keyword.
 ### Explicitly out of scope for this task
 
 - Operator-owned live recovery proof (T01).
-- Weakening ruleset checks or synthesizing statuses.
+- Weakening ruleset checks or synthesizing unbacked statuses.
 - Manually merging promotion PR #947.
 - Unrelated VOC-113 feature work beyond the metadata-read defect.
 - Product/runtime/signup/credential/topology changes.
@@ -84,7 +88,7 @@ KARSIFT/vocanova-platform-sandbox#<task>` and MUST NOT use a closing keyword.
    `b97e9575fd30671c336a2e92ca00db6e29b86416` (or the still-blocking SHA recorded
    in T00 evidence if `develop` advanced). Verify the run progresses past
    metadata read and produces or observes genuine push/validation workflow runs
-   for that exact SHA — not fabricated statuses.
+   for that exact SHA — not unbacked statuses.
 3. Dispatch package-authorized `reconcile-release` for release issue #946 (or
    observe the equivalent release converge recovery). Verify promotion PR #947's
    exact head receives genuine required pull-request checks through recovery.
@@ -107,7 +111,7 @@ KARSIFT/vocanova-platform-sandbox#<task>` and MUST NOT use a closing keyword.
 - Code changes (T00 owns the mechanism).
 - Post-promotion `main` workflow verification (remains VOC-113-T02).
 - Implementer-owned Actions dispatch or log inspection.
-- Status fabrication, ruleset weakening, or manual merge of #947.
+- Unbacked status fabrication, ruleset weakening/bypass, or manual merge of #947.
 
 ## Task ordering notes
 

@@ -63,7 +63,7 @@ class Voc115PackageTaskPolicyTests(unittest.TestCase):
 
     def test_fixture_is_pinned_to_final_shared_source_merge(self):
         pin = (FIXTURE_INFRA_ROOT / "PINNED_SHA.txt").read_text(encoding="utf-8").strip()
-        self.assertEqual(pin, "9d7e334f917643c42bb4b7a062c8fcddecc7927f")
+        self.assertEqual(pin, "c5d8bccfa8676bd367b53ad5f6f9a51a40c99405")
 
     def test_voc115_package_is_one_task_by_default(self):
         sections = validate_package_tasks(self.voc115_tasks, "VOC-115")

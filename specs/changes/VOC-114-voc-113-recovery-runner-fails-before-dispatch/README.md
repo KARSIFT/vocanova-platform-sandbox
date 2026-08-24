@@ -56,7 +56,7 @@ therefore uses a dedicated job `GITHUB_TOKEN`; the App remains mutation-only.
    VOC-113-T01), then bind the result to the exact T01 carrier head through the
    existing read-only `verify-promotion-check-recovery / verify` action.
 
-Do not weaken ruleset contexts, fabricate checks/statuses, manually merge #947,
+Do not weaken ruleset contexts, fabricate checks or unbacked statuses, manually merge #947,
 or copy logs/secrets into evidence.
 
 ## Tasks

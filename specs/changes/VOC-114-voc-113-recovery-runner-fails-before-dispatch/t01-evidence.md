@@ -61,14 +61,26 @@ tasks:
   Actions token from the App mutation token. Recovery now uses job-scoped
   Actions write plus Checks/Statuses/Contents/Pull requests read, while the App
   token remains limited to PR/issue/content mutations.
+- shared-infra PR `#144`: reviewed head
+  `46c4cc1ceae5845b49e57e38d6d7fa399ed73ff4`, merge
+  `6999e2beda5bbf00028fae04ca0e65324fc59afa`; added the D07
+  ruleset-attestation bridge after genuine recovery passed but GitHub still
+  reported the promotion PR blocked.
+- shared-infra PR `#145`: reviewed head
+  `73a63d42345ff54619d257e4857fc4166a2785af`, merge
+  `c5d8bccfa8676bd367b53ad5f6f9a51a40c99405`; corrected the project template
+  so only release receives Statuses write and added job-scoped negative tests.
 
-The caller fixture is pinned to shared-infra merge
-`9d7e334f917643c42bb4b7a062c8fcddecc7927f`. Caller corrective PR `#970`
+The caller fixture first pinned token separation at shared-infra merge
+`9d7e334f917643c42bb4b7a062c8fcddecc7927f` and now pins the complete D07
+contract, including the template permission correction, at
+`c5d8bccfa8676bd367b53ad5f6f9a51a40c99405`. Caller corrective PR `#970`
 merged as `c3455941463c0ded5630ea309b50f94a6cd546af`; final pin-sync PR `#971`
 merged as `172648f555b0eacedeb44fef707e6edf3cc60372`; promotion recovery provenance
 PR `#972` merged as `51c4d261d940c0e96a66238992c5380384729bb2`; final
 push-provenance refinement PR `#973` merged as
-`0b0d866533e0100f6dfe37e3109f040ddde37bd6`.
+`0b0d866533e0100f6dfe37e3109f040ddde37bd6`; token-sync PR `#975` merged as
+`f18acca8322131eadfaf9bc963352f8980e9d6f7`.
 The caller recovery workflows set repository context before their pre-checkout
 PR reads. Exact-`develop` promotion recovery uses `squash-safe-push`, matching
 the immutable integration tip; actual pull-request events retain
@@ -150,6 +162,22 @@ status was performed.
   `32724752006`, `32724766278`, and `32724769924` all succeeded on exact head
   `a07ea8c0cdaf060ff8a75db2b1436eebeecf2d52`, isolating authorization—not the
   allowlist, workflow inputs, or target identity—as the remaining defect.
+- caller correction PR `#975` passed exact-head CI and independent review, then
+  merged to `develop` as `f18acca8322131eadfaf9bc963352f8980e9d6f7`.
+  Its merge-gate recovery step successfully used the separated job token; only
+  the pre-existing duplicate immutable task marker failed after the merge.
+- release run `32727465136`, converge job `97432766968`: job permissions exposed
+  Actions write plus Checks/Statuses read, the App remained mutation-only, and
+  promotion recovery successfully dispatched exact-head Repository Governance
+  run `32727780544` and pipeline run `32727783329` for `f18acca…`; both passed.
+  Recovery and newest-authoritative-check selection succeeded. The final merge
+  failed because GitHub's ruleset did not associate those successful
+  `workflow_dispatch` runs with promotion PR #947's required contexts. No manual
+  merge, ruleset bypass, or unbacked status was performed.
+- shared-infra PR `#144` then implemented D07 in the same VOC-114-T00 outcome and
+  merged as `6999e2beda5bbf00028fae04ca0e65324fc59afa`: release-only Statuses
+  write, exact expected-workflow/PR/SHA validation, same-SHA ruleset
+  attestations, future-selector exclusion, and ruleset-propagation retries.
 
 Each failure remained fail-closed and produced no fabricated check or manual
 promotion merge.
@@ -157,9 +185,10 @@ promotion merge.
 ## Deterministic validation
 
 - shared-infra focused VOC-113/VOC-114 suite: `48` tests, pass;
-- shared-infra full suite after the final correction: `260` tests, pass;
+- shared-infra full suite after the final correction: `265` tests, pass;
 - caller focused Node recovery/pin/policy suite: `25` tests, pass;
-- pinned shared-infra fixture suite: `176` tests, pass;
+- caller full foundation suite after package build: `337` tests, pass;
+- pinned shared-infra fixture suite: `181` tests, pass;
 - caller governance suite: `160` tests, pass;
 - repository governance validation: pass;
 - `git diff --check`: pass.

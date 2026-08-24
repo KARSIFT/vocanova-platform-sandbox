@@ -27,6 +27,8 @@ and dispatch allowlisted genuine workflows using a job `GITHUB_TOKEN` carrying
 Actions write plus Checks/Statuses/Contents/Pull requests read. App tokens used
 by merge-gate and release retain only the existing Contents/Issues/Pull requests
 mutation scopes and are not used for Actions reads or dispatch.
+Release alone has Statuses write for the D07 ruleset bridge, which is permitted
+only after genuine exact-head required workflow success.
 
 ## VOC-114-AC-02 — Sanitized endpoint-class diagnostics replace generic metadata failure
 
@@ -69,7 +71,7 @@ genuine push/validation runs; (b) `reconcile-release` for release issue #946
 progresses past metadata read and creates or observes genuine pull-request checks
 for promotion PR #947's exact head; and (c) the existing read-only
 `verify-promotion-check-recovery / verify` job succeeds on the exact T01 carrier
-PR head. No fabricated statuses.
+PR head. No unbacked or independently authoritative statuses.
 
 ## VOC-114-AC-05 — Promotion PR #947 unblocked for VOC-113-T01 completion
 
@@ -84,7 +86,10 @@ checks (`governance-policy`, `validate`, `ci / ci` or current ruleset equivalent
 and becomes eligible for release converge merge under VOC-108 authoritative
 selection. The exact-carrier verifier independently confirms those contexts.
 Metadata-only evidence; merge occurs only via release converge after genuine
-success, not by manual intervention or status fabrication.
+success, not by manual intervention or ruleset bypass. When GitHub does not
+associate manual recovery runs with the PR, D07 same-SHA status attestations may
+satisfy the ruleset only after the trusted selector validates the underlying
+genuine workflow runs; those attestations are excluded from evidence selection.
 
 Acceptance criteria must be observable, stable, security-aware, and bidirectionally
 traceable to requirements, tasks, tests, and evidence.

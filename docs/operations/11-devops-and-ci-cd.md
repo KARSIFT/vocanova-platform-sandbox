@@ -103,7 +103,8 @@ is currently deployed against — not a plan:
 ### Missing Actions activation recovery
 
 If GitHub does not activate required workflows after an App-driven task merge or
-promotion-PR creation, do not toggle PR state or create check/status records. The
+promotion-PR creation, do not toggle PR state or create unbacked check/status
+records. The
 repository-managed recovery path dispatches the genuine governance, validation,
 and path-required deployment workflows for an immutable SHA, waits only for
 successful terminal evidence, and times out fail-closed. Its hourly wake repairs
@@ -126,6 +127,16 @@ recovery does not depend on installation-level Actions permission. When a metada
 endpoint fails, the runner emits one sanitized endpoint class
 (`check_runs_read_failed`, `workflow_runs_read_failed`, or
 `commit_metadata_read_failed`) and aborts before dispatch planning.
+
+GitHub does not associate successful manual recovery runs with the promotion
+PR's required ruleset contexts. The release job therefore receives the additional
+`statuses: write` capability. Only after the trusted selector proves genuine
+successful exact-head runs from the expected governance-policy,
+repository-governance, and pipeline workflows does it revalidate the open PR and
+publish same-SHA success attestations for `governance-policy`, `validate`, and
+`ci / ci`. Those derived statuses link to the release run and are excluded from
+future evidence selection, so they satisfy the repository ruleset but can never
+replace the underlying Actions evidence. The App token remains mutation-only.
 
 This table is an implementation target, not authority to procure vendors, incur spend, create
 infrastructure, deploy, or release. Each such action requires its own approved change package and

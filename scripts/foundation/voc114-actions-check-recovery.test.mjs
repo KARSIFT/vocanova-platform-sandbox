@@ -57,6 +57,7 @@ test("VOC-114 caller docs describe the recovery job-token contract", () => {
   assert.match(devopsOperations, /`GITHUB_TOKEN`/);
   assert.match(devopsOperations, /`checks: read`/);
   assert.match(devopsOperations, /`statuses: read`/);
+  assert.match(devopsOperations, /`statuses: write`/);
   assert.match(devopsOperations, /`actions: write`/);
   assert.match(
     devopsOperations,
@@ -80,11 +81,32 @@ test("VOC-114 fixture mirror separates recovery and mutation tokens", () => {
     path.join(fixtureInfraRoot, ".github/workflows/recover-actions-checks.yml"),
     "utf8",
   );
-  for (const workflow of [mergeGate, release, reusable]) {
+  const template = readFileSync(
+    path.join(
+      fixtureInfraRoot,
+      "templates/project-repo/.github/workflows/pipeline.yml",
+    ),
+    "utf8",
+  );
+  const templateMergeGate = template
+    .split("\n  merge-gate:\n", 2)[1]
+    .split("\n  release:\n", 1)[0];
+  const templateRelease = template
+    .split("\n  release:\n", 2)[1]
+    .split("\n  auto-advance:\n", 1)[0];
+  for (const workflow of [mergeGate, reusable]) {
     assert.match(workflow, /checks: read/);
     assert.match(workflow, /statuses: read/);
     assert.match(workflow, /actions: write/);
   }
+  assert.match(release, /checks: read/);
+  assert.match(release, /statuses: write/);
+  assert.match(release, /promotion-status-attestation-runner\.py/);
+  assert.match(release, /actions: write/);
+  assert.match(templateMergeGate, /statuses: read/);
+  assert.doesNotMatch(templateMergeGate, /statuses: write/);
+  assert.match(templateRelease, /statuses: write/);
+  assert.doesNotMatch(templateRelease, /statuses: read/);
   assert.doesNotMatch(
     reusable,
     /Mint App installation token for recovery dispatch/,

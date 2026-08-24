@@ -219,6 +219,12 @@ class Voc114RecoveryMetadataTests(unittest.TestCase):
         template = (
             ROOT / "templates/project-repo/.github/workflows/pipeline.yml"
         ).read_text(encoding="utf-8")
+        template_merge_gate = template.split("\n  merge-gate:\n", 1)[1].split(
+            "\n  release:\n", 1
+        )[0]
+        template_release = template.split("\n  release:\n", 1)[1].split(
+            "\n  auto-advance:\n", 1
+        )[0]
         mutation_contract = {
             "permission-contents": "write",
             "permission-issues": "write",
@@ -244,10 +250,36 @@ class Voc114RecoveryMetadataTests(unittest.TestCase):
             self.assertIn("GH_TOKEN: ${{ github.token }}", block)
             self.assertNotIn("steps.app-token.outputs.token", block)
 
-        for workflow in (merge_gate, release, reusable, template):
+        for workflow in (merge_gate, reusable):
             self.assertIn("actions: write", workflow)
             self.assertIn("checks: read", workflow)
             self.assertIn("statuses: read", workflow)
+        for workflow in (release, template_release):
+            self.assertIn("actions: write", workflow)
+            self.assertIn("checks: read", workflow)
+            self.assertIn("statuses: write", workflow)
+        self.assertIn("statuses: read", template_merge_gate)
+        self.assertNotIn("statuses: write", template_merge_gate)
+        self.assertNotIn("statuses: read", template_release)
+
+    def test_ruleset_statuses_never_replace_genuine_recovery_checks(self):
+        summary = runner.select_gate_evidence(
+            [{"check_runs": [], "total_count": 0}],
+            [{
+                "statuses": [
+                    {
+                        "id": 1,
+                        "context": "ci / ci",
+                        "state": "success",
+                        "created_at": "2026-08-24T00:00:00Z",
+                        "creator": {"login": "github-actions[bot]"},
+                    }
+                ],
+                "total_count": 1,
+            }],
+            head_sha=HEAD_SHA,
+        )
+        self.assertEqual(summary["total_count"], 0)
 
     def test_duplicate_permission_inputs_fail_the_mint_contract_model(self):
         malformed = """- name: Recovery

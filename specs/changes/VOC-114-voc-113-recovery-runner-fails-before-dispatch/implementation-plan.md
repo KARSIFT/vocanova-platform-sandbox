@@ -25,6 +25,7 @@
 | `karsift-ai-infra/config/actions-check-recovery-runner.py` | modify | Endpoint-class errors; abort before dispatch on read failure |
 | `karsift-ai-infra/.github/workflows/merge-gate.yml` | modify | Job-token recovery scopes; mutation-only App mint |
 | `karsift-ai-infra/.github/workflows/release.yml` | modify | Job-token converge recovery; mutation-only App mint |
+| `karsift-ai-infra/config/promotion_status_attestation.py` + runner | create | D07 exact-workflow ruleset bridge; reject unbacked evidence |
 | `karsift-ai-infra/.github/workflows/recover-actions-checks.yml` | modify | Job-token metadata/dispatch scopes |
 | `karsift-ai-infra/tests/test_voc113_actions_check_recovery.py` | modify/extend | VOC-114 read-contract and no-dispatch negatives |
 | Additional focused VOC-114 policy tests | create if cleaner | Absent-permission endpoint-class fixtures |
@@ -43,7 +44,10 @@ Ordered steps:
 5. Extend deterministic tests for both recovery modes and absent-permission
    negatives.
 6. Update docs whose recovery credential or App permission claims would become false.
-7. Run applicable validation; record results in `t00-evidence.md`.
+7. If GitHub does not attach successful manual recovery runs to PR ruleset
+   contexts, add the D07 release-only status bridge with exact workflow/PR/SHA
+   validation and selector exclusion in this same task.
+8. Run applicable validation; record results in `t00-evidence.md`.
 
 ### T01 — Live recovery proof and unblock promotion PR #947
 
@@ -60,8 +64,10 @@ Ordered steps:
    recorded still-blocking SHA).
 3. Dispatch `reconcile-release` for release issue #946; confirm promotion PR #947
    exact-head recovery progresses past metadata read.
-4. Confirm genuine required checks on #947's exact head; allow release converge
-   to merge only under VOC-108 success.
+4. Confirm genuine required checks on #947's exact head; if D07 is needed, confirm
+   its derived same-SHA statuses follow authoritative success and remain excluded
+   from evidence selection. Allow release converge to merge only under VOC-108
+   success and the unchanged repository ruleset.
 5. Dispatch the read-only `verify-promotion-check-recovery` action on the exact
    T01 carrier head and require job `verify-promotion-check-recovery / verify`.
 6. Record metadata-only evidence; do not manually merge #947.

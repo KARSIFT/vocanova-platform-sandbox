@@ -25,7 +25,7 @@ requirement_source: 'GitHub issue #956 (VOC-113 recovery runner fails before dis
   release, and recover-actions-checks has explicit Actions and read capabilities for
   exact-SHA metadata endpoints while the App remains mutation-only; localize runner failures to sanitized
   endpoint classes; add policy/runner tests; re-run live integration recovery and
-  reconcile-release without weakening rulesets, fabricating checks, or manually merging
+  reconcile-release without weakening rulesets, fabricating checks or unbacked statuses, or manually merging
   #947. This draft package does not adopt or authorize itself.
 
   '
@@ -103,6 +103,8 @@ dependencies:
     '
 affected_areas:
 - KARSIFT/karsift-ai-infra/config/actions-check-recovery-runner.py
+- KARSIFT/karsift-ai-infra/config/promotion-status-attestation-runner.py
+- KARSIFT/karsift-ai-infra/config/promotion_status_attestation.py
 - KARSIFT/karsift-ai-infra/.github/workflows/merge-gate.yml
 - KARSIFT/karsift-ai-infra/.github/workflows/release.yml
 - KARSIFT/karsift-ai-infra/.github/workflows/recover-actions-checks.yml

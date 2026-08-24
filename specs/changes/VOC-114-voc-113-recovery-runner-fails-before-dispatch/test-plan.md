@@ -60,7 +60,10 @@
 - Preconditions: T00 task branch
 - Procedure: Simulate metadata-read failure mid-run; assert
   `plan_recovery_dispatches` / dispatch execution paths are not invoked and
-  merge-gate/release policy tests still forbid fabrication shortcuts.
+  merge-gate/release policy tests still forbid unbacked fabrication shortcuts.
+  D07 tests also require exact successful workflow identities, reject status or
+  foreign/neutral/failing evidence, revalidate the live PR, and prove that
+  bridge statuses are excluded from future authoritative selection.
 - Expected result: Recovery stops at metadata phase; VOC-113 invariants preserved
 - Evidence: `VOC-114-EV-00`
 
@@ -88,8 +91,9 @@
   `action=verify-promotion-check-recovery` and `promotion_pr_number=947`; require
   job `verify-promotion-check-recovery / verify` on the carrier's exact PR head.
   Read `t01-evidence.md` for the complementary both-mode metadata.
-- Expected result: #947 unblocked for VOC-113-T01; no fabricated statuses; merge
-  only via release converge after genuine success
+- Expected result: #947 unblocked for VOC-113-T01; no unbacked statuses; any D07
+  ruleset attestation is derived only after genuine success, and merge occurs
+  only via release converge
 - Evidence: `VOC-114-EV-01`
 
 Include positive, negative, authorization, failure, migration, accessibility, and
