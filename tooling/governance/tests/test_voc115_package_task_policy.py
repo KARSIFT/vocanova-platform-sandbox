@@ -61,9 +61,9 @@ class Voc115PackageTaskPolicyTests(unittest.TestCase):
         self.assertIn("largest safe coherent unit", normalized)
         self.assertIn("Do not request a split", normalized)
 
-    def test_fixture_is_pinned_to_final_shared_source_merge(self):
-        pin = (FIXTURE_INFRA_ROOT / "PINNED_SHA.txt").read_text(encoding="utf-8").strip()
-        self.assertEqual(pin, "c5d8bccfa8676bd367b53ad5f6f9a51a40c99405")
+    def test_voc115_final_shared_source_merge_remains_historical_evidence(self):
+        fixture_readme = read_fixture("README.md")
+        self.assertIn("c5d8bccfa8676bd367b53ad5f6f9a51a40c99405", fixture_readme)
 
     def test_voc115_package_is_one_task_by_default(self):
         sections = validate_package_tasks(self.voc115_tasks, "VOC-115")

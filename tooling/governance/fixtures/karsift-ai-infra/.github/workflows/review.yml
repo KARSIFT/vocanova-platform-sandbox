@@ -12,12 +12,10 @@ name: review (reusable)
 # roles.yml - full run-time provider abstraction isn't built yet. Don't claim
 # more decoupling than exists.
 #
-# Current state (VOC-117, 2026-08-24): runs via a raw `cursor-agent` CLI
-# invocation on cursor/grok-4.6[fast=false] (Grok 4.6 Standard, non-fast).
-# Parameterized stored bindings reach --model via
-# config/prepare_cursor_model.py after stripping the cursor/ prefix.
-# Full execution-mechanism history lives in CHANGELOG.md's "review.yml"
-# section, not here.
+# Current state (VOC-117, 2026-08-24): runs through Cursor on Grok 4.6
+# Standard. The provider-qualified stored binding is validated and only its
+# `cursor/` prefix is removed; bracket parameters remain part of the quoted
+# `--model` value. Execution-mechanism history lives in CHANGELOG.md.
 #
 # Every claim below was checked against the real installed CLI
 # (`agent --version` reported 2026.07.23-e383d2b at migration time) in a
@@ -229,7 +227,7 @@ jobs:
           echo "Routing this review as: role=$role (attempt=$attempt, risk=${risk:-unknown})"
 
           MODEL=$(bash karsift-ai-infra/config/resolve-model.sh "$role" karsift-ai-infra/config/roles.yml)
-          python3 karsift-ai-infra/config/prepare_cursor_model.py --check-prefix "$MODEL"
+          python3 karsift-ai-infra/config/prepare_cursor_model.py "$MODEL" >/dev/null
           echo "model=$MODEL" >> "$GITHUB_OUTPUT"
           echo "role=$role" >> "$GITHUB_OUTPUT"
 
@@ -379,8 +377,11 @@ jobs:
         run: |
           set -uo pipefail
           source karsift-ai-infra/config/retry-helpers.sh
-          MODEL=$(python3 karsift-ai-infra/config/prepare_cursor_model.py \
-            --require-api-key "${{ steps.model.outputs.model }}")
+          if ! MODEL=$(python3 karsift-ai-infra/config/prepare_cursor_model.py \
+            --require-api-key "${{ steps.model.outputs.model }}"); then
+            echo "::error::Reviewer Cursor model preparation failed closed." >&2
+            exit 1
+          fi
           run_review() {
             if agent -p --trust --mode plan \
               --model "$MODEL" \

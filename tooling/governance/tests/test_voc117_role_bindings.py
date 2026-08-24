@@ -83,11 +83,11 @@ class Voc117RoleBindingsFixtureTests(unittest.TestCase):
     def test_voc117_test_04_roles_header_describes_voc117_lineup(self):
         header = "\n".join(self.roles.splitlines()[:20])
         self.assertIn("VOC-117", header)
-        self.assertIn("historical only", header)
+        self.assertIn("not current routing or fallback behavior", header)
 
     def test_voc117_test_05_fixture_pin_is_recorded(self):
         pin = (FIXTURE_INFRA_ROOT / "PINNED_SHA.txt").read_text(encoding="utf-8").strip()
-        self.assertRegex(pin, r"^[0-9a-f]{40}$")
+        self.assertEqual(pin, "27a44b298f1c234a94e02127eaeb55d66b28e30d")
 
 
 if __name__ == "__main__":

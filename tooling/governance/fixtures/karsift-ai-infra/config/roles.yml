@@ -1,34 +1,19 @@
-# Role -> model bindings. This is the ONLY file that names a specific AI vendor
-# or model anywhere in karsift-ai-infra. Every workflow reads a *role* name
-# ("implementer", "reviewer", "planner", etc.) and resolves it here.
+# Authoritative current role bindings.
 #
-# Current state (VOC-117, 2026-08-24): all six active roles run through Cursor
-# and require CURSOR_API_KEY. Planner and review roles use Grok 4.6 Standard
-# (non-fast) with explicit bracket parameters in the stored values;
-# implementer and implementer_escalation both use Composer 2.5. Prior
-# OpenAI/Codex, OpenCode, Claude Code, cursor/auto, and cursor-grok-4.5
-# bindings are historical only — see git history and CHANGELOG.md, not this
-# file, for prior lineups.
+# VOC-117 (2026-08-24) makes every active role Cursor-backed. Planner and
+# review roles use Grok 4.6 Standard (`fast=false`); plan review additionally
+# requests explicit high effort. Implementation and its single escalation
+# attempt both use Composer 2.5 by requirement. The identical escalation
+# binding is intentional and does not expand the existing retry limit.
 #
-# Stored values use cursor/<model>[param=value,...] when parameters matter.
-# Workflows strip the cursor/ prefix and pass the remainder to the Cursor CLI
-# --model flag unchanged (see config/prepare_cursor_model.py). Unsupported
-# provider prefixes and missing CURSOR_API_KEY fail closed with no fallback.
+# Historical provider/model transitions remain available in CHANGELOG.md and
+# Git history. They are not current routing or fallback behavior. Workflows
+# must fail closed when a configured binding cannot be honored; they must not
+# silently select another provider, model, speed tier, or effort level.
 
 implementer: cursor/composer-2.5
-
-# Used only on remediate.yml attempt 2 (see implement.yml). VOC-117 aligns
-# escalation with implementer on composer-2.5 (VOC-117-D03).
 implementer_escalation: cursor/composer-2.5
-
-# Independent verification of implementation PRs — Grok 4.6 Standard (non-fast).
-reviewer: cursor/grok-4.6[fast=false]
-
-# Same binding as reviewer; review retries do not downgrade model tier.
-reviewer_fast_retry: cursor/grok-4.6[fast=false]
-
-# Draft change-package authoring; human adoption follows plan review.
 planner: cursor/grok-4.6[fast=false]
-
-# Independent verification of plan/ PR proposals before adoption.
+reviewer: cursor/grok-4.6[fast=false]
+reviewer_fast_retry: cursor/grok-4.6[fast=false]
 plan_reviewer: cursor/grok-4.6[effort=high,fast=false]

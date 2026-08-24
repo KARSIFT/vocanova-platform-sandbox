@@ -163,8 +163,8 @@ VOC-117 advances the six active role bindings to Cursor Composer 2.5
 parameters (planner, reviewer, reviewer_fast_retry, plan_reviewer). Workflow
 routing uses `config/prepare_cursor_model.py` so stored values like
 `cursor/grok-4.6[fast=false]` reach the Cursor CLI without silent vendor/model
-fallback. `PINNED_SHA.txt` updates to the exact reviewed karsift-ai-infra merge
-that lands those changes; fixture file content in this directory is synchronized
+fallback. `PINNED_SHA.txt` records exact reviewed karsift-ai-infra merge
+`27a44b298f1c234a94e02127eaeb55d66b28e30d`; fixture file content in this directory is synchronized
 to that merge in the same task. Recovery metadata reads and allowlisted
 dispatches use narrowly job-scoped `GITHUB_TOKEN` permissions: Actions write plus
 Checks, Commit statuses, Contents, and Pull requests read. App tokens remain

@@ -61,23 +61,31 @@ the stored binding shape without silent vendor/model substitution.
 
 | Item | Value |
 |------|-------|
-| Coordinated infra source | `KARSIFT/karsift-ai-infra` (same T00 carrier) |
+| Governed Cursor implementation | caller run `32783787908`, job `97612143209` (`cursor-agent`, attempt 1) |
+| Authoritative infra PR | `KARSIFT/karsift-ai-infra#147` |
+| Reviewed infra head | `d6ac23f70a10299e73629f257e275854525d15c8` |
+| Infra merge commit | `27a44b298f1c234a94e02127eaeb55d66b28e30d` |
 | Caller fixture directory | `tooling/governance/fixtures/karsift-ai-infra/` |
 | Prior pin | `c5d8bccfa8676bd367b53ad5f6f9a51a40c99405` |
-| New pin | Set to the exact reviewed karsift-ai-infra merge SHA at workflow handoff |
+| New pin | `27a44b298f1c234a94e02127eaeb55d66b28e30d` |
 
-Fixture file content is synchronized to the infra changes in this working tree.
-`PINNED_SHA.txt` is updated to the exact reviewed infra merge commit when the
-coordinated infra PR merges (handoff step; not pre-merge guess).
+The first governed Cursor attempt produced the caller-side source projection but
+correctly left the prior pin in place while no authoritative source merge existed.
+Its exact-SHA review failed closed on that missing source/pin. PR #147 then landed
+the authoritative source under the same T00 authority. This caller revision removes
+the two unrelated VOC-112 fixture edits identified by that review, synchronizes the
+seven mirrored source files byte-for-byte to reviewed infra head `d6ac23f…`, and pins
+the exact GitHub merge commit `27a44b2…`; it does not infer or predeclare a SHA.
 
 ## Validation commands
 
 | Command | Result | Notes |
 |---------|--------|-------|
-| `python3 -m unittest discover -s tests -p 'test_*.py'` in `karsift-ai-infra` | pass | 274 tests (includes 8 VOC-117 regressions) |
+| `python3 -m unittest tests.test_voc117_role_bindings -v` in `karsift-ai-infra` | pass | 7 VOC-117 regressions on source head `d6ac23f…` |
+| `python3 -m unittest discover -s tests -p 'test_*.py'` in `karsift-ai-infra` | pass | 273 tests on source head `d6ac23f…` |
 | `bash scripts/governance/validate-governance.sh` | pass | Repository foundation + monitoring declarations |
 | `bash scripts/governance/classify-change-risk.sh` | pass | Detected path floor `R4` |
-| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pass | 167 tests (includes 7 VOC-117 fixture regressions) |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pass | 167 tests after exact-pin reconciliation |
 | `python3 -m unittest discover -s tooling/governance/tests -p 'test_voc117*.py'` | pass | 7 tests |
 | `git diff --check` | pass | No whitespace or patch-format errors |
 
