@@ -156,7 +156,16 @@ other integration advances rely on that hourly exact-tip wake.
 VOC-114 (VOC-113 recovery metadata-read fix) pins shared-infra merge
 `c5d8bccfa8676bd367b53ad5f6f9a51a40c99405`, including the live-proof
 corrections from PRs #137 through #145 and the project-template correction that
-keeps Statuses write on release alone. Recovery metadata reads and allowlisted
+keeps Statuses write on release alone.
+
+VOC-117 advances the six active role bindings to Cursor Composer 2.5
+(implementer + escalation) and Grok 4.6 Standard with explicit bracket
+parameters (planner, reviewer, reviewer_fast_retry, plan_reviewer). Workflow
+routing uses `config/prepare_cursor_model.py` so stored values like
+`cursor/grok-4.6[fast=false]` reach the Cursor CLI without silent vendor/model
+fallback. `PINNED_SHA.txt` updates to the exact reviewed karsift-ai-infra merge
+that lands those changes; fixture file content in this directory is synchronized
+to that merge in the same task. Recovery metadata reads and allowlisted
 dispatches use narrowly job-scoped `GITHUB_TOKEN` permissions: Actions write plus
 Checks, Commit statuses, Contents, and Pull requests read. App tokens remain
 limited to App-identity release mutations and no longer depend on an installation

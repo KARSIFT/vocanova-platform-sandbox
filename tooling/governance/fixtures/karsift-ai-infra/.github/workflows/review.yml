@@ -12,14 +12,12 @@ name: review (reusable)
 # roles.yml - full run-time provider abstraction isn't built yet. Don't claim
 # more decoupling than exists.
 #
-# Current state (as of 2026-07-31): runs via a raw `cursor-agent` CLI
-# invocation (cursor.com - Cursor's own headless agent CLI, not a wrapper
-# action), reviewer-only - implementer and planner have their own separate
-# execution steps in their own files, moved to Cursor independently (see
-# their own files). Full execution-mechanism history (Claude Code ->
-# openai/codex-action -> OpenCode -> Cursor, and exactly why each move
-# happened - including the OpenCode-account incident that forced the last
-# one) lives in CHANGELOG.md's "review.yml" section, not here.
+# Current state (VOC-117, 2026-08-24): runs via a raw `cursor-agent` CLI
+# invocation on cursor/grok-4.6[fast=false] (Grok 4.6 Standard, non-fast).
+# Parameterized stored bindings reach --model via
+# config/prepare_cursor_model.py after stripping the cursor/ prefix.
+# Full execution-mechanism history lives in CHANGELOG.md's "review.yml"
+# section, not here.
 #
 # Every claim below was checked against the real installed CLI
 # (`agent --version` reported 2026.07.23-e383d2b at migration time) in a
@@ -66,10 +64,6 @@ name: review (reusable)
 #   nd-JSON per-event stream - the "Extract verdict text" step below reads
 #   the whole file as one JSON document and pulls `.result` directly; no
 #   line-by-line event filtering is needed.
-#
-# implementer and planner stay on their existing roles for now - migrating
-# them to Cursor too is a separate, not-yet-done follow-up; do not assume
-# they've moved without checking their own workflow files' execution steps.
 #
 # Needs CURSOR_API_KEY as a repo/org secret on the calling project - same
 # Free-plan-org private-repo caveat documented elsewhere in this repo for
@@ -169,7 +163,7 @@ jobs:
       # commit really was unreachable, not a model quality problem either
       # time. Checking out the exact reviewed SHA removes the root cause:
       # the reviewer now has the real file tree for what it's reviewing.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         if: steps.pr.outputs.stale != 'true'
         with:
           ref: ${{ steps.pr.outputs.sha }}
@@ -199,7 +193,7 @@ jobs:
 
       - name: Checkout karsift-ai-infra
         if: steps.pr.outputs.stale != 'true'
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: KARSIFT/karsift-ai-infra
           path: karsift-ai-infra
@@ -235,6 +229,7 @@ jobs:
           echo "Routing this review as: role=$role (attempt=$attempt, risk=${risk:-unknown})"
 
           MODEL=$(bash karsift-ai-infra/config/resolve-model.sh "$role" karsift-ai-infra/config/roles.yml)
+          python3 karsift-ai-infra/config/prepare_cursor_model.py --check-prefix "$MODEL"
           echo "model=$MODEL" >> "$GITHUB_OUTPUT"
           echo "role=$role" >> "$GITHUB_OUTPUT"
 
@@ -384,8 +379,8 @@ jobs:
         run: |
           set -uo pipefail
           source karsift-ai-infra/config/retry-helpers.sh
-          MODEL="${{ steps.model.outputs.model }}"
-          MODEL="${MODEL#cursor/}"
+          MODEL=$(python3 karsift-ai-infra/config/prepare_cursor_model.py \
+            --require-api-key "${{ steps.model.outputs.model }}")
           run_review() {
             if agent -p --trust --mode plan \
               --model "$MODEL" \
