@@ -1,0 +1,141 @@
+schema_version: 1
+id: VOC-114
+slug: voc-113-recovery-runner-fails-before-dispatch
+title: Fix VOC-113 recovery runner metadata-read failure before dispatch
+type: infrastructure
+status: draft
+risk: R4
+planned_implementation_risk_floor: 'R4. T00 changes CI/CD lifecycle orchestration
+  in KARSIFT/karsift-ai-infra (merge-gate, release, recover-actions-checks) and the
+  shared actions-check-recovery runner used for exact-SHA gate metadata reads. App
+  installation/token read capabilities for Checks and Actions metadata are in scope.
+  This is a draft proposal for the reviewing human at adoption time, not a determination;
+  the path classifier and independent verifier remain authoritative.
+
+  '
+canonical_path: specs/changes/VOC-114-voc-113-recovery-runner-fails-before-dispatch
+authority_model: a004-active
+requirement_source: 'GitHub issue #956 (VOC-113 recovery runner fails before dispatch
+  with App metadata-read error). Live evidence 2026-08-24: PR #954 merged at b97e9575fd30671c336a2e92ca00db6e29b86416;
+  pipeline run 32696249484 job 97339047384 failed step Recover missing integration
+  push workflows with actions-check-recovery: github_metadata_read_failed; reconcile-release
+  run 32696549963 job 97339655608 failed Recover missing exact-head promotion checks
+  with the same error; no recovery dispatch in either mode; promotion PR #947 remains
+  blocked for VOC-113-T01. Required: ensure App installation/token used by merge-gate,
+  release, and recover-actions-checks has explicit read capabilities for exact-SHA
+  metadata endpoints (especially Checks read); localize runner failures to sanitized
+  endpoint classes; add policy/runner tests; re-run live integration recovery and
+  reconcile-release without weakening rulesets, fabricating checks, or manually merging
+  #947. This draft package does not adopt or authorize itself.
+
+  '
+requirement_approval_status: not-approved
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: 'none-intentional for application runtime. Restores VOC-113 recovery
+  so missing exact-SHA checks can be detected and genuine workflow dispatches can
+  proceed. Completing promotion PR #947 after genuine checks (blocked VOC-113-T01
+  outcome) may promote already-reviewed develop history to main and thereby trigger
+  the existing automatic production deploy path; that is recovery of the stranded
+  VOC-112 release handoff, not a new deploy policy. No application, signup, secret,
+  database, or monitoring-inventory behavior changes.
+
+  '
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: 'Governance-automation fix for VOC-113 recovery metadata reads only.
+    No page routes, critical API endpoints, or stable monitor/synthetic IDs in infra/monitoring/monitors.yaml
+    or infra/monitoring/synthetics.yaml are added or changed. Existing production/staging
+    monitors continue to observe deployed environments; restoring recovery read permissions
+    does not alter monitor inventory.
+
+    '
+dependencies:
+- id: VOC-114-DEP-00
+  status: "resolved at drafting time. Issue #956 records sanitized live observations\
+    \ for PR #954 merge at b97e9575, pipeline run 32696249484 integration_push recovery\
+    \ failure, reconcile-release run 32696549963 promotion_pr recovery failure, and\
+    \ blocked promotion PR #947 / release issue #946 \u2014 without logs, credentials,\
+    \ OAuth material, or user identifiers.\n"
+- id: VOC-114-DEP-01
+  status: 'resolved at drafting time. VOC-113-T00 merged the durable recovery mechanism
+    (actions-check-recovery-runner.py, recover-actions-checks.yml, merge-gate/release
+    hooks) but live runs fail immediately in the shared metadata-read phase before
+    bounded wait or dispatch.
+
+    '
+- id: VOC-114-DEP-02
+  status: 'resolved at drafting time. merge-gate report-status and adopt.yml already
+    document that exact-SHA gate metadata via REST check-runs/status endpoints requires
+    effective Checks read (and Actions read for related paths). Recovery currently
+    mints App tokens without explicit read permission requests and collapses all gh
+    failures to github_metadata_read_failed.
+
+    '
+- id: VOC-114-DEP-03
+  status: "resolved at drafting time. Cross-repo pattern from VOC-113 / VOC-104 /\
+    \ VOC-108 \u2014 reusable workflow behavior lands in KARSIFT/karsift-ai-infra;\
+    \ this package authorizes the required outcome. Do not treat an untracked local\
+    \ karsift-ai-infra/ checkout as this repository's tracked tree. Caller consumes\
+    \ reusable workflows at @main.\n"
+- id: VOC-113
+  status: 'Adopted predecessor whose T01 remains blocked until recovery metadata reads
+    succeed. This package must not weaken VOC-113 fail-closed, no-fabrication, or
+    VOC-108 authoritative selection invariants.
+
+    '
+- id: VOC-108
+  status: 'Adopted predecessor owning authoritative exact-head check selection. Recovery
+    must remain a consumer of that selection, not a bypass.
+
+    '
+affected_areas:
+- KARSIFT/karsift-ai-infra/config/actions-check-recovery-runner.py
+- KARSIFT/karsift-ai-infra/.github/workflows/merge-gate.yml
+- KARSIFT/karsift-ai-infra/.github/workflows/release.yml
+- KARSIFT/karsift-ai-infra/.github/workflows/recover-actions-checks.yml
+- KARSIFT/karsift-ai-infra/tests/test_voc113_actions_check_recovery.py and related
+  policy tests
+- karsift-ai-infra README and/or ops docs when current App permission claims become
+  false
+- specs/changes/VOC-114-voc-113-recovery-runner-fails-before-dispatch/
+implementation:
+  authorized: false
+  required: true
+  status: not-authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-governance-automation-recovery-fix-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+production_deployment: disabled
+autonomous_production_release: disabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
+blocking_reasons: package not adopted; implementation not authorized
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
