@@ -149,6 +149,8 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
   assert.match(pipeline, /has_successful_run/);
   assert.match(pipeline, /deploy_required/);
   assert.match(pipeline, /outputs\.recovery_needed == 'true'/);
+  assert.match(pipeline, /inputs\.action == 'recover-integration-push'/);
+  assert.doesNotMatch(dispatchInputBlock, /integration_recovery_target_sha:/);
   assert.match(
     pipeline,
     /target_sha: \$\{\{ needs\.resolve-integration-recovery-target\.outputs\.target_sha \}\}/,
