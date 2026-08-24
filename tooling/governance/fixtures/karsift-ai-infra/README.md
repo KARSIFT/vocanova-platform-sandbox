@@ -122,4 +122,8 @@ actions: publish the immutable task marker, then close the linked task so the
 release observer receives its authenticated wake-up events.
 Close/reopen or draft/ready transitions on a promotion pull request do not
 recover missing required checks; VOC-113 recovery dispatches genuine allowlisted
-workflows for the exact SHA with a bounded 1800-second fail-closed wait.
+workflows for the exact SHA with a bounded 1800-second fail-closed wait. Recovery
+calls are serialized by mode and target SHA. The caller template's hourly
+schedule also resolves the current integration head and performs a secondary
+integration recovery wake; it is a mutation-free no-op after both required
+integration workflows have completed successfully.

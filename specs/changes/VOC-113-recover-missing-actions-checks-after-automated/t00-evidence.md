@@ -103,6 +103,18 @@ still requires successful terminal evidence. All four shared self-CI checks
 passed before merge; the final shared `main` commit is
 `d82a905fbecb497ce8346e5cf13e1001a0f13f85`.
 
+A subsequent exact-SHA review found one Medium fixture-coherence defect and two
+Low completeness gaps. The caller fixture now includes the shared completion
+publisher/parser contract and the current `ci.yml` checkout pin, so the local
+mirror is executable rather than only structurally representative. Shared PR
+#126 also serializes recovery by mode and exact target SHA and adds an hourly
+caller-template wake that resolves the current integration head. If the
+original post-merge attempt is interrupted or times out, the next scheduled
+wake retries missing/failed genuine workflows; successful terminal evidence is
+a mutation-free no-op. All four shared self-CI checks passed before merge; the
+final shared `main` commit is
+`97b380b77d08adbf14952df17ee8d11e6f521b15`.
+
 ## VOC-112 provenance repair (`VOC-113-D11`)
 
 Repository Governance supplies `PR_BASE_SHA` and `PR_HEAD_SHA` and selects

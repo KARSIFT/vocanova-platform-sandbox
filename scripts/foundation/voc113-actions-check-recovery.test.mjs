@@ -35,6 +35,11 @@ const releaseWorkflowPath = path.join(
   fixtureInfraRoot,
   ".github/workflows/release.yml",
 );
+const fixtureCiPath = path.join(fixtureInfraRoot, ".github/workflows/ci.yml");
+const completionRunnerPath = path.join(
+  fixtureInfraRoot,
+  "config/task-completion-runner.py",
+);
 const verifyPromotionWorkflowPath = path.join(
   fixtureInfraRoot,
   ".github/workflows/verify-promotion-check-recovery.yml",
@@ -112,6 +117,14 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
   assert.match(pipeline, /expected_proof_head_sha: \$\{\{ github\.sha \}\}/);
   assert.match(pipeline, /verify-promotion-check-recovery/);
   assert.match(pipeline, /verify-post-promotion-workflow/);
+  assert.match(pipeline, /resolve-integration-recovery-target:/);
+  assert.match(pipeline, /git\/ref\/heads\/develop/);
+  assert.match(pipeline, /recover-integration-push:/);
+  assert.match(pipeline, /recovery_mode: integration_push/);
+  assert.match(
+    pipeline,
+    /target_sha: \$\{\{ needs\.resolve-integration-recovery-target\.outputs\.target_sha \}\}/,
+  );
   assert.match(
     pipeline,
     /uses: KARSIFT\/karsift-ai-infra\/\.github\/workflows\/verify-promotion-check-recovery\.yml@main/,
@@ -139,6 +152,27 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
     mergeGate.split("Recover missing integration", 1)[1] ?? "",
     /github\.token merge/i,
   );
+});
+
+test("VOC-113 fixture mirror keeps completion CLI and checkout pin coherent", () => {
+  const help = spawnSync(
+    "python3",
+    [completionRunnerPath, "publish", "--help"],
+    {
+      cwd: fixtureInfraRoot,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        PYTHONPATH: path.join(fixtureInfraRoot, "config"),
+      },
+    },
+  );
+  assert.equal(help.status, 0, help.stderr || help.stdout);
+  assert.match(help.stdout, /--reviewed-base-sha/);
+  const fixtureCi = readFileSync(fixtureCiPath, "utf8");
+  assert.doesNotMatch(fixtureCi, /actions\/checkout@11d5960a/);
+  assert.match(fixtureCi, /actions\/checkout@3d3c42e5/);
+  assert.match(fixtureCi, /persist-credentials: false/);
 });
 
 test("VOC-113-TEST-08/09 contracts bind read-only verifier job names", () => {
