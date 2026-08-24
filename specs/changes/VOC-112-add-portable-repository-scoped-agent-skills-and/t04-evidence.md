@@ -38,10 +38,11 @@ events rather than as a separate first-class read event, the file metric counts 
 existing readable repository paths referenced by those completed events. It is an explicit
 trace-derived proxy, not a claim that every runtime read is observable.
 
-Revision validation is fail closed in the required Repository Governance workflow: its
-full-history checkout sets strict mode, requires every captured commit, proves ancestry,
-and compares recorded hashes with captured blobs and current files. Generic shallow
-application CI remains offline and non-mutating while validating current source hashes.
+Revision validation is fail closed and squash-aware in Repository Governance. Pull-request
+runs require every captured commit, prove ancestry, and compare captured/current hashes.
+Branch-push runs after the repository's squash merge re-validate the current hashes without
+requiring discarded intermediate PR commits to remain ancestors. Generic shallow
+application CI is offline and non-mutating.
 
 Fixture: `scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json`.
 

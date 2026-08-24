@@ -36,7 +36,7 @@ jobs:
           node-version-file: ".nvmrc"
       - name: Validate agent-skill capture provenance with full history
         env:
-          VOC112_REQUIRE_CAPTURE_HISTORY: "true"
+          VOC112_CAPTURE_PROVENANCE_MODE: ${{ github.event_name == 'pull_request' && 'pr-ancestry' || 'squash-safe-push' }}
         run: node --test scripts/foundation/voc112-navigation-benchmark.test.mjs
       - name: Run repository-foundation unit tests
         run: python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py' -v

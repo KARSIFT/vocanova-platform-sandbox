@@ -67,9 +67,10 @@ No product analytics or UI accessibility changes.
   license. Mitigation: reject unlicensed sources (including the reviewed Vercel React skill),
   retain required license/NOTICE files, and author repository-native guidance where needed.
 - `VOC-112-R08`: **Capture provenance missing in shallow application CI** — exact capture
-  commits may not exist in a depth-limited checkout. Mitigation: keep ordinary foundation
-  tests offline/non-mutating and require exact commit ancestry plus captured/current source
-  hashes in the full-history Repository Governance gate.
+  commits may not exist in a depth-limited checkout or as ancestors after squash merge.
+  Mitigation: keep ordinary foundation tests offline/non-mutating; require commit ancestry
+  and captured/current hashes on pull requests; re-validate current hashes in the
+  squash-safe branch-push gate without relying on discarded intermediate commits.
 - `VOC-112-DEP-00`: Issue #933 requirement thread (resolved at drafting).
 - `VOC-112-DEP-01`: Protected agent instructions (`AGENTS.md`, `CLAUDE.md`) (resolved).
 - `VOC-112-DEP-02`: Existing development workflow docs (resolved).

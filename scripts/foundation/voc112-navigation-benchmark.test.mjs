@@ -40,6 +40,11 @@ const sha256AtRevision = (revision, relativePath) =>
 
 function assertCapturedRevision(evidence) {
   assert.match(evidence.subject_revision, /^[a-f0-9]{40}$/);
+  const mode = process.env.VOC112_CAPTURE_PROVENANCE_MODE ?? "local";
+  assert.ok(
+    ["local", "pr-ancestry", "squash-safe-push"].includes(mode),
+    `unknown capture provenance mode: ${mode}`,
+  );
   const subjectLookup = spawnSync(
     "git",
     ["cat-file", "-e", `${evidence.subject_revision}^{commit}`],
@@ -49,25 +54,29 @@ function assertCapturedRevision(evidence) {
     },
   );
   if (subjectLookup.status !== 0) {
-    assert.equal(
-      execFileSync("git", ["rev-parse", "--is-shallow-repository"], {
-        cwd: repositoryRoot,
-        encoding: "utf8",
-      }).trim(),
-      "true",
-      "a full checkout must already contain the captured commit",
-    );
     assert.notEqual(
-      process.env.VOC112_REQUIRE_CAPTURE_HISTORY,
-      "true",
-      "strict capture provenance requires the full-history governance checkout",
+      mode,
+      "pr-ancestry",
+      "PR ancestry mode requires every captured commit object",
     );
+    if (mode === "local") {
+      assert.equal(
+        execFileSync("git", ["rev-parse", "--is-shallow-repository"], {
+          cwd: repositoryRoot,
+          encoding: "utf8",
+        }).trim(),
+        "true",
+        "a full local checkout must already contain the captured commit",
+      );
+    }
   } else {
-    execFileSync(
-      "git",
-      ["merge-base", "--is-ancestor", evidence.subject_revision, "HEAD"],
-      { cwd: repositoryRoot },
-    );
+    if (mode !== "squash-safe-push") {
+      execFileSync(
+        "git",
+        ["merge-base", "--is-ancestor", evidence.subject_revision, "HEAD"],
+        { cwd: repositoryRoot },
+      );
+    }
     assert.equal(
       evidence.source_hashes.navigator_skill_sha256,
       sha256AtRevision(
@@ -325,7 +334,9 @@ test("VOC-112-TEST-14: operator docs and AGENTS.md preserve one-source precedenc
   assert.match(agents, /A-004 is the effective/);
   assert.match(agents, /Never self-approve/);
   assert.match(governanceWorkflow, /fetch-depth: 0/);
-  assert.match(governanceWorkflow, /VOC112_REQUIRE_CAPTURE_HISTORY: "true"/);
+  assert.match(governanceWorkflow, /VOC112_CAPTURE_PROVENANCE_MODE:/);
+  assert.match(governanceWorkflow, /pr-ancestry/);
+  assert.match(governanceWorkflow, /squash-safe-push/);
   assert.match(
     governanceWorkflow,
     /node --test scripts\/foundation\/voc112-navigation-benchmark\.test\.mjs/,
