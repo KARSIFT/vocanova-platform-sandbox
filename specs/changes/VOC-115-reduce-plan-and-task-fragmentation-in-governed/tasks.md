@@ -59,6 +59,8 @@ planning unless a real split boundary exists.
    - `bash scripts/governance/validate-governance.sh`;
    - `bash scripts/governance/classify-change-risk.sh`;
    - `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'`;
+   - `python3 -m unittest discover -s tests -p 'test_*.py'` in the primary
+     `KARSIFT/karsift-ai-infra` checkout;
    - any narrower targeted governance/fixture regression command added by the
      implementation;
    - `git diff --check`.

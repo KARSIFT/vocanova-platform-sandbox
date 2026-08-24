@@ -6,7 +6,8 @@
 - Protected areas: `AGENTS.md`, `docs/operations/10-development-workflow.md`,
   `docs/operations/15-ai-native-product-and-engineering-operating-model.md`,
   `docs/governance/16-autonomous-development-operating-model.md`,
-  `specs/templates/change-package/`, `tooling/governance/`,
+  `docs/templates/change-specification.md`, `specs/templates/change-package/`,
+  `tooling/governance/`,
   `tooling/governance/tests/`, and mirrored
   `tooling/governance/fixtures/karsift-ai-infra/` prompts/workflows/config/tests.
 - Prerequisites: confirm current planner prompt, plan-review prompt, adopt roster
@@ -26,6 +27,7 @@
 | `docs/operations/15-ai-native-product-and-engineering-operating-model.md` | modify | Replace fragmentation-encouraging task language with one-task default + explicit split boundaries |
 | `docs/governance/16-autonomous-development-operating-model.md` | modify | Reconcile live governed lifecycle wording with one-package/one-task default and bounded in-scope remediation |
 | `AGENTS.md` | modify | Update bug-handling / governed-loop language so in-scope causal remediation can stay under the active package; preserve unrelated-bug new-plan rule |
+| `docs/templates/change-specification.md` | modify | Make task IDs minimum-sufficient outcome traceability groupings and remove component-oriented split cues |
 | `specs/templates/change-package/` | modify | Update template wording so tasks and task-specific evidence no longer imply fragmentation by default |
 | `tooling/governance/fixtures/karsift-ai-infra/prompts/plan.md` | modify | Replace "small, ordered" default with one-task default + split-reason rules |
 | `tooling/governance/fixtures/karsift-ai-infra/prompts/plan-review.md` | modify | Make multi-task review check require explicit split reasons and bounded scope handling |

@@ -40,7 +40,8 @@ user-interface accessibility effect.
   Mitigation: one-task default in both prose and deterministic fixture coverage.
 - `VOC-115-R04`: **Low release risk** because no runtime deployment change is
   intended; rollback is documentation/prompt/validator reversion.
-- Protected surfaces: `AGENTS.md`, `DOC-15`, `DOC-16`, package templates,
+- Protected surfaces: `AGENTS.md`, `DOC-15`, `DOC-16`,
+  `docs/templates/change-specification.md`, `specs/templates/change-package/`,
   `docs/operations/10-development-workflow.md`, `tooling/governance/`, the primary
   `KARSIFT/karsift-ai-infra` planner/plan-review/validation source, mirrored infra
   fixtures, and task-sequencing tests.
