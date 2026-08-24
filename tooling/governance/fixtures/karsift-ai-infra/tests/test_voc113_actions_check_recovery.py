@@ -59,7 +59,13 @@ class ActionsCheckRecoveryTests(unittest.TestCase):
             ROOT / "templates/project-repo/.github/workflows/pipeline.yml"
         ).read_text(encoding="utf-8")
         ci_block = template.split("  ci:", 1)[1].split("\n  plan-review:", 1)[0]
+        reuse_block = template.split("  ready-for-review-reuse:", 1)[1].split(
+            "\n  ci:", 1
+        )[0]
         self.assertIn("inputs.action == 'recover-promotion-pr-checks'", ci_block)
+        self.assertIn("inputs.action == 'recover-promotion-pr-checks'", reuse_block)
+        self.assertIn("event_action:", reuse_block)
+        self.assertIn("'recovery'", reuse_block)
         self.assertNotIn("\n  recover-promotion-pr-checks:", template)
         dispatch_inputs = template.split("  workflow_dispatch:", 1)[1].split(
             "\n# A synchronize event", 1
@@ -129,7 +135,9 @@ class ActionsCheckRecoveryTests(unittest.TestCase):
             [plan.workflow_file for plan in plans],
             ["repository-governance.yml", "deploy-staging.yml"],
         )
-        self.assertEqual(plans[-1].inputs, {})
+        self.assertTrue(
+            all(plan.inputs == {"recovery_target_sha": HEAD_SHA} for plan in plans)
+        )
         self.assertNotIn(
             "recover-actions-checks.yml",
             [plan.workflow_file for plan in plans],
@@ -161,6 +169,25 @@ class ActionsCheckRecoveryTests(unittest.TestCase):
                 "path": f".github/workflows/{workflow}",
                 "status": "in_progress",
                 "conclusion": None,
+            }
+            for workflow in ("repository-governance.yml", "deploy-staging.yml")
+        ]
+        self.assertFalse(
+            recovery_complete(
+                mode="integration_push",
+                gate_summary=evaluate_summary([]),
+                workflow_runs=runs,
+                head_sha=HEAD_SHA,
+            )
+        )
+
+    def test_integration_recovery_rejects_neutral_runs(self):
+        runs = [
+            {
+                "head_sha": HEAD_SHA,
+                "path": f".github/workflows/{workflow}",
+                "status": "completed",
+                "conclusion": "neutral",
             }
             for workflow in ("repository-governance.yml", "deploy-staging.yml")
         ]

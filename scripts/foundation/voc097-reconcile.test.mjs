@@ -99,8 +99,16 @@ test("VOC-097-T02 caller wires bounded polling and explicit observe/dispatch pat
         /expected_base_sha: \$\{\{ github\.event\.pull_request\.base\.sha \}\}/g,
       ) ?? []
     ).length,
-    5,
+    4,
     "plan review, task review, remediation, merge gate, and ready-for-review reuse must bind the event base",
+  );
+  const reuseBlock =
+    pipeline
+      .split("\n  ready-for-review-reuse:", 2)[1]
+      ?.split("\n  ci:", 1)[0] ?? "";
+  assert.match(
+    reuseBlock,
+    /github\.event\.pull_request\.base\.sha \|\| github\.sha/,
   );
 });
 

@@ -122,6 +122,21 @@ live-evidence reconciler and exact-SHA integration recovery—while continuing t
 prove the implementer and workflow-level permission floor have no Actions-write
 authority. The full foundation suite passes with 333 tests.
 
+The final exact-SHA review passed and reported three non-blocking hardening
+opportunities; all three were nevertheless resolved. Shared PR #127 now
+requires `success` (not `neutral`) for recovered integration workflows and
+passes the immutable target SHA into each integration dispatch. Caller
+workflows validate that SHA against the dispatched branch tip before any
+governance or deployment work, so branch movement fails closed. The caller's
+promotion recovery path also runs the reuse-decision prerequisite explicitly
+in `recovery` mode, eliminating dependence on `always()` traversing a skipped
+job. Shared PR #127 passed 226 policy tests and all four hosted self-CI checks;
+the shared `main` merge commit is
+`bc2ea04f4cb664c0f4fa16ceaebdf0160c5ba0a0`.
+Shared PR #128 mirrored the explicit recovery prerequisite into the canonical
+caller template and passed the same 226-test/four-check gate; its shared
+`main` merge commit is `4edfb2d979b86df9cdacc10d5de5120e46763417`.
+
 ## VOC-112 provenance repair (`VOC-113-D11`)
 
 Repository Governance supplies `PR_BASE_SHA` and `PR_HEAD_SHA` and selects

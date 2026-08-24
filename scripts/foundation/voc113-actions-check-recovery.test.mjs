@@ -23,6 +23,10 @@ const repositoryGovernancePath = path.join(
   repositoryRoot,
   ".github/workflows/repository-governance.yml",
 );
+const stagingDeployPath = path.join(
+  repositoryRoot,
+  ".github/workflows/deploy-staging.yml",
+);
 const fixtureInfraRoot = path.join(
   repositoryRoot,
   "tooling/governance/fixtures/karsift-ai-infra",
@@ -92,6 +96,7 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
   const pipeline = readFileSync(pipelinePath, "utf8");
   const governancePolicy = readFileSync(governancePolicyPath, "utf8");
   const repositoryGovernance = readFileSync(repositoryGovernancePath, "utf8");
+  const stagingDeploy = readFileSync(stagingDeployPath, "utf8");
   const mergeGate = readFileSync(mergeWorkflowPath, "utf8");
   const release = readFileSync(releaseWorkflowPath, "utf8");
 
@@ -104,6 +109,12 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
   const ciBlock =
     pipeline.split("\n  ci:", 2)[1]?.split("\n  plan-review:", 1)[0] ?? "";
   assert.match(ciBlock, /inputs\.action == 'recover-promotion-pr-checks'/);
+  const reuseBlock =
+    pipeline
+      .split("\n  ready-for-review-reuse:", 2)[1]
+      ?.split("\n  ci:", 1)[0] ?? "";
+  assert.match(reuseBlock, /inputs\.action == 'recover-promotion-pr-checks'/);
+  assert.match(reuseBlock, /event_action:.*'recovery'/);
   assert.doesNotMatch(pipeline, /\n  recover-promotion-pr-checks:/);
   const dispatchInputBlock =
     pipeline
@@ -135,6 +146,10 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
   );
   assert.match(governancePolicy, /recovery_pr_number/);
   assert.match(repositoryGovernance, /recovery_pr_number/);
+  assert.match(repositoryGovernance, /recovery_target_sha/);
+  assert.match(repositoryGovernance, /RECOVERY_TARGET_SHA/);
+  assert.match(stagingDeploy, /recovery_target_sha/);
+  assert.match(stagingDeploy, /Validate immutable recovery target/);
   assert.match(repositoryGovernance, /pr-validation/);
   assert.match(repositoryGovernance, /pr-ancestry/);
   assert.match(repositoryGovernance, /Select strict capture provenance mode/);
