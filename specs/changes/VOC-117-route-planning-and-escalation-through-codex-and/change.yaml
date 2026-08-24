@@ -1,0 +1,146 @@
+schema_version: 1
+id: VOC-117
+slug: route-planning-and-escalation-through-codex-and
+title: Route planning and review through Cursor Grok 4.6 Standard and align implementer
+  escalation
+type: infrastructure
+status: draft
+risk: R4
+planned_implementation_risk_floor: 'R4. This package changes authoritative AI role
+  bindings in KARSIFT/karsift-ai-infra/config/roles.yml, workflow model-string handling
+  for parameterized Cursor IDs, mirrored caller fixtures under tooling/governance/,
+  and current-state workflow/docs comments that describe active model routing. tooling/governance/*
+  is an R4 path floor; AI model routing is a protected area. This is a draft proposal
+  for human adoption review, not a determination; the path classifier and independent
+  verifier remain authoritative.
+
+  '
+canonical_path: specs/changes/VOC-117-route-planning-and-escalation-through-codex-and
+authority_model: a004-active
+requirement_source: 'GitHub issue #978 (Route planning and escalation through Codex
+  and upgrade Grok review roles), as superseded by the 2026-08-24T22:04:19Z comment
+  from m-e-h-r-d-a-a-d. That comment is the authoritative final model mapping: no
+  OPENAI_API_KEY or OpenAI/Codex execution path; store Cursor-parameterized bindings
+  for planner/review roles; keep implementer and implementer_escalation on cursor/composer-2.5;
+  one plan and one end-to-end task covering roles, parameterized-model workflow compatibility,
+  tests, current-state docs/comments, caller fixture/pin, and validation. This draft
+  package does not adopt or authorize itself.
+
+  '
+requirement_approval_status: not-approved. This package has not been adopted. No field
+  in this file authorizes implementation.
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time if needed
+target_branch: develop
+approved_candidate_sha: null
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human/autonomous
+    governed decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: 'none-intentional for application runtime. This package changes
+  AI model selection and routing configuration only. It does not change product behavior,
+  permissions, review authority, production data, deployment credentials, or monitor
+  inventory.
+
+  '
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: 'Model-routing and role-binding change only. No page routes, critical
+    API endpoints, monitor inventory, or synthetic inventory in infra/monitoring/
+    are added or changed.
+
+    '
+dependencies:
+- id: VOC-117-DEP-00
+  status: 'resolved at drafting time. Issue #978 plus the superseding 2026-08-24 comment
+    provide exact role bindings, remove OpenAI/Codex requirements, and require one
+    coherent end-to-end task with enough specificity to draft without a clarifying
+    round trip.
+
+    '
+- id: VOC-117-DEP-01
+  status: 'resolved at drafting time. Active A-004 remains authoritative: no founder
+    `approved` comment gate on engineering-workflow adopt/merge/release paths; exact-SHA
+    independent verification, deterministic risk floors, protected-path controls,
+    credential isolation, and fail-closed behavior remain mandatory.
+
+    '
+- id: VOC-117-DEP-02
+  status: 'unresolved until implementation. Workflows currently strip a `cursor/`
+    prefix and pass the remainder to Cursor CLI `--model`. Implementation must make
+    parameterized stored values such as `grok-4.6[fast=false]` and `grok-4.6[effort=high,fast=false]`
+    compatible with the pinned Cursor CLI without silent fallback to another vendor
+    or model. Exact CLI flag/slug mechanics are an implementer verification detail,
+    not a package authority to invent alternate bindings.
+
+    '
+- id: VOC-117-DEP-03
+  status: 'resolved at drafting time as an accepted tradeoff of the superseding mapping:
+    `implementer` and `implementer_escalation` both bind to `cursor/composer-2.5`,
+    so attempt-2 escalation is same-model rather than a different lab. Preserve one-retry
+    limits; do not invent a different escalation model.
+
+    '
+- id: VOC-117-DEP-04
+  status: 'resolved at drafting time as an accepted tradeoff of the superseding mapping:
+    `planner`, `reviewer`, `reviewer_fast_retry`, and `plan_reviewer` all use the
+    `grok-4.6` model ID with explicit Standard/non-fast parameters; `plan_reviewer`
+    additionally pins `effort=high`. Cross-family independence from implementer (Composer)
+    is preserved; planner vs plan_reviewer independence is parameter-level within
+    the same model ID by request.
+
+    '
+affected_areas:
+- KARSIFT/karsift-ai-infra/config/roles.yml
+- KARSIFT/karsift-ai-infra/config/resolve-model.sh (only if parameterized parsing
+  must land here)
+- KARSIFT/karsift-ai-infra/.github/workflows/plan.yml
+- KARSIFT/karsift-ai-infra/.github/workflows/plan-review.yml
+- KARSIFT/karsift-ai-infra/.github/workflows/review.yml
+- KARSIFT/karsift-ai-infra/.github/workflows/implement.yml
+- KARSIFT/karsift-ai-infra/tests/ (role-resolution and workflow routing regressions)
+- karsift-ai-infra current-state header/comments that falsely describe dormant OpenAI/Codex
+  or obsolete Cursor bindings as active
+- tooling/governance/fixtures/karsift-ai-infra/ (mirrored pin of the exact reviewed
+  infra merge)
+- tooling/governance/tests/ (caller fixture regressions for the six bindings and fail-closed
+  routing)
+- caller docs/comments that assert a specific active model lineup when they would
+  become false
+- specs/changes/VOC-117-route-planning-and-escalation-through-codex-and/
+implementation:
+  authorized: false
+  required: true
+  status: proposed
+  target_branch: develop
+  pull_request: null
+  authority_issue: 978
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-model-routing-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+repository_adoption_status: not-adopted
+production_deployment: disabled
+autonomous_production_release: enabled
+ehr: not-triggered
+standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
+blocking_reasons: draft package; not adopted; implementation not authorized
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
