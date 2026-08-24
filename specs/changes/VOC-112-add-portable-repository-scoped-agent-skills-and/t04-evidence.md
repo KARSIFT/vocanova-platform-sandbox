@@ -38,10 +38,10 @@ events rather than as a separate first-class read event, the file metric counts 
 existing readable repository paths referenced by those completed events. It is an explicit
 trace-derived proxy, not a claim that every runtime read is observable.
 
-Revision validation is fail closed: full checkouts require each captured commit locally;
-shallow checkouts first deepen from `origin`, then require the commit, prove it is an
-ancestor of HEAD, and compare both recorded source hashes with the captured blobs and the
-current files. A depth-1 clone reproduction passed this path and ended unshallowed.
+Revision validation is fail closed in the required Repository Governance workflow: its
+full-history checkout sets strict mode, requires every captured commit, proves ancestry,
+and compares recorded hashes with captured blobs and current files. Generic shallow
+application CI remains offline and non-mutating while validating current source hashes.
 
 Fixture: `scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json`.
 
@@ -79,7 +79,7 @@ was removed before the final PR head.
 | `node --test scripts/foundation/voc112-navigation-benchmark.test.mjs` | 7/7 pass                                                                                                                                                                              |
 | `node --test scripts/foundation/voc112-*.test.mjs`                    | pass                                                                                                                                                                                  |
 | `bash scripts/governance/validate-governance.sh`                      | pass                                                                                                                                                                                  |
-| `bash scripts/governance/classify-change-risk.sh`                     | R3                                                                                                                                                                                    |
+| `bash scripts/governance/classify-change-risk.sh`                     | R4 after adding strict full-history validation to Repository Governance                                                                                                               |
 | `git diff --check`                                                    | pass                                                                                                                                                                                  |
 | `pnpm validate`                                                       | executed locally; stopped only at the two Docker-backed OAuth API tests because Docker is unavailable in this WSL checkout; all preceding phases passed; exact-SHA hosted CI required |
 | `pnpm build`                                                          | pass (packages, web, API)                                                                                                                                                             |
@@ -87,3 +87,8 @@ was removed before the final PR head.
 ## Acceptance mapping
 
 - `VOC-112-AC-04` / `VOC-112-EV-04` — complete.
+
+T04's final semantic/path risk is R4 because the evidence hardening updates
+`.github/workflows/repository-governance.yml`; application and deployment behavior remain
+unchanged. The workflow uses its existing full-history checkout and a pinned Node action,
+so strict provenance validation is offline and does not mutate the checkout.

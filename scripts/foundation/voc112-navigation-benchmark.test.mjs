@@ -38,7 +38,7 @@ const sha256AtRevision = (revision, relativePath) =>
 
 function assertCapturedRevision(evidence) {
   assert.match(evidence.subject_revision, /^[a-f0-9]{40}$/);
-  let subjectLookup = spawnSync(
+  const subjectLookup = spawnSync(
     "git",
     ["cat-file", "-e", `${evidence.subject_revision}^{commit}`],
     {
@@ -55,45 +55,31 @@ function assertCapturedRevision(evidence) {
       "true",
       "a full checkout must already contain the captured commit",
     );
-    const deepen = spawnSync(
+    assert.notEqual(
+      process.env.VOC112_REQUIRE_CAPTURE_HISTORY,
+      "true",
+      "strict capture provenance requires the full-history governance checkout",
+    );
+  } else {
+    execFileSync(
       "git",
-      ["fetch", "--no-tags", "--quiet", "--unshallow", "origin"],
-      { cwd: repositoryRoot, encoding: "utf8", timeout: 120_000 },
+      ["merge-base", "--is-ancestor", evidence.subject_revision, "HEAD"],
+      { cwd: repositoryRoot },
     );
     assert.equal(
-      deepen.status,
-      0,
-      `failed to deepen shallow checkout for captured revision: ${deepen.stderr}`,
+      evidence.source_hashes.navigator_skill_sha256,
+      sha256AtRevision(
+        evidence.subject_revision,
+        ".agents/skills/vocanova-repo-navigator/SKILL.md",
+      ),
+      "navigator hash must bind to the captured revision",
     );
-    subjectLookup = spawnSync(
-      "git",
-      ["cat-file", "-e", `${evidence.subject_revision}^{commit}`],
-      { cwd: repositoryRoot, encoding: "utf8" },
+    assert.equal(
+      evidence.source_hashes.agents_sha256,
+      sha256AtRevision(evidence.subject_revision, "AGENTS.md"),
+      "AGENTS.md hash must bind to the captured revision",
     );
   }
-  assert.equal(
-    subjectLookup.status,
-    0,
-    "captured commit object is unavailable",
-  );
-  execFileSync(
-    "git",
-    ["merge-base", "--is-ancestor", evidence.subject_revision, "HEAD"],
-    { cwd: repositoryRoot },
-  );
-  assert.equal(
-    evidence.source_hashes.navigator_skill_sha256,
-    sha256AtRevision(
-      evidence.subject_revision,
-      ".agents/skills/vocanova-repo-navigator/SKILL.md",
-    ),
-    "navigator hash must bind to the captured revision",
-  );
-  assert.equal(
-    evidence.source_hashes.agents_sha256,
-    sha256AtRevision(evidence.subject_revision, "AGENTS.md"),
-    "AGENTS.md hash must bind to the captured revision",
-  );
   assert.equal(
     evidence.source_hashes.navigator_skill_sha256,
     sha256(".agents/skills/vocanova-repo-navigator/SKILL.md"),
@@ -194,16 +180,18 @@ test("VOC-112-TEST-12: navigator does not regress keyed correctness or bounded c
   );
 });
 
-test("VOC-112-TEST-12 supplemental: evidence contains no prompts or raw logs", () => {
-  const source = readFileSync(
-    path.join(
-      repositoryRoot,
-      "scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json",
-    ),
-    "utf8",
-  );
-  assert.doesNotMatch(source, /aggregated_output|raw_(?:log|trace)|prompt/i);
-  assert.doesNotMatch(source, /(?:API_KEY|AUTH_TOKEN|COOKIE|OAUTH_CODE)/i);
+test("VOC-112-TEST-12 supplemental: evidence fixtures contain no prompts or raw logs", () => {
+  for (const name of [
+    "voc112-navigation-benchmark-traces.json",
+    "voc112-skill-discovery-evidence.json",
+  ]) {
+    const source = readFileSync(
+      path.join(repositoryRoot, "scripts/foundation/fixtures", name),
+      "utf8",
+    );
+    assert.doesNotMatch(source, /aggregated_output|raw_(?:log|trace)|prompt/i);
+    assert.doesNotMatch(source, /(?:API_KEY|AUTH_TOKEN|COOKIE|OAUTH_CODE)/i);
+  }
 });
 
 test("VOC-112-TEST-13: Cursor and Claude actually read the canonical skill from root and nested cwd", () => {
@@ -284,6 +272,10 @@ test("VOC-112-TEST-14: operator docs and AGENTS.md preserve one-source precedenc
     "utf8",
   );
   const agents = readFileSync(path.join(repositoryRoot, "AGENTS.md"), "utf8");
+  const governanceWorkflow = readFileSync(
+    path.join(repositoryRoot, ".github/workflows/repository-governance.yml"),
+    "utf8",
+  );
   for (const heading of [
     "## Installation scope",
     "## One-source architecture",
@@ -301,4 +293,10 @@ test("VOC-112-TEST-14: operator docs and AGENTS.md preserve one-source precedenc
   assert.match(agents, /repository sources win/i);
   assert.match(agents, /A-004 is the effective/);
   assert.match(agents, /Never self-approve/);
+  assert.match(governanceWorkflow, /fetch-depth: 0/);
+  assert.match(governanceWorkflow, /VOC112_REQUIRE_CAPTURE_HISTORY: "true"/);
+  assert.match(
+    governanceWorkflow,
+    /node --test scripts\/foundation\/voc112-navigation-benchmark\.test\.mjs/,
+  );
 });

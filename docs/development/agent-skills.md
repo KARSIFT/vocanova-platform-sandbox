@@ -33,10 +33,10 @@ pnpm test   # includes foundation tests
 
 Capture fresh navigation/discovery evidence after rubric or navigator routing changes.
 These are explicit, authenticated operator actions; the deterministic test validates the
-committed sanitized capture and never starts an agent. In a full checkout validation is
-offline; if a shallow checkout omits a captured commit, validation fetches repository
-history from `origin`, then requires the commit and proves ancestry instead of accepting
-missing provenance:
+committed sanitized capture and never starts an agent or makes a network request. The
+required Repository Governance check uses `fetch-depth: 0` and strict mode to require each
+captured commit, prove ancestry, and bind hashes. A generic shallow application-test
+checkout validates the current source hashes without mutating Git history:
 
 ```bash
 node scripts/foundation/voc112-navigation-benchmark-run.mjs --capture-codex
