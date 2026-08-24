@@ -13,7 +13,7 @@ carrier PR `#969`; no implementer run was started for this operator-owned task.
 - Initial live-proof integration and promotion head:
   `c718f6b49ad6a9a4f1d26eb4319347f6220a8d54`.
 - Final trusted caller and promotion head after consuming all causal fixes:
-  `51c4d261d940c0e96a66238992c5380384729bb2`.
+  `0b0d866533e0100f6dfe37e3109f040ddde37bd6`.
 - Promotion PR: `#947`, `develop` → `main`, open and mergeable when observed.
 - T00 shared-infra baseline: PR `#136`, reviewed head
   `72b3742d5cd3ed1561534908d34286869befbe53`, merge
@@ -59,11 +59,13 @@ The caller fixture is pinned to shared-infra merge
 `bdc6736568827103b48255521f4bc83d5103bd3b`. Caller corrective PR `#970`
 merged as `c3455941463c0ded5630ea309b50f94a6cd546af`; final pin-sync PR `#971`
 merged as `172648f555b0eacedeb44fef707e6edf3cc60372`; promotion recovery provenance
-PR `#972` merged as `51c4d261d940c0e96a66238992c5380384729bb2`.
+PR `#972` merged as `51c4d261d940c0e96a66238992c5380384729bb2`; final
+push-provenance refinement PR `#973` merged as
+`0b0d866533e0100f6dfe37e3109f040ddde37bd6`.
 The caller recovery workflows set repository context before their pre-checkout
-PR reads and use merge-base-bound `pr-validation` for already-squashed
-promotion recovery while retaining `pr-ancestry` for original fixture-changing
-pull requests.
+PR reads. Exact-`develop` promotion recovery uses `squash-safe-push`, matching
+the immutable integration tip; actual pull-request events retain
+`pr-validation` and strict `pr-ancestry` for original fixture-changing changes.
 
 ## Integration-push proof
 
@@ -124,7 +126,14 @@ status was performed.
   leading to shared-infra PR `#142` and caller pin-sync PR `#971`;
 - verifier run `32721444405`, job `97413542354`: failed closed because the
   recovered `validate` context used original-PR ancestry rules against an
-  already-squashed promotion history, leading to caller PR `#972`.
+  already-squashed promotion history, leading to caller PR `#972`;
+- recovery validate run `32722352070`, job `97416266201`: failed closed after
+  merge-base PR validation proved unsuitable when the old production merge base
+  predates the navigator skill, leading to caller refinement PR `#973`;
+- final promotion recovery validate run `32723140094`, job `97418637552`:
+  `success` on exact promotion head
+  `0b0d866533e0100f6dfe37e3109f040ddde37bd6` using the corrected
+  `squash-safe-push` path.
 
 Each failure remained fail-closed and produced no fabricated check or manual
 promotion merge.
