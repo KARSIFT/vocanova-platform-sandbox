@@ -1,4 +1,4 @@
-# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106, VOC-108, VOC-115)
+# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106, VOC-108, VOC-115, VOC-117)
 
 These copies are deterministic fixtures for caller-repo policy regressions.
 They mirror `KARSIFT/karsift-ai-infra` at the SHA in `PINNED_SHA.txt` so
@@ -163,9 +163,12 @@ VOC-117 advances the six active role bindings to Cursor Composer 2.5
 parameters (planner, reviewer, reviewer_fast_retry, plan_reviewer). Workflow
 routing uses `config/prepare_cursor_model.py` so stored values like
 `cursor/grok-4.6[fast=false]` reach the Cursor CLI without silent vendor/model
-fallback. `PINNED_SHA.txt` records exact reviewed karsift-ai-infra merge
-`27a44b298f1c234a94e02127eaeb55d66b28e30d`; fixture file content in this directory is synchronized
-to that merge in the same task. Recovery metadata reads and allowlisted
+fallback. Reviewer and plan-review terminal failures pass the structured Cursor
+response through `config/extract-cursor-result.py`, which emits only bounded
+reason codes and withholds raw provider output. `PINNED_SHA.txt` records exact
+reviewed karsift-ai-infra merge
+`42aa66757a521b1187193fba17b74e440964c27f`; fixture file content in this
+directory is synchronized to that merge in the same task. Recovery metadata reads and allowlisted
 dispatches use narrowly job-scoped `GITHUB_TOKEN` permissions: Actions write plus
 Checks, Commit statuses, Contents, and Pull requests read. App tokens remain
 limited to App-identity release mutations and no longer depend on an installation

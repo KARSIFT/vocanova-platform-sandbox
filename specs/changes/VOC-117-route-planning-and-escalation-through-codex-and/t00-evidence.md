@@ -18,11 +18,15 @@ or complete CI logs.
 - `.github/workflows/plan.yml` — planner resolves `cursor/grok-4.6[fast=false]`
   through `prepare_cursor_model.py`.
 - `.github/workflows/review.yml` — reviewer paths use parameterized Grok 4.6
-  Standard form via `prepare_cursor_model.py`.
+  Standard form via `prepare_cursor_model.py`; terminal failures expose only a
+  bounded classification and withhold raw provider output.
 - `.github/workflows/plan-review.yml` — plan_reviewer retains `effort=high` and
-  `fast=false` through `prepare_cursor_model.py`.
+  `fast=false` through `prepare_cursor_model.py`; terminal failures use the same
+  sanitized classification path.
 - `.github/workflows/implement.yml` — implementer, escalation, and self-correct
   steps use `prepare_cursor_model.py` for `cursor/composer-2.5`.
+- `config/extract-cursor-result.py` — bounded Cursor failure reason codes without
+  printing raw provider responses or credentials.
 - `tests/test_voc117_role_bindings.py` — VOC-117-TEST-00 through TEST-05 regressions.
 
 ### Caller mirrored fixture and tests
@@ -67,12 +71,12 @@ the stored binding shape without silent vendor/model substitution.
 | Item | Value |
 |------|-------|
 | Governed Cursor implementation | caller run `32783787908`, job `97612143209` (`cursor-agent`, attempt 1) |
-| Authoritative infra PR | `KARSIFT/karsift-ai-infra#147` |
-| Reviewed infra head | `d6ac23f70a10299e73629f257e275854525d15c8` |
-| Infra merge commit | `27a44b298f1c234a94e02127eaeb55d66b28e30d` |
+| Authoritative infra PRs | `KARSIFT/karsift-ai-infra#147`, diagnostic hardening `#148` |
+| Independently reviewed infra heads | `d6ac23f70a10299e73629f257e275854525d15c8`, `9457233e5b2e2fb03674ef963d89ac4767596a4f` |
+| Infra merge commits | initial `27a44b298f1c234a94e02127eaeb55d66b28e30d`; authoritative current `42aa66757a521b1187193fba17b74e440964c27f` |
 | Caller fixture directory | `tooling/governance/fixtures/karsift-ai-infra/` |
 | Prior pin | `c5d8bccfa8676bd367b53ad5f6f9a51a40c99405` |
-| New pin | `27a44b298f1c234a94e02127eaeb55d66b28e30d` |
+| New pin | `42aa66757a521b1187193fba17b74e440964c27f` |
 
 The first governed Cursor attempt produced the caller-side source projection but
 correctly left the prior pin in place while no authoritative source merge existed.
@@ -80,20 +84,27 @@ Its exact-SHA review failed closed on that missing source/pin. PR #147 then land
 the authoritative source under the same T00 authority. This caller revision removes
 the two unrelated VOC-112 fixture edits identified by that review, synchronizes the
 seven mirrored source files byte-for-byte to reviewed infra head `d6ac23f…`, and pins
-the exact GitHub merge commit `27a44b2…`; it does not infer or predeclare a SHA.
+the exact GitHub merge commit rather than inferring or predeclaring a SHA. A live
+reviewer invocation then exposed a diagnostic defect: terminal Cursor application
+errors were withheld without a safe reason code. The same T00 authority produced
+independently reviewed infra PR #148. Its exact merge `42aa667…` preserves the six
+bindings and retry controls while adding bounded error classification. This caller
+revision mirrors that authoritative current source and advances the pin to the exact
+follow-up merge.
 
 ## Validation commands
 
 | Command | Result | Notes |
 |---------|--------|-------|
 | `python3 -m unittest tests.test_voc117_role_bindings -v` in `karsift-ai-infra` | pass | 7 VOC-117 regressions on source head `d6ac23f…` |
-| `python3 -m unittest discover -s tests -p 'test_*.py'` in `karsift-ai-infra` | pass | 273 tests on source head `d6ac23f…` |
+| `python3 -m unittest discover -s tests -p 'test_*.py'` in `karsift-ai-infra` | pass | 275 tests on follow-up source head `9457233…` |
 | `bash scripts/governance/validate-governance.sh` | pass | Repository foundation + monitoring declarations |
 | `bash scripts/governance/classify-change-risk.sh` | pass | Detected path floor `R4` |
-| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pass | 167 tests after exact-pin reconciliation |
-| `python3 -m unittest discover -s tooling/governance/tests -p 'test_voc117*.py'` | pass | 7 tests |
-| `node --test scripts/foundation/voc097-fixture-matrix.test.mjs scripts/foundation/voc104-ready-for-review-reuse.test.mjs scripts/foundation/voc108-authoritative-lifecycle.test.mjs` | pass | 25 tests after pin advance to `27a44b2…` |
-| `bash karsift-ai-infra/config/run-app-checks.sh` | pass | pre-push deterministic CI (attempt-2 repair) |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pass | 168 tests after exact-pin and diagnostic reconciliation |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_voc117*.py'` | pass | 8 deterministic tests (also included in the full 168-test run) |
+| `node --test scripts/foundation/voc097-fixture-matrix.test.mjs scripts/foundation/voc104-ready-for-review-reuse.test.mjs scripts/foundation/voc108-authoritative-lifecycle.test.mjs` | pass | 16 tests after pin advance to `42aa667…` |
+| `bash karsift-ai-infra/config/run-app-checks.sh` on caller head `e75c5ce…` | pass | Governed attempt-2 pre-push deterministic CI |
+| `bash karsift-ai-infra/config/run-app-checks.sh` after pinning `42aa667…` | environment-limited locally | Format, lint, typecheck, 338 foundation tests, API-client tests, middleware tests, web build, and API build passed; two controlled-signup API tests could not start because Docker is unavailable in this WSL environment. Hosted CI remains authoritative for those Docker-backed tests. |
 | `git diff --check` | pass | No whitespace or patch-format errors |
 
 ## Acceptance mapping
