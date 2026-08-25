@@ -4,7 +4,7 @@ slug: make-governed-automation-preserve-self-correction
 title: Make governed automation preserve self-correction helpers and finish coordinated
   cross-repository tasks
 type: infrastructure
-status: draft
+status: adopted
 risk: R4
 planned_implementation_risk_floor: 'R4. This package changes protected CI/CD orchestration
   in KARSIFT/karsift-ai-infra (implement.yml commit/self-correction/publish, actions-check-recovery,
@@ -31,10 +31,8 @@ requirement_source: 'GitHub issue #994 (Make governed automation preserve self-c
   exact reviewed infra merge. This draft package does not adopt or authorize itself.
 
   '
-requirement_approval_status: 'issue #994 is the requirement source; this draft does
-  not adopt or authorize itself
-
-  '
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: unknown - not recorded by this draft; set at adoption time if needed
 target_branch: develop
@@ -46,8 +44,8 @@ owners:
     '
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: 'none-intentional for application runtime. This package repairs
   governed automation so coordinated infrastructure and caller work, pre-push self-correction,
@@ -145,12 +143,12 @@ affected_areas:
 - tooling/governance/tests/
 - specs/changes/VOC-121-make-governed-automation-preserve-self-correction/
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: not-authorized
+  status: authorized
   target_branch: develop
   pull_request: null
-  authority_issue: null
+  authority_issue: 996
 release:
   required: true
   mode: not-authorized-by-this-package
@@ -161,7 +159,7 @@ release:
   rollback_required: true
 ehr: not-triggered
 standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
-blocking_reasons: draft package is not adopted and is not implementation-authorized
+blocking_reasons: none - adopted and implementation-authorized
 artifacts:
   readme: README.md
   specification: specification.md
@@ -171,3 +169,20 @@ artifacts:
   tasks: tasks.md
   test_plan: test-plan.md
   release_plan: release-plan.md
+approved_candidate_sha: 2065f784d5237faed6baa4a53c3f8418f696a308
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/995#issuecomment-5417657512
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-121-DEP-00
+- VOC-121-DEP-01
+- VOC-121-DEP-02
+- VOC-121-DEP-03
+- VOC-121-DEP-04
+- VOC-121-DEP-05
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #995 at 2065f784d5237faed6baa4a53c3f8418f696a308'
+implementation_authority_before_adoption: false
+implementation_authority_status: authorized
+repository_adoption_status: adopted
+adoption_pr: 995
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/995
