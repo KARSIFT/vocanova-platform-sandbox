@@ -131,6 +131,7 @@ new VOC-117 publication-behavior decision.
 | `bash scripts/governance/classify-change-risk.sh` | pass | Detected path floor `R4` |
 | `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pass | 170 tests after exact pin and isolated failure-publisher reconciliation |
 | `python3 -m unittest discover -s tooling/governance/tests -p 'test_voc117*.py'` | pass | 10 deterministic tests (also included in the full 170-test run) |
+| `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'` | pass | 204 mirrored shared-infrastructure policy tests on exact caller fixture pin `21a24db…` |
 | `node --test scripts/foundation/voc097-fixture-matrix.test.mjs scripts/foundation/voc104-ready-for-review-reuse.test.mjs scripts/foundation/voc108-authoritative-lifecycle.test.mjs` | pass | 16 tests after pin advance to `21a24db…` |
 | Independent Claude Code exact-revision review of infra PR #149 | pass | `VERDICT: PASS` on `e7f3804…`; no findings after error-response, I/O-failure, and combined-flag coverage |
 | Independent Claude Code exact-revision review of infra PR #150 | pass | `VERDICT: PASS` on `6526cf6…`; no findings on sanitized stdout/stderr channel boundary |

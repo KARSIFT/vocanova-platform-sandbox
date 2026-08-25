@@ -172,7 +172,9 @@ infrastructure failure comment while withholding raw provider output.
 `PINNED_SHA.txt` records exact
 reviewed karsift-ai-infra merge
 `21a24db03703b693a363737cbd6e479d50801107`; fixture file content in this
-directory is synchronized to that merge in the same task. Recovery metadata reads and allowlisted
+directory is synchronized to that merge in the same task.
+
+Recovery metadata reads and allowlisted
 dispatches use narrowly job-scoped `GITHUB_TOKEN` permissions: Actions write plus
 Checks, Commit statuses, Contents, and Pull requests read. App tokens remain
 limited to App-identity release mutations and no longer depend on an installation
