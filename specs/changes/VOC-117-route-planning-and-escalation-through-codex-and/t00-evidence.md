@@ -113,6 +113,14 @@ rechecks identity, and posts a non-verdict failure comment without model output.
 Its independently reviewed head `364a899…` merged as exact authoritative source
 `21a24db…`; the caller mirror and pin now use that merge.
 
+The exact fixture advance also carries authoritative infrastructure changes that
+landed after the caller's prior `c5d8bcc…` pin but before VOC-117 source work. In
+particular, `implement.yml`'s repository-explicit REST update for an existing PR
+was independently merged by infrastructure PR #119 as `2188c72…` and is already
+present in the pre-VOC-117 source base `d4a8f5c…`. Its appearance in the caller
+base-to-head diff is stale-fixture reconciliation required by `VOC-117-D05`, not a
+new VOC-117 publication-behavior decision.
+
 ## Validation commands
 
 | Command | Result | Notes |
