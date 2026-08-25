@@ -13,9 +13,9 @@ pin) contains exactly:
 
 - `implementer: cursor/composer-2.5`
 - `implementer_escalation: cursor/composer-2.5`
-- `planner: cursor/grok-4.6[fast=false]`
-- `reviewer: cursor/grok-4.6[fast=false]`
-- `reviewer_fast_retry: cursor/grok-4.6[fast=false]`
+- `planner: cursor/grok-4.6[effort=high,fast=false]`
+- `reviewer: cursor/grok-4.6[effort=high,fast=false]`
+- `reviewer_fast_retry: cursor/grok-4.6[effort=high,fast=false]`
 - `plan_reviewer: cursor/grok-4.6[effort=high,fast=false]`
 
 No OpenAI/Codex planner or escalation binding is restored as the active mapping.
@@ -41,8 +41,9 @@ bindings and invoke Cursor without stripping or ignoring the requested `fast=fal
 - Result: pending
 
 Deterministic workflow tests prove `reviewer`, `reviewer_fast_retry`, and
-`plan_reviewer` select the Grok 4.6 Standard (non-fast) Cursor form derived from
-their stored bindings, with `plan_reviewer` retaining `effort=high`.
+`plan_reviewer` select the effort-qualified Grok 4.6 Standard (non-fast) Cursor
+form derived from their stored bindings. The proven-unavailable effort-omitted
+form fails closed before invocation.
 
 ## VOC-117-AC-03 — Missing credentials or unsupported prefixes fail closed
 

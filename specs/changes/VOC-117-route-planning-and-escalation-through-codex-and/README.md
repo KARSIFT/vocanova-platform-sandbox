@@ -5,13 +5,13 @@
 | Package | `VOC-117` |
 | Title | Route planning and review through Cursor Grok 4.6 Standard and align implementer escalation |
 | Path | `specs/changes/VOC-117-route-planning-and-escalation-through-codex-and` |
-| Status | `draft` |
-| Risk | `R4` (draft proposal; AI role bindings, workflow model routing, and mirrored governance fixtures) |
+| Status | `adopted` |
+| Risk | `R4` (AI role bindings, workflow model routing, and mirrored governance fixtures) |
 | Authority model | A-004 active |
 | Requirement source | GitHub issue [#978](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/978), superseded by the 2026-08-24 comment |
 | Target branch | `develop` |
-| Approval | `not-approved` |
-| Implementation authorized | `false` |
+| Approval | adopted by plan PR [#979](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/979) |
+| Implementation authorized | `true` via task issue [#980](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/980) |
 | `automatic_merge_allowed` | `true` (per AGENTS.md A-004 drafting rule) |
 
 ## Problem
@@ -28,7 +28,7 @@ effort) parameters on Grok 4.6.
 1. Persist the six authoritative role bindings from the superseding comment in
    `KARSIFT/karsift-ai-infra/config/roles.yml`.
 2. Make plan/implement/review/plan-review workflows compatible with parameterized
-   Cursor model strings such as `grok-4.6[fast=false]` without silent vendor/model
+   Cursor model strings such as `grok-4.6[effort=high,fast=false]` without silent vendor/model
    fallback.
 3. Keep authentication fail-closed: Cursor paths require `CURSOR_API_KEY`; never
    print credentials; do not require or introduce an OpenAI execution path.
@@ -44,9 +44,9 @@ effort) parameters on Grok 4.6.
 |------|----------------|
 | `implementer` | `cursor/composer-2.5` |
 | `implementer_escalation` | `cursor/composer-2.5` |
-| `planner` | `cursor/grok-4.6[fast=false]` |
-| `reviewer` | `cursor/grok-4.6[fast=false]` |
-| `reviewer_fast_retry` | `cursor/grok-4.6[fast=false]` |
+| `planner` | `cursor/grok-4.6[effort=high,fast=false]` |
+| `reviewer` | `cursor/grok-4.6[effort=high,fast=false]` |
+| `reviewer_fast_retry` | `cursor/grok-4.6[effort=high,fast=false]` |
 | `plan_reviewer` | `cursor/grok-4.6[effort=high,fast=false]` |
 
 ## Tasks
@@ -61,12 +61,11 @@ See `tasks.md` for the full task definition.
 
 See `test-plan.md`, `implementation-plan.md`, and `release-plan.md`.
 Under **active A-004**, engineering-workflow gates do not wait on a founder
-`approved` comment, but this draft itself carries no adoption or implementation
-authority.
+`approved` comment. Plan PR #979 and task issue #980 carry the adopted package and
+implementation authority for this single task.
 
 ## Risk note
 
-This package **proposes R4** because it changes protected AI model routing and
+This package is **R4** because it changes protected AI model routing and
 `tooling/governance/` fixtures/workflows. The path-based classifier and
-independent verifier remain authoritative; this draft proposal is not a
-determination.
+independent verifier remain authoritative.

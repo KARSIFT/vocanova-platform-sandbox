@@ -4,16 +4,17 @@
 
 Update the governed AI role lineup as one coherent model-routing change. Use Cursor
 Composer 2.5 for implementer and implementer escalation, and use Cursor Grok 4.6
-Standard (`fast=false`) for planner and review roles, with plan reviewer also pinning
-`effort=high`.
+Standard (`fast=false`) for planner and review roles, with explicit `effort=high`
+on every Grok 4.6 binding because live Cursor CLI discovery proved the
+effort-omitted identifier unavailable.
 
 **Requirement source:** [GitHub issue #978](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/978),
 as superseded by the comment from `m-e-h-r-d-a-a-d` at `2026-08-24T22:04:19Z`. That
 comment supersedes the original OpenAI/Codex mappings and removes any
 `OPENAI_API_KEY` / OpenAI execution-path requirement.
 
-**This draft package does not adopt or authorize itself**; adoption remains a
-separate A-004-governed decision.
+Plan PR #979 adopted this package under A-004; task issue #980 separately carries
+implementation authority for the single task.
 
 ## Scope and non-goals
 
@@ -53,7 +54,7 @@ separate A-004-governed decision.
 
 ## Risk and protected areas
 
-- **Draft package proposal:** **R4**.
+- **Adopted risk:** **R4**.
 - Protected areas: AI provider/model routing; CI/CD workflows; repository
   governance fixtures under `tooling/governance/`; shared infra role config.
 - Protected technical effect: which model occupies each pipeline role and how
@@ -72,14 +73,16 @@ separate A-004-governed decision.
 |------|----------------|
 | `implementer` | `cursor/composer-2.5` |
 | `implementer_escalation` | `cursor/composer-2.5` |
-| `planner` | `cursor/grok-4.6[fast=false]` |
-| `reviewer` | `cursor/grok-4.6[fast=false]` |
-| `reviewer_fast_retry` | `cursor/grok-4.6[fast=false]` |
+| `planner` | `cursor/grok-4.6[effort=high,fast=false]` |
+| `reviewer` | `cursor/grok-4.6[effort=high,fast=false]` |
+| `reviewer_fast_retry` | `cursor/grok-4.6[effort=high,fast=false]` |
 | `plan_reviewer` | `cursor/grok-4.6[effort=high,fast=false]` |
 
 `composer2.5` spelling from informal requests normalizes to Cursor model ID
-`composer-2.5`. `grok-4.6` is the model ID; Standard is the non-Fast speed tier;
-`high` is Grok 4.6's default effort and is made explicit for `plan_reviewer`.
+`composer-2.5`. `grok-4.6` is the model ID; Standard is the non-Fast speed tier.
+Live Cursor CLI model discovery and direct invocation established that the
+effort-qualified high/non-Fast identifier works while
+`grok-4.6[fast=false]` is unavailable, so `high` is explicit for every Grok role.
 
 `VOC-117-D01`: The superseding issue comment replaces the original OpenAI/Codex
 objective. This package must not require `OPENAI_API_KEY`, must not route planner
@@ -88,7 +91,7 @@ acceptance criteria from the superseded issue body.
 
 `VOC-117-D02`: Workflows must accept the parameterized stored strings. After any
 vendor-prefix handling, the invoked Cursor model must preserve the requested
-Standard/non-fast behavior and, for `plan_reviewer`, `effort=high`. If the pinned
+Standard/non-fast behavior and explicit `effort=high`. If the pinned
 CLI requires an equivalent supported form, convert deterministically; do not
 silently substitute a different vendor, model family, or speed/effort tier.
 
@@ -131,18 +134,19 @@ Abuse/process risks:
 
 ## Contradictions and open questions
 
-1. **Parameterized CLI mechanics (`VOC-117-DEP-02`):** Cursor docs identify
-   `grok-4.6` plus effort/speed parameters; community evidence suggests bracket
-   forms are not always honored identically by every CLI surface. Implementation
-   must verify against the pinned Cursor CLI and record the exact compatible form
-   used, without changing the authoritative *stored* bindings in `roles.yml`.
+1. **Parameterized CLI mechanics (`VOC-117-DEP-02`, resolved):** Live Cursor CLI
+   discovery and direct invocation proved
+   `grok-4.6[effort=high,fast=false]` succeeds while
+   `grok-4.6[fast=false]` is unavailable. The authoritative stored bindings now
+   use the working effort-qualified form without changing model family or speed.
 2. **Same-model escalation:** `implementer` and `implementer_escalation` are
    identical by request. Historical escalation philosophy preferred a different
    lab; this package deliberately does not restore that.
-3. **Planner vs plan_reviewer independence:** both use `grok-4.6`; plan reviewer
-   adds `effort=high`. Cross-family independence from implementer is preserved;
-   full cross-model independence between planner and plan_reviewer is not.
+3. **Planner vs plan_reviewer independence:** both use the same explicit-high
+   non-Fast `grok-4.6` form. Cross-family independence from implementer is
+   preserved; full cross-model independence between planner and plan_reviewer is
+   not.
 4. **Package path slug:** the directory retains the workflow-assigned
    `...-through-codex-and` slug even though OpenAI/Codex is out of scope. Do not
-   rename the package path in this draft; treat the title/specification wording as
-   the current-state description.
+   rename the adopted package path; treat the title/specification wording as the
+   current-state description.

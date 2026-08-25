@@ -10,9 +10,8 @@ planned_implementation_risk_floor: 'R4. This package changes authoritative AI ro
   bindings in KARSIFT/karsift-ai-infra/config/roles.yml, workflow model-string handling
   for parameterized Cursor IDs, mirrored caller fixtures under tooling/governance/,
   and current-state workflow/docs comments that describe active model routing. tooling/governance/*
-  is an R4 path floor; AI model routing is a protected area. This is a draft proposal
-  for human adoption review, not a determination; the path classifier and independent
-  verifier remain authoritative.
+  is an R4 path floor; AI model routing is a protected area. The path classifier
+  and independent verifier remain authoritative.
 
   '
 canonical_path: specs/changes/VOC-117-route-planning-and-escalation-through-codex-and
@@ -23,8 +22,8 @@ requirement_source: 'GitHub issue #978 (Route planning and escalation through Co
   OPENAI_API_KEY or OpenAI/Codex execution path; store Cursor-parameterized bindings
   for planner/review roles; keep implementer and implementer_escalation on cursor/composer-2.5;
   one plan and one end-to-end task covering roles, parameterized-model workflow compatibility,
-  tests, current-state docs/comments, caller fixture/pin, and validation. This draft
-  package does not adopt or authorize itself.
+  tests, current-state docs/comments, caller fixture/pin, and validation. Plan PR
+  #979 adopted the package and task issue #980 authorizes this implementation.
 
   '
 requirement_approval_status: approved requirement; package adopted automatically after
@@ -72,12 +71,12 @@ dependencies:
 
     '
 - id: VOC-117-DEP-02
-  status: 'unresolved until implementation. Workflows currently strip a `cursor/`
-    prefix and pass the remainder to Cursor CLI `--model`. Implementation must make
-    parameterized stored values such as `grok-4.6[fast=false]` and `grok-4.6[effort=high,fast=false]`
-    compatible with the pinned Cursor CLI without silent fallback to another vendor
-    or model. Exact CLI flag/slug mechanics are an implementer verification detail,
-    not a package authority to invent alternate bindings.
+  status: 'resolved during implementation. Live Cursor CLI discovery and direct
+    invocation proved `grok-4.6[effort=high,fast=false]` works and the effort-omitted
+    Grok 4.6 form is unavailable. Source PR KARSIFT/karsift-ai-infra#155 made high
+    effort explicit for every Grok role, retained `fast=false`, and fails closed
+    before invocation when Grok 4.6 effort is missing. No alternate vendor, model
+    family, or speed tier was substituted.
 
     '
 - id: VOC-117-DEP-03
@@ -90,8 +89,8 @@ dependencies:
 - id: VOC-117-DEP-04
   status: 'resolved at drafting time as an accepted tradeoff of the superseding mapping:
     `planner`, `reviewer`, `reviewer_fast_retry`, and `plan_reviewer` all use the
-    `grok-4.6` model ID with explicit Standard/non-fast parameters; `plan_reviewer`
-    additionally pins `effort=high`. Cross-family independence from implementer (Composer)
+    `grok-4.6` model ID with explicit high-effort Standard/non-fast parameters.
+    Cross-family independence from implementer (Composer)
     is preserved; planner vs plan_reviewer independence is parameter-level within
     the same model ID by request.
 
@@ -119,7 +118,7 @@ implementation:
   required: true
   status: authorized
   target_branch: develop
-  pull_request: null
+  pull_request: 982
   authority_issue: 980
 release:
   required: true

@@ -14,11 +14,12 @@
 - Covers: `VOC-117-AC-01`
 - Preconditions: updated `plan.yml` (and any shared model-parse helper)
 - Procedure: Workflow/fixture tests resolve `planner` and assert the Cursor invocation
-  receives the Standard/non-fast form derived from `cursor/grok-4.6[fast=false]`
+  receives the Standard/non-fast form derived from
+  `cursor/grok-4.6[effort=high,fast=false]`
   without silent vendor/model fallback.
-- Expected result: planner routes through Cursor with bare `grok-4.6` plus the
-  requested non-fast semantics (or the verified equivalent supported CLI form), not
-  through OpenAI/Codex.
+- Expected result: planner routes through Cursor with exact CLI model
+  `grok-4.6[effort=high,fast=false]`, not through OpenAI/Codex; the
+  effort-omitted form fails closed.
 - Evidence: `VOC-117-EV-00`
 
 ## VOC-117-TEST-02 — Reviewer, fast retry, and plan reviewer use Grok 4.6 Standard
@@ -26,10 +27,11 @@
 - Covers: `VOC-117-AC-01`, `VOC-117-AC-02`
 - Preconditions: updated `review.yml` and `plan-review.yml`
 - Procedure: Workflow/fixture tests resolve `reviewer`, `reviewer_fast_retry`, and
-  `plan_reviewer` and assert Cursor invocation uses the Standard/non-fast Grok 4.6
-  form; `plan_reviewer` retains `effort=high`.
-- Expected result: all three review-side roles use Cursor Grok 4.6 Standard; plan
-  reviewer keeps high effort; no silent remapping to a different model family.
+  `plan_reviewer` and assert Cursor invocation uses the explicit-high
+  Standard/non-fast Grok 4.6 form.
+- Expected result: all three review-side roles use exact CLI model
+  `grok-4.6[effort=high,fast=false]`; no silent remapping to a different model
+  family, effort, or speed tier.
 - Evidence: `VOC-117-EV-00`
 
 ## VOC-117-TEST-03 — Missing credentials and unsupported prefixes fail closed

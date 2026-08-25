@@ -35,10 +35,11 @@ user-interface accessibility effect.
   implementer, and planner/plan_reviewer share `grok-4.6`. Accepted by
   `VOC-117-D00` / `VOC-117-DEP-03` / `VOC-117-DEP-04`. Implementer vs reviewer
   remain distinct (`composer-2.5` vs `grok-4.6`).
-- `VOC-117-R03`: **Medium operational risk** if the pinned Cursor CLI does not honor
-  bracket parameters identically to IDE/docs. Mitigation: implementer verifies
-  against the pinned CLI and records the compatible invocation form without
-  changing stored `roles.yml` bindings (`VOC-117-DEP-02`).
+- `VOC-117-R03`: **Medium operational risk** if the Cursor CLI does not honor
+  configured bracket parameters. Live discovery and invocation resolved this by
+  proving explicit-high non-Fast Grok succeeds and the effort-omitted form is
+  unavailable; deterministic preparation now rejects the latter without fallback
+  (`VOC-117-DEP-02`).
 - `VOC-117-R04`: **Low release risk** because no application runtime deployment
   change is intended; rollback is config/workflow/fixture reversion.
 - Protected surfaces: `KARSIFT/karsift-ai-infra/config/roles.yml`, plan/implement/
@@ -57,6 +58,6 @@ user-interface accessibility effect.
 Active authority model: **A-004**. No founder `approved` comment is required for
 engineering-workflow adopt/merge/release gates. EHR is not triggered.
 
-This draft proposes **R4** because it changes protected AI model routing and
-governance fixtures/workflows, but the path classifier and independent verifier
-remain authoritative.
+This adopted package is **R4** because it changes protected AI model routing and
+governance fixtures/workflows. The path classifier and independent verifier remain
+authoritative.

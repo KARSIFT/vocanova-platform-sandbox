@@ -159,11 +159,13 @@ corrections from PRs #137 through #145 and the project-template correction that
 keeps Statuses write on release alone.
 
 VOC-117 advances the six active role bindings to Cursor Composer 2.5
-(implementer + escalation) and Grok 4.6 Standard with explicit bracket
-parameters (planner, reviewer, reviewer_fast_retry, plan_reviewer). Workflow
-routing uses `config/prepare_cursor_model.py` so stored values like
-`cursor/grok-4.6[fast=false]` reach the Cursor CLI without silent vendor/model
-fallback. Reviewer and plan-review terminal failures pass the structured Cursor
+(implementer + escalation) and explicit-high Grok 4.6 Standard with bracket
+parameters (planner, reviewer, reviewer_fast_retry, plan_reviewer). Live Cursor
+CLI model discovery proved the effort-omitted identifier unavailable, so
+`config/prepare_cursor_model.py` passes stored values like
+`cursor/grok-4.6[effort=high,fast=false]` to the Cursor CLI without silent
+vendor/model fallback and rejects Grok 4.6 forms that omit effort. Reviewer and
+plan-review terminal failures pass the structured Cursor
 response through `config/extract-cursor-result.py`, which writes only a strict
 schema-v1 failure artifact containing an allowlisted reason and regex-bounded
 subtype. The same-run artifact is retained for one day. Dedicated clean
@@ -175,10 +177,12 @@ an empty JSON response, the failed producer may inspect at most 64 KiB of local
 stderr and retain only an existing allowlisted reason code; missing, oversized,
 or unrecognized text remains `unspecified` and never enters the artifact. The
 exact Cursor phrase `API key is invalid` maps to `authentication`, while
-negative regressions reject unrelated API-key help prose.
+negative regressions reject unrelated API-key help prose. Cursor's bounded
+`Available models:` diagnostic is classified as an unavailable/invalid model
+without publishing the list or other raw output.
 `PINNED_SHA.txt` records exact
 reviewed karsift-ai-infra merge
-`2bc265805d0b8acfe812f12a01c930dd31e7fb89`; fixture file content in this
+`37b06aa95030e235b7311b3c14ee23977f62ac76`; fixture file content in this
 directory is synchronized to that merge in the same task.
 
 Recovery metadata reads and allowlisted

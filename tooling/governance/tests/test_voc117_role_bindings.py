@@ -16,9 +16,9 @@ from voc080_fixtures import FIXTURE_INFRA_ROOT, read_fixture
 VOC117_BINDINGS = {
     "implementer": "cursor/composer-2.5",
     "implementer_escalation": "cursor/composer-2.5",
-    "planner": "cursor/grok-4.6[fast=false]",
-    "reviewer": "cursor/grok-4.6[fast=false]",
-    "reviewer_fast_retry": "cursor/grok-4.6[fast=false]",
+    "planner": "cursor/grok-4.6[effort=high,fast=false]",
+    "reviewer": "cursor/grok-4.6[effort=high,fast=false]",
+    "reviewer_fast_retry": "cursor/grok-4.6[effort=high,fast=false]",
     "plan_reviewer": "cursor/grok-4.6[effort=high,fast=false]",
 }
 
@@ -56,9 +56,14 @@ class Voc117RoleBindingsFixtureTests(unittest.TestCase):
             self.assertIn("--require-api-key", workflow)
 
     def test_voc117_test_02_plan_reviewer_retains_high_effort(self):
-        cli = prepare_cursor_model(VOC117_BINDINGS["plan_reviewer"])
-        self.assertIn("effort=high", cli)
-        self.assertIn("fast=false", cli)
+        for role in ("planner", "reviewer", "reviewer_fast_retry", "plan_reviewer"):
+            with self.subTest(role=role):
+                cli = prepare_cursor_model(VOC117_BINDINGS[role])
+                self.assertEqual(cli, "grok-4.6[effort=high,fast=false]")
+
+        for unavailable in ("cursor/grok-4.6", "cursor/grok-4.6[fast=false]"):
+            with self.subTest(unavailable=unavailable), self.assertRaises(CursorModelError):
+                prepare_cursor_model(unavailable)
 
     def test_voc117_test_03_missing_api_key_fails_closed(self):
         env = os.environ.copy()
@@ -89,12 +94,13 @@ class Voc117RoleBindingsFixtureTests(unittest.TestCase):
 
     def test_voc117_test_05_fixture_pin_is_recorded(self):
         pin = (FIXTURE_INFRA_ROOT / "PINNED_SHA.txt").read_text(encoding="utf-8").strip()
-        self.assertEqual(pin, "2bc265805d0b8acfe812f12a01c930dd31e7fb89")
+        self.assertEqual(pin, "37b06aa95030e235b7311b3c14ee23977f62ac76")
 
     def test_voc117_test_06_cursor_failures_are_sanitized_and_classified(self):
         extractor = read_fixture("config/extract-cursor-result.py")
         self.assertIn('return "model_parameter_invalid"', extractor)
         self.assertIn('return "model_unavailable_or_invalid"', extractor)
+        self.assertIn('"available models:"', extractor)
         self.assertIn("Raw provider output is withheld.", extractor)
         for workflow in (self.review, self.plan_review):
             self.assertIn("extract-cursor-result.py", workflow)
