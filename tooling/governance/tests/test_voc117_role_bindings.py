@@ -87,15 +87,16 @@ class Voc117RoleBindingsFixtureTests(unittest.TestCase):
 
     def test_voc117_test_05_fixture_pin_is_recorded(self):
         pin = (FIXTURE_INFRA_ROOT / "PINNED_SHA.txt").read_text(encoding="utf-8").strip()
-        self.assertEqual(pin, "42aa66757a521b1187193fba17b74e440964c27f")
+        self.assertEqual(pin, "12e5cd65159b5315b7e618facb251e0324dcfbb5")
 
     def test_voc117_test_06_cursor_failures_are_sanitized_and_classified(self):
         extractor = read_fixture("config/extract-cursor-result.py")
         self.assertIn('return "model_parameter_invalid"', extractor)
         self.assertIn('return "model_unavailable_or_invalid"', extractor)
+        self.assertIn("Raw provider output is withheld.", extractor)
         for workflow in (self.review, self.plan_review):
             self.assertIn("extract-cursor-result.py", workflow)
-            self.assertIn("raw provider output is withheld", workflow)
+            self.assertIn("--github-annotation", workflow)
             self.assertNotIn("cat /tmp/cursor-stderr.log", workflow)
 
 

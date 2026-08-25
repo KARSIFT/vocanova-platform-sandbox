@@ -71,12 +71,12 @@ the stored binding shape without silent vendor/model substitution.
 | Item | Value |
 |------|-------|
 | Governed Cursor implementation | caller run `32783787908`, job `97612143209` (`cursor-agent`, attempt 1) |
-| Authoritative infra PRs | `KARSIFT/karsift-ai-infra#147`, diagnostic hardening `#148` |
-| Independently reviewed infra heads | `d6ac23f70a10299e73629f257e275854525d15c8`, `9457233e5b2e2fb03674ef963d89ac4767596a4f` |
-| Infra merge commits | initial `27a44b298f1c234a94e02127eaeb55d66b28e30d`; authoritative current `42aa66757a521b1187193fba17b74e440964c27f` |
+| Authoritative infra PRs | `KARSIFT/karsift-ai-infra#147`, diagnostic classification `#148`, structured diagnostic publication `#149` |
+| Independently reviewed infra heads | `d6ac23f70a10299e73629f257e275854525d15c8`, `9457233e5b2e2fb03674ef963d89ac4767596a4f`, `e7f3804e41658bf45acc5f580134dd76a4a6ea3c` |
+| Infra merge commits | initial `27a44b298f1c234a94e02127eaeb55d66b28e30d`; classification `42aa66757a521b1187193fba17b74e440964c27f`; authoritative current `12e5cd65159b5315b7e618facb251e0324dcfbb5` |
 | Caller fixture directory | `tooling/governance/fixtures/karsift-ai-infra/` |
 | Prior pin | `c5d8bccfa8676bd367b53ad5f6f9a51a40c99405` |
-| New pin | `42aa66757a521b1187193fba17b74e440964c27f` |
+| New pin | `12e5cd65159b5315b7e618facb251e0324dcfbb5` |
 
 The first governed Cursor attempt produced the caller-side source projection but
 correctly left the prior pin in place while no authoritative source merge existed.
@@ -89,20 +89,26 @@ reviewer invocation then exposed a diagnostic defect: terminal Cursor applicatio
 errors were withheld without a safe reason code. The same T00 authority produced
 independently reviewed infra PR #148. Its exact merge `42aa667…` preserves the six
 bindings and retry controls while adding bounded error classification. This caller
-revision mirrors that authoritative current source and advances the pin to the exact
-follow-up merge.
+revision initially mirrored that source. Live runs then proved the classification
+remained inside the failed job and was absent from structured check metadata. The
+same T00 authority produced infra PR #149, independently reviewed at exact head
+`e7f3804…` and merged as `12e5cd6…`. It publishes only the bounded allowlisted
+diagnostic as a check annotation, keeps raw provider output withheld, and preserves
+the role mappings, bracket parameters, exact-SHA binding, protected checks, and
+retry limits. The caller mirror and pin now use that exact authoritative merge.
 
 ## Validation commands
 
 | Command | Result | Notes |
 |---------|--------|-------|
 | `python3 -m unittest tests.test_voc117_role_bindings -v` in `karsift-ai-infra` | pass | 7 VOC-117 regressions on source head `d6ac23f…` |
-| `python3 -m unittest discover -s tests -p 'test_*.py'` in `karsift-ai-infra` | pass | 275 tests on follow-up source head `9457233…` |
+| `python3 -m unittest discover -s tests -p 'test_*.py'` in `karsift-ai-infra` | pass | 277 tests on authoritative merge `12e5cd6…` |
 | `bash scripts/governance/validate-governance.sh` | pass | Repository foundation + monitoring declarations |
 | `bash scripts/governance/classify-change-risk.sh` | pass | Detected path floor `R4` |
 | `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pass | 168 tests after exact-pin and diagnostic reconciliation |
 | `python3 -m unittest discover -s tooling/governance/tests -p 'test_voc117*.py'` | pass | 8 deterministic tests (also included in the full 168-test run) |
-| `node --test scripts/foundation/voc097-fixture-matrix.test.mjs scripts/foundation/voc104-ready-for-review-reuse.test.mjs scripts/foundation/voc108-authoritative-lifecycle.test.mjs` | pass | 16 tests after pin advance to `42aa667…` |
+| `node --test scripts/foundation/voc097-fixture-matrix.test.mjs scripts/foundation/voc104-ready-for-review-reuse.test.mjs scripts/foundation/voc108-authoritative-lifecycle.test.mjs` | pass | 16 tests after pin advance to `12e5cd6…` |
+| Independent Claude Code exact-revision review of infra PR #149 | pass | `VERDICT: PASS` on `e7f3804…`; no findings after error-response, I/O-failure, and combined-flag coverage |
 | `bash karsift-ai-infra/config/run-app-checks.sh` on caller head `e75c5ce…` | pass | Governed attempt-2 pre-push deterministic CI |
 | `bash karsift-ai-infra/config/run-app-checks.sh` after pinning `42aa667…` | environment-limited locally | Format, lint, typecheck, 338 foundation tests, API-client tests, middleware tests, web build, and API build passed; two controlled-signup API tests could not start because Docker is unavailable in this WSL environment. Hosted CI remains authoritative for those Docker-backed tests. |
 | `git diff --check` | pass | No whitespace or patch-format errors |

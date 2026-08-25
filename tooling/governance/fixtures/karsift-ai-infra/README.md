@@ -165,9 +165,10 @@ routing uses `config/prepare_cursor_model.py` so stored values like
 `cursor/grok-4.6[fast=false]` reach the Cursor CLI without silent vendor/model
 fallback. Reviewer and plan-review terminal failures pass the structured Cursor
 response through `config/extract-cursor-result.py`, which emits only bounded
-reason codes and withholds raw provider output. `PINNED_SHA.txt` records exact
+reason codes as structured check annotations and withholds raw provider output.
+`PINNED_SHA.txt` records exact
 reviewed karsift-ai-infra merge
-`42aa66757a521b1187193fba17b74e440964c27f`; fixture file content in this
+`12e5cd65159b5315b7e618facb251e0324dcfbb5`; fixture file content in this
 directory is synchronized to that merge in the same task. Recovery metadata reads and allowlisted
 dispatches use narrowly job-scoped `GITHUB_TOKEN` permissions: Actions write plus
 Checks, Commit statuses, Contents, and Pull requests read. App tokens remain
