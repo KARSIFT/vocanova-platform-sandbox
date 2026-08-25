@@ -50,7 +50,7 @@ class ReleasePolicyTests(unittest.TestCase):
         self.assertIn("--match-head-commit \"$CHECKED_HEAD_SHA\"", self.release)
         self.assertIn('headRefOid <<<"$live")" != "$CHECKED_HEAD_SHA', self.release)
         self.assertNotIn("statusCheckRollup", self.release)
-        self.assertNotIn("gh pr checks", self.release)
+        self.assertIn("gh pr checks \"$PR_NUMBER\" --required", self.release)
 
     def test_ruleset_attestation_is_narrow_and_precedes_merge(self):
         self.assertIn("statuses: write", self.release)
@@ -62,6 +62,15 @@ class ReleasePolicyTests(unittest.TestCase):
         self.assertLess(attest, merge)
         self.assertIn("GH_TOKEN: ${{ github.token }}", self.release[attest:merge])
         self.assertIn("steps.app-token.outputs.token", self.release[merge:])
+
+    def test_promotion_preserves_long_lived_integration_branch(self):
+        merge = self.release.index("Perform the single exact-head merge decision")
+        close = self.release.index('gh issue close "$RELEASE_ISSUE"', merge)
+        preservation = self.release[merge:close]
+        self.assertIn("git/ref/heads/${{ inputs.integration_branch }}", preservation)
+        self.assertIn('ref="refs/heads/${{ inputs.integration_branch }}"', preservation)
+        self.assertIn('-f sha="$CHECKED_HEAD_SHA"', preservation)
+        self.assertIn("Never rewind a branch that advanced concurrently", preservation)
 
 
 if __name__ == "__main__":

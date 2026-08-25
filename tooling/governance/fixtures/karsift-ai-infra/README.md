@@ -206,3 +206,11 @@ operator dispatch without accepting a free-form target SHA, closing the
 default-branch schedule bootstrap gap encountered during the live proof.
 Its paginated commit query pipes slurped pages to standalone `jq`, avoiding the
 GitHub CLI's invalid `--slurp` plus `--jq` combination.
+
+VOC-121 (coordinated infrastructure carrier publication and required-check
+recovery) advances implementer helper preservation, isolated `publish-source`
+for authorized nested `karsift-ai-infra/` edits, and promotion recovery that
+consult `gh pr checks --required` so cancelled exact-head required check-runs
+are not treated as satisfied by alternate successful runs or same-named
+statuses when GitHub still reports failure. Status attestation cannot override
+a ruleset-selected cancelled or failed required check-run.

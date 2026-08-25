@@ -84,6 +84,7 @@ class PromotionStatusAttestationTests(unittest.TestCase):
         repository = "KARSIFT/example"
 
         def completed(command, **kwargs):
+            joined = " ".join(command)
             result = mock.Mock(returncode=0, stderr="")
             if command[-1] == f"repos/{repository}/pulls/947":
                 result.stdout = json.dumps(
@@ -92,6 +93,14 @@ class PromotionStatusAttestationTests(unittest.TestCase):
                         "state": "open",
                         "head": {"sha": head_sha, "ref": "develop"},
                     }
+                )
+            elif joined.startswith("gh pr checks"):
+                result.stdout = json.dumps(
+                    [
+                        {"name": "governance-policy", "state": "SUCCESS"},
+                        {"name": "validate", "state": "SUCCESS"},
+                        {"name": "ci / ci", "state": "SUCCESS"},
+                    ]
                 )
             else:
                 result.stdout = "{}"

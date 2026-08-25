@@ -75,7 +75,33 @@ def main() -> int:
         if not expected_url.fullmatch(args.target_url):
             raise RunnerError("invalid_target_url")
         summary = json.loads(Path(args.authoritative_file).read_text(encoding="utf-8"))
-        contexts = attestable_contexts(summary)
+        pr_required_checks = None
+        if args.github_token:
+            env = os.environ.copy()
+            env["GH_TOKEN"] = args.github_token
+            env["GH_REPO"] = args.repository
+            completed = subprocess.run(
+                [
+                    "gh",
+                    "pr",
+                    "checks",
+                    str(args.pr_number),
+                    "--required",
+                    "--json",
+                    "name,state",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                env=env,
+            )
+            if completed.returncode == 0:
+                from required_check_satisfaction import parse_gh_pr_checks_json
+
+                pr_required_checks = parse_gh_pr_checks_json(
+                    json.loads(completed.stdout or "[]")
+                )
+        contexts = attestable_contexts(summary, pr_required_checks=pr_required_checks)
         pull_request = gh_api(
             args.github_token,
             args.repository,
