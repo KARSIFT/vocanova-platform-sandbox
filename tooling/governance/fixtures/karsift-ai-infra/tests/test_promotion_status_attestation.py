@@ -147,6 +147,54 @@ class PromotionStatusAttestationTests(unittest.TestCase):
             all(call.kwargs["env"]["GH_TOKEN"] == "job-token" for call in posts)
         )
 
+    def test_runner_fails_closed_when_required_pr_checks_probe_fails(self):
+        head_sha = "a" * 40
+        repository = "KARSIFT/example"
+
+        def completed(command, **kwargs):
+            joined = " ".join(command)
+            result = mock.Mock(returncode=0, stderr="")
+            if joined.startswith("gh pr checks"):
+                result.returncode = 1
+                result.stdout = ""
+                result.stderr = "probe failed"
+            elif command[-1] == f"repos/{repository}/pulls/947":
+                result.stdout = json.dumps(
+                    {
+                        "number": 947,
+                        "state": "open",
+                        "head": {"sha": head_sha, "ref": "develop"},
+                    }
+                )
+            else:
+                result.stdout = "{}"
+            return result
+
+        with tempfile.TemporaryDirectory() as directory:
+            evidence = Path(directory) / "authoritative.json"
+            evidence.write_text(json.dumps(summary()), encoding="utf-8")
+            argv = [
+                "promotion-status-attestation-runner.py",
+                "--authoritative-file",
+                str(evidence),
+                "--repository",
+                repository,
+                "--pr-number",
+                "947",
+                "--head-sha",
+                head_sha,
+                "--branch-ref",
+                "develop",
+                "--target-url",
+                f"https://github.com/{repository}/actions/runs/123",
+                "--github-token",
+                "job-token",
+            ]
+            with mock.patch.object(sys, "argv", argv), mock.patch.object(
+                runner.subprocess, "run", side_effect=completed
+            ):
+                self.assertEqual(runner.main(), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

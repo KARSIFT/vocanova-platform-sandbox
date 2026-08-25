@@ -21,6 +21,21 @@ def nested_worktree_has_changes(status_porcelain: str) -> bool:
     return bool(status_porcelain.strip())
 
 
+def nested_worktree_has_source_changes(
+    *,
+    head_sha: str,
+    base_sha: str,
+    status_porcelain: str,
+) -> bool:
+    """Detect authorized nested edits including commits the implementer already made."""
+
+    if nested_worktree_has_changes(status_porcelain):
+        return True
+    if not SHA_RE.fullmatch(head_sha) or not SHA_RE.fullmatch(base_sha):
+        return False
+    return head_sha.lower() != base_sha.lower()
+
+
 def validate_publication_metadata(
     *,
     branch: str,

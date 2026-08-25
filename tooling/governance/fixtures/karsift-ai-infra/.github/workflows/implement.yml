@@ -868,14 +868,17 @@ jobs:
           cp karsift-ai-infra/config/run-app-checks.sh /tmp/run-app-checks.sh
           cp karsift-ai-infra/config/prepare_cursor_model.py "$HELPER_DIR/prepare_cursor_model.py"
 
+          SOURCE_BASE_SHA="${{ steps.infra-checkout.outputs.base_sha }}"
           if [ -n "$(git -C karsift-ai-infra status --porcelain)" ]; then
             git -C karsift-ai-infra config user.name "karsift-ai-infra-bot"
             git -C karsift-ai-infra config user.email "actions@users.noreply.github.com"
             git -C karsift-ai-infra add -A
             git -C karsift-ai-infra commit -m "${{ inputs.change_id }}: ${{ inputs.task_id }} coordinated source carrier (attempt ${{ inputs.attempt }})"
-            SOURCE_HEAD_SHA=$(git -C karsift-ai-infra rev-parse HEAD)
+          fi
+          SOURCE_HEAD_SHA=$(git -C karsift-ai-infra rev-parse HEAD)
+          if [ "$SOURCE_HEAD_SHA" != "$SOURCE_BASE_SHA" ]; then
             git -C karsift-ai-infra bundle create /tmp/implementer-source.bundle \
-              "${{ steps.infra-checkout.outputs.base_sha }}..$SOURCE_HEAD_SHA"
+              "$SOURCE_BASE_SHA"..HEAD
             echo "has_source_changes=true" >> "$GITHUB_OUTPUT"
             echo "source_head_sha=$SOURCE_HEAD_SHA" >> "$GITHUB_OUTPUT"
           else

@@ -180,10 +180,12 @@ exact Cursor phrase `API key is invalid` maps to `authentication`, while
 negative regressions reject unrelated API-key help prose. Cursor's bounded
 `Available models:` diagnostic is classified as an unavailable/invalid model
 without publishing the list or other raw output.
-`PINNED_SHA.txt` records exact
-reviewed karsift-ai-infra merge
-`37b06aa95030e235b7311b3c14ee23977f62ac76`; fixture file content in this
-directory is synchronized to that merge in the same task.
+`PINNED_SHA.txt` records the exact reviewed karsift-ai-infra merge consumed by
+this fixture. VOC-121-T00 updates fixture content ahead of the coordinated
+infrastructure merge; the pin is updated to the exact reviewed infra merge SHA
+in the same task once that carrier merges (`VOC-121-D10` bootstrap). Until
+then, `PINNED_SHA.txt` remains at the prior merge
+`37b06aa95030e235b7311b3c14ee23977f62ac76`.
 
 Recovery metadata reads and allowlisted
 dispatches use narrowly job-scoped `GITHUB_TOKEN` permissions: Actions write plus

@@ -29,6 +29,14 @@ class Voc121ImplementFixtureTests(unittest.TestCase):
             self.readme,
         )
 
+    def test_fixture_readme_does_not_claim_false_pin_sync(self):
+        self.assertIn("VOC-121-D10", self.readme)
+        self.assertIn("PINNED_SHA.txt` remains", self.readme)
+        self.assertNotIn(
+            "fixture file content in this directory is synchronized to that merge",
+            self.readme,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

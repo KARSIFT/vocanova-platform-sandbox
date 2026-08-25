@@ -16,6 +16,7 @@ from implementer_source_carrier import (  # noqa: E402
     CarrierError,
     build_source_pr_body,
     nested_worktree_has_changes,
+    nested_worktree_has_source_changes,
     validate_no_gitlink_paths,
 )
 from prepare_cursor_model import CursorModelError, prepare_cursor_model  # noqa: E402
@@ -32,6 +33,7 @@ class Voc121ImplementPolicyTests(unittest.TestCase):
 
     def test_workflow_bundles_nested_edits_before_removal(self):
         self.assertIn("git -C karsift-ai-infra bundle create /tmp/implementer-source.bundle", WORKFLOW)
+        self.assertIn('if [ "$SOURCE_HEAD_SHA" != "$SOURCE_BASE_SHA" ]; then', WORKFLOW)
         self.assertIn("has_source_changes=true", WORKFLOW)
         self.assertIn("publish-source:", WORKFLOW)
 
@@ -86,8 +88,31 @@ class Voc121ImplementPolicyTests(unittest.TestCase):
             prepare_cursor_model("opencode-go/foo")
 
     def test_nested_change_detection(self):
+        base_sha = "a" * 40
+        head_sha = "b" * 40
         self.assertTrue(nested_worktree_has_changes(" M config/foo.py\n"))
         self.assertFalse(nested_worktree_has_changes(""))
+        self.assertTrue(
+            nested_worktree_has_source_changes(
+                head_sha=head_sha,
+                base_sha=base_sha,
+                status_porcelain="",
+            )
+        )
+        self.assertFalse(
+            nested_worktree_has_source_changes(
+                head_sha=base_sha,
+                base_sha=base_sha,
+                status_porcelain="",
+            )
+        )
+        self.assertTrue(
+            nested_worktree_has_source_changes(
+                head_sha=base_sha,
+                base_sha=base_sha,
+                status_porcelain=" M config/foo.py\n",
+            )
+        )
 
     def tearDown(self):
         if hasattr(self, "_scratch"):
