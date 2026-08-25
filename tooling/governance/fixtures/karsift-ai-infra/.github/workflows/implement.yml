@@ -111,6 +111,7 @@ jobs:
       head_sha: ${{ steps.bundle.outputs.head_sha }}
       source_head_sha: ${{ steps.commit.outputs.source_head_sha }}
       source_integration_sha: ${{ steps.infra-checkout.outputs.base_sha }}
+      source_expected_head_sha: ${{ steps.source-branch.outputs.expected_head_sha }}
       risk: ${{ steps.package.outputs.risk }}
     concurrency:
       # One implementer at a time per adopted package. A queued manual
@@ -181,8 +182,9 @@ jobs:
 
           # Surface the package's own declared risk so "Open PR" can put a
           # real "Risk classification: R#" line in the PR body automatically -
-          # merge-gate.yml fails closed (requires founder approval) without
-          # one, so leaving this to be added by hand is a gap, not a feature.
+          # merge-gate.yml fails closed without one, so leaving this to be added
+          # by hand is a gap, not a feature. Under active A-004 this is a
+          # deterministic risk/evidence gate, not a founder-comment gate.
           risk = str(data.get("risk", "")).upper()
           with open(github_output, "a") as f:
               f.write(f"risk={risk}\n")
@@ -344,6 +346,46 @@ jobs:
           integration_sha=$(git rev-parse "origin/${{ inputs.integration_branch }}")
           echo "integration_sha=$integration_sha" >> "$GITHUB_OUTPUT"
           echo "base_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Bind nested infrastructure carrier to its exact remote head
+        id: source-branch
+        env:
+          SOURCE_BRANCH: ${{ steps.branch.outputs.branch }}
+        run: |
+          set -euo pipefail
+          echo "expected_head_sha=" >> "$GITHUB_OUTPUT"
+          if [ "${{ inputs.attempt }}" = "1" ]; then
+            echo "model_base_sha=$(git -C karsift-ai-infra rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          live_head=$(git -C karsift-ai-infra ls-remote --heads origin \
+            "refs/heads/$SOURCE_BRANCH" | awk '{print $1}')
+          if [ -z "$live_head" ]; then
+            echo "No earlier infrastructure carrier exists; remediation may create it with an absence lease."
+            echo "model_base_sha=$(git -C karsift-ai-infra rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! [[ "$live_head" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Existing infrastructure carrier head is malformed; refusing remediation." >&2
+            exit 1
+          fi
+          git -C karsift-ai-infra fetch --no-tags origin \
+            "refs/heads/$SOURCE_BRANCH:refs/remotes/origin/$SOURCE_BRANCH"
+          fetched_head=$(git -C karsift-ai-infra rev-parse \
+            "refs/remotes/origin/$SOURCE_BRANCH")
+          if [ "$fetched_head" != "$live_head" ]; then
+            echo "Infrastructure carrier changed while it was being bound; refusing stale remediation." >&2
+            exit 1
+          fi
+          git -C karsift-ai-infra checkout -B source-carrier "$fetched_head"
+          if ! git -C karsift-ai-infra rebase \
+            "${{ steps.infra-checkout.outputs.base_sha }}"; then
+            git -C karsift-ai-infra rebase --abort
+            echo "Existing infrastructure carrier conflicts with current main; refusing to discard it." >&2
+            exit 1
+          fi
+          echo "expected_head_sha=$live_head" >> "$GITHUB_OUTPUT"
+          echo "model_base_sha=$(git -C karsift-ai-infra rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       # Escalates to config/roles.yml's `implementer_escalation` (if
       # configured) on attempt 2 - the last chance before remediate.yml gives
@@ -868,17 +910,19 @@ jobs:
           cp karsift-ai-infra/config/run-app-checks.sh /tmp/run-app-checks.sh
           cp karsift-ai-infra/config/prepare_cursor_model.py "$HELPER_DIR/prepare_cursor_model.py"
 
-          SOURCE_BASE_SHA="${{ steps.infra-checkout.outputs.base_sha }}"
+          # As with the caller branch, normalize any commits the model made
+          # itself back into staged source changes. This prevents a clean
+          # nested status from silently discarding already-committed edits.
+          git -C karsift-ai-infra reset --soft \
+            "${{ steps.source-branch.outputs.model_base_sha }}"
           if [ -n "$(git -C karsift-ai-infra status --porcelain)" ]; then
             git -C karsift-ai-infra config user.name "karsift-ai-infra-bot"
             git -C karsift-ai-infra config user.email "actions@users.noreply.github.com"
             git -C karsift-ai-infra add -A
             git -C karsift-ai-infra commit -m "${{ inputs.change_id }}: ${{ inputs.task_id }} coordinated source carrier (attempt ${{ inputs.attempt }})"
-          fi
-          SOURCE_HEAD_SHA=$(git -C karsift-ai-infra rev-parse HEAD)
-          if [ "$SOURCE_HEAD_SHA" != "$SOURCE_BASE_SHA" ]; then
+            SOURCE_HEAD_SHA=$(git -C karsift-ai-infra rev-parse HEAD)
             git -C karsift-ai-infra bundle create /tmp/implementer-source.bundle \
-              "$SOURCE_BASE_SHA"..HEAD
+              "${{ steps.infra-checkout.outputs.base_sha }}..$SOURCE_HEAD_SHA"
             echo "has_source_changes=true" >> "$GITHUB_OUTPUT"
             echo "source_head_sha=$SOURCE_HEAD_SHA" >> "$GITHUB_OUTPUT"
           else
@@ -967,7 +1011,10 @@ jobs:
         if: steps.selfcorrect.outcome == 'success'
         run: |
           set -euo pipefail
-          rm -rf karsift-ai-infra
+          if [ -e karsift-ai-infra ]; then
+            echo "Self-correction recreated the removed infrastructure checkout; refusing to discard unbound source edits." >&2
+            exit 1
+          fi
           git add -A
           if git diff --cached --quiet; then
             echo "Self-correction produced no additional changes."
@@ -1038,6 +1085,7 @@ jobs:
     if: >-
       always() &&
       needs.implement.outputs.has_changes != 'true' &&
+      needs.implement.outputs.has_source_changes != 'true' &&
       (needs.implement.result == 'success' || inputs.attempt == '2')
     runs-on: ubuntu-latest
     permissions:
@@ -1245,16 +1293,17 @@ jobs:
         id: has-app
         env:
           APP_ID: ${{ secrets.KARSIFT_BOT_APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
         run: |
-          if [ -n "$APP_ID" ]; then
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "configured=false" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          if [ -z "$APP_ID" ] || [ -z "$APP_PRIVATE_KEY" ]; then
+            echo "Infrastructure publication requires GitHub App credentials; refusing cross-repository fallback." >&2
+            exit 1
           fi
+          echo "configured=true" >> "$GITHUB_OUTPUT"
 
       - name: Mint least-privilege App token for infrastructure repository
         id: app-token
-        if: steps.has-app.outputs.configured == 'true'
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
         with:
           app-id: ${{ secrets.KARSIFT_BOT_APP_ID }}
@@ -1267,10 +1316,11 @@ jobs:
 
       - name: Publish exact infrastructure bundle from an isolated bare repository
         env:
-          PUBLISH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
+          PUBLISH_TOKEN: ${{ steps.app-token.outputs.token }}
           PUBLISH_BRANCH: ${{ needs.implement.outputs.branch }}
           PUBLISH_HEAD_SHA: ${{ needs.implement.outputs.source_head_sha }}
           PUBLISH_INTEGRATION_SHA: ${{ needs.implement.outputs.source_integration_sha }}
+          EXPECTED_SOURCE_HEAD_SHA: ${{ needs.implement.outputs.source_expected_head_sha }}
           SOURCE_REPOSITORY: KARSIFT/karsift-ai-infra
         run: |
           set -euo pipefail
@@ -1311,28 +1361,25 @@ jobs:
             exit 1
           fi
 
+          if [ -n "$EXPECTED_SOURCE_HEAD_SHA" ] &&
+             ! [[ "$EXPECTED_SOURCE_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Expected infrastructure carrier head is malformed; refusing publication." >&2
+            exit 1
+          fi
           live_head=$(git --git-dir="$git_dir" ls-remote --heads origin \
             "refs/heads/$PUBLISH_BRANCH" | awk '{print $1}')
-          if [ "${{ inputs.attempt }}" != "1" ]; then
-            if [ -z "$live_head" ]; then
-              echo "Remediation attempt has no existing infrastructure branch; refusing stale push." >&2
-              exit 1
-            fi
-            lease="refs/heads/$PUBLISH_BRANCH:$live_head"
-          else
-            if [ -n "$live_head" ] && [ "$live_head" != "$PUBLISH_HEAD_SHA" ]; then
-              echo "Attempt-1 infrastructure branch unexpectedly exists at another commit." >&2
-              exit 1
-            fi
-            lease="refs/heads/$PUBLISH_BRANCH:$live_head"
+          if [ "$live_head" != "$EXPECTED_SOURCE_HEAD_SHA" ]; then
+            echo "Infrastructure carrier changed after implementer binding; refusing stale publication." >&2
+            exit 1
           fi
+          lease="refs/heads/$PUBLISH_BRANCH:$EXPECTED_SOURCE_HEAD_SHA"
           git --git-dir="$git_dir" -c core.hooksPath=/dev/null push --no-verify \
             --force-with-lease="$lease" origin \
             "refs/heads/$PUBLISH_BRANCH:refs/heads/$PUBLISH_BRANCH"
 
       - name: Open or update infrastructure PR from the clean runner
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           GH_REPO: KARSIFT/karsift-ai-infra
           PUBLISH_BRANCH: ${{ needs.implement.outputs.branch }}
           AUTHORITY_REPOSITORY: ${{ github.repository }}

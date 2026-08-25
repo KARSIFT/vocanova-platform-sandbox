@@ -100,7 +100,16 @@ class Voc121SourceCarrierPublisherTests(unittest.TestCase):
         git(repository, "bundle", "create", str(bundle), f"{base_sha}..{branch}")
         return bundle, head
 
-    def publish_source(self, *, bundle, branch, head, integration_sha, attempt):
+    def publish_source(
+        self,
+        *,
+        bundle,
+        branch,
+        head,
+        integration_sha,
+        attempt,
+        expected_source_head="",
+    ):
         script = workflow_run_block(
             "Publish exact infrastructure bundle from an isolated bare repository"
         )
@@ -120,6 +129,7 @@ class Voc121SourceCarrierPublisherTests(unittest.TestCase):
                 "PUBLISH_BRANCH": branch,
                 "PUBLISH_HEAD_SHA": head,
                 "PUBLISH_INTEGRATION_SHA": integration_sha,
+                "EXPECTED_SOURCE_HEAD_SHA": expected_source_head,
                 "FIXTURE_REMOTE": str(self.remote),
             }
         )
@@ -191,7 +201,43 @@ class Voc121SourceCarrierPublisherTests(unittest.TestCase):
             attempt=1,
         )
         self.assertNotEqual(completed.returncode, 0)
-        self.assertIn("unexpectedly exists at another commit", completed.stderr)
+        self.assertIn("changed after implementer binding", completed.stderr)
+
+    def test_remediation_updates_only_the_exact_bound_source_head(self):
+        branch, head, bundle, base_sha = self.make_source_attempt_one()
+        first = self.publish_source(
+            bundle=bundle,
+            branch=branch,
+            head=head,
+            integration_sha=base_sha,
+            attempt=1,
+        )
+        self.assertEqual(first.returncode, 0, first.stderr)
+
+        remediation = self.clone("source-remediation")
+        git(remediation, "checkout", "-B", branch, f"origin/{branch}")
+        remediation_head = self.commit(
+            remediation,
+            "config/foo.py",
+            "source remediation\n",
+            "source carrier remediation",
+        )
+        remediation_bundle, _ = self.create_source_bundle(
+            remediation, base_sha, "source-remediation.bundle"
+        )
+        completed = self.publish_source(
+            bundle=remediation_bundle,
+            branch=branch,
+            head=remediation_head,
+            integration_sha=base_sha,
+            attempt=2,
+            expected_source_head=head,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(
+            git(self.root, "--git-dir", str(self.remote), "rev-parse", branch),
+            remediation_head,
+        )
 
     def test_unverifiable_lineage_fails_closed(self):
         branch, head, bundle, base_sha = self.make_source_attempt_one()

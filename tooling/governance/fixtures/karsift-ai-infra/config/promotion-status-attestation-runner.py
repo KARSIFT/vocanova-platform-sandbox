@@ -13,6 +13,7 @@ import sys
 
 from actions_check_recovery import RecoveryError, validate_promotion_target, validate_sha
 from promotion_status_attestation import AttestationError, attestable_contexts
+from required_check_satisfaction import SatisfactionError, parse_gh_pr_checks_json
 
 
 REPOSITORY_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
@@ -75,8 +76,6 @@ def main() -> int:
         if not expected_url.fullmatch(args.target_url):
             raise RunnerError("invalid_target_url")
         summary = json.loads(Path(args.authoritative_file).read_text(encoding="utf-8"))
-        from required_check_satisfaction import parse_gh_pr_checks_json
-
         env = os.environ.copy()
         env["GH_TOKEN"] = args.github_token
         env["GH_REPO"] = args.repository
@@ -95,10 +94,10 @@ def main() -> int:
             check=False,
             env=env,
         )
-        if completed.returncode != 0:
+        if not completed.stdout.strip():
             raise RunnerError("required_pr_checks_read_failed")
         pr_required_checks = parse_gh_pr_checks_json(
-            json.loads(completed.stdout or "[]")
+            json.loads(completed.stdout)
         )
         contexts = attestable_contexts(summary, pr_required_checks=pr_required_checks)
         pull_request = gh_api(
@@ -126,7 +125,14 @@ def main() -> int:
                 },
             )
             print(f"promotion-status-attestation: published {context} from run {run_id}")
-    except (AttestationError, RecoveryError, RunnerError, OSError, json.JSONDecodeError) as exc:
+    except (
+        AttestationError,
+        RecoveryError,
+        RunnerError,
+        SatisfactionError,
+        OSError,
+        json.JSONDecodeError,
+    ) as exc:
         print(f"promotion-status-attestation: {exc}", file=sys.stderr)
         return 1
     return 0
