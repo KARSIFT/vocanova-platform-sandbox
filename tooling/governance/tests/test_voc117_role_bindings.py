@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -87,7 +89,7 @@ class Voc117RoleBindingsFixtureTests(unittest.TestCase):
 
     def test_voc117_test_05_fixture_pin_is_recorded(self):
         pin = (FIXTURE_INFRA_ROOT / "PINNED_SHA.txt").read_text(encoding="utf-8").strip()
-        self.assertEqual(pin, "12e5cd65159b5315b7e618facb251e0324dcfbb5")
+        self.assertEqual(pin, "2f2569cb03ef3dbfee8beb956ec125e81c94a785")
 
     def test_voc117_test_06_cursor_failures_are_sanitized_and_classified(self):
         extractor = read_fixture("config/extract-cursor-result.py")
@@ -98,6 +100,42 @@ class Voc117RoleBindingsFixtureTests(unittest.TestCase):
             self.assertIn("extract-cursor-result.py", workflow)
             self.assertIn("--github-annotation", workflow)
             self.assertNotIn("cat /tmp/cursor-stderr.log", workflow)
+
+    def test_voc117_test_07_annotation_uses_stdout_without_raw_content(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            scratch_path = Path(scratch)
+            input_path = scratch_path / "response.json"
+            output_path = scratch_path / "verdict.md"
+            provider_text = "Requested model is not available; secret-like tail"
+            input_path.write_text(
+                json.dumps(
+                    {
+                        "is_error": True,
+                        "subtype": "error_during_execution",
+                        "result": provider_text,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(FIXTURE_CONFIG / "extract-cursor-result.py"),
+                    str(input_path),
+                    str(output_path),
+                    "--allow-waiting",
+                    "--github-annotation",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(completed.returncode, 75)
+            self.assertIn("reason=model_unavailable_or_invalid", completed.stdout)
+            self.assertIn("Raw provider output is withheld.", completed.stdout)
+            self.assertNotIn(provider_text, completed.stdout)
+            self.assertEqual(completed.stderr, "")
+            self.assertFalse(output_path.exists())
 
 
 if __name__ == "__main__":
