@@ -164,12 +164,14 @@ parameters (planner, reviewer, reviewer_fast_retry, plan_reviewer). Workflow
 routing uses `config/prepare_cursor_model.py` so stored values like
 `cursor/grok-4.6[fast=false]` reach the Cursor CLI without silent vendor/model
 fallback. Reviewer and plan-review terminal failures pass the structured Cursor
-response through `config/extract-cursor-result.py`, which emits only bounded
-reason codes as structured check annotations on the stdout channel GitHub
-Actions parses and withholds raw provider output.
+response through `config/extract-cursor-result.py`, which exports only bounded
+reason and subtype values. Dedicated clean publisher jobs validate the exact
+live PR base/head pair, check out their own exact reusable-workflow SHA, mint a
+narrowly scoped App token only after validation, and publish a non-verdict
+infrastructure failure comment while withholding raw provider output.
 `PINNED_SHA.txt` records exact
 reviewed karsift-ai-infra merge
-`2f2569cb03ef3dbfee8beb956ec125e81c94a785`; fixture file content in this
+`21a24db03703b693a363737cbd6e479d50801107`; fixture file content in this
 directory is synchronized to that merge in the same task. Recovery metadata reads and allowlisted
 dispatches use narrowly job-scoped `GITHUB_TOKEN` permissions: Actions write plus
 Checks, Commit statuses, Contents, and Pull requests read. App tokens remain

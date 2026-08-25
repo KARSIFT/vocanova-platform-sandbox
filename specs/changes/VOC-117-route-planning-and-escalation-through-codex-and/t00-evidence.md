@@ -26,8 +26,12 @@ or complete CI logs.
 - `.github/workflows/implement.yml` — implementer, escalation, and self-correct
   steps use `prepare_cursor_model.py` for `cursor/composer-2.5`.
 - `config/extract-cursor-result.py` — bounded Cursor failure reason codes without
-  printing raw provider responses or credentials.
+  printing raw provider responses or credentials; safe step-output transport.
+- `config/build-review-failure-comment.py` — validates bounded classification,
+  exact PR base/head identity, and non-verdict failure-comment content.
 - `tests/test_voc117_role_bindings.py` — VOC-117-TEST-00 through TEST-05 regressions.
+- `tests/test_cursor_result.py` and `tests/test_review_failure_comment.py` —
+  deterministic output-channel, vocabulary, identity, and CLI regressions.
 
 ### Caller mirrored fixture and tests
 
@@ -71,12 +75,12 @@ the stored binding shape without silent vendor/model substitution.
 | Item | Value |
 |------|-------|
 | Governed Cursor implementation | caller run `32783787908`, job `97612143209` (`cursor-agent`, attempt 1) |
-| Authoritative infra PRs | `KARSIFT/karsift-ai-infra#147`, diagnostic classification `#148`, structured diagnostic publication `#149`, annotation channel correction `#150` |
-| Independently reviewed infra heads | `d6ac23f70a10299e73629f257e275854525d15c8`, `9457233e5b2e2fb03674ef963d89ac4767596a4f`, `e7f3804e41658bf45acc5f580134dd76a4a6ea3c`, `6526cf63f2e7ef35750b9eab0ddeb74fdc071af9` |
-| Infra merge commits | initial `27a44b298f1c234a94e02127eaeb55d66b28e30d`; classification `42aa66757a521b1187193fba17b74e440964c27f`; publication `12e5cd65159b5315b7e618facb251e0324dcfbb5`; authoritative current `2f2569cb03ef3dbfee8beb956ec125e81c94a785` |
+| Authoritative infra PRs | `KARSIFT/karsift-ai-infra#147`, diagnostic classification `#148`, structured diagnostic publication `#149`, annotation channel correction `#150`, isolated bounded failure publisher `#151` |
+| Independently reviewed infra heads | `d6ac23f70a10299e73629f257e275854525d15c8`, `9457233e5b2e2fb03674ef963d89ac4767596a4f`, `e7f3804e41658bf45acc5f580134dd76a4a6ea3c`, `6526cf63f2e7ef35750b9eab0ddeb74fdc071af9`, `364a8996f45b4a39298ca7d42f298edca35d773b` |
+| Infra merge commits | initial `27a44b298f1c234a94e02127eaeb55d66b28e30d`; classification `42aa66757a521b1187193fba17b74e440964c27f`; annotation publication `12e5cd65159b5315b7e618facb251e0324dcfbb5`; stdout correction `2f2569cb03ef3dbfee8beb956ec125e81c94a785`; authoritative current `21a24db03703b693a363737cbd6e479d50801107` |
 | Caller fixture directory | `tooling/governance/fixtures/karsift-ai-infra/` |
-| Prior pin | `c5d8bccfa8676bd367b53ad5f6f9a51a40c99405` |
-| New pin | `2f2569cb03ef3dbfee8beb956ec125e81c94a785` |
+| Prior pin | `2f2569cb03ef3dbfee8beb956ec125e81c94a785` |
+| New pin | `21a24db03703b693a363737cbd6e479d50801107` |
 
 The first governed Cursor attempt produced the caller-side source projection but
 correctly left the prior pin in place while no authoritative source merge existed.
@@ -99,22 +103,30 @@ retry limits. The caller mirror and pin now use that exact authoritative merge.
 Live runs then proved the workflow command was written to stderr, which GitHub
 Actions does not parse into structured annotations. Infra PR #150 corrected only
 that channel, retained ordinary diagnostics on stderr, and added subprocess channel
-assertions. Its independently reviewed head `6526cf6…` merged as `2f2569c…`; the
-caller mirror and pin now use this final exact authoritative merge.
+assertions. Its independently reviewed head `6526cf6…` merged as `2f2569c…`.
+Fresh caller runs resolved that exact reusable-workflow SHA but still exposed no
+bounded annotation in GitHub's structured run metadata. Infra PR #151 therefore
+moved the already-bounded values through step/job outputs to a dedicated clean
+publisher. That publisher validates the live base/head pair, checks out its own
+exact workflow SHA, mints a narrowly scoped App token only after validation,
+rechecks identity, and posts a non-verdict failure comment without model output.
+Its independently reviewed head `364a899…` merged as exact authoritative source
+`21a24db…`; the caller mirror and pin now use that merge.
 
 ## Validation commands
 
 | Command | Result | Notes |
 |---------|--------|-------|
 | `python3 -m unittest tests.test_voc117_role_bindings -v` in `karsift-ai-infra` | pass | 7 VOC-117 regressions on source head `d6ac23f…` |
-| `python3 -m unittest discover -s tests -p 'test_*.py'` in `karsift-ai-infra` | pass | 277 tests on authoritative merge `2f2569c…` |
+| `python3 -m unittest discover -s tests -p 'test_*.py'` in `karsift-ai-infra` | pass | 280 tests on authoritative merge `21a24db…` |
 | `bash scripts/governance/validate-governance.sh` | pass | Repository foundation + monitoring declarations |
 | `bash scripts/governance/classify-change-risk.sh` | pass | Detected path floor `R4` |
-| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pass | 169 tests after exact-pin and annotation-channel reconciliation |
-| `python3 -m unittest discover -s tooling/governance/tests -p 'test_voc117*.py'` | pass | 9 deterministic tests (also included in the full 169-test run) |
-| `node --test scripts/foundation/voc097-fixture-matrix.test.mjs scripts/foundation/voc104-ready-for-review-reuse.test.mjs scripts/foundation/voc108-authoritative-lifecycle.test.mjs` | pass | 16 tests after pin advance to `2f2569c…` |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pass | 170 tests after exact pin and isolated failure-publisher reconciliation |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_voc117*.py'` | pass | 10 deterministic tests (also included in the full 170-test run) |
+| `node --test scripts/foundation/voc097-fixture-matrix.test.mjs scripts/foundation/voc104-ready-for-review-reuse.test.mjs scripts/foundation/voc108-authoritative-lifecycle.test.mjs` | pass | 16 tests after pin advance to `21a24db…` |
 | Independent Claude Code exact-revision review of infra PR #149 | pass | `VERDICT: PASS` on `e7f3804…`; no findings after error-response, I/O-failure, and combined-flag coverage |
 | Independent Claude Code exact-revision review of infra PR #150 | pass | `VERDICT: PASS` on `6526cf6…`; no findings on sanitized stdout/stderr channel boundary |
+| Independent Claude Code exact-revision review of infra PR #151 | pass | `VERDICT: PASS` on `364a899…`; no blocking findings on failed-step outputs, exact-SHA identity, App-token isolation, bounded content, or merge-gate separation |
 | `bash karsift-ai-infra/config/run-app-checks.sh` on caller head `e75c5ce…` | pass | Governed attempt-2 pre-push deterministic CI |
 | `bash karsift-ai-infra/config/run-app-checks.sh` after pinning `42aa667…` | environment-limited locally | Format, lint, typecheck, 338 foundation tests, API-client tests, middleware tests, web build, and API build passed; two controlled-signup API tests could not start because Docker is unavailable in this WSL environment. Hosted CI remains authoritative for those Docker-backed tests. |
 | `git diff --check` | pass | No whitespace or patch-format errors |

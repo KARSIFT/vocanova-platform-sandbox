@@ -89,7 +89,7 @@ class Voc117RoleBindingsFixtureTests(unittest.TestCase):
 
     def test_voc117_test_05_fixture_pin_is_recorded(self):
         pin = (FIXTURE_INFRA_ROOT / "PINNED_SHA.txt").read_text(encoding="utf-8").strip()
-        self.assertEqual(pin, "2f2569cb03ef3dbfee8beb956ec125e81c94a785")
+        self.assertEqual(pin, "21a24db03703b693a363737cbd6e479d50801107")
 
     def test_voc117_test_06_cursor_failures_are_sanitized_and_classified(self):
         extractor = read_fixture("config/extract-cursor-result.py")
@@ -106,6 +106,7 @@ class Voc117RoleBindingsFixtureTests(unittest.TestCase):
             scratch_path = Path(scratch)
             input_path = scratch_path / "response.json"
             output_path = scratch_path / "verdict.md"
+            github_output = scratch_path / "github-output"
             provider_text = "Requested model is not available; secret-like tail"
             input_path.write_text(
                 json.dumps(
@@ -117,6 +118,8 @@ class Voc117RoleBindingsFixtureTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            env = os.environ.copy()
+            env["GITHUB_OUTPUT"] = str(github_output)
             completed = subprocess.run(
                 [
                     sys.executable,
@@ -125,9 +128,11 @@ class Voc117RoleBindingsFixtureTests(unittest.TestCase):
                     str(output_path),
                     "--allow-waiting",
                     "--github-annotation",
+                    "--set-github-output",
                 ],
                 capture_output=True,
                 text=True,
+                env=env,
                 check=False,
             )
             self.assertEqual(completed.returncode, 75)
@@ -136,6 +141,24 @@ class Voc117RoleBindingsFixtureTests(unittest.TestCase):
             self.assertNotIn(provider_text, completed.stdout)
             self.assertEqual(completed.stderr, "")
             self.assertFalse(output_path.exists())
+            self.assertEqual(
+                github_output.read_text(encoding="utf-8").splitlines(),
+                [
+                    "failure_subtype=error_during_execution",
+                    "failure_reason=model_unavailable_or_invalid",
+                ],
+            )
+
+    def test_voc117_test_08_bounded_failure_publisher_is_exact_sha_isolated(self):
+        builder = read_fixture("config/build-review-failure-comment.py")
+        self.assertIn("SAFE_REASONS = {", builder)
+        self.assertIn('"model_unavailable_or_invalid"', builder)
+        self.assertIn("PR base/head pair changed before failure publication.", builder)
+        for workflow in (self.review, self.plan_review):
+            self.assertIn("failure_reason: ${{ steps.verify.outputs.failure_reason }}", workflow)
+            self.assertIn("build-review-failure-comment.py", workflow)
+            self.assertIn("ref: ${{ job.workflow_sha }}", workflow)
+            self.assertIn("permission-pull-requests: write", workflow)
 
 
 if __name__ == "__main__":
