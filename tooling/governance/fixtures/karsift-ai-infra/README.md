@@ -164,14 +164,16 @@ parameters (planner, reviewer, reviewer_fast_retry, plan_reviewer). Workflow
 routing uses `config/prepare_cursor_model.py` so stored values like
 `cursor/grok-4.6[fast=false]` reach the Cursor CLI without silent vendor/model
 fallback. Reviewer and plan-review terminal failures pass the structured Cursor
-response through `config/extract-cursor-result.py`, which exports only bounded
-reason and subtype values. Dedicated clean publisher jobs validate the exact
-live PR base/head pair, check out their own exact reusable-workflow SHA, mint a
-narrowly scoped App token only after validation, and publish a non-verdict
-infrastructure failure comment while withholding raw provider output.
+response through `config/extract-cursor-result.py`, which writes only a strict
+schema-v1 failure artifact containing an allowlisted reason and regex-bounded
+subtype. The same-run artifact is retained for one day. Dedicated clean
+publisher jobs download and strictly validate it, validate the exact live PR
+base/head pair, check out their own exact reusable-workflow SHA, mint a narrowly
+scoped App token only after validation, and publish a non-verdict infrastructure
+failure comment while withholding raw provider output.
 `PINNED_SHA.txt` records exact
 reviewed karsift-ai-infra merge
-`21a24db03703b693a363737cbd6e479d50801107`; fixture file content in this
+`773bf7198aec0f5fcdff0f89d712cf14ef0a770e`; fixture file content in this
 directory is synchronized to that merge in the same task.
 
 Recovery metadata reads and allowlisted
