@@ -77,12 +77,12 @@ the stored binding shape without silent vendor/model substitution.
 | Item | Value |
 |------|-------|
 | Governed Cursor implementation | caller run `32783787908`, job `97612143209` (`cursor-agent`, attempt 1) |
-| Authoritative infra PRs | `KARSIFT/karsift-ai-infra#147`, diagnostic classification `#148`, structured diagnostic publication `#149`, annotation channel correction `#150`, isolated bounded failure publisher `#151`, failed-job artifact handoff correction `#152` |
-| Independently reviewed infra heads | `d6ac23f70a10299e73629f257e275854525d15c8`, `9457233e5b2e2fb03674ef963d89ac4767596a4f`, `e7f3804e41658bf45acc5f580134dd76a4a6ea3c`, `6526cf63f2e7ef35750b9eab0ddeb74fdc071af9`, `364a8996f45b4a39298ca7d42f298edca35d773b`, `a3f4a495b52dc8694afe7d2d6c2ceb0788cd7512` |
-| Infra merge commits | initial `27a44b298f1c234a94e02127eaeb55d66b28e30d`; classification `42aa66757a521b1187193fba17b74e440964c27f`; annotation publication `12e5cd65159b5315b7e618facb251e0324dcfbb5`; stdout correction `2f2569cb03ef3dbfee8beb956ec125e81c94a785`; failed-job output handoff `21a24db03703b693a363737cbd6e479d50801107`; authoritative current `773bf7198aec0f5fcdff0f89d712cf14ef0a770e` |
+| Authoritative infra PRs | `KARSIFT/karsift-ai-infra#147`, diagnostic classification `#148`, structured diagnostic publication `#149`, annotation channel correction `#150`, isolated bounded failure publisher `#151`, failed-job artifact handoff correction `#152`, bounded stderr classification `#153` |
+| Independently reviewed infra heads | `d6ac23f70a10299e73629f257e275854525d15c8`, `9457233e5b2e2fb03674ef963d89ac4767596a4f`, `e7f3804e41658bf45acc5f580134dd76a4a6ea3c`, `6526cf63f2e7ef35750b9eab0ddeb74fdc071af9`, `364a8996f45b4a39298ca7d42f298edca35d773b`, `a3f4a495b52dc8694afe7d2d6c2ceb0788cd7512`, `1fb294435ef9f94a874c97604d8d8f15dbc3fff4` |
+| Infra merge commits | initial `27a44b298f1c234a94e02127eaeb55d66b28e30d`; classification `42aa66757a521b1187193fba17b74e440964c27f`; annotation publication `12e5cd65159b5315b7e618facb251e0324dcfbb5`; stdout correction `2f2569cb03ef3dbfee8beb956ec125e81c94a785`; failed-job output handoff `21a24db03703b693a363737cbd6e479d50801107`; artifact handoff `773bf7198aec0f5fcdff0f89d712cf14ef0a770e`; authoritative current `d2ac2463a2903b5944737b0efe50d6ceed203244` |
 | Caller fixture directory | `tooling/governance/fixtures/karsift-ai-infra/` |
-| Prior pin | `21a24db03703b693a363737cbd6e479d50801107` |
-| New pin | `773bf7198aec0f5fcdff0f89d712cf14ef0a770e` |
+| Prior pin | `773bf7198aec0f5fcdff0f89d712cf14ef0a770e` |
+| New pin | `d2ac2463a2903b5944737b0efe50d6ceed203244` |
 
 The first governed Cursor attempt produced the caller-side source projection but
 correctly left the prior pin in place while no authoritative source merge existed.
@@ -123,7 +123,16 @@ the live exact base/head identity, checks out exact `job.workflow_sha`, and only
 then mints its scoped App token. Raw provider response, stderr, prompt,
 environment, and credentials remain withheld. Its independently reviewed exact
 head `a3f4a49…` passed with no blocking findings and merged as authoritative source
-`773bf7198…`; the caller mirror and pin now use that exact merge.
+`773bf7198…`. Live caller run `32836275599` proved the artifact path end to end,
+including the clean App-token publisher, but the bounded record remained
+`unspecified` because Cursor returned empty JSON and wrote its diagnostic only to
+stderr. Infra PR #153 added a strictly bounded 64 KiB local stderr inspection in
+the failed producer job and maps only to the existing allowlisted reason codes;
+missing, oversized, malformed, or unrecognized input remains `unspecified`, and
+raw stderr never enters annotations, artifacts, comments, or outputs. Its exact
+head `1fb2944…` passed independent read-only review with no blocking findings and
+merged as authoritative source `d2ac246…`; the caller mirror and pin now use that
+exact merge.
 
 The exact fixture advance also carries authoritative infrastructure changes that
 landed after the caller's prior `c5d8bcc…` pin but before VOC-117 source work. In
@@ -138,17 +147,18 @@ new VOC-117 publication-behavior decision.
 | Command | Result | Notes |
 |---------|--------|-------|
 | `python3 -m unittest tests.test_voc117_role_bindings -v` in `karsift-ai-infra` | pass | 7 VOC-117 regressions on source head `d6ac23f…` |
-| `python3 -m unittest discover -s tests -p 'test_*.py'` in `karsift-ai-infra` | pass | 281 tests on authoritative merge `773bf719…` |
+| `python3 -m unittest discover -s tests -p 'test_*.py'` in `karsift-ai-infra` | pass | 283 tests on authoritative merge `d2ac2463…` |
 | `bash scripts/governance/validate-governance.sh` | pass | Repository foundation + monitoring declarations |
 | `bash scripts/governance/classify-change-risk.sh` | pass | Detected path floor `R4` |
 | `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pass | 170 tests after exact pin and isolated failure-publisher reconciliation |
 | `python3 -m unittest discover -s tooling/governance/tests -p 'test_voc117*.py'` | pass | 10 deterministic tests (also included in the full 170-test run) |
-| `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'` | pass | 205 mirrored shared-infrastructure policy tests on exact caller fixture pin `773bf719…` |
-| `node --test scripts/foundation/voc097-fixture-matrix.test.mjs scripts/foundation/voc104-ready-for-review-reuse.test.mjs scripts/foundation/voc108-authoritative-lifecycle.test.mjs` | pass | 16 tests after pin advance to `773bf719…` |
+| `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'` | pass | 207 mirrored shared-infrastructure policy tests on exact caller fixture pin `d2ac2463…` |
+| `node --test scripts/foundation/voc097-fixture-matrix.test.mjs scripts/foundation/voc104-ready-for-review-reuse.test.mjs scripts/foundation/voc108-authoritative-lifecycle.test.mjs` | pass | 16 tests after pin advance to `d2ac2463…` |
 | Independent Claude Code exact-revision review of infra PR #149 | pass | `VERDICT: PASS` on `e7f3804…`; no findings after error-response, I/O-failure, and combined-flag coverage |
 | Independent Claude Code exact-revision review of infra PR #150 | pass | `VERDICT: PASS` on `6526cf6…`; no findings on sanitized stdout/stderr channel boundary |
 | Independent Claude Code exact-revision review of infra PR #151 | pass | `VERDICT: PASS` on `364a899…`; no blocking findings on failed-step outputs, exact-SHA identity, App-token isolation, bounded content, or merge-gate separation |
 | Independent Claude Code exact-revision review of infra PR #152 | pass | `VERDICT: PASS WITH NON-BLOCKING FINDINGS` on `a3f4a49…`; no blockers on strict artifact schema, failed-job handoff, exact-SHA identity, scoped App-token isolation, bounded content, or fail-closed behavior |
+| Independent Claude Code exact-revision review of infra PR #153 | pass | `VERDICT: PASS WITH NON-BLOCKING FINDINGS` on `1fb2944…`; no blockers on bounded stderr reads, allowlisted-only classification, raw-text withholding, strict artifact validation, exact-SHA controls, role mappings, or retry limits |
 | `bash karsift-ai-infra/config/run-app-checks.sh` on caller head `e75c5ce…` | pass | Governed attempt-2 pre-push deterministic CI |
 | `bash karsift-ai-infra/config/run-app-checks.sh` after pinning `42aa667…` | environment-limited locally | Format, lint, typecheck, 338 foundation tests, API-client tests, middleware tests, web build, and API build passed; two controlled-signup API tests could not start because Docker is unavailable in this WSL environment. Hosted CI remains authoritative for those Docker-backed tests. |
 | `git diff --check` | pass | No whitespace or patch-format errors |

@@ -170,10 +170,13 @@ subtype. The same-run artifact is retained for one day. Dedicated clean
 publisher jobs download and strictly validate it, validate the exact live PR
 base/head pair, check out their own exact reusable-workflow SHA, mint a narrowly
 scoped App token only after validation, and publish a non-verdict infrastructure
-failure comment while withholding raw provider output.
+failure comment while withholding raw provider output. When Cursor exits with
+an empty JSON response, the failed producer may inspect at most 64 KiB of local
+stderr and retain only an existing allowlisted reason code; missing, oversized,
+or unrecognized text remains `unspecified` and never enters the artifact.
 `PINNED_SHA.txt` records exact
 reviewed karsift-ai-infra merge
-`773bf7198aec0f5fcdff0f89d712cf14ef0a770e`; fixture file content in this
+`d2ac2463a2903b5944737b0efe50d6ceed203244`; fixture file content in this
 directory is synchronized to that merge in the same task.
 
 Recovery metadata reads and allowlisted

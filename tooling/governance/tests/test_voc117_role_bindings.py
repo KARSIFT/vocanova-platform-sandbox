@@ -89,7 +89,7 @@ class Voc117RoleBindingsFixtureTests(unittest.TestCase):
 
     def test_voc117_test_05_fixture_pin_is_recorded(self):
         pin = (FIXTURE_INFRA_ROOT / "PINNED_SHA.txt").read_text(encoding="utf-8").strip()
-        self.assertEqual(pin, "773bf7198aec0f5fcdff0f89d712cf14ef0a770e")
+        self.assertEqual(pin, "d2ac2463a2903b5944737b0efe50d6ceed203244")
 
     def test_voc117_test_06_cursor_failures_are_sanitized_and_classified(self):
         extractor = read_fixture("config/extract-cursor-result.py")
@@ -155,6 +155,7 @@ class Voc117RoleBindingsFixtureTests(unittest.TestCase):
         self.assertIn("PR base/head pair changed before failure publication.", builder)
         for workflow in (self.review, self.plan_review):
             self.assertIn("--failure-record=/tmp/", workflow)
+            self.assertIn("--failure-input=/tmp/cursor-stderr.log", workflow)
             self.assertIn("actions/upload-artifact@", workflow)
             self.assertIn("actions/download-artifact@", workflow)
             self.assertIn("retention-days: 1", workflow)
