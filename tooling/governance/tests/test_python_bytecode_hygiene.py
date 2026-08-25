@@ -132,6 +132,26 @@ class PythonBytecodeHygieneTests(unittest.TestCase):
             errors = validate_gitignore_file(root / ".gitignore")
             self.assertEqual([f"missing repository .gitignore: {root / '.gitignore'}"], errors)
 
+    def test_working_tree_delete_does_not_hide_indexed_bytecode(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "repo"
+            root.mkdir()
+            self.init_repo(root)
+            (root / ".gitignore").write_text(
+                "__pycache__/\n*.py[cod]\n", encoding="utf-8"
+            )
+            artifact = root / "infra/scripts/__pycache__/tracked.cpython-312.pyc"
+            artifact.parent.mkdir(parents=True)
+            artifact.write_bytes(b"tracked-bytecode")
+            relative = str(artifact.relative_to(root))
+            subprocess.run(["git", "add", "-f", relative], cwd=root, check=True, capture_output=True)
+            artifact.unlink()
+
+            result = self.run_validator(root)
+            self.assertEqual(1, result.returncode, result.stdout + result.stderr)
+            self.assertIn("tracked Python bytecode/cache artifacts remain", result.stderr)
+            self.assertIn("__pycache__", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

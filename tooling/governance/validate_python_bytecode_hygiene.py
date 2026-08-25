@@ -28,21 +28,6 @@ def list_tracked_paths(repository_root: Path) -> list[str]:
     return completed.stdout.decode("utf-8", errors="replace").split("\0")[:-1]
 
 
-def list_deleted_tracked_paths(repository_root: Path) -> set[str]:
-    completed = subprocess.run(
-        ["git", "ls-files", "--deleted", "-z"],
-        cwd=repository_root,
-        check=False,
-        capture_output=True,
-    )
-    if completed.returncode != 0:
-        stderr = completed.stderr.decode("utf-8", errors="replace").strip()
-        raise RuntimeError(f"git ls-files --deleted failed in {repository_root}: {stderr}")
-    if not completed.stdout:
-        return set()
-    return set(completed.stdout.decode("utf-8", errors="replace").split("\0")[:-1])
-
-
 def find_tracked_bytecode_artifacts(tracked_paths: list[str]) -> list[str]:
     violations: list[str] = []
     for path in tracked_paths:
@@ -97,11 +82,7 @@ def validate_gitignore_file(gitignore_path: Path) -> list[str]:
 def validate_repository(repository_root: Path) -> list[str]:
     errors: list[str] = []
     tracked_paths = list_tracked_paths(repository_root)
-    deleted_paths = list_deleted_tracked_paths(repository_root)
-    active_tracked_paths = [
-        path for path in tracked_paths if path not in deleted_paths
-    ]
-    tracked_bytecode = find_tracked_bytecode_artifacts(active_tracked_paths)
+    tracked_bytecode = find_tracked_bytecode_artifacts(tracked_paths)
     if tracked_bytecode:
         preview = ", ".join(tracked_bytecode[:5])
         suffix = "..." if len(tracked_bytecode) > 5 else ""
