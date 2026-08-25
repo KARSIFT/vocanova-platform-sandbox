@@ -47,6 +47,12 @@ Grok review blocked both exact revisions rather than allowing premature merge:
    GitHub's failed required-check row but dispatched an alternate workflow
    instead of rerunning the exact cancelled run selected by GitHub. Review:
    https://github.com/KARSIFT/vocanova-platform-sandbox/pull/998#issuecomment-5418048173
+3. Attempt 2 deterministic CI (`pnpm test` / `run-app-checks.sh`) failed because
+   `PINNED_SHA.txt` advanced to infra merge `99476c2…` but
+   `scripts/foundation/voc097-fixture-matrix.test.mjs`,
+   `scripts/foundation/voc104-ready-for-review-reuse.test.mjs`, and
+   `scripts/foundation/voc108-authoritative-lifecycle.test.mjs` still asserted the
+   prior VOC-117 pin `37b06aa9…`.
 
 The coordinated infrastructure carrier remediated those findings at reviewed
 head `c21c9a8e65c3b3ae1ed135ebcb6bfd33597aede5`:
@@ -90,6 +96,7 @@ head `c21c9a8e65c3b3ae1ed135ebcb6bfd33597aede5`:
 - `tooling/governance/fixtures/karsift-ai-infra/` — reviewed source-tree mirror pinned to the exact merge
 - `tooling/governance/tests/test_voc121_implement_policy.py` — fixture regressions
 - `tooling/governance/tests/test_voc117_role_bindings.py` — preserves the historical VOC-117 source record without freezing the global fixture pin
+- `scripts/foundation/voc097-fixture-matrix.test.mjs`, `scripts/foundation/voc104-ready-for-review-reuse.test.mjs`, and `scripts/foundation/voc108-authoritative-lifecycle.test.mjs` — pin assertions advanced to infra merge `99476c2…`
 - this evidence file
 
 ## Shared-infra carrier and fixture pin
@@ -143,6 +150,7 @@ git diff --check
 | `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | **PASS** (184 tests) |
 | Parse every fixture YAML file with PyYAML | **PASS** |
 | `git diff --check` | **PASS** |
+| `node --test scripts/foundation/voc097-fixture-matrix.test.mjs scripts/foundation/voc104-ready-for-review-reuse.test.mjs scripts/foundation/voc108-authoritative-lifecycle.test.mjs` | **PASS** — pin assertions match `99476c2…` |
 
 ## Acceptance mapping
 
