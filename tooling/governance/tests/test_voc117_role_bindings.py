@@ -89,7 +89,7 @@ class Voc117RoleBindingsFixtureTests(unittest.TestCase):
 
     def test_voc117_test_05_fixture_pin_is_recorded(self):
         pin = (FIXTURE_INFRA_ROOT / "PINNED_SHA.txt").read_text(encoding="utf-8").strip()
-        self.assertEqual(pin, "d2ac2463a2903b5944737b0efe50d6ceed203244")
+        self.assertEqual(pin, "2bc265805d0b8acfe812f12a01c930dd31e7fb89")
 
     def test_voc117_test_06_cursor_failures_are_sanitized_and_classified(self):
         extractor = read_fixture("config/extract-cursor-result.py")

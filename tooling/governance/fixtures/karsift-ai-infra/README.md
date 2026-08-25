@@ -173,10 +173,12 @@ scoped App token only after validation, and publish a non-verdict infrastructure
 failure comment while withholding raw provider output. When Cursor exits with
 an empty JSON response, the failed producer may inspect at most 64 KiB of local
 stderr and retain only an existing allowlisted reason code; missing, oversized,
-or unrecognized text remains `unspecified` and never enters the artifact.
+or unrecognized text remains `unspecified` and never enters the artifact. The
+exact Cursor phrase `API key is invalid` maps to `authentication`, while
+negative regressions reject unrelated API-key help prose.
 `PINNED_SHA.txt` records exact
 reviewed karsift-ai-infra merge
-`d2ac2463a2903b5944737b0efe50d6ceed203244`; fixture file content in this
+`2bc265805d0b8acfe812f12a01c930dd31e7fb89`; fixture file content in this
 directory is synchronized to that merge in the same task.
 
 Recovery metadata reads and allowlisted
