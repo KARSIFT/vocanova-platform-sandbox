@@ -20,7 +20,7 @@
 |--------|--------|-------|
 | `KARSIFT/karsift-ai-infra/config/roles.yml` | modify | Persist the six exact bindings from `VOC-117-D00`; update current-state comments |
 | `KARSIFT/karsift-ai-infra/config/resolve-model.sh` and/or shared model-parse helper | modify if needed | Only if parameterized parsing must be centralized rather than inlined in workflows |
-| `KARSIFT/karsift-ai-infra/.github/workflows/plan.yml` | modify | Compatible invocation of `cursor/grok-4.6[fast=false]` for planner |
+| `KARSIFT/karsift-ai-infra/.github/workflows/plan.yml` | modify | Compatible invocation of `cursor/grok-4.6[effort=high,fast=false]` for planner |
 | `KARSIFT/karsift-ai-infra/.github/workflows/plan-review.yml` | modify | Compatible invocation of `cursor/grok-4.6[effort=high,fast=false]` |
 | `KARSIFT/karsift-ai-infra/.github/workflows/review.yml` | modify | Compatible invocation for reviewer / reviewer_fast_retry |
 | `KARSIFT/karsift-ai-infra/.github/workflows/implement.yml` | modify | Keep composer-2.5 for implementer and implementer_escalation; preserve Cursor fail-closed auth; do not re-enable OpenAI/Codex as the active path |
@@ -36,8 +36,9 @@ Ordered steps:
 1. Land the authoritative `roles.yml` bindings and current-state comment updates in
    the primary infra repository.
 2. Make plan/implement/review/plan-review workflows compatible with parameterized
-   Cursor model strings; verify against the pinned Cursor CLI that Standard/non-fast
-   and plan-reviewer `effort=high` are preserved without silent fallback.
+   Cursor model strings; verify against the Cursor CLI that explicit-high
+   Standard/non-fast is preserved without silent fallback and reject the
+   effort-omitted unavailable form.
 3. Add/extend deterministic tests for the six exact mappings, parameterized
    routing, and fail-closed credential/prefix cases.
 4. Run infra self-CI / unit suite; merge the reviewed infra PR.

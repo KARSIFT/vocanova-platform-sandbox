@@ -34,10 +34,10 @@ name: plan-review (reusable)
 # substitute for; a merged plan PR is still just a draft in the tree until a
 # human (or founder-delegate) flips its change.yaml to adopted.
 #
-# See review.yml's own header comment for the Cursor CLI execution-mechanism
-# details (--mode plan, --trust, stdin prompt, --output-format json) - this
-# file's execution step is copied from there verbatim; if that mechanism
-# changes, update both files.
+# Current state (VOC-117, 2026-08-24): the plan reviewer runs through Cursor
+# on Grok 4.6 Standard with explicit high effort. See review.yml for the
+# shared read-only CLI mechanism; parameterized model preparation must stay
+# aligned in both files.
 
 on:
   workflow_call:
@@ -120,7 +120,7 @@ jobs:
       # Checks out the PR's own reviewed commit, not the integration branch -
       # same reasoning as review.yml's identical step (see that file's own
       # comment for the live incident this avoids repeating).
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ steps.pr.outputs.sha }}
           fetch-depth: 0
@@ -147,7 +147,7 @@ jobs:
             "$merge_base" "$EXPECTED_HEAD_SHA" -- > /tmp/pr.diff
 
       - name: Checkout karsift-ai-infra
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: KARSIFT/karsift-ai-infra
           path: karsift-ai-infra
@@ -158,6 +158,7 @@ jobs:
         run: |
           set -euo pipefail
           MODEL=$(bash karsift-ai-infra/config/resolve-model.sh plan_reviewer karsift-ai-infra/config/roles.yml)
+          python3 karsift-ai-infra/config/prepare_cursor_model.py "$MODEL" >/dev/null
           echo "model=$MODEL" >> "$GITHUB_OUTPUT"
 
       - name: Build prompt
@@ -224,8 +225,11 @@ jobs:
         run: |
           set -uo pipefail
           source karsift-ai-infra/config/retry-helpers.sh
-          MODEL="${{ steps.model.outputs.model }}"
-          MODEL="${MODEL#cursor/}"
+          if ! MODEL=$(python3 karsift-ai-infra/config/prepare_cursor_model.py \
+            --require-api-key "${{ steps.model.outputs.model }}"); then
+            echo "::error::Plan-review Cursor model preparation failed closed." >&2
+            exit 1
+          fi
           run_review() {
             if agent -p --trust --mode plan \
               --model "$MODEL" \
@@ -242,10 +246,34 @@ jobs:
           }
           retry_if_transient /tmp/cursor-stderr.log /tmp/verdict-response.json -- run_review
           exit_code=$?
-          if [ "$exit_code" -ne 0 ]; then
-            cat /tmp/cursor-stderr.log >&2
-          fi
           exit "$exit_code"
+
+      - name: Build bounded plan-review failure record
+        id: failure-record
+        if: ${{ failure() && steps.verify.outcome == 'failure' }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/plan-review-failure
+          classification_status=0
+          python3 karsift-ai-infra/config/extract-cursor-result.py \
+            /tmp/verdict-response.json /tmp/verdict.md \
+            --github-annotation \
+            --failure-record=/tmp/plan-review-failure/failure.json \
+            --failure-input=/tmp/cursor-stderr.log || classification_status=$?
+          if [ "$classification_status" -ne 75 ] ||
+             [ ! -s /tmp/plan-review-failure/failure.json ]; then
+            echo "Bounded plan-review failure classification could not be recorded." >&2
+            exit 1
+          fi
+
+      - name: Upload bounded plan-review failure record
+        if: ${{ always() && steps.failure-record.outcome == 'success' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: plan-review-failure-${{ inputs.pr_number }}-${{ inputs.expected_head_sha }}
+          path: /tmp/plan-review-failure/failure.json
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Extract verdict text
         run: |
@@ -382,3 +410,70 @@ jobs:
           fi
           gh pr comment "$PR_NUMBER" \
             --body-file /tmp/plan-review-publish/verdict-comment.md
+
+  publish-plan-review-failure:
+    needs: plan-review
+    if: ${{ always() && needs.plan-review.result == 'failure' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Download bounded plan-review failure record
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: plan-review-failure-${{ inputs.pr_number }}-${{ inputs.expected_head_sha }}
+          path: /tmp/plan-review-failure-input
+
+      - name: Checkout exact shared failure-publication policy
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: KARSIFT/karsift-ai-infra
+          ref: ${{ job.workflow_sha }}
+          path: karsift-ai-infra
+          persist-credentials: false
+
+      - name: Validate exact plan PR identity and bounded failure classification
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
+          EXPECTED_BASE_SHA: ${{ inputs.expected_base_sha }}
+        run: |
+          set -euo pipefail
+          gh pr view "$PR_NUMBER" --json state,headRefOid,baseRefOid > /tmp/live-pr.json
+          python3 karsift-ai-infra/config/build-review-failure-comment.py \
+            plan-reviewer /tmp/live-pr.json \
+            /tmp/plan-review-failure-input/failure.json \
+            /tmp/plan-review-failure-comment.md "$EXPECTED_HEAD_SHA" \
+            "$EXPECTED_BASE_SHA" "${{ github.run_id }}"
+
+      - name: Mint plan-failure-comment App token on the clean runner
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
+        with:
+          app-id: ${{ secrets.KARSIFT_BOT_APP_ID }}
+          private-key: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-pull-requests: write
+
+      - name: Publish App-signed bounded plan failure comment
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
+          EXPECTED_BASE_SHA: ${{ inputs.expected_base_sha }}
+        run: |
+          set -euo pipefail
+          live_pair=$(gh pr view "$PR_NUMBER" --json state,headRefOid,baseRefOid)
+          if [ "$(jq -r .state <<<"$live_pair")" != "OPEN" ] ||
+             [ "$(jq -r .headRefOid <<<"$live_pair")" != "$EXPECTED_HEAD_SHA" ] ||
+             [ "$(jq -r .baseRefOid <<<"$live_pair")" != "$EXPECTED_BASE_SHA" ]; then
+            echo "Plan PR base/head pair changed immediately before failure publication." >&2
+            exit 1
+          fi
+          gh pr comment "$PR_NUMBER" --body-file /tmp/plan-review-failure-comment.md

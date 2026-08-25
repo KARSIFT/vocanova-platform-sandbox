@@ -12,14 +12,10 @@ name: review (reusable)
 # roles.yml - full run-time provider abstraction isn't built yet. Don't claim
 # more decoupling than exists.
 #
-# Current state (as of 2026-07-31): runs via a raw `cursor-agent` CLI
-# invocation (cursor.com - Cursor's own headless agent CLI, not a wrapper
-# action), reviewer-only - implementer and planner have their own separate
-# execution steps in their own files, moved to Cursor independently (see
-# their own files). Full execution-mechanism history (Claude Code ->
-# openai/codex-action -> OpenCode -> Cursor, and exactly why each move
-# happened - including the OpenCode-account incident that forced the last
-# one) lives in CHANGELOG.md's "review.yml" section, not here.
+# Current state (VOC-117, 2026-08-24): runs through Cursor on Grok 4.6
+# Standard. The provider-qualified stored binding is validated and only its
+# `cursor/` prefix is removed; bracket parameters remain part of the quoted
+# `--model` value. Execution-mechanism history lives in CHANGELOG.md.
 #
 # Every claim below was checked against the real installed CLI
 # (`agent --version` reported 2026.07.23-e383d2b at migration time) in a
@@ -66,10 +62,6 @@ name: review (reusable)
 #   nd-JSON per-event stream - the "Extract verdict text" step below reads
 #   the whole file as one JSON document and pulls `.result` directly; no
 #   line-by-line event filtering is needed.
-#
-# implementer and planner stay on their existing roles for now - migrating
-# them to Cursor too is a separate, not-yet-done follow-up; do not assume
-# they've moved without checking their own workflow files' execution steps.
 #
 # Needs CURSOR_API_KEY as a repo/org secret on the calling project - same
 # Free-plan-org private-repo caveat documented elsewhere in this repo for
@@ -169,7 +161,7 @@ jobs:
       # commit really was unreachable, not a model quality problem either
       # time. Checking out the exact reviewed SHA removes the root cause:
       # the reviewer now has the real file tree for what it's reviewing.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         if: steps.pr.outputs.stale != 'true'
         with:
           ref: ${{ steps.pr.outputs.sha }}
@@ -199,7 +191,7 @@ jobs:
 
       - name: Checkout karsift-ai-infra
         if: steps.pr.outputs.stale != 'true'
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: KARSIFT/karsift-ai-infra
           path: karsift-ai-infra
@@ -235,6 +227,7 @@ jobs:
           echo "Routing this review as: role=$role (attempt=$attempt, risk=${risk:-unknown})"
 
           MODEL=$(bash karsift-ai-infra/config/resolve-model.sh "$role" karsift-ai-infra/config/roles.yml)
+          python3 karsift-ai-infra/config/prepare_cursor_model.py "$MODEL" >/dev/null
           echo "model=$MODEL" >> "$GITHUB_OUTPUT"
           echo "role=$role" >> "$GITHUB_OUTPUT"
 
@@ -384,8 +377,11 @@ jobs:
         run: |
           set -uo pipefail
           source karsift-ai-infra/config/retry-helpers.sh
-          MODEL="${{ steps.model.outputs.model }}"
-          MODEL="${MODEL#cursor/}"
+          if ! MODEL=$(python3 karsift-ai-infra/config/prepare_cursor_model.py \
+            --require-api-key "${{ steps.model.outputs.model }}"); then
+            echo "::error::Reviewer Cursor model preparation failed closed." >&2
+            exit 1
+          fi
           run_review() {
             if agent -p --trust --mode plan \
               --model "$MODEL" \
@@ -409,10 +405,34 @@ jobs:
           # content-free failures only) applies identically here.
           retry_if_transient /tmp/cursor-stderr.log /tmp/verdict-response.json -- run_review
           exit_code=$?
-          if [ "$exit_code" -ne 0 ]; then
-            cat /tmp/cursor-stderr.log >&2
-          fi
           exit "$exit_code"
+
+      - name: Build bounded reviewer failure record
+        id: failure-record
+        if: ${{ failure() && steps.pr.outputs.stale != 'true' && steps.verify.outcome == 'failure' }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/review-failure
+          classification_status=0
+          python3 karsift-ai-infra/config/extract-cursor-result.py \
+            /tmp/verdict-response.json /tmp/verdict.md \
+            --allow-waiting --github-annotation \
+            --failure-record=/tmp/review-failure/failure.json \
+            --failure-input=/tmp/cursor-stderr.log || classification_status=$?
+          if [ "$classification_status" -ne 75 ] ||
+             [ ! -s /tmp/review-failure/failure.json ]; then
+            echo "Bounded reviewer failure classification could not be recorded." >&2
+            exit 1
+          fi
+
+      - name: Upload bounded reviewer failure record
+        if: ${{ always() && steps.failure-record.outcome == 'success' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: review-failure-${{ inputs.pr_number }}-${{ inputs.expected_head_sha }}
+          path: /tmp/review-failure/failure.json
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Extract verdict text
         if: steps.pr.outputs.stale != 'true'
@@ -592,3 +612,69 @@ jobs:
           fi
           gh pr comment "$PR_NUMBER" \
             --body-file /tmp/review-publish/verdict-comment.md
+
+  publish-review-failure:
+    needs: review
+    if: ${{ always() && needs.review.result == 'failure' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Download bounded reviewer failure record
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: review-failure-${{ inputs.pr_number }}-${{ inputs.expected_head_sha }}
+          path: /tmp/review-failure-input
+
+      - name: Checkout exact shared failure-publication policy
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: KARSIFT/karsift-ai-infra
+          ref: ${{ job.workflow_sha }}
+          path: karsift-ai-infra
+          persist-credentials: false
+
+      - name: Validate exact PR identity and bounded failure classification
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
+          EXPECTED_BASE_SHA: ${{ inputs.expected_base_sha }}
+        run: |
+          set -euo pipefail
+          gh pr view "$PR_NUMBER" --json state,headRefOid,baseRefOid > /tmp/live-pr.json
+          python3 karsift-ai-infra/config/build-review-failure-comment.py \
+            reviewer /tmp/live-pr.json /tmp/review-failure-input/failure.json \
+            /tmp/review-failure-comment.md "$EXPECTED_HEAD_SHA" \
+            "$EXPECTED_BASE_SHA" "${{ github.run_id }}"
+
+      - name: Mint failure-comment App token on the clean runner
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
+        with:
+          app-id: ${{ secrets.KARSIFT_BOT_APP_ID }}
+          private-key: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-pull-requests: write
+
+      - name: Publish App-signed bounded failure comment
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
+          EXPECTED_BASE_SHA: ${{ inputs.expected_base_sha }}
+        run: |
+          set -euo pipefail
+          live_pair=$(gh pr view "$PR_NUMBER" --json state,headRefOid,baseRefOid)
+          if [ "$(jq -r .state <<<"$live_pair")" != "OPEN" ] ||
+             [ "$(jq -r .headRefOid <<<"$live_pair")" != "$EXPECTED_HEAD_SHA" ] ||
+             [ "$(jq -r .baseRefOid <<<"$live_pair")" != "$EXPECTED_BASE_SHA" ]; then
+            echo "PR base/head pair changed immediately before failure publication." >&2
+            exit 1
+          fi
+          gh pr comment "$PR_NUMBER" --body-file /tmp/review-failure-comment.md

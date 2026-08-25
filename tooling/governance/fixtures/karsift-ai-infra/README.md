@@ -1,4 +1,4 @@
-# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106, VOC-108, VOC-115)
+# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106, VOC-108, VOC-115, VOC-117)
 
 These copies are deterministic fixtures for caller-repo policy regressions.
 They mirror `KARSIFT/karsift-ai-infra` at the SHA in `PINNED_SHA.txt` so
@@ -156,7 +156,36 @@ other integration advances rely on that hourly exact-tip wake.
 VOC-114 (VOC-113 recovery metadata-read fix) pins shared-infra merge
 `c5d8bccfa8676bd367b53ad5f6f9a51a40c99405`, including the live-proof
 corrections from PRs #137 through #145 and the project-template correction that
-keeps Statuses write on release alone. Recovery metadata reads and allowlisted
+keeps Statuses write on release alone.
+
+VOC-117 advances the six active role bindings to Cursor Composer 2.5
+(implementer + escalation) and explicit-high Grok 4.6 Standard with bracket
+parameters (planner, reviewer, reviewer_fast_retry, plan_reviewer). Live Cursor
+CLI model discovery proved the effort-omitted identifier unavailable, so
+`config/prepare_cursor_model.py` passes stored values like
+`cursor/grok-4.6[effort=high,fast=false]` to the Cursor CLI without silent
+vendor/model fallback and rejects Grok 4.6 forms that omit effort. Reviewer and
+plan-review terminal failures pass the structured Cursor
+response through `config/extract-cursor-result.py`, which writes only a strict
+schema-v1 failure artifact containing an allowlisted reason and regex-bounded
+subtype. The same-run artifact is retained for one day. Dedicated clean
+publisher jobs download and strictly validate it, validate the exact live PR
+base/head pair, check out their own exact reusable-workflow SHA, mint a narrowly
+scoped App token only after validation, and publish a non-verdict infrastructure
+failure comment while withholding raw provider output. When Cursor exits with
+an empty JSON response, the failed producer may inspect at most 64 KiB of local
+stderr and retain only an existing allowlisted reason code; missing, oversized,
+or unrecognized text remains `unspecified` and never enters the artifact. The
+exact Cursor phrase `API key is invalid` maps to `authentication`, while
+negative regressions reject unrelated API-key help prose. Cursor's bounded
+`Available models:` diagnostic is classified as an unavailable/invalid model
+without publishing the list or other raw output.
+`PINNED_SHA.txt` records exact
+reviewed karsift-ai-infra merge
+`37b06aa95030e235b7311b3c14ee23977f62ac76`; fixture file content in this
+directory is synchronized to that merge in the same task.
+
+Recovery metadata reads and allowlisted
 dispatches use narrowly job-scoped `GITHUB_TOKEN` permissions: Actions write plus
 Checks, Commit statuses, Contents, and Pull requests read. App tokens remain
 limited to App-identity release mutations and no longer depend on an installation

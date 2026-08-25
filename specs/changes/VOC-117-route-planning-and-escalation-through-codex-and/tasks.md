@@ -1,7 +1,7 @@
 # VOC-117 — Tasks
 
-None of the tasks below is implementation-authorized by this package.
-Adoption and each task's own implementation authorization are separate.
+The package is adopted by plan PR #979. Task issue #980 is the sole implementation
+authority for the task below.
 
 This package intentionally defaults to **one task** because issue #978 (as
 superseded) requires one coherent model-routing outcome covering configuration,
@@ -14,20 +14,20 @@ validation together.
 - Acceptance criteria: `VOC-117-AC-00` through `VOC-117-AC-05`
 - Tests: `VOC-117-TEST-00` through `VOC-117-TEST-05`
 - Evidence: `VOC-117-EV-00` (`t00-evidence.md` in this package directory)
-- Status: pending
+- Status: in progress on caller PR #982 after authoritative infra merge
 
 ### Required work
 
 1. Update authoritative `KARSIFT/karsift-ai-infra/config/roles.yml` to exactly:
    - `implementer: cursor/composer-2.5`
    - `implementer_escalation: cursor/composer-2.5`
-   - `planner: cursor/grok-4.6[fast=false]`
-   - `reviewer: cursor/grok-4.6[fast=false]`
-   - `reviewer_fast_retry: cursor/grok-4.6[fast=false]`
+   - `planner: cursor/grok-4.6[effort=high,fast=false]`
+   - `reviewer: cursor/grok-4.6[effort=high,fast=false]`
+   - `reviewer_fast_retry: cursor/grok-4.6[effort=high,fast=false]`
    - `plan_reviewer: cursor/grok-4.6[effort=high,fast=false]`
 2. Make `plan.yml`, `implement.yml`, `review.yml`, and `plan-review.yml` compatible
-   with parameterized Cursor model strings so the requested Standard/non-fast and
-   plan-reviewer `effort=high` semantics are preserved after vendor-prefix handling.
+   with parameterized Cursor model strings so the requested explicit-high
+   Standard/non-fast semantics are preserved after vendor-prefix handling.
 3. Keep authentication fail-closed for Cursor paths (`CURSOR_API_KEY`); never print
    credentials; do not require or re-enable an OpenAI/Codex execution path.
 4. Update current-state comments/docs so dormant historical OpenAI/Codex or obsolete
@@ -56,8 +56,8 @@ validation together.
 
 - This package intentionally has one task because no concrete split boundary is
   required: coordinated source and caller PRs remain one outcome.
-- If implementation discovers that parameterized CLI support cannot honor the stored
-  bindings without changing the requested model IDs, stop and record the blocker in
-  evidence rather than silently substituting another vendor/model.
+- Live implementation discovered the effort-omitted Grok identifier is unavailable.
+  The same task records the evidence and uses Cursor's working explicit-high
+  non-Fast form without substituting another vendor, model family, or speed tier.
 
 Tasks preserve scope, separation of duties, and rollback safety.
