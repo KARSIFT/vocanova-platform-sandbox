@@ -222,6 +222,7 @@ done
 bash -n scripts/governance/classify-change-risk.sh
 bash -n scripts/governance/validate-monitoring-impact.sh
 python3 tooling/governance/validate_repository_foundation.py --repository-root .
+python3 tooling/governance/validate_python_bytecode_hygiene.py --repository-root .
 
 monitoring_impact_args=()
 if [[ -n "$files_from" ]]; then

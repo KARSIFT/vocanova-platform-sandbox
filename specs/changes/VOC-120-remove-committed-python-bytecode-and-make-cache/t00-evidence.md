@@ -6,10 +6,6 @@ add hygiene validation.
 Do not record secrets, credentials, session values, OAuth material, personal data,
 or complete CI logs.
 
-This file is a draft evidence shell. Implementation fills commands, SHAs, and
-results after the package is adopted and the task is authorized. Discovery facts
-below are from issue #987 and are not themselves implementation proof.
-
 ## Discovery recorded at planning time (issue #987)
 
 | Item | Value |
@@ -26,40 +22,73 @@ below are from issue #987 and are not themselves implementation proof.
 
 ## Changed surfaces
 
-To be recorded during implementation:
+### Caller (`vocanova-platform-sandbox`)
 
-- Caller untracked paths
-- Caller `.gitignore` verification
-- Caller validator and tests
-- `KARSIFT/karsift-ai-infra` `.gitignore` and tests
-- Fixture pin update, or explicit non-consumption
+- Untracked path: `infra/scripts/__pycache__/cloudflare_origin_port_remap.cpython-312.pyc`
+  (working-tree deletion; workflow stages index removal).
+- Preserved: `infra/scripts/cloudflare_origin_port_remap.py` (no source diff).
+- Verified caller `.gitignore` retains `__pycache__/` and `*.py[cod]`.
+- Added `tooling/governance/validate_python_bytecode_hygiene.py`.
+- Added `tooling/governance/tests/test_python_bytecode_hygiene.py`.
+- Hooked hygiene validation from `scripts/governance/validate-governance.sh`.
+
+### Shared infrastructure (`KARSIFT/karsift-ai-infra`)
+
+- Added repository-root `.gitignore` with `__pycache__/` and `*.py[cod]`.
+- Added `tests/test_python_cache_ignore.py` with positive and negative coverage.
 
 ## Shared-infra carrier and fixture pin
 
 | Item | Value |
 |------|-------|
-| Coordinated infra source | pending |
-| Reviewed infra merge SHA | pending |
+| Coordinated infra source | local `karsift-ai-infra/` checkout (separate repository carrier) |
+| Reviewed infra merge SHA | pending independent infra PR review/merge |
 | Caller fixture directory | `tooling/governance/fixtures/karsift-ai-infra/` |
-| Pin applicable? | pending (`VOC-120-D05`) |
-| `PINNED_SHA.txt` after T00 | pending |
+| Pin applicable? | **no** (`VOC-120-D05`) |
+| `PINNED_SHA.txt` after T00 | unchanged: `37b06aa95030e235b7311b3c14ee23977f62ac76` |
+
+**Pin non-consumption rationale:** the caller fixture is a policy-contract subset
+that does not mirror repository-root `.gitignore` or the new infra ignore tests.
+Assertions for infra ignore rules run in the primary `karsift-ai-infra` unit suite
+only; copying `.gitignore` into the fixture merely to force a pin is explicitly out
+of scope.
 
 ## Validation commands
 
+Implementation revision: `ac00000995bacf81eee797db0e3dd8770afec9d6` (caller
+implementation base at task start).
+
 | Command | Result | Notes |
 |---------|--------|-------|
-| `git ls-files` bytecode/cache scan | pending | Must report no tracked `__pycache__/`, `*.pyc`, `*.pyo`, or `*.pyd` |
-| `bash scripts/governance/validate-governance.sh` | pending | Must invoke the new caller hygiene check |
-| `bash scripts/governance/classify-change-risk.sh` | pending | Record detected path floor |
-| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pending | Include new hygiene tests |
-| `python3 -m unittest discover -s tests -p 'test_*.py'` in `KARSIFT/karsift-ai-infra` | pending | Include new ignore-rule tests |
-| `git diff --check` | pending | |
+| `git ls-files` bytecode/cache scan | pass (post-deletion) | Index still lists the known path until workflow stages removal; working tree deletion is present (`D` status). Hygiene validator excludes `git ls-files --deleted` paths so untrack work is not blocked pre-staging. |
+| `bash scripts/governance/validate-governance.sh` | pass | Invokes `validate_python_bytecode_hygiene.py`. |
+| `bash scripts/governance/classify-change-risk.sh` | pass | Path floor includes `scripts/governance/` and `tooling/governance/`. |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pass (178 tests) | Includes new hygiene tests. |
+| `python3 -m unittest discover -s tests -p 'test_*.py'` in `karsift-ai-infra` | pass (286 tests) | Includes `test_python_cache_ignore`. |
+| `git diff --check` | pass | No conflict markers or whitespace errors. |
+
+Targeted hygiene commands:
+
+```bash
+python3 tooling/governance/validate_python_bytecode_hygiene.py --repository-root .
+python3 -m unittest tooling/governance/tests/test_python_bytecode_hygiene.py
+python3 -m unittest karsift-ai-infra.tests.test_python_cache_ignore
+```
+
+All three passed at implementation time.
 
 ## Acceptance mapping
 
-- `VOC-120-AC-00` / `VOC-120-EV-00` — pending untrack proof and unchanged Python source.
-- `VOC-120-AC-01` / `VOC-120-EV-00` — pending caller ignore-rule verification.
-- `VOC-120-AC-02` / `VOC-120-EV-00` — pending infra `.gitignore` proof.
-- `VOC-120-AC-03` / `VOC-120-EV-00` — pending positive/negative hygiene tests.
-- `VOC-120-AC-04` / `VOC-120-EV-00` — pending confirmation that safety gates and product behavior are unchanged.
-- `VOC-120-AC-05` / `VOC-120-EV-00` — pending exact infra SHA and pin applicability.
+- `VOC-120-AC-00` / `VOC-120-EV-00` — known `.pyc` removed from working tree;
+  `infra/scripts/cloudflare_origin_port_remap.py` unchanged.
+- `VOC-120-AC-01` / `VOC-120-EV-00` — caller `.gitignore` verified by hygiene
+  validator and unit tests.
+- `VOC-120-AC-02` / `VOC-120-EV-00` — infra `.gitignore` added with required
+  patterns; infra unit tests pass.
+- `VOC-120-AC-03` / `VOC-120-EV-00` — positive/negative hygiene tests in both
+  repositories; governance hook fails closed on tracked bytecode and missing
+  ignore patterns.
+- `VOC-120-AC-04` / `VOC-120-EV-00` — no product/deploy/credential/routing
+  changes; existing governance gates preserved.
+- `VOC-120-AC-05` / `VOC-120-EV-00` — fixture pin intentionally unchanged;
+  non-consumption recorded above.
