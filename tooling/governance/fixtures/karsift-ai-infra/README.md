@@ -1,4 +1,4 @@
-# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106, VOC-108, VOC-115, VOC-117)
+# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106, VOC-108, VOC-115, VOC-117, VOC-121)
 
 These copies are deterministic fixtures for caller-repo policy regressions.
 They mirror `KARSIFT/karsift-ai-infra` at the SHA in `PINNED_SHA.txt` so
@@ -12,7 +12,7 @@ contracts without cloning the infra repository in CI.
 
 They are not a second runtime source of truth. Callers still `uses:`
 `KARSIFT/karsift-ai-infra/...@main`. Update the fixtures when VOC-080-,
-VOC-097-, VOC-102-, VOC-104-, VOC-106-, VOC-108-, or VOC-115-related infra contracts change and
+VOC-097-, VOC-102-, VOC-104-, VOC-106-, VOC-108-, VOC-115-, or VOC-121-related infra contracts change and
 record the new pin in evidence.
 
 ## package/task defaults (VOC-115)
@@ -180,20 +180,25 @@ exact Cursor phrase `API key is invalid` maps to `authentication`, while
 negative regressions reject unrelated API-key help prose. Cursor's bounded
 `Available models:` diagnostic is classified as an unavailable/invalid model
 without publishing the list or other raw output.
-`PINNED_SHA.txt` records exact
-reviewed karsift-ai-infra merge
-`37b06aa95030e235b7311b3c14ee23977f62ac76`; fixture file content in this
-directory is synchronized to that merge in the same task.
+`PINNED_SHA.txt` records the exact reviewed karsift-ai-infra merge consumed by
+this fixture. VOC-117 originally advanced the fixture to merge
+`37b06aa95030e235b7311b3c14ee23977f62ac76`. VOC-121-T00 advances it to
+infrastructure PR #157 merge
+`99476c2a1018e42d4bd442657b5257885ac9f1c9`; the mirrored source files are
+byte-for-byte copies from that merge's reviewed tree.
 
-Recovery metadata reads and allowlisted
+Recovery metadata reads, exact selected-run reruns, and allowlisted absent-context
 dispatches use narrowly job-scoped `GITHUB_TOKEN` permissions: Actions write plus
 Checks, Commit statuses, Contents, and Pull requests read. App tokens remain
 limited to App-identity release mutations and no longer depend on an installation
 Actions grant. The runner uses valid
 `gh api` invocation, reports sanitized endpoint-class failures, binds promotion
 dispatch suppression, completion, and promotion verification to required
-contexts, ignoring unrelated checks when the three required contexts have
-succeeded. Both hosted verification adapters
+contexts. A failed or cancelled ruleset-selected pull-request check is rebound
+to its original run, PR, head, branch, event, workflow name/path, and first
+attempt before that exact run is rerun once. Alternate successful runs and
+same-named statuses cannot suppress the rerun; workflow dispatch is used only
+for a genuinely absent required context. Both hosted verification adapters
 also use valid `gh api` repository context. The contract is covered by
 `tests/test_voc114_actions_check_recovery.py`.
 Release additionally grants its job token Commit statuses write. After genuine
@@ -206,3 +211,13 @@ operator dispatch without accepting a free-form target SHA, closing the
 default-branch schedule bootstrap gap encountered during the live proof.
 Its paginated commit query pipes slurped pages to standalone `jq`, avoiding the
 GitHub CLI's invalid `--slurp` plus `--jq` combination.
+
+VOC-121 (coordinated infrastructure carrier publication and required-check
+recovery) advances implementer helper preservation, isolated `publish-source`
+for authorized nested `karsift-ai-infra/` edits, and promotion recovery that
+consults `gh pr checks --required`. A cancelled or failed exact-head required
+Actions run is rerun by its selected run ID after exact metadata validation;
+only an absent context is redispatched. Alternate successful runs and
+same-named statuses cannot override the ruleset-selected row. Status
+attestation, release evaluation, and the read-only recovery verifier use the
+same required-check view and fail closed on ambiguity or read failure.

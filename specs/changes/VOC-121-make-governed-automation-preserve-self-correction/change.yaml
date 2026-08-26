@@ -1,0 +1,188 @@
+schema_version: 1
+id: VOC-121
+slug: make-governed-automation-preserve-self-correction
+title: Make governed automation preserve self-correction helpers and finish coordinated
+  cross-repository tasks
+type: infrastructure
+status: adopted
+risk: R4
+planned_implementation_risk_floor: 'R4. This package changes protected CI/CD orchestration
+  in KARSIFT/karsift-ai-infra (implement.yml commit/self-correction/publish, actions-check-recovery,
+  promotion status attestation) and caller tooling/governance fixtures and tests.
+  tooling/governance/* is an R4 path floor; .github/workflows/* is an R3 floor; semantic
+  agent-authority and second-repository publication are protected. This is a draft
+  proposal for human adoption review, not a determination; the path classifier and
+  independent verifier remain authoritative.
+
+  '
+canonical_path: specs/changes/VOC-121-make-governed-automation-preserve-self-correction
+authority_model: a004-active
+requirement_source: 'GitHub issue #994 (Make governed automation preserve self-correction
+  helpers and finish coordinated cross-repository tasks). VOC-120 exposed three related
+  autonomous-delivery failures: authorized nested infrastructure edits were silently
+  discarded by implement.yml; pre-push self-correction invoked prepare_cursor_model.py
+  after rm -rf karsift-ai-infra; promotion recovery treated a successful same-named
+  status or alternate run as satisfying a cancelled required check-run that GitHub
+  ruleset evaluation still selected. Required: one outcome-sized reliability change
+  so a single adopted task can finish all authorized coordinated repository carriers
+  without silent loss; self-correction retains immutable helpers after caller staging;
+  required-check recovery uses GitHub actual branch/ruleset satisfaction; deterministic
+  tests reproduce all three live failures; docs and caller fixture/pin follow the
+  exact reviewed infra merge. This draft package does not adopt or authorize itself.
+
+  '
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time if needed
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: 'planner (drafting only; adoption remains a human/autonomous
+    governed decision)
+
+    '
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
+automatic_merge_allowed: true
+production_impact: 'none-intentional for application runtime. This package repairs
+  governed automation so coordinated infrastructure and caller work, pre-push self-correction,
+  and required-check recovery complete fail-closed. It does not change product behavior,
+  deployment topology, credentials, providers, or monitor inventory. Restoring intended
+  promotion recovery may allow an already-reviewed promotion PR to merge through existing
+  gates after genuine exact-head checks; that is not a new deploy path.
+
+  '
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: 'KARSIFT automation reliability fix for implementer staging/self-correction,
+    coordinated-repository publication, and required-check recovery. No page routes,
+    critical API endpoints, monitor inventory, or synthetic inventory in infra/monitoring/
+    are added or changed.
+
+    '
+dependencies:
+- id: VOC-121-DEP-00
+  status: 'resolved at drafting time. Issue #994 provides the three live failures,
+    exact reproduction/run IDs, root causes, required outcome, fail-loud floor if
+    general multi-carrier cannot be made safe, credential/retry non-goals, and one-task
+    guidance with enough specificity to draft without a clarifying round trip.
+
+    '
+- id: VOC-121-DEP-01
+  status: 'resolved at drafting time. Active A-004 remains authoritative: no founder
+    approved-comment gate on engineering-workflow adopt/merge/release paths; exact-SHA
+    independent verification, deterministic risk floors, protected-path controls,
+    and fail-closed behavior remain mandatory.
+
+    '
+- id: VOC-121-DEP-02
+  status: 'resolved at drafting time. Current reusable implement.yml Commit implementer
+    work copies only config/run-app-checks.sh to /tmp, then rm -rf karsift-ai-infra,
+    then stages a caller-only bundle. Self-correct failed pre-push validation later
+    invokes python3 karsift-ai-infra/config/prepare_cursor_model.py. The implementer
+    prompt already permits coordinated repository carriers; the execution/publishing
+    contract does not.
+
+    '
+- id: VOC-121-DEP-03
+  status: 'resolved at drafting time. Live VOC-120-T00 implementation run https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32899479806
+    (job 97970681892) produced authorized nested infrastructure edits that were discarded;
+    no infrastructure PR existed until manual recovery under the same task. VOC-120-T00
+    evidence records attempt-1 independent verification failure for missing coordinated
+    infra delivery.
+
+    '
+- id: VOC-121-DEP-04
+  status: 'resolved at drafting time. Promotion PR #993 had an exact-head governance-policy
+    pull-request check-run cancelled by concurrency while another workflow-dispatch
+    run and a published same-named status were successful. Release run https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/32902418610
+    reported actions-check-recovery dispatched=none, attested successful statuses,
+    then failed merge because the ruleset still selected the cancelled required check-run.
+    gh pr checks --required continued to report governance-policy failed. Rerunning
+    the cancelled exact-head governance run succeeded; the App controller then merged
+    #993 without an admin bypass.
+
+    '
+- id: VOC-121-DEP-05
+  status: 'resolved at drafting time as an accepted delivery constraint: coordinated
+    PRs in the caller and KARSIFT/karsift-ai-infra remain one task. Repository count
+    is not a split reason. T00 itself is a coordinated change and may still hit the
+    pre-fix discard path (chicken-and-egg); bootstrap recovery of this task infra
+    carrier is in-scope. After T00 merges, future adopted tasks must not need that
+    recovery.
+
+    '
+- id: VOC-121-DEP-06
+  status: 'open at drafting time as an implementer-recorded fallback, not a planner
+    guess. Preferred outcome is full governed multi-carrier publication. If implementation
+    proves that general multi-carrier support cannot be made safe in this change without
+    weakening runner isolation, App-token least privilege, exact-SHA review, or protected
+    checks, the same task must fail loudly on authorized nested edits with precise
+    recovery instructions. Silent deletion remains unacceptable either way. Record
+    the chosen path and the safety constraint in t00-evidence.md.
+
+    '
+affected_areas:
+- KARSIFT/karsift-ai-infra/.github/workflows/implement.yml
+- KARSIFT/karsift-ai-infra/.github/workflows/release.yml
+- KARSIFT/karsift-ai-infra/.github/workflows/merge-gate.yml
+- KARSIFT/karsift-ai-infra/.github/workflows/recover-actions-checks.yml
+- KARSIFT/karsift-ai-infra/config/actions_check_recovery.py
+- KARSIFT/karsift-ai-infra/config/actions-check-recovery-runner.py
+- KARSIFT/karsift-ai-infra/config/authoritative_checks.py
+- KARSIFT/karsift-ai-infra/config/promotion_status_attestation.py
+- KARSIFT/karsift-ai-infra/config/promotion-status-attestation-runner.py
+- KARSIFT/karsift-ai-infra/prompts/implement.md
+- KARSIFT/karsift-ai-infra/README.md
+- KARSIFT/karsift-ai-infra/tests/
+- tooling/governance/fixtures/karsift-ai-infra/
+- tooling/governance/tests/
+- specs/changes/VOC-121-make-governed-automation-preserve-self-correction/
+implementation:
+  authorized: true
+  required: true
+  status: authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: 996
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-automation-reliability-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+ehr: not-triggered
+standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
+blocking_reasons: none - adopted and implementation-authorized
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+approved_candidate_sha: 2065f784d5237faed6baa4a53c3f8418f696a308
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/995#issuecomment-5417657512
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-121-DEP-00
+- VOC-121-DEP-01
+- VOC-121-DEP-02
+- VOC-121-DEP-03
+- VOC-121-DEP-04
+- VOC-121-DEP-05
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #995 at 2065f784d5237faed6baa4a53c3f8418f696a308'
+implementation_authority_before_adoption: false
+implementation_authority_status: authorized
+repository_adoption_status: adopted
+adoption_pr: 995
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/995

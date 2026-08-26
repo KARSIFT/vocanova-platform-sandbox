@@ -44,6 +44,7 @@ class Voc117RoleBindingsFixtureTests(unittest.TestCase):
         cls.review = read_fixture(".github/workflows/review.yml")
         cls.plan_review = read_fixture(".github/workflows/plan-review.yml")
         cls.implement = read_fixture(".github/workflows/implement.yml")
+        cls.readme = read_fixture("README.md")
 
     def test_voc117_test_00_fixture_has_six_exact_bindings(self):
         for role, expected in VOC117_BINDINGS.items():
@@ -92,9 +93,8 @@ class Voc117RoleBindingsFixtureTests(unittest.TestCase):
         self.assertIn("VOC-117", header)
         self.assertIn("not current routing or fallback behavior", header)
 
-    def test_voc117_test_05_fixture_pin_is_recorded(self):
-        pin = (FIXTURE_INFRA_ROOT / "PINNED_SHA.txt").read_text(encoding="utf-8").strip()
-        self.assertEqual(pin, "37b06aa95030e235b7311b3c14ee23977f62ac76")
+    def test_voc117_test_05_source_merge_remains_recorded_after_later_pin(self):
+        self.assertIn("37b06aa95030e235b7311b3c14ee23977f62ac76", self.readme)
 
     def test_voc117_test_06_cursor_failures_are_sanitized_and_classified(self):
         extractor = read_fixture("config/extract-cursor-result.py")
