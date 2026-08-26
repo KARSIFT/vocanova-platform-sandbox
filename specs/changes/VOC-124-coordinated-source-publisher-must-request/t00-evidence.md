@@ -65,7 +65,9 @@ data, complete CI logs, or App token values.
 | Independently reviewed infra head SHA | `7d9e72e3149676e004cc36553664686f226080a7` |
 | Exact infra merge SHA | `f406cc95a3f853e8aef5bf8bcf22d37a29d64547` |
 | Separate merger | `m-e-h-r-d-a-a-d` (merged `2026-08-26`; not the `implementer` model role) |
-| `VOC-124-D04` bootstrap status | **exhausted** — one clean branch from infra `main`, one reviewed non-closing infra PR, one merge; caller fixture/pin/evidence resumed only after merge `f406cc95a3f853e8aef5bf8bcf22d37a29d64547` was live on `implement.yml@main` |
+| Independent exact-head verdict | **PASS**, no findings, on `7d9e72e3149676e004cc36553664686f226080a7`; [review comment](https://github.com/KARSIFT/karsift-ai-infra/pull/159#issuecomment-5424756083) posted `2026-08-26T11:41:31Z` |
+| Review/merge chronology | The separate actor merged at `2026-08-26T11:34:42Z`, before the exact-head review verdict completed. Attempt 2 started at `2026-08-26T11:34:56Z`, also before that verdict. This timing deviation is recorded explicitly; the evidence does not claim a pre-merge verdict. |
+| `VOC-124-D04` bootstrap status | **exhausted** by the exact merge — one clean branch from infra `main`, one non-closing infra PR, one separate-actor merge; caller fixture/pin/evidence resumed only after merge `f406cc95a3f853e8aef5bf8bcf22d37a29d64547` was live on `implement.yml@main`. The same exact source head subsequently received an independent PASS with no findings. |
 | VOC-122 nested head `f90eb63…` published by bootstrap? | **no** |
 | Pin applicable? | **yes** — `implement.yml` and VOC-124 tests are in the policy fixture subset |
 | `PINNED_SHA.txt` after source merge | `f406cc95a3f853e8aef5bf8bcf22d37a29d64547` |
@@ -73,9 +75,15 @@ data, complete CI logs, or App token values.
 
 ## Independent source review
 
-Bootstrap infrastructure PR #159 was reviewed and merged before attempt 2 resumed
-caller fixture/pin work. The governed `implementer` model did not approve or merge
-that carrier.
+Bootstrap infrastructure PR #159 merged at `2026-08-26T11:34:42Z` while no
+independent verdict had yet completed. Attempt 2 resumed at
+`2026-08-26T11:34:56Z`. The read-only Cursor Grok review later returned PASS
+with no findings on the unchanged exact source head
+`7d9e72e3149676e004cc36553664686f226080a7` and was posted at
+`2026-08-26T11:41:31Z`. This deviated from the intended pre-merge review
+sequence; it is not represented as compliant chronology. The governed
+`implementer` model did not approve or merge that carrier, and the separate
+merger did not change the reviewed head.
 
 ## Dependent #1003 / #1012 (not implemented by this task)
 
@@ -134,4 +142,4 @@ node --test scripts/foundation/voc097-fixture-matrix.test.mjs scripts/foundation
 - `VOC-124-AC-03` / `VOC-124-EV-00` — **pass**: missing credentials, invalid bundles, stale bases/leases fail closed
 - `VOC-124-AC-04` / `VOC-124-EV-00` — **pass**: VOC-121/VOC-123 isolation, named-ref bundle, lease, retry limits preserved
 - `VOC-124-AC-05` / `VOC-124-EV-00` — **pass**: A-004 current-state text corrected; historical CHANGELOG unchanged
-- `VOC-124-AC-06` / `VOC-124-EV-00` — **pass**: bootstrap exhausted; fixture pin advanced to `f406cc95a3f853e8aef5bf8bcf22d37a29d64547`; #1003 retry handoff recorded against that SHA
+- `VOC-124-AC-06` / `VOC-124-EV-00` — **evidence complete with disclosed chronology deviation, subject to independent caller assessment**: bootstrap exhausted; exact source head received a post-merge PASS with no findings; fixture pin advanced to `f406cc95a3f853e8aef5bf8bcf22d37a29d64547`; #1003 retry handoff recorded against that SHA
