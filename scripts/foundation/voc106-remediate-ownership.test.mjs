@@ -117,8 +117,9 @@ test("VOC-106-TEST-11: caller wiring exposes read-only verify-remediate-operator
   );
   assert.match(verifier, /jobs:\s+verify:/);
   assert.match(contract, /- verify-remediate-operator-ownership \/ verify/);
-  assert.match(remediate, /remediate-ownership-classifier\.py/);
-  assert.match(remediate, /remediate-escalate-operator\.py/);
-  assert.match(remediate, /remediate-fail-closed\.py/);
-  assert.match(remediate, /path: pr-head/);
+  assert.match(remediate, /remediation-ownership\.py/);
+  assert.match(remediate, /--repository-root caller/);
+  assert.match(remediate, /--ownership-state "\$ownership_state"/);
+  assert.match(remediate, /echo "operator_escalation=true"/);
+  assert.match(remediate, /path: caller/);
 });
