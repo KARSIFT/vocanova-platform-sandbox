@@ -15,6 +15,10 @@ const pipelinePath = path.join(
   repositoryRoot,
   ".github/workflows/pipeline.yml",
 );
+const pipelineVerifyPath = path.join(
+  repositoryRoot,
+  ".github/workflows/pipeline-verify.yml",
+);
 const docPath = path.join(
   repositoryRoot,
   "docs/operations/15-ai-native-product-and-engineering-operating-model.md",
@@ -104,7 +108,7 @@ test("VOC-104-TEST-11: docs and caller wiring distinguish reuse from full path",
 test("VOC-104 fixture is pinned to the independently reviewed shared merge", () => {
   assert.equal(
     readFileSync(pinPath, "utf8").trim(),
-    "f406cc95a3f853e8aef5bf8bcf22d37a29d64547",
+    "82fe888d7285270060055fbc4a6a46263906f2f0",
   );
 });
 
@@ -124,18 +128,18 @@ test("VOC-104-TEST-01: ready_for_review remains subscribed", () => {
 });
 
 test("VOC-104-TEST-12: verifier is read-only and contract-bound", () => {
-  const pipeline = readFileSync(pipelinePath, "utf8");
+  const pipelineVerify = readFileSync(pipelineVerifyPath, "utf8");
   const verifier = readFileSync(verifyWorkflowPath, "utf8");
   const reuse = readFileSync(reuseWorkflowPath, "utf8");
   const mergeGate = readFileSync(mergeWorkflowPath, "utf8");
   const contract = readFileSync(contractPath, "utf8");
-  assert.match(pipeline, /verify-ready-for-review-reuse/);
+  assert.match(pipelineVerify, /verify-ready-for-review-reuse/);
   assert.match(
-    pipeline,
+    pipelineVerify,
     /uses: KARSIFT\/karsift-ai-infra\/\.github\/workflows\/verify-ready-for-review-reuse\.yml@main/,
   );
   const verifyBlock =
-    pipeline.split("verify-ready-for-review-reuse:", 2)[1] ?? "";
+    pipelineVerify.split("verify-ready-for-review-reuse:", 2)[1] ?? "";
   assert.match(verifyBlock, /actions: read/);
   assert.doesNotMatch(verifyBlock, /secrets: inherit/);
   assert.match(verifier, /jobs:\s+verify:/);
@@ -148,8 +152,11 @@ test("VOC-104-TEST-12: verifier is read-only and contract-bound", () => {
   assert.match(reuse, /name: decide \(\$\{\{ inputs\.event_action \}\}\)/);
   assert.match(mergeGate, /Publish immutable reuse transition attestation/);
   assert.match(mergeGate, /policy_sha:/);
-  assert.doesNotMatch(pipeline, /verify_reuse_proof_head_sha:/);
-  assert.match(pipeline, /expected_proof_head_sha: \$\{\{ github\.sha \}\}/);
+  assert.doesNotMatch(pipelineVerify, /verify_reuse_proof_head_sha:/);
+  assert.match(
+    pipelineVerify,
+    /expected_proof_head_sha: \$\{\{ github\.sha \}\}/,
+  );
   assert.match(contract, /verify-ready-for-review-reuse \/ verify/);
   assert.match(contract, /exact_pr_head/);
   assert.match(contract, /workflow_dispatch/);

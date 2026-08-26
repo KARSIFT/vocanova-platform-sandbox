@@ -38,6 +38,13 @@ const sharedCallerTemplate = readFileSync(
   ),
   "utf8",
 );
+const sharedCallerVerifyTemplate = readFileSync(
+  path.join(
+    fixtureRoot,
+    "templates/project-repo/.github/workflows/pipeline-verify.yml",
+  ),
+  "utf8",
+);
 const authorityDocs = [
   readFileSync(path.join(repositoryRoot, "AGENTS.md"), "utf8"),
   readFileSync(
@@ -133,11 +140,11 @@ test("VOC-108-TEST-08: caller and shared docs name marker-bound authority", () =
   );
   assert.doesNotMatch(sharedMerge, /see "Close linked task issue" below/);
   assert.match(
-    sharedCallerTemplate,
+    sharedCallerVerifyTemplate,
     /options: \[[^\]]*verify-remediate-operator-ownership[^\]]*\]/,
   );
   assert.match(
-    sharedCallerTemplate,
+    sharedCallerVerifyTemplate,
     /\n  verify-remediate-operator-ownership:\n/,
   );
 });
@@ -145,6 +152,6 @@ test("VOC-108-TEST-08: caller and shared docs name marker-bound authority", () =
 test("VOC-108 fixture is pinned to the consumed shared merge", () => {
   assert.equal(
     readFileSync(path.join(fixtureRoot, "PINNED_SHA.txt"), "utf8").trim(),
-    "f406cc95a3f853e8aef5bf8bcf22d37a29d64547",
+    "82fe888d7285270060055fbc4a6a46263906f2f0",
   );
 });
