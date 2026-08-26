@@ -1,0 +1,198 @@
+schema_version: 1
+id: VOC-125
+slug: manual-resume-of-an-existing-implementation-pr
+title: Manual resume of an existing implementation PR must supply exact retry bindings
+type: infrastructure
+status: draft
+risk: R4
+planned_implementation_risk_floor: 'R4. This package changes protected CI/CD implement
+  recovery identity in KARSIFT/karsift-ai-infra (implement.yml existing-carrier binding,
+  caller pipeline dispatch contract, and tooling/governance fixtures and tests). tooling/governance/*
+  is an R4 path floor; .github/workflows/* is an R3 floor; semantic mutation of exact-head
+  remediation bindings, attempt caps, and implementation-carrier identity is protected.
+  This is a draft proposal for human adoption review, not a determination; the path
+  classifier and independent verifier remain authoritative.
+
+  '
+canonical_path: specs/changes/VOC-125-manual-resume-of-an-existing-implementation-pr
+authority_model: a004-active
+requirement_source: 'GitHub issue #1020 (Manual resume of an existing implementation
+  PR cannot supply exact retry bindings). Live 2026-08-26 failure while resuming adopted
+  task VOC-122-T00 (issue #1003, draft PR #1012) after VOC-124 repaired and merged
+  the coordinated source publisher: pipeline run 32966618512 job 98170418081 reached
+  Create implementation branch, found existing remote branch agent/voc-122-voc-122-t00
+  at 0b7be8c531be8300d5a1d5534acc83bf4d6a1791, then failed closed before model resolution
+  because expected_head_sha was empty. Prior App-signed review bound that PR revision
+  to base e910eb4a21d48bbb5b3e0c30b8ee647d64683dbe. Caller develop at dispatch was
+  f0f7a54283c3527f40544fd236516dc3a5f4dc82; authoritative infrastructure was KARSIFT/karsift-ai-infra@f406cc95a3f853e8aef5bf8bcf22d37a29d64547.
+  Root cause: reusable implement.yml correctly requires expected_head_sha and expected_base_sha
+  on attempt != 1, but caller pipeline.yml workflow_dispatch exposes attempt without
+  an existing-carrier recovery identity and the implement job forwards neither SHA.
+  Automatic remediate.yml retries have those values from the pull-request review path;
+  a later operator recovery through action=implement cannot supply them. Retrying
+  as attempt 1 would violate the one-retry limit; deleting the branch or opening a
+  replacement PR would discard the existing carrier. Required: one fail-closed governed
+  recovery route that derives immutable identity from an explicit existing PR number
+  and App-signed exact-revision review/metadata, forwards verified bindings into implement.yml
+  before any model or mutation step, preserves attempt 1|2 and the existing carrier,
+  adds deterministic source and caller tests, updates current-state docs/fixture/pin,
+  then resumes existing #1003 / #1012 through the repaired route. This draft package
+  does not adopt or authorize itself.
+
+  '
+requirement_approval_status: not-approved
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time if needed
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: 'planner (drafting only; adoption remains a human/autonomous
+    governed decision)
+
+    '
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: 'none-intentional for application runtime. This package repairs
+  the documented operator implement-dispatch contract so an existing implementation
+  PR can be resumed after automatic remediation stops. It does not change product
+  behavior, deployment topology, secret values, providers, or monitor inventory. Restoring
+  intended recovery may allow the already-authorized VOC-122-T00 carrier to continue
+  through existing gates; that is not a new deploy path.
+
+  '
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: 'KARSIFT implement-recovery identity fix only. No page routes, critical
+    API endpoints, monitor inventory, or synthetic inventory in infra/monitoring/
+    are added or changed.
+
+    '
+dependencies:
+- id: VOC-125-DEP-00
+  status: 'resolved at drafting time. Issue #1020 provides the live implement failure,
+    exact run/job IDs, existing branch/head, prior-review base, caller and infrastructure
+    refs, root cause (caller dispatch omits recovery identity and does not forward
+    expected_head_sha / expected_base_sha), the prohibition on attempt-1 reclassification
+    or replacement carriers, preferred PR-number derivation over free-form SHAs, fail-closed
+    mismatch classes, test shape, docs/fixture/pin duty, Cursor Composer / Cursor
+    Grok preservation, no-OpenAI constraint, and the instruction to resume existing
+    #1003 / #1012 rather than create a replacement VOC-122 task or PR. Enough specificity
+    to draft without a clarifying round trip.
+
+    '
+- id: VOC-125-DEP-01
+  status: 'resolved at drafting time. Active A-004 remains authoritative: no founder
+    approved-comment gate on engineering-workflow adopt/merge/release paths; exact-SHA
+    independent verification, deterministic risk floors, protected-path controls,
+    and fail-closed behavior remain mandatory.
+
+    '
+- id: VOC-125-DEP-02
+  status: 'resolved at drafting time by reading the current workflows. karsift-ai-infra/.github/workflows/implement.yml
+    declares optional expected_head_sha and expected_base_sha (default empty) and,
+    on attempt != 1, compares the existing remote task branch against inputs.expected_head_sha
+    via config/verify-expected-head.py before model resolution. Caller .github/workflows/pipeline.yml
+    workflow_dispatch exposes change_id, package_path, task_id, issue_number, and
+    attempt, and the implement job forwards only those five fields plus integration_branch.
+    It does not expose or forward expected_head_sha, expected_base_sha, or an existing
+    PR number. Automatic remediate.yml retry already passes expected_head_sha and
+    expected_base_sha from the pull-request event. The infra project-repo pipeline
+    template has the same implement-job omission.
+
+    '
+- id: VOC-125-DEP-03
+  status: 'resolved at drafting time. VOC-121 isolated source publication, VOC-123
+    named-ref source bundles, and VOC-124 publish-source permission-workflows: write
+    are live (infra merge f406cc95a3f853e8aef5bf8bcf22d37a29d64547). This package
+    does not reopen those contracts. Because VOC-124 already lets an authorized nested
+    workflow-file commit publish, T00 does not need a supervised bootstrap exception.
+    The first T00 run is attempt 1 on a new carrier.
+
+    '
+- id: VOC-125-DEP-04
+  status: 'resolved at drafting time as an accepted delivery constraint: coordinated
+    PRs in the caller and KARSIFT/karsift-ai-infra remain one task. Repository count,
+    workflow-versus-tests-versus-docs, and fixture/pin work are not split reasons.
+    Merge the independently reviewed infra PR first so implement.yml@main declares
+    existing_pr_number before the caller forwards it, then pin the caller fixture
+    to that exact merge SHA when consumed.
+
+    '
+- id: VOC-125-DEP-05
+  status: 'resolved at drafting time as a hard dependency that must not expand this
+    package into a replacement VOC-122 roster. Adopted VOC-122-T00 (#1003) and draft
+    caller PR #1012 remain the only valid authority/carrier for that outcome. This
+    package must not implement VOC-122 promotion-recovery replan behavior, must not
+    merge #1012, and must not create a replacement VOC-122 task or PR. After this
+    package''s exact reviewed infra merge is live on implement.yml@main and the caller
+    dispatch contract is merged, resume the existing #1003 / #1012 carrier through
+    the repaired route at attempt 2 with existing_pr_number=1012.
+
+    '
+- id: VOC-125-DEP-06
+  status: 'resolved at drafting time. Configured Cursor Composer remains the implementer
+    and Cursor Grok remains the exact-revision independent reviewer. No OpenAI credential
+    or execution route is needed or authorized. Do not print credential values.
+
+    '
+- id: VOC-125-DEP-07
+  status: 'open at drafting time as an implementer-facing structure choice, not a
+    planner guess past the required behavior. Whether recovery-identity derivation
+    lives in a new config/bind-existing-carrier.py (or equivalent), an extension of
+    config/verify-expected-head.py, and whether tests live in tests/test_voc125_*.py
+    or extend test_remediate_policy.py / test_voc121_implement_policy.py, is an implementation
+    choice. Constraints that are not open: operator identity is an explicit existing
+    PR number, not free-form SHA inputs on caller workflow_dispatch; implement.yml
+    remains the derivation and fail-closed locus; SHA inputs stay on implement.yml
+    for the automatic remediate path and must be bound to the live PR when present;
+    attempt 1|2 and the existing carrier are preserved; every listed mismatch class
+    fails closed before any model or mutation step.
+
+    '
+affected_areas:
+- KARSIFT/karsift-ai-infra/.github/workflows/implement.yml
+- KARSIFT/karsift-ai-infra/.github/workflows/remediate.yml
+- KARSIFT/karsift-ai-infra/templates/project-repo/.github/workflows/pipeline.yml
+- KARSIFT/karsift-ai-infra/config/
+- KARSIFT/karsift-ai-infra/tests/
+- KARSIFT/karsift-ai-infra/README.md
+- .github/workflows/pipeline.yml
+- tooling/governance/fixtures/karsift-ai-infra/
+- tooling/governance/tests/
+- specs/changes/VOC-125-manual-resume-of-an-existing-implementation-pr/
+implementation:
+  authorized: false
+  required: true
+  status: pending
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-automation-reliability-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+ehr: not-triggered
+standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
+blocking_reasons: draft package is not adopted and is not implementation-authorized
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+repository_adoption_status: not-adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: not-authorized
+production_deployment: disabled
+autonomous_production_release: enabled
