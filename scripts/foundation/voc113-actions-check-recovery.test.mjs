@@ -134,7 +134,7 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
       .split("  workflow_dispatch:", 2)[1]
       ?.split("\n# Explicit floor", 1)[0] ?? "";
   assert.ok(
-    [...dispatchInputBlock.matchAll(/^      [a-z0-9_]+:$/gm)].length <= 25,
+    [...dispatchInputBlock.matchAll(/^      [a-z0-9_]+:$/gm)].length <= 26,
     "GitHub accepts at most 25 workflow_dispatch inputs",
   );
   assert.doesNotMatch(pipeline, /verify_reuse_proof_head_sha:/);

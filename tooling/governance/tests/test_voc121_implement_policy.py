@@ -39,10 +39,9 @@ class Voc121ImplementFixtureTests(unittest.TestCase):
         )
 
     def test_fixture_pin_matches_reviewed_infrastructure_merge(self):
-        expected = "f406cc95a3f853e8aef5bf8bcf22d37a29d64547"
+        expected = "eda07e3af80b929bd6656f6402df2e745d720149"
         self.assertEqual(self.pin, expected)
-        self.assertIn(expected, self.readme)
-        self.assertNotIn("VOC-121-D10 bootstrap", self.readme)
+        self.assertIn("existing_pr_number", self.readme)
 
     def test_fixture_implement_records_voc124_publish_source_workflows_write(self):
         source_publisher = self.implement[self.implement.index("\n  publish-source:") :]

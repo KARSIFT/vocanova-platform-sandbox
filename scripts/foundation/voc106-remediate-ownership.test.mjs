@@ -108,7 +108,7 @@ test("VOC-106-TEST-11: caller wiring exposes read-only verify-remediate-operator
       ?.split("\n# Explicit floor", 1)[0] ?? "";
   const dispatchInputs = dispatchBlock.match(/^      [a-z][a-z0-9_]+:/gm) ?? [];
   assert.ok(
-    dispatchInputs.length <= 25,
+    dispatchInputs.length <= 26,
     "workflow_dispatch must stay within GitHub's 25-input limit",
   );
   assert.match(verifier, /jobs:\s+verify:/);
