@@ -1,0 +1,228 @@
+schema_version: 1
+id: VOC-124
+slug: coordinated-source-publisher-must-request
+title: Coordinated source publisher must request workflow-write permission
+type: infrastructure
+status: adopted
+risk: R4
+planned_implementation_risk_floor: 'R4. This package changes protected CI/CD coordinated
+  source-carrier publication in KARSIFT/karsift-ai-infra (implement.yml publish-source
+  App-token mint) and caller tooling/governance fixtures and tests. tooling/governance/*
+  is an R4 path floor; .github/workflows/* is an R3 floor; semantic second-repository
+  publication of nested infrastructure workflow files is protected. This is a draft
+  proposal for human adoption review, not a determination; the path classifier and
+  independent verifier remain authoritative.
+
+  '
+canonical_path: specs/changes/VOC-124-coordinated-source-publisher-must-request
+authority_model: a004-active
+requirement_source: 'GitHub issue #1013 (Coordinated source publisher must request
+  workflow-write permission). Live 2026-08-26 failure while implementing adopted task
+  VOC-122-T00: pipeline run 32958526215 produced a valid nested infrastructure bundle
+  at exact head f90eb630743c8c523e2e6e8dff017acbb31a7f43 based on infrastructure 7500a4171d96a8e0d38889a9c92ad5dc092ad8dd.
+  The publish-source job 98147443377 downloaded and verified that bundle and minted
+  the infrastructure-repository App token, then the exact branch push failed because
+  the commit changes .github/workflows/recover-actions-checks.yml and GitHub rejected
+  the App token with `refusing to allow a GitHub App to create or update workflow
+  ... without workflows permission`. Caller PR #1012 is intentionally draft and must
+  remain unmerged: it contains only the staged mirror/evidence and still pins the
+  prior infrastructure SHA until the authoritative source PR merges. Root cause: karsift-ai-infra/.github/workflows/implement.yml
+  requests permission-contents, permission-issues, and permission-pull-requests when
+  minting the publish-source App token, but omits the supported permission-workflows:
+  write input. The karsift-ai-infra-bot installation (ID 148001476) already has repository
+  workflows: write; no secret, account, or repository-setting change is required.
+  An ordinary VOC-122 retry cannot repair this because the caller executes implement.yml@main,
+  so the same broken source-publisher token request would reject its own workflow-file
+  fix. Required: one outcome-sized change that requests permission-workflows: write
+  only on the cross-repository infrastructure publisher token, preserves existing
+  App-boundary / bundle / lease / fail-closed / review controls, adds deterministic
+  tests, uses one bounded exhausted bootstrap for this self-hosting repair without
+  authorizing manual publication of VOC-122''s source bundle, corrects current-state
+  A-004 PR/workflow text in the same carrier path, then retries the existing VOC-122-T00
+  carrier. This draft package does not adopt or authorize itself.
+
+  '
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time if needed
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: 'planner (drafting only; adoption remains a human/autonomous
+    governed decision)
+
+    '
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
+automatic_merge_allowed: true
+production_impact: 'none-intentional for application runtime. This package repairs
+  the coordinated source-carrier App-token mint so an authorized nested karsift-ai-infra
+  commit that changes .github/workflows/** can be published. It does not change product
+  behavior, deployment topology, secret values, providers, or monitor inventory. Restoring
+  intended source-carrier publication may allow the already-authorized VOC-122-T00
+  carrier to open its infra PR through existing gates; that is not a new deploy path.
+
+  '
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: 'KARSIFT coordinated source-publisher token-permission fix only. No page
+    routes, critical API endpoints, monitor inventory, or synthetic inventory in infra/monitoring/
+    are added or changed.
+
+    '
+dependencies:
+- id: VOC-124-DEP-00
+  status: 'resolved at drafting time. Issue #1013 provides the live publish-source
+    failure, exact run/job IDs, nested head f90eb630743c8c523e2e6e8dff017acbb31a7f43,
+    infrastructure base 7500a4171d96a8e0d38889a9c92ad5dc092ad8dd, GitHub App workflows-permission
+    rejection, root cause (missing permission-workflows: write on the publish-source
+    token mint), installation already holding workflows: write, #1012 draft constraint,
+    bootstrap necessity, VOC-122 retry-not-replace instruction, A-004 current-state
+    text correction, preserved fail-closed contracts, test shape, and one-task preference
+    with enough specificity to draft without a clarifying round trip.
+
+    '
+- id: VOC-124-DEP-01
+  status: 'resolved at drafting time. Active A-004 remains authoritative: no founder
+    approved-comment gate on engineering-workflow adopt/merge/release paths; exact-SHA
+    independent verification, deterministic risk floors, protected-path controls,
+    and fail-closed behavior remain mandatory.
+
+    '
+- id: VOC-124-DEP-02
+  status: 'resolved at drafting time by reading the current workflows. implement.yml
+    publish-source mints the App token with permission-contents: write, permission-issues:
+    write, and permission-pull-requests: write, repositories: karsift-ai-infra, and
+    no permission-workflows input. The caller publish job mints a separate caller-scoped
+    token with the same three permissions, no permission-workflows, and still rejects
+    .github/workflows/** before push. test_live_evidence_reconcile.py currently splits
+    on `\n  publish:` and therefore includes publish-source in that `publish_job`
+    substring while asserting permission-workflows is absent; T00 must isolate those
+    jobs when adding the source-publisher permission.
+
+    '
+- id: VOC-124-DEP-03
+  status: 'resolved at drafting time. VOC-121 already landed isolated source publication
+    and VOC-123 already landed named-ref source-bundle creation. This package does
+    not reopen those contracts. It closes the remaining token-permission gap: the
+    infrastructure publisher token must request workflows: write so GitHub will accept
+    an authorized nested workflow-file commit.
+
+    '
+- id: VOC-124-DEP-04
+  status: 'resolved at drafting time as an accepted delivery constraint: coordinated
+    PRs in the caller and KARSIFT/karsift-ai-infra remain one task. Repository count,
+    workflow-versus-tests-versus-docs, and fixture/pin work are not split reasons.
+    Pin the caller fixture only if that fixture actually consumes the infra change.
+    Merge the independently reviewed infra PR first, then pin to that exact merge
+    SHA.
+
+    '
+- id: VOC-124-DEP-05
+  status: 'resolved at drafting time as a hard dependency that must not expand this
+    package into a replacement VOC-122 roster. Adopted VOC-122-T00 (#1003) and draft
+    caller PR #1012 cannot deliver nested infrastructure until this token-permission
+    defect is repaired. This package must not implement VOC-122 promotion-recovery
+    replan behavior, must not hand-push nested head f90eb630743c8c523e2e6e8dff017acbb31a7f43,
+    must not merge #1012, and must not create a replacement VOC-122 task or PR. After
+    this package''s exact reviewed infra merge is live on implement.yml@main, re-dispatch
+    or reconcile the existing #1003 carrier against that revision.
+
+    '
+- id: VOC-124-DEP-06
+  status: 'resolved at drafting time following VOC-121-D10 / VOC-123-D08. The caller
+    resolves KARSIFT/karsift-ai-infra/.github/workflows/implement.yml@main before
+    the model job starts, so the broken source-publisher token request cannot publish
+    its own nested workflow-file repair. One bounded supervised bootstrap infra PR
+    is in scope under T00: clean branch from current infra main, exact token-permission
+    repair plus tests/docs/A-004 current-state text, non-closing task link, source
+    self-CI, independent exact-SHA review, and a different merger. No PATH/Git interception,
+    direct main push, secret/account/installation change, or VOC-122 bundle publication
+    is allowed. The exception expires at that merge; caller fixture/pin/evidence and
+    the existing VOC-122-T00 retry then use the repaired normal implement.yml@main
+    path.
+
+    '
+- id: VOC-124-DEP-07
+  status: 'resolved at drafting time as an issue-stated fact that T00 must not reopen:
+    karsift-ai-infra-bot installation 148001476 already has repository workflows:
+    write. No KARSIFT_BOT_APP_ID / KARSIFT_BOT_PRIVATE_KEY rotation, no installation
+    permission change, and no repository-setting change is in scope. Do not print
+    credential values.
+
+    '
+- id: VOC-124-DEP-08
+  status: 'open at drafting time as an implementer-facing structure choice, not a
+    planner guess past the required behavior. Whether permission assertions live in
+    an extended test_voc121_implement_policy.py / test_voc121_source_carrier_publisher.py
+    / test_live_evidence_reconcile.py or a new tests/test_voc124_*.py is an implementation
+    choice. Constraints that are not open: request permission-workflows: write on
+    the publish-source create-github-app-token step only; do not add it to the caller
+    publish token mint; keep the caller workflow-file rejection; preserve fail-closed
+    missing-credential / invalid-bundle / stale-base / stale-lease behavior; isolate
+    the live-evidence publish_job assertion so it does not treat publish-source as
+    the caller publisher.
+
+    '
+affected_areas:
+- KARSIFT/karsift-ai-infra/.github/workflows/implement.yml
+- KARSIFT/karsift-ai-infra/README.md
+- KARSIFT/karsift-ai-infra/tests/
+- tooling/governance/fixtures/karsift-ai-infra/
+- tooling/governance/tests/
+- scripts/foundation/voc097-fixture-matrix.test.mjs
+- scripts/foundation/voc104-ready-for-review-reuse.test.mjs
+- scripts/foundation/voc108-authoritative-lifecycle.test.mjs
+- specs/changes/VOC-124-coordinated-source-publisher-must-request/
+implementation:
+  authorized: true
+  required: true
+  status: authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: 1015
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-automation-reliability-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+ehr: not-triggered
+standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
+blocking_reasons: none - adopted and implementation-authorized
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+repository_adoption_status: adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: authorized
+production_deployment: disabled
+autonomous_production_release: enabled
+approved_candidate_sha: de814d972688c558e012fed9b5a3ac8624defc5d
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1014#issuecomment-5424437007
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-124-DEP-00
+- VOC-124-DEP-01
+- VOC-124-DEP-02
+- VOC-124-DEP-03
+- VOC-124-DEP-04
+- VOC-124-DEP-05
+- VOC-124-DEP-06
+- VOC-124-DEP-07
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #1014 at de814d972688c558e012fed9b5a3ac8624defc5d'
+adoption_pr: 1014
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1014
