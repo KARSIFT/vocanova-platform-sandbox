@@ -62,11 +62,11 @@ data, complete CI logs, or App token values.
 
 | Item | Value |
 |------|-------|
-| Coordinated infra PR | pending independent review / merge (nested source publication path) |
-| Independently reviewed infra head SHA | pending |
-| Exact infra git merge SHA | pending — replace content-addressed pin below when merge is live |
+| Coordinated infra PR | [KARSIFT/karsift-ai-infra#160](https://github.com/KARSIFT/karsift-ai-infra/pull/160), merged 2026-08-26 |
+| Independently reviewed infra head SHA | `f2b69b45226305f7ee820fdb834929098bb5c232` — `PASS WITH NON-BLOCKING FINDINGS` after the first exact head failed review and was remediated on attempt 2 |
+| Exact infra git merge SHA | `1f1705dbad41729563b0ad1e878e4154e5511e93` |
 | Pin applicable? | **yes** — `implement.yml`, bind helpers, and tests consumed |
-| `PINNED_SHA.txt` after fixture sync | `eda07e3af80b929bd6656f6402df2e745d720149` (content-addressed mirror of VOC-125 fixture subset; advance to exact infra merge SHA on publication) |
+| `PINNED_SHA.txt` after fixture sync | `1f1705dbad41729563b0ad1e878e4154e5511e93` — exact infrastructure merge SHA |
 | Bootstrap used? | **no** |
 
 ## Dependent #1003 / #1012 (not implemented by this task)
@@ -95,7 +95,8 @@ git diff --check
 
 | Command | Result |
 |---------|--------|
-| `python3 -m unittest discover -s tests -p 'test_*.py'` (karsift-ai-infra) | **OK** (362 tests) |
+| `python3 -m unittest discover -s tests -p 'test_*.py'` (karsift-ai-infra) | **OK** (381 tests on reviewed head `f2b69b45226305f7ee820fdb834929098bb5c232`) |
+| `python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'` | **OK** (300 tests against pin `1f1705dbad41729563b0ad1e878e4154e5511e93`) |
 | `bash scripts/governance/validate-governance.sh` | **OK** |
 | `bash scripts/governance/classify-change-risk.sh` | **OK** (path floor only; no PR risk declaration in working tree) |
 | `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | **OK** (199 tests) |

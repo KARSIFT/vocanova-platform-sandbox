@@ -620,6 +620,5 @@ pin advances.
 - VOC-121 / VOC-123 (named-ref nested source-carrier bundle tips): fixture
   regressions assert `create-bundle` and named-ref publication contracts on
   `implement.yml`.
-- VOC-125 existing-carrier resume identity: `eda07e3af80b929bd6656f6402df2e745d720149`
-  (content-addressed fixture mirror; replace with exact infra git merge SHA when
-  the coordinated source carrier merges).
+- VOC-125 existing-carrier resume identity: `1f1705dbad41729563b0ad1e878e4154e5511e93`
+  (exact coordinated infrastructure merge SHA).
