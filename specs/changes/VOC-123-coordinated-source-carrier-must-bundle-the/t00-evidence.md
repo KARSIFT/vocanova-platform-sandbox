@@ -27,7 +27,7 @@ data, or complete CI logs.
 | Item | Value |
 |------|-------|
 | Named-ref mechanism | `refs/karsift/source-bundle-head` via `config/implementer_source_carrier.py create-bundle`; `implement.yml` calls the helper after the isolated nested commit |
-| Bootstrap carrier | `VOC-123-D08` supervised bootstrap via infrastructure PR #158 (`agent/voc123-t00-bootstrap`); merged to `main` as `7500a4171d96a8e0d38889a9c92ad5dc092ad8dd`; no direct `main` push or runner-environment Git interception |
+| Bootstrap carrier | `VOC-123-D08` one-time supervised bootstrap via infrastructure PR #158 (`agent/voc123-t00-bootstrap`); independently reviewed head `f60465bc50f79b1bcd5de67e210906a6447a63fc`; merged to `main` as `7500a4171d96a8e0d38889a9c92ad5dc092ad8dd` by `m-e-h-r-d-a-a-d` at `2026-08-26T06:43:45Z`; no direct `main` push or runner-environment Git interception; bootstrap authority exhausted before caller pin resumed |
 | Advertised-head check | `git bundle list-heads` must equal exactly `{head_sha} refs/karsift/source-bundle-head`; enforced by `verify_bundle_heads()` before upload |
 | Temp-ref cleanup | `update-ref -d refs/karsift/source-bundle-head` in a `finally` block; bundle deleted on verification failure |
 | Caller recovery `integration_sha..HEAD` | **proven safe, unchanged** — real-repo tests show non-empty bundle with `list-heads` `{head_sha} HEAD` on attached and detached HEAD |
@@ -55,11 +55,33 @@ data, or complete CI logs.
 | Item | Value |
 |------|-------|
 | Coordinated infra PR | https://github.com/KARSIFT/karsift-ai-infra/pull/158 — merged |
-| Independently reviewed infra head SHA | bound to PR #158 exact final revision (bootstrap carrier) |
+| Bootstrap branch | `agent/voc123-t00-bootstrap` |
+| Review base SHA | `99476c2a1018e42d4bd442657b5257885ac9f1c9` (infra `main` before bootstrap) |
+| Independently reviewed infra head SHA | `f60465bc50f79b1bcd5de67e210906a6447a63fc` |
+| Reviewed source tree SHA | `c6440d2f50f14e8dfe3a7f24e4143e6a79807190` |
 | Exact infra merge SHA | `7500a4171d96a8e0d38889a9c92ad5dc092ad8dd` |
+| Separate merger | `m-e-h-r-d-a-a-d` (merged `2026-08-26T06:43:45Z`; not the `implementer` model role) |
+| Governed implementer role | `implementer` / `cursor/composer-2.5` — prepared PR #158; did not merge |
+| `VOC-123-D08` bootstrap status | **exhausted** — one clean branch from infra `main`, one reviewed non-closing infra PR, one merge; caller fixture/pin/evidence resumed only after merge `7500a417…` was live on `implement.yml@main` |
 | Pin applicable? | **yes** — `implement.yml`, `implementer_source_carrier.py`, and VOC-123 tests are in the policy fixture subset |
 | `PINNED_SHA.txt` after source merge | `7500a4171d96a8e0d38889a9c92ad5dc092ad8dd` |
 | Fixture/source comparison | **PASS** — `implement.yml`, `implementer_source_carrier.py`, `test_voc123_source_bundle.py`, and `test_voc121_implement_policy.py` are byte-for-byte identical between the reviewed infra tree and the pinned fixture |
+
+## Independent source review
+
+| Item | Value |
+|------|-------|
+| Review record | https://github.com/KARSIFT/karsift-ai-infra/pull/158#issuecomment-5419362762 |
+| Role/model | `reviewer` / `cursor/grok-4.6[effort=high,fast=false]` |
+| Session / request | `dfcb337b-14d5-4234-9808-1f6e7d03864d` / `0180b599-865b-4faa-b453-5fef461c42ec` |
+| Verdict | **PASS** |
+| Exact-head self-CI | https://github.com/KARSIFT/karsift-ai-infra/actions/runs/32918872376 — actionlint, shellcheck, yaml-parse, and policy-tests succeeded |
+
+The review was bound to base `99476c2a1018e42d4bd442657b5257885ac9f1c9`,
+head `f60465bc50f79b1bcd5de67e210906a6447a63fc`, and tree
+`c6440d2f50f14e8dfe3a7f24e4143e6a79807190`. A separate actor
+(`m-e-h-r-d-a-a-d`) merged that exact head as `7500a4171d96a8e0d38889a9c92ad5dc092ad8dd`.
+The governed `implementer` model did not approve or merge the bootstrap carrier.
 
 ## Dependent #1003 (not implemented by this task)
 
@@ -118,4 +140,4 @@ python3 -m unittest tests.test_voc123_source_bundle  # infra and pinned fixture
 - `VOC-123-AC-03` / `VOC-123-EV-00` — caller/planner `..HEAD` paths proven safe; unchanged in production workflows
 - `VOC-123-AC-04` / `VOC-123-EV-00` — VOC-121 isolation, App-token split, lease, retry limits, non-closing source PR preserved
 - `VOC-123-AC-05` / `VOC-123-EV-00` — deterministic real-repository tests in `test_voc123_source_bundle.py`
-- `VOC-123-AC-06` / `VOC-123-EV-00` — docs/comments updated; fixture pin equals infra merge `7500a417…`; #1003 recorded as distinct re-dispatch
+- `VOC-123-AC-06` / `VOC-123-EV-00` — docs/comments updated; fixture pin equals infra merge `7500a417…`; bootstrap PR #158 recorded with reviewed head `f60465bc…`, tree `c6440d2…`, separate merger `m-e-h-r-d-a-a-d`, independent review comment, and D08 exhaustion before caller pin; #1003 recorded as distinct re-dispatch
