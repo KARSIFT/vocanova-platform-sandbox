@@ -15,6 +15,10 @@ const pipelinePath = path.join(
   repositoryRoot,
   ".github/workflows/pipeline.yml",
 );
+const pipelineVerifyPath = path.join(
+  repositoryRoot,
+  ".github/workflows/pipeline-verify.yml",
+);
 const governancePolicyPath = path.join(
   repositoryRoot,
   ".github/workflows/governance-policy.yml",
@@ -98,6 +102,7 @@ test("VOC-113-TEST-00 through TEST-07 and TEST-10: infra recovery policy fixture
 
 test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
   const pipeline = readFileSync(pipelinePath, "utf8");
+  const pipelineVerify = readFileSync(pipelineVerifyPath, "utf8");
   const governancePolicy = readFileSync(governancePolicyPath, "utf8");
   const repositoryGovernance = readFileSync(repositoryGovernancePath, "utf8");
   const stagingDeploy = readFileSync(stagingDeployPath, "utf8");
@@ -108,7 +113,7 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
   assert.match(pipeline, /recover-promotion-pr-checks/);
   assert.match(pipeline, /promotion_pr_number:/);
   assert.match(
-    pipeline,
+    pipelineVerify,
     /promotion_pr_number: \$\{\{ inputs\.promotion_pr_number \}\}/,
   );
   const ciBlock =
@@ -138,9 +143,12 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
     "GitHub accepts at most 25 workflow_dispatch inputs",
   );
   assert.doesNotMatch(pipeline, /verify_reuse_proof_head_sha:/);
-  assert.match(pipeline, /expected_proof_head_sha: \$\{\{ github\.sha \}\}/);
-  assert.match(pipeline, /verify-promotion-check-recovery/);
-  assert.match(pipeline, /verify-post-promotion-workflow/);
+  assert.match(
+    pipelineVerify,
+    /expected_proof_head_sha: \$\{\{ github\.sha \}\}/,
+  );
+  assert.match(pipelineVerify, /verify-promotion-check-recovery/);
+  assert.match(pipelineVerify, /verify-post-promotion-workflow/);
   assert.match(pipeline, /resolve-integration-recovery-target:/);
   assert.match(pipeline, /git\/ref\/heads\/develop/);
   assert.match(pipeline, /recover-integration-push:/);
@@ -156,11 +164,11 @@ test("VOC-113 caller wiring exposes recovery and read-only verifiers", () => {
     /target_sha: \$\{\{ needs\.resolve-integration-recovery-target\.outputs\.target_sha \}\}/,
   );
   assert.match(
-    pipeline,
+    pipelineVerify,
     /uses: KARSIFT\/karsift-ai-infra\/\.github\/workflows\/verify-promotion-check-recovery\.yml@main/,
   );
   assert.match(
-    pipeline,
+    pipelineVerify,
     /uses: KARSIFT\/karsift-ai-infra\/\.github\/workflows\/verify-post-promotion-workflow\.yml@main/,
   );
   assert.match(governancePolicy, /recovery_pr_number/);
@@ -244,11 +252,11 @@ test("VOC-113-TEST-08/09 contracts bind read-only verifier job names", () => {
 });
 
 test("VOC-113-TEST-12: verifier jobs are read-only", () => {
-  const pipeline = readFileSync(pipelinePath, "utf8");
+  const pipelineVerify = readFileSync(pipelineVerifyPath, "utf8");
   const verifyPromotionBlock =
-    pipeline.split("verify-promotion-check-recovery:", 2)[1] ?? "";
+    pipelineVerify.split("verify-promotion-check-recovery:", 2)[1] ?? "";
   const verifyPostPromotionBlock =
-    pipeline.split("verify-post-promotion-workflow:", 2)[1] ?? "";
+    pipelineVerify.split("verify-post-promotion-workflow:", 2)[1] ?? "";
   assert.match(verifyPromotionBlock, /actions: read/);
   assert.match(verifyPostPromotionBlock, /actions: read/);
   assert.doesNotMatch(verifyPromotionBlock, /secrets: inherit/);

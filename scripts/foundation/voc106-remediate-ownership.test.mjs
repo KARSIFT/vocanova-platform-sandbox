@@ -15,6 +15,10 @@ const pipelinePath = path.join(
   repositoryRoot,
   ".github/workflows/pipeline.yml",
 );
+const pipelineVerifyPath = path.join(
+  repositoryRoot,
+  ".github/workflows/pipeline-verify.yml",
+);
 const liveEvidenceDocPath = path.join(
   repositoryRoot,
   "docs/operations/live-evidence.md",
@@ -76,21 +80,21 @@ test("VOC-106-TEST-10: docs describe ownership-gated remediation", () => {
 });
 
 test("VOC-106-TEST-11: caller wiring exposes read-only verify-remediate-operator-ownership action", () => {
-  const pipeline = readFileSync(pipelinePath, "utf8");
+  const pipelineVerify = readFileSync(pipelineVerifyPath, "utf8");
   const verifier = readFileSync(infraVerifierPath, "utf8");
   const contract = readFileSync(contractPath, "utf8");
   const remediate = readFileSync(infraRemediatePath, "utf8");
   assert.match(
-    pipeline,
+    pipelineVerify,
     /verify-remediate-operator-ownership/,
     "pipeline must expose the proof action",
   );
   assert.match(
-    pipeline,
+    pipelineVerify,
     /uses: KARSIFT\/karsift-ai-infra\/\.github\/workflows\/verify-remediate-operator-ownership\.yml@main/,
   );
   const verifyBlock =
-    pipeline.split("verify-remediate-operator-ownership:", 2)[1] ?? "";
+    pipelineVerify.split("verify-remediate-operator-ownership:", 2)[1] ?? "";
   assert.ok(verifyBlock.length > 0, "verify job must exist");
   assert.match(verifyBlock, /actions: read/);
   assert.doesNotMatch(verifyBlock, /secrets: inherit/);
@@ -103,9 +107,9 @@ test("VOC-106-TEST-11: caller wiring exposes read-only verify-remediate-operator
     /pr_number: \$\{\{ inputs\.live_evidence_pr_number \}\}/,
   );
   const dispatchBlock =
-    pipeline
+    pipelineVerify
       .split("  workflow_dispatch:", 2)[1]
-      ?.split("\n# Explicit floor", 1)[0] ?? "";
+      ?.split("\npermissions:", 1)[0] ?? "";
   const dispatchInputs = dispatchBlock.match(/^      [a-z][a-z0-9_]+:/gm) ?? [];
   assert.ok(
     dispatchInputs.length <= 25,
