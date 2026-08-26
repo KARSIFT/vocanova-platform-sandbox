@@ -136,7 +136,8 @@ on:
 
 # Explicit floor for the reusable jobs below that do not declare narrower
 # job-level permissions. Most call karsift-ai-infra workflows with
-# `secrets: inherit`; read-only verification jobs deliberately do not. Without
+# `secrets: inherit`; read-only verifier dispatch lives on pipeline-verify.yml
+# (VOC-126). Without
 # an explicit workflow or job floor, reusable callers silently
 # inherit whatever the repo's own default_workflow_permissions setting
 # grants, and a reusable workflow call can never get MORE access than its

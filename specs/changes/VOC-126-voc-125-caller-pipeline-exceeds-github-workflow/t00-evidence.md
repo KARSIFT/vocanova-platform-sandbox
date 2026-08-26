@@ -37,26 +37,27 @@ data, complete CI logs, or App token values.
 | #1024 | supersede after the governed replacement exists; do not merge |
 | VOC-125 #1022 / #1020 | close only when the live caller route is valid; no completion marker bound to #1024 |
 | VOC-122 | resume existing #1003 / #1012 after exact infra merge and caller dispatch are live; do not create a replacement task or PR |
-| Attempt | VOC-126-T00 first run is attempt `1`; do not dispatch VOC-125 as attempt `3` |
+| Attempt | VOC-126-T00 attempt `2` on this carrier; do not dispatch VOC-125 as attempt `3` |
 | Bootstrap | none |
 | Secrets | do not print credential values; do not rotate App secrets |
 
 ## Changed surfaces
 
-**Infrastructure (`KARSIFT/karsift-ai-infra` — local commit `82fe888d7285270060055fbc4a6a46263906f2f0` for source publication):**
+**Infrastructure (`KARSIFT/karsift-ai-infra` — independently reviewed merge `20dcf340fa73a36ebc6074442fde79530dfa5871`, PR #161):**
 
 - `templates/project-repo/.github/workflows/pipeline.yml` — removed five verifier actions/inputs/jobs; kept `existing_pr_number`; 16 `workflow_dispatch` inputs
 - `templates/project-repo/.github/workflows/pipeline-verify.yml` — new dedicated read-only verifier dispatch (17 inputs)
 - `tests/test_voc126_workflow_dispatch_input_limit.py` — maximum-input-count regression
 - `tests/test_adoption_handoff.py`, `test_auto_advance_ownership.py`, `test_ready_for_review_reuse.py`, `test_remediation_ownership.py` — relocated verifier contract assertions
-- `README.md` — verifier dispatch documents `pipeline-verify.yml`
+- `README.md` — verifier dispatch documents `pipeline-verify.yml`; operator resume documents `existing_pr_number` on `pipeline.yml`
 
 **Caller (`vocanova-platform-sandbox`):**
 
 - `.github/workflows/pipeline.yml` — added `existing_pr_number`; relocated verifiers; 16 inputs
 - `.github/workflows/pipeline-verify.yml` — live read-only verifier dispatch mirror
-- `tooling/governance/fixtures/karsift-ai-infra/` — template, tests, README pin paragraph, `PINNED_SHA.txt`, supporting config copies
+- `tooling/governance/fixtures/karsift-ai-infra/` — synced to infra merge `20dcf340fa73a36ebc6074442fde79530dfa5871`, including VOC-125 `implement.yml` / `remediate.yml`, bind helpers, and `test_voc125_existing_carrier.py`
 - `tooling/governance/tests/test_voc126_workflow_dispatch_input_limit.py`
+- `tooling/governance/tests/test_voc125_implement_policy.py`
 - `tooling/governance/tests/test_voc080_*`, `test_voc121_implement_policy.py`, `test_voc124_implement_policy.py`
 - `scripts/foundation/voc097-fixture-matrix.test.mjs`, `voc104-ready-for-review-reuse.test.mjs`, `voc108-authoritative-lifecycle.test.mjs`
 
@@ -64,12 +65,12 @@ data, complete CI logs, or App token values.
 
 | Item | Value |
 |------|-------|
-| Coordinated infra PR | prepared in local `karsift-ai-infra` commit `82fe888d7285270060055fbc4a6a46263906f2f0` for source publication |
-| Independently reviewed infra head SHA | pending merge (target `82fe888d7285270060055fbc4a6a46263906f2f0`) |
-| Exact infra merge SHA | pending independent merge |
-| Pin applicable? | **yes** — project-repo `pipeline.yml` / `pipeline-verify.yml` and related tests consumed |
+| Coordinated infra PR | KARSIFT/karsift-ai-infra#161 |
+| Independently reviewed infra head SHA | `20dcf340fa73a36ebc6074442fde79530dfa5871` |
+| Exact infra merge SHA | `20dcf340fa73a36ebc6074442fde79530dfa5871` |
+| Pin applicable? | **yes** — project-repo `pipeline.yml` / `pipeline-verify.yml`, VOC-125 implement/remediate surface, bind helpers, and related tests consumed |
 | Pin must not equal | `1f1705dbad41729563b0ad1e878e4154e5511e93` |
-| `PINNED_SHA.txt` after source merge | `82fe888d7285270060055fbc4a6a46263906f2f0` (awaiting exact reviewed merge confirmation) |
+| `PINNED_SHA.txt` | `20dcf340fa73a36ebc6074442fde79530dfa5871` |
 | Bootstrap used? | **no** |
 
 ## Dependent carriers (not implemented by this task)
@@ -89,7 +90,7 @@ data, complete CI logs, or App token values.
 ## Validation commands
 
 ```bash
-# Infrastructure (nested checkout)
+# Infrastructure (nested checkout at merged SHA)
 python3 -m unittest discover -s tests -p 'test_*.py'
 
 # Caller
@@ -104,7 +105,7 @@ git diff --check
 
 | Command | Result |
 |---------|--------|
-| `python3 -m unittest discover -s tests -p 'test_*.py'` (karsift-ai-infra) | **pass** |
+| `python3 -m unittest discover -s tests -p 'test_*.py'` (karsift-ai-infra @ `20dcf34…`) | **pass** |
 | `bash scripts/governance/validate-governance.sh` | **pass** |
 | `bash scripts/governance/classify-change-risk.sh` | **pass** (path floor only in this environment) |
 | `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | **pass** |
@@ -121,13 +122,12 @@ git diff --check
 - `VOC-126-AC-01` / `VOC-126-EV-00` — implemented (`existing_pr_number` on `pipeline.yml`, forwarded on `implement`)
 - `VOC-126-AC-02` / `VOC-126-EV-00` — implemented (five verifiers on `pipeline-verify.yml`; mutating actions on `pipeline.yml`)
 - `VOC-126-AC-03` / `VOC-126-EV-00` — implemented (read-only verifier workflow; recovery jobs remain on `pipeline.yml`)
-- `VOC-126-AC-04` / `VOC-126-EV-00` — implemented; VOC-125 policy tests unchanged in substance
-- `VOC-126-AC-05` / `VOC-126-EV-00` — implemented pending infra PR merge confirmation at `82fe888…`; pin advanced; #1024 not merged
+- `VOC-126-AC-04` / `VOC-126-EV-00` — implemented; fixture carries VOC-125 `implement.yml` / `remediate.yml` / bind helpers; caller `test_voc125_implement_policy.py` added
+- `VOC-126-AC-05` / `VOC-126-EV-00` — implemented; pin equals independently reviewed infra merge `20dcf340fa73a36ebc6074442fde79530dfa5871`; #1024 not merged
 - `VOC-126-AC-06` / `VOC-126-EV-00` — handoff recorded; #1022/#1020/#1024 closure and #1003 resume remain post-merge operator steps
 
 ## Post-merge operator steps (not executed in T00)
 
-1. After infra PR merge at reviewed SHA `82fe888d7285270060055fbc4a6a46263906f2f0` (or superseding exact reviewed head if amended), confirm `PINNED_SHA.txt` matches that merge.
-2. After caller dispatch is merged and promoted, close #1024 as superseded with audit comment naming the VOC-126 exact SHA.
-3. Close #1022 / #1020 only when the live route is valid.
-4. Resume existing `VOC-122-T00` / #1003 / #1012 at attempt `2` with `existing_pr_number=1012` via the command above.
+1. After caller dispatch is merged and promoted, close #1024 as superseded with audit comment naming the VOC-126 exact SHA.
+2. Close #1022 / #1020 only when the live route is valid.
+3. Resume existing `VOC-122-T00` / #1003 / #1012 at attempt `2` with `existing_pr_number=1012` via the command above.

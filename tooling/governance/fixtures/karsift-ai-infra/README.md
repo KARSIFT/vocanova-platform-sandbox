@@ -108,6 +108,15 @@ The VOC-106 workflow, policy, verifier, and regression-test copies correspond to
 shared-infra merge `db164eb3905a96b74b039ab6aa36944408bf0a44`, including the
 hosted verifier base-SHA adapter fix recorded in this package's T00 remediation.
 
+VOC-125 (VOC-126 caller pin) documents operator resume through caller
+`workflow_dispatch` `action=implement` with `attempt=2` and
+`existing_pr_number=<open PR>`. The caller forwards only the PR number—not
+free-form SHAs. `implement.yml` derives immutable `expected_head_sha` /
+`expected_base_sha` before `Create implementation branch`. Read-only verifier
+dispatch uses caller `pipeline-verify.yml` (VOC-126) so `pipeline.yml` stays
+within GitHub's 25-input `workflow_dispatch` maximum while preserving
+`existing_pr_number`.
+
 ## authoritative lifecycle state (VOC-108)
 
 VOC-108 originally advanced the fixture to shared-infra merge
@@ -189,8 +198,8 @@ infrastructure PR #158 merge
 `7500a4171d96a8e0d38889a9c92ad5dc092ad8dd`. VOC-124-T00 advances it to
 infrastructure PR #159 merge
 `f406cc95a3f853e8aef5bf8bcf22d37a29d64547`. VOC-126-T00 advances it to
-infrastructure merge
-`82fe888d7285270060055fbc4a6a46263906f2f0`; the mirrored source files are
+infrastructure PR #161 merge
+`20dcf340fa73a36ebc6074442fde79530dfa5871`; the mirrored source files are
 byte-for-byte copies from that merge's reviewed tree.
 
 Recovery metadata reads, exact selected-run reruns, and allowlisted absent-context
