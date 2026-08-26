@@ -39,10 +39,22 @@ class Voc121ImplementFixtureTests(unittest.TestCase):
         )
 
     def test_fixture_pin_matches_reviewed_infrastructure_merge(self):
-        expected = "7500a4171d96a8e0d38889a9c92ad5dc092ad8dd"
+        expected = "f406cc95a3f853e8aef5bf8bcf22d37a29d64547"
         self.assertEqual(self.pin, expected)
         self.assertIn(expected, self.readme)
         self.assertNotIn("VOC-121-D10 bootstrap", self.readme)
+
+    def test_fixture_implement_records_voc124_publish_source_workflows_write(self):
+        source_publisher = self.implement[self.implement.index("\n  publish-source:") :]
+        mint = source_publisher[
+            source_publisher.index(
+                "- name: Mint least-privilege App token for infrastructure repository"
+            ) :
+        ]
+        self.assertIn("permission-workflows: write", mint)
+        _, remainder = self.implement.split("\n  publish:", 1)
+        publish_job, _ = remainder.split("\n  publish-source:", 1)
+        self.assertNotIn("permission-workflows: write", publish_job)
 
     def test_fixture_implement_uses_named_ref_source_bundle(self):
         self.assertIn("implementer_source_carrier.py \\", self.implement)

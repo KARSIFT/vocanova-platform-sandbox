@@ -186,7 +186,9 @@ this fixture. VOC-117 originally advanced the fixture to merge
 infrastructure PR #157 merge
 `99476c2a1018e42d4bd442657b5257885ac9f1c9`. VOC-123-T00 advances it to
 infrastructure PR #158 merge
-`7500a4171d96a8e0d38889a9c92ad5dc092ad8dd`; the mirrored source files are
+`7500a4171d96a8e0d38889a9c92ad5dc092ad8dd`. VOC-124-T00 advances it to
+infrastructure PR #159 merge
+`f406cc95a3f853e8aef5bf8bcf22d37a29d64547`; the mirrored source files are
 byte-for-byte copies from that merge's reviewed tree.
 
 Recovery metadata reads, exact selected-run reruns, and allowlisted absent-context
@@ -230,3 +232,8 @@ before `bundle create`, verifies the sole advertised head, and removes the ref
 on every exit path. Raw object IDs remain a proven empty-bundle failure class.
 Caller and planner `..HEAD` recovery bundles were proven safe with real
 repositories and remain unchanged.
+
+VOC-124 (coordinated source publisher workflow-write permission) requests
+`workflows: write` on the clean `publish-source` App token so authorized nested
+infrastructure commits that change `.github/workflows/**` can be published.
+The caller `publish` token still omits `workflows: write` and still rejects every caller `.github/workflows/**` change before push.

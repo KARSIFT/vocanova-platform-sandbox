@@ -1,15 +1,10 @@
-"""VOC-124 caller regressions against the nested infra checkout when present."""
+"""VOC-124 caller fixture regressions for publish-source workflow-write permission."""
 
 from __future__ import annotations
 
 import unittest
-from pathlib import Path
 
-from voc080_fixtures import FIXTURE_INFRA_ROOT, REPOSITORY_ROOT, read_fixture
-
-
-NESTED_INFRA_ROOT = REPOSITORY_ROOT / "karsift-ai-infra"
-NESTED_IMPLEMENT = NESTED_INFRA_ROOT / ".github" / "workflows" / "implement.yml"
+from voc080_fixtures import read_fixture
 
 
 def caller_publish_job(workflow: str) -> str:
@@ -22,67 +17,51 @@ def publish_source_job(workflow: str) -> str:
     return workflow[workflow.index("\n  publish-source:") :]
 
 
-class Voc124ImplementPolicyTests(unittest.TestCase):
+class Voc124ImplementFixtureTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.fixture_implement = read_fixture(".github/workflows/implement.yml")
-        cls.fixture_pin = read_fixture("PINNED_SHA.txt").strip()
-        cls.nested_implement = (
-            NESTED_IMPLEMENT.read_text(encoding="utf-8")
-            if NESTED_IMPLEMENT.is_file()
-            else None
-        )
+        cls.implement = read_fixture(".github/workflows/implement.yml")
+        cls.pin = read_fixture("PINNED_SHA.txt").strip()
+        cls.readme = read_fixture("README.md")
 
-    def test_fixture_pin_unchanged_until_bootstrap_merge(self):
-        self.assertEqual(
-            self.fixture_pin,
-            "7500a4171d96a8e0d38889a9c92ad5dc092ad8dd",
-        )
+    def test_fixture_pin_matches_voc124_bootstrap_merge(self):
+        expected = "f406cc95a3f853e8aef5bf8bcf22d37a29d64547"
+        self.assertEqual(self.pin, expected)
+        self.assertIn(expected, self.readme)
+        self.assertIn("VOC-124-T00", self.readme)
 
-    def test_fixture_implement_still_matches_prior_reviewed_merge(self):
-        self.assertNotIn("permission-workflows: write", self.fixture_implement)
-        self.assertIn("required human approval are still pending", self.fixture_implement)
-
-    def test_nested_publish_source_mint_requests_workflows_write(self):
-        if self.nested_implement is None:
-            self.skipTest("nested karsift-ai-infra checkout not present")
-        mint = publish_source_job(self.nested_implement)
+    def test_fixture_publish_source_mint_requests_workflows_write(self):
+        mint = publish_source_job(self.implement)
         self.assertIn("permission-workflows: write", mint)
         self.assertIn("repositories: karsift-ai-infra", mint)
+        self.assertIn("permission-contents: write", mint)
+        self.assertIn("permission-issues: write", mint)
+        self.assertIn("permission-pull-requests: write", mint)
 
-    def test_nested_caller_publish_mint_omits_workflows_write(self):
-        if self.nested_implement is None:
-            self.skipTest("nested karsift-ai-infra checkout not present")
-        publish_job = caller_publish_job(self.nested_implement)
+    def test_fixture_caller_publish_mint_omits_workflows_write(self):
+        publish_job = caller_publish_job(self.implement)
         mint = publish_job.split(
             "- name: Mint least-privilege App token on the clean runner", 1
         )[1]
         self.assertNotIn("permission-workflows: write", mint)
         self.assertIn("cannot publish workflow-file changes", publish_job)
 
-    def test_nested_caller_publish_pr_body_matches_active_a004(self):
-        if self.nested_implement is None:
-            self.skipTest("nested karsift-ai-infra checkout not present")
-        publish_job = caller_publish_job(self.nested_implement)
+    def test_fixture_caller_publish_pr_body_matches_active_a004(self):
+        publish_job = caller_publish_job(self.implement)
         self.assertNotIn("required human approval are still pending", publish_job)
         self.assertIn("Independent", publish_job)
         self.assertIn("exact-revision review is still pending", publish_job)
+        self.assertIn("not authorized to", publish_job)
+        self.assertIn("merge on its own", publish_job)
 
-    def test_nested_carrier_files_exist_for_post_merge_fixture_sync(self):
-        if self.nested_implement is None:
-            self.skipTest("nested karsift-ai-infra checkout not present")
-        for relative in (
-            ".github/workflows/implement.yml",
-            "README.md",
-            "tests/test_voc124_workflow_permissions.py",
-            "tests/test_voc121_source_carrier_publisher.py",
-            "tests/test_voc121_implement_policy.py",
-            "tests/test_live_evidence_reconcile.py",
-        ):
-            self.assertTrue(
-                (NESTED_INFRA_ROOT / relative).is_file(),
-                f"missing nested path {relative}",
-            )
+    def test_fixture_implement_records_voc124_current_state(self):
+        self.assertIn("Current state (VOC-124, 2026-08-26)", self.implement)
+        self.assertIn("requests `workflows: write`", self.implement)
+
+    def test_fixture_includes_voc124_workflow_permission_tests(self):
+        voc124 = read_fixture("tests/test_voc124_workflow_permissions.py")
+        self.assertIn("permission-workflows: write", voc124)
+        self.assertIn("test_publish_source_mint_requests_workflows_write", voc124)
 
 
 if __name__ == "__main__":
