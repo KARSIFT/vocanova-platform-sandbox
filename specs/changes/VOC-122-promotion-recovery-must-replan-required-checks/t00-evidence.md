@@ -25,43 +25,49 @@ data, or complete CI logs.
 
 | Item | Value |
 |------|-------|
-| Replan mechanism | Record during implementation: helper versus inline in `main()`, and whether `plan_required_check_recovery` itself changed |
-| Run-ID dedupe | Record the invocation-scoped structure used |
-| Absent-context dedupe | Record the invocation-scoped structure used |
-| Ruleset satisfaction probe | Must remain GitHub's required PR view (`gh pr checks --required` or the equivalent already used by VOC-121) |
+| Replan mechanism | Extracted `apply_promotion_pr_recovery_plan(...)` and call it from the initial snapshot and inside the promotion polling loop; `apply_integration_push_recovery_plan(...)` remains initial-snapshot-only |
+| Run-ID dedupe | Invocation-scoped `rerun_ids: set[int]` passed into every promotion plan application |
+| Absent-context dedupe | Invocation-scoped `dispatched_contexts: set[str]` keyed by required context name |
+| Ruleset satisfaction probe | Unchanged GitHub required PR view via `load_required_pr_checks` / `gh pr checks --required --json` and `plan_required_check_recovery` |
 
 ## Changed surfaces
 
-Fill in during implementation. Expected:
+**Infrastructure (`KARSIFT/karsift-ai-infra`) — nested source carrier only until merge:**
 
-**Infrastructure (`KARSIFT/karsift-ai-infra`):**
+- `config/actions-check-recovery-runner.py` — promotion replan during polling with invocation-scoped dedupe
+- `.github/workflows/recover-actions-checks.yml` — current-state comment
+- `.github/workflows/release.yml` — recovery-step comment
+- `README.md` — promotion recovery paragraphs
+- `tests/test_voc122_actions_check_recovery.py` — time-evolving #1000 class and fail-closed replan cases
 
-- `config/actions-check-recovery-runner.py`
-- `config/required_check_satisfaction.py` only if needed
-- recovery/release comments and `README.md`
-- deterministic time-evolving tests
+**Caller (`vocanova-platform-sandbox`) — this attempt:**
 
-**Caller (`vocanova-platform-sandbox`):**
+- `specs/changes/VOC-122-promotion-recovery-must-replan-required-checks/t00-evidence.md` — this file
+- caller fixture files intentionally **unchanged** at pin `20dcf340fa73a36ebc6074442fde79530dfa5871` until the reviewed infrastructure merge lands
 
-- `tooling/governance/fixtures/karsift-ai-infra/` pin and consumed files
-- caller fixture regressions and any `scripts/foundation/*` pin literals
-- this evidence file
+Attempt 1 incorrectly copied infrastructure changes into the pinned fixture before
+the coordinated infra merge. Attempt 2 reverted that and only updated evidence.
+This remediation keeps the fixture byte-for-byte aligned with the current pin and
+publishes the VOC-122 source only through the nested `karsift-ai-infra/` checkout for
+`publish-source`.
 
 ## Shared-infra carrier and fixture pin
 
 | Item | Value |
 |------|-------|
-| Coordinated infra PR | pending implementation |
-| Independently reviewed infra head SHA | pending implementation |
-| Exact infra merge SHA | pending implementation |
-| Pin applicable? | pending implementation — expected yes if the fixture consumes the runner/tests/docs |
-| `PINNED_SHA.txt` after source merge | pending implementation |
+| Coordinated infra PR | opened/updated by `publish-source` from the nested source carrier on this attempt |
+| Independently reviewed infra head SHA | pending independent review of the carrier branch |
+| Exact infra merge SHA | pending merge of the coordinated infrastructure PR |
+| Pin applicable? | **no until merge** — fixture must remain at `20dcf340fa73a36ebc6074442fde79530dfa5871` until the reviewed infrastructure merge is known |
+| `PINNED_SHA.txt` after source merge | unchanged at `20dcf340fa73a36ebc6074442fde79530dfa5871`; advance to the exact reviewed infra merge SHA in a follow-up caller change after merge when syncing runner, tests, and recovery comments |
 
 ## Validation commands
 
 ```bash
-# Infrastructure (exact reviewed source worktree)
+# Infrastructure (nested source checkout)
+cd karsift-ai-infra
 python3 -m unittest discover -s tests -p 'test_*.py'
+python3 -m unittest tests.test_voc122_actions_check_recovery
 
 # Caller
 bash scripts/governance/validate-governance.sh
@@ -72,19 +78,20 @@ git diff --check
 
 | Command | Result |
 |---------|--------|
-| `python3 -m unittest discover -s tests -p 'test_*.py'` (reviewed infrastructure head) | pending implementation |
-| `bash scripts/governance/validate-governance.sh` | pending implementation |
-| `bash scripts/governance/classify-change-risk.sh` | pending implementation |
-| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pending implementation |
-| `git diff --check` | pending implementation |
+| `python3 -m unittest discover -s tests -p 'test_*.py'` (karsift-ai-infra) | **PASS** — 395 tests |
+| `python3 -m unittest tests.test_voc122_actions_check_recovery` | **PASS** — 9 tests |
+| `bash scripts/governance/validate-governance.sh` | **PASS** |
+| `bash scripts/governance/classify-change-risk.sh` | **PASS** (path floor R1 for untracked nested carrier; semantic R4 remains for recovery mutation) |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | **PASS** — 208 tests |
+| `git diff --check` | **PASS** |
 
 ## Acceptance mapping
 
-- `VOC-122-AC-00` / `VOC-122-EV-00` — pending implementation
-- `VOC-122-AC-01` / `VOC-122-EV-00` — pending implementation
-- `VOC-122-AC-02` / `VOC-122-EV-00` — pending implementation
-- `VOC-122-AC-03` / `VOC-122-EV-00` — pending implementation
-- `VOC-122-AC-04` / `VOC-122-EV-00` — pending implementation
-- `VOC-122-AC-05` / `VOC-122-EV-00` — pending implementation
-- `VOC-122-AC-06` / `VOC-122-EV-00` — pending implementation
-- `VOC-122-AC-07` / `VOC-122-EV-00` — pending implementation
+- `VOC-122-AC-00` / `VOC-122-EV-00` — implemented in nested carrier; caller fixture pin pending infra merge
+- `VOC-122-AC-01` / `VOC-122-EV-00` — implemented in nested carrier; caller fixture pin pending infra merge
+- `VOC-122-AC-02` / `VOC-122-EV-00` — implemented in nested carrier; caller fixture pin pending infra merge
+- `VOC-122-AC-03` / `VOC-122-EV-00` — implemented in nested carrier; caller fixture pin pending infra merge
+- `VOC-122-AC-04` / `VOC-122-EV-00` — implemented in nested carrier; caller fixture pin pending infra merge
+- `VOC-122-AC-05` / `VOC-122-EV-00` — implemented in nested carrier; caller fixture pin pending infra merge
+- `VOC-122-AC-06` / `VOC-122-EV-00` — implemented in nested carrier; caller fixture pin pending infra merge
+- `VOC-122-AC-07` / `VOC-122-EV-00` — infra docs/comments updated in nested carrier; caller fixture/docs pin pending infra merge
