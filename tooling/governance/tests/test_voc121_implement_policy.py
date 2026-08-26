@@ -39,10 +39,21 @@ class Voc121ImplementFixtureTests(unittest.TestCase):
         )
 
     def test_fixture_pin_matches_reviewed_infrastructure_merge(self):
-        expected = "99476c2a1018e42d4bd442657b5257885ac9f1c9"
+        expected = "7500a4171d96a8e0d38889a9c92ad5dc092ad8dd"
         self.assertEqual(self.pin, expected)
         self.assertIn(expected, self.readme)
         self.assertNotIn("VOC-121-D10 bootstrap", self.readme)
+
+    def test_fixture_implement_uses_named_ref_source_bundle(self):
+        self.assertIn("implementer_source_carrier.py \\", self.implement)
+        self.assertIn("create-bundle \\", self.implement)
+        self.assertIn("--output /tmp/implementer-source.bundle", self.implement)
+        self.assertNotIn(
+            '"${{ steps.infra-checkout.outputs.base_sha }}..$SOURCE_HEAD_SHA"',
+            self.implement,
+        )
+        self.assertIn("Current state (VOC-123, 2026-08-26)", self.implement)
+        self.assertIn("VOC-123 (named-ref nested source-carrier bundle tips)", self.readme)
 
 
 if __name__ == "__main__":

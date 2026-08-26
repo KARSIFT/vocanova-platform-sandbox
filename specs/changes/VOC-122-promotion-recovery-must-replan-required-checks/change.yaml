@@ -1,0 +1,185 @@
+schema_version: 1
+id: VOC-122
+slug: promotion-recovery-must-replan-required-checks
+title: Promotion recovery must replan required checks that appear after its initial
+  snapshot
+type: infrastructure
+status: adopted
+risk: R4
+planned_implementation_risk_floor: 'R4. This package changes protected CI/CD promotion-recovery
+  orchestration in KARSIFT/karsift-ai-infra (actions-check-recovery-runner, required-check
+  planning, recover-actions-checks / release callers, and current-state recovery docs)
+  and caller tooling/governance fixtures and tests. tooling/governance/* is an R4
+  path floor; .github/workflows/* is an R3 floor; semantic mutation of required Actions
+  runs on an open promotion PR is protected. This is a draft proposal for human adoption
+  review, not a determination; the path classifier and independent verifier remain
+  authoritative.
+
+  '
+canonical_path: specs/changes/VOC-122-promotion-recovery-must-replan-required-checks
+authority_model: a004-active
+requirement_source: 'GitHub issue #1001 (Promotion recovery must replan required checks
+  that appear after its initial snapshot). Live 2026-08-26 reproduction: VOC-121 caller
+  merge advanced develop to bb531fc211e91e40cec1847e1e28d98beaedacff and opened promotion
+  PR #1000. Release run 32912818046 job 98010275057 entered Recover missing exact-head
+  promotion checks at 2026-08-25T23:54:50Z and, because required pull-request rows
+  had not all appeared, used the absent-context workflow-dispatch path (governance-policy
+  dispatch run 32912851134 passed). The actual pull-request governance-policy run
+  32912850066 appeared at 2026-08-25T23:54:52Z and was cancelled by concurrency; gh
+  pr checks 1000 --required continued to select that CANCELLED row. The active recovery
+  job polled until timeout without rerunning 32912850066 because plan_required_check_recovery,
+  exact-run validation, rerun, and dispatch planning run only before the while loop
+  in config/actions-check-recovery-runner.py. After that obsolete polling run was
+  cancelled, already-queued convergence run 32912851044 job 98010820950 started with
+  the cancelled row present, reran 32912850066 as attempt 2, and the App merged #1000
+  at 70db9d7dbc4789264732e4fe4f347914dd6f764e without a ruleset bypass. Required:
+  one outcome-sized reliability change so promotion recovery re-evaluates newly appearing
+  required-check rows during polling while preserving VOC-121 fail-closed contracts
+  (exact selected-run validation, once-per-run-id rerun, once-per-absent-context dispatch,
+  no alternate-run or same-named-status override, no duplicate active/successful work,
+  1800-second timeout, App-token separation, exact-head merge decision, retry limits);
+  deterministic time-evolving tests; current-state docs and caller fixture/pin through
+  the coordinated exact-SHA flow. This draft package does not adopt or authorize itself.
+
+  '
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time if needed
+target_branch: develop
+approved_candidate_sha: 005dc58e43aeceb7b6c176ec0195834146871ace
+owners:
+  decision: unassigned
+  package_preparation: 'planner (drafting only; adoption remains a human/autonomous
+    governed decision)
+
+    '
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
+automatic_merge_allowed: true
+production_impact: 'none-intentional for application runtime. This package repairs
+  promotion-check recovery so a required pull-request row that appears after the initial
+  metadata snapshot can be rerun or left pending during the same recovery invocation.
+  It does not change product behavior, deployment topology, credentials, providers,
+  or monitor inventory. Restoring intended recovery may allow an already-reviewed
+  promotion PR to merge through existing gates after genuine exact-head checks; that
+  is not a new deploy path.
+
+  '
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: 'KARSIFT promotion-recovery reliability fix only. No page routes, critical
+    API endpoints, monitor inventory, or synthetic inventory in infra/monitoring/
+    are added or changed.
+
+    '
+dependencies:
+- id: VOC-122-DEP-00
+  status: 'resolved at drafting time. Issue #1001 provides the live promotion-PR reproduction,
+    exact run/job IDs, root cause in actions-check-recovery-runner.py, required fail-closed
+    contracts, one-task guidance, and test shape with enough specificity to draft
+    without a clarifying round trip.
+
+    '
+- id: VOC-122-DEP-01
+  status: 'resolved at drafting time. Active A-004 remains authoritative: no founder
+    approved-comment gate on engineering-workflow adopt/merge/release paths; exact-SHA
+    independent verification, deterministic risk floors, protected-path controls,
+    and fail-closed behavior remain mandatory.
+
+    '
+- id: VOC-122-DEP-02
+  status: 'resolved at drafting time by reading the current recovery runner. main()
+    calls plan_required_check_recovery, validate_selected_workflow_run, rerun_selected_workflow,
+    and dispatch_workflow only from the initial_gate_summary / pr_required_checks
+    snapshot before the while loop. The loop only calls run_metadata_phase and recovery_complete.
+    That matches the live #1000 failure class.
+
+    '
+- id: VOC-122-DEP-03
+  status: 'resolved at drafting time. VOC-121 already landed exact selected-run recovery:
+    a cancelled/failed ruleset-selected pull-request run is rebound and rerun by exact
+    run ID; only a genuinely absent context uses workflow dispatch; alternate runs
+    and same-named statuses cannot override GitHub''s required PR view. This package
+    does not reopen that selection contract. It closes the remaining snapshot-then-poll
+    gap: a row that is absent at plan time and later appears cancelled/failed is visible
+    to recovery_complete but never planned in that same invocation.
+
+    '
+- id: VOC-122-DEP-04
+  status: 'resolved at drafting time as an accepted delivery constraint: coordinated
+    PRs in the caller and KARSIFT/karsift-ai-infra remain one task. Repository count,
+    runner-versus-tests-versus-docs, and fixture/pin work are not split reasons. Pin
+    the caller fixture only if that fixture actually consumes the infra change.
+
+    '
+- id: VOC-122-DEP-05
+  status: 'open at drafting time as an implementer-facing structure choice, not a
+    planner guess past the required behavior. Recovery may extract a helper that applies
+    plan_required_check_recovery to the current required PR view, or keep planning
+    inline, provided every poll (and the initial snapshot) uses the same fail-closed
+    contracts and persistent once-per-run-id / once-per-absent-context dedupe. Do
+    not invent a second satisfaction probe that can disagree with gh pr checks --required.
+
+    '
+affected_areas:
+- KARSIFT/karsift-ai-infra/config/actions-check-recovery-runner.py
+- KARSIFT/karsift-ai-infra/config/required_check_satisfaction.py
+- KARSIFT/karsift-ai-infra/config/actions_check_recovery.py
+- KARSIFT/karsift-ai-infra/.github/workflows/recover-actions-checks.yml
+- KARSIFT/karsift-ai-infra/.github/workflows/release.yml
+- KARSIFT/karsift-ai-infra/README.md
+- KARSIFT/karsift-ai-infra/tests/
+- tooling/governance/fixtures/karsift-ai-infra/
+- tooling/governance/tests/
+- scripts/foundation/voc097-fixture-matrix.test.mjs
+- scripts/foundation/voc104-ready-for-review-reuse.test.mjs
+- scripts/foundation/voc108-authoritative-lifecycle.test.mjs
+- specs/changes/VOC-122-promotion-recovery-must-replan-required-checks/
+implementation:
+  authorized: true
+  required: true
+  status: authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: 1003
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-automation-reliability-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+ehr: not-triggered
+standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
+blocking_reasons: none - adopted and implementation-authorized
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+repository_adoption_status: adopted
+adoption_pr: 1002
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1002
+implementation_authority_before_adoption: false
+implementation_authority_status: authorized
+production_deployment: disabled
+autonomous_production_release: enabled
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1002#issuecomment-5418850024
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-122-DEP-00
+- VOC-122-DEP-01
+- VOC-122-DEP-02
+- VOC-122-DEP-03
+- VOC-122-DEP-04
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #1002 at 005dc58e43aeceb7b6c176ec0195834146871ace'
