@@ -37,9 +37,10 @@
   Do not call GitHub and do not mint `KARSIFT_BOT_*` credentials. Existing
   VOC-121 tests that publish a non-workflow file do not satisfy this test by
   themselves.
-- Expected result: the #1013 failure class is no longer a source-publisher
-  script rejection, and the token mint required for GitHub to accept that
-  push is present.
+- Expected result: the source publisher retains its own lineage, lease, and
+  bundle checks without inheriting the caller publisher's workflow-file
+  rejection, and its token mint includes the permission required to prevent
+  GitHub's #1013 App-token workflow-file push rejection.
 - Evidence: `VOC-124-EV-00`
 
 ## VOC-124-TEST-02 — Caller publisher still refuses workflow files without workflow-write

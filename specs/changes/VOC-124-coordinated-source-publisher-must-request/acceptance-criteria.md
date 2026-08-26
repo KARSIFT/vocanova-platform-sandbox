@@ -106,10 +106,11 @@ validated on their exact reviewed revisions. If the caller fixture consumes
 the infrastructure change, `PINNED_SHA.txt` equals that exact infra merge
 SHA and matching caller pin assertions are advanced. After that merge is live
 on `implement.yml@main`, the existing `VOC-122-T00` carrier is re-dispatched
-or reconciled (not replaced); its authoritative infrastructure PR is
-published from a newly verified bundle, independently reviewed, and merged;
-caller PR #1012 is then updated to that exact infrastructure merge SHA with
-truthful evidence and is not merged by this package.
+or reconciled (not replaced), and that handoff is recorded against the exact
+VOC-124 infrastructure merge. Publishing, independently reviewing, and
+merging VOC-122's authoritative infrastructure PR, then updating and merging
+caller PR #1012 with its exact source pin and truthful evidence, remain the
+existing VOC-122 roster's work and are not VOC-124-T00 completion gates.
 
 Acceptance criteria must be observable, stable, security-aware, and bidirectionally
 traceable to requirements, tasks, tests, and evidence.

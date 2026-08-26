@@ -227,11 +227,11 @@ at drafting time).
 distinct publisher-permission outcome. Do not implement VOC-122
 promotion-recovery replan behavior here. After the exact reviewed infra merge
 is live on `implement.yml@main`, re-dispatch or reconcile the existing
-`VOC-122-T00` carrier against that revision so its authoritative
-infrastructure PR is published from a newly verified bundle, independently
-reviewed, and merged. Then update caller PR #1012 to that exact
-infrastructure merge SHA with truthful evidence. Do not reconstruct or
-hand-push runner-produced head
+`VOC-122-T00` carrier against that revision and record the handoff. Publishing,
+independently reviewing, and merging VOC-122's authoritative infrastructure
+PR, then updating and merging caller PR #1012 with its exact source pin and
+truthful evidence, remain the existing VOC-122 roster's work and are not
+VOC-124-T00 completion gates. Do not reconstruct or hand-push runner-produced head
 `f90eb630743c8c523e2e6e8dff017acbb31a7f43`. Do not merge #1012 from this
 package. Record bootstrap exhaustion in `t00-evidence.md` so the exception
 cannot be reused.
