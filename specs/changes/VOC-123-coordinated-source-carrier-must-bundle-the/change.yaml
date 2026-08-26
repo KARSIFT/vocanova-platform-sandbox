@@ -3,7 +3,7 @@ id: VOC-123
 slug: coordinated-source-carrier-must-bundle-the
 title: Coordinated source carrier must bundle the committed head through a named ref
 type: infrastructure
-status: draft
+status: adopted
 risk: R4
 planned_implementation_risk_floor: 'R4. This package changes protected CI/CD coordinated
   source-carrier publication in KARSIFT/karsift-ai-infra (implement.yml nested-source
@@ -49,8 +49,8 @@ requirement_source: 'GitHub issue #1005 (Coordinated source carrier must bundle 
   itself.
 
   '
-requirement_approval_status: 'GitHub issue #1005 is the requirement source; this draft
-  package is not adopted and does not authorize implementation '
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: unknown - not recorded by this draft; set at adoption time if needed
 target_branch: develop
@@ -62,8 +62,8 @@ owners:
     '
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: 'none-intentional for application runtime. This package repairs
   coordinated source-carrier Git-bundle creation so a nested karsift-ai-infra commit
@@ -155,16 +155,15 @@ dependencies:
 
     '
 - id: VOC-123-DEP-07
-  status: 'resolved after initial independent plan review. The caller resolves
-    `KARSIFT/karsift-ai-infra/.github/workflows/implement.yml@main` before the
-    model job starts, so the broken raw-SHA source-bundle step cannot publish its
-    own nested repair. Following the existing VOC-121-D10 chicken-and-egg
-    precedent, one bounded supervised bootstrap infra PR is in scope under T00:
-    clean branch from current infra main, exact named-ref repair plus tests/docs,
-    non-closing task link, source self-CI, independent exact-SHA review, and a
-    different merger. No PATH/Git interception or direct main push is allowed.
-    The exception expires at that merge; caller fixture/pin/evidence and #1003
-    then use the repaired normal implement.yml@main path.
+  status: 'resolved after initial independent plan review. The caller resolves `KARSIFT/karsift-ai-infra/.github/workflows/implement.yml@main`
+    before the model job starts, so the broken raw-SHA source-bundle step cannot publish
+    its own nested repair. Following the existing VOC-121-D10 chicken-and-egg precedent,
+    one bounded supervised bootstrap infra PR is in scope under T00: clean branch
+    from current infra main, exact named-ref repair plus tests/docs, non-closing task
+    link, source self-CI, independent exact-SHA review, and a different merger. No
+    PATH/Git interception or direct main push is allowed. The exception expires at
+    that merge; caller fixture/pin/evidence and #1003 then use the repaired normal
+    implement.yml@main path.
 
     '
 affected_areas:
@@ -180,12 +179,12 @@ affected_areas:
 - scripts/foundation/voc108-authoritative-lifecycle.test.mjs
 - specs/changes/VOC-123-coordinated-source-carrier-must-bundle-the/
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: not-authorized
+  status: authorized
   target_branch: develop
   pull_request: null
-  authority_issue: null
+  authority_issue: 1007
 release:
   required: true
   mode: not-authorized-by-this-package
@@ -196,8 +195,7 @@ release:
   rollback_required: true
 ehr: not-triggered
 standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
-blocking_reasons: package is an unadopted draft; adoption and implementation authorization
-  remain separate A-004-governed decisions
+blocking_reasons: none - adopted and implementation-authorized
 artifacts:
   readme: README.md
   specification: specification.md
@@ -207,8 +205,23 @@ artifacts:
   tasks: tasks.md
   test_plan: test-plan.md
   release_plan: release-plan.md
-repository_adoption_status: not-adopted
+repository_adoption_status: adopted
 implementation_authority_before_adoption: false
-implementation_authority_status: not-authorized
+implementation_authority_status: authorized
 production_deployment: disabled
 autonomous_production_release: enabled
+approved_candidate_sha: c2608ab33d752020521bd40c1b39f578c4612b5a
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1006#issuecomment-5419129871
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-123-DEP-00
+- VOC-123-DEP-01
+- VOC-123-DEP-02
+- VOC-123-DEP-03
+- VOC-123-DEP-04
+- VOC-123-DEP-05
+- VOC-123-DEP-07
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #1006 at c2608ab33d752020521bd40c1b39f578c4612b5a'
+adoption_pr: 1006
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1006
