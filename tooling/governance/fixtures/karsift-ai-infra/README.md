@@ -1,4 +1,4 @@
-# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106, VOC-108, VOC-115, VOC-117, VOC-121)
+# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106, VOC-108, VOC-115, VOC-117, VOC-121, VOC-123)
 
 These copies are deterministic fixtures for caller-repo policy regressions.
 They mirror `KARSIFT/karsift-ai-infra` at the SHA in `PINNED_SHA.txt` so
@@ -12,7 +12,7 @@ contracts without cloning the infra repository in CI.
 
 They are not a second runtime source of truth. Callers still `uses:`
 `KARSIFT/karsift-ai-infra/...@main`. Update the fixtures when VOC-080-,
-VOC-097-, VOC-102-, VOC-104-, VOC-106-, VOC-108-, VOC-115-, or VOC-121-related infra contracts change and
+VOC-097-, VOC-102-, VOC-104-, VOC-106-, VOC-108-, VOC-115-, VOC-121-, or VOC-123-related infra contracts change and
 record the new pin in evidence.
 
 ## package/task defaults (VOC-115)
@@ -184,7 +184,9 @@ without publishing the list or other raw output.
 this fixture. VOC-117 originally advanced the fixture to merge
 `37b06aa95030e235b7311b3c14ee23977f62ac76`. VOC-121-T00 advances it to
 infrastructure PR #157 merge
-`99476c2a1018e42d4bd442657b5257885ac9f1c9`; the mirrored source files are
+`99476c2a1018e42d4bd442657b5257885ac9f1c9`. VOC-123-T00 advances it to
+infrastructure PR #158 merge
+`7500a4171d96a8e0d38889a9c92ad5dc092ad8dd`; the mirrored source files are
 byte-for-byte copies from that merge's reviewed tree.
 
 Recovery metadata reads, exact selected-run reruns, and allowlisted absent-context
@@ -221,3 +223,10 @@ only an absent context is redispatched. Alternate successful runs and
 same-named statuses cannot override the ruleset-selected row. Status
 attestation, release evaluation, and the read-only recovery verifier use the
 same required-check view and fail closed on ambiguity or read failure.
+
+VOC-123 (named-ref nested source-carrier bundle tips) binds the exact committed
+infrastructure head to one temporary `refs/karsift/source-bundle-head` ref
+before `bundle create`, verifies the sole advertised head, and removes the ref
+on every exit path. Raw object IDs remain a proven empty-bundle failure class.
+Caller and planner `..HEAD` recovery bundles were proven safe with real
+repositories and remain unchanged.
