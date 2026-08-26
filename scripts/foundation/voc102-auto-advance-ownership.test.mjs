@@ -15,6 +15,10 @@ const pipelinePath = path.join(
   repositoryRoot,
   ".github/workflows/pipeline.yml",
 );
+const pipelineVerifyPath = path.join(
+  repositoryRoot,
+  ".github/workflows/pipeline-verify.yml",
+);
 const liveEvidenceDocPath = path.join(
   repositoryRoot,
   "docs/operations/live-evidence.md",
@@ -95,20 +99,20 @@ test("VOC-102-TEST-11 through TEST-13: carrier, permissions, verifier", () => {
 });
 
 test("VOC-102 caller wiring exposes read-only verify-auto-advance-live-evidence action", () => {
-  const pipeline = readFileSync(pipelinePath, "utf8");
+  const pipelineVerify = readFileSync(pipelineVerifyPath, "utf8");
   const verifier = readFileSync(infraVerifierPath, "utf8");
   const contract = readFileSync(contractPath, "utf8");
   assert.match(
-    pipeline,
+    pipelineVerify,
     /verify-auto-advance-live-evidence/,
     "pipeline must expose the proof action",
   );
   assert.match(
-    pipeline,
+    pipelineVerify,
     /uses: KARSIFT\/karsift-ai-infra\/\.github\/workflows\/verify-auto-advance-live-evidence\.yml@main/,
   );
   const verifyBlock =
-    pipeline.split("verify-auto-advance-live-evidence:", 2)[1] ?? "";
+    pipelineVerify.split("verify-auto-advance-live-evidence:", 2)[1] ?? "";
   assert.ok(
     verifyBlock.length > 0,
     "verify-auto-advance-live-evidence job must exist",

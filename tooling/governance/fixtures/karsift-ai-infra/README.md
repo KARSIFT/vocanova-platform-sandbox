@@ -1,4 +1,4 @@
-# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106, VOC-108, VOC-115, VOC-117, VOC-121, VOC-123)
+# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106, VOC-108, VOC-115, VOC-117, VOC-121, VOC-123, VOC-126)
 
 These copies are deterministic fixtures for caller-repo policy regressions.
 They mirror `KARSIFT/karsift-ai-infra` at the SHA in `PINNED_SHA.txt` so
@@ -12,7 +12,7 @@ contracts without cloning the infra repository in CI.
 
 They are not a second runtime source of truth. Callers still `uses:`
 `KARSIFT/karsift-ai-infra/...@main`. Update the fixtures when VOC-080-,
-VOC-097-, VOC-102-, VOC-104-, VOC-106-, VOC-108-, VOC-115-, VOC-121-, or VOC-123-related infra contracts change and
+VOC-097-, VOC-102-, VOC-104-, VOC-106-, VOC-108-, VOC-115-, VOC-121-, VOC-123-, or VOC-126-related infra contracts change and
 record the new pin in evidence.
 
 ## package/task defaults (VOC-115)
@@ -108,6 +108,15 @@ The VOC-106 workflow, policy, verifier, and regression-test copies correspond to
 shared-infra merge `db164eb3905a96b74b039ab6aa36944408bf0a44`, including the
 hosted verifier base-SHA adapter fix recorded in this package's T00 remediation.
 
+VOC-125 (VOC-126 caller pin) documents operator resume through caller
+`workflow_dispatch` `action=implement` with `attempt=2` and
+`existing_pr_number=<open PR>`. The caller forwards only the PR number—not
+free-form SHAs. `implement.yml` derives immutable `expected_head_sha` /
+`expected_base_sha` before `Create implementation branch`. Read-only verifier
+dispatch uses caller `pipeline-verify.yml` (VOC-126) so `pipeline.yml` stays
+within GitHub's 25-input `workflow_dispatch` maximum while preserving
+`existing_pr_number`.
+
 ## authoritative lifecycle state (VOC-108)
 
 VOC-108 originally advanced the fixture to shared-infra merge
@@ -188,7 +197,9 @@ infrastructure PR #157 merge
 infrastructure PR #158 merge
 `7500a4171d96a8e0d38889a9c92ad5dc092ad8dd`. VOC-124-T00 advances it to
 infrastructure PR #159 merge
-`f406cc95a3f853e8aef5bf8bcf22d37a29d64547`; the mirrored source files are
+`f406cc95a3f853e8aef5bf8bcf22d37a29d64547`. VOC-126-T00 advances it to
+infrastructure PR #161 merge
+`20dcf340fa73a36ebc6074442fde79530dfa5871`; the mirrored source files are
 byte-for-byte copies from that merge's reviewed tree.
 
 Recovery metadata reads, exact selected-run reruns, and allowlisted absent-context

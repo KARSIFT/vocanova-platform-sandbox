@@ -14,8 +14,10 @@ import sys
 from live_evidence_reconcile import parse_contract_yaml, validate_contract
 from verify_remediate_operator_ownership import (
     verify_carrier_state,
+    verify_source_evidence,
     verify_source_jobs,
     verify_source_run,
+    verify_source_to_carrier_lineage,
 )
 
 
@@ -106,6 +108,18 @@ def associated_base_sha(run: dict) -> str:
     return str(base.get("sha") or "")
 
 
+def immutable_run_head_sha(run: dict) -> str:
+    """Return the immutable source SHA recorded directly on the Actions run."""
+    return str(run.get("head_sha") or "")
+
+
+def evidence_path_for_task(package_root: Path, task_id: str) -> Path:
+    match = re.fullmatch(r"[A-Z][A-Z0-9]*-[0-9]+-T([0-9]+[a-z]?)", task_id)
+    if match is None:
+        raise VerificationError("invalid_evidence_task_id")
+    return package_root / f"t{match.group(1).lower()}-evidence.md"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repository", default=os.environ.get("GITHUB_REPOSITORY", ""))
@@ -155,34 +169,48 @@ def main() -> int:
                     "view",
                     str(args.pr_number),
                     "--json",
-                    "number,title,body,state,headRefOid,baseRefName,comments",
+                    "number,title,body,state,headRefOid,baseRefName,baseRefOid,comments",
                 ]
             )
         )
-        expected_head_sha = str(pr.get("headRefOid") or "")
-        expected_base_sha = associated_base_sha(run)
-        if not expected_base_sha:
-            expected_base_sha = str(
-                json.loads(
-                    api.gh(
-                        [
-                            "pr",
-                            "view",
-                            str(args.pr_number),
-                            "--json",
-                            "baseRefOid",
-                        ]
-                    )
-                ).get("baseRefOid")
-                or ""
-            )
+        carrier_head_sha = str(pr.get("headRefOid") or "")
+        source_head_sha = immutable_run_head_sha(run)
+        expected_base_sha = str(pr.get("baseRefOid") or "")
         require(
             verify_source_run(
                 run=run,
                 repository=args.repository,
                 pr_number=args.pr_number,
-                expected_head_sha=expected_head_sha,
+                expected_head_sha=source_head_sha,
                 expected_base_sha=expected_base_sha,
+            )
+        )
+        comparison = json.loads(
+            api.gh(
+                [
+                    "api",
+                    f"/repos/{args.repository}/compare/{source_head_sha}...{carrier_head_sha}",
+                ]
+            )
+        )
+        require(
+            verify_source_to_carrier_lineage(
+                comparison=comparison,
+                source_head_sha=source_head_sha,
+                carrier_head_sha=carrier_head_sha,
+            )
+        )
+        try:
+            evidence_text = evidence_path_for_task(package_root, args.task_id).read_text(
+                encoding="utf-8"
+            )
+        except OSError as exc:
+            raise VerificationError("source_evidence_missing") from exc
+        require(
+            verify_source_evidence(
+                evidence_text,
+                source_run_id=args.source_run_id,
+                source_head_sha=source_head_sha,
             )
         )
         jobs_payload = json.loads(
@@ -202,14 +230,11 @@ def main() -> int:
             raise VerificationError("source_job_set_incomplete")
         require(verify_source_jobs(jobs))
 
-        issue_number = None
         body = str(pr.get("body") or "")
-        for line in body.splitlines():
-            if line.startswith("Closes #"):
-                issue_number = int(line.removeprefix("Closes #").strip())
-                break
-        if issue_number is None:
+        authority_matches = re.findall(r"^Closes #([1-9][0-9]*)\.?$", body, re.MULTILINE)
+        if len(authority_matches) != 1:
             raise VerificationError("authority_issue_missing")
+        issue_number = int(authority_matches[0])
 
         require(
             verify_carrier_state(
@@ -221,6 +246,7 @@ def main() -> int:
                 current_ref=args.current_ref,
                 comments=pr.get("comments", []),
                 source_run_id=args.source_run_id,
+                source_head_sha=source_head_sha,
             )
         )
     except (VerificationError, OSError, ValueError, json.JSONDecodeError) as exc:
@@ -234,6 +260,7 @@ def main() -> int:
                 "source_run_id": args.source_run_id,
                 "pr_number": args.pr_number,
                 "task_id": args.task_id,
+                "source_head_sha": source_head_sha,
                 "carrier_head_sha": args.current_ref,
                 "verify_result": "pass",
             },

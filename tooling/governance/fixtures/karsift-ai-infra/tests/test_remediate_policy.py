@@ -19,6 +19,31 @@ class RemediatePolicyTests(unittest.TestCase):
         self.assertIn('--review-job-failed "$REVIEW_JOB_FAILED"', self.workflow)
         self.assertIn('echo "should_retry=false"', self.workflow)
 
+    def test_operator_owned_or_malformed_metadata_never_dispatches_implementer(self):
+        self.assertIn("config/remediation-ownership.py", self.workflow)
+        self.assertIn("--repository-root caller", self.workflow)
+        self.assertIn("--ownership-state \"$ownership_state\"", self.workflow)
+        self.assertIn('decision" = "ESCALATE_OPERATOR"', self.workflow)
+        self.assertIn('echo "operator_escalation=true"', self.workflow)
+        retry = self.workflow.split("  retry:", 1)[1]
+        self.assertIn("needs.decide.outputs.should_retry == 'true'", retry)
+        self.assertNotIn("operator_escalation", retry)
+
+    def test_operator_escalation_is_exact_head_sanitized_and_deduplicated(self):
+        escalation = self.workflow.split(
+            "- name: Publish sanitized operator-ownership escalation", 1
+        )[1].split("- name: Record sanitized CI failure metadata", 1)[0]
+        self.assertIn("--json headRefOid,baseRefOid,state", escalation)
+        self.assertIn("remediation-ownership-escalation", escalation)
+        self.assertIn("VOC-106: Remediation operator escalation for", escalation)
+        self.assertIn('should_retry: \\`false\\`', escalation)
+        self.assertIn('package_path: \\`$PACKAGE_PATH\\`', escalation)
+        self.assertIn('run_id: \\`$GITHUB_RUN_ID\\`', escalation)
+        self.assertIn("contains($marker)", escalation)
+        self.assertIn("No general implementer was dispatched", escalation)
+        self.assertNotIn("/logs", escalation)
+        self.assertNotIn("/artifacts", escalation)
+
     def test_retry_is_bounded_to_two_attempts(self):
         self.assertIn("next_attempt=$((attempt + 1))", self.workflow)
         self.assertIn('if [ "$next_attempt" -gt 2 ]; then', self.workflow)
@@ -87,7 +112,10 @@ class RemediatePolicyTests(unittest.TestCase):
         self.assertIn("$GITHUB_STEP_SUMMARY", ci_metadata)
         self.assertIn("previous attempt failed deterministic CI before review", self.implement)
         self.assertIn("Reproduce the failure in this", self.implement)
-        self.assertIn("failed_head_sha: ${{ inputs.expected_head_sha }}", self.implement)
+        self.assertIn(
+            "failed_head_sha: ${{ steps.bind-carrier.outputs.expected_head_sha }}",
+            self.implement,
+        )
 
     def test_stale_caller_run_cannot_dispatch_newer_head(self):
         self.assertIn("expected_head_sha:", self.workflow)
@@ -110,16 +138,7 @@ class RemediatePolicyTests(unittest.TestCase):
         self.assertIn("uses: KARSIFT/karsift-ai-infra/.github/workflows/implement.yml@main", retry)
         self.assertIn("attempt: ${{ needs.decide.outputs.next_attempt }}", retry)
         self.assertIn("expected_base_sha: ${{ inputs.expected_base_sha }}", retry)
-
-    def test_operator_owned_fail_does_not_dispatch_implementer(self):
-        self.assertIn("remediate-ownership-classifier.py", self.workflow)
-        self.assertIn("remediate-escalate-operator.py", self.workflow)
-        self.assertIn("operator_escalation=true", self.workflow)
-        self.assertIn("ownership_fail_closed=true", self.workflow)
-        ownership_gate = self.workflow.index("remediate-ownership-classifier.py")
-        retry_output = self.workflow.index('echo "should_retry=true"')
-        self.assertLess(ownership_gate, retry_output)
-        self.assertIn('--ownership "$ownership"', self.workflow)
+        self.assertIn("existing_pr_number: ${{ inputs.pr_number }}", retry)
 
     def test_no_founder_override_or_comment_authority(self):
         self.assertNotIn("founder_username:", self.workflow)

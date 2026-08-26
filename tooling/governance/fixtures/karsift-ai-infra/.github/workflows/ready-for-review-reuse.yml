@@ -63,6 +63,8 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         if: inputs.event_action == 'ready_for_review'
         continue-on-error: true
+        with:
+          persist-credentials: false
 
       - name: Checkout shared reuse policy
         id: policy-checkout
