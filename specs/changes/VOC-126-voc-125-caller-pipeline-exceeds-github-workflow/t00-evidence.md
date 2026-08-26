@@ -25,6 +25,17 @@ data, complete CI logs, or App token values.
 | Downstream blocked carrier | VOC-122-T00 #1003 / draft PR #1012 |
 | Why bootstrap is not required | VOC-124 already requested `permission-workflows: write` on `publish-source`; T00's first run is attempt `1` |
 
+## Attempt history and supervised carrier reconciliation
+
+| Item | Value |
+|------|-------|
+| Attempt 1 carrier | `103245d20ae58d309a1d2a73da3c8d80427d8ff5`, based on `42c79d44e43e6d99e7dbe5e07f50aa0d2e8bd76e` |
+| Exact-SHA review | KARSIFT review run `33018539110` failed attempt 1 for the provisional pin and incomplete VOC-125 carry-forward |
+| Attempt 2 carrier | KARSIFT remediation run `33018539110`, artifact `implement-VOC-126-VOC-126-T00-attempt2`, exact artifact head `4d389fa044f864c704eb774c8f53f9c5ce4edbe5` |
+| Attempt 2 result | Composer advanced the pin to `20dcf340fa73a36ebc6074442fde79530dfa5871`, synchronized the mirrored source subset, and passed the governed pre-push validation after its single self-correction pass |
+| Residual composition | The bounded retry still omitted caller-only `test_voc125_implement_fixture.py`, `test_voc125_pipeline_dispatch.py`, and finalized VOC-125 delivery evidence from unmerged #1024. Those exact governed carrier assets were composed onto the attempt-2 artifact, with only the new pin and GitHub's 25-input bound updated. |
+| Retry limit | attempt `2` is final; no attempt `3` dispatched |
+
 ## Chosen delivery path
 
 | Item | Constraint |
@@ -43,7 +54,7 @@ data, complete CI logs, or App token values.
 
 ## Changed surfaces
 
-**Infrastructure (`KARSIFT/karsift-ai-infra` — independently reviewed merge `20dcf340fa73a36ebc6074442fde79530dfa5871`, PR #161):**
+**Infrastructure (`KARSIFT/karsift-ai-infra` — directly owner-verified merge `20dcf340fa73a36ebc6074442fde79530dfa5871`, PR #161):**
 
 - `templates/project-repo/.github/workflows/pipeline.yml` — removed five verifier actions/inputs/jobs; kept `existing_pr_number`; 16 `workflow_dispatch` inputs
 - `templates/project-repo/.github/workflows/pipeline-verify.yml` — new dedicated read-only verifier dispatch (17 inputs)
@@ -57,7 +68,7 @@ data, complete CI logs, or App token values.
 - `.github/workflows/pipeline-verify.yml` — live read-only verifier dispatch mirror
 - `tooling/governance/fixtures/karsift-ai-infra/` — synced to infra merge `20dcf340fa73a36ebc6074442fde79530dfa5871`, including VOC-125 `implement.yml` / `remediate.yml`, bind helpers, and `test_voc125_existing_carrier.py`
 - `tooling/governance/tests/test_voc126_workflow_dispatch_input_limit.py`
-- `tooling/governance/tests/test_voc125_implement_policy.py`
+- `tooling/governance/tests/test_voc125_implement_policy.py`, `test_voc125_implement_fixture.py`, `test_voc125_pipeline_dispatch.py`
 - `tooling/governance/tests/test_voc080_*`, `test_voc121_implement_policy.py`, `test_voc124_implement_policy.py`
 - `scripts/foundation/voc097-fixture-matrix.test.mjs`, `voc104-ready-for-review-reuse.test.mjs`, `voc108-authoritative-lifecycle.test.mjs`
 
@@ -66,7 +77,7 @@ data, complete CI logs, or App token values.
 | Item | Value |
 |------|-------|
 | Coordinated infra PR | KARSIFT/karsift-ai-infra#161 |
-| Independently reviewed infra head SHA | `20dcf340fa73a36ebc6074442fde79530dfa5871` |
+| Directly owner-verified infra head SHA | `9db35bd338313ab3ab8b7903a6c0522383423fa4` |
 | Exact infra merge SHA | `20dcf340fa73a36ebc6074442fde79530dfa5871` |
 | Pin applicable? | **yes** — project-repo `pipeline.yml` / `pipeline-verify.yml`, VOC-125 implement/remediate surface, bind helpers, and related tests consumed |
 | Pin must not equal | `1f1705dbad41729563b0ad1e878e4154e5511e93` |
@@ -105,25 +116,30 @@ git diff --check
 
 | Command | Result |
 |---------|--------|
-| `python3 -m unittest discover -s tests -p 'test_*.py'` (karsift-ai-infra @ `20dcf34…`) | **pass** |
+| `python3 -m unittest discover -s tests -p 'test_*.py'` (karsift-ai-infra source head `9db35bd…`) | **pass** (386 tests; direct owner verification) |
+| KARSIFT attempt-2 governed pre-push validation | **pass** after one self-correction |
+| `python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'` | **pass** (343 tests) |
 | `bash scripts/governance/validate-governance.sh` | **pass** |
-| `bash scripts/governance/classify-change-risk.sh` | **pass** (path floor only in this environment) |
-| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | **pass** |
-| `node scripts/foundation/voc097-fixture-matrix.test.mjs` | **pass** |
-| `node scripts/foundation/voc104-ready-for-review-reuse.test.mjs` | **pass** |
-| `node scripts/foundation/voc108-authoritative-lifecycle.test.mjs` | **pass** |
+| `bash scripts/governance/classify-change-risk.sh` | **pass** (R4 path floor) |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | **pass** (208 tests) |
+| `node scripts/foundation/voc097-fixture-matrix.test.mjs` | **pass** (5 tests) |
+| `node scripts/foundation/voc102-auto-advance-ownership.test.mjs` | **pass** (5 tests) |
+| `node scripts/foundation/voc104-ready-for-review-reuse.test.mjs` | **pass** (6 tests) |
+| `node scripts/foundation/voc106-remediate-ownership.test.mjs` | **pass** (3 tests) |
+| `node scripts/foundation/voc108-authoritative-lifecycle.test.mjs` | **pass** (5 tests) |
+| `node scripts/foundation/voc113-actions-check-recovery.test.mjs` | **pass** (5 tests) |
 | `git diff --check` | **pass** |
 
 **Input-count spot check (caller):** `pipeline.yml` = 16 inputs; `pipeline-verify.yml` = 17 inputs (both ≤ 25).
 
 ## Acceptance mapping
 
-- `VOC-126-AC-00` / `VOC-126-EV-00` — implemented; pending independent exact-SHA verification after merge
+- `VOC-126-AC-00` / `VOC-126-EV-00` — implemented; pending independent exact-SHA verification of the final caller head
 - `VOC-126-AC-01` / `VOC-126-EV-00` — implemented (`existing_pr_number` on `pipeline.yml`, forwarded on `implement`)
 - `VOC-126-AC-02` / `VOC-126-EV-00` — implemented (five verifiers on `pipeline-verify.yml`; mutating actions on `pipeline.yml`)
 - `VOC-126-AC-03` / `VOC-126-EV-00` — implemented (read-only verifier workflow; recovery jobs remain on `pipeline.yml`)
 - `VOC-126-AC-04` / `VOC-126-EV-00` — implemented; fixture carries VOC-125 `implement.yml` / `remediate.yml` / bind helpers; caller `test_voc125_implement_policy.py` added
-- `VOC-126-AC-05` / `VOC-126-EV-00` — implemented; pin equals independently reviewed infra merge `20dcf340fa73a36ebc6074442fde79530dfa5871`; #1024 not merged
+- `VOC-126-AC-05` / `VOC-126-EV-00` — implemented; pin equals directly owner-verified infra merge `20dcf340fa73a36ebc6074442fde79530dfa5871`; #1024 not merged
 - `VOC-126-AC-06` / `VOC-126-EV-00` — handoff recorded; #1022/#1020/#1024 closure and #1003 resume remain post-merge operator steps
 
 ## Post-merge operator steps (not executed in T00)
