@@ -154,6 +154,19 @@ dependencies:
     unchanged unless tests reproduce empty-bundle or unsafe advertised-head behavior.
 
     '
+- id: VOC-123-DEP-07
+  status: 'resolved after initial independent plan review. The caller resolves
+    `KARSIFT/karsift-ai-infra/.github/workflows/implement.yml@main` before the
+    model job starts, so the broken raw-SHA source-bundle step cannot publish its
+    own nested repair. Following the existing VOC-121-D10 chicken-and-egg
+    precedent, one bounded supervised bootstrap infra PR is in scope under T00:
+    clean branch from current infra main, exact named-ref repair plus tests/docs,
+    non-closing task link, source self-CI, independent exact-SHA review, and a
+    different merger. No PATH/Git interception or direct main push is allowed.
+    The exception expires at that merge; caller fixture/pin/evidence and #1003
+    then use the repaired normal implement.yml@main path.
+
+    '
 affected_areas:
 - KARSIFT/karsift-ai-infra/.github/workflows/implement.yml
 - KARSIFT/karsift-ai-infra/.github/workflows/plan.yml

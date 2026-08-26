@@ -27,6 +27,7 @@ data, or complete CI logs.
 | Item | Value |
 |------|-------|
 | Named-ref mechanism | Record during implementation: exact temporary ref name/namespace, and whether create/verify/cleanup is inline in `implement.yml` or extracted |
+| Bootstrap carrier | Record the bounded `VOC-123-D08` infra PR, exact reviewed head, separate merger, merge SHA, and proof no direct `main` push or runner-environment interception occurred |
 | Advertised-head check | Record the exact `git bundle list-heads` assertion used in production |
 | Temp-ref cleanup | Record that the ref is deleted after create, including on verification failure |
 | Caller recovery `integration_sha..HEAD` | pending implementation — prove safe or repair |

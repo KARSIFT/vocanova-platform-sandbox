@@ -55,11 +55,12 @@ user-interface accessibility effect.
 - `VOC-123-R04`: **Medium documentation risk** if README/workflow comments
   continue to describe a raw-SHA exclusion range as current-state.
   Mitigation: same-task current-state updates (`VOC-123-D05`).
-- `VOC-123-R05`: **Medium sequencing risk** if this task's own nested
-  infrastructure edits are committed by an `implement.yml` revision that
-  still uses a raw-SHA tip. Mitigation: land the workflow repair in the
-  infrastructure carrier of this same task before relying on source
-  publication (`tasks.md` ordering notes).
+- `VOC-123-R05`: **High bootstrap risk** because the already-resolved
+  `implement.yml@main` cannot consume a nested edit to itself and will repeat
+  the raw-SHA failure before artifact upload. Mitigation: the bounded,
+  independently reviewed, one-time supervised infra bootstrap in
+  `VOC-123-D08`; normal source publication becomes mandatory after its exact
+  merge and the exception then expires.
 - `VOC-123-R06`: **Low release risk** because no application runtime
   deployment change is intended; rollback is workflow/config/test reversion.
   Restored source-carrier publication may open an already-authorized infra
@@ -67,7 +68,7 @@ user-interface accessibility effect.
 - Protected surfaces: `KARSIFT/karsift-ai-infra` implement/plan workflows,
   App-token versus job-token split, caller `tooling/governance/` fixtures
   and tests, and this package directory.
-- `VOC-123-DEP-00` through `VOC-123-DEP-06`: see `change.yaml`.
+- `VOC-123-DEP-00` through `VOC-123-DEP-07`: see `change.yaml`.
 - `VOC-123-EV-00`: T00 evidence — named-ref mechanism, advertised-head
   proof, caller/planner inspection result, validation commands, exact infra
   SHA, pin applicability, and #1003 re-dispatch note.

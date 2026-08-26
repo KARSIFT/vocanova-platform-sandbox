@@ -93,7 +93,7 @@ or production data.
 
 ## VOC-123-AC-06 — Current-state docs and caller pin follow the reviewed infra merge
 
-- Requirement source: `VOC-123-D05`, `VOC-123-D06`, `VOC-123-D07`
+- Requirement source: `VOC-123-D05`, `VOC-123-D06`, `VOC-123-D07`, `VOC-123-D08`
 - Tasks: `VOC-123-T00`
 - Tests: `VOC-123-TEST-06`
 - Evidence: `VOC-123-EV-00`
@@ -107,6 +107,10 @@ SHA and matching caller pin assertions are advanced. If not, the pin is
 unchanged and non-consumption is recorded in `t00-evidence.md`. Evidence
 also records that #1003 remains a distinct VOC-122 task to re-dispatch
 against that exact revision, not work implemented in this package.
+Evidence records the bounded supervised bootstrap infra PR, its exact reviewed
+head and merge SHA, separate merger, and exhaustion before the normal caller
+carrier resumed; no direct `main` push or runner-environment interception was
+used.
 
 Acceptance criteria must be observable, stable, security-aware, and bidirectionally
 traceable to requirements, tasks, tests, and evidence.

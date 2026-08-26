@@ -8,8 +8,10 @@ pull requests remain one task; repository count, workflow-versus-tests-versus-do
 and fixture/pin work are not split reasons.
 
 Cross-repo note: T00 changes `KARSIFT/karsift-ai-infra` for named-ref source
-bundle creation. The implementer opens the infra PR for that behavior; this
-package is the authorizing change package for the required outcome. Do not
+bundle creation. Because the broken running workflow cannot publish its own
+repair, the initial infra PR uses the bounded supervised bootstrap in
+`VOC-123-D08`; this package is the authorizing change package for the required
+outcome. Do not
 treat the untracked local `karsift-ai-infra/` checkout (if present) as this
 repo's tracked tree. Caller fixture/pin, tests, and evidence land in this
 repository under the same task. Infra PRs must say
@@ -18,7 +20,7 @@ closing keyword.
 
 ## VOC-123-T00 — Bundle the coordinated source-carrier committed head through a named ref
 
-- Requirement source: issue #1005; `VOC-123-D00` through `VOC-123-D07`
+- Requirement source: issue #1005; `VOC-123-D00` through `VOC-123-D08`
 - Acceptance criteria: `VOC-123-AC-00` through `VOC-123-AC-06`
 - Tests: `VOC-123-TEST-00` through `VOC-123-TEST-06`
 - Evidence: `VOC-123-EV-00` (`t00-evidence.md` in this package directory)
@@ -67,10 +69,14 @@ closing keyword.
    commit-step comments, `plan.yml` only if that path changes,
    `karsift-ai-infra/README.md` source-carrier paragraph) so they no longer
    describe a raw-SHA exclusion range as a working bundle contract.
-7. Land the infra change through one reviewed infra PR using the live
-   VOC-121 coordinated-carrier publisher once this named-ref repair is in
-   the same implementer revision that needs to publish it (the implementer
-   of *this* task is the first consumer). Pin
+7. Bootstrap the initial infra change through one clean isolated branch from
+   current infra `main` under `VOC-123-D08`, because the already-compiled
+   `implement.yml@main` cannot consume its own nested edit. Open one reviewed
+   non-closing infra PR, run full source validation, bind independent review
+   to its exact final SHA, and require a different actor to merge. Do not
+   mutate PATH/Git, push to `main`, reuse `db31cc9`, or widen the patch. After
+   that exact merge is live, use the normal coordinated carrier for remaining
+   caller work. Pin
    `tooling/governance/fixtures/karsift-ai-infra/` to that exact merge SHA
    when the fixture consumes the change. Update caller fixture regressions
    and any `scripts/foundation/*` pin literals that still assert
@@ -98,8 +104,9 @@ closing keyword.
   monitor-inventory changes.
 - Implementing VOC-122 promotion-recovery replan or otherwise delivering
   #1003 inside this package.
-- Hand-patching or pushing nested commit `db31cc9` outside the governed
-  implement path.
+- Hand-patching or pushing nested commit `db31cc9`; bootstrap is limited to
+  the newly implemented, validated, independently reviewed source repair in
+  `VOC-123-D08`.
 - Weakening exact-SHA review, risk floors, protected checks, retry caps, or
   App-token isolation.
 - Splitting workflow logic, tests, docs, infrastructure, caller pin, or
@@ -117,12 +124,11 @@ closing keyword.
 - Infra should merge first when the caller fixture/pin consumes that change;
   otherwise the two reviewed PRs may complete under the same task without a
   pin bump.
-- This task's own implementer is the first live consumer of the named-ref
-  repair: if T00 itself writes nested `karsift-ai-infra` files, the same
-  `implement.yml` revision that creates those files must already bind a named
-  bundle tip, or the #1003 empty-bundle failure recurs on this task. Land the
-  workflow repair and its tests in the infrastructure carrier first; do not
-  depend on a later follow-up to make this task's own source bundle succeed.
+- The initial infra repair cannot consume itself: GitHub resolves the reusable
+  workflow from old infra `main` before the job starts. Use only the bounded
+  `VOC-123-D08` supervised bootstrap for that first infra PR. Once merged,
+  normal `implement.yml@main` publication is mandatory and the bootstrap
+  authority is exhausted.
 - No task may be dispatched before this package is adopted and
   implementation-authorized.
 

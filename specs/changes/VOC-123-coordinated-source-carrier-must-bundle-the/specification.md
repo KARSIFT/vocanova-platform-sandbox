@@ -191,9 +191,9 @@ and the `scripts/foundation/voc097-fixture-matrix.test.mjs`,
 assert the previous infra merge (`99476c2a1018e42d4bd442657b5257885ac9f1c9`
 at drafting time).
 
-`VOC-123-D06`: VOC-121's isolated source publisher remains the delivery path.
-This task must use that coordinated-carrier path. Silent discard of nested
-infrastructure edits remains forbidden. Infra PRs must say
+`VOC-123-D06`: VOC-121's isolated source publisher remains the normal delivery
+path after this repair is live on infrastructure `main`. Silent discard of
+nested infrastructure edits remains forbidden. Infra PRs must say
 `Relates to KARSIFT/vocanova-platform-sandbox#<task>` and must not use a
 GitHub closing keyword. The caller implementation PR keeps local `Closes #N`.
 
@@ -202,6 +202,25 @@ carrier-integrity outcome. Do not implement VOC-122 promotion-recovery replan
 behavior here. After the exact reviewed infra merge is pinned, record in
 `t00-evidence.md` that #1003 should be re-dispatched or reconciled against
 that revision. Do not reconstruct runner-only commit `db31cc9` by hand.
+
+`VOC-123-D08`: T00 cannot publish its own initial infrastructure repair with
+the broken path. The caller resolves
+`KARSIFT/karsift-ai-infra/.github/workflows/implement.yml@main` before the
+model job starts, so nested edits cannot recompile the running commit step;
+the old raw-SHA bundle command will deterministically fail first. As in
+`VOC-121-D10`, supervised bootstrap recovery of this task's own source PR is
+therefore in-scope under T00, not a second package or task.
+
+The bootstrap is limited to one clean isolated infrastructure branch based on
+the current protected `main`, the exact named-ref repair, its tests/docs, and
+no caller pin. It must open one non-closing infra PR linked to the T00
+authority issue, pass source self-CI, receive independent review bound to its
+exact final SHA, and be merged by someone other than the implementer. No
+model-runner credential, PATH/Git interception, ruleset bypass, direct push to
+`main`, or reuse of `db31cc9` is allowed. After that exact infra merge is live,
+all remaining caller fixture/pin/evidence work and the later #1003 re-dispatch
+must use the normal governed `implement.yml@main` path. This exception expires
+with the bootstrap infra merge and cannot be reused by later tasks.
 
 ## Data, migrations, analytics, and accessibility
 

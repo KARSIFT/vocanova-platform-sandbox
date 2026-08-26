@@ -13,15 +13,15 @@
   still uses `base_sha..HEAD`. Confirm VOC-121 publisher contracts
   (`publish-source` App token, `bundle verify`, SHA fetch, force-with-lease)
   remain the baseline this change must preserve.
-- VOC-121's isolated source publisher is already live. Use it. Do not treat
-  an untracked local `karsift-ai-infra/` checkout as this repository's
-  tracked tree.
+- VOC-121's isolated source publisher is live but its raw-SHA bundle command
+  cannot publish this task's own repair. Use the bounded supervised bootstrap
+  in `VOC-123-D08` for the first infra PR only. Do not treat an untracked local
+  `karsift-ai-infra/` checkout as this repository's tracked tree.
 - Preserve two-attempt implementer bounds, exact-SHA independent review,
   fail-closed credentials, and runner/App-token isolation.
-- This task's own nested infrastructure edits must be publishable by the
-  same `implement.yml` revision that creates them. Do not land tests/docs
-  that require source publication before the named-ref repair is in that
-  revision.
+- The already-resolved `implement.yml@main` cannot be recompiled by nested
+  edits in its running job. Do not dispatch a predictably failing self-carrier
+  or mutate its runner environment to intercept Git.
 
 ## File reconciliation and implementation sequence
 
@@ -41,7 +41,9 @@
 
 Ordered steps:
 
-1. In `KARSIFT/karsift-ai-infra`, change nested source-bundle creation so
+1. In a clean isolated `KARSIFT/karsift-ai-infra` worktree based on current
+   `main`, use the one-time `VOC-123-D08` bootstrap to change nested
+   source-bundle creation so
    the exact committed `SOURCE_HEAD_SHA` is bound to an isolated temporary
    named ref, the bundle is created from `base_sha..that-ref`, advertised
    heads are verified, and the temp ref is deleted. Do not reuse the publish
@@ -56,11 +58,13 @@ Ordered steps:
    what is executed.
 4. Update current-state comments/docs so they describe named-ref source
    bundle tips.
-5. Run the infra unit/policy suite. Open one reviewed infra PR that
+5. Run the infra unit/policy suite. Open one reviewed bootstrap infra PR that
    `Relates to KARSIFT/vocanova-platform-sandbox#<task>` and does not use a
    closing keyword. Merge it first when the caller fixture consumes the
    change.
-6. Sync and pin the caller fixture to that exact merge SHA when consumed;
+6. After a different actor merges that exact reviewed infra head and the
+   fixed workflow is live on `main`, resume the normal governed carrier. Sync
+   and pin the caller fixture to that exact merge SHA when consumed;
    update caller governance and foundation pin tests; record evidence in
    `t00-evidence.md`, including that #1003 is a distinct VOC-122
    re-dispatch against that SHA.
@@ -102,6 +106,9 @@ when an infra PR is opened) should confirm:
   applicable;
 - VOC-122 / #1003 behavior was not implemented in this package;
 - the implementer did not approve or merge its own work on either carrier.
+- the `VOC-123-D08` bootstrap was limited to the first infra PR, used no
+  runner-environment interception or direct `main` push, and was exhausted by
+  the exact infra merge before normal caller work resumed.
 
 ## Deployment and rollback
 

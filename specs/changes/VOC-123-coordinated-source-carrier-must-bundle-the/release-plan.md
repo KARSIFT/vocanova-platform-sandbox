@@ -17,7 +17,8 @@ active A-004.
 | Phase | Owner | Preconditions | Outcome evidence |
 |-------|-------|---------------|------------------|
 | Plan merge | plan reviewer + merge-gate | Draft package; `automatic_merge_allowed: true`; valid `monitoring_impact` | Adopted package on `develop` |
-| T00 coordinated source + caller merge | implementer + independent verifier | Adoption + task authorization; named-ref repair present in the same infra revision that must publish nested edits; reviewed shared-infra PR precedes caller fixture pin when consumed | `VOC-123-EV-00` — named-ref bundle tip; advertised-head proof; exact SHAs |
+| T00 bootstrap source merge | implementer + independent verifier + separate merger | Adoption + task authorization; clean branch from current infra `main`; bounded `VOC-123-D08` scope | Exact reviewed infra head and merge SHA; source self-CI |
+| T00 normal caller merge | implementer + independent verifier | Bootstrap infra merge live on `implement.yml@main`; bootstrap authority exhausted; caller fixture pinned to exact merge | `VOC-123-EV-00` — named-ref bundle tip; advertised-head proof; exact SHAs |
 | Post-merge effect | repository maintainers + future implement jobs | T00 merged to integration branch | A nested source commit produces a non-empty source bundle and can open the infrastructure carrier PR through existing gates |
 | Dependent #1003 | existing VOC-122 roster, not this package | Exact reviewed VOC-123 infra merge available | Re-dispatch or reconcile `VOC-122-T00` against that revision; do not treat this package as VOC-122 completion |
 
