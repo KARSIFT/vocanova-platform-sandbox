@@ -1,0 +1,214 @@
+schema_version: 1
+id: VOC-123
+slug: coordinated-source-carrier-must-bundle-the
+title: Coordinated source carrier must bundle the committed head through a named ref
+type: infrastructure
+status: draft
+risk: R4
+planned_implementation_risk_floor: 'R4. This package changes protected CI/CD coordinated
+  source-carrier publication in KARSIFT/karsift-ai-infra (implement.yml nested-source
+  bundle creation, and caller/planner recovery-bundle paths if they reproduce the
+  same raw-positive-tip defect) and caller tooling/governance fixtures and tests.
+  tooling/governance/* is an R4 path floor; .github/workflows/* is an R3 floor; semantic
+  second-repository publication of nested infrastructure is protected. This is a draft
+  proposal for human adoption review, not a determination; the path classifier and
+  independent verifier remain authoritative.
+
+  '
+canonical_path: specs/changes/VOC-123-coordinated-source-carrier-must-bundle-the
+authority_model: a004-active
+requirement_source: 'GitHub issue #1005 (Coordinated source carrier must bundle the
+  committed head through a named ref). Live 2026-08-26 failure while implementing
+  adopted task #1003 (VOC-122-T00): pipeline run 32915078678 job 98017696468 committed
+  four authoritative-infrastructure files as nested commit db31cc9, then failed at
+  source-bundle creation with `fatal: Refusing to create empty bundle.` before artifact
+  upload or either carrier PR. Failing code in KARSIFT/karsift-ai-infra/.github/workflows/implement.yml
+  (mirrored in tooling/governance/fixtures/karsift-ai-infra/.github/workflows/implement.yml)
+  is `git -C karsift-ai-infra bundle create /tmp/implementer-source.bundle "${{ steps.infra-checkout.outputs.base_sha
+  }}..$SOURCE_HEAD_SHA"` after `SOURCE_HEAD_SHA=$(git -C karsift-ai-infra rev-parse
+  HEAD)`. Git bundle creation needs a named positive revision to advertise as the
+  bundle head; a range ending only in a raw SHA traverses the intended commit but
+  advertises no reference, so Git refuses an empty bundle. Deterministic local reproduction:
+  `git bundle create raw.bundle "$base_sha..$head_sha"` exits 128; `git branch carrier
+  "$head_sha"` then `git bundle create ref.bundle "$base_sha..carrier"` succeeds and
+  `git bundle list-heads` advertises refs/heads/carrier. A workflow rerun cannot recover
+  the lost nested commit; no source bundle or caller recovery artifact was uploaded,
+  so no implementation carrier PR exists for #1003. Required: one outcome-sized carrier-integrity
+  change that binds the exact committed SOURCE_HEAD_SHA to an isolated temporary named
+  ref (or equivalently safe named ref) before source-bundle creation, creates the
+  bundle from base_sha..that-ref, verifies the bundle advertises exactly the expected
+  head/ref, removes the temporary ref afterward, inspects caller and planner recovery-bundle
+  paths (`implement.yml` `integration_sha..HEAD` and `plan.yml` `base_sha..HEAD`)
+  and changes only paths that reproduce the defect, preserves exact base/head binding,
+  nested-repository isolation, bundle verification, artifact integrity, force-with-lease
+  publishing, App-token separation, retry limits, independent exact-SHA review, protected
+  checks, and fail-closed behavior; adds deterministic real-temporary-repository tests;
+  updates current-state comments/docs and the caller fixture/pin through the coordinated
+  exact-SHA flow; reconciles active #1003 delivery against that exact revision without
+  implementing VOC-122 in this package. This draft package does not adopt or authorize
+  itself.
+
+  '
+requirement_approval_status: 'GitHub issue #1005 is the requirement source; this draft
+  package is not adopted and does not authorize implementation '
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time if needed
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: 'planner (drafting only; adoption remains a human/autonomous
+    governed decision)
+
+    '
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: 'none-intentional for application runtime. This package repairs
+  coordinated source-carrier Git-bundle creation so a nested karsift-ai-infra commit
+  can be advertised and published. It does not change product behavior, deployment
+  topology, credentials, providers, or monitor inventory. Restoring intended source-carrier
+  publication may allow an already-authorized coordinated infrastructure task (including
+  a later re-dispatch of #1003) to open its infra PR through existing gates; that
+  is not a new deploy path.
+
+  '
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: 'KARSIFT coordinated source-carrier integrity fix only. No page routes,
+    critical API endpoints, monitor inventory, or synthetic inventory in infra/monitoring/
+    are added or changed.
+
+    '
+dependencies:
+- id: VOC-123-DEP-00
+  status: 'resolved at drafting time. Issue #1005 provides the live implement-job
+    failure, exact run/job IDs, nested commit db31cc9, empty-bundle error, failing
+    workflow snippet, deterministic local reproduction, root cause (raw-SHA positive
+    tip), required named-ref repair, caller/planner inspection duty, preserved fail-closed
+    contracts, test shape, fixture/pin/docs coordination, #1003 hard-dependency-but-distinct-outcome
+    guidance, and one-task instruction with enough specificity to draft without a
+    clarifying round trip.
+
+    '
+- id: VOC-123-DEP-01
+  status: 'resolved at drafting time. Active A-004 remains authoritative: no founder
+    approved-comment gate on engineering-workflow adopt/merge/release paths; exact-SHA
+    independent verification, deterministic risk floors, protected-path controls,
+    and fail-closed behavior remain mandatory.
+
+    '
+- id: VOC-123-DEP-02
+  status: 'resolved at drafting time by reading the current workflows. implement.yml
+    Commit implementer''s work binds SOURCE_HEAD_SHA=$(git -C karsift-ai-infra rev-parse
+    HEAD) then `git -C karsift-ai-infra bundle create /tmp/implementer-source.bundle
+    "${{ steps.infra-checkout.outputs.base_sha }}..$SOURCE_HEAD_SHA"`. That matches
+    the live #1003 empty-bundle failure. Caller recovery uses `git bundle create /tmp/implementer-work.bundle
+    "${{ steps.branch.outputs.integration_sha }}..HEAD"`. Planner recovery uses `git
+    bundle create /tmp/planner-work.bundle "${{ steps.branch.outputs.base_sha }}..HEAD"`.
+    Existing VOC-121 nested-bundle tests create `source_base..HEAD` or `base_sha..$branch`
+    and therefore do not reproduce the production raw-SHA defect.
+
+    '
+- id: VOC-123-DEP-03
+  status: 'resolved at drafting time. VOC-121 already landed isolated source publication:
+    nested edits are committed in isolated repository state, bundled, uploaded, and
+    published from a clean publish-source job with an infrastructure-scoped App token,
+    force-with-lease, exact lineage checks, and a non-closing Relates-to source PR.
+    This package does not reopen that publication contract. It closes the remaining
+    bundle-create gap: a named positive revision must advertise the exact committed
+    head.
+
+    '
+- id: VOC-123-DEP-04
+  status: 'resolved at drafting time as an accepted delivery constraint: coordinated
+    PRs in the caller and KARSIFT/karsift-ai-infra remain one task. Repository count,
+    workflow-versus-tests-versus-docs, and fixture/pin work are not split reasons.
+    Pin the caller fixture only if that fixture actually consumes the infra change.
+    Merge the independently reviewed infra PR first, then pin to that exact merge
+    SHA.
+
+    '
+- id: VOC-123-DEP-05
+  status: 'resolved at drafting time as a hard dependency that must not expand this
+    package. Adopted VOC-122-T00 (#1003) cannot deliver nested infrastructure until
+    this carrier-integrity defect is repaired. This package must not implement VOC-122
+    promotion-recovery replan behavior, must not hand-patch or push #1003, and must
+    not split #1003 delivery into this roster. After this package''s exact reviewed
+    infra merge is pinned, reconcile/re-dispatch #1003 against that revision as a
+    separate already-authorized task.
+
+    '
+- id: VOC-123-DEP-06
+  status: 'open at drafting time as an implementer-facing structure choice, not a
+    planner guess past the required behavior. The isolated temporary ref''s exact
+    name/namespace (for example refs/karsift/source-bundle-head versus a throwaway
+    local branch) and whether create/verify/cleanup live inline in implement.yml or
+    in a small helper are implementation choices. Constraints that are not open: bind
+    the exact 40-character SOURCE_HEAD_SHA; advertise exactly that committed head;
+    do not reuse the remediation `source-carrier` branch name or the publish branch;
+    do not advertise unrelated refs; delete the temporary ref afterward; fail closed
+    on wrong/missing/multiple advertised heads. Caller/planner `..HEAD` paths stay
+    unchanged unless tests reproduce empty-bundle or unsafe advertised-head behavior.
+
+    '
+- id: VOC-123-DEP-07
+  status: 'resolved after initial independent plan review. The caller resolves
+    `KARSIFT/karsift-ai-infra/.github/workflows/implement.yml@main` before the
+    model job starts, so the broken raw-SHA source-bundle step cannot publish its
+    own nested repair. Following the existing VOC-121-D10 chicken-and-egg
+    precedent, one bounded supervised bootstrap infra PR is in scope under T00:
+    clean branch from current infra main, exact named-ref repair plus tests/docs,
+    non-closing task link, source self-CI, independent exact-SHA review, and a
+    different merger. No PATH/Git interception or direct main push is allowed.
+    The exception expires at that merge; caller fixture/pin/evidence and #1003
+    then use the repaired normal implement.yml@main path.
+
+    '
+affected_areas:
+- KARSIFT/karsift-ai-infra/.github/workflows/implement.yml
+- KARSIFT/karsift-ai-infra/.github/workflows/plan.yml
+- KARSIFT/karsift-ai-infra/config/implementer_source_carrier.py
+- KARSIFT/karsift-ai-infra/README.md
+- KARSIFT/karsift-ai-infra/tests/
+- tooling/governance/fixtures/karsift-ai-infra/
+- tooling/governance/tests/
+- scripts/foundation/voc097-fixture-matrix.test.mjs
+- scripts/foundation/voc104-ready-for-review-reuse.test.mjs
+- scripts/foundation/voc108-authoritative-lifecycle.test.mjs
+- specs/changes/VOC-123-coordinated-source-carrier-must-bundle-the/
+implementation:
+  authorized: false
+  required: true
+  status: not-authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-automation-reliability-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+ehr: not-triggered
+standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
+blocking_reasons: package is an unadopted draft; adoption and implementation authorization
+  remain separate A-004-governed decisions
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+repository_adoption_status: not-adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: not-authorized
+production_deployment: disabled
+autonomous_production_release: enabled
