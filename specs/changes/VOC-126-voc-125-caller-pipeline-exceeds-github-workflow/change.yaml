@@ -1,0 +1,220 @@
+schema_version: 1
+id: VOC-126
+slug: voc-125-caller-pipeline-exceeds-github-workflow
+title: VOC-125 caller pipeline exceeds GitHub workflow_dispatch input limit
+type: infrastructure
+status: adopted
+risk: R4
+planned_implementation_risk_floor: 'R4. This package changes the protected caller
+  dispatch contract and the KARSIFT/karsift-ai-infra project-repo pipeline template
+  so every live workflow_dispatch block stays within GitHub''s 25-input limit while
+  preserving VOC-125 existing_pr_number and all existing recovery/verifier capabilities.
+  tooling/governance/* is an R4 path floor; .github/workflows/* is an R3 floor; semantic
+  mutation of operator implement-resume identity and read-only verifier dispatch routing
+  is protected. This is a draft proposal for human adoption review, not a determination;
+  the path classifier and independent verifier remain authoritative.
+
+  '
+canonical_path: specs/changes/VOC-126-voc-125-caller-pipeline-exceeds-github-workflow
+authority_model: a004-active
+requirement_source: "GitHub issue #1025 (VOC-125 caller pipeline exceeds GitHub workflow_dispatch\
+  \ input limit). Live 2026-08-26 definition failure on adopted VOC-125 caller PR\
+  \ #1024 exact head 8621f12dd466edab37fddb86d4e5e0a348ed3609 after authoritative\
+  \ infrastructure PR KARSIFT/karsift-ai-infra#160 merged as 1f1705dbad41729563b0ad1e878e4154e5511e93.\
+  \ Actions run 32977045898 terminates with no jobs or logs. Authenticated annotation:\
+  \ Invalid workflow file: .github/workflows/pipeline.yml#L1 \u2014 you may only define\
+  \ up to 25 inputs for a workflow_dispatch event. Draft/ready retriggering on the\
+  \ same SHA produces no pipeline run. Root cause: VOC-125 correctly added existing_pr_number,\
+  \ but the source template and tests omitted GitHub's maximum input count, so the\
+  \ 26-input project-repo pipeline is invalid whenever all existing dispatch interfaces\
+  \ are present. VOC-125's final allowed implementation retry is already consumed;\
+  \ PR #1024 cannot enter exact-revision pipeline review. Required: one fail-closed\
+  \ governed repair that preserves existing_pr_number and every active recovery/verifier\
+  \ capability, relocates the coherent read-only verifier dispatch surface so every\
+  \ live workflow_dispatch block has at most 25 inputs, adds an explicit maximum-input-count\
+  \ regression, merges the independently reviewed source repair first, then updates\
+  \ the caller workflow/fixture/pin/tests/docs to that exact merge, supersedes #1024\
+  \ without merging it, closes VOC-125 #1022/#1020 only after the live caller route\
+  \ is valid, and resumes existing VOC-122 #1003/#1012 through the repaired route.\
+  \ This draft package does not adopt or authorize itself.\n"
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time if needed
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: 'planner (drafting only; adoption remains a human/autonomous
+    governed decision)
+
+    '
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
+automatic_merge_allowed: true
+production_impact: 'none-intentional for application runtime. This package repairs
+  the caller and project-repo workflow_dispatch contracts so GitHub will accept the
+  VOC-125 existing_pr_number operator interface without deleting an active recovery
+  or verifier capability. It does not change product behavior, deployment topology,
+  secret values, providers, or monitor inventory. Restoring a valid caller route may
+  allow the already-authorized VOC-122-T00 carrier to be resumed through existing
+  gates; that is not a new deploy path.
+
+  '
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: 'KARSIFT caller workflow_dispatch input-limit repair only. No page routes,
+    critical API endpoints, monitor inventory, or synthetic inventory in infra/monitoring/
+    are added or changed.
+
+    '
+dependencies:
+- id: VOC-126-DEP-00
+  status: 'resolved at drafting time. Issue #1025 provides the live definition failure,
+    exact PR/SHA/run IDs, GitHub 25-input annotation, root cause (VOC-125 added existing_pr_number
+    without an input-count regression), the prohibition on silently dropping an unrelated
+    dispatch input, the consumed VOC-125 retry budget, the instruction to update the
+    authoritative template and source tests first, the requirement to supersede unusable
+    PR #1024 rather than retry it, the VOC-125 #1022/#1020 and VOC-122 #1003/#1012
+    handoff, suggested design space (dedicated read-only verifier workflow versus
+    a fail-closed structured interface), Cursor Composer / Cursor Grok preservation,
+    no-OpenAI constraint, and one-task preference with enough specificity to draft
+    without a clarifying round trip.
+
+    '
+- id: VOC-126-DEP-01
+  status: 'resolved at drafting time. Active A-004 remains authoritative: no founder
+    approved-comment gate on engineering-workflow adopt/merge/release paths; exact-SHA
+    independent verification, deterministic risk floors, protected-path controls,
+    and fail-closed behavior remain mandatory.
+
+    '
+- id: VOC-126-DEP-02
+  status: 'resolved at drafting time by reading the live caller and the VOC-125 source
+    template. Live .github/workflows/pipeline.yml currently has 25 workflow_dispatch
+    inputs and does not yet declare existing_pr_number. karsift-ai-infra/templates/project-repo/.github/workflows/pipeline.yml
+    at infrastructure merge 1f1705dbad41729563b0ad1e878e4154e5511e93 declares existing_pr_number
+    plus the prior 25 interfaces (26 total). GitHub rejects any workflow_dispatch
+    block with more than 25 inputs before jobs start. implement.yml@main already declares
+    existing_pr_number from that same merge and must keep doing so. Local fixture/governance/foundation
+    suites do not currently assert the 25-input maximum.
+
+    '
+- id: VOC-126-DEP-03
+  status: 'resolved at drafting time as the chosen design. Relocate the coherent read-only
+    verifier dispatch surface (verify-auto-advance-live-evidence, verify-ready-for-review-reuse,
+    verify-remediate-operator-ownership, verify-promotion-check-recovery, verify-post-promotion-workflow
+    and their dedicated inputs) into a dedicated caller workflow. Keep plan, implement,
+    reconcile, reconcile-release, reconcile-live-evidence, recover-integration-push,
+    and recover-promotion-pr-checks on pipeline.yml, including existing_pr_number
+    on implement. Do not replace named verifier scalars with unstructured JSON in
+    this package: GitHub does not schema-validate JSON inputs, and a packed interface
+    would add a new fail-closed parser without recovering first-class named-input
+    coverage already tested. Do not silently drop an input.
+
+    '
+- id: VOC-126-DEP-04
+  status: 'resolved at drafting time as an accepted delivery constraint: coordinated
+    PRs in the caller and KARSIFT/karsift-ai-infra remain one task. Repository count,
+    workflow-versus-tests-versus-docs, and fixture/pin work are not split reasons.
+    Merge the independently reviewed infra PR first so the project-repo template is
+    GitHub-valid and declares existing_pr_number under the 25-input limit before the
+    caller consumes it, then pin the caller fixture to that exact merge SHA when consumed.
+
+    '
+- id: VOC-126-DEP-05
+  status: 'resolved at drafting time as a hard dependency that must not expand this
+    package into a replacement VOC-122 roster or a third VOC-125 attempt. Adopted
+    VOC-125-T00 (#1022) consumed its final allowed retry remediating the source carrier;
+    caller PR #1024 is unusable because GitHub rejects its workflow definition. Adopted
+    VOC-122-T00 (#1003) and draft caller PR #1012 remain the only valid authority/carrier
+    for that distinct outcome. This package must not implement VOC-122 promotion-recovery
+    replan behavior, must not merge #1024 or #1012, must not create a replacement
+    VOC-122 task or PR, and must not dispatch VOC-125-T00 as attempt 3. After this
+    package''s exact reviewed infra merge and caller dispatch are live, supersede
+    #1024, close VOC-125 #1022/#1020 only when the live caller route is valid, then
+    resume existing #1003 / #1012 at attempt 2 with existing_pr_number=1012.
+
+    '
+- id: VOC-126-DEP-06
+  status: 'resolved at drafting time. Configured Cursor Composer remains the implementer
+    and Cursor Grok remains the exact-revision independent reviewer. No OpenAI credential
+    or execution route is needed or authorized. Do not print credential values. No
+    bootstrap exception: VOC-124 already requested permission-workflows: write on
+    publish-source. T00''s first run is attempt 1 on a new VOC-126 carrier.
+
+    '
+- id: VOC-126-DEP-07
+  status: 'open at drafting time as an implementer-facing naming choice, not a planner
+    guess past the required behavior. Preferred dedicated workflow file name is pipeline-verify.yml
+    in both the infrastructure project-repo template and the live caller .github/workflows/
+    directory. An equivalent name is acceptable if tests, current-state comments,
+    and operator dispatch commands use that exact identity. Constraints that are not
+    open: the relocated surface is the five read-only verifier jobs listed in VOC-126-DEP-03;
+    recover-integration-push and recover-promotion-pr-checks stay on pipeline.yml
+    because they mutate; every workflow_dispatch block remains at most 25 inputs;
+    existing_pr_number stays on pipeline.yml implement; named verifier inputs are
+    preserved rather than packed into JSON; live_evidence_mode versus live_evidence_dispatch
+    drift between live caller and template is not a drive-by normalization unless
+    one of those files must change for the relocation.
+
+    '
+affected_areas:
+- KARSIFT/karsift-ai-infra/templates/project-repo/.github/workflows/pipeline.yml
+- KARSIFT/karsift-ai-infra/templates/project-repo/.github/workflows/pipeline-verify.yml
+- KARSIFT/karsift-ai-infra/tests/
+- KARSIFT/karsift-ai-infra/README.md
+- .github/workflows/pipeline.yml
+- .github/workflows/pipeline-verify.yml
+- tooling/governance/fixtures/karsift-ai-infra/
+- tooling/governance/tests/
+- specs/changes/VOC-126-voc-125-caller-pipeline-exceeds-github-workflow/
+implementation:
+  authorized: true
+  required: true
+  status: authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: 1027
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-automation-reliability-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+ehr: not-triggered
+standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
+blocking_reasons: none - adopted and implementation-authorized
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+repository_adoption_status: adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: authorized
+production_deployment: disabled
+autonomous_production_release: enabled
+approved_candidate_sha: 28b3edb4c7d5d37b0db29a659a2a6f71bd55f465
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1026#issuecomment-5426700280
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-126-DEP-00
+- VOC-126-DEP-01
+- VOC-126-DEP-02
+- VOC-126-DEP-03
+- VOC-126-DEP-04
+- VOC-126-DEP-05
+- VOC-126-DEP-06
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #1026 at 28b3edb4c7d5d37b0db29a659a2a6f71bd55f465'
+adoption_pr: 1026
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1026

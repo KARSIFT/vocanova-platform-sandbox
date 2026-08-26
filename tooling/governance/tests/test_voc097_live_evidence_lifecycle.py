@@ -127,7 +127,7 @@ class Voc097LiveEvidenceLifecycleTests(unittest.TestCase):
           return 97
         }}
         """
-        package_root = FIXTURE_INFRA_ROOT / "pr-head" / package
+        package_root = FIXTURE_INFRA_ROOT / "caller" / package
         package_root.mkdir(parents=True, exist_ok=True)
         tasks_md = package_root / "tasks.md"
         tasks_md.write_text(
@@ -171,7 +171,7 @@ class Voc097LiveEvidenceLifecycleTests(unittest.TestCase):
             if tasks_md.is_file():
                 tasks_md.unlink()
             for parent in (package_root, *package_root.parents):
-                if parent == FIXTURE_INFRA_ROOT / "pr-head":
+                if parent == FIXTURE_INFRA_ROOT / "caller":
                     break
                 if parent.is_dir() and not any(parent.iterdir()):
                     parent.rmdir()
