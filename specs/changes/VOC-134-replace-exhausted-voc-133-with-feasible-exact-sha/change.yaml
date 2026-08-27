@@ -3,7 +3,7 @@ id: VOC-134
 slug: replace-exhausted-voc-133-with-feasible-exact-sha
 title: Replace exhausted VOC-133 with feasible exact-SHA evidence and complete infra
 type: infrastructure
-status: draft
+status: adopted
 risk: R4
 planned_implementation_risk_floor: "R4. This package consumes already-merged KARSIFT/karsift-ai-infra#166\
   \ by pinning caller tooling/governance fixtures, tests, and pin assertions to exact\
@@ -43,23 +43,22 @@ requirement_source: 'GitHub issue #1066 (Replace exhausted VOC-133 with feasible
   base at drafting is 95a779f9e62090f856ed03f389e7ac1d901aaa14; implementation must
   revalidate current develop at dispatch and fail closed if it moved unexpectedly.
   This draft package does not adopt or authorize itself.'
-requirement_approval_status: 'Not approved. This package is an unreviewed draft prepared
-  by the planner role in response to issue #1066; no adoption or implementation authorization
-  has been recorded. See owners and approval_status below.'
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: unknown - not recorded by this draft; set at adoption time if needed. The
   expected immutable implementation carrier base at drafting is 95a779f9e62090f856ed03f389e7ac1d901aaa14
   and must be revalidated at implementation dispatch.
 target_branch: develop
-approved_candidate_sha: null
+approved_candidate_sha: 76048aabb3b81e343a956bf5cfdea809e0aeb4b5
 owners:
   decision: unassigned
   package_preparation: planner (drafting only; adoption remains a human/autonomous
     governed decision)
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: none-intentional for application runtime. This package consumes
   the already merged karsift-ai-infra#166 post-implementer helper-lifetime and nested-checkout
@@ -231,12 +230,12 @@ affected_areas:
 - scripts/foundation/voc108-authoritative-lifecycle.test.mjs
 - specs/changes/VOC-134-replace-exhausted-voc-133-with-feasible-exact-sha/
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: not-authorized
+  status: authorized
   target_branch: develop
   pull_request: null
-  authority_issue: null
+  authority_issue: 1068
 release:
   required: true
   mode: not-authorized-by-this-package
@@ -247,11 +246,7 @@ release:
   rollback_required: true
 ehr: not-triggered
 standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
-blocking_reasons: Repository-level adoption has not occurred. No task in tasks.md
-  is implementation-authorized. VOC-134-DEP-07 (whether any live caller workflow file
-  besides the fixture pin/tests/docs must change) remains an implementer-facing proof
-  at implementation time, not a blocker to adopting the required pin, restore, nested-checkout,
-  VOC-112, package.json, and feasible-evidence behavior.
+blocking_reasons: none - adopted and implementation-authorized
 artifacts:
   readme: README.md
   specification: specification.md
@@ -263,8 +258,24 @@ artifacts:
   release_plan: release-plan.md
 production_deployment: disabled
 autonomous_production_release: enabled
-repository_adoption_status: not-adopted
-adoption_pr: null
-adoption_evidence: null
+repository_adoption_status: adopted
+adoption_pr: 1067
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1067
 implementation_authority_before_adoption: false
-implementation_authority_status: not-exercised
+implementation_authority_status: authorized
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1067#issuecomment-5442616736
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-134-DEP-00
+- VOC-134-DEP-01
+- VOC-134-DEP-02
+- VOC-134-DEP-03
+- VOC-134-DEP-04
+- VOC-134-DEP-05
+- VOC-134-DEP-06
+- VOC-134-DEP-08
+- VOC-134-DEP-09
+- VOC-134-DEP-10
+- VOC-134-DEP-11
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #1067 at 76048aabb3b81e343a956bf5cfdea809e0aeb4b5'
