@@ -1,0 +1,19 @@
+schema_version: 1
+task_id: VOC-128-T01
+ownership: operator
+
+workflow_file: scheduled-synthetics.yml
+job_names:
+  - synthetic.staging.oauth-expected-state
+  - synthetic.staging.authenticated-core-journey
+  - dispatch-production-synthetics-on-main
+events:
+  - schedule
+  - workflow_dispatch
+branch: develop
+sha_lineage:
+  mode: integration_contains_pr_head
+conclusion: success
+max_age: 72h
+dispatch:
+  workflow_file: scheduled-synthetics.yml

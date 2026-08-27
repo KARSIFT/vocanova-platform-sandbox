@@ -1,0 +1,119 @@
+schema_version: 1
+id: VOC-128
+slug: operational-failure-scheduled-synthetics-failure
+title: Fix scheduled-synthetics production jobs failing on the develop default-branch
+  schedule
+type: infrastructure
+status: draft
+risk: R3
+planned_implementation_risk_floor: R3. Expected task files include .github/workflows/scheduled-synthetics.yml
+  (R3 path floor), infra/monitoring/scheduled-synthetics.mjs, docs/operations/monitoring.md,
+  scripts/foundation/voc086-scheduled-synthetics.test.mjs (R1), and this package directory.
+  This is a draft proposal for human adoption review, not a determination. The path
+  classifier and independent verifier remain authoritative. Do not touch scripts/governance
+  unless a later evidence-backed decision raises the floor to R4.
+canonical_path: specs/changes/VOC-128-operational-failure-scheduled-synthetics-failure
+authority_model: a004-active
+requirement_source: 'GitHub issue #1037 (Operational failure, scheduled-synthetics
+  failure), opened by the VOC-088-T02 operational-failure-monitoring observer. Public
+  Actions metadata for https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/33039500346
+  (scheduled-synthetics run 200, schedule event, 2026-08-27T04:28:07Z, head develop
+  at 0d0b0cdf0692d0349f380e9cae3285b4c7916b05, conclusion failure). All three jobs
+  that declare environment production failed in about two seconds with empty steps
+  and runner_id 0. Both staging jobs in the same run succeeded, including synthetic.staging.authenticated-core-journey.
+  Repository default branch is develop, so GitHub cron always checks out develop.
+  This draft package does not adopt or authorize itself.'
+requirement_approval_status: not-approved
+base_branch: develop
+base_sha: unknown - not recorded by this draft
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: none-intentional for application runtime. This package changes
+  how scheduled synthetics select the GitHub ref that may use the production environment.
+  It must not widen production environment branch policy to develop, must not expose
+  production secrets to develop-scheduled jobs, and must not change product behavior,
+  OAuth policy, or Kuma inventory.
+rollback_required: true
+monitoring_impact:
+  state: existing
+  synthetic_ids:
+  - synthetic.production.oauth-expected-state
+  - synthetic.production.journey-content
+  - synthetic.production.authenticated-route-content-sweep
+  - synthetic.staging.oauth-expected-state
+  - synthetic.staging.authenticated-core-journey
+dependencies:
+- id: VOC-128-DEP-00
+  status: 'resolved at drafting time. Issue #1037 and public jobs API for run 33039500346
+    identify workflow scheduled-synthetics, conclusion failure, head branch develop,
+    and the three production jobs that never received a runner.'
+- id: VOC-128-DEP-01
+  status: resolved at drafting time. Repository default_branch is develop. GitHub
+    schedule events run only on the default branch. Production synthetic jobs declare
+    environment production. Staging jobs do not declare a GitHub Environment.
+- id: VOC-128-DEP-02
+  status: resolved at drafting time. This failure class is distinct from VOC-093 (route-sweep
+    smoke exit 1 with real steps on main) and VOC-090 (staging core-journey cancellation/timeout).
+    VOC-108 explicitly excluded the scheduled-synthetics branch-selection footgun
+    from its own scope.
+- id: VOC-088
+  status: 'Adopted predecessor. operational-failure-monitoring.yml opened issue #1037
+    via the sanitized failure-to-issue path. This package remediates the underlying
+    workflow failure and must not weaken deduplication or sanitization.'
+- id: VOC-086
+  status: Adopted predecessor that owns scheduled-synthetics.yml, synthetics.yaml
+    stable IDs, and hourly coverage of the five canonical checks.
+- id: VOC-098
+  status: Adopted predecessor that removed unnecessary Actions permission from the
+    observer App token. This package must not put Actions write on that App. Same-repo
+    dispatch, if needed, uses job-level GITHUB_TOKEN only.
+- id: VOC-110
+  status: Adopted predecessor whose T01 live-evidence contract had to be retargeted
+    from integration_contains_pr_head to exact_sha of the T00 merge because a develop-tip
+    workflow cannot contain an unmerged evidence PR. T01 of this package must apply
+    that lesson.
+affected_areas:
+- .github/workflows/scheduled-synthetics.yml
+- infra/monitoring/scheduled-synthetics.mjs
+- scripts/foundation/voc086-scheduled-synthetics.test.mjs
+- docs/operations/monitoring.md
+- specs/changes/VOC-128-operational-failure-scheduled-synthetics-failure
+implementation:
+  authorized: false
+  required: true
+  status: not-authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-automation-reliability-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+ehr: not-triggered
+standing_technical_steward_approval: not-required-solely-for-routine-R3-or-R4-under-active-A004
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+repository_adoption_status: not-adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: not-authorized
+production_deployment: disabled
+autonomous_production_release: disabled
+blocking_reasons: package is an unadopted draft
