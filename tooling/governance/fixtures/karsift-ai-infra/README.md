@@ -1,4 +1,4 @@
-# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106, VOC-108, VOC-115, VOC-117, VOC-121, VOC-122, VOC-123, VOC-126)
+# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106, VOC-108, VOC-115, VOC-117, VOC-121, VOC-122, VOC-123, VOC-126, VOC-129)
 
 These copies are deterministic fixtures for caller-repo policy regressions.
 They mirror `KARSIFT/karsift-ai-infra` at the SHA in `PINNED_SHA.txt` so
@@ -12,7 +12,7 @@ contracts without cloning the infra repository in CI.
 
 They are not a second runtime source of truth. Callers still `uses:`
 `KARSIFT/karsift-ai-infra/...@main`. Update the fixtures when VOC-080-,
-VOC-097-, VOC-102-, VOC-104-, VOC-106-, VOC-108-, VOC-115-, VOC-121-, VOC-122-, VOC-123-, or VOC-126-related infra contracts change and
+VOC-097-, VOC-102-, VOC-104-, VOC-106-, VOC-108-, VOC-115-, VOC-121-, VOC-122-, VOC-123-, VOC-126-, or VOC-129-related infra contracts change and
 record the new pin in evidence.
 
 ## package/task defaults (VOC-115)
@@ -201,7 +201,9 @@ infrastructure PR #159 merge
 infrastructure PR #161 merge
 `20dcf340fa73a36ebc6074442fde79530dfa5871`. VOC-122-T00 advances it to
 infrastructure PR #162 merge
-`60afda3a44fd06b8c00b219771de7112f1aded6e`; the mirrored source files are
+`60afda3a44fd06b8c00b219771de7112f1aded6e`. VOC-129-T00 advances it to
+infrastructure PR #164 merge
+`863fc1f35b1d35e4981a59166b0e939be1a2b681`; the mirrored source files are
 byte-for-byte copies from that merge's reviewed tree.
 
 Recovery metadata reads, exact selected-run reruns, and allowlisted absent-context

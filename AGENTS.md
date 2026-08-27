@@ -176,7 +176,11 @@ gh workflow run pipeline.yml --ref develop -f action=reconcile-release -f releas
 ```
 
 No founder `approved` comment is part of this path. Promotion proceeds when release
-checks pass; failed gates remain fail-closed until remediation succeeds.
+checks pass; failed gates remain fail-closed until remediation succeeds. After a
+successful promotion merge, `develop` is advanced to that exact merge SHA before
+the release audit closes. Interrupted promotion retries via `reconcile-release`
+dispatch (see above). Exceptional governed production-target work uses
+`reconcile-production-change` before ordinary release evaluation.
 
 ## Current validation
 
@@ -258,8 +262,11 @@ no founder `approved` comment when applicable gates pass:
   `workflow_dispatch` as fallback/retry). A successful promotion PR merge produces
   that push, so deployment follows automatically with no separate dispatch step.
 - Interrupted promotion retries via `reconcile-release` dispatch (see above), not a
-  founder comment. Failed promotion or deploy attempts remain fail-closed until
-  remediation checks pass; no human comment may override failed gates.
+  founder comment. After promotion succeeds, `develop` is advanced to that exact
+  merge SHA before the release audit closes. Exceptional governed
+  production-target work uses `reconcile-production-change`. Failed promotion or
+  deploy attempts remain fail-closed until remediation checks pass; no human
+  comment may override failed gates.
 - This path does not authorize agents to bypass independent verification, CI, scope,
   or governance checks, and does not retroactively justify skipping requirement
   clarification when product requirements are genuinely ambiguous.

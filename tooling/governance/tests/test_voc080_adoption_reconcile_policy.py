@@ -42,7 +42,7 @@ class Voc080AdoptionReconcilePolicyTests(unittest.TestCase):
 
     def test_caller_exposes_reconcile_without_replaying_old_events(self):
         self.assertIn(
-            "options: [implement, plan, reconcile, reconcile-release, reconcile-live-evidence, recover-integration-push, recover-promotion-pr-checks]",
+            "options: [implement, plan, reconcile, reconcile-release, reconcile-production-change, reconcile-live-evidence, recover-integration-push, recover-promotion-pr-checks]",
             self.pipeline,
         )
         self.assertIn("inputs.action == 'reconcile'", self.pipeline)

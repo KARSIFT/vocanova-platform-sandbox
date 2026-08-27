@@ -1508,8 +1508,10 @@ Must include:
 - Outstanding non-blocking issues.
 
 Merges when release checks pass (no founder `approved` comment gate after A-004
-activation; see §17.2). Interrupted promotion retries via `reconcile-release`
-dispatch.
+activation; see §17.2). After promotion succeeds, `develop` is advanced to that
+exact merge SHA before the release audit closes. Interrupted promotion retries
+via `reconcile-release` dispatch; exceptional governed production-target work
+uses `reconcile-production-change`.
 
 *Historical: release PRs required founder approval before A-004 / the 2026-08-08
 auto-release path.*

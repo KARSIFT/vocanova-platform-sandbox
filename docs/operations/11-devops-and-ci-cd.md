@@ -110,6 +110,11 @@ and path-required deployment workflows for an immutable SHA, waits only for
 successful terminal evidence, and times out fail-closed. Its hourly wake repairs
 a stranded current `develop` tip without duplicating already-successful runs;
 `reconcile-release` re-enters the same promotion recovery path idempotently.
+After a successful promotion merge, `develop` is advanced to that exact merge SHA
+before the release audit closes; tree-equivalent integration pushes therefore do
+not schedule staging when no allowlisted runtime/deploy path changed. Exceptional
+governed production-target work uses `reconcile-production-change` to bind an
+already merged `main` tree onto `develop` before ordinary release evaluation.
 Immediate post-merge recovery is scoped to governed `agent/` task branches.
 Other ways of advancing `develop` are covered by the hourly exact-tip wake.
 For bounded operator recovery of the current integration tip, dispatch
