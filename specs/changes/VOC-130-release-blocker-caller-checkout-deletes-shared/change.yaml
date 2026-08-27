@@ -3,7 +3,7 @@ id: VOC-130
 slug: release-blocker-caller-checkout-deletes-shared
 title: 'Release blocker: caller checkout deletes shared lifecycle policy'
 type: infrastructure
-status: draft
+status: adopted
 risk: R4
 planned_implementation_risk_floor: 'R4. This package consumes already-merged KARSIFT/karsift-ai-infra#165
   by pinning
@@ -91,8 +91,8 @@ requirement_source: 'GitHub issue #1047 (Release blocker: caller checkout delete
   this blocker. This draft package does not adopt or authorize itself.
 
   '
-requirement_approval_status: 'requirement recorded from issue #1047; package remains
-  not-approved'
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: unknown - not recorded by this draft; set at adoption time if needed
 target_branch: develop
@@ -104,8 +104,8 @@ owners:
     '
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: 'none-intentional for application runtime. This package consumes
   the already
@@ -304,12 +304,12 @@ affected_areas:
 - scripts/foundation/voc108-authoritative-lifecycle.test.mjs
 - specs/changes/VOC-130-release-blocker-caller-checkout-deletes-shared/
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: not-authorized
+  status: authorized
   target_branch: develop
   pull_request: null
-  authority_issue: null
+  authority_issue: 1049
 release:
   required: true
   mode: not-authorized-by-this-package
@@ -320,7 +320,7 @@ release:
   rollback_required: true
 ehr: not-triggered
 standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
-blocking_reasons: pending adoption and implementation authorization
+blocking_reasons: none - adopted and implementation-authorized
 artifacts:
   readme: README.md
   specification: specification.md
@@ -330,8 +330,23 @@ artifacts:
   tasks: tasks.md
   test_plan: test-plan.md
   release_plan: release-plan.md
-repository_adoption_status: not-adopted
+repository_adoption_status: adopted
 implementation_authority_before_adoption: false
-implementation_authority_status: not-authorized
+implementation_authority_status: authorized
 production_deployment: disabled
 autonomous_production_release: enabled
+approved_candidate_sha: 603a1db2c2d65221ac2b13146cc463b8fa16b553
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1048#issuecomment-5438612102
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-130-DEP-00
+- VOC-130-DEP-01
+- VOC-130-DEP-02
+- VOC-130-DEP-03
+- VOC-130-DEP-04
+- VOC-130-DEP-05
+- VOC-130-DEP-06
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #1048 at 603a1db2c2d65221ac2b13146cc463b8fa16b553'
+adoption_pr: 1048
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1048
