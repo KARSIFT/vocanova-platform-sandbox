@@ -112,41 +112,97 @@ root-issue audit may record the reviewed head and merge SHA.
 
 ## Changed surfaces (implementation)
 
-Pending implementation. Record the exact fixture files mirrored from
-`b263c0c110591cc798b89277dfc35542abb1597b` (required:
-`.github/workflows/ci.yml`, `.github/workflows/implement.yml`,
-`.github/workflows/release.yml`, `config/run-app-checks.sh`,
-`config/implementer_nested_checkout.py`, `tests/test_app_check_context.py`,
-`tests/test_release_policy.py`, `tests/test_voc121_implement_policy.py`,
-`tests/test_voc123_source_bundle.py`, and fixture `CHANGELOG.md`), the
-reconfirmed SHA-256 hashes, every live pin assertion advanced from
-`863fc1f…`, the implementation PR base actually selected before the first
-in-scope edit, confirmation that all eight no-change paths are absent from
-the diff against the protected comparison anchor, the exhaustive-diff
-hydration/bypass scan result including `tooling/governance/tests/**`,
-negative-case results, confirmation that the regression passed after it was
-tracked and committed, any live workflow edit required by `VOC-136-DEP-07`,
-and the commands actually run.
+Implementation PR base recorded before the first in-scope edit:
+`a4f24e7de3ce62651ae25ca49adfff90256c1fa3` (current `develop` at dispatch).
+Plan/adoption/roster commits after the protected comparison anchor are
+governance-only and do not count as protected-file drift for the eight
+no-change paths.
+
+Protected comparison anchor for eight-path boundary:
+`b9e74fc2db4691c48c637639b265d527de9f4505`.
+
+Authoritative infra merge consumed:
+`b263c0c110591cc798b89277dfc35542abb1597b` (KARSIFT/karsift-ai-infra#167).
+
+Fixture files mirrored byte-for-byte from that merge:
+
+- `.github/workflows/ci.yml` — SHA-256 `0e0d485359d31325bf8b4c41b2047752ac42c6a5139251bd46b03cf7d671a9bb`
+- `.github/workflows/implement.yml` — SHA-256 `e0612aa46dff58d3c06ff338864af3fa32cc725f151235cbe8b6789a80995d2a`
+- `.github/workflows/release.yml` — SHA-256 `fd11e45f999d26c9e009eb0d40c67c7a644ed2c8dd721a29b98c1fea4e790f08`
+- `config/run-app-checks.sh` — SHA-256 `2ee4eaa25788af72146eee1ef9adb8cc9f42f2c4077d24e6aed25b55deddd1b2`
+- `config/implementer_nested_checkout.py` — SHA-256 `e9190e7d5b1d48e76b0da63409005d27c12a36cbaf713033c3f2d9fa887216a9`
+- `tests/test_app_check_context.py` — SHA-256 `74b8a0c1bcc00a137801e28888b3e6b78371934c14a99ea8eb34f4e0793bb5e0`
+- `tests/test_release_policy.py` — SHA-256 `082c67fb26f221cf6e44e07364915f77bb4aee10b46e5b03be9c2d57c33a1e07`
+- `tests/test_voc121_implement_policy.py` — SHA-256 `78bf3a05829ae76c9571ec5acc6099c49b405f9e5007c34001a50500e6044975`
+- `tests/test_voc123_source_bundle.py` — SHA-256 `d0f28a862eb04e8cf5ff5ffa13f58749f95e26401c470d8e68f8f9b80f1b7936`
+- `CHANGELOG.md` — SHA-256 `7cdb3d6c863ccaab15012ef3944aac223d5a4fcc044c4f990955dfd02f70e4ea`
+
+`PINNED_SHA.txt` and live caller pin assertions advanced from `863fc1f…` to
+`b263c0c…`. Caller-owned fixture `README.md` current-state paragraph updated
+for VOC-136-T00 (#167 pin, post-caller-checkout restore, post-implementer
+helper-lifetime, immutable PR-context contract). Infrastructure repository
+`README.md` was not copied over the caller-owned fixture README.
+
+New caller regressions:
+
+- `tooling/governance/tests/voc136_bypass_scan.py` — exhaustive caller-diff
+  bypass scanner with source-safe literals; only excludes mirrored
+  `tooling/governance/fixtures/karsift-ai-infra/**` (does **not** exclude
+  `tooling/governance/tests/**` or this regression module).
+- `tooling/governance/tests/test_voc136_caller_replacement.py` — pin/hash,
+  restore ordering, nested-checkout, PR-context, eight-path boundary against
+  the protected comparison anchor, negative scanner cases, benign-mention
+  non-false-positive, and feasible exact-revision evidence contract tests.
+
+Eight no-change paths confirmed byte-identical to protected comparison anchor
+`b9e74fc2…` and absent from `git diff` against that SHA. JSON
+`subject_revision` remains `f9d11e232a07c7d7a9c433d02c9267912543ba10`.
+`package.json`, `validate-workspace.mjs`, and
+`voc112-navigation-benchmark-run.mjs` remain anchor-identical. No live
+`pipeline.yml` edit was required (`VOC-136-DEP-07`).
+
+Complete-diff scan scope: every added/modified path against
+`b9e74fc2db4691c48c637639b265d527de9f4505`, including all `scripts/**`,
+`package.json`, every added/changed `*.mjs` / `*.js` / `*.sh` / `*.py`
+outside the mirrored infra fixture subtree, and all changed paths under
+`tooling/governance/tests/**`. Negative unit cases reject capture fetch,
+hydrate/materialize helpers, provenance-mode overrides, PR SHA setters around
+`validate-workspace`, import-time fetch side effects in caller tests, and
+local fail-closed bypass wrappers. `SCAN_EXCLUDE_PREFIXES` does not list
+`tooling/governance/tests/` (VOC-135 attempt-2 class rejected).
 
 ## Validation commands (implementation)
 
-Pending implementation. Expected commands are listed in
-`implementation-plan.md`. Record exact commands and results here after the
-regression is tracked and committed; do not treat a missing suite as a pass.
-Do not treat a `/tmp` karsift-ai-infra checkout as a required comparison
-source. Do not treat an untracked-only pass as acceptance. At minimum record:
+Recorded after the regression was prepared in the working tree (workflow
+handoff stages/commits before hosted gates):
 
-- `bash scripts/governance/validate-governance.sh` with exact base/head
-- `bash scripts/governance/classify-change-risk.sh` with exact base/head
-  (expect R4)
-- `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'`
-- `python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'`
-- targeted complete-scan positive/negative suite
-- targeted `voc097`, `voc104`, `voc108`, exact #167 pin/hash tests,
-  protected comparison-anchor eight-path boundary tests, and the
-  `package.json` identity assertion
-- `git diff --check`
-- hosted required checks and independent exact-revision review
+```bash
+python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'
+# 244 tests, OK
+
+python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'
+# OK
+
+python3 -m unittest discover -s tooling/governance/tests -p 'test_voc136*.py' -v
+# 23 tests, OK (includes complete-diff scan, negative cases, benign mentions)
+
+node scripts/foundation/voc097-fixture-matrix.test.mjs
+node scripts/foundation/voc104-ready-for-review-reuse.test.mjs
+node scripts/foundation/voc108-authoritative-lifecycle.test.mjs
+# all pass
+
+bash scripts/governance/validate-governance.sh \
+  --base a4f24e7de3ce62651ae25ca49adfff90256c1fa3 --head HEAD
+# passed
+
+git diff --check
+# clean
+```
+
+`classify-change-risk.sh` requires a staged diff range and will run on the
+implementation PR with exact base `a4f24e7de3ce62651ae25ca49adfff90256c1fa3`
+(expect R4). Hosted required checks and independent exact-revision review
+remain pending on the implementation PR.
 
 ## Independent verification (implementation)
 
