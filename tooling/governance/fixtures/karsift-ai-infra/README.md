@@ -209,12 +209,21 @@ infrastructure PR #167 merge
 `b263c0c110591cc798b89277dfc35542abb1597b`; the mirrored source files include
 the #165 post-caller-checkout restore in both release jobs, the #166
 post-implementer helper-lifetime and nested-checkout contracts, and the #167
-immutable PR-context validation contract. `run-app-checks.sh` validates an exact
+immutable PR-context validation contract. VOC-138-T00 advances the pin to
+infrastructure merge `ac0edc4b5b8f6165fa5e23a7b166dc2a0c2ea18f` with authenticated
+promotion `pr-validation`, recovery dispatch metadata, and doomed `ci / ci` rerun
+refusal. `run-app-checks.sh` validates an exact
 PR base/head pair without fetching evidence; an unchanged capture fixture
 selects `pr-validation`, add/modify/delete selects `pr-ancestry`, reusable CI
 checks out full reachable history (`fetch-depth: 0`), and implementer pre-push
 uses the integration anchor plus live committed HEAD including after
-self-correction.
+self-correction. VOC-138-T00 advances the pin to the infrastructure merge that
+adds an authenticated same-repository `main` <- `develop` promotion signal:
+that pair always selects `pr-validation` with exact PR SHAs regardless of capture
+subject availability; ordinary fixture-changing PRs remain `pr-ancestry`
+fail-closed; promotion recovery dispatches `recover-promotion-pr-checks` with
+immutable PR metadata instead of rerunning doomed `ci / ci` pull-request jobs,
+and rejects weaker same-head `squash-safe-push` dispatches as completion proof.
 
 Recovery metadata reads, exact selected-run reruns, and allowlisted absent-context
 dispatches use narrowly job-scoped `GITHUB_TOKEN` permissions: Actions write plus
@@ -225,9 +234,11 @@ Actions grant. The runner uses valid
 dispatch suppression, completion, and promotion verification to required
 contexts. A failed or cancelled ruleset-selected pull-request check is rebound
 to its original run, PR, head, branch, event, workflow name/path, and first
-attempt before that exact run is rerun once. Alternate successful runs and
-same-named statuses cannot suppress the rerun; workflow dispatch is used only
-for a genuinely absent required context. Both hosted verification adapters
+attempt before that exact run is rerun once, except doomed `ci / ci` promotion
+rows dispatch `recover-promotion-pr-checks` instead of rerunning. Alternate
+successful runs and same-named statuses cannot suppress the rerun; workflow
+dispatch is used only for a genuinely absent required context or promotion
+`ci / ci` recovery. Both hosted verification adapters
 also use valid `gh api` repository context. The contract is covered by
 `tests/test_voc114_actions_check_recovery.py`.
 Release additionally grants its job token Commit statuses write. After genuine

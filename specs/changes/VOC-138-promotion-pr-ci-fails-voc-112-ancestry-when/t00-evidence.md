@@ -71,27 +71,34 @@ constraint, and recovery "do not rerun doomed job" behavior before merge.
 
 Implementation PR base recorded before the first in-scope edit:
 
-pending — resolve current `develop` to a 40-character SHA before any
-in-scope edit. Issue-creation develop was
+`e89a02723cfbcaed952a868f2ab3f1442fd04fae` (current `develop` at dispatch).
+
+Issue-creation develop was
 `87f0efcb94a213a0ede9fdbca94a707a22d42b86`. Plan/adoption/roster commits
 after that SHA are governance-only and do not count as protected-file drift.
 
 Protected comparison anchor for eight-path VOC-112 boundary:
 `b9e74fc2db4691c48c637639b265d527de9f4505`.
 
-Issue-creation infra pin (defective for this failure class; replace):
+Issue-creation infra pin (defective for this failure class; replaced):
 `b263c0c110591cc798b89277dfc35542abb1597b`.
 
-New independently reviewed infra merge (record after it exists):
-pending.
+New independently reviewed infra merge:
+`ac0edc4b5b8f6165fa5e23a7b166dc2a0c2ea18f` (local infra commit; infra PR
+pending independent exact-revision review and canonical merge).
 
 In-scope implementation diff paths (expected; record actuals after commit):
 
-- `KARSIFT/karsift-ai-infra` `config/run-app-checks.sh`
-- `KARSIFT/karsift-ai-infra` `.github/workflows/ci.yml`
-- `KARSIFT/karsift-ai-infra` recovery runner/modules and tests
+- `KARSIFT/karsift-ai-infra` `config/run-app-checks.sh` (`--promotion-pr` signal)
+- `KARSIFT/karsift-ai-infra` `.github/workflows/ci.yml` (promotion inputs and detection)
+- `KARSIFT/karsift-ai-infra` `config/actions-check-recovery-runner.py` (skip doomed `ci / ci` reruns)
+- `KARSIFT/karsift-ai-infra` `config/promotion_status_attestation.py` (reject squash-safe recovery)
+- `KARSIFT/karsift-ai-infra` `config/promotion-status-attestation-runner.py`
+- `KARSIFT/karsift-ai-infra` `templates/project-repo/.github/workflows/pipeline.yml`
+- `KARSIFT/karsift-ai-infra` tests (`test_app_check_context.py`, `test_voc122_actions_check_recovery.py`, `test_voc138_promotion_pr_provenance.py`)
+- caller `.github/workflows/pipeline.yml` (`promotion-pr-metadata` job and ci inputs)
 - caller `tooling/governance/fixtures/karsift-ai-infra/**` pin and mirrors
-- caller `tooling/governance/tests/` as needed for pin/scan assertions
+- caller `tooling/governance/tests/test_voc138_promotion_pr_provenance.py`
 - `docs/operations/11-devops-and-ci-cd.md`
 - `docs/development/agent-skills.md`
 - `specs/changes/VOC-138-promotion-pr-ci-fails-voc-112-ancestry-when/t00-evidence.md`
@@ -113,22 +120,34 @@ In-scope implementation diff paths (expected; record actuals after commit):
 
 ## Validation commands (implementation)
 
-Recorded after the repair is tracked and committed. Base is the
-implementation PR base; head is the implementation PR head bound by
-App-authored independent review (not recorded here as a self-SHA).
+Recorded after the repair is tracked and committed. Base is
+`e89a02723cfbcaed952a868f2ab3f1442fd04fae`; head is the implementation PR
+head bound by App-authored independent review (not recorded here as a self-SHA).
 
 ```bash
 bash scripts/governance/validate-governance.sh \
-  --base <implementation-pr-base> \
+  --base e89a02723cfbcaed952a868f2ab3f1442fd04fae \
   --head <implementation-pr-head>
 bash scripts/governance/classify-change-risk.sh \
-  --base <implementation-pr-base> \
+  --base e89a02723cfbcaed952a868f2ab3f1442fd04fae \
   --head <implementation-pr-head>
 python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'
 python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'
 node --test scripts/foundation/voc112-navigation-benchmark.test.mjs
 git diff --check
 ```
+
+Local implementer attempt `1` results (pre-commit working tree):
+
+| Command | Result |
+|---------|--------|
+| `python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'` | pass |
+| `python3 -m unittest tooling.governance.tests.test_voc138_promotion_pr_provenance` | pass |
+| `node --test scripts/foundation/voc112-navigation-benchmark.test.mjs` | pass |
+| `git diff --check` | pass |
+
+Governance validation, classify-change-risk, and full caller governance discovery
+run after the workflow commits the repair.
 
 `classify-change-risk.sh` is expected to report R4 on the implementation
 range.

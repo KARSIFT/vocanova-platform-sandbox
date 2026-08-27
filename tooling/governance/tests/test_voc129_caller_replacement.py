@@ -13,7 +13,7 @@ from voc080_fixtures import read_fixture
 REPO_ROOT = Path(__file__).resolve().parents[3]
 CALLER_WORKFLOWS = REPO_ROOT / ".github/workflows"
 FIXTURE_ROOT = REPO_ROOT / "tooling/governance/fixtures/karsift-ai-infra"
-AUTHORITATIVE_PIN = "b263c0c110591cc798b89277dfc35542abb1597b"
+AUTHORITATIVE_PIN = "ac0edc4b5b8f6165fa5e23a7b166dc2a0c2ea18f"
 STALE_PIN_164 = "863fc1f35b1d35e4981a59166b0e939be1a2b681"
 PREVIOUS_DEVELOP_PIN = "60afda3a44fd06b8c00b219771de7112f1aded6e"
 MAX_DISPATCH_INPUTS = 25

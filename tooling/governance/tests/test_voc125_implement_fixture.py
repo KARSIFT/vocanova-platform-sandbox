@@ -19,7 +19,7 @@ class Voc125ImplementFixtureTests(unittest.TestCase):
         cls.readme = read_fixture("README.md")
 
     def test_fixture_pin_records_voc125_content(self):
-        self.assertEqual(self.pin, "b263c0c110591cc798b89277dfc35542abb1597b")
+        self.assertEqual(self.pin, "ac0edc4b5b8f6165fa5e23a7b166dc2a0c2ea18f")
         self.assertIn("existing_pr_number", self.implement)
         self.assertIn("existing_pr_number=<open PR>", self.readme)
 
