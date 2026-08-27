@@ -25,7 +25,7 @@ class Voc124ImplementFixtureTests(unittest.TestCase):
         cls.readme = read_fixture("README.md")
 
     def test_fixture_pin_matches_voc124_bootstrap_merge(self):
-        expected = "60afda3a44fd06b8c00b219771de7112f1aded6e"
+        expected = "a9df74a63976d5239b84151fd01310835c999e7c"
         self.assertEqual(self.pin, expected)
         self.assertIn(expected, self.readme)
         self.assertIn("VOC-124-T00", self.readme)

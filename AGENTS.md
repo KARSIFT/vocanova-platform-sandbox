@@ -175,6 +175,14 @@ If a package roster completed but develop→main promotion did not finish, dispa
 gh workflow run pipeline.yml --ref develop -f action=reconcile-release -f release_issue_number=<ISSUE>
 ```
 
+After a successful governed promotion merge, `release.yml` advances `develop` to
+that exact merge commit SHA before closing the release audit. `reconcile-release`
+retries that bind-and-sync when the promotion PR is already merged but integration
+has not yet converged. Exceptional main-only reconciliation of an adopted,
+production-target task uses `reconcile-production-change` with the closed task
+issue number; it is not the ordinary post-promotion route and accepts no
+operator-typed SHA inputs.
+
 No founder `approved` comment is part of this path. Promotion proceeds when release
 checks pass; failed gates remain fail-closed until remediation succeeds.
 

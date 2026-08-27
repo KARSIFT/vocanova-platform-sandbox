@@ -1,54 +1,199 @@
-# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106, VOC-108, VOC-115, VOC-117, VOC-121, VOC-122, VOC-123, VOC-126)
+# karsift-ai-infra
 
-These copies are deterministic fixtures for caller-repo policy regressions.
-They mirror `KARSIFT/karsift-ai-infra` at the SHA in `PINNED_SHA.txt` so
-`tooling/governance/tests/test_voc080_*.py`,
-`tooling/governance/tests/test_voc097_*.py`,
-`tooling/governance/tests/test_voc115_package_task_policy.py`,
-`tooling/governance/tests/test_auto_advance_ownership.py`,
-`tooling/governance/tests/test_remediate_ownership.py`, and related suites can
-assert merge/adopt/release/remediate/plan-review/live-evidence/auto-advance/role
-contracts without cloning the infra repository in CI.
+Reusable GitHub Actions automation for the loop: **plan or implement a governed change → deterministic
+CI checks it → an independent reviewer verifies the exact revision → the proven automated gate merges
+it.** Formerly `vocanova-ai-infra` - renamed because the pipeline itself was never
+Vocanova-specific; only the project wiring was. Any KARSIFT project can call these workflows.
 
-They are not a second runtime source of truth. Callers still `uses:`
-`KARSIFT/karsift-ai-infra/...@main`. Update the fixtures when VOC-080-,
-VOC-097-, VOC-102-, VOC-104-, VOC-106-, VOC-108-, VOC-115-, VOC-121-, VOC-122-, VOC-123-, or VOC-126-related infra contracts change and
-record the new pin in evidence.
+## Roles are technology-agnostic
 
-## package/task defaults (VOC-115)
+Every AI step in this pipeline is a **role**, not a vendor commitment:
 
-Planning now chooses the largest safe coherent package for the complete user or
-business outcome. A plan may be broad or massive and contain several tasks, but it
-must use the minimum sufficient number of maximal tasks; one end-to-end task and
-implementation PR is the default whenever technically possible. Backend, frontend,
-contracts, tests, docs, configuration, skills, and rollback evidence stay together
-when they serve the same outcome. `config/package_task_policy.py` and
-`package-task-policy-runner.py` fail closed when a second or later task lacks an
-allowed split reason with a concrete explanation, or when more than three tasks lack
-package-level justification. `plan.yml` enforces this in the planner retry loop for
-newly drafted packages. Line, file, component, skill, repository, or layer counts and
-convenience are never sufficient split reasons. The caller fixture must pin the exact
-reviewed shared-infra merge that provides this contract.
+| Role | What it does |
+|---|---|
+| `planner` | Turns a request - free text, an existing document, or a GitHub issue's whole thread - into a full DRAFT change package (spec, acceptance criteria, task breakdown) in the calling project's own package format. Asks a clarifying question instead of guessing. The independently reviewed exact revision is adopted deterministically after merge; the planner cannot adopt or review its own output. |
+| `implementer` | Implements one approved task on a branch. No merge authority, no production access, cannot approve its own work. Escalates to a stronger model (`implementer_escalation`) on its last retry attempt rather than retrying blind. |
+| `reviewer` | Independent, read-only verification. Posts a structured, commit-bound verdict. Never edits, merges, or approves. Routes to a cheaper model (`reviewer_fast_retry`) on a low-risk retry. |
 
-VOC-104 adds the pinned `ready-for-review-reuse.yml` and
-`verify-ready-for-review-reuse.yml` contracts. The decision vocabulary is
-`reuse-evidence`, `full-path`, and `fail-closed-to-full-path`; only the first may
-skip duplicate exact-SHA CI/model work, and merge-gate still re-evaluates the
-validated prior run identity. Reusable review records bind the exact pipeline run
-ID in addition to base/head and package/task identity. Controlled proof keeps the
-source transition PR/base/head/ref distinct from the later evidence-carrier SHA,
-requires the workflow-controlled `decide (ready_for_review)` job marker, and
-recomputes the exact latest eligible prior run instead of trusting a supplied ID.
-Both source runs must resolve the complete reuse-policy workflow set to one
-identical authenticated shared-infra SHA. If GitHub clears a closed run's PR
-association, a prior run is admitted only through its exact App-authored review
-record on that PR. Optimized merge publishes one App-authored pre-merge record
-binding repository, PR, branch, base/head, ready/prior run IDs, and policy SHA;
-the post-transition verifier requires that unique attestation.
-Task-owned live evidence is also bound to the exact task identifier at production,
-duplicate-suppression, review-classification, and reuse-decision boundaries. The
-post-transition verifier requires GitHub's authenticated source PR object to record
-the PR as merged; a successful auto-merge job alone is not accepted as merge proof.
+Planning follows a largest-safe-coherent-unit policy: a plan can cover a broad
+initiative and contain several tasks, but it must use the minimum sufficient number
+of maximal tasks. One end-to-end task and implementation PR is the default whenever
+technically possible. The planner workflow rejects later tasks that lack a real,
+concretely explained authority/owner, independent release or rollback, hard
+dependency, environment, post-merge evidence, or demonstrated reviewability
+boundary. Line, file, component, skill, repository, and layer counts are not split
+reasons by themselves.
+
+`config/roles.yml` is the sole authoritative role-to-model mapping. Workflow comments may describe
+the current invocation contract, but they do not override that file. `CHANGELOG.md` and Git history
+preserve earlier provider and CLI transitions as history rather than active fallback behavior.
+
+Independent verification requires a distinct reviewer role and exact-revision, read-only controls;
+it is not defined solely by whether role occupants use different API vendors. The current governed
+lineup deliberately uses separate model families for implementation and verification through Cursor.
+Check `config/roles.yml` rather than inferring active routing from historical discussion.
+
+## What this is not
+
+Not a full Control Plane, not a durable work queue, not an AI Budget Governor, not a founder-facing
+chat interface. It's the smallest reusable slice that makes "implement → verify → merge" real and
+auditable: a working, evidenced loop from an approved change package to a reviewed PR. A durable
+queue, staged production rollout, and anything past PR-merge is real future work for whichever
+calling project needs it, not simulated here.
+
+## Why this is a separate repo
+
+Reusable GitHub Actions workflows belong in one place, editable independent of any project repo. A
+calling project gets a thin `pipeline.yml` (see `templates/project-repo/`) that wires its triggers
+into this repo's reusable workflows - nothing project-specific belongs here, and nothing about this
+repo's internals should require touching a calling project's copy.
+
+## Governance: this repo enforces gates, it does not set policy
+
+This repo has an opinion about *mechanism* (approved package required, independent read-only review,
+fail-closed merge gate) and deliberately no opinion about *policy* (what counts as R0 vs. R4, who the
+founder is, what a project's change-package format looks like). Each calling project supplies that
+through its own governance documents and through inputs to `merge-gate.yml`:
+
+- **Branch model**: `implement.yml` and `review.yml` both take an `integration_branch` input
+  (default `"develop"`, for projects that split `develop`/`main`). Set it to `"main"` for a
+  GitHub-flow-only project with a single long-lived branch - get this wrong and the very first
+  checkout step fails outright, with a git error that doesn't obviously say "wrong branch name."
+- **Implementation authority**: `implement.yml` refuses to run unless the calling project's own
+  `change.yaml`-equivalent shows the package as adopted and authorized. A chat prompt or bare issue is
+  never sufficient - only an approved package is.
+- **PR-creation identity (optional but recommended)**: by default, `implement.yml` opens its PR using
+  the workflow's default `GITHUB_TOKEN`. GitHub requires a manual "Approve workflows to run" click on
+  every resulting PR when it detects `GITHUB_TOKEN` created or updated it - same-repo or not, this is
+  GitHub's own security behavior, not a bug here. Set `KARSIFT_BOT_APP_ID` and
+  `KARSIFT_BOT_PRIVATE_KEY` (a GitHub App installed on the calling project, `contents`/`issues`/
+  `pull-requests: read & write`) to remove that friction - `implement.yml` mints a short-lived
+  installation token and uses it instead, automatically, whenever those two secrets are present.
+  Without them, behavior is unchanged from before.
+- **Release PR identity and checks**: `release.yml` requires those same GitHub App credentials for
+  promotion PRs. It creates and merges the PR as the App identity so GitHub does not pause the PR's
+  workflows for maintainer approval, waits fail-closed for every registered PR check, and only then
+  merges the integration branch into the production branch. It then advances integration to the
+  exact resulting merge SHA under an exact ref lease; callers must grant the App a bypass only on
+  the integration branch for that bounded convergence while leaving production without a bypass.
+  Production must also have an active, repository-owned pull-request ruleset with strict required
+  status checks (GitHub's **Require branches to be up to date before merging**) and no bypass actors.
+  `release.yml` validates that effective rule immediately before merge, so GitHub atomically refuses
+  a promotion if production moved after its exact base was checked; the workflow then verifies the
+  resulting ordered merge parents before synchronizing integration.
+  Release PRs declare the conservative R4 risk class because promotion updates production.
+- **Independent review**: `review.yml` runs the reviewer role with **read-only** tools only. It can
+  read the diff and the package and post one comment - nothing else. Findings are Critical / High /
+  Medium / Low; the verdict is one of `PASS`, `PASS WITH NON-BLOCKING FINDINGS`, or `FAIL`, bound to
+  the exact reviewed commit SHA.
+- **Merge authority**: `merge-gate.yml` is risk-aware and **fails closed**. It reads a
+  `Risk classification: R#` line from the PR body (any project can use a different risk scheme, but
+  this is the convention the gate parses today); a PR with no parseable risk declaration never
+  merges and must be corrected. R0-R4 can auto-merge only when
+  `auto_merge_enabled: "true"` is explicitly passed by the calling project **and** CI is green **and**
+  the reviewer's verdict passed. Historical `automatic_merge_allowed: false` values are not a
+  founder-attention gate. `auto_merge_enabled` defaults to `"false"` - this is the real,
+  current, evidenced activation state in every KARSIFT project checked against this repo as of this
+  writing, not a cautious guess. Flipping it is a deliberate edit made after real evidence the
+  loop is reliable, never a default. Automatic merges use the GitHub App token so their
+  `pull_request: closed` event reaches adoption, and delete only the merged task/plan branch.
+
+**Planner output is a draft, never an authoritative risk signal.** `plan.yml` lets
+the planner role propose a `risk:` value in the change package it drafts, but that
+proposal is exactly as authoritative as a human's first guess would be - nothing
+more. The actual gate is unchanged: a human reviews and adopts (or rejects) the
+draft, and once any task from it is implemented, this repo's own `merge-gate.yml`
+still fails closed on any unparseable or under-declared risk, and the calling
+project's own deterministic path-based classifier (if it has one, e.g.
+vocanova-platform's `scripts/governance/classify-change-risk.sh`) still runs against
+the real diff, same as for a human-drafted package. A planner-drafted `risk:` value
+must never be treated as the ground truth on its own - that's the entire point of
+keeping a path-based floor independent of anything an LLM declares about its own
+proposal.
+
+This mirrors a real pattern already adopted and active in at least one calling project
+(`vocanova-platform`'s governance amendments): **governance permission and technical activation are
+separate states.** A project can formally decide that R0-R2 releases may eventually auto-merge
+without becoming true the moment that decision is written down - it becomes true only when this
+gate's `auto_merge_enabled` is actually flipped for that project, with evidence. Don't represent a
+capability as active just because policy permits it.
+
+## Automated remediation
+
+When the reviewer returns `FAIL`, **or CI itself fails outright before review ever runs** (`ci`
+failing means `review` never gets a chance to produce a verdict at all, a real blind spot until this
+was added), `remediate.yml` (wired into the caller template right after `review`) automatically
+re-dispatches the implementer once, with the failure details - the reviewer's exact findings, or the
+exact failed base/head plus an instruction to reproduce repository-controlled checks when there was
+no review to draw from - included in the prompt as required reading, not a blind second guess. Raw
+CI logs, artifacts, step output, and environment values are never copied into PR comments or model
+context. It force-updates the same PR rather than opening a new one. On
+that one retry, `implement.yml` escalates to a stronger model (`implementer_escalation` in
+`config/roles.yml`) rather than reusing the same model that already failed once. If the retry also
+fails, it stops and escalates to the authority issue instead of trying a third time - the same
+two-attempt cap `implement.yml` already enforced for its own internal failures, now closing the gap
+where an implementer *success* followed by a reviewer *FAIL* (or a plain CI failure) previously went
+nowhere until a human happened to notice.
+
+A declared operator-owned live-evidence task may instead receive the exact
+machine-readable state `VERDICT: WAITING FOR OPERATOR LIVE EVIDENCE` when its
+implementation is correct and the only missing acceptance proof is the declared
+live Actions run. Merge remains fail-closed, but `remediate.yml` does not spend an
+implementation retry on that state. It is also forbidden to tell the implementer
+to edit unrelated workflows merely to manufacture the evidence.
+
+The same ownership boundary applies when a current exact-SHA run has a genuine
+review `FAIL` or CI failure. Before `remediate.yml` can dispatch the bounded
+implementer retry, it reads the task's live-evidence contract and exact task
+stanza from an immutable checkout of the caller head. A valid `operator` or
+`live-actions` contract produces a sanitized, deduplicated operator escalation
+instead of an implementation dispatch. Missing, malformed, unreadable, or
+conflicting ownership metadata fails closed in the same lane. Ordinary tasks
+(no contract and no ownership marker) retain the existing two-attempt behavior;
+stale runs, waiting verdicts, and reviewer-infrastructure failures retain their
+separate no-retry semantics.
+
+Calling repositories may expose the read-only
+`verify-remediate-operator-ownership.yml` reusable verifier for controlled live
+proof. It checks the exact carrier head, source pipeline/PR lineage, successful
+remediation decision, skipped retry jobs, and one trusted sanitized escalation
+marker for that exact source run and head; markers from later source heads do
+not make the earlier proof ambiguous. The controlled failing source head and the
+later metadata-bearing carrier head are intentionally distinct: allowlisted
+evidence binds the source run's immutable `head_sha` (not the mutable head in its
+PR association), and GitHub's compare metadata must prove that source is an
+ancestor of the exact dispatched carrier head. It reads Actions/PR metadata only
+and never downloads logs or artifacts. Trusted marker authors include GitHub's
+GraphQL-normalized built-in Actions identity as well as its REST-style bot login.
+
+Before either task or plan review becomes an App-signed record, a bounded
+normalizer removes full-line commit/task/package/issue/base binding lookalikes
+from the model narrative. The clean workflow then supplies those authoritative
+bindings exactly once and revalidates the final verdict plus live base/head pair.
+Reviewer preambles or repeated metadata therefore cannot make a valid review
+ambiguous, while duplicate or non-final verdicts still fail closed.
+
+A `PASS`, `PASS WITH NON-BLOCKING FINDINGS`, waiting state, or no verdict yet
+(with CI still green) are implementation-remediation no-ops. Only an explicit
+implementation `FAIL` or CI failure can consume the bounded implementation
+retry. A review-job error stays in the isolated reviewer-infrastructure lane.
+After a terminal Cursor invocation failure, that lane writes only a strict
+schema-v1 reason/subtype record and retains it as a one-day workflow artifact.
+A missing or unusable JSON response may be classified from at most 64 KiB of
+local Cursor stderr inside the failed producer job; only an existing allowlisted
+reason code survives, while oversized, missing, or unrecognized text remains
+`unspecified`. Authentication matching covers Cursor's exact bounded invalid
+API-key phrasing without retaining the text or matching unrelated help prose.
+A clean publisher downloads and revalidates the bounded record plus the exact
+live PR base/head pair before minting its narrowly scoped App token and posting
+a non-verdict infrastructure comment. Raw provider responses, stderr, prompts,
+environment values, and credentials never enter that artifact or comment.
+
+The implementer job deliberately has no `actions` permission and receives no
+general Actions inspection/dispatch credential. Operator reconciliation is a
+separate repository-controlled responsibility; adding it must not broaden the
+implementer's permissions or secrets.
+
 On an eligible unchanged draft-to-ready transition, `ci.yml` still emits the
 repository ruleset's required `ci / ci` check context, but runs only a named
 exact-SHA reuse marker. Checkout and application validation remain skipped. This
@@ -60,200 +205,433 @@ plus the full validation step to be skipped. Merge-gate also requires exactly on
 context in `SUCCESS`; prior evidence can never replace a skipped or ambiguous
 current compatibility context.
 
-## auto-advance ownership (VOC-102)
+Promotion recovery keeps GitHub's branch ruleset authoritative. A manual
+recovery run is not attached to the promotion PR by GitHub, so a successful
+exact-head run alone cannot satisfy the PR's required contexts. After the
+release selector validates the open PR identity and genuine successful runs
+from the three expected workflows, it also consults GitHub's
+`gh pr checks --required` view. A cancelled or failed ruleset-selected check
+remains unsatisfied even if another same-name run or status succeeded.
+Recovery parses that selected row's Actions run URL, re-reads the run through
+GitHub's API, and requires the exact PR, head SHA, branch, `pull_request`
+event, workflow name/path, and failed conclusion before rerunning that same run
+ID. Automatic recovery accepts only the original run attempt, preserving the
+one-rerun ceiling. Only a genuinely absent context uses the allowlisted
+workflow-dispatch bootstrap; pending rows wait, and ambiguous, status-only,
+foreign, or unreadable rows fail closed. Promotion recovery re-evaluates the
+required PR view during the bounded wait, not only from the first snapshot, so
+a context that appears later as a cancelled or failed selected pull-request row
+is still rerun in the same invocation after the same identity checks. Only when
+both evidence views pass may
+the release job
+publish same-SHA success statuses for
+`governance-policy`, `validate`, and `ci / ci`, linked to the release run. The
+caller grants `statuses: write` only to that release job; the GitHub App token
+remains limited to contents/issues/pull-request mutation.
+
+The unrestricted implementer also never shares a runner with the GitHub App
+token. It produces and uploads a Git bundle with persisted checkout credentials
+disabled; a separate clean `publish` job downloads that artifact, mints a
+repository-scoped contents/issues/pull-requests token, imports the exact
+declared commit into a new bare repository, and pushes with hooks disabled plus
+an explicit lease. Repository hooks, PATH changes, or tools left by model code
+therefore cannot observe the App credential or forge its bot identity. The
+publisher rejects every `.github/workflows/**` change before push; those
+security-sensitive edits use a separately supervised review/publication path
+instead of executing from an unreviewed same-repository PR.
+
+When an adopted caller task also authorizes changes to its nested
+`karsift-ai-infra` checkout, `implement.yml` preserves every self-correction
+helper before removing the checkout from caller staging. It commits the
+authorized source changes and binds the exact committed head to one temporary,
+fixed-name ref before creating the separate bundle. The carrier verifies that
+this is the bundle's sole advertised head, verifies the bundle itself, and
+removes the temporary ref on every exit path. A second clean publisher with an infrastructure-scoped App token that requests
+`workflows: write` (in addition to contents, issues, and pull requests) then
+verifies exact lineage and an explicit branch lease before opening a
+non-closing cross-repository PR. That permission covers authorized nested
+commits that change `.github/workflows/**`; the caller `publish` token still
+omits `workflows: write` and still rejects every caller
+`.github/workflows/**` change before push. The model runner never receives the
+infrastructure token, a stale or racing source head fails closed, and caller
+fixtures cannot consume the source carrier until its independently reviewed
+merge SHA is known.
+All PR operations and bounded issue notifications in these clean jobs name the
+calling repository explicitly, because they intentionally have no checked-out
+Git worktree from which GitHub CLI could infer repository context.
+Its model-facing job also has read-only issue and pull-request permissions;
+no-change reporting is performed by a separate clean runner.
+
+The unrestricted planner uses the same privilege boundary. Its runner has no
+persisted checkout credential while the model is active and can only upload a
+Git bundle or clarifying-question artifact. A fresh `publish-plan` runner
+validates the exact bundle lineage and rejects any changed path outside the new
+package directory before it receives a repository-scoped publishing token.
+
+`live-evidence-reconcile.yml` implements that separate responsibility. Calling
+repositories invoke it from an hourly schedule (or an explicit reconcile
+dispatch), so it can poll any workflow named by a task contract without adding a
+broad `workflow_run` trigger that recursively observes the pipeline itself. It:
+
+- accepts only the contract at
+  `<package>/.karsift/live-evidence/<task_id>.yaml` on a current waiting PR;
+- reads Actions run and job metadata only — never logs, artifacts, steps, or
+  arbitrary output;
+- validates workflow identity, required successful jobs, event, branch, exact
+  SHA lineage, conclusion, and age before qualifying evidence, paginating a
+  bounded maximum of 1,000 candidates and failing closed beyond that bound;
+- can dispatch only the workflow/ref/inputs declared by that contract, and
+  only when the target ref is protected and the workflow file is byte-identical
+  to the protected default-branch copy (the caller pipeline itself is always
+  forbidden).
+  A trusted App-authored reservation precedes the single API attempt, so an
+  uncertain outcome cannot be retried into a duplicate dispatch. The PR's
+  head/ref, body-bound package/task/authority issue, latest trusted WAITING
+  verdict, 72-hour deadline, and immutable target/default branch snapshots are
+  re-read both before reservation and immediately before the dispatch API call;
+- serializes per calling repository, records one allowlisted
+  `<task_id>.result.json`, and updates the PR ref without force; and
+- emits one timeout escalation after 72 hours without invoking implementation
+  remediation, Sentry, or the operational-failure observer.
+
+The result commit changes the PR head. The calling project's normal
+`pull_request: synchronize` path therefore runs CI and independent review again,
+bound to the post-reconcile SHA; a PASS from the older waiting head cannot carry
+forward. Result-commit, ref, and trusted-comment mutations use a short-lived
+installation token from the KARSIFT GitHub App. Declared workflow dispatch alone
+uses the dedicated reconcile job's `GITHUB_TOKEN` with `actions: write`; other
+caller jobs retain their existing permission floor, and the implementer receives
+neither token. The App token is repository-scoped and requests only contents,
+issues, and pull-request write permissions: contents publishes the result
+commit, issues handles task/timeout comments, and pull requests publishes the
+exact-head attestation on the waiting PR conversation. It uses an immutable
+post-fix `create-github-app-token` revision whose parser honors the
+`permission-*` inputs. Waiting is accepted only
+when the successful check resolves to the exact PR, head, branch, active caller
+pipeline workflow ID, and an unchanged head/base pipeline file; the comment
+timestamp must also fall inside that check's run window. Its trusted comment
+is signed by the dedicated GitHub App from an isolated `publish-review` job and
+binds the package path, task ID, and authority issue observed by that review, so
+neither another `github-actions[bot]` workflow nor a later PR-body edit can
+retarget authorization. The post-reconcile
+review requires a trusted App-authored attestation bound to its new exact head,
+and that attestation is posted before the branch advances to prevent a fast
+`synchronize` review from racing it.
+
+Merge, remediation, and plan adoption apply the same identity rule: only an
+App-signed, exact-head verdict with its successful isolated publisher check is
+accepted. Plan review has its own clean `publish-plan-review` stage, so neither
+review model can impersonate the credential that records its decision.
+The caller template wires that review for every `plan/` PR and makes merge-gate
+wait for it explicitly.
+
+For `pull_request` and `pull_request_target` evidence, the run's GitHub PR
+association must include the waiting PR number; matching workflow, branch, and
+SHA alone is insufficient. The read-only workflow token explicitly grants
+Actions, Checks, contents, issues, and pull-request metadata access so these
+provenance checks work in private repositories.
+Only open, unmerged PRs can reconcile or dispatch, and dispatch authority
+expires at the same 72-hour waiting deadline. Workflow names and every
+App-authored structured comment field are restricted to single-line safe
+scalars; result attestation requires an exact line rather than a substring.
+
+Caller pipelines pass the triggering PR base/head into plan review, task review,
+remediation, and merge-gate. A newer push makes older runs stale: reviewer model
+work is skipped, remediation cannot target the newer head, and merge uses GitHub
+CLI's atomic `--match-head-commit` guard. The caller template also cancels
+superseded pull-request runs to avoid duplicate model cost; the exact-SHA guards
+remain the correctness boundary when cancellation races or is unavailable.
+
+**Ready-for-review reuse (VOC-104):** when a draft PR becomes ready on an unchanged exact
+base/head that already has green required checks and a trusted App-signed PASS verdict, the
+caller's read-only `ready-for-review-reuse.yml` job may emit `reuse-evidence` so the current
+`ready_for_review` run skips full CI and model review while merge-gate still re-evaluates using
+the validated prior pipeline run. Any failed reuse precondition, helper uncertainty, or
+non-`ready_for_review` activity selects the normal full CI and review path
+(`full-path` or `fail-closed-to-full-path`). Draft PRs remain non-mergeable regardless of reuse.
+Only App-signed publisher comments qualify; human or implementer text never authorizes reuse.
+A qualifying publisher record binds its exact pipeline run ID as well as the base/head and
+package/task identity, preventing evidence from different base revisions from being combined.
+Reuse also requires GitHub's authenticated `referenced_workflows` metadata to show that the
+eligibility helper, CI, task review, plan review, and merge gate all resolved to one identical
+shared-infrastructure commit in both runs. A mutable `@main` policy change therefore forces the
+full path even when the application base/head did not change. Merge-gate repeats this revision
+comparison independently before it can authorize merge.
+A separate read-only `verify-ready-for-review-reuse.yml` workflow validates controlled live proof
+from allowlisted Actions metadata only. Its evidence-carrier head is intentionally distinct from
+the earlier observed ready-transition head: explicit dispatch inputs bind the carrier SHA, while
+the source PR number/base/head/ref bind both source runs. The ready run must also contain the
+workflow-controlled `decide (ready_for_review)` job marker. If GitHub has cleared a closed run's
+`pull_requests` array, the verifier never infers ownership from a matching branch/head alone. A
+prior run is admitted only when an App-authored review comment on that exact PR binds its run ID,
+base/head, and package/task identity. Before optimized auto-merge, merge-gate also publishes one
+App-authored transition attestation binding repository, PR number, branch, base/head, ready run,
+selected prior run, and shared-policy SHA; the post-merge verifier requires that unique record.
+The verifier also recomputes the latest eligible prior run strictly before the ready run and
+requires it to equal the declared prior run ID, so proof cannot substitute a different valid run.
+
+Callers must pass those exact base/head inputs to plan review, task review,
+remediation, and merge-gate. Every reusable-workflow schema keeps them optional
+so a shared-infrastructure rollout does not prevent an older default-branch
+caller workflow from starting; an omitted or invalid value fails closed at
+runtime by refusing plan review, skipping task review, refusing remediation, and
+leaving merge pending instead of silently falling back to a live head.
+A remediation retry carries the failed head into `implement.yml`, validates it
+before model work, revalidates it immediately before publishing, and uses an
+explicit SHA-valued force-with-lease. A commit arriving in either timing window
+therefore survives instead of being overwritten by the stale retry.
+Adoption similarly removes its merged roster ref through an exact-SHA lease;
+if native merged-branch cleanup wins the deletion race, an authoritative
+absence recheck is accepted, while any surviving ref still stops dispatch.
+An unchanged reconciliation also checks for a retained roster ref and removes
+it only when GitHub proves its current SHA is the unique head of a merged roster
+PR for the expected integration branch.
+The implementer records the pre-model task tip and the fetched integration tip
+as separate boundaries. It soft-resets only to the former, but its recovery
+bundle spans from the integration anchor through the complete task lineage.
+The isolated publisher fetches only that trusted integration history, verifies
+and imports the self-contained task bundle, scans the whole lineage for denied
+workflow changes, and then applies the exact old-head lease. This also covers a
+remediation branch whose prior commits were locally rebased and therefore never
+existed on the remote under their new commit IDs.
+
+Reviewer responses are shape-validated inside the bounded transient-retry loop.
+A provider process that exits successfully but omits its documented non-empty
+result is retried as reviewer infrastructure, with sanitized diagnostics only.
+If all reviewer attempts fail, remediation records bounded Actions metadata but
+does not dispatch the implementer or consume its one code-remediation attempt.
+Only a genuine App-signed FAIL verdict or failed CI can start implementation.
+
+## Ordered autonomous task execution
 
 Adoption starts the first task automatically. The adopted roster records an explicit
 `depends_on` edge from every later task to its predecessor. `auto-advance.yml` releases the next
 task only after one valid App-authored completion marker proves the preceding task's exact reviewed
 caller PR merged. The issue-close event is only a wake-up hint; closed state alone cannot advance.
-For ordinary implementation tasks it dispatches `implement.yml` attempt 1. When the next roster
-task has a valid `operator` or `live-actions` contract at
-`<package>/.karsift/live-evidence/<task_id>.yaml`, auto-advance instead prepares a deterministic
-draft evidence-carrier PR and posts one sanitized waiting marker without executing the general
-implementer. A repeat event repairs a partial carrier publication but preserves any existing
-operator evidence. Missing-required, malformed, invalid, duplicate, or conflicting ownership
-metadata fails closed. “No marker” means a readable task stanza has no ownership marker; a missing
-or unreadable `tasks.md` cannot establish that condition and fails closed instead of guessing that
-the task is ordinary. The classifier and proof verifier stay read-only; only a clean publisher
-receives carrier writes, and the fail-closed notifier receives issue-write only.
-Carrier PRs inherit their `Risk classification: R#` line from exactly one valid
-root `risk: R0` through `risk: R4` declaration in the adopted package's
-`change.yaml`. Missing, duplicate, or malformed risk metadata fails closed; the
-publisher does not over-classify every future carrier as R4.
-If that deterministic branch already belongs to a closed or merged carrier PR,
-publication fails closed with `conflicting_existing_pr`; it never silently
-reopens or replaces historical state. An operator must confirm why the carrier
-was closed before a governed restoration or cleanup/retry.
+For an ordinary next task, it preserves the existing deterministic-branch guard and dispatches
+`implement.yml` attempt 1. For a task with a valid operator/live-actions contract at
+`<package>/.karsift/live-evidence/<task_id>.yaml`, it does not execute the general implementer:
+a separate clean App-scoped job creates or repairs one deterministic draft evidence-carrier PR
+and one sanitized waiting marker. The task's own `tasks.md` stanza may declare the exact secondary
+expectation marker `- Automation ownership: operator` or
+`- Automation ownership: live-actions`; a missing required contract, malformed contract, invalid
+or duplicate marker, or marker/contract conflict fails closed. Narrative prose is never parsed as
+ownership. “No marker” means the task stanza was successfully read and contains no ownership
+marker; a missing or unreadable `tasks.md` cannot establish that condition and therefore fails
+closed instead of guessing that the task is ordinary. Re-entry repairs a partially published
+carrier without overwriting an existing evidence file. When an adopted plan already contains a
+strictly identity-bound, incomplete `source_run_id: pending` evidence stub on the protected
+integration branch, the first carrier publication normalizes that stub to the canonical pending
+body; completed, mismatched, ambiguous, or oversized content still fails closed. Implementer jobs
+remain serialized per change package.
 
-## remediation ownership gate (VOC-106)
+Carrier PRs inherit their `Risk classification: R#` line from the adopted package's root
+`change.yaml`. The publisher and verifier accept exactly one root `risk: R0` through `risk: R4`
+declaration and fail closed when it is absent, duplicated, or malformed; they do not hardcode R4
+for lower-risk operator-owned packages.
 
-`remediate.yml` resolves task ownership from the exact reviewed PR head before any
-implementer retry. Valid `operator` or `live-actions` contracts suppress `implement.yml`
-dispatch for review `FAIL` and CI failure, posting a sanitized operator/reconcile
-escalation instead. Malformed or contradictory ownership metadata uses a separate
-fail-closed escalation. Ordinary implementer-owned tasks retain the bounded retry.
-WAITING / STALE / review-infra failures remain non-retrying and do not consume an
-implementation attempt. A separate read-only
-`verify-remediate-operator-ownership.yml` workflow validates controlled remediate
-proof from Actions, issue, and PR metadata only—never logs or artifacts. Its
-runner extracts the source run's associated PR base SHA from the
-`pull_requests` list object (never by stringifying that list).
+If the deterministic carrier branch already belongs to a closed or merged PR, publication fails
+closed with `conflicting_existing_pr`. The publisher never silently reopens or replaces that PR:
+an operator must first confirm why it was closed and then restore the trusted draft or perform a
+new governed cleanup/retry. This keeps an intentional abandonment or completed history from being
+mistaken for permission to continue.
 
-The implementer job deliberately has no `actions` permission and receives no
-general Actions inspection/dispatch credential. Operator reconciliation is a
-separate repository-controlled responsibility; adding it must not broaden the
-implementer's permissions or secrets.
+The ownership classifier is read-only. Only the non-model carrier publisher receives an App token
+for contents/issues/pull-request writes, and the fail-closed notifier receives issue-write only.
+Neither receives Actions-write or model credentials. Read-only verifier dispatch
+uses caller `pipeline-verify.yml` (VOC-126); the separate reusable
+`verify-auto-advance-live-evidence.yml` workflow validates the later controlled source-run/carrier
+proof from Actions, issue, and PR metadata only—never logs or artifacts.
 
-The VOC-106 workflow, policy, verifier, and regression-test copies correspond to
-shared-infra merge `db164eb3905a96b74b039ab6aa36944408bf0a44`, including the
-hosted verifier base-SHA adapter fix recorded in this package's T00 remediation.
+`implement.yml` enforces the same ordering independently, including for direct
+`workflow_dispatch` calls: the dispatched task and issue must match the adopted roster, every
+dependency issue must be closed, the dependency's bot PR must be merged, and that merge must be an
+ancestor of the integration branch checked out for the new task. This makes a manual or duplicated
+dispatch fail before a branch or PR is created instead of allowing dependent tasks to race.
 
-VOC-125 (VOC-126 caller pin) documents operator resume through caller
-`workflow_dispatch` `action=implement` with `attempt=2` and
-`existing_pr_number=<open PR>`. The caller forwards only the PR number—not
-free-form SHAs. `implement.yml` derives immutable `expected_head_sha` /
-`expected_base_sha` before `Create implementation branch`. Read-only verifier
-dispatch uses caller `pipeline-verify.yml` (VOC-126) so `pipeline.yml` stays
-within GitHub's 25-input `workflow_dispatch` maximum while preserving
-`existing_pr_number`.
+Remediation attempts fetch and rebase onto the current integration branch before the implementer
+runs. If upstream changes make the old branch conflict, the workflow preserves the old revision as
+a remote reference and restarts the retry from the current integration tip, with that fact included
+in the implementer prompt. Stale sibling-task state therefore cannot silently consume the final
+attempt.
 
-## authoritative lifecycle state (VOC-108)
+Operator resume after automatic remediation stops uses caller `workflow_dispatch`
+`action=implement` with `attempt=2` and `existing_pr_number=<open PR>`. The
+caller forwards only the PR number—not free-form SHAs. `implement.yml` derives
+immutable `expected_head_sha` / `expected_base_sha` from the live open PR (and
+App-signed review metadata when present) before `Create implementation branch`
+and before model resolution. Automatic `remediate.yml` retry continues to pass
+event-derived SHAs and also forwards `pr_number` as `existing_pr_number`.
+Attempt `1` with an existing open carrier fails closed; attempt `3` is rejected.
 
-VOC-108 originally advanced the fixture to shared-infra merge
-`d3108dfdef34e2f98c028916e95c36130d329132`; VOC-115 then advanced it to
-`3fd40f52aba602fab8399482bc5b772731675d1a`, and VOC-114 now advances the
-consolidated fixture pin through `30cc0a6f443b95e45527b03094767b8357b0a2dc`
-and `bdc6736568827103b48255521f4bc83d5103bd3b` to
-`9d7e334f917643c42bb4b7a062c8fcddecc7927f`, then to
-`6999e2beda5bbf00028fae04ca0e65324fc59afa`, and finally to
-`c5d8bccfa8676bd367b53ad5f6f9a51a40c99405`.
-Adoption, merge/reuse, and release
-select the newest authoritative attempt per logical exact-SHA gate from complete
-paginated histories and bind the selected evidence to the authenticated pull
-request's repository, number, base, and head. The merge gate writes one App-authored
-caller-merge marker only for task branches before emitting the task close event;
-auto-advance and release validate that same marker against live PR state. A
-premature close is a safe wake-up no-op. Foreign qualified closing references are
-rejected at merge time, while cross-repository links remain non-closing.
-Automatic, reconcile, promotion-PR, check-provider, and external-workflow wake-ups
-share one serialized promotion evaluator and one exact-head merge command. Shared
-instructions explicitly define issue closure as a wake-up hint rather than task
-completion authority.
-The pinned caller template also retains the read-only
-`verify-remediate-operator-ownership` dispatch surface used by live callers.
-External `check_run` wake-ups invoke release evaluation only when the check is
-attached to the `develop` → `main` promotion pull request.
-Auto-advance comments and diagnostics use the current serialized-convergence
-name, preventing the retired `check-completion` job name from becoming false
-operator guidance.
-The generated adoption roster PR is evaluated through the same paginated,
-exact-identity newest-attempt selector as the merged plan head. Its complete
-green logical set must stabilize on one unchanged head before exact-SHA merge.
-The merge-gate App credential contract names both authoritative completion
-actions: publish the immutable task marker, then close the linked task so the
-release observer receives its authenticated wake-up events.
+## Drafting and issue-creation are two separate steps
+
+`plan.yml` only ever drafts a package and opens a PR for it - it does not open any tracking issues.
+Those come from `adopt.yml`, which fires after a `plan/`-branch PR merges and re-verifies that the
+independent PASS verdict is bound to the exact merged head. It writes adoption metadata and the task
+roster together through a checked bookkeeping PR. A caller can dispatch the same merged plan PR to
+reconcile a missed event; task issue lookup and the roster commit are idempotent.
+Adoption is serialized per plan authority. After the checked roster PR is
+confirmed merged, its ephemeral `karsift/roster-*` head is deleted only through
+an exact-SHA lease; a queued-but-not-merged PR or concurrently advanced ref is
+never deleted. Caller repositories should also enable GitHub's native
+`delete_branch_on_merge` setting as a low-cost second guard; protected
+integration and production branches are not eligible for that deletion.
+
+All shared-workflow checkout steps use one verified immutable Node.js 24 action
+revision and disable credential persistence. Jobs that mutate Git refs must
+configure their scoped App token (or documented `GITHUB_TOKEN` fallback)
+explicitly, so an action-runtime upgrade cannot silently change write identity.
+
+**Anyone - a human, or another agent - can start this by opening an issue,** not just by dispatching
+`plan.yml` by hand. The calling project's `pipeline.yml` routes any newly-opened issue with no
+`karsift:*` label into `plan.yml` with that issue's number; the planner drafts from the issue's full
+thread (body plus every comment so far). If that's not enough to draft from - a bare "this is broken"
+with no repro, say, whether from a human or from an automated log-reading agent that noticed
+something wrong - the planner posts a clarifying question back on the issue instead of guessing, and
+labels it `karsift:needs-info`. A reply (from whoever or whatever opened the issue) re-triggers
+planning with the updated thread - no manual re-dispatch needed either way. The one thing this never
+does is skip adoption: however planning started, the resulting package is still only ever a draft
+until a human reviews and merges it.
+
+Issue-driven planning is serialized per source issue and reconciled twice: once before model work,
+then again as the clean publisher's first step, before either a needs-info comment or branch/PR
+publication. A unique `plan/` PR from the configured publisher identity (the App when configured,
+otherwise the documented workflow-token bot), bound to that exact issue, makes a retry a
+mutation-free no-op. Ambiguous linkage or a bare `karsift:planned` label fails closed. This prevents
+an already-running needs-info retry from spending another model run, changing a closed/planned
+source issue, or publishing a duplicate package.
+
+## Release gate: checked automatic promotion per completed change package
+
+`merge-gate.yml` gates each *task*; `release.yml` gates the layer above it - promoting a project's
+integration branch (e.g. `develop`) to its production branch (e.g. `main`) once an entire *package*
+is done. Package completion means every roster entry has one valid App-authored marker bound to a
+live merged caller PR at its reviewed head. Those markers plus newest green promotion-PR checks are
+the gate; issue state and founder comments are not release authority.
+
+A package's task roster is fixed once, at adoption time: `adopt.yml` writes
+`<package_path>/.karsift/tasks.json`
+(`[{"task_id": ..., "issue": <number>, "depends_on": [...]}, ...]`) once it opens the
+per-task issues. `release.yml` never re-parses a project's own `tasks.md` prose to determine
+completion - that was tried for issue-opening itself and broke against a real house-style mismatch
+(see `adopt.yml`'s task-parser comments, carried over from where this logic used to live in
+`plan.yml`); the roster file is the sole source of truth instead. Each
+task's tracking issue receives one strict App-authored completion marker only after
+`merge-gate.yml` observes its exact caller PR merged. The gate then emits the
+issue-close event; issue state by itself is never completion authority. Both
+`auto-advance.yml` and `release.yml` validate the same marker against the live
+caller PR, so a foreign closing reference or premature manual close is a safe
+no-op. Cross-repository PRs use `Relates to OWNER/CALLER#N`; only the caller task
+PR uses local `Closes #N`.
+
+Completion identity is parsed from a fresh REST read of the merged caller PR,
+not from the workflow event's original body snapshot. If an authorized body
+correction happens after the run starts, rerunning the failed completion job
+therefore sees the correction. The adapter still requires exactly one matching
+task, package, and local issue binding, then binds that identity to both the
+immutable adopted roster at the exact reviewed base and the newest App-signed
+exact-base/head PASS review before any issue mutation. Conflicting evidence
+fails closed. A retry after the exact App marker
+and a timeline-proven later issue-close wake-up makes no further mutation; if the
+marker was published after an earlier automatic close, the retry safely emits
+the missing post-marker close wake-up.
+
+When every roster marker validates, `release.yml` opens a `Release: <change_id>`
+audit issue and automatically opens (or reuses) and merges a real
+`develop → main` pull request. The PR and its merge commit remain the review and audit carrier;
+production is never promoted by a direct ref update. After the merge, a separate exact-SHA policy
+validates the PR identity, the checked base/head, the merge commit's two parents, and both live refs.
+Only then does it advance `develop` to that exact merge SHA with
+`--force-with-lease`. It refuses if production moved, integration moved, or integration gained a
+unique commit. The release audit closes only after both refs are identical.
+
+All packages and retries share one production/integration-pair concurrency group, preventing
+different completed packages from racing between merge and convergence. If an attempt is interrupted
+after the PR merge, `reconcile-release` identifies exactly one merged promotion PR from the audit
+issue and change ID, then repeats the same validation and lease-protected synchronization. An exact
+retry is a no-op. A terminal check completion wakes only the cheap evaluator; it does not rerun
+unchanged-SHA CI or the reviewer.
+
+The caller template also provides an explicit reconciliation path for the exceptional package that
+is intentionally implemented against production. On the App-authored task-completion wake, it
+validates the same exact reviewed-PR marker and immutable adopted roster, requires the live production
+SHA to equal that merge, proves integration has no unique commits, then advances integration under
+the shared branch-pair lock. Ordinary integration-target tasks are mutation-free no-ops. A strict
+`reconcile-production-change` dispatch retries an interrupted eligible reconciliation.
+`merge-gate.yml` applies the same strict, non-bypassable production-ruleset guard immediately before
+merging any task PR whose base is the configured production branch, so the exceptional carrier is
+also atomically bound to its checked base.
+Release evaluation and task auto-advance both wait for this preflight, so a production-target task
+cannot race the next task or a promotion decision.
+
+`release.yml` itself does not deploy hosted infrastructure. A caller may independently trigger its
+own production deployment from the resulting push to `main`. The follow-up integration push for a
+normal merge promotion is tree-equivalent, so path-filtered staging deployment workflows receive no
+changed application path and do not run unnecessarily.
+
+Packages that predate `.karsift/tasks.json` (planned before this feature existed, or never
+planner-authored) aren't covered - the release gate only applies going forward.
+
+## What's deliberately not built yet
+
+- A run-time-swappable reviewer/planner *execution step* (today, swapping the model within a
+  provider is config-driven; swapping to a different provider's CLI/action - as happened 2026-07-24,
+  Claude Code CLI to `openai/codex-action`, for both `review.yml` and `plan.yml` - is still a workflow
+  edit, not just a config edit)
+- Per-project custom risk-classification schemes beyond the `Risk classification: R#` convention
+  `merge-gate.yml` parses
+- Writing verification verdicts back into a package's own machine-readable status (the reviewer has
+  no write authority; a human or a later deterministic step does this today)
+- A durable work queue or hosted staged/production deployment owned by this infrastructure repo
+- A real-time/synchronous chat interface - "anyone can open an issue and reply to the planner's
+  questions" (see above) covers the same ground asynchronously, through GitHub's own issue/comment
+  events, but there is no live conversational session
+- A hosted deployment implementation; caller repositories own any push-to-main deployment trigger
+
 Close/reopen or draft/ready transitions on a promotion pull request do not
-recover missing required checks; VOC-113 recovery dispatches genuine allowlisted
-workflows for the exact SHA with a bounded 1800-second fail-closed wait. Recovery
-calls are serialized by mode and target SHA. The caller template's hourly
+recover missing required checks. VOC-121 recovery reruns a ruleset-selected
+failed/cancelled pull-request run in place and retains VOC-113's genuine
+allowlisted dispatch only for a missing required row. VOC-122 replans against
+GitHub's current required PR view during the bounded 1800-second fail-closed
+wait so a row that appears after the first snapshot can still be rerun in the
+same invocation. Recovery calls are serialized by mode and target
+SHA. The caller template's hourly
 schedule also resolves the current integration head and performs a secondary
 integration recovery wake; it is a mutation-free no-op after both required
 integration workflows have completed successfully.
 Immediate post-merge recovery is limited to governed `agent/` task branches;
 other integration advances rely on that hourly exact-tip wake.
 
-VOC-114 (VOC-113 recovery metadata-read fix) pins shared-infra merge
-`c5d8bccfa8676bd367b53ad5f6f9a51a40c99405`, including the live-proof
-corrections from PRs #137 through #145 and the project-template correction that
-keeps Statuses write on release alone.
+Recovery metadata reads and allowlisted dispatches use the workflow job's
+short-lived `GITHUB_TOKEN`, with explicit Checks read, Commit statuses read,
+Contents/Pull requests read, and Actions write permissions. App tokens remain
+limited to the release and merge mutations that require the App identity; recovery
+therefore does not depend on installation-level Actions permission. Metadata
+request failures are reported only as `check_runs_read_failed`,
+`workflow_runs_read_failed`, or `commit_metadata_read_failed`, and recovery stops
+before dispatch planning.
 
-VOC-117 advances the six active role bindings to Cursor Composer 2.5
-(implementer + escalation) and explicit-high Grok 4.6 Standard with bracket
-parameters (planner, reviewer, reviewer_fast_retry, plan_reviewer). Live Cursor
-CLI model discovery proved the effort-omitted identifier unavailable, so
-`config/prepare_cursor_model.py` passes stored values like
-`cursor/grok-4.6[effort=high,fast=false]` to the Cursor CLI without silent
-vendor/model fallback and rejects Grok 4.6 forms that omit effort. Reviewer and
-plan-review terminal failures pass the structured Cursor
-response through `config/extract-cursor-result.py`, which writes only a strict
-schema-v1 failure artifact containing an allowlisted reason and regex-bounded
-subtype. The same-run artifact is retained for one day. Dedicated clean
-publisher jobs download and strictly validate it, validate the exact live PR
-base/head pair, check out their own exact reusable-workflow SHA, mint a narrowly
-scoped App token only after validation, and publish a non-verdict infrastructure
-failure comment while withholding raw provider output. When Cursor exits with
-an empty JSON response, the failed producer may inspect at most 64 KiB of local
-stderr and retain only an existing allowlisted reason code; missing, oversized,
-or unrecognized text remains `unspecified` and never enters the artifact. The
-exact Cursor phrase `API key is invalid` maps to `authentication`, while
-negative regressions reject unrelated API-key help prose. Cursor's bounded
-`Available models:` diagnostic is classified as an unavailable/invalid model
-without publishing the list or other raw output.
-`PINNED_SHA.txt` records the exact reviewed karsift-ai-infra merge consumed by
-this fixture. VOC-117 originally advanced the fixture to merge
-`37b06aa95030e235b7311b3c14ee23977f62ac76`. VOC-121-T00 advances it to
-infrastructure PR #157 merge
-`99476c2a1018e42d4bd442657b5257885ac9f1c9`. VOC-123-T00 advances it to
-infrastructure PR #158 merge
-`7500a4171d96a8e0d38889a9c92ad5dc092ad8dd`. VOC-124-T00 advances it to
-infrastructure PR #159 merge
-`f406cc95a3f853e8aef5bf8bcf22d37a29d64547`. VOC-126-T00 advances it to
-infrastructure PR #161 merge
-`20dcf340fa73a36ebc6074442fde79530dfa5871`. VOC-122-T00 advances it to
-infrastructure PR #162 merge
-`60afda3a44fd06b8c00b219771de7112f1aded6e`; the mirrored source files are
-byte-for-byte copies from that merge's reviewed tree.
+## Layout
 
-Recovery metadata reads, exact selected-run reruns, and allowlisted absent-context
-dispatches use narrowly job-scoped `GITHUB_TOKEN` permissions: Actions write plus
-Checks, Commit statuses, Contents, and Pull requests read. App tokens remain
-limited to App-identity release mutations and no longer depend on an installation
-Actions grant. The runner uses valid
-`gh api` invocation, reports sanitized endpoint-class failures, binds promotion
-dispatch suppression, completion, and promotion verification to required
-contexts. A failed or cancelled ruleset-selected pull-request check is rebound
-to its original run, PR, head, branch, event, workflow name/path, and first
-attempt before that exact run is rerun once. Alternate successful runs and
-same-named statuses cannot suppress the rerun; workflow dispatch is used only
-for a genuinely absent required context. Both hosted verification adapters
-also use valid `gh api` repository context. The contract is covered by
-`tests/test_voc114_actions_check_recovery.py`.
-Release additionally grants its job token Commit statuses write. After genuine
-exact-head checks from the three expected workflows pass, it publishes only the
-three ruleset-required same-SHA status attestations. The attestations link to the
-release run and are excluded from authoritative selection, so they cannot replace
-the underlying Actions evidence; the App token remains mutation-only.
-The caller template exposes the existing integration resolver/recovery pair to
-operator dispatch without accepting a free-form target SHA, closing the
-default-branch schedule bootstrap gap encountered during the live proof.
-Its paginated commit query pipes slurped pages to standalone `jq`, avoiding the
-GitHub CLI's invalid `--slurp` plus `--jq` combination.
-
-VOC-121 (coordinated infrastructure carrier publication and required-check
-recovery) advances implementer helper preservation, isolated `publish-source`
-for authorized nested `karsift-ai-infra/` edits, and promotion recovery that
-consults `gh pr checks --required`. A cancelled or failed exact-head required
-Actions run is rerun by its selected run ID after exact metadata validation;
-only an absent context is redispatched. Alternate successful runs and
-same-named statuses cannot override the ruleset-selected row. Status
-attestation, release evaluation, and the read-only recovery verifier use the
-same required-check view and fail closed on ambiguity or read failure.
-
-VOC-122 (promotion-recovery replan during polling) re-evaluates GitHub's
-required PR view during the bounded 1800-second wait, not only from the first
-snapshot. A context that is absent in snapshot 1 and later appears as a
-cancelled or failed ruleset-selected pull-request row is rerun once in the same
-invocation after the existing identity checks. Invocation-scoped run-ID and
-absent-context dedupe prevent duplicate reruns or dispatches.
-
-VOC-123 (named-ref nested source-carrier bundle tips) binds the exact committed
-infrastructure head to one temporary `refs/karsift/source-bundle-head` ref
-before `bundle create`, verifies the sole advertised head, and removes the ref
-on every exit path. Raw object IDs remain a proven empty-bundle failure class.
-Caller and planner `..HEAD` recovery bundles were proven safe with real
-repositories and remain unchanged.
-
-VOC-124 (coordinated source publisher workflow-write permission) requests
-`workflows: write` on the clean `publish-source` App token so authorized nested
-infrastructure commits that change `.github/workflows/**` can be published.
-The caller `publish` token still omits `workflows: write` and still rejects every caller `.github/workflows/**` change before push.
+```
+karsift-ai-infra/
+  config/
+    roles.yml             # the only file naming a specific model/vendor
+    resolve-model.sh
+  prompts/
+    plan.md                # planner role instructions - draft only, never adopts/authorizes
+    implement.md           # implementer role instructions - scope discipline, no self-approval
+    review.md              # reviewer role instructions - read-only, structured verdict
+  .github/workflows/
+    ci.yml                 # generic pnpm checks, once a project's app foundation adds them
+    plan.yml                # drafts a DRAFT package from free text, a document, or an issue thread
+    adopt.yml                # opens per-task issues only once a plan/ PR is actually adopted+merged
+    implement.yml
+    review.yml
+    remediate.yml           # re-dispatches implement.yml once on a FAIL verdict, then escalates
+    merge-gate.yml          # risk-aware, fails closed, auto_merge_enabled defaults false
+    release.yml              # marker-validated serialized package promotion, gates develop -> main
+  templates/project-repo/
+    .github/workflows/pipeline.yml   # thin caller template - copy into a project repo
+```

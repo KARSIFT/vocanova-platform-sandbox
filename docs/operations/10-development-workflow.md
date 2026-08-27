@@ -77,7 +77,9 @@ feature/* ──PR──► develop ──release PR──► main
 
 Task branches: `<type>/<issue-number>-<short-description>` (`feature/`, `fix/`, `hotfix/`,
 `refactor/`, `chore/`, `docs/`, `test/`, `security/`, `revert/`). Squash merge only into `develop`;
-merge commit for `develop → main`. Rebase before final review; `git push --force-with-lease`, never
+merge commit for `develop → main`. After a successful governed promotion merge, automation
+advances `develop` to that exact merge commit SHA before the release audit closes so both
+permanent branches share the same tip. Rebase before final review; `git push --force-with-lease`, never
 plain `--force`. These mechanics do not grant merge or release authority; that authority comes from
 canonical governance.
 

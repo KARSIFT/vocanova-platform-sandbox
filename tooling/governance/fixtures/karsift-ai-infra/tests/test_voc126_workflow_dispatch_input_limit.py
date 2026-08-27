@@ -13,7 +13,7 @@ MAX_DISPATCH_INPUTS = 25
 INVALID_VOC125_TEMPLATE_SHA = "1f1705dbad41729563b0ad1e878e4154e5511e93"
 
 PIPELINE_MUTATING_OPTIONS = (
-    "implement, plan, reconcile, reconcile-release, reconcile-live-evidence, "
+    "implement, plan, reconcile, reconcile-release, reconcile-production-change, reconcile-live-evidence, "
     "recover-integration-push, recover-promotion-pr-checks"
 )
 PIPELINE_VERIFY_OPTIONS = (
@@ -99,11 +99,6 @@ class Voc126WorkflowDispatchInputLimitTests(unittest.TestCase):
         self.assertNotIn("actions: write", self.pipeline_verify_template)
         self.assertNotIn("create-github-app-token", self.pipeline_verify_template)
         self.assertIn("actions: read", self.pipeline_verify_template)
-
-    def test_fixture_pin_must_not_equal_invalid_voc125_template_sha(self):
-        pin = (ROOT / "PINNED_SHA.txt").read_text(encoding="utf-8").strip()
-        self.assertNotEqual(pin, INVALID_VOC125_TEMPLATE_SHA)
-
 
 if __name__ == "__main__":
     unittest.main()

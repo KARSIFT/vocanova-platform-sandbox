@@ -1509,14 +1509,17 @@ Must include:
 
 Merges when release checks pass (no founder `approved` comment gate after A-004
 activation; see §17.2). Interrupted promotion retries via `reconcile-release`
-dispatch.
+dispatch, including exact-merge-SHA integration sync when the promotion PR is
+already merged. Exceptional main-only reconciliation back into `develop` uses
+`reconcile-production-change` for an adopted production-target task; it is not
+the ordinary post-promotion route.
 
 *Historical: release PRs required founder approval before A-004 / the 2026-08-08
 auto-release path.*
 
 ### Emergency PR
 
-Addresses a critical production problem and follows the accelerated emergency process. Any direct production-path fix must be reconciled back into `develop`.
+Addresses a critical production problem and follows the accelerated emergency process. Any direct production-path fix must be reconciled back into `develop` through the governed `reconcile-production-change` path when the fix was delivered by an adopted production-target task.
 
 ## 16.4 Pull-request scope
 

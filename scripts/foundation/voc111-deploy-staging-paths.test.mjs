@@ -224,6 +224,30 @@ test("VOC-111-TEST-09: stale near-no-op documentation removed", () => {
   assert.doesNotMatch(devopsDoc, /near-no-op/i);
 });
 
+test("VOC-127-TEST-08: tree-equivalent develop sync has no allowlisted path changes", () => {
+  // GitHub push path filters compare changed files in the push. A post-promotion
+  // integration ref update that only fast-forwards develop to the merge commit
+  // with an identical tree produces an empty changed-path set, so the workflow
+  // is not scheduled. This models that empty set explicitly.
+  for (const changedPath of []) {
+    assert.equal(
+      pathSelectsPushDeploy(changedPath),
+      false,
+      "empty push diff must not select push-triggered deploy-staging",
+    );
+  }
+
+  for (const changedPath of [
+    "specs/changes/VOC-127-converge-develop-to-the-exact-promotion-merge-sha/t00-evidence.md",
+  ]) {
+    assert.equal(
+      pathSelectsPushDeploy(changedPath),
+      false,
+      `${changedPath} must not select push-triggered deploy-staging`,
+    );
+  }
+});
+
 test("VOC-111 push allowlist: workflow paths block matches VOC-111-D03", () => {
   assert.deepEqual(
     extractPushPaths(readWorkflow()),

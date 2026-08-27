@@ -171,7 +171,8 @@ satisfy the original acceptance criteria still requires a new issue and plan.
 - `develop` is the integrated staging state; successful merges deploy to staging
   only after staging automation exists and is validated.
 - Release pull requests promote `develop` to `main` with an identifiable release
-  merge commit.
+  merge commit. After that merge succeeds, automation advances `develop` to the
+  same exact merge SHA before the release audit closes.
 - `main` is production-ready and is the only production deployment source.
 - Low-risk, reversible R0-R1 production releases may proceed automatically after
   every applicable release gate passes. An R2 release may also proceed automatically

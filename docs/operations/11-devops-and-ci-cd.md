@@ -109,7 +109,12 @@ repository-managed recovery path dispatches the genuine governance, validation,
 and path-required deployment workflows for an immutable SHA, waits only for
 successful terminal evidence, and times out fail-closed. Its hourly wake repairs
 a stranded current `develop` tip without duplicating already-successful runs;
-`reconcile-release` re-enters the same promotion recovery path idempotently.
+`reconcile-release` re-enters the same promotion recovery path idempotently,
+including bind-and-sync of `develop` to the exact promotion merge SHA when the
+promotion PR is already merged but integration has not yet converged. A
+tree-equivalent post-promotion integration ref update does not schedule
+`deploy-staging.yml` because GitHub's push path filter sees no allowlisted file
+changes.
 Immediate post-merge recovery is scoped to governed `agent/` task branches.
 Other ways of advancing `develop` are covered by the hourly exact-tip wake.
 For bounded operator recovery of the current integration tip, dispatch
