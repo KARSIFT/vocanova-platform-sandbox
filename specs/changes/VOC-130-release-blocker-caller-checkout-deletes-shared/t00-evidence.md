@@ -48,16 +48,71 @@ data, complete CI logs, or App token values.
 
 ## Changed surfaces (implementation)
 
-Pending implementation. Record the exact fixture files mirrored from
-`8ce2b77a09a729e458a9f4cbea1ca26eb114d398`, every live pin assertion
-advanced from `863fc1f…`, any live workflow edit required by
-`VOC-130-DEP-07`, and the commands actually run.
+**Infrastructure (`KARSIFT/karsift-ai-infra`):** already merged as
+`8ce2b77a09a729e458a9f4cbea1ca26eb114d398` (PR #165). This task does not
+change infrastructure.
 
-## Validation commands (implementation)
+**Caller (`vocanova-platform-sandbox`):**
 
-Pending implementation. Expected commands are listed in
-`implementation-plan.md`. Record exact commands and results here; do not
-treat a missing suite as a pass.
+- `tooling/governance/fixtures/karsift-ai-infra/.github/workflows/release.yml`
+  mirrored from infra #165 with `Restore shared lifecycle policy after caller
+  checkout` in both `identify` and `converge`.
+- `tooling/governance/fixtures/karsift-ai-infra/tests/test_release_policy.py`
+  mirrored from infra #165, including
+  `test_caller_checkout_rehydrates_shared_policy_before_lifecycle_helpers`.
+- `tooling/governance/fixtures/karsift-ai-infra/PINNED_SHA.txt` set to
+  `8ce2b77a09a729e458a9f4cbea1ca26eb114d398`.
+- `tooling/governance/fixtures/karsift-ai-infra/README.md` current-state pin
+  paragraph advanced to #165 and documents the post-caller-checkout restore.
+- `tooling/governance/tests/test_voc130_shared_policy_restore.py` added for pin,
+  restore ordering, #164 contract preservation, and VOC-130 carrier identity.
+- Caller governance pin literals and foundation tests advanced from
+  `863fc1f…` to `8ce2b77…`.
+- Live `.github/workflows/pipeline.yml` unchanged (`VOC-130-DEP-07` expected
+  no-op; caller already dispatches `release.yml@main`).
+
+**Non-consumption:** unrelated #165 files outside the caller fixture subset were
+not copied merely to force the pin.
+
+## Shared-infra carrier and fixture pin
+
+| Item | Value |
+|------|-------|
+| Coordinated infra PR | KARSIFT/karsift-ai-infra#165 (already merged) |
+| Exact infra merge SHA | `8ce2b77a09a729e458a9f4cbea1ca26eb114d398` |
+| Pin applicable? | **yes** |
+| Pin must equal | `8ce2b77a09a729e458a9f4cbea1ca26eb114d398` |
+| Pin must not equal | `863fc1f35b1d35e4981a59166b0e939be1a2b681` |
+| `PINNED_SHA.txt` | `8ce2b77a09a729e458a9f4cbea1ca26eb114d398` |
+| Bootstrap used? | **no** |
+| Snapshot-gap task added? | **no** |
+| VOC-129 #1046 re-implemented? | **no** |
+
+## Validation commands and results
+
+```bash
+bash scripts/governance/validate-governance.sh
+bash scripts/governance/classify-change-risk.sh
+python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'
+python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'
+node scripts/foundation/voc097-fixture-matrix.test.mjs
+node scripts/foundation/voc104-ready-for-review-reuse.test.mjs
+node scripts/foundation/voc108-authoritative-lifecycle.test.mjs
+python3 -m unittest tooling.governance.tests.test_voc130_shared_policy_restore
+git diff --check
+```
+
+| Command | Result |
+|---------|--------|
+| `validate-governance.sh` | pass |
+| `classify-change-risk.sh` | pass (path floor only; no PR declaration in local run) |
+| caller governance unittest suite | pass (230 tests) |
+| fixture unittest suite | pass (379 tests) |
+| `voc097-fixture-matrix.test.mjs` | pass (5 tests) |
+| `voc104-ready-for-review-reuse.test.mjs` | pass |
+| `voc108-authoritative-lifecycle.test.mjs` | pass (5 tests) |
+| `test_voc130_shared_policy_restore` | pass (9 tests) |
+| `git diff --check` | pass |
 
 ## Independent verification (implementation)
 

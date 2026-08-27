@@ -39,7 +39,7 @@ class Voc121ImplementFixtureTests(unittest.TestCase):
         )
 
     def test_fixture_pin_matches_reviewed_infrastructure_merge(self):
-        expected = "863fc1f35b1d35e4981a59166b0e939be1a2b681"
+        expected = "8ce2b77a09a729e458a9f4cbea1ca26eb114d398"
         self.assertEqual(self.pin, expected)
         self.assertIn(expected, self.readme)
         self.assertNotIn("VOC-121-D10 bootstrap", self.readme)
