@@ -3,7 +3,7 @@ id: VOC-136
 slug: complete-infra-167-caller-pin-with-exhaustive
 title: Complete infra
 type: infrastructure
-status: draft
+status: adopted
 risk: R4
 planned_implementation_risk_floor: "R4. This package consumes already-merged KARSIFT/karsift-ai-infra#167\
   \ by pinning caller tooling/governance fixtures, tests, and pin assertions to exact\
@@ -44,7 +44,8 @@ requirement_source: 'GitHub issue #1076 (Complete infra #167 caller pin with exh
   cherry-pick, compose, or redispatch PR #1051, #1056, #1065, #1070, or #1075 or tasks
   VOC-132 through VOC-135. Pin target is b263c0c110591cc798b89277dfc35542abb1597b.
   This draft package does not adopt or authorize itself.'
-requirement_approval_status: not-approved
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: Protected comparison anchor for the eight no-change paths is b9e74fc2db4691c48c637639b265d527de9f4505.
   Issue-creation develop was 5044d62f6f35069412e8ffcf80a0682e7847d1c1. Implementation
@@ -58,8 +59,8 @@ owners:
     governed decision)
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: 'none-intentional for application runtime. This package consumes
   the already merged karsift-ai-infra#167 immutable PR-context validation contract
@@ -305,12 +306,12 @@ affected_areas:
 - scripts/foundation/voc108-authoritative-lifecycle.test.mjs
 - specs/changes/VOC-136-complete-infra-167-caller-pin-with-exhaustive/
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: not-authorized
+  status: authorized
   target_branch: develop
   pull_request: null
-  authority_issue: null
+  authority_issue: 1078
 release:
   required: true
   mode: not-authorized-by-this-package
@@ -321,7 +322,7 @@ release:
   rollback_required: true
 ehr: not-triggered
 standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
-blocking_reasons: pending-adoption-and-implementation-authorization
+blocking_reasons: none - adopted and implementation-authorized
 artifacts:
   readme: README.md
   specification: specification.md
@@ -333,6 +334,27 @@ artifacts:
   release_plan: release-plan.md
 production_deployment: disabled
 autonomous_production_release: enabled
-repository_adoption_status: not-adopted
+repository_adoption_status: adopted
 implementation_authority_before_adoption: false
-implementation_authority_status: not-authorized
+implementation_authority_status: authorized
+approved_candidate_sha: 84ed7fae674317fe556942477a9450f723f3b098
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1077#issuecomment-5444601635
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-136-DEP-00
+- VOC-136-DEP-01
+- VOC-136-DEP-02
+- VOC-136-DEP-03
+- VOC-136-DEP-04
+- VOC-136-DEP-05
+- VOC-136-DEP-06
+- VOC-136-DEP-08
+- VOC-136-DEP-09
+- VOC-136-DEP-10
+- VOC-136-DEP-11
+- VOC-136-DEP-12
+- VOC-136-DEP-13
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #1077 at 84ed7fae674317fe556942477a9450f723f3b098'
+adoption_pr: 1077
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1077
