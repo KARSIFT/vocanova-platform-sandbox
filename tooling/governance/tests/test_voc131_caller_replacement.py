@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import subprocess
 import unittest
 from pathlib import Path
 
-from voc080_fixtures import FIXTURE_INFRA_ROOT, read_fixture
+from voc080_fixtures import read_fixture
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -21,6 +22,17 @@ VOC112_FIXTURES = (
     "scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json",
     "scripts/foundation/fixtures/voc112-skill-discovery-evidence.json",
 )
+# SHA-256 digests of the two mirrored files at infra merge #165
+# (8ce2b77a09a729e458a9f4cbea1ca26eb114d398). In-repo proof avoids depending
+# on an external karsift-ai-infra checkout at test time.
+INFRA_165_FILE_SHA256 = {
+    ".github/workflows/release.yml": (
+        "fd11e45f999d26c9e009eb0d40c67c7a644ed2c8dd721a29b98c1fea4e790f08"
+    ),
+    "tests/test_release_policy.py": (
+        "082c67fb26f221cf6e44e07364915f77bb4aee10b46e5b03be9c2d57c33a1e07"
+    ),
+}
 MAX_DISPATCH_INPUTS = 25
 
 
@@ -91,25 +103,16 @@ class Voc131CallerReplacementTests(unittest.TestCase):
         self.assertNotEqual(self.pin, STALE_PIN_164)
 
     def test_fixture_release_and_policy_tests_are_byte_identical_to_infra_merge(self):
-        for relative in (
-            ".github/workflows/release.yml",
-            "tests/test_release_policy.py",
-        ):
+        for relative, expected_sha256 in INFRA_165_FILE_SHA256.items():
             fixture_bytes = (FIXTURE_ROOT / relative).read_bytes()
-            infra_result = subprocess.run(
-                [
-                    "git",
-                    "show",
-                    f"{AUTHORITATIVE_PIN}:{relative}",
-                ],
-                cwd="/tmp/karsift-fetch",
-                capture_output=True,
-                check=True,
-            )
+            digest = hashlib.sha256(fixture_bytes).hexdigest()
             self.assertEqual(
-                fixture_bytes,
-                infra_result.stdout,
-                f"fixture {relative} differs from infra merge {AUTHORITATIVE_PIN}",
+                digest,
+                expected_sha256,
+                (
+                    f"fixture {relative} sha256 {digest} differs from infra "
+                    f"merge {AUTHORITATIVE_PIN} expected {expected_sha256}"
+                ),
             )
 
     def test_fixture_restore_steps_precede_lifecycle_helpers_in_both_jobs(self):

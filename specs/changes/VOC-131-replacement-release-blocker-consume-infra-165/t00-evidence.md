@@ -53,7 +53,7 @@ data, complete CI logs, or App token values.
 | `existing_pr_number` | remains implement-only |
 | VOC-129 | do not re-implement #1046; do not manufacture a VOC-129 completion marker; promote through repaired `release.yml@main` / `reconcile-release` |
 | VOC-130 | do not retry #1049 / #1051; do not manufacture a VOC-130 completion marker; close as superseded after this replacement promotes |
-| Attempt | VOC-131-T00 attempt `1` on this carrier |
+| Attempt | VOC-131-T00 attempt `2` on this carrier (remediation after review of `bf8056e…`) |
 | `roles.yml` | unchanged |
 | OpenAI | not authorized |
 | Snapshot-the-gap task? | **no** — forbidden (`karsift-ai-infra#15`) |
@@ -68,7 +68,7 @@ data, complete CI logs, or App token values.
 | `tooling/governance/fixtures/karsift-ai-infra/.github/workflows/release.yml` | byte-identical copy from infra #165 merge |
 | `tooling/governance/fixtures/karsift-ai-infra/tests/test_release_policy.py` | byte-identical copy from infra #165 merge |
 | `tooling/governance/fixtures/karsift-ai-infra/README.md` | current-state pin paragraph for VOC-131-T00 and post-caller-checkout restore |
-| `tooling/governance/tests/test_voc131_caller_replacement.py` | new deterministic regressions for pin, restore ordering, VOC-112 identity, carrier constraints |
+| `tooling/governance/tests/test_voc131_caller_replacement.py` | new deterministic regressions for pin, restore ordering, VOC-112 identity, carrier constraints; in-repo SHA-256 digests prove byte-identity to infra #165 without an external checkout |
 | `tooling/governance/tests/test_voc121_implement_policy.py` | live pin literal advanced to `8ce2b77…` |
 | `tooling/governance/tests/test_voc122_implement_policy.py` | live pin literal advanced to `8ce2b77…` |
 | `tooling/governance/tests/test_voc124_implement_policy.py` | live pin literal advanced to `8ce2b77…` |
@@ -82,11 +82,22 @@ data, complete CI logs, or App token values.
 | `.github/workflows/pipeline.yml` | no edit — caller already dispatches `release.yml@main` |
 | `scripts/foundation/fixtures/voc112-*.json` | not modified |
 | `AGENTS.md`, navigator skill | not modified |
+| `scripts/foundation/voc112-navigation-benchmark.test.mjs` | not modified (attempt-1 provenance weakening reverted) |
 
 Exact comparison of every other fixture path shared with infra merge
 `8ce2b77a09a729e458a9f4cbea1ca26eb114d398` found no additional byte drift
 beyond `release.yml`, `test_release_policy.py`, and caller-local README /
 CHANGELOG commentary.
+
+## Remediation (attempt 2)
+
+Independent review of `bf8056e4329f640dd8843094df7a76a7401880bd` blocked on:
+
+1. byte-identity proof that depended on `/tmp/karsift-fetch` instead of an
+   in-repo deterministic check — fixed by comparing fixture file SHA-256
+   digests to constants recorded for infra merge `8ce2b77…`;
+2. out-of-scope weakening of `voc112-navigation-benchmark.test.mjs` — reverted
+   to the carrier `develop` base fail-closed `local` provenance behavior.
 
 ## Validation commands (implementation)
 
@@ -104,8 +115,8 @@ python3 -m unittest tooling.governance.tests.test_voc131_caller_replacement
 
 Record exact pass/fail output below after the workflow runs validation.
 
-| Command | Result |
-|---------|--------|
+| Command | Result (attempt 2 remediation) |
+|---------|--------------------------------|
 | `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | OK (231 tests) |
 | `python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'` | OK (379 tests) |
 | `node scripts/foundation/voc097-fixture-matrix.test.mjs` | pass 5 |
