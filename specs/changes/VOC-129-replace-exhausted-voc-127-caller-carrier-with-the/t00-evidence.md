@@ -41,6 +41,7 @@ data, complete CI logs, or App token values.
 | #1041 | supersede after the governed replacement is promoted; do not merge |
 | VOC-127 #1039 / #1035 | close only after promotion, with audit comments naming the VOC-129 merge; no VOC-127 completion marker bound to #1041 |
 | Attempt | VOC-129-T00 attempt `1` on this carrier; do not dispatch VOC-127 as attempt `3` |
+| Attempt 2 remediation | VOC-112 `subject_revision` bound to published head `f9d11e23…` (not parent `8f3ad451…`) so `pr-ancestry` provenance passes when `AGENTS.md` and VOC-112 fixtures change together |
 | `roles.yml` | unchanged |
 | OpenAI | not authorized |
 | Snapshot-the-gap task? | **no** — forbidden (`karsift-ai-infra#15`) |
@@ -104,6 +105,7 @@ node scripts/foundation/voc111-deploy-staging-paths.test.mjs
 node scripts/foundation/voc097-fixture-matrix.test.mjs
 node scripts/foundation/voc104-ready-for-review-reuse.test.mjs
 node scripts/foundation/voc108-authoritative-lifecycle.test.mjs
+node scripts/foundation/voc112-navigation-benchmark.test.mjs
 python3 -m unittest tooling.governance.tests.test_voc129_caller_replacement
 git diff --check
 ```
@@ -118,6 +120,7 @@ git diff --check
 | `voc097-fixture-matrix.test.mjs` | pass |
 | `voc104-ready-for-review-reuse.test.mjs` | pass |
 | `voc108-authoritative-lifecycle.test.mjs` | pass (5 tests) |
+| `voc112-navigation-benchmark.test.mjs` | pass (13 tests; includes `pr-ancestry` provenance) |
 | `test_voc129_caller_replacement` | pass (8 tests) |
 | `git diff --check` | pass |
 
