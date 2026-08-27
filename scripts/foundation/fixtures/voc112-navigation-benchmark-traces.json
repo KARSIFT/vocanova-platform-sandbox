@@ -1,11 +1,11 @@
 {
   "schema_version": 2,
   "capture_kind": "real-agent-structured-trace",
-  "subject_revision": "5ab8328ca7bb1fcf4e70e1b728ef07dcfa1b5cb7",
+  "subject_revision": "68b548704d9183655a415639393969bfd9a46180",
   "recorded_at": "2026-08-23T22:37:28.112Z",
   "source_hashes": {
     "navigator_skill_sha256": "b58be5905c7f8027c4f28423d2033459698209aecbde93996bdbeffb05fadbce",
-    "agents_sha256": "5ba216ffcfcd1797c5da661226573ae12ef204ee8a7d63de2b118a6e4cb0806f"
+    "agents_sha256": "7bd3bf3e0de41800c586f4e2620bf647588e05aca746dd11a503281ebe6fef1b"
   },
   "runtime": {
     "name": "codex",

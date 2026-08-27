@@ -147,7 +147,8 @@ review `FAIL` or CI failure. Before `remediate.yml` can dispatch the bounded
 implementer retry, it reads the task's live-evidence contract and exact task
 stanza from an immutable checkout of the caller head. A valid `operator` or
 `live-actions` contract produces a sanitized, deduplicated operator escalation
-instead of an implementation dispatch. Missing, malformed, unreadable, or
+instead of an implementation dispatch. Valid `operator` or `live-actions` contracts suppress `implement.yml`
+dispatch for review `FAIL` and CI failure. Missing, malformed, unreadable, or
 conflicting ownership metadata fails closed in the same lane. Ordinary tasks
 (no contract and no ownership marker) retain the existing two-attempt behavior;
 stale runs, waiting verdicts, and reviewer-infrastructure failures retain their
@@ -354,7 +355,7 @@ A qualifying publisher record binds its exact pipeline run ID as well as the bas
 package/task identity, preventing evidence from different base revisions from being combined.
 Reuse also requires GitHub's authenticated `referenced_workflows` metadata to show that the
 eligibility helper, CI, task review, plan review, and merge gate all resolved to one identical
-shared-infrastructure commit in both runs. A mutable `@main` policy change therefore forces the
+authenticated shared-infra SHA in both runs. A mutable `@main` policy change therefore forces the
 full path even when the application base/head did not change. Merge-gate repeats this revision
 comparison independently before it can authorize merge.
 A separate read-only `verify-ready-for-review-reuse.yml` workflow validates controlled live proof
@@ -365,7 +366,7 @@ workflow-controlled `decide (ready_for_review)` job marker. If GitHub has cleare
 `pull_requests` array, the verifier never infers ownership from a matching branch/head alone. A
 prior run is admitted only when an App-authored review comment on that exact PR binds its run ID,
 base/head, and package/task identity. Before optimized auto-merge, merge-gate also publishes one
-App-authored transition attestation binding repository, PR number, branch, base/head, ready run,
+App-authored pre-merge record binding repository, PR number, branch, base/head, ready run,
 selected prior run, and shared-policy SHA; the post-merge verifier requires that unique record.
 The verifier also recomputes the latest eligible prior run strictly before the ready run and
 requires it to equal the declared prior run ID, so proof cannot substitute a different valid run.
@@ -408,11 +409,11 @@ Adoption starts the first task automatically. The adopted roster records an expl
 `depends_on` edge from every later task to its predecessor. `auto-advance.yml` releases the next
 task only after one valid App-authored completion marker proves the preceding task's exact reviewed
 caller PR merged. The issue-close event is only a wake-up hint; closed state alone cannot advance.
-For an ordinary next task, it preserves the existing deterministic-branch guard and dispatches
-`implement.yml` attempt 1. For a task with a valid operator/live-actions contract at
-`<package>/.karsift/live-evidence/<task_id>.yaml`, it does not execute the general implementer:
-a separate clean App-scoped job creates or repairs one deterministic draft evidence-carrier PR
-and one sanitized waiting marker. The task's own `tasks.md` stanza may declare the exact secondary
+For ordinary implementation tasks it dispatches `implement.yml` attempt 1. When the next roster
+task has a valid `operator` or `live-actions` contract at
+`<package>/.karsift/live-evidence/<task_id>.yaml`, auto-advance instead prepares a deterministic
+draft evidence-carrier PR and posts one sanitized waiting marker without executing the general
+implementer. A separate clean App-scoped job creates or repairs that carrier on re-entry. The task's own `tasks.md` stanza may declare the exact secondary
 expectation marker `- Automation ownership: operator` or
 `- Automation ownership: live-actions`; a missing required contract, malformed contract, invalid
 or duplicate marker, or marker/contract conflict fails closed. Narrative prose is never parsed as

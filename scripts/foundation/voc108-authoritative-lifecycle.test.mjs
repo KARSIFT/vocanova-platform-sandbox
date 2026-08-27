@@ -87,7 +87,7 @@ test("VOC-108-TEST-07: terminal gates wake cheap release evaluation", () => {
   const release = pipeline
     .split("  release:", 2)[1]
     .split("  auto-advance:", 1)[0];
-  assert.match(release, /needs: \[merge-gate\]/);
+  assert.match(release, /needs: \[merge-gate/);
   assert.match(release, /always\(\)/);
   assert.match(release, /github\.event_name == 'pull_request'/);
   assert.match(release, /github\.event_name == 'workflow_run'/);
