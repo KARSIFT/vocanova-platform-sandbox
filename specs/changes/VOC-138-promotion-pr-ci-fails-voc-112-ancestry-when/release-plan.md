@@ -61,12 +61,14 @@ engineering-workflow gates. Required evidence:
 1. Exact-SHA independent verification for the infrastructure PR and the
    caller implementation PR. The implementer must not approve or merge its
    own work. The independent-review comment must bind the live PR head
-   exactly and must explicitly evaluate the promotion missing-subject case,
+   exactly and must explicitly evaluate deterministic authenticated promotion
+   classification independent of subject availability,
    ordinary `pr-ancestry` retention, hash/SHA negatives, no-fetch
    constraint, and recovery "do not rerun doomed job" behavior. Merge-gate
    must reject any mismatch.
-2. Deterministic proof that a `main` <- `develop` promotion with an
-   unreachable subject selects `pr-validation` and keeps exact PR SHAs.
+2. Deterministic proof that an authenticated same-repository `main` <-
+   `develop` promotion selects `pr-validation` independent of subject
+   availability and keeps exact PR SHAs.
 3. Deterministic proof that `VOC-112-TEST-12` and `VOC-112-TEST-13` pass
    under that mode.
 4. Deterministic proof that ordinary fixture-changing PRs remain

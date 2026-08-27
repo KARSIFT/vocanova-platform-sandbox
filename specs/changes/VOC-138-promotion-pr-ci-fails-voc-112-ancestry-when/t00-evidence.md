@@ -50,7 +50,7 @@ constraint, and recovery "do not rerun doomed job" behavior before merge.
 | Carrier | new VOC-138 branch/PR from current `develop`; not a rewrite of PR #1090 |
 | Infra | open a new independently reviewed `KARSIFT/karsift-ai-infra` PR; pin its exact merge; do not freeze defective #167 |
 | Promotion identification | explicit signal from reusable `ci.yml` only for same-repository `main` <- `develop` |
-| Promotion provenance | unreachable subject → `pr-validation` with exact PR SHAs; do not use `--squash-safe-push` for the required PR check |
+| Promotion provenance | authenticated promotion pair → deterministic `pr-validation` with exact PR SHAs regardless of subject availability; do not use `--squash-safe-push` for the required PR check |
 | Ordinary PRs | fixture add/modify/delete stays `pr-ancestry`; missing subject still fail-closed |
 | Negatives | tampered merge-base/current hashes and missing/malformed PR SHAs still fail closed |
 | Hydration | **forbidden** — no `git fetch`, hydrate helper, provenance-mode wrapper, or skip |

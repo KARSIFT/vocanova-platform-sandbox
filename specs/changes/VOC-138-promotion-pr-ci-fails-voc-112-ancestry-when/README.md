@@ -55,10 +55,11 @@ failure. Workflow-dispatch recovery passes only because it takes the non-PR
 Use one largest-safe coherent task and one caller implementation PR,
 coordinated with one infrastructure PR:
 
-1. Make same-repository `main` <- `develop` promotion PR validation use the
-   existing merge-base/hash-bound `pr-validation` contract when the recorded
-   subject commit object cannot be resolved. Keep supplying exact PR base/head
-   SHAs. Do not switch the promotion PR to `--squash-safe-push`.
+1. Make authenticated same-repository `main` <- `develop` promotion PR
+   validation deterministically use the existing merge-base/hash-bound
+   `pr-validation` contract, independent of subject-object availability. Keep
+   supplying exact PR base/head SHAs. Do not switch the promotion PR to
+   `--squash-safe-push`.
 2. Do not fetch or hydrate evidence commits. Do not weaken ordinary
    (non-promotion) PR `pr-ancestry` fail-closed behavior when the capture
    fixture is added, modified, or deleted.

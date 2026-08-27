@@ -1,6 +1,6 @@
 # VOC-138 — Acceptance Criteria
 
-## VOC-138-AC-00 — Promotion PRs with an unreachable capture subject use pr-validation
+## VOC-138-AC-00 — Authenticated promotion PRs deterministically use pr-validation
 
 - Requirement source: `VOC-138-D01`, `VOC-138-D02`, `VOC-138-D05`
 - Tasks: `VOC-138-T00`

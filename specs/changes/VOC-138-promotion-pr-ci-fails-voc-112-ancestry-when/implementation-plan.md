@@ -54,7 +54,7 @@
 | Caller `tooling/governance/tests/` | extend as needed | Pin assertions and any caller-owned complete-diff coverage; do not exclude `tooling/governance/tests/` from the scan |
 | Eight VOC-112 no-change paths | **do not modify** | Must remain byte-identical to `b9e74fc2…` |
 | `docs/operations/11-devops-and-ci-cd.md` | modify | Replace the promotion-PR `squash-safe-push` claim with the `pr-validation` contract |
-| `docs/development/agent-skills.md` | modify | State that promotion PRs with an unreachable subject use merge-base/hash-bound `pr-validation`; ordinary fixture-changing PRs still require captured-commit ancestry |
+| `docs/development/agent-skills.md` | modify | State that authenticated promotion PRs deterministically use merge-base/hash-bound `pr-validation` regardless of subject availability; ordinary fixture-changing PRs still require captured-commit ancestry |
 | `specs/changes/VOC-135-…/` and `VOC-136-…/` and `VOC-137-…/` | **do not modify** | Audit evidence |
 | `.github/workflows/pipeline.yml` | modify if required by the proven dispatch contract | Resolve/pass immutable promotion PR metadata to recovery CI so it runs `pr-validation`; never use generic non-PR squash-safe mode as equivalent proof |
 | `specs/changes/VOC-138-.../t00-evidence.md` | update | Record implementation PR base, new infra merge, mode-selection change, recovery change, validation after commit, feasible exact-head binding contract. Do not write the live implementation-head SHA into this file as a self-referential required value |
@@ -111,8 +111,8 @@ as acceptance.
 Independent verifier (exact reviewed caller SHA, and the infra PR SHA) should
 confirm:
 
-- promotion PRs with an unreachable subject select `pr-validation` and keep
-  exact PR SHAs;
+- authenticated promotion PRs deterministically select `pr-validation`,
+  independent of subject availability, and keep exact PR SHAs;
 - `VOC-112-TEST-12` and `VOC-112-TEST-13` pass under that mode without
   fetching the subject;
 - ordinary fixture-changing PRs remain `pr-ancestry` fail-closed;
