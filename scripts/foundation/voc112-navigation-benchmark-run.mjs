@@ -24,65 +24,6 @@ const discoveryPath = path.join(
   "voc112-skill-discovery-evidence.json",
 );
 const navigatorRelativePath = ".agents/skills/vocanova-repo-navigator/SKILL.md";
-const CAPTURE_FIXTURES = [
-  "voc112-navigation-benchmark-traces.json",
-  "voc112-skill-discovery-evidence.json",
-];
-
-function readCapturedRevisions() {
-  const revisions = new Set();
-  for (const fixtureName of CAPTURE_FIXTURES) {
-    const fixture = JSON.parse(
-      readFileSync(path.join(fixturesDirectory, fixtureName), "utf8"),
-    );
-    if (typeof fixture.subject_revision === "string") {
-      revisions.add(fixture.subject_revision);
-    }
-    for (const row of fixture.discoveries ?? []) {
-      if (typeof row.subject_revision === "string") {
-        revisions.add(row.subject_revision);
-      }
-    }
-  }
-  return [...revisions];
-}
-
-function ensureCapturedRevisionObjectsForCi() {
-  const provenanceMode = process.env.VOC112_CAPTURE_PROVENANCE_MODE ?? "local";
-  if (provenanceMode !== "local" || !process.env.GITHUB_ACTIONS) {
-    return;
-  }
-  const isShallow =
-    execFileSync("git", ["rev-parse", "--is-shallow-repository"], {
-      cwd: repositoryRoot,
-      encoding: "utf8",
-    }).trim() === "true";
-  if (isShallow) {
-    return;
-  }
-  for (const revision of readCapturedRevisions()) {
-    if (!/^[a-f0-9]{40}$/.test(revision)) {
-      continue;
-    }
-    const exists =
-      spawnSync("git", ["cat-file", "-e", `${revision}^{commit}`], {
-        cwd: repositoryRoot,
-      }).status === 0;
-    if (exists) {
-      continue;
-    }
-    const fetch = spawnSync(
-      "git",
-      ["fetch", "--depth", "1", "origin", revision],
-      { cwd: repositoryRoot, encoding: "utf8" },
-    );
-    if (fetch.status !== 0) {
-      throw new Error(
-        `unable to fetch VOC-112 capture revision ${revision}: ${fetch.stderr || fetch.stdout}`,
-      );
-    }
-  }
-}
 
 export const BENCHMARK_QUESTIONS = [
   {
@@ -582,6 +523,4 @@ function runCli(action) {
 // credentialed capture merely because that parent process has extra argv data.
 if (process.argv[1] && path.resolve(process.argv[1]) === modulePath) {
   runCli(process.argv[2]);
-} else {
-  ensureCapturedRevisionObjectsForCi();
 }

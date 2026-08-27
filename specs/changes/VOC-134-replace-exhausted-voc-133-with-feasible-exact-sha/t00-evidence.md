@@ -92,7 +92,7 @@ Post-merge / root-issue audit may record the reviewed head and merge SHA.
 | VOC-131 | do not retry #1056; do not manufacture a VOC-131 completion marker; close as superseded after this replacement promotes |
 | VOC-132 | do not redispatch #1059; do not manufacture a VOC-132 completion marker; do not silently change VOC-132's adopted #165 pin; close as superseded after this replacement promotes |
 | VOC-133 | do not redispatch #1063; do not reuse #1065; do not manufacture a VOC-133 completion marker; do not silently rewrite VOC-133 in place; close as superseded after this replacement promotes |
-| Attempt | VOC-134-T00 attempt `1` on this carrier |
+| Attempt | VOC-134-T00 attempt `2` on this carrier (remediation: remove attempt-1 capture-commit fetch inlined in `voc112-navigation-benchmark-run.mjs`) |
 | `roles.yml` | unchanged |
 | OpenAI | not authorized |
 | Snapshot-the-gap task? | **no** — forbidden (`karsift-ai-infra#15`) |
@@ -154,12 +154,17 @@ Protected-path equality against immutable carrier base
 - all five VOC-112 no-change paths byte-identical; absent from
   `git diff b9e74fc2db4691c48c637639b265d527de9f4505`
 - `package.json` byte-identical; absent from that diff
-- no capture-commit fetch helper, provenance-mode wrapper, or evidence-stamping
-  helper added
+- `scripts/foundation/voc112-navigation-benchmark-run.mjs` byte-identical to
+  the carrier base; absent from that diff (attempt 1 incorrectly added an
+  import-time `git fetch` helper; attempt 2 removes it)
+- no `scripts/foundation/ensure-voc112-capture-commits.mjs`, no inlined
+  capture-commit fetch in modules imported by
+  `voc112-navigation-benchmark.test.mjs`, no provenance-mode wrapper, and no
+  evidence-stamping helper added
 
 ## Validation commands (implementation)
 
-Recorded after implementation (exact commands and exit codes):
+Recorded after attempt-2 remediation (exact commands and exit codes):
 
 ```text
 python3 -m unittest discover -s tooling/governance/tests -p 'test_voc134*.py'  → exit 0 (15 tests)
@@ -171,6 +176,7 @@ node scripts/foundation/voc108-authoritative-lifecycle.test.mjs  → exit 0
 bash scripts/governance/validate-governance.sh  → exit 0
 bash scripts/governance/classify-change-risk.sh  → exit 0 (path floor R4)
 git diff --check  → exit 0
+git diff b9e74fc2db4691c48c637639b265d527de9f4505 -- scripts/foundation/voc112-navigation-benchmark-run.mjs  → empty (carrier-base identical)
 ```
 
 ## Independent verification (implementation)

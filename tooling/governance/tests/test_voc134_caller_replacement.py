@@ -108,6 +108,25 @@ def assert_commit_exists(sha: str) -> None:
         raise AssertionError(f"commit object does not resolve: {sha}")
 
 
+PROVENANCE_TEST = (
+    REPOSITORY_ROOT / "scripts/foundation/voc112-navigation-benchmark.test.mjs"
+)
+
+CAPTURE_FETCH_FORBIDDEN_PATTERNS = (
+    "ensure-voc112-capture-commits",
+    "ensureCapturedRevision",
+    '["fetch", "--depth"',
+    '"fetch", "--depth"',
+)
+
+
+def local_imports_from_provenance_test() -> list[Path]:
+    text = PROVENANCE_TEST.read_text(encoding="utf-8")
+    imports = re.findall(r'from\s+["\'](\./[^"\']+\.mjs)["\']', text)
+    foundation_dir = PROVENANCE_TEST.parent
+    return [foundation_dir / imp.removeprefix("./") for imp in imports]
+
+
 def paths_in_diff(base_sha: str, *paths: str) -> list[str]:
     completed = subprocess.run(
         ["git", "diff", "--name-only", base_sha],
@@ -330,9 +349,30 @@ class Voc134CallerReplacementTests(unittest.TestCase):
         package_json = (REPOSITORY_ROOT / "package.json").read_text(encoding="utf-8")
         self.assertNotIn("VOC112_CAPTURE_PROVENANCE_MODE", package_json)
         self.assertNotIn("ensure-voc112-capture-commits", package_json)
+        self.assertIn(
+            "node --test scripts/foundation/*.test.mjs",
+            package_json,
+        )
         self.assertFalse(
             (REPOSITORY_ROOT / "scripts/foundation/ensure-voc112-capture-commits.mjs").exists()
         )
+        run_module_changed = paths_in_diff(
+            IMMUTABLE_CARRIER_BASE,
+            "scripts/foundation/voc112-navigation-benchmark-run.mjs",
+        )
+        self.assertEqual(
+            run_module_changed,
+            [],
+            msg="provenance run module must match immutable carrier base",
+        )
+        for module_path in local_imports_from_provenance_test():
+            text = module_path.read_text(encoding="utf-8")
+            for pattern in CAPTURE_FETCH_FORBIDDEN_PATTERNS:
+                self.assertNotIn(
+                    pattern,
+                    text,
+                    msg=f"{module_path.relative_to(REPOSITORY_ROOT)}: {pattern}",
+                )
 
     def test_feasible_exact_revision_evidence_contract(self):
         self.assertIn(IMMUTABLE_CARRIER_BASE, self.evidence)
@@ -349,7 +389,7 @@ class Voc134CallerReplacementTests(unittest.TestCase):
         self.assertIn("not #1051", self.evidence)
         self.assertIn("not #1056", self.evidence)
         self.assertIn("not #1065", self.evidence)
-        self.assertIn("VOC-134-T00 attempt `1`", self.evidence)
+        self.assertIn("VOC-134-T00 attempt `2`", self.evidence)
         self.assertIn("not redispatched #1059", self.evidence)
         self.assertIn("not redispatched #1063", self.evidence)
 
