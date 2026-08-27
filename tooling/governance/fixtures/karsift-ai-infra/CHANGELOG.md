@@ -1,5 +1,39 @@
 # Changelog
 
+## 2026-08-27 — Recover an absent integration ref after promotion
+
+- `reconcile-release` now distinguishes an absent integration ref from an unreadable ref lookup,
+  binds the unique audit-carrier promotion already at the live production tip, and reaches the
+  existing lease-protected create path instead of stopping on the API 404.
+- Both release jobs resolve their caller checkout before touching caller state: normal evaluation
+  still reads integration, while an absent integration ref reads the already-promoted production
+  tree so the audit-bound recovery path remains reachable.
+- Ambiguous carrier identity, a moved production tip, malformed ref data, or other lookup failure
+  remains fail closed with sanitized diagnostics. Deterministic policy coverage protects the missing
+  ref preflight as well as the existing exact-SHA branch-sync runner.
+
+## 2026-08-27 — Converge integration to exact governed production history
+
+- A successful merge-commit promotion now preserves its reviewed `develop → main` PR and merge
+  commit, then advances integration to that exact merge SHA under a lease. Production movement,
+  integration movement, unique integration commits, malformed merge parents, and ambiguous recovery
+  identity all fail closed; interrupted reconciliation is idempotent.
+- Release mutations now serialize globally per production/integration pair. A tree-equivalent
+  post-promotion synchronization does not create a second promotion loop or changed staging path,
+  and the release audit closes only after both refs are identical.
+- Immediately before mutation, release verifies that production is covered by an active,
+  repository-owned, non-bypassable pull-request ruleset whose required checks are strict. GitHub
+  therefore atomically rejects a promotion if production no longer matches the checked base; the
+  workflow also verifies the resulting ordered merge parents before synchronization. The same
+  guard requires at least one concrete required context and protects exceptional task PRs that
+  target production through `merge-gate.yml`.
+- The caller template adds one governed path for intentional production-target tasks. It accepts
+  only the App-authored exact-review completion marker and adopted roster, runs before ordinary
+  release evaluation, skips ineligible issue closures, and supports strict retry.
+- Errors remain bounded codes, App credentials remain environment-only, and the active Cursor model
+  bindings, independent review, risk classification, protected checks, and retry controls are
+  unchanged.
+
 ## 2026-08-25 — Recognize Cursor API-key phrasing without exposing stderr
 
 - Live caller run `32839205119` still published `unspecified` after the bounded
@@ -245,6 +279,16 @@ every past state.
 
 ## implement.yml
 
+- **2026-08-27, post-implementer helper lifetime**: a governed caller task
+  correctly removed the untracked nested `karsift-ai-infra/` checkout to keep
+  it out of caller staging, but the later commit step still tried to copy its
+  validation and source-carrier helpers from that deleted directory. The
+  reusable workflow now preserves those helpers before the unrestricted model
+  runs, treats an absent nested checkout as no infrastructure-source change,
+  and requires a surviving path to resolve to its own distinct Git root rather
+  than inheriting the caller repository. Non-repository and symlink paths fail
+  closed as ambiguous source state.
+  Authorized nested edits retain the existing exact-head bundle path.
 - **2026-07-23, restored to `openai/codex-action`**: once OpenAI API billing
   became available again, after an earlier same-vendor compromise (Claude
   Code CLI for both implementer and reviewer) that this replaced.

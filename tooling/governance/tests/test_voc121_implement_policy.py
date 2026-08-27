@@ -39,7 +39,7 @@ class Voc121ImplementFixtureTests(unittest.TestCase):
         )
 
     def test_fixture_pin_matches_reviewed_infrastructure_merge(self):
-        expected = "863fc1f35b1d35e4981a59166b0e939be1a2b681"
+        expected = "b263c0c110591cc798b89277dfc35542abb1597b"
         self.assertEqual(self.pin, expected)
         self.assertIn(expected, self.readme)
         self.assertNotIn("VOC-121-D10 bootstrap", self.readme)
@@ -57,7 +57,7 @@ class Voc121ImplementFixtureTests(unittest.TestCase):
         self.assertNotIn("permission-workflows: write", publish_job)
 
     def test_fixture_implement_uses_named_ref_source_bundle(self):
-        self.assertIn("implementer_source_carrier.py \\", self.implement)
+        self.assertIn('"$HELPER_DIR/implementer_source_carrier.py"', self.implement)
         self.assertIn("create-bundle \\", self.implement)
         self.assertIn("--output /tmp/implementer-source.bundle", self.implement)
         self.assertNotIn(

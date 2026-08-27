@@ -76,7 +76,7 @@ Post-merge / root-issue audit may record the reviewed head and merge SHA.
 | Drafting-time `test_voc123_source_bundle.py` SHA-256 | `d0f28a862eb04e8cf5ff5ffa13f58749f95e26401c470d8e68f8f9b80f1b7936` (reconfirm from fetched exact merge) |
 | Drafting-time `CHANGELOG.md` SHA-256 | `7cdb3d6c863ccaab15012ef3944aac223d5a4fcc044c4f990955dfd02f70e4ea` (reconfirm from fetched exact merge) |
 | Drafting-time infra README documentation-source SHA-256 | `06bcea7696ff80a59c9bab846061ce7a4c6d8bc175a1d02a2d7eefab0bcf46a3` (do not overwrite caller-owned fixture README) |
-| Immutable carrier-base SHA | expected `b9e74fc2db4691c48c637639b265d527de9f4505`; record at PR creation before any in-scope edit; fail closed if `develop` moved; do not use a moving branch ref after selection |
+| Immutable carrier-base SHA | `b9e74fc2db4691c48c637639b265d527de9f4505` (selected before in-scope edits; develop-at-dispatch `5044d62f6f35069412e8ffcf80a0682e7847d1c1` added only this package's plan/roster commits; eight no-change paths verified identical at both SHAs) |
 | Eight no-change paths | byte-identical to the immutable carrier-base SHA; JSON `subject_revision` remains `f9d11e23…`; provenance `local` mode stays fail-closed; none of the eight paths in the implementation diff; fail—not skip—if the commit or a path cannot resolve |
 | Hydration/bypass prohibition | no capture-commit fetch helper; no hydrate/materialize helper; no provenance-mode wrapper; no import side effect; no environment override; no evidence-stamping helper; no skip; complete caller-diff scan of changed executable paths, not one prohibited filename |
 | Hashed VOC-112 sources | do not edit `AGENTS.md` or `.agents/skills/vocanova-repo-navigator/SKILL.md` |
@@ -101,35 +101,61 @@ Post-merge / root-issue audit may record the reviewed head and merge SHA.
 
 ## Changed surfaces (implementation)
 
-Pending implementation. Record the exact fixture files mirrored from
-`b263c0c110591cc798b89277dfc35542abb1597b` (required:
-`.github/workflows/ci.yml`, `.github/workflows/implement.yml`,
-`.github/workflows/release.yml`, `config/run-app-checks.sh`,
-`config/implementer_nested_checkout.py`, `tests/test_app_check_context.py`,
-`tests/test_release_policy.py`, `tests/test_voc121_implement_policy.py`,
-`tests/test_voc123_source_bundle.py`, and fixture `CHANGELOG.md`), the
-reconfirmed SHA-256 hashes, every live pin assertion advanced from
-`863fc1f…`, the immutable carrier-base SHA actually selected before the first
-in-scope edit, confirmation that all eight no-change paths are absent from
-the diff against that SHA, the complete-diff hydration/bypass scan result,
-any live workflow edit required by `VOC-135-DEP-07`, and the commands
-actually run.
+Mirrored from infrastructure merge `b263c0c110591cc798b89277dfc35542abb1597b`
+(byte-for-byte, SHA-256 reconfirmed):
+
+| Fixture path | SHA-256 |
+|--------------|---------|
+| `.github/workflows/ci.yml` | `0e0d485359d31325bf8b4c41b2047752ac42c6a5139251bd46b03cf7d671a9bb` |
+| `.github/workflows/implement.yml` | `e0612aa46dff58d3c06ff338864af3fa32cc725f151235cbe8b6789a80995d2a` |
+| `.github/workflows/release.yml` | `fd11e45f999d26c9e009eb0d40c67c7a644ed2c8dd721a29b98c1fea4e790f08` |
+| `config/run-app-checks.sh` | `2ee4eaa25788af72146eee1ef9adb8cc9f42f2c4077d24e6aed25b55deddd1b2` |
+| `config/implementer_nested_checkout.py` | `e9190e7d5b1d48e76b0da63409005d27c12a36cbaf713033c3f2d9fa887216a9` |
+| `tests/test_app_check_context.py` | `74b8a0c1bcc00a137801e28888b3e6b78371934c14a99ea8eb34f4e0793bb5e0` |
+| `tests/test_release_policy.py` | `082c67fb26f221cf6e44e07364915f77bb4aee10b46e5b03be9c2d57c33a1e07` |
+| `tests/test_voc121_implement_policy.py` | `78bf3a05829ae76c9571ec5acc6099c49b405f9e5007c34001a50500e6044975` |
+| `tests/test_voc123_source_bundle.py` | `d0f28a862eb04e8cf5ff5ffa13f58749f95e26401c470d8e68f8f9b80f1b7936` |
+| `CHANGELOG.md` | `7cdb3d6c863ccaab15012ef3944aac223d5a4fcc044c4f990955dfd02f70e4ea` |
+
+Also updated:
+
+- `tooling/governance/fixtures/karsift-ai-infra/PINNED_SHA.txt` → `b263c0c…`
+- `tooling/governance/fixtures/karsift-ai-infra/README.md` current-state pin paragraph
+- `tooling/governance/tests/test_voc135_caller_replacement.py` (new regressions)
+- live pin assertions in `scripts/foundation/voc097-fixture-matrix.test.mjs`,
+  `voc104-ready-for-review-reuse.test.mjs`, `voc108-authoritative-lifecycle.test.mjs`,
+  and governance tests that previously hard-coded `863fc1f…`
+
+No live `.github/workflows/pipeline.yml` edit was required (`VOC-135-DEP-07`):
+the caller already dispatches `implement.yml@main`, `release.yml@main`, and
+`ci.yml@main`.
+
+Eight no-change paths: byte-identical to immutable carrier-base SHA
+`b9e74fc2db4691c48c637639b265d527de9f4505`; absent from the implementation
+diff against that SHA. JSON `subject_revision` remains
+`f9d11e232a07c7d7a9c433d02c9267912543ba10`. Complete-diff hydration/bypass
+scan: pass (no capture fetch, hydrate helper, provenance wrapper, or evidence
+mutation under any changed caller executable path).
 
 ## Validation commands (implementation)
 
-Pending implementation. Expected commands are listed in
-`implementation-plan.md`. Record exact commands and results here; do not
-treat a missing suite as a pass. Do not treat a `/tmp` karsift-ai-infra
-checkout as a required comparison source. At minimum record:
+Recorded from the implementation working tree:
 
-- `bash scripts/governance/validate-governance.sh`
-- `bash scripts/governance/classify-change-risk.sh`
-- `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'`
-- `python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'`
-- targeted `voc097`, `voc104`, `voc108`, exact #167 pin/hash tests, immutable
-  carrier-base eight-path boundary tests, the complete-diff hydration/bypass
-  scan, and the `package.json` carrier-base-identity assertion
-- `git diff --check`
+| Command | Result |
+|---------|--------|
+| `bash scripts/governance/validate-governance.sh` | pass |
+| `bash scripts/governance/classify-change-risk.sh` | pass (R4 path floor reported) |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pass (240 tests) |
+| `python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_app_check_context.py'` | pass (9 tests) |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_voc135*.py'` | pass (19 tests) |
+| `node scripts/foundation/voc097-fixture-matrix.test.mjs` | pass |
+| `node scripts/foundation/voc104-ready-for-review-reuse.test.mjs` | pass |
+| `node scripts/foundation/voc108-authoritative-lifecycle.test.mjs` | pass |
+| `git diff --check` | pass |
+
+No `/tmp` karsift-ai-infra checkout was required at test time. Hashes were
+reconfirmed from the untracked workspace nested checkout at
+`b263c0c110591cc798b89277dfc35542abb1597b` before mirroring.
 
 ## Independent verification (implementation)
 

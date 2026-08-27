@@ -1,4 +1,4 @@
-# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106, VOC-108, VOC-115, VOC-117, VOC-121, VOC-122, VOC-123, VOC-126, VOC-129)
+# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106, VOC-108, VOC-115, VOC-117, VOC-121, VOC-122, VOC-123, VOC-126, VOC-129, VOC-135)
 
 These copies are deterministic fixtures for caller-repo policy regressions.
 They mirror `KARSIFT/karsift-ai-infra` at the SHA in `PINNED_SHA.txt` so
@@ -12,7 +12,7 @@ contracts without cloning the infra repository in CI.
 
 They are not a second runtime source of truth. Callers still `uses:`
 `KARSIFT/karsift-ai-infra/...@main`. Update the fixtures when VOC-080-,
-VOC-097-, VOC-102-, VOC-104-, VOC-106-, VOC-108-, VOC-115-, VOC-121-, VOC-122-, VOC-123-, VOC-126-, or VOC-129-related infra contracts change and
+VOC-097-, VOC-102-, VOC-104-, VOC-106-, VOC-108-, VOC-115-, VOC-121-, VOC-122-, VOC-123-, VOC-126-, VOC-129-, or VOC-135-related infra contracts change and
 record the new pin in evidence.
 
 ## package/task defaults (VOC-115)
@@ -204,7 +204,17 @@ infrastructure PR #162 merge
 `60afda3a44fd06b8c00b219771de7112f1aded6e`. VOC-129-T00 advances it to
 infrastructure PR #164 merge
 `863fc1f35b1d35e4981a59166b0e939be1a2b681`; the mirrored source files are
-byte-for-byte copies from that merge's reviewed tree.
+byte-for-byte copies from that merge's reviewed tree. VOC-135-T00 advances it to
+infrastructure PR #167 merge
+`b263c0c110591cc798b89277dfc35542abb1597b`; the mirrored source files include
+the #165 post-caller-checkout restore in both release jobs, the #166
+post-implementer helper-lifetime and nested-checkout contracts, and the #167
+immutable PR-context validation contract. `run-app-checks.sh` validates an exact
+PR base/head pair without fetching evidence; an unchanged capture fixture
+selects `pr-validation`, add/modify/delete selects `pr-ancestry`, reusable CI
+checks out full reachable history (`fetch-depth: 0`), and implementer pre-push
+uses the integration anchor plus live committed HEAD including after
+self-correction.
 
 Recovery metadata reads, exact selected-run reruns, and allowlisted absent-context
 dispatches use narrowly job-scoped `GITHUB_TOKEN` permissions: Actions write plus
