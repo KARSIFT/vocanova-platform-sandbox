@@ -13,7 +13,8 @@ from voc080_fixtures import read_fixture
 REPO_ROOT = Path(__file__).resolve().parents[3]
 CALLER_WORKFLOWS = REPO_ROOT / ".github/workflows"
 FIXTURE_ROOT = REPO_ROOT / "tooling/governance/fixtures/karsift-ai-infra"
-AUTHORITATIVE_PIN = "863fc1f35b1d35e4981a59166b0e939be1a2b681"
+AUTHORITATIVE_PIN = "f3d79177bf8a9abe0dae550f39502165d494c576"
+STALE_PIN_164 = "863fc1f35b1d35e4981a59166b0e939be1a2b681"
 STALE_PIN_163 = "a9df74a63976d5239b84151fd01310835c999e7c"
 PREVIOUS_DEVELOP_PIN = "60afda3a44fd06b8c00b219771de7112f1aded6e"
 MAX_DISPATCH_INPUTS = 25
@@ -55,6 +56,7 @@ class Voc129CallerReplacementTests(unittest.TestCase):
 
     def test_pin_equals_authoritative_infra_merge_and_not_stale_pins(self):
         self.assertEqual(self.pin, AUTHORITATIVE_PIN)
+        self.assertNotEqual(self.pin, STALE_PIN_164)
         self.assertNotEqual(self.pin, STALE_PIN_163)
         self.assertNotEqual(self.pin, PREVIOUS_DEVELOP_PIN)
 

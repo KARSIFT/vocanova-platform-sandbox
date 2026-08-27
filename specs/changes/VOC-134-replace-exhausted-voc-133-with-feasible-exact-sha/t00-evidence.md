@@ -102,33 +102,76 @@ Post-merge / root-issue audit may record the reviewed head and merge SHA.
 
 ## Changed surfaces (implementation)
 
-Pending implementation. Record the exact fixture files mirrored from
-`f3d79177bf8a9abe0dae550f39502165d494c576` (required:
-`.github/workflows/implement.yml`, `.github/workflows/release.yml`,
-`config/implementer_nested_checkout.py`, `tests/test_release_policy.py`,
-`tests/test_voc121_implement_policy.py`, `tests/test_voc123_source_bundle.py`,
-and fixture `CHANGELOG.md`), the reconfirmed SHA-256 hashes, every live pin
-assertion advanced from `863fc1f…`, the immutable carrier-base SHA actually
-selected before the first in-scope edit, confirmation that all five VOC-112
-no-change paths and `package.json` are absent from the diff against that SHA,
-any live workflow edit required by `VOC-134-DEP-07`, and the commands actually
-run.
+Implementation resolved current `develop` to
+`b9e74fc2db4691c48c637639b265d527de9f4505` before any in-scope edit. That SHA
+is the immutable carrier-base constant for VOC-112 no-change and `package.json`
+identity checks (drafting expected `95a779f9e62090f856ed03f389e7ac1d901aaa14`;
+`develop` moved after adoption roster merge #1069).
+
+Mirrored byte-for-byte from infrastructure merge
+`f3d79177bf8a9abe0dae550f39502165d494c576` (#166):
+
+- `tooling/governance/fixtures/karsift-ai-infra/.github/workflows/implement.yml`
+- `tooling/governance/fixtures/karsift-ai-infra/.github/workflows/release.yml`
+- `tooling/governance/fixtures/karsift-ai-infra/config/implementer_nested_checkout.py`
+  (new)
+- `tooling/governance/fixtures/karsift-ai-infra/tests/test_release_policy.py`
+- `tooling/governance/fixtures/karsift-ai-infra/tests/test_voc121_implement_policy.py`
+- `tooling/governance/fixtures/karsift-ai-infra/tests/test_voc123_source_bundle.py`
+- `tooling/governance/fixtures/karsift-ai-infra/CHANGELOG.md`
+- `tooling/governance/fixtures/karsift-ai-infra/PINNED_SHA.txt`
+
+Reconfirmed SHA-256 hashes at implementation (match `VOC-134-D11` drafting-time
+values):
+
+| Fixture path | SHA-256 |
+|--------------|---------|
+| `.github/workflows/implement.yml` | `5e44f6a82cdb127f9716faea56cd226965ab3cf86566bde009af375c205ff03c` |
+| `.github/workflows/release.yml` | `fd11e45f999d26c9e009eb0d40c67c7a644ed2c8dd721a29b98c1fea4e790f08` |
+| `config/implementer_nested_checkout.py` | `e9190e7d5b1d48e76b0da63409005d27c12a36cbaf713033c3f2d9fa887216a9` |
+| `tests/test_release_policy.py` | `082c67fb26f221cf6e44e07364915f77bb4aee10b46e5b03be9c2d57c33a1e07` |
+| `tests/test_voc121_implement_policy.py` | `78bf3a05829ae76c9571ec5acc6099c49b405f9e5007c34001a50500e6044975` |
+| `tests/test_voc123_source_bundle.py` | `d0f28a862eb04e8cf5ff5ffa13f58749f95e26401c470d8e68f8f9b80f1b7936` |
+| `CHANGELOG.md` | `7cdb3d6c863ccaab15012ef3944aac223d5a4fcc044c4f990955dfd02f70e4ea` |
+
+Advanced live pin assertions from `863fc1f…` (#164) to `f3d791…` (#166) in
+`scripts/foundation/voc097-fixture-matrix.test.mjs`,
+`voc104-ready-for-review-reuse.test.mjs`, `voc108-authoritative-lifecycle.test.mjs`,
+and matching `tooling/governance/tests/test_voc12*.py` suites. Added
+`tooling/governance/tests/test_voc134_caller_replacement.py` for restore
+ordering, #166 helper-lifetime / nested-checkout coverage (including
+`nested_checkout_not_directory`), recorded-hash byte identity, immutable
+carrier-base VOC-112 boundary, `package.json` identity, and feasible
+exact-revision evidence contract.
+
+Updated current-state pin paragraph in fixture `README.md`. No live
+`.github/workflows/pipeline.yml` edit (`VOC-134-DEP-07`: caller already uses
+`implement.yml@main` and `release.yml@main`).
+
+Protected-path equality against immutable carrier base
+`b9e74fc2db4691c48c637639b265d527de9f4505`:
+
+- all five VOC-112 no-change paths byte-identical; absent from
+  `git diff b9e74fc2db4691c48c637639b265d527de9f4505`
+- `package.json` byte-identical; absent from that diff
+- no capture-commit fetch helper, provenance-mode wrapper, or evidence-stamping
+  helper added
 
 ## Validation commands (implementation)
 
-Pending implementation. Expected commands are listed in
-`implementation-plan.md`. Record exact commands and results here; do not
-treat a missing suite as a pass. Do not treat a `/tmp` karsift-ai-infra
-checkout as a required comparison source. At minimum record:
+Recorded after implementation (exact commands and exit codes):
 
-- `bash scripts/governance/validate-governance.sh`
-- `bash scripts/governance/classify-change-risk.sh`
-- `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'`
-- `python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'`
-- targeted `voc097`, `voc104`, `voc108`, exact #166 pin/hash tests, immutable
-  carrier-base VOC-112 boundary tests, and the `package.json`
-  carrier-base-identity assertion
-- `git diff --check`
+```text
+python3 -m unittest discover -s tooling/governance/tests -p 'test_voc134*.py'  → exit 0 (15 tests)
+python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'  → exit 0 (236 tests)
+python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'  → exit 0
+node scripts/foundation/voc097-fixture-matrix.test.mjs  → exit 0
+node scripts/foundation/voc104-ready-for-review-reuse.test.mjs  → exit 0
+node scripts/foundation/voc108-authoritative-lifecycle.test.mjs  → exit 0
+bash scripts/governance/validate-governance.sh  → exit 0
+bash scripts/governance/classify-change-risk.sh  → exit 0 (path floor R4)
+git diff --check  → exit 0
+```
 
 ## Independent verification (implementation)
 

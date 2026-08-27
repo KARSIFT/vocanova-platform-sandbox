@@ -204,7 +204,16 @@ infrastructure PR #162 merge
 `60afda3a44fd06b8c00b219771de7112f1aded6e`. VOC-129-T00 advances it to
 infrastructure PR #164 merge
 `863fc1f35b1d35e4981a59166b0e939be1a2b681`; the mirrored source files are
-byte-for-byte copies from that merge's reviewed tree.
+byte-for-byte copies from that merge's reviewed tree. VOC-134-T00 advances it to
+infrastructure PR #166 merge
+`f3d79177bf8a9abe0dae550f39502165d494c576`; the mirrored `implement.yml`,
+`release.yml`, `config/implementer_nested_checkout.py`, and the paired policy
+tests are byte-for-byte copies from that merge's reviewed tree. Both release
+jobs restore shared lifecycle policy after caller checkout and before
+task-completion helpers (`job.workflow_repository`, `job.workflow_sha`,
+`path: karsift-ai-infra`, `persist-credentials: false`). The implementer job
+copies lifecycle helpers to immutable `/tmp` paths before the unrestricted
+model and classifies nested checkout from the preserved helper after the model.
 
 Recovery metadata reads, exact selected-run reruns, and allowlisted absent-context
 dispatches use narrowly job-scoped `GITHUB_TOKEN` permissions: Actions write plus
