@@ -3,7 +3,7 @@ id: VOC-127
 slug: converge-develop-to-the-exact-promotion-merge-sha
 title: Converge develop to the exact promotion merge SHA and govern main-only reconciliation
 type: infrastructure
-status: draft
+status: adopted
 risk: R4
 planned_implementation_risk_floor: R4. This package changes the protected KARSIFT/karsift-ai-infra
   release convergence path so a successful develop-to-main merge-commit promotion
@@ -39,8 +39,8 @@ requirement_source: 'GitHub issue #1035 (Converge develop to the exact promotion
   and add deterministic regression coverage. Current config/roles.yml bindings must
   not change. Do not add OpenAI execution or request OPENAI_API_KEY. This draft package
   does not adopt or authorize itself.'
-requirement_approval_status: 'draft from GitHub issue #1035; package is not adopted
-  and does not authorize implementation'
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: unknown - not recorded by this draft; set at adoption time if needed
 target_branch: develop
@@ -50,8 +50,8 @@ owners:
     governed decision)
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: none-intentional for application runtime. Ordinary post-promotion
   synchronization is a tree-equivalent integration-ref update to the already reviewed
@@ -153,12 +153,12 @@ affected_areas:
 - docs/governance/16-autonomous-development-operating-model.md
 - specs/changes/VOC-127-converge-develop-to-the-exact-promotion-merge-sha/
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: not-authorized
+  status: authorized
   target_branch: develop
   pull_request: null
-  authority_issue: null
+  authority_issue: 1039
 release:
   required: true
   mode: not-authorized-by-this-package
@@ -169,7 +169,7 @@ release:
   rollback_required: true
 ehr: not-triggered
 standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
-blocking_reasons: draft package; not adopted and not implementation-authorized
+blocking_reasons: none - adopted and implementation-authorized
 artifacts:
   readme: README.md
   specification: specification.md
@@ -179,8 +179,23 @@ artifacts:
   tasks: tasks.md
   test_plan: test-plan.md
   release_plan: release-plan.md
-repository_adoption_status: not-adopted
+repository_adoption_status: adopted
 implementation_authority_before_adoption: false
-implementation_authority_status: not-authorized
+implementation_authority_status: authorized
 production_deployment: disabled
 autonomous_production_release: enabled
+approved_candidate_sha: b23d2df7286eedb9189588c6e2db678d9e5196d2
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1036#issuecomment-5436055286
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-127-DEP-00
+- VOC-127-DEP-01
+- VOC-127-DEP-02
+- VOC-127-DEP-03
+- VOC-127-DEP-04
+- VOC-127-DEP-05
+- VOC-127-DEP-06
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #1036 at b23d2df7286eedb9189588c6e2db678d9e5196d2'
+adoption_pr: 1036
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1036
