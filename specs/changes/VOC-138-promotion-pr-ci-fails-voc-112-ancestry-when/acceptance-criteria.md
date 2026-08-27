@@ -9,11 +9,10 @@
 - Result: pending
 
 A same-repository `main` <- `develop` promotion PR that supplies valid exact
-base/head SHAs, whose capture fixture differs between those SHAs, and whose
-recorded `subject_revision` commit object cannot be resolved in the existing
-checkout, selects `VOC112_CAPTURE_PROVENANCE_MODE=pr-validation` and keeps
+base/head SHAs selects `VOC112_CAPTURE_PROVENANCE_MODE=pr-validation` and keeps
 `PR_BASE_SHA` / `PR_HEAD_SHA` set. It does not select `pr-ancestry` and does
-not switch to `--squash-safe-push`.
+not switch to `--squash-safe-push`, whether the recorded subject is missing,
+resolvable, or resolvable but not an ancestor of the promotion head.
 
 ## VOC-138-AC-01 — Named VOC-112 tests pass under that exact-base/head mode
 
@@ -69,7 +68,9 @@ The implementation diff adds no capture-commit fetch helper, hydrate helper,
 provenance-mode wrapper, skip, or test-time evidence mutation. `run-app-checks.sh`
 and reusable `ci.yml` still do not `git fetch` evidence commits. Required
 `ci / ci` remains a required check. Status attestations, if published, are
-backed by genuine exact-head Actions success.
+backed by genuine Actions success that is also bound to the promotion PR
+number, immutable base/head SHAs, repository, branch pair, expected
+workflow/path, and `pr-validation` mode.
 
 ## VOC-138-AC-05 — Recovery does not rerun a structurally doomed PR job
 
@@ -80,11 +81,15 @@ backed by genuine exact-head Actions success.
 - Result: pending
 
 When GitHub's selected required `ci / ci` row is a failed `pull_request` run
-whose provenance classification cannot change on rerun, and a successful
-exact-head application-check of the same workflow already exists (including
-`workflow_dispatch` class `33122158425`), recovery selects or publishes that
-unambiguous success instead of rerunning the doomed job. Identity mismatches
-outside this class still raise `selected_required_run_mismatch`.
+whose provenance classification cannot change on rerun, recovery does not
+rerun it. Recovery dispatches or selects only a semantically equivalent
+`pr-validation` execution bound to the promotion PR number, immutable
+base/head SHAs, repository, configured branch pair, and expected
+workflow/path. It waits for genuine success before publishing an attestation.
+Same-head `--squash-safe-push` run `33122158425` is incident evidence only
+and is rejected as completion proof. Missing evidence and all identity or
+semantic mismatches fail closed with `selected_required_run_mismatch` or the
+live equivalent.
 
 ## VOC-138-AC-06 — Caller pin and mirrored fixture bytes match the new infra merge
 
@@ -108,8 +113,8 @@ authoritative fixture file is byte-identical to that merge.
 - Result: pending
 
 Fixture README, `docs/operations/11-devops-and-ci-cd.md`, and
-`docs/development/agent-skills.md` describe promotion PR `pr-validation` when
-the subject is unreachable, ordinary fixture-changing `pr-ancestry`, and
+`docs/development/agent-skills.md` describe deterministic promotion PR
+`pr-validation`, ordinary fixture-changing `pr-ancestry`, and
 non-PR dispatch `squash-safe-push`. They do not claim that the promotion PR
 application check uses `--squash-safe-push`. VOC-135/VOC-136/VOC-137 package
 records are not rewritten.
@@ -140,7 +145,8 @@ No snapshot of the current develop/main gap is committed. After exact-SHA
 review and merge into `develop`, `reconcile-release` for #1089 can merge
 #1090 (or the live same-repository promotion at the then-current `develop`
 head), synchronize `develop` to that exact merge SHA, and allow the normal
-production deployment gate to run. Closed state alone is not completion
+automatic production deployment on the resulting `main` push to run and be
+verified. Closed state alone is not completion
 proof. Named incident run/job IDs remain audit evidence.
 
 Acceptance criteria must be observable, stable, security-aware, and bidirectionally

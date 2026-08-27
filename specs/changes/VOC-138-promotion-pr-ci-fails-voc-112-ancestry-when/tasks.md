@@ -54,18 +54,24 @@ work through #1090 is evidence of this outcome after the repair lands.
    drift.
 3. Open a new `KARSIFT/karsift-ai-infra` PR. Add an explicit promotion signal
    on reusable `ci.yml` only for same-repository `main` <- `develop`. In
-   `run-app-checks.sh`, when that signal is set and the recorded subject
-   cannot be resolved, select `pr-validation` with exact PR SHAs. Do not
-   fetch. Keep `--squash-safe-push` for non-PR events. Ordinary fixture
-   add/modify/delete without the signal stays `pr-ancestry`.
-4. Change exact-head recovery so it does not rerun a structurally doomed
-   `pull_request` `ci / ci` job when a successful exact-head application-check
-   of the same workflow already exists. Select or publish that unambiguous
-   success. Keep `selected_required_run_mismatch` for other identity failures.
-   Do not fabricate unbacked statuses.
+   `run-app-checks.sh`, that authenticated signal always selects
+   `pr-validation` with exact PR SHAs, independent of subject-object
+   availability. Do not fetch. Keep `--squash-safe-push` for generic non-PR
+   events. Ordinary fixture add/modify/delete without the signal stays
+   `pr-ancestry`.
+4. Change exact-head recovery so it does not rerun a structurally doomed PR
+   job or attest a weaker same-head dispatch. Resolve and bind immutable PR
+   number/base/head/repository/branch-pair/workflow metadata, dispatch or
+   select a recovery execution that actually runs `pr-validation`, wait for
+   genuine success, and only then publish the equivalent required result.
+   Update caller `.github/workflows/pipeline.yml` in the same T00 if required
+   to pass this metadata. Treat run `33122158425` as incident evidence only.
+   Keep `selected_required_run_mismatch` for all missing or mismatched
+   identity or semantic evidence. Do not fabricate unbacked statuses.
 5. Add deterministic tests for the #1090 class, ordinary missing-subject
-   fail-closed, hash/SHA negatives, no `git fetch`, and doomed-job rerun
-   refusal. Obtain independent exact-revision review of the infra PR and
+   fail-closed, resolvable-but-non-ancestor promotion, hash/SHA negatives, no
+   `git fetch`, doomed-job rerun refusal, and weaker-dispatch rejection.
+   Obtain independent exact-revision review of the infra PR and
    merge it. Record the exact merge SHA.
 6. From current caller `develop`, create a new VOC-138 implementation branch.
    Pin `PINNED_SHA.txt` to that infra merge and mirror every changed

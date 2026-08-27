@@ -12,13 +12,17 @@ change the `karsift-ai-infra-bot` installation.
 Security controls that must remain:
 
 - Ordinary fixture-changing PRs stay on `pr-ancestry` and fail closed when
-  the captured commit object is missing. Missing-subject fallback is
-  promotion-pair only.
+  the captured commit object is missing. An authenticated same-repository
+  `main` <- `develop` promotion deterministically uses `pr-validation`,
+  independent of whether the captured object is missing, resolvable, or a
+  nonancestor.
 - Exact PR base/head SHAs remain required for promotion application checks.
   Promotion PRs are not switched to `--squash-safe-push`.
 - No `git fetch` / hydrate path for evidence commits.
-- Recovery attestations require genuine exact-head Actions success and remain
-  excluded from authoritative evidence selection.
+- Recovery attestations require genuine Actions success bound to the PR number,
+  repository, immutable base/head SHAs, configured branch pair, expected
+  workflow/path, and `pr-validation` mode, and remain excluded from
+  authoritative evidence selection.
 - VOC-112 capture fixtures, provenance test, runner, `validate-workspace.mjs`,
   hashed sources, and `package.json` remain the published comparison-anchor
   bytes.
@@ -54,8 +58,9 @@ recovery are CI orchestration only.
   hydrated. Mitigation: `VOC-138-D06`, `VOC-138-AC-04`, `VOC-138-TEST-07`.
 - `VOC-138-R04`: **High recovery-safety risk** if `reconcile-release` keeps
   rerunning the doomed `pull_request` job (`98691441027` / `98692552949`)
-  instead of selecting the successful exact-head dispatch
-  (`33122158425`). Mitigation: `VOC-138-D07`, `VOC-138-AC-05`.
+  or accepts same-head squash-safe dispatch `33122158425` as equivalent proof.
+  Mitigation: reject the weaker dispatch and accept only a genuine PR-bound
+  `pr-validation` recovery success under `VOC-138-D07`, `VOC-138-AC-05`.
 - `VOC-138-R05`: **High coverage risk** if the eight VOC-112 no-change paths
   are edited to make `pr-ancestry` succeed. Mitigation: `VOC-138-D09`,
   `VOC-138-TEST-02`.
@@ -74,9 +79,10 @@ recovery are CI orchestration only.
 - `VOC-138-R10`: **Low application-runtime release risk** because ordinary
   sync is tree-equivalent; rollback is fixture/test/doc reversion plus infra
   revert of the coordinated PR.
-- Protected surfaces: caller `tooling/governance/` fixtures and tests, this
-  package directory, named current-state docs. Eight VOC-112 paths are
-  protected against change.
+- Protected surfaces: caller `.github/workflows/pipeline.yml` when metadata
+  plumbing is required, `tooling/governance/` fixtures and tests, this package
+  directory, and named current-state docs. Eight VOC-112 paths are protected
+  against change.
 - `VOC-138-DEP-00` through `VOC-138-DEP-09`: see `change.yaml`.
 - `VOC-138-EV-00`: T00 evidence — implementation PR base, new infra merge,
   promotion mode selection, ordinary `pr-ancestry` retention, hash/SHA

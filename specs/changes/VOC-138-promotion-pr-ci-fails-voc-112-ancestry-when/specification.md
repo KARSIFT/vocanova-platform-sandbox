@@ -5,10 +5,11 @@
 Unblock same-repository `main` <- `develop` promotion PR validation when the
 historical VOC-112 capture subject commit object is not reachable. Promotion
 PR application checks must use the existing merge-base/hash-bound
-`pr-validation` contract in that case, without fetching or hydrating evidence
-commits and without weakening ordinary PR fail-closed behavior. Exact-head
-check recovery must select or publish one unambiguous successful validation
-instead of rerunning a structurally doomed `pull_request` job.
+`pr-validation` contract for that authenticated branch pair, without fetching
+or hydrating evidence commits and without weakening ordinary PR fail-closed
+behavior. Exact-head check recovery must obtain a semantically equivalent,
+PR-bound `pr-validation` success instead of rerunning a structurally doomed
+`pull_request` job or substituting a weaker same-head check.
 
 **Requirement source:** [GitHub issue #1091](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/1091).
 
@@ -31,7 +32,7 @@ separate A-004-governed decision.
 | Unreachable subject | `f9d11e232a07c7d7a9c433d02c9267912543ba10` |
 | PR run | `33122154521` |
 | Failed jobs | `98691441027`, rerun `98692552949` |
-| Dispatch recovery (pass) | `33122158425` (339 foundation tests; squash-safe non-PR path) |
+| Dispatch recovery (incident only) | `33122158425` (339 foundation tests; squash-safe non-PR path; not sufficient promotion-check evidence) |
 | reconcile-release | `33122099253` (`selected_required_run_mismatch`), `33122436137` (reran doomed PR job) |
 | Production promotion | none; `main` remains `0d0b0cdf…` |
 | Issue-creation pin | `b263c0c110591cc798b89277dfc35542abb1597b` (#167) |
@@ -43,11 +44,12 @@ separate A-004-governed decision.
 
 1. Coordinated infrastructure change so reusable `ci.yml` / `run-app-checks.sh`
    select `pr-validation` (exact PR base/head SHAs, merge-base anchored
-   hashes) for a same-repository production <- integration promotion PR when
-   the recorded capture subject cannot be resolved in the existing checkout.
-2. Exact-head check recovery that selects or publishes one unambiguous
-   successful exact-head validation instead of rerunning a `pull_request`
-   application-check whose provenance classification cannot change on rerun.
+   hashes) for the authenticated same-repository production <- integration
+   promotion pair, independent of incidental capture-subject object availability.
+2. Exact-head check recovery that dispatches or selects one semantically
+   equivalent validation bound to the promotion PR number, immutable base/head
+   SHAs, branch pair, repository, workflow path, and `pr-validation` mode,
+   instead of rerunning a doomed job or accepting a weaker same-head result.
 3. Deterministic regressions for the #1090 class, ordinary fixture-changing
    PRs that must remain `pr-ancestry`, and negative SHA/hash cases.
 4. Caller pin/fixture mirror of the new independently reviewed infrastructure
@@ -122,14 +124,12 @@ Reusable `ci.yml` must pass an explicit promotion signal (for example
 must not receive the signal. Missing or conflicting exact PR SHAs remain
 fail-closed.
 
-`VOC-138-D02`: Promotion provenance when the subject is unreachable. When
-the promotion signal is present, exact PR SHAs are valid, and the capture
-fixture's recorded `subject_revision` commit object cannot be resolved with
-`git cat-file -e <subject>^{commit}` in the existing checkout, select
-`pr-validation` (keep exporting `PR_BASE_SHA` / `PR_HEAD_SHA`). Do not
-fetch. If the subject *is* resolvable, existing fixture-diff behavior may
-remain (`pr-ancestry` when the fixture changed; `pr-validation` when it did
-not).
+`VOC-138-D02`: Promotion provenance is deterministic. When the authenticated
+promotion signal is present and exact PR SHAs are valid, select
+`pr-validation` and keep exporting `PR_BASE_SHA` / `PR_HEAD_SHA`, regardless
+of whether the capture fixture differs or the recorded `subject_revision`
+object happens to be resolvable in the checkout. Do not fetch. This removes
+incidental object availability from the trusted promotion-pair decision.
 
 `VOC-138-D03`: Ordinary PRs stay fail-closed. When the promotion signal is
 absent, fixture add/modify/delete continues to select `pr-ancestry`. An
@@ -146,8 +146,10 @@ closed.
 
 `VOC-138-D05`: Do not switch promotion PRs to `--squash-safe-push`. That
 mode is correct for non-PR dispatch/push recovery and is why run
-`33122158425` passed. The required PR check must keep exact base/head SHAs
-so hash/SHA negatives remain enforceable. `docs/operations/11-devops-and-ci-cd.md`
+`33122158425` passed, but that run is incident evidence only and is not
+sufficient completion proof for #1090. The required PR check and any recovery
+equivalent must keep exact base/head SHAs so hash/SHA negatives remain
+enforceable. `docs/operations/11-devops-and-ci-cd.md`
 currently claims the promotion PR uses `squash-safe-push`; this package
 updates that sentence to the `pr-validation` contract in the same caller PR.
 
@@ -156,17 +158,20 @@ and tests must not `git fetch` the subject, add a hydrate/materialize
 helper, wrap `VOC112_CAPTURE_PROVENANCE_MODE`, stamp evidence at test time,
 or skip the named VOC-112 tests.
 
-`VOC-138-D07`: Exact-head recovery. Recovery must not rerun a selected
-`pull_request` `ci / ci` job when that job's provenance classification
-cannot change on rerun and a successful exact-head application-check of the
-same required workflow already exists (including `workflow_dispatch` run
-`33122158425` at head `87f0efcb…`). In that class, select or publish one
-unambiguous successful validation: extend the VOC-114-D07 same-SHA
-attestation path so genuine exact-head success from the expected workflows
-counts even when the GitHub-selected required row is a structurally doomed
-`pull_request` run. Identity mismatches that are not this class still raise
-`selected_required_run_mismatch`. Do not fabricate statuses without genuine
-exact-head success. Do not bypass the ruleset.
+`VOC-138-D07`: Exact-head recovery requires semantic equivalence. Recovery
+must not rerun a selected `pull_request` `ci / ci` job when its provenance
+classification cannot change. It must instead dispatch or select a genuine
+validation that is immutably bound to the promotion PR number, repository,
+base SHA, head SHA, same-repository configured production <- integration
+pair, expected workflow/path, and corrected `pr-validation` mode. The
+recovery execution must run the same merge-base/current-hash and PR-SHA
+checks as the required PR path before one unambiguous success may be
+attested. A same-head `workflow_dispatch` using `--squash-safe-push`,
+including incident run `33122158425`, is not equivalent and must be rejected
+as completion proof. If no equivalent success exists, dispatch and wait for
+one or fail closed. Other identity or semantic mismatches still raise
+`selected_required_run_mismatch`. Do not fabricate statuses or bypass the
+ruleset.
 
 `VOC-138-D08`: Required regression. A deterministic test must construct a
 `main` <- `develop` style checkout where the capture fixture differs, the
@@ -176,6 +181,9 @@ existing `assertCapturedRevision` path used by `VOC-112-TEST-12` and
 `VOC-112-TEST-13` passes without fetching the subject. A parallel ordinary-PR
 fixture-changed checkout with the same missing subject and no promotion
 signal must still select `pr-ancestry` and fail closed.
+The promotion case must also be repeated with a resolvable but non-ancestor
+subject and still select `pr-validation`, proving object availability does
+not control promotion behavior.
 
 `VOC-138-D09`: Eight VOC-112 no-change paths remain byte-identical to
 protected comparison anchor `b9e74fc2db4691c48c637639b265d527de9f4505` and
@@ -315,11 +323,11 @@ Abuse/process risks:
    If implementation proves those branch names must be inputs rather than
    literals, that is compatible as long as forks and other pairs cannot
    receive the signal. Do not infer promotion solely from "subject missing".
-3. **Live caller workflows:** no live `.github/workflows/pipeline.yml` edit
-   is expected, because the caller already consumes `ci.yml@main` and
-   `release.yml@main`. If dispatch-surface comparison proves a caller
-   workflow must change, record that in `t00-evidence.md` and keep the
-   change inside T00.
+3. **Live caller workflows:** `.github/workflows/pipeline.yml` is in scope
+   when needed to resolve immutable promotion PR metadata and pass it to a
+   recovery-mode reusable CI call. Recovery must not fall through to the
+   generic non-PR `--squash-safe-push` branch. Keep any required caller edit,
+   mirrored contract, tests, and current-state docs inside T00.
 4. **PR #1090 head movement:** after this package merges, GitHub will move
    #1090's `develop` head. Recovery/promotion evidence may name a later
    exact head. The named 2026-08-27 run/job IDs remain the incident audit

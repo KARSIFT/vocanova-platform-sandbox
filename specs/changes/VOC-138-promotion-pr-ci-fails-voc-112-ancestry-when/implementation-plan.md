@@ -46,17 +46,17 @@
 
 | Target | Action | Notes |
 |--------|--------|-------|
-| `KARSIFT/karsift-ai-infra` `config/run-app-checks.sh` | modify | Accept an explicit promotion signal. When that signal is set and the recorded subject cannot be resolved, select `pr-validation` with exact PR SHAs. Do not fetch. Ordinary fixture add/modify/delete without the signal stays `pr-ancestry` |
-| `KARSIFT/karsift-ai-infra` `.github/workflows/ci.yml` | modify | Pass the promotion signal only for same-repository `main` <- `develop` (or the configured production/integration pair). Keep `--pr-base-sha`/`--pr-head-sha`. Keep `--squash-safe-push` for non-PR events |
-| `KARSIFT/karsift-ai-infra` recovery runner / modules | modify | Do not rerun a structurally doomed `pull_request` `ci / ci` job when successful exact-head application-check evidence already exists; select or publish that success (VOC-114-D07 extension). Keep `selected_required_run_mismatch` for other identity failures |
-| `KARSIFT/karsift-ai-infra` tests (`test_app_check_context.py`, recovery tests) | extend | Promotion missing-subject → `pr-validation`; ordinary missing-subject → `pr-ancestry` fail-closed; hash/SHA negatives; no `git fetch`; doomed-job rerun refused when exact-head dispatch success exists |
+| `KARSIFT/karsift-ai-infra` `config/run-app-checks.sh` | modify | Accept an authenticated promotion signal and always select `pr-validation` with exact PR SHAs for that pair, independent of subject-object availability. Do not fetch. Ordinary fixture add/modify/delete without the signal stays `pr-ancestry` |
+| `KARSIFT/karsift-ai-infra` `.github/workflows/ci.yml` | modify | Pass the promotion signal only for same-repository `main` <- `develop` (or the configured production/integration pair), including explicitly PR-bound recovery. Keep `--pr-base-sha`/`--pr-head-sha`. Generic non-PR events remain `--squash-safe-push` and cannot satisfy promotion recovery |
+| `KARSIFT/karsift-ai-infra` recovery runner / modules | modify | Do not rerun a doomed PR job or attest a weaker same-head result. Require PR number, immutable base/head, repository, branch pair, workflow/path, `pr-validation`, and genuine success; otherwise dispatch/wait or fail closed |
+| `KARSIFT/karsift-ai-infra` tests (`test_app_check_context.py`, recovery tests) | extend | Deterministic promotion `pr-validation`; ordinary missing-subject → `pr-ancestry` fail-closed; resolvable non-ancestor; hash/SHA negatives; no `git fetch`; weaker dispatch rejected; equivalent recovery accepted |
 | Caller `tooling/governance/fixtures/karsift-ai-infra/**` | replace from new infra merge | Pin `PINNED_SHA.txt` to that exact merge; mirror every changed authoritative file |
 | Caller `tooling/governance/tests/` | extend as needed | Pin assertions and any caller-owned complete-diff coverage; do not exclude `tooling/governance/tests/` from the scan |
 | Eight VOC-112 no-change paths | **do not modify** | Must remain byte-identical to `b9e74fc2…` |
 | `docs/operations/11-devops-and-ci-cd.md` | modify | Replace the promotion-PR `squash-safe-push` claim with the `pr-validation` contract |
 | `docs/development/agent-skills.md` | modify | State that promotion PRs with an unreachable subject use merge-base/hash-bound `pr-validation`; ordinary fixture-changing PRs still require captured-commit ancestry |
 | `specs/changes/VOC-135-…/` and `VOC-136-…/` and `VOC-137-…/` | **do not modify** | Audit evidence |
-| `.github/workflows/pipeline.yml` | **do not modify unless proven** | Expected: no live workflow edit |
+| `.github/workflows/pipeline.yml` | modify if required by the proven dispatch contract | Resolve/pass immutable promotion PR metadata to recovery CI so it runs `pr-validation`; never use generic non-PR squash-safe mode as equivalent proof |
 | `specs/changes/VOC-138-.../t00-evidence.md` | update | Record implementation PR base, new infra merge, mode-selection change, recovery change, validation after commit, feasible exact-head binding contract. Do not write the live implementation-head SHA into this file as a self-referential required value |
 
 Ordered steps:
@@ -102,8 +102,8 @@ Also record the exact targeted infra and caller commands that prove:
 - promotion missing-subject → `application-check provenance mode: pr-validation`;
 - ordinary missing-subject fixture change → `pr-ancestry` and fail-closed;
 - tampered merge-base / current hashes / missing SHAs fail closed;
-- recovery refuses to rerun the doomed `pull_request` job when exact-head
-  dispatch success exists.
+- recovery rejects incident dispatch `33122158425`, refuses to rerun the
+  doomed PR job, and accepts only a genuine PR-bound `pr-validation` success.
 
 Do not treat a missing suite as a pass. Do not treat an untracked-only pass
 as acceptance.
@@ -144,8 +144,8 @@ confirm:
   `main` <- `develop` promotion whose VOC-112 subject is not reachable can
   pass required `ci / ci` under `pr-validation`. Ordinary fixture-changing
   PRs still fail closed without the capture commit. Recovery no longer
-  reruns a structurally doomed PR job when exact-head success already
-  exists. Ordinary release can then merge #1090 and deploy where applicable.
+  reruns a structurally doomed PR job or accepts weaker same-head evidence.
+  Ordinary release can then merge #1090 and trigger automatic deployment.
 - **Rollback trigger:** promotion missing-subject still selects
   `pr-ancestry`; ordinary missing-subject no longer fails closed; promotion
   PR switched to `--squash-safe-push`; fetch/hydrate helper added; eight

@@ -1,6 +1,6 @@
 # VOC-138 — Test Plan
 
-## VOC-138-TEST-00 — Promotion signal selects pr-validation when the subject is unreachable
+## VOC-138-TEST-00 — Promotion signal deterministically selects pr-validation
 
 - Covers: `VOC-138-AC-00`
 - Preconditions: fixture `run-app-checks.sh` callable; temporary git repo;
@@ -13,6 +13,8 @@
   and `PR_HEAD_SHA` are exported. Assert the runner source contains no
   `git fetch`.
 - Expected result: the #1090 class no longer selects `pr-ancestry`.
+- Repeat with a resolvable but non-ancestor subject and assert the same mode;
+  object availability must not change promotion classification.
 - Evidence: `VOC-138-EV-00`
 
 ## VOC-138-TEST-01 — VOC-112-TEST-12 and VOC-112-TEST-13 pass under pr-validation without the subject
@@ -35,7 +37,7 @@
 ## VOC-138-TEST-02 — Eight VOC-112 no-change paths stay byte-identical to the anchor
 
 - Covers: `VOC-138-AC-01`
-- Preconditions: implementation PR against protected comparison anchor
+- Preconditions: protected comparison anchor (not the implementation PR base)
   `b9e74fc2db4691c48c637639b265d527de9f4505`
 - Procedure: For each of the eight VOC-112 no-change paths, assert
   working-tree bytes equal `git show b9e74fc2…:path` and that
@@ -105,17 +107,20 @@
 - Expected result: VOC-134/VOC-135 hydration classes cannot recur.
 - Evidence: `VOC-138-EV-00`
 
-## VOC-138-TEST-08 — Recovery refuses to rerun a structurally doomed pull_request job
+## VOC-138-TEST-08 — Recovery requires PR-bound pr-validation equivalence
 
 - Covers: `VOC-138-AC-04`, `VOC-138-AC-05`
 - Preconditions: recovery runner test harness; no secrets or production data
-- Procedure: Feed a required `ci / ci` row modeled on failed
-  `pull_request` run `33122154521` / job `98691441027` plus a successful
-  exact-head `workflow_dispatch` application-check modeled on
-  `33122158425`. Assert the runner does not POST
-  `/actions/runs/<doomed-id>/rerun`. Assert it selects or publishes the
-  successful exact-head validation instead.
-- Expected result: `reconcile-release` cannot repeat the #1090 doomed rerun.
+- Procedure: Feed a required `ci / ci` row modeled on failed `pull_request`
+  run `33122154521` / job `98691441027`. First provide same-head dispatch
+  `33122158425` with `squash-safe-push`; assert it is rejected as insufficient
+  and never attested. Then provide a genuine recovery execution bound to PR
+  #1090, its immutable base/head SHAs, repository, `main` <- `develop`, the
+  expected workflow/path, and `pr-validation`; assert recovery does not POST
+  `/actions/runs/<doomed-id>/rerun`, waits for success, and only then publishes
+  the equivalent result.
+- Expected result: `reconcile-release` cannot repeat the doomed rerun or mask
+  PR-only SHA/hash failures with a weaker same-head check.
 - Evidence: `VOC-138-EV-00`
 
 ## VOC-138-TEST-09 — selected_required_run_mismatch remains for other identity failures
@@ -123,7 +128,8 @@
 - Covers: `VOC-138-AC-05`
 - Preconditions: existing VOC-121/VOC-122 identity checks
 - Procedure: Assert wrong SHA, wrong branch, wrong workflow path, wrong PR
-  number, or non-matching conclusion still raise
+  number, wrong validation mode (including `squash-safe-push`), or
+  non-matching conclusion still raise
   `selected_required_run_mismatch` (or the live equivalent). Assert
   unbacked status fabrication is still forbidden.
 - Expected result: D07 extension is narrow to the doomed-job class.
@@ -147,7 +153,8 @@
 - Preconditions: caller docs in the implementation diff
 - Procedure: Assert `docs/operations/11-devops-and-ci-cd.md` no longer says
   the canonical promotion PR validates with `squash-safe-push`. Assert it
-  states promotion PRs use `pr-validation` when the subject is unreachable
+  states authenticated same-repository `main` <- `develop` promotion PRs
+  deterministically use `pr-validation`, independent of subject availability,
   and ordinary fixture-changing PRs retain `pr-ancestry`. Assert
   `docs/development/agent-skills.md` and the fixture README match. Assert
   `git diff` against the implementation PR base does not name files under

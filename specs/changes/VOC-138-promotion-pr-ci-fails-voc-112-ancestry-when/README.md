@@ -31,7 +31,7 @@ Fresh promotion PR [#1090](https://github.com/KARSIFT/vocanova-platform-sandbox/
 | Failing tests | `VOC-112-TEST-12`, `VOC-112-TEST-13` |
 | Fail-closed message | `PR ancestry mode requires every captured commit object` |
 | Captured subject | `f9d11e232a07c7d7a9c433d02c9267912543ba10` |
-| Dispatch recovery (pass) | run `33122158425` (339 foundation tests) |
+| Dispatch recovery (incident only) | run `33122158425` (339 foundation tests under weaker squash-safe mode; not promotion-check proof) |
 | reconcile-release (blocked) | `33122099253`, `33122436137` |
 | First recovery class | `selected_required_run_mismatch` |
 | Issue-creation pin | `b263c0c110591cc798b89277dfc35542abb1597b` (#167) |
@@ -64,9 +64,10 @@ coordinated with one infrastructure PR:
    fixture is added, modified, or deleted.
 3. Keep negative tests that reject tampered merge-base/current hashes and
    missing or malformed PR SHAs.
-4. Make exact-head check recovery select or publish one unambiguous successful
-   validation at the promotion head instead of rerunning a structurally doomed
-   `pull_request` job.
+4. Make exact-head recovery obtain one genuine PR-bound `pr-validation`
+   success (PR number, immutable base/head, repository, branch pair, and
+   workflow/path) instead of rerunning a doomed job or accepting a weaker
+   same-head dispatch.
 5. Add a deterministic regression for a `main` <- `develop` promotion whose
    recorded subject commit object is absent, proving `VOC-112-TEST-12` and
    `VOC-112-TEST-13` pass under `pr-validation`.

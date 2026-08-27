@@ -28,11 +28,11 @@ completion proof.
 | Phase | Owner | Preconditions | Outcome evidence |
 |-------|-------|---------------|------------------|
 | Plan merge | plan reviewer + merge-gate | Draft package; `automatic_merge_allowed: true`; valid `monitoring_impact` | Adopted package on `develop`; no duplicate task roster |
-| Coordinated infra merge | implementer + independent verifier | New `KARSIFT/karsift-ai-infra` PR; promotion missing-subject selects `pr-validation`; ordinary `pr-ancestry` retained; recovery does not rerun doomed PR jobs | Exact infra merge SHA recorded in caller `PINNED_SHA.txt` |
+| Coordinated infra merge | implementer + independent verifier | New `KARSIFT/karsift-ai-infra` PR; authenticated promotion always selects `pr-validation`; ordinary `pr-ancestry` retained; recovery rejects weaker same-head evidence and does not rerun doomed PR jobs | Exact infra merge SHA recorded in caller `PINNED_SHA.txt` |
 | T00 caller merge | implementer + independent verifier | Adoption + task authorization; new VOC-138 branch from current `develop`; pin matches the infra merge; eight VOC-112 paths unchanged vs `b9e74fc2…` | `VOC-138-EV-00` — implementation PR base; infra merge; mode-selection and recovery change; App-authored review/check binds the live PR head |
 | Post-merge promotion | existing `release.yml@main` via `reconcile-release` for #1089 | T00 caller changes live on `develop`; valid completion marker; required `ci / ci` can pass on the live promotion PR | Promotion PR #1090 (or successor at the then-current `develop` head) merges; `develop` is advanced to that exact merge SHA before audit close; refs end 0 ahead / 0 behind with identical tree |
 | Staging | VOC-111 path selection | Real tree change vs tree-equivalent develop sync | Staging only for the real tree change; tree-equivalent sync must not keep staging scheduled |
-| Production deploy | existing `deploy-production.yml` on `main` push | Promotion merge produced a `main` push; path selection if any | Production deploys if selected by existing path rules; this package does not add a new deploy path; verify deployment if selected |
+| Production deploy | existing `deploy-production.yml` on every `main` push | Promotion merge produced a `main` push | Automatic production deployment runs; this package does not add a new deploy path; verify its exact-SHA result |
 | Audit reconciliation | implementer evidence + maintainers | Incident run/job IDs preserved | Release/task/requirement records close with audit comments naming the exact promotion merge and the independently reviewed head; root issue #1091 closes only after that evidence exists. Runs `33122154521`, `33122158425`, `33122099253`, `33122436137` and jobs `98691441027`, `98692552949` remain audit context. |
 
 Monitoring inventory remains unchanged (`monitoring_impact.state: none`).
@@ -75,8 +75,10 @@ engineering-workflow gates. Required evidence:
    or malformed PR SHAs still fail closed.
 6. Deterministic proof that no fetch/hydrate helper was added and that
    required `ci / ci` was not weakened.
-7. Deterministic proof that recovery does not rerun a doomed `pull_request`
-   job when successful exact-head validation already exists.
+7. Deterministic proof that recovery rejects `33122158425`-class
+   `squash-safe-push` evidence, does not rerun a doomed `pull_request` job,
+   and accepts only genuine PR-number/base/head/repository/branch/workflow
+   bound `pr-validation` success.
 8. Deterministic proof that `PINNED_SHA.txt` equals the new infra merge and
    that all eight VOC-112 no-change paths remain byte-identical to
    `b9e74fc2…`.
@@ -97,8 +99,8 @@ engineering-workflow gates. Required evidence:
 13. After promotion: `develop` and `main` resolve to the same SHA for this
     package's promotion merge (0 ahead / 0 behind, identical tree); staging
     ran only for the real tree change; tree-equivalent convergence did not
-    trigger an unnecessary staging deployment; production deployment is
-    verified if selected. Post-merge audit may record the independently
+    trigger an unnecessary staging deployment; automatic production
+    deployment from the `main` push is verified. Post-merge audit may record the independently
     reviewed head and the promotion merge SHA.
 
 Closure: T00 merges with passing deterministic checks and exact-SHA

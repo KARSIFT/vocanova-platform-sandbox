@@ -10,7 +10,7 @@ planned_implementation_risk_floor: 'R4. This package repairs promotion-PR applic
 
   and exact-head check recovery so a same-repository main <- develop promotion
 
-  whose historical VOC-112 subject commit is not reachable uses the existing
+  deterministically uses the existing
 
   merge-base/hash-bound post-squash contract instead of pr-ancestry fail-closed.
 
@@ -46,7 +46,9 @@ requirement_source: 'GitHub issue #1091 (Promotion PR CI fails VOC-112 ancestry 
 
   promotion checkout. Dispatch recovery run 33122158425 succeeds (339
 
-  foundation tests) via the non-PR squash-safe path. reconcile-release runs
+  foundation tests) via the weaker non-PR squash-safe path; it is incident
+
+  evidence only and is not sufficient promotion-check proof. reconcile-release runs
 
   33122099253 and 33122436137 cannot converge. First reported
 
@@ -126,7 +128,9 @@ dependencies:
 
     f9d11e232a07c7d7a9c433d02c9267912543ba10, dispatch recovery run
 
-    33122158425, reconcile-release runs 33122099253 and 33122436137,
+    33122158425 (incident evidence only; not sufficient promotion-check proof),
+
+    reconcile-release runs 33122099253 and 33122436137,
 
     selected_required_run_mismatch, the no-hydration constraint, the
 
@@ -268,9 +272,17 @@ dependencies:
 
     navigation-benchmark runner, validate-workspace.mjs, or package.json.
 
-    Mode selection and recovery repair land in run-app-checks.sh, ci.yml,
+    Promotion mode selection is deterministic from authenticated repository and
 
-    the recovery runner, their tests, caller fixture mirrors, and current-state
+    branch-pair metadata, independent of captured-object availability. Mode
+
+    selection and recovery repair land in run-app-checks.sh, ci.yml,
+
+    the recovery runner, their tests, caller fixture mirrors, the live caller
+
+    .github/workflows/pipeline.yml when required to pass immutable recovery
+
+    PR metadata, and current-state
 
     docs that already describe this contract.
 
@@ -278,7 +290,13 @@ dependencies:
 - id: VOC-138-DEP-08
   status: 'resolved at drafting time as the feasible exact-revision evidence
 
-    contract. Exact-revision binding remains fail-closed by requiring the
+    contract. Exact-revision binding remains fail-closed by requiring recovery
+
+    evidence to bind PR number, repository, immutable base/head SHAs, configured
+
+    main <- develop branch pair, expected workflow/path, and pr-validation mode,
+
+    and by requiring the
 
     App-authored independent-review comment/check to bind the live PR head
 
@@ -302,7 +320,9 @@ dependencies:
 
     then-current develop head), synchronize develop to the exact promotion
 
-    merge SHA, and allow the normal production deployment gate to run. Do
+    merge SHA, and trigger the normal automatic production deployment on the
+
+    resulting main push; that deployment must be verified at the exact SHA. Do
 
     not snapshot the current develop/main gap (karsift-ai-infra#15). Closed
 
@@ -312,6 +332,7 @@ dependencies:
 
     '
 affected_areas:
+- .github/workflows/pipeline.yml
 - tooling/governance/fixtures/karsift-ai-infra/
 - tooling/governance/tests/
 - docs/operations/11-devops-and-ci-cd.md

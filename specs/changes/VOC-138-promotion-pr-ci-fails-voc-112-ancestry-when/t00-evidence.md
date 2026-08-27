@@ -35,7 +35,7 @@ constraint, and recovery "do not rerun doomed job" behavior before merge.
 | Captured subject | `f9d11e232a07c7d7a9c433d02c9267912543ba10` |
 | PR run | `33122154521` |
 | Failed jobs | `98691441027`, rerun `98692552949` |
-| Dispatch recovery (pass) | `33122158425` (339 foundation tests; `--squash-safe-push`) |
+| Dispatch recovery (incident only) | `33122158425` (339 foundation tests; weaker `--squash-safe-push`; not sufficient promotion-check proof) |
 | reconcile-release | `33122099253` (`selected_required_run_mismatch`), `33122436137` (reran doomed PR job) |
 | Production promotion | none; `main` remains `0d0b0cdf…` |
 | Issue-creation pin (#167) | `b263c0c110591cc798b89277dfc35542abb1597b` |
@@ -54,7 +54,7 @@ constraint, and recovery "do not rerun doomed job" behavior before merge.
 | Ordinary PRs | fixture add/modify/delete stays `pr-ancestry`; missing subject still fail-closed |
 | Negatives | tampered merge-base/current hashes and missing/malformed PR SHAs still fail closed |
 | Hydration | **forbidden** — no `git fetch`, hydrate helper, provenance-mode wrapper, or skip |
-| Recovery | do not rerun a structurally doomed `pull_request` `ci / ci` job when successful exact-head validation already exists; select or publish that success |
+| Recovery | reject weaker same-head dispatches; do not rerun a doomed PR job; dispatch/select only PR-number/base/head/repository/branch/workflow-bound `pr-validation` and wait for genuine success |
 | Fixture freeze versus advance | issue-creation pin `b263c0c…` is historical; live pin becomes the new infra merge |
 | Eight no-change paths | byte-identical to `b9e74fc2…`; do not edit `AGENTS.md`, navigator skill, VOC-112 fixtures, provenance test, runner, `validate-workspace.mjs`, or `package.json` |
 | Docs | update fixture README, `docs/operations/11-devops-and-ci-cd.md`, and `docs/development/agent-skills.md` in the same caller PR |
@@ -107,7 +107,8 @@ In-scope implementation diff paths (expected; record actuals after commit):
 | Tampered merge-base or current hashes | fail closed |
 | Missing or malformed PR SHAs | fail closed |
 | `git fetch` / hydrate helper | absent |
-| Failed PR job plus successful exact-head dispatch | recovery does not rerun the doomed job; selects/publishes the success |
+| Failed PR job plus `33122158425`-class squash-safe dispatch | dispatch is rejected as insufficient; recovery does not attest it or rerun the doomed job |
+| Failed PR job plus genuine PR-bound `pr-validation` recovery | recovery waits for success, verifies immutable identity and mode, then publishes one equivalent result |
 | Other selected-run identity mismatch | `selected_required_run_mismatch` |
 
 ## Validation commands (implementation)
@@ -155,8 +156,8 @@ Pending. After the exact reviewed caller merge:
   passes under the repaired contract.
 - `develop` is advanced to the successful promotion merge SHA before audit
   close and ends 0 ahead / 0 behind `main` with an identical tree.
-- Production deployment proceeds where existing path selection requires it
-  and is verified if selected.
+- Every promotion merge push to `main` triggers automatic production
+  deployment, whose exact-SHA result is verified.
 - Release/task/requirement records close with audit comments naming the
   exact promotion merge. Post-merge audit may record the independently
   reviewed head and the promotion merge SHA.
