@@ -91,7 +91,7 @@ Post-merge / root-issue audit may record the reviewed head and merge SHA.
 | `existing_pr_number` | remains implement-only |
 | VOC-129 | do not re-implement #1046; do not manufacture a VOC-129 completion marker; promote through repaired `release.yml@main` / `reconcile-release` |
 | VOC-127 / VOC-130 / VOC-131 / VOC-132 / VOC-133 / VOC-134 | do not retry; do not manufacture completion markers; close as superseded after this replacement promotes |
-| Attempt | VOC-135-T00 attempt `1` on this carrier |
+| Attempt | VOC-135-T00 attempt `2` on this carrier (attempt `1` failed independent review: TEST-12 self-failing substring scan) |
 | `roles.yml` | unchanged: implementer/escalation `cursor/composer-2.5`; planner/reviewer/reviewer_fast_retry/plan_reviewer `cursor/grok-4.6[effort=high,fast=false]` |
 | OpenAI | not authorized |
 | Snapshot-the-gap task? | **no** — forbidden (`karsift-ai-infra#15`) |
@@ -134,12 +134,24 @@ Eight no-change paths: byte-identical to immutable carrier-base SHA
 `b9e74fc2db4691c48c637639b265d527de9f4505`; absent from the implementation
 diff against that SHA. JSON `subject_revision` remains
 `f9d11e232a07c7d7a9c433d02c9267912543ba10`. Complete-diff hydration/bypass
-scan: pass (no capture fetch, hydrate helper, provenance wrapper, or evidence
-mutation under any changed caller executable path).
+scan: pass after remediation (semantic detection of provenance-variable
+**setters** on `scripts/**` and `package.json`; governance regression tests
+excluded from the scan path set because they assert forbidden patterns rather
+than wrapping `pnpm test` / `validate-workspace`; no capture fetch, hydrate
+helper, provenance wrapper, or evidence mutation under any changed caller
+executable path).
+
+Attempt `1` review finding (TEST-12): a naive `assertNotIn("VOC112_CAPTURE_PROVENANCE_MODE")`
+substring check on every changed `.py` path failed on this regression module
+once tracked. Remediation replaces that check with setter-pattern detection and
+excludes `tooling/governance/tests/` from the executable scan scope per
+`VOC-135-TEST-12` intent (fail when caller scripts **set** provenance variables
+around tests or `validate-workspace`, not when regressions mention the names in
+assertions).
 
 ## Validation commands (implementation)
 
-Recorded from the implementation working tree:
+Recorded from the remediation working tree (attempt `2`):
 
 | Command | Result |
 |---------|--------|
@@ -147,7 +159,7 @@ Recorded from the implementation working tree:
 | `bash scripts/governance/classify-change-risk.sh` | pass (R4 path floor reported) |
 | `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pass (240 tests) |
 | `python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_app_check_context.py'` | pass (9 tests) |
-| `python3 -m unittest discover -s tooling/governance/tests -p 'test_voc135*.py'` | pass (19 tests) |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_voc135*.py'` | pass (19 tests; includes `test_complete_diff_scan_rejects_hydration_or_provenance_bypasses` on tracked tree) |
 | `node scripts/foundation/voc097-fixture-matrix.test.mjs` | pass |
 | `node scripts/foundation/voc104-ready-for-review-reuse.test.mjs` | pass |
 | `node scripts/foundation/voc108-authoritative-lifecycle.test.mjs` | pass |

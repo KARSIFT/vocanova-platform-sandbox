@@ -75,6 +75,39 @@ PROHIBITED_HELPERS = (
 )
 
 FIXTURE_MIRROR_PREFIX = "tooling/governance/fixtures/karsift-ai-infra/"
+SCAN_EXCLUDE_PREFIXES = (
+    FIXTURE_MIRROR_PREFIX,
+    "tooling/governance/tests/",
+)
+EXECUTABLE_SUFFIXES = {".mjs", ".js", ".sh", ".py"}
+
+CAPTURE_FETCH_PATTERN = re.compile(
+    r"git\s+fetch[^\n]*(?:capture|evidence|f9d11e23|voc112)",
+    re.IGNORECASE,
+)
+HYDRATE_PATTERN = re.compile(
+    r"hydrate[-_ ]?voc112|materialize[-_ ]?evidence|ensure-voc112-capture",
+    re.IGNORECASE,
+)
+PROVENANCE_MODE_SET_PATTERN = re.compile(
+    r"(?:export\s+VOC112_CAPTURE_PROVENANCE_MODE\s*=|"
+    r"(?:^|[;\s&|])VOC112_CAPTURE_PROVENANCE_MODE\s*=|"
+    r"process\.env\.VOC112_CAPTURE_PROVENANCE_MODE\s*=|"
+    r"os\.environ\[['\"]VOC112_CAPTURE_PROVENANCE_MODE['\"]\]\s*=|"
+    r"os\.putenv\s*\(\s*['\"]VOC112_CAPTURE_PROVENANCE_MODE['\"])",
+    re.MULTILINE,
+)
+PR_SHA_SET_PATTERN = re.compile(
+    r"(?:export\s+PR_(?:BASE|HEAD)_SHA\s*=|"
+    r"(?:^|[;\s&|])PR_(?:BASE|HEAD)_SHA\s*=|"
+    r"process\.env\.PR_(?:BASE|HEAD)_SHA\s*=|"
+    r"os\.environ\[['\"]PR_(?:BASE|HEAD)_SHA['\"]\]\s*=)",
+    re.MULTILINE,
+)
+LOCAL_FAIL_CLOSED_BYPASS_PATTERN = re.compile(
+    r"VOC112_CAPTURE_PROVENANCE_MODE\s*=\s*['\"]pr-(?:validation|ancestry)['\"]",
+    re.IGNORECASE,
+)
 
 
 def sha256_file(path: Path) -> str:
@@ -108,6 +141,31 @@ def git_diff_names(base: str) -> list[str]:
     if completed.returncode:
         raise AssertionError(completed.stderr)
     return [line for line in completed.stdout.splitlines() if line.strip()]
+
+
+def is_scan_excluded(relative: str) -> bool:
+    return any(relative.startswith(prefix) for prefix in SCAN_EXCLUDE_PREFIXES)
+
+
+def scan_changed_path_for_bypasses(relative: str, text: str) -> None:
+    lowered = text.lower()
+    if CAPTURE_FETCH_PATTERN.search(text):
+        raise AssertionError(f"{relative} fetches capture/evidence commits")
+    if HYDRATE_PATTERN.search(lowered):
+        raise AssertionError(f"{relative} hydrates or materializes evidence")
+    if relative == "package.json" or relative.startswith("scripts/"):
+        if PROVENANCE_MODE_SET_PATTERN.search(text):
+            raise AssertionError(f"{relative} sets VOC112_CAPTURE_PROVENANCE_MODE")
+        if relative != "package.json" and (
+            "validate-workspace" in relative or relative.endswith(".test.mjs")
+        ):
+            if PR_SHA_SET_PATTERN.search(text):
+                raise AssertionError(f"{relative} sets PR_BASE_SHA or PR_HEAD_SHA")
+        if LOCAL_FAIL_CLOSED_BYPASS_PATTERN.search(text):
+            raise AssertionError(f"{relative} bypasses local fail-closed provenance")
+    elif Path(relative).suffix in EXECUTABLE_SUFFIXES:
+        if PROVENANCE_MODE_SET_PATTERN.search(text):
+            raise AssertionError(f"{relative} sets VOC112_CAPTURE_PROVENANCE_MODE")
 
 
 def split_release_job(text: str, job: str) -> str:
@@ -331,36 +389,21 @@ class Voc135CallerReplacementTests(unittest.TestCase):
 
     def test_complete_diff_scan_rejects_hydration_or_provenance_bypasses(self):
         diff_names = git_diff_names(IMMUTABLE_CARRIER_BASE)
-        executable_suffixes = {".mjs", ".js", ".sh", ".py"}
-        scan_roots = ("scripts/",)
         for relative in diff_names:
             self.assertNotIn(relative, NO_CHANGE_PATHS, relative)
-            if relative.startswith(FIXTURE_MIRROR_PREFIX):
+            if is_scan_excluded(relative):
                 continue
             path = REPO_ROOT / relative
             if not path.is_file():
                 continue
-            if relative == "package.json" or relative.startswith(scan_roots):
-                text = path.read_text(encoding="utf-8")
-                lowered = text.lower()
-                self.assertNotRegex(
-                    text,
-                    r"git\s+fetch[^\n]*(?:capture|evidence|f9d11e23|voc112)",
-                    f"{relative} fetches capture/evidence commits",
+            if relative == "package.json" or relative.startswith("scripts/"):
+                scan_changed_path_for_bypasses(
+                    relative, path.read_text(encoding="utf-8")
                 )
-                if relative != "package.json":
-                    self.assertNotIn("VOC112_CAPTURE_PROVENANCE_MODE", text, relative)
-                if "validate-workspace" in relative or relative.endswith(".test.mjs"):
-                    self.assertNotIn("PR_BASE_SHA", text, relative)
-                    self.assertNotIn("PR_HEAD_SHA", text, relative)
-                self.assertNotRegex(
-                    lowered,
-                    r"hydrate[-_ ]?voc112|materialize[-_ ]?evidence|ensure-voc112-capture",
-                    f"{relative} hydrates or materializes evidence",
+            elif path.suffix in EXECUTABLE_SUFFIXES:
+                scan_changed_path_for_bypasses(
+                    relative, path.read_text(encoding="utf-8")
                 )
-            elif path.suffix in executable_suffixes:
-                text = path.read_text(encoding="utf-8")
-                self.assertNotIn("VOC112_CAPTURE_PROVENANCE_MODE", text, relative)
 
     def test_evidence_records_carrier_base_merge_hashes_and_feasible_binding(self):
         self.assertIn(IMMUTABLE_CARRIER_BASE, self.evidence)
@@ -380,7 +423,7 @@ class Voc135CallerReplacementTests(unittest.TestCase):
         self.assertIn("#1051", self.evidence)
         self.assertIn("#1056", self.evidence)
         self.assertIn("#1065", self.evidence)
-        self.assertIn("VOC-135-T00 attempt `1`", self.evidence)
+        self.assertIn("VOC-135-T00 attempt `2`", self.evidence)
         self.assertIn("not redispatched", self.evidence)
         self.assertNotIn("snapshot-gap", self.evidence.lower())
 
