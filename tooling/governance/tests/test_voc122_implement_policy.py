@@ -43,7 +43,7 @@ class Voc122ImplementFixtureTests(unittest.TestCase):
         self.assertIn("32912850066", self.voc122_tests)
 
     def test_fixture_pin_matches_reviewed_infrastructure_merge(self):
-        expected = "863fc1f35b1d35e4981a59166b0e939be1a2b681"
+        expected = "f3d79177bf8a9abe0dae550f39502165d494c576"
         self.assertEqual(self.pin, expected)
         self.assertIn(expected, self.readme)
 

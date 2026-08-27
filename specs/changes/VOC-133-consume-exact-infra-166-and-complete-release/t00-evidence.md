@@ -77,32 +77,90 @@ data, complete CI logs, raw provider responses, or App token values.
 
 ## Changed surfaces (implementation)
 
-Pending implementation. Record the exact fixture files mirrored from
-`f3d79177bf8a9abe0dae550f39502165d494c576` (required:
-`.github/workflows/implement.yml`, `.github/workflows/release.yml`,
-`config/implementer_nested_checkout.py`, `tests/test_release_policy.py`,
-`tests/test_voc121_implement_policy.py`, `tests/test_voc123_source_bundle.py`,
-and fixture `CHANGELOG.md`), the reconfirmed SHA-256 hashes, every live pin
-assertion advanced from `863fc1f…`, confirmation that all five VOC-112
-no-change paths are absent from the diff, any live workflow edit required by
-`VOC-133-DEP-07`, and the commands actually run.
+Carrier `develop` base at implementation time:
+`95a779f9e62090f856ed03f389e7ac1d901aaa14`.
+
+Mirrored byte-for-byte from infra merge `f3d79177bf8a9abe0dae550f39502165d494c576`
+(fetched from an untracked workspace checkout at that exact SHA; not committed as a
+gitlink):
+
+| Fixture path | Confirmed SHA-256 |
+|--------------|-------------------|
+| `.github/workflows/implement.yml` | `5e44f6a82cdb127f9716faea56cd226965ab3cf86566bde009af375c205ff03c` |
+| `.github/workflows/release.yml` | `fd11e45f999d26c9e009eb0d40c67c7a644ed2c8dd721a29b98c1fea4e790f08` |
+| `config/implementer_nested_checkout.py` | `e9190e7d5b1d48e76b0da63409005d27c12a36cbaf713033c3f2d9fa887216a9` |
+| `tests/test_release_policy.py` | `082c67fb26f221cf6e44e07364915f77bb4aee10b46e5b03be9c2d57c33a1e07` |
+| `tests/test_voc121_implement_policy.py` | `78bf3a05829ae76c9571ec5acc6099c49b405f9e5007c34001a50500e6044975` |
+| `tests/test_voc123_source_bundle.py` | `d0f28a862eb04e8cf5ff5ffa13f58749f95e26401c470d8e68f8f9b80f1b7936` |
+| `CHANGELOG.md` | `7cdb3d6c863ccaab15012ef3944aac223d5a4fcc044c4f990955dfd02f70e4ea` |
+
+Drafting-time hashes in `VOC-133-D11` match the fetched merge exactly; no hash
+adjustment was required.
+
+Additional caller changes:
+
+- `tooling/governance/fixtures/karsift-ai-infra/PINNED_SHA.txt` advanced to
+  `f3d79177bf8a9abe0dae550f39502165d494c576`.
+- `tooling/governance/fixtures/karsift-ai-infra/README.md` current-state pin
+  paragraph updated for VOC-133; caller-owned README preserved.
+- `tooling/governance/tests/test_voc133_infra_166_pin.py` added (pin, recorded
+  hashes, restore ordering, helper-lifetime, non-directory classifier, pipeline
+  limits, roles unchanged).
+- `tooling/governance/tests/test_voc133_complete_voc112_boundary.py` added
+  (five-path develop-base equality and diff absence, JSON `subject_revision`,
+  provenance `local` fail-closed).
+- Live pin assertions advanced in `test_voc121_implement_policy.py`,
+  `test_voc122_implement_policy.py`, `test_voc124_implement_policy.py`,
+  `test_voc125_implement_policy.py`, `test_voc125_implement_fixture.py`,
+  `test_voc126_workflow_dispatch_input_limit.py`, `test_voc129_caller_replacement.py`,
+  `voc097-fixture-matrix.test.mjs`, `voc104-ready-for-review-reuse.test.mjs`,
+  and `voc108-authoritative-lifecycle.test.mjs`.
+- `test_voc121_implement_policy.py` helper-path assertion updated for the #166
+  `HELPER_DIR` source-carrier invocation (mirrored bytes unchanged).
+
+`VOC-133-DEP-07` result: no live `.github/workflows/pipeline.yml` edit required.
+Caller already dispatches `implement.yml@main` and `release.yml@main`.
+
+Complete VOC-112 no-change boundary against carrier develop base
+`95a779f9e62090f856ed03f389e7ac1d901aaa14`:
+
+| Path | In implementation diff? | Byte-identical to develop base? |
+|------|-------------------------|----------------------------------|
+| `scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json` | no | yes |
+| `scripts/foundation/fixtures/voc112-skill-discovery-evidence.json` | no | yes |
+| `scripts/foundation/voc112-navigation-benchmark.test.mjs` | no | yes |
+| `AGENTS.md` | no | yes |
+| `.agents/skills/vocanova-repo-navigator/SKILL.md` | no | yes |
+
+JSON `subject_revision` remains `f9d11e232a07c7d7a9c433d02c9267912543ba10`.
+Provenance test still contains the fail-closed `local` mode requirement:
+`a full local checkout must already contain the captured commit`.
 
 ## Validation commands (implementation)
 
-Pending implementation. Expected commands are listed in
-`implementation-plan.md`. Record exact commands and results here; do not
-treat a missing suite as a pass. Do not treat a `/tmp` karsift-ai-infra
-checkout as a required comparison source.
+| Command | Result |
+|---------|--------|
+| `bash scripts/governance/validate-governance.sh` | pass |
+| `bash scripts/governance/classify-change-risk.sh` | pass (path floor reported) |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pass (240 tests) |
+| `python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'` | pass (383 tests) |
+| `node scripts/foundation/voc097-fixture-matrix.test.mjs` | pass |
+| `node scripts/foundation/voc104-ready-for-review-reuse.test.mjs` | pass |
+| `node scripts/foundation/voc108-authoritative-lifecycle.test.mjs` | pass |
+| `python3 -m unittest tooling.governance.tests.test_voc133_infra_166_pin tooling.governance.tests.test_voc133_complete_voc112_boundary` | pass (via discover) |
+| `git diff --check` | pass |
+
+Pin SHA: `f3d79177bf8a9abe0dae550f39502165d494c576`.
+Recorded SHA-256 identity: confirmed as listed above; no `/tmp` checkout at test time.
 
 ## Independent verification (implementation)
 
 Pending exact-SHA independent review of the caller implementation PR. Record
-the exact reviewed head SHA here and confirm the consumed infra merge is
+the exact reviewed head SHA here after the workflow commits this carrier.
+Consumed infra merge:
 `f3d79177bf8a9abe0dae550f39502165d494c576`. The implementer must not approve
-or merge its own work. Do not claim that
-`scripts/foundation/voc112-navigation-benchmark.test.mjs` or any other
-protected path was reverted unless `git diff` against the carrier `develop`
-base does not name that path.
+or merge its own work. No protected VOC-112 path was edited; evidence does not
+claim a revert for any path absent from the diff.
 
 ## Promotion and closure (post-merge)
 

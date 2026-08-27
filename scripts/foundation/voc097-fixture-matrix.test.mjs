@@ -129,7 +129,7 @@ test("VOC-097-T03 vendored infra pin is recorded for fixture replay", () => {
   // VOC-121 advances the pinned fixture to the reviewed karsift-ai-infra merge
   // while preserving the full VOC-097 regression matrix; keep this exact rather
   // than accepting any SHA.
-  assert.equal(pin, "863fc1f35b1d35e4981a59166b0e939be1a2b681");
+  assert.equal(pin, "f3d79177bf8a9abe0dae550f39502165d494c576");
 });
 
 test("VOC-097-T03 Python fixture matrix passes", () => {
