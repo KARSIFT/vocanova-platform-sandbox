@@ -62,19 +62,59 @@ data, complete CI logs, or App token values.
 
 ## Changed surfaces (implementation)
 
-Pending implementation. Record the exact fixture files mirrored from
-`8ce2b77a09a729e458a9f4cbea1ca26eb114d398` (expected:
-`.github/workflows/release.yml` and `tests/test_release_policy.py` only),
-every live pin assertion advanced from `863fc1f…`, confirmation that the two
-named VOC-112 fixtures and hashed VOC-112 sources are absent from the diff,
-any live workflow edit required by `VOC-131-DEP-07`, and the commands
-actually run.
+| Surface | Action |
+|---------|--------|
+| `tooling/governance/fixtures/karsift-ai-infra/PINNED_SHA.txt` | set to `8ce2b77a09a729e458a9f4cbea1ca26eb114d398` |
+| `tooling/governance/fixtures/karsift-ai-infra/.github/workflows/release.yml` | byte-identical copy from infra #165 merge |
+| `tooling/governance/fixtures/karsift-ai-infra/tests/test_release_policy.py` | byte-identical copy from infra #165 merge |
+| `tooling/governance/fixtures/karsift-ai-infra/README.md` | current-state pin paragraph for VOC-131-T00 and post-caller-checkout restore |
+| `tooling/governance/tests/test_voc131_caller_replacement.py` | new deterministic regressions for pin, restore ordering, VOC-112 identity, carrier constraints |
+| `tooling/governance/tests/test_voc121_implement_policy.py` | live pin literal advanced to `8ce2b77…` |
+| `tooling/governance/tests/test_voc122_implement_policy.py` | live pin literal advanced to `8ce2b77…` |
+| `tooling/governance/tests/test_voc124_implement_policy.py` | live pin literal advanced to `8ce2b77…` |
+| `tooling/governance/tests/test_voc125_implement_policy.py` | live pin literal advanced to `8ce2b77…` |
+| `tooling/governance/tests/test_voc125_implement_fixture.py` | live pin literal advanced to `8ce2b77…` |
+| `tooling/governance/tests/test_voc126_workflow_dispatch_input_limit.py` | live pin literal advanced to `8ce2b77…` |
+| `tooling/governance/tests/test_voc129_caller_replacement.py` | authoritative pin advanced to `8ce2b77…`; `#164` pin retained as stale class |
+| `scripts/foundation/voc097-fixture-matrix.test.mjs` | pin literal advanced to `8ce2b77…` |
+| `scripts/foundation/voc104-ready-for-review-reuse.test.mjs` | pin literal advanced to `8ce2b77…` |
+| `scripts/foundation/voc108-authoritative-lifecycle.test.mjs` | pin literal advanced to `8ce2b77…` |
+| `.github/workflows/pipeline.yml` | no edit — caller already dispatches `release.yml@main` |
+| `scripts/foundation/fixtures/voc112-*.json` | not modified |
+| `AGENTS.md`, navigator skill | not modified |
+
+Exact comparison of every other fixture path shared with infra merge
+`8ce2b77a09a729e458a9f4cbea1ca26eb114d398` found no additional byte drift
+beyond `release.yml`, `test_release_policy.py`, and caller-local README /
+CHANGELOG commentary.
 
 ## Validation commands (implementation)
 
-Pending implementation. Expected commands are listed in
-`implementation-plan.md`. Record exact commands and results here; do not
-treat a missing suite as a pass.
+```bash
+bash scripts/governance/validate-governance.sh
+bash scripts/governance/classify-change-risk.sh
+python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'
+python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'
+node scripts/foundation/voc097-fixture-matrix.test.mjs
+node scripts/foundation/voc104-ready-for-review-reuse.test.mjs
+node scripts/foundation/voc108-authoritative-lifecycle.test.mjs
+git diff --check
+python3 -m unittest tooling.governance.tests.test_voc131_caller_replacement
+```
+
+Record exact pass/fail output below after the workflow runs validation.
+
+| Command | Result |
+|---------|--------|
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | OK (231 tests) |
+| `python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'` | OK (379 tests) |
+| `node scripts/foundation/voc097-fixture-matrix.test.mjs` | pass 5 |
+| `node scripts/foundation/voc104-ready-for-review-reuse.test.mjs` | pass 6 |
+| `node scripts/foundation/voc108-authoritative-lifecycle.test.mjs` | pass 5 |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_voc131*.py'` | OK (10 tests) |
+| `bash scripts/governance/validate-governance.sh` | passed |
+| `bash scripts/governance/classify-change-risk.sh` | passed (R4 path floor) |
+| `git diff --check` | clean |
 
 ## Independent verification (implementation)
 

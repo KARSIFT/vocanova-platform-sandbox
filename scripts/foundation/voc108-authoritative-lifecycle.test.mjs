@@ -156,6 +156,6 @@ test("VOC-108-TEST-08: caller and shared docs name marker-bound authority", () =
 test("VOC-108 fixture is pinned to the consumed shared merge", () => {
   assert.equal(
     readFileSync(path.join(fixtureRoot, "PINNED_SHA.txt"), "utf8").trim(),
-    "863fc1f35b1d35e4981a59166b0e939be1a2b681",
+    "8ce2b77a09a729e458a9f4cbea1ca26eb114d398",
   );
 });
