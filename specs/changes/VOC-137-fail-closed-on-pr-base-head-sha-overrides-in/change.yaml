@@ -3,7 +3,7 @@ id: VOC-137
 slug: fail-closed-on-pr-base-head-sha-overrides-in
 title: Fail closed on PR base/head SHA overrides in every scannable caller executable
 type: infrastructure
-status: draft
+status: adopted
 risk: R4
 planned_implementation_risk_floor: R4. This package corrects VOC-136's exhaustive
   caller-diff bypass scanner so PR_BASE_SHA / PR_HEAD_SHA override detection is content-semantic
@@ -30,9 +30,8 @@ requirement_source: 'GitHub issue #1083 (Fail closed on PR base/head SHA overrid
   Live PINNED_SHA.txt already equals infrastructure #167 merge b263c0c110591cc798b89277dfc35542abb1597b.
   Preserve VOC-136 merge/completion/review records as audit evidence. Do not rewrite
   or manufacture them. This draft package does not adopt or authorize itself.'
-requirement_approval_status: 'not-approved. GitHub issue #1083 provides the defect,
-  root cause, and required outcome with enough specificity to draft. This package
-  has not been adopted and does not authorize implementation.'
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: Issue-creation develop is 0cee20c87e0411a95f368d2b7d39ac2bb118dfb8 (VOC-136
   merge). Protected comparison anchor for the eight VOC-112 no-change paths remains
@@ -48,8 +47,8 @@ owners:
     governed decision)
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: 'none-intentional for application runtime. This package tightens
   the existing exhaustive caller-diff scanner so PR base/head SHA overrides fail closed
@@ -157,12 +156,12 @@ affected_areas:
 - tooling/governance/tests/
 - specs/changes/VOC-137-fail-closed-on-pr-base-head-sha-overrides-in
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: proposed
+  status: authorized
   target_branch: develop
   pull_request: null
-  authority_issue: 1083
+  authority_issue: 1085
 release:
   required: true
   mode: not-authorized-by-this-package
@@ -173,8 +172,7 @@ release:
   rollback_required: true
 ehr: not-triggered
 standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
-blocking_reasons: Not adopted. Requires plan-review, governance validation, and merge-gate
-  under active A-004 before adoption. Implementation is not authorized by this draft.
+blocking_reasons: none - adopted and implementation-authorized
 artifacts:
   readme: README.md
   specification: specification.md
@@ -186,9 +184,24 @@ artifacts:
   release_plan: release-plan.md
 production_deployment: disabled
 autonomous_production_release: not-authorized-by-this-package
-repository_adoption_status: not-adopted
+repository_adoption_status: adopted
 implementation_authority_before_adoption: false
-implementation_authority_status: not-exercised
-approved_candidate_sha: null
-adoption_pr: null
-adoption_evidence: null
+implementation_authority_status: authorized
+approved_candidate_sha: 69d9884e16b50da6d6fc574ccbdefa38f9737ce2
+adoption_pr: 1084
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1084
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1084#issuecomment-5445153649
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-137-DEP-00
+- VOC-137-DEP-01
+- VOC-137-DEP-02
+- VOC-137-DEP-03
+- VOC-137-DEP-04
+- VOC-137-DEP-05
+- VOC-137-DEP-06
+- VOC-137-DEP-07
+- VOC-137-DEP-08
+- VOC-137-DEP-09
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #1084 at 69d9884e16b50da6d6fc574ccbdefa38f9737ce2'
