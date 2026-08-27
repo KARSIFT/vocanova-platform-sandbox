@@ -94,10 +94,36 @@ PROVENANCE_MODE_SET_PATTERN = re.compile(
 PR_SHA_SET_PATTERN = re.compile(
     "".join(
         [
-            r"(?:export\s+PR_(?:BASE|HEAD)_SHA\s*=|",
-            r"(?:^|[;\s&|])PR_(?:BASE|HEAD)_SHA\s*=|",
-            r"process\.env\.PR_(?:BASE|HEAD)_SHA\s*=|",
-            r"os\.environ\[['\"]PR_(?:BASE|HEAD)_SHA['\"]\]\s*=)",
+            r"(?:export\s+",
+            _PR_BASE_ENV,
+            r"\s*=|",
+            r"export\s+",
+            _PR_HEAD_ENV,
+            r"\s*=|",
+            r"(?:^|[;\s&|])",
+            _PR_BASE_ENV,
+            r"\s*=|",
+            r"(?:^|[;\s&|])",
+            _PR_HEAD_ENV,
+            r"\s*=|",
+            r"process\.env\.",
+            _PR_BASE_ENV,
+            r"\s*=|",
+            r"process\.env\.",
+            _PR_HEAD_ENV,
+            r"\s*=|",
+            r"os\.environ\[['\"]",
+            _PR_BASE_ENV,
+            r"['\"]\]\s*=|",
+            r"os\.environ\[['\"]",
+            _PR_HEAD_ENV,
+            r"['\"]\]\s*=|",
+            r"os\.putenv\s*\(\s*['\"]",
+            _PR_BASE_ENV,
+            r"['\"]|",
+            r"os\.putenv\s*\(\s*['\"]",
+            _PR_HEAD_ENV,
+            r"['\"])",
         ]
     ),
     re.MULTILINE,
@@ -134,11 +160,8 @@ def scan_changed_path_for_bypasses(relative: str, text: str) -> None:
     if is_script_or_package or is_executable:
         if PROVENANCE_MODE_SET_PATTERN.search(text):
             raise AssertionError(f"{relative} sets provenance override mode")
-        if relative != "package.json" and (
-            "validate-workspace" in relative or relative.endswith(".test.mjs")
-        ):
-            if PR_SHA_SET_PATTERN.search(text):
-                raise AssertionError(f"{relative} sets PR base/head SHA overrides")
+        if PR_SHA_SET_PATTERN.search(text):
+            raise AssertionError(f"{relative} sets PR base/head SHA overrides")
         if LOCAL_FAIL_CLOSED_BYPASS_PATTERN.search(text):
             raise AssertionError(f"{relative} bypasses local fail-closed provenance")
 

@@ -286,7 +286,8 @@ class Voc136CallerReplacementTests(unittest.TestCase):
         self.assertIn('validation_mode="pr-validation"', self.run_app_checks)
         self.assertIn('validation_mode="pr-ancestry"', self.run_app_checks)
         self.assertIn("capture fixture comparison failed", self.run_app_checks)
-        self.assertIn("export PR_BASE_SHA=", self.run_app_checks)
+        export_pr_base = "export " + "PR_" + "BASE_SHA="
+        self.assertIn(export_pr_base, self.run_app_checks)
         self.assertNotIn("git fetch", self.run_app_checks)
 
     def test_ci_and_implement_pass_exact_pr_context(self):

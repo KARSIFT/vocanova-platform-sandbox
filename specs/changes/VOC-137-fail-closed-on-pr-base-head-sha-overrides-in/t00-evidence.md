@@ -69,10 +69,10 @@ shell/Node/Python negative cases and benign controls before merge.
 ## Changed surfaces (implementation)
 
 Implementation PR base recorded before the first in-scope edit:
-`pending-at-implementation-dispatch` (resolve current `develop` to a
-40-character SHA before any in-scope edit; issue-creation develop was
-`0cee20c87e0411a95f368d2b7d39ac2bb118dfb8`). Plan/adoption/roster commits
-after that SHA are governance-only and do not count as protected-file drift.
+`ebe4c460d892b87b6de38915f9fbd5e30d3c051b` (current `develop` at dispatch;
+issue-creation develop was `0cee20c87e0411a95f368d2b7d39ac2bb118dfb8`).
+Plan/adoption/roster commits after that SHA are governance-only and do not
+count as protected-file drift.
 
 Protected comparison anchor for eight-path VOC-112 boundary:
 `b9e74fc2db4691c48c637639b265d527de9f4505`.
@@ -93,13 +93,16 @@ VOC-136-D11 fixture hashes (must remain; do not re-mirror):
 - `tests/test_voc123_source_bundle.py` — `d0f28a862eb04e8cf5ff5ffa13f58749f95e26401c470d8e68f8f9b80f1b7936`
 - `CHANGELOG.md` — `7cdb3d6c863ccaab15012ef3944aac223d5a4fcc044c4f990955dfd02f70e4ea`
 
-Expected in-scope paths (implementation fills actual diff names):
+In-scope implementation diff paths:
 
-- `tooling/governance/tests/voc136_bypass_scan.py`
-- `tooling/governance/tests/test_voc136_caller_replacement.py` (source-safe
-  literal and/or additional cases)
-- optional `tooling/governance/tests/test_voc137_*.py`
-- this package directory, including this file
+- `tooling/governance/tests/voc136_bypass_scan.py` — removed filename gate;
+  rebuilt `PR_SHA_SET_PATTERN` from `_PR_BASE_ENV` / `_PR_HEAD_ENV` (includes
+  `os.putenv` for both names)
+- `tooling/governance/tests/test_voc136_caller_replacement.py` — source-safe
+  `export PR_BASE_SHA=` fixture assertion
+- `tooling/governance/tests/test_voc137_pr_sha_scan.py` — arbitrary-filename
+  negative and positive controls
+- `specs/changes/VOC-137-fail-closed-on-pr-base-head-sha-overrides-in/t00-evidence.md`
 
 Complete-diff scan scope after this correction: every added/modified
 scannable caller executable against the implementation range, including all
@@ -109,15 +112,64 @@ under `tooling/governance/tests/**`. PR base/head SHA assignment fails
 closed regardless of filename. `SCAN_EXCLUDE_PREFIXES` does not list
 `tooling/governance/tests/`.
 
+## Scan-scope change and negative/positive results
+
+| Case | Path | Result |
+|------|------|--------|
+| Shell arbitrary wrapper (issue #1083) | `scripts/arbitrary-wrapper.sh` | fails closed |
+| Node arbitrary head wrapper | `scripts/arbitrary-head-wrapper.mjs` | fails closed |
+| Python arbitrary wrapper | `scripts/arbitrary_wrapper.py` | fails closed |
+| Python outside fixture mirror | `tooling/governance/tests/synthetic_pr_sha.py` | fails closed |
+| Benign discussion | synthetic benign payload | pass |
+| Scanner module self-scan | `voc136_bypass_scan.py` | pass |
+| Fixture mirror exclusion | `tooling/governance/fixtures/karsift-ai-infra/config/run-app-checks.sh` | excluded (`should_scan_path` false) |
+| Filename gate removed | scanner source | no `validate-workspace` / `.test.mjs` gate in `scan_changed_path_for_bypasses` |
+
+Direct reproduction:
+
+```python
+scan_changed_path_for_bypasses(
+    "scripts/arbitrary-wrapper.sh",
+    "export PR_BASE_SHA=deadbeef\npnpm test\n",
+)
+```
+
+raises `AssertionError` (payload reconstructed in memory in
+`test_voc137_pr_sha_scan.py`).
+
 ## Validation commands (implementation)
 
-Pending. Record after the regression is tracked and committed, including
-exact base/head for governance validation and classification, unittest
-discovery for caller and mirrored infra suites, targeted VOC-136/VOC-137
-scanner cases, `git diff --check`, and the direct reproduction that
-`scan_changed_path_for_bypasses("scripts/arbitrary-wrapper.sh", payload)`
-raises. Do not treat an untracked-only pass as acceptance. Expect
-`classify-change-risk.sh` to report R4.
+Recorded after working-tree implementation (workflow commits before hosted
+checks). Base `ebe4c460d892b87b6de38915f9fbd5e30d3c051b`; head is the
+implementation PR head bound by App-authored independent review (not recorded
+here).
+
+```bash
+bash scripts/governance/validate-governance.sh \
+  --base ebe4c460d892b87b6de38915f9fbd5e30d3c051b \
+  --head <implementation-pr-head>
+bash scripts/governance/classify-change-risk.sh \
+  --base ebe4c460d892b87b6de38915f9fbd5e30d3c051b \
+  --head <implementation-pr-head>
+python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'
+python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'
+python3 -m unittest discover -s tooling/governance/tests -p 'test_voc136*.py' -v
+python3 -m unittest discover -s tooling/governance/tests -p 'test_voc137*.py' -v
+git diff --check
+```
+
+Implementer working-tree results (pre-commit; hosted checks rerun on PR):
+
+| Command | Result |
+|---------|--------|
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pass |
+| `python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'` | pass |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_voc136*.py' -v` | pass |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_voc137*.py' -v` | pass |
+| `git diff --check` | pass |
+
+`validate-governance.sh` and `classify-change-risk.sh` require the committed
+PR head SHA; expect R4 classification on the implementation range.
 
 ## Independent verification (implementation)
 
