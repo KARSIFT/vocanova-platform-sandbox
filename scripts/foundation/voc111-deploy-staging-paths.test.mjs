@@ -224,6 +224,25 @@ test("VOC-111-TEST-09: stale near-no-op documentation removed", () => {
   assert.doesNotMatch(devopsDoc, /near-no-op/i);
 });
 
+test("VOC-129-TEST-06: empty diff and specs-only paths do not select push deploy", () => {
+  const changedPaths = [];
+  assert.equal(
+    changedPaths.some(pathSelectsPushDeploy),
+    false,
+    "empty changed-path set must not select deploy",
+  );
+  for (const changedPath of [
+    "specs/changes/VOC-129-replace-exhausted-voc-127-caller-carrier-with-the/specification.md",
+    "specs/changes/VOC-127-converge-develop-to-the-exact-promotion-merge-sha/tasks.md",
+  ]) {
+    assert.equal(
+      pathSelectsPushDeploy(changedPath),
+      false,
+      `${changedPath} must not select push-triggered deploy-staging`,
+    );
+  }
+});
+
 test("VOC-111 push allowlist: workflow paths block matches VOC-111-D03", () => {
   assert.deepEqual(
     extractPushPaths(readWorkflow()),
