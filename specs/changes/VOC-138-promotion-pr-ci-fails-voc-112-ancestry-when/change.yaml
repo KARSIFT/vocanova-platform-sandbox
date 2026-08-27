@@ -3,7 +3,7 @@ id: VOC-138
 slug: promotion-pr-ci-fails-voc-112-ancestry-when
 title: Promotion PR CI fails VOC-112 ancestry when captured commit is not reachable
 type: infrastructure
-status: draft
+status: adopted
 risk: R4
 planned_implementation_risk_floor: 'R4. This package repairs promotion-PR application-check
   provenance selection
@@ -63,7 +63,8 @@ requirement_source: 'GitHub issue #1091 (Promotion PR CI fails VOC-112 ancestry 
   package does not adopt or authorize itself.
 
   '
-requirement_approval_status: issue-sourced draft; this package is not adopted
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: 'Issue-creation develop is 87f0efcb94a213a0ede9fdbca94a707a22d42b86 (promotion
 
@@ -87,8 +88,8 @@ owners:
     governed decision)
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: 'none-intentional for application runtime. This package repairs
   promotion-PR
@@ -339,12 +340,12 @@ affected_areas:
 - docs/development/agent-skills.md
 - specs/changes/VOC-138-promotion-pr-ci-fails-voc-112-ancestry-when
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: not-authorized
+  status: authorized
   target_branch: develop
   pull_request: null
-  authority_issue: null
+  authority_issue: 1093
 release:
   required: true
   mode: not-authorized-by-this-package
@@ -355,7 +356,7 @@ release:
   rollback_required: true
 ehr: not-triggered
 standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
-blocking_reasons: package is a draft and is not adopted or implementation-authorized
+blocking_reasons: none - adopted and implementation-authorized
 artifacts:
   readme: README.md
   specification: specification.md
@@ -367,6 +368,24 @@ artifacts:
   release_plan: release-plan.md
 production_deployment: disabled
 autonomous_production_release: not-authorized-by-this-package
-repository_adoption_status: not-adopted
+repository_adoption_status: adopted
 implementation_authority_before_adoption: false
-implementation_authority_status: not-authorized
+implementation_authority_status: authorized
+approved_candidate_sha: 1b663256505deb2c7d898b2ab668ede1ecfbb549
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1092#issuecomment-5446389297
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-138-DEP-00
+- VOC-138-DEP-01
+- VOC-138-DEP-02
+- VOC-138-DEP-03
+- VOC-138-DEP-04
+- VOC-138-DEP-05
+- VOC-138-DEP-06
+- VOC-138-DEP-07
+- VOC-138-DEP-08
+- VOC-138-DEP-09
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #1092 at 1b663256505deb2c7d898b2ab668ede1ecfbb549'
+adoption_pr: 1092
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1092
