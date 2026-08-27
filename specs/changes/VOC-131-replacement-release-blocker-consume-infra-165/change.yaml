@@ -1,0 +1,213 @@
+schema_version: 1
+id: VOC-131
+slug: replacement-release-blocker-consume-infra-165
+title: 'Replacement release blocker: consume infra #165 without rewriting VOC-112
+  evidence'
+type: infrastructure
+status: draft
+risk: R4
+planned_implementation_risk_floor: 'R4. This package consumes already-merged KARSIFT/karsift-ai-infra#165
+  by pinning caller tooling/governance fixtures, tests, and pin assertions to exact
+  merge 8ce2b77a09a729e458a9f4cbea1ca26eb114d398 and mirroring only the two #165-changed
+  authoritative files (.github/workflows/release.yml and tests/test_release_policy.py)
+  without rewriting VOC-112 evidence fixtures. tooling/governance/* is an R4 path
+  floor. .github/workflows/* is an R3 floor if a live caller workflow must change.
+  Semantic mutation of release checkout lifetime, task-completion validation, and
+  VOC-112 capture identity is protected. This is a draft proposal for human adoption
+  review, not a determination. The path classifier and independent verifier remain
+  authoritative.
+
+  '
+canonical_path: specs/changes/VOC-131-replacement-release-blocker-consume-infra-165
+authority_model: a004-active
+requirement_source: 'GitHub issue #1052 (Replacement release blocker: consume infra
+  #165 without rewriting VOC-112 evidence). Governed VOC-130-T00 (#1049) exhausted
+  both attempts without merging. Unmerged carrier PR #1051 correctly implemented the
+  exact infrastructure #165 pin and release fixture, but both reviewed heads retained
+  two unrelated VOC-112 evidence retargets. Attempt 1 reviewed head a04a41a19176d1322faee1a3365d82153d61af1b
+  (PR #1051 comment 5438961796). Attempt 2 claimed those retargets were reverted,
+  while exact head e846cc2f62556c2d6616282f2e9c4929c00655e7 still contained them (PR
+  #1051 comment 5439141140). Durable exhaustion marker: issue #1049 comment 5439143793.
+  Independent exact-SHA review therefore failed closed twice. This replacement is
+  the same still-unfinished release-repair outcome and must not reopen or reimplement
+  infrastructure #165. Authoritative infra PR KARSIFT/karsift-ai-infra#165, independently
+  reviewed exact head e33931d02f7bdbb094ae8177fd88324cd19ac5ce, exact infrastructure
+  merge 8ce2b77a09a729e458a9f4cbea1ca26eb114d398. Original live release failure: run
+  33066533397, where caller root checkout deleted nested shared lifecycle policy before
+  task-completion-runner.py. The two out-of-scope files must remain byte-for-byte
+  identical to the new carrier''s develop base: scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json
+  and scripts/foundation/fixtures/voc112-skill-discovery-evidence.json. At current
+  develop their subject_revision values remain f9d11e232a07c7d7a9c433d02c9267912543ba10.
+  Do not retarget or recapture them. The implementation PR diff must not contain either
+  path. This draft package does not adopt or authorize itself.
+
+  '
+requirement_approval_status: requirement recorded from GitHub issue
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time if needed
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: 'planner (drafting only; adoption remains a human/autonomous
+    governed decision)
+
+    '
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: 'none-intentional for application runtime. This package consumes
+  the already merged karsift-ai-infra#165 shared-policy restore contract on the caller
+  by updating the fixture pin, mirrored release.yml, tests, and docs, without rewriting
+  VOC-112 evidence. Ordinary post-promotion synchronization remains a tree-equivalent
+  integration-ref update. This package does not add a new production deploy path,
+  change secret values, providers, or monitor inventory.
+
+  '
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: 'Caller fixture/pin, #165 restore coverage, and VOC-112 fixture-identity
+    regression for the already-merged karsift-ai-infra#165 contract. No page routes,
+    critical API endpoints, monitor inventory, or synthetic inventory in infra/monitoring/
+    are added or changed.
+
+    '
+dependencies:
+- id: VOC-131-DEP-00
+  status: 'resolved at drafting time. Issue #1052 provides the exhausted VOC-130 task
+    #1049, unmerged carrier #1051, attempt-1 reviewed head a04a41a19176d1322faee1a3365d82153d61af1b,
+    attempt-2 reviewed head e846cc2f62556c2d6616282f2e9c4929c00655e7, both-review
+    fail-closed comments, durable exhaustion marker on #1049, the prohibition on reusing
+    #1051 or reimplementing infrastructure #165, the exact pin 8ce2b77a09a729e458a9f4cbea1ca26eb114d398,
+    reviewed infra head e33931d02f7bdbb094ae8177fd88324cd19ac5ce, original live failure
+    run 33066533397, the two VOC-112 files that must remain byte-identical to the
+    new carrier''s develop base with subject_revision f9d11e232a07c7d7a9c433d02c9267912543ba10,
+    the required #165 restore contract, preservation of #164 contracts, no-OpenAI
+    constraint, one-task preference, and VOC-129 / VOC-130 / this-replacement promotion/closure
+    with enough specificity to draft without a clarifying round trip.
+
+    '
+- id: VOC-131-DEP-01
+  status: 'resolved at drafting time. Active A-004 remains authoritative. No founder
+    approved-comment gate on engineering-workflow adopt/merge/release paths. Exact-SHA
+    independent verification, deterministic risk floors, protected-path controls,
+    and fail-closed behavior remain mandatory. R4 is a draft proposal, not a determination.
+
+    '
+- id: VOC-131-DEP-02
+  status: 'resolved at drafting time by reading live caller develop. Live tooling/governance/fixtures/karsift-ai-infra/PINNED_SHA.txt
+    currently equals 863fc1f35b1d35e4981a59166b0e939be1a2b681 (infrastructure #164).
+    Live .github/workflows/pipeline.yml already dispatches KARSIFT/karsift-ai-infra/.github/workflows/release.yml@main.
+    The two VOC-112 fixtures currently keep subject_revision f9d11e232a07c7d7a9c433d02c9267912543ba10.
+    Authoritative infrastructure PR KARSIFT/karsift-ai-infra#165 is already merged
+    as 8ce2b77a09a729e458a9f4cbea1ca26eb114d398 and encodes Restore shared lifecycle
+    policy after caller checkout in both identify and converge, bound to job.workflow_repository
+    and job.workflow_sha with persist-credentials: false. Issue #1052 names the two
+    #165-changed authoritative files as .github/workflows/release.yml and tests/test_release_policy.py.
+
+    '
+- id: VOC-131-DEP-03
+  status: 'resolved at drafting time as the chosen design. Consume already-merged
+    infrastructure #165. Do not open a replacement infra PR and do not re-implement
+    #164 or #165. Do not reuse, merge, modify, or compose PR #1051 or its branch.
+    Set PINNED_SHA.txt and every live pin assertion to 8ce2b77a09a729e458a9f4cbea1ca26eb114d398,
+    not to 863fc1f35b1d35e4981a59166b0e939be1a2b681. Mirror from exact infra merge
+    #165 only the two changed authoritative files, byte-for-byte. Preserve the #164
+    missing-develop recovery and exact-merge-SHA develop sync already on the caller.
+
+    '
+- id: VOC-131-DEP-04
+  status: 'resolved at drafting time as an accepted delivery constraint. Coordinated
+    PRs in the caller and KARSIFT/karsift-ai-infra remain one task in principle. Infrastructure
+    #165 is already merged, independently reviewed, and is the pin target, so this
+    task does not open a replacement infra PR. Repository count, workflow-versus-tests-versus-docs,
+    fixture/pin work, and VOC-112 identity regression are not split reasons.
+
+    '
+- id: VOC-131-DEP-05
+  status: 'resolved at drafting time as a hard dependency that must not expand this
+    package into a second VOC-129 or VOC-130 implementation. VOC-129 caller PR #1046
+    is already merged as 429d8c6d49303148ca1cc14dba5f6768a7863346. VOC-130-T00 (#1049)
+    is exhausted; PR #1051 remains unmerged and must not be merged or modified. This
+    package must not re-implement VOC-129 or VOC-130, must not manufacture a VOC-129
+    or VOC-130 completion marker, and must not snapshot the current develop/main gap
+    (karsift-ai-infra#15). After the repaired release path is live, ordinary release
+    evaluation promotes outstanding VOC-129 work plus this replacement when each has
+    a valid App-authored completion marker. This package''s implementation PR Closes
+    only its own VOC-131 task issue.
+
+    '
+- id: VOC-131-DEP-06
+  status: 'resolved at drafting time. Configured Cursor Composer remains the implementer
+    and Cursor Grok remains the exact-revision independent reviewer. Current config/roles.yml
+    bindings are fixed and must not change. No OpenAI credential or execution route
+    is needed or authorized. Do not print credential values. No bootstrap exception.
+    VOC-124 already requested permission-workflows write on publish-source. T00''s
+    first run is attempt 1 on a new VOC-131 carrier from current develop.
+
+    '
+- id: VOC-131-DEP-07
+  status: 'open at drafting time as an implementer-facing proof, not a planner guess
+    past the required behavior. Whether live caller .github/workflows files other
+    than the fixture pin/tests/docs must change is proven at implementation time by
+    comparing the #165 merge with the live caller dispatch surface. Expected outcome
+    is no live pipeline.yml edit because the caller already uses release.yml@main.
+    Constraints that are not open include the following. Pin and fixture equal 8ce2b77a09a729e458a9f4cbea1ca26eb114d398.
+    identify and converge restore shared policy after caller checkout and before task-completion
+    helpers, with persist-credentials: false. #164 missing-develop recovery, unique-develop
+    fail-closed behavior, and reconcile-production-change remain. No operator-typed
+    SHA inputs. workflow_dispatch blocks stay at most 25 inputs. roles.yml is unchanged.
+    No snapshot-gap task. No OpenAI route. The two named VOC-112 fixtures remain byte-identical
+    to the carrier''s develop base and do not appear in the implementation diff.
+
+    '
+- id: VOC-131-DEP-08
+  status: 'resolved at drafting time as a hard scope constraint. The VOC-130 exhaustion
+    cause was unrelated VOC-112 evidence retargets on both reviewed #1051 heads. This
+    package must keep scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json
+    and scripts/foundation/fixtures/voc112-skill-discovery-evidence.json byte-for-byte
+    identical to the new carrier''s develop base, with subject_revision remaining
+    f9d11e232a07c7d7a9c433d02c9267912543ba10. Do not retarget or recapture them. Do
+    not edit AGENTS.md or .agents/skills/vocanova-repo-navigator/SKILL.md merely to
+    keep those hashes current; those hashed sources are out of scope for this pin.
+    Add a deterministic regression that fails if either named VOC-112 fixture differs
+    from the adopted package / carrier develop base.
+
+    '
+affected_areas:
+- tooling/governance/fixtures/karsift-ai-infra/
+- tooling/governance/tests/
+- scripts/foundation/voc097-fixture-matrix.test.mjs
+- scripts/foundation/voc104-ready-for-review-reuse.test.mjs
+- scripts/foundation/voc108-authoritative-lifecycle.test.mjs
+- specs/changes/VOC-131-replacement-release-blocker-consume-infra-165/
+implementation:
+  authorized: false
+  required: true
+  status: pending
+  target_branch: develop
+  pull_request: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-automation-reliability-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+ehr: not-triggered
+standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
+blocking_reasons: package is a draft; not adopted and not implementation-authorized
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+production_deployment: disabled
+autonomous_production_release: enabled
