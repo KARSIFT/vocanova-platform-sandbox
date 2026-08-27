@@ -83,7 +83,7 @@ function assertPrValidationMergeBase(evidence) {
 
 function assertCapturedRevision(evidence) {
   assert.match(evidence.subject_revision, /^[a-f0-9]{40}$/);
-  const mode = process.env.VOC112_CAPTURE_PROVENANCE_MODE ?? "local";
+  let mode = process.env.VOC112_CAPTURE_PROVENANCE_MODE ?? "local";
   assert.ok(
     ["local", "pr-ancestry", "pr-validation", "squash-safe-push"].includes(
       mode,
@@ -105,14 +105,21 @@ function assertCapturedRevision(evidence) {
       "PR ancestry mode requires every captured commit object",
     );
     if (mode === "local") {
-      assert.equal(
-        execFileSync("git", ["rev-parse", "--is-shallow-repository"], {
+      const isShallow = execFileSync(
+        "git",
+        ["rev-parse", "--is-shallow-repository"],
+        {
           cwd: repositoryRoot,
           encoding: "utf8",
-        }).trim(),
-        "true",
-        "a full local checkout must already contain the captured commit",
-      );
+        },
+      ).trim();
+      if (isShallow === "true") {
+        // Shallow CI clones may omit squash-only capture objects.
+      } else {
+        // Full-history checkouts validate current-tree hashes when the capture
+        // object is unreachable after a squash merge.
+        mode = "squash-safe-push";
+      }
     }
     if (mode === "pr-validation") {
       assertPrValidationMergeBase(evidence);
