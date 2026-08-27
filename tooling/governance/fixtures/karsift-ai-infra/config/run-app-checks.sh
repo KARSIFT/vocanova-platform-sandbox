@@ -39,6 +39,12 @@ run_script_if_present() {
 run_script_if_present format:check
 run_script_if_present lint
 run_script_if_present typecheck
+if [ -f scripts/foundation/hydrate-voc112-git-objects.mjs ]; then
+  echo "== hydrate VOC-112 capture commit objects for full checkouts =="
+  if ! node scripts/foundation/hydrate-voc112-git-objects.mjs; then
+    failed=1
+  fi
+fi
 run_script_if_present test
 run_script_if_present build
 

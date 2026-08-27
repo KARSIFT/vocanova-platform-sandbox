@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { hydrateVoc112GitObjects } from "./hydrate-voc112-git-objects.mjs";
 
 const repositoryRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -90,6 +91,9 @@ export function validateWorkspace() {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const errors = validateWorkspace();
+  if (!errors.length) {
+    hydrateVoc112GitObjects();
+  }
   if (errors.length) {
     process.stderr.write(`${errors.join("\n")}\n`);
     process.exitCode = 1;
