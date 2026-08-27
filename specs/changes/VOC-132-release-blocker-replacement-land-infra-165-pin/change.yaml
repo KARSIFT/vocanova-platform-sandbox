@@ -4,7 +4,7 @@ slug: release-blocker-replacement-land-infra-165-pin
 title: 'Release blocker replacement: land infra #165 pin with complete VOC-112 no-change
   boundary'
 type: infrastructure
-status: draft
+status: adopted
 risk: R4
 planned_implementation_risk_floor: 'R4. This package consumes already-merged KARSIFT/karsift-ai-infra#165
   by pinning caller tooling/governance fixtures, tests, and pin assertions to exact
@@ -44,8 +44,8 @@ requirement_source: 'GitHub issue #1057 (Release blocker replacement: land infra
   At current develop the JSON subject_revision values remain f9d11e232a07c7d7a9c433d02c9267912543ba10.
   Do not retarget, recapture, or weaken provenance behavior. This draft package does
   not adopt or authorize itself. '
-requirement_approval_status: 'not-approved. Requirement captured from GitHub issue
-  #1057. This package has not been adopted. No field in this file authorizes implementation. '
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: unknown - not recorded by this draft; set at adoption time if needed
 target_branch: develop
@@ -55,8 +55,8 @@ owners:
     governed decision) '
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: 'none-intentional for application runtime. This package consumes
   the already merged karsift-ai-infra#165 shared-policy restore contract on the caller
@@ -182,12 +182,12 @@ affected_areas:
 - scripts/foundation/voc108-authoritative-lifecycle.test.mjs
 - specs/changes/VOC-132-release-blocker-replacement-land-infra-165-pin/
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: proposed
+  status: authorized
   target_branch: develop
   pull_request: null
-  authority_issue: null
+  authority_issue: 1059
 release:
   required: true
   mode: not-authorized-by-this-package
@@ -198,8 +198,7 @@ release:
   rollback_required: true
 ehr: not-triggered
 standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
-blocking_reasons: 'Not adopted. Requires independent plan review, governance validation,
-  and merge-gate before adoption. This draft does not authorize implementation. '
+blocking_reasons: none - adopted and implementation-authorized
 artifacts:
   readme: README.md
   specification: specification.md
@@ -211,9 +210,23 @@ artifacts:
   release_plan: release-plan.md
 production_deployment: disabled
 autonomous_production_release: enabled
-approved_candidate_sha: null
-repository_adoption_status: not-adopted
-adoption_pr: null
-adoption_evidence: null
+approved_candidate_sha: 18cde4932b50a01263a4c255cc63b17f48c520bf
+repository_adoption_status: adopted
+adoption_pr: 1058
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1058
 implementation_authority_before_adoption: false
-implementation_authority_status: not-exercised
+implementation_authority_status: authorized
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1058#issuecomment-5440175221
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-132-DEP-00
+- VOC-132-DEP-01
+- VOC-132-DEP-02
+- VOC-132-DEP-03
+- VOC-132-DEP-04
+- VOC-132-DEP-05
+- VOC-132-DEP-06
+- VOC-132-DEP-08
+- VOC-132-DEP-09
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #1058 at 18cde4932b50a01263a4c255cc63b17f48c520bf'
