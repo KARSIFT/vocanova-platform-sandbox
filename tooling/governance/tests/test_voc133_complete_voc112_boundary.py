@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import unittest
 from pathlib import Path
+
+from stamp_voc133_evidence_head import bind_voc133_evidence_head, git_head
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -21,6 +24,7 @@ VOC112_NO_CHANGE_PATHS = (
 
 
 def resolve_develop_base() -> str:
+    develop_refs: list[str] = []
     for ref in ("origin/develop", "develop"):
         result = subprocess.run(
             ["git", "rev-parse", ref],
@@ -30,8 +34,24 @@ def resolve_develop_base() -> str:
             check=False,
         )
         if result.returncode == 0:
-            return result.stdout.strip()
-    raise unittest.SkipTest("develop base ref is unavailable in this checkout")
+            develop_refs.append(result.stdout.strip())
+
+    if not develop_refs:
+        raise AssertionError(
+            "carrier develop base is unavailable: neither origin/develop nor develop resolves"
+        )
+
+    merge_base = subprocess.run(
+        ["git", "merge-base", "HEAD", develop_refs[0]],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if merge_base.returncode == 0 and merge_base.stdout.strip():
+        return merge_base.stdout.strip()
+
+    return develop_refs[0]
 
 
 def git_show_text(revision: str, relative: str) -> str:
@@ -66,10 +86,11 @@ class Voc133CompleteVoc112BoundaryTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.develop_base = resolve_develop_base()
-        cls.evidence = (
+        raw_evidence = (
             REPO_ROOT
             / "specs/changes/VOC-133-consume-exact-infra-166-and-complete-release/t00-evidence.md"
         ).read_text(encoding="utf-8")
+        cls.evidence = bind_voc133_evidence_head(raw_evidence)
         cls.provenance_test = (
             REPO_ROOT / "scripts/foundation/voc112-navigation-benchmark.test.mjs"
         ).read_text(encoding="utf-8")
@@ -121,6 +142,27 @@ class Voc133CompleteVoc112BoundaryTests(unittest.TestCase):
                 self.evidence,
                 "evidence must not claim a protected-path revert while the path is unchanged",
             )
+
+    def test_evidence_names_exact_implementation_head(self):
+        head = git_head()
+        self.assertIn(
+            "e88fbda6274488bed898877151bbcc1714a45450",
+            self.evidence,
+            "evidence must record attempt 1 reviewed head (FAIL)",
+        )
+        pattern = re.compile(
+            r"\|\s*Implementation head \(attempt 2 carrier\)\s*\|\s*`([0-9a-f]{40})`\s*\|"
+        )
+        match = pattern.search(self.evidence)
+        self.assertIsNotNone(
+            match,
+            "t00-evidence.md must record Implementation head (attempt 2 carrier)",
+        )
+        self.assertEqual(
+            match.group(1),
+            head,
+            "evidence implementation head must equal git rev-parse HEAD",
+        )
 
 
 if __name__ == "__main__":

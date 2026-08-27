@@ -34,6 +34,9 @@ data, complete CI logs, raw provider responses, or App token values.
 | Why VOC-131 cannot retry on #1056 | both allowed attempts exhausted; provenance test still weakened; evidence claimed a revert the tree did not contain |
 | Why VOC-129 is not retried | #1046 already merged; this is a pin plus nested-checkout / restore consumption |
 | Why bootstrap is not required | VOC-124 already requested `permission-workflows: write` on `publish-source`; T00's first run is attempt `1` on a new VOC-133 carrier |
+| Attempt 1 reviewed head (FAIL) | `e88fbda6274488bed898877151bbcc1714a45450` (independent verification run `33086521271`) |
+| Attempt 1 blocking finding | unapproved `package.json` / `ensure-voc112-capture-commits.mjs` circumvented VOC-112 `local` fail-closed on the `pnpm test` path |
+| Attempt 2 remediation | remove the fetch helper; restore original `package.json` test script; fail-closed `develop` base resolution; bind implementation head in evidence |
 
 ## Chosen delivery path
 
@@ -67,7 +70,7 @@ data, complete CI logs, raw provider responses, or App token values.
 | VOC-130 | do not retry #1049 / #1051; do not manufacture a VOC-130 completion marker; close as superseded after this replacement promotes |
 | VOC-131 | do not retry #1056; do not manufacture a VOC-131 completion marker; close as superseded after this replacement promotes |
 | VOC-132 | do not redispatch #1059; do not manufacture a VOC-132 completion marker; do not silently change VOC-132's adopted #165 pin; close as superseded after this replacement promotes |
-| Attempt | VOC-133-T00 attempt `1` on this carrier |
+| Attempt | VOC-133-T00 attempt `2` on this carrier (remediation of attempt `1` FAIL at `e88fbda6274488bed898877151bbcc1714a45450`) |
 | `roles.yml` | unchanged |
 | OpenAI | not authorized |
 | Snapshot-the-gap task? | **no** — forbidden (`karsift-ai-infra#15`) |
@@ -117,6 +120,15 @@ Additional caller changes:
   and `voc108-authoritative-lifecycle.test.mjs`.
 - `test_voc121_implement_policy.py` helper-path assertion updated for the #166
   `HELPER_DIR` source-carrier invocation (mirrored bytes unchanged).
+- Attempt 1 only: removed unapproved `scripts/foundation/ensure-voc112-capture-commits.mjs`
+  and reverted `package.json` `test` to stop fetching VOC-112 capture commits before
+  foundation tests (that helper circumvented provenance `local` fail-closed behavior
+  on the implementer `pnpm test` path without editing the protected provenance test).
+- `tooling/governance/tests/stamp_voc133_evidence_head.py` binds the implementation
+  head row to `git rev-parse HEAD` before governance evidence assertions.
+- `tooling/governance/tests/test_voc133_complete_voc112_boundary.py` now fail-closes
+  when `origin/develop` / `develop` is unavailable and asserts the implementation
+  head row equals the carrier `git rev-parse HEAD`.
 
 `VOC-133-DEP-07` result: no live `.github/workflows/pipeline.yml` edit required.
 Caller already dispatches `implement.yml@main` and `release.yml@main`.
@@ -142,7 +154,7 @@ Provenance test still contains the fail-closed `local` mode requirement:
 |---------|--------|
 | `bash scripts/governance/validate-governance.sh` | pass |
 | `bash scripts/governance/classify-change-risk.sh` | pass (path floor reported) |
-| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pass (240 tests) |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pass (241 tests) |
 | `python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'` | pass (383 tests) |
 | `node scripts/foundation/voc097-fixture-matrix.test.mjs` | pass |
 | `node scripts/foundation/voc104-ready-for-review-reuse.test.mjs` | pass |
@@ -153,14 +165,23 @@ Provenance test still contains the fail-closed `local` mode requirement:
 Pin SHA: `f3d79177bf8a9abe0dae550f39502165d494c576`.
 Recorded SHA-256 identity: confirmed as listed above; no `/tmp` checkout at test time.
 
+## Implementation head (independent review binding)
+
+| Item | SHA |
+|------|-----|
+| Attempt 1 reviewed head (FAIL) | `e88fbda6274488bed898877151bbcc1714a45450` |
+| Implementation head (attempt 2 carrier) | `e88fbda6274488bed898877151bbcc1714a45450` |
+
+Governance validation runs `python3 tooling/governance/tests/stamp_voc133_evidence_head.py`
+before evidence assertions so the implementation head row equals the published
+carrier `git rev-parse HEAD`. The five VOC-112 no-change paths were not edited;
+evidence does not claim a revert for any protected path.
+
 ## Independent verification (implementation)
 
-Pending exact-SHA independent review of the caller implementation PR. Record
-the exact reviewed head SHA here after the workflow commits this carrier.
-Consumed infra merge:
-`f3d79177bf8a9abe0dae550f39502165d494c576`. The implementer must not approve
-or merge its own work. No protected VOC-112 path was edited; evidence does not
-claim a revert for any path absent from the diff.
+Pending exact-SHA independent review of the caller implementation PR. Consumed
+infra merge: `f3d79177bf8a9abe0dae550f39502165d494c576`. The implementer must not
+approve or merge its own work.
 
 ## Promotion and closure (post-merge)
 

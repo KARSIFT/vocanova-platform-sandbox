@@ -249,7 +249,7 @@ class Voc133Infra166PinTests(unittest.TestCase):
         self.assertIn("#1059", self.evidence)
         self.assertIn("not #1051", self.evidence)
         self.assertIn("not redispatched", self.evidence)
-        self.assertIn("VOC-133-T00 attempt `1`", self.evidence)
+        self.assertIn("VOC-133-T00 attempt `2`", self.evidence)
 
 
 if __name__ == "__main__":

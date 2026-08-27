@@ -19,7 +19,7 @@
     "typecheck": "pnpm run typecheck:packages && pnpm run typecheck:web",
     "typecheck:web": "pnpm --filter @vocanova/web typecheck",
     "typecheck:packages": "tsc -b packages/api-client packages/design-tokens --pretty false",
-    "test": "pnpm run build:packages && node scripts/foundation/ensure-voc112-capture-commits.mjs && node --test scripts/foundation/*.test.mjs && pnpm --filter @vocanova/api-client test && pnpm --filter @vocanova/web test:middleware && pnpm run test:api",
+    "test": "pnpm run build:packages && node --test scripts/foundation/*.test.mjs && pnpm --filter @vocanova/api-client test && pnpm --filter @vocanova/web test:middleware && pnpm run test:api",
     "test:api": "cd apps/api && go test ./...",
     "test:controlled-signup-oauth-e2e": "cd apps/api && go test ./app/api/... -run ControlledSignupOAuth -count=1",
     "build": "pnpm run build:packages && pnpm run build:web && pnpm run build:api",
