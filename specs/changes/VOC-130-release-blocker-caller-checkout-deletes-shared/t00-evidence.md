@@ -39,7 +39,7 @@ data, complete CI logs, or App token values.
 | Operator identity | adopted authority issue number; no free-form SHA inputs on caller `workflow_dispatch` |
 | `existing_pr_number` | remains implement-only |
 | VOC-129 | do not re-implement #1046; promote through repaired `release.yml@main` / `reconcile-release` |
-| Attempt | VOC-130-T00 attempt `1` on this carrier |
+| Attempt | VOC-130-T00 attempt `2` on this carrier (remediation: revert out-of-scope VOC-112 fixture retarget) |
 | `roles.yml` | unchanged |
 | OpenAI | not authorized |
 | Snapshot-the-gap task? | **no** — forbidden (`karsift-ai-infra#15`) |
@@ -71,6 +71,14 @@ change infrastructure.
 - Live `.github/workflows/pipeline.yml` unchanged (`VOC-130-DEP-07` expected
   no-op; caller already dispatches `release.yml@main`).
 
+**Remediation (attempt 2):** reverted out-of-scope VOC-112 fixture
+`subject_revision` retarget in
+`scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json` and
+`scripts/foundation/fixtures/voc112-skill-discovery-evidence.json` (not in T00
+scope; would engage stricter `pr-ancestry` provenance without matching
+recapture). Clarified fixture README historical byte-for-byte sentence for the
+#164 pin.
+
 **Non-consumption:** unrelated #165 files outside the caller fixture subset were
 not copied merely to force the pin.
 
@@ -98,7 +106,7 @@ python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tes
 node scripts/foundation/voc097-fixture-matrix.test.mjs
 node scripts/foundation/voc104-ready-for-review-reuse.test.mjs
 node scripts/foundation/voc108-authoritative-lifecycle.test.mjs
-python3 -m unittest tooling.governance.tests.test_voc130_shared_policy_restore
+python3 -m unittest discover -s tooling/governance/tests -p 'test_voc130*.py'
 git diff --check
 ```
 
@@ -111,7 +119,7 @@ git diff --check
 | `voc097-fixture-matrix.test.mjs` | pass (5 tests) |
 | `voc104-ready-for-review-reuse.test.mjs` | pass |
 | `voc108-authoritative-lifecycle.test.mjs` | pass (5 tests) |
-| `test_voc130_shared_policy_restore` | pass (9 tests) |
+| `test_voc130_shared_policy_restore` (discover `-p 'test_voc130*.py'`) | pass (9 tests) |
 | `git diff --check` | pass |
 
 ## Independent verification (implementation)

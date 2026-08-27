@@ -203,8 +203,9 @@ infrastructure PR #161 merge
 infrastructure PR #162 merge
 `60afda3a44fd06b8c00b219771de7112f1aded6e`. VOC-129-T00 advances it to
 infrastructure PR #164 merge
-`863fc1f35b1d35e4981a59166b0e939be1a2b681`; the mirrored source files are
-byte-for-byte copies from that merge's reviewed tree. VOC-130-T00 advances it to
+`863fc1f35b1d35e4981a59166b0e939be1a2b681` (at that time the mirrored source
+files were byte-for-byte copies from that merge's reviewed tree). VOC-130-T00
+advances it to
 infrastructure PR #165 merge
 `8ce2b77a09a729e458a9f4cbea1ca26eb114d398`; both release `identify` and
 `converge` restore shared lifecycle policy after caller checkout via
