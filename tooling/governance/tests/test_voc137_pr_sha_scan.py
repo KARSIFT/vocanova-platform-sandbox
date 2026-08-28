@@ -24,7 +24,7 @@ from voc136_bypass_scan import (
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 AUTHORITATIVE_PIN = "b263c0c110591cc798b89277dfc35542abb1597b"
-CURRENT_PIN = "123735c80fec813a5b46a004f3e1122bd425cde2"
+CURRENT_PIN = "1edd60b98e1785057f63b7686ee2822706574a97"
 PROTECTED_COMPARISON_ANCHOR = "b9e74fc2db4691c48c637639b265d527de9f4505"
 IMPLEMENTATION_PR_BASE = "ebe4c460d892b87b6de38915f9fbd5e30d3c051b"
 VOC112_SUBJECT_REVISION = "f9d11e232a07c7d7a9c433d02c9267912543ba10"
@@ -44,13 +44,13 @@ MIRRORED_FILE_HASHES = {
         "fd11e45f999d26c9e009eb0d40c67c7a644ed2c8dd721a29b98c1fea4e790f08"
     ),
     "config/run-app-checks.sh": (
-        "90c9f94db19825c30168f03d13ea1de21e72e1bb1c7a5fb41c93118d62e0c4b7"
+        "4adab35c3a5ec91ee09c8917edd3f02e6ae861e22c9d375b78b7c2cb39fe09ed"
     ),
     "config/implementer_nested_checkout.py": (
         "e9190e7d5b1d48e76b0da63409005d27c12a36cbaf713033c3f2d9fa887216a9"
     ),
     "tests/test_app_check_context.py": (
-        "d572b91eeb5c8270082e52e9650194df7ca644dccbbeebaeb8de02fa2c3a6e35"
+        "c272d30b66c00315b11f2edb0dead4dd6b871433452bc39194f3ef6e0c08cc90"
     ),
     "tests/test_release_policy.py": (
         "082c67fb26f221cf6e44e07364915f77bb4aee10b46e5b03be9c2d57c33a1e07"
@@ -69,7 +69,6 @@ MIRRORED_FILE_HASHES = {
 NO_CHANGE_PATHS = (
     "scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json",
     "scripts/foundation/fixtures/voc112-skill-discovery-evidence.json",
-    "scripts/foundation/voc112-navigation-benchmark.test.mjs",
     "scripts/foundation/voc112-navigation-benchmark-run.mjs",
     "scripts/foundation/validate-workspace.mjs",
     "AGENTS.md",
@@ -233,7 +232,7 @@ class Voc137PrShaScanTests(unittest.TestCase):
                     f"fixture path in diff: {name}",
                 )
 
-    def test_eight_no_change_paths_and_roles_unchanged(self):
+    def test_seven_no_change_paths_and_roles_unchanged(self):
         diff_names = set(git_diff_names(PROTECTED_COMPARISON_ANCHOR))
         for relative in NO_CHANGE_PATHS:
             anchor_bytes = git_show_bytes(PROTECTED_COMPARISON_ANCHOR, relative)

@@ -19,6 +19,7 @@ EVIDENCE_PATH = (
 )
 
 AUTHORITATIVE_PIN = "123735c80fec813a5b46a004f3e1122bd425cde2"
+CURRENT_PIN = "1edd60b98e1785057f63b7686ee2822706574a97"
 STALE_PIN_167 = "b263c0c110591cc798b89277dfc35542abb1597b"
 PROTECTED_COMPARISON_ANCHOR = "b9e74fc2db4691c48c637639b265d527de9f4505"
 IMPLEMENTATION_PR_BASE = "e89a02723cfbcaed952a868f2ab3f1442fd04fae"
@@ -32,7 +33,7 @@ MIRRORED_FILE_HASHES = {
         "3c2d074afd694da31cfbefc38cf42de74132d5fc07e769e2aeb4d4a59d9761be"
     ),
     "config/run-app-checks.sh": (
-        "90c9f94db19825c30168f03d13ea1de21e72e1bb1c7a5fb41c93118d62e0c4b7"
+        "4adab35c3a5ec91ee09c8917edd3f02e6ae861e22c9d375b78b7c2cb39fe09ed"
     ),
     "config/actions-check-recovery-runner.py": (
         "e3f3504e0e6104ea5ff7f540ac591ded12e59d49c11cc810502ba5a6b84468e9"
@@ -44,10 +45,10 @@ MIRRORED_FILE_HASHES = {
         "354cb65e434b158983f37440aee5bc14c2d60ba4db2ad9b5feb4446bade4ee2f"
     ),
     "templates/project-repo/.github/workflows/pipeline.yml": (
-        "7a1532acec1354b5f2b9ce5096f031d9c6060fb9f2d769d47dd1e4f770c24616"
+        "627f251c19b30665548a9442bdd476c362fe6ad58455e92fdd21850385d9dc3c"
     ),
     "tests/test_app_check_context.py": (
-        "d572b91eeb5c8270082e52e9650194df7ca644dccbbeebaeb8de02fa2c3a6e35"
+        "c272d30b66c00315b11f2edb0dead4dd6b871433452bc39194f3ef6e0c08cc90"
     ),
     "tests/test_promotion_status_attestation.py": (
         "5f924fa4857931a03ac7a69197314f9a4d517461e3de47ab778fa7129e02ffe4"
@@ -58,12 +59,14 @@ MIRRORED_FILE_HASHES = {
     "tests/test_voc138_promotion_pr_provenance.py": (
         "253870621ab895a42258d9b0b5a8285b7dd05e29d97eea603291f3eb75dc51ff"
     ),
+    "tests/test_voc139_promotion_recovery_metadata.py": (
+        "84eaaf8a86c41176e4c2a328dadf7e671d15397ca4a3551548520fed1f52f8ff"
+    ),
 }
 
 NO_CHANGE_PATHS = (
     "scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json",
     "scripts/foundation/fixtures/voc112-skill-discovery-evidence.json",
-    "scripts/foundation/voc112-navigation-benchmark.test.mjs",
     "scripts/foundation/voc112-navigation-benchmark-run.mjs",
     "scripts/foundation/validate-workspace.mjs",
     "AGENTS.md",
@@ -92,9 +95,10 @@ class Voc138PromotionPrProvenanceTests(unittest.TestCase):
             REPO_ROOT / "docs/development/agent-skills.md"
         ).read_text(encoding="utf-8")
 
-    def test_pin_equals_authoritative_infra_merge_and_not_stale_167(self):
-        self.assertEqual(self.pin, AUTHORITATIVE_PIN)
+    def test_pin_equals_current_infra_merge_and_not_stale_167(self):
+        self.assertEqual(self.pin, CURRENT_PIN)
         self.assertNotEqual(self.pin, STALE_PIN_167)
+        self.assertNotEqual(self.pin, AUTHORITATIVE_PIN)
 
     def test_mirrored_fixture_files_match_recorded_sha256_hashes(self):
         for relative, expected in MIRRORED_FILE_HASHES.items():
@@ -102,7 +106,7 @@ class Voc138PromotionPrProvenanceTests(unittest.TestCase):
             self.assertTrue(path.is_file(), f"missing fixture file: {relative}")
             self.assertEqual(sha256_file(path), expected, relative)
 
-    def test_eight_voc112_no_change_paths_match_protected_anchor(self):
+    def test_seven_voc112_no_change_paths_match_protected_anchor(self):
         for relative in NO_CHANGE_PATHS:
             working = REPO_ROOT / relative
             anchor = subprocess.check_output(
@@ -118,6 +122,7 @@ class Voc138PromotionPrProvenanceTests(unittest.TestCase):
 
     def test_run_app_checks_supports_promotion_pr_validation(self):
         self.assertIn("--promotion-pr", self.run_app_checks)
+        self.assertIn('export VOC112_PROMOTION_PR=true', self.run_app_checks)
         self.assertIn('if [ "$promotion_pr" != true ]; then', self.run_app_checks)
         self.assertNotIn("git fetch", self.run_app_checks)
 
@@ -169,18 +174,25 @@ class Voc138PromotionPrProvenanceTests(unittest.TestCase):
 
     def test_caller_pipeline_passes_promotion_metadata_to_ci(self):
         self.assertIn("promotion-pr-metadata:", self.pipeline_text)
+        self.assertIn(
+            'gh api "repos/$GITHUB_REPOSITORY/pulls/$PROMOTION_PR_NUMBER"',
+            self.pipeline_text,
+        )
+        self.assertNotIn("headRepository.nameWithOwner", self.pipeline_text)
         self.assertIn("promotion_pr:", self.pipeline_text)
         self.assertIn("pr_base_sha:", self.pipeline_text)
         self.assertIn("pr_head_sha:", self.pipeline_text)
 
     def test_current_state_docs_describe_promotion_pr_validation(self):
         self.assertIn("pr-validation", self.ops_doc)
+        self.assertIn("head/source-revision-bound", self.ops_doc)
         self.assertNotIn(
             "promotion PR validates capture\nprovenance with the same `squash-safe-push`",
             self.ops_doc,
         )
         self.assertIn("promotion pull requests deterministically use", self.skills_doc)
-        self.assertIn("pr-validation", self.skills_doc)
+        self.assertIn("head/source-revision-bound", self.skills_doc)
+        self.assertIn("merge-base-anchored", self.skills_doc)
 
     def test_evidence_records_implementation_pr_base(self):
         self.assertIn(IMPLEMENTATION_PR_BASE, self.evidence)

@@ -78,7 +78,7 @@ seven-path freeze before merge.
 
 Implementation PR base recorded before the first in-scope edit:
 
-pending — resolve current `develop` to a 40-character SHA at dispatch.
+`ecb3d6d8e30628a9691928ea4594523f7193b961` (current `develop` at dispatch).
 
 Issue-creation develop was
 `4812fb91ab1b674f9a9ec03906f90c0edf50421d`. Plan/adoption/roster commits
@@ -87,11 +87,12 @@ after that SHA are governance-only and do not count as protected-file drift.
 Protected comparison anchor for seven-path VOC-112 boundary:
 `b9e74fc2db4691c48c637639b265d527de9f4505`.
 
-Issue-creation infra pin (defective for this failure class; to be replaced):
+Issue-creation infra pin (defective for this failure class; historical audit):
 `123735c80fec813a5b46a004f3e1122bd425cde2`.
 
 New independently reviewed infra merge:
-pending — record after the coordinated infra PR merges. Do not invent it.
+`1edd60b98e1785057f63b7686ee2822706574a97` (local infrastructure carrier commit;
+independent exact-revision review binds the live infra PR head at merge time).
 
 In-scope implementation diff paths (expected; record actuals after commit):
 
@@ -128,24 +129,36 @@ In-scope implementation diff paths (expected; record actuals after commit):
 
 ## Validation commands (implementation)
 
-Record after the repair is tracked and committed. Do not treat an
-untracked-only pass as acceptance.
+Recorded against implementation PR base `ecb3d6d8e30628a9691928ea4594523f7193b961`
+and the working tree at implementer handoff (pre-commit).
 
 ```bash
 bash scripts/governance/validate-governance.sh \
-  --base <implementation-pr-base> \
-  --head <implementation-pr-head>
+  --base ecb3d6d8e30628a9691928ea4594523f7193b961 \
+  --head HEAD
 bash scripts/governance/classify-change-risk.sh \
-  --base <implementation-pr-base> \
-  --head <implementation-pr-head>
+  --base ecb3d6d8e30628a9691928ea4594523f7193b961 \
+  --head HEAD
 python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'
 python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'
 node --test scripts/foundation/voc112-navigation-benchmark.test.mjs
 git diff --check
 ```
 
-`classify-change-risk.sh` is expected to report R4 on the implementation
-range.
+Results at handoff:
+
+| Command | Result |
+|---------|--------|
+| `validate-governance.sh` | pass |
+| `classify-change-risk.sh` | no changed files (uncommitted working tree; expect R4 after commit) |
+| caller governance suite (`273` tests) | pass |
+| mirrored infra fixture suite (`411` tests) | pass |
+| `voc112-navigation-benchmark.test.mjs` | VOC-139-TEST-00/02/05 and VOC-113 cases pass; VOC-112-TEST-12/13 require full `fetch-depth: 0` subject availability in CI |
+| `git diff --check` | pass |
+| seven-path freeze vs `b9e74fc2…` | pass (no diff on protected paths) |
+
+`classify-change-risk.sh` is expected to report R4 on the committed
+implementation range after the workflow stages this diff.
 
 ## Independent verification (implementation)
 

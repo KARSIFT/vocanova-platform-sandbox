@@ -66,18 +66,21 @@ function assertPrValidationMergeBase(evidence) {
   );
   const mergeBase = mergeBaseResult.stdout.trim();
   assert.match(mergeBase, /^[a-f0-9]{40}$/);
+  const promotionPr = process.env.VOC112_PROMOTION_PR === "true";
+  const hashAnchorRevision = promotionPr ? prHeadSha : mergeBase;
+  const hashAnchorLabel = promotionPr ? "PR head" : "PR merge base";
   assert.equal(
     evidence.source_hashes.navigator_skill_sha256,
     sha256AtRevision(
-      mergeBase,
+      hashAnchorRevision,
       ".agents/skills/vocanova-repo-navigator/SKILL.md",
     ),
-    "navigator hash must be anchored in the PR merge base",
+    `navigator hash must be anchored in the ${hashAnchorLabel}`,
   );
   assert.equal(
     evidence.source_hashes.agents_sha256,
-    sha256AtRevision(mergeBase, "AGENTS.md"),
-    "AGENTS.md hash must be anchored in the PR merge base",
+    sha256AtRevision(hashAnchorRevision, "AGENTS.md"),
+    `AGENTS.md hash must be anchored in the ${hashAnchorLabel}`,
   );
 }
 
@@ -172,15 +175,21 @@ function totals(rows) {
   };
 }
 
-function withProvenanceEnv(mode, baseSha, headSha, callback) {
+function withProvenanceEnv(mode, baseSha, headSha, callback, options = {}) {
   const prior = {
     mode: process.env.VOC112_CAPTURE_PROVENANCE_MODE,
     base: process.env.PR_BASE_SHA,
     head: process.env.PR_HEAD_SHA,
+    promotion: process.env.VOC112_PROMOTION_PR,
   };
   process.env.VOC112_CAPTURE_PROVENANCE_MODE = mode;
   process.env.PR_BASE_SHA = baseSha;
   process.env.PR_HEAD_SHA = headSha;
+  if (options.promotionPr) {
+    process.env.VOC112_PROMOTION_PR = "true";
+  } else {
+    delete process.env.VOC112_PROMOTION_PR;
+  }
   try {
     callback();
   } finally {
@@ -188,6 +197,7 @@ function withProvenanceEnv(mode, baseSha, headSha, callback) {
       ["VOC112_CAPTURE_PROVENANCE_MODE", prior.mode],
       ["PR_BASE_SHA", prior.base],
       ["PR_HEAD_SHA", prior.head],
+      ["VOC112_PROMOTION_PR", prior.promotion],
     ]) {
       if (value === undefined) delete process.env[name];
       else process.env[name] = value;
@@ -567,4 +577,113 @@ test("VOC-113-TEST-10: changed current hash fails closed under pr-validation", (
       process.env.PR_HEAD_SHA = priorHead;
     }
   }
+});
+
+test("VOC-139-TEST-00: promotion pr-validation binds hashes to PR head, not merge base", () => {
+  const headSha = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  }).trim();
+  const baseSha = execFileSync("git", ["rev-parse", "HEAD~1"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  }).trim();
+  const evidence = {
+    ...fixture("voc112-navigation-benchmark-traces.json"),
+    subject_revision: "0".repeat(40),
+    source_hashes: {
+      navigator_skill_sha256: sha256AtRevision(
+        headSha,
+        ".agents/skills/vocanova-repo-navigator/SKILL.md",
+      ),
+      agents_sha256: sha256AtRevision(headSha, "AGENTS.md"),
+    },
+  };
+  withProvenanceEnv("pr-validation", baseSha, headSha, () =>
+    assertCapturedRevision(evidence),
+    { promotionPr: true },
+  );
+});
+
+test("VOC-139-TEST-02: ordinary pr-validation still requires merge-base hashes", () => {
+  const headSha = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  }).trim();
+  const baseSha = execFileSync("git", ["rev-parse", "HEAD~1"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  }).trim();
+  const mergeBase = execFileSync(
+    "git",
+    ["merge-base", baseSha, headSha],
+    { cwd: repositoryRoot, encoding: "utf8" },
+  ).trim();
+  const evidence = {
+    ...fixture("voc112-navigation-benchmark-traces.json"),
+    subject_revision: "0".repeat(40),
+    source_hashes: {
+      navigator_skill_sha256: sha256AtRevision(
+        headSha,
+        ".agents/skills/vocanova-repo-navigator/SKILL.md",
+      ),
+      agents_sha256: sha256AtRevision(headSha, "AGENTS.md"),
+    },
+  };
+  if (
+    sha256AtRevision(headSha, "AGENTS.md") ===
+    sha256AtRevision(mergeBase, "AGENTS.md")
+  ) {
+    return;
+  }
+  withProvenanceEnv("pr-validation", baseSha, headSha, () =>
+    assert.throws(
+      () => assertCapturedRevision(evidence),
+      /AGENTS\.md hash must be anchored in the PR merge base/,
+    ),
+  );
+});
+
+test("VOC-139-TEST-05: promotion pr-validation rejects merge-base-only hashes", () => {
+  const headSha = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  }).trim();
+  const baseSha = execFileSync("git", ["rev-parse", "HEAD~1"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  }).trim();
+  const mergeBase = execFileSync(
+    "git",
+    ["merge-base", baseSha, headSha],
+    { cwd: repositoryRoot, encoding: "utf8" },
+  ).trim();
+  const evidence = {
+    ...fixture("voc112-navigation-benchmark-traces.json"),
+    subject_revision: "0".repeat(40),
+    source_hashes: {
+      navigator_skill_sha256: sha256AtRevision(
+        mergeBase,
+        ".agents/skills/vocanova-repo-navigator/SKILL.md",
+      ),
+      agents_sha256: sha256AtRevision(mergeBase, "AGENTS.md"),
+    },
+  };
+  if (
+    sha256AtRevision(headSha, "AGENTS.md") ===
+    sha256AtRevision(mergeBase, "AGENTS.md")
+  ) {
+    return;
+  }
+  withProvenanceEnv(
+    "pr-validation",
+    baseSha,
+    headSha,
+    () =>
+      assert.throws(
+        () => assertCapturedRevision(evidence),
+        /AGENTS\.md hash must be anchored in the PR head/,
+      ),
+    { promotionPr: true },
+  );
 });

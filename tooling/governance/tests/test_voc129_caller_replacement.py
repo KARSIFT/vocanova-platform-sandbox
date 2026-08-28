@@ -14,6 +14,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 CALLER_WORKFLOWS = REPO_ROOT / ".github/workflows"
 FIXTURE_ROOT = REPO_ROOT / "tooling/governance/fixtures/karsift-ai-infra"
 AUTHORITATIVE_PIN = "123735c80fec813a5b46a004f3e1122bd425cde2"
+CURRENT_PIN = "1edd60b98e1785057f63b7686ee2822706574a97"
 STALE_PIN_164 = "863fc1f35b1d35e4981a59166b0e939be1a2b681"
 PREVIOUS_DEVELOP_PIN = "60afda3a44fd06b8c00b219771de7112f1aded6e"
 MAX_DISPATCH_INPUTS = 25
@@ -53,10 +54,11 @@ class Voc129CallerReplacementTests(unittest.TestCase):
             / "specs/changes/VOC-129-replace-exhausted-voc-127-caller-carrier-with-the/t00-evidence.md"
         ).read_text(encoding="utf-8")
 
-    def test_pin_equals_authoritative_infra_merge_and_not_stale_pins(self):
-        self.assertEqual(self.pin, AUTHORITATIVE_PIN)
+    def test_pin_equals_current_infra_merge_and_not_stale_pins(self):
+        self.assertEqual(self.pin, CURRENT_PIN)
         self.assertNotEqual(self.pin, STALE_PIN_164)
         self.assertNotEqual(self.pin, PREVIOUS_DEVELOP_PIN)
+        self.assertNotEqual(self.pin, AUTHORITATIVE_PIN)
 
     def test_fixture_contains_in_scope_infra_164_files(self):
         required = [
