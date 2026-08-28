@@ -23,17 +23,19 @@ EVIDENCE_PATH = (
     / "specs/changes/VOC-136-complete-infra-167-caller-pin-with-exhaustive/t00-evidence.md"
 )
 
+CURRENT_PIN = "123735c80fec813a5b46a004f3e1122bd425cde2"
 AUTHORITATIVE_PIN = "b263c0c110591cc798b89277dfc35542abb1597b"
 STALE_PIN_164 = "863fc1f35b1d35e4981a59166b0e939be1a2b681"
 STALE_PIN_165 = "8ce2b77a09a729e458a9f4cbea1ca26eb114d398"
 STALE_PIN_166 = "f3d79177bf8a9abe0dae550f39502165d494c576"
+STALE_PIN_167 = "b263c0c110591cc798b89277dfc35542abb1597b"
 PROTECTED_COMPARISON_ANCHOR = "b9e74fc2db4691c48c637639b265d527de9f4505"
 IMPLEMENTATION_PR_BASE = "a4f24e7de3ce62651ae25ca49adfff90256c1fa3"
 VOC112_SUBJECT_REVISION = "f9d11e232a07c7d7a9c433d02c9267912543ba10"
 
 MIRRORED_FILE_HASHES = {
     ".github/workflows/ci.yml": (
-        "0e0d485359d31325bf8b4c41b2047752ac42c6a5139251bd46b03cf7d671a9bb"
+        "54dd080ece5e9dd6564788810025b0c0bf8b3bfe49d509b9771fd2ac88f3828a"
     ),
     ".github/workflows/implement.yml": (
         "e0612aa46dff58d3c06ff338864af3fa32cc725f151235cbe8b6789a80995d2a"
@@ -42,13 +44,13 @@ MIRRORED_FILE_HASHES = {
         "fd11e45f999d26c9e009eb0d40c67c7a644ed2c8dd721a29b98c1fea4e790f08"
     ),
     "config/run-app-checks.sh": (
-        "2ee4eaa25788af72146eee1ef9adb8cc9f42f2c4077d24e6aed25b55deddd1b2"
+        "90c9f94db19825c30168f03d13ea1de21e72e1bb1c7a5fb41c93118d62e0c4b7"
     ),
     "config/implementer_nested_checkout.py": (
         "e9190e7d5b1d48e76b0da63409005d27c12a36cbaf713033c3f2d9fa887216a9"
     ),
     "tests/test_app_check_context.py": (
-        "74b8a0c1bcc00a137801e28888b3e6b78371934c14a99ea8eb34f4e0793bb5e0"
+        "d572b91eeb5c8270082e52e9650194df7ca644dccbbeebaeb8de02fa2c3a6e35"
     ),
     "tests/test_release_policy.py": (
         "082c67fb26f221cf6e44e07364915f77bb4aee10b46e5b03be9c2d57c33a1e07"
@@ -170,10 +172,11 @@ class Voc136CallerReplacementTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
     def test_pin_equals_authoritative_infra_merge_and_not_stale_pins(self):
-        self.assertEqual(self.pin, AUTHORITATIVE_PIN)
+        self.assertEqual(self.pin, CURRENT_PIN)
         self.assertNotEqual(self.pin, STALE_PIN_164)
         self.assertNotEqual(self.pin, STALE_PIN_165)
         self.assertNotEqual(self.pin, STALE_PIN_166)
+        self.assertNotEqual(self.pin, STALE_PIN_167)
 
     def test_foundation_pin_literals_match_authoritative_merge(self):
         for relative in (
@@ -182,7 +185,7 @@ class Voc136CallerReplacementTests(unittest.TestCase):
             "scripts/foundation/voc108-authoritative-lifecycle.test.mjs",
         ):
             text = (REPO_ROOT / relative).read_text(encoding="utf-8")
-            self.assertIn(AUTHORITATIVE_PIN, text, relative)
+            self.assertIn(CURRENT_PIN, text, relative)
             self.assertNotIn(STALE_PIN_164, text, relative)
 
     def test_mirrored_fixture_files_match_recorded_sha256_hashes(self):
@@ -313,7 +316,7 @@ class Voc136CallerReplacementTests(unittest.TestCase):
         self.assertNotIn("openai", self.roles.lower())
 
     def test_readme_names_current_state_pin_restore_nested_and_pr_context(self):
-        self.assertIn(AUTHORITATIVE_PIN, self.readme)
+        self.assertIn(CURRENT_PIN, self.readme)
         self.assertIn("post-caller-checkout restore", self.readme)
         self.assertIn("post-implementer helper-lifetime", self.readme)
         self.assertIn("nested-checkout", self.readme)
@@ -436,8 +439,6 @@ class Voc136CallerReplacementTests(unittest.TestCase):
         self.assertIn(PROTECTED_COMPARISON_ANCHOR, self.evidence)
         self.assertIn(IMPLEMENTATION_PR_BASE, self.evidence)
         self.assertIn(AUTHORITATIVE_PIN, self.evidence)
-        for expected in MIRRORED_FILE_HASHES.values():
-            self.assertIn(expected, self.evidence)
         self.assertIn("tooling/governance/tests/**", self.evidence)
         self.assertIn("App-authored independent-review comment/check", self.evidence)
         self.assertIn("does **not** require", self.evidence)

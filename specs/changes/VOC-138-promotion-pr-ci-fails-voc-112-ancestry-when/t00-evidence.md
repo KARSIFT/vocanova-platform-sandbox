@@ -71,27 +71,35 @@ constraint, and recovery "do not rerun doomed job" behavior before merge.
 
 Implementation PR base recorded before the first in-scope edit:
 
-pending — resolve current `develop` to a 40-character SHA before any
-in-scope edit. Issue-creation develop was
+`e89a02723cfbcaed952a868f2ab3f1442fd04fae` (current `develop` at dispatch).
+
+Issue-creation develop was
 `87f0efcb94a213a0ede9fdbca94a707a22d42b86`. Plan/adoption/roster commits
 after that SHA are governance-only and do not count as protected-file drift.
 
 Protected comparison anchor for eight-path VOC-112 boundary:
 `b9e74fc2db4691c48c637639b265d527de9f4505`.
 
-Issue-creation infra pin (defective for this failure class; replace):
+Issue-creation infra pin (defective for this failure class; replaced):
 `b263c0c110591cc798b89277dfc35542abb1597b`.
 
-New independently reviewed infra merge (record after it exists):
-pending.
+New independently reviewed infra merge:
+`123735c80fec813a5b46a004f3e1122bd425cde2` (infra PR #168; independently
+reviewed source head `a5c1fe9e9eda7b9374bcd1a6938ba02ede73bb8b`).
 
 In-scope implementation diff paths (expected; record actuals after commit):
 
-- `KARSIFT/karsift-ai-infra` `config/run-app-checks.sh`
-- `KARSIFT/karsift-ai-infra` `.github/workflows/ci.yml`
-- `KARSIFT/karsift-ai-infra` recovery runner/modules and tests
+- `KARSIFT/karsift-ai-infra` `config/run-app-checks.sh` (`--promotion-pr` signal)
+- `KARSIFT/karsift-ai-infra` `.github/workflows/ci.yml` (promotion inputs and detection)
+- `KARSIFT/karsift-ai-infra` `config/actions-check-recovery-runner.py` (skip doomed `ci / ci` reruns)
+- `KARSIFT/karsift-ai-infra` `config/promotion_status_attestation.py` (reject squash-safe recovery)
+- `KARSIFT/karsift-ai-infra` `config/promotion-status-attestation-runner.py`
+- `KARSIFT/karsift-ai-infra` `templates/project-repo/.github/workflows/pipeline.yml`
+- `KARSIFT/karsift-ai-infra` `.github/workflows/self-ci.yml` (template-inclusive actionlint)
+- `KARSIFT/karsift-ai-infra` tests (`test_app_check_context.py`, `test_promotion_status_attestation.py`, `test_voc122_actions_check_recovery.py`, `test_voc138_promotion_pr_provenance.py`)
+- caller `.github/workflows/pipeline.yml` (`promotion-pr-metadata` job and ci inputs)
 - caller `tooling/governance/fixtures/karsift-ai-infra/**` pin and mirrors
-- caller `tooling/governance/tests/` as needed for pin/scan assertions
+- caller `tooling/governance/tests/test_voc138_promotion_pr_provenance.py`
 - `docs/operations/11-devops-and-ci-cd.md`
 - `docs/development/agent-skills.md`
 - `specs/changes/VOC-138-promotion-pr-ci-fails-voc-112-ancestry-when/t00-evidence.md`
@@ -107,22 +115,22 @@ In-scope implementation diff paths (expected; record actuals after commit):
 | Tampered merge-base or current hashes | fail closed |
 | Missing or malformed PR SHAs | fail closed |
 | `git fetch` / hydrate helper | absent |
-| Failed PR job plus `33122158425`-class squash-safe dispatch | dispatch is rejected as insufficient; recovery does not attest it or rerun the doomed job |
+| Failed PR job plus `33122158425`-class squash-safe dispatch | generic `display_title: pipeline` is rejected as insufficient; recovery does not attest it or rerun the doomed job |
 | Failed PR job plus genuine PR-bound `pr-validation` recovery | recovery waits for success, verifies immutable identity and mode, then publishes one equivalent result |
 | Other selected-run identity mismatch | `selected_required_run_mismatch` |
 
 ## Validation commands (implementation)
 
-Recorded after the repair is tracked and committed. Base is the
-implementation PR base; head is the implementation PR head bound by
-App-authored independent review (not recorded here as a self-SHA).
+Recorded after the repair is tracked and committed. Base is
+`e89a02723cfbcaed952a868f2ab3f1442fd04fae`; head is the implementation PR
+head bound by App-authored independent review (not recorded here as a self-SHA).
 
 ```bash
 bash scripts/governance/validate-governance.sh \
-  --base <implementation-pr-base> \
+  --base e89a02723cfbcaed952a868f2ab3f1442fd04fae \
   --head <implementation-pr-head>
 bash scripts/governance/classify-change-risk.sh \
-  --base <implementation-pr-base> \
+  --base e89a02723cfbcaed952a868f2ab3f1442fd04fae \
   --head <implementation-pr-head>
 python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'
 python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'
@@ -130,13 +138,34 @@ node --test scripts/foundation/voc112-navigation-benchmark.test.mjs
 git diff --check
 ```
 
+Tracked repair commit `a571df59d4d168e26f69304217ddf4362586214c`
+results (the final caller head remains bound externally by exact-SHA review):
+
+| Command | Result |
+|---------|--------|
+| `bash scripts/governance/validate-governance.sh --base e89a0272… --head a571df59…` | pass |
+| `bash scripts/governance/classify-change-risk.sh --base e89a0272… --head a571df59…` | pass; R4 floor |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pass; 266 tests |
+| `python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'` | pass; 403 tests |
+| `VOC112_CAPTURE_PROVENANCE_MODE=pr-validation PR_BASE_SHA=e89a0272… PR_HEAD_SHA=a571df59… node --test scripts/foundation/voc112-navigation-benchmark.test.mjs` | pass; 13 tests |
+| `python3 -m unittest tooling.governance.tests.test_voc138_promotion_pr_provenance` | pass; 8 tests, including actual missing-subject assertion |
+| `git diff --check` | pass |
+
+Governance validation, classify-change-risk, and full caller governance discovery
+run after the workflow commits the repair.
+
 `classify-change-risk.sh` is expected to report R4 on the implementation
 range.
 
 ## Independent verification (implementation)
 
-Pending exact-SHA independent review of the infrastructure PR and the caller
-implementation PR. The App-authored independent-review comment/check must
+Infrastructure PR #168 received independent PASS at source head
+`a5c1fe9e9eda7b9374bcd1a6938ba02ede73bb8b` after 453 tests and hosted
+actionlint, shellcheck, YAML parsing, and policy tests passed. It merged as
+`123735c80fec813a5b46a004f3e1122bd425cde2`.
+
+Pending exact-SHA independent review of the caller implementation PR. The
+App-authored independent-review comment/check must
 bind the live PR head exactly and must explicitly evaluate the promotion
 missing-subject case, ordinary `pr-ancestry` retention, hash/SHA negatives,
 no-fetch constraint, and recovery behavior. Merge-gate must reject any

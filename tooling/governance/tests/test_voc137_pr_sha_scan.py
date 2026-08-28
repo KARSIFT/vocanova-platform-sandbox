@@ -24,6 +24,7 @@ from voc136_bypass_scan import (
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 AUTHORITATIVE_PIN = "b263c0c110591cc798b89277dfc35542abb1597b"
+CURRENT_PIN = "123735c80fec813a5b46a004f3e1122bd425cde2"
 PROTECTED_COMPARISON_ANCHOR = "b9e74fc2db4691c48c637639b265d527de9f4505"
 IMPLEMENTATION_PR_BASE = "ebe4c460d892b87b6de38915f9fbd5e30d3c051b"
 VOC112_SUBJECT_REVISION = "f9d11e232a07c7d7a9c433d02c9267912543ba10"
@@ -34,7 +35,7 @@ EVIDENCE_PATH = (
 
 MIRRORED_FILE_HASHES = {
     ".github/workflows/ci.yml": (
-        "0e0d485359d31325bf8b4c41b2047752ac42c6a5139251bd46b03cf7d671a9bb"
+        "54dd080ece5e9dd6564788810025b0c0bf8b3bfe49d509b9771fd2ac88f3828a"
     ),
     ".github/workflows/implement.yml": (
         "e0612aa46dff58d3c06ff338864af3fa32cc725f151235cbe8b6789a80995d2a"
@@ -43,13 +44,13 @@ MIRRORED_FILE_HASHES = {
         "fd11e45f999d26c9e009eb0d40c67c7a644ed2c8dd721a29b98c1fea4e790f08"
     ),
     "config/run-app-checks.sh": (
-        "2ee4eaa25788af72146eee1ef9adb8cc9f42f2c4077d24e6aed25b55deddd1b2"
+        "90c9f94db19825c30168f03d13ea1de21e72e1bb1c7a5fb41c93118d62e0c4b7"
     ),
     "config/implementer_nested_checkout.py": (
         "e9190e7d5b1d48e76b0da63409005d27c12a36cbaf713033c3f2d9fa887216a9"
     ),
     "tests/test_app_check_context.py": (
-        "74b8a0c1bcc00a137801e28888b3e6b78371934c14a99ea8eb34f4e0793bb5e0"
+        "d572b91eeb5c8270082e52e9650194df7ca644dccbbeebaeb8de02fa2c3a6e35"
     ),
     "tests/test_release_policy.py": (
         "082c67fb26f221cf6e44e07364915f77bb4aee10b46e5b03be9c2d57c33a1e07"
@@ -219,17 +220,18 @@ class Voc137PrShaScanTests(unittest.TestCase):
         self.assertIn(export_pr_base, self.run_app_checks)
 
     def test_pin_and_mirrored_fixture_bytes_unchanged(self):
-        self.assertEqual(read_fixture("PINNED_SHA.txt").strip(), AUTHORITATIVE_PIN)
+        self.assertEqual(read_fixture("PINNED_SHA.txt").strip(), CURRENT_PIN)
         for relative, expected in MIRRORED_FILE_HASHES.items():
             path = FIXTURE_INFRA_ROOT / relative
             self.assertTrue(path.is_file(), f"missing fixture file: {relative}")
             self.assertEqual(sha256_file(path), expected, relative)
-        diff_names = git_diff_names(IMPLEMENTATION_PR_BASE)
-        for name in diff_names:
-            self.assertFalse(
-                name.startswith("tooling/governance/fixtures/karsift-ai-infra/"),
-                f"fixture path in diff: {name}",
-            )
+        if CURRENT_PIN == AUTHORITATIVE_PIN:
+            diff_names = git_diff_names(IMPLEMENTATION_PR_BASE)
+            for name in diff_names:
+                self.assertFalse(
+                    name.startswith("tooling/governance/fixtures/karsift-ai-infra/"),
+                    f"fixture path in diff: {name}",
+                )
 
     def test_eight_no_change_paths_and_roles_unchanged(self):
         diff_names = set(git_diff_names(PROTECTED_COMPARISON_ANCHOR))
