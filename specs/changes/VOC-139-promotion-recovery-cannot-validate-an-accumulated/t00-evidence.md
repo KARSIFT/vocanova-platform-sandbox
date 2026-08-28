@@ -143,10 +143,10 @@ bash scripts/governance/classify-change-risk.sh \
   --head HEAD
 python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'
 python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'
-git fetch --no-tags origin f9d11e232a07c7d7a9c433d02c9267912543ba10
 PR_BASE_SHA=0d0b0cdf0692d0349f380e9cae3285b4c7916b05 \
 PR_HEAD_SHA=4812fb91ab1b674f9a9ec03906f90c0edf50421d \
-VOC_PROMOTION_PR_VALIDATION=true \
+VOC112_CAPTURE_PROVENANCE_MODE=pr-validation \
+VOC112_PROMOTION_PR=true \
 node --test scripts/foundation/voc112-navigation-benchmark.test.mjs
 git diff --check
 ```
@@ -163,9 +163,9 @@ Results before final exact-head review:
 | `git diff --check` | pass |
 | seven-path freeze vs `b9e74fc2…` | pass (no diff on protected paths) |
 
-The Node suite was run after resolving its frozen historical capture commit in
-the temporary review clone. No hydration, recapture, or evidence mutation was
-performed.
+The Node suite was run in authenticated promotion `pr-validation` mode while
+the frozen historical capture subject was absent. No hydration, recapture, or
+evidence mutation was performed.
 
 ## Independent verification (implementation)
 
