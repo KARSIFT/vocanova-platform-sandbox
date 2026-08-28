@@ -55,7 +55,7 @@
 | Caller `scripts/foundation/voc112-navigation-benchmark.test.mjs` | modify | Promotion signal → hashes bind to `PR_HEAD_SHA` + working tree; absent signal → merge-base anchoring remains |
 | Caller `.github/workflows/pipeline.yml` | modify | Same repository-explicit, supported-field metadata lookup as the template |
 | Caller `tooling/governance/fixtures/karsift-ai-infra/**` | replace from new infra merge | Pin `PINNED_SHA.txt` to that exact merge; mirror every changed authoritative file |
-| Caller `tooling/governance/tests/` | extend | Accumulated-hash, no-checkout metadata, identity negatives; narrow VOC-138 `NO_CHANGE_PATHS` so the provenance test is no longer frozen |
+| Caller `tooling/governance/tests/` | extend/reconcile | Accumulated-hash, no-checkout metadata, identity negatives; narrow VOC-138 `NO_CHANGE_PATHS`; advance every current-pin and mirrored-hash assertion while preserving historical authoritative-pin evidence |
 | Seven remaining VOC-112 no-change paths | **do not modify** | Must remain byte-identical to `b9e74fc2…` |
 | `docs/operations/11-devops-and-ci-cd.md` | modify | Replace promotion-PR merge-base hash claim with head/source-revision binding |
 | `docs/development/agent-skills.md` | modify | Same hash-anchor contract; keep ordinary merge-base / `pr-ancestry` language |
@@ -77,7 +77,9 @@ Ordered steps:
    Implement the provenance-test hash rule and live `pipeline.yml` metadata
    fix. Set `PINNED_SHA.txt` and mirror every changed authoritative fixture
    file from that exact merge. Update the named current-state docs. Narrow
-   live VOC-138 `NO_CHANGE_PATHS`.
+   live VOC-138 `NO_CHANGE_PATHS`. Reconcile all current-pin and mirrored-hash
+   assertions in the governance suite; preserve historical authoritative-pin
+   constants and package records.
 5. Confirm no seven-path VOC-112 file and no VOC-138 package file is staged.
    Confirm `roles.yml` is untouched. Confirm no fetch/hydrate/recapture
    helper was added.

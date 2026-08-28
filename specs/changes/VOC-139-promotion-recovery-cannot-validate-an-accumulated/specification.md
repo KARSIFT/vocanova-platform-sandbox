@@ -234,7 +234,12 @@ independent exact-revision review, and after that merge sets
 Mirror at least `config/run-app-checks.sh`, the project-repo `pipeline.yml`
 template, and their tests. If exact comparison proves another authoritative
 fixture file also changed, mirror it too. Do not treat the untracked local
-`karsift-ai-infra/` checkout as this repository's tracked tree.
+`karsift-ai-infra/` checkout as this repository's tracked tree. Reconcile all
+live caller pin-lock tests that assert the current fixture pin or mirrored
+hashes. Preserve historical `AUTHORITATIVE_PIN` / issue-era pin constants and
+package evidence; where a test serves both purposes, separate its current-pin
+expectation from its historical audit expectation rather than rewriting the
+historical value.
 
 `VOC-139-D12`: Docs in the same PR. Update every current-state document that
 would otherwise remain false:

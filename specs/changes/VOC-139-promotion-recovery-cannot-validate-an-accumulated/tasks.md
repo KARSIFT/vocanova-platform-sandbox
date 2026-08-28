@@ -82,7 +82,11 @@ satisfy sha_lineage against promotion PR #1090's recovery HEAD.
    and mirror every changed authoritative fixture file. Update fixture
    README, `docs/operations/11-devops-and-ci-cd.md`, and
    `docs/development/agent-skills.md`. Do not edit the seven remaining
-   VOC-112 no-change paths.
+   VOC-112 no-change paths. Reconcile every live caller pin-lock/current-pin
+   assertion and mirrored-file hash table with the new merge, including the
+   VOC-138 test. Preserve issue-era `AUTHORITATIVE_PIN` values and historical
+   package evidence; split current versus authoritative constants where a
+   test currently conflates them.
 7. Confirm fixture `roles.yml` is unchanged and no OpenAI route is added.
    Confirm no capture-commit fetch helper, hydrate helper, recapture, or
    test-time evidence mutation was added.

@@ -168,7 +168,12 @@
   Assert SHA-256 of each changed mirrored file equals the same path at that
   merge. Assert the pin is not left at
   `123735c80fec813a5b46a004f3e1122bd425cde2` if that merge still lacks
-  repository-explicit metadata or the promotion hash-anchor export.
+  repository-explicit metadata or the promotion hash-anchor export. Discover
+  every live governance test that asserts `CURRENT_PIN`, the live fixture pin,
+  or mirrored-file hashes and assert it expects the new merge. Assert
+  historical `AUTHORITATIVE_PIN` / issue-era constants and package evidence
+  still retain their original merge, using separate current and historical
+  constants where needed.
 - Expected result: caller fixtures match the repaired infra contract.
 - Evidence: `VOC-139-EV-00`
 
