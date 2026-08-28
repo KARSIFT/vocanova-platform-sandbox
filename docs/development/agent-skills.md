@@ -36,10 +36,11 @@ These are explicit, authenticated operator actions; the deterministic test valid
 committed sanitized capture and never starts an agent or makes a network request. The
 required Repository Governance check uses `fetch-depth: 0`: authenticated
 same-repository `main` ← `develop` promotion pull requests deterministically use
-merge-base/hash-bound `pr-validation` with exact PR base/head SHAs regardless of
+head/source-revision-bound `pr-validation` with exact PR base/head SHAs regardless of
 capture-subject object availability; other pull requests that change the capture
 fixture require each captured commit, prove ancestry, and bind captured/current
-hashes; post-squash branch pushes re-validate the current hashes without requiring
+hashes; ordinary unchanged-fixture pull requests remain merge-base-anchored
+`pr-validation`. Post-squash branch pushes re-validate the current hashes without requiring
 discarded intermediate PR commits to be ancestors. A generic shallow
 application-test checkout also remains non-mutating:
 

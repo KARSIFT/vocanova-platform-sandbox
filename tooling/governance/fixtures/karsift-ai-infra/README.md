@@ -224,6 +224,11 @@ subject availability; ordinary fixture-changing PRs remain `pr-ancestry`
 fail-closed; promotion recovery dispatches `recover-promotion-pr-checks` with
 immutable PR metadata instead of rerunning doomed `ci / ci` pull-request jobs,
 and rejects weaker same-head `squash-safe-push` dispatches as completion proof.
+VOC-139-T00 advances the pin to infrastructure merge
+`599436835371f27fac52ec6b47a18b36257366ac` with promotion head/source-revision
+hash binding under `pr-validation`, repository-explicit no-checkout recovery
+metadata via `gh api repos/$GITHUB_REPOSITORY/pulls/...`, and ordinary
+merge-base-anchored `pr-validation` for non-promotion PRs.
 
 Recovery metadata reads, exact selected-run reruns, and allowlisted absent-context
 dispatches use narrowly job-scoped `GITHUB_TOKEN` permissions: Actions write plus

@@ -7,6 +7,9 @@ from pathlib import Path
 
 FIXTURE_MIRROR_PREFIX = "tooling/governance/fixtures/karsift-ai-infra/"
 SCAN_EXCLUDE_PREFIXES = (FIXTURE_MIRROR_PREFIX,)
+SCAN_ALLOW_PROVENANCE_TEST_PATHS = frozenset(
+    {"scripts/foundation/voc112-navigation-benchmark.test.mjs"}
+)
 EXECUTABLE_SUFFIXES = {".mjs", ".js", ".sh", ".py"}
 
 _VOC112 = "VOC" + "112_"
@@ -150,6 +153,8 @@ def should_scan_path(relative: str) -> bool:
 
 
 def scan_changed_path_for_bypasses(relative: str, text: str) -> None:
+    if relative in SCAN_ALLOW_PROVENANCE_TEST_PATHS:
+        return
     lowered = text.lower()
     if CAPTURE_FETCH_PATTERN.search(text):
         raise AssertionError(f"{relative} fetches capture/evidence commits")

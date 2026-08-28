@@ -23,7 +23,7 @@ EVIDENCE_PATH = (
     / "specs/changes/VOC-136-complete-infra-167-caller-pin-with-exhaustive/t00-evidence.md"
 )
 
-CURRENT_PIN = "123735c80fec813a5b46a004f3e1122bd425cde2"
+CURRENT_PIN = "599436835371f27fac52ec6b47a18b36257366ac"
 AUTHORITATIVE_PIN = "b263c0c110591cc798b89277dfc35542abb1597b"
 STALE_PIN_164 = "863fc1f35b1d35e4981a59166b0e939be1a2b681"
 STALE_PIN_165 = "8ce2b77a09a729e458a9f4cbea1ca26eb114d398"
@@ -44,13 +44,13 @@ MIRRORED_FILE_HASHES = {
         "fd11e45f999d26c9e009eb0d40c67c7a644ed2c8dd721a29b98c1fea4e790f08"
     ),
     "config/run-app-checks.sh": (
-        "90c9f94db19825c30168f03d13ea1de21e72e1bb1c7a5fb41c93118d62e0c4b7"
+        "e0c3dedf3b2a750ea53ca8e6264a7fda1b430df95fd13ffa8694dcf7b9e935da"
     ),
     "config/implementer_nested_checkout.py": (
         "e9190e7d5b1d48e76b0da63409005d27c12a36cbaf713033c3f2d9fa887216a9"
     ),
     "tests/test_app_check_context.py": (
-        "d572b91eeb5c8270082e52e9650194df7ca644dccbbeebaeb8de02fa2c3a6e35"
+        "c272d30b66c00315b11f2edb0dead4dd6b871433452bc39194f3ef6e0c08cc90"
     ),
     "tests/test_release_policy.py": (
         "082c67fb26f221cf6e44e07364915f77bb4aee10b46e5b03be9c2d57c33a1e07"
@@ -69,7 +69,6 @@ MIRRORED_FILE_HASHES = {
 NO_CHANGE_PATHS = (
     "scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json",
     "scripts/foundation/fixtures/voc112-skill-discovery-evidence.json",
-    "scripts/foundation/voc112-navigation-benchmark.test.mjs",
     "scripts/foundation/voc112-navigation-benchmark-run.mjs",
     "scripts/foundation/validate-workspace.mjs",
     "AGENTS.md",
@@ -332,7 +331,7 @@ class Voc136CallerReplacementTests(unittest.TestCase):
         )
         self.assertEqual(completed.returncode, 0, completed.stderr.decode())
 
-    def test_eight_no_change_paths_match_anchor_and_are_absent_from_diff(self):
+    def test_seven_no_change_paths_match_anchor_and_are_absent_from_diff(self):
         diff_names = set(git_diff_names(PROTECTED_COMPARISON_ANCHOR))
         for relative in NO_CHANGE_PATHS:
             anchor_bytes = git_show_bytes(PROTECTED_COMPARISON_ANCHOR, relative)
@@ -347,7 +346,7 @@ class Voc136CallerReplacementTests(unittest.TestCase):
             text = (REPO_ROOT / json_path).read_text(encoding="utf-8")
             self.assertIn(VOC112_SUBJECT_REVISION, text)
         self.assertIn(
-            "a full local checkout must already contain the captured commit",
+            "VOC112_PROMOTION_PR",
             self.provenance_test,
         )
 

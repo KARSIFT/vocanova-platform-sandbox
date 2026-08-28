@@ -144,12 +144,12 @@ future evidence selection, so they satisfy the repository ruleset but can never
 replace the underlying Actions evidence. The App token remains mutation-only.
 
 The canonical same-repository `develop` → `main` promotion PR validates capture
-provenance with merge-base/hash-bound `pr-validation` using the immutable PR
+provenance with head/source-revision-bound `pr-validation` using the immutable PR
 base/head SHAs, independent of whether the recorded capture subject commit
 object is reachable in the synthetic checkout. Ordinary pull requests retain
-`pr-validation` when the capture fixture is unchanged; PRs that change the
-capture fixture retain strict `pr-ancestry` unless the authenticated promotion
-signal applies. Non-PR dispatch recovery uses `squash-safe-push`; a weaker
+merge-base-anchored `pr-validation` when the capture fixture is unchanged; PRs
+that change the capture fixture retain strict `pr-ancestry` unless the authenticated
+promotion signal applies. Non-PR dispatch recovery uses `squash-safe-push`; a weaker
 same-head squash-safe dispatch is not sufficient promotion-check proof. A fork
 or any other base/head branch pair cannot select the promotion exception.
 

@@ -78,7 +78,7 @@ seven-path freeze before merge.
 
 Implementation PR base recorded before the first in-scope edit:
 
-pending — resolve current `develop` to a 40-character SHA at dispatch.
+`ecb3d6d8e30628a9691928ea4594523f7193b961` (current `develop` at dispatch).
 
 Issue-creation develop was
 `4812fb91ab1b674f9a9ec03906f90c0edf50421d`. Plan/adoption/roster commits
@@ -87,11 +87,12 @@ after that SHA are governance-only and do not count as protected-file drift.
 Protected comparison anchor for seven-path VOC-112 boundary:
 `b9e74fc2db4691c48c637639b265d527de9f4505`.
 
-Issue-creation infra pin (defective for this failure class; to be replaced):
+Issue-creation infra pin (defective for this failure class; historical audit):
 `123735c80fec813a5b46a004f3e1122bd425cde2`.
 
 New independently reviewed infra merge:
-pending — record after the coordinated infra PR merges. Do not invent it.
+`599436835371f27fac52ec6b47a18b36257366ac` (PR #169 merge after independent
+exact-revision review of head `d739e0049d418aeb118af84b7c7a445a2bb82045`).
 
 In-scope implementation diff paths (expected; record actuals after commit):
 
@@ -128,30 +129,55 @@ In-scope implementation diff paths (expected; record actuals after commit):
 
 ## Validation commands (implementation)
 
-Record after the repair is tracked and committed. Do not treat an
-untracked-only pass as acceptance.
+Recorded against implementation PR base `ecb3d6d8e30628a9691928ea4594523f7193b961`
+and the corrected supervised implementation range. The final exact caller head is
+bound by the App-authored independent-review comment/check rather than written into
+the commit that it identifies.
 
 ```bash
 bash scripts/governance/validate-governance.sh \
-  --base <implementation-pr-base> \
-  --head <implementation-pr-head>
+  --base ecb3d6d8e30628a9691928ea4594523f7193b961 \
+  --head HEAD
 bash scripts/governance/classify-change-risk.sh \
-  --base <implementation-pr-base> \
-  --head <implementation-pr-head>
+  --base ecb3d6d8e30628a9691928ea4594523f7193b961 \
+  --head HEAD
 python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'
 python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'
+PR_BASE_SHA=0d0b0cdf0692d0349f380e9cae3285b4c7916b05 \
+PR_HEAD_SHA=4812fb91ab1b674f9a9ec03906f90c0edf50421d \
+VOC112_CAPTURE_PROVENANCE_MODE=pr-validation \
+VOC112_PROMOTION_PR=true \
 node --test scripts/foundation/voc112-navigation-benchmark.test.mjs
+pnpm exec prettier --check scripts/foundation/voc112-navigation-benchmark.test.mjs
 git diff --check
 ```
 
-`classify-change-risk.sh` is expected to report R4 on the implementation
-range.
+Results before final exact-head review:
+
+| Command | Result |
+|---------|--------|
+| `validate-governance.sh` | pass |
+| `classify-change-risk.sh` | pass; R4 path floor |
+| caller governance suite (`275` tests) | pass |
+| mirrored infra fixture suite (`416` tests) | pass |
+| `voc112-navigation-benchmark.test.mjs` | `17/17` pass using the exact accumulated-promotion base/head pair; stored head hashes differ from base and the subject commit is absent, while ordinary merge-base anchoring and divergent-SHA negatives fail closed |
+| targeted Prettier check | pass after causal formatting remediation from implementation-PR run `33135763089` / job `98735260803` |
+| `git diff --check` | pass |
+| seven-path freeze vs `b9e74fc2…` | pass (no diff on protected paths) |
+
+The Node suite was run in authenticated promotion `pr-validation` mode while
+the frozen historical capture subject was absent. No hydration, recapture, or
+evidence mutation was performed.
 
 ## Independent verification (implementation)
 
-Pending exact-SHA independent review of the infrastructure PR and the caller
-implementation PR. The App-authored independent-review comment/check must
-bind the live PR head exactly and must explicitly evaluate the
+Infrastructure PR #169 passed independent exact-revision review at
+`d739e0049d418aeb118af84b7c7a445a2bb82045` and merged as
+`599436835371f27fac52ec6b47a18b36257366ac` after all hosted checks passed.
+
+Pending exact-SHA independent review of the caller implementation PR. The
+App-authored independent-review comment/check must bind the live PR head exactly
+and must explicitly evaluate the
 accumulated-promotion head-hash case, ordinary merge-base retention,
 no-checkout metadata, identity negatives, no-fetch/no-recapture constraint,
 and seven-path freeze. Merge-gate must reject any mismatch. Record a pointer
