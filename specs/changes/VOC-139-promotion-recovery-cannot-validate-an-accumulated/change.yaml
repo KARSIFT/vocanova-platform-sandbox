@@ -3,7 +3,7 @@ id: VOC-139
 slug: promotion-recovery-cannot-validate-an-accumulated
 title: Promotion recovery cannot validate an accumulated develop-to-main PR
 type: infrastructure
-status: draft
+status: adopted
 risk: R4
 planned_implementation_risk_floor: 'R4. This package repairs promotion-PR VOC-112
   source-hash provenance so an accumulated same-repository main <- develop promotion
@@ -34,8 +34,8 @@ requirement_source: "GitHub issue #1096 (Promotion recovery cannot validate an a
   \ Live PINNED_SHA.txt equals VOC-138 infra merge 123735c80fec813a5b46a004f3e1122bd425cde2.\
   \ No production promotion occurred. This draft package does not adopt or authorize\
   \ itself.\n"
-requirement_approval_status: 'pending-package-adoption. Issue #1096 records the requirement;
-  this draft is not adopted and does not authorize implementation. '
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: 'Issue-creation develop is 4812fb91ab1b674f9a9ec03906f90c0edf50421d (VOC-138
   caller merge; promotion PR #1090 head at the incident). Protected comparison anchor
@@ -54,8 +54,8 @@ owners:
     governed decision) '
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: 'none-intentional for application runtime. This package repairs
   promotion-PR source-hash provenance and no-checkout recovery metadata so the already-open
@@ -101,11 +101,11 @@ dependencies:
     feature PR and rejects an accumulated promotion whose hashed sources changed on
     develop. Live caller and template promotion-pr-metadata jobs invoke gh pr view
     "$PROMOTION_PR_NUMBER" with no -R/--repo and no checkout. In addition, the live
-    gh response exposes headRepository id/name rather than the queried
-    headRepository.nameWithOwner projection, so repository identity would still
-    resolve to null after adding -R alone. The repair must validate supported full-owner/repository
-    fields and include same-name-fork negatives. An untracked local karsift-ai-infra/
-    checkout, if present, is not this repository''s tracked tree.
+    gh response exposes headRepository id/name rather than the queried headRepository.nameWithOwner
+    projection, so repository identity would still resolve to null after adding -R
+    alone. The repair must validate supported full-owner/repository fields and include
+    same-name-fork negatives. An untracked local karsift-ai-infra/ checkout, if present,
+    is not this repository''s tracked tree.
 
     '
 - id: VOC-139-DEP-03
@@ -194,11 +194,12 @@ affected_areas:
 - docs/development/agent-skills.md
 - specs/changes/VOC-139-promotion-recovery-cannot-validate-an-accumulated
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: not-authorized
+  status: authorized
   target_branch: develop
   pull_request: null
+  authority_issue: 1098
 release:
   required: true
   mode: not-authorized-by-this-package
@@ -209,7 +210,7 @@ release:
   rollback_required: true
 ehr: not-triggered
 standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
-blocking_reasons: draft package; not adopted; implementation not authorized
+blocking_reasons: none - adopted and implementation-authorized
 artifacts:
   readme: README.md
   specification: specification.md
@@ -221,6 +222,24 @@ artifacts:
   release_plan: release-plan.md
 production_deployment: disabled
 autonomous_production_release: not-authorized-by-this-package
-repository_adoption_status: not-adopted
+repository_adoption_status: adopted
 implementation_authority_before_adoption: false
-implementation_authority_status: not-authorized
+implementation_authority_status: authorized
+approved_candidate_sha: 3f2c8f41ddb367fee543073a6b21cf3f8144798e
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1097#issuecomment-5447271011
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-139-DEP-00
+- VOC-139-DEP-01
+- VOC-139-DEP-02
+- VOC-139-DEP-03
+- VOC-139-DEP-04
+- VOC-139-DEP-05
+- VOC-139-DEP-06
+- VOC-139-DEP-07
+- VOC-139-DEP-08
+- VOC-139-DEP-09
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #1097 at 3f2c8f41ddb367fee543073a6b21cf3f8144798e'
+adoption_pr: 1097
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1097
