@@ -1,0 +1,222 @@
+schema_version: 1
+id: VOC-139
+slug: promotion-recovery-cannot-validate-an-accumulated
+title: Promotion recovery cannot validate an accumulated develop-to-main PR
+type: infrastructure
+status: draft
+risk: R4
+planned_implementation_risk_floor: 'R4. This package repairs promotion-PR VOC-112
+  source-hash provenance so an accumulated same-repository main <- develop promotion
+  can pass pr-validation when AGENTS.md or the navigator skill legitimately differ
+  from historical main, and it makes no-checkout recovery metadata repository-explicit.
+  tooling/governance/* is an R4 path floor. .github/workflows/* is an R3 floor. Semantic
+  mutation of application-check provenance, required-check recovery, and exact-revision
+  evidence binding is protected. This is a draft proposal for human adoption review,
+  not a determination. The path classifier and independent verifier remain authoritative.
+
+  '
+canonical_path: specs/changes/VOC-139-promotion-recovery-cannot-validate-an-accumulated
+authority_model: a004-active
+requirement_source: "GitHub issue #1096 (Promotion recovery cannot validate an accumulated\
+  \ develop-to-main PR), including its original body. After VOC-138 caller PR #1095\
+  \ merged to develop as 4812fb91ab1b674f9a9ec03906f90c0edf50421d, promotion PR #1090\
+  \ (main <- develop) with immutable base 0d0b0cdf0692d0349f380e9cae3285b4c7916b05\
+  \ and head 4812fb91ab1b674f9a9ec03906f90c0edf50421d still cannot pass required ci\
+  \ / ci. Synchronized pull-request run 33130426061, job 98718413924, selects VOC112_CAPTURE_PROVENANCE_MODE=pr-validation\
+  \ as VOC-138 intended but fails VOC-112-TEST-12 and VOC-112-TEST-13 with \"AGENTS.md\
+  \ hash must be anchored in the PR merge base\" (stored/head hash b0e65629\u2026\
+  \ versus main/base hash 5ba216ff\u2026). Documented recovery gh workflow run pipeline.yml\
+  \ --ref develop -f action=reconcile-release -f release_issue_number=1089 produced\
+  \ release run 33130473438 which dispatched recovery run 33130527834 (display title\
+  \ promotion-pr-validation PR #1090). Recovery job 98718739912 fails before checkout\
+  \ at gh pr view \"$PROMOTION_PR_NUMBER\" with fatal: not a git repository because\
+  \ the job does not pass --repo / -R and has no checkout/current repository context.\
+  \ Live PINNED_SHA.txt equals VOC-138 infra merge 123735c80fec813a5b46a004f3e1122bd425cde2.\
+  \ No production promotion occurred. This draft package does not adopt or authorize\
+  \ itself.\n"
+requirement_approval_status: 'pending-package-adoption. Issue #1096 records the requirement;
+  this draft is not adopted and does not authorize implementation. '
+base_branch: develop
+base_sha: 'Issue-creation develop is 4812fb91ab1b674f9a9ec03906f90c0edf50421d (VOC-138
+  caller merge; promotion PR #1090 head at the incident). Protected comparison anchor
+  for the seven remaining VOC-112 no-change paths remains b9e74fc2db4691c48c637639b265d527de9f4505.
+  The provenance test scripts/foundation/voc112-navigation-benchmark.test.mjs is the
+  remaining defect surface and is in scope to change. Implementation must record the
+  actual implementation PR base separately at dispatch, fail closed on unrelated/material
+  movement of develop, and must not treat this package''s own plan/adoption/roster
+  commits as protected-file drift. Do not snapshot the current develop/main gap.
+
+  '
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: 'planner (drafting only; adoption remains a human/autonomous
+    governed decision) '
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: 'none-intentional for application runtime. This package repairs
+  promotion-PR source-hash provenance and no-checkout recovery metadata so the already-open
+  develop-to-main promotion can pass required ci / ci when hashed sources legitimately
+  changed on develop. Ordinary post-promotion synchronization remains a tree-equivalent
+  integration-ref update. This package does not add a new production deploy path,
+  change secret values, providers, or monitor inventory.
+
+  '
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: 'Promotion-PR VOC-112 source-hash provenance and no-checkout recovery
+    metadata. No page routes, critical API endpoints, monitor inventory, or synthetic
+    inventory in infra/monitoring/ are added or changed.
+
+    '
+dependencies:
+- id: VOC-139-DEP-00
+  status: "resolved at drafting time. Issue #1096 provides the failing promotion PR\
+    \ #1090, exact head 4812fb91ab1b674f9a9ec03906f90c0edf50421d, base main 0d0b0cdf0692d0349f380e9cae3285b4c7916b05,\
+    \ PR run 33130426061, job 98718413924, tests VOC-112-TEST-12 and VOC-112-TEST-13,\
+    \ the merge-base hash fail-closed text with stored/head b0e65629\u2026 versus\
+    \ main/base 5ba216ff\u2026, recover-promotion-pr-checks run 33130527834, job 98718739912,\
+    \ fatal: not a git repository, release run 33130473438, release issue #1089, VOC-138\
+    \ merge #1095, and enough specificity to draft without a clarifying round trip.\n"
+- id: VOC-139-DEP-01
+  status: 'resolved at drafting time. Active A-004 remains authoritative. No founder
+    approved-comment gate on engineering-workflow adopt/merge/release paths. Exact-SHA
+    independent verification, deterministic risk floors, protected-path controls,
+    and fail-closed behavior remain mandatory. R4 is a draft proposal, not a determination.
+    automatic_merge_allowed is drafted true per AGENTS.md A-004 drafting rule.
+
+    '
+- id: VOC-139-DEP-02
+  status: 'resolved at drafting time by reading live caller and fixture trees. Live
+    PINNED_SHA.txt equals 123735c80fec813a5b46a004f3e1122bd425cde2 (VOC-138 infrastructure
+    merge). Live run-app-checks.sh selects pr-validation for --promotion-pr with exact
+    PR SHAs and does not export a promotion-specific hash-anchor signal. Live voc112-navigation-benchmark.test.mjs
+    assertPrValidationMergeBase always requires stored AGENTS.md and navigator hashes
+    to equal the git merge-base of PR_BASE_SHA and PR_HEAD_SHA, then also requires
+    those hashes to equal the working tree. That is sufficient for an ordinary unchanged-source
+    feature PR and rejects an accumulated promotion whose hashed sources changed on
+    develop. Live caller and template promotion-pr-metadata jobs invoke gh pr view
+    "$PROMOTION_PR_NUMBER" with no -R/--repo and no checkout. An untracked local karsift-ai-infra/
+    checkout, if present, is not this repository''s tracked tree.
+
+    '
+- id: VOC-139-DEP-03
+  status: 'resolved at drafting time as the chosen design. One end-to-end implementation
+    task covering a coordinated infrastructure PR plus the caller pin, live pipeline.yml,
+    provenance-test hash rule, tests, docs, evidence, and release handoff. Do not
+    split by repository, hash-rule versus metadata, test, or layer. Do not add a VOC-097
+    live-evidence second task: a draft evidence-carrier PR cannot satisfy sha_lineage
+    against promotion PR #1090''s recovery HEAD (karsift-ai-infra#15 class). Do not
+    snapshot the current develop/main gap. This package''s implementation PR Closes
+    only its own VOC-139 task issue.
+
+    '
+- id: VOC-139-DEP-04
+  status: 'resolved at drafting time as a hard TEST constraint. Do not fetch or hydrate
+    evidence commits. Do not recapture VOC-112 JSON fixtures. Do not weaken ordinary
+    (non-promotion) PR pr-validation merge-base hash anchoring or ordinary fixture-changing
+    pr-ancestry. Do not switch the promotion PR to --squash-safe-push. Negative tests
+    must still reject tampered current hashes, missing or malformed PR SHAs, unrelated
+    commits, unrelated repository/PR, and wrong refs. Do not weaken the required ci
+    / ci check.
+
+    '
+- id: VOC-139-DEP-05
+  status: "resolved at drafting time as a pin-advance rule. VOC-138 pin 123735c80fec813a5b46a004f3e1122bd425cde2\
+    \ remains historical audit evidence and remains the issue-creation pin. This repair\
+    \ cannot land by freezing that pin. T00 must open and consume one new independently\
+    \ reviewed karsift-ai-infra PR whose exact merge SHA becomes the new PINNED_SHA.txt\
+    \ value, then mirror every changed authoritative fixture file from that exact\
+    \ merge. Do not silently keep 123735c80\u2026 if the live reusable workflow or\
+    \ template still omits repository-explicit metadata or fails to export the promotion\
+    \ hash-anchor signal.\n"
+- id: VOC-139-DEP-06
+  status: 'resolved at drafting time. Configured Cursor Composer remains the implementer
+    and Cursor Grok remains the exact-revision independent reviewer. Current fixture
+    config/roles.yml bindings are fixed and must not change: implementer and implementer_escalation
+    cursor/composer-2.5; planner, reviewer, reviewer_fast_retry, and plan_reviewer
+    cursor/grok-4.6[effort=high,fast=false]. No OpenAI credential or execution route
+    is needed or authorized. Do not print credential values.
+
+    '
+- id: VOC-139-DEP-07
+  status: 'resolved at drafting time as a narrowed no-change constraint. Keep these
+    seven VOC-112 paths byte-identical to protected comparison anchor b9e74fc2db4691c48c637639b265d527de9f4505:
+    scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json, scripts/foundation/fixtures/voc112-skill-discovery-evidence.json,
+    scripts/foundation/voc112-navigation-benchmark-run.mjs, scripts/foundation/validate-workspace.mjs,
+    AGENTS.md, .agents/skills/vocanova-repo-navigator/SKILL.md, and package.json.
+    JSON subject_revision remains f9d11e232a07c7d7a9c433d02c9267912543ba10. The eighth
+    former no-change path, scripts/foundation/voc112-navigation-benchmark.test.mjs,
+    is the remaining merge-base hash defect and is in scope. Do not rewrite VOC-138
+    package records under specs/changes/VOC-138-promotion-pr-ci-fails-voc-112-ancestry-when/.
+    Live tooling/governance/tests/test_voc138_promotion_pr_provenance.py NO_CHANGE_PATHS
+    must stop treating the provenance test as frozen.
+
+    '
+- id: VOC-139-DEP-08
+  status: 'resolved at drafting time as the feasible exact-revision evidence contract.
+    Exact-revision binding remains fail-closed by requiring the App-authored independent-review
+    comment/check to bind the live PR head exactly and merge-gate to reject any mismatch.
+    Committed package evidence records the implementation PR base, infra merge SHA,
+    hash-rule change, metadata change, negative-case results, and where later exact-head
+    binding will be published. Tests must not mutate evidence at runtime. A commit
+    must not be required to contain its own SHA.
+
+    '
+- id: VOC-139-DEP-09
+  status: 'resolved at drafting time. After this correction merges into develop, reconcile-release
+    for release issue #1089 must be able to merge promotion PR #1090 (or the live
+    same-repository main <- develop promotion at the then-current develop head), synchronize
+    develop to the exact promotion merge SHA, and trigger the normal automatic production
+    deployment on the resulting main push; that deployment must be verified at the
+    exact SHA. Closure of root issue #1096 requires allowlisted metadata from the
+    successful recovery/release run (run/job IDs, repository, PR, base/head, ref,
+    path, conclusion) and must not treat closed state as completion proof. Do not
+    snapshot the current develop/main gap (karsift-ai-infra#15). Preserve the named
+    incident run/job IDs as audit evidence. Do not manufacture completion markers
+    for other packages.
+
+    '
+affected_areas:
+- .github/workflows/pipeline.yml
+- scripts/foundation/voc112-navigation-benchmark.test.mjs
+- tooling/governance/fixtures/karsift-ai-infra/
+- tooling/governance/tests/
+- docs/operations/11-devops-and-ci-cd.md
+- docs/development/agent-skills.md
+- specs/changes/VOC-139-promotion-recovery-cannot-validate-an-accumulated
+implementation:
+  authorized: false
+  required: true
+  status: not-authorized
+  target_branch: develop
+  pull_request: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-automation-reliability-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+ehr: not-triggered
+standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
+blocking_reasons: draft package; not adopted; implementation not authorized
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+production_deployment: disabled
+autonomous_production_release: not-authorized-by-this-package
+repository_adoption_status: not-adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: not-authorized
