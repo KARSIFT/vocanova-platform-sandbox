@@ -65,7 +65,8 @@
 - Preconditions: runner and provenance test callable
 - Procedure: Assert invalid or conflicting `--pr-base-sha`/`--pr-head-sha`
   exits non-zero with `invalid or conflicting exact PR validation context`
-  (or the live equivalent). Assert unavailable or unrelated commits exit
+  (or the live equivalent). Assert unavailable commits or a base that is not
+  an ancestor of the head exit
   non-zero with `exact PR validation commits are unavailable or unrelated`.
   Assert the existing VOC-113 missing-SHA messages still apply under
   `pr-validation` with and without the promotion signal.
@@ -89,9 +90,13 @@
 
 - Covers: `VOC-139-AC-02`, `VOC-139-AC-03`
 - Preconditions: metadata command body and recovery attestation harness
-- Procedure: Assert `promotion-pr-metadata` rejects a payload whose
-  `baseRefName` is not `main`, `headRefName` is not `develop`, or
-  `headRepository.nameWithOwner` is not `$GITHUB_REPOSITORY`. Assert
+- Procedure: Assert `promotion-pr-metadata` rejects a payload whose base/head
+  refs are not `main`/`develop`, whose base/head repository full names do not
+  both equal `$GITHUB_REPOSITORY`, whose PR is not open, or whose SHAs are not
+  40-character commit IDs. Use a response shaped like live `gh pr view`, where
+  `headRepository` has `id` and `name` but no `nameWithOwner`, and assert the
+  implementation does not read that absent field. Include a same-name fork
+  with a different owner. Assert
   recovery attestation still rejects wrong PR number, wrong repository,
   wrong workflow path, and wrong SHAs (`selected_required_run_mismatch` or
   the live equivalent).
@@ -107,16 +112,18 @@
 - Procedure: Extract and execute the real `promotion-pr-metadata` `run`
   body (or the helper it actually calls). Set `GITHUB_REPOSITORY`,
   `PROMOTION_PR_NUMBER`, and `GH_TOKEN` to fixture values. Run with `cwd`
-  equal to the non-git directory. Assert the invoked `gh` arguments include
-  `pr`, `view`, the PR number, and `-R` or `--repo` equal to
-  `$GITHUB_REPOSITORY`. Assert the job YAML has no `actions/checkout` step.
-  Repeat without `-R`/`--repo` (or with `gh` configured to require git
-  context when the flag is absent) and assert failure matching
+  equal to the non-git directory. Assert the invoked `gh` arguments address
+  `$GITHUB_REPOSITORY` explicitly, either through the REST path or `-R` /
+  `--repo`, and return a realistic identity shape. Assert the job YAML has no
+  `actions/checkout` step. Repeat without explicit repository context (or
+  with `gh` configured to require git context when it is absent) and assert
+  failure matching
   `/not a git repository/` or a deterministic equivalent that proves
   repository-context dependence. Assert live caller, template, and fixture
   bytes all contain the repository-explicit invocation.
 - Expected result: recovery job `98718739912`'s class cannot recur; tests
-  detect missing `-R`, not just missing substring comments.
+  detect missing repository context and unsupported identity projections,
+  not just missing substring comments.
 - Evidence: `VOC-139-EV-00`
 
 ## VOC-139-TEST-08 — Recovery still requires PR-bound pr-validation equivalence

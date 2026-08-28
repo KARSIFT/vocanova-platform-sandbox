@@ -40,7 +40,7 @@ seven-path freeze before merge.
 | Release run | `33130473438` |
 | Recovery run | `33130527834` (`promotion-pr-validation PR #1090`) |
 | Recovery job | `98718739912` |
-| Defect 2 | `gh pr view "$PROMOTION_PR_NUMBER"` with no `-R`/`--repo` and no checkout → `fatal: not a git repository` |
+| Defect 2 | `gh pr view "$PROMOTION_PR_NUMBER"` has no `-R`/`--repo` and no checkout → `fatal: not a git repository`; adding `-R` alone is insufficient because live `headRepository` has no `nameWithOwner` field |
 | Production promotion | none; `main` remains `0d0b0cdf…` |
 | Issue-creation pin (VOC-138 infra) | `123735c80fec813a5b46a004f3e1122bd425cde2` |
 | Protected comparison anchor (seven VOC-112 paths) | `b9e74fc2db4691c48c637639b265d527de9f4505` |
@@ -56,9 +56,9 @@ seven-path freeze before merge.
 | Promotion identification | existing `--promotion-pr` signal from reusable `ci.yml` only for same-repository `main` ← `develop` |
 | Promotion hashes | authenticated promotion pair → `pr-validation` with hashes bound to `PR_HEAD_SHA` and the working tree; do not require historical `main` hashes; do not use `--squash-safe-push` |
 | Ordinary PRs | unchanged-fixture `pr-validation` stays merge-base anchored; fixture add/modify/delete stays `pr-ancestry` |
-| Negatives | malformed SHA, unrelated commits/repository/PR, wrong refs, tampered current hashes still fail closed |
+| Negatives | malformed SHA, base-not-ancestor, unrelated repository/PR, wrong refs, closed PR, same-name fork, and tampered current hashes still fail closed |
 | Hydration / recapture | **forbidden** |
-| Metadata | `gh pr view … -R "$GITHUB_REPOSITORY"`; no checkout; subprocess test in a non-git directory |
+| Metadata | explicit `$GITHUB_REPOSITORY` context; supported full-owner/repository identity fields; no checkout; realistic subprocess test in a non-git directory |
 | Recovery | retain VOC-138 PR-bound `pr-validation` attestation; do not rerun doomed `pull_request` jobs |
 | Fixture freeze versus advance | issue-creation pin `123735c80…` is historical; live pin becomes the new infra merge |
 | Seven no-change paths | byte-identical to `b9e74fc2…`; provenance test is the allowed exception |
@@ -118,10 +118,10 @@ In-scope implementation diff paths (expected; record actuals after commit):
 | Ordinary PR, fixture changed, subject absent | `pr-ancestry` fail-closed |
 | Unchanged fixture, valid SHAs, no promotion signal | merge-base-anchored `pr-validation` |
 | Tampered current hashes, or promotion hashes matching only `main` | fail closed |
-| Missing or malformed PR SHAs / unrelated commits | fail closed |
+| Missing or malformed PR SHAs / base not ancestor of head | fail closed |
 | Wrong refs / unrelated repository or PR | fail closed |
-| Metadata `gh pr view` in a non-git directory with `-R` | succeeds (mock/fixture `gh`) |
-| Metadata `gh pr view` without `-R` in a non-git directory | fails (`not a git repository` or equivalent) |
+| Metadata lookup in a non-git directory with explicit repository context and supported fields | succeeds (realistic mock/fixture `gh`) |
+| Metadata lookup without explicit context, with missing fields, or for a same-name fork | fails closed |
 | `git fetch` / hydrate / recapture | absent |
 | Failed PR job plus weaker squash-safe dispatch | still rejected as insufficient |
 | Other selected-run identity mismatch | `selected_required_run_mismatch` |

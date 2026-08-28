@@ -56,7 +56,9 @@ Two independent defects remain in the newly activated promotion path:
 2. `.github/workflows/pipeline.yml` job `promotion-pr-metadata` (and the
    matching infrastructure template) invokes `gh pr view` before any
    checkout and without `-R "$GITHUB_REPOSITORY"`, so GitHub CLI cannot
-   resolve repository context.
+   resolve repository context. Adding `-R` alone would still read the absent
+   `.headRepository.nameWithOwner` field as `null`; supported owner/name or
+   pull REST full-name fields are required.
 
 ## Required outcome (summary)
 
@@ -71,10 +73,11 @@ coordinated with one infrastructure PR:
    `--squash-safe-push`.
 2. Keep ordinary (non-promotion) `pr-validation` merge-base hash anchoring
    and ordinary fixture-changing `pr-ancestry` fail-closed.
-3. Make the no-checkout metadata query repository-explicit
-   (`gh pr view … -R "$GITHUB_REPOSITORY"`) in the live caller workflow, the
-   infrastructure template, and the mirrored fixture. Exercise that step in
-   a test that has no git repository.
+3. Make the no-checkout metadata query repository-explicit in the live caller
+   workflow, infrastructure template, and mirrored fixture. Validate
+   owner/repository identity from supported live response fields (not absent
+   `.headRepository.nameWithOwner`) and exercise the real step in a test that
+   has no git repository and includes a same-name fork negative.
 4. Keep negatives: malformed SHA, unrelated repository/PR, wrong refs,
    unrelated commits, tampered current hashes, missing/nonancestor subject
    for ordinary `pr-ancestry`.

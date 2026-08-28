@@ -43,9 +43,11 @@ separate A-004-governed decision.
    same-repository `main` ← `develop` `pr-validation`: stored capture hashes
    bind to the reviewed head/source revision (`PR_HEAD_SHA` and working tree)
    without requiring historical `main` to contain those hashes. Exact PR
-   base/head SHAs remain required and must still resolve to a common
-   merge-base (related commits).
-2. Repository-explicit no-checkout metadata (`gh pr view … -R "$GITHUB_REPOSITORY"`)
+   base/head SHAs remain required, and the base must be an ancestor of the
+   head.
+2. Repository-explicit no-checkout metadata (prefer the pull REST response
+   addressed through `repos/$GITHUB_REPOSITORY`, or supported `gh pr view`
+   owner/repository fields with `-R "$GITHUB_REPOSITORY"`)
    in live caller `.github/workflows/pipeline.yml`, the infrastructure
    template, and the mirrored fixture, plus a subprocess/end-to-end test that
    executes that step with no git repository.
@@ -122,7 +124,8 @@ base/head pair must not receive the signal. Missing or conflicting exact PR
 SHAs remain fail-closed.
 
 `VOC-139-D02`: Promotion source-hash contract. When the authenticated
-promotion signal is present and exact PR SHAs are valid related commits,
+promotion signal is present, exact PR SHAs are valid, and `PR_BASE_SHA` is
+an ancestor of `PR_HEAD_SHA`,
 `VOC112_CAPTURE_PROVENANCE_MODE` remains `pr-validation` (so VOC-138 recovery
 attestation still matches). Stored `source_hashes.agents_sha256` and
 `source_hashes.navigator_skill_sha256` must equal the files at `PR_HEAD_SHA`
@@ -144,8 +147,8 @@ equivalent). Do not treat "hashes differ from main" as a general escape
 hatch.
 
 `VOC-139-D04`: Identity and hash negatives stay fail-closed. Missing or
-malformed `PR_BASE_SHA` / `PR_HEAD_SHA`, unrelated base/head commits (no
-common merge-base), tampered current/working-tree hashes, unrelated
+malformed `PR_BASE_SHA` / `PR_HEAD_SHA`, a base that is not an ancestor of
+the head, tampered current/working-tree hashes, unrelated
 repository or PR, and wrong base/head refs still fail closed. Capture-fixture
 comparison errors still fail closed. Unchanged fixtures with valid SHAs and
 no promotion signal still select merge-base-anchored `pr-validation`.
@@ -163,22 +166,30 @@ hydrate/materialize helper, wrap provenance mode as a skip, stamp evidence at
 test time, or rewrite the two VOC-112 JSON fixtures. JSON `subject_revision`
 remains `f9d11e232a07c7d7a9c433d02c9267912543ba10`.
 
-`VOC-139-D07`: No-checkout recovery metadata is repository-explicit. Job
-`promotion-pr-metadata` must invoke
-`gh pr view "$PROMOTION_PR_NUMBER" -R "$GITHUB_REPOSITORY" …` (equivalent
-`--repo` is acceptable in addition, not instead). It must not depend on a
-checkout or implicit git remote. The same command text must land in:
+`VOC-139-D07`: No-checkout recovery metadata is repository-explicit and uses
+fields actually present in the live GitHub response. Job
+`promotion-pr-metadata` must address `$GITHUB_REPOSITORY` explicitly. The
+preferred form is `gh api "repos/$GITHUB_REPOSITORY/pulls/$PROMOTION_PR_NUMBER"`
+and validation of `.base.repo.full_name`, `.head.repo.full_name`, refs, state,
+and exact SHAs. An equivalent `gh pr view ... -R "$GITHUB_REPOSITORY"` form is
+acceptable only when it derives owner/name from supported fields such as
+`headRepositoryOwner.login` plus `headRepository.name`; it must not read the
+absent `.headRepository.nameWithOwner`. It must not depend on a checkout or
+implicit git remote. Equivalent behavior must land in:
 
 - live caller `.github/workflows/pipeline.yml`
 - `KARSIFT/karsift-ai-infra` `templates/project-repo/.github/workflows/pipeline.yml`
 - the caller fixture mirror of that template
 
-The job still rejects a non-`main`/`develop` same-repository pair. Wrong
-repository or PR identity remains fail-closed. A deterministic test must
+The job still rejects a closed or missing PR, a fork/same-name repository,
+and a non-`main`/`develop` same-repository pair. Missing/malformed SHAs and
+wrong repository or PR identity remain fail-closed. A deterministic test must
 execute the real metadata step (or the extracted command body it actually
 runs) in a directory that is not a git repository, with `GITHUB_REPOSITORY`
-set, and must prove success depends on the explicit repo flag rather than
-implicit git context.
+set, using a fixture shaped like the real GitHub response in which
+`headRepository` has no `nameWithOwner`. It must prove success depends on
+explicit repository context and supported identity fields rather than an
+implicit git remote or a nonexistent projection.
 
 `VOC-139-D08`: Recovery attestation remains VOC-138's PR-bound
 `pr-validation` contract: PR number, repository, immutable base/head SHAs,
@@ -315,7 +326,8 @@ Abuse/process risks:
    `VOC-139-D06`.
 5. Editing the seven remaining VOC-112 no-change paths — forbidden by
    `VOC-139-D10`.
-6. Leaving `gh pr view` without an explicit repo flag — forbidden by
+6. Leaving metadata without explicit repository context or relying on the
+   absent `.headRepository.nameWithOwner` projection — forbidden by
    `VOC-139-D07`.
 7. Snapshotting the develop/main gap or adding a self-invalidating
    snapshot-then-check task — forbidden by `VOC-139-D09` and

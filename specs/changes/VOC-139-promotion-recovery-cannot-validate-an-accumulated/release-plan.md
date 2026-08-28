@@ -78,11 +78,14 @@ engineering-workflow gates. Required evidence:
    for a checkout whose `AGENTS.md` differs between base and head.
 4. Deterministic proof that ordinary `pr-validation` remains merge-base
    anchored and that ordinary fixture-changing PRs remain `pr-ancestry`.
-5. Deterministic proof that malformed SHAs, unrelated commits,
-   unrelated repository/PR, wrong refs, and tampered current hashes still
+5. Deterministic proof that malformed SHAs, base-not-ancestor,
+   unrelated repository/PR (including a same-name fork), wrong refs, closed
+   PR state, and tampered current hashes still
    fail closed.
 6. Deterministic proof that `promotion-pr-metadata` is repository-explicit,
-   has no checkout, and is exercised in a non-git directory.
+   uses fields present in the live GitHub response rather than absent
+   `.headRepository.nameWithOwner`, has no checkout, and is exercised in a
+   non-git directory.
 7. Deterministic proof that recovery still rejects weaker same-head
    evidence and does not rerun doomed `pull_request` jobs.
 8. Deterministic proof that `PINNED_SHA.txt` equals the new infra merge and

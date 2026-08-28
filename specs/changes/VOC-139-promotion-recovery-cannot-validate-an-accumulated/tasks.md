@@ -54,22 +54,26 @@ satisfy sha_lineage against promotion PR #1090's recovery HEAD.
 3. Open a new `KARSIFT/karsift-ai-infra` PR. Export an explicit promotion
    hash-anchor signal from `run-app-checks.sh` when `--promotion-pr` is set
    (prefer `VOC112_PROMOTION_PR=true`) while keeping mode `pr-validation` and
-   exact PR SHAs. Add `-R "$GITHUB_REPOSITORY"` to template
-   `promotion-pr-metadata`'s `gh pr view`. Do not fetch. Keep
+   exact PR SHAs. Make template `promotion-pr-metadata` repository-explicit
+   and validate fields present in the live GitHub response rather than absent
+   `.headRepository.nameWithOwner`. Do not fetch. Keep
    `--squash-safe-push` for generic non-PR events. Ordinary fixture
    add/modify/delete without the signal stays `pr-ancestry`. Ordinary
    `pr-validation` without the signal stays merge-base hash-anchored.
 4. In the caller provenance test, implement the promotion-specific hash
    rule: when the promotion signal is present, stored hashes must equal
    `PR_HEAD_SHA` files and the working tree, not the merge-base files. Keep
-   requiring valid related SHAs and a common merge-base. Keep ordinary
+   requiring valid exact SHAs and require the base to be an ancestor of the
+   head. Keep ordinary
    `pr-validation` merge-base anchoring when the signal is absent.
 5. Update live caller `.github/workflows/pipeline.yml` `promotion-pr-metadata`
-   to the same repository-explicit `gh pr view`. Add deterministic tests for
+   to the same repository-explicit, supported-field metadata lookup. Add
+   deterministic tests for
    the #1090 accumulated-hash class, ordinary merge-base fail-closed, malformed
    SHA, unrelated commits/repository/PR, wrong refs, tampered current hashes,
-   missing/nonancestor subject retention, and a subprocess execution of the
-   metadata step with no git repository. Narrow live VOC-138 `NO_CHANGE_PATHS`
+   missing/nonancestor subject retention, base-not-ancestor rejection, and a
+   subprocess execution of the metadata step with no git repository and a
+   realistic GitHub response shape. Narrow live VOC-138 `NO_CHANGE_PATHS`
    so it no longer freezes the provenance test. Do not rewrite VOC-138
    package records.
 6. Obtain independent exact-revision review of the infra PR and merge it.

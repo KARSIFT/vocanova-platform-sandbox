@@ -16,7 +16,8 @@
   `assertPrValidationMergeBase` still requires stored hashes to equal
   merge-base files. Confirm live and template `promotion-pr-metadata` still
   invoke `gh pr view "$PROMOTION_PR_NUMBER"` with no `-R`/`--repo` and no
-  checkout. Confirm PR #1090, run `33130426061`, job `98718413924`, recovery
+  checkout, and confirm the queried `headRepository.nameWithOwner` projection
+  is absent from the live response. Confirm PR #1090, run `33130426061`, job `98718413924`, recovery
   run `33130527834`, job `98718739912`, and release run `33130473438` remain
   the incident record. Confirm `subject_revision` remains
   `f9d11e232a07c7d7a9c433d02c9267912543ba10`. Confirm the seven remaining
@@ -49,10 +50,10 @@
 | Target | Action | Notes |
 |--------|--------|-------|
 | `KARSIFT/karsift-ai-infra` `config/run-app-checks.sh` | modify | When `--promotion-pr` is set, export `VOC112_PROMOTION_PR=true` (or equivalent) and keep mode `pr-validation` with exact PR SHAs. Unset the env otherwise. Do not fetch |
-| `KARSIFT/karsift-ai-infra` `templates/project-repo/.github/workflows/pipeline.yml` | modify | `promotion-pr-metadata` `gh pr view` must pass `-R "$GITHUB_REPOSITORY"`. No checkout step |
-| `KARSIFT/karsift-ai-infra` tests | extend | Promotion hash-anchor export; no-checkout metadata subprocess; identity negatives; ordinary merge-base retention |
+| `KARSIFT/karsift-ai-infra` `templates/project-repo/.github/workflows/pipeline.yml` | modify | `promotion-pr-metadata` must address `$GITHUB_REPOSITORY` explicitly and validate supported owner/repository fields, refs, open state, and exact SHAs. No checkout step |
+| `KARSIFT/karsift-ai-infra` tests | extend | Promotion hash-anchor export; no-checkout metadata subprocess using the live response shape without `headRepository.nameWithOwner`; fork/identity negatives; ordinary merge-base retention |
 | Caller `scripts/foundation/voc112-navigation-benchmark.test.mjs` | modify | Promotion signal → hashes bind to `PR_HEAD_SHA` + working tree; absent signal → merge-base anchoring remains |
-| Caller `.github/workflows/pipeline.yml` | modify | Same repository-explicit `gh pr view` as the template |
+| Caller `.github/workflows/pipeline.yml` | modify | Same repository-explicit, supported-field metadata lookup as the template |
 | Caller `tooling/governance/fixtures/karsift-ai-infra/**` | replace from new infra merge | Pin `PINNED_SHA.txt` to that exact merge; mirror every changed authoritative file |
 | Caller `tooling/governance/tests/` | extend | Accumulated-hash, no-checkout metadata, identity negatives; narrow VOC-138 `NO_CHANGE_PATHS` so the provenance test is no longer frozen |
 | Seven remaining VOC-112 no-change paths | **do not modify** | Must remain byte-identical to `b9e74fc2…` |
@@ -107,10 +108,10 @@ Also record the exact targeted infra and caller commands that prove:
 - accumulated promotion with differing `AGENTS.md` → `VOC-112-TEST-12` /
   `VOC-112-TEST-13` pass under `pr-validation`;
 - ordinary no-promotion differing hashes → merge-base fail-closed;
-- malformed SHA / unrelated commits / wrong refs / unrelated repository/PR
-  fail closed;
-- metadata step succeeds in a non-git directory with `-R` and fails without
-  it;
+- malformed SHA / base-not-ancestor / wrong refs / unrelated repository/PR,
+  including a same-name fork and closed PR, fail closed;
+- metadata step succeeds in a non-git directory with explicit repository
+  context and supported response fields, and fails without either;
 - recovery still rejects weaker same-head dispatch and does not rerun doomed
   `pull_request` jobs.
 
@@ -127,7 +128,8 @@ confirm:
 - ordinary fixture-changing PRs remain `pr-ancestry` fail-closed;
 - hash/SHA/identity negatives still fail closed;
 - no fetch/hydrate/recapture helper exists;
-- `promotion-pr-metadata` is repository-explicit and has no checkout;
+- `promotion-pr-metadata` is repository-explicit, validates supported
+  owner/repository fields, and has no checkout;
 - a no-checkout subprocess test exists and would have caught job
   `98718739912`;
 - `PINNED_SHA.txt` equals the new infra merge, not stale `123735c80…` if that

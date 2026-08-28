@@ -100,7 +100,11 @@ dependencies:
     those hashes to equal the working tree. That is sufficient for an ordinary unchanged-source
     feature PR and rejects an accumulated promotion whose hashed sources changed on
     develop. Live caller and template promotion-pr-metadata jobs invoke gh pr view
-    "$PROMOTION_PR_NUMBER" with no -R/--repo and no checkout. An untracked local karsift-ai-infra/
+    "$PROMOTION_PR_NUMBER" with no -R/--repo and no checkout. In addition, the live
+    gh response exposes headRepository id/name rather than the queried
+    headRepository.nameWithOwner projection, so repository identity would still
+    resolve to null after adding -R alone. The repair must validate supported full-owner/repository
+    fields and include same-name-fork negatives. An untracked local karsift-ai-infra/
     checkout, if present, is not this repository''s tracked tree.
 
     '

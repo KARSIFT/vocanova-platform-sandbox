@@ -16,12 +16,14 @@ Security controls that must remain:
 - Ordinary non-promotion `pr-validation` stays merge-base hash-anchored.
   Only the authenticated same-repository `main` ← `develop` promotion signal
   binds hashes to `PR_HEAD_SHA`.
-- Exact PR base/head SHAs remain required and must still be related commits.
+- Exact PR base/head SHAs remain required, and base must be an ancestor of head.
   Promotion PRs are not switched to `--squash-safe-push`.
 - No `git fetch` / hydrate / recapture path for evidence commits or JSON
   fixtures.
-- Recovery metadata uses `-R "$GITHUB_REPOSITORY"` and still rejects the
-  wrong branch pair or repository. Attestations require genuine Actions
+- Recovery metadata addresses `$GITHUB_REPOSITORY` explicitly, validates
+  supported owner/repository fields rather than absent
+  `.headRepository.nameWithOwner`, and still rejects wrong branch pairs,
+  forks, closed PRs, malformed SHAs, or repository identity. Attestations require genuine Actions
   success bound to the PR number, repository, immutable base/head SHAs,
   configured branch pair, expected workflow/path, and `pr-validation` mode.
 - Seven VOC-112 capture/runner/source/package.json paths remain the
@@ -59,7 +61,8 @@ metadata are CI orchestration only.
   switched to `--squash-safe-push`, dropping exact SHA/hash negatives.
   Mitigation: `VOC-139-D05`, `VOC-139-AC-04`.
 - `VOC-139-R04`: **High recovery-safety risk** if `promotion-pr-metadata`
-  still invokes `gh pr view` without `-R` / `--repo`, repeating job
+  still lacks explicit repository context or reads the absent
+  `.headRepository.nameWithOwner` projection, repeating job
   `98718739912`. Mitigation: `VOC-139-D07`, `VOC-139-AC-03`,
   `VOC-139-TEST-07`.
 - `VOC-139-R05`: **High coverage risk** if the seven remaining VOC-112

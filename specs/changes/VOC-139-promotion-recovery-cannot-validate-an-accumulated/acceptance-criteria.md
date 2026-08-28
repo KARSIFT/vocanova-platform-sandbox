@@ -53,13 +53,17 @@ and no promotion signal still select merge-base-anchored `pr-validation`.
 - Evidence: `VOC-139-EV-00`
 - Result: pending
 
-Job `promotion-pr-metadata` invokes `gh pr view` with `-R "$GITHUB_REPOSITORY"`
-(or equivalent `--repo`) and has no checkout step. A deterministic test
-executes the real metadata command body in a directory that is not a git
-repository and succeeds only when the explicit repository flag is present.
-Live caller `pipeline.yml`, the infrastructure template, and the mirrored
-fixture carry the same repository-explicit invocation. Wrong refs or
-repository still fail with `promotion pair mismatch` (or the live equivalent).
+Job `promotion-pr-metadata` addresses `$GITHUB_REPOSITORY` explicitly and has
+no checkout step. It validates exact base/head repository full names, refs,
+open state, and 40-character SHAs using fields present in the live GitHub
+response; it must not read absent `.headRepository.nameWithOwner`. A
+deterministic test executes the real metadata command body in a directory
+that is not a git repository, with a realistic response shape lacking that
+field, and succeeds only with explicit repository context and supported
+identity fields. Live caller `pipeline.yml`, the infrastructure template,
+and the mirrored fixture carry equivalent behavior. Wrong refs, closed or
+missing PRs, malformed SHAs, forks/same-name repositories, or other repository
+identity mismatches fail closed.
 
 ## VOC-139-AC-04 — Recovery attestation stays exact-identity pr-validation
 
