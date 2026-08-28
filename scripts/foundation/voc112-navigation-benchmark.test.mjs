@@ -599,8 +599,11 @@ test("VOC-139-TEST-00: promotion pr-validation binds hashes to PR head, not merg
       agents_sha256: sha256AtRevision(headSha, "AGENTS.md"),
     },
   };
-  withProvenanceEnv("pr-validation", baseSha, headSha, () =>
-    assertCapturedRevision(evidence),
+  withProvenanceEnv(
+    "pr-validation",
+    baseSha,
+    headSha,
+    () => assertCapturedRevision(evidence),
     { promotionPr: true },
   );
 });
@@ -614,11 +617,10 @@ test("VOC-139-TEST-02: ordinary pr-validation still requires merge-base hashes",
     cwd: repositoryRoot,
     encoding: "utf8",
   }).trim();
-  const mergeBase = execFileSync(
-    "git",
-    ["merge-base", baseSha, headSha],
-    { cwd: repositoryRoot, encoding: "utf8" },
-  ).trim();
+  const mergeBase = execFileSync("git", ["merge-base", baseSha, headSha], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  }).trim();
   const evidence = {
     ...fixture("voc112-navigation-benchmark-traces.json"),
     subject_revision: "0".repeat(40),
@@ -653,11 +655,10 @@ test("VOC-139-TEST-05: promotion pr-validation rejects merge-base-only hashes", 
     cwd: repositoryRoot,
     encoding: "utf8",
   }).trim();
-  const mergeBase = execFileSync(
-    "git",
-    ["merge-base", baseSha, headSha],
-    { cwd: repositoryRoot, encoding: "utf8" },
-  ).trim();
+  const mergeBase = execFileSync("git", ["merge-base", baseSha, headSha], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  }).trim();
   const evidence = {
     ...fixture("voc112-navigation-benchmark-traces.json"),
     subject_revision: "0".repeat(40),
