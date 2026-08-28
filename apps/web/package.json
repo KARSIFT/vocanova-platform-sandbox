@@ -16,7 +16,7 @@
     "generate:tokens": "node scripts/generate-tokens-css.mjs"
   },
   "dependencies": {
-    "@sentry/nextjs": "^10.70.0",
+    "@sentry/nextjs": "^10.71.0",
     "@vocanova/api-client": "workspace:*",
     "next": "16.3.2",
     "react": "19.2.8",
@@ -27,9 +27,9 @@
     "@next/eslint-plugin-next": "16.3.2",
     "@playwright/test": "1.62.1",
     "@tailwindcss/postcss": "4.3.3",
-    "@types/node": "26.2.0",
+    "@types/node": "26.3.0",
     "@types/react": "19.2.18",
-    "@types/react-dom": "19.2.4",
+    "@types/react-dom": "19.2.5",
     "@vocanova/design-tokens": "workspace:*",
     "axe-core": "4.13.0",
     "chrome-launcher": "1.2.1",
