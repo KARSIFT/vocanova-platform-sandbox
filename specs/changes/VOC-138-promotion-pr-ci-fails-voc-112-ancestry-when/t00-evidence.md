@@ -138,13 +138,17 @@ node --test scripts/foundation/voc112-navigation-benchmark.test.mjs
 git diff --check
 ```
 
-Local implementer attempt `1` results (pre-commit working tree):
+Tracked repair commit `a571df59d4d168e26f69304217ddf4362586214c`
+results (the final caller head remains bound externally by exact-SHA review):
 
 | Command | Result |
 |---------|--------|
-| `python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'` | pass |
-| `python3 -m unittest tooling.governance.tests.test_voc138_promotion_pr_provenance` | pass |
-| `node --test scripts/foundation/voc112-navigation-benchmark.test.mjs` | pass |
+| `bash scripts/governance/validate-governance.sh --base e89a0272… --head a571df59…` | pass |
+| `bash scripts/governance/classify-change-risk.sh --base e89a0272… --head a571df59…` | pass; R4 floor |
+| `python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'` | pass; 266 tests |
+| `python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'` | pass; 403 tests |
+| `VOC112_CAPTURE_PROVENANCE_MODE=pr-validation PR_BASE_SHA=e89a0272… PR_HEAD_SHA=a571df59… node --test scripts/foundation/voc112-navigation-benchmark.test.mjs` | pass; 13 tests |
+| `python3 -m unittest tooling.governance.tests.test_voc138_promotion_pr_provenance` | pass; 8 tests, including actual missing-subject assertion |
 | `git diff --check` | pass |
 
 Governance validation, classify-change-risk, and full caller governance discovery
@@ -155,8 +159,13 @@ range.
 
 ## Independent verification (implementation)
 
-Pending exact-SHA independent review of the infrastructure PR and the caller
-implementation PR. The App-authored independent-review comment/check must
+Infrastructure PR #168 received independent PASS at source head
+`a5c1fe9e9eda7b9374bcd1a6938ba02ede73bb8b` after 453 tests and hosted
+actionlint, shellcheck, YAML parsing, and policy tests passed. It merged as
+`123735c80fec813a5b46a004f3e1122bd425cde2`.
+
+Pending exact-SHA independent review of the caller implementation PR. The
+App-authored independent-review comment/check must
 bind the live PR head exactly and must explicitly evaluate the promotion
 missing-subject case, ordinary `pr-ancestry` retention, hash/SHA negatives,
 no-fetch constraint, and recovery behavior. Merge-gate must reject any
