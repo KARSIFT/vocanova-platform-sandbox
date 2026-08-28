@@ -143,6 +143,7 @@ bash scripts/governance/classify-change-risk.sh \
   --head HEAD
 python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'
 python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'
+git fetch --no-tags origin f9d11e232a07c7d7a9c433d02c9267912543ba10
 PR_BASE_SHA=0d0b0cdf0692d0349f380e9cae3285b4c7916b05 \
 PR_HEAD_SHA=4812fb91ab1b674f9a9ec03906f90c0edf50421d \
 VOC_PROMOTION_PR_VALIDATION=true \
@@ -154,17 +155,17 @@ Results before final exact-head review:
 
 | Command | Result |
 |---------|--------|
-| `validate-governance.sh` | pending final committed range |
-| `classify-change-risk.sh` | pending final committed range; expected R4 |
+| `validate-governance.sh` | pass |
+| `classify-change-risk.sh` | pass; R4 path floor |
 | caller governance suite (`275` tests) | pass |
 | mirrored infra fixture suite (`416` tests) | pass |
 | `voc112-navigation-benchmark.test.mjs` | `17/17` pass using the exact accumulated-promotion base/head pair; stored head hashes differ from base and the subject commit is absent, while ordinary merge-base anchoring and divergent-SHA negatives fail closed |
 | `git diff --check` | pass |
 | seven-path freeze vs `b9e74fc2…` | pass (no diff on protected paths) |
 
-The final committed range is validated and classified before publication; the
-exact results are recorded in a follow-up evidence commit if they differ from the
-expected PASS / R4 outcome.
+The Node suite was run after resolving its frozen historical capture commit in
+the temporary review clone. No hydration, recapture, or evidence mutation was
+performed.
 
 ## Independent verification (implementation)
 
