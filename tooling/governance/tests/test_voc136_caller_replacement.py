@@ -23,7 +23,7 @@ EVIDENCE_PATH = (
     / "specs/changes/VOC-136-complete-infra-167-caller-pin-with-exhaustive/t00-evidence.md"
 )
 
-CURRENT_PIN = "ac0edc4b5b8f6165fa5e23a7b166dc2a0c2ea18f"
+CURRENT_PIN = "123735c80fec813a5b46a004f3e1122bd425cde2"
 AUTHORITATIVE_PIN = "b263c0c110591cc798b89277dfc35542abb1597b"
 STALE_PIN_164 = "863fc1f35b1d35e4981a59166b0e939be1a2b681"
 STALE_PIN_165 = "8ce2b77a09a729e458a9f4cbea1ca26eb114d398"
@@ -35,7 +35,7 @@ VOC112_SUBJECT_REVISION = "f9d11e232a07c7d7a9c433d02c9267912543ba10"
 
 MIRRORED_FILE_HASHES = {
     ".github/workflows/ci.yml": (
-        "b5f2e0d82bbe3e98f85fe5da064c144732ab500abe1e6cf3348c938b3deef2c1"
+        "54dd080ece5e9dd6564788810025b0c0bf8b3bfe49d509b9771fd2ac88f3828a"
     ),
     ".github/workflows/implement.yml": (
         "e0612aa46dff58d3c06ff338864af3fa32cc725f151235cbe8b6789a80995d2a"
@@ -44,13 +44,13 @@ MIRRORED_FILE_HASHES = {
         "fd11e45f999d26c9e009eb0d40c67c7a644ed2c8dd721a29b98c1fea4e790f08"
     ),
     "config/run-app-checks.sh": (
-        "ce875cd2b2450663e1c1c611fd31533b2d222afc5a3c443f0623dbd5d3eca03c"
+        "90c9f94db19825c30168f03d13ea1de21e72e1bb1c7a5fb41c93118d62e0c4b7"
     ),
     "config/implementer_nested_checkout.py": (
         "e9190e7d5b1d48e76b0da63409005d27c12a36cbaf713033c3f2d9fa887216a9"
     ),
     "tests/test_app_check_context.py": (
-        "c585df66f8a00d4526f5eeb5cb08300f5b9e359f7d0d210b15f8890a4480d18d"
+        "d572b91eeb5c8270082e52e9650194df7ca644dccbbeebaeb8de02fa2c3a6e35"
     ),
     "tests/test_release_policy.py": (
         "082c67fb26f221cf6e44e07364915f77bb4aee10b46e5b03be9c2d57c33a1e07"

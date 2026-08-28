@@ -210,7 +210,7 @@ infrastructure PR #167 merge
 the #165 post-caller-checkout restore in both release jobs, the #166
 post-implementer helper-lifetime and nested-checkout contracts, and the #167
 immutable PR-context validation contract. VOC-138-T00 advances the pin to
-infrastructure merge `ac0edc4b5b8f6165fa5e23a7b166dc2a0c2ea18f` with authenticated
+infrastructure merge `123735c80fec813a5b46a004f3e1122bd425cde2` with authenticated
 promotion `pr-validation`, recovery dispatch metadata, and doomed `ci / ci` rerun
 refusal. `run-app-checks.sh` validates an exact
 PR base/head pair without fetching evidence; an unchanged capture fixture

@@ -1,4 +1,6 @@
 name: pipeline
+run-name: >-
+  ${{ github.event_name == 'workflow_dispatch' && inputs.action == 'recover-promotion-pr-checks' && format('promotion-pr-validation PR #{0}', inputs.promotion_pr_number) || github.event.pull_request.title || github.workflow }}
 
 # Thin file. All real logic lives in KARSIFT/karsift-ai-infra's reusable
 # workflows - this just wires triggers to them. Runs alongside (not instead
@@ -338,7 +340,7 @@ jobs:
       always() &&
       (
         (github.event_name == 'pull_request' && github.event.action != 'closed') ||
-        (github.event_name == 'workflow_dispatch' && inputs.action == 'recover-promotion-pr-checks')
+        (github.event_name == 'workflow_dispatch' && inputs.action == 'recover-promotion-pr-checks' && needs.promotion-pr-metadata.result == 'success')
       )
     uses: KARSIFT/karsift-ai-infra/.github/workflows/ci.yml@main
     with:

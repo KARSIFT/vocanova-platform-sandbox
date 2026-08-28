@@ -84,8 +84,8 @@ Issue-creation infra pin (defective for this failure class; replaced):
 `b263c0c110591cc798b89277dfc35542abb1597b`.
 
 New independently reviewed infra merge:
-`ac0edc4b5b8f6165fa5e23a7b166dc2a0c2ea18f` (local infra commit; infra PR
-pending independent exact-revision review and canonical merge).
+`123735c80fec813a5b46a004f3e1122bd425cde2` (infra PR #168; independently
+reviewed source head `a5c1fe9e9eda7b9374bcd1a6938ba02ede73bb8b`).
 
 In-scope implementation diff paths (expected; record actuals after commit):
 
@@ -95,7 +95,8 @@ In-scope implementation diff paths (expected; record actuals after commit):
 - `KARSIFT/karsift-ai-infra` `config/promotion_status_attestation.py` (reject squash-safe recovery)
 - `KARSIFT/karsift-ai-infra` `config/promotion-status-attestation-runner.py`
 - `KARSIFT/karsift-ai-infra` `templates/project-repo/.github/workflows/pipeline.yml`
-- `KARSIFT/karsift-ai-infra` tests (`test_app_check_context.py`, `test_voc122_actions_check_recovery.py`, `test_voc138_promotion_pr_provenance.py`)
+- `KARSIFT/karsift-ai-infra` `.github/workflows/self-ci.yml` (template-inclusive actionlint)
+- `KARSIFT/karsift-ai-infra` tests (`test_app_check_context.py`, `test_promotion_status_attestation.py`, `test_voc122_actions_check_recovery.py`, `test_voc138_promotion_pr_provenance.py`)
 - caller `.github/workflows/pipeline.yml` (`promotion-pr-metadata` job and ci inputs)
 - caller `tooling/governance/fixtures/karsift-ai-infra/**` pin and mirrors
 - caller `tooling/governance/tests/test_voc138_promotion_pr_provenance.py`
@@ -114,7 +115,7 @@ In-scope implementation diff paths (expected; record actuals after commit):
 | Tampered merge-base or current hashes | fail closed |
 | Missing or malformed PR SHAs | fail closed |
 | `git fetch` / hydrate helper | absent |
-| Failed PR job plus `33122158425`-class squash-safe dispatch | dispatch is rejected as insufficient; recovery does not attest it or rerun the doomed job |
+| Failed PR job plus `33122158425`-class squash-safe dispatch | generic `display_title: pipeline` is rejected as insufficient; recovery does not attest it or rerun the doomed job |
 | Failed PR job plus genuine PR-bound `pr-validation` recovery | recovery waits for success, verifies immutable identity and mode, then publishes one equivalent result |
 | Other selected-run identity mismatch | `selected_required_run_mismatch` |
 
