@@ -24,7 +24,7 @@ from voc136_bypass_scan import (
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 AUTHORITATIVE_PIN = "b263c0c110591cc798b89277dfc35542abb1597b"
-CURRENT_PIN = "1edd60b98e1785057f63b7686ee2822706574a97"
+CURRENT_PIN = "599436835371f27fac52ec6b47a18b36257366ac"
 PROTECTED_COMPARISON_ANCHOR = "b9e74fc2db4691c48c637639b265d527de9f4505"
 IMPLEMENTATION_PR_BASE = "ebe4c460d892b87b6de38915f9fbd5e30d3c051b"
 VOC112_SUBJECT_REVISION = "f9d11e232a07c7d7a9c433d02c9267912543ba10"
@@ -44,7 +44,7 @@ MIRRORED_FILE_HASHES = {
         "fd11e45f999d26c9e009eb0d40c67c7a644ed2c8dd721a29b98c1fea4e790f08"
     ),
     "config/run-app-checks.sh": (
-        "4adab35c3a5ec91ee09c8917edd3f02e6ae861e22c9d375b78b7c2cb39fe09ed"
+        "e0c3dedf3b2a750ea53ca8e6264a7fda1b430df95fd13ffa8694dcf7b9e935da"
     ),
     "config/implementer_nested_checkout.py": (
         "e9190e7d5b1d48e76b0da63409005d27c12a36cbaf713033c3f2d9fa887216a9"

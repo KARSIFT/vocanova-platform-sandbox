@@ -19,7 +19,7 @@ EVIDENCE_PATH = (
 )
 
 AUTHORITATIVE_PIN = "123735c80fec813a5b46a004f3e1122bd425cde2"
-CURRENT_PIN = "1edd60b98e1785057f63b7686ee2822706574a97"
+CURRENT_PIN = "599436835371f27fac52ec6b47a18b36257366ac"
 STALE_PIN_167 = "b263c0c110591cc798b89277dfc35542abb1597b"
 PROTECTED_COMPARISON_ANCHOR = "b9e74fc2db4691c48c637639b265d527de9f4505"
 IMPLEMENTATION_PR_BASE = "e89a02723cfbcaed952a868f2ab3f1442fd04fae"
@@ -33,7 +33,7 @@ MIRRORED_FILE_HASHES = {
         "3c2d074afd694da31cfbefc38cf42de74132d5fc07e769e2aeb4d4a59d9761be"
     ),
     "config/run-app-checks.sh": (
-        "4adab35c3a5ec91ee09c8917edd3f02e6ae861e22c9d375b78b7c2cb39fe09ed"
+        "e0c3dedf3b2a750ea53ca8e6264a7fda1b430df95fd13ffa8694dcf7b9e935da"
     ),
     "config/actions-check-recovery-runner.py": (
         "e3f3504e0e6104ea5ff7f540ac591ded12e59d49c11cc810502ba5a6b84468e9"
@@ -60,7 +60,7 @@ MIRRORED_FILE_HASHES = {
         "253870621ab895a42258d9b0b5a8285b7dd05e29d97eea603291f3eb75dc51ff"
     ),
     "tests/test_voc139_promotion_recovery_metadata.py": (
-        "84eaaf8a86c41176e4c2a328dadf7e671d15397ca4a3551548520fed1f52f8ff"
+        "3db49071643781270c7e89fcade26d4c9b47dfb6bc207d620f8419f16e1428a4"
     ),
 }
 
