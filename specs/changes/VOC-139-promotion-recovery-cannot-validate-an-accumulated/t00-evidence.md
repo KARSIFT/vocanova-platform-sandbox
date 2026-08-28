@@ -148,6 +148,7 @@ PR_HEAD_SHA=4812fb91ab1b674f9a9ec03906f90c0edf50421d \
 VOC112_CAPTURE_PROVENANCE_MODE=pr-validation \
 VOC112_PROMOTION_PR=true \
 node --test scripts/foundation/voc112-navigation-benchmark.test.mjs
+pnpm exec prettier --check scripts/foundation/voc112-navigation-benchmark.test.mjs
 git diff --check
 ```
 
@@ -160,6 +161,7 @@ Results before final exact-head review:
 | caller governance suite (`275` tests) | pass |
 | mirrored infra fixture suite (`416` tests) | pass |
 | `voc112-navigation-benchmark.test.mjs` | `17/17` pass using the exact accumulated-promotion base/head pair; stored head hashes differ from base and the subject commit is absent, while ordinary merge-base anchoring and divergent-SHA negatives fail closed |
+| targeted Prettier check | pass after causal formatting remediation from implementation-PR run `33135763089` / job `98735260803` |
 | `git diff --check` | pass |
 | seven-path freeze vs `b9e74fc2…` | pass (no diff on protected paths) |
 

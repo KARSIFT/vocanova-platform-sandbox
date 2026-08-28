@@ -25,10 +25,8 @@ const fixture = (name) =>
       "utf8",
     ),
   );
-const VOC139_PROMOTION_BASE_SHA =
-  "0d0b0cdf0692d0349f380e9cae3285b4c7916b05";
-const VOC139_PROMOTION_HEAD_SHA =
-  "4812fb91ab1b674f9a9ec03906f90c0edf50421d";
+const VOC139_PROMOTION_BASE_SHA = "0d0b0cdf0692d0349f380e9cae3285b4c7916b05";
+const VOC139_PROMOTION_HEAD_SHA = "4812fb91ab1b674f9a9ec03906f90c0edf50421d";
 const sha256 = (relativePath) =>
   createHash("sha256")
     .update(readFileSync(path.join(repositoryRoot, relativePath)))
@@ -720,12 +718,7 @@ test("VOC-139-TEST-04: promotion pr-validation rejects a non-ancestor base", () 
   assert.notEqual(
     spawnSync(
       "git",
-      [
-        "merge-base",
-        "--is-ancestor",
-        divergentBase,
-        VOC139_PROMOTION_HEAD_SHA,
-      ],
+      ["merge-base", "--is-ancestor", divergentBase, VOC139_PROMOTION_HEAD_SHA],
       { cwd: repositoryRoot },
     ).status,
     0,
