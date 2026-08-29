@@ -4,8 +4,8 @@
 
 Unblock the already-open same-repository `main` ← `develop` promotion so
 release convergence can trust recovered `ci / ci` evidence and a separate,
-current-repository-scoped guard identity can prove the live production merge
-guard before the mutation identity merges. Do not create a duplicate promotion
+current-repository-scoped guard token can prove the live production merge guard
+before the unchanged mutation token merges. Do not create a duplicate promotion
 PR or release audit. Do not weaken ruleset enforcement.
 
 **Requirement source:** [GitHub issue #1102](https://github.com/KARSIFT/vocanova-platform-sandbox/issues/1102).
@@ -105,8 +105,8 @@ separate A-004-governed decision.
   the required exhaustive search.
 - Protected technical effect: whether release convergence can attest recovered
   `ci / ci` without selecting its own in-progress carrier, and whether the
-  isolated guard identity can prove a non-bypassable production ruleset before
-  the unchanged mutation identity merges to `main`. No application runtime
+  isolated guard token can prove a non-bypassable production ruleset before
+  the unchanged mutation token merges to `main`. No application runtime
   effect is intended.
 - EHR: not triggered.
 - Active authority model: **A-004**. No founder `approved` comment is a
@@ -363,8 +363,10 @@ Abuse/process risks:
    and `VOC-140-D07`.
 5. Granting unrelated App permissions or rotating `KARSIFT_BOT_*` secrets —
    forbidden by `VOC-140-D06` and `VOC-140-D12`.
-6. Switching the verifier to a different identity so the merger never proves
-   the guard — forbidden by `VOC-140-D06`.
+6. Passing the guard token to merge/mutation steps, passing Administration to
+   the mutation token, or separating verification from the immediately
+   following fresh exact-head/base/ref revalidation and mutation-token merge —
+   forbidden by `VOC-140-D06`.
 7. Fabricating statuses or manually merging #1090 — forbidden by
    `VOC-140-DEP-04`.
 8. Snapshotting the develop/main gap or adding a self-invalidating

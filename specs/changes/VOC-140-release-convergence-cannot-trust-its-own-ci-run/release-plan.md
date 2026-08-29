@@ -10,7 +10,7 @@ permission and external App-installation prerequisite are bounded by D06/D07.
 It lands the recovery-identity and production-merge-guard token/API repair so
 `reconcile-release` can attest recovered `ci / ci` without selecting its own
 in-progress carrier and can prove the live non-bypassable production ruleset
-with the isolated guard identity before the unchanged mutation identity
+with the isolated guard token before the unchanged mutation token
 merges. Promotion PR #1090 remains the live
 promotion carrier after this repair merges; this package does not merge
 #1090 itself and must not create a duplicate promotion PR or release audit.

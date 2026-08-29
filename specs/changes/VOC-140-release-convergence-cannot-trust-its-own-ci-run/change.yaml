@@ -156,8 +156,8 @@ dependencies:
     \ reviewed karsift-ai-infra PR whose exact merge SHA becomes the new PINNED_SHA.txt\
     \ value, then mirror every changed authoritative fixture file from that exact\
     \ merge. Do not silently keep 59943683\u2026 if the live reusable workflow still\
-    \ selects a still-running release carrier as ci / ci or still cannot prove bypass_actors\
-    \ with the merge identity.\n"
+    \ selects a still-running release carrier as ci / ci or the isolated guard token\
+    \ still cannot prove bypass_actors.\n"
 - id: VOC-140-DEP-06
   status: 'resolved at drafting time. Configured Cursor Composer remains the implementer
     and Cursor Grok remains the exact-revision independent reviewer. Current fixture

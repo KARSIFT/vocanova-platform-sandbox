@@ -54,8 +54,8 @@ satisfy sha_lineage against promotion PR #1090's recovery HEAD.
 3. Open a new `KARSIFT/karsift-ai-infra` PR. Implement D01–D08 there:
    never select an in-progress/failed release carrier as attestable `ci / ci`;
    require dedicated completed `promotion-pr-validation PR #<n>` when no
-   completed non-carrier run exists; request the least-privilege mint
-   keep the existing mutation token at exactly Contents/Issues/Pull requests
+   completed non-carrier run exists; keep the existing mutation token at
+   exactly Contents/Issues/Pull requests
    write and sole for `gh pr merge`/mutations; add a separate ephemeral
    current-caller-repository-scoped Administration-write-only guard token,
    injected only into guard verification immediately before merge. Apply the

@@ -136,8 +136,8 @@ Also record the exact targeted infra and caller commands that prove:
 - omitted `bypass_actors` fails distinctly from `production_merge_guard_missing`;
 - `bypass_actors: []` still prints `production-merge-guard: ok`;
 - non-empty bypass still fails closed;
-- release and production-branch merge-gate mints request the diagnosed
-  exact two-token permission sets and repository scope; guard verification is
+- release and production-branch merge-gate mints enforce the exact two-token
+  permission sets and current-repository scope; guard verification is
   immediately before merge; the guard token never reaches `gh pr merge` or any
   mutation/status/issue/PR/content step.
 

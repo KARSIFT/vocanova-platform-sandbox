@@ -151,7 +151,7 @@
   merge. Assert the pin is not left at
   `599436835371f27fac52ec6b47a18b36257366ac` if that merge still selects a
   still-running release carrier as `ci / ci` or still cannot prove
-  `bypass_actors` with the merge identity. Discover every live governance
+  `bypass_actors` with the isolated guard token. Discover every live governance
   test that asserts `CURRENT_PIN`, the live fixture pin, or mirrored-file
   hashes and assert it expects the new merge. Assert historical
   `AUTHORITATIVE_PIN` / issue-era constants and package evidence still retain

@@ -4,8 +4,8 @@
 
 This package repairs promotion recovery/selection so a still-running release
 carrier cannot be treated as completed `ci / ci`, and it repairs the App
-token/API contract so a separate guard-only identity can prove the live
-non-bypassable production ruleset before the unchanged mutation identity
+token/API contract so a separate guard-only token can prove the live
+non-bypassable production ruleset before the unchanged mutation token
 merges to `main`. It does not introduce new secret values,
 OAuth/session material, production-data access, or user-facing data flows.
 It does not rotate `KARSIFT_BOT_APP_ID` / `KARSIFT_BOT_PRIVATE_KEY`.
@@ -82,7 +82,7 @@ guard visibility are CI orchestration only.
   treated as empty, or if the guard is weakened to skip no-bypass proof.
   Mitigation: `VOC-140-D05`, `VOC-140-D07`, `VOC-140-TEST-06`,
   `VOC-140-TEST-07`.
-- `VOC-140-R04`: **High authorization risk** if the merge identity still
+- `VOC-140-R04`: **High authorization risk** if the isolated guard token still
   cannot see full ruleset fields after the mint change, repeating
   `production_merge_guard_missing` for live ruleset `20575146`. Mitigation:
   `VOC-140-D06`, `VOC-140-D07`, `VOC-140-TEST-07`, `VOC-140-TEST-08`.
