@@ -64,9 +64,11 @@ satisfy sha_lineage against promotion PR #1090's recovery HEAD.
    fabricate statuses, or rerun doomed `pull_request` `ci / ci` jobs.
 4. Complete the known external activation prerequisite: configure GitHub App
    `karsift-ai-infra-bot` Repository permissions as Administration: Read and
-   write and obtain installation-owner approval for
-   `KARSIFT/vocanova-platform-sandbox`. Do not rotate App ID/private-key
-   secrets. Until hosted guard verification returns explicit
+   write and obtain owner approval on KARSIFT organization installation
+   `148001476`. Record that its current `repository_selection: all` ceiling is
+   broader than the workflow's required explicit token restriction to
+   `KARSIFT/vocanova-platform-sandbox`. Do not rotate App ID/private-key secrets.
+   Until hosted guard verification returns explicit
    `bypass_actors: []`, fail closed with the precise approval-and-rerun action.
 5. Add deterministic tests for the #1102 circular-CI class, dedicated
    promotion-pr-validation dispatch/selection, omitted-`bypass_actors`

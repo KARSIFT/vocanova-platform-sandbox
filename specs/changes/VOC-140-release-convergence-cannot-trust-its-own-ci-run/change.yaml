@@ -207,12 +207,16 @@ dependencies:
 - id: VOC-140-DEP-10
   status: 'known external activation prerequisite. GitHub App karsift-ai-infra-bot
     must request Repository permissions Administration: Read and write, and the
-    KARSIFT/vocanova-platform-sandbox installation owner must approve the permission
-    change. No App ID/private-key secret rotation is required. Until hosted guard-only-token
-    evidence returns explicit bypass_actors: [], fail closed with the precise configure,
-    approve, and rerun action. Both tokens share the same App/private key; record that
-    residual permission-ceiling risk. A dedicated guard App is optional future hardening,
-    not authorized by T00.
+    owner of KARSIFT organization installation 148001476 must approve the permission
+    change. Read-only drafting-time inspection reports repository_selection: all and
+    current Contents/Issues/Pull requests/Workflows write plus Metadata read, with no
+    Administration permission. The guard mint must remain explicitly scoped to the
+    current caller repository, but that runtime restriction does not narrow the shared
+    App/private-key ceiling across installation-selected repositories. No App ID/private-key
+    secret rotation is required. Until hosted guard-only-token evidence returns explicit
+    bypass_actors: [], fail closed with the precise configure, approve, scope, and rerun
+    action. A dedicated single-repository guard App is optional future hardening, not
+    authorized by T00.
 
     '
 affected_areas:

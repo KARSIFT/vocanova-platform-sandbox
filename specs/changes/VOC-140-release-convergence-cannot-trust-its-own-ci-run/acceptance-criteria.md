@@ -82,8 +82,9 @@ never reaches mutation, status, issue, pull-request, content, or merge commands.
 A payload that omits `bypass_actors` or returns a non-array fails with a
 distinct sanitized class and the precise operator action: configure
 `karsift-ai-infra-bot` Administration: Read and write, obtain installation-owner
-approval for this repository, do not rotate secrets, and rerun. Hosted evidence
-shows explicit `bypass_actors: []` before merge is permitted.
+approval on KARSIFT organization installation `148001476`, retain the explicit
+current-caller-repository guard-token scope, do not rotate secrets, and rerun.
+Hosted evidence shows explicit `bypass_actors: []` before merge is permitted.
 
 ## VOC-140-AC-05 — Regression tests exercise the real token-visible payload and circular-CI identity
 
@@ -151,7 +152,9 @@ classification, caller governance suite, mirrored infra suite,
 `git diff --check`, and independent exact-revision review that binds the live
 head all pass. `roles.yml` is unchanged. Evidence does not require a commit
 to contain its own SHA. Evidence records the same-App/private-key residual risk
-and that a dedicated guard App is optional future hardening, not T00 work.
+across installation `148001476`'s current `repository_selection: all` ceiling
+and that a dedicated single-repository guard App is optional future hardening,
+not T00 work.
 
 ## VOC-140-AC-09 — reconcile-release can merge the promotion and converge develop
 

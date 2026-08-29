@@ -42,7 +42,10 @@
   edit `config/roles.yml`.
 - External activation prerequisite: `karsift-ai-infra-bot` Repository
   permissions must request Administration: Read and write and the installation
-  owner must approve that change for the caller repository. No secret rotation.
+  owner must approve that change on KARSIFT organization installation
+  `148001476`. That installation currently selects all repositories; the guard
+  mint must still explicitly restrict each token to the caller repository. No
+  secret rotation.
 - Do not snapshot the current develop/main gap. Do not add OpenAI execution.
 - Do not weaken the production merge guard, add bypass actors, fabricate
   statuses, or manually merge #1090.
@@ -78,7 +81,9 @@ Ordered steps:
    release/production-deploy claims; record each match as update, historical,
    or irrelevant. Confirm the known external prerequisite:
    `karsift-ai-infra-bot` Administration: Read and write with installation-owner
-   approval for this repository. Do not rotate secrets.
+   approval on KARSIFT organization installation `148001476`; record its current
+   `repository_selection: all` ceiling and retain explicit single-repository
+   runtime token scope. Do not rotate secrets.
 3. Open the coordinated `KARSIFT/karsift-ai-infra` PR from current infra
    `main`. Implement D01–D08 there with tests. Preserve the mutation mint
    exactly; add the guard-only mint and isolated verification step immediately

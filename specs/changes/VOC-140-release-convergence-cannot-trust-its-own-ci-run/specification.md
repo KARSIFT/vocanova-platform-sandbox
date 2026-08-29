@@ -192,20 +192,27 @@ do not switch either guard or merge to `github.token`.
 `VOC-140-D07`: External activation prerequisite and distinct omitted-field
 failure. Before hosted acceptance, GitHub App `karsift-ai-infra-bot` must have
 Repository permissions → Administration: **Read and write**, and the owner of
-the `KARSIFT/vocanova-platform-sandbox` installation must approve the pending
-permission change. This is a known external repository/App setting, not a
-permission to guess at implementation time, and it requires no App-ID or
-private-key secret rotation. When the fetched ruleset JSON
+KARSIFT organization installation `148001476` must approve the pending
+permission change. Read-only live inspection at drafting time shows that
+installation uses `repository_selection: all` and currently grants Contents,
+Issues, Pull requests, and Workflows write plus Metadata read, but no
+Administration permission. The runtime guard mint must therefore keep its
+explicit owner-plus-current-repository restriction; that token restriction does
+not narrow the App/private-key ceiling across the installation's selected
+repositories. This is a known external repository/App setting, not a permission
+to guess at implementation time, and it requires no App-ID or private-key secret
+rotation. When the fetched ruleset JSON
 omits `bypass_actors` or returns a non-array, fail closed with a new
 sanitized class such as `production_merge_guard_payload_incomplete` (or the
 live equivalent) that is not `production_merge_guard_missing`. The message
 must name the precise operator action: update `karsift-ai-infra-bot` to
 Administration: Read and write, have the installation owner approve that
-permission for `KARSIFT/vocanova-platform-sandbox`, then rerun the failed
-guard / `reconcile-release`; do not rotate secrets. Hosted evidence must show
-the guard-only token returns an explicit `bypass_actors: []` for the effective
-production ruleset before merge is allowed. Do not print tokens, private-key
-material, or full ruleset dumps.
+permission on KARSIFT installation `148001476`, retain the workflow's explicit
+single-repository token scope for `KARSIFT/vocanova-platform-sandbox`, then
+rerun the failed guard / `reconcile-release`; do not rotate secrets. Hosted
+evidence must show the guard-only token returns an explicit
+`bypass_actors: []` for the effective production ruleset before merge is
+allowed. Do not print tokens, private-key material, or full ruleset dumps.
 
 `VOC-140-D08`: Tests must exercise the real token-visible payload shape and
 token isolation, not
@@ -273,11 +280,12 @@ reviewer / `reviewer_fast_retry` / `plan_reviewer`
 secret is rotated. Token separation reduces accidental credential exposure,
 but both tokens are minted from the same App registration and private key, so
 compromise of that key or a workflow context able to mint tokens retains the
-App installation's combined permission ceiling. Record this residual risk.
-An optional dedicated guard App with only Administration write and repository
-scope could further separate keys, but is future hardening and is not required
-or authorized by T00. Preserve the named run/job IDs as audit evidence only
-(no raw logs).
+App installation's combined permission ceiling across installation `148001476`'s
+current `repository_selection: all` scope. Record this residual risk. An
+optional dedicated guard App with only Administration write and a
+single-repository installation could further separate keys, but is future
+hardening and is not required or authorized by T00. Preserve the named run/job
+IDs as audit evidence only (no raw logs).
 
 `VOC-140-D13`: Validation after the repair is tracked and committed:
 
@@ -403,8 +411,10 @@ Abuse/process risks:
    into `PINNED_SHA.txt` and `t00-evidence.md`. Do not invent it at planning
    time.
 7. **App installation grant:** Administration: Read and write plus
-   installation-owner approval for `KARSIFT/vocanova-platform-sandbox` is a
-   known external activation prerequisite. D07 uses the repository-settings
-   exception for that operator action; workflow code still lands through the
-   governed PR. No secret rotation is required, and the path stays fail closed
-   until hosted explicit empty-bypass proof exists.
+   owner approval on KARSIFT organization installation `148001476` is a known
+   external activation prerequisite. The installation currently uses
+   `repository_selection: all`; D06 separately requires each runtime guard
+   token to be restricted to `KARSIFT/vocanova-platform-sandbox`. D07 uses the
+   repository-settings exception for that operator action; workflow code still
+   lands through the governed PR. No secret rotation is required, and the path
+   stays fail closed until hosted explicit empty-bypass proof exists.

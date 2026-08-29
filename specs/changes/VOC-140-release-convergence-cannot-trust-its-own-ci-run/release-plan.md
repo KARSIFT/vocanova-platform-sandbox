@@ -32,7 +32,7 @@ completion proof.
 | Phase | Owner | Preconditions | Outcome evidence |
 |-------|-------|---------------|------------------|
 | Plan merge | plan reviewer + merge-gate | Draft package; `automatic_merge_allowed: true`; valid `monitoring_impact` | Adopted package on `develop`; no duplicate task roster |
-| External App activation | App installation owner | `karsift-ai-infra-bot` requests Administration: Read and write for `KARSIFT/vocanova-platform-sandbox`; no secret rotation | Permission approved; hosted guard-only-token proof returns explicit `bypass_actors: []`; omission/nonempty remains fail closed |
+| External App activation | KARSIFT organization installation owner | `karsift-ai-infra-bot` requests Administration: Read and write; installation `148001476` currently has `repository_selection: all` and no Administration permission; no secret rotation | Permission approved; workflow guard mint remains explicitly scoped to `KARSIFT/vocanova-platform-sandbox`; hosted guard-only-token proof returns explicit `bypass_actors: []`; omission/nonempty remains fail closed |
 | Coordinated infra merge | implementer + independent verifier | New `KARSIFT/karsift-ai-infra` PR; circular-CI repair; mutation token unchanged at exactly Contents/Issues/Pull requests write; separate current-repository Administration-write-only guard token in release and merge-gate production paths | Exact infra merge SHA recorded in caller `PINNED_SHA.txt`; tests prove permission sets, scope, order, and use isolation |
 | T00 caller merge | implementer + independent verifier | Adoption + task authorization; new VOC-140 branch from current `develop`; pin matches the infra merge | `VOC-140-EV-00` — implementation PR base; infra merge; identity and token/API change; App-authored review/check binds the live PR head |
 | Post-merge promotion | existing `release.yml@main` via dedicated recovery if needed, then `reconcile-release` for #1089 | T00 caller changes live on `develop`; valid completion marker; recovered `ci / ci` is a completed non-carrier run; isolated guard token proves ruleset `20575146` before the mutation-token merge | Promotion PR #1090 (or successor at the then-current `develop` head) merges; `develop` is advanced to that exact merge SHA before audit close; refs end 0 ahead / 0 behind with identical tree; allowlisted recovery/release run metadata is recorded |
@@ -56,12 +56,14 @@ evidence-carrier task.
 The D07 App registration/installation approval is a known activation
 prerequisite and uses the repository-settings exception. The precise action is
 to set `karsift-ai-infra-bot` Repository permissions to Administration: Read
-and write, have the installation owner approve it for this repository, then
-rerun the failed guard / `reconcile-release`. No App ID/private-key secret is
-rotated. The workflow mint change still lands in the governed implementation
-PR. Both tokens share the same App/private key, leaving a documented combined
-permission-ceiling residual risk; a dedicated guard App is optional future
-hardening, not part of T00.
+and write, have the owner approve it on KARSIFT organization installation
+`148001476`, retain the workflow's explicit single-repository guard-token scope,
+then rerun the failed guard / `reconcile-release`. No App ID/private-key secret
+is rotated. The workflow mint change still lands in the governed implementation
+PR. Both tokens share the same App/private key and the installation currently
+uses `repository_selection: all`, leaving a documented organization-installation
+permission-ceiling residual risk; a dedicated single-repository guard App is
+optional future hardening, not part of T00.
 
 ## Rollback
 

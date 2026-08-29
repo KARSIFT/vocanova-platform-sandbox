@@ -76,8 +76,10 @@ coordinated with one infrastructure PR:
    before merge, and use the same two-token separation in the production-branch
    path of `merge-gate.yml`. Omitted/non-array `bypass_actors` fails distinctly.
    Activation requires `karsift-ai-infra-bot` Administration: Read and write
-   plus installation-owner approval; it requires no secret rotation and must
-   produce hosted proof of explicit `bypass_actors: []`.
+   plus owner approval on KARSIFT organization installation `148001476`; it
+   requires no secret rotation and must produce hosted proof of explicit
+   `bypass_actors: []`. That installation currently selects all repositories,
+   while each guard token remains explicitly scoped to this caller repository.
 3. Exercise the real token-visible payload shape and parse both workflow token
    mints in regression tests, proving exact permissions, repository scope,
    guard-before-merge order, and that the guard token never reaches merge,
@@ -98,9 +100,11 @@ coordinated with one infrastructure PR:
 
 This is a KARSIFT automation reliability fix, not product behavior. Preserve
 A-004 risk classification, protected checks, review independence, and release
-gates. Both tokens still derive from the same App/private key, so record that
-residual permission-ceiling risk; a dedicated guard App is optional future
-hardening, not required or authorized by this package.
+gates. Both tokens still derive from the same App/private key and installation
+`148001476` currently uses `repository_selection: all`, so record that
+organization-installation permission-ceiling risk; a dedicated
+single-repository guard App is optional future hardening, not required or
+authorized by this package.
 
 ## Tasks
 

@@ -40,15 +40,20 @@ The guard token's `permission-administration: write` is a GitHub API visibility
 constraint and does not authorize adding bypass actors, changing rulesets, or
 weakening required checks. External activation requires the
 `karsift-ai-infra-bot` registration to request Administration: Read and write
-and the installation owner to approve that permission for this repository.
-No App-ID or private-key secret rotation is required. Until hosted verification
-returns explicit `bypass_actors: []`, the merge remains fail closed with the
-precise approval-and-rerun operator action.
+and the owner of KARSIFT organization installation `148001476` to approve that
+permission. Drafting-time inspection shows `repository_selection: all`; the
+guard token's explicit current-repository restriction limits runtime use but
+does not narrow the shared App/private-key ceiling across installation-selected
+repositories. No App-ID or private-key secret rotation is required. Until hosted
+verification returns explicit `bypass_actors: []`, the merge remains fail closed
+with the precise approval-and-rerun operator action.
 
 Token separation limits accidental step-level exposure but both tokens are
 minted from the same App registration/private key, so compromise retains the
-installation's combined permission ceiling. A dedicated guard App/key is
-optional future hardening, not required or authorized by this task.
+organization installation's combined permission ceiling across its
+`repository_selection: all` scope. A dedicated single-repository guard App/key
+would provide stronger credential-root isolation, but is optional future
+hardening, not required or authorized by this task.
 
 ## Data and migrations
 

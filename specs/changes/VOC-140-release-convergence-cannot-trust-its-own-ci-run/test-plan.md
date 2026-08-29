@@ -109,9 +109,10 @@
   (`production_merge_guard_payload_incomplete` or the live equivalent) and
   not `production_merge_guard_missing`. Assert stderr names the operator
   action to set `karsift-ai-infra-bot` Administration: Read and write, obtain
-  installation-owner approval for `KARSIFT/vocanova-platform-sandbox`, avoid
-  secret rotation, and rerun. Assert it does not print tokens or private-key
-  material. Repeat with a full
+  owner approval on KARSIFT organization installation `148001476`, retain the
+  explicit current-repository token restriction for
+  `KARSIFT/vocanova-platform-sandbox`, avoid secret rotation, and rerun. Assert
+  it does not print tokens or private-key material. Repeat with a full
   administrator-visible payload including `bypass_actors: []` and assert
   `ok`.
 - Expected result: run `33136984634`'s class is diagnosed as token-visible

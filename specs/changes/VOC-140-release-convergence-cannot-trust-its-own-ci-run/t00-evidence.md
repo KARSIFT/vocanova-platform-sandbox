@@ -56,7 +56,7 @@ no-fabricated-status constraint, and pin advance before merge.
 | Dedicated recovery | dispatch or select `promotion-pr-validation PR #<n>`; require completed/success before attestation |
 | Production guard | still requires effective active repository-owned ruleset, pull-request rule, strict non-empty required checks, and `bypass_actors: []` |
 | Token/API | mutation token remains exactly Contents/Issues/Pull requests write and sole for merge/mutations; distinct current-repository-scoped Administration-write-only guard token is used only for guard verification immediately before merge in both workflows |
-| External activation | `karsift-ai-infra-bot` Administration: Read and write plus installation-owner approval for this repository; no secret rotation; hosted explicit `bypass_actors: []` proof required |
+| External activation | `karsift-ai-infra-bot` Administration: Read and write plus owner approval on KARSIFT organization installation `148001476`; installation currently selects all repositories, while guard token stays explicitly caller-repository scoped; no secret rotation; hosted explicit `bypass_actors: []` proof required |
 | Tests | real token-visible omitted-field payload and circular-CI parent-run fixture; not helper-only full fixtures |
 | Fixture freeze versus advance | issue-creation pin `59943683…` is historical; live pin becomes the new infra merge |
 | VOC-139 / VOC-138 records | do not rewrite `specs/changes/VOC-139-…/` or `VOC-138-…/` |
@@ -123,7 +123,7 @@ In-scope implementation diff paths (expected; record actuals after commit):
 | Mutation token | exactly Contents/Issues/Pull requests write; sole App token for `gh pr merge` and mutations; no Administration |
 | Guard token | exactly Administration write; explicit owner/current caller repository scope; only guard verification; never merge/mutation/status/issues/PR/content |
 | Workflow order | guard-only mint and verification immediately precede fresh exact-head/base/ref revalidation and mutation-token merge in release and production merge-gate paths |
-| External App activation | pending — record Administration: Read and write registration plus installation-owner approval; no secret rotation |
+| External App activation | pending — record Administration: Read and write registration plus owner approval on KARSIFT organization installation `148001476`; record current `repository_selection: all`, explicit caller-repository runtime token scope, and no secret rotation |
 | Hosted guard proof | pending — record sanitized explicit `bypass_actors: []`; omission/non-array/nonempty fail closed |
 
 ## Exhaustive source and pin reconciliation
@@ -142,9 +142,10 @@ foundation pin assertions.
 
 Pending confirmation. Record that step-level token isolation does not split
 the underlying `karsift-ai-infra-bot` registration/private key: compromise can
-still mint up to the installation's combined permission ceiling. A separately
-keyed, Administration-only guard App is optional future hardening and is not
-implemented or authorized by VOC-140-T00.
+still mint up to installation `148001476`'s combined permission ceiling across
+its current `repository_selection: all` scope. A separately keyed,
+single-repository Administration-only guard App is optional future hardening
+and is not implemented or authorized by VOC-140-T00.
 
 ## Validation commands (implementation)
 
