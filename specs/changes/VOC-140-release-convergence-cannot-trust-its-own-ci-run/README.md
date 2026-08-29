@@ -69,15 +69,19 @@ coordinated with one infrastructure PR:
    `ci / ci`. Recovery must dispatch or select the dedicated
    `promotion-pr-validation PR #1090` workflow and require that run to be
    completed/successful before attestation.
-2. Diagnose and repair the least-privilege token/API contract so the identity
-   that calls the production merge guard immediately before `gh pr merge` can
-   prove an effective active repository ruleset, strict non-empty required
-   checks, a pull-request rule, and zero bypass actors. Distinguish an omitted
-   token-visible field from a genuinely missing guard. If the App registration
-   lacks the required permission, fail with a precise operator action and
-   document the exact external setting.
-3. Exercise the real token-visible payload shape in regression tests; do not
-   only duplicate helper logic with full admin fixtures.
+2. Preserve the mutation token at exactly Contents/Issues/Pull requests write
+   and as the sole App token for `gh pr merge` and mutations. Separately mint
+   an ephemeral, current-caller-repository-scoped guard token with only
+   Administration write, inject it only into guard verification immediately
+   before merge, and use the same two-token separation in the production-branch
+   path of `merge-gate.yml`. Omitted/non-array `bypass_actors` fails distinctly.
+   Activation requires `karsift-ai-infra-bot` Administration: Read and write
+   plus installation-owner approval; it requires no secret rotation and must
+   produce hosted proof of explicit `bypass_actors: []`.
+3. Exercise the real token-visible payload shape and parse both workflow token
+   mints in regression tests, proving exact permissions, repository scope,
+   guard-before-merge order, and that the guard token never reaches merge,
+   mutation, status, issue, or PR operations.
 4. Do not weaken the guard, add bypass actors, fabricate statuses, or manually
    merge. Preserve exact PR base/head/refs/repository binding, ruleset
    enforcement, no founder-comment gate, and idempotent `reconcile-release`.
@@ -86,11 +90,17 @@ coordinated with one infrastructure PR:
    recovery if necessary, `reconcile-release` for #1089, verify #1090 merges,
    verify `develop` synchronizes to the promotion merge SHA, and verify the
    exact `main` push production deployment succeeds. Do not snapshot the
-   develop/main gap (`karsift-ai-infra#15`).
+   develop/main gap (`karsift-ai-infra#15`). Exhaustively search current source
+   and pin documentation; reconcile at least the fixture README,
+   `docs/operations/11-devops-and-ci-cd.md`,
+   `docs/governance/repository-settings.md`, the activation checklist, and
+   DOC-19 to active A-004/current automatic release and the two-token contract.
 
 This is a KARSIFT automation reliability fix, not product behavior. Preserve
 A-004 risk classification, protected checks, review independence, and release
-gates.
+gates. Both tokens still derive from the same App/private key, so record that
+residual permission-ceiling risk; a dedicated guard App is optional future
+hardening, not required or authorized by this package.
 
 ## Tasks
 

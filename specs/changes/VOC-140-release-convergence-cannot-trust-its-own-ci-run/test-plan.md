@@ -108,29 +108,37 @@
   omitted or a non-array. Assert failure matching the new sanitized class
   (`production_merge_guard_payload_incomplete` or the live equivalent) and
   not `production_merge_guard_missing`. Assert stderr names the operator
-  action to grant the diagnosed permission on `karsift-ai-infra-bot` and
-  does not print tokens or private-key material. Repeat with a full
+  action to set `karsift-ai-infra-bot` Administration: Read and write, obtain
+  installation-owner approval for `KARSIFT/vocanova-platform-sandbox`, avoid
+  secret rotation, and rerun. Assert it does not print tokens or private-key
+  material. Repeat with a full
   administrator-visible payload including `bypass_actors: []` and assert
   `ok`.
 - Expected result: run `33136984634`'s class is diagnosed as token-visible
   payload incompleteness, not as a missing live ruleset.
 - Evidence: `VOC-140-EV-00`
 
-## VOC-140-TEST-08 — Release and production-branch merge-gate mints request the diagnosed permission
+## VOC-140-TEST-08 — Both workflow paths enforce exact two-token isolation
 
 - Covers: `VOC-140-AC-04`
 - Preconditions: live `release.yml` and `merge-gate.yml` after the infra
   merge
-- Procedure: Assert the App-token mint used immediately before
-  `verify-production-merge-guard.sh` in `release.yml` includes the diagnosed
-  least-privilege permission from D06, plus the existing contents/issues/
-  pull-requests writes. Assert the production-branch path in `merge-gate.yml`
-  uses the same mint contract. Assert unrelated grants
-  (`permission-workflows`, `permission-actions`) are not added to that mint.
-  Assert the verifier is still invoked with that App token, not
-  `github.token`, immediately before `gh pr merge`.
-- Expected result: the merger identity can prove the guard; the contract is
-  visible in YAML, not only in helper comments.
+- Procedure: Parse `release.yml` and `merge-gate.yml`. For each production
+  merge path, assert the existing mutation mint has exactly
+  `permission-contents: write`, `permission-issues: write`, and
+  `permission-pull-requests: write`, has no Administration permission, and is
+  the only App-token output supplied to `gh pr merge` or mutation steps.
+  Assert a distinct mint appears immediately before guard verification, has
+  exactly `permission-administration: write`, explicit `owner`, and
+  `repositories` limited to the current caller repository; it has no Contents,
+  Issues, Pull requests, Statuses, Actions, or Workflows grant. Assert its
+  output is injected only into `verify-production-merge-guard.sh`, that guard
+  success precedes a fresh exact-head/base/ref revalidation and merge, and that
+  no guard-token output/expression appears in `gh pr merge`, mutation, status,
+  issue, PR, content, or completion-marker steps. Assert neither identity is
+  replaced by `github.token`.
+- Expected result: exact permissions, repository scoping, step order, and
+  credential-use isolation are machine-proven in both workflows.
 - Evidence: `VOC-140-EV-00`
 
 ## VOC-140-TEST-09 — Pin and mirrored fixture bytes match the new infra merge
@@ -151,17 +159,28 @@
 - Expected result: caller fixtures match the repaired infra contract.
 - Evidence: `VOC-140-EV-00`
 
-## VOC-140-TEST-10 — Current-state docs match the live contract
+## VOC-140-TEST-10 — Exhaustive source/pin search and current docs match the live contract
 
 - Covers: `VOC-140-AC-07`
 - Preconditions: caller docs in the implementation diff
-- Procedure: Assert `docs/operations/11-devops-and-ci-cd.md` no longer says
-  the App token is contents/issues/pull-requests-only if D06 added an
-  administration permission. Assert it states recovery/selection never
+- Procedure: Exhaustively search tracked source/current docs for the old pin,
+  `CURRENT_PIN`, mirrored hashes, mutation-only/token permission claims,
+  active-A-003 claims, and disabled/unimplemented automatic-release or
+  production-deploy claims; assert evidence disposes every match as updated,
+  intentionally historical, or irrelevant. Assert fixture README and
+  `docs/operations/11-devops-and-ci-cd.md` distinguish the unchanged mutation
+  token from the guard-only token. Assert
+  `docs/governance/repository-settings.md`, the activation checklist, and
+  DOC-19 identify active A-004/current enabled repository-controlled release
+  and production deployment while retaining RL1/RL2 disabled. Assert docs state
+  recovery/selection never
   treats a still-running release carrier as attestable `ci / ci`, dedicated
   `promotion-pr-validation` must be completed/successful, and the merge App
-  identity requests the least-privilege permission required to prove
-  ruleset/no-bypass fields. Assert the fixture README matches. Assert
+  guard token is Administration-write-only, current-repository scoped, and
+  never used for merge/mutations. Assert historical A-003 and issue-era pin
+  records stay clearly historical. Assert
+  governance validators/tests no longer require stale current-state wording
+  and retain unrelated fail-closed invariants. Assert
   `git diff` against the implementation PR base does not name files under
   `specs/changes/VOC-139-…/` or `specs/changes/VOC-138-…/`.
 - Expected result: no current-state doc claims a contract the code does not
@@ -180,7 +199,11 @@
   PR base and new infra merge, states that the live head is bound by the
   App-authored independent-review comment/check, and does not require a
   tracked file in the same commit to equal `HEAD`. Assert fixture
-  `roles.yml` is unchanged.
+  `roles.yml` is unchanged. Assert hosted evidence from the approved App installation shows
+  the guard-only token received explicit `bypass_actors: []`; omission,
+  non-array, and non-empty values fail closed. Assert no App ID/private-key
+  secret changed. Assert evidence records the shared App/private-key residual
+  risk and labels a dedicated guard App as optional future hardening only.
 - Expected result: hosted-equivalent deterministic checks pass;
   classification is R4; exact-head binding remains Git-feasible.
 - Evidence: `VOC-140-EV-00`

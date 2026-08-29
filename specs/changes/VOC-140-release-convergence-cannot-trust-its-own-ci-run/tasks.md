@@ -5,8 +5,8 @@ Adoption and each task's own implementation authorization are separate.
 
 This package intentionally defaults to **one task** because issue #1102 is one
 release-convergence repair outcome: never trust a still-running release
-carrier as recovered `ci / ci`, make the merge App identity able to prove
-the production merge guard, pin the new infrastructure merge, update
+carrier as recovered `ci / ci`, add an isolated guard-only token while
+preserving the mutation token, pin the new infrastructure merge, update
 current-state docs, and let `reconcile-release` for #1089 merge #1090.
 Repository count, CI-identity-versus-token-contract, workflow-versus-tests-
 versus-docs, and pin-versus-release are not split reasons.
@@ -55,37 +55,54 @@ satisfy sha_lineage against promotion PR #1090's recovery HEAD.
    never select an in-progress/failed release carrier as attestable `ci / ci`;
    require dedicated completed `promotion-pr-validation PR #<n>` when no
    completed non-carrier run exists; request the least-privilege mint
-   permission that actually returns `bypass_actors` as an array on the
-   release merge identity and the production-branch merge-gate path; fail
-   distinctly when that field is omitted. Capture live App-token versus
-   administrator-visible ruleset JSON at this revision before choosing the
-   mint permission. Do not add bypass actors, fabricate statuses, or rerun
-   doomed `pull_request` `ci / ci` jobs.
-4. Add deterministic tests for the #1102 circular-CI class, dedicated
+   keep the existing mutation token at exactly Contents/Issues/Pull requests
+   write and sole for `gh pr merge`/mutations; add a separate ephemeral
+   current-caller-repository-scoped Administration-write-only guard token,
+   injected only into guard verification immediately before merge. Apply the
+   same two-token separation in the production-branch merge-gate path and fail
+   distinctly when `bypass_actors` is omitted. Do not add bypass actors,
+   fabricate statuses, or rerun doomed `pull_request` `ci / ci` jobs.
+4. Complete the known external activation prerequisite: configure GitHub App
+   `karsift-ai-infra-bot` Repository permissions as Administration: Read and
+   write and obtain installation-owner approval for
+   `KARSIFT/vocanova-platform-sandbox`. Do not rotate App ID/private-key
+   secrets. Until hosted guard verification returns explicit
+   `bypass_actors: []`, fail closed with the precise approval-and-rerun action.
+5. Add deterministic tests for the #1102 circular-CI class, dedicated
    promotion-pr-validation dispatch/selection, omitted-`bypass_actors`
    payload, empty-bypass acceptance, non-empty-bypass rejection, and a
    subprocess of the real verifier with a mock `gh`. Do not treat helper-only
-   full-fixture tests as covering the token-visible shape.
-5. Obtain independent exact-revision review of the infra PR and merge it.
+   full-fixture tests as covering the token-visible shape. Parse both workflows
+   to prove exact token permissions, caller-repository scope, guard-before-merge
+   order, and that the guard token never reaches merge/mutations/status/issues/PR.
+6. Obtain independent exact-revision review of the infra PR and merge it.
    Record the exact merge SHA. From current caller `develop`, create a new
    VOC-140 implementation branch. Pin `PINNED_SHA.txt` to that infra merge
    and mirror every changed authoritative fixture file. Update fixture
-   README and `docs/operations/11-devops-and-ci-cd.md`. Do not rewrite
+   README and all current-state docs found by exhaustive tracked-source search,
+   including `docs/operations/11-devops-and-ci-cd.md`,
+   `docs/governance/repository-settings.md`, the activation checklist, and
+   DOC-19, plus any validator/test (including `validate-governance.sh`) that
+   enforces stale wording. Reconcile active-A-003 and release/production-disabled claims to
+   active A-004/current release while preserving clearly historical text. Do not rewrite
    VOC-139 or VOC-138 package records. Reconcile every live caller
    pin-lock/current-pin assertion and mirrored-file hash table with the new
    merge. Preserve issue-era `AUTHORITATIVE_PIN` values and historical
    package evidence; split current versus authoritative constants where a
    test currently conflates them.
-6. Confirm fixture `roles.yml` is unchanged and no OpenAI route is added.
+7. Confirm fixture `roles.yml` is unchanged and no OpenAI route is added.
    Confirm no fabricated-status helper, bypass-actor addition, or test-time
    evidence mutation was added.
-7. Record in `t00-evidence.md` the implementation PR base, new infra merge,
-   recovery-identity change, token/API contract including the diagnosed mint
-   permission and any required operator App-setting action, negative-case
-   results, pin advance, validation commands after commit, and the feasible
+8. Record in `t00-evidence.md` the implementation PR base, new infra merge,
+   recovery-identity change, exact two-token contract and external
+   App-setting/installation-owner action, negative-case
+   results, exact token sets/scope/use isolation, source-search disposition,
+   installation approval and hosted empty-bypass proof, pin advance,
+   same-App/private-key residual risk and optional dedicated guard App,
+   validation commands after commit, and the feasible
    exact-head binding contract. Evidence must not require a commit to contain
    its own SHA.
-8. Run applicable validation **after the repair is tracked and committed**
+9. Run applicable validation **after the repair is tracked and committed**
    and record results in `t00-evidence.md`:
    - `bash scripts/governance/validate-governance.sh` with exact base/head;
    - `bash scripts/governance/classify-change-risk.sh` with exact base/head
@@ -99,7 +116,7 @@ satisfy sha_lineage against promotion PR #1090's recovery HEAD.
      promotion-pr-validation requirement, omitted-`bypass_actors` token
      shape, empty-bypass acceptance, non-empty-bypass rejection,
      no-fabricated-status constraint, and pin advance.
-9. This package's caller PR `Closes` only its own VOC-140 task issue. Do
+10. This package's caller PR `Closes` only its own VOC-140 task issue. Do
    not snapshot the current develop/main gap. After the exact reviewed
    caller merge, rerun dedicated promotion recovery if necessary, then
    `reconcile-release` for #1089 may merge #1090 (or the live promotion at
@@ -107,7 +124,7 @@ satisfy sha_lineage against promotion PR #1090's recovery HEAD.
    merge SHA. Root issue #1102 closes only after allowlisted metadata from
    the successful recovery/release run exists.
 
-10. Preserve independent exact-SHA review, risk classification, protected
+11. Preserve independent exact-SHA review, risk classification, protected
     checks, and App-token isolation. The independent review comment must bind
     the live PR head exactly. Merge-gate must reject any mismatch.
 
@@ -120,9 +137,10 @@ satisfy sha_lineage against promotion PR #1090's recovery HEAD.
 - Creating a duplicate promotion PR or release audit issue.
 - Switching the promotion PR application check to `--squash-safe-push`.
 - Rerunning doomed `pull_request` `ci / ci` jobs as a strategy.
-- Changing GitHub App installation permissions inside the implementation PR
-  except as the documented D07 operator action if the mint requests a
-  permission the installation lacks.
+- Rotating GitHub App credentials or adding Administration to the mutation
+  token. The required App-registration/installation approval is an external
+  repository setting and is recorded as allowlisted evidence, not PR code.
+- Creating a dedicated guard App in T00; that is optional future hardening.
 - Requiring a commit to contain its own SHA.
 - Snapshotting the current develop/main gap, or treating "promote current
   develop" as this package's work rather than as post-repair release

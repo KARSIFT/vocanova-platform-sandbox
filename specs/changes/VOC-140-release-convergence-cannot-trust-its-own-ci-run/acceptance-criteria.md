@@ -64,7 +64,7 @@ pull-request rule, non-strict checks, empty/malformed required-check lists,
 and source mismatches still fail closed. The implementation does not add
 bypass actors, fabricate statuses, or manually merge.
 
-## VOC-140-AC-04 — The merge App identity can prove those fields; omitted fields fail distinctly
+## VOC-140-AC-04 — Guard proof uses an isolated Administration-only token
 
 - Requirement source: `VOC-140-D06`, `VOC-140-D07`
 - Tasks: `VOC-140-T00`
@@ -72,15 +72,18 @@ bypass actors, fabricate statuses, or manually merge.
 - Evidence: `VOC-140-EV-00`
 - Result: pending
 
-The identity that calls `verify-production-merge-guard.sh` immediately before
-`gh pr merge` requests the least-privilege mint permission that actually
-returns `bypass_actors` as an array. A payload that omits `bypass_actors` or
-returns a non-array fails closed with a distinct sanitized class (not
-`production_merge_guard_missing`) and names the operator action to grant that
-permission on GitHub App `karsift-ai-infra-bot` for this repository. The
-production-branch `merge-gate.yml` path that already calls the same verifier
-uses the same mint contract. The verifier is not switched to `github.token`
-to avoid diagnosing the App contract.
+In both `release.yml` and the production-branch path of `merge-gate.yml`, the
+existing mutation token retains exactly Contents/Issues/Pull requests write
+and remains the sole App token supplied to `gh pr merge` and mutations. A
+separate ephemeral guard token is scoped to the current caller repository and
+has only Administration write; it is injected only into
+`verify-production-merge-guard.sh` immediately before the exact-head merge and
+never reaches mutation, status, issue, pull-request, content, or merge commands.
+A payload that omits `bypass_actors` or returns a non-array fails with a
+distinct sanitized class and the precise operator action: configure
+`karsift-ai-infra-bot` Administration: Read and write, obtain installation-owner
+approval for this repository, do not rotate secrets, and rerun. Hosted evidence
+shows explicit `bypass_actors: []` before merge is permitted.
 
 ## VOC-140-AC-05 — Regression tests exercise the real token-visible payload and circular-CI identity
 
@@ -96,7 +99,10 @@ Tests include omitted-`bypass_actors`, `bypass_actors: []`, and non-empty
 bypass payloads, including a subprocess of the real
 `verify-production-merge-guard.sh` with a mock `gh`. A helper-only test that
 duplicates `validate_production_merge_guard` with complete admin fixtures is
-not sufficient coverage.
+not sufficient coverage. Workflow-structure tests prove both exact permission
+sets, explicit current-repository scope, guard-before-merge ordering, and that
+the guard-token output/expression is absent from `gh pr merge`, mutation,
+status, issue, PR, content, and completion-marker execution.
 
 ## VOC-140-AC-06 — Caller pin and mirrored fixture bytes match the new infra merge
 
@@ -119,14 +125,18 @@ authoritative fixture file is byte-identical to that merge.
 - Evidence: `VOC-140-EV-00`
 - Result: pending
 
-Fixture README and `docs/operations/11-devops-and-ci-cd.md` describe that
+An exhaustive tracked-source search identifies every current pin literal/hash
+assertion, token-contract claim, active-authority claim, and release/deployment
+activation claim. Fixture README, `docs/operations/11-devops-and-ci-cd.md`,
+`docs/governance/repository-settings.md`,
+`docs/governance/post-merge-activation-checklist.md`, DOC-19, and every other
+current-state match describe that
 recovery/selection never treats a still-running release carrier as attestable
 `ci / ci`, that dedicated `promotion-pr-validation` must be
-completed/successful, and that the merge App identity requests the
-least-privilege permission required to prove ruleset/no-bypass fields. They
-do not claim the App token is contents/issues/pull-requests-only if D06 added
-an administration permission. VOC-139 and VOC-138 package records are not
-rewritten.
+completed/successful, and the strict two-token contract. Repository-settings
+states active A-004 and current enabled automatic release/production deployment
+while retaining RL1/RL2 disabled. Clearly marked historical A-003 and issue-era
+pin evidence remains historical. VOC-139 and VOC-138 records are not rewritten.
 
 ## VOC-140-AC-08 — Deterministic suites and exact-SHA review pass
 
@@ -140,7 +150,8 @@ After the repair is tracked and committed, governance validation, R4
 classification, caller governance suite, mirrored infra suite,
 `git diff --check`, and independent exact-revision review that binds the live
 head all pass. `roles.yml` is unchanged. Evidence does not require a commit
-to contain its own SHA.
+to contain its own SHA. Evidence records the same-App/private-key residual risk
+and that a dedicated guard App is optional future hardening, not T00 work.
 
 ## VOC-140-AC-09 — reconcile-release can merge the promotion and converge develop
 

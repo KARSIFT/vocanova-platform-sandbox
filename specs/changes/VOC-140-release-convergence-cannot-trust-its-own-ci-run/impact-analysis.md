@@ -4,8 +4,9 @@
 
 This package repairs promotion recovery/selection so a still-running release
 carrier cannot be treated as completed `ci / ci`, and it repairs the App
-token/API contract so the identity that merges to `main` can prove the live
-non-bypassable production ruleset. It does not introduce new secret values,
+token/API contract so a separate guard-only identity can prove the live
+non-bypassable production ruleset before the unchanged mutation identity
+merges to `main`. It does not introduce new secret values,
 OAuth/session material, production-data access, or user-facing data flows.
 It does not rotate `KARSIFT_BOT_APP_ID` / `KARSIFT_BOT_PRIVATE_KEY`.
 
@@ -22,21 +23,32 @@ Security controls that must remain:
   repository-owned ruleset, a pull-request rule, strict non-empty required
   checks, and `bypass_actors: []`. Omitted or non-array `bypass_actors` fails
   distinctly from a missing guard.
-- The merge identity requests only the least-privilege permission that
-  actually returns those fields. Unrelated grants are not added. The
-  verifier is not switched to `github.token` to avoid diagnosing the App
-  contract.
+- The existing mutation token remains exactly Contents/Issues/Pull requests
+  write and is the sole App token for `gh pr merge` and mutations. A separate
+  ephemeral guard token is scoped only to the current caller repository, has
+  only Administration write, and is injected only into guard verification
+  immediately before merge. It never reaches mutation, status, issue, PR,
+  content, or merge commands. The same separation applies in the production
+  branch path of `merge-gate.yml`.
 - Exact-head binding remains fail-closed through the App-authored
   independent-review comment/check and merge-gate mismatch rejection.
 - `config/roles.yml` is unchanged; no OpenAI execution route is added.
 - Raw errors remain sanitized. No credential values are printed in logs,
   tests, or evidence.
 
-If D06 requires `permission-administration: write` because GitHub omits
-`bypass_actors` without write access to the ruleset, that is a GitHub API
-constraint. It expands the merge token's administration grant and must be
-documented. It does not authorize adding bypass actors, changing rulesets,
-or weakening required checks.
+The guard token's `permission-administration: write` is a GitHub API visibility
+constraint and does not authorize adding bypass actors, changing rulesets, or
+weakening required checks. External activation requires the
+`karsift-ai-infra-bot` registration to request Administration: Read and write
+and the installation owner to approve that permission for this repository.
+No App-ID or private-key secret rotation is required. Until hosted verification
+returns explicit `bypass_actors: []`, the merge remains fail closed with the
+precise approval-and-rerun operator action.
+
+Token separation limits accidental step-level exposure but both tokens are
+minted from the same App registration/private key, so compromise retains the
+installation's combined permission ceiling. A dedicated guard App/key is
+optional future hardening, not required or authorized by this task.
 
 ## Data and migrations
 
@@ -69,9 +81,10 @@ guard visibility are CI orchestration only.
   cannot see full ruleset fields after the mint change, repeating
   `production_merge_guard_missing` for live ruleset `20575146`. Mitigation:
   `VOC-140-D06`, `VOC-140-D07`, `VOC-140-TEST-07`, `VOC-140-TEST-08`.
-- `VOC-140-R05`: **High privilege-expansion risk** if the mint adds
-  unrelated permissions or if administration write is requested without
-  proving read cannot return `bypass_actors`. Mitigation: `VOC-140-D06`.
+- `VOC-140-R05`: **High privilege-expansion risk** if Administration is added
+  to the mutation token, if the guard token is not current-repository scoped,
+  or if it reaches a merge/mutation/status/issue/PR step. Mitigation:
+  `VOC-140-D06`, `VOC-140-D08`, `VOC-140-TEST-08`.
 - `VOC-140-R06`: **High coverage risk** if tests only duplicate helper
   logic with complete admin fixtures and never exercise the omitted-field
   App-token shape or the circular-CI parent-run fixture. Mitigation:
@@ -88,9 +101,15 @@ guard visibility are CI orchestration only.
   sha_lineage cannot bind to #1090 recovery. Mitigation: `VOC-140-D10`,
   `VOC-140-TEST-12`.
 - `VOC-140-R10`: **Medium documentation risk** if
-  `docs/operations/11-devops-and-ci-cd.md` keeps claiming the App token is
-  contents/issues/pull-requests-only after D06 changes the mint.
+  current-state docs retain active-A-003/release-disabled claims or describe
+  the combined App-token system as mutation-only instead of documenting the
+  isolated mutation and guard tokens.
   Mitigation: `VOC-140-D11`, `VOC-140-TEST-10`.
+- `VOC-140-R12`: **High shared-credential residual risk** because the same App
+  private key can mint tokens up to the installation permission ceiling.
+  Mitigation: workflow token-use isolation, short-lived repository-scoped
+  guard tokens, explicit evidence, and documenting an optional dedicated guard
+  App as future hardening (`VOC-140-D12`).
 - `VOC-140-R11`: **Low application-runtime release risk** because ordinary
   sync is tree-equivalent; rollback is fixture/test/doc/workflow reversion
   plus infra revert of the coordinated PR.
@@ -98,7 +117,7 @@ guard visibility are CI orchestration only.
   package directory, named current-state docs, reusable recovery/attestation/
   guard sources, and App-token mints on release and production-branch
   merge-gate.
-- `VOC-140-DEP-00` through `VOC-140-DEP-09`: see `change.yaml`.
+- `VOC-140-DEP-00` through `VOC-140-DEP-10`: see `change.yaml`.
 - `VOC-140-EV-00`: T00 evidence — implementation PR base, new infra merge,
   circular-CI identity repair, dedicated promotion-pr-validation requirement,
   token/API contract, omitted-field distinct failure, pin advance, validation

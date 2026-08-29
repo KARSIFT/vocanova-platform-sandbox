@@ -17,6 +17,9 @@ record the reviewed head and merge SHA.
 Independent review must explicitly evaluate the circular-CI identity case,
 dedicated promotion-pr-validation requirement, omitted-`bypass_actors` token
 shape, empty-bypass acceptance, non-empty-bypass rejection,
+exact two-token permissions/repository scope/use isolation in both workflows,
+external App approval and hosted explicit-empty-bypass proof, current-state
+documentation reconciliation, same-App/private-key residual risk,
 no-fabricated-status constraint, and pin advance before merge.
 
 ## Discovery recorded at planning time (issue #1102)
@@ -52,11 +55,12 @@ no-fabricated-status constraint, and pin advance before merge.
 | Circular CI | never select an in-progress/failed release carrier as attestable `ci / ci`; recovery must not report complete without dispatch on that class |
 | Dedicated recovery | dispatch or select `promotion-pr-validation PR #<n>`; require completed/success before attestation |
 | Production guard | still requires effective active repository-owned ruleset, pull-request rule, strict non-empty required checks, and `bypass_actors: []` |
-| Token/API | least-privilege mint permission that actually returns `bypass_actors`; distinct omitted-field failure with operator App-setting action; do not switch the verifier to `github.token` |
+| Token/API | mutation token remains exactly Contents/Issues/Pull requests write and sole for merge/mutations; distinct current-repository-scoped Administration-write-only guard token is used only for guard verification immediately before merge in both workflows |
+| External activation | `karsift-ai-infra-bot` Administration: Read and write plus installation-owner approval for this repository; no secret rotation; hosted explicit `bypass_actors: []` proof required |
 | Tests | real token-visible omitted-field payload and circular-CI parent-run fixture; not helper-only full fixtures |
 | Fixture freeze versus advance | issue-creation pin `59943683…` is historical; live pin becomes the new infra merge |
 | VOC-139 / VOC-138 records | do not rewrite `specs/changes/VOC-139-…/` or `VOC-138-…/` |
-| Docs | update fixture README and `docs/operations/11-devops-and-ci-cd.md` in the same caller PR |
+| Docs | exhaustively search source/pin claims; update fixture README, operations CI/CD, repository-settings, activation checklist, DOC-19, and any other current-state matches while preserving historical records |
 | Exact-head binding | App-authored independent-review comment/check binds the live PR head; merge-gate rejects mismatch; a commit must not be required to contain its own SHA |
 | Attempt | VOC-140-T00 attempt `1` on this carrier |
 | `roles.yml` | unchanged: implementer/escalation `cursor/composer-2.5`; planner/reviewer/reviewer_fast_retry/plan_reviewer `cursor/grok-4.6[effort=high,fast=false]` |
@@ -67,6 +71,7 @@ no-fabricated-status constraint, and pin advance before merge.
 | Bootstrap | none |
 | Secrets | do not print credential values; do not copy full CI logs |
 | Evidence truth | name the implementation PR base and new infra merge; bind the live head via App-authored review/check; do not mutate this file at test/runtime |
+| Residual risk | both tokens share one App/private key and its permission ceiling; optional dedicated guard App is future hardening, not T00 |
 
 ## Changed surfaces (implementation)
 
@@ -89,13 +94,17 @@ pending — record after the coordinated infra PR merges.
 In-scope implementation diff paths (expected; record actuals after commit):
 
 - `KARSIFT/karsift-ai-infra` recovery/selection/attestation sources
-- `KARSIFT/karsift-ai-infra` `.github/workflows/release.yml` App-token mint
-- `KARSIFT/karsift-ai-infra` `.github/workflows/merge-gate.yml` production-branch mint
+- `KARSIFT/karsift-ai-infra` `.github/workflows/release.yml` mutation and guard-token mints
+- `KARSIFT/karsift-ai-infra` `.github/workflows/merge-gate.yml` production-branch mutation/guard separation
 - `KARSIFT/karsift-ai-infra` `config/production_merge_guard.py` and `config/verify-production-merge-guard.sh`
 - `KARSIFT/karsift-ai-infra` tests for circular-CI identity and token-visible payload shape
 - caller `tooling/governance/fixtures/karsift-ai-infra/**` pin and mirrors
 - caller `tooling/governance/tests/` (VOC-140 regressions; current-pin assertions)
 - `docs/operations/11-devops-and-ci-cd.md`
+- `docs/governance/repository-settings.md`
+- `docs/governance/post-merge-activation-checklist.md`
+- `docs/operations/19-governance-reconciliation-notes.md`
+- `scripts/governance/validate-governance.sh` and relevant tests if stale assertions require reconciliation
 - fixture `README.md`
 - `specs/changes/VOC-140-release-convergence-cannot-trust-its-own-ci-run/t00-evidence.md`
 
@@ -111,7 +120,31 @@ In-scope implementation diff paths (expected; record actuals after commit):
 | Administrator-visible ruleset `20575146` shape with `bypass_actors: []` | `production-merge-guard: ok ruleset_id=…` |
 | App-token-visible ruleset JSON with omitted/non-array `bypass_actors` | distinct `production_merge_guard_payload_incomplete` (or live equivalent), not `production_merge_guard_missing` |
 | Non-empty `bypass_actors` | still fail closed |
-| Diagnosed mint permission | recorded after live payload capture; applied to release and production-branch merge-gate mints |
+| Mutation token | exactly Contents/Issues/Pull requests write; sole App token for `gh pr merge` and mutations; no Administration |
+| Guard token | exactly Administration write; explicit owner/current caller repository scope; only guard verification; never merge/mutation/status/issues/PR/content |
+| Workflow order | guard-only mint and verification immediately precede fresh exact-head/base/ref revalidation and mutation-token merge in release and production merge-gate paths |
+| External App activation | pending — record Administration: Read and write registration plus installation-owner approval; no secret rotation |
+| Hosted guard proof | pending — record sanitized explicit `bypass_actors: []`; omission/non-array/nonempty fail closed |
+
+## Exhaustive source and pin reconciliation
+
+Pending. Record the exact tracked-source searches for the old/current pin,
+`CURRENT_PIN` / `AUTHORITATIVE_PIN`, mirrored-file hashes, mutation-only token
+claims, active-A-003 claims, and disabled/unimplemented automatic-release or
+production-deploy claims. List every match and disposition: updated current
+state, preserved clearly historical audit evidence, or irrelevant. At minimum
+include fixture README, `docs/operations/11-devops-and-ci-cd.md`,
+`docs/governance/repository-settings.md`, the activation checklist, DOC-19,
+governance validators that enforce their wording, caller pin-lock tests, and
+foundation pin assertions.
+
+## Credential residual risk
+
+Pending confirmation. Record that step-level token isolation does not split
+the underlying `karsift-ai-infra-bot` registration/private key: compromise can
+still mint up to the installation's combined permission ceiling. A separately
+keyed, Administration-only guard App is optional future hardening and is not
+implemented or authorized by VOC-140-T00.
 
 ## Validation commands (implementation)
 
@@ -139,8 +172,10 @@ implementation PR. The App-authored independent-review comment/check must
 bind the live PR head exactly and must explicitly evaluate the circular-CI
 identity case, dedicated promotion-pr-validation requirement,
 omitted-`bypass_actors` token shape, empty-bypass acceptance,
-non-empty-bypass rejection, no-fabricated-status constraint, and pin
-advance. Merge-gate must reject any mismatch. Record a pointer to that
+non-empty-bypass rejection, exact token permissions/scope/use isolation,
+guard-before-merge order, external App approval/hosted proof, current-state
+documentation, same-App residual risk, no-fabricated-status constraint, and
+pin advance. Merge-gate must reject any mismatch. Record a pointer to that
 comment/check here after it exists; do not write the live head SHA into this
 file as a value that the same commit is required to contain. The implementer
 must not approve or merge its own work.
@@ -154,8 +189,8 @@ Pending. After the exact reviewed caller merge:
 - Rerun dedicated `recover-promotion-pr-checks` for #1090 if necessary.
 - `reconcile-release` for #1089 may merge #1090 (or the live same-repository
   promotion at the then-current `develop` head) once recovered `ci / ci` is a
-  completed non-carrier run and the merge App identity can prove the live
-  production merge guard.
+  completed non-carrier run and the isolated guard token can prove the live
+  production merge guard before the mutation-token merge.
 - Recovery must emit a successful exact run/repository/PR/base/head/ref/path
   attestation. Record allowlisted metadata only (workflow identity, event,
   branch, HEAD SHA, run/job IDs, conclusion).
