@@ -139,7 +139,11 @@
   success precedes a fresh exact-head/base/ref revalidation and merge, and that
   no guard-token output/expression appears in `gh pr merge`, mutation, status,
   issue, PR, content, or completion-marker steps. Assert neither identity is
-  replaced by `github.token`.
+  replaced by `github.token`. Exhaustively parse every
+  `actions/create-github-app-token` mint in the infrastructure workflow tree;
+  only the two explicitly allowlisted guard mints in the release and
+  production merge-gate paths may request Administration, and every other mint
+  must omit it.
 - Expected result: exact permissions, repository scoping, step order, and
   credential-use isolation are machine-proven in both workflows.
 - Evidence: `VOC-140-EV-00`
@@ -215,7 +219,9 @@
 ## VOC-140-TEST-12 — No snapshot-gap; reconcile-release handoff
 
 - Covers: `VOC-140-AC-09`
-- Preconditions: this package's implementation PR and `t00-evidence.md`
+- Preconditions: this package's implementation PR and `t00-evidence.md`; the
+  installation-owner approval and hosted probe may still be pending while T00
+  is reviewed
 - Procedure: Assert no develop/main gap snapshot was committed. Assert no
   duplicate promotion PR or release-audit creation helper was added. Assert
   evidence states that after this correction merges, dedicated promotion
@@ -226,12 +232,13 @@
   `33136865709`, `33136984634`, `33137091931` and jobs `98738317266`,
   `98739074178`, `98739420310` are preserved as audit evidence, not restaged
   as this package's implementation work. Assert closed state is not treated
-  as completion proof. After T00 merges, assert the KARSIFT installation owner
-  approved Administration: Read and write and a hosted guard-only token scoped
-  to this caller repository received explicit `bypass_actors: []`; omission,
-  non-array, and non-empty values remain fail closed. Assert root issue #1102
-  is documented to close only after this activation proof and allowlisted
-  metadata from the successful recovery/release run exist.
+  as completion proof. Assert the evidence documents that, after T00 merges,
+  the KARSIFT installation owner must approve Administration: Read and write
+  and a hosted guard-only token scoped to this caller repository must receive
+  explicit `bypass_actors: []`; omission, non-array, and non-empty values remain
+  fail closed. Assert root issue #1102 is documented to close only after that
+  later activation proof and allowlisted metadata from the successful
+  recovery/release run exist.
 - Expected result: repair is identity plus token/API plus ordinary release
   handoff, not a snapshot-then-check package.
 - Evidence: `VOC-140-EV-00`

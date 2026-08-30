@@ -30,7 +30,9 @@ satisfy sha_lineage against promotion PR #1090's recovery HEAD.
 
 - Requirement source: issue #1102; `VOC-140-D00` through `VOC-140-D16`
 - Acceptance criteria: `VOC-140-AC-00` through `VOC-140-AC-09`
-- Tests: `VOC-140-TEST-00` through `VOC-140-TEST-12`
+- Tests: `VOC-140-TEST-00` through `VOC-140-TEST-11`
+- Post-T00 release/closure verification: `VOC-140-TEST-12` (not an
+  implementation-task close or retry prerequisite)
 - Evidence: `VOC-140-EV-00` (`t00-evidence.md` in this package directory)
 - Status: pending
 

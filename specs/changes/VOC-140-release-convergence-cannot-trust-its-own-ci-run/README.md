@@ -126,6 +126,6 @@ implementation authority.
 This package **proposes R4** because durable `tooling/governance/` fixture,
 pin, recovery-identity, attestation, and production-merge-guard updates belong
 under the R4 path floor, and because the change mutates required-check recovery
-and the App identity that proves production protection. The path-based
+and the isolated guard token used to prove production protection. The path-based
 classifier and independent verifier remain authoritative; this draft proposal
 is not a determination.

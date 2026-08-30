@@ -174,7 +174,7 @@ bind the live PR head exactly and must explicitly evaluate the circular-CI
 identity case, dedicated promotion-pr-validation requirement,
 omitted-`bypass_actors` token shape, empty-bypass acceptance,
 non-empty-bypass rejection, exact token permissions/scope/use isolation,
-guard-before-merge order, external App approval/hosted proof, current-state
+guard-before-merge order, the post-T00 external App approval/hosted-proof
 release-gate contract (which may remain pending at T00 review), current-state
 documentation, same-App residual risk, no-fabricated-status constraint, and
 pin advance. Merge-gate must reject any mismatch. Record a pointer to that

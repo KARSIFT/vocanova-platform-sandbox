@@ -36,10 +36,11 @@ Security controls that must remain:
 - Raw errors remain sanitized. No credential values are printed in logs,
   tests, or evidence.
 
-The guard token's `permission-administration: write` is a GitHub API visibility
-constraint and does not authorize adding bypass actors, changing rulesets, or
-weakening required checks. External activation requires the
-`karsift-ai-infra-bot` registration to request Administration: Read and write
+The guard token's `permission-administration: write` is required for GitHub API
+visibility and technically carries ruleset-mutation capability. D05/D06,
+workflow isolation, and the exhaustive mint allowlist forbid using it to add
+bypass actors, change rulesets, or weaken required checks. External activation
+requires the `karsift-ai-infra-bot` registration to request Administration: Read and write
 and the owner of KARSIFT organization installation `148001476` to approve that
 permission. Drafting-time inspection shows `repository_selection: all`; the
 guard token's explicit current-repository restriction limits runtime use but
@@ -141,6 +142,6 @@ for engineering-workflow adopt/merge/release gates. EHR is not triggered.
 
 This draft proposes **R4** because it changes protected CI/CD orchestration
 under `tooling/governance/` and mutates required-check recovery and the App
-identity that proves production protection, but the path classifier and
+isolated guard token used to prove production protection, but the path classifier and
 independent verifier remain authoritative. This is a draft proposal, not a
 determination.

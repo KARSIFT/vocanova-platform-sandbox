@@ -167,8 +167,9 @@ confirm:
 - current-state source search is exhaustive; repository-settings and other
   current docs reflect active A-004/current release activation and distinguish
   the unchanged mutation token from the guard-only token;
-- external App permission approval and hosted explicit `bypass_actors: []`
-  evidence exist; no secret was rotated;
+- the fail-closed external App action and post-T00 hosted
+  `bypass_actors: []` release gate are documented and may remain pending at
+  implementation review; no secret was rotated;
 - the same-App/private-key residual risk and optional dedicated guard App are
   documented;
 - VOC-139 and VOC-138 package records are unchanged;

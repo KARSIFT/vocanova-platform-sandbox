@@ -87,7 +87,8 @@ engineering-workflow gates. Required evidence:
    dedicated promotion-pr-validation requirement, omitted-`bypass_actors`
    token shape, empty-bypass acceptance, non-empty-bypass rejection,
    exact token permissions/scope/use isolation and guard-before-merge order in
-   both workflows, external activation/hosted proof, current-state docs,
+   both workflows, the documented post-T00 external activation/hosted-proof
+   release gate (which may remain pending at T00 review), current-state docs,
    same-App residual risk, no-fabricated-status constraint, and pin advance. Merge-gate must reject
    any mismatch.
 2. Deterministic proof that an in-progress or failed release carrier is

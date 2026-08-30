@@ -227,14 +227,20 @@ only helper logic with complete admin fixtures. Include at least: omitted
 `bypass_actors`; `bypass_actors: []`; non-empty bypass; and a subprocess of
 `verify-production-merge-guard.sh` with a mock `gh` that returns those
 shapes. Include a circular-CI fixture whose newest `ci / ci` check is SUCCESS
-while the parent workflow run is `in_progress` and contains `release / converge`.
+while the parent workflow run is `in_progress` and actually executes a
+non-skipped `release / converge` job or otherwise matches the explicit
+reconcile-release carrier identity. A shared workflow definition whose release
+job is skipped must remain eligible as a dedicated recovery carrier.
 Do not treat a unit test that only calls `validate_production_merge_guard` with
 hand-built full fixtures as covering D06/D07. Parse both workflows and prove
 the mutation mint has exactly Contents/Issues/Pull requests write, the guard
 mint has exactly Administration write and current-caller-repository scope, the
 guard step immediately precedes the exact-head merge decision, and no guard
 token expression or output reaches `gh pr merge`, status publication, issue,
-PR, content mutation, or completion-marker steps.
+PR, content mutation, or completion-marker steps. Exhaustively parse every
+`actions/create-github-app-token` mint in the infrastructure workflows and
+fail if any mint outside the two explicitly named guard-only production paths
+requests Administration. Keep that allowlist narrow and path-specific.
 
 `VOC-140-D09`: Pin advance. Issue-creation pin
 `599436835371f27fac52ec6b47a18b36257366ac` is the defective live contract for
@@ -314,8 +320,9 @@ independent-review comment/check must bind the live PR head exactly and must
 explicitly evaluate the circular-CI identity case, dedicated
 promotion-pr-validation requirement, omitted-`bypass_actors` token shape,
 empty-bypass acceptance, non-empty-bypass rejection, exact two-token
-permission/scope/use isolation in both workflows, external App approval and
-hosted proof, current-state docs, same-App residual risk,
+permission/scope/use isolation in both workflows, the external App approval and
+hosted-proof release-gate contract (which may remain pending at T00 review),
+current-state docs, same-App residual risk,
 no-fabricated-status constraint, and pin advance. Merge-gate must reject any mismatch. Committed
 `t00-evidence.md` records the implementation PR base, new infra merge,
 recovery-identity change, token/API contract, and the contract that later
