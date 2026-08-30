@@ -4,17 +4,17 @@ slug: release-convergence-cannot-trust-its-own-ci-run
 title: Release convergence cannot trust its own CI run or verify the production merge
   guard with the App token
 type: infrastructure
-status: draft
+status: adopted
 risk: R4
 planned_implementation_risk_floor: 'R4. This package repairs two causally related
   release-convergence defects so the already-open develop-to-main promotion can finish:
   recovery/selection must never treat a still-running release carrier as attestable
-  completed ci / ci, and the isolated guard token that proves the production merge guard must
-  see full ruleset/no-bypass fields. tooling/governance/* is an R4 path floor. .github/workflows/*
-  is an R3 floor. Semantic mutation of required-check recovery, status attestation,
-  production-merge-guard authorization, and exact-revision evidence binding is protected.
-  This is a draft proposal for human adoption review, not a determination. The path
-  classifier and independent verifier remain authoritative.
+  completed ci / ci, and the isolated guard token that proves the production merge
+  guard must see full ruleset/no-bypass fields. tooling/governance/* is an R4 path
+  floor. .github/workflows/* is an R3 floor. Semantic mutation of required-check recovery,
+  status attestation, production-merge-guard authorization, and exact-revision evidence
+  binding is protected. This is a draft proposal for human adoption review, not a
+  determination. The path classifier and independent verifier remain authoritative.
 
   '
 canonical_path: specs/changes/VOC-140-release-convergence-cannot-trust-its-own-ci-run
@@ -45,8 +45,8 @@ requirement_source: "GitHub issue #1102 (Release convergence cannot trust its ow
   \ []. The release mutation App token requests only permission-contents: write, permission-issues:\
   \ write, and permission-pull-requests: write. This draft package does not adopt\
   \ or authorize itself.\n"
-requirement_approval_status: 'requirement documented in GitHub issue #1102; this draft
-  package is not approved and does not authorize implementation '
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: 'Issue-creation develop / promotion PR #1090 head is 21eef75549226766fc4f78f62f232ee5fbdb8d6d.
   Issue-creation infrastructure pin is VOC-139 merge 599436835371f27fac52ec6b47a18b36257366ac
@@ -63,8 +63,8 @@ owners:
     governed decision) '
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: 'none-intentional for application runtime. This package repairs
   promotion recovery/selection identity and the production-merge-guard two-token contract
@@ -111,18 +111,19 @@ dependencies:
     check, which can be a completed job inside a still-running pipeline.yml carrier
     that also contains release / converge. verify_promotion_required_run_semantics
     then fails untrusted_ci_recovery_identity because that run status is not completed/success.
-    Live release.yml mints the mutation App token with exactly permission-contents: write,
-    permission-issues: write, and permission-pull-requests: write, then calls verify-production-merge-guard.sh
-    with that token immediately before gh pr merge. GitHub omits bypass_actors unless
-    the caller has ruleset write access, while GET /repos/{owner}/{repo}/rulesets/{id}
-    is reachable under Metadata:read, so the HTTP fetch can succeed and validate_production_merge_guard
-    still raises production_merge_guard_missing. The required design preserves that
-    mutation token unchanged and adds a separate ephemeral current-caller-repository-scoped
-    token with only permission-administration: write for guard verification immediately
-    before merge, with the same separation in merge-gate''s production path. Current tests construct full helper
-    fixtures with bypass_actors: [] and do not exercise the omitted-field App-token
-    shape. An untracked local karsift-ai-infra/ checkout, if present, is not this
-    repository''s tracked tree.
+    Live release.yml mints the mutation App token with exactly permission-contents:
+    write, permission-issues: write, and permission-pull-requests: write, then calls
+    verify-production-merge-guard.sh with that token immediately before gh pr merge.
+    GitHub omits bypass_actors unless the caller has ruleset write access, while GET
+    /repos/{owner}/{repo}/rulesets/{id} is reachable under Metadata:read, so the HTTP
+    fetch can succeed and validate_production_merge_guard still raises production_merge_guard_missing.
+    The required design preserves that mutation token unchanged and adds a separate
+    ephemeral current-caller-repository-scoped token with only permission-administration:
+    write for guard verification immediately before merge, with the same separation
+    in merge-gate''s production path. Current tests construct full helper fixtures
+    with bypass_actors: [] and do not exercise the omitted-field App-token shape.
+    An untracked local karsift-ai-infra/ checkout, if present, is not this repository''s
+    tracked tree.
 
     '
 - id: VOC-140-DEP-03
@@ -142,11 +143,10 @@ dependencies:
     not manually merge #1090. Keep the mutation token exactly Contents/Issues/Pull
     requests write and sole for gh pr merge/mutations. Keep the Administration-write-only
     guard token current-repository scoped and out of mutation/status/issues/PR/content
-    steps. Never select an in-progress or failed release carrier
-    as trusted recovered ci / ci. Keep exact PR base/head/refs/repository binding,
-    ruleset enforcement, no founder-comment gate, and idempotent reconcile-release.
-    Do not switch the promotion PR to --squash-safe-push. Do not rerun doomed pull_request
-    ci / ci jobs as a strategy.
+    steps. Never select an in-progress or failed release carrier as trusted recovered
+    ci / ci. Keep exact PR base/head/refs/repository binding, ruleset enforcement,
+    no founder-comment gate, and idempotent reconcile-release. Do not switch the promotion
+    PR to --squash-safe-push. Do not rerun doomed pull_request ci / ci jobs as a strategy.
 
     '
 - id: VOC-140-DEP-05
@@ -171,12 +171,12 @@ dependencies:
   status: 'resolved at drafting time as a no-change constraint. Do not rewrite VOC-139,
     VOC-138, or earlier package records under specs/changes/. Do not edit VOC-112
     capture fixtures, hashed sources, AGENTS.md, the navigator skill, or package.json.
-    Exhaustively search current source and pin docs; update fixture README,
-    docs/operations/11-devops-and-ci-cd.md, docs/governance/repository-settings.md,
-    docs/governance/post-merge-activation-checklist.md, docs/operations/19-governance-reconciliation-notes.md,
-    scripts/governance/validate-governance.sh and any relevant tests that enforce
-    stale current wording, and every additional current-state match. Preserve clearly historical records.
-    Do not recapture VOC-112 JSON fixtures.
+    Exhaustively search current source and pin docs; update fixture README, docs/operations/11-devops-and-ci-cd.md,
+    docs/governance/repository-settings.md, docs/governance/post-merge-activation-checklist.md,
+    docs/operations/19-governance-reconciliation-notes.md, scripts/governance/validate-governance.sh
+    and any relevant tests that enforce stale current wording, and every additional
+    current-state match. Preserve clearly historical records. Do not recapture VOC-112
+    JSON fixtures.
 
     '
 - id: VOC-140-DEP-08
@@ -208,15 +208,15 @@ dependencies:
   status: 'operator-owned post-implementation release activation prerequisite; it
     does not block plan adoption, implementation authorization, or the reviewed infra/caller
     merges and must not consume implementer retries. GitHub App karsift-ai-infra-bot
-    must request Repository permissions Administration: Read and write, and the
-    owner of KARSIFT organization installation 148001476 must approve the permission
-    change. Read-only drafting-time inspection reports repository_selection: all and
-    current Contents/Issues/Pull requests/Workflows write plus Metadata read, with no
-    Administration permission. The guard mint must remain explicitly scoped to the
-    current caller repository, but that runtime restriction does not narrow the shared
-    App/private-key ceiling across installation-selected repositories. No App ID/private-key
-    secret rotation is required. After T00 merges and before #1090 promotion, the
-    operator approval and hosted guard-only-token probe must return explicit bypass_actors:
+    must request Repository permissions Administration: Read and write, and the owner
+    of KARSIFT organization installation 148001476 must approve the permission change.
+    Read-only drafting-time inspection reports repository_selection: all and current
+    Contents/Issues/Pull requests/Workflows write plus Metadata read, with no Administration
+    permission. The guard mint must remain explicitly scoped to the current caller
+    repository, but that runtime restriction does not narrow the shared App/private-key
+    ceiling across installation-selected repositories. No App ID/private-key secret
+    rotation is required. After T00 merges and before #1090 promotion, the operator
+    approval and hosted guard-only-token probe must return explicit bypass_actors:
     []; until then release fails closed with the precise configure, approve, scope,
     and rerun action. This proof is release/closure evidence. A dedicated single-repository
     guard App is optional future hardening, not authorized by T00.
@@ -232,12 +232,12 @@ affected_areas:
 - scripts/governance/validate-governance.sh
 - specs/changes/VOC-140-release-convergence-cannot-trust-its-own-ci-run
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: not-authorized
+  status: authorized
   target_branch: develop
   pull_request: null
-  authority_issue: null
+  authority_issue: 1106
 release:
   required: true
   mode: not-authorized-by-this-package
@@ -248,7 +248,7 @@ release:
   rollback_required: true
 ehr: not-triggered
 standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
-blocking_reasons: pending-adoption-and-implementation-authorization
+blocking_reasons: none - adopted and implementation-authorized
 artifacts:
   readme: README.md
   specification: specification.md
@@ -260,6 +260,24 @@ artifacts:
   release_plan: release-plan.md
 production_deployment: disabled
 autonomous_production_release: not-authorized-by-this-package
-repository_adoption_status: not-adopted
+repository_adoption_status: adopted
 implementation_authority_before_adoption: false
-implementation_authority_status: not-authorized
+implementation_authority_status: authorized
+approved_candidate_sha: 272808e2e83e729b6071296bddefcbc62f87408e
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1103#issuecomment-5470511411
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-140-DEP-00
+- VOC-140-DEP-01
+- VOC-140-DEP-02
+- VOC-140-DEP-03
+- VOC-140-DEP-04
+- VOC-140-DEP-05
+- VOC-140-DEP-06
+- VOC-140-DEP-07
+- VOC-140-DEP-08
+- VOC-140-DEP-09
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #1103 at 272808e2e83e729b6071296bddefcbc62f87408e'
+adoption_pr: 1103
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1103
