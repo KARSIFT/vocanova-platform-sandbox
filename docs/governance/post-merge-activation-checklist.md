@@ -1,11 +1,17 @@
 # Post-Merge Governance Activation Checklist
 
-Status: Not activated
+Status: Partially activated (repository-controlled merge/release/deploy enabled; RL1/RL2 technical activation disabled)
 
-The status above refers to technical autonomous merge/release capability, not A-003
-governance authority. A-003 became effectively active at `2026-07-17T16:44:34Z`;
-automatic/autonomous merge, RL1/RL2 technical activation, production deployment, and
-autonomous production release remain disabled or unimplemented.
+**Current state (2026-08-30, VOC-140):** A-004 is the active engineering-workflow authority model.
+Automatic merge, the repository-controlled `develop` → `main` promotion path, and push-to-`main`
+production deployment are enabled when promotion checks pass. Recovery never treats a still-running
+release carrier as attestable `ci / ci`, and production merge-guard verification uses a separate
+Administration-only guard token immediately before the unchanged mutation-token merge. RL1/RL2
+technical activation remain disabled.
+
+**Historical (pre-2026-08-08):** A-003 became effectively active at `2026-07-17T16:44:34Z`, but
+automatic/autonomous merge, RL1/RL2 technical activation, production deployment, and autonomous
+production release were still disabled or unimplemented until the 2026-08-08 delegation.
 
 **Updated 2026-08-08**: for vocanova-platform-sandbox specifically, automatic/autonomous
 merge, production deployment, and autonomous production release are no longer
@@ -92,8 +98,10 @@ Record an evidence link, accountable human, and completion date for every item.
       after every applicable prerequisite is implemented, tested, and proven. A-003
       policy permission alone is not technical activation.
 
-Until all applicable activation items are evidenced, R3 production changes remain
-blocked and autonomous production release remains disabled.
+Until every unchecked activation item below is evidenced, treat the remaining
+checklist gaps as open operational risk. Repository-controlled automatic merge,
+promotion, and production deployment are enabled under active A-004 when gates pass;
+RL1/RL2 technical activation remain disabled.
 
 **Updated 2026-08-08**: for vocanova-platform-sandbox, the founder explicitly
 authorized automatic production release (see `AGENTS.md`'s "Release and deployment

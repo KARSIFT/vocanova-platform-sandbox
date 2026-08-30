@@ -45,9 +45,10 @@ must not become permanent ownership or a routine replacement approval layer.
 
 ## Bootstrap boundary
 
-The initial DOC-16/A-002 adoption is protected R4 governance. Its narrowly scoped
+**Historical bootstrap:** the initial DOC-16/A-002 adoption is protected R4 governance. Its narrowly scoped
 bootstrap rule permits founder approval, independent Claude Code verification, and
 repository validation to adopt the framework without claiming nonexistent steward
-approval. It authorizes no production or R3 protected technical work. Immediately
-after merge, ordinary R3 steward requirements apply and R3 production remains blocked
-until a qualified human steward and enforcement are configured.
+approval. It authorized no production or R3 protected technical work. After that
+merge, the then-current steward requirements applied until A-003 retired them; active
+A-004 now governs engineering-workflow gates without a standing steward or founder
+`approved` comment.

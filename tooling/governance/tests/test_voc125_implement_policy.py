@@ -20,8 +20,9 @@ class Voc125ImplementFixtureTests(unittest.TestCase):
         cls.voc125_tests = read_fixture("tests/test_voc125_existing_carrier.py")
 
     def test_fixture_pin_matches_voc126_infra_merge(self):
-        expected = "60afda3a44fd06b8c00b219771de7112f1aded6e"
+        expected = "67bdfd13ef875dead23ce4be01d7d0e8b976e289"
         self.assertEqual(self.pin, expected)
+        self.assertIn("123735c80fec813a5b46a004f3e1122bd425cde2", self.readme)
         self.assertIn(expected, self.readme)
         self.assertIn("VOC-126-T00", self.readme)
 

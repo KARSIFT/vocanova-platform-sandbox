@@ -58,16 +58,16 @@ Use the highest `Yes` answer:
 Uncertainty raises the class until resolved. Splitting a change does not lower the
 classification if the parts produce one combined consequence.
 
-## Initial governance bootstrap classification
+## Historical initial-governance bootstrap classification
 
-The initial DOC-16/A-002 adoption is R4 because it establishes consequential
-governance. It requires founder approval, independent Claude Code verification, and
-passing repository validation. The one-time bootstrap exception permits that initial
-governance pull request to merge without a nonexistent technical steward, but does
-not lower its risk, satisfy steward approval, authorize production, or apply to any
-later R3/R4 change. The steward requirement is effective immediately after merge;
-R3 production remains blocked until a qualified human steward is appointed and
-enforcement is active.
+The initial DOC-16/A-002 adoption was R4 because it established consequential
+governance. It required founder approval, independent Claude Code verification, and
+passing repository validation. The one-time bootstrap exception permitted that
+initial governance pull request to merge without a nonexistent technical steward,
+but did not lower its risk, satisfy steward approval, authorize production, or apply
+to any later R3/R4 change. The then-current steward requirement became effective
+after merge and remained so until A-003 retired it. Active A-004 now governs
+engineering-workflow gates.
 
 ## Automated risk floor
 
@@ -81,8 +81,9 @@ reviewed pull request. A comment, label, or approval cannot simply suppress the
 detected floor.
 
 Path classification remains a risk floor, not proof of a human approval requirement.
-Under active A-003, an R3 path does not by itself require founder or standing
-technical-steward approval.
+Under active A-004, neither an R3 nor R4 path floor creates a founder-comment or
+standing technical-steward approval gate; the applicable strengthened evidence,
+independent verification, rollout, monitoring, and rollback controls still apply.
 
 ## Waivers
 

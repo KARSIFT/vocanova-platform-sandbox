@@ -9,6 +9,9 @@ class ReleasePolicyTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.release = (ROOT / ".github/workflows/release.yml").read_text()
+        cls.production_reconcile = (
+            ROOT / ".github/workflows/reconcile-production-change.yml"
+        ).read_text()
         cls.template = (ROOT / "templates/project-repo/.github/workflows/pipeline.yml").read_text()
 
     def test_founder_comment_is_not_release_authority(self):
@@ -49,8 +52,34 @@ class ReleasePolicyTests(unittest.TestCase):
         self.assertIn("--paginate --slurp", self.release)
         self.assertIn("--match-head-commit \"$CHECKED_HEAD_SHA\"", self.release)
         self.assertIn('headRefOid <<<"$live")" != "$CHECKED_HEAD_SHA', self.release)
+        self.assertIn('baseRefOid <<<"$live")" != "$CHECKED_BASE_SHA', self.release)
+        self.assertIn('base_sha" != "$EXPECTED_BASE_SHA', self.release)
         self.assertNotIn("statusCheckRollup", self.release)
         self.assertIn("gh pr checks \"$PR_NUMBER\" --required", self.release)
+
+    def test_production_base_is_atomically_guarded_by_server_rules(self):
+        merge = self.release.index("Perform the single exact-head merge decision")
+        sync = self.release.index("Synchronize integration to the exact promotion merge")
+        guarded_merge = self.release[merge:sync]
+        self.assertIn("verify-production-merge-guard.sh", guarded_merge)
+        self.assertLess(
+            guarded_merge.index("verify-production-merge-guard.sh"),
+            guarded_merge.index("gh pr merge"),
+        )
+        retry = guarded_merge.index("for attempt in 1 2 3")
+        self.assertGreater(
+            guarded_merge.index("verify-production-merge-guard.sh"), retry
+        )
+
+    def test_main_target_task_merge_uses_same_atomic_server_guard(self):
+        merge_gate = (ROOT / ".github/workflows/merge-gate.yml").read_text()
+        self.assertIn("production_branch:", merge_gate)
+        self.assertIn("verify-production-merge-guard.sh", merge_gate)
+        self.assertLess(
+            merge_gate.index("verify-production-merge-guard.sh"),
+            merge_gate.index("gh pr merge"),
+        )
+        self.assertIn('production_branch: "main"', self.template)
 
     def test_ruleset_attestation_is_narrow_and_precedes_merge(self):
         self.assertIn("statuses: write", self.release)
@@ -63,14 +92,116 @@ class ReleasePolicyTests(unittest.TestCase):
         self.assertIn("GH_TOKEN: ${{ github.token }}", self.release[attest:merge])
         self.assertIn("steps.app-token.outputs.token", self.release[merge:])
 
-    def test_promotion_preserves_long_lived_integration_branch(self):
+    def test_promotion_converges_integration_to_exact_merge_before_close(self):
         merge = self.release.index("Perform the single exact-head merge decision")
-        close = self.release.index('gh issue close "$RELEASE_ISSUE"', merge)
-        preservation = self.release[merge:close]
-        self.assertIn("git/ref/heads/${{ inputs.integration_branch }}", preservation)
-        self.assertIn('ref="refs/heads/${{ inputs.integration_branch }}"', preservation)
-        self.assertIn('-f sha="$CHECKED_HEAD_SHA"', preservation)
-        self.assertIn("Never rewind a branch that advanced concurrently", preservation)
+        sync = self.release.index(
+            "Synchronize integration to the exact promotion merge", merge
+        )
+        close = self.release.index(
+            "Close the release audit after exact branch convergence", sync
+        )
+        self.assertLess(merge, sync)
+        self.assertLess(sync, close)
+        self.assertIn("branch-sync-runner.py", self.release[sync:close])
+        self.assertIn("--expected-head-sha", self.release[sync:close])
+        self.assertIn("--expected-base-sha", self.release[sync:close])
+        self.assertNotIn('-f sha="$CHECKED_HEAD_SHA"', self.release)
+
+    def test_release_pair_is_globally_serialized_and_recovery_is_exact(self):
+        self.assertIn(
+            "release-converge-${{ github.repository }}-${{ inputs.integration_branch }}-${{ inputs.production_branch }}",
+            self.release,
+        )
+        concurrency = self.release.split("concurrency:", 1)[1].split(
+            "permissions:", 1
+        )[0]
+        self.assertNotIn("needs.identify.outputs.change_id", concurrency)
+        self.assertIn("--paginate --slurp", self.release)
+        self.assertIn("closed-promotion-pages.json", self.release)
+        self.assertIn("matching-merged-promotions.json", self.release)
+        self.assertIn('!= "$production_sha"', self.release)
+        self.assertIn('!= "$integration_sha"', self.release)
+
+    def test_missing_integration_ref_reaches_audit_bound_recovery(self):
+        promotion = self.release.split("Open or reuse the single promotion PR", 1)[1]
+        missing_ref = promotion.index('if [ -z "$integration_sha" ]')
+        compare = promotion.index('compare=$(gh api')
+        self.assertLess(missing_ref, compare)
+        self.assertIn("git/matching-refs/heads/", promotion[:missing_ref])
+        self.assertIn('recover_merged_promotion ""', promotion[missing_ref:compare])
+        self.assertIn("2>/dev/null", promotion[:missing_ref])
+        self.assertIn("Merged promotion recovery no longer matches production", promotion)
+        self.assertIn("branch-sync-runner.py", self.release)
+
+    def test_missing_integration_ref_cannot_fail_before_caller_checkout(self):
+        for job_name, end_marker in (
+            ("  identify:", "  converge:"),
+            ("  converge:", None),
+        ):
+            job = self.release.split(job_name, 1)[1]
+            if end_marker:
+                job = job.split(end_marker, 1)[0]
+            policy_checkout = job.index("Checkout shared lifecycle policy")
+            resolver = job.index("release-checkout-ref-runner.py")
+            caller_checkout = job.index("Checkout caller release state")
+            self.assertLess(policy_checkout, resolver)
+            self.assertLess(resolver, caller_checkout)
+            self.assertIn("ref: ${{ steps.caller-ref.outputs.ref }}", job)
+        self.assertNotIn("ref: ${{ inputs.integration_branch }}", self.release)
+
+    def test_caller_checkout_rehydrates_shared_policy_before_lifecycle_helpers(self):
+        self.assertEqual(
+            self.release.count(
+                "Restore shared lifecycle policy after caller checkout"
+            ),
+            2,
+        )
+        for job_name, end_marker, helper in (
+            ("  identify:", "  converge:", "task-completion-runner.py validate-task"),
+            ("  converge:", None, "task-completion-runner.py validate-roster"),
+        ):
+            job = self.release.split(job_name, 1)[1]
+            if end_marker:
+                job = job.split(end_marker, 1)[0]
+            caller_checkout = job.index("Checkout caller release state")
+            restore = job.index(
+                "Restore shared lifecycle policy after caller checkout"
+            )
+            helper_use = job.index(helper)
+            self.assertLess(caller_checkout, restore)
+            self.assertLess(restore, helper_use)
+            restored = job[restore:helper_use]
+            self.assertIn("repository: ${{ job.workflow_repository }}", restored)
+            self.assertIn("ref: ${{ job.workflow_sha }}", restored)
+            self.assertIn("path: karsift-ai-infra", restored)
+
+    def test_main_only_reconciliation_precedes_release_and_has_strict_retry(self):
+        self.assertIn("reconcile-production-change:", self.template)
+        self.assertIn(
+            "needs: [merge-gate, reconcile-production-change]", self.template
+        )
+        auto_advance = self.template.split("  auto-advance:", 1)[1].split(
+            "  live-evidence-reconcile:", 1
+        )[0]
+        self.assertIn("needs: [reconcile-production-change]", auto_advance)
+        self.assertIn(
+            "needs.reconcile-production-change.result == 'success'", auto_advance
+        )
+        self.assertIn(
+            "needs.reconcile-production-change.result == 'success'", self.template
+        )
+        self.assertIn("--mode governed-main-only", self.production_reconcile)
+        self.assertIn("--skip-ineligible", self.production_reconcile)
+        self.assertIn("job.workflow_sha", self.production_reconcile)
+        self.assertNotIn("OPENAI", self.production_reconcile)
+
+    def test_branch_sync_mutation_uses_exact_lease_and_sanitized_errors(self):
+        runner = (ROOT / "config/branch-sync-runner.py").read_text()
+        self.assertIn('f"--force-with-lease={lease}"', runner)
+        self.assertIn("branch_state_changed_before_push", runner)
+        self.assertIn("branch_sync_postcondition_failed", runner)
+        self.assertNotIn("result.stderr", runner)
+        self.assertNotIn("result.stdout, file=sys.stderr", runner)
 
 
 if __name__ == "__main__":

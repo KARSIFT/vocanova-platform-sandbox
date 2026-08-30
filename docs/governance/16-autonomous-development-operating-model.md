@@ -15,6 +15,8 @@ related_documents:
 related_decisions:
   - A-001
   - A-002
+  - A-003
+  - A-004
 ---
 
 # 16 — Vocanova Autonomous Development Operating Model
@@ -34,9 +36,10 @@ principles. Amendment A-002 supersedes DOC-15 and A-001 only where they require
 founder approval for every `develop` to `main` merge or every production publication.
 DOC-16 and A-002 also superseded conflicting DOC-15/A-001 language that permitted an
 R3 protected technical change to merge into `develop` with CI and Claude Code
-approval alone. Active A-003 now supersedes DOC-16/A-002 standing-steward clauses:
-routine R3 uses strengthened applicable controls and independent verification without
-standing steward or founder approval merely because it is R3.
+approval alone. A-003 later superseded DOC-16/A-002 standing-steward clauses. Active
+A-004 now supersedes A-003 founder-comment engineering-workflow gates: routine R3 and
+R4 use strengthened applicable controls and independent verification without standing
+steward or founder-comment approval.
 
 The governing documents are:
 
@@ -44,7 +47,11 @@ The governing documents are:
    for the baseline operating model.
 2. [Amendment A-002](amendments/A-002-governed-autonomous-releases.md) for release
    authority.
-3. [Change risk classification](change-risk-classification.md),
+3. [Amendment A-003](amendments/A-003-governed-autonomous-engineering-authority.md)
+   as frozen historical authority evidence.
+4. [Amendment A-004](amendments/A-004-remove-founder-approval-gates-from-autonomous-engineering-workflows.md)
+   as the effective engineering-workflow authority.
+5. [Change risk classification](change-risk-classification.md),
    [protected areas](protected-areas.md), and [approval matrix](approval-matrix.md)
    for operational enforcement.
 
@@ -115,8 +122,8 @@ technical-steward status or authority to Claude Code or another AI agent.
 The technical-steward requirement became effective immediately when PR #3 merged and
 remained effective until A-003 activation. The historical qualified human steward is
 recorded in
-[technical-steward-appointment.md](technical-steward-appointment.md). Under active
-Under A-003, R4 merge required founder approval (historical). **Active A-004:**
+[technical-steward-appointment.md](technical-steward-appointment.md).
+**Historical A-003:** R4 merge required founder approval. **Active A-004:**
 routine R3 uses strengthened applicable controls and independent verification without
 standing steward or founder approval merely because it is R3; R4 requires stronger
 evidence but not a founder `approved` comment on engineering-workflow gates.
@@ -168,15 +175,16 @@ satisfy the original acceptance criteria still requires a new issue and plan.
   independent-verifier result. Protected changes also require their designated
   protected-path and risk-specific non-human controls.
 - Working branches are normally squash-merged into `develop`.
-- `develop` is the integrated staging state; successful merges deploy to staging
-  only after staging automation exists and is validated.
+- `develop` is the integrated staging state; applicable successful merges deploy
+  through the validated staging automation.
 - Release pull requests promote `develop` to `main` with an identifiable release
-  merge commit.
+  merge commit. After promotion succeeds, `develop` is advanced to that exact merge
+  SHA before the release audit closes; interrupted convergence retries via
+  `reconcile-release`, and exceptional governed production-target work uses
+  `reconcile-production-change`.
 - `main` is production-ready and is the only production deployment source.
-- Low-risk, reversible R0-R1 production releases may proceed automatically after
-  every applicable release gate passes. An R2 release may also proceed automatically
-  only when it is reversible, its stronger checks pass, and the approved release
-  policy explicitly permits that change type. Automation is permission, not an
+- Under active A-004, R0-R4 production releases may proceed automatically after every
+  applicable risk-specific release gate passes. Automation is permission, not an
   obligation; a gate may always hold a release for investigation.
 - Under active A-004, routine R3 requires strengthened applicable controls and
   independent verification without standing steward or founder approval solely for
@@ -206,10 +214,13 @@ the sole enforcement mechanism.
 
 ## Verification model
 
-All installed, relevant checks must pass. The expected verification stack is enabled
-only as the corresponding code and tooling are added:
+All installed, relevant checks must pass. The table below is the retained
+bootstrap-era repository snapshot from DOC-16 adoption; it is historical evidence,
+not current activation status. Current application, CI, staging, promotion, and
+production-deploy state is documented in `docs/development.md`, DOC-11,
+`repository-settings.md`, and `a004-transition-state.yaml`.
 
-| Capability | Current repository state | Activation rule |
+| Capability | Bootstrap repository state | Activation rule |
 |---|---|---|
 | Governance structure and protected-path classification | Implemented by dependency-free repository scripts and the policy workflow | Required now |
 | pnpm frozen installation, formatting, lint, type checking, unit tests, integration tests, and build | No `package.json`, lockfile, workspace, application code, or scripts exist | Add required checks when the approved application foundation introduces real scripts |
@@ -221,9 +232,9 @@ only as the corresponding code and tooling are added:
 | Independent Claude Code verification | No authenticated verifier integration is present | Configure a distinct identity and required status check before autonomous merges |
 | Staging, production, health checks, and rollback | No Cloudflare configuration, credentials, environments, or application exist | Implement only after projects, scoped credentials, commands, and rollback mechanism are approved |
 
-Absence of a tool is never represented by a passing placeholder check. Until a
-required external gate exists, the corresponding merge or release remains manual or
-blocked according to [repository-settings.md](repository-settings.md).
+Absence of a tool was never represented by a passing placeholder check. Current
+merge and release paths remain fail-closed on any missing applicable gate according
+to [repository-settings.md](repository-settings.md).
 
 ## Release gate
 

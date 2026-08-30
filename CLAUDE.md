@@ -10,14 +10,14 @@ gates (activated by canonical merge of `VOC-080-T07`; see
 `docs/governance/a004-transition-state.yaml`). No autonomous engineering workflow waits on a founder `approved` comment; R4 remains a strengthened evidence class, not a founder-comment merge gate. A-003 and VOC-075 historical founder-gate records
 remain preserved as audit evidence only.
 
-A-003 has been effectively active since `2026-07-17T16:44:34Z`. Routine R3 no longer
-requires standing technical-steward or founder approval merely because it is R3;
-strengthened applicable controls and independent verification remain required. EHR
-is exceptional, and Claude still cannot self-approve or substitute for founder
-requirement clarification or qualified-human authority where separately required
-(product/legal/strategy ambiguity before stable AC — not merge/adopt/release
-`approved` comments). The one-time VOC-002 migration approval is exhausted and must
-never be reused.
+A-003 became effectively active at `2026-07-17T16:44:34Z` and is now the historical
+predecessor to active A-004. Routine R3 and R4 engineering workflows require
+strengthened applicable controls and independent verification without standing
+technical-steward or founder-comment approval. EHR is exceptional, and Claude still
+cannot self-approve or substitute for founder requirement clarification or
+qualified-human authority where separately required (product/legal/strategy ambiguity
+before stable AC — not merge/adopt/release `approved` comments). The one-time VOC-002
+migration approval is exhausted and must never be reused.
 
 ## Required review
 

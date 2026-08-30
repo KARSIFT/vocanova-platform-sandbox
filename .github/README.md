@@ -6,7 +6,7 @@ This directory contains repository contribution and governance controls:
   and approvals with a lightweight R0 path.
 - `ISSUE_TEMPLATE/` provides governed change intake and private security routing.
 - `CODEOWNERS` uses the verified human repository identity for review routing. It is
-  not approval evidence and does not create a standing post-A-003 authority.
+  not approval evidence and does not create a standing authority under active A-004.
 - `workflows/governance-policy.yml` validates the governance structure and prevents a
   pull request from declaring a risk below its changed-path floor.
 
@@ -20,8 +20,9 @@ lives in `.github/` itself. See
 [`docs/governance/repository-settings.md`](../docs/governance/repository-settings.md)
 for the required administrator settings and credentials.
 
-A-003 governance authority is active. These files do not technically activate RL1 or
-RL2, production deployment, autonomous production release, DOC-17, or DOC-18. (Automatic
-merge into `develop` specifically - a distinct, narrower gate, A-003 §10 - is separately
-implemented and live via karsift-ai-infra's merge-gate.yml; see
-`docs/governance/a003-transition-state.yaml`'s `automatic_merge_allowed` field.)
+A-004 is the active engineering-workflow authority. These files do not themselves
+activate automation, but automatic merge into `develop`, repository-controlled
+`develop` → `main` promotion, and push-to-`main` production deployment are implemented
+and enabled through karsift-ai-infra when their gates pass. RL1/RL2 technical
+activation remains disabled. See `docs/governance/repository-settings.md` and
+`docs/governance/a004-transition-state.yaml` for current activation state.

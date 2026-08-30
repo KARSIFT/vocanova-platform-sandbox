@@ -32,7 +32,7 @@ class AdoptionHandoffPolicyTests(unittest.TestCase):
         merge_block = self.merge_gate[merge:].split(
             "- name: Publish task completion marker", 1
         )[0]
-        self.assertIn("GH_TOKEN: ${{ steps.app-token.outputs.token }}", merge_block)
+        self.assertIn("MUTATION_TOKEN: ${{ steps.app-token.outputs.token }}", merge_block)
         self.assertNotIn("GH_TOKEN: ${{ github.token }}", merge_block)
 
     def test_adoption_is_exact_revision_verified_and_idempotent(self):
@@ -76,7 +76,7 @@ class AdoptionHandoffPolicyTests(unittest.TestCase):
 
     def test_caller_template_has_reconciliation_dispatch(self):
         self.assertIn(
-            "options: [implement, plan, reconcile, reconcile-release, reconcile-live-evidence, recover-integration-push, recover-promotion-pr-checks]",
+            "options: [implement, plan, reconcile, reconcile-release, reconcile-production-change, reconcile-live-evidence, recover-integration-push, recover-promotion-pr-checks]",
             self.template,
         )
         self.assertIn("plan_pr_number:", self.template)

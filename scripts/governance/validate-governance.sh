@@ -140,12 +140,16 @@ if grep -Eqi 'no qualified (human )?technical[- ]steward( identity or team)? exi
   exit 1
 fi
 
-grep -Fqx "Status: Not activated" "$activation" || {
-  echo "Governance activation status must remain Not activated." >&2
+grep -Fq "RL1/RL2 technical activation remain disabled" "$activation" || {
+  echo "The activation checklist must keep RL1/RL2 technical activation disabled." >&2
   exit 1
 }
-grep -Fq "autonomous production release remains disabled" "$activation" || {
-  echo "The activation checklist must keep autonomous production release disabled." >&2
+grep -Fq "A-004 is the active engineering-workflow authority model" "$activation" || {
+  echo "The activation checklist must document active A-004 authority." >&2
+  exit 1
+}
+grep -Fq "repository-controlled" "$activation" || {
+  echo "The activation checklist must document the repository-controlled release/deploy path." >&2
   exit 1
 }
 if grep -Eqi '^[[:space:]]*Status:[[:space:]]*Activated|^- \[x\].*(autonomous|production release).*(enable|activat)' "$activation"; then
@@ -160,7 +164,14 @@ grep -Fq "initial public launch" "$amendment"
 grep -Fq "Initial governance bootstrap adoption" "$operating_model"
 grep -Fq "Initial adoption exception" "$amendment"
 grep -Fq "historical initial DOC-16/A-002 bootstrap" docs/governance/approval-matrix.md
-grep -Fq "R3 production changes remain" docs/governance/post-merge-activation-checklist.md
+grep -Fq "Repository-controlled automatic merge," "$activation" || {
+  echo "The activation checklist must preserve the active A-004 automatic-merge invariant." >&2
+  exit 1
+}
+grep -Fq "promotion, and production deployment are enabled under active A-004 when gates pass;" "$activation" || {
+  echo "The activation checklist must preserve the active A-004 release/deploy invariant." >&2
+  exit 1
+}
 
 if grep -Eq 'FOUNDER_GITHUB_USERNAME|TECHNICAL_STEWARD_GITHUB_USERNAME' .github/CODEOWNERS; then
   echo "CODEOWNERS contains an unverifiable identity placeholder." >&2

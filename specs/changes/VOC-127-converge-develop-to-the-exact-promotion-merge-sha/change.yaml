@@ -1,0 +1,201 @@
+schema_version: 1
+id: VOC-127
+slug: converge-develop-to-the-exact-promotion-merge-sha
+title: Converge develop to the exact promotion merge SHA and govern main-only reconciliation
+type: infrastructure
+status: adopted
+risk: R4
+planned_implementation_risk_floor: R4. This package changes the protected KARSIFT/karsift-ai-infra
+  release convergence path so a successful develop-to-main merge-commit promotion
+  advances the long-lived integration ref to the exact resulting merge SHA, and it
+  adds an exceptional adopted exact-SHA path for main-only hotfix/evidence reconciliation.
+  tooling/governance/* is an R4 path floor; .github/workflows/* is an R3 floor; semantic
+  mutation of promotion-merge identity, integration-ref advancement, and fail-closed
+  unique-commit preservation is protected. This is a draft proposal for human adoption
+  review, not a determination; the path classifier and independent verifier remain
+  authoritative.
+canonical_path: specs/changes/VOC-127-converge-develop-to-the-exact-promotion-merge-sha
+authority_model: a004-active
+requirement_source: 'GitHub issue #1035 (Converge develop to the exact promotion merge
+  SHA and govern main-only reconciliation). Successful --merge promotions leave the
+  long-lived integration branch at the pre-promotion checked head while production
+  advances to a main-only merge commit. Before the bounded 2026-08-27 repair, develop
+  was 883c4a544f24fb9840694a834ebe9c665d4160b5 and main was promotion merge SHA 0d0b0cdf0692d0349f380e9cae3285b4c7916b05
+  from PR #1033; git rev-list --left-right --count origin/develop...origin/main returned
+  0 46; develop was an ancestor of main; the tree diff was the two VOC-113-T01 evidence
+  files from main-targeting PR #955. Root cause: release.yml preserves or recreates
+  the integration ref at CHECKED_HEAD_SHA and never binds or advances develop to the
+  merged PR result. Required: after every successful governed promotion, preserve
+  the real promotion PR and merge commit, resolve that exact merge SHA, advance develop
+  to it before release closure, bind checked head/base, merged PR identity, and live
+  tips, fail closed on races or unique develop commits, recover interrupted sync through
+  reconcile-release including already-merged-but-unclosed audits, avoid a second promotion
+  PR or release loop, skip unnecessary staging deploys on tree-equivalent sync while
+  retaining path-selected deploy for runtime/deploy tree changes, add an exceptional
+  adopted exact-SHA path for main-only hotfix/evidence reconciliation that does not
+  normalize direct main changes, preserve existing roster/check/review/retry/risk/secret/credential/deploy/
+  rollback controls, update docs that describe release or branch behavior, pin the
+  caller fixture and PINNED_SHA.txt to the exact merged KARSIFT/karsift-ai-infra commit,
+  and add deterministic regression coverage. Current config/roles.yml bindings must
+  not change. Do not add OpenAI execution or request OPENAI_API_KEY. This draft package
+  does not adopt or authorize itself.'
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time if needed
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human/autonomous
+    governed decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
+automatic_merge_allowed: true
+production_impact: none-intentional for application runtime. Ordinary post-promotion
+  synchronization is a tree-equivalent integration-ref update to the already reviewed
+  promotion merge commit. Exceptional main-only reconciliation may copy an already-authorized
+  main tree onto develop; staging remains path-selected. This package does not add
+  a new production deploy path, change secret values, providers, or monitor inventory.
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: KARSIFT release-convergence and exceptional main-only reconciliation
+    repair only. No page routes, critical API endpoints, monitor inventory, or synthetic
+    inventory in infra/monitoring/ are added or changed.
+dependencies:
+- id: VOC-127-DEP-00
+  status: 'resolved at drafting time. Issue #1035 provides the live pre-repair refs,
+    PR #1033 merge SHA, 0/46 ahead/behind count, ancestor proof, VOC-113-T01 PR #955
+    tree-diff, root cause in release.yml restoring CHECKED_HEAD_SHA, the 2026-08-27
+    bounded settings repair that already recreated develop at exact main 0d0b0cdf0692d0349f380e9cae3285b4c7916b05,
+    required post-promotion sync behavior, fail-closed races, reconcile-release recovery
+    including already-merged audits, release-loop prohibition, staging path-selection,
+    exceptional main-only path, docs/pin/tests, Cursor Composer / Cursor Grok preservation,
+    no-OpenAI constraint, and one-task preference with enough specificity to draft
+    without a clarifying round trip.'
+- id: VOC-127-DEP-01
+  status: 'resolved at drafting time. Active A-004 remains authoritative: no founder
+    approved-comment gate on engineering-workflow adopt/merge/release paths; exact-SHA
+    independent verification, deterministic risk floors, protected-path controls,
+    and fail-closed behavior remain mandatory.'
+- id: VOC-127-DEP-02
+  status: resolved at drafting time by reading the live reusable workflow. karsift-ai-infra/.github/workflows/release.yml
+    performs gh pr merge --merge --match-head-commit "$CHECKED_HEAD_SHA", then preserves
+    an existing integration ref or recreates a missing one at CHECKED_HEAD_SHA, then
+    closes the release audit. It does not resolve mergeCommit.oid, bind parents to
+    the checked head and production base, or advance develop to that merge SHA. If
+    the promotion PR is already terminal, the merge step no-ops without sync. If compare
+    ahead_by is 0 (develop is an ancestor of main after a merge-commit promotion),
+    the Open or reuse the single promotion PR step closes the audit as Already promoted
+    without syncing develop. test_release_policy.py currently requires restoration
+    at CHECKED_HEAD_SHA.
+- id: VOC-127-DEP-03
+  status: resolved at drafting time as the chosen design. Ordinary post-promotion
+    synchronization is part of the existing serialized release converge job after
+    the single exact-head merge, and is retried by reconcile-release when the promotion
+    PR is already merged but the audit is still open or develop is not yet at the
+    merge SHA. Do not add a snapshot commit of the current develop/main gap under
+    this package directory as a later drift gate (karsift-ai-infra#15). The 2026-08-27
+    repair already set both refs to 0d0b0cdf0692d0349f380e9cae3285b4c7916b05; this
+    package prevents recurrence rather than re-enacting that settings operation.
+- id: VOC-127-DEP-04
+  status: 'resolved at drafting time as an accepted delivery constraint: coordinated
+    PRs in the caller and KARSIFT/karsift-ai-infra remain one task. Repository count,
+    workflow-versus-tests-versus-docs, and fixture/pin work are not split reasons.
+    Merge the independently reviewed infra PR first so release.yml@main performs exact-merge-SHA
+    synchronization before the caller consumes the pin, then pin the caller fixture
+    to that exact merge SHA when consumed.'
+- id: VOC-127-DEP-05
+  status: 'resolved at drafting time. Configured Cursor Composer remains the implementer
+    and Cursor Grok remains the exact-revision independent reviewer. Current config/roles.yml
+    bindings are fixed and must not change. No OpenAI credential or execution route
+    is needed or authorized. Do not print credential values. No bootstrap exception:
+    VOC-124 already requested permission-workflows: write on publish-source. T00''s
+    first run is attempt 1 on a new VOC-127 carrier.'
+- id: VOC-127-DEP-06
+  status: resolved at drafting time as a non-expansion constraint. This package must
+    not implement VOC-122 promotion-recovery replan, must not merge unrelated open
+    carriers, must not change App installation permissions or rotate KARSIFT_BOT_*
+    secrets, and must not treat the 2026-08-27 settings repair as reusable implementation
+    authority. Exceptional main-only reconciliation must not become the ordinary develop-to-main
+    workflow.
+- id: VOC-127-DEP-07
+  status: 'open at drafting time as an implementer-facing naming choice, not a planner
+    guess past the required behavior. Preferred helper location is karsift-ai-infra/config/
+    with a dedicated module plus runner (for example sync-integration-to-merge.py)
+    called from release.yml after the single merge decision. Preferred exceptional
+    caller action name is reconcile-main-to-develop on pipeline.yml, with a dedicated
+    merged main-targeting PR input that is not existing_pr_number and is not a free-form
+    SHA. Equivalent names are acceptable if tests, current-state comments, and operator
+    dispatch commands use that exact identity. Constraints that are not open: ordinary
+    sync happens in the existing serialized converge job; identity is a merged PR
+    number plus adopted package/task bindings, never operator-typed SHAs on caller
+    workflow_dispatch; unique develop commits fail closed and are never erased; no
+    second promotion PR; workflow_dispatch blocks stay at most 25 inputs; roles.yml
+    is unchanged.'
+affected_areas:
+- KARSIFT/karsift-ai-infra/.github/workflows/release.yml
+- KARSIFT/karsift-ai-infra/config/
+- KARSIFT/karsift-ai-infra/tests/
+- KARSIFT/karsift-ai-infra/README.md
+- KARSIFT/karsift-ai-infra/templates/project-repo/.github/workflows/pipeline.yml
+- .github/workflows/pipeline.yml
+- .github/workflows/deploy-staging.yml
+- tooling/governance/fixtures/karsift-ai-infra/
+- tooling/governance/tests/
+- scripts/foundation/voc111-deploy-staging-paths.test.mjs
+- AGENTS.md
+- docs/operations/11-devops-and-ci-cd.md
+- docs/operations/10-development-workflow.md
+- docs/operations/15-ai-native-product-and-engineering-operating-model.md
+- docs/governance/16-autonomous-development-operating-model.md
+- specs/changes/VOC-127-converge-develop-to-the-exact-promotion-merge-sha/
+implementation:
+  authorized: true
+  required: true
+  status: authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: 1039
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-automation-reliability-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+ehr: not-triggered
+standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
+blocking_reasons: none - adopted and implementation-authorized
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+repository_adoption_status: adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: authorized
+production_deployment: disabled
+autonomous_production_release: enabled
+approved_candidate_sha: b23d2df7286eedb9189588c6e2db678d9e5196d2
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1036#issuecomment-5436055286
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-127-DEP-00
+- VOC-127-DEP-01
+- VOC-127-DEP-02
+- VOC-127-DEP-03
+- VOC-127-DEP-04
+- VOC-127-DEP-05
+- VOC-127-DEP-06
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #1036 at b23d2df7286eedb9189588c6e2db678d9e5196d2'
+adoption_pr: 1036
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1036

@@ -138,16 +138,19 @@ tool as required unless it exists or the implementation task includes installing
 - Declared risk: R#
 - Path-detected floor: pending CI
 - Protected areas:
-- Active governance model: active-A-003 / separately governed rollback reference
+- Active governance model: active-A-004 / separately governed historical reference
 - Independent verifier required: Yes
-- Standing technical-steward approval required: Yes/No and governing reason
+- Standing technical-steward or founder-comment workflow approval required: No under
+  active A-004; record any separate non-workflow authority and governing reason
 - EHR triggered: Yes/No and evidence
-- Founder decision required: Yes/No
+- Founder requirement clarification required before stable AC: Yes/No and evidence
 - Approval evidence:
 
-Under active A-003, routine R3 does not require standing steward or founder approval
-merely because it is R3. Record strengthened technical gates. R4 founder authority
-and any triggered EHR remain independently applicable.
+Under active A-004, R0-R4 engineering-workflow gates do not require a founder
+`approved` comment or standing steward approval. Record strengthened technical gates,
+the stronger R4 evidence obligations, any triggered EHR, and any founder product,
+legal, or strategy requirement clarification obtained before stable acceptance
+criteria.
 
 ## Assumptions and open questions
 

@@ -26,13 +26,19 @@ related_documents:
   - DOC-14
 related_decisions:
   - A-001
+  - A-003
+  - A-004
 ---
 
 # 15 — Vocanova AI-Native Product and Engineering Operating Model v1.0
 
 ## Document status
 
-This document is approved and defines the operating model for product decisions, specifications, implementation, review, repository governance, and release for Vocanova. It does **not** define production publication - no staging or production deployment stage exists in the live pipeline (corrected 2026-07-24; see §17.0).
+This document is approved and defines the operating model for product decisions,
+specifications, implementation, review, repository governance, and release for
+Vocanova. Repository-controlled staging, promotion, and production deployment are
+implemented and enabled when their current gates pass (reconciled 2026-08-30; see
+§17.0 and `docs/governance/repository-settings.md`).
 
 It consolidates all approved decisions from Decision Groups 1–10 and incorporates **Amendment A-001 — Development Merge Authority**.
 
@@ -40,7 +46,7 @@ It consolidates all approved decisions from Decision Groups 1–10 and incorpora
 originally described an aspirational merge/staging model that was never the system actually
 built. §17 has been rewritten to match the live pipeline; those two decision entries carry an
 inline correction note pointing to §17.0 rather than being rewritten in place, to preserve the
-decision register as a historical record. **A-003 (`docs/governance/amendments/A-003-...md`) and
+decision register as a historical record. **A-004 (`docs/governance/amendments/A-004-...md`) and
 the live `karsift-ai-infra` pipeline are the actual current authority for merge/review mechanics -
 where this document's remaining prose (outside §17) describes something narrower or different,
 treat it as historical design intent, not a live contradiction requiring further correction in
@@ -1508,8 +1514,10 @@ Must include:
 - Outstanding non-blocking issues.
 
 Merges when release checks pass (no founder `approved` comment gate after A-004
-activation; see §17.2). Interrupted promotion retries via `reconcile-release`
-dispatch.
+activation; see §17.2). After promotion succeeds, `develop` is advanced to that
+exact merge SHA before the release audit closes. Interrupted promotion retries
+via `reconcile-release` dispatch; exceptional governed production-target work
+uses `reconcile-production-change`.
 
 *Historical: release PRs required founder approval before A-004 / the 2026-08-08
 auto-release path.*
@@ -2114,7 +2122,11 @@ A waiver records:
 
 Critical security findings cannot be waived merely to meet a deadline.
 
-High-risk waivers require founder approval before production.
+Under active A-004, a founder `approved` comment cannot waive a failed or missing
+engineering or production gate. Correct the finding or govern a changed requirement
+through the normal package, deterministic checks, and independent verification.
+Founder clarification remains applicable when the underlying product, legal, or
+strategy requirement is genuinely ambiguous before stable acceptance criteria.
 
 ## 22.4 Kill switches
 

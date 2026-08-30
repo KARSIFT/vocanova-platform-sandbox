@@ -1,0 +1,342 @@
+schema_version: 1
+id: VOC-129
+slug: replace-exhausted-voc-127-caller-carrier-with-the
+title: Replace exhausted VOC-127 caller carrier with the exact infrastructure
+type: infrastructure
+status: adopted
+risk: R4
+planned_implementation_risk_floor: 'R4. This package lands the remaining VOC-127 caller-side
+  release-synchronization
+
+  contract by recreating the intended caller diff from current develop and pinning
+
+  tooling/governance fixtures, tests, and live pipeline dispatch to the exact
+
+  already-merged KARSIFT/karsift-ai-infra#164 revision
+
+  863fc1f35b1d35e4981a59166b0e939be1a2b681. tooling/governance/* is an R4 path
+
+  floor. .github/workflows/* is an R3 floor. Semantic mutation of the caller
+
+  fixture pin, release-convergence evidence, and exceptional production-change
+
+  dispatch is protected. This is a draft proposal for human adoption review, not
+
+  a determination. The path classifier and independent verifier remain
+
+  authoritative.
+
+  '
+canonical_path: specs/changes/VOC-129-replace-exhausted-voc-127-caller-carrier-with-the
+authority_model: a004-active
+requirement_source: 'GitHub issue #1042 (Replace exhausted VOC-127 caller carrier
+  with the exact
+
+  infrastructure #164 fixture and pin). VOC-127 task #1039 / PR #1041 exhausted
+
+  attempt 2/2 in pipeline run 33058603158. The attempt-2 recovery artifact is
+
+  implement-VOC-127-VOC-127-T00-attempt2 (artifact id 9640920826, bundle SHA-256
+
+  724e5547e29283b2701b70b72e000253a5100edf77545807610fce17151f7906, exact head
+
+  bbdb93aadec461830435771490f5c79ba524fed9). The clean publisher refused
+
+  workflow-file publication. Supervised inspection before publication found
+
+  tooling/governance/fixtures/karsift-ai-infra/PINNED_SHA.txt still equal to
+
+  obsolete infrastructure merge a9df74a63976d5239b84151fd01310835c999e7c.
+
+  Authoritative follow-up infrastructure PR KARSIFT/karsift-ai-infra#164 merged
+
+  as 863fc1f35b1d35e4981a59166b0e939be1a2b681 after independent exact-revision
+
+  review and 428 local/hosted policy tests. PR #1041 remains unchanged at exact
+
+  head 9d459813a733f9c6d58ad3352df0db27d33ee7f4. Do not publish the stale
+
+  artifact and do not dispatch VOC-127 attempt 3. Recreate the complete intended
+
+  VOC-127 caller diff from current develop, mirror in-scope infrastructure files
+
+  from that exact #164 merge, set PINNED_SHA.txt and every live pin assertion to
+
+  that merge, carry caller pipeline/docs/tests for the already-approved
+
+  release-sync outcome, and add deterministic coverage for the #164 checkout-ref
+
+  ordering/missing-develop path and exact pin consistency. After the replacement
+
+  merges and is promoted, close #1041 as superseded (never merged), then close
+
+  #1039 and root #1035 with audit comments naming the replacement merge. Do not
+
+  manufacture a VOC-127 completion marker from #1041. Preserve current
+
+  config/roles.yml bindings. Do not add OpenAI execution or credentials. This
+
+  draft package does not adopt or authorize itself.
+
+  '
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
+base_branch: develop
+base_sha: unknown - not recorded by this draft; set at adoption time if needed
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: 'planner (drafting only; adoption remains a human/autonomous
+    governed decision)
+
+    '
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
+automatic_merge_allowed: true
+production_impact: 'none-intentional for application runtime. This package consumes
+  the already
+
+  merged karsift-ai-infra#164 release-convergence contract on the caller by
+
+  updating the fixture pin, live pipeline dispatch, docs, and tests. Ordinary
+
+  post-promotion synchronization remains a tree-equivalent integration-ref
+
+  update. This package does not add a new production deploy path, change secret
+
+  values, providers, or monitor inventory.
+
+  '
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: 'Caller fixture/pin and pipeline dispatch repair for the already-merged
+
+    karsift-ai-infra#164 release-convergence contract. No page routes, critical
+
+    API endpoints, monitor inventory, or synthetic inventory in infra/monitoring/
+
+    are added or changed.
+
+    '
+dependencies:
+- id: VOC-129-DEP-00
+  status: 'resolved at drafting time. Issue #1042 provides the exhausted VOC-127
+
+    attempt-2/2 evidence, exact artifact/bundle/head IDs, unpublished #1041
+
+    head, obsolete #163 pin a9df74a63976d5239b84151fd01310835c999e7c, the
+
+    authoritative #164 merge 863fc1f35b1d35e4981a59166b0e939be1a2b681, the
+
+    prohibition on publishing the stale artifact or dispatching VOC-127
+
+    attempt 3, the requirement to recreate the caller diff from current
+
+    develop, the #164 checkout-ref and pin-consistency regressions, the
+
+    post-promotion close order for #1041/#1039/#1035, Cursor Composer / Cursor
+
+    Grok preservation, no-OpenAI constraint, and one-task preference with
+
+    enough specificity to draft without a clarifying round trip.
+
+    '
+- id: VOC-129-DEP-01
+  status: 'resolved at drafting time. Active A-004 remains authoritative. No founder
+
+    approved-comment gate on engineering-workflow adopt/merge/release paths.
+
+    Exact-SHA independent verification, deterministic risk floors,
+
+    protected-path controls, and fail-closed behavior remain mandatory.
+
+    '
+- id: VOC-129-DEP-02
+  status: 'resolved at drafting time by reading live caller develop and the local
+
+    karsift-ai-infra checkout of the #164 contract. Live
+
+    tooling/governance/fixtures/karsift-ai-infra/PINNED_SHA.txt currently
+
+    equals 60afda3a44fd06b8c00b219771de7112f1aded6e. Fixture release.yml still
+
+    restores a missing integration ref at CHECKED_HEAD_SHA. Live
+
+    .github/workflows/pipeline.yml action options omit
+
+    reconcile-production-change, release still needs only merge-gate, and
+
+    auto-advance does not wait on governed production-change reconciliation.
+
+    Authoritative infrastructure PR KARSIFT/karsift-ai-infra#164 is already
+
+    merged as 863fc1f35b1d35e4981a59166b0e939be1a2b681 and encodes bind-and-sync
+
+    to mergeCommit.oid, release-checkout-ref-runner.py missing-develop
+
+    fallback, branch-sync helpers, and template action
+
+    reconcile-production-change.
+
+    '
+- id: VOC-129-DEP-03
+  status: 'resolved at drafting time as the chosen design. Recreate the complete
+
+    intended VOC-127 caller diff from current develop. Do not compose or
+
+    publish PR #1041, artifact implement-VOC-127-VOC-127-T00-attempt2, or
+
+    unpublished head 9d459813a733f9c6d58ad3352df0db27d33ee7f4. Mirror every
+
+    in-scope infrastructure file needed by the caller from exact merge
+
+    863fc1f35b1d35e4981a59166b0e939be1a2b681. Set PINNED_SHA.txt and every live
+
+    pin assertion to that merge, not to a9df74a63976d5239b84151fd01310835c999e7c
+
+    or 60afda3a44fd06b8c00b219771de7112f1aded6e. Consume the live #164 identity
+
+    reconcile-production-change. Do not revive VOC-127-DEP-07 preferred name
+
+    reconcile-main-to-develop.
+
+    '
+- id: VOC-129-DEP-04
+  status: 'resolved at drafting time as an accepted delivery constraint. Coordinated
+
+    PRs in the caller and KARSIFT/karsift-ai-infra remain one task in
+
+    principle. Infrastructure #164 is already merged, independently reviewed,
+
+    and is the pin target, so this task does not open a replacement infra PR
+
+    and does not re-implement #163 or #164. Repository count,
+
+    workflow-versus-tests-versus-docs, and fixture/pin work are not split
+
+    reasons.
+
+    '
+- id: VOC-129-DEP-05
+  status: 'resolved at drafting time as a hard dependency that must not expand this
+
+    package into a third VOC-127 implementation attempt. Adopted VOC-127-T00
+
+    (#1039) consumed its final allowed retry. PR #1041 is unpublishable and
+
+    remains at 9d459813a733f9c6d58ad3352df0db27d33ee7f4. This package must not
+
+    dispatch VOC-127-T00 as attempt 3, must not merge #1041, and must not
+
+    manufacture a VOC-127 completion marker from #1041. After this package''s
+
+    exact reviewed caller merge is promoted, close #1041 as superseded, then
+
+    close #1039 and root #1035 with audit comments naming the VOC-129
+
+    replacement merge.
+
+    '
+- id: VOC-129-DEP-06
+  status: 'resolved at drafting time. Configured Cursor Composer remains the
+
+    implementer and Cursor Grok remains the exact-revision independent
+
+    reviewer. Current config/roles.yml bindings are fixed and must not change.
+
+    No OpenAI credential or execution route is needed or authorized. Do not
+
+    print credential values. No bootstrap exception. VOC-124 already requested
+
+    permission-workflows write on publish-source. T00''s first run is attempt 1
+
+    on a new VOC-129 carrier.
+
+    '
+- id: VOC-129-DEP-07
+  status: 'open at drafting time as an implementer-facing proof, not a planner guess
+
+    past the required behavior. Whether live deploy-staging.yml on.push.paths
+
+    already skips tree-equivalent merge-commit fast-forwards, or a job-level
+
+    selector must be added, is proven at implementation time. Constraints that
+
+    are not open include the following. Pin and fixture equal
+
+    863fc1f35b1d35e4981a59166b0e939be1a2b681. Exceptional main-only identity on
+
+    the caller is reconcile-production-change from #164. Unique develop
+
+    commits fail closed. No operator-typed SHA inputs. workflow_dispatch
+
+    blocks stay at most 25 inputs. roles.yml is unchanged. #1041 is not
+
+    published. VOC-127 is not retried as attempt 3.
+
+    '
+affected_areas:
+- .github/workflows/pipeline.yml
+- .github/workflows/deploy-staging.yml
+- tooling/governance/fixtures/karsift-ai-infra/
+- tooling/governance/tests/
+- scripts/foundation/voc097-fixture-matrix.test.mjs
+- scripts/foundation/voc104-ready-for-review-reuse.test.mjs
+- scripts/foundation/voc108-authoritative-lifecycle.test.mjs
+- scripts/foundation/voc111-deploy-staging-paths.test.mjs
+- AGENTS.md
+- docs/operations/11-devops-and-ci-cd.md
+- docs/operations/10-development-workflow.md
+- docs/operations/15-ai-native-product-and-engineering-operating-model.md
+- docs/governance/16-autonomous-development-operating-model.md
+- specs/changes/VOC-129-replace-exhausted-voc-127-caller-carrier-with-the/
+implementation:
+  authorized: true
+  required: true
+  status: authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: 1044
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-automation-reliability-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+ehr: not-triggered
+standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
+blocking_reasons: none - adopted and implementation-authorized
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+repository_adoption_status: adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: authorized
+production_deployment: disabled
+autonomous_production_release: enabled
+approved_candidate_sha: 1a4a8b96ae65c83f11c577a7b98b00895f7a19c3
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1043#issuecomment-5437548670
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-129-DEP-00
+- VOC-129-DEP-01
+- VOC-129-DEP-02
+- VOC-129-DEP-03
+- VOC-129-DEP-04
+- VOC-129-DEP-05
+- VOC-129-DEP-06
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #1043 at 1a4a8b96ae65c83f11c577a7b98b00895f7a19c3'
+adoption_pr: 1043
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1043

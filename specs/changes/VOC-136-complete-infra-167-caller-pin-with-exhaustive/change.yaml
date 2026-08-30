@@ -1,0 +1,360 @@
+schema_version: 1
+id: VOC-136
+slug: complete-infra-167-caller-pin-with-exhaustive
+title: Complete infra
+type: infrastructure
+status: adopted
+risk: R4
+planned_implementation_risk_floor: "R4. This package consumes already-merged KARSIFT/karsift-ai-infra#167\
+  \ by pinning caller tooling/governance fixtures, tests, and pin assertions to exact\
+  \ merge b263c0c110591cc798b89277dfc35542abb1597b and mirroring every necessary #164\u2192\
+  #167 authoritative caller fixture surface, including the #167 immutable PR-context\
+  \ validation contract and every #166 release-synchronization file still required,\
+  \ while keeping the complete VOC-112 no-change boundary byte-identical to protected\
+  \ comparison anchor b9e74fc2db4691c48c637639b265d527de9f4505 and adding an exhaustive\
+  \ complete-diff executable bypass scan that does not exclude tooling/governance/tests/**\
+  \ or this regression's own module. tooling/governance/* is an R4 path floor. .github/workflows/*\
+  \ is an R3 floor if a live caller workflow must change. Semantic mutation of application-check\
+  \ provenance, pre-push PR context, release checkout lifetime, post-implementer nested-checkout\
+  \ classification, source-carrier publication, task-completion validation, and exact-revision\
+  \ evidence binding is protected. This is a draft proposal for human adoption review,\
+  \ not a determination. The path classifier and independent verifier remain authoritative."
+canonical_path: specs/changes/VOC-136-complete-infra-167-caller-pin-with-exhaustive
+authority_model: a004-active
+requirement_source: 'GitHub issue #1076 (Complete infra #167 caller pin with exhaustive
+  executable bypass scanning), including its original body. Infrastructure PR KARSIFT/karsift-ai-infra#167
+  is already merged as b263c0c110591cc798b89277dfc35542abb1597b (independently reviewed
+  head eb11c4fc6841ec73816e2e064dcd449d98c1e933). VOC-135 / PR #1075 was deliberately
+  stopped unmerged after its second attempt weakened a required regression. Attempt-1
+  head 7c3e821bb3228c0fd2c7279b6d577a388148cb18 self-failed TEST-12 because the complete-diff
+  scan matched its own assertion literal (https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1075#issuecomment-5444183121).
+  Attempt-2 head dcd2da9ccbdf471c5294db30f09c9bb99aacdcd1 added "tooling/governance/tests/"
+  to SCAN_EXCLUDE_PREFIXES, excluding every changed/added caller test Python executable
+  from scanning (https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1075#issuecomment-5444311947).
+  The exact-head reviewer classified that residual path Low and returned PASS WITH
+  NON-BLOCKING FINDINGS (https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1075#issuecomment-5444342914);
+  operator supervision converted the PR to draft then closed it unmerged. Do not treat
+  that PASS as sufficient for a replacement that retains the exclusion. PR #1075 is
+  closed/unmerged and its remote branch is deleted. VOC-135 task #1073 and root #1071
+  are closed not-planned with audit; no completion marker exists. Current caller refs
+  at issue creation: develop 5044d62f6f35069412e8ffcf80a0682e7847d1c1, main 0d0b0cdf0692d0349f380e9cae3285b4c7916b05.
+  Live tracked PINNED_SHA.txt still equals 863fc1f35b1d35e4981a59166b0e939be1a2b681
+  (#164). Protected comparison anchor remains b9e74fc2db4691c48c637639b265d527de9f4505.
+  Plan/adoption/roster commits after that SHA are governance-only. Do not reuse, merge,
+  cherry-pick, compose, or redispatch PR #1051, #1056, #1065, #1070, or #1075 or tasks
+  VOC-132 through VOC-135. Pin target is b263c0c110591cc798b89277dfc35542abb1597b.
+  This draft package does not adopt or authorize itself.'
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
+base_branch: develop
+base_sha: Protected comparison anchor for the eight no-change paths is b9e74fc2db4691c48c637639b265d527de9f4505.
+  Issue-creation develop was 5044d62f6f35069412e8ffcf80a0682e7847d1c1. Implementation
+  must record the actual implementation PR base separately at dispatch, fail closed
+  on unrelated/material movement of develop, and must not treat this package's own
+  plan/adoption/roster commits as protected-file drift.
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: planner (drafting only; adoption remains a human/autonomous
+    governed decision)
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
+automatic_merge_allowed: true
+production_impact: 'none-intentional for application runtime. This package consumes
+  the already merged karsift-ai-infra#167 immutable PR-context validation contract
+  and the still-required #166 release-synchronization files on the caller by updating
+  the fixture pin, mirrored ci.yml / implement.yml / run-app-checks.sh / #166 restore
+  and nested-checkout files / tests / docs, without changing VOC-112 provenance behavior,
+  evidence, subject revisions, hashed sources, package.json, validate-workspace.mjs,
+  or the navigation-benchmark runner. Ordinary post-promotion synchronization remains
+  a tree-equivalent integration-ref update. This package does not add a new production
+  deploy path, change secret values, providers, or monitor inventory.'
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: "Caller fixture/pin, #164 through #167 restore, nested-checkout, and\
+    \ immutable PR-context validation coverage, complete VOC-112 no-change boundary\
+    \ bound to protected comparison anchor b9e74fc2\u2026, exhaustive complete-diff\
+    \ executable bypass scanning including tooling/governance/tests/**, package.json\
+    \ identity, feasible exact-revision evidence, and hash-based #167 byte-identity\
+    \ for the already-merged karsift-ai-infra#167 contract. No page routes, critical\
+    \ API endpoints, monitor inventory, or synthetic inventory in infra/monitoring/\
+    \ are added or changed."
+dependencies:
+- id: VOC-136-DEP-00
+  status: "resolved at drafting time. Issue #1076 provides the exhausted VOC-135-T00\
+    \ (#1073 / PR #1075) attempts, exact reviewed heads 7c3e821bb3228c0fd2c7279b6d577a388148cb18\
+    \ and dcd2da9ccbdf471c5294db30f09c9bb99aacdcd1, the TEST-12 self-scan false-positive,\
+    \ the SCAN_EXCLUDE_PREFIXES weakening, the prohibition on treating PASS WITH NON-BLOCKING\
+    \ FINDINGS as sufficient, the prohibition on reuse of PR #1075 and redispatched\
+    \ VOC-135-T00 (#1073), the exact pin b263c0c110591cc798b89277dfc35542abb1597b,\
+    \ the #167 PR-context contract, the #166 files still required, the eight-path\
+    \ no-change boundary against protected comparison anchor b9e74fc2\u2026, the exhaustive\
+    \ complete-diff scan including tooling/governance/tests/**, negative unit cases,\
+    \ source-safe literals, tracked-after-commit pass, feasible exact-revision evidence,\
+    \ no-OpenAI constraint, one-task preference, fail-closed-on-unrelated-develop-movement,\
+    \ and VOC-127 / superseded VOC-130 through VOC-135 / this-replacement promotion/closure\
+    \ with enough specificity to draft without a clarifying round trip."
+- id: VOC-136-DEP-01
+  status: resolved at drafting time. Active A-004 remains authoritative. No founder
+    approved-comment gate on engineering-workflow adopt/merge/release paths. Exact-SHA
+    independent verification, deterministic risk floors, protected-path controls,
+    and fail-closed behavior remain mandatory. R4 is a draft proposal, not a determination.
+- id: VOC-136-DEP-02
+  status: 'resolved at drafting time by reading live caller develop. Live tooling/governance/fixtures/karsift-ai-infra/PINNED_SHA.txt
+    currently equals 863fc1f35b1d35e4981a59166b0e939be1a2b681 (infrastructure #164).
+    Live .github/workflows/pipeline.yml already dispatches KARSIFT/karsift-ai-infra/.github/workflows/implement.yml@main
+    and release.yml@main and exposes reconcile-production-change. The two VOC-112
+    fixtures currently keep subject_revision f9d11e232a07c7d7a9c433d02c9267912543ba10.
+    Live voc112-navigation-benchmark.test.mjs still fail-closes local mode when a
+    full checkout is missing the captured commit. Live package.json, validate-workspace.mjs,
+    and voc112-navigation-benchmark-run.mjs have no VOC112 provenance-mode wrapper,
+    capture-commit fetch helper, or hydrate helper. Authoritative infrastructure PR
+    KARSIFT/karsift-ai-infra#167 is already merged as b263c0c110591cc798b89277dfc35542abb1597b.
+    Independently reviewed PASS infra head is eb11c4fc6841ec73816e2e064dcd449d98c1e933.
+    Current caller fixtures still lack config/implementer_nested_checkout.py, tests/test_app_check_context.py,
+    Restore shared lifecycle policy after caller checkout, Preserve post-implementer
+    lifecycle helpers, ci.yml fetch-depth 0 plus exact PR SHA pair, and run-app-checks.sh
+    --pr-base-sha/--pr-head-sha. Issue-creation develop was 5044d62f6f35069412e8ffcf80a0682e7847d1c1;
+    main was 0d0b0cdf0692d0349f380e9cae3285b4c7916b05. An untracked local karsift-ai-infra/
+    checkout, if present, is not this repository''s tracked tree.'
+- id: VOC-136-DEP-03
+  status: 'resolved at drafting time as the chosen design. Consume already-merged
+    infrastructure #167. Do not open a replacement infra PR and do not re-implement
+    #164, #165, #166, or #167. Do not silently retarget VOC-132 from pin #165, VOC-133/VOC-134
+    from pin #166, or VOC-135/this package away from #167. Do not redispatch VOC-132-T00
+    (#1059), VOC-133-T00 (#1063), VOC-134-T00 (#1068), or VOC-135-T00 (#1073). Do
+    not reuse, merge, cherry-pick, modify, or compose PR #1051, PR #1056, PR #1065,
+    PR #1070, or PR #1075 or their branches. Set PINNED_SHA.txt and every live pin
+    assertion to b263c0c110591cc798b89277dfc35542abb1597b, not to 863fc1f35b1d35e4981a59166b0e939be1a2b681,
+    not to 8ce2b77a09a729e458a9f4cbea1ca26eb114d398, and not to f3d79177bf8a9abe0dae550f39502165d494c576.
+    Mirror from exact infra merge #167 every necessary changed authoritative file,
+    byte-for-byte, including the named #167 files and every #166 fixture file still
+    required by the release synchronization outcome. Preserve the #165 post-caller-checkout
+    restore and the #164 missing-develop recovery and exact-merge-SHA develop sync
+    already specified for the caller.'
+- id: VOC-136-DEP-04
+  status: 'resolved at drafting time as an accepted delivery constraint. Coordinated
+    PRs in the caller and KARSIFT/karsift-ai-infra remain one task in principle. Infrastructure
+    #167 is already merged, independently reviewed, and is the pin target, so this
+    task does not open a replacement infra PR. Repository count, workflow-versus-tests-versus-docs,
+    fixture/pin work, VOC-112 no-change boundary, exhaustive bypass regression, package.json
+    identity, feasible evidence, and release reconciliation are not split reasons.'
+- id: VOC-136-DEP-05
+  status: 'resolved at drafting time as a hard dependency that must not expand this
+    package into a second VOC-127, VOC-129, VOC-130, VOC-131, VOC-132, VOC-133, VOC-134,
+    or VOC-135 implementation. VOC-129 caller PR #1046 is already merged as 429d8c6d49303148ca1cc14dba5f6768a7863346.
+    VOC-130-T00 (#1049) is exhausted; PR #1051 remains unmerged and must not be merged
+    or modified. VOC-131-T00 / PR #1056 is exhausted at c11454e717a6d778143de1f2023acc4480305845
+    and must not be retried or merged. VOC-132-T00 (#1059) produced no caller branch,
+    PR, or completion marker after run 33079499176; do not redispatch that task and
+    do not manufacture a VOC-132 completion marker. VOC-133-T00 (#1063 / PR #1065)
+    exhausted both attempts; do not redispatch that task, do not reuse PR #1065, and
+    do not manufacture a VOC-133 completion marker. VOC-134-T00 (#1068 / PR #1070)
+    exhausted both attempts; do not redispatch that task, do not reuse PR #1070, and
+    do not manufacture a VOC-134 completion marker. VOC-135-T00 (#1073 / PR #1075)
+    exhausted both attempts and was closed unmerged after operator supervision; do
+    not redispatch that task, do not reuse PR #1075, and do not manufacture a VOC-135
+    completion marker. This package must not re-implement those packages, must not
+    snapshot the current develop/main gap (karsift-ai-infra#15), and after the repaired
+    implement/release/ PR-context path is live, ordinary release evaluation promotes
+    outstanding qualified work when each has a valid App-authored completion marker.
+    This package''s implementation PR Closes only its own VOC-136 task issue.'
+- id: VOC-136-DEP-06
+  status: 'resolved at drafting time. Configured Cursor Composer remains the implementer
+    and Cursor Grok remains the exact-revision independent reviewer. Current config/roles.yml
+    bindings are fixed and must not change: implementer and implementer_escalation
+    cursor/composer-2.5; planner, reviewer, reviewer_fast_retry, and plan_reviewer
+    cursor/grok-4.6[effort=high,fast=false]. No OpenAI credential or execution route
+    is needed or authorized. Do not print credential values. No bootstrap exception.
+    VOC-124 already requested permission-workflows write on publish-source. T00''s
+    first run is attempt 1 on a new VOC-136 carrier from current develop.'
+- id: VOC-136-DEP-07
+  status: "open at drafting time as an implementer-facing proof, not a planner guess\
+    \ past the required behavior. Whether live caller .github/workflows files other\
+    \ than the fixture pin/tests/docs must change is proven at implementation time\
+    \ by comparing the #167 merge with the live caller dispatch surface. Expected\
+    \ outcome is no live pipeline.yml edit because the caller already uses implement.yml@main\
+    \ and release.yml@main. Constraints that are not open include the following. Pin\
+    \ and fixture equal b263c0c110591cc798b89277dfc35542abb1597b and equal neither\
+    \ 863fc1f35b1d35e4981a59166b0e939be1a2b681 nor 8ce2b77a09a729e458a9f4cbea1ca26eb114d398\
+    \ nor f3d79177bf8a9abe0dae550f39502165d494c576. identify and converge restore\
+    \ shared policy after caller checkout and before task-completion helpers, with\
+    \ persist-credentials: false. #166 copies helpers before the unrestricted model;\
+    \ absent nested checkout means no infrastructure source carrier while caller changes\
+    \ continue; a plain subdirectory inheriting caller Git, non-directory, or symlink\
+    \ fails closed; a distinct nested Git checkout preserves exact-head bundle/ancestry/remote/lease\
+    \ publication. #167 run-app-checks.sh accepts and validates an immutable PR base/head\
+    \ pair, selects pr-validation for an unchanged capture fixture, pr-ancestry for\
+    \ add/modify/delete, fails closed on comparison errors, never fetches evidence\
+    \ commits, reusable CI checks out full reachable history, and implementation pre-push\
+    \ uses the integration anchor plus current committed HEAD including after self-correction.\
+    \ #164 missing-develop recovery, unique-develop fail-closed behavior, and reconcile-production-change\
+    \ remain. No operator-typed SHA inputs. workflow_dispatch blocks stay at most\
+    \ 25 inputs. roles.yml is unchanged. No snapshot-gap task. No OpenAI route. The\
+    \ eight named no-change paths remain byte-identical to protected comparison anchor\
+    \ b9e74fc2\u2026 and do not appear in the implementation diff against that anchor.\
+    \ Exact-head binding is App-authored review/check metadata, not a self-referential\
+    \ SHA in the same Git tree. The exhaustive scan must include tooling/governance/tests/**."
+- id: VOC-136-DEP-08
+  status: 'resolved at drafting time as a hard scope constraint. VOC-130 exhausted
+    on unrelated VOC-112 JSON retargets. VOC-131 exhausted because scripts/foundation/voc112-navigation-benchmark.test.mjs
+    weakened missing-subject local-mode fail-closed behavior while evidence falsely
+    claimed that edit was reverted. VOC-133 exhausted because attempt 1 fetched a
+    missing capture commit before pnpm test and attempt 2 forced pr-validation provenance
+    mode via package.json while mutating evidence at test time. VOC-134 exhausted
+    because attempt 1 added an import-time capture fetch in voc112-navigation-benchmark-run.mjs
+    and attempt 2 added hydrate-voc112-git-objects.mjs invoked from validate-workspace.mjs.
+    VOC-135 exhausted because attempt 1 self-failed TEST-12 on its own assertion literal
+    and attempt 2 excluded tooling/governance/tests/ from scanning. This package must
+    keep all eight named no-change paths byte-for-byte identical to protected comparison
+    anchor b9e74fc2db4691c48c637639b265d527de9f4505: the two VOC-112 JSON fixtures,
+    the provenance test, the navigation-benchmark runner, validate-workspace.mjs,
+    AGENTS.md, the navigator skill, and package.json. Do not retarget, recapture,
+    or weaken them. Do not edit AGENTS.md or the navigator skill merely to keep hashes
+    current. Do not add a capture-commit fetch helper, hydrate/materialize helper,
+    provenance-mode wrapper, import side effect, environment override, evidence-stamping
+    helper, skip, or test-time evidence mutation under any filename. Add a deterministic
+    regression bound to the protected comparison anchor that fails if any protected
+    path differs or if proof cannot run, and an exhaustive caller-diff scan of changed
+    executable paths, including tooling/governance/tests/** and this regression''s
+    own module, that fails if any new or changed caller script hydrates evidence,
+    fetches capture subjects, sets VOC-112 provenance variables around tests, or makes
+    local fail-closed unreachable.'
+- id: VOC-136-DEP-09
+  status: 'resolved at drafting time as a hard validation constraint. Exact mirrored
+    fixture bytes must be validated against infra #167 using recorded SHA-256 hashes
+    (or an equivalent workspace-reproducible comparison) that does not depend on a
+    machine-specific /tmp checkout existing at test time. Drafting-time hashes reconfirmed
+    for VOC-135-D11 from an untracked nested checkout at b263c0c110591cc798b89277dfc35542abb1597b
+    are recorded in specification.md VOC-136-D11 and reused here because #167 has
+    not moved. Implementation must reconfirm those hashes from a fetched exact merge
+    before committing them into the regression. Committed evidence must name the protected
+    comparison anchor, the actual implementation PR base, the final infra merge, the
+    confirmed hashes, complete-diff scan scope and negative cases, and the contract
+    that the live implementation head is bound by the App-authored independent-review
+    comment/check. Evidence must not require a commit to contain its own SHA. Evidence
+    must not claim a protected-path revert unless that path is absent from the diff
+    against the protected comparison anchor.'
+- id: VOC-136-DEP-10
+  status: 'resolved at drafting time as the feasible exact-revision evidence contract.
+    VOC-133-D12 / TEST-10 as interpreted by PR #1065 required a tracked file to name
+    the SHA of the same commit that contains it. That is Git-impossible: changing
+    the file changes the commit SHA. This package keeps exact-revision binding fail-closed
+    by requiring the App-authored independent-review comment/check to bind the live
+    PR head exactly, requiring merge-gate to reject any mismatch, and allowing post-merge/root-issue
+    audit to record the reviewed head and merge SHA. Committed package evidence records
+    the protected comparison anchor, the actual implementation PR base, exact infra
+    merge, hashes, validation, scan scope, and where later exact-head binding will
+    be published. Tests must not mutate evidence at runtime to make that contract
+    appear true.'
+- id: VOC-136-DEP-11
+  status: resolved at drafting time as the protected-comparison-anchor and implementation-PR-base
+    rule. Protected comparison anchor remains b9e74fc2db4691c48c637639b265d527de9f4505.
+    Plan/adoption/roster commits after that SHA, including already-merged VOC-135
+    plan adoption and this package's own plan/adoption/roster commits, are governance-only
+    and do not count as protected-file drift for the eight no-change paths. Issue-creation
+    develop 5044d62f6f35069412e8ffcf80a0682e7847d1c1 is expected to differ from the
+    anchor for that reason. Implementation must resolve current develop to a 40-character
+    SHA before any in-scope edit, record that SHA as the implementation PR base, and
+    fail closed on unrelated/material movement of develop (any tree change outside
+    this package directory, already-merged VOC-135 package adoption/roster metadata,
+    and other governance-only commits that cannot affect the eight protected paths
+    or the live pin/fixture). If any of the eight no-change paths differs from the
+    anchor, fail closed. If the live pin or fixture already changed, fail closed rather
+    than composing with an unexpected tree. Do not retarget the protected comparison
+    anchor. After the implementation PR base is recorded, tests must not use a moving
+    branch name as the eight-path comparison authority.
+- id: VOC-136-DEP-12
+  status: "resolved at drafting time as a caller-owned README rule. The issue lists\
+    \ README documentation among the #167 files to consume. The caller fixture README.md\
+    \ is a different document from KARSIFT/karsift-ai-infra/README.md. Implementation\
+    \ updates the caller-owned fixture README current-state pin paragraph so it names\
+    \ pin b263c0c\u2026 and the #167 immutable PR-context contract, quoting or summarizing\
+    \ the infra README PR-context paragraph. It does not replace the caller-owned\
+    \ README with the infrastructure repository README. The infra README SHA-256 at\
+    \ merge b263c0c\u2026 is recorded in VOC-136-D11 as the documentation-source hash.\
+    \ If exact comparison proves another existing caller-fixture file besides the\
+    \ named set differs from #167, record that finding in t00-evidence.md and mirror\
+    \ it; do not copy unrelated infra-only tests merely to force a pin."
+- id: VOC-136-DEP-13
+  status: 'resolved at drafting time as a hard TEST-12 constraint. Do not exclude
+    tooling/governance/tests/**, this regression''s own module, or another executable
+    directory wholesale. The only scan exclusion for Python/JS/shell executables is
+    the mirrored tooling/governance/fixtures/karsift-ai-infra/** subtree. Test and
+    assertion literals that would otherwise match the scanner must be represented
+    as non-contiguous source-safe values so self-scanning a tracked committed module
+    does not false-positive. Actual semantic setters, commands, import-time side effects,
+    and provenance-environment overrides must fail. Negative unit cases must reconstruct
+    contiguous forbidden payloads only in memory (or in non-executable, non-scanned
+    test data) and prove rejection of at least: an import-time or pre-test git fetch
+    for VOC-112/ evidence; a hydrate/materialize helper under an arbitrary new filename;
+    shell, Node, and Python forms that set VOC112_CAPTURE_PROVENANCE_MODE; relevant
+    PR_BASE_SHA / PR_HEAD_SHA setters around tests or validate-workspace; an import-time
+    side effect inside an added tooling/governance/tests/*.py module; and a wrapper
+    or skip that makes default local fail-closed unreachable. Benign assertion/test-data
+    mentions must not false-positive. The regression itself must pass after it is
+    tracked and committed, not merely while untracked. Do not treat PR #1075 attempt-2
+    PASS WITH NON-BLOCKING FINDINGS as sufficient if the exclusion remains.'
+affected_areas:
+- tooling/governance/fixtures/karsift-ai-infra/
+- tooling/governance/tests/
+- scripts/foundation/voc097-fixture-matrix.test.mjs
+- scripts/foundation/voc104-ready-for-review-reuse.test.mjs
+- scripts/foundation/voc108-authoritative-lifecycle.test.mjs
+- specs/changes/VOC-136-complete-infra-167-caller-pin-with-exhaustive/
+implementation:
+  authorized: true
+  required: true
+  status: authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: 1078
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-automation-reliability-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+ehr: not-triggered
+standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
+blocking_reasons: none - adopted and implementation-authorized
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+production_deployment: disabled
+autonomous_production_release: enabled
+repository_adoption_status: adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: authorized
+approved_candidate_sha: 84ed7fae674317fe556942477a9450f723f3b098
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1077#issuecomment-5444601635
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-136-DEP-00
+- VOC-136-DEP-01
+- VOC-136-DEP-02
+- VOC-136-DEP-03
+- VOC-136-DEP-04
+- VOC-136-DEP-05
+- VOC-136-DEP-06
+- VOC-136-DEP-08
+- VOC-136-DEP-09
+- VOC-136-DEP-10
+- VOC-136-DEP-11
+- VOC-136-DEP-12
+- VOC-136-DEP-13
+adoption_deferred_decisions: []
+adoption_authority_provenance: 'a004-active evaluated plan PR #1077 at 84ed7fae674317fe556942477a9450f723f3b098'
+adoption_pr: 1077
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1077

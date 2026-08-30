@@ -52,25 +52,29 @@ git diff --check
 Use the exact checked-in tool versions and scripts with a frozen lockfile. Do not claim
 an unavailable tool or external deployment passed.
 
-Under active A-003, routine R3 requires strengthened applicable controls and
-independent verification, not standing technical-steward or founder approval merely
-because it is R3. R4 founder authority remains unchanged and EHR remains exceptional,
-not a routine approval layer. Claude Code is an independent verifier, never human
-authority. Repository protections apply to contributors and automation actors alike;
-never bypass failed checks, required review, branch protection, or production gates.
+Under active A-004, R0-R4 engineering workflows advance through applicable
+deterministic controls and independent verification without a founder `approved`
+comment on merge, adoption, release, deploy, or retry. R4 retains strengthened
+evidence, rollout, monitoring, and rollback obligations. Founder input remains
+requirement clarification for genuinely ambiguous product, legal, or strategy
+questions before stable acceptance criteria; EHR remains exceptional, not a routine
+approval layer. The independent reviewer is never human authority. Repository
+protections apply to contributors and automation actors alike; never bypass failed
+checks, required review, branch protection, or production gates.
 
-The one-time initial DOC-16/A-002 bootstrap may merge with founder approval,
-independent Claude Code verification, and passing repository validation. It does not
-mark steward approval satisfied or authorize production. The exception expires on
-merge; R3 production remains blocked until a qualified human steward is appointed and
-enforcement is active.
+**Historical bootstrap:** the one-time initial DOC-16/A-002 adoption merged with
+founder approval, independent Claude Code verification, and passing repository
+validation. It did not mark steward approval satisfied or authorize production, and
+the exception expired on merge. It is not a current approval or release gate.
 
 VOC-002 was not a bootstrap exception. It was the completed one-time A-003 migration
 governed by pre-A-003 R4 founder and R3 technical-steward approval bound to its exact
 revision. That approval is exhausted and cannot be reused - VOC-002 itself grants no
 standing automatic-merge or autonomous-production-release authority. This does not mean
 those capabilities are disabled system-wide: automatic merge into `develop` is a
-separately implemented and proven gate (A-003 §10, live via karsift-ai-infra's
-merge-gate.yml) with its own authority, not derived from VOC-002. See AGENTS.md's
+separately implemented and proven gate, and repository-controlled promotion plus
+push-to-`main` production deployment are enabled when their non-founder gates pass.
+Those controls derive from current A-004 authority and live infrastructure, not
+VOC-002. See AGENTS.md's
 "Change workflow" section for the current, accurate state of that gate and of
 autonomous production release.

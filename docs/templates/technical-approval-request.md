@@ -9,16 +9,17 @@ reviewed_revision: replace-with-commit-sha
 # Legacy/Exceptional Technical Review Request — Change title
 
 This legacy/exceptional template must not be used as a routine R3 approval layer
-under active A-003. It may preserve historical evidence or record qualified external
-review for a specifically triggered EHR or another independently applicable
-requirement. The one-time VOC-002 migration approval is exhausted and non-reusable.
+under active A-004, and R4 likewise creates no founder-comment engineering-workflow
+gate. It may preserve historical evidence or record qualified external review for a
+specifically triggered EHR or another independently applicable requirement. The
+one-time VOC-002 migration approval is exhausted and non-reusable.
 
 ## Protected change
 
 - Protected areas and detected paths:
 - Technical decision being authorized:
 - Specification/ADR/PR links:
-- Why R3 applies:
+- Why protected or exceptional review applies:
 
 ## Evidence
 
@@ -31,14 +32,15 @@ requirement. The one-time VOC-002 migration approval is exhausted and non-reusab
 - Monitoring and rollback rehearsal:
 - Remaining risks or waivers:
 
-## Steward assessment
+## Exceptional reviewer assessment
 
 - Is the design technically sound within the approved product scope?
 - Are least privilege, failure isolation, and recovery adequate?
 - Are tests and operational evidence proportionate to the risk?
-- Does any issue require R4 founder escalation?
+- Does any issue trigger EHR, or require founder product/legal/strategy clarification
+  before stable acceptance criteria?
 
-## Approval
+## Review outcome
 
 - Decision: Approved / Changes required / Escalated
 - Conditions:

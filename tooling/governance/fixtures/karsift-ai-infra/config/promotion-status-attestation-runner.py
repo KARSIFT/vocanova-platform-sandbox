@@ -12,7 +12,11 @@ import subprocess
 import sys
 
 from actions_check_recovery import RecoveryError, validate_promotion_target, validate_sha
-from promotion_status_attestation import AttestationError, attestable_contexts
+from promotion_status_attestation import (
+    AttestationError,
+    attestable_contexts,
+    verify_promotion_required_run_semantics,
+)
 from required_check_satisfaction import SatisfactionError, parse_gh_pr_checks_json
 
 
@@ -51,6 +55,39 @@ def gh_api(
     if completed.returncode:
         raise RunnerError("github_api_failed")
     return json.loads(completed.stdout or "{}")
+
+
+def gh_api_paginated_jobs(
+    token: str, repository: str, run_id: int
+) -> list[dict]:
+    command = [
+        "gh",
+        "api",
+        "--paginate",
+        "--slurp",
+        f"repos/{repository}/actions/runs/{run_id}/jobs?per_page=100",
+    ]
+    env = os.environ.copy()
+    env["GH_TOKEN"] = token
+    env["GH_REPO"] = repository
+    completed = subprocess.run(
+        command,
+        text=True,
+        capture_output=True,
+        check=False,
+        env=env,
+    )
+    if completed.returncode:
+        raise RunnerError("github_api_failed")
+    pages = json.loads(completed.stdout or "null")
+    if not isinstance(pages, list) or any(
+        not isinstance(page, dict)
+        or not isinstance(page.get("jobs"), list)
+        or any(not isinstance(job, dict) for job in page["jobs"])
+        for page in pages
+    ):
+        raise RunnerError("invalid_workflow_jobs_payload")
+    return [job for page in pages for job in page["jobs"]]
 
 
 def main() -> int:
@@ -111,7 +148,43 @@ def main() -> int:
             branch_ref=args.branch_ref,
             pr_number=args.pr_number,
         )
+        base = pull_request.get("base") if isinstance(pull_request, dict) else None
+        head = pull_request.get("head") if isinstance(pull_request, dict) else None
+        if (
+            not isinstance(base, dict)
+            or not isinstance(head, dict)
+            or base.get("ref") != "main"
+            or head.get("ref") != "develop"
+            or (head.get("repo") or {}).get("full_name") != args.repository
+            or (base.get("repo") or {}).get("full_name") != args.repository
+        ):
+            raise RunnerError("promotion_pair_mismatch")
+        base_sha = validate_sha(str(base.get("sha") or ""), "base_sha")
         for context, run_id in contexts:
+            run_payload = gh_api(
+                args.github_token,
+                args.repository,
+                f"repos/{args.repository}/actions/runs/{run_id}",
+            )
+            jobs = (
+                gh_api_paginated_jobs(
+                    args.github_token, args.repository, run_id
+                )
+                if context == "ci / ci"
+                else None
+            )
+            verify_promotion_required_run_semantics(
+                run_payload,
+                context=context,
+                run_id=run_id,
+                repository=args.repository,
+                pr_number=args.pr_number,
+                base_sha=base_sha,
+                head_sha=head_sha,
+                base_ref="main",
+                head_ref="develop",
+                jobs=jobs,
+            )
             gh_api(
                 args.github_token,
                 args.repository,
