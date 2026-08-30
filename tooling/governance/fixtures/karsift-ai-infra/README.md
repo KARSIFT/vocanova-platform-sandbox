@@ -1,7 +1,10 @@
 # Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106, VOC-108, VOC-115, VOC-117, VOC-121, VOC-122, VOC-123, VOC-126, VOC-129, VOC-136, VOC-140)
 
 These copies are deterministic fixtures for caller-repo policy regressions.
-They mirror `KARSIFT/karsift-ai-infra` at the SHA in `PINNED_SHA.txt` so
+This README is adapted caller-local provenance documentation, not a canonical
+byte mirror of the infrastructure repository's README. The workflow, config,
+and test paths locked by the governance hash tables mirror
+`KARSIFT/karsift-ai-infra` at the SHA in `PINNED_SHA.txt` so
 `tooling/governance/tests/test_voc080_*.py`,
 `tooling/governance/tests/test_voc097_*.py`,
 `tooling/governance/tests/test_voc115_package_task_policy.py`,
@@ -12,7 +15,7 @@ contracts without cloning the infra repository in CI.
 
 They are not a second runtime source of truth. Callers still `uses:`
 `KARSIFT/karsift-ai-infra/...@main`. Update the fixtures when VOC-080-,
-VOC-097-, VOC-102-, VOC-104-, VOC-106-, VOC-108-, VOC-115-, VOC-121-, VOC-122-, VOC-123-, VOC-126-, VOC-129-, or VOC-136-related infra contracts change and
+VOC-097-, VOC-102-, VOC-104-, VOC-106-, VOC-108-, VOC-115-, VOC-121-, VOC-122-, VOC-123-, VOC-126-, VOC-129-, VOC-136-, or VOC-140-related infra contracts change and
 record the new pin in evidence.
 
 ## package/task defaults (VOC-115)
@@ -45,6 +48,18 @@ association, a prior run is admitted only through its exact App-authored review
 record on that PR. Optimized merge publishes one App-authored pre-merge record
 binding repository, PR, branch, base/head, ready/prior run IDs, and policy SHA;
 the post-transition verifier requires that unique attestation.
+The final VOC-140 reuse repair identifies the canonical pipeline from immutable
+workflow path, pull-request event, exact head/base/refs, policy revision, and job
+set; a PR-title-derived run display name is not identity. Every non-empty
+`pull_requests` payload must be one exact association. Null, scalar, partial,
+mixed, duplicate, or unrelated-extra entries fail closed, and every supplied
+repository `full_name`, name, owner, API URL, or web URL must agree. GitHub's
+real compact name-plus-API-URL repository shape remains eligible. Only an exact
+empty association array may use the existing unique App-authored attestation
+fallback. For an ordinary non-production agent/plan PR, already-terminal required
+checks may be admitted while their exact pipeline parent waits on merge-gate;
+promotion/release carriers and any run with an executed non-skipped release job
+retain completed-success parent attestation.
 Task-owned live evidence is also bound to the exact task identifier at production,
 duplicate-suppression, review-classification, and reuse-decision boundaries. The
 post-transition verifier requires GitHub's authenticated source PR object to record
@@ -228,8 +243,9 @@ VOC-139-T00 advances the pin to infrastructure merge
 `599436835371f27fac52ec6b47a18b36257366ac` with promotion head/source-revision
 hash binding under `pr-validation`, repository-explicit no-checkout recovery
 metadata via `gh api repos/$GITHUB_REPOSITORY/pulls/...`, and ordinary
-merge-base-anchored `pr-validation` for non-promotion PRs. VOC-140-T00 advances
-the pin to infrastructure merge `9fdff24cd387cc2cdc468c84a3012b0c34b6c8e8` with
+merge-base-anchored `pr-validation` for non-promotion PRs. VOC-140-T00 initially
+consumed independently reviewed infrastructure merge
+`9fdff24cd387cc2cdc468c84a3012b0c34b6c8e8` with
 release-carrier CI identity repair, dedicated `promotion-pr-validation` completion
 requirements, and a strict two-token production merge-guard contract: the mutation
 App token remains exactly Contents/Issues/Pull requests write for merge and
@@ -239,7 +255,11 @@ An in-progress or otherwise non-successfully-completed parent is never attestabl
 and any actually executed non-skipped `release / converge` job marks its run as a
 carrier regardless of title. A skipped release definition remains eligible; when no
 completed non-carrier result exists, exact-PR/head `promotion-pr-validation` must
-complete successfully before attestation.
+complete successfully before attestation. The final independently reviewed
+in-scope repair advances the current pin to
+`67bdfd13ef875dead23ce4be01d7d0e8b976e289` and adds the ordinary-PR
+self-deadlock exception plus the shared strict association and custom-run-name
+reuse rules described above.
 
 Recovery metadata reads, exact selected-run reruns, and allowlisted absent-context
 dispatches use narrowly job-scoped `GITHUB_TOKEN` permissions: Actions write plus

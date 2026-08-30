@@ -350,6 +350,7 @@ VERDICT: PASS
         script = script.replace("${{ inputs.current_ci_result }}", "success")
         script = script.replace("${{ github.run_id }}", "200")
         script = script.replace("${{ github.repository }}", "KARSIFT/example")
+        script = script.replace("${{ inputs.production_branch }}", "main")
         script = script.replace("karsift-ai-infra/config/", "config/")
         script = script.replace(
             "PYTHONPATH=karsift-ai-infra/config",

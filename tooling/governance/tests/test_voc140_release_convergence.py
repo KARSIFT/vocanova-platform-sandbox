@@ -20,12 +20,44 @@ RECONCILIATION_NOTES_PATH = (
 )
 
 AUTHORITATIVE_PIN = "599436835371f27fac52ec6b47a18b36257366ac"
-CURRENT_PIN = "9fdff24cd387cc2cdc468c84a3012b0c34b6c8e8"
+CURRENT_PIN = "67bdfd13ef875dead23ce4be01d7d0e8b976e289"
+PREVIOUS_REVIEWED_PIN = "9fdff24cd387cc2cdc468c84a3012b0c34b6c8e8"
 IMPLEMENTATION_PR_BASE = "c59548375764d938265910cd07f2c2a73e337c01"
+
+FINAL_INFRA_CHANGED_MIRRORS = frozenset(
+    {
+        ".github/workflows/merge-gate.yml",
+        "config/authoritative-checks-runner.py",
+        "config/authoritative_checks.py",
+        "config/ready-for-review-reuse-runner.py",
+        "config/verify-ready-for-review-reuse-runner.py",
+        "config/verify_ready_for_review_reuse.py",
+        "tests/test_ready_for_review_reuse.py",
+        "tests/test_voc140_release_carrier_attestation.py",
+    }
+)
+ADAPTED_INFRA_CHANGED_PATHS = {"README.md": "adapted-caller-local-provenance"}
+CURRENT_PIN_ASSERTION_PATHS = (
+    "scripts/foundation/voc097-fixture-matrix.test.mjs",
+    "scripts/foundation/voc104-ready-for-review-reuse.test.mjs",
+    "scripts/foundation/voc108-authoritative-lifecycle.test.mjs",
+    "tooling/governance/tests/test_voc121_implement_policy.py",
+    "tooling/governance/tests/test_voc122_implement_policy.py",
+    "tooling/governance/tests/test_voc124_implement_policy.py",
+    "tooling/governance/tests/test_voc125_implement_fixture.py",
+    "tooling/governance/tests/test_voc125_implement_policy.py",
+    "tooling/governance/tests/test_voc126_workflow_dispatch_input_limit.py",
+    "tooling/governance/tests/test_voc129_caller_replacement.py",
+    "tooling/governance/tests/test_voc136_caller_replacement.py",
+    "tooling/governance/tests/test_voc137_pr_sha_scan.py",
+    "tooling/governance/tests/test_voc138_promotion_pr_provenance.py",
+    "tooling/governance/tests/test_voc139_promotion_recovery_metadata.py",
+    "tooling/governance/tests/test_voc140_release_convergence.py",
+)
 
 MIRRORED_FILE_HASHES = {
     ".github/workflows/merge-gate.yml": (
-        "0762609f8903ed9d4bfdd3c2e22bb3e64994eeb60baa50d2ce3de6f17b4cd40e"
+        "f65f734fdbbc44162984fd5b3019497c178d8dc2da6fce0a9133cceb0b9443ce"
     ),
     ".github/workflows/release.yml": (
         "8198c14b3ff9ebb4d047ced6eaf2d5c37398c8da9f5709aaa0dbbf5252eef56f"
@@ -37,7 +69,10 @@ MIRRORED_FILE_HASHES = {
         "fa7b8052c6b11801fe9446e9589adfe4a4c5d2272afc61e6283d02e5893a9cfb"
     ),
     "config/authoritative-checks-runner.py": (
-        "09963eaa7dc517ba2c52e2f2faaf4d3e119da2dea1eb480c41dfac36f74e8e84"
+        "b70b3cc80889ec2a55be4ddd1eb5dd63831bb2b6159f7fc664359bf307f575e7"
+    ),
+    "config/authoritative_checks.py": (
+        "fdb3b58378812483d703e3a973b07306cb66ece8315355dc4a951fb30a794808"
     ),
     "config/production_merge_guard.py": (
         "a12720fdf6d67c533f5d478ff8396526900a5109f96e3fc63f2068ae820c724f"
@@ -51,8 +86,17 @@ MIRRORED_FILE_HASHES = {
     "config/promotion_status_attestation.py": (
         "18329e515df88dda113c23fea3dd32275d51635370b9c8a35aff39f6763eb15a"
     ),
+    "config/ready-for-review-reuse-runner.py": (
+        "75d173a715fba1866b7be198f84f55d2526166000a7112d478e70b88b0e3566c"
+    ),
     "config/verify-production-merge-guard.sh": (
         "bb5587724c1ff38995c7b78b3bf17eff1de596ea404ad0559cf9a3fe401000f3"
+    ),
+    "config/verify-ready-for-review-reuse-runner.py": (
+        "a8421ccd6e7d38764b5b1b871c0d7323fcff6d7560f095a2da6770f736760537"
+    ),
+    "config/verify_ready_for_review_reuse.py": (
+        "a2849f024d8735b7334022be452092e9d2f00e3a0034c3e761db456c8918b4b4"
     ),
     "tests/test_adoption_handoff.py": (
         "fda591948b4e0e540ba69ae2e42dc6b4267d4a005d1d7655a646972f1c21990c"
@@ -62,6 +106,9 @@ MIRRORED_FILE_HASHES = {
     ),
     "tests/test_promotion_status_attestation.py": (
         "6c55ff93fe464d0ab29be9ea68452ff437672a456ba39d22d613356eae15f393"
+    ),
+    "tests/test_ready_for_review_reuse.py": (
+        "6379d3e12fd30e3d5f46613f0eeb0d68f027b75c5ba42e7ca5d6d29bc7d92c49"
     ),
     "tests/test_voc114_actions_check_recovery.py": (
         "87eb36a0c8f5bf57fc474c29b0eca9642ab6a0195b7648ead3d1deec09544486"
@@ -73,7 +120,7 @@ MIRRORED_FILE_HASHES = {
         "748e15ee723f002e93bd4451ace894c863509c9cc58ade398159b0f4573d1242"
     ),
     "tests/test_voc140_release_carrier_attestation.py": (
-        "8382d8999c6559164488c02424fca6acc3e41dae8b9199b64d0bc973aa1671b0"
+        "37d35c20967928418b269e2751502051faeddb49942a55964855a5695bd00428"
     ),
     "tests/test_voc140_production_merge_guard.py": (
         "da0352223067e5f781db3950bdd81facb2749d22755ca0510c07af774864ae05"
@@ -212,6 +259,28 @@ class Voc140ReleaseConvergenceTests(unittest.TestCase):
                 path = FIXTURE_INFRA_ROOT / relative
                 self.assertEqual(sha256_file(path), expected, relative)
 
+    def test_final_infra_change_disposition_and_live_pin_locks_are_exhaustive(self):
+        self.assertEqual(len(FINAL_INFRA_CHANGED_MIRRORS), 8)
+        self.assertTrue(FINAL_INFRA_CHANGED_MIRRORS <= set(MIRRORED_FILE_HASHES))
+        for relative in FINAL_INFRA_CHANGED_MIRRORS:
+            self.assertIn(f"`{relative}`", self.evidence, relative)
+        self.assertEqual(
+            ADAPTED_INFRA_CHANGED_PATHS,
+            {"README.md": "adapted-caller-local-provenance"},
+        )
+        self.assertNotIn("README.md", MIRRORED_FILE_HASHES)
+        self.assertEqual(len(CURRENT_PIN_ASSERTION_PATHS), 15)
+        for relative in CURRENT_PIN_ASSERTION_PATHS:
+            with self.subTest(relative=relative):
+                text = (REPO_ROOT / relative).read_text(encoding="utf-8")
+                self.assertIn(CURRENT_PIN, text, relative)
+                if relative == "tooling/governance/tests/test_voc140_release_convergence.py":
+                    self.assertNotIn(
+                        f'CURRENT_PIN = "{PREVIOUS_REVIEWED_PIN}"', text, relative
+                    )
+                else:
+                    self.assertNotIn(PREVIOUS_REVIEWED_PIN, text, relative)
+
     def test_mirrored_fixture_files_preserve_authoritative_modes(self):
         for relative in MIRRORED_FILE_HASHES:
             with self.subTest(relative=relative):
@@ -221,10 +290,15 @@ class Voc140ReleaseConvergenceTests(unittest.TestCase):
 
     def test_readme_records_voc140_recovery_and_guard_contract(self):
         self.assertIn(CURRENT_PIN, self.readme)
+        self.assertIn(PREVIOUS_REVIEWED_PIN, self.readme)
+        self.assertIn("adapted caller-local provenance", self.readme)
+        self.assertIn("not a canonical\nbyte mirror", self.readme)
         self.assertIn("promotion-pr-validation", self.readme)
         self.assertIn("Administration", self.readme)
         self.assertIn("never attestable", self.readme)
         self.assertIn("skipped release definition remains eligible", self.readme)
+        self.assertIn("Every non-empty\n`pull_requests` payload", self.readme)
+        self.assertIn("PR-title-derived run display name is not identity", self.readme)
         self.assertNotIn("the App token remains mutation-only", self.readme)
 
     def test_current_docs_record_release_identity_and_two_token_contract(self):
