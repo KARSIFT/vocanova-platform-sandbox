@@ -1,0 +1,265 @@
+schema_version: 1
+id: VOC-140
+slug: release-convergence-cannot-trust-its-own-ci-run
+title: Release convergence cannot trust its own CI run or verify the production merge
+  guard with the App token
+type: infrastructure
+status: draft
+risk: R4
+planned_implementation_risk_floor: 'R4. This package repairs two causally related
+  release-convergence defects so the already-open develop-to-main promotion can finish:
+  recovery/selection must never treat a still-running release carrier as attestable
+  completed ci / ci, and the isolated guard token that proves the production merge guard must
+  see full ruleset/no-bypass fields. tooling/governance/* is an R4 path floor. .github/workflows/*
+  is an R3 floor. Semantic mutation of required-check recovery, status attestation,
+  production-merge-guard authorization, and exact-revision evidence binding is protected.
+  This is a draft proposal for human adoption review, not a determination. The path
+  classifier and independent verifier remain authoritative.
+
+  '
+canonical_path: specs/changes/VOC-140-release-convergence-cannot-trust-its-own-ci-run
+authority_model: a004-active
+requirement_source: "GitHub issue #1102 (Release convergence cannot trust its own\
+  \ CI run or verify the production merge guard with the App token), including its\
+  \ original body. After VOC-139 repaired promotion validation, the governed develop\
+  \ \u2192 main release for audit #1089 / promotion PR #1090 remains fail-closed.\
+  \ Immutable state at issue creation: main 0d0b0cdf0692d0349f380e9cae3285b4c7916b05,\
+  \ develop / PR #1090 head 21eef75549226766fc4f78f62f232ee5fbdb8d6d, promotion PR\
+  \ #1090 open, release audit #1089 open, repaired infrastructure pin 599436835371f27fac52ec6b47a18b36257366ac,\
+  \ dedicated recovery run 33136865709 completed successfully and exact-head/PR-bound.\
+  \ No promotion merge or production deployment occurred. Reproduction 1: PR #1090\
+  \ synchronized to 21eef755\u2026 and completed pull-request ci / ci in run 33136633666;\
+  \ reconcile-release for #1089 observed job 98738317266 report recovery complete\
+  \ without dispatch because required checks were green; the authoritative selector\
+  \ chose ci / ci from the same still-running workflow that contains release / converge;\
+  \ status attestation then failed untrusted_ci_recovery_identity because that workflow\
+  \ cannot be completed/successful until its own release job ends. Reproduction 2:\
+  \ explicit recover-promotion-pr-checks for PR #1090 produced successful run 33136865709\
+  \ at exact head 21eef755\u2026; subsequent reconcile-release runs 33136984634 /\
+  \ job 98739074178 and 33137091931 / job 98739420310 attested required contexts including\
+  \ ci / ci from 33136865709, then Perform the single exact-head merge decision failed\
+  \ before gh pr merge with production-merge-guard: production_merge_guard_missing.\
+  \ The same revision under an administrator-visible authenticated shell reports production-merge-guard:\
+  \ ok ruleset_id=20575146 for live repository-owned active main-only strict ruleset\
+  \ 20575146 with required PRs, governance-policy/validate/ci, and bypass_actors:\
+  \ []. The release mutation App token requests only permission-contents: write, permission-issues:\
+  \ write, and permission-pull-requests: write. This draft package does not adopt\
+  \ or authorize itself.\n"
+requirement_approval_status: 'requirement documented in GitHub issue #1102; this draft
+  package is not approved and does not authorize implementation '
+base_branch: develop
+base_sha: 'Issue-creation develop / promotion PR #1090 head is 21eef75549226766fc4f78f62f232ee5fbdb8d6d.
+  Issue-creation infrastructure pin is VOC-139 merge 599436835371f27fac52ec6b47a18b36257366ac
+  and is the defective live contract for this failure class. Implementation must record
+  the actual implementation PR base separately at dispatch, fail closed on unrelated/material
+  movement of develop, and must not treat this package''s own plan/adoption/roster
+  commits as protected-file drift. Do not snapshot the current develop/main gap.
+
+  '
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: 'planner (drafting only; adoption remains a human/autonomous
+    governed decision) '
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: 'none-intentional for application runtime. This package repairs
+  promotion recovery/selection identity and the production-merge-guard two-token contract
+  so the already-open develop-to-main promotion can pass attestation and prove the
+  live ruleset before merge. Ordinary post-promotion synchronization remains a tree-equivalent
+  integration-ref update. This package does not add a new production deploy path,
+  change secret values, providers, or monitor inventory.
+
+  '
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: 'Release-convergence CI recovery identity and production-merge-guard
+    token/API visibility. No page routes, critical API endpoints, monitor inventory,
+    or synthetic inventory in infra/monitoring/ are added or changed.
+
+    '
+dependencies:
+- id: VOC-140-DEP-00
+  status: 'resolved at drafting time. Issue #1102 provides the failing promotion PR
+    #1090, exact head 21eef75549226766fc4f78f62f232ee5fbdb8d6d, base main 0d0b0cdf0692d0349f380e9cae3285b4c7916b05,
+    pin 599436835371f27fac52ec6b47a18b36257366ac, circular-CI run 33136633666 / job
+    98738317266, fail-closed untrusted_ci_recovery_identity, dedicated recovery run
+    33136865709, reconcile-release runs 33136984634 / 33137091931 and jobs 98739074178
+    / 98739420310, production-merge-guard: production_merge_guard_missing versus administrator-visible
+    production-merge-guard: ok ruleset_id=20575146, the App-token mint permission
+    set, and enough specificity to draft without a clarifying round trip.
+
+    '
+- id: VOC-140-DEP-01
+  status: 'resolved at drafting time. Active A-004 remains authoritative. No founder
+    approved-comment gate on engineering-workflow adopt/merge/release paths. Exact-SHA
+    independent verification, deterministic risk floors, protected-path controls,
+    and fail-closed behavior remain mandatory. R4 is a draft proposal, not a determination.
+    automatic_merge_allowed is drafted true per AGENTS.md A-004 drafting rule.
+
+    '
+- id: VOC-140-DEP-02
+  status: 'resolved at drafting time by reading live caller fixtures. Live PINNED_SHA.txt
+    equals 599436835371f27fac52ec6b47a18b36257366ac (VOC-139 infrastructure merge).
+    Recovery completion treats required PR checks showing SUCCESS for ci / ci as sufficient
+    and does not require the parent workflow run to be completed or to be the dedicated
+    promotion-pr-validation dispatch. select_authoritative picks the newest ci / ci
+    check, which can be a completed job inside a still-running pipeline.yml carrier
+    that also contains release / converge. verify_promotion_required_run_semantics
+    then fails untrusted_ci_recovery_identity because that run status is not completed/success.
+    Live release.yml mints the mutation App token with exactly permission-contents: write,
+    permission-issues: write, and permission-pull-requests: write, then calls verify-production-merge-guard.sh
+    with that token immediately before gh pr merge. GitHub omits bypass_actors unless
+    the caller has ruleset write access, while GET /repos/{owner}/{repo}/rulesets/{id}
+    is reachable under Metadata:read, so the HTTP fetch can succeed and validate_production_merge_guard
+    still raises production_merge_guard_missing. The required design preserves that
+    mutation token unchanged and adds a separate ephemeral current-caller-repository-scoped
+    token with only permission-administration: write for guard verification immediately
+    before merge, with the same separation in merge-gate''s production path. Current tests construct full helper
+    fixtures with bypass_actors: [] and do not exercise the omitted-field App-token
+    shape. An untracked local karsift-ai-infra/ checkout, if present, is not this
+    repository''s tracked tree.
+
+    '
+- id: VOC-140-DEP-03
+  status: 'resolved at drafting time as the chosen design. One end-to-end implementation
+    task covering a coordinated infrastructure PR plus the caller pin, recovery/selection
+    identity, production-merge-guard token/API contract, tests, docs, evidence, and
+    release handoff. Do not split by repository, CI-identity versus token contract,
+    test, or layer. Do not add a VOC-097 live-evidence second task: a draft evidence-carrier
+    PR cannot satisfy sha_lineage against promotion PR #1090''s recovery HEAD (karsift-ai-infra#15
+    class). Do not snapshot the current develop/main gap. This package''s implementation
+    PR Closes only its own VOC-140 task issue.
+
+    '
+- id: VOC-140-DEP-04
+  status: 'resolved at drafting time as a hard TEST constraint. Do not weaken the
+    production merge guard. Do not add bypass actors. Do not fabricate statuses. Do
+    not manually merge #1090. Keep the mutation token exactly Contents/Issues/Pull
+    requests write and sole for gh pr merge/mutations. Keep the Administration-write-only
+    guard token current-repository scoped and out of mutation/status/issues/PR/content
+    steps. Never select an in-progress or failed release carrier
+    as trusted recovered ci / ci. Keep exact PR base/head/refs/repository binding,
+    ruleset enforcement, no founder-comment gate, and idempotent reconcile-release.
+    Do not switch the promotion PR to --squash-safe-push. Do not rerun doomed pull_request
+    ci / ci jobs as a strategy.
+
+    '
+- id: VOC-140-DEP-05
+  status: "resolved at drafting time as a pin-advance rule. VOC-139 pin 599436835371f27fac52ec6b47a18b36257366ac\
+    \ remains historical audit evidence and remains the issue-creation pin. This repair\
+    \ cannot land by freezing that pin. T00 must open and consume one new independently\
+    \ reviewed karsift-ai-infra PR whose exact merge SHA becomes the new PINNED_SHA.txt\
+    \ value, then mirror every changed authoritative fixture file from that exact\
+    \ merge. Do not silently keep 59943683\u2026 if the live reusable workflow still\
+    \ selects a still-running release carrier as ci / ci or the isolated guard token\
+    \ still cannot prove bypass_actors.\n"
+- id: VOC-140-DEP-06
+  status: 'resolved at drafting time. Configured Cursor Composer remains the implementer
+    and Cursor Grok remains the exact-revision independent reviewer. Current fixture
+    config/roles.yml bindings are fixed and must not change: implementer and implementer_escalation
+    cursor/composer-2.5; planner, reviewer, reviewer_fast_retry, and plan_reviewer
+    cursor/grok-4.6[effort=high,fast=false]. No OpenAI credential or execution route
+    is needed or authorized. Do not print credential values.
+
+    '
+- id: VOC-140-DEP-07
+  status: 'resolved at drafting time as a no-change constraint. Do not rewrite VOC-139,
+    VOC-138, or earlier package records under specs/changes/. Do not edit VOC-112
+    capture fixtures, hashed sources, AGENTS.md, the navigator skill, or package.json.
+    Exhaustively search current source and pin docs; update fixture README,
+    docs/operations/11-devops-and-ci-cd.md, docs/governance/repository-settings.md,
+    docs/governance/post-merge-activation-checklist.md, docs/operations/19-governance-reconciliation-notes.md,
+    scripts/governance/validate-governance.sh and any relevant tests that enforce
+    stale current wording, and every additional current-state match. Preserve clearly historical records.
+    Do not recapture VOC-112 JSON fixtures.
+
+    '
+- id: VOC-140-DEP-08
+  status: 'resolved at drafting time as the feasible exact-revision evidence contract.
+    Exact-revision binding remains fail-closed by requiring the App-authored independent-review
+    comment/check to bind the live PR head exactly and merge-gate to reject any mismatch.
+    Committed package evidence records the implementation PR base, infra merge SHA,
+    recovery-identity change, token/API contract, negative-case results, and where
+    later exact-head binding will be published. Tests must not mutate evidence at
+    runtime. A commit must not be required to contain its own SHA.
+
+    '
+- id: VOC-140-DEP-09
+  status: 'resolved at drafting time. After this correction merges into develop, rerun
+    the existing dedicated promotion recovery if necessary, then reconcile-release
+    for release issue #1089 must be able to merge promotion PR #1090 (or the live
+    same-repository main <- develop promotion at the then-current develop head), synchronize
+    develop to the exact promotion merge SHA, and trigger the normal automatic production
+    deployment on the resulting main push; that deployment must be verified at the
+    exact SHA. Closure of root issue #1102 requires allowlisted metadata from the
+    successful recovery/release run (run/job IDs, repository, PR, base/head, ref,
+    path, conclusion) and must not treat closed state as completion proof. Do not
+    snapshot the current develop/main gap (karsift-ai-infra#15). Preserve the named
+    incident run/job IDs as audit evidence. Do not create a duplicate promotion PR
+    or release audit. Do not manufacture completion markers for other packages.
+
+    '
+- id: VOC-140-DEP-10
+  status: 'operator-owned post-implementation release activation prerequisite; it
+    does not block plan adoption, implementation authorization, or the reviewed infra/caller
+    merges and must not consume implementer retries. GitHub App karsift-ai-infra-bot
+    must request Repository permissions Administration: Read and write, and the
+    owner of KARSIFT organization installation 148001476 must approve the permission
+    change. Read-only drafting-time inspection reports repository_selection: all and
+    current Contents/Issues/Pull requests/Workflows write plus Metadata read, with no
+    Administration permission. The guard mint must remain explicitly scoped to the
+    current caller repository, but that runtime restriction does not narrow the shared
+    App/private-key ceiling across installation-selected repositories. No App ID/private-key
+    secret rotation is required. After T00 merges and before #1090 promotion, the
+    operator approval and hosted guard-only-token probe must return explicit bypass_actors:
+    []; until then release fails closed with the precise configure, approve, scope,
+    and rerun action. This proof is release/closure evidence. A dedicated single-repository
+    guard App is optional future hardening, not authorized by T00.
+
+    '
+affected_areas:
+- tooling/governance/fixtures/karsift-ai-infra/
+- tooling/governance/tests/
+- docs/operations/11-devops-and-ci-cd.md
+- docs/governance/repository-settings.md
+- docs/governance/post-merge-activation-checklist.md
+- docs/operations/19-governance-reconciliation-notes.md
+- scripts/governance/validate-governance.sh
+- specs/changes/VOC-140-release-convergence-cannot-trust-its-own-ci-run
+implementation:
+  authorized: false
+  required: true
+  status: not-authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-automation-reliability-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+ehr: not-triggered
+standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
+blocking_reasons: pending-adoption-and-implementation-authorization
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+production_deployment: disabled
+autonomous_production_release: not-authorized-by-this-package
+repository_adoption_status: not-adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: not-authorized
