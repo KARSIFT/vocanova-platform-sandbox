@@ -1,4 +1,4 @@
-# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106, VOC-108, VOC-115, VOC-117, VOC-121, VOC-122, VOC-123, VOC-126, VOC-129, VOC-136)
+# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106, VOC-108, VOC-115, VOC-117, VOC-121, VOC-122, VOC-123, VOC-126, VOC-129, VOC-136, VOC-140)
 
 These copies are deterministic fixtures for caller-repo policy regressions.
 They mirror `KARSIFT/karsift-ai-infra` at the SHA in `PINNED_SHA.txt` so
@@ -229,12 +229,17 @@ VOC-139-T00 advances the pin to infrastructure merge
 hash binding under `pr-validation`, repository-explicit no-checkout recovery
 metadata via `gh api repos/$GITHUB_REPOSITORY/pulls/...`, and ordinary
 merge-base-anchored `pr-validation` for non-promotion PRs. VOC-140-T00 advances
-the pin to infrastructure merge `0ee1daf1aecdb5039ecc0fc74f5c64b24cdd5f5d` with
+the pin to infrastructure merge `9fdff24cd387cc2cdc468c84a3012b0c34b6c8e8` with
 release-carrier CI identity repair, dedicated `promotion-pr-validation` completion
 requirements, and a strict two-token production merge-guard contract: the mutation
 App token remains exactly Contents/Issues/Pull requests write for merge and
 mutations, while a separate caller-repository-scoped Administration-write guard
 token is used only for `verify-production-merge-guard.sh` immediately before merge.
+An in-progress or otherwise non-successfully-completed parent is never attestable,
+and any actually executed non-skipped `release / converge` job marks its run as a
+carrier regardless of title. A skipped release definition remains eligible; when no
+completed non-carrier result exists, exact-PR/head `promotion-pr-validation` must
+complete successfully before attestation.
 
 Recovery metadata reads, exact selected-run reruns, and allowlisted absent-context
 dispatches use narrowly job-scoped `GITHUB_TOKEN` permissions: Actions write plus

@@ -164,7 +164,14 @@ grep -Fq "initial public launch" "$amendment"
 grep -Fq "Initial governance bootstrap adoption" "$operating_model"
 grep -Fq "Initial adoption exception" "$amendment"
 grep -Fq "historical initial DOC-16/A-002 bootstrap" docs/governance/approval-matrix.md
-grep -Fq "R3 production changes remain" docs/governance/post-merge-activation-checklist.md
+grep -Fq "Repository-controlled automatic merge," "$activation" || {
+  echo "The activation checklist must preserve the active A-004 automatic-merge invariant." >&2
+  exit 1
+}
+grep -Fq "promotion, and production deployment are enabled under active A-004 when gates pass;" "$activation" || {
+  echo "The activation checklist must preserve the active A-004 release/deploy invariant." >&2
+  exit 1
+}
 
 if grep -Eq 'FOUNDER_GITHUB_USERNAME|TECHNICAL_STEWARD_GITHUB_USERNAME' .github/CODEOWNERS; then
   echo "CODEOWNERS contains an unverifiable identity placeholder." >&2

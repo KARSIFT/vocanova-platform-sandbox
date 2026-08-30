@@ -20,7 +20,7 @@ as protected-file drift.
 
 Independently reviewed `KARSIFT/karsift-ai-infra` merge consumed by this pin:
 
-`0ee1daf1aecdb5039ecc0fc74f5c64b24cdd5f5d`
+`9fdff24cd387cc2cdc468c84a3012b0c34b6c8e8`
 
 Issue-creation / VOC-139 pin (defective for this failure class; historical audit):
 `599436835371f27fac52ec6b47a18b36257366ac`.
@@ -54,13 +54,33 @@ Issue-creation / VOC-139 pin (defective for this failure class; historical audit
 
 ## Exhaustive source-search disposition
 
-| Pattern / topic | Disposition |
-|-----------------|-------------|
-| Pin `59943683…` in fixture README / historical package evidence | preserved as historical |
-| Live `PINNED_SHA.txt` and pin-lock tests | updated to `0ee1daf…` |
-| `mutation-only` App-token claims in DOC-11 | updated to mutation vs guard-only split |
-| Active-A-003 / disabled production release in repository-settings, DOC-19, activation checklist | updated to active A-004 and enabled release/deploy path; RL1/RL2 remain disabled; `validate-governance.sh` reconciled |
-| VOC-138 / VOC-139 package records under `specs/changes/` | unchanged (audit evidence) |
+The tracked-source scan used `git grep -n -I -E` over Markdown, YAML, workflow,
+Python, and shell sources. Pattern families were:
+
+| Pattern family | Examples searched |
+|----------------|-------------------|
+| Pin and hash assertions | old/current full pin, `CURRENT_PIN`, `AUTHORITATIVE_PIN`, `PINNED_SHA`, SHA-256 tables |
+| Token permissions and use | `mutation-only`, Contents/Issues/Pull requests grants, `Administration`, guard token scope/use |
+| Authority state | `active-A-003`, `active A-003`, `A003`, active/effective A-004 |
+| Human gates | R3/R4 with founder approval, founder `approved`, technical-steward, EHR |
+| Automation state | automatic/autonomous merge or release and production deployment described as disabled, blocked, inactive, or unimplemented |
+
+Every resulting path was classified as follows:
+
+| Paths | Disposition |
+|-------|-------------|
+| `.github/CODEOWNERS`; `.github/README.md`; `CLAUDE.md`; `CONTRIBUTING.md` | Live repository instructions/routing corrected to active A-004, no standing founder-comment/steward workflow gate, and enabled gated merge/promotion/deploy state. |
+| `docs/README.md`; `docs/engineering/04-technical-architecture.md`; `docs/decisions/README.md` | Current indexes/architecture/decision guidance corrected to reference A-004 and current activation sources. |
+| `docs/governance/README.md`; `docs/governance/change-risk-classification.md`; `docs/governance/16-autonomous-development-operating-model.md`; `docs/governance/protected-areas.md` | Current governance text corrected; bootstrap and pre-A-004 statements are now explicitly historical. DOC-16's obsolete R0-R2 release ceiling is replaced with gated R0-R4 eligibility. |
+| `docs/operations/10-development-workflow.md`; `docs/operations/15-ai-native-product-and-engineering-operating-model.md` | Current branch/deploy and waiver claims corrected to enabled gated release/deploy and no founder-comment override. |
+| `docs/templates/change-specification.md`; `docs/templates/release-record.md`; `docs/templates/technical-approval-request.md` | Current authoring templates corrected to active A-004, stronger R4 evidence, requirement clarification, and exceptional-only human review. |
+| `tooling/governance/fixtures/karsift-ai-infra/README.md`; `docs/operations/11-devops-and-ci-cd.md`; `docs/governance/repository-settings.md`; `docs/governance/post-merge-activation-checklist.md`; `docs/operations/19-governance-reconciliation-notes.md`; `scripts/governance/validate-governance.sh` | Current recovery, two-token, active-A-004, release/deploy, RL1/RL2, and validator claims corrected and revalidated. |
+| `tooling/governance/fixtures/karsift-ai-infra/PINNED_SHA.txt`; `tooling/governance/tests/test_voc129_caller_replacement.py`; `tooling/governance/tests/test_voc136_caller_replacement.py`; `tooling/governance/tests/test_voc137_pr_sha_scan.py`; `tooling/governance/tests/test_voc138_promotion_pr_provenance.py`; `tooling/governance/tests/test_voc139_promotion_recovery_metadata.py`; `tooling/governance/tests/test_voc140_release_convergence.py` | All six changed live `CURRENT_PIN` assertions were updated to `9fdff24…`, with the literal 18-file hash table in the VOC-140 test; issue-era `AUTHORITATIVE_PIN` / `VOC139_INFRA_PIN` values remain `59943683…`. The VOC-140 regression also enumerates every corrected live-authority path and rejects its prior stale literal. |
+| `docs/governance/amendments/A-002-governed-autonomous-releases.md`; `docs/governance/amendments/A-003-governed-autonomous-engineering-authority.md`; `docs/governance/amendments/A-004-remove-founder-approval-gates-from-autonomous-engineering-workflows.md`; `docs/governance/a003-transition-state.yaml`; `docs/governance/a004-transition-state.yaml`; `docs/governance/technical-steward-appointment.md` | Frozen amendment, transition, and appointment evidence preserved. Current overlay notices already distinguish active A-004 from historical authority. |
+| `docs/architecture/17-autonomous-development-architecture.md`; `docs/planning/18-autonomous-development-implementation-roadmap.md` (DOC-17 / DOC-18) | Preserved adopted historical design/roadmap exactly as required; `docs/README.md` and DOC-19 explicitly identify their non-current disposition. |
+| `docs/archive/`; historical `specs/changes/` packages | Preserved audit evidence. VOC-138 / VOC-139 were explicitly excluded from edits. |
+| `tooling/governance/validate_repository_foundation.py`; `tooling/governance/tests/test_validate_repository_foundation.py`; `tooling/governance/tests/test_voc080_workflow_policy.py`; historical amendment assertions in `scripts/governance/validate-governance.sh` | Preserved validator/test historical strings required to validate frozen A-003/A-004 records; no live gate depends on them. |
+| The 18 paths under `tooling/governance/fixtures/karsift-ai-infra/` listed by the literal hash table | Exact byte/mode mirrors of authoritative infra merge `9fdff24…`; old token/recovery strings inside older package evidence remain historical rather than current fixture contract. |
 
 ## Credential residual risk
 
@@ -83,16 +103,27 @@ Before hosted promotion of #1090:
 
 Pending at implementation review is valid; this does not consume implementer retries.
 
-## Validation commands (implementation working tree)
+## Validation commands (final implementation revision)
 
-Remediation attempt 2 — results from the working tree after blocking-finding fixes:
+Manual reconciliation after the independently reviewed infrastructure merge. The
+evidence-bearing commit was revalidated without further file changes; these results
+therefore describe the exact pushed implementation revision:
 
 ```bash
 python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'
-# OK — 281 tests
+# OK — 284 tests
 
 python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'
-# OK — 490 tests
+# OK — 451 tests
+
+python3 -m unittest discover -s tooling/governance/tests -p 'test_voc140_release_convergence.py'
+# OK — 9 tests
+
+python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_voc140_*.py'
+# OK — 27 tests
+
+python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_production_merge_guard.py'
+# OK — 7 tests
 
 bash scripts/governance/validate-governance.sh --base c59548375764d938265910cd07f2c2a73e337c01 --head HEAD
 # OK
@@ -109,6 +140,9 @@ Targeted VOC-140 cases are covered by `test_voc140_release_convergence.py`
 (filtered gate-summary composition, failed/queued/cancelled carriers), and
 `test_voc140_production_merge_guard.py` (omitted/empty/non-empty bypass subprocess,
 exhaustive Administration-mint allowlist across all fixture workflows).
+`test_voc138_promotion_pr_provenance.py` also forces the historical capture object
+to be unavailable through a deterministic Git wrapper, reproducing GitHub's shallow
+checkout while retaining the fail-closed `pr-ancestry` assertion in full local clones.
 
 Governance validation with exact base/head and independent exact-SHA review bind
 the live implementation PR head after commit; this file does not require the

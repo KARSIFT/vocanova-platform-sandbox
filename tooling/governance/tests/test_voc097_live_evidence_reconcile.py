@@ -377,8 +377,11 @@ VERDICT: PASS
               *"/commits/{HEAD}/status?per_page=100"*)
                 printf '%s\\n' '[{{"total_count":0,"statuses":[]}}]'
                 ;;
+              *"/actions/runs/301/jobs?per_page=100"*)
+                printf '%s\\n' '[{{"total_count":1,"jobs":[{{"name":"release / converge","status":"completed","conclusion":"skipped"}}]}}]'
+                ;;
               *"/actions/runs/301"*)
-                printf '%s\\n' '{{"id":301,"event":"pull_request","head_sha":"{HEAD}","path":".github/workflows/pipeline.yml","repository":{{"full_name":"KARSIFT/example"}}}}'
+                printf '%s\\n' '{{"id":301,"event":"pull_request","status":"completed","conclusion":"success","head_sha":"{HEAD}","path":".github/workflows/pipeline.yml","repository":{{"full_name":"KARSIFT/example"}}}}'
                 ;;
               *"/issues/12/comments?per_page=100"*)
                 printf '%s\\n' '[[{{"id":1,"created_at":"2026-08-21T00:00:00Z","user":{{"login":"karsift-ai-infra-bot[bot]","type":"Bot"}},"body":"**Independent verification - bound to commit `{old_head}`**\\ntask_id: `VOC-097-T02`\\npackage_path: `specs/changes/VOC-097-example`\\nauthority_issue: `34`\\nbase_sha: `{BASE}`\\nVERDICT: PASS"}}]]'

@@ -23,7 +23,7 @@ amendments:
     adopted_at: 2026-07-30
     approving_owner: founder
     resolution_recorded_in: specs/changes/VOC-032-begin-milestone-r1-staging-readiness-docs-product/change.yaml
-    notes: "Supersedes the prior Render Web Service + Cloudflare Workers + Render PostgreSQL rows in §1's target-infrastructure table and the vocanova.com domain set, per VOC-032-D02 (resolved at adoption 2026-07-28, founder-gate delegation). The superseded rows are annotated, not silently deleted, consistent with this repository's existing convention for amending an approved document (see DOC-15 §17.0 and the A-003 active-authority notice in DOC-16). Detailed in §1's amendment note below."
+    notes: "Supersedes the prior Render Web Service + Cloudflare Workers + Render PostgreSQL rows in §1's target-infrastructure table and the vocanova.com domain set, per VOC-032-D02 (resolved at adoption 2026-07-28, founder-gate delegation). The superseded rows are annotated, not silently deleted, consistent with this repository's existing convention for amending an approved document (see DOC-15 §17.0 and DOC-16's active-A-004 notice over historical A-003 records). Detailed in §1's amendment note below."
   - id: VOC-051-§1-amendment
     title: "§1 Error monitoring row extended to cover apps/web browser-side reporting and the hourly Sentry-to-GitHub-issue monitoring workflow"
     adopted_in: VOC-051
@@ -62,8 +62,9 @@ Staging (from `develop`), Production (from `main`).
 > `staging.vocanova.site` and `api-staging.vocanova.site` as the staging subdomains). The
 > superseded rows are retained in place and marked **~~strikethrough~~** below so this section
 > preserves the v1.0 historical record of what DOC-11 originally targeted, exactly as DOC-15 §17.0
-> retains the A-001 prose that A-003 actually supersedes and DOC-16 retains its A-003
-> active-authority notice. The amended (v1.1) baseline immediately follows.
+> retains the A-001 prose that A-003 actually superseded and DOC-16 retains the
+> historical A-003 record beneath its active-A-004 authority notice. The amended
+> (v1.1) baseline immediately follows.
 
 **Original (v1.0) target infrastructure baseline** (2026-07-21 — 2026-07-29, **superseded as of
 2026-07-30 by `VOC-032-§1-amendment`**; retained in place as historical record):

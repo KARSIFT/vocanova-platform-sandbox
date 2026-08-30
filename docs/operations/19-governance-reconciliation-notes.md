@@ -7,7 +7,7 @@ status: proposed
 owner: founder
 canonical_path: docs/operations/19-governance-reconciliation-notes.md
 approved_at: null
-last_reviewed_at: 2026-07-19
+last_reviewed_at: 2026-08-30
 review_cycle: quarterly
 supersedes: null
 related_documents:
@@ -20,6 +20,7 @@ related_documents:
 related_decisions:
   - A-002
   - A-003
+  - A-004
 adoption_change: VOC-007
 source_files:
   - path: 12-governance-and-automation.md
@@ -74,6 +75,22 @@ production-release rows - see that file's own correction note for why):
 These are implementation-time facts, not permanent promises. The transition YAML and
 [activation checklist](../governance/post-merge-activation-checklist.md) remain the sources of truth.
 
+Promotion recovery does not trust a required `ci / ci` result from a parent workflow
+that is still running or otherwise not completed successfully. It also rejects any
+run that actually executed a non-skipped `release / converge` job, even when the run
+title appears dedicated. When no completed non-carrier result exists, a dedicated
+`promotion-pr-validation PR #<n>` run must complete successfully for the exact
+promotion PR and head before attestation; a skipped shared `release / converge`
+definition does not by itself make the run a release carrier.
+
+Production merge uses a strict two-token contract. The mutation App token grants
+exactly Contents, Issues, and Pull requests write and is the sole token for merge and
+repository mutations. Immediately before the guard verification and merge decision,
+the workflow mints a current-caller-repository-scoped, Administration-write-only
+guard token used only by `verify-production-merge-guard.sh`. It is never used for
+statuses, Issues, Pull requests, Contents, or merge operations, and the verifier
+accepts bypass configuration only as an explicit empty `bypass_actors` array.
+
 ## 3. What the stale source got right
 
 The source comparison usefully recorded that earlier Documents 10 and 14, DOC-15/A-001, and the
@@ -85,9 +102,10 @@ least privilege, kill switches, rollback, and the need to resolve contradictions
 
 The source's final recommendation—immediate Claude-gated automatic merge for every risk class and
 one blanket founder approval covering release-PR merge plus production publication—is not current
-governance. It lacked visibility into approved A-002 and the final, effectively active A-003. It
-must not be used to interpret DOC-15/A-001 as the latest rule, bypass R4 founder authority, create
-standing founder approval for routine R3, or claim automation is active.
+governance. It lacked visibility into approved A-002 and the later active A-004 model. It must not
+be used to interpret DOC-15/A-001 as the latest rule, bypass current exact-SHA, risk, or independent-
+verification gates, recreate a standing founder-approval requirement for engineering workflows, or
+claim automation is active outside the recorded transition and repository settings.
 
 ## 5. Historical approvals are not reusable
 

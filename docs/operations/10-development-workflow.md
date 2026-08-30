@@ -7,7 +7,7 @@ status: approved
 owner: founder
 canonical_path: docs/operations/10-development-workflow.md
 approved_at: 2026-07-21
-last_reviewed_at: 2026-07-21
+last_reviewed_at: 2026-08-30
 review_cycle: quarterly
 supersedes: null
 related_documents:
@@ -15,7 +15,8 @@ related_documents:
   - DOC-15
   - DOC-16
   - DOC-19
-related_decisions: []
+related_decisions:
+  - A-004
 adoption_change: VOC-008
 source_files:
   - path: 10-development-workflow.md
@@ -61,18 +62,20 @@ The Go backend remains a normal module at `apps/api`, not part of the pnpm works
 
 ## 3. Branch strategy
 
-The intended topology has two permanent branches: `develop` (default integration branch and future
-staging source) and `main` (production source, accepting governed release changes plus emergency
+The intended topology has two permanent branches: `develop` (default integration and staging
+source) and `main` (production source, accepting governed release changes plus emergency
 hotfixes). No `release/*` branch is planned for MVP; a `develop → main` PR represents a release
 candidate, subject to the live authority and release-class rules. Automatic staging deployment,
-automatic merge, and production deployment are not technically active as of 2026-07-21; consult
-[the A-003 transition state](../governance/a003-transition-state.yaml) rather than inferring
-activation from this topology.
+automatic merge into `develop`, repository-controlled `develop` → `main` promotion,
+and push-to-`main` production deployment are enabled when their applicable gates and
+path selectors pass. RL1/RL2 technical activation remains disabled; consult
+[the A-004 transition state](../governance/a004-transition-state.yaml) and current
+operations documentation rather than inferring activation from branch topology.
 
 ```text
 feature/* ──PR──► develop ──release PR──► main
                     │                       │
-              Future staging         Production source
+            Conditional staging      Production source
 ```
 
 Task branches: `<type>/<issue-number>-<short-description>` (`feature/`, `fix/`, `hotfix/`,
@@ -161,8 +164,11 @@ commit together → Claude migration-risk review. High-risk migrations (drop tab
 primary-key change, user-data deletion, or irreversible transformation) follow the live R0–R4
 classification, protected-area controls, approval matrix, and EHR rules. Required evidence includes
 migration lint, from-zero and upgrade-path tests, destructive-operation detection, recovery proof,
-and independent migration-risk review as applicable. R4 consequences require founder approval;
-routine R3 does not require standing founder or steward approval merely for being R3. Use
+and independent migration-risk review as applicable. Under active A-004, R4
+engineering-workflow gates require strengthened evidence and
+independent verification, not a founder `approved` comment. Founder clarification remains required
+for genuinely ambiguous product, legal, or strategy requirements before stable acceptance criteria.
+Routine R3 likewise has no standing founder or steward gate. Use
 expand-and-contract so `develop` does not carry an unrecoverable migration between merge and release.
 See the [canonical governance index](../governance/README.md).
 

@@ -23,7 +23,7 @@ EVIDENCE_PATH = (
     / "specs/changes/VOC-136-complete-infra-167-caller-pin-with-exhaustive/t00-evidence.md"
 )
 
-CURRENT_PIN = "0ee1daf1aecdb5039ecc0fc74f5c64b24cdd5f5d"
+CURRENT_PIN = "9fdff24cd387cc2cdc468c84a3012b0c34b6c8e8"
 AUTHORITATIVE_PIN = "b263c0c110591cc798b89277dfc35542abb1597b"
 STALE_PIN_164 = "863fc1f35b1d35e4981a59166b0e939be1a2b681"
 STALE_PIN_165 = "8ce2b77a09a729e458a9f4cbea1ca26eb114d398"
@@ -41,7 +41,7 @@ MIRRORED_FILE_HASHES = {
         "e0612aa46dff58d3c06ff338864af3fa32cc725f151235cbe8b6789a80995d2a"
     ),
     ".github/workflows/release.yml": (
-        "52b70fd84bcaf08614bf3ed0aa27526c0ac74843937eff6d9671cf885a064eee"
+        "8198c14b3ff9ebb4d047ced6eaf2d5c37398c8da9f5709aaa0dbbf5252eef56f"
     ),
     "config/run-app-checks.sh": (
         "e0c3dedf3b2a750ea53ca8e6264a7fda1b430df95fd13ffa8694dcf7b9e935da"
