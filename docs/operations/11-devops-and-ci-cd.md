@@ -127,8 +127,9 @@ release-converge, and standalone recovery jobs use their short-lived
 `GITHUB_TOKEN` with explicit `actions: write`, `checks: read`, `statuses: read`,
 and the required Contents/Pull requests access. That job token discovers workflow
 runs and dispatches only the runner's allowlisted genuine workflows. The mutation
-App token remains limited to exactly Contents, Issues, and Pull requests write for
-PR, issue, content, and `gh pr merge` mutations that require App identity. A
+App token remains limited to PR, issue, and content mutations — exactly Contents,
+Issues, and Pull requests write for `gh pr merge` and other mutations that require
+App identity. A
 separate ephemeral guard-only App token, scoped to the current caller repository
 with Administration write only, is minted immediately before production merge-guard
 verification and is never passed to merge, status, issue, or content mutation
