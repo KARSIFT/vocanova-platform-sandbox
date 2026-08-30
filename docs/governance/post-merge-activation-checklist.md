@@ -7,6 +7,13 @@ governance authority. A-003 became effectively active at `2026-07-17T16:44:34Z`;
 automatic/autonomous merge, RL1/RL2 technical activation, production deployment, and
 autonomous production release remain disabled or unimplemented.
 
+**Updated 2026-08-30 (VOC-140):** A-004 is the active engineering-workflow authority model.
+Automatic merge, the repository-controlled `develop` → `main` promotion path, and push-to-`main`
+production deployment are enabled when promotion checks pass. Recovery never treats a still-running
+release carrier as attestable `ci / ci`, and production merge-guard verification uses a separate
+Administration-only guard token immediately before the unchanged mutation-token merge. RL1/RL2
+technical activation remain disabled.
+
 **Updated 2026-08-08**: for vocanova-platform-sandbox specifically, automatic/autonomous
 merge, production deployment, and autonomous production release are no longer
 disabled - the founder explicitly, twice-confirmed-live authorized all three (see

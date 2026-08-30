@@ -99,7 +99,7 @@ class Voc126CallerWorkflowDispatchTests(unittest.TestCase):
         )
         pin = pin_path.read_text(encoding="utf-8").strip()
         self.assertNotEqual(pin, INVALID_VOC125_TEMPLATE_SHA)
-        self.assertEqual(pin, "599436835371f27fac52ec6b47a18b36257366ac")
+        self.assertEqual(pin, "0ee1daf1aecdb5039ecc0fc74f5c64b24cdd5f5d")
 
 
 if __name__ == "__main__":

@@ -19,7 +19,7 @@ EVIDENCE_PATH = (
 )
 
 AUTHORITATIVE_PIN = "123735c80fec813a5b46a004f3e1122bd425cde2"
-CURRENT_PIN = "599436835371f27fac52ec6b47a18b36257366ac"
+CURRENT_PIN = "0ee1daf1aecdb5039ecc0fc74f5c64b24cdd5f5d"
 STALE_PIN_167 = "b263c0c110591cc798b89277dfc35542abb1597b"
 PROTECTED_COMPARISON_ANCHOR = "b9e74fc2db4691c48c637639b265d527de9f4505"
 IMPLEMENTATION_PR_BASE = "e89a02723cfbcaed952a868f2ab3f1442fd04fae"
@@ -36,10 +36,10 @@ MIRRORED_FILE_HASHES = {
         "e0c3dedf3b2a750ea53ca8e6264a7fda1b430df95fd13ffa8694dcf7b9e935da"
     ),
     "config/actions-check-recovery-runner.py": (
-        "e3f3504e0e6104ea5ff7f540ac591ded12e59d49c11cc810502ba5a6b84468e9"
+        "04e03532a086a81eb53ffe8ac0d4b8cdf086f2902b32dc4e7c8ed643060662ea"
     ),
     "config/promotion_status_attestation.py": (
-        "53a50e2c70d31f38750ad4134abeaf30e31c63ac9e3ac74197c638ce2a8cc1ca"
+        "18329e515df88dda113c23fea3dd32275d51635370b9c8a35aff39f6763eb15a"
     ),
     "config/promotion-status-attestation-runner.py": (
         "354cb65e434b158983f37440aee5bc14c2d60ba4db2ad9b5feb4446bade4ee2f"
@@ -54,7 +54,7 @@ MIRRORED_FILE_HASHES = {
         "5f924fa4857931a03ac7a69197314f9a4d517461e3de47ab778fa7129e02ffe4"
     ),
     "tests/test_voc122_actions_check_recovery.py": (
-        "8ca6b211aab6bca8cf64f2dfa9169855685b52a7ba6e34ac77bf7ea4f28f29b0"
+        "748e15ee723f002e93bd4451ace894c863509c9cc58ade398159b0f4573d1242"
     ),
     "tests/test_voc138_promotion_pr_provenance.py": (
         "253870621ab895a42258d9b0b5a8285b7dd05e29d97eea603291f3eb75dc51ff"

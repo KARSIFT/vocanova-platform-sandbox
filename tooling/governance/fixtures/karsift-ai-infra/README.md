@@ -228,7 +228,13 @@ VOC-139-T00 advances the pin to infrastructure merge
 `599436835371f27fac52ec6b47a18b36257366ac` with promotion head/source-revision
 hash binding under `pr-validation`, repository-explicit no-checkout recovery
 metadata via `gh api repos/$GITHUB_REPOSITORY/pulls/...`, and ordinary
-merge-base-anchored `pr-validation` for non-promotion PRs.
+merge-base-anchored `pr-validation` for non-promotion PRs. VOC-140-T00 advances
+the pin to infrastructure merge `0ee1daf1aecdb5039ecc0fc74f5c64b24cdd5f5d` with
+release-carrier CI identity repair, dedicated `promotion-pr-validation` completion
+requirements, and a strict two-token production merge-guard contract: the mutation
+App token remains exactly Contents/Issues/Pull requests write for merge and
+mutations, while a separate caller-repository-scoped Administration-write guard
+token is used only for `verify-production-merge-guard.sh` immediately before merge.
 
 Recovery metadata reads, exact selected-run reruns, and allowlisted absent-context
 dispatches use narrowly job-scoped `GITHUB_TOKEN` permissions: Actions write plus

@@ -5,13 +5,14 @@ settings, create Cloudflare projects, or provision credentials. A repository
 administrator must configure and record the following before autonomous merge or
 release is enabled.
 
-A-003 governance authority is active. That activation must not be represented as
-hosted or technical activation. Automatic merge into `develop` (A-003 §10) is
+A-004 is the active engineering-workflow authority model. That activation must not
+be represented as hosted or technical activation. Automatic merge into `develop` is
 implemented, tested, and proven - live since VOC-012 (see
-`docs/governance/a003-transition-state.yaml`). RL1/RL2 technical activation,
-production deployment, and autonomous production release (A-003 §11/12, a distinct,
-narrower gate than develop-merge) remain disabled or unimplemented. *(Corrected
-2026-07-24 - previously conflated develop-merge with production-release authority.)*
+`docs/governance/a004-transition-state.yaml`). The repository-controlled
+`develop` → `main` promotion path and push-to-`main` production deployment are
+enabled when promotion checks pass; RL1/RL2 technical activation remains disabled.
+*(Corrected 2026-08-30 - previously described A-003 as active and production release
+as disabled.)*
 
 ## GitHub rulesets
 

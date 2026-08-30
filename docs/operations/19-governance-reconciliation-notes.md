@@ -52,18 +52,18 @@ Canonical sources: [DOC-16](../governance/16-autonomous-development-operating-mo
 Governance may permit an action class while the repository lacks the technical controls needed to
 perform it automatically. This table is a point-in-time snapshot and goes stale as capabilities are
 actually activated - treat
-[the A-003 transition state](../governance/a003-transition-state.yaml) as the live source of truth,
-not this copy. Last corrected 2026-07-24 (the `2026-07-19` snapshot below was stale on the
-develop-merge row - see that file's own correction note for why):
+[the A-004 transition state](../governance/a004-transition-state.yaml) as the live source of truth,
+not this copy. Last corrected 2026-08-30 (the `2026-07-19` snapshot below was stale on the
+production-release rows - see that file's own correction note for why):
 
 | Capability | Recorded state |
 |---|---|
-| A-003 authority model | active |
+| A-004 authority model | active |
 | RL1 technical activation | `false` |
 | RL2 technical activation | `false` |
-| Automatic merge allowed (into `develop` - A-003 §10) | `true` - live since VOC-012 |
-| Production deployment (to `main` - A-003 §11/12) | `disabled` |
-| Autonomous production release | `disabled` |
+| Automatic merge allowed (into `develop`) | `true` - live since VOC-012 |
+| Production deployment (to `main`) | `enabled` on push when gates pass |
+| Autonomous production release | `enabled` via repository-controlled promotion path |
 | Control Plane implementation | `false` |
 
 These are implementation-time facts, not permanent promises. The transition YAML and

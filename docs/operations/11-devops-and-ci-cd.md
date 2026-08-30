@@ -126,9 +126,15 @@ Recovery metadata reads are fail-closed prerequisites. The merge-gate,
 release-converge, and standalone recovery jobs use their short-lived
 `GITHUB_TOKEN` with explicit `actions: write`, `checks: read`, `statuses: read`,
 and the required Contents/Pull requests access. That job token discovers workflow
-runs and dispatches only the runner's allowlisted genuine workflows. The App token
-remains limited to PR, issue, and content mutations that require App identity, so
-recovery does not depend on installation-level Actions permission. When a metadata
+runs and dispatches only the runner's allowlisted genuine workflows. The mutation
+App token remains limited to exactly Contents, Issues, and Pull requests write for
+PR, issue, content, and `gh pr merge` mutations that require App identity. A
+separate ephemeral guard-only App token, scoped to the current caller repository
+with Administration write only, is minted immediately before production merge-guard
+verification and is never passed to merge, status, issue, or content mutation
+steps. Recovery does not treat a still-running release carrier as attestable
+`ci / ci`; when no completed non-carrier run exists it dispatches or waits for
+`promotion-pr-validation PR #<n>` to finish before attestation. When a metadata
 endpoint fails, the runner emits one sanitized endpoint class
 (`check_runs_read_failed`, `workflow_runs_read_failed`, or
 `commit_metadata_read_failed`) and aborts before dispatch planning.
@@ -141,7 +147,9 @@ repository-governance, and pipeline workflows does it revalidate the open PR and
 publish same-SHA success attestations for `governance-policy`, `validate`, and
 `ci / ci`. Those derived statuses link to the release run and are excluded from
 future evidence selection, so they satisfy the repository ruleset but can never
-replace the underlying Actions evidence. The App token remains mutation-only.
+replace the underlying Actions evidence. The mutation App token does not receive
+Administration permission; production merge-guard verification uses the separate
+guard-only token described above.
 
 The canonical same-repository `develop` → `main` promotion PR validates capture
 provenance with head/source-revision-bound `pr-validation` using the immutable PR
