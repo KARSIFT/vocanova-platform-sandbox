@@ -1,0 +1,225 @@
+schema_version: 1
+id: VOC-141
+slug: promotion-recovery-waits-30-minutes-when-green-ci
+title: Promotion recovery waits 30 minutes when green CI has an unattestable parent
+type: infrastructure
+status: draft
+risk: R4
+planned_implementation_risk_floor: 'R4. This package repairs promotion recovery so
+  a GitHub-required ci / ci SUCCESS row whose composed parent is not uniquely attestable
+  immediately plans exactly one dedicated recover-promotion-pr-checks dispatch instead
+  of polling until the 1,800-second timeout. tooling/governance/* is an R4 path floor.
+  .github/workflows/* is an R3 floor. Semantic mutation of required-check recovery,
+  status attestation, and exact-revision evidence binding is protected. This is a
+  draft proposal for human adoption review, not a determination. The path classifier
+  and independent verifier remain authoritative.
+
+  '
+canonical_path: specs/changes/VOC-141-promotion-recovery-waits-30-minutes-when-green-ci
+authority_model: a004-active
+requirement_source: "GitHub issue #1109 (Promotion recovery waits 30 minutes when\
+  \ green CI has an unattestable parent), including its original body. This is a causal\
+  \ residual of post-merge VOC-140 release verification. Promotion recovery correctly\
+  \ rejects a green ci / ci check whose parent pipeline is a release carrier, but\
+  \ apply_promotion_pr_recovery_plan derives dispatch_contexts only from plan_required_check_recovery,\
+  \ which returns no missing/failed CI context when GitHub's required row is already\
+  \ SUCCESS. Live reproduction: repository KARSIFT/vocanova-platform-sandbox, promotion\
+  \ PR #1090, exact promotion head c3a53bab3035b7f08c0fb959bdf1b56bf330d291, infrastructure\
+  \ policy KARSIFT/karsift-ai-infra@67bdfd13ef875dead23ce4be01d7d0e8b976e289, failing\
+  \ release carrier run 33340381776 job 99334840338 step Recover missing exact-head\
+  \ promotion checks started 2026-08-30T22:54:51Z ended 2026-08-30T23:25:23Z with\
+  \ diagnostics mode=promotion_pr missing_checks=none pending=0 failed=0 successful=6\
+  \ then exit 1. Duplicate native carrier 33340516672 entered the identical no-progress\
+  \ step. Workaround gh workflow run pipeline.yml --ref develop -f action=recover-promotion-pr-checks\
+  \ -f promotion_pr_number=1090 produced dedicated run 33341923799 SUCCESS on exact\
+  \ head c3a53bab\u2026; subsequent reconcile-release run 33342062118 succeeded including\
+  \ the production merge guard. This draft package does not adopt or authorize itself.\n"
+requirement_approval_status: issue-sourced requirement; this draft package is not
+  adopted and does not authorize implementation
+base_branch: develop
+base_sha: 'Issue-creation promotion PR #1090 head is c3a53bab3035b7f08c0fb959bdf1b56bf330d291.
+  Issue-creation infrastructure pin is VOC-140 merge 67bdfd13ef875dead23ce4be01d7d0e8b976e289
+  and is the defective live contract for this failure class. Implementation must record
+  the actual implementation PR base separately at dispatch, fail closed on unrelated/material
+  movement of develop, and must not treat this package''s own plan/adoption/roster
+  commits as protected-file drift. Do not snapshot the current develop/main gap.
+
+  '
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: 'planner (drafting only; adoption remains a human/autonomous
+    governed decision) '
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: 'none-intentional for application runtime. This package repairs
+  promotion recovery dispatch so a green-but-unattestable required ci / ci row immediately
+  plans dedicated promotion-pr-validation instead of waiting 1,800 seconds with no
+  possible state transition. Ordinary post-promotion synchronization remains a tree-equivalent
+  integration-ref update. This package does not add a new production deploy path,
+  change secret values, providers, the production merge guard, or monitor inventory.
+
+  '
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: 'Promotion recovery dispatch when GitHub-required ci / ci is SUCCESS
+    but composed evidence is unattestable. No page routes, critical API endpoints,
+    monitor inventory, or synthetic inventory in infra/monitoring/ are added or changed.
+
+    '
+dependencies:
+- id: VOC-141-DEP-00
+  status: 'resolved at drafting time. Issue #1109 provides the failing promotion PR
+    #1090, exact head c3a53bab3035b7f08c0fb959bdf1b56bf330d291, pin 67bdfd13ef875dead23ce4be01d7d0e8b976e289,
+    failing release carrier 33340381776 / job 99334840338, 1,800-second timeout diagnostics
+    with missing_checks: none, duplicate carrier 33340516672, workaround dedicated
+    run 33341923799, subsequent reconcile-release 33342062118 including production
+    merge guard, and enough specificity to draft without a clarifying round trip.
+
+    '
+- id: VOC-141-DEP-01
+  status: 'resolved at drafting time. Active A-004 remains authoritative. No founder
+    approved-comment gate on engineering-workflow adopt/merge/release paths. Exact-SHA
+    independent verification, deterministic risk floors, protected-path controls,
+    and fail-closed behavior remain mandatory. R4 is a draft proposal, not a determination.
+    automatic_merge_allowed is drafted true per AGENTS.md A-004 drafting rule.
+
+    '
+- id: VOC-141-DEP-02
+  status: 'resolved at drafting time by reading live caller fixtures at pin 67bdfd13ef875dead23ce4be01d7d0e8b976e289.
+    recovery_complete correctly returns false when promotion_ci_context_is_attestable
+    cannot bind the selected green ci / ci row to an attestable completed non-carrier
+    parent. apply_promotion_pr_recovery_plan derives dispatch_contexts only from plan_required_check_recovery,
+    which skips required rows whose GitHub state is already SUCCESS, then filters
+    plan_recovery_dispatches to those contexts, so pipeline.yml recover-promotion-pr-checks
+    is dropped. The polling loop then refreshes the same SUCCESS metadata until DEFAULT_TIMEOUT_SECONDS
+    1800. format_timeout_diagnostics / collect_missing report missing_checks: none
+    and omit the unattestable-parent reason. suppress_active_or_successful_dispatches
+    also drops pipeline.yml when a supplied gate_summary context_state is SUCCESS
+    or PENDING, which would reintroduce the hang if reused unchanged as the dispatch
+    filter. An untracked local karsift-ai-infra/ checkout, if present, is not this
+    repository''s tracked tree.
+
+    '
+- id: VOC-141-DEP-03
+  status: 'resolved at drafting time as the chosen design. One end-to-end implementation
+    task covering a coordinated infrastructure PR plus the caller pin, recovery dispatch
+    when composed CI is unattestable, timeout diagnostics, tests, docs, evidence,
+    and release handoff. Do not split by repository, dispatch versus diagnostics,
+    test, or layer. Do not add a VOC-097 live-evidence second task: a draft evidence-carrier
+    PR cannot satisfy sha_lineage against a live promotion HEAD (karsift-ai-infra#15
+    class). Do not snapshot the current develop/main gap. This package''s implementation
+    PR Closes only its own VOC-141 task issue.
+
+    '
+- id: VOC-141-DEP-04
+  status: 'resolved at drafting time as a hard TEST constraint. Do not weaken the
+    production merge guard. Do not add bypass actors. Do not fabricate statuses. Do
+    not manually merge a promotion PR. Do not change the VOC-140 two-token contract.
+    Never select an in-progress or failed release carrier as trusted recovered ci
+    / ci. Keep exact PR base/head/refs/repository binding, ruleset enforcement, no
+    founder-comment gate, and idempotent reconcile-release. Do not switch the promotion
+    PR to --squash-safe-push. Do not rerun doomed pull_request ci / ci jobs as a strategy.
+    Do not wait 1,800 seconds without a dispatch when composed CI is unattestable.
+
+    '
+- id: VOC-141-DEP-05
+  status: "resolved at drafting time as a pin-advance rule. VOC-140 pin 67bdfd13ef875dead23ce4be01d7d0e8b976e289\
+    \ remains historical audit evidence and remains the issue-creation pin. This repair\
+    \ cannot land by freezing that pin. T00 must open and consume one new independently\
+    \ reviewed karsift-ai-infra PR whose exact merge SHA becomes the new PINNED_SHA.txt\
+    \ value, then mirror every changed authoritative fixture file from that exact\
+    \ merge. Do not silently keep 67bdfd13\u2026 if the live reusable workflow still\
+    \ omits dedicated dispatch when GitHub-required ci / ci is SUCCESS and composed\
+    \ evidence is unattestable.\n"
+- id: VOC-141-DEP-06
+  status: 'resolved at drafting time. Configured Cursor Composer remains the implementer
+    and Cursor Grok remains the exact-revision independent reviewer. Current fixture
+    config/roles.yml bindings are fixed and must not change: implementer and implementer_escalation
+    cursor/composer-2.5; planner, reviewer, reviewer_fast_retry, and plan_reviewer
+    cursor/grok-4.6[effort=high,fast=false]. No OpenAI credential or execution route
+    is needed or authorized. Do not print credential values.
+
+    '
+- id: VOC-141-DEP-07
+  status: 'resolved at drafting time as a no-change constraint. Do not rewrite VOC-140,
+    VOC-139, VOC-138, or earlier package records under specs/changes/. Do not edit
+    VOC-112 capture fixtures, hashed sources, AGENTS.md, the navigator skill, or package.json.
+    Exhaustively search current source and pin docs; update fixture README, docs/operations/11-devops-and-ci-cd.md,
+    and every additional current-state match that still describes SUCCESS required
+    rows as sufficient to skip dedicated recovery dispatch. Preserve clearly historical
+    records. Do not recapture VOC-112 JSON fixtures. Do not change the production
+    merge guard or App-token mints.
+
+    '
+- id: VOC-141-DEP-08
+  status: 'resolved at drafting time as the feasible exact-revision evidence contract.
+    Exact-revision binding remains fail-closed by requiring the App-authored independent-review
+    comment/check to bind the live PR head exactly and merge-gate to reject any mismatch.
+    Committed package evidence records the implementation PR base, infra merge SHA,
+    dispatch-when-unattestable change, timeout-diagnostic change, negative-case results,
+    and where later exact-head binding will be published. Tests must not mutate evidence
+    at runtime. A commit must not be required to contain its own SHA.
+
+    '
+- id: VOC-141-DEP-09
+  status: 'resolved at drafting time. After this correction merges into develop, ordinary
+    reconcile-release must immediately dispatch dedicated promotion-pr-validation
+    when GitHub-required ci / ci is SUCCESS and composed evidence is unattestable,
+    then merge the live same-repository main <- develop promotion at the then-current
+    develop head, synchronize develop to the exact promotion merge SHA, and trigger
+    the normal automatic production deployment on the resulting main push; that deployment
+    must be verified at the exact SHA. Closure of root issue #1109 requires allowlisted
+    metadata from a successful recovery/release run (run/job IDs, repository, PR,
+    base/head, ref, path, conclusion) and must not treat closed state as completion
+    proof. Do not snapshot the current develop/main gap (karsift-ai-infra#15). Preserve
+    the named incident run/job IDs as audit evidence. Do not create a duplicate promotion
+    PR or release audit. Workaround run 33341923799 and reconcile-release 33342062118
+    already proved dedicated dispatch unblocks this class; they are incident evidence,
+    not a substitute for the code repair. Do not manufacture completion markers for
+    other packages.
+
+    '
+affected_areas:
+- tooling/governance/fixtures/karsift-ai-infra/
+- tooling/governance/tests/
+- docs/operations/11-devops-and-ci-cd.md
+- specs/changes/VOC-141-promotion-recovery-waits-30-minutes-when-green-ci
+implementation:
+  authorized: false
+  required: true
+  status: pending
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-automation-reliability-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+ehr: not-triggered
+standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
+blocking_reasons: package is a draft proposal; adoption and implementation authorization
+  remain separate A-004-governed decisions
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+production_deployment: disabled
+autonomous_production_release: not-authorized-by-this-package
+repository_adoption_status: not-adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: not-authorized
+adoption_deferred_decisions: []
