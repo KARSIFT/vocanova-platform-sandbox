@@ -24,7 +24,7 @@ from voc136_bypass_scan import (
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 AUTHORITATIVE_PIN = "b263c0c110591cc798b89277dfc35542abb1597b"
-CURRENT_PIN = "599436835371f27fac52ec6b47a18b36257366ac"
+CURRENT_PIN = "67bdfd13ef875dead23ce4be01d7d0e8b976e289"
 PROTECTED_COMPARISON_ANCHOR = "b9e74fc2db4691c48c637639b265d527de9f4505"
 IMPLEMENTATION_PR_BASE = "ebe4c460d892b87b6de38915f9fbd5e30d3c051b"
 VOC112_SUBJECT_REVISION = "f9d11e232a07c7d7a9c433d02c9267912543ba10"
@@ -41,7 +41,7 @@ MIRRORED_FILE_HASHES = {
         "e0612aa46dff58d3c06ff338864af3fa32cc725f151235cbe8b6789a80995d2a"
     ),
     ".github/workflows/release.yml": (
-        "fd11e45f999d26c9e009eb0d40c67c7a644ed2c8dd721a29b98c1fea4e790f08"
+        "8198c14b3ff9ebb4d047ced6eaf2d5c37398c8da9f5709aaa0dbbf5252eef56f"
     ),
     "config/run-app-checks.sh": (
         "e0c3dedf3b2a750ea53ca8e6264a7fda1b430df95fd13ffa8694dcf7b9e935da"

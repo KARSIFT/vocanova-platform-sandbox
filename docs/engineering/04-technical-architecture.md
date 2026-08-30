@@ -177,9 +177,12 @@ The repository uses `develop` and `main` as permanent branches with short-lived 
 branches and governed pull requests. Exact merge, approval, and release authority is defined only by
 [DOC-16](../governance/16-autonomous-development-operating-model.md),
 [A-002](../governance/amendments/A-002-governed-autonomous-releases.md),
-[A-003](../governance/amendments/A-003-governed-autonomous-engineering-authority.md), and the
+[A-003](../governance/amendments/A-003-governed-autonomous-engineering-authority.md),
+[A-004](../governance/amendments/A-004-remove-founder-approval-gates-from-autonomous-engineering-workflows.md), and the
 [approval matrix](../governance/approval-matrix.md). Governance permission does not imply that
-automatic merge or deployment is technically active.
+automation is technically active; current activation is recorded in
+[`repository-settings.md`](../governance/repository-settings.md) and the
+[A-004 transition state](../governance/a004-transition-state.yaml).
 
 ## 20. CI/CD
 

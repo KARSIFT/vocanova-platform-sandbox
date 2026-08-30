@@ -60,7 +60,10 @@ VOC-010 through VOC-022 is architecturally unrelated: a set of reusable GitHub A
 (`KARSIFT/karsift-ai-infra`) wired into this repo's own `.github/workflows/pipeline.yml` - no
 Postgres queue, no Budget Governor, no MCP interface, no Change Contract Registry. This was a
 deliberate decision (see `karsift-ai-infra`'s own README and commit history), not an oversight.
-Their adoption does not implement the Control Plane, activate RL1/RL2, or enable production
-deployment or autonomous production release. It also does not, on its own, cover automatic merge
-into `develop` - that narrower capability (A-003 §10) is separately implemented and live; see
-`docs/governance/a003-transition-state.yaml`.
+Their adoption did not implement the Control Plane, activate RL1/RL2, or by itself
+enable production deployment or autonomous production release. Current A-004-backed
+automatic merge into `develop`, repository-controlled promotion, and push-to-`main`
+production deployment are separately implemented and enabled when their gates pass;
+RL1/RL2 technical activation remains disabled. See
+`docs/governance/repository-settings.md` and
+`docs/governance/a004-transition-state.yaml`.

@@ -25,7 +25,8 @@ EVIDENCE_PATH = (
 )
 
 AUTHORITATIVE_PIN = "123735c80fec813a5b46a004f3e1122bd425cde2"
-CURRENT_PIN = "599436835371f27fac52ec6b47a18b36257366ac"
+VOC139_INFRA_PIN = "599436835371f27fac52ec6b47a18b36257366ac"
+CURRENT_PIN = "67bdfd13ef875dead23ce4be01d7d0e8b976e289"
 PROTECTED_COMPARISON_ANCHOR = "b9e74fc2db4691c48c637639b265d527de9f4505"
 IMPLEMENTATION_PR_BASE = "ecb3d6d8e30628a9691928ea4594523f7193b961"
 PROMOTION_BASE_SHA = "0d0b0cdf0692d0349f380e9cae3285b4c7916b05"
@@ -148,6 +149,7 @@ class Voc139PromotionRecoveryMetadataTests(unittest.TestCase):
 
     def test_pin_advances_to_reviewed_voc139_infra_merge(self):
         self.assertEqual(self.pin, CURRENT_PIN)
+        self.assertNotEqual(self.pin, VOC139_INFRA_PIN)
         self.assertNotEqual(self.pin, AUTHORITATIVE_PIN)
 
     def test_seven_voc112_paths_remain_frozen_against_protected_anchor(self):
@@ -275,7 +277,7 @@ class Voc139PromotionRecoveryMetadataTests(unittest.TestCase):
 
     def test_evidence_records_implementation_pr_base_and_infra_merge(self):
         self.assertIn(IMPLEMENTATION_PR_BASE, self.evidence)
-        self.assertIn(CURRENT_PIN, self.evidence)
+        self.assertIn(VOC139_INFRA_PIN, self.evidence)
         self.assertIn(AUTHORITATIVE_PIN, self.evidence)
 
 

@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import os
+import shutil
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -19,7 +21,7 @@ EVIDENCE_PATH = (
 )
 
 AUTHORITATIVE_PIN = "123735c80fec813a5b46a004f3e1122bd425cde2"
-CURRENT_PIN = "599436835371f27fac52ec6b47a18b36257366ac"
+CURRENT_PIN = "67bdfd13ef875dead23ce4be01d7d0e8b976e289"
 STALE_PIN_167 = "b263c0c110591cc798b89277dfc35542abb1597b"
 PROTECTED_COMPARISON_ANCHOR = "b9e74fc2db4691c48c637639b265d527de9f4505"
 IMPLEMENTATION_PR_BASE = "e89a02723cfbcaed952a868f2ab3f1442fd04fae"
@@ -36,13 +38,13 @@ MIRRORED_FILE_HASHES = {
         "e0c3dedf3b2a750ea53ca8e6264a7fda1b430df95fd13ffa8694dcf7b9e935da"
     ),
     "config/actions-check-recovery-runner.py": (
-        "e3f3504e0e6104ea5ff7f540ac591ded12e59d49c11cc810502ba5a6b84468e9"
+        "ff3e79cd31aa684e4ed591471f14d13afae58ce068a87abdd71eb47f0d571733"
     ),
     "config/promotion_status_attestation.py": (
-        "53a50e2c70d31f38750ad4134abeaf30e31c63ac9e3ac74197c638ce2a8cc1ca"
+        "18329e515df88dda113c23fea3dd32275d51635370b9c8a35aff39f6763eb15a"
     ),
     "config/promotion-status-attestation-runner.py": (
-        "354cb65e434b158983f37440aee5bc14c2d60ba4db2ad9b5feb4446bade4ee2f"
+        "d69a71d97e5ea9130b25fdbe63c922c18183f050535e747ee587d6917c57c216"
     ),
     "templates/project-repo/.github/workflows/pipeline.yml": (
         "627f251c19b30665548a9442bdd476c362fe6ad58455e92fdd21850385d9dc3c"
@@ -51,10 +53,10 @@ MIRRORED_FILE_HASHES = {
         "c272d30b66c00315b11f2edb0dead4dd6b871433452bc39194f3ef6e0c08cc90"
     ),
     "tests/test_promotion_status_attestation.py": (
-        "5f924fa4857931a03ac7a69197314f9a4d517461e3de47ab778fa7129e02ffe4"
+        "6c55ff93fe464d0ab29be9ea68452ff437672a456ba39d22d613356eae15f393"
     ),
     "tests/test_voc122_actions_check_recovery.py": (
-        "8ca6b211aab6bca8cf64f2dfa9169855685b52a7ba6e34ac77bf7ea4f28f29b0"
+        "748e15ee723f002e93bd4451ace894c863509c9cc58ade398159b0f4573d1242"
     ),
     "tests/test_voc138_promotion_pr_provenance.py": (
         "253870621ab895a42258d9b0b5a8285b7dd05e29d97eea603291f3eb75dc51ff"
@@ -127,12 +129,6 @@ class Voc138PromotionPrProvenanceTests(unittest.TestCase):
         self.assertNotIn("git fetch", self.run_app_checks)
 
     def test_actual_voc112_assertion_accepts_pr_validation_and_rejects_ancestry(self):
-        subject_lookup = subprocess.run(
-            ["git", "cat-file", "-e", f"{VOC112_SUBJECT_REVISION}^{{commit}}"],
-            cwd=REPO_ROOT,
-            capture_output=True,
-        )
-        self.assertNotEqual(subject_lookup.returncode, 0)
         head = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, text=True
         ).strip()
@@ -159,13 +155,33 @@ class Voc138PromotionPrProvenanceTests(unittest.TestCase):
         self.assertEqual(promotion.returncode, 0, promotion.stderr)
 
         environment["VOC112_CAPTURE_PROVENANCE_MODE"] = "pr-ancestry"
-        ordinary = subprocess.run(
-            command,
-            cwd=REPO_ROOT,
-            env=environment,
-            text=True,
-            capture_output=True,
-        )
+        real_git = shutil.which("git")
+        self.assertIsNotNone(real_git)
+        with tempfile.TemporaryDirectory() as scratch:
+            git_wrapper = Path(scratch) / "git"
+            git_wrapper.write_text(
+                "#!/bin/sh\n"
+                'if [ "$1" = "cat-file" ] && [ "$2" = "-e" ] && '
+                '[ "$3" = "$MISSING_OBJECT^{commit}" ]; then\n'
+                "  exit 1\n"
+                "fi\n"
+                'exec "$REAL_GIT" "$@"\n',
+                encoding="utf-8",
+            )
+            git_wrapper.chmod(0o755)
+            shallow_environment = {
+                **environment,
+                "MISSING_OBJECT": VOC112_SUBJECT_REVISION,
+                "PATH": scratch + os.pathsep + environment["PATH"],
+                "REAL_GIT": real_git,
+            }
+            ordinary = subprocess.run(
+                command,
+                cwd=REPO_ROOT,
+                env=shallow_environment,
+                text=True,
+                capture_output=True,
+            )
         self.assertNotEqual(ordinary.returncode, 0)
         self.assertIn(
             "PR ancestry mode requires every captured commit object",

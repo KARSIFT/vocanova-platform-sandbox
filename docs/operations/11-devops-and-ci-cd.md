@@ -23,7 +23,7 @@ amendments:
     adopted_at: 2026-07-30
     approving_owner: founder
     resolution_recorded_in: specs/changes/VOC-032-begin-milestone-r1-staging-readiness-docs-product/change.yaml
-    notes: "Supersedes the prior Render Web Service + Cloudflare Workers + Render PostgreSQL rows in §1's target-infrastructure table and the vocanova.com domain set, per VOC-032-D02 (resolved at adoption 2026-07-28, founder-gate delegation). The superseded rows are annotated, not silently deleted, consistent with this repository's existing convention for amending an approved document (see DOC-15 §17.0 and the A-003 active-authority notice in DOC-16). Detailed in §1's amendment note below."
+    notes: "Supersedes the prior Render Web Service + Cloudflare Workers + Render PostgreSQL rows in §1's target-infrastructure table and the vocanova.com domain set, per VOC-032-D02 (resolved at adoption 2026-07-28, founder-gate delegation). The superseded rows are annotated, not silently deleted, consistent with this repository's existing convention for amending an approved document (see DOC-15 §17.0 and DOC-16's active-A-004 notice over historical A-003 records). Detailed in §1's amendment note below."
   - id: VOC-051-§1-amendment
     title: "§1 Error monitoring row extended to cover apps/web browser-side reporting and the hourly Sentry-to-GitHub-issue monitoring workflow"
     adopted_in: VOC-051
@@ -62,8 +62,9 @@ Staging (from `develop`), Production (from `main`).
 > `staging.vocanova.site` and `api-staging.vocanova.site` as the staging subdomains). The
 > superseded rows are retained in place and marked **~~strikethrough~~** below so this section
 > preserves the v1.0 historical record of what DOC-11 originally targeted, exactly as DOC-15 §17.0
-> retains the A-001 prose that A-003 actually supersedes and DOC-16 retains its A-003
-> active-authority notice. The amended (v1.1) baseline immediately follows.
+> retains the A-001 prose that A-003 actually superseded and DOC-16 retains the
+> historical A-003 record beneath its active-A-004 authority notice. The amended
+> (v1.1) baseline immediately follows.
 
 **Original (v1.0) target infrastructure baseline** (2026-07-21 — 2026-07-29, **superseded as of
 2026-07-30 by `VOC-032-§1-amendment`**; retained in place as historical record):
@@ -126,9 +127,16 @@ Recovery metadata reads are fail-closed prerequisites. The merge-gate,
 release-converge, and standalone recovery jobs use their short-lived
 `GITHUB_TOKEN` with explicit `actions: write`, `checks: read`, `statuses: read`,
 and the required Contents/Pull requests access. That job token discovers workflow
-runs and dispatches only the runner's allowlisted genuine workflows. The App token
-remains limited to PR, issue, and content mutations that require App identity, so
-recovery does not depend on installation-level Actions permission. When a metadata
+runs and dispatches only the runner's allowlisted genuine workflows. The mutation
+App token remains limited to PR, issue, and content mutations — exactly Contents,
+Issues, and Pull requests write for `gh pr merge` and other mutations that require
+App identity. A
+separate ephemeral guard-only App token, scoped to the current caller repository
+with Administration write only, is minted immediately before production merge-guard
+verification and is never passed to merge, status, issue, or content mutation
+steps. Recovery does not treat a still-running release carrier as attestable
+`ci / ci`; when no completed non-carrier run exists it dispatches or waits for
+`promotion-pr-validation PR #<n>` to finish before attestation. When a metadata
 endpoint fails, the runner emits one sanitized endpoint class
 (`check_runs_read_failed`, `workflow_runs_read_failed`, or
 `commit_metadata_read_failed`) and aborts before dispatch planning.
@@ -141,7 +149,9 @@ repository-governance, and pipeline workflows does it revalidate the open PR and
 publish same-SHA success attestations for `governance-policy`, `validate`, and
 `ci / ci`. Those derived statuses link to the release run and are excluded from
 future evidence selection, so they satisfy the repository ruleset but can never
-replace the underlying Actions evidence. The App token remains mutation-only.
+replace the underlying Actions evidence. The mutation App token does not receive
+Administration permission; production merge-guard verification uses the separate
+guard-only token described above.
 
 The canonical same-repository `develop` → `main` promotion PR validates capture
 provenance with head/source-revision-bound `pr-validation` using the immutable PR

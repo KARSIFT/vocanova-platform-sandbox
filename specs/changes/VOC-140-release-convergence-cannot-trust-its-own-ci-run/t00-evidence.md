@@ -6,206 +6,171 @@ production-merge-guard App-token visibility.
 Do not record secrets, credentials, session values, OAuth material, personal
 data, complete CI logs, raw provider responses, or App token values.
 
-Committed evidence in this file records the implementation PR base, the new
-infrastructure merge, the recovery-identity change, the token/API contract,
-and validation. It does **not** require this file, in the same Git commit, to
-contain that commit's own SHA. The live implementation head is bound by the
-App-authored independent-review comment/check on the implementation PR.
-Merge-gate must reject any mismatch. Post-merge / root-issue audit may
-record the reviewed head and merge SHA.
+## Implementation PR base
 
-Independent review must explicitly evaluate the circular-CI identity case,
-dedicated promotion-pr-validation requirement, omitted-`bypass_actors` token
-shape, empty-bypass acceptance, non-empty-bypass rejection,
-exact two-token permissions/repository scope/use isolation in both workflows,
-the fail-closed external App action and post-T00 hosted explicit-empty-bypass
-release gate, current-state documentation reconciliation, same-App/private-key residual risk,
-no-fabricated-status constraint, and pin advance before merge.
+Recorded before the first in-scope edit:
 
-## Discovery recorded at planning time (issue #1102)
+`c59548375764d938265910cd07f2c2a73e337c01` (`develop` at dispatch).
+
+Issue-creation develop was `21eef75549226766fc4f78f62f232ee5fbdb8d6d`.
+Plan/adoption/roster commits after that SHA are governance-only and do not count
+as protected-file drift.
+
+## Infrastructure merge
+
+Independently reviewed `KARSIFT/karsift-ai-infra` merge consumed by this pin:
+
+`67bdfd13ef875dead23ce4be01d7d0e8b976e289`
+
+The earlier independently reviewed merge
+`9fdff24cd387cc2cdc468c84a3012b0c34b6c8e8` repaired the original release
+carrier and guard-token defects. It remains historical evidence; the final merge
+adds the causally related ordinary-PR attestation and ready-for-review reuse repair.
+
+Issue-creation / VOC-139 pin (defective for this failure class; historical audit):
+`599436835371f27fac52ec6b47a18b36257366ac`.
+
+## Issue #1102 incident record
 
 | Item | Value |
 |------|-------|
-| Requirement source | GitHub issue #1102 |
 | Promotion PR | #1090 |
 | Release issue | #1089 |
 | PR base (`main`) | `0d0b0cdf0692d0349f380e9cae3285b4c7916b05` |
-| PR head (`develop`) | `21eef75549226766fc4f78f62f232ee5fbdb8d6d` |
-| Issue-creation pin | `599436835371f27fac52ec6b47a18b36257366ac` |
-| Defect 1 | Recovery reports complete without dispatch; selector chooses `ci / ci` from the still-running workflow that contains `release / converge` |
+| PR head at issue creation | `21eef75549226766fc4f78f62f232ee5fbdb8d6d` |
 | Circular-CI run / job | `33136633666` / `98738317266` |
 | Circular-CI fail-closed | `untrusted_ci_recovery_identity` |
 | Dedicated recovery success | run `33136865709` |
-| Defect 2 | Merge App token cannot prove full ruleset/no-bypass fields; validator raises `production_merge_guard_missing` while admin-visible verifier reports `ok` |
 | Guard-fail release runs / jobs | `33136984634` / `98739074178`; `33137091931` / `98739420310` |
 | Guard fail-closed | `production-merge-guard: production_merge_guard_missing` |
-| Admin-visible command | `bash tooling/governance/fixtures/karsift-ai-infra/config/verify-production-merge-guard.sh KARSIFT/vocanova-platform-sandbox main tooling/governance/fixtures/karsift-ai-infra/config` |
-| Admin-visible result | `production-merge-guard: ok ruleset_id=20575146` |
-| Live ruleset | `20575146`; repository-owned; active; `main`-only; strict; requires PRs and `governance-policy` / `validate` / `ci`; `bypass_actors: []` |
-| App-token mint | `permission-contents: write`, `permission-issues: write`, `permission-pull-requests: write` |
-| Production promotion | none; `main` remains `0d0b0cdf…` |
-| Why bootstrap is not required | T00's first run is attempt `1` on a new VOC-140 carrier from current `develop` |
+| Admin-visible ruleset | `20575146` with `bypass_actors: []` under administrator token |
 
-## Chosen delivery path
+## Recovery identity and token/API contract
 
-| Item | Constraint |
-|------|------------|
-| Carrier | new VOC-140 branch/PR from current `develop`; not a rewrite of PR #1090 |
-| Infra | open a new independently reviewed `KARSIFT/karsift-ai-infra` PR; pin its exact merge; do not freeze defective `59943683…` |
-| Circular CI | never select an in-progress/failed release carrier as attestable `ci / ci`; recovery must not report complete without dispatch on that class |
-| Dedicated recovery | dispatch or select `promotion-pr-validation PR #<n>`; require completed/success before attestation |
-| Production guard | still requires effective active repository-owned ruleset, pull-request rule, strict non-empty required checks, and `bypass_actors: []` |
-| Token/API | mutation token remains exactly Contents/Issues/Pull requests write and sole for merge/mutations; distinct current-repository-scoped Administration-write-only guard token is used only for guard verification immediately before merge in both workflows |
-| External activation | T00 records the fail-closed action; after T00 merge, `karsift-ai-infra-bot` Administration: Read and write plus owner approval on KARSIFT organization installation `148001476`; installation currently selects all repositories, while guard token stays explicitly caller-repository scoped; no secret rotation; hosted explicit `bypass_actors: []` proof required before #1090 promotion |
-| Tests | real token-visible omitted-field payload and circular-CI parent-run fixture; not helper-only full fixtures |
-| Fixture freeze versus advance | issue-creation pin `59943683…` is historical; live pin becomes the new infra merge |
-| VOC-139 / VOC-138 records | do not rewrite `specs/changes/VOC-139-…/` or `VOC-138-…/` |
-| Docs | exhaustively search source/pin claims; update fixture README, operations CI/CD, repository-settings, activation checklist, DOC-19, and any other current-state matches while preserving historical records |
-| Exact-head binding | App-authored independent-review comment/check binds the live PR head; merge-gate rejects mismatch; a commit must not be required to contain its own SHA |
-| Attempt | VOC-140-T00 attempt `1` on this carrier |
-| `roles.yml` | unchanged: implementer/escalation `cursor/composer-2.5`; planner/reviewer/reviewer_fast_retry/plan_reviewer `cursor/grok-4.6[effort=high,fast=false]` |
-| OpenAI | not authorized |
-| Snapshot-the-gap task? | **no** — forbidden (`karsift-ai-infra#15`) |
-| Duplicate promotion PR / audit? | **no** |
-| VOC-097 live-evidence task? | **no** — evidence-carrier sha_lineage cannot bind to #1090 recovery HEAD |
-| Bootstrap | none |
-| Secrets | do not print credential values; do not copy full CI logs |
-| Evidence truth | name the implementation PR base and new infra merge; bind the live head via App-authored review/check; do not mutate this file at test/runtime |
-| Residual risk | both tokens share one App/private key and its permission ceiling; optional dedicated guard App is future hardening, not T00 |
+| Case | Result |
+|------|--------|
+| Newest `ci / ci` SUCCESS on in-progress `pipeline.yml` release carrier | not attestable; recovery not complete without dedicated dispatch |
+| PR-required `ci / ci` SUCCESS with attestable selection filtered from gate summary | recovery not complete (#1102 composition fix in `promotion_ci_context_is_attestable`) |
+| Completed `promotion-pr-validation PR #<n>` exact-head/PR-bound | attestable; may suppress redispatch |
+| Omitted/non-array `bypass_actors` in ruleset payload | `production_merge_guard_payload_incomplete` with operator action |
+| `bypass_actors: []` under Administration token | `production-merge-guard: ok` |
+| Mutation App token | exactly Contents/Issues/Pull requests write; sole token for merge/mutations |
+| Guard App token | exactly Administration write; explicit owner/current-repository scope; only `verify-production-merge-guard.sh` |
+| Ordinary non-production agent/plan PR exact terminal checks with an in-progress exact pipeline parent | attestable only through the verified singleton PR association and only when no release job executed; promotion/release carriers remain excluded |
+| Pipeline display name derived from the PR title | ignored; ready reuse binds immutable workflow path/event/head/base/refs/policy/jobs |
+| Non-empty run association | exactly one complete entry; malformed, partial, null/mixed, duplicate, unrelated-extra, or contradictory supplied repository identity fails closed in every consumer |
+| Exact empty run association | eligible only through the existing unique App-authored exact-PR attestation fallback |
 
-## Changed surfaces (implementation)
+## Exhaustive source-search disposition
 
-Implementation PR base recorded before the first in-scope edit:
+The tracked-source scan used `git grep -n -I -E` over Markdown, YAML, workflow,
+Python, and shell sources. Pattern families were:
 
-pending — resolve current `develop` to a 40-character SHA before any
-in-scope edit.
+| Pattern family | Examples searched |
+|----------------|-------------------|
+| Pin and hash assertions | old/current full pin, `CURRENT_PIN`, `AUTHORITATIVE_PIN`, `PINNED_SHA`, SHA-256 tables |
+| Token permissions and use | `mutation-only`, Contents/Issues/Pull requests grants, `Administration`, guard token scope/use |
+| Authority state | `active-A-003`, `active A-003`, `A003`, active/effective A-004 |
+| Human gates | R3/R4 with founder approval, founder `approved`, technical-steward, EHR |
+| Automation state | automatic/autonomous merge or release and production deployment described as disabled, blocked, inactive, or unimplemented |
 
-Issue-creation develop was
-`21eef75549226766fc4f78f62f232ee5fbdb8d6d`. Plan/adoption/roster commits
-after that SHA are governance-only and do not count as protected-file drift.
+Every resulting path was classified as follows:
 
-Issue-creation infra pin (defective for this failure class; historical audit):
-`599436835371f27fac52ec6b47a18b36257366ac`.
-
-New independently reviewed infra merge:
-
-pending — record after the coordinated infra PR merges.
-
-In-scope implementation diff paths (expected; record actuals after commit):
-
-- `KARSIFT/karsift-ai-infra` recovery/selection/attestation sources
-- `KARSIFT/karsift-ai-infra` `.github/workflows/release.yml` mutation and guard-token mints
-- `KARSIFT/karsift-ai-infra` `.github/workflows/merge-gate.yml` production-branch mutation/guard separation
-- `KARSIFT/karsift-ai-infra` `config/production_merge_guard.py` and `config/verify-production-merge-guard.sh`
-- `KARSIFT/karsift-ai-infra` tests for circular-CI identity and token-visible payload shape
-- caller `tooling/governance/fixtures/karsift-ai-infra/**` pin and mirrors
-- caller `tooling/governance/tests/` (VOC-140 regressions; current-pin assertions)
-- `docs/operations/11-devops-and-ci-cd.md`
-- `docs/governance/repository-settings.md`
-- `docs/governance/post-merge-activation-checklist.md`
-- `docs/operations/19-governance-reconciliation-notes.md`
-- `scripts/governance/validate-governance.sh` and relevant tests if stale assertions require reconciliation
-- fixture `README.md`
-- `specs/changes/VOC-140-release-convergence-cannot-trust-its-own-ci-run/t00-evidence.md`
-
-## Identity and token/API results
-
-| Case | Expected result |
-|------|-----------------|
-| Newest `ci / ci` SUCCESS on still-running `pipeline.yml` that contains `release / converge` | not attestable; recovery not complete; dedicated `recover-promotion-pr-checks` dispatched |
-| Failed or queued release carrier | not attestable; does not suppress dedicated recovery |
-| Completed `promotion-pr-validation PR #<n>` exact-head/PR-bound | attestable `ci / ci`; recovery complete; redispatch suppressed |
-| Same-head `display_title: pipeline` / `--squash-safe-push` | still rejected |
-| Doomed `pull_request` `ci / ci` | still not rerun as a strategy |
-| Administrator-visible ruleset `20575146` shape with `bypass_actors: []` | `production-merge-guard: ok ruleset_id=…` |
-| App-token-visible ruleset JSON with omitted/non-array `bypass_actors` | distinct `production_merge_guard_payload_incomplete` (or live equivalent), not `production_merge_guard_missing` |
-| Non-empty `bypass_actors` | still fail closed |
-| Mutation token | exactly Contents/Issues/Pull requests write; sole App token for `gh pr merge` and mutations; no Administration |
-| Guard token | exactly Administration write; explicit owner/current caller repository scope; only guard verification; never merge/mutation/status/issues/PR/content |
-| Workflow order | guard-only mint and verification immediately precede fresh exact-head/base/ref revalidation and mutation-token merge in release and production merge-gate paths |
-| External App activation | post-T00 release gate, pending is valid at implementation close — record required Administration: Read and write registration plus owner approval on KARSIFT organization installation `148001476`; record current `repository_selection: all`, explicit caller-repository runtime token scope, and no secret rotation |
-| Hosted guard proof | post-T00 release/closure evidence, pending is valid at implementation close — after approval record sanitized explicit `bypass_actors: []`; omission/non-array/nonempty fail closed; do not consume an implementer retry |
-
-## Exhaustive source and pin reconciliation
-
-Pending. Record the exact tracked-source searches for the old/current pin,
-`CURRENT_PIN` / `AUTHORITATIVE_PIN`, mirrored-file hashes, mutation-only token
-claims, active-A-003 claims, and disabled/unimplemented automatic-release or
-production-deploy claims. List every match and disposition: updated current
-state, preserved clearly historical audit evidence, or irrelevant. At minimum
-include fixture README, `docs/operations/11-devops-and-ci-cd.md`,
-`docs/governance/repository-settings.md`, the activation checklist, DOC-19,
-governance validators that enforce their wording, caller pin-lock tests, and
-foundation pin assertions.
+| Paths | Disposition |
+|-------|-------------|
+| `.github/CODEOWNERS`; `.github/README.md`; `CLAUDE.md`; `CONTRIBUTING.md` | Live repository instructions/routing corrected to active A-004, no standing founder-comment/steward workflow gate, and enabled gated merge/promotion/deploy state. |
+| `docs/README.md`; `docs/engineering/04-technical-architecture.md`; `docs/decisions/README.md` | Current indexes/architecture/decision guidance corrected to reference A-004 and current activation sources. |
+| `docs/governance/README.md`; `docs/governance/change-risk-classification.md`; `docs/governance/16-autonomous-development-operating-model.md`; `docs/governance/protected-areas.md` | Current governance text corrected; bootstrap and pre-A-004 statements are now explicitly historical. DOC-16's obsolete R0-R2 release ceiling is replaced with gated R0-R4 eligibility. |
+| `docs/operations/10-development-workflow.md`; `docs/operations/15-ai-native-product-and-engineering-operating-model.md` | Current branch/deploy and waiver claims corrected to enabled gated release/deploy and no founder-comment override. |
+| `docs/templates/change-specification.md`; `docs/templates/release-record.md`; `docs/templates/technical-approval-request.md` | Current authoring templates corrected to active A-004, stronger R4 evidence, requirement clarification, and exceptional-only human review. |
+| `tooling/governance/fixtures/karsift-ai-infra/README.md`; `docs/operations/11-devops-and-ci-cd.md`; `docs/governance/repository-settings.md`; `docs/governance/post-merge-activation-checklist.md`; `docs/operations/19-governance-reconciliation-notes.md`; `scripts/governance/validate-governance.sh` | Current recovery, two-token, active-A-004, release/deploy, RL1/RL2, and validator claims remain reconciled. The fixture README is explicitly adapted caller-local provenance rather than a canonical byte mirror; it records final pin `67bdfd13…`, strict singleton association validation, compact repository acceptance, custom-run-name reuse, and the bounded ordinary-PR parent exception. |
+| `tooling/governance/fixtures/karsift-ai-infra/PINNED_SHA.txt`; `scripts/foundation/voc097-fixture-matrix.test.mjs`; `scripts/foundation/voc104-ready-for-review-reuse.test.mjs`; `scripts/foundation/voc108-authoritative-lifecycle.test.mjs`; `tooling/governance/tests/test_voc121_implement_policy.py`; `tooling/governance/tests/test_voc122_implement_policy.py`; `tooling/governance/tests/test_voc124_implement_policy.py`; `tooling/governance/tests/test_voc125_implement_fixture.py`; `tooling/governance/tests/test_voc125_implement_policy.py`; `tooling/governance/tests/test_voc126_workflow_dispatch_input_limit.py`; `tooling/governance/tests/test_voc129_caller_replacement.py`; `tooling/governance/tests/test_voc136_caller_replacement.py`; `tooling/governance/tests/test_voc137_pr_sha_scan.py`; `tooling/governance/tests/test_voc138_promotion_pr_provenance.py`; `tooling/governance/tests/test_voc139_promotion_recovery_metadata.py`; `tooling/governance/tests/test_voc140_release_convergence.py` | The pin and all 15 live current-pin assertions were updated to `67bdfd13…`. The VOC-140 test records literal SHA-256 values for the 23 canonical mirrors and an exact final-diff disposition; issue-era `AUTHORITATIVE_PIN`, `VOC139_INFRA_PIN`, package records, and earlier reviewed pin `9fdff24…` remain historical evidence. |
+| `docs/governance/amendments/A-002-governed-autonomous-releases.md`; `docs/governance/amendments/A-003-governed-autonomous-engineering-authority.md`; `docs/governance/amendments/A-004-remove-founder-approval-gates-from-autonomous-engineering-workflows.md`; `docs/governance/a003-transition-state.yaml`; `docs/governance/a004-transition-state.yaml`; `docs/governance/technical-steward-appointment.md` | Frozen amendment, transition, and appointment evidence preserved. Current overlay notices already distinguish active A-004 from historical authority. |
+| `docs/architecture/17-autonomous-development-architecture.md`; `docs/planning/18-autonomous-development-implementation-roadmap.md` (DOC-17 / DOC-18) | Preserved adopted historical design/roadmap exactly as required; `docs/README.md` and DOC-19 explicitly identify their non-current disposition. |
+| `docs/archive/`; historical `specs/changes/` packages | Preserved audit evidence. VOC-138 / VOC-139 were explicitly excluded from edits. |
+| `tooling/governance/validate_repository_foundation.py`; `tooling/governance/tests/test_validate_repository_foundation.py`; `tooling/governance/tests/test_voc080_workflow_policy.py`; historical amendment assertions in `scripts/governance/validate-governance.sh` | Preserved validator/test historical strings required to validate frozen A-003/A-004 records; no live gate depends on them. |
+| `.github/workflows/merge-gate.yml`; `config/authoritative-checks-runner.py`; `config/authoritative_checks.py`; `config/ready-for-review-reuse-runner.py`; `config/verify-ready-for-review-reuse-runner.py`; `config/verify_ready_for_review_reuse.py`; `tests/test_ready_for_review_reuse.py`; `tests/test_voc140_release_carrier_attestation.py` under the fixture root | These are the complete eight canonical mirrors changed by final infra range `9fdff24…` to `67bdfd13…`; each was replaced byte-for-byte with mode `100644`. |
+| The 23 paths under `tooling/governance/fixtures/karsift-ai-infra/` listed by the literal hash table | Exact byte/mode mirrors of authoritative infra merge `67bdfd13…`. Mechanical comparison from `9fdff24…` to `67bdfd13…` found nine changed paths: eight canonical workflow/config/test mirrors were replaced exactly; upstream `README.md` is the sole adapted caller-local path and is deliberately excluded from the canonical hash table. No changed canonical mirror was omitted or added outside that disposition. Old token/recovery strings inside older package evidence remain historical rather than current fixture contract. |
 
 ## Credential residual risk
 
-Pending confirmation. Record that step-level token isolation does not split
-the underlying `karsift-ai-infra-bot` registration/private key: compromise can
-still mint up to installation `148001476`'s combined permission ceiling across
-its current `repository_selection: all` scope. A separately keyed,
-single-repository Administration-only guard App is optional future hardening
-and is not implemented or authorized by VOC-140-T00.
+Step-level token isolation does not split the underlying `karsift-ai-infra-bot`
+registration/private key. Compromise can still mint up to installation
+`148001476`'s combined permission ceiling across its current
+`repository_selection: all` scope. A separately keyed single-repository
+Administration-only guard App is optional future hardening and is not implemented
+by VOC-140-T00.
 
-## Validation commands (implementation)
+## External activation (post-T00 release gate)
 
-Pending. Record against the implementation PR base and the corrected
-supervised implementation range after the repair is tracked and committed.
-The final exact caller head is bound by the App-authored independent-review
-comment/check rather than written into the commit that it identifies.
+Before hosted promotion of #1090:
+
+1. Configure `karsift-ai-infra-bot` Repository permissions Administration: Read and write.
+2. Obtain installation-owner approval on KARSIFT organization installation `148001476`.
+3. Retain explicit caller-repository guard-token scope at runtime.
+4. Do not rotate App ID/private-key secrets.
+5. Rerun failed guard / `reconcile-release` after hosted explicit `bypass_actors: []` proof.
+
+Pending at implementation review is valid; this does not consume implementer retries.
+
+## Validation commands (final implementation revision)
+
+Manual reconciliation after the independently reviewed infrastructure merge. The
+evidence-bearing commit was revalidated without further file changes; these results
+therefore describe the exact pushed implementation revision:
 
 ```bash
-bash scripts/governance/validate-governance.sh \
-  --base <implementation-pr-base> \
-  --head HEAD
-bash scripts/governance/classify-change-risk.sh \
-  --base <implementation-pr-base> \
-  --head HEAD
 python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'
+# OK — 285 tests
+
 python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'
+# OK — 460 tests
+
+python3 -m unittest discover -s tooling/governance/tests -p 'test_voc140_release_convergence.py'
+# OK — 10 tests
+
+python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_voc140_*.py'
+# OK — 32 tests
+
+python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_production_merge_guard.py'
+# OK — 7 tests
+
+python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_ready_for_review_reuse.py'
+# OK — 35 tests
+
+python3 -m unittest discover -s tooling/governance/tests -p 'test_voc097_live_evidence_reconcile.py'
+# OK — 12 tests
+
+bash scripts/governance/validate-governance.sh --base c59548375764d938265910cd07f2c2a73e337c01 --head HEAD
+# OK
+
+bash scripts/governance/classify-change-risk.sh --base c59548375764d938265910cd07f2c2a73e337c01 --head HEAD
+# OK — detected path-based risk floor R4
+
 git diff --check
+# OK
 ```
 
-## Independent verification (implementation)
+Targeted VOC-140 cases are covered by `test_voc140_release_convergence.py`
+(recorded SHA-256 pin-lock literals and exhaustive final-diff disposition),
+`test_voc140_release_carrier_attestation.py`
+(filtered gate-summary composition, failed/queued/cancelled carriers), and
+`test_voc140_production_merge_guard.py` (omitted/empty/non-empty bypass subprocess,
+exhaustive Administration-mint allowlist across all fixture workflows).
+`test_ready_for_review_reuse.py` covers the real compact association, malformed/
+partial/mixed/duplicate/contradictory association rejection in every consumer,
+custom run-name selection, and the bounded ordinary-parent exception. The caller
+VOC-097 merge-gate subprocess replaces the new production-branch input explicitly
+and exercises the mirrored production runner path.
+`test_voc138_promotion_pr_provenance.py` also forces the historical capture object
+to be unavailable through a deterministic Git wrapper, reproducing GitHub's shallow
+checkout while retaining the fail-closed `pr-ancestry` assertion in full local clones.
 
-Pending exact-SHA independent review of the infrastructure PR and the caller
-implementation PR. The App-authored independent-review comment/check must
-bind the live PR head exactly and must explicitly evaluate the circular-CI
-identity case, dedicated promotion-pr-validation requirement,
-omitted-`bypass_actors` token shape, empty-bypass acceptance,
-non-empty-bypass rejection, exact token permissions/scope/use isolation,
-guard-before-merge order, the post-T00 external App approval/hosted-proof
-release-gate contract (which may remain pending at T00 review), current-state
-documentation, same-App residual risk, no-fabricated-status constraint, and
-pin advance. Merge-gate must reject any mismatch. Record a pointer to that
-comment/check here after it exists; do not write the live head SHA into this
-file as a value that the same commit is required to contain. The implementer
-must not approve or merge its own work.
+Governance validation with exact base/head and independent exact-SHA review bind
+the live implementation PR head after commit; this file does not require the
+same commit to contain that head SHA.
 
-## Promotion and closure (post-merge)
+## Exact-head binding contract
 
-Pending. After the exact reviewed caller merge:
-
-- Genuine staging runs only for the real caller tree change. Tree-equivalent
-  post-promotion develop synchronization must not keep staging scheduled.
-- Rerun dedicated `recover-promotion-pr-checks` for #1090 if necessary.
-- `reconcile-release` for #1089 may merge #1090 (or the live same-repository
-  promotion at the then-current `develop` head) once recovered `ci / ci` is a
-  completed non-carrier run and the isolated guard token can prove the live
-  production merge guard before the mutation-token merge.
-- Recovery must emit a successful exact run/repository/PR/base/head/ref/path
-  attestation. Record allowlisted metadata only (workflow identity, event,
-  branch, HEAD SHA, run/job IDs, conclusion).
-- `develop` is advanced to the successful promotion merge SHA before audit
-  close and ends 0 ahead / 0 behind `main` with an identical tree.
-- Every promotion merge push to `main` triggers automatic production
-  deployment, whose exact-SHA result is verified.
-- Release/task/requirement records close with audit comments naming the
-  exact promotion merge. Post-merge audit may record the independently
-  reviewed head and the promotion merge SHA.
-- Root issue #1102 closes only after that allowlisted recovery/release
-  metadata exists.
-- Closed state alone is not completion proof.
-- Incident runs `33136633666`, `33136865709`, `33136984634`, `33137091931`
-  and jobs `98738317266`, `98739074178`, `98739420310` remain audit context
-  only.
+The App-authored independent-review comment/check on the implementation PR must
+bind the live head exactly. Merge-gate must reject any mismatch.

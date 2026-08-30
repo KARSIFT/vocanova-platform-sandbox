@@ -2,16 +2,17 @@
 
 Files in this repository describe policy but cannot enable GitHub organization
 settings, create Cloudflare projects, or provision credentials. A repository
-administrator must configure and record the following before autonomous merge or
-release is enabled.
+administrator must configure, maintain, and record the following for autonomous
+merge and release to remain enabled.
 
-A-003 governance authority is active. That activation must not be represented as
-hosted or technical activation. Automatic merge into `develop` (A-003 §10) is
+A-004 is the active engineering-workflow authority model. That activation must not
+be represented as hosted or technical activation. Automatic merge into `develop` is
 implemented, tested, and proven - live since VOC-012 (see
-`docs/governance/a003-transition-state.yaml`). RL1/RL2 technical activation,
-production deployment, and autonomous production release (A-003 §11/12, a distinct,
-narrower gate than develop-merge) remain disabled or unimplemented. *(Corrected
-2026-07-24 - previously conflated develop-merge with production-release authority.)*
+`docs/governance/a004-transition-state.yaml`). The repository-controlled
+`develop` → `main` promotion path and push-to-`main` production deployment are
+enabled when promotion checks pass; RL1/RL2 technical activation remains disabled.
+*(Corrected 2026-08-30 - previously described A-003 as active and production release
+as disabled.)*
 
 ## GitHub rulesets
 
@@ -69,7 +70,29 @@ Configure `main`:
 GitHub cannot natively express every conditional R0-R4 gate combination using
 CODEOWNERS alone. Use separate protected teams/environments and a reviewed gate that
 validates the effective risk class and attributable evidence. Keep autonomous merge
-disabled until that gate is tested.
+enabled only while that gate remains tested, required, and fail-closed.
+
+### Promotion recovery and production-merge credentials
+
+Promotion recovery excludes `ci / ci` evidence whose parent workflow run is still
+running or otherwise not completed successfully. It also excludes any run that
+actually executed a non-skipped `release / converge` job, even when that run has a
+dedicated-looking title. If no completed non-carrier run is attestable, the dedicated
+`promotion-pr-validation PR #<n>` run must complete successfully for the exact
+promotion PR and head before its result can be attested. A shared workflow whose
+`release / converge` job was skipped remains eligible when every other identity and
+completion check passes.
+
+The production merge path uses two separately minted App tokens. The mutation token grants
+exactly Contents, Issues, and Pull requests write and remains the sole token used for
+merge or other repository mutations; its mint preserves the pre-VOC-140 installation
+scope by setting no `repositories` restriction. Immediately before each merge decision,
+the workflow mints an Administration-write-only guard token with explicit owner and
+current-caller-repository scope. It is used only to run
+`verify-production-merge-guard.sh` and never for status publication or Issues, Pull
+requests, Contents, or merge operations. The guard verifier accepts bypass
+configuration only when GitHub returns an explicit `bypass_actors: []`; omitted,
+non-array, or non-empty values fail closed.
 
 Multiple owners on one CODEOWNERS pattern are alternatives: one matching owner can
 satisfy GitHub's native code-owner review requirement. They do not mean that every
