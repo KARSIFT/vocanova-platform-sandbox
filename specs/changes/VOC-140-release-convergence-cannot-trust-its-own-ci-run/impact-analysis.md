@@ -141,7 +141,7 @@ Active authority model: **A-004**. No founder `approved` comment is required
 for engineering-workflow adopt/merge/release gates. EHR is not triggered.
 
 This draft proposes **R4** because it changes protected CI/CD orchestration
-under `tooling/governance/` and mutates required-check recovery and the App
-isolated guard token used to prove production protection, but the path classifier and
-independent verifier remain authoritative. This is a draft proposal, not a
-determination.
+under `tooling/governance/` and mutates required-check recovery and the
+isolated guard token used to prove production protection, but the path
+classifier and independent verifier remain authoritative. This is a draft
+proposal, not a determination.
