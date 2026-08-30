@@ -18,8 +18,8 @@ Independent review must explicitly evaluate the circular-CI identity case,
 dedicated promotion-pr-validation requirement, omitted-`bypass_actors` token
 shape, empty-bypass acceptance, non-empty-bypass rejection,
 exact two-token permissions/repository scope/use isolation in both workflows,
-external App approval and hosted explicit-empty-bypass proof, current-state
-documentation reconciliation, same-App/private-key residual risk,
+the fail-closed external App action and post-T00 hosted explicit-empty-bypass
+release gate, current-state documentation reconciliation, same-App/private-key residual risk,
 no-fabricated-status constraint, and pin advance before merge.
 
 ## Discovery recorded at planning time (issue #1102)
@@ -56,7 +56,7 @@ no-fabricated-status constraint, and pin advance before merge.
 | Dedicated recovery | dispatch or select `promotion-pr-validation PR #<n>`; require completed/success before attestation |
 | Production guard | still requires effective active repository-owned ruleset, pull-request rule, strict non-empty required checks, and `bypass_actors: []` |
 | Token/API | mutation token remains exactly Contents/Issues/Pull requests write and sole for merge/mutations; distinct current-repository-scoped Administration-write-only guard token is used only for guard verification immediately before merge in both workflows |
-| External activation | `karsift-ai-infra-bot` Administration: Read and write plus owner approval on KARSIFT organization installation `148001476`; installation currently selects all repositories, while guard token stays explicitly caller-repository scoped; no secret rotation; hosted explicit `bypass_actors: []` proof required |
+| External activation | T00 records the fail-closed action; after T00 merge, `karsift-ai-infra-bot` Administration: Read and write plus owner approval on KARSIFT organization installation `148001476`; installation currently selects all repositories, while guard token stays explicitly caller-repository scoped; no secret rotation; hosted explicit `bypass_actors: []` proof required before #1090 promotion |
 | Tests | real token-visible omitted-field payload and circular-CI parent-run fixture; not helper-only full fixtures |
 | Fixture freeze versus advance | issue-creation pin `59943683…` is historical; live pin becomes the new infra merge |
 | VOC-139 / VOC-138 records | do not rewrite `specs/changes/VOC-139-…/` or `VOC-138-…/` |
@@ -123,8 +123,8 @@ In-scope implementation diff paths (expected; record actuals after commit):
 | Mutation token | exactly Contents/Issues/Pull requests write; sole App token for `gh pr merge` and mutations; no Administration |
 | Guard token | exactly Administration write; explicit owner/current caller repository scope; only guard verification; never merge/mutation/status/issues/PR/content |
 | Workflow order | guard-only mint and verification immediately precede fresh exact-head/base/ref revalidation and mutation-token merge in release and production merge-gate paths |
-| External App activation | pending — record Administration: Read and write registration plus owner approval on KARSIFT organization installation `148001476`; record current `repository_selection: all`, explicit caller-repository runtime token scope, and no secret rotation |
-| Hosted guard proof | pending — record sanitized explicit `bypass_actors: []`; omission/non-array/nonempty fail closed |
+| External App activation | post-T00 release gate, pending is valid at implementation close — record required Administration: Read and write registration plus owner approval on KARSIFT organization installation `148001476`; record current `repository_selection: all`, explicit caller-repository runtime token scope, and no secret rotation |
+| Hosted guard proof | post-T00 release/closure evidence, pending is valid at implementation close — after approval record sanitized explicit `bypass_actors: []`; omission/non-array/nonempty fail closed; do not consume an implementer retry |
 
 ## Exhaustive source and pin reconciliation
 
@@ -175,6 +175,7 @@ identity case, dedicated promotion-pr-validation requirement,
 omitted-`bypass_actors` token shape, empty-bypass acceptance,
 non-empty-bypass rejection, exact token permissions/scope/use isolation,
 guard-before-merge order, external App approval/hosted proof, current-state
+release-gate contract (which may remain pending at T00 review), current-state
 documentation, same-App residual risk, no-fabricated-status constraint, and
 pin advance. Merge-gate must reject any mismatch. Record a pointer to that
 comment/check here after it exists; do not write the live head SHA into this

@@ -110,12 +110,12 @@ guard visibility are CI orchestration only.
   the combined App-token system as mutation-only instead of documenting the
   isolated mutation and guard tokens.
   Mitigation: `VOC-140-D11`, `VOC-140-TEST-10`.
-- `VOC-140-R12`: **High shared-credential residual risk** because the same App
+- `VOC-140-R11`: **High shared-credential residual risk** because the same App
   private key can mint tokens up to the installation permission ceiling.
   Mitigation: workflow token-use isolation, short-lived repository-scoped
   guard tokens, explicit evidence, and documenting an optional dedicated guard
   App as future hardening (`VOC-140-D12`).
-- `VOC-140-R11`: **Low application-runtime release risk** because ordinary
+- `VOC-140-R12`: **Low application-runtime release risk** because ordinary
   sync is tree-equivalent; rollback is fixture/test/doc/workflow reversion
   plus infra revert of the coordinated PR.
 - Protected surfaces: caller `tooling/governance/` fixtures and tests, this

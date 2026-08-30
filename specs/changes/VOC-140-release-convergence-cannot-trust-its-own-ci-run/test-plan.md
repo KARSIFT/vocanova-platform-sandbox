@@ -8,9 +8,10 @@
 - Procedure: Construct a fixture modeled on run `33136633666` / job
   `98738317266`: required PR checks show `ci / ci` SUCCESS; the newest
   `ci / ci` check run is completed/success; its parent workflow run is
-  `status=in_progress`, path `.github/workflows/pipeline.yml`, and contains a
-  `release / converge` job (or equivalent `reconcile-release` carrier
-  identity). Assert `recovery_complete` is false. Assert
+  `status=in_progress`, path `.github/workflows/pipeline.yml`, and actually
+  executes a non-skipped `release / converge` job (or has equivalent
+  `reconcile-release` event/input/title carrier identity). Assert
+  `recovery_complete` is false. Assert
   `verify_promotion_required_run_semantics` / attestation fails
   `untrusted_ci_recovery_identity` (or the live equivalent) for that run_id.
   Assert authoritative selection does not choose that run as attestable
@@ -51,8 +52,9 @@
   run with `display_title` `promotion-pr-validation PR #1090`, exact head
   `21eef755…` (or the fixture SHA), exact PR binding, and path
   `.github/workflows/pipeline.yml`. Assert attestation accepts that run for
-  `ci / ci`. Assert recovery_complete is true. Assert redispatch is
-  suppressed. Assert a same-head `display_title: pipeline` /
+  `ci / ci`. Assert recovery_complete is true even though the shared workflow
+  definition contains a skipped `release` job. Assert redispatch is suppressed.
+  Assert a same-head `display_title: pipeline` /
   `--squash-safe-push` run is still rejected.
 - Expected result: dedicated recovery remains the trusted dispatch identity.
 - Evidence: `VOC-140-EV-00`
@@ -200,11 +202,12 @@
   PR base and new infra merge, states that the live head is bound by the
   App-authored independent-review comment/check, and does not require a
   tracked file in the same commit to equal `HEAD`. Assert fixture
-  `roles.yml` is unchanged. Assert hosted evidence from the approved App installation shows
-  the guard-only token received explicit `bypass_actors: []`; omission,
-  non-array, and non-empty values fail closed. Assert no App ID/private-key
-  secret changed. Assert evidence records the shared App/private-key residual
-  risk and labels a dedicated guard App as optional future hardening only.
+  `roles.yml` is unchanged. Assert deterministic fixtures prove omission,
+  non-array, and non-empty values fail closed and that T00 records the precise
+  post-merge operator action without requiring owner approval or a hosted probe
+  to close the implementation task. Assert no App ID/private-key secret changed.
+  Assert evidence records the shared App/private-key residual risk and labels a
+  dedicated guard App as optional future hardening only.
 - Expected result: hosted-equivalent deterministic checks pass;
   classification is R4; exact-head binding remains Git-feasible.
 - Evidence: `VOC-140-EV-00`
@@ -223,8 +226,12 @@
   `33136865709`, `33136984634`, `33137091931` and jobs `98738317266`,
   `98739074178`, `98739420310` are preserved as audit evidence, not restaged
   as this package's implementation work. Assert closed state is not treated
-  as completion proof. Assert root issue #1102 is documented to close only
-  after allowlisted metadata from the successful recovery/release run exists.
+  as completion proof. After T00 merges, assert the KARSIFT installation owner
+  approved Administration: Read and write and a hosted guard-only token scoped
+  to this caller repository received explicit `bypass_actors: []`; omission,
+  non-array, and non-empty values remain fail closed. Assert root issue #1102
+  is documented to close only after this activation proof and allowlisted
+  metadata from the successful recovery/release run exist.
 - Expected result: repair is identity plus token/API plus ordinary release
   handoff, not a snapshot-then-check package.
 - Evidence: `VOC-140-EV-00`

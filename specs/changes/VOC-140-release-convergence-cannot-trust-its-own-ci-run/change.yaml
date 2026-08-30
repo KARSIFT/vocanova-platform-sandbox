@@ -9,7 +9,7 @@ risk: R4
 planned_implementation_risk_floor: 'R4. This package repairs two causally related
   release-convergence defects so the already-open develop-to-main promotion can finish:
   recovery/selection must never treat a still-running release carrier as attestable
-  completed ci / ci, and the App identity that proves the production merge guard must
+  completed ci / ci, and the isolated guard token that proves the production merge guard must
   see full ruleset/no-bypass fields. tooling/governance/* is an R4 path floor. .github/workflows/*
   is an R3 floor. Semantic mutation of required-check recovery, status attestation,
   production-merge-guard authorization, and exact-revision evidence binding is protected.
@@ -205,7 +205,9 @@ dependencies:
 
     '
 - id: VOC-140-DEP-10
-  status: 'known external activation prerequisite. GitHub App karsift-ai-infra-bot
+  status: 'operator-owned post-implementation release activation prerequisite; it
+    does not block plan adoption, implementation authorization, or the reviewed infra/caller
+    merges and must not consume implementer retries. GitHub App karsift-ai-infra-bot
     must request Repository permissions Administration: Read and write, and the
     owner of KARSIFT organization installation 148001476 must approve the permission
     change. Read-only drafting-time inspection reports repository_selection: all and
@@ -213,10 +215,11 @@ dependencies:
     Administration permission. The guard mint must remain explicitly scoped to the
     current caller repository, but that runtime restriction does not narrow the shared
     App/private-key ceiling across installation-selected repositories. No App ID/private-key
-    secret rotation is required. Until hosted guard-only-token evidence returns explicit
-    bypass_actors: [], fail closed with the precise configure, approve, scope, and rerun
-    action. A dedicated single-repository guard App is optional future hardening, not
-    authorized by T00.
+    secret rotation is required. After T00 merges and before #1090 promotion, the
+    operator approval and hosted guard-only-token probe must return explicit bypass_actors:
+    []; until then release fails closed with the precise configure, approve, scope,
+    and rerun action. This proof is release/closure evidence. A dedicated single-repository
+    guard App is optional future hardening, not authorized by T00.
 
     '
 affected_areas:

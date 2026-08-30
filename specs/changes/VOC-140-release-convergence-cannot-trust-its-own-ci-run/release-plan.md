@@ -32,10 +32,10 @@ completion proof.
 | Phase | Owner | Preconditions | Outcome evidence |
 |-------|-------|---------------|------------------|
 | Plan merge | plan reviewer + merge-gate | Draft package; `automatic_merge_allowed: true`; valid `monitoring_impact` | Adopted package on `develop`; no duplicate task roster |
-| External App activation | KARSIFT organization installation owner | `karsift-ai-infra-bot` requests Administration: Read and write; installation `148001476` currently has `repository_selection: all` and no Administration permission; no secret rotation | Permission approved; workflow guard mint remains explicitly scoped to `KARSIFT/vocanova-platform-sandbox`; hosted guard-only-token proof returns explicit `bypass_actors: []`; omission/nonempty remains fail closed |
 | Coordinated infra merge | implementer + independent verifier | New `KARSIFT/karsift-ai-infra` PR; circular-CI repair; mutation token unchanged at exactly Contents/Issues/Pull requests write; separate current-repository Administration-write-only guard token in release and merge-gate production paths | Exact infra merge SHA recorded in caller `PINNED_SHA.txt`; tests prove permission sets, scope, order, and use isolation |
 | T00 caller merge | implementer + independent verifier | Adoption + task authorization; new VOC-140 branch from current `develop`; pin matches the infra merge | `VOC-140-EV-00` — implementation PR base; infra merge; identity and token/API change; App-authored review/check binds the live PR head |
-| Post-merge promotion | existing `release.yml@main` via dedicated recovery if needed, then `reconcile-release` for #1089 | T00 caller changes live on `develop`; valid completion marker; recovered `ci / ci` is a completed non-carrier run; isolated guard token proves ruleset `20575146` before the mutation-token merge | Promotion PR #1090 (or successor at the then-current `develop` head) merges; `develop` is advanced to that exact merge SHA before audit close; refs end 0 ahead / 0 behind with identical tree; allowlisted recovery/release run metadata is recorded |
+| External App activation | KARSIFT organization installation owner, after T00 merge | `karsift-ai-infra-bot` requests Administration: Read and write; installation `148001476` currently has `repository_selection: all` and no Administration permission; no secret rotation; this operator phase does not consume implementer retries | Permission approved; workflow guard mint remains explicitly scoped to `KARSIFT/vocanova-platform-sandbox`; hosted guard-only-token proof returns explicit `bypass_actors: []`; omission/nonempty remains fail closed |
+| Post-merge promotion | existing `release.yml@main` via dedicated recovery if needed, then `reconcile-release` for #1089 | T00 caller changes live on `develop`; external App activation proof passed; valid completion marker; recovered `ci / ci` is a completed non-carrier run; isolated guard token proves ruleset `20575146` before the mutation-token merge | Promotion PR #1090 (or successor at the then-current `develop` head) merges; `develop` is advanced to that exact merge SHA before audit close; refs end 0 ahead / 0 behind with identical tree; allowlisted recovery/release run metadata is recorded |
 | Staging | VOC-111 path selection | Real tree change vs tree-equivalent develop sync | Staging only for the real tree change; tree-equivalent sync must not keep staging scheduled |
 | Production deploy | existing `deploy-production.yml` on every `main` push | Promotion merge produced a `main` push | Automatic production deployment runs; this package does not add a new deploy path; verify its exact-SHA result |
 | Audit reconciliation | implementer evidence + maintainers | Incident run/job IDs preserved | Release/task/requirement records close with audit comments naming the exact promotion merge and the independently reviewed head; root issue #1102 closes only after allowlisted metadata from the successful recovery/release run exists. Runs `33136633666`, `33136865709`, `33136984634`, `33137091931` and jobs `98738317266`, `98739074178`, `98739420310` remain audit context. |
@@ -108,8 +108,9 @@ engineering-workflow gates. Required evidence:
 7. Deterministic proof that omitted `bypass_actors` fails distinctly from
    `production_merge_guard_missing` and names the operator App-setting
    action.
-8. Hosted proof after installation-owner approval that the guard-only token
-   exposes explicit `bypass_actors: []`; no secret rotation.
+8. Post-T00 hosted proof after installation-owner approval that the guard-only
+   token exposes explicit `bypass_actors: []`; no secret rotation and no
+   implementer retry consumed.
 9. Deterministic proof that tests exercise the real token-visible payload
    shape and the circular-CI parent-run fixture.
 10. Deterministic proof that `PINNED_SHA.txt` equals the new infra merge and

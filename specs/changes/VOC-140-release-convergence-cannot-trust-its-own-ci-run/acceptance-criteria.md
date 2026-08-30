@@ -10,8 +10,10 @@
 
 Promotion recovery and authoritative selection do not treat a `ci / ci` check
 as attestable when its parent workflow run is not `completed`/`success`, when
-that run contains `release /` jobs, or when that run is a
-`reconcile-release` / release-converge carrier. The circular-CI class of run
+that run actually executed a non-skipped `release /` job, or when event,
+inputs, or title identify it as a `reconcile-release` / release-converge
+carrier. A skipped `release` job merely defined in the shared workflow does not
+disqualify the dedicated recovery carrier. The circular-CI class of run
 `33136633666` / job `98738317266` cannot recur: recovery does not report
 complete without dispatch merely because required PR checks show SUCCESS for
 that carrier check.
@@ -85,6 +87,10 @@ distinct sanitized class and the precise operator action: configure
 approval on KARSIFT organization installation `148001476`, retain the explicit
 current-caller-repository guard-token scope, do not rotate secrets, and rerun.
 Hosted evidence shows explicit `bypass_actors: []` before merge is permitted.
+T00 acceptance covers the fail-closed implementation, structural isolation
+tests, documentation, and exact operator action. Installation-owner approval
+and the hosted empty-bypass probe are post-T00 release/closure gates, not
+implementer-retry prerequisites; #1090 remains blocked until they pass.
 
 ## VOC-140-AC-05 — Regression tests exercise the real token-visible payload and circular-CI identity
 

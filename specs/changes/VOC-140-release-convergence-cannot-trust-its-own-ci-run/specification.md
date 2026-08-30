@@ -130,9 +130,11 @@ a second task and not a snapshot of the develop/main gap.
 `VOC-140-D01`: Never select an in-progress or failed release carrier as
 trusted recovered `ci / ci`. A check named `ci / ci` whose parent workflow
 run is not `status=completed` and `conclusion=success`, or whose workflow run
-contains `release /` jobs or is a `reconcile-release` / release-converge
-carrier, is not attestable CI. Newest-check selection that ignores parent-run
-completion is the defect class of job `98738317266`.
+actually executed a non-skipped `release /` job or is identified by event,
+inputs, or title as a `reconcile-release` / release-converge carrier, is not
+attestable CI. Merely defining a skipped `release` job in `pipeline.yml` does
+not disqualify the dedicated D02 recovery run. Newest-check selection that
+ignores parent-run completion is the defect class of job `98738317266`.
 
 `VOC-140-D02`: Dedicated promotion-PR recovery remains the recovery carrier.
 When promotion recovery cannot attest a completed successful `ci / ci` run
@@ -213,6 +215,11 @@ rerun the failed guard / `reconcile-release`; do not rotate secrets. Hosted
 evidence must show the guard-only token returns an explicit
 `bypass_actors: []` for the effective production ruleset before merge is
 allowed. Do not print tokens, private-key material, or full ruleset dumps.
+This operator-owned activation occurs after the reviewed infra and caller
+repairs merge and before #1090 promotion; it must not consume or exhaust T00
+implementer retries. T00 is responsible for the fail-closed code, tests,
+documentation, and precise operator action, while the hosted empty-bypass probe
+is release/closure evidence.
 
 `VOC-140-D08`: Tests must exercise the real token-visible payload shape and
 token isolation, not

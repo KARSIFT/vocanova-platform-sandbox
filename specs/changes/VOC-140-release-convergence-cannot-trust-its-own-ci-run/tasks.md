@@ -62,14 +62,16 @@ satisfy sha_lineage against promotion PR #1090's recovery HEAD.
    same two-token separation in the production-branch merge-gate path and fail
    distinctly when `bypass_actors` is omitted. Do not add bypass actors,
    fabricate statuses, or rerun doomed `pull_request` `ci / ci` jobs.
-4. Complete the known external activation prerequisite: configure GitHub App
-   `karsift-ai-infra-bot` Repository permissions as Administration: Read and
-   write and obtain owner approval on KARSIFT organization installation
-   `148001476`. Record that its current `repository_selection: all` ceiling is
-   broader than the workflow's required explicit token restriction to
+4. Encode and document the known external activation prerequisite and its
+   precise fail-closed action: configure GitHub App `karsift-ai-infra-bot`
+   Repository permissions as Administration: Read and write and obtain owner
+   approval on KARSIFT organization installation `148001476`. Record that its
+   current `repository_selection: all` ceiling is broader than the workflow's
+   required explicit token restriction to
    `KARSIFT/vocanova-platform-sandbox`. Do not rotate App ID/private-key secrets.
-   Until hosted guard verification returns explicit
-   `bypass_actors: []`, fail closed with the precise approval-and-rerun action.
+   The owner approval and hosted explicit `bypass_actors: []` probe occur after
+   T00 merges and before #1090 promotion; they are release/closure evidence and
+   must not consume or exhaust T00 implementer retries.
 5. Add deterministic tests for the #1102 circular-CI class, dedicated
    promotion-pr-validation dispatch/selection, omitted-`bypass_actors`
    payload, empty-bypass acceptance, non-empty-bypass rejection, and a
@@ -99,7 +101,7 @@ satisfy sha_lineage against promotion PR #1090's recovery HEAD.
    recovery-identity change, exact two-token contract and external
    App-setting/installation-owner action, negative-case
    results, exact token sets/scope/use isolation, source-search disposition,
-   installation approval and hosted empty-bypass proof, pin advance,
+   post-T00 installation approval/hosted empty-bypass release gate, pin advance,
    same-App/private-key residual risk and optional dedicated guard App,
    validation commands after commit, and the feasible
    exact-head binding contract. Evidence must not require a commit to contain

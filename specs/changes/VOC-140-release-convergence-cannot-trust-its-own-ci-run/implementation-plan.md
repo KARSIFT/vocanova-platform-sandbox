@@ -91,10 +91,12 @@ Ordered steps:
    nested checkout as already-merged work.
 4. Obtain independent exact-revision review of that infra PR and merge it.
    Record the exact merge SHA.
-5. After installation-owner approval, run hosted guard verification and record
-   sanitized proof that the guard-only token exposes explicit
-   `bypass_actors: []`. Omission, non-array, non-empty bypass, or pending App
-   permission approval fails closed with the precise approve-and-rerun action.
+5. Encode and test the fail-closed operator action, but do not wait for or
+   attempt to substitute for installation-owner approval inside T00. Record
+   that hosted explicit `bypass_actors: []` proof is pending post-T00
+   release/closure evidence. Omission, non-array, non-empty bypass, or pending
+   App permission approval must fail closed with the precise approve-and-rerun
+   action.
 6. From current caller `develop`, create a new VOC-140 implementation branch.
    Set `PINNED_SHA.txt` and mirror every changed authoritative fixture file
    from that exact merge. Update the named current-state docs. Reconcile all
@@ -106,13 +108,15 @@ Ordered steps:
 8. Track and commit the caller repair. Re-run suites against the committed
    tree. A pass obtained only while untracked is not acceptance.
 9. Record evidence in `t00-evidence.md`, including source-search disposition,
-   external activation proof, exact token sets/scope/isolation, and the
-   same-App/private-key residual risk. This package's caller PR `Closes`
-   only its own VOC-140 task issue.
-10. After the exact reviewed caller PR merges, rerun dedicated promotion
-   recovery if necessary, then `reconcile-release` for #1089 completes
-   promotion of #1090 (or the live promotion at the then-current `develop`
-   head). Do not add a snapshot-gap task.
+   the external activation contract and pending release gate, exact token
+   sets/scope/isolation, and the same-App/private-key residual risk. This
+   package's caller PR `Closes` only its own VOC-140 task issue.
+10. After the exact reviewed caller PR merges, the installation owner approves
+    the App permission and the hosted current-repository guard probe must show
+    explicit `bypass_actors: []`. Then rerun dedicated promotion recovery if
+    necessary and `reconcile-release` for #1089 completes promotion of #1090
+    (or the live promotion at the then-current `develop` head). Do not add a
+    snapshot-gap task or consume an implementer retry for this operator phase.
 
 ## Validation and independent verification
 
