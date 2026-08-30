@@ -140,12 +140,16 @@ if grep -Eqi 'no qualified (human )?technical[- ]steward( identity or team)? exi
   exit 1
 fi
 
-grep -Fqx "Status: Not activated" "$activation" || {
-  echo "Governance activation status must remain Not activated." >&2
+grep -Fq "RL1/RL2 technical activation remain disabled" "$activation" || {
+  echo "The activation checklist must keep RL1/RL2 technical activation disabled." >&2
   exit 1
 }
-grep -Fq "autonomous production release remains disabled" "$activation" || {
-  echo "The activation checklist must keep autonomous production release disabled." >&2
+grep -Fq "A-004 is the active engineering-workflow authority model" "$activation" || {
+  echo "The activation checklist must document active A-004 authority." >&2
+  exit 1
+}
+grep -Fq "repository-controlled" "$activation" || {
+  echo "The activation checklist must document the repository-controlled release/deploy path." >&2
   exit 1
 }
 if grep -Eqi '^[[:space:]]*Status:[[:space:]]*Activated|^- \[x\].*(autonomous|production release).*(enable|activat)' "$activation"; then

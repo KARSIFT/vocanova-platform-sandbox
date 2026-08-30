@@ -45,6 +45,7 @@ Issue-creation / VOC-139 pin (defective for this failure class; historical audit
 | Case | Result |
 |------|--------|
 | Newest `ci / ci` SUCCESS on in-progress `pipeline.yml` release carrier | not attestable; recovery not complete without dedicated dispatch |
+| PR-required `ci / ci` SUCCESS with attestable selection filtered from gate summary | recovery not complete (#1102 composition fix in `promotion_ci_context_is_attestable`) |
 | Completed `promotion-pr-validation PR #<n>` exact-head/PR-bound | attestable; may suppress redispatch |
 | Omitted/non-array `bypass_actors` in ruleset payload | `production_merge_guard_payload_incomplete` with operator action |
 | `bypass_actors: []` under Administration token | `production-merge-guard: ok` |
@@ -58,7 +59,7 @@ Issue-creation / VOC-139 pin (defective for this failure class; historical audit
 | Pin `59943683…` in fixture README / historical package evidence | preserved as historical |
 | Live `PINNED_SHA.txt` and pin-lock tests | updated to `0ee1daf…` |
 | `mutation-only` App-token claims in DOC-11 | updated to mutation vs guard-only split |
-| Active-A-003 / disabled production release in repository-settings, DOC-19, activation checklist | updated to active A-004 and enabled release/deploy path; RL1/RL2 remain disabled |
+| Active-A-003 / disabled production release in repository-settings, DOC-19, activation checklist | updated to active A-004 and enabled release/deploy path; RL1/RL2 remain disabled; `validate-governance.sh` reconciled |
 | VOC-138 / VOC-139 package records under `specs/changes/` | unchanged (audit evidence) |
 
 ## Credential residual risk
@@ -84,15 +85,30 @@ Pending at implementation review is valid; this does not consume implementer ret
 
 ## Validation commands (implementation working tree)
 
+Remediation attempt 2 — results from the working tree after blocking-finding fixes:
+
 ```bash
 python3 -m unittest discover -s tooling/governance/tests -p 'test_*.py'
+# OK — 281 tests
+
 python3 -m unittest discover -s tooling/governance/fixtures/karsift-ai-infra/tests -p 'test_*.py'
+# OK — 490 tests
+
+bash scripts/governance/validate-governance.sh --base c59548375764d938265910cd07f2c2a73e337c01 --head HEAD
+# OK
+
+bash scripts/governance/classify-change-risk.sh --base c59548375764d938265910cd07f2c2a73e337c01 --head HEAD
+# OK — detected path-based risk floor R4
+
 git diff --check
+# OK
 ```
 
-Targeted VOC-140 cases are covered by `test_voc140_release_convergence.py`,
-`test_voc140_release_carrier_attestation.py`, and
-`test_voc140_production_merge_guard.py` in the mirrored infra suite.
+Targeted VOC-140 cases are covered by `test_voc140_release_convergence.py`
+(recorded SHA-256 pin-lock literals), `test_voc140_release_carrier_attestation.py`
+(filtered gate-summary composition, failed/queued/cancelled carriers), and
+`test_voc140_production_merge_guard.py` (omitted/empty/non-empty bypass subprocess,
+exhaustive Administration-mint allowlist across all fixture workflows).
 
 Governance validation with exact base/head and independent exact-SHA review bind
 the live implementation PR head after commit; this file does not require the

@@ -327,13 +327,24 @@ def promotion_ci_context_is_attestable(
     gate_summary: dict[str, Any],
     workflow_runs: Iterable[dict[str, Any]],
     *,
+    pr_required_checks: Sequence[Mapping[str, Any]] | None = None,
     pr_number: int | None = None,
 ) -> bool:
     """Require completed non-carrier backing evidence for ci / ci."""
 
-    for item in gate_summary.get("checks", []):
-        if item.get("name") != "ci / ci":
-            continue
+    ci_checks = [
+        item
+        for item in gate_summary.get("checks", [])
+        if item.get("name") == "ci / ci"
+    ]
+    if pr_required_checks is not None:
+        if not missing_required_pr_contexts(pr_required_checks, ("ci / ci",)):
+            # PR ruleset view may show SUCCESS while attestable selection filtered
+            # the untrusted carrier check out of gate_summary (#1102 class).
+            if not ci_checks:
+                return False
+
+    for item in ci_checks:
         if item.get("state") != "SUCCESS":
             return False
         run_id = item.get("run_id")
@@ -371,6 +382,7 @@ def recovery_complete(
     if mode == "promotion_pr" and not promotion_ci_context_is_attestable(
         gate_summary,
         workflow_runs,
+        pr_required_checks=pr_required_checks,
         pr_number=pr_number,
     ):
         return False

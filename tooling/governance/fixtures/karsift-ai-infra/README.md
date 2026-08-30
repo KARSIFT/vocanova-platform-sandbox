@@ -256,7 +256,10 @@ Release additionally grants its job token Commit statuses write. After genuine
 exact-head checks from the three expected workflows pass, it publishes only the
 three ruleset-required same-SHA status attestations. The attestations link to the
 release run and are excluded from authoritative selection, so they cannot replace
-the underlying Actions evidence; the App token remains mutation-only.
+the underlying Actions evidence; the mutation App token remains exactly
+Contents/Issues/Pull requests write for merge and mutations, while a separate
+caller-repository-scoped Administration-write guard token is used only for
+`verify-production-merge-guard.sh` immediately before merge.
 The caller template exposes the existing integration resolver/recovery pair to
 operator dispatch without accepting a free-form target SHA, closing the
 default-branch schedule bootstrap gap encountered during the live proof.

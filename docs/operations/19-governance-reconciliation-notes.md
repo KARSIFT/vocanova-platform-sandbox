@@ -33,17 +33,22 @@ source_files:
 
 ## 1. Current authority in plain terms
 
-VocaNova classifies changes R0–R4 and releases RL1–RL3. These are separate axes. Routine R0–R2
-work uses proportionate checks and independent verification. Routine R3 protected technical work
-uses strengthened risk-specific controls and independent verification, but effectively active
-A-003 retired standing founder or technical-steward approval merely because work is R3. R4 covers
-consequential business, legal, pricing, major product-direction, privacy/user-trust, launch, or
-difficult-to-reverse decisions and requires founder approval. EHR is an exceptional stop-and-seek-
+VocaNova classifies changes R0–R4 and releases RL1–RL3. These are separate axes. **A-004** is
+the active engineering-workflow authority model (activated by canonical merge of VOC-080-T07; see
+[the A-004 transition state](../governance/a004-transition-state.yaml)). Routine R0–R3 work uses
+proportionate checks and independent verification without standing founder or technical-steward
+approval merely because work is R3. R4 carries stronger evidence obligations but no founder
+`approved`-comment merge gate on engineering workflows. EHR is an exceptional stop-and-seek-
 expertise condition, not a standing approval layer or a risk class.
+
+**Historical (A-003):** Before A-004 activation, effectively active A-003 retired standing
+founder or technical-steward approval merely because work was R3; R4 still required founder
+approval on merge. That model is preserved in amendment records as audit evidence only.
 
 Canonical sources: [DOC-16](../governance/16-autonomous-development-operating-model.md),
 [A-002](../governance/amendments/A-002-governed-autonomous-releases.md),
 [A-003](../governance/amendments/A-003-governed-autonomous-engineering-authority.md),
+[A-004](../governance/amendments/A-004-remove-founder-approval-gates-from-autonomous-engineering-workflows.md),
 [risk classification](../governance/change-risk-classification.md), and the
 [approval matrix](../governance/approval-matrix.md).
 

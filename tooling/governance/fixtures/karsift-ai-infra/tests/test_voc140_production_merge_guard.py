@@ -22,8 +22,33 @@ from production_merge_guard import (  # noqa: E402
 
 
 REPOSITORY = "KARSIFT/example"
-RELEASE_WORKFLOW = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
-MERGE_GATE_WORKFLOW = (ROOT / ".github/workflows/merge-gate.yml").read_text(encoding="utf-8")
+WORKFLOW_ROOT = ROOT / ".github/workflows"
+RELEASE_WORKFLOW = (WORKFLOW_ROOT / "release.yml").read_text(encoding="utf-8")
+MERGE_GATE_WORKFLOW = (WORKFLOW_ROOT / "merge-gate.yml").read_text(encoding="utf-8")
+
+ALLOWED_ADMINISTRATION_MINT_PATHS = frozenset(
+    {
+        (WORKFLOW_ROOT / "release.yml", "Mint App installation token for production merge guard"),
+        (
+            WORKFLOW_ROOT / "merge-gate.yml",
+            "Mint App installation token for production merge guard",
+        ),
+    }
+)
+
+
+def iter_create_github_app_token_mints(workflow_path: Path) -> list[tuple[str, str]]:
+    """Return (step_name, mint_block) for every App-token mint in a workflow."""
+
+    source = workflow_path.read_text(encoding="utf-8")
+    mints: list[tuple[str, str]] = []
+    for section in source.split("- name: ")[1:]:
+        name, _, remainder = section.partition("\n")
+        if "uses: actions/create-github-app-token@" not in remainder:
+            continue
+        block = remainder.split("\n      - name: ", 1)[0]
+        mints.append((name.strip(), block))
+    return mints
 
 
 def effective(*, ruleset_id: int = 42):
@@ -152,6 +177,42 @@ class Voc140ProductionMergeGuardTests(unittest.TestCase):
         self.assertIn("production_merge_guard_payload_incomplete", result.stderr)
         self.assertIn("operator_action=", result.stderr)
 
+    def test_verify_script_subprocess_with_mock_gh_empty_bypass(self):
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            gh_path = workspace / "gh"
+            gh_path.write_text(
+                "#!/usr/bin/env bash\n"
+                "set -euo pipefail\n"
+                'if [[ "$*" == *rules/branches/* ]]; then\n'
+                '  printf \'[{"type":"required_status_checks","ruleset_id":42,"ruleset_source_type":"Repository","ruleset_source":"KARSIFT/example","parameters":{"strict_required_status_checks_policy":true,"required_status_checks":[{"context":"ci"}]}}]\\n\'\n'
+                "  exit 0\n"
+                "fi\n"
+                'if [[ "$*" == *rulesets/42 ]]; then\n'
+                '  printf \'{"id":42,"target":"branch","source_type":"Repository","source":"KARSIFT/example","enforcement":"active","bypass_actors":[],"rules":[{"type":"pull_request","parameters":{}},{"type":"required_status_checks","parameters":{"strict_required_status_checks_policy":true,"required_status_checks":[{"context":"ci"}]}}]}\\n\'\n'
+                "  exit 0\n"
+                "fi\n"
+                "exit 99\n"
+            )
+            gh_path.chmod(gh_path.stat().st_mode | stat.S_IEXEC)
+            environment = os.environ.copy()
+            environment["PATH"] = f"{workspace}:{environment['PATH']}"
+            result = subprocess.run(
+                [
+                    "bash",
+                    str(ROOT / "config/verify-production-merge-guard.sh"),
+                    REPOSITORY,
+                    "main",
+                    str(ROOT / "config"),
+                ],
+                text=True,
+                capture_output=True,
+                check=False,
+                env=environment,
+            )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("production-merge-guard: ok ruleset_id=42", result.stdout)
+
     def test_release_mutation_mint_has_exact_permissions_without_administration(self):
         mutation = RELEASE_WORKFLOW.split("Mint App installation token for release mutation", 1)[1]
         mutation = mutation.split("Mint App installation token for production merge guard", 1)[0]
@@ -186,9 +247,36 @@ class Voc140ProductionMergeGuardTests(unittest.TestCase):
         merge = MERGE_GATE_WORKFLOW.split("Merge automatically", 1)[1].split(
             "Publish task completion marker", 1
         )[0]
+        self.assertIn("owner: ${{ github.repository_owner }}", guard)
+        self.assertIn("repositories: ${{ github.event.repository.name }}", guard)
         self.assertIn("permission-administration: write", guard)
+        self.assertNotIn("permission-contents: write", guard)
+        self.assertNotIn("permission-issues: write", guard)
+        self.assertNotIn("permission-pull-requests: write", guard)
         self.assertIn('GH_TOKEN="$GUARD_TOKEN" bash karsift-ai-infra/config/verify-production-merge-guard.sh', merge)
         self.assertIn('GH_TOKEN="$MUTATION_TOKEN" gh pr merge', merge)
+
+    def test_only_named_guard_paths_request_administration_mint(self):
+        for workflow_path in sorted(WORKFLOW_ROOT.glob("*.yml")):
+            for step_name, block in iter_create_github_app_token_mints(workflow_path):
+                with self.subTest(workflow=workflow_path.name, step=step_name):
+                    if "permission-administration: write" not in block:
+                        continue
+                    self.assertIn(
+                        (workflow_path, step_name),
+                        ALLOWED_ADMINISTRATION_MINT_PATHS,
+                        (
+                            f"unexpected Administration mint in {workflow_path.name} "
+                            f"step {step_name!r}"
+                        ),
+                    )
+                    self.assertIn("owner: ${{ github.repository_owner }}", block)
+                    self.assertIn(
+                        "repositories: ${{ github.event.repository.name }}", block
+                    )
+                    self.assertNotIn("permission-contents: write", block)
+                    self.assertNotIn("permission-issues: write", block)
+                    self.assertNotIn("permission-pull-requests: write", block)
 
 
 if __name__ == "__main__":

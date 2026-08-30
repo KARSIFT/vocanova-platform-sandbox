@@ -92,6 +92,40 @@ def dedicated_recovery_run(*, status: str = "completed", conclusion: str = "succ
     }
 
 
+def gate_summary_without_ci() -> dict:
+    return {
+        "checks": [
+            {
+                "name": "governance-policy",
+                "state": "SUCCESS",
+                "kind": "check_run",
+                "workflow": "github-actions",
+                "conclusion": "success",
+                "run_id": 1,
+            },
+            {
+                "name": "validate",
+                "state": "SUCCESS",
+                "kind": "check_run",
+                "workflow": "github-actions",
+                "conclusion": "success",
+                "run_id": 2,
+            },
+        ],
+        "pending": 0,
+        "failed": 0,
+        "successful": 2,
+    }
+
+
+def pr_required_checks_success() -> list[dict[str, str]]:
+    return [
+        {"name": "governance-policy", "state": "SUCCESS"},
+        {"name": "validate", "state": "SUCCESS"},
+        {"name": "ci / ci", "state": "SUCCESS"},
+    ]
+
+
 class Voc140ReleaseCarrierAttestationTests(unittest.TestCase):
     def test_in_progress_release_carrier_is_not_attestable(self):
         run = release_carrier_run()
@@ -114,11 +148,52 @@ class Voc140ReleaseCarrierAttestationTests(unittest.TestCase):
                 gate_summary=summary,
                 workflow_runs=workflow_runs,
                 head_sha=HEAD_SHA,
-                pr_required_checks=[
-                    {"name": "governance-policy", "state": "SUCCESS"},
-                    {"name": "validate", "state": "SUCCESS"},
-                    {"name": "ci / ci", "state": "SUCCESS"},
-                ],
+                pr_required_checks=pr_required_checks_success(),
+                pr_number=PR_NUMBER,
+            )
+        )
+
+    def test_recovery_not_complete_when_filtered_summary_lacks_attestable_ci(
+        self,
+    ):
+        """#1102 composition: pr checks SUCCESS but attestable selection dropped ci / ci."""
+        summary = gate_summary_without_ci()
+        workflow_runs = [release_carrier_run()]
+        self.assertFalse(
+            recovery_complete(
+                mode="promotion_pr",
+                gate_summary=summary,
+                workflow_runs=workflow_runs,
+                head_sha=HEAD_SHA,
+                pr_required_checks=pr_required_checks_success(),
+                pr_number=PR_NUMBER,
+            )
+        )
+
+    def test_failed_release_carrier_is_not_attestable(self):
+        run = release_carrier_run(status="completed", conclusion="failure")
+        self.assertFalse(parent_run_is_attestable(run, pr_number=PR_NUMBER))
+
+    def test_queued_release_carrier_is_not_attestable(self):
+        run = release_carrier_run(status="queued", conclusion=None)
+        self.assertFalse(parent_run_is_attestable(run, pr_number=PR_NUMBER))
+
+    def test_cancelled_release_carrier_is_not_attestable(self):
+        run = release_carrier_run(status="completed", conclusion="cancelled")
+        self.assertFalse(parent_run_is_attestable(run, pr_number=PR_NUMBER))
+
+    def test_recovery_not_complete_when_only_failed_carrier_backed_ci(self):
+        summary = gate_summary_with_ci()
+        workflow_runs = [
+            release_carrier_run(status="completed", conclusion="failure")
+        ]
+        self.assertFalse(
+            recovery_complete(
+                mode="promotion_pr",
+                gate_summary=summary,
+                workflow_runs=workflow_runs,
+                head_sha=HEAD_SHA,
+                pr_required_checks=pr_required_checks_success(),
                 pr_number=PR_NUMBER,
             )
         )
@@ -132,11 +207,7 @@ class Voc140ReleaseCarrierAttestationTests(unittest.TestCase):
                 gate_summary=summary,
                 workflow_runs=workflow_runs,
                 head_sha=HEAD_SHA,
-                pr_required_checks=[
-                    {"name": "governance-policy", "state": "SUCCESS"},
-                    {"name": "validate", "state": "SUCCESS"},
-                    {"name": "ci / ci", "state": "SUCCESS"},
-                ],
+                pr_required_checks=pr_required_checks_success(),
                 pr_number=PR_NUMBER,
             )
         )
