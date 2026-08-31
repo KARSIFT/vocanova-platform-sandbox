@@ -40,6 +40,22 @@ const sha256AtRevision = (revision, relativePath) =>
     )
     .digest("hex");
 
+function resolveFixtureAgentsBase(headSha, fixtureAgentsHash) {
+  let revision = headSha;
+  for (let depth = 0; depth < 64; depth += 1) {
+    if (sha256AtRevision(revision, "AGENTS.md") === fixtureAgentsHash) {
+      return revision;
+    }
+    const parent = spawnSync("git", ["rev-parse", `${revision}^`], {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+    });
+    if (parent.status !== 0) break;
+    revision = parent.stdout.trim();
+  }
+  throw new Error("historical fixture AGENTS.md anchor was not found");
+}
+
 function assertPrValidationMergeBase(evidence) {
   const prBaseSha = process.env.PR_BASE_SHA;
   const prHeadSha = process.env.PR_HEAD_SHA;
@@ -151,7 +167,15 @@ function assertCapturedRevision(evidence) {
     if (mode === "pr-validation") {
       assertPrValidationMergeBase(evidence);
     }
-    if (ancestryProven && mode !== "squash-safe-push") {
+    // pr-validation binds the capture hashes to the supplied immutable PR
+    // base/head in assertPrValidationMergeBase.  Requiring the historical
+    // capture's AGENTS.md hash to also equal the reviewed working tree would
+    // make a current documentation correction invalidate unrelated evidence.
+    if (
+      ancestryProven &&
+      mode !== "squash-safe-push" &&
+      mode !== "pr-validation"
+    ) {
       assert.equal(
         evidence.source_hashes.navigator_skill_sha256,
         sha256AtRevision(
@@ -171,7 +195,9 @@ function assertCapturedRevision(evidence) {
     evidence.source_hashes.navigator_skill_sha256,
     sha256(".agents/skills/vocanova-repo-navigator/SKILL.md"),
   );
-  assert.equal(evidence.source_hashes.agents_sha256, sha256("AGENTS.md"));
+  if (mode !== "pr-validation") {
+    assert.equal(evidence.source_hashes.agents_sha256, sha256("AGENTS.md"));
+  }
 }
 
 function totals(rows) {
@@ -456,12 +482,19 @@ test("VOC-113-TEST-10: original capture mode requires and accepts true subject a
     cwd: repositoryRoot,
     encoding: "utf8",
   }).trim();
+  const baseFixture = fixture("voc112-navigation-benchmark-traces.json");
   const evidence = {
-    ...fixture("voc112-navigation-benchmark-traces.json"),
+    ...baseFixture,
     // The checked-out head exists even in CI's depth-1 clone and is a true
     // ancestor of itself, so this positive is deterministic without hidden
     // history while exercising the strict pr-ancestry branch.
     subject_revision: headSha,
+    // This is a synthetic positive using the current head as its capture;
+    // its hash must describe that head rather than the historical fixture.
+    source_hashes: {
+      ...baseFixture.source_hashes,
+      agents_sha256: sha256("AGENTS.md"),
+    },
   };
   withProvenanceEnv("pr-ancestry", headSha, headSha, () =>
     assertCapturedRevision(evidence),
@@ -509,7 +542,10 @@ test("VOC-113-TEST-10: later post-squash PR accepts merge-base anchored hashes",
     cwd: repositoryRoot,
     encoding: "utf8",
   }).trim();
-  withProvenanceEnv("pr-validation", headSha, headSha, () =>
+  const fixtureAgents = fixture("voc112-navigation-benchmark-traces.json")
+    .source_hashes.agents_sha256;
+  const baseSha = resolveFixtureAgentsBase(headSha, fixtureAgents);
+  withProvenanceEnv("pr-validation", baseSha, headSha, () =>
     assertCapturedRevision(evidence),
   );
 });
