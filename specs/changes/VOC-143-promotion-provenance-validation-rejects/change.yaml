@@ -1,0 +1,223 @@
+schema_version: 1
+id: VOC-143
+slug: promotion-provenance-validation-rejects
+title: Promotion provenance validation rejects legitimate AGENTS.md change under squash-safe-push
+type: infrastructure
+status: draft
+risk: R3
+planned_implementation_risk_floor: 'R3. This package repairs VOC-112 capture provenance
+  so a legitimate current AGENTS.md documentation update with an intentionally unmodified
+  historical fixture can pass promotion-path validate (squash-safe-push) and ci /
+  ci (promotion pr-validation). scripts/foundation/*.mjs is an R1 path floor. Semantic
+  mutation of required-check provenance used before develop-to-main promotion is CI/CD
+  / governance-enforcement (R3). Editing .github/workflows/repository-governance.yml
+  would raise the path floor to R4 and is out of scope unless SHA passing is proven
+  insufficient. This is a draft proposal for human adoption review, not a determination.
+  The path classifier and independent verifier remain authoritative.
+
+  '
+canonical_path: specs/changes/VOC-143-promotion-provenance-validation-rejects
+authority_model: a004-active
+requirement_source: 'GitHub issue #1120 (Promotion provenance validation rejects legitimate
+  AGENTS.md change under squash-safe-push), including its original body. Automatic
+  VOC-142 develop-to-main promotion PR #1119 is blocked on exact head 376e00dd769253d7a255660f5391fb208781e2f3.
+  Required validate and ci / ci fail during the promotion path. Release audit issue
+  #1118 remains open. Reproduction: merge a governed implementation PR that changes
+  AGENTS.md without recapturing the historical VOC-112 benchmark fixture (VOC-142-DEP-07);
+  let automatic develop to main promotion run; node --test scripts/foundation/voc112-navigation-benchmark.test.mjs
+  in that promotion validation context. Expected: squash-safe-push validates the historical
+  capture against its correct immutable provenance anchor and permits an unrelated
+  current AGENTS.md documentation update. Actual: the benchmark still requires the
+  fixture historical agents_sha256 to equal the current working-tree AGENTS.md hash.
+  Root cause: VOC-142 narrowed the working-tree AGENTS.md exception only for pr-validation;
+  squash-safe-push retains unconditional working-tree equality, and promotion pr-validation
+  still binds agents_sha256 to PR HEAD, so both required promotion checks fail. This
+  draft package does not adopt or authorize itself.
+
+  '
+requirement_approval_status: issue-sourced requirement; this draft package is not
+  adopted and does not authorize implementation
+base_branch: develop
+base_sha: 'Issue-creation promotion PR #1119 head is 376e00dd769253d7a255660f5391fb208781e2f3.
+  Issue-creation infrastructure pin is VOC-142 merge 8993e867640dfb604dec0466c4e0787e68d8e258
+  and is not the defective contract for this failure class; the defect is the caller
+  VOC-112 provenance assertion. Implementation must record the actual implementation
+  PR base separately at dispatch, fail closed on unrelated/material movement of develop,
+  and must not treat this package''s own plan/adoption/roster commits as protected-file
+  drift. Do not snapshot the current develop/main gap. Do not pin-advance unless an
+  in-scope infra contract change is proven necessary.
+
+  '
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: 'planner (drafting only; adoption remains a human/autonomous
+    governed decision) '
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: 'none-intentional for application runtime. This package repairs
+  VOC-112 provenance assertions so promotion-path required checks accept a legitimate
+  AGENTS.md documentation update while historical capture fixtures remain unmodified.
+  Ordinary post-promotion synchronization remains a tree-equivalent integration-ref
+  update. This package does not add a new production deploy path, change secret values,
+  providers, the production merge guard, or monitor inventory.
+
+  '
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: 'VOC-112 capture-provenance assertion repair for promotion-path squash-safe-push
+    and promotion pr-validation. No page routes, critical API endpoints, monitor inventory,
+    or synthetic inventory in infra/monitoring/ are added or changed.
+
+    '
+dependencies:
+- id: VOC-143-DEP-00
+  status: 'resolved at drafting time. Issue #1120 provides promotion PR #1119, exact
+    head 376e00dd769253d7a255660f5391fb208781e2f3, failing required validate and ci
+    / ci, open release audit #1118, the VOC-142-DEP-07 no-recapture constraint, the
+    squash-safe-push working-tree AGENTS.md equality failure, and enough specificity
+    to draft without a clarifying round trip.
+
+    '
+- id: VOC-143-DEP-01
+  status: 'resolved at drafting time. Active A-004 remains authoritative. No founder
+    approved-comment gate on engineering-workflow adopt/merge/release paths. Exact-SHA
+    independent verification, deterministic risk floors, protected-path controls,
+    and fail-closed behavior remain mandatory. R3 is a draft proposal, not a determination.
+    automatic_merge_allowed is drafted true per AGENTS.md A-004 drafting rule.
+
+    '
+- id: VOC-143-DEP-02
+  status: 'resolved at drafting time by reading live caller sources. scripts/foundation/voc112-navigation-benchmark.test.mjs
+    assertCapturedRevision skips captured-revision AGENTS.md binding for squash-safe-push
+    and pr-validation, then still requires evidence.source_hashes.agents_sha256 ==
+    sha256("AGENTS.md") for every mode except pr-validation. .github/workflows/repository-governance.yml
+    selects squash-safe-push for same-repository main <- develop promotion PRs and
+    for push/non-PR events, while still exporting PR_BASE_SHA / PR_HEAD_SHA on pull_request.
+    tooling/governance fixtures ci.yml uses --promotion-pr (pr-validation, VOC112_PROMOTION_PR=true)
+    for that same promotion PR pair, so ci / ci binds agents_sha256 to PR HEAD via
+    assertPrValidationMergeBase. VOC-142 therefore unblocked ordinary pr-validation
+    (merge-base anchor) and left both promotion required checks failing against an
+    unmodified historical fixture. resolveFixtureAgentsBase already walks from a tip
+    to the ancestor whose AGENTS.md matches the fixture hash. Live PINNED_SHA.txt
+    equals 8993e867640dfb604dec0466c4e0787e68d8e258 and is not this defect. An untracked
+    local karsift-ai-infra/ checkout, if present, is not this repository''s tracked
+    tree.
+
+    '
+- id: VOC-143-DEP-03
+  status: 'resolved at drafting time as the chosen design. One end-to-end implementation
+    task covering the caller provenance assertion, promotion pr-validation AGENTS.md
+    historical-ancestor bind, regression tests, current-state docs, evidence, and
+    release handoff. Do not split by validate versus ci / ci, test, or docs. Do not
+    add a VOC-097 live-evidence second task. Do not snapshot the current develop/main
+    gap. Do not open a karsift-ai-infra PR or pin-advance unless implementation proves
+    an infra contract change is required. This package''s implementation PR Closes
+    only its own VOC-143 task issue.
+
+    '
+- id: VOC-143-DEP-04
+  status: 'resolved at drafting time as a hard TEST constraint. Do not recapture or
+    edit VOC-112 JSON fixtures or hashed sources. Do not switch the promotion PR application
+    check to --squash-safe-push. Do not switch repository-governance.yml promotion
+    validate away from squash-safe-push. Do not weaken local, pr-ancestry, or ordinary
+    merge-base-anchored pr-validation. Do not weaken navigator HEAD/working-tree binding.
+    Do not add fetch/hydrate helpers. Do not weaken the production merge guard, add
+    bypass actors, fabricate statuses, or manually merge #1119. Keep exact PR base/head/refs/repository
+    binding, ruleset enforcement, no founder-comment gate, and idempotent reconcile-release.
+
+    '
+- id: VOC-143-DEP-05
+  status: 'resolved at drafting time as a no-pin-advance rule. VOC-142 pin 8993e867640dfb604dec0466c4e0787e68d8e258
+    remains the live caller pin and is not the defective contract for this failure
+    class. Do not change PINNED_SHA.txt, mirrored fixture bytes, or config/roles.yml.
+    Do not treat the untracked local karsift-ai-infra/ checkout as this repository''s
+    tracked tree.
+
+    '
+- id: VOC-143-DEP-06
+  status: 'resolved at drafting time. Configured Cursor Composer remains the implementer
+    and Cursor Grok remains the exact-revision independent reviewer. Current fixture
+    config/roles.yml bindings are fixed and must not change: implementer and implementer_escalation
+    cursor/composer-2.5; planner, reviewer, reviewer_fast_retry, and plan_reviewer
+    cursor/grok-4.6[effort=high,fast=false]. No OpenAI credential or execution route
+    is needed or authorized. Do not print credential values.
+
+    '
+- id: VOC-143-DEP-07
+  status: 'resolved at drafting time as a no-change constraint. Do not rewrite VOC-142,
+    VOC-141, VOC-140, VOC-139, VOC-138, VOC-114, VOC-113, or VOC-112 package records
+    under specs/changes/. Do not edit VOC-112 capture fixtures, the navigator skill,
+    or package.json. Exhaustively search current source and docs; update every current-state
+    match that still claims squash-safe-push requires working-tree AGENTS.md equality
+    or that promotion pr-validation requires fixture agents_sha256 to equal current
+    HEAD AGENTS.md after a legitimate documentation update. Preserve clearly historical
+    records.
+
+    '
+- id: VOC-143-DEP-08
+  status: 'resolved at drafting time as the feasible exact-revision evidence contract.
+    Exact-revision binding remains fail-closed by requiring the App-authored independent-review
+    comment/check to bind the live PR head exactly and merge-gate to reject any mismatch.
+    Committed package evidence records the implementation PR base, provenance-assertion
+    change, negative-case results, and where later exact-head binding will be published.
+    Tests must not mutate evidence at runtime. A commit must not be required to contain
+    its own SHA.
+
+    '
+- id: VOC-143-DEP-09
+  status: "resolved at drafting time. After this correction merges into develop, ordinary\
+    \ reconcile-release for release issue #1118 must be able to re-evaluate promotion\
+    \ PR #1119 (or the live same-repository main <- develop promotion at the then-current\
+    \ develop head) without the historical-fixture AGENTS.md mismatch class, merge\
+    \ when required checks pass, synchronize develop to the exact promotion merge\
+    \ SHA, and trigger the normal automatic production deployment on the resulting\
+    \ main push; that deployment must be verified at the exact SHA. Closure of root\
+    \ issue #1120 requires allowlisted metadata from a successful recovery/release\
+    \ run and must not treat closed state as completion proof. Do not snapshot the\
+    \ current develop/main gap (karsift-ai-infra#15). Preserve promotion PR #1119,\
+    \ head 376e00dd\u2026, and audit #1118 as incident evidence. Do not create a duplicate\
+    \ promotion PR or release audit. Do not manufacture completion markers for other\
+    \ packages.\n"
+affected_areas:
+- scripts/foundation/voc112-navigation-benchmark.test.mjs
+- docs/operations/11-devops-and-ci-cd.md
+- specs/changes/VOC-143-promotion-provenance-validation-rejects
+implementation:
+  authorized: false
+  required: true
+  status: pending
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-automation-reliability-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+ehr: not-triggered
+standing_technical_steward_approval: not-required-for-R3-engineering-workflow-gates-under-active-A004
+blocking_reasons: package is a draft proposal; adoption and implementation authorization
+  remain separate A-004-governed decisions
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+production_deployment: disabled
+autonomous_production_release: not-authorized-by-this-package
+repository_adoption_status: not-adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: not-authorized
+adoption_deferred_decisions: []
