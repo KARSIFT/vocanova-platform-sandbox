@@ -20,8 +20,8 @@ RECONCILIATION_NOTES_PATH = (
 )
 
 AUTHORITATIVE_PIN = "599436835371f27fac52ec6b47a18b36257366ac"
-CURRENT_PIN = "67bdfd13ef875dead23ce4be01d7d0e8b976e289"
-PREVIOUS_REVIEWED_PIN = "9fdff24cd387cc2cdc468c84a3012b0c34b6c8e8"
+CURRENT_PIN = "8993e867640dfb604dec0466c4e0787e68d8e258"
+PREVIOUS_REVIEWED_PIN = "67bdfd13ef875dead23ce4be01d7d0e8b976e289"
 IMPLEMENTATION_PR_BASE = "c59548375764d938265910cd07f2c2a73e337c01"
 
 FINAL_INFRA_CHANGED_MIRRORS = frozenset(
@@ -53,6 +53,7 @@ CURRENT_PIN_ASSERTION_PATHS = (
     "tooling/governance/tests/test_voc138_promotion_pr_provenance.py",
     "tooling/governance/tests/test_voc139_promotion_recovery_metadata.py",
     "tooling/governance/tests/test_voc140_release_convergence.py",
+    "tooling/governance/tests/test_voc142_adoption_roster_wait.py",
 )
 
 MIRRORED_FILE_HASHES = {
@@ -69,7 +70,7 @@ MIRRORED_FILE_HASHES = {
         "fa7b8052c6b11801fe9446e9589adfe4a4c5d2272afc61e6283d02e5893a9cfb"
     ),
     "config/authoritative-checks-runner.py": (
-        "b70b3cc80889ec2a55be4ddd1eb5dd63831bb2b6159f7fc664359bf307f575e7"
+        "cb0fe7867a2fd95a99935451057a288a01fedbc779d2f68da133e1291b1042d3"
     ),
     "config/authoritative_checks.py": (
         "fdb3b58378812483d703e3a973b07306cb66ece8315355dc4a951fb30a794808"
@@ -99,7 +100,7 @@ MIRRORED_FILE_HASHES = {
         "a2849f024d8735b7334022be452092e9d2f00e3a0034c3e761db456c8918b4b4"
     ),
     "tests/test_adoption_handoff.py": (
-        "fda591948b4e0e540ba69ae2e42dc6b4267d4a005d1d7655a646972f1c21990c"
+        "b16e84853283d04c9e1d297175c6e23ee32f85f1e56c9983bdd1a82f3a125d8e"
     ),
     "tests/test_production_merge_guard.py": (
         "e42ebe9536ceb55192f105b2e617c0dc031a673e3e009819bcd228bcbbd58190"
@@ -269,12 +270,15 @@ class Voc140ReleaseConvergenceTests(unittest.TestCase):
             {"README.md": "adapted-caller-local-provenance"},
         )
         self.assertNotIn("README.md", MIRRORED_FILE_HASHES)
-        self.assertEqual(len(CURRENT_PIN_ASSERTION_PATHS), 15)
+        self.assertEqual(len(CURRENT_PIN_ASSERTION_PATHS), 16)
         for relative in CURRENT_PIN_ASSERTION_PATHS:
             with self.subTest(relative=relative):
                 text = (REPO_ROOT / relative).read_text(encoding="utf-8")
                 self.assertIn(CURRENT_PIN, text, relative)
-                if relative == "tooling/governance/tests/test_voc140_release_convergence.py":
+                if relative in {
+                    "tooling/governance/tests/test_voc140_release_convergence.py",
+                    "tooling/governance/tests/test_voc142_adoption_roster_wait.py",
+                }:
                     self.assertNotIn(
                         f'CURRENT_PIN = "{PREVIOUS_REVIEWED_PIN}"', text, relative
                     )
@@ -330,7 +334,7 @@ class Voc140ReleaseConvergenceTests(unittest.TestCase):
 
     def test_evidence_records_implementation_pr_base(self):
         self.assertIn(IMPLEMENTATION_PR_BASE, self.evidence)
-        self.assertIn(CURRENT_PIN, self.evidence)
+        self.assertIn(PREVIOUS_REVIEWED_PIN, self.evidence)
 
     def test_live_authority_docs_reconcile_a004_and_dispose_every_path(self):
         self.assertEqual(

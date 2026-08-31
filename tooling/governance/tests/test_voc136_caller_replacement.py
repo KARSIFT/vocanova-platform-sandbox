@@ -23,7 +23,7 @@ EVIDENCE_PATH = (
     / "specs/changes/VOC-136-complete-infra-167-caller-pin-with-exhaustive/t00-evidence.md"
 )
 
-CURRENT_PIN = "67bdfd13ef875dead23ce4be01d7d0e8b976e289"
+CURRENT_PIN = "8993e867640dfb604dec0466c4e0787e68d8e258"
 AUTHORITATIVE_PIN = "b263c0c110591cc798b89277dfc35542abb1597b"
 STALE_PIN_164 = "863fc1f35b1d35e4981a59166b0e939be1a2b681"
 STALE_PIN_165 = "8ce2b77a09a729e458a9f4cbea1ca26eb114d398"
@@ -71,7 +71,6 @@ NO_CHANGE_PATHS = (
     "scripts/foundation/fixtures/voc112-skill-discovery-evidence.json",
     "scripts/foundation/voc112-navigation-benchmark-run.mjs",
     "scripts/foundation/validate-workspace.mjs",
-    "AGENTS.md",
     ".agents/skills/vocanova-repo-navigator/SKILL.md",
     "package.json",
 )

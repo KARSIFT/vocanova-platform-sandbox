@@ -21,7 +21,7 @@ EVIDENCE_PATH = (
 )
 
 AUTHORITATIVE_PIN = "123735c80fec813a5b46a004f3e1122bd425cde2"
-CURRENT_PIN = "67bdfd13ef875dead23ce4be01d7d0e8b976e289"
+CURRENT_PIN = "8993e867640dfb604dec0466c4e0787e68d8e258"
 STALE_PIN_167 = "b263c0c110591cc798b89277dfc35542abb1597b"
 PROTECTED_COMPARISON_ANCHOR = "b9e74fc2db4691c48c637639b265d527de9f4505"
 IMPLEMENTATION_PR_BASE = "e89a02723cfbcaed952a868f2ab3f1442fd04fae"
@@ -71,7 +71,6 @@ NO_CHANGE_PATHS = (
     "scripts/foundation/fixtures/voc112-skill-discovery-evidence.json",
     "scripts/foundation/voc112-navigation-benchmark-run.mjs",
     "scripts/foundation/validate-workspace.mjs",
-    "AGENTS.md",
     ".agents/skills/vocanova-repo-navigator/SKILL.md",
     "package.json",
 )

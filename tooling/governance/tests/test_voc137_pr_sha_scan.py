@@ -24,7 +24,7 @@ from voc136_bypass_scan import (
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 AUTHORITATIVE_PIN = "b263c0c110591cc798b89277dfc35542abb1597b"
-CURRENT_PIN = "67bdfd13ef875dead23ce4be01d7d0e8b976e289"
+CURRENT_PIN = "8993e867640dfb604dec0466c4e0787e68d8e258"
 PROTECTED_COMPARISON_ANCHOR = "b9e74fc2db4691c48c637639b265d527de9f4505"
 IMPLEMENTATION_PR_BASE = "ebe4c460d892b87b6de38915f9fbd5e30d3c051b"
 VOC112_SUBJECT_REVISION = "f9d11e232a07c7d7a9c433d02c9267912543ba10"
@@ -71,7 +71,6 @@ NO_CHANGE_PATHS = (
     "scripts/foundation/fixtures/voc112-skill-discovery-evidence.json",
     "scripts/foundation/voc112-navigation-benchmark-run.mjs",
     "scripts/foundation/validate-workspace.mjs",
-    "AGENTS.md",
     ".agents/skills/vocanova-repo-navigator/SKILL.md",
     "package.json",
 )

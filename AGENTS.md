@@ -157,7 +157,10 @@ event or the original adoption run did not finish:
    NON-BLOCKING FINDINGS plan-review comment, and its body names one package.
 2. Dispatch the caller workflow against the integration branch:
    `gh workflow run pipeline.yml --ref develop -f action=reconcile -f plan_pr_number=<PR>`
-3. Confirm the run's `adopt` job reuses any existing task issues, merges the
+3. Confirm the run's `adopt` job reuses any existing task issues, resolves a
+   matching open or already-merged roster PR for the deterministic branch,
+   base, and exact head when one exists (waiting for the complete
+   ruleset-required check set including `ci / ci` before merge), merges the
    checked roster/adoption record when a change is needed, and dispatches only
    the first not-yet-dispatched task.
 4. Re-run the same reconcile command if the run is interrupted. Do not create a

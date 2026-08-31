@@ -22,7 +22,15 @@ class Voc080AdoptionReconcilePolicyTests(unittest.TestCase):
             self.adopt,
         )
         self.assertIn(
-            "existing task issues are reused and an unchanged roster is a no-op",
+            "existing task issues are reused",
+            self.adopt,
+        )
+        self.assertIn(
+            "unchanged roster is a no-op",
+            self.adopt,
+        )
+        self.assertIn(
+            "matching open or already-merged roster PR",
             self.adopt,
         )
         self.assertIn(
