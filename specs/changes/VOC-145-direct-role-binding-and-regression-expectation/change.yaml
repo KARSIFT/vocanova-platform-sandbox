@@ -1,0 +1,236 @@
+schema_version: 1
+id: VOC-145
+slug: direct-role-binding-and-regression-expectation
+title: Direct role-binding and regression-expectation drift lacks governed reconciliation
+type: infrastructure
+status: draft
+risk: R4
+planned_implementation_risk_floor: 'R4. This package reconciles unauthorized karsift-ai-infra
+  main drift of reviewer, reviewer_fast_retry, and plan_reviewer model/effort/speed
+  bindings and the VOC-117 regression expectations that were rewritten to bless them.
+  tooling/governance/* is an R4 path floor. .github/workflows/* is an R3 floor. Semantic
+  mutation of live agent-authority routing is protected. This is a draft proposal
+  for human adoption review, not a determination. The path classifier and independent
+  verifier remain authoritative.
+
+  '
+canonical_path: specs/changes/VOC-145-direct-role-binding-and-regression-expectation
+authority_model: a004-active
+requirement_source: 'GitHub issue #1124 (Direct role-binding and regression-expectation
+  drift lacks governed reconciliation), including its original body. KARSIFT/karsift-ai-infra
+  main directly changed active reviewer bindings and then changed tests/test_voc117_role_bindings.py
+  to accept them, without a matching adopted caller change package or reconciliation
+  of every canonical document that fixes the role mapping. Current unauthorized infra
+  head d8720829b176cf1287e633f9382989fc8f258105. Last governed VOC-142 infrastructure
+  base 8993e867640dfb604dec0466c4e0787e68d8e258. Drift: reviewer high,fast=false to
+  xhigh,fast=false; reviewer_fast_retry high,fast=false to xhigh,fast=true; plan_reviewer
+  high,fast=false to xhigh,fast=false. VOC-117 regression expectations were rewritten
+  to bless the new values. README.md, CHANGELOG.md, caller fixtures/pin, and adopted
+  VOC-142 DEP-06/AC-09 current-state evidence were not reconciled. Infra self-CI is
+  green at run 33443684483, but a green test changed in the same direct sequence does
+  not establish governed authority. This issue is separate from the VOC-112 provenance
+  EHR escalation in #1120 and must not be used as a carrier to bypass that stopped
+  operation. This draft package does not adopt or authorize itself.
+
+  '
+requirement_approval_status: issue-sourced requirement; this draft package is not
+  adopted and does not authorize implementation
+base_branch: develop
+base_sha: 'Issue-creation infrastructure pin is VOC-142 merge 8993e867640dfb604dec0466c4e0787e68d8e258
+  and is the last governed role-binding contract. Unauthorized infra head at issue
+  creation is d8720829b176cf1287e633f9382989fc8f258105. Implementation must record
+  the actual implementation PR base separately at dispatch, fail closed on unrelated/material
+  movement of develop, and must not treat this package''s own plan/adoption/roster
+  commits as protected-file drift. Do not snapshot the current develop/main gap. Do
+  not pin d8720829 as-is.
+
+  '
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: 'planner (drafting only; adoption remains a human/autonomous
+    governed decision) '
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: 'none-intentional for application runtime. This package reconciles
+  live CI agent-authority role bindings and current-state contracts so unauthorized
+  infra main drift cannot remain the undeclared live lineup. Ordinary post-promotion
+  synchronization remains a tree-equivalent integration-ref update. This package does
+  not add a new production deploy path, change secret values, providers, the production
+  merge guard, or monitor inventory.
+
+  '
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: 'Governed reconciliation of CI agent role/model/effort/speed bindings
+    and VOC-117 current-state regression expectations. No page routes, critical API
+    endpoints, monitor inventory, or synthetic inventory in infra/monitoring/ are
+    added or changed.
+
+    '
+dependencies:
+- id: VOC-145-DEP-00
+  status: 'resolved at drafting time. Issue #1124 provides the unauthorized infra
+    head d8720829b176cf1287e633f9382989fc8f258105, last governed VOC-142 base 8993e867640dfb604dec0466c4e0787e68d8e258,
+    the three role binding deltas, the VOC-117 test rewrite, the unreconciliation
+    of README.md, CHANGELOG.md, caller fixtures/pin, and VOC-142 DEP-06/AC-09 current-state
+    evidence, self-CI run 33443684483, the reproduction diff command, and the explicit
+    exclusion of issue #1120. Enough specificity to draft without a clarifying round
+    trip.
+
+    '
+- id: VOC-145-DEP-01
+  status: 'resolved at drafting time. Active A-004 remains authoritative. No founder
+    approved-comment gate on engineering-workflow adopt/merge/release paths. Exact-SHA
+    independent verification, deterministic risk floors, protected-path controls,
+    and fail-closed behavior remain mandatory. R4 is a draft proposal, not a determination.
+    automatic_merge_allowed is drafted true per AGENTS.md A-004 drafting rule.
+
+    '
+- id: VOC-145-DEP-02
+  status: 'resolved at drafting time by reading live caller fixtures at pin 8993e867640dfb604dec0466c4e0787e68d8e258
+    and the untracked local karsift-ai-infra checkout at d8720829b176cf1287e633f9382989fc8f258105.
+    Caller fixture config/roles.yml and tooling/governance/tests/test_voc117_role_bindings.py
+    still assert VOC-142 DEP-06 bindings (all review roles cursor/grok-4.6[effort=high,fast=false]).
+    Live infra config/roles.yml and tests/test_voc117_role_bindings.py already store
+    the drifted xhigh lineup and rewritten VOC117_BINDINGS. Live infra README.md still
+    describes reviewer_fast_retry as a cheaper retry without documenting xhigh or
+    fast=true. Live infra CHANGELOG.md still records the 2026-08-25 explicit high-effort
+    Standard correction and does not record the later xhigh/fast drift. An untracked
+    local karsift-ai-infra/ checkout, if present, is not this repository''s tracked
+    tree and is not implementation evidence.
+
+    '
+- id: VOC-145-DEP-03
+  status: 'resolved at drafting time as the chosen design. One end-to-end implementation
+    task covering a coordinated infrastructure PR plus the caller pin, authorized
+    current binding set, historical-versus-current VOC-117 assertions, tests, docs,
+    evidence, and release handoff. Do not split by repository, restore versus docs,
+    test, or layer. Do not add a VOC-097 live-evidence second task. Do not snapshot
+    the current develop/main gap. This package''s implementation PR Closes only its
+    own VOC-145 task issue.
+
+    '
+- id: VOC-145-DEP-04
+  status: 'resolved at drafting time as a hard TEST constraint. Do not weaken retry
+    caps, exact-SHA independent review, provider isolation, or fail-closed model resolution.
+    Do not add an OpenAI execution route or request OPENAI_API_KEY. Do not print credential
+    values. Do not pin unauthorized head d8720829 as-is. Do not rewrite VOC-117, VOC-142,
+    VOC-141, VOC-140, or earlier package records under specs/changes/. Do not use
+    this package as a carrier for the VOC-112 provenance EHR escalation in issue #1120.
+    Do not recapture VOC-112 JSON fixtures. Do not change the production merge guard
+    or App-token mints.
+
+    '
+- id: VOC-145-DEP-05
+  status: 'resolved at drafting time as a pin-advance rule. VOC-142 pin 8993e867640dfb604dec0466c4e0787e68d8e258
+    remains historical audit evidence and remains the last governed role-binding contract.
+    This reconciliation cannot land by pinning unauthorized head d8720829, even if
+    Path B later authorizes the same binding values, because that SHA rewrote VOC-117
+    expectations in the same ungoverned sequence. T00 must open and consume one new
+    independently reviewed karsift-ai-infra PR whose exact merge SHA becomes the new
+    PINNED_SHA.txt value, then mirror every changed authoritative fixture file from
+    that exact merge.
+
+    '
+- id: VOC-145-DEP-06
+  status: 'resolved at drafting time as the default authorized current binding set
+    (Path A). Unless adoption records Path B, restore last adopted exact bindings:
+    implementer and implementer_escalation cursor/composer-2.5; planner, reviewer,
+    reviewer_fast_retry, and plan_reviewer cursor/grok-4.6[effort=high,fast=false].
+    Restore VOC-117 current-state regression expectations that were rewritten to bless
+    the ungoverned values. No OpenAI credential or execution route is needed or authorized.
+    Do not print credential values.
+
+    '
+- id: VOC-145-DEP-07
+  status: 'open at drafting time; default Path A applies unless adoption records Path
+    B. Path B, if and only if adoption_resolved_decisions names VOC-145-DEP-07 Path
+    B, authorizes the drifted current-state lineup reviewer cursor/grok-4.6[effort=xhigh,fast=false],
+    reviewer_fast_retry cursor/grok-4.6[effort=xhigh,fast=true], plan_reviewer cursor/grok-4.6[effort=xhigh,fast=false],
+    with planner remaining cursor/grok-4.6[effort=high,fast=false] and implementer/escalation
+    remaining cursor/composer-2.5. Path B must keep historical VOC-117 expected bindings
+    as historical constants and must not rewrite test_voc117_role_bindings.py to claim
+    VOC-117 originally required xhigh or fast retry. Path B must still land a new
+    independently reviewed infra merge; d8720829 remains unauthorized. Implementer
+    must not pick Path B from the issue''s "either/or" wording alone.
+
+    '
+- id: VOC-145-DEP-08
+  status: 'resolved at drafting time as the feasible exact-revision evidence contract.
+    Exact-revision binding remains fail-closed by requiring the App-authored independent-review
+    comment/check to bind the live PR head exactly and merge-gate to reject any mismatch.
+    Committed package evidence records the implementation PR base, infra merge SHA,
+    authorized path (A or B), binding table, historical-versus-current test split,
+    negative-case results, and where later exact-head binding will be published. Tests
+    must not mutate evidence at runtime. A commit must not be required to contain
+    its own SHA.
+
+    '
+- id: VOC-145-DEP-09
+  status: 'resolved at drafting time. After this correction merges into develop, ordinary
+    later promotion uses release.yml at the then-current develop tip once required
+    checks pass. develop is advanced to the exact promotion merge SHA before audit
+    close. Every promotion merge push to main triggers automatic production deployment,
+    whose exact-SHA result is verified. Closure of root issue #1124 requires allowlisted
+    metadata from a successful adopt/implement/release path and must not treat closed
+    state as completion proof. Do not snapshot the current develop/main gap (karsift-ai-infra#15).
+    Preserve unauthorized head d8720829, governed base 8993e867, and self-CI run 33443684483
+    as audit evidence. Do not manufacture completion markers for other packages. Do
+    not resume or bypass issue #1120.
+
+    '
+- id: VOC-145-DEP-10
+  status: 'resolved at drafting time as a no-change constraint. Do not rewrite VOC-142,
+    VOC-141, VOC-140, VOC-117, or earlier package records under specs/changes/. Those
+    directories remain historical audit of the then- current contract, including VOC-142
+    DEP-06/AC-09 "roles.yml is unchanged" as a VOC-142-era constraint. Reconcile current-state
+    caller tests, fixture files, README, CHANGELOG, and any live document that would
+    otherwise describe the unauthorized or stale lineup as current. Exhaustively search
+    current source and pin docs. Preserve clearly historical records. Do not recapture
+    VOC-112 JSON fixtures.
+
+    '
+affected_areas:
+- tooling/governance/fixtures/karsift-ai-infra/
+- tooling/governance/tests/
+- specs/changes/VOC-145-direct-role-binding-and-regression-expectation
+implementation:
+  authorized: false
+  required: true
+  status: pending
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-automation-reliability-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+ehr: not-triggered
+standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
+blocking_reasons: package is a draft proposal; adoption and implementation authorization
+  remain separate A-004-governed decisions
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+production_deployment: disabled
+autonomous_production_release: not-authorized-by-this-package
+repository_adoption_status: not-adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: not-authorized
+adoption_deferred_decisions:
+- VOC-145-DEP-07
