@@ -200,7 +200,7 @@ test("VOC-086-TEST-09 (remediation): environment-secret token is minted before r
     workflow,
     "Mint environment-secret writer token",
   );
-  assert.match(tokenStep, /actions\/create-github-app-token@v3/);
+  assert.match(tokenStep, /actions\/create-github-app-token@[0-9a-f]{40} # v3/);
   assert.match(tokenStep, /permission-environments: write/);
   assert.match(tokenStep, /KARSIFT_BOT_APP_ID/);
   assert.match(tokenStep, /KARSIFT_BOT_PRIVATE_KEY/);

@@ -254,7 +254,7 @@ test("VOC-094-TEST-05: observer workflow wires classifier before open-failure-is
     workflow,
     /FAILURE_RUN_ID: \$\{\{ github\.event\.workflow_run\.id \}\}/,
   );
-  assert.match(workflow, /actions\/create-github-app-token@v3/);
+  assert.match(workflow, /actions\/create-github-app-token@[0-9a-f]{40} # v3/);
   assert.doesNotMatch(workflow, /permission-actions:/);
   assert.match(workflow, /permission-issues: write/);
   assert.match(workflow, /^permissions:\n  contents: read\n  actions: read$/m);

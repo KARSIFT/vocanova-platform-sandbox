@@ -1,0 +1,40 @@
+name: Lint Action Pinning
+
+# No trigger-level `paths:` filter, deliberately. A workflow skipped by one
+# reports no conclusion at all, and a required check that never reports
+# leaves a merge queue entry unable to leave the queue (`merge_group` can't
+# carry a `paths:` filter in the first place). This check is cheap (one
+# script, no dependency install), so always running it is both simpler and
+# strictly safer than a hand-maintained path list. See kdlbs/kandev's
+# docs/ci-merge-queue.md, which this repo's own merge-queue setup follows.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  merge_group:
+    types: [checks_requested]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Never cancel a merge-queue run. Its ref is unique per queue entry, so a
+  # cancellation here could only come from a mis-keyed group, and the queue
+  # would read the cancelled check as a failure and eject the entry.
+  cancel-in-progress: ${{ github.event_name != 'merge_group' }}
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: All action refs are SHA-pinned
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Verify action refs
+        run: python3 .github/scripts/lint-action-pinning.py

@@ -1,0 +1,42 @@
+name: Architecture Lint
+
+# No trigger-level `paths:` filter, deliberately — same reasoning as
+# lint-action-pinning.yml. This check is cheap (no dependency install
+# needed), so unconditional is simpler and strictly safer than a
+# hand-maintained path list.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  merge_group:
+    types: [checks_requested]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'merge_group' }}
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Architecture boundaries do not regress
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Test the boundary checker itself
+        run: node --test scripts/foundation/architecture-boundaries.test.mjs
+
+      - name: Verify architecture boundaries
+        run: node scripts/foundation/architecture-boundaries.mjs
