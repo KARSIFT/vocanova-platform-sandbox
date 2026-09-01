@@ -1,0 +1,242 @@
+schema_version: 1
+id: VOC-144
+slug: roster-reconciliation-resolves-carrier-before
+title: Roster reconciliation resolves carrier before pushed PR head metadata converges
+type: infrastructure
+status: draft
+risk: R4
+planned_implementation_risk_floor: 'R4. This package repairs adoption-roster carrier
+  resolution so documented reconcile waits boundedly for the existing same-repository,
+  same-ref OPEN PR to expose the locally pushed exact SHA instead of treating immediate
+  post-push REST head lag as a permanent MISMATCHED_OPEN_CARRIER. tooling/governance/*
+  is an R4 path floor. .github/workflows/* is an R3 floor. Semantic mutation of exact-SHA
+  roster carrier identity before protected merge is protected. This is a draft proposal
+  for human adoption review, not a determination. The path classifier and independent
+  verifier remain authoritative.
+
+  '
+canonical_path: specs/changes/VOC-144-roster-reconciliation-resolves-carrier-before
+authority_model: a004-active
+requirement_source: 'GitHub issue #1122 (Roster reconciliation resolves carrier before
+  pushed PR head metadata converges), including its original body. Documented pipeline.yml
+  reconciliation for merged plan PR #1110 cannot reuse the existing deterministic
+  roster PR #1112 after VOC-142. The adopt job pushes a new exact commit to karsift/roster-voc-141,
+  then immediately fails in Open roster PR with MISMATCHED_OPEN_CARRIER. After the
+  job fails, PR #1112 exposes the just-pushed head and the same resolver returns reuse_open.
+  Live reproduction in KARSIFT/vocanova-platform-sandbox: reconcile run 33437239322
+  pushed head 958e0fedf742173320bb89cfe690ec7070b49e93 then failed MISMATCHED_OPEN_CARRIER;
+  afterward PR #1112 exposed that head. Idempotent retry run 33437514152 pushed head
+  0206cb70437cb751a19a2e715d8202b672060b50 then failed the same way; afterward PR
+  #1112 exposed that new head. Root cause: karsift-ai-infra adopt.yml runs Push roster
+  branch then invokes roster-carrier-runner.py without a bounded metadata-convergence
+  wait. The resolver is correctly fail-closed for a stable mismatch, but the caller
+  does not distinguish transient post-push PR-head lag from a durable identity mismatch.
+  No roster PR was manually merged, closed, recreated, or bypassed; #1112 remains
+  the single exact VOC-141 carrier. This draft package does not adopt or authorize
+  itself.
+
+  '
+requirement_approval_status: issue-sourced requirement; this draft package is not
+  adopted and does not authorize implementation
+base_branch: develop
+base_sha: 'Issue-creation infrastructure pin is VOC-142 merge 8993e867640dfb604dec0466c4e0787e68d8e258
+  and is the defective live contract for this failure class. Interrupted VOC-141 roster
+  PR #1112 is the live carrier being reconciled for plan PR #1110. Implementation
+  must record the actual implementation PR base separately at dispatch, fail closed
+  on unrelated/material movement of develop, and must not treat this package''s own
+  plan/adoption/roster commits as protected-file drift. Do not snapshot the current
+  develop/main gap.
+
+  '
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: 'planner (drafting only; adoption remains a human/autonomous
+    governed decision) '
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: not-approved
+implementation_authorized: false
+automatic_merge_allowed: true
+production_impact: 'none-intentional for application runtime. This package repairs
+  roster-carrier resolution so documented reconcile waits boundedly for GitHub to
+  expose the just-pushed exact PR head before treating a SHA difference as a durable
+  mismatch. Ordinary post-promotion synchronization remains a tree-equivalent integration-ref
+  update. This package does not add a new production deploy path, change secret values,
+  providers, the production merge guard, or monitor inventory.
+
+  '
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: 'Bounded wait for existing roster-PR head metadata to converge to the
+    locally pushed exact SHA. No page routes, critical API endpoints, monitor inventory,
+    or synthetic inventory in infra/monitoring/ are added or changed.
+
+    '
+dependencies:
+- id: VOC-144-DEP-00
+  status: 'resolved at drafting time. Issue #1122 provides the failing reconcile of
+    plan PR #1110 against open roster PR #1112, deterministic branch karsift/roster-voc-141,
+    pin 8993e867640dfb604dec0466c4e0787e68d8e258, run 33437239322 pushing 958e0fedf742173320bb89cfe690ec7070b49e93
+    then MISMATCHED_OPEN_CARRIER with later reuse_open on the same SHA, retry run
+    33437514152 pushing 0206cb70437cb751a19a2e715d8202b672060b50 then the same class,
+    the root-cause statement that adopt.yml invokes roster-carrier-runner.py immediately
+    after Push roster branch, and the suggested fix of a bounded poll until listed
+    head equals local HEAD. Enough specificity to draft without a clarifying round
+    trip.
+
+    '
+- id: VOC-144-DEP-01
+  status: 'resolved at drafting time. Active A-004 remains authoritative. No founder
+    approved-comment gate on engineering-workflow adopt/merge/release paths. Exact-SHA
+    independent verification, deterministic risk floors, protected-path controls,
+    and fail-closed behavior remain mandatory. R4 is a draft proposal, not a determination.
+    automatic_merge_allowed is drafted true per AGENTS.md A-004 drafting rule.
+
+    '
+- id: VOC-144-DEP-02
+  status: 'resolved at drafting time by reading live caller fixtures at pin 8993e867640dfb604dec0466c4e0787e68d8e258.
+    Push roster branch force-with-lease pushes the deterministic karsift/roster-*
+    ref, then Open roster PR immediately runs roster-carrier-runner.py with local
+    git rev-parse HEAD. That runner lists open/closed pulls once and calls resolve_roster_carrier
+    on a single snapshot. resolve_roster_carrier reuses only when repository, head
+    ref, head SHA, and base ref all match; a same-ref OPEN PR whose listed SHA differs
+    returns MISMATCHED_OPEN_CARRIER. That fail-closed identity predicate is correct
+    for a stable mismatch and must stay. The adapter does not re-fetch after push,
+    so GitHub REST lag of the PR head is treated as permanent. VOC-142 tests assert
+    mismatched head SHA fails closed on one snapshot; they do not cover stale-then-converge.
+    An untracked local karsift-ai-infra/ checkout, if present, is not this repository''s
+    tracked tree.
+
+    '
+- id: VOC-144-DEP-03
+  status: 'resolved at drafting time as the chosen design. One end-to-end implementation
+    task covering a coordinated infrastructure PR plus the caller pin, bounded post-push
+    PR-head convergence wait in the GitHub adapter, unchanged single-snapshot identity
+    predicate, fail-closed timeout and durable-mismatch paths, tests, docs, evidence,
+    and release handoff. Do not split by repository, wait versus resolver, test, or
+    layer. Do not add a VOC-097 live-evidence second task. Do not snapshot the current
+    develop/main gap. This package''s implementation PR Closes only its own VOC-144
+    task issue. Do not merge, close, recreate, or bypass roster PR #1112 as this package''s
+    work.
+
+    '
+- id: VOC-144-DEP-04
+  status: 'resolved at drafting time as a hard TEST constraint. Do not weaken exact-SHA
+    identity. Do not reuse a still-stale listed head. Do not create a duplicate roster
+    PR. Do not manually merge a roster PR, including #1112, or this package''s own
+    later roster PR. Do not wait on ambiguous carriers, repository mismatch, base
+    mismatch, or API failure. Do not replace the wait with an unbounded sleep, with
+    VOC-141''s 1,800-second recovery timeout, or with wall-clock GitHub lag in tests.
+    Do not weaken the production merge guard, add bypass actors, fabricate statuses,
+    or change VOC-142 complete-required-set roster wait. Keep exact PR base/head/refs/repository
+    binding, ruleset enforcement, no founder-comment gate, and existing-task reuse.
+
+    '
+- id: VOC-144-DEP-05
+  status: "resolved at drafting time as a pin-advance rule. VOC-142 pin 8993e867640dfb604dec0466c4e0787e68d8e258\
+    \ remains historical audit evidence and remains the issue-creation pin. This repair\
+    \ cannot land by freezing that pin. T00 must open and consume one new independently\
+    \ reviewed karsift-ai-infra PR whose exact merge SHA becomes the new PINNED_SHA.txt\
+    \ value, then mirror every changed authoritative fixture file from that exact\
+    \ merge. Do not silently keep 8993e867\u2026 if the live reusable workflow still\
+    \ resolves the carrier from a single post-push REST snapshot.\n"
+- id: VOC-144-DEP-06
+  status: 'resolved at drafting time. Configured Cursor Composer remains the implementer
+    and Cursor Grok remains the exact-revision independent reviewer. Current fixture
+    config/roles.yml bindings are fixed and must not change: implementer and implementer_escalation
+    cursor/composer-2.5; planner, reviewer, reviewer_fast_retry, and plan_reviewer
+    cursor/grok-4.6[effort=high,fast=false]. No OpenAI credential or execution route
+    is needed or authorized. Do not print credential values.
+
+    '
+- id: VOC-144-DEP-07
+  status: 'resolved at drafting time as a no-change constraint. Do not rewrite VOC-142,
+    VOC-141, VOC-140, VOC-139, or earlier package records under specs/changes/. Do
+    not edit VOC-112 capture fixtures, hashed sources, the navigator skill, or package.json.
+    Exhaustively search current source and pin docs; update AGENTS.md''s reconcile
+    procedure, fixture README, adopt.yml header comments, and every additional current-state
+    match that still claims carrier resolution is a single immediate REST snapshot
+    or that reconcile reuses an exact head without waiting for post-push metadata
+    convergence. Preserve clearly historical records. Do not recapture VOC-112 JSON
+    fixtures. Do not change the production merge guard or App-token mints.
+
+    '
+- id: VOC-144-DEP-08
+  status: 'resolved at drafting time as the feasible exact-revision evidence contract.
+    Exact-revision binding remains fail-closed by requiring the App-authored independent-review
+    comment/check to bind the live PR head exactly and merge-gate to reject any mismatch.
+    Committed package evidence records the implementation PR base, infra merge SHA,
+    convergence-wait change, negative-case results, and where later exact-head binding
+    will be published. Tests must not mutate evidence at runtime. A commit must not
+    be required to contain its own SHA.
+
+    '
+- id: VOC-144-DEP-09
+  status: 'resolved at drafting time. After this correction merges into develop, ordinary
+    reconcile for plan PR #1110 must wait boundedly for open roster PR #1112 to expose
+    the just-pushed exact SHA when GitHub lags, reuse that carrier, wait until the
+    complete required set including ci / ci is SUCCESS, merge that checked carrier,
+    clean the exact head, and dispatch the first not-yet-dispatched task exactly once.
+    This package''s own later promotion uses ordinary release evaluation; do not snapshot
+    the current develop/main gap (karsift-ai-infra#15). Preserve the named incident
+    run/PR/SHA IDs as audit evidence. Do not create a duplicate VOC-141 task, roster
+    PR, or promotion PR. Do not manufacture completion markers for other packages.
+    Closure of root issue #1122 requires allowlisted metadata from a successful adopt
+    or reconcile run that reused a matching carrier after post-push head metadata
+    had converged.
+
+    '
+- id: VOC-144-DEP-10
+  status: 'resolved at drafting time as a sequencing constraint, not a bootstrap exception.
+    This package''s own first native adoption still executes the defective live adopt.yml
+    until T00''s independently reviewed infra merge is pinned. That race is timing-dependent
+    and is not authority to manually merge #1112, to add a supervised bootstrap exception,
+    or to self-adopt. If this package''s native adoption succeeds because GitHub has
+    already converged, T00 lands the repair and documented reconcile of #1110 can
+    resume #1112. If this package''s native adoption hits the same post-push lag,
+    do not invent a second recovery path in this draft; record that remaining tension
+    for adoption-time review without weakening gates.
+
+    '
+affected_areas:
+- tooling/governance/fixtures/karsift-ai-infra/
+- tooling/governance/tests/
+- AGENTS.md
+- docs/operations/15-ai-native-product-and-engineering-operating-model.md
+- specs/changes/VOC-144-roster-reconciliation-resolves-carrier-before
+implementation:
+  authorized: false
+  required: true
+  status: pending
+  target_branch: develop
+  pull_request: null
+  authority_issue: null
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-automation-reliability-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+ehr: not-triggered
+standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
+blocking_reasons: package is a draft proposal; adoption and implementation authorization
+  remain separate A-004-governed decisions
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+production_deployment: disabled
+autonomous_production_release: not-authorized-by-this-package
+repository_adoption_status: not-adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: not-authorized
+adoption_deferred_decisions: []
