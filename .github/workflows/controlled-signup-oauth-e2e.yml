@@ -10,11 +10,10 @@ name: controlled-signup-oauth-e2e
 on:
   pull_request:
     branches:
-      - develop
       - main
   push:
     branches:
-      - develop
+      - main
 
 permissions:
   contents: read

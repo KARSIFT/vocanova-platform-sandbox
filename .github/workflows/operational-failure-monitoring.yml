@@ -1,7 +1,7 @@
 name: operational-failure-monitoring
 
-# VOC-088-T02: turn terminal failures in the repository's deployment and
-# behavioral-synthetic gates into governed, deduplicated planning issues.
+# Turns terminal failures in the repository's deployment and
+# behavioral-synthetic gates into a plain, deduplicated GitHub issue.
 #
 # This observer is deliberately separate from the observed workflows so it also
 # sees cancellation, timeout, and failures that happen before an inline failure

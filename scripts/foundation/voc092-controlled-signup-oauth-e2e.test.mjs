@@ -81,7 +81,7 @@ function listWorkflowSources() {
     .join("\n");
 }
 
-test("VOC-092-TEST-11: CI workflow executes harness on pull requests and develop", () => {
+test("VOC-092-TEST-11: CI workflow executes harness on pull requests and main", () => {
   assert.ok(
     existsSync(workflowPath),
     "controlled-signup-oauth-e2e workflow must exist",
@@ -90,8 +90,8 @@ test("VOC-092-TEST-11: CI workflow executes harness on pull requests and develop
   const workflow = readFileSync(workflowPath, "utf8");
 
   assert.match(workflow, /pull_request:/);
-  assert.match(workflow, /branches:\s*\n\s*- develop/);
-  assert.match(workflow, /push:\s*\n\s*branches:\s*\n\s*- develop/);
+  assert.match(workflow, /branches:\s*\n\s*- main/);
+  assert.match(workflow, /push:\s*\n\s*branches:\s*\n\s*- main/);
   assert.match(workflow, /docker version/);
   assert.match(workflow, /docker info/);
   assert.match(workflow, /cache-dependency-path: apps\/api\/go\.sum/);

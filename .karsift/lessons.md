@@ -1,14 +1,14 @@
 <!-- karsift lessons: keep this file under ~10KB. When it grows past that,
      move the oldest/least-relevant entries into .karsift/lessons-archive.md
-     (create if needed) rather than deleting them - this file is read into
-     every plan/implement/review prompt, so unbounded growth silently
-     inflates cost and dilutes signal on every future run. Archive by hand;
-     no automated pruning exists yet. -->
+     (create if needed) rather than deleting them - unbounded growth dilutes
+     signal for anyone (human or agent) actually reading it. Archive by hand;
+     no automated pruning exists. -->
 
 # Lessons learned - vocanova-platform-sandbox
 
-Append-only. Read into every planner/implementer/reviewer prompt
-(karsift-ai-infra's plan.yml/implement.yml/review.yml "Build prompt" steps).
+Append-only reference. No longer auto-injected into any pipeline prompt (the
+custom plan/implement/review pipeline that did this was retired) - read it
+manually, or point an agent at it, when it's relevant to what you're doing.
 Seeded and maintained manually by the founder-gate operator - no automated
 write-path exists yet (deliberately: unsupervised auto-written lessons were
 ruled out to avoid bad lessons being written silently).

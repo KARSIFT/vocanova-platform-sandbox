@@ -22,7 +22,6 @@ name: accessibility
 on:
   pull_request:
     branches:
-      - develop
       - main
     paths:
       - "apps/web/**"
