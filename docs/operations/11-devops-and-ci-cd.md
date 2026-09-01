@@ -153,15 +153,26 @@ replace the underlying Actions evidence. The mutation App token does not receive
 Administration permission; production merge-guard verification uses the separate
 guard-only token described above.
 
-The canonical same-repository `develop` → `main` promotion PR validates capture
-provenance with head/source-revision-bound `pr-validation` using the immutable PR
-base/head SHAs, independent of whether the recorded capture subject commit
-object is reachable in the synthetic checkout. Ordinary pull requests retain
-merge-base-anchored `pr-validation` when the capture fixture is unchanged; PRs
-that change the capture fixture retain strict `pr-ancestry` unless the authenticated
-promotion signal applies. Non-PR dispatch recovery uses `squash-safe-push`; a weaker
-same-head squash-safe dispatch is not sufficient promotion-check proof. A fork
-or any other base/head branch pair cannot select the promotion exception.
+The canonical same-repository `develop` → `main` promotion PR selects
+`squash-safe-push` from authenticated PR metadata (`main` ← `develop`, same
+repository) and validates capture provenance through reviewed-HEAD pinned-anchor
+`587269f547c93a899ca7b5504825ab5304d7a266`, independent of whether the recorded
+capture subject commit object is reachable in the synthetic checkout. On any pull
+request, changing either capture fixture selects strict `pr-ancestry` before other
+mode resolution; other unchanged-fixture pull requests retain `pr-validation` with
+merge-base/head binding. Non-PR dispatch recovery uses `squash-safe-push`, which
+applies the same reviewed-HEAD pinned-anchor validation; a weaker same-head
+squash-safe dispatch is not sufficient promotion-check proof. A fork or any other
+base/head branch pair cannot select the promotion exception.
+
+**Rollback (VOC-112 historical anchoring repair):** revert
+`scripts/foundation/voc112-navigation-benchmark.test.mjs`, the dual-fixture selector
+hunk in `.github/workflows/repository-governance.yml`, the promotion provenance
+paragraph in this **Missing Actions activation recovery** section, and the
+**Validation** / **Rollback (VOC-112 historical anchoring repair)** sections in
+`docs/development/agent-skills.md` to the pre-repair merge-base/head binding.
+Re-run repository governance validation and the VOC-112 foundation tests before
+merging any rollback carrier.
 
 This table is an implementation target, not authority to procure vendors, incur spend, create
 infrastructure, deploy, or release. Each such action requires its own approved change package and

@@ -2,7 +2,14 @@
 
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
@@ -27,6 +34,74 @@ const governancePolicyPath = path.join(
   repositoryRoot,
   ".github/workflows/governance-policy.yml",
 );
+
+function extractProvenanceStep(workflow) {
+  return workflow
+    .split("- name: Select strict capture provenance mode", 2)[1]
+    .split("\n      - name:", 1)[0];
+}
+
+function runFixtureDiffSelector(gitDiffExit, promotionRefs = {}) {
+  const binDir = mkdtempSync(path.join(tmpdir(), "voc114-git-"));
+  const gitWrapper = path.join(binDir, "git");
+  writeFileSync(
+    gitWrapper,
+    `#!/usr/bin/env bash
+if [ "$1" = "diff" ]; then
+  exit ${gitDiffExit}
+fi
+exit 0
+`,
+  );
+  chmodSync(gitWrapper, 0o755);
+
+  const script = `
+set -euo pipefail
+mode=squash-safe-push
+if git diff --quiet "base" "head" -- \\
+  scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json \\
+  scripts/foundation/fixtures/voc112-skill-discovery-evidence.json; then
+  fixture_diff_status=0
+else
+  fixture_diff_status=$?
+fi
+case "$fixture_diff_status" in
+  1)
+    mode=pr-ancestry
+    ;;
+  0)
+    if [ "$PR_BASE_REF" = "main" ] && \\
+      [ "$PR_HEAD_REF" = "develop" ] && \\
+      [ "$PR_HEAD_REPOSITORY" = "$CURRENT_REPOSITORY" ]; then
+      mode=squash-safe-push
+    else
+      mode=pr-validation
+    fi
+    ;;
+  *)
+    echo "capture fixture comparison failed" >&2
+    exit 1
+    ;;
+esac
+printf '%s' "$mode"
+`;
+
+  const result = spawnSync("bash", ["-c", script], {
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      PATH: `${binDir}:${process.env.PATH}`,
+      PR_BASE_REF: promotionRefs.baseRef ?? "main",
+      PR_HEAD_REF: promotionRefs.headRef ?? "develop",
+      PR_HEAD_REPOSITORY:
+        promotionRefs.headRepository ?? "KARSIFT/vocanova-platform",
+      CURRENT_REPOSITORY:
+        promotionRefs.currentRepository ?? "KARSIFT/vocanova-platform",
+    },
+  });
+  rmSync(binDir, { recursive: true, force: true });
+  return result;
+}
 
 function runInfraTests(pattern) {
   const result = spawnSync(
@@ -132,10 +207,9 @@ test("VOC-114 recovery workflows resolve PR metadata before checkout", () => {
 });
 
 test("VOC-114 canonical promotion uses squash-safe provenance on its associated check", () => {
-  const workflow = readFileSync(repositoryGovernancePath, "utf8");
-  const provenance = workflow
-    .split("- name: Select strict capture provenance mode", 2)[1]
-    .split("\n      - name:", 1)[0];
+  const provenance = extractProvenanceStep(
+    readFileSync(repositoryGovernancePath, "utf8"),
+  );
   assert.match(provenance, /PR_BASE_REF:.*pull_request\.base\.ref/);
   assert.match(provenance, /PR_HEAD_REF:.*pull_request\.head\.ref/);
   assert.match(
@@ -145,8 +219,77 @@ test("VOC-114 canonical promotion uses squash-safe provenance on its associated 
   assert.match(provenance, /CURRENT_REPOSITORY:.*github\.repository/);
   assert.match(
     provenance,
-    /PR_BASE_REF.*main[\s\S]*PR_HEAD_REF.*develop[\s\S]*PR_HEAD_REPOSITORY.*CURRENT_REPOSITORY[\s\S]*mode=squash-safe-push/,
+    /git diff --quiet[\s\S]*voc112-navigation-benchmark-traces\.json/,
   );
-  assert.match(provenance, /else[\s\S]*mode=pr-validation/);
-  assert.match(provenance, /git diff --quiet[\s\S]*mode=pr-ancestry/);
+  assert.match(
+    provenance,
+    /git diff --quiet[\s\S]*voc112-skill-discovery-evidence\.json/,
+  );
+  assert.match(provenance, /fixture_diff_status=\$\?/);
+  assert.match(provenance, /if git diff --quiet/);
+  assert.match(provenance, /case "\$fixture_diff_status" in/);
+  assert.match(provenance, /1\)[\s\S]*mode=pr-ancestry/);
+  assert.match(
+    provenance,
+    /0\)[\s\S]*PR_BASE_REF.*main[\s\S]*PR_HEAD_REF.*develop[\s\S]*PR_HEAD_REPOSITORY.*CURRENT_REPOSITORY[\s\S]*mode=squash-safe-push/,
+  );
+  assert.match(provenance, /mode=squash-safe-push[\s\S]*mode=pr-validation/);
+  assert.match(
+    provenance,
+    /\*\)[\s\S]*capture fixture comparison failed[\s\S]*exit 1/,
+  );
+  assert.doesNotMatch(provenance, /if ! git diff --quiet/);
+});
+
+test("VOC-112-EHR workflow selector: fixture diff precedes promotion exception", () => {
+  const provenance = extractProvenanceStep(
+    readFileSync(repositoryGovernancePath, "utf8"),
+  );
+  for (const fixturePath of [
+    "scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json",
+    "scripts/foundation/fixtures/voc112-skill-discovery-evidence.json",
+  ]) {
+    assert.match(provenance, new RegExp(fixturePath.replaceAll("/", "\\/")));
+  }
+  const fixtureDiffIndex = provenance.indexOf("git diff --quiet");
+  const promotionIndex = provenance.indexOf('[ "$PR_BASE_REF" = "main" ]');
+  const prValidationIndex = provenance.indexOf("mode=pr-validation");
+  assert.ok(fixtureDiffIndex >= 0);
+  assert.ok(promotionIndex > fixtureDiffIndex);
+  assert.ok(prValidationIndex > promotionIndex);
+  assert.match(
+    provenance,
+    /git diff --quiet[\s\S]*voc112-navigation-benchmark-traces\.json[\s\S]*voc112-skill-discovery-evidence\.json[\s\S]*mode=pr-ancestry/,
+  );
+});
+
+test("VOC-112-EHR dual-fixture selector: exit 0 unchanged, 1 changed, >1 fail-closed", () => {
+  const provenance = extractProvenanceStep(
+    readFileSync(repositoryGovernancePath, "utf8"),
+  );
+  assert.match(provenance, /fixture_diff_status=\$\?/);
+  assert.match(provenance, /capture fixture comparison failed/);
+  assert.doesNotMatch(provenance, /if ! git diff --quiet/);
+
+  const unchangedPromotion = runFixtureDiffSelector(0);
+  assert.equal(unchangedPromotion.status, 0, unchangedPromotion.stderr);
+  assert.equal(unchangedPromotion.stdout, "squash-safe-push");
+
+  const unchangedOrdinary = runFixtureDiffSelector(0, {
+    headRef: "feature/example",
+  });
+  assert.equal(unchangedOrdinary.status, 0, unchangedOrdinary.stderr);
+  assert.equal(unchangedOrdinary.stdout, "pr-validation");
+
+  const changed = runFixtureDiffSelector(1);
+  assert.equal(changed.status, 0, changed.stderr);
+  assert.equal(changed.stdout, "pr-ancestry");
+
+  const comparisonFailure = runFixtureDiffSelector(2);
+  assert.notEqual(comparisonFailure.status, 0);
+  assert.match(
+    comparisonFailure.stderr,
+    /capture fixture comparison failed/,
+    comparisonFailure.stdout,
+  );
 });
