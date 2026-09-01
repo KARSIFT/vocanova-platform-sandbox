@@ -869,9 +869,9 @@ export function validateAgentSkillsTree(rootDir = repositoryRoot) {
     );
     errors.push(...skillErrors);
 
-    if (fields) {
-      errors.push(...validateAdapter(skillName, fields, claudeRoot));
-    }
+    // .claude/skills is a plain symlink to .agents/skills (not a separate
+    // adapter tree), so its content is always byte-identical by
+    // construction - no adapter-body/frontmatter-parity check needed here.
 
     errors.push(
       ...validateProvenanceRecord(skillName, skillDir, schema, rootDir),

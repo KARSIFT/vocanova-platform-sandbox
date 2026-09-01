@@ -58,7 +58,7 @@ When this skill conflicts with `AGENTS.md`, `CLAUDE.md`, approved change package
 ### Tailwind and design tokens
 
 - Generated tokens live in `apps/web/src/app/tokens.generated.css`.
-- **Do not use `max-w-md`, `max-w-xl`, or similar named `max-w-*` utilities** — they collide with spacing tokens (see `.karsift/lessons.md`). Use explicit arbitrary widths such as `max-w-[28rem]` with a short comment when needed.
+- **Do not use `max-w-md`, `max-w-xl`, or similar named `max-w-*` utilities** — they collide with spacing tokens. Use explicit arbitrary widths such as `max-w-[28rem]` with a short comment when needed.
 
 ### Lists and state
 
