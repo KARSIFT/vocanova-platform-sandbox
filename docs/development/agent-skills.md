@@ -5,19 +5,18 @@ each procedure from a fresh checkout, with deterministic safety validation.
 
 ## Installation scope
 
-Skills ship in-repo under `.agents/skills/` and `.claude/skills/` (Claude loader
-adapters). No personal or global installation is required for discovery from the
-repository root. Cursor, Codex, and compatible agents read the canonical tree
-directly; Claude adapters load canonical skills via `${CLAUDE_PROJECT_DIR}` so nested
-working directories still resolve the same authoritative files.
+Skills and agents ship in-repo under `.agents/skills/` and `.agents/agents/` — the
+one canonical source. No personal or global installation is required for discovery
+from the repository root. Cursor, Codex, and compatible agents read the canonical
+tree directly; `.claude/skills`, `.claude/agents`, and `.opencode/agents` are plain
+symlinks to it, so there's nothing separate to keep in sync. `.codex/agents/` and
+`.cursor/rules/` hold real, tool-specific translations where a tool's own format
+can't just be a symlink.
 
 ## One-source architecture
 
-- **Canonical tree:** `.agents/skills/<skill-name>/SKILL.md`
-- **Claude adapters:** `.claude/skills/<skill-name>/SKILL.md` (loader-only; no Git
-  symlinks)
+- **Canonical tree:** `.agents/skills/<skill-name>/SKILL.md`, `.agents/agents/`
 - **Architecture reference:** `.agents/skills/README.md`
-- **Adapter contract:** `.claude/skills/README.md`
 - **Repository navigator:** `.agents/skills/vocanova-repo-navigator/SKILL.md`
 
 Governance precedence: when skill prose conflicts with `AGENTS.md`, `CLAUDE.md`,
@@ -27,56 +26,8 @@ approved change packages, tests, or source code, the **repository sources win**.
 
 ```bash
 node --test scripts/foundation/voc112-agent-skills.test.mjs
-node --test scripts/foundation/voc112-navigation-benchmark.test.mjs
 pnpm test   # includes foundation tests
 ```
-
-Capture fresh navigation/discovery evidence after rubric or navigator routing changes.
-These are explicit, authenticated operator actions; the deterministic test validates the
-committed sanitized capture and never starts an agent or makes a network request. The
-required Repository Governance check uses `fetch-depth: 0`: authenticated
-same-repository `main` ← `develop` promotion pull requests select `squash-safe-push`
-from PR metadata and validate through reviewed-HEAD pinned-anchor
-`587269f547c93a899ca7b5504825ab5304d7a266` regardless of capture-subject object
-availability; other pull requests that change either capture fixture require each
-captured commit, prove ancestry, and bind captured/current hashes under strict
-`pr-ancestry`. Unchanged-fixture pull requests remain `pr-validation`, bind PR
-base/head SHAs to the merge base, and walk full first-parent ancestry from the
-reviewed head through pinned anchor `587269f547c93a899ca7b5504825ab5304d7a266`,
-requiring the fixture blob plus every embedded `AGENTS.md`/navigator source-hash
-record to remain immutable through that chain so later legitimate `AGENTS.md` edits
-do not invalidate unchanged evidence. Post-squash branch pushes select
-`squash-safe-push` and re-validate through the same reviewed-HEAD pinned anchor
-without requiring discarded intermediate PR commits to be ancestors. A generic shallow application-test checkout also remains non-mutating:
-
-```bash
-node scripts/foundation/voc112-navigation-benchmark-run.mjs --capture-codex
-node scripts/foundation/voc112-navigation-benchmark-run.mjs --capture-claude-discovery
-# Run only in the authorized hosted Cursor environment:
-node scripts/foundation/voc112-navigation-benchmark-run.mjs --capture-cursor-discovery
-```
-
-Benchmark and discovery evidence fixtures live under
-`scripts/foundation/fixtures/`. They bind to pinned anchor
-`587269f547c93a899ca7b5504825ab5304d7a266`: both fixture blobs, every embedded
-`AGENTS.md`/navigator source-hash record, and the full first-parent chain from the
-reviewed head through that commit must match the working-tree fixture together. A
-later evidence-only commit cannot silently change the measured inputs. Raw runtime traces, prompts, and response bodies are
-not written; only sanitized runtime identity, usage/count metrics, repository paths, and
-rubric results are retained. Never pass or print a credential on the command line.
-
-### Rollback (VOC-112 historical anchoring repair)
-
-If whole-fixture historical anchoring must be reverted before VOC-143 reconciliation
-lands, restore the prior merge-base/head hash binding in
-`scripts/foundation/voc112-navigation-benchmark.test.mjs`, revert the dual-fixture
-selector in `.github/workflows/repository-governance.yml`, and restore the prior
-Validation prose in this file and `docs/operations/11-devops-and-ci-cd.md`. Re-run
-`node --test scripts/foundation/voc112-navigation-benchmark.test.mjs`,
-`node --test scripts/foundation/voc114-actions-check-recovery.test.mjs`, and
-`bash scripts/governance/validate-governance.sh`. Do not edit the JSON fixtures or
-recapture evidence during rollback; expect ordinary PR validation to fail again when
-`AGENTS.md` diverges from the embedded fixture hashes until a durable package lands.
 
 ## Updating pinned upstream material
 
@@ -127,6 +78,6 @@ Skills are instruction surfaces, not authority grants. They must not be used to:
   fetches outside repository tooling;
 - mutate user-profile or global agent configuration outside this repository.
 
-For governed implementation work, follow `AGENTS.md` (issue → plan → task lifecycle).
-Use `vocanova-repo-navigator` to find authoritative paths; do not treat skill prose as
-a substitute for canonical docs or approved change packages.
+For implementation work, follow `AGENTS.md` (open a PR against `main`, checks run,
+tag `@claude` for review). Use `vocanova-repo-navigator` to find authoritative paths;
+do not treat skill prose as a substitute for canonical docs.

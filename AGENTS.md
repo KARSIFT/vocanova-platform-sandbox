@@ -42,8 +42,11 @@ See `docs/development.md` for prerequisites and troubleshooting.
 
 ## Agent skills
 
-Repository-scoped skills live under `.agents/skills/` with Claude loader adapters in
-`.claude/skills/`. See `docs/development/agent-skills.md`.
+Repository-scoped skills and agents live under `.agents/skills/` and `.agents/agents/`
+— the one canonical source. `.claude/skills`, `.claude/agents`, and `.opencode/agents`
+are plain symlinks to it. `.codex/agents/` and `.cursor/rules/` hold real,
+tool-specific translations where a tool's format needs one. See
+`docs/development/agent-skills.md`.
 
 ## Safety
 

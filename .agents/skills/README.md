@@ -9,10 +9,11 @@ tree from the repository root without personal skill installation.
 - **Canonical:** `.agents/skills/<skill-name>/SKILL.md` is the sole authoritative
   procedure. Optional supporting files live in the same directory and are referenced
   from `SKILL.md` only.
-- **Claude adapters:** `.claude/skills/<skill-name>/SKILL.md` repeats all allowed
-  discovery metadata exactly and loads the canonical file via the loader contract in
-  `.claude/skills/README.md`. Adapters contain no independent procedure. No Git
-  symlinks.
+- **`.claude/skills`, `.claude/agents`, `.opencode/agents`:** plain symlinks to
+  `.agents/skills` and `.agents/agents`. Same file, same content, no separate
+  adapter tree to keep in sync. `.codex/agents/` and `.cursor/rules/` hold real,
+  tool-specific translations where a tool's format can't just be a symlink
+  (e.g. Cursor's `.mdc` rule format).
 - **Governance precedence:** When skill prose conflicts with `AGENTS.md`,
   `CLAUDE.md`, approved change packages, tests, or source code, the repository
   sources win.
@@ -64,9 +65,9 @@ Enforced by `scripts/foundation/voc112-agent-skills.test.mjs`:
 | `description` | 512 characters |
 | `SKILL.md` body (after frontmatter) | 32,768 bytes and 400 lines |
 
-The forbidden-instruction denylist scans `SKILL.md`, its Claude adapter, and every
-text-like supporting artifact in the canonical skill directory. Binary artifacts are
-hash-validated through provenance but are not decoded as instructions.
+The forbidden-instruction denylist scans `SKILL.md` and every text-like supporting
+artifact in the canonical skill directory. Binary artifacts are hash-validated
+through provenance but are not decoded as instructions.
 
 ## Provenance
 

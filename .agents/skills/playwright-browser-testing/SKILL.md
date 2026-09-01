@@ -74,7 +74,7 @@ or unpinned `npx playwright` downloads.
 ## CI notes
 
 - CI sets `CI=true`; config enables GitHub reporter and retries.
-- Lighthouse workflow resolves Chromium via Playwright cache — see `.karsift/lessons.md` for shell-expansion constraints.
+- Lighthouse workflow resolves Chromium via Playwright cache; watch for shell-expansion constraints in that resolution script.
 
 ## Safety
 
