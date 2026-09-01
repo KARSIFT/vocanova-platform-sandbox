@@ -101,17 +101,31 @@ jobs:
           mode=squash-safe-push
           if [ "$EVENT_KIND" = "pull_request" ] && \
             [ "$WORKFLOW_EVENT" = "pull_request" ]; then
-            if [ "$PR_BASE_REF" = "main" ] && \
-              [ "$PR_HEAD_REF" = "develop" ] && \
-              [ "$PR_HEAD_REPOSITORY" = "$CURRENT_REPOSITORY" ]; then
-              mode=squash-safe-push
+            if git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- \
+              scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json \
+              scripts/foundation/fixtures/voc112-skill-discovery-evidence.json; then
+              fixture_diff_status=0
             else
-              mode=pr-validation
-              if ! git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- \
-                scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json; then
-                mode=pr-ancestry
-              fi
+              fixture_diff_status=$?
             fi
+            case "$fixture_diff_status" in
+              1)
+                mode=pr-ancestry
+                ;;
+              0)
+                if [ "$PR_BASE_REF" = "main" ] && \
+                  [ "$PR_HEAD_REF" = "develop" ] && \
+                  [ "$PR_HEAD_REPOSITORY" = "$CURRENT_REPOSITORY" ]; then
+                  mode=squash-safe-push
+                else
+                  mode=pr-validation
+                fi
+                ;;
+              *)
+                echo "capture fixture comparison failed" >&2
+                exit 1
+                ;;
+            esac
           fi
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
       - name: Validate agent-skill capture provenance with full history
