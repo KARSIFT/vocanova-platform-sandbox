@@ -3,7 +3,7 @@ id: VOC-145
 slug: direct-role-binding-and-regression-expectation
 title: Direct role-binding and regression-expectation drift lacks governed reconciliation
 type: infrastructure
-status: draft
+status: adopted
 risk: R4
 planned_implementation_risk_floor: 'R4. This package reconciles unauthorized karsift-ai-infra
   main drift of reviewer, reviewer_fast_retry, and plan_reviewer model/effort/speed
@@ -33,8 +33,8 @@ requirement_source: 'GitHub issue #1124 (Direct role-binding and regression-expe
   operation. This draft package does not adopt or authorize itself.
 
   '
-requirement_approval_status: issue-sourced requirement; this draft package is not
-  adopted and does not authorize implementation
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
 base_branch: develop
 base_sha: 'Issue-creation infrastructure pin is VOC-142 merge 8993e867640dfb604dec0466c4e0787e68d8e258
   and is the last governed role-binding contract. Unauthorized infra head at issue
@@ -52,8 +52,8 @@ owners:
     governed decision) '
   implementation: unassigned
   independent_verification: unassigned
-approval_status: not-approved
-implementation_authorized: false
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
 automatic_merge_allowed: true
 production_impact: 'none-intentional for application runtime. This package reconciles
   live CI agent-authority role bindings and current-state contracts so unauthorized
@@ -200,12 +200,12 @@ affected_areas:
 - tooling/governance/tests/
 - specs/changes/VOC-145-direct-role-binding-and-regression-expectation
 implementation:
-  authorized: false
+  authorized: true
   required: true
-  status: pending
+  status: authorized
   target_branch: develop
   pull_request: null
-  authority_issue: null
+  authority_issue: 1132
 release:
   required: true
   mode: not-authorized-by-this-package
@@ -216,8 +216,7 @@ release:
   rollback_required: true
 ehr: not-triggered
 standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
-blocking_reasons: package is a draft proposal; adoption and implementation authorization
-  remain separate A-004-governed decisions
+blocking_reasons: none - adopted and implementation-authorized
 artifacts:
   readme: README.md
   specification: specification.md
@@ -229,8 +228,25 @@ artifacts:
   release_plan: release-plan.md
 production_deployment: disabled
 autonomous_production_release: not-authorized-by-this-package
-repository_adoption_status: not-adopted
+repository_adoption_status: adopted
 implementation_authority_before_adoption: false
-implementation_authority_status: not-authorized
-adoption_deferred_decisions:
+implementation_authority_status: authorized
+adoption_deferred_decisions: []
+approved_candidate_sha: e40eee060091dee243129bf8d19285925a34dc72
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1125#issuecomment-5491579660
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-145-DEP-00
+- VOC-145-DEP-01
+- VOC-145-DEP-02
+- VOC-145-DEP-03
+- VOC-145-DEP-04
+- VOC-145-DEP-05
+- VOC-145-DEP-06
 - VOC-145-DEP-07
+- VOC-145-DEP-08
+- VOC-145-DEP-09
+- VOC-145-DEP-10
+adoption_authority_provenance: 'a004-active evaluated plan PR #1125 at e40eee060091dee243129bf8d19285925a34dc72'
+adoption_pr: 1125
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1125
