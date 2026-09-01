@@ -175,9 +175,18 @@ class Voc138PromotionPrProvenanceTests(unittest.TestCase):
                 "REAL_GIT": real_git,
             }
             ordinary = subprocess.run(
-                command,
+                [
+                    "node",
+                    "--test",
+                    "--test-name-pattern",
+                    "VOC-112-EHR-11",
+                    "scripts/foundation/voc112-navigation-benchmark.test.mjs",
+                ],
                 cwd=REPO_ROOT,
-                env=shallow_environment,
+                env={
+                    **shallow_environment,
+                    "VOC112_SHALLOW_SUBJECT_PROBE": "true",
+                },
                 text=True,
                 capture_output=True,
             )
@@ -200,14 +209,14 @@ class Voc138PromotionPrProvenanceTests(unittest.TestCase):
 
     def test_current_state_docs_describe_promotion_pr_validation(self):
         self.assertIn("pr-validation", self.ops_doc)
-        self.assertIn("head/source-revision-bound", self.ops_doc)
+        self.assertIn("587269f547c93a899ca7b5504825ab5304d7a266", self.ops_doc)
         self.assertNotIn(
             "promotion PR validates capture\nprovenance with the same `squash-safe-push`",
             self.ops_doc,
         )
-        self.assertIn("promotion pull requests deterministically use", self.skills_doc)
-        self.assertIn("head/source-revision-bound", self.skills_doc)
-        self.assertIn("merge-base-anchored", self.skills_doc)
+        self.assertIn("pinned anchor", self.skills_doc)
+        self.assertIn("587269f547c93a899ca7b5504825ab5304d7a266", self.skills_doc)
+        self.assertIn("pr-ancestry", self.skills_doc)
 
     def test_evidence_records_implementation_pr_base(self):
         self.assertIn(IMPLEMENTATION_PR_BASE, self.evidence)
