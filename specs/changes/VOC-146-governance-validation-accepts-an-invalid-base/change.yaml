@@ -1,0 +1,231 @@
+schema_version: 1
+id: VOC-146
+slug: governance-validation-accepts-an-invalid-base
+title: Governance validation accepts an invalid base/head range
+type: governance
+status: adopted
+risk: R4
+planned_implementation_risk_floor: 'R4. This package repairs governance validation
+  so an unresolved --base/--head commit or invalid diff range returns nonzero before
+  the wrapper claims success, and applies the same status-preserving range loading
+  to classify-change-risk.sh, which uses the identical mapfile process-substitution
+  pattern. scripts/governance/* is an R4 path floor. AGENTS.md is an R3 floor. Semantic
+  mutation of fail-closed pull-request range metadata is protected. This is a draft
+  proposal for human adoption review, not a determination. The path classifier and
+  independent verifier remain authoritative.
+
+  '
+canonical_path: specs/changes/VOC-146-governance-validation-accepts-an-invalid-base
+authority_model: a004-active
+requirement_source: 'GitHub issue #1127 (Governance validation accepts an invalid
+  base/head range), including its original body. scripts/governance/validate-governance.sh
+  reports success when --base or --head names a nonexistent commit. From clean commit
+  79b2b3f1f4224235bdda3f77ee887c3004978deb, invoking validate-governance.sh with --base
+  376e00dd769afb0fe850052b3a5cb48f729e73ad --head 79b2b3f1f4224235bdda3f77ee887c3004978deb
+  emits fatal: Invalid symmetric difference expression and then Governance structure
+  validation passed. with exit status 0. Root cause: scripts/governance/validate-monitoring-impact.sh
+  loads changed files with mapfile -t files < <(git diff --no-renames --name-only
+  --diff-filter=ACDMRTUXB "$base...$head"); the failing git diff runs inside process
+  substitution and its nonzero status is not propagated through mapfile, even under
+  set -euo pipefail, so the empty file list is accepted. The same mapfile process-substitution
+  pattern exists in scripts/governance/classify-change-risk.sh. Suggested bounded
+  fix: resolve both revisions explicitly and capture git diff through a status-preserving
+  path before loading its output; add deterministic negative tests for missing base,
+  missing head, and unrelated/no-merge-base revisions, while preserving valid PR and
+  --files-from behavior. Discovered during local exact-range verification of emergency
+  PR #1126; unrelated to that PR''s VOC-112 provenance objective. This draft package
+  does not adopt or authorize itself.
+
+  '
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
+base_branch: develop
+base_sha: 'Issue-creation reproduction commit is 79b2b3f1f4224235bdda3f77ee887c3004978deb.
+  The issue used nonexistent --base 376e00dd769afb0fe850052b3a5cb48f729e73ad against
+  that head. Implementation must record the actual implementation PR base separately
+  at dispatch, fail closed on unrelated/material movement of develop, and must not
+  treat this package''s own plan/adoption/roster commits as protected-file drift.
+  Do not snapshot the current develop/main gap.
+
+  '
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: 'planner (drafting only; adoption remains a human/autonomous
+    governed decision) '
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
+automatic_merge_allowed: true
+production_impact: 'none-intentional for application runtime. This package repairs
+  fail-closed handling of unresolved or invalid --base/--head ranges in governance
+  validation and path-based risk classification. Ordinary post-promotion synchronization
+  remains a tree-equivalent integration-ref update. This package does not add a new
+  production deploy path, change secret values, providers, the production merge guard,
+  or monitor inventory.
+
+  '
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: 'Governance-script fail-closed repair for invalid --base/--head ranges.
+    No page routes, critical API endpoints, monitor inventory, or synthetic inventory
+    in infra/monitoring/ are added or changed.
+
+    '
+dependencies:
+- id: VOC-146-DEP-00
+  status: 'resolved at drafting time. Issue #1127 provides the failing command, observed
+    Git fatal plus Governance structure validation passed. with exit 0, the mapfile
+    process-substitution root cause in validate-monitoring-impact.sh, the suggested
+    bounded fix, and explicit non-goals (unrelated to emergency PR #1126 / VOC-112)
+    with enough specificity to draft without a clarifying round trip.
+
+    '
+- id: VOC-146-DEP-01
+  status: 'resolved at drafting time. Active A-004 remains authoritative. No founder
+    approved-comment gate on engineering-workflow adopt/merge/release paths. Exact-SHA
+    independent verification, deterministic risk floors, protected-path controls,
+    and fail-closed behavior remain mandatory. R4 is a draft proposal, not a determination.
+    automatic_merge_allowed is drafted true per AGENTS.md A-004 drafting rule.
+
+    '
+- id: VOC-146-DEP-02
+  status: 'resolved at drafting time by reading live scripts. validate-monitoring-impact.sh
+    line 67 uses mapfile -t files < <(git diff --no-renames --name-only --diff-filter=ACDMRTUXB
+    "$base...$head"). classify-change-risk.sh line 30 uses the identical pattern.
+    validate-governance.sh forwards --base/--head to the nested validator and prints
+    Governance structure validation passed. after a zero exit. A pull_request event
+    without any resolved range already fails closed (VOC-086-TEST-16); that path is
+    preserved and is not this defect. Working-tree fallback when neither --files-from
+    nor both --base and --head are requested is existing local/push behavior and is
+    preserved. An untracked local karsift-ai-infra/ checkout, if present, is not this
+    repository''s tracked tree.
+
+    '
+- id: VOC-146-DEP-03
+  status: 'resolved at drafting time as the chosen design. One end-to-end implementation
+    task covering status-preserving range loading in validate-monitoring-impact.sh
+    and classify-change-risk.sh, deterministic negative and positive tests, current-state
+    docs including AGENTS.md, evidence, and release handoff. Do not split by script,
+    test versus docs, or wrapper versus classifier. Including classify-change-risk.sh
+    is the same defect class in the same directory under the same --base/--head contract,
+    not a second outcome. Do not add a VOC-097 live-evidence second task. Do not snapshot
+    the current develop/main gap. This package''s implementation PR Closes only its
+    own VOC-146 task issue.
+
+    '
+- id: VOC-146-DEP-04
+  status: 'resolved at drafting time as a hard TEST constraint. Do not weaken pull_request
+    missing-range fail-closed (VOC-086). Do not treat a successful git diff with an
+    empty file list as an invalid range. Do not change monitoring_impact declaration
+    semantics, inventory files, or the Node validator except as required to consume
+    a correctly loaded file list. Do not recapture VOC-112 JSON fixtures. Do not edit
+    emergency PR #1126 or rewrite VOC-086/VOC-112 package records. Do not change the
+    production merge guard, App-token mints, or config/roles.yml.
+
+    '
+- id: VOC-146-DEP-05
+  status: 'resolved at drafting time. No karsift-ai-infra pin advance is required.
+    This defect is entirely in caller scripts/governance/. Do not open an infrastructure
+    PR, change PINNED_SHA.txt, or mirror fixtures. Do not treat the untracked local
+    karsift-ai-infra/ checkout as this repository''s tracked tree.
+
+    '
+- id: VOC-146-DEP-06
+  status: 'resolved at drafting time. Configured Cursor Composer remains the implementer
+    and Cursor Grok remains the exact-revision independent reviewer. Current fixture
+    config/roles.yml bindings are fixed and must not change: implementer and implementer_escalation
+    cursor/composer-2.5; planner, reviewer, reviewer_fast_retry, and plan_reviewer
+    cursor/grok-4.6[effort=high,fast=false]. No OpenAI credential or execution route
+    is needed or authorized. Do not print credential values.
+
+    '
+- id: VOC-146-DEP-07
+  status: 'resolved at drafting time as a no-change constraint. Do not rewrite VOC-086,
+    VOC-112, VOC-142, VOC-141, VOC-140, or earlier package records under specs/changes/.
+    Exhaustively search current source and docs; update AGENTS.md and every additional
+    current-state match that claims a pull_request range is fail-closed only when
+    missing, or that governance validation can succeed after Git reports an invalid
+    symmetric difference. Preserve clearly historical records.
+
+    '
+- id: VOC-146-DEP-08
+  status: 'resolved at drafting time as the feasible exact-revision evidence contract.
+    Exact-revision binding remains fail-closed by requiring the App-authored independent-review
+    comment/check to bind the live PR head exactly and merge-gate to reject any mismatch.
+    Committed package evidence records the implementation PR base, range-loading change,
+    negative-case results, and where later exact-head binding will be published. Tests
+    must not mutate evidence at runtime. A commit must not be required to contain
+    its own SHA.
+
+    '
+- id: VOC-146-DEP-09
+  status: 'resolved at drafting time. After this correction merges into develop, ordinary
+    later promotion of this package uses release.yml at the then-current develop tip
+    once required checks pass. develop is advanced to the exact promotion merge SHA
+    before audit close. Every promotion merge push to main triggers automatic production
+    deployment, whose exact-SHA result is verified. Do not snapshot the current develop/main
+    gap (karsift-ai-infra#15). Closure of root issue #1127 requires allowlisted metadata
+    from a successful implementation/promotion path and must not treat closed state
+    as completion proof.
+
+    '
+affected_areas:
+- scripts/governance/validate-monitoring-impact.sh
+- scripts/governance/classify-change-risk.sh
+- scripts/governance/validate-governance.sh
+- scripts/foundation/
+- AGENTS.md
+- specs/changes/VOC-146-governance-validation-accepts-an-invalid-base
+implementation:
+  authorized: true
+  required: true
+  status: authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: 1129
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-governance-validation-fail-closed-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+ehr: not-triggered
+standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
+blocking_reasons: none - adopted and implementation-authorized
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+production_deployment: disabled
+autonomous_production_release: not-authorized-by-this-package
+repository_adoption_status: adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: authorized
+adoption_deferred_decisions: []
+approved_candidate_sha: c48eb750c3f90e9a283df05cb0bb5f1ae34dc364
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1128#issuecomment-5491331125
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-146-DEP-00
+- VOC-146-DEP-01
+- VOC-146-DEP-02
+- VOC-146-DEP-03
+- VOC-146-DEP-04
+- VOC-146-DEP-05
+- VOC-146-DEP-06
+- VOC-146-DEP-07
+- VOC-146-DEP-08
+- VOC-146-DEP-09
+adoption_authority_provenance: 'a004-active evaluated plan PR #1128 at c48eb750c3f90e9a283df05cb0bb5f1ae34dc364'
+adoption_pr: 1128
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1128
