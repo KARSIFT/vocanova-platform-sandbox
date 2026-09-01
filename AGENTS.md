@@ -87,7 +87,11 @@ packages whose `change.yaml` is untouched remain grandfathered.
 CI (`scripts/governance/validate-monitoring-impact.sh`, invoked from
 `validate-governance.sh`) must receive the pull-request base and head SHAs
 (`--base` / `--head`, same pattern as `classify-change-risk.sh`). A pull_request
-run without a resolved changed-file range is fail-closed.
+run without a resolved changed-file range is fail-closed, as is any requested
+range whose `--base` or `--head` names an unresolved commit or whose three-dot
+diff is invalid (for example unrelated histories with no merge base). Partial
+`--base`/`--head` without the other argument also fails closed instead of
+falling through to working-tree discovery.
 
 **Plan PRs are independently reviewed:** a `plan_reviewer` role and
 `plan-review.yml` reusable workflow (karsift-ai-infra) check every `plan/`-branch PR

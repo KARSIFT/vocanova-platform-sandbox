@@ -11,6 +11,8 @@ base=""
 head=""
 files_from=""
 declarations_only=false
+base_supplied=false
+head_supplied=false
 
 usage() {
   echo "Usage: $0 [--base SHA --head SHA | --files-from FILE] [--declarations-only]" >&2
@@ -18,8 +20,8 @@ usage() {
 
 while (($#)); do
   case "$1" in
-    --base) base="${2:-}"; shift 2 ;;
-    --head) head="${2:-}"; shift 2 ;;
+    --base) base="${2:-}"; base_supplied=true; shift 2 ;;
+    --head) head="${2:-}"; head_supplied=true; shift 2 ;;
     --files-from) files_from="${2:-}"; shift 2 ;;
     --declarations-only) declarations_only=true; shift ;;
     -h|--help) usage; exit 0 ;;
@@ -47,7 +49,13 @@ sys.stdout.write(f"{base}\n{head}\n")
 PY
 }
 
-if [[ -z "$files_from" && ( -z "$base" || -z "$head" ) && "${GITHUB_EVENT_NAME:-}" == "pull_request" ]]; then
+if [[ "$base_supplied" == true && "$head_supplied" != true ]] || \
+   [[ "$head_supplied" == true && "$base_supplied" != true ]]; then
+  echo "A changed-file range requires both --base and --head." >&2
+  exit 1
+fi
+
+if [[ "$declarations_only" != true && -z "$files_from" && "$base_supplied" != true && "$head_supplied" != true && ( -z "$base" || -z "$head" ) && "${GITHUB_EVENT_NAME:-}" == "pull_request" ]]; then
   if event_range="$(read_pr_range_from_event)"; then
     mapfile -t event_shas <<<"$event_range"
     base="${event_shas[0]:-}"
@@ -55,24 +63,19 @@ if [[ -z "$files_from" && ( -z "$base" || -z "$head" ) && "${GITHUB_EVENT_NAME:-
   fi
 fi
 
-if [[ -z "$files_from" && ( -z "$base" || -z "$head" ) && "${GITHUB_EVENT_NAME:-}" == "pull_request" ]]; then
+if [[ "$declarations_only" != true && -z "$files_from" && "$base_supplied" != true && "$head_supplied" != true && ( -z "$base" || -z "$head" ) && "${GITHUB_EVENT_NAME:-}" == "pull_request" ]]; then
   echo "pull_request monitoring_impact validation requires --base/--head, --files-from, or a parseable GITHUB_EVENT_PATH" >&2
   exit 1
 fi
 
 declare -a files=()
-if [[ -n "$files_from" ]]; then
-  mapfile -t files < "$files_from"
-elif [[ -n "$base" && -n "$head" ]]; then
-  mapfile -t files < <(git diff --no-renames --name-only --diff-filter=ACDMRTUXB "$base...$head")
+if [[ "$declarations_only" == true && -z "$files_from" && "$base_supplied" != true && "$head_supplied" != true ]]; then
+  :
 else
-  mapfile -t files < <(
-    {
-      git diff --no-renames --name-only --diff-filter=ACDMRTUXB
-      git diff --cached --no-renames --name-only --diff-filter=ACDMRTUXB
-      git ls-files --others --exclude-standard
-    } | sort -u
-  )
+  # shellcheck source=load-changed-files.sh
+  source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/load-changed-files.sh"
+  load_changed_files "$files_from" "$base" "$head"
+  files=("${GOVERNANCE_CHANGED_FILES[@]}")
 fi
 
 repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
