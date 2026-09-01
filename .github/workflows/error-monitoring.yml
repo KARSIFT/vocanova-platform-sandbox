@@ -89,14 +89,14 @@ jobs:
       - name: Mint a GitHub App installation token
         id: app-token
         if: steps.app-credentials.outputs.available == 'true'
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
         with:
           app-id: ${{ secrets.KARSIFT_BOT_APP_ID }}
           private-key: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
           permission-issues: write
 
       - name: Query Sentry and open deduplicated bug issues
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         env:
           SENTRY_ORG: vocanova
           SENTRY_API_TOKEN: ${{ secrets.SENTRY_API_TOKEN }}

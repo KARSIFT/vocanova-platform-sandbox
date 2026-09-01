@@ -106,7 +106,7 @@ jobs:
       - name: Mint environment-secret writer token
         id: environment-token
         if: ${{ success() && ((inputs.rotate_credentials && !inputs.preprovisioned_credentials) || inputs.recover_store_only) }}
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
         with:
           app-id: ${{ secrets.KARSIFT_BOT_APP_ID }}
           private-key: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
@@ -138,7 +138,7 @@ jobs:
       - name: Refuse a new rotation while recovery material exists
         id: rotation_preflight
         if: ${{ success() && inputs.rotate_credentials && !inputs.recover_store_only }}
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
         with:
           host: ${{ secrets.STAGING_SSH_HOST }}
           username: ${{ secrets.STAGING_SSH_USER }}
@@ -198,7 +198,7 @@ jobs:
           fi
 
       - name: Copy monitoring sync bundle to host
-        uses: appleboy/scp-action@v1.0.0
+        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345 # v1.0.0
         with:
           host: ${{ secrets.STAGING_SSH_HOST }}
           username: ${{ secrets.STAGING_SSH_USER }}
@@ -208,7 +208,7 @@ jobs:
 
       - name: Copy rotation password file to host
         if: ${{ success() && inputs.rotate_credentials && !inputs.recover_store_only }}
-        uses: appleboy/scp-action@v1.0.0
+        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345 # v1.0.0
         with:
           host: ${{ secrets.STAGING_SSH_HOST }}
           username: ${{ secrets.STAGING_SSH_USER }}
@@ -219,7 +219,7 @@ jobs:
       - name: Rotate Kuma credentials on host (explicit opt-in)
         id: rotate_host
         if: ${{ success() && inputs.rotate_credentials && !inputs.recover_store_only }}
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
         with:
           host: ${{ secrets.STAGING_SSH_HOST }}
           username: ${{ secrets.STAGING_SSH_USER }}
@@ -474,7 +474,7 @@ jobs:
 
       - name: Sync monitor inventory after credential rotation
         if: ${{ success() && inputs.sync_inventory && inputs.rotate_credentials }}
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
         with:
           host: ${{ secrets.STAGING_SSH_HOST }}
           username: ${{ secrets.STAGING_SSH_USER }}
@@ -495,7 +495,7 @@ jobs:
 
       - name: Sync monitor inventory to Kuma
         if: ${{ success() && inputs.sync_inventory && !inputs.rotate_credentials && !inputs.recover_store_only }}
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
         env:
           KUMA_USERNAME: ${{ secrets.KUMA_USERNAME }}
           KUMA_PASSWORD: ${{ secrets.KUMA_PASSWORD }}
@@ -550,7 +550,7 @@ jobs:
       # this attempt never applied a reset on the host (VOC-087-D04).
       - name: Remove host rotation credential material
         if: ${{ always() && (inputs.rotate_credentials || inputs.recover_store_only) && steps.scrub_gate.outputs.decision == 'SCRUB' }}
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
         with:
           host: ${{ secrets.STAGING_SSH_HOST }}
           username: ${{ secrets.STAGING_SSH_USER }}

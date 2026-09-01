@@ -156,7 +156,7 @@ test("VOC-088-TEST-11: standalone App observer covers exact failure surface", ()
   for (const conclusion of ["failure", "cancelled", "timed_out"]) {
     assert.match(workflow, new RegExp(`\\b${conclusion}\\b`));
   }
-  assert.match(workflow, /actions\/create-github-app-token@v3/);
+  assert.match(workflow, /actions\/create-github-app-token@[0-9a-f]{40} # v3/);
   assert.doesNotMatch(workflow, /permission-actions:/);
   assert.match(workflow, /permission-issues: write/);
   assert.match(workflow, /^permissions:\n  contents: read\n  actions: read$/m);

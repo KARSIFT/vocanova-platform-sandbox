@@ -376,7 +376,7 @@ jobs:
       # and for the consistent build cache behavior the
       # T02/T03 Dockerfiles assume.
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
 
       # docker/login-action v3 (pinned to the v3.x
       # major version; SHA-pin before any non-staging
@@ -388,7 +388,7 @@ jobs:
       # GITHUB_TOKEN is short-lived and is the only
       # auth the GHCR push step needs per VOC-032-D06.
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v4
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -448,7 +448,7 @@ jobs:
       # attestation is metadata noise that does not
       # change what the image does.
       - name: Build and push vocanova-api
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: apps/api
           file: apps/api/Dockerfile
@@ -483,7 +483,7 @@ jobs:
       # it would invite an accidental "deploy to
       # staging with the local-dev URL" mistake.
       - name: Build and push vocanova-web
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           file: apps/web/Dockerfile
@@ -643,7 +643,7 @@ jobs:
       # non-empty before attempting the connection.
       - name: Copy deploy bundle to staging host
         if: ${{ inputs.skip_ssh_deploy != true }}
-        uses: appleboy/scp-action@v1.0.0
+        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345 # v1.0.0
         with:
           host: ${{ secrets.STAGING_SSH_HOST }}
           username: ${{ secrets.STAGING_SSH_USER }}
@@ -685,7 +685,7 @@ jobs:
       # repo's CURSOR_API_KEY-style secrets, not on the server.
       - name: Sync AI-provider configuration from GitHub secrets
         if: ${{ inputs.skip_ssh_deploy != true }}
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -722,7 +722,7 @@ jobs:
 
       - name: Sync staging monitoring configuration from GitHub secrets
         if: ${{ inputs.skip_ssh_deploy != true }}
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
         env:
           STAGING_SENTRY_DSN: ${{ secrets.STAGING_SENTRY_DSN }}
         with:
@@ -762,7 +762,7 @@ jobs:
       # sync-to-api.env pattern as the Sentry/AI-provider steps above.
       - name: Sync staging smoke-test session-mint token from GitHub secrets
         if: ${{ inputs.skip_ssh_deploy != true }}
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
         env:
           STAGING_SMOKE_TEST_SESSION_MINT_TOKEN: ${{ secrets.STAGING_SMOKE_TEST_SESSION_MINT_TOKEN }}
         with:
@@ -794,7 +794,7 @@ jobs:
       # step below, gated on whether both secrets are present in GitHub.
       - name: Sync staging Google OAuth configuration from GitHub secrets
         if: ${{ inputs.skip_ssh_deploy != true }}
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
         env:
           STAGING_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
           STAGING_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
@@ -843,7 +843,7 @@ jobs:
       # persistent repository secret is the sole cohort source on every deploy.
       - name: Write staging application configuration
         if: ${{ inputs.skip_ssh_deploy != true }}
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
         env:
           STAGING_NEW_USER_SIGNUP_ALLOWLIST: ${{ secrets.STAGING_NEW_USER_SIGNUP_ALLOWLIST }}
           STAGING_GOOGLE_OAUTH_ENABLED: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID != '' && secrets.GOOGLE_OAUTH_CLIENT_SECRET != '' }}
@@ -885,7 +885,7 @@ jobs:
 
       - name: Deploy to staging host
         if: ${{ inputs.skip_ssh_deploy != true }}
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
@@ -1452,7 +1452,7 @@ jobs:
       # running stack depends on.
       - name: Prune unused Docker images and build cache on staging host
         if: ${{ inputs.skip_ssh_deploy != true }}
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
         with:
           host: ${{ secrets.STAGING_SSH_HOST }}
           username: ${{ secrets.STAGING_SSH_USER }}
@@ -1584,7 +1584,7 @@ jobs:
       # VOC-053-DEP-00 is resolved.
       - name: DIAGNOSTIC - dump synthetic account's daily_mission_snapshots rows
         if: ${{ always() && inputs.skip_ssh_deploy != true }}
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
         with:
           host: ${{ secrets.STAGING_SSH_HOST }}
           username: ${{ secrets.STAGING_SSH_USER }}
