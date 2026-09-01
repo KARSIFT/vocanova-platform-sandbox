@@ -20,7 +20,10 @@ env:
 
 jobs:
   walkthrough:
-    if: github.event.pull_request.draft == false
+    # Off by default - set the PR_WALKTHROUGH_ENABLED repo variable to
+    # "true" once the OPENCODE_SECOND_API_KEY workspace has balance again
+    # (matches kandev's own vars.PR_WALKTHROUGH_ENABLED toggle).
+    if: vars.PR_WALKTHROUGH_ENABLED == 'true' && github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
