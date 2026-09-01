@@ -30,10 +30,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     container:
-      image: ghcr.io/karsift/vocanova-ci-base:sha-17604b9f2ce4
+      image: ghcr.io/karsift/vocanova-ci-base:sha-e2b0adde7385
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
+      # scripts/foundation/*.test.mjs shells out to `docker` for real
+      # container-content assertions; the CLI alone has no daemon without
+      # this socket mount (docker-outside-of-docker against the runner's
+      # own daemon).
+      options: -v /var/run/docker.sock:/var/run/docker.sock
     steps:
       # actions/checkout v7.0.1, pinned to the immutable commit documented at
       # https://github.com/actions/checkout/releases/tag/v7.0.1

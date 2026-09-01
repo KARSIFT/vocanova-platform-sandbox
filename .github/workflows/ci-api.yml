@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     container:
-      image: ghcr.io/karsift/vocanova-ci-base:sha-17604b9f2ce4
+      image: ghcr.io/karsift/vocanova-ci-base:sha-e2b0adde7385
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -39,11 +39,16 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
+      # -buildvcs=false: Go's automatic VCS-stamping shells out to `git
+      # status`, which fails with "detected dubious ownership" inside a
+      # container job (the container's git doesn't inherit the host
+      # checkout step's safe.directory config). This repo doesn't rely on
+      # embedded VCS info in built binaries.
       - name: go vet
         run: cd apps/api && go vet ./...
 
       - name: go build
-        run: cd apps/api && go build ./...
+        run: cd apps/api && go build -buildvcs=false ./...
 
       - name: go test
-        run: cd apps/api && go test ./...
+        run: cd apps/api && go test -buildvcs=false ./...
