@@ -118,14 +118,18 @@ test("VOC-146-TEST-02: unrelated histories with no merge base fail closed", () =
     `cd "${repoDir}" && git add a.txt && git -c user.email=t@e.com -c user.name=t commit -q -m a`,
   );
   assert.equal(first.status, 0, first.stderr || first.stdout);
-  const baseSha = runShell(`cd "${repoDir}" && git rev-parse HEAD`).stdout.trim();
+  const baseSha = runShell(
+    `cd "${repoDir}" && git rev-parse HEAD`,
+  ).stdout.trim();
 
   writeFileSync(path.join(repoDir, "b.txt"), "b\n");
   const orphan = runShell(
     `cd "${repoDir}" && git checkout --orphan orphan -q && git rm -rf --cached . >/dev/null 2>&1; git add b.txt && git -c user.email=t@e.com -c user.name=t commit -q -m b`,
   );
   assert.equal(orphan.status, 0, orphan.stderr || orphan.stdout);
-  const headSha = runShell(`cd "${repoDir}" && git rev-parse HEAD`).stdout.trim();
+  const headSha = runShell(
+    `cd "${repoDir}" && git rev-parse HEAD`,
+  ).stdout.trim();
 
   const nested = runScript(
     validateMonitoringImpact,
@@ -155,7 +159,10 @@ test("VOC-146-TEST-03: range loading does not use mapfile process substitution",
 
   assert.doesNotMatch(monitoring, /mapfile -t files < <\(git diff/);
   assert.doesNotMatch(classifier, /mapfile -t files < <\(git diff/);
-  assert.match(helper, /git diff --no-renames --name-only --diff-filter=ACDMRTUXB/);
+  assert.match(
+    helper,
+    /git diff --no-renames --name-only --diff-filter=ACDMRTUXB/,
+  );
   assert.match(helper, /resolve_governance_commit/);
 });
 
@@ -164,7 +171,11 @@ test("VOC-146-TEST-04: partial --base or --head fails closed", () => {
     "--base",
     implementationPrBase,
   ]);
-  assert.notEqual(partialBase.status, 0, partialBase.stderr || partialBase.stdout);
+  assert.notEqual(
+    partialBase.status,
+    0,
+    partialBase.stderr || partialBase.stdout,
+  );
   assert.match(
     partialBase.stderr,
     /requires both --base and --head/,
@@ -175,7 +186,11 @@ test("VOC-146-TEST-04: partial --base or --head fails closed", () => {
     "--head",
     implementationPrBase,
   ]);
-  assert.notEqual(partialHead.status, 0, partialHead.stderr || partialHead.stdout);
+  assert.notEqual(
+    partialHead.status,
+    0,
+    partialHead.stderr || partialHead.stdout,
+  );
 
   const classifierPartial = runScript(classifyChangeRisk, [
     "--base",
@@ -198,11 +213,7 @@ test("VOC-146-TEST-05: valid range and --files-from still succeed", () => {
     headSha,
     "--declarations-only",
   ]);
-  assert.equal(
-    validRange.status,
-    0,
-    validRange.stderr || validRange.stdout,
-  );
+  assert.equal(validRange.status, 0, validRange.stderr || validRange.stdout);
 
   const filesFromDir = mkdtempSync(path.join(tmpdir(), "voc146-files-from-"));
   const filesFrom = path.join(filesFromDir, "changed.txt");
@@ -224,13 +235,15 @@ test("VOC-146-TEST-05: valid range and --files-from still succeed", () => {
   );
   rmSync(filesFromDir, { recursive: true, force: true });
 
-  const declarationsOnly = runScript(validateMonitoringImpact, [
-    "--declarations-only",
-  ], {
-    env: {
-      GITHUB_EVENT_NAME: "pull_request",
+  const declarationsOnly = runScript(
+    validateMonitoringImpact,
+    ["--declarations-only"],
+    {
+      env: {
+        GITHUB_EVENT_NAME: "pull_request",
+      },
     },
-  });
+  );
   assert.equal(
     declarationsOnly.status,
     0,
@@ -245,7 +258,11 @@ test("VOC-146-TEST-06: classify-change-risk.sh uses the same fail-closed range c
     "--head",
     implementationPrBase,
   ]);
-  assert.notEqual(invalidBase.status, 0, invalidBase.stderr || invalidBase.stdout);
+  assert.notEqual(
+    invalidBase.status,
+    0,
+    invalidBase.stderr || invalidBase.stdout,
+  );
   assert.doesNotMatch(
     `${invalidBase.stdout}\n${invalidBase.stderr}`,
     /No changed files to classify\./,
