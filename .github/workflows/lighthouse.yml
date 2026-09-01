@@ -35,7 +35,6 @@ name: lighthouse
 on:
   pull_request:
     branches:
-      - develop
       - main
     paths:
       - "apps/web/**"

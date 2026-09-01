@@ -1,0 +1,42 @@
+name: ci-api
+
+# Vet and test the Go API. Required on every PR into main.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-api-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci-api:
+    name: ci-api
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # actions/checkout v7.0.1, pinned to the immutable commit documented at
+      # https://github.com/actions/checkout/releases/tag/v7.0.1
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: apps/api/go.mod
+          cache-dependency-path: apps/api/go.sum
+
+      - name: go vet
+        run: cd apps/api && go vet ./...
+
+      - name: go build
+        run: cd apps/api && go build ./...
+
+      - name: go test
+        run: cd apps/api && go test ./...

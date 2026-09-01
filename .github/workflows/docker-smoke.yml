@@ -1,0 +1,89 @@
+name: docker-smoke
+
+# VOC-110-T00: merge-gating production Docker boot/HTTP smoke for changes
+# that can affect the shipped @vocanova/web standalone artifact. Builds
+# apps/web/Dockerfile locally (no registry push, no repository secrets),
+# starts the image, requires HTTP 2xx from `/`, verifies the container stays
+# running, and always cleans up. Migrated out of the retired pipeline.yml
+# orchestrator into its own focused workflow.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/web/**"
+      - "packages/**"
+      - ".github/workflows/docker-smoke.yml"
+      - "scripts/foundation/voc110-web-container-runtime.test.mjs"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-smoke-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  docker-smoke:
+    name: web container runtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out reviewed revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Build, boot, and HTTP-smoke the production web image
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          image_tag="vocanova-web:pr-${PR_NUMBER}-${RUN_ID}"
+          container_name="vocanova-web-runtime-${RUN_ID}"
+          host_port=13000
+
+          cleanup() {
+            docker rm -f "$container_name" >/dev/null 2>&1 || true
+            docker rmi -f "$image_tag" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          docker version
+          docker build -f apps/web/Dockerfile \
+            --build-arg NEXT_PUBLIC_API_BASE_URL=http://localhost:8080 \
+            -t "$image_tag" .
+
+          docker run -d --name "$container_name" \
+            --add-host=host.docker.internal:host-gateway \
+            -e API_BASE_URL=http://host.docker.internal:8080 \
+            -e PORT=3000 \
+            -e HOSTNAME=0.0.0.0 \
+            -p "${host_port}:3000" \
+            "$image_tag"
+
+          deadline=$((SECONDS + 180))
+          while [ "$SECONDS" -lt "$deadline" ]; do
+            if [ "$(docker inspect --format '{{.State.Running}}' "$container_name" 2>/dev/null || echo false)" != "true" ]; then
+              echo "Container exited before HTTP smoke succeeded" >&2
+              docker logs --tail=100 "$container_name" >&2 || true
+              exit 1
+            fi
+            status_code=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+              "http://127.0.0.1:${host_port}/" || true)
+            if [ "$status_code" -ge 200 ] && [ "$status_code" -lt 300 ]; then
+              echo "Root route returned HTTP ${status_code}"
+              break
+            fi
+            sleep 2
+          done
+
+          if [ "${status_code:-0}" -lt 200 ] || [ "${status_code:-0}" -ge 300 ]; then
+            echo "Root route did not return HTTP 2xx within 180s (last status: ${status_code:-none})" >&2
+            docker logs --tail=100 "$container_name" >&2 || true
+            exit 1
+          fi
+
+          if [ "$(docker inspect --format '{{.State.Running}}' "$container_name")" != "true" ]; then
+            echo "Container is not running after successful HTTP smoke" >&2
+            exit 1
+          fi

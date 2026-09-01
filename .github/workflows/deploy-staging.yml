@@ -263,7 +263,7 @@ on:
   # use `workflow_dispatch` below for manual retry/redeploy.
   push:
     branches:
-      - develop
+      - main
     paths:
       - "*"
       - "apps/**"

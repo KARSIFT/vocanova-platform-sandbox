@@ -29,8 +29,9 @@ name: deploy-production
 # push deploys cannot silently erase the cohort.
 
 on:
-  push:
-    branches: [main]
+  # Production deploys are manual-dispatch only, deliberately decoupled from
+  # every push to main now that main is the sole branch (single push-to-main
+  # would otherwise trigger both staging and production simultaneously).
   workflow_dispatch:
     inputs:
       production_web_host:
