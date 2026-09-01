@@ -1,4 +1,4 @@
-# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106, VOC-108, VOC-115, VOC-117, VOC-121, VOC-122, VOC-123, VOC-126, VOC-129, VOC-136, VOC-140)
+# Pinned karsift-ai-infra contract fixtures (VOC-080-T05, VOC-097-T03, VOC-102-T00, VOC-104, VOC-106, VOC-108, VOC-115, VOC-117, VOC-121, VOC-122, VOC-123, VOC-126, VOC-129, VOC-136, VOC-140, VOC-145)
 
 These copies are deterministic fixtures for caller-repo policy regressions.
 This README is adapted caller-local provenance documentation, not a canonical
@@ -267,7 +267,13 @@ self-deadlock exception plus the shared strict association and custom-run-name
 reuse rules described above. VOC-142-T00 advances the current pin to
 `8993e867640dfb604dec0466c4e0787e68d8e258` with roster wait completeness for
 the full ruleset-required set including `ci / ci` and exact open or
-already-merged roster PR carrier reuse on reconcile.
+already-merged roster PR carrier reuse on reconcile. VOC-145-T00 advances the
+current pin to `ad2b27784e6fc33b3ac7e9dab48245dd6d08ac7f` with governed Path A
+restoration of role bindings and VOC-117 current-state expectations; unauthorized
+head `d8720829b176cf1287e633f9382989fc8f258105` is not a pin target. The pin
+mirrors coordinated infrastructure carrier PR `KARSIFT/karsift-ai-infra#175`; live
+`@main` reusable workflows remain on the unauthorized head until that PR is
+independently reviewed and merged.
 
 Recovery metadata reads, exact selected-run reruns, and allowlisted absent-context
 dispatches use narrowly job-scoped `GITHUB_TOKEN` permissions: Actions write plus

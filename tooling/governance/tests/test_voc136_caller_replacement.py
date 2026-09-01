@@ -23,7 +23,7 @@ EVIDENCE_PATH = (
     / "specs/changes/VOC-136-complete-infra-167-caller-pin-with-exhaustive/t00-evidence.md"
 )
 
-CURRENT_PIN = "8993e867640dfb604dec0466c4e0787e68d8e258"
+CURRENT_PIN = "ad2b27784e6fc33b3ac7e9dab48245dd6d08ac7f"
 AUTHORITATIVE_PIN = "b263c0c110591cc798b89277dfc35542abb1597b"
 STALE_PIN_164 = "863fc1f35b1d35e4981a59166b0e939be1a2b681"
 STALE_PIN_165 = "8ce2b77a09a729e458a9f4cbea1ca26eb114d398"
@@ -62,7 +62,7 @@ MIRRORED_FILE_HASHES = {
         "d0f28a862eb04e8cf5ff5ffa13f58749f95e26401c470d8e68f8f9b80f1b7936"
     ),
     "CHANGELOG.md": (
-        "7cdb3d6c863ccaab15012ef3944aac223d5a4fcc044c4f990955dfd02f70e4ea"
+        "a33a305abf76528c71632a3df7b5b0b8afe4e5899d88a330f5623c500da7bdff"
     ),
 }
 

@@ -17,7 +17,8 @@ EVIDENCE_PATH = (
 AGENTS_PATH = REPO_ROOT / "AGENTS.md"
 
 AUTHORITATIVE_PIN = "67bdfd13ef875dead23ce4be01d7d0e8b976e289"
-CURRENT_PIN = "8993e867640dfb604dec0466c4e0787e68d8e258"
+VOC142_INFRA_MERGE = "8993e867640dfb604dec0466c4e0787e68d8e258"
+CURRENT_PIN = "ad2b27784e6fc33b3ac7e9dab48245dd6d08ac7f"
 IMPLEMENTATION_PR_BASE = "1fc3473576bef96cffd861f4304168ad147296ef"
 
 FINAL_INFRA_CHANGED_MIRRORS = frozenset(
@@ -77,6 +78,7 @@ CURRENT_PIN_ASSERTION_PATHS = (
     "tooling/governance/tests/test_voc139_promotion_recovery_metadata.py",
     "tooling/governance/tests/test_voc140_release_convergence.py",
     "tooling/governance/tests/test_voc142_adoption_roster_wait.py",
+    "tooling/governance/tests/test_voc145_caller_replacement.py",
 )
 
 
@@ -104,7 +106,7 @@ class Voc142AdoptionRosterWaitCallerTests(unittest.TestCase):
             )
 
     def test_live_current_pin_assertions_reference_new_merge(self):
-        self.assertEqual(len(CURRENT_PIN_ASSERTION_PATHS), 16)
+        self.assertEqual(len(CURRENT_PIN_ASSERTION_PATHS), 17)
         for relative in CURRENT_PIN_ASSERTION_PATHS:
             text = (REPO_ROOT / relative).read_text(encoding="utf-8")
             self.assertIn(CURRENT_PIN, text, relative)
@@ -121,7 +123,7 @@ class Voc142AdoptionRosterWaitCallerTests(unittest.TestCase):
 
     def test_evidence_records_implementation_base_and_infra_merge(self):
         self.assertIn(IMPLEMENTATION_PR_BASE, self.evidence)
-        self.assertIn(CURRENT_PIN, self.evidence)
+        self.assertIn(VOC142_INFRA_MERGE, self.evidence)
         self.assertIn(AUTHORITATIVE_PIN, self.evidence)
         self.assertIn("roster-pr-wait-runner.py", self.evidence)
         self.assertIn("roster-carrier-runner.py", self.evidence)

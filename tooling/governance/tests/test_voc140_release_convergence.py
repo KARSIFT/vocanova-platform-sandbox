@@ -20,7 +20,7 @@ RECONCILIATION_NOTES_PATH = (
 )
 
 AUTHORITATIVE_PIN = "599436835371f27fac52ec6b47a18b36257366ac"
-CURRENT_PIN = "8993e867640dfb604dec0466c4e0787e68d8e258"
+CURRENT_PIN = "ad2b27784e6fc33b3ac7e9dab48245dd6d08ac7f"
 PREVIOUS_REVIEWED_PIN = "67bdfd13ef875dead23ce4be01d7d0e8b976e289"
 IMPLEMENTATION_PR_BASE = "c59548375764d938265910cd07f2c2a73e337c01"
 
@@ -54,6 +54,7 @@ CURRENT_PIN_ASSERTION_PATHS = (
     "tooling/governance/tests/test_voc139_promotion_recovery_metadata.py",
     "tooling/governance/tests/test_voc140_release_convergence.py",
     "tooling/governance/tests/test_voc142_adoption_roster_wait.py",
+    "tooling/governance/tests/test_voc145_caller_replacement.py",
 )
 
 MIRRORED_FILE_HASHES = {
@@ -270,7 +271,7 @@ class Voc140ReleaseConvergenceTests(unittest.TestCase):
             {"README.md": "adapted-caller-local-provenance"},
         )
         self.assertNotIn("README.md", MIRRORED_FILE_HASHES)
-        self.assertEqual(len(CURRENT_PIN_ASSERTION_PATHS), 16)
+        self.assertEqual(len(CURRENT_PIN_ASSERTION_PATHS), 17)
         for relative in CURRENT_PIN_ASSERTION_PATHS:
             with self.subTest(relative=relative):
                 text = (REPO_ROOT / relative).read_text(encoding="utf-8")
