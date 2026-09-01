@@ -35,14 +35,19 @@ Capture fresh navigation/discovery evidence after rubric or navigator routing ch
 These are explicit, authenticated operator actions; the deterministic test validates the
 committed sanitized capture and never starts an agent or makes a network request. The
 required Repository Governance check uses `fetch-depth: 0`: authenticated
-same-repository `main` ← `develop` promotion pull requests deterministically use
-head/source-revision-bound `pr-validation` with exact PR base/head SHAs regardless of
-capture-subject object availability; other pull requests that change the capture
-fixture require each captured commit, prove ancestry, and bind captured/current
-hashes; ordinary unchanged-fixture pull requests remain merge-base-anchored
-`pr-validation`. Post-squash branch pushes re-validate the current hashes without requiring
-discarded intermediate PR commits to be ancestors. A generic shallow
-application-test checkout also remains non-mutating:
+same-repository `main` ← `develop` promotion pull requests select `squash-safe-push`
+from PR metadata and validate through reviewed-HEAD pinned-anchor
+`587269f547c93a899ca7b5504825ab5304d7a266` regardless of capture-subject object
+availability; other pull requests that change either capture fixture require each
+captured commit, prove ancestry, and bind captured/current hashes under strict
+`pr-ancestry`. Unchanged-fixture pull requests remain `pr-validation`, bind PR
+base/head SHAs to the merge base, and walk full first-parent ancestry from the
+reviewed head through pinned anchor `587269f547c93a899ca7b5504825ab5304d7a266`,
+requiring the fixture blob plus every embedded `AGENTS.md`/navigator source-hash
+record to remain immutable through that chain so later legitimate `AGENTS.md` edits
+do not invalidate unchanged evidence. Post-squash branch pushes select
+`squash-safe-push` and re-validate through the same reviewed-HEAD pinned anchor
+without requiring discarded intermediate PR commits to be ancestors. A generic shallow application-test checkout also remains non-mutating:
 
 ```bash
 node scripts/foundation/voc112-navigation-benchmark-run.mjs --capture-codex
@@ -52,11 +57,26 @@ node scripts/foundation/voc112-navigation-benchmark-run.mjs --capture-cursor-dis
 ```
 
 Benchmark and discovery evidence fixtures live under
-`scripts/foundation/fixtures/`. They bind to an exact ancestor revision plus hashes of
-`AGENTS.md` and the canonical navigator skill, so a later evidence-only commit cannot
-silently change the measured inputs. Raw runtime traces, prompts, and response bodies are
+`scripts/foundation/fixtures/`. They bind to pinned anchor
+`587269f547c93a899ca7b5504825ab5304d7a266`: both fixture blobs, every embedded
+`AGENTS.md`/navigator source-hash record, and the full first-parent chain from the
+reviewed head through that commit must match the working-tree fixture together. A
+later evidence-only commit cannot silently change the measured inputs. Raw runtime traces, prompts, and response bodies are
 not written; only sanitized runtime identity, usage/count metrics, repository paths, and
 rubric results are retained. Never pass or print a credential on the command line.
+
+### Rollback (VOC-112 historical anchoring repair)
+
+If whole-fixture historical anchoring must be reverted before VOC-143 reconciliation
+lands, restore the prior merge-base/head hash binding in
+`scripts/foundation/voc112-navigation-benchmark.test.mjs`, revert the dual-fixture
+selector in `.github/workflows/repository-governance.yml`, and restore the prior
+Validation prose in this file and `docs/operations/11-devops-and-ci-cd.md`. Re-run
+`node --test scripts/foundation/voc112-navigation-benchmark.test.mjs`,
+`node --test scripts/foundation/voc114-actions-check-recovery.test.mjs`, and
+`bash scripts/governance/validate-governance.sh`. Do not edit the JSON fixtures or
+recapture evidence during rollback; expect ordinary PR validation to fail again when
+`AGENTS.md` diverges from the embedded fixture hashes until a durable package lands.
 
 ## Updating pinned upstream material
 
