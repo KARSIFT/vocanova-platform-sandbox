@@ -230,6 +230,7 @@ for path in "${r4_ruleset_paths[@]}"; do
   }
 done
 
+bash -n scripts/governance/load-changed-files.sh
 bash -n scripts/governance/classify-change-risk.sh
 bash -n scripts/governance/validate-monitoring-impact.sh
 python3 tooling/governance/validate_repository_foundation.py --repository-root .
