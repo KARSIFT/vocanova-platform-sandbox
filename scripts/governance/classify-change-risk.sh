@@ -6,6 +6,8 @@ head=""
 files_from=""
 pr_body_file=""
 require_declaration=false
+base_supplied=false
+head_supplied=false
 
 usage() {
   echo "Usage: $0 [--base SHA --head SHA | --files-from FILE] [--pr-body-file FILE] [--require-declaration]" >&2
@@ -13,8 +15,8 @@ usage() {
 
 while (($#)); do
   case "$1" in
-    --base) base="${2:-}"; shift 2 ;;
-    --head) head="${2:-}"; shift 2 ;;
+    --base) base="${2:-}"; base_supplied=true; shift 2 ;;
+    --head) head="${2:-}"; head_supplied=true; shift 2 ;;
     --files-from) files_from="${2:-}"; shift 2 ;;
     --pr-body-file) pr_body_file="${2:-}"; shift 2 ;;
     --require-declaration) require_declaration=true; shift ;;
@@ -23,20 +25,16 @@ while (($#)); do
   esac
 done
 
-declare -a files=()
-if [[ -n "$files_from" ]]; then
-  mapfile -t files < "$files_from"
-elif [[ -n "$base" && -n "$head" ]]; then
-  mapfile -t files < <(git diff --no-renames --name-only --diff-filter=ACDMRTUXB "$base...$head")
-else
-  mapfile -t files < <(
-    {
-      git diff --no-renames --name-only --diff-filter=ACDMRTUXB
-      git diff --cached --no-renames --name-only --diff-filter=ACDMRTUXB
-      git ls-files --others --exclude-standard
-    } | sort -u
-  )
+if [[ "$base_supplied" == true && "$head_supplied" != true ]] || \
+   [[ "$head_supplied" == true && "$base_supplied" != true ]]; then
+  echo "A changed-file range requires both --base and --head." >&2
+  exit 1
 fi
+
+# shellcheck source=load-changed-files.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/load-changed-files.sh"
+load_changed_files "$files_from" "$base" "$head"
+declare -a files=("${GOVERNANCE_CHANGED_FILES[@]}")
 
 if ((${#files[@]} == 0)); then
   echo "No changed files to classify."

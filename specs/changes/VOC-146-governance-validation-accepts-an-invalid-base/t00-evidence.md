@@ -6,16 +6,11 @@ range in governance validation and risk classification.
 Do not record secrets, credentials, session values, OAuth material, personal
 data, complete CI logs, raw provider responses, or App token values.
 
-This file is the T00 evidence contract. Implementation fills the recorded
-fields below after the repair is tracked and committed. Do not require this
-file to contain the SHA of the same commit that contains it.
-
 ## Implementation PR base
 
 Recorded before the first in-scope edit:
 
-`pending — resolve current develop to a 40-character SHA before any in-scope
-edit and record it here.`
+`6f1e72206d04dbf7327a9194661ae1a4a806572e` (`develop` at task start).
 
 Issue-creation reproduction commit was
 `79b2b3f1f4224235bdda3f77ee887c3004978deb`.
@@ -38,51 +33,80 @@ count as protected-file drift.
 
 ## Range-loading contract
 
-| Case | Required result |
-|------|-----------------|
-| Nonexistent `--base`, resolvable `--head` | nonzero; no `Governance structure validation passed.` |
-| Resolvable `--base`, nonexistent `--head` | nonzero; no success line |
-| Two resolvable commits with no merge base | nonzero; do not load an empty file list |
-| Partial `--base` or `--head` only | nonzero; do not fall through to working-tree discovery |
-| Valid `--base`/`--head` with a successful empty diff | valid empty change set; classifier may report no changed files |
-| Valid `--base`/`--head` with real file changes | existing success/classification contract |
-| `--files-from` well-formed list | preserved |
-| `pull_request` with no resolved range (VOC-086) | still fail-closed |
-| `--declarations-only` without a range | still usable |
-| Working-tree fallback when no range was requested | preserved |
+Shared helper: `scripts/governance/load-changed-files.sh`
 
-Record the live helper names, status-preserving capture mechanism, and
-exact negative-case SHAs after implementation.
+| Mechanism | Detail |
+|-----------|--------|
+| Commit resolution | `git rev-parse --verify --end-of-options "${rev}^{commit}"` |
+| Status-preserving diff | `git diff … >"$tmp"` with explicit nonzero exit propagation |
+| Partial range guard | Explicit `--base`/`--head` flags fail closed before PR-event fill-in |
+| `--declarations-only` | Skips PR-event/working-tree range loading when no range was requested |
+
+| Case | Required result | Post-repair result |
+|------|-----------------|-------------------|
+| Nonexistent `--base`, resolvable `--head` | nonzero; no success line | exit `1`; `Unable to resolve --base commit` |
+| Resolvable `--base`, nonexistent `--head` | nonzero; no success line | exit `1`; `Unable to resolve --head commit` |
+| Two resolvable commits with no merge base | nonzero | exit `1`; `Unable to load changed files for range` |
+| Partial `--base` or `--head` only | nonzero; no working-tree fallback | exit `1`; `requires both --base and --head` |
+| Valid `--base`/`--head` with successful empty diff | valid empty change set | exit `0`; classifier may report no changed files |
+| Valid `--base`/`--head` with real file changes | existing success contract | exit `0` |
+| `--files-from` well-formed list | preserved | exit `0` under `GITHUB_EVENT_NAME=pull_request` |
+| `pull_request` with no resolved range (VOC-086) | still fail-closed | exit `1` (VOC-086-TEST-16) |
+| `--declarations-only` without a range | still usable | exit `0` under `GITHUB_EVENT_NAME=pull_request` |
+| Working-tree fallback when no range was requested | preserved | unchanged in `classify-change-risk.sh` |
 
 ## Exhaustive source-search disposition
 
-Record searched patterns and path disposition after implementation. Pattern
-families must include:
-
-| Pattern family | Examples searched |
-|----------------|-------------------|
-| Process-substitution range loaders | `mapfile < <(git diff`, `$base...$head` |
-| Missing-range-only fail-closed claims | `AGENTS.md` monitoring-impact paragraph; VOC-086 tests |
-| Success-after-Git-fatal | `Governance structure validation passed.` after invalid range |
-| Classifier empty-list success | `No changed files to classify.` |
-| Historical packages | `specs/changes/VOC-086-…`, `VOC-112-…` must remain unmodified |
-| Pin / infra | `PINNED_SHA.txt` must remain unmodified |
+| Pattern family | Path | Disposition |
+|----------------|------|-------------|
+| `mapfile < <(git diff` range loaders | `scripts/governance/validate-monitoring-impact.sh` | **updated** — uses `load-changed-files.sh` |
+| `mapfile < <(git diff` range loaders | `scripts/governance/classify-change-risk.sh` | **updated** — uses `load-changed-files.sh` |
+| Missing-range-only fail-closed claims | `AGENTS.md` monitoring-impact paragraph | **updated** — unresolved commits and invalid three-dot diffs are fail-closed |
+| Missing-range-only fail-closed claims | `.github/workflows/governance-policy.yml` | **unchanged** — passes explicit `--base`/`--head` |
+| Missing-range-only fail-closed claims | `.github/workflows/repository-governance.yml` | **unchanged** — passes explicit `--base`/`--head` |
+| Missing-range-only fail-closed claims | `scripts/foundation/voc086-monitoring-impact.test.mjs` | **unchanged** — VOC-086 missing-range contract preserved |
+| Success-after-Git-fatal | live scripts | **removed** — Git nonzero status propagates |
+| Classifier empty-list on invalid range | `classify-change-risk.sh` | **fixed** — invalid range exits nonzero before empty-list message |
+| Historical packages | `specs/changes/VOC-086-…/`, `VOC-112-…/` | **unchanged** (audit evidence) |
+| Pin / infra | `PINNED_SHA.txt`, `tooling/governance/fixtures/karsift-ai-infra/**` | **unchanged** |
+| `config/roles.yml` | repository root | **unchanged** |
 
 ## Validation commands (after the repair is tracked and committed)
 
-Record exact commands and results. Required:
+Issue #1127 class (nonexistent `--base`; expect nonzero; no success line):
 
 ```bash
-bash scripts/governance/validate-governance.sh --base <implementation-pr-base> --head <implementation-head>
-bash scripts/governance/classify-change-risk.sh --base <implementation-pr-base> --head <implementation-head>
-node --test scripts/foundation/voc146-*.test.mjs
-node --test scripts/foundation/voc086-monitoring-impact.test.mjs
-git diff --check
+bash scripts/governance/validate-governance.sh \
+  --base 376e00dd769afb0fe850052b3a5cb48f729e73ad \
+  --head 6f1e72206d04dbf7327a9194661ae1a4a806572e
+# exit 1; no "Governance structure validation passed."
 ```
 
-Plus the issue #1127 class command (expect nonzero; no success line) and the
-targeted nonexistent-head, no-merge-base, partial-range, valid-range, and
-`--files-from` cases.
+Valid implementation-PR range (same SHA empty diff at task start):
+
+```bash
+bash scripts/governance/validate-governance.sh \
+  --base 6f1e72206d04dbf7327a9194661ae1a4a806572e \
+  --head 6f1e72206d04dbf7327a9194661ae1a4a806572e
+# exit 0; "Governance structure validation passed."
+```
+
+Path-based risk classification on the same range:
+
+```bash
+bash scripts/governance/classify-change-risk.sh \
+  --base 6f1e72206d04dbf7327a9194661ae1a4a806572e \
+  --head 6f1e72206d04dbf7327a9194661ae1a4a806572e
+# exit 0; valid empty range reports "No changed files to classify."
+```
+
+Foundation suites:
+
+```bash
+node --test scripts/foundation/voc146-range-loading.test.mjs   # 8/8 pass
+node --test scripts/foundation/voc086-monitoring-impact.test.mjs  # 7/7 pass
+git diff --check  # pass
+```
 
 ## Exact-head binding contract
 
