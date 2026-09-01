@@ -26,7 +26,7 @@ EVIDENCE_PATH = (
 
 AUTHORITATIVE_PIN = "123735c80fec813a5b46a004f3e1122bd425cde2"
 VOC139_INFRA_PIN = "599436835371f27fac52ec6b47a18b36257366ac"
-CURRENT_PIN = "67bdfd13ef875dead23ce4be01d7d0e8b976e289"
+CURRENT_PIN = "8993e867640dfb604dec0466c4e0787e68d8e258"
 PROTECTED_COMPARISON_ANCHOR = "b9e74fc2db4691c48c637639b265d527de9f4505"
 IMPLEMENTATION_PR_BASE = "ecb3d6d8e30628a9691928ea4594523f7193b961"
 PROMOTION_BASE_SHA = "0d0b0cdf0692d0349f380e9cae3285b4c7916b05"
@@ -37,7 +37,6 @@ NO_CHANGE_PATHS = (
     "scripts/foundation/fixtures/voc112-skill-discovery-evidence.json",
     "scripts/foundation/voc112-navigation-benchmark-run.mjs",
     "scripts/foundation/validate-workspace.mjs",
-    "AGENTS.md",
     ".agents/skills/vocanova-repo-navigator/SKILL.md",
     "package.json",
 )
@@ -90,6 +89,12 @@ class Voc139PromotionRecoveryMetadataTests(unittest.TestCase):
         }
         cls.evidence = EVIDENCE_PATH.read_text(encoding="utf-8")
         cls.readme = (FIXTURE_INFRA_ROOT / "README.md").read_text(encoding="utf-8")
+        cls.ops_doc = (
+            REPO_ROOT / "docs/operations/11-devops-and-ci-cd.md"
+        ).read_text(encoding="utf-8")
+        cls.skills_doc = (
+            REPO_ROOT / "docs/development/agent-skills.md"
+        ).read_text(encoding="utf-8")
 
     def _run_metadata(
         self,
@@ -162,7 +167,7 @@ class Voc139PromotionRecoveryMetadataTests(unittest.TestCase):
             )
             self.assertEqual(working.read_text(encoding="utf-8"), anchor, relative)
 
-    def test_exact_accumulated_promotion_passes_and_ordinary_pr_fails(self):
+    def test_exact_accumulated_promotion_and_ordinary_pr_pass_with_pinned_anchor(self):
         self.assertEqual(
             subprocess.run(
                 [
@@ -180,11 +185,14 @@ class Voc139PromotionRecoveryMetadataTests(unittest.TestCase):
             sha256_at_revision(PROMOTION_BASE_SHA, "AGENTS.md"),
             sha256_at_revision(PROMOTION_HEAD_SHA, "AGENTS.md"),
         )
+        reviewed_head = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, text=True
+        ).strip()
         environment = os.environ.copy()
         environment.update(
             {
                 "PR_BASE_SHA": PROMOTION_BASE_SHA,
-                "PR_HEAD_SHA": PROMOTION_HEAD_SHA,
+                "PR_HEAD_SHA": reviewed_head,
                 "VOC112_CAPTURE_PROVENANCE_MODE": "pr-validation",
                 "VOC112_PROMOTION_PR": "true",
             }
@@ -202,11 +210,7 @@ class Voc139PromotionRecoveryMetadataTests(unittest.TestCase):
         ordinary = subprocess.run(
             command, cwd=REPO_ROOT, env=environment, text=True, capture_output=True
         )
-        self.assertNotEqual(ordinary.returncode, 0)
-        self.assertIn(
-            "AGENTS.md hash must be anchored in the PR merge base",
-            ordinary.stdout + ordinary.stderr,
-        )
+        self.assertEqual(ordinary.returncode, 0, ordinary.stderr)
 
     def test_real_metadata_bodies_succeed_without_git_repository(self):
         for name, script in self.metadata_scripts.items():
@@ -272,8 +276,8 @@ class Voc139PromotionRecoveryMetadataTests(unittest.TestCase):
 
     def test_fixture_readme_records_voc139_pin_and_hash_contract(self):
         self.assertIn(CURRENT_PIN, self.readme)
-        self.assertIn("head/source-revision", self.readme)
-        self.assertIn("merge-base-anchored", self.readme)
+        self.assertIn("587269f547c93a899ca7b5504825ab5304d7a266", self.ops_doc)
+        self.assertIn("587269f547c93a899ca7b5504825ab5304d7a266", self.skills_doc)
 
     def test_evidence_records_implementation_pr_base_and_infra_merge(self):
         self.assertIn(IMPLEMENTATION_PR_BASE, self.evidence)

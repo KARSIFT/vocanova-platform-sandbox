@@ -162,8 +162,13 @@ Auto-advance comments and diagnostics use the current serialized-convergence
 name, preventing the retired `check-completion` job name from becoming false
 operator guidance.
 The generated adoption roster PR is evaluated through the same paginated,
-exact-identity newest-attempt selector as the merged plan head. Its complete
-green logical set must stabilize on one unchanged head before exact-SHA merge.
+exact-identity newest-attempt selector as the merged plan head. Roster wait
+requires the complete ruleset-required logical-context set for the exact head
+(including `ci / ci`, `governance-policy`, and `validate`) to be registered and
+SUCCESS; two stable zero-pending subset snapshots are not complete. Reconcile
+reuses a matching open or already-merged roster carrier instead of always
+calling `gh pr create`. The complete required set must stabilize on one
+unchanged head before exact-SHA merge.
 The merge-gate App credential contract names both authoritative completion
 actions: publish the immutable task marker, then close the linked task so the
 release observer receives its authenticated wake-up events.
@@ -259,7 +264,10 @@ complete successfully before attestation. The final independently reviewed
 in-scope repair advances the current pin to
 `67bdfd13ef875dead23ce4be01d7d0e8b976e289` and adds the ordinary-PR
 self-deadlock exception plus the shared strict association and custom-run-name
-reuse rules described above.
+reuse rules described above. VOC-142-T00 advances the current pin to
+`8993e867640dfb604dec0466c4e0787e68d8e258` with roster wait completeness for
+the full ruleset-required set including `ci / ci` and exact open or
+already-merged roster PR carrier reuse on reconcile.
 
 Recovery metadata reads, exact selected-run reruns, and allowlisted absent-context
 dispatches use narrowly job-scoped `GITHUB_TOKEN` permissions: Actions write plus

@@ -3,7 +3,8 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import test from "node:test";
@@ -18,6 +19,28 @@ const repositoryRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../..",
 );
+const VOC112_FIXTURES = {
+  benchmark:
+    "scripts/foundation/fixtures/voc112-navigation-benchmark-traces.json",
+  discovery: "scripts/foundation/fixtures/voc112-skill-discovery-evidence.json",
+};
+const VOC112_PINNED_ANCHOR = "587269f547c93a899ca7b5504825ab5304d7a266";
+const VOC112_FIXTURE_PINNED_ANCHORS = {
+  [VOC112_FIXTURES.benchmark]: VOC112_PINNED_ANCHOR,
+  [VOC112_FIXTURES.discovery]: VOC112_PINNED_ANCHOR,
+};
+const NAVIGATOR_SKILL_PATH = ".agents/skills/vocanova-repo-navigator/SKILL.md";
+const AGENTS_PATH = "AGENTS.md";
+const SHA256_PATTERN = /^[a-f0-9]{64}$/;
+const COMMIT_PATTERN = /^[a-f0-9]{40}$/;
+const GIT_FIXTURE_ENV = {
+  GIT_AUTHOR_NAME: "VocaNova Fixture",
+  GIT_AUTHOR_EMAIL: "fixture.invalid",
+  GIT_COMMITTER_NAME: "VocaNova Fixture",
+  GIT_COMMITTER_EMAIL: "fixture.invalid",
+  GIT_AUTHOR_DATE: "2026-08-24T00:00:00Z",
+  GIT_COMMITTER_DATE: "2026-08-24T00:00:00Z",
+};
 const fixture = (name) =>
   JSON.parse(
     readFileSync(
@@ -39,18 +62,266 @@ const sha256AtRevision = (revision, relativePath) =>
       }),
     )
     .digest("hex");
+const reviewedHeadSha = () =>
+  execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  }).trim();
 
-function assertPrValidationMergeBase(evidence) {
+function assertValidSourceHashes(sourceHashes) {
+  assert.ok(sourceHashes, "fixture source_hashes are required");
+  assert.match(
+    sourceHashes.agents_sha256 ?? "",
+    SHA256_PATTERN,
+    "malformed agents_sha256 in fixture source_hashes",
+  );
+  assert.match(
+    sourceHashes.navigator_skill_sha256 ?? "",
+    SHA256_PATTERN,
+    "malformed navigator_skill_sha256 in fixture source_hashes",
+  );
+}
+
+function fixtureBlobExistsAtRevision(revision, fixtureRelativePath) {
+  return (
+    spawnSync("git", ["cat-file", "-e", `${revision}:${fixtureRelativePath}`], {
+      cwd: repositoryRoot,
+    }).status === 0
+  );
+}
+
+function sourceHashesAtPinnedAnchor() {
+  return {
+    agents_sha256: sha256AtRevision(VOC112_PINNED_ANCHOR, AGENTS_PATH),
+    navigator_skill_sha256: sha256AtRevision(
+      VOC112_PINNED_ANCHOR,
+      NAVIGATOR_SKILL_PATH,
+    ),
+  };
+}
+
+function assertSourceHashesMatchPinnedAnchor(sourceHashes, label) {
+  assertValidSourceHashes(sourceHashes);
+  const expected = sourceHashesAtPinnedAnchor();
+  assert.equal(
+    sourceHashes.agents_sha256,
+    expected.agents_sha256,
+    `${label}: agents_sha256 must bind to pinned fixture anchor ${VOC112_PINNED_ANCHOR}`,
+  );
+  assert.equal(
+    sourceHashes.navigator_skill_sha256,
+    expected.navigator_skill_sha256,
+    `${label}: navigator_skill_sha256 must bind to pinned fixture anchor ${VOC112_PINNED_ANCHOR}`,
+  );
+}
+
+function assertAllEmbeddedSourceHashesAtPinnedAnchor(fixtureRelativePath) {
+  if (fixtureRelativePath === VOC112_FIXTURES.benchmark) {
+    assertSourceHashesMatchPinnedAnchor(
+      fixture("voc112-navigation-benchmark-traces.json").source_hashes,
+      "benchmark fixture",
+    );
+    return;
+  }
+  if (fixtureRelativePath === VOC112_FIXTURES.discovery) {
+    for (const [index, row] of fixture(
+      "voc112-skill-discovery-evidence.json",
+    ).discoveries.entries()) {
+      assertSourceHashesMatchPinnedAnchor(
+        row.source_hashes,
+        `discovery row ${index}`,
+      );
+    }
+    return;
+  }
+  throw new Error(`unknown fixture path: ${fixtureRelativePath}`);
+}
+
+function resolveFixturePinnedAnchor(fixtureRelativePath) {
+  const pinnedAnchor = VOC112_FIXTURE_PINNED_ANCHORS[fixtureRelativePath];
+  if (!pinnedAnchor) {
+    throw new Error(`unknown fixture path: ${fixtureRelativePath}`);
+  }
+  assert.match(
+    pinnedAnchor,
+    COMMIT_PATTERN,
+    "pinned fixture anchor is malformed",
+  );
+  assert.equal(
+    spawnSync("git", ["cat-file", "-e", `${pinnedAnchor}^{commit}`], {
+      cwd: repositoryRoot,
+    }).status,
+    0,
+    `pinned fixture anchor object is missing: ${pinnedAnchor}`,
+  );
+  return pinnedAnchor;
+}
+
+function firstParentChainThroughPinnedAnchor(reviewedHead, pinnedAnchor) {
+  const revisions = execFileSync(
+    "git",
+    ["rev-list", "--first-parent", reviewedHead],
+    { cwd: repositoryRoot, encoding: "utf8" },
+  )
+    .trim()
+    .split("\n")
+    .filter(Boolean);
+  const pinIndex = revisions.indexOf(pinnedAnchor);
+  if (pinIndex === -1) {
+    throw new Error(
+      `pinned fixture anchor ${pinnedAnchor} not found in first-parent ancestry of ${reviewedHead}`,
+    );
+  }
+  return revisions.slice(0, pinIndex + 1);
+}
+
+function assertImmutableFixtureChain(fixtureRelativePath, reviewedHead) {
+  const pinnedAnchor = resolveFixturePinnedAnchor(fixtureRelativePath);
+  assert.match(
+    reviewedHead ?? "",
+    COMMIT_PATTERN,
+    "reviewed head revision is malformed",
+  );
+  assert.equal(
+    spawnSync("git", ["cat-file", "-e", `${reviewedHead}^{commit}`], {
+      cwd: repositoryRoot,
+    }).status,
+    0,
+    "reviewed head commit object is missing",
+  );
+
+  const workingFixtureBlob = sha256(fixtureRelativePath);
+  for (const revision of firstParentChainThroughPinnedAnchor(
+    reviewedHead,
+    pinnedAnchor,
+  )) {
+    assert.equal(
+      spawnSync("git", ["cat-file", "-e", `${revision}^{commit}`], {
+        cwd: repositoryRoot,
+      }).status,
+      0,
+      `missing git object while validating fixture chain: ${revision}`,
+    );
+    if (!fixtureBlobExistsAtRevision(revision, fixtureRelativePath)) {
+      throw new Error(
+        `fixture missing at revision ${revision} for ${fixtureRelativePath}`,
+      );
+    }
+    assert.equal(
+      sha256AtRevision(revision, fixtureRelativePath),
+      workingFixtureBlob,
+      `fixture blob must remain immutable from reviewed head through pinned anchor at ${revision}`,
+    );
+  }
+  return pinnedAnchor;
+}
+
+function commitTree(treeSha, parentRevision, message) {
+  const args = ["commit-tree", treeSha];
+  if (parentRevision) {
+    args.push("-p", parentRevision);
+  }
+  return execFileSync("git", args, {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+    input: message,
+    env: { ...process.env, ...GIT_FIXTURE_ENV },
+  }).trim();
+}
+
+function treeWithReplacedBlob(baseRevision, relativePath, blobSha) {
+  const tempDir = mkdtempSync(path.join(tmpdir(), "voc112-tree-"));
+  const indexPath = path.join(tempDir, "index");
+  const indexEnv = { ...process.env, GIT_INDEX_FILE: indexPath };
+  try {
+    execFileSync("git", ["read-tree", `${baseRevision}^{tree}`], {
+      cwd: repositoryRoot,
+      env: indexEnv,
+    });
+    execFileSync(
+      "git",
+      ["update-index", "--cacheinfo", `100644,${blobSha},${relativePath}`],
+      { cwd: repositoryRoot, env: indexEnv },
+    );
+    return execFileSync("git", ["write-tree"], {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+      env: indexEnv,
+    }).trim();
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+}
+
+function buildFirstParentDescendants(startRevision, extraCommits) {
+  let revision = startRevision;
+  for (let index = 0; index < extraCommits; index += 1) {
+    revision = commitTree(
+      `${revision}^{tree}`,
+      revision,
+      `VOC-112 fixture chain ${index}\n`,
+    );
+  }
+  return revision;
+}
+
+function buildTamperedThenRevertedHead(startRevision, fixtureRelativePath) {
+  const baseTree = execFileSync(
+    "git",
+    ["rev-parse", `${startRevision}^{tree}`],
+    {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+    },
+  ).trim();
+  const workingContent = execFileSync(
+    "git",
+    ["show", `${startRevision}:${fixtureRelativePath}`],
+    { cwd: repositoryRoot },
+  );
+  const tamperedBlob = execFileSync("git", ["hash-object", "-w", "--stdin"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+    input: `${workingContent.toString("utf8")}\n/* tamper */\n`,
+  }).trim();
+  const tamperedTree = treeWithReplacedBlob(
+    startRevision,
+    fixtureRelativePath,
+    tamperedBlob,
+  );
+  const tamperedCommit = commitTree(tamperedTree, startRevision, "tamper\n");
+  return commitTree(baseTree, tamperedCommit, "revert\n");
+}
+
+function assertWholeFixtureAnchor(evidence, fixtureRelativePath, reviewedHead) {
+  assertAllEmbeddedSourceHashesAtPinnedAnchor(fixtureRelativePath);
+  assertSourceHashesMatchPinnedAnchor(
+    evidence.source_hashes,
+    "validated capture record",
+  );
+  const anchor = assertImmutableFixtureChain(fixtureRelativePath, reviewedHead);
+  assert.equal(anchor, VOC112_PINNED_ANCHOR);
+  assert.equal(
+    spawnSync("git", ["merge-base", "--is-ancestor", anchor, reviewedHead], {
+      cwd: repositoryRoot,
+    }).status,
+    0,
+    "pinned fixture anchor must be an ancestor of the reviewed head",
+  );
+  return anchor;
+}
+
+function assertPrValidationMergeBase(evidence, fixtureRelativePath) {
   const prBaseSha = process.env.PR_BASE_SHA;
   const prHeadSha = process.env.PR_HEAD_SHA;
   assert.match(
     prBaseSha ?? "",
-    /^[a-f0-9]{40}$/,
+    COMMIT_PATTERN,
     "post-squash PR validation requires PR_BASE_SHA",
   );
   assert.match(
     prHeadSha ?? "",
-    /^[a-f0-9]{40}$/,
+    COMMIT_PATTERN,
     "post-squash PR validation requires PR_HEAD_SHA",
   );
   const mergeBaseResult = spawnSync(
@@ -67,39 +338,29 @@ function assertPrValidationMergeBase(evidence) {
     "PR_BASE_SHA and PR_HEAD_SHA must resolve to a common merge base",
   );
   const mergeBase = mergeBaseResult.stdout.trim();
-  assert.match(mergeBase, /^[a-f0-9]{40}$/);
-  const promotionPr = process.env.VOC112_PROMOTION_PR === "true";
-  if (promotionPr) {
-    const baseAncestry = spawnSync(
-      "git",
-      ["merge-base", "--is-ancestor", prBaseSha, prHeadSha],
-      { cwd: repositoryRoot },
-    );
+  assert.match(mergeBase, COMMIT_PATTERN);
+  if (process.env.VOC112_PROMOTION_PR === "true") {
     assert.equal(
-      baseAncestry.status,
+      spawnSync("git", ["merge-base", "--is-ancestor", prBaseSha, prHeadSha], {
+        cwd: repositoryRoot,
+      }).status,
       0,
       "promotion PR base must be an ancestor of its head",
     );
   }
-  const hashAnchorRevision = promotionPr ? prHeadSha : mergeBase;
-  const hashAnchorLabel = promotionPr ? "PR head" : "PR merge base";
-  assert.equal(
-    evidence.source_hashes.navigator_skill_sha256,
-    sha256AtRevision(
-      hashAnchorRevision,
-      ".agents/skills/vocanova-repo-navigator/SKILL.md",
-    ),
-    `navigator hash must be anchored in the ${hashAnchorLabel}`,
-  );
-  assert.equal(
-    evidence.source_hashes.agents_sha256,
-    sha256AtRevision(hashAnchorRevision, "AGENTS.md"),
-    `AGENTS.md hash must be anchored in the ${hashAnchorLabel}`,
+  assertWholeFixtureAnchor(evidence, fixtureRelativePath, prHeadSha);
+}
+
+function usesWholeFixtureAnchor(mode, subjectAvailable) {
+  return (
+    mode === "pr-validation" ||
+    mode === "squash-safe-push" ||
+    (mode === "local" && !subjectAvailable)
   );
 }
 
-function assertCapturedRevision(evidence) {
-  assert.match(evidence.subject_revision, /^[a-f0-9]{40}$/);
+function assertCapturedRevision(evidence, fixtureRelativePath) {
+  assert.match(evidence.subject_revision, COMMIT_PATTERN);
   const mode = process.env.VOC112_CAPTURE_PROVENANCE_MODE ?? "local";
   assert.ok(
     ["local", "pr-ancestry", "pr-validation", "squash-safe-push"].includes(
@@ -115,24 +376,26 @@ function assertCapturedRevision(evidence) {
       encoding: "utf8",
     },
   );
-  if (subjectLookup.status !== 0) {
+  const subjectAvailable = subjectLookup.status === 0;
+  const fixtureAnchorMode = usesWholeFixtureAnchor(mode, subjectAvailable);
+
+  if (!subjectAvailable) {
     assert.notEqual(
       mode,
       "pr-ancestry",
       "PR ancestry mode requires every captured commit object",
     );
-    if (mode === "local") {
-      assert.equal(
-        execFileSync("git", ["rev-parse", "--is-shallow-repository"], {
-          cwd: repositoryRoot,
-          encoding: "utf8",
-        }).trim(),
-        "true",
-        "a full local checkout must already contain the captured commit",
-      );
-    }
+  }
+
+  if (fixtureAnchorMode) {
     if (mode === "pr-validation") {
-      assertPrValidationMergeBase(evidence);
+      assertPrValidationMergeBase(evidence, fixtureRelativePath);
+    } else {
+      assertWholeFixtureAnchor(
+        evidence,
+        fixtureRelativePath,
+        reviewedHeadSha(),
+      );
     }
   } else {
     const ancestry = spawnSync(
@@ -148,30 +411,27 @@ function assertCapturedRevision(evidence) {
         "original capture subject must be an ancestor of the reviewed head",
       );
     }
-    if (mode === "pr-validation") {
-      assertPrValidationMergeBase(evidence);
-    }
-    if (ancestryProven && mode !== "squash-safe-push") {
+    if (ancestryProven) {
       assert.equal(
         evidence.source_hashes.navigator_skill_sha256,
-        sha256AtRevision(
-          evidence.subject_revision,
-          ".agents/skills/vocanova-repo-navigator/SKILL.md",
-        ),
+        sha256AtRevision(evidence.subject_revision, NAVIGATOR_SKILL_PATH),
         "navigator hash must bind to the captured revision",
       );
       assert.equal(
         evidence.source_hashes.agents_sha256,
-        sha256AtRevision(evidence.subject_revision, "AGENTS.md"),
+        sha256AtRevision(evidence.subject_revision, AGENTS_PATH),
         "AGENTS.md hash must bind to the captured revision",
       );
     }
   }
+
   assert.equal(
     evidence.source_hashes.navigator_skill_sha256,
-    sha256(".agents/skills/vocanova-repo-navigator/SKILL.md"),
+    sha256(NAVIGATOR_SKILL_PATH),
   );
-  assert.equal(evidence.source_hashes.agents_sha256, sha256("AGENTS.md"));
+  if (!fixtureAnchorMode) {
+    assert.equal(evidence.source_hashes.agents_sha256, sha256(AGENTS_PATH));
+  }
 }
 
 function totals(rows) {
@@ -223,7 +483,9 @@ test("VOC-112-TEST-12: benchmark is a revision-bound real structured agent captu
   const evidence = fixture("voc112-navigation-benchmark-traces.json");
   assert.equal(evidence.schema_version, 2);
   assert.equal(evidence.capture_kind, "real-agent-structured-trace");
-  assertCapturedRevision(evidence);
+  withProvenanceEnv("local", "", "", () =>
+    assertCapturedRevision(evidence, VOC112_FIXTURES.benchmark),
+  );
   assert.equal(evidence.runtime.name, "codex");
   assert.equal(evidence.runtime.model, "gpt-5.6-sol");
   assert.equal(evidence.runtime.sandbox, "read-only");
@@ -340,7 +602,9 @@ test("VOC-112-TEST-13: Cursor and Claude actually read the canonical skill from 
           candidate.runtime === runtime && candidate.context === context,
       );
       assert.ok(row, `missing ${runtime}/${context} discovery`);
-      assertCapturedRevision(row);
+      withProvenanceEnv("local", "", "", () =>
+        assertCapturedRevision(row, VOC112_FIXTURES.discovery),
+      );
       assert.equal(row.result, "pass", `${runtime}/${context} did not pass`);
       assert.deepEqual(row.canonical_skill_reads, [
         ".agents/skills/vocanova-repo-navigator/SKILL.md",
@@ -456,15 +720,22 @@ test("VOC-113-TEST-10: original capture mode requires and accepts true subject a
     cwd: repositoryRoot,
     encoding: "utf8",
   }).trim();
+  const baseFixture = fixture("voc112-navigation-benchmark-traces.json");
   const evidence = {
-    ...fixture("voc112-navigation-benchmark-traces.json"),
+    ...baseFixture,
     // The checked-out head exists even in CI's depth-1 clone and is a true
     // ancestor of itself, so this positive is deterministic without hidden
     // history while exercising the strict pr-ancestry branch.
     subject_revision: headSha,
+    // This is a synthetic positive using the current head as its capture;
+    // its hash must describe that head rather than the historical fixture.
+    source_hashes: {
+      ...baseFixture.source_hashes,
+      agents_sha256: sha256("AGENTS.md"),
+    },
   };
   withProvenanceEnv("pr-ancestry", headSha, headSha, () =>
-    assertCapturedRevision(evidence),
+    assertCapturedRevision(evidence, VOC112_FIXTURES.benchmark),
   );
 });
 
@@ -493,24 +764,21 @@ test("VOC-113-TEST-10: original capture mode rejects a fetchable non-ancestor", 
   };
   withProvenanceEnv("pr-ancestry", headSha, headSha, () =>
     assert.throws(
-      () => assertCapturedRevision(evidence),
+      () => assertCapturedRevision(evidence, VOC112_FIXTURES.benchmark),
       /original capture subject must be an ancestor/,
     ),
   );
 });
 
-test("VOC-113-TEST-10: later post-squash PR accepts merge-base anchored hashes", () => {
+test("VOC-113-TEST-10: later post-squash PR accepts pinned fixture anchor", () => {
   const evidence = {
     ...fixture("voc112-navigation-benchmark-traces.json"),
     // Models a capture commit discarded by squash and no longer fetchable.
     subject_revision: "0".repeat(40),
   };
-  const headSha = execFileSync("git", ["rev-parse", "HEAD"], {
-    cwd: repositoryRoot,
-    encoding: "utf8",
-  }).trim();
-  withProvenanceEnv("pr-validation", headSha, headSha, () =>
-    assertCapturedRevision(evidence),
+  const headSha = reviewedHeadSha();
+  withProvenanceEnv("pr-validation", VOC112_PINNED_ANCHOR, headSha, () =>
+    assertCapturedRevision(evidence, VOC112_FIXTURES.benchmark),
   );
 });
 
@@ -529,7 +797,7 @@ test("VOC-113-TEST-10: tampered merge base fails closed under pr-validation", ()
   process.env.PR_HEAD_SHA = headSha;
   try {
     assert.throws(
-      () => assertCapturedRevision(evidence),
+      () => assertCapturedRevision(evidence, VOC112_FIXTURES.benchmark),
       (error) =>
         error instanceof assert.AssertionError &&
         /merge base/.test(error.message),
@@ -573,7 +841,9 @@ test("VOC-113-TEST-10: changed current hash fails closed under pr-validation", (
   process.env.PR_BASE_SHA = baseSha;
   process.env.PR_HEAD_SHA = headSha;
   try {
-    assert.throws(() => assertCapturedRevision(evidence));
+    assert.throws(() =>
+      assertCapturedRevision(evidence, VOC112_FIXTURES.benchmark),
+    );
   } finally {
     if (priorMode === undefined) {
       delete process.env.VOC112_CAPTURE_PROVENANCE_MODE;
@@ -593,96 +863,75 @@ test("VOC-113-TEST-10: changed current hash fails closed under pr-validation", (
   }
 });
 
-test("VOC-139-TEST-00: promotion pr-validation binds hashes to PR head, not merge base", () => {
+test("VOC-139-TEST-00: promotion pr-validation accepts pinned fixture anchor", () => {
   const baseSha = VOC139_PROMOTION_BASE_SHA;
-  const headSha = VOC139_PROMOTION_HEAD_SHA;
+  const incidentHeadSha = VOC139_PROMOTION_HEAD_SHA;
+  const reviewedHead = reviewedHeadSha();
   assert.notEqual(
-    sha256AtRevision(headSha, "AGENTS.md"),
-    sha256AtRevision(baseSha, "AGENTS.md"),
+    sha256AtRevision(incidentHeadSha, AGENTS_PATH),
+    sha256AtRevision(baseSha, AGENTS_PATH),
     "VOC-139 incident fixture must exercise different base/head hashes",
   );
   const evidence = {
     ...fixture("voc112-navigation-benchmark-traces.json"),
     subject_revision: "0".repeat(40),
-    source_hashes: {
-      navigator_skill_sha256: sha256AtRevision(
-        headSha,
-        ".agents/skills/vocanova-repo-navigator/SKILL.md",
-      ),
-      agents_sha256: sha256AtRevision(headSha, "AGENTS.md"),
-    },
   };
   withProvenanceEnv(
     "pr-validation",
     baseSha,
-    headSha,
-    () => assertCapturedRevision(evidence),
+    reviewedHead,
+    () => assertCapturedRevision(evidence, VOC112_FIXTURES.benchmark),
     { promotionPr: true },
   );
 });
 
-test("VOC-139-TEST-02: ordinary pr-validation still requires merge-base hashes", () => {
+test("VOC-139-TEST-02: ordinary pr-validation accepts pinned fixture anchor despite AGENTS drift", () => {
   const baseSha = VOC139_PROMOTION_BASE_SHA;
-  const headSha = VOC139_PROMOTION_HEAD_SHA;
-  const mergeBase = execFileSync("git", ["merge-base", baseSha, headSha], {
+  const incidentHeadSha = VOC139_PROMOTION_HEAD_SHA;
+  const reviewedHead = reviewedHeadSha();
+  const mergeBase = execFileSync("git", ["merge-base", baseSha, reviewedHead], {
     cwd: repositoryRoot,
     encoding: "utf8",
   }).trim();
   const evidence = {
     ...fixture("voc112-navigation-benchmark-traces.json"),
     subject_revision: "0".repeat(40),
-    source_hashes: {
-      navigator_skill_sha256: sha256AtRevision(
-        headSha,
-        ".agents/skills/vocanova-repo-navigator/SKILL.md",
-      ),
-      agents_sha256: sha256AtRevision(headSha, "AGENTS.md"),
-    },
   };
   assert.notEqual(
-    sha256AtRevision(headSha, "AGENTS.md"),
-    sha256AtRevision(mergeBase, "AGENTS.md"),
-    "VOC-139 ordinary-PR regression requires different merge-base/head hashes",
+    sha256AtRevision(reviewedHead, AGENTS_PATH),
+    sha256AtRevision(mergeBase, AGENTS_PATH),
+    "ordinary PR regression requires different merge-base/head AGENTS.md hashes",
   );
-  withProvenanceEnv("pr-validation", baseSha, headSha, () =>
-    assert.throws(
-      () => assertCapturedRevision(evidence),
-      /AGENTS\.md hash must be anchored in the PR merge base/,
-    ),
+  assert.notEqual(
+    sha256AtRevision(incidentHeadSha, AGENTS_PATH),
+    sha256AtRevision(baseSha, AGENTS_PATH),
+    "VOC-139 incident fixture must exercise different base/head hashes",
+  );
+  withProvenanceEnv("pr-validation", baseSha, reviewedHead, () =>
+    assertCapturedRevision(evidence, VOC112_FIXTURES.benchmark),
   );
 });
 
-test("VOC-139-TEST-05: promotion pr-validation rejects merge-base-only hashes", () => {
+test("VOC-139-TEST-05: promotion pr-validation rejects split source hash pair", () => {
   const baseSha = VOC139_PROMOTION_BASE_SHA;
   const headSha = VOC139_PROMOTION_HEAD_SHA;
-  const mergeBase = execFileSync("git", ["merge-base", baseSha, headSha], {
-    cwd: repositoryRoot,
-    encoding: "utf8",
-  }).trim();
+  const expected = sourceHashesAtPinnedAnchor();
   const evidence = {
     ...fixture("voc112-navigation-benchmark-traces.json"),
     subject_revision: "0".repeat(40),
     source_hashes: {
-      navigator_skill_sha256: sha256AtRevision(
-        mergeBase,
-        ".agents/skills/vocanova-repo-navigator/SKILL.md",
-      ),
-      agents_sha256: sha256AtRevision(mergeBase, "AGENTS.md"),
+      agents_sha256: expected.agents_sha256,
+      navigator_skill_sha256: "f".repeat(64),
     },
   };
-  assert.notEqual(
-    sha256AtRevision(headSha, "AGENTS.md"),
-    sha256AtRevision(mergeBase, "AGENTS.md"),
-    "VOC-139 promotion regression requires different merge-base/head hashes",
-  );
   withProvenanceEnv(
     "pr-validation",
     baseSha,
     headSha,
     () =>
       assert.throws(
-        () => assertCapturedRevision(evidence),
-        /AGENTS\.md hash must be anchored in the PR head/,
+        () => assertCapturedRevision(evidence, VOC112_FIXTURES.benchmark),
+        /navigator_skill_sha256 must bind to pinned fixture anchor/,
       ),
     { promotionPr: true },
   );
@@ -740,9 +989,218 @@ test("VOC-139-TEST-04: promotion pr-validation rejects a non-ancestor base", () 
     VOC139_PROMOTION_HEAD_SHA,
     () =>
       assert.throws(
-        () => assertCapturedRevision(evidence),
+        () => assertCapturedRevision(evidence, VOC112_FIXTURES.benchmark),
         /promotion PR base must be an ancestor of its head/,
       ),
     { promotionPr: true },
+  );
+});
+
+test("VOC-112-EHR-01: current develop ordinary PR passes with unchanged fixtures", () => {
+  const headSha = reviewedHeadSha();
+  assert.equal(
+    resolveFixturePinnedAnchor(VOC112_FIXTURES.benchmark),
+    VOC112_PINNED_ANCHOR,
+  );
+  assert.equal(
+    resolveFixturePinnedAnchor(VOC112_FIXTURES.discovery),
+    VOC112_PINNED_ANCHOR,
+  );
+  assert.notEqual(
+    sha256AtRevision(headSha, AGENTS_PATH),
+    fixture("voc112-navigation-benchmark-traces.json").source_hashes
+      .agents_sha256,
+    "current develop must exercise AGENTS.md drift from the pinned fixture anchor",
+  );
+  const evidence = {
+    ...fixture("voc112-navigation-benchmark-traces.json"),
+    subject_revision: "0".repeat(40),
+  };
+  withProvenanceEnv("pr-validation", VOC112_PINNED_ANCHOR, headSha, () =>
+    assertCapturedRevision(evidence, VOC112_FIXTURES.benchmark),
+  );
+});
+
+test("VOC-112-EHR-02: squash-safe-push accepts pinned fixture anchor at develop tip", () => {
+  const evidence = {
+    ...fixture("voc112-navigation-benchmark-traces.json"),
+    subject_revision: "0".repeat(40),
+  };
+  withProvenanceEnv("squash-safe-push", "", "", () =>
+    assertCapturedRevision(evidence, VOC112_FIXTURES.benchmark),
+  );
+});
+
+test("VOC-112-EHR-03: discovery rows bind through the pinned fixture anchor", () => {
+  const headSha = reviewedHeadSha();
+  const row = fixture("voc112-skill-discovery-evidence.json").discoveries[0];
+  assert.equal(
+    assertWholeFixtureAnchor(row, VOC112_FIXTURES.discovery, headSha),
+    VOC112_PINNED_ANCHOR,
+  );
+  withProvenanceEnv("pr-validation", VOC112_PINNED_ANCHOR, headSha, () =>
+    assertCapturedRevision(
+      { ...row, subject_revision: "0".repeat(40) },
+      VOC112_FIXTURES.discovery,
+    ),
+  );
+});
+
+test("VOC-112-EHR-04: malformed source hashes fail closed", () => {
+  const evidence = {
+    ...fixture("voc112-navigation-benchmark-traces.json"),
+    subject_revision: "0".repeat(40),
+    source_hashes: {
+      agents_sha256: "not-a-sha256",
+      navigator_skill_sha256: "also-not-a-sha256",
+    },
+  };
+  const headSha = reviewedHeadSha();
+  withProvenanceEnv("pr-validation", headSha, headSha, () =>
+    assert.throws(
+      () => assertCapturedRevision(evidence, VOC112_FIXTURES.benchmark),
+      /malformed agents_sha256/,
+    ),
+  );
+});
+
+test("VOC-112-EHR-05: unfound source hash pair fails closed", () => {
+  const evidence = {
+    ...fixture("voc112-navigation-benchmark-traces.json"),
+    subject_revision: "0".repeat(40),
+    source_hashes: {
+      agents_sha256: "a".repeat(64),
+      navigator_skill_sha256: "b".repeat(64),
+    },
+  };
+  const headSha = reviewedHeadSha();
+  withProvenanceEnv("pr-validation", headSha, headSha, () =>
+    assert.throws(
+      () => assertCapturedRevision(evidence, VOC112_FIXTURES.benchmark),
+      /agents_sha256 must bind to pinned fixture anchor/,
+    ),
+  );
+});
+
+test("VOC-112-EHR-06: strict local mode rejects stale embedded agents hash", () => {
+  const headSha = reviewedHeadSha();
+  const evidence = {
+    ...fixture("voc112-navigation-benchmark-traces.json"),
+    subject_revision: headSha,
+  };
+  assert.notEqual(
+    evidence.source_hashes.agents_sha256,
+    sha256(AGENTS_PATH),
+    "local strictness requires AGENTS drift at develop tip",
+  );
+  withProvenanceEnv("local", "", "", () =>
+    assert.throws(
+      () => assertCapturedRevision(evidence, VOC112_FIXTURES.benchmark),
+      /AGENTS\.md hash must bind to the captured revision/,
+    ),
+  );
+});
+
+test("VOC-112-EHR-07: long first-parent chains still resolve to pinned anchor", () => {
+  const headSha = reviewedHeadSha();
+  const syntheticHead = buildFirstParentDescendants(headSha, 65);
+  const evidence = fixture("voc112-navigation-benchmark-traces.json");
+  assert.equal(
+    assertWholeFixtureAnchor(
+      evidence,
+      VOC112_FIXTURES.benchmark,
+      syntheticHead,
+    ),
+    VOC112_PINNED_ANCHOR,
+  );
+  assert.equal(
+    assertWholeFixtureAnchor(
+      evidence,
+      VOC112_FIXTURES.discovery,
+      syntheticHead,
+    ),
+    VOC112_PINNED_ANCHOR,
+  );
+});
+
+test("VOC-112-EHR-08: tampered then reverted fixture history fails closed", () => {
+  const headSha = reviewedHeadSha();
+  const syntheticHead = buildTamperedThenRevertedHead(
+    headSha,
+    VOC112_FIXTURES.benchmark,
+  );
+  const evidence = fixture("voc112-navigation-benchmark-traces.json");
+  assert.throws(
+    () =>
+      assertWholeFixtureAnchor(
+        evidence,
+        VOC112_FIXTURES.benchmark,
+        syntheticHead,
+      ),
+    /fixture blob must remain immutable/,
+  );
+});
+
+test("VOC-112-EHR-09: altered discovery row source hash pair fails closed", () => {
+  const headSha = reviewedHeadSha();
+  const row = fixture("voc112-skill-discovery-evidence.json").discoveries[0];
+  const evidence = {
+    ...row,
+    subject_revision: "0".repeat(40),
+    source_hashes: {
+      ...row.source_hashes,
+      navigator_skill_sha256: "c".repeat(64),
+    },
+  };
+  withProvenanceEnv("pr-validation", VOC112_PINNED_ANCHOR, headSha, () =>
+    assert.throws(
+      () => assertCapturedRevision(evidence, VOC112_FIXTURES.discovery),
+      /navigator_skill_sha256 must bind to pinned fixture anchor/,
+    ),
+  );
+});
+
+test("VOC-112-EHR-10: unknown fixture path fails closed", () => {
+  const headSha = reviewedHeadSha();
+  const evidence = fixture("voc112-navigation-benchmark-traces.json");
+  assert.throws(
+    () =>
+      assertWholeFixtureAnchor(
+        evidence,
+        "scripts/foundation/fixtures/missing-fixture.json",
+        headSha,
+      ),
+    /unknown fixture path/,
+  );
+});
+
+test(
+  "VOC-112-EHR-11: pr-ancestry probe rejects missing capture subject object",
+  {
+    skip:
+      process.env.VOC112_SHALLOW_SUBJECT_PROBE !== "true"
+        ? "probe-only regression"
+        : false,
+  },
+  () => {
+    const evidence = {
+      ...fixture("voc112-navigation-benchmark-traces.json"),
+      subject_revision: "0".repeat(40),
+    };
+    process.env.VOC112_CAPTURE_PROVENANCE_MODE = "pr-ancestry";
+    assertCapturedRevision(evidence, VOC112_FIXTURES.benchmark);
+  },
+);
+
+test("VOC-112-EHR-12: pr-ancestry rejects missing capture subject object", () => {
+  const evidence = {
+    ...fixture("voc112-navigation-benchmark-traces.json"),
+    subject_revision: "0".repeat(40),
+  };
+  withProvenanceEnv("pr-ancestry", reviewedHeadSha(), reviewedHeadSha(), () =>
+    assert.throws(
+      () => assertCapturedRevision(evidence, VOC112_FIXTURES.benchmark),
+      /PR ancestry mode requires every captured commit object/,
+    ),
   );
 });

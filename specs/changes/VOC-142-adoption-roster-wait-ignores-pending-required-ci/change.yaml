@@ -1,0 +1,265 @@
+schema_version: 1
+id: VOC-142
+slug: adoption-roster-wait-ignores-pending-required-ci
+title: Adoption roster wait ignores pending required CI and reconcile cannot reuse
+  the open roster PR
+type: infrastructure
+status: adopted
+risk: R4
+planned_implementation_risk_floor: 'R4. This package repairs two causally linked adoption-recovery
+  defects: roster wait must not treat a partial green snapshot as complete while ruleset-required
+  ci / ci is still unregistered or IN_PROGRESS, and reconcile must reuse a matching
+  open or already-merged roster PR instead of always calling gh pr create. tooling/governance/*
+  is an R4 path floor. .github/workflows/* is an R3 floor. Semantic mutation of required-check
+  completeness before protected merge, and of idempotent adoption-carrier reuse, is
+  protected. This is a draft proposal for human adoption review, not a determination.
+  The path classifier and independent verifier remain authoritative.
+
+  '
+canonical_path: specs/changes/VOC-142-adoption-roster-wait-ignores-pending-required-ci
+authority_model: a004-active
+requirement_source: 'GitHub issue #1113 (Adoption roster wait ignores pending required
+  CI and reconcile cannot reuse the open roster PR), including its original body.
+  Native adoption of merged plan PR #1110 declared generated roster PR #1112 checks
+  complete while ruleset-required ci / ci job 99342299218 was still IN_PROGRESS; the
+  subsequent protected merge correctly failed. Documented reconcile for plan_pr_number=1110
+  then failed at Open roster PR because #1112 already existed. Live reproduction in
+  KARSIFT/vocanova-platform-sandbox: source issue #1109, reviewed plan head 178ae81ed4f0224fbb12359c90ddb67c6687ca9a,
+  plan merge bb4ffdf5d53d27baf4c25c28caf3acfeda9e07a2, adoption run 33343125733 /
+  job 99342230038, generated task #1111, exact roster head 98dd0936a73b64a6b548da6cf2000a6d000917ac,
+  roster pipeline run 33343147453. Wait for roster PR checks started 2026-08-30T23:57:08Z
+  and reported SUCCESS at 2026-08-30T23:58:46Z; Merge checked roster PR started 2026-08-30T23:58:46Z
+  and failed at 2026-08-30T23:58:47Z; ci / ci started 2026-08-30T23:57:21Z, remained
+  IN_PROGRESS at the merge attempt, and completed SUCCESS only at 2026-08-30T23:59:16Z.
+  Reconcile run 33343250178 / job 99342577393 reused task #1111 and the deterministic
+  roster branch, then failed at Open roster PR. No roster PR was manually merged,
+  closed, recreated, or bypassed; #1112 remains the single exact VOC-141 carrier.
+  This draft package does not adopt or authorize itself.
+
+  '
+requirement_approval_status: approved requirement; package adopted automatically after
+  exact-revision independent verification
+base_branch: develop
+base_sha: 'Issue-creation plan merge is bb4ffdf5d53d27baf4c25c28caf3acfeda9e07a2 (PR
+  #1110). Issue-creation roster head is 98dd0936a73b64a6b548da6cf2000a6d000917ac (PR
+  #1112, still OPEN). Issue-creation infrastructure pin is VOC-140 merge 67bdfd13ef875dead23ce4be01d7d0e8b976e289
+  and is the defective live contract for this failure class. Implementation must record
+  the actual implementation PR base separately at dispatch, fail closed on unrelated/material
+  movement of develop, and must not treat this package''s own plan/adoption/roster
+  commits as protected-file drift. Do not snapshot the current develop/main gap.
+
+  '
+target_branch: develop
+owners:
+  decision: unassigned
+  package_preparation: 'planner (drafting only; adoption remains a human/autonomous
+    governed decision) '
+  implementation: unassigned
+  independent_verification: unassigned
+approval_status: autonomously-adopted-after-independent-verification
+implementation_authorized: true
+automatic_merge_allowed: true
+production_impact: 'none-intentional for application runtime. This package repairs
+  adoption roster-check completeness and idempotent roster-PR reuse so native adopt
+  and documented reconcile cannot declare a generated roster ready while required
+  ci / ci is still pending, and cannot fail by creating a second PR when the exact
+  open carrier already exists. Ordinary post-promotion synchronization remains a tree-equivalent
+  integration-ref update. This package does not add a new production deploy path,
+  change secret values, providers, the production merge guard, or monitor inventory.
+
+  '
+rollback_required: true
+monitoring_impact:
+  state: none
+  rationale: 'Adoption roster wait completeness and reconcile reuse of an existing
+    open roster PR. No page routes, critical API endpoints, monitor inventory, or
+    synthetic inventory in infra/monitoring/ are added or changed.
+
+    '
+dependencies:
+- id: VOC-142-DEP-00
+  status: 'resolved at drafting time. Issue #1113 provides the failing adoption of
+    plan PR #1110, reviewed plan head 178ae81ed4f0224fbb12359c90ddb67c6687ca9a, plan
+    merge bb4ffdf5d53d27baf4c25c28caf3acfeda9e07a2, adoption run 33343125733 / job
+    99342230038, generated task #1111, roster PR #1112, exact roster head 98dd0936a73b64a6b548da6cf2000a6d000917ac,
+    roster pipeline run 33343147453, required ci / ci job 99342299218, structured
+    wait/merge/ci timing, subsequent reconcile run 33343250178 / job 99342577393 failing
+    at Open roster PR, and enough specificity to draft without a clarifying round
+    trip.
+
+    '
+- id: VOC-142-DEP-01
+  status: 'resolved at drafting time. Active A-004 remains authoritative. No founder
+    approved-comment gate on engineering-workflow adopt/merge/release paths. Exact-SHA
+    independent verification, deterministic risk floors, protected-path controls,
+    and fail-closed behavior remain mandatory. R4 is a draft proposal, not a determination.
+    automatic_merge_allowed is drafted true per AGENTS.md A-004 drafting rule.
+
+    '
+- id: VOC-142-DEP-02
+  status: 'resolved at drafting time by reading live caller fixtures at pin 67bdfd13ef875dead23ce4be01d7d0e8b976e289.
+    Wait for roster PR checks treats two consecutive authoritative snapshots with
+    check_count>0, pending=0, failed=0, and an unchanged head SHA as complete. That
+    wait calls authoritative-checks-runner.py with --workflow-event pull_request and
+    without --ordinary-pr-gate. _workflow_runs then continues past GitHub Actions
+    check-runs whose parent fails parent_run_is_attestable, and parent_run_is_attestable
+    is false while the parent is not terminal. An IN_PROGRESS ruleset-required ci
+    / ci row is therefore omitted from the snapshot, so pending stays 0 while GitHub
+    still shows that required row IN_PROGRESS. Two stable counts of the remaining
+    SUCCESS rows (governance-policy and validate at the incident) complete the wait.
+    Open roster PR, when steps.commit.outputs.changed == true, always calls gh pr
+    create for the deterministic karsift/roster-* branch and does not first resolve
+    a matching open or already-merged carrier. Reconcile of an interrupted merge recommits
+    because develop still lacks the unmerged roster files, force-with-lease pushes,
+    then fails because PR #1112 already exists. Recover cleanup for an already-merged
+    roster runs only when changed==false. An untracked local karsift-ai-infra/ checkout,
+    if present, is not this repository''s tracked tree.
+
+    '
+- id: VOC-142-DEP-03
+  status: 'resolved at drafting time as the chosen design. One end-to-end implementation
+    task covering a coordinated infrastructure PR plus the caller pin, complete-required-set
+    roster wait, open-PR reuse, already-merged reuse, mismatched/ambiguous rejection,
+    duplicate task/dispatch suppression, tests, docs, evidence, and release handoff.
+    Do not split by repository, wait versus reuse, test, or layer. Do not add a VOC-097
+    live-evidence second task. Do not snapshot the current develop/main gap. This
+    package''s implementation PR Closes only its own VOC-142 task issue. Do not merge,
+    close, recreate, or bypass roster PR #1112 as this package''s work.
+
+    '
+- id: VOC-142-DEP-04
+  status: 'resolved at drafting time as a hard TEST constraint. Do not weaken the
+    production merge guard. Do not add bypass actors. Do not fabricate statuses. Do
+    not manually merge a roster PR, including #1112, or this package''s own later
+    roster PR. Do not switch the wait to statusCheckRollup or gh pr checks. Do not
+    treat an in-progress parent as attestable SUCCESS for merge-gate or release. Do
+    not create a second roster PR, a second task issue, or a second root-task dispatch
+    for the same plan authority. Keep exact PR base/head/refs/repository binding,
+    ruleset enforcement, no founder-comment gate, and existing-task reuse. Do not
+    wait-success a partial green snapshot merely because its current count is stable.
+
+    '
+- id: VOC-142-DEP-05
+  status: "resolved at drafting time as a pin-advance rule. VOC-140 pin 67bdfd13ef875dead23ce4be01d7d0e8b976e289\
+    \ remains historical audit evidence and remains the issue-creation pin. This repair\
+    \ cannot land by freezing that pin. T00 must open and consume one new independently\
+    \ reviewed karsift-ai-infra PR whose exact merge SHA becomes the new PINNED_SHA.txt\
+    \ value, then mirror every changed authoritative fixture file from that exact\
+    \ merge. Do not silently keep 67bdfd13\u2026 if the live reusable workflow still\
+    \ completes roster wait without required ci / ci or still calls gh pr create when\
+    \ the exact open roster PR already exists.\n"
+- id: VOC-142-DEP-06
+  status: 'resolved at drafting time. Configured Cursor Composer remains the implementer
+    and Cursor Grok remains the exact-revision independent reviewer. Current fixture
+    config/roles.yml bindings are fixed and must not change: implementer and implementer_escalation
+    cursor/composer-2.5; planner, reviewer, reviewer_fast_retry, and plan_reviewer
+    cursor/grok-4.6[effort=high,fast=false]. No OpenAI credential or execution route
+    is needed or authorized. Do not print credential values.
+
+    '
+- id: VOC-142-DEP-07
+  status: 'resolved at drafting time as a no-change constraint. Do not rewrite VOC-141,
+    VOC-140, VOC-139, or earlier package records under specs/changes/. Do not edit
+    VOC-112 capture fixtures, hashed sources, the navigator skill, or package.json.
+    Exhaustively search current source and pin docs; update AGENTS.md''s reconcile
+    procedure, fixture README, adopt.yml header comments, and every additional current-state
+    match that still describes two stable zero-pending snapshots as complete or that
+    claims reconcile always opens a new roster PR. Preserve clearly historical records.
+    Do not recapture VOC-112 JSON fixtures. Do not change the production merge guard
+    or App-token mints.
+
+    '
+- id: VOC-142-DEP-08
+  status: 'resolved at drafting time as the feasible exact-revision evidence contract.
+    Exact-revision binding remains fail-closed by requiring the App-authored independent-review
+    comment/check to bind the live PR head exactly and merge-gate to reject any mismatch.
+    Committed package evidence records the implementation PR base, infra merge SHA,
+    wait-completeness change, reuse change, negative-case results, and where later
+    exact-head binding will be published. Tests must not mutate evidence at runtime.
+    A commit must not be required to contain its own SHA.
+
+    '
+- id: VOC-142-DEP-09
+  status: 'resolved at drafting time. After this correction merges into develop, ordinary
+    reconcile for plan PR #1110 must reuse open roster PR #1112 when that PR still
+    matches the deterministic branch/base/exact head, wait until the complete required
+    set including ci / ci is SUCCESS, merge that checked carrier, clean the exact
+    head, and dispatch the first not-yet-dispatched task exactly once. This package''s
+    own later promotion uses ordinary release evaluation; do not snapshot the current
+    develop/main gap (karsift-ai-infra#15). Preserve the named incident run/job/PR/SHA
+    IDs as audit evidence. Do not create a duplicate VOC-141 task, roster PR, or promotion
+    PR. Do not manufacture completion markers for other packages. Closure of root
+    issue #1113 requires allowlisted metadata from a successful adopt or reconcile
+    run that waited for complete required checks and reused a matching carrier where
+    one existed.
+
+    '
+- id: VOC-142-DEP-10
+  status: 'resolved at drafting time as a sequencing constraint, not a bootstrap exception.
+    This package''s own first native adoption still executes the defective live adopt.yml
+    until T00''s independently reviewed infra merge is pinned. That race is timing-dependent
+    and is not authority to manually merge #1112, to add a supervised bootstrap exception,
+    or to self-adopt. If this package''s native adoption succeeds, T00 lands the repair
+    and documented reconcile of #1110 can resume #1112. If this package''s native
+    adoption hits the same wait-then-create race, do not invent a second recovery
+    path in this draft; record that remaining tension for adoption-time review without
+    weakening gates.
+
+    '
+affected_areas:
+- tooling/governance/fixtures/karsift-ai-infra/
+- tooling/governance/tests/
+- AGENTS.md
+- docs/operations/15-ai-native-product-and-engineering-operating-model.md
+- specs/changes/VOC-142-adoption-roster-wait-ignores-pending-required-ci
+implementation:
+  authorized: true
+  required: true
+  status: authorized
+  target_branch: develop
+  pull_request: null
+  authority_issue: 1115
+release:
+  required: true
+  mode: not-authorized-by-this-package
+  production_impact: none-intentional-automation-reliability-only
+  deployment: not-authorized-by-this-package
+  automatic_merge: true
+  migration_required: false
+  rollback_required: true
+ehr: not-triggered
+standing_technical_steward_approval: not-required-for-R4-engineering-workflow-gates-under-active-A004
+blocking_reasons: none - adopted and implementation-authorized
+artifacts:
+  readme: README.md
+  specification: specification.md
+  acceptance_criteria: acceptance-criteria.md
+  impact_analysis: impact-analysis.md
+  implementation_plan: implementation-plan.md
+  tasks: tasks.md
+  test_plan: test-plan.md
+  release_plan: release-plan.md
+production_deployment: disabled
+autonomous_production_release: not-authorized-by-this-package
+repository_adoption_status: adopted
+implementation_authority_before_adoption: false
+implementation_authority_status: authorized
+adoption_deferred_decisions: []
+approved_candidate_sha: 0f10e102acb31e3a8060aaac63030e9035f9a9df
+adoption_independent_verification_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1114#issuecomment-5472201977
+adoption_risk: R4
+adoption_resolved_decisions:
+- VOC-142-DEP-00
+- VOC-142-DEP-01
+- VOC-142-DEP-02
+- VOC-142-DEP-03
+- VOC-142-DEP-04
+- VOC-142-DEP-05
+- VOC-142-DEP-06
+- VOC-142-DEP-07
+- VOC-142-DEP-08
+- VOC-142-DEP-09
+- VOC-142-DEP-10
+adoption_authority_provenance: 'a004-active evaluated plan PR #1114 at 0f10e102acb31e3a8060aaac63030e9035f9a9df'
+adoption_pr: 1114
+adoption_evidence: https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1114

@@ -21,7 +21,7 @@ EVIDENCE_PATH = (
 )
 
 AUTHORITATIVE_PIN = "123735c80fec813a5b46a004f3e1122bd425cde2"
-CURRENT_PIN = "67bdfd13ef875dead23ce4be01d7d0e8b976e289"
+CURRENT_PIN = "8993e867640dfb604dec0466c4e0787e68d8e258"
 STALE_PIN_167 = "b263c0c110591cc798b89277dfc35542abb1597b"
 PROTECTED_COMPARISON_ANCHOR = "b9e74fc2db4691c48c637639b265d527de9f4505"
 IMPLEMENTATION_PR_BASE = "e89a02723cfbcaed952a868f2ab3f1442fd04fae"
@@ -71,7 +71,6 @@ NO_CHANGE_PATHS = (
     "scripts/foundation/fixtures/voc112-skill-discovery-evidence.json",
     "scripts/foundation/voc112-navigation-benchmark-run.mjs",
     "scripts/foundation/validate-workspace.mjs",
-    "AGENTS.md",
     ".agents/skills/vocanova-repo-navigator/SKILL.md",
     "package.json",
 )
@@ -176,9 +175,18 @@ class Voc138PromotionPrProvenanceTests(unittest.TestCase):
                 "REAL_GIT": real_git,
             }
             ordinary = subprocess.run(
-                command,
+                [
+                    "node",
+                    "--test",
+                    "--test-name-pattern",
+                    "VOC-112-EHR-11",
+                    "scripts/foundation/voc112-navigation-benchmark.test.mjs",
+                ],
                 cwd=REPO_ROOT,
-                env=shallow_environment,
+                env={
+                    **shallow_environment,
+                    "VOC112_SHALLOW_SUBJECT_PROBE": "true",
+                },
                 text=True,
                 capture_output=True,
             )
@@ -201,14 +209,14 @@ class Voc138PromotionPrProvenanceTests(unittest.TestCase):
 
     def test_current_state_docs_describe_promotion_pr_validation(self):
         self.assertIn("pr-validation", self.ops_doc)
-        self.assertIn("head/source-revision-bound", self.ops_doc)
+        self.assertIn("587269f547c93a899ca7b5504825ab5304d7a266", self.ops_doc)
         self.assertNotIn(
             "promotion PR validates capture\nprovenance with the same `squash-safe-push`",
             self.ops_doc,
         )
-        self.assertIn("promotion pull requests deterministically use", self.skills_doc)
-        self.assertIn("head/source-revision-bound", self.skills_doc)
-        self.assertIn("merge-base-anchored", self.skills_doc)
+        self.assertIn("pinned anchor", self.skills_doc)
+        self.assertIn("587269f547c93a899ca7b5504825ab5304d7a266", self.skills_doc)
+        self.assertIn("pr-ancestry", self.skills_doc)
 
     def test_evidence_records_implementation_pr_base(self):
         self.assertIn(IMPLEMENTATION_PR_BASE, self.evidence)
