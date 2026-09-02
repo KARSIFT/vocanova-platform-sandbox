@@ -1,7 +1,7 @@
 # Claude Code review guidance
 
-When reviewing a PR here (triggered by `@claude` in a comment, via
-`.github/workflows/claude-review.yml`), focus on:
+When reviewing a PR here — automatically on open (`.github/workflows/claude-code-review.yml`)
+or on an `@claude` mention (`.github/workflows/claude-review.yml`) — focus on:
 
 1. **Correctness** — does the diff do what the PR description says, with no
    introduced bugs, edge cases, or regressions?

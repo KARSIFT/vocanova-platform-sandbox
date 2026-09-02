@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Documentation
+    url: https://github.com/KARSIFT/vocanova-platform-sandbox/tree/main/docs
+    about: Local setup, deploy process, architecture, and repo conventions.
   - name: Private security report
     url: https://github.com/KARSIFT/vocanova-platform/security/advisories/new
     about: Report suspected vulnerabilities privately; do not open a public issue.

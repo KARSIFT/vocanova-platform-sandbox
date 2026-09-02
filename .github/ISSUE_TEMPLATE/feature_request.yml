@@ -1,0 +1,79 @@
+name: Feature request
+description: Propose a Vocanova change with clear user value.
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for product changes, workflow improvements, and new integrations.
+        If something is broken or regressed, open a bug report instead.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What learner or operator workflow is blocked or painful today?
+      placeholder: Learners cannot review words they marked "hard" without scrolling the full list.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior you want. Focus on the outcome.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Web UI (apps/web)
+        - API (apps/api)
+        - Auth / OAuth / sessions
+        - Database / migrations
+        - Content / seed data
+        - Deploy / infra
+        - Monitoring / Sentry / synthetics
+        - CI / workflows
+        - Docs
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - A learner can ...
+        - Existing behavior remains ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks and constraints
+      description: Security, privacy, performance, accessibility, migration, or rollout concerns.
+    validations:
+      required: false
+
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Related issues, discussions, docs, or mockups.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked existing issues and did not find this already tracked.
+          required: true
