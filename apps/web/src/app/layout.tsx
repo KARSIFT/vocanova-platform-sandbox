@@ -4,8 +4,9 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Vocanova Web Foundation",
-  description: "Technical validation page for the Vocanova web foundation.",
+  title: "Vocanova",
+  description:
+    "Vocanova is an AI-powered platform for practical English learning.",
 };
 
 export default function RootLayout({
