@@ -61,6 +61,7 @@ jobs:
   monitor:
     name: monitor sentry issues
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       # `secrets` is not available in a step `if:` expression, so presence has
       # to be established as a step output first.

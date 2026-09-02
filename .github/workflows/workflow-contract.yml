@@ -1,0 +1,37 @@
+name: Workflow Contract
+
+# Asserts the invariants that have cost this repo time: merge-queue drift,
+# required checks that never report, auto-deploy creeping back onto
+# production, queue entries ejected by a cancelled run. See
+# .github/scripts/workflows_contract_test.py.
+#
+# No trigger-level `paths:` filter, deliberately — same reasoning as
+# lint-action-pinning.yml.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  merge_group:
+    types: [checks_requested]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'merge_group' }}
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: Workflows honour their contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Run workflow contract tests
+        run: python3 .github/scripts/workflows_contract_test.py
