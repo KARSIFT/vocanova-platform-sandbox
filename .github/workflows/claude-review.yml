@@ -14,10 +14,17 @@ on:
 
 jobs:
   claude:
+    # Human-initiated only. Other review bots (CodeRabbit, Cubic, Greptile,
+    # Codex) routinely quote a PR's diff in their summaries, so a PR that
+    # merely contains the text "@claude" makes their bot-authored review fire
+    # this workflow — and claude-code-action then exits 1 with "Workflow
+    # initiated by non-human actor". Gate on the triggering actor.
     if: |
-      (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude'))
+      github.event.sender.type != 'Bot' && (
+        (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '@claude')) ||
+        (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+        (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude'))
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
