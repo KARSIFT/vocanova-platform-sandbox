@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit review config. Claude (claude-code-review.yml) is the primary
+# automated reviewer; CodeRabbit runs alongside it. Keep it low-noise.
+language: en-US
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+  path_filters:
+    - "!**/pnpm-lock.yaml"
+    - "!**/*.snap"
+    - "!**/testdata/**"
+  path_instructions:
+    - path: "apps/web/**"
+      instructions: >-
+        Next.js 16 App Router + React 19. Flag client/server component boundary
+        mistakes, missing Suspense or error boundaries, and unmemoised work in
+        render. New user-facing copy should go through the i18n helpers.
+    - path: "apps/api/**"
+      instructions: >-
+        Go API. Flag unchecked errors, missing context propagation, SQL built by
+        string concatenation, and handlers that do not verify the session.
+    - path: ".github/workflows/**"
+      instructions: >-
+        Every action ref must be SHA-pinned. Every job needs timeout-minutes and
+        least-privilege permissions. A merge_group workflow must guard
+        cancel-in-progress with github.event_name != 'merge_group'.
+chat:
+  auto_reply: true
