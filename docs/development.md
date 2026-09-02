@@ -15,6 +15,9 @@ corepack prepare pnpm@11.14.0 --activate
 pnpm install --frozen-lockfile
 ```
 
+If you use [mise](https://mise.jdx.dev), `mise install` reads `mise.toml` and
+provisions the same Node, pnpm, Go, and Python versions in one step.
+
 Go downloads the declared toolchain when needed. This requires ordinary access to the
 official Go toolchain distribution and no repository secret.
 
