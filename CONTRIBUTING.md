@@ -15,8 +15,9 @@ pnpm run validate
 
 CI runs `ci-web`, `ci-api`, and (where relevant) `controlled-signup-oauth-e2e`,
 `accessibility`, `lighthouse`, and `docker-smoke` on every PR — see `AGENTS.md` for
-what each checks. All required checks must pass before merge. Tag `@claude` in a PR
-comment for an automated review.
+what each checks. All required checks must pass before merge. Claude reviews every non-draft PR
+automatically (`claude-code-review.yml`); tag `@claude` in a PR comment for a
+follow-up review or a question.
 
 Merging goes through GitHub's merge queue, not a direct merge: once required checks
 pass and the PR is approved, enqueue it (`gh pr merge --squash --auto`, or the
