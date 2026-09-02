@@ -20,3 +20,6 @@ graphify-out/
 .graphify_python
 scripts/graphify/.venv/
 scripts/graphify/.runtime-home/
+# mise per-developer overrides (mise.toml is the shared, committed version)
+.mise.local.toml
+mise.local.toml
