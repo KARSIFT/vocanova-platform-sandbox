@@ -1,0 +1,43 @@
+name: Lint Harness Files
+
+# Guards the agent-instruction files (AGENTS.md, CLAUDE.md, and everything
+# under .agents/skills, .claude, .codex, .cursor) against silent drift: line
+# and description-word limits, and structural checks on skill frontmatter.
+# Adopted from kdlbs/kandev's lint-harness-files.yml, trimmed to the linters
+# this repo actually has.
+#
+# No trigger-level `paths:` filter, deliberately — same reasoning as
+# lint-action-pinning.yml. The check is a checkout plus two short Python
+# scripts, so unconditional is simpler and strictly safer than a
+# hand-maintained path list, and `merge_group` cannot carry a `paths:` filter.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  merge_group:
+    types: [checks_requested]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'merge_group' }}
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Harness files pass lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Test the harness linter itself
+        run: python3 scripts/lint-harness-files.test.py
+
+      - name: Lint harness files
+        run: python3 .github/scripts/lint-harness-files.py --all

@@ -1,0 +1,10 @@
+# Local dev tool versions, matching the CI base image
+# (.github/docker/ci-base/Dockerfile) and .nvmrc. Install mise
+# (https://mise.jdx.dev) and run `mise install` to get the same toolchain CI
+# uses. Purely a convenience — nothing in CI depends on this file.
+
+[tools]
+node = "24.18.0"
+pnpm = "11.14.0"
+go = "1.26.0"
+python = "3.12"

@@ -1,0 +1,115 @@
+name: Bug report
+description: Report a reproducible problem in the Vocanova platform.
+title: "fix: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Before posting, remove secrets, tokens, session
+        cookies, and personal data from logs and screenshots.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What broke? Keep it short and concrete.
+      placeholder: Google sign-in returns to the landing page instead of onboarding.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Web UI (apps/web)
+        - API (apps/api)
+        - Auth / OAuth / sessions
+        - Database / migrations
+        - Content / seed data
+        - Deploy / infra (staging or production)
+        - Monitoring / Sentry / synthetics
+        - CI / workflows
+        - Docs
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Where did you see this?
+      options:
+        - Production (production.vocanova.site)
+        - Staging (staging.vocanova.site)
+        - Local development
+        - CI
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Commit / image
+      description: The deployed commit SHA (from the deploy workflow run) or local branch.
+      placeholder: sha-1a2b3c4, or branch fix/oauth-redirect
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to ...
+        2. Click ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual behavior
+      placeholder: |
+        Expected: redirected to /onboarding after sign-in.
+        Actual: redirected to / with no session.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: reproducibility
+    attributes:
+      label: Reproducibility
+      options:
+        - Always
+        - Often
+        - Sometimes
+        - Once
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and artifacts
+      description: Sanitized API/browser-console logs, Sentry links, screenshots. Use "none" if there are none.
+      placeholder: |
+        Browser console:
+        ```
+        ...
+        ```
+        Sentry: https://...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Before submitting
+      options:
+        - label: I removed secrets, tokens, session cookies, and personal data.
+          required: true
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
