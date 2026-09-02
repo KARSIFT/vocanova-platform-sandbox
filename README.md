@@ -32,3 +32,5 @@ bounded executable change packages. Documents 00–13 were migrated and adopted 
 [docs/README.md](docs/README.md) for the full index and each document's actual status -
 that index, not this paragraph, is the source of truth for migration state going forward).
 
+
+<!-- merge-queue verification: this line proves a PR can actually go through the queue end-to-end -->
