@@ -18,6 +18,12 @@ CI runs `ci-web`, `ci-api`, and (where relevant) `controlled-signup-oauth-e2e`,
 what each checks. All required checks must pass before merge. Tag `@claude` in a PR
 comment for an automated review.
 
+Merging goes through GitHub's merge queue, not a direct merge: once required checks
+pass and the PR is approved, enqueue it (`gh pr merge --squash --auto`, or the
+"Merge when ready" button in the UI). The queue re-runs required checks against the
+real post-merge result before landing it on `main`, so a merge can take a few minutes
+after approval rather than being instant.
+
 Use the exact checked-in tool versions and a frozen lockfile (`pnpm install
 --frozen-lockfile` in CI). Don't claim an unavailable check passed.
 
