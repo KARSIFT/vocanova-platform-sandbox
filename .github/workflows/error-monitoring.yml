@@ -5,10 +5,12 @@ name: error-monitoring
 # Queries the Sentry API for unresolved issues that were first seen recently
 # across all four Layout B projects (see the VOC-051 package's
 # `t00-evidence.md` §3) and opens one plain, UNLABELED GitHub issue per
-# genuinely new problem, so `pipeline.yml`'s `plan-from-issue` job drafts a
-# governed change package from it - the same route AGENTS.md's "Reporting a bug
-# found outside the normal loop" requires of a human. This workflow only ever
-# opens issues; it never adopts, approves, merges, or deploys anything.
+# genuinely new problem, per AGENTS.md's "Reporting a bug found outside the
+# normal loop" convention. This workflow only ever opens issues; it never
+# adopts, approves, merges, or deploys anything. Uses the default
+# GITHUB_TOKEN - it used to mint a karsift-ai-infra-bot App token instead so
+# the issue would trigger a downstream `plan-from-issue` job, but that
+# pipeline no longer exists (removed in the kandev-style migration).
 #
 # ## Required secret and its expected scope (VOC-051-AC-01 / TEST-02)
 #
@@ -42,17 +44,16 @@ on:
   workflow_dispatch:
 
 # Only `issues: write` - deliberately no `contents:`, `deployments:`,
-# `packages:`, or `pull-requests:`. The GitHub App token minted below is
-# requested with the same single permission.
+# `packages:`, or `pull-requests:`.
 permissions:
   issues: write
 
 # Serialized, never cancelled: two overlapping runs (an hourly schedule and a
 # manual `workflow_dispatch`, say) would each build their own
 # already-reported-marker index and could both decide the same Sentry issue is
-# new, creating duplicate issues and duplicate `plan-from-issue` runs
-# (`impact-analysis.md`'s VOC-051-R01). `cancel-in-progress: false` because a
-# run that is mid-way through creating issues must finish, not be killed.
+# new, creating duplicate issues (`impact-analysis.md`'s VOC-051-R01).
+# `cancel-in-progress: false` because a run that is mid-way through creating
+# issues must finish, not be killed.
 concurrency:
   group: error-monitoring
   cancel-in-progress: false
@@ -63,39 +64,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      # `secrets` is not available in a step `if:` expression, so presence has
-      # to be established as a step output first.
-      - name: Detect whether GitHub App credentials are available
-        id: app-credentials
-        env:
-          KARSIFT_BOT_APP_ID: ${{ secrets.KARSIFT_BOT_APP_ID }}
-          KARSIFT_BOT_PRIVATE_KEY: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
-        run: |
-          if [ -n "$KARSIFT_BOT_APP_ID" ] && [ -n "$KARSIFT_BOT_PRIVATE_KEY" ]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      # Identity decision (specification.md open question 1): a GitHub App
-      # installation token, matching karsift-ai-infra's `adopt.yml` pattern,
-      # NOT the default `GITHUB_TOKEN`. This is load-bearing rather than
-      # stylistic: GitHub does not start new workflow runs from events created
-      # with the default `GITHUB_TOKEN`, so an issue opened that way would
-      # never trigger `pipeline.yml`'s `plan-from-issue` job - the entire point
-      # of filing it. The `|| github.token` fallback below keeps the run
-      # working (issue still filed, planner triggered by hand) if the App
-      # credentials are absent, and the script warns explicitly when it lands
-      # on that path instead of pretending the loop closed.
-      - name: Mint a GitHub App installation token
-        id: app-token
-        if: steps.app-credentials.outputs.available == 'true'
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
-        with:
-          app-id: ${{ secrets.KARSIFT_BOT_APP_ID }}
-          private-key: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
-          permission-issues: write
-
       - name: Query Sentry and open deduplicated bug issues
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         env:
@@ -119,9 +87,8 @@ jobs:
           # notice.
           SENTRY_PROJECT_MATRIX: >-
             [{"project":"prod-api","environment":"production"},{"project":"prod-web","environment":"production"},{"project":"stage-api","environment":"staging"},{"project":"stage-web","environment":"staging"}]
-          USING_APP_TOKEN: ${{ steps.app-credentials.outputs.available }}
         with:
-          github-token: ${{ steps.app-token.outputs.token || github.token }}
+          github-token: ${{ github.token }}
           script: |
             const MARKER_PREFIX = "sentry-issue-id:";
             const ISSUE_PAGE_SIZE = 100;
@@ -135,14 +102,6 @@ jobs:
               if (!process.env[envName] || process.env[envName].trim().length === 0) {
                 throw new Error(`Missing required environment variable: ${envName}`);
               }
-            }
-
-            if (process.env.USING_APP_TOKEN !== "true") {
-              core.warning(
-                "KARSIFT_BOT_APP_ID/KARSIFT_BOT_PRIVATE_KEY are not set, so this run falls back to the default GITHUB_TOKEN. " +
-                  "Any issue it opens will NOT trigger pipeline.yml's plan-from-issue job (GitHub does not start workflow runs " +
-                  "from GITHUB_TOKEN-created events); planning must be started by hand for those issues."
-              );
             }
 
             const sentryToken = process.env.SENTRY_API_TOKEN.trim();
@@ -321,8 +280,8 @@ jobs:
                 `<!-- ${marker} -->`,
                 "",
                 "Automated hourly Sentry monitoring (`.github/workflows/error-monitoring.yml`) detected a new",
-                "unresolved production/staging problem. Filed as a plain unlabeled issue so `plan-from-issue`",
-                "drafts a change package from it, per AGENTS.md's \"Reporting a bug found outside the normal loop\".",
+                "unresolved production/staging problem. Filed as a plain unlabeled issue per AGENTS.md's",
+                "\"Reporting a bug found outside the normal loop\".",
                 "",
                 `- Environment: \`${mapping.environment}\``,
                 `- Sentry organization / project: \`${sentryOrg}\` / \`${mapping.project}\``,

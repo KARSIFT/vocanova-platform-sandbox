@@ -14,6 +14,11 @@ name: Auto-merge
 #
 # Escape hatch: add the `hold` label to freeze a PR (auto-merge is turned back
 # off); remove it to release. Drafts are never enqueued.
+#
+# Uses the default GITHUB_TOKEN, not a GitHub App identity. Enabling
+# auto-merge only flips a flag on the PR; the merge queue performs the actual
+# merge later under its own identity, so nothing here needs elevated
+# credentials.
 
 on:
   pull_request:
@@ -33,19 +38,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
-      contents: read
-      pull-requests: read
+      contents: write
+      pull-requests: write
     steps:
-      - name: Mint bot token
-        id: token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
-        with:
-          app-id: ${{ secrets.KARSIFT_BOT_APP_ID }}
-          private-key: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
-
       - name: Enable or disable auto-merge
         env:
-          GH_TOKEN: ${{ steps.token.outputs.token }}
+          GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
           DRAFT: ${{ github.event.pull_request.draft }}
