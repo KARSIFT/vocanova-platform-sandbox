@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { createApiClient } from "@/lib/api";
@@ -21,6 +22,7 @@ export function MeaningSaveButton({
   wordText,
   shortDefinition,
 }: MeaningSaveButtonProps) {
+  const router = useRouter();
   const [saved, setSaved] = useState(initialSaved);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
@@ -51,6 +53,14 @@ export function MeaningSaveButton({
         setSaved(true);
       }
       setStatus("idle");
+      // Word Detail's SentenceFeedback entry point (PRD §2 / #1181) is
+      // gated on the server-rendered `meaning.saved` + `meaning.userWordId`
+      // fields from the parent Server Component, not on this button's own
+      // local `saved` state. Without a refresh, saving a word flips this
+      // button to "Saved" but the sentence-practice widget below it never
+      // appears until the learner manually reloads the page - refresh the
+      // route so the server refetches and the widget shows up immediately.
+      router.refresh();
     } catch (error) {
       setStatus("error");
       // handleApiError detects 401 and routes the learner to

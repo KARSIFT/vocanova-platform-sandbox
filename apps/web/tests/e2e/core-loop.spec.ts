@@ -243,6 +243,20 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
       page.getByRole("button", { name: "Remove pour from saved words" }),
     ).toBeVisible();
 
+    // Issue #1181 (PRD §2): sentence practice is "surfaced from Home,
+    // Word Detail, and Review Completion" - not a fourth tab. This is
+    // entry point 1 of 3: the SentenceFeedback widget below a saved
+    // meaning on the Word Detail screen. It's gated on the server-
+    // rendered `meaning.saved`/`meaning.userWordId` fields (see
+    // discover/[situation]/[word]/page.tsx), which meaning-save-button.tsx
+    // now refreshes via router.refresh() right after a successful save -
+    // without that refresh the button flips to "Saved" but this widget
+    // never appears until a manual reload, silently breaking this entry
+    // point. Assert it renders immediately, with no navigation in between.
+    await expect(
+      page.getByRole("heading", { name: /Practice with pour/ }),
+    ).toBeVisible();
+
     // ----- 5. Review session.
     //
     // The mock returns the one saved word as a due word. With a
@@ -264,7 +278,9 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     await page.getByRole("button", { name: "Good" }).click();
 
     // "All caught up" empty state with a sentence-feedback
-    // widget for the just-reviewed card.
+    // widget for the just-reviewed card. Issue #1181 (PRD §2),
+    // entry point 3 of 3: SentenceFeedback surfaced from Review
+    // Completion (see review-session.tsx's `completed` branch).
     await expect(
       page.getByRole("heading", { name: "You're all caught up", level: 2 }),
     ).toBeVisible();
@@ -302,6 +318,15 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     await page.goto("/home");
     await expect(
       page.getByText(/1 of 20 words reviewed today/),
+    ).toBeVisible();
+
+    // Issue #1181 (PRD §2), entry point 2 of 3: the Home screen's
+    // "Saved words" list renders a SentenceFeedback widget per saved
+    // word (see home/page.tsx). "pour" was saved in step 4, so it
+    // should appear here too, independent of the Word Detail and
+    // Review Completion widgets already exercised above.
+    await expect(
+      page.getByRole("heading", { name: /Practice with pour/ }),
     ).toBeVisible();
 
     // ----- 8. Settings change.
