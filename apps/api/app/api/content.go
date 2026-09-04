@@ -116,6 +116,7 @@ func RegisterContent(api huma.API, svc *content.Service) {
 		Tags:        []string{"Discovery"},
 		Middlewares: []func(huma.Context, func(huma.Context)){RequireAuth()},
 		Responses: map[string]*huma.Response{
+			"400": {Description: "Invalid pagination cursor"},
 			"401": {Description: "Authentication is required"},
 		},
 	}, func(ctx context.Context, input *ListSituationsInput) (*ListSituationsOutput, error) {
