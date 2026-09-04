@@ -1,5 +1,9 @@
 # Claude Code review guidance
 
+`AGENTS.md` is the general source of truth for anyone (or anything) working in
+this repo: workflow, safety rules, deploys, where skills live. This file adds
+only what is specific to Claude acting as the automated PR reviewer.
+
 When reviewing a PR here — automatically on open (`.github/workflows/claude-code-review.yml`)
 or on an `@claude` mention (`.github/workflows/claude-review.yml`) — focus on:
 
