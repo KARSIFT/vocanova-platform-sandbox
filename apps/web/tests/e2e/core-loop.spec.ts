@@ -228,6 +228,24 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
       page.getByRole("heading", { name: "pour", level: 1 }),
     ).toBeVisible();
 
+    // PRD §2 MVP completion criteria requires the Word Detail screen to show
+    // meaning, part of speech, examples, and usage notes (see
+    // docs/product/01-mvp-prd.md §2, issue #1180). Assert each field's real
+    // text - sourced from the mock's CANONICAL_WORDS.pour fixture, which
+    // stands in for the Go content API - is actually on the page, so a
+    // regression that silently drops one of these fields from the DTO,
+    // client, or component fails this test instead of shipping unnoticed.
+    await expect(page.getByText("verb", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("to make liquid flow into a container"),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Could you pour me a cup of coffee?"),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Common in everyday service contexts."),
+    ).toBeVisible();
+
     // ----- 4. Save.
     //
     // The Save button's aria-label changes on toggle: "Save pour:

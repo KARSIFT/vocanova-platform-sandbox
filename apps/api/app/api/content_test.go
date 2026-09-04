@@ -59,22 +59,44 @@ func contentSampleData() (*content.MemoryRepository, *content.MemorySavedStateRe
 		},
 		Words: []content.SeedWord{
 			{
-				ID:             wordID,
-				Text:           "boarding pass",
-				NormalizedText: "boarding pass",
-				WordType:       "phrase",
-				LanguageCode:   "en",
-				Status:         "active",
+				ID:              wordID,
+				Text:            "boarding pass",
+				NormalizedText:  "boarding pass",
+				WordType:        "phrase",
+				LanguageCode:    "en",
+				Status:          "active",
+				DifficultyLevel: "a1_a2",
 			},
 		},
 		Meanings: []content.SeedMeaning{
 			{
-				ID:              meaningID,
-				WordID:          wordID,
-				PartOfSpeech:    "noun",
-				ShortDefinition: "A document that lets you get on your flight.",
-				MeaningOrder:    1,
-				Status:          "active",
+				ID:                meaningID,
+				WordID:            wordID,
+				PartOfSpeech:      "noun",
+				ShortDefinition:   "A document that lets you get on your flight.",
+				LearnerDefinition: "The ticket-like paper or app screen you show before getting on a plane.",
+				MeaningOrder:      1,
+				Status:            "active",
+			},
+		},
+		Examples: []content.SeedExample{
+			{
+				ID:             content.MustParseUUID("00000000-0000-0000-0000-000000000004"),
+				MeaningID:      meaningID,
+				ExampleText:    "Please have your boarding pass ready at the gate.",
+				ExampleOrder:   1,
+				Status:         "active",
+				SituationLabel: "Airport",
+			},
+		},
+		Notes: []content.SeedNote{
+			{
+				ID:        content.MustParseUUID("00000000-0000-0000-0000-000000000005"),
+				MeaningID: meaningID,
+				NoteType:  "formality",
+				NoteText:  "Neutral; used in both spoken and written travel contexts.",
+				NoteOrder: 1,
+				Status:    "active",
 			},
 		},
 		JourneyWords: []content.SeedJourneyWord{
@@ -244,9 +266,26 @@ func TestGetCanonicalWordReturnsWordDetail(t *testing.T) {
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
 	assert.Equal(t, "boarding pass", body.Word.Text)
 	assert.Equal(t, "boarding-pass", body.Word.Slug)
+	assert.Equal(t, "phrase", body.Word.WordType)
+	assert.Equal(t, "a1_a2", body.Word.DifficultyLevel)
 	require.Len(t, body.Word.Meanings, 1)
-	assert.True(t, body.Word.Meanings[0].Saved)
-	assert.Equal(t, "00000000-0000-0000-0000-000000000010", body.Word.Meanings[0].UserWordID)
+
+	// PRD §2 MVP completion criteria requires word detail to surface meaning,
+	// part of speech, examples, and usage notes. Assert each field explicitly so a
+	// future change that silently drops one from the DTO or its mapping fails
+	// this test instead of shipping unnoticed.
+	meaning := body.Word.Meanings[0]
+	assert.Equal(t, "noun", meaning.PartOfSpeech)
+	assert.Equal(t, "A document that lets you get on your flight.", meaning.ShortDefinition)
+	assert.Equal(t, "The ticket-like paper or app screen you show before getting on a plane.", meaning.LearnerDefinition)
+	require.Len(t, meaning.Examples, 1)
+	assert.Equal(t, "Please have your boarding pass ready at the gate.", meaning.Examples[0].ExampleText)
+	require.Len(t, meaning.UsageNotes, 1)
+	assert.Equal(t, "formality", meaning.UsageNotes[0].NoteType)
+	assert.Equal(t, "Neutral; used in both spoken and written travel contexts.", meaning.UsageNotes[0].NoteText)
+
+	assert.True(t, meaning.Saved)
+	assert.Equal(t, "00000000-0000-0000-0000-000000000010", meaning.UserWordID)
 }
 
 func intPtr(i int) *int { return &i }
