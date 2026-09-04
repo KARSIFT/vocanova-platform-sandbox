@@ -21,6 +21,7 @@ MERGE_GROUP_GUARD = "${{ github.event_name != 'merge_group' }}"
 # gates and event-scoped automation that are not required status checks.
 NON_REQUIRED = {
     "accessibility.yml",
+    "auto-merge.yml",
     "claude-code-review.yml",
     "claude-review.yml",
     "ci-base-image.yml",
@@ -32,7 +33,6 @@ NON_REQUIRED = {
     "operational-failure-monitoring.yml",
     "pr-title.yml",
     "pr-walkthrough.yml",
-    "revoke-ready-to-merge.yml",
     "scheduled-synthetics.yml",
     "sync-monitoring.yml",
 }
@@ -134,6 +134,16 @@ class WorkflowContractTest(unittest.TestCase):
             )
             if name not in NON_REQUIRED:
                 self.assertNotIn("paths", t.get("pull_request") or {}, name)
+
+    def test_auto_merge_stays_squash_and_hold_guarded(self) -> None:
+        # Auto-merge must never widen past a squash landing, and the `hold`
+        # label has to remain a real brake — a green PR merges on its own
+        # otherwise, so these two strings are load-bearing.
+        text = (WF_DIR / "auto-merge.yml").read_text()
+        self.assertIn("--auto", text, "auto-merge.yml no longer arms auto-merge")
+        self.assertIn("--disable-auto", text, "auto-merge.yml no longer turns auto-merge back off")
+        self.assertIn("'hold'", text, "auto-merge.yml no longer honours the `hold` label")
+        self.assertIn("DRAFT", text, "auto-merge.yml no longer skips drafts")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,63 @@
+name: Auto-merge
+
+# Enables GitHub's native auto-merge on every ready PR so it lands the moment
+# the branch-ruleset requirements are satisfied — the five required status
+# checks (ci-web, ci-api, controlled-signup OAuth callback E2E, All action refs
+# are SHA-pinned, Architecture boundaries do not regress) plus a clean run
+# through the merge queue. The queue squash-merges (its own merge_method), so
+# `gh pr merge` here only arms auto-merge and does not pick a method.
+#
+# Deliberately does NOT wait on any review bot. Claude, CodeRabbit, Cubic,
+# Greptile and Codex are advisory commenters, not merge gates, so turning any
+# of them off never changes whether a PR can merge. Only the required checks in
+# the `require-pr-and-checks` ruleset do.
+#
+# Escape hatch: add the `hold` label to freeze a PR (auto-merge is turned back
+# off); remove it to release. Drafts are never enqueued.
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, synchronize, labeled, unlabeled]
+    branches: [main]
+
+concurrency:
+  group: auto-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  auto-merge:
+    name: Enable auto-merge when green
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Mint bot token
+        id: token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          app-id: ${{ secrets.KARSIFT_BOT_APP_ID }}
+          private-key: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
+
+      - name: Enable or disable auto-merge
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          DRAFT: ${{ github.event.pull_request.draft }}
+          HELD: ${{ contains(github.event.pull_request.labels.*.name, 'hold') }}
+        run: |
+          set -euo pipefail
+          if [ "$DRAFT" = "true" ] || [ "$HELD" = "true" ]; then
+            echo "PR #$PR is draft=$DRAFT held=$HELD — disabling auto-merge."
+            gh pr merge "$PR" --disable-auto || true
+          else
+            # The merge queue owns the merge method (SQUASH, per the
+            # require-pr-and-checks ruleset) — `gh pr merge` only arms auto-merge.
+            echo "PR #$PR is ready and unheld — enabling auto-merge."
+            gh pr merge "$PR" --auto
+          fi
