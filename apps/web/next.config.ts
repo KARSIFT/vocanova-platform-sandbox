@@ -54,8 +54,16 @@
 import path from "node:path";
 import { withSentryConfig } from "@sentry/nextjs";
 
+// `output: "standalone"` is for the Dockerfile-based staging/production
+// build only (see the module comment above). Vercel (used for apps/web PR
+// preview deploys) packages its own Functions from a normal `.next` build
+// and does not consume the standalone output; forcing this mode there makes
+// Vercel's own build-output step fail looking for artifacts standalone mode
+// doesn't produce in the expected shape. Vercel sets `VERCEL=1` on every
+// build, Docker never does, so gate on that instead of adding a second
+// config file to keep in sync with this one.
 const nextConfig = {
-  output: "standalone",
+  ...(process.env.VERCEL ? {} : { output: "standalone" }),
   outputFileTracingRoot: path.join(__dirname, "../.."),
 };
 
