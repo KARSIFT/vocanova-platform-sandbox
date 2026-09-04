@@ -45,6 +45,7 @@ jobs:
       - name: Enable or disable auto-merge
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
           DRAFT: ${{ github.event.pull_request.draft }}
           HELD: ${{ contains(github.event.pull_request.labels.*.name, 'hold') }}
