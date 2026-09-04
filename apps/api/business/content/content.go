@@ -101,9 +101,18 @@ type SavedStateReader interface {
 }
 
 // ListSituationsRequest is a paginated query.
+//
+// PriorityCategory is an optional hint that boosts situations whose
+// Category matches it to the front of the first page (VOC-1183): a new
+// learner's onboarding goal (main use case) should shape what Discover
+// surfaces first, rather than being collected and never read. It is
+// only applied to the first page (AfterCursor == "") — display_order
+// remains the sole ordering for every page after that, and it never
+// changes the pagination cursor, so paging behavior is unaffected.
 type ListSituationsRequest struct {
-	AfterCursor string
-	Limit       int
+	AfterCursor      string
+	Limit            int
+	PriorityCategory string
 }
 
 // ListSituationsResponse is a paginated list of situations.
@@ -130,9 +139,37 @@ func NewService(repo Repository, reader SavedStateReader) *Service {
 	return &Service{repo: repo, reader: reader}
 }
 
-// ListSituations returns active situations in display order.
+// ListSituations returns active situations in display order, with the
+// first page reordered (stable partition) so situations matching
+// req.PriorityCategory surface first — see ListSituationsRequest.
 func (s *Service) ListSituations(ctx context.Context, req ListSituationsRequest) (*ListSituationsResponse, error) {
-	return s.repo.ListSituations(ctx, req)
+	resp, err := s.repo.ListSituations(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if req.PriorityCategory != "" && req.AfterCursor == "" {
+		prioritizeByCategory(resp.Items, req.PriorityCategory)
+	}
+	return resp, nil
+}
+
+// prioritizeByCategory stable-partitions items in place so items whose
+// Category matches priority come first, preserving their relative
+// display_order within each partition. NextCursor is computed by the
+// repository from the pre-partition ordering, so this reordering never
+// affects pagination correctness.
+func prioritizeByCategory(items []Situation, priority string) {
+	matched := make([]Situation, 0, len(items))
+	rest := make([]Situation, 0, len(items))
+	for _, item := range items {
+		if item.Category == priority {
+			matched = append(matched, item)
+		} else {
+			rest = append(rest, item)
+		}
+	}
+	copy(items, matched)
+	copy(items[len(matched):], rest)
 }
 
 // GetSituation returns a situation with the requester's saved-state overlay.

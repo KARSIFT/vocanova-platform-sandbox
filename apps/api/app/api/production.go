@@ -733,7 +733,7 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	RegisterSettings(api, usersSvc, authSvc)
 	RegisterEmailChangeLinks(api, accountsSvc, authSvc)
 	RegisterAccountDeletionRequests(api, accountsSvc, authSvc)
-	RegisterContent(api, contentSvc)
+	RegisterContent(api, contentSvc, usersSvc)
 	RegisterLearning(api, learningSvc, authSvc)
 	RegisterReviews(api, reviewsSvc, authSvc)
 	RegisterAIFeedback(api, aifeedbackSvc, authSvc)

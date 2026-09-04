@@ -9,6 +9,8 @@ import (
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/auth"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/content"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/users"
+	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
@@ -17,7 +19,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testContentAPI(t *testing.T) (huma.API, *content.Service) {
+// testContentAPI wires the content routes against contentSampleData()
+// and usersSvc (which may be nil, in which case Discover falls back to
+// plain display_order — see requesterMainUseCase).
+func testContentAPI(t *testing.T, usersSvc *users.Service) (huma.API, *content.Service) {
 	repo, reader := contentSampleData()
 	svc := content.NewService(repo, reader)
 
@@ -25,7 +30,7 @@ func testContentAPI(t *testing.T) (huma.API, *content.Service) {
 	api := humachi.New(chi.NewMux(), config)
 	api.UseMiddleware(withHumaContext)
 	api.UseMiddleware(AuthMiddleware(authStubService()))
-	RegisterContent(api, svc)
+	RegisterContent(api, svc, usersSvc)
 	return api, svc
 }
 
@@ -130,7 +135,7 @@ func authenticatedRequest(t *testing.T, userID uuid.UUID) *http.Request {
 }
 
 func TestListJourneySituationsRequiresAuth(t *testing.T) {
-	api, _ := testContentAPI(t)
+	api, _ := testContentAPI(t, nil)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/journey-situations", nil)
@@ -140,7 +145,7 @@ func TestListJourneySituationsRequiresAuth(t *testing.T) {
 }
 
 func TestListJourneySituationsReturnsActiveSituations(t *testing.T) {
-	api, _ := testContentAPI(t)
+	api, _ := testContentAPI(t, nil)
 
 	w := httptest.NewRecorder()
 	req := authenticatedRequest(t, content.MustParseUUID("00000000-0000-0000-0000-000000000009"))
@@ -158,7 +163,7 @@ func TestListJourneySituationsReturnsActiveSituations(t *testing.T) {
 }
 
 func TestGetJourneySituationRequiresAuth(t *testing.T) {
-	api, _ := testContentAPI(t)
+	api, _ := testContentAPI(t, nil)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/journey-situations/airport", nil)
@@ -168,7 +173,7 @@ func TestGetJourneySituationRequiresAuth(t *testing.T) {
 }
 
 func TestGetJourneySituationUnknownSlugReturns404(t *testing.T) {
-	api, _ := testContentAPI(t)
+	api, _ := testContentAPI(t, nil)
 
 	w := httptest.NewRecorder()
 	req := authenticatedRequest(t, content.MustParseUUID("00000000-0000-0000-0000-000000000009"))
@@ -180,7 +185,7 @@ func TestGetJourneySituationUnknownSlugReturns404(t *testing.T) {
 }
 
 func TestGetJourneySituationReturnsSavedOverlay(t *testing.T) {
-	api, _ := testContentAPI(t)
+	api, _ := testContentAPI(t, nil)
 
 	w := httptest.NewRecorder()
 	userID := content.MustParseUUID("00000000-0000-0000-0000-000000000009")
@@ -201,7 +206,7 @@ func TestGetJourneySituationReturnsSavedOverlay(t *testing.T) {
 }
 
 func TestGetJourneySituationCrossUserSavedState(t *testing.T) {
-	api, _ := testContentAPI(t)
+	api, _ := testContentAPI(t, nil)
 
 	w := httptest.NewRecorder()
 	otherUser := content.MustParseUUID("00000000-0000-0000-0000-00000000000a")
@@ -219,7 +224,7 @@ func TestGetJourneySituationCrossUserSavedState(t *testing.T) {
 }
 
 func TestGetCanonicalWordRequiresAuth(t *testing.T) {
-	api, _ := testContentAPI(t)
+	api, _ := testContentAPI(t, nil)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/canonical-words/boarding-pass", nil)
@@ -229,7 +234,7 @@ func TestGetCanonicalWordRequiresAuth(t *testing.T) {
 }
 
 func TestGetCanonicalWordUnknownSlugReturns404(t *testing.T) {
-	api, _ := testContentAPI(t)
+	api, _ := testContentAPI(t, nil)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/canonical-words/unknown", nil)
@@ -240,7 +245,7 @@ func TestGetCanonicalWordUnknownSlugReturns404(t *testing.T) {
 }
 
 func TestListJourneySituationsInvalidCursorReturns400(t *testing.T) {
-	api, _ := testContentAPI(t)
+	api, _ := testContentAPI(t, nil)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/journey-situations?after=not-valid", nil)
@@ -250,8 +255,83 @@ func TestListJourneySituationsInvalidCursorReturns400(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
+// TestListJourneySituationsPrioritizesOnboardingMainUseCase is a
+// regression test for VOC-1183: onboarding collects a "main use case"
+// (daily_life|work|travel|study|social) that maps 1:1 onto
+// journey_situations.category, but until this change nothing ever
+// read it back — a learner's Discover feed was ordered purely by
+// display_order regardless of their stated goal. This asserts that a
+// learner whose completed onboarding profile says mainUseCase=work
+// sees the work-category situation surfaced ahead of a lower-
+// display_order travel situation on the first Discover page.
+func TestListJourneySituationsPrioritizesOnboardingMainUseCase(t *testing.T) {
+	travelID := content.MustParseUUID("00000000-0000-0000-0000-000000000101")
+	workID := content.MustParseUUID("00000000-0000-0000-0000-000000000102")
+	dailyLifeID := content.MustParseUUID("00000000-0000-0000-0000-000000000103")
+	repo := content.NewMemoryRepository(content.MemoryRepositoryData{
+		Situations: []content.Situation{
+			{ID: travelID, Slug: "airport", Title: "Airport", ShortDescription: "d", Category: "travel", Status: "active", DisplayOrder: 1},
+			{ID: workID, Slug: "meeting-room", Title: "Meeting room", ShortDescription: "d", Category: "work", Status: "active", DisplayOrder: 2},
+			{ID: dailyLifeID, Slug: "grocery-store", Title: "Grocery store", ShortDescription: "d", Category: "daily_life", Status: "active", DisplayOrder: 3},
+		},
+	})
+	svc := content.NewService(repo, content.NewMemorySavedStateReader(nil))
+
+	usersRepo := users.NewMemoryRepository()
+	usersSvc := users.NewService(usersRepo, usersRepo, usersRepo, clock.Real{})
+	workLearner := content.MustParseUUID("00000000-0000-0000-0000-000000000201")
+	_, _, err := usersSvc.CompleteOnboarding(context.Background(), workLearner, users.OnboardingAnswers{
+		EnglishLevel:      users.EnglishLevelB1,
+		NativeLanguage:    "es",
+		LearningGoal:      users.LearningGoalWork,
+		MainUseCase:       users.MainUseCaseWork,
+		DailyReviewTarget: 20,
+	})
+	require.NoError(t, err)
+
+	config := huma.DefaultConfig("Vocanova API", "0.1.0")
+	api := humachi.New(chi.NewMux(), config)
+	api.UseMiddleware(withHumaContext)
+	api.UseMiddleware(AuthMiddleware(authStubService()))
+	RegisterContent(api, svc, usersSvc)
+
+	// A learner who never onboarded still sees plain display_order.
+	w := httptest.NewRecorder()
+	req := authenticatedRequest(t, content.MustParseUUID("00000000-0000-0000-0000-000000000009"))
+	api.Adapter().ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+	var unonboarded struct {
+		Items []SituationDTO `json:"items"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &unonboarded))
+	require.Len(t, unonboarded.Items, 3)
+	assert.Equal(t, []string{"airport", "meeting-room", "grocery-store"}, slugsOf(unonboarded.Items))
+
+	// A learner whose stated goal is "work" sees the work situation
+	// first, ahead of the lower-display_order travel situation.
+	w = httptest.NewRecorder()
+	req = authenticatedRequest(t, workLearner)
+	api.Adapter().ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+	var onboarded struct {
+		Items []SituationDTO `json:"items"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &onboarded))
+	require.Len(t, onboarded.Items, 3)
+	assert.Equal(t, "meeting-room", onboarded.Items[0].Slug, "work-goal learner should see the work situation surfaced first")
+	assert.Equal(t, []string{"airport", "grocery-store"}, slugsOf(onboarded.Items[1:]), "non-matching situations keep their relative display_order")
+}
+
+func slugsOf(items []SituationDTO) []string {
+	out := make([]string, len(items))
+	for i, item := range items {
+		out[i] = item.Slug
+	}
+	return out
+}
+
 func TestGetCanonicalWordReturnsWordDetail(t *testing.T) {
-	api, _ := testContentAPI(t)
+	api, _ := testContentAPI(t, nil)
 
 	w := httptest.NewRecorder()
 	userID := content.MustParseUUID("00000000-0000-0000-0000-000000000009")
