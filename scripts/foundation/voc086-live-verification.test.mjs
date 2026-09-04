@@ -315,7 +315,7 @@ test("VOC-086-T05 harness: preprovisioned bootstrap bypasses only the unavailabl
   assert.match(
     workflow,
     /inputs\.rotate_credentials && !inputs\.preprovisioned_credentials/,
-    "App token mint remains required for generated-credential rotation",
+    "the fail-closed rotation guard exempts preprovisioned_credentials, which never writes environment secrets",
   );
 
   const prepareStart = workflow.indexOf(

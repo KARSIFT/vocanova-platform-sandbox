@@ -254,10 +254,16 @@ test("VOC-094-TEST-05: observer workflow wires classifier before open-failure-is
     workflow,
     /FAILURE_RUN_ID: \$\{\{ github\.event\.workflow_run\.id \}\}/,
   );
-  assert.match(workflow, /actions\/create-github-app-token@[0-9a-f]{40} # v3/);
   assert.doesNotMatch(workflow, /permission-actions:/);
-  assert.match(workflow, /permission-issues: write/);
-  assert.match(workflow, /^permissions:\n  contents: read\n  actions: read$/m);
+  assert.match(
+    workflow,
+    /^permissions:\n  contents: read\n  actions: read\n  issues: write$/m,
+  );
+  assert.doesNotMatch(
+    workflow,
+    /KARSIFT_BOT_APP_ID|KARSIFT_BOT_PRIVATE_KEY|create-github-app-token/,
+    "no automation App credential; uses the job's default GITHUB_TOKEN (removed 2026-09-04)",
+  );
   assert.doesNotMatch(workflow, /gh\s+run\s+view/i);
 
   const classifierStepStart = workflow.indexOf(
@@ -278,11 +284,12 @@ test("VOC-094-TEST-05: observer workflow wires classifier before open-failure-is
   assert.doesNotMatch(classifierStep, /steps\.app-token\.outputs\.token/);
 
   const openIssueStep = workflow.slice(openIssueStepStart);
-  assert.match(
+  assert.match(openIssueStep, /GH_TOKEN: \$\{\{ github\.token \}\}/);
+  assert.doesNotMatch(
     openIssueStep,
-    /GH_TOKEN: \$\{\{ steps\.app-token\.outputs\.token \}\}/,
+    /steps\.app-token\.outputs\.token/,
+    "both steps share the same default GITHUB_TOKEN; no App token is minted",
   );
-  assert.doesNotMatch(openIssueStep, /GH_TOKEN: \$\{\{ github\.token \}\}/);
 
   const classifier = readFileSync(classifierPath, "utf8");
   assert.match(classifier, /\/actions\/runs\/\$\{FAILURE_RUN_ID\}\/jobs/);

@@ -156,15 +156,17 @@ test("VOC-088-TEST-11: standalone App observer covers exact failure surface", ()
   for (const conclusion of ["failure", "cancelled", "timed_out"]) {
     assert.match(workflow, new RegExp(`\\b${conclusion}\\b`));
   }
-  assert.match(workflow, /actions\/create-github-app-token@[0-9a-f]{40} # v3/);
   assert.doesNotMatch(workflow, /permission-actions:/);
-  assert.match(workflow, /permission-issues: write/);
-  assert.match(workflow, /^permissions:\n  contents: read\n  actions: read$/m);
-  assert.match(workflow, /KARSIFT_BOT_APP_ID/);
-  assert.match(workflow, /KARSIFT_BOT_PRIVATE_KEY/);
-  assert.match(workflow, /steps\.app-token\.outputs\.token/);
-  assert.doesNotMatch(workflow, /github-token:.*github\.token/);
-  assert.doesNotMatch(workflow, /secrets\.GITHUB_TOKEN/);
+  assert.match(
+    workflow,
+    /^permissions:\n  contents: read\n  actions: read\n  issues: write$/m,
+  );
+  assert.doesNotMatch(
+    workflow,
+    /KARSIFT_BOT_APP_ID|KARSIFT_BOT_PRIVATE_KEY|create-github-app-token/,
+    "no automation App credential; uses the job's default GITHUB_TOKEN (removed 2026-09-04)",
+  );
+  assert.match(workflow, /GH_TOKEN: \$\{\{ github\.token \}\}/);
   assert.match(workflow, /head_repository\.full_name == github\.repository/);
   assert.match(workflow, /classify-deploy-concurrency-cancel\.sh/);
   assert.match(

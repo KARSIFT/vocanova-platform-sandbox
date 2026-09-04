@@ -103,19 +103,24 @@ jobs:
       # `environments:` permission for it), so writing KUMA_USERNAME/
       # KUMA_PASSWORD into the `monitoring` environment needs a credential
       # GITHUB_TOKEN cannot provide. That credential (a karsift-ai-infra-bot
-      # App token) was removed 2026-09-04 and nothing replaces it yet, so
-      # rotate_credentials and recover_store_only fail closed here, before any
-      # password is generated or any host is touched. `sync_inventory` alone
-      # (the default) is unaffected - it only reads the existing
-      # KUMA_USERNAME/KUMA_PASSWORD secrets, it never writes them. To restore
-      # rotation, provision a replacement GitHub App or fine-grained PAT with
+      # App token) was removed 2026-09-04 and nothing replaces it yet.
+      # `preprovisioned_credentials` is exempt: that path only verifies the
+      # already-applied KUMA_USERNAME/KUMA_PASSWORD secrets match what was set
+      # on the Kuma host, it never writes them (see "Store rotated Kuma
+      # password"/"Store preserved Kuma username" below), so it never needed
+      # the App token either. `sync_inventory` alone (the default) is also
+      # unaffected - it only reads those secrets. To restore
+      # rotate_credentials/recover_store_only with a generated password,
+      # provision a replacement GitHub App or fine-grained PAT with
       # `environments: write` on this repository and wire its credentials in
       # here.
       - name: Refuse rotation without an environment-secret writer credential
-        if: ${{ inputs.rotate_credentials || inputs.recover_store_only }}
+        if: >-
+          (inputs.rotate_credentials && !inputs.preprovisioned_credentials) ||
+          inputs.recover_store_only
         run: |
-          echo "Credential rotation/recovery is disabled: no environment-secret writer credential is configured." >&2
-          echo "sync_inventory (the default, no rotation) still works with the existing KUMA_USERNAME/KUMA_PASSWORD secrets." >&2
+          echo "Credential rotation/recovery of a generated password is disabled: no environment-secret writer credential is configured." >&2
+          echo "sync_inventory (the default) and rotate_credentials with preprovisioned_credentials=true still work." >&2
           exit 1
 
       - name: Configure SSH host key verification
