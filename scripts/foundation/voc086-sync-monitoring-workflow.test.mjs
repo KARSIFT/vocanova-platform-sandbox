@@ -188,38 +188,34 @@ test("VOC-086-TEST-09: credential redaction and bootstrap stores secrets without
   assert.ok(existsSync(syncSelftestPath));
 });
 
-test("VOC-086-TEST-09 (remediation): environment-secret token is minted before rotation", () => {
+test("VOC-086-TEST-09 (remediation): rotation of a generated password fails closed without an environment-secret writer credential", () => {
   const workflow = readFileSync(workflowPath, "utf8");
   assert.doesNotMatch(
     workflow,
     /^\s+secrets:\s+write\s*$/m,
     "secrets is not a valid GITHUB_TOKEN workflow permission",
   );
-
-  const tokenStep = extractStepBlock(
+  assert.doesNotMatch(
     workflow,
-    "Mint environment-secret writer token",
+    /KARSIFT_BOT_APP_ID|KARSIFT_BOT_PRIVATE_KEY|create-github-app-token/,
+    "no automation App credential is available to write environment secrets (removed 2026-09-04)",
   );
-  assert.match(tokenStep, /actions\/create-github-app-token@[0-9a-f]{40} # v3/);
-  assert.match(tokenStep, /permission-environments: write/);
-  assert.match(tokenStep, /KARSIFT_BOT_APP_ID/);
-  assert.match(tokenStep, /KARSIFT_BOT_PRIVATE_KEY/);
-  assert.match(tokenStep, /inputs\.rotate_credentials/);
+
+  const guardStep = extractStepBlock(
+    workflow,
+    "Refuse rotation without an environment-secret writer credential",
+  );
+  assert.match(guardStep, /inputs\.rotate_credentials/);
+  assert.match(guardStep, /!inputs\.preprovisioned_credentials/);
   assert.match(
-    tokenStep,
+    guardStep,
     /inputs\.recover_store_only/,
-    "token mint also covers recover-store without a second reset",
+    "guard also covers recover-store, which also needs to write the secret",
   );
+  assert.match(guardStep, /exit 1/);
 
-  const preflightStep = extractStepBlock(
-    workflow,
-    "Verify environment-secret writer access",
-  );
-  assert.match(preflightStep, /steps\.environment-token\.outputs\.token/);
-  assert.match(preflightStep, /environments\/monitoring\/secrets\/public-key/);
-
-  const tokenIndex = workflow.indexOf(
-    "- name: Mint environment-secret writer token",
+  const guardIndex = workflow.indexOf(
+    "- name: Refuse rotation without an environment-secret writer credential",
   );
   const generateIndex = workflow.indexOf(
     "- name: Generate strong Kuma password",
@@ -228,9 +224,10 @@ test("VOC-086-TEST-09 (remediation): environment-secret token is minted before r
     "- name: Rotate Kuma credentials on host",
   );
   assert.ok(
-    tokenIndex >= 0 &&
-      tokenIndex < generateIndex &&
+    guardIndex >= 0 &&
+      guardIndex < generateIndex &&
       generateIndex < rotateIndex,
+    "the fail-closed guard must run before any password is generated or host action taken",
   );
 });
 

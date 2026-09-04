@@ -8,6 +8,13 @@ name: operational-failure-monitoring
 # handler could run. It never reads job logs or failure output. The issue body is
 # built only from allowlisted workflow/conclusion values and GitHub's canonical
 # run URL.
+#
+# Uses the default GITHUB_TOKEN. This used to mint a karsift-ai-infra-bot App
+# token instead, because a GITHUB_TOKEN-authored issue does not trigger a
+# workflow run — that mattered while a downstream `plan-from-issue` job
+# auto-drafted a change package from each issue. That pipeline no longer
+# exists (removed in the kandev-style migration); nothing here needs to
+# trigger anything, it just files the issue.
 
 on:
   workflow_run:
@@ -21,6 +28,7 @@ on:
 permissions:
   contents: read
   actions: read
+  issues: write
 
 # Serialize the list-then-create deduplication transaction. A constant group is
 # intentional: failures from different observed workflows must not race while
@@ -40,30 +48,6 @@ jobs:
     steps:
       - name: Check out the default-branch observer
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-
-      # Fail closed if the App identity is unavailable. GITHUB_TOKEN-created
-      # issue events do not start the downstream issue-to-plan workflow.
-      - name: Require automation GitHub App credentials
-        env:
-          KARSIFT_BOT_APP_ID: ${{ secrets.KARSIFT_BOT_APP_ID }}
-          KARSIFT_BOT_PRIVATE_KEY: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
-        run: |
-          set -euo pipefail
-          if [ -z "${KARSIFT_BOT_APP_ID:-}" ] || [ -z "${KARSIFT_BOT_PRIVATE_KEY:-}" ]; then
-            echo "Automation GitHub App credentials are required" >&2
-            exit 1
-          fi
-
-      # Issues write only — matches the App installation grant (VOC-098-D00).
-      # Bounded Actions jobs metadata for classify-deploy-concurrency-cancel.sh
-      # uses the job GITHUB_TOKEN (actions: read at the workflow permissions floor).
-      - name: Mint issue-writer installation token
-        id: app-token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
-        with:
-          app-id: ${{ secrets.KARSIFT_BOT_APP_ID }}
-          private-key: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
-          permission-issues: write
 
       - name: Classify benign deploy concurrency supersession
         id: classify-cancel
@@ -85,7 +69,7 @@ jobs:
       - name: Open or deduplicate sanitized operational issue
         if: steps.classify-cancel.outputs.skip_issue != 'true'
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ github.token }}
           GH_REPOSITORY: ${{ github.repository }}
           FAILURE_WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
           FAILURE_CONCLUSION: ${{ github.event.workflow_run.conclusion }}

@@ -99,28 +99,29 @@ jobs:
           echo "preprovisioned_credentials requires rotate_credentials=true and recover_store_only=false" >&2
           exit 1
 
-      # GITHUB_TOKEN cannot manage environment secrets. Mint the repository's
-      # existing automation App identity with the exact permission required by
-      # the environment-secret API. If the App lacks that grant, rotation
-      # fails here before any password is generated or applied to Kuma.
-      - name: Mint environment-secret writer token
-        id: environment-token
-        if: ${{ success() && ((inputs.rotate_credentials && !inputs.preprovisioned_credentials) || inputs.recover_store_only) }}
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
-        with:
-          app-id: ${{ secrets.KARSIFT_BOT_APP_ID }}
-          private-key: ${{ secrets.KARSIFT_BOT_PRIVATE_KEY }}
-          permission-environments: write
-
-      - name: Verify environment-secret writer access
-        if: ${{ success() && ((inputs.rotate_credentials && !inputs.preprovisioned_credentials) || inputs.recover_store_only) }}
-        env:
-          GH_TOKEN: ${{ steps.environment-token.outputs.token }}
+      # GITHUB_TOKEN cannot manage environment secrets (there is no
+      # `environments:` permission for it), so writing KUMA_USERNAME/
+      # KUMA_PASSWORD into the `monitoring` environment needs a credential
+      # GITHUB_TOKEN cannot provide. That credential (a karsift-ai-infra-bot
+      # App token) was removed 2026-09-04 and nothing replaces it yet.
+      # `preprovisioned_credentials` is exempt: that path only verifies the
+      # already-applied KUMA_USERNAME/KUMA_PASSWORD secrets match what was set
+      # on the Kuma host, it never writes them (see "Store rotated Kuma
+      # password"/"Store preserved Kuma username" below), so it never needed
+      # the App token either. `sync_inventory` alone (the default) is also
+      # unaffected - it only reads those secrets. To restore
+      # rotate_credentials/recover_store_only with a generated password,
+      # provision a replacement GitHub App or fine-grained PAT with
+      # `environments: write` on this repository and wire its credentials in
+      # here.
+      - name: Refuse rotation without an environment-secret writer credential
+        if: >-
+          (inputs.rotate_credentials && !inputs.preprovisioned_credentials) ||
+          inputs.recover_store_only
         run: |
-          set -euo pipefail
-          gh api \
-            "repos/${GITHUB_REPOSITORY}/environments/monitoring/secrets/public-key" \
-            --silent
+          echo "Credential rotation/recovery of a generated password is disabled: no environment-secret writer credential is configured." >&2
+          echo "sync_inventory (the default) and rotate_credentials with preprovisioned_credentials=true still work." >&2
+          exit 1
 
       - name: Configure SSH host key verification
         env:
