@@ -166,6 +166,70 @@ func TestReconcileStreakDoesNotEarnGraceDayWhenCapped(t *testing.T) {
 	assert.Nil(t, rec.GraceDayEarned)
 }
 
+func TestReconcileStreakGraceDayEarnedEvery7DaysCappedAt2PerProductBible(t *testing.T) {
+	// Product Bible (docs/product/00-product-bible.md §3): "A grace day is
+	// earned every 7 completed days, capped at a balance of 2." This test
+	// walks a streak through two full earn cycles (day 7 and day 14) and a
+	// third (day 21) that must NOT push the balance past the cap, asserting
+	// both halves of the rule explicitly in one place so either half
+	// breaking fails loudly here.
+	tz := "UTC"
+
+	// Cycle 1: streak 6 -> 7 with an empty balance earns the first grace
+	// day (cadence half of the rule).
+	yesterday1 := atLocalDate(t, "2026-07-25")
+	state1 := StreakState{
+		CurrentStreakCount:     6,
+		LongestStreakCount:     6,
+		LastCompletedLocalDate: &yesterday1,
+		Timezone:               tz,
+		Status:                 StreakStatusActive,
+	}
+	snapshots1 := []StreakSnapshot{{LocalDate: yesterday1, Status: MissionStatusCompleted}}
+	now1 := time.Date(2026, 7, 26, 12, 0, 0, 0, time.UTC)
+	rec1, err := ReconcileStreak("user-bible", now1, state1, GraceBalance{Balance: 0}, snapshots1, true)
+	require.NoError(t, err)
+	assert.Equal(t, 7, rec1.NewState.CurrentStreakCount)
+	require.NotNil(t, rec1.GraceDayEarned, "day 7 of the cadence must earn a grace day")
+	assert.Equal(t, 1, rec1.GraceDayEarned.BalanceAfter)
+
+	// Cycle 2: streak 13 -> 14 with a balance of 1 earns the second grace
+	// day, bringing the balance to the cap of 2.
+	yesterday2 := atLocalDate(t, "2026-08-01")
+	state2 := StreakState{
+		CurrentStreakCount:     13,
+		LongestStreakCount:     13,
+		LastCompletedLocalDate: &yesterday2,
+		Timezone:               tz,
+		Status:                 StreakStatusActive,
+	}
+	snapshots2 := []StreakSnapshot{{LocalDate: yesterday2, Status: MissionStatusCompleted}}
+	now2 := time.Date(2026, 8, 2, 12, 0, 0, 0, time.UTC)
+	rec2, err := ReconcileStreak("user-bible", now2, state2, GraceBalance{Balance: rec1.GraceDayEarned.BalanceAfter}, snapshots2, true)
+	require.NoError(t, err)
+	assert.Equal(t, 14, rec2.NewState.CurrentStreakCount)
+	require.NotNil(t, rec2.GraceDayEarned, "day 14 of the cadence must earn a second grace day")
+	assert.Equal(t, 2, rec2.GraceDayEarned.BalanceAfter, "second earn must bring the balance to the cap of 2")
+
+	// Cycle 3: streak 20 -> 21 with a balance already at the cap (2) must
+	// NOT earn a third grace day (cap half of the rule) — the balance must
+	// not exceed 2 even though day 21 is another multiple of 7.
+	yesterday3 := atLocalDate(t, "2026-08-08")
+	state3 := StreakState{
+		CurrentStreakCount:     20,
+		LongestStreakCount:     20,
+		LastCompletedLocalDate: &yesterday3,
+		Timezone:               tz,
+		Status:                 StreakStatusActive,
+	}
+	snapshots3 := []StreakSnapshot{{LocalDate: yesterday3, Status: MissionStatusCompleted}}
+	now3 := time.Date(2026, 8, 9, 12, 0, 0, 0, time.UTC)
+	rec3, err := ReconcileStreak("user-bible", now3, state3, GraceBalance{Balance: rec2.GraceDayEarned.BalanceAfter}, snapshots3, true)
+	require.NoError(t, err)
+	assert.Equal(t, 21, rec3.NewState.CurrentStreakCount)
+	assert.Nil(t, rec3.GraceDayEarned, "balance is already capped at 2; day 21 must not earn a third grace day")
+}
+
 func TestReconcileStreakAtRiskWhenYesterdayDoneButTodayNotYet(t *testing.T) {
 	// Read-only reconciliation: yesterday was good, today not yet
 	// completed, no current completion signaled. Streak is at risk.
