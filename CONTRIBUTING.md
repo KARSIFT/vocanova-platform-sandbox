@@ -36,12 +36,17 @@ staging API — there's no per-PR backend). This is separate from staging/
 production, which stay on the VPS via the deploy workflows below.
 
 Merging is automatic. `auto-merge.yml` turns on GitHub auto-merge for every
-non-draft PR, and the PR lands by itself once the `require-pr-and-checks` ruleset
-is satisfied: the required status checks (`ci-web`, `ci-api`, `controlled-signup
-OAuth callback E2E`, `All action refs are SHA-pinned`, `Architecture boundaries do
-not regress`) go green and the merge queue re-runs them against the real
-post-merge result. No approving review is required, so a green PR can land a few
-minutes after CI finishes with no manual step.
+non-draft PR, and re-checks whether to enqueue it both when the PR itself
+changes and when any of the five required-check workflows finishes
+(`workflow_run: completed`) - arming auto-merge alone does not reliably
+re-enqueue a PR into a required merge queue, so the workflow also calls
+GitHub's enqueue API directly. The PR lands by itself once the
+`require-pr-and-checks` ruleset is satisfied: the required status checks
+(`ci-web`, `ci-api`, `controlled-signup OAuth callback E2E`, `All action
+refs are SHA-pinned`, `Architecture boundaries do not regress`) go green
+and the merge queue re-runs them against the real post-merge result. No
+approving review is required, so a green PR can land a few minutes after
+CI finishes with no manual step.
 
 To hold a PR back, add the `hold` label (auto-merge is switched off until you
 remove it); keep it a draft for the same effect. Squash is the only merge method.
