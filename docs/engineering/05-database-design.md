@@ -257,6 +257,26 @@ succeeded.
 backend product configuration, not database constraints (see [06](06-backend-design.md) §11 for the
 actual point values).
 
+**Confidence Points read trace (audited VOC-1178, 2026-09-05):** the Progress screen's
+displayed total is the ledger's own running `balance_after`, never a separately maintained
+mutable balance -
+`confidence_point_ledger.balance_after` (written once per row, at insert time, as
+`currentBalance + outcome.Amount` inside the caller's existing transaction — see
+`gamification.Service.GrantPoint`) →
+`gamification.Repository.GetLatestPointBalance` (`SELECT balance_after ... ORDER BY
+occurred_at DESC, id DESC LIMIT 1`) → `gamification.Service.CurrentBalance` →
+`missions.Service.GetProgressView` (assigns `ConfidencePointsBalance` directly, no
+recomputation) → `api.progressViewToDTO` (`GET /api/v1/progress`, passthrough) →
+`apps/web/src/app/(app)/progress/page.tsx` (renders `confidencePointsBalance` as-is). No
+step in this chain sums, caches, or independently derives the total.
+`gamification/service_test.go`'s `TestCurrentBalanceMatchesSumOfLedgerEntries` grants a
+sequence of ledger entries and asserts the value this trace ends in equals their exact sum.
+One unrelated, pre-existing mutable counter was found and left alone because it sits outside
+this read path entirely: `daily_activity_summaries.confidence_points_earned`/`_spent`
+(`missions.Service.IncrementConfidencePointsEarned`) is written by some reward call sites but
+is never read back into any API response — it's dead weight, not a balance the Progress
+screen (or anything else) can drift from.
+
 ### `streak_states`
 One row per user (unique). `current_streak_count`, `longest_streak_count` (check `>=` current),
 `last_completed_local_date`, `last_activity_local_date`, `timezone`, `status`
