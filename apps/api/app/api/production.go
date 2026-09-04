@@ -686,13 +686,18 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	if !cfg.AIEnabled {
 		aiGate = aifeedback.NewDisabledGate()
 	}
+	// VOC-028-D01 / issue #1177: wire the real missions.MissionUpdater (not
+	// the P3 StubMissionUpdater) so a qualifying sentence-feedback call
+	// actually awards Confidence Points and updates the daily mission /
+	// streak state, mirroring the same fix already applied to the reviews
+	// P4 wiring above (see newProductionReviewsRepository / VOC-065-T01).
 	aifeedbackSvc := aifeedback.NewService(
 		aifeedback.NewPostgreSQLRepository(db, clk),
 		aiProvider,
 		safetyClassifier,
 		nil,
 		learningIdem,
-		nil,
+		missions.NewMissionUpdater(missionsSvc, gamSvc),
 		aifeedback.NewNoopTelemetryRecorder(),
 		aifeedback.NewDefaultTaskBuilder(),
 		aifeedback.NewDefaultOutputValidator(),
