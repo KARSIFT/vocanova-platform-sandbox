@@ -4,7 +4,8 @@ name: Auto-merge
 # the branch-ruleset requirements are satisfied — the five required status
 # checks (ci-web, ci-api, controlled-signup OAuth callback E2E, All action refs
 # are SHA-pinned, Architecture boundaries do not regress) plus a clean run
-# through the merge queue.
+# through the merge queue. The queue squash-merges (its own merge_method), so
+# `gh pr merge` here only arms auto-merge and does not pick a method.
 #
 # Deliberately does NOT wait on any review bot. Claude, CodeRabbit, Cubic,
 # Greptile and Codex are advisory commenters, not merge gates, so turning any
@@ -55,6 +56,8 @@ jobs:
             echo "PR #$PR is draft=$DRAFT held=$HELD — disabling auto-merge."
             gh pr merge "$PR" --disable-auto || true
           else
-            echo "PR #$PR is ready and unheld — enabling squash auto-merge."
-            gh pr merge "$PR" --squash --auto
+            # The merge queue owns the merge method (SQUASH, per the
+            # require-pr-and-checks ruleset) — `gh pr merge` only arms auto-merge.
+            echo "PR #$PR is ready and unheld — enabling auto-merge."
+            gh pr merge "$PR" --auto
           fi

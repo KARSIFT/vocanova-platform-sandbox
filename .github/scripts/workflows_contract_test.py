@@ -140,7 +140,7 @@ class WorkflowContractTest(unittest.TestCase):
         # label has to remain a real brake — a green PR merges on its own
         # otherwise, so these two strings are load-bearing.
         text = (WF_DIR / "auto-merge.yml").read_text()
-        self.assertIn("--squash --auto", text, "auto-merge.yml no longer enables squash auto-merge")
+        self.assertIn("--auto", text, "auto-merge.yml no longer arms auto-merge")
         self.assertIn("--disable-auto", text, "auto-merge.yml no longer turns auto-merge back off")
         self.assertIn("'hold'", text, "auto-merge.yml no longer honours the `hold` label")
         self.assertIn("DRAFT", text, "auto-merge.yml no longer skips drafts")
