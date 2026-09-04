@@ -19,19 +19,25 @@ what each checks. All required checks must pass before merge.
 
 Every non-draft PR is reviewed automatically by several assistants — Claude
 (`claude-code-review.yml`), CodeRabbit, Cubic, Greptile, and Codex. Their
-comments are advisory, not merge gates. Tag `@claude` (or `@codex`) in a PR
-comment for a follow-up review or a question.
+comments are advisory, not merge gates: none of them can block a merge, and
+turning any of them off doesn't change whether a PR can land. Tag `@claude`
+(or `@codex`) in a PR comment for a follow-up review or a question.
 
 A PR that touches `apps/web` also gets a live preview: Vercel builds it and
 posts the preview URL as a PR comment (frontend only, pointed at the shared
 staging API — there's no per-PR backend). This is separate from staging/
 production, which stay on the VPS via the deploy workflows below.
 
-Merging goes through GitHub's merge queue, not a direct merge: once required checks
-pass and the PR is approved, enqueue it (`gh pr merge --squash --auto`, or the
-"Merge when ready" button in the UI). The queue re-runs required checks against the
-real post-merge result before landing it on `main`, so a merge can take a few minutes
-after approval rather than being instant.
+Merging is automatic. `auto-merge.yml` turns on GitHub auto-merge for every
+non-draft PR, and the PR lands by itself once the `require-pr-and-checks` ruleset
+is satisfied: the required status checks (`ci-web`, `ci-api`, `controlled-signup
+OAuth callback E2E`, `All action refs are SHA-pinned`, `Architecture boundaries do
+not regress`) go green and the merge queue re-runs them against the real
+post-merge result. No approving review is required, so a green PR can land a few
+minutes after CI finishes with no manual step.
+
+To hold a PR back, add the `hold` label (auto-merge is switched off until you
+remove it); keep it a draft for the same effect. Squash is the only merge method.
 
 Use the exact checked-in tool versions and a frozen lockfile (`pnpm install
 --frozen-lockfile` in CI). Don't claim an unavailable check passed.
