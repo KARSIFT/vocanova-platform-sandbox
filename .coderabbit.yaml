@@ -1,6 +1,8 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
-# CodeRabbit review config. Claude (claude-code-review.yml) is the primary
-# automated reviewer; CodeRabbit runs alongside it. Keep it low-noise.
+# CodeRabbit review config. Disabled 2026-09-04: paid tier required to keep
+# reviewing this repo, and the founder does not want to buy it. Claude
+# (claude-code-review.yml) remains the automated reviewer. Config below is
+# kept intact (not deleted) so re-enabling later is a one-line flip.
 language: en-US
 reviews:
   profile: chill
@@ -9,7 +11,7 @@ reviews:
   poem: false
   review_status: true
   auto_review:
-    enabled: true
+    enabled: false
     drafts: false
     base_branches:
       - main
@@ -33,4 +35,4 @@ reviews:
         least-privilege permissions. A merge_group workflow must guard
         cancel-in-progress with github.event_name != 'merge_group'.
 chat:
-  auto_reply: true
+  auto_reply: false
