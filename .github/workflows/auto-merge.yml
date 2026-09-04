@@ -7,9 +7,10 @@ name: Auto-merge
 # through the merge queue. The queue squash-merges (its own merge_method), so
 # `gh pr merge` here only arms auto-merge and does not pick a method.
 #
-# Deliberately does NOT wait on any review bot. Claude, CodeRabbit, Cubic,
-# Greptile and Codex are advisory commenters, not merge gates, so turning any
-# of them off never changes whether a PR can merge. Only the required checks in
+# Deliberately does NOT wait on any review bot. Claude and Codex (the only
+# two still active - CodeRabbit/Cubic/Greptile were disabled 2026-09-04 as
+# paid tools) are advisory commenters, not merge gates, so turning any of
+# them off never changes whether a PR can merge. Only the required checks in
 # the `require-pr-and-checks` ruleset do.
 #
 # Escape hatch: add the `hold` label to freeze a PR (auto-merge is turned back
@@ -21,26 +22,38 @@ name: Auto-merge
 # credentials.
 #
 # Two triggers, one loop. `pull_request` covers a PR being opened/pushed/
-# labeled. `check_suite: completed` (GitHub Actions' own suite only — that's
-# where every required check runs) covers the PR *becoming* green, which
-# `pull_request` alone cannot see. Found live 2026-09-04 (PR #1171, #1172):
-# arming auto-merge does not reliably re-enqueue a PR into a *required* merge
-# queue by itself, and the fix's own first version only retried on
-# `pull_request` events — which fire before checks finish, so the one
-# enqueue attempt landed too early on both PRs and had to be run by hand.
-# The explicit enqueue call is a no-op (swallowed) when a PR isn't eligible
-# yet, is already queued, or already merged, so re-running it from either
-# trigger, for every open PR a check_suite touches, is harmless.
+# labeled. `workflow_run: completed` on the five required-check workflows
+# covers the PR *becoming* green, which `pull_request` alone cannot see -
+# same proven pattern operational-failure-monitoring.yml already uses for
+# PR-triggered runs in this repo.
+#
+# History: arming auto-merge does not reliably re-enqueue a PR into a
+# *required* merge queue by itself (found live 2026-09-04, PR #1171/#1172).
+# The first retry fix used `check_suite: completed` instead of `workflow_run`
+# (PR #1173) - that never fired even once for a PR's own head SHA (confirmed
+# empirically: it fires for push-driven check suites, e.g. on `main` itself,
+# but not for pull_request-driven ones), so PR #1174 stalled the same way
+# and had to be enqueued by hand again. `workflow_run` is what actually
+# works for this case. The explicit enqueue call is a no-op (swallowed) when
+# a PR isn't eligible yet, is already queued, or already merged, so
+# re-running it from either trigger, for every open PR a run touches, is
+# harmless.
 
 on:
   pull_request:
     types: [opened, reopened, ready_for_review, synchronize, labeled, unlabeled]
     branches: [main]
-  check_suite:
+  workflow_run:
+    workflows:
+      - ci-web
+      - ci-api
+      - controlled-signup-oauth-e2e
+      - Lint Action Pinning
+      - Architecture Lint
     types: [completed]
 
 concurrency:
-  group: auto-merge-${{ github.event.pull_request.number || github.event.check_suite.id }}
+  group: auto-merge-${{ github.event.pull_request.number || github.event.workflow_run.id }}
   cancel-in-progress: false
 
 permissions:
@@ -49,7 +62,6 @@ permissions:
 jobs:
   auto-merge:
     name: Enable auto-merge when green
-    if: github.event_name == 'pull_request' || github.event.check_suite.app.slug == 'github-actions'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -61,15 +73,16 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          CHECK_SUITE_PRS: ${{ toJson(github.event.check_suite.pull_requests) }}
+          WORKFLOW_RUN_PRS: ${{ toJson(github.event.workflow_run.pull_requests) }}
         run: |
           set -euo pipefail
           if [ "$EVENT_NAME" = "pull_request" ]; then
             numbers="[$PR_NUMBER]"
           else
-            # check_suite.pull_requests lists same-repo PRs whose head matches
-            # this commit; only ones targeting main are ours to handle.
-            numbers="$(jq -c '[.[] | select(.base.ref == "main") | .number]' <<<"$CHECK_SUITE_PRS")"
+            # workflow_run.pull_requests lists same-repo PRs (this repo takes
+            # no fork PRs) whose head matches this run; only ones targeting
+            # main are ours to handle.
+            numbers="$(jq -c '[.[] | select(.base.ref == "main") | .number]' <<<"$WORKFLOW_RUN_PRS")"
           fi
           echo "numbers=$numbers" >> "$GITHUB_OUTPUT"
 
