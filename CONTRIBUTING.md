@@ -22,6 +22,11 @@ Every non-draft PR is reviewed automatically by several assistants — Claude
 comments are advisory, not merge gates. Tag `@claude` (or `@codex`) in a PR
 comment for a follow-up review or a question.
 
+A PR that touches `apps/web` also gets a live preview: Vercel builds it and
+posts the preview URL as a PR comment (frontend only, pointed at the shared
+staging API — there's no per-PR backend). This is separate from staging/
+production, which stay on the VPS via the deploy workflows below.
+
 Merging goes through GitHub's merge queue, not a direct merge: once required checks
 pass and the PR is approved, enqueue it (`gh pr merge --squash --auto`, or the
 "Merge when ready" button in the UI). The queue re-runs required checks against the
