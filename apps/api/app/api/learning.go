@@ -73,6 +73,7 @@ func RegisterLearning(api huma.API, svc *learning.Service, authSvc *auth.Service
 		Tags:        []string{"Learning"},
 		Middlewares: []func(huma.Context, func(huma.Context)){RequireAuth()},
 		Responses: map[string]*huma.Response{
+			"400": {Description: "Invalid pagination cursor"},
 			"401": {Description: "Authentication is required"},
 		},
 	}, func(ctx context.Context, input *ListSavedWordsInput) (*ListSavedWordsOutput, error) {
@@ -101,6 +102,7 @@ func RegisterLearning(api huma.API, svc *learning.Service, authSvc *auth.Service
 		Tags:        []string{"Learning"},
 		Middlewares: []func(huma.Context, func(huma.Context)){RequireAuth(), CSRFMiddleware(authSvc)},
 		Responses: map[string]*huma.Response{
+			"400": {Description: "Idempotency key required"},
 			"401": {Description: "Authentication is required"},
 			"403": {Description: "Invalid CSRF token"},
 			"404": {Description: "Meaning not found"},

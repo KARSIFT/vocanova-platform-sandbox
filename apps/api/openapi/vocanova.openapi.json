@@ -1691,6 +1691,9 @@
           },
           "403": {
             "description": "Invalid CSRF token"
+          },
+          "429": {
+            "description": "Rate limited"
           }
         },
         "summary": "Log out the current session",
@@ -1716,15 +1719,11 @@
           "204": {
             "description": "No Content"
           },
-          "default": {
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorModel"
-                }
-              }
-            },
-            "description": "Error"
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Magic link sign-in is disabled"
           }
         },
         "summary": "Request a magic sign-in link",
@@ -1757,15 +1756,14 @@
             },
             "description": "OK"
           },
-          "default": {
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorModel"
-                }
-              }
-            },
-            "description": "Error"
+          "401": {
+            "description": "Invalid or expired magic link, or the account is disabled"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Magic link sign-in, or new sign-ups, is disabled"
           }
         },
         "summary": "Consume a magic sign-in link",
@@ -1815,6 +1813,18 @@
           },
           "302": {
             "description": "Redirect to the authenticated application"
+          },
+          "401": {
+            "description": "Invalid or expired OAuth state, or the provider/account failed verification"
+          },
+          "404": {
+            "description": "OAuth provider not configured"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Google OAuth sign-in, or new sign-ups, is disabled"
           }
         },
         "summary": "Handle the Google OAuth provider callback",
@@ -1847,15 +1857,17 @@
             },
             "description": "OK"
           },
-          "default": {
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorModel"
-                }
-              }
-            },
-            "description": "Error"
+          "401": {
+            "description": "The redirect URI is not allowed"
+          },
+          "404": {
+            "description": "OAuth provider not configured"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Google OAuth sign-in is disabled"
           }
         },
         "summary": "Start a Google OAuth sign-in flow",
@@ -1979,6 +1991,9 @@
               }
             },
             "description": "OK"
+          },
+          "400": {
+            "description": "Invalid pagination cursor"
           },
           "401": {
             "description": "Authentication is required"
@@ -2549,6 +2564,9 @@
             },
             "description": "OK"
           },
+          "400": {
+            "description": "Invalid pagination cursor"
+          },
           "401": {
             "description": "Authentication is required"
           }
@@ -2592,6 +2610,9 @@
               }
             },
             "description": "OK"
+          },
+          "400": {
+            "description": "Idempotency key required"
           },
           "401": {
             "description": "Authentication is required"

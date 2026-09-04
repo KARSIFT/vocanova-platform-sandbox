@@ -126,6 +126,7 @@ func RegisterAuth(api huma.API, svc *auth.Service) {
 		Summary:     "Request a magic sign-in link",
 		Tags:        []string{"Authentication"},
 		Responses: map[string]*huma.Response{
+			"429": {Description: "Rate limited"},
 			"503": {Description: "Magic link sign-in is disabled"},
 		},
 	}, func(ctx context.Context, input *RequestMagicLinkInput) (*RequestMagicLinkOutput, error) {
@@ -143,6 +144,8 @@ func RegisterAuth(api huma.API, svc *auth.Service) {
 		Summary:     "Consume a magic sign-in link",
 		Tags:        []string{"Authentication"},
 		Responses: map[string]*huma.Response{
+			"401": {Description: "Invalid or expired magic link, or the account is disabled"},
+			"429": {Description: "Rate limited"},
 			"503": {Description: "Magic link sign-in, or new sign-ups, is disabled"},
 		},
 	}, func(ctx context.Context, input *ConsumeMagicLinkInput) (*ConsumeMagicLinkOutput, error) {
@@ -169,7 +172,9 @@ func RegisterAuth(api huma.API, svc *auth.Service) {
 		Tags:          []string{"Authentication"},
 		DefaultStatus: 200,
 		Responses: map[string]*huma.Response{
+			"401": {Description: "The redirect URI is not allowed"},
 			"404": {Description: "OAuth provider not configured"},
+			"429": {Description: "Rate limited"},
 			"503": {Description: "Google OAuth sign-in is disabled"},
 		},
 	}, func(ctx context.Context, input *OAuthStartInput) (*OAuthStartOutput, error) {
@@ -193,6 +198,9 @@ func RegisterAuth(api huma.API, svc *auth.Service) {
 		Tags:        []string{"Authentication"},
 		Responses: map[string]*huma.Response{
 			"302": {Description: "Redirect to the authenticated application"},
+			"401": {Description: "Invalid or expired OAuth state, or the provider/account failed verification"},
+			"404": {Description: "OAuth provider not configured"},
+			"429": {Description: "Rate limited"},
 			"503": {Description: "Google OAuth sign-in, or new sign-ups, is disabled"},
 		},
 	}, func(ctx context.Context, input *OAuthCallbackInput) (*OAuthCallbackOutput, error) {
@@ -224,6 +232,7 @@ func RegisterAuth(api huma.API, svc *auth.Service) {
 		Responses: map[string]*huma.Response{
 			"401": {Description: "Authentication is required"},
 			"403": {Description: "Invalid CSRF token"},
+			"429": {Description: "Rate limited"},
 		},
 	}, func(ctx context.Context, input *LogoutInput) (*LogoutOutput, error) {
 		c := authHumaContext(ctx)
