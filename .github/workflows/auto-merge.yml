@@ -20,21 +20,27 @@ name: Auto-merge
 # merge later under its own identity, so nothing here needs elevated
 # credentials.
 #
-# Also explicitly enqueues the PR (the `enqueuePullRequest` GraphQL mutation),
-# not just `gh pr merge --auto`. Found live 2026-09-04 (PR #1171): arming
-# auto-merge does not reliably re-enqueue a PR into a *required* merge queue
-# after a later push — the PR sat CLEAN and mergeable with auto-merge armed,
-# but never entered the queue until enqueued explicitly. The explicit call is
-# a no-op (ignored via `|| true`) when the PR isn't eligible yet, is already
-# queued, or is already merged, so re-running it on every push is harmless.
+# Two triggers, one loop. `pull_request` covers a PR being opened/pushed/
+# labeled. `check_suite: completed` (GitHub Actions' own suite only — that's
+# where every required check runs) covers the PR *becoming* green, which
+# `pull_request` alone cannot see. Found live 2026-09-04 (PR #1171, #1172):
+# arming auto-merge does not reliably re-enqueue a PR into a *required* merge
+# queue by itself, and the fix's own first version only retried on
+# `pull_request` events — which fire before checks finish, so the one
+# enqueue attempt landed too early on both PRs and had to be run by hand.
+# The explicit enqueue call is a no-op (swallowed) when a PR isn't eligible
+# yet, is already queued, or already merged, so re-running it from either
+# trigger, for every open PR a check_suite touches, is harmless.
 
 on:
   pull_request:
     types: [opened, reopened, ready_for_review, synchronize, labeled, unlabeled]
     branches: [main]
+  check_suite:
+    types: [completed]
 
 concurrency:
-  group: auto-merge-${{ github.event.pull_request.number }}
+  group: auto-merge-${{ github.event.pull_request.number || github.event.check_suite.id }}
   cancel-in-progress: false
 
 permissions:
@@ -43,45 +49,59 @@ permissions:
 jobs:
   auto-merge:
     name: Enable auto-merge when green
+    if: github.event_name == 'pull_request' || github.event.check_suite.app.slug == 'github-actions'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: write
       pull-requests: write
     steps:
-      - name: Enable or disable auto-merge
-        id: automerge
+      - name: Determine target PR numbers
+        id: targets
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          CHECK_SUITE_PRS: ${{ toJson(github.event.check_suite.pull_requests) }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            numbers="[$PR_NUMBER]"
+          else
+            # check_suite.pull_requests lists same-repo PRs whose head matches
+            # this commit; only ones targeting main are ours to handle.
+            numbers="$(jq -c '[.[] | select(.base.ref == "main") | .number]' <<<"$CHECK_SUITE_PRS")"
+          fi
+          echo "numbers=$numbers" >> "$GITHUB_OUTPUT"
+
+      - name: Enable or disable auto-merge, and enqueue, per target PR
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          PR: ${{ github.event.pull_request.number }}
-          DRAFT: ${{ github.event.pull_request.draft }}
-          HELD: ${{ contains(github.event.pull_request.labels.*.name, 'hold') }}
+          NUMBERS: ${{ steps.targets.outputs.numbers }}
         run: |
           set -euo pipefail
-          if [ "$DRAFT" = "true" ] || [ "$HELD" = "true" ]; then
-            echo "PR #$PR is draft=$DRAFT held=$HELD — disabling auto-merge."
-            gh pr merge "$PR" --disable-auto || true
-            echo "node_id=" >> "$GITHUB_OUTPUT"
-          else
+          for PR in $(jq -r '.[]' <<<"$NUMBERS"); do
+            info="$(gh pr view "$PR" --json isDraft,labels,id)"
+            draft="$(jq -r '.isDraft' <<<"$info")"
+            held="$(jq -r '[.labels[].name] | any(. == "hold")' <<<"$info")"
+            node_id="$(jq -r '.id' <<<"$info")"
+
+            if [ "$draft" = "true" ] || [ "$held" = "true" ]; then
+              echo "PR #$PR is draft=$draft held=$held — disabling auto-merge."
+              gh pr merge "$PR" --disable-auto || true
+              continue
+            fi
+
             # The merge queue owns the merge method (SQUASH, per the
             # require-pr-and-checks ruleset) — `gh pr merge` only arms auto-merge.
             echo "PR #$PR is ready and unheld — enabling auto-merge."
-            gh pr merge "$PR" --auto
-            node_id="$(gh pr view "$PR" --json id --jq .id)"
-            echo "node_id=$node_id" >> "$GITHUB_OUTPUT"
-          fi
+            gh pr merge "$PR" --auto || true
 
-      - name: Explicitly enqueue into the merge queue
-        if: steps.automerge.outputs.node_id != ''
-        env:
-          GH_TOKEN: ${{ github.token }}
-          NODE_ID: ${{ steps.automerge.outputs.node_id }}
-        run: |
-          set -euo pipefail
-          gh api graphql -f query='
-            mutation($id: ID!) {
-              enqueuePullRequest(input: {pullRequestId: $id}) {
-                mergeQueueEntry { state position }
-              }
-            }' -f id="$NODE_ID" || echo "Not eligible to enqueue yet (checks pending, already queued, or already merged) - harmless, GitHub will enqueue it once eligible."
+            gh api graphql -f query='
+              mutation($id: ID!) {
+                enqueuePullRequest(input: {pullRequestId: $id}) {
+                  mergeQueueEntry { state position }
+                }
+              }' -f id="$node_id" \
+              || echo "PR #$PR not eligible to enqueue yet (checks pending, already queued, or already merged) — harmless."
+          done

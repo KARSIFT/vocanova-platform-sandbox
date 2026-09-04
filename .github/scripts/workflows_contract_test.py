@@ -142,8 +142,13 @@ class WorkflowContractTest(unittest.TestCase):
         text = (WF_DIR / "auto-merge.yml").read_text()
         self.assertIn("--auto", text, "auto-merge.yml no longer arms auto-merge")
         self.assertIn("--disable-auto", text, "auto-merge.yml no longer turns auto-merge back off")
-        self.assertIn("'hold'", text, "auto-merge.yml no longer honours the `hold` label")
-        self.assertIn("DRAFT", text, "auto-merge.yml no longer skips drafts")
+        self.assertIn('"hold"', text, "auto-merge.yml no longer honours the `hold` label")
+        self.assertIn("draft", text.lower(), "auto-merge.yml no longer skips drafts")
+        self.assertIn(
+            "enqueuePullRequest", text,
+            "auto-merge.yml no longer explicitly enqueues - arming auto-merge alone "
+            "does not reliably re-enqueue a PR into a required merge queue (found live, PR #1171/#1172)",
+        )
 
 
 if __name__ == "__main__":
