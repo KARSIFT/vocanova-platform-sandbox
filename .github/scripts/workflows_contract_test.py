@@ -30,6 +30,7 @@ NON_REQUIRED = {
     "docker-smoke.yml",
     "error-monitoring.yml",
     "lighthouse.yml",
+    "merge-queue-watchdog.yml",
     "operational-failure-monitoring.yml",
     "pr-title.yml",
     "pr-walkthrough.yml",

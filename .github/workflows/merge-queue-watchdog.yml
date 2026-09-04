@@ -1,0 +1,88 @@
+name: merge-queue-watchdog
+
+# Recurring failure mode, confirmed live twice (2026-09-05): a PR enters the
+# merge queue (state AWAITING_CHECKS) and GitHub never dispatches its
+# merge_group re-verification. No error, no timeout - it just sits there,
+# and because the queue is FIFO, one stuck entry blocks every PR behind it.
+# PR #1176 alone: stuck ~17 minutes. Later, five PRs (#1187-#1191) queued
+# back to back all stalled together, blocked on #1187 sitting at the head
+# for ~19 minutes with nothing behind it able to progress.
+#
+# The fix each time was two GraphQL calls: dequeuePullRequest then
+# enqueuePullRequest. Both times, the PR merged within about two minutes of
+# being re-kicked. This workflow automates exactly that: periodically list
+# the merge queue, and re-kick any entry that's been AWAITING_CHECKS longer
+# than STALE_MINUTES.
+#
+# Root cause is unconfirmed - this treats the symptom (a GitHub merge-queue
+# backend quirk), not a bug in this repo's own workflows.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: merge-queue-watchdog
+  cancel-in-progress: false
+
+jobs:
+  watchdog:
+    name: unstick stale merge-queue entries
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Find and re-kick stale AWAITING_CHECKS entries
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+          STALE_MINUTES: "10"
+        run: |
+          set -euo pipefail
+          IFS='/' read -r owner repo <<<"$GH_REPOSITORY"
+          now_epoch=$(date -u +%s)
+
+          entries="$(gh api graphql -f query='
+            query($owner: String!, $repo: String!) {
+              repository(owner: $owner, name: $repo) {
+                mergeQueue(branch: "main") {
+                  entries(first: 20) {
+                    nodes {
+                      state
+                      enqueuedAt
+                      pullRequest { number id }
+                    }
+                  }
+                }
+              }
+            }' -f owner="$owner" -f repo="$repo" \
+            --jq '.data.repository.mergeQueue.entries.nodes')"
+
+          stale_count=0
+          echo "$entries" | jq -c '.[]' | while read -r entry; do
+            state="$(jq -r '.state' <<<"$entry")"
+            if [ "$state" != "AWAITING_CHECKS" ]; then
+              continue
+            fi
+
+            enqueued_at="$(jq -r '.enqueuedAt' <<<"$entry")"
+            pr_number="$(jq -r '.pullRequest.number' <<<"$entry")"
+            pr_id="$(jq -r '.pullRequest.id' <<<"$entry")"
+            enqueued_epoch="$(date -u -d "$enqueued_at" +%s)"
+            age_minutes=$(( (now_epoch - enqueued_epoch) / 60 ))
+
+            if [ "$age_minutes" -lt "$STALE_MINUTES" ]; then
+              echo "PR #$pr_number: AWAITING_CHECKS for ${age_minutes}m, within threshold - leaving alone"
+              continue
+            fi
+
+            echo "PR #$pr_number: stale (AWAITING_CHECKS for ${age_minutes}m, threshold ${STALE_MINUTES}m) - re-kicking"
+            gh api graphql -f query="mutation { dequeuePullRequest(input: {id: \"$pr_id\"}) { clientMutationId } }" \
+              || echo "  dequeue failed or already dequeued for #$pr_number, continuing"
+            gh api graphql -f query="mutation { enqueuePullRequest(input: {pullRequestId: \"$pr_id\"}) { mergeQueueEntry { state position } } }" \
+              || echo "  enqueue failed for #$pr_number - may need manual attention"
+          done
