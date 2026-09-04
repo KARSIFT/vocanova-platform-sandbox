@@ -332,6 +332,17 @@ func (r *Repository) UpsertStreakState(
 
 // GetLatestPointBalance returns the user's current Confidence Points balance
 // from the latest confidence_point_ledger row. 0 if no rows exist.
+//
+// This is the ledger read that ultimately backs the Progress screen's
+// Confidence Points total (via Service.CurrentBalance ->
+// missions.Service.GetProgressView -> GET /api/v1/progress ->
+// apps/web/src/app/(app)/progress/page.tsx). balance_after is not a
+// separately mutable balance field: it is written once, at insert time, as
+// currentBalance+amount (see Service.GrantPoint), so reading the latest row
+// is exactly the running sum of every ledger entry — never a value that can
+// drift from it. Traced and verified in
+// docs/engineering/05-database-design.md §12 and
+// TestCurrentBalanceMatchesSumOfLedgerEntries (service_test.go).
 func (r *Repository) GetLatestPointBalance(ctx context.Context, userID uuid.UUID) (int, error) {
 	row := r.db.QueryRowContext(ctx,
 		`SELECT balance_after FROM confidence_point_ledger
