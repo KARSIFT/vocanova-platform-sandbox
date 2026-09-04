@@ -69,9 +69,9 @@ export default async function SituationDiscoverPage({
               >
                 <div className="flex items-start justify-between gap-[var(--spacing-md)]">
                   <div>
-                    <p className="text-lg font-semibold text-neutral-900">
+                    <h2 className="text-lg font-semibold text-neutral-900">
                       {meaning.wordText}
-                    </p>
+                    </h2>
                     <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
                       {meaning.shortDefinition}
                     </p>

@@ -47,12 +47,12 @@ export default async function ProgressPage() {
         aria-labelledby="confidence-points-heading"
         className="mt-[var(--spacing-lg)] rounded-md border border-primary-200 bg-primary-50 p-[var(--spacing-md)] shadow-sm"
       >
-        <p
+        <h2
           id="confidence-points-heading"
           className="text-sm font-medium text-primary-900"
         >
           Confidence Points
-        </p>
+        </h2>
         <p className="mt-[var(--spacing-xs)] text-3xl font-semibold text-primary-900">
           {confidencePointsTotal.toLocaleString()}
         </p>
