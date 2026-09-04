@@ -1362,3 +1362,25 @@ func TestProductionGo_NewProductionAPIConstructsP4WiredReviewsRepository(t *test
 	assert.NotContains(t, src, "reviews.NewPostgreSQLRepository(db, clk)\n",
 		"production.go must not construct the reviews repository without P4 wiring options")
 }
+
+// ---------------------------------------------------------------------------
+// Issue #1177 regression: the live composition root must wire a real
+// missions.MissionUpdater into aifeedback.NewService so a qualifying
+// sentence-feedback call actually writes mission progress / Confidence
+// Points instead of silently going through StubMissionUpdater. This is the
+// same class of defect as VOC-065-T01 above, applied to the aifeedback P3
+// seam instead of the reviews P2 path.
+// ---------------------------------------------------------------------------
+
+// TestProductionGo_NewProductionAPIWiresRealMissionUpdater is the
+// composition-root guard: NewProductionAPI must construct aifeedback's
+// Service with a real *missions.MissionUpdater, not a nil interface value
+// (which silently defaults to StubMissionUpdater inside aifeedback.NewService
+// and writes nothing).
+func TestProductionGo_NewProductionAPIWiresRealMissionUpdater(t *testing.T) {
+	source, err := os.ReadFile("production.go")
+	require.NoError(t, err)
+	src := string(source)
+	assert.Contains(t, src, "missions.NewMissionUpdater(missionsSvc, gamSvc)",
+		"NewProductionAPI must pass a real missions.NewMissionUpdater into aifeedback.NewService")
+}
