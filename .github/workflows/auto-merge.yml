@@ -19,6 +19,14 @@ name: Auto-merge
 # auto-merge only flips a flag on the PR; the merge queue performs the actual
 # merge later under its own identity, so nothing here needs elevated
 # credentials.
+#
+# Also explicitly enqueues the PR (the `enqueuePullRequest` GraphQL mutation),
+# not just `gh pr merge --auto`. Found live 2026-09-04 (PR #1171): arming
+# auto-merge does not reliably re-enqueue a PR into a *required* merge queue
+# after a later push — the PR sat CLEAN and mergeable with auto-merge armed,
+# but never entered the queue until enqueued explicitly. The explicit call is
+# a no-op (ignored via `|| true`) when the PR isn't eligible yet, is already
+# queued, or is already merged, so re-running it on every push is harmless.
 
 on:
   pull_request:
@@ -42,6 +50,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Enable or disable auto-merge
+        id: automerge
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -53,9 +62,26 @@ jobs:
           if [ "$DRAFT" = "true" ] || [ "$HELD" = "true" ]; then
             echo "PR #$PR is draft=$DRAFT held=$HELD — disabling auto-merge."
             gh pr merge "$PR" --disable-auto || true
+            echo "node_id=" >> "$GITHUB_OUTPUT"
           else
             # The merge queue owns the merge method (SQUASH, per the
             # require-pr-and-checks ruleset) — `gh pr merge` only arms auto-merge.
             echo "PR #$PR is ready and unheld — enabling auto-merge."
             gh pr merge "$PR" --auto
+            node_id="$(gh pr view "$PR" --json id --jq .id)"
+            echo "node_id=$node_id" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Explicitly enqueue into the merge queue
+        if: steps.automerge.outputs.node_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NODE_ID: ${{ steps.automerge.outputs.node_id }}
+        run: |
+          set -euo pipefail
+          gh api graphql -f query='
+            mutation($id: ID!) {
+              enqueuePullRequest(input: {pullRequestId: $id}) {
+                mergeQueueEntry { state position }
+              }
+            }' -f id="$NODE_ID" || echo "Not eligible to enqueue yet (checks pending, already queued, or already merged) - harmless, GitHub will enqueue it once eligible."
