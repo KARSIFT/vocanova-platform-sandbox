@@ -144,8 +144,10 @@ func (r *PostgreSQLRepository) RevokeAllEmailChangeLinksForUser(ctx context.Cont
 	return n, nil
 }
 
-// UpdateUserEmail sets users.email for the user, enforcing the
-// partial unique index users_active_email_key. A unique_violation
+// UpdateUserEmail sets users.email for the user and moves that user's active
+// email-provider subject with it. The single statement only updates an email
+// identity whose current subject is the user's prior email; it never reassigns
+// an identity owned by another user. A unique_violation
 // (SQLSTATE 23505) on the email index is translated to
 // ErrEmailAlreadyRegistered so the API layer returns a stable
 // 409-style conflict response, never an unhandled 500
@@ -154,8 +156,19 @@ func (r *PostgreSQLRepository) RevokeAllEmailChangeLinksForUser(ctx context.Cont
 // users modules.
 func (r *PostgreSQLRepository) UpdateUserEmail(ctx context.Context, userID uuid.UUID, newEmail string, now time.Time) error {
 	_, err := r.db.ExecContext(ctx,
-		`UPDATE users SET email = lower($2), updated_at = $3
-		 WHERE id = $1 AND deleted_at IS NULL`,
+		`WITH old_email AS (
+			 SELECT email FROM users WHERE id = $1 AND deleted_at IS NULL
+		 ), updated_user AS (
+			 UPDATE users SET email = lower($2), updated_at = $3
+			 WHERE id = $1 AND deleted_at IS NULL
+			 RETURNING id
+		 )
+		 UPDATE external_identities
+		 SET provider_subject = lower($2), provider_email = lower($2),
+		     provider_email_verified = true, updated_at = $3
+		 WHERE user_id = $1 AND provider = 'email'
+		   AND provider_subject = (SELECT email FROM old_email)
+		   AND deleted_at IS NULL`,
 		userID, newEmail, now)
 	if err == nil {
 		return nil

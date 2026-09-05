@@ -227,6 +227,47 @@ func TestConsumeMagicLinkCreatesUserAndSession(t *testing.T) {
 	validated, err := svc.ValidateSession(ctx, token)
 	require.NoError(t, err)
 	assert.Equal(t, user.ID, validated.ID)
+
+	ext, err := repo.GetExternalIdentity(ctx, "email", "user@example.com")
+	require.NoError(t, err)
+	assert.Equal(t, user.ID, ext.UserID)
+	assert.Equal(t, "user@example.com", ext.ProviderEmail)
+	assert.True(t, ext.ProviderEmailVerified)
+}
+
+func TestConsumeMagicLinkReusesExistingEmailIdentity(t *testing.T) {
+	svc, repo, fake, _ := testService(t)
+	ctx := context.Background()
+
+	for range 2 {
+		require.NoError(t, svc.RequestMagicLink(ctx, "1.2.3.4", "user@example.com"))
+		msg, ok := fake.Last()
+		require.True(t, ok)
+		rawToken := extractTokenFromURL(t, msg.BodyText)
+		_, _, _, err := svc.ConsumeMagicLink(ctx, "1.2.3.4", rawToken, "user@example.com")
+		require.NoError(t, err)
+	}
+
+	assert.Len(t, repo.externalIdentities, 1)
+	ext, err := repo.GetExternalIdentity(ctx, "email", "user@example.com")
+	require.NoError(t, err)
+	assert.Equal(t, "email", ext.Provider)
+	assert.Equal(t, "user@example.com", ext.ProviderSubject)
+}
+
+func TestEnsureEmailIdentityRejectsAnotherUsersIdentity(t *testing.T) {
+	svc, repo, _, _ := testService(t)
+	ctx := context.Background()
+	now := time.Now().UTC()
+	owner, err := repo.CreateUser(ctx, "owner@example.com", &now)
+	require.NoError(t, err)
+	other, err := repo.CreateUser(ctx, "other@example.com", &now)
+	require.NoError(t, err)
+	_, err = repo.CreateExternalIdentity(ctx, owner.ID, "email", "owner@example.com", "owner@example.com", true)
+	require.NoError(t, err)
+
+	err = svc.ensureEmailIdentity(ctx, other.ID, "owner@example.com")
+	require.ErrorIs(t, err, ErrInvalidMagicLink)
 }
 
 func TestConsumeMagicLinkRejectsReplay(t *testing.T) {

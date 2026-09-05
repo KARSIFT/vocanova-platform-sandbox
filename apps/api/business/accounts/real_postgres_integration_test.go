@@ -127,6 +127,61 @@ func TestPostgreSQLRepositoryExportAndAnonymization(t *testing.T) {
 	}
 }
 
+// TestUpdateUserEmailMovesEmailProviderIdentityPostgreSQL ensures a confirmed
+// email change releases the old mailbox at the provider-identity boundary.
+// A later magic-link sign-in for that old mailbox can therefore belong to a
+// newly created account instead of being rejected as another user's identity.
+func TestUpdateUserEmailMovesEmailProviderIdentityPostgreSQL(t *testing.T) {
+	dsn := os.Getenv("VOCANOVA_TEST_POSTGRES_DSN")
+	if dsn == "" {
+		t.Skip("VOCANOVA_TEST_POSTGRES_DSN is not set")
+	}
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+	if err := db.PingContext(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	userID := uuid.New()
+	oldEmail := userID.String() + "-old@example.test"
+	newEmail := userID.String() + "-new@example.test"
+	now := time.Now().UTC()
+	if _, err := db.ExecContext(ctx, `INSERT INTO users (id, email, status, created_at, updated_at) VALUES ($1, $2, 'active', $3, $3)`, userID, oldEmail, now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO external_identities (id, user_id, provider, provider_subject, provider_email, provider_email_verified, created_at, updated_at) VALUES ($1, $2, 'email', $3, $3, true, $4, $4)`, uuid.New(), userID, oldEmail, now); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(context.Background(), `DELETE FROM external_identities WHERE user_id = $1`, userID)
+		_, _ = db.ExecContext(context.Background(), `DELETE FROM users WHERE id = $1`, userID)
+	})
+
+	repo := NewPostgreSQLRepository(db)
+	if err := repo.UpdateUserEmail(ctx, userID, newEmail, now); err != nil {
+		t.Fatal(err)
+	}
+	var subject, providerEmail string
+	var verified bool
+	if err := db.QueryRowContext(ctx, `SELECT provider_subject, provider_email, provider_email_verified FROM external_identities WHERE user_id = $1 AND provider = 'email' AND deleted_at IS NULL`, userID).Scan(&subject, &providerEmail, &verified); err != nil {
+		t.Fatal(err)
+	}
+	if subject != newEmail || providerEmail != newEmail || !verified {
+		t.Fatalf("email identity not moved: subject=%q email=%q verified=%t", subject, providerEmail, verified)
+	}
+	var oldCount int
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM external_identities WHERE provider = 'email' AND provider_subject = $1 AND deleted_at IS NULL`, oldEmail).Scan(&oldCount); err != nil {
+		t.Fatal(err)
+	}
+	if oldCount != 0 {
+		t.Fatalf("old email identity remains active: %d", oldCount)
+	}
+}
+
 func repoMustExport(t *testing.T, repo *PostgreSQLRepository, ctx context.Context, userID uuid.UUID) []byte {
 	t.Helper()
 	payload, err := repo.ExportPersonalData(ctx, userID)
