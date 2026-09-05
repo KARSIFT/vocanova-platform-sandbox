@@ -269,6 +269,7 @@ export function validateMockInventory() {
     "useronboardingprofile.go",
     "emailchangelink.go",
     "accountdeletionrequest.go",
+    "aifeedbackqualityreviewreport.go",
   ]);
   for (const entry of readdirSync(apiSchemaRoot, { withFileTypes: true })) {
     if (
@@ -305,6 +306,7 @@ export function validateMockInventory() {
     "20260725140001_voc031_p5_email_change_links.sql",
     "20260725140002_voc031_p5_account_deletion_requests.sql",
     "20260808141000_voc050_t00_synthetic_smoke_test_user.sql",
+    "20260905120000_voc1200_ai_feedback_quality_review_reports.sql",
   ]);
   for (const entry of readdirSync(apiMigrationRoot, {
     withFileTypes: true,

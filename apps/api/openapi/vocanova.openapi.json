@@ -1640,14 +1640,15 @@
             "readOnly": true,
             "type": "string"
           },
-          "classification": {
-            "description": "Optional classification (e.g. incorrect, unsafe, unclear)",
-            "maxLength": 100,
-            "type": "string"
-          },
           "reason": {
-            "description": "Short reason for the report",
-            "maxLength": 200,
+            "description": "Learner-selected report reason",
+            "enum": [
+              "already_correct",
+              "correction_changed_meaning",
+              "explanation_unclear",
+              "inappropriate",
+              "something_else"
+            ],
             "type": "string"
           }
         },
@@ -3354,6 +3355,16 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "description": "User-scoped idempotency key",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "description": "User-scoped idempotency key",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -3378,6 +3389,9 @@
           },
           "404": {
             "description": "Feedback attempt not found"
+          },
+          "409": {
+            "description": "Idempotency key conflict"
           }
         },
         "summary": "Report a quality concern for a feedback attempt",

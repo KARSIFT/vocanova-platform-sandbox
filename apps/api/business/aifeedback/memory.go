@@ -18,6 +18,7 @@ type MemoryRepository struct {
 	words          []MemoryWord
 	sentences      []MemoryLearnerSentence
 	attempts       []MemoryAIFeedbackAttempt
+	reports        []QualityReviewReport
 }
 
 // MemoryUserWord mirrors the user_words row.
@@ -237,6 +238,29 @@ func (r *MemoryRepository) GetFeedbackAttemptOwner(ctx context.Context, attemptI
 	return uuid.Nil, ErrTargetNotFound
 }
 
+// CreateQualityReviewReport implements Repository.
+func (r *MemoryRepository) CreateQualityReviewReport(ctx context.Context, report QualityReviewReport) (bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, existing := range r.reports {
+		if existing.AttemptID == report.AttemptID {
+			if existing.Reason != report.Reason {
+				return false, ErrReportIdempotencyConflict
+			}
+			return false, nil
+		}
+	}
+	r.reports = append(r.reports, report)
+	return true, nil
+}
+
+// QualityReviewReports returns a copy for deterministic tests.
+func (r *MemoryRepository) QualityReviewReports() []QualityReviewReport {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]QualityReviewReport(nil), r.reports...)
+}
+
 // CompleteFeedbackAttempt implements Repository.
 func (r *MemoryRepository) CompleteFeedbackAttempt(ctx context.Context, pending PendingAttempt, feedback *ProviderFeedback, failureCode, failureMessage string, now time.Time) error {
 	r.mu.Lock()
@@ -274,7 +298,15 @@ func (r *MemoryRepository) CompleteFeedbackAttempt(ctx context.Context, pending 
 }
 
 func (r *MemoryRepository) toStoredAttempt(a MemoryAIFeedbackAttempt) *StoredFeedbackAttempt {
+	reported := false
+	for _, report := range r.reports {
+		if report.AttemptID == a.ID {
+			reported = true
+			break
+		}
+	}
 	return &StoredFeedbackAttempt{
+		Reported:          reported,
 		ID:                a.ID,
 		LearnerSentenceID: a.LearnerSentenceID,
 		Status:            a.Status,

@@ -143,14 +143,15 @@ func TestPostgreSQLRepositoryGetFeedbackAttemptByRequestHash(t *testing.T) {
 
 	mock.ExpectQuery("SELECT id, learner_sentence_id").
 		WithArgs(requestHash).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "learner_sentence_id", "status", "provider", "model", "prompt_version", "request_hash", "feedback_json", "feedback_text", "error_code", "error_message"}).
-			AddRow(attemptID, sentenceID, AttemptStatusSucceeded, ProviderMock, "mock", PromptVersionSentenceFeedbackV1, requestHash, []byte(`{"status":"correct"}`), "Good.", nil, nil))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "learner_sentence_id", "status", "provider", "model", "prompt_version", "request_hash", "feedback_json", "feedback_text", "error_code", "error_message", "reported"}).
+			AddRow(attemptID, sentenceID, AttemptStatusSucceeded, ProviderMock, "mock", PromptVersionSentenceFeedbackV1, requestHash, []byte(`{"status":"correct"}`), "Good.", nil, nil, true))
 
 	stored, err := repo.GetFeedbackAttemptByRequestHash(t.Context(), requestHash)
 	require.NoError(t, err)
 	require.NotNil(t, stored)
 	assert.Equal(t, AttemptStatusSucceeded, stored.Status)
 	assert.Equal(t, "correct", stored.FeedbackJSON["status"])
+	assert.True(t, stored.Reported)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 

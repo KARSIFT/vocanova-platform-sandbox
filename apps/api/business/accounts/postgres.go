@@ -385,6 +385,13 @@ func (r *PostgreSQLRepository) AnonymizeUserData(ctx context.Context, userID uui
 	}
 	defer tx.Rollback()
 
+	// Purge quality reports before their parent feedback attempts and retain
+	// an explicit affected-row count for the deletion audit.
+	counters.AIQualityReviewReports, err = execCount(ctx, tx, userID,
+		`DELETE FROM ai_feedback_quality_review_reports WHERE user_id = $1`)
+	if err != nil {
+		return counters, fmt.Errorf("delete quality review reports: %w", err)
+	}
 	// Delete dependent records before their parent learner rows. This order is
 	// required by the committed ON DELETE RESTRICT constraints.
 	c, err := execCount(ctx, tx, userID,

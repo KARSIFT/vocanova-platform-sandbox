@@ -278,6 +278,7 @@ func TestPostgreSQLRepositoryAnonymizeUserDataUsesPersistedSchema(t *testing.T) 
 	uid := uuid.New()
 	mock.ExpectBegin()
 	for _, query := range []string{
+		"DELETE FROM ai_feedback_quality_review_reports WHERE user_id = \\$1",
 		"DELETE FROM ai_feedback_attempts AS attempt",
 		"DELETE FROM review_attempts WHERE user_id = \\$1",
 		"DELETE FROM learner_sentences WHERE user_id = \\$1",
@@ -304,6 +305,7 @@ func TestPostgreSQLRepositoryAnonymizeUserDataUsesPersistedSchema(t *testing.T) 
 	counters, err := repo.AnonymizeUserData(context.Background(), uid)
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), counters.AIFeedbackAttempts)
+	assert.Equal(t, int64(1), counters.AIQualityReviewReports)
 	assert.Equal(t, int64(1), counters.ReviewAttempts)
 	assert.Equal(t, int64(1), counters.LearnerSentences)
 	assert.Equal(t, int64(1), counters.UserWords)
@@ -329,6 +331,9 @@ func TestPostgreSQLRepositoryAnonymizeUserDataRollsBack(t *testing.T) {
 	repo := NewPostgreSQLRepository(db)
 	uid := uuid.New()
 	mock.ExpectBegin()
+	mock.ExpectExec("DELETE FROM ai_feedback_quality_review_reports WHERE user_id = \\$1").
+		WithArgs(uid).
+		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("DELETE FROM ai_feedback_attempts AS attempt").
 		WithArgs(uid).
 		WillReturnResult(sqlmock.NewResult(0, 1))

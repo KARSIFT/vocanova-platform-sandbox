@@ -140,6 +140,7 @@ type AnonymizationCounters struct {
 	LearnerSentences       int64
 	ReviewAttempts         int64
 	AIFeedbackAttempts     int64
+	AIQualityReviewReports int64
 	ConfidencePointLedger  int64
 	GraceDayLedger         int64
 	FeatureAuditLogs       int64

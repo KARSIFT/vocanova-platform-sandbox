@@ -245,8 +245,12 @@ export interface SubmitSentenceFeedbackBody {
 }
 
 export interface ReportSentenceFeedbackBody {
-  reason: string;
-  classification?: string;
+  reason:
+    | "already_correct"
+    | "correction_changed_meaning"
+    | "explanation_unclear"
+    | "inappropriate"
+    | "something_else";
 }
 
 export interface Streak {
@@ -704,13 +708,16 @@ export class VocanovaClient {
   async reportSentenceFeedback(
     attemptId: string,
     body: ReportSentenceFeedbackBody,
+    idempotencyKey: string,
     init?: RequestInit,
   ): Promise<{ response: Response }> {
+    const headers = new Headers(init?.headers);
+    headers.set("Idempotency-Key", idempotencyKey);
     const response = await this.request(
       "POST",
       `/api/v1/sentence-feedback/${encodeURIComponent(attemptId)}/reports`,
       body,
-      init,
+      { ...init, headers },
     );
     return { response };
   }
