@@ -19,27 +19,191 @@ type CreatePersonalDataExportInput struct {
 }
 
 type CreatePersonalDataExportOutput struct {
-	Body PersonalDataExportDTO
+	CacheControl string `header:"Cache-Control"`
+	Pragma       string `header:"Pragma"`
+	Body         PersonalDataExportDTO
 }
 
-// PersonalDataExportDTO is intentionally additive: each collection preserves
-// the learner's own persisted record shape without exposing internal API
-// secrets. The stable top-level keys make the downloaded document practical
-// for a learner to inspect or move to another service.
+// PersonalDataExportDTO is an explicit learner-visible export contract. It is
+// deliberately not a map or a database row: adding a database column cannot
+// make it downloadable without a conscious DTO and SQL-projection change.
 type PersonalDataExportDTO struct {
-	SchemaVersion           string         `json:"schemaVersion"`
-	ExportedAt              string         `json:"exportedAt,omitempty" format:"date-time"`
-	Profile                 map[string]any `json:"profile"`
-	Settings                map[string]any `json:"settings"`
-	OnboardingProfile       any            `json:"onboardingProfile" nullable:"true"`
-	SavedWords              []any          `json:"savedWords"`
-	ReviewHistory           []any          `json:"reviewHistory"`
-	SentenceFeedbackHistory []any          `json:"sentenceFeedbackHistory"`
-	DailyMissions           []any          `json:"dailyMissions"`
-	DailyActivity           []any          `json:"dailyActivity"`
-	ConfidencePointLedger   []any          `json:"confidencePointLedger"`
-	GraceDayLedger          []any          `json:"graceDayLedger"`
-	StreakState             any            `json:"streakState" nullable:"true"`
+	SchemaVersion           string                            `json:"schemaVersion"`
+	ExportedAt              string                            `json:"exportedAt,omitempty" format:"date-time"`
+	Profile                 PersonalDataProfileDTO            `json:"profile"`
+	Settings                PersonalDataSettingsDTO           `json:"settings"`
+	OnboardingProfile       *PersonalDataOnboardingDTO        `json:"onboardingProfile"`
+	SavedWords              []PersonalDataSavedWordDTO        `json:"savedWords"`
+	ReviewHistory           []PersonalDataReviewDTO           `json:"reviewHistory"`
+	SentenceFeedbackHistory []PersonalDataSentenceFeedbackDTO `json:"sentenceFeedbackHistory"`
+	DailyMissions           []PersonalDataMissionDTO          `json:"dailyMissions"`
+	DailyActivity           []PersonalDataActivityDTO         `json:"dailyActivity"`
+	ConfidencePointLedger   []PersonalDataConfidenceLedgerDTO `json:"confidencePointLedger"`
+	GraceDayLedger          []PersonalDataGraceLedgerDTO      `json:"graceDayLedger"`
+	StreakState             *PersonalDataStreakDTO            `json:"streakState"`
+}
+
+type PersonalDataProfileDTO struct {
+	ID               string  `json:"id"`
+	Email            *string `json:"email"`
+	DisplayName      *string `json:"displayName"`
+	AvatarURL        *string `json:"avatarUrl"`
+	OnboardingStatus string  `json:"onboardingStatus"`
+	EmailVerifiedAt  *string `json:"emailVerifiedAt"`
+	CreatedAt        string  `json:"createdAt"`
+	UpdatedAt        string  `json:"updatedAt"`
+}
+type PersonalDataSettingsDTO struct {
+	Timezone               string `json:"timezone"`
+	DailyReviewTarget      int    `json:"dailyReviewTarget"`
+	ReviewIntervalPreset   string `json:"reviewIntervalPreset"`
+	NotificationsEnabled   bool   `json:"notificationsEnabled"`
+	MarketingEmailsEnabled bool   `json:"marketingEmailsEnabled"`
+	AppLanguage            string `json:"appLanguage"`
+	CreatedAt              string `json:"createdAt"`
+	UpdatedAt              string `json:"updatedAt"`
+}
+type PersonalDataOnboardingDTO struct {
+	EnglishLevel      string `json:"englishLevel"`
+	NativeLanguage    string `json:"nativeLanguage"`
+	LearningGoal      string `json:"learningGoal"`
+	MainUseCase       string `json:"mainUseCase"`
+	DailyReviewTarget int    `json:"dailyReviewTarget"`
+	CompletedAt       string `json:"completedAt"`
+	CreatedAt         string `json:"createdAt"`
+	UpdatedAt         string `json:"updatedAt"`
+}
+type PersonalDataSavedWordDTO struct {
+	ID                        string  `json:"id"`
+	MeaningID                 string  `json:"meaningId"`
+	Status                    string  `json:"status"`
+	Source                    string  `json:"source"`
+	ReviewStep                int     `json:"reviewStep"`
+	NextReviewAt              *string `json:"nextReviewAt"`
+	LastReviewedAt            *string `json:"lastReviewedAt"`
+	LastResult                *string `json:"lastResult"`
+	LastRating                *string `json:"lastRating"`
+	ConsecutiveCorrectCount   int     `json:"consecutiveCorrectCount"`
+	ConsecutiveIncorrectCount int     `json:"consecutiveIncorrectCount"`
+	TotalReviewCount          int     `json:"totalReviewCount"`
+	CorrectReviewCount        int     `json:"correctReviewCount"`
+	AddedAt                   string  `json:"addedAt"`
+	MasteredAt                *string `json:"masteredAt"`
+	IgnoredAt                 *string `json:"ignoredAt"`
+	CreatedAt                 string  `json:"createdAt"`
+	UpdatedAt                 string  `json:"updatedAt"`
+}
+type PersonalDataReviewDTO struct {
+	ID                      string  `json:"id"`
+	UserWordID              string  `json:"userWordId"`
+	MeaningID               string  `json:"meaningId"`
+	AttemptType             string  `json:"attemptType"`
+	PromptType              string  `json:"promptType"`
+	Result                  string  `json:"result"`
+	Rating                  *string `json:"rating"`
+	ReviewStepBefore        int     `json:"reviewStepBefore"`
+	ReviewStepAfter         int     `json:"reviewStepAfter"`
+	AnsweredAt              string  `json:"answeredAt"`
+	ResponseTimeMS          int     `json:"responseTimeMs"`
+	SelectedOptionMeaningID *string `json:"selectedOptionMeaningId"`
+	TypedAnswer             *string `json:"typedAnswer"`
+	WasHintUsed             bool    `json:"wasHintUsed"`
+	Source                  string  `json:"source"`
+	CreatedAt               string  `json:"createdAt"`
+	UpdatedAt               string  `json:"updatedAt"`
+}
+type PersonalDataFeedbackDTO struct {
+	Status                  *string `json:"status"`
+	TargetWordUsedCorrectly *bool   `json:"targetWordUsedCorrectly"`
+	CorrectedSentence       *string `json:"correctedSentence"`
+	Explanation             *string `json:"explanation"`
+	ImprovementTip          *string `json:"improvementTip"`
+}
+type PersonalDataFeedbackAttemptDTO struct {
+	Status       string                   `json:"status"`
+	Feedback     *PersonalDataFeedbackDTO `json:"feedback"`
+	FeedbackText *string                  `json:"feedbackText"`
+	StartedAt    *string                  `json:"startedAt"`
+	CompletedAt  *string                  `json:"completedAt"`
+	CreatedAt    string                   `json:"createdAt"`
+	UpdatedAt    string                   `json:"updatedAt"`
+}
+type PersonalDataSentenceDTO struct {
+	ID           string  `json:"id"`
+	MeaningID    *string `json:"meaningId"`
+	UserWordID   *string `json:"userWordId"`
+	SentenceText string  `json:"sentenceText"`
+	Source       string  `json:"source"`
+	Status       string  `json:"status"`
+	SubmittedAt  string  `json:"submittedAt"`
+	CreatedAt    string  `json:"createdAt"`
+	UpdatedAt    string  `json:"updatedAt"`
+}
+type PersonalDataSentenceFeedbackDTO struct {
+	Sentence         PersonalDataSentenceDTO          `json:"sentence"`
+	FeedbackAttempts []PersonalDataFeedbackAttemptDTO `json:"feedbackAttempts"`
+}
+type PersonalDataMissionDTO struct {
+	LocalDate                  string  `json:"localDate"`
+	Timezone                   string  `json:"timezone"`
+	ReviewTarget               int     `json:"reviewTarget"`
+	ReviewsCompleted           int     `json:"reviewsCompleted"`
+	NewWordTarget              *int    `json:"newWordTarget"`
+	NewWordsCompleted          *int    `json:"newWordsCompleted"`
+	SentencePracticeTarget     *int    `json:"sentencePracticeTarget"`
+	SentencePracticesCompleted *int    `json:"sentencePracticesCompleted"`
+	PolicyVersion              string  `json:"policyVersion"`
+	Status                     string  `json:"status"`
+	CompletedAt                *string `json:"completedAt"`
+	GraceApplied               bool    `json:"graceApplied"`
+	CreatedAt                  string  `json:"createdAt"`
+	UpdatedAt                  string  `json:"updatedAt"`
+}
+type PersonalDataActivityDTO struct {
+	LocalDate              string `json:"localDate"`
+	Timezone               string `json:"timezone"`
+	ReviewsAttempted       int    `json:"reviewsAttempted"`
+	ReviewsCorrect         int    `json:"reviewsCorrect"`
+	ReviewsSkipped         int    `json:"reviewsSkipped"`
+	WordsDiscovered        int    `json:"wordsDiscovered"`
+	WordsAdded             int    `json:"wordsAdded"`
+	SentencesSubmitted     int    `json:"sentencesSubmitted"`
+	AIFeedbackReceived     int    `json:"aiFeedbackReceived"`
+	ConfidencePointsEarned int    `json:"confidencePointsEarned"`
+	ConfidencePointsSpent  int    `json:"confidencePointsSpent"`
+	CreatedAt              string `json:"createdAt"`
+	UpdatedAt              string `json:"updatedAt"`
+}
+type PersonalDataConfidenceLedgerDTO struct {
+	Amount       int     `json:"amount"`
+	BalanceAfter int     `json:"balanceAfter"`
+	Reason       string  `json:"reason"`
+	SourceType   string  `json:"sourceType"`
+	SourceID     *string `json:"sourceId"`
+	OccurredAt   string  `json:"occurredAt"`
+	CreatedAt    string  `json:"createdAt"`
+	UpdatedAt    string  `json:"updatedAt"`
+}
+type PersonalDataGraceLedgerDTO struct {
+	Amount             int     `json:"amount"`
+	BalanceAfter       int     `json:"balanceAfter"`
+	Reason             string  `json:"reason"`
+	SourceType         string  `json:"sourceType"`
+	SourceID           *string `json:"sourceId"`
+	AppliedToLocalDate string  `json:"appliedToLocalDate"`
+	Timezone           string  `json:"timezone"`
+	CreatedAt          string  `json:"createdAt"`
+	UpdatedAt          string  `json:"updatedAt"`
+}
+type PersonalDataStreakDTO struct {
+	CurrentStreakCount     int     `json:"currentStreakCount"`
+	LongestStreakCount     int     `json:"longestStreakCount"`
+	LastCompletedLocalDate *string `json:"lastCompletedLocalDate"`
+	LastActivityLocalDate  *string `json:"lastActivityLocalDate"`
+	Timezone               string  `json:"timezone"`
+	Status                 string  `json:"status"`
+	CreatedAt              string  `json:"createdAt"`
+	UpdatedAt              string  `json:"updatedAt"`
 }
 
 func RegisterPersonalDataExports(api huma.API, svc *accounts.Service, authSvc *auth.Service) {
@@ -65,7 +229,7 @@ func RegisterPersonalDataExports(api huma.API, svc *accounts.Service, authSvc *a
 		if err := json.Unmarshal(payload, &body); err != nil {
 			return nil, huma.Error500InternalServerError("internal error")
 		}
-		return &CreatePersonalDataExportOutput{Body: body}, nil
+		return &CreatePersonalDataExportOutput{CacheControl: "no-store", Pragma: "no-cache", Body: body}, nil
 	})
 }
 

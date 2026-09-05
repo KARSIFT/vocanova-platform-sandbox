@@ -3,6 +3,8 @@ package accounts
 import (
 	"context"
 	"errors"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -200,6 +202,53 @@ func TestExportPersonalDataReturnsRequesterScopedJSON(t *testing.T) {
 
 	_, err = svc.ExportPersonalData(context.Background(), uid.String(), "1.2.3.4", "session", "")
 	assert.ErrorIs(t, err, ErrDataExportIdempotencyKeyRequired)
+}
+
+func TestExportPersonalDataIdempotencyIsUserScopedAndDoesNotCrossRead(t *testing.T) {
+	svc, repo, authRepo, _, _ := newService(t)
+	uidA, uidB := uuid.New(), uuid.New()
+	authRepo.setUser(&auth.User{ID: uidA, Email: "a@example.com", Status: "active"})
+	authRepo.setUser(&auth.User{ID: uidB, Email: "b@example.com", Status: "active"})
+	repo.SetUser(uidA, "a@example.com")
+	repo.SetUser(uidB, "b@example.com")
+
+	first, err := svc.ExportPersonalData(context.Background(), uidA.String(), "1.2.3.4", "session-a", "shared-key")
+	require.NoError(t, err)
+	replay, err := svc.ExportPersonalData(context.Background(), uidA.String(), "1.2.3.4", "session-a", "shared-key")
+	require.NoError(t, err)
+	assert.JSONEq(t, string(first), string(replay), "same requester/key is a safe replay")
+
+	other, err := svc.ExportPersonalData(context.Background(), uidB.String(), "5.6.7.8", "session-b", "shared-key")
+	require.NoError(t, err)
+	assert.Contains(t, string(other), "b@example.com")
+	assert.NotContains(t, string(other), "a@example.com", "the key is scoped to the requester, never an export cache shared across users")
+}
+
+func TestExportPersonalDataRateLimited(t *testing.T) {
+	now := testNow()
+	c := &clock.Fixed{T: now}
+	svc, repo, authRepo, _, _ := newServiceForRate(t, c, 1)
+	uid := uuid.New()
+	authRepo.setUser(&auth.User{ID: uid, Email: "user@example.com", Status: "active"})
+	repo.SetUser(uid, "user@example.com")
+	_, err := svc.ExportPersonalData(context.Background(), uid.String(), "1.2.3.4", "session", "key-a")
+	require.NoError(t, err)
+	_, err = svc.ExportPersonalData(context.Background(), uid.String(), "1.2.3.4", "session", "key-b")
+	assert.ErrorIs(t, err, ErrDataExportRateLimited)
+}
+
+// TestExportPersonalDataUsesExplicitPrivacyProjection prevents a future
+// convenience conversion such as to_jsonb(row) from silently adding provider
+// metadata, arbitrary JSON, or operational error details to this download.
+func TestExportPersonalDataUsesExplicitPrivacyProjection(t *testing.T) {
+	source, err := os.ReadFile("postgres.go")
+	require.NoError(t, err)
+	projection := string(source[:strings.Index(string(source), "// PostgreSQLRepository implements")])
+	assert.NotContains(t, projection, "to_jsonb(")
+	for _, internal := range []string{"request_hash", "prompt_version", "error_message", "metadata jsonb", "feedback_json,"} {
+		assert.NotContains(t, projection, internal)
+	}
+	assert.Contains(t, projection, "feedback_json->'status'", "only known learner-visible feedback keys may be selected")
 }
 
 // TestRunDeletionSweepProcessesDueRequests covers VOC-031-TEST-21:
