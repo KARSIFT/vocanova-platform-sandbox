@@ -570,6 +570,39 @@ func TestServiceRequestBudgetFinalizesPendingAttemptWhenIdempotencyRecordExpires
 	assert.Zero(t, f.provider.calls)
 }
 
+func TestServiceRequestBudgetExpiryDuringSuccessFinalizationFailsPendingAttempt(t *testing.T) {
+	f := newServiceFixture(t)
+	f.service.config.RequestTimeout = 20 * time.Millisecond
+	f.service.repo = expiryDuringSuccessCompletionRepository{Repository: f.repo}
+
+	result, err := f.service.SubmitSentenceFeedback(t.Context(), f.request("I work every day."))
+	require.NoError(t, err)
+	assert.Equal(t, ErrorCodeTemporaryFailure, result.ErrorCode)
+	require.Len(t, f.repo.attempts, 1)
+	assert.Equal(t, AttemptStatusFailed, f.repo.attempts[0].Status)
+}
+
+func TestServiceSuccessFinalizationFailureSettlesPendingAttempt(t *testing.T) {
+	f := newServiceFixture(t)
+	f.service.repo = successFinalizationFailureRepository{Repository: f.repo}
+
+	_, err := f.service.SubmitSentenceFeedback(t.Context(), f.request("I work every day."))
+	require.ErrorContains(t, err, "finalize successful attempt")
+	require.Len(t, f.repo.attempts, 1)
+	assert.Equal(t, AttemptStatusFailed, f.repo.attempts[0].Status)
+}
+
+func TestServiceAmbiguousSuccessFinalizationDoesNotOverwriteSuccess(t *testing.T) {
+	f := newServiceFixture(t)
+	f.service.repo = persistedSuccessThenErrorRepository{Repository: f.repo}
+
+	_, err := f.service.SubmitSentenceFeedback(t.Context(), f.request("I work every day."))
+	require.ErrorContains(t, err, "finalize successful attempt")
+	require.Len(t, f.repo.attempts, 1)
+	assert.Equal(t, AttemptStatusSucceeded, f.repo.attempts[0].Status)
+	assert.Equal(t, SentenceStatusFeedbackReady, f.repo.sentences[0].Status)
+}
+
 type deferredGate struct{}
 
 func (deferredGate) Check(ctx context.Context, _ uuid.UUID) error {
@@ -644,6 +677,34 @@ func (r contextCheckingCompletionRepository) CompleteFeedbackAttempt(ctx context
 		return err
 	}
 	return r.Repository.CompleteFeedbackAttempt(ctx, pending, feedback, code, message, now)
+}
+
+type expiryDuringSuccessCompletionRepository struct{ Repository }
+
+func (r expiryDuringSuccessCompletionRepository) CompleteFeedbackAttempt(ctx context.Context, pending PendingAttempt, feedback *ProviderFeedback, code, message string, now time.Time) error {
+	if feedback != nil {
+		<-ctx.Done()
+	}
+	return r.Repository.CompleteFeedbackAttempt(ctx, pending, feedback, code, message, now)
+}
+
+type successFinalizationFailureRepository struct{ Repository }
+
+func (r successFinalizationFailureRepository) CompleteFeedbackAttempt(ctx context.Context, pending PendingAttempt, feedback *ProviderFeedback, code, message string, now time.Time) error {
+	if feedback != nil {
+		return errors.New("database unavailable")
+	}
+	return r.Repository.CompleteFeedbackAttempt(ctx, pending, feedback, code, message, now)
+}
+
+type persistedSuccessThenErrorRepository struct{ Repository }
+
+func (r persistedSuccessThenErrorRepository) CompleteFeedbackAttempt(ctx context.Context, pending PendingAttempt, feedback *ProviderFeedback, code, message string, now time.Time) error {
+	err := r.Repository.CompleteFeedbackAttempt(ctx, pending, feedback, code, message, now)
+	if err != nil || feedback == nil {
+		return err
+	}
+	return errors.New("ambiguous commit result")
 }
 
 func TestRetryRecordFailureSettlesOnlyNewPendingAttempt(t *testing.T) {

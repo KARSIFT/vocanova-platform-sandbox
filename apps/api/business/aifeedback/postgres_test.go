@@ -119,7 +119,7 @@ func TestPostgreSQLRepositoryCompleteFeedbackAttemptSuccess(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectExec("UPDATE ai_feedback_attempts").
-		WithArgs(AttemptStatusSucceeded, sqlmock.AnyArg(), feedback.Explanation, now, now, attemptID).
+		WithArgs(AttemptStatusSucceeded, sqlmock.AnyArg(), feedback.Explanation, now, now, attemptID, AttemptStatusPending).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("UPDATE learner_sentences").
 		WithArgs(SentenceStatusFeedbackReady, now, sentenceID).
@@ -127,6 +127,27 @@ func TestPostgreSQLRepositoryCompleteFeedbackAttemptSuccess(t *testing.T) {
 	mock.ExpectCommit()
 
 	err = repo.CompleteFeedbackAttempt(t.Context(), PendingAttempt{SentenceID: sentenceID, AttemptID: attemptID}, feedback, "", "", now)
+	require.NoError(t, err)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestPostgreSQLRepositoryCompleteFeedbackAttemptDoesNotClobberSettledAttempt(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewPostgreSQLRepository(db, nil)
+	now := time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC)
+	sentenceID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	attemptID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+
+	mock.ExpectBegin()
+	mock.ExpectExec("UPDATE ai_feedback_attempts").
+		WithArgs(AttemptStatusFailed, ErrorCodeTemporaryFailure, "late cleanup", now, now, attemptID, AttemptStatusPending).
+		WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectCommit()
+
+	err = repo.CompleteFeedbackAttempt(t.Context(), PendingAttempt{SentenceID: sentenceID, AttemptID: attemptID}, nil, ErrorCodeTemporaryFailure, "late cleanup", now)
 	require.NoError(t, err)
 	require.NoError(t, mock.ExpectationsWereMet())
 }

@@ -306,11 +306,16 @@ func (r *MemoryRepository) QualityReviewReports() []QualityReviewReport {
 
 // CompleteFeedbackAttempt implements Repository.
 func (r *MemoryRepository) CompleteFeedbackAttempt(ctx context.Context, pending PendingAttempt, feedback *ProviderFeedback, failureCode, failureMessage string, now time.Time) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	updated := false
 	for i := range r.attempts {
-		if r.attempts[i].ID == pending.AttemptID {
+		if r.attempts[i].ID == pending.AttemptID && r.attempts[i].Status == AttemptStatusPending {
+			updated = true
 			if feedback != nil {
 				r.attempts[i].Status = AttemptStatusSucceeded
 				r.attempts[i].FeedbackJSON = feedback.RawJSON
@@ -327,6 +332,9 @@ func (r *MemoryRepository) CompleteFeedbackAttempt(ctx context.Context, pending 
 		}
 	}
 
+	if !updated {
+		return nil
+	}
 	for i := range r.sentences {
 		if r.sentences[i].ID == pending.SentenceID {
 			if feedback != nil {

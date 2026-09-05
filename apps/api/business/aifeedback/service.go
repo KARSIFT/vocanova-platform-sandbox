@@ -392,7 +392,16 @@ func (s *Service) completePendingAttempt(ctx context.Context, req SubmitSentence
 		}, nil
 	}
 
-	if err := s.completeAttempt(ctx, *pending, feedback, "", ""); err != nil {
+	if err := s.repo.CompleteFeedbackAttempt(ctx, *pending, feedback, "", "", s.clock.Now().UTC()); err != nil {
+		// A finalization error may be reported after an ambiguous database
+		// commit. Settle only a still-pending row with the detached cleanup
+		// context, so that cleanup cannot overwrite a committed success.
+		if cleanupErr := s.failPendingAttempt(ctx, *pending, err); cleanupErr != nil {
+			return nil, fmt.Errorf("settle failed successful attempt: %w", cleanupErr)
+		}
+		if ctx.Err() != nil {
+			return s.temporaryFailureResult(req.SentenceText), nil
+		}
 		return nil, fmt.Errorf("finalize successful attempt: %w", err)
 	}
 
@@ -541,19 +550,6 @@ func (s *Service) requestTimeout() time.Duration {
 		return 10 * time.Second
 	}
 	return s.config.RequestTimeout
-}
-
-// completeAttempt uses the request context while it remains usable. If the
-// request budget has elapsed after a pending row was created, use a short,
-// cancellation-independent context solely to settle that row; otherwise a
-// provider timeout would leave a permanently pending logical submission.
-func (s *Service) completeAttempt(ctx context.Context, pending PendingAttempt, feedback *ProviderFeedback, failureCode, failureMessage string) error {
-	if ctx.Err() == nil {
-		return s.repo.CompleteFeedbackAttempt(ctx, pending, feedback, failureCode, failureMessage, s.clock.Now().UTC())
-	}
-	cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Second)
-	defer cancel()
-	return s.repo.CompleteFeedbackAttempt(cleanupCtx, pending, feedback, failureCode, failureMessage, s.clock.Now().UTC())
 }
 
 func (s *Service) temporaryFailureResult(original string) *SentenceFeedbackResult {
