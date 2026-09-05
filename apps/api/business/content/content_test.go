@@ -131,6 +131,27 @@ func TestServiceListSituationsPagination(t *testing.T) {
 	assert.Empty(t, resp2.NextCursor)
 }
 
+func TestServiceListSituationsTiedOrderAndExhaustedCursor(t *testing.T) {
+	repo, _ := sampleMemoryRepo()
+	repo.situations = append(repo.situations, Situation{
+		ID: MustParseUUID("00000000-0000-0000-0000-000000000006"), Slug: "hotel", Title: "Hotel", Status: "active", DisplayOrder: 1,
+	})
+	svc := NewService(repo, nil)
+
+	first, err := svc.ListSituations(t.Context(), ListSituationsRequest{Limit: 1})
+	require.NoError(t, err)
+	second, err := svc.ListSituations(t.Context(), ListSituationsRequest{AfterCursor: first.NextCursor, Limit: 1})
+	require.NoError(t, err)
+	require.Len(t, second.Items, 1)
+	assert.Equal(t, "hotel", second.Items[0].Slug)
+
+	exhausted := encodeSituationCursor(situationCursor{DisplayOrder: 99, ID: MustParseUUID("00000000-0000-0000-0000-000000000001")})
+	empty, err := svc.ListSituations(t.Context(), ListSituationsRequest{AfterCursor: exhausted})
+	require.NoError(t, err)
+	assert.Empty(t, empty.Items)
+	assert.Empty(t, empty.NextCursor)
+}
+
 func TestServiceListSituationsPrioritizesCategoryOnFirstPageOnly(t *testing.T) {
 	repo, _ := sampleMemoryRepo()
 	svc := NewService(repo, nil)

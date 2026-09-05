@@ -18,14 +18,35 @@ func TestPostgreSQLRepositoryListSituations(t *testing.T) {
 	repo := NewPostgreSQLRepository(db)
 
 	mock.ExpectQuery("SELECT id, slug, title, short_description, level_band, category, status, display_order, created_at, updated_at").
-		WithArgs(0, sqlmock.AnyArg(), 20).
+		WithArgs(nil, sqlmock.AnyArg(), 2).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "slug", "title", "short_description", "level_band", "category", "status", "display_order", "created_at", "updated_at"}).
 			AddRow("00000000-0000-0000-0000-000000000001", "airport", "Airport", "Airport words.", "a1_a2", "travel", "active", 1, time.Now(), time.Now()))
 
-	resp, err := repo.ListSituations(t.Context(), ListSituationsRequest{})
+	resp, err := repo.ListSituations(t.Context(), ListSituationsRequest{Limit: 1})
 	require.NoError(t, err)
 	require.Len(t, resp.Items, 1)
 	assert.Equal(t, "airport", resp.Items[0].Slug)
+	assert.Empty(t, resp.NextCursor)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestPostgreSQLRepositoryListSituationsUsesLookahead(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewPostgreSQLRepository(db)
+	now := time.Now()
+	mock.ExpectQuery("ORDER BY display_order ASC, id ASC").
+		WithArgs(nil, sqlmock.AnyArg(), 2).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "slug", "title", "short_description", "level_band", "category", "status", "display_order", "created_at", "updated_at"}).
+			AddRow("00000000-0000-0000-0000-000000000001", "airport", "Airport", "Airport words.", "a1_a2", "travel", "active", 1, now, now).
+			AddRow("00000000-0000-0000-0000-000000000002", "hotel", "Hotel", "Hotel words.", "a1_a2", "travel", "active", 1, now, now))
+
+	resp, err := repo.ListSituations(t.Context(), ListSituationsRequest{Limit: 1})
+	require.NoError(t, err)
+	require.Len(t, resp.Items, 1)
+	assert.NotEmpty(t, resp.NextCursor)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 

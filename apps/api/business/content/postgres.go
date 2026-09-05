@@ -36,14 +36,14 @@ func (r *PostgreSQLRepository) ListSituations(ctx context.Context, req ListSitua
 		limit = 100
 	}
 
-	var displayOrder int
+	var displayOrder sql.NullInt32
 	var afterID uuid.UUID
 	if req.AfterCursor != "" {
 		c, err := decodeSituationCursor(req.AfterCursor)
 		if err != nil {
 			return nil, ErrInvalidCursor
 		}
-		displayOrder = c.DisplayOrder
+		displayOrder = sql.NullInt32{Int32: int32(c.DisplayOrder), Valid: true}
 		afterID = c.ID
 	}
 
@@ -51,17 +51,16 @@ func (r *PostgreSQLRepository) ListSituations(ctx context.Context, req ListSitua
 		`SELECT id, slug, title, short_description, level_band, category, status, display_order, created_at, updated_at
 		 FROM journey_situations
 		 WHERE status = 'active'
-		   AND (display_order > $1 OR (display_order = $1 AND id > $2))
+		   AND ($1::integer IS NULL OR display_order > $1 OR (display_order = $1 AND id > $2))
 		 ORDER BY display_order ASC, id ASC
 		 LIMIT $3`,
-		displayOrder, afterID, limit)
+		displayOrder, afterID, limit+1)
 	if err != nil {
 		return nil, fmt.Errorf("list situations: %w", err)
 	}
 	defer rows.Close()
 
 	items := []Situation{}
-	var last Situation
 	for rows.Next() {
 		var s Situation
 		var levelBand, category sql.NullString
@@ -71,16 +70,18 @@ func (r *PostgreSQLRepository) ListSituations(ctx context.Context, req ListSitua
 		s.LevelBand = levelBand.String
 		s.Category = category.String
 		items = append(items, s)
-		last = s
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("list situations rows: %w", err)
 	}
 
-	resp := &ListSituationsResponse{Items: items}
-	if len(items) == limit {
+	resp := &ListSituationsResponse{}
+	if len(items) > limit {
+		items = items[:limit]
+		last := items[len(items)-1]
 		resp.NextCursor = encodeSituationCursor(situationCursor{DisplayOrder: last.DisplayOrder, ID: last.ID})
 	}
+	resp.Items = items
 	return resp, nil
 }
 

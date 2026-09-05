@@ -280,6 +280,48 @@ func TestServiceListSavedWordsInvalidCursor(t *testing.T) {
 	assert.ErrorIs(t, err, ErrInvalidCursor)
 }
 
+func TestServiceListSavedWordsDeletedCursorDoesNotSkipBoundary(t *testing.T) {
+	repo, idem := sampleLearningRepo()
+	svc := NewService(repo, idem, clock.Real{})
+	userID := MustParseUUID("00000000-0000-0000-0000-000000000003")
+	now := time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC)
+
+	for _, id := range []string{"00000000-0000-0000-0000-000000000010", "00000000-0000-0000-0000-000000000011"} {
+		repo.meanings = append(repo.meanings, MemoryMeaning{ID: MustParseUUID(id), WordID: repo.words[0].ID, PartOfSpeech: "noun", ShortDefinition: id, Status: "active"})
+	}
+	repo.userWords = []MemoryUserWord{
+		{ID: MustParseUUID("00000000-0000-0000-0000-000000000003"), UserID: userID, MeaningID: MustParseUUID("00000000-0000-0000-0000-000000000010"), AddedAt: now},
+		{ID: MustParseUUID("00000000-0000-0000-0000-000000000002"), UserID: userID, MeaningID: MustParseUUID("00000000-0000-0000-0000-000000000011"), AddedAt: now},
+		{ID: MustParseUUID("00000000-0000-0000-0000-000000000001"), UserID: userID, MeaningID: MustParseUUID("00000000-0000-0000-0000-000000000002"), AddedAt: now},
+	}
+
+	first, err := svc.ListSavedWords(t.Context(), ListSavedWordsRequest{UserID: userID, Limit: 1})
+	require.NoError(t, err)
+	require.Len(t, first.Items, 1)
+	deletedAt := now.Add(time.Second)
+	repo.userWords[0].DeletedAt = &deletedAt
+
+	next, err := svc.ListSavedWords(t.Context(), ListSavedWordsRequest{UserID: userID, AfterCursor: first.NextCursor, Limit: 1})
+	require.NoError(t, err)
+	require.Len(t, next.Items, 1)
+	assert.Equal(t, MustParseUUID("00000000-0000-0000-0000-000000000011"), next.Items[0].MeaningID)
+}
+
+func TestServiceListSavedWordsExhaustedCursorReturnsEmptyPage(t *testing.T) {
+	repo, idem := sampleLearningRepo()
+	svc := NewService(repo, idem, clock.Real{})
+	repo.userWords = []MemoryUserWord{{
+		ID: MustParseUUID("00000000-0000-0000-0000-000000000010"), UserID: MustParseUUID("00000000-0000-0000-0000-000000000003"),
+		MeaningID: MustParseUUID("00000000-0000-0000-0000-000000000002"), AddedAt: time.Now(),
+	}}
+	cursor := encodeSavedCursor(savedCursor{AddedAt: time.Time{}, ID: MustParseUUID("00000000-0000-0000-0000-000000000001")})
+
+	resp, err := svc.ListSavedWords(t.Context(), ListSavedWordsRequest{UserID: MustParseUUID("00000000-0000-0000-0000-000000000003"), AfterCursor: cursor})
+	require.NoError(t, err)
+	assert.Empty(t, resp.Items)
+	assert.Empty(t, resp.NextCursor)
+}
+
 func TestServiceIsSavedCrossUserIsolation(t *testing.T) {
 	repo, idem := sampleLearningRepo()
 	svc := NewService(repo, idem, clock.Real{})
