@@ -202,6 +202,32 @@ func TestConsumeMagicLinkCreatesUserAndSession(t *testing.T) {
 	validated, err := svc.ValidateSession(ctx, token)
 	require.NoError(t, err)
 	assert.Equal(t, user.ID, validated.ID)
+
+	ext, err := repo.GetExternalIdentity(ctx, "email", "user@example.com")
+	require.NoError(t, err)
+	assert.Equal(t, user.ID, ext.UserID)
+	assert.Equal(t, "user@example.com", ext.ProviderEmail)
+	assert.True(t, ext.ProviderEmailVerified)
+}
+
+func TestConsumeMagicLinkReusesExistingEmailIdentity(t *testing.T) {
+	svc, repo, fake, _ := testService(t)
+	ctx := context.Background()
+
+	for range 2 {
+		require.NoError(t, svc.RequestMagicLink(ctx, "1.2.3.4", "user@example.com"))
+		msg, ok := fake.Last()
+		require.True(t, ok)
+		rawToken := extractTokenFromURL(t, msg.BodyText)
+		_, _, _, err := svc.ConsumeMagicLink(ctx, "1.2.3.4", rawToken, "user@example.com")
+		require.NoError(t, err)
+	}
+
+	assert.Len(t, repo.externalIdentities, 1)
+	ext, err := repo.GetExternalIdentity(ctx, "email", "user@example.com")
+	require.NoError(t, err)
+	assert.Equal(t, "email", ext.Provider)
+	assert.Equal(t, "user@example.com", ext.ProviderSubject)
 }
 
 func TestConsumeMagicLinkRejectsReplay(t *testing.T) {

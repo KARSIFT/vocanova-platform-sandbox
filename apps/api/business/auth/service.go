@@ -13,6 +13,7 @@ import (
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/email"
+	"github.com/google/uuid"
 )
 
 // Config holds the auth service configuration.
@@ -193,6 +194,9 @@ func (s *Service) ConsumeMagicLink(ctx context.Context, clientIP, token, emailAd
 	if !user.Active() {
 		return nil, nil, "", ErrUserDisabled
 	}
+	if err := s.ensureEmailIdentity(ctx, user.ID, emailAddr); err != nil {
+		return nil, nil, "", err
+	}
 
 	if err := s.repo.AttachMagicLinkUser(ctx, link.ID, user.ID); err != nil {
 		return nil, nil, "", fmt.Errorf("attach magic link: %w", err)
@@ -206,6 +210,23 @@ func (s *Service) ConsumeMagicLink(ctx context.Context, clientIP, token, emailAd
 		return nil, nil, "", err
 	}
 	return user, session, token, nil
+}
+
+// ensureEmailIdentity records the verified email-provider identity for a
+// successful magic-link sign-in. DOC-05 §6 requires every provider identity
+// to be represented in external_identities; repeat sign-ins retain the
+// original row rather than attempting a duplicate insert.
+func (s *Service) ensureEmailIdentity(ctx context.Context, userID uuid.UUID, emailAddr string) error {
+	if ext, err := s.repo.GetExternalIdentity(ctx, "email", emailAddr); err == nil {
+		if ext.UserID != userID {
+			return ErrInvalidMagicLink
+		}
+		return nil
+	}
+	if _, err := s.repo.CreateExternalIdentity(ctx, userID, "email", emailAddr, emailAddr, true); err != nil {
+		return fmt.Errorf("create email external identity: %w", err)
+	}
+	return nil
 }
 
 // OAuthStart begins a Google OAuth flow. It returns the provider authorization
