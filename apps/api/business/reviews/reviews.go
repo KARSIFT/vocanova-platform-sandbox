@@ -144,6 +144,8 @@ var (
 
 const operationSubmitReview = "reviews:submit"
 
+const reviewIdempotencyRetention = 24 * time.Hour
+
 // Service implements the review-domain read side and submission write side.
 type Service struct {
 	repo  Repository
@@ -246,9 +248,8 @@ func (s *Service) SubmitReview(ctx context.Context, req SubmitReviewRequest) (*R
 		return nil, err
 	}
 
-	if err := s.idem.Record(ctx, req.UserID, operationSubmitReview, req.IdempotencyKey, fingerprint); err != nil {
-		return nil, fmt.Errorf("record idempotency: %w", err)
-	}
+	// The repository commits the key together with the attempt, schedule and
+	// rewards. A separate Record here can fail after those effects have committed.
 	return attempt, nil
 }
 
