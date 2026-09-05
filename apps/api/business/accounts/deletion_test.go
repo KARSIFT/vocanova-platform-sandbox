@@ -198,7 +198,7 @@ func TestExportPersonalDataReturnsRequesterScopedJSON(t *testing.T) {
 
 	payload, err := svc.ExportPersonalData(context.Background(), uid.String(), "1.2.3.4", "session", "export-key")
 	require.NoError(t, err)
-	assert.JSONEq(t, `{"schemaVersion":"1.0","profile":{"id":"`+uid.String()+`","email":"user@example.com"},"settings":{},"onboardingProfile":null,"savedWords":[],"reviewHistory":[],"sentenceFeedbackHistory":[],"dailyMissions":[],"dailyActivity":[],"confidencePointLedger":[],"graceDayLedger":[],"streakState":null}`, string(payload))
+	assert.JSONEq(t, `{"schemaVersion":"1.0","profile":{"id":"`+uid.String()+`","email":"user@example.com"},"settings":{"timezone":"UTC","dailyReviewTarget":20,"reviewIntervalPreset":"vocanova_default","notificationsEnabled":true,"marketingEmailsEnabled":false,"appLanguage":"en","createdAt":null,"updatedAt":null},"onboardingProfile":null,"savedWords":[],"reviewHistory":[],"sentenceFeedbackHistory":[],"dailyMissions":[],"dailyActivity":[],"confidencePointLedger":[],"graceDayLedger":[],"streakState":null}`, string(payload))
 
 	_, err = svc.ExportPersonalData(context.Background(), uid.String(), "1.2.3.4", "session", "")
 	assert.ErrorIs(t, err, ErrDataExportIdempotencyKeyRequired)
@@ -249,6 +249,10 @@ func TestExportPersonalDataUsesExplicitPrivacyProjection(t *testing.T) {
 		assert.NotContains(t, projection, internal)
 	}
 	assert.Contains(t, projection, "feedback_json->'status'", "only known learner-visible feedback keys may be selected")
+	assert.Contains(t, projection, "JOIN word_meanings wm ON wm.id = uw.meaning_id")
+	assert.Contains(t, projection, "'wordText', cw.text")
+	assert.Contains(t, projection, "'shortDefinition', wm.short_definition")
+	assert.Contains(t, projection, "'dailyReviewTarget', 20")
 }
 
 // TestRunDeletionSweepProcessesDueRequests covers VOC-031-TEST-21:

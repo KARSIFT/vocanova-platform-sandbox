@@ -54,28 +54,33 @@ type PersonalDataProfileDTO struct {
 	UpdatedAt        string  `json:"updatedAt"`
 }
 type PersonalDataSettingsDTO struct {
-	Timezone               string `json:"timezone"`
-	DailyReviewTarget      int    `json:"dailyReviewTarget"`
-	ReviewIntervalPreset   string `json:"reviewIntervalPreset"`
-	NotificationsEnabled   bool   `json:"notificationsEnabled"`
-	MarketingEmailsEnabled bool   `json:"marketingEmailsEnabled"`
-	AppLanguage            string `json:"appLanguage"`
-	CreatedAt              string `json:"createdAt"`
-	UpdatedAt              string `json:"updatedAt"`
+	Timezone               string  `json:"timezone"`
+	DailyReviewTarget      int     `json:"dailyReviewTarget"`
+	ReviewIntervalPreset   string  `json:"reviewIntervalPreset"`
+	NotificationsEnabled   bool    `json:"notificationsEnabled"`
+	MarketingEmailsEnabled bool    `json:"marketingEmailsEnabled"`
+	AppLanguage            string  `json:"appLanguage"`
+	CreatedAt              *string `json:"createdAt"`
+	UpdatedAt              *string `json:"updatedAt"`
 }
 type PersonalDataOnboardingDTO struct {
-	EnglishLevel      string `json:"englishLevel"`
-	NativeLanguage    string `json:"nativeLanguage"`
-	LearningGoal      string `json:"learningGoal"`
-	MainUseCase       string `json:"mainUseCase"`
-	DailyReviewTarget int    `json:"dailyReviewTarget"`
-	CompletedAt       string `json:"completedAt"`
-	CreatedAt         string `json:"createdAt"`
-	UpdatedAt         string `json:"updatedAt"`
+	_                 struct{} `nullable:"true"`
+	EnglishLevel      string   `json:"englishLevel"`
+	NativeLanguage    string   `json:"nativeLanguage"`
+	LearningGoal      string   `json:"learningGoal"`
+	MainUseCase       string   `json:"mainUseCase"`
+	DailyReviewTarget int      `json:"dailyReviewTarget"`
+	CompletedAt       string   `json:"completedAt"`
+	CreatedAt         string   `json:"createdAt"`
+	UpdatedAt         string   `json:"updatedAt"`
 }
 type PersonalDataSavedWordDTO struct {
 	ID                        string  `json:"id"`
 	MeaningID                 string  `json:"meaningId"`
+	WordID                    string  `json:"wordId"`
+	WordText                  string  `json:"wordText"`
+	PartOfSpeech              string  `json:"partOfSpeech"`
+	ShortDefinition           string  `json:"shortDefinition"`
 	Status                    string  `json:"status"`
 	Source                    string  `json:"source"`
 	ReviewStep                int     `json:"reviewStep"`
@@ -113,11 +118,12 @@ type PersonalDataReviewDTO struct {
 	UpdatedAt               string  `json:"updatedAt"`
 }
 type PersonalDataFeedbackDTO struct {
-	Status                  *string `json:"status"`
-	TargetWordUsedCorrectly *bool   `json:"targetWordUsedCorrectly"`
-	CorrectedSentence       *string `json:"correctedSentence"`
-	Explanation             *string `json:"explanation"`
-	ImprovementTip          *string `json:"improvementTip"`
+	_                       struct{} `nullable:"true"`
+	Status                  *string  `json:"status"`
+	TargetWordUsedCorrectly *bool    `json:"targetWordUsedCorrectly"`
+	CorrectedSentence       *string  `json:"correctedSentence"`
+	Explanation             *string  `json:"explanation"`
+	ImprovementTip          *string  `json:"improvementTip"`
 }
 type PersonalDataFeedbackAttemptDTO struct {
 	Status       string                   `json:"status"`
@@ -196,14 +202,15 @@ type PersonalDataGraceLedgerDTO struct {
 	UpdatedAt          string  `json:"updatedAt"`
 }
 type PersonalDataStreakDTO struct {
-	CurrentStreakCount     int     `json:"currentStreakCount"`
-	LongestStreakCount     int     `json:"longestStreakCount"`
-	LastCompletedLocalDate *string `json:"lastCompletedLocalDate"`
-	LastActivityLocalDate  *string `json:"lastActivityLocalDate"`
-	Timezone               string  `json:"timezone"`
-	Status                 string  `json:"status"`
-	CreatedAt              string  `json:"createdAt"`
-	UpdatedAt              string  `json:"updatedAt"`
+	_                      struct{} `nullable:"true"`
+	CurrentStreakCount     int      `json:"currentStreakCount"`
+	LongestStreakCount     int      `json:"longestStreakCount"`
+	LastCompletedLocalDate *string  `json:"lastCompletedLocalDate"`
+	LastActivityLocalDate  *string  `json:"lastActivityLocalDate"`
+	Timezone               string   `json:"timezone"`
+	Status                 string   `json:"status"`
+	CreatedAt              string   `json:"createdAt"`
+	UpdatedAt              string   `json:"updatedAt"`
 }
 
 func RegisterPersonalDataExports(api huma.API, svc *accounts.Service, authSvc *auth.Service) {

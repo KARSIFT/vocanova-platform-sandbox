@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -63,4 +64,10 @@ func TestPersonalDataExportHandlerRequiresAuthenticationAndCSRF(t *testing.T) {
 	api.Adapter().ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 	assert.Equal(t, "no-store", w.Header().Get("Cache-Control"))
+	var body PersonalDataExportDTO
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	assert.Equal(t, "UTC", body.Settings.Timezone)
+	assert.Equal(t, 20, body.Settings.DailyReviewTarget)
+	assert.Equal(t, "vocanova_default", body.Settings.ReviewIntervalPreset)
+	assert.True(t, body.Settings.NotificationsEnabled)
 }

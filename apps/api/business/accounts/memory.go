@@ -91,7 +91,7 @@ func (r *MemoryRepository) ExportPersonalData(ctx context.Context, userID uuid.U
 	}
 	return json.Marshal(map[string]any{
 		"schemaVersion": "1.0", "profile": map[string]any{"id": u.ID.String(), "email": u.Email},
-		"settings": map[string]any{}, "onboardingProfile": nil, "savedWords": []any{}, "reviewHistory": []any{},
+		"settings": map[string]any{"timezone": "UTC", "dailyReviewTarget": 20, "reviewIntervalPreset": "vocanova_default", "notificationsEnabled": true, "marketingEmailsEnabled": false, "appLanguage": "en", "createdAt": nil, "updatedAt": nil}, "onboardingProfile": nil, "savedWords": []any{}, "reviewHistory": []any{},
 		"sentenceFeedbackHistory": []any{}, "dailyMissions": []any{}, "dailyActivity": []any{},
 		"confidencePointLedger": []any{}, "graceDayLedger": []any{}, "streakState": nil,
 	})
