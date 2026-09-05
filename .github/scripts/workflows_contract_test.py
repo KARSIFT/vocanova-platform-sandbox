@@ -136,6 +136,25 @@ class WorkflowContractTest(unittest.TestCase):
             if name not in NON_REQUIRED:
                 self.assertNotIn("paths", t.get("pull_request") or {}, name)
 
+    def test_ci_api_rejects_openapi_drift(self) -> None:
+        workflow = WORKFLOWS["ci-api.yml"]
+        steps = real_jobs(workflow)["ci-api"]["steps"]
+        step = next(
+            (item for item in steps if item.get("name") == "Verify committed OpenAPI spec"),
+            None,
+        )
+
+        self.assertIsNotNone(step, "ci-api.yml: missing the OpenAPI drift check")
+        self.assertEqual(step.get("working-directory"), "apps/api")
+        command = step.get("run", "")
+        self.assertIn("go run ./cmd/openapi", command)
+        self.assertIn("diff -u openapi/vocanova.openapi.json", command)
+        self.assertIn(
+            "OpenAPI spec is out of date",
+            command,
+            "ci-api.yml: drift failure must explain how to regenerate the spec",
+        )
+
     def test_auto_merge_stays_squash_and_hold_guarded(self) -> None:
         # Auto-merge must never widen past a squash landing, and the `hold`
         # label has to remain a real brake — a green PR merges on its own
