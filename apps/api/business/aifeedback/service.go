@@ -463,12 +463,9 @@ func (s *Service) ReportFeedback(ctx context.Context, userID, attemptID uuid.UUI
 	created, err := s.repo.CreateQualityReviewReport(ctx, QualityReviewReport{
 		ID: uuid.New(), AttemptID: attemptID, UserID: userID, Reason: reason,
 		State: QualityReviewStateOpen, CreatedAt: s.clock.Now().UTC(),
-	})
+	}, idempotencyKey)
 	if err != nil {
 		return fmt.Errorf("create quality review report: %w", err)
-	}
-	if err := s.idem.Record(ctx, userID, operation, idempotencyKey, fingerprint); err != nil {
-		return fmt.Errorf("record report idempotency: %w", err)
 	}
 	if !created {
 		return nil

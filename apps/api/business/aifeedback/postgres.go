@@ -379,10 +379,34 @@ func (r *PostgreSQLRepository) GetFeedbackAttemptOwner(ctx context.Context, atte
 	return userID, nil
 }
 
-// CreateQualityReviewReport implements Repository. The unique attempt key is
-// the final idempotency guard, including across concurrent requests.
-func (r *PostgreSQLRepository) CreateQualityReviewReport(ctx context.Context, report QualityReviewReport) (bool, error) {
-	result, err := r.db.ExecContext(ctx,
+// CreateQualityReviewReport claims the operation key and persists the report in
+// one transaction. The attempt uniqueness constraint independently prevents a
+// second report submitted with a different key.
+func (r *PostgreSQLRepository) CreateQualityReviewReport(ctx context.Context, report QualityReviewReport, idempotencyKey string) (bool, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+	fingerprint := fmt.Sprintf("%s|%s", report.AttemptID, report.Reason)
+	var claimed string
+	err = tx.QueryRowContext(ctx, `INSERT INTO idempotency_keys (id, user_id, operation, key, fingerprint, created_at)
+		VALUES ($1, $2, 'report_sentence_feedback', $3, $4, $5)
+		ON CONFLICT (user_id, operation, key) DO UPDATE
+		SET fingerprint = EXCLUDED.fingerprint, created_at = EXCLUDED.created_at
+		WHERE idempotency_keys.created_at <= $6
+		RETURNING fingerprint`, uuid.New(), report.UserID, idempotencyKey, fingerprint, report.CreatedAt, report.CreatedAt.Add(-24*time.Hour)).Scan(&claimed)
+	if errors.Is(err, sql.ErrNoRows) {
+		err = tx.QueryRowContext(ctx, `SELECT fingerprint FROM idempotency_keys
+			WHERE user_id = $1 AND operation = 'report_sentence_feedback' AND key = $2`, report.UserID, idempotencyKey).Scan(&claimed)
+	}
+	if err != nil {
+		return false, fmt.Errorf("claim report idempotency: %w", err)
+	}
+	if claimed != fingerprint {
+		return false, ErrReportIdempotencyConflict
+	}
+	result, err := tx.ExecContext(ctx,
 		`INSERT INTO ai_feedback_quality_review_reports (
 			id, ai_feedback_attempt_id, user_id, reason, state, classification, created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, NULL, $6, $6)
@@ -398,12 +422,15 @@ func (r *PostgreSQLRepository) CreateQualityReviewReport(ctx context.Context, re
 	}
 	if rows == 0 {
 		var reason string
-		if err := r.db.QueryRowContext(ctx, `SELECT reason FROM ai_feedback_quality_review_reports WHERE ai_feedback_attempt_id = $1 AND user_id = $2`, report.AttemptID, report.UserID).Scan(&reason); err != nil {
+		if err := tx.QueryRowContext(ctx, `SELECT reason FROM ai_feedback_quality_review_reports WHERE ai_feedback_attempt_id = $1 AND user_id = $2`, report.AttemptID, report.UserID).Scan(&reason); err != nil {
 			return false, err
 		}
 		if reason != report.Reason {
 			return false, ErrReportIdempotencyConflict
 		}
+	}
+	if err := tx.Commit(); err != nil {
+		return false, err
 	}
 	return rows == 1, nil
 }

@@ -2,6 +2,7 @@ package aifeedback
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -19,6 +20,17 @@ type MemoryRepository struct {
 	sentences      []MemoryLearnerSentence
 	attempts       []MemoryAIFeedbackAttempt
 	reports        []QualityReviewReport
+	reportKeys     map[reportKeyScope]reportKeyClaim
+}
+
+type reportKeyScope struct {
+	userID uuid.UUID
+	key    string
+}
+
+type reportKeyClaim struct {
+	fingerprint string
+	createdAt   time.Time
 }
 
 // MemoryUserWord mirrors the user_words row.
@@ -282,19 +294,39 @@ func (r *MemoryRepository) GetFeedbackAttemptOwner(ctx context.Context, attemptI
 }
 
 // CreateQualityReviewReport implements Repository.
-func (r *MemoryRepository) CreateQualityReviewReport(ctx context.Context, report QualityReviewReport) (bool, error) {
+func (r *MemoryRepository) CreateQualityReviewReport(ctx context.Context, report QualityReviewReport, idempotencyKey string) (bool, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
+	scope := reportKeyScope{userID: report.UserID, key: idempotencyKey}
+	fingerprint := fmt.Sprintf("%s|%s", report.AttemptID, report.Reason)
+	claim, exists := r.reportKeys[scope]
+	active := exists && claim.createdAt.After(report.CreatedAt.Add(-24*time.Hour))
+	if active && claim.fingerprint != fingerprint {
+		return false, ErrReportIdempotencyConflict
+	}
+	created := true
 	for _, existing := range r.reports {
 		if existing.AttemptID == report.AttemptID {
 			if existing.Reason != report.Reason {
 				return false, ErrReportIdempotencyConflict
 			}
-			return false, nil
+			created = false
+			break
 		}
 	}
-	r.reports = append(r.reports, report)
-	return true, nil
+	if r.reportKeys == nil {
+		r.reportKeys = make(map[reportKeyScope]reportKeyClaim)
+	}
+	if !active {
+		r.reportKeys[scope] = reportKeyClaim{fingerprint: fingerprint, createdAt: report.CreatedAt}
+	}
+	if created {
+		r.reports = append(r.reports, report)
+	}
+	return created, nil
 }
 
 // QualityReviewReports returns a copy for deterministic tests.
