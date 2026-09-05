@@ -181,6 +181,33 @@ func TestPostgreSQLRepositoryCreateOAuthStateAndGetByTokenHash(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestPostgreSQLRepositoryConsumeOAuthStateClaimsOnlyOnce(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewPostgreSQLRepository(db)
+	ctx := context.Background()
+	stateID := uuid.New()
+	consumedAt := time.Now().UTC()
+
+	mock.ExpectExec("UPDATE oauth_states SET consumed_at = \\$1 WHERE id = \\$2 AND consumed_at IS NULL").
+		WithArgs(consumedAt, stateID).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	consumed, err := repo.ConsumeOAuthState(ctx, stateID, consumedAt)
+	require.NoError(t, err)
+	assert.True(t, consumed)
+
+	mock.ExpectExec("UPDATE oauth_states SET consumed_at = \\$1 WHERE id = \\$2 AND consumed_at IS NULL").
+		WithArgs(consumedAt, stateID).
+		WillReturnResult(sqlmock.NewResult(0, 0))
+	consumed, err = repo.ConsumeOAuthState(ctx, stateID, consumedAt)
+	require.NoError(t, err)
+	assert.False(t, consumed, "a second callback must not claim an already-consumed OAuth state")
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestPostgreSQLRepositoryCreateExternalIdentityAndGet(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)

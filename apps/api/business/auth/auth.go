@@ -107,7 +107,10 @@ type Repository interface {
 	// OAuth states
 	CreateOAuthState(ctx context.Context, tokenHash []byte, environment, provider, appReturnURL string, createdAt, expiresAt time.Time) (*OAuthState, error)
 	GetOAuthStateByTokenHash(ctx context.Context, tokenHash []byte) (*OAuthState, error)
-	ConsumeOAuthState(ctx context.Context, id uuid.UUID, consumedAt time.Time) error
+	// ConsumeOAuthState claims an unconsumed state exactly once. It returns
+	// false when another callback has already claimed it, so callers must not
+	// continue an OAuth callback after a replay race.
+	ConsumeOAuthState(ctx context.Context, id uuid.UUID, consumedAt time.Time) (bool, error)
 
 	// External identities
 	GetExternalIdentity(ctx context.Context, provider, providerSubject string) (*ExternalIdentity, error)
