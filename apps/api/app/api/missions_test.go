@@ -273,13 +273,14 @@ func TestGetProgressRequiresAuth(t *testing.T) {
 
 func TestGetProgressReturnsBalanceStreakAndHistory(t *testing.T) {
 	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
-	day1 := time.Date(2026, 7, 20, 0, 0, 0, 0, time.UTC)
-	day2 := time.Date(2026, 7, 21, 0, 0, 0, 0, time.UTC)
-	day3 := time.Date(2026, 7, 22, 0, 0, 0, 0, time.UTC)
-	day4 := time.Date(2026, 7, 23, 0, 0, 0, 0, time.UTC)
-	day5 := time.Date(2026, 7, 24, 0, 0, 0, 0, time.UTC)
-	day6 := time.Date(2026, 7, 25, 0, 0, 0, 0, time.UTC)
-	day7 := time.Date(2026, 7, 26, 0, 0, 0, 0, time.UTC)
+	day7, err := gamification.LocalDate(time.Now(), "UTC")
+	require.NoError(t, err)
+	day6 := day7.AddDate(0, 0, -1)
+	day5 := day7.AddDate(0, 0, -2)
+	day4 := day7.AddDate(0, 0, -3)
+	day3 := day7.AddDate(0, 0, -4)
+	day2 := day7.AddDate(0, 0, -5)
+	day1 := day7.AddDate(0, 0, -6)
 
 	api, _, mock := newMissionsTestAPI(t)
 
@@ -301,9 +302,9 @@ func TestGetProgressReturnsBalanceStreakAndHistory(t *testing.T) {
 	mock.ExpectQuery("SELECT balance_after FROM grace_day_ledger").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(1))
-	// ListRecentCompletionHistory (7 days).
+	// ListRecentCompletionHistory (today - 6 through today, inclusive).
 	mock.ExpectQuery("SELECT local_date, status FROM daily_mission_snapshots").
-		WithArgs(userID, 7).
+		WithArgs(userID, day1, day7).
 		WillReturnRows(sqlmock.NewRows([]string{"local_date", "status"}).
 			AddRow(day7, "open").
 			AddRow(day6, "completed").
@@ -339,6 +340,8 @@ func TestGetProgressReturnsBalanceStreakAndHistory(t *testing.T) {
 
 func TestGetProgressEmptyHistory(t *testing.T) {
 	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	today, err := gamification.LocalDate(time.Now(), "UTC")
+	require.NoError(t, err)
 	api, _, mock := newMissionsTestAPI(t)
 
 	expectGetUserSettings(mock, userID, nil)
@@ -356,7 +359,7 @@ func TestGetProgressEmptyHistory(t *testing.T) {
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}))
 	mock.ExpectQuery("SELECT local_date, status FROM daily_mission_snapshots").
-		WithArgs(userID, 7).
+		WithArgs(userID, today.AddDate(0, 0, -6), today).
 		WillReturnRows(sqlmock.NewRows([]string{"local_date", "status"}))
 
 	w := httptest.NewRecorder()
@@ -433,7 +436,7 @@ func TestGetProgressSharedStreakObjectAgreesWithGetDailyMission(t *testing.T) {
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(2))
 	mock.ExpectQuery("SELECT local_date, status FROM daily_mission_snapshots").
-		WithArgs(userID, 7).
+		WithArgs(userID, day.AddDate(0, 0, -6), day).
 		WillReturnRows(sqlmock.NewRows([]string{"local_date", "status"}).
 			AddRow(day, "completed"))
 

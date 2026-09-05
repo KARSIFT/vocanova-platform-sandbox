@@ -68,6 +68,36 @@ func TestPostgreSQLRepositoryCreateDailyMissionSnapshot(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestPostgreSQLRepositoryListRecentCompletionHistoryUsesCurrentWindowAndOwner(t *testing.T) {
+	// A learner can return after more than seven days away. The old query
+	// selected its last seven stored snapshots, which would make an older
+	// completion appear in the Progress screen's current-week history. The
+	// date predicates are also part of the requester isolation boundary: the
+	// query must never receive a different learner ID while constructing the
+	// history projection.
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRepository(db)
+	owner, other := newUUIDs(t)
+	start := time.Date(2026, 7, 20, 0, 0, 0, 0, time.UTC)
+	end := time.Date(2026, 7, 26, 0, 0, 0, 0, time.UTC)
+	assert.NotEqual(t, owner, other)
+
+	mock.ExpectQuery("SELECT local_date, status FROM daily_mission_snapshots").
+		WithArgs(owner, start, end).
+		WillReturnRows(sqlmock.NewRows([]string{"local_date", "status"}).
+			AddRow(end, StatusCompleted))
+
+	history, err := repo.ListRecentCompletionHistory(t.Context(), owner, start, end)
+	require.NoError(t, err)
+	require.Len(t, history, 1)
+	assert.Equal(t, end, history[0].LocalDate)
+	assert.Equal(t, StatusCompleted, history[0].Status)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestPostgreSQLRepositoryMarkSnapshotMissedSuppliesTimestamps(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
