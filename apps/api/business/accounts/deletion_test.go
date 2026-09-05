@@ -359,6 +359,55 @@ func TestRunDeletionSweepIdempotentResume(t *testing.T) {
 	assert.Equal(t, "completed", row.Status)
 }
 
+// TestRunDeletionSweepReclaimsStaleAnonymizingRequest proves that an
+// interrupted purge can be retried. Account deletion is explicitly staged and
+// retryable (DOC-05 §16 / DOC-06 §14); leaving a row in anonymizing forever
+// would leave learner data retained indefinitely.
+func TestRunDeletionSweepReclaimsStaleAnonymizingRequest(t *testing.T) {
+	svc, repo, authRepo, _, c := newService(t)
+	uid := uuid.New()
+	authRepo.setUser(&auth.User{ID: uid, Email: "user@example.com", Status: "active"})
+	repo.SetUser(uid, "user@example.com")
+
+	created, err := svc.CreateAccountDeletionRequest(context.Background(), uid.String(), "1.2.3.4", "sess-token", "idem")
+	require.NoError(t, err)
+	c.Advance(31 * 24 * time.Hour)
+
+	// Simulate an earlier sweeper that claimed the row and then died before
+	// the transactional anonymization completed. The claim is stale, so a new
+	// pass must be able to take ownership and finish the verified purge.
+	row := repo.DeletionRequest(created.UserID)
+	repo.deletionRequests[row.ID].Status = "anonymizing"
+	repo.deletionRequests[row.ID].UpdatedAt = c.Now().Add(-30 * time.Minute)
+
+	res, err := svc.RunDeletionSweep(context.Background(), "1.2.3.4", "sess-token")
+	require.NoError(t, err)
+	assert.Equal(t, 1, res.Processed)
+	assert.Equal(t, 1, res.Anonymized)
+	assert.Equal(t, "completed", repo.DeletionRequest(uid).Status)
+}
+
+func TestRunDeletionSweepDoesNotReclaimFreshAnonymizingRequest(t *testing.T) {
+	svc, repo, authRepo, _, c := newService(t)
+	uid := uuid.New()
+	authRepo.setUser(&auth.User{ID: uid, Email: "user@example.com", Status: "active"})
+	repo.SetUser(uid, "user@example.com")
+
+	created, err := svc.CreateAccountDeletionRequest(context.Background(), uid.String(), "1.2.3.4", "sess-token", "idem")
+	require.NoError(t, err)
+	c.Advance(31 * 24 * time.Hour)
+
+	row := repo.DeletionRequest(created.UserID)
+	repo.deletionRequests[row.ID].Status = "anonymizing"
+	repo.deletionRequests[row.ID].UpdatedAt = c.Now()
+
+	res, err := svc.RunDeletionSweep(context.Background(), "1.2.3.4", "sess-token")
+	require.NoError(t, err)
+	assert.Equal(t, 0, res.Processed)
+	assert.Equal(t, 0, res.Anonymized)
+	assert.Equal(t, "anonymizing", repo.DeletionRequest(uid).Status)
+}
+
 // TestAccountDeletionRequestEligibleForPurge exercises the
 // EligibleForPurge helper the sweep's claim predicate uses.
 func TestAccountDeletionRequestEligibleForPurge(t *testing.T) {

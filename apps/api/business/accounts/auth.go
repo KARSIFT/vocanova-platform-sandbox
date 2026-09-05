@@ -213,27 +213,27 @@ type Repository interface {
 	// (a) re-validate a replayed Idempotency-Key and (b) feed
 	// the sweep's claim-step.
 	GetAccountDeletionRequestByUserID(ctx context.Context, userID uuid.UUID) (*AccountDeletionRequest, error)
-	// ListDeactivatedRequestsDueForPurge returns up to limit
-	// rows whose status is 'deactivated' and whose purge_after
-	// is at or before now. The (status, purge_after) partial
-	// index makes this an index scan. Used by the sweep.
-	ListDeactivatedRequestsDueForPurge(ctx context.Context, now time.Time, limit int) ([]AccountDeletionRequest, error)
+	// ListDeactivatedRequestsDueForPurge returns up to limit due
+	// 'deactivated' rows and stale 'anonymizing' claims. A stale claim is
+	// eligible for recovery only when its updated_at is at or before
+	// staleBefore; fresh claims remain owned by their current sweeper.
+	ListDeactivatedRequestsDueForPurge(ctx context.Context, now, staleBefore time.Time, limit int) ([]AccountDeletionRequest, error)
 	// ClaimAccountDeletionRequestForAnonymization atomically
-	// transitions a row from 'deactivated' to 'anonymizing'
+	// transitions a due 'deactivated' row, or atomically reclaims
+	// a stale 'anonymizing' row, to 'anonymizing'
 	// and returns true when the transition succeeded (this
 	// caller now owns the row). Returns false when another
 	// sweeper already claimed it; the caller should skip the
 	// row.
-	ClaimAccountDeletionRequestForAnonymization(ctx context.Context, id uuid.UUID, now time.Time) (bool, error)
+	ClaimAccountDeletionRequestForAnonymization(ctx context.Context, id uuid.UUID, now, staleBefore time.Time) (bool, error)
 	// AnonymizeUserData runs the per-table deletion/redaction
 	// disposition inside one transaction. Learner-linked records
 	// are removed in foreign-key-safe order; the retained deleted
 	// user row is stripped of identifiers (DOC-05 §16). Returns
 	// per-table counts for observability.
 	AnonymizeUserData(ctx context.Context, userID uuid.UUID) (AnonymizationCounters, error)
-	// MarkAccountDeletionRequestCompleted transitions the
-	// row from 'anonymizing' to 'completed' and sets
-	// completed_at. Idempotent: a second call on a
-	// 'completed' row is a no-op.
-	MarkAccountDeletionRequestCompleted(ctx context.Context, id uuid.UUID, now time.Time) error
+	// FinalizeAccountDeletionClaim holds the request-row lock while it verifies
+	// claim ownership, purges learner data, and marks the request completed.
+	// A stale worker returns completed=false without touching learner data.
+	FinalizeAccountDeletionClaim(ctx context.Context, id, userID uuid.UUID, claimedAt, now time.Time) (counters AnonymizationCounters, completed bool, err error)
 }

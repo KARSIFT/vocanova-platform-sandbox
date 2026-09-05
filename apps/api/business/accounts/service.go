@@ -68,8 +68,13 @@ type Config struct {
 	EmailChangeLinkLifetime   time.Duration
 	AccountDeletionPurgeDelay time.Duration
 	AccountDeletionSweepLimit int
-	RateLimit                 EmailChangeRateLimitConfig
-	AccountDeletionRateLimit  AccountDeletionRateLimitConfig
+	// AccountDeletionClaimTimeout is the 15-minute recovery threshold for a
+	// purge claim. A worker that dies after moving a row to anonymizing must not
+	// retain learner data indefinitely; after this threshold another sweep may
+	// atomically reclaim it. The finalization row lock protects active purges.
+	AccountDeletionClaimTimeout time.Duration
+	RateLimit                   EmailChangeRateLimitConfig
+	AccountDeletionRateLimit    AccountDeletionRateLimitConfig
 
 	// ReservedSyntheticEmail mirrors auth.KillSwitches'
 	// ReservedSyntheticEmail (VOC-050-T00). The email-change flow is
@@ -112,6 +117,11 @@ type AccountDeletionRateLimitConfig struct {
 // purge_after column; this constant is what the Service writes
 // when no per-row override is supplied.
 const DefaultAccountDeletionPurgeDelay = 30 * 24 * time.Hour
+
+// DefaultAccountDeletionClaimTimeout is the 15-minute recovery threshold for
+// an interrupted sweep. The row lock held during finalization protects an
+// active purge; this is not a bound on the purge's execution time.
+const DefaultAccountDeletionClaimTimeout = 15 * time.Minute
 
 // accountDeletionOperation is the operation string the
 // idempotency_keys table records for every account-deletion
@@ -189,6 +199,9 @@ func NewService(repo Repository, authRepo AuthRepository, emailSender email.Send
 	}
 	if cfg.AccountDeletionSweepLimit == 0 {
 		cfg.AccountDeletionSweepLimit = 100
+	}
+	if cfg.AccountDeletionClaimTimeout <= 0 {
+		cfg.AccountDeletionClaimTimeout = DefaultAccountDeletionClaimTimeout
 	}
 	if cfg.AccountDeletionRateLimit.RequestLimit == 0 {
 		cfg.AccountDeletionRateLimit.RequestLimit = 5
@@ -628,11 +641,11 @@ func (s *Service) CreateAccountDeletionRequest(ctx context.Context, userID, clie
 // RunDeletionSweep runs one pass of the anonymization sweep
 // (VOC-031-D07). The pass:
 //
-//  1. Lists up to cfg.AccountDeletionSweepLimit 'deactivated'
-//     rows whose purge_after is at or before now.
+//  1. Lists up to cfg.AccountDeletionSweepLimit due 'deactivated'
+//     rows and stale 'anonymizing' claims.
 //  2. For each, atomically transitions the row to 'anonymizing'
-//     (the claim step). A losing claim (another sweeper
-//     already claimed the row) is a no-op for this pass.
+//     (or renews a stale claim). A losing claim (another sweeper
+//     owns a fresh lease) is a no-op for this pass.
 //  3. Runs the per-table anonymization inside one
 //     transaction: soft-deletes pending purge for
 //     external_identities / user_words / learner_sentences;
@@ -645,10 +658,9 @@ func (s *Service) CreateAccountDeletionRequest(ctx context.Context, userID, clie
 //  4. Transitions the row to 'completed' and stamps
 //     completed_at.
 //
-// The function is idempotent: a row that is already
-// 'anonymizing' is processed again (resumable sweep,
-// VOC-031-D07), and a row that is 'completed' is never
-// re-touched. Per-IP and per-session rate limits apply
+// The function is idempotent: a stale 'anonymizing' claim is
+// safely recovered after the 15-minute recovery threshold, while a row that is
+// 'completed' is never re-touched. Per-IP and per-session rate limits apply
 // (mirrors the request path's posture).
 func (s *Service) RunDeletionSweep(ctx context.Context, clientIP, sessionToken string) (*SweepResult, error) {
 	if allowed, err := s.limiter.Allow(ctx, auth.KeyForIP("accountdeletion.sweep", clientIP)); err != nil {
@@ -662,8 +674,12 @@ func (s *Service) RunDeletionSweep(ctx context.Context, clientIP, sessionToken s
 		return nil, ErrAccountDeletionRateLimited
 	}
 
-	now := s.clock.Now().UTC()
-	rows, err := s.repo.ListDeactivatedRequestsDueForPurge(ctx, now, s.cfg.AccountDeletionSweepLimit)
+	// PostgreSQL timestamptz stores microsecond precision. The claim timestamp
+	// doubles as the completion fence, so normalize it before both writes. The
+	// finalization row lock protects a still-active purge beyond the threshold.
+	listNow := s.clock.Now().UTC().Truncate(time.Microsecond)
+	staleBefore := listNow.Add(-s.cfg.AccountDeletionClaimTimeout)
+	rows, err := s.repo.ListDeactivatedRequestsDueForPurge(ctx, listNow, staleBefore, s.cfg.AccountDeletionSweepLimit)
 	if err != nil {
 		return nil, fmt.Errorf("list due deletion requests: %w", err)
 	}
@@ -671,7 +687,8 @@ func (s *Service) RunDeletionSweep(ctx context.Context, clientIP, sessionToken s
 	result := &SweepResult{}
 	for _, row := range rows {
 		result.Processed++
-		claimed, err := s.repo.ClaimAccountDeletionRequestForAnonymization(ctx, row.ID, now)
+		claimNow := s.clock.Now().UTC().Truncate(time.Microsecond)
+		claimed, err := s.repo.ClaimAccountDeletionRequestForAnonymization(ctx, row.ID, claimNow, claimNow.Add(-s.cfg.AccountDeletionClaimTimeout))
 		if err != nil {
 			result.Failed++
 			return result, fmt.Errorf("%w: claim row %s: %v", ErrAccountDeletionSweep, row.ID, err)
@@ -681,10 +698,16 @@ func (s *Service) RunDeletionSweep(ctx context.Context, clientIP, sessionToken s
 			// Skip without counting it as a failure.
 			continue
 		}
-		counters, err := s.repo.AnonymizeUserData(ctx, row.UserID)
+		counters, completed, err := s.repo.FinalizeAccountDeletionClaim(ctx, row.ID, row.UserID, claimNow, claimNow)
 		if err != nil {
 			result.Failed++
 			return result, fmt.Errorf("%w: anonymize user %s: %v", ErrAccountDeletionSweep, row.UserID, err)
+		}
+		if !completed {
+			// A newer sweeper reclaimed the lease while this pass was working.
+			// Its fenced completion is authoritative; do not report this stale
+			// worker's counters as a second completed anonymization.
+			continue
 		}
 		result.Anonymized++
 		result.AnonymizationTotals.ExternalIdentities += counters.ExternalIdentities
@@ -700,10 +723,6 @@ func (s *Service) RunDeletionSweep(ctx context.Context, clientIP, sessionToken s
 		result.AnonymizationTotals.DailyMissionSnapshots += counters.DailyMissionSnapshots
 		result.AnonymizationTotals.DailyActivitySummaries += counters.DailyActivitySummaries
 		result.AnonymizationTotals.StreakStates += counters.StreakStates
-		if err := s.repo.MarkAccountDeletionRequestCompleted(ctx, row.ID, now); err != nil {
-			result.Failed++
-			return result, fmt.Errorf("%w: complete row %s: %v", ErrAccountDeletionSweep, row.ID, err)
-		}
 	}
 	return result, nil
 }

@@ -314,12 +314,10 @@ func (r *PostgreSQLRepository) GetAccountDeletionRequestByUserID(ctx context.Con
 	return scanAccountDeletionRequest(row)
 }
 
-// ListDeactivatedRequestsDueForPurge returns up to limit
-// rows whose status is 'deactivated' and whose purge_after is
-// at or before now. The (status, purge_after) partial index
-// makes this an index scan; the LIMIT caps the work one
-// pass can do.
-func (r *PostgreSQLRepository) ListDeactivatedRequestsDueForPurge(ctx context.Context, now time.Time, limit int) ([]AccountDeletionRequest, error) {
+// ListDeactivatedRequestsDueForPurge returns due deactivated rows and stale
+// anonymizing claims. The latter are recovery candidates after an interrupted
+// worker; fresh claims are never returned to a competing sweep.
+func (r *PostgreSQLRepository) ListDeactivatedRequestsDueForPurge(ctx context.Context, now, staleBefore time.Time, limit int) ([]AccountDeletionRequest, error) {
 	if limit <= 0 {
 		limit = 100
 	}
@@ -327,9 +325,10 @@ func (r *PostgreSQLRepository) ListDeactivatedRequestsDueForPurge(ctx context.Co
 		`SELECT id, user_id, status, requested_at, purge_after,
 		        completed_at, idempotency_key, created_at, updated_at
 		 FROM account_deletion_requests
-		 WHERE status = 'deactivated' AND purge_after <= $1
-		 ORDER BY purge_after ASC
-		 LIMIT $2`, now, limit)
+		 WHERE (status = 'deactivated' AND purge_after <= $1)
+		    OR (status = 'anonymizing' AND updated_at <= $2)
+		 ORDER BY purge_after ASC, updated_at ASC
+		 LIMIT $3`, now, staleBefore, limit)
 	if err != nil {
 		return nil, fmt.Errorf("list due deletion requests: %w", err)
 	}
@@ -350,16 +349,16 @@ func (r *PostgreSQLRepository) ListDeactivatedRequestsDueForPurge(ctx context.Co
 
 // ClaimAccountDeletionRequestForAnonymization atomically
 // transitions a row from 'deactivated' to 'anonymizing'. The
-// WHERE clause is the claim predicate: a losing claim (the
-// row is already 'anonymizing' or 'completed', or the row
-// has been removed) returns 0 rows, the call surfaces false,
-// and the caller skips the row.
-func (r *PostgreSQLRepository) ClaimAccountDeletionRequestForAnonymization(ctx context.Context, id uuid.UUID, now time.Time) (bool, error) {
+// WHERE clause is the claim predicate: a losing claim (the row has a fresh
+// anonymizing lease, is completed, or has been removed) returns 0 rows, the
+// call surfaces false, and the caller skips the row.
+func (r *PostgreSQLRepository) ClaimAccountDeletionRequestForAnonymization(ctx context.Context, id uuid.UUID, now, staleBefore time.Time) (bool, error) {
 	res, err := r.db.ExecContext(ctx,
 		`UPDATE account_deletion_requests
 		 SET status = 'anonymizing', updated_at = $2
-		 WHERE id = $1 AND status = 'deactivated'`,
-		id, now,
+		 WHERE id = $1
+		   AND (status = 'deactivated' OR (status = 'anonymizing' AND updated_at <= $3))`,
+		id, now, staleBefore,
 	)
 	if err != nil {
 		return false, fmt.Errorf("claim deletion request: %w", err)
@@ -397,6 +396,21 @@ func (r *PostgreSQLRepository) AnonymizeUserData(ctx context.Context, userID uui
 		return counters, fmt.Errorf("begin tx: %w", err)
 	}
 	defer tx.Rollback()
+	counters, err = r.anonymizeUserDataTx(ctx, tx, userID)
+	if err != nil {
+		return counters, err
+	}
+	if err := tx.Commit(); err != nil {
+		return counters, fmt.Errorf("commit: %w", err)
+	}
+	return counters, nil
+}
+
+// anonymizeUserDataTx contains the foreign-key-safe disposition statements so
+// both direct anonymization and fenced claim finalization use one transaction.
+func (r *PostgreSQLRepository) anonymizeUserDataTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID) (AnonymizationCounters, error) {
+	var counters AnonymizationCounters
+	var err error
 
 	// Purge quality reports before their parent feedback attempts and retain
 	// an explicit affected-row count for the deletion audit.
@@ -504,7 +518,7 @@ func (r *PostgreSQLRepository) AnonymizeUserData(ctx context.Context, userID uui
 	counters.ExternalIdentities = c
 	c, err = execCount(ctx, tx, userID,
 		`UPDATE account_deletion_requests
-		 SET idempotency_key = 'redacted:' || id::text, updated_at = NOW()
+		 SET idempotency_key = 'redacted:' || id::text
 		 WHERE user_id = $1`)
 	if err != nil {
 		return counters, fmt.Errorf("redact deletion request idempotency key: %w", err)
@@ -518,15 +532,56 @@ func (r *PostgreSQLRepository) AnonymizeUserData(ctx context.Context, userID uui
 		return counters, fmt.Errorf("redact user identity: %w", err)
 	}
 
-	if err := tx.Commit(); err != nil {
-		return counters, fmt.Errorf("commit: %w", err)
-	}
 	return counters, nil
 }
 
-// MarkAccountDeletionRequestCompleted transitions the row
-// from 'anonymizing' to 'completed' and stamps completed_at.
-// Idempotent: a second call on a 'completed' row is a no-op.
+// FinalizeAccountDeletionClaim locks the request row across ownership
+// verification, purge, and completion. This fences an old worker that resumes
+// after a stale claim has been recovered by a newer sweep.
+func (r *PostgreSQLRepository) FinalizeAccountDeletionClaim(ctx context.Context, id, userID uuid.UUID, claimedAt, now time.Time) (AnonymizationCounters, bool, error) {
+	var counters AnonymizationCounters
+	if userID == uuid.Nil {
+		return counters, false, errors.New("user id required")
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return counters, false, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback()
+	var current time.Time
+	err = tx.QueryRowContext(ctx, `SELECT updated_at FROM account_deletion_requests WHERE id = $1 AND user_id = $2 AND status = 'anonymizing' FOR UPDATE`, id, userID).Scan(&current)
+	if errors.Is(err, sql.ErrNoRows) {
+		return counters, false, nil
+	}
+	if err != nil {
+		return counters, false, fmt.Errorf("lock deletion request: %w", err)
+	}
+	if !current.Equal(claimedAt) {
+		return counters, false, nil
+	}
+	counters, err = r.anonymizeUserDataTx(ctx, tx, userID)
+	if err != nil {
+		return counters, false, err
+	}
+	res, err := tx.ExecContext(ctx, `UPDATE account_deletion_requests SET status = 'completed', completed_at = $2, updated_at = $2 WHERE id = $1 AND status = 'anonymizing' AND updated_at = $3`, id, now, claimedAt)
+	if err != nil {
+		return counters, false, fmt.Errorf("complete deletion request: %w", err)
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return counters, false, fmt.Errorf("complete deletion request rows: %w", err)
+	}
+	if rows != 1 {
+		return counters, false, nil
+	}
+	if err := tx.Commit(); err != nil {
+		return counters, false, fmt.Errorf("commit: %w", err)
+	}
+	return counters, true, nil
+}
+
+// MarkAccountDeletionRequestCompleted is retained for direct repository users;
+// the service uses FinalizeAccountDeletionClaim for fenced completion.
 func (r *PostgreSQLRepository) MarkAccountDeletionRequestCompleted(ctx context.Context, id uuid.UUID, now time.Time) error {
 	_, err := r.db.ExecContext(ctx,
 		`UPDATE account_deletion_requests
