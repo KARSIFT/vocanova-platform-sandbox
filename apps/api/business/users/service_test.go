@@ -246,6 +246,7 @@ func TestOnboardingAnswersValidateRejectsEveryInvalidEnum(t *testing.T) {
 			a := validAnswers()
 			tc.mutate(&a)
 			err := a.Validate()
+			assert.ErrorIs(t, err, ErrInvalidOnboarding)
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), tc.wantSub)
 		})

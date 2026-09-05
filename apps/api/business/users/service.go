@@ -93,25 +93,25 @@ func (a OnboardingAnswers) Validate() error {
 	switch a.EnglishLevel {
 	case EnglishLevelA1, EnglishLevelA2, EnglishLevelB1, EnglishLevelB2, EnglishLevelUnknown:
 	default:
-		return fmt.Errorf("invalid english level %q", a.EnglishLevel)
+		return fmt.Errorf("%w: invalid english level %q", ErrInvalidOnboarding, a.EnglishLevel)
 	}
 	if a.NativeLanguage == "" {
-		return errors.New("native language is required")
+		return fmt.Errorf("%w: native language is required", ErrInvalidOnboarding)
 	}
 	switch a.LearningGoal {
 	case LearningGoalGeneral, LearningGoalWork, LearningGoalTravel,
 		LearningGoalStudy, LearningGoalConversation, LearningGoalExam:
 	default:
-		return fmt.Errorf("invalid learning goal %q", a.LearningGoal)
+		return fmt.Errorf("%w: invalid learning goal %q", ErrInvalidOnboarding, a.LearningGoal)
 	}
 	switch a.MainUseCase {
 	case MainUseCaseDailyLife, MainUseCaseWork, MainUseCaseTravel,
 		MainUseCaseStudy, MainUseCaseSocial:
 	default:
-		return fmt.Errorf("invalid main use case %q", a.MainUseCase)
+		return fmt.Errorf("%w: invalid main use case %q", ErrInvalidOnboarding, a.MainUseCase)
 	}
 	if a.DailyReviewTarget < MinDailyReviewTarget || a.DailyReviewTarget > MaxDailyReviewTarget {
-		return fmt.Errorf("daily review target %d out of range [%d,%d]", a.DailyReviewTarget, MinDailyReviewTarget, MaxDailyReviewTarget)
+		return fmt.Errorf("%w: daily review target %d out of range [%d,%d]", ErrInvalidOnboarding, a.DailyReviewTarget, MinDailyReviewTarget, MaxDailyReviewTarget)
 	}
 	return nil
 }
@@ -154,6 +154,7 @@ type Repository interface {
 // responses (and 404 for the privacy-preserving "no such resource"
 // case).
 var (
+	ErrInvalidOnboarding  = errors.New("invalid onboarding answers")
 	ErrOnboardingNotFound = errors.New("onboarding profile not found")
 	ErrUserNotFound       = errors.New("user not found")
 	ErrOnboardingConflict = errors.New("onboarding profile already exists")
