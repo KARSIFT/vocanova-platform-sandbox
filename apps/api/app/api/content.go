@@ -6,7 +6,9 @@ import (
 	"net/http"
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/content"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/users"
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/google/uuid"
 )
 
 // SituationDTO is a public journey situation projection.
@@ -107,7 +109,11 @@ type GetWordOutput struct {
 }
 
 // RegisterContent registers the discovery and canonical word read routes.
-func RegisterContent(api huma.API, svc *content.Service) {
+// usersSvc is used, read-only, to look up the requester's onboarding
+// main-use-case answer so the first page of Discover can surface
+// goal-relevant situations first (VOC-1183); it may be nil, in which
+// case Discover ordering falls back to plain display_order.
+func RegisterContent(api huma.API, svc *content.Service, usersSvc *users.Service) {
 	huma.Register(api, huma.Operation{
 		OperationID: "ListJourneySituations",
 		Method:      http.MethodGet,
@@ -121,8 +127,9 @@ func RegisterContent(api huma.API, svc *content.Service) {
 		},
 	}, func(ctx context.Context, input *ListSituationsInput) (*ListSituationsOutput, error) {
 		resp, err := svc.ListSituations(ctx, content.ListSituationsRequest{
-			AfterCursor: input.After,
-			Limit:       input.Limit,
+			AfterCursor:      input.After,
+			Limit:            input.Limit,
+			PriorityCategory: requesterMainUseCase(ctx, usersSvc),
 		})
 		if err != nil {
 			return nil, mapContentError(err)
@@ -241,6 +248,28 @@ func wordToDTO(w *content.WordDetail) WordDetailDTO {
 		DifficultyLevel: w.DifficultyLevel,
 		Meanings:        meanings,
 	}
+}
+
+// requesterMainUseCase looks up the requester's completed onboarding
+// profile and returns its main use case (e.g. "work", "travel"), which
+// maps 1:1 onto journey_situations.category. It returns "" (no
+// prioritization) whenever usersSvc is nil, there is no requester, no
+// onboarding profile exists yet, or the lookup fails — a learner who
+// hasn't onboarded, or any lookup error, simply gets the unprioritized
+// display_order ordering rather than a broken Discover page.
+func requesterMainUseCase(ctx context.Context, usersSvc *users.Service) string {
+	if usersSvc == nil {
+		return ""
+	}
+	uid := RequesterUserID(ctx)
+	if uid == uuid.Nil {
+		return ""
+	}
+	profile, err := usersSvc.GetOnboarding(ctx, uid)
+	if err != nil || profile == nil || profile.Status != users.OnboardingStatusCompleted {
+		return ""
+	}
+	return profile.MainUseCase
 }
 
 func mapContentError(err error) huma.StatusError {

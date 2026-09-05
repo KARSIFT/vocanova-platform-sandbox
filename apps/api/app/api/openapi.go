@@ -121,7 +121,7 @@ func NewContractAPI() huma.API {
 		content.NewMemoryRepository(content.MemoryRepositoryData{}),
 		content.NewMemorySavedStateReader(nil),
 	)
-	RegisterContent(contractAPI, contentSvc)
+	RegisterContent(contractAPI, contentSvc, usersSvc)
 
 	// Register learning routes for OpenAPI generation using an empty in-memory repo.
 	learningSvc := learning.NewService(
