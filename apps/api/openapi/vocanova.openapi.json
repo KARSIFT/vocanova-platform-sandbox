@@ -666,6 +666,111 @@
         ],
         "type": "object"
       },
+      "PersonalDataExportDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/PersonalDataExportDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "confidencePointLedger": {
+            "items": {},
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "dailyActivity": {
+            "items": {},
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "dailyMissions": {
+            "items": {},
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "exportedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "graceDayLedger": {
+            "items": {},
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "onboardingProfile": {
+            "type": [
+              "",
+              "null"
+            ]
+          },
+          "profile": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "reviewHistory": {
+            "items": {},
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "savedWords": {
+            "items": {},
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "schemaVersion": {
+            "type": "string"
+          },
+          "sentenceFeedbackHistory": {
+            "items": {},
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "settings": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "streakState": {
+            "type": [
+              "",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "profile",
+          "settings",
+          "onboardingProfile",
+          "savedWords",
+          "reviewHistory",
+          "sentenceFeedbackHistory",
+          "dailyMissions",
+          "dailyActivity",
+          "confidencePointLedger",
+          "graceDayLedger",
+          "streakState"
+        ],
+        "type": "object"
+      },
       "ProgressDTO": {
         "additionalProperties": false,
         "properties": {
@@ -2150,6 +2255,58 @@
         "summary": "Complete onboarding for the requester",
         "tags": [
           "Onboarding"
+        ]
+      }
+    },
+    "/api/v1/personal-data-export": {
+      "post": {
+        "description": "Synchronous MVP export. Includes learner-visible profile, settings, saved-word, review, practice, feedback, and progress history; excludes authentication secrets, hidden prompts, provider credentials, and internal abuse/report classifications.",
+        "operationId": "CreatePersonalDataExport",
+        "parameters": [
+          {
+            "description": "User-scoped idempotency key (DOC-07)",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "description": "User-scoped idempotency key (DOC-07)",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalDataExportDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Authentication is required"
+          },
+          "403": {
+            "description": "Invalid CSRF token"
+          },
+          "404": {
+            "description": "User not found"
+          },
+          "409": {
+            "description": "Idempotency-Key conflict"
+          },
+          "422": {
+            "description": "Missing or invalid Idempotency-Key"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        },
+        "summary": "Download the requester's personal data as JSON",
+        "tags": [
+          "Account"
         ]
       }
     },

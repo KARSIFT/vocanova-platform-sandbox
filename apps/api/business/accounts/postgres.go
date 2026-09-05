@@ -3,6 +3,7 @@ package accounts
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -11,6 +12,36 @@ import (
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 )
+
+// ExportPersonalData builds the complete learner-visible export in PostgreSQL
+// so every collection is scoped by the same requester id. It intentionally
+// does not select session/token tables, raw provider request material, or
+// internal feedback reports/classifications.
+func (r *PostgreSQLRepository) ExportPersonalData(ctx context.Context, userID uuid.UUID) (json.RawMessage, error) {
+	if userID == uuid.Nil {
+		return nil, errors.New("user id required")
+	}
+	var payload []byte
+	err := r.db.QueryRowContext(ctx, `
+SELECT jsonb_build_object(
+ 'schemaVersion', '1.0', 'exportedAt', now(),
+ 'profile', (SELECT jsonb_build_object('id', id, 'email', email, 'displayName', display_name, 'avatarUrl', avatar_url, 'onboardingStatus', onboarding_status, 'emailVerifiedAt', email_verified_at, 'createdAt', created_at, 'updatedAt', updated_at) FROM users WHERE id = $1),
+ 'settings', COALESCE((SELECT to_jsonb(s) - 'id' - 'user_id' FROM user_settings s WHERE user_id = $1), '{}'::jsonb),
+ 'onboardingProfile', (SELECT to_jsonb(p) - 'id' - 'user_id' FROM user_onboarding_profiles p WHERE user_id = $1),
+ 'savedWords', COALESCE((SELECT jsonb_agg(to_jsonb(w) - 'user_id' ORDER BY w.added_at) FROM user_words w WHERE user_id = $1 AND deleted_at IS NULL), '[]'::jsonb),
+ 'reviewHistory', COALESCE((SELECT jsonb_agg(to_jsonb(a) - 'user_id' ORDER BY a.answered_at) FROM review_attempts a WHERE user_id = $1), '[]'::jsonb),
+ 'sentenceFeedbackHistory', COALESCE((SELECT jsonb_agg(jsonb_build_object('sentence', to_jsonb(s) - 'user_id', 'feedbackAttempts', COALESCE((SELECT jsonb_agg(to_jsonb(f) - 'request_hash' ORDER BY f.started_at) FROM ai_feedback_attempts f WHERE f.learner_sentence_id = s.id), '[]'::jsonb)) ORDER BY s.submitted_at) FROM learner_sentences s WHERE s.user_id = $1 AND s.deleted_at IS NULL), '[]'::jsonb),
+ 'dailyMissions', COALESCE((SELECT jsonb_agg(to_jsonb(m) - 'user_id' ORDER BY m.local_date) FROM daily_mission_snapshots m WHERE user_id = $1), '[]'::jsonb),
+ 'dailyActivity', COALESCE((SELECT jsonb_agg(to_jsonb(d) - 'user_id' ORDER BY d.local_date) FROM daily_activity_summaries d WHERE user_id = $1), '[]'::jsonb),
+ 'confidencePointLedger', COALESCE((SELECT jsonb_agg(to_jsonb(l) - 'user_id' - 'idempotency_key' ORDER BY l.occurred_at) FROM confidence_point_ledger l WHERE user_id = $1), '[]'::jsonb),
+ 'graceDayLedger', COALESCE((SELECT jsonb_agg(to_jsonb(g) - 'user_id' - 'idempotency_key' ORDER BY g.applied_to_local_date) FROM grace_day_ledger g WHERE user_id = $1), '[]'::jsonb),
+ 'streakState', (SELECT to_jsonb(st) - 'id' - 'user_id' FROM streak_states st WHERE user_id = $1)
+)`, userID).Scan(&payload)
+	if err != nil {
+		return nil, fmt.Errorf("query personal data export: %w", err)
+	}
+	return json.RawMessage(payload), nil
+}
 
 // PostgreSQLRepository implements Repository against the T03
 // email_change_links migration. It owns no state of its own; the

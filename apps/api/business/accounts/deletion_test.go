@@ -188,6 +188,20 @@ func TestCreateAccountDeletionRequestRateLimited(t *testing.T) {
 	assert.ErrorIs(t, err, ErrAccountDeletionRateLimited)
 }
 
+func TestExportPersonalDataReturnsRequesterScopedJSON(t *testing.T) {
+	svc, repo, authRepo, _, _ := newService(t)
+	uid := uuid.New()
+	authRepo.setUser(&auth.User{ID: uid, Email: "user@example.com", Status: "active"})
+	repo.SetUser(uid, "user@example.com")
+
+	payload, err := svc.ExportPersonalData(context.Background(), uid.String(), "1.2.3.4", "session", "export-key")
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"schemaVersion":"1.0","profile":{"id":"`+uid.String()+`","email":"user@example.com"},"settings":{},"onboardingProfile":null,"savedWords":[],"reviewHistory":[],"sentenceFeedbackHistory":[],"dailyMissions":[],"dailyActivity":[],"confidencePointLedger":[],"graceDayLedger":[],"streakState":null}`, string(payload))
+
+	_, err = svc.ExportPersonalData(context.Background(), uid.String(), "1.2.3.4", "session", "")
+	assert.ErrorIs(t, err, ErrDataExportIdempotencyKeyRequired)
+}
+
 // TestRunDeletionSweepProcessesDueRequests covers VOC-031-TEST-21:
 // the sweep reads every 'deactivated' row past its purge_after,
 // claims each, runs the per-table disposition, and transitions
