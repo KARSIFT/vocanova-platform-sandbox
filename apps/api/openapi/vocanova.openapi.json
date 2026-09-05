@@ -2475,6 +2475,10 @@
       "WordMeaningDTO": {
         "additionalProperties": false,
         "properties": {
+          "due": {
+            "description": "Whether this saved word is due according to server time",
+            "type": "boolean"
+          },
           "examples": {
             "description": "Example sentences",
             "items": {
@@ -2496,6 +2500,18 @@
           },
           "partOfSpeech": {
             "description": "Part of speech",
+            "type": "string"
+          },
+          "reviewState": {
+            "description": "Learner-visible saved-word state",
+            "enum": [
+              "new",
+              "learning",
+              "reviewing",
+              "mastered",
+              "ignored",
+              "archived"
+            ],
             "type": "string"
           },
           "saved": {

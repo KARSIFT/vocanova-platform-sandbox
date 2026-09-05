@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/content"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/google/uuid"
 )
@@ -81,6 +82,7 @@ type Repository interface {
 	// meanings that are currently saved by the requester. Missing or unsaved IDs
 	// are omitted from the map.
 	SavedUserWordIDs(ctx context.Context, userID uuid.UUID, meaningIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error)
+	SavedWordStates(ctx context.Context, userID uuid.UUID, meaningIDs []uuid.UUID) (map[uuid.UUID]content.SavedWordState, error)
 }
 
 // IdempotencyStore scopes idempotency keys by user and operation.
@@ -230,6 +232,11 @@ func (s *Service) IsSaved(ctx context.Context, userID uuid.UUID, meaningIDs []uu
 // SavedUserWordIDs implements the content.SavedStateReader boundary.
 func (s *Service) SavedUserWordIDs(ctx context.Context, userID uuid.UUID, meaningIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
 	return s.repo.SavedUserWordIDs(ctx, userID, meaningIDs)
+}
+
+// SavedWordStates implements the content.SavedStateReader boundary.
+func (s *Service) SavedWordStates(ctx context.Context, userID uuid.UUID, meaningIDs []uuid.UUID) (map[uuid.UUID]content.SavedWordState, error) {
+	return s.repo.SavedWordStates(ctx, userID, meaningIDs)
 }
 
 func idempotencyFingerprint(meaningID uuid.UUID, source string) string {

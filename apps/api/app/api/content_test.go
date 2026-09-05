@@ -116,14 +116,9 @@ func contentSampleData() (*content.MemoryRepository, *content.MemorySavedStateRe
 		},
 	})
 	userWordID := content.MustParseUUID("00000000-0000-0000-0000-000000000010")
-	reader := content.NewMemorySavedStateReaderWithIDs(
-		map[uuid.UUID]map[uuid.UUID]bool{
-			userID: {meaningID: true},
-		},
-		map[uuid.UUID]map[uuid.UUID]uuid.UUID{
-			userID: {meaningID: userWordID},
-		},
-	)
+	reader := content.NewMemorySavedStateReaderWithStates(map[uuid.UUID]map[uuid.UUID]content.SavedWordState{
+		userID: {meaningID: {UserWordID: userWordID, Status: "learning", Due: true}},
+	})
 	return repo, reader
 }
 
@@ -366,6 +361,29 @@ func TestGetCanonicalWordReturnsWordDetail(t *testing.T) {
 
 	assert.True(t, meaning.Saved)
 	assert.Equal(t, "00000000-0000-0000-0000-000000000010", meaning.UserWordID)
+	assert.Equal(t, "learning", meaning.ReviewState)
+	assert.True(t, meaning.Due)
+}
+
+func TestGetCanonicalWordDoesNotExposeAnotherLearnersReviewState(t *testing.T) {
+	api, _ := testContentAPI(t, nil)
+
+	w := httptest.NewRecorder()
+	otherUser := content.MustParseUUID("00000000-0000-0000-0000-00000000000a")
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/canonical-words/boarding-pass", nil)
+	req = req.WithContext(WithRequester(req.Context(), &auth.User{ID: otherUser}))
+	api.Adapter().ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var body struct {
+		Word WordDetailDTO `json:"word"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	require.Len(t, body.Word.Meanings, 1)
+	assert.False(t, body.Word.Meanings[0].Saved)
+	assert.Empty(t, body.Word.Meanings[0].UserWordID)
+	assert.Empty(t, body.Word.Meanings[0].ReviewState)
+	assert.False(t, body.Word.Meanings[0].Due)
 }
 
 func intPtr(i int) *int { return &i }
