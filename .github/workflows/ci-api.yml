@@ -54,6 +54,17 @@ jobs:
       - name: go build
         run: cd apps/api && go build -buildvcs=false ./...
 
+      - name: Verify committed OpenAPI spec
+        working-directory: apps/api
+        run: |
+          generated_spec="$(mktemp)"
+          trap 'rm -f "$generated_spec"' EXIT
+          go run ./cmd/openapi > "$generated_spec"
+          if ! diff -u openapi/vocanova.openapi.json "$generated_spec"; then
+            echo "::error file=apps/api/openapi/vocanova.openapi.json::OpenAPI spec is out of date. Run 'cd apps/api && go run ./cmd/openapi > openapi/vocanova.openapi.json' and commit the result."
+            exit 1
+          fi
+
       # -skip TestControlledSignupOAuth: this test starts a disposable
       # Postgres via the mounted docker.sock. That container is a sibling on
       # the host's network, not reachable via 127.0.0.1 from inside this
