@@ -120,8 +120,10 @@ type CompletionDay struct {
 }
 
 // CreateDailyMissionSnapshot inserts one daily_mission_snapshots row inside
-// tx. If a row already exists for (userID, localDate), this is a no-op and
-// the existing row is returned. The unique index handles dedup.
+// tx. If a row already exists for (userID, localDate), this returns the
+// established snapshot unchanged. A mission is a per-local-day snapshot, so
+// a retry (or settings change) must never retroactively replace its timezone
+// or review target. The unique index handles deduplication.
 func (r *Repository) CreateDailyMissionSnapshot(
 	ctx context.Context,
 	tx *sql.Tx,
@@ -152,9 +154,7 @@ func (r *Repository) CreateDailyMissionSnapshot(
 			$6, 'open', false, NOW(), NOW()
 		)
 		ON CONFLICT (user_id, local_date) DO UPDATE
-		  SET timezone = EXCLUDED.timezone,
-		      review_target = EXCLUDED.review_target,
-		      updated_at = NOW()
+		  SET user_id = daily_mission_snapshots.user_id
 		RETURNING id, user_id, local_date, timezone, review_target, reviews_completed,
 		          new_word_target, new_words_completed, sentence_practice_target,
 		          sentence_practices_completed, policy_version, status, completed_at,

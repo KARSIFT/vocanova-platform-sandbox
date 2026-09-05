@@ -124,10 +124,10 @@ func TestCreateDailyMissionSnapshotFreshInsertAgainstRealPostgres(t *testing.T) 
 // TestCreateDailyMissionSnapshotOnConflictBranchUnchangedAgainstRealPostgres
 // is VOC-046-TEST-00's negative coverage: the defect and its fix are
 // specific to the fresh-insert branch, so the pre-existing
-// ON CONFLICT DO UPDATE behavior for a user who already has a row for the
-// same (user_id, local_date) must be unchanged. It asserts the second call
-// updates rather than duplicating, preserves the original created_at, and
-// advances updated_at.
+// ON CONFLICT behavior for a user who already has a row for the same
+// (user_id, local_date) must preserve the established daily snapshot. It
+// asserts that a retry with changed settings does not duplicate or mutate the
+// snapshot, including its timestamps.
 func TestCreateDailyMissionSnapshotOnConflictBranchUnchangedAgainstRealPostgres(t *testing.T) {
 	db := newMigratedDisposablePostgres(t)
 	userID := insertTestUser(t, db)
@@ -137,24 +137,24 @@ func TestCreateDailyMissionSnapshotOnConflictBranchUnchangedAgainstRealPostgres(
 	firstSnapshot := createSnapshotInOwnTransaction(t, db, repo, userID, localDate, 20)
 	firstCreatedAt, firstUpdatedAt := readSnapshotTimestamps(t, db, userID, localDate)
 
-	// Postgres NOW() is transaction-start time, so two back-to-back
-	// transactions can share a timestamp on a fast machine. Sleeping past
-	// the clock's practical resolution keeps the "updated_at advanced"
-	// assertion meaningful rather than flaky.
-	time.Sleep(10 * time.Millisecond)
-
-	secondSnapshot := createSnapshotInOwnTransaction(t, db, repo, userID, localDate, 30)
+	secondSnapshot := createSnapshotInOwnTransactionWithSettings(
+		t, db, repo, userID, localDate, "America/New_York", 30, "p4-mission-policy-v2",
+	)
 	secondCreatedAt, secondUpdatedAt := readSnapshotTimestamps(t, db, userID, localDate)
 
 	assert.Equal(t, firstSnapshot.ID, secondSnapshot.ID,
-		"ON CONFLICT must update the existing row, not create a second one")
+		"ON CONFLICT must return the existing row, not create a second one")
 	assert.Equal(t, 1, countSnapshotsFor(t, db, userID, localDate))
-	assert.Equal(t, 30, secondSnapshot.ReviewTarget,
-		"the update branch still applies EXCLUDED.review_target")
+	assert.Equal(t, "UTC", secondSnapshot.Timezone,
+		"a same-day settings change must not rewrite the snapshot timezone")
+	assert.Equal(t, 20, secondSnapshot.ReviewTarget,
+		"a same-day settings change must not rewrite the snapshot review target")
+	assert.Equal(t, gamification.MissionPolicyVersion, secondSnapshot.PolicyVersion,
+		"a retry must not rewrite the established snapshot policy")
 	assert.True(t, firstCreatedAt.Equal(secondCreatedAt),
-		"the update branch must not rewrite created_at (was %s, now %s)", firstCreatedAt, secondCreatedAt)
-	assert.False(t, secondUpdatedAt.Before(firstUpdatedAt),
-		"the update branch must advance updated_at (was %s, now %s)", firstUpdatedAt, secondUpdatedAt)
+		"the conflict branch must not rewrite created_at (was %s, now %s)", firstCreatedAt, secondCreatedAt)
+	assert.True(t, firstUpdatedAt.Equal(secondUpdatedAt),
+		"the conflict branch must not rewrite updated_at (was %s, now %s)", firstUpdatedAt, secondUpdatedAt)
 }
 
 // missionSnapshotNotNullViolationFragment identifies a NOT NULL violation
@@ -478,12 +478,27 @@ func createSnapshotInOwnTransaction(
 	localDate time.Time,
 	reviewTarget int,
 ) *DailyMissionSnapshot {
+	return createSnapshotInOwnTransactionWithSettings(
+		t, db, repo, userID, localDate, "UTC", reviewTarget, gamification.MissionPolicyVersion,
+	)
+}
+
+func createSnapshotInOwnTransactionWithSettings(
+	t *testing.T,
+	db *sql.DB,
+	repo *Repository,
+	userID uuid.UUID,
+	localDate time.Time,
+	timezone string,
+	reviewTarget int,
+	policyVersion string,
+) *DailyMissionSnapshot {
 	t.Helper()
 	tx, err := db.Begin()
 	require.NoError(t, err)
 	defer tx.Rollback()
 	snapshot, err := repo.CreateDailyMissionSnapshot(
-		t.Context(), tx, userID, localDate, "UTC", reviewTarget, gamification.MissionPolicyVersion,
+		t.Context(), tx, userID, localDate, timezone, reviewTarget, policyVersion,
 	)
 	require.NoError(t, err)
 	require.NoError(t, tx.Commit())
