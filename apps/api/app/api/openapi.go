@@ -115,6 +115,7 @@ func NewContractAPI() huma.API {
 	// scoped, requires an authenticated session, double-
 	// submit CSRF, and an Idempotency-Key header (DOC-07).
 	RegisterAccountDeletionRequests(contractAPI, accountsSvc, svc)
+	RegisterPersonalDataExports(contractAPI, accountsSvc, svc)
 
 	// Register content routes for OpenAPI generation using empty in-memory repos.
 	contentSvc := content.NewService(

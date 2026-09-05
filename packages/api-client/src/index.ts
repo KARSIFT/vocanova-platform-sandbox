@@ -385,6 +385,25 @@ export interface CreateAccountDeletionRequestResult {
   replayed: boolean;
 }
 
+/** A portable learner-visible personal-data export. Values are deliberately
+ * data-shaped rather than internal API DTOs so additions remain backward
+ * compatible. It never contains credentials, hidden prompts, or abuse data. */
+export interface PersonalDataExport {
+  schemaVersion: string;
+  exportedAt?: string;
+  profile: Record<string, unknown>;
+  settings: Record<string, unknown>;
+  onboardingProfile: Record<string, unknown> | null;
+  savedWords: unknown[];
+  reviewHistory: unknown[];
+  sentenceFeedbackHistory: unknown[];
+  dailyMissions: unknown[];
+  dailyActivity: unknown[];
+  confidencePointLedger: unknown[];
+  graceDayLedger: unknown[];
+  streakState: Record<string, unknown> | null;
+}
+
 export interface ApiError {
   type?: string;
   title?: string;
@@ -841,6 +860,24 @@ export class VocanovaClient {
       { ...init, headers },
     );
     const data = (await response.json()) as CreateAccountDeletionRequestResult;
+    return { data, response };
+  }
+
+  /** Downloads the current requester's personal data synchronously as JSON.
+   * Requires the same CSRF and Idempotency-Key safeguards as account deletion. */
+  async exportPersonalData(
+    idempotencyKey: string,
+    init?: RequestInit,
+  ): Promise<{ data: PersonalDataExport; response: Response }> {
+    const headers = new Headers(init?.headers);
+    headers.set("Idempotency-Key", idempotencyKey);
+    const response = await this.request(
+      "POST",
+      "/api/v1/personal-data-export",
+      undefined,
+      { ...init, headers },
+    );
+    const data = (await response.json()) as PersonalDataExport;
     return { data, response };
   }
 

@@ -3,6 +3,7 @@ package accounts
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -11,6 +12,36 @@ import (
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 )
+
+// ExportPersonalData builds the complete learner-visible export in PostgreSQL
+// so every collection is scoped by the same requester id. It intentionally
+// does not select session/token tables, raw provider request material, or
+// internal feedback reports/classifications.
+func (r *PostgreSQLRepository) ExportPersonalData(ctx context.Context, userID uuid.UUID) (json.RawMessage, error) {
+	if userID == uuid.Nil {
+		return nil, errors.New("user id required")
+	}
+	var payload []byte
+	err := r.db.QueryRowContext(ctx, `
+SELECT jsonb_build_object(
+ 'schemaVersion', '1.0', 'exportedAt', now(),
+ 'profile', (SELECT jsonb_build_object('id', id, 'email', email, 'displayName', display_name, 'avatarUrl', avatar_url, 'onboardingStatus', onboarding_status, 'emailVerifiedAt', email_verified_at, 'createdAt', created_at, 'updatedAt', updated_at) FROM users WHERE id = $1),
+ 'settings', COALESCE((SELECT jsonb_build_object('timezone', timezone, 'dailyReviewTarget', daily_review_target, 'reviewIntervalPreset', review_interval_preset, 'notificationsEnabled', notifications_enabled, 'marketingEmailsEnabled', marketing_emails_enabled, 'appLanguage', app_language, 'createdAt', created_at, 'updatedAt', updated_at) FROM user_settings WHERE user_id = $1), jsonb_build_object('timezone', 'UTC', 'dailyReviewTarget', 20, 'reviewIntervalPreset', 'vocanova_default', 'notificationsEnabled', true, 'marketingEmailsEnabled', false, 'appLanguage', 'en', 'createdAt', NULL, 'updatedAt', NULL)),
+ 'onboardingProfile', (SELECT jsonb_build_object('englishLevel', english_level, 'nativeLanguage', native_language, 'learningGoal', learning_goal, 'mainUseCase', main_use_case, 'dailyReviewTarget', daily_review_target, 'completedAt', completed_at, 'createdAt', created_at, 'updatedAt', updated_at) FROM user_onboarding_profiles WHERE user_id = $1),
+ 'savedWords', COALESCE((SELECT jsonb_agg(jsonb_build_object('id', uw.id, 'meaningId', uw.meaning_id, 'wordId', cw.id, 'wordText', cw.text, 'partOfSpeech', wm.part_of_speech, 'shortDefinition', wm.short_definition, 'status', uw.status, 'source', uw.source, 'reviewStep', uw.review_step, 'nextReviewAt', uw.next_review_at, 'lastReviewedAt', uw.last_reviewed_at, 'lastResult', uw.last_result, 'lastRating', uw.last_rating, 'consecutiveCorrectCount', uw.consecutive_correct_count, 'consecutiveIncorrectCount', uw.consecutive_incorrect_count, 'totalReviewCount', uw.total_review_count, 'correctReviewCount', uw.correct_review_count, 'addedAt', uw.added_at, 'masteredAt', uw.mastered_at, 'ignoredAt', uw.ignored_at, 'createdAt', uw.created_at, 'updatedAt', uw.updated_at) ORDER BY uw.added_at) FROM user_words uw JOIN word_meanings wm ON wm.id = uw.meaning_id JOIN canonical_words cw ON cw.id = wm.word_id WHERE uw.user_id = $1 AND uw.deleted_at IS NULL), '[]'::jsonb),
+ 'reviewHistory', COALESCE((SELECT jsonb_agg(jsonb_build_object('id', id, 'userWordId', user_word_id, 'meaningId', meaning_id, 'attemptType', attempt_type, 'promptType', prompt_type, 'result', result, 'rating', rating, 'reviewStepBefore', review_step_before, 'reviewStepAfter', review_step_after, 'answeredAt', answered_at, 'responseTimeMs', response_time_ms, 'selectedOptionMeaningId', selected_option_meaning_id, 'typedAnswer', typed_answer, 'wasHintUsed', was_hint_used, 'source', source, 'createdAt', created_at, 'updatedAt', updated_at) ORDER BY answered_at) FROM review_attempts WHERE user_id = $1), '[]'::jsonb),
+ 'sentenceFeedbackHistory', COALESCE((SELECT jsonb_agg(jsonb_build_object('sentence', jsonb_build_object('id', s.id, 'meaningId', s.meaning_id, 'userWordId', s.user_word_id, 'sentenceText', s.sentence_text, 'source', s.source, 'status', s.status, 'submittedAt', s.submitted_at, 'createdAt', s.created_at, 'updatedAt', s.updated_at), 'feedbackAttempts', COALESCE((SELECT jsonb_agg(jsonb_build_object('status', f.status, 'feedback', CASE WHEN f.feedback_json IS NULL THEN NULL ELSE jsonb_strip_nulls(jsonb_build_object('status', f.feedback_json->'status', 'targetWordUsedCorrectly', f.feedback_json->'target_word_used_correctly', 'correctedSentence', f.feedback_json->'corrected_sentence', 'explanation', f.feedback_json->'explanation', 'improvementTip', f.feedback_json->'improvement_tip')) END, 'feedbackText', f.feedback_text, 'startedAt', f.started_at, 'completedAt', f.completed_at, 'createdAt', f.created_at, 'updatedAt', f.updated_at) ORDER BY f.started_at) FROM ai_feedback_attempts f WHERE f.learner_sentence_id = s.id), '[]'::jsonb)) ORDER BY s.submitted_at) FROM learner_sentences s WHERE s.user_id = $1 AND s.deleted_at IS NULL), '[]'::jsonb),
+ 'dailyMissions', COALESCE((SELECT jsonb_agg(jsonb_build_object('localDate', local_date, 'timezone', timezone, 'reviewTarget', review_target, 'reviewsCompleted', reviews_completed, 'newWordTarget', new_word_target, 'newWordsCompleted', new_words_completed, 'sentencePracticeTarget', sentence_practice_target, 'sentencePracticesCompleted', sentence_practices_completed, 'policyVersion', policy_version, 'status', status, 'completedAt', completed_at, 'graceApplied', grace_applied, 'createdAt', created_at, 'updatedAt', updated_at) ORDER BY local_date) FROM daily_mission_snapshots WHERE user_id = $1), '[]'::jsonb),
+ 'dailyActivity', COALESCE((SELECT jsonb_agg(jsonb_build_object('localDate', local_date, 'timezone', timezone, 'reviewsAttempted', reviews_attempted, 'reviewsCorrect', reviews_correct, 'reviewsSkipped', reviews_skipped, 'wordsDiscovered', words_discovered, 'wordsAdded', words_added, 'sentencesSubmitted', sentences_submitted, 'aiFeedbackReceived', ai_feedback_received, 'confidencePointsEarned', confidence_points_earned, 'confidencePointsSpent', confidence_points_spent, 'createdAt', created_at, 'updatedAt', updated_at) ORDER BY local_date) FROM daily_activity_summaries WHERE user_id = $1), '[]'::jsonb),
+ 'confidencePointLedger', COALESCE((SELECT jsonb_agg(jsonb_build_object('amount', amount, 'balanceAfter', balance_after, 'reason', reason, 'sourceType', source_type, 'sourceId', source_id, 'occurredAt', occurred_at, 'createdAt', created_at, 'updatedAt', updated_at) ORDER BY occurred_at) FROM confidence_point_ledger WHERE user_id = $1), '[]'::jsonb),
+ 'graceDayLedger', COALESCE((SELECT jsonb_agg(jsonb_build_object('amount', amount, 'balanceAfter', balance_after, 'reason', reason, 'sourceType', source_type, 'sourceId', source_id, 'appliedToLocalDate', applied_to_local_date, 'timezone', timezone, 'createdAt', created_at, 'updatedAt', updated_at) ORDER BY applied_to_local_date) FROM grace_day_ledger WHERE user_id = $1), '[]'::jsonb),
+ 'streakState', (SELECT jsonb_build_object('currentStreakCount', current_streak_count, 'longestStreakCount', longest_streak_count, 'lastCompletedLocalDate', last_completed_local_date, 'lastActivityLocalDate', last_activity_local_date, 'timezone', timezone, 'status', status, 'createdAt', created_at, 'updatedAt', updated_at) FROM streak_states WHERE user_id = $1)
+)`, userID).Scan(&payload)
+	if err != nil {
+		return nil, fmt.Errorf("query personal data export: %w", err)
+	}
+	return json.RawMessage(payload), nil
+}
 
 // PostgreSQLRepository implements Repository against the T03
 // email_change_links migration. It owns no state of its own; the

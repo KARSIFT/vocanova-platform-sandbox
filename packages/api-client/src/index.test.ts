@@ -928,6 +928,47 @@ describe("VocanovaClient", () => {
     assert.equal(data.purgeAfter, "2026-08-26T12:00:00Z");
   });
 
+  it("sends POST /api/v1/personal-data-export with Idempotency-Key and CSRF", async () => {
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: async (input, init) => {
+        assert.equal(
+          input,
+          "https://api.example.com/api/v1/personal-data-export",
+        );
+        assert.equal(init?.method, "POST");
+        assert.equal(
+          new Headers(init?.headers).get("Idempotency-Key"),
+          "export-key",
+        );
+        assert.equal(
+          new Headers(init?.headers).get("X-CSRF-Token"),
+          "csrf-token-value",
+        );
+        return new Response(
+          JSON.stringify({
+            schemaVersion: "1.0",
+            profile: {},
+            settings: {},
+            onboardingProfile: null,
+            savedWords: [],
+            reviewHistory: [],
+            sentenceFeedbackHistory: [],
+            dailyMissions: [],
+            dailyActivity: [],
+            confidencePointLedger: [],
+            graceDayLedger: [],
+            streakState: null,
+          }),
+        );
+      },
+    });
+    const { data } = await client.exportPersonalData("export-key", {
+      headers: { "X-CSRF-Token": "csrf-token-value" },
+    });
+    assert.equal(data.schemaVersion, "1.0");
+  });
+
   // VOC-031-T06: the session-expiry mid-flow handler at
   // apps/web/src/lib/session.ts is a thin wrapper around
   // ApiResponseError.status === 401. The cross-cutting

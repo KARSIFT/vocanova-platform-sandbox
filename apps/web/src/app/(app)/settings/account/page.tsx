@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 
 import { AccountDeletionForm } from "./_components/account-deletion-form";
+import { PersonalDataExport } from "./_components/personal-data-export";
 import { EmailChangeForm } from "./_components/email-change-form";
 
 export const metadata = {
@@ -60,6 +61,8 @@ export default async function SettingsAccountPage() {
         </p>
         <EmailChangeForm currentEmail={currentEmail} />
       </section>
+
+      <PersonalDataExport />
 
       <section
         aria-labelledby="account-deletion-heading"
