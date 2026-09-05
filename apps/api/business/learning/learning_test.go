@@ -179,6 +179,49 @@ func TestServiceUnsaveUserWord(t *testing.T) {
 	assert.False(t, saved[meaningID])
 }
 
+func TestServiceSaveUserWordRestoresDeletedWordWithFreshSchedule(t *testing.T) {
+	repo, idem := sampleLearningRepo()
+	now := time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC)
+	svc := NewService(repo, idem, &clock.Fixed{T: now})
+	userID := MustParseUUID("00000000-0000-0000-0000-000000000003")
+	meaningID := MustParseUUID("00000000-0000-0000-0000-000000000002")
+
+	first, err := svc.SaveUserWord(t.Context(), SaveUserWordRequest{UserID: userID, MeaningID: meaningID, Source: "journey", IdempotencyKey: "first-save"})
+	require.NoError(t, err)
+	require.NoError(t, svc.UnsaveUserWord(t.Context(), userID, meaningID))
+
+	future := now.Add(24 * time.Hour)
+	repo.userWords[0].ReviewStep = 7
+	repo.userWords[0].NextReviewAt = &future
+	repo.userWords[0].LastReviewedAt = &now
+	repo.userWords[0].LastResult = "correct"
+	repo.userWords[0].LastRating = "easy"
+	repo.userWords[0].ConsecutiveCorrectCount = 4
+	repo.userWords[0].ConsecutiveIncorrectCount = 1
+	repo.userWords[0].TotalReviewCount = 9
+	repo.userWords[0].CorrectReviewCount = 8
+	repo.userWords[0].MasteredAt = &now
+	repo.userWords[0].IgnoredAt = &now
+
+	restored, err := svc.SaveUserWord(t.Context(), SaveUserWordRequest{UserID: userID, MeaningID: meaningID, Source: "manual", IdempotencyKey: "restored-save"})
+	require.NoError(t, err)
+	assert.Equal(t, first.UserWordID, restored.UserWordID)
+
+	got := repo.userWords[0]
+	assert.Equal(t, "new", got.Status)
+	assert.Equal(t, 0, got.ReviewStep)
+	assert.Nil(t, got.NextReviewAt, "a restored word must be immediately due")
+	assert.Nil(t, got.LastReviewedAt)
+	assert.Empty(t, got.LastResult)
+	assert.Empty(t, got.LastRating)
+	assert.Zero(t, got.ConsecutiveCorrectCount)
+	assert.Zero(t, got.ConsecutiveIncorrectCount)
+	assert.Zero(t, got.TotalReviewCount)
+	assert.Zero(t, got.CorrectReviewCount)
+	assert.Nil(t, got.MasteredAt)
+	assert.Nil(t, got.IgnoredAt)
+}
+
 func TestServiceUnsaveUserWordUnknownReturnsNotFound(t *testing.T) {
 	repo, idem := sampleLearningRepo()
 	svc := NewService(repo, idem, clock.Real{})
