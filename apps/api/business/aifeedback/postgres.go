@@ -304,14 +304,21 @@ func (r *PostgreSQLRepository) CompleteFeedbackAttempt(ctx context.Context, pend
 		if err != nil {
 			return fmt.Errorf("marshal feedback json: %w", err)
 		}
-		_, err = tx.ExecContext(ctx,
+		result, err := tx.ExecContext(ctx,
 			`UPDATE ai_feedback_attempts
 			 SET status = $1, feedback_json = $2, feedback_text = $3, completed_at = $4, updated_at = $5
-			 WHERE id = $6`,
-			AttemptStatusSucceeded, rawJSON, feedback.Explanation, now, now, pending.AttemptID,
+			 WHERE id = $6 AND status = $7`,
+			AttemptStatusSucceeded, rawJSON, feedback.Explanation, now, now, pending.AttemptID, AttemptStatusPending,
 		)
 		if err != nil {
 			return fmt.Errorf("update attempt succeeded: %w", err)
+		}
+		updated, err := result.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("check succeeded attempt update: %w", err)
+		}
+		if updated == 0 {
+			return tx.Commit()
 		}
 		_, err = tx.ExecContext(ctx,
 			`UPDATE learner_sentences SET status = $1, updated_at = $2 WHERE id = $3`,
@@ -325,14 +332,21 @@ func (r *PostgreSQLRepository) CompleteFeedbackAttempt(ctx context.Context, pend
 		if code == "" {
 			code = ErrorCodeTemporaryFailure
 		}
-		_, err = tx.ExecContext(ctx,
+		result, err := tx.ExecContext(ctx,
 			`UPDATE ai_feedback_attempts
 			 SET status = $1, error_code = $2, error_message = $3, completed_at = $4, updated_at = $5
-			 WHERE id = $6`,
-			AttemptStatusFailed, code, failureMessage, now, now, pending.AttemptID,
+			 WHERE id = $6 AND status = $7`,
+			AttemptStatusFailed, code, failureMessage, now, now, pending.AttemptID, AttemptStatusPending,
 		)
 		if err != nil {
 			return fmt.Errorf("update attempt failed: %w", err)
+		}
+		updated, err := result.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("check failed attempt update: %w", err)
+		}
+		if updated == 0 {
+			return tx.Commit()
 		}
 		_, err = tx.ExecContext(ctx,
 			`UPDATE learner_sentences SET status = $1, updated_at = $2 WHERE id = $3`,
