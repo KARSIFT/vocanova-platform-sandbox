@@ -122,18 +122,20 @@ type Repository interface {
 
 // Public service errors.
 var (
-	ErrInvalidCursor           = errors.New("invalid cursor")
-	ErrUserWordNotFound        = errors.New("saved word not found")
-	ErrInvalidPromptType       = errors.New("invalid prompt type")
-	ErrInvalidRatingForResult  = errors.New("rating is not permitted for the result")
-	ErrInvalidAttemptType      = errors.New("invalid attempt type")
-	ErrInvalidSource           = errors.New("invalid source")
-	ErrClientAttemptIDRequired = errors.New("client attempt id required")
-	ErrInvalidAnsweredAt       = errors.New("answered at is required")
-	ErrInvalidResponseTimeMs   = errors.New("response time must be non-negative")
-	ErrIdempotencyKeyRequired  = errors.New("idempotency key required")
-	ErrIdempotencyConflict     = errors.New("idempotency key conflict")
-	ErrReviewAttemptNotFound   = errors.New("review attempt not found")
+	ErrInvalidCursor                   = errors.New("invalid cursor")
+	ErrUserWordNotFound                = errors.New("saved word not found")
+	ErrInvalidPromptType               = errors.New("invalid prompt type")
+	ErrInvalidRatingForResult          = errors.New("rating is not permitted for the result")
+	ErrInvalidAttemptType              = errors.New("invalid attempt type")
+	ErrInvalidSource                   = errors.New("invalid source")
+	ErrMultipleChoiceSelectionRequired = errors.New("multiple-choice attempts require a selected option")
+	ErrMultipleChoiceResultMismatch    = errors.New("multiple-choice result does not match selected option")
+	ErrClientAttemptIDRequired         = errors.New("client attempt id required")
+	ErrInvalidAnsweredAt               = errors.New("answered at is required")
+	ErrInvalidResponseTimeMs           = errors.New("response time must be non-negative")
+	ErrIdempotencyKeyRequired          = errors.New("idempotency key required")
+	ErrIdempotencyConflict             = errors.New("idempotency key conflict")
+	ErrReviewAttemptNotFound           = errors.New("review attempt not found")
 )
 
 const operationSubmitReview = "reviews:submit"
@@ -213,7 +215,9 @@ func (s *Service) SubmitReview(ctx context.Context, req SubmitReviewRequest) (*R
 	if req.IdempotencyKey == "" {
 		return nil, ErrIdempotencyKeyRequired
 	}
-
+	if err := validateMultipleChoiceResult(req); err != nil {
+		return nil, err
+	}
 	req.AnsweredAt = req.AnsweredAt.UTC()
 
 	fingerprint := submitReviewFingerprint(req)
@@ -241,6 +245,24 @@ func (s *Service) SubmitReview(ctx context.Context, req SubmitReviewRequest) (*R
 		return nil, fmt.Errorf("record idempotency: %w", err)
 	}
 	return attempt, nil
+}
+
+// validateMultipleChoiceResult ensures scheduling uses the objective answer,
+// rather than trusting a client-declared result. A skipped attempt intentionally
+// has no selected option because no answer was submitted.
+func validateMultipleChoiceResult(req SubmitReviewRequest) error {
+	if req.PromptType != PromptTypeMultipleChoice || req.Result == ResultSkipped {
+		return nil
+	}
+	if req.SelectedOptionMeaningID == nil {
+		return ErrMultipleChoiceSelectionRequired
+	}
+	selectedCorrectly := *req.SelectedOptionMeaningID == req.MeaningID
+	claimedCorrectly := req.Result == ResultCorrect
+	if selectedCorrectly != claimedCorrectly {
+		return ErrMultipleChoiceResultMismatch
+	}
+	return nil
 }
 
 func validateRatingForResult(result, rating string) error {

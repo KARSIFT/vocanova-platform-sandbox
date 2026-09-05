@@ -90,17 +90,19 @@ func TestSubmitReviewSchedulesAndUpdatesCounters(t *testing.T) {
 	svc := NewService(repo, learning.NewMemoryIdempotencyStore(), nil)
 
 	answeredAt := time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC)
+	selectedOptionMeaningID := meaningID
 	attempt, err := svc.SubmitReview(t.Context(), SubmitReviewRequest{
-		UserID:          userID,
-		UserWordID:      userWordID,
-		MeaningID:       meaningID,
-		AttemptType:     AttemptTypeReview,
-		PromptType:      PromptTypeMultipleChoice,
-		Result:          ResultCorrect,
-		Rating:          RatingGood,
-		AnsweredAt:      answeredAt,
-		ClientAttemptID: "ca-1",
-		IdempotencyKey:  "idem-1",
+		UserID:                  userID,
+		UserWordID:              userWordID,
+		MeaningID:               meaningID,
+		AttemptType:             AttemptTypeReview,
+		PromptType:              PromptTypeMultipleChoice,
+		Result:                  ResultCorrect,
+		Rating:                  RatingGood,
+		SelectedOptionMeaningID: &selectedOptionMeaningID,
+		AnsweredAt:              answeredAt,
+		ClientAttemptID:         "ca-1",
+		IdempotencyKey:          "idem-1",
 	})
 	require.NoError(t, err)
 	assert.Equal(t, 1, attempt.ReviewStepAfter)
@@ -108,6 +110,32 @@ func TestSubmitReviewSchedulesAndUpdatesCounters(t *testing.T) {
 	assert.Equal(t, 1, repo.userWords[0].TotalReviewCount)
 	assert.Equal(t, 1, repo.userWords[0].CorrectReviewCount)
 	assert.Equal(t, 1, repo.userWords[0].ConsecutiveCorrectCount)
+}
+
+func TestSubmitReviewRejectsForgedMultipleChoiceCorrectResult(t *testing.T) {
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	wordID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
+	userWordID := uuid.MustParse("00000000-0000-0000-0000-000000000004")
+	wrongMeaningID := uuid.MustParse("00000000-0000-0000-0000-000000000005")
+	repo := NewMemoryRepository(MemoryRepositoryData{
+		Words:     []MemoryWord{{ID: wordID, Text: "boarding pass", NormalizedText: "boarding pass", Status: "active"}},
+		Meanings:  []MemoryMeaning{{ID: meaningID, WordID: wordID, PartOfSpeech: "noun", ShortDefinition: "A document.", Status: "active"}},
+		UserWords: []MemoryUserWord{{ID: userWordID, UserID: userID, MeaningID: meaningID, Status: "new", Source: "journey", ReviewStep: 0}},
+	})
+	svc := NewService(repo, learning.NewMemoryIdempotencyStore(), nil)
+
+	_, err := svc.SubmitReview(t.Context(), SubmitReviewRequest{
+		UserID: userID, UserWordID: userWordID, MeaningID: meaningID,
+		AttemptType: AttemptTypeReview, PromptType: PromptTypeMultipleChoice,
+		Result: ResultCorrect, Rating: RatingGood, SelectedOptionMeaningID: &wrongMeaningID,
+		AnsweredAt:      time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC),
+		ClientAttemptID: "forged-correct", IdempotencyKey: "forged-correct",
+	})
+	require.ErrorIs(t, err, ErrMultipleChoiceResultMismatch)
+	assert.Empty(t, repo.attempts)
+	assert.Equal(t, 0, repo.userWords[0].ReviewStep)
+	assert.Zero(t, repo.userWords[0].TotalReviewCount)
 }
 
 func TestSubmitReviewIdempotencyReplay(t *testing.T) {
@@ -126,18 +154,20 @@ func TestSubmitReviewIdempotencyReplay(t *testing.T) {
 		},
 	})
 	svc := NewService(repo, learning.NewMemoryIdempotencyStore(), clock.Real{})
+	selectedOptionMeaningID := meaningID
 
 	req := SubmitReviewRequest{
-		UserID:          userID,
-		UserWordID:      userWordID,
-		MeaningID:       meaningID,
-		AttemptType:     AttemptTypeReview,
-		PromptType:      PromptTypeMultipleChoice,
-		Result:          ResultCorrect,
-		Rating:          RatingGood,
-		AnsweredAt:      time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC),
-		ClientAttemptID: "ca-1",
-		IdempotencyKey:  "idem-1",
+		UserID:                  userID,
+		UserWordID:              userWordID,
+		MeaningID:               meaningID,
+		AttemptType:             AttemptTypeReview,
+		PromptType:              PromptTypeMultipleChoice,
+		Result:                  ResultCorrect,
+		Rating:                  RatingGood,
+		SelectedOptionMeaningID: &selectedOptionMeaningID,
+		AnsweredAt:              time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC),
+		ClientAttemptID:         "ca-1",
+		IdempotencyKey:          "idem-1",
 	}
 	first, err := svc.SubmitReview(t.Context(), req)
 	require.NoError(t, err)
@@ -163,18 +193,20 @@ func TestSubmitReviewIdempotencyKeyConflict(t *testing.T) {
 		},
 	})
 	svc := NewService(repo, learning.NewMemoryIdempotencyStore(), nil)
+	selectedOptionMeaningID := meaningID
 
 	base := SubmitReviewRequest{
-		UserID:          userID,
-		UserWordID:      userWordID,
-		MeaningID:       meaningID,
-		AttemptType:     AttemptTypeReview,
-		PromptType:      PromptTypeMultipleChoice,
-		Result:          ResultCorrect,
-		Rating:          RatingGood,
-		AnsweredAt:      time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC),
-		ClientAttemptID: "ca-1",
-		IdempotencyKey:  "shared-key",
+		UserID:                  userID,
+		UserWordID:              userWordID,
+		MeaningID:               meaningID,
+		AttemptType:             AttemptTypeReview,
+		PromptType:              PromptTypeMultipleChoice,
+		Result:                  ResultCorrect,
+		Rating:                  RatingGood,
+		SelectedOptionMeaningID: &selectedOptionMeaningID,
+		AnsweredAt:              time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC),
+		ClientAttemptID:         "ca-1",
+		IdempotencyKey:          "shared-key",
 	}
 	_, err := svc.SubmitReview(t.Context(), base)
 	require.NoError(t, err)
@@ -204,27 +236,29 @@ func TestSubmitReviewCrossUserIdempotentKey(t *testing.T) {
 		},
 	})
 	svc := NewService(repo, learning.NewMemoryIdempotencyStore(), nil)
+	selectedOptionMeaningID := meaningID
 
 	base := SubmitReviewRequest{
-		AttemptType:     AttemptTypeReview,
-		PromptType:      PromptTypeMultipleChoice,
-		Result:          ResultCorrect,
-		Rating:          RatingGood,
-		AnsweredAt:      time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC),
-		ClientAttemptID: "shared-ca",
-		IdempotencyKey:  "shared-key",
+		AttemptType:             AttemptTypeReview,
+		PromptType:              PromptTypeMultipleChoice,
+		Result:                  ResultCorrect,
+		Rating:                  RatingGood,
+		SelectedOptionMeaningID: &selectedOptionMeaningID,
+		AnsweredAt:              time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC),
+		ClientAttemptID:         "shared-ca",
+		IdempotencyKey:          "shared-key",
 	}
 	_, err := svc.SubmitReview(t.Context(), SubmitReviewRequest{
 		UserID: userA, UserWordID: userWordA, MeaningID: meaningID,
 		AttemptType: base.AttemptType, PromptType: base.PromptType, Result: base.Result,
-		Rating: base.Rating, AnsweredAt: base.AnsweredAt, ClientAttemptID: base.ClientAttemptID,
+		Rating: base.Rating, SelectedOptionMeaningID: base.SelectedOptionMeaningID, AnsweredAt: base.AnsweredAt, ClientAttemptID: base.ClientAttemptID,
 		IdempotencyKey: base.IdempotencyKey,
 	})
 	require.NoError(t, err)
 	_, err = svc.SubmitReview(t.Context(), SubmitReviewRequest{
 		UserID: userB, UserWordID: userWordB, MeaningID: meaningID,
 		AttemptType: base.AttemptType, PromptType: base.PromptType, Result: base.Result,
-		Rating: base.Rating, AnsweredAt: base.AnsweredAt, ClientAttemptID: base.ClientAttemptID,
+		Rating: base.Rating, SelectedOptionMeaningID: base.SelectedOptionMeaningID, AnsweredAt: base.AnsweredAt, ClientAttemptID: base.ClientAttemptID,
 		IdempotencyKey: base.IdempotencyKey,
 	})
 	require.NoError(t, err)
