@@ -479,7 +479,10 @@ describe("VocanovaClient", () => {
         "https://api.example.com/api/v1/sentence-feedback/00000000-0000-0000-0000-000000000011/reports",
       );
       assert.equal(init.method, "POST");
-      assert.equal(new Headers(init.headers).get("Idempotency-Key"), "idem-key");
+      assert.equal(
+        new Headers(init.headers).get("Idempotency-Key"),
+        "idem-key",
+      );
       assert.equal(
         init.body,
         JSON.stringify({
