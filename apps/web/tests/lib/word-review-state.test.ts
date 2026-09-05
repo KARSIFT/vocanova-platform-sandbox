@@ -12,6 +12,8 @@ test("Word Detail maps only documented persisted review states to learner labels
   assert.equal(formatWordReviewState("learning", false), "Learning");
   assert.equal(formatWordReviewState("reviewing", false), "Learning");
   assert.equal(formatWordReviewState("mastered", false), "Mastered");
-  assert.equal(formatWordReviewState("ignored", false), null);
+  assert.equal(formatWordReviewState("ignored", false), "Ignored");
+  assert.equal(formatWordReviewState("archived", false), "Archived");
+  assert.equal(formatWordReviewState("unknown", false), null);
   assert.equal(formatWordReviewState(undefined, false), null);
 });

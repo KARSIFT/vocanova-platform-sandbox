@@ -16,6 +16,10 @@ export function formatWordReviewState(
       return "Learning";
     case "mastered":
       return "Mastered";
+    case "ignored":
+      return "Ignored";
+    case "archived":
+      return "Archived";
     default:
       return null;
   }

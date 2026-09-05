@@ -121,6 +121,100 @@ func TestSaveUserWordRejectsInactiveCanonicalWordPostgreSQL(t *testing.T) {
 	}
 }
 
+// TestSavedWordStatesPostgreSQLUsesPersistedStatesAndDatabaseTime proves the
+// Word Detail projection against PostgreSQL itself. It deliberately uses the
+// database clock instead of a Go clock so the due result cannot drift with a
+// requester or application-server clock.
+func TestSavedWordStatesPostgreSQLUsesPersistedStatesAndDatabaseTime(t *testing.T) {
+	db := isolatedPostgres(t)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+
+	if _, err := db.ExecContext(ctx, `
+		CREATE TABLE user_words (
+			id uuid PRIMARY KEY,
+			user_id uuid NOT NULL,
+			meaning_id uuid NOT NULL,
+			status text NOT NULL,
+			next_review_at timestamptz,
+			deleted_at timestamptz
+		);`); err != nil {
+		t.Fatal(err)
+	}
+
+	requester, otherUser := uuid.New(), uuid.New()
+	type savedWord struct {
+		meaningID uuid.UUID
+		status    string
+		nextDue   interface{}
+		deleted   bool
+		userID    uuid.UUID
+	}
+	words := []savedWord{
+		{uuid.New(), "new", nil, false, requester},
+		{uuid.New(), "learning", "CURRENT_TIMESTAMP - INTERVAL '1 minute'", false, requester},
+		{uuid.New(), "reviewing", "CURRENT_TIMESTAMP + INTERVAL '1 minute'", false, requester},
+		{uuid.New(), "mastered", "CURRENT_TIMESTAMP - INTERVAL '1 minute'", false, requester},
+		{uuid.New(), "ignored", "CURRENT_TIMESTAMP - INTERVAL '1 minute'", false, requester},
+		{uuid.New(), "archived", "CURRENT_TIMESTAMP - INTERVAL '1 minute'", false, requester},
+		{uuid.New(), "learning", "CURRENT_TIMESTAMP - INTERVAL '1 minute'", true, requester},
+		{uuid.New(), "learning", "CURRENT_TIMESTAMP - INTERVAL '1 minute'", false, otherUser},
+	}
+	for _, word := range words {
+		query := `INSERT INTO user_words (id, user_id, meaning_id, status, next_review_at, deleted_at)
+			VALUES ($1, $2, $3, $4, `
+		if word.nextDue == nil {
+			query += `NULL`
+		} else {
+			query += word.nextDue.(string)
+		}
+		if word.deleted {
+			query += `, CURRENT_TIMESTAMP)`
+		} else {
+			query += `, NULL)`
+		}
+		if _, err := db.ExecContext(ctx, query, uuid.New(), word.userID, word.meaningID, word.status); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	meaningIDs := make([]uuid.UUID, len(words))
+	for i, word := range words {
+		meaningIDs[i] = word.meaningID
+	}
+	states, err := NewPostgreSQLRepository(db).SavedWordStates(ctx, requester, meaningIDs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		index int
+		due   bool
+	}{
+		{0, true},  // new / NULL
+		{1, true},  // learning / past
+		{2, false}, // reviewing / future
+		{3, false}, // mastered is never due
+		{4, false}, // ignored is never due
+		{5, false}, // archived is never due
+	} {
+		state, ok := states[words[tc.index].meaningID]
+		if !ok {
+			t.Fatalf("state for %s missing", words[tc.index].status)
+		}
+		if state.Status != words[tc.index].status || state.Due != tc.due {
+			t.Errorf("%s state = %#v, want status %q and due %t", words[tc.index].status, state, words[tc.index].status, tc.due)
+		}
+	}
+	for _, tc := range []struct {
+		index  int
+		reason string
+	}{{6, "deleted"}, {7, "another requester"}} {
+		if _, ok := states[words[tc.index].meaningID]; ok {
+			t.Errorf("%s saved word was returned", tc.reason)
+		}
+	}
+}
+
 // TestSaveUserWordAtomicIdempotencyPostgreSQL exercises the production
 // transaction path against PostgreSQL. Temporary tables and one connection keep
 // it isolated from application data while still using the real unique-index and
