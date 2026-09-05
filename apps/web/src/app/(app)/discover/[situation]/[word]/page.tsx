@@ -7,6 +7,7 @@ import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { SentenceFeedback } from "../../../_components/sentence-feedback";
 
 import { MeaningSaveButton } from "./_components/meaning-save-button";
+import { isWordInSituation } from "./_components/word-route";
 
 interface WordDetailPageProps {
   params: Promise<{ situation: string; word: string }>;
@@ -15,8 +16,13 @@ interface WordDetailPageProps {
 export default async function WordDetailPage({ params }: WordDetailPageProps) {
   const { situation, word } = await params;
   const client = await createServerApiClient();
+  let situationResponse: Awaited<ReturnType<typeof client.getJourneySituation>>;
   let response: Awaited<ReturnType<typeof client.getCanonicalWord>>;
   try {
+    situationResponse = await client.getJourneySituation(situation);
+    if (!isWordInSituation(situationResponse.data.meanings, word)) {
+      notFound();
+    }
     response = await client.getCanonicalWord(word);
   } catch (error) {
     if (error instanceof ApiResponseError && error.status === 404) {
