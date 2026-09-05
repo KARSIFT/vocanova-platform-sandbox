@@ -105,6 +105,23 @@ func TestProductionFeedbackMissionAccountingAtomicPostgreSQL(t *testing.T) {
 	}
 	_, err = db.ExecContext(ctx, `ALTER TABLE daily_activity_summaries DROP CONSTRAINT reject_feedback_activity`)
 	require.NoError(t, err)
+	// Cancellation after the real updater has written all its rows must still
+	// prevent the outer feedback transaction from publishing any of them.
+	cancelledCtx, cancelCompletion := context.WithCancel(ctx)
+	_, err = repo.CompleteSuccessfulFeedbackAttempt(cancelledCtx, pending, feedback, now, func(ctx context.Context, tx *sql.Tx) (bool, error) {
+		completed, err := complete(ctx, tx)
+		cancelCompletion()
+		return completed, err
+	})
+	cancelCompletion()
+	require.Error(t, err)
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT status FROM ai_feedback_attempts WHERE id=$1`, attemptID).Scan(&attemptStatus))
+	require.Equal(t, aifeedback.AttemptStatusPending, attemptStatus)
+	for _, table := range []string{"confidence_point_ledger", "daily_activity_summaries", "daily_mission_snapshots", "streak_states"} {
+		var count int
+		require.NoError(t, db.QueryRowContext(ctx, "SELECT count(*) FROM "+table+" WHERE user_id=$1", userID).Scan(&count))
+		require.Zero(t, count, "cancelled transaction %s", table)
+	}
 	accountingCalls.Store(0)
 
 	// Contending completions execute on distinct pooled connections. Only

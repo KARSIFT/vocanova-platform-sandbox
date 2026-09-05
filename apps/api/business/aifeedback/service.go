@@ -434,6 +434,9 @@ func (s *Service) completeSuccessfulFeedbackAttempt(ctx context.Context, userID 
 			if updater, ok := s.mission.(TransactionMissionUpdater); ok {
 				return updater.UpdateInTransaction(ctx, tx, userID, pending.SentenceID)
 			}
+			if tx != nil {
+				return false, errors.New("transaction-aware mission updater required")
+			}
 			return s.mission.Update(ctx, userID, pending.SentenceID)
 		})
 	}
