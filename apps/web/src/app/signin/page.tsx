@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { getSignInAuthCapabilities } from "@/lib/auth-capabilities";
+import { normalizeReturnTo } from "@/lib/return-to";
 
 import { MagicLinkForm, OAuthButton } from "./_components/auth-forms";
 
@@ -51,19 +52,4 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
       </div>
     </main>
   );
-}
-
-function normalizeReturnTo(value?: string): string {
-  if (!value || typeof value !== "string") {
-    return "/home";
-  }
-  const trimmed = value.trim();
-  if (!trimmed.startsWith("/")) {
-    return "/home";
-  }
-  // Reject URLs that include a scheme or host to prevent open redirects.
-  if (trimmed.includes("://") || trimmed.includes("//")) {
-    return "/home";
-  }
-  return trimmed;
 }

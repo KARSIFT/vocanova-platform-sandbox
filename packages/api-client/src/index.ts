@@ -38,6 +38,7 @@ export interface CompleteOnboardingBody {
 
 export interface RequestMagicLinkBody {
   email: string;
+  returnTo?: string;
 }
 
 export interface ConsumeMagicLinkBody {

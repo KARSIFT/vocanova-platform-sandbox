@@ -1696,6 +1696,10 @@
             "description": "Email address to send the sign-in link to",
             "format": "email",
             "type": "string"
+          },
+          "returnTo": {
+            "description": "Optional app-relative destination after sign-in",
+            "type": "string"
           }
         },
         "required": [

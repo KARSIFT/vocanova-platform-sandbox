@@ -7,11 +7,13 @@ import { useEffect, useState } from "react";
 import { ApiResponseError } from "@vocanova/api-client";
 
 import { createApiClient } from "@/lib/api";
+import { normalizeReturnTo } from "@/lib/return-to";
 
 export function MagicLinkPageContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
   const email = searchParams.get("email") ?? "";
+  const returnTo = normalizeReturnTo(searchParams.get("returnTo"));
   const [status, setStatus] = useState<{
     type: "loading" | "error";
     message: string;
@@ -33,7 +35,7 @@ export function MagicLinkPageContent() {
     client
       .consumeMagicLink({ token, email })
       .then(() => {
-        window.location.href = "/home";
+        window.location.href = returnTo;
       })
       .catch((error: unknown) => {
         const message =
@@ -42,7 +44,7 @@ export function MagicLinkPageContent() {
             : "This sign-in link is invalid or has expired. Please request a new one.";
         setStatus({ type: "error", message });
       });
-  }, [token, email]);
+  }, [token, email, returnTo]);
 
   return (
     <main className="grid min-h-screen place-items-center p-6">
@@ -62,7 +64,7 @@ export function MagicLinkPageContent() {
         </p>
         {status.type === "error" ? (
           <Link
-            href="/signin"
+            href={`/signin?${new URLSearchParams({ returnTo }).toString()}`}
             className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
           >
             Back to sign in

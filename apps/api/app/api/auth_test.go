@@ -81,6 +81,19 @@ func TestRequestMagicLinkEndpointReturns204(t *testing.T) {
 	assert.Equal(t, "user@example.com", msg.To[0].Email)
 }
 
+func TestRequestMagicLinkEndpointCarriesSafeReturnToIntoEmail(t *testing.T) {
+	api, _, _, fake, _ := testAuthAPI(t)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/magic-links", strings.NewReader(`{"email":"user@example.com","returnTo":"/reviews?mode=due"}`))
+	req.Header.Set("Content-Type", "application/json")
+	api.Adapter().ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusNoContent, w.Code)
+	message, ok := fake.Last()
+	require.True(t, ok)
+	assert.Contains(t, message.BodyText, "returnTo=%2Freviews%3Fmode%3Ddue")
+}
+
 func TestRequestMagicLinkEndpointInvalidEmailStill422(t *testing.T) {
 	api, _, _, _, _ := testAuthAPI(t)
 	w := httptest.NewRecorder()

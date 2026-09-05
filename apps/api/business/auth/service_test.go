@@ -80,6 +80,31 @@ func TestRequestMagicLinkCreatesHashedLinkAndSendsEmail(t *testing.T) {
 	}
 }
 
+func TestRequestMagicLinkWithReturnToIncludesOnlySafeAppRelativeDestination(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("preserves an app-relative destination", func(t *testing.T) {
+		svc, _, fake, _ := testService(t)
+		require.NoError(t, svc.RequestMagicLinkWithReturnTo(ctx, "1.2.3.4", "user@example.com", "/reviews?mode=due"))
+
+		message, ok := fake.Last()
+		require.True(t, ok)
+		linkText := strings.TrimSpace(strings.Split(message.BodyText, "\n\n")[1])
+		link, err := url.Parse(linkText)
+		require.NoError(t, err)
+		assert.Equal(t, "/reviews?mode=due", link.Query().Get("returnTo"))
+	})
+
+	t.Run("drops an external destination", func(t *testing.T) {
+		svc, _, fake, _ := testService(t)
+		require.NoError(t, svc.RequestMagicLinkWithReturnTo(ctx, "1.2.3.4", "user@example.com", "https://evil.example/"))
+
+		message, ok := fake.Last()
+		require.True(t, ok)
+		assert.NotContains(t, message.BodyText, "returnTo=")
+	})
+}
+
 func TestRequestMagicLinkEmptyEmailReturnsNoErrorAndNoEmail(t *testing.T) {
 	svc, _, fake, _ := testService(t)
 	err := svc.RequestMagicLink(context.Background(), "1.2.3.4", "")
