@@ -295,14 +295,12 @@ func (r *PostgreSQLRepository) GetSettings(ctx context.Context, userID uuid.UUID
 
 // UpdateSettings atomically applies a partial Settings update to
 // the user_settings row and (when the caller supplies a new
-// display_name) users.display_name. The implementation reads the
-// existing user_settings row inside the transaction, merges the
-// update in Go, then writes the merged result with an ON CONFLICT
-// upsert. This handles the first-ever-write case (no existing
-// row) without a unique-constraint race against the gamification
-// module's lazy-create path (VOC-031-R05): the ON CONFLICT
-// (user_id) DO UPDATE is the same pattern gamification uses, and
-// the transactional read-modify-write is atomic.
+// display_name) users.display_name. Its upsert applies each supplied
+// field and preserves each omitted field in SQL. Keeping that decision
+// in the conflict update is essential: concurrent PATCHes can otherwise
+// both read an old row, merge in Go, and let the later write restore stale
+// values for fields it did not include. The same statement also handles
+// a concurrent first write without a unique-constraint race (VOC-031-R05).
 func (r *PostgreSQLRepository) UpdateSettings(ctx context.Context, userID uuid.UUID, update SettingsUpdate, now time.Time) (Settings, error) {
 	if err := update.Validate(); err != nil {
 		return Settings{}, err
@@ -313,10 +311,8 @@ func (r *PostgreSQLRepository) UpdateSettings(ctx context.Context, userID uuid.U
 	}
 	defer tx.Rollback()
 
-	merged, err := readMergedSettingsForUpdate(ctx, tx, userID, update)
-	if err != nil {
-		return Settings{}, err
-	}
+	inserted := settingsForInsert(update)
+	merged := inserted
 
 	row := tx.QueryRowContext(ctx,
 		`INSERT INTO user_settings (id, user_id, timezone, daily_review_target,
@@ -324,11 +320,11 @@ func (r *PostgreSQLRepository) UpdateSettings(ctx context.Context, userID uuid.U
 		                           marketing_emails_enabled, app_language, created_at, updated_at)
 		 VALUES ($1, $2, 'UTC', $3, $4, $5, $6, $7, $8, $8)
 		 ON CONFLICT (user_id) DO UPDATE
-		   SET daily_review_target = EXCLUDED.daily_review_target,
-		       review_interval_preset = EXCLUDED.review_interval_preset,
-		       notifications_enabled = EXCLUDED.notifications_enabled,
-		       marketing_emails_enabled = EXCLUDED.marketing_emails_enabled,
-		       app_language = EXCLUDED.app_language,
+		   SET daily_review_target = CASE WHEN $9 THEN EXCLUDED.daily_review_target ELSE user_settings.daily_review_target END,
+		       review_interval_preset = CASE WHEN $10 THEN EXCLUDED.review_interval_preset ELSE user_settings.review_interval_preset END,
+		       notifications_enabled = CASE WHEN $11 THEN EXCLUDED.notifications_enabled ELSE user_settings.notifications_enabled END,
+		       marketing_emails_enabled = CASE WHEN $12 THEN EXCLUDED.marketing_emails_enabled ELSE user_settings.marketing_emails_enabled END,
+		       app_language = CASE WHEN $13 THEN EXCLUDED.app_language ELSE user_settings.app_language END,
 		       updated_at = NOW()
 		 RETURNING daily_review_target, review_interval_preset,
 		           notifications_enabled, marketing_emails_enabled, app_language`,
@@ -336,6 +332,11 @@ func (r *PostgreSQLRepository) UpdateSettings(ctx context.Context, userID uuid.U
 		merged.DailyReviewTarget, merged.ReviewIntervalPreset,
 		merged.NotificationsEnabled, merged.MarketingEmailsEnabled,
 		merged.AppLanguage, now,
+		update.DailyReviewTarget != nil,
+		update.ReviewIntervalPreset != nil,
+		update.NotificationsEnabled != nil,
+		update.MarketingEmailsEnabled != nil,
+		update.AppLanguage != nil,
 	)
 	if err := row.Scan(
 		&merged.DailyReviewTarget, &merged.ReviewIntervalPreset,
@@ -376,76 +377,33 @@ func (r *PostgreSQLRepository) UpdateSettings(ctx context.Context, userID uuid.U
 	return merged, nil
 }
 
-// readMergedSettingsForUpdate reads the existing user_settings
-// row inside tx (returning schema defaults when no row exists) and
-// applies the partial update in Go. This read-modify-write is
-// what lets the conflict-updating upsert always pass a complete,
-// correct row to EXCLUDED: the conflict path replaces every
-// field with EXCLUDED.*, and only the EXCLUDED fields we just
-// computed can win.
-func readMergedSettingsForUpdate(ctx context.Context, tx *sql.Tx, userID uuid.UUID, update SettingsUpdate) (Settings, error) {
-	row := tx.QueryRowContext(ctx,
-		`SELECT daily_review_target, review_interval_preset,
-		        notifications_enabled, marketing_emails_enabled, app_language
-		 FROM user_settings WHERE user_id = $1`,
-		userID,
-	)
-	merged := Settings{
+// settingsForInsert supplies schema defaults for omitted values. PostgreSQL
+// uses these only when the row does not exist; on conflict, the CASE clauses
+// in UpdateSettings preserve the current row for every omitted field.
+func settingsForInsert(update SettingsUpdate) Settings {
+	settings := Settings{
 		DailyReviewTarget:      schemaDailyReviewTargetDefaultInt,
 		ReviewIntervalPreset:   schemaReviewIntervalPresetDefault,
 		AppLanguage:            schemaAppLanguageDefault,
 		NotificationsEnabled:   schemaNotificationsEnabledDefault,
 		MarketingEmailsEnabled: schemaMarketingEmailsEnabledDefault,
 	}
-	var (
-		dailyReview    sql.NullInt32
-		intervalPreset sql.NullString
-		notifsEnabled  sql.NullBool
-		marketingOn    sql.NullBool
-		appLanguage    sql.NullString
-	)
-	err := row.Scan(&dailyReview, &intervalPreset, &notifsEnabled, &marketingOn, &appLanguage)
-	switch {
-	case err == nil:
-		if dailyReview.Valid {
-			merged.DailyReviewTarget = int(dailyReview.Int32)
-		}
-		if intervalPreset.Valid {
-			merged.ReviewIntervalPreset = intervalPreset.String
-		}
-		if notifsEnabled.Valid {
-			merged.NotificationsEnabled = notifsEnabled.Bool
-		}
-		if marketingOn.Valid {
-			merged.MarketingEmailsEnabled = marketingOn.Bool
-		}
-		if appLanguage.Valid {
-			merged.AppLanguage = appLanguage.String
-		}
-	case errors.Is(err, sql.ErrNoRows):
-		// No existing row — schema defaults are already in
-		// merged. Caller is performing a first-ever write;
-		// the upsert will create the row.
-	default:
-		return Settings{}, fmt.Errorf("read existing settings: %w", err)
-	}
-
 	if update.DailyReviewTarget != nil {
-		merged.DailyReviewTarget = *update.DailyReviewTarget
+		settings.DailyReviewTarget = *update.DailyReviewTarget
 	}
 	if update.ReviewIntervalPreset != nil {
-		merged.ReviewIntervalPreset = *update.ReviewIntervalPreset
+		settings.ReviewIntervalPreset = *update.ReviewIntervalPreset
 	}
 	if update.AppLanguage != nil {
-		merged.AppLanguage = *update.AppLanguage
+		settings.AppLanguage = *update.AppLanguage
 	}
 	if update.NotificationsEnabled != nil {
-		merged.NotificationsEnabled = *update.NotificationsEnabled
+		settings.NotificationsEnabled = *update.NotificationsEnabled
 	}
 	if update.MarketingEmailsEnabled != nil {
-		merged.MarketingEmailsEnabled = *update.MarketingEmailsEnabled
+		settings.MarketingEmailsEnabled = *update.MarketingEmailsEnabled
 	}
-	return merged, nil
+	return settings
 }
 
 // Schema defaults for user_settings. These match the NOT NULL

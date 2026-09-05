@@ -18,6 +18,7 @@ import (
 // the parentheses rather than assuming how the SQL literal is wrapped.
 const userSettingsInsertColumnsPattern = `INSERT INTO user_settings \(\s*id,\s*user_id,\s*timezone,\s*daily_review_target,\s*created_at,\s*updated_at\s*\)`
 const updateSettingsInsertColumnsPattern = `INSERT INTO user_settings \(\s*id,\s*user_id,\s*timezone,\s*daily_review_target,\s*review_interval_preset,\s*notifications_enabled,\s*marketing_emails_enabled,\s*app_language,\s*created_at,\s*updated_at\s*\)`
+const updateSettingsPreservesOmittedFieldsPattern = `(?s).*ON CONFLICT \(user_id\) DO UPDATE.*daily_review_target = CASE WHEN \$9 THEN EXCLUDED.daily_review_target ELSE user_settings.daily_review_target END.*notifications_enabled = CASE WHEN \$11 THEN EXCLUDED.notifications_enabled ELSE user_settings.notifications_enabled END`
 
 func TestPostgreSQLRepositoryCompleteOnboardingFreshUserSettingsInsertSuppliesTimestamps(t *testing.T) {
 	db, mock, err := sqlmock.New()
@@ -93,20 +94,12 @@ func TestPostgreSQLRepositoryUpdateSettingsFreshInsertSuppliesTimestamps(t *test
 	target := 25
 
 	mock.ExpectBegin()
-	mock.ExpectQuery("SELECT daily_review_target, review_interval_preset,").
-		WithArgs(userID).
-		WillReturnRows(sqlmock.NewRows([]string{
-			"daily_review_target",
-			"review_interval_preset",
-			"notifications_enabled",
-			"marketing_emails_enabled",
-			"app_language",
-		}))
-	mock.ExpectQuery(updateSettingsInsertColumnsPattern).
+	mock.ExpectQuery(updateSettingsInsertColumnsPattern+updateSettingsPreservesOmittedFieldsPattern).
 		WithArgs(
 			sqlmock.AnyArg(), userID, target, schemaReviewIntervalPresetDefault,
 			schemaNotificationsEnabledDefault, schemaMarketingEmailsEnabledDefault,
 			schemaAppLanguageDefault, now,
+			true, false, false, false, false,
 		).
 		WillReturnRows(sqlmock.NewRows([]string{
 			"daily_review_target",
