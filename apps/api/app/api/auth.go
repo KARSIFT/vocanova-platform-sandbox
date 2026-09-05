@@ -247,6 +247,7 @@ func RegisterAuth(api huma.API, svc *auth.Service) {
 		}
 		cookie := svc.ClearSessionCookie()
 		c.AppendHeader("Set-Cookie", cookie.String())
+		c.AppendHeader("Set-Cookie", svc.ClearCSRFCookie().String())
 		return &LogoutOutput{}, nil
 	})
 }

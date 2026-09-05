@@ -75,3 +75,22 @@ func TestCSRFToken_UnaffectedByOAuthStateDomain(t *testing.T) {
 	_, cookie := CSRFToken(cfg)
 	assert.Equal(t, "production.vocanova.site", cookie.Domain)
 }
+
+func TestClearCSRFCookieMatchesCSRFCookieScope(t *testing.T) {
+	cfg := CookieConfig{
+		CSRName:  "vocanova_csrf",
+		Domain:   "production.vocanova.site",
+		Secure:   true,
+		SameSite: http.SameSiteStrictMode,
+	}
+
+	clearCookie := ClearCSRFCookie(cfg)
+
+	assert.Equal(t, cfg.CSRName, clearCookie.Name)
+	assert.Equal(t, cfg.Domain, clearCookie.Domain)
+	assert.Equal(t, "/", clearCookie.Path)
+	assert.Equal(t, -1, clearCookie.MaxAge)
+	assert.False(t, clearCookie.HttpOnly)
+	assert.True(t, clearCookie.Secure)
+	assert.Equal(t, http.SameSiteStrictMode, clearCookie.SameSite)
+}

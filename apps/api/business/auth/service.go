@@ -495,6 +495,11 @@ func (s *Service) IssueCSRFCookie() (string, *http.Cookie) {
 	return CSRFToken(s.cfg.Cookie)
 }
 
+// ClearCSRFCookie writes a cookie that deletes the double-submit CSRF token.
+func (s *Service) ClearCSRFCookie() *http.Cookie {
+	return ClearCSRFCookie(s.cfg.Cookie)
+}
+
 // OAuthStateCookie returns the short-lived OAuth state cookie.
 func (s *Service) OAuthStateCookie(token string, expiresAt time.Time) *http.Cookie {
 	return OAuthStateCookie(s.cfg.Cookie, token, expiresAt)

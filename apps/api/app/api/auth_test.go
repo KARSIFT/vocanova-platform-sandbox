@@ -215,7 +215,7 @@ func TestLogoutEndpointClearsCookie(t *testing.T) {
 	api.Adapter().ServeHTTP(w, req)
 	require.Equal(t, http.StatusForbidden, w.Code)
 
-	// Logout with CSRF clears the session cookie.
+	// Logout with CSRF clears the session and CSRF cookies.
 	w = httptest.NewRecorder()
 	csrfToken, csrfCookie = svc.IssueCSRFCookie()
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", nil)
@@ -228,6 +228,9 @@ func TestLogoutEndpointClearsCookie(t *testing.T) {
 	clearCookie := findCookie(w.Result().Cookies(), "vocanova_session")
 	require.NotNil(t, clearCookie)
 	assert.True(t, clearCookie.Expires.Before(time.Now()) || clearCookie.MaxAge < 0)
+	clearCSRFCookie := findCookie(w.Result().Cookies(), "vocanova_csrf")
+	require.NotNil(t, clearCSRFCookie)
+	assert.True(t, clearCSRFCookie.Expires.Before(time.Now()) || clearCSRFCookie.MaxAge < 0)
 }
 
 func TestOAuthStartEndpointReturnsURLAndSetsCookie(t *testing.T) {
