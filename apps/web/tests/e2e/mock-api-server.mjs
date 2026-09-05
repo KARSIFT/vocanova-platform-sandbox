@@ -102,7 +102,11 @@ const PORT = Number(process.env.MOCK_API_PORT ?? 8080);
 const HOST = process.env.MOCK_API_HOST ?? "127.0.0.1";
 const MOCK_OAUTH_ENABLED = process.env.MOCK_OAUTH_ENABLED === "true";
 
-const ONBOARDING_STATUSES = new Set(["not_started", "in_progress", "completed"]);
+const ONBOARDING_STATUSES = new Set([
+  "not_started",
+  "in_progress",
+  "completed",
+]);
 
 const SESSION_COOKIE_NAME = "vocanova_session";
 const CSRF_COOKIE_NAME = "vocanova_csrf";
@@ -457,6 +461,8 @@ function buildWordDetailResponse(state, slug) {
     userWordId: state.savedMeaningIds.has(meaning.id)
       ? `uw-${meaning.id}`
       : undefined,
+    reviewState: state.savedMeaningIds.has(meaning.id) ? "new" : undefined,
+    due: state.savedMeaningIds.has(meaning.id) || undefined,
   }));
   return {
     word: {
@@ -609,7 +615,10 @@ const server = createServer(async (req, res) => {
     res.setHeader("Vary", "Origin");
   }
   if (req.method === "OPTIONS") {
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
+    res.setHeader(
+      "Access-Control-Allow-Methods",
+      "GET, POST, PATCH, DELETE, OPTIONS",
+    );
     // Every custom header @vocanova/api-client ever sets
     // (packages/api-client/src/index.ts) - Idempotency-Key was
     // missing here initially and only surfaced once a mutation that
@@ -624,7 +633,10 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  const url = new URL(req.url, `http://${req.headers.host ?? `${HOST}:${PORT}`}`);
+  const url = new URL(
+    req.url,
+    `http://${req.headers.host ?? `${HOST}:${PORT}`}`,
+  );
   const cookies = parseCookies(req.headers.cookie);
 
   if (req.method === "GET" && url.pathname === "/healthz") {
@@ -769,7 +781,9 @@ const server = createServer(async (req, res) => {
       // customized value exists yet. The mock starts with the
       // schema default (20) for every fresh session, so the seed
       // fires for the very first onboarding write.
-      if (state.settings.dailyReviewTarget === DEFAULT_SETTINGS.dailyReviewTarget) {
+      if (
+        state.settings.dailyReviewTarget === DEFAULT_SETTINGS.dailyReviewTarget
+      ) {
         state.settings.dailyReviewTarget = body.dailyReviewTarget;
       }
     }
@@ -990,11 +1004,13 @@ const server = createServer(async (req, res) => {
       attemptId: body.attemptId,
       status: evaluation.status,
       originalSentence: body.sentenceText,
-      correctedSentence: evaluation.status === "correct" ? body.sentenceText : undefined,
+      correctedSentence:
+        evaluation.status === "correct" ? body.sentenceText : undefined,
       explanation: evaluation.explanation,
-      improvementTip: evaluation.status === "needs_improvement"
-        ? "Try using the target word naturally in your sentence."
-        : undefined,
+      improvementTip:
+        evaluation.status === "needs_improvement"
+          ? "Try using the target word naturally in your sentence."
+          : undefined,
       missionCompleted: !evaluation.errorCode,
       canRetry: Boolean(evaluation.errorCode),
       reported: false,
@@ -1157,7 +1173,9 @@ const server = createServer(async (req, res) => {
     }
     logLine(req, 200, { action: "account-deletion" });
     const requestedAt = new Date();
-    const purgeAfter = new Date(requestedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const purgeAfter = new Date(
+      requestedAt.getTime() + 30 * 24 * 60 * 60 * 1000,
+    );
     jsonResponse(
       res,
       200,

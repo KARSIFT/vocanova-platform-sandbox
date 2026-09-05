@@ -55,6 +55,8 @@ type WordMeaningDTO struct {
 	LearnerDefinition string             `json:"learnerDefinition,omitempty" doc:"Learner-friendly definition"`
 	Saved             bool               `json:"saved" doc:"Whether the authenticated requester has saved this meaning"`
 	UserWordID        string             `json:"userWordId,omitempty" format:"uuid" doc:"Saved record identifier when this meaning is saved"`
+	ReviewState       string             `json:"reviewState,omitempty" enum:"new,learning,reviewing,mastered,ignored,archived" doc:"Learner-visible saved-word state"`
+	Due               bool               `json:"due,omitempty" doc:"Whether this saved word is due according to server time"`
 	Examples          []WordExampleDTO   `json:"examples" doc:"Example sentences"`
 	UsageNotes        []WordUsageNoteDTO `json:"usageNotes" doc:"Usage notes"`
 }
@@ -229,13 +231,19 @@ func wordToDTO(w *content.WordDetail) WordDetailDTO {
 				NoteText: n.NoteText,
 			}
 		}
+		userWordID := ""
+		if m.UserWordID != uuid.Nil {
+			userWordID = m.UserWordID.String()
+		}
 		meanings[i] = WordMeaningDTO{
 			ID:                m.ID.String(),
 			PartOfSpeech:      m.PartOfSpeech,
 			ShortDefinition:   m.ShortDefinition,
 			LearnerDefinition: m.LearnerDefinition,
 			Saved:             m.Saved,
-			UserWordID:        m.UserWordID.String(),
+			UserWordID:        userWordID,
+			ReviewState:       m.ReviewState,
+			Due:               m.Due,
 			Examples:          examples,
 			UsageNotes:        notes,
 		}

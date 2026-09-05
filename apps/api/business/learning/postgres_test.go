@@ -247,6 +247,30 @@ func TestPostgreSQLRepositoryIsSaved(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestPostgreSQLRepositorySavedWordStatesUsesDatabaseTime(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewPostgreSQLRepository(db)
+	userID := MustParseUUID("00000000-0000-0000-0000-000000000001")
+	meaningID := MustParseUUID("00000000-0000-0000-0000-000000000002")
+	userWordID := MustParseUUID("00000000-0000-0000-0000-000000000003")
+
+	mock.ExpectQuery("SELECT meaning_id, id, status").
+		WithArgs(userID, sqlmock.AnyArg()).
+		WillReturnRows(sqlmock.NewRows([]string{"meaning_id", "id", "status", "due"}).
+			AddRow(meaningID, userWordID, "learning", true))
+
+	states, err := repo.SavedWordStates(t.Context(), userID, []uuid.UUID{meaningID})
+	require.NoError(t, err)
+	require.Contains(t, states, meaningID)
+	assert.Equal(t, userWordID, states[meaningID].UserWordID)
+	assert.Equal(t, "learning", states[meaningID].Status)
+	assert.True(t, states[meaningID].Due)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestPostgreSQLRepositoryGetSavedMeaning(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)

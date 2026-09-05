@@ -127,9 +127,7 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     // Tab moves focus into the group once; the option labels
     // are reached with arrow keys, not Tab. The Continue button
     // is disabled until an option is selected.
-    await page
-      .getByRole("radio", { name: /A2 \u2014 Elementary/ })
-      .check();
+    await page.getByRole("radio", { name: /A2 \u2014 Elementary/ }).check();
     await page.getByRole("button", { name: "Continue" }).click();
 
     // Step 1: native language. Free text. The step uses an
@@ -138,9 +136,7 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     await expect(
       page.getByRole("heading", { name: /What's your native language\?/ }),
     ).toBeVisible();
-    await page
-      .getByRole("textbox", { name: "Native language" })
-      .fill("es");
+    await page.getByRole("textbox", { name: "Native language" }).fill("es");
     await page.getByRole("button", { name: "Continue" }).click();
 
     // Step 2: learning goal. Radio group rendered inside a
@@ -185,9 +181,7 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
         response.url().includes("/api/v1/onboarding") &&
         response.request().method() === "POST",
     );
-    await page
-      .getByRole("button", { name: "Finish setup" })
-      .click();
+    await page.getByRole("button", { name: "Finish setup" }).click();
     const onboardingResponse = await onboardingResponsePromise;
     expect(onboardingResponse.status()).toBe(200);
 
@@ -213,17 +207,13 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     await expect(
       page.getByRole("heading", { name: "Journey", level: 1 }),
     ).toBeVisible();
-    await page
-      .getByRole("link", { name: /Ordering at a cafe/ })
-      .click();
+    await page.getByRole("link", { name: /Ordering at a cafe/ }).click();
     await expect(page).toHaveURL(/\/discover\/ordering-at-a-cafe(\?|$)/);
     await expect(
       page.getByRole("heading", { name: "Ordering at a cafe", level: 1 }),
     ).toBeVisible();
     await page.getByRole("link", { name: /pour/ }).first().click();
-    await expect(page).toHaveURL(
-      /\/discover\/ordering-at-a-cafe\/pour(\?|$)/,
-    );
+    await expect(page).toHaveURL(/\/discover\/ordering-at-a-cafe\/pour(\?|$)/);
     await expect(
       page.getByRole("heading", { name: "pour", level: 1 }),
     ).toBeVisible();
@@ -260,6 +250,7 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     await expect(
       page.getByRole("button", { name: "Remove pour from saved words" }),
     ).toBeVisible();
+    await expect(page.getByText("Due today", { exact: true })).toBeVisible();
 
     // Issue #1181 (PRD §2): sentence practice is "surfaced from Home,
     // Word Detail, and Review Completion" - not a fourth tab. This is
@@ -290,9 +281,7 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
       page.getByRole("heading", { name: "pour", level: 2 }),
     ).toBeVisible();
     await page.getByRole("button", { name: "Show answer" }).click();
-    await expect(
-      page.getByRole("button", { name: "Good" }),
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Good" })).toBeVisible();
     await page.getByRole("button", { name: "Good" }).click();
 
     // "All caught up" empty state with a sentence-feedback
@@ -316,9 +305,7 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     await page
       .getByRole("textbox", { name: /Write a sentence using pour/ })
       .fill("I will pour the coffee into a cup.");
-    await page
-      .getByRole("button", { name: "Check my sentence" })
-      .click();
+    await page.getByRole("button", { name: "Check my sentence" }).click();
     await expect(page.getByText("Correct", { exact: true })).toBeVisible();
     await expect(
       page.getByText("Your sentence uses the target word naturally."),
@@ -374,9 +361,7 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     // reflects that. After one review, the home page should
     // show "1 of 20 words reviewed today" (the default target).
     await page.goto("/home");
-    await expect(
-      page.getByText(/1 of 20 words reviewed today/),
-    ).toBeVisible();
+    await expect(page.getByText(/1 of 20 words reviewed today/)).toBeVisible();
 
     // Issue #1181 (PRD §2), entry point 2 of 3: the Home screen's
     // "Saved words" list renders a SentenceFeedback widget per saved

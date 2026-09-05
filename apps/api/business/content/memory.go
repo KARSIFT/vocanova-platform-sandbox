@@ -303,6 +303,7 @@ type SeedJourneyWord struct {
 type MemorySavedStateReader struct {
 	data        map[uuid.UUID]map[uuid.UUID]bool
 	userWordIDs map[uuid.UUID]map[uuid.UUID]uuid.UUID
+	states      map[uuid.UUID]map[uuid.UUID]SavedWordState
 }
 
 // NewMemorySavedStateReader creates a saved-state reader from user->meaning maps.
@@ -317,6 +318,23 @@ func NewMemorySavedStateReaderWithIDs(
 	userWordIDs map[uuid.UUID]map[uuid.UUID]uuid.UUID,
 ) *MemorySavedStateReader {
 	return &MemorySavedStateReader{data: saved, userWordIDs: userWordIDs}
+}
+
+// NewMemorySavedStateReaderWithStates creates a reader with learner-safe Word
+// Detail states. It is intentionally separate from the boolean-only helper so
+// older situation-list tests remain focused on their own projection.
+func NewMemorySavedStateReaderWithStates(states map[uuid.UUID]map[uuid.UUID]SavedWordState) *MemorySavedStateReader {
+	saved := make(map[uuid.UUID]map[uuid.UUID]bool, len(states))
+	userWordIDs := make(map[uuid.UUID]map[uuid.UUID]uuid.UUID, len(states))
+	for userID, userStates := range states {
+		saved[userID] = make(map[uuid.UUID]bool, len(userStates))
+		userWordIDs[userID] = make(map[uuid.UUID]uuid.UUID, len(userStates))
+		for meaningID, state := range userStates {
+			saved[userID][meaningID] = true
+			userWordIDs[userID][meaningID] = state.UserWordID
+		}
+	}
+	return &MemorySavedStateReader{data: saved, userWordIDs: userWordIDs, states: states}
 }
 
 func (r *MemorySavedStateReader) IsSaved(ctx context.Context, userID uuid.UUID, meaningIDs []uuid.UUID) (map[uuid.UUID]bool, error) {
@@ -335,6 +353,21 @@ func (r *MemorySavedStateReader) SavedUserWordIDs(ctx context.Context, userID uu
 	for _, id := range meaningIDs {
 		if uid, ok := userMap[id]; ok && uid != uuid.Nil {
 			out[id] = uid
+		}
+	}
+	return out, nil
+}
+
+// SavedWordStates implements SavedStateReader.
+func (r *MemorySavedStateReader) SavedWordStates(ctx context.Context, userID uuid.UUID, meaningIDs []uuid.UUID) (map[uuid.UUID]SavedWordState, error) {
+	out := make(map[uuid.UUID]SavedWordState, len(meaningIDs))
+	for _, id := range meaningIDs {
+		if state, ok := r.states[userID][id]; ok {
+			out[id] = state
+			continue
+		}
+		if r.data[userID][id] {
+			out[id] = SavedWordState{UserWordID: r.userWordIDs[userID][id], Status: "new", Due: true}
 		}
 	}
 	return out, nil
