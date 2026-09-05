@@ -231,9 +231,19 @@ func (r *MemoryRepository) CreatePendingAttempt(ctx context.Context, req SubmitS
 	return &PendingAttempt{SentenceID: sentenceID, AttemptID: attemptID}, nil
 }
 
-func (r *MemoryRepository) CreateRetryAttempt(ctx context.Context, failed *StoredFeedbackAttempt, provider string, model string, now time.Time) (*PendingAttempt, error) {
+func (r *MemoryRepository) CreateRetryAttempt(ctx context.Context, failed *StoredFeedbackAttempt, provider string, model string, now time.Time) (*RetryAttempt, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	// Keep the deterministic repository subject to the same active-generation
+	// invariant as PostgreSQL's partial unique index. A concurrent fresh key
+	// returns the extant pending/succeeded result rather than adding a second
+	// generation that could call the provider.
+	for _, attempt := range r.attempts {
+		if attempt.RequestHash == failed.RequestHash && (attempt.Status == AttemptStatusPending || attempt.Status == AttemptStatusSucceeded) {
+			return &RetryAttempt{Existing: r.toStoredAttempt(attempt)}, nil
+		}
+	}
 
 	attemptID := uuid.New()
 	r.attempts = append(r.attempts, MemoryAIFeedbackAttempt{
@@ -251,7 +261,7 @@ func (r *MemoryRepository) CreateRetryAttempt(ctx context.Context, failed *Store
 			break
 		}
 	}
-	return &PendingAttempt{SentenceID: failed.LearnerSentenceID, AttemptID: attemptID}, nil
+	return &RetryAttempt{Pending: &PendingAttempt{SentenceID: failed.LearnerSentenceID, AttemptID: attemptID}}, nil
 }
 
 // GetFeedbackAttemptOwner implements Repository.

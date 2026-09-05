@@ -39,6 +39,13 @@ type PendingAttempt struct {
 	AttemptID  uuid.UUID
 }
 
+// RetryAttempt records whether a retry created a new provider generation or
+// lost a concurrent race to one that is already active.
+type RetryAttempt struct {
+	Pending  *PendingAttempt
+	Existing *StoredFeedbackAttempt
+}
+
 // QualityReviewReport is the internal record created when a learner reports
 // feedback. Classification is intentionally unset until a later triage flow.
 type QualityReviewReport struct {
@@ -69,7 +76,7 @@ type Repository interface {
 
 	// CreateRetryAttempt appends a pending generation for a previously failed
 	// logical submission, preserving the failed attempt for observability.
-	CreateRetryAttempt(ctx context.Context, failed *StoredFeedbackAttempt, provider string, model string, now time.Time) (*PendingAttempt, error)
+	CreateRetryAttempt(ctx context.Context, failed *StoredFeedbackAttempt, provider string, model string, now time.Time) (*RetryAttempt, error)
 
 	// CompleteFeedbackAttempt updates the attempt and sentence statuses after the
 	// provider call. A non-nil feedback indicates success; otherwise failureCode

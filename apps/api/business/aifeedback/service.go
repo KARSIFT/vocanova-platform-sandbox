@@ -201,8 +201,10 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 	}
 	if existing != nil {
 		// An identical Idempotency-Key is a transport replay, never a learner
-		// retry. It must return the already-recorded outcome without another
-		// provider generation, even when that outcome was a retryable failure.
+		// retry. It must not cause another provider generation. Idempotency keys
+		// retain the request fingerprint rather than a generation ID, so after a
+		// later fresh-key retry succeeds this replay returns that current safe
+		// logical-request result instead of reconstructing the older failure.
 		if idempotencyStatus == learning.IdempotencyMatch {
 			return s.resultFromStored(existing, req.SentenceText), nil
 		}
@@ -213,14 +215,20 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 		// DOC-09 §§5, 8, and 18 require a provider failure to be retryable.
 		// Append a fresh generation so the failed attempt remains immutable
 		// operational history instead of making the retry replay its failure.
-		pending, err := s.repo.CreateRetryAttempt(ctx, existing, s.config.Provider, s.config.Model, s.clock.Now().UTC())
+		retry, err := s.repo.CreateRetryAttempt(ctx, existing, s.config.Provider, s.config.Model, s.clock.Now().UTC())
 		if err != nil {
 			return nil, fmt.Errorf("create retry attempt: %w", err)
+		}
+		if retry.Existing != nil {
+			// Another fresh key won the race to create the active generation.
+			// Returning its safe stored state makes the losing request
+			// non-generative and avoids surfacing a database uniqueness error.
+			return s.resultFromStored(retry.Existing, req.SentenceText), nil
 		}
 		if err := s.idem.Record(ctx, req.UserID, operationSentenceFeedback, req.IdempotencyKey, requestHash); err != nil {
 			return nil, fmt.Errorf("record retry idempotency: %w", err)
 		}
-		return s.completePendingAttempt(ctx, req, target, validation.Normalized, pending, start)
+		return s.completePendingAttempt(ctx, req, target, validation.Normalized, retry.Pending, start)
 	}
 
 	moderation, err := s.safety.Classify(ctx, ModerationInput{
