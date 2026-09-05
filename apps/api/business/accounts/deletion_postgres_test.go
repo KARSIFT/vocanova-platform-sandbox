@@ -191,11 +191,12 @@ func TestPostgreSQLRepositoryListDeactivatedRequestsDueForPurge(t *testing.T) {
 		AddRow(uuid.New(), uidA, "deactivated", now.Add(-30*24*time.Hour), now.Add(-time.Hour), nil, "idem-A", now.Add(-30*24*time.Hour), now.Add(-30*24*time.Hour)).
 		AddRow(uuid.New(), uidB, "deactivated", now.Add(-30*24*time.Hour), now.Add(-time.Minute), nil, "idem-B", now.Add(-30*24*time.Hour), now.Add(-30*24*time.Hour))
 
+	staleBefore := now.Add(-DefaultAccountDeletionClaimTimeout)
 	mock.ExpectQuery("FROM account_deletion_requests").
-		WithArgs(now, 100).
+		WithArgs(now, staleBefore, 100).
 		WillReturnRows(rows)
 
-	got, err := repo.ListDeactivatedRequestsDueForPurge(context.Background(), now, 100)
+	got, err := repo.ListDeactivatedRequestsDueForPurge(context.Background(), now, staleBefore, 100)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 	assert.Equal(t, uidA, got[0].UserID)
@@ -217,18 +218,19 @@ func TestPostgreSQLRepositoryClaimAccountDeletionRequestForAnonymization(t *test
 	now := time.Now().UTC()
 
 	// Winning claim.
+	staleBefore := now.Add(-DefaultAccountDeletionClaimTimeout)
 	mock.ExpectExec("UPDATE account_deletion_requests SET status = 'anonymizing'").
-		WithArgs(id, now).
+		WithArgs(id, now, staleBefore).
 		WillReturnResult(sqlmock.NewResult(0, 1))
-	claimed, err := repo.ClaimAccountDeletionRequestForAnonymization(context.Background(), id, now)
+	claimed, err := repo.ClaimAccountDeletionRequestForAnonymization(context.Background(), id, now, staleBefore)
 	require.NoError(t, err)
 	assert.True(t, claimed, "winning claim returns true")
 
 	// Losing claim: 0 rows updated (already anonymizing/completed).
 	mock.ExpectExec("UPDATE account_deletion_requests SET status = 'anonymizing'").
-		WithArgs(id, now).
+		WithArgs(id, now, staleBefore).
 		WillReturnResult(sqlmock.NewResult(0, 0))
-	claimed, err = repo.ClaimAccountDeletionRequestForAnonymization(context.Background(), id, now)
+	claimed, err = repo.ClaimAccountDeletionRequestForAnonymization(context.Background(), id, now, staleBefore)
 	require.NoError(t, err)
 	assert.False(t, claimed, "losing claim returns false")
 

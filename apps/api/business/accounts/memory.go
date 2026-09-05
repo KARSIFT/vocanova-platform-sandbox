@@ -368,11 +368,10 @@ func (r *MemoryRepository) GetAccountDeletionRequestByUserID(ctx context.Context
 	return nil, errors.New("account deletion request not found")
 }
 
-// ListDeactivatedRequestsDueForPurge returns up to limit
-// rows whose status is 'deactivated' and whose purge_after
-// is at or before now. The order matches the SQL
-// implementation: oldest purge_after first.
-func (r *MemoryRepository) ListDeactivatedRequestsDueForPurge(ctx context.Context, now time.Time, limit int) ([]AccountDeletionRequest, error) {
+// ListDeactivatedRequestsDueForPurge returns due deactivated rows plus stale
+// anonymizing claims. Fresh claims are deliberately excluded so a live worker
+// cannot lose ownership to another sweep.
+func (r *MemoryRepository) ListDeactivatedRequestsDueForPurge(ctx context.Context, now, staleBefore time.Time, limit int) ([]AccountDeletionRequest, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	now = now.UTC()
@@ -381,7 +380,8 @@ func (r *MemoryRepository) ListDeactivatedRequestsDueForPurge(ctx context.Contex
 	}
 	var out []AccountDeletionRequest
 	for _, row := range r.deletionRequests {
-		if row.Status == "deactivated" && !row.PurgeAfter.After(now) {
+		if (row.Status == "deactivated" && !row.PurgeAfter.After(now)) ||
+			(row.Status == "anonymizing" && !row.UpdatedAt.After(staleBefore)) {
 			out = append(out, *cloneDeletion(row))
 		}
 	}
@@ -400,18 +400,18 @@ func (r *MemoryRepository) ListDeactivatedRequestsDueForPurge(ctx context.Contex
 }
 
 // ClaimAccountDeletionRequestForAnonymization atomically
-// transitions a row from 'deactivated' to 'anonymizing'.
-// Returns true when this caller now owns the row, false
-// when the row was already claimed (or no longer
-// 'deactivated').
-func (r *MemoryRepository) ClaimAccountDeletionRequestForAnonymization(ctx context.Context, id uuid.UUID, now time.Time) (bool, error) {
+// transitions a due row from 'deactivated' to 'anonymizing', or reclaims a
+// stale anonymizing claim.
+// Returns true when this caller now owns the row, false when it is missing,
+// completed, or still covered by a fresh claim.
+func (r *MemoryRepository) ClaimAccountDeletionRequestForAnonymization(ctx context.Context, id uuid.UUID, now, staleBefore time.Time) (bool, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	row, ok := r.deletionRequests[id]
 	if !ok {
 		return false, nil
 	}
-	if row.Status != "deactivated" {
+	if row.Status != "deactivated" && (row.Status != "anonymizing" || row.UpdatedAt.After(staleBefore)) {
 		return false, nil
 	}
 	row.Status = "anonymizing"
@@ -454,9 +454,38 @@ func (r *MemoryRepository) AnonymizeUserData(ctx context.Context, userID uuid.UU
 	return r.anonymizeCounters, nil
 }
 
-// MarkAccountDeletionRequestCompleted transitions a row
-// from 'anonymizing' to 'completed' and stamps
-// completed_at. Idempotent.
+// FinalizeAccountDeletionClaim keeps ownership validation, the in-memory
+// purge model, and completion under one mutex just as PostgreSQL keeps them
+// under the request-row lock and transaction.
+func (r *MemoryRepository) FinalizeAccountDeletionClaim(ctx context.Context, id, userID uuid.UUID, claimedAt, now time.Time) (AnonymizationCounters, bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	row, ok := r.deletionRequests[id]
+	if !ok || row.UserID != userID || row.Status != "anonymizing" || !row.UpdatedAt.Equal(claimedAt) {
+		return AnonymizationCounters{}, false, nil
+	}
+	r.anonymizeCounters.ExternalIdentities++
+	r.anonymizeCounters.UserWords++
+	r.anonymizeCounters.LearnerSentences++
+	r.anonymizeCounters.ReviewAttempts++
+	r.anonymizeCounters.AIFeedbackAttempts++
+	r.anonymizeCounters.ConfidencePointLedger++
+	r.anonymizeCounters.GraceDayLedger++
+	r.anonymizeCounters.UserOnboardingProfiles++
+	r.anonymizeCounters.UserSettings++
+	r.anonymizeCounters.DailyMissionSnapshots++
+	r.anonymizeCounters.DailyActivitySummaries++
+	r.anonymizeCounters.StreakStates++
+	row.Status = "completed"
+	completedAt := now.UTC()
+	row.CompletedAt = &completedAt
+	row.UpdatedAt = completedAt
+	return r.anonymizeCounters, true, nil
+}
+
+// MarkAccountDeletionRequestCompleted transitions a row from 'anonymizing' to
+// 'completed' and stamps completed_at. FinalizeAccountDeletionClaim is the
+// fenced service path; this compatibility helper is idempotent.
 func (r *MemoryRepository) MarkAccountDeletionRequestCompleted(ctx context.Context, id uuid.UUID, now time.Time) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

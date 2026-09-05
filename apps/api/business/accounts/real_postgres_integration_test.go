@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -28,7 +29,7 @@ func TestPostgreSQLRepositoryExportAndAnonymization(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
+	t.Cleanup(func() { _ = db.Close() })
 	ctx := context.Background()
 	if err := db.PingContext(ctx); err != nil {
 		t.Fatal(err)
@@ -124,6 +125,118 @@ func TestPostgreSQLRepositoryExportAndAnonymization(t *testing.T) {
 		if aTokens != 0 || bTokens != 1 {
 			t.Fatalf("%s purge isolation failed: A=%d B=%d", table, aTokens, bTokens)
 		}
+	}
+}
+
+// TestPostgreSQLRepositoryReclaimsOnlyStaleDeletionClaims exercises the
+// production query and atomic claim predicate against the migrated schema.
+func TestPostgreSQLRepositoryReclaimsOnlyStaleDeletionClaims(t *testing.T) {
+	dsn := os.Getenv("VOCANOVA_TEST_POSTGRES_DSN")
+	if dsn == "" {
+		t.Skip("VOCANOVA_TEST_POSTGRES_DSN is not set")
+	}
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	ctx := context.Background()
+	if err := db.PingContext(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	staleBefore := now.Add(-DefaultAccountDeletionClaimTimeout)
+	staleUser, freshUser, dueUser := uuid.New(), uuid.New(), uuid.New()
+	staleRequest, freshRequest, dueRequest := uuid.New(), uuid.New(), uuid.New()
+	for _, userID := range []uuid.UUID{staleUser, freshUser, dueUser} {
+		if _, err := db.ExecContext(ctx, `INSERT INTO users (id, email, status, created_at, updated_at) VALUES ($1, $2, 'deleted', $3, $3)`, userID, userID.String()+"@example.test", now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Cleanup(func() {
+		for _, id := range []uuid.UUID{staleRequest, freshRequest, dueRequest} {
+			_, _ = db.ExecContext(context.Background(), `DELETE FROM account_deletion_requests WHERE id = $1`, id)
+		}
+		for _, id := range []uuid.UUID{staleUser, freshUser, dueUser} {
+			_, _ = db.ExecContext(context.Background(), `DELETE FROM users WHERE id = $1`, id)
+		}
+	})
+	for _, row := range []struct {
+		id, userID uuid.UUID
+		status     string
+		updatedAt  time.Time
+	}{
+		{staleRequest, staleUser, "anonymizing", staleBefore.Add(-time.Minute)},
+		{freshRequest, freshUser, "anonymizing", now},
+		{dueRequest, dueUser, "deactivated", now},
+	} {
+		if _, err := db.ExecContext(ctx, `INSERT INTO account_deletion_requests (id, user_id, status, requested_at, purge_after, idempotency_key, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $4, $7)`, row.id, row.userID, row.status, now.Add(-31*24*time.Hour), now.Add(-time.Hour), row.id.String(), row.updatedAt); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	repo := NewPostgreSQLRepository(db)
+	candidates, err := repo.ListDeactivatedRequestsDueForPurge(ctx, now, staleBefore, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := map[uuid.UUID]bool{}
+	for _, candidate := range candidates {
+		seen[candidate.ID] = true
+	}
+	if !seen[staleRequest] || !seen[dueRequest] || seen[freshRequest] {
+		t.Fatalf("unexpected recovery candidates: %#v", seen)
+	}
+
+	// Two recovery workers race on the same stale lease. PostgreSQL's guarded
+	// UPDATE must grant exactly one ownership claim.
+	start := make(chan struct{})
+	results := make(chan bool, 2)
+	errs := make(chan error, 2)
+	var wg sync.WaitGroup
+	for range 2 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			claimed, err := repo.ClaimAccountDeletionRequestForAnonymization(ctx, staleRequest, now, staleBefore)
+			results <- claimed
+			errs <- err
+		}()
+	}
+	close(start)
+	wg.Wait()
+	close(results)
+	close(errs)
+	winners := 0
+	for err := range errs {
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	for claimed := range results {
+		if claimed {
+			winners++
+		}
+	}
+	if winners != 1 {
+		t.Fatalf("stale claim has %d winners, want exactly one", winners)
+	}
+
+	// The original owner resumes after reclamation. Its obsolete claim token
+	// must fail before the purge mutates learner data.
+	_, completed, err := repo.FinalizeAccountDeletionClaim(ctx, staleRequest, staleUser, staleBefore.Add(-time.Minute), now)
+	if err != nil || completed {
+		t.Fatalf("stale owner finalized reclaimed request: completed=%t err=%v", completed, err)
+	}
+	var email string
+	if err := db.QueryRowContext(ctx, `SELECT email FROM users WHERE id = $1`, staleUser).Scan(&email); err != nil || email == "" {
+		t.Fatalf("stale owner mutated user data: email=%q err=%v", email, err)
+	}
+	_, completed, err = repo.FinalizeAccountDeletionClaim(ctx, staleRequest, staleUser, now, now)
+	if err != nil || !completed {
+		t.Fatalf("current owner did not finalize claim: completed=%t err=%v", completed, err)
 	}
 }
 
