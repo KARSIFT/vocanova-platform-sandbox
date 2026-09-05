@@ -213,12 +213,12 @@ func TestSavedWordStatesPostgreSQLUsesPersistedStatesAndDatabaseTime(t *testing.
 			t.Errorf("%s state = %#v, want status %q and due %t", words[tc.index].status, state, wantStatus, tc.due)
 		}
 	}
-	for _, tc := range []struct {
-		index  int
-		reason string
-	}{{6, "deleted"}, {7, "another requester"}} {
-		if _, ok := states[words[tc.index].meaningID]; ok {
-			t.Errorf("%s saved word was returned", tc.reason)
+	for _, word := range words {
+		if !word.deleted && word.userID == requester {
+			continue
+		}
+		if _, ok := states[word.meaningID]; ok {
+			t.Errorf("inaccessible saved word was returned: deleted=%t requester=%s", word.deleted, word.userID)
 		}
 	}
 }
