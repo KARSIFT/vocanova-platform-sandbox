@@ -4,9 +4,14 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 )
+
+// idempotencyRetention is the DOC-07 lifetime for a client-provided
+// Idempotency-Key. A key is expired at the exact 24-hour boundary.
+const idempotencyRetention = 24 * time.Hour
 
 // MemoryIdempotencyStore is a deterministic, in-process idempotency store for
 // service and handler tests. It is not safe for concurrent use across processes
@@ -14,6 +19,7 @@ import (
 type MemoryIdempotencyStore struct {
 	mu   sync.Mutex
 	keys map[string]memoryIdempotencyEntry
+	now  func() time.Time
 }
 
 type memoryIdempotencyEntry struct {
@@ -21,11 +27,15 @@ type memoryIdempotencyEntry struct {
 	operation   string
 	key         string
 	fingerprint string
+	createdAt   time.Time
 }
 
 // NewMemoryIdempotencyStore creates an empty in-memory idempotency store.
 func NewMemoryIdempotencyStore() *MemoryIdempotencyStore {
-	return &MemoryIdempotencyStore{keys: make(map[string]memoryIdempotencyEntry)}
+	return &MemoryIdempotencyStore{
+		keys: make(map[string]memoryIdempotencyEntry),
+		now:  func() time.Time { return time.Now().UTC() },
+	}
 }
 
 func idempotencyCacheKey(userID uuid.UUID, operation, key string) string {
@@ -36,8 +46,13 @@ func (s *MemoryIdempotencyStore) Check(ctx context.Context, userID uuid.UUID, op
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	entry, ok := s.keys[idempotencyCacheKey(userID, operation, key)]
+	cacheKey := idempotencyCacheKey(userID, operation, key)
+	entry, ok := s.keys[cacheKey]
 	if !ok {
+		return IdempotencyAbsent, nil
+	}
+	if !entry.createdAt.After(s.now().UTC().Add(-idempotencyRetention)) {
+		delete(s.keys, cacheKey)
 		return IdempotencyAbsent, nil
 	}
 	if entry.fingerprint == fingerprint {
@@ -55,6 +70,7 @@ func (s *MemoryIdempotencyStore) Record(ctx context.Context, userID uuid.UUID, o
 		operation:   operation,
 		key:         key,
 		fingerprint: fingerprint,
+		createdAt:   s.now().UTC(),
 	}
 	return nil
 }
