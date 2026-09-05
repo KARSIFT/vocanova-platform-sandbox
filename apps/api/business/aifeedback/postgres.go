@@ -232,24 +232,28 @@ func (r *PostgreSQLRepository) CreateRetryAttempt(ctx context.Context, failed *S
 	defer tx.Rollback()
 
 	attemptID := uuid.New()
-	result, err := tx.ExecContext(ctx,
-		`INSERT INTO ai_feedback_attempts (
+	for {
+		result, err := tx.ExecContext(ctx,
+			`INSERT INTO ai_feedback_attempts (
 			id, learner_sentence_id, status, provider, model, prompt_version, request_hash,
 			feedback_json, feedback_text, error_code, error_message,
 			started_at, completed_at, created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, NULL, NULL, NULL, NULL, NULL, NULL, $8, $8)
 		 ON CONFLICT (request_hash) WHERE status IN ('pending', 'succeeded') DO NOTHING`,
-		attemptID, failed.LearnerSentenceID, AttemptStatusPending, provider, model,
-		PromptVersionSentenceFeedbackV1, failed.RequestHash, now,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("insert retry attempt: %w", err)
-	}
-	created, err := result.RowsAffected()
-	if err != nil {
-		return nil, fmt.Errorf("check retry insert: %w", err)
-	}
-	if created == 0 {
+			attemptID, failed.LearnerSentenceID, AttemptStatusPending, provider, model,
+			PromptVersionSentenceFeedbackV1, failed.RequestHash, now,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("insert retry attempt: %w", err)
+		}
+		created, err := result.RowsAffected()
+		if err != nil {
+			return nil, fmt.Errorf("check retry insert: %w", err)
+		}
+		if created == 1 {
+			break
+		}
+
 		row := tx.QueryRowContext(ctx,
 			`SELECT id, learner_sentence_id, status, provider, model, prompt_version, request_hash,
 			        feedback_json, feedback_text, error_code, error_message,
@@ -259,16 +263,21 @@ func (r *PostgreSQLRepository) CreateRetryAttempt(ctx context.Context, failed *S
 			 ORDER BY CASE status WHEN 'succeeded' THEN 0 ELSE 1 END, created_at DESC
 			 LIMIT 1`, failed.RequestHash)
 		existing, err := scanStoredAttempt(row)
-		if err != nil {
+		if err == nil && existing != nil {
+			if err := tx.Commit(); err != nil {
+				return nil, fmt.Errorf("commit existing retry attempt: %w", err)
+			}
+			return &RetryAttempt{Existing: existing}, nil
+		}
+		if !errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("load active retry attempt: %w", err)
 		}
-		if existing == nil {
-			return nil, errors.New("active retry generation disappeared")
-		}
-		if err := tx.Commit(); err != nil {
-			return nil, fmt.Errorf("commit existing retry attempt: %w", err)
-		}
-		return &RetryAttempt{Existing: existing}, nil
+
+		// A conflicting pending generation may have failed after the INSERT
+		// observed it but before this statement's fresh read. A new key is an
+		// explicit retry under DOC-09, so retry the insert rather than turning
+		// that legitimate next generation into an internal error.
+		attemptID = uuid.New()
 	}
 	_, err = tx.ExecContext(ctx,
 		`UPDATE learner_sentences SET status = $1, updated_at = $2 WHERE id = $3`,
