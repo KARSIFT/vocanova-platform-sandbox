@@ -45,6 +45,22 @@ func TestValidateSentenceTooLong(t *testing.T) {
 	assert.Equal(t, ValidationCodeTooLong, result.Code)
 }
 
+func TestValidateSentenceAccepts300UnicodeCodePoints(t *testing.T) {
+	target := &Target{
+		NormalizedWord: "work",
+		WordType:       "word",
+		PartOfSpeech:   "verb",
+		AcceptedForms:  BuildAcceptedForms("work", "word", "verb"),
+	}
+	// The web form must permit this same code-point limit even though each
+	// supplementary symbol occupies two UTF-16 code units in JavaScript.
+	sentence := "I work " + strings.Repeat("📝", 286) + " today."
+
+	result := ValidateSentence(sentence, target)
+	assert.True(t, result.Valid)
+	assert.Len(t, []rune(result.Normalized), DefaultMaxSentenceLength)
+}
+
 func TestValidateSentenceMissingTarget(t *testing.T) {
 	target := &Target{
 		NormalizedWord: "work",
