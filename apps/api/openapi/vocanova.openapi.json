@@ -2917,13 +2917,13 @@
             }
           },
           {
-            "description": "Maximum items to return (1-100)",
+            "description": "Requested page size; defaults to 20 and is capped at 50",
             "explode": false,
             "in": "query",
             "name": "limit",
             "schema": {
               "default": 20,
-              "description": "Maximum items to return (1-100)",
+              "description": "Requested page size; defaults to 20 and is capped at 50",
               "format": "int64",
               "type": "integer"
             }
@@ -3205,13 +3205,13 @@
             }
           },
           {
-            "description": "Maximum items to return (1-100)",
+            "description": "Requested page size; defaults to 20 and is capped at 50",
             "explode": false,
             "in": "query",
             "name": "limit",
             "schema": {
               "default": 20,
-              "description": "Maximum items to return (1-100)",
+              "description": "Requested page size; defaults to 20 and is capped at 50",
               "format": "int64",
               "type": "integer"
             }
@@ -3578,13 +3578,13 @@
             }
           },
           {
-            "description": "Maximum items to return (1-100)",
+            "description": "Requested page size; defaults to 20 and is capped at 50",
             "explode": false,
             "in": "query",
             "name": "limit",
             "schema": {
               "default": 20,
-              "description": "Maximum items to return (1-100)",
+              "description": "Requested page size; defaults to 20 and is capped at 50",
               "format": "int64",
               "type": "integer"
             }

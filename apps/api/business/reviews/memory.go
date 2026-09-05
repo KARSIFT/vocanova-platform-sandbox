@@ -102,8 +102,8 @@ func (r *MemoryRepository) ListDueWords(ctx context.Context, req ListDueWordsReq
 	if limit <= 0 {
 		limit = 20
 	}
-	if limit > 100 {
-		limit = 100
+	if limit > 50 {
+		limit = 50
 	}
 
 	items := r.activeDueWords(req.UserID)

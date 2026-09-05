@@ -30,7 +30,7 @@ type DueWordDTO struct {
 // due review words.
 type ListReviewsDueInput struct {
 	After string `query:"after" doc:"Opaque pagination cursor"`
-	Limit int    `query:"limit" default:"20" doc:"Maximum items to return (1-100)"`
+	Limit int    `query:"limit" default:"20" doc:"Requested page size; defaults to 20 and is capped at 50"`
 }
 
 // ListReviewsDueOutput returns a page of due words and the total due count.
