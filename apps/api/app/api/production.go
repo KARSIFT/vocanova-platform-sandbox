@@ -655,14 +655,16 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	usersSvc := users.NewService(usersRepo, usersRepo, usersRepo, clk)
 
 	contentRepo := content.NewPostgreSQLRepository(db)
+	gamRepo := gamification.NewRepository(db)
+	gamSvc := gamification.NewService(gamRepo)
 	contentSvc := content.NewService(contentRepo, learning.NewPostgreSQLRepository(db))
 
 	learningIdem := learning.NewPostgreSQLIdempotencyStore(db)
-	learningRepo := learning.NewPostgreSQLRepository(db)
+	// The repository owns the atomic PostgreSQL claim, word mutation, and
+	// reward write; the separate store remains for other learning workflows.
+	learningRepo := learning.NewPostgreSQLRepository(db, gamSvc)
 	learningSvc := learning.NewService(learningRepo, learningIdem, clk)
 
-	gamRepo := gamification.NewRepository(db)
-	gamSvc := gamification.NewService(gamRepo)
 	missionsRepo := missions.NewRepository(db)
 	missionsSvc := missions.NewService(missionsRepo, gamSvc)
 
