@@ -40,6 +40,72 @@ func (r *PostgreSQLRepository) SaveUserWord(ctx context.Context, req SaveUserWor
 	}
 	defer tx.Rollback()
 
+	m, err := r.saveUserWordTx(ctx, tx, req, now, false)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit save user word: %w", err)
+	}
+	if m.UserWordID == uuid.Nil {
+		return r.savedMeaningByUserMeaning(ctx, nil, req.UserID, req.MeaningID)
+	}
+	return r.savedMeaningByID(ctx, nil, m.UserWordID)
+}
+
+// SaveUserWordAtomically claims the idempotency key and applies the word and
+// optional reward in one PostgreSQL transaction. The unique key is the
+// cross-process concurrency primitive; no process-local lock participates.
+func (r *PostgreSQLRepository) SaveUserWordAtomically(ctx context.Context, req SaveUserWordRequest, fingerprint string, now time.Time) (*SavedMeaning, IdempotencyStatus, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, IdempotencyAbsent, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback()
+
+	var claimedFingerprint string
+	err = tx.QueryRowContext(ctx, `INSERT INTO idempotency_keys (id, user_id, operation, key, fingerprint, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		ON CONFLICT (user_id, operation, key) DO UPDATE
+		SET fingerprint = EXCLUDED.fingerprint, created_at = EXCLUDED.created_at
+		WHERE idempotency_keys.created_at <= $7
+		RETURNING fingerprint`, uuid.New(), req.UserID, operationSaveUserWord, req.IdempotencyKey, fingerprint, now, now.Add(-idempotencyRetention)).Scan(&claimedFingerprint)
+	if errors.Is(err, sql.ErrNoRows) {
+		// The conflicting insert waited for any concurrent claimant. Lock and
+		// inspect the now-committed active row before deciding replay/conflict.
+		err = tx.QueryRowContext(ctx, `SELECT fingerprint FROM idempotency_keys
+			WHERE user_id = $1 AND operation = $2 AND key = $3 AND created_at > $4 FOR UPDATE`,
+			req.UserID, operationSaveUserWord, req.IdempotencyKey, now.Add(-idempotencyRetention)).Scan(&claimedFingerprint)
+		if err != nil {
+			return nil, IdempotencyAbsent, fmt.Errorf("read idempotency claim: %w", err)
+		}
+		if claimedFingerprint != fingerprint {
+			return nil, IdempotencyConflict, nil
+		}
+		m, err := r.savedMeaningByUserMeaning(ctx, tx, req.UserID, req.MeaningID)
+		if err != nil {
+			return nil, IdempotencyAbsent, err
+		}
+		if err := tx.Commit(); err != nil {
+			return nil, IdempotencyAbsent, fmt.Errorf("commit replay: %w", err)
+		}
+		return m, IdempotencyMatch, nil
+	}
+	if err != nil {
+		return nil, IdempotencyAbsent, fmt.Errorf("claim idempotency: %w", err)
+	}
+
+	m, err := r.saveUserWordTx(ctx, tx, req, now, true)
+	if err != nil {
+		return nil, IdempotencyAbsent, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, IdempotencyAbsent, fmt.Errorf("commit save user word: %w", err)
+	}
+	return m, IdempotencyAbsent, nil
+}
+
+func (r *PostgreSQLRepository) saveUserWordTx(ctx context.Context, tx *sql.Tx, req SaveUserWordRequest, now time.Time, readSavedMeaning bool) (*SavedMeaning, error) {
 	var meaningID uuid.UUID
 	if err := tx.QueryRowContext(ctx,
 		`SELECT wm.id
@@ -56,7 +122,7 @@ func (r *PostgreSQLRepository) SaveUserWord(ctx context.Context, req SaveUserWor
 
 	var existingID uuid.UUID
 	var existingDeletedAt sql.NullTime
-	err = tx.QueryRowContext(ctx,
+	err := tx.QueryRowContext(ctx,
 		`SELECT id, deleted_at FROM user_words WHERE user_id = $1 AND meaning_id = $2 ORDER BY deleted_at DESC NULLS FIRST, created_at DESC LIMIT 1 FOR UPDATE`,
 		req.UserID, req.MeaningID,
 	).Scan(&existingID, &existingDeletedAt)
@@ -65,10 +131,10 @@ func (r *PostgreSQLRepository) SaveUserWord(ctx context.Context, req SaveUserWor
 	}
 
 	if err == nil && !existingDeletedAt.Valid {
-		if err := tx.Commit(); err != nil {
-			return nil, fmt.Errorf("commit existing: %w", err)
+		if !readSavedMeaning {
+			return &SavedMeaning{}, nil
 		}
-		return r.savedMeaningByUserMeaning(ctx, nil, req.UserID, req.MeaningID)
+		return r.savedMeaningByUserMeaning(ctx, tx, req.UserID, req.MeaningID)
 	}
 
 	if err == nil && existingDeletedAt.Valid {
@@ -86,10 +152,10 @@ func (r *PostgreSQLRepository) SaveUserWord(ctx context.Context, req SaveUserWor
 		); err != nil {
 			return nil, fmt.Errorf("restore user word: %w", err)
 		}
-		if err := tx.Commit(); err != nil {
-			return nil, fmt.Errorf("commit restore: %w", err)
+		if !readSavedMeaning {
+			return &SavedMeaning{}, nil
 		}
-		return r.savedMeaningByUserMeaning(ctx, nil, req.UserID, req.MeaningID)
+		return r.savedMeaningByUserMeaning(ctx, tx, req.UserID, req.MeaningID)
 	}
 
 	id := uuid.New()
@@ -135,10 +201,10 @@ func (r *PostgreSQLRepository) SaveUserWord(ctx context.Context, req SaveUserWor
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("commit insert: %w", err)
+	if !readSavedMeaning {
+		return &SavedMeaning{UserWordID: id}, nil
 	}
-	return r.savedMeaningByID(ctx, nil, id)
+	return r.savedMeaningByID(ctx, tx, id)
 }
 
 func (r *PostgreSQLRepository) UnsaveUserWord(ctx context.Context, userID, meaningID uuid.UUID, now time.Time) error {
