@@ -150,6 +150,20 @@ func CSRFToken(cfg CookieConfig) (string, *http.Cookie) {
 	}
 }
 
+// ClearCSRFCookie returns a cookie that deletes the double-submit CSRF cookie.
+func ClearCSRFCookie(cfg CookieConfig) *http.Cookie {
+	return &http.Cookie{
+		Name:     cfg.CSRName,
+		Value:    "",
+		Domain:   cfg.Domain,
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: false,
+		Secure:   cfg.Secure,
+		SameSite: cfg.SameSite,
+	}
+}
+
 // ValidateCSRF compares the double-submit cookie value with the request header.
 func ValidateCSRF(cookieValue, headerValue string) bool {
 	if cookieValue == "" || headerValue == "" {
