@@ -419,7 +419,9 @@ func (s *Service) resultFromStored(attempt *StoredFeedbackAttempt, original stri
 		if result.ErrorCode == "" {
 			result.ErrorCode = ErrorCodeTemporaryFailure
 		}
-		result.ErrorMessage = attempt.ErrorMessage
+		// ErrorMessage is retained for internal diagnosis only. Replays must
+		// preserve the same safe public failure contract as the initial response
+		// and never disclose provider or validator details (DOC-09 §§5, 15, 20).
 		result.CanRetry = true
 	}
 
