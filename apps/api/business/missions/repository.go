@@ -84,16 +84,18 @@ func (r *Repository) ListRecentSnapshots(ctx context.Context, userID uuid.UUID, 
 	return out, nil
 }
 
-// ListRecentCompletionHistory fetches the last `days` local-date + status
-// pairs for userID, used by GET /api/v1/progress's bounded 7-day history.
-func (r *Repository) ListRecentCompletionHistory(ctx context.Context, userID uuid.UUID, days int) ([]CompletionDay, error) {
+// ListRecentCompletionHistory fetches the local-date + status pairs for
+// userID in the inclusive local-date window. Progress calls this with the
+// learner's current seven-day window rather than the latest seven snapshots:
+// a learner who returns after a gap must not see stale dates labelled as this
+// week.
+func (r *Repository) ListRecentCompletionHistory(ctx context.Context, userID uuid.UUID, startDate, endDate time.Time) ([]CompletionDay, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT local_date, status
 		 FROM daily_mission_snapshots
-		 WHERE user_id = $1
-		 ORDER BY local_date DESC
-		 LIMIT $2`,
-		userID, days,
+		 WHERE user_id = $1 AND local_date >= $2 AND local_date <= $3
+		 ORDER BY local_date DESC`,
+		userID, startDate, endDate,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("list recent completion history: %w", err)

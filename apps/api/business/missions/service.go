@@ -221,6 +221,10 @@ func (s *Service) GetProgressView(
 	if err != nil {
 		return nil, err
 	}
+	today, err := gamification.LocalDate(now, resolved.Timezone)
+	if err != nil {
+		return nil, err
+	}
 	balance, err := s.gamification.CurrentBalance(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -229,7 +233,8 @@ func (s *Service) GetProgressView(
 	if err != nil {
 		return nil, err
 	}
-	days, err := s.missions.ListRecentCompletionHistory(ctx, userID, historyDays)
+	startDate := today.AddDate(0, 0, 1-historyDays)
+	days, err := s.missions.ListRecentCompletionHistory(ctx, userID, startDate, today)
 	if err != nil {
 		return nil, err
 	}
