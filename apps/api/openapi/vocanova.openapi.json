@@ -3423,6 +3423,9 @@
           },
           "404": {
             "description": "User not found"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "summary": "Get the requester's settings",
@@ -3464,6 +3467,9 @@
           },
           "404": {
             "description": "User not found"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "summary": "Update the requester's settings",

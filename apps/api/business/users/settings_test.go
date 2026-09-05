@@ -190,6 +190,7 @@ func TestSettingsUpdateValidateRejectsUnknownFieldValues(t *testing.T) {
 			tc.mutate(&u)
 			err := u.Validate()
 			require.Error(t, err)
+			assert.ErrorIs(t, err, ErrInvalidSettings)
 			assert.Contains(t, err.Error(), tc.wantSub)
 		})
 	}

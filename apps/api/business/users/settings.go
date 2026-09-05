@@ -102,6 +102,9 @@ const MaxDisplayNameLength = 80
 // exists.
 var SupportedAppLanguages = []string{"en"}
 
+// ErrInvalidSettings distinguishes learner input errors from persistence failures.
+var ErrInvalidSettings = errors.New("invalid settings")
+
 // Validate enforces the founder-directed field constraints for a
 // PATCH /api/v1/settings payload. It returns a stable, exported
 // error for every rejection so the API layer can map them to
@@ -110,19 +113,19 @@ var SupportedAppLanguages = []string{"en"}
 func (u SettingsUpdate) Validate() error {
 	if u.DailyReviewTarget != nil {
 		if *u.DailyReviewTarget < MinDailyReviewTarget || *u.DailyReviewTarget > MaxDailyReviewTarget {
-			return fmt.Errorf("daily review target %d out of range [%d,%d]", *u.DailyReviewTarget, MinDailyReviewTarget, MaxDailyReviewTarget)
+			return fmt.Errorf("%w: daily review target %d out of range [%d,%d]", ErrInvalidSettings, *u.DailyReviewTarget, MinDailyReviewTarget, MaxDailyReviewTarget)
 		}
 	}
 	if u.ReviewIntervalPreset != nil {
 		switch *u.ReviewIntervalPreset {
 		case ReviewIntervalPresetVocabDefault, ReviewIntervalPresetWordUpLike, ReviewIntervalPresetCustom:
 		default:
-			return fmt.Errorf("invalid review interval preset %q", *u.ReviewIntervalPreset)
+			return fmt.Errorf("%w: invalid review interval preset %q", ErrInvalidSettings, *u.ReviewIntervalPreset)
 		}
 	}
 	if u.AppLanguage != nil {
 		if !isSupportedAppLanguage(*u.AppLanguage) {
-			return fmt.Errorf("app language %q is not supported", *u.AppLanguage)
+			return fmt.Errorf("%w: app language %q is not supported", ErrInvalidSettings, *u.AppLanguage)
 		}
 	}
 	if u.DisplayName != nil {
@@ -132,7 +135,7 @@ func (u SettingsUpdate) Validate() error {
 		// that cannot render usefully.
 		// Match the API schema's maxLength: Unicode code points, not UTF-8 bytes.
 		if utf8.RuneCountInString(*u.DisplayName) > MaxDisplayNameLength {
-			return fmt.Errorf("display name longer than %d characters", MaxDisplayNameLength)
+			return fmt.Errorf("%w: display name longer than %d characters", ErrInvalidSettings, MaxDisplayNameLength)
 		}
 	}
 	return nil

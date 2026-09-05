@@ -71,6 +71,7 @@ func RegisterSettings(api huma.API, svc *users.Service, authSvc *auth.Service) {
 		Responses: map[string]*huma.Response{
 			"401": {Description: "Authentication is required"},
 			"404": {Description: "User not found"},
+			"500": {Description: "Internal server error"},
 		},
 	}, func(ctx context.Context, input *struct{}) (*GetSettingsOutput, error) {
 		uid := RequesterUserID(ctx)
@@ -93,6 +94,7 @@ func RegisterSettings(api huma.API, svc *users.Service, authSvc *auth.Service) {
 			"401": {Description: "Authentication is required"},
 			"403": {Description: "Invalid CSRF token"},
 			"404": {Description: "User not found"},
+			"500": {Description: "Internal server error"},
 		},
 	}, func(ctx context.Context, input *UpdateSettingsInput) (*UpdateSettingsOutput, error) {
 		uid := RequesterUserID(ctx)
@@ -132,14 +134,10 @@ func mapSettingsError(err error) huma.StatusError {
 		return huma.Error404NotFound("user not found")
 	case errors.Is(err, users.ErrUserNotFound):
 		return huma.Error404NotFound("user not found")
+	case errors.Is(err, users.ErrInvalidSettings):
+		return huma.Error400BadRequest("invalid settings update")
 	}
-	// Validation errors (dailyReviewTarget range, enum, appLanguage,
-	// displayName length) bubble up from the service's Validate()
-	// call. Map them to 400 so the frontend can present a clear
-	// invalid-submission signal without a 500.
-	msg := err.Error()
-	if msg != "" {
-		return huma.Error400BadRequest(msg)
-	}
+	// Repository/configuration failures are not learner input errors, and
+	// their text may contain private infrastructure details.
 	return huma.Error500InternalServerError("internal error")
 }
