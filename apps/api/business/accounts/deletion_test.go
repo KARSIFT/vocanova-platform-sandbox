@@ -92,6 +92,29 @@ func TestCreateAccountDeletionRequestReplaysIdempotencyKey(t *testing.T) {
 	require.NotNil(t, row)
 }
 
+// TestCreateAccountDeletionRequestReplayDoesNotConsumeRateLimit preserves the
+// pre-1300 ordering: once the idempotency record is confirmed, a replay is
+// returned before either request rate-limit bucket is charged.
+func TestCreateAccountDeletionRequestReplayDoesNotConsumeRateLimit(t *testing.T) {
+	now := testNow()
+	c := &clock.Fixed{T: now}
+	svc, repo, authRepo, _, idem := newServiceForRate(t, c, 1)
+	uid := uuid.New()
+	authRepo.setUser(&auth.User{ID: uid, Email: "user@example.com", Status: "active"})
+	repo.SetUser(uid, "user@example.com")
+
+	first, err := svc.CreateAccountDeletionRequest(context.Background(), uid.String(), "1.2.3.4", "sess-token", "idem-key")
+	require.NoError(t, err)
+	require.False(t, first.Replayed)
+	// PostgreSQLRepository creates this record inside its transaction. Mirror
+	// that production state here because MemoryRepository has no shared store.
+	require.NoError(t, idem.Record(context.Background(), uid, accountDeletionOperation, "idem-key", accountDeletionFingerprint(uid)))
+
+	replay, err := svc.CreateAccountDeletionRequest(context.Background(), uid.String(), "1.2.3.4", "sess-token", "idem-key")
+	require.NoError(t, err)
+	assert.True(t, replay.Replayed)
+}
+
 // TestCreateAccountDeletionRequestRecordFailureRemainsReplayable pins the
 // DOC-06/DOC-07 idempotency guarantee across a persistence failure. A client
 // that receives an error must be able to retry the same key and recover the

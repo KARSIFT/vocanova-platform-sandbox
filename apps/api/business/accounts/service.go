@@ -550,6 +550,36 @@ func (s *Service) CreateAccountDeletionRequest(ctx context.Context, userID, clie
 	if strings.TrimSpace(idempotencyKey) == "" {
 		return nil, ErrAccountDeletionIdempotencyKeyRequired
 	}
+	if s.idem == nil {
+		return nil, errors.New("idempotency store not configured")
+	}
+
+	// Preserve the established replay posture: a confirmed matching request is
+	// returned before it consumes either rate-limit bucket. The repository still
+	// owns the authoritative transactional claim, so two concurrent absent
+	// checks cannot create duplicate side effects.
+	fingerprint := accountDeletionFingerprint(uid)
+	status, err := s.idem.Check(ctx, uid, accountDeletionOperation, idempotencyKey, fingerprint)
+	if err != nil {
+		return nil, fmt.Errorf("idempotency check: %w", err)
+	}
+	if status == IdempotencyConflict {
+		return nil, ErrAccountDeletionIdempotencyConflict
+	}
+	if status == IdempotencyMatch {
+		existing, err := s.repo.GetAccountDeletionRequestByUserID(ctx, uid)
+		if err != nil {
+			return nil, fmt.Errorf("read existing deletion request: %w", err)
+		}
+		return &AccountDeletionResult{
+			UserID:         existing.UserID,
+			Status:         existing.Status,
+			RequestedAt:    existing.RequestedAt,
+			PurgeAfter:     existing.PurgeAfter,
+			IdempotencyKey: existing.IdempotencyKey,
+			Replayed:       true,
+		}, nil
+	}
 	// Per-IP and per-session rate limits, matching the
 	// email-change posture (VOC-031-D05 generalized).
 	if allowed, err := s.limiter.Allow(ctx, auth.KeyForIP("accountdeletion.request", clientIP)); err != nil {

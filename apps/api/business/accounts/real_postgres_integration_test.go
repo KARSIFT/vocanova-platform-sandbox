@@ -7,7 +7,10 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -176,6 +179,229 @@ func TestPostgreSQLRepositoryDeletionClaimCommitsWithDeactivation(t *testing.T) 
 	}
 	if !second.Replayed || second.ID != first.ID {
 		t.Fatalf("same-key retry was not a replay: %#v", second)
+	}
+}
+
+// TestPostgreSQLRepositoryDeletionClaimRollsBackOnLaterStatementFailure
+// forces the session-revocation statement to fail after the idempotency claim
+// and user deactivation have run. Every prior write must roll back with it.
+func TestPostgreSQLRepositoryDeletionClaimRollsBackOnLaterStatementFailure(t *testing.T) {
+	db := openAccountsIntegrationDB(t)
+	ctx := context.Background()
+	uid := uuid.New()
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	insertDeletionFixture(t, db, uid, now)
+	t.Cleanup(func() { cleanupDeletionFixture(db, uid) })
+
+	suffix := strings.ReplaceAll(uuid.New().String(), "-", "")
+	functionName := "accounts_deletion_rollback_" + suffix
+	triggerName := "accounts_deletion_rollback_trigger_" + suffix
+	createRollbackTrigger(t, db, functionName, triggerName, uid)
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(context.Background(), fmt.Sprintf("DROP TRIGGER IF EXISTS %s ON sessions", triggerName))
+		_, _ = db.ExecContext(context.Background(), fmt.Sprintf("DROP FUNCTION IF EXISTS %s()", functionName))
+	})
+
+	_, err := NewPostgreSQLRepository(db).CreateAccountDeletionRequest(ctx, uid, "rollback-key", now, DefaultAccountDeletionPurgeDelay)
+	if err == nil || !strings.Contains(err.Error(), "forced session revocation failure") {
+		t.Fatalf("expected forced later statement failure, got %v", err)
+	}
+
+	var status string
+	var deletedAt sql.NullTime
+	if err := db.QueryRowContext(ctx, `SELECT status, deleted_at FROM users WHERE id = $1`, uid).Scan(&status, &deletedAt); err != nil {
+		t.Fatal(err)
+	}
+	if status != "active" || deletedAt.Valid {
+		t.Fatalf("user deactivation leaked past rollback: status=%q deleted_at=%v", status, deletedAt.Valid)
+	}
+	assertDeletionCounts(t, db, uid, "rollback-key", 0, 0, 0)
+}
+
+// TestPostgreSQLRepositoryDeletionClaimSameKeyConcurrentReplay uses two real
+// PostgreSQL connections and holds the winning insert open so the losing
+// request must observe the committed record. Both same-key callers succeed;
+// exactly one is the original mutation and exactly one deletion is persisted.
+func TestPostgreSQLRepositoryDeletionClaimSameKeyConcurrentReplay(t *testing.T) {
+	db := openAccountsIntegrationDB(t)
+	db.SetMaxOpenConns(4)
+	uid := uuid.New()
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	insertDeletionFixture(t, db, uid, now)
+	t.Cleanup(func() { cleanupDeletionFixture(db, uid) })
+
+	suffix := strings.ReplaceAll(uuid.New().String(), "-", "")
+	functionName := "accounts_deletion_concurrency_" + suffix
+	triggerName := "accounts_deletion_concurrency_trigger_" + suffix
+	createSlowDeletionInsertTrigger(t, db, functionName, triggerName, uid)
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(context.Background(), fmt.Sprintf("DROP TRIGGER IF EXISTS %s ON account_deletion_requests", triggerName))
+		_, _ = db.ExecContext(context.Background(), fmt.Sprintf("DROP FUNCTION IF EXISTS %s()", functionName))
+	})
+
+	type result struct {
+		row *AccountDeletionRequest
+		err error
+	}
+	start := make(chan struct{})
+	results := make(chan result, 2)
+	var wg sync.WaitGroup
+	for range 2 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			callCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			row, err := NewPostgreSQLRepository(db).CreateAccountDeletionRequest(callCtx, uid, "concurrent-key", now, DefaultAccountDeletionPurgeDelay)
+			results <- result{row: row, err: err}
+		}()
+	}
+	close(start)
+	wg.Wait()
+	close(results)
+
+	var originals, replays int
+	var firstID uuid.UUID
+	for outcome := range results {
+		if outcome.err != nil {
+			t.Fatalf("same-key concurrent request failed: %v", outcome.err)
+		}
+		if outcome.row == nil {
+			t.Fatal("same-key concurrent request returned no row")
+		}
+		if firstID == uuid.Nil {
+			firstID = outcome.row.ID
+		} else if outcome.row.ID != firstID {
+			t.Fatalf("same-key requests returned distinct deletion rows: %s and %s", firstID, outcome.row.ID)
+		}
+		if outcome.row.Replayed {
+			replays++
+		} else {
+			originals++
+		}
+	}
+	if originals != 1 || replays != 1 {
+		t.Fatalf("expected one original and one replay, got originals=%d replays=%d", originals, replays)
+	}
+	assertDeletionCounts(t, db, uid, "concurrent-key", 1, 1, 1)
+}
+
+// TestPostgreSQLRepositoryDeletionClaimRecoversLegacyRow confirms a deletion
+// row written before the atomic claim existed remains replayable with its
+// original key. A fresh key still receives the stable in-flight conflict and
+// must not leave a second idempotency claim behind.
+func TestPostgreSQLRepositoryDeletionClaimRecoversLegacyRow(t *testing.T) {
+	db := openAccountsIntegrationDB(t)
+	ctx := context.Background()
+	uid := uuid.New()
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	insertDeletionFixture(t, db, uid, now)
+	t.Cleanup(func() { cleanupDeletionFixture(db, uid) })
+	legacyID := uuid.New()
+	if _, err := db.ExecContext(ctx, `UPDATE users SET status = 'deleted', deleted_at = $2, updated_at = $2 WHERE id = $1`, uid, now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO account_deletion_requests (id, user_id, status, requested_at, purge_after, idempotency_key, created_at, updated_at) VALUES ($1, $2, 'deactivated', $3, $4, 'legacy-key', $3, $3)`, legacyID, uid, now, now.Add(DefaultAccountDeletionPurgeDelay)); err != nil {
+		t.Fatal(err)
+	}
+
+	repo := NewPostgreSQLRepository(db)
+	replay, err := repo.CreateAccountDeletionRequest(ctx, uid, "legacy-key", now.Add(time.Second), DefaultAccountDeletionPurgeDelay)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !replay.Replayed || replay.ID != legacyID {
+		t.Fatalf("legacy same-key recovery returned %#v, want replay of %s", replay, legacyID)
+	}
+	assertDeletionCounts(t, db, uid, "legacy-key", 1, 1, 0)
+
+	_, err = repo.CreateAccountDeletionRequest(ctx, uid, "fresh-key", now.Add(2*time.Second), DefaultAccountDeletionPurgeDelay)
+	if !errors.Is(err, ErrAccountDeletionAlreadyInFlight) {
+		t.Fatalf("fresh key on a legacy row = %v, want ErrAccountDeletionAlreadyInFlight", err)
+	}
+	assertDeletionCounts(t, db, uid, "fresh-key", 1, 0, 0)
+}
+
+func openAccountsIntegrationDB(t *testing.T) *sql.DB {
+	t.Helper()
+	dsn := os.Getenv("VOCANOVA_TEST_POSTGRES_DSN")
+	if dsn == "" {
+		t.Skip("VOCANOVA_TEST_POSTGRES_DSN is not set")
+	}
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if err := db.PingContext(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	return db
+}
+
+func insertDeletionFixture(t *testing.T, db *sql.DB, uid uuid.UUID, now time.Time) {
+	t.Helper()
+	hash := sha256.Sum256([]byte(uid.String()))
+	if _, err := db.ExecContext(context.Background(), `INSERT INTO users (id, email, status, created_at, updated_at) VALUES ($1, $2, 'active', $3, $3)`, uid, uid.String()+"@example.test", now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(context.Background(), `INSERT INTO sessions (id, user_id, token_hash, created_at, expires_at) VALUES ($1, $2, $3, $4, $5)`, uuid.New(), uid, hash[:], now, now.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func cleanupDeletionFixture(db *sql.DB, uid uuid.UUID) {
+	ctx := context.Background()
+	_, _ = db.ExecContext(ctx, `DELETE FROM idempotency_keys WHERE user_id = $1`, uid)
+	_, _ = db.ExecContext(ctx, `DELETE FROM account_deletion_requests WHERE user_id = $1`, uid)
+	_, _ = db.ExecContext(ctx, `DELETE FROM sessions WHERE user_id = $1`, uid)
+	_, _ = db.ExecContext(ctx, `DELETE FROM magic_links WHERE user_id = $1`, uid)
+	_, _ = db.ExecContext(ctx, `DELETE FROM email_change_links WHERE user_id = $1`, uid)
+	_, _ = db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, uid)
+}
+
+func createRollbackTrigger(t *testing.T, db *sql.DB, functionName, triggerName string, uid uuid.UUID) {
+	t.Helper()
+	query := fmt.Sprintf(`CREATE FUNCTION %s() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.user_id = '%s'::uuid THEN RAISE EXCEPTION 'forced session revocation failure'; END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER %s BEFORE UPDATE OF revoked_at ON sessions FOR EACH ROW EXECUTE FUNCTION %s()`, functionName, uid, triggerName, functionName)
+	if _, err := db.ExecContext(context.Background(), query); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func createSlowDeletionInsertTrigger(t *testing.T, db *sql.DB, functionName, triggerName string, uid uuid.UUID) {
+	t.Helper()
+	query := fmt.Sprintf(`CREATE FUNCTION %s() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.user_id = '%s'::uuid THEN PERFORM pg_sleep(0.25); END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER %s BEFORE INSERT ON account_deletion_requests FOR EACH ROW EXECUTE FUNCTION %s()`, functionName, uid, triggerName, functionName)
+	if _, err := db.ExecContext(context.Background(), query); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func assertDeletionCounts(t *testing.T, db *sql.DB, uid uuid.UUID, key string, requests, idempotency, revokedSessions int) {
+	t.Helper()
+	ctx := context.Background()
+	var gotRequests, gotKeys, gotRevoked int
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM account_deletion_requests WHERE user_id = $1`, uid).Scan(&gotRequests); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM idempotency_keys WHERE user_id = $1 AND operation = $2 AND key = $3`, uid, accountDeletionOperation, key).Scan(&gotKeys); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM sessions WHERE user_id = $1 AND revoked_at IS NOT NULL`, uid).Scan(&gotRevoked); err != nil {
+		t.Fatal(err)
+	}
+	if gotRequests != requests || gotKeys != idempotency || gotRevoked != revokedSessions {
+		t.Fatalf("unexpected deletion state: requests=%d keys=%d revoked_sessions=%d", gotRequests, gotKeys, gotRevoked)
 	}
 }
 
