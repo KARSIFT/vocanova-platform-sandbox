@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { createApiClient } from "@/lib/api";
 import {
@@ -27,7 +26,6 @@ function generateIdempotencyKey(): string {
 }
 
 export function AccountDeletionForm() {
-  const router = useRouter();
   const [phase, setPhase] = useState<DeletionPhase>({ type: "idle" });
   const [typedPhrase, setTypedPhrase] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
@@ -79,7 +77,9 @@ export function AccountDeletionForm() {
         // Best-effort: the server has already revoked the session
         // even if the logout call fails on the client.
       }
-      router.refresh();
+      // Do not refresh this auth-gated page. The successful deletion has
+      // already revoked its session, so a refresh would redirect before the
+      // learner can read this server-confirmed completion state.
     } catch (error) {
       // T06: a 401 mid-account-deletion means the session expired
       // before the deactivation was issued. We never want to claim
