@@ -461,8 +461,15 @@ function buildWordDetailResponse(state, slug) {
     userWordId: state.savedMeaningIds.has(meaning.id)
       ? `uw-${meaning.id}`
       : undefined,
-    reviewState: state.savedMeaningIds.has(meaning.id) ? "new" : undefined,
-    due: state.savedMeaningIds.has(meaning.id) || undefined,
+    reviewState: state.savedMeaningIds.has(meaning.id)
+      ? state.reviewedMeaningIds.has(meaning.id)
+        ? "learning"
+        : "new"
+      : undefined,
+    due:
+      (state.savedMeaningIds.has(meaning.id) &&
+        !state.reviewedMeaningIds.has(meaning.id)) ||
+      undefined,
   }));
   return {
     word: {

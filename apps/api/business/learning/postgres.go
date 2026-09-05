@@ -366,7 +366,8 @@ func (r *PostgreSQLRepository) SavedWordStates(ctx context.Context, userID uuid.
 	}
 
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT meaning_id, id, status,
+		`SELECT meaning_id, id,
+			CASE WHEN status = 'new' AND total_review_count > 0 THEN 'learning' ELSE status END,
 			(status IN ('new', 'learning', 'reviewing') AND (next_review_at IS NULL OR next_review_at <= CURRENT_TIMESTAMP)) AS due
 		 FROM user_words
 		 WHERE user_id = $1 AND meaning_id = ANY($2::uuid[]) AND deleted_at IS NULL`,

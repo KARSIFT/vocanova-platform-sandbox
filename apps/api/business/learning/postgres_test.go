@@ -257,7 +257,7 @@ func TestPostgreSQLRepositorySavedWordStatesUsesDatabaseTime(t *testing.T) {
 	meaningID := MustParseUUID("00000000-0000-0000-0000-000000000002")
 	userWordID := MustParseUUID("00000000-0000-0000-0000-000000000003")
 
-	mock.ExpectQuery("SELECT meaning_id, id, status").
+	mock.ExpectQuery("SELECT meaning_id, id, CASE WHEN status").
 		WithArgs(userID, sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows([]string{"meaning_id", "id", "status", "due"}).
 			AddRow(meaningID, userWordID, "learning", true))

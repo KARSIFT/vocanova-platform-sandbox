@@ -237,11 +237,21 @@ func (r *MemoryRepository) SavedWordStates(ctx context.Context, userID uuid.UUID
 			}
 			due := (uw.Status == "new" || uw.Status == "learning" || uw.Status == "reviewing") &&
 				(uw.NextReviewAt == nil || !uw.NextReviewAt.After(now))
-			out[meaningID] = content.SavedWordState{UserWordID: uw.ID, Status: uw.Status, Due: due}
+			out[meaningID] = content.SavedWordState{UserWordID: uw.ID, Status: reviewState(uw), Due: due}
 			break
 		}
 	}
 	return out, nil
+}
+
+// reviewState keeps the legacy persisted "new" status from being exposed after
+// a review has already been submitted. Review scheduling owns the attempt
+// counters; Word Detail only needs the learner-facing state.
+func reviewState(uw MemoryUserWord) string {
+	if uw.Status == "new" && uw.TotalReviewCount > 0 {
+		return "learning"
+	}
+	return uw.Status
 }
 
 // IsSaved implements SavedStateReader.

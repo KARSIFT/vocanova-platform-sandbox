@@ -136,6 +136,7 @@ func TestSavedWordStatesPostgreSQLUsesPersistedStatesAndDatabaseTime(t *testing.
 			user_id uuid NOT NULL,
 			meaning_id uuid NOT NULL,
 			status text NOT NULL,
+			total_review_count integer NOT NULL DEFAULT 0,
 			next_review_at timestamptz,
 			deleted_at timestamptz
 		);`); err != nil {
@@ -146,23 +147,25 @@ func TestSavedWordStatesPostgreSQLUsesPersistedStatesAndDatabaseTime(t *testing.
 	type savedWord struct {
 		meaningID uuid.UUID
 		status    string
+		reviews   int
 		nextDue   interface{}
 		deleted   bool
 		userID    uuid.UUID
 	}
 	words := []savedWord{
-		{uuid.New(), "new", nil, false, requester},
-		{uuid.New(), "learning", "CURRENT_TIMESTAMP - INTERVAL '1 minute'", false, requester},
-		{uuid.New(), "reviewing", "CURRENT_TIMESTAMP + INTERVAL '1 minute'", false, requester},
-		{uuid.New(), "mastered", "CURRENT_TIMESTAMP - INTERVAL '1 minute'", false, requester},
-		{uuid.New(), "ignored", "CURRENT_TIMESTAMP - INTERVAL '1 minute'", false, requester},
-		{uuid.New(), "archived", "CURRENT_TIMESTAMP - INTERVAL '1 minute'", false, requester},
-		{uuid.New(), "learning", "CURRENT_TIMESTAMP - INTERVAL '1 minute'", true, requester},
-		{uuid.New(), "learning", "CURRENT_TIMESTAMP - INTERVAL '1 minute'", false, otherUser},
+		{uuid.New(), "new", 0, nil, false, requester},
+		{uuid.New(), "new", 1, "CURRENT_TIMESTAMP + INTERVAL '1 minute'", false, requester},
+		{uuid.New(), "learning", 0, "CURRENT_TIMESTAMP - INTERVAL '1 minute'", false, requester},
+		{uuid.New(), "reviewing", 0, "CURRENT_TIMESTAMP + INTERVAL '1 minute'", false, requester},
+		{uuid.New(), "mastered", 0, "CURRENT_TIMESTAMP - INTERVAL '1 minute'", false, requester},
+		{uuid.New(), "ignored", 0, "CURRENT_TIMESTAMP - INTERVAL '1 minute'", false, requester},
+		{uuid.New(), "archived", 0, "CURRENT_TIMESTAMP - INTERVAL '1 minute'", false, requester},
+		{uuid.New(), "learning", 0, "CURRENT_TIMESTAMP - INTERVAL '1 minute'", true, requester},
+		{uuid.New(), "learning", 0, "CURRENT_TIMESTAMP - INTERVAL '1 minute'", false, otherUser},
 	}
 	for _, word := range words {
-		query := `INSERT INTO user_words (id, user_id, meaning_id, status, next_review_at, deleted_at)
-			VALUES ($1, $2, $3, $4, `
+		query := `INSERT INTO user_words (id, user_id, meaning_id, status, total_review_count, next_review_at, deleted_at)
+			VALUES ($1, $2, $3, $4, $5, `
 		if word.nextDue == nil {
 			query += `NULL`
 		} else {
@@ -173,7 +176,7 @@ func TestSavedWordStatesPostgreSQLUsesPersistedStatesAndDatabaseTime(t *testing.
 		} else {
 			query += `, NULL)`
 		}
-		if _, err := db.ExecContext(ctx, query, uuid.New(), word.userID, word.meaningID, word.status); err != nil {
+		if _, err := db.ExecContext(ctx, query, uuid.New(), word.userID, word.meaningID, word.status, word.reviews); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -191,18 +194,23 @@ func TestSavedWordStatesPostgreSQLUsesPersistedStatesAndDatabaseTime(t *testing.
 		due   bool
 	}{
 		{0, true},  // new / NULL
-		{1, true},  // learning / past
-		{2, false}, // reviewing / future
-		{3, false}, // mastered is never due
-		{4, false}, // ignored is never due
-		{5, false}, // archived is never due
+		{1, false}, // reviewed legacy new / future
+		{2, true},  // learning / past
+		{3, false}, // reviewing / future
+		{4, false}, // mastered is never due
+		{5, false}, // ignored is never due
+		{6, false}, // archived is never due
 	} {
 		state, ok := states[words[tc.index].meaningID]
 		if !ok {
 			t.Fatalf("state for %s missing", words[tc.index].status)
 		}
-		if state.Status != words[tc.index].status || state.Due != tc.due {
-			t.Errorf("%s state = %#v, want status %q and due %t", words[tc.index].status, state, words[tc.index].status, tc.due)
+		wantStatus := words[tc.index].status
+		if words[tc.index].status == "new" && words[tc.index].reviews > 0 {
+			wantStatus = "learning"
+		}
+		if state.Status != wantStatus || state.Due != tc.due {
+			t.Errorf("%s state = %#v, want status %q and due %t", words[tc.index].status, state, wantStatus, tc.due)
 		}
 	}
 	for _, tc := range []struct {
