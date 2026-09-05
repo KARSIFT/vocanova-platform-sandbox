@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 )
@@ -129,7 +130,8 @@ func (u SettingsUpdate) Validate() error {
 		// nothing here; the API layer is expected to pass
 		// the raw value and the length cap rejects values
 		// that cannot render usefully.
-		if len(*u.DisplayName) > MaxDisplayNameLength {
+		// Match the API schema's maxLength: Unicode code points, not UTF-8 bytes.
+		if utf8.RuneCountInString(*u.DisplayName) > MaxDisplayNameLength {
 			return fmt.Errorf("display name longer than %d characters", MaxDisplayNameLength)
 		}
 	}
