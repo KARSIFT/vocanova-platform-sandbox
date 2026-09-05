@@ -87,9 +87,8 @@ func TestSubmitReviewSchedulesAndUpdatesCounters(t *testing.T) {
 			{ID: userWordID, UserID: userID, MeaningID: meaningID, Status: "new", Source: "journey", ReviewStep: 0},
 		},
 	})
-	svc := NewService(repo, learning.NewMemoryIdempotencyStore(), nil)
-
 	answeredAt := time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC)
+	svc := NewService(repo, learning.NewMemoryIdempotencyStore(), clock.Fixed{T: answeredAt})
 	selectedOptionMeaningID := meaningID
 	attempt, err := svc.SubmitReview(t.Context(), SubmitReviewRequest{
 		UserID:                  userID,
@@ -110,6 +109,34 @@ func TestSubmitReviewSchedulesAndUpdatesCounters(t *testing.T) {
 	assert.Equal(t, 1, repo.userWords[0].TotalReviewCount)
 	assert.Equal(t, 1, repo.userWords[0].CorrectReviewCount)
 	assert.Equal(t, 1, repo.userWords[0].ConsecutiveCorrectCount)
+}
+
+func TestSubmitReviewAnchorsScheduleToServerClock(t *testing.T) {
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	wordID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
+	userWordID := uuid.MustParse("00000000-0000-0000-0000-000000000004")
+	serverNow := time.Date(2026, 9, 5, 12, 0, 0, 0, time.UTC)
+	clientAnsweredAt := serverNow.Add(-30 * 24 * time.Hour)
+
+	repo := NewMemoryRepository(MemoryRepositoryData{
+		Words:     []MemoryWord{{ID: wordID, Text: "boarding pass", NormalizedText: "boarding pass", Status: "active"}},
+		Meanings:  []MemoryMeaning{{ID: meaningID, WordID: wordID, PartOfSpeech: "noun", ShortDefinition: "A document.", Status: "active"}},
+		UserWords: []MemoryUserWord{{ID: userWordID, UserID: userID, MeaningID: meaningID, Status: "new", Source: "journey", ReviewStep: 0}},
+	})
+	svc := NewService(repo, learning.NewMemoryIdempotencyStore(), clock.Fixed{T: serverNow})
+	selectedOptionMeaningID := meaningID
+
+	attempt, err := svc.SubmitReview(t.Context(), SubmitReviewRequest{
+		UserID: userID, UserWordID: userWordID, MeaningID: meaningID,
+		AttemptType: AttemptTypeReview, PromptType: PromptTypeMultipleChoice,
+		Result: ResultCorrect, Rating: RatingGood, SelectedOptionMeaningID: &selectedOptionMeaningID,
+		AnsweredAt: clientAnsweredAt, ClientAttemptID: "server-clock", IdempotencyKey: "server-clock",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, clientAnsweredAt, attempt.AnsweredAt, "attempt history retains the client-recorded answer time")
+	assert.Equal(t, serverNow.Add(time.Hour), attempt.NextReviewAt, "the client timestamp cannot manipulate the schedule")
+	assert.Equal(t, serverNow.Add(time.Hour), *repo.userWords[0].NextReviewAt)
 }
 
 func TestSubmitReviewRejectsForgedMultipleChoiceCorrectResult(t *testing.T) {

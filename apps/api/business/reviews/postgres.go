@@ -238,7 +238,11 @@ func (r *PostgreSQLRepository) SubmitReview(ctx context.Context, req SubmitRevie
 			ConsecutiveIncorrectCount: consecutiveIncorrect,
 		},
 	}
-	sched, err := ApplyReview(prior, ApplyReviewRequest{Result: req.Result, Rating: req.Rating}, req.AnsweredAt)
+	scheduledAt := req.scheduledAt
+	if scheduledAt.IsZero() {
+		scheduledAt = r.clock.Now().UTC()
+	}
+	sched, err := ApplyReview(prior, ApplyReviewRequest{Result: req.Result, Rating: req.Rating}, scheduledAt)
 	if err != nil {
 		return nil, err
 	}
