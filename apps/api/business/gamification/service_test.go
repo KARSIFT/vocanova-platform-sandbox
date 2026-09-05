@@ -92,3 +92,37 @@ func TestCurrentBalanceMatchesSumOfLedgerEntries(t *testing.T) {
 
 	require.NoError(t, mock.ExpectationsWereMet())
 }
+
+func TestReconcileAndAdvanceUsesResolvedTimezoneForExistingStreakState(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	svc := NewService(NewRepository(db))
+	userID := uuid.MustParse("00000000-0000-0000-0000-0000000000bb")
+	now := time.Date(2026, 9, 4, 15, 30, 0, 0, time.UTC) // Sep 5 in Tokyo, Sep 4 in UTC.
+	localDay := time.Date(2026, 9, 5, 0, 0, 0, 0, time.UTC)
+
+	// A pre-existing state was written before the learner changed their
+	// settings from UTC to Asia/Tokyo. Reconciliation must use and persist the
+	// resolved timezone, rather than keeping its obsolete timezone forever.
+	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT user_id, current_streak_count, longest_streak_count").
+		WithArgs(userID).
+		WillReturnRows(sqlmock.NewRows([]string{
+			"user_id", "current_streak_count", "longest_streak_count",
+			"last_completed_local_date", "last_activity_local_date",
+			"timezone", "status", "created_at", "updated_at",
+		}).AddRow(userID, 4, 4, nil, nil, "UTC", StreakStatusActive, now, now))
+	mock.ExpectExec("INSERT INTO streak_states").
+		WithArgs(sqlmock.AnyArg(), userID, 4, 4, nil, localDay, "Asia/Tokyo", StreakStatusActive).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+
+	tx, err := db.BeginTx(t.Context(), nil)
+	require.NoError(t, err)
+	_, err = svc.ReconcileAndAdvance(t.Context(), tx, userID, now, "Asia/Tokyo", nil, 0, false)
+	require.NoError(t, err)
+	require.NoError(t, tx.Commit())
+	require.NoError(t, mock.ExpectationsWereMet())
+}

@@ -171,8 +171,11 @@ func (s *Service) ReconcileAndAdvance(
 		LongestStreakCount:     state.LongestStreakCount,
 		LastCompletedLocalDate: state.LastCompletedLocalDate,
 		LastActivityLocalDate:  state.LastActivityLocalDate,
-		Timezone:               state.Timezone,
-		Status:                 state.Status,
+		// The resolved timezone is the learner's current timezone. Historical
+		// mission snapshots retain their own timezone, but streak reconciliation
+		// must calculate today and yesterday in the current one.
+		Timezone: timezone,
+		Status:   state.Status,
 	}
 	rec, err := ReconcileStreak(userID.String(), now, domainState, GraceBalance{Balance: graceBalance}, snapshots, currentCompletion)
 	if err != nil {
