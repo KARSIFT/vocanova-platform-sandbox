@@ -3032,6 +3032,9 @@
           },
           "401": {
             "description": "Authentication is required"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "summary": "Get the requester's onboarding profile",
@@ -3073,6 +3076,9 @@
           },
           "409": {
             "description": "Onboarding profile already exists with different answers"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "summary": "Complete onboarding for the requester",

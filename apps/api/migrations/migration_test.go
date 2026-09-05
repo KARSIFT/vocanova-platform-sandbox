@@ -199,6 +199,24 @@ func TestVOC028P3AIFeedbackAttemptsMigrationCarriesDatabaseInvariants(t *testing
 	}
 }
 
+func TestAIFeedbackRetryMigrationKeepsOneActiveGenerationPerRequest(t *testing.T) {
+	sql, err := os.ReadFile("20260905130000_ai_feedback_retry_history.sql")
+	if err != nil {
+		t.Fatalf("read ai feedback retry migration: %v", err)
+	}
+	text := string(sql)
+	for _, invariant := range []string{
+		"DROP INDEX ai_feedback_attempts_request_hash_key",
+		"CREATE UNIQUE INDEX ai_feedback_attempts_request_hash_active_key",
+		"ON ai_feedback_attempts (request_hash)",
+		"WHERE status IN ('pending', 'succeeded')",
+	} {
+		if !strings.Contains(text, invariant) {
+			t.Errorf("retry migration missing invariant %q", invariant)
+		}
+	}
+}
+
 func TestVOC026P1IdempotencyMigrationCarriesDatabaseInvariants(t *testing.T) {
 	sql, err := os.ReadFile("20260725100001_voc026_p1_idempotency_keys.sql")
 	if err != nil {

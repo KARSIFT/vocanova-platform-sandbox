@@ -226,7 +226,55 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 		return nil, fmt.Errorf("dedup check: %w", err)
 	}
 	if existing != nil {
-		return s.resultFromStored(existing, req.SentenceText), nil
+		// An identical Idempotency-Key is a transport replay, never a learner
+		// retry. It must not cause another provider generation. Idempotency keys
+		// retain the request fingerprint rather than a generation ID, so after a
+		// later fresh-key retry succeeds this replay returns that current safe
+		// logical-request result instead of reconstructing the older failure.
+		if idempotencyStatus == learning.IdempotencyMatch {
+			return s.resultFromStored(existing, req.SentenceText), nil
+		}
+		if existing.Status != AttemptStatusFailed {
+			// A fresh key that observes an active or completed equivalent request
+			// is non-generative. Record it so a later transport replay remains
+			// non-generative if a pending attempt subsequently fails.
+			if err := s.idem.Record(ctx, req.UserID, operationSentenceFeedback, req.IdempotencyKey, requestHash); err != nil {
+				return nil, fmt.Errorf("record existing idempotency: %w", err)
+			}
+			return s.resultFromStored(existing, req.SentenceText), nil
+		}
+
+		// DOC-09 §§5, 8, and 18 require a provider failure to be retryable.
+		// Append a fresh generation so the failed attempt remains immutable
+		// operational history instead of making the retry replay its failure.
+		retry, err := s.repo.CreateRetryAttempt(ctx, existing, s.config.Provider, s.config.Model, s.clock.Now().UTC())
+		if err != nil {
+			if ctx.Err() != nil {
+				return s.temporaryFailureResult(req.SentenceText), nil
+			}
+			return nil, fmt.Errorf("create retry attempt: %w", err)
+		}
+		if retry.Existing != nil {
+			// Another fresh key won the race to create the active generation.
+			// Returning its safe stored state makes the losing request
+			// non-generative and avoids surfacing a database uniqueness error.
+			// Preserve the losing key too: a transport replay of this request must
+			// remain a replay even if the active generation later fails.
+			if err := s.idem.Record(ctx, req.UserID, operationSentenceFeedback, req.IdempotencyKey, requestHash); err != nil {
+				return nil, fmt.Errorf("record existing retry idempotency: %w", err)
+			}
+			return s.resultFromStored(retry.Existing, req.SentenceText), nil
+		}
+		if err := s.idem.Record(ctx, req.UserID, operationSentenceFeedback, req.IdempotencyKey, requestHash); err != nil {
+			if cleanupErr := s.failPendingAttempt(ctx, *retry.Pending, err); cleanupErr != nil {
+				return nil, fmt.Errorf("finalize retry idempotency-record failure: %w", cleanupErr)
+			}
+			if ctx.Err() != nil {
+				return s.temporaryFailureResult(req.SentenceText), nil
+			}
+			return nil, fmt.Errorf("record retry idempotency: %w", err)
+		}
+		return s.completePendingAttempt(ctx, req, target, validation.Normalized, retry.Pending, start)
 	}
 
 	moderation, err := s.safety.Classify(ctx, ModerationInput{
@@ -296,7 +344,13 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 		return nil, fmt.Errorf("record idempotency: %w", err)
 	}
 
-	feedback, providerDuration, providerErr := s.generateWithRepair(ctx, target, validation.Normalized)
+	return s.completePendingAttempt(ctx, req, target, validation.Normalized, pending, start)
+}
+
+// completePendingAttempt calls the provider and finalizes one pending row. It
+// is shared by a first submission and a retry of a failed generation.
+func (s *Service) completePendingAttempt(ctx context.Context, req SubmitSentenceFeedbackRequest, target *Target, normalized string, pending *PendingAttempt, start time.Time) (*SentenceFeedbackResult, error) {
+	feedback, providerDuration, providerErr := s.generateWithRepair(ctx, target, normalized)
 
 	if providerErr != nil {
 		if err := s.failPendingAttempt(ctx, *pending, providerErr); err != nil {

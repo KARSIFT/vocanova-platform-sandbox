@@ -66,6 +66,7 @@ func RegisterOnboarding(api huma.API, svc *users.Service, authSvc *auth.Service)
 		Middlewares: []func(huma.Context, func(huma.Context)){RequireAuth()},
 		Responses: map[string]*huma.Response{
 			"401": {Description: "Authentication is required"},
+			"500": {Description: "Internal server error"},
 		},
 	}, func(ctx context.Context, input *struct{}) (*GetOnboardingOutput, error) {
 		uid := RequesterUserID(ctx)
@@ -88,6 +89,7 @@ func RegisterOnboarding(api huma.API, svc *users.Service, authSvc *auth.Service)
 			"401": {Description: "Authentication is required"},
 			"403": {Description: "Invalid CSRF token"},
 			"409": {Description: "Onboarding profile already exists with different answers"},
+			"500": {Description: "Internal server error"},
 		},
 	}, func(ctx context.Context, input *CompleteOnboardingInput) (*CompleteOnboardingOutput, error) {
 		uid := RequesterUserID(ctx)
@@ -141,14 +143,9 @@ func mapOnboardingError(err error) huma.StatusError {
 		return huma.Error409Conflict("onboarding profile already exists with different answers")
 	case errors.Is(err, users.ErrUserNotFound):
 		return huma.Error404NotFound("user not found")
+	case errors.Is(err, users.ErrInvalidOnboarding):
+		return huma.Error400BadRequest("invalid onboarding answers")
 	}
-	// Validation errors (EnglishLevel/NativeLanguage/LearningGoal/
-	// MainUseCase/DailyReviewTarget) bubble up from the service's
-	// Validate() call. Map them to 400 so the frontend can present
-	// a clear invalid-submission signal without a 500.
-	msg := err.Error()
-	if msg != "" {
-		return huma.Error400BadRequest(msg)
-	}
+	// Unexpected repository errors may include private infrastructure details.
 	return huma.Error500InternalServerError("internal error")
 }

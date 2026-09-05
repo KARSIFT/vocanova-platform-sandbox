@@ -114,17 +114,24 @@ func (r *MemoryRepository) GetMeaningsBySituation(ctx context.Context, situation
 		}
 	}
 	sort.Slice(links, func(i, j int) bool {
-		oi, oj := 0, 0
-		if links[i].DisplayOrder != nil {
-			oi = *links[i].DisplayOrder
+		if links[i].IsCore != links[j].IsCore {
+			return links[i].IsCore
 		}
-		if links[j].DisplayOrder != nil {
-			oj = *links[j].DisplayOrder
+		if links[i].DisplayOrder == nil && links[j].DisplayOrder != nil {
+			// PostgreSQL sorts nullable display_order values last for ASC,
+			// matching the discovery query below.
+			return false
 		}
-		if oi == oj {
-			return links[i].MeaningID.String() < links[j].MeaningID.String()
+		if links[i].DisplayOrder != nil && links[j].DisplayOrder == nil {
+			return true
 		}
-		return oi < oj
+		if links[i].DisplayOrder != nil && *links[i].DisplayOrder != *links[j].DisplayOrder {
+			return *links[i].DisplayOrder < *links[j].DisplayOrder
+		}
+		if links[i].RelevanceScore != links[j].RelevanceScore {
+			return links[i].RelevanceScore > links[j].RelevanceScore
+		}
+		return links[i].MeaningID.String() < links[j].MeaningID.String()
 	})
 
 	var out []MeaningSummary

@@ -211,9 +211,19 @@ func (s *Service) ConsumeMagicLink(ctx context.Context, clientIP, token, emailAd
 		// Create a verified user from the magic link.
 		user, err = s.repo.CreateUser(ctx, emailAddr, &now)
 		if err != nil {
-			return nil, nil, "", fmt.Errorf("create user: %w", err)
+			if errors.Is(err, ErrUserEmailAlreadyExists) {
+				// Another valid link may have completed the first-user insert
+				// after our lookup. Re-read the active owner; never recover
+				// arbitrary database errors or bypass the normal active-user
+				// check below.
+				user, err = s.repo.GetUserByEmail(ctx, emailAddr)
+			}
+			if err != nil {
+				return nil, nil, "", fmt.Errorf("create user: %w", err)
+			}
 		}
 	}
+
 	if !user.Active() {
 		return nil, nil, "", ErrUserDisabled
 	}

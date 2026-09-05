@@ -102,6 +102,23 @@ func TestPostgreSQLRepositoryGetMeaningsBySituation(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestPostgreSQLRepositoryGetMeaningsBySituationUsesDiscoveryPriority(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewPostgreSQLRepository(db)
+	situationID := MustParseUUID("00000000-0000-0000-0000-000000000001")
+
+	mock.ExpectQuery("ORDER BY jw.is_core DESC, jw.display_order ASC NULLS LAST, jw.relevance_score DESC, m.id ASC").
+		WithArgs(situationID).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "word_id", "text", "normalized_text", "part_of_speech", "short_definition", "display_order"}))
+
+	_, err = repo.GetMeaningsBySituation(t.Context(), situationID)
+	require.NoError(t, err)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestPostgreSQLRepositoryGetWordBySlug(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)

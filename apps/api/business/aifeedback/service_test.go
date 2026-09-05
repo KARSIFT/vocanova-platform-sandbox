@@ -3,6 +3,8 @@ package aifeedback
 import (
 	"context"
 	"errors"
+	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -12,6 +14,145 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// retryRaceRepository makes the service exercise the same sequence PostgreSQL
+// can observe: a loser sees a pending generation, the winner fails it, and the
+// loser then retries its insert against that newly failed generation.
+type retryRaceRepository struct {
+	Repository
+	mu             sync.Mutex
+	retryCalls     int
+	readMu         sync.Mutex
+	failedReads    int
+	bothFailedRead chan struct{}
+	winnerCreated  chan struct{}
+	loserObserved  chan struct{}
+	winnerFinished chan struct{}
+}
+
+func (r *retryRaceRepository) GetFeedbackAttemptByRequestHash(ctx context.Context, requestHash string) (*StoredFeedbackAttempt, error) {
+	attempt, err := r.Repository.GetFeedbackAttemptByRequestHash(ctx, requestHash)
+	if err != nil || attempt == nil || attempt.Status != AttemptStatusFailed {
+		return attempt, err
+	}
+	r.readMu.Lock()
+	r.failedReads++
+	read := r.failedReads
+	if read == 2 {
+		close(r.bothFailedRead)
+	}
+	r.readMu.Unlock()
+	if read == 1 {
+		<-r.bothFailedRead
+	}
+	return attempt, nil
+}
+
+func (r *retryRaceRepository) CreateRetryAttempt(ctx context.Context, failed *StoredFeedbackAttempt, provider, model string, now time.Time) (*RetryAttempt, error) {
+	r.mu.Lock()
+	r.retryCalls++
+	call := r.retryCalls
+	r.mu.Unlock()
+
+	if call == 1 {
+		retry, err := r.Repository.CreateRetryAttempt(ctx, failed, provider, model, now)
+		if err == nil {
+			close(r.winnerCreated)
+		}
+		return retry, err
+	}
+
+	// Observe the conflicting active row first, then wait until the first
+	// provider call has persisted its failure before trying again.
+	<-r.winnerCreated
+	conflict, err := r.Repository.CreateRetryAttempt(ctx, failed, provider, model, now)
+	if err != nil || conflict.Existing == nil {
+		return conflict, err
+	}
+	close(r.loserObserved)
+	<-r.winnerFinished
+	return r.Repository.CreateRetryAttempt(ctx, failed, provider, model, now)
+}
+
+func (r *retryRaceRepository) CompleteFeedbackAttempt(ctx context.Context, pending PendingAttempt, feedback *ProviderFeedback, failureCode, failureMessage string, now time.Time) error {
+	err := r.Repository.CompleteFeedbackAttempt(ctx, pending, feedback, failureCode, failureMessage, now)
+	if err == nil && failureCode != "" {
+		close(r.winnerFinished)
+	}
+	return err
+}
+
+type failOnceProvider struct {
+	mu           sync.Mutex
+	calls        int
+	firstStarted chan struct{}
+	releaseFirst chan struct{}
+}
+
+// retryExistingRepository makes a later fresh-key request observe the active
+// pending generation created by the first request. It lets the test replay the
+// losing key after the winner has persisted a failure.
+type retryExistingRepository struct {
+	Repository
+	mu              sync.Mutex
+	reads           int
+	failed          *StoredFeedbackAttempt
+	staleFailedRead bool
+	retryCalls      int
+	winnerCreated   chan struct{}
+	winnerFinished  chan struct{}
+}
+
+func (r *retryExistingRepository) GetFeedbackAttemptByRequestHash(ctx context.Context, requestHash string) (*StoredFeedbackAttempt, error) {
+	attempt, err := r.Repository.GetFeedbackAttemptByRequestHash(ctx, requestHash)
+	if err != nil {
+		return nil, err
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.reads++
+	if r.reads == 1 {
+		r.failed = attempt
+	}
+	if r.reads == 2 && r.staleFailedRead {
+		return r.failed, nil
+	}
+	return attempt, nil
+}
+
+func (r *retryExistingRepository) CreateRetryAttempt(ctx context.Context, failed *StoredFeedbackAttempt, provider, model string, now time.Time) (*RetryAttempt, error) {
+	r.mu.Lock()
+	r.retryCalls++
+	call := r.retryCalls
+	r.mu.Unlock()
+
+	retry, err := r.Repository.CreateRetryAttempt(ctx, failed, provider, model, now)
+	if call == 1 && err == nil && retry.Pending != nil {
+		close(r.winnerCreated)
+	}
+	return retry, err
+}
+
+func (r *retryExistingRepository) CompleteFeedbackAttempt(ctx context.Context, pending PendingAttempt, feedback *ProviderFeedback, failureCode, failureMessage string, now time.Time) error {
+	err := r.Repository.CompleteFeedbackAttempt(ctx, pending, feedback, failureCode, failureMessage, now)
+	if err == nil && failureCode != "" {
+		close(r.winnerFinished)
+	}
+	return err
+}
+
+func (p *failOnceProvider) GenerateFeedback(ctx context.Context, task ProviderTask) (*ProviderFeedback, error) {
+	p.mu.Lock()
+	p.calls++
+	call := p.calls
+	p.mu.Unlock()
+	if call == 1 {
+		close(p.firstStarted)
+		<-p.releaseFirst
+		return nil, errors.New("transient provider failure")
+	}
+	return NewMockProvider().GenerateFeedback(ctx, task)
+}
 
 type serviceFixture struct {
 	userID          uuid.UUID
@@ -490,7 +631,59 @@ func (deferredRecordIdempotency) Record(ctx context.Context, _ uuid.UUID, _, _, 
 	return ctx.Err()
 }
 
-func TestServiceStoredFailureReplayDoesNotExposeInternalError(t *testing.T) {
+type failedRecordIdempotency struct{ learning.IdempotencyStore }
+
+func (failedRecordIdempotency) Record(context.Context, uuid.UUID, string, string, string) error {
+	return errors.New("idempotency storage unavailable")
+}
+
+type contextCheckingCompletionRepository struct{ Repository }
+
+func (r contextCheckingCompletionRepository) CompleteFeedbackAttempt(ctx context.Context, pending PendingAttempt, feedback *ProviderFeedback, code, message string, now time.Time) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return r.Repository.CompleteFeedbackAttempt(ctx, pending, feedback, code, message, now)
+}
+
+func TestRetryRecordFailureSettlesOnlyNewPendingAttempt(t *testing.T) {
+	for _, expired := range []bool{false, true} {
+		t.Run(fmt.Sprintf("expired=%t", expired), func(t *testing.T) {
+			f := newServiceFixture(t)
+			f.service.provider = &failingProvider{}
+			req := f.request("I work every day.")
+			_, err := f.service.SubmitSentenceFeedback(t.Context(), req)
+			require.NoError(t, err)
+			require.Len(t, f.repo.attempts, 1)
+			originalID := f.repo.attempts[0].ID
+
+			f.service.provider = f.provider
+			f.service.repo = contextCheckingCompletionRepository{f.repo}
+			if expired {
+				f.service.config.RequestTimeout = 20 * time.Millisecond
+				f.service.idem = deferredRecordIdempotency{f.service.idem}
+			} else {
+				f.service.idem = failedRecordIdempotency{f.service.idem}
+			}
+			req.IdempotencyKey = "new-generation-record-failure"
+			result, err := f.service.SubmitSentenceFeedback(t.Context(), req)
+			if expired {
+				require.NoError(t, err)
+				require.Equal(t, ErrorCodeTemporaryFailure, result.ErrorCode)
+			} else {
+				require.ErrorContains(t, err, "record retry idempotency")
+			}
+			require.Len(t, f.repo.attempts, 2)
+			require.Equal(t, originalID, f.repo.attempts[0].ID)
+			for _, attempt := range f.repo.attempts {
+				require.Equal(t, AttemptStatusFailed, attempt.Status)
+			}
+			require.Zero(t, f.provider.calls, "record failure must not call the provider")
+		})
+	}
+}
+
+func TestServiceRetryAfterProviderFailureCreatesNewGeneration(t *testing.T) {
 	f := newServiceFixture(t)
 	f.service.provider = &failingProvider{}
 	req := f.request("I work every day.")
@@ -500,17 +693,163 @@ func TestServiceStoredFailureReplayDoesNotExposeInternalError(t *testing.T) {
 	assert.Equal(t, ErrorCodeTemporaryFailure, initial.ErrorCode)
 	assert.Empty(t, initial.ErrorMessage)
 
-	// A fresh idempotency key exercises request-hash deduplication rather than
-	// the idempotency-key conflict path. The stored error is deliberately an
-	// internal provider detail and must not be returned to the learner.
+	// A fresh idempotency key exercises request-hash retry rather than the
+	// idempotency-key conflict path. A retryable provider failure must call the
+	// provider again, while keeping the failed generation as history.
 	replay := req
 	replay.IdempotencyKey = uuid.New().String()
+	f.service.provider = f.provider
 	result, err := f.service.SubmitSentenceFeedback(t.Context(), replay)
 	require.NoError(t, err)
-	assert.Equal(t, ErrorCodeTemporaryFailure, result.ErrorCode)
+	assert.Equal(t, LearningStatusCorrect, result.Status)
 	assert.Empty(t, result.ErrorMessage)
-	assert.True(t, result.CanRetry)
-	assert.Equal(t, 1, len(f.repo.attempts))
+	assert.False(t, result.CanRetry)
+	assert.Equal(t, 1, f.provider.calls)
+	require.Len(t, f.repo.attempts, 2)
+	assert.Equal(t, AttemptStatusFailed, f.repo.attempts[0].Status)
+	assert.Equal(t, AttemptStatusSucceeded, f.repo.attempts[1].Status)
+	assert.NotEqual(t, initial.AttemptID, result.AttemptID)
+}
+
+func TestServiceProviderFailureIdempotencyReplayDoesNotRetry(t *testing.T) {
+	f := newServiceFixture(t)
+	f.service.provider = &failingProvider{}
+	req := f.request("I work every day.")
+
+	initial, err := f.service.SubmitSentenceFeedback(t.Context(), req)
+	require.NoError(t, err)
+	assert.Equal(t, ErrorCodeTemporaryFailure, initial.ErrorCode)
+
+	replayed, err := f.service.SubmitSentenceFeedback(t.Context(), req)
+	require.NoError(t, err)
+	assert.Equal(t, ErrorCodeTemporaryFailure, replayed.ErrorCode)
+	assert.True(t, replayed.CanRetry)
+	assert.Len(t, f.repo.attempts, 1)
+}
+
+func TestServiceConcurrentFreshRetriesRecoverAfterWinningGenerationFails(t *testing.T) {
+	f := newServiceFixture(t)
+	request := f.request("I work every day.")
+	target, err := f.repo.LoadTarget(t.Context(), LoadTargetRequest{UserID: request.UserID, Source: request.Source, AttemptID: request.AttemptID})
+	require.NoError(t, err)
+	hash := RequestHash(request.UserID, request.AttemptID, target.NormalizedWord, "i work every day.", PromptVersionSentenceFeedbackV1)
+	failedSentenceID := uuid.New()
+	f.repo.sentences = append(f.repo.sentences, MemoryLearnerSentence{ID: failedSentenceID, UserID: f.userID, Status: SentenceStatusFeedbackFailed})
+	f.repo.attempts = append(f.repo.attempts, MemoryAIFeedbackAttempt{
+		ID: uuid.New(), LearnerSentenceID: failedSentenceID, Status: AttemptStatusFailed, RequestHash: hash,
+	})
+
+	repo := &retryRaceRepository{
+		Repository:     f.repo,
+		bothFailedRead: make(chan struct{}),
+		winnerCreated:  make(chan struct{}),
+		loserObserved:  make(chan struct{}),
+		winnerFinished: make(chan struct{}),
+	}
+	provider := &failOnceProvider{firstStarted: make(chan struct{}), releaseFirst: make(chan struct{})}
+	newService := func() *Service {
+		return NewService(repo, provider, NewCompositeSafetyClassifier(NewDefaultLocalAbuseChecker(), NewMockProvider()), nil,
+			learning.NewMemoryIdempotencyStore(), NewStubMissionUpdater(), NewNoopTelemetryRecorder(), nil, nil, f.service.clock, DefaultServiceConfig())
+	}
+
+	results := make(chan *SentenceFeedbackResult, 2)
+	errs := make(chan error, 2)
+	submit := func() {
+		req := request
+		req.IdempotencyKey = uuid.NewString()
+		result, err := newService().SubmitSentenceFeedback(t.Context(), req)
+		results <- result
+		errs <- err
+	}
+	go submit()
+	go submit()
+	<-repo.winnerCreated
+	<-provider.firstStarted
+	<-repo.loserObserved
+	close(provider.releaseFirst)
+	for range 2 {
+		require.NoError(t, <-errs)
+	}
+	close(results)
+
+	var succeeded, failed int
+	for result := range results {
+		if result.Status == LearningStatusCorrect {
+			succeeded++
+		} else {
+			assert.Equal(t, ErrorCodeTemporaryFailure, result.ErrorCode)
+			failed++
+		}
+	}
+	assert.Equal(t, 1, succeeded)
+	assert.Equal(t, 1, failed)
+	assert.Equal(t, 2, provider.calls, "the loser recovers as the next explicit retry")
+}
+
+func TestServiceRetryExistingLoserKeyReplayDoesNotGenerateAfterWinnerFails(t *testing.T) {
+	testServiceRetryLoserKeyReplayDoesNotGenerateAfterWinnerFails(t, true)
+}
+
+func TestServicePendingLoserKeyReplayDoesNotGenerateAfterWinnerFails(t *testing.T) {
+	testServiceRetryLoserKeyReplayDoesNotGenerateAfterWinnerFails(t, false)
+}
+
+func testServiceRetryLoserKeyReplayDoesNotGenerateAfterWinnerFails(t *testing.T, staleFailedRead bool) {
+	t.Helper()
+	f := newServiceFixture(t)
+	request := f.request("I work every day.")
+	target, err := f.repo.LoadTarget(t.Context(), LoadTargetRequest{UserID: request.UserID, Source: request.Source, AttemptID: request.AttemptID})
+	require.NoError(t, err)
+	hash := RequestHash(request.UserID, request.AttemptID, target.NormalizedWord, "i work every day.", PromptVersionSentenceFeedbackV1)
+	failedSentenceID := uuid.New()
+	f.repo.sentences = append(f.repo.sentences, MemoryLearnerSentence{ID: failedSentenceID, UserID: f.userID, Status: SentenceStatusFeedbackFailed})
+	f.repo.attempts = append(f.repo.attempts, MemoryAIFeedbackAttempt{
+		ID: uuid.New(), LearnerSentenceID: failedSentenceID, Status: AttemptStatusFailed, RequestHash: hash,
+	})
+
+	repo := &retryExistingRepository{
+		Repository:      f.repo,
+		staleFailedRead: staleFailedRead,
+		winnerCreated:   make(chan struct{}),
+		winnerFinished:  make(chan struct{}),
+	}
+	provider := &failOnceProvider{firstStarted: make(chan struct{}), releaseFirst: make(chan struct{})}
+	idem := learning.NewMemoryIdempotencyStore()
+	limiter := NewMemoryRateLimiter(RateLimitConfig{}, f.service.clock)
+	service := NewService(repo, provider, NewCompositeSafetyClassifier(NewDefaultLocalAbuseChecker(), NewMockProvider()), limiter,
+		idem, NewStubMissionUpdater(), NewNoopTelemetryRecorder(), nil, nil, f.service.clock, DefaultServiceConfig())
+
+	winner := request
+	winner.IdempotencyKey = "retry-winner"
+	winnerResult := make(chan *SentenceFeedbackResult, 1)
+	winnerErr := make(chan error, 1)
+	go func() {
+		result, submitErr := service.SubmitSentenceFeedback(t.Context(), winner)
+		winnerResult <- result
+		winnerErr <- submitErr
+	}()
+	<-repo.winnerCreated
+	<-provider.firstStarted
+
+	loser := request
+	loser.IdempotencyKey = "retry-loser"
+	loserResult, err := service.SubmitSentenceFeedback(t.Context(), loser)
+	require.NoError(t, err)
+	assert.Equal(t, ErrorCodeTemporaryFailure, loserResult.ErrorCode)
+	assert.True(t, loserResult.CanRetry)
+	assert.Equal(t, 1, provider.calls, "the loser observes pending work without generating")
+
+	close(provider.releaseFirst)
+	require.NoError(t, <-winnerErr)
+	assert.Equal(t, ErrorCodeTemporaryFailure, (<-winnerResult).ErrorCode)
+	<-repo.winnerFinished
+
+	replayed, err := service.SubmitSentenceFeedback(t.Context(), loser)
+	require.NoError(t, err)
+	assert.Equal(t, ErrorCodeTemporaryFailure, replayed.ErrorCode)
+	assert.True(t, replayed.CanRetry)
+	assert.Equal(t, 1, provider.calls, "the losing key remains a transport replay")
+	assert.Len(t, f.repo.attempts, 2, "the replay must not create another retry generation")
 }
 
 type failingProvider struct{}

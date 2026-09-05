@@ -87,6 +87,10 @@ type SubmitReviewRequest struct {
 	ClientAttemptID         string
 	Metadata                map[string]any
 	IdempotencyKey          string
+	// scheduledAt is set by Service from its server-owned clock. It is kept
+	// separate from AnsweredAt, which is immutable attempt history supplied by
+	// the client and must not control the next review time.
+	scheduledAt time.Time
 }
 
 // Prompt types supported by the P2 review submission API.
@@ -219,6 +223,7 @@ func (s *Service) SubmitReview(ctx context.Context, req SubmitReviewRequest) (*R
 		return nil, err
 	}
 	req.AnsweredAt = req.AnsweredAt.UTC()
+	req.scheduledAt = s.clock.Now().UTC()
 
 	fingerprint := submitReviewFingerprint(req)
 	status, err := s.idem.Check(ctx, req.UserID, operationSubmitReview, req.IdempotencyKey, fingerprint)

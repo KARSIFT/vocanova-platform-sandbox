@@ -224,6 +224,43 @@ func TestServiceGetSituationReturnsMeanings(t *testing.T) {
 	assert.True(t, detail.Meanings[0].Saved)
 }
 
+func TestServiceGetSituationOrdersCoreMeaningsBeforeDisplayOrderAndRelevance(t *testing.T) {
+	situationID := MustParseUUID("00000000-0000-0000-0000-000000000101")
+	wordID := MustParseUUID("00000000-0000-0000-0000-000000000102")
+	firstID := MustParseUUID("00000000-0000-0000-0000-000000000103")
+	coreID := MustParseUUID("00000000-0000-0000-0000-000000000104")
+	moreRelevantID := MustParseUUID("00000000-0000-0000-0000-000000000105")
+	undisplayedID := MustParseUUID("00000000-0000-0000-0000-000000000106")
+	displayOrder := 1
+
+	repo := NewMemoryRepository(MemoryRepositoryData{
+		Situations: []Situation{{ID: situationID, Slug: "airport", Status: "active"}},
+		Words:      []SeedWord{{ID: wordID, Text: "word", NormalizedText: "word", Status: "active"}},
+		Meanings: []SeedMeaning{
+			{ID: firstID, WordID: wordID, Status: "active"},
+			{ID: coreID, WordID: wordID, Status: "active"},
+			{ID: moreRelevantID, WordID: wordID, Status: "active"},
+			{ID: undisplayedID, WordID: wordID, Status: "active"},
+		},
+		JourneyWords: []SeedJourneyWord{
+			{JourneySituationID: situationID, MeaningID: firstID, DisplayOrder: &displayOrder, RelevanceScore: 20},
+			{JourneySituationID: situationID, MeaningID: coreID, DisplayOrder: &displayOrder, RelevanceScore: 1, IsCore: true},
+			{JourneySituationID: situationID, MeaningID: moreRelevantID, DisplayOrder: &displayOrder, RelevanceScore: 90},
+			{JourneySituationID: situationID, MeaningID: undisplayedID, RelevanceScore: 100},
+		},
+	})
+
+	detail, err := NewService(repo, nil).GetSituation(t.Context(), uuid.Nil, "airport")
+	require.NoError(t, err)
+	require.Len(t, detail.Meanings, 4)
+	assert.Equal(t, []uuid.UUID{coreID, moreRelevantID, firstID, undisplayedID}, []uuid.UUID{
+		detail.Meanings[0].MeaningID,
+		detail.Meanings[1].MeaningID,
+		detail.Meanings[2].MeaningID,
+		detail.Meanings[3].MeaningID,
+	})
+}
+
 func TestServiceGetSituationNoSavedReader(t *testing.T) {
 	repo, _ := sampleMemoryRepo()
 	svc := NewService(repo, nil)

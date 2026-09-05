@@ -2,11 +2,13 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -42,6 +44,42 @@ func TestPostgreSQLRepositoryCreateUserAndGetByEmail(t *testing.T) {
 	assert.Equal(t, email, got.Email)
 
 	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestPostgreSQLRepositoryCreateUserTranslatesOnlyActiveEmailUniqueViolation(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		dbErr      error
+		wantExists bool
+	}{
+		{
+			name:       "active email unique index",
+			dbErr:      &pq.Error{Code: "23505", Constraint: "users_active_email_key"},
+			wantExists: true,
+		},
+		{
+			name:  "unrelated unique index",
+			dbErr: &pq.Error{Code: "23505", Constraint: "sessions_token_hash_key"},
+		},
+		{
+			name:  "non uniqueness database error",
+			dbErr: &pq.Error{Code: "23503", Constraint: "users_pkey"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			db, mock, err := sqlmock.New()
+			require.NoError(t, err)
+			defer db.Close()
+
+			mock.ExpectExec("INSERT INTO users").
+				WithArgs(sqlmock.AnyArg(), "user@example.com", sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+				WillReturnError(tc.dbErr)
+
+			_, err = NewPostgreSQLRepository(db).CreateUser(context.Background(), "user@example.com", nil)
+			assert.Equal(t, tc.wantExists, errors.Is(err, ErrUserEmailAlreadyExists))
+			require.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
 }
 
 func TestPostgreSQLRepositoryCreateSessionAndGetByTokenHash(t *testing.T) {

@@ -11,7 +11,9 @@ import (
 
 // RateLimiter scopes generation requests per learner.
 type RateLimiter interface {
+	// Allow acquires a permit only on success. An error grants no permit.
 	Allow(ctx context.Context, userID uuid.UUID) error
+	// Release must be called only by a request that successfully called Allow.
 	Release(userID uuid.UUID)
 }
 

@@ -278,10 +278,16 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
           id="displayName"
           name="displayName"
           type="text"
-          maxLength={80}
           autoComplete="nickname"
           value={state.displayName}
-          onChange={(event) => patch("displayName", event.target.value)}
+          onChange={(event) => {
+            // Match the API's Unicode code-point cap. Native maxLength
+            // counts UTF-16 units and allows only 40 supplementary letters.
+            // Reject over-limit edits without truncating the previous name.
+            if (Array.from(event.target.value).length <= 80) {
+              patch("displayName", event.target.value);
+            }
+          }}
           className="block w-full rounded-md border border-neutral-300 px-[var(--spacing-sm)] py-[var(--spacing-sm)] text-base text-neutral-900 focus:border-primary-600 focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-primary-600"
         />
       </fieldset>

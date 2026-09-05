@@ -113,7 +113,8 @@ func (r *PostgreSQLRepository) GetMeaningsBySituation(ctx context.Context, situa
 		 WHERE jw.journey_situation_id = $1
 		   AND m.status = 'active'
 		   AND cw.status = 'active'
-		 ORDER BY jw.display_order ASC, m.id ASC`,
+		 ORDER BY jw.is_core DESC, jw.display_order ASC NULLS LAST,
+		          jw.relevance_score DESC, m.id ASC`,
 		situationID)
 	if err != nil {
 		return nil, fmt.Errorf("list meanings by situation: %w", err)
