@@ -1,4 +1,7 @@
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
+import { getSavedVocabularySummary } from "./_components/progress-view";
+
+const SAVED_VOCABULARY_DISPLAY_LIMIT = 10;
 
 function formatWeekdayLabel(localDate: string): string {
   const date = new Date(`${localDate}T00:00:00Z`);
@@ -13,7 +16,9 @@ export default async function ProgressPage() {
   let savedWordsResponse: Awaited<ReturnType<typeof client.listSavedWords>>;
   let progressResponse: Awaited<ReturnType<typeof client.getProgress>>;
   try {
-    savedWordsResponse = await client.listSavedWords({ limit: 10 });
+    savedWordsResponse = await client.listSavedWords({
+      limit: SAVED_VOCABULARY_DISPLAY_LIMIT,
+    });
     progressResponse = await client.getProgress();
   } catch (error) {
     requireAuthRedirect(error, "/progress");
@@ -84,12 +89,12 @@ export default async function ProgressPage() {
           id="saved-vocabulary-heading"
           className="text-lg font-semibold text-neutral-900"
         >
-          Saved vocabulary
+          Recent saved vocabulary
         </h2>
         {savedWords.length > 0 ? (
           <>
             <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-              {savedWords.length} word{savedWords.length === 1 ? "" : "s"} saved
+              {getSavedVocabularySummary(SAVED_VOCABULARY_DISPLAY_LIMIT)}
             </p>
             <ul className="mt-[var(--spacing-md)] space-y-[var(--spacing-xs)]">
               {savedWords.map((savedWord) => (
