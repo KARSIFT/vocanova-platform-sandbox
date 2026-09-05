@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useLayoutEffect, useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 
-import { DueWord, SubmitReviewBody } from "@vocanova/api-client";
+import { ApiResponseError } from "@vocanova/api-client";
+import type { DueWord } from "@vocanova/api-client";
 
 import { createApiClient } from "@/lib/api";
 import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
@@ -16,6 +17,11 @@ import {
   shouldShowReviewCardPrompt,
   type PromptPhase,
 } from "./review-session-prompt";
+import {
+  matchesPendingReviewSubmission,
+  type PendingReviewSubmission,
+  type ReviewSubmissionIntent,
+} from "./review-session-retry";
 
 type Rating = "again" | "hard" | "good" | "easy";
 
@@ -58,6 +64,8 @@ export function ReviewSession({
   const [lastReviewAttemptId, setLastReviewAttemptId] = useState<string | null>(
     null,
   );
+  const [hasSubmittedCurrentCard, setHasSubmittedCurrentCard] = useState(false);
+  const pendingSubmission = useRef<PendingReviewSubmission | null>(null);
 
   const currentCard = dueWords[currentIndex];
 
@@ -78,6 +86,8 @@ export function ReviewSession({
     setSelectedOption(null);
     setErrorMessage(null);
     setStartTime(Date.now());
+    setHasSubmittedCurrentCard(false);
+    pendingSubmission.current = null;
   }, [currentIndex, dueWords]);
 
   const advance = () => {
@@ -87,6 +97,7 @@ export function ReviewSession({
     }
 
     setIsRefetching(true);
+    setErrorMessage(null);
     const client = createApiClient();
     client
       .listDueWords({ limit: 50 })
@@ -104,7 +115,10 @@ export function ReviewSession({
         // route the learner to re-auth instead of leaving them looking at
         // an error on a frozen card.
         setErrorMessage(
-          handleApiError(error, "Unable to load more words. Please try again."),
+          handleApiError(
+            error,
+            "Your answer was saved. Unable to load more words. Please try again.",
+          ),
         );
       })
       .finally(() => {
@@ -125,6 +139,10 @@ export function ReviewSession({
       return;
     }
 
+    if (hasSubmittedCurrentCard) {
+      return;
+    }
+
     const csrfToken = getCookieValue(CSRF_COOKIE_NAME);
     if (!csrfToken) {
       setErrorMessage("Session is not ready. Please refresh the page.");
@@ -134,33 +152,65 @@ export function ReviewSession({
     setIsSubmitting(true);
     setErrorMessage(null);
 
-    const client = createApiClient();
-    const clientAttemptId = generateClientAttemptId();
-    const body: SubmitReviewBody = {
+    const intent: ReviewSubmissionIntent = {
       userWordId: currentCard.userWordId,
       meaningId: currentCard.meaningId,
-      attemptType: "review",
       promptType:
         promptType === "multiple_choice" ? "multiple_choice" : "self_check",
       result,
       rating,
-      answeredAt: new Date().toISOString(),
-      responseTimeMs: Math.max(0, Date.now() - startTime),
       selectedOptionMeaningId,
-      wasHintUsed: false,
-      source: "review_session",
-      clientAttemptId,
     };
+    let submission = pendingSubmission.current;
+    if (submission && !matchesPendingReviewSubmission(submission, intent)) {
+      setIsSubmitting(false);
+      setErrorMessage(
+        "Your previous answer may still be processing. Please retry the same answer.",
+      );
+      return;
+    }
+    if (!submission) {
+      const clientAttemptId = generateClientAttemptId();
+      submission = {
+        idempotencyKey: clientAttemptId,
+        body: {
+          ...intent,
+          attemptType: "review",
+          answeredAt: new Date().toISOString(),
+          responseTimeMs: Math.max(0, Date.now() - startTime),
+          wasHintUsed: false,
+          source: "review_session",
+          clientAttemptId,
+        },
+      };
+      pendingSubmission.current = submission;
+    }
 
     try {
-      const { data } = await client.submitReview(body, clientAttemptId, {
+      const client = createApiClient();
+      const { data } = await client.submitReview(
+        submission.body,
+        submission.idempotencyKey,
+        {
         headers: { "X-CSRF-Token": csrfToken },
-      });
+        },
+      );
+      pendingSubmission.current = null;
+      setHasSubmittedCurrentCard(true);
       setLastReviewedCard(currentCard);
       setLastReviewAttemptId(data.attemptId);
       setRemainingCount((count) => Math.max(0, count - 1));
       advance();
     } catch (error) {
+      // A 4xx response is a definite rejection, not an ambiguous transport
+      // outcome. Do not retain its key/body for a retry.
+      if (
+        error instanceof ApiResponseError &&
+        error.status >= 400 &&
+        error.status < 500
+      ) {
+        pendingSubmission.current = null;
+      }
       // T06: a 401 mid-review-session is the documented
       // session-expiry mid-flow case — never claim a card was
       // reviewed when the server rejected it. handleApiError routes
@@ -283,6 +333,7 @@ export function ReviewSession({
                     const isDisabled = isMultipleChoiceOptionDisabled(
                       phase,
                       isSubmitting,
+                      hasSubmittedCurrentCard,
                     );
                     return (
                       <button
@@ -321,7 +372,11 @@ export function ReviewSession({
               <button
                 type="button"
                 onClick={() => setPhase("rate")}
-                disabled={isReviewActionDisabled(isSubmitting, isRefetching)}
+                disabled={isReviewActionDisabled(
+                  isSubmitting,
+                  isRefetching,
+                  hasSubmittedCurrentCard,
+                )}
                 className="w-full rounded-md border border-neutral-200 bg-neutral-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors hover:bg-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Show answer
@@ -343,7 +398,11 @@ export function ReviewSession({
                       selectedOptionMeaningId: selectedOption ?? undefined,
                     })
                   }
-                  disabled={isReviewActionDisabled(isSubmitting, isRefetching)}
+                  disabled={isReviewActionDisabled(
+                    isSubmitting,
+                    isRefetching,
+                    hasSubmittedCurrentCard,
+                  )}
                   className="mt-[var(--spacing-md)] w-full rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 transition-colors hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Continue
@@ -391,6 +450,7 @@ export function ReviewSession({
                         disabled={isReviewActionDisabled(
                           isSubmitting,
                           isRefetching,
+                          hasSubmittedCurrentCard,
                         )}
                         className="rounded-md border border-neutral-200 bg-neutral-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors hover:bg-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
                       >
@@ -410,6 +470,16 @@ export function ReviewSession({
               >
                 {errorMessage}
               </p>
+            ) : null}
+            {hasSubmittedCurrentCard && errorMessage ? (
+              <button
+                type="button"
+                onClick={advance}
+                disabled={isRefetching}
+                className="mt-[var(--spacing-sm)] w-full rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Retry loading reviews
+              </button>
             ) : null}
           </>
         ) : (

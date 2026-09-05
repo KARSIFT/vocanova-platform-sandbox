@@ -8,8 +8,9 @@ export type PromptPhase = "prompt" | "feedback" | "rate";
 export function isMultipleChoiceOptionDisabled(
   phase: PromptPhase,
   isSubmitting: boolean,
+  hasSubmittedCurrentCard: boolean,
 ): boolean {
-  return isSubmitting || phase === "feedback";
+  return isSubmitting || hasSubmittedCurrentCard || phase === "feedback";
 }
 
 /**
@@ -23,8 +24,9 @@ export function isMultipleChoiceOptionDisabled(
 export function isReviewActionDisabled(
   isSubmitting: boolean,
   isRefetching: boolean,
+  hasSubmittedCurrentCard: boolean,
 ): boolean {
-  return isSubmitting || isRefetching;
+  return isSubmitting || isRefetching || hasSubmittedCurrentCard;
 }
 
 /**
