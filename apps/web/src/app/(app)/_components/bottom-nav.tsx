@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { isPrimaryNavItemActive } from "./bottom-nav-state";
+
 const NAV_ITEMS = [
   { href: "/home", label: "Home" },
   { href: "/discover", label: "Journey" },
@@ -18,7 +20,7 @@ export function BottomNav() {
       className="fixed inset-x-0 bottom-0 flex h-16 w-full border-t border-neutral-200 bg-white"
     >
       {NAV_ITEMS.map((item) => {
-        const isActive = pathname === item.href;
+        const isActive = isPrimaryNavItemActive(pathname, item.href);
 
         return (
           <Link

@@ -66,6 +66,7 @@ export function SentenceFeedback({
     setErrorMessage(null);
     setReported(false);
     setReportStatus("idle");
+    setShowReportReasons(false);
 
     const client = createApiClient();
     try {
@@ -75,6 +76,11 @@ export function SentenceFeedback({
         { headers: { "X-CSRF-Token": csrfToken } },
       );
       setResult(data);
+      // A deduplicated response may represent feedback that was already
+      // reported in an earlier submission. The backend is authoritative for
+      // that persisted state, so do not make the learner report it again.
+      setReported(data.reported);
+      setShowReportReasons(false);
       if (data.errorCode) {
         setErrorMessage(
           data.errorMessage || getDefaultErrorMessage(data, targetWord),

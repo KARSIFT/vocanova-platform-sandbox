@@ -319,6 +319,48 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     ).toBeVisible();
     await expect(page.getByText(/Mission completed: Yes/)).toBeVisible();
 
+    // A fresh result explicitly has reported=false and remains reportable.
+    // A failed report preserves the feedback result and keeps the action
+    // retryable; reporting never replaces the feedback under DOC-09 §16.
+    await expect(
+      page.getByRole("button", { name: "Report a problem" }),
+    ).toBeVisible();
+    const reportEndpoint = "**/api/v1/sentence-feedback/*/reports";
+    await page.route(reportEndpoint, async (route) => {
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "temporary_failure" }),
+      });
+    });
+    await page.getByRole("button", { name: "Report a problem" }).click();
+    await page.getByRole("button", { name: "Already correct" }).click();
+    await expect(page.getByText("Unable to report. Try again.")).toBeVisible();
+    await expect(page.getByText("Correct", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("Your sentence uses the target word naturally."),
+    ).toBeVisible();
+    await expect(page.getByText(/Mission completed: Yes/)).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Already correct" }),
+    ).toBeVisible();
+
+    await page.unroute(reportEndpoint);
+    await page.getByRole("button", { name: "Already correct" }).click();
+    await expect(page.getByText("Reported", { exact: true })).toBeVisible();
+
+    // A deduplicated response represents feedback reported by an earlier
+    // submission. It must hydrate that persisted state rather than offer the
+    // five report reasons again.
+    await page.getByRole("button", { name: "Check my sentence" }).click();
+    await expect(page.getByText("Reported", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Report a problem" }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Correction changed my meaning" }),
+    ).toHaveCount(0);
+
     // ----- 7. Progress update.
     //
     // The mock's POST /api/v1/reviews/submissions increments

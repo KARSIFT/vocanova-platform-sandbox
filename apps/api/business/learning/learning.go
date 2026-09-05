@@ -92,6 +92,21 @@ type IdempotencyStore interface {
 	Record(ctx context.Context, userID uuid.UUID, operation, key, fingerprint string) error
 }
 
+// saveIdempotencyClaimer is implemented by the in-memory test store. Production
+// saves deliberately do not use it: PostgreSQLRepository performs the claim in
+// its transaction with the word and reward effects.
+type saveIdempotencyClaimer interface {
+	ClaimSave(ctx context.Context, userID uuid.UUID, operation, key, fingerprint string) (IdempotencyStatus, error)
+	CompleteSave(ctx context.Context, userID uuid.UUID, operation, key, fingerprint string)
+	ReleaseSave(ctx context.Context, userID uuid.UUID, operation, key, fingerprint string)
+}
+
+// atomicSaveRepository owns the database transaction for a save idempotency
+// claim and its effects.
+type atomicSaveRepository interface {
+	SaveUserWordAtomically(ctx context.Context, req SaveUserWordRequest, fingerprint string, now time.Time) (*SavedMeaning, IdempotencyStatus, error)
+}
+
 // IdempotencyStatus describes the result of an idempotency key lookup.
 type IdempotencyStatus int
 
@@ -138,6 +153,36 @@ func (s *Service) SaveUserWord(ctx context.Context, req SaveUserWordRequest) (*S
 	}
 
 	fingerprint := idempotencyFingerprint(req.MeaningID, req.Source)
+	now := s.clock.Now().UTC()
+	if repo, ok := s.repo.(atomicSaveRepository); ok {
+		m, status, err := repo.SaveUserWordAtomically(ctx, req, fingerprint, now)
+		if err != nil {
+			return nil, err
+		}
+		if status == IdempotencyConflict {
+			return nil, ErrIdempotencyConflict
+		}
+		return m, nil
+	}
+	if claimer, ok := s.idem.(saveIdempotencyClaimer); ok {
+		status, err := claimer.ClaimSave(ctx, req.UserID, operationSaveUserWord, req.IdempotencyKey, fingerprint)
+		if err != nil {
+			return nil, fmt.Errorf("idempotency claim: %w", err)
+		}
+		if status == IdempotencyConflict || status == IdempotencyMatch {
+			if status == IdempotencyConflict {
+				return nil, ErrIdempotencyConflict
+			}
+			return s.repo.GetSavedMeaning(ctx, req.UserID, req.MeaningID)
+		}
+		m, err := s.repo.SaveUserWord(ctx, req, now)
+		if err != nil {
+			claimer.ReleaseSave(ctx, req.UserID, operationSaveUserWord, req.IdempotencyKey, fingerprint)
+			return nil, err
+		}
+		claimer.CompleteSave(ctx, req.UserID, operationSaveUserWord, req.IdempotencyKey, fingerprint)
+		return m, nil
+	}
 	status, err := s.idem.Check(ctx, req.UserID, operationSaveUserWord, req.IdempotencyKey, fingerprint)
 	if err != nil {
 		return nil, fmt.Errorf("idempotency check: %w", err)
@@ -149,7 +194,6 @@ func (s *Service) SaveUserWord(ctx context.Context, req SaveUserWordRequest) (*S
 		return s.repo.GetSavedMeaning(ctx, req.UserID, req.MeaningID)
 	}
 
-	now := s.clock.Now().UTC()
 	m, err := s.repo.SaveUserWord(ctx, req, now)
 	if err != nil {
 		return nil, err

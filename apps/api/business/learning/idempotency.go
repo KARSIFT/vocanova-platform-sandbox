@@ -28,6 +28,8 @@ type memoryIdempotencyEntry struct {
 	key         string
 	fingerprint string
 	createdAt   time.Time
+	completed   bool
+	settled     chan struct{}
 }
 
 // NewMemoryIdempotencyStore creates an empty in-memory idempotency store.
@@ -78,6 +80,69 @@ func (s *MemoryIdempotencyStore) Record(ctx context.Context, userID uuid.UUID, o
 		key:         key,
 		fingerprint: fingerprint,
 		createdAt:   now,
+		completed:   true,
 	}
 	return nil
+}
+
+// ClaimSave atomically reserves a key for the memory-only service path. The
+// reservation is removed on a failed effect, matching a rolled-back database
+// transaction. A completed reservation is indistinguishable from Record to
+// subsequent sequential calls, which is sufficient for this deterministic
+// test implementation.
+func (s *MemoryIdempotencyStore) ClaimSave(ctx context.Context, userID uuid.UUID, operation, key, fingerprint string) (IdempotencyStatus, error) {
+	cacheKey := idempotencyCacheKey(userID, operation, key)
+	for {
+		if err := ctx.Err(); err != nil {
+			return IdempotencyAbsent, err
+		}
+		s.mu.Lock()
+		now := s.now().UTC()
+		if entry, ok := s.keys[cacheKey]; ok && entry.createdAt.After(now.Add(-idempotencyRetention)) {
+			if entry.fingerprint != fingerprint {
+				s.mu.Unlock()
+				return IdempotencyConflict, nil
+			}
+			if entry.completed {
+				s.mu.Unlock()
+				return IdempotencyMatch, nil
+			}
+			settled := entry.settled
+			s.mu.Unlock()
+			select {
+			case <-settled:
+				continue
+			case <-ctx.Done():
+				return IdempotencyAbsent, ctx.Err()
+			}
+		}
+		s.keys[cacheKey] = memoryIdempotencyEntry{userID: userID, operation: operation, key: key, fingerprint: fingerprint, createdAt: now, settled: make(chan struct{})}
+		s.mu.Unlock()
+		return IdempotencyAbsent, nil
+	}
+}
+
+func (s *MemoryIdempotencyStore) CompleteSave(ctx context.Context, userID uuid.UUID, operation, key, fingerprint string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	cacheKey := idempotencyCacheKey(userID, operation, key)
+	if entry, ok := s.keys[cacheKey]; ok && entry.fingerprint == fingerprint {
+		if !entry.completed && entry.settled != nil {
+			close(entry.settled)
+		}
+		entry.completed = true
+		s.keys[cacheKey] = entry
+	}
+}
+
+func (s *MemoryIdempotencyStore) ReleaseSave(ctx context.Context, userID uuid.UUID, operation, key, fingerprint string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	cacheKey := idempotencyCacheKey(userID, operation, key)
+	if entry, ok := s.keys[cacheKey]; ok && entry.fingerprint == fingerprint {
+		if !entry.completed && entry.settled != nil {
+			close(entry.settled)
+		}
+		delete(s.keys, cacheKey)
+	}
 }

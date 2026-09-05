@@ -304,14 +304,21 @@ func (r *PostgreSQLRepository) CompleteFeedbackAttempt(ctx context.Context, pend
 		if err != nil {
 			return fmt.Errorf("marshal feedback json: %w", err)
 		}
-		_, err = tx.ExecContext(ctx,
+		result, err := tx.ExecContext(ctx,
 			`UPDATE ai_feedback_attempts
 			 SET status = $1, feedback_json = $2, feedback_text = $3, completed_at = $4, updated_at = $5
-			 WHERE id = $6`,
-			AttemptStatusSucceeded, rawJSON, feedback.Explanation, now, now, pending.AttemptID,
+			 WHERE id = $6 AND status = $7`,
+			AttemptStatusSucceeded, rawJSON, feedback.Explanation, now, now, pending.AttemptID, AttemptStatusPending,
 		)
 		if err != nil {
 			return fmt.Errorf("update attempt succeeded: %w", err)
+		}
+		updated, err := result.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("check succeeded attempt update: %w", err)
+		}
+		if updated == 0 {
+			return tx.Commit()
 		}
 		_, err = tx.ExecContext(ctx,
 			`UPDATE learner_sentences SET status = $1, updated_at = $2 WHERE id = $3`,
@@ -325,14 +332,21 @@ func (r *PostgreSQLRepository) CompleteFeedbackAttempt(ctx context.Context, pend
 		if code == "" {
 			code = ErrorCodeTemporaryFailure
 		}
-		_, err = tx.ExecContext(ctx,
+		result, err := tx.ExecContext(ctx,
 			`UPDATE ai_feedback_attempts
 			 SET status = $1, error_code = $2, error_message = $3, completed_at = $4, updated_at = $5
-			 WHERE id = $6`,
-			AttemptStatusFailed, code, failureMessage, now, now, pending.AttemptID,
+			 WHERE id = $6 AND status = $7`,
+			AttemptStatusFailed, code, failureMessage, now, now, pending.AttemptID, AttemptStatusPending,
 		)
 		if err != nil {
 			return fmt.Errorf("update attempt failed: %w", err)
+		}
+		updated, err := result.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("check failed attempt update: %w", err)
+		}
+		if updated == 0 {
+			return tx.Commit()
 		}
 		_, err = tx.ExecContext(ctx,
 			`UPDATE learner_sentences SET status = $1, updated_at = $2 WHERE id = $3`,
@@ -365,10 +379,34 @@ func (r *PostgreSQLRepository) GetFeedbackAttemptOwner(ctx context.Context, atte
 	return userID, nil
 }
 
-// CreateQualityReviewReport implements Repository. The unique attempt key is
-// the final idempotency guard, including across concurrent requests.
-func (r *PostgreSQLRepository) CreateQualityReviewReport(ctx context.Context, report QualityReviewReport) (bool, error) {
-	result, err := r.db.ExecContext(ctx,
+// CreateQualityReviewReport claims the operation key and persists the report in
+// one transaction. The attempt uniqueness constraint independently prevents a
+// second report submitted with a different key.
+func (r *PostgreSQLRepository) CreateQualityReviewReport(ctx context.Context, report QualityReviewReport, idempotencyKey string) (bool, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+	fingerprint := fmt.Sprintf("%s|%s", report.AttemptID, report.Reason)
+	var claimed string
+	err = tx.QueryRowContext(ctx, `INSERT INTO idempotency_keys (id, user_id, operation, key, fingerprint, created_at)
+		VALUES ($1, $2, 'report_sentence_feedback', $3, $4, $5)
+		ON CONFLICT (user_id, operation, key) DO UPDATE
+		SET fingerprint = EXCLUDED.fingerprint, created_at = EXCLUDED.created_at
+		WHERE idempotency_keys.created_at <= $6
+		RETURNING fingerprint`, uuid.New(), report.UserID, idempotencyKey, fingerprint, report.CreatedAt, report.CreatedAt.Add(-24*time.Hour)).Scan(&claimed)
+	if errors.Is(err, sql.ErrNoRows) {
+		err = tx.QueryRowContext(ctx, `SELECT fingerprint FROM idempotency_keys
+			WHERE user_id = $1 AND operation = 'report_sentence_feedback' AND key = $2`, report.UserID, idempotencyKey).Scan(&claimed)
+	}
+	if err != nil {
+		return false, fmt.Errorf("claim report idempotency: %w", err)
+	}
+	if claimed != fingerprint {
+		return false, ErrReportIdempotencyConflict
+	}
+	result, err := tx.ExecContext(ctx,
 		`INSERT INTO ai_feedback_quality_review_reports (
 			id, ai_feedback_attempt_id, user_id, reason, state, classification, created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, NULL, $6, $6)
@@ -384,12 +422,15 @@ func (r *PostgreSQLRepository) CreateQualityReviewReport(ctx context.Context, re
 	}
 	if rows == 0 {
 		var reason string
-		if err := r.db.QueryRowContext(ctx, `SELECT reason FROM ai_feedback_quality_review_reports WHERE ai_feedback_attempt_id = $1 AND user_id = $2`, report.AttemptID, report.UserID).Scan(&reason); err != nil {
+		if err := tx.QueryRowContext(ctx, `SELECT reason FROM ai_feedback_quality_review_reports WHERE ai_feedback_attempt_id = $1 AND user_id = $2`, report.AttemptID, report.UserID).Scan(&reason); err != nil {
 			return false, err
 		}
 		if reason != report.Reason {
 			return false, ErrReportIdempotencyConflict
 		}
+	}
+	if err := tx.Commit(); err != nil {
+		return false, err
 	}
 	return rows == 1, nil
 }
