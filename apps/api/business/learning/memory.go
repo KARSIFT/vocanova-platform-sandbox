@@ -20,15 +20,26 @@ type MemoryRepository struct {
 
 // MemoryUserWord is an in-memory user_words row for tests.
 type MemoryUserWord struct {
-	ID        uuid.UUID
-	UserID    uuid.UUID
-	MeaningID uuid.UUID
-	Status    string
-	Source    string
-	AddedAt   time.Time
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt *time.Time
+	ID                        uuid.UUID
+	UserID                    uuid.UUID
+	MeaningID                 uuid.UUID
+	Status                    string
+	Source                    string
+	ReviewStep                int
+	NextReviewAt              *time.Time
+	LastReviewedAt            *time.Time
+	LastResult                string
+	LastRating                string
+	ConsecutiveCorrectCount   int
+	ConsecutiveIncorrectCount int
+	TotalReviewCount          int
+	CorrectReviewCount        int
+	MasteredAt                *time.Time
+	IgnoredAt                 *time.Time
+	AddedAt                   time.Time
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
+	DeletedAt                 *time.Time
 }
 
 // MemoryMeaning is an in-memory canonical meaning for tests.
@@ -81,6 +92,17 @@ func (r *MemoryRepository) SaveUserWord(ctx context.Context, req SaveUserWordReq
 			uw.DeletedAt = nil
 			uw.Status = "new"
 			uw.Source = req.Source
+			uw.ReviewStep = 0
+			uw.NextReviewAt = nil
+			uw.LastReviewedAt = nil
+			uw.LastResult = ""
+			uw.LastRating = ""
+			uw.ConsecutiveCorrectCount = 0
+			uw.ConsecutiveIncorrectCount = 0
+			uw.TotalReviewCount = 0
+			uw.CorrectReviewCount = 0
+			uw.MasteredAt = nil
+			uw.IgnoredAt = nil
 			uw.AddedAt = now
 			uw.UpdatedAt = now
 			return r.savedMeaningFromUserWord(*uw), nil
@@ -154,9 +176,14 @@ func (r *MemoryRepository) ListSavedWords(ctx context.Context, req ListSavedWord
 		if err != nil {
 			return nil, ErrInvalidCursor
 		}
+		// A cursor is an exclusive boundary, not a reference to a row that
+		// must still exist. Start exhausted unless an item strictly after the
+		// boundary is found, so a deleted cursor row cannot skip that item or
+		// restart the list.
+		start = len(items)
 		for i, it := range items {
-			if it.AddedAt.Before(c.AddedAt) || (it.AddedAt.Equal(c.AddedAt) && it.UserWordID.String() <= c.ID.String()) {
-				start = i + 1
+			if it.AddedAt.Before(c.AddedAt) || (it.AddedAt.Equal(c.AddedAt) && it.UserWordID.String() < c.ID.String()) {
+				start = i
 				break
 			}
 		}

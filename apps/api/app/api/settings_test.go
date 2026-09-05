@@ -349,6 +349,42 @@ func TestUpdateSettingsRejectsUnsupportedAppLanguage(t *testing.T) {
 // VOC-031-TEST-08: a displayName beyond MaxDisplayNameLength is
 // rejected. Huma's maxLength tag and the service-layer
 // validation are both lines of defense.
+func TestUpdateSettingsUnicodeDisplayNameRoundTrip(t *testing.T) {
+	for _, character := range []string{"م", "界", "😀"} {
+		t.Run(character, func(t *testing.T) {
+			api, svc, _ := testSettingsAPI(t)
+			uid := uuid.New()
+			name := strings.Repeat(character, users.MaxDisplayNameLength)
+			payload, err := json.Marshal(map[string]string{"displayName": name})
+			require.NoError(t, err)
+			csrfToken, csrfCookie := svc.IssueCSRFCookie()
+			req := settingsRequesterRequest(t, http.MethodPatch, "/api/v1/settings", string(payload), uid)
+			req.AddCookie(csrfCookie)
+			req.Header.Set("X-CSRF-Token", csrfToken)
+			w := httptest.NewRecorder()
+			api.Adapter().ServeHTTP(w, req)
+			require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+
+			w = httptest.NewRecorder()
+			api.Adapter().ServeHTTP(w, settingsRequesterRequest(t, http.MethodGet, "/api/v1/settings", "", uid))
+			require.Equal(t, http.StatusOK, w.Code)
+			var result SettingsDTO
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
+			assert.Equal(t, name, result.DisplayName)
+
+			payload, err = json.Marshal(map[string]string{"displayName": name + character})
+			require.NoError(t, err)
+			req = settingsRequesterRequest(t, http.MethodPatch, "/api/v1/settings", string(payload), uid)
+			req.AddCookie(csrfCookie)
+			req.Header.Set("X-CSRF-Token", csrfToken)
+			w = httptest.NewRecorder()
+			api.Adapter().ServeHTTP(w, req)
+			require.GreaterOrEqual(t, w.Code, 400)
+			require.Less(t, w.Code, 500)
+		})
+	}
+}
+
 func TestUpdateSettingsRejectsOverlongDisplayName(t *testing.T) {
 	api, svc, _ := testSettingsAPI(t)
 	uid := uuid.New()

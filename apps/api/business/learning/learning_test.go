@@ -179,6 +179,49 @@ func TestServiceUnsaveUserWord(t *testing.T) {
 	assert.False(t, saved[meaningID])
 }
 
+func TestServiceSaveUserWordRestoresDeletedWordWithFreshSchedule(t *testing.T) {
+	repo, idem := sampleLearningRepo()
+	now := time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC)
+	svc := NewService(repo, idem, &clock.Fixed{T: now})
+	userID := MustParseUUID("00000000-0000-0000-0000-000000000003")
+	meaningID := MustParseUUID("00000000-0000-0000-0000-000000000002")
+
+	first, err := svc.SaveUserWord(t.Context(), SaveUserWordRequest{UserID: userID, MeaningID: meaningID, Source: "journey", IdempotencyKey: "first-save"})
+	require.NoError(t, err)
+	require.NoError(t, svc.UnsaveUserWord(t.Context(), userID, meaningID))
+
+	future := now.Add(24 * time.Hour)
+	repo.userWords[0].ReviewStep = 7
+	repo.userWords[0].NextReviewAt = &future
+	repo.userWords[0].LastReviewedAt = &now
+	repo.userWords[0].LastResult = "correct"
+	repo.userWords[0].LastRating = "easy"
+	repo.userWords[0].ConsecutiveCorrectCount = 4
+	repo.userWords[0].ConsecutiveIncorrectCount = 1
+	repo.userWords[0].TotalReviewCount = 9
+	repo.userWords[0].CorrectReviewCount = 8
+	repo.userWords[0].MasteredAt = &now
+	repo.userWords[0].IgnoredAt = &now
+
+	restored, err := svc.SaveUserWord(t.Context(), SaveUserWordRequest{UserID: userID, MeaningID: meaningID, Source: "manual", IdempotencyKey: "restored-save"})
+	require.NoError(t, err)
+	assert.Equal(t, first.UserWordID, restored.UserWordID)
+
+	got := repo.userWords[0]
+	assert.Equal(t, "new", got.Status)
+	assert.Equal(t, 0, got.ReviewStep)
+	assert.Nil(t, got.NextReviewAt, "a restored word must be immediately due")
+	assert.Nil(t, got.LastReviewedAt)
+	assert.Empty(t, got.LastResult)
+	assert.Empty(t, got.LastRating)
+	assert.Zero(t, got.ConsecutiveCorrectCount)
+	assert.Zero(t, got.ConsecutiveIncorrectCount)
+	assert.Zero(t, got.TotalReviewCount)
+	assert.Zero(t, got.CorrectReviewCount)
+	assert.Nil(t, got.MasteredAt)
+	assert.Nil(t, got.IgnoredAt)
+}
+
 func TestServiceUnsaveUserWordUnknownReturnsNotFound(t *testing.T) {
 	repo, idem := sampleLearningRepo()
 	svc := NewService(repo, idem, clock.Real{})
@@ -278,6 +321,48 @@ func TestServiceListSavedWordsInvalidCursor(t *testing.T) {
 		AfterCursor: "not-valid",
 	})
 	assert.ErrorIs(t, err, ErrInvalidCursor)
+}
+
+func TestServiceListSavedWordsDeletedCursorDoesNotSkipBoundary(t *testing.T) {
+	repo, idem := sampleLearningRepo()
+	svc := NewService(repo, idem, clock.Real{})
+	userID := MustParseUUID("00000000-0000-0000-0000-000000000003")
+	now := time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC)
+
+	for _, id := range []string{"00000000-0000-0000-0000-000000000010", "00000000-0000-0000-0000-000000000011"} {
+		repo.meanings = append(repo.meanings, MemoryMeaning{ID: MustParseUUID(id), WordID: repo.words[0].ID, PartOfSpeech: "noun", ShortDefinition: id, Status: "active"})
+	}
+	repo.userWords = []MemoryUserWord{
+		{ID: MustParseUUID("00000000-0000-0000-0000-000000000003"), UserID: userID, MeaningID: MustParseUUID("00000000-0000-0000-0000-000000000010"), AddedAt: now},
+		{ID: MustParseUUID("00000000-0000-0000-0000-000000000002"), UserID: userID, MeaningID: MustParseUUID("00000000-0000-0000-0000-000000000011"), AddedAt: now},
+		{ID: MustParseUUID("00000000-0000-0000-0000-000000000001"), UserID: userID, MeaningID: MustParseUUID("00000000-0000-0000-0000-000000000002"), AddedAt: now},
+	}
+
+	first, err := svc.ListSavedWords(t.Context(), ListSavedWordsRequest{UserID: userID, Limit: 1})
+	require.NoError(t, err)
+	require.Len(t, first.Items, 1)
+	deletedAt := now.Add(time.Second)
+	repo.userWords[0].DeletedAt = &deletedAt
+
+	next, err := svc.ListSavedWords(t.Context(), ListSavedWordsRequest{UserID: userID, AfterCursor: first.NextCursor, Limit: 1})
+	require.NoError(t, err)
+	require.Len(t, next.Items, 1)
+	assert.Equal(t, MustParseUUID("00000000-0000-0000-0000-000000000011"), next.Items[0].MeaningID)
+}
+
+func TestServiceListSavedWordsExhaustedCursorReturnsEmptyPage(t *testing.T) {
+	repo, idem := sampleLearningRepo()
+	svc := NewService(repo, idem, clock.Real{})
+	repo.userWords = []MemoryUserWord{{
+		ID: MustParseUUID("00000000-0000-0000-0000-000000000010"), UserID: MustParseUUID("00000000-0000-0000-0000-000000000003"),
+		MeaningID: MustParseUUID("00000000-0000-0000-0000-000000000002"), AddedAt: time.Now(),
+	}}
+	cursor := encodeSavedCursor(savedCursor{AddedAt: time.Time{}, ID: MustParseUUID("00000000-0000-0000-0000-000000000001")})
+
+	resp, err := svc.ListSavedWords(t.Context(), ListSavedWordsRequest{UserID: MustParseUUID("00000000-0000-0000-0000-000000000003"), AfterCursor: cursor})
+	require.NoError(t, err)
+	assert.Empty(t, resp.Items)
+	assert.Empty(t, resp.NextCursor)
 }
 
 func TestServiceIsSavedCrossUserIsolation(t *testing.T) {

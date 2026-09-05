@@ -666,6 +666,929 @@
         ],
         "type": "object"
       },
+      "PersonalDataActivityDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "aiFeedbackReceived": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "confidencePointsEarned": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "confidencePointsSpent": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "localDate": {
+            "type": "string"
+          },
+          "reviewsAttempted": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "reviewsCorrect": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "reviewsSkipped": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "sentencesSubmitted": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "wordsAdded": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "wordsDiscovered": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "localDate",
+          "timezone",
+          "reviewsAttempted",
+          "reviewsCorrect",
+          "reviewsSkipped",
+          "wordsDiscovered",
+          "wordsAdded",
+          "sentencesSubmitted",
+          "aiFeedbackReceived",
+          "confidencePointsEarned",
+          "confidencePointsSpent",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "PersonalDataConfidenceLedgerDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "balanceAfter": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "occurredAt": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "sourceId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sourceType": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount",
+          "balanceAfter",
+          "reason",
+          "sourceType",
+          "sourceId",
+          "occurredAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "PersonalDataExportDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/PersonalDataExportDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "confidencePointLedger": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalDataConfidenceLedgerDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "dailyActivity": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalDataActivityDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "dailyMissions": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalDataMissionDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "exportedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "graceDayLedger": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalDataGraceLedgerDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "onboardingProfile": {
+            "$ref": "#/components/schemas/PersonalDataOnboardingDTO"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/PersonalDataProfileDTO"
+          },
+          "reviewHistory": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalDataReviewDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "savedWords": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalDataSavedWordDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "schemaVersion": {
+            "type": "string"
+          },
+          "sentenceFeedbackHistory": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalDataSentenceFeedbackDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "settings": {
+            "$ref": "#/components/schemas/PersonalDataSettingsDTO"
+          },
+          "streakState": {
+            "$ref": "#/components/schemas/PersonalDataStreakDTO"
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "profile",
+          "settings",
+          "onboardingProfile",
+          "savedWords",
+          "reviewHistory",
+          "sentenceFeedbackHistory",
+          "dailyMissions",
+          "dailyActivity",
+          "confidencePointLedger",
+          "graceDayLedger",
+          "streakState"
+        ],
+        "type": "object"
+      },
+      "PersonalDataFeedbackAttemptDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "completedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "feedback": {
+            "$ref": "#/components/schemas/PersonalDataFeedbackDTO"
+          },
+          "feedbackText": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "startedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "feedback",
+          "feedbackText",
+          "startedAt",
+          "completedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "PersonalDataFeedbackDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "correctedSentence": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "explanation": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "improvementTip": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "targetWordUsedCorrectly": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "targetWordUsedCorrectly",
+          "correctedSentence",
+          "explanation",
+          "improvementTip"
+        ],
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "PersonalDataGraceLedgerDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "appliedToLocalDate": {
+            "type": "string"
+          },
+          "balanceAfter": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "sourceId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sourceType": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount",
+          "balanceAfter",
+          "reason",
+          "sourceType",
+          "sourceId",
+          "appliedToLocalDate",
+          "timezone",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "PersonalDataMissionDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "completedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "graceApplied": {
+            "type": "boolean"
+          },
+          "localDate": {
+            "type": "string"
+          },
+          "newWordTarget": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "newWordsCompleted": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "policyVersion": {
+            "type": "string"
+          },
+          "reviewTarget": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "reviewsCompleted": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "sentencePracticeTarget": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "sentencePracticesCompleted": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "localDate",
+          "timezone",
+          "reviewTarget",
+          "reviewsCompleted",
+          "newWordTarget",
+          "newWordsCompleted",
+          "sentencePracticeTarget",
+          "sentencePracticesCompleted",
+          "policyVersion",
+          "status",
+          "completedAt",
+          "graceApplied",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "PersonalDataOnboardingDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "completedAt": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "dailyReviewTarget": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "englishLevel": {
+            "type": "string"
+          },
+          "learningGoal": {
+            "type": "string"
+          },
+          "mainUseCase": {
+            "type": "string"
+          },
+          "nativeLanguage": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "englishLevel",
+          "nativeLanguage",
+          "learningGoal",
+          "mainUseCase",
+          "dailyReviewTarget",
+          "completedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "PersonalDataProfileDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "avatarUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "emailVerifiedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "onboardingStatus": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "displayName",
+          "avatarUrl",
+          "onboardingStatus",
+          "emailVerifiedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "PersonalDataReviewDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "answeredAt": {
+            "type": "string"
+          },
+          "attemptType": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "meaningId": {
+            "type": "string"
+          },
+          "promptType": {
+            "type": "string"
+          },
+          "rating": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "responseTimeMs": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "result": {
+            "type": "string"
+          },
+          "reviewStepAfter": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "reviewStepBefore": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "selectedOptionMeaningId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source": {
+            "type": "string"
+          },
+          "typedAnswer": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "userWordId": {
+            "type": "string"
+          },
+          "wasHintUsed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "userWordId",
+          "meaningId",
+          "attemptType",
+          "promptType",
+          "result",
+          "rating",
+          "reviewStepBefore",
+          "reviewStepAfter",
+          "answeredAt",
+          "responseTimeMs",
+          "selectedOptionMeaningId",
+          "typedAnswer",
+          "wasHintUsed",
+          "source",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "PersonalDataSavedWordDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "addedAt": {
+            "type": "string"
+          },
+          "consecutiveCorrectCount": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "consecutiveIncorrectCount": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "correctReviewCount": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "ignoredAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lastRating": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lastResult": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lastReviewedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "masteredAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "meaningId": {
+            "type": "string"
+          },
+          "nextReviewAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "partOfSpeech": {
+            "type": "string"
+          },
+          "reviewStep": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "shortDefinition": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "totalReviewCount": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "wordId": {
+            "type": "string"
+          },
+          "wordText": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "meaningId",
+          "wordId",
+          "wordText",
+          "partOfSpeech",
+          "shortDefinition",
+          "status",
+          "source",
+          "reviewStep",
+          "nextReviewAt",
+          "lastReviewedAt",
+          "lastResult",
+          "lastRating",
+          "consecutiveCorrectCount",
+          "consecutiveIncorrectCount",
+          "totalReviewCount",
+          "correctReviewCount",
+          "addedAt",
+          "masteredAt",
+          "ignoredAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "PersonalDataSentenceDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "createdAt": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "meaningId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sentenceText": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "submittedAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "userWordId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "meaningId",
+          "userWordId",
+          "sentenceText",
+          "source",
+          "status",
+          "submittedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "PersonalDataSentenceFeedbackDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "feedbackAttempts": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalDataFeedbackAttemptDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "sentence": {
+            "$ref": "#/components/schemas/PersonalDataSentenceDTO"
+          }
+        },
+        "required": [
+          "sentence",
+          "feedbackAttempts"
+        ],
+        "type": "object"
+      },
+      "PersonalDataSettingsDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "appLanguage": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dailyReviewTarget": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "marketingEmailsEnabled": {
+            "type": "boolean"
+          },
+          "notificationsEnabled": {
+            "type": "boolean"
+          },
+          "reviewIntervalPreset": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "timezone",
+          "dailyReviewTarget",
+          "reviewIntervalPreset",
+          "notificationsEnabled",
+          "marketingEmailsEnabled",
+          "appLanguage",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "PersonalDataStreakDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "createdAt": {
+            "type": "string"
+          },
+          "currentStreakCount": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "lastActivityLocalDate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lastCompletedLocalDate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "longestStreakCount": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "currentStreakCount",
+          "longestStreakCount",
+          "lastCompletedLocalDate",
+          "lastActivityLocalDate",
+          "timezone",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": [
+          "object",
+          "null"
+        ]
+      },
       "ProgressDTO": {
         "additionalProperties": false,
         "properties": {
@@ -717,14 +1640,15 @@
             "readOnly": true,
             "type": "string"
           },
-          "classification": {
-            "description": "Optional classification (e.g. incorrect, unsafe, unclear)",
-            "maxLength": 100,
-            "type": "string"
-          },
           "reason": {
-            "description": "Short reason for the report",
-            "maxLength": 200,
+            "description": "Learner-selected report reason",
+            "enum": [
+              "already_correct",
+              "correction_changed_meaning",
+              "explanation_unclear",
+              "inappropriate",
+              "something_else"
+            ],
             "type": "string"
           }
         },
@@ -1348,7 +2272,7 @@
             "type": "string"
           },
           "selectedOptionMeaningId": {
-            "description": "Chosen option for multiple choice",
+            "description": "Chosen option for multiple choice; required for non-skipped multiple-choice attempts and must agree with result",
             "format": "uuid",
             "type": "string"
           },
@@ -2153,6 +3077,70 @@
         ]
       }
     },
+    "/api/v1/personal-data-export": {
+      "post": {
+        "description": "Synchronous MVP export. Includes learner-visible profile, settings, saved-word, review, practice, feedback, and progress history; excludes authentication secrets, hidden prompts, provider credentials, and internal abuse/report classifications.",
+        "operationId": "CreatePersonalDataExport",
+        "parameters": [
+          {
+            "description": "User-scoped idempotency key (DOC-07)",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "description": "User-scoped idempotency key (DOC-07)",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalDataExportDTO"
+                }
+              }
+            },
+            "description": "OK",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Pragma": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication is required"
+          },
+          "403": {
+            "description": "Invalid CSRF token"
+          },
+          "404": {
+            "description": "User not found"
+          },
+          "409": {
+            "description": "Idempotency-Key conflict"
+          },
+          "422": {
+            "description": "Missing or invalid Idempotency-Key"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        },
+        "summary": "Download the requester's personal data as JSON",
+        "tags": [
+          "Account"
+        ]
+      }
+    },
     "/api/v1/progress": {
       "get": {
         "operationId": "GetProgress",
@@ -2367,6 +3355,16 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "description": "User-scoped idempotency key",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "description": "User-scoped idempotency key",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -2391,6 +3389,9 @@
           },
           "404": {
             "description": "Feedback attempt not found"
+          },
+          "409": {
+            "description": "Idempotency key conflict"
           }
         },
         "summary": "Report a quality concern for a feedback attempt",

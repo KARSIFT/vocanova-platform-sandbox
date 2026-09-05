@@ -2,6 +2,7 @@ package learning
 
 import (
 	"errors"
+	"regexp"
 	"testing"
 	"time"
 
@@ -169,14 +170,36 @@ func TestPostgreSQLRepositoryListSavedWords(t *testing.T) {
 	now := time.Now()
 
 	mock.ExpectQuery("SELECT uw.id, uw.meaning_id, cw.id, cw.text, cw.normalized_text").
-		WithArgs(userID, sqlmock.AnyArg(), sqlmock.AnyArg(), 20).
+		WithArgs(userID, sqlmock.AnyArg(), sqlmock.AnyArg(), 2).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "meaning_id", "word_id", "text", "normalized_text", "part_of_speech", "short_definition", "status", "source", "added_at"}).
 			AddRow("00000000-0000-0000-0000-000000000003", "00000000-0000-0000-0000-000000000002", "00000000-0000-0000-0000-000000000004", "boarding pass", "boarding pass", "noun", "A document.", "new", "journey", now))
 
-	resp, err := repo.ListSavedWords(t.Context(), ListSavedWordsRequest{UserID: userID})
+	resp, err := repo.ListSavedWords(t.Context(), ListSavedWordsRequest{UserID: userID, Limit: 1})
 	require.NoError(t, err)
 	require.Len(t, resp.Items, 1)
 	assert.Equal(t, "boarding-pass", resp.Items[0].WordSlug)
+	assert.Empty(t, resp.NextCursor)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestPostgreSQLRepositoryListSavedWordsUsesLookahead(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewPostgreSQLRepository(db)
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	now := time.Now()
+	mock.ExpectQuery("ORDER BY uw.added_at DESC, uw.id DESC").
+		WithArgs(userID, sqlmock.AnyArg(), sqlmock.AnyArg(), 2).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "meaning_id", "word_id", "text", "normalized_text", "part_of_speech", "short_definition", "status", "source", "added_at"}).
+			AddRow("00000000-0000-0000-0000-000000000003", "00000000-0000-0000-0000-000000000002", "00000000-0000-0000-0000-000000000004", "first", "first", "noun", "First.", "new", "journey", now).
+			AddRow("00000000-0000-0000-0000-000000000005", "00000000-0000-0000-0000-000000000006", "00000000-0000-0000-0000-000000000007", "second", "second", "noun", "Second.", "new", "journey", now))
+
+	resp, err := repo.ListSavedWords(t.Context(), ListSavedWordsRequest{UserID: userID, Limit: 1})
+	require.NoError(t, err)
+	require.Len(t, resp.Items, 1)
+	assert.NotEmpty(t, resp.NextCursor)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -324,8 +347,17 @@ func TestPostgreSQLRepositorySaveUserWordRestoreDeletedNoNewReward(t *testing.T)
 		WithArgs(userID, meaningID).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "deleted_at"}).
 			AddRow(existingID, time.Date(2026, 7, 24, 0, 0, 0, 0, time.UTC))) // Previously deleted
-	// Restore the deleted row instead of inserting a new one
-	mock.ExpectExec("UPDATE user_words").
+	// Restore the deleted row as a fresh saved word instead of inserting a
+	// new one. Every scheduling/history field must match a newly saved word.
+	mock.ExpectExec(regexp.QuoteMeta(`UPDATE user_words
+			 SET deleted_at = NULL, status = 'new', source = $1, review_step = 0,
+			     next_review_at = NULL, last_reviewed_at = NULL,
+			     last_result = NULL, last_rating = NULL,
+			     consecutive_correct_count = 0, consecutive_incorrect_count = 0,
+			     total_review_count = 0, correct_review_count = 0,
+			     mastered_at = NULL, ignored_at = NULL,
+			     added_at = $2, updated_at = $2
+			 WHERE id = $3`)).
 		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), existingID).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()

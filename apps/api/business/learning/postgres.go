@@ -72,6 +72,11 @@ func (r *PostgreSQLRepository) SaveUserWord(ctx context.Context, req SaveUserWor
 		if _, err := tx.ExecContext(ctx,
 			`UPDATE user_words
 			 SET deleted_at = NULL, status = 'new', source = $1, review_step = 0,
+			     next_review_at = NULL, last_reviewed_at = NULL,
+			     last_result = NULL, last_rating = NULL,
+			     consecutive_correct_count = 0, consecutive_incorrect_count = 0,
+			     total_review_count = 0, correct_review_count = 0,
+			     mastered_at = NULL, ignored_at = NULL,
 			     added_at = $2, updated_at = $2
 			 WHERE id = $3`,
 			req.Source, now, existingID,
@@ -188,8 +193,8 @@ func (r *PostgreSQLRepository) ListSavedWords(ctx context.Context, req ListSaved
 				uw.added_at < $2 OR
 				(uw.added_at = $2 AND uw.id < $3))
 		 ORDER BY uw.added_at DESC, uw.id DESC
-		 LIMIT $4`,
-		req.UserID, cursorTime, cursorID, limit,
+		LIMIT $4`,
+		req.UserID, cursorTime, cursorID, limit+1,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("list saved words: %w", err)
@@ -197,7 +202,6 @@ func (r *PostgreSQLRepository) ListSavedWords(ctx context.Context, req ListSaved
 	defer rows.Close()
 
 	var items []SavedMeaning
-	var last SavedMeaning
 	for rows.Next() {
 		var m SavedMeaning
 		var normalizedText string
@@ -208,16 +212,18 @@ func (r *PostgreSQLRepository) ListSavedWords(ctx context.Context, req ListSaved
 		m.WordSlug = wordSlug(normalizedText)
 		m.Saved = true
 		items = append(items, m)
-		last = m
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("list saved words rows: %w", err)
 	}
 
-	resp := &ListSavedWordsResponse{Items: items}
-	if len(items) == limit {
+	resp := &ListSavedWordsResponse{}
+	if len(items) > limit {
+		items = items[:limit]
+		last := items[len(items)-1]
 		resp.NextCursor = encodeSavedCursor(savedCursor{AddedAt: last.AddedAt, ID: last.UserWordID})
 	}
+	resp.Items = items
 	return resp, nil
 }
 

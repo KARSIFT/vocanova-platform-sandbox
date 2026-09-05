@@ -124,6 +124,34 @@ func TestServiceSubmitSentenceFeedbackSuccess(t *testing.T) {
 	assert.Equal(t, 1, f.provider.calls)
 }
 
+func TestServiceReportFeedbackPersistsOneOpenUnclassifiedRecord(t *testing.T) {
+	f := newServiceFixture(t)
+	result, err := f.service.SubmitSentenceFeedback(t.Context(), f.request("I work every day."))
+	require.NoError(t, err)
+
+	require.NoError(t, f.service.ReportFeedback(t.Context(), f.userID, result.AttemptID, ReportReasonAlreadyCorrect, "report-idem-1"))
+	require.NoError(t, f.service.ReportFeedback(t.Context(), f.userID, result.AttemptID, ReportReasonAlreadyCorrect, "report-idem-2"))
+
+	reports := f.repo.QualityReviewReports()
+	require.Len(t, reports, 1)
+	assert.Equal(t, result.AttemptID, reports[0].AttemptID)
+	assert.Equal(t, ReportReasonAlreadyCorrect, reports[0].Reason)
+	assert.Equal(t, QualityReviewStateOpen, reports[0].State)
+	assert.Nil(t, reports[0].Classification)
+	replayed, err := f.service.SubmitSentenceFeedback(t.Context(), f.request("I work every day."))
+	require.NoError(t, err)
+	assert.True(t, replayed.Reported)
+	assert.Equal(t, result.Status, replayed.Status)
+	assert.Equal(t, 1, f.provider.calls)
+
+	assert.ErrorIs(t, f.service.ReportFeedback(t.Context(), f.userID, result.AttemptID, ReportReasonCorrectionChangedMeaning, "report-idem-1"), ErrReportIdempotencyConflict)
+	assert.ErrorIs(t, f.service.ReportFeedback(t.Context(), f.userID, result.AttemptID, ReportReasonCorrectionChangedMeaning, "another-key"), ErrReportIdempotencyConflict)
+	second, err := f.service.SubmitSentenceFeedback(t.Context(), f.request("I work every morning."))
+	require.NoError(t, err)
+	assert.ErrorIs(t, f.service.ReportFeedback(t.Context(), f.userID, second.AttemptID, ReportReasonAlreadyCorrect, "report-idem-1"), ErrReportIdempotencyConflict)
+	assert.Len(t, f.repo.QualityReviewReports(), 1)
+}
+
 func TestServiceValidationFailureTooShort(t *testing.T) {
 	f := newServiceFixture(t)
 	req := f.request("I work")
@@ -317,6 +345,29 @@ func TestServiceProviderFailureIsRetryable(t *testing.T) {
 	assert.True(t, result.CanRetry)
 	assert.NotEqual(t, uuid.Nil, result.SentenceID)
 	assert.NotEqual(t, uuid.Nil, result.AttemptID)
+}
+
+func TestServiceStoredFailureReplayDoesNotExposeInternalError(t *testing.T) {
+	f := newServiceFixture(t)
+	f.service.provider = &failingProvider{}
+	req := f.request("I work every day.")
+
+	initial, err := f.service.SubmitSentenceFeedback(t.Context(), req)
+	require.NoError(t, err)
+	assert.Equal(t, ErrorCodeTemporaryFailure, initial.ErrorCode)
+	assert.Empty(t, initial.ErrorMessage)
+
+	// A fresh idempotency key exercises request-hash deduplication rather than
+	// the idempotency-key conflict path. The stored error is deliberately an
+	// internal provider detail and must not be returned to the learner.
+	replay := req
+	replay.IdempotencyKey = uuid.New().String()
+	result, err := f.service.SubmitSentenceFeedback(t.Context(), replay)
+	require.NoError(t, err)
+	assert.Equal(t, ErrorCodeTemporaryFailure, result.ErrorCode)
+	assert.Empty(t, result.ErrorMessage)
+	assert.True(t, result.CanRetry)
+	assert.Equal(t, 1, len(f.repo.attempts))
 }
 
 type failingProvider struct{}

@@ -2,6 +2,7 @@ package accounts
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -77,6 +78,23 @@ func NewMemoryRepository() *MemoryRepository {
 		users:            make(map[uuid.UUID]*memoryUser),
 		deletionRequests: make(map[uuid.UUID]*AccountDeletionRequest),
 	}
+}
+
+// ExportPersonalData provides a minimal deterministic contract fixture. The
+// production repository is responsible for enumerating persisted history.
+func (r *MemoryRepository) ExportPersonalData(ctx context.Context, userID uuid.UUID) (json.RawMessage, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	u, ok := r.users[userID]
+	if !ok {
+		return nil, ErrUserNotFound
+	}
+	return json.Marshal(map[string]any{
+		"schemaVersion": "1.0", "profile": map[string]any{"id": u.ID.String(), "email": u.Email},
+		"settings": map[string]any{"timezone": "UTC", "dailyReviewTarget": 20, "reviewIntervalPreset": "vocanova_default", "notificationsEnabled": true, "marketingEmailsEnabled": false, "appLanguage": "en", "createdAt": nil, "updatedAt": nil}, "onboardingProfile": nil, "savedWords": []any{}, "reviewHistory": []any{},
+		"sentenceFeedbackHistory": []any{}, "dailyMissions": []any{}, "dailyActivity": []any{},
+		"confidencePointLedger": []any{}, "graceDayLedger": []any{}, "streakState": nil,
+	})
 }
 
 // CreateEmailChangeLink inserts one row. Mirrors the SQL

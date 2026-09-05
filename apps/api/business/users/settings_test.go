@@ -1,11 +1,23 @@
 package users
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestSettingsUpdateDisplayNameCountsUnicodeCharacters(t *testing.T) {
+	for _, character := range []string{"a", "م", "界", "😀"} {
+		t.Run(character, func(t *testing.T) {
+			name := strings.Repeat(character, MaxDisplayNameLength)
+			require.NoError(t, SettingsUpdate{DisplayName: &name}.Validate())
+			name += character
+			require.Error(t, SettingsUpdate{DisplayName: &name}.Validate())
+		})
+	}
+}
 
 // TestSettingsUpdateValidateAcceptsEmpty verifies that a fully-empty
 // payload (a PATCH with no fields) passes validation. The service

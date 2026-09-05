@@ -9,7 +9,10 @@ production, queue entries ejected by a cancelled run). Run:
     python3 .github/scripts/workflows_contract_test.py
 """
 
+import json
+import os
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -62,6 +65,124 @@ def real_jobs(wf: dict) -> dict:
 
 
 WORKFLOWS = {p.name: load(p) for p in sorted(WF_DIR.glob("*.yml"))}
+
+
+def auto_merge_shell() -> str:
+    """Return the production inline shell, rather than a copied test fixture."""
+    steps = real_jobs(WORKFLOWS["auto-merge.yml"])["auto-merge"]["steps"]
+    return next(step["run"] for step in steps if step.get("name") == "Enable or disable auto-merge, and enqueue, per target PR")
+
+
+class AutoMergeWorkflowShellTest(unittest.TestCase):
+    """Exercise the checked-in workflow shell with a deterministic fake gh."""
+
+    def run_shell(self, info: dict, *, queued: bool, fail_dequeue: bool = False, race_dequeued: bool = False):
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            fake_gh = temp / "gh"
+            log = temp / "gh.log"
+            fake_gh.write_text(
+                """#!/usr/bin/env python3
+import os
+import sys
+
+args = sys.argv[1:]
+joined = " ".join(args)
+log = os.environ["GH_LOG"]
+with open(log, "a") as output:
+    if args[:2] == ["pr", "view"]:
+        output.write("VIEW\\n")
+        print(os.environ["PR_INFO"])
+    elif args[:2] == ["pr", "merge"]:
+        output.write("MERGE " + " ".join(args[2:]) + "\\n")
+    elif "dequeuePullRequest" in joined:
+        output.write("DEQUEUE\\n")
+        if os.environ.get("FAIL_DEQUEUE") == "1":
+            print("simulated dequeue failure", file=sys.stderr)
+            sys.exit(1)
+    elif "enqueuePullRequest" in joined:
+        output.write("ENQUEUE\\n")
+    elif "mergeQueueEntry" in joined:
+        count_path = os.environ["GH_QUERY_COUNT"]
+        count = int(open(count_path).read()) if os.path.exists(count_path) else 0
+        with open(count_path, "w") as count_file:
+            count_file.write(str(count + 1))
+        output.write("QUEUE_QUERY\\n")
+        value = os.environ["QUEUED"] == "1"
+        if os.environ.get("RACE_DEQUEUED") == "1" and count > 0:
+            value = False
+        print(str(value).lower())
+    else:
+        print("unexpected gh invocation: " + joined, file=sys.stderr)
+        sys.exit(2)
+"""
+            )
+            fake_gh.chmod(0o755)
+            environment = {
+                **os.environ,
+                "PATH": f"{temp}:{os.environ['PATH']}",
+                "NUMBERS": "[42]",
+                "GH_TOKEN": "test-token",
+                "GH_REPO": "KARSIFT/vocanova-platform-sandbox",
+                "PR_INFO": json.dumps(info),
+                "GH_LOG": str(log),
+                "GH_QUERY_COUNT": str(temp / "query-count"),
+                "QUEUED": "1" if queued else "0",
+                "FAIL_DEQUEUE": "1" if fail_dequeue else "0",
+                "RACE_DEQUEUED": "1" if race_dequeued else "0",
+            }
+            result = subprocess.run(
+                ["bash", "-c", auto_merge_shell()],
+                cwd=WF_DIR.parents[1],
+                env=environment,
+                text=True,
+                capture_output=True,
+            )
+            return result, log.read_text().splitlines() if log.exists() else []
+
+    @staticmethod
+    def pr_info(*, draft: bool = False, held: bool = False, auto_merge: bool = True) -> dict:
+        return {
+            "isDraft": draft,
+            "labels": [{"name": "hold"}] if held else [],
+            "id": "PR_node_42",
+            "state": "OPEN",
+            "autoMergeRequest": {"enabledAt": "2026-09-05T00:00:00Z"} if auto_merge else None,
+        }
+
+    def test_draft_disables_auto_merge_and_dequeues(self) -> None:
+        result, log = self.run_shell(self.pr_info(draft=True), queued=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(log, ["VIEW", "MERGE 42 --disable-auto", "QUEUE_QUERY", "DEQUEUE"])
+
+    def test_hold_disables_auto_merge_and_dequeues(self) -> None:
+        result, log = self.run_shell(self.pr_info(held=True), queued=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(log, ["VIEW", "MERGE 42 --disable-auto", "QUEUE_QUERY", "DEQUEUE"])
+
+    def test_absent_queue_entry_is_not_dequeued(self) -> None:
+        result, log = self.run_shell(self.pr_info(draft=True, auto_merge=False), queued=False)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(log, ["VIEW", "QUEUE_QUERY"])
+
+    def test_dequeue_failure_is_visible_when_entry_remains(self) -> None:
+        result, log = self.run_shell(self.pr_info(draft=True), queued=True, fail_dequeue=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("remains in the merge queue", result.stderr)
+        self.assertEqual(log, ["VIEW", "MERGE 42 --disable-auto", "QUEUE_QUERY", "DEQUEUE", "QUEUE_QUERY"])
+
+    def test_concurrent_dequeue_is_safe(self) -> None:
+        result, log = self.run_shell(
+            self.pr_info(draft=True), queued=True, fail_dequeue=True, race_dequeued=True
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("already removed", result.stderr)
+        self.assertEqual(log, ["VIEW", "MERGE 42 --disable-auto", "QUEUE_QUERY", "DEQUEUE", "QUEUE_QUERY"])
+
+    def test_ready_unheld_pr_still_enables_and_enqueues(self) -> None:
+        result, log = self.run_shell(self.pr_info(auto_merge=False), queued=False)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(log, ["VIEW", "MERGE 42 --auto", "ENQUEUE"])
 
 
 class WorkflowContractTest(unittest.TestCase):

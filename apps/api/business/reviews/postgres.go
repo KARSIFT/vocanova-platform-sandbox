@@ -89,8 +89,8 @@ func (r *PostgreSQLRepository) ListDueWords(ctx context.Context, req ListDueWord
 	}
 
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT
-		   uw.id, uw.meaning_id, cw.id, cw.text, cw.normalized_text,
+		`SELECT * FROM (SELECT
+		   uw.id AS user_word_id, uw.meaning_id, cw.id AS word_id, cw.text, cw.normalized_text,
 		   wm.part_of_speech, wm.short_definition, uw.status, uw.source, uw.review_step,
 		   uw.next_review_at,
 		   COUNT(*) OVER() AS total_count
@@ -101,12 +101,13 @@ func (r *PostgreSQLRepository) ListDueWords(ctx context.Context, req ListDueWord
 		   AND uw.deleted_at IS NULL
 		   AND uw.status IN ('new', 'learning', 'reviewing')
 		   AND (uw.next_review_at IS NULL OR uw.next_review_at <= NOW())
-		   AND ($2::timestamptz IS NULL OR
-		        COALESCE(uw.next_review_at, '-infinity'::timestamptz) > $2 OR
-		        (COALESCE(uw.next_review_at, '-infinity'::timestamptz) = $2 AND uw.id > $3))
-		 ORDER BY COALESCE(uw.next_review_at, '-infinity'::timestamptz) ASC, uw.id ASC
+		 ) AS due
+		 WHERE ($3::uuid = '00000000-0000-0000-0000-000000000000'::uuid OR
+		        (COALESCE(due.next_review_at, '-infinity'::timestamptz), due.user_word_id) >
+		        (COALESCE($2::timestamptz, '-infinity'::timestamptz), $3::uuid))
+		 ORDER BY COALESCE(due.next_review_at, '-infinity'::timestamptz) ASC, due.user_word_id ASC
 		 LIMIT $4`,
-		req.UserID, cursorNextReviewAt, cursorID, limit,
+		req.UserID, cursorNextReviewAt, cursorID, limit+1,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("list due words: %w", err)
@@ -115,7 +116,6 @@ func (r *PostgreSQLRepository) ListDueWords(ctx context.Context, req ListDueWord
 
 	var items []DueWord
 	var totalCount int
-	var last DueWord
 	for rows.Next() {
 		var d DueWord
 		var normalizedText string
@@ -132,14 +132,30 @@ func (r *PostgreSQLRepository) ListDueWords(ctx context.Context, req ListDueWord
 			d.NextReviewAt = &nextReviewAt.Time
 		}
 		items = append(items, d)
-		last = d
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("list due words rows: %w", err)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, fmt.Errorf("close due words rows: %w", err)
+	}
+	// No row carries the window count when a cursor is exhausted.
+	if len(items) == 0 && req.AfterCursor != "" {
+		err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM user_words uw
+		 JOIN word_meanings wm ON wm.id = uw.meaning_id
+		 JOIN canonical_words cw ON cw.id = wm.word_id
+		 WHERE uw.user_id = $1 AND uw.deleted_at IS NULL
+		 AND uw.status IN ('new', 'learning', 'reviewing')
+		 AND (uw.next_review_at IS NULL OR uw.next_review_at <= NOW())`, req.UserID).Scan(&totalCount)
+		if err != nil {
+			return nil, fmt.Errorf("count due words: %w", err)
+		}
+	}
 
 	resp := &ListDueWordsResponse{Items: items, TotalCount: totalCount}
-	if len(items) == limit {
+	if len(items) > limit {
+		resp.Items = items[:limit]
+		last := resp.Items[limit-1]
 		cursor := dueCursor{ID: last.UserWordID}
 		if last.NextReviewAt != nil {
 			cursor.NextReviewAt = *last.NextReviewAt

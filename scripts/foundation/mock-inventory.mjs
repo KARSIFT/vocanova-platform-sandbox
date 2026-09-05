@@ -178,7 +178,8 @@ export function validateMockInventory() {
   // VOC-031-T01 onboarding read/submit routes, the
   // VOC-031-T02 settings read/write routes, the
   // VOC-031-T03 email-change request/consume routes, and the
-  // VOC-031-T04 account-deletion request route were invented.
+  // VOC-031-T04 account-deletion request route and the synchronous
+  // personal-data export privacy route were invented.
   const allowedAPIPaths = [
     /^\/api\/v1\/me$/,
     /^\/api\/v1\/auth(?:\/|$)/,
@@ -197,6 +198,7 @@ export function validateMockInventory() {
     /^\/api\/v1\/settings\/email-change-links$/,
     /^\/api\/v1\/settings\/email-change-links\/consume$/,
     /^\/api\/v1\/account-deletion-requests$/,
+    /^\/api\/v1\/personal-data-export$/,
   ];
   const apiRouteFiles = globSync("**/*.go", { cwd: apiRouteRoot });
   for (const file of apiRouteFiles) {
@@ -206,7 +208,7 @@ export function validateMockInventory() {
       const apiPath = match[1];
       if (!allowedAPIPaths.some((allowed) => allowed.test(apiPath))) {
         errors.push(
-          `${file}: API path ${apiPath} outside the approved A1/P1/P2/P4-T00/T04/P5-T01/T02/T03 boundary`,
+          `${file}: API path ${apiPath} outside the approved A1/P1/P2/P4-T00/T04/P5-T01/T02/T03/privacy boundary`,
         );
       }
     }
@@ -267,6 +269,7 @@ export function validateMockInventory() {
     "useronboardingprofile.go",
     "emailchangelink.go",
     "accountdeletionrequest.go",
+    "aifeedbackqualityreviewreport.go",
   ]);
   for (const entry of readdirSync(apiSchemaRoot, { withFileTypes: true })) {
     if (
@@ -303,6 +306,7 @@ export function validateMockInventory() {
     "20260725140001_voc031_p5_email_change_links.sql",
     "20260725140002_voc031_p5_account_deletion_requests.sql",
     "20260808141000_voc050_t00_synthetic_smoke_test_user.sql",
+    "20260905120000_voc1200_ai_feedback_quality_review_reports.sql",
   ]);
   for (const entry of readdirSync(apiMigrationRoot, {
     withFileTypes: true,

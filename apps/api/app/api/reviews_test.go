@@ -306,7 +306,7 @@ func TestSubmitReviewSchedulesStepForward(t *testing.T) {
 		},
 	})
 
-	body := `{"userWordId":"00000000-0000-0000-0000-000000000004","meaningId":"00000000-0000-0000-0000-000000000003","promptType":"multiple_choice","result":"correct","rating":"good","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"ca-1"}`
+	body := `{"userWordId":"00000000-0000-0000-0000-000000000004","meaningId":"00000000-0000-0000-0000-000000000003","promptType":"multiple_choice","result":"correct","rating":"good","selectedOptionMeaningId":"00000000-0000-0000-0000-000000000003","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"ca-1"}`
 	w := httptest.NewRecorder()
 	req := submitReviewRequest(t, userID, body, authSvc)
 	api.Adapter().ServeHTTP(w, req)
@@ -320,6 +320,23 @@ func TestSubmitReviewSchedulesStepForward(t *testing.T) {
 	assert.Equal(t, 0, out.Body.ReviewStepBefore)
 	assert.Equal(t, 1, out.Body.ReviewStepAfter)
 	assert.False(t, out.Body.NextReviewAt.IsZero())
+}
+
+func TestSubmitReviewRejectsMultipleChoiceCorrectWithoutSelection(t *testing.T) {
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	wordID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
+	userWordID := uuid.MustParse("00000000-0000-0000-0000-000000000004")
+	api, _, authSvc := testReviewsAPI(t, reviews.MemoryRepositoryData{
+		Words:     []reviews.MemoryWord{{ID: wordID, Text: "boarding pass", NormalizedText: "boarding pass", Status: "active"}},
+		Meanings:  []reviews.MemoryMeaning{{ID: meaningID, WordID: wordID, PartOfSpeech: "noun", ShortDefinition: "A document.", Status: "active"}},
+		UserWords: []reviews.MemoryUserWord{{ID: userWordID, UserID: userID, MeaningID: meaningID, Status: "new", Source: "journey", ReviewStep: 0}},
+	})
+
+	body := `{"userWordId":"00000000-0000-0000-0000-000000000004","meaningId":"00000000-0000-0000-0000-000000000003","promptType":"multiple_choice","result":"correct","rating":"good","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"forged-no-selection"}`
+	w := httptest.NewRecorder()
+	api.Adapter().ServeHTTP(w, submitReviewRequest(t, userID, body, authSvc))
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
 func TestSubmitReviewAgainStepsBack(t *testing.T) {
@@ -355,7 +372,7 @@ func TestSubmitReviewUnknownUserWordReturns404(t *testing.T) {
 	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
 	api, _, authSvc := testReviewsAPI(t, reviews.MemoryRepositoryData{})
 
-	body := `{"userWordId":"00000000-0000-0000-0000-000000000004","meaningId":"00000000-0000-0000-0000-000000000003","promptType":"multiple_choice","result":"correct","rating":"good","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"ca-3"}`
+	body := `{"userWordId":"00000000-0000-0000-0000-000000000004","meaningId":"00000000-0000-0000-0000-000000000003","promptType":"multiple_choice","result":"correct","rating":"good","selectedOptionMeaningId":"00000000-0000-0000-0000-000000000003","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"ca-3"}`
 	w := httptest.NewRecorder()
 	req := submitReviewRequest(t, userID, body, authSvc)
 	api.Adapter().ServeHTTP(w, req)
@@ -382,7 +399,7 @@ func TestSubmitReviewMismatchedMeaningReturns404(t *testing.T) {
 		},
 	})
 
-	body := fmt.Sprintf(`{"userWordId":"%s","meaningId":"%s","promptType":"multiple_choice","result":"correct","rating":"good","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"ca-4"}`, userWordID.String(), otherMeaningID.String())
+	body := fmt.Sprintf(`{"userWordId":"%s","meaningId":"%s","promptType":"multiple_choice","result":"correct","rating":"good","selectedOptionMeaningId":"%s","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"ca-4"}`, userWordID.String(), otherMeaningID.String(), otherMeaningID.String())
 	w := httptest.NewRecorder()
 	req := submitReviewRequest(t, userID, body, authSvc)
 	api.Adapter().ServeHTTP(w, req)
@@ -420,7 +437,7 @@ func TestSubmitReviewIdempotencyReplay(t *testing.T) {
 		},
 	})
 
-	body := `{"userWordId":"00000000-0000-0000-0000-000000000004","meaningId":"00000000-0000-0000-0000-000000000003","promptType":"multiple_choice","result":"correct","rating":"good","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"ca-replay"}`
+	body := `{"userWordId":"00000000-0000-0000-0000-000000000004","meaningId":"00000000-0000-0000-0000-000000000003","promptType":"multiple_choice","result":"correct","rating":"good","selectedOptionMeaningId":"00000000-0000-0000-0000-000000000003","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"ca-replay"}`
 	submit := func() *httptest.ResponseRecorder {
 		w := httptest.NewRecorder()
 		req := submitReviewRequest(t, userID, body, authSvc)
@@ -456,8 +473,8 @@ func TestSubmitReviewIdempotencyKeyConflict(t *testing.T) {
 		},
 	})
 
-	body1 := `{"userWordId":"00000000-0000-0000-0000-000000000004","meaningId":"00000000-0000-0000-0000-000000000003","promptType":"multiple_choice","result":"correct","rating":"good","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"ca-conflict-1"}`
-	body2 := `{"userWordId":"00000000-0000-0000-0000-000000000004","meaningId":"00000000-0000-0000-0000-000000000003","promptType":"multiple_choice","result":"correct","rating":"easy","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"ca-conflict-2"}`
+	body1 := `{"userWordId":"00000000-0000-0000-0000-000000000004","meaningId":"00000000-0000-0000-0000-000000000003","promptType":"multiple_choice","result":"correct","rating":"good","selectedOptionMeaningId":"00000000-0000-0000-0000-000000000003","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"ca-conflict-1"}`
+	body2 := `{"userWordId":"00000000-0000-0000-0000-000000000004","meaningId":"00000000-0000-0000-0000-000000000003","promptType":"multiple_choice","result":"correct","rating":"easy","selectedOptionMeaningId":"00000000-0000-0000-0000-000000000003","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"ca-conflict-2"}`
 
 	w := httptest.NewRecorder()
 	req := submitReviewRequest(t, userID, body1, authSvc)
@@ -489,7 +506,7 @@ func TestSubmitReviewCrossUserCannotSubmit(t *testing.T) {
 		},
 	})
 
-	body := fmt.Sprintf(`{"userWordId":"%s","meaningId":"%s","promptType":"multiple_choice","result":"correct","rating":"good","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"ca-cross"}`, userWordID.String(), meaningID.String())
+	body := fmt.Sprintf(`{"userWordId":"%s","meaningId":"%s","promptType":"multiple_choice","result":"correct","rating":"good","selectedOptionMeaningId":"%s","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"ca-cross"}`, userWordID.String(), meaningID.String(), meaningID.String())
 	w := httptest.NewRecorder()
 	req := submitReviewRequest(t, other, body, authSvc)
 	api.Adapter().ServeHTTP(w, req)
