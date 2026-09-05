@@ -400,6 +400,19 @@ func TestServiceRequestBudgetFinalizesPendingAttemptAndSkipsExpiredRepair(t *tes
 	assert.Equal(t, AttemptStatusFailed, f.repo.attempts[0].Status, "the detached cleanup context must settle the pending attempt")
 }
 
+func TestServiceRequestBudgetFinalizesPendingAttemptWhenIdempotencyRecordExpires(t *testing.T) {
+	f := newServiceFixture(t)
+	f.service.config.RequestTimeout = 20 * time.Millisecond
+	f.service.idem = deferredRecordIdempotency{IdempotencyStore: f.service.idem}
+
+	result, err := f.service.SubmitSentenceFeedback(t.Context(), f.request("I work every day."))
+	require.NoError(t, err)
+	assert.Equal(t, ErrorCodeTemporaryFailure, result.ErrorCode)
+	require.Len(t, f.repo.attempts, 1)
+	assert.Equal(t, AttemptStatusFailed, f.repo.attempts[0].Status, "idempotency-record expiry must not strand the pending attempt")
+	assert.Zero(t, f.provider.calls)
+}
+
 type deferredGate struct{}
 
 func (deferredGate) Check(ctx context.Context, _ uuid.UUID) error {
@@ -441,6 +454,13 @@ func (p *expiredInvalidProvider) GenerateFeedback(ctx context.Context, _ Provide
 	p.calls++
 	<-ctx.Done()
 	return &ProviderFeedback{}, nil
+}
+
+type deferredRecordIdempotency struct{ learning.IdempotencyStore }
+
+func (deferredRecordIdempotency) Record(ctx context.Context, _ uuid.UUID, _, _, _ string) error {
+	<-ctx.Done()
+	return ctx.Err()
 }
 
 func TestServiceStoredFailureReplayDoesNotExposeInternalError(t *testing.T) {

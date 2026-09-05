@@ -165,7 +165,8 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 	}
 
 	if err := s.rateLimiter.Allow(ctx, req.UserID); err != nil {
-		defer s.rateLimiter.Release(req.UserID)
+		// A rejected request owns no permit; releasing here would free the
+		// slot held by another generation for the same learner.
 		if ctx.Err() != nil {
 			return s.temporaryFailureResult(req.SentenceText), nil
 		}
@@ -283,6 +284,9 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 	}
 
 	if err := s.idem.Record(ctx, req.UserID, operationSentenceFeedback, req.IdempotencyKey, requestHash); err != nil {
+		if cleanupErr := s.failPendingAttempt(ctx, *pending, err); cleanupErr != nil {
+			return nil, fmt.Errorf("finalize idempotency-record failure: %w", cleanupErr)
+		}
 		if ctx.Err() != nil {
 			return s.temporaryFailureResult(req.SentenceText), nil
 		}
@@ -292,7 +296,7 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 	feedback, providerDuration, providerErr := s.generateWithRepair(ctx, target, validation.Normalized)
 
 	if providerErr != nil {
-		if err := s.completeAttempt(ctx, *pending, nil, ErrorCodeTemporaryFailure, providerErr.Error()); err != nil {
+		if err := s.failPendingAttempt(ctx, *pending, providerErr); err != nil {
 			return nil, fmt.Errorf("finalize failed attempt: %w", err)
 		}
 		s.recordTelemetry(ctx, req.UserID, target, "provider_error", providerDuration.Milliseconds(), "")
@@ -306,7 +310,7 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 	}
 
 	if err := s.outputValidator.Validate(feedback, target); err != nil {
-		if err := s.completeAttempt(ctx, *pending, nil, ErrorCodeTemporaryFailure, err.Error()); err != nil {
+		if err := s.failPendingAttempt(ctx, *pending, err); err != nil {
 			return nil, fmt.Errorf("finalize invalid output attempt: %w", err)
 		}
 		s.recordTelemetry(ctx, req.UserID, target, "invalid_output", providerDuration.Milliseconds(), "")
@@ -319,7 +323,7 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 		}, nil
 	}
 	if err := ctx.Err(); err != nil {
-		if finalizeErr := s.completeAttempt(ctx, *pending, nil, ErrorCodeTemporaryFailure, err.Error()); finalizeErr != nil {
+		if finalizeErr := s.failPendingAttempt(ctx, *pending, err); finalizeErr != nil {
 			return nil, fmt.Errorf("finalize expired attempt: %w", finalizeErr)
 		}
 		return &SentenceFeedbackResult{
@@ -463,6 +467,15 @@ func (s *Service) generateWithRepair(ctx context.Context, target *Target, normal
 		return nil, providerDuration, fmt.Errorf("output validation failed after repair: %w", err)
 	}
 	return feedback, providerDuration, nil
+}
+
+// failPendingAttempt settles an already-created attempt on every terminal
+// failure path. It never borrows the request context: the request may already
+// be cancelled or expired, and cleanup itself remains bounded to one second.
+func (s *Service) failPendingAttempt(ctx context.Context, pending PendingAttempt, cause error) error {
+	cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Second)
+	defer cancel()
+	return s.repo.CompleteFeedbackAttempt(cleanupCtx, pending, nil, ErrorCodeTemporaryFailure, cause.Error(), s.clock.Now().UTC())
 }
 
 func (s *Service) requestTimeout() time.Duration {
