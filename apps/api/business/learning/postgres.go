@@ -42,7 +42,10 @@ func (r *PostgreSQLRepository) SaveUserWord(ctx context.Context, req SaveUserWor
 
 	var meaningID uuid.UUID
 	if err := tx.QueryRowContext(ctx,
-		`SELECT id FROM word_meanings WHERE id = $1 AND status = 'active'`,
+		`SELECT wm.id
+		 FROM word_meanings wm
+		 JOIN canonical_words cw ON cw.id = wm.word_id
+		 WHERE wm.id = $1 AND wm.status = 'active' AND cw.status = 'active'`,
 		req.MeaningID,
 	).Scan(&meaningID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
