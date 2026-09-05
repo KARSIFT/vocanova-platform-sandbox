@@ -155,7 +155,8 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 	}
 
 	if err := s.rateLimiter.Allow(ctx, req.UserID); err != nil {
-		defer s.rateLimiter.Release(req.UserID)
+		// A rejected request owns no permit; releasing here would free the
+		// slot held by another generation for the same learner.
 		return &SentenceFeedbackResult{
 			OriginalSentence: req.SentenceText,
 			ErrorCode:        ErrorCodeRateLimited,
