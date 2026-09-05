@@ -8,6 +8,12 @@ import { createApiClient } from "@/lib/api";
 import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
 import { handleApiError } from "@/lib/session";
 
+import {
+  acceptSentenceEdit,
+  countSentenceCharacters,
+  MAX_SENTENCE_CHARACTERS,
+} from "./sentence-feedback-input";
+
 interface SentenceFeedbackProps {
   targetWord: string;
   attemptId: string;
@@ -169,15 +175,18 @@ export function SentenceFeedback({
             id={`sentence-input-${attemptId}`}
             name="sentence"
             value={sentence}
-            onChange={(event) => setSentence(event.target.value)}
+            onChange={(event) =>
+              setSentence((previous) =>
+                acceptSentenceEdit(previous, event.target.value),
+              )
+            }
             disabled={isLoading}
-            maxLength={300}
             rows={3}
             placeholder={`Type a sentence using "${targetWord}"...`}
             className="w-full rounded-md border border-neutral-300 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base text-neutral-900 placeholder:text-neutral-500 focus:border-primary-500 focus:outline focus:outline-2 focus:outline-primary-500/20 disabled:cursor-not-allowed disabled:opacity-60"
           />
           <p className="mt-[var(--spacing-xs)] text-right text-sm text-neutral-600">
-            {sentence.length}/300
+            {countSentenceCharacters(sentence)}/{MAX_SENTENCE_CHARACTERS}
           </p>
         </div>
 
