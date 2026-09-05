@@ -2,6 +2,7 @@ package aifeedback
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
@@ -18,6 +19,13 @@ type MissionUpdater interface {
 	Update(ctx context.Context, userID, sentenceID uuid.UUID) (bool, error)
 }
 
+// TransactionMissionUpdater is implemented by the production mission updater.
+// It lets the feedback repository own one commit boundary without making the
+// missions package depend on the feedback package.
+type TransactionMissionUpdater interface {
+	UpdateInTransaction(ctx context.Context, tx *sql.Tx, userID, sentenceID uuid.UUID) (bool, error)
+}
+
 // StubMissionUpdater returns a backend-decided false result and writes
 // nothing. It exists as a safe default for callers that don't have a real
 // MissionUpdater available (see the package doc comment above); it must not
@@ -31,5 +39,9 @@ func NewStubMissionUpdater() *StubMissionUpdater {
 
 // Update always returns false, nil: this stub never writes.
 func (s *StubMissionUpdater) Update(ctx context.Context, userID, sentenceID uuid.UUID) (bool, error) {
+	return false, nil
+}
+
+func (s *StubMissionUpdater) UpdateInTransaction(ctx context.Context, tx *sql.Tx, userID, sentenceID uuid.UUID) (bool, error) {
 	return false, nil
 }

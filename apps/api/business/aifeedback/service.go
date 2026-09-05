@@ -2,6 +2,7 @@ package aifeedback
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
@@ -392,7 +393,8 @@ func (s *Service) completePendingAttempt(ctx context.Context, req SubmitSentence
 		}, nil
 	}
 
-	if err := s.repo.CompleteFeedbackAttempt(ctx, *pending, feedback, "", "", s.clock.Now().UTC()); err != nil {
+	missionCompleted, err := s.completeSuccessfulFeedbackAttempt(ctx, req.UserID, *pending, feedback)
+	if err != nil {
 		// A finalization error may be reported after an ambiguous database
 		// commit. Settle only a still-pending row with the detached cleanup
 		// context, so that cleanup cannot overwrite a committed success.
@@ -403,11 +405,6 @@ func (s *Service) completePendingAttempt(ctx context.Context, req SubmitSentence
 			return s.temporaryFailureResult(req.SentenceText), nil
 		}
 		return nil, fmt.Errorf("finalize successful attempt: %w", err)
-	}
-
-	missionCompleted, err := s.mission.Update(ctx, req.UserID, pending.SentenceID)
-	if err != nil {
-		return nil, fmt.Errorf("mission update: %w", err)
 	}
 
 	duration := s.clock.Now().Sub(start)
@@ -426,6 +423,27 @@ func (s *Service) completePendingAttempt(ctx context.Context, req SubmitSentence
 		Reported:          false,
 	}
 	return result, nil
+}
+
+// completeSuccessfulFeedbackAttempt keeps the production feedback transition
+// and all mission accounting in one transaction. Test-only repositories that
+// do not expose a transaction retain the historical seam.
+func (s *Service) completeSuccessfulFeedbackAttempt(ctx context.Context, userID uuid.UUID, pending PendingAttempt, feedback *ProviderFeedback) (bool, error) {
+	if finalizer, ok := s.repo.(SuccessfulFeedbackFinalizer); ok {
+		return finalizer.CompleteSuccessfulFeedbackAttempt(ctx, pending, feedback, s.clock.Now().UTC(), func(ctx context.Context, tx *sql.Tx) (bool, error) {
+			if updater, ok := s.mission.(TransactionMissionUpdater); ok {
+				return updater.UpdateInTransaction(ctx, tx, userID, pending.SentenceID)
+			}
+			if tx != nil {
+				return false, errors.New("transaction-aware mission updater required")
+			}
+			return s.mission.Update(ctx, userID, pending.SentenceID)
+		})
+	}
+	if err := s.repo.CompleteFeedbackAttempt(ctx, pending, feedback, "", "", s.clock.Now().UTC()); err != nil {
+		return false, err
+	}
+	return s.mission.Update(ctx, userID, pending.SentenceID)
 }
 
 // ReportFeedback records a learner report for a feedback attempt. It verifies
