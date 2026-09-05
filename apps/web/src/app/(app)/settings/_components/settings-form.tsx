@@ -15,16 +15,20 @@ const REVIEW_INTERVAL_PRESETS = [
     value: "vocanova_default",
     label: "Vocanova default",
     helper: "Spaced repetition tuned for everyday vocabulary.",
+    available: true,
   },
   {
     value: "wordup_like",
     label: "Faster reminders",
     helper: "Words come back sooner — useful before an exam or trip.",
+    available: true,
   },
   {
     value: "custom",
-    label: "Custom",
-    helper: "A later custom preset. We will add it here when it ships.",
+    label: "Custom (coming soon)",
+    helper:
+      "Custom review schedules are not available yet. Your current choice stays saved until then.",
+    available: false,
   },
 ] as const;
 
@@ -172,25 +176,42 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
             return (
               <label
                 key={preset.value}
-                className={`flex min-h-[var(--spacing-2xl)] cursor-pointer items-start gap-[var(--spacing-sm)] rounded-md border p-[var(--spacing-md)] transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] ${
+                className={`flex min-h-[var(--spacing-2xl)] items-start gap-[var(--spacing-sm)] rounded-md border p-[var(--spacing-md)] transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] ${
                   checked
                     ? "border-primary-600 bg-primary-50"
                     : "border-neutral-200 bg-white hover:border-primary-300"
-                } focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary-700`}
+                } ${
+                  preset.available
+                    ? "cursor-pointer focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary-700"
+                    : "cursor-not-allowed opacity-70"
+                }`}
               >
                 <input
                   type="radio"
                   name="reviewIntervalPreset"
                   value={preset.value}
                   checked={checked}
+                  disabled={preset.available === false}
                   onChange={() => patch("reviewIntervalPreset", preset.value)}
+                  aria-describedby={
+                    preset.available === false
+                      ? "custom-review-rhythm-unavailable"
+                      : undefined
+                  }
                   className="mt-[var(--spacing-xs)] size-4 accent-primary-600"
                 />
                 <span className="flex flex-col">
                   <span className="text-base font-medium text-neutral-900">
                     {preset.label}
                   </span>
-                  <span className="text-sm text-neutral-700">
+                  <span
+                    id={
+                      preset.available === false
+                        ? "custom-review-rhythm-unavailable"
+                        : undefined
+                    }
+                    className="text-sm text-neutral-700"
+                  >
                     {preset.helper}
                   </span>
                 </span>
