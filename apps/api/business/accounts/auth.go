@@ -120,6 +120,8 @@ type AccountDeletionRequest struct {
 	IdempotencyKey string
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+	// Replayed is a transport-only projection. It is never persisted.
+	Replayed bool
 }
 
 // Valid reports whether the request can still be processed by
