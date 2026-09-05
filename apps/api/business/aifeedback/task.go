@@ -150,7 +150,7 @@ func (v *DefaultOutputValidator) Validate(feedback *ProviderFeedback, target *Ta
 		return fmt.Errorf("invalid status %q", feedback.Status)
 	}
 
-	if feedback.Explanation == "" {
+	if strings.TrimSpace(feedback.Explanation) == "" {
 		return fmt.Errorf("explanation is required")
 	}
 	if len([]rune(feedback.Explanation)) > 200 {
@@ -170,19 +170,19 @@ func (v *DefaultOutputValidator) Validate(feedback *ProviderFeedback, target *Ta
 	}
 
 	if feedback.Status == LearningStatusIncorrect {
-		if feedback.CorrectedSentence == nil || *feedback.CorrectedSentence == "" {
+		if feedback.CorrectedSentence == nil || strings.TrimSpace(*feedback.CorrectedSentence) == "" {
 			return fmt.Errorf("status incorrect requires corrected_sentence")
 		}
-		if feedback.ImprovementTip == nil || *feedback.ImprovementTip == "" {
+		if feedback.ImprovementTip == nil || strings.TrimSpace(*feedback.ImprovementTip) == "" {
 			return fmt.Errorf("status incorrect requires improvement_tip")
 		}
 	}
 
 	if feedback.Status == LearningStatusNeedsImprovement {
-		if feedback.CorrectedSentence == nil || *feedback.CorrectedSentence == "" {
+		if feedback.CorrectedSentence == nil || strings.TrimSpace(*feedback.CorrectedSentence) == "" {
 			return fmt.Errorf("status needs_improvement requires corrected_sentence")
 		}
-		if feedback.ImprovementTip == nil || *feedback.ImprovementTip == "" {
+		if feedback.ImprovementTip == nil || strings.TrimSpace(*feedback.ImprovementTip) == "" {
 			return fmt.Errorf("status needs_improvement requires improvement_tip")
 		}
 	}
