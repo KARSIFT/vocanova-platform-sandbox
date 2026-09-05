@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -19,6 +21,63 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type failingSettingsRepository struct {
+	*users.MemoryRepository
+}
+
+func TestMapSettingsErrorClassification(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		err    error
+		status int
+	}{
+		{"validation", users.ErrInvalidSettings, 400},
+		{"wrapped validation", fmt.Errorf("context: %w", users.ErrInvalidSettings), 400},
+		{"missing settings", users.ErrSettingsNotFound, 404},
+		{"missing user", fmt.Errorf("context: %w", users.ErrUserNotFound), 404},
+		{"internal", errors.New("private infrastructure"), 500},
+		{"wrapped internal", fmt.Errorf("context: %w", errors.New("private infrastructure")), 500},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			mapped := mapSettingsError(tc.err)
+			assert.Equal(t, tc.status, mapped.GetStatus())
+			assert.NotContains(t, mapped.Error(), "private infrastructure")
+		})
+	}
+	assert.Nil(t, mapSettingsError(nil))
+}
+
+func (r failingSettingsRepository) GetSettings(context.Context, uuid.UUID) (users.Settings, error) {
+	return users.Settings{}, errors.New("database connection failed: private-db-host secret-credential")
+}
+
+func (r failingSettingsRepository) UpdateSettings(context.Context, uuid.UUID, users.SettingsUpdate, time.Time) (users.Settings, error) {
+	return users.Settings{}, errors.New("database connection failed: private-db-host secret-credential")
+}
+
+func TestSettingsRepositoryErrorsArePrivate(t *testing.T) {
+	_, authSvc, _ := testSettingsAPI(t)
+	repo := failingSettingsRepository{users.NewMemoryRepository()}
+	svc := users.NewService(repo, repo, repo, &clock.Fixed{T: testNow()})
+	api := humachi.New(chi.NewMux(), huma.DefaultConfig("Settings failures", "1"))
+	api.UseMiddleware(withHumaContext)
+	RegisterContract(api)
+	RegisterSettings(api, svc, authSvc)
+	for _, method := range []string{http.MethodGet, http.MethodPatch} {
+		t.Run(method, func(t *testing.T) {
+			req := settingsRequesterRequest(t, method, "/api/v1/settings", `{}`, uuid.New())
+			token, cookie := authSvc.IssueCSRFCookie()
+			req.AddCookie(cookie)
+			req.Header.Set("X-CSRF-Token", token)
+			rec := httptest.NewRecorder()
+			api.Adapter().ServeHTTP(rec, req)
+			assert.Equal(t, http.StatusInternalServerError, rec.Code)
+			assert.NotContains(t, rec.Body.String(), "private-db-host")
+			assert.NotContains(t, rec.Body.String(), "secret-credential")
+		})
+	}
+}
 
 // testSettingsAPI wires a Huma API with the contract, auth, and
 // settings routes registered against the same in-memory auth
