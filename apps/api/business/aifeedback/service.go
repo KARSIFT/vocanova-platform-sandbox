@@ -17,9 +17,12 @@ type ServiceConfig struct {
 	Provider string
 	Model    string
 	Release  string
-	// RequestTimeout bounds the complete synchronous sentence-feedback
-	// lifecycle. It deliberately starts before the gate, repository, and
-	// moderation calls, rather than only when the feedback provider is called.
+	// RequestTimeout is the cooperative 10-second target for the complete
+	// synchronous sentence-feedback lifecycle. It deliberately starts before
+	// the gate, repository, and moderation calls, rather than only when the
+	// feedback provider is called. Dependencies must honor its context: Go
+	// cannot preempt a provider that ignores cancellation. A failed pending
+	// attempt may then take up to one additional second for bounded cleanup.
 	RequestTimeout time.Duration
 	RateLimit      RateLimitConfig
 	OpenCode       OpenCodeConfig
@@ -424,9 +427,10 @@ func (s *Service) ReportFeedback(ctx context.Context, userID, attemptID uuid.UUI
 }
 
 // generateWithRepair calls the provider once and, if the output fails validation,
-// makes one constrained repair attempt (DOC-09 §10). The provider call is bounded
-// by the DOC-09 §18 total backend target of 10 seconds; the adapter itself
-// enforces an 8-second per-request timeout.
+// makes one constrained repair attempt (DOC-09 §10). The cooperative request
+// context is the DOC-09 §18 10-second total backend target; the adapter itself
+// enforces an 8-second per-request timeout. An uncooperative provider can delay
+// return beyond that deadline, but no repair or success is started afterward.
 func (s *Service) generateWithRepair(ctx context.Context, target *Target, normalized string) (*ProviderFeedback, time.Duration, error) {
 	task := s.taskBuilder.Build(target, normalized)
 	providerStart := s.clock.Now()

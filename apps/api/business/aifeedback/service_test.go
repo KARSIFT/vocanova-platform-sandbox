@@ -400,6 +400,22 @@ func TestServiceRequestBudgetFinalizesPendingAttemptAndSkipsExpiredRepair(t *tes
 	assert.Equal(t, AttemptStatusFailed, f.repo.attempts[0].Status, "the detached cleanup context must settle the pending attempt")
 }
 
+func TestServiceRequestBudgetCannotPreemptUncooperativeProvider(t *testing.T) {
+	f := newServiceFixture(t)
+	f.service.config.RequestTimeout = 5 * time.Millisecond
+	provider := &uncooperativeInvalidProvider{delay: 25 * time.Millisecond}
+	f.service.provider = provider
+
+	started := time.Now()
+	result, err := f.service.SubmitSentenceFeedback(t.Context(), f.request("I work every day."))
+	require.NoError(t, err)
+	assert.Equal(t, ErrorCodeTemporaryFailure, result.ErrorCode)
+	assert.GreaterOrEqual(t, time.Since(started), provider.delay, "a context deadline cannot preempt a provider that ignores it")
+	assert.Equal(t, 1, provider.calls, "the expired request must not start a repair")
+	require.Len(t, f.repo.attempts, 1)
+	assert.Equal(t, AttemptStatusFailed, f.repo.attempts[0].Status)
+}
+
 func TestServiceRequestBudgetFinalizesPendingAttemptWhenIdempotencyRecordExpires(t *testing.T) {
 	f := newServiceFixture(t)
 	f.service.config.RequestTimeout = 20 * time.Millisecond
@@ -453,6 +469,17 @@ type expiredInvalidProvider struct{ calls int }
 func (p *expiredInvalidProvider) GenerateFeedback(ctx context.Context, _ ProviderTask) (*ProviderFeedback, error) {
 	p.calls++
 	<-ctx.Done()
+	return &ProviderFeedback{}, nil
+}
+
+type uncooperativeInvalidProvider struct {
+	calls int
+	delay time.Duration
+}
+
+func (p *uncooperativeInvalidProvider) GenerateFeedback(_ context.Context, _ ProviderTask) (*ProviderFeedback, error) {
+	p.calls++
+	time.Sleep(p.delay)
 	return &ProviderFeedback{}, nil
 }
 
