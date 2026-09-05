@@ -290,7 +290,9 @@ export function validateMockInventory() {
   // P4 gamification_tables migration; T03 adds the
   // email_change_links migration; T04 adds the
   // account_deletion_requests migration. VOC-050-T00 adds the
-  // synthetic smoke-test account marker on users.
+  // synthetic smoke-test account marker on users. The AI retry-history
+  // migration makes failed feedback attempts retryable without losing their
+  // history.
   const allowedMigrationFiles = new Set([
     "20260724210000_identity_foundation.sql",
     "20260724210001_oauth_state.sql",
@@ -307,6 +309,7 @@ export function validateMockInventory() {
     "20260725140002_voc031_p5_account_deletion_requests.sql",
     "20260808141000_voc050_t00_synthetic_smoke_test_user.sql",
     "20260905120000_voc1200_ai_feedback_quality_review_reports.sql",
+    "20260905130000_ai_feedback_retry_history.sql",
   ]);
   for (const entry of readdirSync(apiMigrationRoot, {
     withFileTypes: true,

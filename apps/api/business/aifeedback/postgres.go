@@ -118,13 +118,23 @@ func (r *PostgreSQLRepository) GetFeedbackAttemptByRequestHash(ctx context.Conte
 		        feedback_json, feedback_text, error_code, error_message,
 		        EXISTS (SELECT 1 FROM ai_feedback_quality_review_reports r WHERE r.ai_feedback_attempt_id = ai_feedback_attempts.id)
 		 FROM ai_feedback_attempts
-		 WHERE request_hash = $1`,
+		 WHERE request_hash = $1
+		 ORDER BY CASE status WHEN 'succeeded' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END,
+		          created_at DESC`,
 		requestHash,
 	)
 	return r.scanStoredAttempt(row)
 }
 
 func (r *PostgreSQLRepository) scanStoredAttempt(row *sql.Row) (*StoredFeedbackAttempt, error) {
+	return scanStoredAttempt(row)
+}
+
+type storedAttemptScanner interface {
+	Scan(dest ...any) error
+}
+
+func scanStoredAttempt(row storedAttemptScanner) (*StoredFeedbackAttempt, error) {
 	var a StoredFeedbackAttempt
 	var feedbackJSON []byte
 	var feedbackText, errorCode, errorMessage sql.NullString
@@ -209,6 +219,77 @@ func (r *PostgreSQLRepository) CreatePendingAttempt(ctx context.Context, req Sub
 	}
 
 	return &PendingAttempt{SentenceID: sentenceID, AttemptID: attemptID}, nil
+}
+
+// CreateRetryAttempt appends an immutable retry generation for the same
+// learner sentence after a failed provider attempt. The partial unique index on
+// request_hash prevents more than one pending or successful generation.
+func (r *PostgreSQLRepository) CreateRetryAttempt(ctx context.Context, failed *StoredFeedbackAttempt, provider string, model string, now time.Time) (*RetryAttempt, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("begin retry tx: %w", err)
+	}
+	defer tx.Rollback()
+
+	attemptID := uuid.New()
+	for {
+		result, err := tx.ExecContext(ctx,
+			`INSERT INTO ai_feedback_attempts (
+			id, learner_sentence_id, status, provider, model, prompt_version, request_hash,
+			feedback_json, feedback_text, error_code, error_message,
+			started_at, completed_at, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, NULL, NULL, NULL, NULL, NULL, NULL, $8, $8)
+		 ON CONFLICT (request_hash) WHERE status IN ('pending', 'succeeded') DO NOTHING`,
+			attemptID, failed.LearnerSentenceID, AttemptStatusPending, provider, model,
+			PromptVersionSentenceFeedbackV1, failed.RequestHash, now,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("insert retry attempt: %w", err)
+		}
+		created, err := result.RowsAffected()
+		if err != nil {
+			return nil, fmt.Errorf("check retry insert: %w", err)
+		}
+		if created == 1 {
+			break
+		}
+
+		row := tx.QueryRowContext(ctx,
+			`SELECT id, learner_sentence_id, status, provider, model, prompt_version, request_hash,
+			        feedback_json, feedback_text, error_code, error_message,
+			        EXISTS (SELECT 1 FROM ai_feedback_quality_review_reports r WHERE r.ai_feedback_attempt_id = ai_feedback_attempts.id)
+			 FROM ai_feedback_attempts
+			 WHERE request_hash = $1 AND status IN ('pending', 'succeeded')
+			 ORDER BY CASE status WHEN 'succeeded' THEN 0 ELSE 1 END, created_at DESC
+			 LIMIT 1`, failed.RequestHash)
+		existing, err := scanStoredAttempt(row)
+		if err == nil && existing != nil {
+			if err := tx.Commit(); err != nil {
+				return nil, fmt.Errorf("commit existing retry attempt: %w", err)
+			}
+			return &RetryAttempt{Existing: existing}, nil
+		}
+		if !errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("load active retry attempt: %w", err)
+		}
+
+		// A conflicting pending generation may have failed after the INSERT
+		// observed it but before this statement's fresh read. A new key is an
+		// explicit retry under DOC-09, so retry the insert rather than turning
+		// that legitimate next generation into an internal error.
+		attemptID = uuid.New()
+	}
+	_, err = tx.ExecContext(ctx,
+		`UPDATE learner_sentences SET status = $1, updated_at = $2 WHERE id = $3`,
+		SentenceStatusSubmitted, now, failed.LearnerSentenceID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("reset learner sentence for retry: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit retry attempt: %w", err)
+	}
+	return &RetryAttempt{Pending: &PendingAttempt{SentenceID: failed.LearnerSentenceID, AttemptID: attemptID}}, nil
 }
 
 func (r *PostgreSQLRepository) CompleteFeedbackAttempt(ctx context.Context, pending PendingAttempt, feedback *ProviderFeedback, failureCode, failureMessage string, now time.Time) error {
