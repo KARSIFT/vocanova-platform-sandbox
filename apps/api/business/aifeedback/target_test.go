@@ -59,6 +59,17 @@ func TestSentenceContainsTargetPhrase(t *testing.T) {
 	assert.False(t, SentenceContainsTarget("I give you a book.", target))
 }
 
+func TestSentenceContainsTargetConfiguredPhraseVariant(t *testing.T) {
+	target := &Target{
+		NormalizedWord: "give up",
+		WordType:       "phrasal_verb",
+		PartOfSpeech:   "verb",
+		AcceptedForms:  []string{"give up", "gave up"},
+	}
+
+	assert.True(t, SentenceContainsTarget("I gave up yesterday.", target))
+}
+
 func TestSentenceContainsTargetPossessive(t *testing.T) {
 	target := &Target{
 		NormalizedWord: "work",
