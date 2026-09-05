@@ -65,12 +65,19 @@ func (s *MemoryIdempotencyStore) Record(ctx context.Context, userID uuid.UUID, o
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.keys[idempotencyCacheKey(userID, operation, key)] = memoryIdempotencyEntry{
+	cacheKey := idempotencyCacheKey(userID, operation, key)
+	now := s.now().UTC()
+	// Match PostgreSQL's insert-or-replace-expired behavior: replaying an
+	// active key must not renew its lifetime or replace its fingerprint.
+	if entry, ok := s.keys[cacheKey]; ok && entry.createdAt.After(now.Add(-idempotencyRetention)) {
+		return nil
+	}
+	s.keys[cacheKey] = memoryIdempotencyEntry{
 		userID:      userID,
 		operation:   operation,
 		key:         key,
 		fingerprint: fingerprint,
-		createdAt:   s.now().UTC(),
+		createdAt:   now,
 	}
 	return nil
 }

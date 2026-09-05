@@ -60,6 +60,21 @@ func TestMemoryIdempotencyStoreScopesKeysByUserAndOperation(t *testing.T) {
 	}
 }
 
+func TestMemoryIdempotencyReplayDoesNotExtendRetention(t *testing.T) {
+	created := time.Date(2026, 9, 5, 12, 0, 0, 0, time.UTC)
+	now := created
+	store := NewMemoryIdempotencyStore()
+	store.now = func() time.Time { return now }
+	userID := uuid.New()
+	require.NoError(t, store.Record(t.Context(), userID, "report", "key", "first"))
+	now = created.Add(23 * time.Hour)
+	require.NoError(t, store.Record(t.Context(), userID, "report", "key", "first"))
+	now = created.Add(idempotencyRetention)
+	status, err := store.Check(t.Context(), userID, "report", "key", "first")
+	require.NoError(t, err)
+	assert.Equal(t, IdempotencyAbsent, status, "a replay must retain the original expiration time")
+}
+
 func TestPostgreSQLIdempotencyStoreOnlyMatchesActiveKeysAndReplacesExpiredOnRecord(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
