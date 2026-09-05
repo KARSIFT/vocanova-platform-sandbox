@@ -317,12 +317,18 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 // ReportFeedback records a learner report for a feedback attempt. It verifies
 // the attempt belongs to the authenticated learner, then emits a privacy-safe
 // telemetry report. It does not change the stored result or mission completion.
-func (s *Service) ReportFeedback(ctx context.Context, userID, attemptID uuid.UUID, reason, classification string) error {
+func (s *Service) ReportFeedback(ctx context.Context, userID, attemptID uuid.UUID, reason, idempotencyKey string) error {
 	if userID == uuid.Nil {
 		return errors.New("user id required")
 	}
 	if attemptID == uuid.Nil {
 		return ErrTargetNotFound
+	}
+	if !validReportReason(reason) {
+		return ErrInvalidReportReason
+	}
+	if idempotencyKey == "" {
+		return errors.New("idempotency key required")
 	}
 	owner, err := s.repo.GetFeedbackAttemptOwner(ctx, attemptID)
 	if err != nil {
@@ -331,14 +337,24 @@ func (s *Service) ReportFeedback(ctx context.Context, userID, attemptID uuid.UUI
 	if owner != userID {
 		return ErrTargetNotFound
 	}
+	created, err := s.repo.CreateQualityReviewReport(ctx, QualityReviewReport{
+		ID: uuid.New(), AttemptID: attemptID, UserID: userID, Reason: reason,
+		State: QualityReviewStateOpen, CreatedAt: s.clock.Now().UTC(),
+	})
+	if err != nil {
+		return fmt.Errorf("create quality review report: %w", err)
+	}
+	if !created {
+		return nil
+	}
 	s.telemetry.RecordReport(ctx, FeedbackReport{
 		UserID:         userID,
 		AttemptID:      attemptID,
 		Reason:         reason,
-		Classification: classification,
+		Classification: "",
 	})
 	s.config.Metrics.RecordReport(ctx, MetricsReportEvent{
-		Classification: classification,
+		Classification: "",
 		Provider:       s.config.Provider,
 		Model:          s.config.Model,
 		Release:        s.config.Release,

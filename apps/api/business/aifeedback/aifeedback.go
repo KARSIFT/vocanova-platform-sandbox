@@ -80,6 +80,7 @@ var (
 	ErrRateLimited             = errors.New("ai feedback rate limited")
 	ErrSafetyBlocked           = errors.New("ai feedback safety blocked")
 	ErrTargetNotFound          = errors.New("target not found")
+	ErrInvalidReportReason     = errors.New("invalid report reason")
 	ErrAIGenerationDisabled    = errors.New("ai generation is disabled")
 )
 

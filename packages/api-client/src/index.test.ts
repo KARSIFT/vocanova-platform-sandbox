@@ -479,11 +479,11 @@ describe("VocanovaClient", () => {
         "https://api.example.com/api/v1/sentence-feedback/00000000-0000-0000-0000-000000000011/reports",
       );
       assert.equal(init.method, "POST");
+      assert.equal(new Headers(init.headers).get("Idempotency-Key"), "idem-key");
       assert.equal(
         init.body,
         JSON.stringify({
-          reason: "The feedback is incorrect.",
-          classification: "incorrect",
+          reason: "already_correct",
         }),
       );
       return Promise.resolve(new Response(null, { status: 204 }));
@@ -495,7 +495,8 @@ describe("VocanovaClient", () => {
     });
     const { response } = await client.reportSentenceFeedback(
       "00000000-0000-0000-0000-000000000011",
-      { reason: "The feedback is incorrect.", classification: "incorrect" },
+      { reason: "already_correct" },
+      "idem-key",
     );
     assert.equal(response.status, 204);
   });

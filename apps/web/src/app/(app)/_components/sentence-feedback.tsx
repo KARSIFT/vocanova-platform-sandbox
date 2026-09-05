@@ -22,6 +22,14 @@ const AI_LIMITATION_COPY =
 const RETRY_MESSAGE =
   "Vocanova could not check this sentence right now. Your sentence is still here, so you can try again.";
 
+const REPORT_REASONS = [
+  ["already_correct", "Already correct"],
+  ["correction_changed_meaning", "Correction changed my meaning"],
+  ["explanation_unclear", "Explanation was unclear"],
+  ["inappropriate", "Inappropriate"],
+  ["something_else", "Something else"],
+] as const;
+
 export function SentenceFeedback({
   targetWord,
   attemptId,
@@ -37,6 +45,7 @@ export function SentenceFeedback({
   const [reportStatus, setReportStatus] = useState<
     "idle" | "loading" | "error"
   >("idle");
+  const [showReportReasons, setShowReportReasons] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -85,7 +94,7 @@ export function SentenceFeedback({
     }
   }
 
-  async function handleReport() {
+  async function handleReport(reason: (typeof REPORT_REASONS)[number][0]) {
     if (!result?.attemptId) {
       return;
     }
@@ -102,13 +111,12 @@ export function SentenceFeedback({
     try {
       await client.reportSentenceFeedback(
         result.attemptId,
-        {
-          reason: "Learner reported this feedback via UI",
-          classification: "report",
-        },
+        { reason },
+        generateIdempotencyKey(),
         { headers: { "X-CSRF-Token": csrfToken } },
       );
       setReported(true);
+      setShowReportReasons(false);
       setReportStatus("idle");
     } catch (error) {
       // T06: a 401 on a report submission routes the learner to
@@ -259,10 +267,27 @@ export function SentenceFeedback({
               <div className="mt-[var(--spacing-sm)] flex items-center gap-[var(--spacing-md)]">
                 {reported ? (
                   <span className="text-sm text-neutral-600">Reported</span>
+                ) : showReportReasons ? (
+                  <fieldset className="space-y-[var(--spacing-xs)]">
+                    <legend className="text-sm font-medium text-neutral-800">
+                      What was the problem?
+                    </legend>
+                    {REPORT_REASONS.map(([reason, label]) => (
+                      <button
+                        key={reason}
+                        type="button"
+                        onClick={() => handleReport(reason)}
+                        disabled={reportStatus === "loading"}
+                        className="block text-left text-sm text-neutral-600 underline transition-colors hover:text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </fieldset>
                 ) : (
                   <button
                     type="button"
-                    onClick={handleReport}
+                    onClick={() => setShowReportReasons(true)}
                     disabled={reportStatus === "loading"}
                     aria-busy={reportStatus === "loading"}
                     className="text-sm font-medium text-neutral-600 underline transition-colors hover:text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"

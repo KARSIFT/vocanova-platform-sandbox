@@ -46,10 +46,10 @@ type SubmitSentenceFeedbackOutput struct {
 
 // ReportSentenceFeedbackInput reports a quality concern for a feedback attempt.
 type ReportSentenceFeedbackInput struct {
-	AttemptID string `path:"attemptId" format:"uuid" required:"true" doc:"AI feedback attempt identifier"`
-	Body      struct {
-		Reason         string `json:"reason" maxLength:"200" required:"true" doc:"Short reason for the report"`
-		Classification string `json:"classification,omitempty" maxLength:"100" doc:"Optional classification (e.g. incorrect, unsafe, unclear)"`
+	AttemptID      string `path:"attemptId" format:"uuid" required:"true" doc:"AI feedback attempt identifier"`
+	IdempotencyKey string `header:"Idempotency-Key" required:"true" doc:"User-scoped idempotency key"`
+	Body           struct {
+		Reason string `json:"reason" enum:"already_correct,correction_changed_meaning,explanation_unclear,inappropriate,something_else" required:"true" doc:"Learner-selected report reason"`
 	}
 }
 
@@ -106,7 +106,7 @@ func RegisterAIFeedback(api huma.API, svc *aifeedback.Service, authSvc *auth.Ser
 			"404": {Description: "Feedback attempt not found"},
 		},
 	}, func(ctx context.Context, input *ReportSentenceFeedbackInput) (*ReportSentenceFeedbackOutput, error) {
-		if err := svc.ReportFeedback(ctx, RequesterUserID(ctx), parseUUID(input.AttemptID), input.Body.Reason, input.Body.Classification); err != nil {
+		if err := svc.ReportFeedback(ctx, RequesterUserID(ctx), parseUUID(input.AttemptID), input.Body.Reason, input.IdempotencyKey); err != nil {
 			return nil, mapAIFeedbackError(err)
 		}
 		return &ReportSentenceFeedbackOutput{}, nil

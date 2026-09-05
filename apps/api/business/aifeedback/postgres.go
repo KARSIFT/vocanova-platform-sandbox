@@ -283,6 +283,26 @@ func (r *PostgreSQLRepository) GetFeedbackAttemptOwner(ctx context.Context, atte
 	return userID, nil
 }
 
+// CreateQualityReviewReport implements Repository. The unique attempt key is
+// the final idempotency guard, including across concurrent requests.
+func (r *PostgreSQLRepository) CreateQualityReviewReport(ctx context.Context, report QualityReviewReport) (bool, error) {
+	result, err := r.db.ExecContext(ctx,
+		`INSERT INTO ai_feedback_quality_review_reports (
+			id, ai_feedback_attempt_id, user_id, reason, state, classification, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, NULL, $6, $6)
+		ON CONFLICT (ai_feedback_attempt_id) DO NOTHING`,
+		report.ID, report.AttemptID, report.UserID, report.Reason, report.State, report.CreatedAt,
+	)
+	if err != nil {
+		return false, err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	return rows == 1, nil
+}
+
 // RequestHash computes the deduplication key for a sentence-feedback request.
 func RequestHash(userID uuid.UUID, attemptID uuid.UUID, targetWord, normalizedSentence, promptVersion string) string {
 	h := sha256.New()

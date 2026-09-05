@@ -38,6 +38,18 @@ type PendingAttempt struct {
 	AttemptID  uuid.UUID
 }
 
+// QualityReviewReport is the internal record created when a learner reports
+// feedback. Classification is intentionally unset until a later triage flow.
+type QualityReviewReport struct {
+	ID             uuid.UUID
+	AttemptID      uuid.UUID
+	UserID         uuid.UUID
+	Reason         string
+	State          string
+	Classification *string
+	CreatedAt      time.Time
+}
+
 // Repository is the persistence boundary for the AI feedback domain.
 type Repository interface {
 	// LoadTarget loads the authoritative target word/phrase after verifying the
@@ -63,4 +75,8 @@ type Repository interface {
 	// associated with the given ai_feedback_attempts row. If the attempt does not
 	// exist, it returns ErrTargetNotFound so the caller can surface a 404.
 	GetFeedbackAttemptOwner(ctx context.Context, attemptID uuid.UUID) (uuid.UUID, error)
+
+	// CreateQualityReviewReport creates at most one report for an attempt.
+	// It returns false when that report already exists.
+	CreateQualityReviewReport(ctx context.Context, report QualityReviewReport) (bool, error)
 }

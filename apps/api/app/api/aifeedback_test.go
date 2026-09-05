@@ -313,8 +313,9 @@ func TestReportSentenceFeedbackRequiresAuth(t *testing.T) {
 	api, _, authSvc := testAIFeedbackAPI(t, aifeedback.MemoryRepositoryData{})
 
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/sentence-feedback/00000000-0000-0000-0000-000000000001/reports", bytes.NewReader([]byte(`{"reason":"bad"}`)))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/sentence-feedback/00000000-0000-0000-0000-000000000001/reports", bytes.NewReader([]byte(`{"reason":"already_correct"}`)))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Idempotency-Key", "idem-key")
 	addCSRF(req, authSvc)
 	api.Adapter().ServeHTTP(w, req)
 
@@ -326,8 +327,9 @@ func TestReportSentenceFeedbackRequiresCSRF(t *testing.T) {
 	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
 
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/sentence-feedback/00000000-0000-0000-0000-000000000001/reports", bytes.NewReader([]byte(`{"reason":"bad"}`)))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/sentence-feedback/00000000-0000-0000-0000-000000000001/reports", bytes.NewReader([]byte(`{"reason":"already_correct"}`)))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Idempotency-Key", "idem-key")
 	req = req.WithContext(WithRequester(req.Context(), &auth.User{ID: userID}))
 	api.Adapter().ServeHTTP(w, req)
 
@@ -339,8 +341,9 @@ func TestReportSentenceFeedbackUnknownAttemptReturns404(t *testing.T) {
 	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
 
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/sentence-feedback/00000000-0000-0000-0000-000000000001/reports", bytes.NewReader([]byte(`{"reason":"bad"}`)))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/sentence-feedback/00000000-0000-0000-0000-000000000001/reports", bytes.NewReader([]byte(`{"reason":"already_correct"}`)))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Idempotency-Key", "idem-key")
 	req = req.WithContext(WithRequester(req.Context(), &auth.User{ID: userID}))
 	addCSRF(req, authSvc)
 	api.Adapter().ServeHTTP(w, req)
@@ -377,8 +380,9 @@ func TestReportSentenceFeedbackCrossUserReturns404(t *testing.T) {
 	attemptID := out.Body.AttemptID
 
 	w = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/v1/sentence-feedback/%s/reports", attemptID), bytes.NewReader([]byte(`{"reason":"bad"}`)))
+	req = httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/v1/sentence-feedback/%s/reports", attemptID), bytes.NewReader([]byte(`{"reason":"already_correct"}`)))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Idempotency-Key", "idem-key")
 	req = req.WithContext(WithRequester(req.Context(), &auth.User{ID: other}))
 	addCSRF(req, authSvc)
 	api.Adapter().ServeHTTP(w, req)
@@ -414,8 +418,9 @@ func TestReportSentenceFeedbackSucceedsForOwner(t *testing.T) {
 	attemptID := out.Body.AttemptID
 
 	w = httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/v1/sentence-feedback/%s/reports", attemptID), bytes.NewReader([]byte(`{"reason":"bad","classification":"incorrect"}`)))
+	req = httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/v1/sentence-feedback/%s/reports", attemptID), bytes.NewReader([]byte(`{"reason":"already_correct"}`)))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Idempotency-Key", "idem-key")
 	req = req.WithContext(WithRequester(req.Context(), &auth.User{ID: owner}))
 	addCSRF(req, authSvc)
 	api.Adapter().ServeHTTP(w, req)
