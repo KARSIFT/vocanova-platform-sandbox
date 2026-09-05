@@ -347,6 +347,102 @@ func TestServiceProviderFailureIsRetryable(t *testing.T) {
 	assert.NotEqual(t, uuid.Nil, result.AttemptID)
 }
 
+func TestServiceRequestBudgetStartsBeforeDeferredGate(t *testing.T) {
+	f := newServiceFixture(t)
+	f.service.config.RequestTimeout = 20 * time.Millisecond
+	f.service.config.Gate = deferredGate{}
+	repo := &countingRepository{MemoryRepository: f.repo}
+	f.service.repo = repo
+
+	result, err := f.service.SubmitSentenceFeedback(t.Context(), f.request("I work every day."))
+	require.NoError(t, err)
+	assert.Equal(t, ErrorCodeTemporaryFailure, result.ErrorCode)
+	assert.Zero(t, repo.loadTargetCalls, "the request must stop at the expired gate")
+	assert.Zero(t, f.provider.calls)
+}
+
+func TestServiceRequestBudgetCancelsDeferredTargetLoad(t *testing.T) {
+	f := newServiceFixture(t)
+	f.service.config.RequestTimeout = 20 * time.Millisecond
+	repo := &deferredLoadRepository{MemoryRepository: f.repo}
+	f.service.repo = repo
+
+	result, err := f.service.SubmitSentenceFeedback(t.Context(), f.request("I work every day."))
+	require.NoError(t, err)
+	assert.Equal(t, ErrorCodeTemporaryFailure, result.ErrorCode)
+	assert.True(t, repo.loadTargetCalled)
+	assert.Zero(t, f.provider.calls)
+}
+
+func TestServiceRequestBudgetCancelsDeferredModerationBeforePendingAttempt(t *testing.T) {
+	f := newServiceFixture(t)
+	f.service.config.RequestTimeout = 20 * time.Millisecond
+	f.service.safety = deferredSafetyClassifier{}
+
+	result, err := f.service.SubmitSentenceFeedback(t.Context(), f.request("I work every day."))
+	require.NoError(t, err)
+	assert.Equal(t, ErrorCodeTemporaryFailure, result.ErrorCode)
+	assert.Empty(t, f.repo.attempts, "a timed-out moderation call must not create a pending attempt")
+	assert.Zero(t, f.provider.calls)
+}
+
+func TestServiceRequestBudgetFinalizesPendingAttemptAndSkipsExpiredRepair(t *testing.T) {
+	f := newServiceFixture(t)
+	f.service.config.RequestTimeout = 20 * time.Millisecond
+	provider := &expiredInvalidProvider{}
+	f.service.provider = provider
+
+	result, err := f.service.SubmitSentenceFeedback(t.Context(), f.request("I work every day."))
+	require.NoError(t, err)
+	assert.Equal(t, ErrorCodeTemporaryFailure, result.ErrorCode)
+	assert.Equal(t, 1, provider.calls, "the repair provider call must not start after the request budget expires")
+	require.Len(t, f.repo.attempts, 1)
+	assert.Equal(t, AttemptStatusFailed, f.repo.attempts[0].Status, "the detached cleanup context must settle the pending attempt")
+}
+
+type deferredGate struct{}
+
+func (deferredGate) Check(ctx context.Context, _ uuid.UUID) error {
+	<-ctx.Done()
+	return ctx.Err()
+}
+
+type countingRepository struct {
+	*MemoryRepository
+	loadTargetCalls int
+}
+
+func (r *countingRepository) LoadTarget(ctx context.Context, req LoadTargetRequest) (*Target, error) {
+	r.loadTargetCalls++
+	return r.MemoryRepository.LoadTarget(ctx, req)
+}
+
+type deferredLoadRepository struct {
+	*MemoryRepository
+	loadTargetCalled bool
+}
+
+func (r *deferredLoadRepository) LoadTarget(ctx context.Context, _ LoadTargetRequest) (*Target, error) {
+	r.loadTargetCalled = true
+	<-ctx.Done()
+	return nil, ctx.Err()
+}
+
+type deferredSafetyClassifier struct{}
+
+func (deferredSafetyClassifier) Classify(ctx context.Context, _ ModerationInput) (*SafetyResult, error) {
+	<-ctx.Done()
+	return nil, ctx.Err()
+}
+
+type expiredInvalidProvider struct{ calls int }
+
+func (p *expiredInvalidProvider) GenerateFeedback(ctx context.Context, _ ProviderTask) (*ProviderFeedback, error) {
+	p.calls++
+	<-ctx.Done()
+	return &ProviderFeedback{}, nil
+}
+
 func TestServiceStoredFailureReplayDoesNotExposeInternalError(t *testing.T) {
 	f := newServiceFixture(t)
 	f.service.provider = &failingProvider{}

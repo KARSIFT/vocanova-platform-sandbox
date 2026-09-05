@@ -14,25 +14,30 @@ import (
 
 // ServiceConfig is the runtime configuration for the AI feedback service.
 type ServiceConfig struct {
-	Provider  string
-	Model     string
-	Release   string
-	RateLimit RateLimitConfig
-	OpenCode  OpenCodeConfig
-	Gate      GenerationGate
-	Metrics   MetricsRecorder
+	Provider string
+	Model    string
+	Release  string
+	// RequestTimeout bounds the complete synchronous sentence-feedback
+	// lifecycle. It deliberately starts before the gate, repository, and
+	// moderation calls, rather than only when the feedback provider is called.
+	RequestTimeout time.Duration
+	RateLimit      RateLimitConfig
+	OpenCode       OpenCodeConfig
+	Gate           GenerationGate
+	Metrics        MetricsRecorder
 }
 
 // DefaultServiceConfig returns the default P3 configuration.
 func DefaultServiceConfig() ServiceConfig {
 	return ServiceConfig{
-		Provider:  ProviderMock,
-		Model:     "mock",
-		Release:   "unknown",
-		RateLimit: DefaultRateLimitConfig(),
-		OpenCode:  DefaultOpenCodeConfig(),
-		Gate:      NewAlwaysEnabledGate(),
-		Metrics:   NewNoopMetricsRecorder(),
+		Provider:       ProviderMock,
+		Model:          "mock",
+		Release:        "unknown",
+		RequestTimeout: 10 * time.Second,
+		RateLimit:      DefaultRateLimitConfig(),
+		OpenCode:       DefaultOpenCodeConfig(),
+		Gate:           NewAlwaysEnabledGate(),
+		Metrics:        NewNoopMetricsRecorder(),
 	}
 }
 
@@ -136,8 +141,13 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 	if req.IdempotencyKey == "" {
 		return nil, errors.New("idempotency key required")
 	}
+	ctx, cancel := context.WithTimeout(ctx, s.requestTimeout())
+	defer cancel()
 
 	if err := s.config.Gate.Check(ctx, req.UserID); err != nil {
+		if ctx.Err() != nil {
+			return s.temporaryFailureResult(req.SentenceText), nil
+		}
 		if errors.Is(err, ErrAIGenerationDisabled) {
 			s.recordTelemetry(ctx, req.UserID, nil, "generation_disabled", 0, "")
 			return &SentenceFeedbackResult{
@@ -156,6 +166,9 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 
 	if err := s.rateLimiter.Allow(ctx, req.UserID); err != nil {
 		defer s.rateLimiter.Release(req.UserID)
+		if ctx.Err() != nil {
+			return s.temporaryFailureResult(req.SentenceText), nil
+		}
 		return &SentenceFeedbackResult{
 			OriginalSentence: req.SentenceText,
 			ErrorCode:        ErrorCodeRateLimited,
@@ -168,6 +181,9 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 
 	target, err := s.repo.LoadTarget(ctx, LoadTargetRequest{UserID: req.UserID, Source: req.Source, AttemptID: req.AttemptID})
 	if err != nil {
+		if ctx.Err() != nil {
+			return s.temporaryFailureResult(req.SentenceText), nil
+		}
 		if errors.Is(err, ErrTargetNotFound) {
 			s.recordTelemetry(ctx, req.UserID, target, "attempt_not_eligible", 0, "")
 			return s.validationResult(req.SentenceText, ValidationCodeAttemptNotEligible), nil
@@ -185,6 +201,9 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 
 	idempotencyStatus, err := s.idem.Check(ctx, req.UserID, operationSentenceFeedback, req.IdempotencyKey, requestHash)
 	if err != nil {
+		if ctx.Err() != nil {
+			return s.temporaryFailureResult(req.SentenceText), nil
+		}
 		return nil, fmt.Errorf("idempotency check: %w", err)
 	}
 	if idempotencyStatus == learning.IdempotencyConflict {
@@ -197,6 +216,9 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 
 	existing, err := s.repo.GetFeedbackAttemptByRequestHash(ctx, requestHash)
 	if err != nil {
+		if ctx.Err() != nil {
+			return s.temporaryFailureResult(req.SentenceText), nil
+		}
 		return nil, fmt.Errorf("dedup check: %w", err)
 	}
 	if existing != nil {
@@ -209,6 +231,9 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 		LearnerLevel: target.LearnerLevel,
 	})
 	if err != nil {
+		if ctx.Err() != nil {
+			return s.temporaryFailureResult(req.SentenceText), nil
+		}
 		return nil, fmt.Errorf("safety classification: %w", err)
 	}
 	if moderation == nil {
@@ -251,17 +276,23 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 	now := s.clock.Now().UTC()
 	pending, err := s.repo.CreatePendingAttempt(ctx, req, target, validation.Normalized, requestHash, s.config.Provider, s.config.Model, now)
 	if err != nil {
+		if ctx.Err() != nil {
+			return s.temporaryFailureResult(req.SentenceText), nil
+		}
 		return nil, fmt.Errorf("create pending attempt: %w", err)
 	}
 
 	if err := s.idem.Record(ctx, req.UserID, operationSentenceFeedback, req.IdempotencyKey, requestHash); err != nil {
+		if ctx.Err() != nil {
+			return s.temporaryFailureResult(req.SentenceText), nil
+		}
 		return nil, fmt.Errorf("record idempotency: %w", err)
 	}
 
 	feedback, providerDuration, providerErr := s.generateWithRepair(ctx, target, validation.Normalized)
 
 	if providerErr != nil {
-		if err := s.repo.CompleteFeedbackAttempt(ctx, *pending, nil, ErrorCodeTemporaryFailure, providerErr.Error(), s.clock.Now().UTC()); err != nil {
+		if err := s.completeAttempt(ctx, *pending, nil, ErrorCodeTemporaryFailure, providerErr.Error()); err != nil {
 			return nil, fmt.Errorf("finalize failed attempt: %w", err)
 		}
 		s.recordTelemetry(ctx, req.UserID, target, "provider_error", providerDuration.Milliseconds(), "")
@@ -275,7 +306,7 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 	}
 
 	if err := s.outputValidator.Validate(feedback, target); err != nil {
-		if err := s.repo.CompleteFeedbackAttempt(ctx, *pending, nil, ErrorCodeTemporaryFailure, err.Error(), s.clock.Now().UTC()); err != nil {
+		if err := s.completeAttempt(ctx, *pending, nil, ErrorCodeTemporaryFailure, err.Error()); err != nil {
 			return nil, fmt.Errorf("finalize invalid output attempt: %w", err)
 		}
 		s.recordTelemetry(ctx, req.UserID, target, "invalid_output", providerDuration.Milliseconds(), "")
@@ -287,8 +318,20 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 			CanRetry:         true,
 		}, nil
 	}
+	if err := ctx.Err(); err != nil {
+		if finalizeErr := s.completeAttempt(ctx, *pending, nil, ErrorCodeTemporaryFailure, err.Error()); finalizeErr != nil {
+			return nil, fmt.Errorf("finalize expired attempt: %w", finalizeErr)
+		}
+		return &SentenceFeedbackResult{
+			SentenceID:       pending.SentenceID,
+			AttemptID:        pending.AttemptID,
+			OriginalSentence: req.SentenceText,
+			ErrorCode:        ErrorCodeTemporaryFailure,
+			CanRetry:         true,
+		}, nil
+	}
 
-	if err := s.repo.CompleteFeedbackAttempt(ctx, *pending, feedback, "", "", s.clock.Now().UTC()); err != nil {
+	if err := s.completeAttempt(ctx, *pending, feedback, "", ""); err != nil {
 		return nil, fmt.Errorf("finalize successful attempt: %w", err)
 	}
 
@@ -381,15 +424,18 @@ func (s *Service) ReportFeedback(ctx context.Context, userID, attemptID uuid.UUI
 // by the DOC-09 §18 total backend target of 10 seconds; the adapter itself
 // enforces an 8-second per-request timeout.
 func (s *Service) generateWithRepair(ctx context.Context, target *Target, normalized string) (*ProviderFeedback, time.Duration, error) {
-	providerCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
 	task := s.taskBuilder.Build(target, normalized)
 	providerStart := s.clock.Now()
-	feedback, err := s.provider.GenerateFeedback(providerCtx, task)
+	if err := ctx.Err(); err != nil {
+		return nil, 0, err
+	}
+	feedback, err := s.provider.GenerateFeedback(ctx, task)
 	providerDuration := s.clock.Now().Sub(providerStart)
 
 	if err != nil {
+		return nil, providerDuration, err
+	}
+	if err := ctx.Err(); err != nil {
 		return nil, providerDuration, err
 	}
 
@@ -400,10 +446,16 @@ func (s *Service) generateWithRepair(ctx context.Context, target *Target, normal
 
 	repairTask := s.taskBuilder.BuildRepair(task, validationErr.Error(), feedback.RawJSON)
 	repairStart := s.clock.Now()
-	feedback, err = s.provider.GenerateFeedback(providerCtx, repairTask)
+	if err := ctx.Err(); err != nil {
+		return nil, providerDuration, err
+	}
+	feedback, err = s.provider.GenerateFeedback(ctx, repairTask)
 	providerDuration += s.clock.Now().Sub(repairStart)
 
 	if err != nil {
+		return nil, providerDuration, err
+	}
+	if err := ctx.Err(); err != nil {
 		return nil, providerDuration, err
 	}
 
@@ -411,6 +463,30 @@ func (s *Service) generateWithRepair(ctx context.Context, target *Target, normal
 		return nil, providerDuration, fmt.Errorf("output validation failed after repair: %w", err)
 	}
 	return feedback, providerDuration, nil
+}
+
+func (s *Service) requestTimeout() time.Duration {
+	if s.config.RequestTimeout <= 0 {
+		return 10 * time.Second
+	}
+	return s.config.RequestTimeout
+}
+
+// completeAttempt uses the request context while it remains usable. If the
+// request budget has elapsed after a pending row was created, use a short,
+// cancellation-independent context solely to settle that row; otherwise a
+// provider timeout would leave a permanently pending logical submission.
+func (s *Service) completeAttempt(ctx context.Context, pending PendingAttempt, feedback *ProviderFeedback, failureCode, failureMessage string) error {
+	if ctx.Err() == nil {
+		return s.repo.CompleteFeedbackAttempt(ctx, pending, feedback, failureCode, failureMessage, s.clock.Now().UTC())
+	}
+	cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Second)
+	defer cancel()
+	return s.repo.CompleteFeedbackAttempt(cleanupCtx, pending, feedback, failureCode, failureMessage, s.clock.Now().UTC())
+}
+
+func (s *Service) temporaryFailureResult(original string) *SentenceFeedbackResult {
+	return &SentenceFeedbackResult{OriginalSentence: original, ErrorCode: ErrorCodeTemporaryFailure, CanRetry: true}
 }
 
 func (s *Service) validationResult(original, code string) *SentenceFeedbackResult {
