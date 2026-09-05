@@ -154,9 +154,14 @@ func (r *MemoryRepository) ListSavedWords(ctx context.Context, req ListSavedWord
 		if err != nil {
 			return nil, ErrInvalidCursor
 		}
+		// A cursor is an exclusive boundary, not a reference to a row that
+		// must still exist. Start exhausted unless an item strictly after the
+		// boundary is found, so a deleted cursor row cannot skip that item or
+		// restart the list.
+		start = len(items)
 		for i, it := range items {
-			if it.AddedAt.Before(c.AddedAt) || (it.AddedAt.Equal(c.AddedAt) && it.UserWordID.String() <= c.ID.String()) {
-				start = i + 1
+			if it.AddedAt.Before(c.AddedAt) || (it.AddedAt.Equal(c.AddedAt) && it.UserWordID.String() < c.ID.String()) {
+				start = i
 				break
 			}
 		}

@@ -69,6 +69,10 @@ func (r *MemoryRepository) ListSituations(ctx context.Context, req ListSituation
 		if err != nil {
 			return nil, ErrInvalidCursor
 		}
+		// Treat the cursor as an exclusive boundary. It may refer to a
+		// situation that was removed after the prior request, or be past the
+		// end of the collection.
+		start = len(items)
 		for i, s := range items {
 			if s.DisplayOrder > c.DisplayOrder || (s.DisplayOrder == c.DisplayOrder && s.ID.String() > c.ID.String()) {
 				start = i
