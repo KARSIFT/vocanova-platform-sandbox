@@ -100,7 +100,7 @@ func RegisterEmailChangeLinks(api huma.API, svc *accounts.Service, authSvc *auth
 		},
 	}, func(ctx context.Context, input *ConsumeEmailChangeLinkInput) (*ConsumeEmailChangeLinkOutput, error) {
 		c := authHumaContext(ctx)
-		res, err := svc.ConsumeEmailChangeLink(ctx, clientIPFromHuma(c), sessionTokenFromHuma(c, authSvc), input.Body.Token)
+		res, err := svc.ConsumeEmailChangeLink(ctx, RequesterUserID(ctx), clientIPFromHuma(c), sessionTokenFromHuma(c, authSvc), input.Body.Token)
 		if err != nil {
 			return nil, mapEmailChangeError(err)
 		}
