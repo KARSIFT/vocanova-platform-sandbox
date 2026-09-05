@@ -192,7 +192,7 @@ export function ReviewSession({
         submission.body,
         submission.idempotencyKey,
         {
-        headers: { "X-CSRF-Token": csrfToken },
+          headers: { "X-CSRF-Token": csrfToken },
         },
       );
       pendingSubmission.current = null;
