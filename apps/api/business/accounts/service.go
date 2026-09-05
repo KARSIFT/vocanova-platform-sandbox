@@ -550,35 +550,6 @@ func (s *Service) CreateAccountDeletionRequest(ctx context.Context, userID, clie
 	if strings.TrimSpace(idempotencyKey) == "" {
 		return nil, ErrAccountDeletionIdempotencyKeyRequired
 	}
-	if s.idem == nil {
-		return nil, errors.New("idempotency store not configured")
-	}
-
-	// Idempotency check first: a replay with the same key
-	// short-circuits to the existing row, no side effects.
-	fingerprint := accountDeletionFingerprint(uid)
-	status, err := s.idem.Check(ctx, uid, accountDeletionOperation, idempotencyKey, fingerprint)
-	if err != nil {
-		return nil, fmt.Errorf("idempotency check: %w", err)
-	}
-	if status == IdempotencyConflict {
-		return nil, ErrAccountDeletionIdempotencyConflict
-	}
-	if status == IdempotencyMatch {
-		existing, gerr := s.repo.GetAccountDeletionRequestByUserID(ctx, uid)
-		if gerr != nil {
-			return nil, fmt.Errorf("read existing deletion request: %w", gerr)
-		}
-		return &AccountDeletionResult{
-			UserID:         existing.UserID,
-			Status:         existing.Status,
-			RequestedAt:    existing.RequestedAt,
-			PurgeAfter:     existing.PurgeAfter,
-			IdempotencyKey: existing.IdempotencyKey,
-			Replayed:       true,
-		}, nil
-	}
-
 	// Per-IP and per-session rate limits, matching the
 	// email-change posture (VOC-031-D05 generalized).
 	if allowed, err := s.limiter.Allow(ctx, auth.KeyForIP("accountdeletion.request", clientIP)); err != nil {
@@ -592,40 +563,10 @@ func (s *Service) CreateAccountDeletionRequest(ctx context.Context, userID, clie
 		return nil, ErrAccountDeletionRateLimited
 	}
 
-	// Existence check: ErrUserNotFound surfaces a 404 (the
-	// API layer's mapAccountDeletionError). Without this, a
-	// JWT in flight for a deleted-and-purged user would 500
-	// inside the deactivation transaction.
-	if _, err := s.auth.GetUserByID(ctx, uid); err != nil {
-		return nil, ErrUserNotFound
-	}
-
 	now := s.clock.Now().UTC()
 	row, err := s.repo.CreateAccountDeletionRequest(ctx, uid, idempotencyKey, now, s.cfg.AccountDeletionPurgeDelay)
 	if err != nil {
 		return nil, err
-	}
-
-	if err := s.idem.Record(ctx, uid, accountDeletionOperation, idempotencyKey, fingerprint); err != nil {
-		// The deactivation is already persisted at this
-		// point; the idempotency row is the second line of
-		// defense (a future replay would still find the
-		// existing account_deletion_requests row even
-		// without the idempotency_keys row, because
-		// GetAccountDeletionRequestByUserID is keyed on
-		// user_id alone). We log the error via the
-		// returned error so the operator can see it, but
-		// we do not undo the deactivation: a transient
-		// idempotency-store failure must not block the
-		// user's right to be forgotten.
-		return &AccountDeletionResult{
-			UserID:         row.UserID,
-			Status:         row.Status,
-			RequestedAt:    row.RequestedAt,
-			PurgeAfter:     row.PurgeAfter,
-			IdempotencyKey: row.IdempotencyKey,
-			Replayed:       false,
-		}, fmt.Errorf("record idempotency: %w", err)
 	}
 
 	return &AccountDeletionResult{
@@ -634,7 +575,7 @@ func (s *Service) CreateAccountDeletionRequest(ctx context.Context, userID, clie
 		RequestedAt:    row.RequestedAt,
 		PurgeAfter:     row.PurgeAfter,
 		IdempotencyKey: row.IdempotencyKey,
-		Replayed:       false,
+		Replayed:       row.Replayed,
 	}, nil
 }
 

@@ -128,6 +128,57 @@ func TestPostgreSQLRepositoryExportAndAnonymization(t *testing.T) {
 	}
 }
 
+// TestPostgreSQLRepositoryDeletionClaimCommitsWithDeactivation proves the
+// production transaction never commits a revoked session/deletion request
+// without its scoped idempotency record, and that a same-key retry returns the
+// persisted result rather than a second mutation.
+func TestPostgreSQLRepositoryDeletionClaimCommitsWithDeactivation(t *testing.T) {
+	dsn := os.Getenv("VOCANOVA_TEST_POSTGRES_DSN")
+	if dsn == "" {
+		t.Skip("VOCANOVA_TEST_POSTGRES_DSN is not set")
+	}
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+	uid := uuid.New()
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	hash := sha256.Sum256([]byte(uid.String()))
+	if _, err := db.ExecContext(ctx, `INSERT INTO users (id, email, status, created_at, updated_at) VALUES ($1, $2, 'active', $3, $3)`, uid, uid.String()+"@example.test", now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO sessions (id, user_id, token_hash, created_at, expires_at) VALUES ($1, $2, $3, $4, $5)`, uuid.New(), uid, hash[:], now, now.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	repo := NewPostgreSQLRepository(db)
+	first, err := repo.CreateAccountDeletionRequest(ctx, uid, "atomic-key", now, DefaultAccountDeletionPurgeDelay)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.Replayed {
+		t.Fatal("first request was unexpectedly replayed")
+	}
+	var keys, revoked int
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM idempotency_keys WHERE user_id = $1 AND operation = $2 AND key = $3`, uid, accountDeletionOperation, "atomic-key").Scan(&keys); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM sessions WHERE user_id = $1 AND revoked_at IS NOT NULL`, uid).Scan(&revoked); err != nil {
+		t.Fatal(err)
+	}
+	if keys != 1 || revoked != 1 {
+		t.Fatalf("idempotency/deactivation transaction incomplete: keys=%d revoked=%d", keys, revoked)
+	}
+	second, err := repo.CreateAccountDeletionRequest(ctx, uid, "atomic-key", now.Add(time.Second), DefaultAccountDeletionPurgeDelay)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !second.Replayed || second.ID != first.ID {
+		t.Fatalf("same-key retry was not a replay: %#v", second)
+	}
+}
+
 // TestPostgreSQLRepositoryReclaimsOnlyStaleDeletionClaims exercises the
 // production query and atomic claim predicate against the migrated schema.
 func TestPostgreSQLRepositoryReclaimsOnlyStaleDeletionClaims(t *testing.T) {

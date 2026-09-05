@@ -310,6 +310,11 @@ func (r *MemoryRepository) CreateAccountDeletionRequest(ctx context.Context, use
 	// pre-check directly.
 	for _, row := range r.deletionRequests {
 		if row.UserID == userID {
+			if row.IdempotencyKey == idempotencyKey {
+				result := cloneDeletion(row)
+				result.Replayed = true
+				return result, nil
+			}
 			return nil, fmt.Errorf("%w: deletion already in flight", ErrAccountDeletionAlreadyInFlight)
 		}
 	}

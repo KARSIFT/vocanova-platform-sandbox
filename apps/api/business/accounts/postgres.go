@@ -228,6 +228,22 @@ func (r *PostgreSQLRepository) CreateAccountDeletionRequest(ctx context.Context,
 	}
 	defer tx.Rollback()
 
+	// The idempotency claim is deliberately part of this transaction. Recording
+	// it after deactivation used to permit a 500 after the irreversible write,
+	// leaving an authenticated same-key retry unable to recover its result.
+	_, err = tx.ExecContext(ctx,
+		`INSERT INTO idempotency_keys (id, user_id, operation, key, fingerprint, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6)
+		 ON CONFLICT (user_id, operation, key) DO UPDATE
+		 SET fingerprint = EXCLUDED.fingerprint, created_at = EXCLUDED.created_at
+		 WHERE idempotency_keys.created_at <= $7`,
+		uuid.New(), userID, accountDeletionOperation, idempotencyKey,
+		accountDeletionFingerprint(userID), now, now.Add(-24*time.Hour),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("claim deletion idempotency: %w", err)
+	}
+
 	res, err := tx.ExecContext(ctx,
 		`UPDATE users SET status = 'deleted', deleted_at = $2, updated_at = $2
 		 WHERE id = $1 AND deleted_at IS NULL`,
@@ -241,6 +257,23 @@ func (r *PostgreSQLRepository) CreateAccountDeletionRequest(ctx context.Context,
 		return nil, fmt.Errorf("deactivate user rows: %w", err)
 	}
 	if rows == 0 {
+		// A concurrent same-key request can observe the user after the winning
+		// transaction commits. Return its confirmed record rather than turning a
+		// transport retry into an in-flight conflict or a misleading not-found.
+		existing, existingErr := scanAccountDeletionRequest(tx.QueryRowContext(ctx,
+			`SELECT id, user_id, status, requested_at, purge_after,
+			        completed_at, idempotency_key, created_at, updated_at
+			 FROM account_deletion_requests WHERE user_id = $1`, userID))
+		if existingErr == nil {
+			if existing.IdempotencyKey == idempotencyKey {
+				existing.Replayed = true
+				if err := tx.Commit(); err != nil {
+					return nil, fmt.Errorf("commit replayed deletion request: %w", err)
+				}
+				return existing, nil
+			}
+			return nil, fmt.Errorf("%w: deletion already in flight", ErrAccountDeletionAlreadyInFlight)
+		}
 		return nil, ErrUserNotFound
 	}
 

@@ -15,6 +15,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type recordFailingIdempotencyStore struct {
+	*MemoryIdempotencyStore
+	err error
+}
+
+func (s *recordFailingIdempotencyStore) Record(context.Context, uuid.UUID, string, string, string) error {
+	return s.err
+}
+
 // TestCreateAccountDeletionRequestDeactivatesUserAndPersistsRow covers
 // VOC-031-TEST-18: a successful POST marks the user deleted, persists
 // the account_deletion_requests row with the correct status and
@@ -81,6 +90,33 @@ func TestCreateAccountDeletionRequestReplaysIdempotencyKey(t *testing.T) {
 	// The repository still has only one row.
 	row := repo.DeletionRequest(uid)
 	require.NotNil(t, row)
+}
+
+// TestCreateAccountDeletionRequestRecordFailureRemainsReplayable pins the
+// DOC-06/DOC-07 idempotency guarantee across a persistence failure. A client
+// that receives an error must be able to retry the same key and recover the
+// committed deletion result instead of receiving an in-flight conflict.
+func TestCreateAccountDeletionRequestRecordFailureRemainsReplayable(t *testing.T) {
+	repo := NewMemoryRepository()
+	authRepo := newAuthRepoStub()
+	uid := uuid.New()
+	authRepo.setUser(&auth.User{ID: uid, Email: "user@example.com", Status: "active"})
+	repo.SetUser(uid, "user@example.com")
+	c := &clock.Fixed{T: testNow()}
+	idem := &recordFailingIdempotencyStore{MemoryIdempotencyStore: NewMemoryIdempotencyStore(), err: errors.New("idempotency unavailable")}
+	svc := NewService(repo, authRepo, nil, idem, c, auth.NewFixedWindowRateLimiter(c, time.Hour, 10), Config{
+		AccountDeletionPurgeDelay: 30 * 24 * time.Hour,
+		AccountDeletionRateLimit:  AccountDeletionRateLimitConfig{RequestWindow: time.Hour, RequestLimit: 10},
+	})
+
+	first, err := svc.CreateAccountDeletionRequest(context.Background(), uid.String(), "1.2.3.4", "session", "retry-key")
+	require.NoError(t, err)
+	assert.False(t, first.Replayed)
+	require.NotNil(t, repo.DeletionRequest(uid), "the first request committed the irreversible deletion")
+
+	second, err := svc.CreateAccountDeletionRequest(context.Background(), uid.String(), "1.2.3.4", "session", "retry-key")
+	require.NoError(t, err, "a same-key retry must recover the committed result")
+	assert.True(t, second.Replayed)
 }
 
 // TestCreateAccountDeletionRequestIdempotencyKeysAreUserScoped covers

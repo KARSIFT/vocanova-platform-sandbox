@@ -32,6 +32,9 @@ func TestPostgreSQLRepositoryCreateAccountDeletionRequestDeactivatesUser(t *test
 	purgeAfter := now.Add(purgeDelay)
 
 	mock.ExpectBegin()
+	mock.ExpectExec("INSERT INTO idempotency_keys").
+		WithArgs(sqlmock.AnyArg(), uid, accountDeletionOperation, idemKey, accountDeletionFingerprint(uid), now, now.Add(-24*time.Hour)).
+		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectExec("UPDATE users SET status = 'deleted'").
 		WithArgs(uid, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -73,6 +76,9 @@ func TestPostgreSQLRepositoryCreateAccountDeletionRequestMissingUser(t *testing.
 	now := time.Now().UTC()
 
 	mock.ExpectBegin()
+	mock.ExpectExec("INSERT INTO idempotency_keys").
+		WithArgs(sqlmock.AnyArg(), uid, accountDeletionOperation, "idem", accountDeletionFingerprint(uid), now, now.Add(-24*time.Hour)).
+		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectExec("UPDATE users SET status = 'deleted'").
 		WithArgs(uid, now).
 		WillReturnResult(sqlmock.NewResult(0, 0))
@@ -98,6 +104,9 @@ func TestPostgreSQLRepositoryCreateAccountDeletionRequestAlreadyInFlight(t *test
 	now := time.Now().UTC()
 
 	mock.ExpectBegin()
+	mock.ExpectExec("INSERT INTO idempotency_keys").
+		WithArgs(sqlmock.AnyArg(), uid, accountDeletionOperation, "idem-2", accountDeletionFingerprint(uid), now, now.Add(-24*time.Hour)).
+		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectExec("UPDATE users SET status = 'deleted'").
 		WithArgs(uid, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
