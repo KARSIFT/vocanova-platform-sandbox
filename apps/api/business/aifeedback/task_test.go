@@ -160,6 +160,53 @@ func TestDefaultOutputValidatorRejectsNeedsImprovementWithoutCorrection(t *testi
 	assert.Error(t, v.Validate(fb, nil))
 }
 
+func TestDefaultOutputValidatorRejectsWhitespaceOnlyRequiredFields(t *testing.T) {
+	v := NewDefaultOutputValidator()
+
+	tests := []struct {
+		name string
+		fb   *ProviderFeedback
+	}{
+		{
+			name: "explanation",
+			fb: &ProviderFeedback{
+				Status:                  LearningStatusCorrect,
+				TargetWordUsedCorrectly: true,
+				Explanation:             " \t\n ",
+				RawJSON:                 map[string]any{"status": "correct"},
+			},
+		},
+		{
+			name: "incorrect correction",
+			fb: &ProviderFeedback{
+				Status:                  LearningStatusIncorrect,
+				TargetWordUsedCorrectly: false,
+				Explanation:             "Use the target word correctly.",
+				CorrectedSentence:       stringPtr(" \t "),
+				ImprovementTip:          stringPtr("Try again."),
+				RawJSON:                 map[string]any{"status": "incorrect"},
+			},
+		},
+		{
+			name: "needs improvement tip",
+			fb: &ProviderFeedback{
+				Status:                  LearningStatusNeedsImprovement,
+				TargetWordUsedCorrectly: false,
+				Explanation:             "Use the target word more naturally.",
+				CorrectedSentence:       stringPtr("I work every day."),
+				ImprovementTip:          stringPtr("\n\t"),
+				RawJSON:                 map[string]any{"status": "needs_improvement"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Error(t, v.Validate(tt.fb, nil))
+		})
+	}
+}
+
 func TestDefaultOutputValidatorRejectsCorrectWithCorrection(t *testing.T) {
 	v := NewDefaultOutputValidator()
 	corrected := "I work every day."
