@@ -73,3 +73,38 @@ func TestConcurrentSaveSameKeyDifferentMeaningsHasOneEffect(t *testing.T) {
 	require.Equal(t, 1, conflicts)
 	require.Len(t, repo.userWords, 1, "the conflicting payload must not save a second word")
 }
+
+func TestMatchingMemorySaveClaimWaitsForOutcome(t *testing.T) {
+	for _, failed := range []bool{false, true} {
+		t.Run(map[bool]string{false: "replay completed save", true: "retry rolled back save"}[failed], func(t *testing.T) {
+			store := NewMemoryIdempotencyStore()
+			userID := uuid.New()
+			status, err := store.ClaimSave(t.Context(), userID, operationSaveUserWord, "same", "fingerprint")
+			require.NoError(t, err)
+			require.Equal(t, IdempotencyAbsent, status)
+			ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+			defer cancel()
+			results := make(chan IdempotencyStatus, 1)
+			errs := make(chan error, 1)
+			go func() {
+				got, claimErr := store.ClaimSave(ctx, userID, operationSaveUserWord, "same", "fingerprint")
+				results <- got
+				errs <- claimErr
+			}()
+			select {
+			case got := <-results:
+				t.Fatalf("matching in-flight save returned before settlement: %v", got)
+			case <-time.After(50 * time.Millisecond):
+			}
+			want := IdempotencyMatch
+			if failed {
+				store.ReleaseSave(ctx, userID, operationSaveUserWord, "same", "fingerprint")
+				want = IdempotencyAbsent
+			} else {
+				store.CompleteSave(ctx, userID, operationSaveUserWord, "same", "fingerprint")
+			}
+			require.NoError(t, <-errs)
+			require.Equal(t, want, <-results)
+		})
+	}
+}
