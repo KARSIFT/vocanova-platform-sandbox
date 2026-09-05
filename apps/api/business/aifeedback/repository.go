@@ -30,6 +30,7 @@ type StoredFeedbackAttempt struct {
 	FeedbackText      string
 	ErrorCode         string
 	ErrorMessage      string
+	Reported          bool
 }
 
 // PendingAttempt holds the IDs created by CreatePendingAttempt.

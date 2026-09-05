@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/learning"
@@ -327,7 +328,7 @@ func (s *Service) ReportFeedback(ctx context.Context, userID, attemptID uuid.UUI
 	if !validReportReason(reason) {
 		return ErrInvalidReportReason
 	}
-	if idempotencyKey == "" {
+	if strings.TrimSpace(idempotencyKey) == "" {
 		return errors.New("idempotency key required")
 	}
 	owner, err := s.repo.GetFeedbackAttemptOwner(ctx, attemptID)
@@ -337,12 +338,24 @@ func (s *Service) ReportFeedback(ctx context.Context, userID, attemptID uuid.UUI
 	if owner != userID {
 		return ErrTargetNotFound
 	}
+	fingerprint := fmt.Sprintf("%s|%s", attemptID, reason)
+	const operation = "report_sentence_feedback"
+	status, err := s.idem.Check(ctx, userID, operation, idempotencyKey, fingerprint)
+	if err != nil {
+		return fmt.Errorf("check report idempotency: %w", err)
+	}
+	if status == learning.IdempotencyConflict {
+		return ErrReportIdempotencyConflict
+	}
 	created, err := s.repo.CreateQualityReviewReport(ctx, QualityReviewReport{
 		ID: uuid.New(), AttemptID: attemptID, UserID: userID, Reason: reason,
 		State: QualityReviewStateOpen, CreatedAt: s.clock.Now().UTC(),
 	})
 	if err != nil {
 		return fmt.Errorf("create quality review report: %w", err)
+	}
+	if err := s.idem.Record(ctx, userID, operation, idempotencyKey, fingerprint); err != nil {
+		return fmt.Errorf("record report idempotency: %w", err)
 	}
 	if !created {
 		return nil
@@ -414,6 +427,7 @@ func (s *Service) resultFromStored(attempt *StoredFeedbackAttempt, original stri
 		AttemptID:        attempt.ID,
 		OriginalSentence: original,
 		CanRetry:         false,
+		Reported:         attempt.Reported,
 	}
 
 	switch attempt.Status {

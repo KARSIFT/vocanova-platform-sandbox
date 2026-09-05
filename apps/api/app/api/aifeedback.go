@@ -104,9 +104,13 @@ func RegisterAIFeedback(api huma.API, svc *aifeedback.Service, authSvc *auth.Ser
 			"401": {Description: "Authentication is required"},
 			"403": {Description: "Invalid CSRF token"},
 			"404": {Description: "Feedback attempt not found"},
+			"409": {Description: "Idempotency key conflict"},
 		},
 	}, func(ctx context.Context, input *ReportSentenceFeedbackInput) (*ReportSentenceFeedbackOutput, error) {
 		if err := svc.ReportFeedback(ctx, RequesterUserID(ctx), parseUUID(input.AttemptID), input.Body.Reason, input.IdempotencyKey); err != nil {
+			if errors.Is(err, aifeedback.ErrReportIdempotencyConflict) {
+				return nil, huma.Error409Conflict("idempotency key conflict")
+			}
 			return nil, mapAIFeedbackError(err)
 		}
 		return &ReportSentenceFeedbackOutput{}, nil

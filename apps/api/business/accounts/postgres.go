@@ -364,6 +364,17 @@ func (r *PostgreSQLRepository) AnonymizeUserData(ctx context.Context, userID uui
 	}
 	defer tx.Rollback()
 
+	// Account deletion anonymizes parent rows rather than deleting them, so
+	// foreign-key cascades alone cannot remove learner quality reports.
+	reports, err := tx.ExecContext(ctx, `DELETE FROM ai_feedback_quality_review_reports WHERE user_id = $1`, userID)
+	if err != nil {
+		return counters, fmt.Errorf("delete quality review reports: %w", err)
+	}
+	counters.AIQualityReviewReports, err = reports.RowsAffected()
+	if err != nil {
+		return counters, fmt.Errorf("count deleted quality review reports: %w", err)
+	}
+
 	// Soft-delete-pending-purge.
 	c, err := execCount(ctx, tx, userID, nowUTC(),
 		`UPDATE external_identities SET deleted_at = $2, updated_at = $2

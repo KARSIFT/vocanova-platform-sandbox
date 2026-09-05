@@ -115,7 +115,8 @@ func learnerLevel(level string) string {
 func (r *PostgreSQLRepository) GetFeedbackAttemptByRequestHash(ctx context.Context, requestHash string) (*StoredFeedbackAttempt, error) {
 	row := r.db.QueryRowContext(ctx,
 		`SELECT id, learner_sentence_id, status, provider, model, prompt_version, request_hash,
-		        feedback_json, feedback_text, error_code, error_message
+		        feedback_json, feedback_text, error_code, error_message,
+		        EXISTS (SELECT 1 FROM ai_feedback_quality_review_reports r WHERE r.ai_feedback_attempt_id = ai_feedback_attempts.id)
 		 FROM ai_feedback_attempts
 		 WHERE request_hash = $1`,
 		requestHash,
@@ -130,7 +131,7 @@ func (r *PostgreSQLRepository) scanStoredAttempt(row *sql.Row) (*StoredFeedbackA
 
 	err := row.Scan(
 		&a.ID, &a.LearnerSentenceID, &a.Status, &a.Provider, &a.Model, &a.PromptVersion, &a.RequestHash,
-		&feedbackJSON, &feedbackText, &errorCode, &errorMessage,
+		&feedbackJSON, &feedbackText, &errorCode, &errorMessage, &a.Reported,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -299,6 +300,15 @@ func (r *PostgreSQLRepository) CreateQualityReviewReport(ctx context.Context, re
 	rows, err := result.RowsAffected()
 	if err != nil {
 		return false, err
+	}
+	if rows == 0 {
+		var reason string
+		if err := r.db.QueryRowContext(ctx, `SELECT reason FROM ai_feedback_quality_review_reports WHERE ai_feedback_attempt_id = $1 AND user_id = $2`, report.AttemptID, report.UserID).Scan(&reason); err != nil {
+			return false, err
+		}
+		if reason != report.Reason {
+			return false, ErrReportIdempotencyConflict
+		}
 	}
 	return rows == 1, nil
 }

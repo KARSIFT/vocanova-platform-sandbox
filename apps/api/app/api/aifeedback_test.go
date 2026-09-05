@@ -426,6 +426,16 @@ func TestReportSentenceFeedbackSucceedsForOwner(t *testing.T) {
 	api.Adapter().ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusNoContent, w.Code)
+
+	// Reusing the operation key with a different report reason is a conflict.
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/v1/sentence-feedback/%s/reports", attemptID), bytes.NewReader([]byte(`{"reason":"correction_changed_meaning"}`)))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Idempotency-Key", "idem-key")
+	req = req.WithContext(WithRequester(req.Context(), &auth.User{ID: owner}))
+	addCSRF(req, authSvc)
+	api.Adapter().ServeHTTP(w, req)
+	assert.Equal(t, http.StatusConflict, w.Code)
 }
 
 // ---------------------------------------------------------------------------

@@ -2402,6 +2402,9 @@
           },
           "404": {
             "description": "Feedback attempt not found"
+          },
+          "409": {
+            "description": "Idempotency key conflict"
           }
         },
         "summary": "Report a quality concern for a feedback attempt",

@@ -244,6 +244,9 @@ func (r *MemoryRepository) CreateQualityReviewReport(ctx context.Context, report
 	defer r.mu.Unlock()
 	for _, existing := range r.reports {
 		if existing.AttemptID == report.AttemptID {
+			if existing.Reason != report.Reason {
+				return false, ErrReportIdempotencyConflict
+			}
 			return false, nil
 		}
 	}
@@ -295,7 +298,15 @@ func (r *MemoryRepository) CompleteFeedbackAttempt(ctx context.Context, pending 
 }
 
 func (r *MemoryRepository) toStoredAttempt(a MemoryAIFeedbackAttempt) *StoredFeedbackAttempt {
+	reported := false
+	for _, report := range r.reports {
+		if report.AttemptID == a.ID {
+			reported = true
+			break
+		}
+	}
 	return &StoredFeedbackAttempt{
+		Reported:          reported,
 		ID:                a.ID,
 		LearnerSentenceID: a.LearnerSentenceID,
 		Status:            a.Status,
