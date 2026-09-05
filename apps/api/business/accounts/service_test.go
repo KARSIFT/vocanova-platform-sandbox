@@ -228,7 +228,7 @@ func TestConsumeEmailChangeLinkRejectsReservedSyntheticEmail(t *testing.T) {
 	_, err = repo.CreateEmailChangeLink(context.Background(), uid, reservedSyntheticTestEmail, hash, "test", now, now.Add(15*time.Minute))
 	require.NoError(t, err)
 
-	_, err = svc.ConsumeEmailChangeLink(context.Background(), "1.2.3.4", "sess-token", rawToken)
+	_, err = svc.ConsumeEmailChangeLink(context.Background(), uid, "1.2.3.4", "sess-token", rawToken)
 
 	assert.ErrorIs(t, err, ErrInvalidEmailChangeLink)
 	assert.Equal(t, "old@example.com", repo.UserEmail(uid))
@@ -303,7 +303,7 @@ func TestConsumeEmailChangeLinkHappyPathAndOldEmailNotification(t *testing.T) {
 	require.NoError(t, err)
 	raw := extractTokenFromLink(t, link.Link)
 
-	res, err := svc.ConsumeEmailChangeLink(context.Background(), "1.2.3.4", "sess-token", raw)
+	res, err := svc.ConsumeEmailChangeLink(context.Background(), uid, "1.2.3.4", "sess-token", raw)
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	assert.Equal(t, uid, res.UserID)
@@ -319,6 +319,32 @@ func TestConsumeEmailChangeLinkHappyPathAndOldEmailNotification(t *testing.T) {
 	assert.Equal(t, "old@example.com", notify.To[0].Email)
 	assert.Equal(t, "Your Vocanova sign-in email was changed", notify.Subject)
 	assert.Contains(t, notify.BodyText, "new@example.com")
+}
+
+func TestConsumeEmailChangeLinkRejectsDifferentAuthenticatedUser(t *testing.T) {
+	svc, repo, authRepo, _, _ := newService(t)
+	ownerID := uuid.New()
+	otherID := uuid.New()
+	authRepo.setUser(&auth.User{ID: ownerID, Email: "owner@example.com", Status: "active"})
+	authRepo.setUser(&auth.User{ID: otherID, Email: "other@example.com", Status: "active"})
+	repo.SetUser(ownerID, "owner@example.com")
+	repo.SetUser(otherID, "other@example.com")
+
+	link, err := svc.RequestEmailChangeLink(context.Background(), ownerID, "1.2.3.4", "owner-session", "new@example.com")
+	require.NoError(t, err)
+	raw := extractTokenFromLink(t, link.Link)
+
+	// Possessing an email-confirmation token is not authority to mutate the
+	// link owner's account from another authenticated learner's session.
+	_, err = svc.ConsumeEmailChangeLink(context.Background(), otherID, "1.2.3.4", "other-session", raw)
+	assert.ErrorIs(t, err, ErrInvalidEmailChangeLink)
+	assert.Equal(t, "owner@example.com", repo.UserEmail(ownerID))
+	assert.Equal(t, "other@example.com", repo.UserEmail(otherID))
+
+	// The rejected cross-account request does not consume the owner’s token.
+	result, err := svc.ConsumeEmailChangeLink(context.Background(), ownerID, "1.2.3.4", "owner-session", raw)
+	require.NoError(t, err)
+	assert.Equal(t, "new@example.com", result.NewEmail)
 }
 
 // TestConsumeEmailChangeLinkSessionUnchanged covers VOC-031-D05
@@ -343,13 +369,13 @@ func TestConsumeEmailChangeLinkSessionUnchanged(t *testing.T) {
 	// two emails (request + notification) are dispatched, and
 	// the user still has its old email-mutation only.
 	require.Len(t, fake.Sent, 1)
-	res, err := svc.ConsumeEmailChangeLink(context.Background(), "1.2.3.4", "sess-token", raw)
+	res, err := svc.ConsumeEmailChangeLink(context.Background(), uid, "1.2.3.4", "sess-token", raw)
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	require.Len(t, fake.Sent, 2, "only the old-email notification is added at confirm; nothing else")
 
 	// The token is consumed; a second confirm must fail.
-	_, err = svc.ConsumeEmailChangeLink(context.Background(), "1.2.3.4", "sess-token", raw)
+	_, err = svc.ConsumeEmailChangeLink(context.Background(), uid, "1.2.3.4", "sess-token", raw)
 	assert.ErrorIs(t, err, ErrInvalidEmailChangeLink)
 }
 
@@ -366,7 +392,7 @@ func TestConsumeEmailChangeLinkRejectsExpired(t *testing.T) {
 	raw := extractTokenFromLink(t, link.Link)
 
 	c.Advance(16 * time.Minute)
-	_, err = svc.ConsumeEmailChangeLink(context.Background(), "1.2.3.4", "sess-token", raw)
+	_, err = svc.ConsumeEmailChangeLink(context.Background(), uid, "1.2.3.4", "sess-token", raw)
 	assert.ErrorIs(t, err, ErrInvalidEmailChangeLink)
 }
 
@@ -383,7 +409,7 @@ func TestConsumeEmailChangeLinkRejectsTampered(t *testing.T) {
 	// Flip the last character of the token.
 	last := raw[len(raw)-1]
 	flipped := raw[:len(raw)-1] + string(last^1)
-	_, err = svc.ConsumeEmailChangeLink(context.Background(), "1.2.3.4", "sess-token", flipped)
+	_, err = svc.ConsumeEmailChangeLink(context.Background(), uid, "1.2.3.4", "sess-token", flipped)
 	assert.ErrorIs(t, err, ErrInvalidEmailChangeLink)
 }
 
@@ -391,9 +417,9 @@ func TestConsumeEmailChangeLinkRejectsTampered(t *testing.T) {
 // "no token supplied" branch.
 func TestConsumeEmailChangeLinkRejectsEmpty(t *testing.T) {
 	svc, _, _, _, _ := newService(t)
-	_, err := svc.ConsumeEmailChangeLink(context.Background(), "1.2.3.4", "sess-token", "")
+	_, err := svc.ConsumeEmailChangeLink(context.Background(), uuid.New(), "1.2.3.4", "sess-token", "")
 	assert.ErrorIs(t, err, ErrInvalidEmailChangeLink)
-	_, err = svc.ConsumeEmailChangeLink(context.Background(), "1.2.3.4", "sess-token", "   ")
+	_, err = svc.ConsumeEmailChangeLink(context.Background(), uuid.New(), "1.2.3.4", "sess-token", "   ")
 	assert.ErrorIs(t, err, ErrInvalidEmailChangeLink)
 }
 
@@ -408,9 +434,9 @@ func TestConsumeEmailChangeLinkRejectsReplay(t *testing.T) {
 	link, err := svc.RequestEmailChangeLink(context.Background(), uid, "1.2.3.4", "sess-token", "new@example.com")
 	require.NoError(t, err)
 	raw := extractTokenFromLink(t, link.Link)
-	_, err = svc.ConsumeEmailChangeLink(context.Background(), "1.2.3.4", "sess-token", raw)
+	_, err = svc.ConsumeEmailChangeLink(context.Background(), uid, "1.2.3.4", "sess-token", raw)
 	require.NoError(t, err)
-	_, err = svc.ConsumeEmailChangeLink(context.Background(), "1.2.3.4", "sess-token", raw)
+	_, err = svc.ConsumeEmailChangeLink(context.Background(), uid, "1.2.3.4", "sess-token", raw)
 	assert.ErrorIs(t, err, ErrInvalidEmailChangeLink)
 }
 
@@ -433,7 +459,7 @@ func TestConsumeEmailChangeLinkRejectsWrongEnvironment(t *testing.T) {
 		auth.NewFixedWindowRateLimiter(&clock.Fixed{T: testNow()}, time.Hour, 100),
 		Config{Environment: "production", BaseURL: "https://test.example.com", EmailChangePath: "/auth/email-change", EmailChangeLinkLifetime: 15 * time.Minute},
 	)
-	_, err = otherSvc.ConsumeEmailChangeLink(context.Background(), "1.2.3.4", "sess-token", raw)
+	_, err = otherSvc.ConsumeEmailChangeLink(context.Background(), uid, "1.2.3.4", "sess-token", raw)
 	assert.ErrorIs(t, err, ErrInvalidEmailChangeLink)
 }
 
@@ -514,7 +540,7 @@ func TestConsumeEmailChangeLinkDuplicateEmailRace(t *testing.T) {
 func TestConsumeEmailChangeLinkUserNotFound(t *testing.T) {
 	svc, _, _, _, _ := newService(t)
 	// No authRepo.setUser: any user-id is missing.
-	_, err := svc.ConsumeEmailChangeLink(context.Background(), "1.2.3.4", "sess-token", "anyToken")
+	_, err := svc.ConsumeEmailChangeLink(context.Background(), uuid.New(), "1.2.3.4", "sess-token", "anyToken")
 	assert.ErrorIs(t, err, ErrInvalidEmailChangeLink, "missing user surfaces as the same generic invalid-link error to avoid enumeration")
 }
 
@@ -534,9 +560,9 @@ func TestConsumeEmailChangeLinkRateLimitedByIP(t *testing.T) {
 		EmailChangePath: "/auth/email-change", EmailChangeLinkLifetime: 15 * time.Minute,
 	})
 
-	_, err := svc.ConsumeEmailChangeLink(context.Background(), "1.2.3.4", "sess-token", "any")
+	_, err := svc.ConsumeEmailChangeLink(context.Background(), uid, "1.2.3.4", "sess-token", "any")
 	require.Error(t, err) // first call is a generic invalid-link
-	_, err = svc.ConsumeEmailChangeLink(context.Background(), "1.2.3.4", "sess-token", "any")
+	_, err = svc.ConsumeEmailChangeLink(context.Background(), uid, "1.2.3.4", "sess-token", "any")
 	assert.ErrorIs(t, err, ErrEmailChangeRateLimited)
 }
 
@@ -558,9 +584,9 @@ func TestConsumeEmailChangeLinkRateLimitedBySession(t *testing.T) {
 		EmailChangePath: "/auth/email-change", EmailChangeLinkLifetime: 15 * time.Minute,
 	})
 
-	_, err := svc.ConsumeEmailChangeLink(context.Background(), "1.2.3.4", "sess-token", "any")
+	_, err := svc.ConsumeEmailChangeLink(context.Background(), uid, "1.2.3.4", "sess-token", "any")
 	require.Error(t, err) // first call is a generic invalid-link
-	_, err = svc.ConsumeEmailChangeLink(context.Background(), "5.6.7.8", "sess-token", "any")
+	_, err = svc.ConsumeEmailChangeLink(context.Background(), uid, "5.6.7.8", "sess-token", "any")
 	assert.ErrorIs(t, err, ErrEmailChangeRateLimited)
 }
 

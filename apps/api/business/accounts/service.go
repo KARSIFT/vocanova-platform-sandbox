@@ -310,16 +310,18 @@ func (s *Service) emailChangeURL(token, newEmail string) string {
 	return u.String()
 }
 
-// ConsumeEmailChangeLink validates the supplied token, updates
-// users.email, sends a best-effort notification to the OLD address,
-// and returns the EmailChangeResult the API layer renders to the
-// requester. The flow's security guarantees (per VOC-031-D05):
+// ConsumeEmailChangeLink validates the supplied token for requesterUserID,
+// updates users.email, sends a best-effort notification to the OLD address,
+// and returns the EmailChangeResult the API layer renders to the requester.
+// The flow's security guarantees (per VOC-031-D05):
 //
 //   - the raw token is the only form that ever appears in the
 //     request and the email body; only its SHA-256 hash is
 //     persisted;
 //   - the link is single-use (consumed_at), 15-minute-expiring,
 //     and environment-scoped;
+//   - the authenticated requester owns the link, so a confirmation token
+//     cannot mutate another signed-in learner's account;
 //   - the new-email uniqueness check is enforced atomically at
 //     confirm time by users_active_email_key; a losing confirm
 //     receives a stable ErrEmailAlreadyRegistered, never a 500
@@ -340,7 +342,10 @@ func (s *Service) emailChangeURL(token, newEmail string) string {
 // failure does not block the user. Per the spec the notification
 // is required as a security control, so production wiring must
 // treat it as such even though the function does not abort.
-func (s *Service) ConsumeEmailChangeLink(ctx context.Context, clientIP, sessionToken, token string) (*EmailChangeResult, error) {
+func (s *Service) ConsumeEmailChangeLink(ctx context.Context, requesterUserID uuid.UUID, clientIP, sessionToken, token string) (*EmailChangeResult, error) {
+	if requesterUserID == uuid.Nil {
+		return nil, ErrInvalidEmailChangeLink
+	}
 	if allowed, err := s.limiter.Allow(ctx, auth.KeyForIP("emailchange.consume", clientIP)); err != nil {
 		return nil, fmt.Errorf("rate limit: %w", err)
 	} else if !allowed {
@@ -365,6 +370,13 @@ func (s *Service) ConsumeEmailChangeLink(ctx context.Context, clientIP, sessionT
 		return nil, ErrInvalidEmailChangeLink
 	}
 	if link.Environment != s.cfg.Environment {
+		return nil, ErrInvalidEmailChangeLink
+	}
+	// The confirmation token proves control of the destination mailbox, but
+	// does not authorize whichever account happens to be signed in when it is
+	// redeemed. Bind the mutation to the requester that created the link.
+	// Keep an owner mismatch non-distinguishing to avoid exposing link state.
+	if link.UserID != requesterUserID {
 		return nil, ErrInvalidEmailChangeLink
 	}
 	now := s.clock.Now()
