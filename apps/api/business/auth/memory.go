@@ -298,15 +298,18 @@ func (r *MemoryRepository) GetOAuthStateByTokenHash(ctx context.Context, tokenHa
 	return &copy, nil
 }
 
-func (r *MemoryRepository) ConsumeOAuthState(ctx context.Context, id uuid.UUID, consumedAt time.Time) error {
+func (r *MemoryRepository) ConsumeOAuthState(ctx context.Context, id uuid.UUID, consumedAt time.Time) (bool, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	o, ok := r.oauthStates[id]
 	if !ok {
-		return errors.New("oauth state not found")
+		return false, errors.New("oauth state not found")
+	}
+	if o.ConsumedAt != nil {
+		return false, nil
 	}
 	o.ConsumedAt = &consumedAt
-	return nil
+	return true, nil
 }
 
 func (r *MemoryRepository) GetExternalIdentity(ctx context.Context, provider, providerSubject string) (*ExternalIdentity, error) {

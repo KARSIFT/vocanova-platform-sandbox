@@ -344,8 +344,12 @@ func (s *Service) OAuthCallback(ctx context.Context, clientIP, code, state, cook
 	if ostate.Environment != s.cfg.Environment || ostate.Provider != "google" || !ostate.Valid(now) {
 		return nil, nil, "", "", ErrInvalidOAuthState
 	}
-	if err := s.repo.ConsumeOAuthState(ctx, ostate.ID, now); err != nil {
+	consumed, err := s.repo.ConsumeOAuthState(ctx, ostate.ID, now)
+	if err != nil {
 		return nil, nil, "", "", fmt.Errorf("consume oauth state: %w", err)
+	}
+	if !consumed {
+		return nil, nil, "", "", ErrInvalidOAuthState
 	}
 
 	identity, err := s.oauth.Verify(ctx, code, state, s.cfg.OAuthRedirectURI)
