@@ -22,7 +22,7 @@ func TestReportPurgeParticipatesInDeletionTransaction(t *testing.T) {
 		} else {
 			deletion.WillReturnResult(sqlmock.NewResult(0, 3))
 			// Any later failure rolls back removal of reports as well.
-			mock.ExpectExec("UPDATE external_identities").WithArgs(uid, sqlmock.AnyArg()).WillReturnError(errors.New("later failure"))
+			mock.ExpectExec("DELETE FROM ai_feedback_attempts").WithArgs(uid).WillReturnError(errors.New("later failure"))
 		}
 		mock.ExpectRollback()
 		_, err = NewPostgreSQLRepository(db).AnonymizeUserData(t.Context(), uid)

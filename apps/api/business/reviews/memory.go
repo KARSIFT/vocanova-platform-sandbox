@@ -130,6 +130,7 @@ func (r *MemoryRepository) ListDueWords(ctx context.Context, req ListDueWordsReq
 		if err != nil {
 			return nil, ErrInvalidCursor
 		}
+		start = len(items)
 		for i, it := range items {
 			cursorTime := c.NextReviewAt
 			itTimeZero := it.NextReviewAt == nil

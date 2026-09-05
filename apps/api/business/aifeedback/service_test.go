@@ -347,6 +347,29 @@ func TestServiceProviderFailureIsRetryable(t *testing.T) {
 	assert.NotEqual(t, uuid.Nil, result.AttemptID)
 }
 
+func TestServiceStoredFailureReplayDoesNotExposeInternalError(t *testing.T) {
+	f := newServiceFixture(t)
+	f.service.provider = &failingProvider{}
+	req := f.request("I work every day.")
+
+	initial, err := f.service.SubmitSentenceFeedback(t.Context(), req)
+	require.NoError(t, err)
+	assert.Equal(t, ErrorCodeTemporaryFailure, initial.ErrorCode)
+	assert.Empty(t, initial.ErrorMessage)
+
+	// A fresh idempotency key exercises request-hash deduplication rather than
+	// the idempotency-key conflict path. The stored error is deliberately an
+	// internal provider detail and must not be returned to the learner.
+	replay := req
+	replay.IdempotencyKey = uuid.New().String()
+	result, err := f.service.SubmitSentenceFeedback(t.Context(), replay)
+	require.NoError(t, err)
+	assert.Equal(t, ErrorCodeTemporaryFailure, result.ErrorCode)
+	assert.Empty(t, result.ErrorMessage)
+	assert.True(t, result.CanRetry)
+	assert.Equal(t, 1, len(f.repo.attempts))
+}
+
 type failingProvider struct{}
 
 func (f *failingProvider) GenerateFeedback(ctx context.Context, task ProviderTask) (*ProviderFeedback, error) {

@@ -150,15 +150,23 @@ func sortedForms(forms map[string]struct{}) []string {
 }
 
 // SentenceContainsTarget checks whether the normalized sentence contains the
-// target word/phrase or one of its accepted forms. Phrase targets are matched
-// as a sequence of tokens; single-word targets are matched against any token.
+// target word/phrase or one of its accepted forms. Phrase targets and their
+// configured variants are matched as sequences of tokens; single-word targets
+// are matched against any token.
 func SentenceContainsTarget(sentence string, target *Target) bool {
 	sentence = strings.ToLower(strings.TrimSpace(sentence))
 	tokens := sentenceTokens(sentence)
 
-	phraseTokens := sentenceTokens(strings.ToLower(strings.TrimSpace(target.NormalizedWord)))
-	if isPhraseType(target.WordType) || len(phraseTokens) > 1 {
-		return containsTokenSequence(tokens, phraseTokens)
+	canonicalPhraseTokens := sentenceTokens(strings.ToLower(strings.TrimSpace(target.NormalizedWord)))
+	if isPhraseType(target.WordType) || len(canonicalPhraseTokens) > 1 {
+		forms := append([]string{target.NormalizedWord}, target.AcceptedForms...)
+		for _, form := range forms {
+			phraseTokens := sentenceTokens(strings.ToLower(strings.TrimSpace(form)))
+			if containsTokenSequence(tokens, phraseTokens) {
+				return true
+			}
+		}
+		return false
 	}
 
 	forms := make(map[string]struct{}, len(target.AcceptedForms))

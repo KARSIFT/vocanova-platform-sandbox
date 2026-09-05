@@ -41,7 +41,7 @@ name: Auto-merge
 
 on:
   pull_request:
-    types: [opened, reopened, ready_for_review, synchronize, labeled, unlabeled]
+    types: [opened, reopened, ready_for_review, converted_to_draft, synchronize, labeled, unlabeled]
     branches: [main]
   workflow_run:
     workflows:
@@ -94,14 +94,45 @@ jobs:
         run: |
           set -euo pipefail
           for PR in $(jq -r '.[]' <<<"$NUMBERS"); do
-            info="$(gh pr view "$PR" --json isDraft,labels,id)"
+            info="$(gh pr view "$PR" --json isDraft,labels,id,state,autoMergeRequest)"
             draft="$(jq -r '.isDraft' <<<"$info")"
             held="$(jq -r '[.labels[].name] | any(. == "hold")' <<<"$info")"
             node_id="$(jq -r '.id' <<<"$info")"
 
+            if [ "$(jq -r '.state' <<<"$info")" != "OPEN" ]; then
+              continue
+            fi
+
             if [ "$draft" = "true" ] || [ "$held" = "true" ]; then
-              echo "PR #$PR is draft=$draft held=$held — disabling auto-merge."
-              gh pr merge "$PR" --disable-auto || true
+              echo "PR #$PR is draft=$draft held=$held — disabling auto-merge and removing its queue entry."
+              if [ "$(jq -r '.autoMergeRequest != null' <<<"$info")" = "true" ]; then
+                gh pr merge "$PR" --disable-auto
+              fi
+              queued="$(gh api graphql -f query='
+                query($id: ID!) {
+                  node(id: $id) { ... on PullRequest { mergeQueueEntry { id } } }
+                }' -f id="$node_id" --jq '.data.node.mergeQueueEntry != null')"
+              if [ "$queued" = "true" ]; then
+                if ! gh api graphql -f query='
+                  mutation($id: ID!) {
+                    dequeuePullRequest(input: {id: $id}) { clientMutationId }
+                  }' -f id="$node_id"
+                then
+                  # A queue worker can remove the entry after our read. Treat
+                  # that specific race as success, but fail visibly if it is
+                  # still queued so a broken brake cannot be mistaken for one.
+                  echo "PR #$PR dequeue mutation failed; checking whether it was already removed." >&2
+                  still_queued="$(gh api graphql -f query='
+                    query($id: ID!) {
+                      node(id: $id) { ... on PullRequest { mergeQueueEntry { id } } }
+                    }' -f id="$node_id" --jq '.data.node.mergeQueueEntry != null')"
+                  if [ "$still_queued" = "true" ]; then
+                    echo "PR #$PR remains in the merge queue after dequeue failed." >&2
+                    exit 1
+                  fi
+                  echo "PR #$PR was already removed from the merge queue." >&2
+                fi
+              fi
               continue
             fi
 

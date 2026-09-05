@@ -75,7 +75,7 @@ type SubmitReviewInput struct {
 		Rating                  string         `json:"rating,omitempty" enum:"again,hard,good,easy" doc:"Learner rating"`
 		AnsweredAt              time.Time      `json:"answeredAt" format:"date-time" required:"true" doc:"When the answer was submitted"`
 		ResponseTimeMs          int            `json:"responseTimeMs,omitempty" default:"0" doc:"Client-measured response time in milliseconds"`
-		SelectedOptionMeaningID string         `json:"selectedOptionMeaningId,omitempty" format:"uuid" doc:"Chosen option for multiple choice"`
+		SelectedOptionMeaningID string         `json:"selectedOptionMeaningId,omitempty" format:"uuid" doc:"Chosen option for multiple choice; required for non-skipped multiple-choice attempts and must agree with result"`
 		TypedAnswer             string         `json:"typedAnswer,omitempty" doc:"Typed answer if applicable"`
 		WasHintUsed             bool           `json:"wasHintUsed,omitempty" default:"false" doc:"Whether a hint was shown"`
 		Source                  string         `json:"source,omitempty" enum:"review,review_session" default:"review" doc:"Origin of the attempt"`
@@ -235,6 +235,8 @@ func mapReviewsError(err error) huma.StatusError {
 		errors.Is(err, reviews.ErrInvalidResult),
 		errors.Is(err, reviews.ErrInvalidRating),
 		errors.Is(err, reviews.ErrInvalidRatingForResult),
+		errors.Is(err, reviews.ErrMultipleChoiceSelectionRequired),
+		errors.Is(err, reviews.ErrMultipleChoiceResultMismatch),
 		errors.Is(err, reviews.ErrInvalidAttemptType),
 		errors.Is(err, reviews.ErrInvalidSource),
 		errors.Is(err, reviews.ErrClientAttemptIDRequired),
