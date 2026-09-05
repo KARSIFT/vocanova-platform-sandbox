@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { createApiClient } from "@/lib/api";
 import {
@@ -26,13 +27,10 @@ function generateIdempotencyKey(): string {
 }
 
 export function AccountDeletionForm() {
+  const router = useRouter();
   const [phase, setPhase] = useState<DeletionPhase>({ type: "idle" });
   const [typedPhrase, setTypedPhrase] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
-  const [completed, setCompleted] = useState<{
-    requestedAt: string;
-    purgeAfter: string;
-  } | null>(null);
 
   async function handleDelete() {
     if (typedPhrase.trim() !== CONFIRMATION_PHRASE) {
@@ -60,10 +58,6 @@ export function AccountDeletionForm() {
         generateIdempotencyKey(),
         { headers: { "X-CSRF-Token": csrfToken } },
       );
-      setCompleted({
-        requestedAt: data.requestedAt,
-        purgeAfter: data.purgeAfter,
-      });
       // The server already revoked every active session; the local
       // cookie is just a presentation concern. Clear it so subsequent
       // requests (e.g. via a still-pending client request) cannot
@@ -77,9 +71,9 @@ export function AccountDeletionForm() {
         // Best-effort: the server has already revoked the session
         // even if the logout call fails on the client.
       }
-      // Do not refresh this auth-gated page. The successful deletion has
-      // already revoked its session, so a refresh would redirect before the
-      // learner can read this server-confirmed completion state.
+      // The acknowledgement must be outside the authenticated shell: this
+      // request revokes the session, making its header and navigation invalid.
+      router.replace("/account-deactivated");
     } catch (error) {
       // T06: a 401 mid-account-deletion means the session expired
       // before the deactivation was issued. We never want to claim
@@ -95,38 +89,6 @@ export function AccountDeletionForm() {
     } finally {
       setIsDeleting(false);
     }
-  }
-
-  if (completed) {
-    return (
-      <div
-        role="status"
-        aria-live="polite"
-        className="mt-[var(--spacing-md)] space-y-[var(--spacing-md)]"
-      >
-        <div className="rounded-md border border-red-300 bg-white p-[var(--spacing-md)] text-base text-neutral-900">
-          <p className="font-semibold text-red-900">
-            Your account has been deactivated.
-          </p>
-          <p className="mt-[var(--spacing-xs)]">
-            We&apos;ll permanently anonymize your saved words, reviews, and
-            practice history on{" "}
-            <span className="font-medium">{completed.purgeAfter}</span>. After
-            that, your data is gone for good.
-          </p>
-          <p className="mt-[var(--spacing-sm)]">
-            You can sign in again before then to reactivate, and your data will
-            be restored.
-          </p>
-        </div>
-        <a
-          href="/signin"
-          className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-        >
-          Go to sign in
-        </a>
-      </div>
-    );
   }
 
   return (

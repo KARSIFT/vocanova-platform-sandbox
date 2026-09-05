@@ -26,21 +26,27 @@ test.describe("Account deletion confirmation", () => {
     ]);
 
     await page.goto("/settings/account");
+    await expect
+      .poll(() => page.evaluate(() => document.cookie))
+      .toContain("vocanova_csrf=");
     await page
       .getByRole("button", { name: "I want to delete my account" })
       .click();
-    await page.getByLabel("Type the confirmation phrase").fill("delete my account");
+    await page
+      .getByLabel("Type the confirmation phrase")
+      .fill("delete my account");
     await page
       .getByRole("button", { name: "Permanently deactivate my account" })
       .click();
 
     await expect(
-      page.getByText("Your account has been deactivated."),
+      page.getByRole("heading", { name: "Your account has been deactivated." }),
     ).toBeVisible();
-    await expect(page).toHaveURL(/\/settings\/account$/);
+    await expect(page).toHaveURL(/\/account-deactivated$/);
     await expect(
       page.getByRole("link", { name: "Go to sign in" }),
     ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Log out" })).toHaveCount(0);
 
     const cookieNames = (await context.cookies()).map((cookie) => cookie.name);
     expect(cookieNames).not.toContain("vocanova_session");
