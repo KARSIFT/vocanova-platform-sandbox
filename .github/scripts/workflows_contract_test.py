@@ -292,6 +292,20 @@ class WorkflowContractTest(unittest.TestCase):
             "does not reliably re-enqueue a PR into a required merge queue (found live, PR #1171/#1172)",
         )
 
+    def test_merge_queue_watchdog_uses_a_dispatching_mutation_credential(self) -> None:
+        text = (WF_DIR / "merge-queue-watchdog.yml").read_text()
+        self.assertIn("MERGE_QUEUE_WATCHDOG_TOKEN", text)
+        self.assertIn("merge_queue_watchdog.py", text)
+
+    def test_merge_queue_watchdog_recovery_cases(self) -> None:
+        result = subprocess.run(
+            ["python3", str(WF_DIR.parent / "scripts" / "merge_queue_watchdog_test.py")],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
