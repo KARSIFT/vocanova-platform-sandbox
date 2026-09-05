@@ -15,5 +15,7 @@ export function acceptSentenceEdit(
   nextValue: string,
   limit = MAX_SENTENCE_CHARACTERS,
 ): string {
-  return countSentenceCharacters(nextValue) <= limit ? nextValue : previousValue;
+  return countSentenceCharacters(nextValue) <= limit
+    ? nextValue
+    : previousValue;
 }
