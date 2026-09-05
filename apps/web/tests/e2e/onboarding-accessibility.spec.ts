@@ -87,15 +87,26 @@ test.describe("Onboarding accessibility (VOC-031-T07b)", () => {
       contextLabel: "/onboarding",
       requireText: [
         "text=Welcome to Vocanova",
+        "text=You can change your daily review target later in Settings.",
         "text=Continue",
         // The English-level step's actual <legend>:
         "text=How would you describe your English?",
+        "text=Choose the closest level for now. Later, Settings lets you adjust your daily review target.",
         "text=A1 — Beginner",
       ],
     });
 
+    await expect(
+      page.getByText("every answer later in Settings", { exact: false }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByText("you can change it any time", { exact: false }),
+    ).toHaveCount(0);
+
     // Sanity: the test ran on a supported project, otherwise
     // the project name is asserted in the report.
-    expect(testInfo.project.name).toMatch(/^(home-desktop-1280|mobile-360|mobile-430)$/);
+    expect(testInfo.project.name).toMatch(
+      /^(home-desktop-1280|mobile-360|mobile-430)$/,
+    );
   });
 });

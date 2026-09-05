@@ -41,7 +41,7 @@ export default async function OnboardingPage() {
           </h1>
           <p className="text-base text-neutral-700">
             A few quick questions so we can shape your practice. You can change
-            every answer later in Settings.
+            your daily review target later in Settings.
           </p>
         </header>
         <OnboardingForm />
