@@ -157,4 +157,9 @@ var (
 	ErrOAuthNotConfigured           = errors.New("oauth provider not configured")
 	ErrSyntheticSessionMintDisabled = errors.New("synthetic smoke-test session minting is disabled")
 	ErrSyntheticUserNotSeeded       = errors.New("synthetic smoke-test user is not seeded")
+	// ErrUserEmailAlreadyExists is returned only when PostgreSQL rejects a
+	// create on the active-email unique index. Callers may re-read that user to
+	// recover a concurrent first sign-in; other persistence failures are not
+	// safe to recover from this way.
+	ErrUserEmailAlreadyExists = errors.New("user email already exists")
 )

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 )
 
 // PostgreSQLRepository implements Repository against the T00 migration schema.
@@ -30,6 +30,10 @@ func (r *PostgreSQLRepository) CreateUser(ctx context.Context, email string, ver
 		id, email, verifiedAt, now, now,
 	)
 	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "23505" && pqErr.Constraint == "users_active_email_key" {
+			return nil, fmt.Errorf("create user: %w", ErrUserEmailAlreadyExists)
+		}
 		return nil, fmt.Errorf("create user: %w", err)
 	}
 	return &User{
