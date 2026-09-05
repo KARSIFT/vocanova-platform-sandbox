@@ -209,6 +209,12 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 			return s.resultFromStored(existing, req.SentenceText), nil
 		}
 		if existing.Status != AttemptStatusFailed {
+			// A fresh key that observes an active or completed equivalent request
+			// is non-generative. Record it so a later transport replay remains
+			// non-generative if a pending attempt subsequently fails.
+			if err := s.idem.Record(ctx, req.UserID, operationSentenceFeedback, req.IdempotencyKey, requestHash); err != nil {
+				return nil, fmt.Errorf("record existing idempotency: %w", err)
+			}
 			return s.resultFromStored(existing, req.SentenceText), nil
 		}
 
@@ -223,6 +229,11 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 			// Another fresh key won the race to create the active generation.
 			// Returning its safe stored state makes the losing request
 			// non-generative and avoids surfacing a database uniqueness error.
+			// Preserve the losing key too: a transport replay of this request must
+			// remain a replay even if the active generation later fails.
+			if err := s.idem.Record(ctx, req.UserID, operationSentenceFeedback, req.IdempotencyKey, requestHash); err != nil {
+				return nil, fmt.Errorf("record existing retry idempotency: %w", err)
+			}
 			return s.resultFromStored(retry.Existing, req.SentenceText), nil
 		}
 		if err := s.idem.Record(ctx, req.UserID, operationSentenceFeedback, req.IdempotencyKey, requestHash); err != nil {
