@@ -44,14 +44,12 @@ type FormState = Omit<Settings, "displayName" | "reviewIntervalPreset"> & {
 };
 
 export function SettingsForm({ initialSettings }: SettingsFormProps) {
-  const [state, setState] = useState<FormState>({
-    dailyReviewTarget: initialSettings.dailyReviewTarget,
-    reviewIntervalPreset: initialSettings.reviewIntervalPreset,
-    appLanguage: initialSettings.appLanguage,
-    notificationsEnabled: initialSettings.notificationsEnabled,
-    marketingEmailsEnabled: initialSettings.marketingEmailsEnabled,
-    displayName: initialSettings.displayName,
-  });
+  const [state, setState] = useState<FormState>(() =>
+    toFormState(initialSettings),
+  );
+  const [baseline, setBaseline] = useState<FormState>(() =>
+    toFormState(initialSettings),
+  );
   const [status, setStatus] = useState<SaveStatus>({ type: "idle" });
 
   function patch<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -74,7 +72,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
       return;
     }
 
-    const body = buildUpdateBody(state, initialSettings);
+    const body = buildUpdateBody(state, baseline);
     if (Object.keys(body).length === 0) {
       setStatus({ type: "saved" });
       return;
@@ -86,14 +84,9 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
       const { data } = await client.updateSettings(body, {
         headers: { "X-CSRF-Token": csrfToken },
       });
-      setState({
-        dailyReviewTarget: data.dailyReviewTarget,
-        reviewIntervalPreset: data.reviewIntervalPreset,
-        appLanguage: data.appLanguage,
-        notificationsEnabled: data.notificationsEnabled,
-        marketingEmailsEnabled: data.marketingEmailsEnabled,
-        displayName: data.displayName,
-      });
+      const savedSettings = toFormState(data);
+      setState(savedSettings);
+      setBaseline(savedSettings);
       setStatus({ type: "saved" });
     } catch (error) {
       // T06: a 401 mid-settings-write is the documented
@@ -306,9 +299,20 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   );
 }
 
+function toFormState(settings: Settings): FormState {
+  return {
+    dailyReviewTarget: settings.dailyReviewTarget,
+    reviewIntervalPreset: settings.reviewIntervalPreset,
+    appLanguage: settings.appLanguage,
+    notificationsEnabled: settings.notificationsEnabled,
+    marketingEmailsEnabled: settings.marketingEmailsEnabled,
+    displayName: settings.displayName,
+  };
+}
+
 function buildUpdateBody(
   next: FormState,
-  baseline: Settings,
+  baseline: FormState,
 ): UpdateSettingsBody {
   const body: UpdateSettingsBody = {};
   if (next.dailyReviewTarget !== baseline.dailyReviewTarget) {
