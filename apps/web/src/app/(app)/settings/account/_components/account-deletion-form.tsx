@@ -73,7 +73,9 @@ export function AccountDeletionForm() {
       }
       // The acknowledgement must be outside the authenticated shell: this
       // request revokes the session, making its header and navigation invalid.
-      router.replace("/account-deactivated");
+      router.replace(
+        `/account-deactivated?purgeAfter=${encodeURIComponent(data.purgeAfter)}`,
+      );
     } catch (error) {
       // T06: a 401 mid-account-deletion means the session expired
       // before the deactivation was issued. We never want to claim

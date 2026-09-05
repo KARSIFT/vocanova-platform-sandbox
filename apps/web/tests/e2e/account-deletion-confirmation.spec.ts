@@ -42,7 +42,14 @@ test.describe("Account deletion confirmation", () => {
     await expect(
       page.getByRole("heading", { name: "Your account has been deactivated." }),
     ).toBeVisible();
-    await expect(page).toHaveURL(/\/account-deactivated$/);
+    await expect(page).toHaveURL(/\/account-deactivated\?purgeAfter=/);
+    const purgeAfter = new URL(page.url()).searchParams.get("purgeAfter");
+    expect(purgeAfter).not.toBeNull();
+    const expectedPurgeAfter = new Intl.DateTimeFormat("en-US", {
+      dateStyle: "long",
+      timeZone: "UTC",
+    }).format(new Date(purgeAfter!));
+    await expect(page.getByText(expectedPurgeAfter)).toBeVisible();
     await expect(
       page.getByRole("link", { name: "Go to sign in" }),
     ).toBeVisible();

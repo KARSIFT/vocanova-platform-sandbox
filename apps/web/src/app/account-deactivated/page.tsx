@@ -5,7 +5,32 @@ export const metadata: Metadata = {
   description: "Confirmation that your Vocanova account has been deactivated.",
 };
 
-export default function AccountDeactivatedPage() {
+interface AccountDeactivatedPageProps {
+  searchParams: Promise<{ purgeAfter?: string }>;
+}
+
+function formatPurgeAfter(purgeAfter: string | undefined): string | null {
+  if (!purgeAfter) {
+    return null;
+  }
+
+  const date = new Date(purgeAfter);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "long",
+    timeZone: "UTC",
+  }).format(date);
+}
+
+export default async function AccountDeactivatedPage({
+  searchParams,
+}: AccountDeactivatedPageProps) {
+  const { purgeAfter } = await searchParams;
+  const formattedPurgeAfter = formatPurgeAfter(purgeAfter);
+
   return (
     <main className="grid min-h-screen place-items-center bg-neutral-50 p-6">
       <div
@@ -17,11 +42,14 @@ export default function AccountDeactivatedPage() {
           <h1 className="text-2xl font-semibold text-red-900">
             Your account has been deactivated.
           </h1>
-          <p className="mt-[var(--spacing-xs)]">
-            We&apos;ll permanently anonymize your saved words, reviews, and
-            practice history after 30 days. After that, your data is gone for
-            good.
-          </p>
+          {formattedPurgeAfter ? (
+            <p className="mt-[var(--spacing-xs)]">
+              We&apos;ll permanently anonymize your saved words, reviews, and
+              practice history on{" "}
+              <span className="font-medium">{formattedPurgeAfter}</span>. After
+              that, your data is gone for good.
+            </p>
+          ) : null}
           <p className="mt-[var(--spacing-sm)]">
             You can sign in again before then to reactivate, and your data will
             be restored.
