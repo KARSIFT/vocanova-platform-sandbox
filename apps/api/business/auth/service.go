@@ -224,6 +224,16 @@ func (s *Service) ensureEmailIdentity(ctx context.Context, userID uuid.UUID, ema
 		return nil
 	}
 	if _, err := s.repo.CreateExternalIdentity(ctx, userID, "email", emailAddr, emailAddr, true); err != nil {
+		// A concurrent successful consume can create the identity between the
+		// lookup and insert above. Re-read it before surfacing the insertion
+		// failure: only the same user may reuse it. In particular, never turn
+		// an identity owned by another account into this account's identity.
+		if ext, lookupErr := s.repo.GetExternalIdentity(ctx, "email", emailAddr); lookupErr == nil {
+			if ext.UserID == userID {
+				return nil
+			}
+			return ErrInvalidMagicLink
+		}
 		return fmt.Errorf("create email external identity: %w", err)
 	}
 	return nil

@@ -230,6 +230,21 @@ func TestConsumeMagicLinkReusesExistingEmailIdentity(t *testing.T) {
 	assert.Equal(t, "user@example.com", ext.ProviderSubject)
 }
 
+func TestEnsureEmailIdentityRejectsAnotherUsersIdentity(t *testing.T) {
+	svc, repo, _, _ := testService(t)
+	ctx := context.Background()
+	now := time.Now().UTC()
+	owner, err := repo.CreateUser(ctx, "owner@example.com", &now)
+	require.NoError(t, err)
+	other, err := repo.CreateUser(ctx, "other@example.com", &now)
+	require.NoError(t, err)
+	_, err = repo.CreateExternalIdentity(ctx, owner.ID, "email", "owner@example.com", "owner@example.com", true)
+	require.NoError(t, err)
+
+	err = svc.ensureEmailIdentity(ctx, other.ID, "owner@example.com")
+	require.ErrorIs(t, err, ErrInvalidMagicLink)
+}
+
 func TestConsumeMagicLinkRejectsReplay(t *testing.T) {
 	svc, _, fake, _ := testService(t)
 	ctx := context.Background()

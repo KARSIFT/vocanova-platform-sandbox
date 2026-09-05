@@ -324,6 +324,10 @@ func (r *MemoryRepository) GetExternalIdentity(ctx context.Context, provider, pr
 func (r *MemoryRepository) CreateExternalIdentity(ctx context.Context, userID uuid.UUID, provider, providerSubject, providerEmail string, providerEmailVerified bool) (*ExternalIdentity, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	key := provider + ":" + providerSubject
+	if _, exists := r.externalByProvider[key]; exists {
+		return nil, errors.New("external identity already exists")
+	}
 	now := time.Now().UTC()
 	ext := &ExternalIdentity{
 		ID:                    uuid.New(),
@@ -336,7 +340,7 @@ func (r *MemoryRepository) CreateExternalIdentity(ctx context.Context, userID uu
 		UpdatedAt:             now,
 	}
 	r.externalIdentities[ext.ID] = ext
-	r.externalByProvider[provider+":"+providerSubject] = ext
+	r.externalByProvider[key] = ext
 	return ext, nil
 }
 
