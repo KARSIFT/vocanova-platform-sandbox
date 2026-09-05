@@ -286,7 +286,11 @@ func (r *MemoryRepository) SubmitReview(ctx context.Context, req SubmitReviewReq
 			ConsecutiveIncorrectCount: uw.ConsecutiveIncorrectCount,
 		},
 	}
-	sched, err := ApplyReview(prior, ApplyReviewRequest{Result: req.Result, Rating: req.Rating}, req.AnsweredAt)
+	scheduledAt := req.scheduledAt
+	if scheduledAt.IsZero() {
+		scheduledAt = time.Now().UTC()
+	}
+	sched, err := ApplyReview(prior, ApplyReviewRequest{Result: req.Result, Rating: req.Rating}, scheduledAt)
 	if err != nil {
 		return nil, err
 	}
