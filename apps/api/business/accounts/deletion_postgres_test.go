@@ -263,3 +263,82 @@ func TestPostgreSQLRepositoryCreateAccountDeletionRequestRequiresUserID(t *testi
 	_, err = repo.CreateAccountDeletionRequest(context.Background(), uuid.New(), "", time.Now(), 30*24*time.Hour)
 	require.Error(t, err)
 }
+
+// TestPostgreSQLRepositoryAnonymizeUserDataUsesPersistedSchema exercises the
+// production sweep SQL rather than the memory counters. In particular, the
+// feedback ownership predicate must go through learner_sentences (there is no
+// ai_feedback_attempts.user_id), and deleting attempts avoids replacing every
+// unique request_hash with the same value.
+func TestPostgreSQLRepositoryAnonymizeUserDataUsesPersistedSchema(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewPostgreSQLRepository(db)
+	uid := uuid.New()
+	mock.ExpectBegin()
+	for _, query := range []string{
+		"DELETE FROM ai_feedback_attempts AS attempt",
+		"DELETE FROM review_attempts WHERE user_id = \\$1",
+		"DELETE FROM learner_sentences WHERE user_id = \\$1",
+		"DELETE FROM user_words WHERE user_id = \\$1",
+		"DELETE FROM confidence_point_ledger WHERE user_id = \\$1",
+		"DELETE FROM grace_day_ledger WHERE user_id = \\$1",
+		"DELETE FROM daily_mission_snapshots WHERE user_id = \\$1",
+		"DELETE FROM daily_activity_summaries WHERE user_id = \\$1",
+		"DELETE FROM streak_states WHERE user_id = \\$1",
+		"DELETE FROM user_onboarding_profiles WHERE user_id = \\$1",
+		"DELETE FROM user_settings WHERE user_id = \\$1",
+		"DELETE FROM idempotency_keys WHERE user_id = \\$1",
+		"DELETE FROM email_change_links WHERE user_id = \\$1",
+		"DELETE FROM magic_links WHERE user_id = \\$1",
+		"DELETE FROM sessions WHERE user_id = \\$1",
+		"DELETE FROM external_identities WHERE user_id = \\$1",
+		"UPDATE account_deletion_requests",
+		"UPDATE users",
+	} {
+		mock.ExpectExec(query).WithArgs(uid).WillReturnResult(sqlmock.NewResult(0, 1))
+	}
+	mock.ExpectCommit()
+
+	counters, err := repo.AnonymizeUserData(context.Background(), uid)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), counters.AIFeedbackAttempts)
+	assert.Equal(t, int64(1), counters.ReviewAttempts)
+	assert.Equal(t, int64(1), counters.LearnerSentences)
+	assert.Equal(t, int64(1), counters.UserWords)
+	assert.Equal(t, int64(1), counters.ExternalIdentities)
+	assert.Equal(t, int64(1), counters.ConfidencePointLedger)
+	assert.Equal(t, int64(1), counters.GraceDayLedger)
+	assert.Equal(t, int64(1), counters.DailyMissionSnapshots)
+	assert.Equal(t, int64(1), counters.DailyActivitySummaries)
+	assert.Equal(t, int64(1), counters.StreakStates)
+	assert.Equal(t, int64(1), counters.UserOnboardingProfiles)
+	assert.Equal(t, int64(1), counters.UserSettings)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+// TestPostgreSQLRepositoryAnonymizeUserDataRollsBack confirms that a failed
+// disposition does not leave a partially-purged account. A later sweep can
+// safely retry the same deletion request.
+func TestPostgreSQLRepositoryAnonymizeUserDataRollsBack(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewPostgreSQLRepository(db)
+	uid := uuid.New()
+	mock.ExpectBegin()
+	mock.ExpectExec("DELETE FROM ai_feedback_attempts AS attempt").
+		WithArgs(uid).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec("DELETE FROM review_attempts WHERE user_id = \\$1").
+		WithArgs(uid).
+		WillReturnError(errors.New("injected review deletion failure"))
+	mock.ExpectRollback()
+
+	_, err = repo.AnonymizeUserData(context.Background(), uid)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "delete review_attempts")
+	require.NoError(t, mock.ExpectationsWereMet())
+}

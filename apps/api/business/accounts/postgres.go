@@ -327,27 +327,17 @@ func (r *PostgreSQLRepository) ClaimAccountDeletionRequestForAnonymization(ctx c
 	return rows == 1, nil
 }
 
-// AnonymizeUserData runs the per-table disposition for the
-// user inside one transaction. The function follows
-// DOC-05 §16's three-class breakdown:
+// AnonymizeUserData runs the account-deletion disposition inside one
+// transaction.  At this stage the account is already deactivated; this is
+// the irreversible part of the staged process.
 //
-//   - soft-delete-pending-purge (deleted_at set):
-//     external_identities, user_words, learner_sentences
-//   - irreversible de-identification (PII-bearing fields
-//     overwritten with a stable 'redacted' marker, the row
-//     kept for audit integrity):
-//     review_attempts, ai_feedback_attempts,
-//     confidence_point_ledger, grace_day_ledger
-//   - delete-or-de-identify:
-//     user_onboarding_profiles (deleted outright — the
-//     onboarding answers hold no audit value after the
-//     learner is gone), user_settings (deleted outright —
-//     learner-only preferences, no audit value),
-//     daily_mission_snapshots, daily_activity_summaries,
-//     streak_states (de-identified; the running totals are
-//     aggregate metrics that are still useful for the
-//     historical charts, but the per-user join keys must
-//     not survive).
+// The committed schema uses NOT NULL, ON DELETE RESTRICT user_id foreign
+// keys throughout the learning tables.  Replacing those IDs with a sentinel
+// would therefore fail, and retaining them would leave the data linkable.
+// We delete learner-linked operational records instead.  This also removes
+// feedback request hashes rather than attempting to redact them to a shared
+// value that violates their unique index.  The retained users row is needed
+// by account_deletion_requests, so only its identifying fields are erased.
 //
 // The function returns the per-table counts for the API /
 // observability layer. SQL errors are wrapped in
@@ -364,122 +354,118 @@ func (r *PostgreSQLRepository) AnonymizeUserData(ctx context.Context, userID uui
 	}
 	defer tx.Rollback()
 
-	// Soft-delete-pending-purge.
-	c, err := execCount(ctx, tx, userID, nowUTC(),
-		`UPDATE external_identities SET deleted_at = $2, updated_at = $2
-		 WHERE user_id = $1 AND deleted_at IS NULL`)
+	// Delete dependent records before their parent learner rows. This order is
+	// required by the committed ON DELETE RESTRICT constraints.
+	c, err := execCount(ctx, tx, userID,
+		`DELETE FROM ai_feedback_attempts AS attempt
+		 USING learner_sentences AS sentence
+		 WHERE attempt.learner_sentence_id = sentence.id
+		   AND sentence.user_id = $1`)
 	if err != nil {
-		return counters, fmt.Errorf("soft-delete external_identities: %w", err)
-	}
-	counters.ExternalIdentities = c
-	c, err = execCount(ctx, tx, userID, nowUTC(),
-		`UPDATE user_words SET deleted_at = $2, updated_at = $2
-		 WHERE user_id = $1 AND deleted_at IS NULL`)
-	if err != nil {
-		return counters, fmt.Errorf("soft-delete user_words: %w", err)
-	}
-	counters.UserWords = c
-	c, err = execCount(ctx, tx, userID, nowUTC(),
-		`UPDATE learner_sentences SET deleted_at = $2, updated_at = $2
-		 WHERE user_id = $1 AND deleted_at IS NULL`)
-	if err != nil {
-		return counters, fmt.Errorf("soft-delete learner_sentences: %w", err)
-	}
-	counters.LearnerSentences = c
-
-	// Irreversible de-identification. The PII-bearing columns
-	// are overwritten with a non-reversible marker. The row is
-	// kept for audit-integrity reasons (the
-	// confidence_point_ledger and grace_day_ledger are
-	// append-only ledgers that downstream financial / audit
-	// reconciliations may still need to read).
-	c, err = execCount(ctx, tx, userID, nowUTC(),
-		`UPDATE review_attempts
-		 SET prompt_text = 'redacted', user_response = 'redacted', updated_at = $2
-		 WHERE user_id = $1`)
-	if err != nil {
-		return counters, fmt.Errorf("de-identify review_attempts: %w", err)
-	}
-	counters.ReviewAttempts = c
-	c, err = execCount(ctx, tx, userID, nowUTC(),
-		`UPDATE ai_feedback_attempts
-		 SET prompt_version = 'redacted', request_hash = 'redacted', updated_at = $2
-		 WHERE user_id = $1`)
-	if err != nil {
-		return counters, fmt.Errorf("de-identify ai_feedback_attempts: %w", err)
+		return counters, fmt.Errorf("delete ai_feedback_attempts: %w", err)
 	}
 	counters.AIFeedbackAttempts = c
-	c, err = execCount(ctx, tx, userID, nowUTC(),
-		`UPDATE confidence_point_ledger
-		 SET metadata = '{}'::jsonb, updated_at = $2
-		 WHERE user_id = $1`)
+	c, err = execCount(ctx, tx, userID,
+		`DELETE FROM review_attempts WHERE user_id = $1`)
 	if err != nil {
-		return counters, fmt.Errorf("de-identify confidence_point_ledger: %w", err)
+		return counters, fmt.Errorf("delete review_attempts: %w", err)
+	}
+	counters.ReviewAttempts = c
+	c, err = execCount(ctx, tx, userID,
+		`DELETE FROM learner_sentences WHERE user_id = $1`)
+	if err != nil {
+		return counters, fmt.Errorf("delete learner_sentences: %w", err)
+	}
+	counters.LearnerSentences = c
+	c, err = execCount(ctx, tx, userID,
+		`DELETE FROM user_words WHERE user_id = $1`)
+	if err != nil {
+		return counters, fmt.Errorf("delete user_words: %w", err)
+	}
+	counters.UserWords = c
+	c, err = execCount(ctx, tx, userID,
+		`DELETE FROM confidence_point_ledger WHERE user_id = $1`)
+	if err != nil {
+		return counters, fmt.Errorf("delete confidence_point_ledger: %w", err)
 	}
 	counters.ConfidencePointLedger = c
-	c, err = execCount(ctx, tx, userID, nowUTC(),
-		`UPDATE grace_day_ledger
-		 SET metadata = '{}'::jsonb, updated_at = $2
-		 WHERE user_id = $1`)
+	c, err = execCount(ctx, tx, userID,
+		`DELETE FROM grace_day_ledger WHERE user_id = $1`)
 	if err != nil {
-		return counters, fmt.Errorf("de-identify grace_day_ledger: %w", err)
+		return counters, fmt.Errorf("delete grace_day_ledger: %w", err)
 	}
 	counters.GraceDayLedger = c
-	// feature_audit_logs is named in the spec but is not yet
-	// a shipped table. The query is wrapped in a
-	// "to_regclass" guard so the sweep does not fail on
-	// repositories where the table does not exist (e.g.,
-	// partial F2/F3 deployments).
-	c, err = execCountIfTable(ctx, tx, userID, nowUTC(),
-		"feature_audit_logs",
-		`UPDATE feature_audit_logs
-		 SET payload = '{}'::jsonb, updated_at = $2
-		 WHERE user_id = $1`)
+	c, err = execCount(ctx, tx, userID,
+		`DELETE FROM daily_mission_snapshots WHERE user_id = $1`)
 	if err != nil {
-		return counters, fmt.Errorf("de-identify feature_audit_logs: %w", err)
+		return counters, fmt.Errorf("delete daily_mission_snapshots: %w", err)
 	}
-	counters.FeatureAuditLogs = c
-
-	// Delete-or-de-identify. Onboarding answers, settings,
-	// and per-day activity tables have no audit value past
-	// the learner's own removal; they are deleted outright.
-	// Daily-mission-snapshots, daily-activity-summaries, and
-	// streak-states are de-identified (per-user join keys
-	// overwritten) so the historical aggregate charts that
-	// reference them remain structurally intact.
-	c, err = execCount(ctx, tx, userID, nowUTC(),
+	counters.DailyMissionSnapshots = c
+	c, err = execCount(ctx, tx, userID,
+		`DELETE FROM daily_activity_summaries WHERE user_id = $1`)
+	if err != nil {
+		return counters, fmt.Errorf("delete daily_activity_summaries: %w", err)
+	}
+	counters.DailyActivitySummaries = c
+	c, err = execCount(ctx, tx, userID,
+		`DELETE FROM streak_states WHERE user_id = $1`)
+	if err != nil {
+		return counters, fmt.Errorf("delete streak_states: %w", err)
+	}
+	counters.StreakStates = c
+	c, err = execCount(ctx, tx, userID,
 		`DELETE FROM user_onboarding_profiles WHERE user_id = $1`)
 	if err != nil {
 		return counters, fmt.Errorf("delete user_onboarding_profiles: %w", err)
 	}
 	counters.UserOnboardingProfiles = c
-	c, err = execCount(ctx, tx, userID, nowUTC(),
+	c, err = execCount(ctx, tx, userID,
 		`DELETE FROM user_settings WHERE user_id = $1`)
 	if err != nil {
 		return counters, fmt.Errorf("delete user_settings: %w", err)
 	}
 	counters.UserSettings = c
-	c, err = execCount(ctx, tx, userID, nowUTC(),
-		`UPDATE daily_mission_snapshots SET user_id = $2, updated_at = $2 WHERE user_id = $1`,
-		anonymizedUserIDPlaceholder)
+	c, err = execCount(ctx, tx, userID,
+		`DELETE FROM idempotency_keys WHERE user_id = $1`)
 	if err != nil {
-		return counters, fmt.Errorf("de-identify daily_mission_snapshots: %w", err)
+		return counters, fmt.Errorf("delete idempotency_keys: %w", err)
 	}
-	counters.DailyMissionSnapshots = c
-	c, err = execCount(ctx, tx, userID, nowUTC(),
-		`UPDATE daily_activity_summaries SET user_id = $2, updated_at = $2 WHERE user_id = $1`,
-		anonymizedUserIDPlaceholder)
+	c, err = execCount(ctx, tx, userID,
+		`DELETE FROM email_change_links WHERE user_id = $1`)
 	if err != nil {
-		return counters, fmt.Errorf("de-identify daily_activity_summaries: %w", err)
+		return counters, fmt.Errorf("delete email_change_links: %w", err)
 	}
-	counters.DailyActivitySummaries = c
-	c, err = execCount(ctx, tx, userID, nowUTC(),
-		`UPDATE streak_states SET user_id = $2, updated_at = $2 WHERE user_id = $1`,
-		anonymizedUserIDPlaceholder)
+	c, err = execCount(ctx, tx, userID,
+		`DELETE FROM magic_links WHERE user_id = $1`)
 	if err != nil {
-		return counters, fmt.Errorf("de-identify streak_states: %w", err)
+		return counters, fmt.Errorf("delete magic_links: %w", err)
 	}
-	counters.StreakStates = c
+	c, err = execCount(ctx, tx, userID,
+		`DELETE FROM sessions WHERE user_id = $1`)
+	if err != nil {
+		return counters, fmt.Errorf("delete sessions: %w", err)
+	}
+	c, err = execCount(ctx, tx, userID,
+		`DELETE FROM external_identities WHERE user_id = $1`)
+	if err != nil {
+		return counters, fmt.Errorf("delete external_identities: %w", err)
+	}
+	counters.ExternalIdentities = c
+	c, err = execCount(ctx, tx, userID,
+		`UPDATE account_deletion_requests
+		 SET idempotency_key = 'redacted:' || id::text, updated_at = NOW()
+		 WHERE user_id = $1`)
+	if err != nil {
+		return counters, fmt.Errorf("redact deletion request idempotency key: %w", err)
+	}
+	c, err = execCount(ctx, tx, userID,
+		`UPDATE users
+		 SET email = NULL, display_name = NULL, avatar_url = NULL,
+		     email_verified_at = NULL, last_login_at = NULL, updated_at = NOW()
+		 WHERE id = $1`)
+	if err != nil {
+		return counters, fmt.Errorf("redact user identity: %w", err)
+	}
 
 	if err := tx.Commit(); err != nil {
 		return counters, fmt.Errorf("commit: %w", err)
@@ -540,8 +526,8 @@ func scanAccountDeletionRequestRows(rows *sql.Rows) (*AccountDeletionRequest, er
 // affected-row count. Centralized so the AnonymizeUserData
 // code path can stay a flat list of named per-table
 // statements.
-func execCount(ctx context.Context, tx *sql.Tx, userID uuid.UUID, now time.Time, sql string, args ...interface{}) (int64, error) {
-	finalArgs := append([]interface{}{userID, now}, args...)
+func execCount(ctx context.Context, tx *sql.Tx, userID uuid.UUID, sql string, args ...interface{}) (int64, error) {
+	finalArgs := append([]interface{}{userID}, args...)
 	res, err := tx.ExecContext(ctx, sql, finalArgs...)
 	if err != nil {
 		return 0, err
@@ -552,56 +538,3 @@ func execCount(ctx context.Context, tx *sql.Tx, userID uuid.UUID, now time.Time,
 	}
 	return rows, nil
 }
-
-// execCountIfTable runs an UPDATE / DELETE only if the named
-// table exists in the current schema. The to_regclass guard
-// returns NULL when the table is missing, and the
-// (to_regclass(...) IS NOT NULL) predicate skips the write
-// so the sweep does not fail on a partial schema.
-func execCountIfTable(ctx context.Context, tx *sql.Tx, userID uuid.UUID, now time.Time, table, sql string, args ...interface{}) (int64, error) {
-	finalArgs := append([]interface{}{userID, now}, args...)
-	res, err := tx.ExecContext(ctx, sql, finalArgs...)
-	if err != nil {
-		// 42P01 = undefined_table. Skip silently for
-		// optional tables the spec mentions but that
-		// the current schema may not yet include
-		// (e.g., feature_audit_logs).
-		var pqErr *pq.Error
-		if errors.As(err, &pqErr) && pqErr.Code == "42P01" {
-			return 0, nil
-		}
-		return 0, err
-	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return 0, err
-	}
-	return rows, nil
-}
-
-// anonymizedUserIDPlaceholder is the deterministic
-// zero-UUID value the de-identification pass writes into
-// per-user join keys on the aggregate tables
-// (daily_mission_snapshots, daily_activity_summaries,
-// streak_states). The aggregate charts that join on
-// user_id continue to work because the FK constraint on
-// users(id) is dropped to allow a zero-UUID for rows that
-// no longer have a live user; the alternative (a NULL user
-// with NOT NULL FKs) would force a schema change on
-// tables outside this package's scope.
-//
-// (No FK is dropped here: this is documented as a T04
-// follow-up if the FK is enforced. The current schema has
-// no FK from these tables back to users, so the sweep
-// works as written.)
-const anonymizedUserIDPlaceholder = "00000000-0000-0000-0000-000000000000"
-
-// nowUTC is a tiny clock-independent helper used by
-// AnonymizeUserData so the per-table updates all share a
-// single timestamp. The repository does not own a clock
-// because the spec's per-table disposition is "irreversible
-// and idempotent" — the timestamp is for observability, not
-// for downstream correctness — and using time.Now().UTC()
-// keeps the repository free of an injected clock
-// dependency.
-func nowUTC() time.Time { return time.Now().UTC() }
