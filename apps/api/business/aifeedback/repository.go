@@ -67,6 +67,10 @@ type Repository interface {
 	// provider. provider and model are recorded on the pending attempt row.
 	CreatePendingAttempt(ctx context.Context, req SubmitSentenceFeedbackRequest, target *Target, normalized string, requestHash string, provider string, model string, now time.Time) (*PendingAttempt, error)
 
+	// CreateRetryAttempt appends a pending generation for a previously failed
+	// logical submission, preserving the failed attempt for observability.
+	CreateRetryAttempt(ctx context.Context, failed *StoredFeedbackAttempt, provider string, model string, now time.Time) (*PendingAttempt, error)
+
 	// CompleteFeedbackAttempt updates the attempt and sentence statuses after the
 	// provider call. A non-nil feedback indicates success; otherwise failureCode
 	// and failureMessage describe the failure.

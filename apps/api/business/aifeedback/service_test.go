@@ -347,7 +347,7 @@ func TestServiceProviderFailureIsRetryable(t *testing.T) {
 	assert.NotEqual(t, uuid.Nil, result.AttemptID)
 }
 
-func TestServiceStoredFailureReplayDoesNotExposeInternalError(t *testing.T) {
+func TestServiceRetryAfterProviderFailureCreatesNewGeneration(t *testing.T) {
 	f := newServiceFixture(t)
 	f.service.provider = &failingProvider{}
 	req := f.request("I work every day.")
@@ -357,17 +357,38 @@ func TestServiceStoredFailureReplayDoesNotExposeInternalError(t *testing.T) {
 	assert.Equal(t, ErrorCodeTemporaryFailure, initial.ErrorCode)
 	assert.Empty(t, initial.ErrorMessage)
 
-	// A fresh idempotency key exercises request-hash deduplication rather than
-	// the idempotency-key conflict path. The stored error is deliberately an
-	// internal provider detail and must not be returned to the learner.
+	// A fresh idempotency key exercises request-hash retry rather than the
+	// idempotency-key conflict path. A retryable provider failure must call the
+	// provider again, while keeping the failed generation as history.
 	replay := req
 	replay.IdempotencyKey = uuid.New().String()
+	f.service.provider = f.provider
 	result, err := f.service.SubmitSentenceFeedback(t.Context(), replay)
 	require.NoError(t, err)
-	assert.Equal(t, ErrorCodeTemporaryFailure, result.ErrorCode)
+	assert.Equal(t, LearningStatusCorrect, result.Status)
 	assert.Empty(t, result.ErrorMessage)
-	assert.True(t, result.CanRetry)
-	assert.Equal(t, 1, len(f.repo.attempts))
+	assert.False(t, result.CanRetry)
+	assert.Equal(t, 1, f.provider.calls)
+	require.Len(t, f.repo.attempts, 2)
+	assert.Equal(t, AttemptStatusFailed, f.repo.attempts[0].Status)
+	assert.Equal(t, AttemptStatusSucceeded, f.repo.attempts[1].Status)
+	assert.NotEqual(t, initial.AttemptID, result.AttemptID)
+}
+
+func TestServiceProviderFailureIdempotencyReplayDoesNotRetry(t *testing.T) {
+	f := newServiceFixture(t)
+	f.service.provider = &failingProvider{}
+	req := f.request("I work every day.")
+
+	initial, err := f.service.SubmitSentenceFeedback(t.Context(), req)
+	require.NoError(t, err)
+	assert.Equal(t, ErrorCodeTemporaryFailure, initial.ErrorCode)
+
+	replayed, err := f.service.SubmitSentenceFeedback(t.Context(), req)
+	require.NoError(t, err)
+	assert.Equal(t, ErrorCodeTemporaryFailure, replayed.ErrorCode)
+	assert.True(t, replayed.CanRetry)
+	assert.Len(t, f.repo.attempts, 1)
 }
 
 type failingProvider struct{}

@@ -131,6 +131,37 @@ func TestPostgreSQLRepositoryCompleteFeedbackAttemptSuccess(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestPostgreSQLRepositoryCreateRetryAttempt(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewPostgreSQLRepository(db, nil)
+	now := time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC)
+	sentenceID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	failed := &StoredFeedbackAttempt{
+		ID:                uuid.MustParse("00000000-0000-0000-0000-000000000002"),
+		LearnerSentenceID: sentenceID,
+		Status:            AttemptStatusFailed,
+		RequestHash:       "retry-hash",
+	}
+
+	mock.ExpectBegin()
+	mock.ExpectExec("INSERT INTO ai_feedback_attempts").
+		WithArgs(sqlmock.AnyArg(), sentenceID, AttemptStatusPending, ProviderMock, "mock", PromptVersionSentenceFeedbackV1, "retry-hash", now).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec("UPDATE learner_sentences").
+		WithArgs(SentenceStatusSubmitted, now, sentenceID).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+
+	pending, err := repo.CreateRetryAttempt(t.Context(), failed, ProviderMock, "mock", now)
+	require.NoError(t, err)
+	assert.Equal(t, sentenceID, pending.SentenceID)
+	assert.NotEqual(t, uuid.Nil, pending.AttemptID)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestPostgreSQLRepositoryGetFeedbackAttemptByRequestHash(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)

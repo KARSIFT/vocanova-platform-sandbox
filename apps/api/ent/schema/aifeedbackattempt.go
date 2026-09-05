@@ -61,7 +61,7 @@ func (AIFeedbackAttempt) Edges() []ent.Edge {
 
 func (AIFeedbackAttempt) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("request_hash").Unique(),
+		index.Fields("request_hash").Unique().Annotations(entsql.IndexWhere("status IN ('pending', 'succeeded')")),
 		index.Fields("learner_sentence_id", "started_at"),
 		index.Fields("status", "started_at"),
 	}

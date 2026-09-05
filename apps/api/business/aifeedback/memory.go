@@ -181,8 +181,18 @@ func (r *MemoryRepository) GetFeedbackAttemptByRequestHash(ctx context.Context, 
 	defer r.mu.Unlock()
 
 	for _, a := range r.attempts {
-		if a.RequestHash == requestHash {
+		if a.RequestHash == requestHash && a.Status == AttemptStatusSucceeded {
 			return r.toStoredAttempt(a), nil
+		}
+	}
+	for _, a := range r.attempts {
+		if a.RequestHash == requestHash && a.Status == AttemptStatusPending {
+			return r.toStoredAttempt(a), nil
+		}
+	}
+	for i := len(r.attempts) - 1; i >= 0; i-- {
+		if r.attempts[i].RequestHash == requestHash {
+			return r.toStoredAttempt(r.attempts[i]), nil
 		}
 	}
 	return nil, nil
@@ -219,6 +229,29 @@ func (r *MemoryRepository) CreatePendingAttempt(ctx context.Context, req SubmitS
 	})
 
 	return &PendingAttempt{SentenceID: sentenceID, AttemptID: attemptID}, nil
+}
+
+func (r *MemoryRepository) CreateRetryAttempt(ctx context.Context, failed *StoredFeedbackAttempt, provider string, model string, now time.Time) (*PendingAttempt, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	attemptID := uuid.New()
+	r.attempts = append(r.attempts, MemoryAIFeedbackAttempt{
+		ID:                attemptID,
+		LearnerSentenceID: failed.LearnerSentenceID,
+		Status:            AttemptStatusPending,
+		Provider:          provider,
+		Model:             model,
+		PromptVersion:     PromptVersionSentenceFeedbackV1,
+		RequestHash:       failed.RequestHash,
+	})
+	for i := range r.sentences {
+		if r.sentences[i].ID == failed.LearnerSentenceID {
+			r.sentences[i].Status = SentenceStatusSubmitted
+			break
+		}
+	}
+	return &PendingAttempt{SentenceID: failed.LearnerSentenceID, AttemptID: attemptID}, nil
 }
 
 // GetFeedbackAttemptOwner implements Repository.
