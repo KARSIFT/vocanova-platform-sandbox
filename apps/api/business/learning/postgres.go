@@ -236,8 +236,8 @@ func (r *PostgreSQLRepository) ListSavedWords(ctx context.Context, req ListSaved
 	if limit <= 0 {
 		limit = 20
 	}
-	if limit > 100 {
-		limit = 100
+	if limit > 50 {
+		limit = 50
 	}
 
 	var cursorTime sql.NullTime

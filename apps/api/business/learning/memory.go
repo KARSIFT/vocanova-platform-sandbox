@@ -158,8 +158,8 @@ func (r *MemoryRepository) ListSavedWords(ctx context.Context, req ListSavedWord
 	if limit <= 0 {
 		limit = 20
 	}
-	if limit > 100 {
-		limit = 100
+	if limit > 50 {
+		limit = 50
 	}
 
 	items := r.activeSavedMeanings(req.UserID)

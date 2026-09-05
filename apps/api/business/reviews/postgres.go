@@ -71,8 +71,8 @@ func (r *PostgreSQLRepository) ListDueWords(ctx context.Context, req ListDueWord
 	if limit <= 0 {
 		limit = 20
 	}
-	if limit > 100 {
-		limit = 100
+	if limit > 50 {
+		limit = 50
 	}
 
 	var cursorNextReviewAt sql.NullTime

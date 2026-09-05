@@ -52,7 +52,7 @@ type UnsaveUserWordOutput struct{}
 // ListSavedWordsInput requests a paginated list of the authenticated requester's saved meanings.
 type ListSavedWordsInput struct {
 	After string `query:"after" doc:"Opaque pagination cursor"`
-	Limit int    `query:"limit" default:"20" doc:"Maximum items to return (1-100)"`
+	Limit int    `query:"limit" default:"20" doc:"Requested page size; defaults to 20 and is capped at 50"`
 }
 
 // ListSavedWordsOutput returns a page of saved meanings.
