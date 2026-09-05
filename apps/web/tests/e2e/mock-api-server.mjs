@@ -929,10 +929,43 @@ const server = createServer(async (req, res) => {
       return;
     }
     const state = getSessionState(cookies);
-    const sentenceId = generateId("sent");
     const targetWord = body.attemptId
       ? lookupTargetWord(body.attemptId)
       : "pour";
+    const existingAttempt = state.sentenceAttempts.find(
+      (attempt) =>
+        attempt.attemptId === body.attemptId &&
+        attempt.sentenceText === body.sentenceText,
+    );
+    if (existingAttempt) {
+      logLine(req, 200, {
+        action: "replay-sentence",
+        status: existingAttempt.evaluation.status,
+      });
+      jsonResponse(res, 200, {
+        sentenceId: existingAttempt.sentenceId,
+        attemptId: body.attemptId,
+        status: existingAttempt.evaluation.status,
+        originalSentence: body.sentenceText,
+        correctedSentence:
+          existingAttempt.evaluation.status === "correct"
+            ? body.sentenceText
+            : undefined,
+        explanation: existingAttempt.evaluation.explanation,
+        improvementTip:
+          existingAttempt.evaluation.status === "needs_improvement"
+            ? "Try using the target word naturally in your sentence."
+            : undefined,
+        missionCompleted: !existingAttempt.evaluation.errorCode,
+        canRetry: Boolean(existingAttempt.evaluation.errorCode),
+        reported: existingAttempt.reported,
+        errorCode: existingAttempt.evaluation.errorCode,
+        errorMessage: existingAttempt.evaluation.errorMessage,
+      });
+      return;
+    }
+
+    const sentenceId = generateId("sent");
     const evaluation = evaluateSentenceFeedback({
       sentence: body.sentenceText,
       targetWord,
@@ -942,6 +975,7 @@ const server = createServer(async (req, res) => {
       attemptId: body.attemptId,
       sentenceText: body.sentenceText,
       evaluation,
+      reported: false,
     });
     if (!evaluation.errorCode) {
       state.sentenceCount += 1;
@@ -977,6 +1011,14 @@ const server = createServer(async (req, res) => {
   ) {
     if (!checkCsrf(req, cookies, res, logLine)) {
       return;
+    }
+    const state = getSessionState(cookies);
+    const attemptId = url.pathname.split("/").at(-2);
+    const attempt = state.sentenceAttempts.find(
+      (candidate) => candidate.attemptId === attemptId,
+    );
+    if (attempt) {
+      attempt.reported = true;
     }
     logLine(req, 204, { action: "report-sentence" });
     emptyResponse(res, 204);
