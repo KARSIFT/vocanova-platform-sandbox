@@ -265,13 +265,17 @@ func (r *PostgreSQLRepository) GetOAuthStateByTokenHash(ctx context.Context, tok
 	return &o, nil
 }
 
-func (r *PostgreSQLRepository) ConsumeOAuthState(ctx context.Context, id uuid.UUID, consumedAt time.Time) error {
-	_, err := r.db.ExecContext(ctx,
-		`UPDATE oauth_states SET consumed_at = $1 WHERE id = $2`, consumedAt, id)
+func (r *PostgreSQLRepository) ConsumeOAuthState(ctx context.Context, id uuid.UUID, consumedAt time.Time) (bool, error) {
+	res, err := r.db.ExecContext(ctx,
+		`UPDATE oauth_states SET consumed_at = $1 WHERE id = $2 AND consumed_at IS NULL`, consumedAt, id)
 	if err != nil {
-		return fmt.Errorf("consume oauth state: %w", err)
+		return false, fmt.Errorf("consume oauth state: %w", err)
 	}
-	return nil
+	n, err := res.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("consume oauth state rows: %w", err)
+	}
+	return n == 1, nil
 }
 
 func (r *PostgreSQLRepository) GetExternalIdentity(ctx context.Context, provider, providerSubject string) (*ExternalIdentity, error) {

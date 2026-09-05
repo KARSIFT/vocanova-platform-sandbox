@@ -9,6 +9,7 @@ import (
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/email"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -53,6 +54,14 @@ func testServiceWithOAuth(t *testing.T, oauth OAuthProvider) (*Service, *MemoryR
 	cfg := testConfig()
 	svc := NewService(repo, fake, oauth, c, limiter, cfg)
 	return svc, repo, fake, c
+}
+
+// losingOAuthStateRepository simulates the callback that loses the atomic
+// single-use claim after it has read an otherwise valid OAuth state.
+type losingOAuthStateRepository struct{ *MemoryRepository }
+
+func (r losingOAuthStateRepository) ConsumeOAuthState(context.Context, uuid.UUID, time.Time) (bool, error) {
+	return false, nil
 }
 
 func TestRequestMagicLinkCreatesHashedLinkAndSendsEmail(t *testing.T) {
@@ -499,6 +508,20 @@ func TestOAuthCallbackCreatesUserAndSession(t *testing.T) {
 	validated, err := svc.ValidateSession(ctx, token)
 	require.NoError(t, err)
 	assert.Equal(t, user.ID, validated.ID)
+}
+
+func TestOAuthCallbackRejectsStateWhenAnotherCallbackClaimsIt(t *testing.T) {
+	identity := &OAuthIdentity{Subject: "sub-123", Email: "user@example.com", EmailVerified: true}
+	oauth := NewFakeOAuthProvider(identity)
+	_, repo, fake, c := testServiceWithOAuth(t, oauth)
+	svc := NewService(losingOAuthStateRepository{repo}, fake, oauth, c, NewFixedWindowRateLimiter(c, time.Hour, 100), testConfig())
+
+	_, stateToken, err := svc.OAuthStart(context.Background(), "1.2.3.4", "https://test.example.com/app")
+	require.NoError(t, err)
+
+	_, _, _, _, err = svc.OAuthCallback(context.Background(), "1.2.3.4", "auth-code", stateToken, stateToken)
+	assert.ErrorIs(t, err, ErrInvalidOAuthState)
+	assert.Empty(t, repo.sessions, "a callback that loses the state claim must not mint a session")
 }
 
 func TestOAuthCallbackLinksExistingUserByEmail(t *testing.T) {
