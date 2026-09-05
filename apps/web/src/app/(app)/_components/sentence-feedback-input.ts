@@ -7,9 +7,13 @@ export function countSentenceCharacters(value: string): number {
   return Array.from(value).length;
 }
 
-export function limitSentenceCharacters(
-  value: string,
+// Keep the existing value when an edit would exceed the limit. Truncating the
+// proposed value could otherwise discard the trailing part of a valid sentence
+// when a learner inserts or pastes text in its middle.
+export function acceptSentenceEdit(
+  previousValue: string,
+  nextValue: string,
   limit = MAX_SENTENCE_CHARACTERS,
 ): string {
-  return Array.from(value).slice(0, limit).join("");
+  return countSentenceCharacters(nextValue) <= limit ? nextValue : previousValue;
 }

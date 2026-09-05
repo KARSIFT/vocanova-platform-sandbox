@@ -9,8 +9,8 @@ import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
 import { handleApiError } from "@/lib/session";
 
 import {
+  acceptSentenceEdit,
   countSentenceCharacters,
-  limitSentenceCharacters,
   MAX_SENTENCE_CHARACTERS,
 } from "./sentence-feedback-input";
 
@@ -168,7 +168,9 @@ export function SentenceFeedback({
             name="sentence"
             value={sentence}
             onChange={(event) =>
-              setSentence(limitSentenceCharacters(event.target.value))
+              setSentence((previous) =>
+                acceptSentenceEdit(previous, event.target.value),
+              )
             }
             disabled={isLoading}
             rows={3}

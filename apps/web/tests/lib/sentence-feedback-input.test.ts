@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  acceptSentenceEdit,
   countSentenceCharacters,
-  limitSentenceCharacters,
   MAX_SENTENCE_CHARACTERS,
 } from "../../src/app/(app)/_components/sentence-feedback-input";
 
@@ -19,14 +19,28 @@ describe("sentence feedback character limit", () => {
     const sentence = "I work " + "📝".repeat(286) + " today.";
 
     assert.equal(countSentenceCharacters(sentence), MAX_SENTENCE_CHARACTERS);
-    assert.equal(limitSentenceCharacters(sentence), sentence);
+    assert.equal(acceptSentenceEdit("", sentence), sentence);
   });
 
-  it("truncates only after the 300th code point", () => {
-    const sentence = "I work " + "📝".repeat(293) + " today.";
+  it("preserves a full sentence when a middle insertion would exceed the limit", () => {
+    const sentence = "I work " + "a".repeat(286) + " today.";
+    const edited = sentence.slice(0, 20) + "📝" + sentence.slice(20);
 
-    const limited = limitSentenceCharacters(sentence);
-    assert.equal(countSentenceCharacters(limited), MAX_SENTENCE_CHARACTERS);
-    assert.equal(limited, Array.from(sentence).slice(0, 300).join(""));
+    assert.equal(countSentenceCharacters(sentence), MAX_SENTENCE_CHARACTERS);
+    assert.equal(acceptSentenceEdit(sentence, edited), sentence);
+  });
+
+  it("preserves a full sentence when a pasted value would exceed the limit", () => {
+    const sentence = "I work " + "a".repeat(286) + " today.";
+    const pasted = sentence + "📝";
+
+    assert.equal(acceptSentenceEdit(sentence, pasted), sentence);
+  });
+
+  it("accepts normal edits below the limit", () => {
+    const sentence = "I work today.";
+    const edited = "I worked today.";
+
+    assert.equal(acceptSentenceEdit(sentence, edited), edited);
   });
 });
