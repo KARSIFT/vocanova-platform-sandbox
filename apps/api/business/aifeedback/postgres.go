@@ -360,6 +360,49 @@ func (r *PostgreSQLRepository) CompleteFeedbackAttempt(ctx context.Context, pend
 	return tx.Commit()
 }
 
+// CompleteSuccessfulFeedbackAttempt atomically persists a successful provider
+// result and the mission/reward/activity accounting it triggers. The pending
+// status predicate fences concurrent or ambiguous replays: only the caller
+// that transitions pending may run accounting.
+func (r *PostgreSQLRepository) CompleteSuccessfulFeedbackAttempt(ctx context.Context, pending PendingAttempt, feedback *ProviderFeedback, now time.Time, completion SuccessfulFeedbackCompletion) (bool, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return false, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback()
+	rawJSON, err := json.Marshal(feedback.RawJSON)
+	if err != nil {
+		return false, fmt.Errorf("marshal feedback json: %w", err)
+	}
+	result, err := tx.ExecContext(ctx, `UPDATE ai_feedback_attempts
+		SET status = $1, feedback_json = $2, feedback_text = $3, completed_at = $4, updated_at = $5
+		WHERE id = $6 AND status = $7`, AttemptStatusSucceeded, rawJSON, feedback.Explanation, now, now, pending.AttemptID, AttemptStatusPending)
+	if err != nil {
+		return false, fmt.Errorf("update attempt succeeded: %w", err)
+	}
+	updated, err := result.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("check succeeded attempt update: %w", err)
+	}
+	if updated == 0 {
+		if err := tx.Commit(); err != nil {
+			return false, fmt.Errorf("commit settled attempt: %w", err)
+		}
+		return false, nil
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE learner_sentences SET status = $1, updated_at = $2 WHERE id = $3`, SentenceStatusFeedbackReady, now, pending.SentenceID); err != nil {
+		return false, fmt.Errorf("update sentence feedback ready: %w", err)
+	}
+	completed, err := completion(ctx, tx)
+	if err != nil {
+		return false, fmt.Errorf("complete mission accounting: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return false, fmt.Errorf("commit successful feedback and accounting: %w", err)
+	}
+	return completed, nil
+}
+
 // GetFeedbackAttemptOwner implements Repository.
 func (r *PostgreSQLRepository) GetFeedbackAttemptOwner(ctx context.Context, attemptID uuid.UUID) (uuid.UUID, error) {
 	var userID uuid.UUID

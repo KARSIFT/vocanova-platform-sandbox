@@ -2,10 +2,23 @@ package aifeedback
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+// SuccessfulFeedbackCompletion performs the mission/reward/activity side of a
+// successful feedback attempt using the feedback repository's transaction.
+// It is deliberately a callback: aifeedback owns the completion transition,
+// while missions remains the owner of its accounting rules.
+type SuccessfulFeedbackCompletion func(context.Context, *sql.Tx) (bool, error)
+
+// SuccessfulFeedbackFinalizer is implemented by production repositories that
+// can make feedback persistence and its accounting one database transaction.
+type SuccessfulFeedbackFinalizer interface {
+	CompleteSuccessfulFeedbackAttempt(ctx context.Context, pending PendingAttempt, feedback *ProviderFeedback, now time.Time, completion SuccessfulFeedbackCompletion) (bool, error)
+}
 
 // SubmitSentenceFeedbackRequest is the service input for a sentence-feedback
 // submission. It contains only the fields the frontend is permitted to send.

@@ -344,12 +344,18 @@ func NewMissionUpdater(m *Service, g *gamification.Service) *MissionUpdater {
 // policy decision (bonus sentence-practice mission goal disabled at
 // launch) before delegating to UpdateForSentence.
 func (u *MissionUpdater) Update(ctx context.Context, userID, sentenceID uuid.UUID) (bool, error) {
+	return u.UpdateInTransaction(ctx, nil, userID, sentenceID)
+}
+
+// UpdateInTransaction applies sentence feedback accounting inside a caller's
+// transaction. A nil transaction preserves the standalone Update entry point.
+func (u *MissionUpdater) UpdateInTransaction(ctx context.Context, tx *sql.Tx, userID, sentenceID uuid.UUID) (bool, error) {
 	resolved, err := u.gamification.GetSettings(ctx, userID, "")
 	if err != nil {
 		return false, err
 	}
 	const includeSentenceGoal = false // VOC-030-D03: bonus goals disabled at launch
-	return u.UpdateForSentence(ctx, userID, sentenceID, resolved, time.Now(), includeSentenceGoal)
+	return u.updateForSentence(ctx, tx, userID, sentenceID, resolved, time.Now(), includeSentenceGoal)
 }
 
 // UpdateForSentence is the transaction-aware entry point Update above
@@ -374,11 +380,19 @@ func (u *MissionUpdater) UpdateForSentence(
 	now time.Time,
 	includeSentenceGoal bool,
 ) (bool, error) {
-	tx, err := u.missions.missions.db.BeginTx(ctx, nil)
-	if err != nil {
-		return false, fmt.Errorf("begin tx: %w", err)
+	return u.updateForSentence(ctx, nil, userID, sentenceID, resolved, now, includeSentenceGoal)
+}
+
+func (u *MissionUpdater) updateForSentence(ctx context.Context, tx *sql.Tx, userID, sentenceID uuid.UUID, resolved gamification.ResolvedSettings, now time.Time, includeSentenceGoal bool) (bool, error) {
+	ownedTx := tx == nil
+	var err error
+	if ownedTx {
+		tx, err = u.missions.missions.db.BeginTx(ctx, nil)
+		if err != nil {
+			return false, fmt.Errorf("begin tx: %w", err)
+		}
+		defer tx.Rollback()
 	}
-	defer tx.Rollback()
 
 	// Ensure today's snapshot exists.
 	snap, err := u.missions.EnsureTodaySnapshot(ctx, tx, userID, resolved, now)
@@ -466,8 +480,10 @@ func (u *MissionUpdater) UpdateForSentence(
 	// here is always false. The explicit assignment replaces the prior
 	// always-false hardcode with the honest path-invariant value.
 	missionCompleted := false
-	if err := tx.Commit(); err != nil {
-		return false, fmt.Errorf("commit: %w", err)
+	if ownedTx {
+		if err := tx.Commit(); err != nil {
+			return false, fmt.Errorf("commit: %w", err)
+		}
 	}
 	return missionCompleted, nil
 }

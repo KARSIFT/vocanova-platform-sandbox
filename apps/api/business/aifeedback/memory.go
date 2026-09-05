@@ -380,6 +380,44 @@ func (r *MemoryRepository) CompleteFeedbackAttempt(ctx context.Context, pending 
 	return nil
 }
 
+// CompleteSuccessfulFeedbackAttempt mirrors the production ordering for
+// deterministic service tests. Memory has no SQL transaction, so it runs the
+// accounting callback before exposing the successful state.
+func (r *MemoryRepository) CompleteSuccessfulFeedbackAttempt(ctx context.Context, pending PendingAttempt, feedback *ProviderFeedback, now time.Time, completion SuccessfulFeedbackCompletion) (bool, error) {
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	pendingFound := false
+	for _, attempt := range r.attempts {
+		if attempt.ID == pending.AttemptID && attempt.Status == AttemptStatusPending {
+			pendingFound = true
+			break
+		}
+	}
+	if !pendingFound {
+		return false, nil
+	}
+	completed, err := completion(ctx, nil)
+	if err != nil {
+		return false, err
+	}
+	for i := range r.attempts {
+		if r.attempts[i].ID == pending.AttemptID {
+			r.attempts[i].Status = AttemptStatusSucceeded
+			r.attempts[i].FeedbackJSON = feedback.RawJSON
+			r.attempts[i].FeedbackText = feedback.Explanation
+		}
+	}
+	for i := range r.sentences {
+		if r.sentences[i].ID == pending.SentenceID {
+			r.sentences[i].Status = SentenceStatusFeedbackReady
+		}
+	}
+	return completed, nil
+}
+
 func (r *MemoryRepository) toStoredAttempt(a MemoryAIFeedbackAttempt) *StoredFeedbackAttempt {
 	reported := false
 	for _, report := range r.reports {

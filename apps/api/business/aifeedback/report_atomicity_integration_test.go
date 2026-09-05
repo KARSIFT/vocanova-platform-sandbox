@@ -166,3 +166,68 @@ func TestCreateQualityReviewReportAtomicPostgreSQL(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, created)
 }
+
+// TestCompleteSuccessfulFeedbackAttemptAtomicPostgreSQL proves the completion
+// boundary on a real PostgreSQL transaction. The callback stands in for the
+// mission package's transaction-aware updater and writes the same three
+// classes of state it owns: ledger, activity and mission state.
+func TestCompleteSuccessfulFeedbackAttemptAtomicPostgreSQL(t *testing.T) {
+	db := isolatedReportPostgres(t)
+	ctx := t.Context()
+	_, err := db.ExecContext(ctx, `
+		CREATE TABLE learner_sentences (id uuid PRIMARY KEY, status text NOT NULL, updated_at timestamptz NOT NULL);
+		CREATE TABLE ai_feedback_attempts (id uuid PRIMARY KEY, learner_sentence_id uuid NOT NULL, status text NOT NULL, feedback_json jsonb, feedback_text text, completed_at timestamptz, updated_at timestamptz NOT NULL);
+		CREATE TABLE confidence_point_ledger (id uuid PRIMARY KEY, user_id uuid NOT NULL, amount integer NOT NULL);
+		CREATE TABLE daily_activity_summaries (user_id uuid PRIMARY KEY, sentences_submitted integer NOT NULL DEFAULT 0, ai_feedback_received integer NOT NULL DEFAULT 0);
+		CREATE TABLE daily_mission_snapshots (user_id uuid PRIMARY KEY, status text NOT NULL);`)
+	require.NoError(t, err)
+	now, userID, sentenceID, attemptID := time.Now().UTC(), uuid.New(), uuid.New(), uuid.New()
+	_, err = db.ExecContext(ctx, `INSERT INTO learner_sentences (id, status, updated_at) VALUES ($1, 'submitted', $2)`, sentenceID, now)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, `INSERT INTO ai_feedback_attempts (id, learner_sentence_id, status, updated_at) VALUES ($1, $2, 'pending', $3)`, attemptID, sentenceID, now)
+	require.NoError(t, err)
+	repo := NewPostgreSQLRepository(db, nil)
+	feedback := &ProviderFeedback{Status: LearningStatusCorrect, Explanation: "Good work.", RawJSON: map[string]any{"status": LearningStatusCorrect}}
+	account := func(fail bool) SuccessfulFeedbackCompletion {
+		return func(ctx context.Context, tx *sql.Tx) (bool, error) {
+			if _, err := tx.ExecContext(ctx, `INSERT INTO confidence_point_ledger VALUES ($1, $2, 5)`, uuid.New(), userID); err != nil {
+				return false, err
+			}
+			if _, err := tx.ExecContext(ctx, `INSERT INTO daily_activity_summaries (user_id, sentences_submitted, ai_feedback_received) VALUES ($1, 1, 1)`, userID); err != nil {
+				return false, err
+			}
+			if fail {
+				return false, errors.New("mission accounting rejected")
+			}
+			_, err := tx.ExecContext(ctx, `INSERT INTO daily_mission_snapshots VALUES ($1, 'open')`, userID)
+			return false, err
+		}
+	}
+	_, err = repo.CompleteSuccessfulFeedbackAttempt(ctx, PendingAttempt{SentenceID: sentenceID, AttemptID: attemptID}, feedback, now, account(true))
+	require.Error(t, err)
+	var attemptStatus string
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT status FROM ai_feedback_attempts WHERE id = $1`, attemptID).Scan(&attemptStatus))
+	require.Equal(t, AttemptStatusPending, attemptStatus)
+	for _, table := range []string{"confidence_point_ledger", "daily_activity_summaries", "daily_mission_snapshots"} {
+		var count int
+		require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM `+table).Scan(&count))
+		require.Zero(t, count, "%s must roll back with feedback", table)
+	}
+	_, err = repo.CompleteSuccessfulFeedbackAttempt(ctx, PendingAttempt{SentenceID: sentenceID, AttemptID: attemptID}, feedback, now, account(false))
+	require.NoError(t, err)
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT status FROM ai_feedback_attempts WHERE id = $1`, attemptID).Scan(&attemptStatus))
+	require.Equal(t, AttemptStatusSucceeded, attemptStatus)
+	var ledger, activity, mission int
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM confidence_point_ledger`).Scan(&ledger))
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM daily_activity_summaries`).Scan(&activity))
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM daily_mission_snapshots`).Scan(&mission))
+	require.Equal(t, 1, ledger)
+	require.Equal(t, 1, activity)
+	require.Equal(t, 1, mission)
+	// A settled replay does not call accounting again, so non-idempotent
+	// activity updates cannot be duplicated.
+	called := false
+	_, err = repo.CompleteSuccessfulFeedbackAttempt(ctx, PendingAttempt{SentenceID: sentenceID, AttemptID: attemptID}, feedback, now, func(context.Context, *sql.Tx) (bool, error) { called = true; return false, nil })
+	require.NoError(t, err)
+	require.False(t, called)
+}
