@@ -88,7 +88,8 @@ type Repository interface {
 	// exist, it returns ErrTargetNotFound so the caller can surface a 404.
 	GetFeedbackAttemptOwner(ctx context.Context, attemptID uuid.UUID) (uuid.UUID, error)
 
-	// CreateQualityReviewReport creates at most one report for an attempt.
+	// CreateQualityReviewReport atomically claims the user-scoped reporting key
+	// and creates at most one report for an attempt.
 	// It returns false when that report already exists.
-	CreateQualityReviewReport(ctx context.Context, report QualityReviewReport) (bool, error)
+	CreateQualityReviewReport(ctx context.Context, report QualityReviewReport, idempotencyKey string) (bool, error)
 }
