@@ -61,7 +61,8 @@ func oauthStateCookieValue(c huma.Context, name string) string {
 // RequestMagicLinkInput requests a single-use sign-in link.
 type RequestMagicLinkInput struct {
 	Body struct {
-		Email string `json:"email" format:"email" doc:"Email address to send the sign-in link to"`
+		Email    string `json:"email" format:"email" doc:"Email address to send the sign-in link to"`
+		ReturnTo string `json:"returnTo,omitempty" doc:"Optional app-relative destination after sign-in"`
 	}
 }
 
@@ -131,7 +132,7 @@ func RegisterAuth(api huma.API, svc *auth.Service) {
 		},
 	}, func(ctx context.Context, input *RequestMagicLinkInput) (*RequestMagicLinkOutput, error) {
 		c := authHumaContext(ctx)
-		if err := svc.RequestMagicLink(ctx, clientIPFromHuma(c), input.Body.Email); err != nil {
+		if err := svc.RequestMagicLinkWithReturnTo(ctx, clientIPFromHuma(c), input.Body.Email, input.Body.ReturnTo); err != nil {
 			return nil, mapAuthError(err)
 		}
 		return &RequestMagicLinkOutput{}, nil

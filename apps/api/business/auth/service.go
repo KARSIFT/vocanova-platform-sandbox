@@ -82,6 +82,14 @@ func (s *Service) OAuthStateLifetime() time.Duration { return s.cfg.OAuthStateLi
 
 // RequestMagicLink creates a single-use magic link and sends it to the email.
 func (s *Service) RequestMagicLink(ctx context.Context, clientIP, emailAddr string) error {
+	return s.RequestMagicLinkWithReturnTo(ctx, clientIP, emailAddr, "")
+}
+
+// RequestMagicLinkWithReturnTo sends a sign-in link that returns the learner
+// to a validated app-relative route after consumption. The destination lives
+// in the emailed URL rather than persistence because it is navigation context,
+// not identity state.
+func (s *Service) RequestMagicLinkWithReturnTo(ctx context.Context, clientIP, emailAddr, returnTo string) error {
 	if s.killSwitches != nil && !s.killSwitches.MagicLinkEnabled {
 		return ErrMagicLinkDisabled
 	}
@@ -116,7 +124,7 @@ func (s *Service) RequestMagicLink(ctx context.Context, clientIP, emailAddr stri
 		return fmt.Errorf("create magic link: %w", err)
 	}
 
-	link := s.magicLinkURL(token, emailAddr)
+	link := s.magicLinkURL(token, emailAddr, normalizeReturnTo(returnTo))
 	msg := email.Message{
 		To:       []email.Address{{Email: emailAddr}},
 		Subject:  "Sign in to Vocanova",
@@ -129,14 +137,29 @@ func (s *Service) RequestMagicLink(ctx context.Context, clientIP, emailAddr stri
 	return nil
 }
 
-func (s *Service) magicLinkURL(token, email string) string {
+func (s *Service) magicLinkURL(token, email, returnTo string) string {
 	u, _ := url.Parse(s.cfg.BaseURL)
 	u.Path = s.cfg.MagicLinkPath
 	q := u.Query()
 	q.Set("token", token)
 	q.Set("email", email)
+	if returnTo != "" {
+		q.Set("returnTo", returnTo)
+	}
 	u.RawQuery = q.Encode()
 	return u.String()
+}
+
+func normalizeReturnTo(value string) string {
+	value = strings.TrimSpace(value)
+	if !strings.HasPrefix(value, "/") || strings.HasPrefix(value, "//") || strings.Contains(value, "\\") {
+		return ""
+	}
+	u, err := url.Parse(value)
+	if err != nil || u.IsAbs() || u.Host != "" {
+		return ""
+	}
+	return value
 }
 
 // ConsumeMagicLink verifies a magic link, creates/links the user, and issues a

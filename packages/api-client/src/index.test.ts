@@ -34,7 +34,10 @@ describe("VocanovaClient", () => {
         "application/json",
       );
       assert.equal(new Headers(init.headers).get("Accept"), "application/json");
-      assert.equal(init.body, JSON.stringify({ email: "user@example.com" }));
+      assert.equal(
+        init.body,
+        JSON.stringify({ email: "user@example.com", returnTo: "/reviews" }),
+      );
       return Promise.resolve(new Response(null, { status: 204 }));
     };
 
@@ -44,6 +47,7 @@ describe("VocanovaClient", () => {
     });
     const { response } = await client.requestMagicLink({
       email: "user@example.com",
+      returnTo: "/reviews",
     });
     assert.equal(response.status, 204);
   });
