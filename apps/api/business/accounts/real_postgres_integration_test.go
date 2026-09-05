@@ -1,0 +1,137 @@
+//go:build integration
+
+package accounts
+
+import (
+	"context"
+	"crypto/sha256"
+	"database/sql"
+	"encoding/json"
+	"os"
+	"testing"
+	"time"
+
+	"github.com/google/uuid"
+	_ "github.com/lib/pq"
+)
+
+// TestPostgreSQLRepositoryExportAndAnonymization exercises the real SQL
+// projection and purge ordering against a separately migrated disposable
+// database. It is opt-in because migrations are intentionally not run by the
+// ordinary unit-test suite.
+func TestPostgreSQLRepositoryExportAndAnonymization(t *testing.T) {
+	dsn := os.Getenv("VOCANOVA_TEST_POSTGRES_DSN")
+	if dsn == "" {
+		t.Skip("VOCANOVA_TEST_POSTGRES_DSN is not set")
+	}
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+	if err := db.PingContext(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	userA, userB := uuid.New(), uuid.New()
+	sentenceA, sentenceB := uuid.New(), uuid.New()
+	attemptA := uuid.New()
+	exec := func(query string, args ...any) {
+		t.Helper()
+		if _, err := db.ExecContext(ctx, query, args...); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, user := range []struct {
+		id    uuid.UUID
+		email string
+	}{{userA, userA.String() + "@example.test"}, {userB, userB.String() + "@example.test"}} {
+		sessionHash := sha256.Sum256([]byte(user.id.String() + "session"))
+		magicHash := sha256.Sum256([]byte(user.id.String() + "magic"))
+		emailChangeHash := sha256.Sum256([]byte(user.id.String() + "email-change"))
+		exec(`INSERT INTO users (id, email, status, created_at, updated_at) VALUES ($1, $2, 'deleted', $3, $3)`, user.id, user.email, now)
+		exec(`INSERT INTO external_identities (id, user_id, provider, provider_subject, created_at, updated_at) VALUES ($1, $2, 'email', $3, $4, $4)`, uuid.New(), user.id, user.id.String(), now)
+		exec(`INSERT INTO sessions (id, user_id, token_hash, created_at, expires_at) VALUES ($1, $2, $3, $4, $5)`, uuid.New(), user.id, sessionHash[:], now, now.Add(time.Hour))
+		exec(`INSERT INTO magic_links (id, user_id, email, token_hash, environment, created_at, expires_at) VALUES ($1, $2, $3, $4, 'test', $5, $6)`, uuid.New(), user.id, user.email, magicHash[:], now, now.Add(time.Minute))
+		exec(`INSERT INTO email_change_links (id, user_id, new_email, token_hash, environment, created_at, expires_at) VALUES ($1, $2, $3, $4, 'test', $5, $6)`, uuid.New(), user.id, "new-"+user.email, emailChangeHash[:], now, now.Add(time.Minute))
+		exec(`INSERT INTO idempotency_keys (id, user_id, operation, key, fingerprint, created_at) VALUES ($1, $2, 'test', $3, 'fingerprint', $4)`, uuid.New(), user.id, user.id.String(), now)
+	}
+	exec(`INSERT INTO user_settings (id, user_id, timezone, daily_review_target, review_interval_preset, notifications_enabled, marketing_emails_enabled, app_language, created_at, updated_at) VALUES ($1, $2, 'Asia/Tehran', 25, 'wordup_like', false, true, 'en', $3, $3)`, uuid.New(), userA, now)
+	for _, sentence := range []struct {
+		id     uuid.UUID
+		userID uuid.UUID
+		text   string
+	}{{sentenceA, userA, "A private learner sentence."}, {sentenceB, userB, "B private learner sentence."}} {
+		exec(`INSERT INTO learner_sentences (id, user_id, sentence_text, normalized_sentence_text, source, status, submitted_at, created_at, updated_at) VALUES ($1, $2, $3, lower($3), 'free_practice', 'feedback_ready', $4, $4, $4)`, sentence.id, sentence.userID, sentence.text, now)
+	}
+	exec(`INSERT INTO ai_feedback_attempts (id, learner_sentence_id, status, provider, model, prompt_version, request_hash, feedback_json, completed_at, created_at, updated_at) VALUES ($1, $2, 'succeeded', 'test', 'test', 'v1', $3, '{"status":"correct"}', $4, $4, $4)`, attemptA, sentenceA, attemptA.String(), now)
+	exec(`INSERT INTO ai_feedback_quality_review_reports (id, ai_feedback_attempt_id, user_id, reason, classification, state, created_at, updated_at) VALUES ($1, $2, $3, 'already_correct', 'unnecessary_correction', 'open', $4, $4)`, uuid.New(), attemptA, userA, now)
+	exec(`INSERT INTO account_deletion_requests (id, user_id, status, requested_at, purge_after, idempotency_key, created_at, updated_at) VALUES ($1, $2, 'deactivated', $3, $4, 'delete-key-a', $3, $3)`, uuid.New(), userA, now, now.Add(time.Hour))
+
+	repo := NewPostgreSQLRepository(db)
+	payload, err := repo.ExportPersonalData(ctx, userA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var export map[string]any
+	if err := json.Unmarshal(payload, &export); err != nil {
+		t.Fatal(err)
+	}
+	settings := export["settings"].(map[string]any)
+	if settings["timezone"] != "Asia/Tehran" || settings["dailyReviewTarget"] != float64(25) {
+		t.Fatalf("unexpected real settings projection: %#v", settings)
+	}
+	otherPayload := repoMustExport(t, repo, ctx, userB)
+	if string(payload) == "" || string(payload) == string(otherPayload) {
+		t.Fatal("exports must be non-empty and requester-scoped")
+	}
+	var otherExport map[string]any
+	if err := json.Unmarshal(otherPayload, &otherExport); err != nil {
+		t.Fatal(err)
+	}
+	otherSettings := otherExport["settings"].(map[string]any)
+	if otherSettings["timezone"] != "UTC" || otherSettings["dailyReviewTarget"] != float64(20) {
+		t.Fatalf("unexpected schema-default settings projection: %#v", otherSettings)
+	}
+
+	counters, err := repo.AnonymizeUserData(ctx, userA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if counters.LearnerSentences != 1 || counters.AIFeedbackAttempts != 1 || counters.AIQualityReviewReports != 1 || counters.ExternalIdentities != 1 {
+		t.Fatalf("unexpected purge counters: %#v", counters)
+	}
+	var aRemaining, bRemaining int
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM learner_sentences WHERE user_id = $1`, userA).Scan(&aRemaining); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM learner_sentences WHERE user_id = $1`, userB).Scan(&bRemaining); err != nil {
+		t.Fatal(err)
+	}
+	if aRemaining != 0 || bRemaining != 1 {
+		t.Fatalf("purge isolation failed: A=%d B=%d", aRemaining, bRemaining)
+	}
+	for _, table := range []string{"sessions", "magic_links", "email_change_links"} {
+		var aTokens, bTokens int
+		if err := db.QueryRowContext(ctx, `SELECT count(*) FROM `+table+` WHERE user_id = $1`, userA).Scan(&aTokens); err != nil {
+			t.Fatal(err)
+		}
+		if err := db.QueryRowContext(ctx, `SELECT count(*) FROM `+table+` WHERE user_id = $1`, userB).Scan(&bTokens); err != nil {
+			t.Fatal(err)
+		}
+		if aTokens != 0 || bTokens != 1 {
+			t.Fatalf("%s purge isolation failed: A=%d B=%d", table, aTokens, bTokens)
+		}
+	}
+}
+
+func repoMustExport(t *testing.T, repo *PostgreSQLRepository, ctx context.Context, userID uuid.UUID) []byte {
+	t.Helper()
+	payload, err := repo.ExportPersonalData(ctx, userID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return payload
+}
