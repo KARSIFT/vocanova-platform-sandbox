@@ -69,10 +69,18 @@
 
 import { randomUUID } from "node:crypto";
 
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 const ONBOARDING_COOKIE_VALUE = "not_started";
 const CORE_LOOP_TEST_TIMEOUT_MS = 90_000;
+const SENTENCE_PRIVACY_REMINDER =
+  "For your privacy, do not include personal information such as phone numbers, addresses, or passwords.";
+
+async function expectSentencePracticePrivacyReminder(
+  page: Page,
+) {
+  await expect(page.getByText(SENTENCE_PRIVACY_REMINDER)).toBeVisible();
+}
 
 test.describe("Core loop end-to-end (VOC-031-T08)", () => {
   test("auth -> onboarding -> discover -> save -> review -> sentence -> AI feedback -> progress -> settings -> logout -> rejection", async ({
@@ -274,6 +282,7 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     await expect(
       page.getByRole("heading", { name: /Practice with pour/ }),
     ).toBeVisible();
+    await expectSentencePracticePrivacyReminder(page);
 
     // ----- 5. Review session.
     //
@@ -305,6 +314,7 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     await expect(
       page.getByRole("heading", { name: /Practice with pour/ }),
     ).toBeVisible();
+    await expectSentencePracticePrivacyReminder(page);
 
     // ----- 6. Sentence feedback + deterministic AI.
     //
@@ -346,6 +356,7 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     await expect(
       page.getByRole("heading", { name: /Practice with pour/ }),
     ).toBeVisible();
+    await expectSentencePracticePrivacyReminder(page);
 
     // ----- 8. Settings change.
     await page.goto("/settings");

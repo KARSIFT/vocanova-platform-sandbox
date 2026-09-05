@@ -161,6 +161,10 @@ export function SentenceFeedback({
         Write a sentence using the word{" "}
         <span className="font-medium text-neutral-900">{targetWord}</span>.
       </p>
+      <p className="mt-[var(--spacing-xs)] text-sm text-neutral-600">
+        For your privacy, do not include personal information such as phone
+        numbers, addresses, or passwords.
+      </p>
 
       <form
         onSubmit={handleSubmit}
