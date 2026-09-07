@@ -263,7 +263,7 @@ func TestGraceReconciliationUsesSignedLedgerSumForSameTransactionEntries(t *test
 	_, err = gam.ReconcileAndAdvance(ctx, tx, userID, now, "UTC", []gamification.StreakSnapshot{
 		{LocalDate: yesterday, Status: gamification.MissionStatusMissed},
 		{LocalDate: today, Status: gamification.MissionStatusCompleted},
-	}, 0, true)
+	}, true)
 	require.NoError(t, err)
 	require.NoError(t, tx.Commit())
 
@@ -344,7 +344,7 @@ func TestConcurrentGraceReconciliationsSerializeStateAndAuditBalancesPostgreSQL(
 		if err != nil {
 			return err
 		}
-		if _, err := gam.ReconcileAndAdvance(ctx, tx, userID, now, "UTC", snapshots, 0, true); err != nil {
+		if _, err := gam.ReconcileAndAdvance(ctx, tx, userID, now, "UTC", snapshots, true); err != nil {
 			_ = tx.Rollback()
 			return err
 		}

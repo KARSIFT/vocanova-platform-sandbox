@@ -133,7 +133,6 @@ func (s *Service) GrantGraceDay(
 //   - timezone: the resolved effective timezone (from the missions module)
 //   - snapshots: the recent (last 14 local days) daily_mission_snapshots for
 //     the user, in any order; reconciliation sorts them internally
-//   - graceBalance: the user's current grace-day balance
 //   - currentCompletion: true if the caller just completed today's mission
 //     in the same call
 //
@@ -147,7 +146,6 @@ func (s *Service) ReconcileAndAdvance(
 	now time.Time,
 	timezone string,
 	snapshots []StreakSnapshot,
-	graceBalance int,
 	currentCompletion bool,
 ) (*StreakReconciliation, error) {
 	if tx == nil {

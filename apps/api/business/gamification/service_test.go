@@ -110,7 +110,7 @@ func TestReconcileAndAdvanceUsesResolvedTimezoneForExistingStreakState(t *testin
 	mock.ExpectExec("SELECT pg_advisory_xact_lock").WithArgs(userID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM grace_day_ledger").WithArgs(userID).
-		WillReturnRows(sqlmock.NewRows([]string{"balance"}).AddRow(0))
+		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(0))
 	mock.ExpectQuery("SELECT user_id, current_streak_count, longest_streak_count").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{
@@ -125,7 +125,7 @@ func TestReconcileAndAdvanceUsesResolvedTimezoneForExistingStreakState(t *testin
 
 	tx, err := db.BeginTx(t.Context(), nil)
 	require.NoError(t, err)
-	_, err = svc.ReconcileAndAdvance(t.Context(), tx, userID, now, "Asia/Tokyo", nil, 0, false)
+	_, err = svc.ReconcileAndAdvance(t.Context(), tx, userID, now, "Asia/Tokyo", nil, false)
 	require.NoError(t, err)
 	require.NoError(t, tx.Commit())
 	require.NoError(t, mock.ExpectationsWereMet())

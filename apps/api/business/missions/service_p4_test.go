@@ -108,10 +108,6 @@ func TestUpdateForSentenceP4SuccessWiring(t *testing.T) {
 			nil, nil, nil, nil,
 			gamification.MissionPolicyVersion, "open", nil, false, nil,
 		))
-	// CurrentGraceBalance.
-	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM grace_day_ledger").
-		WithArgs(userID).
-		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(0))
 	mock.ExpectExec("SELECT pg_advisory_xact_lock").WithArgs(userID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM grace_day_ledger").WithArgs(userID).
@@ -212,9 +208,6 @@ func TestUpdateForSentenceP4SentenceGoalActiveWhenD03Activated(t *testing.T) {
 			"sentence_practices_completed", "policy_version", "status", "completed_at",
 			"grace_applied", "grace_day_id",
 		}))
-	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM grace_day_ledger").
-		WithArgs(userID).
-		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(0))
 	mock.ExpectExec("SELECT pg_advisory_xact_lock").WithArgs(userID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM grace_day_ledger").WithArgs(userID).
@@ -406,9 +399,6 @@ func TestUpdateForSentenceP4UpdateEntryPointWiresResolverAndDelegate(t *testing.
 			"sentence_practices_completed", "policy_version", "status", "completed_at",
 			"grace_applied", "grace_day_id",
 		}))
-	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM grace_day_ledger").
-		WithArgs(userID).
-		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(0))
 	mock.ExpectExec("SELECT pg_advisory_xact_lock").WithArgs(userID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM grace_day_ledger").WithArgs(userID).

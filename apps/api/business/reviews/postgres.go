@@ -503,7 +503,7 @@ func (r *PostgreSQLRepository) applyP4ReviewWiring(
 	}
 	if _, err := r.gamification.ReconcileAndAdvance(
 		ctx, tx, req.UserID, now, resolved.Timezone,
-		snaps, 0, missionCompletedNow,
+		snaps, missionCompletedNow,
 	); err != nil {
 		return fmt.Errorf("reconcile streak: %w", err)
 	}

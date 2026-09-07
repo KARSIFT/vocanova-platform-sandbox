@@ -462,10 +462,6 @@ func TestCrossCuttingMultiDayGapReconciliationOnRead(t *testing.T) {
 			gamification.MissionPolicyVersion, gamification.MissionStatusCompleted,
 			&fourDaysAgo, false, nil,
 		))
-	// currentGraceBalance.
-	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM grace_day_ledger").
-		WithArgs(userID).
-		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(0))
 	mock.ExpectExec("SELECT pg_advisory_xact_lock").WithArgs(userID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM grace_day_ledger").WithArgs(userID).
