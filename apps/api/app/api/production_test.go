@@ -140,6 +140,21 @@ func TestLoadProductionConfig_DefaultsAreSensible(t *testing.T) {
 	assert.Equal(t, "smoke-test-bot@synthetic.vocanova.invalid", cfg.SyntheticSmokeTestEmail, "VOCANOVA_SYNTHETIC_SMOKE_TEST_EMAIL must default to the reserved .invalid identity the deploy seed uses")
 }
 
+func TestLoadProductionConfig_RejectsUnsafeAccountDeletionSweepInterval(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://example/db")
+	t.Setenv("SESSION_COOKIE_DOMAIN", "example.com")
+	t.Setenv("OAUTH_REDIRECT_URI", "https://example.com/auth/callback")
+
+	for _, interval := range []string{"30s", "25h", "not-a-duration"} {
+		t.Run(interval, func(t *testing.T) {
+			t.Setenv("ACCOUNT_DELETION_SWEEP_INTERVAL", interval)
+			_, err := LoadProductionConfig()
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "ACCOUNT_DELETION_SWEEP_INTERVAL")
+		})
+	}
+}
+
 func TestLoadProductionConfig_NormalizesSyntheticSmokeTestEmail(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://example/db")
 	t.Setenv("BASE_URL", "https://staging.vocanova.site")
