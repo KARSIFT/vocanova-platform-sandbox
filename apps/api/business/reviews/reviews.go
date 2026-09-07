@@ -240,6 +240,14 @@ func (s *Service) SubmitReview(ctx context.Context, req SubmitReviewRequest) (*R
 		if err != nil {
 			return nil, fmt.Errorf("fetch idempotent attempt: %w", err)
 		}
+		// Fingerprints are retained for the documented 24-hour replay window.
+		// Their legacy encoding is not self-describing for optional fields, so a
+		// fingerprint match alone cannot establish request equality. Compare the
+		// persisted attempt before returning a replay, just as the repository's
+		// transactional path does.
+		if !reviewAttemptEqualsRequest(attempt, req) {
+			return nil, ErrIdempotencyConflict
+		}
 		return attempt, nil
 	}
 

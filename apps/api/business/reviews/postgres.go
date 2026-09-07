@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
@@ -704,7 +705,10 @@ func reviewAttemptEqualsRequest(a *ReviewAttempt, req SubmitReviewRequest) bool 
 	if a.ResponseTimeMs != req.ResponseTimeMs || a.WasHintUsed != req.WasHintUsed || a.Source != req.Source {
 		return false
 	}
-	if !a.AnsweredAt.Equal(req.AnsweredAt) {
+	// PostgreSQL timestamptz persists microsecond precision while the API
+	// accepts RFC3339 nanoseconds. Compare at the database's precision so an
+	// exact retry of a persisted request remains a replay.
+	if !postgresTimestampEqual(a.AnsweredAt, req.AnsweredAt) {
 		return false
 	}
 	if !ptrUUIDEqual(a.SelectedOptionMeaningID, req.SelectedOptionMeaningID) {
@@ -714,4 +718,18 @@ func reviewAttemptEqualsRequest(a *ReviewAttempt, req SubmitReviewRequest) bool 
 		return false
 	}
 	return true
+}
+
+// postgresTimestampEqual reproduces PostgreSQL's microsecond timestamp
+// parsing and rounding. PostgreSQL parses the fractional seconds through a
+// float before rounding half-to-even, so ideal integer nanosecond rounding and
+// time.Time.Round do not match every accepted RFC3339 value.
+func postgresTimestampEqual(a, b time.Time) bool {
+	return postgresTimestamp(a).Equal(postgresTimestamp(b))
+}
+
+func postgresTimestamp(t time.Time) time.Time {
+	t = t.UTC()
+	microseconds := math.RoundToEven(float64(t.Nanosecond()) / float64(time.Second) * 1_000_000)
+	return t.Truncate(time.Second).Add(time.Duration(microseconds) * time.Microsecond)
 }
