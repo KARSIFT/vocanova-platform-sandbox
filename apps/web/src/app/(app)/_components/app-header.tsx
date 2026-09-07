@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import { createApiClient } from "@/lib/api";
 import { CSRF_COOKIE_NAME, deleteCookie, getCookieValue } from "@/lib/cookies";
 import { handleApiError } from "@/lib/session";
 
 export function AppHeader() {
+  const pathname = usePathname();
   const [status, setStatus] = useState<{
     type: "idle" | "loading" | "error";
     message: string;
@@ -57,6 +59,7 @@ export function AppHeader() {
         ) : null}
         <Link
           href="/settings"
+          aria-current={pathname === "/settings" ? "page" : undefined}
           className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-[var(--spacing-sm)] py-[var(--spacing-xs)] text-sm font-medium text-neutral-900 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
         >
           Settings

@@ -1,11 +1,11 @@
 // VOC-031-T07b Home accessibility scan at the two mobile viewports
 // (360px, 430px). T07a already covers /home at the 1280x720
-// representative desktop width in home-accessibility.spec.ts; this
-// file extends the coverage to the mobile breakpoints DOC-03 §10
-// requires. The T07b acceptance criterion calls out that this
-// coverage must add explicit keyboard-reachability and
-// non-color-only-feedback assertions on top of the axe scan, not
-// only infer them from a clean axe run.
+// representative desktop width in home-accessibility.spec.ts. The
+// Settings-navigation regression also runs at desktop, while the
+// T07b-specific scan below remains mobile-only. The T07b acceptance
+// criterion calls out that this coverage must add explicit
+// keyboard-reachability and non-color-only-feedback assertions on
+// top of the axe scan, not only infer them from a clean axe run.
 
 import { expect, test } from "@playwright/test";
 
@@ -36,6 +36,12 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
     );
     expect(documentWidth).toBeLessThanOrEqual(page.viewportSize()!.width);
 
+    await page.evaluate(() => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      document.body.focus();
+    });
     await page.keyboard.press("Tab");
     await expect(settingsLink).toBeFocused();
     await page.keyboard.press("Enter");
