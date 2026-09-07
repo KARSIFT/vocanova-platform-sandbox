@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 import { createApiClient } from "@/lib/api";
 import { CSRF_COOKIE_NAME, deleteCookie, getCookieValue } from "@/lib/cookies";
@@ -54,6 +55,12 @@ export function AppHeader() {
             {status.message}
           </p>
         ) : null}
+        <Link
+          href="/settings"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-[var(--spacing-sm)] py-[var(--spacing-xs)] text-sm font-medium text-neutral-900 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+        >
+          Settings
+        </Link>
         <button
           type="button"
           onClick={handleLogout}

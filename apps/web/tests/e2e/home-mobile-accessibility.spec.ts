@@ -17,6 +17,30 @@ import {
 } from "./axe-helper.js";
 
 test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
+  test("Settings is reachable from the authenticated header at 360px", async ({
+    page,
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== "mobile-360",
+      "The navigation regression is specifically exercised at the minimum supported mobile width.",
+    );
+
+    await page.goto("/home");
+
+    const settingsLink = page.getByRole("link", { name: "Settings" });
+    await expect(settingsLink).toBeVisible();
+    await expect(settingsLink).toHaveCSS("min-height", "44px");
+
+    const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(documentWidth).toBeLessThanOrEqual(360);
+
+    await settingsLink.click();
+    await expect(page).toHaveURL(/\/settings$/);
+    await expect(
+      page.getByRole("heading", { name: "Settings", level: 1 }),
+    ).toBeVisible();
+  });
+
   test("Home renders with zero critical/serious axe violations, is keyboard reachable, and uses text-based state at 360 / 430", async ({
     page,
   }, testInfo) => {
