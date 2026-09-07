@@ -1,11 +1,11 @@
 // VOC-031-T07b Home accessibility scan at the two mobile viewports
 // (360px, 430px). T07a already covers /home at the 1280x720
-// representative desktop width in home-accessibility.spec.ts; this
-// file extends the coverage to the mobile breakpoints DOC-03 §10
-// requires. The T07b acceptance criterion calls out that this
-// coverage must add explicit keyboard-reachability and
-// non-color-only-feedback assertions on top of the axe scan, not
-// only infer them from a clean axe run.
+// representative desktop width in home-accessibility.spec.ts. The
+// Settings-navigation regression also runs at desktop, while the
+// T07b-specific scan below remains mobile-only. The T07b acceptance
+// criterion calls out that this coverage must add explicit
+// keyboard-reachability and non-color-only-feedback assertions on
+// top of the axe scan, not only infer them from a clean axe run.
 
 import { expect, test } from "@playwright/test";
 
@@ -17,6 +17,40 @@ import {
 } from "./axe-helper.js";
 
 test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
+  test("Settings is reachable from the authenticated header", async ({
+    page,
+  }) => {
+    for (const route of ["/home", "/discover", "/progress"]) {
+      await page.goto(route);
+      await expect(page.getByRole("link", { name: "Settings" })).toBeVisible();
+      await expect(
+        page.getByRole("navigation", { name: "Primary" }).getByRole("link"),
+      ).toHaveText(["Home", "Journey", "Progress"]);
+    }
+    const settingsLink = page.getByRole("link", { name: "Settings" });
+    await expect(settingsLink).toBeVisible();
+    await expect(settingsLink).toHaveCSS("min-height", "44px");
+
+    const documentWidth = await page.evaluate(
+      () => document.documentElement.scrollWidth,
+    );
+    expect(documentWidth).toBeLessThanOrEqual(page.viewportSize()!.width);
+
+    await page.evaluate(() => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      document.body.focus();
+    });
+    await page.keyboard.press("Tab");
+    await expect(settingsLink).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/\/settings$/);
+    await expect(
+      page.getByRole("heading", { name: "Settings", level: 1 }),
+    ).toBeVisible();
+  });
+
   test("Home renders with zero critical/serious axe violations, is keyboard reachable, and uses text-based state at 360 / 430", async ({
     page,
   }, testInfo) => {
