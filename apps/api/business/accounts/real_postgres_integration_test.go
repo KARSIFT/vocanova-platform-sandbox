@@ -182,6 +182,78 @@ func TestPostgreSQLRepositoryDeletionClaimCommitsWithDeactivation(t *testing.T) 
 	}
 }
 
+// TestPostgreSQLRepositoryDeletionRedactsUnattachedMagicLink proves that an
+// outstanding sign-in link issued before its owner deletes their account does
+// not retain the owner's email. RequestMagicLink creates the row without a
+// user_id and only attaches it after successful consumption, so this exercises
+// the production shape that a user_id-only revoke/purge misses.
+func TestPostgreSQLRepositoryDeletionRedactsUnattachedMagicLink(t *testing.T) {
+	db := openAccountsIntegrationDB(t)
+	ctx := context.Background()
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	uid, otherUID := uuid.New(), uuid.New()
+	email := uid.String() + "@example.test"
+	otherEmail := otherUID.String() + "@example.test"
+	linkID, otherLinkID := uuid.New(), uuid.New()
+	hash := sha256.Sum256([]byte(uid.String() + "unattached-link"))
+	otherHash := sha256.Sum256([]byte(otherUID.String() + "unattached-link"))
+
+	for _, user := range []struct {
+		id    uuid.UUID
+		email string
+	}{{uid, email}, {otherUID, otherEmail}} {
+		if _, err := db.ExecContext(ctx, `INSERT INTO users (id, email, status, created_at, updated_at) VALUES ($1, $2, 'active', $3, $3)`, user.id, user.email, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, link := range []struct {
+		id    uuid.UUID
+		email string
+		hash  []byte
+	}{{linkID, email, hash[:]}, {otherLinkID, otherEmail, otherHash[:]}} {
+		if _, err := db.ExecContext(ctx, `INSERT INTO magic_links (id, email, token_hash, environment, created_at, expires_at) VALUES ($1, $2, $3, 'test', $4, $5)`, link.id, link.email, link.hash, now, now.Add(10*time.Minute)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Cleanup(func() {
+		for _, id := range []uuid.UUID{linkID, otherLinkID} {
+			_, _ = db.ExecContext(context.Background(), `DELETE FROM magic_links WHERE id = $1`, id)
+		}
+		for _, id := range []uuid.UUID{uid, otherUID} {
+			_, _ = db.ExecContext(context.Background(), `DELETE FROM idempotency_keys WHERE user_id = $1`, id)
+			_, _ = db.ExecContext(context.Background(), `DELETE FROM account_deletion_requests WHERE user_id = $1`, id)
+			_, _ = db.ExecContext(context.Background(), `DELETE FROM users WHERE id = $1`, id)
+		}
+	})
+
+	repo := NewPostgreSQLRepository(db)
+	if _, err := repo.CreateAccountDeletionRequest(ctx, uid, "unattached-link-key", now, DefaultAccountDeletionPurgeDelay); err != nil {
+		t.Fatal(err)
+	}
+	// The later user_id-scoped purge does not delete this deliberately
+	// unattached row, so assert the redaction survives the complete sequence.
+	if _, err := repo.AnonymizeUserData(ctx, uid); err != nil {
+		t.Fatal(err)
+	}
+	var gotEmail string
+	var revokedAt sql.NullTime
+	var attachedUser sql.NullString
+	if err := db.QueryRowContext(ctx, `SELECT email, revoked_at, user_id FROM magic_links WHERE id = $1`, linkID).Scan(&gotEmail, &revokedAt, &attachedUser); err != nil {
+		t.Fatal(err)
+	}
+	if gotEmail == email || !strings.HasPrefix(gotEmail, "redacted:") || !revokedAt.Valid || attachedUser.Valid {
+		t.Fatalf("unattached magic link was not revoked and redacted: email=%q revoked=%t user_id=%v", gotEmail, revokedAt.Valid, attachedUser.Valid)
+	}
+	var otherEmailGot string
+	var otherRevoked sql.NullTime
+	if err := db.QueryRowContext(ctx, `SELECT email, revoked_at FROM magic_links WHERE id = $1`, otherLinkID).Scan(&otherEmailGot, &otherRevoked); err != nil {
+		t.Fatal(err)
+	}
+	if otherEmailGot != otherEmail || otherRevoked.Valid {
+		t.Fatalf("unrelated magic link was changed: email=%q revoked=%t", otherEmailGot, otherRevoked.Valid)
+	}
+}
+
 // TestPostgreSQLRepositoryDeletionClaimRollsBackOnLaterStatementFailure
 // forces the session-revocation statement to fail after the idempotency claim
 // and user deactivation have run. Every prior write must roll back with it.
