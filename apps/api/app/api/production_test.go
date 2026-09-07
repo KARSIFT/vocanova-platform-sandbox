@@ -155,6 +155,24 @@ func TestLoadProductionConfig_RejectsUnsafeAccountDeletionSweepInterval(t *testi
 	}
 }
 
+func TestLoadProductionConfig_AcceptsAccountDeletionSweepIntervalBoundaries(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://example/db")
+	t.Setenv("BASE_URL", "https://example.com")
+	t.Setenv("SESSION_COOKIE_DOMAIN", "example.com")
+	t.Setenv("OAUTH_REDIRECT_URI", "https://example.com/auth/callback")
+
+	for _, interval := range []string{"1m", "24h"} {
+		t.Run(interval, func(t *testing.T) {
+			t.Setenv("ACCOUNT_DELETION_SWEEP_INTERVAL", interval)
+			cfg, err := LoadProductionConfig()
+			require.NoError(t, err)
+			expected, err := time.ParseDuration(interval)
+			require.NoError(t, err)
+			assert.Equal(t, expected, cfg.AccountDeletionSweepInterval)
+		})
+	}
+}
+
 func TestLoadProductionConfig_NormalizesSyntheticSmokeTestEmail(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://example/db")
 	t.Setenv("BASE_URL", "https://staging.vocanova.site")
