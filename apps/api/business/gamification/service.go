@@ -153,6 +153,13 @@ func (s *Service) ReconcileAndAdvance(
 	if tx == nil {
 		return nil, errors.New("transaction required")
 	}
+	// A reconciliation can consume and earn grace in one transaction. Lock
+	// before deriving the signed sum so concurrent reconciliations cannot both
+	// write balance_after from the same predecessor.
+	graceBalance, err := s.repo.GetLatestGraceBalanceTx(ctx, tx, userID)
+	if err != nil {
+		return nil, err
+	}
 	state, err := s.repo.GetStreakState(ctx, userID)
 	if err != nil {
 		return nil, err

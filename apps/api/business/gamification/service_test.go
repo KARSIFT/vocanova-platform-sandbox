@@ -107,6 +107,10 @@ func TestReconcileAndAdvanceUsesResolvedTimezoneForExistingStreakState(t *testin
 	// settings from UTC to Asia/Tokyo. Reconciliation must use and persist the
 	// resolved timezone, rather than keeping its obsolete timezone forever.
 	mock.ExpectBegin()
+	mock.ExpectExec("SELECT pg_advisory_xact_lock").WithArgs(userID.String()).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM grace_day_ledger").WithArgs(userID).
+		WillReturnRows(sqlmock.NewRows([]string{"balance"}).AddRow(0))
 	mock.ExpectQuery("SELECT user_id, current_streak_count, longest_streak_count").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{

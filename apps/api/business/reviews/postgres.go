@@ -501,13 +501,9 @@ func (r *PostgreSQLRepository) applyP4ReviewWiring(
 	if err != nil {
 		return fmt.Errorf("fetch streak snapshots: %w", err)
 	}
-	graceBalance, err := getLatestGraceBalanceTx(ctx, tx, req.UserID)
-	if err != nil {
-		return fmt.Errorf("get latest grace balance: %w", err)
-	}
 	if _, err := r.gamification.ReconcileAndAdvance(
 		ctx, tx, req.UserID, now, resolved.Timezone,
-		snaps, graceBalance, missionCompletedNow,
+		snaps, 0, missionCompletedNow,
 	); err != nil {
 		return fmt.Errorf("reconcile streak: %w", err)
 	}
@@ -589,27 +585,6 @@ func (r *PostgreSQLRepository) fetchStreakSnapshotsTx(ctx context.Context, tx *s
 		return nil, fmt.Errorf("scan streak snapshots rows: %w", err)
 	}
 	return out, nil
-}
-
-// getLatestGraceBalanceTx reads the user's current grace-day balance inside
-// the caller's tx. Confidence Points use gamification.CurrentBalanceTx,
-// which additionally serializes same-user awards before reading the ledger sum.
-func getLatestGraceBalanceTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID) (int, error) {
-	row := tx.QueryRowContext(ctx,
-		`SELECT COALESCE(balance_after, 0) FROM grace_day_ledger
-		 WHERE user_id = $1
-		 ORDER BY created_at DESC, id DESC
-		 LIMIT 1`,
-		userID,
-	)
-	var balance int
-	if err := row.Scan(&balance); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return 0, nil
-		}
-		return 0, fmt.Errorf("fetch latest grace balance: %w", err)
-	}
-	return balance, nil
 }
 
 func (r *PostgreSQLRepository) fetchAttemptByClientAttemptID(ctx context.Context, tx *sql.Tx, userID uuid.UUID, clientAttemptID string) (*ReviewAttempt, error) {

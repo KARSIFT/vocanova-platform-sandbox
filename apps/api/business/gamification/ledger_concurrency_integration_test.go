@@ -221,3 +221,179 @@ func TestProductionPointWritersSerializeAndRemainReplaySafePostgreSQL(t *testing
 	require.Equal(t, 1, submitted, "settled feedback replay must not repeat sentence activity")
 	require.Equal(t, 1, feedbackCount, "settled feedback replay must not repeat feedback activity")
 }
+
+// TestGraceReconciliationUsesSignedLedgerSumForSameTransactionEntries
+// reproduces issue #1318 against the complete committed migration set. The
+// real reconciliation writes a use and earn at PostgreSQL's transaction-stable
+// NOW(), so UUIDv4 order cannot identify the final running balance.
+func TestGraceReconciliationUsesSignedLedgerSumForSameTransactionEntries(t *testing.T) {
+	db := ledgerWriterDB(t)
+	ctx := t.Context()
+	userID := uuid.New()
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	today := now.Truncate(24 * time.Hour)
+	yesterday := today.AddDate(0, 0, -1)
+	lastCompleted := today.AddDate(0, 0, -2)
+	_, err := db.ExecContext(ctx,
+		`INSERT INTO users (id,email,status,created_at,updated_at)
+		 VALUES ($1,$2,'active',$3,$3)`, userID, userID.String()+"@example.test", now)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx,
+		`INSERT INTO streak_states (
+			id,user_id,current_streak_count,longest_streak_count,
+			last_completed_local_date,last_activity_local_date,timezone,status,created_at,updated_at
+		) VALUES ($1,$2,6,6,$3,$3,'UTC','active',$4,$4)`,
+		uuid.New(), userID, lastCompleted, now)
+	require.NoError(t, err)
+
+	gam := gamification.NewService(gamification.NewRepository(db))
+	// Seed the one grace day available before reconciliation.
+	tx, err := db.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	_, err = gam.GrantGraceDay(ctx, tx, userID, 1, 1,
+		gamification.GraceReasonEarnedByStreak, gamification.GraceSourceStreak,
+		nil, lastCompleted, "UTC", gamification.StreakGraceDayEarnedKey(userID.String(), "seed"))
+	require.NoError(t, err)
+	require.NoError(t, tx.Commit())
+
+	// A production reconciliation after one missed day spends the available
+	// grace day and earns a replacement for reaching seven completed days.
+	tx, err = db.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	_, err = gam.ReconcileAndAdvance(ctx, tx, userID, now, "UTC", []gamification.StreakSnapshot{
+		{LocalDate: yesterday, Status: gamification.MissionStatusMissed},
+		{LocalDate: today, Status: gamification.MissionStatusCompleted},
+	}, 0, true)
+	require.NoError(t, err)
+	require.NoError(t, tx.Commit())
+
+	var sameTimestamp bool
+	err = db.QueryRowContext(ctx, `SELECT min(created_at) = max(created_at)
+		FROM grace_day_ledger WHERE user_id = $1
+		  AND applied_to_local_date IN ($2, $3)`, userID, yesterday, today).Scan(&sameTimestamp)
+	require.NoError(t, err)
+	require.True(t, sameTimestamp, "the reconciliation use/earn rows must share NOW()")
+	rows, err := db.QueryContext(ctx, `SELECT amount,balance_after
+		FROM grace_day_ledger WHERE user_id=$1 AND amount IN (-1, 1)
+		ORDER BY balance_after`, userID)
+	require.NoError(t, err)
+	defer rows.Close()
+	var amounts, balances []int
+	for rows.Next() {
+		var amount, balanceAfter int
+		require.NoError(t, rows.Scan(&amount, &balanceAfter))
+		amounts, balances = append(amounts, amount), append(balances, balanceAfter)
+	}
+	require.NoError(t, rows.Err())
+	require.Equal(t, []int{-1, 1, 1}, amounts)
+	require.Equal(t, []int{0, 1, 1}, balances, "each immutable audit balance follows the locked predecessor")
+	var current, longest int
+	var stateLastCompleted time.Time
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT current_streak_count,longest_streak_count,last_completed_local_date
+		FROM streak_states WHERE user_id=$1`, userID).Scan(&current, &longest, &stateLastCompleted))
+	require.Equal(t, 7, current)
+	require.Equal(t, 7, longest)
+	require.Equal(t, today, stateLastCompleted)
+	var sum int
+	require.NoError(t, db.QueryRowContext(ctx,
+		`SELECT COALESCE(SUM(amount), 0) FROM grace_day_ledger WHERE user_id = $1`, userID).Scan(&sum))
+	displayed, err := gam.CurrentGraceBalance(ctx, userID)
+	require.NoError(t, err)
+	require.Equal(t, 1, sum)
+	require.Equal(t, sum, displayed, "Daily Mission and Progress must receive the ledger sum")
+}
+
+func TestConcurrentGraceReconciliationsSerializeStateAndAuditBalancesPostgreSQL(t *testing.T) {
+	db := ledgerWriterDB(t)
+	ctx, cancel := context.WithTimeout(t.Context(), 45*time.Second)
+	defer cancel()
+	userID := uuid.New()
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	today := now.Truncate(24 * time.Hour)
+	yesterday := today.AddDate(0, 0, -1)
+	lastCompleted := today.AddDate(0, 0, -2)
+	_, err := db.ExecContext(ctx, `INSERT INTO users (id,email,status,created_at,updated_at)
+		VALUES ($1,$2,'active',$3,$3)`, userID, userID.String()+"@example.test", now)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, `INSERT INTO streak_states (
+		id,user_id,current_streak_count,longest_streak_count,
+		last_completed_local_date,last_activity_local_date,timezone,status,created_at,updated_at
+	) VALUES ($1,$2,6,6,$3,$3,'UTC','active',$4,$4)`, uuid.New(), userID, lastCompleted, now)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, `INSERT INTO grace_day_ledger (
+		id,user_id,amount,balance_after,reason,source_type,applied_to_local_date,timezone,created_at,updated_at
+	) VALUES ($1,$2,1,1,'earned_by_streak','streak',$3,'UTC',$4,$4)`, uuid.New(), userID, lastCompleted, now)
+	require.NoError(t, err)
+
+	applicationName := ""
+	require.NoError(t, db.QueryRowContext(ctx, "SELECT current_setting('application_name')").Scan(&applicationName))
+	_, err = db.ExecContext(ctx, `CREATE FUNCTION hold_first_grace_ledger_insert() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN PERFORM pg_sleep(0.5); RETURN NEW; END $$; CREATE TRIGGER hold_first_grace_ledger_insert BEFORE INSERT ON grace_day_ledger FOR EACH ROW EXECUTE FUNCTION hold_first_grace_ledger_insert()`)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_, err := db.ExecContext(context.Background(), "DROP TRIGGER IF EXISTS hold_first_grace_ledger_insert ON grace_day_ledger; DROP FUNCTION IF EXISTS hold_first_grace_ledger_insert()")
+		require.NoError(t, err)
+	})
+
+	gam := gamification.NewService(gamification.NewRepository(db))
+	snapshots := []gamification.StreakSnapshot{
+		{LocalDate: yesterday, Status: gamification.MissionStatusMissed},
+		{LocalDate: today, Status: gamification.MissionStatusCompleted},
+	}
+	reconcile := func() error {
+		tx, err := db.BeginTx(ctx, nil)
+		if err != nil {
+			return err
+		}
+		if _, err := gam.ReconcileAndAdvance(ctx, tx, userID, now, "UTC", snapshots, 0, true); err != nil {
+			_ = tx.Rollback()
+			return err
+		}
+		return tx.Commit()
+	}
+	first := make(chan error, 1)
+	go func() { first <- reconcile() }()
+	deadline := time.Now().Add(3 * time.Second)
+	firstWriterSleeping := false
+	for time.Now().Before(deadline) {
+		var n int
+		err := db.QueryRowContext(ctx, `SELECT count(*) FROM pg_stat_activity
+			WHERE pid <> pg_backend_pid() AND application_name=$1 AND state='active'
+			  AND wait_event='PgSleep' AND query LIKE '%INSERT INTO grace_day_ledger%'`, applicationName).Scan(&n)
+		require.NoError(t, err)
+		if n > 0 {
+			firstWriterSleeping = true
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	require.True(t, firstWriterSleeping, "first reconciliation did not reach the controlled grace insert")
+	second := make(chan error, 1)
+	go func() { second <- reconcile() }()
+	waitForLedgerLock(t, ctx, db, applicationName)
+	require.NoError(t, <-first)
+	require.NoError(t, <-second)
+
+	var current, longest int
+	var stateLastCompleted time.Time
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT current_streak_count,longest_streak_count,last_completed_local_date
+		FROM streak_states WHERE user_id=$1`, userID).Scan(&current, &longest, &stateLastCompleted))
+	require.Equal(t, 7, current)
+	require.Equal(t, 7, longest)
+	require.Equal(t, today, stateLastCompleted)
+	rows, err := db.QueryContext(ctx, `SELECT amount,balance_after FROM grace_day_ledger
+		WHERE user_id=$1 ORDER BY balance_after`, userID)
+	require.NoError(t, err)
+	defer rows.Close()
+	var amounts, balances []int
+	for rows.Next() {
+		var amount, balanceAfter int
+		require.NoError(t, rows.Scan(&amount, &balanceAfter))
+		amounts, balances = append(amounts, amount), append(balances, balanceAfter)
+	}
+	require.NoError(t, rows.Err())
+	require.Equal(t, []int{-1, 1, 1}, amounts)
+	require.Equal(t, []int{0, 1, 1}, balances)
+	balance, err := gam.CurrentGraceBalance(ctx, userID)
+	require.NoError(t, err)
+	require.Equal(t, 1, balance)
+}
