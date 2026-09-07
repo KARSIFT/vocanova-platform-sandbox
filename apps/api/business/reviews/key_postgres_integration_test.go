@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -436,14 +437,17 @@ func TestSubmitReviewRollsBackWhenGraceSnapshotProtectionDoesNotUpdatePostgreSQL
 	// RETURN NULL suppresses precisely the owner/date/status protection update:
 	// ReconcileAndAdvance has already observed the missed snapshot and written
 	// its tentative state/debit when the fail-closed bool guard must abort.
-	_, err := db.ExecContext(ctx, `CREATE FUNCTION suppress_fixture_protection() RETURNS trigger LANGUAGE plpgsql AS $$
+	// PL/pgSQL function definitions cannot bind OLD/NEW comparisons as query
+	// parameters, so format only this test's generated UUID and ISO date.
+	triggerSQL := fmt.Sprintf(`CREATE FUNCTION suppress_fixture_protection() RETURNS trigger LANGUAGE plpgsql AS $$
 		BEGIN
-			IF OLD.user_id = '`+req.UserID.String()+`'::uuid AND OLD.local_date = DATE '`+yesterday.Format("2006-01-02")+`'
+			IF OLD.user_id = '%s'::uuid AND OLD.local_date = DATE '%s'
 				AND OLD.status = 'missed' AND NEW.status = 'protected' THEN RETURN NULL; END IF;
 			RETURN NEW;
 		END $$;
 		CREATE TRIGGER suppress_fixture_protection BEFORE UPDATE ON daily_mission_snapshots
-		FOR EACH ROW EXECUTE FUNCTION suppress_fixture_protection()`)
+		FOR EACH ROW EXECUTE FUNCTION suppress_fixture_protection()`, req.UserID, yesterday.Format("2006-01-02"))
+	_, err := db.ExecContext(ctx, triggerSQL)
 	require.NoError(t, err)
 
 	gam := gamification.NewService(gamification.NewRepository(db))

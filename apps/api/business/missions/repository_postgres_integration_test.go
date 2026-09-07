@@ -48,7 +48,7 @@ import (
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
 	"github.com/google/uuid"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -542,18 +542,23 @@ func newMigratedPostgresFromEnv(t *testing.T) *sql.DB {
 	}
 	admin, err := sql.Open("postgres", dsn)
 	require.NoError(t, err)
+	t.Cleanup(func() { _ = admin.Close() })
 	schema := "missions_grace_" + randomHexSuffix(t, 12)
 	_, err = admin.Exec("CREATE SCHEMA " + schema)
 	require.NoError(t, err)
+	t.Cleanup(func() {
+		if _, err := admin.Exec("DROP SCHEMA " + schema + " CASCADE"); err != nil {
+			t.Errorf("drop validation schema %s: %v", schema, err)
+		}
+	})
+	if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
+		dsn, err = pq.ParseURL(dsn)
+		require.NoError(t, err)
+	}
 	db, err := sql.Open("postgres", dsn+" search_path="+schema)
 	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
 	applyCommittedForwardMigrations(t, db)
-	t.Cleanup(func() {
-		require.NoError(t, db.Close())
-		_, err := admin.Exec("DROP SCHEMA " + schema + " CASCADE")
-		require.NoError(t, err)
-		require.NoError(t, admin.Close())
-	})
 	return db
 }
 
