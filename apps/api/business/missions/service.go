@@ -104,6 +104,19 @@ func (s *Service) MarkSnapshotCompleted(
 	return s.missions.MarkSnapshotCompleted(ctx, tx, userID, localDate, now)
 }
 
+// MarkSnapshotProtected links a grace-day ledger debit to the exact missed
+// local-day snapshot that it protects. It is conditional on status='missed',
+// so a retry cannot protect the day twice.
+func (s *Service) MarkSnapshotProtected(
+	ctx context.Context,
+	tx *sql.Tx,
+	userID uuid.UUID,
+	localDate time.Time,
+	graceDayID uuid.UUID,
+) (bool, error) {
+	return s.missions.MarkSnapshotProtected(ctx, tx, userID, localDate, graceDayID)
+}
+
 // GetDailyMissionView returns the API view of today's daily mission for the
 // user, including the shared streak object. The clientTimezone is the
 // optional request-time IANA timezone from the caller (validated by

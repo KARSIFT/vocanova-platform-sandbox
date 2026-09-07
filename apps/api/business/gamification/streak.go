@@ -54,13 +54,14 @@ type StreakReconciliation struct {
 	// available grace day to protect a missed day and a grace_day_ledger
 	// row should be inserted (with a negative amount).
 	GraceDayUsed *GraceLedgerEntry
+	// GraceDayUsedID is the persisted ledger-row identifier for GraceDayUsed.
+	// Transaction owners use it to link the protected mission snapshot without
+	// making gamification depend on the missions package.
+	GraceDayUsedID *uuid.UUID
 	// YesterdayProtectedLocalDate is set when the reconciliation decided
 	// to apply a grace day to yesterday (so the caller can mark yesterday's
 	// daily_mission_snapshot.status='protected' and grace_applied=true).
 	YesterdayProtectedLocalDate *time.Time
-	// YesterdaySnapshotID is the snapshot id of yesterday that should be
-	// marked protected. Nil when no protection happened.
-	YesterdaySnapshotID *string
 	// YesterdayWasMissed is true when yesterday's snapshot was in
 	// status='missed' (i.e. the day was genuinely missed). Used by the
 	// caller to decide whether to mark it protected.
@@ -274,12 +275,8 @@ func ReconcileStreak(
 			// when the read happens — here we just signal intent.
 			rec.YesterdayProtectedLocalDate = &yesterday
 			rec.YesterdayWasMissed = true
-			if yesterdaySnap.GraceDayID != nil {
-				id := *yesterdaySnap.GraceDayID
-				rec.YesterdaySnapshotID = &id
-			}
 			newState.Status = StreakStatusAtRisk
-			return StreakReconciliation{NewState: newState, YesterdayProtectedLocalDate: &yesterday, YesterdayWasMissed: true, YesterdaySnapshotID: rec.YesterdaySnapshotID}, nil
+			return StreakReconciliation{NewState: newState, YesterdayProtectedLocalDate: &yesterday, YesterdayWasMissed: true}, nil
 		}
 		// Today completed and grace available: consume one grace day
 		// and mark yesterday protected, streak advances.
@@ -297,10 +294,6 @@ func ReconcileStreak(
 		rec.GraceDayUsed = &used
 		rec.YesterdayProtectedLocalDate = &yesterday
 		rec.YesterdayWasMissed = true
-		if yesterdaySnap.GraceDayID != nil {
-			id := *yesterdaySnap.GraceDayID
-			rec.YesterdaySnapshotID = &id
-		}
 		newState.CurrentStreakCount = state.CurrentStreakCount + 1
 		newState.LongestStreakCount = maxInt(state.LongestStreakCount, newState.CurrentStreakCount)
 		newState.LastCompletedLocalDate = &today
@@ -324,7 +317,7 @@ func ReconcileStreak(
 				IdempotencyKey:     StreakGraceDayEarnedKey(userID, dateKey(today)),
 			}
 		}
-		return StreakReconciliation{NewState: newState, GraceDayEarned: rec.GraceDayEarned, GraceDayUsed: rec.GraceDayUsed, YesterdayProtectedLocalDate: &yesterday, YesterdayWasMissed: true, YesterdaySnapshotID: rec.YesterdaySnapshotID}, nil
+		return StreakReconciliation{NewState: newState, GraceDayEarned: rec.GraceDayEarned, GraceDayUsed: rec.GraceDayUsed, YesterdayProtectedLocalDate: &yesterday, YesterdayWasMissed: true}, nil
 	}
 
 	// gap >= 2 with no applicable grace, or gap > 2: streak breaks.
