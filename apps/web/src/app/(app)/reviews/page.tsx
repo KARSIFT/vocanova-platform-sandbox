@@ -4,12 +4,34 @@ import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 
 import { getReviewsView } from "./_components/reviews-view";
 import { ReviewSession } from "./_components/review-session";
+import {
+  getDueRequestLimit,
+  getRemainingReviewTarget,
+} from "./_components/review-session-limit";
 
 export default async function ReviewsPage() {
   const client = await createServerApiClient();
+  let dailyMissionResponse: Awaited<ReturnType<typeof client.getDailyMission>>;
+  try {
+    dailyMissionResponse = await client.getDailyMission();
+  } catch (error) {
+    requireAuthRedirect(error, "/reviews");
+  }
+
+  const remainingReviewTarget = getRemainingReviewTarget(
+    dailyMissionResponse.data.reviewTarget,
+    dailyMissionResponse.data.reviewsCompleted,
+  );
+
+  if (remainingReviewTarget === 0) {
+    return <MissionTargetComplete />;
+  }
+
   let dueResponse: Awaited<ReturnType<typeof client.listDueWords>>;
   try {
-    dueResponse = await client.listDueWords({ limit: 50 });
+    dueResponse = await client.listDueWords({
+      limit: getDueRequestLimit(remainingReviewTarget),
+    });
   } catch (error) {
     requireAuthRedirect(error, "/reviews");
   }
@@ -55,9 +77,40 @@ export default async function ReviewsPage() {
       ) : (
         <ReviewSession
           initialDueWords={dueWords}
-          initialTotalCount={totalCount}
+          initialTotalCount={Math.min(totalCount, remainingReviewTarget)}
+          reviewSessionLimit={remainingReviewTarget}
         />
       )}
+    </div>
+  );
+}
+
+function MissionTargetComplete() {
+  return (
+    <div className="p-[var(--spacing-lg)]">
+      <div className="mb-[var(--spacing-md)] flex items-center justify-between">
+        <h1 className="text-2xl font-semibold text-neutral-900">Review</h1>
+        <Link
+          href="/home"
+          className="text-base font-semibold text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+        >
+          Back to Home
+        </Link>
+      </div>
+      <div className="flex flex-col items-center justify-center py-[var(--spacing-2xl)] text-center">
+        <h2 className="text-xl font-semibold text-neutral-900">
+          Today&apos;s review target is complete
+        </h2>
+        <p className="mt-[var(--spacing-sm)] text-base text-neutral-700">
+          Nice work. Come back tomorrow for your next review session.
+        </p>
+        <Link
+          href="/home"
+          className="mt-[var(--spacing-lg)] inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+        >
+          Back to Home
+        </Link>
+      </div>
     </div>
   );
 }

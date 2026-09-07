@@ -26,6 +26,10 @@ import {
   getCompletedReviewCountAfterSubmission,
   getReviewCompletionSummary,
 } from "./review-completion-summary";
+import {
+  getDueRequestLimit,
+  hasReachedReviewSessionLimit,
+} from "./review-session-limit";
 
 type Rating = "again" | "hard" | "good" | "easy";
 
@@ -46,11 +50,13 @@ interface ReviewOption {
 interface ReviewSessionProps {
   initialDueWords: DueWord[];
   initialTotalCount: number;
+  reviewSessionLimit: number;
 }
 
 export function ReviewSession({
   initialDueWords,
   initialTotalCount,
+  reviewSessionLimit,
 }: ReviewSessionProps) {
   const [dueWords, setDueWords] = useState<DueWord[]>(initialDueWords);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -106,20 +112,22 @@ export function ReviewSession({
   const refetchDueQueue = ({
     fallbackErrorMessage,
     queueUpdateMessage: nextQueueUpdateMessage,
+    remainingSessionReviews,
   }: {
     fallbackErrorMessage: string;
     queueUpdateMessage?: string;
+    remainingSessionReviews: number;
   }) => {
     setIsRefetching(true);
     setQueueRefreshFailed(false);
     setErrorMessage(null);
     const client = createApiClient();
     client
-      .listDueWords({ limit: 50 })
+      .listDueWords({ limit: getDueRequestLimit(remainingSessionReviews) })
       .then(({ data }) => {
         if (data.items.length > 0) {
           setDueWords(data.items);
-          setRemainingCount(data.totalCount);
+          setRemainingCount(Math.min(data.totalCount, remainingSessionReviews));
           setCurrentIndex(0);
         } else {
           setRemainingCount(0);
@@ -144,7 +152,15 @@ export function ReviewSession({
       });
   };
 
-  const advance = () => {
+  const advance = (nextCompletedReviewCount: number) => {
+    if (
+      hasReachedReviewSessionLimit(nextCompletedReviewCount, reviewSessionLimit)
+    ) {
+      setRemainingCount(0);
+      setCompleted(true);
+      return;
+    }
+
     if (currentIndex + 1 < dueWords.length) {
       setQueueUpdateMessage(null);
       setCurrentIndex((index) => index + 1);
@@ -154,6 +170,7 @@ export function ReviewSession({
     refetchDueQueue({
       fallbackErrorMessage:
         "Your answer was saved. Unable to load more words. Please try again.",
+      remainingSessionReviews: reviewSessionLimit - nextCompletedReviewCount,
     });
   };
 
@@ -231,10 +248,12 @@ export function ReviewSession({
       setLastReviewedCard(currentCard);
       setLastReviewAttemptId(data.attemptId);
       setRemainingCount((count) => Math.max(0, count - 1));
-      setCompletedReviewCount((count) =>
-        getCompletedReviewCountAfterSubmission(count, true),
+      const nextCompletedReviewCount = getCompletedReviewCountAfterSubmission(
+        completedReviewCount,
+        true,
       );
-      advance();
+      setCompletedReviewCount(nextCompletedReviewCount);
+      advance(nextCompletedReviewCount);
     } catch (error) {
       if (error instanceof ApiResponseError && error.status === 404) {
         // A 404 is a definite answer: another tab (or device) may have
@@ -247,6 +266,7 @@ export function ReviewSession({
             "The word was removed, but we couldn't refresh your review list. Please try again.",
           queueUpdateMessage:
             "This word was removed. Your review list was updated.",
+          remainingSessionReviews: reviewSessionLimit - completedReviewCount,
         });
         return;
       }
@@ -544,7 +564,7 @@ export function ReviewSession({
             {hasSubmittedCurrentCard && !queueRefreshFailed && errorMessage ? (
               <button
                 type="button"
-                onClick={advance}
+                onClick={() => advance(completedReviewCount)}
                 disabled={isRefetching}
                 className="mt-[var(--spacing-sm)] w-full rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -560,6 +580,8 @@ export function ReviewSession({
                       "The word was removed, but we couldn't refresh your review list. Please try again.",
                     queueUpdateMessage:
                       "This word was removed. Your review list was updated.",
+                    remainingSessionReviews:
+                      reviewSessionLimit - completedReviewCount,
                   })
                 }
                 disabled={isRefetching}
