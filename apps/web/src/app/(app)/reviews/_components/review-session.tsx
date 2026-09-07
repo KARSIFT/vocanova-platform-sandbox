@@ -59,6 +59,9 @@ export function ReviewSession({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefetching, setIsRefetching] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [queueUpdateMessage, setQueueUpdateMessage] = useState<string | null>(
+    null,
+  );
   const [completed, setCompleted] = useState(false);
   const [phase, setPhase] = useState<PromptPhase>("prompt");
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
@@ -95,12 +98,13 @@ export function ReviewSession({
     pendingSubmission.current = null;
   }, [currentIndex, dueWords]);
 
-  const advance = () => {
-    if (currentIndex + 1 < dueWords.length) {
-      setCurrentIndex((index) => index + 1);
-      return;
-    }
-
+  const refetchDueQueue = ({
+    fallbackErrorMessage,
+    queueUpdateMessage: nextQueueUpdateMessage,
+  }: {
+    fallbackErrorMessage: string;
+    queueUpdateMessage?: string;
+  }) => {
     setIsRefetching(true);
     setErrorMessage(null);
     const client = createApiClient();
@@ -111,24 +115,36 @@ export function ReviewSession({
           setDueWords(data.items);
           setRemainingCount(data.totalCount);
           setCurrentIndex(0);
+          setCompleted(false);
         } else {
+          setRemainingCount(0);
           setCompleted(true);
+        }
+        if (nextQueueUpdateMessage) {
+          setQueueUpdateMessage(nextQueueUpdateMessage);
         }
       })
       .catch((error) => {
         // T06: a 401 here means the session expired mid-review-session;
         // route the learner to re-auth instead of leaving them looking at
         // an error on a frozen card.
-        setErrorMessage(
-          handleApiError(
-            error,
-            "Your answer was saved. Unable to load more words. Please try again.",
-          ),
-        );
+        setErrorMessage(handleApiError(error, fallbackErrorMessage));
       })
       .finally(() => {
         setIsRefetching(false);
       });
+  };
+
+  const advance = () => {
+    if (currentIndex + 1 < dueWords.length) {
+      setCurrentIndex((index) => index + 1);
+      return;
+    }
+
+    refetchDueQueue({
+      fallbackErrorMessage:
+        "Your answer was saved. Unable to load more words. Please try again.",
+    });
   };
 
   const submitAttempt = async ({
@@ -210,6 +226,20 @@ export function ReviewSession({
       );
       advance();
     } catch (error) {
+      if (error instanceof ApiResponseError && error.status === 404) {
+        // A 404 is a definite answer: another tab (or device) may have
+        // removed this saved word after the due queue was loaded. Discard the
+        // idempotency intent and reconcile with the backend rather than
+        // offering a retry that can never succeed.
+        pendingSubmission.current = null;
+        refetchDueQueue({
+          fallbackErrorMessage:
+            "The word was removed, but we couldn't refresh your review list. Please try again.",
+          queueUpdateMessage:
+            "This word was removed. Your review list was updated.",
+        });
+        return;
+      }
       // A 4xx response is a definite rejection, not an ambiguous transport
       // outcome. Do not retain its key/body for a retry.
       if (
@@ -247,6 +277,15 @@ export function ReviewSession({
         <p className="mt-[var(--spacing-sm)] text-base text-neutral-700">
           {completionSummary ?? "No words are due for review right now."}
         </p>
+        {queueUpdateMessage ? (
+          <p
+            role="status"
+            aria-live="polite"
+            className="mt-[var(--spacing-sm)] text-sm text-neutral-700"
+          >
+            {queueUpdateMessage}
+          </p>
+        ) : null}
         <Link
           href="/home"
           className="mt-[var(--spacing-lg)] inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
@@ -296,6 +335,15 @@ export function ReviewSession({
           Card {currentIndex + 1} of {dueWords.length}
         </p>
       </div>
+      {queueUpdateMessage ? (
+        <p
+          role="status"
+          aria-live="polite"
+          className="mt-[var(--spacing-sm)] text-sm text-neutral-700"
+        >
+          {queueUpdateMessage}
+        </p>
+      ) : null}
 
       <div
         className="mt-[var(--spacing-md)] rounded-md border border-neutral-200 bg-white p-[var(--spacing-md)] shadow-sm"
