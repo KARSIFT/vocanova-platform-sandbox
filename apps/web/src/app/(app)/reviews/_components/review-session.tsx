@@ -122,9 +122,10 @@ export function ReviewSession({
           setRemainingCount(0);
           setCompleted(true);
         }
-        if (nextQueueUpdateMessage) {
-          setQueueUpdateMessage(nextQueueUpdateMessage);
-        }
+        // A 404-driven refetch supplies a status for the first refreshed
+        // card. Every normal refetch clears it so it cannot leak into a
+        // later card or completion summary.
+        setQueueUpdateMessage(nextQueueUpdateMessage ?? null);
       })
       .catch((error) => {
         // T06: a 401 here means the session expired mid-review-session;
@@ -142,6 +143,7 @@ export function ReviewSession({
 
   const advance = () => {
     if (currentIndex + 1 < dueWords.length) {
+      setQueueUpdateMessage(null);
       setCurrentIndex((index) => index + 1);
       return;
     }
@@ -543,7 +545,7 @@ export function ReviewSession({
                 disabled={isRefetching}
                 className="mt-[var(--spacing-sm)] w-full rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Retry loading reviews
+                Retry refreshing your review list
               </button>
             ) : null}
             {queueRefreshFailed && errorMessage ? (

@@ -35,6 +35,20 @@ async function submitFixtureReview(page: Page, index: number) {
   await page.getByRole("button", { name: "Good" }).click();
 }
 
+function fixtureDueWord(index: number) {
+  return {
+    userWordId: `recovered-user-word-${index}`,
+    meaningId: `recovered-meaning-${index}`,
+    wordId: `recovered-word-${index}`,
+    wordSlug: `recovered-word-${index}`,
+    wordText: `Review word ${index}`,
+    partOfSpeech: "noun",
+    shortDefinition: `definition for review word ${index}`,
+    status: "due",
+    reviewStep: 0,
+  };
+}
+
 test.describe("Review stale-card recovery", () => {
   test("reconciles a removed last card instead of retrying its rejected answer", async ({
     page,
@@ -153,5 +167,85 @@ test.describe("Review stale-card recovery", () => {
       page.getByText("This word was removed. Your review list was updated."),
     ).toBeVisible();
     expect(dueRefreshCount).toBe(1);
+  });
+
+  test("clears the removed-word status after later normal reviews", async ({
+    page,
+    context,
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== "home-desktop-1280",
+      "The mutation flow is covered once against the production bundle.",
+    );
+
+    const sessionId = [
+      "review-stale-card-status-lifecycle",
+      testInfo.testId,
+      `retry-${testInfo.retry}`,
+    ]
+      .map(encodeURIComponent)
+      .join("-");
+    await seedReviewSession(context, sessionId, 1);
+    await page.goto("/reviews");
+
+    let submissionCount = 0;
+    await page.route("**/api/v1/reviews/submissions", async (route) => {
+      submissionCount += 1;
+      if (submissionCount === 1) {
+        await route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({
+            title: "Not Found",
+            status: 404,
+            detail: "saved word not found",
+          }),
+        });
+        return;
+      }
+      await route.continue();
+    });
+
+    let dueRefreshCount = 0;
+    await page.route("**/api/v1/reviews/due?limit=50", async (route) => {
+      dueRefreshCount += 1;
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify(
+          dueRefreshCount === 1
+            ? {
+                items: [fixtureDueWord(2), fixtureDueWord(3)],
+                totalCount: 2,
+              }
+            : { items: [], totalCount: 0 },
+        ),
+      });
+    });
+
+    await submitFixtureReview(page, 1);
+    await expect(
+      page.getByRole("heading", { name: "Review word 2", level: 2 }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("This word was removed. Your review list was updated."),
+    ).toBeVisible();
+
+    await submitFixtureReview(page, 2);
+    await expect(
+      page.getByRole("heading", { name: "Review word 3", level: 2 }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("This word was removed. Your review list was updated."),
+    ).toHaveCount(0);
+
+    await submitFixtureReview(page, 3);
+    await expect(
+      page.getByRole("heading", { name: "Review complete", level: 2 }),
+    ).toBeVisible();
+    await expect(page.getByText("You reviewed 2 words.")).toBeVisible();
+    await expect(
+      page.getByText("This word was removed. Your review list was updated."),
+    ).toHaveCount(0);
+    expect(dueRefreshCount).toBe(2);
   });
 });
