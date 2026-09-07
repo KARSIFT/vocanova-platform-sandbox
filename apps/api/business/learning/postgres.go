@@ -198,6 +198,9 @@ func (r *PostgreSQLRepository) saveUserWordTx(ctx context.Context, tx *sql.Tx, r
 			if err != nil {
 				return nil, fmt.Errorf("ensure daily mission snapshot: %w", err)
 			}
+			if snap == nil {
+				return nil, errors.New("ensure daily mission snapshot: no snapshot returned")
+			}
 		}
 		// This locks the user-wide point-balance key for tx before reading.
 		currentBalance, err := r.gamification.CurrentBalanceTx(ctx, tx, req.UserID)
