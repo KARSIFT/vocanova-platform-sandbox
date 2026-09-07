@@ -657,16 +657,16 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	contentRepo := content.NewPostgreSQLRepository(db)
 	gamRepo := gamification.NewRepository(db)
 	gamSvc := gamification.NewService(gamRepo)
+	missionsRepo := missions.NewRepository(db)
+	missionsSvc := missions.NewService(missionsRepo, gamSvc)
 	contentSvc := content.NewService(contentRepo, learning.NewPostgreSQLRepository(db))
 
 	learningIdem := learning.NewPostgreSQLIdempotencyStore(db)
-	// The repository owns the atomic PostgreSQL claim, word mutation, and
-	// reward write; the separate store remains for other learning workflows.
-	learningRepo := learning.NewPostgreSQLRepository(db, gamSvc)
+	// The repository owns the atomic PostgreSQL claim, word mutation, reward,
+	// and daily-activity writes; the separate store remains for other learning
+	// workflows.
+	learningRepo := newProductionLearningRepository(db, gamSvc, missionsSvc)
 	learningSvc := learning.NewService(learningRepo, learningIdem, clk)
-
-	missionsRepo := missions.NewRepository(db)
-	missionsSvc := missions.NewService(missionsRepo, gamSvc)
 
 	reviewsRepo := newProductionReviewsRepository(db, clk, gamSvc, missionsSvc)
 	reviewsSvc := reviews.NewService(reviewsRepo, learningIdem, clk)
@@ -776,6 +776,13 @@ func newProductionReviewsRepository(db *sql.DB, clk clock.Clock, gamSvc *gamific
 		reviews.WithGamificationService(gamSvc),
 		reviews.WithMissionsService(missionsSvc),
 	)
+}
+
+// newProductionLearningRepository is the sole construction path for the live
+// learning PostgreSQL repository. It wires P4 dependencies so word additions
+// update daily activity alongside their confidence-point ledger entry.
+func newProductionLearningRepository(db *sql.DB, gamSvc *gamification.Service, missionsSvc *missions.Service) *learning.PostgreSQLRepository {
+	return learning.NewPostgreSQLRepository(db, gamSvc, missionsSvc)
 }
 
 // ControlledSignupReady reports whether controlled first-time signup

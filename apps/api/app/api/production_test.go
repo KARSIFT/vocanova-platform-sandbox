@@ -1363,6 +1363,30 @@ func TestProductionGo_NewProductionAPIConstructsP4WiredReviewsRepository(t *test
 		"production.go must not construct the reviews repository without P4 wiring options")
 }
 
+// TestProductionLearningRepositoryWiresP4Dependencies prevents the word-save
+// path from regressing to a ledger-only write that omits exported daily
+// activity counters.
+func TestProductionLearningRepositoryWiresP4Dependencies(t *testing.T) {
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	gamSvc := gamification.NewService(gamification.NewRepository(db))
+	missionsSvc := missions.NewService(missions.NewRepository(db), gamSvc)
+
+	repo := newProductionLearningRepository(db, gamSvc, missionsSvc)
+	require.True(t, repo.HasP4Wiring(),
+		"production learning repository must wire gamification and missions for word-add activity writes")
+}
+
+func TestProductionGo_NewProductionAPIConstructsP4WiredLearningRepository(t *testing.T) {
+	source, err := os.ReadFile("production.go")
+	require.NoError(t, err)
+	src := string(source)
+	assert.Contains(t, src, "newProductionLearningRepository(db, gamSvc, missionsSvc)",
+		"NewProductionAPI must build the learning repository with P4 activity wiring")
+}
+
 // ---------------------------------------------------------------------------
 // Issue #1177 regression: the live composition root must wire a real
 // missions.MissionUpdater into aifeedback.NewService so a qualifying

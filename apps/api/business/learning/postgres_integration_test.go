@@ -6,14 +6,18 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/missions"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/google/uuid"
 	_ "github.com/lib/pq"
+	"github.com/stretchr/testify/require"
 )
 
 // isolatedPostgres opens a database whose connections all use a fresh schema.
@@ -333,5 +337,119 @@ func TestSaveUserWordAtomicIdempotencyPostgreSQL(t *testing.T) {
 	}
 	if _, err := svc.SaveUserWord(ctx, SaveUserWordRequest{UserID: failingUser, MeaningID: failingMeaning, Source: "journey", IdempotencyKey: "reward-fails"}); err != nil {
 		t.Fatalf("retry after rolled-back reward: %v", err)
+	}
+}
+
+// migratedWordActivityDB applies every committed forward migration in a fresh
+// schema so this test exercises the same constraints and defaults as the live
+// P1/P4 write path without sharing any application data.
+func migratedWordActivityDB(t *testing.T) *sql.DB {
+	t.Helper()
+	db := isolatedPostgres(t)
+	paths, err := filepath.Glob("../../migrations/*.sql")
+	require.NoError(t, err)
+	require.NotEmpty(t, paths)
+	for _, path := range paths {
+		if strings.HasSuffix(path, ".down.sql") {
+			continue
+		}
+		migration, err := os.ReadFile(path)
+		require.NoError(t, err)
+		_, err = db.Exec(string(migration))
+		require.NoErrorf(t, err, "apply migration %s", filepath.Base(path))
+	}
+	return db
+}
+
+// TestSaveUserWordRecordsDailyActivityPostgreSQL proves the production P1
+// first-save transaction keeps the exported daily aggregate in lockstep with
+// its +2 immutable ledger award. It also covers the paths that must remain
+// no-ops (duplicate, idempotent replay, and restore) and rollback on an
+// activity-write failure.
+func TestSaveUserWordRecordsDailyActivityPostgreSQL(t *testing.T) {
+	db := migratedWordActivityDB(t)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
+	userID, meaningID, failingMeaningID := uuid.New(), uuid.New(), uuid.New()
+	require.NoError(t, func() error {
+		_, err := db.ExecContext(ctx,
+			`INSERT INTO users (id, email, status, onboarding_status, created_at, updated_at)
+			 VALUES ($1, $2, 'active', 'completed', $3, $3)`, userID, userID.String()+"@example.test", now)
+		return err
+	}())
+	for _, id := range []uuid.UUID{meaningID, failingMeaningID} {
+		wordID := uuid.New()
+		_, err := db.ExecContext(ctx,
+			`INSERT INTO canonical_words (id, text, normalized_text, status, created_at, updated_at)
+			 VALUES ($1, $2, $2, 'active', $3, $3)`, wordID, wordID.String(), now)
+		require.NoError(t, err)
+		_, err = db.ExecContext(ctx,
+			`INSERT INTO word_meanings (id, word_id, part_of_speech, short_definition, meaning_order, status, created_at, updated_at)
+			 VALUES ($1, $2, 'noun', 'fixture', 1, 'active', $3, $3)`, id, wordID, now)
+		require.NoError(t, err)
+	}
+
+	gam := gamification.NewService(gamification.NewRepository(db))
+	missionSvc := missions.NewService(missions.NewRepository(db), gam)
+	svc := NewService(NewPostgreSQLRepository(db, gam, missionSvc), nil, &clock.Fixed{T: now})
+	save := SaveUserWordRequest{UserID: userID, MeaningID: meaningID, Source: "manual", IdempotencyKey: "first-save"}
+	_, err := svc.SaveUserWord(ctx, save)
+	require.NoError(t, err)
+
+	localDate := now.Format("2006-01-02")
+	var wordsAdded, pointsEarned, ledgerRows int
+	require.NoError(t, db.QueryRowContext(ctx,
+		`SELECT words_added, confidence_points_earned FROM daily_activity_summaries WHERE user_id = $1 AND local_date = $2`, userID, localDate,
+	).Scan(&wordsAdded, &pointsEarned))
+	require.Equal(t, 1, wordsAdded)
+	require.Equal(t, gamification.RewardAddWord, pointsEarned)
+	require.NoError(t, db.QueryRowContext(ctx,
+		`SELECT count(*) FROM confidence_point_ledger WHERE user_id = $1`, userID,
+	).Scan(&ledgerRows))
+	require.Equal(t, 1, ledgerRows)
+
+	// A new request key for an already active word, and an exact replay, are
+	// both no-op saves rather than additional activity or rewards.
+	_, err = svc.SaveUserWord(ctx, SaveUserWordRequest{UserID: userID, MeaningID: meaningID, Source: "manual", IdempotencyKey: "duplicate"})
+	require.NoError(t, err)
+	_, err = svc.SaveUserWord(ctx, save)
+	require.NoError(t, err)
+	require.NoError(t, db.QueryRowContext(ctx,
+		`SELECT words_added, confidence_points_earned FROM daily_activity_summaries WHERE user_id = $1 AND local_date = $2`, userID, localDate,
+	).Scan(&wordsAdded, &pointsEarned))
+	require.Equal(t, 1, wordsAdded)
+	require.Equal(t, gamification.RewardAddWord, pointsEarned)
+
+	// Restoring an unsaved word retains the existing anti-farming policy.
+	require.NoError(t, svc.UnsaveUserWord(ctx, userID, meaningID))
+	_, err = svc.SaveUserWord(ctx, SaveUserWordRequest{UserID: userID, MeaningID: meaningID, Source: "manual", IdempotencyKey: "restore"})
+	require.NoError(t, err)
+	require.NoError(t, db.QueryRowContext(ctx,
+		`SELECT words_added, confidence_points_earned FROM daily_activity_summaries WHERE user_id = $1 AND local_date = $2`, userID, localDate,
+	).Scan(&wordsAdded, &pointsEarned))
+	require.Equal(t, 1, wordsAdded)
+	require.Equal(t, gamification.RewardAddWord, pointsEarned)
+
+	// The activity write occurs after the ledger insert but before commit; a
+	// database failure must leave none of the first-save state behind.
+	failingUserID := uuid.New()
+	require.NoError(t, func() error {
+		_, err := db.ExecContext(ctx,
+			`INSERT INTO users (id, email, status, onboarding_status, created_at, updated_at)
+			 VALUES ($1, $2, 'active', 'completed', $3, $3)`, failingUserID, failingUserID.String()+"@example.test", now)
+		return err
+	}())
+	require.NoError(t, func() error {
+		_, err := db.ExecContext(ctx, fmt.Sprintf(
+			`ALTER TABLE daily_activity_summaries ADD CONSTRAINT reject_word_activity CHECK (user_id <> '%s'::uuid)`, failingUserID))
+		return err
+	}())
+	_, err = svc.SaveUserWord(ctx, SaveUserWordRequest{UserID: failingUserID, MeaningID: failingMeaningID, Source: "manual", IdempotencyKey: "activity-fails"})
+	require.Error(t, err)
+	for _, table := range []string{"user_words", "idempotency_keys", "confidence_point_ledger", "daily_mission_snapshots", "daily_activity_summaries"} {
+		var count int
+		require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM `+table+` WHERE user_id = $1`, failingUserID).Scan(&count))
+		require.Zerof(t, count, "rollback left %s rows", table)
 	}
 }
