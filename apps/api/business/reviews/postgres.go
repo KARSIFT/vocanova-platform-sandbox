@@ -513,10 +513,14 @@ func (r *PostgreSQLRepository) applyP4ReviewWiring(
 		return fmt.Errorf("reconcile streak: %w", err)
 	}
 	if reconciliation.GraceDayUsed != nil && reconciliation.GraceDayUsedID != nil && reconciliation.YesterdayProtectedLocalDate != nil {
-		if _, err := r.missions.MarkSnapshotProtected(
+		protected, err := r.missions.MarkSnapshotProtected(
 			ctx, tx, req.UserID, *reconciliation.YesterdayProtectedLocalDate, *reconciliation.GraceDayUsedID,
-		); err != nil {
+		)
+		if err != nil {
 			return fmt.Errorf("mark grace-protected snapshot: %w", err)
+		}
+		if !protected {
+			return errors.New("mark grace-protected snapshot: missed snapshot was not updated")
 		}
 	}
 	return nil

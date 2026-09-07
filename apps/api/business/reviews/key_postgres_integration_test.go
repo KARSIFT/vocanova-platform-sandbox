@@ -308,3 +308,170 @@ func TestReviewKeyFingerprintCollisionPostgreSQL(t *testing.T) {
 	_, err = svc.SubmitReview(ctx, changedTime)
 	require.ErrorIs(t, err, ErrIdempotencyConflict, "a materially different timestamp is not a replay")
 }
+
+// seedGraceRecoveryReview creates the exact production state in which a
+// learner missed yesterday, has one grace day, and a review today crosses the
+// existing daily target. Keeping this in the reviews package makes the test
+// drive PostgreSQLRepository.SubmitReview rather than manually invoking the
+// reconciliation and snapshot-linking collaborators.
+func seedGraceRecoveryReview(t *testing.T, db *sql.DB, now time.Time) SubmitReviewRequest {
+	t.Helper()
+	req := seedReviewKeyRequest(t, db, now)
+	today := now.UTC().Truncate(24 * time.Hour)
+	yesterday := today.AddDate(0, 0, -1)
+	dayBeforeYesterday := today.AddDate(0, 0, -2)
+	_, err := db.Exec(`INSERT INTO user_settings (id,user_id,timezone,daily_review_target,created_at,updated_at)
+		VALUES ($1,$2,'UTC',5,$3,$3)`, uuid.New(), req.UserID, now)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO daily_mission_snapshots
+		(id,user_id,local_date,timezone,review_target,reviews_completed,policy_version,status,completed_at,created_at,updated_at)
+		VALUES
+		($1,$2,$3,'UTC',5,5,$4,'completed',$6,$6,$6),
+		($5,$2,$7,'UTC',5,0,$4,'missed',NULL,$6,$6),
+		($8,$2,$9,'UTC',5,4,$4,'open',NULL,$6,$6)`,
+		uuid.New(), req.UserID, dayBeforeYesterday, gamification.MissionPolicyVersion, uuid.New(), now,
+		yesterday, uuid.New(), today)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO streak_states
+		(id,user_id,current_streak_count,longest_streak_count,last_completed_local_date,last_activity_local_date,timezone,status,created_at,updated_at)
+		VALUES ($1,$2,4,4,$3,$3,'UTC','active',$4,$4)`, uuid.New(), req.UserID, dayBeforeYesterday, now)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO grace_day_ledger
+		(id,user_id,amount,balance_after,reason,source_type,applied_to_local_date,timezone,idempotency_key,created_at,updated_at)
+		VALUES ($1,$2,1,1,'earned_by_streak','streak',$3,'UTC','seed-grace',$4,$4)`, uuid.New(), req.UserID, dayBeforeYesterday, now)
+	require.NoError(t, err)
+	return req
+}
+
+func TestSubmitReviewGraceRecoveryProtectsMissedSnapshotPostgreSQL(t *testing.T) {
+	db := reviewKeyDB(t)
+	ctx, cancel := context.WithTimeout(t.Context(), 45*time.Second)
+	defer cancel()
+	now := time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)
+	req := seedGraceRecoveryReview(t, db, now)
+	gam := gamification.NewService(gamification.NewRepository(db))
+	missionService := missions.NewService(missions.NewRepository(db), gam)
+	clk := &clock.Fixed{T: now}
+	svc := NewService(NewPostgreSQLRepository(db, clk,
+		WithGamificationService(gam), WithMissionsService(missionService)), nil, clk)
+
+	// Two simultaneous delivery attempts and a settled retry are all the same
+	// production SubmitReview request. The database claim and user-word lock
+	// must publish its review, rewards, streak update, debit, and link once.
+	start := make(chan struct{})
+	type result struct {
+		attempt *ReviewAttempt
+		err     error
+	}
+	results := make(chan result, 2)
+	for range 2 {
+		go func() {
+			<-start
+			a, err := svc.SubmitReview(ctx, req)
+			results <- result{a, err}
+		}()
+	}
+	close(start)
+	first, second := <-results, <-results
+	require.NoError(t, first.err)
+	require.NoError(t, second.err)
+	require.Equal(t, first.attempt.ID, second.attempt.ID)
+	replayed, err := svc.SubmitReview(ctx, req)
+	require.NoError(t, err)
+	require.Equal(t, first.attempt.ID, replayed.ID)
+
+	today := now.Truncate(24 * time.Hour)
+	yesterday := today.AddDate(0, 0, -1)
+	var attempts, pointRows, graceRows, reviewsCompleted, reviewStep, totalReviews int
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM review_attempts WHERE user_id=$1`, req.UserID).Scan(&attempts))
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM confidence_point_ledger WHERE user_id=$1`, req.UserID).Scan(&pointRows))
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM grace_day_ledger WHERE user_id=$1`, req.UserID).Scan(&graceRows))
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT reviews_completed FROM daily_mission_snapshots WHERE user_id=$1 AND local_date=$2`, req.UserID, today).Scan(&reviewsCompleted))
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT review_step,total_review_count FROM user_words WHERE id=$1`, req.UserWordID).Scan(&reviewStep, &totalReviews))
+	require.Equal(t, 1, attempts)
+	require.Equal(t, 2, pointRows, "the review and completion awards share the submission transaction")
+	require.Equal(t, 2, graceRows, "the seed and exactly one used-grace debit")
+	require.Equal(t, 5, reviewsCompleted)
+	require.Equal(t, 1, reviewStep)
+	require.Equal(t, 1, totalReviews)
+
+	var todayStatus, yesterdayStatus string
+	var protected bool
+	var snapshotGraceID, debitID uuid.UUID
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT status FROM daily_mission_snapshots WHERE user_id=$1 AND local_date=$2`, req.UserID, today).Scan(&todayStatus))
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT status,grace_applied,grace_day_id FROM daily_mission_snapshots WHERE user_id=$1 AND local_date=$2`, req.UserID, yesterday).Scan(&yesterdayStatus, &protected, &snapshotGraceID))
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT id FROM grace_day_ledger WHERE user_id=$1 AND amount=-1 AND applied_to_local_date=$2`, req.UserID, yesterday).Scan(&debitID))
+	require.Equal(t, "completed", todayStatus)
+	require.Equal(t, "protected", yesterdayStatus)
+	require.True(t, protected)
+	require.Equal(t, debitID, snapshotGraceID, "the owner/date-scoped missed snapshot links the exact debit")
+
+	var streak int
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT current_streak_count FROM streak_states WHERE user_id=$1`, req.UserID).Scan(&streak))
+	require.Equal(t, 5, streak)
+
+	// A later non-completing production review reconciles from the protected
+	// history and leaves the recovered five-day streak intact.
+	tomorrow := now.AddDate(0, 0, 1)
+	nextReq := seedReviewKeyRequest(t, db, tomorrow)
+	_, err = db.ExecContext(ctx, `UPDATE user_words SET user_id=$1 WHERE id=$2`, req.UserID, nextReq.UserWordID)
+	require.NoError(t, err)
+	nextReq.UserID = req.UserID
+	nextReq.ClientAttemptID = "later-day-attempt"
+	nextReq.IdempotencyKey = "later-day-key"
+	clk.T = tomorrow
+	_, err = svc.SubmitReview(ctx, nextReq)
+	require.NoError(t, err)
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT current_streak_count FROM streak_states WHERE user_id=$1`, req.UserID).Scan(&streak))
+	require.Equal(t, 5, streak)
+}
+
+func TestSubmitReviewRollsBackWhenGraceSnapshotProtectionDoesNotUpdatePostgreSQL(t *testing.T) {
+	db := reviewKeyDB(t)
+	ctx, cancel := context.WithTimeout(t.Context(), 45*time.Second)
+	defer cancel()
+	now := time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)
+	req := seedGraceRecoveryReview(t, db, now)
+	yesterday := now.AddDate(0, 0, -1).Truncate(24 * time.Hour)
+	// RETURN NULL suppresses precisely the owner/date/status protection update:
+	// ReconcileAndAdvance has already observed the missed snapshot and written
+	// its tentative state/debit when the fail-closed bool guard must abort.
+	_, err := db.ExecContext(ctx, `CREATE FUNCTION suppress_fixture_protection() RETURNS trigger LANGUAGE plpgsql AS $$
+		BEGIN
+			IF OLD.user_id = '`+req.UserID.String()+`'::uuid AND OLD.local_date = DATE '`+yesterday.Format("2006-01-02")+`'
+				AND OLD.status = 'missed' AND NEW.status = 'protected' THEN RETURN NULL; END IF;
+			RETURN NEW;
+		END $$;
+		CREATE TRIGGER suppress_fixture_protection BEFORE UPDATE ON daily_mission_snapshots
+		FOR EACH ROW EXECUTE FUNCTION suppress_fixture_protection()`)
+	require.NoError(t, err)
+
+	gam := gamification.NewService(gamification.NewRepository(db))
+	clk := &clock.Fixed{T: now}
+	svc := NewService(NewPostgreSQLRepository(db, clk,
+		WithGamificationService(gam), WithMissionsService(missions.NewService(missions.NewRepository(db), gam))), nil, clk)
+	_, err = svc.SubmitReview(ctx, req)
+	require.ErrorContains(t, err, "missed snapshot was not updated")
+
+	var attempts, keys, points, graceRows, step, total, reviewsCompleted, streak int
+	var yesterdayStatus string
+	var applied bool
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM review_attempts WHERE user_id=$1`, req.UserID).Scan(&attempts))
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM idempotency_keys WHERE user_id=$1`, req.UserID).Scan(&keys))
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM confidence_point_ledger WHERE user_id=$1`, req.UserID).Scan(&points))
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM grace_day_ledger WHERE user_id=$1`, req.UserID).Scan(&graceRows))
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT review_step,total_review_count FROM user_words WHERE id=$1`, req.UserWordID).Scan(&step, &total))
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT reviews_completed FROM daily_mission_snapshots WHERE user_id=$1 AND local_date=$2`, req.UserID, now.Truncate(24*time.Hour)).Scan(&reviewsCompleted))
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT status,grace_applied FROM daily_mission_snapshots WHERE user_id=$1 AND local_date=$2`, req.UserID, yesterday).Scan(&yesterdayStatus, &applied))
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT current_streak_count FROM streak_states WHERE user_id=$1`, req.UserID).Scan(&streak))
+	require.Zero(t, attempts)
+	require.Zero(t, keys)
+	require.Zero(t, points)
+	require.Equal(t, 1, graceRows, "the reconciliation debit rolls back")
+	require.Zero(t, step)
+	require.Zero(t, total)
+	require.Equal(t, 4, reviewsCompleted)
+	require.Equal(t, "missed", yesterdayStatus)
+	require.False(t, applied)
+	require.Equal(t, 4, streak)
+}
