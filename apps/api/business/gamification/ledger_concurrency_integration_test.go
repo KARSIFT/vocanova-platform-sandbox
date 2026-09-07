@@ -129,6 +129,7 @@ func TestProductionPointWritersSerializeAndRemainReplaySafePostgreSQL(t *testing
 		_, err := save.SaveUserWord(ctx, learning.SaveUserWordRequest{UserID: userID, MeaningID: saveMeaningID, Source: "manual", IdempotencyKey: "save-day-one"})
 		saved <- err
 	}()
+	firstWriterSleeping := false
 	deadline := time.Now().Add(3 * time.Second)
 	for time.Now().Before(deadline) {
 		var n int
@@ -137,10 +138,12 @@ func TestProductionPointWritersSerializeAndRemainReplaySafePostgreSQL(t *testing
 			  AND wait_event='PgSleep' AND query LIKE '%INSERT INTO confidence_point_ledger%'`, applicationName).Scan(&n)
 		require.NoError(t, err)
 		if n > 0 {
+			firstWriterSleeping = true
 			break
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
+	require.True(t, firstWriterSleeping, "first production writer did not reach the controlled ledger insert")
 	reviewed := make(chan error, 1)
 	go func() {
 		_, err := review.SubmitReview(ctx, reviews.SubmitReviewRequest{UserID: userID, UserWordID: reviewWordID, MeaningID: reviewMeaningID, AttemptType: reviews.AttemptTypeReview, PromptType: reviews.PromptTypeSelfCheck, Result: reviews.ResultCorrect, Rating: reviews.RatingGood, AnsweredAt: dayTwo, Source: reviews.SourceReview, ClientAttemptID: "review-day-two", IdempotencyKey: "review-day-two"})

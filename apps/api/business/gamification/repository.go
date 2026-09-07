@@ -351,9 +351,6 @@ func (r *Repository) GetLatestPointBalance(ctx context.Context, userID uuid.UUID
 	)
 	var balance int
 	if err := row.Scan(&balance); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return 0, nil
-		}
 		return 0, fmt.Errorf("fetch latest point balance: %w", err)
 	}
 	return balance, nil
@@ -384,9 +381,6 @@ func (r *Repository) GetLatestPointBalanceTx(ctx context.Context, tx *sql.Tx, us
 	)
 	var balance int
 	if err := row.Scan(&balance); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return 0, nil
-		}
 		return 0, fmt.Errorf("fetch latest point balance in transaction: %w", err)
 	}
 	return balance, nil
