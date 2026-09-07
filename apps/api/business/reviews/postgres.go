@@ -188,6 +188,9 @@ func (r *PostgreSQLRepository) GetReviewAttemptByClientAttemptID(ctx context.Con
 }
 
 func (r *PostgreSQLRepository) SubmitReview(ctx context.Context, req SubmitReviewRequest) (*ReviewAttempt, error) {
+	if req.IdempotencyKey == "" {
+		return nil, ErrIdempotencyKeyRequired
+	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("begin tx: %w", err)
@@ -214,6 +217,32 @@ func (r *PostgreSQLRepository) SubmitReview(ctx context.Context, req SubmitRevie
 		return nil, ErrUserWordNotFound
 	}
 
+	// Claim inside the existing transaction, after ownership validation and
+	// before any effects. The unique index waits for concurrent claimants; an
+	// active conflicting fingerprint must not reach scheduling or rewards.
+	now := r.clock.Now().UTC()
+	fingerprint := submitReviewFingerprint(req)
+	var storedFingerprint string
+	err = tx.QueryRowContext(ctx, `INSERT INTO idempotency_keys (id, user_id, operation, key, fingerprint, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		ON CONFLICT (user_id, operation, key) DO UPDATE
+		SET fingerprint = EXCLUDED.fingerprint, created_at = EXCLUDED.created_at
+		WHERE idempotency_keys.created_at <= $7
+		RETURNING fingerprint`, uuid.New(), req.UserID, operationSubmitReview, req.IdempotencyKey,
+		fingerprint, now, now.Add(-reviewIdempotencyRetention)).Scan(&storedFingerprint)
+	activeKey := errors.Is(err, sql.ErrNoRows)
+	if activeKey {
+		err = tx.QueryRowContext(ctx, `SELECT fingerprint FROM idempotency_keys
+			WHERE user_id = $1 AND operation = $2 AND key = $3 FOR UPDATE`,
+			req.UserID, operationSubmitReview, req.IdempotencyKey).Scan(&storedFingerprint)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("claim review idempotency: %w", err)
+	}
+	if activeKey && storedFingerprint != fingerprint {
+		return nil, ErrIdempotencyConflict
+	}
+
 	// Idempotency guard on (user_id, client_attempt_id).
 	existing, err := r.fetchAttemptByClientAttemptID(ctx, tx, req.UserID, req.ClientAttemptID)
 	if err != nil {
@@ -227,6 +256,9 @@ func (r *PostgreSQLRepository) SubmitReview(ctx context.Context, req SubmitRevie
 			return existing, nil
 		}
 		return nil, ErrIdempotencyConflict
+	}
+	if activeKey {
+		return nil, ErrReviewAttemptNotFound
 	}
 
 	prior := ReviewState{
@@ -248,7 +280,6 @@ func (r *PostgreSQLRepository) SubmitReview(ctx context.Context, req SubmitRevie
 	}
 
 	attemptID := uuid.New()
-	now := r.clock.Now().UTC()
 	selectedOpt := sql.NullString{}
 	if req.SelectedOptionMeaningID != nil {
 		selectedOpt = sql.NullString{String: req.SelectedOptionMeaningID.String(), Valid: true}

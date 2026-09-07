@@ -11,6 +11,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func expectReviewKeyClaim(mock sqlmock.Sqlmock) {
+	mock.ExpectQuery("INSERT INTO idempotency_keys").
+		WillReturnRows(sqlmock.NewRows([]string{"fingerprint"}).AddRow("claimed"))
+}
+
 func TestPostgreSQLRepositorySubmitReview(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
@@ -29,6 +34,7 @@ func TestPostgreSQLRepositorySubmitReview(t *testing.T) {
 		WithArgs(userWordID, userID).
 		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count"}).
 			AddRow(0, meaningID, 0, 0, 0, 0))
+	expectReviewKeyClaim(mock)
 	mock.ExpectQuery("SELECT ra.id, ra.user_word_id").
 		WithArgs(userID, "ca-1").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "user_word_id", "meaning_id", "attempt_type", "prompt_type", "result", "rating", "review_step_before", "review_step_after", "answered_at", "response_time_ms", "selected_option_meaning_id", "typed_answer", "was_hint_used", "source", "client_attempt_id", "metadata", "next_review_at"}))
@@ -52,6 +58,7 @@ func TestPostgreSQLRepositorySubmitReview(t *testing.T) {
 		ResponseTimeMs:  0,
 		Source:          SourceReview,
 		ClientAttemptID: "ca-1",
+		IdempotencyKey:  "review-test-key",
 	}
 	attempt, err := repo.SubmitReview(t.Context(), req)
 	require.NoError(t, err)
@@ -87,6 +94,7 @@ func TestPostgreSQLRepositorySubmitReviewUserWordNotFound(t *testing.T) {
 		Rating:          RatingGood,
 		AnsweredAt:      time.Now().UTC(),
 		ClientAttemptID: "ca",
+		IdempotencyKey:  "review-test-key",
 	})
 	assert.ErrorIs(t, err, ErrUserWordNotFound)
 	require.NoError(t, mock.ExpectationsWereMet())
@@ -120,6 +128,7 @@ func TestPostgreSQLRepositorySubmitReviewMeaningMismatch(t *testing.T) {
 		Rating:          RatingGood,
 		AnsweredAt:      time.Now().UTC(),
 		ClientAttemptID: "ca",
+		IdempotencyKey:  "review-test-key",
 	})
 	assert.ErrorIs(t, err, ErrUserWordNotFound)
 	require.NoError(t, mock.ExpectationsWereMet())
@@ -143,6 +152,7 @@ func TestPostgreSQLRepositorySubmitReviewIdempotencyConflict(t *testing.T) {
 		WithArgs(userWordID, userID).
 		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count"}).
 			AddRow(0, meaningID, 0, 0, 0, 0))
+	expectReviewKeyClaim(mock)
 	mock.ExpectQuery("SELECT ra.id, ra.user_word_id").
 		WithArgs(userID, "ca-1").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "user_word_id", "meaning_id", "attempt_type", "prompt_type", "result", "rating", "review_step_before", "review_step_after", "answered_at", "response_time_ms", "selected_option_meaning_id", "typed_answer", "was_hint_used", "source", "client_attempt_id", "metadata", "next_review_at"}).
@@ -160,6 +170,7 @@ func TestPostgreSQLRepositorySubmitReviewIdempotencyConflict(t *testing.T) {
 		AnsweredAt:      now,
 		Source:          SourceReview,
 		ClientAttemptID: "ca-1",
+		IdempotencyKey:  "review-test-key",
 	}
 	// Same client_attempt_id with same body is idempotent, so alter the rating.
 	req.Rating = RatingEasy

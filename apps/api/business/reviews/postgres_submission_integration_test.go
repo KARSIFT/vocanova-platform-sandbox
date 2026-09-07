@@ -30,6 +30,11 @@ func TestPostgreSQLSubmitReviewAnchorsScheduleToServerClock(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 	_, err = db.ExecContext(ctx, `
+		CREATE TEMP TABLE idempotency_keys (
+			id uuid PRIMARY KEY, user_id uuid NOT NULL, operation text NOT NULL,
+			key text NOT NULL, fingerprint text NOT NULL, created_at timestamptz NOT NULL,
+			UNIQUE(user_id, operation, key)
+		);
 		CREATE TEMP TABLE user_words (
 			id uuid PRIMARY KEY, user_id uuid NOT NULL, meaning_id uuid NOT NULL,
 			review_step integer NOT NULL, total_review_count integer NOT NULL,

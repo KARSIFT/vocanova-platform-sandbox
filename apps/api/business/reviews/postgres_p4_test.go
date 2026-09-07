@@ -93,6 +93,7 @@ func TestPostgreSQLRepositorySubmitReviewP4NilDependenciesNoP4Wiring(t *testing.
 		WithArgs(userWordID, userID).
 		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count"}).
 			AddRow(0, meaningID, 0, 0, 0, 0))
+	expectReviewKeyClaim(mock)
 	mock.ExpectQuery("SELECT ra.id, ra.user_word_id").
 		WithArgs(userID, "ca-1").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "user_word_id", "meaning_id", "attempt_type", "prompt_type", "result", "rating", "review_step_before", "review_step_after", "answered_at", "response_time_ms", "selected_option_meaning_id", "typed_answer", "was_hint_used", "source", "client_attempt_id", "metadata", "next_review_at"}))
@@ -116,6 +117,7 @@ func TestPostgreSQLRepositorySubmitReviewP4NilDependenciesNoP4Wiring(t *testing.
 		ResponseTimeMs:  0,
 		Source:          SourceReview,
 		ClientAttemptID: "ca-1",
+		IdempotencyKey:  "review-test-key",
 	}
 	attempt, err := repo.SubmitReview(t.Context(), req)
 	require.NoError(t, err)
@@ -158,6 +160,7 @@ func TestPostgreSQLRepositorySubmitReviewP4RatingGoodWiring(t *testing.T) {
 		WithArgs(userWordID, userID).
 		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count"}).
 			AddRow(0, meaningID, 0, 0, 0, 0))
+	expectReviewKeyClaim(mock)
 	mock.ExpectQuery("SELECT ra.id, ra.user_word_id").
 		WithArgs(userID, "ca-1").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "user_word_id", "meaning_id", "attempt_type", "prompt_type", "result", "rating", "review_step_before", "review_step_after", "answered_at", "response_time_ms", "selected_option_meaning_id", "typed_answer", "was_hint_used", "source", "client_attempt_id", "metadata", "next_review_at"}))
@@ -243,6 +246,7 @@ func TestPostgreSQLRepositorySubmitReviewP4RatingGoodWiring(t *testing.T) {
 		ResponseTimeMs:  0,
 		Source:          SourceReview,
 		ClientAttemptID: "ca-1",
+		IdempotencyKey:  "review-test-key",
 	}
 	attempt, err := repo.SubmitReview(t.Context(), req)
 	require.NoError(t, err)
@@ -281,6 +285,7 @@ func TestPostgreSQLRepositorySubmitReviewP4MissionCompletion(t *testing.T) {
 		WithArgs(userWordID, userID).
 		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count"}).
 			AddRow(0, meaningID, 0, 0, 0, 0))
+	expectReviewKeyClaim(mock)
 	mock.ExpectQuery("SELECT ra.id, ra.user_word_id").
 		WithArgs(userID, "ca-20").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "user_word_id", "meaning_id", "attempt_type", "prompt_type", "result", "rating", "review_step_before", "review_step_after", "answered_at", "response_time_ms", "selected_option_meaning_id", "typed_answer", "was_hint_used", "source", "client_attempt_id", "metadata", "next_review_at"}))
@@ -388,6 +393,7 @@ func TestPostgreSQLRepositorySubmitReviewP4MissionCompletion(t *testing.T) {
 		ResponseTimeMs:  0,
 		Source:          SourceReview,
 		ClientAttemptID: "ca-20",
+		IdempotencyKey:  "review-test-key",
 	}
 	attempt, err := repo.SubmitReview(t.Context(), req)
 	require.NoError(t, err)
@@ -424,6 +430,7 @@ func TestPostgreSQLRepositorySubmitReviewP4SkippedNoRatingReward(t *testing.T) {
 		WithArgs(userWordID, userID).
 		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count"}).
 			AddRow(0, meaningID, 0, 0, 0, 0))
+	expectReviewKeyClaim(mock)
 	mock.ExpectQuery("SELECT ra.id, ra.user_word_id").
 		WithArgs(userID, "ca-skip").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "user_word_id", "meaning_id", "attempt_type", "prompt_type", "result", "rating", "review_step_before", "review_step_after", "answered_at", "response_time_ms", "selected_option_meaning_id", "typed_answer", "was_hint_used", "source", "client_attempt_id", "metadata", "next_review_at"}))
@@ -488,6 +495,7 @@ func TestPostgreSQLRepositorySubmitReviewP4SkippedNoRatingReward(t *testing.T) {
 		ResponseTimeMs:  0,
 		Source:          SourceReview,
 		ClientAttemptID: "ca-skip",
+		IdempotencyKey:  "review-test-key",
 	}
 	attempt, err := repo.SubmitReview(t.Context(), req)
 	require.NoError(t, err)
@@ -525,6 +533,7 @@ func TestPostgreSQLRepositorySubmitReviewP4IdempotentMatchNoP4Wiring(t *testing.
 		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count"}).
 			AddRow(0, meaningID, 0, 0, 0, 0))
 	// fetchAttemptByClientAttemptID returns the existing attempt (same body).
+	expectReviewKeyClaim(mock)
 	mock.ExpectQuery("SELECT ra.id, ra.user_word_id").
 		WithArgs(userID, "ca-1").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "user_word_id", "meaning_id", "attempt_type", "prompt_type", "result", "rating", "review_step_before", "review_step_after", "answered_at", "response_time_ms", "selected_option_meaning_id", "typed_answer", "was_hint_used", "source", "client_attempt_id", "metadata", "next_review_at"}).
@@ -544,6 +553,7 @@ func TestPostgreSQLRepositorySubmitReviewP4IdempotentMatchNoP4Wiring(t *testing.
 		AnsweredAt:      now,
 		Source:          SourceReview,
 		ClientAttemptID: "ca-1",
+		IdempotencyKey:  "review-test-key",
 	}
 	attempt, err := repo.SubmitReview(t.Context(), req)
 	require.NoError(t, err)
@@ -582,6 +592,7 @@ func TestPostgreSQLRepositorySubmitReviewP4AlreadyCompletedSnapshotNoDoubleRewar
 		WithArgs(userWordID, userID).
 		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count"}).
 			AddRow(0, meaningID, 0, 0, 0, 0))
+	expectReviewKeyClaim(mock)
 	mock.ExpectQuery("SELECT ra.id, ra.user_word_id").
 		WithArgs(userID, "ca-2nd").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "user_word_id", "meaning_id", "attempt_type", "prompt_type", "result", "rating", "review_step_before", "review_step_after", "answered_at", "response_time_ms", "selected_option_meaning_id", "typed_answer", "was_hint_used", "source", "client_attempt_id", "metadata", "next_review_at"}))
@@ -661,6 +672,7 @@ func TestPostgreSQLRepositorySubmitReviewP4AlreadyCompletedSnapshotNoDoubleRewar
 		ResponseTimeMs:  0,
 		Source:          SourceReview,
 		ClientAttemptID: "ca-2nd",
+		IdempotencyKey:  "review-test-key",
 	}
 	attempt, err := repo.SubmitReview(t.Context(), req)
 	require.NoError(t, err)

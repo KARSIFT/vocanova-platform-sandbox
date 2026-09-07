@@ -17,6 +17,12 @@ type MemoryRepository struct {
 	meanings  []MemoryMeaning
 	words     []MemoryWord
 	attempts  []MemoryReviewAttempt
+	keys      map[string]reviewMemoryKey
+}
+
+type reviewMemoryKey struct {
+	fingerprint string
+	createdAt   time.Time
 }
 
 // MemoryUserWord is an in-memory user_words row for tests.
@@ -257,6 +263,37 @@ func (r *MemoryRepository) GetReviewAttemptByClientAttemptID(ctx context.Context
 func (r *MemoryRepository) SubmitReview(ctx context.Context, req SubmitReviewRequest) (*ReviewAttempt, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if req.IdempotencyKey == "" {
+		return nil, ErrIdempotencyKeyRequired
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	now := req.scheduledAt
+	if now.IsZero() {
+		now = time.Now().UTC()
+	}
+	key := req.UserID.String() + ":" + req.IdempotencyKey
+	fingerprint := submitReviewFingerprint(req)
+	entry, active := r.keys[key]
+	active = active && entry.createdAt.After(now.Add(-reviewIdempotencyRetention))
+	if active && entry.fingerprint != fingerprint {
+		return nil, ErrIdempotencyConflict
+	}
+	attempt, err := r.submitReviewLocked(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if !active {
+		if r.keys == nil {
+			r.keys = make(map[string]reviewMemoryKey)
+		}
+		r.keys[key] = reviewMemoryKey{fingerprint: fingerprint, createdAt: now}
+	}
+	return attempt, nil
+}
+
+func (r *MemoryRepository) submitReviewLocked(ctx context.Context, req SubmitReviewRequest) (*ReviewAttempt, error) {
 
 	// Check for an existing attempt by (user_id, client_attempt_id).
 	for i, a := range r.attempts {
