@@ -44,6 +44,12 @@ async function expectMinimumTouchHeight(locator: Locator) {
   );
 }
 
+async function expectNoHorizontalOverflow(page: Page) {
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(page.viewportSize()!.width);
+}
+
 test.describe("Review touch targets", () => {
   test("self-check reveal and rating controls meet the 44px minimum", async ({
     page,
@@ -60,6 +66,7 @@ test.describe("Review touch targets", () => {
         page.getByRole("button", { name: rating }),
       );
     }
+    await expectNoHorizontalOverflow(page);
   });
 
   test("multiple-choice answers and the incorrect-answer continuation meet the 44px minimum", async ({
@@ -80,5 +87,28 @@ test.describe("Review touch targets", () => {
     await expectMinimumTouchHeight(
       page.getByRole("button", { name: "Continue" }),
     );
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test("retrying a failed queue refresh meets the 44px minimum", async ({
+    page,
+  }, testInfo) => {
+    await seedReviewFixture(page, 1, testInfo);
+    await page.goto("/reviews");
+    await page.getByRole("button", { name: "Show answer" }).click();
+
+    await page.route("**/api/v1/reviews/due?limit=50", async (route) => {
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "temporary_failure" }),
+      });
+    });
+    await page.getByRole("button", { name: "Good" }).click();
+
+    await expectMinimumTouchHeight(
+      page.getByRole("button", { name: "Retry loading reviews" }),
+    );
+    await expectNoHorizontalOverflow(page);
   });
 });
