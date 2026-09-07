@@ -704,7 +704,10 @@ func reviewAttemptEqualsRequest(a *ReviewAttempt, req SubmitReviewRequest) bool 
 	if a.ResponseTimeMs != req.ResponseTimeMs || a.WasHintUsed != req.WasHintUsed || a.Source != req.Source {
 		return false
 	}
-	if !a.AnsweredAt.Equal(req.AnsweredAt) {
+	// PostgreSQL timestamptz persists microsecond precision while the API
+	// accepts RFC3339 nanoseconds. Compare at the database's precision so an
+	// exact retry of a persisted request remains a replay.
+	if !postgresTimestampEqual(a.AnsweredAt, req.AnsweredAt) {
 		return false
 	}
 	if !ptrUUIDEqual(a.SelectedOptionMeaningID, req.SelectedOptionMeaningID) {
@@ -714,4 +717,21 @@ func reviewAttemptEqualsRequest(a *ReviewAttempt, req SubmitReviewRequest) bool 
 		return false
 	}
 	return true
+}
+
+// postgresTimestampEqual reproduces PostgreSQL's microsecond timestamp
+// rounding, including its round-half-to-even behavior. time.Time.Round rounds
+// half away from zero and would reject exact retries at .500 or .2500µs.
+func postgresTimestampEqual(a, b time.Time) bool {
+	return postgresTimestamp(a).Equal(postgresTimestamp(b))
+}
+
+func postgresTimestamp(t time.Time) time.Time {
+	t = t.UTC()
+	microseconds := t.Nanosecond() / int(time.Microsecond)
+	remainder := t.Nanosecond() % int(time.Microsecond)
+	if remainder > 500 || (remainder == 500 && microseconds%2 != 0) {
+		microseconds++
+	}
+	return t.Truncate(time.Second).Add(time.Duration(microseconds) * time.Microsecond)
 }

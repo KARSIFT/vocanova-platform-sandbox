@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/learning"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/missions"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/google/uuid"
@@ -208,4 +209,88 @@ func TestReviewKeyTransactionPostgreSQL(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, first.ID, replayed.ID)
 	})
+}
+
+// TestReviewKeyFingerprintCollisionPostgreSQL exercises the production service
+// arrangement, where PostgreSQLIdempotencyStore.Check can match a legacy
+// fingerprint before the repository's transactional replay guard runs.
+func TestReviewKeyFingerprintCollisionPostgreSQL(t *testing.T) {
+	db := reviewKeyDB(t)
+	ctx, cancel := context.WithTimeout(t.Context(), 45*time.Second)
+	defer cancel()
+	c := &clock.Fixed{T: time.Now().UTC().Truncate(time.Microsecond)}
+	gam := gamification.NewService(gamification.NewRepository(db))
+	repo := NewPostgreSQLRepository(db, c,
+		WithGamificationService(gam),
+		WithMissionsService(missions.NewService(missions.NewRepository(db), gam)),
+	)
+	svc := NewService(repo, learning.NewPostgreSQLIdempotencyStore(db), c)
+
+	first := seedReviewKeyRequest(t, db, c.T)
+	first.AnsweredAt = first.AnsweredAt.Add(123 * time.Nanosecond)
+	selected := first.MeaningID
+	first.SelectedOptionMeaningID = &selected
+	created, err := svc.SubmitReview(ctx, first)
+	require.NoError(t, err)
+
+	type effects struct {
+		attempts, ledger, total, step int
+		keyCreatedAt                  time.Time
+	}
+	readEffects := func() effects {
+		var got effects
+		require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM review_attempts WHERE user_id=$1`, first.UserID).Scan(&got.attempts))
+		require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM confidence_point_ledger WHERE user_id=$1`, first.UserID).Scan(&got.ledger))
+		require.NoError(t, db.QueryRowContext(ctx, `SELECT total_review_count, review_step FROM user_words WHERE id=$1`, first.UserWordID).Scan(&got.total, &got.step))
+		require.NoError(t, db.QueryRowContext(ctx, `SELECT created_at FROM idempotency_keys WHERE user_id=$1 AND operation=$2 AND key=$3`, first.UserID, operationSubmitReview, first.IdempotencyKey).Scan(&got.keyCreatedAt))
+		return got
+	}
+	before := readEffects()
+
+	// These valid self-check requests share the legacy concatenated fingerprint:
+	// selected UUID X + nil typed answer versus nil selected option + typed X.
+	colliding := first
+	colliding.SelectedOptionMeaningID = nil
+	typed := selected.String()
+	colliding.TypedAnswer = &typed
+	_, err = svc.SubmitReview(ctx, colliding)
+	require.ErrorIs(t, err, ErrIdempotencyConflict)
+	require.Equal(t, before, readEffects(), "a rejected collision must not apply second effects")
+
+	// Exact legacy-fingerprint replay remains a replay and cannot extend its
+	// stored 24-hour retention window.
+	replayed, err := svc.SubmitReview(ctx, first)
+	require.NoError(t, err)
+	require.Equal(t, created.ID, replayed.ID)
+	require.Equal(t, before, readEffects(), "matching replay must not apply effects or slide key age")
+
+	// PostgreSQL rounds timestamptz values to microseconds. Both sides of the
+	// boundary must preserve exact-request replay compatibility.
+	for _, tc := range []struct {
+		offset, persistedOffset time.Duration
+	}{
+		{offset: 500 * time.Nanosecond, persistedOffset: 0},
+		{offset: 999 * time.Nanosecond, persistedOffset: time.Microsecond},
+		{offset: 1001 * time.Nanosecond, persistedOffset: time.Microsecond},
+		{offset: 1500 * time.Nanosecond, persistedOffset: 2 * time.Microsecond},
+		{offset: 2500 * time.Nanosecond, persistedOffset: 2 * time.Microsecond},
+	} {
+		t.Run("nanosecond input is replayable", func(t *testing.T) {
+			req := seedReviewKeyRequest(t, db, c.T)
+			req.AnsweredAt = req.AnsweredAt.Add(tc.offset)
+			created, err := svc.SubmitReview(ctx, req)
+			require.NoError(t, err)
+			persisted, err := repo.GetReviewAttemptByClientAttemptID(ctx, req.UserID, req.ClientAttemptID)
+			require.NoError(t, err)
+			require.True(t, c.T.Add(tc.persistedOffset).Equal(persisted.AnsweredAt), "PostgreSQL must retain its microsecond-rounded instant")
+			replayed, err := svc.SubmitReview(ctx, req)
+			require.NoError(t, err)
+			require.Equal(t, created.ID, replayed.ID)
+		})
+	}
+
+	changedTime := first
+	changedTime.AnsweredAt = changedTime.AnsweredAt.Add(time.Microsecond)
+	_, err = svc.SubmitReview(ctx, changedTime)
+	require.ErrorIs(t, err, ErrIdempotencyConflict, "a materially different timestamp is not a replay")
 }
