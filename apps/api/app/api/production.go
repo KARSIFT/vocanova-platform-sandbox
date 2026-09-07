@@ -88,6 +88,11 @@ type ProductionConfig struct {
 	// normalized at load time because every comparison against it
 	// happens on already-normalized addresses.
 	SyntheticSmokeTestEmail string
+
+	// AccountDeletionSweepInterval is the cadence at which a production API
+	// process checks for due staged-deletion requests. The sweep itself uses
+	// database claims, so running it in more than one replica is safe.
+	AccountDeletionSweepInterval time.Duration
 }
 
 // AI-provider identifiers and per-provider connection defaults.
@@ -198,6 +203,7 @@ func LoadProductionConfig() (ProductionConfig, error) {
 			getenv("VOCANOVA_SYNTHETIC_SMOKE_TEST_EMAIL", defaultSyntheticSmokeTestEmail),
 		),
 	}
+	cfg.AccountDeletionSweepInterval = getenvDuration("ACCOUNT_DELETION_SWEEP_INTERVAL", time.Hour)
 
 	if cfg.DatabaseURL == "" {
 		return cfg, errors.New("DATABASE_URL is required")
