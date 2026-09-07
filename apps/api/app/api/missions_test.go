@@ -287,7 +287,7 @@ func TestGetProgressReturnsBalanceStreakAndHistory(t *testing.T) {
 	// getSettings → no user_settings row.
 	expectGetUserSettings(mock, userID, nil)
 	// CurrentBalance.
-	mock.ExpectQuery("SELECT balance_after FROM confidence_point_ledger").
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM confidence_point_ledger").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(42))
 	// loadStreakAndGrace → GetStreakStateForRead.
@@ -345,9 +345,9 @@ func TestGetProgressEmptyHistory(t *testing.T) {
 	api, _, mock := newMissionsTestAPI(t)
 
 	expectGetUserSettings(mock, userID, nil)
-	mock.ExpectQuery("SELECT balance_after FROM confidence_point_ledger").
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM confidence_point_ledger").
 		WithArgs(userID).
-		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}))
+		WillReturnRows(sqlmock.NewRows([]string{"sum"}).AddRow(0))
 	mock.ExpectQuery("SELECT user_id, current_streak_count, longest_streak_count").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{
@@ -422,7 +422,7 @@ func TestGetProgressSharedStreakObjectAgreesWithGetDailyMission(t *testing.T) {
 
 	// GetProgress flow.
 	expectGetUserSettings(mock, userID, nil)
-	mock.ExpectQuery("SELECT balance_after FROM confidence_point_ledger").
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM confidence_point_ledger").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(100))
 	mock.ExpectQuery("SELECT user_id, current_streak_count, longest_streak_count").

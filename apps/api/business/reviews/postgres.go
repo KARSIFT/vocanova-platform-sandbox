@@ -441,7 +441,7 @@ func (r *PostgreSQLRepository) applyP4ReviewWiring(
 	// prices only Again/Hard/Good/Easy, all of which require a rating)
 	// but the activity counter above already recorded the attempt.
 	if !skipped {
-		balance, err := getLatestPointBalanceTx(ctx, tx, req.UserID)
+		balance, err := r.gamification.CurrentBalanceTx(ctx, tx, req.UserID)
 		if err != nil {
 			return fmt.Errorf("get latest point balance: %w", err)
 		}
@@ -473,7 +473,7 @@ func (r *PostgreSQLRepository) applyP4ReviewWiring(
 		}
 		if completed {
 			missionCompletedNow = true
-			balance, err := getLatestPointBalanceTx(ctx, tx, req.UserID)
+			balance, err := r.gamification.CurrentBalanceTx(ctx, tx, req.UserID)
 			if err != nil {
 				return fmt.Errorf("get latest point balance: %w", err)
 			}
@@ -591,31 +591,9 @@ func (r *PostgreSQLRepository) fetchStreakSnapshotsTx(ctx context.Context, tx *s
 	return out, nil
 }
 
-// getLatestPointBalanceTx reads the user's current confidence-point balance
-// inside the caller's tx so the rating-tiered reward grant and the
-// daily-mission completion grant see the post-write value (re-using the
-// same connection-scoped snapshot, avoiding the @@race window that the
-// pre-existing GetLatestPointBalance context-based read would open).
-func getLatestPointBalanceTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID) (int, error) {
-	row := tx.QueryRowContext(ctx,
-		`SELECT COALESCE(balance_after, 0) FROM confidence_point_ledger
-		 WHERE user_id = $1
-		 ORDER BY occurred_at DESC, id DESC
-		 LIMIT 1`,
-		userID,
-	)
-	var balance int
-	if err := row.Scan(&balance); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return 0, nil
-		}
-		return 0, fmt.Errorf("fetch latest point balance: %w", err)
-	}
-	return balance, nil
-}
-
 // getLatestGraceBalanceTx reads the user's current grace-day balance inside
-// the caller's tx (see getLatestPointBalanceTx for the rationale).
+// the caller's tx. Confidence Points use gamification.CurrentBalanceTx,
+// which additionally serializes same-user awards before reading the ledger sum.
 func getLatestGraceBalanceTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID) (int, error) {
 	row := tx.QueryRowContext(ctx,
 		`SELECT COALESCE(balance_after, 0) FROM grace_day_ledger

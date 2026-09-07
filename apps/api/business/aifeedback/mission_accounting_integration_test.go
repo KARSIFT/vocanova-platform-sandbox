@@ -151,6 +151,11 @@ func TestProductionFeedbackMissionAccountingAtomicPostgreSQL(t *testing.T) {
 	require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*), sum(amount) FROM confidence_point_ledger WHERE user_id=$1`, userID).Scan(&awards, &points))
 	require.Equal(t, 2, awards)
 	require.Equal(t, gamification.RewardSentenceSubmitted+gamification.RewardAIFeedbackGot, points)
+	// Both awards deliberately share one updater clock value. Progress must
+	// still report their exact sum rather than selecting one random UUID row.
+	displayed, err := gam.CurrentBalance(ctx, userID)
+	require.NoError(t, err)
+	require.Equal(t, points, displayed)
 	require.NoError(t, db.QueryRowContext(ctx, `SELECT sentences_submitted, ai_feedback_received, confidence_points_earned FROM daily_activity_summaries WHERE user_id=$1`, userID).Scan(&submitted, &received, &earned))
 	require.Equal(t, 1, submitted)
 	require.Equal(t, 1, received)

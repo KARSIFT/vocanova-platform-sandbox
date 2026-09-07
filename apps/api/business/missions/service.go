@@ -400,8 +400,8 @@ func (u *MissionUpdater) updateForSentence(ctx context.Context, tx *sql.Tx, user
 		return false, err
 	}
 
-	// Current balance from the latest ledger row.
-	balance, err := u.gamification.CurrentBalance(ctx, userID)
+	// Lock and read the current balance inside this award transaction.
+	balance, err := u.gamification.CurrentBalanceTx(ctx, tx, userID)
 	if err != nil {
 		return false, err
 	}
