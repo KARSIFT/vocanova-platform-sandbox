@@ -17,24 +17,28 @@ import {
 } from "./axe-helper.js";
 
 test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
-  test("Settings is reachable from the authenticated header at 360px", async ({
+  test("Settings is reachable from the authenticated header", async ({
     page,
-  }, testInfo) => {
-    test.skip(
-      testInfo.project.name !== "mobile-360",
-      "The navigation regression is specifically exercised at the minimum supported mobile width.",
-    );
-
-    await page.goto("/home");
-
+  }) => {
+    for (const route of ["/home", "/discover", "/progress"]) {
+      await page.goto(route);
+      await expect(page.getByRole("link", { name: "Settings" })).toBeVisible();
+      await expect(
+        page.getByRole("navigation", { name: "Primary" }).getByRole("link"),
+      ).toHaveText(["Home", "Journey", "Progress"]);
+    }
     const settingsLink = page.getByRole("link", { name: "Settings" });
     await expect(settingsLink).toBeVisible();
     await expect(settingsLink).toHaveCSS("min-height", "44px");
 
-    const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
-    expect(documentWidth).toBeLessThanOrEqual(360);
+    const documentWidth = await page.evaluate(
+      () => document.documentElement.scrollWidth,
+    );
+    expect(documentWidth).toBeLessThanOrEqual(page.viewportSize()!.width);
 
-    await settingsLink.click();
+    await page.keyboard.press("Tab");
+    await expect(settingsLink).toBeFocused();
+    await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/settings$/);
     await expect(
       page.getByRole("heading", { name: "Settings", level: 1 }),
