@@ -9,6 +9,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"net/http"
@@ -18,6 +19,8 @@ import (
 	"time"
 
 	contract "github.com/KARSIFT/vocanova-platform/apps/api/app/api"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/auth"
+	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/getsentry/sentry-go"
 	sentryhttp "github.com/getsentry/sentry-go/http"
 )
@@ -62,6 +65,20 @@ func run() error {
 		return fmt.Errorf("build api: %w", err)
 	}
 	defer db.Close()
+
+	// Auth.Cleanup owns the bounded deletion of expired sessions, magic links,
+	// and OAuth states. It has no HTTP caller, so run it independently of
+	// request traffic and stop it before releasing the database on shutdown.
+	cleanupCtx, cancelCleanup := context.WithCancel(context.Background())
+	cleanupDone := make(chan struct{})
+	go func() {
+		defer close(cleanupDone)
+		runAuthCleanupLoop(cleanupCtx, newAuthCleanupService(db), cfg.AuthCleanupInterval)
+	}()
+	defer func() {
+		cancelCleanup()
+		<-cleanupDone
+	}()
 
 	// Real unhandled errors/panics from any request, not just the
 	// deliberate VOC-037-T04 test endpoint, must reach Sentry - the
@@ -120,4 +137,41 @@ func boolFlag(b bool) string {
 		return "on"
 	}
 	return "off"
+}
+
+type authCleaner interface {
+	Cleanup(context.Context) error
+}
+
+// newAuthCleanupService builds the narrow production service instance used by
+// the cleanup loop. Cleanup only needs the PostgreSQL repository and clock;
+// delivery, OAuth, and request-rate-limit collaborators are not involved.
+func newAuthCleanupService(db *sql.DB) authCleaner {
+	return auth.NewService(auth.NewPostgreSQLRepository(db), nil, nil, clock.Real{}, nil, auth.Config{})
+}
+
+// runAuthCleanupLoop cleans once at startup, then at the configured cadence.
+// A failed pass is logged without credential or learner data and a later pass
+// retries it. Cancellation stops the ticker promptly during shutdown.
+func runAuthCleanupLoop(ctx context.Context, cleaner authCleaner, interval time.Duration) {
+	if interval <= 0 {
+		interval = time.Hour
+	}
+	run := func() {
+		if err := cleaner.Cleanup(ctx); err != nil {
+			fmt.Fprintf(os.Stderr, "api: auth cleanup failed: %v\n", err)
+		}
+	}
+
+	run()
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			run()
+		}
+	}
 }

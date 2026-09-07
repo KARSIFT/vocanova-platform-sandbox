@@ -129,6 +129,7 @@ func TestLoadProductionConfig_DefaultsAreSensible(t *testing.T) {
 	cfg, err := LoadProductionConfig()
 	require.NoError(t, err)
 	assert.Equal(t, "8080", cfg.Port, "PORT must default to 8080 when unset")
+	assert.Equal(t, time.Hour, cfg.AuthCleanupInterval, "AUTH_CLEANUP_INTERVAL must default to one hour when unset")
 	assert.Equal(t, "staging", cfg.Environment, "ENVIRONMENT must default to staging when unset")
 	assert.True(t, cfg.AIEnabled, "AI_FEATURES_ENABLED must default to true when unset")
 	assert.True(t, cfg.MagicLinkOn, "EMAIL_MAGIC_LINK_ENABLED must default to true when unset")

@@ -1,8 +1,43 @@
 package main
 
 import (
+	"context"
+	"sync/atomic"
 	"testing"
+	"time"
 )
+
+type fakeAuthCleaner struct{ calls atomic.Int32 }
+
+func (f *fakeAuthCleaner) Cleanup(context.Context) error {
+	f.calls.Add(1)
+	return nil
+}
+
+func TestRunAuthCleanupLoopRunsImmediatelyAndStopsOnCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cleaner := &fakeAuthCleaner{}
+	done := make(chan struct{})
+	go func() {
+		runAuthCleanupLoop(ctx, cleaner, time.Hour)
+		close(done)
+	}()
+
+	deadline := time.After(time.Second)
+	for cleaner.calls.Load() == 0 {
+		select {
+		case <-deadline:
+			t.Fatal("auth cleanup did not run at startup")
+		case <-time.After(time.Millisecond):
+		}
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("auth cleanup loop did not stop after cancellation")
+	}
+}
 
 // TestRun_RejectsMissingDatabaseURL covers the first
 // config-load safety property: a process started with no

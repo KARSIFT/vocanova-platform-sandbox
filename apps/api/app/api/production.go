@@ -88,6 +88,10 @@ type ProductionConfig struct {
 	// normalized at load time because every comparison against it
 	// happens on already-normalized addresses.
 	SyntheticSmokeTestEmail string
+
+	// AuthCleanupInterval is the cadence for deleting expired authentication
+	// artifacts. It is intentionally a lightweight in-process MVP job.
+	AuthCleanupInterval time.Duration
 }
 
 // AI-provider identifiers and per-provider connection defaults.
@@ -198,6 +202,7 @@ func LoadProductionConfig() (ProductionConfig, error) {
 			getenv("VOCANOVA_SYNTHETIC_SMOKE_TEST_EMAIL", defaultSyntheticSmokeTestEmail),
 		),
 	}
+	cfg.AuthCleanupInterval = getenvDuration("AUTH_CLEANUP_INTERVAL", time.Hour)
 
 	if cfg.DatabaseURL == "" {
 		return cfg, errors.New("DATABASE_URL is required")
