@@ -453,3 +453,64 @@ func TestSaveUserWordRecordsDailyActivityPostgreSQL(t *testing.T) {
 		require.Zerof(t, count, "rollback left %s rows", table)
 	}
 }
+
+// TestSaveUserWordSameMeaningConcurrentFirstSavesPostgreSQL keeps two
+// independently-idempotent requests for one first save from escaping the
+// active-row uniqueness boundary as a database error. The trigger makes the
+// overlap deterministic; the all-migrations schema exercises the P4 activity
+// writes as well as user_words' partial unique index.
+func TestSaveUserWordSameMeaningConcurrentFirstSavesPostgreSQL(t *testing.T) {
+	db := migratedWordActivityDB(t)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
+	userID, wordID, meaningID := uuid.New(), uuid.New(), uuid.New()
+	_, err := db.ExecContext(ctx,
+		`INSERT INTO users (id, email, status, onboarding_status, created_at, updated_at)
+		 VALUES ($1, $2, 'active', 'completed', $3, $3)`, userID, userID.String()+"@example.test", now)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx,
+		`INSERT INTO canonical_words (id, text, normalized_text, status, created_at, updated_at)
+		 VALUES ($1, $2, $2, 'active', $3, $3)`, wordID, wordID.String(), now)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx,
+		`INSERT INTO word_meanings (id, word_id, part_of_speech, short_definition, meaning_order, status, created_at, updated_at)
+		 VALUES ($1, $2, 'noun', 'fixture', 1, 'active', $3, $3)`, meaningID, wordID, now)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, `CREATE FUNCTION hold_first_word_insert() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN PERFORM pg_sleep(0.15); RETURN NEW; END $$; CREATE TRIGGER hold_first_word_insert BEFORE INSERT ON user_words FOR EACH ROW EXECUTE FUNCTION hold_first_word_insert();`)
+	require.NoError(t, err)
+
+	gam := gamification.NewService(gamification.NewRepository(db))
+	missionSvc := missions.NewService(missions.NewRepository(db), gam)
+	svc := NewService(NewPostgreSQLRepository(db, gam, missionSvc), nil, &clock.Fixed{T: now})
+	ready, start, errs := make(chan struct{}, 2), make(chan struct{}), make(chan error, 2)
+	var wg sync.WaitGroup
+	for _, key := range []string{"same-meaning-a", "same-meaning-b"} {
+		wg.Add(1)
+		go func(key string) {
+			defer wg.Done()
+			ready <- struct{}{}
+			<-start
+			_, err := svc.SaveUserWord(ctx, SaveUserWordRequest{UserID: userID, MeaningID: meaningID, Source: "manual", IdempotencyKey: key})
+			errs <- err
+		}(key)
+	}
+	<-ready
+	<-ready
+	close(start)
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		require.NoError(t, err)
+	}
+
+	var words, points, ledger int
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM user_words WHERE user_id = $1`, userID).Scan(&words))
+	require.NoError(t, db.QueryRowContext(ctx,
+		`SELECT confidence_points_earned FROM daily_activity_summaries WHERE user_id = $1 AND local_date = $2`, userID, now.Format("2006-01-02"),
+	).Scan(&points))
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM confidence_point_ledger WHERE user_id = $1`, userID).Scan(&ledger))
+	require.Equal(t, 1, words)
+	require.Equal(t, gamification.RewardAddWord, points)
+	require.Equal(t, 1, ledger)
+}

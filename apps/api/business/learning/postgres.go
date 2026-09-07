@@ -111,6 +111,21 @@ func (r *PostgreSQLRepository) SaveUserWordAtomically(ctx context.Context, req S
 }
 
 func (r *PostgreSQLRepository) saveUserWordTx(ctx context.Context, tx *sql.Tx, req SaveUserWordRequest, now time.Time, readSavedMeaning bool) (*SavedMeaning, error) {
+	// The partial active-row unique index prevents duplicate persistence, but it
+	// cannot make two concurrent first saves return the same idempotent result:
+	// both transactions can observe no row before either INSERT commits. The P4
+	// production path serializes that observation and mutation by user+meaning,
+	// so the waiter re-reads the winner's active row rather than surfacing a
+	// unique-constraint error after its idempotency claim.
+	if r.missions != nil {
+		if _, err := tx.ExecContext(ctx,
+			`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
+			req.UserID.String()+":"+req.MeaningID.String(),
+		); err != nil {
+			return nil, fmt.Errorf("lock user word: %w", err)
+		}
+	}
+
 	var meaningID uuid.UUID
 	if err := tx.QueryRowContext(ctx,
 		`SELECT wm.id
