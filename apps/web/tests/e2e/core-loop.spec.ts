@@ -291,13 +291,13 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     await expect(page.getByRole("button", { name: "Good" })).toBeVisible();
     await page.getByRole("button", { name: "Good" }).click();
 
-    // "All caught up" empty state with a sentence-feedback
-    // widget for the just-reviewed card. Issue #1181 (PRD §2),
-    // entry point 3 of 3: SentenceFeedback surfaced from Review
-    // Completion (see review-session.tsx's `completed` branch).
+    // DOC-03 §4 requires Review Completion to surface a summary and
+    // offer sentence practice. The one submitted card was confirmed
+    // by the mock API, so it must be counted once here.
     await expect(
-      page.getByRole("heading", { name: "You're all caught up", level: 2 }),
+      page.getByRole("heading", { name: "Review complete", level: 2 }),
     ).toBeVisible();
+    await expect(page.getByText("You reviewed 1 word.")).toBeVisible();
     await expect(
       page.getByRole("heading", { name: /Practice with pour/ }),
     ).toBeVisible();

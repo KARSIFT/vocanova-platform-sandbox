@@ -32,6 +32,7 @@ test.describe("Reviews accessibility (VOC-031-T07b)", () => {
     await expect(
       page.getByRole("heading", { name: "You're all caught up", level: 2 }),
     ).toBeVisible();
+    await expect(page.getByText(/You reviewed \d+ word/)).toHaveCount(0);
 
     const { criticalOrSerious } = await scanForAxeViolations(page);
     expect(

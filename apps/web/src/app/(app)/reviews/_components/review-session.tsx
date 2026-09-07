@@ -22,6 +22,10 @@ import {
   type PendingReviewSubmission,
   type ReviewSubmissionIntent,
 } from "./review-session-retry";
+import {
+  getCompletedReviewCountAfterSubmission,
+  getReviewCompletionSummary,
+} from "./review-completion-summary";
 
 type Rating = "again" | "hard" | "good" | "easy";
 
@@ -51,6 +55,7 @@ export function ReviewSession({
   const [dueWords, setDueWords] = useState<DueWord[]>(initialDueWords);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [remainingCount, setRemainingCount] = useState(initialTotalCount);
+  const [completedReviewCount, setCompletedReviewCount] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefetching, setIsRefetching] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -200,6 +205,9 @@ export function ReviewSession({
       setLastReviewedCard(currentCard);
       setLastReviewAttemptId(data.attemptId);
       setRemainingCount((count) => Math.max(0, count - 1));
+      setCompletedReviewCount((count) =>
+        getCompletedReviewCountAfterSubmission(count, true),
+      );
       advance();
     } catch (error) {
       // A 4xx response is a definite rejection, not an ambiguous transport
@@ -227,13 +235,17 @@ export function ReviewSession({
   };
 
   if (dueWords.length === 0 || completed) {
+    const completionSummary = completed
+      ? getReviewCompletionSummary(completedReviewCount)
+      : null;
+
     return (
       <div className="flex flex-col items-center justify-center py-[var(--spacing-2xl)] text-center">
         <h2 className="text-xl font-semibold text-neutral-900">
-          You&apos;re all caught up
+          {completionSummary ? "Review complete" : "You're all caught up"}
         </h2>
         <p className="mt-[var(--spacing-sm)] text-base text-neutral-700">
-          No words are due for review right now.
+          {completionSummary ?? "No words are due for review right now."}
         </p>
         <Link
           href="/home"

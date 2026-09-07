@@ -420,8 +420,34 @@ function buildSavedWords(state) {
   return { items, nextCursor: undefined };
 }
 
-function buildDueWords(state) {
+function buildDueWords(state, { fixtureDueWordCount, limit }) {
   const items = [];
+
+  if (fixtureDueWordCount > 0) {
+    for (let index = 1; index <= fixtureDueWordCount; index += 1) {
+      const meaningId = `fixture-meaning-${index}`;
+      if (state.reviewedMeaningIds.has(meaningId)) {
+        continue;
+      }
+      items.push({
+        userWordId: `fixture-user-word-${index}`,
+        meaningId,
+        wordId: `fixture-word-${index}`,
+        wordSlug: `fixture-word-${index}`,
+        wordText: `Review word ${index}`,
+        partOfSpeech: "noun",
+        shortDefinition: `definition for review word ${index}`,
+        status: "due",
+        reviewStep: 0,
+      });
+    }
+    return {
+      items: items.slice(0, limit),
+      nextCursor: items.length > limit ? "fixture-next-page" : undefined,
+      totalCount: items.length,
+    };
+  }
+
   for (const meaningId of state.savedMeaningIds) {
     if (state.reviewedMeaningIds.has(meaningId)) {
       continue;
@@ -444,7 +470,7 @@ function buildDueWords(state) {
     });
   }
   return {
-    items,
+    items: items.slice(0, limit),
     nextCursor: undefined,
     totalCount: items.length,
   };
@@ -873,7 +899,17 @@ const server = createServer(async (req, res) => {
 
   if (req.method === "GET" && url.pathname === "/api/v1/reviews/due") {
     const state = getSessionState(cookies);
-    const data = buildDueWords(state);
+    const requestedLimit = Number(url.searchParams.get("limit"));
+    const fixtureDueWordCount = Number(cookies.e2e_review_fixture_count ?? 0);
+    const data = buildDueWords(state, {
+      fixtureDueWordCount: Number.isSafeInteger(fixtureDueWordCount)
+        ? fixtureDueWordCount
+        : 0,
+      limit:
+        Number.isSafeInteger(requestedLimit) && requestedLimit > 0
+          ? requestedLimit
+          : Number.POSITIVE_INFINITY,
+    });
     logLine(req, 200, { count: data.items.length });
     jsonResponse(res, 200, data);
     return;
