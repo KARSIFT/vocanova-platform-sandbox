@@ -41,6 +41,20 @@ func (r *PostgreSQLRepository) LoadTarget(ctx context.Context, req LoadTargetReq
 	}
 }
 
+// LoadTargetForReplay is deliberately narrower than LoadTarget: it resolves a
+// target that the authenticated learner formerly owned so the service can find
+// an exact immutable result. It must never be used to authorize a generation.
+func (r *PostgreSQLRepository) LoadTargetForReplay(ctx context.Context, req LoadTargetRequest) (*Target, error) {
+	switch req.Source {
+	case SourceWordDetail:
+		return r.loadTargetFromUserWordForReplay(ctx, req.UserID, req.AttemptID)
+	case SourceReview:
+		return r.loadTargetFromReviewAttemptForReplay(ctx, req.UserID, req.AttemptID)
+	default:
+		return nil, ErrTargetNotFound
+	}
+}
+
 func (r *PostgreSQLRepository) loadTargetFromUserWord(ctx context.Context, userID, userWordID uuid.UUID) (*Target, error) {
 	row := r.db.QueryRowContext(ctx,
 		`SELECT cw.id, cw.text, cw.normalized_text, cw.word_type, cw.difficulty_level,
@@ -49,6 +63,19 @@ func (r *PostgreSQLRepository) loadTargetFromUserWord(ctx context.Context, userI
 		 JOIN word_meanings wm ON wm.id = uw.meaning_id
 		 JOIN canonical_words cw ON cw.id = wm.word_id
 		 WHERE uw.id = $1 AND uw.user_id = $2 AND uw.deleted_at IS NULL`,
+		userWordID, userID,
+	)
+	return r.scanTarget(row, userWordID, nil)
+}
+
+func (r *PostgreSQLRepository) loadTargetFromUserWordForReplay(ctx context.Context, userID, userWordID uuid.UUID) (*Target, error) {
+	row := r.db.QueryRowContext(ctx,
+		`SELECT cw.id, cw.text, cw.normalized_text, cw.word_type, cw.difficulty_level,
+		        wm.id, wm.part_of_speech, wm.short_definition, uw.id
+		 FROM user_words uw
+		 JOIN word_meanings wm ON wm.id = uw.meaning_id
+		 JOIN canonical_words cw ON cw.id = wm.word_id
+		 WHERE uw.id = $1 AND uw.user_id = $2`,
 		userWordID, userID,
 	)
 	return r.scanTarget(row, userWordID, nil)
@@ -63,6 +90,20 @@ func (r *PostgreSQLRepository) loadTargetFromReviewAttempt(ctx context.Context, 
 		 JOIN word_meanings wm ON wm.id = ra.meaning_id
 		 JOIN canonical_words cw ON cw.id = wm.word_id
 		 WHERE ra.id = $1 AND ra.user_id = $2 AND uw.deleted_at IS NULL`,
+		reviewAttemptID, userID,
+	)
+	return r.scanTarget(row, uuid.Nil, &reviewAttemptID)
+}
+
+func (r *PostgreSQLRepository) loadTargetFromReviewAttemptForReplay(ctx context.Context, userID, reviewAttemptID uuid.UUID) (*Target, error) {
+	row := r.db.QueryRowContext(ctx,
+		`SELECT cw.id, cw.text, cw.normalized_text, cw.word_type, cw.difficulty_level,
+		        wm.id, wm.part_of_speech, wm.short_definition, ra.user_word_id
+		 FROM review_attempts ra
+		 JOIN user_words uw ON uw.id = ra.user_word_id
+		 JOIN word_meanings wm ON wm.id = ra.meaning_id
+		 JOIN canonical_words cw ON cw.id = wm.word_id
+		 WHERE ra.id = $1 AND ra.user_id = $2`,
 		reviewAttemptID, userID,
 	)
 	return r.scanTarget(row, uuid.Nil, &reviewAttemptID)
@@ -174,6 +215,18 @@ func (r *PostgreSQLRepository) CreatePendingAttempt(ctx context.Context, req Sub
 		return nil, fmt.Errorf("begin tx: %w", err)
 	}
 	defer tx.Rollback()
+
+	// LoadTarget is only a preflight. Claim the active saved word in this
+	// transaction immediately before writing so an Unsave cannot commit between
+	// eligibility validation and the new feedback generation.
+	var activeUserWordID uuid.UUID
+	if err := tx.QueryRowContext(ctx, `SELECT id FROM user_words
+		WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL FOR UPDATE`, target.UserWordID, req.UserID).Scan(&activeUserWordID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrTargetNotFound
+		}
+		return nil, fmt.Errorf("claim active user word: %w", err)
+	}
 
 	sentenceID := uuid.New()
 	attemptID := uuid.New()

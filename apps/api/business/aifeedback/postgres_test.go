@@ -106,6 +106,9 @@ func TestPostgreSQLRepositoryCreatePendingAttempt(t *testing.T) {
 	requestHash := RequestHash(userID, userWordID, "work", "i work every day.", PromptVersionSentenceFeedbackV1)
 
 	mock.ExpectBegin()
+	mock.ExpectQuery(`SELECT id FROM user_words`).
+		WithArgs(userWordID, userID).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(userWordID))
 	mock.ExpectExec("INSERT INTO learner_sentences").
 		WithArgs(sqlmock.AnyArg(), userID, meaningID, userWordID, req.SentenceText, "i work every day.", SourceWordDetail, SentenceStatusSubmitted, now, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -118,6 +121,26 @@ func TestPostgreSQLRepositoryCreatePendingAttempt(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEqual(t, uuid.Nil, pending.SentenceID)
 	assert.NotEqual(t, uuid.Nil, pending.AttemptID)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestPostgreSQLRepositoryCreatePendingAttemptRejectsRemovedUserWord(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	userID, userWordID := uuid.New(), uuid.New()
+	repo := NewPostgreSQLRepository(db, nil)
+	request := SubmitSentenceFeedbackRequest{UserID: userID, Source: SourceWordDetail, AttemptID: userWordID}
+
+	mock.ExpectBegin()
+	mock.ExpectQuery(`SELECT id FROM user_words`).
+		WithArgs(userWordID, userID).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}))
+	mock.ExpectRollback()
+
+	_, err = repo.CreatePendingAttempt(t.Context(), request, &Target{UserWordID: userWordID}, "i work every day.", "hash", ProviderMock, "mock", time.Now())
+	assert.ErrorIs(t, err, ErrTargetNotFound)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
