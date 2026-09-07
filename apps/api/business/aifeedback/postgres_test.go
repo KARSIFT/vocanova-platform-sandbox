@@ -53,6 +53,29 @@ func TestPostgreSQLRepositoryLoadTargetNotFound(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestPostgreSQLRepositoryLoadTargetFromReviewRejectsRemovedUserWord(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewPostgreSQLRepository(db, nil)
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	reviewAttemptID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+
+	// Review Completion may retain an attempt ID while another tab removes its
+	// user_word. That historical attempt must not remain an eligible target for
+	// a new sentence-feedback generation or mission/progress mutation.
+	mock.ExpectQuery(`uw\.deleted_at IS NULL`).
+		WithArgs(reviewAttemptID, userID).
+		WillReturnRows(sqlmock.NewRows([]string{"cw.id"}))
+
+	_, err = repo.LoadTarget(t.Context(), LoadTargetRequest{
+		UserID: userID, Source: SourceReview, AttemptID: reviewAttemptID,
+	})
+	assert.ErrorIs(t, err, ErrTargetNotFound)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestPostgreSQLRepositoryCreatePendingAttempt(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)

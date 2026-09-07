@@ -62,7 +62,7 @@ func (r *PostgreSQLRepository) loadTargetFromReviewAttempt(ctx context.Context, 
 		 JOIN user_words uw ON uw.id = ra.user_word_id
 		 JOIN word_meanings wm ON wm.id = ra.meaning_id
 		 JOIN canonical_words cw ON cw.id = wm.word_id
-		 WHERE ra.id = $1 AND ra.user_id = $2`,
+		 WHERE ra.id = $1 AND ra.user_id = $2 AND uw.deleted_at IS NULL`,
 		reviewAttemptID, userID,
 	)
 	return r.scanTarget(row, uuid.Nil, &reviewAttemptID)
