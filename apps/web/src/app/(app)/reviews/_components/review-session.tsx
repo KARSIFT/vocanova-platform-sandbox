@@ -62,6 +62,7 @@ export function ReviewSession({
   const [queueUpdateMessage, setQueueUpdateMessage] = useState<string | null>(
     null,
   );
+  const [queueRefreshFailed, setQueueRefreshFailed] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [phase, setPhase] = useState<PromptPhase>("prompt");
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
@@ -106,6 +107,7 @@ export function ReviewSession({
     queueUpdateMessage?: string;
   }) => {
     setIsRefetching(true);
+    setQueueRefreshFailed(false);
     setErrorMessage(null);
     const client = createApiClient();
     client
@@ -129,6 +131,9 @@ export function ReviewSession({
         // route the learner to re-auth instead of leaving them looking at
         // an error on a frozen card.
         setErrorMessage(handleApiError(error, fallbackErrorMessage));
+        if (nextQueueUpdateMessage) {
+          setQueueRefreshFailed(true);
+        }
       })
       .finally(() => {
         setIsRefetching(false);
@@ -535,6 +540,23 @@ export function ReviewSession({
               <button
                 type="button"
                 onClick={advance}
+                disabled={isRefetching}
+                className="mt-[var(--spacing-sm)] w-full rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Retry loading reviews
+              </button>
+            ) : null}
+            {queueRefreshFailed && errorMessage ? (
+              <button
+                type="button"
+                onClick={() =>
+                  refetchDueQueue({
+                    fallbackErrorMessage:
+                      "The word was removed, but we couldn't refresh your review list. Please try again.",
+                    queueUpdateMessage:
+                      "This word was removed. Your review list was updated.",
+                  })
+                }
                 disabled={isRefetching}
                 className="mt-[var(--spacing-sm)] w-full rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
