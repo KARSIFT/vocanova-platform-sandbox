@@ -671,6 +671,10 @@ const server = createServer(async (req, res) => {
     `http://${req.headers.host ?? `${HOST}:${PORT}`}`,
   );
   const cookies = parseCookies(req.headers.cookie);
+  const requestedDelayMs = Number(cookies.e2e_response_delay_ms ?? 0);
+  if (Number.isFinite(requestedDelayMs) && requestedDelayMs > 0) {
+    await new Promise((resolve) => setTimeout(resolve, requestedDelayMs));
+  }
 
   if (req.method === "GET" && url.pathname === "/healthz") {
     logLine(req, 200);
