@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
@@ -720,18 +721,15 @@ func reviewAttemptEqualsRequest(a *ReviewAttempt, req SubmitReviewRequest) bool 
 }
 
 // postgresTimestampEqual reproduces PostgreSQL's microsecond timestamp
-// rounding, including its round-half-to-even behavior. time.Time.Round rounds
-// half away from zero and would reject exact retries at .500 or .2500µs.
+// parsing and rounding. PostgreSQL parses the fractional seconds through a
+// float before rounding half-to-even, so ideal integer nanosecond rounding and
+// time.Time.Round do not match every accepted RFC3339 value.
 func postgresTimestampEqual(a, b time.Time) bool {
 	return postgresTimestamp(a).Equal(postgresTimestamp(b))
 }
 
 func postgresTimestamp(t time.Time) time.Time {
 	t = t.UTC()
-	microseconds := t.Nanosecond() / int(time.Microsecond)
-	remainder := t.Nanosecond() % int(time.Microsecond)
-	if remainder > 500 || (remainder == 500 && microseconds%2 != 0) {
-		microseconds++
-	}
+	microseconds := math.RoundToEven(float64(t.Nanosecond()) / float64(time.Second) * 1_000_000)
 	return t.Truncate(time.Second).Add(time.Duration(microseconds) * time.Microsecond)
 }

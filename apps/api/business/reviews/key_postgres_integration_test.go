@@ -218,7 +218,9 @@ func TestReviewKeyFingerprintCollisionPostgreSQL(t *testing.T) {
 	db := reviewKeyDB(t)
 	ctx, cancel := context.WithTimeout(t.Context(), 45*time.Second)
 	defer cancel()
-	c := &clock.Fixed{T: time.Now().UTC().Truncate(time.Microsecond)}
+	// A second boundary is microsecond-even. The table below exercises both it
+	// and the adjacent odd microsecond, so half-to-even expectations are stable.
+	c := &clock.Fixed{T: time.Now().UTC().Truncate(time.Second)}
 	gam := gamification.NewService(gamification.NewRepository(db))
 	repo := NewPostgreSQLRepository(db, c,
 		WithGamificationService(gam),
@@ -267,17 +269,29 @@ func TestReviewKeyFingerprintCollisionPostgreSQL(t *testing.T) {
 	// PostgreSQL rounds timestamptz values to microseconds. Both sides of the
 	// boundary must preserve exact-request replay compatibility.
 	for _, tc := range []struct {
-		offset, persistedOffset time.Duration
+		name                                     string
+		baseOffset, inputOffset, persistedOffset time.Duration
 	}{
-		{offset: 500 * time.Nanosecond, persistedOffset: 0},
-		{offset: 999 * time.Nanosecond, persistedOffset: time.Microsecond},
-		{offset: 1001 * time.Nanosecond, persistedOffset: time.Microsecond},
-		{offset: 1500 * time.Nanosecond, persistedOffset: 2 * time.Microsecond},
-		{offset: 2500 * time.Nanosecond, persistedOffset: 2 * time.Microsecond},
+		{name: "even microsecond plus 500ns", inputOffset: 500 * time.Nanosecond, persistedOffset: 0},
+		{name: "even microsecond plus 999ns", inputOffset: 999 * time.Nanosecond, persistedOffset: time.Microsecond},
+		{name: "even microsecond plus 1001ns", inputOffset: 1001 * time.Nanosecond, persistedOffset: time.Microsecond},
+		{name: "even microsecond plus 1500ns", inputOffset: 1500 * time.Nanosecond, persistedOffset: 2 * time.Microsecond},
+		{name: "even microsecond plus 2500ns", inputOffset: 2500 * time.Nanosecond, persistedOffset: 2 * time.Microsecond},
+		{name: "odd microsecond plus 500ns", baseOffset: time.Microsecond, inputOffset: 500 * time.Nanosecond, persistedOffset: 2 * time.Microsecond},
+		{name: "odd microsecond plus 999ns", baseOffset: time.Microsecond, inputOffset: 999 * time.Nanosecond, persistedOffset: 2 * time.Microsecond},
+		{name: "odd microsecond plus 1001ns", baseOffset: time.Microsecond, inputOffset: 1001 * time.Nanosecond, persistedOffset: 2 * time.Microsecond},
+		{name: "odd microsecond plus 1500ns", baseOffset: time.Microsecond, inputOffset: 1500 * time.Nanosecond, persistedOffset: 2 * time.Microsecond},
+		{name: "odd microsecond plus 2500ns", baseOffset: time.Microsecond, inputOffset: 2500 * time.Nanosecond, persistedOffset: 4 * time.Microsecond},
+		// PostgreSQL parses timestamp fractions through float precision before
+		// rounding. These near-half inputs prove its observable behavior rather
+		// than ideal integer half-to-even arithmetic.
+		{name: "float parsed 997500ns", inputOffset: 997500 * time.Nanosecond, persistedOffset: 997 * time.Microsecond},
+		{name: "float parsed 1994500ns", inputOffset: 1994500 * time.Nanosecond, persistedOffset: 1995 * time.Microsecond},
+		{name: "float parsed 15952500ns", inputOffset: 15952500 * time.Nanosecond, persistedOffset: 15953 * time.Microsecond},
 	} {
-		t.Run("nanosecond input is replayable", func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			req := seedReviewKeyRequest(t, db, c.T)
-			req.AnsweredAt = req.AnsweredAt.Add(tc.offset)
+			req.AnsweredAt = req.AnsweredAt.Add(tc.baseOffset + tc.inputOffset)
 			created, err := svc.SubmitReview(ctx, req)
 			require.NoError(t, err)
 			persisted, err := repo.GetReviewAttemptByClientAttemptID(ctx, req.UserID, req.ClientAttemptID)
