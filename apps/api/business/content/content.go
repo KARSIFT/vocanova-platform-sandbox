@@ -69,6 +69,8 @@ type WordMeaning struct {
 	UsageNotes        []WordUsageNote
 	Saved             bool
 	UserWordID        uuid.UUID
+	ReviewState       string
+	Due               bool
 }
 
 // WordDetail is a canonical word with all its meanings.
@@ -98,6 +100,17 @@ type SavedStateReader interface {
 	// meanings that are currently saved by the requester. Missing or unsaved IDs
 	// are omitted from the map.
 	SavedUserWordIDs(ctx context.Context, userID uuid.UUID, meaningIDs []uuid.UUID) (map[uuid.UUID]uuid.UUID, error)
+	// SavedWordStates returns the requester-owned state needed by Word Detail.
+	// Due is calculated by the backing server, never from browser time.
+	SavedWordStates(ctx context.Context, userID uuid.UUID, meaningIDs []uuid.UUID) (map[uuid.UUID]SavedWordState, error)
+}
+
+// SavedWordState is the learner-safe portion of a saved word's scheduling
+// state. It deliberately excludes review steps and timestamps.
+type SavedWordState struct {
+	UserWordID uuid.UUID
+	Status     string
+	Due        bool
 }
 
 // ListSituationsRequest is a paginated query.
@@ -230,18 +243,16 @@ func (s *Service) applySavedWord(ctx context.Context, userID uuid.UUID, word *Wo
 	for i, m := range word.Meanings {
 		ids[i] = m.ID
 	}
-	states, err := s.reader.IsSaved(ctx, userID, ids)
-	if err != nil {
-		return err
-	}
-	userWordIDs, err := s.reader.SavedUserWordIDs(ctx, userID, ids)
+	states, err := s.reader.SavedWordStates(ctx, userID, ids)
 	if err != nil {
 		return err
 	}
 	for i := range word.Meanings {
-		word.Meanings[i].Saved = states[word.Meanings[i].ID]
-		if id, ok := userWordIDs[word.Meanings[i].ID]; ok {
-			word.Meanings[i].UserWordID = id
+		if state, ok := states[word.Meanings[i].ID]; ok {
+			word.Meanings[i].Saved = true
+			word.Meanings[i].UserWordID = state.UserWordID
+			word.Meanings[i].ReviewState = state.Status
+			word.Meanings[i].Due = state.Due
 		}
 	}
 	return nil

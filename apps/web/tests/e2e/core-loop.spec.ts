@@ -256,6 +256,7 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     await expect(
       page.getByRole("button", { name: "Remove pour from saved words" }),
     ).toBeVisible();
+    await expect(page.getByText("Due today", { exact: true })).toBeVisible();
 
     // Issue #1181 (PRD §2): sentence practice is "surfaced from Home,
     // Word Detail, and Review Completion" - not a fourth tab. This is

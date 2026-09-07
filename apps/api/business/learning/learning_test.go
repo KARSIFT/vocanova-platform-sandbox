@@ -49,6 +49,26 @@ func TestServiceSaveUserWordCreatesRow(t *testing.T) {
 	assert.True(t, saved[meaningID])
 }
 
+func TestMemorySavedWordStateLabelsReviewedLegacyNewWordAsLearning(t *testing.T) {
+	repo, _ := sampleLearningRepo()
+	userID := MustParseUUID("00000000-0000-0000-0000-000000000003")
+	meaningID := MustParseUUID("00000000-0000-0000-0000-000000000002")
+	nextReviewAt := time.Now().Add(time.Hour)
+	repo.userWords = append(repo.userWords, MemoryUserWord{
+		ID:               uuid.New(),
+		UserID:           userID,
+		MeaningID:        meaningID,
+		Status:           "new",
+		TotalReviewCount: 1,
+		NextReviewAt:     &nextReviewAt,
+	})
+
+	states, err := repo.SavedWordStates(t.Context(), userID, []uuid.UUID{meaningID})
+	require.NoError(t, err)
+	assert.Equal(t, "learning", states[meaningID].Status)
+	assert.False(t, states[meaningID].Due)
+}
+
 func TestServiceSaveUserWordRequiresIdempotencyKey(t *testing.T) {
 	repo, idem := sampleLearningRepo()
 	svc := NewService(repo, idem, clock.Real{})

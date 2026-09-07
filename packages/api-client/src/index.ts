@@ -117,6 +117,9 @@ export interface WordMeaning {
   learnerDefinition?: string;
   saved: boolean;
   userWordId?: string;
+  reviewState?:
+    "new" | "learning" | "reviewing" | "mastered" | "ignored" | "archived";
+  due?: boolean;
   examples: WordExample[];
   usageNotes: WordUsageNote[];
 }

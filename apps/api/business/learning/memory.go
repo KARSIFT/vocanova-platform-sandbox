@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/content"
 	"github.com/google/uuid"
 )
 
@@ -219,6 +220,38 @@ func (r *MemoryRepository) SavedUserWordIDs(ctx context.Context, userID uuid.UUI
 		}
 	}
 	return out, nil
+}
+
+// SavedWordStates implements SavedStateReader. The process clock is the server
+// authority in the in-memory development/test implementation.
+func (r *MemoryRepository) SavedWordStates(ctx context.Context, userID uuid.UUID, meaningIDs []uuid.UUID) (map[uuid.UUID]content.SavedWordState, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	now := time.Now()
+	out := make(map[uuid.UUID]content.SavedWordState, len(meaningIDs))
+	for _, meaningID := range meaningIDs {
+		for _, uw := range r.userWords {
+			if uw.UserID != userID || uw.MeaningID != meaningID || uw.DeletedAt != nil {
+				continue
+			}
+			due := (uw.Status == "new" || uw.Status == "learning" || uw.Status == "reviewing") &&
+				(uw.NextReviewAt == nil || !uw.NextReviewAt.After(now))
+			out[meaningID] = content.SavedWordState{UserWordID: uw.ID, Status: reviewState(uw), Due: due}
+			break
+		}
+	}
+	return out, nil
+}
+
+// reviewState keeps the legacy persisted "new" status from being exposed after
+// a review has already been submitted. Review scheduling owns the attempt
+// counters; Word Detail only needs the learner-facing state.
+func reviewState(uw MemoryUserWord) string {
+	if uw.Status == "new" && uw.TotalReviewCount > 0 {
+		return "learning"
+	}
+	return uw.Status
 }
 
 // IsSaved implements SavedStateReader.

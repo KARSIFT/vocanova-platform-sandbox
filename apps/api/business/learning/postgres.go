@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/content"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -352,6 +353,41 @@ func (r *PostgreSQLRepository) SavedUserWordIDs(ctx context.Context, userID uuid
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("saved user word id rows: %w", err)
+	}
+	return out, nil
+}
+
+// SavedWordStates returns the learner-safe state for Word Detail. PostgreSQL's
+// CURRENT_TIMESTAMP is deliberately used so due state is based on server time.
+func (r *PostgreSQLRepository) SavedWordStates(ctx context.Context, userID uuid.UUID, meaningIDs []uuid.UUID) (map[uuid.UUID]content.SavedWordState, error) {
+	out := make(map[uuid.UUID]content.SavedWordState, len(meaningIDs))
+	if len(meaningIDs) == 0 {
+		return out, nil
+	}
+
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT meaning_id, id,
+			CASE WHEN status = 'new' AND total_review_count > 0 THEN 'learning' ELSE status END,
+			(status IN ('new', 'learning', 'reviewing') AND (next_review_at IS NULL OR next_review_at <= CURRENT_TIMESTAMP)) AS due
+		 FROM user_words
+		 WHERE user_id = $1 AND meaning_id = ANY($2::uuid[]) AND deleted_at IS NULL`,
+		userID, pq.Array(meaningIDs),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("saved word states: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var meaningID uuid.UUID
+		var state content.SavedWordState
+		if err := rows.Scan(&meaningID, &state.UserWordID, &state.Status, &state.Due); err != nil {
+			return nil, fmt.Errorf("scan saved word state: %w", err)
+		}
+		out[meaningID] = state
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("saved word states rows: %w", err)
 	}
 	return out, nil
 }
