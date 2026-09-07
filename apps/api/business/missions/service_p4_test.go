@@ -56,7 +56,10 @@ func TestUpdateForSentenceP4SuccessWiring(t *testing.T) {
 			gamification.MissionPolicyVersion, "open", nil, false, nil,
 		))
 	// CurrentBalance (no rows yet -> empty).
-	mock.ExpectQuery("SELECT balance_after FROM confidence_point_ledger").
+	mock.ExpectExec("SELECT pg_advisory_xact_lock").
+		WithArgs(userID.String()).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM confidence_point_ledger").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}))
 	// GrantPoint for +3 sentence-submitted.
@@ -161,7 +164,10 @@ func TestUpdateForSentenceP4SentenceGoalActiveWhenD03Activated(t *testing.T) {
 			nil, nil, nil, nil,
 			gamification.MissionPolicyVersion, "open", nil, false, nil,
 		))
-	mock.ExpectQuery("SELECT balance_after FROM confidence_point_ledger").
+	mock.ExpectExec("SELECT pg_advisory_xact_lock").
+		WithArgs(userID.String()).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM confidence_point_ledger").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}))
 	mock.ExpectQuery("INSERT INTO confidence_point_ledger").
@@ -269,7 +275,10 @@ func TestUpdateForSentenceP4RollbackOnError(t *testing.T) {
 			nil, nil, nil, nil,
 			gamification.MissionPolicyVersion, "open", nil, false, nil,
 		))
-	mock.ExpectQuery("SELECT balance_after FROM confidence_point_ledger").
+	mock.ExpectExec("SELECT pg_advisory_xact_lock").
+		WithArgs(userID.String()).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM confidence_point_ledger").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}))
 	mock.ExpectQuery("INSERT INTO confidence_point_ledger").
@@ -350,7 +359,10 @@ func TestUpdateForSentenceP4UpdateEntryPointWiresResolverAndDelegate(t *testing.
 			nil, nil, nil, nil,
 			gamification.MissionPolicyVersion, "open", nil, false, nil,
 		))
-	mock.ExpectQuery("SELECT balance_after FROM confidence_point_ledger").
+	mock.ExpectExec("SELECT pg_advisory_xact_lock").
+		WithArgs(userID.String()).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM confidence_point_ledger").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}))
 	mock.ExpectQuery("INSERT INTO confidence_point_ledger").

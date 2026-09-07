@@ -331,24 +331,22 @@ func (r *Repository) UpsertStreakState(
 }
 
 // GetLatestPointBalance returns the user's current Confidence Points balance
-// from the latest confidence_point_ledger row. 0 if no rows exist.
+// as the signed sum of the append-only ledger. 0 if no rows exist.
 //
 // This is the ledger read that ultimately backs the Progress screen's
 // Confidence Points total (via Service.CurrentBalance ->
 // missions.Service.GetProgressView -> GET /api/v1/progress ->
-// apps/web/src/app/(app)/progress/page.tsx). balance_after is not a
-// separately mutable balance field: it is written once, at insert time, as
-// currentBalance+amount (see Service.GrantPoint), so reading the latest row
-// is exactly the running sum of every ledger entry — never a value that can
-// drift from it. Traced and verified in
+// apps/web/src/app/(app)/progress/page.tsx). balance_after is not a separately
+// mutable balance field: it is written once, at insert time, as
+// currentBalance+amount (see Service.GrantPoint). Reads sum immutable amounts
+// rather than selecting a "latest" row because occurred_at is a business
+// timestamp and UUID ids are not commit-order values. Traced and verified in
 // docs/engineering/05-database-design.md §12 and
 // TestCurrentBalanceMatchesSumOfLedgerEntries (service_test.go).
 func (r *Repository) GetLatestPointBalance(ctx context.Context, userID uuid.UUID) (int, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT balance_after FROM confidence_point_ledger
-		 WHERE user_id = $1
-		 ORDER BY occurred_at DESC, id DESC
-		 LIMIT 1`,
+		`SELECT COALESCE(SUM(amount), 0) FROM confidence_point_ledger
+		 WHERE user_id = $1`,
 		userID,
 	)
 	var balance int
@@ -357,6 +355,39 @@ func (r *Repository) GetLatestPointBalance(ctx context.Context, userID uuid.UUID
 			return 0, nil
 		}
 		return 0, fmt.Errorf("fetch latest point balance: %w", err)
+	}
+	return balance, nil
+}
+
+// GetLatestPointBalanceTx serializes confidence-point awards for one user for
+// the lifetime of tx, then returns the current running balance. The advisory
+// lock is keyed by the UUID text so independent learning operations (and
+// independent local-date snapshots) cannot both derive balance_after from the
+// same predecessor. It is transaction-scoped, so rollback releases it and no
+// process-local coordination is required.
+func (r *Repository) GetLatestPointBalanceTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID) (int, error) {
+	if tx == nil {
+		return 0, errors.New("transaction required")
+	}
+	// Lock in a separate statement. Under READ COMMITTED, one CTE would let a
+	// waiter retain its pre-lock snapshot and therefore read a stale sum.
+	if _, err := tx.ExecContext(ctx,
+		`SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0))`,
+		userID.String(),
+	); err != nil {
+		return 0, fmt.Errorf("lock point balance: %w", err)
+	}
+	row := tx.QueryRowContext(ctx,
+		`SELECT COALESCE(SUM(amount), 0) FROM confidence_point_ledger
+		 WHERE user_id = $1`,
+		userID,
+	)
+	var balance int
+	if err := row.Scan(&balance); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("fetch latest point balance in transaction: %w", err)
 	}
 	return balance, nil
 }

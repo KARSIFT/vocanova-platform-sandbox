@@ -199,7 +199,10 @@ func TestPostgreSQLRepositorySubmitReviewP4RatingGoodWiring(t *testing.T) {
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	// 2d. getLatestPointBalanceTx (no rows yet -> empty).
-	mock.ExpectQuery("SELECT COALESCE\\(balance_after, 0\\) FROM confidence_point_ledger").
+	mock.ExpectExec("SELECT pg_advisory_xact_lock").
+		WithArgs(userID.String()).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM confidence_point_ledger").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}))
 	// 2e. GrantPoint -> InsertPointLedger for the +5 Good rating reward.
@@ -321,7 +324,10 @@ func TestPostgreSQLRepositorySubmitReviewP4MissionCompletion(t *testing.T) {
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	// Balance before the rating-tiered grant: 0 (clean start).
-	mock.ExpectQuery("SELECT COALESCE\\(balance_after, 0\\) FROM confidence_point_ledger").
+	mock.ExpectExec("SELECT pg_advisory_xact_lock").
+		WithArgs(userID.String()).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM confidence_point_ledger").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}))
 	// +5 Good reward.
@@ -341,7 +347,10 @@ func TestPostgreSQLRepositorySubmitReviewP4MissionCompletion(t *testing.T) {
 		WithArgs(userID, day, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	// Balance before the +10 daily-mission grant: now 5 (the +5 was just written).
-	mock.ExpectQuery("SELECT COALESCE\\(balance_after, 0\\) FROM confidence_point_ledger").
+	mock.ExpectExec("SELECT pg_advisory_xact_lock").
+		WithArgs(userID.String()).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM confidence_point_ledger").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(gamification.RewardReviewGood))
 	// +10 daily-mission-completion reward.
@@ -627,7 +636,10 @@ func TestPostgreSQLRepositorySubmitReviewP4AlreadyCompletedSnapshotNoDoubleRewar
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	// +5 Good reward (still awarded — every individual review attempt earns
 	// its rating-tiered point, even on a day that's already complete).
-	mock.ExpectQuery("SELECT COALESCE\\(balance_after, 0\\) FROM confidence_point_ledger").
+	mock.ExpectExec("SELECT pg_advisory_xact_lock").
+		WithArgs(userID.String()).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM confidence_point_ledger").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}))
 	mock.ExpectQuery("INSERT INTO confidence_point_ledger").

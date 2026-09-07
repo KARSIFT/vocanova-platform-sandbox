@@ -82,7 +82,7 @@ func TestCurrentBalanceMatchesSumOfLedgerEntries(t *testing.T) {
 	// The Progress screen's read path (missions.Service.GetProgressView)
 	// calls exactly this method. It must read the same total back from the
 	// ledger's latest balance_after column - not a separate mutable field.
-	mock.ExpectQuery(`SELECT balance_after FROM confidence_point_ledger`).
+	mock.ExpectQuery(`SELECT COALESCE\(SUM\(amount\), 0\) FROM confidence_point_ledger`).
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(runningBalance))
 
