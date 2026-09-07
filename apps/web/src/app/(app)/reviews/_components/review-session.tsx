@@ -97,6 +97,10 @@ export function ReviewSession({
     setStartTime(Date.now());
     setHasSubmittedCurrentCard(false);
     pendingSubmission.current = null;
+    // queueUpdateMessage deliberately survives the 404-driven dueWords
+    // replacement so the first authoritative card can announce it. Normal
+    // local-card transitions clear it in advance(), and normal refetches set
+    // it back to null.
   }, [currentIndex, dueWords]);
 
   const refetchDueQueue = ({
@@ -117,7 +121,6 @@ export function ReviewSession({
           setDueWords(data.items);
           setRemainingCount(data.totalCount);
           setCurrentIndex(0);
-          setCompleted(false);
         } else {
           setRemainingCount(0);
           setCompleted(true);
@@ -538,7 +541,7 @@ export function ReviewSession({
                 {errorMessage}
               </p>
             ) : null}
-            {hasSubmittedCurrentCard && errorMessage ? (
+            {hasSubmittedCurrentCard && !queueRefreshFailed && errorMessage ? (
               <button
                 type="button"
                 onClick={advance}
