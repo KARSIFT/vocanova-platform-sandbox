@@ -140,6 +140,44 @@ func TestLoadProductionConfig_DefaultsAreSensible(t *testing.T) {
 	assert.Equal(t, "smoke-test-bot@synthetic.vocanova.invalid", cfg.SyntheticSmokeTestEmail, "VOCANOVA_SYNTHETIC_SMOKE_TEST_EMAIL must default to the reserved .invalid identity the deploy seed uses")
 }
 
+func TestLoadProductionConfig_RejectsUnsafeAuthCleanupInterval(t *testing.T) {
+	for _, interval := range []string{"not-a-duration", "0s", "59s", "24h1s"} {
+		t.Run(interval, func(t *testing.T) {
+			t.Setenv("DATABASE_URL", "postgres://example/db")
+			t.Setenv("BASE_URL", "https://staging.vocanova.site")
+			t.Setenv("OAUTH_REDIRECT_URI", "https://api-staging.vocanova.site/auth/oauth/google/callback")
+			t.Setenv("SESSION_COOKIE_DOMAIN", "staging.vocanova.site")
+			t.Setenv("AUTH_CLEANUP_INTERVAL", interval)
+
+			_, err := LoadProductionConfig()
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "AUTH_CLEANUP_INTERVAL")
+		})
+	}
+}
+
+func TestLoadProductionConfig_AcceptsAuthCleanupIntervalBoundaries(t *testing.T) {
+	for _, tc := range []struct {
+		interval string
+		expected time.Duration
+	}{
+		{"1m", time.Minute},
+		{"24h", 24 * time.Hour},
+	} {
+		t.Run(tc.interval, func(t *testing.T) {
+			t.Setenv("DATABASE_URL", "postgres://example/db")
+			t.Setenv("BASE_URL", "https://staging.vocanova.site")
+			t.Setenv("OAUTH_REDIRECT_URI", "https://api-staging.vocanova.site/auth/oauth/google/callback")
+			t.Setenv("SESSION_COOKIE_DOMAIN", "staging.vocanova.site")
+			t.Setenv("AUTH_CLEANUP_INTERVAL", tc.interval)
+
+			cfg, err := LoadProductionConfig()
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, cfg.AuthCleanupInterval)
+		})
+	}
+}
+
 func TestLoadProductionConfig_NormalizesSyntheticSmokeTestEmail(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://example/db")
 	t.Setenv("BASE_URL", "https://staging.vocanova.site")
