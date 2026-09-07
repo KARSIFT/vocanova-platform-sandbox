@@ -1,10 +1,13 @@
 export default function ReviewsLoading() {
   return (
-    <div
+    <section
       aria-busy="true"
-      aria-label="Loading reviews"
+      aria-labelledby="reviews-loading-status"
       className="animate-pulse p-[var(--spacing-lg)]"
     >
+      <p id="reviews-loading-status" role="status" className="sr-only">
+        Loading reviews
+      </p>
       <div className="flex items-center justify-between">
         <div className="h-7 w-1/4 rounded bg-neutral-200" />
         <div className="h-4 w-1/4 rounded bg-neutral-200" />
@@ -19,6 +22,6 @@ export default function ReviewsLoading() {
           ))}
         </div>
       </section>
-    </div>
+    </section>
   );
 }

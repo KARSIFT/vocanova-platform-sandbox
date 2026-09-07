@@ -14,20 +14,41 @@ async function delayNextServerRequest(page: import("@playwright/test").Page) {
   ]);
 }
 
+async function disableViewportPrefetch(page: import("@playwright/test").Page) {
+  // Keep the delayed transition deterministic: desktop Link components eagerly
+  // prefetch visible routes, which otherwise may complete before the fixture
+  // delay is installed. This only affects this isolated browser context.
+  await page.addInitScript(() => {
+    window.IntersectionObserver = class {
+      disconnect() {}
+      observe() {}
+      takeRecords() {
+        return [];
+      }
+      unobserve() {}
+    } as unknown as typeof IntersectionObserver;
+  });
+}
+
 test.describe("Route loading states", () => {
   test("Journey shows loading feedback while its data is delayed", async ({
     page,
   }) => {
+    await disableViewportPrefetch(page);
     await page.goto("/home");
     await expect(
       page.getByRole("heading", { name: "Today's Mission", level: 1 }),
     ).toBeVisible();
 
     await delayNextServerRequest(page);
+
     const navigation = page.getByRole("link", { name: "Go to Journey" }).click();
 
-    await expect(page.getByLabel("Loading Journey")).toBeVisible();
-    await expect(page.getByLabel("Loading Journey")).toHaveAttribute(
+    const status = page.getByRole("status").filter({
+      hasText: "Loading Journey",
+    });
+    await expect(status).toBeVisible();
+    await expect(status.locator("..")).toHaveAttribute(
       "aria-busy",
       "true",
     );
@@ -40,16 +61,21 @@ test.describe("Route loading states", () => {
   test("Review shows loading feedback while its data is delayed", async ({
     page,
   }) => {
+    await disableViewportPrefetch(page);
     await page.goto("/home");
     await expect(
       page.getByRole("heading", { name: "Today's Mission", level: 1 }),
     ).toBeVisible();
 
     await delayNextServerRequest(page);
+
     const navigation = page.getByRole("link", { name: "Start review" }).click();
 
-    await expect(page.getByLabel("Loading reviews")).toBeVisible();
-    await expect(page.getByLabel("Loading reviews")).toHaveAttribute(
+    const status = page.getByRole("status").filter({
+      hasText: "Loading reviews",
+    });
+    await expect(status).toBeVisible();
+    await expect(status.locator("..")).toHaveAttribute(
       "aria-busy",
       "true",
     );
