@@ -1,13 +1,27 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page, type TestInfo } from "@playwright/test";
 
 async function seedReviewFixture(
-  page: import("@playwright/test").Page,
+  page: Page,
   count: number,
+  testInfo: TestInfo,
 ) {
+  // The mock keeps review state in a process-wide map keyed by this cookie.
+  // Every Playwright project and retry therefore needs its own key: the three
+  // accessibility projects share the same mock server, and a retry may begin
+  // after its earlier attempt has consumed some fixture cards.
+  const sessionId = [
+    "review-summary",
+    testInfo.project.name,
+    testInfo.testId,
+    `retry-${testInfo.retry}`,
+  ]
+    .map(encodeURIComponent)
+    .join("-");
+
   await page.context().addCookies([
     {
       name: "vocanova_session",
-      value: `review-summary-${count}`,
+      value: sessionId,
       domain: "127.0.0.1",
       path: "/",
     },
@@ -26,10 +40,7 @@ async function seedReviewFixture(
   ]);
 }
 
-async function submitCurrentReview(
-  page: import("@playwright/test").Page,
-  index: number,
-) {
+async function submitCurrentReview(page: Page, index: number) {
   const showAnswer = page.getByRole("button", { name: "Show answer" });
   if (await showAnswer.isVisible()) {
     await showAnswer.click();
@@ -46,8 +57,8 @@ async function submitCurrentReview(
 test.describe("Review completion summary", () => {
   test("counts a paginated 51-card session after server confirmations", async ({
     page,
-  }) => {
-    await seedReviewFixture(page, 51);
+  }, testInfo) => {
+    await seedReviewFixture(page, 51, testInfo);
     await page.goto("/reviews");
 
     for (let index = 1; index <= 51; index += 1) {
@@ -65,8 +76,8 @@ test.describe("Review completion summary", () => {
 
   test("does not count a rejected submission before its successful retry", async ({
     page,
-  }) => {
-    await seedReviewFixture(page, 1);
+  }, testInfo) => {
+    await seedReviewFixture(page, 1, testInfo);
     await page.goto("/reviews");
     await page.getByRole("button", { name: "Show answer" }).click();
 
