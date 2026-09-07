@@ -34,6 +34,8 @@ export interface CompleteOnboardingBody {
   learningGoal: LearningGoal;
   mainUseCase: MainUseCase;
   dailyReviewTarget: number;
+  /** Optional browser-resolved IANA timezone for learner-local daily logic. */
+  timezone?: string;
 }
 
 export interface RequestMagicLinkBody {

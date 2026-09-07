@@ -140,15 +140,19 @@ func (r *PostgreSQLRepository) CompleteOnboarding(ctx context.Context, userID uu
 	// preserved (the spec's "never overwrite a customized row" rule).
 	row := tx.QueryRowContext(ctx,
 		`INSERT INTO user_settings (id, user_id, timezone, daily_review_target, created_at, updated_at)
-		 VALUES ($1, $2, 'UTC', $3, $5, $5)
+		 VALUES ($1, $2, $3, $4, $6, $6)
 		 ON CONFLICT (user_id) DO UPDATE
-		   SET daily_review_target = CASE WHEN user_settings.daily_review_target <> $4
+		   SET timezone = CASE WHEN user_settings.timezone <> 'UTC'
+		                       THEN user_settings.timezone
+		                       ELSE EXCLUDED.timezone
+		                   END,
+		       daily_review_target = CASE WHEN user_settings.daily_review_target <> $5
 		                                  THEN user_settings.daily_review_target
 		                                  ELSE EXCLUDED.daily_review_target
 		                              END,
 		       updated_at = NOW()
 		 RETURNING user_id, daily_review_target`,
-		uuid.New(), userID, answers.DailyReviewTarget, SchemaDailyReviewTargetDefault, now,
+		uuid.New(), userID, answers.EffectiveTimezone(), answers.DailyReviewTarget, SchemaDailyReviewTargetDefault, now,
 	)
 	var (
 		storedID  uuid.UUID

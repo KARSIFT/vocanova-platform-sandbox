@@ -137,7 +137,7 @@ func (r *MemoryRepository) CompleteOnboarding(ctx context.Context, userID uuid.U
 	case SeedCreateRow:
 		r.settings[userID] = &MemoryUserSettings{
 			UserID:                 userID,
-			Timezone:               "UTC",
+			Timezone:               answers.EffectiveTimezone(),
 			DailyReviewTarget:      decision.Value,
 			ReviewIntervalPreset:   "vocanova_default",
 			NotificationsEnabled:   true,
@@ -146,6 +146,9 @@ func (r *MemoryRepository) CompleteOnboarding(ctx context.Context, userID uuid.U
 		}
 	case SeedOverwriteDefault:
 		settings.DailyReviewTarget = decision.Value
+		if settings.Timezone == "UTC" {
+			settings.Timezone = answers.EffectiveTimezone()
+		}
 	case SeedPreserveExisting:
 		// no-op
 	}
