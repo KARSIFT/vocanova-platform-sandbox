@@ -79,8 +79,7 @@ func run() error {
 		runDeletionSweepLoop(sweepCtx, newDeletionSweepService(db), cfg.AccountDeletionSweepInterval)
 	}()
 	defer func() {
-		cancelSweep()
-		<-sweepDone
+		stopDeletionSweep(cancelSweep, sweepDone)
 	}()
 
 	// Real unhandled errors/panics from any request, not just the
@@ -127,6 +126,13 @@ func run() error {
 		return fmt.Errorf("listen: %w", err)
 	}
 
+	// Stop and join background work before beginning the HTTP drain. Otherwise
+	// a ticker can start a new irreversible purge during the server's 30-second
+	// graceful-shutdown window. The deferred call remains a safety net for an
+	// earlier return; cancellation and reads from a closed done channel are both
+	// idempotent.
+	stopDeletionSweep(cancelSweep, sweepDone)
+
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
@@ -144,6 +150,13 @@ func boolFlag(b bool) string {
 
 type deletionSweeper interface {
 	RunDeletionSweep(ctx context.Context, clientIP, sessionToken string) (*accounts.SweepResult, error)
+}
+
+// stopDeletionSweep cancels the loop and waits until it has exited while the
+// database is still open. It is safe to invoke more than once.
+func stopDeletionSweep(cancel context.CancelFunc, done <-chan struct{}) {
+	cancel()
+	<-done
 }
 
 // newDeletionSweepService builds the narrow production service instance used

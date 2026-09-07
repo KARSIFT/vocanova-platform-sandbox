@@ -41,6 +41,16 @@ func TestRunDeletionSweepLoopRunsImmediatelyAndStopsOnCancellation(t *testing.T)
 	}
 }
 
+func TestStopDeletionSweepWaitsForLoopExit(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		<-ctx.Done()
+		close(done)
+	}()
+	stopDeletionSweep(cancel, done)
+}
+
 // TestRun_RejectsMissingDatabaseURL covers the first
 // config-load safety property: a process started with no
 // DATABASE_URL must exit non-zero with a clear error message,
