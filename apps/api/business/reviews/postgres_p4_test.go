@@ -204,7 +204,7 @@ func TestPostgreSQLRepositorySubmitReviewP4RatingGoodWiring(t *testing.T) {
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM confidence_point_ledger").
 		WithArgs(userID).
-		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}))
+		WillReturnRows(sqlmock.NewRows([]string{"sum"}).AddRow(0))
 	// 2e. GrantPoint -> InsertPointLedger for the +5 Good rating reward.
 	mock.ExpectQuery("INSERT INTO confidence_point_ledger").
 		WithArgs(
@@ -329,7 +329,7 @@ func TestPostgreSQLRepositorySubmitReviewP4MissionCompletion(t *testing.T) {
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM confidence_point_ledger").
 		WithArgs(userID).
-		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}))
+		WillReturnRows(sqlmock.NewRows([]string{"sum"}).AddRow(0))
 	// +5 Good reward.
 	mock.ExpectQuery("INSERT INTO confidence_point_ledger").
 		WithArgs(
@@ -641,7 +641,7 @@ func TestPostgreSQLRepositorySubmitReviewP4AlreadyCompletedSnapshotNoDoubleRewar
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM confidence_point_ledger").
 		WithArgs(userID).
-		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}))
+		WillReturnRows(sqlmock.NewRows([]string{"sum"}).AddRow(0))
 	mock.ExpectQuery("INSERT INTO confidence_point_ledger").
 		WithArgs(
 			sqlmock.AnyArg(), userID, gamification.RewardReviewGood, gamification.RewardReviewGood,

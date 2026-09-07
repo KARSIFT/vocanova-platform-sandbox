@@ -166,7 +166,7 @@ func TestAIFeedbackP4RealMissionUpdaterSuccessWiring(t *testing.T) {
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	f.mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM confidence_point_ledger").
 		WithArgs(f.userID).
-		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}))
+		WillReturnRows(sqlmock.NewRows([]string{"sum"}).AddRow(0))
 	// 2c. GrantPoint for +3 sentence-submitted. sentenceID is AnyArg
 	// because MemoryRepository mints a fresh UUID per submission.
 	f.mock.ExpectQuery("INSERT INTO confidence_point_ledger").

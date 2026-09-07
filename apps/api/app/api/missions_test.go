@@ -347,7 +347,7 @@ func TestGetProgressEmptyHistory(t *testing.T) {
 	expectGetUserSettings(mock, userID, nil)
 	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM confidence_point_ledger").
 		WithArgs(userID).
-		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}))
+		WillReturnRows(sqlmock.NewRows([]string{"sum"}).AddRow(0))
 	mock.ExpectQuery("SELECT user_id, current_streak_count, longest_streak_count").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{
