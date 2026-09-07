@@ -181,13 +181,9 @@ func (s *Service) GetDailyMissionView(
 				GraceDayID:   s.GraceDayID,
 			})
 		}
-		graceBalance, err := s.gamification.CurrentGraceBalance(ctx, userID)
-		if err != nil {
-			return nil, fmt.Errorf("current grace balance: %w", err)
-		}
 		if _, err := s.gamification.ReconcileAndAdvance(
 			ctx, tx, userID, now, resolved.Timezone,
-			streakSnaps, graceBalance, false,
+			streakSnaps, false,
 		); err != nil {
 			return nil, fmt.Errorf("reconcile streak: %w", err)
 		}
@@ -477,13 +473,9 @@ func (u *MissionUpdater) updateForSentence(ctx context.Context, tx *sql.Tx, user
 			GraceDayID:   s.GraceDayID,
 		})
 	}
-	graceBalance, err := u.gamification.CurrentGraceBalance(ctx, userID)
-	if err != nil {
-		return false, fmt.Errorf("current grace balance: %w", err)
-	}
 	if _, err := u.gamification.ReconcileAndAdvance(
 		ctx, tx, userID, now, resolved.Timezone,
-		streakSnaps, graceBalance, false, // currentCompletion: P3 never completes the mission
+		streakSnaps, false, // currentCompletion: P3 never completes the mission
 	); err != nil {
 		return false, fmt.Errorf("reconcile streak: %w", err)
 	}

@@ -212,10 +212,10 @@ func TestAIFeedbackP4RealMissionUpdaterSuccessWiring(t *testing.T) {
 			nil, nil, nil, nil,
 			gamification.MissionPolicyVersion, "open", nil, false, nil,
 		))
-	// 2i. CurrentGraceBalance.
-	f.mock.ExpectQuery("SELECT balance_after FROM grace_day_ledger").
-		WithArgs(f.userID).
-		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}))
+	f.mock.ExpectExec("SELECT pg_advisory_xact_lock").WithArgs(f.userID.String()).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	f.mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM grace_day_ledger").WithArgs(f.userID).
+		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(0))
 	// 2j. GetStreakState.
 	f.mock.ExpectQuery("SELECT user_id, current_streak_count, longest_streak_count").
 		WithArgs(f.userID).

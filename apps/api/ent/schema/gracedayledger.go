@@ -11,7 +11,8 @@ import (
 )
 
 // GraceDayLedger is the append-only history of every grace-day change.
-// The current available balance is balance_after of the latest row per user.
+// The current available balance is the signed amount sum per user;
+// balance_after is an immutable per-entry audit value.
 // reason and source_type follow DOC-05 §12. Owned by gamification.
 type GraceDayLedger struct{ ent.Schema }
 

@@ -141,10 +141,10 @@ func TestGetDailyMissionLazilyCreatesAndReturnsProjection(t *testing.T) {
 			"sentence_practices_completed", "policy_version", "status", "completed_at",
 			"grace_applied", "grace_day_id",
 		}))
-	// CurrentGraceBalance.
-	mock.ExpectQuery("SELECT balance_after FROM grace_day_ledger").
-		WithArgs(userID).
-		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}))
+	mock.ExpectExec("SELECT pg_advisory_xact_lock").WithArgs(userID.String()).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM grace_day_ledger").WithArgs(userID).
+		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(0))
 	// GetStreakState (called by ReconcileAndAdvance to read the current
 	// streak-state row before upserting).
 	mock.ExpectQuery("SELECT user_id, current_streak_count, longest_streak_count").
@@ -168,7 +168,7 @@ func TestGetDailyMissionLazilyCreatesAndReturnsProjection(t *testing.T) {
 			"timezone", "status", "created_at", "updated_at",
 		}))
 	// loadStreakAndGrace → CurrentGraceBalance.
-	mock.ExpectQuery("SELECT balance_after FROM grace_day_ledger").
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM grace_day_ledger").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(0))
 
@@ -222,7 +222,7 @@ func TestGetDailyMissionReturnsExistingSnapshot(t *testing.T) {
 			"timezone", "status", "created_at", "updated_at",
 		}).AddRow(userID, 3, 5, nil, nil, "UTC", gamification.StreakStatusActive, time.Now(), time.Now()))
 	// loadStreakAndGrace → CurrentGraceBalance.
-	mock.ExpectQuery("SELECT balance_after FROM grace_day_ledger").
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM grace_day_ledger").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(1))
 
@@ -299,7 +299,7 @@ func TestGetProgressReturnsBalanceStreakAndHistory(t *testing.T) {
 			"timezone", "status", "created_at", "updated_at",
 		}).AddRow(userID, 3, 7, nil, nil, "UTC", gamification.StreakStatusActive, time.Now(), time.Now()))
 	// loadStreakAndGrace → CurrentGraceBalance.
-	mock.ExpectQuery("SELECT balance_after FROM grace_day_ledger").
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM grace_day_ledger").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(1))
 	// ListRecentCompletionHistory (today - 6 through today, inclusive).
@@ -355,9 +355,9 @@ func TestGetProgressEmptyHistory(t *testing.T) {
 			"last_completed_local_date", "last_activity_local_date",
 			"timezone", "status", "created_at", "updated_at",
 		}))
-	mock.ExpectQuery("SELECT balance_after FROM grace_day_ledger").
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM grace_day_ledger").
 		WithArgs(userID).
-		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}))
+		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(0))
 	mock.ExpectQuery("SELECT local_date, status FROM daily_mission_snapshots").
 		WithArgs(userID, today.AddDate(0, 0, -6), today).
 		WillReturnRows(sqlmock.NewRows([]string{"local_date", "status"}))
@@ -409,7 +409,7 @@ func TestGetProgressSharedStreakObjectAgreesWithGetDailyMission(t *testing.T) {
 			"last_completed_local_date", "last_activity_local_date",
 			"timezone", "status", "created_at", "updated_at",
 		}).AddRow(userID, 5, 12, &day, &day, "UTC", gamification.StreakStatusActive, now, now))
-	mock.ExpectQuery("SELECT balance_after FROM grace_day_ledger").
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM grace_day_ledger").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(2))
 
@@ -432,7 +432,7 @@ func TestGetProgressSharedStreakObjectAgreesWithGetDailyMission(t *testing.T) {
 			"last_completed_local_date", "last_activity_local_date",
 			"timezone", "status", "created_at", "updated_at",
 		}).AddRow(userID, 5, 12, &day, &day, "UTC", gamification.StreakStatusActive, now, now))
-	mock.ExpectQuery("SELECT balance_after FROM grace_day_ledger").
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM grace_day_ledger").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(2))
 	mock.ExpectQuery("SELECT local_date, status FROM daily_mission_snapshots").
