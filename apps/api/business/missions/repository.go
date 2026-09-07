@@ -413,7 +413,8 @@ func (r *Repository) MarkSnapshotCompleted(
 func (r *Repository) MarkSnapshotProtected(
 	ctx context.Context,
 	tx *sql.Tx,
-	snapshotID uuid.UUID,
+	userID uuid.UUID,
+	localDate time.Time,
 	graceDayID uuid.UUID,
 ) (bool, error) {
 	if tx == nil {
@@ -422,8 +423,8 @@ func (r *Repository) MarkSnapshotProtected(
 	res, err := tx.ExecContext(ctx,
 		`UPDATE daily_mission_snapshots
 		 SET status = 'protected', grace_applied = true, grace_day_id = $2, updated_at = NOW()
-		 WHERE id = $1 AND status = 'missed'`,
-		snapshotID, graceDayID,
+		 WHERE user_id = $1 AND local_date = $3 AND status = 'missed'`,
+		userID, graceDayID, localDate,
 	)
 	if err != nil {
 		return false, fmt.Errorf("mark snapshot protected: %w", err)

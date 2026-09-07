@@ -53,6 +53,10 @@ type StreakReconciliation struct {
 	// available grace day to protect a missed day and a grace_day_ledger
 	// row should be inserted (with a negative amount).
 	GraceDayUsed *GraceLedgerEntry
+	// GraceDayUsedID is the persisted ledger-row identifier for GraceDayUsed.
+	// Transaction owners use it to link the protected mission snapshot without
+	// making gamification depend on the missions package.
+	GraceDayUsedID *uuid.UUID
 	// YesterdayProtectedLocalDate is set when the reconciliation decided
 	// to apply a grace day to yesterday (so the caller can mark yesterday's
 	// daily_mission_snapshot.status='protected' and grace_applied=true).

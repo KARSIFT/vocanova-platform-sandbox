@@ -194,15 +194,17 @@ func (s *Service) ReconcileAndAdvance(
 	}
 	if rec.GraceDayUsed != nil {
 		entry := rec.GraceDayUsed
-		if _, err := s.GrantGraceDay(
+		rowID, err := s.GrantGraceDay(
 			ctx, tx, userID,
 			entry.Amount, entry.BalanceAfter,
 			entry.Reason, entry.SourceType,
 			entry.SourceID, entry.AppliedToLocalDate, entry.Timezone,
 			entry.IdempotencyKey,
-		); err != nil {
+		)
+		if err != nil {
 			return nil, err
 		}
+		rec.GraceDayUsedID = &rowID
 	}
 	if rec.GraceDayEarned != nil {
 		entry := rec.GraceDayEarned

@@ -505,11 +505,19 @@ func (r *PostgreSQLRepository) applyP4ReviewWiring(
 	if err != nil {
 		return fmt.Errorf("get latest grace balance: %w", err)
 	}
-	if _, err := r.gamification.ReconcileAndAdvance(
+	reconciliation, err := r.gamification.ReconcileAndAdvance(
 		ctx, tx, req.UserID, now, resolved.Timezone,
 		snaps, graceBalance, missionCompletedNow,
-	); err != nil {
+	)
+	if err != nil {
 		return fmt.Errorf("reconcile streak: %w", err)
+	}
+	if reconciliation.GraceDayUsed != nil && reconciliation.GraceDayUsedID != nil && reconciliation.YesterdayProtectedLocalDate != nil {
+		if _, err := r.missions.MarkSnapshotProtected(
+			ctx, tx, req.UserID, *reconciliation.YesterdayProtectedLocalDate, *reconciliation.GraceDayUsedID,
+		); err != nil {
+			return fmt.Errorf("mark grace-protected snapshot: %w", err)
+		}
 	}
 	return nil
 }

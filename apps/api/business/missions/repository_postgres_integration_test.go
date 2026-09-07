@@ -530,6 +530,96 @@ func newMigratedDisposablePostgres(t *testing.T) *sql.DB {
 	return db
 }
 
+// newMigratedPostgresFromEnv applies the complete committed migration set in a
+// unique schema of an explicitly supplied PostgreSQL validation instance.
+// The connection pool is closed before the schema is dropped so cleanup does
+// not leave a pooled search_path pointed at a removed schema.
+func newMigratedPostgresFromEnv(t *testing.T) *sql.DB {
+	t.Helper()
+	dsn := os.Getenv("VOCANOVA_TEST_POSTGRES_DSN")
+	if dsn == "" {
+		t.Skip("VOCANOVA_TEST_POSTGRES_DSN is unset")
+	}
+	admin, err := sql.Open("postgres", dsn)
+	require.NoError(t, err)
+	schema := "missions_grace_" + randomHexSuffix(t, 12)
+	_, err = admin.Exec("CREATE SCHEMA " + schema)
+	require.NoError(t, err)
+	db, err := sql.Open("postgres", dsn+" search_path="+schema)
+	require.NoError(t, err)
+	applyCommittedForwardMigrations(t, db)
+	t.Cleanup(func() {
+		require.NoError(t, db.Close())
+		_, err := admin.Exec("DROP SCHEMA " + schema + " CASCADE")
+		require.NoError(t, err)
+		require.NoError(t, admin.Close())
+	})
+	return db
+}
+
+// TestGraceDayUseProtectsSnapshotAndSurvivesNextDayRealPostgres proves the
+// production transaction-owner protocol against all forward migrations. The
+// gamification package returns the debit row ID; its caller persists the
+// owner/date-scoped protected snapshot in that same transaction.
+func TestGraceDayUseProtectsSnapshotAndSurvivesNextDayRealPostgres(t *testing.T) {
+	db := newMigratedPostgresFromEnv(t)
+	ctx := t.Context()
+	userID := insertTestUser(t, db)
+	missionRepo := NewRepository(db)
+	gamSvc := gamification.NewService(gamification.NewRepository(db))
+	day1 := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+	day2, day3, day4 := day1.AddDate(0, 0, 1), day1.AddDate(0, 0, 2), day1.AddDate(0, 0, 3)
+	for _, day := range []time.Time{day1, day2, day3, day4} {
+		createSnapshotInOwnTransaction(t, db, missionRepo, userID, day, 5)
+	}
+	_, err := db.ExecContext(ctx, `UPDATE daily_mission_snapshots
+		SET status = CASE local_date WHEN $2 THEN 'completed' WHEN $3 THEN 'missed' WHEN $4 THEN 'completed' ELSE 'missed' END,
+		    completed_at = CASE WHEN local_date IN ($2, $4) THEN NOW() ELSE NULL END
+		WHERE user_id = $1`, userID, day1, day2, day3)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, `INSERT INTO streak_states (id,user_id,current_streak_count,longest_streak_count,last_completed_local_date,last_activity_local_date,timezone,status,created_at,updated_at)
+		VALUES ($1,$2,4,4,$3,$3,'UTC','active',NOW(),NOW())`, uuid.New(), userID, day1)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, `INSERT INTO grace_day_ledger (id,user_id,amount,balance_after,reason,source_type,applied_to_local_date,timezone,idempotency_key,created_at,updated_at)
+		VALUES ($1,$2,1,1,'earned_by_streak','streak',$3,'UTC','seed',NOW(),NOW())`, uuid.New(), userID, day1)
+	require.NoError(t, err)
+
+	tx, err := db.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	rec, err := gamSvc.ReconcileAndAdvance(ctx, tx, userID, day3.Add(12*time.Hour), "UTC", []gamification.StreakSnapshot{
+		{LocalDate: day1, Status: gamification.MissionStatusCompleted},
+		{LocalDate: day2, Status: gamification.MissionStatusMissed},
+		{LocalDate: day3, Status: gamification.MissionStatusCompleted},
+	}, 1, true)
+	require.NoError(t, err)
+	require.NotNil(t, rec.GraceDayUsedID)
+	protected, err := missionRepo.MarkSnapshotProtected(ctx, tx, userID, *rec.YesterdayProtectedLocalDate, *rec.GraceDayUsedID)
+	require.NoError(t, err)
+	require.True(t, protected)
+	require.NoError(t, tx.Commit())
+
+	protectedSnapshot, err := missionRepo.GetDailyMissionSnapshot(ctx, userID, day2)
+	require.NoError(t, err)
+	require.Equal(t, gamification.MissionStatusProtected, protectedSnapshot.Status)
+	require.True(t, protectedSnapshot.GraceApplied)
+	require.NotNil(t, protectedSnapshot.GraceDayID)
+	require.Equal(t, rec.GraceDayUsedID.String(), *protectedSnapshot.GraceDayID)
+
+	tx, err = db.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	_, err = gamSvc.ReconcileAndAdvance(ctx, tx, userID, day4.Add(12*time.Hour), "UTC", []gamification.StreakSnapshot{
+		{LocalDate: day1, Status: gamification.MissionStatusCompleted},
+		{LocalDate: day2, Status: gamification.MissionStatusProtected},
+		{LocalDate: day3, Status: gamification.MissionStatusCompleted},
+		{LocalDate: day4, Status: gamification.MissionStatusMissed},
+	}, 0, false)
+	require.NoError(t, err)
+	require.NoError(t, tx.Commit())
+	state, err := gamSvc.GetStreakStateForRead(ctx, userID)
+	require.NoError(t, err)
+	require.Equal(t, 5, state.CurrentStreakCount)
+}
+
 // applyCommittedForwardMigrations executes every committed forward
 // migration in filename (version) order. Recovery down-files are excluded
 // by the same rule Atlas itself uses: only `*.sql` is a forward migration,
