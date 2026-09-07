@@ -286,6 +286,15 @@ func TestGetProgressReturnsBalanceStreakAndHistory(t *testing.T) {
 
 	// getSettings → no user_settings row.
 	expectGetUserSettings(mock, userID, nil)
+	// Progress uses the same first-read snapshot/reconciliation boundary as
+	// Daily Mission. This fixture already has today's snapshot, so the
+	// transaction is a no-op and does not rewrite it.
+	mock.ExpectBegin()
+	expectGetDailyMissionSnapshot(mock, userID, day7, &missions.DailyMissionSnapshot{
+		UserID: userID.String(), LocalDate: day7, Timezone: "UTC", ReviewTarget: 20,
+		PolicyVersion: gamification.MissionPolicyVersion, Status: missions.StatusOpen,
+	})
+	mock.ExpectCommit()
 	// CurrentBalance.
 	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM confidence_point_ledger").
 		WithArgs(userID).
@@ -345,6 +354,12 @@ func TestGetProgressEmptyHistory(t *testing.T) {
 	api, _, mock := newMissionsTestAPI(t)
 
 	expectGetUserSettings(mock, userID, nil)
+	mock.ExpectBegin()
+	expectGetDailyMissionSnapshot(mock, userID, today, &missions.DailyMissionSnapshot{
+		UserID: userID.String(), LocalDate: today, Timezone: "UTC", ReviewTarget: 20,
+		PolicyVersion: gamification.MissionPolicyVersion, Status: missions.StatusOpen,
+	})
+	mock.ExpectCommit()
 	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM confidence_point_ledger").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"sum"}).AddRow(0))
@@ -360,7 +375,8 @@ func TestGetProgressEmptyHistory(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(0))
 	mock.ExpectQuery("SELECT local_date, status FROM daily_mission_snapshots").
 		WithArgs(userID, today.AddDate(0, 0, -6), today).
-		WillReturnRows(sqlmock.NewRows([]string{"local_date", "status"}))
+		WillReturnRows(sqlmock.NewRows([]string{"local_date", "status"}).
+			AddRow(today, missions.StatusOpen))
 
 	w := httptest.NewRecorder()
 	req := authenticatedMissionsRequest(t, userID, "/api/v1/progress")
@@ -372,7 +388,11 @@ func TestGetProgressEmptyHistory(t *testing.T) {
 	assert.Equal(t, 0, body.Body.ConfidencePointsBalance)
 	assert.Equal(t, 0, body.Body.Streak.GraceDayBalance)
 	assert.NotNil(t, body.Body.CompletionHistory)
-	assert.Empty(t, body.Body.CompletionHistory)
+	// Today's lazily-established snapshot is an unfinished day, not a
+	// completion; it must still appear in the current local-day window.
+	require.Len(t, body.Body.CompletionHistory, 1)
+	assert.Equal(t, today.Format("2006-01-02"), body.Body.CompletionHistory[0].LocalDate)
+	assert.False(t, body.Body.CompletionHistory[0].Completed)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -422,6 +442,17 @@ func TestGetProgressSharedStreakObjectAgreesWithGetDailyMission(t *testing.T) {
 
 	// GetProgress flow.
 	expectGetUserSettings(mock, userID, nil)
+	mock.ExpectBegin()
+	expectGetDailyMissionSnapshot(mock, userID, day, &missions.DailyMissionSnapshot{
+		UserID:           userID.String(),
+		LocalDate:        day,
+		Timezone:         "UTC",
+		ReviewTarget:     20,
+		ReviewsCompleted: 20,
+		PolicyVersion:    gamification.MissionPolicyVersion,
+		Status:           missions.StatusCompleted,
+	})
+	mock.ExpectCommit()
 	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM confidence_point_ledger").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(100))

@@ -140,10 +140,45 @@ func (s *Service) GetDailyMissionView(
 	if err != nil {
 		return nil, err
 	}
-	// Lazy snapshot creation: if today's row does not exist yet, create it
-	// (and run a read-time streak reconciliation) so the read APIs always
-	// return a stable projection. The unique (user_id, local_date) index
-	// makes CreateDailyMissionSnapshot idempotent.
+	snap, err := s.ensureTodaySnapshotAndReconcile(ctx, userID, resolved, today, now)
+	if err != nil {
+		return nil, err
+	}
+	streak, graceBalance, err := s.loadStreakAndGrace(ctx, userID, resolved.Timezone)
+	if err != nil {
+		return nil, err
+	}
+	view := &DailyMissionView{
+		LocalDate:       today,
+		Timezone:        resolved.Timezone,
+		Streak:          streak,
+		GraceDayBalance: graceBalance,
+	}
+	view.ReviewTarget = snap.ReviewTarget
+	view.ReviewsCompleted = snap.ReviewsCompleted
+	view.NewWordTarget = snap.NewWordTarget
+	view.NewWordsCompleted = snap.NewWordsCompleted
+	view.SentencePracticeTarget = snap.SentencePracticeTarget
+	view.SentencePracticesCompleted = snap.SentencePracticesCompleted
+	view.PolicyVersion = snap.PolicyVersion
+	view.Status = snap.Status
+	view.CompletedAt = snap.CompletedAt
+	view.GraceApplied = snap.GraceApplied
+	return view, nil
+}
+
+// ensureTodaySnapshotAndReconcile establishes today's stable snapshot and
+// reconciles a stale streak together when a learner first reads either Home's
+// mission or Progress on a new local day. Keeping the two writes in one
+// transaction prevents either read surface from exposing a stale streak while
+// preserving the established lazy, idempotent snapshot behavior.
+func (s *Service) ensureTodaySnapshotAndReconcile(
+	ctx context.Context,
+	userID uuid.UUID,
+	resolved gamification.ResolvedSettings,
+	today time.Time,
+	now time.Time,
+) (*DailyMissionSnapshot, error) {
 	tx, err := s.missions.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("begin tx: %w", err)
@@ -191,27 +226,7 @@ func (s *Service) GetDailyMissionView(
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("commit: %w", err)
 	}
-	streak, graceBalance, err := s.loadStreakAndGrace(ctx, userID, resolved.Timezone)
-	if err != nil {
-		return nil, err
-	}
-	view := &DailyMissionView{
-		LocalDate:       today,
-		Timezone:        resolved.Timezone,
-		Streak:          streak,
-		GraceDayBalance: graceBalance,
-	}
-	view.ReviewTarget = snap.ReviewTarget
-	view.ReviewsCompleted = snap.ReviewsCompleted
-	view.NewWordTarget = snap.NewWordTarget
-	view.NewWordsCompleted = snap.NewWordsCompleted
-	view.SentencePracticeTarget = snap.SentencePracticeTarget
-	view.SentencePracticesCompleted = snap.SentencePracticesCompleted
-	view.PolicyVersion = snap.PolicyVersion
-	view.Status = snap.Status
-	view.CompletedAt = snap.CompletedAt
-	view.GraceApplied = snap.GraceApplied
-	return view, nil
+	return snap, nil
 }
 
 // GetProgressView returns the API view of the user's overall progress
@@ -232,6 +247,9 @@ func (s *Service) GetProgressView(
 	}
 	today, err := gamification.LocalDate(now, resolved.Timezone)
 	if err != nil {
+		return nil, err
+	}
+	if _, err := s.ensureTodaySnapshotAndReconcile(ctx, userID, resolved, today, now); err != nil {
 		return nil, err
 	}
 	balance, err := s.gamification.CurrentBalance(ctx, userID)
