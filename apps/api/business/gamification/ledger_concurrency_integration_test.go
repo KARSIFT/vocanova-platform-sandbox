@@ -293,7 +293,7 @@ func TestGraceReconciliationUsesSignedLedgerSumForSameTransactionEntries(t *test
 		FROM streak_states WHERE user_id=$1`, userID).Scan(&current, &longest, &stateLastCompleted))
 	require.Equal(t, 7, current)
 	require.Equal(t, 7, longest)
-	require.Equal(t, today, stateLastCompleted)
+	require.True(t, stateLastCompleted.Equal(today))
 	var sum int
 	require.NoError(t, db.QueryRowContext(ctx,
 		`SELECT COALESCE(SUM(amount), 0) FROM grace_day_ledger WHERE user_id = $1`, userID).Scan(&sum))
@@ -379,7 +379,7 @@ func TestConcurrentGraceReconciliationsSerializeStateAndAuditBalancesPostgreSQL(
 		FROM streak_states WHERE user_id=$1`, userID).Scan(&current, &longest, &stateLastCompleted))
 	require.Equal(t, 7, current)
 	require.Equal(t, 7, longest)
-	require.Equal(t, today, stateLastCompleted)
+	require.True(t, stateLastCompleted.Equal(today))
 	rows, err := db.QueryContext(ctx, `SELECT amount,balance_after FROM grace_day_ledger
 		WHERE user_id=$1 ORDER BY balance_after`, userID)
 	require.NoError(t, err)
