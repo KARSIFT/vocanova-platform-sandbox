@@ -194,9 +194,12 @@ func TestPostgreSQLRepositoryDeletionRedactsUnattachedMagicLink(t *testing.T) {
 	uid, otherUID := uuid.New(), uuid.New()
 	email := uid.String() + "@example.test"
 	otherEmail := otherUID.String() + "@example.test"
-	linkID, otherLinkID := uuid.New(), uuid.New()
+	linkID, otherLinkID, postDeletionLinkID, consumedLinkID := uuid.New(), uuid.New(), uuid.New(), uuid.New()
 	hash := sha256.Sum256([]byte(uid.String() + "unattached-link"))
 	otherHash := sha256.Sum256([]byte(otherUID.String() + "unattached-link"))
+	postDeletionHash := sha256.Sum256([]byte(uid.String() + "post-deletion-link"))
+	consumedHash := sha256.Sum256([]byte(uid.String() + "consumed-link"))
+	consumedAt := now.Add(-time.Second)
 
 	for _, user := range []struct {
 		id    uuid.UUID
@@ -207,16 +210,23 @@ func TestPostgreSQLRepositoryDeletionRedactsUnattachedMagicLink(t *testing.T) {
 		}
 	}
 	for _, link := range []struct {
-		id    uuid.UUID
-		email string
-		hash  []byte
-	}{{linkID, email, hash[:]}, {otherLinkID, otherEmail, otherHash[:]}} {
-		if _, err := db.ExecContext(ctx, `INSERT INTO magic_links (id, email, token_hash, environment, created_at, expires_at) VALUES ($1, $2, $3, 'test', $4, $5)`, link.id, link.email, link.hash, now, now.Add(10*time.Minute)); err != nil {
+		id         uuid.UUID
+		email      string
+		hash       []byte
+		createdAt  time.Time
+		consumedAt *time.Time
+	}{
+		{linkID, email, hash[:], now.Add(-time.Second), nil},
+		{otherLinkID, otherEmail, otherHash[:], now.Add(-time.Second), nil},
+		{postDeletionLinkID, email, postDeletionHash[:], now.Add(time.Second), nil},
+		{consumedLinkID, email, consumedHash[:], now.Add(-2 * time.Second), &consumedAt},
+	} {
+		if _, err := db.ExecContext(ctx, `INSERT INTO magic_links (id, email, token_hash, environment, created_at, expires_at, consumed_at) VALUES ($1, $2, $3, 'test', $4, $5, $6)`, link.id, link.email, link.hash, link.createdAt, link.createdAt.Add(10*time.Minute), link.consumedAt); err != nil {
 			t.Fatal(err)
 		}
 	}
 	t.Cleanup(func() {
-		for _, id := range []uuid.UUID{linkID, otherLinkID} {
+		for _, id := range []uuid.UUID{linkID, otherLinkID, postDeletionLinkID, consumedLinkID} {
 			_, _ = db.ExecContext(context.Background(), `DELETE FROM magic_links WHERE id = $1`, id)
 		}
 		for _, id := range []uuid.UUID{uid, otherUID} {
@@ -251,6 +261,16 @@ func TestPostgreSQLRepositoryDeletionRedactsUnattachedMagicLink(t *testing.T) {
 	}
 	if otherEmailGot != otherEmail || otherRevoked.Valid {
 		t.Fatalf("unrelated magic link was changed: email=%q revoked=%t", otherEmailGot, otherRevoked.Valid)
+	}
+	for _, id := range []uuid.UUID{postDeletionLinkID, consumedLinkID} {
+		var retainedEmail string
+		var retainedRevoked sql.NullTime
+		if err := db.QueryRowContext(ctx, `SELECT email, revoked_at FROM magic_links WHERE id = $1`, id).Scan(&retainedEmail, &retainedRevoked); err != nil {
+			t.Fatal(err)
+		}
+		if retainedEmail != email || retainedRevoked.Valid {
+			t.Fatalf("non-pre-deletion/unconsumed link was changed: email=%q revoked=%t", retainedEmail, retainedRevoked.Valid)
+		}
 	}
 }
 

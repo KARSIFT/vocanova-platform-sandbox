@@ -308,6 +308,8 @@ func (r *PostgreSQLRepository) CreateAccountDeletionRequest(ctx context.Context,
 		       ELSE revoked_at
 		     END
 		 WHERE user_id IS NULL
+		   AND consumed_at IS NULL
+		   AND created_at <= $2
 		   AND lower(email) = lower((SELECT email FROM users WHERE id = $1))`,
 		userID, now,
 	); err != nil {
