@@ -11,7 +11,8 @@ import (
 )
 
 // ConfidencePointLedger is the append-only history of every Confidence Point
-// change. The running balance is balance_after of the latest row per user.
+// change. balance_after is an immutable audit snapshot; the current balance
+// is the signed sum of amount across the user's ledger rows.
 // reason and source_type follow DOC-05 §12 (with the D02 reconciliation:
 // `word_added` reason / `user_word` source_type added for the Add word reward).
 // Owned by gamification.

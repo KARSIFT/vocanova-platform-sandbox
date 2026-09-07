@@ -52,6 +52,31 @@ func TestRepositoryInsertPointLedgerIdempotent(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestRepositoryGetLatestPointBalanceTxLocksUserBalance(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRepository(db)
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	mock.ExpectBegin()
+	mock.ExpectExec("SELECT pg_advisory_xact_lock").
+		WithArgs(userID.String()).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM confidence_point_ledger").
+		WithArgs(userID).
+		WillReturnRows(sqlmock.NewRows([]string{"coalesce"}).AddRow(7))
+	mock.ExpectCommit()
+
+	tx, err := db.Begin()
+	require.NoError(t, err)
+	balance, err := repo.GetLatestPointBalanceTx(t.Context(), tx, userID)
+	require.NoError(t, err)
+	assert.Equal(t, 7, balance)
+	require.NoError(t, tx.Commit())
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 // TestRepositoryInsertGraceLedgerIdempotent is the grace-day equivalent of
 // the point-ledger idempotency test.
 func TestRepositoryInsertGraceLedgerIdempotent(t *testing.T) {

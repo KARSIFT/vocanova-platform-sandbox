@@ -228,6 +228,12 @@ func (s *Service) CurrentBalance(ctx context.Context, userID uuid.UUID) (int, er
 	return s.repo.GetLatestPointBalance(ctx, userID)
 }
 
+// CurrentBalanceTx obtains the per-user transaction lock used by every
+// production point-award writer before reading its predecessor balance.
+func (s *Service) CurrentBalanceTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID) (int, error) {
+	return s.repo.GetLatestPointBalanceTx(ctx, tx, userID)
+}
+
 // CurrentGraceBalance returns the user's current grace-day balance.
 func (s *Service) CurrentGraceBalance(ctx context.Context, userID uuid.UUID) (int, error) {
 	return s.repo.GetLatestGraceBalance(ctx, userID)
