@@ -545,7 +545,7 @@ export function ReviewSession({
                 disabled={isRefetching}
                 className="mt-[var(--spacing-sm)] w-full rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Retry refreshing your review list
+                Retry loading reviews
               </button>
             ) : null}
             {queueRefreshFailed && errorMessage ? (
@@ -562,7 +562,7 @@ export function ReviewSession({
                 disabled={isRefetching}
                 className="mt-[var(--spacing-sm)] w-full rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Retry loading reviews
+                Retry refreshing your review list
               </button>
             ) : null}
           </>

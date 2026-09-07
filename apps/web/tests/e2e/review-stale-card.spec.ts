@@ -16,7 +16,13 @@ async function seedReviewSession(
       { name: "vocanova_csrf", value: "review-stale-card-csrf", url },
       ...(fixtureCount === undefined
         ? []
-        : [{ name: "e2e_review_fixture_count", value: String(fixtureCount), url }]),
+        : [
+            {
+              name: "e2e_review_fixture_count",
+              value: String(fixtureCount),
+              url,
+            },
+          ]),
     ]),
   );
 }
