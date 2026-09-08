@@ -96,6 +96,47 @@ func TestMissionCompletedAtIntegrityAgainstPostgreSQL(t *testing.T) {
 			requireMissionCompletionCheckViolation(t, err)
 		})
 	}
+
+	// The constraint must apply to mutations as well as inserts: application
+	// code writes the completion pair during a status transition, while an
+	// accidental later timestamp on any non-completed state must be rejected.
+	for _, status := range []string{"open", "missed", "protected"} {
+		t.Run("updating timestamp on "+status, func(t *testing.T) {
+			id := uuid.New()
+			_, err := db.ExecContext(ctx,
+				`INSERT INTO daily_mission_snapshots (id, status, completed_at)
+				 VALUES ($1, $2, NULL)`, id, status)
+			require.NoError(t, err)
+
+			_, err = db.ExecContext(ctx,
+				`UPDATE daily_mission_snapshots SET completed_at = $2 WHERE id = $1`, id, now)
+			requireMissionCompletionCheckViolation(t, err)
+		})
+	}
+	t.Run("updating the completion pair", func(t *testing.T) {
+		id := uuid.New()
+		_, err := db.ExecContext(ctx,
+			`INSERT INTO daily_mission_snapshots (id, status, completed_at)
+			 VALUES ($1, 'open', NULL)`, id)
+		require.NoError(t, err)
+
+		_, err = db.ExecContext(ctx,
+			`UPDATE daily_mission_snapshots
+			 SET status = 'completed', completed_at = $2
+			 WHERE id = $1`, id, now)
+		require.NoError(t, err)
+	})
+	t.Run("removing completed status without clearing timestamp", func(t *testing.T) {
+		id := uuid.New()
+		_, err := db.ExecContext(ctx,
+			`INSERT INTO daily_mission_snapshots (id, status, completed_at)
+			 VALUES ($1, 'completed', $2)`, id, now)
+		require.NoError(t, err)
+
+		_, err = db.ExecContext(ctx,
+			`UPDATE daily_mission_snapshots SET status = 'missed' WHERE id = $1`, id)
+		requireMissionCompletionCheckViolation(t, err)
+	})
 	t.Run("completed without timestamp", func(t *testing.T) {
 		_, err := db.ExecContext(ctx,
 			`INSERT INTO daily_mission_snapshots (id, status, completed_at)
