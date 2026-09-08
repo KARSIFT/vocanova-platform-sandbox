@@ -71,3 +71,19 @@ func TestPersonalDataExportHandlerRequiresAuthenticationAndCSRF(t *testing.T) {
 	assert.Equal(t, "vocanova_default", body.Settings.ReviewIntervalPreset)
 	assert.True(t, body.Settings.NotificationsEnabled)
 }
+
+func TestPersonalDataExportHandlerRejectsWhitespaceIdempotencyKeyAsDocumentedValidation(t *testing.T) {
+	api, authSvc, repo, authRepo := testPersonalDataExportAPI(t)
+	uid := uuid.New()
+	authRepo.UpsertUser(&auth.User{ID: uid, Email: "user@example.com", Status: "active"})
+	repo.SetUser(uid, "user@example.com")
+
+	csrf, cookie := authSvc.IssueCSRFCookie()
+	req := exportRequest(t, uid, " ", true)
+	req.AddCookie(cookie)
+	req.Header.Set("X-CSRF-Token", csrf)
+	w := httptest.NewRecorder()
+	api.Adapter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnprocessableEntity, w.Code, w.Body.String())
+}

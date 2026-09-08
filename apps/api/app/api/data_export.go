@@ -243,7 +243,7 @@ func RegisterPersonalDataExports(api huma.API, svc *accounts.Service, authSvc *a
 func mapDataExportError(err error) huma.StatusError {
 	switch {
 	case errors.Is(err, accounts.ErrDataExportIdempotencyKeyRequired):
-		return huma.Error400BadRequest("idempotency key required")
+		return huma.Error422UnprocessableEntity("idempotency key required")
 	case errors.Is(err, accounts.ErrDataExportIdempotencyConflict):
 		return huma.Error409Conflict("idempotency key conflict")
 	case errors.Is(err, accounts.ErrDataExportRateLimited):
