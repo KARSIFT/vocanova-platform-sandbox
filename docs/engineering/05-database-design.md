@@ -276,7 +276,7 @@ or concurrent awards.
 sequence of ledger entries and asserts the value this trace ends in equals their exact sum.
 One unrelated, pre-existing mutable counter was found and left alone because it sits outside
 this read path entirely: `daily_activity_summaries.confidence_points_earned`/`_spent`
-(`missions.Service.IncrementConfidencePointsEarned`) is written by some reward call sites but
+(`missions.Service.RecordConfidencePointChange`) is written by some reward call sites but
 is never read back into any API response — it's dead weight, not a balance the Progress
 screen (or anything else) can drift from.
 
