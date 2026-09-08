@@ -243,7 +243,8 @@ export function validateMockInventory() {
   // tables: daily_mission_snapshots, daily_activity_summaries,
   // confidence_point_ledger, streak_states, grace_day_ledger, and
   // user_settings. VOC-031-T00 adds user_onboarding_profiles; T03
-  // adds email_change_links; T04 adds account_deletion_requests.
+  // adds email_change_links; T04 adds account_deletion_requests. VOC-1445
+  // adds the UserSettings migration-parity test alongside its existing schema.
   const allowedSchemaFiles = new Set([
     "canonicalword.go",
     "externalidentity.go",
@@ -266,6 +267,7 @@ export function validateMockInventory() {
     "streakstate.go",
     "gracedayledger.go",
     "usersettings.go",
+    "usersettings_test.go",
     "useronboardingprofile.go",
     "emailchangelink.go",
     "accountdeletionrequest.go",
@@ -296,6 +298,9 @@ export function validateMockInventory() {
   // key cascades with RESTRICT actions. VOC-1352 adds the documented
   // feature_audit_logs table used by
   // the word-save transaction and account-deletion de-identification flow.
+  // VOC-1445 narrows the legacy app-language regex to the one launch locale;
+  // its NOT VALID constraint retains pre-existing direct-write values while
+  // protecting all future writes.
   const allowedMigrationFiles = new Set([
     "20260724210000_identity_foundation.sql",
     "20260724210001_oauth_state.sql",
@@ -315,6 +320,7 @@ export function validateMockInventory() {
     "20260905130000_ai_feedback_retry_history.sql",
     "20260908010000_voc1350_restrict_ai_feedback_report_foreign_keys.sql",
     "20260908020000_voc1352_feature_audit_logs.sql",
+    "20260908300000_voc1445_en_only_app_language.sql",
   ]);
   for (const entry of readdirSync(apiMigrationRoot, {
     withFileTypes: true,

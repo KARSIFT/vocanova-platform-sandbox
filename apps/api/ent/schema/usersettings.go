@@ -22,7 +22,7 @@ func (UserSettings) Annotations() []schema.Annotation {
 			Checks: map[string]string{
 				"daily_review_target_in_range": "daily_review_target >= 5 AND daily_review_target <= 100",
 				"review_interval_preset_valid": "review_interval_preset IN ('vocanova_default', 'wordup_like', 'custom')",
-				"app_language_valid":           "app_language ~ '^[A-Za-z]{2,8}$'",
+				"app_language_valid":           "app_language = 'en'",
 				"timezone_nonempty":            "char_length(timezone) > 0",
 			},
 		},
@@ -41,7 +41,7 @@ func (UserSettings) Fields() []ent.Field {
 		field.String("review_interval_preset").Default("vocanova_default"),
 		field.Bool("notifications_enabled").Default(true),
 		field.Bool("marketing_emails_enabled").Default(false),
-		field.String("app_language").Default("en"),
+		field.Enum("app_language").Values("en").Default("en"),
 	}
 }
 

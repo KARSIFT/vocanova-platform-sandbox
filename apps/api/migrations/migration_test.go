@@ -292,6 +292,26 @@ func TestVOC030P4UserSettingsMigrationCarriesDatabaseInvariants(t *testing.T) {
 	}
 }
 
+func TestVOC1445EnOnlyAppLanguageMigrationMatchesProductContract(t *testing.T) {
+	sql, err := os.ReadFile("20260908300000_voc1445_en_only_app_language.sql")
+	if err != nil {
+		t.Fatalf("read voc-1445 en-only app language migration: %v", err)
+	}
+	text := string(sql)
+	for _, invariant := range []string{
+		"DROP CONSTRAINT user_settings_app_language_valid",
+		"ADD CONSTRAINT user_settings_app_language_valid",
+		"CHECK (app_language = 'en') NOT VALID",
+	} {
+		if !strings.Contains(text, invariant) {
+			t.Errorf("voc-1445 migration missing invariant %q", invariant)
+		}
+	}
+	if strings.Contains(text, "^[A-Za-z]{2,8}$") {
+		t.Error("voc-1445 migration retains the generic app-language regex")
+	}
+}
+
 func TestVOC030P4MissionTablesMigrationCarriesDatabaseInvariants(t *testing.T) {
 	sql, err := os.ReadFile("20260725130001_voc030_p4_mission_tables.sql")
 	if err != nil {
