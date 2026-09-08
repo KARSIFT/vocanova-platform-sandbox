@@ -595,7 +595,7 @@ func TestGraceDayUseProtectsSnapshotAndSurvivesNextDayRealPostgres(t *testing.T)
 		{LocalDate: day1, Status: gamification.MissionStatusCompleted},
 		{LocalDate: day2, Status: gamification.MissionStatusMissed},
 		{LocalDate: day3, Status: gamification.MissionStatusCompleted},
-	}, 1, true)
+	}, true)
 	require.NoError(t, err)
 	require.NotNil(t, rec.GraceDayUsedID)
 	protected, err := missionRepo.MarkSnapshotProtected(ctx, tx, userID, *rec.YesterdayProtectedLocalDate, *rec.GraceDayUsedID)
@@ -617,7 +617,7 @@ func TestGraceDayUseProtectsSnapshotAndSurvivesNextDayRealPostgres(t *testing.T)
 		{LocalDate: day2, Status: gamification.MissionStatusProtected},
 		{LocalDate: day3, Status: gamification.MissionStatusCompleted},
 		{LocalDate: day4, Status: gamification.MissionStatusMissed},
-	}, 0, false)
+	}, false)
 	require.NoError(t, err)
 	require.NoError(t, tx.Commit())
 	state, err := gamSvc.GetStreakStateForRead(ctx, userID)

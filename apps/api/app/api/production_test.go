@@ -130,6 +130,7 @@ func TestLoadProductionConfig_DefaultsAreSensible(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "8080", cfg.Port, "PORT must default to 8080 when unset")
 	assert.Equal(t, time.Hour, cfg.AuthCleanupInterval, "AUTH_CLEANUP_INTERVAL must default to one hour when unset")
+	assert.Equal(t, time.Hour, cfg.AccountDeletionSweepInterval, "ACCOUNT_DELETION_SWEEP_INTERVAL must default to one hour when unset")
 	assert.Equal(t, "staging", cfg.Environment, "ENVIRONMENT must default to staging when unset")
 	assert.True(t, cfg.AIEnabled, "AI_FEATURES_ENABLED must default to true when unset")
 	assert.True(t, cfg.MagicLinkOn, "EMAIL_MAGIC_LINK_ENABLED must default to true when unset")
@@ -156,6 +157,21 @@ func TestLoadProductionConfig_RejectsUnsafeAuthCleanupInterval(t *testing.T) {
 	}
 }
 
+func TestLoadProductionConfig_RejectsUnsafeAccountDeletionSweepInterval(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://example/db")
+	t.Setenv("SESSION_COOKIE_DOMAIN", "example.com")
+	t.Setenv("OAUTH_REDIRECT_URI", "https://example.com/auth/callback")
+
+	for _, interval := range []string{"30s", "25h", "not-a-duration"} {
+		t.Run(interval, func(t *testing.T) {
+			t.Setenv("ACCOUNT_DELETION_SWEEP_INTERVAL", interval)
+			_, err := LoadProductionConfig()
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "ACCOUNT_DELETION_SWEEP_INTERVAL")
+		})
+	}
+}
+
 func TestLoadProductionConfig_AcceptsAuthCleanupIntervalBoundaries(t *testing.T) {
 	for _, tc := range []struct {
 		interval string
@@ -174,6 +190,24 @@ func TestLoadProductionConfig_AcceptsAuthCleanupIntervalBoundaries(t *testing.T)
 			cfg, err := LoadProductionConfig()
 			require.NoError(t, err)
 			assert.Equal(t, tc.expected, cfg.AuthCleanupInterval)
+		})
+	}
+}
+
+func TestLoadProductionConfig_AcceptsAccountDeletionSweepIntervalBoundaries(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://example/db")
+	t.Setenv("BASE_URL", "https://example.com")
+	t.Setenv("SESSION_COOKIE_DOMAIN", "example.com")
+	t.Setenv("OAUTH_REDIRECT_URI", "https://example.com/auth/callback")
+
+	for _, interval := range []string{"1m", "24h"} {
+		t.Run(interval, func(t *testing.T) {
+			t.Setenv("ACCOUNT_DELETION_SWEEP_INTERVAL", interval)
+			cfg, err := LoadProductionConfig()
+			require.NoError(t, err)
+			expected, err := time.ParseDuration(interval)
+			require.NoError(t, err)
+			assert.Equal(t, expected, cfg.AccountDeletionSweepInterval)
 		})
 	}
 }
@@ -1400,6 +1434,30 @@ func TestProductionGo_NewProductionAPIConstructsP4WiredReviewsRepository(t *test
 		"NewProductionAPI must build the reviews repository via newProductionReviewsRepository")
 	assert.NotContains(t, src, "reviews.NewPostgreSQLRepository(db, clk)\n",
 		"production.go must not construct the reviews repository without P4 wiring options")
+}
+
+// TestProductionLearningRepositoryWiresP4Dependencies prevents the word-save
+// path from regressing to a ledger-only write that omits exported daily
+// activity counters.
+func TestProductionLearningRepositoryWiresP4Dependencies(t *testing.T) {
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	gamSvc := gamification.NewService(gamification.NewRepository(db))
+	missionsSvc := missions.NewService(missions.NewRepository(db), gamSvc)
+
+	repo := newProductionLearningRepository(db, gamSvc, missionsSvc)
+	require.True(t, repo.HasP4Wiring(),
+		"production learning repository must wire gamification and missions for word-add activity writes")
+}
+
+func TestProductionGo_NewProductionAPIConstructsP4WiredLearningRepository(t *testing.T) {
+	source, err := os.ReadFile("production.go")
+	require.NoError(t, err)
+	src := string(source)
+	assert.Contains(t, src, "newProductionLearningRepository(db, gamSvc, missionsSvc)",
+		"NewProductionAPI must build the learning repository with P4 activity wiring")
 }
 
 // ---------------------------------------------------------------------------

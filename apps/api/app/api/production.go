@@ -93,6 +93,11 @@ type ProductionConfig struct {
 	// artifacts. It is intentionally a lightweight in-process MVP job and is
 	// bounded so an unsafe deployment value cannot hammer PostgreSQL.
 	AuthCleanupInterval time.Duration
+
+	// AccountDeletionSweepInterval is the cadence at which a production API
+	// process checks for due staged-deletion requests. The sweep itself uses
+	// database claims, so running it in more than one replica is safe.
+	AccountDeletionSweepInterval time.Duration
 }
 
 const (
@@ -101,6 +106,13 @@ const (
 	// ensure credential material is not retained indefinitely by a bad setting.
 	minAuthCleanupInterval = time.Minute
 	maxAuthCleanupInterval = 24 * time.Hour
+
+	// AccountDeletionSweepInterval must not outpace the sweep service's
+	// fixed 60-per-hour internal safety budget, and must remain frequent
+	// enough that a due privacy deletion cannot be delayed indefinitely by
+	// an accidental environment value.
+	minAccountDeletionSweepInterval = time.Minute
+	maxAccountDeletionSweepInterval = 24 * time.Hour
 )
 
 // AI-provider identifiers and per-provider connection defaults.
@@ -218,6 +230,15 @@ func LoadProductionConfig() (ProductionConfig, error) {
 	)
 	if authCleanupIntervalErr != nil {
 		return cfg, authCleanupIntervalErr
+	}
+
+	var sweepIntervalErr error
+	cfg.AccountDeletionSweepInterval, sweepIntervalErr = getenvBoundedDuration(
+		"ACCOUNT_DELETION_SWEEP_INTERVAL", time.Hour,
+		minAccountDeletionSweepInterval, maxAccountDeletionSweepInterval,
+	)
+	if sweepIntervalErr != nil {
+		return cfg, sweepIntervalErr
 	}
 
 	if cfg.DatabaseURL == "" {
@@ -697,16 +718,16 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	contentRepo := content.NewPostgreSQLRepository(db)
 	gamRepo := gamification.NewRepository(db)
 	gamSvc := gamification.NewService(gamRepo)
+	missionsRepo := missions.NewRepository(db)
+	missionsSvc := missions.NewService(missionsRepo, gamSvc)
 	contentSvc := content.NewService(contentRepo, learning.NewPostgreSQLRepository(db))
 
 	learningIdem := learning.NewPostgreSQLIdempotencyStore(db)
-	// The repository owns the atomic PostgreSQL claim, word mutation, and
-	// reward write; the separate store remains for other learning workflows.
-	learningRepo := learning.NewPostgreSQLRepository(db, gamSvc)
+	// The repository owns the atomic PostgreSQL claim, word mutation, reward,
+	// and daily-activity writes; the separate store remains for other learning
+	// workflows.
+	learningRepo := newProductionLearningRepository(db, gamSvc, missionsSvc)
 	learningSvc := learning.NewService(learningRepo, learningIdem, clk)
-
-	missionsRepo := missions.NewRepository(db)
-	missionsSvc := missions.NewService(missionsRepo, gamSvc)
 
 	reviewsRepo := newProductionReviewsRepository(db, clk, gamSvc, missionsSvc)
 	reviewsSvc := reviews.NewService(reviewsRepo, learningIdem, clk)
@@ -816,6 +837,13 @@ func newProductionReviewsRepository(db *sql.DB, clk clock.Clock, gamSvc *gamific
 		reviews.WithGamificationService(gamSvc),
 		reviews.WithMissionsService(missionsSvc),
 	)
+}
+
+// newProductionLearningRepository is the sole construction path for the live
+// learning PostgreSQL repository. It wires P4 dependencies so word additions
+// update daily activity alongside their confidence-point ledger entry.
+func newProductionLearningRepository(db *sql.DB, gamSvc *gamification.Service, missionsSvc *missions.Service) *learning.PostgreSQLRepository {
+	return learning.NewPostgreSQLRepository(db, gamSvc, missionsSvc)
 }
 
 // ControlledSignupReady reports whether controlled first-time signup

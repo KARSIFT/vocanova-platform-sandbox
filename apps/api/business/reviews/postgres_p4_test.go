@@ -223,10 +223,12 @@ func TestPostgreSQLRepositorySubmitReviewP4RatingGoodWiring(t *testing.T) {
 	mock.ExpectQuery("SELECT local_date, status, completed_at, grace_applied, grace_day_id FROM daily_mission_snapshots").
 		WithArgs(userID, 14).
 		WillReturnRows(sqlmock.NewRows([]string{"local_date", "status", "completed_at", "grace_applied", "grace_day_id"}))
-	// 2i. getLatestGraceBalanceTx (no rows yet -> empty).
-	mock.ExpectQuery("SELECT COALESCE\\(balance_after, 0\\) FROM grace_day_ledger").
+	// 2i. ReconcileAndAdvance locks the user, then sums the grace ledger.
+	mock.ExpectExec("SELECT pg_advisory_xact_lock").WithArgs(userID.String()).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM grace_day_ledger").
 		WithArgs(userID).
-		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}))
+		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(0))
 	// 2j. ReconcileAndAdvance: GetStreakState on db, then UpsertStreakState
 	// on tx.
 	mock.ExpectQuery("SELECT user_id, current_streak_count, longest_streak_count").
@@ -376,9 +378,11 @@ func TestPostgreSQLRepositorySubmitReviewP4MissionCompletion(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"local_date", "status", "completed_at", "grace_applied", "grace_day_id"}).
 			AddRow(yesterday, "completed", now, false, nil).
 			AddRow(day, "completed", now, false, nil))
-	mock.ExpectQuery("SELECT COALESCE\\(balance_after, 0\\) FROM grace_day_ledger").
+	mock.ExpectExec("SELECT pg_advisory_xact_lock").WithArgs(userID.String()).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM grace_day_ledger").
 		WithArgs(userID).
-		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}))
+		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(0))
 	// ReconcileAndAdvance: GetStreakState on db.
 	mock.ExpectQuery("SELECT user_id, current_streak_count, longest_streak_count").
 		WithArgs(userID).
@@ -482,9 +486,11 @@ func TestPostgreSQLRepositorySubmitReviewP4SkippedNoRatingReward(t *testing.T) {
 	mock.ExpectQuery("SELECT local_date, status, completed_at, grace_applied, grace_day_id FROM daily_mission_snapshots").
 		WithArgs(userID, 14).
 		WillReturnRows(sqlmock.NewRows([]string{"local_date", "status", "completed_at", "grace_applied", "grace_day_id"}))
-	mock.ExpectQuery("SELECT COALESCE\\(balance_after, 0\\) FROM grace_day_ledger").
+	mock.ExpectExec("SELECT pg_advisory_xact_lock").WithArgs(userID.String()).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM grace_day_ledger").
 		WithArgs(userID).
-		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}))
+		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(0))
 	mock.ExpectQuery("SELECT user_id, current_streak_count, longest_streak_count").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"user_id", "current_streak_count", "longest_streak_count", "last_completed_local_date", "last_activity_local_date", "timezone", "status", "created_at", "updated_at"}))
@@ -660,9 +666,11 @@ func TestPostgreSQLRepositorySubmitReviewP4AlreadyCompletedSnapshotNoDoubleRewar
 		WithArgs(userID, 14).
 		WillReturnRows(sqlmock.NewRows([]string{"local_date", "status", "completed_at", "grace_applied", "grace_day_id"}).
 			AddRow(day, "completed", now, false, nil))
-	mock.ExpectQuery("SELECT COALESCE\\(balance_after, 0\\) FROM grace_day_ledger").
+	mock.ExpectExec("SELECT pg_advisory_xact_lock").WithArgs(userID.String()).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM grace_day_ledger").
 		WithArgs(userID).
-		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}))
+		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(0))
 	mock.ExpectQuery("SELECT user_id, current_streak_count, longest_streak_count").
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"user_id", "current_streak_count", "longest_streak_count", "last_completed_local_date", "last_activity_local_date", "timezone", "status", "created_at", "updated_at"}).

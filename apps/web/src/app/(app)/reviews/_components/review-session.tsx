@@ -59,6 +59,10 @@ export function ReviewSession({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefetching, setIsRefetching] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [queueUpdateMessage, setQueueUpdateMessage] = useState<string | null>(
+    null,
+  );
+  const [queueRefreshFailed, setQueueRefreshFailed] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [phase, setPhase] = useState<PromptPhase>("prompt");
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
@@ -93,15 +97,21 @@ export function ReviewSession({
     setStartTime(Date.now());
     setHasSubmittedCurrentCard(false);
     pendingSubmission.current = null;
+    // queueUpdateMessage deliberately survives the 404-driven dueWords
+    // replacement so the first authoritative card can announce it. Normal
+    // local-card transitions clear it in advance(), and normal refetches set
+    // it back to null.
   }, [currentIndex, dueWords]);
 
-  const advance = () => {
-    if (currentIndex + 1 < dueWords.length) {
-      setCurrentIndex((index) => index + 1);
-      return;
-    }
-
+  const refetchDueQueue = ({
+    fallbackErrorMessage,
+    queueUpdateMessage: nextQueueUpdateMessage,
+  }: {
+    fallbackErrorMessage: string;
+    queueUpdateMessage?: string;
+  }) => {
     setIsRefetching(true);
+    setQueueRefreshFailed(false);
     setErrorMessage(null);
     const client = createApiClient();
     client
@@ -112,23 +122,39 @@ export function ReviewSession({
           setRemainingCount(data.totalCount);
           setCurrentIndex(0);
         } else {
+          setRemainingCount(0);
           setCompleted(true);
         }
+        // A 404-driven refetch supplies a status for the first refreshed
+        // card. Every normal refetch clears it so it cannot leak into a
+        // later card or completion summary.
+        setQueueUpdateMessage(nextQueueUpdateMessage ?? null);
       })
       .catch((error) => {
         // T06: a 401 here means the session expired mid-review-session;
         // route the learner to re-auth instead of leaving them looking at
         // an error on a frozen card.
-        setErrorMessage(
-          handleApiError(
-            error,
-            "Your answer was saved. Unable to load more words. Please try again.",
-          ),
-        );
+        setErrorMessage(handleApiError(error, fallbackErrorMessage));
+        if (nextQueueUpdateMessage) {
+          setQueueRefreshFailed(true);
+        }
       })
       .finally(() => {
         setIsRefetching(false);
       });
+  };
+
+  const advance = () => {
+    if (currentIndex + 1 < dueWords.length) {
+      setQueueUpdateMessage(null);
+      setCurrentIndex((index) => index + 1);
+      return;
+    }
+
+    refetchDueQueue({
+      fallbackErrorMessage:
+        "Your answer was saved. Unable to load more words. Please try again.",
+    });
   };
 
   const submitAttempt = async ({
@@ -210,6 +236,20 @@ export function ReviewSession({
       );
       advance();
     } catch (error) {
+      if (error instanceof ApiResponseError && error.status === 404) {
+        // A 404 is a definite answer: another tab (or device) may have
+        // removed this saved word after the due queue was loaded. Discard the
+        // idempotency intent and reconcile with the backend rather than
+        // offering a retry that can never succeed.
+        pendingSubmission.current = null;
+        refetchDueQueue({
+          fallbackErrorMessage:
+            "The word was removed, but we couldn't refresh your review list. Please try again.",
+          queueUpdateMessage:
+            "This word was removed. Your review list was updated.",
+        });
+        return;
+      }
       // A 4xx response is a definite rejection, not an ambiguous transport
       // outcome. Do not retain its key/body for a retry.
       if (
@@ -247,6 +287,15 @@ export function ReviewSession({
         <p className="mt-[var(--spacing-sm)] text-base text-neutral-700">
           {completionSummary ?? "No words are due for review right now."}
         </p>
+        {queueUpdateMessage ? (
+          <p
+            role="status"
+            aria-live="polite"
+            className="mt-[var(--spacing-sm)] text-sm text-neutral-700"
+          >
+            {queueUpdateMessage}
+          </p>
+        ) : null}
         <Link
           href="/home"
           className="mt-[var(--spacing-lg)] inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
@@ -296,6 +345,15 @@ export function ReviewSession({
           Card {currentIndex + 1} of {dueWords.length}
         </p>
       </div>
+      {queueUpdateMessage ? (
+        <p
+          role="status"
+          aria-live="polite"
+          className="mt-[var(--spacing-sm)] text-sm text-neutral-700"
+        >
+          {queueUpdateMessage}
+        </p>
+      ) : null}
 
       <div
         className="mt-[var(--spacing-md)] rounded-md border border-neutral-200 bg-white p-[var(--spacing-md)] shadow-sm"
@@ -483,7 +541,7 @@ export function ReviewSession({
                 {errorMessage}
               </p>
             ) : null}
-            {hasSubmittedCurrentCard && errorMessage ? (
+            {hasSubmittedCurrentCard && !queueRefreshFailed && errorMessage ? (
               <button
                 type="button"
                 onClick={advance}
@@ -491,6 +549,23 @@ export function ReviewSession({
                 className="mt-[var(--spacing-sm)] w-full rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Retry loading reviews
+              </button>
+            ) : null}
+            {queueRefreshFailed && errorMessage ? (
+              <button
+                type="button"
+                onClick={() =>
+                  refetchDueQueue({
+                    fallbackErrorMessage:
+                      "The word was removed, but we couldn't refresh your review list. Please try again.",
+                    queueUpdateMessage:
+                      "This word was removed. Your review list was updated.",
+                  })
+                }
+                disabled={isRefetching}
+                className="mt-[var(--spacing-sm)] w-full rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Retry refreshing your review list
               </button>
             ) : null}
           </>

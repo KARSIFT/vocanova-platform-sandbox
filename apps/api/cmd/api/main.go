@@ -19,6 +19,7 @@ import (
 	"time"
 
 	contract "github.com/KARSIFT/vocanova-platform/apps/api/app/api"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/accounts"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/auth"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/getsentry/sentry-go"
@@ -79,6 +80,21 @@ func run() error {
 		stopAuthCleanup(cancelCleanup, cleanupDone)
 	}()
 
+	// A deletion request deliberately deactivates first, then is purged after
+	// its grace period. Without this loop, a due row can remain deactivated
+	// forever because no request path invokes RunDeletionSweep. Database-level
+	// claims make concurrent API replicas safe; each process may run this same
+	// bounded loop.
+	sweepCtx, cancelSweep := context.WithCancel(context.Background())
+	sweepDone := make(chan struct{})
+	go func() {
+		defer close(sweepDone)
+		runDeletionSweepLoop(sweepCtx, newDeletionSweepService(db), cfg.AccountDeletionSweepInterval)
+	}()
+	defer func() {
+		stopDeletionSweep(cancelSweep, sweepDone)
+	}()
+
 	// Real unhandled errors/panics from any request, not just the
 	// deliberate VOC-037-T04 test endpoint, must reach Sentry - the
 	// deliberate test event alone proves the DSN/token wiring, not that
@@ -123,13 +139,13 @@ func run() error {
 		return fmt.Errorf("listen: %w", err)
 	}
 
-	// Stop and join background cleanup before beginning the HTTP drain. This
-	// prevents a ticker from beginning a new credential-delete pass during the
-	// graceful-shutdown window, while the database is still available for an
-	// already-running pass to observe cancellation. The deferred call remains a
-	// safety net for earlier returns; cancellation and reads from a closed done
-	// channel are both idempotent.
+	// Stop and join both background jobs before beginning the HTTP drain. This
+	// prevents either ticker from beginning a new credential-delete or account-
+	// purge pass during the graceful-shutdown window. The deferred calls remain
+	// safety nets for earlier returns; cancellation and reads from closed done
+	// channels are idempotent.
 	stopAuthCleanup(cancelCleanup, cleanupDone)
+	stopDeletionSweep(cancelSweep, sweepDone)
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -157,6 +173,17 @@ func stopAuthCleanup(cancel context.CancelFunc, done <-chan struct{}) {
 	<-done
 }
 
+type deletionSweeper interface {
+	RunDeletionSweep(ctx context.Context, clientIP, sessionToken string) (*accounts.SweepResult, error)
+}
+
+// stopDeletionSweep cancels the loop and waits until it has exited while the
+// database is still open. It is safe to invoke more than once.
+func stopDeletionSweep(cancel context.CancelFunc, done <-chan struct{}) {
+	cancel()
+	<-done
+}
+
 // newAuthCleanupService builds the narrow production service instance used by
 // the cleanup loop. Cleanup only needs the PostgreSQL repository and clock;
 // delivery, OAuth, and request-rate-limit collaborators are not involved.
@@ -174,6 +201,50 @@ func runAuthCleanupLoop(ctx context.Context, cleaner authCleaner, interval time.
 	run := func() {
 		if err := cleaner.Cleanup(ctx); err != nil {
 			fmt.Fprintf(os.Stderr, "api: auth cleanup failed: %v\n", err)
+		}
+	}
+
+	run()
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			run()
+		}
+	}
+}
+
+// newDeletionSweepService builds the narrow production service instance used
+// only by the background purge loop. Request-only collaborators are nil: the
+// sweep uses just the repository, clock, rate limiter, and deletion settings.
+func newDeletionSweepService(db *sql.DB) deletionSweeper {
+	clk := clock.Real{}
+	return accounts.NewService(
+		accounts.NewPostgreSQLRepository(db), nil, nil, nil, clk,
+		auth.NewFixedWindowRateLimiter(clk, time.Hour, 60),
+		accounts.Config{},
+	)
+}
+
+// runDeletionSweepLoop performs one pass at startup (so overdue requests do
+// not wait a whole cadence) and then at each configured interval. Errors are
+// logged without account identifiers; a later pass safely resumes a failed or
+// stale claim. Context cancellation stops the ticker promptly during shutdown.
+func runDeletionSweepLoop(ctx context.Context, sweeper deletionSweeper, interval time.Duration) {
+	if interval <= 0 {
+		interval = time.Hour
+	}
+	run := func() {
+		result, err := sweeper.RunDeletionSweep(ctx, "internal", "internal")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "api: account-deletion sweep failed: %v\n", err)
+			return
+		}
+		if result.Anonymized > 0 || result.Failed > 0 {
+			fmt.Fprintf(os.Stderr, "api: account-deletion sweep processed=%d anonymized=%d failed=%d\n", result.Processed, result.Anonymized, result.Failed)
 		}
 	}
 

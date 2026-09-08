@@ -234,8 +234,8 @@ async function chooseWordLink(page: Page): Promise<Locator> {
 // leave the prior card mounted in feedback with every MC option disabled.
 // Waiting only for a visible MC group / Card N of M then re-entering this
 // helper is the VOC-076 run #227 failure mode. Settle on a *prompt-ready*
-// control (enabled Show answer, enabled MC option) or caught-up before
-// returning, and require the same signal at entry.
+// control (enabled Show answer, enabled MC option) or a terminal review state
+// before returning, and require the same signal at entry.
 async function reviewOneCard(page: Page): Promise<boolean> {
   const showAnswerButton = page.getByRole("button", {
     name: "Show answer",
@@ -251,6 +251,11 @@ async function reviewOneCard(page: Page): Promise<boolean> {
     name: "You're all caught up",
     level: 2,
   });
+  const reviewCompleteHeading = page.getByRole("heading", {
+    name: "Review complete",
+    level: 2,
+  });
+  const terminalReviewHeading = caughtUpHeading.or(reviewCompleteHeading);
 
   // Batch-end listDueWords and in-flight submitReview can exceed the
   // default 20s expect timeout while the prior feedback card is still
@@ -258,11 +263,14 @@ async function reviewOneCard(page: Page): Promise<boolean> {
   const PROMPT_READY_TIMEOUT_MS = 120_000;
 
   const promptReady = () =>
-    showAnswerButton.or(enabledMcOption).or(caughtUpHeading).first();
+    showAnswerButton
+      .or(enabledMcOption)
+      .or(terminalReviewHeading)
+      .first();
 
   await expect(promptReady()).toBeVisible({ timeout: PROMPT_READY_TIMEOUT_MS });
 
-  if (await caughtUpHeading.isVisible()) {
+  if (await terminalReviewHeading.isVisible()) {
     return false;
   }
 
@@ -387,36 +395,46 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
         name: "You're all caught up",
         level: 2,
       });
+      const reviewCompleteHeading = page.getByRole("heading", {
+        name: "Review complete",
+        level: 2,
+      });
+      const terminalReviewHeading = caughtUpHeading.or(reviewCompleteHeading);
 
       const cardCounter = page.getByText(/^Card \d+ of \d+$/);
 
       let reviewed = 0;
       while (reviewed < MAX_REVIEW_CARDS) {
-        // caughtUpHeading.isVisible() is a synchronous DOM snapshot, not
+        // terminalReviewHeading.isVisible() is a synchronous DOM snapshot, not
         // an auto-retrying assertion - called right after navigation (or
         // right after the previous card's submission), the review data
         // can still be loading, so it reads false even when the queue is
         // genuinely empty. Wait for the page to actually reach one of its
-        // two settled states first, the same signal the loop already
+        // terminal review state (caught-up or Review complete) or a card first,
+        // the same signal the loop already
         // trusts after each submission below, instead of trusting an
         // instantaneous check. Found live, 2026-08-09: this raced ahead
         // of an empty queue and reviewOneCard then waited the full test
         // timeout for a card that was never going to appear.
-        await expect(caughtUpHeading.or(cardCounter).first()).toBeVisible();
-        if (await caughtUpHeading.isVisible()) {
+        await expect(
+          terminalReviewHeading.or(cardCounter).first(),
+        ).toBeVisible();
+        if (await terminalReviewHeading.isVisible()) {
           break;
         }
         const didReview = await reviewOneCard(page);
         if (!didReview) {
-          // reviewOneCard independently found the queue already empty -
-          // trust it over this loop's own now-stale check above.
+          // reviewOneCard independently found a terminal review state - trust
+          // it over this loop's own now-stale check above.
           break;
         }
         reviewed++;
         // The submission either advances to the next card or empties
         // the queue; both are settled states, so wait for one of them
         // instead of a fixed delay.
-        await expect(caughtUpHeading.or(cardCounter).first()).toBeVisible();
+        await expect(
+          terminalReviewHeading.or(cardCounter).first(),
+        ).toBeVisible();
       }
 
       // VOC-074-T02: step 7 must not pass vacuously when the queue was empty or
@@ -441,8 +459,9 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
         name: /^Practice with /,
       });
       if (!(await feedbackHeading.isVisible())) {
-        // The widget only renders in the caught-up state, for a card
-        // reviewed in this same session. A run that started with a
+        // The widget only renders in a terminal review state (caught-up or
+        // Review complete), for a card reviewed in this same session. A run
+        // that started with a
         // backlog deeper than MAX_REVIEW_CARDS legitimately never
         // reaches it.
         testInfo.annotations.push({

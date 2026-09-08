@@ -110,21 +110,46 @@ func (r *Repository) GetStreakState(ctx context.Context, userID uuid.UUID) (*Str
 }
 
 // GetLatestGraceBalance returns the user's current available grace-day
-// balance from the latest grace_day_ledger row. 0 if no rows exist.
+// balance. grace_day_ledger is append-only, so its signed amount sum is the
+// source of truth. In particular, created_at is transaction-stable in
+// PostgreSQL: a use and an earn written by one reconciliation can tie, and
+// UUID order cannot determine a running balance from those rows.
 func (r *Repository) GetLatestGraceBalance(ctx context.Context, userID uuid.UUID) (int, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT balance_after FROM grace_day_ledger
-		 WHERE user_id = $1
-		 ORDER BY created_at DESC, id DESC
-		 LIMIT 1`,
+		`SELECT COALESCE(SUM(amount), 0) FROM grace_day_ledger
+		 WHERE user_id = $1`,
 		userID,
 	)
 	var balance int
 	if err := row.Scan(&balance); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return 0, nil
-		}
-		return 0, fmt.Errorf("fetch latest grace balance: %w", err)
+		return 0, fmt.Errorf("sum grace balance: %w", err)
+	}
+	return balance, nil
+}
+
+// GetLatestGraceBalanceTx serializes grace-ledger writers for one user, then
+// returns the signed ledger sum inside tx. It intentionally uses the same
+// per-user advisory-lock namespace as confidence-point awards: a workflow can
+// award points and reconcile grace in one transaction, so one shared lock
+// avoids inconsistent multi-lock ordering. PostgreSQL transaction advisory
+// locks are reentrant for that transaction. The lock and aggregate are
+// separate statements: under READ COMMITTED, a single CTE could retain a
+// pre-lock snapshot after waiting for a concurrent reconciliation to commit.
+func (r *Repository) GetLatestGraceBalanceTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID) (int, error) {
+	if tx == nil {
+		return 0, errors.New("transaction required")
+	}
+	if _, err := tx.ExecContext(ctx,
+		`SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0))`,
+		userID.String(),
+	); err != nil {
+		return 0, fmt.Errorf("lock grace balance: %w", err)
+	}
+	var balance int
+	if err := tx.QueryRowContext(ctx,
+		`SELECT COALESCE(SUM(amount), 0) FROM grace_day_ledger WHERE user_id = $1`, userID,
+	).Scan(&balance); err != nil {
+		return 0, fmt.Errorf("sum grace balance in transaction: %w", err)
 	}
 	return balance, nil
 }

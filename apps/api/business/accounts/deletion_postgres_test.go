@@ -44,6 +44,9 @@ func TestPostgreSQLRepositoryCreateAccountDeletionRequestDeactivatesUser(t *test
 	mock.ExpectExec("UPDATE magic_links SET revoked_at").
 		WithArgs(uid, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec("(?s)UPDATE magic_links.*WHERE user_id IS NULL.*AND consumed_at IS NULL.*AND created_at <= \\$2").
+		WithArgs(uid, now).
+		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("UPDATE email_change_links SET revoked_at").
 		WithArgs(uid, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -114,6 +117,9 @@ func TestPostgreSQLRepositoryCreateAccountDeletionRequestAlreadyInFlight(t *test
 		WithArgs(uid, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("UPDATE magic_links SET revoked_at").
+		WithArgs(uid, now).
+		WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec("(?s)UPDATE magic_links.*WHERE user_id IS NULL.*AND consumed_at IS NULL.*AND created_at <= \\$2").
 		WithArgs(uid, now).
 		WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectExec("UPDATE email_change_links SET revoked_at").

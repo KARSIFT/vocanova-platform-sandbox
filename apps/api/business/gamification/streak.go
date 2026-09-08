@@ -32,8 +32,9 @@ type StreakState struct {
 }
 
 // GraceBalance is the user's current available grace-day balance. The
-// repository layer reads this from the latest grace_day_ledger row (or
-// 0 if no rows exist).
+// repository layer derives this from the signed grace_day_ledger amount sum
+// (or 0 if no rows exist); created_at and UUIDs cannot define a reliable
+// latest row when a reconciliation writes more than one entry.
 type GraceBalance struct {
 	Balance int
 }
@@ -124,6 +125,18 @@ func ReconcileStreak(
 	idx := buildSnapshotIndex(snapshots)
 	todaySnap, hasToday := idx[dateKey(today)]
 	yesterdaySnap, hasYesterday := idx[dateKey(yesterday)]
+
+	// A concurrent or retried completion can enter after another transaction
+	// already persisted today's state. It must be a no-op even if its caller
+	// still reports currentCompletion; otherwise it could re-run the
+	// reconciliation against an already-completed day and regress the streak.
+	if hasToday && todaySnap.Status == MissionStatusCompleted &&
+		state.LastCompletedLocalDate != nil && dateKey(*state.LastCompletedLocalDate) == dateKey(today) {
+		unchanged := state
+		unchanged.LastActivityLocalDate = &today
+		unchanged.Status = StreakStatusActive
+		return StreakReconciliation{NewState: unchanged}, nil
+	}
 
 	if hasToday && todaySnap.Status == MissionStatusCompleted && !currentCompletion {
 		// (a) no-op; today's mission already complete, streak stays.

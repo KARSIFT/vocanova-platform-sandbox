@@ -9,6 +9,7 @@ import (
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/content"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/missions"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 )
@@ -19,6 +20,7 @@ import (
 type PostgreSQLRepository struct {
 	db           *sql.DB
 	gamification *gamification.Service
+	missions     *missions.Service
 }
 
 // NewPostgreSQLRepository creates a repository backed by db with optional
@@ -29,6 +31,8 @@ func NewPostgreSQLRepository(db *sql.DB, opts ...interface{}) *PostgreSQLReposit
 		switch v := opt.(type) {
 		case *gamification.Service:
 			repo.gamification = v
+		case *missions.Service:
+			repo.missions = v
 		}
 	}
 	return repo
@@ -107,6 +111,21 @@ func (r *PostgreSQLRepository) SaveUserWordAtomically(ctx context.Context, req S
 }
 
 func (r *PostgreSQLRepository) saveUserWordTx(ctx context.Context, tx *sql.Tx, req SaveUserWordRequest, now time.Time, readSavedMeaning bool) (*SavedMeaning, error) {
+	// The partial active-row unique index prevents duplicate persistence, but it
+	// cannot make two concurrent first saves return the same idempotent result:
+	// both transactions can observe no row before either INSERT commits. The P4
+	// production path serializes that observation and mutation by user+meaning,
+	// so the waiter re-reads the winner's active row rather than surfacing a
+	// unique-constraint error after its idempotency claim.
+	if r.missions != nil {
+		if _, err := tx.ExecContext(ctx,
+			`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
+			req.UserID.String()+":"+req.MeaningID.String(),
+		); err != nil {
+			return nil, fmt.Errorf("lock user word: %w", err)
+		}
+	}
+
 	var meaningID uuid.UUID
 	if err := tx.QueryRowContext(ctx,
 		`SELECT wm.id
@@ -179,11 +198,25 @@ func (r *PostgreSQLRepository) saveUserWordTx(ctx context.Context, tx *sql.Tx, r
 		return nil, fmt.Errorf("insert user word: %w", err)
 	}
 
-	// P4 reward wiring: record the +2 point award for word addition inside the
-	// existing transaction. This is idempotent via the confidence_point_ledger's
-	// (user_id, idempotency_key) unique index. D03 keeps the optional new-word
-	// mission goal disabled, so we don't call IncrementWordsAdded.
+	// P4 reward/activity wiring records the +2 point award and its daily
+	// activity counters in the same transaction as the word mutation. The
+	// optional new-word mission goal remains disabled by the current policy.
 	if r.gamification != nil {
+		var resolved gamification.ResolvedSettings
+		var snap *missions.DailyMissionSnapshot
+		if r.missions != nil {
+			resolved, err = r.gamification.GetSettings(ctx, req.UserID, "")
+			if err != nil {
+				return nil, fmt.Errorf("get mission settings: %w", err)
+			}
+			snap, err = r.missions.EnsureTodaySnapshot(ctx, tx, req.UserID, resolved, now)
+			if err != nil {
+				return nil, fmt.Errorf("ensure daily mission snapshot: %w", err)
+			}
+			if snap == nil {
+				return nil, errors.New("ensure daily mission snapshot: no snapshot returned")
+			}
+		}
 		// This locks the user-wide point-balance key for tx before reading.
 		currentBalance, err := r.gamification.CurrentBalanceTx(ctx, tx, req.UserID)
 		if err != nil {
@@ -200,12 +233,30 @@ func (r *PostgreSQLRepository) saveUserWordTx(ctx context.Context, tx *sql.Tx, r
 		); err != nil {
 			return nil, fmt.Errorf("grant add-word point: %w", err)
 		}
+		if r.missions != nil {
+			if err := r.missions.IncrementWordsAdded(
+				ctx, tx, req.UserID, snap.LocalDate, resolved.Timezone, false,
+			); err != nil {
+				return nil, fmt.Errorf("increment words added: %w", err)
+			}
+			if err := r.missions.IncrementConfidencePointsEarned(
+				ctx, tx, req.UserID, snap.LocalDate, resolved.Timezone, gamification.RewardAddWord,
+			); err != nil {
+				return nil, fmt.Errorf("increment points earned: %w", err)
+			}
+		}
 	}
 
 	if !readSavedMeaning {
 		return &SavedMeaning{UserWordID: id}, nil
 	}
 	return r.savedMeaningByID(ctx, tx, id)
+}
+
+// HasP4Wiring reports whether this repository has the dependencies required
+// to keep P1 word-add activity summaries consistent with their point award.
+func (r *PostgreSQLRepository) HasP4Wiring() bool {
+	return r.gamification != nil && r.missions != nil
 }
 
 func (r *PostgreSQLRepository) UnsaveUserWord(ctx context.Context, userID, meaningID uuid.UUID, now time.Time) error {
