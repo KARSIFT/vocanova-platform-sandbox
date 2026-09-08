@@ -343,6 +343,25 @@ func TestDailyActivityReviewCounterIntegrityMigrationCarriesDatabaseInvariants(t
 	}
 }
 
+func TestDailyActivityPointAggregateIntegrityMigrationCarriesDatabaseInvariants(t *testing.T) {
+	sql, err := os.ReadFile("20260908150000_daily_activity_point_aggregate_integrity.sql")
+	if err != nil {
+		t.Fatalf("read daily activity point-aggregate integrity migration: %v", err)
+	}
+	text := string(sql)
+	for _, invariant := range []string{
+		"ALTER TABLE daily_activity_summaries",
+		"daily_activity_summaries_confidence_point_counters_nonnegative",
+		"confidence_points_earned >= 0",
+		"confidence_points_spent >= 0",
+		"NOT VALID",
+	} {
+		if !strings.Contains(text, invariant) {
+			t.Errorf("daily activity point-aggregate integrity migration missing invariant %q", invariant)
+		}
+	}
+}
+
 func TestVOC030P4GamificationTablesMigrationCarriesDatabaseInvariants(t *testing.T) {
 	sql, err := os.ReadFile("20260725130002_voc030_p4_gamification_tables.sql")
 	if err != nil {

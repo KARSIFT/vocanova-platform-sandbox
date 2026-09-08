@@ -194,10 +194,10 @@ func TestAIFeedbackP4RealMissionUpdaterSuccessWiring(t *testing.T) {
 	f.mock.ExpectExec("INSERT INTO daily_activity_summaries").
 		WithArgs(sqlmock.AnyArg(), f.userID, day, "UTC").
 		WillReturnResult(sqlmock.NewResult(0, 1))
-	// 2g. IncrementConfidencePointsEarned (+3 + +2 = +5).
+	// 2g. RecordConfidencePointChange (+3 + +2 = +5).
 	f.mock.ExpectExec("INSERT INTO daily_activity_summaries").
 		WithArgs(sqlmock.AnyArg(), f.userID, day, "UTC",
-			gamification.RewardSentenceSubmitted+gamification.RewardAIFeedbackGot).
+			gamification.RewardSentenceSubmitted+gamification.RewardAIFeedbackGot, 0).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	// 2h. ListRecentSnapshots.
 	f.mock.ExpectQuery("SELECT id, user_id, local_date, timezone, review_target, reviews_completed").

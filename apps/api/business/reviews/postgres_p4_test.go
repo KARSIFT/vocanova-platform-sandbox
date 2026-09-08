@@ -213,9 +213,9 @@ func TestPostgreSQLRepositorySubmitReviewP4RatingGoodWiring(t *testing.T) {
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), now,
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
-	// 2f. IncrementConfidencePointsEarned for the +5.
+	// 2f. RecordConfidencePointChange for the +5.
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
-		WithArgs(sqlmock.AnyArg(), userID, day, "UTC", gamification.RewardReviewGood).
+		WithArgs(sqlmock.AnyArg(), userID, day, "UTC", gamification.RewardReviewGood, 0).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	// 2g. Mission not yet completed (1 < 20) — no MarkSnapshotCompleted
 	// or second GrantPoint.
@@ -342,7 +342,7 @@ func TestPostgreSQLRepositorySubmitReviewP4MissionCompletion(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
 	// Points-earned summary for the +5.
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
-		WithArgs(sqlmock.AnyArg(), userID, day, "UTC", gamification.RewardReviewGood).
+		WithArgs(sqlmock.AnyArg(), userID, day, "UTC", gamification.RewardReviewGood, 0).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	// Mission completion: MarkSnapshotCompleted transitions open -> completed.
 	mock.ExpectExec("UPDATE daily_mission_snapshots").
@@ -367,7 +367,7 @@ func TestPostgreSQLRepositorySubmitReviewP4MissionCompletion(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
 	// Points-earned summary for the +10.
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
-		WithArgs(sqlmock.AnyArg(), userID, day, "UTC", gamification.RewardDailyMissionDone).
+		WithArgs(sqlmock.AnyArg(), userID, day, "UTC", gamification.RewardDailyMissionDone, 0).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	// Streak reconciliation: fetch recent snapshots (includes today just
 	// marked completed, mirroring applyP4ReviewWiring's mark-then-fetch
@@ -479,7 +479,7 @@ func TestPostgreSQLRepositorySubmitReviewP4SkippedNoRatingReward(t *testing.T) {
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	// NO getLatestPointBalanceTx, NO InsertPointLedger, NO
-	// IncrementConfidencePointsEarned: the skipped review's path skips
+	// RecordConfidencePointChange: the skipped review's path skips
 	// the rating-tiered reward.
 	// Mission not yet completed (1 < 20) — no MarkSnapshotCompleted.
 	// Streak reconciliation still runs (read-only update of streak state).
@@ -656,7 +656,7 @@ func TestPostgreSQLRepositorySubmitReviewP4AlreadyCompletedSnapshotNoDoubleRewar
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
-		WithArgs(sqlmock.AnyArg(), userID, day, "UTC", gamification.RewardReviewGood).
+		WithArgs(sqlmock.AnyArg(), userID, day, "UTC", gamification.RewardReviewGood, 0).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	// NO MarkSnapshotCompleted (reviews_completed >= target but snapshot is
 	// already 'completed' so the comparison is false). NO second GrantPoint

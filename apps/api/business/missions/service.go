@@ -87,11 +87,9 @@ func (s *Service) IncrementWordsAdded(
 	)
 }
 
-// IncrementConfidencePointsEarned adds amount to today's
-// daily_activity_summaries.confidence_points_earned (used by the P1 word-add
-// and P2 review/mission-completion writes to keep the activity summary in
-// sync with the confidence_point_ledger).
-func (s *Service) IncrementConfidencePointsEarned(
+// RecordConfidencePointChange writes a signed ledger change to today's earned
+// or spent daily activity counter.
+func (s *Service) RecordConfidencePointChange(
 	ctx context.Context,
 	tx *sql.Tx,
 	userID uuid.UUID,
@@ -99,7 +97,7 @@ func (s *Service) IncrementConfidencePointsEarned(
 	timezone string,
 	amount int,
 ) error {
-	return s.missions.IncrementConfidencePointsEarned(
+	return s.missions.RecordConfidencePointChange(
 		ctx, tx, userID, localDate, timezone, amount,
 	)
 }
@@ -490,7 +488,7 @@ func (u *MissionUpdater) updateForSentence(ctx context.Context, tx *sql.Tx, user
 		earned += gamification.RewardAIFeedbackGot
 	}
 	if earned != 0 {
-		if err := u.missions.missions.IncrementConfidencePointsEarned(
+		if err := u.missions.missions.RecordConfidencePointChange(
 			ctx, tx, userID, snap.LocalDate, resolved.Timezone, earned,
 		); err != nil {
 			return false, err

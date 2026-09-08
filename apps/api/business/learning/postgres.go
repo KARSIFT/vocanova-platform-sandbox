@@ -245,7 +245,7 @@ func (r *PostgreSQLRepository) saveUserWordTx(ctx context.Context, tx *sql.Tx, r
 			); err != nil {
 				return nil, fmt.Errorf("increment words added: %w", err)
 			}
-			if err := r.missions.IncrementConfidencePointsEarned(
+			if err := r.missions.RecordConfidencePointChange(
 				ctx, tx, req.UserID, snap.LocalDate, resolved.Timezone, gamification.RewardAddWord,
 			); err != nil {
 				return nil, fmt.Errorf("increment points earned: %w", err)

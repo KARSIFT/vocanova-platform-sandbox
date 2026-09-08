@@ -23,6 +23,7 @@ func (DailyActivitySummary) Annotations() []schema.Annotation {
 			Checks: map[string]string{
 				"review_counters_nonnegative":                 "reviews_attempted >= 0 AND reviews_correct >= 0 AND reviews_skipped >= 0",
 				"review_counters_classified_within_attempted": "reviews_correct <= reviews_attempted - reviews_skipped",
+				"confidence_point_counters_nonnegative":       "confidence_points_earned >= 0 AND confidence_points_spent >= 0",
 			},
 		},
 	}
@@ -44,7 +45,7 @@ func (DailyActivitySummary) Fields() []ent.Field {
 		field.Int("words_added").Default(0).Min(0),
 		field.Int("sentences_submitted").Default(0).Min(0),
 		field.Int("ai_feedback_received").Default(0).Min(0),
-		field.Int("confidence_points_earned").Default(0),
+		field.Int("confidence_points_earned").Default(0).Min(0),
 		field.Int("confidence_points_spent").Default(0).Min(0),
 	}
 }

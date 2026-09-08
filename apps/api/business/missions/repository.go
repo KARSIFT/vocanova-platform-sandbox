@@ -347,10 +347,11 @@ func (r *Repository) IncrementAIFeedbackReceived(
 	return nil
 }
 
-// IncrementConfidencePointsEarned increments daily_activity_summaries
-// .confidence_points_earned by amount. amount may be negative for spend
-// events.
-func (r *Repository) IncrementConfidencePointsEarned(
+// RecordConfidencePointChange records a signed Confidence Point ledger change
+// in the matching daily aggregate. Positive amounts are earned; negative
+// amounts are spent and are stored as a positive spent counter. A zero amount
+// is a no-op because the immutable ledger rejects zero-value entries too.
+func (r *Repository) RecordConfidencePointChange(
 	ctx context.Context,
 	tx *sql.Tx,
 	userID uuid.UUID,
@@ -361,18 +362,31 @@ func (r *Repository) IncrementConfidencePointsEarned(
 	if tx == nil {
 		return errors.New("transaction required")
 	}
+	if amount == 0 {
+		return nil
+	}
+	earned, spent := amount, 0
+	if amount < 0 {
+		spent = -amount
+		if spent < 0 {
+			return errors.New("confidence point amount is out of range")
+		}
+		earned = 0
+	}
 	if _, err := tx.ExecContext(ctx,
 		`INSERT INTO daily_activity_summaries (
-			id, user_id, local_date, timezone, confidence_points_earned, created_at, updated_at
+			id, user_id, local_date, timezone, confidence_points_earned,
+			confidence_points_spent, created_at, updated_at
 		) VALUES (
-			$1, $2, $3, $4, $5, NOW(), NOW()
+			$1, $2, $3, $4, $5, $6, NOW(), NOW()
 		)
 		ON CONFLICT (user_id, local_date) DO UPDATE
 		  SET confidence_points_earned = daily_activity_summaries.confidence_points_earned + EXCLUDED.confidence_points_earned,
+		      confidence_points_spent = daily_activity_summaries.confidence_points_spent + EXCLUDED.confidence_points_spent,
 		      updated_at = NOW()`,
-		uuid.New(), userID, localDate, timezone, amount,
+		uuid.New(), userID, localDate, timezone, earned, spent,
 	); err != nil {
-		return fmt.Errorf("upsert activity summary points earned: %w", err)
+		return fmt.Errorf("upsert activity summary confidence points: %w", err)
 	}
 	return nil
 }
