@@ -115,8 +115,11 @@ class MergeQueueWatchdogTest(unittest.TestCase):
     def test_missing_mutation_token_fails_with_setup_instructions(self) -> None:
         fake = FakeGitHub([entry(1201, 20)])
 
-        with self.assertRaisesRegex(RecoveryError, r"MERGE_QUEUE_WATCHDOG_TOKEN"):
+        with self.assertRaises(RecoveryError) as raised:
             recover(self.queue(fake, ""), NOW, 10)
+        self.assertIn("MERGE_QUEUE_WATCHDOG_TOKEN", str(raised.exception))
+        self.assertIn("Pull requests read/write", str(raised.exception))
+        self.assertNotIn("Contents", str(raised.exception))
 
 
 if __name__ == "__main__":

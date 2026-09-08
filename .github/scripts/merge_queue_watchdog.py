@@ -136,7 +136,7 @@ class MergeQueue:
         if not self.mutation_token:
             raise RecoveryError(
                 f"PR #{entry.number}: {operation} requires MERGE_QUEUE_WATCHDOG_TOKEN. "
-                "Configure a fine-grained token with repository Contents and Pull requests read/write access; "
+                "Configure a fine-grained token for this repository with Pull requests read/write access; "
                 "GITHUB_TOKEN cannot dispatch the required merge_group workflows."
             )
         try:

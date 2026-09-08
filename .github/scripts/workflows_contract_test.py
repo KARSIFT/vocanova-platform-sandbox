@@ -296,6 +296,8 @@ class WorkflowContractTest(unittest.TestCase):
         text = (WF_DIR / "merge-queue-watchdog.yml").read_text()
         self.assertIn("MERGE_QUEUE_WATCHDOG_TOKEN", text)
         self.assertIn("merge_queue_watchdog.py", text)
+        self.assertIn("contents: read", text)
+        self.assertRegex(text, r"actions/checkout@[0-9a-f]{40}")
 
     def test_merge_queue_watchdog_recovery_cases(self) -> None:
         result = subprocess.run(
