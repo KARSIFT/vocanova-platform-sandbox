@@ -39,6 +39,16 @@ func TestRunAuthCleanupLoopRunsImmediatelyAndStopsOnCancellation(t *testing.T) {
 	}
 }
 
+func TestStopAuthCleanupWaitsForLoopExit(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		<-ctx.Done()
+		close(done)
+	}()
+	stopAuthCleanup(cancel, done)
+}
+
 // TestRun_RejectsMissingDatabaseURL covers the first
 // config-load safety property: a process started with no
 // DATABASE_URL must exit non-zero with a clear error message,

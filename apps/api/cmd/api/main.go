@@ -76,8 +76,7 @@ func run() error {
 		runAuthCleanupLoop(cleanupCtx, newAuthCleanupService(db), cfg.AuthCleanupInterval)
 	}()
 	defer func() {
-		cancelCleanup()
-		<-cleanupDone
+		stopAuthCleanup(cancelCleanup, cleanupDone)
 	}()
 
 	// Real unhandled errors/panics from any request, not just the
@@ -124,6 +123,14 @@ func run() error {
 		return fmt.Errorf("listen: %w", err)
 	}
 
+	// Stop and join background cleanup before beginning the HTTP drain. This
+	// prevents a ticker from beginning a new credential-delete pass during the
+	// graceful-shutdown window, while the database is still available for an
+	// already-running pass to observe cancellation. The deferred call remains a
+	// safety net for earlier returns; cancellation and reads from a closed done
+	// channel are both idempotent.
+	stopAuthCleanup(cancelCleanup, cleanupDone)
+
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
@@ -141,6 +148,13 @@ func boolFlag(b bool) string {
 
 type authCleaner interface {
 	Cleanup(context.Context) error
+}
+
+// stopAuthCleanup cancels the loop and waits until it has exited while the
+// database remains open. It is safe to invoke more than once.
+func stopAuthCleanup(cancel context.CancelFunc, done <-chan struct{}) {
+	cancel()
+	<-done
 }
 
 // newAuthCleanupService builds the narrow production service instance used by
