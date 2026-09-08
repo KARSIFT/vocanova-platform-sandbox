@@ -229,9 +229,9 @@ func (r *Repository) InsertPointLedger(
 	idempotencyKey PointIdempotencyKey,
 	metadata json.RawMessage,
 	occurredAt time.Time,
-) (uuid.UUID, error) {
+) (uuid.UUID, bool, error) {
 	if tx == nil {
-		return uuid.Nil, errors.New("transaction required")
+		return uuid.Nil, false, errors.New("transaction required")
 	}
 	var key sql.NullString
 	if idempotencyKey != "" {
@@ -242,6 +242,7 @@ func (r *Repository) InsertPointLedger(
 		meta = []byte(metadata)
 	}
 	var id uuid.UUID
+	var inserted bool
 	err := tx.QueryRowContext(ctx,
 		`INSERT INTO confidence_point_ledger (
 			id, user_id, amount, balance_after, reason, source_type,
@@ -252,14 +253,14 @@ func (r *Repository) InsertPointLedger(
 		)
 		ON CONFLICT (user_id, idempotency_key) WHERE idempotency_key IS NOT NULL
 		DO UPDATE SET amount = confidence_point_ledger.amount
-		RETURNING id`,
+		RETURNING id, (xmax = 0) AS inserted`,
 		uuid.New(), userID, amount, balanceAfter, reason, sourceType,
 		sourceID, key, meta, occurredAt,
-	).Scan(&id)
+	).Scan(&id, &inserted)
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("insert point ledger: %w", err)
+		return uuid.Nil, false, fmt.Errorf("insert point ledger: %w", err)
 	}
-	return id, nil
+	return id, inserted, nil
 }
 
 // InsertGraceLedger writes one grace_day_ledger row inside tx. idempotencyKey

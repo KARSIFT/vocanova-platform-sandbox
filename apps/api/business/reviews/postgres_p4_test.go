@@ -212,7 +212,7 @@ func TestPostgreSQLRepositorySubmitReviewP4RatingGoodWiring(t *testing.T) {
 			gamification.ReasonReviewCorrect, gamification.SourceReviewAttempt,
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), now,
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
 	// 2f. IncrementConfidencePointsEarned for the +5.
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
 		WithArgs(sqlmock.AnyArg(), userID, day, "UTC", gamification.RewardReviewGood).
@@ -339,7 +339,7 @@ func TestPostgreSQLRepositorySubmitReviewP4MissionCompletion(t *testing.T) {
 			gamification.ReasonReviewCorrect, gamification.SourceReviewAttempt,
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), now,
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
 	// Points-earned summary for the +5.
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
 		WithArgs(sqlmock.AnyArg(), userID, day, "UTC", gamification.RewardReviewGood).
@@ -364,7 +364,7 @@ func TestPostgreSQLRepositorySubmitReviewP4MissionCompletion(t *testing.T) {
 			nil,
 			sqlmock.AnyArg(), sqlmock.AnyArg(), now,
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
 	// Points-earned summary for the +10.
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
 		WithArgs(sqlmock.AnyArg(), userID, day, "UTC", gamification.RewardDailyMissionDone).
@@ -654,7 +654,7 @@ func TestPostgreSQLRepositorySubmitReviewP4AlreadyCompletedSnapshotNoDoubleRewar
 			gamification.ReasonReviewCorrect, gamification.SourceReviewAttempt,
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), now,
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
 		WithArgs(sqlmock.AnyArg(), userID, day, "UTC", gamification.RewardReviewGood).
 		WillReturnResult(sqlmock.NewResult(0, 1))

@@ -386,19 +386,21 @@ func NewMissionUpdater(m *Service, g *gamification.Service) *MissionUpdater {
 // same D01 chain's remaining UTC/default step, and applies the VOC-030-D03
 // policy decision (bonus sentence-practice mission goal disabled at
 // launch) before delegating to UpdateForSentence.
-func (u *MissionUpdater) Update(ctx context.Context, userID, sentenceID uuid.UUID) (bool, error) {
-	return u.UpdateInTransaction(ctx, nil, userID, sentenceID)
+func (u *MissionUpdater) Update(ctx context.Context, userID, sentenceID, attemptID uuid.UUID) (bool, error) {
+	return u.UpdateInTransaction(ctx, nil, userID, sentenceID, attemptID)
 }
 
 // UpdateInTransaction applies sentence feedback accounting inside a caller's
-// transaction. A nil transaction preserves the standalone Update entry point.
-func (u *MissionUpdater) UpdateInTransaction(ctx context.Context, tx *sql.Tx, userID, sentenceID uuid.UUID) (bool, error) {
+// transaction. sentenceID owns the one submission reward; attemptID owns the
+// per-successful-feedback reward. A nil transaction preserves the standalone
+// Update entry point.
+func (u *MissionUpdater) UpdateInTransaction(ctx context.Context, tx *sql.Tx, userID, sentenceID, attemptID uuid.UUID) (bool, error) {
 	resolved, err := u.gamification.GetSettings(ctx, userID, "")
 	if err != nil {
 		return false, err
 	}
 	const includeSentenceGoal = false // VOC-030-D03: bonus goals disabled at launch
-	return u.updateForSentence(ctx, tx, userID, sentenceID, resolved, time.Now(), includeSentenceGoal)
+	return u.updateForSentence(ctx, tx, userID, sentenceID, attemptID, resolved, time.Now(), includeSentenceGoal)
 }
 
 // UpdateForSentence is the transaction-aware entry point Update above
@@ -418,15 +420,15 @@ func (u *MissionUpdater) UpdateInTransaction(ctx context.Context, tx *sql.Tx, us
 // caller) doesn't pay for a second settings lookup.
 func (u *MissionUpdater) UpdateForSentence(
 	ctx context.Context,
-	userID, sentenceID uuid.UUID,
+	userID, sentenceID, attemptID uuid.UUID,
 	resolved gamification.ResolvedSettings,
 	now time.Time,
 	includeSentenceGoal bool,
 ) (bool, error) {
-	return u.updateForSentence(ctx, nil, userID, sentenceID, resolved, now, includeSentenceGoal)
+	return u.updateForSentence(ctx, nil, userID, sentenceID, attemptID, resolved, now, includeSentenceGoal)
 }
 
-func (u *MissionUpdater) updateForSentence(ctx context.Context, tx *sql.Tx, userID, sentenceID uuid.UUID, resolved gamification.ResolvedSettings, now time.Time, includeSentenceGoal bool) (bool, error) {
+func (u *MissionUpdater) updateForSentence(ctx context.Context, tx *sql.Tx, userID, sentenceID, attemptID uuid.UUID, resolved gamification.ResolvedSettings, now time.Time, includeSentenceGoal bool) (bool, error) {
 	ownedTx := tx == nil
 	var err error
 	if ownedTx {
@@ -450,7 +452,7 @@ func (u *MissionUpdater) updateForSentence(ctx context.Context, tx *sql.Tx, user
 	}
 
 	// Sentence-submitted award.
-	newBalance, _, err := u.gamification.GrantPoint(
+	newBalance, _, sentenceAwarded, err := u.gamification.GrantPoint(
 		ctx, tx, userID, gamification.RewardKindSentenceSubmitted,
 		&sentenceID, gamification.LearnerSentenceSubmittedKey(sentenceID.String()),
 		balance, now, nil,
@@ -460,11 +462,12 @@ func (u *MissionUpdater) updateForSentence(ctx context.Context, tx *sql.Tx, user
 	}
 
 	// AI-feedback-received award.
-	if _, _, err := u.gamification.GrantPoint(
+	_, _, feedbackAwarded, err := u.gamification.GrantPoint(
 		ctx, tx, userID, gamification.RewardKindAIFeedbackGot,
-		&sentenceID, gamification.AIFeedbackAttemptReceivedKey(sentenceID.String()),
+		&attemptID, gamification.AIFeedbackAttemptReceivedKey(attemptID.String()),
 		newBalance, now, nil,
-	); err != nil {
+	)
+	if err != nil {
 		return false, err
 	}
 
@@ -479,11 +482,19 @@ func (u *MissionUpdater) updateForSentence(ctx context.Context, tx *sql.Tx, user
 	); err != nil {
 		return false, err
 	}
-	if err := u.missions.missions.IncrementConfidencePointsEarned(
-		ctx, tx, userID, snap.LocalDate, resolved.Timezone,
-		gamification.RewardSentenceSubmitted+gamification.RewardAIFeedbackGot,
-	); err != nil {
-		return false, err
+	earned := 0
+	if sentenceAwarded {
+		earned += gamification.RewardSentenceSubmitted
+	}
+	if feedbackAwarded {
+		earned += gamification.RewardAIFeedbackGot
+	}
+	if earned != 0 {
+		if err := u.missions.missions.IncrementConfidencePointsEarned(
+			ctx, tx, userID, snap.LocalDate, resolved.Timezone, earned,
+		); err != nil {
+			return false, err
+		}
 	}
 
 	// Streak reconciliation: lazy, no queue/cron (DOC-06 §15), computed

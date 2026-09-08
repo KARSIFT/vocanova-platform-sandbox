@@ -84,7 +84,7 @@ func TestProductionFeedbackMissionAccountingAtomicPostgreSQL(t *testing.T) {
 	var accountingCalls atomic.Int32
 	complete := func(ctx context.Context, tx *sql.Tx) (bool, error) {
 		accountingCalls.Add(1)
-		return updater.UpdateInTransaction(ctx, tx, userID, sentenceID)
+		return updater.UpdateInTransaction(ctx, tx, userID, sentenceID, pending.AttemptID)
 	}
 
 	// Fail a real activity write after the actual production updater has

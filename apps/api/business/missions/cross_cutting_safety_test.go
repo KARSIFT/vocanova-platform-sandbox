@@ -85,12 +85,12 @@ func TestCrossCuttingOnConflictSecondLineOfDefenseAcrossAllThreeWiredRewards(t *
 			wordID, gamification.UserWordAddedKey(wordID.String()),
 			sqlmock.AnyArg(), now,
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
 	mock.ExpectCommit()
 
 	tx1, err := db.BeginTx(t.Context(), nil)
 	require.NoError(t, err)
-	balance1, ledgerID, err := gamSvc.GrantPoint(
+	balance1, ledgerID, _, err := gamSvc.GrantPoint(
 		t.Context(), tx1, userID,
 		gamification.RewardKindAddWord,
 		&wordID,
@@ -124,12 +124,12 @@ func TestCrossCuttingOnConflictSecondLineOfDefenseAcrossAllThreeWiredRewards(t *
 			wordID, gamification.UserWordAddedKey(wordID.String()),
 			sqlmock.AnyArg(), now,
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(ledgerID))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(ledgerID, false))
 	mock.ExpectCommit()
 
 	tx2, err := db.BeginTx(t.Context(), nil)
 	require.NoError(t, err)
-	_, ledgerID2, err := gamSvc.GrantPoint(
+	_, ledgerID2, _, err := gamSvc.GrantPoint(
 		t.Context(), tx2, userID,
 		gamification.RewardKindAddWord,
 		&wordID,
@@ -152,12 +152,12 @@ func TestCrossCuttingOnConflictSecondLineOfDefenseAcrossAllThreeWiredRewards(t *
 			reviewID, gamification.ReviewAttemptRatedKey(reviewID.String()),
 			sqlmock.AnyArg(), now,
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
 	mock.ExpectCommit()
 
 	tx3, err := db.BeginTx(t.Context(), nil)
 	require.NoError(t, err)
-	balance3, reviewLedgerID, err := gamSvc.GrantPoint(
+	balance3, reviewLedgerID, _, err := gamSvc.GrantPoint(
 		t.Context(), tx3, userID,
 		gamification.RewardKindReviewGood,
 		&reviewID,
@@ -179,12 +179,12 @@ func TestCrossCuttingOnConflictSecondLineOfDefenseAcrossAllThreeWiredRewards(t *
 			reviewID, gamification.ReviewAttemptRatedKey(reviewID.String()),
 			sqlmock.AnyArg(), now,
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(reviewLedgerID))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(reviewLedgerID, false))
 	mock.ExpectCommit()
 
 	tx4, err := db.BeginTx(t.Context(), nil)
 	require.NoError(t, err)
-	_, reviewLedgerID2, err := gamSvc.GrantPoint(
+	_, reviewLedgerID2, _, err := gamSvc.GrantPoint(
 		t.Context(), tx4, userID,
 		gamification.RewardKindReviewGood,
 		&reviewID,
@@ -209,7 +209,7 @@ func TestCrossCuttingOnConflictSecondLineOfDefenseAcrossAllThreeWiredRewards(t *
 			sentenceID, gamification.LearnerSentenceSubmittedKey(sentenceID.String()),
 			sqlmock.AnyArg(), now,
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
 	mock.ExpectQuery("INSERT INTO confidence_point_ledger").
 		WithArgs(
 			sqlmock.AnyArg(), userID, gamification.RewardAIFeedbackGot,
@@ -218,12 +218,12 @@ func TestCrossCuttingOnConflictSecondLineOfDefenseAcrossAllThreeWiredRewards(t *
 			sentenceID, gamification.AIFeedbackAttemptReceivedKey(sentenceID.String()),
 			sqlmock.AnyArg(), now,
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
 	mock.ExpectCommit()
 
 	tx5, err := db.BeginTx(t.Context(), nil)
 	require.NoError(t, err)
-	balance5a, sentLedgerID, err := gamSvc.GrantPoint(
+	balance5a, sentLedgerID, _, err := gamSvc.GrantPoint(
 		t.Context(), tx5, userID,
 		gamification.RewardKindSentenceSubmitted,
 		&sentenceID,
@@ -231,7 +231,7 @@ func TestCrossCuttingOnConflictSecondLineOfDefenseAcrossAllThreeWiredRewards(t *
 		balance3, now, nil,
 	)
 	require.NoError(t, err)
-	balance5b, aiLedgerID, err := gamSvc.GrantPoint(
+	balance5b, aiLedgerID, _, err := gamSvc.GrantPoint(
 		t.Context(), tx5, userID,
 		gamification.RewardKindAIFeedbackGot,
 		&sentenceID,
@@ -257,7 +257,7 @@ func TestCrossCuttingOnConflictSecondLineOfDefenseAcrossAllThreeWiredRewards(t *
 			sentenceID, gamification.LearnerSentenceSubmittedKey(sentenceID.String()),
 			sqlmock.AnyArg(), now,
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(sentLedgerID))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(sentLedgerID, false))
 	mock.ExpectQuery("INSERT INTO confidence_point_ledger").
 		WithArgs(
 			sqlmock.AnyArg(), userID, gamification.RewardAIFeedbackGot,
@@ -266,12 +266,12 @@ func TestCrossCuttingOnConflictSecondLineOfDefenseAcrossAllThreeWiredRewards(t *
 			sentenceID, gamification.AIFeedbackAttemptReceivedKey(sentenceID.String()),
 			sqlmock.AnyArg(), now,
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(aiLedgerID))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(aiLedgerID, false))
 	mock.ExpectCommit()
 
 	tx6, err := db.BeginTx(t.Context(), nil)
 	require.NoError(t, err)
-	_, sentLedgerID2, err := gamSvc.GrantPoint(
+	_, sentLedgerID2, _, err := gamSvc.GrantPoint(
 		t.Context(), tx6, userID,
 		gamification.RewardKindSentenceSubmitted,
 		&sentenceID,
@@ -279,7 +279,7 @@ func TestCrossCuttingOnConflictSecondLineOfDefenseAcrossAllThreeWiredRewards(t *
 		balance5b, now, nil,
 	)
 	require.NoError(t, err)
-	_, aiLedgerID2, err := gamSvc.GrantPoint(
+	_, aiLedgerID2, _, err := gamSvc.GrantPoint(
 		t.Context(), tx6, userID,
 		gamification.RewardKindAIFeedbackGot,
 		&sentenceID,
@@ -329,7 +329,7 @@ func TestCrossCuttingFailedActionsAcrossAllThreeWiredTransactions(t *testing.T) 
 
 	tx, err := db.BeginTx(t.Context(), nil)
 	require.NoError(t, err)
-	_, _, err = gamSvc.GrantPoint(
+	_, _, _, err = gamSvc.GrantPoint(
 		t.Context(), tx, userID,
 		gamification.RewardKindAddWord,
 		&wordID,

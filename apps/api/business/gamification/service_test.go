@@ -60,13 +60,13 @@ func TestCurrentBalanceMatchesSumOfLedgerEntries(t *testing.T) {
 				outcome.Reason, outcome.SourceType, sqlmock.AnyArg(),
 				g.kind.String(), sqlmock.AnyArg(), now,
 			).
-			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
+			WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
 		mock.ExpectCommit()
 
 		tx, err := db.Begin()
 		require.NoError(t, err)
 
-		gotBalance, _, err := svc.GrantPoint(
+		gotBalance, _, _, err := svc.GrantPoint(
 			t.Context(), tx, userID, g.rk, nil, g.kind, runningBalance, now, nil,
 		)
 		require.NoError(t, err)
@@ -90,6 +90,38 @@ func TestCurrentBalanceMatchesSumOfLedgerEntries(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, wantTotal, got, "Progress screen's Confidence Points total must equal the exact sum of ledger entries")
 
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGrantPointDuplicateKeepsCurrentBalance(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	svc := NewService(NewRepository(db))
+	userID := uuid.MustParse("00000000-0000-0000-0000-0000000000ac")
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
+	key := LearnerSentenceSubmittedKey("sentence-1")
+
+	mock.ExpectBegin()
+	mock.ExpectQuery(pointLedgerInsertColumnsPattern).
+		WithArgs(
+			sqlmock.AnyArg(), userID, RewardSentenceSubmitted, 8,
+			ReasonSentenceSubmitted, SourceLearnerSentence, sqlmock.AnyArg(),
+			key.String(), sqlmock.AnyArg(), now,
+		).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), false))
+	mock.ExpectCommit()
+
+	tx, err := db.Begin()
+	require.NoError(t, err)
+	balance, _, created, err := svc.GrantPoint(
+		t.Context(), tx, userID, RewardKindSentenceSubmitted, nil, key, 5, now, nil,
+	)
+	require.NoError(t, err)
+	require.NoError(t, tx.Commit())
+	assert.False(t, created)
+	assert.Equal(t, 5, balance, "a replay must not claim a second +3 award")
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 

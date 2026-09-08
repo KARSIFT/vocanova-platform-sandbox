@@ -493,18 +493,18 @@ func (s *Service) completeSuccessfulFeedbackAttempt(ctx context.Context, userID 
 	if finalizer, ok := s.repo.(SuccessfulFeedbackFinalizer); ok {
 		return finalizer.CompleteSuccessfulFeedbackAttempt(ctx, pending, feedback, s.clock.Now().UTC(), func(ctx context.Context, tx *sql.Tx) (bool, error) {
 			if updater, ok := s.mission.(TransactionMissionUpdater); ok {
-				return updater.UpdateInTransaction(ctx, tx, userID, pending.SentenceID)
+				return updater.UpdateInTransaction(ctx, tx, userID, pending.SentenceID, pending.AttemptID)
 			}
 			if tx != nil {
 				return false, errors.New("transaction-aware mission updater required")
 			}
-			return s.mission.Update(ctx, userID, pending.SentenceID)
+			return s.mission.Update(ctx, userID, pending.SentenceID, pending.AttemptID)
 		})
 	}
 	if err := s.repo.CompleteFeedbackAttempt(ctx, pending, feedback, "", "", s.clock.Now().UTC()); err != nil {
 		return false, err
 	}
-	return s.mission.Update(ctx, userID, pending.SentenceID)
+	return s.mission.Update(ctx, userID, pending.SentenceID, pending.AttemptID)
 }
 
 // ReportFeedback records a learner report for a feedback attempt. It verifies

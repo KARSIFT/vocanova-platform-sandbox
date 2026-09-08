@@ -60,8 +60,8 @@ func (s *Service) EnsureUserSettings(ctx context.Context, tx *sql.Tx, userID uui
 
 // GrantPoint writes one confidence_point_ledger row inside tx and returns the
 // new running balance. If the idempotency key already exists for this user,
-// the insert is a no-op (the existing row's id and amount are returned). The
-// caller must have already computed the new balance (current + amount).
+// the insert is a no-op and created is false; the returned balance remains the
+// caller's current ledger sum rather than claiming a duplicate award.
 func (s *Service) GrantPoint(
 	ctx context.Context,
 	tx *sql.Tx,
@@ -72,24 +72,27 @@ func (s *Service) GrantPoint(
 	currentBalance int,
 	now time.Time,
 	metadata json.RawMessage,
-) (int, uuid.UUID, error) {
+) (int, uuid.UUID, bool, error) {
 	if tx == nil {
-		return 0, uuid.Nil, errors.New("transaction required")
+		return 0, uuid.Nil, false, errors.New("transaction required")
 	}
 	outcome, err := RewardFor(kind)
 	if err != nil {
-		return 0, uuid.Nil, err
+		return 0, uuid.Nil, false, err
 	}
 	newBalance := currentBalance + outcome.Amount
-	rowID, err := s.repo.InsertPointLedger(
+	rowID, created, err := s.repo.InsertPointLedger(
 		ctx, tx, userID, outcome.Amount, newBalance,
 		outcome.Reason, outcome.SourceType, sourceID,
 		idempotencyKey, metadata, now,
 	)
 	if err != nil {
-		return 0, uuid.Nil, err
+		return 0, uuid.Nil, false, err
 	}
-	return newBalance, rowID, nil
+	if !created {
+		return currentBalance, rowID, false, nil
+	}
+	return newBalance, rowID, true, nil
 }
 
 // GrantGraceDay writes one grace_day_ledger row inside tx and returns the

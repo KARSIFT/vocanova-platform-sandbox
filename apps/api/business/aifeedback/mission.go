@@ -8,7 +8,9 @@ import (
 )
 
 // MissionUpdater is the seam for daily-mission / streak / point updates
-// triggered by a completed sentence-feedback attempt (VOC-028-D01). The real
+// triggered by a completed sentence-feedback attempt. Both the learner
+// sentence and the successful attempt are supplied because their rewards have
+// distinct ledger source types and idempotency scopes (VOC-028-D01). The real
 // implementation is missions.MissionUpdater (apps/api/business/missions/
 // service.go), wired in by the production composition root
 // (apps/api/app/api/production.go) as of issue #1177. NewService falls back
@@ -16,14 +18,14 @@ import (
 // tests, or the OpenAPI-generation-only wiring in openapi.go), so a caller
 // that omits it gets an honest no-op instead of a panic.
 type MissionUpdater interface {
-	Update(ctx context.Context, userID, sentenceID uuid.UUID) (bool, error)
+	Update(ctx context.Context, userID, sentenceID, attemptID uuid.UUID) (bool, error)
 }
 
 // TransactionMissionUpdater is implemented by the production mission updater.
 // It lets the feedback repository own one commit boundary without making the
 // missions package depend on the feedback package.
 type TransactionMissionUpdater interface {
-	UpdateInTransaction(ctx context.Context, tx *sql.Tx, userID, sentenceID uuid.UUID) (bool, error)
+	UpdateInTransaction(ctx context.Context, tx *sql.Tx, userID, sentenceID, attemptID uuid.UUID) (bool, error)
 }
 
 // StubMissionUpdater returns a backend-decided false result and writes
@@ -38,10 +40,10 @@ func NewStubMissionUpdater() *StubMissionUpdater {
 }
 
 // Update always returns false, nil: this stub never writes.
-func (s *StubMissionUpdater) Update(ctx context.Context, userID, sentenceID uuid.UUID) (bool, error) {
+func (s *StubMissionUpdater) Update(ctx context.Context, userID, sentenceID, attemptID uuid.UUID) (bool, error) {
 	return false, nil
 }
 
-func (s *StubMissionUpdater) UpdateInTransaction(ctx context.Context, tx *sql.Tx, userID, sentenceID uuid.UUID) (bool, error) {
+func (s *StubMissionUpdater) UpdateInTransaction(ctx context.Context, tx *sql.Tx, userID, sentenceID, attemptID uuid.UUID) (bool, error) {
 	return false, nil
 }

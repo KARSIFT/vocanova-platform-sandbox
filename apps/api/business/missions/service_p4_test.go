@@ -39,6 +39,7 @@ func TestUpdateForSentenceP4SuccessWiring(t *testing.T) {
 
 	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
 	sentenceID := uuid.MustParse("00000000-0000-0000-0000-00000000000a")
+	attemptID := uuid.MustParse("00000000-0000-0000-0000-00000000000b")
 	day := time.Date(2026, 7, 26, 0, 0, 0, 0, time.UTC)
 
 	// EnsureTodaySnapshot (idempotent insert-or-update).
@@ -71,18 +72,18 @@ func TestUpdateForSentenceP4SuccessWiring(t *testing.T) {
 			gamification.LearnerSentenceSubmittedKey(sentenceID.String()),
 			sqlmock.AnyArg(), now,
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
 	// GrantPoint for +2 AI-feedback-received.
 	mock.ExpectQuery("INSERT INTO confidence_point_ledger").
 		WithArgs(
 			sqlmock.AnyArg(), userID, gamification.RewardAIFeedbackGot,
 			gamification.RewardSentenceSubmitted+gamification.RewardAIFeedbackGot,
 			gamification.ReasonAIFeedbackReceived, gamification.SourceAIFeedbackAttempt,
-			sentenceID,
-			gamification.AIFeedbackAttemptReceivedKey(sentenceID.String()),
+			attemptID,
+			gamification.AIFeedbackAttemptReceivedKey(attemptID.String()),
 			sqlmock.AnyArg(), now,
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
 	// IncrementSentenceSubmitted (D03 active=false, so no mission counter).
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
 		WithArgs(sqlmock.AnyArg(), userID, day, "UTC").
@@ -126,7 +127,7 @@ func TestUpdateForSentenceP4SuccessWiring(t *testing.T) {
 	mock.ExpectCommit()
 
 	resolved := gamification.ResolvedSettings{Timezone: "UTC", DailyReviewTarget: 20}
-	completed, err := updater.UpdateForSentence(t.Context(), userID, sentenceID, resolved, now, false)
+	completed, err := updater.UpdateForSentence(t.Context(), userID, sentenceID, attemptID, resolved, now, false)
 	require.NoError(t, err)
 	assert.False(t, completed, "P3 path never completes the mission (only the P2 review path increments reviews_completed)")
 	require.NoError(t, mock.ExpectationsWereMet())
@@ -177,7 +178,7 @@ func TestUpdateForSentenceP4SentenceGoalActiveWhenD03Activated(t *testing.T) {
 			gamification.ReasonSentenceSubmitted, gamification.SourceLearnerSentence,
 			sentenceID, sqlmock.AnyArg(), sqlmock.AnyArg(), now,
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
 	mock.ExpectQuery("INSERT INTO confidence_point_ledger").
 		WithArgs(
 			sqlmock.AnyArg(), userID, gamification.RewardAIFeedbackGot,
@@ -185,7 +186,7 @@ func TestUpdateForSentenceP4SentenceGoalActiveWhenD03Activated(t *testing.T) {
 			gamification.ReasonAIFeedbackReceived, gamification.SourceAIFeedbackAttempt,
 			sentenceID, sqlmock.AnyArg(), sqlmock.AnyArg(), now,
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
 	// IncrementSentenceSubmitted with includeSentenceGoal=true writes to BOTH
 	// the activity summary AND the mission counter.
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
@@ -224,24 +225,26 @@ func TestUpdateForSentenceP4SentenceGoalActiveWhenD03Activated(t *testing.T) {
 	mock.ExpectCommit()
 
 	resolved := gamification.ResolvedSettings{Timezone: "UTC", DailyReviewTarget: 20}
-	completed, err := updater.UpdateForSentence(t.Context(), userID, sentenceID, resolved, now, true)
+	completed, err := updater.UpdateForSentence(t.Context(), userID, sentenceID, sentenceID, resolved, now, true)
 	require.NoError(t, err)
 	assert.False(t, completed)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
 // TestUpdateForSentenceP4IdempotencyKeyDerivation proves the per-source-event
-// idempotency keys are deterministic from the sentence ID. Two calls
+// idempotency keys are deterministic from their distinct source IDs. Two calls
 // produce identical keys, which is what the (user_id, idempotency_key)
 // partial unique index in confidence_point_ledger turns into a second
 // line of defense against a retried/replayed transaction awarding the
 // same reward twice.
 func TestUpdateForSentenceP4IdempotencyKeyDerivation(t *testing.T) {
 	sentenceID := uuid.MustParse("00000000-0000-0000-0000-00000000000a")
+	attemptID := uuid.MustParse("00000000-0000-0000-0000-00000000000b")
 	gotSubmitted := gamification.LearnerSentenceSubmittedKey(sentenceID.String())
-	gotFeedback := gamification.AIFeedbackAttemptReceivedKey(sentenceID.String())
+	gotFeedback := gamification.AIFeedbackAttemptReceivedKey(attemptID.String())
 	assert.Equal(t, "learner_sentence:00000000-0000-0000-0000-00000000000a:submitted", gotSubmitted.String())
-	assert.Equal(t, "ai_feedback_attempt:00000000-0000-0000-0000-00000000000a:received", gotFeedback.String())
+	assert.Equal(t, "ai_feedback_attempt:00000000-0000-0000-0000-00000000000b:received", gotFeedback.String())
+	assert.NotEqual(t, gotSubmitted.String(), gotFeedback.String())
 	// Two derivations produce identical strings (deterministic).
 	assert.Equal(t, gotSubmitted.String(), gamification.LearnerSentenceSubmittedKey(sentenceID.String()).String())
 }
@@ -288,7 +291,7 @@ func TestUpdateForSentenceP4RollbackOnError(t *testing.T) {
 			gamification.ReasonSentenceSubmitted, gamification.SourceLearnerSentence,
 			sentenceID, sqlmock.AnyArg(), sqlmock.AnyArg(), now,
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
 	mock.ExpectQuery("INSERT INTO confidence_point_ledger").
 		WithArgs(
 			sqlmock.AnyArg(), userID, gamification.RewardAIFeedbackGot,
@@ -296,7 +299,7 @@ func TestUpdateForSentenceP4RollbackOnError(t *testing.T) {
 			gamification.ReasonAIFeedbackReceived, gamification.SourceAIFeedbackAttempt,
 			sentenceID, sqlmock.AnyArg(), sqlmock.AnyArg(), now,
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
 	// IncrementSentenceSubmitted fails.
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
 		WithArgs(sqlmock.AnyArg(), userID, day, "UTC").
@@ -304,7 +307,7 @@ func TestUpdateForSentenceP4RollbackOnError(t *testing.T) {
 	mock.ExpectRollback()
 
 	resolved := gamification.ResolvedSettings{Timezone: "UTC", DailyReviewTarget: 20}
-	completed, err := updater.UpdateForSentence(t.Context(), userID, sentenceID, resolved, now, false)
+	completed, err := updater.UpdateForSentence(t.Context(), userID, sentenceID, sentenceID, resolved, now, false)
 	require.Error(t, err)
 	assert.False(t, completed, "rollback path returns false")
 	require.NoError(t, mock.ExpectationsWereMet())
@@ -373,7 +376,7 @@ func TestUpdateForSentenceP4UpdateEntryPointWiresResolverAndDelegate(t *testing.
 			gamification.ReasonSentenceSubmitted, gamification.SourceLearnerSentence,
 			sentenceID, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
 	mock.ExpectQuery("INSERT INTO confidence_point_ledger").
 		WithArgs(
 			sqlmock.AnyArg(), userID, gamification.RewardAIFeedbackGot,
@@ -381,7 +384,7 @@ func TestUpdateForSentenceP4UpdateEntryPointWiresResolverAndDelegate(t *testing.
 			gamification.ReasonAIFeedbackReceived, gamification.SourceAIFeedbackAttempt,
 			sentenceID, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
 		WithArgs(sqlmock.AnyArg(), userID, day, "UTC").
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -414,7 +417,7 @@ func TestUpdateForSentenceP4UpdateEntryPointWiresResolverAndDelegate(t *testing.
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
-	completed, err := updater.Update(t.Context(), userID, sentenceID)
+	completed, err := updater.Update(t.Context(), userID, sentenceID, sentenceID)
 	require.NoError(t, err)
 	assert.False(t, completed, "P3 Update path never completes the mission")
 	require.NoError(t, mock.ExpectationsWereMet())

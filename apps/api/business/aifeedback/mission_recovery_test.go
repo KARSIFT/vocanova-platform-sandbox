@@ -14,7 +14,7 @@ type temporarilyUnavailableMission struct {
 	applied bool
 }
 
-func (m *temporarilyUnavailableMission) Update(context.Context, uuid.UUID, uuid.UUID) (bool, error) {
+func (m *temporarilyUnavailableMission) Update(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) (bool, error) {
 	m.calls++
 	if m.calls == 1 {
 		return false, errors.New("mission transaction unavailable")

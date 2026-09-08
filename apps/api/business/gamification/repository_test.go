@@ -36,18 +36,19 @@ func TestRepositoryInsertPointLedgerIdempotent(t *testing.T) {
 			sqlmock.AnyArg(), userID, 5, 5, "review_correct", "review_attempt",
 			sqlmock.AnyArg(), "review_attempt:abc:rated", []byte(meta), now,
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
 	mock.ExpectCommit()
 
 	tx, err := db.Begin()
 	require.NoError(t, err)
-	id, err := repo.InsertPointLedger(
+	id, inserted, err := repo.InsertPointLedger(
 		t.Context(), tx, userID, 5, 5,
 		"review_correct", "review_attempt", nil,
 		ReviewAttemptRatedKey("abc"), meta, now,
 	)
 	require.NoError(t, err)
 	assert.NotEqual(t, uuid.Nil, id)
+	assert.True(t, inserted)
 	require.NoError(t, tx.Commit())
 	require.NoError(t, mock.ExpectationsWereMet())
 }

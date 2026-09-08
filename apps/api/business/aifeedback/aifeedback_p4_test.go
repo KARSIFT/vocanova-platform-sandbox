@@ -176,7 +176,7 @@ func TestAIFeedbackP4RealMissionUpdaterSuccessWiring(t *testing.T) {
 			gamification.ReasonSentenceSubmitted, gamification.SourceLearnerSentence,
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
 	// 2d. GrantPoint for +2 AI-feedback-received.
 	f.mock.ExpectQuery("INSERT INTO confidence_point_ledger").
 		WithArgs(
@@ -185,7 +185,7 @@ func TestAIFeedbackP4RealMissionUpdaterSuccessWiring(t *testing.T) {
 			gamification.ReasonAIFeedbackReceived, gamification.SourceAIFeedbackAttempt,
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
 	// 2e. IncrementSentenceSubmitted (D03 disabled).
 	f.mock.ExpectExec("INSERT INTO daily_activity_summaries").
 		WithArgs(sqlmock.AnyArg(), f.userID, day, "UTC").
@@ -365,7 +365,7 @@ type countingMissionUpdater struct {
 	calls int
 }
 
-func (c *countingMissionUpdater) Update(ctx context.Context, userID, sentenceID uuid.UUID) (bool, error) {
+func (c *countingMissionUpdater) Update(ctx context.Context, userID, sentenceID, attemptID uuid.UUID) (bool, error) {
 	c.calls++
 	return false, nil
 }
