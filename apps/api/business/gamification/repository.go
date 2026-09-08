@@ -215,9 +215,8 @@ func (r *Repository) UpsertUserSettings(ctx context.Context, tx *sql.Tx, userID 
 // InsertPointLedger writes one confidence_point_ledger row inside tx.
 // idempotencyKey may be empty. Returns the inserted row id. If a row with the
 // same (user_id, idempotency_key) already exists, the insert is a no-op
-// (returning the existing id) — the partial unique index turns a duplicate
-// into a defensive guard against the primary idempotency mechanism being
-// bypassed.
+// (returning the existing id). It deliberately uses DO NOTHING rather than a
+// no-op UPDATE so the database append-only trigger remains meaningful.
 func (r *Repository) InsertPointLedger(
 	ctx context.Context,
 	tx *sql.Tx,
@@ -252,11 +251,18 @@ func (r *Repository) InsertPointLedger(
 			$7, $8, $9, $10, NOW(), NOW()
 		)
 		ON CONFLICT (user_id, idempotency_key) WHERE idempotency_key IS NOT NULL
-		DO UPDATE SET amount = confidence_point_ledger.amount
-		RETURNING id, (xmax = 0) AS inserted`,
+		DO NOTHING
+		RETURNING id`,
 		uuid.New(), userID, amount, balanceAfter, reason, sourceType,
 		sourceID, key, meta, occurredAt,
-	).Scan(&id, &inserted)
+	).Scan(&id)
+	inserted = err == nil
+	if errors.Is(err, sql.ErrNoRows) && key.Valid {
+		err = tx.QueryRowContext(ctx,
+			`SELECT id FROM confidence_point_ledger
+			 WHERE user_id = $1 AND idempotency_key = $2`, userID, key,
+		).Scan(&id)
+	}
 	if err != nil {
 		return uuid.Nil, false, fmt.Errorf("insert point ledger: %w", err)
 	}
@@ -264,7 +270,8 @@ func (r *Repository) InsertPointLedger(
 }
 
 // InsertGraceLedger writes one grace_day_ledger row inside tx. idempotencyKey
-// may be empty. The same ON CONFLICT rule as confidence_point_ledger applies.
+// may be empty. The same append-only ON CONFLICT rule as
+// confidence_point_ledger applies.
 func (r *Repository) InsertGraceLedger(
 	ctx context.Context,
 	tx *sql.Tx,
@@ -298,11 +305,17 @@ func (r *Repository) InsertGraceLedger(
 			$7, $8, $9, $10, NOW(), NOW()
 		)
 		ON CONFLICT (user_id, idempotency_key) WHERE idempotency_key IS NOT NULL
-		DO UPDATE SET amount = grace_day_ledger.amount
+		DO NOTHING
 		RETURNING id`,
 		uuid.New(), userID, amount, balanceAfter, reason, sourceType,
 		src, appliedToLocalDate, timezone, key,
 	).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) && key.Valid {
+		err = tx.QueryRowContext(ctx,
+			`SELECT id FROM grace_day_ledger
+			 WHERE user_id = $1 AND idempotency_key = $2`, userID, key,
+		).Scan(&id)
+	}
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("insert grace ledger: %w", err)
 	}
