@@ -422,6 +422,27 @@ func TestVOC031P5EmailChangeLinksMigrationCarriesDatabaseInvariants(t *testing.T
 	}
 }
 
+func TestVOC1350ReportForeignKeysUseExplicitDeletion(t *testing.T) {
+	sql, err := os.ReadFile("20260908010000_voc1350_restrict_ai_feedback_report_foreign_keys.sql")
+	if err != nil {
+		t.Fatalf("read voc1350 report foreign-key migration: %v", err)
+	}
+	text := string(sql)
+	for _, required := range []string{
+		"DROP CONSTRAINT ai_feedback_quality_review_reports_ai_feedback_attempt_id_fkey",
+		"DROP CONSTRAINT ai_feedback_quality_review_reports_user_id_fkey",
+		"FOREIGN KEY (ai_feedback_attempt_id) REFERENCES ai_feedback_attempts(id) ON DELETE RESTRICT",
+		"FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT",
+	} {
+		if !strings.Contains(text, required) {
+			t.Errorf("voc1350 report foreign-key migration missing %q", required)
+		}
+	}
+	if strings.Contains(text, "ON DELETE CASCADE") {
+		t.Error("voc1350 report foreign-key migration must not introduce ON DELETE CASCADE")
+	}
+}
+
 // TestVOC031P5AccountDeletionRequestsMigrationCarriesDatabaseInvariants
 // covers the migration invariants for VOC-031-T04. The
 // migration creates the account_deletion_requests table per
