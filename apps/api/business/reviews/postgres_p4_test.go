@@ -451,7 +451,7 @@ func TestPostgreSQLRepositorySubmitReviewP4SkippedNoRatingReward(t *testing.T) {
 		WithArgs(sqlmock.AnyArg(), userID, userWordID, meaningID, "review", "multiple_choice", "skipped", nil, 0, 0, now, 0, nil, nil, false, "review", "ca-skip", nil, now, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("UPDATE user_words").
-		WithArgs(0, sqlmock.AnyArg(), now, "skipped", sqlmock.AnyArg(), 1, 0, 0, 0, now, userWordID, userID).
+		WithArgs(0, sqlmock.AnyArg(), now, "skipped", nil, 1, 0, 0, 0, now, userWordID, userID).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	// Phase 2: P4 wiring.
