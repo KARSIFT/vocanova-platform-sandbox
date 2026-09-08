@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"strings"
 	"testing"
@@ -62,6 +63,24 @@ type losingOAuthStateRepository struct{ *MemoryRepository }
 
 func (r losingOAuthStateRepository) ConsumeOAuthState(context.Context, uuid.UUID, time.Time) (bool, error) {
 	return false, nil
+}
+
+// racedGoogleIdentityRepository simulates the database uniqueness race where
+// another valid OAuth callback creates the identity immediately before this
+// callback's insert reports its duplicate-key error.
+type racedGoogleIdentityRepository struct {
+	*MemoryRepository
+	winnerUserID uuid.UUID
+}
+
+func (r racedGoogleIdentityRepository) CreateExternalIdentity(ctx context.Context, userID uuid.UUID, provider, providerSubject, providerEmail string, providerEmailVerified bool) (*ExternalIdentity, error) {
+	if r.winnerUserID != uuid.Nil {
+		userID = r.winnerUserID
+	}
+	if _, err := r.MemoryRepository.CreateExternalIdentity(ctx, userID, provider, providerSubject, providerEmail, providerEmailVerified); err != nil {
+		return nil, err
+	}
+	return nil, errors.New("external identity already exists")
 }
 
 func TestRequestMagicLinkCreatesHashedLinkAndSendsEmail(t *testing.T) {
@@ -544,6 +563,40 @@ func TestOAuthCallbackLinksExistingUserByEmail(t *testing.T) {
 	for _, ext := range repo.externalIdentities {
 		assert.Equal(t, user.ID, ext.UserID)
 	}
+}
+
+func TestResolveOAuthIdentityRecoversConcurrentIdentityLinkForSameUser(t *testing.T) {
+	identity := &OAuthIdentity{Subject: "sub-123", Email: "user@example.com", EmailVerified: true}
+	oauth := NewFakeOAuthProvider(identity)
+	_, repo, fake, c := testServiceWithOAuth(t, oauth)
+	ctx := context.Background()
+	owner, err := repo.CreateUser(ctx, "user@example.com", nil)
+	require.NoError(t, err)
+	svc := NewService(racedGoogleIdentityRepository{MemoryRepository: repo}, fake, oauth, c, NewFixedWindowRateLimiter(c, time.Hour, 100), testConfig())
+
+	user, err := svc.resolveOAuthIdentity(ctx, identity, owner.Email, c.Now())
+
+	require.NoError(t, err)
+	assert.Equal(t, owner.ID, user.ID)
+	stored, err := repo.GetExternalIdentity(ctx, "google", identity.Subject)
+	require.NoError(t, err)
+	assert.Equal(t, owner.ID, stored.UserID)
+}
+
+func TestResolveOAuthIdentityFailsClosedWhenConcurrentLinkHasDifferentOwner(t *testing.T) {
+	identity := &OAuthIdentity{Subject: "sub-123", Email: "user@example.com", EmailVerified: true}
+	oauth := NewFakeOAuthProvider(identity)
+	_, repo, fake, c := testServiceWithOAuth(t, oauth)
+	ctx := context.Background()
+	owner, err := repo.CreateUser(ctx, "user@example.com", nil)
+	require.NoError(t, err)
+	winner, err := repo.CreateUser(ctx, "other@example.com", nil)
+	require.NoError(t, err)
+	svc := NewService(racedGoogleIdentityRepository{MemoryRepository: repo, winnerUserID: winner.ID}, fake, oauth, c, NewFixedWindowRateLimiter(c, time.Hour, 100), testConfig())
+
+	_, err = svc.resolveOAuthIdentity(ctx, identity, owner.Email, c.Now())
+
+	assert.ErrorIs(t, err, ErrOAuthProviderFailed)
 }
 
 func TestOAuthCallbackRejectsMismatchedCookieState(t *testing.T) {
