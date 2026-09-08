@@ -155,7 +155,11 @@ export function AccountDeletionForm() {
             }}
             disabled={isDeleting}
             className="mt-[var(--spacing-xs)] block w-full rounded-md border border-neutral-300 px-[var(--spacing-sm)] py-[var(--spacing-sm)] text-base text-neutral-900 focus:border-red-600 focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-red-600"
-            aria-describedby="delete-confirmation-helper"
+            aria-describedby={
+              errorMessage
+                ? "delete-confirmation-helper delete-confirmation-error"
+                : "delete-confirmation-helper"
+            }
           />
           <p
             id="delete-confirmation-helper"
@@ -196,6 +200,7 @@ export function AccountDeletionForm() {
 
       {errorMessage ? (
         <p
+          id="delete-confirmation-error"
           role="alert"
           aria-live="assertive"
           className="rounded-md border border-red-300 bg-red-50 p-[var(--spacing-sm)] text-base text-red-800"

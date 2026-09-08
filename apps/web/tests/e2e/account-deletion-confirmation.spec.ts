@@ -57,8 +57,12 @@ test.describe("Account deletion confirmation", () => {
       name: "Permanently deactivate my account",
     });
     await deactivate.click();
-    await expect(page.getByRole("alert")).toBeVisible();
+    await expect(page.locator("#delete-confirmation-error")).toBeVisible();
     await expect(confirmation).toHaveValue("delete my account");
+    await expect(confirmation).toHaveAttribute(
+      "aria-describedby",
+      "delete-confirmation-helper delete-confirmation-error",
+    );
     await expect(deactivate).toBeVisible();
     await page.unroute(deletionEndpoint);
 
