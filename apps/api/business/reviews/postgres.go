@@ -324,7 +324,13 @@ func (r *PostgreSQLRepository) SubmitReview(ctx context.Context, req SubmitRevie
 	}
 
 	lastResult := sql.NullString{String: sched.LastResult, Valid: true}
-	lastRating := sql.NullString{String: sched.LastRating, Valid: true}
+	// A skipped review has no scheduling rating. The schema permits NULL, not
+	// an empty string, so keep the absent value nullable in both persisted
+	// review state and immutable attempt history.
+	lastRating := sql.NullString{}
+	if sched.LastRating != "" {
+		lastRating = sql.NullString{String: sched.LastRating, Valid: true}
+	}
 	_, err = tx.ExecContext(ctx,
 		`UPDATE user_words
 		 SET review_step = $1,

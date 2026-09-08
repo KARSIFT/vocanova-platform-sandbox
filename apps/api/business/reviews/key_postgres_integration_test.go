@@ -212,6 +212,35 @@ func TestReviewKeyTransactionPostgreSQL(t *testing.T) {
 	})
 }
 
+// TestSkippedReviewPersistsNullableRatingPostgreSQL exercises the committed
+// schema's nullable rating invariant. A skipped review has no rating, so both
+// the immutable attempt and mutable user-word projection must store NULL rather
+// than an empty string that violates the CHECK constraint.
+func TestSkippedReviewPersistsNullableRatingPostgreSQL(t *testing.T) {
+	db := reviewKeyDB(t)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	c := &clock.Fixed{T: now}
+	repo := NewPostgreSQLRepository(db, c)
+	req := seedReviewKeyRequest(t, db, now)
+	req.Result = ResultSkipped
+	req.Rating = ""
+	req.ClientAttemptID = "skipped-attempt"
+	req.IdempotencyKey = "skipped-key"
+
+	attempt, err := NewService(repo, nil, c).SubmitReview(ctx, req)
+	require.NoError(t, err)
+	require.Equal(t, ResultSkipped, attempt.Result)
+	require.Empty(t, attempt.Rating)
+
+	var attemptRating, lastRating sql.NullString
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT rating FROM review_attempts WHERE id = $1`, attempt.ID).Scan(&attemptRating))
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT last_rating FROM user_words WHERE id = $1`, req.UserWordID).Scan(&lastRating))
+	require.False(t, attemptRating.Valid, "skipped attempt rating must be NULL")
+	require.False(t, lastRating.Valid, "skipped user-word rating must be NULL")
+}
+
 // TestReviewKeyFingerprintCollisionPostgreSQL exercises the production service
 // arrangement, where PostgreSQLIdempotencyStore.Check can match a legacy
 // fingerprint before the repository's transactional replay guard runs.

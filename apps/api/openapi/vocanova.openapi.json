@@ -1776,14 +1776,17 @@
             "type": "string"
           },
           "rating": {
-            "description": "Learner rating",
+            "description": "Learner rating; null when no rating applies",
             "enum": [
               "again",
               "hard",
               "good",
               "easy"
             ],
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "responseTimeMs": {
             "description": "Client-measured response time in milliseconds",
