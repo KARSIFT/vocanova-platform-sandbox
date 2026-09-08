@@ -20,8 +20,10 @@ func (StreakState) Annotations() []schema.Annotation {
 		entsql.Annotation{
 			Table: "streak_states",
 			Checks: map[string]string{
-				"longest_ge_current": "longest_streak_count >= current_streak_count",
-				"counts_nonnegative": "current_streak_count >= 0 AND longest_streak_count >= 0",
+				"longest_ge_current":       "longest_streak_count >= current_streak_count",
+				"counts_nonnegative":       "current_streak_count >= 0 AND longest_streak_count >= 0",
+				"positive_streak_has_date": "current_streak_count = 0 OR last_completed_local_date IS NOT NULL",
+				"completion_is_activity":   "last_completed_local_date IS NULL OR (last_activity_local_date IS NOT NULL AND last_completed_local_date <= last_activity_local_date)",
 			},
 		},
 	}

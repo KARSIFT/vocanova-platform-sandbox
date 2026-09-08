@@ -296,6 +296,8 @@ export function validateMockInventory() {
   // key cascades with RESTRICT actions. VOC-1352 adds the documented
   // feature_audit_logs table used by
   // the word-save transaction and account-deletion de-identification flow.
+  // VOC-1440 keeps persisted streak dates consistent with mission-derived
+  // streak counts while preserving retained legacy rows.
   const allowedMigrationFiles = new Set([
     "20260724210000_identity_foundation.sql",
     "20260724210001_oauth_state.sql",
@@ -315,6 +317,7 @@ export function validateMockInventory() {
     "20260905130000_ai_feedback_retry_history.sql",
     "20260908010000_voc1350_restrict_ai_feedback_report_foreign_keys.sql",
     "20260908020000_voc1352_feature_audit_logs.sql",
+    "20260908280000_voc1440_streak_timeline_consistency.sql",
   ]);
   for (const entry of readdirSync(apiMigrationRoot, {
     withFileTypes: true,
