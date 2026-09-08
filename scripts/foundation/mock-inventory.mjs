@@ -304,7 +304,9 @@ export function validateMockInventory() {
   // constraint, the review result/rating constraint, and AI-feedback outcome
   // payload checks are forward integrity changes to existing tables rather
   // than new application boundaries. The mission completion-state migration
-  // keeps completed_at exclusive to completed snapshots.
+  // keeps completed_at exclusive to completed snapshots. VOC-1402 makes the
+  // existing confidence-point and grace-day histories append-only, with a
+  // transaction-local exception for account purges.
   const allowedMigrationFiles = new Set([
     "20260724210000_identity_foundation.sql",
     "20260724210001_oauth_state.sql",
@@ -333,6 +335,7 @@ export function validateMockInventory() {
     "20260908130000_email_change_links_cleanup_order.sql",
     "20260908140000_voc1398_ai_feedback_outcome_integrity.sql",
     "20260908150000_daily_activity_point_aggregate_integrity.sql",
+    "20260908153000_voc1402_append_only_learning_ledgers.sql",
     "20260908170000_user_word_review_counter_constraints.sql",
   ]);
   for (const entry of readdirSync(apiMigrationRoot, {

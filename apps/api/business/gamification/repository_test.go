@@ -36,7 +36,7 @@ func TestRepositoryInsertPointLedgerIdempotent(t *testing.T) {
 			sqlmock.AnyArg(), userID, 5, 5, "review_correct", "review_attempt",
 			sqlmock.AnyArg(), "review_attempt:abc:rated", []byte(meta), now,
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
 	mock.ExpectCommit()
 
 	tx, err := db.Begin()
@@ -77,13 +77,14 @@ func TestRepositoryInsertPointLedgerReplayReadsExistingAppendOnlyRow(t *testing.
 
 	tx, err := db.Begin()
 	require.NoError(t, err)
-	id, err := repo.InsertPointLedger(
+	id, inserted, err := repo.InsertPointLedger(
 		t.Context(), tx, userID, 99, 99,
 		"review_correct", "review_attempt", nil,
 		ReviewAttemptRatedKey("replay"), nil, now,
 	)
 	require.NoError(t, err)
 	assert.Equal(t, existingID, id)
+	assert.False(t, inserted)
 	require.NoError(t, tx.Commit())
 	require.NoError(t, mock.ExpectationsWereMet())
 }
