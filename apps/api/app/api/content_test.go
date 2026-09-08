@@ -150,11 +150,13 @@ func TestListJourneySituationsReturnsActiveSituations(t *testing.T) {
 	var body struct {
 		Items      []SituationDTO `json:"items"`
 		NextCursor string         `json:"nextCursor"`
+		HasMore    bool           `json:"hasMore"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
 	require.Len(t, body.Items, 1)
 	assert.Equal(t, "airport", body.Items[0].Slug)
 	assert.Empty(t, body.NextCursor)
+	assert.False(t, body.HasMore)
 }
 
 func TestGetJourneySituationRequiresAuth(t *testing.T) {

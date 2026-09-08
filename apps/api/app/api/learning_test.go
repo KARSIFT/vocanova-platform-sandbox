@@ -86,6 +86,7 @@ func TestListSavedWordsReturnsSavedMeanings(t *testing.T) {
 	assert.Equal(t, "boarding-pass", body.Body.Items[0].WordSlug)
 	assert.Equal(t, "A document.", body.Body.Items[0].ShortDefinition)
 	assert.True(t, body.Body.Items[0].Saved)
+	assert.False(t, body.Body.HasMore)
 }
 
 func TestSaveUserWordRequiresAuth(t *testing.T) {

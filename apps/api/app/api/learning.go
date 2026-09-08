@@ -60,6 +60,7 @@ type ListSavedWordsOutput struct {
 	Body struct {
 		Items      []SavedMeaningDTO `json:"items" doc:"Saved meanings"`
 		NextCursor string            `json:"nextCursor,omitempty" doc:"Opaque cursor for the next page"`
+		HasMore    bool              `json:"hasMore" doc:"Whether another page is available"`
 	}
 }
 
@@ -91,6 +92,7 @@ func RegisterLearning(api huma.API, svc *learning.Service, authSvc *auth.Service
 			out.Body.Items[i] = savedMeaningToDTO(m)
 		}
 		out.Body.NextCursor = resp.NextCursor
+		out.Body.HasMore = resp.NextCursor != ""
 		return out, nil
 	})
 
