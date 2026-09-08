@@ -475,6 +475,7 @@ func TestVOC1423FeedbackReportOwnerMigrationCarriesDatabaseInvariant(t *testing.
 		"CREATE FUNCTION enforce_ai_feedback_quality_review_report_owner()",
 		"JOIN learner_sentences AS sentence ON sentence.id = attempt.learner_sentence_id",
 		"sentence.user_id = NEW.user_id",
+		"FOR UPDATE OF attempt, sentence",
 		"ERRCODE = '23503'",
 		"CREATE TRIGGER ai_feedback_quality_review_reports_owner_matches_attempt",
 		"BEFORE INSERT OR UPDATE OF ai_feedback_attempt_id, user_id",

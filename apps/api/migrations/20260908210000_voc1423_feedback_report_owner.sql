@@ -10,13 +10,17 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1
+  -- Lock both ownership parents through commit. Without these locks, a valid
+  -- report insert and a concurrent attempt/sentence ownership update can each
+  -- inspect the old chain and commit an invalid final state.
+  PERFORM 1
     FROM ai_feedback_attempts AS attempt
     JOIN learner_sentences AS sentence ON sentence.id = attempt.learner_sentence_id
     WHERE attempt.id = NEW.ai_feedback_attempt_id
       AND sentence.user_id = NEW.user_id
-  ) THEN
+    FOR UPDATE OF attempt, sentence;
+
+  IF NOT FOUND THEN
     RAISE EXCEPTION
       USING ERRCODE = '23503',
             MESSAGE = 'ai feedback quality review report user must own its feedback attempt';
