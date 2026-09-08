@@ -170,6 +170,7 @@ func (f *ProviderFeedback) StructuredJSON() map[string]any {
 	result := map[string]any{
 		"status":                     f.Status,
 		"target_word_used_correctly": f.TargetWordUsedCorrectly,
+		"headline":                   f.Headline,
 		"explanation":                f.Explanation,
 	}
 	if f.CorrectedSentence != nil {

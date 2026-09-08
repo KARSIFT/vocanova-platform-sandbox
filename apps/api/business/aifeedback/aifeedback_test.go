@@ -73,12 +73,14 @@ func TestProviderFeedbackStructuredJSONExcludesRawProviderFields(t *testing.T) {
 		Status:                  LearningStatusNeedsImprovement,
 		TargetWordUsedCorrectly: false,
 		CorrectedSentence:       &corrected,
+		Headline:                "Nice effort with the target word!",
 		Explanation:             "The tense needs a small correction.",
 		ImprovementTip:          &tip,
 		RawJSON: map[string]any{
 			"status":                     "needs_improvement",
 			"target_word_used_correctly": false,
 			"corrected_sentence":         corrected,
+			"headline":                   "Nice effort with the target word!",
 			"explanation":                "The tense needs a small correction.",
 			"improvement_tip":            tip,
 			"system_prompt":              "do not retain this provider output",
@@ -89,6 +91,7 @@ func TestProviderFeedbackStructuredJSONExcludesRawProviderFields(t *testing.T) {
 		"status":                     LearningStatusNeedsImprovement,
 		"target_word_used_correctly": false,
 		"corrected_sentence":         corrected,
+		"headline":                   "Nice effort with the target word!",
 		"explanation":                "The tense needs a small correction.",
 		"improvement_tip":            tip,
 	}, feedback.StructuredJSON())
@@ -104,6 +107,7 @@ func TestMemoryRepositoryCompletionStoresStructuredFeedbackOnly(t *testing.T) {
 	feedback := &ProviderFeedback{
 		Status:                  LearningStatusCorrect,
 		TargetWordUsedCorrectly: true,
+		Headline:                "Great use of the target word!",
 		Explanation:             "Correct use.",
 		RawJSON: map[string]any{
 			"status":                     LearningStatusCorrect,
@@ -117,6 +121,7 @@ func TestMemoryRepositoryCompletionStoresStructuredFeedbackOnly(t *testing.T) {
 	assert.Equal(t, map[string]any{
 		"status":                     LearningStatusCorrect,
 		"target_word_used_correctly": true,
+		"headline":                   "Great use of the target word!",
 		"explanation":                "Correct use.",
 	}, repo.attempts[0].FeedbackJSON)
 }
