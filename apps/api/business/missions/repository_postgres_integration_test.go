@@ -337,6 +337,61 @@ func TestDailyActivitySummaryFreshInsertPathsAgainstRealPostgres(t *testing.T) {
 	})
 }
 
+func TestDailyActivitySummaryReviewCounterConstraintsAgainstRealPostgres(t *testing.T) {
+	db := newMigratedPostgresForReviewCounterConstraints(t)
+	userID := insertTestUser(t, db)
+	localDate := time.Date(2026, 9, 8, 0, 0, 0, 0, time.UTC)
+
+	for _, tc := range []struct {
+		name      string
+		attempted int
+		correct   int
+		skipped   int
+	}{
+		{name: "negative_attempted", attempted: -1},
+		{name: "negative_correct", attempted: 1, correct: -1},
+		{name: "negative_skipped", attempted: 1, skipped: -1},
+		{name: "classified_exceeds_attempted", attempted: 1, correct: 1, skipped: 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := db.ExecContext(t.Context(), `INSERT INTO daily_activity_summaries (
+				id, user_id, local_date, timezone, reviews_attempted, reviews_correct,
+				reviews_skipped, created_at, updated_at
+			) VALUES ($1, $2, $3, 'UTC', $4, $5, $6, NOW(), NOW())`,
+				uuid.New(), userID, localDate.AddDate(0, 0, len(tc.name)), tc.attempted, tc.correct, tc.skipped)
+			require.Error(t, err)
+			var pqErr *pq.Error
+			require.ErrorAs(t, err, &pqErr)
+			assert.Equal(t, "23514", string(pqErr.Code))
+		})
+	}
+
+	repo := NewRepository(db)
+	createSnapshotInOwnTransaction(t, db, repo, userID, localDate, 20)
+	tx, err := db.BeginTx(t.Context(), nil)
+	require.NoError(t, err)
+	defer tx.Rollback()
+	_, err = repo.IncrementReviewsCompleted(t.Context(), tx, userID, localDate, "UTC", 20, true, false)
+	require.NoError(t, err)
+	require.NoError(t, tx.Commit())
+
+	summary := readActivitySummary(t, db, userID, localDate)
+	assert.Equal(t, 1, summary.ReviewsAttempted)
+	assert.Equal(t, 1, summary.ReviewsCorrect)
+	assert.Equal(t, 0, summary.ReviewsSkipped)
+}
+
+// newMigratedPostgresForReviewCounterConstraints uses an explicitly supplied
+// PostgreSQL validation instance when available, while retaining the
+// disposable-container path used by the rest of this integration suite.
+func newMigratedPostgresForReviewCounterConstraints(t *testing.T) *sql.DB {
+	t.Helper()
+	if os.Getenv("VOCANOVA_TEST_POSTGRES_DSN") != "" {
+		return newMigratedPostgresFromEnv(t)
+	}
+	return newMigratedDisposablePostgres(t)
+}
+
 // activitySummaryIncrement describes one daily_activity_summaries call site
 // so the update-branch proof below can drive every one of them through the
 // same procedure instead of repeating it five times.

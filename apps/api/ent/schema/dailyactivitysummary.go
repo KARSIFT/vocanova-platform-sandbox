@@ -17,7 +17,15 @@ import (
 type DailyActivitySummary struct{ ent.Schema }
 
 func (DailyActivitySummary) Annotations() []schema.Annotation {
-	return []schema.Annotation{entsql.Annotation{Table: "daily_activity_summaries"}}
+	return []schema.Annotation{
+		entsql.Annotation{
+			Table: "daily_activity_summaries",
+			Checks: map[string]string{
+				"review_counters_nonnegative":                 "reviews_attempted >= 0 AND reviews_correct >= 0 AND reviews_skipped >= 0",
+				"review_counters_classified_within_attempted": "reviews_correct <= reviews_attempted - reviews_skipped",
+			},
+		},
+	}
 }
 
 func (DailyActivitySummary) Mixin() []ent.Mixin {
