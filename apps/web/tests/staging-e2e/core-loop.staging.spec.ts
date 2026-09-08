@@ -37,6 +37,8 @@
 import { expect, test } from "@playwright/test";
 import type { Locator, Page, TestInfo } from "@playwright/test";
 
+import { reviewSeedActions } from "./review-seed";
+
 const SESSION_COOKIE_ENV = "E2E_SESSION_COOKIE";
 const CSRF_COOKIE_ENV = "E2E_CSRF_TOKEN";
 const SESSION_COOKIE_NAME = "vocanova_session";
@@ -90,7 +92,9 @@ function requiredEnv(name: string): string {
   return value;
 }
 
-async function readReviewedTodayProgress(page: Page): Promise<ReviewedTodayProgress> {
+async function readReviewedTodayProgress(
+  page: Page,
+): Promise<ReviewedTodayProgress> {
   const counter = page.getByText(REVIEWED_TODAY_PATTERN);
   await expect(counter).toBeVisible();
   const text = (await counter.textContent()) ?? "";
@@ -115,10 +119,17 @@ async function readReviewedTodayCountAfterReviews(
 ): Promise<number> {
   // reviews_completed caps at review_target; extra submissions after the
   // completing review do not raise the home counter (VOC-082-T01).
-  const minimumExpected = Math.min(reviewedBefore + reviewedCards, reviewTarget);
+  const minimumExpected = Math.min(
+    reviewedBefore + reviewedCards,
+    reviewTarget,
+  );
   const attemptValues: number[] = [];
 
-  for (let attempt = 1; attempt <= STEP_7_REVIEWED_COUNT_MAX_ATTEMPTS; attempt++) {
+  for (
+    let attempt = 1;
+    attempt <= STEP_7_REVIEWED_COUNT_MAX_ATTEMPTS;
+    attempt++
+  ) {
     await page.goto("/home");
     const reviewedAfter = await readReviewedTodayCount(page);
     attemptValues.push(reviewedAfter);
@@ -134,7 +145,9 @@ async function readReviewedTodayCountAfterReviews(
             ? `${countsSummary}, attempts=${attempt}, values=${attemptValues.join(",")}`
             : countsSummary,
       });
-      console.log(`[staging core-loop] step 7 reviewed counts: ${countsSummary}`);
+      console.log(
+        `[staging core-loop] step 7 reviewed counts: ${countsSummary}`,
+      );
       if (attempt > 1) {
         testInfo.annotations.push({
           type: "step-7-retry",
@@ -204,11 +217,9 @@ async function completeOnboardingIfRedirected(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/home(\?|$)/);
 }
 
-// Prefers a word the account has not saved yet: a newly-saved word
-// has next_review_at NULL and so becomes due immediately, which is
-// what keeps the review, sentence-feedback, and progress steps
-// exercised rather than skipped on most runs. Falls back to the
-// first word when every word in the situation is already saved.
+// Prefers a word the account has not saved yet. If every word in the
+// situation is already saved, step 4 deliberately removes and restores the
+// selected word so its review schedule is reset and it becomes due now.
 async function chooseWordLink(page: Page): Promise<Locator> {
   const wordItems = page
     .locator("main ul > li")
@@ -263,10 +274,7 @@ async function reviewOneCard(page: Page): Promise<boolean> {
   const PROMPT_READY_TIMEOUT_MS = 120_000;
 
   const promptReady = () =>
-    showAnswerButton
-      .or(enabledMcOption)
-      .or(terminalReviewHeading)
-      .first();
+    showAnswerButton.or(enabledMcOption).or(terminalReviewHeading).first();
 
   await expect(promptReady()).toBeVisible({ timeout: PROMPT_READY_TIMEOUT_MS });
 
@@ -354,10 +362,9 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
       ).toBeVisible();
     });
 
-    const { reviewed: reviewedBefore, target: reviewTarget } = await test.step(
-      "2. read the daily-mission baseline",
-      async () => readReviewedTodayProgress(page),
-    );
+    const { reviewed: reviewedBefore, target: reviewTarget } =
+      await test.step("2. read the daily-mission baseline", async () =>
+        readReviewedTodayProgress(page));
 
     await test.step("3. discover a situation and open a word", async () => {
       await page.goto("/discover");
@@ -369,7 +376,9 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
       expect(await situationLinks.count()).toBeGreaterThan(0);
       await situationLinks.first().click();
       await expect(page).toHaveURL(/\/discover\/[^/]+(\?|$)/);
-      await expect(page.getByRole("link", { name: "Back to Journey" })).toBeVisible();
+      await expect(
+        page.getByRole("link", { name: "Back to Journey" }),
+      ).toBeVisible();
 
       const wordLink = await chooseWordLink(page);
       await wordLink.click();
@@ -379,80 +388,89 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
     await test.step("4. save the word", async () => {
       const saveButton = page.locator("button[aria-pressed]").first();
       await expect(saveButton).toBeVisible();
-      if ((await saveButton.getAttribute("aria-pressed")) !== "true") {
+
+      const initiallySaved =
+        (await saveButton.getAttribute("aria-pressed")) === "true";
+      for (const action of reviewSeedActions(initiallySaved)) {
         await saveButton.click();
+        await expect(saveButton).toHaveAttribute(
+          "aria-pressed",
+          action === "remove" ? "false" : "true",
+        );
       }
+
       await expect(saveButton).toHaveAttribute("aria-pressed", "true");
     });
 
-    const reviewedCards = await test.step("5. work the review queue", async () => {
-      await page.goto("/reviews");
-      await expect(
-        page.getByRole("heading", { name: "Review", level: 1 }),
-      ).toBeVisible();
-
-      const caughtUpHeading = page.getByRole("heading", {
-        name: "You're all caught up",
-        level: 2,
-      });
-      const reviewCompleteHeading = page.getByRole("heading", {
-        name: "Review complete",
-        level: 2,
-      });
-      const terminalReviewHeading = caughtUpHeading.or(reviewCompleteHeading);
-
-      const cardCounter = page.getByText(/^Card \d+ of \d+$/);
-
-      let reviewed = 0;
-      while (reviewed < MAX_REVIEW_CARDS) {
-        // terminalReviewHeading.isVisible() is a synchronous DOM snapshot, not
-        // an auto-retrying assertion - called right after navigation (or
-        // right after the previous card's submission), the review data
-        // can still be loading, so it reads false even when the queue is
-        // genuinely empty. Wait for the page to actually reach one of its
-        // terminal review state (caught-up or Review complete) or a card first,
-        // the same signal the loop already
-        // trusts after each submission below, instead of trusting an
-        // instantaneous check. Found live, 2026-08-09: this raced ahead
-        // of an empty queue and reviewOneCard then waited the full test
-        // timeout for a card that was never going to appear.
+    const reviewedCards =
+      await test.step("5. work the review queue", async () => {
+        await page.goto("/reviews");
         await expect(
-          terminalReviewHeading.or(cardCounter).first(),
+          page.getByRole("heading", { name: "Review", level: 1 }),
         ).toBeVisible();
-        if (await terminalReviewHeading.isVisible()) {
-          break;
-        }
-        const didReview = await reviewOneCard(page);
-        if (!didReview) {
-          // reviewOneCard independently found a terminal review state - trust
-          // it over this loop's own now-stale check above.
-          break;
-        }
-        reviewed++;
-        // The submission either advances to the next card or empties
-        // the queue; both are settled states, so wait for one of them
-        // instead of a fixed delay.
-        await expect(
-          terminalReviewHeading.or(cardCounter).first(),
-        ).toBeVisible();
-      }
 
-      // VOC-074-T02: step 7 must not pass vacuously when the queue was empty or
-      // caught up (reviewedAfter >= reviewedBefore + 0). Fail here, not in step 7.
-      expect(
-        reviewed,
-        "step 5 must review at least one card for the staging core-loop gate (VOC-074-T02)",
-      ).toBeGreaterThanOrEqual(1);
+        const caughtUpHeading = page.getByRole("heading", {
+          name: "You're all caught up",
+          level: 2,
+        });
+        const reviewCompleteHeading = page.getByRole("heading", {
+          name: "Review complete",
+          level: 2,
+        });
+        const terminalReviewHeading = caughtUpHeading.or(reviewCompleteHeading);
 
-      const step5Summary = `reviewedCards=${reviewed}`;
-      testInfo.annotations.push({
-        type: "step-5-reviewed-cards",
-        description: step5Summary,
+        const cardCounter = page.getByText(/^Card \d+ of \d+$/);
+
+        let reviewed = 0;
+        while (reviewed < MAX_REVIEW_CARDS) {
+          // terminalReviewHeading.isVisible() is a synchronous DOM snapshot, not
+          // an auto-retrying assertion - called right after navigation (or
+          // right after the previous card's submission), the review data
+          // can still be loading, so it reads false even when the queue is
+          // genuinely empty. Wait for the page to actually reach one of its
+          // terminal review state (caught-up or Review complete) or a card first,
+          // the same signal the loop already
+          // trusts after each submission below, instead of trusting an
+          // instantaneous check. Found live, 2026-08-09: this raced ahead
+          // of an empty queue and reviewOneCard then waited the full test
+          // timeout for a card that was never going to appear.
+          await expect(
+            terminalReviewHeading.or(cardCounter).first(),
+          ).toBeVisible();
+          if (await terminalReviewHeading.isVisible()) {
+            break;
+          }
+          const didReview = await reviewOneCard(page);
+          if (!didReview) {
+            // reviewOneCard independently found a terminal review state - trust
+            // it over this loop's own now-stale check above.
+            break;
+          }
+          reviewed++;
+          // The submission either advances to the next card or empties
+          // the queue; both are settled states, so wait for one of them
+          // instead of a fixed delay.
+          await expect(
+            terminalReviewHeading.or(cardCounter).first(),
+          ).toBeVisible();
+        }
+
+        // VOC-074-T02: step 7 must not pass vacuously when the queue was empty or
+        // caught up (reviewedAfter >= reviewedBefore + 0). Fail here, not in step 7.
+        expect(
+          reviewed,
+          "step 5 must review at least one card for the staging core-loop gate (VOC-074-T02)",
+        ).toBeGreaterThanOrEqual(1);
+
+        const step5Summary = `reviewedCards=${reviewed}`;
+        testInfo.annotations.push({
+          type: "step-5-reviewed-cards",
+          description: step5Summary,
+        });
+        console.log(`[staging core-loop] step 5 ${step5Summary}`);
+
+        return reviewed;
       });
-      console.log(`[staging core-loop] step 5 ${step5Summary}`);
-
-      return reviewed;
-    });
 
     await test.step("6. sentence feedback on the reviewed word", async () => {
       const feedbackHeading = page.getByRole("heading", {
@@ -520,7 +538,9 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
       const displayName = `Synthetic smoke-test ${Date.now()}`;
       await displayNameInput.fill(displayName);
       await page.getByRole("button", { name: "Save settings" }).click();
-      await expect(page.getByText("Your settings have been saved.")).toBeVisible();
+      await expect(
+        page.getByText("Your settings have been saved."),
+      ).toBeVisible();
       await expect(displayNameInput).toHaveValue(displayName);
     });
 
