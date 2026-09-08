@@ -297,7 +297,9 @@ export function validateMockInventory() {
   // feature_audit_logs table used by the word-save transaction and
   // account-deletion de-identification flow. VOC-1379 adds the forward-only
   // daily-activity review-counter integrity constraints; it does not add a
-  // new table or application boundary.
+  // new table or application boundary. The grace-protected mission linkage
+  // is likewise a forward integrity change to existing mission and ledger
+  // tables, rather than a new application boundary.
   const allowedMigrationFiles = new Set([
     "20260724210000_identity_foundation.sql",
     "20260724210001_oauth_state.sql",
@@ -318,6 +320,7 @@ export function validateMockInventory() {
     "20260908010000_voc1350_restrict_ai_feedback_report_foreign_keys.sql",
     "20260908020000_voc1352_feature_audit_logs.sql",
     "20260908110000_daily_activity_review_counter_integrity.sql",
+    "20260908120000_grace_protected_mission_linkage.sql",
   ]);
   for (const entry of readdirSync(apiMigrationRoot, {
     withFileTypes: true,
