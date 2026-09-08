@@ -400,7 +400,12 @@ func (s *Service) replayStoredResult(ctx context.Context, req SubmitSentenceFeed
 			return nil, false, fmt.Errorf("record stored replay idempotency: %w", err)
 		}
 	}
-	return s.resultFromStored(existing, req.SentenceText), true, nil
+	result := s.resultFromStored(existing, req.SentenceText)
+	// The owner may still read an immutable stored outcome after removing the
+	// saved word, but that historical target is deliberately ineligible for a
+	// fresh provider call. Do not advertise a retry that can never run.
+	result.CanRetry = false
+	return result, true, nil
 }
 
 // completePendingAttempt calls the provider and finalizes one pending row. It

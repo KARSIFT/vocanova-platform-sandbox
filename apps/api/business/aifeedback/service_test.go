@@ -281,6 +281,49 @@ func TestServiceReplaysStoredFeedbackAfterWordIsRemoved(t *testing.T) {
 	assert.Equal(t, 1, f.provider.calls, "stored replay must not generate after removal")
 }
 
+func TestServiceReplaysStoredReviewFeedbackAfterWordIsRemoved(t *testing.T) {
+	f := newServiceFixture(t)
+	req := SubmitSentenceFeedbackRequest{
+		UserID:         f.userID,
+		SentenceText:   "I work every day.",
+		Source:         SourceReview,
+		AttemptID:      f.reviewAttemptID,
+		IdempotencyKey: uuid.New().String(),
+	}
+	first, err := f.service.SubmitSentenceFeedback(t.Context(), req)
+	require.NoError(t, err)
+
+	removedAt := time.Now().UTC()
+	f.repo.userWords[0].DeletedAt = &removedAt
+	replay, err := f.service.SubmitSentenceFeedback(t.Context(), req)
+	require.NoError(t, err)
+	assert.Equal(t, first.SentenceID, replay.SentenceID)
+	assert.Equal(t, first.AttemptID, replay.AttemptID)
+	assert.Equal(t, first.Status, replay.Status)
+	assert.False(t, replay.CanRetry)
+	assert.Equal(t, 1, f.provider.calls, "stored review replay must not generate after removal")
+}
+
+func TestServiceRemovedWordFailedReplayDoesNotAdvertiseRetry(t *testing.T) {
+	f := newServiceFixture(t)
+	req := f.request("I work every day.")
+	f.service.provider = &failingProvider{}
+	initial, err := f.service.SubmitSentenceFeedback(t.Context(), req)
+	require.NoError(t, err)
+	assert.True(t, initial.CanRetry)
+
+	removedAt := time.Now().UTC()
+	f.repo.userWords[0].DeletedAt = &removedAt
+	f.service.provider = f.provider
+	replay, err := f.service.SubmitSentenceFeedback(t.Context(), req)
+	require.NoError(t, err)
+	assert.Equal(t, initial.AttemptID, replay.AttemptID)
+	assert.Equal(t, ErrorCodeTemporaryFailure, replay.ErrorCode)
+	assert.False(t, replay.CanRetry, "removed historical targets cannot start a fresh generation")
+	assert.Equal(t, 0, f.provider.calls)
+	assert.Len(t, f.repo.attempts, 1)
+}
+
 type removedBeforeCreateRepository struct{ *MemoryRepository }
 
 func (r *removedBeforeCreateRepository) CreatePendingAttempt(context.Context, SubmitSentenceFeedbackRequest, *Target, string, string, string, string, time.Time) (*PendingAttempt, error) {
