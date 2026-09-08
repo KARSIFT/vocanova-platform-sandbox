@@ -469,6 +469,13 @@ func (r *PostgreSQLRepository) anonymizeUserDataTx(ctx context.Context, tx *sql.
 	var counters AnonymizationCounters
 	var err error
 
+	// Immutable history tables permit their narrowly defined deletion or
+	// de-identification only inside this transaction. set_config(..., true)
+	// guarantees the gate resets on commit or rollback.
+	if _, err := tx.ExecContext(ctx, `SELECT set_config('vocanova.ledger_purge', 'on', true)`); err != nil {
+		return counters, fmt.Errorf("enable immutable-history purge: %w", err)
+	}
+
 	// Purge quality reports before their parent feedback attempts and retain
 	// an explicit affected-row count for the deletion audit.
 	counters.AIQualityReviewReports, err = execCount(ctx, tx, userID,
