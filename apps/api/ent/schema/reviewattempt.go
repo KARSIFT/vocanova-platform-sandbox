@@ -13,7 +13,9 @@ import (
 type ReviewAttempt struct{ ent.Schema }
 
 func (ReviewAttempt) Annotations() []schema.Annotation {
-	return []schema.Annotation{entsql.Annotation{Table: "review_attempts"}}
+	return []schema.Annotation{entsql.Annotation{Table: "review_attempts", Checks: map[string]string{
+		"result_rating_valid": "(result = 'skipped' AND rating IS NULL) OR (result = 'incorrect' AND rating IS NOT NULL AND rating = 'again') OR (result = 'correct' AND rating IS NOT NULL AND rating IN ('hard', 'good', 'easy'))",
+	}}}
 }
 
 func (ReviewAttempt) Mixin() []ent.Mixin { return []ent.Mixin{UUIDMixin{}, TimeMixin{}} }
