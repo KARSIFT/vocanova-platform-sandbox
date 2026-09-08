@@ -94,6 +94,10 @@ type ProductionConfig struct {
 	// bounded so an unsafe deployment value cannot hammer PostgreSQL.
 	AuthCleanupInterval time.Duration
 
+	// IdempotencyCleanupInterval is the cadence for bounded deletion of
+	// records beyond DOC-07's 24-hour replay window.
+	IdempotencyCleanupInterval time.Duration
+
 	// AccountDeletionSweepInterval is the cadence at which a production API
 	// process checks for due staged-deletion requests. The sweep itself uses
 	// database claims, so running it in more than one replica is safe.
@@ -104,8 +108,10 @@ const (
 	// AuthCleanupInterval runs database DELETE statements in every API replica.
 	// Keep it bounded to preserve the intended lightweight-cleanup posture and
 	// ensure credential material is not retained indefinitely by a bad setting.
-	minAuthCleanupInterval = time.Minute
-	maxAuthCleanupInterval = 24 * time.Hour
+	minAuthCleanupInterval        = time.Minute
+	maxAuthCleanupInterval        = 24 * time.Hour
+	minIdempotencyCleanupInterval = time.Minute
+	maxIdempotencyCleanupInterval = 24 * time.Hour
 
 	// AccountDeletionSweepInterval must not outpace the sweep service's
 	// fixed 60-per-hour internal safety budget, and must remain frequent
@@ -230,6 +236,15 @@ func LoadProductionConfig() (ProductionConfig, error) {
 	)
 	if authCleanupIntervalErr != nil {
 		return cfg, authCleanupIntervalErr
+	}
+
+	var idempotencyCleanupIntervalErr error
+	cfg.IdempotencyCleanupInterval, idempotencyCleanupIntervalErr = getenvBoundedDuration(
+		"IDEMPOTENCY_CLEANUP_INTERVAL", time.Hour,
+		minIdempotencyCleanupInterval, maxIdempotencyCleanupInterval,
+	)
+	if idempotencyCleanupIntervalErr != nil {
+		return cfg, idempotencyCleanupIntervalErr
 	}
 
 	var sweepIntervalErr error

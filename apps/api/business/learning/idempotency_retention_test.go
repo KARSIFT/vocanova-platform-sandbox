@@ -107,6 +107,29 @@ func TestPostgreSQLIdempotencyStoreOnlyMatchesActiveKeysAndReplacesExpiredOnReco
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestPostgreSQLIdempotencyStoreCleanupExpiredIsBounded(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
+	store := NewPostgreSQLIdempotencyStore(db)
+	store.now = func() time.Time { return now }
+	cutoff := now.Add(-idempotencyRetention)
+
+	mock.ExpectExec("WITH expired AS").
+		WithArgs(cutoff, 250).
+		WillReturnResult(sqlmock.NewResult(0, 2))
+	deleted, err := store.CleanupExpired(t.Context(), 250)
+	require.NoError(t, err)
+	assert.Equal(t, 2, deleted)
+
+	deleted, err = store.CleanupExpired(t.Context(), 0)
+	require.Error(t, err)
+	assert.Zero(t, deleted)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 // TestPostgreSQLIdempotencyStoreRetentionPostgreSQL validates the conflict
 // replacement against a disposable database. It uses a connection-local table
 // and never reads or writes application tables.
@@ -166,4 +189,59 @@ func TestPostgreSQLIdempotencyStoreRetentionPostgreSQL(t *testing.T) {
 	var fingerprint string
 	require.NoError(t, db.QueryRowContext(ctx, `SELECT fingerprint FROM idempotency_keys WHERE user_id = $1`, userA).Scan(&fingerprint))
 	assert.Equal(t, "new", fingerprint)
+}
+
+func TestPostgreSQLIdempotencyStoreCleanupExpiredPostgreSQL(t *testing.T) {
+	dsn := os.Getenv("VOCANOVA_TEST_POSTGRES_DSN")
+	if dsn == "" {
+		t.Skip("VOCANOVA_TEST_POSTGRES_DSN is unset; real PostgreSQL cleanup test unavailable")
+	}
+	db, err := sql.Open("postgres", dsn)
+	require.NoError(t, err)
+	defer db.Close()
+	db.SetMaxOpenConns(1)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+	_, err = db.ExecContext(ctx, `
+		CREATE TEMP TABLE idempotency_keys (
+			id uuid PRIMARY KEY, user_id uuid NOT NULL, operation text NOT NULL,
+			key text NOT NULL, fingerprint text NOT NULL, created_at timestamptz NOT NULL,
+			UNIQUE (user_id, operation, key)
+		)`)
+	require.NoError(t, err)
+
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
+	cutoff := now.Add(-idempotencyRetention)
+	store := NewPostgreSQLIdempotencyStore(db)
+	store.now = func() time.Time { return now }
+
+	for _, createdAt := range []time.Time{
+		cutoff.Add(-time.Second),
+		cutoff,
+		// PostgreSQL stores timestamptz values at microsecond precision. Keep the
+		// active fixture one representable unit beyond the expiration boundary.
+		cutoff.Add(time.Microsecond),
+	} {
+		_, err = db.ExecContext(ctx,
+			`INSERT INTO idempotency_keys (id, user_id, operation, key, fingerprint, created_at)
+			 VALUES ($1, $2, 'review', $3, 'fingerprint', $4)`,
+			uuid.New(), uuid.New(), uuid.NewString(), createdAt,
+		)
+		require.NoError(t, err)
+	}
+
+	deleted, err := store.CleanupExpired(ctx, 1)
+	require.NoError(t, err)
+	assert.Equal(t, 1, deleted, "one pass must honor its batch limit")
+	deleted, err = store.CleanupExpired(ctx, 1)
+	require.NoError(t, err)
+	assert.Equal(t, 1, deleted, "the exact 24-hour boundary is expired")
+	deleted, err = store.CleanupExpired(ctx, 1)
+	require.NoError(t, err)
+	assert.Zero(t, deleted, "active rows must be preserved")
+
+	var remaining int
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM idempotency_keys`).Scan(&remaining))
+	assert.Equal(t, 1, remaining)
 }
