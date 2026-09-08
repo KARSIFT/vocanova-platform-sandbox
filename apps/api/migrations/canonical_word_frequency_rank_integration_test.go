@@ -109,6 +109,12 @@ func TestVOC1438CanonicalWordFrequencyRankConstraint(t *testing.T) {
 	if _, err := conn.ExecContext(ctx, `INSERT INTO canonical_words (id, frequency_rank, updated_at) VALUES ($1, 1, $2)`, validID, now); err != nil {
 		t.Fatalf("insert valid rank for update checks: %v", err)
 	}
+	if _, err := conn.ExecContext(ctx, `UPDATE canonical_words SET frequency_rank = NULL WHERE id = $1`, validID); err != nil {
+		t.Fatalf("update rank to NULL: %v", err)
+	}
+	if _, err := conn.ExecContext(ctx, `UPDATE canonical_words SET frequency_rank = 1 WHERE id = $1`, validID); err != nil {
+		t.Fatalf("update rank to boundary 1: %v", err)
+	}
 	assertFrequencyRankCheckViolation(t, execFrequencyRankWrite(ctx, conn, `
 		UPDATE canonical_words SET frequency_rank = 0 WHERE id = $1`, validID))
 	assertFrequencyRankCheckViolation(t, execFrequencyRankWrite(ctx, conn, `
