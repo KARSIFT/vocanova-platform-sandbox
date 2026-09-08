@@ -26,6 +26,11 @@ func (DailyMissionSnapshot) Annotations() []schema.Annotation {
 				"sentence_target_in_range":      "sentence_practice_target IS NULL OR (sentence_practice_target >= 1 AND sentence_practice_target <= 100)",
 				"sentence_completed_in_range":   "sentence_practice_target IS NULL OR (sentence_practices_completed >= 0 AND sentence_practices_completed <= sentence_practice_target)",
 				"completed_at_required_on_done": "status <> 'completed' OR completed_at IS NOT NULL",
+				// A protected day is the persisted result of consuming one
+				// grace day. The cross-table, same-user foreign key is owned
+				// by the Atlas migration because Ent cannot express composite
+				// foreign keys; keep the local status/link invariant here too.
+				"grace_protection_fields_consistent": "(status = 'protected' AND grace_applied AND grace_day_id IS NOT NULL) OR (status <> 'protected' AND NOT grace_applied AND grace_day_id IS NULL)",
 			},
 		},
 	}

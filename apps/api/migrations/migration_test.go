@@ -374,6 +374,31 @@ func TestVOC030P4GamificationTablesMigrationCarriesDatabaseInvariants(t *testing
 	}
 }
 
+func TestGraceProtectedMissionLinkageMigrationCarriesDatabaseInvariants(t *testing.T) {
+	sql, err := os.ReadFile("20260908120000_grace_protected_mission_linkage.sql")
+	if err != nil {
+		t.Fatalf("read grace-protected mission linkage migration: %v", err)
+	}
+	text := string(sql)
+	for _, invariant := range []string{
+		"ALTER TABLE grace_day_ledger",
+		"UNIQUE (id, user_id)",
+		"ALTER TABLE daily_mission_snapshots",
+		"status = 'protected' AND grace_applied AND grace_day_id IS NOT NULL",
+		"status <> 'protected' AND NOT grace_applied AND grace_day_id IS NULL",
+		"FOREIGN KEY (grace_day_id, user_id)",
+		"REFERENCES grace_day_ledger (id, user_id)",
+		"ON DELETE RESTRICT",
+	} {
+		if !strings.Contains(text, invariant) {
+			t.Errorf("grace-protected mission linkage migration missing invariant %q", invariant)
+		}
+	}
+	if strings.Contains(text, "ON DELETE CASCADE") {
+		t.Error("grace-protected mission linkage migration contains forbidden ON DELETE CASCADE")
+	}
+}
+
 // TestVOC031P5UserOnboardingProfilesMigrationCarriesDatabaseInvariants
 // covers VOC-031-TEST-00. The migration is the T00 deliverable: it
 // creates the user_onboarding_profiles table (DOC-05 §6) and
