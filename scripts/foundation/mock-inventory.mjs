@@ -301,8 +301,9 @@ export function validateMockInventory() {
   // de-identification. VOC-1379, the grace-protected mission linkage,
   // VOC-1385's email-change-link cleanup index, VOC-1389's nonnegative
   // user-word review-counter constraint, the daily point aggregate
-  // constraint, and the review result/rating constraint are forward integrity
-  // changes to existing tables rather than new application boundaries.
+  // constraint, the review result/rating constraint, and AI-feedback outcome
+  // payload checks are forward integrity changes to existing tables rather
+  // than new application boundaries.
   const allowedMigrationFiles = new Set([
     "20260724210000_identity_foundation.sql",
     "20260724210001_oauth_state.sql",
@@ -328,6 +329,7 @@ export function validateMockInventory() {
     "20260908110000_daily_activity_review_counter_integrity.sql",
     "20260908120000_grace_protected_mission_linkage.sql",
     "20260908130000_email_change_links_cleanup_order.sql",
+    "20260908140000_voc1398_ai_feedback_outcome_integrity.sql",
     "20260908150000_daily_activity_point_aggregate_integrity.sql",
     "20260908170000_user_word_review_counter_constraints.sql",
   ]);

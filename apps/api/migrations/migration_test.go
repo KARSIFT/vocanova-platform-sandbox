@@ -241,6 +241,27 @@ func TestVOC028P3AIFeedbackAttemptsMigrationCarriesDatabaseInvariants(t *testing
 	}
 }
 
+func TestAIFeedbackOutcomeIntegrityMigrationCarriesDatabaseInvariants(t *testing.T) {
+	sql, err := os.ReadFile("20260908140000_voc1398_ai_feedback_outcome_integrity.sql")
+	if err != nil {
+		t.Fatalf("read voc-1398 ai feedback outcome integrity migration: %v", err)
+	}
+	text := string(sql)
+	for _, invariant := range []string{
+		"ALTER TABLE ai_feedback_attempts",
+		"status <> 'succeeded' OR (feedback_json IS NOT NULL AND jsonb_typeof(feedback_json) = 'object')",
+		"status = 'succeeded' OR feedback_json IS NULL",
+		"status = 'succeeded' OR feedback_text IS NULL",
+		"status = 'failed' OR error_code IS NULL",
+		"status = 'failed' OR error_message IS NULL",
+		"NOT VALID",
+	} {
+		if !strings.Contains(text, invariant) {
+			t.Errorf("migration missing invariant %q", invariant)
+		}
+	}
+}
+
 func TestAIFeedbackRetryMigrationKeepsOneActiveGenerationPerRequest(t *testing.T) {
 	sql, err := os.ReadFile("20260905130000_ai_feedback_retry_history.sql")
 	if err != nil {
