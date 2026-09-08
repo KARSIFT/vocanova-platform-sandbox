@@ -16,9 +16,9 @@ func (JourneySituation) Annotations() []schema.Annotation {
 		entsql.Annotation{
 			Table: "journey_situations",
 			Checks: map[string]string{
-				"slug_nonblank":              "slug ~ '[^[:space:]]'",
-				"title_nonblank":             "title ~ '[^[:space:]]'",
-				"short_description_nonblank": "short_description ~ '[^[:space:]]'",
+				"slug_nonblank":              curatedContentNonblankCheck("slug"),
+				"title_nonblank":             curatedContentNonblankCheck("title"),
+				"short_description_nonblank": curatedContentNonblankCheck("short_description"),
 			},
 		},
 	}
@@ -27,9 +27,9 @@ func (JourneySituation) Mixin() []ent.Mixin { return []ent.Mixin{UUIDMixin{}, Ti
 
 func (JourneySituation) Fields() []ent.Field {
 	return []ent.Field{
-		field.String("slug").NotEmpty(),
-		field.String("title").NotEmpty(),
-		field.String("short_description").NotEmpty(),
+		field.String("slug").NotEmpty().Validate(validateCuratedContentNonblank),
+		field.String("title").NotEmpty().Validate(validateCuratedContentNonblank),
+		field.String("short_description").NotEmpty().Validate(validateCuratedContentNonblank),
 		field.Enum("level_band").
 			Values("a1_a2", "a2_b1", "b1_b2", "mixed").
 			Optional().Nillable(),

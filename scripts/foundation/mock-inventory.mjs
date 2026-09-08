@@ -246,6 +246,8 @@ export function validateMockInventory() {
   // adds email_change_links; T04 adds account_deletion_requests.
   const allowedSchemaFiles = new Set([
     "canonicalword.go",
+    "curatedcontent.go",
+    "curatedcontent_test.go",
     "externalidentity.go",
     "journeysituation.go",
     "journeyword.go",

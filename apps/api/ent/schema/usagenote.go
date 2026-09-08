@@ -17,7 +17,7 @@ func (UsageNote) Annotations() []schema.Annotation {
 		entsql.Annotation{
 			Table: "usage_notes",
 			Checks: map[string]string{
-				"note_text_nonblank": "note_text ~ '[^[:space:]]'",
+				"note_text_nonblank": curatedContentNonblankCheck("note_text"),
 			},
 		},
 	}
@@ -29,7 +29,7 @@ func (UsageNote) Fields() []ent.Field {
 		field.UUID("meaning_id", uuid.UUID{}),
 		field.Enum("note_type").
 			Values("collocation", "register", "common_mistake", "grammar", "pronunciation", "other"),
-		field.String("note_text").NotEmpty(),
+		field.String("note_text").NotEmpty().Validate(validateCuratedContentNonblank),
 		field.Int("note_order").Positive(),
 		field.Enum("status").
 			Values("draft", "active", "archived").

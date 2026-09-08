@@ -31,7 +31,7 @@ func TestCuratedContentNonblankMigrationCarriesAllInvariants(t *testing.T) {
 		"journey_situations_slug_nonblank",
 		"journey_situations_title_nonblank",
 		"journey_situations_short_description_nonblank",
-		"~ '[^[:space:]]'",
+		"U&'[^\\0009-\\000D\\0020\\0085\\00A0\\1680\\2000-\\200A\\2028\\2029\\202F\\205F\\3000]'",
 		"NOT VALID",
 	} {
 		assert.Contains(t, text, invariant)
@@ -39,22 +39,30 @@ func TestCuratedContentNonblankMigrationCarriesAllInvariants(t *testing.T) {
 
 	schemaChecks := map[string][]string{
 		"../ent/schema/canonicalword.go": {
-			`"text_nonblank":            "text ~ '[^[:space:]]'"`,
-			`"normalized_text_nonblank": "normalized_text ~ '[^[:space:]]'"`,
+			`"text_nonblank":            curatedContentNonblankCheck("text")`,
+			`"normalized_text_nonblank": curatedContentNonblankCheck("normalized_text")`,
+			`field.String("text").NotEmpty().Validate(validateCuratedContentNonblank)`,
+			`field.String("normalized_text").NotEmpty().Validate(validateCuratedContentNonblank)`,
 		},
 		"../ent/schema/wordmeaning.go": {
-			`"short_definition_nonblank": "short_definition ~ '[^[:space:]]'"`,
+			`"short_definition_nonblank": curatedContentNonblankCheck("short_definition")`,
+			`field.String("short_definition").NotEmpty().Validate(validateCuratedContentNonblank)`,
 		},
 		"../ent/schema/wordexample.go": {
-			`"example_text_nonblank": "example_text ~ '[^[:space:]]'"`,
+			`"example_text_nonblank": curatedContentNonblankCheck("example_text")`,
+			`field.String("example_text").NotEmpty().Validate(validateCuratedContentNonblank)`,
 		},
 		"../ent/schema/usagenote.go": {
-			`"note_text_nonblank": "note_text ~ '[^[:space:]]'"`,
+			`"note_text_nonblank": curatedContentNonblankCheck("note_text")`,
+			`field.String("note_text").NotEmpty().Validate(validateCuratedContentNonblank)`,
 		},
 		"../ent/schema/journeysituation.go": {
-			`"slug_nonblank":              "slug ~ '[^[:space:]]'"`,
-			`"title_nonblank":             "title ~ '[^[:space:]]'"`,
-			`"short_description_nonblank": "short_description ~ '[^[:space:]]'"`,
+			`"slug_nonblank":              curatedContentNonblankCheck("slug")`,
+			`"title_nonblank":             curatedContentNonblankCheck("title")`,
+			`"short_description_nonblank": curatedContentNonblankCheck("short_description")`,
+			`field.String("slug").NotEmpty().Validate(validateCuratedContentNonblank)`,
+			`field.String("title").NotEmpty().Validate(validateCuratedContentNonblank)`,
+			`field.String("short_description").NotEmpty().Validate(validateCuratedContentNonblank)`,
 		},
 	}
 	for filename, checks := range schemaChecks {
@@ -64,6 +72,10 @@ func TestCuratedContentNonblankMigrationCarriesAllInvariants(t *testing.T) {
 			assert.Contains(t, string(body), check)
 		}
 	}
+	validator, readErr := os.ReadFile("../ent/schema/curatedcontent.go")
+	require.NoError(t, readErr)
+	assert.Contains(t, string(validator), `const curatedContentNonblankPattern = "U&'[^\\0009-\\000D\\0020\\0085\\00A0\\1680\\2000-\\200A\\2028\\2029\\202F\\205F\\3000]'"`)
+	assert.Contains(t, string(validator), "strings.TrimSpace(value)")
 }
 
 func TestCuratedContentNonblankAgainstPostgreSQL(t *testing.T) {
@@ -197,6 +209,33 @@ func TestCuratedContentNonblankAgainstPostgreSQL(t *testing.T) {
 		})
 	}
 
+	// PostgreSQL's POSIX [:space:] class follows the active collation. The
+	// migration instead spells out Unicode White_Space, so these values must be
+	// rejected consistently even when the database locale changes.
+	unicodeWhitespace := "\u00a0\u2007\u202f\u3000"
+	unicodeWhitespaceUpdates := []struct {
+		name   string
+		table  string
+		column string
+		id     uuid.UUID
+	}{
+		{name: "word text", table: "canonical_words", column: "text", id: validWordID},
+		{name: "word normalized text", table: "canonical_words", column: "normalized_text", id: validWordID},
+		{name: "meaning definition", table: "word_meanings", column: "short_definition", id: validMeaningID},
+		{name: "example text", table: "word_examples", column: "example_text", id: validExampleID},
+		{name: "note text", table: "usage_notes", column: "note_text", id: validNoteID},
+		{name: "situation slug", table: "journey_situations", column: "slug", id: validSituationID},
+		{name: "situation title", table: "journey_situations", column: "title", id: validSituationID},
+		{name: "situation description", table: "journey_situations", column: "short_description", id: validSituationID},
+	}
+	for _, tc := range unicodeWhitespaceUpdates {
+		t.Run("reject Unicode whitespace update "+tc.name, func(t *testing.T) {
+			query := "UPDATE " + pq.QuoteIdentifier(tc.table) + " SET " + pq.QuoteIdentifier(tc.column) + " = $1 WHERE id = $2"
+			_, updateErr := db.ExecContext(ctx, query, unicodeWhitespace, tc.id)
+			requireCuratedContentCheckViolation(t, updateErr)
+		})
+	}
+
 	for _, legacy := range legacyRows {
 		t.Run("legacy row protected on update "+legacy.table, func(t *testing.T) {
 			_, updateErr := db.ExecContext(ctx,
@@ -224,7 +263,7 @@ func TestCuratedContentNonblankAgainstPostgreSQL(t *testing.T) {
 			FROM pg_constraint
 			WHERE connamespace = current_schema()::regnamespace AND conname = $1`, name).Scan(&validated, &definition))
 		assert.False(t, validated, name)
-		assert.Contains(t, definition, "[^[:space:]]", name)
+		assert.Contains(t, definition, "CHECK", name)
 	}
 }
 

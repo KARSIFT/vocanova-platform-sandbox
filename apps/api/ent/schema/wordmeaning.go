@@ -17,7 +17,7 @@ func (WordMeaning) Annotations() []schema.Annotation {
 		entsql.Annotation{
 			Table: "word_meanings",
 			Checks: map[string]string{
-				"short_definition_nonblank": "short_definition ~ '[^[:space:]]'",
+				"short_definition_nonblank": curatedContentNonblankCheck("short_definition"),
 			},
 		},
 	}
@@ -29,7 +29,7 @@ func (WordMeaning) Fields() []ent.Field {
 		field.UUID("word_id", uuid.UUID{}),
 		field.Enum("part_of_speech").
 			Values("noun", "verb", "adjective", "adverb", "preposition", "conjunction", "interjection", "pronoun", "determiner", "phrase", "idiom", "phrasal_verb", "collocation", "other"),
-		field.String("short_definition").NotEmpty(),
+		field.String("short_definition").NotEmpty().Validate(validateCuratedContentNonblank),
 		field.String("learner_definition").Optional().Nillable(),
 		field.Int("meaning_order").Positive(),
 		field.Enum("status").

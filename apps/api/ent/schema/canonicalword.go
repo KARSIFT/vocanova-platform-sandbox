@@ -16,8 +16,8 @@ func (CanonicalWord) Annotations() []schema.Annotation {
 		entsql.Annotation{
 			Table: "canonical_words",
 			Checks: map[string]string{
-				"text_nonblank":            "text ~ '[^[:space:]]'",
-				"normalized_text_nonblank": "normalized_text ~ '[^[:space:]]'",
+				"text_nonblank":            curatedContentNonblankCheck("text"),
+				"normalized_text_nonblank": curatedContentNonblankCheck("normalized_text"),
 			},
 		},
 	}
@@ -26,8 +26,8 @@ func (CanonicalWord) Mixin() []ent.Mixin { return []ent.Mixin{UUIDMixin{}, TimeM
 
 func (CanonicalWord) Fields() []ent.Field {
 	return []ent.Field{
-		field.String("text").NotEmpty(),
-		field.String("normalized_text").NotEmpty(),
+		field.String("text").NotEmpty().Validate(validateCuratedContentNonblank),
+		field.String("normalized_text").NotEmpty().Validate(validateCuratedContentNonblank),
 		field.Enum("word_type").
 			Values("word", "phrase", "phrasal_verb", "idiom", "collocation").
 			Default("word"),

@@ -17,7 +17,7 @@ func (WordExample) Annotations() []schema.Annotation {
 		entsql.Annotation{
 			Table: "word_examples",
 			Checks: map[string]string{
-				"example_text_nonblank": "example_text ~ '[^[:space:]]'",
+				"example_text_nonblank": curatedContentNonblankCheck("example_text"),
 			},
 		},
 	}
@@ -27,7 +27,7 @@ func (WordExample) Mixin() []ent.Mixin { return []ent.Mixin{UUIDMixin{}, TimeMix
 func (WordExample) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("meaning_id", uuid.UUID{}),
-		field.String("example_text").NotEmpty(),
+		field.String("example_text").NotEmpty().Validate(validateCuratedContentNonblank),
 		field.Int("example_order").Positive(),
 		field.Enum("difficulty_level").
 			Values("a1", "a2", "b1", "b2", "c1", "unknown").
