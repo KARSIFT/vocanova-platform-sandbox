@@ -13,15 +13,23 @@ import (
 type MagicLink struct{ ent.Schema }
 
 func (MagicLink) Annotations() []schema.Annotation {
-	return []schema.Annotation{entsql.Annotation{Table: "magic_links"}}
+	return []schema.Annotation{
+		entsql.Annotation{
+			Table: "magic_links",
+			Checks: map[string]string{
+				"email_nonblank":       authRecordIdentifierNonblankCheck("email"),
+				"environment_nonblank": authRecordIdentifierNonblankCheck("environment"),
+			},
+		},
+	}
 }
 func (MagicLink) Mixin() []ent.Mixin { return []ent.Mixin{UUIDMixin{}} }
 func (MagicLink) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("user_id", uuid.UUID{}).Optional().Nillable(),
-		field.String("email").NotEmpty().Immutable(),
+		field.String("email").NotEmpty().Validate(validateAuthRecordIdentifierNonblank).Immutable(),
 		field.Bytes("token_hash").Unique().Immutable(),
-		field.String("environment").NotEmpty().Immutable(),
+		field.String("environment").NotEmpty().Validate(validateAuthRecordIdentifierNonblank).Immutable(),
 		field.Time("created_at").Immutable(),
 		field.Time("expires_at").Immutable(),
 		field.Time("consumed_at").Optional().Nillable(),

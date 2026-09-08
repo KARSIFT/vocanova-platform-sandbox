@@ -1,4 +1,4 @@
-h1:p9J1rzlKZbjDaksBwN5nYHzUEy5OO1mB4mnkt4q7Qws=
+h1:dfXtbp+8XRLW8B1/GF3vFL7c5stW34+SjH9H74HymBY=
 20260724210000_identity_foundation.sql h1:kCE91pYCtOUccWkoJGp8Ow1N7oOWjxAvGcPQtSIC17k=
 20260724210001_oauth_state.sql h1:8UfSmhz20WitPSfl/I/KlApBO0VK39xYS053oC3IEiU=
 20260725100000_voc026_p1_content_tables.sql h1:rTIXQ0O1B1X6fu82HtnYS3xb0KU3yYQO/kJmui0C9j8=
@@ -17,3 +17,4 @@ h1:p9J1rzlKZbjDaksBwN5nYHzUEy5OO1mB4mnkt4q7Qws=
 20260905130000_ai_feedback_retry_history.sql h1:i+BVsod9jgh4TVEHBG6JfrvDX/Sykwwl9UEHdpiw4ec=
 20260908010000_voc1350_restrict_ai_feedback_report_foreign_keys.sql h1:tMwDWcLBCAL3sANQW8+Xewtoy5QgNYjKHnx4RqJyiRE=
 20260908020000_voc1352_feature_audit_logs.sql h1:BzCJ0G9JHOi9HlpW9qJkYIEzW77YdLJ9gx6aLhZwVQM=
+20260908290000_voc1444_auth_record_identifiers_nonblank.sql h1:5s18KT4t5XWLKm68nWrSD4WR9M0QGpTx9kel2asmaIE=

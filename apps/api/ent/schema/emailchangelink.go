@@ -30,7 +30,15 @@ import (
 type EmailChangeLink struct{ ent.Schema }
 
 func (EmailChangeLink) Annotations() []schema.Annotation {
-	return []schema.Annotation{entsql.Annotation{Table: "email_change_links"}}
+	return []schema.Annotation{
+		entsql.Annotation{
+			Table: "email_change_links",
+			Checks: map[string]string{
+				"new_email_nonblank":   authRecordIdentifierNonblankCheck("new_email"),
+				"environment_nonblank": authRecordIdentifierNonblankCheck("environment"),
+			},
+		},
+	}
 }
 
 func (EmailChangeLink) Mixin() []ent.Mixin { return []ent.Mixin{UUIDMixin{}} }
@@ -38,9 +46,9 @@ func (EmailChangeLink) Mixin() []ent.Mixin { return []ent.Mixin{UUIDMixin{}} }
 func (EmailChangeLink) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("user_id", uuid.UUID{}).Immutable(),
-		field.String("new_email").NotEmpty().Immutable(),
+		field.String("new_email").NotEmpty().Validate(validateAuthRecordIdentifierNonblank).Immutable(),
 		field.Bytes("token_hash").Unique().Immutable(),
-		field.String("environment").NotEmpty().Immutable(),
+		field.String("environment").NotEmpty().Validate(validateAuthRecordIdentifierNonblank).Immutable(),
 		field.Time("created_at").Immutable(),
 		field.Time("expires_at").Immutable(),
 		field.Time("consumed_at").Optional().Nillable(),
