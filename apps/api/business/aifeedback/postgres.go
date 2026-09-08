@@ -353,7 +353,7 @@ func (r *PostgreSQLRepository) CompleteFeedbackAttempt(ctx context.Context, pend
 	defer tx.Rollback()
 
 	if feedback != nil {
-		rawJSON, err := json.Marshal(feedback.RawJSON)
+		rawJSON, err := json.Marshal(feedback.StructuredJSON())
 		if err != nil {
 			return fmt.Errorf("marshal feedback json: %w", err)
 		}
@@ -423,7 +423,7 @@ func (r *PostgreSQLRepository) CompleteSuccessfulFeedbackAttempt(ctx context.Con
 		return false, fmt.Errorf("begin tx: %w", err)
 	}
 	defer tx.Rollback()
-	rawJSON, err := json.Marshal(feedback.RawJSON)
+	rawJSON, err := json.Marshal(feedback.StructuredJSON())
 	if err != nil {
 		return false, fmt.Errorf("marshal feedback json: %w", err)
 	}
