@@ -30,7 +30,7 @@ func (CanonicalWord) Fields() []ent.Field {
 		field.Enum("difficulty_level").
 			Values("a1", "a2", "b1", "b2", "c1", "unknown").
 			Optional().Nillable(),
-		field.Int("frequency_rank").Optional().Nillable(),
+		field.Int("frequency_rank").Positive().Optional().Nillable(),
 	}
 }
 

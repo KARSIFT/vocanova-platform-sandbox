@@ -119,6 +119,23 @@ func TestVOC026P1ContentMigrationCarriesDatabaseInvariants(t *testing.T) {
 	}
 }
 
+func TestVOC1438CanonicalWordFrequencyRankMigrationCarriesDatabaseInvariant(t *testing.T) {
+	sql, err := os.ReadFile("20260908270000_voc1438_canonical_word_frequency_rank.sql")
+	if err != nil {
+		t.Fatalf("read canonical-word frequency-rank migration: %v", err)
+	}
+	text := string(sql)
+	for _, invariant := range []string{
+		"ALTER TABLE canonical_words",
+		"canonical_words_frequency_rank_positive",
+		"CHECK (frequency_rank IS NULL OR frequency_rank > 0) NOT VALID",
+	} {
+		if !strings.Contains(text, invariant) {
+			t.Errorf("migration missing invariant %q", invariant)
+		}
+	}
+}
+
 func TestVOC027P2ReviewAttemptsMigrationCarriesDatabaseInvariants(t *testing.T) {
 	sql, err := os.ReadFile("20260725110000_voc027_p2_review_attempts.sql")
 	if err != nil {
