@@ -280,6 +280,25 @@ func TestAIFeedbackRetryMigrationKeepsOneActiveGenerationPerRequest(t *testing.T
 	}
 }
 
+func TestVOC1402LearningLedgersAreAppendOnlyExceptAccountPurge(t *testing.T) {
+	sql, err := os.ReadFile("20260908153000_voc1402_append_only_learning_ledgers.sql")
+	if err != nil {
+		t.Fatalf("read voc1402 migration: %v", err)
+	}
+	text := string(sql)
+	for _, invariant := range []string{
+		"CREATE FUNCTION vocanova_reject_learning_ledger_mutation()",
+		"current_setting('vocanova.ledger_purge', true) = 'on'",
+		"BEFORE UPDATE OR DELETE ON confidence_point_ledger",
+		"BEFORE UPDATE OR DELETE ON grace_day_ledger",
+		"ERRCODE = '55000'",
+	} {
+		if !strings.Contains(text, invariant) {
+			t.Errorf("voc1402 migration missing invariant %q", invariant)
+		}
+	}
+}
+
 func TestVOC026P1IdempotencyMigrationCarriesDatabaseInvariants(t *testing.T) {
 	sql, err := os.ReadFile("20260725100001_voc026_p1_idempotency_keys.sql")
 	if err != nil {

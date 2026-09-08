@@ -501,6 +501,13 @@ func (r *PostgreSQLRepository) anonymizeUserDataTx(ctx context.Context, tx *sql.
 	var counters AnonymizationCounters
 	var err error
 
+	// DOC-05 §12 ledgers reject DELETE through a database trigger. Their
+	// deletion is nevertheless required by the staged account-anonymization
+	// flow (DOC-05 §16), so scope the exception to this transaction only.
+	if _, err := tx.ExecContext(ctx, `SELECT set_config('vocanova.ledger_purge', 'on', true)`); err != nil {
+		return counters, fmt.Errorf("enable learning-ledger purge: %w", err)
+	}
+
 	// Purge quality reports before their parent feedback attempts and retain
 	// an explicit affected-row count for the deletion audit.
 	counters.AIQualityReviewReports, err = execCount(ctx, tx, userID,
