@@ -298,9 +298,9 @@ export function validateMockInventory() {
   // VOC-1352 adds feature_audit_logs for word-save and account-deletion
   // de-identification. VOC-1379, the grace-protected mission linkage,
   // VOC-1385's email-change-link cleanup index, VOC-1389's nonnegative
-  // user-word review-counter constraint, and the daily point aggregate
-  // constraint are forward integrity changes to existing tables rather than
-  // new application boundaries.
+  // user-word review-counter constraint, the daily point aggregate
+  // constraint, and the review result/rating constraint are forward integrity
+  // changes to existing tables rather than new application boundaries.
   const allowedMigrationFiles = new Set([
     "20260724210000_identity_foundation.sql",
     "20260724210001_oauth_state.sql",
@@ -321,6 +321,7 @@ export function validateMockInventory() {
     "20260908010000_voc1350_restrict_ai_feedback_report_foreign_keys.sql",
     "20260908020000_voc1352_feature_audit_logs.sql",
     "20260908021500_review_attempt_user_word_integrity.sql",
+    "20260908091500_review_attempt_result_rating_integrity.sql",
     "20260908110000_daily_activity_review_counter_integrity.sql",
     "20260908120000_grace_protected_mission_linkage.sql",
     "20260908130000_email_change_links_cleanup_order.sql",
