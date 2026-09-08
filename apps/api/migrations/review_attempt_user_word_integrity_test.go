@@ -104,6 +104,19 @@ func TestReviewAttemptUserWordIntegrityAgainstPostgreSQL(t *testing.T) {
 	_, err = db.ExecContext(ctx, string(migration))
 	require.NoError(t, err, "NOT VALID must preserve rollout with legacy mismatches")
 
+	// PostgreSQL records a NOT VALID foreign key as unvalidated in its
+	// constraint catalog. Check that state explicitly rather than inferring it
+	// only from the legacy row: the rollout guarantee is part of this
+	// migration's contract.
+	var validated bool
+	require.NoError(t, db.QueryRowContext(ctx, `
+		SELECT convalidated
+		FROM pg_constraint
+		WHERE conname = 'review_attempts_user_word_owner_meaning_fk'
+		  AND conrelid = 'review_attempts'::regclass`,
+	).Scan(&validated))
+	assert.False(t, validated, "the forward-only constraint must remain NOT VALID for legacy rows")
+
 	// Valid history remains insertable even when the saved word is archived or
 	// soft-deleted; the relationship protects identity, not active-state policy.
 	validID := uuid.New()
@@ -131,6 +144,10 @@ func TestReviewAttemptUserWordIntegrityAgainstPostgreSQL(t *testing.T) {
 	_, err = db.ExecContext(ctx,
 		`UPDATE review_attempts SET user_id = $1 WHERE id = $2`, userB, validID)
 	requireForeignKeyViolation(t, err, "cross-user update")
+
+	_, err = db.ExecContext(ctx,
+		`UPDATE review_attempts SET meaning_id = $1 WHERE id = $2`, meaningB, validID)
+	requireForeignKeyViolation(t, err, "cross-meaning update")
 
 	var legacyRows int
 	require.NoError(t, db.QueryRowContext(ctx,
