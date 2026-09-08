@@ -49,31 +49,37 @@ export function AppHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-neutral-200 bg-white px-[var(--spacing-md)]">
-      <span className="text-lg font-semibold text-neutral-900">Vocanova</span>
-      <div className="flex items-center gap-[var(--spacing-sm)]">
-        {status.message ? (
-          <p role="alert" aria-live="polite" className="text-sm text-red-700">
-            {status.message}
-          </p>
-        ) : null}
-        <Link
-          href="/settings"
-          aria-current={pathname === "/settings" ? "page" : undefined}
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-[var(--spacing-sm)] py-[var(--spacing-xs)] text-sm font-medium text-neutral-900 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+    <>
+      <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-neutral-200 bg-white px-[var(--spacing-md)]">
+        <span className="text-lg font-semibold text-neutral-900">Vocanova</span>
+        <div className="flex items-center gap-[var(--spacing-sm)]">
+          <Link
+            href="/settings"
+            aria-current={pathname === "/settings" ? "page" : undefined}
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-[var(--spacing-sm)] py-[var(--spacing-xs)] text-sm font-medium text-neutral-900 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+          >
+            Settings
+          </Link>
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={status.type === "loading"}
+            aria-busy={status.type === "loading"}
+            className="min-h-11 rounded-md border border-neutral-300 px-[var(--spacing-md)] py-[var(--spacing-xs)] text-sm font-medium text-neutral-900 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {status.type === "loading" ? "Signing out..." : "Log out"}
+          </button>
+        </div>
+      </header>
+      {status.message ? (
+        <p
+          role="alert"
+          aria-live="polite"
+          className="border-b border-red-200 bg-red-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-sm text-red-700"
         >
-          Settings
-        </Link>
-        <button
-          type="button"
-          onClick={handleLogout}
-          disabled={status.type === "loading"}
-          aria-busy={status.type === "loading"}
-          className="min-h-11 rounded-md border border-neutral-300 px-[var(--spacing-md)] py-[var(--spacing-xs)] text-sm font-medium text-neutral-900 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {status.type === "loading" ? "Signing out..." : "Log out"}
-        </button>
-      </div>
-    </header>
+          {status.message}
+        </p>
+      ) : null}
+    </>
   );
 }

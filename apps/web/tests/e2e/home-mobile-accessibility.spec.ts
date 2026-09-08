@@ -17,6 +17,41 @@ import {
 } from "./axe-helper.js";
 
 test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
+  test("keeps a logout failure readable and retryable below the header", async ({
+    page,
+  }) => {
+    await page.goto("/home");
+    await page.route("**/api/v1/auth/logout", async (route) => {
+      await route.fulfill({
+        status: 503,
+        contentType: "application/problem+json",
+        body: JSON.stringify({
+          detail: "Unable to log out. Please try again.",
+        }),
+      });
+    });
+
+    await page.getByRole("button", { name: "Log out" }).click();
+
+    const alert = page.getByRole("alert");
+    const header = page.getByRole("banner");
+    await expect(alert).toHaveText("Unable to log out. Please try again.");
+    await expect(page.getByRole("button", { name: "Log out" })).toBeEnabled();
+
+    const [alertBox, headerBox] = await Promise.all([
+      alert.boundingBox(),
+      header.boundingBox(),
+    ]);
+    expect(alertBox).not.toBeNull();
+    expect(headerBox).not.toBeNull();
+    expect(alertBox!.y).toBeGreaterThanOrEqual(headerBox!.y + headerBox!.height);
+
+    const documentWidth = await page.evaluate(
+      () => document.documentElement.scrollWidth,
+    );
+    expect(documentWidth).toBeLessThanOrEqual(page.viewportSize()!.width);
+  });
+
   test("Settings is reachable from the authenticated header", async ({
     page,
   }) => {
