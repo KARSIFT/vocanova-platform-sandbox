@@ -1,4 +1,10 @@
-import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
+import {
+  expect,
+  test,
+  type Locator,
+  type Page,
+  type TestInfo,
+} from "@playwright/test";
 
 async function seedReviewFixture(
   page: Page,
@@ -39,9 +45,10 @@ async function seedReviewFixture(
 async function expectMinimumTouchHeight(locator: Locator) {
   await expect(locator).toBeVisible();
   const box = await locator.boundingBox();
-  expect(box?.height, "Expected a rendered touch target.").toBeGreaterThanOrEqual(
-    44,
-  );
+  expect(
+    box?.height,
+    "Expected a rendered touch target.",
+  ).toBeGreaterThanOrEqual(44);
 }
 
 async function expectNoHorizontalOverflow(page: Page) {
@@ -75,7 +82,9 @@ test.describe("Review touch targets", () => {
     await seedReviewFixture(page, 4, testInfo);
     await page.goto("/reviews");
 
-    const options = page.getByRole("button", { name: /noun — definition for review word/ });
+    const options = page.getByRole("button", {
+      name: /noun — definition for review word/,
+    });
     await expect(options).toHaveCount(4);
     for (let index = 0; index < 4; index += 1) {
       await expectMinimumTouchHeight(options.nth(index));
@@ -97,7 +106,7 @@ test.describe("Review touch targets", () => {
     await page.goto("/reviews");
     await page.getByRole("button", { name: "Show answer" }).click();
 
-    await page.route("**/api/v1/reviews/due?limit=50", async (route) => {
+    await page.route("**/api/v1/reviews/due?limit=*", async (route) => {
       await route.fulfill({
         status: 500,
         contentType: "application/json",
