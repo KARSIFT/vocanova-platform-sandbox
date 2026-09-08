@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import type {
@@ -123,6 +123,8 @@ export function OnboardingForm({
     nativeLanguage: defaultNativeLanguage,
   });
   const [status, setStatus] = useState<Status>({ type: "idle" });
+  const stepContentRef = useRef<HTMLDivElement>(null);
+  const shouldMoveFocus = useRef(false);
 
   const totalSteps = 5;
   const canGoBack = step > 0 && status.type !== "submitting";
@@ -131,10 +133,30 @@ export function OnboardingForm({
     [step, state],
   );
 
+  useEffect(() => {
+    if (!shouldMoveFocus.current) {
+      return;
+    }
+    shouldMoveFocus.current = false;
+
+    const stepContent = stepContentRef.current;
+    if (!stepContent) {
+      return;
+    }
+    const selectedControl = stepContent.querySelector<HTMLElement>(
+      "input:checked:not(:disabled)",
+    );
+    const firstControl = stepContent.querySelector<HTMLElement>(
+      "input:not(:disabled), button:not(:disabled), textarea:not(:disabled), select:not(:disabled)",
+    );
+    (selectedControl ?? firstControl)?.focus();
+  }, [step]);
+
   function goNext() {
     if (!canGoForward) {
       return;
     }
+    shouldMoveFocus.current = true;
     setStep((s) => Math.min(totalSteps - 1, s + 1));
   }
 
@@ -142,6 +164,7 @@ export function OnboardingForm({
     if (!canGoBack) {
       return;
     }
+    shouldMoveFocus.current = true;
     setStep((s) => Math.max(0, s - 1));
   }
 
@@ -195,41 +218,49 @@ export function OnboardingForm({
     <div className="space-y-[var(--spacing-lg)]">
       <StepIndicator currentStep={step} totalSteps={totalSteps} />
 
-      {step === 0 ? (
-        <EnglishLevelStep
-          value={state.englishLevel}
-          onChange={(value) => setState((s) => ({ ...s, englishLevel: value }))}
-        />
-      ) : null}
-      {step === 1 ? (
-        <NativeLanguageStep
-          value={state.nativeLanguage}
-          onChange={(value) =>
-            setState((s) => ({ ...s, nativeLanguage: value }))
-          }
-        />
-      ) : null}
-      {step === 2 ? (
-        <LearningGoalStep
-          value={state.learningGoal}
-          onChange={(value) => setState((s) => ({ ...s, learningGoal: value }))}
-        />
-      ) : null}
-      {step === 3 ? (
-        <MainUseCaseStep
-          value={state.mainUseCase}
-          onChange={(value) => setState((s) => ({ ...s, mainUseCase: value }))}
-        />
-      ) : null}
-      {step === 4 ? (
-        <DailyReviewTargetStep
-          value={state.dailyReviewTarget}
-          onChange={(value) =>
-            setState((s) => ({ ...s, dailyReviewTarget: value }))
-          }
-          state={state}
-        />
-      ) : null}
+      <div ref={stepContentRef}>
+        {step === 0 ? (
+          <EnglishLevelStep
+            value={state.englishLevel}
+            onChange={(value) =>
+              setState((s) => ({ ...s, englishLevel: value }))
+            }
+          />
+        ) : null}
+        {step === 1 ? (
+          <NativeLanguageStep
+            value={state.nativeLanguage}
+            onChange={(value) =>
+              setState((s) => ({ ...s, nativeLanguage: value }))
+            }
+          />
+        ) : null}
+        {step === 2 ? (
+          <LearningGoalStep
+            value={state.learningGoal}
+            onChange={(value) =>
+              setState((s) => ({ ...s, learningGoal: value }))
+            }
+          />
+        ) : null}
+        {step === 3 ? (
+          <MainUseCaseStep
+            value={state.mainUseCase}
+            onChange={(value) =>
+              setState((s) => ({ ...s, mainUseCase: value }))
+            }
+          />
+        ) : null}
+        {step === 4 ? (
+          <DailyReviewTargetStep
+            value={state.dailyReviewTarget}
+            onChange={(value) =>
+              setState((s) => ({ ...s, dailyReviewTarget: value }))
+            }
+            state={state}
+          />
+        ) : null}
+      </div>
 
       {status.type === "error" ? (
         <p

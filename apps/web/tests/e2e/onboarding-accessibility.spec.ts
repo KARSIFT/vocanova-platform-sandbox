@@ -103,6 +103,21 @@ test.describe("Onboarding accessibility (VOC-031-T07b)", () => {
       page.getByText("you can change it any time", { exact: false }),
     ).toHaveCount(0);
 
+    // A client-side step change must place keyboard focus on the next
+    // question's control rather than leave it on the persistent Continue or
+    // Back button. This makes the short survey understandable without a
+    // visual change announcement.
+    const level = page.getByRole("radio", { name: /A2 — Elementary/ });
+    await level.check();
+    await page.getByRole("button", { name: "Continue" }).click();
+    const nativeLanguage = page.getByRole("textbox", {
+      name: "Native language",
+    });
+    await expect(nativeLanguage).toBeFocused();
+
+    await page.getByRole("button", { name: "Back" }).click();
+    await expect(level).toBeFocused();
+
     // Sanity: the test ran on a supported project, otherwise
     // the project name is asserted in the report.
     expect(testInfo.project.name).toMatch(
