@@ -58,7 +58,7 @@ func seedReviewFeedbackTarget(ctx context.Context, db *sql.DB, userID, wordID, m
 		{`INSERT INTO canonical_words (id, text, normalized_text, word_type, language_code, status, difficulty_level, created_at, updated_at) VALUES ($1, 'work', 'work', 'word', 'en', 'active', 'a2', $2, $2)`, []any{wordID, now}},
 		{`INSERT INTO word_meanings (id, word_id, part_of_speech, short_definition, meaning_order, status, created_at, updated_at) VALUES ($1, $2, 'verb', 'do a job', 1, 'active', $3, $3)`, []any{meaningID, wordID, now}},
 		{`INSERT INTO user_words (id, user_id, meaning_id, status, source, added_at, created_at, updated_at) VALUES ($1, $2, $3, 'learning', 'manual', $4, $4, $4)`, []any{userWordID, userID, meaningID, now}},
-		{`INSERT INTO review_attempts (id, user_id, user_word_id, meaning_id, attempt_type, prompt_type, result, rating, review_step_before, review_step_after, answered_at, source, created_at, updated_at) VALUES ($1, $2, $3, $4, 'review', 'multiple_choice', 'correct', 'good', 0, 1, $5, 'review', $5, $5)`, []any{reviewID, userID, userWordID, meaningID, now}},
+		{`INSERT INTO review_attempts (id, user_id, user_word_id, meaning_id, attempt_type, prompt_type, result, rating, review_step_before, review_step_after, answered_at, source, created_at, updated_at) VALUES ($1, $2, $3, $4, 'review', 'multiple_choice', 'correct', 'good', 0, 1, $5, 'daily_review', $5, $5)`, []any{reviewID, userID, userWordID, meaningID, now}},
 	}
 	for _, q := range queries {
 		if _, err := db.ExecContext(ctx, q.query, q.args...); err != nil {
