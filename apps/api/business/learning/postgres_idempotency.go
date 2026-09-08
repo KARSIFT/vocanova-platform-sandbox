@@ -71,7 +71,10 @@ func (s *PostgreSQLIdempotencyStore) CleanupExpired(ctx context.Context, limit i
 		`WITH expired AS (
 		   SELECT id FROM idempotency_keys
 		   WHERE created_at <= $1
-		   ORDER BY created_at, id
+		   -- The retention migration indexes created_at. Keeping the claim in
+		   -- that order lets PostgreSQL stop after the batch instead of sorting
+		   -- every expired row before it can apply LIMIT.
+		   ORDER BY created_at
 		   LIMIT $2
 		   FOR UPDATE SKIP LOCKED
 		 )
