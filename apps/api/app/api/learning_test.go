@@ -25,12 +25,16 @@ func testLearningAPI(t *testing.T) (huma.API, *learning.Service, *auth.Service) 
 
 	wordID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
 	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+	secondWordID := uuid.MustParse("00000000-0000-0000-0000-000000000004")
+	secondMeaningID := uuid.MustParse("00000000-0000-0000-0000-000000000005")
 	learningRepo := learning.NewMemoryRepository(learning.MemoryRepositoryData{
 		Words: []learning.MemoryWord{
 			{ID: wordID, Text: "boarding pass", NormalizedText: "boarding pass", Status: "active"},
+			{ID: secondWordID, Text: "hotel key", NormalizedText: "hotel key", Status: "active"},
 		},
 		Meanings: []learning.MemoryMeaning{
 			{ID: meaningID, WordID: wordID, PartOfSpeech: "noun", ShortDefinition: "A document.", Status: "active"},
+			{ID: secondMeaningID, WordID: secondWordID, PartOfSpeech: "noun", ShortDefinition: "A key.", Status: "active"},
 		},
 	})
 	learningSvc := learning.NewService(learningRepo, learning.NewMemoryIdempotencyStore(), nil)
@@ -87,6 +91,42 @@ func TestListSavedWordsReturnsSavedMeanings(t *testing.T) {
 	assert.Equal(t, "A document.", body.Body.Items[0].ShortDefinition)
 	assert.True(t, body.Body.Items[0].Saved)
 	assert.False(t, body.Body.HasMore)
+}
+
+func TestListSavedWordsHasMoreMatchesCursor(t *testing.T) {
+	api, svc, _ := testLearningAPI(t)
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
+	firstMeaningID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+	secondMeaningID := uuid.MustParse("00000000-0000-0000-0000-000000000005")
+
+	_, err := svc.SaveUserWord(t.Context(), learning.SaveUserWordRequest{UserID: userID, MeaningID: firstMeaningID, Source: "journey", IdempotencyKey: "first"})
+	require.NoError(t, err)
+	_, err = svc.SaveUserWord(t.Context(), learning.SaveUserWordRequest{UserID: userID, MeaningID: secondMeaningID, Source: "journey", IdempotencyKey: "second"})
+	require.NoError(t, err)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/user-words?limit=1", nil)
+	req = req.WithContext(WithRequester(req.Context(), &auth.User{ID: userID}))
+	api.Adapter().ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var first ListSavedWordsOutput
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &first.Body))
+	require.Len(t, first.Body.Items, 1)
+	require.NotEmpty(t, first.Body.NextCursor)
+	assert.True(t, first.Body.HasMore)
+
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/user-words?limit=1&after="+first.Body.NextCursor, nil)
+	req = req.WithContext(WithRequester(req.Context(), &auth.User{ID: userID}))
+	api.Adapter().ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var second ListSavedWordsOutput
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &second.Body))
+	require.Len(t, second.Body.Items, 1)
+	assert.Empty(t, second.Body.NextCursor)
+	assert.False(t, second.Body.HasMore)
 }
 
 func TestSaveUserWordRequiresAuth(t *testing.T) {

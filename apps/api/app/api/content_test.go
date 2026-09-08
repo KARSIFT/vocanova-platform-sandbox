@@ -24,6 +24,10 @@ import (
 // plain display_order — see requesterMainUseCase).
 func testContentAPI(t *testing.T, usersSvc *users.Service) (huma.API, *content.Service) {
 	repo, reader := contentSampleData()
+	return testContentAPIWithRepository(t, usersSvc, repo, reader)
+}
+
+func testContentAPIWithRepository(t *testing.T, usersSvc *users.Service, repo *content.MemoryRepository, reader *content.MemorySavedStateReader) (huma.API, *content.Service) {
 	svc := content.NewService(repo, reader)
 
 	config := huma.DefaultConfig("Vocanova API", "0.1.0")
@@ -157,6 +161,41 @@ func TestListJourneySituationsReturnsActiveSituations(t *testing.T) {
 	assert.Equal(t, "airport", body.Items[0].Slug)
 	assert.Empty(t, body.NextCursor)
 	assert.False(t, body.HasMore)
+}
+
+func TestListJourneySituationsHasMoreMatchesCursor(t *testing.T) {
+	userID := content.MustParseUUID("00000000-0000-0000-0000-000000000009")
+	repo := content.NewMemoryRepository(content.MemoryRepositoryData{
+		Situations: []content.Situation{
+			{ID: content.MustParseUUID("00000000-0000-0000-0000-000000000001"), Slug: "airport", Title: "Airport", Status: "active", DisplayOrder: 1},
+			{ID: content.MustParseUUID("00000000-0000-0000-0000-000000000002"), Slug: "hotel", Title: "Hotel", Status: "active", DisplayOrder: 2},
+		},
+	})
+	api, _ := testContentAPIWithRepository(t, nil, repo, content.NewMemorySavedStateReaderWithStates(nil))
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/journey-situations?limit=1", nil)
+	req = req.WithContext(WithRequester(req.Context(), &auth.User{ID: userID}))
+	api.Adapter().ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var first ListSituationsOutput
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &first.Body))
+	require.Len(t, first.Body.Items, 1)
+	require.NotEmpty(t, first.Body.NextCursor)
+	assert.True(t, first.Body.HasMore)
+
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/journey-situations?limit=1&after="+first.Body.NextCursor, nil)
+	req = req.WithContext(WithRequester(req.Context(), &auth.User{ID: userID}))
+	api.Adapter().ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var second ListSituationsOutput
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &second.Body))
+	require.Len(t, second.Body.Items, 1)
+	assert.Empty(t, second.Body.NextCursor)
+	assert.False(t, second.Body.HasMore)
 }
 
 func TestGetJourneySituationRequiresAuth(t *testing.T) {
