@@ -460,7 +460,7 @@ func (r *PostgreSQLRepository) applyP4ReviewWiring(
 		if err != nil {
 			return fmt.Errorf("grant review point: %w", err)
 		}
-		if err := r.missions.IncrementConfidencePointsEarned(
+		if err := r.missions.RecordConfidencePointChange(
 			ctx, tx, req.UserID, snap.LocalDate, resolved.Timezone, newBalance-balance,
 		); err != nil {
 			return fmt.Errorf("increment points earned: %w", err)
@@ -492,7 +492,7 @@ func (r *PostgreSQLRepository) applyP4ReviewWiring(
 			); err != nil {
 				return fmt.Errorf("grant daily mission point: %w", err)
 			}
-			if err := r.missions.IncrementConfidencePointsEarned(
+			if err := r.missions.RecordConfidencePointChange(
 				ctx, tx, req.UserID, snap.LocalDate, resolved.Timezone, gamification.RewardDailyMissionDone,
 			); err != nil {
 				return fmt.Errorf("increment points earned: %w", err)

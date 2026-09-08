@@ -196,6 +196,50 @@ func TestPostgreSQLRepositoryIncrementWordsAdded(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestPostgreSQLRepositoryRecordConfidencePointChange(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRepository(db)
+	userID, _ := newUUIDs(t)
+	day := time.Date(2026, 9, 8, 0, 0, 0, 0, time.UTC)
+
+	for _, tc := range []struct {
+		name   string
+		amount int
+		earned int
+		spent  int
+	}{
+		{name: "earned", amount: 5, earned: 5},
+		{name: "spent", amount: -3, spent: 3},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			mock.ExpectBegin()
+			mock.ExpectExec("INSERT INTO daily_activity_summaries").
+				WithArgs(sqlmock.AnyArg(), userID, day, "UTC", tc.earned, tc.spent).
+				WillReturnResult(sqlmock.NewResult(0, 1))
+			mock.ExpectCommit()
+
+			tx, err := db.Begin()
+			require.NoError(t, err)
+			require.NoError(t, repo.RecordConfidencePointChange(t.Context(), tx, userID, day, "UTC", tc.amount))
+			require.NoError(t, tx.Commit())
+		})
+	}
+
+	t.Run("zero_is_noop", func(t *testing.T) {
+		mock.ExpectBegin()
+		mock.ExpectCommit()
+		tx, err := db.Begin()
+		require.NoError(t, err)
+		require.NoError(t, repo.RecordConfidencePointChange(t.Context(), tx, userID, day, "UTC", 0))
+		require.NoError(t, tx.Commit())
+	})
+
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestPostgreSQLRepositoryIncrementWordsAddedOptionalGoal(t *testing.T) {
 	// When includeNewWordGoal is true, the mission counter is also
 	// incremented. When false, only the activity summary is updated.

@@ -408,7 +408,7 @@ func TestDailyActivitySummaryFreshInsertPathsAgainstRealPostgres(t *testing.T) {
 		assertTimestampWithin(t, "updated_at", summary.UpdatedAt, before, after)
 	})
 
-	t.Run("IncrementConfidencePointsEarned", func(t *testing.T) {
+	t.Run("RecordConfidencePointChange", func(t *testing.T) {
 		db := newMigratedDisposablePostgres(t)
 		repo := NewRepository(db)
 		userID := insertTestUser(t, db)
@@ -418,7 +418,7 @@ func TestDailyActivitySummaryFreshInsertPathsAgainstRealPostgres(t *testing.T) {
 		tx, err := db.Begin()
 		require.NoError(t, err)
 		defer tx.Rollback()
-		require.NoError(t, repo.IncrementConfidencePointsEarned(t.Context(), tx, userID, localDate, "UTC", 5))
+		require.NoError(t, repo.RecordConfidencePointChange(t.Context(), tx, userID, localDate, "UTC", 5))
 		require.NoError(t, tx.Commit())
 		after := databaseNow(t, db)
 
@@ -569,9 +569,9 @@ func activitySummaryIncrements() []activitySummaryIncrement {
 			expectedAfterTwoCalls: 2,
 		},
 		{
-			name: "IncrementConfidencePointsEarned",
+			name: "RecordConfidencePointChange",
 			invoke: func(ctx context.Context, repo *Repository, tx *sql.Tx, userID uuid.UUID, localDate time.Time) error {
-				return repo.IncrementConfidencePointsEarned(ctx, tx, userID, localDate, "UTC", 5)
+				return repo.RecordConfidencePointChange(ctx, tx, userID, localDate, "UTC", 5)
 			},
 			counter:               func(row activitySummaryRow) int { return row.ConfidencePointsEarned },
 			expectedAfterTwoCalls: 10,
@@ -770,6 +770,51 @@ func newPostgresForReviewCounterMigration(t *testing.T) *sql.DB {
 	return newDisposablePostgres(t)
 }
 
+func TestDailyActivityPointAggregateIntegrityAgainstRealPostgres(t *testing.T) {
+	db := newMigratedPostgresFromEnv(t)
+	userID := insertTestUser(t, db)
+	localDate := time.Date(2026, 9, 8, 0, 0, 0, 0, time.UTC)
+
+	for _, tc := range []struct {
+		name   string
+		earned int
+		spent  int
+	}{
+		{name: "negative_earned", earned: -1},
+		{name: "negative_spent", spent: -1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := db.ExecContext(t.Context(), `INSERT INTO daily_activity_summaries (
+				id, user_id, local_date, timezone, confidence_points_earned,
+				confidence_points_spent, created_at, updated_at
+			) VALUES ($1, $2, $3, 'UTC', $4, $5, NOW(), NOW())`,
+				uuid.New(), userID, localDate.AddDate(0, 0, len(tc.name)), tc.earned, tc.spent)
+			require.Error(t, err)
+			var pqErr *pq.Error
+			require.ErrorAs(t, err, &pqErr)
+			assert.Equal(t, "23514", string(pqErr.Code))
+		})
+	}
+
+	repo := NewRepository(db)
+	for _, amount := range []int{5, -3} {
+		tx, err := db.BeginTx(t.Context(), nil)
+		require.NoError(t, err)
+		require.NoError(t, repo.RecordConfidencePointChange(t.Context(), tx, userID, localDate, "UTC", amount))
+		require.NoError(t, tx.Commit())
+	}
+
+	summary := readActivitySummary(t, db, userID, localDate)
+	assert.Equal(t, 5, summary.ConfidencePointsEarned)
+	assert.Equal(t, 3, summary.ConfidencePointsSpent)
+
+	tx, err := db.BeginTx(t.Context(), nil)
+	require.NoError(t, err)
+	require.NoError(t, repo.RecordConfidencePointChange(t.Context(), tx, userID, localDate.AddDate(0, 0, 1), "UTC", 0))
+	require.NoError(t, tx.Commit())
+	requireNoActivitySummaryFor(t, db, userID, localDate.AddDate(0, 0, 1))
+}
+
 // TestGraceDayUseProtectsSnapshotAndSurvivesNextDayRealPostgres proves the
 // production transaction-owner protocol against all forward migrations. The
 // gamification package returns the debit row ID; its caller persists the
@@ -931,6 +976,7 @@ type activitySummaryRow struct {
 	SentencesSubmitted     int
 	AIFeedbackReceived     int
 	ConfidencePointsEarned int
+	ConfidencePointsSpent  int
 	CreatedAt              time.Time
 	UpdatedAt              time.Time
 }
@@ -941,7 +987,7 @@ func readActivitySummary(t *testing.T, db *sql.DB, userID uuid.UUID, localDate t
 	require.NoError(t, db.QueryRow(
 		`SELECT reviews_attempted, reviews_correct, reviews_skipped,
 		        words_added, sentences_submitted, ai_feedback_received,
-		        confidence_points_earned, created_at, updated_at
+		        confidence_points_earned, confidence_points_spent, created_at, updated_at
 		   FROM daily_activity_summaries
 		  WHERE user_id = $1 AND local_date = $2`,
 		userID, localDate,
@@ -953,6 +999,7 @@ func readActivitySummary(t *testing.T, db *sql.DB, userID uuid.UUID, localDate t
 		&row.SentencesSubmitted,
 		&row.AIFeedbackReceived,
 		&row.ConfidencePointsEarned,
+		&row.ConfidencePointsSpent,
 		&row.CreatedAt,
 		&row.UpdatedAt,
 	))

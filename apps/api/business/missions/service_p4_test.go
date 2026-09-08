@@ -92,9 +92,9 @@ func TestUpdateForSentenceP4SuccessWiring(t *testing.T) {
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
 		WithArgs(sqlmock.AnyArg(), userID, day, "UTC").
 		WillReturnResult(sqlmock.NewResult(0, 1))
-	// IncrementConfidencePointsEarned (+3 + +2 = +5).
+	// RecordConfidencePointChange (+3 + +2 = +5).
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
-		WithArgs(sqlmock.AnyArg(), userID, day, "UTC", gamification.RewardSentenceSubmitted+gamification.RewardAIFeedbackGot).
+		WithArgs(sqlmock.AnyArg(), userID, day, "UTC", gamification.RewardSentenceSubmitted+gamification.RewardAIFeedbackGot, 0).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	// ListRecentSnapshots for streak reconciliation.
 	mock.ExpectQuery("SELECT id, user_id, local_date, timezone, review_target, reviews_completed").
@@ -199,7 +199,7 @@ func TestUpdateForSentenceP4SentenceGoalActiveWhenD03Activated(t *testing.T) {
 		WithArgs(sqlmock.AnyArg(), userID, day, "UTC").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
-		WithArgs(sqlmock.AnyArg(), userID, day, "UTC", gamification.RewardSentenceSubmitted+gamification.RewardAIFeedbackGot).
+		WithArgs(sqlmock.AnyArg(), userID, day, "UTC", gamification.RewardSentenceSubmitted+gamification.RewardAIFeedbackGot, 0).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("SELECT id, user_id, local_date, timezone, review_target, reviews_completed").
 		WithArgs(userID, 14).
@@ -392,7 +392,7 @@ func TestUpdateForSentenceP4UpdateEntryPointWiresResolverAndDelegate(t *testing.
 		WithArgs(sqlmock.AnyArg(), userID, day, "UTC").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
-		WithArgs(sqlmock.AnyArg(), userID, day, "UTC", gamification.RewardSentenceSubmitted+gamification.RewardAIFeedbackGot).
+		WithArgs(sqlmock.AnyArg(), userID, day, "UTC", gamification.RewardSentenceSubmitted+gamification.RewardAIFeedbackGot, 0).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("SELECT id, user_id, local_date, timezone, review_target, reviews_completed").
 		WithArgs(userID, 14).
