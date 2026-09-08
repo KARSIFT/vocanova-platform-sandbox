@@ -230,6 +230,7 @@ func TestListReviewsDuePagination(t *testing.T) {
 	require.Len(t, first.Body.Items, 2)
 	assert.Equal(t, 3, first.Body.TotalCount)
 	assert.NotEmpty(t, first.Body.NextCursor)
+	assert.True(t, first.Body.HasMore)
 	// Ascending by next_review_at means past3 (oldest) first, then past2.
 	assert.Equal(t, 3, first.Body.Items[0].ReviewStep)
 	assert.Equal(t, 2, first.Body.Items[1].ReviewStep)
@@ -246,6 +247,7 @@ func TestListReviewsDuePagination(t *testing.T) {
 	assert.Equal(t, 1, second.Body.Items[0].ReviewStep)
 	assert.Equal(t, 3, second.Body.TotalCount)
 	assert.Empty(t, second.Body.NextCursor)
+	assert.False(t, second.Body.HasMore)
 }
 
 func TestSubmitReviewRequiresAuth(t *testing.T) {

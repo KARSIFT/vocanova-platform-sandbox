@@ -82,6 +82,7 @@ type ListSituationsOutput struct {
 	Body struct {
 		Items      []SituationDTO `json:"items" doc:"Situations"`
 		NextCursor string         `json:"nextCursor,omitempty" doc:"Opaque cursor for the next page"`
+		HasMore    bool           `json:"hasMore" doc:"Whether another page is available"`
 	}
 }
 
@@ -142,6 +143,7 @@ func RegisterContent(api huma.API, svc *content.Service, usersSvc *users.Service
 			out.Body.Items[i] = situationToDTO(s)
 		}
 		out.Body.NextCursor = resp.NextCursor
+		out.Body.HasMore = resp.NextCursor != ""
 		return out, nil
 	})
 

@@ -487,6 +487,10 @@
             "readOnly": true,
             "type": "string"
           },
+          "hasMore": {
+            "description": "Whether another page is available",
+            "type": "boolean"
+          },
           "items": {
             "description": "Due words",
             "items": {
@@ -509,6 +513,7 @@
         },
         "required": [
           "items",
+          "hasMore",
           "totalCount"
         ],
         "type": "object"
@@ -524,6 +529,10 @@
             "format": "uri",
             "readOnly": true,
             "type": "string"
+          },
+          "hasMore": {
+            "description": "Whether another page is available",
+            "type": "boolean"
           },
           "items": {
             "description": "Saved meanings",
@@ -541,7 +550,8 @@
           }
         },
         "required": [
-          "items"
+          "items",
+          "hasMore"
         ],
         "type": "object"
       },
@@ -556,6 +566,10 @@
             "format": "uri",
             "readOnly": true,
             "type": "string"
+          },
+          "hasMore": {
+            "description": "Whether another page is available",
+            "type": "boolean"
           },
           "items": {
             "description": "Situations",
@@ -573,7 +587,8 @@
           }
         },
         "required": [
-          "items"
+          "items",
+          "hasMore"
         ],
         "type": "object"
       },

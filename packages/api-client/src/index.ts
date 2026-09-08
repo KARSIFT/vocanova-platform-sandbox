@@ -138,6 +138,7 @@ export interface WordDetail {
 export interface ListSituationsResponse {
   items: Situation[];
   nextCursor?: string;
+  hasMore: boolean;
 }
 
 export interface SituationResponse {
@@ -166,6 +167,7 @@ export interface SavedMeaning {
 export interface ListSavedWordsResponse {
   items: SavedMeaning[];
   nextCursor?: string;
+  hasMore: boolean;
 }
 
 export interface SaveUserWordBody {
@@ -188,6 +190,7 @@ export interface DueWord {
 export interface ListDueWordsResponse {
   items: DueWord[];
   nextCursor?: string;
+  hasMore: boolean;
   totalCount: number;
 }
 

@@ -38,6 +38,7 @@ type ListReviewsDueOutput struct {
 	Body struct {
 		Items      []DueWordDTO `json:"items" doc:"Due words"`
 		NextCursor string       `json:"nextCursor,omitempty" doc:"Opaque cursor for the next page"`
+		HasMore    bool         `json:"hasMore" doc:"Whether another page is available"`
 		TotalCount int          `json:"totalCount" doc:"Total due words for the requester"`
 	}
 }
@@ -116,6 +117,7 @@ func RegisterReviews(api huma.API, svc *reviews.Service, authSvc *auth.Service) 
 			out.Body.Items[i] = dueWordToDTO(d)
 		}
 		out.Body.NextCursor = resp.NextCursor
+		out.Body.HasMore = resp.NextCursor != ""
 		out.Body.TotalCount = resp.TotalCount
 		return out, nil
 	})
