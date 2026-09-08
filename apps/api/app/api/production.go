@@ -89,6 +89,11 @@ type ProductionConfig struct {
 	// happens on already-normalized addresses.
 	SyntheticSmokeTestEmail string
 
+	// AuthCleanupInterval is the cadence for deleting expired authentication
+	// artifacts. It is intentionally a lightweight in-process MVP job and is
+	// bounded so an unsafe deployment value cannot hammer PostgreSQL.
+	AuthCleanupInterval time.Duration
+
 	// AccountDeletionSweepInterval is the cadence at which a production API
 	// process checks for due staged-deletion requests. The sweep itself uses
 	// database claims, so running it in more than one replica is safe.
@@ -96,6 +101,12 @@ type ProductionConfig struct {
 }
 
 const (
+	// AuthCleanupInterval runs database DELETE statements in every API replica.
+	// Keep it bounded to preserve the intended lightweight-cleanup posture and
+	// ensure credential material is not retained indefinitely by a bad setting.
+	minAuthCleanupInterval = time.Minute
+	maxAuthCleanupInterval = 24 * time.Hour
+
 	// AccountDeletionSweepInterval must not outpace the sweep service's
 	// fixed 60-per-hour internal safety budget, and must remain frequent
 	// enough that a due privacy deletion cannot be delayed indefinitely by
@@ -212,6 +223,15 @@ func LoadProductionConfig() (ProductionConfig, error) {
 			getenv("VOCANOVA_SYNTHETIC_SMOKE_TEST_EMAIL", defaultSyntheticSmokeTestEmail),
 		),
 	}
+	var authCleanupIntervalErr error
+	cfg.AuthCleanupInterval, authCleanupIntervalErr = getenvBoundedDuration(
+		"AUTH_CLEANUP_INTERVAL", time.Hour,
+		minAuthCleanupInterval, maxAuthCleanupInterval,
+	)
+	if authCleanupIntervalErr != nil {
+		return cfg, authCleanupIntervalErr
+	}
+
 	var sweepIntervalErr error
 	cfg.AccountDeletionSweepInterval, sweepIntervalErr = getenvBoundedDuration(
 		"ACCOUNT_DELETION_SWEEP_INTERVAL", time.Hour,

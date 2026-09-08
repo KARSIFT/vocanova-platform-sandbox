@@ -67,6 +67,19 @@ func run() error {
 	}
 	defer db.Close()
 
+	// Auth.Cleanup owns the bounded deletion of expired sessions, magic links,
+	// and OAuth states. It has no HTTP caller, so run it independently of
+	// request traffic and stop it before releasing the database on shutdown.
+	cleanupCtx, cancelCleanup := context.WithCancel(context.Background())
+	cleanupDone := make(chan struct{})
+	go func() {
+		defer close(cleanupDone)
+		runAuthCleanupLoop(cleanupCtx, newAuthCleanupService(db), cfg.AuthCleanupInterval)
+	}()
+	defer func() {
+		stopAuthCleanup(cancelCleanup, cleanupDone)
+	}()
+
 	// A deletion request deliberately deactivates first, then is purged after
 	// its grace period. Without this loop, a due row can remain deactivated
 	// forever because no request path invokes RunDeletionSweep. Database-level
@@ -126,11 +139,12 @@ func run() error {
 		return fmt.Errorf("listen: %w", err)
 	}
 
-	// Stop and join background work before beginning the HTTP drain. Otherwise
-	// a ticker can start a new irreversible purge during the server's 30-second
-	// graceful-shutdown window. The deferred call remains a safety net for an
-	// earlier return; cancellation and reads from a closed done channel are both
-	// idempotent.
+	// Stop and join both background jobs before beginning the HTTP drain. This
+	// prevents either ticker from beginning a new credential-delete or account-
+	// purge pass during the graceful-shutdown window. The deferred calls remain
+	// safety nets for earlier returns; cancellation and reads from closed done
+	// channels are idempotent.
+	stopAuthCleanup(cancelCleanup, cleanupDone)
 	stopDeletionSweep(cancelSweep, sweepDone)
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -148,6 +162,17 @@ func boolFlag(b bool) string {
 	return "off"
 }
 
+type authCleaner interface {
+	Cleanup(context.Context) error
+}
+
+// stopAuthCleanup cancels the loop and waits until it has exited while the
+// database remains open. It is safe to invoke more than once.
+func stopAuthCleanup(cancel context.CancelFunc, done <-chan struct{}) {
+	cancel()
+	<-done
+}
+
 type deletionSweeper interface {
 	RunDeletionSweep(ctx context.Context, clientIP, sessionToken string) (*accounts.SweepResult, error)
 }
@@ -157,6 +182,39 @@ type deletionSweeper interface {
 func stopDeletionSweep(cancel context.CancelFunc, done <-chan struct{}) {
 	cancel()
 	<-done
+}
+
+// newAuthCleanupService builds the narrow production service instance used by
+// the cleanup loop. Cleanup only needs the PostgreSQL repository and clock;
+// delivery, OAuth, and request-rate-limit collaborators are not involved.
+func newAuthCleanupService(db *sql.DB) authCleaner {
+	return auth.NewService(auth.NewPostgreSQLRepository(db), nil, nil, clock.Real{}, nil, auth.Config{})
+}
+
+// runAuthCleanupLoop cleans once at startup, then at the configured cadence.
+// A failed pass is logged without credential or learner data and a later pass
+// retries it. Cancellation stops the ticker promptly during shutdown.
+func runAuthCleanupLoop(ctx context.Context, cleaner authCleaner, interval time.Duration) {
+	if interval <= 0 {
+		interval = time.Hour
+	}
+	run := func() {
+		if err := cleaner.Cleanup(ctx); err != nil {
+			fmt.Fprintf(os.Stderr, "api: auth cleanup failed: %v\n", err)
+		}
+	}
+
+	run()
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			run()
+		}
+	}
 }
 
 // newDeletionSweepService builds the narrow production service instance used

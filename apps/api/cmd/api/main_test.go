@@ -9,6 +9,48 @@ import (
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/accounts"
 )
 
+type fakeAuthCleaner struct{ calls atomic.Int32 }
+
+func (f *fakeAuthCleaner) Cleanup(context.Context) error {
+	f.calls.Add(1)
+	return nil
+}
+
+func TestRunAuthCleanupLoopRunsImmediatelyAndStopsOnCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cleaner := &fakeAuthCleaner{}
+	done := make(chan struct{})
+	go func() {
+		runAuthCleanupLoop(ctx, cleaner, time.Hour)
+		close(done)
+	}()
+
+	deadline := time.After(time.Second)
+	for cleaner.calls.Load() == 0 {
+		select {
+		case <-deadline:
+			t.Fatal("auth cleanup did not run at startup")
+		case <-time.After(time.Millisecond):
+		}
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("auth cleanup loop did not stop after cancellation")
+	}
+}
+
+func TestStopAuthCleanupWaitsForLoopExit(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		<-ctx.Done()
+		close(done)
+	}()
+	stopAuthCleanup(cancel, done)
+}
+
 type fakeDeletionSweeper struct{ calls atomic.Int32 }
 
 func (f *fakeDeletionSweeper) RunDeletionSweep(context.Context, string, string) (*accounts.SweepResult, error) {
