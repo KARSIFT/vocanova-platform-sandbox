@@ -139,6 +139,36 @@ func TestMissionOptionalGoalPairIntegrityAgainstPostgreSQL(t *testing.T) {
 		})
 	}
 
+	// NOT VALID preserves the legacy row above, but PostgreSQL must enforce
+	// these pair constraints whenever a later update touches a new snapshot.
+	// Each rejected update leaves this valid baseline unchanged for the next
+	// case, which also exercises both target and completed columns directly.
+	mutableID := uuid.New()
+	_, err = db.ExecContext(ctx,
+		`INSERT INTO daily_mission_snapshots
+		 (id, new_word_target, new_words_completed, sentence_practice_target, sentence_practices_completed)
+		 VALUES ($1, 5, 0, 3, 0)`, mutableID,
+	)
+	require.NoError(t, err)
+	for _, tc := range []struct {
+		name      string
+		statement string
+	}{
+		{name: "new target removed while progress remains", statement: `UPDATE daily_mission_snapshots SET new_word_target = NULL WHERE id = $1`},
+		{name: "new progress removed while target remains", statement: `UPDATE daily_mission_snapshots SET new_words_completed = NULL WHERE id = $1`},
+		{name: "new progress becomes negative", statement: `UPDATE daily_mission_snapshots SET new_words_completed = -1 WHERE id = $1`},
+		{name: "new progress exceeds target", statement: `UPDATE daily_mission_snapshots SET new_words_completed = 6 WHERE id = $1`},
+		{name: "sentence target removed while progress remains", statement: `UPDATE daily_mission_snapshots SET sentence_practice_target = NULL WHERE id = $1`},
+		{name: "sentence progress removed while target remains", statement: `UPDATE daily_mission_snapshots SET sentence_practices_completed = NULL WHERE id = $1`},
+		{name: "sentence progress becomes negative", statement: `UPDATE daily_mission_snapshots SET sentence_practices_completed = -1 WHERE id = $1`},
+		{name: "sentence progress exceeds target", statement: `UPDATE daily_mission_snapshots SET sentence_practices_completed = 4 WHERE id = $1`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := db.ExecContext(ctx, tc.statement, mutableID)
+			requireMissionGoalCheckViolation(t, err, tc.name)
+		})
+	}
+
 	var legacyRows int
 	require.NoError(t, db.QueryRowContext(ctx,
 		`SELECT count(*) FROM daily_mission_snapshots WHERE id = $1`, legacyID).Scan(&legacyRows))
