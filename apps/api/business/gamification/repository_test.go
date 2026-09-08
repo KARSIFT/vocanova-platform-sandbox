@@ -36,7 +36,7 @@ func TestRepositoryInsertPointLedgerIdempotent(t *testing.T) {
 			sqlmock.AnyArg(), userID, 5, 5, "review_correct", "review_attempt",
 			sqlmock.AnyArg(), "review_attempt:abc:rated", []byte(meta), now,
 		).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(uuid.New()))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "inserted"}).AddRow(uuid.New(), true))
 	mock.ExpectCommit()
 
 	tx, err := db.Begin()

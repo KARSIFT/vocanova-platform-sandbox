@@ -252,11 +252,10 @@ func (r *Repository) InsertPointLedger(
 		)
 		ON CONFLICT (user_id, idempotency_key) WHERE idempotency_key IS NOT NULL
 		DO NOTHING
-		RETURNING id`,
+		RETURNING id, (xmax = 0) AS inserted`,
 		uuid.New(), userID, amount, balanceAfter, reason, sourceType,
 		sourceID, key, meta, occurredAt,
-	).Scan(&id)
-	inserted = err == nil
+	).Scan(&id, &inserted)
 	if errors.Is(err, sql.ErrNoRows) && key.Valid {
 		err = tx.QueryRowContext(ctx,
 			`SELECT id FROM confidence_point_ledger
