@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"time"
+	_ "time/tzdata" // Keep IANA validation available in the minimal Alpine runtime.
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/google/uuid"
