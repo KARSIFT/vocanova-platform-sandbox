@@ -28,6 +28,7 @@ func (DailyMissionSnapshot) Annotations() []schema.Annotation {
 				"sentence_completed_in_range":   "sentence_practice_target IS NULL OR (sentence_practices_completed >= 0 AND sentence_practices_completed <= sentence_practice_target)",
 				"sentence_goal_pair_consistent": "(sentence_practice_target IS NULL AND sentence_practices_completed IS NULL) OR (sentence_practice_target IS NOT NULL AND sentence_practices_completed IS NOT NULL AND sentence_practices_completed >= 0 AND sentence_practices_completed <= sentence_practice_target)",
 				"completed_at_required_on_done": "status <> 'completed' OR completed_at IS NOT NULL",
+				"completed_at_only_on_done":     "status = 'completed' OR completed_at IS NULL",
 				// A protected day is the persisted result of consuming one
 				// grace day. The cross-table, same-user foreign key is owned
 				// by the Atlas migration because Ent cannot express composite

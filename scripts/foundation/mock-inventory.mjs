@@ -303,7 +303,8 @@ export function validateMockInventory() {
   // user-word review-counter constraint, the daily point aggregate
   // constraint, the review result/rating constraint, and AI-feedback outcome
   // payload checks are forward integrity changes to existing tables rather
-  // than new application boundaries.
+  // than new application boundaries. The mission completion-state migration
+  // keeps completed_at exclusive to completed snapshots.
   const allowedMigrationFiles = new Set([
     "20260724210000_identity_foundation.sql",
     "20260724210001_oauth_state.sql",
@@ -325,6 +326,7 @@ export function validateMockInventory() {
     "20260908020000_voc1352_feature_audit_logs.sql",
     "20260908021500_review_attempt_user_word_integrity.sql",
     "20260908023500_mission_optional_goal_pair_integrity.sql",
+    "20260908024500_mission_completed_at_integrity.sql",
     "20260908091500_review_attempt_result_rating_integrity.sql",
     "20260908110000_daily_activity_review_counter_integrity.sql",
     "20260908120000_grace_protected_mission_linkage.sql",
