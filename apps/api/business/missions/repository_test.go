@@ -267,7 +267,7 @@ func TestPostgreSQLRepositoryIncrementWordsAddedOptionalGoal(t *testing.T) {
 	mock.ExpectBegin()
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
 		WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectExec("UPDATE daily_mission_snapshots").
+	mock.ExpectExec("(?s)UPDATE daily_mission_snapshots.*new_word_target IS NOT NULL").
 		WithArgs(userID, day).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
@@ -275,6 +275,31 @@ func TestPostgreSQLRepositoryIncrementWordsAddedOptionalGoal(t *testing.T) {
 	tx, err := db.Begin()
 	require.NoError(t, err)
 	err = repo.IncrementWordsAdded(t.Context(), tx, userID, day, "UTC", true)
+	require.NoError(t, err)
+	require.NoError(t, tx.Commit())
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestPostgreSQLRepositoryIncrementSentenceSubmittedOptionalGoal(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRepository(db)
+	userID, _ := newUUIDs(t)
+	day := time.Date(2026, 7, 26, 0, 0, 0, 0, time.UTC)
+
+	mock.ExpectBegin()
+	mock.ExpectExec("INSERT INTO daily_activity_summaries").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec("(?s)UPDATE daily_mission_snapshots.*sentence_practice_target IS NOT NULL").
+		WithArgs(userID, day).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+
+	tx, err := db.Begin()
+	require.NoError(t, err)
+	err = repo.IncrementSentenceSubmitted(t.Context(), tx, userID, day, "UTC", true)
 	require.NoError(t, err)
 	require.NoError(t, tx.Commit())
 	require.NoError(t, mock.ExpectationsWereMet())

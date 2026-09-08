@@ -235,9 +235,10 @@ func (r *Repository) IncrementReviewsCompleted(
 }
 
 // IncrementWordsAdded increments daily_activity_summaries.words_added by 1
-// and, if the optional new-word mission goal is active, also increments
-// daily_mission_snapshots.new_words_completed. The caller controls which
-// behavior is invoked by passing includeNewWordGoal.
+// and, if the optional new-word mission goal is active on the snapshot, also
+// increments daily_mission_snapshots.new_words_completed. A snapshot without
+// a target has no such goal, so its mission update is a no-op even if a caller
+// supplies includeNewWordGoal.
 func (r *Repository) IncrementWordsAdded(
 	ctx context.Context,
 	tx *sql.Tx,
@@ -266,9 +267,10 @@ func (r *Repository) IncrementWordsAdded(
 		if _, err := tx.ExecContext(ctx,
 			`UPDATE daily_mission_snapshots
 			 SET new_words_completed = LEAST(COALESCE(new_words_completed, 0) + 1,
-			                                COALESCE(new_word_target, 1)),
+			                                new_word_target),
 			     updated_at = NOW()
-			 WHERE user_id = $1 AND local_date = $2`,
+			 WHERE user_id = $1 AND local_date = $2
+			   AND new_word_target IS NOT NULL`,
 			userID, localDate,
 		); err != nil {
 			return fmt.Errorf("increment new_words_completed: %w", err)
@@ -278,8 +280,10 @@ func (r *Repository) IncrementWordsAdded(
 }
 
 // IncrementSentenceSubmitted increments daily_activity_summaries
-// .sentences_submitted and, if the optional sentence-practice goal is
-// active, daily_mission_snapshots.sentence_practices_completed.
+// .sentences_submitted and, if the optional sentence-practice goal is active
+// on the snapshot, daily_mission_snapshots.sentence_practices_completed. A
+// snapshot without a target has no such goal, so its mission update is a
+// no-op even if a caller supplies includeSentenceGoal.
 func (r *Repository) IncrementSentenceSubmitted(
 	ctx context.Context,
 	tx *sql.Tx,
@@ -308,9 +312,10 @@ func (r *Repository) IncrementSentenceSubmitted(
 		if _, err := tx.ExecContext(ctx,
 			`UPDATE daily_mission_snapshots
 			 SET sentence_practices_completed = LEAST(COALESCE(sentence_practices_completed, 0) + 1,
-			                                         COALESCE(sentence_practice_target, 1)),
+			                                         sentence_practice_target),
 			     updated_at = NOW()
-			 WHERE user_id = $1 AND local_date = $2`,
+			 WHERE user_id = $1 AND local_date = $2
+			   AND sentence_practice_target IS NOT NULL`,
 			userID, localDate,
 		); err != nil {
 			return fmt.Errorf("increment sentence_practices_completed: %w", err)

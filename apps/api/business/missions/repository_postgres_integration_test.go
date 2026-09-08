@@ -388,6 +388,35 @@ func TestDailyActivitySummaryFreshInsertPathsAgainstRealPostgres(t *testing.T) {
 		assertTimestampWithin(t, "updated_at", summary.UpdatedAt, before, after)
 	})
 
+	t.Run("OptionalGoalCountersNoOpWithoutTarget", func(t *testing.T) {
+		db := newMigratedDisposablePostgres(t)
+		repo := NewRepository(db)
+		userID := insertTestUser(t, db)
+		createSnapshotInOwnTransaction(t, db, repo, userID, localDate, 20)
+
+		for _, increment := range []func(context.Context, *sql.Tx, uuid.UUID, time.Time, string, bool) error{
+			repo.IncrementWordsAdded,
+			repo.IncrementSentenceSubmitted,
+		} {
+			tx, err := db.Begin()
+			require.NoError(t, err)
+			require.NoError(t, increment(t.Context(), tx, userID, localDate, "UTC", true))
+			require.NoError(t, tx.Commit())
+		}
+
+		snapshot, err := repo.GetDailyMissionSnapshot(t.Context(), userID, localDate)
+		require.NoError(t, err)
+		require.NotNil(t, snapshot)
+		assert.Nil(t, snapshot.NewWordTarget)
+		assert.Nil(t, snapshot.NewWordsCompleted)
+		assert.Nil(t, snapshot.SentencePracticeTarget)
+		assert.Nil(t, snapshot.SentencePracticesCompleted)
+
+		summary := readActivitySummary(t, db, userID, localDate)
+		assert.Equal(t, 1, summary.WordsAdded)
+		assert.Equal(t, 1, summary.SentencesSubmitted)
+	})
+
 	t.Run("IncrementAIFeedbackReceived", func(t *testing.T) {
 		db := newMigratedDisposablePostgres(t)
 		repo := NewRepository(db)
