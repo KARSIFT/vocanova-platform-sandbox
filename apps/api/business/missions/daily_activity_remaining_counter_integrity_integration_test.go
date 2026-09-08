@@ -8,8 +8,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"path/filepath"
-	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -24,7 +22,7 @@ const remainingActivityCounterMigration = "20260908180000_daily_activity_remaini
 
 func TestDailyActivityRemainingCounterConstraintsAgainstRealPostgres(t *testing.T) {
 	db := newDailyActivityCounterValidationDB(t)
-	applyDailyActivityCounterMigrations(t, db, "")
+	applyCommittedForwardMigrations(t, db)
 	userID := insertTestUser(t, db)
 	baseDate := time.Date(2026, 9, 8, 0, 0, 0, 0, time.UTC)
 
@@ -84,7 +82,7 @@ func TestDailyActivityRemainingCounterConstraintsAgainstRealPostgres(t *testing.
 
 func TestDailyActivityRemainingCounterMigrationPreservesLegacyRows(t *testing.T) {
 	db := newDailyActivityCounterValidationDB(t)
-	applyDailyActivityCounterMigrations(t, db, remainingActivityCounterMigration)
+	applyCommittedForwardMigrationsBefore(t, db, remainingActivityCounterMigration)
 	userID := insertTestUser(t, db)
 	legacyDate := time.Date(2026, 9, 7, 0, 0, 0, 0, time.UTC)
 
@@ -93,7 +91,7 @@ func TestDailyActivityRemainingCounterMigrationPreservesLegacyRows(t *testing.T)
 	) VALUES ($1, $2, $3, 'UTC', -1, NOW(), NOW())`, uuid.New(), userID, legacyDate)
 	require.NoError(t, err, "the pre-migration schema must accept the legacy fixture")
 
-	applyDailyActivityCounterMigration(t, db, remainingActivityCounterMigration)
+	applyCommittedForwardMigration(t, db, remainingActivityCounterMigration)
 
 	var legacyValue int
 	require.NoError(t, db.QueryRowContext(t.Context(), `SELECT words_discovered
@@ -143,31 +141,6 @@ func newDailyActivityCounterValidationDB(t *testing.T) *sql.DB {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
 	return db
-}
-
-func applyDailyActivityCounterMigrations(t *testing.T, db *sql.DB, stopBefore string) {
-	t.Helper()
-	paths, err := filepath.Glob(filepath.Join(migrationsDirRelativeToPackage, "*.sql"))
-	require.NoError(t, err)
-	sort.Strings(paths)
-	for _, path := range paths {
-		name := filepath.Base(path)
-		if stopBefore != "" && name == stopBefore {
-			return
-		}
-		applyDailyActivityCounterMigration(t, db, name)
-	}
-	if stopBefore != "" {
-		t.Fatalf("migration %s not found", stopBefore)
-	}
-}
-
-func applyDailyActivityCounterMigration(t *testing.T, db *sql.DB, name string) {
-	t.Helper()
-	contents, err := os.ReadFile(filepath.Join(migrationsDirRelativeToPackage, name))
-	require.NoError(t, err)
-	_, err = db.Exec(string(contents))
-	require.NoErrorf(t, err, "apply migration %s", name)
 }
 
 func randomDailyActivityCounterSuffix(t *testing.T, bytes int) string {
