@@ -53,6 +53,29 @@ func TestPostgreSQLRepositoryLoadTargetNotFound(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestPostgreSQLRepositoryLoadTargetFromReviewRejectsRemovedUserWord(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewPostgreSQLRepository(db, nil)
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	reviewAttemptID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+
+	// Review Completion may retain an attempt ID while another tab removes its
+	// user_word. That historical attempt must not remain an eligible target for
+	// a new sentence-feedback generation or mission/progress mutation.
+	mock.ExpectQuery(`uw\.deleted_at IS NULL`).
+		WithArgs(reviewAttemptID, userID).
+		WillReturnRows(sqlmock.NewRows([]string{"cw.id"}))
+
+	_, err = repo.LoadTarget(t.Context(), LoadTargetRequest{
+		UserID: userID, Source: SourceReview, AttemptID: reviewAttemptID,
+	})
+	assert.ErrorIs(t, err, ErrTargetNotFound)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestPostgreSQLRepositoryCreatePendingAttempt(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
@@ -83,6 +106,9 @@ func TestPostgreSQLRepositoryCreatePendingAttempt(t *testing.T) {
 	requestHash := RequestHash(userID, userWordID, "work", "i work every day.", PromptVersionSentenceFeedbackV1)
 
 	mock.ExpectBegin()
+	mock.ExpectQuery(`SELECT id FROM user_words`).
+		WithArgs(userWordID, userID).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(userWordID))
 	mock.ExpectExec("INSERT INTO learner_sentences").
 		WithArgs(sqlmock.AnyArg(), userID, meaningID, userWordID, req.SentenceText, "i work every day.", SourceWordDetail, SentenceStatusSubmitted, now, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -95,6 +121,26 @@ func TestPostgreSQLRepositoryCreatePendingAttempt(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEqual(t, uuid.Nil, pending.SentenceID)
 	assert.NotEqual(t, uuid.Nil, pending.AttemptID)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestPostgreSQLRepositoryCreatePendingAttemptRejectsRemovedUserWord(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	userID, userWordID := uuid.New(), uuid.New()
+	repo := NewPostgreSQLRepository(db, nil)
+	request := SubmitSentenceFeedbackRequest{UserID: userID, Source: SourceWordDetail, AttemptID: userWordID}
+
+	mock.ExpectBegin()
+	mock.ExpectQuery(`SELECT id FROM user_words`).
+		WithArgs(userWordID, userID).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}))
+	mock.ExpectRollback()
+
+	_, err = repo.CreatePendingAttempt(t.Context(), request, &Target{UserWordID: userWordID}, "i work every day.", "hash", ProviderMock, "mock", time.Now())
+	assert.ErrorIs(t, err, ErrTargetNotFound)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 

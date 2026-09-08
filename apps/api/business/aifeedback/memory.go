@@ -132,6 +132,31 @@ func (r *MemoryRepository) LoadTarget(ctx context.Context, req LoadTargetRequest
 	}
 }
 
+// LoadTargetForReplay resolves an owner-scoped historical target without
+// treating a soft-deleted saved word as eligible for a new generation. It is
+// used only to derive the exact deduplication fingerprint of an already
+// persisted request.
+func (r *MemoryRepository) LoadTargetForReplay(ctx context.Context, req LoadTargetRequest) (*Target, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	switch req.Source {
+	case SourceWordDetail:
+		for _, uw := range r.userWords {
+			if uw.ID == req.AttemptID && uw.UserID == req.UserID {
+				return r.buildTarget(uw.MeaningID, uw.ID, nil)
+			}
+		}
+	case SourceReview:
+		for _, ra := range r.reviewAttempts {
+			if ra.ID == req.AttemptID && ra.UserID == req.UserID {
+				return r.buildTarget(ra.MeaningID, ra.UserWordID, &req.AttemptID)
+			}
+		}
+	}
+	return nil, ErrTargetNotFound
+}
+
 func (r *MemoryRepository) loadTargetFromUserWord(userID, userWordID uuid.UUID) (*Target, error) {
 	for _, uw := range r.userWords {
 		if uw.ID == userWordID && uw.UserID == userID && uw.DeletedAt == nil {
@@ -144,7 +169,12 @@ func (r *MemoryRepository) loadTargetFromUserWord(userID, userWordID uuid.UUID) 
 func (r *MemoryRepository) loadTargetFromReviewAttempt(userID, reviewAttemptID uuid.UUID) (*Target, error) {
 	for _, ra := range r.reviewAttempts {
 		if ra.ID == reviewAttemptID && ra.UserID == userID {
-			return r.buildTarget(ra.MeaningID, ra.UserWordID, &reviewAttemptID)
+			for _, uw := range r.userWords {
+				if uw.ID == ra.UserWordID && uw.UserID == userID && uw.DeletedAt == nil {
+					return r.buildTarget(ra.MeaningID, ra.UserWordID, &reviewAttemptID)
+				}
+			}
+			return nil, ErrTargetNotFound
 		}
 	}
 	return nil, ErrTargetNotFound

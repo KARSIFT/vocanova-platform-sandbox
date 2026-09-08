@@ -190,6 +190,11 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 			return s.temporaryFailureResult(req.SentenceText), nil
 		}
 		if errors.Is(err, ErrTargetNotFound) {
+			if replay, found, replayErr := s.replayStoredResult(ctx, req); replayErr != nil {
+				return nil, replayErr
+			} else if found {
+				return replay, nil
+			}
 			s.recordTelemetry(ctx, req.UserID, target, "attempt_not_eligible", 0, "")
 			return s.validationResult(req.SentenceText, ValidationCodeAttemptNotEligible), nil
 		}
@@ -332,6 +337,10 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 		if ctx.Err() != nil {
 			return s.temporaryFailureResult(req.SentenceText), nil
 		}
+		if errors.Is(err, ErrTargetNotFound) {
+			s.recordTelemetry(ctx, req.UserID, target, "attempt_not_eligible", 0, "")
+			return s.validationResult(req.SentenceText, ValidationCodeAttemptNotEligible), nil
+		}
 		return nil, fmt.Errorf("create pending attempt: %w", err)
 	}
 
@@ -346,6 +355,57 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 	}
 
 	return s.completePendingAttempt(ctx, req, target, validation.Normalized, pending, start)
+}
+
+type replayTargetLoader interface {
+	LoadTargetForReplay(context.Context, LoadTargetRequest) (*Target, error)
+}
+
+// replayStoredResult preserves an exact stored result after a word is removed.
+// It is intentionally reachable only after active-target authorization fails:
+// no returned target can start a new provider call or mission mutation.
+func (s *Service) replayStoredResult(ctx context.Context, req SubmitSentenceFeedbackRequest) (*SentenceFeedbackResult, bool, error) {
+	loader, ok := s.repo.(replayTargetLoader)
+	if !ok {
+		return nil, false, nil
+	}
+	target, err := loader.LoadTargetForReplay(ctx, LoadTargetRequest{UserID: req.UserID, Source: req.Source, AttemptID: req.AttemptID})
+	if err != nil {
+		if errors.Is(err, ErrTargetNotFound) {
+			return nil, false, nil
+		}
+		return nil, false, fmt.Errorf("load replay target: %w", err)
+	}
+	validation := ValidateSentence(req.SentenceText, target)
+	if !validation.Valid {
+		return nil, false, nil
+	}
+	hash := RequestHash(req.UserID, req.AttemptID, target.NormalizedWord, validation.Normalized, PromptVersionSentenceFeedbackV1)
+	status, err := s.idem.Check(ctx, req.UserID, operationSentenceFeedback, req.IdempotencyKey, hash)
+	if err != nil {
+		return nil, false, fmt.Errorf("check replay idempotency: %w", err)
+	}
+	if status == learning.IdempotencyConflict {
+		return &SentenceFeedbackResult{OriginalSentence: req.SentenceText, ErrorCode: ErrorCodeIdempotencyConflict, CanRetry: false}, true, nil
+	}
+	existing, err := s.repo.GetFeedbackAttemptByRequestHash(ctx, hash)
+	if err != nil {
+		return nil, false, fmt.Errorf("lookup stored replay: %w", err)
+	}
+	if existing == nil {
+		return nil, false, nil
+	}
+	if status != learning.IdempotencyMatch {
+		if err := s.idem.Record(ctx, req.UserID, operationSentenceFeedback, req.IdempotencyKey, hash); err != nil {
+			return nil, false, fmt.Errorf("record stored replay idempotency: %w", err)
+		}
+	}
+	result := s.resultFromStored(existing, req.SentenceText)
+	// The owner may still read an immutable stored outcome after removing the
+	// saved word, but that historical target is deliberately ineligible for a
+	// fresh provider call. Do not advertise a retry that can never run.
+	result.CanRetry = false
+	return result, true, nil
 }
 
 // completePendingAttempt calls the provider and finalizes one pending row. It
