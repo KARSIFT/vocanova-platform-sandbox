@@ -316,11 +316,11 @@ export function SentenceFeedback({
                       : "Report a problem"}
                   </button>
                 )}
-                {reportStatus === "error" ? (
-                  <span role="alert" className="text-sm text-red-700">
-                    Unable to report. Try again.
-                  </span>
-                ) : null}
+                <span role="alert" className="text-sm text-red-700">
+                  {reportStatus === "error"
+                    ? "Unable to report. Try again."
+                    : ""}
+                </span>
               </div>
             </div>
           ) : null}
