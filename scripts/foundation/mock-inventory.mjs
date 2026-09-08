@@ -292,7 +292,8 @@ export function validateMockInventory() {
   // account_deletion_requests migration. VOC-050-T00 adds the
   // synthetic smoke-test account marker on users. The AI retry-history
   // migration makes failed feedback attempts retryable without losing their
-  // history.
+  // history. VOC-1350 explicitly replaces the quality-review-report foreign
+  // key cascades with RESTRICT actions.
   const allowedMigrationFiles = new Set([
     "20260724210000_identity_foundation.sql",
     "20260724210001_oauth_state.sql",
@@ -310,6 +311,7 @@ export function validateMockInventory() {
     "20260808141000_voc050_t00_synthetic_smoke_test_user.sql",
     "20260905120000_voc1200_ai_feedback_quality_review_reports.sql",
     "20260905130000_ai_feedback_retry_history.sql",
+    "20260908010000_voc1350_restrict_ai_feedback_report_foreign_keys.sql",
   ]);
   for (const entry of readdirSync(apiMigrationRoot, {
     withFileTypes: true,
