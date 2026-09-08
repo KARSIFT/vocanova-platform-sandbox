@@ -514,6 +514,81 @@ func TestCrossCuttingMultiDayGapReconciliationOnRead(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+// TestCrossCuttingMultiDayGapReconciliationOnDirectProgressRead protects the
+// second learner-facing streak read. Progress is reachable independently of
+// Home, so it must not display a stale active streak merely because the user
+// has not visited GET /daily-mission since their last completed day.
+func TestCrossCuttingMultiDayGapReconciliationOnDirectProgressRead(t *testing.T) {
+	_, mock, _, missionsSvc := newCrossCuttingDB(t)
+
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	now := fixedNow()
+	today := fixedDay()
+	fourDaysAgo := today.AddDate(0, 0, -4)
+
+	expectGetUserSettingsNoRow(mock, userID)
+	mock.ExpectBegin()
+	expectGetDailyMissionSnapshotNoRow(mock, userID, today)
+	mock.ExpectQuery("INSERT INTO daily_mission_snapshots").
+		WithArgs(sqlmock.AnyArg(), userID, today, "UTC", 20, gamification.MissionPolicyVersion).
+		WillReturnRows(sqlmock.NewRows([]string{
+			"id", "user_id", "local_date", "timezone", "review_target", "reviews_completed",
+			"new_word_target", "new_words_completed", "sentence_practice_target",
+			"sentence_practices_completed", "policy_version", "status", "completed_at",
+			"grace_applied", "grace_day_id",
+		}).AddRow(
+			uuid.New(), userID, today, "UTC", 20, 0,
+			nil, nil, nil, nil, gamification.MissionPolicyVersion, "open", nil, false, nil,
+		))
+	mock.ExpectQuery("SELECT id, user_id, local_date, timezone, review_target, reviews_completed").
+		WithArgs(userID, 14).
+		WillReturnRows(sqlmock.NewRows([]string{
+			"id", "user_id", "local_date", "timezone", "review_target", "reviews_completed",
+			"new_word_target", "new_words_completed", "sentence_practice_target",
+			"sentence_practices_completed", "policy_version", "status", "completed_at",
+			"grace_applied", "grace_day_id",
+		}).AddRow(
+			uuid.New(), userID, fourDaysAgo, "UTC", 20, 20,
+			nil, nil, nil, nil, gamification.MissionPolicyVersion, gamification.MissionStatusCompleted,
+			&fourDaysAgo, false, nil,
+		))
+	mock.ExpectExec("SELECT pg_advisory_xact_lock").WithArgs(userID.String()).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM grace_day_ledger").WithArgs(userID).
+		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(0))
+	mock.ExpectQuery("SELECT user_id, current_streak_count, longest_streak_count").
+		WithArgs(userID).
+		WillReturnRows(sqlmock.NewRows([]string{
+			"user_id", "current_streak_count", "longest_streak_count",
+			"last_completed_local_date", "last_activity_local_date", "timezone", "status", "created_at", "updated_at",
+		}).AddRow(userID, 12, 12, &fourDaysAgo, &fourDaysAgo, "UTC", gamification.StreakStatusActive, now, now))
+	mock.ExpectExec("INSERT INTO streak_states").WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+
+	// Progress reads its own projection after the same reconciliation commit.
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM confidence_point_ledger").
+		WithArgs(userID).WillReturnRows(sqlmock.NewRows([]string{"sum"}).AddRow(0))
+	mock.ExpectQuery("SELECT user_id, current_streak_count, longest_streak_count").
+		WithArgs(userID).
+		WillReturnRows(sqlmock.NewRows([]string{
+			"user_id", "current_streak_count", "longest_streak_count",
+			"last_completed_local_date", "last_activity_local_date", "timezone", "status", "created_at", "updated_at",
+		}).AddRow(userID, 0, 12, nil, nil, "UTC", gamification.StreakStatusBroken, now, now))
+	mock.ExpectQuery("SELECT COALESCE\\(SUM\\(amount\\), 0\\) FROM grace_day_ledger").
+		WithArgs(userID).WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(0))
+	mock.ExpectQuery("SELECT local_date, status").
+		WithArgs(userID, today.AddDate(0, 0, -6), today).
+		WillReturnRows(sqlmock.NewRows([]string{"local_date", "status"}).AddRow(today, StatusOpen))
+
+	view, err := missionsSvc.GetProgressView(t.Context(), userID, "", now, 7)
+	require.NoError(t, err)
+	require.NotNil(t, view)
+	assert.Equal(t, 0, view.Streak.CurrentStreakCount)
+	assert.Equal(t, 12, view.Streak.LongestStreakCount)
+	assert.Equal(t, gamification.StreakStatusBroken, view.Streak.Status)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 // TestCrossCuttingClockPackageReexport is a tiny smoke test that the
 // cross-cutting fixture's clock helper compiles against the
 // foundation clock package used by the P1/P2/P3 repositories. It
