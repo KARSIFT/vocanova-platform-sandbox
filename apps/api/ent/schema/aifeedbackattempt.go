@@ -19,8 +19,13 @@ func (AIFeedbackAttempt) Annotations() []schema.Annotation {
 		entsql.Annotation{
 			Table: "ai_feedback_attempts",
 			Checks: map[string]string{
-				"completed_at_required_on_success": "status <> 'succeeded' OR completed_at IS NOT NULL",
-				"error_code_required_on_failure":   "status <> 'failed' OR error_code IS NOT NULL",
+				"completed_at_required_on_success":  "status <> 'succeeded' OR completed_at IS NOT NULL",
+				"error_code_required_on_failure":    "status <> 'failed' OR error_code IS NOT NULL",
+				"feedback_json_required_on_success": "status <> 'succeeded' OR feedback_json IS NOT NULL",
+				"feedback_json_only_on_success":     "status = 'succeeded' OR feedback_json IS NULL",
+				"feedback_text_only_on_success":     "status = 'succeeded' OR feedback_text IS NULL",
+				"error_code_only_on_failure":        "status = 'failed' OR error_code IS NULL",
+				"error_message_only_on_failure":     "status = 'failed' OR error_message IS NULL",
 			},
 		},
 	}
