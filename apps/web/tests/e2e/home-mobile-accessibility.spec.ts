@@ -69,24 +69,41 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
     expect(documentWidth).toBeLessThanOrEqual(page.viewportSize()!.width);
   });
 
-  test("lets keyboard users skip the persistent app shell", async ({ page }) => {
-    await page.goto("/home");
+  test("lets keyboard users skip the persistent app shell on every authenticated route", async ({
+    page,
+  }) => {
+    const authenticatedRoutes = [
+      "/home",
+      "/discover",
+      "/discover/ordering-at-a-cafe",
+      "/discover/ordering-at-a-cafe/pour",
+      "/reviews",
+      "/progress",
+      "/settings",
+      "/settings/account",
+    ];
 
-    await page.evaluate(() => {
-      if (document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur();
-      }
-      document.body.focus();
-    });
-    await page.keyboard.press("Tab");
+    for (const route of authenticatedRoutes) {
+      await page.goto(route);
 
-    const skipLink = page.getByRole("link", { name: "Skip to main content" });
-    await expect(skipLink).toBeFocused();
-    await expect(skipLink).toBeVisible();
-    await page.keyboard.press("Enter");
+      const skipLink = page.getByRole("link", {
+        name: "Skip to main content",
+      });
+      const main = page.getByRole("main");
+      await expect(main).toHaveCount(1);
+      await expect(main).toHaveAttribute("id", "main-content");
+      await expect(main).toHaveAttribute("tabindex", "-1");
+      await expect(skipLink).toHaveAttribute("href", "#main-content");
 
-    await expect(page.getByRole("main")).toBeFocused();
-    await expect(page).toHaveURL(/\/home#main-content$/);
+      await page.keyboard.press("Tab");
+
+      await expect(skipLink).toBeFocused();
+      await expect(skipLink).toBeVisible();
+      await page.keyboard.press("Enter");
+
+      await expect(main).toBeFocused();
+      await expect(page).toHaveURL(new RegExp(`${route}#main-content$`));
+    }
   });
 
   test("Settings is reachable from the authenticated header", async ({
@@ -108,12 +125,10 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
     );
     expect(documentWidth).toBeLessThanOrEqual(page.viewportSize()!.width);
 
-    await page.evaluate(() => {
-      if (document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur();
-      }
-      document.body.focus();
-    });
+    await page.keyboard.press("Tab");
+    await expect(
+      page.getByRole("link", { name: "Skip to main content" }),
+    ).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(settingsLink).toBeFocused();
     await page.keyboard.press("Enter");
