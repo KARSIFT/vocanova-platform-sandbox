@@ -64,6 +64,7 @@ func TestStreakTimelineConsistencyAgainstPostgreSQL(t *testing.T) {
 
 	for _, filename := range []string{
 		"20260724210000_identity_foundation.sql",
+		"20260725130001_voc030_p4_mission_tables.sql",
 		"20260725130002_voc030_p4_gamification_tables.sql",
 	} {
 		migration, readErr := os.ReadFile(filename)
@@ -75,6 +76,7 @@ func TestStreakTimelineConsistencyAgainstPostgreSQL(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	today := time.Date(2026, 9, 8, 0, 0, 0, 0, time.UTC)
 	yesterday := today.AddDate(0, 0, -1)
+	twoDaysAgo := today.AddDate(0, 0, -2)
 	legacyMissingDateUser := insertStreakTimelineUser(t, ctx, db, now)
 	legacyReversedUser := insertStreakTimelineUser(t, ctx, db, now)
 	legacyMissingDateID := uuid.New()
@@ -90,11 +92,20 @@ func TestStreakTimelineConsistencyAgainstPostgreSQL(t *testing.T) {
 	zeroUser := insertStreakTimelineUser(t, ctx, db, now)
 	positiveUser := insertStreakTimelineUser(t, ctx, db, now)
 	brokenUser := insertStreakTimelineUser(t, ctx, db, now)
+	protectedUser := insertStreakTimelineUser(t, ctx, db, now)
 	zeroID := uuid.New()
 	positiveID := uuid.New()
 	insertStreakTimelineState(t, ctx, db, zeroID, zeroUser, 0, 0, nil, nil, "active", now)
 	insertStreakTimelineState(t, ctx, db, positiveID, positiveUser, 3, 5, &today, &today, "active", now)
 	insertStreakTimelineState(t, ctx, db, uuid.New(), brokenUser, 0, 7, &yesterday, &today, "broken", now)
+	// A protected daily_mission_snapshot is still activity after the last
+	// completed anchor. Streak state has no "protected" status of its own;
+	// it remains active while the snapshot carries that historical status.
+	insertStreakTimelineState(t, ctx, db, uuid.New(), protectedUser, 4, 4, &twoDaysAgo, &today, "active", now)
+	_, err = db.ExecContext(ctx, `INSERT INTO daily_mission_snapshots
+		(id, user_id, local_date, timezone, review_target, policy_version, status, grace_applied, created_at, updated_at)
+		VALUES ($1, $2, $3, 'UTC', 5, 'test', 'protected', true, $4, $4)`, uuid.New(), protectedUser, yesterday, now)
+	require.NoError(t, err)
 
 	missingDateUser := insertStreakTimelineUser(t, ctx, db, now)
 	_, err = db.ExecContext(ctx, `INSERT INTO streak_states

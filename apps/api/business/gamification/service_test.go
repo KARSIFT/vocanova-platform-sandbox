@@ -101,6 +101,7 @@ func TestReconcileAndAdvanceUsesResolvedTimezoneForExistingStreakState(t *testin
 	svc := NewService(NewRepository(db))
 	userID := uuid.MustParse("00000000-0000-0000-0000-0000000000bb")
 	now := time.Date(2026, 9, 4, 15, 30, 0, 0, time.UTC) // Sep 5 in Tokyo, Sep 4 in UTC.
+	previousLocalDay := time.Date(2026, 9, 4, 0, 0, 0, 0, time.UTC)
 	localDay := time.Date(2026, 9, 5, 0, 0, 0, 0, time.UTC)
 
 	// A pre-existing state was written before the learner changed their
@@ -117,9 +118,9 @@ func TestReconcileAndAdvanceUsesResolvedTimezoneForExistingStreakState(t *testin
 			"user_id", "current_streak_count", "longest_streak_count",
 			"last_completed_local_date", "last_activity_local_date",
 			"timezone", "status", "created_at", "updated_at",
-		}).AddRow(userID, 4, 4, nil, nil, "UTC", StreakStatusActive, now, now))
+		}).AddRow(userID, 4, 4, previousLocalDay, previousLocalDay, "UTC", StreakStatusActive, now, now))
 	mock.ExpectExec("INSERT INTO streak_states").
-		WithArgs(sqlmock.AnyArg(), userID, 4, 4, nil, localDay, "Asia/Tokyo", StreakStatusActive).
+		WithArgs(sqlmock.AnyArg(), userID, 4, 4, previousLocalDay, localDay, "Asia/Tokyo", StreakStatusActive).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
