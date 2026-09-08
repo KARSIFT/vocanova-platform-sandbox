@@ -12,7 +12,15 @@ import (
 type CanonicalWord struct{ ent.Schema }
 
 func (CanonicalWord) Annotations() []schema.Annotation {
-	return []schema.Annotation{entsql.Annotation{Table: "canonical_words"}}
+	return []schema.Annotation{
+		entsql.Annotation{
+			Table: "canonical_words",
+			Checks: map[string]string{
+				"text_nonblank":            "text ~ '[^[:space:]]'",
+				"normalized_text_nonblank": "normalized_text ~ '[^[:space:]]'",
+			},
+		},
+	}
 }
 func (CanonicalWord) Mixin() []ent.Mixin { return []ent.Mixin{UUIDMixin{}, TimeMixin{}} }
 

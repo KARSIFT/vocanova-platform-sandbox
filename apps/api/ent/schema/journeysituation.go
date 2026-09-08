@@ -12,7 +12,16 @@ import (
 type JourneySituation struct{ ent.Schema }
 
 func (JourneySituation) Annotations() []schema.Annotation {
-	return []schema.Annotation{entsql.Annotation{Table: "journey_situations"}}
+	return []schema.Annotation{
+		entsql.Annotation{
+			Table: "journey_situations",
+			Checks: map[string]string{
+				"slug_nonblank":              "slug ~ '[^[:space:]]'",
+				"title_nonblank":             "title ~ '[^[:space:]]'",
+				"short_description_nonblank": "short_description ~ '[^[:space:]]'",
+			},
+		},
+	}
 }
 func (JourneySituation) Mixin() []ent.Mixin { return []ent.Mixin{UUIDMixin{}, TimeMixin{}} }
 
