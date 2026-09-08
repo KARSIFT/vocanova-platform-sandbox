@@ -3,12 +3,7 @@
 package missions
 
 import (
-	"crypto/rand"
-	"database/sql"
-	"encoding/hex"
 	"fmt"
-	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -21,7 +16,7 @@ import (
 const remainingActivityCounterMigration = "20260908180000_daily_activity_remaining_counter_integrity.sql"
 
 func TestDailyActivityRemainingCounterConstraintsAgainstRealPostgres(t *testing.T) {
-	db := newDailyActivityCounterValidationDB(t)
+	db := newPostgresForReviewCounterMigration(t)
 	applyCommittedForwardMigrations(t, db)
 	userID := insertTestUser(t, db)
 	baseDate := time.Date(2026, 9, 8, 0, 0, 0, 0, time.UTC)
@@ -81,7 +76,7 @@ func TestDailyActivityRemainingCounterConstraintsAgainstRealPostgres(t *testing.
 }
 
 func TestDailyActivityRemainingCounterMigrationPreservesLegacyRows(t *testing.T) {
-	db := newDailyActivityCounterValidationDB(t)
+	db := newPostgresForReviewCounterMigration(t)
 	applyCommittedForwardMigrationsBefore(t, db, remainingActivityCounterMigration)
 	userID := insertTestUser(t, db)
 	legacyDate := time.Date(2026, 9, 7, 0, 0, 0, 0, time.UTC)
@@ -113,42 +108,6 @@ func TestDailyActivityRemainingCounterMigrationPreservesLegacyRows(t *testing.T)
 	_, err = db.ExecContext(t.Context(), `UPDATE daily_activity_summaries
 		SET updated_at = NOW() WHERE user_id = $1 AND local_date = $2`, userID, legacyDate)
 	requireConstraintViolation(t, err)
-}
-
-func newDailyActivityCounterValidationDB(t *testing.T) *sql.DB {
-	t.Helper()
-	dsn := os.Getenv("VOCANOVA_TEST_POSTGRES_DSN")
-	if dsn == "" {
-		t.Skip("VOCANOVA_TEST_POSTGRES_DSN is unset")
-	}
-	admin, err := sql.Open("postgres", dsn)
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = admin.Close() })
-
-	schema := "daily_activity_counters_" + randomDailyActivityCounterSuffix(t, 12)
-	_, err = admin.Exec("CREATE SCHEMA " + schema)
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		if _, err := admin.Exec("DROP SCHEMA " + schema + " CASCADE"); err != nil {
-			t.Errorf("drop validation schema %s: %v", schema, err)
-		}
-	})
-	if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
-		dsn, err = pq.ParseURL(dsn)
-		require.NoError(t, err)
-	}
-	db, err := sql.Open("postgres", dsn+" search_path="+schema)
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = db.Close() })
-	return db
-}
-
-func randomDailyActivityCounterSuffix(t *testing.T, bytes int) string {
-	t.Helper()
-	buffer := make([]byte, bytes)
-	_, err := rand.Read(buffer)
-	require.NoError(t, err)
-	return hex.EncodeToString(buffer)
 }
 
 func requireConstraintViolation(t *testing.T, err error) {
