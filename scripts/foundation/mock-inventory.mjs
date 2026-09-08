@@ -253,6 +253,7 @@ export function validateMockInventory() {
     "magiclink.go",
     "mixins.go",
     "reviewattempt.go",
+    "reviewattempt_test.go",
     "aifeedbackattempt.go",
     "session.go",
     "usagenote.go",

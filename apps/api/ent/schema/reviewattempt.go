@@ -10,39 +10,40 @@ import (
 	"github.com/google/uuid"
 )
 
-// ReviewAttempt is immutable learner history. Ent models its rows and the
-// forward migration enforces update/delete protection with a PostgreSQL trigger.
+// ReviewAttempt is immutable learner history. Ent declares its fields
+// create-only and the forward migration enforces update/delete protection at
+// PostgreSQL's final integrity layer.
 type ReviewAttempt struct{ ent.Schema }
 
 func (ReviewAttempt) Annotations() []schema.Annotation {
 	return []schema.Annotation{entsql.Annotation{Table: "review_attempts"}}
 }
 
-func (ReviewAttempt) Mixin() []ent.Mixin { return []ent.Mixin{UUIDMixin{}, TimeMixin{}} }
+func (ReviewAttempt) Mixin() []ent.Mixin { return []ent.Mixin{UUIDMixin{}, ImmutableTimeMixin{}} }
 
 func (ReviewAttempt) Fields() []ent.Field {
 	return []ent.Field{
-		field.UUID("user_id", uuid.UUID{}),
-		field.UUID("user_word_id", uuid.UUID{}),
-		field.UUID("meaning_id", uuid.UUID{}),
-		field.String("attempt_type").NotEmpty(),
+		field.UUID("user_id", uuid.UUID{}).Immutable(),
+		field.UUID("user_word_id", uuid.UUID{}).Immutable(),
+		field.UUID("meaning_id", uuid.UUID{}).Immutable(),
+		field.String("attempt_type").NotEmpty().Immutable(),
 		field.Enum("prompt_type").
-			Values("multiple_choice", "self_check"),
+			Values("multiple_choice", "self_check").Immutable(),
 		field.Enum("result").
-			Values("correct", "incorrect", "skipped"),
+			Values("correct", "incorrect", "skipped").Immutable(),
 		field.Enum("rating").
 			Values("again", "hard", "good", "easy").
-			Optional().Nillable(),
-		field.Int("review_step_before").Min(0).Max(7),
-		field.Int("review_step_after").Min(0).Max(7),
-		field.Time("answered_at"),
-		field.Int("response_time_ms").Min(0).Default(0),
-		field.UUID("selected_option_meaning_id", uuid.UUID{}).Optional().Nillable(),
-		field.String("typed_answer").Optional().Nillable(),
-		field.Bool("was_hint_used").Default(false),
-		field.String("source").NotEmpty(),
-		field.String("client_attempt_id").Optional().Nillable(),
-		field.JSON("metadata", map[string]any{}).Optional(),
+			Optional().Nillable().Immutable(),
+		field.Int("review_step_before").Min(0).Max(7).Immutable(),
+		field.Int("review_step_after").Min(0).Max(7).Immutable(),
+		field.Time("answered_at").Immutable(),
+		field.Int("response_time_ms").Min(0).Default(0).Immutable(),
+		field.UUID("selected_option_meaning_id", uuid.UUID{}).Optional().Nillable().Immutable(),
+		field.String("typed_answer").Optional().Nillable().Immutable(),
+		field.Bool("was_hint_used").Default(false).Immutable(),
+		field.String("source").NotEmpty().Immutable(),
+		field.String("client_attempt_id").Optional().Nillable().Immutable(),
+		field.JSON("metadata", map[string]any{}).Optional().Immutable(),
 	}
 }
 

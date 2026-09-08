@@ -27,6 +27,18 @@ func (TimeMixin) Fields() []ent.Field {
 	}
 }
 
+// ImmutableTimeMixin is for append-only history rows. Both timestamps are set
+// on creation so Ent cannot offer a timestamp-only update path that conflicts
+// with the database mutation guard.
+type ImmutableTimeMixin struct{ ent.Schema }
+
+func (ImmutableTimeMixin) Fields() []ent.Field {
+	return []ent.Field{
+		field.Time("created_at").Default(time.Now).Immutable(),
+		field.Time("updated_at").Default(time.Now).Immutable(),
+	}
+}
+
 // SoftDeleteMixin adds a nullable deleted_at timestamp for soft-deleted tables.
 type SoftDeleteMixin struct{ ent.Schema }
 
