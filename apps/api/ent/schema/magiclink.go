@@ -13,7 +13,14 @@ import (
 type MagicLink struct{ ent.Schema }
 
 func (MagicLink) Annotations() []schema.Annotation {
-	return []schema.Annotation{entsql.Annotation{Table: "magic_links"}}
+	return []schema.Annotation{
+		entsql.Annotation{
+			Table: "magic_links",
+			Checks: map[string]string{
+				"token_hash_sha256_width": "octet_length(token_hash) = 32",
+			},
+		},
+	}
 }
 func (MagicLink) Mixin() []ent.Mixin { return []ent.Mixin{UUIDMixin{}} }
 func (MagicLink) Fields() []ent.Field {

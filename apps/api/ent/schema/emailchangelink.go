@@ -30,7 +30,14 @@ import (
 type EmailChangeLink struct{ ent.Schema }
 
 func (EmailChangeLink) Annotations() []schema.Annotation {
-	return []schema.Annotation{entsql.Annotation{Table: "email_change_links"}}
+	return []schema.Annotation{
+		entsql.Annotation{
+			Table: "email_change_links",
+			Checks: map[string]string{
+				"token_hash_sha256_width": "octet_length(token_hash) = 32",
+			},
+		},
+	}
 }
 
 func (EmailChangeLink) Mixin() []ent.Mixin { return []ent.Mixin{UUIDMixin{}} }

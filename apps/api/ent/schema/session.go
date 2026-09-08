@@ -13,7 +13,14 @@ import (
 type Session struct{ ent.Schema }
 
 func (Session) Annotations() []schema.Annotation {
-	return []schema.Annotation{entsql.Annotation{Table: "sessions"}}
+	return []schema.Annotation{
+		entsql.Annotation{
+			Table: "sessions",
+			Checks: map[string]string{
+				"token_hash_sha256_width": "octet_length(token_hash) = 32",
+			},
+		},
+	}
 }
 func (Session) Mixin() []ent.Mixin { return []ent.Mixin{UUIDMixin{}} }
 func (Session) Fields() []ent.Field {
