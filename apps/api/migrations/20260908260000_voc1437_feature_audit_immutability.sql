@@ -20,6 +20,11 @@ BEGIN
      AND NEW.actor_id IS NULL
      AND NEW.metadata = '{}'::jsonb
      AND NEW.created_at = OLD.created_at
+     -- The production account-deletion query stamps its one permitted update
+     -- with NOW(), which is PostgreSQL's transaction timestamp. Do not let a
+     -- caller backdate or otherwise rewrite audit lifecycle timing while the
+     -- shared gate is open.
+     AND NEW.updated_at = transaction_timestamp()
   THEN
     RETURN NEW;
   END IF;

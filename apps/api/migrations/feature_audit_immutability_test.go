@@ -34,6 +34,7 @@ func TestFeatureAuditImmutabilityMigrationIsNarrowlyScoped(t *testing.T) {
 		"NEW.actor_id IS NULL",
 		"NEW.metadata = '{}'::jsonb",
 		"NEW.created_at = OLD.created_at",
+		"NEW.updated_at = transaction_timestamp()",
 		"ERRCODE = '55000'",
 		"BEFORE UPDATE OR DELETE ON feature_audit_logs",
 	} {
@@ -44,6 +45,7 @@ func TestFeatureAuditImmutabilityMigrationIsNarrowlyScoped(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(accountRepository), "SELECT set_config('vocanova.ledger_purge', 'on', true)")
 	assert.Contains(t, string(accountRepository), "SET user_id = NULL, actor_id = NULL, entity_id = NULL,")
+	assert.Contains(t, string(accountRepository), "metadata = '{}'::jsonb, updated_at = NOW()")
 }
 
 func TestFeatureAuditImmutabilityAgainstPostgreSQL(t *testing.T) {
@@ -105,8 +107,8 @@ func TestFeatureAuditImmutabilityAgainstPostgreSQL(t *testing.T) {
 	require.NoError(t, err)
 	_, err = rollbackTx.ExecContext(ctx, `UPDATE feature_audit_logs
 		SET user_id = NULL, actor_id = NULL, entity_id = NULL,
-		    metadata = '{}'::jsonb, updated_at = $2
-		WHERE id = $1`, auditID, now.Add(time.Second))
+		    metadata = '{}'::jsonb, updated_at = NOW()
+		WHERE id = $1`, auditID)
 	require.NoError(t, err, "the exact account-deletion de-identification is allowed inside the gate")
 	require.NoError(t, rollbackTx.Rollback())
 
@@ -124,6 +126,17 @@ func TestFeatureAuditImmutabilityAgainstPostgreSQL(t *testing.T) {
 	requireFeatureAuditImmutabilityViolation(t, err)
 	require.NoError(t, misuseUpdateTx.Rollback())
 
+	misuseTimestampTx, err := db.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	_, err = misuseTimestampTx.ExecContext(ctx, `SELECT set_config('vocanova.ledger_purge', 'on', true)`)
+	require.NoError(t, err)
+	_, err = misuseTimestampTx.ExecContext(ctx, `UPDATE feature_audit_logs
+		SET user_id = NULL, actor_id = NULL, entity_id = NULL,
+		    metadata = '{}'::jsonb, updated_at = $2
+		WHERE id = $1`, auditID, now.Add(-time.Hour))
+	requireFeatureAuditImmutabilityViolation(t, err, "the gate must not allow audit timestamp rewrites")
+	require.NoError(t, misuseTimestampTx.Rollback())
+
 	misuseDeleteTx, err := db.BeginTx(ctx, nil)
 	require.NoError(t, err)
 	_, err = misuseDeleteTx.ExecContext(ctx, `SELECT set_config('vocanova.ledger_purge', 'on', true)`)
@@ -138,8 +151,8 @@ func TestFeatureAuditImmutabilityAgainstPostgreSQL(t *testing.T) {
 	require.NoError(t, err)
 	_, err = commitTx.ExecContext(ctx, `UPDATE feature_audit_logs
 		SET user_id = NULL, actor_id = NULL, entity_id = NULL,
-		    metadata = '{}'::jsonb, updated_at = $2
-		WHERE id = $1`, auditID, now.Add(time.Second))
+		    metadata = '{}'::jsonb, updated_at = NOW()
+		WHERE id = $1`, auditID)
 	require.NoError(t, err)
 	require.NoError(t, commitTx.Commit())
 
