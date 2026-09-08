@@ -622,7 +622,7 @@ func (s *Service) CreateAccountDeletionRequest(ctx context.Context, userID, clie
 //     external_identities / user_words / learner_sentences;
 //     irreversibly de-identifies review_attempts /
 //     ai_feedback_attempts / confidence_point_ledger /
-//     grace_day_ledger / (feature_audit_logs if present);
+//     grace_day_ledger / feature_audit_logs;
 //     deletes or de-identifies user_onboarding_profiles /
 //     user_settings / daily_mission_snapshots /
 //     daily_activity_summaries / streak_states (DOC-05 §16).

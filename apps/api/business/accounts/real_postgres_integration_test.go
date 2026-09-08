@@ -72,6 +72,8 @@ func TestPostgreSQLRepositoryExportAndAnonymization(t *testing.T) {
 	}
 	exec(`INSERT INTO ai_feedback_attempts (id, learner_sentence_id, status, provider, model, prompt_version, request_hash, feedback_json, completed_at, created_at, updated_at) VALUES ($1, $2, 'succeeded', 'test', 'test', 'v1', $3, '{"status":"correct"}', $4, $4, $4)`, attemptA, sentenceA, attemptA.String(), now)
 	exec(`INSERT INTO ai_feedback_quality_review_reports (id, ai_feedback_attempt_id, user_id, reason, classification, state, created_at, updated_at) VALUES ($1, $2, $3, 'already_correct', 'unnecessary_correction', 'open', $4, $4)`, uuid.New(), attemptA, userA, now)
+	auditID := uuid.New()
+	exec(`INSERT INTO feature_audit_logs (id, user_id, action, entity_type, entity_id, actor_type, actor_id, metadata, created_at, updated_at) VALUES ($1, $2, 'user_word_saved', 'user_word', $3, 'user', $2, '{"source":"integration"}', $4, $4)`, auditID, userA, uuid.New(), now)
 	exec(`INSERT INTO account_deletion_requests (id, user_id, status, requested_at, purge_after, idempotency_key, created_at, updated_at) VALUES ($1, $2, 'deactivated', $3, $4, 'delete-key-a', $3, $3)`, uuid.New(), userA, now, now.Add(time.Hour))
 
 	repo := NewPostgreSQLRepository(db)
@@ -106,6 +108,17 @@ func TestPostgreSQLRepositoryExportAndAnonymization(t *testing.T) {
 	}
 	if counters.LearnerSentences != 1 || counters.AIFeedbackAttempts != 1 || counters.AIQualityReviewReports != 1 || counters.ExternalIdentities != 1 {
 		t.Fatalf("unexpected purge counters: %#v", counters)
+	}
+	if counters.FeatureAuditLogs != 1 {
+		t.Fatalf("unexpected feature audit disposition count: %#v", counters)
+	}
+	var auditUserID, auditActorID, auditEntityID sql.NullString
+	var auditMetadata string
+	if err := db.QueryRowContext(ctx, `SELECT user_id, actor_id, entity_id, metadata::text FROM feature_audit_logs WHERE id = $1`, auditID).Scan(&auditUserID, &auditActorID, &auditEntityID, &auditMetadata); err != nil {
+		t.Fatal(err)
+	}
+	if auditUserID.Valid || auditActorID.Valid || auditEntityID.Valid || auditMetadata != "{}" {
+		t.Fatalf("feature audit log retained learner linkage after deletion: user=%v actor=%v entity=%v metadata=%q", auditUserID, auditActorID, auditEntityID, auditMetadata)
 	}
 	var aRemaining, bRemaining int
 	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM learner_sentences WHERE user_id = $1`, userA).Scan(&aRemaining); err != nil {

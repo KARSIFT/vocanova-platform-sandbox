@@ -476,6 +476,14 @@ func (r *PostgreSQLRepository) anonymizeUserDataTx(ctx context.Context, tx *sql.
 	if err != nil {
 		return counters, fmt.Errorf("delete quality review reports: %w", err)
 	}
+	counters.FeatureAuditLogs, err = execCount(ctx, tx, userID,
+		`UPDATE feature_audit_logs
+		 SET user_id = NULL, actor_id = NULL, entity_id = NULL,
+		     metadata = '{}'::jsonb, updated_at = NOW()
+		 WHERE user_id = $1 OR actor_id = $1`)
+	if err != nil {
+		return counters, fmt.Errorf("de-identify feature audit logs: %w", err)
+	}
 	// Delete dependent records before their parent learner rows. This order is
 	// required by the committed ON DELETE RESTRICT constraints.
 	c, err := execCount(ctx, tx, userID,

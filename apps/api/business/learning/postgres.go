@@ -172,6 +172,9 @@ func (r *PostgreSQLRepository) saveUserWordTx(ctx context.Context, tx *sql.Tx, r
 		); err != nil {
 			return nil, fmt.Errorf("restore user word: %w", err)
 		}
+		if err := insertUserWordAudit(ctx, tx, req.UserID, existingID, req.Source, now); err != nil {
+			return nil, err
+		}
 		if !readSavedMeaning {
 			return &SavedMeaning{}, nil
 		}
@@ -196,6 +199,9 @@ func (r *PostgreSQLRepository) saveUserWordTx(ctx context.Context, tx *sql.Tx, r
 		id, req.UserID, req.MeaningID, req.Source, now,
 	).Scan(&id); err != nil {
 		return nil, fmt.Errorf("insert user word: %w", err)
+	}
+	if err := insertUserWordAudit(ctx, tx, req.UserID, id, req.Source, now); err != nil {
+		return nil, err
 	}
 
 	// P4 reward/activity wiring records the +2 point award and its daily
@@ -251,6 +257,23 @@ func (r *PostgreSQLRepository) saveUserWordTx(ctx context.Context, tx *sql.Tx, r
 		return &SavedMeaning{UserWordID: id}, nil
 	}
 	return r.savedMeaningByID(ctx, tx, id)
+}
+
+// insertUserWordAudit records only the state transition and opaque IDs. It is
+// intentionally called inside the word mutation transaction, so a failed audit
+// write cannot leave an un-audited saved-word state behind.
+func insertUserWordAudit(ctx context.Context, tx *sql.Tx, userID, userWordID uuid.UUID, source string, now time.Time) error {
+	if _, err := tx.ExecContext(ctx,
+		`INSERT INTO feature_audit_logs (
+			id, user_id, action, entity_type, entity_id, request_id,
+			actor_type, actor_id, metadata, created_at, updated_at
+		) VALUES ($1, $2, 'user_word_saved', 'user_word', $3, NULL,
+			'user', $2, jsonb_build_object('source', $4::text), $5, $5)`,
+		uuid.New(), userID, userWordID, source, now,
+	); err != nil {
+		return fmt.Errorf("insert user word audit: %w", err)
+	}
+	return nil
 }
 
 // HasP4Wiring reports whether this repository has the dependencies required
