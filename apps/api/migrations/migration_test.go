@@ -321,6 +321,28 @@ func TestVOC030P4MissionTablesMigrationCarriesDatabaseInvariants(t *testing.T) {
 	}
 }
 
+func TestDailyActivityReviewCounterIntegrityMigrationCarriesDatabaseInvariants(t *testing.T) {
+	sql, err := os.ReadFile("20260908110000_daily_activity_review_counter_integrity.sql")
+	if err != nil {
+		t.Fatalf("read daily activity review-counter integrity migration: %v", err)
+	}
+	text := string(sql)
+	for _, invariant := range []string{
+		"ALTER TABLE daily_activity_summaries",
+		"daily_activity_summaries_review_counters_nonnegative",
+		"reviews_attempted >= 0",
+		"reviews_correct >= 0",
+		"reviews_skipped >= 0",
+		"daily_activity_summaries_review_counters_classified_within_attempted",
+		"reviews_correct <= reviews_attempted - reviews_skipped",
+		"NOT VALID",
+	} {
+		if !strings.Contains(text, invariant) {
+			t.Errorf("daily activity review-counter integrity migration missing invariant %q", invariant)
+		}
+	}
+}
+
 func TestVOC030P4GamificationTablesMigrationCarriesDatabaseInvariants(t *testing.T) {
 	sql, err := os.ReadFile("20260725130002_voc030_p4_gamification_tables.sql")
 	if err != nil {

@@ -337,6 +337,94 @@ func TestDailyActivitySummaryFreshInsertPathsAgainstRealPostgres(t *testing.T) {
 	})
 }
 
+func TestDailyActivitySummaryReviewCounterConstraintsAgainstRealPostgres(t *testing.T) {
+	db := newMigratedPostgresForReviewCounterConstraints(t)
+	userID := insertTestUser(t, db)
+	localDate := time.Date(2026, 9, 8, 0, 0, 0, 0, time.UTC)
+
+	for _, tc := range []struct {
+		name      string
+		attempted int
+		correct   int
+		skipped   int
+	}{
+		{name: "negative_attempted", attempted: -1},
+		{name: "negative_correct", attempted: 1, correct: -1},
+		{name: "negative_skipped", attempted: 1, skipped: -1},
+		{name: "classified_exceeds_attempted", attempted: 1, correct: 1, skipped: 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := db.ExecContext(t.Context(), `INSERT INTO daily_activity_summaries (
+				id, user_id, local_date, timezone, reviews_attempted, reviews_correct,
+				reviews_skipped, created_at, updated_at
+			) VALUES ($1, $2, $3, 'UTC', $4, $5, $6, NOW(), NOW())`,
+				uuid.New(), userID, localDate.AddDate(0, 0, len(tc.name)), tc.attempted, tc.correct, tc.skipped)
+			require.Error(t, err)
+			var pqErr *pq.Error
+			require.ErrorAs(t, err, &pqErr)
+			assert.Equal(t, "23514", string(pqErr.Code))
+		})
+	}
+
+	repo := NewRepository(db)
+	createSnapshotInOwnTransaction(t, db, repo, userID, localDate, 20)
+	tx, err := db.BeginTx(t.Context(), nil)
+	require.NoError(t, err)
+	defer tx.Rollback()
+	_, err = repo.IncrementReviewsCompleted(t.Context(), tx, userID, localDate, "UTC", 20, true, false)
+	require.NoError(t, err)
+	require.NoError(t, tx.Commit())
+
+	summary := readActivitySummary(t, db, userID, localDate)
+	assert.Equal(t, 1, summary.ReviewsAttempted)
+	assert.Equal(t, 1, summary.ReviewsCorrect)
+	assert.Equal(t, 0, summary.ReviewsSkipped)
+}
+
+// TestDailyActivityReviewCounterMigrationAcceptsExistingLegacyRows proves the
+// forward-only migration itself can be applied to a populated production
+// database: a legacy aggregate that predates these checks must not block the
+// deployment, while the checks still reject invalid rows written afterwards.
+func TestDailyActivityReviewCounterMigrationAcceptsExistingLegacyRows(t *testing.T) {
+	db := newPostgresForReviewCounterMigration(t)
+	applyCommittedForwardMigrationsBefore(t, db, "20260908110000_daily_activity_review_counter_integrity.sql")
+	userID := insertTestUser(t, db)
+	legacyDate := time.Date(2026, 9, 6, 0, 0, 0, 0, time.UTC)
+
+	_, err := db.ExecContext(t.Context(), `INSERT INTO daily_activity_summaries (
+		id, user_id, local_date, timezone, reviews_attempted, reviews_correct,
+		reviews_skipped, created_at, updated_at
+	) VALUES ($1, $2, $3, 'UTC', 1, 1, 1, NOW(), NOW())`, uuid.New(), userID, legacyDate)
+	require.NoError(t, err, "pre-migration schema must accept the legacy aggregate fixture")
+
+	applyCommittedForwardMigration(t, db, "20260908110000_daily_activity_review_counter_integrity.sql")
+
+	var legacyRows int
+	require.NoError(t, db.QueryRowContext(t.Context(), `SELECT count(*) FROM daily_activity_summaries
+		WHERE user_id = $1 AND local_date = $2`, userID, legacyDate).Scan(&legacyRows))
+	assert.Equal(t, 1, legacyRows, "the migration must not rewrite or reject existing aggregates")
+
+	_, err = db.ExecContext(t.Context(), `INSERT INTO daily_activity_summaries (
+		id, user_id, local_date, timezone, reviews_attempted, reviews_correct,
+		reviews_skipped, created_at, updated_at
+	) VALUES ($1, $2, $3, 'UTC', 1, 1, 1, NOW(), NOW())`, uuid.New(), userID, legacyDate.AddDate(0, 0, 1))
+	require.Error(t, err, "the NOT VALID checks must still protect every new row")
+	var pqErr *pq.Error
+	require.ErrorAs(t, err, &pqErr)
+	assert.Equal(t, "23514", string(pqErr.Code))
+}
+
+// newMigratedPostgresForReviewCounterConstraints uses an explicitly supplied
+// PostgreSQL validation instance when available, while retaining the
+// disposable-container path used by the rest of this integration suite.
+func newMigratedPostgresForReviewCounterConstraints(t *testing.T) *sql.DB {
+	t.Helper()
+	if os.Getenv("VOCANOVA_TEST_POSTGRES_DSN") != "" {
+		return newMigratedPostgresFromEnv(t)
+	}
+	return newMigratedDisposablePostgres(t)
+}
+
 // activitySummaryIncrement describes one daily_activity_summaries call site
 // so the update-branch proof below can drive every one of them through the
 // same procedure instead of repeating it five times.
@@ -511,8 +599,21 @@ func createSnapshotInOwnTransactionWithSettings(
 // each test gets an isolated database and no state leaks between tests.
 func newMigratedDisposablePostgres(t *testing.T) *sql.DB {
 	t.Helper()
+	db := newDisposablePostgres(t)
+	applyCommittedForwardMigrations(t, db)
+	return db
+}
+
+// newDisposablePostgres starts the isolated PostgreSQL instance shared by the
+// fresh-schema and existing-data migration proofs. Callers choose which part
+// of the migration sequence to apply so the latter can seed a true legacy row.
+func newDisposablePostgres(t *testing.T) *sql.DB {
+	t.Helper()
 	if _, err := exec.LookPath("docker"); err != nil {
 		t.Skipf("docker not on PATH (VOC-046-TEST-00's real-Postgres proof requires Docker): %v", err)
+	}
+	if output, err := exec.Command("docker", "info").CombinedOutput(); err != nil {
+		t.Skipf("Docker is on PATH but unavailable (VOC-046-TEST-00's real-Postgres proof requires a running Docker daemon): %v\n%s", err, output)
 	}
 
 	port := freeLoopbackTCPPort(t)
@@ -526,7 +627,6 @@ func newMigratedDisposablePostgres(t *testing.T) *sql.DB {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
 	requirePingSucceeds(t, db)
-	applyCommittedForwardMigrations(t, db)
 	return db
 }
 
@@ -535,6 +635,15 @@ func newMigratedDisposablePostgres(t *testing.T) *sql.DB {
 // The connection pool is closed before the schema is dropped so cleanup does
 // not leave a pooled search_path pointed at a removed schema.
 func newMigratedPostgresFromEnv(t *testing.T) *sql.DB {
+	db := newPostgresFromEnv(t)
+	applyCommittedForwardMigrations(t, db)
+	return db
+}
+
+// newPostgresFromEnv creates an isolated schema in the explicitly supplied
+// PostgreSQL validation instance, leaving the caller free to apply either the
+// full migration set or a prefix of it.
+func newPostgresFromEnv(t *testing.T) *sql.DB {
 	t.Helper()
 	dsn := os.Getenv("VOCANOVA_TEST_POSTGRES_DSN")
 	if dsn == "" {
@@ -558,8 +667,15 @@ func newMigratedPostgresFromEnv(t *testing.T) *sql.DB {
 	db, err := sql.Open("postgres", dsn+" search_path="+schema)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
-	applyCommittedForwardMigrations(t, db)
 	return db
+}
+
+func newPostgresForReviewCounterMigration(t *testing.T) *sql.DB {
+	t.Helper()
+	if os.Getenv("VOCANOVA_TEST_POSTGRES_DSN") != "" {
+		return newPostgresFromEnv(t)
+	}
+	return newDisposablePostgres(t)
 }
 
 // TestGraceDayUseProtectsSnapshotAndSurvivesNextDayRealPostgres proves the
@@ -631,6 +747,12 @@ func TestGraceDayUseProtectsSnapshotAndSurvivesNextDayRealPostgres(t *testing.T)
 // and the recovery files carry a `.down.sql.example` suffix specifically so
 // they fall outside that glob.
 func applyCommittedForwardMigrations(t *testing.T, db *sql.DB) {
+	applyCommittedForwardMigrationsBefore(t, db, "")
+}
+
+// applyCommittedForwardMigrationsBefore applies each committed forward
+// migration before stopBefore. An empty stopBefore applies the whole set.
+func applyCommittedForwardMigrationsBefore(t *testing.T, db *sql.DB, stopBefore string) {
 	t.Helper()
 	paths, err := filepath.Glob(filepath.Join(migrationsDirRelativeToPackage, "*.sql"))
 	require.NoError(t, err)
@@ -640,11 +762,23 @@ func applyCommittedForwardMigrations(t *testing.T, db *sql.DB) {
 		if strings.HasSuffix(path, ".down.sql") {
 			continue
 		}
-		statements, err := os.ReadFile(path)
-		require.NoError(t, err)
-		_, err = db.Exec(string(statements))
-		require.NoErrorf(t, err, "apply migration %s", filepath.Base(path))
+		name := filepath.Base(path)
+		if stopBefore != "" && name == stopBefore {
+			return
+		}
+		applyCommittedForwardMigration(t, db, name)
 	}
+	if stopBefore != "" {
+		t.Fatalf("migration %s not found", stopBefore)
+	}
+}
+
+func applyCommittedForwardMigration(t *testing.T, db *sql.DB, name string) {
+	t.Helper()
+	statements, err := os.ReadFile(filepath.Join(migrationsDirRelativeToPackage, name))
+	require.NoError(t, err)
+	_, err = db.Exec(string(statements))
+	require.NoErrorf(t, err, "apply migration %s", name)
 }
 
 // insertTestUser creates the minimal users row the mission tables'
