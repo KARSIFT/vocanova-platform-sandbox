@@ -69,7 +69,7 @@
 
 import { randomUUID } from "node:crypto";
 
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 const ONBOARDING_COOKIE_VALUE = "not_started";
 const CORE_LOOP_TEST_TIMEOUT_MS = 90_000;
@@ -78,6 +78,20 @@ const SENTENCE_PRIVACY_REMINDER =
 
 async function expectSentencePracticePrivacyReminder(page: Page) {
   await expect(page.getByText(SENTENCE_PRIVACY_REMINDER)).toBeVisible();
+}
+
+async function expectMinimumTouchTarget(locator: Locator) {
+  await expect(locator).toBeVisible();
+  const box = await locator.boundingBox();
+  expect(box, "Expected an actionable visible control").not.toBeNull();
+  expect(
+    box!.width,
+    "Expected a 44px minimum touch-target width",
+  ).toBeGreaterThanOrEqual(44);
+  expect(
+    box!.height,
+    "Expected a 44px minimum touch-target height",
+  ).toBeGreaterThanOrEqual(44);
 }
 
 test.describe("Core loop end-to-end (VOC-031-T08)", () => {
@@ -323,9 +337,11 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     // A fresh result explicitly has reported=false and remains reportable.
     // A failed report preserves the feedback result and keeps the action
     // retryable; reporting never replaces the feedback under DOC-09 §16.
-    await expect(
-      page.getByRole("button", { name: "Report a problem" }),
-    ).toBeVisible();
+    const reportButton = page.getByRole("button", {
+      name: "Report a problem",
+    });
+    await expect(reportButton).toBeVisible();
+    await expectMinimumTouchTarget(reportButton);
     const reportEndpoint = "**/api/v1/sentence-feedback/*/reports";
     await page.route(reportEndpoint, async (route) => {
       await route.fulfill({
@@ -334,7 +350,16 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
         body: JSON.stringify({ error: "temporary_failure" }),
       });
     });
-    await page.getByRole("button", { name: "Report a problem" }).click();
+    await reportButton.click();
+    for (const label of [
+      "Already correct",
+      "Correction changed my meaning",
+      "Explanation was unclear",
+      "Inappropriate",
+      "Something else",
+    ]) {
+      await expectMinimumTouchTarget(page.getByRole("button", { name: label }));
+    }
     await page.getByRole("button", { name: "Already correct" }).click();
     await expect(page.getByText("Unable to report. Try again.")).toBeVisible();
     await expect(page.getByText("Correct", { exact: true })).toBeVisible();
