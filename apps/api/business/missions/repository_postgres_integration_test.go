@@ -157,6 +157,98 @@ func TestCreateDailyMissionSnapshotOnConflictBranchUnchangedAgainstRealPostgres(
 		"the conflict branch must not rewrite updated_at (was %s, now %s)", firstUpdatedAt, secondUpdatedAt)
 }
 
+// TestGraceProtectedMissionSnapshotConstraintsAgainstRealPostgres proves the
+// database, rather than only MarkSnapshotProtected's normal write path,
+// rejects inconsistent or cross-learner grace links. A protected mission
+// preserves a streak only when the append-only grace ledger contains the
+// matching debit for the same learner (DOC-05 §§2,10,12).
+func TestGraceProtectedMissionSnapshotConstraintsAgainstRealPostgres(t *testing.T) {
+	// Use the explicitly supplied validation instance rather than the
+	// Docker-only helper so this regression exercises all committed forward
+	// migrations wherever the repository's shared PostgreSQL check is
+	// available. The helper isolates the test in its own schema.
+	db := newMigratedPostgresFromEnv(t)
+	repo := NewRepository(db)
+	firstUserID := insertTestUser(t, db)
+	secondUserID := insertTestUser(t, db)
+	day := time.Date(2026, 9, 8, 0, 0, 0, 0, time.UTC)
+	firstSnapshot := createSnapshotInOwnTransaction(t, db, repo, firstUserID, day, 20)
+	secondSnapshot := createSnapshotInOwnTransaction(t, db, repo, secondUserID, day, 20)
+
+	firstGraceID := insertGraceDebit(t, db, firstUserID, day)
+	secondGraceID := insertGraceDebit(t, db, secondUserID, day)
+
+	_, err := db.ExecContext(t.Context(), `UPDATE daily_mission_snapshots
+		SET status = 'protected', grace_applied = true, grace_day_id = $1
+		WHERE id = $2`, firstGraceID, firstSnapshot.ID)
+	require.NoError(t, err, "a same-user grace debit must protect its mission")
+
+	for _, tc := range []struct {
+		name         string
+		snapshotID   string
+		status       string
+		graceApplied bool
+		graceID      *uuid.UUID
+		code         string
+	}{
+		{
+			name:         "protected_without_applied_grace",
+			snapshotID:   secondSnapshot.ID,
+			status:       "protected",
+			graceApplied: false,
+			code:         "23514",
+		},
+		{
+			name:         "protected_with_dangling_grace_id",
+			snapshotID:   secondSnapshot.ID,
+			status:       "protected",
+			graceApplied: true,
+			graceID:      uuidPtr(uuid.New()),
+			code:         "23503",
+		},
+		{
+			name:         "protected_with_another_learners_grace_id",
+			snapshotID:   firstSnapshot.ID,
+			status:       "protected",
+			graceApplied: true,
+			graceID:      &secondGraceID,
+			code:         "23503",
+		},
+		{
+			name:         "non_protected_with_grace_link",
+			snapshotID:   firstSnapshot.ID,
+			status:       "open",
+			graceApplied: true,
+			graceID:      &firstGraceID,
+			code:         "23514",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := db.ExecContext(t.Context(), `UPDATE daily_mission_snapshots
+				SET status = $1, grace_applied = $2, grace_day_id = $3
+				WHERE id = $4`, tc.status, tc.graceApplied, tc.graceID, tc.snapshotID)
+			require.Error(t, err)
+			var pqErr *pq.Error
+			require.ErrorAs(t, err, &pqErr)
+			assert.Equal(t, tc.code, string(pqErr.Code))
+		})
+	}
+}
+
+func insertGraceDebit(t *testing.T, db *sql.DB, userID uuid.UUID, localDate time.Time) uuid.UUID {
+	t.Helper()
+	id := uuid.New()
+	_, err := db.ExecContext(t.Context(), `INSERT INTO grace_day_ledger (
+		id, user_id, amount, balance_after, reason, source_type,
+		applied_to_local_date, timezone, idempotency_key, created_at, updated_at
+	) VALUES ($1, $2, -1, 0, 'used_for_missed_day', 'streak', $3, 'UTC', $4, NOW(), NOW())`,
+		id, userID, localDate, "grace-linkage-"+id.String())
+	require.NoError(t, err)
+	return id
+}
+
+func uuidPtr(id uuid.UUID) *uuid.UUID { return &id }
+
 // missionSnapshotNotNullViolationFragment identifies a NOT NULL violation
 // raised by daily_mission_snapshots specifically - the defect VOC-046-T00
 // owns. Postgres names the offending relation in the error text, which is

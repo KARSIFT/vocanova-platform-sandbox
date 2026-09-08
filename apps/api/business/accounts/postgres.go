@@ -520,17 +520,20 @@ func (r *PostgreSQLRepository) anonymizeUserDataTx(ctx context.Context, tx *sql.
 	}
 	counters.ConfidencePointLedger = c
 	c, err = execCount(ctx, tx, userID,
-		`DELETE FROM grace_day_ledger WHERE user_id = $1`)
-	if err != nil {
-		return counters, fmt.Errorf("delete grace_day_ledger: %w", err)
-	}
-	counters.GraceDayLedger = c
-	c, err = execCount(ctx, tx, userID,
 		`DELETE FROM daily_mission_snapshots WHERE user_id = $1`)
 	if err != nil {
 		return counters, fmt.Errorf("delete daily_mission_snapshots: %w", err)
 	}
 	counters.DailyMissionSnapshots = c
+	// Protected mission snapshots reference their same-user grace-ledger
+	// debit with ON DELETE RESTRICT. Purge the dependent snapshot before its
+	// append-only ledger row; every other deletion remains explicit too.
+	c, err = execCount(ctx, tx, userID,
+		`DELETE FROM grace_day_ledger WHERE user_id = $1`)
+	if err != nil {
+		return counters, fmt.Errorf("delete grace_day_ledger: %w", err)
+	}
+	counters.GraceDayLedger = c
 	c, err = execCount(ctx, tx, userID,
 		`DELETE FROM daily_activity_summaries WHERE user_id = $1`)
 	if err != nil {
