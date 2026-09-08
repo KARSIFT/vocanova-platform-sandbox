@@ -45,7 +45,9 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
 
     await page.getByRole("button", { name: "Log out" }).click();
 
-    const alert = page.getByRole("alert");
+    const alert = page.getByText("Unable to log out. Please try again.", {
+      exact: true,
+    });
     const header = page.getByRole("banner");
     await expect(alert).toHaveText("Unable to log out. Please try again.");
     expect(logoutRequestCount).toBe(1);
