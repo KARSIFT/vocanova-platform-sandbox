@@ -150,6 +150,84 @@ func TestLedgerIdempotencyReplayDoesNotMutateExistingRow(t *testing.T) {
 	require.Equal(t, 1, graceCount)
 }
 
+func TestPointLedgerConflictingReplayReadsCommittedAppendOnlyRow(t *testing.T) {
+	db := ledgerWriterDB(t)
+	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
+	defer cancel()
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	userID := uuid.New()
+	insertLedgerUser(t, ctx, db, userID, now)
+	repo := gamification.NewRepository(db)
+	key := gamification.ReviewAttemptRatedKey("append-only-conflict")
+
+	firstTx, err := db.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	defer firstTx.Rollback()
+	firstID, inserted, err := repo.InsertPointLedger(ctx, firstTx, userID, 5, 5,
+		"review_correct", "review_attempt", nil, key, nil, now)
+	require.NoError(t, err)
+	require.True(t, inserted)
+
+	type replayResult struct {
+		id  uuid.UUID
+		err error
+	}
+	replayed := make(chan replayResult, 1)
+	go func() {
+		tx, err := db.BeginTx(ctx, nil)
+		if err != nil {
+			replayed <- replayResult{err: err}
+			return
+		}
+		defer tx.Rollback()
+		id, _, err := repo.InsertPointLedger(ctx, tx, userID, 999, 999,
+			"review_correct", "review_attempt", nil, key, nil, now.Add(time.Hour))
+		if err == nil {
+			err = tx.Commit()
+		}
+		replayed <- replayResult{id: id, err: err}
+	}()
+
+	// The second INSERT must wait for the uncommitted unique-index owner. Once
+	// the first writer commits, DO NOTHING returns no row and the repository's
+	// fresh SELECT must return that committed append-only row instead of issuing
+	// a no-op UPDATE.
+	waitForPointLedgerConflict(t, ctx, db)
+	require.NoError(t, firstTx.Commit())
+	got := <-replayed
+	require.NoError(t, got.err)
+	require.Equal(t, firstID, got.id)
+
+	var amount, balanceAfter, count int
+	require.NoError(t, db.QueryRowContext(ctx,
+		`SELECT amount, balance_after FROM confidence_point_ledger WHERE id = $1`, firstID,
+	).Scan(&amount, &balanceAfter))
+	require.NoError(t, db.QueryRowContext(ctx,
+		`SELECT count(*) FROM confidence_point_ledger WHERE user_id = $1`, userID,
+	).Scan(&count))
+	require.Equal(t, 5, amount)
+	require.Equal(t, 5, balanceAfter)
+	require.Equal(t, 1, count)
+}
+
+func waitForPointLedgerConflict(t *testing.T, ctx context.Context, db *sql.DB) {
+	t.Helper()
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		var waiting int
+		err := db.QueryRowContext(ctx, `SELECT count(*) FROM pg_stat_activity
+			WHERE pid <> pg_backend_pid() AND state = 'active'
+			  AND wait_event_type = 'Lock'
+			  AND query LIKE '%INSERT INTO confidence_point_ledger%'`).Scan(&waiting)
+		require.NoError(t, err)
+		if waiting > 0 {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("conflicting point-ledger replay did not wait for the unique index")
+}
+
 func insertLedgerUser(t *testing.T, ctx context.Context, db *sql.DB, userID uuid.UUID, now time.Time) {
 	t.Helper()
 	_, err := db.ExecContext(ctx, `INSERT INTO users (id, email, status, onboarding_status, created_at, updated_at)
