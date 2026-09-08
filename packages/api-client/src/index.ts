@@ -196,7 +196,7 @@ export interface ReviewAttempt {
   attemptType: string;
   promptType: "multiple_choice" | "self_check";
   result: "correct" | "incorrect" | "skipped";
-  rating?: "again" | "hard" | "good" | "easy" | null;
+  rating: "again" | "hard" | "good" | "easy" | null;
   reviewStepBefore: number;
   reviewStepAfter: number;
   answeredAt: string;
