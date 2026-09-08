@@ -249,11 +249,12 @@ func TestAIFeedbackOutcomeIntegrityMigrationCarriesDatabaseInvariants(t *testing
 	text := string(sql)
 	for _, invariant := range []string{
 		"ALTER TABLE ai_feedback_attempts",
-		"status <> 'succeeded' OR feedback_json IS NOT NULL",
+		"status <> 'succeeded' OR (feedback_json IS NOT NULL AND jsonb_typeof(feedback_json) = 'object')",
 		"status = 'succeeded' OR feedback_json IS NULL",
 		"status = 'succeeded' OR feedback_text IS NULL",
 		"status = 'failed' OR error_code IS NULL",
 		"status = 'failed' OR error_message IS NULL",
+		"NOT VALID",
 	} {
 		if !strings.Contains(text, invariant) {
 			t.Errorf("migration missing invariant %q", invariant)

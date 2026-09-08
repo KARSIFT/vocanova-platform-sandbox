@@ -21,7 +21,7 @@ func (AIFeedbackAttempt) Annotations() []schema.Annotation {
 			Checks: map[string]string{
 				"completed_at_required_on_success":  "status <> 'succeeded' OR completed_at IS NOT NULL",
 				"error_code_required_on_failure":    "status <> 'failed' OR error_code IS NOT NULL",
-				"feedback_json_required_on_success": "status <> 'succeeded' OR feedback_json IS NOT NULL",
+				"feedback_json_required_on_success": "status <> 'succeeded' OR (feedback_json IS NOT NULL AND jsonb_typeof(feedback_json) = 'object')",
 				"feedback_json_only_on_success":     "status = 'succeeded' OR feedback_json IS NULL",
 				"feedback_text_only_on_success":     "status = 'succeeded' OR feedback_text IS NULL",
 				"error_code_only_on_failure":        "status = 'failed' OR error_code IS NULL",

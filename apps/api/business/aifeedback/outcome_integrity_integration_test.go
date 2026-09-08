@@ -28,16 +28,29 @@ func TestAIFeedbackOutcomeIntegrityPostgreSQL(t *testing.T) {
 			error_message text,
 			completed_at timestamptz,
 			CONSTRAINT completed_at_required_on_success CHECK (status <> 'succeeded' OR completed_at IS NOT NULL),
-			CONSTRAINT error_code_required_on_failure CHECK (status <> 'failed' OR error_code IS NOT NULL),
-			CONSTRAINT feedback_json_required_on_success CHECK (status <> 'succeeded' OR feedback_json IS NOT NULL),
-			CONSTRAINT feedback_json_only_on_success CHECK (status = 'succeeded' OR feedback_json IS NULL),
-			CONSTRAINT feedback_text_only_on_success CHECK (status = 'succeeded' OR feedback_text IS NULL),
-			CONSTRAINT error_code_only_on_failure CHECK (status = 'failed' OR error_code IS NULL),
-			CONSTRAINT error_message_only_on_failure CHECK (status = 'failed' OR error_message IS NULL)
+			CONSTRAINT error_code_required_on_failure CHECK (status <> 'failed' OR error_code IS NOT NULL)
 		)`)
 	require.NoError(t, err)
 
 	now := time.Date(2026, 9, 8, 14, 0, 0, 0, time.UTC)
+	// A historic row that predates the new invariant must not make deployment
+	// fail. NOT VALID constraints still reject every new or changed row.
+	legacyID := uuid.New()
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO ai_feedback_attempts (id, status, completed_at)
+		VALUES ($1, 'succeeded', $2)`, legacyID, now)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, `
+		ALTER TABLE ai_feedback_attempts
+			ADD CONSTRAINT feedback_json_required_on_success CHECK (status <> 'succeeded' OR (feedback_json IS NOT NULL AND jsonb_typeof(feedback_json) = 'object')) NOT VALID,
+			ADD CONSTRAINT feedback_json_only_on_success CHECK (status = 'succeeded' OR feedback_json IS NULL) NOT VALID,
+			ADD CONSTRAINT feedback_text_only_on_success CHECK (status = 'succeeded' OR feedback_text IS NULL) NOT VALID,
+			ADD CONSTRAINT error_code_only_on_failure CHECK (status = 'failed' OR error_code IS NULL) NOT VALID,
+			ADD CONSTRAINT error_message_only_on_failure CHECK (status = 'failed' OR error_message IS NULL) NOT VALID`)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, `UPDATE ai_feedback_attempts SET feedback_text = 'changed' WHERE id = $1`, legacyID)
+	require.Error(t, err, "changing a legacy-invalid row must enforce the new constraints")
+
 	insert := func(status string, feedbackJSON, feedbackText, errorCode, errorMessage any, completedAt any) error {
 		_, err := db.ExecContext(ctx, `
 			INSERT INTO ai_feedback_attempts (id, status, feedback_json, feedback_text, error_code, error_message, completed_at)
@@ -59,6 +72,8 @@ func TestAIFeedbackOutcomeIntegrityPostgreSQL(t *testing.T) {
 		completed  any
 	}{
 		{name: "success without structured output", status: AttemptStatusSucceeded, completed: now},
+		{name: "success with JSON null", status: AttemptStatusSucceeded, json: `null`, completed: now},
+		{name: "success with JSON scalar", status: AttemptStatusSucceeded, json: `"correct"`, completed: now},
 		{name: "success with failure code", status: AttemptStatusSucceeded, json: `{"status":"correct"}`, code: ErrorCodeTemporaryFailure, completed: now},
 		{name: "failed with success payload", status: AttemptStatusFailed, json: `{"status":"correct"}`, code: ErrorCodeTemporaryFailure, completed: now},
 		{name: "pending with feedback text", status: AttemptStatusPending, text: "leaked terminal text"},
