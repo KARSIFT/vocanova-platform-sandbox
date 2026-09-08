@@ -386,10 +386,11 @@ function buildProgress(state) {
   return cloneProgress(state.progress);
 }
 
-function buildDailyMission(state) {
+function buildDailyMission(state, reviewTarget = DEFAULT_DAILY_MISSION.reviewTarget) {
   const streak = { ...state.progress.streak };
   return {
     ...state.dailyMission,
+    reviewTarget,
     reviewsCompleted: state.reviewedCount,
     streak,
   };
@@ -1090,7 +1091,15 @@ const server = createServer(async (req, res) => {
 
   if (req.method === "GET" && url.pathname === "/api/v1/daily-mission") {
     const state = getSessionState(cookies);
-    const mission = buildDailyMission(state);
+    const requestedReviewTarget = Number(cookies.e2e_daily_review_target);
+    const mission = buildDailyMission(
+      state,
+      Number.isSafeInteger(requestedReviewTarget) &&
+        requestedReviewTarget >= 5 &&
+        requestedReviewTarget <= 100
+        ? requestedReviewTarget
+        : undefined,
+    );
     logLine(req, 200, { reviewsCompleted: mission.reviewsCompleted });
     jsonResponse(res, 200, mission);
     return;

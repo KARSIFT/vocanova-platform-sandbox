@@ -37,6 +37,12 @@ async function seedReviewFixture(
       domain: "127.0.0.1",
       path: "/",
     },
+    {
+      name: "e2e_daily_review_target",
+      value: String(count),
+      domain: "127.0.0.1",
+      path: "/",
+    },
   ]);
 }
 
