@@ -1,6 +1,7 @@
 package gamification
 
 import (
+	"database/sql"
 	"encoding/json"
 	"testing"
 	"time"
@@ -17,9 +18,8 @@ const (
 	streakStateInsertColumnsPattern = `INSERT INTO streak_states \(\s*id,\s*user_id,\s*current_streak_count,\s*longest_streak_count,\s*last_completed_local_date,\s*last_activity_local_date,\s*timezone,\s*status,\s*created_at,\s*updated_at\s*\)`
 )
 
-// TestRepositoryInsertPointLedgerIdempotent exercises the
-// (user_id, idempotency_key) ON CONFLICT branch. A retried point award
-// with the same idempotency key must not create a second row.
+// TestRepositoryInsertPointLedgerIdempotent covers a fresh point award.
+// The duplicate-key readback path is covered separately below.
 func TestRepositoryInsertPointLedgerIdempotent(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
@@ -53,6 +53,41 @@ func TestRepositoryInsertPointLedgerIdempotent(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestRepositoryInsertPointLedgerReplayReadsExistingAppendOnlyRow(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRepository(db)
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	now := time.Date(2026, 7, 26, 12, 0, 0, 0, time.UTC)
+	existingID := uuid.New()
+
+	mock.ExpectBegin()
+	mock.ExpectQuery(pointLedgerInsertColumnsPattern+`(?s:.*?)ON CONFLICT \(user_id, idempotency_key\)(?s:.*?)DO NOTHING(?s:.*?)RETURNING id`).
+		WithArgs(
+			sqlmock.AnyArg(), userID, 99, 99, "review_correct", "review_attempt",
+			sqlmock.AnyArg(), "review_attempt:replay:rated", nil, now,
+		).
+		WillReturnError(sql.ErrNoRows)
+	mock.ExpectQuery(`SELECT id FROM confidence_point_ledger\s+WHERE user_id = \$1 AND idempotency_key = \$2`).
+		WithArgs(userID, "review_attempt:replay:rated").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(existingID))
+	mock.ExpectCommit()
+
+	tx, err := db.Begin()
+	require.NoError(t, err)
+	id, err := repo.InsertPointLedger(
+		t.Context(), tx, userID, 99, 99,
+		"review_correct", "review_attempt", nil,
+		ReviewAttemptRatedKey("replay"), nil, now,
+	)
+	require.NoError(t, err)
+	assert.Equal(t, existingID, id)
+	require.NoError(t, tx.Commit())
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestRepositoryGetLatestPointBalanceTxLocksUserBalance(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
@@ -78,8 +113,8 @@ func TestRepositoryGetLatestPointBalanceTxLocksUserBalance(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
-// TestRepositoryInsertGraceLedgerIdempotent is the grace-day equivalent of
-// the point-ledger idempotency test.
+// TestRepositoryInsertGraceLedgerIdempotent covers a fresh grace-day award.
+// The duplicate-key readback path is covered separately below.
 func TestRepositoryInsertGraceLedgerIdempotent(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
@@ -108,6 +143,42 @@ func TestRepositoryInsertGraceLedgerIdempotent(t *testing.T) {
 	)
 	require.NoError(t, err)
 	assert.NotEqual(t, uuid.Nil, id)
+	require.NoError(t, tx.Commit())
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestRepositoryInsertGraceLedgerReplayReadsExistingAppendOnlyRow(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRepository(db)
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	day := time.Date(2026, 7, 26, 0, 0, 0, 0, time.UTC)
+	existingID := uuid.New()
+
+	mock.ExpectBegin()
+	mock.ExpectQuery(graceLedgerInsertColumnsPattern+`(?s:.*?)ON CONFLICT \(user_id, idempotency_key\)(?s:.*?)DO NOTHING(?s:.*?)RETURNING id`).
+		WithArgs(
+			sqlmock.AnyArg(), userID, 99, 99, "earned_by_streak", "streak",
+			sqlmock.AnyArg(), day, "UTC", "streak:replay:2026-07-26:grace_day_earned",
+		).
+		WillReturnError(sql.ErrNoRows)
+	mock.ExpectQuery(`SELECT id FROM grace_day_ledger\s+WHERE user_id = \$1 AND idempotency_key = \$2`).
+		WithArgs(userID, "streak:replay:2026-07-26:grace_day_earned").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(existingID))
+	mock.ExpectCommit()
+
+	tx, err := db.Begin()
+	require.NoError(t, err)
+	id, err := repo.InsertGraceLedger(
+		t.Context(), tx, userID, 99, 99,
+		"earned_by_streak", "streak", nil,
+		day, "UTC",
+		StreakGraceDayEarnedKey("replay", "2026-07-26"),
+	)
+	require.NoError(t, err)
+	assert.Equal(t, existingID, id)
 	require.NoError(t, tx.Commit())
 	require.NoError(t, mock.ExpectationsWereMet())
 }

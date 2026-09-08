@@ -52,6 +52,51 @@ func TestLearningLedgersRejectMutationExceptScopedAccountPurge(t *testing.T) {
 	requireAppendOnlyViolation(t, err)
 }
 
+func TestLearningLedgerPurgeGateRollsBackWithAccountAnonymization(t *testing.T) {
+	db := ledgerWriterDB(t)
+	ctx := t.Context()
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	userID := uuid.New()
+	insertLedgerUser(t, ctx, db, userID, now)
+	insertLearningLedgerRows(t, ctx, db, userID, now)
+
+	// Fail after the confidence ledger has been deleted but while deleting the
+	// grace ledger. This exercises the production rollback path with the gate
+	// enabled, rather than only asserting that set_config was called in a mock.
+	_, err := db.ExecContext(ctx, `
+		CREATE FUNCTION vocanova_test_reject_grace_ledger_purge()
+		RETURNS trigger
+		LANGUAGE plpgsql
+		AS $$
+		BEGIN
+			RAISE EXCEPTION 'injected grace ledger purge failure';
+		END;
+		$$;
+		CREATE TRIGGER vocanova_test_reject_grace_ledger_purge
+			AFTER DELETE ON grace_day_ledger
+			FOR EACH ROW EXECUTE FUNCTION vocanova_test_reject_grace_ledger_purge();
+	`)
+	require.NoError(t, err)
+
+	_, err = accounts.NewPostgreSQLRepository(db).AnonymizeUserData(ctx, userID)
+	require.ErrorContains(t, err, "delete grace_day_ledger")
+
+	var pointCount, graceCount int
+	require.NoError(t, db.QueryRowContext(ctx,
+		`SELECT count(*) FROM confidence_point_ledger WHERE user_id = $1`, userID,
+	).Scan(&pointCount))
+	require.NoError(t, db.QueryRowContext(ctx,
+		`SELECT count(*) FROM grace_day_ledger WHERE user_id = $1`, userID,
+	).Scan(&graceCount))
+	require.Equal(t, 1, pointCount, "the failed purge must restore prior ledger deletes")
+	require.Equal(t, 1, graceCount)
+
+	// set_config(..., true) is transaction-local: rollback must not leave a
+	// pooled connection able to delete ledger history in a later transaction.
+	_, err = db.ExecContext(ctx, `DELETE FROM confidence_point_ledger WHERE user_id = $1`, userID)
+	requireAppendOnlyViolation(t, err)
+}
+
 func TestLedgerIdempotencyReplayDoesNotMutateExistingRow(t *testing.T) {
 	db := ledgerWriterDB(t)
 	ctx := t.Context()
