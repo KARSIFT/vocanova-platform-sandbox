@@ -23,8 +23,10 @@ func (DailyMissionSnapshot) Annotations() []schema.Annotation {
 				"reviews_completed_in_range":    "reviews_completed >= 0 AND reviews_completed <= review_target",
 				"new_word_target_in_range":      "new_word_target IS NULL OR (new_word_target >= 1 AND new_word_target <= 100)",
 				"new_words_completed_in_range":  "new_word_target IS NULL OR (new_words_completed >= 0 AND new_words_completed <= new_word_target)",
+				"new_word_goal_pair_consistent": "(new_word_target IS NULL AND new_words_completed IS NULL) OR (new_word_target IS NOT NULL AND new_words_completed IS NOT NULL AND new_words_completed >= 0 AND new_words_completed <= new_word_target)",
 				"sentence_target_in_range":      "sentence_practice_target IS NULL OR (sentence_practice_target >= 1 AND sentence_practice_target <= 100)",
 				"sentence_completed_in_range":   "sentence_practice_target IS NULL OR (sentence_practices_completed >= 0 AND sentence_practices_completed <= sentence_practice_target)",
+				"sentence_goal_pair_consistent": "(sentence_practice_target IS NULL AND sentence_practices_completed IS NULL) OR (sentence_practice_target IS NOT NULL AND sentence_practices_completed IS NOT NULL AND sentence_practices_completed >= 0 AND sentence_practices_completed <= sentence_practice_target)",
 				"completed_at_required_on_done": "status <> 'completed' OR completed_at IS NOT NULL",
 				// A protected day is the persisted result of consuming one
 				// grace day. The cross-table, same-user foreign key is owned
