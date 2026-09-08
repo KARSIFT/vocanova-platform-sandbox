@@ -4,6 +4,7 @@ async function seedReviewSession(
   context: BrowserContext,
   sessionId: string,
   fixtureCount?: number,
+  reviewTarget?: number,
 ) {
   const origins = [
     "http://127.0.0.1:3000",
@@ -22,6 +23,15 @@ async function seedReviewSession(
               value: String(fixtureCount),
               url,
             },
+            ...(reviewTarget === undefined
+              ? []
+              : [
+                  {
+                    name: "e2e_daily_review_target",
+                    value: String(reviewTarget),
+                    url,
+                  },
+                ]),
           ]),
     ]),
   );
@@ -135,7 +145,7 @@ test.describe("Review stale-card recovery", () => {
     ]
       .map(encodeURIComponent)
       .join("-");
-    await seedReviewSession(context, sessionId, 2);
+    await seedReviewSession(context, sessionId, 2, 2);
     await page.goto("/reviews");
 
     await submitFixtureReview(page, 1);
@@ -144,7 +154,7 @@ test.describe("Review stale-card recovery", () => {
     ).toBeVisible();
 
     let dueRefreshCount = 0;
-    await page.route("**/api/v1/reviews/due?limit=50", async (route) => {
+    await page.route("**/api/v1/reviews/due?limit=*", async (route) => {
       dueRefreshCount += 1;
       await route.fulfill({
         contentType: "application/json",
@@ -191,7 +201,7 @@ test.describe("Review stale-card recovery", () => {
     ]
       .map(encodeURIComponent)
       .join("-");
-    await seedReviewSession(context, sessionId, 1);
+    await seedReviewSession(context, sessionId, 1, 2);
     await page.goto("/reviews");
 
     let submissionCount = 0;
@@ -213,7 +223,7 @@ test.describe("Review stale-card recovery", () => {
     });
 
     let dueRefreshCount = 0;
-    await page.route("**/api/v1/reviews/due?limit=50", async (route) => {
+    await page.route("**/api/v1/reviews/due?limit=*", async (route) => {
       dueRefreshCount += 1;
       await route.fulfill({
         contentType: "application/json",
