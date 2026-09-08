@@ -29,14 +29,19 @@ async function seedReviewSession(
 
 async function submitFixtureReview(page: Page, index: number) {
   const showAnswer = page.getByRole("button", { name: "Show answer" });
+  const multipleChoiceOption = page.getByRole("button", {
+    name: `noun — definition for review word ${index}`,
+  });
+
+  // Navigation may briefly show neither review control while the due queue is
+  // loading. Wait for the prompt type instead of deciding from that transient
+  // state, so the helper does not wait for an option that will never render.
+  await expect(showAnswer.or(multipleChoiceOption).first()).toBeVisible();
+
   if (await showAnswer.isVisible()) {
     await showAnswer.click();
   } else {
-    await page
-      .getByRole("button", {
-        name: `noun — definition for review word ${index}`,
-      })
-      .click();
+    await multipleChoiceOption.click();
   }
   await page.getByRole("button", { name: "Good" }).click();
 }
