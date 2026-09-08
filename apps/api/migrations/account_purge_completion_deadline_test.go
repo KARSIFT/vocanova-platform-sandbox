@@ -114,6 +114,20 @@ func TestAccountPurgeCompletionDeadlineAgainstPostgreSQL(t *testing.T) {
 		uuid.New(), requestedAt, purgeAfter, purgeAfter.Add(-time.Microsecond))
 	requireAccountPurgeDeadlineViolation(t, err)
 
+	// The new deadline check complements rather than replaces the lifecycle
+	// checks that bind completed_at to the completed status.
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO account_deletion_requests (id, status, requested_at, purge_after, completed_at)
+		VALUES ($1, 'completed', $2, $3, NULL)`,
+		uuid.New(), requestedAt, purgeAfter)
+	requireAccountPurgeDeadlineViolation(t, err)
+
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO account_deletion_requests (id, status, requested_at, purge_after, completed_at)
+		VALUES ($1, 'deactivated', $2, $3, $4)`,
+		uuid.New(), requestedAt, purgeAfter, purgeAfter)
+	requireAccountPurgeDeadlineViolation(t, err)
+
 	_, err = db.ExecContext(ctx, `
 		UPDATE account_deletion_requests SET completed_at = $1 WHERE id = $2`,
 		purgeAfter.Add(-time.Second), validID)
