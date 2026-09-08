@@ -126,6 +126,46 @@ func TestPostgreSQLRepositoryRevokeAllEmailChangeLinksForUser(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestPostgreSQLRepositoryCleanupExpiredEmailChangeLinks(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	now := time.Now().UTC()
+	mock.ExpectExec("WITH inactive AS").
+		WithArgs(now, 1000).
+		WillReturnResult(sqlmock.NewResult(0, 3))
+
+	n, err := NewPostgreSQLRepository(db).CleanupExpiredEmailChangeLinks(context.Background(), now, 1000)
+	require.NoError(t, err)
+	assert.Equal(t, int64(3), n)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestPostgreSQLRepositoryCleanupExpiredEmailChangeLinksReturnsDatabaseError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	mock.ExpectExec("WITH inactive AS").
+		WithArgs(sqlmock.AnyArg(), 1000).
+		WillReturnError(errors.New("database unavailable"))
+
+	_, err = NewPostgreSQLRepository(db).CleanupExpiredEmailChangeLinks(context.Background(), time.Now().UTC(), 1000)
+	require.Error(t, err)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestPostgreSQLRepositoryCleanupExpiredEmailChangeLinksRejectsNonPositiveLimit(t *testing.T) {
+	db, _, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	n, err := NewPostgreSQLRepository(db).CleanupExpiredEmailChangeLinks(context.Background(), time.Now().UTC(), 0)
+	require.Zero(t, n)
+	require.Error(t, err)
+}
+
 func TestPostgreSQLRepositoryUpdateUserEmailSuccess(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)

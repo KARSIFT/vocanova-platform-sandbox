@@ -225,6 +225,18 @@ func NewService(repo Repository, authRepo AuthRepository, emailSender email.Send
 	}
 }
 
+// CleanupExpiredEmailChangeLinks removes transient confirmation credentials
+// that can no longer be consumed. It deliberately has no request identity or
+// rate-limit dependency because the production background loop is its only
+// caller.
+func (s *Service) CleanupExpiredEmailChangeLinks(ctx context.Context, limit int) (int64, error) {
+	n, err := s.repo.CleanupExpiredEmailChangeLinks(ctx, s.clock.Now().UTC(), limit)
+	if err != nil {
+		return 0, fmt.Errorf("cleanup email change links: %w", err)
+	}
+	return n, nil
+}
+
 // EmailLink is the dispatch-side projection returned by
 // RequestEmailChangeLink. The link is the only artifact the API
 // layer needs to embed in the outbound email body; the raw token is

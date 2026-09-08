@@ -299,7 +299,9 @@ export function validateMockInventory() {
   // daily-activity review-counter integrity constraints; it does not add a
   // new table or application boundary. The grace-protected mission linkage
   // is likewise a forward integrity change to existing mission and ledger
-  // tables, rather than a new application boundary.
+  // tables, rather than a new application boundary. VOC-1385 adds the
+  // cleanup-order index for the existing email_change_links table; it is also
+  // a forward operational integrity change, not a new application boundary.
   const allowedMigrationFiles = new Set([
     "20260724210000_identity_foundation.sql",
     "20260724210001_oauth_state.sql",
@@ -321,6 +323,7 @@ export function validateMockInventory() {
     "20260908020000_voc1352_feature_audit_logs.sql",
     "20260908110000_daily_activity_review_counter_integrity.sql",
     "20260908120000_grace_protected_mission_linkage.sql",
+    "20260908130000_email_change_links_cleanup_order.sql",
   ]);
   for (const entry of readdirSync(apiMigrationRoot, {
     withFileTypes: true,

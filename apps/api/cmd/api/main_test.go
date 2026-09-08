@@ -131,6 +131,87 @@ func TestStopIdempotencyCleanupWaitsForLoopExit(t *testing.T) {
 	stopIdempotencyCleanup(cancel, done)
 }
 
+type fakeEmailChangeCleaner struct {
+	calls atomic.Int32
+	limit atomic.Int32
+}
+
+func (f *fakeEmailChangeCleaner) CleanupExpiredEmailChangeLinks(_ context.Context, limit int) (int64, error) {
+	f.calls.Add(1)
+	f.limit.Store(int32(limit))
+	return 0, nil
+}
+
+func TestRunEmailChangeCleanupLoopRunsImmediatelyAndStopsOnCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cleaner := &fakeEmailChangeCleaner{}
+	done := make(chan struct{})
+	go func() {
+		runEmailChangeCleanupLoop(ctx, cleaner, time.Hour)
+		close(done)
+	}()
+
+	deadline := time.After(time.Second)
+	for cleaner.calls.Load() == 0 {
+		select {
+		case <-deadline:
+			t.Fatal("email-change cleanup did not run at startup")
+		case <-time.After(time.Millisecond):
+		}
+	}
+	if got := cleaner.limit.Load(); got != emailChangeCleanupBatchSize {
+		t.Fatalf("cleanup limit = %d, want %d", got, emailChangeCleanupBatchSize)
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("email-change cleanup loop did not stop after cancellation")
+	}
+}
+
+func TestStopEmailChangeCleanupWaitsForLoopExit(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		<-ctx.Done()
+		close(done)
+	}()
+	stopEmailChangeCleanup(cancel, done)
+}
+
+type failingEmailChangeCleaner struct{ calls atomic.Int32 }
+
+func (f *failingEmailChangeCleaner) CleanupExpiredEmailChangeLinks(context.Context, int) (int64, error) {
+	f.calls.Add(1)
+	return 0, errors.New("synthetic cleanup failure")
+}
+
+func TestRunEmailChangeCleanupLoopContinuesAfterFailure(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cleaner := &failingEmailChangeCleaner{}
+	done := make(chan struct{})
+	go func() {
+		runEmailChangeCleanupLoop(ctx, cleaner, 5*time.Millisecond)
+		close(done)
+	}()
+
+	deadline := time.After(time.Second)
+	for cleaner.calls.Load() < 2 {
+		select {
+		case <-deadline:
+			t.Fatal("email-change cleanup did not retry after a failure")
+		case <-time.After(time.Millisecond):
+		}
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("email-change cleanup loop did not stop after cancellation")
+	}
+}
+
 type fakeDeletionSweeper struct{ calls atomic.Int32 }
 
 func (f *fakeDeletionSweeper) RunDeletionSweep(context.Context, string, string) (*accounts.SweepResult, error) {

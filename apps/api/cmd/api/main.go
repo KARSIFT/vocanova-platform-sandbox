@@ -93,6 +93,20 @@ func run() error {
 		stopIdempotencyCleanup(cancelIdempotencyCleanup, idempotencyCleanupDone)
 	}()
 
+	// Email-change confirmation links are account-owned rather than auth-owned,
+	// but have the same short-lived credential lifecycle. Run their cleanup on
+	// the configured auth-cleanup cadence so consumed, revoked, and expired
+	// links do not retain a pending email address or token hash indefinitely.
+	emailChangeCleanupCtx, cancelEmailChangeCleanup := context.WithCancel(context.Background())
+	emailChangeCleanupDone := make(chan struct{})
+	go func() {
+		defer close(emailChangeCleanupDone)
+		runEmailChangeCleanupLoop(emailChangeCleanupCtx, newEmailChangeCleanupService(db), cfg.AuthCleanupInterval)
+	}()
+	defer func() {
+		stopEmailChangeCleanup(cancelEmailChangeCleanup, emailChangeCleanupDone)
+	}()
+
 	// A deletion request deliberately deactivates first, then is purged after
 	// its grace period. Without this loop, a due row can remain deactivated
 	// forever because no request path invokes RunDeletionSweep. Database-level
@@ -154,12 +168,13 @@ func run() error {
 
 	// Stop and join all background jobs before beginning the HTTP drain. This
 	// prevents a ticker from beginning a new credential-delete, idempotency-
-	// cleanup, or account-purge pass during the graceful-shutdown window. The
-	// deferred calls remain
+	// cleanup, email-change cleanup, or account-purge pass during the graceful-
+	// shutdown window. The deferred calls remain
 	// safety nets for earlier returns; cancellation and reads from closed done
 	// channels are idempotent.
 	stopAuthCleanup(cancelCleanup, cleanupDone)
 	stopIdempotencyCleanup(cancelIdempotencyCleanup, idempotencyCleanupDone)
+	stopEmailChangeCleanup(cancelEmailChangeCleanup, emailChangeCleanupDone)
 	stopDeletionSweep(cancelSweep, sweepDone)
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -181,9 +196,22 @@ type authCleaner interface {
 	Cleanup(context.Context) error
 }
 
+type emailChangeCleaner interface {
+	CleanupExpiredEmailChangeLinks(context.Context, int) (int64, error)
+}
+
+const emailChangeCleanupBatchSize = 1_000
+
 // stopAuthCleanup cancels the loop and waits until it has exited while the
 // database remains open. It is safe to invoke more than once.
 func stopAuthCleanup(cancel context.CancelFunc, done <-chan struct{}) {
+	cancel()
+	<-done
+}
+
+// stopEmailChangeCleanup cancels the loop and waits until it has exited while
+// the database remains open. It is safe to invoke more than once.
+func stopEmailChangeCleanup(cancel context.CancelFunc, done <-chan struct{}) {
 	cancel()
 	<-done
 }
@@ -217,6 +245,12 @@ func stopDeletionSweep(cancel context.CancelFunc, done <-chan struct{}) {
 // delivery, OAuth, and request-rate-limit collaborators are not involved.
 func newAuthCleanupService(db *sql.DB) authCleaner {
 	return auth.NewService(auth.NewPostgreSQLRepository(db), nil, nil, clock.Real{}, nil, auth.Config{})
+}
+
+// newEmailChangeCleanupService builds the narrow account-owned service used
+// only by the background credential-retention loop.
+func newEmailChangeCleanupService(db *sql.DB) emailChangeCleaner {
+	return accounts.NewService(accounts.NewPostgreSQLRepository(db), nil, nil, nil, clock.Real{}, nil, accounts.Config{})
 }
 
 // runAuthCleanupLoop cleans once at startup, then at the configured cadence.
@@ -263,6 +297,38 @@ func runIdempotencyCleanupLoop(ctx context.Context, cleaner idempotencyCleaner, 
 		}
 		if deleted > 0 {
 			fmt.Fprintf(os.Stderr, "api: idempotency cleanup deleted=%d\n", deleted)
+		}
+	}
+
+	run()
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			run()
+		}
+	}
+}
+
+// runEmailChangeCleanupLoop removes expired, consumed, and revoked email
+// confirmation links once at startup and then at the auth-cleanup cadence.
+// Errors intentionally contain no link or account identifiers, and a failed
+// pass does not prevent the next one.
+func runEmailChangeCleanupLoop(ctx context.Context, cleaner emailChangeCleaner, interval time.Duration) {
+	if interval <= 0 {
+		interval = time.Hour
+	}
+	run := func() {
+		deleted, err := cleaner.CleanupExpiredEmailChangeLinks(ctx, emailChangeCleanupBatchSize)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "api: email-change cleanup failed: %v\n", err)
+			return
+		}
+		if deleted > 0 {
+			fmt.Fprintf(os.Stderr, "api: email-change cleanup deleted=%d\n", deleted)
 		}
 	}
 

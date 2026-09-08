@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -172,6 +173,49 @@ func (r *MemoryRepository) RevokeAllEmailChangeLinksForUser(ctx context.Context,
 		}
 	}
 	return n, nil
+}
+
+// CleanupExpiredEmailChangeLinks mirrors the production cleanup predicate.
+// An unexpired, unconsumed, unrevoked link remains usable.
+func (r *MemoryRepository) CleanupExpiredEmailChangeLinks(ctx context.Context, before time.Time, limit int) (int64, error) {
+	if limit <= 0 {
+		return 0, errors.New("cleanup limit must be positive")
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Map iteration is deliberately random, unlike PostgreSQL's ordered claim.
+	// Sort the candidate ids so in-memory tests retain the same bounded,
+	// deterministic behavior as production.
+	ids := make([]uuid.UUID, 0)
+	for id, link := range r.byID {
+		if !link.ExpiresAt.After(before) || link.ConsumedAt != nil || link.RevokedAt != nil {
+			ids = append(ids, id)
+		}
+	}
+	sort.Slice(ids, func(i, j int) bool { return ids[i].String() < ids[j].String() })
+
+	var deleted int64
+	for _, id := range ids {
+		if deleted == int64(limit) {
+			break
+		}
+		link := r.byID[id]
+		delete(r.byID, id)
+		for hash, indexed := range r.byHash {
+			if indexed == link {
+				delete(r.byHash, hash)
+			}
+		}
+		if links := r.byUser[link.UserID]; links != nil {
+			delete(links, id)
+			if len(links) == 0 {
+				delete(r.byUser, link.UserID)
+			}
+		}
+		deleted++
+	}
+	return deleted, nil
 }
 
 // UpdateUserEmail applies the new email to the user, enforcing the
