@@ -4,6 +4,8 @@ import { describe, it } from "node:test";
 import {
   acceptSentenceEdit,
   countSentenceCharacters,
+  getSentenceCharacterCountDescription,
+  getSentenceCharacterLimitStatus,
   MAX_SENTENCE_CHARACTERS,
 } from "../../src/app/(app)/_components/sentence-feedback-input";
 
@@ -42,5 +44,16 @@ describe("sentence feedback character limit", () => {
     const edited = "I worked today.";
 
     assert.equal(acceptSentenceEdit(sentence, edited), edited);
+  });
+
+  it("describes the current count and announces reaching the limit once", () => {
+    const sentence = "a".repeat(MAX_SENTENCE_CHARACTERS);
+
+    assert.equal(getSentenceCharacterCountDescription("a"), "1 of 300 characters");
+    assert.equal(
+      getSentenceCharacterLimitStatus(sentence),
+      "You've reached the 300-character limit.",
+    );
+    assert.equal(getSentenceCharacterLimitStatus("a"), null);
   });
 });
