@@ -316,10 +316,33 @@ func TestSubmitReviewSchedulesStepForward(t *testing.T) {
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &out.Body))
 	assert.Equal(t, userWordID.String(), out.Body.UserWordID)
 	assert.Equal(t, "correct", out.Body.Result)
-	assert.Equal(t, "good", out.Body.Rating)
+	require.NotNil(t, out.Body.Rating)
+	assert.Equal(t, "good", *out.Body.Rating)
 	assert.Equal(t, 0, out.Body.ReviewStepBefore)
 	assert.Equal(t, 1, out.Body.ReviewStepAfter)
 	assert.False(t, out.Body.NextReviewAt.IsZero())
+}
+
+func TestSubmitReviewReturnsNullRatingForSkippedAttempt(t *testing.T) {
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	wordID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
+	userWordID := uuid.MustParse("00000000-0000-0000-0000-000000000004")
+	api, _, authSvc := testReviewsAPI(t, reviews.MemoryRepositoryData{
+		Words:     []reviews.MemoryWord{{ID: wordID, Text: "boarding pass", NormalizedText: "boarding pass", Status: "active"}},
+		Meanings:  []reviews.MemoryMeaning{{ID: meaningID, WordID: wordID, PartOfSpeech: "noun", ShortDefinition: "A document.", Status: "active"}},
+		UserWords: []reviews.MemoryUserWord{{ID: userWordID, UserID: userID, MeaningID: meaningID, Status: "new", Source: "journey", ReviewStep: 0}},
+	})
+
+	w := httptest.NewRecorder()
+	req := submitReviewRequest(t, userID, `{"userWordId":"00000000-0000-0000-0000-000000000004","meaningId":"00000000-0000-0000-0000-000000000003","promptType":"multiple_choice","result":"skipped","answeredAt":"2026-07-25T12:00:00Z","clientAttemptId":"ca-skipped"}`, authSvc)
+	api.Adapter().ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var out SubmitReviewOutput
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &out.Body))
+	assert.Nil(t, out.Body.Rating)
+	assert.Contains(t, w.Body.String(), `"rating":null`)
 }
 
 func TestSubmitReviewRejectsMultipleChoiceCorrectWithoutSelection(t *testing.T) {

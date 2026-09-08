@@ -50,7 +50,7 @@ type ReviewAttemptDTO struct {
 	AttemptType             string    `json:"attemptType" doc:"Attempt category"`
 	PromptType              string    `json:"promptType" enum:"multiple_choice,self_check" doc:"Prompt type"`
 	Result                  string    `json:"result" enum:"correct,incorrect,skipped" doc:"Objective result"`
-	Rating                  string    `json:"rating" enum:"again,hard,good,easy" doc:"Learner rating"`
+	Rating                  *string   `json:"rating" nullable:"true" enum:"again,hard,good,easy" doc:"Learner rating; null when no rating applies"`
 	ReviewStepBefore        int       `json:"reviewStepBefore" doc:"Review step before this attempt"`
 	ReviewStepAfter         int       `json:"reviewStepAfter" doc:"Review step after this attempt"`
 	AnsweredAt              time.Time `json:"answeredAt" format:"date-time" doc:"When the answer was submitted"`
@@ -185,7 +185,7 @@ func reviewAttemptToDTO(a reviews.ReviewAttempt) ReviewAttemptDTO {
 		AttemptType:      a.AttemptType,
 		PromptType:       a.PromptType,
 		Result:           a.Result,
-		Rating:           a.Rating,
+		Rating:           nullableString(a.Rating),
 		ReviewStepBefore: a.ReviewStepBefore,
 		ReviewStepAfter:  a.ReviewStepAfter,
 		AnsweredAt:       a.AnsweredAt,
