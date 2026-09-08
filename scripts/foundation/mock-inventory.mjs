@@ -306,7 +306,8 @@ export function validateMockInventory() {
   // than new application boundaries. The mission completion-state migration
   // keeps completed_at exclusive to completed snapshots. VOC-1402 makes the
   // existing confidence-point and grace-day histories append-only, with a
-  // transaction-local exception for account purges.
+  // transaction-local exception for account purges. VOC-1406 constrains the
+  // saved word's current result/rating state.
   const allowedMigrationFiles = new Set([
     "20260724210000_identity_foundation.sql",
     "20260724210001_oauth_state.sql",
@@ -338,6 +339,7 @@ export function validateMockInventory() {
     "20260908153000_voc1402_append_only_learning_ledgers.sql",
     "20260908170000_user_word_review_counter_constraints.sql",
     "20260908180000_daily_activity_remaining_counter_integrity.sql",
+    "20260908190000_voc1406_user_word_result_rating_integrity.sql",
   ]);
   for (const entry of readdirSync(apiMigrationRoot, {
     withFileTypes: true,
