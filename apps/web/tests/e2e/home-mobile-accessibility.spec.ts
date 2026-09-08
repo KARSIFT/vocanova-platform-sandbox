@@ -94,6 +94,10 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
       await expect(main).toHaveAttribute("id", "main-content");
       await expect(main).toHaveAttribute("tabindex", "-1");
       await expect(skipLink).toHaveAttribute("href", "#main-content");
+      const documentWidth = await page.evaluate(
+        () => document.documentElement.scrollWidth,
+      );
+      expect(documentWidth).toBeLessThanOrEqual(page.viewportSize()!.width);
 
       await page.keyboard.press("Tab");
 
