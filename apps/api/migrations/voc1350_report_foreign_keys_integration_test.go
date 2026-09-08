@@ -51,21 +51,19 @@ func TestVOC1350ReportForeignKeysRestrictParentDeletion(t *testing.T) {
 	}
 
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	reportUserID, sentenceUserID := uuid.New(), uuid.New()
+	reportUserID := uuid.New()
 	sentenceID, attemptID, reportID := uuid.New(), uuid.New(), uuid.New()
 	t.Cleanup(func() {
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_feedback_quality_review_reports WHERE id = $1`, reportID)
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_feedback_attempts WHERE id = $1`, attemptID)
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM learner_sentences WHERE id = $1`, sentenceID)
-		_, _ = db.ExecContext(context.Background(), `DELETE FROM users WHERE id IN ($1, $2)`, reportUserID, sentenceUserID)
+		_, _ = db.ExecContext(context.Background(), `DELETE FROM users WHERE id = $1`, reportUserID)
 	})
 
-	for _, userID := range []uuid.UUID{reportUserID, sentenceUserID} {
-		if _, err := db.ExecContext(ctx, `INSERT INTO users (id, email, status, created_at, updated_at) VALUES ($1, $2, 'active', $3, $3)`, userID, userID.String()+"@example.test", now); err != nil {
-			t.Fatal(err)
-		}
+	if _, err := db.ExecContext(ctx, `INSERT INTO users (id, email, status, created_at, updated_at) VALUES ($1, $2, 'active', $3, $3)`, reportUserID, reportUserID.String()+"@example.test", now); err != nil {
+		t.Fatal(err)
 	}
-	if _, err := db.ExecContext(ctx, `INSERT INTO learner_sentences (id, user_id, sentence_text, normalized_sentence_text, source, status, submitted_at, created_at, updated_at) VALUES ($1, $2, 'A private sentence.', 'a private sentence.', 'free_practice', 'feedback_ready', $3, $3, $3)`, sentenceID, sentenceUserID, now); err != nil {
+	if _, err := db.ExecContext(ctx, `INSERT INTO learner_sentences (id, user_id, sentence_text, normalized_sentence_text, source, status, submitted_at, created_at, updated_at) VALUES ($1, $2, 'A private sentence.', 'a private sentence.', 'free_practice', 'feedback_ready', $3, $3, $3)`, sentenceID, reportUserID, now); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := db.ExecContext(ctx, `INSERT INTO ai_feedback_attempts (id, learner_sentence_id, status, provider, model, prompt_version, request_hash, feedback_json, completed_at, created_at, updated_at) VALUES ($1, $2, 'succeeded', 'test', 'test', 'v1', $3, '{"status":"correct"}', $4, $4, $4)`, attemptID, sentenceID, attemptID.String(), now); err != nil {

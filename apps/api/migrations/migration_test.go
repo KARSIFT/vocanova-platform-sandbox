@@ -465,6 +465,31 @@ func TestVOC1350ReportForeignKeysUseExplicitDeletion(t *testing.T) {
 	}
 }
 
+func TestVOC1423FeedbackReportOwnerMigrationCarriesDatabaseInvariant(t *testing.T) {
+	sql, err := os.ReadFile("20260908210000_voc1423_feedback_report_owner.sql")
+	if err != nil {
+		t.Fatalf("read voc1423 feedback-report-owner migration: %v", err)
+	}
+	text := string(sql)
+	for _, required := range []string{
+		"CREATE FUNCTION enforce_ai_feedback_quality_review_report_owner()",
+		"JOIN learner_sentences AS sentence ON sentence.id = attempt.learner_sentence_id",
+		"sentence.user_id = NEW.user_id",
+		"ERRCODE = '23503'",
+		"CREATE TRIGGER ai_feedback_quality_review_reports_owner_matches_attempt",
+		"BEFORE INSERT OR UPDATE OF ai_feedback_attempt_id, user_id",
+		"ON ai_feedback_quality_review_reports",
+		"CREATE TRIGGER ai_feedback_attempts_owner_matches_reports",
+		"BEFORE UPDATE OF learner_sentence_id",
+		"CREATE TRIGGER learner_sentences_owner_matches_feedback_reports",
+		"BEFORE UPDATE OF user_id",
+	} {
+		if !strings.Contains(text, required) {
+			t.Errorf("voc1423 feedback-report-owner migration missing %q", required)
+		}
+	}
+}
+
 // TestVOC031P5AccountDeletionRequestsMigrationCarriesDatabaseInvariants
 // covers the migration invariants for VOC-031-T04. The
 // migration creates the account_deletion_requests table per
