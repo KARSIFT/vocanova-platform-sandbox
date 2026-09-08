@@ -58,6 +58,11 @@ func (UserWord) Edges() []ent.Edge {
 
 func (UserWord) Indexes() []ent.Index {
 	return []ent.Index{
+		// The composite unique key is the parent target for the database-level
+		// review-attempt ownership foreign key. Although id is individually
+		// unique, PostgreSQL requires this exact key to reference the repeated
+		// user and meaning values in immutable review history.
+		index.Fields("id", "user_id", "meaning_id").Unique(),
 		index.Fields("user_id", "meaning_id").
 			Unique().
 			Annotations(entsql.IndexWhere("deleted_at IS NULL")),

@@ -527,8 +527,15 @@ func (r *PostgreSQLRepository) anonymizeUserDataTx(ctx context.Context, tx *sql.
 		return counters, fmt.Errorf("delete ai_feedback_attempts: %w", err)
 	}
 	counters.AIFeedbackAttempts = c
+	// The composite review-history FK added after initial deployments is NOT
+	// VALID, so an existing cross-user row can remain until its owning saved
+	// word is purged. Delete by both recorded learner and referenced saved-word
+	// ownership before deleting user_words, otherwise that legacy row would
+	// keep the word alive through the original RESTRICT foreign key.
 	c, err = execCount(ctx, tx, userID,
-		`DELETE FROM review_attempts WHERE user_id = $1`)
+		`DELETE FROM review_attempts
+		 WHERE user_id = $1
+		    OR user_word_id IN (SELECT id FROM user_words WHERE user_id = $1)`)
 	if err != nil {
 		return counters, fmt.Errorf("delete review_attempts: %w", err)
 	}

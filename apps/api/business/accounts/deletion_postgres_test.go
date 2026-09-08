@@ -298,7 +298,7 @@ func TestPostgreSQLRepositoryAnonymizeUserDataUsesPersistedSchema(t *testing.T) 
 		"DELETE FROM ai_feedback_quality_review_reports WHERE user_id = \\$1",
 		"UPDATE feature_audit_logs",
 		"DELETE FROM ai_feedback_attempts AS attempt",
-		"DELETE FROM review_attempts WHERE user_id = \\$1",
+		"DELETE FROM review_attempts WHERE user_id = \\$1 OR user_word_id IN",
 		"DELETE FROM learner_sentences WHERE user_id = \\$1",
 		"DELETE FROM user_words WHERE user_id = \\$1",
 		"DELETE FROM confidence_point_ledger WHERE user_id = \\$1",
@@ -358,7 +358,7 @@ func TestPostgreSQLRepositoryAnonymizeUserDataRollsBack(t *testing.T) {
 	mock.ExpectExec("DELETE FROM ai_feedback_attempts AS attempt").
 		WithArgs(uid).
 		WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectExec("DELETE FROM review_attempts WHERE user_id = \\$1").
+	mock.ExpectExec("DELETE FROM review_attempts WHERE user_id = \\$1 OR user_word_id IN").
 		WithArgs(uid).
 		WillReturnError(errors.New("injected review deletion failure"))
 	mock.ExpectRollback()
