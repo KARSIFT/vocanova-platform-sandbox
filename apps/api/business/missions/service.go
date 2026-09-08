@@ -71,6 +71,22 @@ func (s *Service) IncrementReviewsCompleted(
 	)
 }
 
+// IncrementWordsAdded records a successful word addition in the daily
+// activity summary. New-word mission goals remain optional, so callers pass
+// whether the policy version in use has enabled that bonus.
+func (s *Service) IncrementWordsAdded(
+	ctx context.Context,
+	tx *sql.Tx,
+	userID uuid.UUID,
+	localDate time.Time,
+	timezone string,
+	includeNewWordGoal bool,
+) error {
+	return s.missions.IncrementWordsAdded(
+		ctx, tx, userID, localDate, timezone, includeNewWordGoal,
+	)
+}
+
 // IncrementConfidencePointsEarned adds amount to today's
 // daily_activity_summaries.confidence_points_earned (used by the P1 word-add
 // and P2 review/mission-completion writes to keep the activity summary in
