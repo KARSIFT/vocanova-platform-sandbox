@@ -130,6 +130,7 @@ func TestLoadProductionConfig_DefaultsAreSensible(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "8080", cfg.Port, "PORT must default to 8080 when unset")
 	assert.Equal(t, time.Hour, cfg.AuthCleanupInterval, "AUTH_CLEANUP_INTERVAL must default to one hour when unset")
+	assert.Equal(t, time.Hour, cfg.IdempotencyCleanupInterval, "IDEMPOTENCY_CLEANUP_INTERVAL must default to one hour when unset")
 	assert.Equal(t, time.Hour, cfg.AccountDeletionSweepInterval, "ACCOUNT_DELETION_SWEEP_INTERVAL must default to one hour when unset")
 	assert.Equal(t, "staging", cfg.Environment, "ENVIRONMENT must default to staging when unset")
 	assert.True(t, cfg.AIEnabled, "AI_FEATURES_ENABLED must default to true when unset")
@@ -153,6 +154,22 @@ func TestLoadProductionConfig_RejectsUnsafeAuthCleanupInterval(t *testing.T) {
 			_, err := LoadProductionConfig()
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "AUTH_CLEANUP_INTERVAL")
+		})
+	}
+}
+
+func TestLoadProductionConfig_RejectsUnsafeIdempotencyCleanupInterval(t *testing.T) {
+	for _, interval := range []string{"not-a-duration", "0s", "59s", "24h1s"} {
+		t.Run(interval, func(t *testing.T) {
+			t.Setenv("DATABASE_URL", "postgres://example/db")
+			t.Setenv("BASE_URL", "https://staging.vocanova.site")
+			t.Setenv("SESSION_COOKIE_DOMAIN", "staging.vocanova.site")
+			t.Setenv("OAUTH_REDIRECT_URI", "https://api-staging.vocanova.site/auth/oauth/google/callback")
+			t.Setenv("IDEMPOTENCY_CLEANUP_INTERVAL", interval)
+
+			_, err := LoadProductionConfig()
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "IDEMPOTENCY_CLEANUP_INTERVAL")
 		})
 	}
 }
@@ -190,6 +207,28 @@ func TestLoadProductionConfig_AcceptsAuthCleanupIntervalBoundaries(t *testing.T)
 			cfg, err := LoadProductionConfig()
 			require.NoError(t, err)
 			assert.Equal(t, tc.expected, cfg.AuthCleanupInterval)
+		})
+	}
+}
+
+func TestLoadProductionConfig_AcceptsIdempotencyCleanupIntervalBoundaries(t *testing.T) {
+	for _, tc := range []struct {
+		interval string
+		expected time.Duration
+	}{
+		{interval: "1m", expected: time.Minute},
+		{interval: "24h", expected: 24 * time.Hour},
+	} {
+		t.Run(tc.interval, func(t *testing.T) {
+			t.Setenv("DATABASE_URL", "postgres://example/db")
+			t.Setenv("BASE_URL", "https://staging.vocanova.site")
+			t.Setenv("SESSION_COOKIE_DOMAIN", "staging.vocanova.site")
+			t.Setenv("OAUTH_REDIRECT_URI", "https://api-staging.vocanova.site/auth/oauth/google/callback")
+			t.Setenv("IDEMPOTENCY_CLEANUP_INTERVAL", tc.interval)
+
+			cfg, err := LoadProductionConfig()
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, cfg.IdempotencyCleanupInterval)
 		})
 	}
 }

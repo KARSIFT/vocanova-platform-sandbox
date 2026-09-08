@@ -59,3 +59,33 @@ func (s *PostgreSQLIdempotencyStore) Record(ctx context.Context, userID uuid.UUI
 	}
 	return nil
 }
+
+// CleanupExpired deletes at most limit records whose 24-hour replay window
+// has elapsed. The bounded, skip-locked claim keeps cleanup safe when several
+// API replicas run the same maintenance loop.
+func (s *PostgreSQLIdempotencyStore) CleanupExpired(ctx context.Context, limit int) (int, error) {
+	if limit <= 0 {
+		return 0, errors.New("cleanup limit must be positive")
+	}
+	result, err := s.db.ExecContext(ctx,
+		`WITH expired AS (
+		   SELECT id FROM idempotency_keys
+		   WHERE created_at <= $1
+		   ORDER BY created_at, id
+		   LIMIT $2
+		   FOR UPDATE SKIP LOCKED
+		 )
+		 DELETE FROM idempotency_keys AS keys
+		 USING expired
+		 WHERE keys.id = expired.id`,
+		s.now().UTC().Add(-idempotencyRetention), limit,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("cleanup expired idempotency keys: %w", err)
+	}
+	deleted, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("count cleaned idempotency keys: %w", err)
+	}
+	return int(deleted), nil
+}

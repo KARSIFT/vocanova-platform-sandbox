@@ -21,6 +21,7 @@ import (
 	contract "github.com/KARSIFT/vocanova-platform/apps/api/app/api"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/accounts"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/auth"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/learning"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/getsentry/sentry-go"
 	sentryhttp "github.com/getsentry/sentry-go/http"
@@ -78,6 +79,18 @@ func run() error {
 	}()
 	defer func() {
 		stopAuthCleanup(cancelCleanup, cleanupDone)
+	}()
+
+	// Idempotency records stop affecting requests after 24 hours. Delete old
+	// rows in bounded batches so normal traffic cannot grow the table forever.
+	idempotencyCtx, cancelIdempotencyCleanup := context.WithCancel(context.Background())
+	idempotencyCleanupDone := make(chan struct{})
+	go func() {
+		defer close(idempotencyCleanupDone)
+		runIdempotencyCleanupLoop(idempotencyCtx, newIdempotencyCleaner(db), cfg.IdempotencyCleanupInterval)
+	}()
+	defer func() {
+		stopIdempotencyCleanup(cancelIdempotencyCleanup, idempotencyCleanupDone)
 	}()
 
 	// A deletion request deliberately deactivates first, then is purged after
@@ -139,12 +152,14 @@ func run() error {
 		return fmt.Errorf("listen: %w", err)
 	}
 
-	// Stop and join both background jobs before beginning the HTTP drain. This
-	// prevents either ticker from beginning a new credential-delete or account-
-	// purge pass during the graceful-shutdown window. The deferred calls remain
+	// Stop and join all background jobs before beginning the HTTP drain. This
+	// prevents a ticker from beginning a new credential-delete, idempotency-
+	// cleanup, or account-purge pass during the graceful-shutdown window. The
+	// deferred calls remain
 	// safety nets for earlier returns; cancellation and reads from closed done
 	// channels are idempotent.
 	stopAuthCleanup(cancelCleanup, cleanupDone)
+	stopIdempotencyCleanup(cancelIdempotencyCleanup, idempotencyCleanupDone)
 	stopDeletionSweep(cancelSweep, sweepDone)
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -177,6 +192,19 @@ type deletionSweeper interface {
 	RunDeletionSweep(ctx context.Context, clientIP, sessionToken string) (*accounts.SweepResult, error)
 }
 
+const idempotencyCleanupBatchSize = 1_000
+
+type idempotencyCleaner interface {
+	CleanupExpired(context.Context, int) (int, error)
+}
+
+// stopIdempotencyCleanup cancels the loop and joins it while the database is
+// still open. It is safe to invoke more than once.
+func stopIdempotencyCleanup(cancel context.CancelFunc, done <-chan struct{}) {
+	cancel()
+	<-done
+}
+
 // stopDeletionSweep cancels the loop and waits until it has exited while the
 // database is still open. It is safe to invoke more than once.
 func stopDeletionSweep(cancel context.CancelFunc, done <-chan struct{}) {
@@ -201,6 +229,40 @@ func runAuthCleanupLoop(ctx context.Context, cleaner authCleaner, interval time.
 	run := func() {
 		if err := cleaner.Cleanup(ctx); err != nil {
 			fmt.Fprintf(os.Stderr, "api: auth cleanup failed: %v\n", err)
+		}
+	}
+
+	run()
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			run()
+		}
+	}
+}
+
+func newIdempotencyCleaner(db *sql.DB) idempotencyCleaner {
+	return learning.NewPostgreSQLIdempotencyStore(db)
+}
+
+// runIdempotencyCleanupLoop deletes one bounded batch at startup and at each
+// cadence. Failures contain no record contents and are retried by a later pass.
+func runIdempotencyCleanupLoop(ctx context.Context, cleaner idempotencyCleaner, interval time.Duration) {
+	if interval <= 0 {
+		interval = time.Hour
+	}
+	run := func() {
+		deleted, err := cleaner.CleanupExpired(ctx, idempotencyCleanupBatchSize)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "api: idempotency cleanup failed: %v\n", err)
+			return
+		}
+		if deleted > 0 {
+			fmt.Fprintf(os.Stderr, "api: idempotency cleanup deleted=%d\n", deleted)
 		}
 	}
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -49,6 +50,85 @@ func TestStopAuthCleanupWaitsForLoopExit(t *testing.T) {
 		close(done)
 	}()
 	stopAuthCleanup(cancel, done)
+}
+
+type fakeIdempotencyCleaner struct {
+	calls  atomic.Int32
+	limits chan int
+	err    error
+}
+
+func (f *fakeIdempotencyCleaner) CleanupExpired(_ context.Context, limit int) (int, error) {
+	f.calls.Add(1)
+	if f.limits != nil {
+		select {
+		case f.limits <- limit:
+		default:
+		}
+	}
+	return 0, f.err
+}
+
+func TestRunIdempotencyCleanupLoopRetriesAfterFailure(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cleaner := &fakeIdempotencyCleaner{
+		limits: make(chan int, 2),
+		err:    errors.New("transient database failure"),
+	}
+	done := make(chan struct{})
+	go func() {
+		runIdempotencyCleanupLoop(ctx, cleaner, time.Millisecond)
+		close(done)
+	}()
+
+	for range 2 {
+		select {
+		case <-cleaner.limits:
+		case <-time.After(time.Second):
+			t.Fatal("idempotency cleanup failure was not retried")
+		}
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("idempotency cleanup loop did not stop after retry")
+	}
+}
+
+func TestRunIdempotencyCleanupLoopRunsImmediatelyAndStopsOnCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cleaner := &fakeIdempotencyCleaner{limits: make(chan int, 1)}
+	done := make(chan struct{})
+	go func() {
+		runIdempotencyCleanupLoop(ctx, cleaner, time.Hour)
+		close(done)
+	}()
+
+	select {
+	case limit := <-cleaner.limits:
+		if limit != idempotencyCleanupBatchSize {
+			t.Fatalf("cleanup limit = %d, want %d", limit, idempotencyCleanupBatchSize)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("idempotency cleanup did not run at startup")
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("idempotency cleanup loop did not stop after cancellation")
+	}
+}
+
+func TestStopIdempotencyCleanupWaitsForLoopExit(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		<-ctx.Done()
+		close(done)
+	}()
+	stopIdempotencyCleanup(cancel, done)
 }
 
 type fakeDeletionSweeper struct{ calls atomic.Int32 }
