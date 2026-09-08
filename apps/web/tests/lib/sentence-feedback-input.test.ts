@@ -46,7 +46,7 @@ describe("sentence feedback character limit", () => {
     assert.equal(acceptSentenceEdit(sentence, edited), edited);
   });
 
-  it("describes the current count and announces reaching the limit once", () => {
+  it("describes the current count and reports only the exact limit", () => {
     const sentence = "a".repeat(MAX_SENTENCE_CHARACTERS);
 
     assert.equal(getSentenceCharacterCountDescription("a"), "1 of 300 characters");
@@ -55,5 +55,9 @@ describe("sentence feedback character limit", () => {
       "You've reached the 300-character limit.",
     );
     assert.equal(getSentenceCharacterLimitStatus("a"), null);
+    assert.equal(
+      getSentenceCharacterLimitStatus("a".repeat(MAX_SENTENCE_CHARACTERS + 1)),
+      null,
+    );
   });
 });
