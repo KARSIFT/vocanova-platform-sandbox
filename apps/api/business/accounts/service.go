@@ -229,11 +229,12 @@ func NewService(repo Repository, authRepo AuthRepository, emailSender email.Send
 // that can no longer be consumed. It deliberately has no request identity or
 // rate-limit dependency because the production background loop is its only
 // caller.
-func (s *Service) CleanupExpiredEmailChangeLinks(ctx context.Context) error {
-	if _, err := s.repo.CleanupExpiredEmailChangeLinks(ctx, s.clock.Now().UTC()); err != nil {
-		return fmt.Errorf("cleanup email change links: %w", err)
+func (s *Service) CleanupExpiredEmailChangeLinks(ctx context.Context, limit int) (int64, error) {
+	n, err := s.repo.CleanupExpiredEmailChangeLinks(ctx, s.clock.Now().UTC(), limit)
+	if err != nil {
+		return 0, fmt.Errorf("cleanup email change links: %w", err)
 	}
-	return nil
+	return n, nil
 }
 
 // EmailLink is the dispatch-side projection returned by

@@ -148,11 +148,24 @@ func (r *PostgreSQLRepository) RevokeAllEmailChangeLinksForUser(ctx context.Cont
 // once they have expired, been consumed, or been revoked. That prevents the
 // pending email address and token hash from remaining after their request-path
 // usefulness has ended.
-func (r *PostgreSQLRepository) CleanupExpiredEmailChangeLinks(ctx context.Context, before time.Time) (int64, error) {
-	res, err := r.db.ExecContext(ctx, `DELETE FROM email_change_links
-		WHERE expires_at <= $1
-		   OR consumed_at IS NOT NULL
-		   OR (revoked_at IS NOT NULL AND revoked_at <= $1)`, before)
+func (r *PostgreSQLRepository) CleanupExpiredEmailChangeLinks(ctx context.Context, before time.Time, limit int) (int64, error) {
+	if limit <= 0 {
+		return 0, errors.New("cleanup limit must be positive")
+	}
+	// Claim a bounded set of rows first. SKIP LOCKED lets every API replica run
+	// the same loop without waiting on, or deleting, another replica's batch.
+	res, err := r.db.ExecContext(ctx, `WITH inactive AS (
+			SELECT id FROM email_change_links
+			WHERE expires_at <= $1
+			   OR consumed_at IS NOT NULL
+			   OR revoked_at IS NOT NULL
+			ORDER BY created_at, id
+			LIMIT $2
+			FOR UPDATE SKIP LOCKED
+		)
+		DELETE FROM email_change_links AS links
+		USING inactive
+		WHERE links.id = inactive.id`, before, limit)
 	if err != nil {
 		return 0, fmt.Errorf("cleanup email change links: %w", err)
 	}

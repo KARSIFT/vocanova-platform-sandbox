@@ -65,12 +65,16 @@ func TestPostgreSQLRepositoryCleanupExpiredEmailChangeLinksPostgreSQL(t *testing
 	}
 	expiredID := insert("expired", now, nil, nil)
 	consumedID := insert("consumed", now.Add(time.Minute), &now, nil)
-	revokedID := insert("revoked", now.Add(time.Minute), nil, &now)
+	futureRevocation := now.Add(time.Minute)
+	revokedID := insert("revoked", now.Add(2*time.Minute), nil, &futureRevocation)
 	activeID := insert("active", now.Add(time.Minute), nil, nil)
 
-	deleted, err := NewPostgreSQLRepository(db).CleanupExpiredEmailChangeLinks(ctx, now)
+	deleted, err := NewPostgreSQLRepository(db).CleanupExpiredEmailChangeLinks(ctx, now, 2)
 	require.NoError(t, err)
-	require.Equal(t, int64(3), deleted)
+	require.Equal(t, int64(2), deleted, "one pass must honor the batch limit")
+	deleted, err = NewPostgreSQLRepository(db).CleanupExpiredEmailChangeLinks(ctx, now, 2)
+	require.NoError(t, err)
+	require.Equal(t, int64(1), deleted, "a later pass removes the remaining inactive row")
 
 	var remaining []uuid.UUID
 	rows, err := db.QueryContext(ctx, `SELECT id FROM email_change_links WHERE user_id = $1`, userID)

@@ -131,11 +131,15 @@ func TestStopIdempotencyCleanupWaitsForLoopExit(t *testing.T) {
 	stopIdempotencyCleanup(cancel, done)
 }
 
-type fakeEmailChangeCleaner struct{ calls atomic.Int32 }
+type fakeEmailChangeCleaner struct {
+	calls atomic.Int32
+	limit atomic.Int32
+}
 
-func (f *fakeEmailChangeCleaner) CleanupExpiredEmailChangeLinks(context.Context) error {
+func (f *fakeEmailChangeCleaner) CleanupExpiredEmailChangeLinks(_ context.Context, limit int) (int64, error) {
 	f.calls.Add(1)
-	return nil
+	f.limit.Store(int32(limit))
+	return 0, nil
 }
 
 func TestRunEmailChangeCleanupLoopRunsImmediatelyAndStopsOnCancellation(t *testing.T) {
@@ -154,6 +158,9 @@ func TestRunEmailChangeCleanupLoopRunsImmediatelyAndStopsOnCancellation(t *testi
 			t.Fatal("email-change cleanup did not run at startup")
 		case <-time.After(time.Millisecond):
 		}
+	}
+	if got := cleaner.limit.Load(); got != emailChangeCleanupBatchSize {
+		t.Fatalf("cleanup limit = %d, want %d", got, emailChangeCleanupBatchSize)
 	}
 	cancel()
 	select {
@@ -175,9 +182,9 @@ func TestStopEmailChangeCleanupWaitsForLoopExit(t *testing.T) {
 
 type failingEmailChangeCleaner struct{ calls atomic.Int32 }
 
-func (f *failingEmailChangeCleaner) CleanupExpiredEmailChangeLinks(context.Context) error {
+func (f *failingEmailChangeCleaner) CleanupExpiredEmailChangeLinks(context.Context, int) (int64, error) {
 	f.calls.Add(1)
-	return errors.New("synthetic cleanup failure")
+	return 0, errors.New("synthetic cleanup failure")
 }
 
 func TestRunEmailChangeCleanupLoopContinuesAfterFailure(t *testing.T) {

@@ -197,8 +197,10 @@ type authCleaner interface {
 }
 
 type emailChangeCleaner interface {
-	CleanupExpiredEmailChangeLinks(context.Context) error
+	CleanupExpiredEmailChangeLinks(context.Context, int) (int64, error)
 }
+
+const emailChangeCleanupBatchSize = 1_000
 
 // stopAuthCleanup cancels the loop and waits until it has exited while the
 // database remains open. It is safe to invoke more than once.
@@ -320,8 +322,13 @@ func runEmailChangeCleanupLoop(ctx context.Context, cleaner emailChangeCleaner, 
 		interval = time.Hour
 	}
 	run := func() {
-		if err := cleaner.CleanupExpiredEmailChangeLinks(ctx); err != nil {
+		deleted, err := cleaner.CleanupExpiredEmailChangeLinks(ctx, emailChangeCleanupBatchSize)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "api: email-change cleanup failed: %v\n", err)
+			return
+		}
+		if deleted > 0 {
+			fmt.Fprintf(os.Stderr, "api: email-change cleanup deleted=%d\n", deleted)
 		}
 	}
 

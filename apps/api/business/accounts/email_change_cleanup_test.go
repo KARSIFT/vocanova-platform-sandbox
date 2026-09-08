@@ -33,7 +33,9 @@ func TestServiceCleanupExpiredEmailChangeLinksRemovesOnlyInactiveLinks(t *testin
 	active := create("active-after-revoke", now.Add(time.Minute))
 
 	svc := NewService(repo, nil, nil, nil, &clock.Fixed{T: now}, nil, Config{})
-	require.NoError(t, svc.CleanupExpiredEmailChangeLinks(context.Background()))
+	deleted, err := svc.CleanupExpiredEmailChangeLinks(context.Background(), 10)
+	require.NoError(t, err)
+	require.Equal(t, int64(3), deleted)
 
 	links := repo.LinksForUser(userID)
 	require.Len(t, links, 1)
