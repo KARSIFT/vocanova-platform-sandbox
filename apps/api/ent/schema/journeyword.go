@@ -13,7 +13,14 @@ import (
 type JourneyWord struct{ ent.Schema }
 
 func (JourneyWord) Annotations() []schema.Annotation {
-	return []schema.Annotation{entsql.Annotation{Table: "journey_words"}}
+	return []schema.Annotation{
+		entsql.Annotation{
+			Table: "journey_words",
+			Checks: map[string]string{
+				"display_order_positive": "display_order IS NULL OR display_order > 0",
+			},
+		},
+	}
 }
 func (JourneyWord) Mixin() []ent.Mixin { return []ent.Mixin{UUIDMixin{}, TimeMixin{}} }
 
@@ -22,7 +29,7 @@ func (JourneyWord) Fields() []ent.Field {
 		field.UUID("journey_situation_id", uuid.UUID{}),
 		field.UUID("meaning_id", uuid.UUID{}),
 		field.Int("relevance_score").Min(1).Max(100).Default(50),
-		field.Int("display_order").Optional().Nillable(),
+		field.Int("display_order").Positive().Optional().Nillable(),
 		field.Bool("is_core").Default(false),
 	}
 }

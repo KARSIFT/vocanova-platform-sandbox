@@ -13,7 +13,14 @@ import (
 type WordMeaning struct{ ent.Schema }
 
 func (WordMeaning) Annotations() []schema.Annotation {
-	return []schema.Annotation{entsql.Annotation{Table: "word_meanings"}}
+	return []schema.Annotation{
+		entsql.Annotation{
+			Table: "word_meanings",
+			Checks: map[string]string{
+				"meaning_order_positive": "meaning_order > 0",
+			},
+		},
+	}
 }
 func (WordMeaning) Mixin() []ent.Mixin { return []ent.Mixin{UUIDMixin{}, TimeMixin{}} }
 

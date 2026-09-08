@@ -13,7 +13,14 @@ import (
 type WordExample struct{ ent.Schema }
 
 func (WordExample) Annotations() []schema.Annotation {
-	return []schema.Annotation{entsql.Annotation{Table: "word_examples"}}
+	return []schema.Annotation{
+		entsql.Annotation{
+			Table: "word_examples",
+			Checks: map[string]string{
+				"example_order_positive": "example_order > 0",
+			},
+		},
+	}
 }
 func (WordExample) Mixin() []ent.Mixin { return []ent.Mixin{UUIDMixin{}, TimeMixin{}} }
 

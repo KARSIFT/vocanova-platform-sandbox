@@ -12,7 +12,14 @@ import (
 type JourneySituation struct{ ent.Schema }
 
 func (JourneySituation) Annotations() []schema.Annotation {
-	return []schema.Annotation{entsql.Annotation{Table: "journey_situations"}}
+	return []schema.Annotation{
+		entsql.Annotation{
+			Table: "journey_situations",
+			Checks: map[string]string{
+				"display_order_positive": "display_order > 0",
+			},
+		},
+	}
 }
 func (JourneySituation) Mixin() []ent.Mixin { return []ent.Mixin{UUIDMixin{}, TimeMixin{}} }
 

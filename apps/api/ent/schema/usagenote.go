@@ -13,7 +13,14 @@ import (
 type UsageNote struct{ ent.Schema }
 
 func (UsageNote) Annotations() []schema.Annotation {
-	return []schema.Annotation{entsql.Annotation{Table: "usage_notes"}}
+	return []schema.Annotation{
+		entsql.Annotation{
+			Table: "usage_notes",
+			Checks: map[string]string{
+				"note_order_positive": "note_order > 0",
+			},
+		},
+	}
 }
 func (UsageNote) Mixin() []ent.Mixin { return []ent.Mixin{UUIDMixin{}, TimeMixin{}} }
 
