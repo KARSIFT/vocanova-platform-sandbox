@@ -19,6 +19,7 @@ func (DailyMissionSnapshot) Annotations() []schema.Annotation {
 		entsql.Annotation{
 			Table: "daily_mission_snapshots",
 			Checks: map[string]string{
+				"timezone_nonblank":             "timezone !~ '^[[:space:]]*$'",
 				"review_target_in_range":        "review_target >= 5 AND review_target <= 100",
 				"reviews_completed_in_range":    "reviews_completed >= 0 AND reviews_completed <= review_target",
 				"new_word_target_in_range":      "new_word_target IS NULL OR (new_word_target >= 1 AND new_word_target <= 100)",

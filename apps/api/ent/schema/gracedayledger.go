@@ -21,7 +21,8 @@ func (GraceDayLedger) Annotations() []schema.Annotation {
 		entsql.Annotation{
 			Table: "grace_day_ledger",
 			Checks: map[string]string{
-				"amount_nonzero": "amount <> 0",
+				"timezone_nonblank": "timezone !~ '^[[:space:]]*$'",
+				"amount_nonzero":    "amount <> 0",
 			},
 		},
 	}

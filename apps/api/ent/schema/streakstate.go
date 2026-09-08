@@ -20,6 +20,7 @@ func (StreakState) Annotations() []schema.Annotation {
 		entsql.Annotation{
 			Table: "streak_states",
 			Checks: map[string]string{
+				"timezone_nonblank":  "timezone !~ '^[[:space:]]*$'",
 				"longest_ge_current": "longest_streak_count >= current_streak_count",
 				"counts_nonnegative": "current_streak_count >= 0 AND longest_streak_count >= 0",
 			},

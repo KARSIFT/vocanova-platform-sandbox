@@ -57,6 +57,30 @@ func TestVOC1352FeatureAuditLogsMigrationCarriesPrivacyInvariants(t *testing.T) 
 	}
 }
 
+func TestVOC1414TimezoneCaptureIntegrityMigrationCarriesDatabaseInvariants(t *testing.T) {
+	sql, err := os.ReadFile("20260908030000_voc1414_timezone_capture_integrity.sql")
+	if err != nil {
+		t.Fatalf("read timezone capture integrity migration: %v", err)
+	}
+	text := string(sql)
+	for _, invariant := range []string{
+		"ALTER TABLE daily_mission_snapshots",
+		"daily_mission_snapshots_timezone_nonblank",
+		"ALTER TABLE daily_activity_summaries",
+		"daily_activity_summaries_timezone_nonblank",
+		"ALTER TABLE streak_states",
+		"streak_states_timezone_nonblank",
+		"ALTER TABLE grace_day_ledger",
+		"grace_day_ledger_timezone_nonblank",
+		"timezone !~ '^[[:space:]]*$'",
+		"NOT VALID",
+	} {
+		if !strings.Contains(text, invariant) {
+			t.Errorf("migration missing invariant %q", invariant)
+		}
+	}
+}
+
 func TestOAuthStateMigrationCarriesDatabaseInvariants(t *testing.T) {
 	sql, err := os.ReadFile("20260724210001_oauth_state.sql")
 	if err != nil {

@@ -17,7 +17,14 @@ import (
 type DailyActivitySummary struct{ ent.Schema }
 
 func (DailyActivitySummary) Annotations() []schema.Annotation {
-	return []schema.Annotation{entsql.Annotation{Table: "daily_activity_summaries"}}
+	return []schema.Annotation{
+		entsql.Annotation{
+			Table: "daily_activity_summaries",
+			Checks: map[string]string{
+				"timezone_nonblank": "timezone !~ '^[[:space:]]*$'",
+			},
+		},
+	}
 }
 
 func (DailyActivitySummary) Mixin() []ent.Mixin {
