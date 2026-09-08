@@ -15,7 +15,10 @@ import (
 type UserWord struct{ ent.Schema }
 
 func (UserWord) Annotations() []schema.Annotation {
-	return []schema.Annotation{entsql.Annotation{Table: "user_words"}}
+	return []schema.Annotation{entsql.Annotation{Table: "user_words", Checks: map[string]string{
+		"review_counts_nonnegative":         "consecutive_correct_count >= 0 AND consecutive_incorrect_count >= 0 AND total_review_count >= 0 AND correct_review_count >= 0",
+		"correct_review_count_within_total": "correct_review_count <= total_review_count",
+	}}}
 }
 func (UserWord) Mixin() []ent.Mixin { return []ent.Mixin{UUIDMixin{}, TimeMixin{}, SoftDeleteMixin{}} }
 
@@ -37,10 +40,10 @@ func (UserWord) Fields() []ent.Field {
 		field.Enum("last_rating").
 			Values("again", "hard", "good", "easy").
 			Optional().Nillable(),
-		field.Int("consecutive_correct_count").Default(0),
-		field.Int("consecutive_incorrect_count").Default(0),
-		field.Int("total_review_count").Default(0),
-		field.Int("correct_review_count").Default(0),
+		field.Int("consecutive_correct_count").Min(0).Default(0),
+		field.Int("consecutive_incorrect_count").Min(0).Default(0),
+		field.Int("total_review_count").Min(0).Default(0),
+		field.Int("correct_review_count").Min(0).Default(0),
 		field.Time("added_at").Default(time.Now),
 		field.Time("mastered_at").Optional().Nillable(),
 		field.Time("ignored_at").Optional().Nillable(),
