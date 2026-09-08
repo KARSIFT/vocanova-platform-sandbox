@@ -151,6 +151,8 @@ func TestCuratedContentOrderingAgainstPostgreSQL(t *testing.T) {
 		(id, journey_situation_id, meaning_id, relevance_score, display_order, is_core, created_at, updated_at)
 		VALUES ($1, $2, $3, 50, NULL, false, $4, $4)`, validJourneyWordID, validSituationID, validMeaningID, now)
 	require.NoError(t, err, "nullable journey-word position remains valid")
+	_, err = db.ExecContext(ctx, `UPDATE journey_words SET display_order = 1 WHERE id = $1`, validJourneyWordID)
+	require.NoError(t, err, "one-based journey-word position remains valid when present")
 
 	invalidInserts := []struct {
 		name  string
