@@ -163,7 +163,11 @@ func TestCreateDailyMissionSnapshotOnConflictBranchUnchangedAgainstRealPostgres(
 // preserves a streak only when the append-only grace ledger contains the
 // matching debit for the same learner (DOC-05 §§2,10,12).
 func TestGraceProtectedMissionSnapshotConstraintsAgainstRealPostgres(t *testing.T) {
-	db := newMigratedDisposablePostgres(t)
+	// Use the explicitly supplied validation instance rather than the
+	// Docker-only helper so this regression exercises all committed forward
+	// migrations wherever the repository's shared PostgreSQL check is
+	// available. The helper isolates the test in its own schema.
+	db := newMigratedPostgresFromEnv(t)
 	repo := NewRepository(db)
 	firstUserID := insertTestUser(t, db)
 	secondUserID := insertTestUser(t, db)
