@@ -30,7 +30,15 @@ import (
 type EmailChangeLink struct{ ent.Schema }
 
 func (EmailChangeLink) Annotations() []schema.Annotation {
-	return []schema.Annotation{entsql.Annotation{Table: "email_change_links"}}
+	return []schema.Annotation{
+		entsql.Annotation{
+			Table: "email_change_links",
+			Checks: map[string]string{
+				"consumed_at_within_lifetime":   "consumed_at IS NULL OR (consumed_at >= created_at AND consumed_at < expires_at)",
+				"revoked_at_not_before_created": "revoked_at IS NULL OR revoked_at >= created_at",
+			},
+		},
+	}
 }
 
 func (EmailChangeLink) Mixin() []ent.Mixin { return []ent.Mixin{UUIDMixin{}} }

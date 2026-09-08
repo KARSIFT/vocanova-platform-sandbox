@@ -13,7 +13,15 @@ import (
 type MagicLink struct{ ent.Schema }
 
 func (MagicLink) Annotations() []schema.Annotation {
-	return []schema.Annotation{entsql.Annotation{Table: "magic_links"}}
+	return []schema.Annotation{
+		entsql.Annotation{
+			Table: "magic_links",
+			Checks: map[string]string{
+				"consumed_at_within_lifetime":   "consumed_at IS NULL OR (consumed_at >= created_at AND consumed_at < expires_at)",
+				"revoked_at_not_before_created": "revoked_at IS NULL OR revoked_at >= created_at",
+			},
+		},
+	}
 }
 func (MagicLink) Mixin() []ent.Mixin { return []ent.Mixin{UUIDMixin{}} }
 func (MagicLink) Fields() []ent.Field {
