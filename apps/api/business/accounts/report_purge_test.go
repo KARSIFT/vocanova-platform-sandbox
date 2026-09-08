@@ -16,6 +16,8 @@ func TestReportPurgeParticipatesInDeletionTransaction(t *testing.T) {
 		defer db.Close()
 		uid := uuid.New()
 		mock.ExpectBegin()
+		mock.ExpectExec("SELECT set_config\\('vocanova\\.ledger_purge', 'on', true\\)").
+			WillReturnResult(sqlmock.NewResult(0, 1))
 		deletion := mock.ExpectExec("DELETE FROM ai_feedback_quality_review_reports WHERE user_id = \\$1").WithArgs(uid)
 		if failDelete {
 			deletion.WillReturnError(errors.New("delete failed"))

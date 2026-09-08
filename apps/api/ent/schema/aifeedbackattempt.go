@@ -32,19 +32,19 @@ func (AIFeedbackAttempt) Mixin() []ent.Mixin {
 
 func (AIFeedbackAttempt) Fields() []ent.Field {
 	return []ent.Field{
-		field.UUID("learner_sentence_id", uuid.UUID{}),
+		field.UUID("learner_sentence_id", uuid.UUID{}).Immutable(),
 		field.Enum("status").
 			Values("pending", "succeeded", "failed", "cancelled").
 			Default("pending"),
-		field.String("provider").NotEmpty(),
-		field.String("model").NotEmpty(),
-		field.String("prompt_version").NotEmpty(),
-		field.String("request_hash").NotEmpty(),
+		field.String("provider").NotEmpty().Immutable(),
+		field.String("model").NotEmpty().Immutable(),
+		field.String("prompt_version").NotEmpty().Immutable(),
+		field.String("request_hash").NotEmpty().Immutable(),
 		field.JSON("feedback_json", map[string]any{}).Optional(),
 		field.String("feedback_text").Optional().Nillable(),
 		field.String("error_code").Optional().Nillable(),
 		field.String("error_message").Optional().Nillable(),
-		field.Time("started_at").Optional().Nillable(),
+		field.Time("started_at").Optional().Nillable().Immutable(),
 		field.Time("completed_at").Optional().Nillable(),
 	}
 }

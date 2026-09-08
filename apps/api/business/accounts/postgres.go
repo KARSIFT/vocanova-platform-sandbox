@@ -469,6 +469,13 @@ func (r *PostgreSQLRepository) anonymizeUserDataTx(ctx context.Context, tx *sql.
 	var counters AnonymizationCounters
 	var err error
 
+	// DOC-05 §16 keeps AI feedback attempts immutable during an active account
+	// lifecycle. Account deletion is its sole delete path, scoped to this
+	// transaction through the same local setting used by the learning ledgers.
+	if _, err := tx.ExecContext(ctx, `SELECT set_config('vocanova.ledger_purge', 'on', true)`); err != nil {
+		return counters, fmt.Errorf("enable immutable-history purge: %w", err)
+	}
+
 	// Purge quality reports before their parent feedback attempts and retain
 	// an explicit affected-row count for the deletion audit.
 	counters.AIQualityReviewReports, err = execCount(ctx, tx, userID,

@@ -239,6 +239,29 @@ func TestAIFeedbackRetryMigrationKeepsOneActiveGenerationPerRequest(t *testing.T
 	}
 }
 
+func TestVOC1427FinalizedAIFeedbackAttemptsAreImmutableExceptAccountPurge(t *testing.T) {
+	sql, err := os.ReadFile("20260908230000_voc1427_preserve_finalized_ai_feedback_attempts.sql")
+	if err != nil {
+		t.Fatalf("read voc1427 migration: %v", err)
+	}
+	text := string(sql)
+	for _, invariant := range []string{
+		"CREATE FUNCTION vocanova_reject_ai_feedback_attempt_mutation()",
+		"current_setting('vocanova.ledger_purge', true) = 'on'",
+		"OLD.status = 'pending'",
+		"NEW.status IN ('succeeded', 'failed')",
+		"BEFORE UPDATE OR DELETE ON ai_feedback_attempts",
+		"ERRCODE = '55000'",
+	} {
+		if !strings.Contains(text, invariant) {
+			t.Errorf("voc1427 migration missing invariant %q", invariant)
+		}
+	}
+	if strings.Contains(text, "'cancelled'") {
+		t.Error("voc1427 must not enable an unimplemented cancelled transition")
+	}
+}
+
 func TestVOC026P1IdempotencyMigrationCarriesDatabaseInvariants(t *testing.T) {
 	sql, err := os.ReadFile("20260725100001_voc026_p1_idempotency_keys.sql")
 	if err != nil {

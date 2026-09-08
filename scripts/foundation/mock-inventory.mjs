@@ -315,6 +315,7 @@ export function validateMockInventory() {
     "20260905130000_ai_feedback_retry_history.sql",
     "20260908010000_voc1350_restrict_ai_feedback_report_foreign_keys.sql",
     "20260908020000_voc1352_feature_audit_logs.sql",
+    "20260908230000_voc1427_preserve_finalized_ai_feedback_attempts.sql",
   ]);
   for (const entry of readdirSync(apiMigrationRoot, {
     withFileTypes: true,
