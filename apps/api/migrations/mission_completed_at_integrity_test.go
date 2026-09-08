@@ -60,10 +60,15 @@ func TestMissionCompletedAtIntegrityAgainstPostgreSQL(t *testing.T) {
 	require.NoError(t, err)
 
 	now := time.Now().UTC()
-	legacyID := uuid.New()
+	legacyCompleteByStatusID := uuid.New()
 	_, err = db.ExecContext(ctx,
 		`INSERT INTO daily_mission_snapshots (id, status, completed_at)
-		 VALUES ($1, 'open', $2)`, legacyID, now)
+		 VALUES ($1, 'open', $2)`, legacyCompleteByStatusID, now)
+	require.NoError(t, err, "the original one-way check permits this legacy contradiction")
+	legacyClearTimestampID := uuid.New()
+	_, err = db.ExecContext(ctx,
+		`INSERT INTO daily_mission_snapshots (id, status, completed_at)
+		 VALUES ($1, 'missed', $2)`, legacyClearTimestampID, now)
 	require.NoError(t, err, "the original one-way check permits this legacy contradiction")
 
 	migration, err := os.ReadFile(missionCompletedAtIntegrityMigration)
@@ -137,17 +142,38 @@ func TestMissionCompletedAtIntegrityAgainstPostgreSQL(t *testing.T) {
 			`UPDATE daily_mission_snapshots SET status = 'missed' WHERE id = $1`, id)
 		requireMissionCompletionCheckViolation(t, err)
 	})
+	t.Run("clearing timestamp from completed", func(t *testing.T) {
+		id := uuid.New()
+		_, err := db.ExecContext(ctx,
+			`INSERT INTO daily_mission_snapshots (id, status, completed_at)
+			 VALUES ($1, 'completed', $2)`, id, now)
+		require.NoError(t, err)
+
+		_, err = db.ExecContext(ctx,
+			`UPDATE daily_mission_snapshots SET completed_at = NULL WHERE id = $1`, id)
+		requireMissionCompletionCheckViolation(t, err)
+	})
 	t.Run("completed without timestamp", func(t *testing.T) {
 		_, err := db.ExecContext(ctx,
 			`INSERT INTO daily_mission_snapshots (id, status, completed_at)
 			 VALUES ($1, 'completed', NULL)`, uuid.New())
 		requireMissionCompletionCheckViolation(t, err)
 	})
+	t.Run("legacy contradictions can be repaired through either side of the pair", func(t *testing.T) {
+		_, err := db.ExecContext(ctx,
+			`UPDATE daily_mission_snapshots SET status = 'completed' WHERE id = $1`, legacyCompleteByStatusID)
+		require.NoError(t, err)
+
+		_, err = db.ExecContext(ctx,
+			`UPDATE daily_mission_snapshots SET completed_at = NULL WHERE id = $1`, legacyClearTimestampID)
+		require.NoError(t, err)
+	})
 
 	var legacyRows int
 	require.NoError(t, db.QueryRowContext(ctx,
-		`SELECT count(*) FROM daily_mission_snapshots WHERE id = $1`, legacyID).Scan(&legacyRows))
-	assert.Equal(t, 1, legacyRows)
+		`SELECT count(*) FROM daily_mission_snapshots WHERE id IN ($1, $2)`,
+		legacyCompleteByStatusID, legacyClearTimestampID).Scan(&legacyRows))
+	assert.Equal(t, 2, legacyRows)
 
 	var validated bool
 	require.NoError(t, db.QueryRowContext(ctx, `
