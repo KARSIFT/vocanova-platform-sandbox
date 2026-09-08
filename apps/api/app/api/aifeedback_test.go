@@ -546,7 +546,7 @@ func newOpenCodeE2ETestServer(t *testing.T) (*httptest.Server, *openCodeE2ECallC
 				atomic.AddInt32(&counters.feedbackCalls, 1)
 				resp := openCodeE2EMessageResponse{
 					Info:  json.RawMessage(`{}`),
-					Parts: []openCodeE2EPart{{Type: "text", Text: `{"status":"correct","target_word_used_correctly":true,"explanation":"Good use of the target word."}`}},
+					Parts: []openCodeE2EPart{{Type: "text", Text: `{"status":"correct","target_word_used_correctly":true,"headline":"Great use of the target word!","explanation":"Good use of the target word."}`}},
 				}
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
@@ -649,6 +649,7 @@ func TestSubmitSentenceFeedback_RealProviders_ReachesFeedbackProviderSeam(t *tes
 	assert.NotEqual(t, aifeedback.ErrorCodeSafetyModerationUnavailable, out.Body.ErrorCode,
 		"the fail-closed SAFETY_MODERATION_UNAVAILABLE error code from issue #216 must not appear when the real moderation provider is wired")
 	assert.Equal(t, "correct", out.Body.Status, "the real feedback provider must have produced a real, non-fail-closed outcome")
+	assert.Equal(t, "Great use of the target word!", out.Body.Headline)
 	assert.Equal(t, "I work every day.", out.Body.OriginalSentence)
 	assert.False(t, out.Body.MissionCompleted)
 	assert.False(t, out.Body.CanRetry)

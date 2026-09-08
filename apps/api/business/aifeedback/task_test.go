@@ -27,6 +27,10 @@ func TestDefaultTaskBuilderBuildProducesThreeLayers(t *testing.T) {
 	assert.NotEmpty(t, task.SystemPrompt)
 	assert.NotEmpty(t, task.DeveloperPrompt)
 	assert.NotNil(t, task.OutputSchema)
+	properties := task.OutputSchema["properties"].(map[string]any)
+	headlineSchema := properties["headline"].(map[string]any)
+	assert.Equal(t, 60, headlineSchema["maxLength"])
+	assert.Contains(t, task.OutputSchema["required"], "headline")
 	assert.Equal(t, 300, task.MaxOutputTokens)
 	assert.InDelta(t, 0.1, task.Temperature, 0.001)
 	assert.False(t, task.EnableWebSearch)
@@ -81,6 +85,7 @@ func TestDefaultOutputValidatorAcceptsValidCorrect(t *testing.T) {
 	fb := &ProviderFeedback{
 		Status:                  LearningStatusCorrect,
 		TargetWordUsedCorrectly: true,
+		Headline:                "Great work!",
 		Explanation:             "Correct.",
 		RawJSON:                 map[string]any{"status": "correct", "target_word_used_correctly": true},
 	}
@@ -94,6 +99,7 @@ func TestDefaultOutputValidatorAcceptsValidIncorrect(t *testing.T) {
 	fb := &ProviderFeedback{
 		Status:                  LearningStatusIncorrect,
 		TargetWordUsedCorrectly: false,
+		Headline:                "Almost there!",
 		Explanation:             "Use past tense for finished times.",
 		CorrectedSentence:       &corrected,
 		ImprovementTip:          &tip,
@@ -114,6 +120,7 @@ func TestDefaultOutputValidatorAcceptsValidNeedsImprovement(t *testing.T) {
 	fb := &ProviderFeedback{
 		Status:                  LearningStatusNeedsImprovement,
 		TargetWordUsedCorrectly: false,
+		Headline:                "Good start!",
 		Explanation:             "The sentence is understandable but could be clearer.",
 		CorrectedSentence:       &corrected,
 		ImprovementTip:          &tip,
@@ -125,6 +132,24 @@ func TestDefaultOutputValidatorAcceptsValidNeedsImprovement(t *testing.T) {
 		},
 	}
 	assert.NoError(t, v.Validate(fb, nil))
+}
+
+func TestDefaultOutputValidatorRejectsMissingOrOverlongHeadline(t *testing.T) {
+	v := NewDefaultOutputValidator()
+	valid := ProviderFeedback{
+		Status:                  LearningStatusCorrect,
+		TargetWordUsedCorrectly: true,
+		Headline:                "Great work!",
+		Explanation:             "Correct.",
+	}
+
+	missing := valid
+	missing.Headline = ""
+	assert.EqualError(t, v.Validate(&missing, nil), "headline is required")
+
+	overlong := valid
+	overlong.Headline = string(make([]rune, 61))
+	assert.EqualError(t, v.Validate(&overlong, nil), "headline too long")
 }
 
 func TestDefaultOutputValidatorRejectsInconsistentCorrect(t *testing.T) {

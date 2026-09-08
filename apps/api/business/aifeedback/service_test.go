@@ -360,6 +360,7 @@ func TestServiceReportFeedbackPersistsOneOpenUnclassifiedRecord(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, replayed.Reported)
 	assert.Equal(t, result.Status, replayed.Status)
+	assert.Equal(t, result.Headline, replayed.Headline)
 	assert.Equal(t, 1, f.provider.calls)
 
 	assert.ErrorIs(t, f.service.ReportFeedback(t.Context(), f.userID, result.AttemptID, ReportReasonCorrectionChangedMeaning, "report-idem-1"), ErrReportIdempotencyConflict)

@@ -19,6 +19,7 @@ type SentenceFeedbackResultDTO struct {
 	Status                string  `json:"status,omitempty" enum:"correct,needs_improvement,incorrect" doc:"Pedagogical outcome when feedback succeeded"`
 	OriginalSentence      string  `json:"originalSentence" doc:"The sentence the learner submitted"`
 	CorrectedSentence     *string `json:"correctedSentence,omitempty" doc:"Corrected sentence when useful"`
+	Headline              string  `json:"headline,omitempty" maxLength:"60" doc:"Encouraging, honest feedback headline"`
 	Explanation           string  `json:"explanation,omitempty" doc:"Short explanation of the result"`
 	ImprovementTip        *string `json:"improvementTip,omitempty" doc:"One improvement tip when useful"`
 	MissionCompleted      bool    `json:"missionCompleted" doc:"Backend-confirmed mission state (P3 stub: always false)"`
@@ -122,6 +123,7 @@ func sentenceFeedbackResultToDTO(r *aifeedback.SentenceFeedbackResult) SentenceF
 		Status:                r.Status,
 		OriginalSentence:      r.OriginalSentence,
 		CorrectedSentence:     r.CorrectedSentence,
+		Headline:              r.Headline,
 		Explanation:           r.Explanation,
 		ImprovementTip:        r.ImprovementTip,
 		MissionCompleted:      r.MissionCompleted,

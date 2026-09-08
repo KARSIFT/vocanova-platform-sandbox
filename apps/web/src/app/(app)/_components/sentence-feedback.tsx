@@ -228,7 +228,7 @@ export function SentenceFeedback({
               aria-label={`Feedback result: ${statusLabel}`}
               className={`rounded-md p-[var(--spacing-md)] ${getStatusClasses(result.status)}`}
             >
-              <p className="font-semibold">{statusLabel}</p>
+              <p className="font-semibold">{result.headline || statusLabel}</p>
               {result.explanation ? (
                 <p className="mt-[var(--spacing-xs)] text-base">
                   {result.explanation}
