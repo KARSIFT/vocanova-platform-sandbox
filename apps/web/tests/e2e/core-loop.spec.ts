@@ -81,6 +81,7 @@ async function expectSentencePracticePrivacyReminder(page: Page) {
 }
 
 async function expectMinimumTouchTarget(locator: Locator) {
+	await expect(locator).toBeVisible();
   const box = await locator.boundingBox();
   expect(box, "Expected an actionable visible control").not.toBeNull();
   expect(
