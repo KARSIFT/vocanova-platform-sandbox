@@ -32,7 +32,16 @@ func TestUserWordResultRatingIntegrityMigrationCarriesDatabaseInvariant(t *testi
 
 	schemaBody, err := os.ReadFile("../ent/schema/userword.go")
 	require.NoError(t, err)
-	assert.Contains(t, string(schemaBody), "last_result_rating_consistent")
+	for _, invariant := range []string{
+		"last_result_rating_consistent",
+		"last_result IS NULL AND last_rating IS NULL",
+		"last_result = 'skipped' AND last_rating IS NULL",
+		"last_result = 'incorrect' AND last_rating IS NOT NULL AND last_rating = 'again'",
+		"last_result = 'correct' AND last_rating IS NOT NULL AND last_rating IN ('hard', 'good', 'easy')",
+		") IS TRUE",
+	} {
+		assert.Contains(t, string(schemaBody), invariant, "Ent metadata must mirror migration invariant %q", invariant)
+	}
 }
 
 func TestUserWordResultRatingIntegrityAgainstPostgreSQL(t *testing.T) {
@@ -104,8 +113,14 @@ func TestUserWordResultRatingIntegrityAgainstPostgreSQL(t *testing.T) {
 		result any
 		rating any
 	}{
-		{name: "rating without result", rating: "hard"},
+		{name: "no result again", rating: "again"},
+		{name: "no result hard", rating: "hard"},
+		{name: "no result good", rating: "good"},
+		{name: "no result easy", rating: "easy"},
 		{name: "skipped again", result: "skipped", rating: "again"},
+		{name: "skipped hard", result: "skipped", rating: "hard"},
+		{name: "skipped good", result: "skipped", rating: "good"},
+		{name: "skipped easy", result: "skipped", rating: "easy"},
 		{name: "incorrect without rating", result: "incorrect"},
 		{name: "incorrect hard", result: "incorrect", rating: "hard"},
 		{name: "incorrect good", result: "incorrect", rating: "good"},
@@ -121,6 +136,14 @@ func TestUserWordResultRatingIntegrityAgainstPostgreSQL(t *testing.T) {
 			requireUserWordResultRatingCheckViolation(t, err)
 		})
 	}
+
+	validUpdateID := uuid.New()
+	_, err = db.ExecContext(ctx,
+		`INSERT INTO user_words (id, last_result, last_rating) VALUES ($1, 'incorrect', 'again')`,
+		validUpdateID)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, `UPDATE user_words SET last_rating = 'hard' WHERE id = $1`, validUpdateID)
+	requireUserWordResultRatingCheckViolation(t, err)
 
 	_, err = db.ExecContext(ctx, `UPDATE user_words SET marker = 1 WHERE id = $1`, legacyID)
 	requireUserWordResultRatingCheckViolation(t, err)
