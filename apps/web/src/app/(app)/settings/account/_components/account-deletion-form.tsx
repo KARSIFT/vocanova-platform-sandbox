@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { createApiClient } from "@/lib/api";
@@ -12,10 +12,7 @@ import {
 } from "@/lib/cookies";
 import { handleApiError } from "@/lib/session";
 
-type DeletionPhase =
-  | { type: "idle" }
-  | { type: "confirming" }
-  | { type: "error"; message: string };
+type DeletionPhase = { type: "idle" } | { type: "confirming" };
 
 const CONFIRMATION_PHRASE = "delete my account";
 
@@ -29,25 +26,37 @@ function generateIdempotencyKey(): string {
 export function AccountDeletionForm() {
   const router = useRouter();
   const [phase, setPhase] = useState<DeletionPhase>({ type: "idle" });
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [typedPhrase, setTypedPhrase] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const deleteTriggerRef = useRef<HTMLButtonElement>(null);
+  const confirmationInputRef = useRef<HTMLInputElement>(null);
+  const shouldRestoreTriggerFocus = useRef(false);
+
+  useEffect(() => {
+    if (phase.type === "confirming") {
+      confirmationInputRef.current?.focus();
+      return;
+    }
+    if (shouldRestoreTriggerFocus.current) {
+      shouldRestoreTriggerFocus.current = false;
+      deleteTriggerRef.current?.focus();
+    }
+  }, [phase]);
 
   async function handleDelete() {
     if (typedPhrase.trim() !== CONFIRMATION_PHRASE) {
-      setPhase({
-        type: "error",
-        message: `Please type "${CONFIRMATION_PHRASE}" exactly to confirm.`,
-      });
+      setErrorMessage(
+        `Please type "${CONFIRMATION_PHRASE}" exactly to confirm.`,
+      );
       return;
     }
 
     const csrfToken = getCookieValue(CSRF_COOKIE_NAME);
     if (!csrfToken) {
-      setPhase({
-        type: "error",
-        message:
-          "Your session is missing a security token. Please refresh the page and try again.",
-      });
+      setErrorMessage(
+        "Your session is missing a security token. Please refresh the page and try again.",
+      );
       return;
     }
 
@@ -87,7 +96,7 @@ export function AccountDeletionForm() {
         error,
         "We couldn't deactivate your account. Please try again.",
       );
-      setPhase({ type: "error", message });
+      setErrorMessage(message);
     } finally {
       setIsDeleting(false);
     }
@@ -97,8 +106,12 @@ export function AccountDeletionForm() {
     <div className="mt-[var(--spacing-md)] space-y-[var(--spacing-md)]">
       {phase.type === "idle" ? (
         <button
+          ref={deleteTriggerRef}
           type="button"
-          onClick={() => setPhase({ type: "confirming" })}
+          onClick={() => {
+            setErrorMessage(null);
+            setPhase({ type: "confirming" });
+          }}
           className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md border border-red-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-red-800 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-red-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
         >
           I want to delete my account
@@ -130,15 +143,23 @@ export function AccountDeletionForm() {
             Type the confirmation phrase
           </label>
           <input
+            ref={confirmationInputRef}
             id="delete-confirmation"
             name="confirmation"
             type="text"
             autoComplete="off"
             value={typedPhrase}
-            onChange={(event) => setTypedPhrase(event.target.value)}
+            onChange={(event) => {
+              setTypedPhrase(event.target.value);
+              setErrorMessage(null);
+            }}
             disabled={isDeleting}
             className="mt-[var(--spacing-xs)] block w-full rounded-md border border-neutral-300 px-[var(--spacing-sm)] py-[var(--spacing-sm)] text-base text-neutral-900 focus:border-red-600 focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-red-600"
-            aria-describedby="delete-confirmation-helper"
+            aria-describedby={
+              errorMessage
+                ? "delete-confirmation-helper delete-confirmation-error"
+                : "delete-confirmation-helper"
+            }
           />
           <p
             id="delete-confirmation-helper"
@@ -163,8 +184,10 @@ export function AccountDeletionForm() {
             <button
               type="button"
               onClick={() => {
+                shouldRestoreTriggerFocus.current = true;
                 setPhase({ type: "idle" });
                 setTypedPhrase("");
+                setErrorMessage(null);
               }}
               disabled={isDeleting}
               className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
@@ -175,13 +198,14 @@ export function AccountDeletionForm() {
         </div>
       ) : null}
 
-      {phase.type === "error" ? (
+      {errorMessage ? (
         <p
+          id="delete-confirmation-error"
           role="alert"
           aria-live="assertive"
           className="rounded-md border border-red-300 bg-red-50 p-[var(--spacing-sm)] text-base text-red-800"
         >
-          {phase.message}
+          {errorMessage}
         </p>
       ) : null}
     </div>

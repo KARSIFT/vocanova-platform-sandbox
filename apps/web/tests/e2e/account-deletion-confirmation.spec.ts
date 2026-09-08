@@ -29,15 +29,44 @@ test.describe("Account deletion confirmation", () => {
     await expect
       .poll(() => page.evaluate(() => document.cookie))
       .toContain("vocanova_csrf=");
-    await page
-      .getByRole("button", { name: "I want to delete my account" })
-      .click();
-    await page
-      .getByLabel("Type the confirmation phrase")
-      .fill("delete my account");
-    await page
-      .getByRole("button", { name: "Permanently deactivate my account" })
-      .click();
+    const trigger = page.getByRole("button", {
+      name: "I want to delete my account",
+    });
+    const confirmation = page.getByLabel("Type the confirmation phrase");
+    await trigger.click();
+    await expect(confirmation).toBeFocused();
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await expect(trigger).toBeFocused();
+
+    await trigger.click();
+    await expect(confirmation).toBeFocused();
+    await confirmation.fill("delete my account");
+
+    // A recoverable API failure must keep the confirmation controls and the
+    // typed phrase available for a safe retry; it must not collapse to an
+    // error-only view in this irreversible flow.
+    const deletionEndpoint = "**/api/v1/account-deletion-requests";
+    await page.route(deletionEndpoint, async (route) => {
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "temporary_failure" }),
+      });
+    });
+    const deactivate = page.getByRole("button", {
+      name: "Permanently deactivate my account",
+    });
+    await deactivate.click();
+    await expect(page.locator("#delete-confirmation-error")).toBeVisible();
+    await expect(confirmation).toHaveValue("delete my account");
+    await expect(confirmation).toHaveAttribute(
+      "aria-describedby",
+      "delete-confirmation-helper delete-confirmation-error",
+    );
+    await expect(deactivate).toBeVisible();
+    await page.unroute(deletionEndpoint);
+
+    await deactivate.click();
 
     await expect(
       page.getByRole("heading", { name: "Your account has been deactivated." }),
