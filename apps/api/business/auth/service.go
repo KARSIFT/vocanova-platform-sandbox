@@ -407,6 +407,17 @@ func (s *Service) resolveOAuthIdentity(ctx context.Context, identity *OAuthIdent
 		}
 	}
 	if _, err := s.repo.CreateExternalIdentity(ctx, user.ID, "google", identity.Subject, emailAddr, true); err != nil {
+		// Two independently started, valid OAuth flows can both observe no
+		// identity before one wins the database's unique (provider, subject)
+		// insert. Recover only if the winner linked that Google subject to the
+		// same verified-email user; a different owner must never receive a
+		// session through this callback.
+		if ext, lookupErr := s.repo.GetExternalIdentity(ctx, "google", identity.Subject); lookupErr == nil {
+			if ext.UserID == user.ID {
+				return user, nil
+			}
+			return nil, ErrOAuthProviderFailed
+		}
 		return nil, fmt.Errorf("create external identity: %w", err)
 	}
 	return user, nil
