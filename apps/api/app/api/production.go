@@ -88,7 +88,21 @@ type ProductionConfig struct {
 	// normalized at load time because every comparison against it
 	// happens on already-normalized addresses.
 	SyntheticSmokeTestEmail string
+
+	// AccountDeletionSweepInterval is the cadence at which a production API
+	// process checks for due staged-deletion requests. The sweep itself uses
+	// database claims, so running it in more than one replica is safe.
+	AccountDeletionSweepInterval time.Duration
 }
+
+const (
+	// AccountDeletionSweepInterval must not outpace the sweep service's
+	// fixed 60-per-hour internal safety budget, and must remain frequent
+	// enough that a due privacy deletion cannot be delayed indefinitely by
+	// an accidental environment value.
+	minAccountDeletionSweepInterval = time.Minute
+	maxAccountDeletionSweepInterval = 24 * time.Hour
+)
 
 // AI-provider identifiers and per-provider connection defaults.
 // providerGemini has no aifeedback-package constant yet (adding one
@@ -198,6 +212,14 @@ func LoadProductionConfig() (ProductionConfig, error) {
 			getenv("VOCANOVA_SYNTHETIC_SMOKE_TEST_EMAIL", defaultSyntheticSmokeTestEmail),
 		),
 	}
+	var sweepIntervalErr error
+	cfg.AccountDeletionSweepInterval, sweepIntervalErr = getenvBoundedDuration(
+		"ACCOUNT_DELETION_SWEEP_INTERVAL", time.Hour,
+		minAccountDeletionSweepInterval, maxAccountDeletionSweepInterval,
+	)
+	if sweepIntervalErr != nil {
+		return cfg, sweepIntervalErr
+	}
 
 	if cfg.DatabaseURL == "" {
 		return cfg, errors.New("DATABASE_URL is required")
@@ -263,6 +285,25 @@ func getenvDuration(key string, fallback time.Duration) time.Duration {
 		return fallback
 	}
 	return d
+}
+
+// getenvBoundedDuration reads an operator-facing duration whose range is part
+// of the production safety contract. Unlike optional feature knobs, a malformed
+// or unsafe value must fail startup rather than silently changing deletion
+// behavior.
+func getenvBoundedDuration(key string, fallback, min, max time.Duration) (time.Duration, error) {
+	v := os.Getenv(key)
+	if v == "" {
+		return fallback, nil
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil {
+		return 0, fmt.Errorf("%s must be a Go duration: %w", key, err)
+	}
+	if d < min || d > max {
+		return 0, fmt.Errorf("%s must be between %s and %s", key, min, max)
+	}
+	return d, nil
 }
 
 // accountsIdempotencyAdapter wraps a learning.PostgreSQLIdempotencyStore

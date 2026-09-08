@@ -129,6 +129,7 @@ func TestLoadProductionConfig_DefaultsAreSensible(t *testing.T) {
 	cfg, err := LoadProductionConfig()
 	require.NoError(t, err)
 	assert.Equal(t, "8080", cfg.Port, "PORT must default to 8080 when unset")
+	assert.Equal(t, time.Hour, cfg.AccountDeletionSweepInterval, "ACCOUNT_DELETION_SWEEP_INTERVAL must default to one hour when unset")
 	assert.Equal(t, "staging", cfg.Environment, "ENVIRONMENT must default to staging when unset")
 	assert.True(t, cfg.AIEnabled, "AI_FEATURES_ENABLED must default to true when unset")
 	assert.True(t, cfg.MagicLinkOn, "EMAIL_MAGIC_LINK_ENABLED must default to true when unset")
@@ -137,6 +138,39 @@ func TestLoadProductionConfig_DefaultsAreSensible(t *testing.T) {
 	assert.Equal(t, "opencode", cfg.APIProvider, "AI_PROVIDER must default to opencode when unset")
 	assert.Equal(t, "http://127.0.0.1:4096", cfg.APIBaseURL, "AI_PROVIDER_BASE_URL must default to local opencode serve when unset")
 	assert.Equal(t, "smoke-test-bot@synthetic.vocanova.invalid", cfg.SyntheticSmokeTestEmail, "VOCANOVA_SYNTHETIC_SMOKE_TEST_EMAIL must default to the reserved .invalid identity the deploy seed uses")
+}
+
+func TestLoadProductionConfig_RejectsUnsafeAccountDeletionSweepInterval(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://example/db")
+	t.Setenv("SESSION_COOKIE_DOMAIN", "example.com")
+	t.Setenv("OAUTH_REDIRECT_URI", "https://example.com/auth/callback")
+
+	for _, interval := range []string{"30s", "25h", "not-a-duration"} {
+		t.Run(interval, func(t *testing.T) {
+			t.Setenv("ACCOUNT_DELETION_SWEEP_INTERVAL", interval)
+			_, err := LoadProductionConfig()
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "ACCOUNT_DELETION_SWEEP_INTERVAL")
+		})
+	}
+}
+
+func TestLoadProductionConfig_AcceptsAccountDeletionSweepIntervalBoundaries(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://example/db")
+	t.Setenv("BASE_URL", "https://example.com")
+	t.Setenv("SESSION_COOKIE_DOMAIN", "example.com")
+	t.Setenv("OAUTH_REDIRECT_URI", "https://example.com/auth/callback")
+
+	for _, interval := range []string{"1m", "24h"} {
+		t.Run(interval, func(t *testing.T) {
+			t.Setenv("ACCOUNT_DELETION_SWEEP_INTERVAL", interval)
+			cfg, err := LoadProductionConfig()
+			require.NoError(t, err)
+			expected, err := time.ParseDuration(interval)
+			require.NoError(t, err)
+			assert.Equal(t, expected, cfg.AccountDeletionSweepInterval)
+		})
+	}
 }
 
 func TestLoadProductionConfig_NormalizesSyntheticSmokeTestEmail(t *testing.T) {

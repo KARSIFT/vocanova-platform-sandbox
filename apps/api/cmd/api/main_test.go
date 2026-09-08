@@ -1,8 +1,55 @@
 package main
 
 import (
+	"context"
+	"sync/atomic"
 	"testing"
+	"time"
+
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/accounts"
 )
+
+type fakeDeletionSweeper struct{ calls atomic.Int32 }
+
+func (f *fakeDeletionSweeper) RunDeletionSweep(context.Context, string, string) (*accounts.SweepResult, error) {
+	f.calls.Add(1)
+	return &accounts.SweepResult{}, nil
+}
+
+func TestRunDeletionSweepLoopRunsImmediatelyAndStopsOnCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	sweeper := &fakeDeletionSweeper{}
+	done := make(chan struct{})
+	go func() {
+		runDeletionSweepLoop(ctx, sweeper, time.Hour)
+		close(done)
+	}()
+
+	deadline := time.After(time.Second)
+	for sweeper.calls.Load() == 0 {
+		select {
+		case <-deadline:
+			t.Fatal("deletion sweep did not run at startup")
+		case <-time.After(time.Millisecond):
+		}
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("deletion sweep loop did not stop after cancellation")
+	}
+}
+
+func TestStopDeletionSweepWaitsForLoopExit(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		<-ctx.Done()
+		close(done)
+	}()
+	stopDeletionSweep(cancel, done)
+}
 
 // TestRun_RejectsMissingDatabaseURL covers the first
 // config-load safety property: a process started with no

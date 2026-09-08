@@ -9,6 +9,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"net/http"
@@ -18,6 +19,9 @@ import (
 	"time"
 
 	contract "github.com/KARSIFT/vocanova-platform/apps/api/app/api"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/accounts"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/auth"
+	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/getsentry/sentry-go"
 	sentryhttp "github.com/getsentry/sentry-go/http"
 )
@@ -63,6 +67,21 @@ func run() error {
 	}
 	defer db.Close()
 
+	// A deletion request deliberately deactivates first, then is purged after
+	// its grace period. Without this loop, a due row can remain deactivated
+	// forever because no request path invokes RunDeletionSweep. Database-level
+	// claims make concurrent API replicas safe; each process may run this same
+	// bounded loop.
+	sweepCtx, cancelSweep := context.WithCancel(context.Background())
+	sweepDone := make(chan struct{})
+	go func() {
+		defer close(sweepDone)
+		runDeletionSweepLoop(sweepCtx, newDeletionSweepService(db), cfg.AccountDeletionSweepInterval)
+	}()
+	defer func() {
+		stopDeletionSweep(cancelSweep, sweepDone)
+	}()
+
 	// Real unhandled errors/panics from any request, not just the
 	// deliberate VOC-037-T04 test endpoint, must reach Sentry - the
 	// deliberate test event alone proves the DSN/token wiring, not that
@@ -107,6 +126,13 @@ func run() error {
 		return fmt.Errorf("listen: %w", err)
 	}
 
+	// Stop and join background work before beginning the HTTP drain. Otherwise
+	// a ticker can start a new irreversible purge during the server's 30-second
+	// graceful-shutdown window. The deferred call remains a safety net for an
+	// earlier return; cancellation and reads from a closed done channel are both
+	// idempotent.
+	stopDeletionSweep(cancelSweep, sweepDone)
+
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
@@ -120,4 +146,59 @@ func boolFlag(b bool) string {
 		return "on"
 	}
 	return "off"
+}
+
+type deletionSweeper interface {
+	RunDeletionSweep(ctx context.Context, clientIP, sessionToken string) (*accounts.SweepResult, error)
+}
+
+// stopDeletionSweep cancels the loop and waits until it has exited while the
+// database is still open. It is safe to invoke more than once.
+func stopDeletionSweep(cancel context.CancelFunc, done <-chan struct{}) {
+	cancel()
+	<-done
+}
+
+// newDeletionSweepService builds the narrow production service instance used
+// only by the background purge loop. Request-only collaborators are nil: the
+// sweep uses just the repository, clock, rate limiter, and deletion settings.
+func newDeletionSweepService(db *sql.DB) deletionSweeper {
+	clk := clock.Real{}
+	return accounts.NewService(
+		accounts.NewPostgreSQLRepository(db), nil, nil, nil, clk,
+		auth.NewFixedWindowRateLimiter(clk, time.Hour, 60),
+		accounts.Config{},
+	)
+}
+
+// runDeletionSweepLoop performs one pass at startup (so overdue requests do
+// not wait a whole cadence) and then at each configured interval. Errors are
+// logged without account identifiers; a later pass safely resumes a failed or
+// stale claim. Context cancellation stops the ticker promptly during shutdown.
+func runDeletionSweepLoop(ctx context.Context, sweeper deletionSweeper, interval time.Duration) {
+	if interval <= 0 {
+		interval = time.Hour
+	}
+	run := func() {
+		result, err := sweeper.RunDeletionSweep(ctx, "internal", "internal")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "api: account-deletion sweep failed: %v\n", err)
+			return
+		}
+		if result.Anonymized > 0 || result.Failed > 0 {
+			fmt.Fprintf(os.Stderr, "api: account-deletion sweep processed=%d anonymized=%d failed=%d\n", result.Processed, result.Anonymized, result.Failed)
+		}
+	}
+
+	run()
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			run()
+		}
+	}
 }
