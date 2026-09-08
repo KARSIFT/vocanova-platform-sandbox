@@ -292,16 +292,13 @@ export function validateMockInventory() {
   // account_deletion_requests migration. VOC-050-T00 adds the
   // synthetic smoke-test account marker on users. The AI retry-history
   // migration makes failed feedback attempts retryable without losing their
-  // history. VOC-1350 explicitly replaces the quality-review-report foreign
-  // key cascades with RESTRICT actions. VOC-1352 adds the documented
-  // feature_audit_logs table used by the word-save transaction and
-  // account-deletion de-identification flow. VOC-1379 adds the forward-only
-  // daily-activity review-counter integrity constraints; it does not add a
-  // new table or application boundary. The grace-protected mission linkage
-  // is likewise a forward integrity change to existing mission and ledger
-  // tables, rather than a new application boundary. VOC-1385 adds the
-  // cleanup-order index for the existing email_change_links table; it is also
-  // a forward operational integrity change, not a new application boundary.
+  // history. The review-attempt integrity migration binds immutable history's
+  // repeated learner/meaning IDs to its referenced saved-word row. VOC-1350
+  // replaces quality-review-report foreign key cascades with RESTRICT actions.
+  // VOC-1352 adds feature_audit_logs for word-save and account-deletion
+  // de-identification. VOC-1379, the grace-protected mission linkage, and
+  // VOC-1385 email-change-link cleanup index are forward integrity changes to
+  // existing tables rather than new application boundaries.
   const allowedMigrationFiles = new Set([
     "20260724210000_identity_foundation.sql",
     "20260724210001_oauth_state.sql",
@@ -321,6 +318,7 @@ export function validateMockInventory() {
     "20260905130000_ai_feedback_retry_history.sql",
     "20260908010000_voc1350_restrict_ai_feedback_report_foreign_keys.sql",
     "20260908020000_voc1352_feature_audit_logs.sql",
+    "20260908021500_review_attempt_user_word_integrity.sql",
     "20260908110000_daily_activity_review_counter_integrity.sql",
     "20260908120000_grace_protected_mission_linkage.sql",
     "20260908130000_email_change_links_cleanup_order.sql",
