@@ -43,15 +43,43 @@ func TestDailyActivityRemainingCounterConstraintsAgainstRealPostgres(t *testing.
 			) VALUES ($1, $2, $3, 'UTC', -1, NOW(), NOW())`, tc.column),
 				uuid.New(), userID, baseDate.AddDate(0, 0, index))
 			requireConstraintViolation(t, err)
+
+			rowID := uuid.New()
+			_, err = db.ExecContext(t.Context(), `INSERT INTO daily_activity_summaries (
+				id, user_id, local_date, timezone, created_at, updated_at
+			) VALUES ($1, $2, $3, 'UTC', NOW(), NOW())`,
+				rowID, userID, baseDate.AddDate(0, 0, index+10))
+			require.NoError(t, err, "the zero/default aggregate state must remain writable")
+
+			_, err = db.ExecContext(t.Context(), fmt.Sprintf(
+				`UPDATE daily_activity_summaries SET %s = -1 WHERE id = $1`, tc.column), rowID)
+			requireConstraintViolation(t, err)
 		})
 	}
+
+	var defaults struct {
+		wordsDiscovered    int
+		wordsAdded         int
+		sentencesSubmitted int
+		aiFeedbackReceived int
+	}
+	require.NoError(t, db.QueryRowContext(t.Context(), `SELECT
+		words_discovered, words_added, sentences_submitted, ai_feedback_received
+		FROM daily_activity_summaries WHERE user_id = $1 AND local_date = $2`,
+		userID, baseDate.AddDate(0, 0, 10)).Scan(
+		&defaults.wordsDiscovered, &defaults.wordsAdded, &defaults.sentencesSubmitted, &defaults.aiFeedbackReceived,
+	))
+	assert.Equal(t, 0, defaults.wordsDiscovered, "omitted counters must keep their PostgreSQL defaults")
+	assert.Equal(t, 0, defaults.wordsAdded, "omitted counters must keep their PostgreSQL defaults")
+	assert.Equal(t, 0, defaults.sentencesSubmitted, "omitted counters must keep their PostgreSQL defaults")
+	assert.Equal(t, 0, defaults.aiFeedbackReceived, "omitted counters must keep their PostgreSQL defaults")
 
 	_, err := db.ExecContext(t.Context(), `INSERT INTO daily_activity_summaries (
 		id, user_id, local_date, timezone, words_discovered, words_added,
 		sentences_submitted, ai_feedback_received, created_at, updated_at
-	) VALUES ($1, $2, $3, 'UTC', 0, 2, 3, 4, NOW(), NOW())`,
-		uuid.New(), userID, baseDate.AddDate(0, 0, 10))
-	require.NoError(t, err, "the default/valid counter state must remain writable")
+	) VALUES ($1, $2, $3, 'UTC', 1, 2, 3, 4, NOW(), NOW())`,
+		uuid.New(), userID, baseDate.AddDate(0, 0, 20))
+	require.NoError(t, err, "positive counter values must remain writable")
 }
 
 func TestDailyActivityRemainingCounterMigrationPreservesLegacyRows(t *testing.T) {
@@ -74,12 +102,18 @@ func TestDailyActivityRemainingCounterMigrationPreservesLegacyRows(t *testing.T)
 
 	var validated bool
 	require.NoError(t, db.QueryRowContext(t.Context(), `SELECT convalidated
-		FROM pg_constraint WHERE conname = 'daily_activity_summaries_remaining_counters_nonnegative'`).Scan(&validated))
+		FROM pg_constraint
+		WHERE conname = 'daily_activity_summaries_remaining_counters_nonnegative'
+		  AND conrelid = 'daily_activity_summaries'::regclass`).Scan(&validated))
 	assert.False(t, validated, "the constraint must stay NOT VALID until a deliberate legacy reconciliation")
 
 	_, err = db.ExecContext(t.Context(), `INSERT INTO daily_activity_summaries (
 		id, user_id, local_date, timezone, sentences_submitted, created_at, updated_at
 	) VALUES ($1, $2, $3, 'UTC', -1, NOW(), NOW())`, uuid.New(), userID, legacyDate.AddDate(0, 0, 1))
+	requireConstraintViolation(t, err)
+
+	_, err = db.ExecContext(t.Context(), `UPDATE daily_activity_summaries
+		SET updated_at = NOW() WHERE user_id = $1 AND local_date = $2`, userID, legacyDate)
 	requireConstraintViolation(t, err)
 }
 
