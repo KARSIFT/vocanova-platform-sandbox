@@ -154,6 +154,20 @@ func TestCreateAccountDeletionRequestRequiresIdempotencyKey(t *testing.T) {
 	assert.Equal(t, http.StatusUnprocessableEntity, w.Code, "missing idem key path")
 }
 
+func TestCreateAccountDeletionRequestRejectsWhitespaceIdempotencyKeyAsDocumentedValidation(t *testing.T) {
+	api, authSvc, _, accountsRepo, authRepo := testAccountDeletionAPI(t)
+	uid := seedUserForAccountDeletion(t, authRepo, accountsRepo, "user@example.com")
+
+	csrfToken, csrfCookie := authSvc.IssueCSRFCookie()
+	req := adRequesterRequest(t, http.MethodPost, "/api/v1/account-deletion-requests", " ", uid)
+	req.AddCookie(csrfCookie)
+	req.Header.Set("X-CSRF-Token", csrfToken)
+	w := httptest.NewRecorder()
+	api.Adapter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnprocessableEntity, w.Code, w.Body.String())
+}
+
 // TestCreateAccountDeletionRequestHappyPath covers the
 // success path: a 200 with the deactivated state, the
 // scheduled purge_after, and the Idempotency-Key fingerprint.

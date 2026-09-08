@@ -90,8 +90,8 @@ func RegisterAccountDeletionRequests(api huma.API, svc *accounts.Service, authSv
 
 // mapAccountDeletionError maps the accounts package's
 // exported errors to stable Huma responses. The 401 path is
-// reserved for "missing or invalid session"; the 400 path
-// is the missing-Idempotency-Key validation error; the 404
+// reserved for "missing or invalid session"; invalid
+// Idempotency-Key values return the documented 422; the 404
 // is the user-not-found; the 409 covers the
 // already-in-flight discipline and the Idempotency-Key
 // fingerprint conflict; the 429 is the rate-limit error;
@@ -102,7 +102,7 @@ func mapAccountDeletionError(err error) huma.StatusError {
 	}
 	switch {
 	case errors.Is(err, accounts.ErrAccountDeletionIdempotencyKeyRequired):
-		return huma.Error400BadRequest("idempotency key required")
+		return huma.Error422UnprocessableEntity("idempotency key required")
 	case errors.Is(err, accounts.ErrAccountDeletionIdempotencyConflict):
 		return huma.Error409Conflict("idempotency key conflict")
 	case errors.Is(err, accounts.ErrAccountDeletionAlreadyInFlight):
