@@ -114,10 +114,11 @@ func TestServiceCompleteOnboardingRejectsNilUserID(t *testing.T) {
 }
 
 func TestServiceCompleteOnboardingSeedsUserSettingsWhenNoRow(t *testing.T) {
-	svc, _ := newServiceWithMemory(t)
+	svc, repo := newServiceWithMemory(t)
 	uid := uuid.New()
 	a := validAnswers()
 	a.DailyReviewTarget = 30
+	a.Timezone = "Asia/Tehran"
 
 	profile, stored, err := svc.CompleteOnboarding(context.Background(), uid, a)
 	require.NoError(t, err)
@@ -126,6 +127,21 @@ func TestServiceCompleteOnboardingSeedsUserSettingsWhenNoRow(t *testing.T) {
 	assert.Equal(t, 30, profile.DailyReviewTarget)
 	assert.True(t, stored.Stored)
 	assert.Equal(t, 30, stored.DailyReviewTarget, "no existing row: seed with onboarding answer")
+	assert.Equal(t, "Asia/Tehran", repo.settings[uid].Timezone)
+}
+
+func TestOnboardingAnswersValidateRejectsInvalidTimezone(t *testing.T) {
+	for _, timezone := range []string{"Not/A_Real_Zone", "Local"} {
+		t.Run(timezone, func(t *testing.T) {
+			a := validAnswers()
+			a.Timezone = timezone
+			require.ErrorIs(t, a.Validate(), ErrInvalidOnboarding)
+		})
+	}
+}
+
+func TestOnboardingAnswersEffectiveTimezoneFallsBackToUTC(t *testing.T) {
+	assert.Equal(t, "UTC", validAnswers().EffectiveTimezone())
 }
 
 func TestServiceCompleteOnboardingOverwritesDefaultUserSettings(t *testing.T) {
@@ -154,10 +170,12 @@ func TestServiceCompleteOnboardingPreservesCustomizedUserSettings(t *testing.T) 
 
 	a := validAnswers()
 	a.DailyReviewTarget = 10
+	a.Timezone = "Asia/Tehran"
 	_, stored, err := svc.CompleteOnboarding(context.Background(), uid, a)
 	require.NoError(t, err)
 	assert.True(t, stored.Stored)
 	assert.Equal(t, 50, stored.DailyReviewTarget, "customized existing: never overwrite")
+	assert.Equal(t, "Europe/Madrid", repo.settings[uid].Timezone, "customized timezone: never overwrite")
 }
 
 func TestServiceCompleteOnboardingPersistsProfile(t *testing.T) {

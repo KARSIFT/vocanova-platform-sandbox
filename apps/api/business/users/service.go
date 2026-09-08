@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"time"
+	_ "time/tzdata" // Keep IANA validation available in the minimal Alpine runtime.
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/google/uuid"
@@ -83,6 +84,10 @@ type OnboardingAnswers struct {
 	LearningGoal      string
 	MainUseCase       string
 	DailyReviewTarget int
+	// Timezone is the optional IANA timezone detected by the browser during
+	// onboarding. An empty value deliberately retains the documented UTC
+	// fallback for clients that cannot report one.
+	Timezone string
 }
 
 // Validate enforces the DOC-05 §6 enum and range checks at the service
@@ -113,7 +118,29 @@ func (a OnboardingAnswers) Validate() error {
 	if a.DailyReviewTarget < MinDailyReviewTarget || a.DailyReviewTarget > MaxDailyReviewTarget {
 		return fmt.Errorf("%w: daily review target %d out of range [%d,%d]", ErrInvalidOnboarding, a.DailyReviewTarget, MinDailyReviewTarget, MaxDailyReviewTarget)
 	}
+	if a.Timezone != "" {
+		// time.LoadLocation accepts Go's process-local "Local" sentinel,
+		// but it is not an IANA identifier. Persisting it would make a
+		// learner's daily boundary depend on whichever timezone an API host
+		// happens to use.
+		if a.Timezone == "Local" {
+			return fmt.Errorf("%w: invalid IANA timezone %q", ErrInvalidOnboarding, a.Timezone)
+		}
+		if _, err := time.LoadLocation(a.Timezone); err != nil {
+			return fmt.Errorf("%w: invalid IANA timezone %q", ErrInvalidOnboarding, a.Timezone)
+		}
+	}
 	return nil
+}
+
+// EffectiveTimezone returns the timezone persisted for a newly-created
+// settings row. Keep the fallback here so every repository implementation
+// treats an unavailable browser timezone identically.
+func (a OnboardingAnswers) EffectiveTimezone() string {
+	if a.Timezone == "" {
+		return "UTC"
+	}
+	return a.Timezone
 }
 
 // UserSettingsReader is the minimum view the D04 seed-eligibility decision

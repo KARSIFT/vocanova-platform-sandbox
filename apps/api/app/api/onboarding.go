@@ -42,6 +42,7 @@ type CompleteOnboardingInput struct {
 		LearningGoal      string `json:"learningGoal" enum:"general,work,travel,study,conversation,exam" doc:"Self-reported learning goal"`
 		MainUseCase       string `json:"mainUseCase" enum:"daily_life,work,travel,study,social" doc:"Self-reported main use case"`
 		DailyReviewTarget int    `json:"dailyReviewTarget" minimum:"5" maximum:"100" doc:"Self-reported daily review target"`
+		Timezone          string `json:"timezone,omitempty" maxLength:"255" doc:"Optional browser-resolved IANA timezone used for daily learning logic"`
 	}
 }
 
@@ -99,6 +100,7 @@ func RegisterOnboarding(api huma.API, svc *users.Service, authSvc *auth.Service)
 			LearningGoal:      input.Body.LearningGoal,
 			MainUseCase:       input.Body.MainUseCase,
 			DailyReviewTarget: input.Body.DailyReviewTarget,
+			Timezone:          input.Body.Timezone,
 		}
 		profile, _, err := svc.CompleteOnboarding(ctx, uid, answers)
 		if err != nil {

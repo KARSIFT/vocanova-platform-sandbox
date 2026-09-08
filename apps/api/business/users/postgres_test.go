@@ -34,6 +34,7 @@ func TestPostgreSQLRepositoryCompleteOnboardingFreshUserSettingsInsertSuppliesTi
 		LearningGoal:      "general",
 		MainUseCase:       "daily_life",
 		DailyReviewTarget: 30,
+		Timezone:          "Asia/Tehran",
 	}
 
 	mock.ExpectBegin()
@@ -47,6 +48,7 @@ func TestPostgreSQLRepositoryCompleteOnboardingFreshUserSettingsInsertSuppliesTi
 		).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery(userSettingsInsertColumnsPattern).
+		WithArgs(sqlmock.AnyArg(), userID, answers.Timezone, answers.DailyReviewTarget, SchemaDailyReviewTargetDefault, now).
 		WillReturnRows(sqlmock.NewRows([]string{"user_id", "daily_review_target"}).AddRow(userID, answers.DailyReviewTarget))
 	mock.ExpectCommit()
 	mock.ExpectQuery("SELECT u.onboarding_status,").

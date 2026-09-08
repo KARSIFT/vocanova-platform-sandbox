@@ -14,6 +14,8 @@ import { createApiClient } from "@/lib/api";
 import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
 import { handleApiError } from "@/lib/session";
 
+import { getBrowserTimezone } from "./onboarding-timezone";
+
 interface OnboardingFormProps {
   defaultNativeLanguage?: string;
 }
@@ -163,6 +165,7 @@ export function OnboardingForm({
       learningGoal: state.learningGoal!,
       mainUseCase: state.mainUseCase!,
       dailyReviewTarget: state.dailyReviewTarget,
+      timezone: getBrowserTimezone(),
     };
     const client = createApiClient();
     try {

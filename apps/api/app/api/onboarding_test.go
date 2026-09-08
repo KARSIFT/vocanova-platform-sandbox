@@ -182,7 +182,7 @@ func TestCompleteOnboardingSeedsUserSettingsWhenNoRow(t *testing.T) {
 
 	csrfToken, csrfCookie := svc.IssueCSRFCookie()
 	req := onbRequesterRequest(t, http.MethodPost, "/api/v1/onboarding",
-		`{"englishLevel":"a2","nativeLanguage":"es","learningGoal":"work","mainUseCase":"work","dailyReviewTarget":30}`,
+		`{"englishLevel":"a2","nativeLanguage":"es","learningGoal":"work","mainUseCase":"work","dailyReviewTarget":30,"timezone":"Asia/Tehran"}`,
 		uid)
 	req.AddCookie(csrfCookie)
 	req.Header.Set("X-CSRF-Token", csrfToken)
@@ -195,6 +195,22 @@ func TestCompleteOnboardingSeedsUserSettingsWhenNoRow(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, stored.Stored, "D04: no existing user_settings row → row is created")
 	assert.Equal(t, 30, stored.DailyReviewTarget, "D04: no existing row → seed with onboarding answer")
+}
+
+func TestCompleteOnboardingRejectsInvalidTimezone(t *testing.T) {
+	api, svc, _ := testOnboardingAPI(t)
+	uid := uuid.New()
+
+	csrfToken, csrfCookie := svc.IssueCSRFCookie()
+	req := onbRequesterRequest(t, http.MethodPost, "/api/v1/onboarding",
+		`{"englishLevel":"b1","nativeLanguage":"es","learningGoal":"general","mainUseCase":"daily_life","dailyReviewTarget":25,"timezone":"Not/A_Real_Zone"}`,
+		uid)
+	req.AddCookie(csrfCookie)
+	req.Header.Set("X-CSRF-Token", csrfToken)
+
+	w := httptest.NewRecorder()
+	api.Adapter().ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
 func TestCompleteOnboardingPreservesCustomizedUserSettings(t *testing.T) {

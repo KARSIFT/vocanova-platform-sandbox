@@ -58,6 +58,11 @@
             "description": "Self-reported native language",
             "minLength": 1,
             "type": "string"
+          },
+          "timezone": {
+            "description": "Optional browser-resolved IANA timezone used for daily learning logic",
+            "maxLength": 255,
+            "type": "string"
           }
         },
         "required": [
