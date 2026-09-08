@@ -11,6 +11,8 @@ import { handleApiError } from "@/lib/session";
 import {
   acceptSentenceEdit,
   countSentenceCharacters,
+  getSentenceCharacterCountDescription,
+  getSentenceCharacterLimitStatus,
   MAX_SENTENCE_CHARACTERS,
 } from "./sentence-feedback-input";
 
@@ -150,6 +152,10 @@ export function SentenceFeedback({
   const hasResult = result !== null;
   const hasSuccessResult = hasResult && !result.errorCode;
   const statusLabel = result ? getStatusLabel(result.status) : null;
+  const characterCount = countSentenceCharacters(sentence);
+  const characterCountId = `sentence-character-count-${attemptId}`;
+  const characterLimitMessageId = `sentence-character-limit-${attemptId}`;
+  const characterLimitStatus = getSentenceCharacterLimitStatus(sentence);
 
   return (
     <section
@@ -184,6 +190,9 @@ export function SentenceFeedback({
           <textarea
             id={`sentence-input-${attemptId}`}
             name="sentence"
+            aria-describedby={`${characterCountId}${
+              characterLimitStatus ? ` ${characterLimitMessageId}` : ""
+            }`}
             value={sentence}
             onChange={(event) =>
               setSentence((previous) =>
@@ -195,9 +204,18 @@ export function SentenceFeedback({
             placeholder={`Type a sentence using "${targetWord}"...`}
             className="w-full rounded-md border border-neutral-300 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base text-neutral-900 placeholder:text-neutral-500 focus:border-primary-500 focus:outline focus:outline-2 focus:outline-primary-500/20 disabled:cursor-not-allowed disabled:opacity-60"
           />
-          <p className="mt-[var(--spacing-xs)] text-right text-sm text-neutral-600">
-            {countSentenceCharacters(sentence)}/{MAX_SENTENCE_CHARACTERS}
+          <p
+            id={characterCountId}
+            aria-label={getSentenceCharacterCountDescription(sentence)}
+            className="mt-[var(--spacing-xs)] text-right text-sm text-neutral-600"
+          >
+            {characterCount}/{MAX_SENTENCE_CHARACTERS}
           </p>
+          {characterLimitStatus ? (
+            <p id={characterLimitMessageId} role="status" className="sr-only">
+              {characterLimitStatus}
+            </p>
+          ) : null}
         </div>
 
         <button

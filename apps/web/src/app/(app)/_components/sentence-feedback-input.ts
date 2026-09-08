@@ -7,6 +7,16 @@ export function countSentenceCharacters(value: string): number {
   return Array.from(value).length;
 }
 
+export function getSentenceCharacterCountDescription(value: string): string {
+  return `${countSentenceCharacters(value)} of ${MAX_SENTENCE_CHARACTERS} characters`;
+}
+
+export function getSentenceCharacterLimitStatus(value: string): string | null {
+  return countSentenceCharacters(value) === MAX_SENTENCE_CHARACTERS
+    ? `You've reached the ${MAX_SENTENCE_CHARACTERS}-character limit.`
+    : null;
+}
+
 // Keep the existing value when an edit would exceed the limit. Truncating the
 // proposed value could otherwise discard the trailing part of a valid sentence
 // when a learner inserts or pastes text in its middle.
