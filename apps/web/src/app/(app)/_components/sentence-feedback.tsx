@@ -297,7 +297,7 @@ export function SentenceFeedback({
                         type="button"
                         onClick={() => handleReport(reason)}
                         disabled={reportStatus === "loading"}
-                        className="block text-left text-sm text-neutral-600 underline transition-colors hover:text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center text-left text-sm text-neutral-600 underline transition-colors hover:text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {label}
                       </button>
@@ -309,7 +309,7 @@ export function SentenceFeedback({
                     onClick={() => setShowReportReasons(true)}
                     disabled={reportStatus === "loading"}
                     aria-busy={reportStatus === "loading"}
-                    className="text-sm font-medium text-neutral-600 underline transition-colors hover:text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center text-sm font-medium text-neutral-600 underline transition-colors hover:text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {reportStatus === "loading"
                       ? "Reporting..."
@@ -317,7 +317,7 @@ export function SentenceFeedback({
                   </button>
                 )}
                 {reportStatus === "error" ? (
-                  <span className="text-sm text-red-700">
+                  <span role="alert" className="text-sm text-red-700">
                     Unable to report. Try again.
                   </span>
                 ) : null}
