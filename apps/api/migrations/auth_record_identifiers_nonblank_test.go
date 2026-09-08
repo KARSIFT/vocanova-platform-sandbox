@@ -71,6 +71,9 @@ func TestAuthRecordIdentifiersNonblankAgainstPostgreSQL(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
+	var serverEncoding string
+	require.NoError(t, db.QueryRowContext(ctx, `SHOW server_encoding`).Scan(&serverEncoding))
+	require.Equal(t, "UTF8", serverEncoding, "the explicit Unicode White_Space regular expression requires UTF8; SQL_ASCII cannot represent its non-ASCII code points")
 	schema := "vocanova_auth_nonblank_" + strings.ReplaceAll(uuid.NewString(), "-", "")
 	_, err = db.ExecContext(ctx, "CREATE SCHEMA "+pq.QuoteIdentifier(schema))
 	require.NoError(t, err)
