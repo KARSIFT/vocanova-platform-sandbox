@@ -90,6 +90,38 @@ func waitForLedgerLock(t *testing.T, ctx context.Context, db *sql.DB, applicatio
 	t.Fatal("second production writer did not wait on pg_advisory_xact_lock")
 }
 
+func TestPointLedgerDuplicateReportsNoNewAwardPostgreSQL(t *testing.T) {
+	db := ledgerWriterDB(t)
+	ctx := t.Context()
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	userID := uuid.New()
+	_, err := db.ExecContext(ctx,
+		`INSERT INTO users (id,email,status,created_at,updated_at) VALUES ($1,$2,'active',$3,$3)`,
+		userID, userID.String()+"@example.test", now,
+	)
+	require.NoError(t, err)
+
+	svc := gamification.NewService(gamification.NewRepository(db))
+	key := gamification.LearnerSentenceSubmittedKey("duplicate-source")
+	tx, err := db.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	balance, _, created, err := svc.GrantPoint(ctx, tx, userID, gamification.RewardKindSentenceSubmitted, nil, key, 0, now, nil)
+	require.NoError(t, err)
+	require.True(t, created)
+	require.Equal(t, gamification.RewardSentenceSubmitted, balance)
+	require.NoError(t, tx.Commit())
+
+	tx, err = db.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	current, err := svc.CurrentBalanceTx(ctx, tx, userID)
+	require.NoError(t, err)
+	balance, _, created, err = svc.GrantPoint(ctx, tx, userID, gamification.RewardKindSentenceSubmitted, nil, key, current, now, nil)
+	require.NoError(t, err)
+	require.False(t, created)
+	require.Equal(t, current, balance)
+	require.NoError(t, tx.Commit())
+}
+
 func TestProductionPointWritersSerializeAndRemainReplaySafePostgreSQL(t *testing.T) {
 	db := ledgerWriterDB(t)
 	ctx, cancel := context.WithTimeout(t.Context(), 45*time.Second)
@@ -167,7 +199,7 @@ func TestProductionPointWritersSerializeAndRemainReplaySafePostgreSQL(t *testing
 	feedback := &aifeedback.ProviderFeedback{Status: aifeedback.LearningStatusCorrect, Explanation: "fixture", RawJSON: map[string]any{"status": aifeedback.LearningStatusCorrect}}
 	feedbackRepo := aifeedback.NewPostgreSQLRepository(db, nil)
 	complete := func(ctx context.Context, tx *sql.Tx) (bool, error) {
-		return updater.UpdateInTransaction(ctx, tx, userID, sentenceID)
+		return updater.UpdateInTransaction(ctx, tx, userID, sentenceID, attemptID)
 	}
 	_, err = db.ExecContext(ctx, fmt.Sprintf("ALTER TABLE confidence_point_ledger ADD CONSTRAINT reject_fixture_sentence CHECK (user_id <> '%s') NOT VALID", userID))
 	require.NoError(t, err)

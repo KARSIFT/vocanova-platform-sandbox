@@ -451,7 +451,7 @@ func (r *PostgreSQLRepository) applyP4ReviewWiring(
 		if err != nil {
 			return fmt.Errorf("get latest point balance: %w", err)
 		}
-		newBalance, _, err := r.gamification.GrantPoint(
+		newBalance, _, _, err := r.gamification.GrantPoint(
 			ctx, tx, req.UserID,
 			rewardKind, &attemptID,
 			gamification.ReviewAttemptRatedKey(attemptID.String()),
@@ -484,7 +484,7 @@ func (r *PostgreSQLRepository) applyP4ReviewWiring(
 				return fmt.Errorf("get latest point balance: %w", err)
 			}
 			localDateKey := snap.LocalDate.Format("2006-01-02")
-			if _, _, err := r.gamification.GrantPoint(
+			if _, _, _, err := r.gamification.GrantPoint(
 				ctx, tx, req.UserID,
 				gamification.RewardKindDailyMissionDone, nil,
 				gamification.DailyMissionCompletedKey(req.UserID.String(), localDateKey),

@@ -22,7 +22,7 @@ func (r *finalizerAwareRepository) CompleteSuccessfulFeedbackAttempt(ctx context
 
 type countedMissionAccounting struct{ calls int }
 
-func (m *countedMissionAccounting) Update(context.Context, uuid.UUID, uuid.UUID) (bool, error) {
+func (m *countedMissionAccounting) Update(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) (bool, error) {
 	m.calls++
 	return false, nil
 }

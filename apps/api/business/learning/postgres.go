@@ -228,7 +228,7 @@ func (r *PostgreSQLRepository) saveUserWordTx(ctx context.Context, tx *sql.Tx, r
 		if err != nil {
 			return nil, fmt.Errorf("get current balance: %w", err)
 		}
-		if _, _, err := r.gamification.GrantPoint(
+		if _, _, _, err := r.gamification.GrantPoint(
 			ctx, tx, req.UserID,
 			gamification.RewardKindAddWord,
 			&id,
