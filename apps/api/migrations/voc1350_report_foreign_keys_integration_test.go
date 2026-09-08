@@ -54,10 +54,17 @@ func TestVOC1350ReportForeignKeysRestrictParentDeletion(t *testing.T) {
 	reportUserID, sentenceUserID := uuid.New(), uuid.New()
 	sentenceID, attemptID, reportID := uuid.New(), uuid.New(), uuid.New()
 	t.Cleanup(func() {
-		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_feedback_quality_review_reports WHERE id = $1`, reportID)
-		_, _ = db.ExecContext(context.Background(), `DELETE FROM ai_feedback_attempts WHERE id = $1`, attemptID)
-		_, _ = db.ExecContext(context.Background(), `DELETE FROM learner_sentences WHERE id = $1`, sentenceID)
-		_, _ = db.ExecContext(context.Background(), `DELETE FROM users WHERE id IN ($1, $2)`, reportUserID, sentenceUserID)
+		tx, err := db.BeginTx(context.Background(), nil)
+		if err != nil {
+			return
+		}
+		defer tx.Rollback()
+		_, _ = tx.ExecContext(context.Background(), `SELECT set_config('vocanova.ledger_purge', 'on', true)`)
+		_, _ = tx.ExecContext(context.Background(), `DELETE FROM ai_feedback_quality_review_reports WHERE id = $1`, reportID)
+		_, _ = tx.ExecContext(context.Background(), `DELETE FROM ai_feedback_attempts WHERE id = $1`, attemptID)
+		_, _ = tx.ExecContext(context.Background(), `DELETE FROM learner_sentences WHERE id = $1`, sentenceID)
+		_, _ = tx.ExecContext(context.Background(), `DELETE FROM users WHERE id IN ($1, $2)`, reportUserID, sentenceUserID)
+		_ = tx.Commit()
 	})
 
 	for _, userID := range []uuid.UUID{reportUserID, sentenceUserID} {
@@ -75,7 +82,18 @@ func TestVOC1350ReportForeignKeysRestrictParentDeletion(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = db.ExecContext(ctx, `DELETE FROM ai_feedback_attempts WHERE id = $1`, attemptID)
+	// The immutable-attempt trigger rejects an ordinary delete before PostgreSQL
+	// reaches this FK. Enable only the account-purge-local gate here so this
+	// focused migration test can still verify the report-before-attempt order.
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	if _, err := tx.ExecContext(ctx, `SELECT set_config('vocanova.ledger_purge', 'on', true)`); err != nil {
+		t.Fatal(err)
+	}
+	_, err = tx.ExecContext(ctx, `DELETE FROM ai_feedback_attempts WHERE id = $1`, attemptID)
 	assertForeignKeyViolation(t, err)
 	_, err = db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, reportUserID)
 	assertForeignKeyViolation(t, err)
