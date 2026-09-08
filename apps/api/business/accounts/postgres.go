@@ -144,6 +144,25 @@ func (r *PostgreSQLRepository) RevokeAllEmailChangeLinksForUser(ctx context.Cont
 	return n, nil
 }
 
+// CleanupExpiredEmailChangeLinks removes short-lived email-change credentials
+// once they have expired, been consumed, or been revoked. That prevents the
+// pending email address and token hash from remaining after their request-path
+// usefulness has ended.
+func (r *PostgreSQLRepository) CleanupExpiredEmailChangeLinks(ctx context.Context, before time.Time) (int64, error) {
+	res, err := r.db.ExecContext(ctx, `DELETE FROM email_change_links
+		WHERE expires_at <= $1
+		   OR consumed_at IS NOT NULL
+		   OR (revoked_at IS NOT NULL AND revoked_at <= $1)`, before)
+	if err != nil {
+		return 0, fmt.Errorf("cleanup email change links: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("cleanup email change links rows: %w", err)
+	}
+	return n, nil
+}
+
 // UpdateUserEmail sets users.email for the user and moves that user's active
 // email-provider subject with it. The single statement only updates an email
 // identity whose current subject is the user's prior email; it never reassigns

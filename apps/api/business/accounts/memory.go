@@ -174,6 +174,34 @@ func (r *MemoryRepository) RevokeAllEmailChangeLinksForUser(ctx context.Context,
 	return n, nil
 }
 
+// CleanupExpiredEmailChangeLinks mirrors the production cleanup predicate.
+// An unexpired, unconsumed, unrevoked link remains usable.
+func (r *MemoryRepository) CleanupExpiredEmailChangeLinks(ctx context.Context, before time.Time) (int64, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	var deleted int64
+	for id, link := range r.byID {
+		if link.ExpiresAt.After(before) && link.ConsumedAt == nil && (link.RevokedAt == nil || link.RevokedAt.After(before)) {
+			continue
+		}
+		delete(r.byID, id)
+		for hash, indexed := range r.byHash {
+			if indexed == link {
+				delete(r.byHash, hash)
+			}
+		}
+		if links := r.byUser[link.UserID]; links != nil {
+			delete(links, id)
+			if len(links) == 0 {
+				delete(r.byUser, link.UserID)
+			}
+		}
+		deleted++
+	}
+	return deleted, nil
+}
+
 // UpdateUserEmail applies the new email to the user, enforcing the
 // same uniqueness discipline the SQL partial unique index provides:
 // another active user already owns lower(newEmail), so we reject

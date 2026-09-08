@@ -189,6 +189,10 @@ type Repository interface {
 	// from the account-deletion path (T04) so no stale link
 	// can be consumed after the account is deactivated.
 	RevokeAllEmailChangeLinksForUser(ctx context.Context, userID uuid.UUID, revokedAt time.Time) (int64, error)
+	// CleanupExpiredEmailChangeLinks removes transient email-change credentials
+	// after expiry, consumption, or revocation. It is only called by the
+	// production lightweight-cleanup loop.
+	CleanupExpiredEmailChangeLinks(ctx context.Context, before time.Time) (int64, error)
 	// UpdateUserEmail changes users.email for the given user,
 	// returning a stable sentinel when the partial unique
 	// index on lower(email) WHERE deleted_at IS NULL rejects

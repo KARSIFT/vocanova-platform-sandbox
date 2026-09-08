@@ -126,6 +126,36 @@ func TestPostgreSQLRepositoryRevokeAllEmailChangeLinksForUser(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestPostgreSQLRepositoryCleanupExpiredEmailChangeLinks(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	now := time.Now().UTC()
+	mock.ExpectExec("DELETE FROM email_change_links").
+		WithArgs(now).
+		WillReturnResult(sqlmock.NewResult(0, 3))
+
+	n, err := NewPostgreSQLRepository(db).CleanupExpiredEmailChangeLinks(context.Background(), now)
+	require.NoError(t, err)
+	assert.Equal(t, int64(3), n)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestPostgreSQLRepositoryCleanupExpiredEmailChangeLinksReturnsDatabaseError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	mock.ExpectExec("DELETE FROM email_change_links").
+		WithArgs(sqlmock.AnyArg()).
+		WillReturnError(errors.New("database unavailable"))
+
+	_, err = NewPostgreSQLRepository(db).CleanupExpiredEmailChangeLinks(context.Background(), time.Now().UTC())
+	require.Error(t, err)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestPostgreSQLRepositoryUpdateUserEmailSuccess(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
