@@ -35,6 +35,28 @@ func TestIdentityMigrationCarriesDatabaseInvariants(t *testing.T) {
 	}
 }
 
+func TestVOC1352FeatureAuditLogsMigrationCarriesPrivacyInvariants(t *testing.T) {
+	sql, err := os.ReadFile("20260908020000_voc1352_feature_audit_logs.sql")
+	if err != nil {
+		t.Fatalf("read feature audit migration: %v", err)
+	}
+	text := string(sql)
+	for _, invariant := range []string{
+		"CREATE TABLE feature_audit_logs",
+		"user_id uuid REFERENCES users(id) ON DELETE RESTRICT",
+		"actor_type IN ('user', 'system', 'admin', 'ai')",
+		"metadata jsonb NOT NULL DEFAULT '{}'::jsonb",
+		"feature_audit_logs_user_created_at_idx",
+	} {
+		if !strings.Contains(text, invariant) {
+			t.Errorf("migration missing invariant %q", invariant)
+		}
+	}
+	if strings.Contains(text, "ON DELETE CASCADE") {
+		t.Error("feature audit logs must not automatically cascade core learner data")
+	}
+}
+
 func TestOAuthStateMigrationCarriesDatabaseInvariants(t *testing.T) {
 	sql, err := os.ReadFile("20260724210001_oauth_state.sql")
 	if err != nil {

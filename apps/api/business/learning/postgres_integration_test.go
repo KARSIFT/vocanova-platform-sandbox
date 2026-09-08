@@ -239,6 +239,7 @@ func TestSaveUserWordAtomicIdempotencyPostgreSQL(t *testing.T) {
 		CREATE TABLE canonical_words (id uuid PRIMARY KEY, text text NOT NULL DEFAULT 'word', normalized_text text NOT NULL DEFAULT 'word', status text NOT NULL);
 		CREATE TABLE word_meanings (id uuid PRIMARY KEY, word_id uuid NOT NULL REFERENCES canonical_words(id), part_of_speech text NOT NULL DEFAULT 'noun', short_definition text NOT NULL DEFAULT 'definition', status text NOT NULL);
 		CREATE TABLE user_words (id uuid PRIMARY KEY, user_id uuid NOT NULL, meaning_id uuid NOT NULL, status text NOT NULL, source text NOT NULL, review_step integer NOT NULL, next_review_at timestamptz, last_reviewed_at timestamptz, last_result text, last_rating text, consecutive_correct_count integer NOT NULL, consecutive_incorrect_count integer NOT NULL, total_review_count integer NOT NULL, correct_review_count integer NOT NULL, added_at timestamptz NOT NULL, mastered_at timestamptz, ignored_at timestamptz, deleted_at timestamptz, created_at timestamptz NOT NULL, updated_at timestamptz NOT NULL);
+		CREATE TABLE feature_audit_logs (id uuid PRIMARY KEY, user_id uuid, action text NOT NULL, entity_type text NOT NULL, entity_id uuid, request_id text, actor_type text NOT NULL, actor_id uuid, metadata jsonb NOT NULL, created_at timestamptz NOT NULL, updated_at timestamptz NOT NULL);
 		CREATE TABLE idempotency_keys (id uuid PRIMARY KEY, user_id uuid NOT NULL, operation text NOT NULL, key text NOT NULL, fingerprint text NOT NULL, created_at timestamptz NOT NULL, UNIQUE(user_id, operation, key));
 		CREATE TABLE confidence_point_ledger (id uuid PRIMARY KEY, user_id uuid NOT NULL, amount integer NOT NULL CHECK (amount <> 0), balance_after integer NOT NULL, reason text NOT NULL, source_type text NOT NULL, source_id uuid, idempotency_key text, metadata jsonb, occurred_at timestamptz NOT NULL, created_at timestamptz NOT NULL, updated_at timestamptz NOT NULL, UNIQUE(user_id, idempotency_key));
 		CREATE FUNCTION hold_idempotency_claim() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN PERFORM pg_sleep(0.15); RETURN NEW; END $$;
@@ -408,6 +409,9 @@ func TestSaveUserWordRecordsDailyActivityPostgreSQL(t *testing.T) {
 		`SELECT count(*) FROM confidence_point_ledger WHERE user_id = $1`, userID,
 	).Scan(&ledgerRows))
 	require.Equal(t, 1, ledgerRows)
+	var auditRows int
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM feature_audit_logs WHERE user_id = $1 AND action = 'user_word_saved'`, userID).Scan(&auditRows))
+	require.Equal(t, 1, auditRows)
 
 	// A new request key for an already active word, and an exact replay, are
 	// both no-op saves rather than additional activity or rewards.
@@ -420,6 +424,8 @@ func TestSaveUserWordRecordsDailyActivityPostgreSQL(t *testing.T) {
 	).Scan(&wordsAdded, &pointsEarned))
 	require.Equal(t, 1, wordsAdded)
 	require.Equal(t, gamification.RewardAddWord, pointsEarned)
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM feature_audit_logs WHERE user_id = $1 AND action = 'user_word_saved'`, userID).Scan(&auditRows))
+	require.Equal(t, 1, auditRows, "active no-op and exact replay must not create audit events")
 
 	// Restoring an unsaved word retains the existing anti-farming policy.
 	require.NoError(t, svc.UnsaveUserWord(ctx, userID, meaningID))
@@ -430,6 +436,8 @@ func TestSaveUserWordRecordsDailyActivityPostgreSQL(t *testing.T) {
 	).Scan(&wordsAdded, &pointsEarned))
 	require.Equal(t, 1, wordsAdded)
 	require.Equal(t, gamification.RewardAddWord, pointsEarned)
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM feature_audit_logs WHERE user_id = $1 AND action = 'user_word_saved'`, userID).Scan(&auditRows))
+	require.Equal(t, 2, auditRows, "restore must be audited as a new state transition")
 
 	// The activity write occurs after the ledger insert but before commit; a
 	// database failure must leave none of the first-save state behind.

@@ -21,6 +21,7 @@ func TestReportPurgeParticipatesInDeletionTransaction(t *testing.T) {
 			deletion.WillReturnError(errors.New("delete failed"))
 		} else {
 			deletion.WillReturnResult(sqlmock.NewResult(0, 3))
+			mock.ExpectExec("UPDATE feature_audit_logs").WithArgs(uid).WillReturnResult(sqlmock.NewResult(0, 0))
 			// Any later failure rolls back removal of reports as well.
 			mock.ExpectExec("DELETE FROM ai_feedback_attempts").WithArgs(uid).WillReturnError(errors.New("later failure"))
 		}

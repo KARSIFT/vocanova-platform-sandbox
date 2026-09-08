@@ -47,6 +47,9 @@ func TestPostgreSQLRepositorySaveUserWord(t *testing.T) {
 	mock.ExpectQuery("INSERT INTO user_words").
 		WithArgs(sqlmock.AnyArg(), userID, meaningID, "journey", now).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(newID))
+	mock.ExpectExec("INSERT INTO feature_audit_logs").
+		WithArgs(sqlmock.AnyArg(), userID, newID, "journey", now).
+		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 	mock.ExpectQuery(savedMeaningQuery()).
 		WithArgs(sqlmock.AnyArg()).
@@ -320,6 +323,9 @@ func TestPostgreSQLRepositorySaveUserWordWithGamificationNil(t *testing.T) {
 	mock.ExpectQuery("INSERT INTO user_words").
 		WithArgs(sqlmock.AnyArg(), userID, meaningID, "journey", now).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(newID))
+	mock.ExpectExec("INSERT INTO feature_audit_logs").
+		WithArgs(sqlmock.AnyArg(), userID, newID, "journey", now).
+		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 	mock.ExpectQuery(savedMeaningQuery()).
 		WithArgs(sqlmock.AnyArg()).
@@ -408,6 +414,9 @@ func TestPostgreSQLRepositorySaveUserWordRestoreDeletedNoNewReward(t *testing.T)
 			     added_at = $2, updated_at = $2
 			 WHERE id = $3`)).
 		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), existingID).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec("INSERT INTO feature_audit_logs").
+		WithArgs(sqlmock.AnyArg(), userID, existingID, "journey", now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 	mock.ExpectQuery(savedMeaningQuery()).
