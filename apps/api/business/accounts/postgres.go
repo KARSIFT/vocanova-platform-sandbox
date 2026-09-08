@@ -469,6 +469,15 @@ func (r *PostgreSQLRepository) anonymizeUserDataTx(ctx context.Context, tx *sql.
 	var counters AnonymizationCounters
 	var err error
 
+	// DOC-05 §16 requires deleting immutable learning histories as part of the
+	// staged account-anonymization transaction. The database guards those
+	// tables, so enable the sole exception transaction-locally. This setting is
+	// intentionally shared with the point/grace-ledger and AI-attempt guards;
+	// it cannot leak through a pooled connection after commit or rollback.
+	if _, err := tx.ExecContext(ctx, `SELECT set_config('vocanova.ledger_purge', 'on', true)`); err != nil {
+		return counters, fmt.Errorf("enable immutable-learning-history purge: %w", err)
+	}
+
 	// Purge quality reports before their parent feedback attempts and retain
 	// an explicit affected-row count for the deletion audit.
 	counters.AIQualityReviewReports, err = execCount(ctx, tx, userID,

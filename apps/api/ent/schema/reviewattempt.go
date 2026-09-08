@@ -10,6 +10,8 @@ import (
 	"github.com/google/uuid"
 )
 
+// ReviewAttempt is immutable learner history. Ent models its rows and the
+// forward migration enforces update/delete protection with a PostgreSQL trigger.
 type ReviewAttempt struct{ ent.Schema }
 
 func (ReviewAttempt) Annotations() []schema.Annotation {

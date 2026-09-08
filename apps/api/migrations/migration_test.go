@@ -154,6 +154,24 @@ func TestVOC027P2ReviewAttemptsMigrationCarriesDatabaseInvariants(t *testing.T) 
 	}
 }
 
+func TestVOC1429ReviewAttemptImmutabilityMigrationCarriesDatabaseInvariant(t *testing.T) {
+	sql, err := os.ReadFile("20260908240000_voc1429_review_attempt_immutability.sql")
+	if err != nil {
+		t.Fatalf("read voc1429 review-attempt-immutability migration: %v", err)
+	}
+	text := string(sql)
+	for _, required := range []string{
+		"CREATE FUNCTION vocanova_reject_review_attempt_mutation()",
+		"current_setting('vocanova.ledger_purge', true) = 'on'",
+		"BEFORE UPDATE OR DELETE ON review_attempts",
+		"ERRCODE = '55000'",
+	} {
+		if !strings.Contains(text, required) {
+			t.Errorf("voc1429 review-attempt-immutability migration missing %q", required)
+		}
+	}
+}
+
 func TestVOC028P3LearnerSentencesMigrationCarriesDatabaseInvariants(t *testing.T) {
 	sql, err := os.ReadFile("20260725120000_voc028_p3_learner_sentences.sql")
 	if err != nil {
