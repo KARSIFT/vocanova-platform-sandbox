@@ -292,8 +292,10 @@ export function validateMockInventory() {
   // account_deletion_requests migration. VOC-050-T00 adds the
   // synthetic smoke-test account marker on users. The AI retry-history
   // migration makes failed feedback attempts retryable without losing their
-  // history. The review-attempt integrity migration binds immutable history's
-  // repeated learner/meaning IDs to its referenced saved-word row. VOC-1350
+  // history. The mission-goal pair migration closes PostgreSQL NULL-check
+  // loopholes for optional target/completed snapshot fields. The review-attempt
+  // integrity migration binds immutable history's repeated learner/meaning
+  // IDs to its referenced saved-word row. VOC-1350
   // replaces quality-review-report foreign key cascades with RESTRICT actions.
   // VOC-1352 adds feature_audit_logs for word-save and account-deletion
   // de-identification. VOC-1379, the grace-protected mission linkage,
@@ -321,6 +323,7 @@ export function validateMockInventory() {
     "20260908010000_voc1350_restrict_ai_feedback_report_foreign_keys.sql",
     "20260908020000_voc1352_feature_audit_logs.sql",
     "20260908021500_review_attempt_user_word_integrity.sql",
+    "20260908023500_mission_optional_goal_pair_integrity.sql",
     "20260908091500_review_attempt_result_rating_integrity.sql",
     "20260908110000_daily_activity_review_counter_integrity.sql",
     "20260908120000_grace_protected_mission_linkage.sql",
