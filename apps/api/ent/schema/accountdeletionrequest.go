@@ -40,6 +40,7 @@ func (AccountDeletionRequest) Annotations() []schema.Annotation {
 				"purge_after_within_year":   "purge_after <= requested_at + interval '365 days'",
 				"completed_when_status":     "status = 'completed' OR completed_at IS NULL",
 				"completed_at_iff_status":   "status <> 'completed' OR completed_at IS NOT NULL",
+				"completed_after_purge_due": "status <> 'completed' OR completed_at >= purge_after",
 				"idempotency_key_nonempty":  "char_length(idempotency_key) > 0",
 			},
 		},
