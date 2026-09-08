@@ -186,6 +186,38 @@ func TestVOC028P3LearnerSentencesMigrationCarriesDatabaseInvariants(t *testing.T
 	}
 }
 
+func TestVOC1418LearnerSentenceNonblankMigrationCarriesDocumentedInvariants(t *testing.T) {
+	sql, err := os.ReadFile("20260908030000_voc1418_learner_sentence_nonblank.sql")
+	if err != nil {
+		t.Fatalf("read voc1418 learner sentence nonblank migration: %v", err)
+	}
+	text := string(sql)
+	for _, invariant := range []string{
+		"ALTER TABLE learner_sentences",
+		"learner_sentences_sentence_text_nonblank",
+		"sentence_text ~ '[^[:space:]]'",
+		"learner_sentences_normalized_sentence_text_nonblank",
+		"normalized_sentence_text ~ '[^[:space:]]'",
+		"NOT VALID",
+	} {
+		if !strings.Contains(text, invariant) {
+			t.Errorf("migration missing invariant %q", invariant)
+		}
+	}
+	schema, err := os.ReadFile("../ent/schema/learnersentence.go")
+	if err != nil {
+		t.Fatalf("read learner sentence Ent schema: %v", err)
+	}
+	for _, invariant := range []string{
+		"\"sentence_text_nonblank\":            \"sentence_text ~ '[^[:space:]]'\"",
+		"\"normalized_sentence_text_nonblank\": \"normalized_sentence_text ~ '[^[:space:]]'\"",
+	} {
+		if !strings.Contains(string(schema), invariant) {
+			t.Errorf("Ent schema missing invariant %q", invariant)
+		}
+	}
+}
+
 func TestVOC028P3AIFeedbackAttemptsMigrationCarriesDatabaseInvariants(t *testing.T) {
 	sql, err := os.ReadFile("20260725120001_voc028_p3_ai_feedback_attempts.sql")
 	if err != nil {

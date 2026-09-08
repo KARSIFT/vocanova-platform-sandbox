@@ -21,7 +21,9 @@ func (LearnerSentence) Annotations() []schema.Annotation {
 		entsql.Annotation{
 			Table: "learner_sentences",
 			Checks: map[string]string{
-				"sentence_text_length": "char_length(sentence_text) <= 1000",
+				"sentence_text_length":              "char_length(sentence_text) <= 1000",
+				"sentence_text_nonblank":            "sentence_text ~ '[^[:space:]]'",
+				"normalized_sentence_text_nonblank": "normalized_sentence_text ~ '[^[:space:]]'",
 			},
 		},
 	}
