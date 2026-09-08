@@ -775,6 +775,15 @@ func TestDailyActivityPointAggregateIntegrityAgainstRealPostgres(t *testing.T) {
 	userID := insertTestUser(t, db)
 	localDate := time.Date(2026, 9, 8, 0, 0, 0, 0, time.UTC)
 
+	// A forward-only constraint must not make deployment depend on repairing
+	// historical summaries. PostgreSQL still checks NOT VALID constraints for
+	// every new or changed row, which the direct-write checks below prove.
+	var validated bool
+	require.NoError(t, db.QueryRowContext(t.Context(), `SELECT convalidated
+		FROM pg_constraint
+		WHERE conname = 'daily_activity_summaries_confidence_point_counters_nonnegative'`).Scan(&validated))
+	assert.False(t, validated)
+
 	for _, tc := range []struct {
 		name   string
 		earned int

@@ -354,6 +354,7 @@ func TestDailyActivityPointAggregateIntegrityMigrationCarriesDatabaseInvariants(
 		"daily_activity_summaries_confidence_point_counters_nonnegative",
 		"confidence_points_earned >= 0",
 		"confidence_points_spent >= 0",
+		"NOT VALID",
 	} {
 		if !strings.Contains(text, invariant) {
 			t.Errorf("daily activity point-aggregate integrity migration missing invariant %q", invariant)

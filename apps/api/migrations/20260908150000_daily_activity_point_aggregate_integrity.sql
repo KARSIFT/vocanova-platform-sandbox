@@ -8,4 +8,4 @@ ALTER TABLE daily_activity_summaries
     CHECK (
       confidence_points_earned >= 0
       AND confidence_points_spent >= 0
-    );
+    ) NOT VALID;

@@ -237,6 +237,19 @@ func TestPostgreSQLRepositoryRecordConfidencePointChange(t *testing.T) {
 		require.NoError(t, tx.Commit())
 	})
 
+	t.Run("minimum_integer_is_rejected_without_query", func(t *testing.T) {
+		minInt := -int(^uint(0)>>1) - 1
+		mock.ExpectBegin()
+		mock.ExpectCommit()
+		tx, err := db.Begin()
+		require.NoError(t, err)
+		require.EqualError(t,
+			repo.RecordConfidencePointChange(t.Context(), tx, userID, day, "UTC", minInt),
+			"confidence point amount is out of range",
+		)
+		require.NoError(t, tx.Commit())
+	})
+
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
