@@ -416,6 +416,7 @@ func (s *Service) completePendingAttempt(ctx context.Context, req SubmitSentence
 		Status:            feedback.Status,
 		OriginalSentence:  req.SentenceText,
 		CorrectedSentence: feedback.CorrectedSentence,
+		Headline:          feedback.Headline,
 		Explanation:       feedback.Explanation,
 		ImprovementTip:    feedback.ImprovementTip,
 		MissionCompleted:  missionCompleted,
@@ -594,6 +595,7 @@ func (s *Service) resultFromStored(attempt *StoredFeedbackAttempt, original stri
 		result.CanRetry = true
 	case AttemptStatusSucceeded:
 		result.Status = stringValue(attempt.FeedbackJSON, "status")
+		result.Headline = stringValue(attempt.FeedbackJSON, "headline")
 		result.Explanation = attempt.FeedbackText
 		if corrected, ok := attempt.FeedbackJSON["corrected_sentence"].(string); ok {
 			result.CorrectedSentence = &corrected

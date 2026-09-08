@@ -332,6 +332,9 @@ func mapOpenCodeFeedback(raw map[string]any) (*ProviderFeedback, error) {
 	if v, ok := raw["explanation"].(string); ok {
 		fb.Explanation = v
 	}
+	if v, ok := raw["headline"].(string); ok {
+		fb.Headline = v
+	}
 	if v, ok := raw["corrected_sentence"].(string); ok && v != "" {
 		fb.CorrectedSentence = &v
 	}

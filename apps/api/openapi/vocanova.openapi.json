@@ -1981,6 +1981,11 @@
             "description": "Short explanation of the result",
             "type": "string"
           },
+          "headline": {
+            "description": "Encouraging, honest feedback headline",
+            "maxLength": 60,
+            "type": "string"
+          },
           "improvementTip": {
             "description": "One improvement tip when useful",
             "type": "string"

@@ -49,8 +49,8 @@ const (
 // Prompt and schema versions (DOC-09 §14). Material prompt changes must create a
 // new version; version strings live in version-controlled code.
 const (
-	PromptVersionSentenceFeedbackV1 = "sentence-feedback-v1"
-	SchemaVersionFeedbackV1         = "feedback-schema-v1"
+	PromptVersionSentenceFeedbackV1 = "sentence-feedback-v2"
+	SchemaVersionFeedbackV1         = "feedback-schema-v2"
 	PromptVersionModerationV1       = "moderation-v1"
 	SchemaVersionModerationV1       = "moderation-schema-v1"
 )
@@ -118,6 +118,7 @@ type SentenceFeedbackResult struct {
 	Status                string
 	OriginalSentence      string
 	CorrectedSentence     *string
+	Headline              string
 	Explanation           string
 	ImprovementTip        *string
 	MissionCompleted      bool
@@ -156,6 +157,7 @@ type ProviderFeedback struct {
 	Status                  string
 	TargetWordUsedCorrectly bool
 	CorrectedSentence       *string
+	Headline                string
 	Explanation             string
 	ImprovementTip          *string
 	RawJSON                 map[string]any
@@ -214,10 +216,12 @@ func (m *MockProvider) GenerateFeedback(ctx context.Context, task ProviderTask) 
 		return &ProviderFeedback{
 			Status:                  LearningStatusCorrect,
 			TargetWordUsedCorrectly: true,
+			Headline:                "Great use of the target word!",
 			Explanation:             "The sentence uses the target word correctly.",
 			RawJSON: map[string]any{
 				"status":                     LearningStatusCorrect,
 				"target_word_used_correctly": true,
+				"headline":                   "Great use of the target word!",
 			},
 		}, nil
 	}
@@ -227,11 +231,13 @@ func (m *MockProvider) GenerateFeedback(ctx context.Context, task ProviderTask) 
 		Status:                  LearningStatusIncorrect,
 		TargetWordUsedCorrectly: false,
 		CorrectedSentence:       &corrected,
+		Headline:                "Almost there—try the target word.",
 		Explanation:             "The sentence does not include the target word.",
 		ImprovementTip:          stringPtr("Try using the target word in your sentence."),
 		RawJSON: map[string]any{
 			"status":                     LearningStatusIncorrect,
 			"target_word_used_correctly": false,
+			"headline":                   "Almost there—try the target word.",
 		},
 	}, nil
 }

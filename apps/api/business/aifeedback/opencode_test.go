@@ -54,7 +54,7 @@ func TestOpenCodeFeedbackProviderParsesValidResponse(t *testing.T) {
 
 		resp := openCodeMessageResponse{
 			Parts: []openCodePart{
-				{Type: "text", Text: `{"status":"correct","target_word_used_correctly":true,"explanation":"Good use of work."}`},
+				{Type: "text", Text: `{"status":"correct","target_word_used_correctly":true,"headline":"Great use of work!","explanation":"Good use of work."}`},
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -74,6 +74,7 @@ func TestOpenCodeFeedbackProviderParsesValidResponse(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, LearningStatusCorrect, feedback.Status)
 	assert.True(t, feedback.TargetWordUsedCorrectly)
+	assert.Equal(t, "Great use of work!", feedback.Headline)
 	assert.Equal(t, "Good use of work.", feedback.Explanation)
 	assert.Nil(t, feedback.CorrectedSentence)
 	assert.Nil(t, feedback.ImprovementTip)

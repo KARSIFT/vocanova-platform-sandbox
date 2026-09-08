@@ -232,6 +232,8 @@ export interface SentenceFeedbackResult {
   status?: "correct" | "needs_improvement" | "incorrect";
   originalSentence: string;
   correctedSentence?: string;
+  /** Encouraging, honest feedback headline (maximum 60 characters). */
+  headline?: string;
   explanation?: string;
   improvementTip?: string;
   missionCompleted: boolean;
