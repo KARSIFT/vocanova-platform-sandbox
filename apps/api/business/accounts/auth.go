@@ -76,8 +76,8 @@ var (
 	// runs.
 	ErrEmailChangeInvalidEmail = errors.New("invalid email address")
 	// ErrAccountDeletionIdempotencyKeyRequired is returned when
-	// the request is missing the Idempotency-Key header that
-	// DOC-07 makes required for this endpoint. Stable 400.
+	// the DOC-07-required Idempotency-Key is missing or invalid.
+	// The API maps this validation error to stable 422.
 	ErrAccountDeletionIdempotencyKeyRequired = errors.New("idempotency key required")
 	// ErrAccountDeletionIdempotencyConflict is returned when
 	// the same Idempotency-Key was previously used for a
