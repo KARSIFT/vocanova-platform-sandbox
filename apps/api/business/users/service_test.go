@@ -131,10 +131,13 @@ func TestServiceCompleteOnboardingSeedsUserSettingsWhenNoRow(t *testing.T) {
 }
 
 func TestOnboardingAnswersValidateRejectsInvalidTimezone(t *testing.T) {
-	a := validAnswers()
-	a.Timezone = "Not/A_Real_Zone"
-
-	require.ErrorIs(t, a.Validate(), ErrInvalidOnboarding)
+	for _, timezone := range []string{"Not/A_Real_Zone", "Local"} {
+		t.Run(timezone, func(t *testing.T) {
+			a := validAnswers()
+			a.Timezone = timezone
+			require.ErrorIs(t, a.Validate(), ErrInvalidOnboarding)
+		})
+	}
 }
 
 func TestOnboardingAnswersEffectiveTimezoneFallsBackToUTC(t *testing.T) {

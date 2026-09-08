@@ -118,6 +118,13 @@ func (a OnboardingAnswers) Validate() error {
 		return fmt.Errorf("%w: daily review target %d out of range [%d,%d]", ErrInvalidOnboarding, a.DailyReviewTarget, MinDailyReviewTarget, MaxDailyReviewTarget)
 	}
 	if a.Timezone != "" {
+		// time.LoadLocation accepts Go's process-local "Local" sentinel,
+		// but it is not an IANA identifier. Persisting it would make a
+		// learner's daily boundary depend on whichever timezone an API host
+		// happens to use.
+		if a.Timezone == "Local" {
+			return fmt.Errorf("%w: invalid IANA timezone %q", ErrInvalidOnboarding, a.Timezone)
+		}
 		if _, err := time.LoadLocation(a.Timezone); err != nil {
 			return fmt.Errorf("%w: invalid IANA timezone %q", ErrInvalidOnboarding, a.Timezone)
 		}
