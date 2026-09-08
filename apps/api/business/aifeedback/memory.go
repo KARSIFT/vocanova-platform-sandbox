@@ -380,7 +380,7 @@ func (r *MemoryRepository) CompleteFeedbackAttempt(ctx context.Context, pending 
 			updated = true
 			if feedback != nil {
 				r.attempts[i].Status = AttemptStatusSucceeded
-				r.attempts[i].FeedbackJSON = feedback.RawJSON
+				r.attempts[i].FeedbackJSON = feedback.StructuredJSON()
 				r.attempts[i].FeedbackText = feedback.Explanation
 			} else {
 				code := failureCode
@@ -436,7 +436,7 @@ func (r *MemoryRepository) CompleteSuccessfulFeedbackAttempt(ctx context.Context
 	for i := range r.attempts {
 		if r.attempts[i].ID == pending.AttemptID {
 			r.attempts[i].Status = AttemptStatusSucceeded
-			r.attempts[i].FeedbackJSON = feedback.RawJSON
+			r.attempts[i].FeedbackJSON = feedback.StructuredJSON()
 			r.attempts[i].FeedbackText = feedback.Explanation
 		}
 	}

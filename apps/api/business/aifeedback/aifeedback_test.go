@@ -2,6 +2,7 @@ package aifeedback
 
 import (
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -63,6 +64,61 @@ func TestMockProviderGenerateFeedbackMissingSentence(t *testing.T) {
 
 	_, err := mock.GenerateFeedback(t.Context(), task)
 	assert.ErrorIs(t, err, ErrMissingLearnerSentence)
+}
+
+func TestProviderFeedbackStructuredJSONExcludesRawProviderFields(t *testing.T) {
+	corrected := "I work every day."
+	tip := "Use the present tense."
+	feedback := &ProviderFeedback{
+		Status:                  LearningStatusNeedsImprovement,
+		TargetWordUsedCorrectly: false,
+		CorrectedSentence:       &corrected,
+		Explanation:             "The tense needs a small correction.",
+		ImprovementTip:          &tip,
+		RawJSON: map[string]any{
+			"status":                     "needs_improvement",
+			"target_word_used_correctly": false,
+			"corrected_sentence":         corrected,
+			"explanation":                "The tense needs a small correction.",
+			"improvement_tip":            tip,
+			"system_prompt":              "do not retain this provider output",
+		},
+	}
+
+	assert.Equal(t, map[string]any{
+		"status":                     LearningStatusNeedsImprovement,
+		"target_word_used_correctly": false,
+		"corrected_sentence":         corrected,
+		"explanation":                "The tense needs a small correction.",
+		"improvement_tip":            tip,
+	}, feedback.StructuredJSON())
+}
+
+func TestMemoryRepositoryCompletionStoresStructuredFeedbackOnly(t *testing.T) {
+	repo := NewMemoryRepository(MemoryRepositoryData{})
+	sentenceID := uuid.New()
+	attemptID := uuid.New()
+	repo.sentences = append(repo.sentences, MemoryLearnerSentence{ID: sentenceID, Status: SentenceStatusSubmitted})
+	repo.attempts = append(repo.attempts, MemoryAIFeedbackAttempt{ID: attemptID, LearnerSentenceID: sentenceID, Status: AttemptStatusPending})
+
+	feedback := &ProviderFeedback{
+		Status:                  LearningStatusCorrect,
+		TargetWordUsedCorrectly: true,
+		Explanation:             "Correct use.",
+		RawJSON: map[string]any{
+			"status":                     LearningStatusCorrect,
+			"target_word_used_correctly": true,
+			"explanation":                "Correct use.",
+			"developer_prompt":           "provider-only diagnostic",
+		},
+	}
+	require.NoError(t, repo.CompleteFeedbackAttempt(t.Context(), PendingAttempt{SentenceID: sentenceID, AttemptID: attemptID}, feedback, "", "", time.Now()))
+
+	assert.Equal(t, map[string]any{
+		"status":                     LearningStatusCorrect,
+		"target_word_used_correctly": true,
+		"explanation":                "Correct use.",
+	}, repo.attempts[0].FeedbackJSON)
 }
 
 func TestMockProviderClassifyMapsTestMarkers(t *testing.T) {

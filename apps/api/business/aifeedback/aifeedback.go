@@ -163,6 +163,24 @@ type ProviderFeedback struct {
 	RawJSON                 map[string]any
 }
 
+// StructuredJSON returns the validated feedback fields that may be retained
+// with a learner sentence. RawJSON is deliberately excluded: it is transient
+// provider output used only to construct a bounded repair request.
+func (f *ProviderFeedback) StructuredJSON() map[string]any {
+	result := map[string]any{
+		"status":                     f.Status,
+		"target_word_used_correctly": f.TargetWordUsedCorrectly,
+		"explanation":                f.Explanation,
+	}
+	if f.CorrectedSentence != nil {
+		result["corrected_sentence"] = *f.CorrectedSentence
+	}
+	if f.ImprovementTip != nil {
+		result["improvement_tip"] = *f.ImprovementTip
+	}
+	return result
+}
+
 // ModerationInput is the request scoped for a moderation provider.
 type ModerationInput struct {
 	SentenceText string

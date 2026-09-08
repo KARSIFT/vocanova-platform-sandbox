@@ -160,12 +160,13 @@ func TestPostgreSQLRepositoryCompleteFeedbackAttemptSuccess(t *testing.T) {
 		RawJSON: map[string]any{
 			"status":                     LearningStatusCorrect,
 			"target_word_used_correctly": true,
+			"system_prompt":              "provider-only diagnostic",
 		},
 	}
 
 	mock.ExpectBegin()
 	mock.ExpectExec("UPDATE ai_feedback_attempts").
-		WithArgs(AttemptStatusSucceeded, sqlmock.AnyArg(), feedback.Explanation, now, now, attemptID, AttemptStatusPending).
+		WithArgs(AttemptStatusSucceeded, []byte(`{"explanation":"Good.","status":"correct","target_word_used_correctly":true}`), feedback.Explanation, now, now, attemptID, AttemptStatusPending).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("UPDATE learner_sentences").
 		WithArgs(SentenceStatusFeedbackReady, now, sentenceID).
