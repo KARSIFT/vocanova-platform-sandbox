@@ -2306,11 +2306,10 @@
             "type": "string"
           },
           "source": {
-            "default": "review",
+            "default": "daily_review",
             "description": "Origin of the attempt",
             "enum": [
-              "review",
-              "review_session"
+              "daily_review"
             ],
             "type": "string"
           },

@@ -227,7 +227,7 @@ export function ReviewSession({
           answeredAt: new Date().toISOString(),
           responseTimeMs: Math.max(0, Date.now() - startTime),
           wasHintUsed: false,
-          source: "review_session",
+          source: "daily_review",
           clientAttemptId,
         },
       };

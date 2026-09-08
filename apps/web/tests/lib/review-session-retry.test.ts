@@ -18,7 +18,7 @@ const pending: PendingReviewSubmission = {
     answeredAt: "2026-09-05T10:00:00.000Z",
     responseTimeMs: 1234,
     wasHintUsed: false,
-    source: "review_session",
+    source: "daily_review",
     clientAttemptId: "attempt-1",
   },
 };

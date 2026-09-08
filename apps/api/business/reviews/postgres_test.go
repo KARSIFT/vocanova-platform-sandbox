@@ -39,7 +39,7 @@ func TestPostgreSQLRepositorySubmitReview(t *testing.T) {
 		WithArgs(userID, "ca-1").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "user_word_id", "meaning_id", "attempt_type", "prompt_type", "result", "rating", "review_step_before", "review_step_after", "answered_at", "response_time_ms", "selected_option_meaning_id", "typed_answer", "was_hint_used", "source", "client_attempt_id", "metadata", "next_review_at"}))
 	mock.ExpectExec("INSERT INTO review_attempts").
-		WithArgs(sqlmock.AnyArg(), userID, userWordID, meaningID, "review", "multiple_choice", "correct", "good", 0, 1, now, 0, nil, nil, false, "review", "ca-1", nil, now, now).
+		WithArgs(sqlmock.AnyArg(), userID, userWordID, meaningID, "review", "multiple_choice", "correct", "good", 0, 1, now, 0, nil, nil, false, SourceReview, "ca-1", nil, now, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("UPDATE user_words").
 		WithArgs(1, sqlmock.AnyArg(), now, "correct", "good", 1, 1, 1, 0, now, userWordID, userID).
@@ -156,7 +156,7 @@ func TestPostgreSQLRepositorySubmitReviewIdempotencyConflict(t *testing.T) {
 	mock.ExpectQuery("SELECT ra.id, ra.user_word_id").
 		WithArgs(userID, "ca-1").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "user_word_id", "meaning_id", "attempt_type", "prompt_type", "result", "rating", "review_step_before", "review_step_after", "answered_at", "response_time_ms", "selected_option_meaning_id", "typed_answer", "was_hint_used", "source", "client_attempt_id", "metadata", "next_review_at"}).
-			AddRow(attemptID, userWordID, meaningID, "review", "multiple_choice", "correct", "good", 0, 1, now, 0, nil, nil, false, "review", "ca-1", nil, now))
+			AddRow(attemptID, userWordID, meaningID, "review", "multiple_choice", "correct", "good", 0, 1, now, 0, nil, nil, false, SourceReview, "ca-1", nil, now))
 	mock.ExpectRollback()
 
 	req := SubmitReviewRequest{

@@ -104,11 +104,8 @@ const (
 	AttemptTypeReview = "review"
 )
 
-// Source values for P2 review submissions.
-const (
-	SourceReview        = "review"
-	SourceReviewSession = "review_session"
-)
+// SourceReview is the documented provenance for an MVP daily review session.
+const SourceReview = "daily_review"
 
 // Repository is the persistence boundary for the review domain.
 type Repository interface {
@@ -206,7 +203,7 @@ func (s *Service) SubmitReview(ctx context.Context, req SubmitReviewRequest) (*R
 	if req.AttemptType != AttemptTypeReview {
 		return nil, fmt.Errorf("%w: %q", ErrInvalidAttemptType, req.AttemptType)
 	}
-	if req.Source != SourceReview && req.Source != SourceReviewSession {
+	if req.Source != SourceReview {
 		return nil, fmt.Errorf("%w: %q", ErrInvalidSource, req.Source)
 	}
 	if req.ClientAttemptID == "" {

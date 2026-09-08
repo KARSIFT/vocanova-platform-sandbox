@@ -226,7 +226,7 @@ export interface SubmitReviewBody {
   selectedOptionMeaningId?: string;
   typedAnswer?: string;
   wasHintUsed?: boolean;
-  source?: "review" | "review_session";
+  source?: "daily_review";
   clientAttemptId: string;
   metadata?: Record<string, unknown>;
 }

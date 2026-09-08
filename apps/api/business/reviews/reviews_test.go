@@ -105,6 +105,7 @@ func TestSubmitReviewSchedulesAndUpdatesCounters(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, 1, attempt.ReviewStepAfter)
+	assert.Equal(t, "daily_review", attempt.Source)
 	assert.Equal(t, 1.0, attempt.NextReviewAt.Sub(answeredAt).Hours())
 	assert.Equal(t, 1, repo.userWords[0].TotalReviewCount)
 	assert.Equal(t, 1, repo.userWords[0].CorrectReviewCount)

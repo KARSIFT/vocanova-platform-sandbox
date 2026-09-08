@@ -23,7 +23,8 @@ func (ReviewAttempt) Fields() []ent.Field {
 		field.UUID("user_id", uuid.UUID{}),
 		field.UUID("user_word_id", uuid.UUID{}),
 		field.UUID("meaning_id", uuid.UUID{}),
-		field.String("attempt_type").NotEmpty(),
+		field.Enum("attempt_type").
+			Values("review", "practice", "placement", "mission"),
 		field.Enum("prompt_type").
 			Values("multiple_choice", "self_check"),
 		field.Enum("result").
@@ -38,7 +39,8 @@ func (ReviewAttempt) Fields() []ent.Field {
 		field.UUID("selected_option_meaning_id", uuid.UUID{}).Optional().Nillable(),
 		field.String("typed_answer").Optional().Nillable(),
 		field.Bool("was_hint_used").Default(false),
-		field.String("source").NotEmpty(),
+		field.Enum("source").
+			Values("daily_review", "word_detail", "journey_practice", "manual_practice"),
 		field.String("client_attempt_id").Optional().Nillable(),
 		field.JSON("metadata", map[string]any{}).Optional(),
 	}

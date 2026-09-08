@@ -98,7 +98,7 @@ func TestPostgreSQLRepositorySubmitReviewP4NilDependenciesNoP4Wiring(t *testing.
 		WithArgs(userID, "ca-1").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "user_word_id", "meaning_id", "attempt_type", "prompt_type", "result", "rating", "review_step_before", "review_step_after", "answered_at", "response_time_ms", "selected_option_meaning_id", "typed_answer", "was_hint_used", "source", "client_attempt_id", "metadata", "next_review_at"}))
 	mock.ExpectExec("INSERT INTO review_attempts").
-		WithArgs(sqlmock.AnyArg(), userID, userWordID, meaningID, "review", "multiple_choice", "correct", "good", 0, 1, now, 0, nil, nil, false, "review", "ca-1", nil, now, now).
+		WithArgs(sqlmock.AnyArg(), userID, userWordID, meaningID, "review", "multiple_choice", "correct", "good", 0, 1, now, 0, nil, nil, false, SourceReview, "ca-1", nil, now, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("UPDATE user_words").
 		WithArgs(1, sqlmock.AnyArg(), now, "correct", "good", 1, 1, 1, 0, now, userWordID, userID).
@@ -165,7 +165,7 @@ func TestPostgreSQLRepositorySubmitReviewP4RatingGoodWiring(t *testing.T) {
 		WithArgs(userID, "ca-1").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "user_word_id", "meaning_id", "attempt_type", "prompt_type", "result", "rating", "review_step_before", "review_step_after", "answered_at", "response_time_ms", "selected_option_meaning_id", "typed_answer", "was_hint_used", "source", "client_attempt_id", "metadata", "next_review_at"}))
 	mock.ExpectExec("INSERT INTO review_attempts").
-		WithArgs(sqlmock.AnyArg(), userID, userWordID, meaningID, "review", "multiple_choice", "correct", "good", 0, 1, now, 0, nil, nil, false, "review", "ca-1", nil, now, now).
+		WithArgs(sqlmock.AnyArg(), userID, userWordID, meaningID, "review", "multiple_choice", "correct", "good", 0, 1, now, 0, nil, nil, false, SourceReview, "ca-1", nil, now, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("UPDATE user_words").
 		WithArgs(1, sqlmock.AnyArg(), now, "correct", "good", 1, 1, 1, 0, now, userWordID, userID).
@@ -295,7 +295,7 @@ func TestPostgreSQLRepositorySubmitReviewP4MissionCompletion(t *testing.T) {
 		WithArgs(userID, "ca-20").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "user_word_id", "meaning_id", "attempt_type", "prompt_type", "result", "rating", "review_step_before", "review_step_after", "answered_at", "response_time_ms", "selected_option_meaning_id", "typed_answer", "was_hint_used", "source", "client_attempt_id", "metadata", "next_review_at"}))
 	mock.ExpectExec("INSERT INTO review_attempts").
-		WithArgs(sqlmock.AnyArg(), userID, userWordID, meaningID, "review", "multiple_choice", "correct", "good", 0, 1, now, 0, nil, nil, false, "review", "ca-20", nil, now, now).
+		WithArgs(sqlmock.AnyArg(), userID, userWordID, meaningID, "review", "multiple_choice", "correct", "good", 0, 1, now, 0, nil, nil, false, SourceReview, "ca-20", nil, now, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("UPDATE user_words").
 		WithArgs(1, sqlmock.AnyArg(), now, "correct", "good", 1, 1, 1, 0, now, userWordID, userID).
@@ -448,7 +448,7 @@ func TestPostgreSQLRepositorySubmitReviewP4SkippedNoRatingReward(t *testing.T) {
 		WithArgs(userID, "ca-skip").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "user_word_id", "meaning_id", "attempt_type", "prompt_type", "result", "rating", "review_step_before", "review_step_after", "answered_at", "response_time_ms", "selected_option_meaning_id", "typed_answer", "was_hint_used", "source", "client_attempt_id", "metadata", "next_review_at"}))
 	mock.ExpectExec("INSERT INTO review_attempts").
-		WithArgs(sqlmock.AnyArg(), userID, userWordID, meaningID, "review", "multiple_choice", "skipped", nil, 0, 0, now, 0, nil, nil, false, "review", "ca-skip", nil, now, now).
+		WithArgs(sqlmock.AnyArg(), userID, userWordID, meaningID, "review", "multiple_choice", "skipped", nil, 0, 0, now, 0, nil, nil, false, SourceReview, "ca-skip", nil, now, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("UPDATE user_words").
 		WithArgs(0, sqlmock.AnyArg(), now, "skipped", sqlmock.AnyArg(), 1, 0, 0, 0, now, userWordID, userID).
@@ -552,7 +552,7 @@ func TestPostgreSQLRepositorySubmitReviewP4IdempotentMatchNoP4Wiring(t *testing.
 	mock.ExpectQuery("SELECT ra.id, ra.user_word_id").
 		WithArgs(userID, "ca-1").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "user_word_id", "meaning_id", "attempt_type", "prompt_type", "result", "rating", "review_step_before", "review_step_after", "answered_at", "response_time_ms", "selected_option_meaning_id", "typed_answer", "was_hint_used", "source", "client_attempt_id", "metadata", "next_review_at"}).
-			AddRow(existingAttemptID, userWordID, meaningID, "review", "multiple_choice", "correct", "good", 0, 1, now, 0, nil, nil, false, "review", "ca-1", nil, now))
+			AddRow(existingAttemptID, userWordID, meaningID, "review", "multiple_choice", "correct", "good", 0, 1, now, 0, nil, nil, false, SourceReview, "ca-1", nil, now))
 	mock.ExpectCommit()
 	// No P4 SQL — the existing-attempt short-circuit returns before the
 	// gamification/missions block.
@@ -612,7 +612,7 @@ func TestPostgreSQLRepositorySubmitReviewP4AlreadyCompletedSnapshotNoDoubleRewar
 		WithArgs(userID, "ca-2nd").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "user_word_id", "meaning_id", "attempt_type", "prompt_type", "result", "rating", "review_step_before", "review_step_after", "answered_at", "response_time_ms", "selected_option_meaning_id", "typed_answer", "was_hint_used", "source", "client_attempt_id", "metadata", "next_review_at"}))
 	mock.ExpectExec("INSERT INTO review_attempts").
-		WithArgs(sqlmock.AnyArg(), userID, userWordID, meaningID, "review", "multiple_choice", "correct", "good", 0, 1, now, 0, nil, nil, false, "review", "ca-2nd", nil, now, now).
+		WithArgs(sqlmock.AnyArg(), userID, userWordID, meaningID, "review", "multiple_choice", "correct", "good", 0, 1, now, 0, nil, nil, false, SourceReview, "ca-2nd", nil, now, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("UPDATE user_words").
 		WithArgs(1, sqlmock.AnyArg(), now, "correct", "good", 1, 1, 1, 0, now, userWordID, userID).

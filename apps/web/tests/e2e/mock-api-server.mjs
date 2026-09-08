@@ -971,7 +971,7 @@ const server = createServer(async (req, res) => {
       responseTimeMs: body.responseTimeMs ?? 0,
       selectedOptionMeaningId: body.selectedOptionMeaningId,
       wasHintUsed: body.wasHintUsed ?? false,
-      source: body.source ?? "review_session",
+      source: body.source ?? "daily_review",
       clientAttemptId: body.clientAttemptId,
       nextReviewAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     });

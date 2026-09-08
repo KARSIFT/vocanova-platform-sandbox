@@ -79,7 +79,7 @@ type SubmitReviewInput struct {
 		SelectedOptionMeaningID string         `json:"selectedOptionMeaningId,omitempty" format:"uuid" doc:"Chosen option for multiple choice; required for non-skipped multiple-choice attempts and must agree with result"`
 		TypedAnswer             string         `json:"typedAnswer,omitempty" doc:"Typed answer if applicable"`
 		WasHintUsed             bool           `json:"wasHintUsed,omitempty" default:"false" doc:"Whether a hint was shown"`
-		Source                  string         `json:"source,omitempty" enum:"review,review_session" default:"review" doc:"Origin of the attempt"`
+		Source                  string         `json:"source,omitempty" enum:"daily_review" default:"daily_review" doc:"Origin of the attempt"`
 		ClientAttemptID         string         `json:"clientAttemptId" required:"true" doc:"Client-provided idempotency identifier"`
 		Metadata                map[string]any `json:"metadata,omitempty" doc:"Extra prompt context"`
 	}

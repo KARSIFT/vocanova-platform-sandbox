@@ -397,7 +397,7 @@ describe("VocanovaClient", () => {
             answeredAt: "2026-07-25T12:00:00Z",
             responseTimeMs: 1234,
             wasHintUsed: false,
-            source: "review",
+            source: "daily_review",
             clientAttemptId: "ca-1",
             nextReviewAt: "2026-07-25T13:00:00Z",
           }),
