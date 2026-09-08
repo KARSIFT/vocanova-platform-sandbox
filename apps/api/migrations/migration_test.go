@@ -335,6 +335,7 @@ func TestDailyActivityReviewCounterIntegrityMigrationCarriesDatabaseInvariants(t
 		"reviews_skipped >= 0",
 		"daily_activity_summaries_review_counters_classified_within_attempted",
 		"reviews_correct <= reviews_attempted - reviews_skipped",
+		"NOT VALID",
 	} {
 		if !strings.Contains(text, invariant) {
 			t.Errorf("daily activity review-counter integrity migration missing invariant %q", invariant)

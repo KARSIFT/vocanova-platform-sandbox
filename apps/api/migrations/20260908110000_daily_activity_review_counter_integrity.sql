@@ -10,6 +10,11 @@ ALTER TABLE daily_activity_summaries
       reviews_attempted >= 0
       AND reviews_correct >= 0
       AND reviews_skipped >= 0
-    ),
+    ) NOT VALID,
   ADD CONSTRAINT daily_activity_summaries_review_counters_classified_within_attempted
-    CHECK (reviews_correct <= reviews_attempted - reviews_skipped);
+    CHECK (reviews_correct <= reviews_attempted - reviews_skipped) NOT VALID;
+
+-- NOT VALID deliberately makes this forward-only migration safe to deploy if
+-- a pre-existing cached aggregate is already corrupt. PostgreSQL enforces both
+-- checks for every subsequent INSERT or UPDATE, while a separate, deliberate
+-- data-reconciliation migration can repair and validate legacy rows later.
