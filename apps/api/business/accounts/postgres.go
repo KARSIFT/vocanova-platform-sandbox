@@ -198,8 +198,11 @@ func (r *PostgreSQLRepository) UpdateUserEmail(ctx context.Context, userID uuid.
 //     account is invalidated so the requester cannot stay
 //     signed in across the deletion.
 //  3. UPDATE magic_links SET revoked_at=$2 WHERE user_id=$1
-//     AND consumed_at IS NULL AND revoked_at IS NULL. No
-//     in-flight sign-in link can be consumed after deletion.
+//     AND consumed_at IS NULL AND revoked_at IS NULL, then redact
+//     unconsumed links issued to the account email before they were
+//     attached to a user. No in-flight sign-in link can be consumed
+//     after deletion, and an unattached link cannot retain the
+//     learner's email until expiry or the later purge.
 //  4. UPDATE email_change_links SET revoked_at=$2 WHERE
 //     user_id=$1 AND consumed_at IS NULL AND revoked_at IS
 //     NULL. Same posture for email-change tokens.
@@ -290,6 +293,27 @@ func (r *PostgreSQLRepository) CreateAccountDeletionRequest(ctx context.Context,
 		userID, now,
 	); err != nil {
 		return nil, fmt.Errorf("revoke magic links: %w", err)
+	}
+	// A requested magic link has no user_id until it is consumed.  If a
+	// learner requested more than one link, an unconsumed earlier link is
+	// therefore not covered by the user_id revocation above or the later
+	// user_id-scoped purge. Redact those links while the deleting user's
+	// email is still available in this transaction. A linked link remains
+	// intact here so the purge can remove it by user_id.
+	if _, err := tx.ExecContext(ctx,
+		`UPDATE magic_links
+		 SET email = 'redacted:' || id::text,
+		     revoked_at = CASE
+		       WHEN consumed_at IS NULL AND revoked_at IS NULL THEN $2
+		       ELSE revoked_at
+		     END
+		 WHERE user_id IS NULL
+		   AND consumed_at IS NULL
+		   AND created_at <= $2
+		   AND lower(email) = lower((SELECT email FROM users WHERE id = $1))`,
+		userID, now,
+	); err != nil {
+		return nil, fmt.Errorf("redact unattached magic links: %w", err)
 	}
 	if _, err := tx.ExecContext(ctx,
 		`UPDATE email_change_links SET revoked_at = $2
