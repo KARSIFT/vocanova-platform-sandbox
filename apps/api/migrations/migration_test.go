@@ -154,6 +154,26 @@ func TestVOC027P2ReviewAttemptsMigrationCarriesDatabaseInvariants(t *testing.T) 
 	}
 }
 
+func TestReviewAttemptResultRatingIntegrityMigrationCarriesDatabaseInvariants(t *testing.T) {
+	sql, err := os.ReadFile("20260908091500_review_attempt_result_rating_integrity.sql")
+	if err != nil {
+		t.Fatalf("read review attempt result/rating integrity migration: %v", err)
+	}
+	text := string(sql)
+	for _, invariant := range []string{
+		"ALTER TABLE review_attempts",
+		"CHECK (",
+		"result = 'skipped' AND rating IS NULL",
+		"result = 'incorrect' AND rating IS NOT NULL AND rating = 'again'",
+		"result = 'correct' AND rating IS NOT NULL AND rating IN ('hard', 'good', 'easy')",
+		"NOT VALID",
+	} {
+		if !strings.Contains(text, invariant) {
+			t.Errorf("review attempt result/rating integrity migration missing invariant %q", invariant)
+		}
+	}
+}
+
 func TestVOC028P3LearnerSentencesMigrationCarriesDatabaseInvariants(t *testing.T) {
 	sql, err := os.ReadFile("20260725120000_voc028_p3_learner_sentences.sql")
 	if err != nil {
