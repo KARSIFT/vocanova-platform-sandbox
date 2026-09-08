@@ -296,8 +296,9 @@ export function validateMockInventory() {
   // repeated learner/meaning IDs to its referenced saved-word row. VOC-1350
   // replaces quality-review-report foreign key cascades with RESTRICT actions.
   // VOC-1352 adds feature_audit_logs for word-save and account-deletion
-  // de-identification. VOC-1379, the grace-protected mission linkage, and
-  // VOC-1385 email-change-link cleanup index are forward integrity changes to
+  // de-identification. VOC-1379, the grace-protected mission linkage,
+  // VOC-1385's email-change-link cleanup index, and VOC-1389's nonnegative
+  // user-word review-counter constraint are forward integrity changes to
   // existing tables rather than new application boundaries.
   const allowedMigrationFiles = new Set([
     "20260724210000_identity_foundation.sql",
@@ -322,6 +323,7 @@ export function validateMockInventory() {
     "20260908110000_daily_activity_review_counter_integrity.sql",
     "20260908120000_grace_protected_mission_linkage.sql",
     "20260908130000_email_change_links_cleanup_order.sql",
+    "20260908170000_user_word_review_counter_constraints.sql",
   ]);
   for (const entry of readdirSync(apiMigrationRoot, {
     withFileTypes: true,

@@ -123,6 +123,63 @@ func TestUserWordReviewCounterConstraintsAgainstRealPostgres(t *testing.T) {
 	require.NoError(t, err, "a valid review-counter update must remain accepted")
 }
 
+// TestUserWordReviewCounterConstraintRolloutAcceptsLegacyRows proves the
+// forward migration can be deployed before a separately planned historical
+// repair. PostgreSQL enforces a NOT VALID check for every later write, but it
+// must not scan and reject an already-corrupt row while adding the constraint.
+func TestUserWordReviewCounterConstraintRolloutAcceptsLegacyRows(t *testing.T) {
+	dsn := os.Getenv("VOCANOVA_TEST_POSTGRES_DSN")
+	if dsn == "" {
+		t.Skip("VOCANOVA_TEST_POSTGRES_DSN is unset; real PostgreSQL test unavailable")
+	}
+
+	admin, err := sql.Open("postgres", dsn)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = admin.Close() })
+
+	schemaName := "user_word_counts_rollout_" + randomSchemaSuffix(t, 12)
+	_, err = admin.Exec("CREATE SCHEMA " + schemaName)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_, err := admin.Exec("DROP SCHEMA " + schemaName + " CASCADE")
+		require.NoError(t, err)
+	})
+
+	db, err := sql.Open("postgres", dsn+" search_path="+schemaName)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+	applyForwardMigrationsBefore(t, db, userWordCounterConstraintsMigration)
+
+	ctx := context.Background()
+	userID, meaningID, wordID := uuid.New(), uuid.New(), uuid.New()
+	now := time.Now().UTC()
+	_, err = db.ExecContext(ctx, `INSERT INTO users (id, email, status, onboarding_status, created_at, updated_at)
+		VALUES ($1, $2, 'active', 'completed', $3, $3)`, userID, fmt.Sprintf("counter-rollout-%s@example.test", userID), now)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, `INSERT INTO canonical_words (id, text, normalized_text, language_code, created_at, updated_at)
+		VALUES ($1, 'count', 'count', 'en', $2, $2)`, wordID, now)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, `INSERT INTO word_meanings (id, word_id, part_of_speech, short_definition, meaning_order, created_at, updated_at)
+		VALUES ($1, $2, 'noun', 'a total', 1, $3, $3)`, meaningID, wordID, now)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, `INSERT INTO user_words (
+		id, user_id, meaning_id, source, consecutive_correct_count,
+		consecutive_incorrect_count, total_review_count, correct_review_count,
+		added_at, created_at, updated_at
+	) VALUES ($1, $2, $3, 'manual', -1, -1, -1, -1, $4, $4, $4)`,
+		uuid.New(), userID, meaningID, now)
+	require.NoError(t, err, "the pre-existing upper-bound check permits this historical corruption")
+
+	migration, err := os.ReadFile(userWordCounterConstraintsMigration)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, string(migration))
+	require.NoError(t, err, "NOT VALID must allow the forward migration to install beside legacy corruption")
+	var validated bool
+	err = db.QueryRowContext(ctx, `SELECT convalidated FROM pg_constraint WHERE conname = 'user_words_review_counts_nonnegative'`).Scan(&validated)
+	require.NoError(t, err)
+	require.False(t, validated, "the migration must remain NOT VALID until an explicit historical repair and validation")
+}
+
 func randomSchemaSuffix(t *testing.T, bytes int) string {
 	t.Helper()
 	buf := make([]byte, bytes)
@@ -137,6 +194,22 @@ func applyAllForwardMigrations(t *testing.T, db *sql.DB) {
 	require.NoError(t, err)
 	sort.Strings(paths)
 	for _, path := range paths {
+		migration, err := os.ReadFile(path)
+		require.NoError(t, err)
+		_, err = db.Exec(string(migration))
+		require.NoErrorf(t, err, "apply migration %s", path)
+	}
+}
+
+func applyForwardMigrationsBefore(t *testing.T, db *sql.DB, migrationToExclude string) {
+	t.Helper()
+	paths, err := filepath.Glob("*.sql")
+	require.NoError(t, err)
+	sort.Strings(paths)
+	for _, path := range paths {
+		if path == migrationToExclude {
+			break
+		}
 		migration, err := os.ReadFile(path)
 		require.NoError(t, err)
 		_, err = db.Exec(string(migration))
