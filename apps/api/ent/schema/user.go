@@ -46,6 +46,7 @@ func (User) Edges() []ent.Edge {
 		edge.To("confidence_point_ledger", ConfidencePointLedger.Type),
 		edge.To("streak_state", StreakState.Type),
 		edge.To("grace_day_ledger", GraceDayLedger.Type),
+		edge.To("feature_audit_logs", FeatureAuditLog.Type),
 	}
 }
 

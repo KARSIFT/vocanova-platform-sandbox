@@ -270,6 +270,7 @@ export function validateMockInventory() {
     "emailchangelink.go",
     "accountdeletionrequest.go",
     "aifeedbackqualityreviewreport.go",
+    "featureauditlog.go",
   ]);
   for (const entry of readdirSync(apiSchemaRoot, { withFileTypes: true })) {
     if (
