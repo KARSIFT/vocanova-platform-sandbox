@@ -64,6 +64,16 @@ type ListSavedWordsOutput struct {
 	}
 }
 
+// GetSavedWordInput requests one learner-owned saved record.
+type GetSavedWordInput struct {
+	UserWordID string `path:"userWordId" format:"uuid" required:"true" doc:"Saved record identifier"`
+}
+
+// GetSavedWordOutput returns one saved meaning with canonical summary data.
+type GetSavedWordOutput struct {
+	Body SavedMeaningDTO
+}
+
 // RegisterLearning registers the user-words save/unsave/list routes.
 func RegisterLearning(api huma.API, svc *learning.Service, authSvc *auth.Service) {
 	huma.Register(api, huma.Operation{
@@ -94,6 +104,25 @@ func RegisterLearning(api huma.API, svc *learning.Service, authSvc *auth.Service
 		out.Body.NextCursor = resp.NextCursor
 		out.Body.HasMore = resp.NextCursor != ""
 		return out, nil
+	})
+
+	huma.Register(api, huma.Operation{
+		OperationID: "GetSavedWord",
+		Method:      http.MethodGet,
+		Path:        "/api/v1/user-words/records/{userWordId}",
+		Summary:     "Get one saved word owned by the authenticated requester",
+		Tags:        []string{"Learning"},
+		Middlewares: []func(huma.Context, func(huma.Context)){RequireAuth()},
+		Responses: map[string]*huma.Response{
+			"401": {Description: "Authentication is required"},
+			"404": {Description: "Saved word not found"},
+		},
+	}, func(ctx context.Context, input *GetSavedWordInput) (*GetSavedWordOutput, error) {
+		m, err := svc.GetSavedWord(ctx, RequesterUserID(ctx), parseUUID(input.UserWordID))
+		if err != nil {
+			return nil, mapLearningError(err)
+		}
+		return &GetSavedWordOutput{Body: savedMeaningToDTO(*m)}, nil
 	})
 
 	huma.Register(api, huma.Operation{

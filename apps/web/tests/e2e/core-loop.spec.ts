@@ -437,9 +437,9 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
 
     // ----- 10. Unauthenticated-access rejection.
     //
-    // The mock returns 401 for /api/v1/me when the
-    // e2e_unauthenticated=1 cookie is set (see
-    // mock-api-server.mjs). The middleware uses that 401 to
+    // The mock returns 401 for authenticated API routes when the
+    // e2e_unauthenticated=1 cookie is set (see mock-api-server.mjs).
+    // The middleware uses the /api/v1/me response to
     // redirect to /signin. The test sets the cookie, navigates
     // to /home, and expects the redirect.
     await context.addCookies([

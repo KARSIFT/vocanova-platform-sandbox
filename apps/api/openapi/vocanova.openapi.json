@@ -3714,6 +3714,46 @@
         ]
       }
     },
+    "/api/v1/user-words/records/{userWordId}": {
+      "get": {
+        "operationId": "GetSavedWord",
+        "parameters": [
+          {
+            "description": "Saved record identifier",
+            "in": "path",
+            "name": "userWordId",
+            "required": true,
+            "schema": {
+              "description": "Saved record identifier",
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedMeaningDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Authentication is required"
+          },
+          "404": {
+            "description": "Saved word not found"
+          }
+        },
+        "summary": "Get one saved word owned by the authenticated requester",
+        "tags": [
+          "Learning"
+        ]
+      }
+    },
     "/api/v1/user-words/{meaningId}": {
       "delete": {
         "operationId": "UnsaveUserWord",

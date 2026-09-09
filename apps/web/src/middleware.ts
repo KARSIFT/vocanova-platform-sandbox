@@ -9,6 +9,8 @@ export const config = {
     "/home",
     "/discover",
     "/discover/:path*",
+    "/words",
+    "/words/:path*",
     "/progress",
     "/reviews",
     "/reviews/:path*",

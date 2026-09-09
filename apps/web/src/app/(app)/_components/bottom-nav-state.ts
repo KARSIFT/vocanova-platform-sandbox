@@ -4,6 +4,9 @@ export function isPrimaryNavItemActive(
 ): boolean {
   return (
     pathname === href ||
-    (href === "/discover" && pathname.startsWith("/discover/"))
+    (href === "/discover" &&
+      (pathname.startsWith("/discover/") ||
+        pathname === "/words" ||
+        pathname.startsWith("/words/")))
   );
 }

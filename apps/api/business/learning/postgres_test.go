@@ -296,6 +296,28 @@ func TestPostgreSQLRepositoryGetSavedMeaning(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestPostgreSQLRepositoryGetSavedMeaningByIDScopesToOwner(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewPostgreSQLRepository(db)
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+	rowID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
+	wordID := uuid.MustParse("00000000-0000-0000-0000-000000000004")
+	now := time.Now()
+
+	mock.ExpectQuery(regexp.QuoteMeta("WHERE uw.id = $1 AND uw.user_id = $2 AND uw.deleted_at IS NULL")).
+		WithArgs(rowID, userID).
+		WillReturnRows(savedMeaningRow(rowID, meaningID, wordID, now))
+
+	m, err := repo.GetSavedMeaningByID(t.Context(), userID, rowID)
+	require.NoError(t, err)
+	assert.Equal(t, rowID, m.UserWordID)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 // TestPostgreSQLRepositorySaveUserWordWithGamificationNil tests that word-addition
 // without gamification works (gamification is optional and nil by default).
 // This verifies that the pre-existing P1 behavior is byte-for-byte unchanged

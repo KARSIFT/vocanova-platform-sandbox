@@ -630,6 +630,20 @@ export class VocanovaClient {
     return { data, response };
   }
 
+  async getSavedWord(
+    userWordId: string,
+    init?: RequestInit,
+  ): Promise<{ data: SavedMeaning; response: Response }> {
+    const response = await this.request(
+      "GET",
+      `/api/v1/user-words/records/${encodeURIComponent(userWordId)}`,
+      undefined,
+      init,
+    );
+    const data = (await response.json()) as SavedMeaning;
+    return { data, response };
+  }
+
   async listDueWords(
     params?: { after?: string; limit?: number },
     init?: RequestInit,

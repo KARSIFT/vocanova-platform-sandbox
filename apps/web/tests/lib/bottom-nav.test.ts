@@ -13,6 +13,14 @@ test("keeps Journey active throughout nested discovery routes", () => {
     isPrimaryNavItemActive("/discover/ordering-at-a-cafe/pour", "/discover"),
     true,
   );
+  assert.equal(isPrimaryNavItemActive("/words", "/discover"), true);
+  assert.equal(
+    isPrimaryNavItemActive(
+      "/words/00000000-0000-0000-0000-000000000001",
+      "/discover",
+    ),
+    true,
+  );
 });
 
 test("does not activate Journey for a similarly named route", () => {

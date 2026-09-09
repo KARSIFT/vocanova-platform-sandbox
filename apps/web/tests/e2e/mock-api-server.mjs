@@ -64,6 +64,7 @@
 //                                                       (clears session cookie)
 //
 //   GET    /api/v1/user-words                        -> 200 { items, nextCursor }
+//   GET    /api/v1/user-words/records/:userWordId    -> 200 SavedMeaning
 //   POST   /api/v1/user-words                        -> 200 SavedMeaning
 //   DELETE /api/v1/user-words/:meaningId             -> 204
 //
@@ -412,7 +413,7 @@ function buildSavedWords(state) {
       wordText: word.text,
       partOfSpeech: meaning.partOfSpeech,
       shortDefinition: meaning.shortDefinition,
-      status: "saved",
+      status: "new",
       source: "journey",
       saved: true,
       addedAt: new Date().toISOString(),
@@ -749,21 +750,18 @@ const server = createServer(async (req, res) => {
 
   // ----- authenticated routes (CSRF enforced for mutations) --
 
+  if (cookies.e2e_unauthenticated === "1") {
+    // Most browser fixtures intentionally use the mock's default synthetic
+    // session. This override exercises the real API's RequireAuth boundary
+    // consistently across every authenticated mock route.
+    logLine(req, 401, { reason: "e2e-unauthenticated-override" });
+    jsonResponse(res, 401, { error: "unauthorized" });
+    return;
+  }
+
   if (req.method === "GET" && url.pathname === "/api/v1/me") {
     if (url.searchParams.get("fail") === "me") {
       logLine(req, 401, { reason: "fixture-forced-401" });
-      jsonResponse(res, 401, { error: "unauthorized" });
-      return;
-    }
-    if (cookies.e2e_unauthenticated === "1") {
-      // T08: the unauthenticated-access rejection step sets this
-      // cookie after logout to make /api/v1/me return 401, so the
-      // Next.js auth-gate middleware (apps/web/src/middleware.ts)
-      // routes the learner to /signin. The cookie is unset by the
-      // test before the next test that needs an authenticated
-      // session, so the existing T07a/T07b scans continue to see
-      // a 200 here without changing their own setup.
-      logLine(req, 401, { reason: "e2e-unauthenticated-override" });
       jsonResponse(res, 401, { error: "unauthorized" });
       return;
     }
@@ -877,11 +875,32 @@ const server = createServer(async (req, res) => {
       wordText: word.text,
       partOfSpeech: meaning.partOfSpeech,
       shortDefinition: meaning.shortDefinition,
-      status: "saved",
+      status: "new",
       source: body.source ?? "journey",
       saved: true,
       addedAt: new Date().toISOString(),
     });
+    return;
+  }
+
+  if (
+    req.method === "GET" &&
+    url.pathname.startsWith("/api/v1/user-words/records/")
+  ) {
+    const userWordId = decodeURIComponent(
+      url.pathname.slice("/api/v1/user-words/records/".length),
+    );
+    const state = getSessionState(cookies);
+    const savedWord = buildSavedWords(state).items.find(
+      (item) => item.userWordId === userWordId,
+    );
+    if (!savedWord) {
+      logLine(req, 404, { reason: "saved-word-not-found" });
+      jsonResponse(res, 404, { error: "not_found" });
+      return;
+    }
+    logLine(req, 200, { action: "get-saved-word" });
+    jsonResponse(res, 200, savedWord);
     return;
   }
 

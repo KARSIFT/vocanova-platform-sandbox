@@ -306,6 +306,19 @@ func (r *PostgreSQLRepository) GetSavedMeaning(ctx context.Context, userID, mean
 	return r.savedMeaningByUserMeaning(ctx, nil, userID, meaningID)
 }
 
+func (r *PostgreSQLRepository) GetSavedMeaningByID(ctx context.Context, userID, userWordID uuid.UUID) (*SavedMeaning, error) {
+	row := r.db.QueryRowContext(ctx,
+		`SELECT uw.id, uw.meaning_id, cw.id, cw.text, cw.normalized_text,
+		     wm.part_of_speech, wm.short_definition, uw.status, uw.source, uw.added_at
+		  FROM user_words uw
+		  JOIN word_meanings wm ON wm.id = uw.meaning_id
+		  JOIN canonical_words cw ON cw.id = wm.word_id
+		  WHERE uw.id = $1 AND uw.user_id = $2 AND uw.deleted_at IS NULL`,
+		userWordID, userID,
+	)
+	return r.scanSavedMeaning(row)
+}
+
 func (r *PostgreSQLRepository) ListSavedWords(ctx context.Context, req ListSavedWordsRequest) (*ListSavedWordsResponse, error) {
 	limit := req.Limit
 	if limit <= 0 {

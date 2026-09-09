@@ -18,9 +18,17 @@ export default async function DiscoverPage() {
   return (
     <div className="p-[var(--spacing-lg)]">
       <h1 className="text-2xl font-semibold text-neutral-900">Journey</h1>
-      <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-        Choose a situation to explore practical vocabulary.
-      </p>
+      <div className="flex flex-wrap items-end justify-between gap-[var(--spacing-md)]">
+        <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
+          Choose a situation to explore practical vocabulary.
+        </p>
+        <Link
+          href="/words"
+          className="inline-flex min-h-[var(--spacing-2xl)] items-center rounded-md px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-semibold text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+        >
+          View saved vocabulary
+        </Link>
+      </div>
 
       {getDiscoverListView(items.length) === "empty" ? (
         <div className="flex flex-col items-center justify-center py-[var(--spacing-2xl)] text-center">
