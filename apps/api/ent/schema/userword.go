@@ -15,10 +15,19 @@ import (
 type UserWord struct{ ent.Schema }
 
 func (UserWord) Annotations() []schema.Annotation {
-	return []schema.Annotation{entsql.Annotation{Table: "user_words", Checks: map[string]string{
-		"review_counts_nonnegative":         "consecutive_correct_count >= 0 AND consecutive_incorrect_count >= 0 AND total_review_count >= 0 AND correct_review_count >= 0",
-		"correct_review_count_within_total": "correct_review_count <= total_review_count",
-	}}}
+	return []schema.Annotation{
+		entsql.Annotation{
+			Table: "user_words",
+			Checks: map[string]string{
+				"review_counts_nonnegative":         "consecutive_correct_count >= 0 AND consecutive_incorrect_count >= 0 AND total_review_count >= 0 AND correct_review_count >= 0",
+				"correct_review_count_within_total": "correct_review_count <= total_review_count",
+				"last_result_rating_consistent": `((last_result IS NULL AND last_rating IS NULL)
+					OR (last_result = 'skipped' AND last_rating IS NULL)
+					OR (last_result = 'incorrect' AND last_rating IS NOT NULL AND last_rating = 'again')
+					OR (last_result = 'correct' AND last_rating IS NOT NULL AND last_rating IN ('hard', 'good', 'easy'))) IS TRUE`,
+			},
+		},
+	}
 }
 func (UserWord) Mixin() []ent.Mixin { return []ent.Mixin{UUIDMixin{}, TimeMixin{}, SoftDeleteMixin{}} }
 
