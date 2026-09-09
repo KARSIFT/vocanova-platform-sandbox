@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const reviewAttemptUserWordIntegrityMigration = "20260908021500_review_attempt_user_word_integrity.sql"
+const reviewAttemptUserWordIntegrityMigration = "20260909142059_review_attempt_user_word_integrity.sql"
 
 func TestReviewAttemptUserWordIntegrityMigrationCarriesDatabaseInvariants(t *testing.T) {
 	sqlBytes, err := os.ReadFile(reviewAttemptUserWordIntegrityMigration)

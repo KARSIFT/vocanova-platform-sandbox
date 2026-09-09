@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const reviewAttemptResultRatingMigration = "20260908091500_review_attempt_result_rating_integrity.sql"
+const reviewAttemptResultRatingMigration = "20260909142062_review_attempt_result_rating_integrity.sql"
 
 func TestReviewAttemptResultRatingMigrationAndEntSchemaAgree(t *testing.T) {
 	migration, err := os.ReadFile(reviewAttemptResultRatingMigration)

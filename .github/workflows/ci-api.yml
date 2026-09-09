@@ -43,6 +43,54 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
+      # Atlas applies versioned migrations linearly in staging and production.
+      # A PR may add a migration only after the base branch's highest forward
+      # version; otherwise a deployment whose database has already applied the
+      # base history fails with Atlas's non-linear-history error. This check
+      # runs against the PR base, or the current main tip for a
+      # merge-group ref. The latter is essential: a stale PR may have passed
+      # against an older main tip but enter the merge queue after a newer
+      # migration has landed.
+      - name: Verify added migrations extend the PR base linearly
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          # The checkout action configures safe.directory on the host, but
+          # that Git configuration is not inherited by this job container.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          if [[ "$EVENT_NAME" == "merge_group" ]]; then
+            git fetch --no-tags --depth=1 origin main
+            BASE_SHA="$(git rev-parse FETCH_HEAD)"
+          else
+            git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          fi
+          base_max="$({
+            git ls-tree -r --name-only "$BASE_SHA" -- apps/api/migrations
+          } | sed -nE 's#^apps/api/migrations/([0-9]{14})_[^/]+\.sql$#\1#p' | sort -n | tail -n 1)"
+          if [[ -z "$base_max" ]]; then
+            echo "::error::Could not determine the base history's highest migration version."
+            exit 1
+          fi
+          while IFS=$'\t' read -r status first second; do
+            case "$status" in
+              A) migration_path="$first" ;;
+              R*) migration_path="$second" ;;
+              *) continue ;;
+            esac
+            name="${migration_path##*/}"
+            if [[ "$name" =~ ^([0-9]{14})_.+\.sql$ ]]; then
+              version="${BASH_REMATCH[1]}"
+              if (( 10#$version <= 10#$base_max )); then
+                echo "::error file=$migration_path::Migration $name must have a version later than the PR base's highest forward migration ($base_max). Rebase it with 'atlas migrate rebase'."
+                exit 1
+              fi
+            fi
+          done < <(git diff --name-status --find-renames "$BASE_SHA" HEAD -- apps/api/migrations)
+
       # -buildvcs=false: Go's automatic VCS-stamping shells out to `git
       # status`, which fails with "detected dubious ownership" inside a
       # container job (the container's git doesn't inherit the host

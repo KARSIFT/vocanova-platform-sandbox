@@ -132,7 +132,7 @@ func TestAtlasMigrateApplySucceedsAgainstDisposablePostgres(t *testing.T) {
 	// directory (the same `cwd` the production wrapper
 	// `apps/api/scripts/migrate.sh` would resolve to from
 	// `MIGRATIONS_DIR=file://.../migrations`).
-	applyAtlasMigrate(t, dbURL, "first apply (empty database, all 13 migrations)")
+	applyAtlasMigrate(t, dbURL, "first apply (empty database, all committed migrations)")
 
 	// Second apply: against the now-migrated database. We
 	// assert the output indicates no pending migrations.
@@ -305,10 +305,20 @@ func waitForPostgresReady(t *testing.T, containerName string, timeout time.Durat
 // are unambiguous in the log.
 func applyAtlasMigrate(t *testing.T, dbURL string, label string) {
 	t.Helper()
+	applyAtlasMigrateFromDir(t, dbURL, migrationDirectory(t), label)
+}
+
+func migrationDirectory(t *testing.T) string {
+	t.Helper()
 	dir, err := filepath.Abs(".")
 	if err != nil {
-		t.Fatalf("%s: resolve migrations dir absolute path: %v", label, err)
+		t.Fatalf("resolve migrations dir absolute path: %v", err)
 	}
+	return dir
+}
+
+func applyAtlasMigrateFromDir(t *testing.T, dbURL, dir, label string) {
+	t.Helper()
 	cmd := exec.Command("atlas", "migrate", "apply",
 		"--url", dbURL,
 		"--dir", "file://"+dir,

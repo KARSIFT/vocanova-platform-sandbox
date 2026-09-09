@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const missionOptionalGoalPairMigration = "20260908023500_mission_optional_goal_pair_integrity.sql"
+const missionOptionalGoalPairMigration = "20260909142060_mission_optional_goal_pair_integrity.sql"
 
 func TestMissionOptionalGoalPairMigrationCarriesDatabaseInvariants(t *testing.T) {
 	body, err := os.ReadFile(missionOptionalGoalPairMigration)

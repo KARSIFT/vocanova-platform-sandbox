@@ -327,10 +327,6 @@ export function validateMockInventory() {
     "20260905130000_ai_feedback_retry_history.sql",
     "20260908010000_voc1350_restrict_ai_feedback_report_foreign_keys.sql",
     "20260908020000_voc1352_feature_audit_logs.sql",
-    "20260908021500_review_attempt_user_word_integrity.sql",
-    "20260908023500_mission_optional_goal_pair_integrity.sql",
-    "20260908024500_mission_completed_at_integrity.sql",
-    "20260908091500_review_attempt_result_rating_integrity.sql",
     "20260908110000_daily_activity_review_counter_integrity.sql",
     "20260908120000_grace_protected_mission_linkage.sql",
     "20260908130000_email_change_links_cleanup_order.sql",
@@ -340,6 +336,10 @@ export function validateMockInventory() {
     "20260908170000_user_word_review_counter_constraints.sql",
     "20260908180000_daily_activity_remaining_counter_integrity.sql",
     "20260908190000_voc1406_user_word_result_rating_integrity.sql",
+    "20260909142059_review_attempt_user_word_integrity.sql",
+    "20260909142060_mission_optional_goal_pair_integrity.sql",
+    "20260909142061_mission_completed_at_integrity.sql",
+    "20260909142062_review_attempt_result_rating_integrity.sql",
   ]);
   for (const entry of readdirSync(apiMigrationRoot, {
     withFileTypes: true,

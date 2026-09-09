@@ -155,7 +155,7 @@ func TestVOC027P2ReviewAttemptsMigrationCarriesDatabaseInvariants(t *testing.T) 
 }
 
 func TestReviewAttemptResultRatingIntegrityMigrationCarriesDatabaseInvariants(t *testing.T) {
-	sql, err := os.ReadFile("20260908091500_review_attempt_result_rating_integrity.sql")
+	sql, err := os.ReadFile("20260909142062_review_attempt_result_rating_integrity.sql")
 	if err != nil {
 		t.Fatalf("read review attempt result/rating integrity migration: %v", err)
 	}
