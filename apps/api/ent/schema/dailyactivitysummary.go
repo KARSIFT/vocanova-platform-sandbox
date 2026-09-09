@@ -24,6 +24,7 @@ func (DailyActivitySummary) Annotations() []schema.Annotation {
 				"review_counters_nonnegative":                 "reviews_attempted >= 0 AND reviews_correct >= 0 AND reviews_skipped >= 0",
 				"review_counters_classified_within_attempted": "reviews_correct <= reviews_attempted - reviews_skipped",
 				"confidence_point_counters_nonnegative":       "confidence_points_earned >= 0 AND confidence_points_spent >= 0",
+				"remaining_counters_nonnegative":              "words_discovered >= 0 AND words_added >= 0 AND sentences_submitted >= 0 AND ai_feedback_received >= 0",
 			},
 		},
 	}

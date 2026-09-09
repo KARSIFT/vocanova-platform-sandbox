@@ -403,6 +403,27 @@ func TestDailyActivityReviewCounterIntegrityMigrationCarriesDatabaseInvariants(t
 	}
 }
 
+func TestDailyActivityRemainingCounterIntegrityMigrationCarriesDatabaseInvariants(t *testing.T) {
+	sql, err := os.ReadFile("20260908180000_daily_activity_remaining_counter_integrity.sql")
+	if err != nil {
+		t.Fatalf("read daily activity remaining-counter integrity migration: %v", err)
+	}
+	text := string(sql)
+	for _, invariant := range []string{
+		"ALTER TABLE daily_activity_summaries",
+		"daily_activity_summaries_remaining_counters_nonnegative",
+		"words_discovered >= 0",
+		"words_added >= 0",
+		"sentences_submitted >= 0",
+		"ai_feedback_received >= 0",
+		"NOT VALID",
+	} {
+		if !strings.Contains(text, invariant) {
+			t.Errorf("daily activity remaining-counter integrity migration missing invariant %q", invariant)
+		}
+	}
+}
+
 func TestDailyActivityPointAggregateIntegrityMigrationCarriesDatabaseInvariants(t *testing.T) {
 	sql, err := os.ReadFile("20260908150000_daily_activity_point_aggregate_integrity.sql")
 	if err != nil {

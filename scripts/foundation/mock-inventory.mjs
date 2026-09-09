@@ -337,6 +337,7 @@ export function validateMockInventory() {
     "20260908150000_daily_activity_point_aggregate_integrity.sql",
     "20260908153000_voc1402_append_only_learning_ledgers.sql",
     "20260908170000_user_word_review_counter_constraints.sql",
+    "20260908180000_daily_activity_remaining_counter_integrity.sql",
   ]);
   for (const entry of readdirSync(apiMigrationRoot, {
     withFileTypes: true,
