@@ -307,7 +307,8 @@ export function validateMockInventory() {
   // keeps completed_at exclusive to completed snapshots. VOC-1402 makes the
   // existing confidence-point and grace-day histories append-only, with a
   // transaction-local exception for account purges. VOC-1406 constrains the
-  // saved word's current result/rating state.
+  // saved word's current result/rating state. VOC-1411 binds idempotency
+  // claims to real users and fingerprints.
   const allowedMigrationFiles = new Set([
     "20260724210000_identity_foundation.sql",
     "20260724210001_oauth_state.sql",
@@ -340,6 +341,7 @@ export function validateMockInventory() {
     "20260909142060_mission_optional_goal_pair_integrity.sql",
     "20260909142061_mission_completed_at_integrity.sql",
     "20260909142062_review_attempt_result_rating_integrity.sql",
+    "20260909142063_voc1411_idempotency_record_integrity.sql",
   ]);
   for (const entry of readdirSync(apiMigrationRoot, {
     withFileTypes: true,

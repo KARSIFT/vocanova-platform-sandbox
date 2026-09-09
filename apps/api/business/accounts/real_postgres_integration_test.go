@@ -130,7 +130,7 @@ func TestPostgreSQLRepositoryExportAndAnonymization(t *testing.T) {
 	if aRemaining != 0 || bRemaining != 1 {
 		t.Fatalf("purge isolation failed: A=%d B=%d", aRemaining, bRemaining)
 	}
-	for _, table := range []string{"sessions", "magic_links", "email_change_links"} {
+	for _, table := range []string{"idempotency_keys", "sessions", "magic_links", "email_change_links"} {
 		var aTokens, bTokens int
 		if err := db.QueryRowContext(ctx, `SELECT count(*) FROM `+table+` WHERE user_id = $1`, userA).Scan(&aTokens); err != nil {
 			t.Fatal(err)
