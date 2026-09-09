@@ -351,6 +351,64 @@ class WorkflowContractTest(unittest.TestCase):
             "does not reliably re-enqueue a PR into a required merge queue (found live, PR #1171/#1172)",
         )
 
+    def test_deploys_replace_the_migration_artifact_before_atlas_runs(self) -> None:
+        # A tar extraction overlays its destination. That is unsafe for Atlas:
+        # a renamed migration can survive alongside the bundle's atlas.sum.
+        # Both deploys must move the entire old directory away and replace it
+        # with a validated directory staged from the immutable bundle.
+        deploys = {
+            "deploy-staging.yml": {
+                "bundle": "/tmp/deploy-bundle.tgz",
+                "parent": "/opt/vocanova/apps/api",
+                "migrate": 'DATABASE_URL="$migration_database_url" sh /opt/vocanova/apps/api/scripts/migrate.sh',
+            },
+            "deploy-production.yml": {
+                "bundle": "/tmp/production-deploy-bundle.tgz",
+                "parent": "/opt/vocanova/production/apps/api",
+                "migrate": 'DATABASE_URL="$migration_database_url" sh /opt/vocanova/production/apps/api/scripts/migrate.sh',
+            },
+        }
+        for workflow_name, values in deploys.items():
+            text = (WF_DIR / workflow_name).read_text()
+            parent = f'migration_parent={values["parent"]}'
+            stage = 'migration_stage_root=$(mktemp -d "$migration_parent/.migrations-stage.XXXXXX")'
+            extract = (
+                f'tar -xzf {values["bundle"]} -C "$migration_stage_root" '
+                "./apps/api/migrations"
+            )
+            validate = 'if [ ! -f "$migration_stage/atlas.sum" ]'
+            backup = 'mv "$migration_parent/migrations" "$migration_backup"'
+            install = 'mv "$migration_stage" "$migration_parent/migrations"'
+            cleanup_function = "cleanup_migration_artifacts() {"
+            cleanup_trap = "trap cleanup_migration_artifacts EXIT"
+            success_cleanup = "cleanup_migration_artifacts\n            trap - EXIT"
+            restore = 'if mv "$migration_backup" "$migration_parent/migrations"; then'
+            restore_failure = "rollback failed; previous artifact remains at $migration_backup"
+
+            for required in (
+                parent,
+                stage,
+                cleanup_function,
+                cleanup_trap,
+                extract,
+                validate,
+                backup,
+                install,
+                restore,
+                restore_failure,
+                success_cleanup,
+            ):
+                self.assertIn(required, text, f"{workflow_name}: missing migration replacement step {required!r}")
+
+            self.assertLess(text.index(parent), text.index(stage), workflow_name)
+            self.assertLess(text.index(stage), text.index(extract), workflow_name)
+            self.assertLess(text.index(extract), text.index(validate), workflow_name)
+            self.assertLess(text.index(validate), text.index(backup), workflow_name)
+            self.assertLess(text.index(backup), text.index(install), workflow_name)
+            self.assertLess(text.index(install), text.index(restore), workflow_name)
+            self.assertLess(text.index(install), text.index(success_cleanup), workflow_name)
+            self.assertLess(text.index(install), text.index(values["migrate"]), workflow_name)
+
 
 if __name__ == "__main__":
     unittest.main()

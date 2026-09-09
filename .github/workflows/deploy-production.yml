@@ -505,6 +505,50 @@ jobs:
             sudo mkdir -p /opt/vocanova/production
             sudo tar -xzf /tmp/production-deploy-bundle.tgz -C /opt/vocanova/production
             sudo chown -R "$(id -un)":"$(id -gn)" /opt/vocanova/production
+
+            # The bundle is authoritative for the Atlas migration directory.
+            # A normal tar extraction overlays files, which leaves a migration
+            # behind when a recovery has renamed it. Stage the bundled
+            # directory on the destination filesystem, validate it, then swap
+            # the whole directory before Atlas reads it. This changes no
+            # database revision history and fails closed if the staged artifact
+            # is incomplete.
+            migration_parent=/opt/vocanova/production/apps/api
+            migration_stage_root=$(mktemp -d "$migration_parent/.migrations-stage.XXXXXX")
+            migration_backup=""
+            cleanup_migration_artifacts() {
+              rm -rf "$migration_stage_root"
+              # Keep the backup only if a failed restore left migrations
+              # absent, so an operator has the intact previous artifact.
+              if [ -n "$migration_backup" ] && [ -d "$migration_parent/migrations" ]; then
+                rm -rf "$migration_backup"
+              fi
+            }
+            trap cleanup_migration_artifacts EXIT
+            tar -xzf /tmp/production-deploy-bundle.tgz -C "$migration_stage_root" ./apps/api/migrations
+            migration_stage="$migration_stage_root/apps/api/migrations"
+            if [ ! -f "$migration_stage/atlas.sum" ] || ! find "$migration_stage" -maxdepth 1 -type f -name '*.sql' -print -quit | grep -q .; then
+              echo "ERROR: staged migration artifact is incomplete; refusing to replace deployed migrations" >&2
+              exit 1
+            fi
+            migration_backup=$(mktemp -d "$migration_parent/.migrations-backup.XXXXXX")
+            # GNU mv moves a source *into* an existing destination directory;
+            # reserve a unique path, then remove it so this is an exact rename.
+            rmdir "$migration_backup"
+            if ! mv "$migration_parent/migrations" "$migration_backup"; then
+              echo "ERROR: could not move the deployed migration directory to its rollback backup" >&2
+              exit 1
+            fi
+            if ! mv "$migration_stage" "$migration_parent/migrations"; then
+              if mv "$migration_backup" "$migration_parent/migrations"; then
+                echo "ERROR: could not install the staged migration artifact; restored the previous directory" >&2
+              else
+                echo "ERROR: could not install the staged migration artifact and rollback failed; previous artifact remains at $migration_backup" >&2
+              fi
+              exit 1
+            fi
+            cleanup_migration_artifacts
+            trap - EXIT
             chmod 750 /opt/vocanova/production
             mkdir -p /opt/vocanova/production/secrets/nginx
             chmod 700 /opt/vocanova/production/secrets
