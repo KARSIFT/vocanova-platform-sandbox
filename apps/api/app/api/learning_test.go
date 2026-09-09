@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -91,6 +92,55 @@ func TestListSavedWordsReturnsSavedMeanings(t *testing.T) {
 	assert.Equal(t, "A document.", body.Body.Items[0].ShortDefinition)
 	assert.True(t, body.Body.Items[0].Saved)
 	assert.False(t, body.Body.HasMore)
+}
+
+func TestGetSavedWordReturnsOwnerRecord(t *testing.T) {
+	api, svc, _ := testLearningAPI(t)
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
+	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+	saved, err := svc.SaveUserWord(t.Context(), learning.SaveUserWordRequest{
+		UserID: userID, MeaningID: meaningID, Source: "journey", IdempotencyKey: "get-owner-record",
+	})
+	require.NoError(t, err)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/user-words/records/%s", saved.UserWordID), nil)
+	req = req.WithContext(WithRequester(req.Context(), &auth.User{ID: userID}))
+	api.Adapter().ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var body GetSavedWordOutput
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body.Body))
+	assert.Equal(t, saved.UserWordID.String(), body.Body.UserWordID)
+	assert.Equal(t, "boarding-pass", body.Body.WordSlug)
+}
+
+func TestGetSavedWordDoesNotExposeAnotherLearnersRecord(t *testing.T) {
+	api, svc, _ := testLearningAPI(t)
+	owner := uuid.MustParse("00000000-0000-0000-0000-000000000003")
+	other := uuid.MustParse("00000000-0000-0000-0000-000000000004")
+	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+	saved, err := svc.SaveUserWord(t.Context(), learning.SaveUserWordRequest{
+		UserID: owner, MeaningID: meaningID, Source: "journey", IdempotencyKey: "get-private-record",
+	})
+	require.NoError(t, err)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/user-words/records/%s", saved.UserWordID), nil)
+	req = req.WithContext(WithRequester(req.Context(), &auth.User{ID: other}))
+	api.Adapter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestGetSavedWordRequiresAuth(t *testing.T) {
+	api, _, _ := testLearningAPI(t)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/user-words/records/00000000-0000-0000-0000-000000000003", nil)
+	api.Adapter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
 func TestListSavedWordsHasMoreMatchesCursor(t *testing.T) {

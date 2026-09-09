@@ -92,7 +92,7 @@ func TestContractContainsLearningEndpoints(t *testing.T) {
 		t.Fatalf("marshal OpenAPI: %v", err)
 	}
 	contract := string(document)
-	for _, expected := range []string{"ListSavedWords", "SaveUserWord", "UnsaveUserWord", "/api/v1/user-words", "Idempotency-Key"} {
+	for _, expected := range []string{"ListSavedWords", "GetSavedWord", "SaveUserWord", "UnsaveUserWord", "/api/v1/user-words", "/api/v1/user-words/records/{userWordId}", "Idempotency-Key"} {
 		if !strings.Contains(contract, expected) {
 			t.Errorf("OpenAPI missing %q", expected)
 		}

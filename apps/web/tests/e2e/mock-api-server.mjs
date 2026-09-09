@@ -64,6 +64,7 @@
 //                                                       (clears session cookie)
 //
 //   GET    /api/v1/user-words                        -> 200 { items, nextCursor }
+//   GET    /api/v1/user-words/records/:userWordId    -> 200 SavedMeaning
 //   POST   /api/v1/user-words                        -> 200 SavedMeaning
 //   DELETE /api/v1/user-words/:meaningId             -> 204
 //
@@ -882,6 +883,27 @@ const server = createServer(async (req, res) => {
       saved: true,
       addedAt: new Date().toISOString(),
     });
+    return;
+  }
+
+  if (
+    req.method === "GET" &&
+    url.pathname.startsWith("/api/v1/user-words/records/")
+  ) {
+    const userWordId = decodeURIComponent(
+      url.pathname.slice("/api/v1/user-words/records/".length),
+    );
+    const state = getSessionState(cookies);
+    const savedWord = buildSavedWords(state).items.find(
+      (item) => item.userWordId === userWordId,
+    );
+    if (!savedWord) {
+      logLine(req, 404, { reason: "saved-word-not-found" });
+      jsonResponse(res, 404, { error: "not_found" });
+      return;
+    }
+    logLine(req, 200, { action: "get-saved-word" });
+    jsonResponse(res, 200, savedWord);
     return;
   }
 

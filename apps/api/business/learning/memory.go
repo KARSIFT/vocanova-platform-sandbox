@@ -151,6 +151,18 @@ func (r *MemoryRepository) GetSavedMeaning(ctx context.Context, userID, meaningI
 	return nil, ErrUserWordNotFound
 }
 
+func (r *MemoryRepository) GetSavedMeaningByID(ctx context.Context, userID, userWordID uuid.UUID) (*SavedMeaning, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for _, uw := range r.userWords {
+		if uw.ID == userWordID && uw.UserID == userID && uw.DeletedAt == nil {
+			return r.savedMeaningFromUserWord(uw), nil
+		}
+	}
+	return nil, ErrUserWordNotFound
+}
+
 func (r *MemoryRepository) ListSavedWords(ctx context.Context, req ListSavedWordsRequest) (*ListSavedWordsResponse, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

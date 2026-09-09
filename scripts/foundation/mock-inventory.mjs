@@ -64,6 +64,9 @@ const expectedRouteDirectories = [
   path.join("discover", "[situation]", "[word]"),
   "progress",
   "reviews",
+  // DOC-08 saved-vocabulary management routes.
+  "words",
+  path.join("words", "[userWordId]"),
   // VOC-031-T05: the two new (app) routes P5 introduces
   // (Settings + Settings/account, per DOC-08). They live
   // inside the authenticated (app) group so the existing
@@ -171,7 +174,10 @@ export function validateMockInventory() {
     }
   }
 
-  // Verify no API routes beyond A1 auth, VOC-026 P1 content/learning, the
+  // Keep real API routes within the explicitly registered product surface.
+  // The list began as a milestone mock guard and now also records later
+  // document-backed routes so a new endpoint cannot bypass contract review.
+  // It includes A1 auth, VOC-026 P1 content/learning, the
   // VOC-027 P2 review routes (due-queue read and submission), the
   // VOC-028-T04 sentence-feedback write/report routes, the
   // VOC-030-T04 daily-mission/progress reads, the
@@ -187,6 +193,7 @@ export function validateMockInventory() {
     /^\/api\/v1\/canonical-words(?:\/[^/]+)?$/,
     /^\/api\/v1\/user-words$/,
     /^\/api\/v1\/user-words\/[^/]+$/,
+    /^\/api\/v1\/user-words\/records\/[^/]+$/,
     /^\/api\/v1\/reviews\/due$/,
     /^\/api\/v1\/reviews\/submissions$/,
     /^\/api\/v1\/sentence-feedback$/,
@@ -208,7 +215,7 @@ export function validateMockInventory() {
       const apiPath = match[1];
       if (!allowedAPIPaths.some((allowed) => allowed.test(apiPath))) {
         errors.push(
-          `${file}: API path ${apiPath} outside the approved A1/P1/P2/P4-T00/T04/P5-T01/T02/T03/privacy boundary`,
+          `${file}: API path ${apiPath} is outside the registered product API surface`,
         );
       }
     }
@@ -382,6 +389,8 @@ export function validateMockInventory() {
       '"/home"',
       '"/discover"',
       '"/discover/:path*"',
+      '"/words"',
+      '"/words/:path*"',
       '"/progress"',
       '"/reviews"',
       '"/reviews/:path*"',

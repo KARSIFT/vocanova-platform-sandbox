@@ -296,6 +296,43 @@ func TestServiceListSavedWords(t *testing.T) {
 	assert.Empty(t, resp.NextCursor)
 }
 
+func TestServiceGetSavedWordIsOwnerScoped(t *testing.T) {
+	repo, idem := sampleLearningRepo()
+	svc := NewService(repo, idem, clock.Real{})
+	owner := MustParseUUID("00000000-0000-0000-0000-000000000003")
+	other := MustParseUUID("00000000-0000-0000-0000-000000000004")
+	meaningID := MustParseUUID("00000000-0000-0000-0000-000000000002")
+
+	saved, err := svc.SaveUserWord(t.Context(), SaveUserWordRequest{
+		UserID: owner, MeaningID: meaningID, Source: "journey", IdempotencyKey: "get-saved-word",
+	})
+	require.NoError(t, err)
+
+	got, err := svc.GetSavedWord(t.Context(), owner, saved.UserWordID)
+	require.NoError(t, err)
+	assert.Equal(t, saved.UserWordID, got.UserWordID)
+	assert.Equal(t, "boarding-pass", got.WordSlug)
+
+	_, err = svc.GetSavedWord(t.Context(), other, saved.UserWordID)
+	assert.ErrorIs(t, err, ErrUserWordNotFound)
+}
+
+func TestServiceGetSavedWordRejectsRemovedRecord(t *testing.T) {
+	repo, idem := sampleLearningRepo()
+	svc := NewService(repo, idem, clock.Real{})
+	userID := MustParseUUID("00000000-0000-0000-0000-000000000003")
+	meaningID := MustParseUUID("00000000-0000-0000-0000-000000000002")
+
+	saved, err := svc.SaveUserWord(t.Context(), SaveUserWordRequest{
+		UserID: userID, MeaningID: meaningID, Source: "journey", IdempotencyKey: "removed-saved-word",
+	})
+	require.NoError(t, err)
+	require.NoError(t, svc.UnsaveUserWord(t.Context(), userID, meaningID))
+
+	_, err = svc.GetSavedWord(t.Context(), userID, saved.UserWordID)
+	assert.ErrorIs(t, err, ErrUserWordNotFound)
+}
+
 func TestServiceListSavedWordsCursor(t *testing.T) {
 	repo, idem := sampleLearningRepo()
 	now := time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC)

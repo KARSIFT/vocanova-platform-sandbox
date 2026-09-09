@@ -74,6 +74,8 @@ type Repository interface {
 	UnsaveUserWord(ctx context.Context, userID, meaningID uuid.UUID, now time.Time) error
 	// GetSavedMeaning returns the saved meaning with canonical details for the requester.
 	GetSavedMeaning(ctx context.Context, userID, meaningID uuid.UUID) (*SavedMeaning, error)
+	// GetSavedMeaningByID returns one active saved record by its learner-owned ID.
+	GetSavedMeaningByID(ctx context.Context, userID, userWordID uuid.UUID) (*SavedMeaning, error)
 	// ListSavedWords returns the requester's saved meanings ordered by most recent first.
 	ListSavedWords(ctx context.Context, req ListSavedWordsRequest) (*ListSavedWordsResponse, error)
 	// IsSaved returns requester-scoped saved states for the given meaning IDs.
@@ -222,6 +224,17 @@ func (s *Service) ListSavedWords(ctx context.Context, req ListSavedWordsRequest)
 		return nil, errors.New("user id required")
 	}
 	return s.repo.ListSavedWords(ctx, req)
+}
+
+// GetSavedWord returns one active saved word owned by the requester.
+func (s *Service) GetSavedWord(ctx context.Context, userID, userWordID uuid.UUID) (*SavedMeaning, error) {
+	if userID == uuid.Nil {
+		return nil, errors.New("user id required")
+	}
+	if userWordID == uuid.Nil {
+		return nil, ErrUserWordNotFound
+	}
+	return s.repo.GetSavedMeaningByID(ctx, userID, userWordID)
 }
 
 // IsSaved implements the content.SavedStateReader boundary.

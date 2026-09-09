@@ -74,30 +74,43 @@ export default async function HomePage() {
           Saved words
         </h2>
         {savedWords.length > 0 ? (
-          <ul className="mt-[var(--spacing-sm)] space-y-[var(--spacing-md)]">
-            {savedWords.map((savedWord) => (
-              <li
-                key={savedWord.userWordId}
-                className="rounded-md p-[var(--spacing-sm)]"
-              >
-                <p className="font-medium text-neutral-900">
-                  {savedWord.wordText}
-                  <span className="ml-[var(--spacing-xs)] text-sm font-normal text-neutral-600">
-                    {savedWord.partOfSpeech}
-                  </span>
-                </p>
-                <p className="text-base text-neutral-700">
-                  {savedWord.shortDefinition}
-                </p>
-                <SentenceFeedback
-                  targetWord={savedWord.wordText}
-                  attemptId={savedWord.userWordId}
-                  source="word_detail"
-                  shortDefinition={savedWord.shortDefinition}
-                />
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul className="mt-[var(--spacing-sm)] space-y-[var(--spacing-md)]">
+              {savedWords.map((savedWord) => (
+                <li
+                  key={savedWord.userWordId}
+                  className="rounded-md p-[var(--spacing-sm)]"
+                >
+                  <p className="font-medium text-neutral-900">
+                    <Link
+                      href={`/words/${savedWord.userWordId}`}
+                      className="rounded-sm hover:text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+                    >
+                      {savedWord.wordText}
+                    </Link>
+                    <span className="ml-[var(--spacing-xs)] text-sm font-normal text-neutral-600">
+                      {savedWord.partOfSpeech}
+                    </span>
+                  </p>
+                  <p className="text-base text-neutral-700">
+                    {savedWord.shortDefinition}
+                  </p>
+                  <SentenceFeedback
+                    targetWord={savedWord.wordText}
+                    attemptId={savedWord.userWordId}
+                    source="word_detail"
+                    shortDefinition={savedWord.shortDefinition}
+                  />
+                </li>
+              ))}
+            </ul>
+            <Link
+              href="/words"
+              className="mt-[var(--spacing-md)] inline-flex min-h-[var(--spacing-2xl)] items-center rounded-md px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-semibold text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+            >
+              Manage saved vocabulary
+            </Link>
+          </>
         ) : (
           <p className="mt-[var(--spacing-sm)] text-base text-neutral-700">
             You haven&apos;t saved any words yet. Explore a journey to start

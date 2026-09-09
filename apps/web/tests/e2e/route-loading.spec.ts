@@ -84,4 +84,29 @@ test.describe("Route loading states", () => {
       page.getByRole("heading", { name: "Review", level: 1 }),
     ).toBeVisible({ timeout: 10_000 });
   });
+
+  test("Saved vocabulary shows loading feedback while its data is delayed", async ({
+    page,
+  }) => {
+    await disableViewportPrefetch(page);
+    await page.goto("/discover");
+    await expect(
+      page.getByRole("heading", { name: "Journey", level: 1 }),
+    ).toBeVisible();
+
+    await delayNextServerRequest(page);
+
+    const navigation = page
+      .getByRole("link", { name: "View saved vocabulary" })
+      .click();
+    const status = page.getByRole("status").filter({
+      hasText: "Loading saved vocabulary",
+    });
+    await expect(status).toBeVisible();
+    await expect(status.locator("..")).toHaveAttribute("aria-busy", "true");
+    await navigation;
+    await expect(
+      page.getByRole("heading", { name: "Saved vocabulary", level: 1 }),
+    ).toBeVisible({ timeout: 10_000 });
+  });
 });

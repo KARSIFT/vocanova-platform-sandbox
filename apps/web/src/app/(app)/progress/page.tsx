@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { getSavedVocabularySummary } from "./_components/progress-view";
 
@@ -111,6 +113,12 @@ export default async function ProgressPage() {
                 </li>
               ))}
             </ul>
+            <Link
+              href="/words"
+              className="mt-[var(--spacing-md)] inline-flex min-h-[var(--spacing-2xl)] items-center rounded-md px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-semibold text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+            >
+              View all saved vocabulary
+            </Link>
           </>
         ) : (
           <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
