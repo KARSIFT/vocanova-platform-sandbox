@@ -75,7 +75,7 @@ export function RemoveSavedWordButton({
         {status === "loading" ? "Removing..." : `Remove ${wordText}`}
       </button>
       {errorMessage ? (
-        <p role="alert" aria-live="polite" className="text-sm text-red-700">
+        <p role="alert" className="text-sm text-red-700">
           {errorMessage}
         </p>
       ) : null}

@@ -17,6 +17,14 @@ test.describe("Saved vocabulary library", () => {
     if (!baseURL) {
       throw new Error("Expected Playwright to configure use.baseURL");
     }
+
+    const mockAPI = `http://127.0.0.1:${process.env.MOCK_API_PORT ?? 8080}`;
+    const unauthorizedRecord = await page.request.get(
+      `${mockAPI}/api/v1/user-words/records/uw-mean-pour`,
+      { headers: { Cookie: "e2e_unauthenticated=1" } },
+    );
+    expect(unauthorizedRecord.status()).toBe(401);
+
     await context.addCookies([
       {
         name: "vocanova_session",

@@ -750,21 +750,18 @@ const server = createServer(async (req, res) => {
 
   // ----- authenticated routes (CSRF enforced for mutations) --
 
+  if (cookies.e2e_unauthenticated === "1") {
+    // Most browser fixtures intentionally use the mock's default synthetic
+    // session. This override exercises the real API's RequireAuth boundary
+    // consistently across every authenticated mock route.
+    logLine(req, 401, { reason: "e2e-unauthenticated-override" });
+    jsonResponse(res, 401, { error: "unauthorized" });
+    return;
+  }
+
   if (req.method === "GET" && url.pathname === "/api/v1/me") {
     if (url.searchParams.get("fail") === "me") {
       logLine(req, 401, { reason: "fixture-forced-401" });
-      jsonResponse(res, 401, { error: "unauthorized" });
-      return;
-    }
-    if (cookies.e2e_unauthenticated === "1") {
-      // T08: the unauthenticated-access rejection step sets this
-      // cookie after logout to make /api/v1/me return 401, so the
-      // Next.js auth-gate middleware (apps/web/src/middleware.ts)
-      // routes the learner to /signin. The cookie is unset by the
-      // test before the next test that needs an authenticated
-      // session, so the existing T07a/T07b scans continue to see
-      // a 200 here without changing their own setup.
-      logLine(req, 401, { reason: "e2e-unauthenticated-override" });
       jsonResponse(res, 401, { error: "unauthorized" });
       return;
     }
