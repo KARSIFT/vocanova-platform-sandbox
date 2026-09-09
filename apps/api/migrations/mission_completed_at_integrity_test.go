@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const missionCompletedAtIntegrityMigration = "20260908024500_mission_completed_at_integrity.sql"
+const missionCompletedAtIntegrityMigration = "20260909142061_mission_completed_at_integrity.sql"
 
 func TestMissionCompletedAtIntegrityMigrationCarriesDatabaseInvariant(t *testing.T) {
 	body, err := os.ReadFile(missionCompletedAtIntegrityMigration)

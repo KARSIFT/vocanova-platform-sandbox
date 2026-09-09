@@ -73,6 +73,12 @@ def auto_merge_shell() -> str:
     return next(step["run"] for step in steps if step.get("name") == "Enable or disable auto-merge, and enqueue, per target PR")
 
 
+def linear_migration_history_shell() -> str:
+    """Return the checked-in migration guard shell, rather than a fixture copy."""
+    steps = real_jobs(WORKFLOWS["ci-api.yml"])["ci-api"]["steps"]
+    return next(step["run"] for step in steps if step.get("name") == "Verify added migrations extend the PR base linearly")
+
+
 class AutoMergeWorkflowShellTest(unittest.TestCase):
     """Exercise the checked-in workflow shell with a deterministic fake gh."""
 
@@ -183,6 +189,59 @@ with open(log, "a") as output:
         result, log = self.run_shell(self.pr_info(auto_merge=False), queued=False)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(log, ["VIEW", "MERGE 42 --auto", "ENQUEUE"])
+
+
+class LinearMigrationHistoryGuardTest(unittest.TestCase):
+    """Exercise the CI guard against deterministic Git output."""
+
+    def run_guard(self, changed_migration: str):
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            fake_git = temp / "git"
+            fake_git.write_text(
+                """#!/usr/bin/env python3
+import os
+import sys
+
+args = sys.argv[1:]
+if args[:1] == ["config"] or args[:1] == ["fetch"]:
+    sys.exit(0)
+if args[:1] == ["ls-tree"]:
+    print("apps/api/migrations/20260909142062_current_tail.sql")
+    sys.exit(0)
+if args[:1] == ["diff"]:
+    print(os.environ["MIGRATION_DIFF"])
+    sys.exit(0)
+print("unexpected git invocation: " + " ".join(args), file=sys.stderr)
+sys.exit(2)
+"""
+            )
+            fake_git.chmod(0o755)
+            environment = {
+                **os.environ,
+                "PATH": f"{temp}:{os.environ['PATH']}",
+                "EVENT_NAME": "pull_request",
+                "BASE_SHA": "base-sha",
+                "GITHUB_WORKSPACE": str(temp),
+                "MIGRATION_DIFF": f"A\tapps/api/migrations/{changed_migration}",
+            }
+            return subprocess.run(
+                ["bash", "-euo", "pipefail", "-c", linear_migration_history_shell()],
+                cwd=temp,
+                env=environment,
+                text=True,
+                capture_output=True,
+            )
+
+    def test_rejects_a_stale_added_migration(self) -> None:
+        result = self.run_guard("20260909142061_stale.sql")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("20260909142061_stale.sql", result.stdout)
+        self.assertIn("atlas migrate rebase", result.stdout)
+
+    def test_accepts_a_later_added_migration(self) -> None:
+        result = self.run_guard("20260909142063_later.sql")
+        self.assertEqual(result.returncode, 0, result.stderr)
 
 
 class WorkflowContractTest(unittest.TestCase):
