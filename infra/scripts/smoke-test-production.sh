@@ -215,7 +215,7 @@ coerce_same_origin_redirect_path() {
   esac
 
   case "$path" in
-    /signin|/signin\?*)
+    /signin|/signin\?*|/login|/login\?*)
       _redirect_reject_reason="sign-in"
       return 1
       ;;

@@ -130,6 +130,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.end_headers()
                 return
             if self._authorized():
+                if scenario == "route_login_redirect" and path == "/home":
+                    self.send_response(307)
+                    self.send_header("Location", "/login?returnTo=/home")
+                    self.end_headers()
+                    return
                 if scenario == "route_redirect_loop" and path == "/home":
                     self.send_response(307)
                     self.send_header("Location", "/home")
@@ -181,8 +186,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 switches["magic_link_enabled"] = True
                 switches["oauth_enabled"] = True
             self._json(200, {"status": status, "database": database, "kill_switches": switches})
-        elif self.path in PUBLIC_WEB_PATHS or self.path in AUTHENTICATED_WEB_PATHS:
-            self._serve_web(self.path)
+        elif self.path.split("?", 1)[0] in PUBLIC_WEB_PATHS or self.path.split("?", 1)[0] in AUTHENTICATED_WEB_PATHS:
+            self._serve_web(self.path.split("?", 1)[0])
         elif self.path == "/api/v1/me":
             if self._authorized():
                 self._json(200, {"ok": True})
@@ -362,6 +367,13 @@ echo "== case 14: absolute same-origin sign-in redirect still fails closed =="
 start_server route_absolute_signin_redirect
 check "absolute same-origin sign-in redirect is rejected" fail \
   env SMOKE_TEST_SESSION_COOKIE="vocanova_session=not-the-smoke-token" \
+  bash "$smoke_script" "$base_url" "$base_url"
+stop_server
+
+echo "== case 15: authenticated route cannot pass by rendering login =="
+start_server route_login_redirect
+check "login page is rejected as an authenticated route result" fail \
+  env SMOKE_TEST_SESSION_COOKIE="vocanova_session=smoke-test-token" \
   bash "$smoke_script" "$base_url" "$base_url"
 stop_server
 

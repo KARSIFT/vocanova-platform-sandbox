@@ -518,6 +518,20 @@ func buildOAuthProvider(cfg ProductionConfig) (auth.OAuthProvider, error) {
 // interactively can see which providers are wired without having to
 // read the env file. The log line never includes the API key, the
 // model string, or any request body.
+func productionAIGenerationEnabled(cfg ProductionConfig) bool {
+	if !cfg.AIEnabled || strings.TrimSpace(cfg.APIKey) == "" {
+		return false
+	}
+	switch cfg.APIProvider {
+	case string(aifeedback.ProviderOpenCode), providerGemini:
+		return true
+	case providerCloudflare:
+		return strings.TrimSpace(cfg.APIAccountID) != ""
+	default:
+		return false
+	}
+}
+
 func buildAIProviders(cfg ProductionConfig) (aifeedback.FeedbackProvider, aifeedback.SafetyClassifier) {
 	if cfg.APIProvider == string(aifeedback.ProviderOpenCode) && cfg.APIKey != "" {
 		openCodeCfg := aifeedback.OpenCodeConfig{
@@ -565,7 +579,7 @@ func buildAIProviders(cfg ProductionConfig) (aifeedback.FeedbackProvider, aifeed
 				aifeedback.NewCloudflareModerationProvider(cloudflareCfg),
 			)
 	}
-	fmt.Fprintf(os.Stderr, "api: ai feedback=MockProvider ai moderation=MockProvider (AI_PROVIDER not configured for a complete real-provider config; AI features fall back to in-memory mock)\n")
+	fmt.Fprintf(os.Stderr, "api: real AI provider is not configured; production generation is disabled\n")
 	return aifeedback.NewMockProvider(),
 		aifeedback.NewCompositeSafetyClassifier(
 			aifeedback.NewDefaultLocalAbuseChecker(),
@@ -760,8 +774,11 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	})
 
 	aiProvider, safetyClassifier := buildAIProviders(cfg)
+	// Never present deterministic test-provider output as real learner feedback.
+	// Keep non-AI learning available when a provider is missing or disabled.
+	aiGenerationEnabled := productionAIGenerationEnabled(cfg)
 	aiGate := aifeedback.GenerationGate(aifeedback.NewAlwaysEnabledGate())
-	if !cfg.AIEnabled {
+	if !aiGenerationEnabled {
 		aiGate = aifeedback.NewDisabledGate()
 	}
 	// VOC-028-D01 / issue #1177: wire the real missions.MissionUpdater (not
@@ -830,7 +847,7 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 		MagicLinkEnabled:  cfg.MagicLinkOn,
 		OAuthEnabled:      cfg.OAuthOn,
 		NewSignupsEnabled: cfg.NewSignupsOn,
-		AIEnabled:         cfg.AIEnabled,
+		AIEnabled:         aiGenerationEnabled,
 	}, ControlledSignupReady(
 		cfg.OAuthOn,
 		cfg.NewSignupsOn,
