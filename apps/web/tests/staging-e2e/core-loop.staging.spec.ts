@@ -37,6 +37,10 @@
 import { expect, test } from "@playwright/test";
 import type { Locator, Page, TestInfo } from "@playwright/test";
 
+import {
+  getEnabledReviewPromptControl,
+  waitForReviewReadiness,
+} from "../e2e/review-readiness";
 import { reviewSeedActions } from "./review-seed";
 
 const SESSION_COOKIE_ENV = "E2E_SESSION_COOKIE";
@@ -241,7 +245,7 @@ async function chooseWordLink(page: Page): Promise<Locator> {
 //
 // After Good/Continue, submitReview and (on batch end) listDueWords can
 // leave the prior card mounted in feedback with every MC option disabled.
-// Waiting only for a visible MC group / Card N of M then re-entering this
+// Waiting only for a visible MC group / progress label then re-entering this
 // helper is the VOC-076 run #227 failure mode. Settle on a *prompt-ready*
 // control (enabled Show answer, enabled MC option) or a terminal review state
 // before returning, and require the same signal at entry.
@@ -250,33 +254,17 @@ async function reviewOneCard(page: Page): Promise<boolean> {
     name: "Show answer",
     disabled: false,
   });
-  const multipleChoiceGroup = page.getByRole("group", {
-    name: /^Choose the meaning for /,
-  });
-  const enabledMcOption = multipleChoiceGroup
-    .getByRole("button", { disabled: false })
-    .first();
-  const caughtUpHeading = page.getByRole("heading", {
-    name: "You're all caught up",
-    level: 2,
-  });
-  const reviewCompleteHeading = page.getByRole("heading", {
-    name: "Review complete",
-    level: 2,
-  });
-  const terminalReviewHeading = caughtUpHeading.or(reviewCompleteHeading);
+  const enabledPromptControl = getEnabledReviewPromptControl(page);
 
   // Batch-end listDueWords and in-flight submitReview can exceed the
   // default 20s expect timeout while the prior feedback card is still
   // mounted; allow a longer settle window inside the 240s journey budget.
   const PROMPT_READY_TIMEOUT_MS = 120_000;
 
-  const promptReady = () =>
-    showAnswerButton.or(enabledMcOption).or(terminalReviewHeading).first();
-
-  await expect(promptReady()).toBeVisible({ timeout: PROMPT_READY_TIMEOUT_MS });
-
-  if (await terminalReviewHeading.isVisible()) {
+  if (
+    (await waitForReviewReadiness(page, PROMPT_READY_TIMEOUT_MS)) ===
+    "terminal"
+  ) {
     return false;
   }
 
@@ -288,17 +276,15 @@ async function reviewOneCard(page: Page): Promise<boolean> {
     });
     await expect(goodButton).toBeVisible();
     await goodButton.click();
-    await expect(promptReady()).toBeVisible({
-      timeout: PROMPT_READY_TIMEOUT_MS,
-    });
+    await waitForReviewReadiness(page, PROMPT_READY_TIMEOUT_MS);
     return true;
   }
 
   // Multiple-choice prompt. Which option is correct is not knowable
   // from the rendered page, so the journey answers, then follows
   // whichever branch the app shows - both submit a real attempt.
-  // enabledMcOption is already the readiness signal (VOC-076-AC-02).
-  await enabledMcOption.click();
+  // enabledPromptControl is already the readiness signal (VOC-076-AC-02).
+  await enabledPromptControl.click();
 
   const ratingButton = page.getByRole("button", {
     name: "Good",
@@ -314,7 +300,7 @@ async function reviewOneCard(page: Page): Promise<boolean> {
   } else {
     await continueButton.click();
   }
-  await expect(promptReady()).toBeVisible({ timeout: PROMPT_READY_TIMEOUT_MS });
+  await waitForReviewReadiness(page, PROMPT_READY_TIMEOUT_MS);
   return true;
 }
 
@@ -407,35 +393,14 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
           page.getByRole("heading", { name: "Review", level: 1 }),
         ).toBeVisible();
 
-        const caughtUpHeading = page.getByRole("heading", {
-          name: "You're all caught up",
-          level: 2,
-        });
-        const reviewCompleteHeading = page.getByRole("heading", {
-          name: "Review complete",
-          level: 2,
-        });
-        const terminalReviewHeading = caughtUpHeading.or(reviewCompleteHeading);
-
-        const cardCounter = page.getByText(/^Card \d+ of \d+$/);
-
         let reviewed = 0;
         while (reviewed < MAX_REVIEW_CARDS) {
-          // terminalReviewHeading.isVisible() is a synchronous DOM snapshot, not
-          // an auto-retrying assertion - called right after navigation (or
-          // right after the previous card's submission), the review data
-          // can still be loading, so it reads false even when the queue is
-          // genuinely empty. Wait for the page to actually reach one of its
-          // terminal review state (caught-up or Review complete) or a card first,
-          // the same signal the loop already
-          // trusts after each submission below, instead of trusting an
-          // instantaneous check. Found live, 2026-08-09: this raced ahead
-          // of an empty queue and reviewOneCard then waited the full test
-          // timeout for a card that was never going to appear.
-          await expect(
-            terminalReviewHeading.or(cardCounter).first(),
-          ).toBeVisible();
-          if (await terminalReviewHeading.isVisible()) {
+          // The route can still be loading just after navigation or a
+          // submission. Wait for an actionable prompt or terminal state,
+          // rather than taking an instantaneous DOM snapshot that could race
+          // an empty queue and leave reviewOneCard waiting for a card that
+          // will never render.
+          if ((await waitForReviewReadiness(page)) === "terminal") {
             break;
           }
           const didReview = await reviewOneCard(page);
@@ -448,9 +413,7 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
           // The submission either advances to the next card or empties
           // the queue; both are settled states, so wait for one of them
           // instead of a fixed delay.
-          await expect(
-            terminalReviewHeading.or(cardCounter).first(),
-          ).toBeVisible();
+          await waitForReviewReadiness(page);
         }
 
         // VOC-074-T02: step 7 must not pass vacuously when the queue was empty or
@@ -508,8 +471,13 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
       // The real evaluator is not deterministic, so the assertion is
       // that the widget settled on a rendered outcome - a verdict or
       // an explicit error - not which verdict it was.
-      const verdict = page.getByRole("status", { name: /^Feedback result: / });
-      await expect(verdict.or(page.getByRole("alert")).first()).toBeVisible();
+      const feedback = feedbackHeading.locator("..");
+      const verdict = feedback.getByRole("status", {
+        name: /^Feedback result: /,
+      });
+      await expect(
+        verdict.or(feedback.getByRole("alert")).first(),
+      ).toBeVisible();
     });
 
     await test.step("7. progress reflects the completed reviews", async () => {
