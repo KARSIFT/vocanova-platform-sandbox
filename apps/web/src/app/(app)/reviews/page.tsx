@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
+import { PageContainer } from "@/ui/surface";
 
 import { getReviewsView } from "./_components/reviews-view";
 import { ReviewSession } from "./_components/review-session";
@@ -45,7 +46,7 @@ export default async function ReviewsPage() {
   const { items: dueWords, totalCount } = dueResponse.data;
 
   return (
-    <div className="p-[var(--spacing-lg)]">
+    <PageContainer className="max-w-[40rem]">
       <div className="mb-[var(--spacing-md)] flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-neutral-900">Review</h1>
         <Link
@@ -87,13 +88,13 @@ export default async function ReviewsPage() {
           reviewSessionLimit={remainingReviewTarget}
         />
       )}
-    </div>
+    </PageContainer>
   );
 }
 
 function MissionTargetComplete() {
   return (
-    <div className="p-[var(--spacing-lg)]">
+    <PageContainer className="max-w-[40rem]">
       <div className="mb-[var(--spacing-md)] flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-neutral-900">Review</h1>
         <Link
@@ -117,6 +118,6 @@ function MissionTargetComplete() {
           Back to Home
         </Link>
       </div>
-    </div>
+    </PageContainer>
   );
 }

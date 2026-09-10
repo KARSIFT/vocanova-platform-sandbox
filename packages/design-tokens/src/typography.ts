@@ -1,6 +1,6 @@
 export const fontSize: Readonly<Record<string, string>> = {
-  xs: "0.640rem",
-  sm: "0.800rem",
+  xs: "0.750rem",
+  sm: "0.875rem",
   base: "1.000rem",
   lg: "1.250rem",
   xl: "1.563rem",

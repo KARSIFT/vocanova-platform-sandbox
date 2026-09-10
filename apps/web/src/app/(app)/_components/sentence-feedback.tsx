@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { SentenceFeedbackResult } from "@vocanova/api-client";
 
@@ -54,9 +54,21 @@ export function SentenceFeedback({
     "idle" | "loading" | "error"
   >("idle");
   const [showReportReasons, setShowReportReasons] = useState(false);
+  const [submittedSentence, setSubmittedSentence] = useState<string | null>(
+    null,
+  );
+  const pendingSubmission = useRef<{
+    idempotencyKey: string;
+    sentenceText: string;
+  } | null>(null);
+  const submittingSynchronously = useRef(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (submittingSynchronously.current) {
+      return;
+    }
 
     const csrfToken = getCookieValue(CSRF_COOKIE_NAME);
     if (!csrfToken) {
@@ -64,6 +76,12 @@ export function SentenceFeedback({
       return;
     }
 
+    const pending = pendingSubmission.current ?? {
+      idempotencyKey: generateIdempotencyKey(),
+      sentenceText: sentence,
+    };
+    pendingSubmission.current = pending;
+    submittingSynchronously.current = true;
     setIsLoading(true);
     setErrorMessage(null);
     setReported(false);
@@ -73,11 +91,13 @@ export function SentenceFeedback({
     const client = createApiClient();
     try {
       const { data } = await client.submitSentenceFeedback(
-        { sentenceText: sentence, source, attemptId },
-        generateIdempotencyKey(),
+        { sentenceText: pending.sentenceText, source, attemptId },
+        pending.idempotencyKey,
         { headers: { "X-CSRF-Token": csrfToken } },
       );
       setResult(data);
+      setSubmittedSentence(data.originalSentence || pending.sentenceText);
+      pendingSubmission.current = null;
       // A deduplicated response may represent feedback that was already
       // reported in an earlier submission. The backend is authoritative for
       // that persisted state, so do not make the learner report it again.
@@ -93,10 +113,9 @@ export function SentenceFeedback({
       onFeedbackSubmitted?.(data);
     } catch (error) {
       setResult(null);
-      // T06: a 401 here means the session expired mid-sentence-submission.
-      // Never lose the learner's sentence — the textarea stays populated
-      // (controlled by component state) and we route to re-auth. The
-      // learner can copy their text and resume after sign-in.
+      // The controlled textarea preserves a draft through recoverable,
+      // in-place failures. A re-auth navigation starts a new component, so
+      // it cannot preserve the draft across that navigation.
       setErrorMessage(
         handleApiError(
           error,
@@ -105,6 +124,7 @@ export function SentenceFeedback({
       );
     } finally {
       setIsLoading(false);
+      submittingSynchronously.current = false;
     }
   }
 
@@ -194,11 +214,14 @@ export function SentenceFeedback({
               characterLimitStatus ? ` ${characterLimitMessageId}` : ""
             }`}
             value={sentence}
-            onChange={(event) =>
-              setSentence((previous) =>
-                acceptSentenceEdit(previous, event.target.value),
-              )
-            }
+            onChange={(event) => {
+              const next = acceptSentenceEdit(sentence, event.target.value);
+              if (next !== sentence) {
+                setErrorMessage(null);
+                pendingSubmission.current = null;
+              }
+              setSentence(next);
+            }}
             disabled={isLoading}
             rows={3}
             placeholder={`Type a sentence using "${targetWord}"...`}
@@ -255,7 +278,18 @@ export function SentenceFeedback({
             </div>
           ) : null}
 
-          {result.errorCode && !result.crisisResourceMessage ? (
+          {submittedSentence ? (
+            <div className="rounded-md bg-neutral-50 p-[var(--spacing-md)]">
+              <p className="text-sm font-medium text-neutral-700">
+                Sentence checked
+              </p>
+              <p className="mt-[var(--spacing-xs)] text-base text-neutral-900">
+                {submittedSentence}
+              </p>
+            </div>
+          ) : null}
+
+          {result.errorCode && !result.crisisResourceMessage && errorMessage ? (
             <div
               role="alert"
               aria-live="polite"

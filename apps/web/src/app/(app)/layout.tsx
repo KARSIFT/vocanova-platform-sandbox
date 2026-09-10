@@ -18,7 +18,7 @@ export default function AppShellLayout({
       <main
         id="main-content"
         tabIndex={-1}
-        className="min-h-screen pb-16 pt-14"
+        className="min-h-screen pb-[calc(5rem+env(safe-area-inset-bottom))]"
       >
         {children}
       </main>

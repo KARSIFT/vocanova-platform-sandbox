@@ -50,7 +50,6 @@ const CSRF_COOKIE_NAME = "vocanova_csrf";
 // it is hit, the journey still proves the review path works and
 // records why it stopped short of the caught-up state.
 const MAX_REVIEW_CARDS = 8;
-const REVIEWED_TODAY_PATTERN = /(\d+) of (\d+) words reviewed today/;
 
 type ReviewedTodayProgress = {
   reviewed: number;
@@ -95,14 +94,13 @@ function requiredEnv(name: string): string {
 async function readReviewedTodayProgress(
   page: Page,
 ): Promise<ReviewedTodayProgress> {
-  const counter = page.getByText(REVIEWED_TODAY_PATTERN);
+  const counter = page.getByRole("progressbar", { name: "Today’s mission progress" });
   await expect(counter).toBeVisible();
-  const text = (await counter.textContent()) ?? "";
-  const match = REVIEWED_TODAY_PATTERN.exec(text);
-  if (!match) {
-    throw new Error(`Could not read the daily-mission counter from: ${text}`);
-  }
-  return { reviewed: Number(match[1]), target: Number(match[2]) };
+  const reviewed = Number(await counter.getAttribute("aria-valuenow"));
+  const target = Number(await counter.getAttribute("aria-valuemax"));
+  expect(Number.isFinite(reviewed)).toBe(true);
+  expect(target).toBeGreaterThan(0);
+  return { reviewed, target };
 }
 
 async function readReviewedTodayCount(page: Page): Promise<number> {

@@ -42,7 +42,8 @@ test.describe("Route loading states", () => {
 
     await delayNextServerRequest(page);
 
-    const navigation = page.getByRole("link", { name: "Go to Journey" }).click();
+    const navigation = page.getByRole("navigation", { name: "Primary" })
+      .getByRole("link", { name: "Journey" }).click();
 
     const status = page.getByRole("status").filter({
       hasText: "Loading Journey",
@@ -60,8 +61,12 @@ test.describe("Route loading states", () => {
 
   test("Review shows loading feedback while its data is delayed", async ({
     page,
-  }) => {
+  }, testInfo) => {
     await disableViewportPrefetch(page);
+    await page.context().addCookies([{
+      name: "e2e_review_fixture_count", value: "1",
+      url: testInfo.project.use.baseURL!,
+    }]);
     await page.goto("/home");
     await expect(
       page.getByRole("heading", { name: "Today's Mission", level: 1 }),

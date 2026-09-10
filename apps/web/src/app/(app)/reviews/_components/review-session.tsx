@@ -41,6 +41,12 @@ const RATING_LABELS: Record<Rating, string> = {
 };
 
 const RATING_ORDER: Rating[] = ["again", "hard", "good", "easy"];
+const RATING_GUIDANCE: Record<Rating, string> = {
+  again: "Need another try",
+  hard: "Remembered with effort",
+  good: "Remembered comfortably",
+  easy: "Felt automatic",
+};
 
 interface ReviewOption {
   meaningId: string;
@@ -81,6 +87,8 @@ export function ReviewSession({
   );
   const [hasSubmittedCurrentCard, setHasSubmittedCurrentCard] = useState(false);
   const pendingSubmission = useRef<PendingReviewSubmission | null>(null);
+  const promptHeadingRef = useRef<HTMLHeadingElement>(null);
+  const shouldFocusPrompt = useRef(false);
 
   const currentCard = dueWords[currentIndex];
 
@@ -109,6 +117,17 @@ export function ReviewSession({
     // it back to null.
   }, [currentIndex, dueWords]);
 
+  useLayoutEffect(() => {
+    if (shouldFocusPrompt.current && currentCard && !isRefetching) {
+      const heading = promptHeadingRef.current;
+      if (!heading) {
+        return;
+      }
+      shouldFocusPrompt.current = false;
+      heading.focus();
+    }
+  }, [currentCard, isRefetching]);
+
   const refetchDueQueue = ({
     fallbackErrorMessage,
     queueUpdateMessage: nextQueueUpdateMessage,
@@ -129,6 +148,7 @@ export function ReviewSession({
           setDueWords(data.items);
           setRemainingCount(Math.min(data.totalCount, remainingSessionReviews));
           setCurrentIndex(0);
+          shouldFocusPrompt.current = true;
         } else {
           setRemainingCount(0);
           setCompleted(true);
@@ -164,6 +184,7 @@ export function ReviewSession({
     if (currentIndex + 1 < dueWords.length) {
       setQueueUpdateMessage(null);
       setCurrentIndex((index) => index + 1);
+      shouldFocusPrompt.current = true;
       return;
     }
 
@@ -362,7 +383,8 @@ export function ReviewSession({
           {remainingCount} word{remainingCount === 1 ? "" : "s"} remaining
         </p>
         <p className="text-sm text-neutral-500">
-          Card {currentIndex + 1} of {dueWords.length}
+          Review {completedReviewCount + 1} of{" "}
+          {completedReviewCount + remainingCount}
         </p>
       </div>
       {queueUpdateMessage ? (
@@ -385,7 +407,11 @@ export function ReviewSession({
               <span className="inline-block rounded-full bg-neutral-100 px-[var(--spacing-sm)] py-[var(--spacing-xs)] text-sm text-neutral-700">
                 {currentCard.partOfSpeech}
               </span>
-              <h2 className="mt-[var(--spacing-sm)] text-3xl font-semibold text-neutral-900">
+              <h2
+                ref={promptHeadingRef}
+                tabIndex={-1}
+                className="mt-[var(--spacing-sm)] text-3xl font-semibold text-neutral-900"
+              >
                 {currentCard.wordText}
               </h2>
               {promptType === "self_check" && phase !== "rate" ? (
@@ -526,6 +552,7 @@ export function ReviewSession({
                       <button
                         key={rating}
                         type="button"
+                        aria-label={RATING_LABELS[rating]}
                         onClick={() =>
                           submitAttempt({
                             result:
@@ -544,7 +571,10 @@ export function ReviewSession({
                         )}
                         className="min-h-11 rounded-md border border-neutral-200 bg-neutral-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors hover:bg-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        {RATING_LABELS[rating]}
+                        <span className="block">{RATING_LABELS[rating]}</span>
+                        <span className="block text-xs font-normal text-neutral-600">
+                          {RATING_GUIDANCE[rating]}
+                        </span>
                       </button>
                     ))}
                   </div>

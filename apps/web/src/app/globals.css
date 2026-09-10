@@ -2,10 +2,57 @@
 @import "./tokens.generated.css";
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--color-neutral-100);
 }
 
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
+  min-width: 320px;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgb(221 214 254 / 0.42),
+      transparent 31rem
+    ),
+    var(--color-neutral-100);
+  color: var(--color-neutral-900);
+  font-family:
+    ui-rounded, "Nunito Sans", "Avenir Next", Avenir, system-ui, sans-serif;
+  line-height: 1.5;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: var(--color-primary-200);
+  color: var(--color-primary-900);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-primary-500);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
 }

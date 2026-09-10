@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
+import { Eyebrow, PageContainer } from "@/ui/surface";
 
 import { getDiscoverListView } from "./_components/discover-view";
 
@@ -16,11 +17,14 @@ export default async function DiscoverPage() {
   const { items } = response.data;
 
   return (
-    <div className="p-[var(--spacing-lg)]">
-      <h1 className="text-2xl font-semibold text-neutral-900">Journey</h1>
+    <PageContainer>
+      <Eyebrow>Learn in context</Eyebrow>
+      <h1 className="mt-[var(--spacing-xs)] text-3xl font-bold tracking-tight text-neutral-900">
+        Journey
+      </h1>
       <div className="flex flex-wrap items-end justify-between gap-[var(--spacing-md)]">
         <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-          Choose a situation to explore practical vocabulary.
+          Choose a familiar moment, then collect words you will actually use.
         </p>
         <Link
           href="/words"
@@ -52,9 +56,13 @@ export default async function DiscoverPage() {
             <li key={situation.slug}>
               <Link
                 href={`/discover/${situation.slug}`}
-                className="block rounded-md border border-neutral-200 bg-neutral-50 p-[var(--spacing-md)] shadow-sm hover:border-primary-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary-600"
+                className="group block min-h-32 rounded-[var(--radius-lg)] border border-neutral-200 bg-white p-[var(--spacing-lg)] shadow-sm transition hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-md"
               >
-                <h2 className="text-lg font-semibold text-neutral-900">
+                <span className="inline-flex rounded-lg bg-secondary-100 px-[var(--spacing-sm)] py-1 text-xs font-bold text-secondary-800">
+                  {situation.category.replaceAll("_", " ")}
+                  {situation.levelBand ? ` · ${situation.levelBand}` : ""}
+                </span>
+                <h2 className="mt-[var(--spacing-sm)] text-xl font-bold tracking-tight text-neutral-900 group-hover:text-primary-800">
                   {situation.title}
                 </h2>
                 <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
@@ -65,6 +73,6 @@ export default async function DiscoverPage() {
           ))}
         </ul>
       )}
-    </div>
+    </PageContainer>
   );
 }

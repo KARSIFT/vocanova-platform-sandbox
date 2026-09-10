@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ApiResponseError } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
+import { Eyebrow, PageContainer } from "@/ui/surface";
 import { SentenceFeedback } from "../../../_components/sentence-feedback";
 
 import { MeaningSaveButton } from "./_components/meaning-save-button";
@@ -35,15 +36,16 @@ export default async function WordDetailPage({ params }: WordDetailPageProps) {
   const { word: wordData } = response.data;
 
   return (
-    <div className="p-[var(--spacing-lg)]">
+    <PageContainer>
       <Link
         href={`/discover/${situation}`}
-        className="text-base font-semibold text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+        className="inline-flex min-h-11 items-center text-base font-semibold text-primary-700 hover:text-primary-800"
       >
         Back to Journey
       </Link>
 
       <div className="mt-[var(--spacing-md)]">
+        <Eyebrow>{situationResponse.data.situation.title}</Eyebrow>
         <h1 className="text-2xl font-semibold text-neutral-900">
           {wordData.text}
         </h1>
@@ -65,7 +67,7 @@ export default async function WordDetailPage({ params }: WordDetailPageProps) {
             return (
               <li
                 key={meaning.id}
-                className="rounded-md border border-neutral-200 bg-neutral-50 p-[var(--spacing-md)] shadow-sm"
+                className="rounded-[var(--radius-lg)] border border-neutral-200 bg-white p-[var(--spacing-lg)] shadow-sm"
               >
                 <div className="flex flex-wrap items-start justify-between gap-[var(--spacing-md)]">
                   <div className="min-w-0 flex-1">
@@ -141,7 +143,7 @@ export default async function WordDetailPage({ params }: WordDetailPageProps) {
           })}
         </ul>
       </section>
-    </div>
+    </PageContainer>
   );
 }
 

@@ -507,14 +507,17 @@ function buildWordDetailResponse(state, slug) {
   };
 }
 
-function buildSituationResponse(slug) {
+function buildSituationResponse(slug, state) {
   const fixture = SITUATIONS_BY_SLUG[slug];
   if (!fixture) {
     return null;
   }
   return {
     situation: fixture.situation,
-    meanings: fixture.meanings.map((meaning) => ({ ...meaning })),
+    meanings: fixture.meanings.map((meaning) => ({
+      ...meaning,
+      saved: state.savedMeaningIds.has(meaning.meaningId),
+    })),
   };
 }
 
@@ -1148,7 +1151,7 @@ const server = createServer(async (req, res) => {
     const slug = decodeURIComponent(
       url.pathname.slice("/api/v1/journey-situations/".length),
     );
-    const response = buildSituationResponse(slug);
+    const response = buildSituationResponse(slug, getSessionState(cookies));
     if (!response) {
       logLine(req, 404, { slug });
       jsonResponse(res, 404, { error: "not_found", slug });

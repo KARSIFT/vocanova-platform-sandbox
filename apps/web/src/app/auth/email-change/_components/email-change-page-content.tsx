@@ -8,6 +8,7 @@ import { ApiResponseError } from "@vocanova/api-client";
 
 import { createApiClient } from "@/lib/api";
 import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
+import { Surface } from "@/ui/surface";
 
 type ConfirmationState =
   | { type: "loading" }
@@ -99,8 +100,11 @@ export function EmailChangePageContent() {
   const returnTo = `/auth/email-change?${new URLSearchParams({ token }).toString()}`;
 
   return (
-    <main className="grid min-h-screen place-items-center p-6">
-      <div className="w-full max-w-[28rem] space-y-[var(--spacing-md)] rounded-xl border border-neutral-200 bg-white p-[var(--spacing-lg)] shadow-sm">
+    <main className="grid min-h-screen place-items-center bg-neutral-100 p-6">
+      <Surface className="w-full max-w-[28rem] space-y-[var(--spacing-md)]">
+        <p className="text-sm font-bold tracking-wide text-primary-700">
+          VocaNova
+        </p>
         <h1 className="text-2xl font-semibold text-neutral-900">
           Confirm your new email
         </h1>
@@ -165,7 +169,7 @@ export function EmailChangePageContent() {
             </Link>
           </>
         ) : null}
-      </div>
+      </Surface>
     </main>
   );
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
+import { Eyebrow, PageContainer } from "@/ui/surface";
 
 import { RemoveSavedWordButton } from "./_components/remove-saved-word-button";
 import {
@@ -33,10 +34,11 @@ export default async function SavedWordsPage({
   const view = getSavedWordsView(items.length, Boolean(after));
 
   return (
-    <div className="p-[var(--spacing-lg)]">
+    <PageContainer>
       <div className="flex flex-wrap items-start justify-between gap-[var(--spacing-md)]">
         <div>
-          <h1 className="text-2xl font-semibold text-neutral-900">
+          <Eyebrow>Words you chose</Eyebrow>
+          <h1 className="mt-[var(--spacing-xs)] text-3xl font-bold tracking-tight text-neutral-900">
             Saved vocabulary
           </h1>
           <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
@@ -88,7 +90,7 @@ export default async function SavedWordsPage({
               return (
                 <li
                   key={savedWord.userWordId}
-                  className="flex flex-col justify-between gap-[var(--spacing-md)] rounded-md border border-neutral-200 bg-neutral-50 p-[var(--spacing-md)] shadow-sm"
+                  className="flex flex-col justify-between gap-[var(--spacing-md)] rounded-[var(--radius-lg)] border border-neutral-200 bg-white p-[var(--spacing-lg)] shadow-sm"
                 >
                   <div>
                     <div className="flex flex-wrap items-baseline gap-[var(--spacing-xs)]">
@@ -156,6 +158,6 @@ export default async function SavedWordsPage({
           </nav>
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }

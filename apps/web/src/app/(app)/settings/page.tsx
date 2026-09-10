@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
+import { PageContainer, Surface } from "@/ui/surface";
 
 import { SettingsForm } from "./_components/settings-form";
 
@@ -19,7 +20,7 @@ export default async function SettingsPage() {
   }
 
   return (
-    <div className="p-[var(--spacing-lg)]">
+    <PageContainer>
       <div className="mb-[var(--spacing-md)] flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-neutral-900">Settings</h1>
         <Link
@@ -37,9 +38,9 @@ export default async function SettingsPage() {
 
       <SettingsForm initialSettings={response.data} />
 
-      <section
+      <Surface
         aria-labelledby="account-section-heading"
-        className="mt-[var(--spacing-lg)] rounded-md border border-neutral-200 bg-neutral-50 p-[var(--spacing-md)] shadow-sm"
+        className="mt-[var(--spacing-lg)]"
       >
         <h2
           id="account-section-heading"
@@ -56,7 +57,7 @@ export default async function SettingsPage() {
         >
           Manage account
         </Link>
-      </section>
-    </div>
+      </Surface>
+    </PageContainer>
   );
 }
