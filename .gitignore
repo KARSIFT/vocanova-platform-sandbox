@@ -6,6 +6,8 @@ apps/web/next-env.d.ts
 .pnpm-store/
 .DS_Store
 coverage/
+apps/web/test-results/
+apps/web/playwright-report/
 __pycache__/
 *.py[cod]
 # VOC-031-T09: per-audit Lighthouse reports. Runtime artifacts

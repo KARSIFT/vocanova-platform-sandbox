@@ -41,8 +41,10 @@ all reported advisories remain visible and must be recorded in the pull request.
 ## Project-specific commands
 
 Use `pnpm --filter @vocanova/web dev`, `build`, `start`, `lint`, or `typecheck` for
-the Next.js application. `start` serves a prior production build. The root page is a
-technical framework-validation placeholder and contains no product UI.
+the Next.js application. `start` serves a prior production build. The root page is
+the public product landing page. Authenticated learning starts at `/home`, with
+Journey at `/discover`, saved vocabulary at `/words`, reviews at `/review`, and
+progress at `/progress`.
 
 Run API commands from `apps/api`:
 
@@ -53,7 +55,34 @@ go build ./...
 go test ./...
 ```
 
-`ent/` and `migrations/` are non-executable structural foundations only.
+`ent/schema/` defines the database models, and `migrations/` contains versioned
+PostgreSQL migrations. The API implements authentication, canonical content,
+learning, reviews, sentence feedback, missions, progress, and account settings.
+
+## Browser verification
+
+The local browser harness uses synthetic data through a mock API; it does not
+prove production provider or database behavior. Use the same loopback hostname
+at build time and runtime so the browser sends its test cookies to the API:
+
+```bash
+bash infra/scripts/install-playwright-chromium.sh
+API_BASE_URL=http://127.0.0.1:8080 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8080 pnpm --filter @vocanova/web build
+pnpm --filter @vocanova/web test:e2e
+```
+
+`NEXT_PUBLIC_API_BASE_URL` is embedded into the browser bundle during the build.
+Setting it only when starting the server does not update that bundle. A build
+using `localhost` with tests served from `127.0.0.1` causes mutation requests to
+miss cookies and fail CSRF checks. Rebuild with the values above.
+
+The suite covers desktop and 360px/430px mobile layouts, accessibility, auth,
+onboarding, the learning loop, saved vocabulary, and account settings. Docker
+must be running for disposable PostgreSQL OAuth and other database integration
+tests. In WSL, enable Docker Desktop integration for this distribution. The
+standard `ci-api` job excludes `TestControlledSignupOAuth` because the dedicated
+`controlled-signup-oauth-e2e` workflow runs it on a host with Docker networking;
+that exclusion alone is not proof that OAuth integration passes.
 
 ## Troubleshooting
 
@@ -77,5 +106,6 @@ go test ./...
   disabling module checksum verification, which it also does) - re-enabling it is
   required to fetch a missing `go1.26.5`, e.g. via `go install golang.org/dl/go1.26.5@latest`
   then `go1.26.5 download`.
-- No deployment, migration, integration, accessibility, staging, or production check
-  exists in this foundation.
+- The workflows under `.github/workflows/` run API/web CI, OAuth integration,
+  accessibility, Lighthouse, Docker smoke tests, and operational synthetics.
+  Staging deploys after changes reach `main`; production deployment is manual.
