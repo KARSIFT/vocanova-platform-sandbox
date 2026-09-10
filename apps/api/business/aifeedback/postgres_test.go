@@ -121,6 +121,7 @@ func TestPostgreSQLRepositoryCreatePendingAttempt(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEqual(t, uuid.Nil, pending.SentenceID)
 	assert.NotEqual(t, uuid.Nil, pending.AttemptID)
+	assert.Equal(t, now, pending.SubmittedAt)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -210,12 +211,14 @@ func TestPostgreSQLRepositoryCreateRetryAttempt(t *testing.T) {
 
 	repo := NewPostgreSQLRepository(db, nil)
 	now := time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC)
+	submittedAt := now.Add(-time.Hour)
 	sentenceID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
 	failed := &StoredFeedbackAttempt{
 		ID:                uuid.MustParse("00000000-0000-0000-0000-000000000002"),
 		LearnerSentenceID: sentenceID,
 		Status:            AttemptStatusFailed,
 		RequestHash:       "retry-hash",
+		SubmittedAt:       submittedAt,
 	}
 
 	mock.ExpectBegin()
@@ -233,6 +236,7 @@ func TestPostgreSQLRepositoryCreateRetryAttempt(t *testing.T) {
 	assert.Nil(t, retry.Existing)
 	assert.Equal(t, sentenceID, retry.Pending.SentenceID)
 	assert.NotEqual(t, uuid.Nil, retry.Pending.AttemptID)
+	assert.Equal(t, submittedAt, retry.Pending.SubmittedAt)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -243,12 +247,14 @@ func TestPostgreSQLRepositoryCreateRetryAttemptReturnsActiveGenerationAfterConfl
 
 	repo := NewPostgreSQLRepository(db, nil)
 	now := time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC)
+	submittedAt := now.Add(-time.Hour)
 	sentenceID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
 	failed := &StoredFeedbackAttempt{
 		ID:                uuid.MustParse("00000000-0000-0000-0000-000000000002"),
 		LearnerSentenceID: sentenceID,
 		Status:            AttemptStatusFailed,
 		RequestHash:       "retry-hash",
+		SubmittedAt:       submittedAt,
 	}
 	activeID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
 
@@ -256,10 +262,10 @@ func TestPostgreSQLRepositoryCreateRetryAttemptReturnsActiveGenerationAfterConfl
 	mock.ExpectExec("INSERT INTO ai_feedback_attempts").
 		WithArgs(sqlmock.AnyArg(), sentenceID, AttemptStatusPending, ProviderMock, "mock", PromptVersionSentenceFeedbackV1, "retry-hash", now).
 		WillReturnResult(sqlmock.NewResult(0, 0))
-	mock.ExpectQuery("SELECT id, learner_sentence_id, status").
+	mock.ExpectQuery("SELECT attempt.id, attempt.learner_sentence_id, attempt.status").
 		WithArgs("retry-hash").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "learner_sentence_id", "status", "provider", "model", "prompt_version", "request_hash", "feedback_json", "feedback_text", "error_code", "error_message", "reported", "created_at"}).
-			AddRow(activeID, sentenceID, AttemptStatusPending, ProviderMock, "mock", PromptVersionSentenceFeedbackV1, "retry-hash", nil, nil, nil, nil, false, now))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "learner_sentence_id", "status", "provider", "model", "prompt_version", "request_hash", "feedback_json", "feedback_text", "error_code", "error_message", "reported", "created_at", "submitted_at"}).
+			AddRow(activeID, sentenceID, AttemptStatusPending, ProviderMock, "mock", PromptVersionSentenceFeedbackV1, "retry-hash", nil, nil, nil, nil, false, now, submittedAt))
 	mock.ExpectCommit()
 
 	retry, err := repo.CreateRetryAttempt(t.Context(), failed, ProviderMock, "mock", now)
@@ -268,6 +274,7 @@ func TestPostgreSQLRepositoryCreateRetryAttemptReturnsActiveGenerationAfterConfl
 	require.NotNil(t, retry.Existing)
 	assert.Equal(t, activeID, retry.Existing.ID)
 	assert.Equal(t, AttemptStatusPending, retry.Existing.Status)
+	assert.Equal(t, submittedAt, retry.Existing.SubmittedAt)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -281,11 +288,12 @@ func TestPostgreSQLRepositoryGetFeedbackAttemptByRequestHash(t *testing.T) {
 	sentenceID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
 	requestHash := "abc123"
 	now := time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC)
+	submittedAt := now.Add(-time.Hour)
 
-	mock.ExpectQuery("SELECT id, learner_sentence_id").
+	mock.ExpectQuery("SELECT attempt.id, attempt.learner_sentence_id").
 		WithArgs(requestHash).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "learner_sentence_id", "status", "provider", "model", "prompt_version", "request_hash", "feedback_json", "feedback_text", "error_code", "error_message", "reported", "created_at"}).
-			AddRow(attemptID, sentenceID, AttemptStatusSucceeded, ProviderMock, "mock", PromptVersionSentenceFeedbackV1, requestHash, []byte(`{"status":"correct"}`), "Good.", nil, nil, true, now))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "learner_sentence_id", "status", "provider", "model", "prompt_version", "request_hash", "feedback_json", "feedback_text", "error_code", "error_message", "reported", "created_at", "submitted_at"}).
+			AddRow(attemptID, sentenceID, AttemptStatusSucceeded, ProviderMock, "mock", PromptVersionSentenceFeedbackV1, requestHash, []byte(`{"status":"correct"}`), "Good.", nil, nil, true, now, submittedAt))
 
 	stored, err := repo.GetFeedbackAttemptByRequestHash(t.Context(), requestHash)
 	require.NoError(t, err)
@@ -293,6 +301,7 @@ func TestPostgreSQLRepositoryGetFeedbackAttemptByRequestHash(t *testing.T) {
 	assert.Equal(t, AttemptStatusSucceeded, stored.Status)
 	assert.Equal(t, "correct", stored.FeedbackJSON["status"])
 	assert.True(t, stored.Reported)
+	assert.Equal(t, submittedAt, stored.SubmittedAt)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -353,7 +362,7 @@ func TestPostgreSQLRepositoryRequestHashNotFound(t *testing.T) {
 	repo := NewPostgreSQLRepository(db, nil)
 	requestHash := "missing"
 
-	mock.ExpectQuery("SELECT id, learner_sentence_id").
+	mock.ExpectQuery("SELECT attempt.id, attempt.learner_sentence_id").
 		WithArgs(requestHash).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}))
 

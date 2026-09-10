@@ -1230,6 +1230,22 @@ const server = createServer(async (req, res) => {
     if (!checkCsrf(req, cookies, res, logLine)) {
       return;
     }
+    let body = {};
+    try {
+      body = await readJsonBody(req);
+    } catch {
+      logLine(req, 400, { reason: "malformed-json" });
+      jsonResponse(res, 400, { error: "invalid_json" });
+      return;
+    }
+    if (body.token === "invalid-token") {
+      logLine(req, 401, { reason: "invalid-email-change-token" });
+      jsonResponse(res, 401, {
+        title: "Invalid link",
+        detail: "This confirmation link is invalid or has expired.",
+      });
+      return;
+    }
     logLine(req, 200, { action: "consume-email-change" });
     jsonResponse(res, 200, {
       email: DEFAULT_USER.email,

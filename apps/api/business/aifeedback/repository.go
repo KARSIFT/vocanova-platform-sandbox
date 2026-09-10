@@ -45,12 +45,14 @@ type StoredFeedbackAttempt struct {
 	ErrorMessage      string
 	Reported          bool
 	CreatedAt         time.Time
+	SubmittedAt       time.Time
 }
 
 // PendingAttempt holds the IDs created by CreatePendingAttempt.
 type PendingAttempt struct {
-	SentenceID uuid.UUID
-	AttemptID  uuid.UUID
+	SentenceID  uuid.UUID
+	AttemptID   uuid.UUID
+	SubmittedAt time.Time
 }
 
 // RetryAttempt records whether a retry created a new provider generation or

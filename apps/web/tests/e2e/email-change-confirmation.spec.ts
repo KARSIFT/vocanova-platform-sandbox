@@ -25,4 +25,38 @@ test.describe("email-change confirmation", () => {
       "confirmation link is incomplete",
     );
   });
+
+  test("an invalid token does not send an authenticated learner into a sign-in loop", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page.evaluate(() => {
+      document.cookie = "vocanova_csrf=email-change-test; Path=/; SameSite=Lax";
+    });
+
+    await page.goto("/auth/email-change?token=invalid-token");
+
+    await expect(page.locator("main").getByRole("alert")).toContainText(
+      "invalid or has expired",
+    );
+    await expect(page.getByRole("link", { name: "Sign in" })).toHaveCount(0);
+  });
+
+  test("a signed-out confirmation flow preserves the token and requires magic-link sign-in", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page.evaluate(() => {
+      document.cookie = "e2e_unauthenticated=1; Path=/; SameSite=Lax";
+      document.cookie = "vocanova_csrf=email-change-test; Path=/; SameSite=Lax";
+    });
+
+    await page.goto("/auth/email-change?token=test-token");
+
+    const signInLink = page.getByRole("link", { name: "Sign in" });
+    await expect(signInLink).toHaveAttribute(
+      "href",
+      /\/login\?.*returnTo=.*email-change.*magicOnly=1/,
+    );
+  });
 });

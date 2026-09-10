@@ -14,7 +14,6 @@ type EmailPhase =
   | { type: "idle" }
   | { type: "requesting" }
   | { type: "pending"; newEmail: string }
-  | { type: "completed"; newEmail: string; previousEmail: string }
   | { type: "error"; message: string };
 
 export function EmailChangeForm({ currentEmail }: EmailChangeFormProps) {
@@ -66,33 +65,6 @@ export function EmailChangeForm({ currentEmail }: EmailChangeFormProps) {
 
   return (
     <div className="mt-[var(--spacing-md)] space-y-[var(--spacing-md)]">
-      {phase.type === "completed" ? (
-        <div
-          role="status"
-          aria-live="polite"
-          className="rounded-md border border-green-300 bg-green-50 p-[var(--spacing-md)] text-base text-green-900"
-        >
-          <p className="font-semibold">Your sign-in email was updated.</p>
-          <p className="mt-[var(--spacing-xs)]">
-            New address: <span className="font-medium">{phase.newEmail}</span>
-            {phase.previousEmail ? (
-              <>
-                {" "}
-                (previously{" "}
-                <span className="font-medium">{phase.previousEmail}</span>)
-              </>
-            ) : null}
-          </p>
-          <button
-            type="button"
-            onClick={handleStartOver}
-            className="mt-[var(--spacing-sm)] text-sm font-medium text-primary-700 underline hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-          >
-            Change to another address
-          </button>
-        </div>
-      ) : null}
-
       {phase.type === "pending" ? (
         <div className="space-y-[var(--spacing-md)]">
           <p

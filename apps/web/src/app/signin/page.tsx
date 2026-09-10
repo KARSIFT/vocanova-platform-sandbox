@@ -11,13 +11,14 @@ export const metadata: Metadata = {
 };
 
 interface SignInPageProps {
-  searchParams: Promise<{ returnTo?: string }>;
+  searchParams: Promise<{ magicOnly?: string; returnTo?: string }>;
 }
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {
-  const { returnTo } = await searchParams;
+  const { magicOnly, returnTo } = await searchParams;
   const safeReturnTo = normalizeReturnTo(returnTo);
   const { oauthEnabled } = await getSignInAuthCapabilities();
+  const showOAuth = oauthEnabled && magicOnly !== "1";
 
   return (
     <main className="grid min-h-screen place-items-center p-6">
@@ -32,11 +33,13 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             Sign in to Vocanova
           </h1>
           <p className="text-base text-neutral-700">
-            Choose a sign-in method to continue.
+            {showOAuth
+              ? "Choose a sign-in method to continue."
+              : "Enter your email to continue securely."}
           </p>
         </div>
 
-        {oauthEnabled ? (
+        {showOAuth ? (
           <>
             <OAuthButton returnTo={safeReturnTo} />
 

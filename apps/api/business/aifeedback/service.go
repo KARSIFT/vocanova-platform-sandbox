@@ -349,7 +349,7 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 			return nil, fmt.Errorf("finalize idempotency-record failure: %w", cleanupErr)
 		}
 		if ctx.Err() != nil {
-			return s.temporaryFailureResult(req.SentenceText), nil
+			return s.failedProcessingResult(*pending, req.SentenceText, target.WordID), nil
 		}
 		return nil, fmt.Errorf("record idempotency: %w", err)
 	}
@@ -418,13 +418,7 @@ func (s *Service) completePendingAttempt(ctx context.Context, req SubmitSentence
 			return nil, fmt.Errorf("finalize failed attempt: %w", err)
 		}
 		s.recordTelemetry(ctx, req.UserID, target, "provider_error", providerDuration.Milliseconds(), "")
-		return &SentenceFeedbackResult{
-			SentenceID:       pending.SentenceID,
-			AttemptID:        pending.AttemptID,
-			OriginalSentence: req.SentenceText,
-			ErrorCode:        ErrorCodeTemporaryFailure,
-			CanRetry:         true,
-		}, nil
+		return s.failedProcessingResult(*pending, req.SentenceText, target.WordID), nil
 	}
 
 	if err := s.outputValidator.Validate(feedback, target); err != nil {
@@ -432,25 +426,13 @@ func (s *Service) completePendingAttempt(ctx context.Context, req SubmitSentence
 			return nil, fmt.Errorf("finalize invalid output attempt: %w", err)
 		}
 		s.recordTelemetry(ctx, req.UserID, target, "invalid_output", providerDuration.Milliseconds(), "")
-		return &SentenceFeedbackResult{
-			SentenceID:       pending.SentenceID,
-			AttemptID:        pending.AttemptID,
-			OriginalSentence: req.SentenceText,
-			ErrorCode:        ErrorCodeTemporaryFailure,
-			CanRetry:         true,
-		}, nil
+		return s.failedProcessingResult(*pending, req.SentenceText, target.WordID), nil
 	}
 	if err := ctx.Err(); err != nil {
 		if finalizeErr := s.failPendingAttempt(ctx, *pending, err); finalizeErr != nil {
 			return nil, fmt.Errorf("finalize expired attempt: %w", finalizeErr)
 		}
-		return &SentenceFeedbackResult{
-			SentenceID:       pending.SentenceID,
-			AttemptID:        pending.AttemptID,
-			OriginalSentence: req.SentenceText,
-			ErrorCode:        ErrorCodeTemporaryFailure,
-			CanRetry:         true,
-		}, nil
+		return s.failedProcessingResult(*pending, req.SentenceText, target.WordID), nil
 	}
 
 	missionCompleted, err := s.completeSuccessfulFeedbackAttempt(ctx, req.UserID, *pending, feedback)
@@ -462,7 +444,7 @@ func (s *Service) completePendingAttempt(ctx context.Context, req SubmitSentence
 			return nil, fmt.Errorf("settle failed successful attempt: %w", cleanupErr)
 		}
 		if ctx.Err() != nil {
-			return s.temporaryFailureResult(req.SentenceText), nil
+			return s.failedProcessingResult(*pending, req.SentenceText, target.WordID), nil
 		}
 		return nil, fmt.Errorf("finalize successful attempt: %w", err)
 	}
@@ -489,7 +471,7 @@ func (s *Service) completePendingAttempt(ctx context.Context, req SubmitSentence
 		MissionCompleted:        missionCompleted,
 		CanRetry:                false,
 		Reported:                false,
-		CreatedAt:               start.UTC(),
+		CreatedAt:               pending.SubmittedAt,
 	}
 	return result, nil
 }
@@ -659,6 +641,20 @@ func (s *Service) temporaryFailureResult(original string) *SentenceFeedbackResul
 	return &SentenceFeedbackResult{OriginalSentence: original, ErrorCode: ErrorCodeTemporaryFailure, CanRetry: true}
 }
 
+func (s *Service) failedProcessingResult(pending PendingAttempt, original string, targetWordID uuid.UUID) *SentenceFeedbackResult {
+	return &SentenceFeedbackResult{
+		FeedbackID:       pending.AttemptID,
+		SentenceID:       pending.SentenceID,
+		AttemptID:        pending.AttemptID,
+		TargetWordID:     targetWordID,
+		ProcessingStatus: ProcessingStatusFailed,
+		OriginalSentence: original,
+		ErrorCode:        ErrorCodeTemporaryFailure,
+		CanRetry:         true,
+		CreatedAt:        pending.SubmittedAt,
+	}
+}
+
 func (s *Service) validationResult(original, code string) *SentenceFeedbackResult {
 	return &SentenceFeedbackResult{
 		ProcessingStatus: ProcessingStatusSkipped,
@@ -677,7 +673,7 @@ func (s *Service) resultFromStored(attempt *StoredFeedbackAttempt, original stri
 		OriginalSentence: original,
 		CanRetry:         false,
 		Reported:         attempt.Reported,
-		CreatedAt:        attempt.CreatedAt,
+		CreatedAt:        attempt.SubmittedAt,
 	}
 
 	switch attempt.Status {

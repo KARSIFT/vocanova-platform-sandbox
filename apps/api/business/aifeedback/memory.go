@@ -395,7 +395,7 @@ func (r *MemoryRepository) CreatePendingAttempt(ctx context.Context, req SubmitS
 		CreatedAt:         now,
 	})
 
-	return &PendingAttempt{SentenceID: sentenceID, AttemptID: attemptID}, nil
+	return &PendingAttempt{SentenceID: sentenceID, AttemptID: attemptID, SubmittedAt: now}, nil
 }
 
 func (r *MemoryRepository) CreateRetryAttempt(ctx context.Context, failed *StoredFeedbackAttempt, provider string, model string, now time.Time) (*RetryAttempt, error) {
@@ -429,7 +429,11 @@ func (r *MemoryRepository) CreateRetryAttempt(ctx context.Context, failed *Store
 			break
 		}
 	}
-	return &RetryAttempt{Pending: &PendingAttempt{SentenceID: failed.LearnerSentenceID, AttemptID: attemptID}}, nil
+	return &RetryAttempt{Pending: &PendingAttempt{
+		SentenceID:  failed.LearnerSentenceID,
+		AttemptID:   attemptID,
+		SubmittedAt: failed.SubmittedAt,
+	}}, nil
 }
 
 // GetFeedbackAttemptOwner implements Repository.
@@ -576,6 +580,13 @@ func (r *MemoryRepository) CompleteSuccessfulFeedbackAttempt(ctx context.Context
 
 func (r *MemoryRepository) toStoredAttempt(a MemoryAIFeedbackAttempt) *StoredFeedbackAttempt {
 	reported := false
+	var submittedAt time.Time
+	for _, sentence := range r.sentences {
+		if sentence.ID == a.LearnerSentenceID {
+			submittedAt = sentence.SubmittedAt
+			break
+		}
+	}
 	for _, report := range r.reports {
 		if report.AttemptID == a.ID {
 			reported = true
@@ -596,6 +607,7 @@ func (r *MemoryRepository) toStoredAttempt(a MemoryAIFeedbackAttempt) *StoredFee
 		ErrorCode:         a.ErrorCode,
 		ErrorMessage:      a.ErrorMessage,
 		CreatedAt:         a.CreatedAt,
+		SubmittedAt:       submittedAt,
 	}
 }
 

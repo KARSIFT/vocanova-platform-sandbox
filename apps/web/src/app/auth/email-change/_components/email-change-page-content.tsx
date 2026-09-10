@@ -40,15 +40,47 @@ export function EmailChangePageContent() {
       return;
     }
 
-    createApiClient()
-      .consumeEmailChangeLink(
-        { token },
-        { headers: { "X-CSRF-Token": csrfToken } },
-      )
-      .then(({ data }) => setState({ type: "success", email: data.email }))
-      .catch((error: unknown) => {
+    const client = createApiClient();
+    const headers = { "X-CSRF-Token": csrfToken };
+    const invalidLinkMessage =
+      "This confirmation link is invalid or has expired. Request a new one from account settings.";
+
+    async function confirmEmailChange() {
+      try {
+        await client.getCurrentUser();
+      } catch (error) {
         if (error instanceof ApiResponseError && error.status === 401) {
           setState({ type: "signin" });
+          return;
+        }
+        setState({ type: "error", message: invalidLinkMessage });
+        return;
+      }
+
+      try {
+        const { data } = await client.consumeEmailChangeLink(
+          { token },
+          { headers },
+        );
+        setState({ type: "success", email: data.email });
+      } catch (error) {
+        if (error instanceof ApiResponseError && error.status === 401) {
+          // The API deliberately uses 401 for both an absent session and an
+          // invalid/expired token. Re-check the session before deciding
+          // whether sign-in can help; otherwise an unusable token would loop
+          // through sign-in forever.
+          try {
+            await client.getCurrentUser();
+          } catch (sessionError) {
+            if (
+              sessionError instanceof ApiResponseError &&
+              sessionError.status === 401
+            ) {
+              setState({ type: "signin" });
+              return;
+            }
+          }
+          setState({ type: "error", message: invalidLinkMessage });
           return;
         }
         setState({
@@ -56,9 +88,12 @@ export function EmailChangePageContent() {
           message:
             error instanceof ApiResponseError
               ? error.message
-              : "This confirmation link is invalid or has expired. Request a new one from account settings.",
+              : invalidLinkMessage,
         });
-      });
+      }
+    }
+
+    void confirmEmailChange();
   }, [token]);
 
   const returnTo = `/auth/email-change?${new URLSearchParams({ token }).toString()}`;
@@ -105,7 +140,7 @@ export function EmailChangePageContent() {
               confirmation link again.
             </p>
             <Link
-              href={`/login?${new URLSearchParams({ returnTo }).toString()}`}
+              href={`/login?${new URLSearchParams({ returnTo, magicOnly: "1" }).toString()}`}
               className="inline-flex min-h-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
             >
               Sign in

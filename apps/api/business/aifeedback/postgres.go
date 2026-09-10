@@ -155,14 +155,16 @@ func learnerLevel(level string) string {
 
 func (r *PostgreSQLRepository) GetFeedbackAttemptByRequestHash(ctx context.Context, requestHash string) (*StoredFeedbackAttempt, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, learner_sentence_id, status, provider, model, prompt_version, request_hash,
-		        feedback_json, feedback_text, error_code, error_message,
-		        EXISTS (SELECT 1 FROM ai_feedback_quality_review_reports r WHERE r.ai_feedback_attempt_id = ai_feedback_attempts.id),
-		        created_at
-		 FROM ai_feedback_attempts
-		 WHERE request_hash = $1
-		 ORDER BY CASE status WHEN 'succeeded' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END,
-		          created_at DESC`,
+		`SELECT attempt.id, attempt.learner_sentence_id, attempt.status, attempt.provider,
+		        attempt.model, attempt.prompt_version, attempt.request_hash,
+		        attempt.feedback_json, attempt.feedback_text, attempt.error_code, attempt.error_message,
+		        EXISTS (SELECT 1 FROM ai_feedback_quality_review_reports r WHERE r.ai_feedback_attempt_id = attempt.id),
+		        attempt.created_at, sentence.submitted_at
+		 FROM ai_feedback_attempts attempt
+		 JOIN learner_sentences sentence ON sentence.id = attempt.learner_sentence_id
+		 WHERE attempt.request_hash = $1
+		 ORDER BY CASE attempt.status WHEN 'succeeded' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END,
+		          attempt.created_at DESC`,
 		requestHash,
 	)
 	return r.scanStoredAttempt(row)
@@ -323,7 +325,7 @@ func scanStoredAttempt(row storedAttemptScanner) (*StoredFeedbackAttempt, error)
 
 	err := row.Scan(
 		&a.ID, &a.LearnerSentenceID, &a.Status, &a.Provider, &a.Model, &a.PromptVersion, &a.RequestHash,
-		&feedbackJSON, &feedbackText, &errorCode, &errorMessage, &a.Reported, &a.CreatedAt,
+		&feedbackJSON, &feedbackText, &errorCode, &errorMessage, &a.Reported, &a.CreatedAt, &a.SubmittedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -412,7 +414,7 @@ func (r *PostgreSQLRepository) CreatePendingAttempt(ctx context.Context, req Sub
 		return nil, fmt.Errorf("commit pending attempt: %w", err)
 	}
 
-	return &PendingAttempt{SentenceID: sentenceID, AttemptID: attemptID}, nil
+	return &PendingAttempt{SentenceID: sentenceID, AttemptID: attemptID, SubmittedAt: now}, nil
 }
 
 // CreateRetryAttempt appends an immutable retry generation for the same
@@ -449,13 +451,15 @@ func (r *PostgreSQLRepository) CreateRetryAttempt(ctx context.Context, failed *S
 		}
 
 		row := tx.QueryRowContext(ctx,
-			`SELECT id, learner_sentence_id, status, provider, model, prompt_version, request_hash,
-			        feedback_json, feedback_text, error_code, error_message,
-			        EXISTS (SELECT 1 FROM ai_feedback_quality_review_reports r WHERE r.ai_feedback_attempt_id = ai_feedback_attempts.id),
-			        created_at
-			 FROM ai_feedback_attempts
-			 WHERE request_hash = $1 AND status IN ('pending', 'succeeded')
-			 ORDER BY CASE status WHEN 'succeeded' THEN 0 ELSE 1 END, created_at DESC
+			`SELECT attempt.id, attempt.learner_sentence_id, attempt.status, attempt.provider,
+			        attempt.model, attempt.prompt_version, attempt.request_hash,
+			        attempt.feedback_json, attempt.feedback_text, attempt.error_code, attempt.error_message,
+			        EXISTS (SELECT 1 FROM ai_feedback_quality_review_reports r WHERE r.ai_feedback_attempt_id = attempt.id),
+			        attempt.created_at, sentence.submitted_at
+			 FROM ai_feedback_attempts attempt
+			 JOIN learner_sentences sentence ON sentence.id = attempt.learner_sentence_id
+			 WHERE attempt.request_hash = $1 AND attempt.status IN ('pending', 'succeeded')
+			 ORDER BY CASE attempt.status WHEN 'succeeded' THEN 0 ELSE 1 END, attempt.created_at DESC
 			 LIMIT 1`, failed.RequestHash)
 		existing, err := scanStoredAttempt(row)
 		if err == nil && existing != nil {
@@ -484,7 +488,11 @@ func (r *PostgreSQLRepository) CreateRetryAttempt(ctx context.Context, failed *S
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("commit retry attempt: %w", err)
 	}
-	return &RetryAttempt{Pending: &PendingAttempt{SentenceID: failed.LearnerSentenceID, AttemptID: attemptID}}, nil
+	return &RetryAttempt{Pending: &PendingAttempt{
+		SentenceID:  failed.LearnerSentenceID,
+		AttemptID:   attemptID,
+		SubmittedAt: failed.SubmittedAt,
+	}}, nil
 }
 
 func (r *PostgreSQLRepository) CompleteFeedbackAttempt(ctx context.Context, pending PendingAttempt, feedback *ProviderFeedback, failureCode, failureMessage string, now time.Time) error {
