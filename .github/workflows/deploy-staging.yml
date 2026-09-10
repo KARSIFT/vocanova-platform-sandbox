@@ -599,6 +599,8 @@ jobs:
           # tests, not scripts/), so `cp` is sufficient.
           cp apps/api/scripts/migrate.sh /tmp/deploy-bundle/apps/api/scripts/
           chmod +x /tmp/deploy-bundle/apps/api/scripts/migrate.sh
+          cp apps/api/scripts/install-migration-artifact.sh /tmp/deploy-bundle/apps/api/scripts/
+          chmod +x /tmp/deploy-bundle/apps/api/scripts/install-migration-artifact.sh
           # VOC-050-T00's synthetic smoke-test account seed. The
           # script and its SQL travel together; the script resolves
           # the .sql file relative to its own directory.
@@ -868,6 +870,8 @@ jobs:
             sudo touch /opt/vocanova/infra/secrets/api.env
             sudo chown "$(id -un)":"$(id -gn)" /opt/vocanova/infra/secrets/api.env
             sed -i \
+              -e '/^BASE_URL=/d' \
+              -e '/^MAGIC_LINK_PATH=/d' \
               -e '/^OAUTH_REDIRECT_URI=/d' \
               -e '/^OAUTH_REDIRECT_ALLOWLIST=/d' \
               -e '/^GOOGLE_OAUTH_ENABLED=/d' \
@@ -875,6 +879,8 @@ jobs:
               -e '/^NEW_USER_SIGNUP_ALLOWLIST=/d' \
               /opt/vocanova/infra/secrets/api.env
             {
+              echo "BASE_URL=https://staging.vocanova.site"
+              echo "MAGIC_LINK_PATH=/magic-link"
               echo "OAUTH_REDIRECT_URI=https://api-staging.vocanova.site/api/v1/auth/oauth/google/callback"
               echo "OAUTH_REDIRECT_ALLOWLIST=https://staging.vocanova.site/onboarding,https://staging.vocanova.site/home"
               echo "GOOGLE_OAUTH_ENABLED=${STAGING_GOOGLE_OAUTH_ENABLED}"
@@ -930,8 +936,13 @@ jobs:
               echo "ERROR: staging deploy bundle contains paths outside infra/ and apps/" >&2
               exit 1
             fi
-            sudo tar -xzf /tmp/deploy-bundle.tgz -C /opt/vocanova
+            # Install migrations separately below. A normal overlay extraction
+            # cannot remove a renamed migration from a previous release.
+            sudo tar --exclude='./apps/api/migrations' -xzf /tmp/deploy-bundle.tgz -C /opt/vocanova
             sudo chown -R "$(id -un)":"$(id -gn)" /opt/vocanova/infra /opt/vocanova/apps
+            /opt/vocanova/apps/api/scripts/install-migration-artifact.sh \
+              /tmp/deploy-bundle.tgz \
+              /opt/vocanova/apps/api/migrations
 
             # -------------------------------------------------------------
             # 2. Install Atlas on the staging host if it is not

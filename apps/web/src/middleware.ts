@@ -12,6 +12,8 @@ export const config = {
     "/words",
     "/words/:path*",
     "/progress",
+    "/review",
+    "/review/:path*",
     "/reviews",
     "/reviews/:path*",
     "/settings",
@@ -57,7 +59,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   const returnTo = new URLSearchParams({
     returnTo: `${request.nextUrl.pathname}${request.nextUrl.search}`,
   }).toString();
-  const signInUrl = new URL(`/signin?${returnTo}`, request.url);
+  const signInUrl = new URL(`/login?${returnTo}`, request.url);
 
   const apiBaseURL = getApiBaseURL();
   const cookieHeader = request.headers.get("cookie") ?? "";

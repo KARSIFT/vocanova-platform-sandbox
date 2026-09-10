@@ -19,8 +19,6 @@ type EmailPhase =
 
 export function EmailChangeForm({ currentEmail }: EmailChangeFormProps) {
   const [newEmail, setNewEmail] = useState("");
-  const [token, setToken] = useState("");
-  const [isConsuming, setIsConsuming] = useState(false);
   const [phase, setPhase] = useState<EmailPhase>({ type: "idle" });
 
   async function handleRequest(event: React.FormEvent<HTMLFormElement>) {
@@ -61,56 +59,9 @@ export function EmailChangeForm({ currentEmail }: EmailChangeFormProps) {
     }
   }
 
-  async function handleConsume(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const trimmedToken = token.trim();
-    if (!trimmedToken) {
-      return;
-    }
-
-    const csrfToken = getCookieValue(CSRF_COOKIE_NAME);
-    if (!csrfToken) {
-      setPhase({
-        type: "error",
-        message:
-          "Your session is missing a security token. Please refresh the page and try again.",
-      });
-      return;
-    }
-
-    setIsConsuming(true);
-    const client = createApiClient();
-    try {
-      const { data } = await client.consumeEmailChangeLink(
-        { token: trimmedToken },
-        { headers: { "X-CSRF-Token": csrfToken } },
-      );
-      setPhase({
-        type: "completed",
-        newEmail: data.email,
-        previousEmail: data.previousEmail,
-      });
-      setToken("");
-      setNewEmail("");
-    } catch (error) {
-      // T06: a 401 mid-consume routes the learner to re-auth.
-      // The token is preserved in the form's controlled input so the
-      // learner does not need to recover it from email after
-      // re-authentication.
-      const message = handleApiError(
-        error,
-        "We couldn't confirm that link. Please try again.",
-      );
-      setPhase({ type: "error", message });
-    } finally {
-      setIsConsuming(false);
-    }
-  }
-
   function handleStartOver() {
     setPhase({ type: "idle" });
     setNewEmail("");
-    setToken("");
   }
 
   return (
@@ -151,50 +102,16 @@ export function EmailChangeForm({ currentEmail }: EmailChangeFormProps) {
           >
             We sent a confirmation link to{" "}
             <span className="font-medium">{phase.newEmail}</span>. The link
-            expires in 15 minutes. Paste the link&apos;s token below to finish
-            the change.
+            expires in 15 minutes. Open it in this browser while you are signed
+            in to finish the change.
           </p>
-          <form
-            onSubmit={handleConsume}
-            aria-label="Confirm new sign-in email"
-            className="space-y-[var(--spacing-sm)]"
+          <button
+            type="button"
+            onClick={handleStartOver}
+            className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
           >
-            <label
-              htmlFor="email-change-token"
-              className="block text-base font-medium text-neutral-900"
-            >
-              Confirmation token
-            </label>
-            <input
-              id="email-change-token"
-              name="token"
-              type="text"
-              required
-              autoComplete="off"
-              value={token}
-              onChange={(event) => setToken(event.target.value)}
-              disabled={isConsuming}
-              className="block w-full rounded-md border border-neutral-300 px-[var(--spacing-sm)] py-[var(--spacing-sm)] text-base text-neutral-900 focus:border-primary-600 focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-primary-600"
-            />
-            <div className="flex flex-wrap gap-[var(--spacing-sm)]">
-              <button
-                type="submit"
-                disabled={isConsuming || token.trim().length === 0}
-                aria-busy={isConsuming}
-                className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isConsuming ? "Confirming..." : "Confirm change"}
-              </button>
-              <button
-                type="button"
-                onClick={handleStartOver}
-                disabled={isConsuming}
-                className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
+            Use a different address
+          </button>
         </div>
       ) : null}
 

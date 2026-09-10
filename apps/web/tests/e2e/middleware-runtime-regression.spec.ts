@@ -6,7 +6,7 @@
 // inlined into the Edge bundle at build time). `getApiBaseURL()`
 // therefore falls back to `http://localhost:8080` inside the Edge
 // sandbox, the `/api/v1/me` auth check never reaches the deployed API,
-// and every authenticated learner is redirected back to `/signin`.
+// and every authenticated learner is redirected back to `/login`.
 //
 // This test executes the real, unmodified middleware source inside the
 // real Edge sandbox Next.js ships, and inside Node, against a stub API
@@ -35,7 +35,7 @@ import {
 
 const DESKTOP_PROJECT_NAME = "home-desktop-1280";
 const PROTECTED_ROUTE_URL = "https://app.vocanova.test/home";
-const SIGN_IN_PATH = "/signin";
+const SIGN_IN_PATH = "/login";
 const VALID_SESSION_COOKIE = `${SESSION_COOKIE_NAME}=valid-session-for-regression-test`;
 
 test.describe("Middleware runtime regression (VOC-039-T01)", () => {
@@ -81,7 +81,7 @@ test.describe("Middleware runtime regression (VOC-039-T01)", () => {
 
   // Regression gate: this is the assertion that fails against a
   // pre-VOC-039-T00 `middleware.ts` (which runs on Edge, never reaches
-  // the API, and redirects an authenticated learner to /signin) and
+  // the API, and redirects an authenticated learner to /login) and
   // passes once the module declares the Node.js runtime.
   test("declared runtime lets the auth check reach the API and admits an authenticated learner", async () => {
     const declaredRuntime = await readDeclaredMiddlewareRuntime();

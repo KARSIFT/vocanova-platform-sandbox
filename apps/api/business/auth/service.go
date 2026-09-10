@@ -67,7 +67,7 @@ func NewService(repo Repository, emailSender email.Sender, oauth OAuthProvider, 
 		cfg.OAuthStateLifetime = 10 * time.Minute
 	}
 	if cfg.MagicLinkPath == "" {
-		cfg.MagicLinkPath = "/auth/magic"
+		cfg.MagicLinkPath = "/magic-link"
 	}
 	return &Service{repo: repo, emailSender: emailSender, oauth: oauth, clock: c, limiter: limiter, cfg: cfg}
 }

@@ -195,7 +195,7 @@ func LoadProductionConfig() (ProductionConfig, error) {
 		DatabaseURL:     os.Getenv("DATABASE_URL"),
 		Environment:     getenv("ENVIRONMENT", "staging"),
 		BaseURL:         os.Getenv("BASE_URL"),
-		MagicLinkPath:   getenv("MAGIC_LINK_PATH", "/auth/magic"),
+		MagicLinkPath:   getenv("MAGIC_LINK_PATH", "/magic-link"),
 		OAuthRedirect:   os.Getenv("OAUTH_REDIRECT_URI"),
 		SessionDomain:   os.Getenv("SESSION_COOKIE_DOMAIN"),
 		SessionSecure:   getenvBool("SESSION_COOKIE_SECURE", true),

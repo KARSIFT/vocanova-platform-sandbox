@@ -463,9 +463,9 @@ describe("VocanovaClient", () => {
     assert.equal(data.nextReviewAt, "2026-07-25T13:00:00Z");
   });
 
-  it("sends POST /api/v1/sentence-feedback with Idempotency-Key", async () => {
+  it("sends POST /api/v1/learner-sentences with Idempotency-Key", async () => {
     const fetch = (url: string, init: RequestInit): Promise<Response> => {
-      assert.equal(url, "https://api.example.com/api/v1/sentence-feedback");
+      assert.equal(url, "https://api.example.com/api/v1/learner-sentences");
       assert.equal(init.method, "POST");
       assert.equal(
         new Headers(init.headers).get("Idempotency-Key"),
@@ -511,6 +511,46 @@ describe("VocanovaClient", () => {
     assert.equal(data.status, "correct");
     assert.equal(data.originalSentence, "I work every day.");
     assert.equal(data.missionCompleted, false);
+  });
+
+  it("lists and gets retained learner sentences", async () => {
+    const sentence = {
+      id: "00000000-0000-0000-0000-000000000010",
+      processingStatus: "completed",
+      status: "correct",
+      originalSentence: "I work every day.",
+      targetWordUsedCorrectly: true,
+      grammarAcceptable: true,
+      meaningClear: true,
+      naturalness: "natural",
+      reported: false,
+      createdAt: "2026-09-10T12:00:00Z",
+    };
+    const fetch = (url: string, init: RequestInit): Promise<Response> => {
+      assert.equal(init.method, "GET");
+      if (url.endsWith("?after=next-page&limit=10")) {
+        return Promise.resolve(
+          Response.json({ items: [sentence], hasMore: false }),
+        );
+      }
+      assert.equal(
+        url,
+        "https://api.example.com/api/v1/learner-sentences/00000000-0000-0000-0000-000000000010",
+      );
+      return Promise.resolve(Response.json(sentence));
+    };
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: fetch as typeof globalThis.fetch,
+    });
+
+    const page = await client.listLearnerSentences({
+      after: "next-page",
+      limit: 10,
+    });
+    assert.equal(page.data.items[0]?.status, "correct");
+    const detail = await client.getLearnerSentence(sentence.id);
+    assert.equal(detail.data.originalSentence, "I work every day.");
   });
 
   it("sends POST /api/v1/sentence-feedback/{attemptId}/reports", async () => {

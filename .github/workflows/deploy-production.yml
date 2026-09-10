@@ -201,6 +201,8 @@ jobs:
           chmod +x /tmp/production-deploy-bundle/infra/scripts/rehearse-production-secrets-boundary.sh
           cp apps/api/scripts/migrate.sh /tmp/production-deploy-bundle/apps/api/scripts/
           chmod +x /tmp/production-deploy-bundle/apps/api/scripts/migrate.sh
+          cp apps/api/scripts/install-migration-artifact.sh /tmp/production-deploy-bundle/apps/api/scripts/
+          chmod +x /tmp/production-deploy-bundle/apps/api/scripts/install-migration-artifact.sh
           # VOC-050-T00's synthetic smoke-test account seed. The
           # script and its SQL travel together; the script resolves
           # the .sql file relative to its own directory.
@@ -438,6 +440,7 @@ jobs:
             sed -i \
               -e '/^ENVIRONMENT=/d' \
               -e '/^BASE_URL=/d' \
+              -e '/^MAGIC_LINK_PATH=/d' \
               -e '/^OAUTH_REDIRECT_URI=/d' \
               -e '/^OAUTH_REDIRECT_ALLOWLIST=/d' \
               -e '/^SESSION_COOKIE_DOMAIN=/d' \
@@ -454,7 +457,8 @@ jobs:
               echo "ENVIRONMENT=production"
               # VOC-079-T01: canonical HTTPS :443 via shared edge — no :8443
               # port qualification in browser-facing OAuth/CORS values.
-              echo "BASE_URL=https://${PRODUCTION_API_HOST}"
+              echo "BASE_URL=https://${PRODUCTION_WEB_HOST}"
+              echo "MAGIC_LINK_PATH=/magic-link"
               echo "OAUTH_REDIRECT_URI=https://${PRODUCTION_API_HOST}/api/v1/auth/oauth/google/callback"
               echo "OAUTH_REDIRECT_ALLOWLIST=https://${PRODUCTION_WEB_HOST}/onboarding,https://${PRODUCTION_WEB_HOST}/home"
               # Shared parent domain (e.g. ".vocanova.site"), NOT the bare
@@ -503,8 +507,13 @@ jobs:
             set -euo pipefail
 
             sudo mkdir -p /opt/vocanova/production
-            sudo tar -xzf /tmp/production-deploy-bundle.tgz -C /opt/vocanova/production
+            # Install migrations separately below. A normal overlay extraction
+            # cannot remove a renamed migration from a previous release.
+            sudo tar --exclude='./apps/api/migrations' -xzf /tmp/production-deploy-bundle.tgz -C /opt/vocanova/production
             sudo chown -R "$(id -un)":"$(id -gn)" /opt/vocanova/production
+            /opt/vocanova/production/apps/api/scripts/install-migration-artifact.sh \
+              /tmp/production-deploy-bundle.tgz \
+              /opt/vocanova/production/apps/api/migrations
             chmod 750 /opt/vocanova/production
             mkdir -p /opt/vocanova/production/secrets/nginx
             chmod 700 /opt/vocanova/production/secrets

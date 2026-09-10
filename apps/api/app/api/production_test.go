@@ -48,7 +48,7 @@ func newProductionTestConfig() ProductionConfig {
 		DatabaseURL:     "postgres://example/db",
 		Environment:     "staging",
 		BaseURL:         "https://staging.vocanova.site",
-		MagicLinkPath:   "/auth/magic",
+		MagicLinkPath:   "/magic-link",
 		OAuthRedirect:   "https://api-staging.vocanova.site/auth/oauth/google/callback",
 		OAuthReturnURLs: []string{"https://api-staging.vocanova.site/auth/oauth/google/callback"},
 		SessionDomain:   "staging.vocanova.site",
@@ -118,6 +118,7 @@ func TestLoadProductionConfig_DefaultsAreSensible(t *testing.T) {
 	t.Setenv("SESSION_COOKIE_DOMAIN", "staging.vocanova.site")
 	t.Setenv("PORT", "")
 	t.Setenv("ENVIRONMENT", "")
+	t.Setenv("MAGIC_LINK_PATH", "")
 	t.Setenv("AI_FEATURES_ENABLED", "")
 	t.Setenv("EMAIL_MAGIC_LINK_ENABLED", "")
 	t.Setenv("GOOGLE_OAUTH_ENABLED", "")
@@ -133,6 +134,7 @@ func TestLoadProductionConfig_DefaultsAreSensible(t *testing.T) {
 	assert.Equal(t, time.Hour, cfg.IdempotencyCleanupInterval, "IDEMPOTENCY_CLEANUP_INTERVAL must default to one hour when unset")
 	assert.Equal(t, time.Hour, cfg.AccountDeletionSweepInterval, "ACCOUNT_DELETION_SWEEP_INTERVAL must default to one hour when unset")
 	assert.Equal(t, "staging", cfg.Environment, "ENVIRONMENT must default to staging when unset")
+	assert.Equal(t, "/magic-link", cfg.MagicLinkPath, "magic-link emails must default to the documented web route")
 	assert.True(t, cfg.AIEnabled, "AI_FEATURES_ENABLED must default to true when unset")
 	assert.True(t, cfg.MagicLinkOn, "EMAIL_MAGIC_LINK_ENABLED must default to true when unset")
 	assert.True(t, cfg.OAuthOn, "GOOGLE_OAUTH_ENABLED must default to true when unset")

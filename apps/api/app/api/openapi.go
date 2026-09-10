@@ -43,7 +43,7 @@ func NewContractAPI() huma.API {
 		auth.Config{
 			Environment:            "openapi",
 			BaseURL:                "https://example.com",
-			MagicLinkPath:          "/auth/magic",
+			MagicLinkPath:          "/magic-link",
 			OAuthRedirectURI:       "https://example.com/auth/oauth/google/callback",
 			OAuthRedirectAllowlist: []string{"https://example.com/auth/oauth/google/callback"},
 			SessionLifetime:        30 * 24 * time.Hour,

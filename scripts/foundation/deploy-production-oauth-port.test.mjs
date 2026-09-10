@@ -10,7 +10,8 @@ const STEP_START_MARKER = "- name: Write production application configuration";
 const STEP_END_MARKER = "- name: Deploy to production host";
 
 const EXPECTED_CONFIG_LINES = [
-  'echo "BASE_URL=https://${PRODUCTION_API_HOST}"',
+  'echo "BASE_URL=https://${PRODUCTION_WEB_HOST}"',
+  'echo "MAGIC_LINK_PATH=/magic-link"',
   'echo "OAUTH_REDIRECT_URI=https://${PRODUCTION_API_HOST}/api/v1/auth/oauth/google/callback"',
   'echo "OAUTH_REDIRECT_ALLOWLIST=https://${PRODUCTION_WEB_HOST}/onboarding,https://${PRODUCTION_WEB_HOST}/home"',
 ];

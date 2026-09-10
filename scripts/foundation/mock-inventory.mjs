@@ -85,7 +85,18 @@ const expectedRouteDirectories = [
 // must live outside the (app) group). The expectedRouteDirectories
 // check above only covers (app) routes; the onboarding route
 // gets its own presence check below.
-const expectedTopLevelRouteDirectories = ["onboarding"];
+const expectedTopLevelRouteDirectories = [
+  "onboarding",
+  "login",
+  "magic-link",
+  "review",
+  path.join("review", "session"),
+  // Compatibility routes remain live for already-issued links/bookmarks.
+  "signin",
+  path.join("auth", "magic"),
+  // Account settings emails need a browser destination for token consume.
+  path.join("auth", "email-change"),
+];
 
 export function validateMockInventory() {
   const errors = [];
@@ -198,6 +209,7 @@ export function validateMockInventory() {
     /^\/api\/v1\/reviews\/submissions$/,
     /^\/api\/v1\/sentence-feedback$/,
     /^\/api\/v1\/sentence-feedback\/[^/]+\/reports$/,
+    /^\/api\/v1\/learner-sentences(?:\/[^/]*)?$/,
     /^\/api\/v1\/daily-mission$/,
     /^\/api\/v1\/progress$/,
     /^\/api\/v1\/onboarding$/,
@@ -392,6 +404,8 @@ export function validateMockInventory() {
       '"/words"',
       '"/words/:path*"',
       '"/progress"',
+      '"/review"',
+      '"/review/:path*"',
       '"/reviews"',
       '"/reviews/:path*"',
       '"/onboarding"',
@@ -421,13 +435,9 @@ export function validateMockInventory() {
     }
   }
 
-  // Verify the expected top-level (non-(app)) route directories
-  // exist in the filesystem. The T01 onboarding route is the
-  // only P5 route that lives outside the (app) group (per
-  // DOC-03 §3's "redirect to /onboarding before any (app) route"
-  // flow), so this list is intentionally short. A regression
-  // that deleted the directory would silently re-open the
-  // "no onboarding screen" gap.
+  // Verify the expected top-level (non-(app)) route directories exist in the
+  // filesystem. This covers onboarding, the documented auth/review URLs,
+  // compatibility URLs, and the email-change confirmation destination.
   const topLevelAppRoot = path.join(repositoryRoot, "apps/web/src/app");
   for (const relative of expectedTopLevelRouteDirectories) {
     const dirPath = path.join(topLevelAppRoot, relative);

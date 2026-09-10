@@ -85,9 +85,15 @@ func TestDefaultOutputValidatorAcceptsValidCorrect(t *testing.T) {
 	fb := &ProviderFeedback{
 		Status:                  LearningStatusCorrect,
 		TargetWordUsedCorrectly: true,
+		GrammarAcceptable:       true,
+		MeaningClear:            true,
+		Naturalness:             NaturalnessNatural,
 		Headline:                "Great work!",
 		Explanation:             "Correct.",
-		RawJSON:                 map[string]any{"status": "correct", "target_word_used_correctly": true},
+		RawJSON: map[string]any{
+			"status": "correct", "target_word_used_correctly": true,
+			"grammar_acceptable": true, "meaning_clear": true, "naturalness": "natural",
+		},
 	}
 	assert.NoError(t, v.Validate(fb, nil))
 }
@@ -99,6 +105,9 @@ func TestDefaultOutputValidatorAcceptsValidIncorrect(t *testing.T) {
 	fb := &ProviderFeedback{
 		Status:                  LearningStatusIncorrect,
 		TargetWordUsedCorrectly: false,
+		GrammarAcceptable:       false,
+		MeaningClear:            true,
+		Naturalness:             NaturalnessUnderstandable,
 		Headline:                "Almost there!",
 		Explanation:             "Use past tense for finished times.",
 		CorrectedSentence:       &corrected,
@@ -106,6 +115,9 @@ func TestDefaultOutputValidatorAcceptsValidIncorrect(t *testing.T) {
 		RawJSON: map[string]any{
 			"status":                     "incorrect",
 			"target_word_used_correctly": false,
+			"grammar_acceptable":         false,
+			"meaning_clear":              true,
+			"naturalness":                "understandable",
 			"corrected_sentence":         corrected,
 			"improvement_tip":            tip,
 		},
@@ -120,6 +132,9 @@ func TestDefaultOutputValidatorAcceptsValidNeedsImprovement(t *testing.T) {
 	fb := &ProviderFeedback{
 		Status:                  LearningStatusNeedsImprovement,
 		TargetWordUsedCorrectly: false,
+		GrammarAcceptable:       true,
+		MeaningClear:            true,
+		Naturalness:             NaturalnessUnderstandable,
 		Headline:                "Good start!",
 		Explanation:             "The sentence is understandable but could be clearer.",
 		CorrectedSentence:       &corrected,
@@ -127,6 +142,9 @@ func TestDefaultOutputValidatorAcceptsValidNeedsImprovement(t *testing.T) {
 		RawJSON: map[string]any{
 			"status":                     "needs_improvement",
 			"target_word_used_correctly": false,
+			"grammar_acceptable":         true,
+			"meaning_clear":              true,
+			"naturalness":                "understandable",
 			"corrected_sentence":         corrected,
 			"improvement_tip":            tip,
 		},
@@ -139,8 +157,15 @@ func TestDefaultOutputValidatorRejectsMissingOrOverlongHeadline(t *testing.T) {
 	valid := ProviderFeedback{
 		Status:                  LearningStatusCorrect,
 		TargetWordUsedCorrectly: true,
+		GrammarAcceptable:       true,
+		MeaningClear:            true,
+		Naturalness:             NaturalnessNatural,
 		Headline:                "Great work!",
 		Explanation:             "Correct.",
+		RawJSON: map[string]any{
+			"target_word_used_correctly": true, "grammar_acceptable": true,
+			"meaning_clear": true, "naturalness": "natural",
+		},
 	}
 
 	missing := valid
@@ -174,15 +199,44 @@ func TestDefaultOutputValidatorRejectsIncorrectWithoutCorrection(t *testing.T) {
 	assert.Error(t, v.Validate(fb, nil))
 }
 
-func TestDefaultOutputValidatorRejectsNeedsImprovementWithoutCorrection(t *testing.T) {
+func TestDefaultOutputValidatorAcceptsNeedsImprovementWithoutCorrection(t *testing.T) {
 	v := NewDefaultOutputValidator()
+	tip := "Use the target word in a more natural phrase."
 	fb := &ProviderFeedback{
 		Status:                  LearningStatusNeedsImprovement,
 		TargetWordUsedCorrectly: false,
+		GrammarAcceptable:       true,
+		MeaningClear:            true,
+		Naturalness:             NaturalnessUnderstandable,
+		Headline:                "Almost right!",
 		Explanation:             "Needs work.",
-		RawJSON:                 map[string]any{"status": "needs_improvement", "target_word_used_correctly": false},
+		ImprovementTip:          &tip,
+		RawJSON: map[string]any{
+			"status": "needs_improvement", "target_word_used_correctly": false,
+			"grammar_acceptable": true, "meaning_clear": true, "naturalness": "understandable",
+		},
 	}
-	assert.Error(t, v.Validate(fb, nil))
+	assert.NoError(t, v.Validate(fb, nil))
+}
+
+func TestDefaultOutputValidatorAcceptsCorrectWithOptionalTip(t *testing.T) {
+	v := NewDefaultOutputValidator()
+	tip := "Try this useful phrase at work."
+	fb := &ProviderFeedback{
+		Status:                  LearningStatusCorrect,
+		TargetWordUsedCorrectly: true,
+		GrammarAcceptable:       true,
+		MeaningClear:            true,
+		Naturalness:             NaturalnessNatural,
+		Headline:                "Great use!",
+		Explanation:             "The target word is used naturally.",
+		ImprovementTip:          &tip,
+		RawJSON: map[string]any{
+			"status": "correct", "target_word_used_correctly": true,
+			"grammar_acceptable": true, "meaning_clear": true, "naturalness": "natural",
+		},
+	}
+	assert.NoError(t, v.Validate(fb, nil))
 }
 
 func TestDefaultOutputValidatorRejectsWhitespaceOnlyRequiredFields(t *testing.T) {

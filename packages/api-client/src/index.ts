@@ -232,21 +232,54 @@ export interface SubmitReviewBody {
 }
 
 export interface SentenceFeedbackResult {
+  feedbackId?: string;
   sentenceId?: string;
   attemptId?: string;
+  targetWordId?: string;
+  processingStatus?: "pending" | "completed" | "failed" | "skipped";
   status?: "correct" | "needs_improvement" | "incorrect";
   originalSentence: string;
-  correctedSentence?: string;
+  correctedSentence: string | null;
   /** Encouraging, honest feedback headline (maximum 60 characters). */
   headline?: string;
   explanation?: string;
-  improvementTip?: string;
+  improvementTip: string | null;
+  targetWordUsedCorrectly: boolean;
+  grammarAcceptable: boolean;
+  meaningClear: boolean;
+  naturalness?: "natural" | "understandable" | "unnatural";
   missionCompleted: boolean;
   canRetry: boolean;
   reported: boolean;
   errorCode?: string;
   errorMessage?: string;
   crisisResourceMessage?: string;
+  createdAt?: string;
+}
+
+export interface LearnerSentence {
+  id: string;
+  feedbackId?: string;
+  targetWordId?: string;
+  processingStatus: "pending" | "completed" | "failed" | "skipped";
+  status?: "correct" | "needs_improvement" | "incorrect";
+  originalSentence: string;
+  correctedSentence: string | null;
+  headline?: string;
+  explanation?: string;
+  improvementTip: string | null;
+  targetWordUsedCorrectly: boolean;
+  grammarAcceptable: boolean;
+  meaningClear: boolean;
+  naturalness?: "natural" | "understandable" | "unnatural";
+  reported: boolean;
+  createdAt: string;
+}
+
+export interface ListLearnerSentencesResponse {
+  items: LearnerSentence[];
+  nextCursor?: string;
+  hasMore: boolean;
 }
 
 export interface SubmitSentenceFeedbackBody {
@@ -719,7 +752,7 @@ export class VocanovaClient {
     headers.set("Idempotency-Key", idempotencyKey);
     const response = await this.request(
       "POST",
-      "/api/v1/sentence-feedback",
+      "/api/v1/learner-sentences",
       body,
       {
         ...init,
@@ -727,6 +760,38 @@ export class VocanovaClient {
       },
     );
     const data = (await response.json()) as SentenceFeedbackResult;
+    return { data, response };
+  }
+
+  async listLearnerSentences(
+    params?: { after?: string; limit?: number },
+    init?: RequestInit,
+  ): Promise<{ data: ListLearnerSentencesResponse; response: Response }> {
+    const query = new URLSearchParams();
+    if (params?.after) query.set("after", params.after);
+    if (params?.limit) query.set("limit", String(params.limit));
+    const suffix = query.toString();
+    const response = await this.request(
+      "GET",
+      `/api/v1/learner-sentences${suffix ? `?${suffix}` : ""}`,
+      undefined,
+      init,
+    );
+    const data = (await response.json()) as ListLearnerSentencesResponse;
+    return { data, response };
+  }
+
+  async getLearnerSentence(
+    sentenceId: string,
+    init?: RequestInit,
+  ): Promise<{ data: LearnerSentence; response: Response }> {
+    const response = await this.request(
+      "GET",
+      `/api/v1/learner-sentences/${encodeURIComponent(sentenceId)}`,
+      undefined,
+      init,
+    );
+    const data = (await response.json()) as LearnerSentence;
     return { data, response };
   }
 

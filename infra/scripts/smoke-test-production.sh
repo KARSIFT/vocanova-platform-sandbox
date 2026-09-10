@@ -4,8 +4,8 @@ set -euo pipefail
 # VOC-038-T02 — repeatable production smoke-test suite.
 # VOC-085-T01 — content-aware journey-situations checks and detail API
 # verification (fail closed on HTTP 200 with an empty list).
-# VOC-085-T02 — authenticated non-mutating learning-route sweep (ten fixed
-# web routes plus API-derived discover situation/word routes).
+# VOC-085-T02 — authenticated non-mutating learning-route sweep (the
+# documented pages, compatibility aliases, and API-derived discover routes).
 #
 # Replaces the manual curl/SSH checks used ad hoc during R2 (VOC-037)
 # with a scripted, callable-from-CI-or-standalone suite. Every check
@@ -90,17 +90,23 @@ profile_runs_section() {
   esac
 }
 
-# VOC-085-TEST-06 fixed route inventory (keep in sync with
+# VOC-085-TEST-06 route inventory (keep in sync with
 # scripts/foundation/voc085-production-route-sweep.test.mjs).
 PRODUCTION_PUBLIC_WEB_ROUTES=(
   "/"
+  "/login"
+  "/magic-link"
   "/signin"
   "/auth/magic"
+  "/auth/email-change"
 )
 PRODUCTION_AUTHENTICATED_WEB_ROUTES=(
   "/onboarding"
   "/home"
   "/discover"
+  "/words"
+  "/review"
+  "/review/session"
   "/reviews"
   "/progress"
   "/settings"

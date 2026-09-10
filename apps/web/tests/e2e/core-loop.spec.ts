@@ -49,13 +49,13 @@
 //       click Save settings, verify the "saved" confirmation.
 //
 //   9.  Logout: click the AppHeader "Log out" button, expect
-//       navigation to /signin.
+//       navigation to /login.
 //
 //   10. Unauthenticated-access rejection: set
 //       e2e_unauthenticated=1 (the same kind of test-only cookie
 //       the T07b onboarding scan uses, see mock-api-server.mjs),
 //       navigate to /home, expect the auth-gate middleware to
-//       redirect to /signin.
+//       redirect to /login.
 //
 // Project scope: T08 follows the T07a "one representative
 // desktop width" pattern - mobile-360 / mobile-430 are
@@ -428,9 +428,9 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     //
     // The AppHeader's Log out button calls POST /api/v1/auth/logout
     // with the CSRF token, clears the local CSRF cookie, and
-    // navigates to /signin.
+    // navigates to /login.
     await page.getByRole("button", { name: "Log out" }).click();
-    await expect(page).toHaveURL(/\/signin(\?|$)/);
+    await expect(page).toHaveURL(/\/login(\?|$)/);
     await expect(
       page.getByRole("heading", { name: "Sign in to Vocanova" }),
     ).toBeVisible();
@@ -440,12 +440,12 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     // The mock returns 401 for authenticated API routes when the
     // e2e_unauthenticated=1 cookie is set (see mock-api-server.mjs).
     // The middleware uses the /api/v1/me response to
-    // redirect to /signin. The test sets the cookie, navigates
+    // redirect to /login. The test sets the cookie, navigates
     // to /home, and expects the redirect.
     await context.addCookies([
       { name: "e2e_unauthenticated", value: "1", url: baseURL },
     ]);
     await page.goto("/home");
-    await expect(page).toHaveURL(/\/signin\?returnTo=%2Fhome(\b|$)/);
+    await expect(page).toHaveURL(/\/login\?returnTo=%2Fhome(\b|$)/);
   });
 });

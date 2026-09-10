@@ -32,7 +32,7 @@ export default async function OnboardingPage() {
           defines a --spacing-* scale, so Tailwind resolves the named
           max-w-xl utility to --spacing-xl (32px) instead of the intended
           36rem, collapsing this card to a single-character column. The
-          same defect pre-exists on /signin and /auth/magic; fixing the
+          same defect pre-exists on the authentication routes; fixing the
           shared token config is out of this task's scope. */}
       <div className="w-full max-w-[36rem] space-y-[var(--spacing-lg)] rounded-xl border border-neutral-200 bg-white p-[var(--spacing-lg)] shadow-sm">
         <header className="space-y-[var(--spacing-xs)]">

@@ -3,6 +3,7 @@ package aifeedback
 import (
 	"context"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -80,6 +81,7 @@ type MemoryLearnerSentence struct {
 	Source                 string
 	Status                 string
 	SubmittedAt            time.Time
+	DeletedAt              *time.Time
 }
 
 // MemoryAIFeedbackAttempt mirrors the ai_feedback_attempts row.
@@ -95,6 +97,7 @@ type MemoryAIFeedbackAttempt struct {
 	FeedbackText      string
 	ErrorCode         string
 	ErrorMessage      string
+	CreatedAt         time.Time
 }
 
 // MemoryRepositoryData holds seed data for the memory repository.
@@ -103,6 +106,9 @@ type MemoryRepositoryData struct {
 	ReviewAttempts []MemoryReviewAttempt
 	Meanings       []MemoryMeaning
 	Words          []MemoryWord
+	Sentences      []MemoryLearnerSentence
+	Attempts       []MemoryAIFeedbackAttempt
+	Reports        []QualityReviewReport
 }
 
 // NewMemoryRepository initializes an in-memory repository from seed data.
@@ -112,7 +118,125 @@ func NewMemoryRepository(data MemoryRepositoryData) *MemoryRepository {
 		reviewAttempts: data.ReviewAttempts,
 		meanings:       data.Meanings,
 		words:          data.Words,
+		sentences:      data.Sentences,
+		attempts:       data.Attempts,
+		reports:        data.Reports,
 	}
+}
+
+// ListLearnerSentences implements Repository.
+func (r *MemoryRepository) ListLearnerSentences(ctx context.Context, req ListLearnerSentencesRequest) (*ListLearnerSentencesResponse, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	limit := req.Limit
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 50 {
+		limit = 50
+	}
+	var after *learnerSentenceCursor
+	if req.AfterCursor != "" {
+		cursor, err := decodeLearnerSentenceCursor(req.AfterCursor)
+		if err != nil {
+			return nil, err
+		}
+		after = &cursor
+	}
+
+	sentences := make([]MemoryLearnerSentence, 0, len(r.sentences))
+	for _, sentence := range r.sentences {
+		if sentence.UserID != req.UserID || sentence.DeletedAt != nil {
+			continue
+		}
+		if after != nil && !sentence.SubmittedAt.Before(after.SubmittedAt) &&
+			!(sentence.SubmittedAt.Equal(after.SubmittedAt) && sentence.ID.String() < after.ID.String()) {
+			continue
+		}
+		sentences = append(sentences, sentence)
+	}
+	sort.Slice(sentences, func(i, j int) bool {
+		if sentences[i].SubmittedAt.Equal(sentences[j].SubmittedAt) {
+			return sentences[i].ID.String() > sentences[j].ID.String()
+		}
+		return sentences[i].SubmittedAt.After(sentences[j].SubmittedAt)
+	})
+
+	hasMore := len(sentences) > limit
+	if hasMore {
+		sentences = sentences[:limit]
+	}
+	response := &ListLearnerSentencesResponse{Items: make([]LearnerSentence, 0, len(sentences))}
+	for _, sentence := range sentences {
+		response.Items = append(response.Items, r.learnerSentenceProjection(sentence))
+	}
+	if hasMore {
+		last := sentences[len(sentences)-1]
+		response.NextCursor = encodeLearnerSentenceCursor(learnerSentenceCursor{SubmittedAt: last.SubmittedAt, ID: last.ID})
+	}
+	return response, nil
+}
+
+// GetLearnerSentence implements Repository.
+func (r *MemoryRepository) GetLearnerSentence(ctx context.Context, userID, sentenceID uuid.UUID) (*LearnerSentence, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, sentence := range r.sentences {
+		if sentence.ID == sentenceID && sentence.UserID == userID && sentence.DeletedAt == nil {
+			item := r.learnerSentenceProjection(sentence)
+			return &item, nil
+		}
+	}
+	return nil, ErrTargetNotFound
+}
+
+func (r *MemoryRepository) learnerSentenceProjection(sentence MemoryLearnerSentence) LearnerSentence {
+	var latest *MemoryAIFeedbackAttempt
+	for i := range r.attempts {
+		attempt := &r.attempts[i]
+		if attempt.LearnerSentenceID != sentence.ID {
+			continue
+		}
+		if latest == nil || attempt.CreatedAt.After(latest.CreatedAt) ||
+			(attempt.CreatedAt.Equal(latest.CreatedAt) && attempt.ID.String() > latest.ID.String()) {
+			latest = attempt
+		}
+	}
+	var attemptID uuid.UUID
+	var attemptStatus string
+	var feedback map[string]any
+	var feedbackText string
+	var reported bool
+	if latest != nil {
+		attemptID = latest.ID
+		attemptStatus = latest.Status
+		feedback = latest.FeedbackJSON
+		feedbackText = latest.FeedbackText
+		for _, report := range r.reports {
+			if report.AttemptID == latest.ID {
+				reported = true
+				break
+			}
+		}
+	}
+	var targetWordID uuid.UUID
+	for _, meaning := range r.meanings {
+		if meaning.ID == sentence.MeaningID {
+			targetWordID = meaning.WordID
+			break
+		}
+	}
+	return learnerSentenceFromStored(
+		sentence.ID, attemptID, targetWordID, sentence.Status, attemptStatus,
+		sentence.SentenceText, feedback, feedbackText, reported, sentence.SubmittedAt,
+	)
 }
 
 // LoadTarget implements Repository.
@@ -268,6 +392,7 @@ func (r *MemoryRepository) CreatePendingAttempt(ctx context.Context, req SubmitS
 		Model:             model,
 		PromptVersion:     PromptVersionSentenceFeedbackV1,
 		RequestHash:       requestHash,
+		CreatedAt:         now,
 	})
 
 	return &PendingAttempt{SentenceID: sentenceID, AttemptID: attemptID}, nil
@@ -296,6 +421,7 @@ func (r *MemoryRepository) CreateRetryAttempt(ctx context.Context, failed *Store
 		Model:             model,
 		PromptVersion:     PromptVersionSentenceFeedbackV1,
 		RequestHash:       failed.RequestHash,
+		CreatedAt:         now,
 	})
 	for i := range r.sentences {
 		if r.sentences[i].ID == failed.LearnerSentenceID {
@@ -469,6 +595,7 @@ func (r *MemoryRepository) toStoredAttempt(a MemoryAIFeedbackAttempt) *StoredFee
 		FeedbackText:      a.FeedbackText,
 		ErrorCode:         a.ErrorCode,
 		ErrorMessage:      a.ErrorMessage,
+		CreatedAt:         a.CreatedAt,
 	}
 }
 

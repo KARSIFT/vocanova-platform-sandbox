@@ -59,7 +59,7 @@ function assertRedirectsToSignIn(response: Response): void {
   assert.equal(response.status, 307);
   const location = response.headers.get("location");
   assert.ok(location, "expected a redirect Location header");
-  assert.equal(new URL(location).pathname, "/signin");
+  assert.equal(new URL(location).pathname, "/login");
 }
 
 function assertNoCredentialMaterial(line: string): void {

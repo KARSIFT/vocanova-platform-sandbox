@@ -157,7 +157,8 @@ func (r *PostgreSQLRepository) GetFeedbackAttemptByRequestHash(ctx context.Conte
 	row := r.db.QueryRowContext(ctx,
 		`SELECT id, learner_sentence_id, status, provider, model, prompt_version, request_hash,
 		        feedback_json, feedback_text, error_code, error_message,
-		        EXISTS (SELECT 1 FROM ai_feedback_quality_review_reports r WHERE r.ai_feedback_attempt_id = ai_feedback_attempts.id)
+		        EXISTS (SELECT 1 FROM ai_feedback_quality_review_reports r WHERE r.ai_feedback_attempt_id = ai_feedback_attempts.id),
+		        created_at
 		 FROM ai_feedback_attempts
 		 WHERE request_hash = $1
 		 ORDER BY CASE status WHEN 'succeeded' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END,
@@ -171,6 +172,146 @@ func (r *PostgreSQLRepository) scanStoredAttempt(row *sql.Row) (*StoredFeedbackA
 	return scanStoredAttempt(row)
 }
 
+// ListLearnerSentences returns the authenticated learner's retained sentence
+// history. The lateral join selects the newest generation without exposing
+// provider metadata or internal error text.
+func (r *PostgreSQLRepository) ListLearnerSentences(ctx context.Context, req ListLearnerSentencesRequest) (*ListLearnerSentencesResponse, error) {
+	limit := req.Limit
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 50 {
+		limit = 50
+	}
+
+	args := []any{req.UserID}
+	cursorClause := ""
+	if req.AfterCursor != "" {
+		cursor, err := decodeLearnerSentenceCursor(req.AfterCursor)
+		if err != nil {
+			return nil, err
+		}
+		cursorClause = " AND (ls.submitted_at, ls.id) < ($2, $3)"
+		args = append(args, cursor.SubmittedAt, cursor.ID)
+	}
+	args = append(args, limit+1)
+	limitPlaceholder := fmt.Sprintf("$%d", len(args))
+
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT ls.id, COALESCE(afa.id::text, ''), COALESCE(cw.id::text, ''),
+		       ls.status, COALESCE(afa.status, ''), ls.sentence_text,
+		       COALESCE(afa.feedback_json, '{}'::jsonb),
+		       COALESCE(afa.feedback_text, ''),
+		       CASE WHEN afa.id IS NULL THEN false ELSE EXISTS (
+		         SELECT 1 FROM ai_feedback_quality_review_reports report
+		         WHERE report.ai_feedback_attempt_id = afa.id
+		       ) END,
+		       ls.submitted_at
+		FROM learner_sentences ls
+		LEFT JOIN word_meanings wm ON wm.id = ls.meaning_id
+		LEFT JOIN canonical_words cw ON cw.id = wm.word_id
+		LEFT JOIN LATERAL (
+		  SELECT attempt.id, attempt.status, attempt.feedback_json, attempt.feedback_text
+		  FROM ai_feedback_attempts attempt
+		  WHERE attempt.learner_sentence_id = ls.id
+		  ORDER BY attempt.created_at DESC, attempt.id DESC
+		  LIMIT 1
+		) afa ON true
+		WHERE ls.user_id = $1 AND ls.deleted_at IS NULL`+cursorClause+`
+		ORDER BY ls.submitted_at DESC, ls.id DESC
+		LIMIT `+limitPlaceholder, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list learner sentences: %w", err)
+	}
+	defer rows.Close()
+
+	items := make([]LearnerSentence, 0, limit+1)
+	for rows.Next() {
+		item, err := scanLearnerSentence(rows)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate learner sentences: %w", err)
+	}
+
+	response := &ListLearnerSentencesResponse{Items: items}
+	if len(items) > limit {
+		response.Items = items[:limit]
+		last := response.Items[len(response.Items)-1]
+		response.NextCursor = encodeLearnerSentenceCursor(learnerSentenceCursor{SubmittedAt: last.CreatedAt, ID: last.ID})
+	}
+	return response, nil
+}
+
+// GetLearnerSentence returns one retained sentence only when it belongs to the
+// authenticated learner.
+func (r *PostgreSQLRepository) GetLearnerSentence(ctx context.Context, userID, sentenceID uuid.UUID) (*LearnerSentence, error) {
+	row := r.db.QueryRowContext(ctx, `
+		SELECT ls.id, COALESCE(afa.id::text, ''), COALESCE(cw.id::text, ''),
+		       ls.status, COALESCE(afa.status, ''), ls.sentence_text,
+		       COALESCE(afa.feedback_json, '{}'::jsonb),
+		       COALESCE(afa.feedback_text, ''),
+		       CASE WHEN afa.id IS NULL THEN false ELSE EXISTS (
+		         SELECT 1 FROM ai_feedback_quality_review_reports report
+		         WHERE report.ai_feedback_attempt_id = afa.id
+		       ) END,
+		       ls.submitted_at
+		FROM learner_sentences ls
+		LEFT JOIN word_meanings wm ON wm.id = ls.meaning_id
+		LEFT JOIN canonical_words cw ON cw.id = wm.word_id
+		LEFT JOIN LATERAL (
+		  SELECT attempt.id, attempt.status, attempt.feedback_json, attempt.feedback_text
+		  FROM ai_feedback_attempts attempt
+		  WHERE attempt.learner_sentence_id = ls.id
+		  ORDER BY attempt.created_at DESC, attempt.id DESC
+		  LIMIT 1
+		) afa ON true
+		WHERE ls.id = $1 AND ls.user_id = $2 AND ls.deleted_at IS NULL`, sentenceID, userID)
+	item, err := scanLearnerSentence(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrTargetNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &item, nil
+}
+
+type learnerSentenceScanner interface {
+	Scan(dest ...any) error
+}
+
+func scanLearnerSentence(row learnerSentenceScanner) (LearnerSentence, error) {
+	var sentenceID uuid.UUID
+	var feedbackIDText, targetWordIDText string
+	var sentenceStatus, attemptStatus, original string
+	var feedbackJSON []byte
+	var feedbackText string
+	var reported bool
+	var submittedAt time.Time
+	if err := row.Scan(
+		&sentenceID, &feedbackIDText, &targetWordIDText, &sentenceStatus,
+		&attemptStatus, &original, &feedbackJSON, &feedbackText, &reported, &submittedAt,
+	); err != nil {
+		return LearnerSentence{}, err
+	}
+	feedback := make(map[string]any)
+	if len(feedbackJSON) > 0 {
+		if err := json.Unmarshal(feedbackJSON, &feedback); err != nil {
+			return LearnerSentence{}, fmt.Errorf("unmarshal learner sentence feedback: %w", err)
+		}
+	}
+	feedbackID, _ := uuid.Parse(feedbackIDText)
+	targetWordID, _ := uuid.Parse(targetWordIDText)
+	return learnerSentenceFromStored(
+		sentenceID, feedbackID, targetWordID, sentenceStatus, attemptStatus,
+		original, feedback, feedbackText, reported, submittedAt,
+	), nil
+}
+
 type storedAttemptScanner interface {
 	Scan(dest ...any) error
 }
@@ -182,7 +323,7 @@ func scanStoredAttempt(row storedAttemptScanner) (*StoredFeedbackAttempt, error)
 
 	err := row.Scan(
 		&a.ID, &a.LearnerSentenceID, &a.Status, &a.Provider, &a.Model, &a.PromptVersion, &a.RequestHash,
-		&feedbackJSON, &feedbackText, &errorCode, &errorMessage, &a.Reported,
+		&feedbackJSON, &feedbackText, &errorCode, &errorMessage, &a.Reported, &a.CreatedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -310,7 +451,8 @@ func (r *PostgreSQLRepository) CreateRetryAttempt(ctx context.Context, failed *S
 		row := tx.QueryRowContext(ctx,
 			`SELECT id, learner_sentence_id, status, provider, model, prompt_version, request_hash,
 			        feedback_json, feedback_text, error_code, error_message,
-			        EXISTS (SELECT 1 FROM ai_feedback_quality_review_reports r WHERE r.ai_feedback_attempt_id = ai_feedback_attempts.id)
+			        EXISTS (SELECT 1 FROM ai_feedback_quality_review_reports r WHERE r.ai_feedback_attempt_id = ai_feedback_attempts.id),
+			        created_at
 			 FROM ai_feedback_attempts
 			 WHERE request_hash = $1 AND status IN ('pending', 'succeeded')
 			 ORDER BY CASE status WHEN 'succeeded' THEN 0 ELSE 1 END, created_at DESC

@@ -25,7 +25,7 @@ export function isSessionExpiredError(error: unknown): boolean {
  * handleSessionExpired is the single client-side entry point for the
  * session-expiry mid-flow handler. It clears the local session and CSRF
  * cookies (so a stale request cannot be replayed against the same identity)
- * and routes the learner to /signin with the current page as returnTo, so
+ * and routes the learner to /login with the current page as returnTo, so
  * after re-authentication the learner lands back where they were.
  *
  * Components must NOT catch a 401 silently and continue: the cross-cutting
@@ -43,7 +43,7 @@ export function handleSessionExpired(currentPath?: string): void {
   const returnTo =
     currentPath ?? `${window.location.pathname}${window.location.search}`;
   const params = new URLSearchParams({ returnTo });
-  window.location.href = `/signin?${params.toString()}`;
+  window.location.href = `/login?${params.toString()}`;
 }
 
 /**

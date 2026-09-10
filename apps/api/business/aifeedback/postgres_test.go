@@ -156,6 +156,9 @@ func TestPostgreSQLRepositoryCompleteFeedbackAttemptSuccess(t *testing.T) {
 	feedback := &ProviderFeedback{
 		Status:                  LearningStatusCorrect,
 		TargetWordUsedCorrectly: true,
+		GrammarAcceptable:       true,
+		MeaningClear:            true,
+		Naturalness:             NaturalnessNatural,
 		Headline:                "Great use of the target word!",
 		Explanation:             "Good.",
 		RawJSON: map[string]any{
@@ -167,7 +170,7 @@ func TestPostgreSQLRepositoryCompleteFeedbackAttemptSuccess(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectExec("UPDATE ai_feedback_attempts").
-		WithArgs(AttemptStatusSucceeded, []byte(`{"explanation":"Good.","headline":"Great use of the target word!","status":"correct","target_word_used_correctly":true}`), feedback.Explanation, now, now, attemptID, AttemptStatusPending).
+		WithArgs(AttemptStatusSucceeded, []byte(`{"explanation":"Good.","grammar_acceptable":true,"headline":"Great use of the target word!","meaning_clear":true,"naturalness":"natural","status":"correct","target_word_used_correctly":true}`), feedback.Explanation, now, now, attemptID, AttemptStatusPending).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("UPDATE learner_sentences").
 		WithArgs(SentenceStatusFeedbackReady, now, sentenceID).
@@ -255,8 +258,8 @@ func TestPostgreSQLRepositoryCreateRetryAttemptReturnsActiveGenerationAfterConfl
 		WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectQuery("SELECT id, learner_sentence_id, status").
 		WithArgs("retry-hash").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "learner_sentence_id", "status", "provider", "model", "prompt_version", "request_hash", "feedback_json", "feedback_text", "error_code", "error_message", "reported"}).
-			AddRow(activeID, sentenceID, AttemptStatusPending, ProviderMock, "mock", PromptVersionSentenceFeedbackV1, "retry-hash", nil, nil, nil, nil, false))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "learner_sentence_id", "status", "provider", "model", "prompt_version", "request_hash", "feedback_json", "feedback_text", "error_code", "error_message", "reported", "created_at"}).
+			AddRow(activeID, sentenceID, AttemptStatusPending, ProviderMock, "mock", PromptVersionSentenceFeedbackV1, "retry-hash", nil, nil, nil, nil, false, now))
 	mock.ExpectCommit()
 
 	retry, err := repo.CreateRetryAttempt(t.Context(), failed, ProviderMock, "mock", now)
@@ -277,11 +280,12 @@ func TestPostgreSQLRepositoryGetFeedbackAttemptByRequestHash(t *testing.T) {
 	attemptID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
 	sentenceID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
 	requestHash := "abc123"
+	now := time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC)
 
 	mock.ExpectQuery("SELECT id, learner_sentence_id").
 		WithArgs(requestHash).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "learner_sentence_id", "status", "provider", "model", "prompt_version", "request_hash", "feedback_json", "feedback_text", "error_code", "error_message", "reported"}).
-			AddRow(attemptID, sentenceID, AttemptStatusSucceeded, ProviderMock, "mock", PromptVersionSentenceFeedbackV1, requestHash, []byte(`{"status":"correct"}`), "Good.", nil, nil, true))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "learner_sentence_id", "status", "provider", "model", "prompt_version", "request_hash", "feedback_json", "feedback_text", "error_code", "error_message", "reported", "created_at"}).
+			AddRow(attemptID, sentenceID, AttemptStatusSucceeded, ProviderMock, "mock", PromptVersionSentenceFeedbackV1, requestHash, []byte(`{"status":"correct"}`), "Good.", nil, nil, true, now))
 
 	stored, err := repo.GetFeedbackAttemptByRequestHash(t.Context(), requestHash)
 	require.NoError(t, err)
@@ -289,6 +293,55 @@ func TestPostgreSQLRepositoryGetFeedbackAttemptByRequestHash(t *testing.T) {
 	assert.Equal(t, AttemptStatusSucceeded, stored.Status)
 	assert.Equal(t, "correct", stored.FeedbackJSON["status"])
 	assert.True(t, stored.Reported)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestPostgreSQLRepositoryListLearnerSentencesUsesOwnerScopeAndLookahead(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewPostgreSQLRepository(db, nil)
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	wordID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+	firstID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
+	secondID := uuid.MustParse("00000000-0000-0000-0000-000000000004")
+	attemptID := uuid.MustParse("00000000-0000-0000-0000-000000000005")
+	now := time.Date(2026, 9, 10, 12, 0, 0, 0, time.UTC)
+	columns := []string{
+		"id", "feedback_id", "target_word_id", "sentence_status", "attempt_status",
+		"sentence_text", "feedback_json", "feedback_text", "reported", "submitted_at",
+	}
+	mock.ExpectQuery("SELECT ls.id").
+		WithArgs(userID, 2).
+		WillReturnRows(sqlmock.NewRows(columns).
+			AddRow(firstID, attemptID.String(), wordID.String(), SentenceStatusFeedbackReady, AttemptStatusSucceeded,
+				"I work every day.", []byte(`{"status":"correct","headline":"Great use!","explanation":"Clear.","target_word_used_correctly":true,"grammar_acceptable":true,"meaning_clear":true,"naturalness":"natural"}`), "Clear.", true, now).
+			AddRow(secondID, "", wordID.String(), SentenceStatusSubmitted, "", "I work on Mondays.", []byte(`{}`), "", false, now.Add(-time.Hour)))
+
+	page, err := repo.ListLearnerSentences(t.Context(), ListLearnerSentencesRequest{UserID: userID, Limit: 1})
+	require.NoError(t, err)
+	require.Len(t, page.Items, 1)
+	assert.Equal(t, firstID, page.Items[0].ID)
+	assert.Equal(t, ProcessingStatusCompleted, page.Items[0].ProcessingStatus)
+	assert.True(t, page.Items[0].GrammarAcceptable)
+	assert.True(t, page.Items[0].Reported)
+	assert.NotEmpty(t, page.NextCursor)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestPostgreSQLRepositoryGetLearnerSentenceMapsMissingToNotFound(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+	repo := NewPostgreSQLRepository(db, nil)
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	sentenceID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+	mock.ExpectQuery("SELECT ls.id").WithArgs(sentenceID, userID).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}))
+
+	_, err = repo.GetLearnerSentence(t.Context(), userID, sentenceID)
+	assert.ErrorIs(t, err, ErrTargetNotFound)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 

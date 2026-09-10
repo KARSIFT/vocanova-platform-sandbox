@@ -1,8 +1,6 @@
 // VOC-073-T01 accessibility scan for / (landing).
 //
-// The root page is a public placeholder with no auth cookie
-// required. Remediation stays within accessibility fixes on
-// the current copy (VOC-073-DEP-02) — not a marketing rewrite.
+// The root page is the public product entry point and needs no auth cookie.
 
 import { expect, test } from "@playwright/test";
 
@@ -14,14 +12,18 @@ import {
 } from "./axe-helper.js";
 
 test.describe("Landing accessibility (VOC-073-T01)", () => {
-  test("/ renders with zero critical/serious axe violations, is keyboard reachable, and uses text-based content", async ({
+  test("/ renders the product entry point with zero critical/serious axe violations and keyboard-reachable actions", async ({
     page,
   }, testInfo) => {
     await page.goto("/");
 
     await expect(
-      page.getByText("Vocanova web foundation is running."),
+      page.getByRole("heading", { name: "Words for the moments that matter." }),
     ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Start learning" })).toHaveAttribute(
+      "href",
+      "/login",
+    );
 
     const { criticalOrSerious } = await scanForAxeViolations(page);
     expect(
@@ -31,13 +33,15 @@ test.describe("Landing accessibility (VOC-073-T01)", () => {
       ).join("\n")}`,
     ).toEqual([]);
 
-    // The landing placeholder is read-only with no interactive
-    // controls — the correct posture for a static status page.
-    await assertKeyboardReachable(page, { minFocusable: 0 });
+    await assertKeyboardReachable(page, { minFocusable: 3 });
 
     await assertNonColorOnlyFeedback(page, {
       contextLabel: "/",
-      requireText: ["text=Vocanova web foundation is running."],
+      requireText: [
+        "text=Learn in context",
+        "text=Remember for longer",
+        "text=Turn words into speech",
+      ],
     });
 
     expect(testInfo.project.name).toMatch(/^(home-desktop-1280|mobile-360|mobile-430)$/);

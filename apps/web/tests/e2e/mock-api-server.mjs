@@ -71,7 +71,7 @@
 //   GET    /api/v1/reviews/due                       -> 200 { items, nextCursor, totalCount }
 //   POST   /api/v1/reviews/submissions               -> 200 ReviewAttempt
 //
-//   POST   /api/v1/sentence-feedback                 -> 200 SentenceFeedbackResult
+//   POST   /api/v1/learner-sentences                 -> 200 SentenceFeedbackResult
 //                                                       (deterministic rule table)
 //   POST   /api/v1/sentence-feedback/:attemptId/reports -> 204
 //
@@ -997,7 +997,11 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  if (req.method === "POST" && url.pathname === "/api/v1/sentence-feedback") {
+  if (
+    req.method === "POST" &&
+    (url.pathname === "/api/v1/learner-sentences" ||
+      url.pathname === "/api/v1/sentence-feedback")
+  ) {
     if (!checkCsrf(req, cookies, res, logLine)) {
       return;
     }

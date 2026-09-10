@@ -329,6 +329,15 @@ func mapOpenCodeFeedback(raw map[string]any) (*ProviderFeedback, error) {
 	if v, ok := raw["target_word_used_correctly"].(bool); ok {
 		fb.TargetWordUsedCorrectly = v
 	}
+	if v, ok := raw["grammar_acceptable"].(bool); ok {
+		fb.GrammarAcceptable = v
+	}
+	if v, ok := raw["meaning_clear"].(bool); ok {
+		fb.MeaningClear = v
+	}
+	if v, ok := raw["naturalness"].(string); ok {
+		fb.Naturalness = v
+	}
 	if v, ok := raw["explanation"].(string); ok {
 		fb.Explanation = v
 	}
