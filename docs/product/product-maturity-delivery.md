@@ -35,10 +35,11 @@ remain the scope baseline; implementation history is not an acceptance criterion
 
 - Production web build, workspace validation, formatting, lint, and type checks pass.
 - Foundation checks, 31 shared API-client tests, and 59 web helper/middleware tests pass.
-- Local browser suite: 139 passed, 17 existing layout-specific skips. The complete
+- Local browser suite: 142 passed, 17 existing layout-specific skips. The complete
   learning loop now runs at all three layouts, not just desktop.
 - Retry tests verify one pending request, stable request identity after an ambiguous
-  transport failure, fresh identity after editing, and the original checked sentence.
+  transport failure, fresh identity after editing, the original checked sentence,
+  and removal of empty validation alerts while a revised sentence is pending.
 - API CI command (`go test -skip TestControlledSignupOAuth ./...`) and Go build pass.
 - Production smoke self-tests: all 15 scenarios pass, including rejecting `/login`
   redirects instead of counting the login page as a rendered authenticated route.

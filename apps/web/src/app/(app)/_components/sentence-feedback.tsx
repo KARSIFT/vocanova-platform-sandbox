@@ -113,10 +113,9 @@ export function SentenceFeedback({
       onFeedbackSubmitted?.(data);
     } catch (error) {
       setResult(null);
-      // T06: a 401 here means the session expired mid-sentence-submission.
-      // Never lose the learner's sentence — the textarea stays populated
-      // (controlled by component state) and we route to re-auth. The
-      // learner can copy their text and resume after sign-in.
+      // The controlled textarea preserves a draft through recoverable,
+      // in-place failures. A re-auth navigation starts a new component, so
+      // it cannot preserve the draft across that navigation.
       setErrorMessage(
         handleApiError(
           error,
@@ -290,7 +289,7 @@ export function SentenceFeedback({
             </div>
           ) : null}
 
-          {result.errorCode && !result.crisisResourceMessage ? (
+          {result.errorCode && !result.crisisResourceMessage && errorMessage ? (
             <div
               role="alert"
               aria-live="polite"
