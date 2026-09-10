@@ -33,9 +33,9 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             Sign in to Vocanova
           </h1>
           <p className="text-base text-neutral-700">
-            {showOAuth
-              ? "Choose a sign-in method to continue."
-              : "Enter your email to continue securely."}
+            {magicOnly === "1"
+              ? "Enter your email to continue securely."
+              : "Choose a sign-in method to continue."}
           </p>
         </div>
 
