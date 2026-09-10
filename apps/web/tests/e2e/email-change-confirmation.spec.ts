@@ -21,7 +21,7 @@ test.describe("email-change confirmation", () => {
 
   test("an incomplete confirmation link fails safely", async ({ page }) => {
     await page.goto("/auth/email-change");
-    await expect(page.getByRole("alert")).toContainText(
+    await expect(page.locator("main").getByRole("alert")).toContainText(
       "confirmation link is incomplete",
     );
   });

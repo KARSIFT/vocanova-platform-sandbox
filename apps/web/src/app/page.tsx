@@ -35,7 +35,7 @@ export default function Page() {
             aria-label="Vocanova home"
             className="rounded-sm text-xl font-semibold tracking-[-0.04em] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#176b4d]"
           >
-            vocanova<span className="text-[#e65f3c]">.</span>
+            vocanova<span className="text-[#a63f27]">.</span>
           </Link>
           <Link
             href="/login"
@@ -52,7 +52,7 @@ export default function Page() {
             </p>
             <h1 className="text-[clamp(3.25rem,8vw,7.25rem)] leading-[0.9] font-semibold tracking-[-0.075em] text-balance">
               Words for the
-              <span className="block text-[#e65f3c]">moments that matter.</span>
+              <span className="block text-[#a63f27]">moments that matter.</span>
             </h1>
             <p className="mt-8 max-w-[39rem] text-lg leading-8 text-[#36584c] sm:text-xl">
               Discover English through real situations, remember it with a
@@ -81,7 +81,7 @@ export default function Page() {
           >
             <div className="absolute inset-[8%] rotate-6 rounded-[32%_68%_55%_45%/45%_42%_58%_55%] bg-[#f5b544]" />
             <div className="absolute inset-[19%_12%_14%_20%] -rotate-3 rounded-[2.5rem] border border-white/70 bg-white/85 p-8 shadow-[0_30px_80px_rgba(49,62,47,0.18)] backdrop-blur">
-              <p className="text-xs font-bold tracking-[0.18em] text-[#7b8176] uppercase">
+              <p className="text-xs font-bold tracking-[0.18em] text-[#5f685f] uppercase">
                 Today&apos;s word
               </p>
               <p className="mt-5 text-4xl font-semibold tracking-[-0.05em]">
@@ -111,7 +111,7 @@ export default function Page() {
         >
           <div className="grid gap-8 lg:grid-cols-[0.7fr_1.3fr]">
             <div>
-              <p className="text-sm font-bold tracking-[0.16em] text-[#e65f3c] uppercase">
+              <p className="text-sm font-bold tracking-[0.16em] text-[#a63f27] uppercase">
                 The daily loop
               </p>
               <h2
@@ -127,7 +127,7 @@ export default function Page() {
                   key={benefit.marker}
                   className="rounded-[1.5rem] border border-[#17352b]/10 bg-white/55 p-6"
                 >
-                  <span className="text-xs font-bold tracking-[0.16em] text-[#e65f3c]">
+                  <span className="text-xs font-bold tracking-[0.16em] text-[#a63f27]">
                     {benefit.marker}
                   </span>
                   <h3 className="mt-5 text-lg font-semibold">
