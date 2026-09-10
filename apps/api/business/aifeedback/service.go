@@ -661,6 +661,7 @@ func (s *Service) temporaryFailureResult(original string) *SentenceFeedbackResul
 
 func (s *Service) validationResult(original, code string) *SentenceFeedbackResult {
 	return &SentenceFeedbackResult{
+		ProcessingStatus: ProcessingStatusSkipped,
 		OriginalSentence: original,
 		ErrorCode:        code,
 		CanRetry:         code != ValidationCodeAttemptNotEligible,
@@ -707,6 +708,8 @@ func (s *Service) resultFromStored(attempt *StoredFeedbackAttempt, original stri
 		// preserve the same safe public failure contract as the initial response
 		// and never disclose provider or validator details (DOC-09 §§5, 15, 20).
 		result.CanRetry = true
+	case AttemptStatusCancelled:
+		result.ProcessingStatus = ProcessingStatusSkipped
 	}
 
 	return result

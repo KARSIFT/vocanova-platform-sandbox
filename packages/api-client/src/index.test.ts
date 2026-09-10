@@ -533,6 +533,11 @@ describe("VocanovaClient", () => {
           Response.json({ items: [sentence], hasMore: false }),
         );
       }
+      if (url.endsWith("?limit=0")) {
+        return Promise.resolve(
+          Response.json({ items: [sentence], hasMore: false }),
+        );
+      }
       assert.equal(
         url,
         "https://api.example.com/api/v1/learner-sentences/00000000-0000-0000-0000-000000000010",
@@ -549,6 +554,8 @@ describe("VocanovaClient", () => {
       limit: 10,
     });
     assert.equal(page.data.items[0]?.status, "correct");
+    const explicitDefault = await client.listLearnerSentences({ limit: 0 });
+    assert.equal(explicitDefault.data.items[0]?.status, "correct");
     const detail = await client.getLearnerSentence(sentence.id);
     assert.equal(detail.data.originalSentence, "I work every day.");
   });

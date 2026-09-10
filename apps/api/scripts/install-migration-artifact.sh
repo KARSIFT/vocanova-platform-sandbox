@@ -54,14 +54,14 @@ fi
 if [ -e "$target" ]; then
   backup=$(mktemp -d "$parent/.migrations-backup.XXXXXX")
   rmdir "$backup"
-  if ! mv -T "$target" "$backup"; then
+  if ! mv "$target" "$backup"; then
     echo "ERROR: could not create the migration rollback backup" >&2
     exit 1
   fi
 fi
 
-if ! mv -T "$stage" "$target"; then
-  if [ -n "$backup" ] && mv -T "$backup" "$target"; then
+if ! mv "$stage" "$target"; then
+  if [ -n "$backup" ] && mv "$backup" "$target"; then
     echo "ERROR: could not install the migration artifact; restored the previous directory" >&2
   elif [ -n "$backup" ]; then
     echo "ERROR: migration installation and rollback failed; previous artifact retained at $backup" >&2
@@ -73,4 +73,3 @@ fi
 
 cleanup
 trap - EXIT HUP INT TERM
-

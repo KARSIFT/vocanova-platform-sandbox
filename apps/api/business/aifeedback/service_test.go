@@ -378,8 +378,21 @@ func TestServiceValidationFailureTooShort(t *testing.T) {
 	result, err := f.service.SubmitSentenceFeedback(t.Context(), req)
 	require.NoError(t, err)
 	assert.Equal(t, ValidationCodeTooShort, result.ErrorCode)
+	assert.Equal(t, ProcessingStatusSkipped, result.ProcessingStatus)
 	assert.True(t, result.CanRetry)
 	assert.Equal(t, 0, f.provider.calls)
+}
+
+func TestServiceCancelledReplayIsSkipped(t *testing.T) {
+	f := newServiceFixture(t)
+	attemptID := uuid.New()
+	result := f.service.resultFromStored(&StoredFeedbackAttempt{
+		ID: attemptID, LearnerSentenceID: uuid.New(), Status: AttemptStatusCancelled,
+	}, "I work every day.", f.wordID)
+
+	assert.Equal(t, attemptID, result.AttemptID)
+	assert.Equal(t, ProcessingStatusSkipped, result.ProcessingStatus)
+	assert.False(t, result.CanRetry)
 }
 
 func TestServiceValidationFailureMissingTarget(t *testing.T) {
