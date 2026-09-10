@@ -72,6 +72,9 @@ func TestProviderFeedbackStructuredJSONExcludesRawProviderFields(t *testing.T) {
 	feedback := &ProviderFeedback{
 		Status:                  LearningStatusNeedsImprovement,
 		TargetWordUsedCorrectly: false,
+		GrammarAcceptable:       false,
+		MeaningClear:            true,
+		Naturalness:             NaturalnessUnderstandable,
 		CorrectedSentence:       &corrected,
 		Headline:                "Nice effort with the target word!",
 		Explanation:             "The tense needs a small correction.",
@@ -90,6 +93,9 @@ func TestProviderFeedbackStructuredJSONExcludesRawProviderFields(t *testing.T) {
 	assert.Equal(t, map[string]any{
 		"status":                     LearningStatusNeedsImprovement,
 		"target_word_used_correctly": false,
+		"grammar_acceptable":         false,
+		"meaning_clear":              true,
+		"naturalness":                NaturalnessUnderstandable,
 		"corrected_sentence":         corrected,
 		"headline":                   "Nice effort with the target word!",
 		"explanation":                "The tense needs a small correction.",
@@ -107,6 +113,9 @@ func TestMemoryRepositoryCompletionStoresStructuredFeedbackOnly(t *testing.T) {
 	feedback := &ProviderFeedback{
 		Status:                  LearningStatusCorrect,
 		TargetWordUsedCorrectly: true,
+		GrammarAcceptable:       true,
+		MeaningClear:            true,
+		Naturalness:             NaturalnessNatural,
 		Headline:                "Great use of the target word!",
 		Explanation:             "Correct use.",
 		RawJSON: map[string]any{
@@ -121,6 +130,9 @@ func TestMemoryRepositoryCompletionStoresStructuredFeedbackOnly(t *testing.T) {
 	assert.Equal(t, map[string]any{
 		"status":                     LearningStatusCorrect,
 		"target_word_used_correctly": true,
+		"grammar_acceptable":         true,
+		"meaning_clear":              true,
+		"naturalness":                NaturalnessNatural,
 		"headline":                   "Great use of the target word!",
 		"explanation":                "Correct use.",
 	}, repo.attempts[0].FeedbackJSON)
@@ -164,6 +176,20 @@ func TestSentenceFeedbackResultFields(t *testing.T) {
 	assert.Equal(t, "I work yesterday.", result.OriginalSentence)
 	assert.Equal(t, LearningStatusNeedsImprovement, result.Status)
 	assert.False(t, result.MissionCompleted)
+}
+
+func TestCompletedFeedbackFromLegacyStoredResultUsesContractSafeDefaults(t *testing.T) {
+	projection := completedFeedbackFromStored(map[string]any{
+		"status":                     LearningStatusCorrect,
+		"headline":                   "Great use!",
+		"target_word_used_correctly": true,
+	}, "Correct use.")
+
+	assert.Equal(t, "Correct use.", projection.Explanation)
+	assert.True(t, projection.TargetWordUsedCorrectly)
+	assert.True(t, projection.GrammarAcceptable)
+	assert.True(t, projection.MeaningClear)
+	assert.Equal(t, NaturalnessNatural, projection.Naturalness)
 }
 
 func TestProviderTaskNeverConcatenatesLearnerInput(t *testing.T) {

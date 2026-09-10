@@ -44,12 +44,15 @@ type StoredFeedbackAttempt struct {
 	ErrorCode         string
 	ErrorMessage      string
 	Reported          bool
+	CreatedAt         time.Time
+	SubmittedAt       time.Time
 }
 
 // PendingAttempt holds the IDs created by CreatePendingAttempt.
 type PendingAttempt struct {
-	SentenceID uuid.UUID
-	AttemptID  uuid.UUID
+	SentenceID  uuid.UUID
+	AttemptID   uuid.UUID
+	SubmittedAt time.Time
 }
 
 // RetryAttempt records whether a retry created a new provider generation or
@@ -73,6 +76,13 @@ type QualityReviewReport struct {
 
 // Repository is the persistence boundary for the AI feedback domain.
 type Repository interface {
+	// ListLearnerSentences returns only the authenticated learner's retained
+	// sentence history, newest first.
+	ListLearnerSentences(ctx context.Context, req ListLearnerSentencesRequest) (*ListLearnerSentencesResponse, error)
+
+	// GetLearnerSentence returns one owner-scoped retained sentence.
+	GetLearnerSentence(ctx context.Context, userID, sentenceID uuid.UUID) (*LearnerSentence, error)
+
 	// LoadTarget loads the authoritative target word/phrase after verifying the
 	// attempt is owned by the authenticated learner. If the attempt is missing,
 	// inaccessible, or ineligible, it returns ErrTargetNotFound.

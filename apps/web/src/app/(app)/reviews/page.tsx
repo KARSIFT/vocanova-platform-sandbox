@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 
@@ -8,6 +9,11 @@ import {
   getDueRequestLimit,
   getRemainingReviewTarget,
 } from "./_components/review-session-limit";
+
+export const metadata: Metadata = {
+  title: "Review — Vocanova",
+  description: "Review your saved vocabulary with Vocanova.",
+};
 
 export default async function ReviewsPage() {
   const client = await createServerApiClient();

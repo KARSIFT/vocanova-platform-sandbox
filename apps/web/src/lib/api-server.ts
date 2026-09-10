@@ -25,7 +25,7 @@ export function requireAuthRedirect(error: unknown, returnTo: string): never {
   if (error instanceof ApiResponseError && error.status === 401) {
     const searchParams = new URLSearchParams();
     searchParams.set("returnTo", returnTo);
-    redirect(`/signin?${searchParams.toString()}`);
+    redirect(`/login?${searchParams.toString()}`);
   }
   throw error;
 }

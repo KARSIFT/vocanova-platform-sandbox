@@ -29,11 +29,21 @@ const voc079InvariantsPath = path.join(
 const smokeScript = readFileSync(smokeScriptPath, "utf8");
 const deployProduction = readFileSync(deployProductionPath, "utf8");
 
-const EXPECTED_PUBLIC_ROUTES = ["/", "/signin", "/auth/magic"];
+const EXPECTED_PUBLIC_ROUTES = [
+  "/",
+  "/login",
+  "/magic-link",
+  "/signin",
+  "/auth/magic",
+  "/auth/email-change",
+];
 const EXPECTED_AUTHENTICATED_ROUTES = [
   "/onboarding",
   "/home",
   "/discover",
+  "/words",
+  "/review",
+  "/review/session",
   "/reviews",
   "/progress",
   "/settings",
@@ -50,7 +60,7 @@ function extractBashArray(script, arrayName) {
   return matches;
 }
 
-test("VOC-085-TEST-06: smoke script enumerates the ten fixed production web routes", () => {
+test("VOC-085-TEST-06: smoke script covers every documented production web route and compatibility aliases", () => {
   const publicRoutes = extractBashArray(
     smokeScript,
     "PRODUCTION_PUBLIC_WEB_ROUTES",
@@ -63,17 +73,17 @@ test("VOC-085-TEST-06: smoke script enumerates the ten fixed production web rout
   assert.deepEqual(
     publicRoutes,
     EXPECTED_PUBLIC_ROUTES,
-    "public route inventory must match AC-05 exactly",
+    "public route inventory must match the product route contract",
   );
   assert.deepEqual(
     authenticatedRoutes,
     EXPECTED_AUTHENTICATED_ROUTES,
-    "authenticated route inventory must match AC-05 exactly",
+    "authenticated route inventory must match the product route contract",
   );
   assert.equal(
     publicRoutes.length + authenticatedRoutes.length,
-    10,
-    "route sweep must cover exactly ten fixed routes",
+    16,
+    "route sweep must cover the documented routes and compatibility aliases",
   );
 
   assert.match(

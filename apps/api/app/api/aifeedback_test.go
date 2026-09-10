@@ -130,7 +130,15 @@ func TestSubmitSentenceFeedbackSuccess(t *testing.T) {
 	var out SubmitSentenceFeedbackOutput
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &out.Body))
 	assert.Equal(t, "correct", out.Body.Status)
+	assert.Equal(t, aifeedback.ProcessingStatusCompleted, out.Body.ProcessingStatus)
 	assert.Equal(t, "I work every day.", out.Body.OriginalSentence)
+	assert.Equal(t, wordID.String(), out.Body.TargetWordID)
+	assert.Equal(t, out.Body.AttemptID, out.Body.FeedbackID)
+	assert.True(t, out.Body.TargetWordUsedCorrectly)
+	assert.True(t, out.Body.GrammarAcceptable)
+	assert.True(t, out.Body.MeaningClear)
+	assert.Equal(t, aifeedback.NaturalnessNatural, out.Body.Naturalness)
+	assert.NotNil(t, out.Body.CreatedAt)
 	assert.False(t, out.Body.MissionCompleted)
 	assert.False(t, out.Body.CanRetry)
 }
@@ -438,6 +446,128 @@ func TestReportSentenceFeedbackSucceedsForOwner(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, w.Code)
 }
 
+func TestCreateLearnerSentenceCanonicalRoute(t *testing.T) {
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	wordID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
+	userWordID := uuid.MustParse("00000000-0000-0000-0000-000000000004")
+	api, _, authSvc := testAIFeedbackAPI(t, aifeedback.MemoryRepositoryData{
+		Words:     []aifeedback.MemoryWord{{ID: wordID, Text: "work", NormalizedText: "work", WordType: "word", DifficultyLevel: "a2", Status: "active"}},
+		Meanings:  []aifeedback.MemoryMeaning{{ID: meaningID, WordID: wordID, PartOfSpeech: "verb", ShortDefinition: "to do a job", Status: "active"}},
+		UserWords: []aifeedback.MemoryUserWord{{ID: userWordID, UserID: userID, MeaningID: meaningID, Status: "learning"}},
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/learner-sentences", strings.NewReader(
+		`{"sentenceText":"I work every day.","source":"word_detail","attemptId":"00000000-0000-0000-0000-000000000004"}`,
+	))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Idempotency-Key", "canonical-route")
+	req = req.WithContext(WithRequester(req.Context(), &auth.User{ID: userID}))
+	addCSRF(req, authSvc)
+	w := httptest.NewRecorder()
+	api.Adapter().ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var out SubmitSentenceFeedbackOutput
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &out.Body))
+	assert.Equal(t, "correct", out.Body.Status)
+	assert.NotEmpty(t, out.Body.SentenceID)
+}
+
+func TestLearnerSentenceCanonicalRoutesRequireAuth(t *testing.T) {
+	api, _, authSvc := testAIFeedbackAPI(t, aifeedback.MemoryRepositoryData{})
+	cases := []struct {
+		method string
+		path   string
+		body   string
+	}{
+		{http.MethodPost, "/api/v1/learner-sentences", `{}`},
+		{http.MethodGet, "/api/v1/learner-sentences", ""},
+		{http.MethodGet, "/api/v1/learner-sentences/00000000-0000-0000-0000-000000000001", ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.method+" "+tc.path, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body))
+			if tc.body != "" {
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Idempotency-Key", "canonical-route-auth")
+				addCSRF(req, authSvc)
+			}
+			api.Adapter().ServeHTTP(w, req)
+			assert.Equal(t, http.StatusUnauthorized, w.Code)
+		})
+	}
+}
+
+func TestLearnerSentenceHistoryIsOwnerScopedAndPaginated(t *testing.T) {
+	owner := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	other := uuid.MustParse("00000000-0000-0000-0000-000000000002")
+	wordID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
+	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000004")
+	firstID := uuid.MustParse("00000000-0000-0000-0000-000000000005")
+	secondID := uuid.MustParse("00000000-0000-0000-0000-000000000006")
+	otherID := uuid.MustParse("00000000-0000-0000-0000-000000000007")
+	attemptID := uuid.MustParse("00000000-0000-0000-0000-000000000008")
+	now := time.Date(2026, 9, 10, 10, 0, 0, 0, time.UTC)
+	api, _, _ := testAIFeedbackAPI(t, aifeedback.MemoryRepositoryData{
+		Words:    []aifeedback.MemoryWord{{ID: wordID, Text: "work", NormalizedText: "work"}},
+		Meanings: []aifeedback.MemoryMeaning{{ID: meaningID, WordID: wordID}},
+		Sentences: []aifeedback.MemoryLearnerSentence{
+			{ID: firstID, UserID: owner, MeaningID: meaningID, SentenceText: "I work every day.", Status: aifeedback.SentenceStatusFeedbackReady, SubmittedAt: now},
+			{ID: secondID, UserID: owner, MeaningID: meaningID, SentenceText: "I work on Mondays.", Status: aifeedback.SentenceStatusSubmitted, SubmittedAt: now.Add(-time.Hour)},
+			{ID: otherID, UserID: other, MeaningID: meaningID, SentenceText: "Private sentence.", Status: aifeedback.SentenceStatusSubmitted, SubmittedAt: now.Add(time.Hour)},
+		},
+		Attempts: []aifeedback.MemoryAIFeedbackAttempt{{
+			ID: attemptID, LearnerSentenceID: firstID, Status: aifeedback.AttemptStatusSucceeded,
+			FeedbackJSON: map[string]any{"status": "correct", "headline": "Great use!", "explanation": "Clear and correct.", "target_word_used_correctly": true},
+			CreatedAt:    now,
+		}},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/learner-sentences?limit=1", nil)
+	req = req.WithContext(WithRequester(req.Context(), &auth.User{ID: owner}))
+	w := httptest.NewRecorder()
+	api.Adapter().ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+	var firstPage ListLearnerSentencesOutput
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &firstPage.Body))
+	require.Len(t, firstPage.Body.Items, 1)
+	assert.Equal(t, firstID.String(), firstPage.Body.Items[0].ID)
+	assert.Equal(t, "completed", firstPage.Body.Items[0].ProcessingStatus)
+	assert.Equal(t, "correct", firstPage.Body.Items[0].Status)
+	assert.True(t, firstPage.Body.HasMore)
+	require.NotEmpty(t, firstPage.Body.NextCursor)
+
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/learner-sentences?limit=1&after="+firstPage.Body.NextCursor, nil)
+	req = req.WithContext(WithRequester(req.Context(), &auth.User{ID: owner}))
+	w = httptest.NewRecorder()
+	api.Adapter().ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+	var secondPage ListLearnerSentencesOutput
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &secondPage.Body))
+	require.Len(t, secondPage.Body.Items, 1)
+	assert.Equal(t, secondID.String(), secondPage.Body.Items[0].ID)
+	assert.Equal(t, "pending", secondPage.Body.Items[0].ProcessingStatus)
+	assert.False(t, secondPage.Body.HasMore)
+
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/learner-sentences/"+otherID.String(), nil)
+	req = req.WithContext(WithRequester(req.Context(), &auth.User{ID: owner}))
+	w = httptest.NewRecorder()
+	api.Adapter().ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestLearnerSentenceHistoryRejectsInvalidCursor(t *testing.T) {
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	api, _, _ := testAIFeedbackAPI(t, aifeedback.MemoryRepositoryData{})
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/learner-sentences?after=not-valid", nil)
+	req = req.WithContext(WithRequester(req.Context(), &auth.User{ID: userID}))
+	w := httptest.NewRecorder()
+	api.Adapter().ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
 // ---------------------------------------------------------------------------
 // VOC-034-T02 regression test: prove the production-wiring defect from
 // issue #216 (the literal-nil safety classifier) is fixed at the route
@@ -546,7 +676,7 @@ func newOpenCodeE2ETestServer(t *testing.T) (*httptest.Server, *openCodeE2ECallC
 				atomic.AddInt32(&counters.feedbackCalls, 1)
 				resp := openCodeE2EMessageResponse{
 					Info:  json.RawMessage(`{}`),
-					Parts: []openCodeE2EPart{{Type: "text", Text: `{"status":"correct","target_word_used_correctly":true,"headline":"Great use of the target word!","explanation":"Good use of the target word."}`}},
+					Parts: []openCodeE2EPart{{Type: "text", Text: `{"status":"correct","target_word_used_correctly":true,"grammar_acceptable":true,"meaning_clear":true,"naturalness":"natural","headline":"Great use of the target word!","explanation":"Good use of the target word."}`}},
 				}
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)

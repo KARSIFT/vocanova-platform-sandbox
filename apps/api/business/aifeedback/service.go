@@ -238,7 +238,7 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 		// later fresh-key retry succeeds this replay returns that current safe
 		// logical-request result instead of reconstructing the older failure.
 		if idempotencyStatus == learning.IdempotencyMatch {
-			return s.resultFromStored(existing, req.SentenceText), nil
+			return s.resultFromStored(existing, req.SentenceText, target.WordID), nil
 		}
 		if existing.Status != AttemptStatusFailed {
 			// A fresh key that observes an active or completed equivalent request
@@ -247,7 +247,7 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 			if err := s.idem.Record(ctx, req.UserID, operationSentenceFeedback, req.IdempotencyKey, requestHash); err != nil {
 				return nil, fmt.Errorf("record existing idempotency: %w", err)
 			}
-			return s.resultFromStored(existing, req.SentenceText), nil
+			return s.resultFromStored(existing, req.SentenceText, target.WordID), nil
 		}
 
 		// DOC-09 §§5, 8, and 18 require a provider failure to be retryable.
@@ -269,7 +269,7 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 			if err := s.idem.Record(ctx, req.UserID, operationSentenceFeedback, req.IdempotencyKey, requestHash); err != nil {
 				return nil, fmt.Errorf("record existing retry idempotency: %w", err)
 			}
-			return s.resultFromStored(retry.Existing, req.SentenceText), nil
+			return s.resultFromStored(retry.Existing, req.SentenceText, target.WordID), nil
 		}
 		if err := s.idem.Record(ctx, req.UserID, operationSentenceFeedback, req.IdempotencyKey, requestHash); err != nil {
 			if cleanupErr := s.failPendingAttempt(ctx, *retry.Pending, err); cleanupErr != nil {
@@ -349,7 +349,7 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 			return nil, fmt.Errorf("finalize idempotency-record failure: %w", cleanupErr)
 		}
 		if ctx.Err() != nil {
-			return s.temporaryFailureResult(req.SentenceText), nil
+			return s.failedProcessingResult(*pending, req.SentenceText, target.WordID), nil
 		}
 		return nil, fmt.Errorf("record idempotency: %w", err)
 	}
@@ -400,7 +400,7 @@ func (s *Service) replayStoredResult(ctx context.Context, req SubmitSentenceFeed
 			return nil, false, fmt.Errorf("record stored replay idempotency: %w", err)
 		}
 	}
-	result := s.resultFromStored(existing, req.SentenceText)
+	result := s.resultFromStored(existing, req.SentenceText, target.WordID)
 	// The owner may still read an immutable stored outcome after removing the
 	// saved word, but that historical target is deliberately ineligible for a
 	// fresh provider call. Do not advertise a retry that can never run.
@@ -418,13 +418,7 @@ func (s *Service) completePendingAttempt(ctx context.Context, req SubmitSentence
 			return nil, fmt.Errorf("finalize failed attempt: %w", err)
 		}
 		s.recordTelemetry(ctx, req.UserID, target, "provider_error", providerDuration.Milliseconds(), "")
-		return &SentenceFeedbackResult{
-			SentenceID:       pending.SentenceID,
-			AttemptID:        pending.AttemptID,
-			OriginalSentence: req.SentenceText,
-			ErrorCode:        ErrorCodeTemporaryFailure,
-			CanRetry:         true,
-		}, nil
+		return s.failedProcessingResult(*pending, req.SentenceText, target.WordID), nil
 	}
 
 	if err := s.outputValidator.Validate(feedback, target); err != nil {
@@ -432,25 +426,13 @@ func (s *Service) completePendingAttempt(ctx context.Context, req SubmitSentence
 			return nil, fmt.Errorf("finalize invalid output attempt: %w", err)
 		}
 		s.recordTelemetry(ctx, req.UserID, target, "invalid_output", providerDuration.Milliseconds(), "")
-		return &SentenceFeedbackResult{
-			SentenceID:       pending.SentenceID,
-			AttemptID:        pending.AttemptID,
-			OriginalSentence: req.SentenceText,
-			ErrorCode:        ErrorCodeTemporaryFailure,
-			CanRetry:         true,
-		}, nil
+		return s.failedProcessingResult(*pending, req.SentenceText, target.WordID), nil
 	}
 	if err := ctx.Err(); err != nil {
 		if finalizeErr := s.failPendingAttempt(ctx, *pending, err); finalizeErr != nil {
 			return nil, fmt.Errorf("finalize expired attempt: %w", finalizeErr)
 		}
-		return &SentenceFeedbackResult{
-			SentenceID:       pending.SentenceID,
-			AttemptID:        pending.AttemptID,
-			OriginalSentence: req.SentenceText,
-			ErrorCode:        ErrorCodeTemporaryFailure,
-			CanRetry:         true,
-		}, nil
+		return s.failedProcessingResult(*pending, req.SentenceText, target.WordID), nil
 	}
 
 	missionCompleted, err := s.completeSuccessfulFeedbackAttempt(ctx, req.UserID, *pending, feedback)
@@ -462,7 +444,7 @@ func (s *Service) completePendingAttempt(ctx context.Context, req SubmitSentence
 			return nil, fmt.Errorf("settle failed successful attempt: %w", cleanupErr)
 		}
 		if ctx.Err() != nil {
-			return s.temporaryFailureResult(req.SentenceText), nil
+			return s.failedProcessingResult(*pending, req.SentenceText, target.WordID), nil
 		}
 		return nil, fmt.Errorf("finalize successful attempt: %w", err)
 	}
@@ -471,17 +453,25 @@ func (s *Service) completePendingAttempt(ctx context.Context, req SubmitSentence
 	s.recordTelemetry(ctx, req.UserID, target, "success", duration.Milliseconds(), feedback.Status)
 
 	result := &SentenceFeedbackResult{
-		SentenceID:        pending.SentenceID,
-		AttemptID:         pending.AttemptID,
-		Status:            feedback.Status,
-		OriginalSentence:  req.SentenceText,
-		CorrectedSentence: feedback.CorrectedSentence,
-		Headline:          feedback.Headline,
-		Explanation:       feedback.Explanation,
-		ImprovementTip:    feedback.ImprovementTip,
-		MissionCompleted:  missionCompleted,
-		CanRetry:          false,
-		Reported:          false,
+		FeedbackID:              pending.AttemptID,
+		SentenceID:              pending.SentenceID,
+		AttemptID:               pending.AttemptID,
+		TargetWordID:            target.WordID,
+		ProcessingStatus:        ProcessingStatusCompleted,
+		Status:                  feedback.Status,
+		OriginalSentence:        req.SentenceText,
+		CorrectedSentence:       feedback.CorrectedSentence,
+		Headline:                feedback.Headline,
+		Explanation:             feedback.Explanation,
+		ImprovementTip:          feedback.ImprovementTip,
+		TargetWordUsedCorrectly: feedback.TargetWordUsedCorrectly,
+		GrammarAcceptable:       feedback.GrammarAcceptable,
+		MeaningClear:            feedback.MeaningClear,
+		Naturalness:             feedback.Naturalness,
+		MissionCompleted:        missionCompleted,
+		CanRetry:                false,
+		Reported:                false,
+		CreatedAt:               pending.SubmittedAt,
 	}
 	return result, nil
 }
@@ -505,6 +495,25 @@ func (s *Service) completeSuccessfulFeedbackAttempt(ctx context.Context, userID 
 		return false, err
 	}
 	return s.mission.Update(ctx, userID, pending.SentenceID, pending.AttemptID)
+}
+
+// ListLearnerSentences returns an owner-scoped, privacy-safe history page.
+func (s *Service) ListLearnerSentences(ctx context.Context, req ListLearnerSentencesRequest) (*ListLearnerSentencesResponse, error) {
+	if req.UserID == uuid.Nil {
+		return nil, errors.New("user id required")
+	}
+	return s.repo.ListLearnerSentences(ctx, req)
+}
+
+// GetLearnerSentence returns one owner-scoped retained submission.
+func (s *Service) GetLearnerSentence(ctx context.Context, userID, sentenceID uuid.UUID) (*LearnerSentence, error) {
+	if userID == uuid.Nil {
+		return nil, errors.New("user id required")
+	}
+	if sentenceID == uuid.Nil {
+		return nil, ErrTargetNotFound
+	}
+	return s.repo.GetLearnerSentence(ctx, userID, sentenceID)
 }
 
 // ReportFeedback records a learner report for a feedback attempt. It verifies
@@ -632,39 +641,61 @@ func (s *Service) temporaryFailureResult(original string) *SentenceFeedbackResul
 	return &SentenceFeedbackResult{OriginalSentence: original, ErrorCode: ErrorCodeTemporaryFailure, CanRetry: true}
 }
 
+func (s *Service) failedProcessingResult(pending PendingAttempt, original string, targetWordID uuid.UUID) *SentenceFeedbackResult {
+	return &SentenceFeedbackResult{
+		FeedbackID:       pending.AttemptID,
+		SentenceID:       pending.SentenceID,
+		AttemptID:        pending.AttemptID,
+		TargetWordID:     targetWordID,
+		ProcessingStatus: ProcessingStatusFailed,
+		OriginalSentence: original,
+		ErrorCode:        ErrorCodeTemporaryFailure,
+		CanRetry:         true,
+		CreatedAt:        pending.SubmittedAt,
+	}
+}
+
 func (s *Service) validationResult(original, code string) *SentenceFeedbackResult {
 	return &SentenceFeedbackResult{
+		ProcessingStatus: ProcessingStatusSkipped,
 		OriginalSentence: original,
 		ErrorCode:        code,
 		CanRetry:         code != ValidationCodeAttemptNotEligible,
 	}
 }
 
-func (s *Service) resultFromStored(attempt *StoredFeedbackAttempt, original string) *SentenceFeedbackResult {
+func (s *Service) resultFromStored(attempt *StoredFeedbackAttempt, original string, targetWordID uuid.UUID) *SentenceFeedbackResult {
 	result := &SentenceFeedbackResult{
+		FeedbackID:       attempt.ID,
 		SentenceID:       attempt.LearnerSentenceID,
 		AttemptID:        attempt.ID,
+		TargetWordID:     targetWordID,
 		OriginalSentence: original,
 		CanRetry:         false,
 		Reported:         attempt.Reported,
+		CreatedAt:        attempt.SubmittedAt,
 	}
 
 	switch attempt.Status {
 	case AttemptStatusPending:
+		result.ProcessingStatus = ProcessingStatusPending
 		result.ErrorCode = ErrorCodeTemporaryFailure
 		result.CanRetry = true
 	case AttemptStatusSucceeded:
-		result.Status = stringValue(attempt.FeedbackJSON, "status")
-		result.Headline = stringValue(attempt.FeedbackJSON, "headline")
-		result.Explanation = attempt.FeedbackText
-		if corrected, ok := attempt.FeedbackJSON["corrected_sentence"].(string); ok {
-			result.CorrectedSentence = &corrected
-		}
-		if tip, ok := attempt.FeedbackJSON["improvement_tip"].(string); ok {
-			result.ImprovementTip = &tip
-		}
+		result.ProcessingStatus = ProcessingStatusCompleted
+		projection := completedFeedbackFromStored(attempt.FeedbackJSON, attempt.FeedbackText)
+		result.Status = projection.Status
+		result.Headline = projection.Headline
+		result.Explanation = projection.Explanation
+		result.CorrectedSentence = projection.CorrectedSentence
+		result.ImprovementTip = projection.ImprovementTip
+		result.TargetWordUsedCorrectly = projection.TargetWordUsedCorrectly
+		result.GrammarAcceptable = projection.GrammarAcceptable
+		result.MeaningClear = projection.MeaningClear
+		result.Naturalness = projection.Naturalness
 		result.MissionCompleted = false
 	case AttemptStatusFailed:
+		result.ProcessingStatus = ProcessingStatusFailed
 		result.ErrorCode = attempt.ErrorCode
 		if result.ErrorCode == "" {
 			result.ErrorCode = ErrorCodeTemporaryFailure
@@ -673,6 +704,8 @@ func (s *Service) resultFromStored(attempt *StoredFeedbackAttempt, original stri
 		// preserve the same safe public failure contract as the initial response
 		// and never disclose provider or validator details (DOC-09 §§5, 15, 20).
 		result.CanRetry = true
+	case AttemptStatusCancelled:
+		result.ProcessingStatus = ProcessingStatusSkipped
 	}
 
 	return result

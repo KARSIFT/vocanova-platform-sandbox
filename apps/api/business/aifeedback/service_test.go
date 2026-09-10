@@ -260,6 +260,8 @@ func TestServiceSubmitSentenceFeedbackSuccess(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, LearningStatusCorrect, result.Status)
 	assert.Equal(t, req.SentenceText, result.OriginalSentence)
+	assert.Equal(t, ProcessingStatusCompleted, result.ProcessingStatus)
+	assert.Equal(t, time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC), result.CreatedAt)
 	assert.False(t, result.MissionCompleted)
 	assert.False(t, result.CanRetry)
 	assert.Equal(t, 1, f.provider.calls)
@@ -278,6 +280,7 @@ func TestServiceReplaysStoredFeedbackAfterWordIsRemoved(t *testing.T) {
 	assert.Equal(t, first.SentenceID, replay.SentenceID)
 	assert.Equal(t, first.AttemptID, replay.AttemptID)
 	assert.Equal(t, first.Status, replay.Status)
+	assert.Equal(t, first.CreatedAt, replay.CreatedAt)
 	assert.Equal(t, 1, f.provider.calls, "stored replay must not generate after removal")
 }
 
@@ -378,8 +381,21 @@ func TestServiceValidationFailureTooShort(t *testing.T) {
 	result, err := f.service.SubmitSentenceFeedback(t.Context(), req)
 	require.NoError(t, err)
 	assert.Equal(t, ValidationCodeTooShort, result.ErrorCode)
+	assert.Equal(t, ProcessingStatusSkipped, result.ProcessingStatus)
 	assert.True(t, result.CanRetry)
 	assert.Equal(t, 0, f.provider.calls)
+}
+
+func TestServiceCancelledReplayIsSkipped(t *testing.T) {
+	f := newServiceFixture(t)
+	attemptID := uuid.New()
+	result := f.service.resultFromStored(&StoredFeedbackAttempt{
+		ID: attemptID, LearnerSentenceID: uuid.New(), Status: AttemptStatusCancelled,
+	}, "I work every day.", f.wordID)
+
+	assert.Equal(t, attemptID, result.AttemptID)
+	assert.Equal(t, ProcessingStatusSkipped, result.ProcessingStatus)
+	assert.False(t, result.CanRetry)
 }
 
 func TestServiceValidationFailureMissingTarget(t *testing.T) {
@@ -561,9 +577,13 @@ func TestServiceProviderFailureIsRetryable(t *testing.T) {
 	result, err := f.service.SubmitSentenceFeedback(t.Context(), req)
 	require.NoError(t, err)
 	assert.Equal(t, ErrorCodeTemporaryFailure, result.ErrorCode)
+	assert.Equal(t, ProcessingStatusFailed, result.ProcessingStatus)
 	assert.True(t, result.CanRetry)
 	assert.NotEqual(t, uuid.Nil, result.SentenceID)
 	assert.NotEqual(t, uuid.Nil, result.AttemptID)
+	assert.Equal(t, result.AttemptID, result.FeedbackID)
+	assert.Equal(t, f.wordID, result.TargetWordID)
+	assert.Equal(t, time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC), result.CreatedAt)
 }
 
 func TestServiceRequestBudgetStartsBeforeDeferredGate(t *testing.T) {

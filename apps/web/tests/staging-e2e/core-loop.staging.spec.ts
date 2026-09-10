@@ -501,7 +501,7 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
 
       const feedbackResponse = page.waitForResponse(
         (response) =>
-          response.url().includes("/api/v1/sentence-feedback") &&
+          response.url().includes("/api/v1/learner-sentences") &&
           response.request().method() === "POST",
       );
       await page.getByRole("button", { name: "Check my sentence" }).click();
@@ -546,7 +546,7 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
 
     await test.step("9. log out", async () => {
       await page.getByRole("button", { name: "Log out" }).click();
-      await expect(page).toHaveURL(/\/signin(\?|$)/);
+      await expect(page).toHaveURL(/\/login(\?|$)/);
       await expect(
         page.getByRole("heading", { name: "Sign in to Vocanova" }),
       ).toBeVisible();
@@ -557,7 +557,7 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
       // session server-side, so this is the real auth gate reacting
       // to a real 401 from /api/v1/me.
       await page.goto("/home");
-      await expect(page).toHaveURL(/\/signin\?returnTo=%2Fhome(\b|$)/);
+      await expect(page).toHaveURL(/\/login\?returnTo=%2Fhome(\b|$)/);
     });
   });
 });

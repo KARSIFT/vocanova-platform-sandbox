@@ -35,7 +35,7 @@ export function AppHeader() {
         headers: { "X-CSRF-Token": csrfToken },
       });
       deleteCookie(CSRF_COOKIE_NAME);
-      window.location.href = "/signin";
+      window.location.href = "/login";
     } catch (error) {
       // T06: a 401 on logout is the documented "session already
       // expired" case — clear the local session cookie anyway and

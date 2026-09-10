@@ -475,6 +475,163 @@
         ],
         "type": "object"
       },
+      "LearnerSentenceDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/LearnerSentenceDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "correctedSentence": {
+            "description": "Corrected sentence when useful",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "description": "When the sentence was submitted",
+            "format": "date-time",
+            "type": "string"
+          },
+          "explanation": {
+            "description": "Short explanation of the result",
+            "maxLength": 240,
+            "type": "string"
+          },
+          "feedbackId": {
+            "description": "Latest feedback identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "grammarAcceptable": {
+            "description": "Whether grammar was acceptable for the learner level",
+            "type": "boolean"
+          },
+          "headline": {
+            "description": "Encouraging, honest feedback headline",
+            "maxLength": 60,
+            "type": "string"
+          },
+          "id": {
+            "description": "Learner sentence identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "improvementTip": {
+            "description": "One improvement tip when useful",
+            "maxLength": 160,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "meaningClear": {
+            "description": "Whether the intended meaning was clear",
+            "type": "boolean"
+          },
+          "naturalness": {
+            "description": "Sentence naturalness when processing completed",
+            "enum": [
+              "natural",
+              "understandable",
+              "unnatural"
+            ],
+            "type": "string"
+          },
+          "originalSentence": {
+            "description": "Sentence submitted by the learner",
+            "type": "string"
+          },
+          "processingStatus": {
+            "description": "Public processing state",
+            "enum": [
+              "pending",
+              "completed",
+              "failed",
+              "skipped"
+            ],
+            "type": "string"
+          },
+          "reported": {
+            "description": "Whether the learner reported this feedback",
+            "type": "boolean"
+          },
+          "status": {
+            "description": "Learning result when processing completed",
+            "enum": [
+              "correct",
+              "needs_improvement",
+              "incorrect"
+            ],
+            "type": "string"
+          },
+          "targetWordId": {
+            "description": "Canonical target word identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "targetWordUsedCorrectly": {
+            "description": "Whether the target vocabulary was used correctly",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "processingStatus",
+          "originalSentence",
+          "correctedSentence",
+          "improvementTip",
+          "targetWordUsedCorrectly",
+          "grammarAcceptable",
+          "meaningClear",
+          "reported",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "ListLearnerSentencesOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/ListLearnerSentencesOutputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "hasMore": {
+            "description": "Whether another page is available",
+            "type": "boolean"
+          },
+          "items": {
+            "description": "Retained learner sentences",
+            "items": {
+              "$ref": "#/components/schemas/LearnerSentenceDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "nextCursor": {
+            "description": "Opaque cursor for the next page",
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "hasMore"
+        ],
+        "type": "object"
+      },
       "ListReviewsDueOutputBody": {
         "additionalProperties": false,
         "properties": {
@@ -1986,6 +2143,14 @@
           },
           "correctedSentence": {
             "description": "Corrected sentence when useful",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "description": "When the sentence was submitted",
+            "format": "date-time",
             "type": "string"
           },
           "crisisResourceMessage": {
@@ -2002,7 +2167,17 @@
           },
           "explanation": {
             "description": "Short explanation of the result",
+            "maxLength": 240,
             "type": "string"
+          },
+          "feedbackId": {
+            "description": "Feedback result identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "grammarAcceptable": {
+            "description": "Whether grammar was acceptable for the learner level",
+            "type": "boolean"
           },
           "headline": {
             "description": "Encouraging, honest feedback headline",
@@ -2011,14 +2186,42 @@
           },
           "improvementTip": {
             "description": "One improvement tip when useful",
-            "type": "string"
+            "maxLength": 160,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "meaningClear": {
+            "description": "Whether the intended meaning was clear",
+            "type": "boolean"
           },
           "missionCompleted": {
-            "description": "Backend-confirmed mission state (P3 stub: always false)",
+            "description": "Backend-confirmed mission state",
             "type": "boolean"
+          },
+          "naturalness": {
+            "description": "Sentence naturalness",
+            "enum": [
+              "natural",
+              "understandable",
+              "unnatural"
+            ],
+            "type": "string"
           },
           "originalSentence": {
             "description": "The sentence the learner submitted",
+            "maxLength": 300,
+            "type": "string"
+          },
+          "processingStatus": {
+            "description": "Public processing state",
+            "enum": [
+              "pending",
+              "completed",
+              "failed",
+              "skipped"
+            ],
             "type": "string"
           },
           "reported": {
@@ -2038,10 +2241,24 @@
               "incorrect"
             ],
             "type": "string"
+          },
+          "targetWordId": {
+            "description": "Canonical target word identifier",
+            "format": "uuid",
+            "type": "string"
+          },
+          "targetWordUsedCorrectly": {
+            "description": "Whether the target vocabulary was used correctly",
+            "type": "boolean"
           }
         },
         "required": [
           "originalSentence",
+          "correctedSentence",
+          "improvementTip",
+          "targetWordUsedCorrectly",
+          "grammarAcceptable",
+          "meaningClear",
           "missionCompleted",
           "canRetry",
           "reported"
@@ -3033,6 +3250,150 @@
         "summary": "Get a journey situation with meanings",
         "tags": [
           "Discovery"
+        ]
+      }
+    },
+    "/api/v1/learner-sentences": {
+      "get": {
+        "operationId": "ListLearnerSentences",
+        "parameters": [
+          {
+            "description": "Opaque pagination cursor",
+            "explode": false,
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "description": "Opaque pagination cursor",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Requested page size; defaults to 20 and is capped at 50",
+            "explode": false,
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 20,
+              "description": "Requested page size; defaults to 20 and is capped at 50",
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListLearnerSentencesOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid pagination cursor"
+          },
+          "401": {
+            "description": "Authentication is required"
+          }
+        },
+        "summary": "List the authenticated learner's retained sentences",
+        "tags": [
+          "AI Feedback"
+        ]
+      },
+      "post": {
+        "operationId": "CreateLearnerSentence",
+        "parameters": [
+          {
+            "description": "User-scoped idempotency key",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "description": "User-scoped idempotency key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitSentenceFeedbackInputBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SentenceFeedbackResultDTO"
+                }
+              }
+            },
+            "description": "Feedback result, which may include a business-level error code"
+          },
+          "401": {
+            "description": "Authentication is required"
+          },
+          "403": {
+            "description": "Invalid CSRF token"
+          },
+          "404": {
+            "description": "Owner or target resource not found"
+          },
+          "409": {
+            "description": "Idempotency key conflict"
+          }
+        },
+        "summary": "Submit a learner sentence for AI feedback",
+        "tags": [
+          "AI Feedback"
+        ]
+      }
+    },
+    "/api/v1/learner-sentences/{id}": {
+      "get": {
+        "operationId": "GetLearnerSentence",
+        "parameters": [
+          {
+            "description": "Learner sentence identifier",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "Learner sentence identifier",
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearnerSentenceDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Authentication is required"
+          },
+          "404": {
+            "description": "Learner sentence not found"
+          }
+        },
+        "summary": "Get one retained learner sentence",
+        "tags": [
+          "AI Feedback"
         ]
       }
     },

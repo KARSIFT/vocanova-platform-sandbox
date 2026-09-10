@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -18,6 +19,12 @@ const (
 	LearningStatusCorrect          = "correct"
 	LearningStatusNeedsImprovement = "needs_improvement"
 	LearningStatusIncorrect        = "incorrect"
+)
+
+const (
+	NaturalnessNatural        = "natural"
+	NaturalnessUnderstandable = "understandable"
+	NaturalnessUnnatural      = "unnatural"
 )
 
 // Operational attempt statuses for ai_feedback_attempts.
@@ -113,20 +120,28 @@ const (
 // response (DOC-09 §9). It contains only the fields the frontend is permitted
 // to display.
 type SentenceFeedbackResult struct {
-	SentenceID            uuid.UUID
-	AttemptID             uuid.UUID
-	Status                string
-	OriginalSentence      string
-	CorrectedSentence     *string
-	Headline              string
-	Explanation           string
-	ImprovementTip        *string
-	MissionCompleted      bool
-	CanRetry              bool
-	Reported              bool
-	ErrorCode             string
-	ErrorMessage          string
-	CrisisResourceMessage string
+	FeedbackID              uuid.UUID
+	SentenceID              uuid.UUID
+	AttemptID               uuid.UUID
+	TargetWordID            uuid.UUID
+	ProcessingStatus        string
+	Status                  string
+	OriginalSentence        string
+	CorrectedSentence       *string
+	Headline                string
+	Explanation             string
+	ImprovementTip          *string
+	TargetWordUsedCorrectly bool
+	GrammarAcceptable       bool
+	MeaningClear            bool
+	Naturalness             string
+	MissionCompleted        bool
+	CanRetry                bool
+	Reported                bool
+	ErrorCode               string
+	ErrorMessage            string
+	CrisisResourceMessage   string
+	CreatedAt               time.Time
 }
 
 // CrisisResourceText is the non-clinical crisis message surfaced for clear
@@ -156,6 +171,9 @@ type ProviderTask struct {
 type ProviderFeedback struct {
 	Status                  string
 	TargetWordUsedCorrectly bool
+	GrammarAcceptable       bool
+	MeaningClear            bool
+	Naturalness             string
 	CorrectedSentence       *string
 	Headline                string
 	Explanation             string
@@ -170,6 +188,9 @@ func (f *ProviderFeedback) StructuredJSON() map[string]any {
 	result := map[string]any{
 		"status":                     f.Status,
 		"target_word_used_correctly": f.TargetWordUsedCorrectly,
+		"grammar_acceptable":         f.GrammarAcceptable,
+		"meaning_clear":              f.MeaningClear,
+		"naturalness":                f.Naturalness,
 		"headline":                   f.Headline,
 		"explanation":                f.Explanation,
 	}
@@ -235,11 +256,17 @@ func (m *MockProvider) GenerateFeedback(ctx context.Context, task ProviderTask) 
 		return &ProviderFeedback{
 			Status:                  LearningStatusCorrect,
 			TargetWordUsedCorrectly: true,
+			GrammarAcceptable:       true,
+			MeaningClear:            true,
+			Naturalness:             NaturalnessNatural,
 			Headline:                "Great use of the target word!",
 			Explanation:             "The sentence uses the target word correctly.",
 			RawJSON: map[string]any{
 				"status":                     LearningStatusCorrect,
 				"target_word_used_correctly": true,
+				"grammar_acceptable":         true,
+				"meaning_clear":              true,
+				"naturalness":                NaturalnessNatural,
 				"headline":                   "Great use of the target word!",
 			},
 		}, nil
@@ -249,6 +276,9 @@ func (m *MockProvider) GenerateFeedback(ctx context.Context, task ProviderTask) 
 	return &ProviderFeedback{
 		Status:                  LearningStatusIncorrect,
 		TargetWordUsedCorrectly: false,
+		GrammarAcceptable:       true,
+		MeaningClear:            false,
+		Naturalness:             NaturalnessUnnatural,
 		CorrectedSentence:       &corrected,
 		Headline:                "Almost there—try the target word.",
 		Explanation:             "The sentence does not include the target word.",
@@ -256,6 +286,9 @@ func (m *MockProvider) GenerateFeedback(ctx context.Context, task ProviderTask) 
 		RawJSON: map[string]any{
 			"status":                     LearningStatusIncorrect,
 			"target_word_used_correctly": false,
+			"grammar_acceptable":         true,
+			"meaning_clear":              false,
+			"naturalness":                NaturalnessUnnatural,
 			"headline":                   "Almost there—try the target word.",
 		},
 	}, nil

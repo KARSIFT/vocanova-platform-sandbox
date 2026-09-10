@@ -19,6 +19,7 @@ from pathlib import Path
 import yaml
 
 WF_DIR = Path(__file__).resolve().parents[1] / "workflows"
+REPO_ROOT = WF_DIR.parents[1]
 MERGE_GROUP_GUARD = "${{ github.event_name != 'merge_group' }}"
 
 # Workflows deliberately exempt from "must also run on merge_group": advisory
@@ -350,6 +351,62 @@ class WorkflowContractTest(unittest.TestCase):
             "auto-merge.yml no longer explicitly enqueues - arming auto-merge alone "
             "does not reliably re-enqueue a PR into a required merge queue (found live, PR #1171/#1172)",
         )
+
+    def test_deploys_install_the_exact_migration_artifact_before_atlas(self) -> None:
+        deploys = {
+            "deploy-staging.yml": {
+                "bundle": "/tmp/deploy-bundle.tgz",
+                "target": "/opt/vocanova/apps/api/migrations",
+                "installer": "/opt/vocanova/apps/api/scripts/install-migration-artifact.sh",
+                "migrate": 'DATABASE_URL="$migration_database_url" sh /opt/vocanova/apps/api/scripts/migrate.sh',
+            },
+            "deploy-production.yml": {
+                "bundle": "/tmp/production-deploy-bundle.tgz",
+                "target": "/opt/vocanova/production/apps/api/migrations",
+                "installer": "/opt/vocanova/production/apps/api/scripts/install-migration-artifact.sh",
+                "migrate": 'DATABASE_URL="$migration_database_url" sh /opt/vocanova/production/apps/api/scripts/migrate.sh',
+            },
+        }
+
+        for workflow_name, values in deploys.items():
+            text = (WF_DIR / workflow_name).read_text()
+            copy = "cp apps/api/scripts/install-migration-artifact.sh"
+            exclude = "--exclude='./apps/api/migrations'"
+            install = values["installer"]
+
+            self.assertIn(copy, text, f"{workflow_name}: installer is not bundled")
+            self.assertIn(exclude, text, f"{workflow_name}: overlay extraction still includes migrations")
+            self.assertIn(install, text, f"{workflow_name}: exact migration artifact is not installed")
+            self.assertIn(values["bundle"], text, workflow_name)
+            self.assertIn(values["target"], text, workflow_name)
+            self.assertLess(text.index(exclude), text.index(install), workflow_name)
+            self.assertLess(text.index(install), text.index(values["migrate"]), workflow_name)
+
+    def test_migration_artifact_installer_preserves_or_replaces_atomically(self) -> None:
+        installer_test = REPO_ROOT / "apps/api/scripts/install-migration-artifact.selftest.sh"
+        result = subprocess.run(
+            [str(installer_test)],
+            cwd=REPO_ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(
+            result.returncode,
+            0,
+            f"installer self-test failed:\nstdout: {result.stdout}\nstderr: {result.stderr}",
+        )
+        self.assertIn("install-migration-artifact self-test passed", result.stdout)
+
+    def test_email_links_use_the_web_origin_and_documented_route(self) -> None:
+        staging = (WF_DIR / "deploy-staging.yml").read_text()
+        production = (WF_DIR / "deploy-production.yml").read_text()
+
+        self.assertIn('echo "BASE_URL=https://staging.vocanova.site"', staging)
+        self.assertIn('echo "MAGIC_LINK_PATH=/magic-link"', staging)
+        self.assertIn('echo "BASE_URL=https://${PRODUCTION_WEB_HOST}"', production)
+        self.assertIn('echo "MAGIC_LINK_PATH=/magic-link"', production)
+        self.assertNotIn('echo "BASE_URL=https://${PRODUCTION_API_HOST}"', production)
 
 
 if __name__ == "__main__":

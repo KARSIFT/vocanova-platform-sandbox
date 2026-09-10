@@ -88,11 +88,14 @@ WORD_DETAIL = {
     }
 }
 
-PUBLIC_WEB_PATHS = {"/", "/signin", "/auth/magic"}
+PUBLIC_WEB_PATHS = {"/", "/login", "/magic-link", "/signin", "/auth/magic", "/auth/email-change"}
 AUTHENTICATED_WEB_PATHS = {
     "/onboarding",
     "/home",
     "/discover",
+    "/words",
+    "/review",
+    "/review/session",
     "/reviews",
     "/progress",
     "/settings",

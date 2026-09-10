@@ -10,7 +10,7 @@
 // the Edge sandbox `src/lib/env.ts`'s `getApiBaseURL()` silently falls
 // back to `http://localhost:8080`, the `/api/v1/me` auth check never
 // reaches the real API, and every authenticated learner is bounced
-// back to `/signin`.
+// back to `/login`.
 //
 // A plain unit test of `middleware()` cannot see any of that: run
 // under Node, the exact same source reads the real environment and

@@ -45,7 +45,7 @@ test.describe("Home accessibility (VOC-031-T07a)", () => {
     // webServer entries) handles /api/v1/me + the home page's data
     // reads. The auth-gate middleware reads the same /api/v1/me
     // response, so a 200 there lets the request through to
-    // /home instead of redirecting to /signin.
+    // /home instead of redirecting to /login.
     await page.goto("/home");
 
     // The "Today's Mission" heading is the most specific
