@@ -55,7 +55,10 @@ test.describe("Review readiness", () => {
     await page.goto("/reviews");
     expect(await waitForReviewReadiness(page)).toBe("prompt");
 
-    const multipleChoiceOption = getEnabledReviewPromptControl(page);
+    const multipleChoiceOption = page
+      .getByRole("group", { name: /^Choose the meaning for / })
+      .getByRole("button", { disabled: false })
+      .first();
     await expect(multipleChoiceOption).toBeVisible();
     await submitReadyReview(page);
 

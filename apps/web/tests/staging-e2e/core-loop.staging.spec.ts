@@ -471,7 +471,10 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
       // The real evaluator is not deterministic, so the assertion is
       // that the widget settled on a rendered outcome - a verdict or
       // an explicit error - not which verdict it was.
-      const feedback = feedbackHeading.locator("..");
+      const feedback = page.getByRole("region", {
+        name: await feedbackHeading.innerText(),
+        exact: true,
+      });
       const verdict = feedback.getByRole("status", {
         name: /^Feedback result: /,
       });
