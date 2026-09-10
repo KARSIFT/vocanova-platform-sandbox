@@ -155,6 +155,13 @@ read as "grading" (red X marks, harsh error colors) in favor of supportive frami
 the AI tone rules in [09](../engineering/09-ai-features.md) §13 ("Great use of this word," "Almost right," never
 "Your English is bad").
 
+The product maturity pass uses one primary-blue/secondary-violet/neutral token palette across
+public and authenticated pages. Page content is bounded on desktop and padded for phones;
+white rounded surfaces, consistent focus indicators, and 44px actions recur across the app.
+Small text uses a minimum 12px token (14px for supporting copy). Mission actions remain visible
+without scrolling on a 360×640 phone. Brand presentation and form treatments should remain
+consistent through sign-in, onboarding, learning, and account management.
+
 ## 12. UX risks and mitigations
 
 - **Risk: AI feedback UI reads as a test/grade, discouraging learners.** Mitigation: encouraging

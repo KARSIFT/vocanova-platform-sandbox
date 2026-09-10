@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
+import { PageContainer, Surface } from "@/ui/surface";
 
 import { AccountDeletionForm } from "./_components/account-deletion-form";
 import { PersonalDataExport } from "./_components/personal-data-export";
@@ -23,7 +24,7 @@ export default async function SettingsAccountPage() {
   const currentEmail = meResponse.data.email ?? "";
 
   return (
-    <div className="p-[var(--spacing-lg)]">
+    <PageContainer>
       <div className="mb-[var(--spacing-md)] flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-neutral-900">Account</h1>
         <Link
@@ -39,9 +40,9 @@ export default async function SettingsAccountPage() {
         also delete your account from here.
       </p>
 
-      <section
+      <Surface
         aria-labelledby="email-change-heading"
-        className="mt-[var(--spacing-lg)] rounded-md border border-neutral-200 bg-neutral-50 p-[var(--spacing-md)] shadow-sm"
+        className="mt-[var(--spacing-lg)]"
       >
         <h2
           id="email-change-heading"
@@ -60,7 +61,7 @@ export default async function SettingsAccountPage() {
           </span>
         </p>
         <EmailChangeForm currentEmail={currentEmail} />
-      </section>
+      </Surface>
 
       <PersonalDataExport />
 
@@ -81,6 +82,6 @@ export default async function SettingsAccountPage() {
         </p>
         <AccountDeletionForm />
       </section>
-    </div>
+    </PageContainer>
   );
 }

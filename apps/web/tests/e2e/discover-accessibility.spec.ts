@@ -12,6 +12,7 @@
 // assertion specifically targets the "Saved" badge and the
 // meaning-by-meaning card structure on the situation page.
 
+import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
 import {
@@ -47,7 +48,7 @@ test.describe("Discover accessibility (VOC-031-T07b)", () => {
     await assertNonColorOnlyFeedback(page, {
       contextLabel: "/discover",
       requireText: [
-        "text=Choose a situation",
+        "text=Choose a familiar moment",
         // The two fixture situation cards must each render their
         // title text - the situation grid is the page's primary
         // content.
@@ -59,7 +60,14 @@ test.describe("Discover accessibility (VOC-031-T07b)", () => {
 
   test("/discover/[situation] renders with zero critical/serious axe violations, is keyboard reachable, and uses text-based state", async ({
     page,
-  }) => {
+  }, testInfo) => {
+    await page.context().addCookies([
+      { name: "vocanova_session", value: randomUUID(), url: testInfo.project.use.baseURL! },
+      { name: "vocanova_csrf", value: "journey-saved-state", url: testInfo.project.use.baseURL! },
+    ]);
+    await page.goto("/discover/ordering-at-a-cafe/pour");
+    await page.getByRole("button", { name: /^Save pour:/ }).click();
+    await expect(page.getByRole("button", { name: "Remove pour from saved words" })).toBeVisible();
     await page.goto("/discover/ordering-at-a-cafe");
 
     await expect(

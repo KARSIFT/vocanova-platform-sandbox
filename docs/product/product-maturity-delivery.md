@@ -19,23 +19,53 @@ remain the scope baseline; implementation history is not an acceptance criterion
 
 ## Acceptance checklist
 
-- [ ] Landing, sign-in, onboarding, and app screens share a visual system.
-- [ ] A first-time learner can discover, save, review, and practise a word.
-- [ ] Home prioritizes the current mission and handles empty/completed states.
-- [ ] Journey and saved vocabulary support clear browsing and word detail.
-- [ ] Reviews provide focused recall, useful rating guidance, and completion.
-- [ ] Sentence practice preserves input, handles pending/errors, and shows feedback.
-- [ ] Progress and settings are understandable and usable on mobile and desktop.
-- [ ] Browser checks cover 360px, 430px, desktop, keyboard, and accessibility.
+- [x] Landing, sign-in, onboarding, and app screens share a visual system.
+- [x] A first-time learner can discover, save, review, and practise a word.
+- [x] Home prioritizes the current mission and handles empty/completed states.
+- [x] Journey and saved vocabulary support clear browsing and word detail.
+- [x] Reviews provide focused recall, useful rating guidance, and completion.
+- [x] Sentence practice preserves input, handles pending/errors, and shows feedback.
+- [x] Progress and settings are understandable and usable on mobile and desktop.
+- [x] Browser checks cover 360px, 430px, desktop, keyboard, and accessibility.
 - [ ] Relevant unit, integration, build, and CI checks pass.
 - [ ] Documentation reflects verified behavior and deployment limitations.
 - [ ] One PR is reviewed and made ready only after the complete change is verified.
 
-## Initial evidence
+## Verification evidence (2026-09-10)
+
+- Production web build, workspace validation, formatting, lint, and type checks pass.
+- Foundation checks, 31 shared API-client tests, and 59 web helper/middleware tests pass.
+- Local browser suite: 139 passed, 17 existing layout-specific skips. The complete
+  learning loop now runs at all three layouts, not just desktop.
+- Retry tests verify one pending request, stable request identity after an ambiguous
+  transport failure, fresh identity after editing, and the original checked sentence.
+- API CI command (`go test -skip TestControlledSignupOAuth ./...`) and Go build pass.
+- Production smoke self-tests: all 15 scenarios pass, including rejecting `/login`
+  redirects instead of counting the login page as a rendered authenticated route.
+- Manually inspected rendered Home, Journey, word detail, Progress, and sign-in
+  screens on mobile, plus desktop Journey. Browser fixtures are synthetic, not
+  evidence of real-provider AI quality or live Google authentication.
+
+## Deployment boundaries and remaining gates
+
+- PR #1460 is the single delivery PR. Final CI, automated review, and performance
+  budgets remain gates before it is made ready for the repository merge queue.
+- Local Docker is unavailable. Database-backed OAuth verification must pass in
+  the dedicated CI job; the local API command intentionally excludes that harness.
+- Merging deploys staging. Production requires a separate manual workflow dispatch
+  on the reviewed revision; documentation now describes that distinction.
+- Real AI generation fails closed when the selected provider lacks its required
+  credentials. Test mocks cannot silently become production learner feedback.
+- Live Google account login requires a human/provider session; the OAuth callback
+  harness and readiness checks do not claim to replace that audit.
+- Issue #1459 still tracks the production authenticated route sweep. Do not close
+  it without a successful deployed check.
+
+## Baseline findings
 
 - Baseline web production build passes.
-- Home currently puts review navigation below up to ten sentence-practice forms.
-- Landing and learning use unrelated visual styles.
+- Home put review navigation below up to ten sentence-practice forms.
+- Landing and learning used unrelated visual styles.
 - Canonical seed contains seven situations, 39 words, and 42 meanings.
 - Local browser execution initially lacks system libraries; local Docker is an
   unavailable WSL integration. Database-backed verification requires a functioning

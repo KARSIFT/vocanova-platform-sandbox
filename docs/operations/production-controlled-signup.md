@@ -18,8 +18,8 @@ harness (VOC-092).
 | `NEW_USER_SIGNUP_ALLOWLIST` | synced from `PRODUCTION_NEW_USER_SIGNUP_ALLOWLIST` on every deploy                                        | Only listed Google identities may create a production account |
 
 The former `workflow_dispatch` input `new_user_signup_allowlist` was removed.
-Automatic push deploys to `main` and manual dispatches both read the repository
-secret only. A normal merge to `main` cannot silently erase the cohort.
+Manual production deploys read the repository secret only. Merging to `main`
+deploys staging, not production; see [AGENTS.md](../../AGENTS.md).
 
 Personal data rules:
 
@@ -49,14 +49,14 @@ disabled — see fail-closed behavior below).
 
 ## Pick up the change
 
-Every push to `main` triggers `deploy-production.yml`, which:
+Manually dispatch `deploy-production.yml` on the reviewed `main` revision. It:
 
 1. Validates the secret on the runner (`infra/scripts/validate-production-signup-allowlist.sh`).
 2. Writes `NEW_USER_SIGNUP_ALLOWLIST` into production `api.env`.
 3. Redeploys the API container and runs the production smoke suite.
 
-To apply a secret-only change without a code merge, manually dispatch
-`deploy-production.yml` on `main` (Workflows → Deploy production → Run workflow).
+The same manual dispatch applies a secret-only change without a code merge
+(Workflows → Deploy production → Run workflow).
 
 ### Verify the deploy
 
@@ -95,12 +95,12 @@ The live production synthetic `synthetic.production.oauth-expected-state` and
 `verify-production-oauth-start.sh` assert OAuth start, canonical callback, and
 `controlled_signup_ready: true` on `/healthz` when OAuth is expected enabled.
 
-## Prove cohort preservation across automatic deploys
+## Prove cohort preservation across deploys
 
-After changing the secret, record two consecutive **push**-triggered
+After changing the secret, record two consecutive manually dispatched
 `deploy-production` successes on `main` without editing the secret again. Each
 run must pass **Validate production controlled-signup allowlist** and log
-`controlled signup ready: true`. That pair proves automatic deploys preserve
+`controlled signup ready: true`. That pair proves repeated deploys preserve
 the secret-backed cohort (VOC-096-AC-00 / AC-01).
 
 ## Fail-closed behavior
@@ -134,7 +134,7 @@ audit):
 | Allowlisted first-time Google user | Sign in at `https://production.vocanova.site/signin` with an identity present in the secret | Reaches production home/onboarding without HTTP 503                                                                                         |
 | Unlisted Google user               | Attempt first-time sign-in with an identity **not** in the secret                        | Google may authenticate, but the API callback returns HTTP 503 with the stable "new sign-ups are disabled" body (`auth.ErrSignupsDisabled`) |
 | Scheduled readiness                | Confirm latest `scheduled-synthetics` run                                                | Job `synthetic.production.oauth-expected-state` succeeded                                                                                   |
-| Cohort persistence                 | Two consecutive push deploy successes after secret edit                                    | Both validate allowlist and log `controlled signup ready: true`                                                                             |
+| Cohort persistence                 | Two consecutive manual deploy successes after secret edit                                  | Both validate allowlist and log `controlled signup ready: true`                                                                             |
 
 Record only pass/fail and run URLs in evidence. Never paste email addresses,
 OAuth codes, session cookies, or callback query strings.

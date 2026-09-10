@@ -31,19 +31,24 @@ receive lightweight AI feedback → build daily habit.
 
 ## Frontend foundation
 
-Next.js App Router + TypeScript, deployed to Cloudflare (see [10](../operations/10-development-workflow.md) for the
-concrete Cloudflare Workers + Render split). Go `/api/v1` is the backend authority. Single repo,
-frontend under `apps/web` per [04](../engineering/04-technical-architecture.md) §5. pnpm. Tailwind +
-shadcn/ui-style components. TanStack Query for server state, React state for UI state. React Hook
-Form + Zod. Vitest, React Testing Library, Playwright.
+Next.js App Router + TypeScript, deployed in Docker alongside the Go API and PostgreSQL.
+The current staging/production deployment workflows and [development guide](../development.md)
+are authoritative; the earlier Cloudflare Workers + Render split is not the deployed topology.
+Go `/api/v1` is the backend authority. Single repo,
+frontend under `apps/web` per [04](../engineering/04-technical-architecture.md) §5. pnpm and Tailwind.
+The current implementation uses server components for page data, a shared typed fetch client,
+and controlled React forms for interactive learning. Shared presentation primitives live in
+`src/ui/`; adding a state or form library is not itself a product completion requirement.
+Node's test runner covers client helpers and middleware; Playwright covers browser behavior.
 
 ## Architecture
 
 ```text
-app/                # routes and layouts
-src/features/       # product feature modules
-src/shared/          # shared components, API client, utilities
-tests/e2e/
+src/app/            # routes, layouts, and route-local components
+src/ui/             # shared visual primitives
+src/lib/            # API integration, session, cookies, and helpers
+tests/e2e/          # local browser and accessibility checks
+tests/staging-e2e/  # deployed learning-flow verification
 ```
 
 Feature areas: auth, onboarding, dashboard, discovery, words, reviews, sentences, progress,
@@ -75,8 +80,9 @@ sentence practice is a component, not a route.
 
 ## Core UX decisions
 
-- **Home**: daily-mission focused; shows streak, next action, review summary, discovery entry,
-  progress summary.
+- **Home**: daily-mission focused; the next action is visible above the mobile navigation without
+  scrolling at 360×640. Show backend-confirmed mission state, streak, and a compact saved-word
+  preview. Sentence practice opens through a deliberate disclosure, not a form for every word.
 - **Discovery**: one word at a time; backend controls content/sequencing; save must succeed before
   moving forward.
 - **Review**: focused session, show-answer active recall, **ratings: Again, Hard, Good, Easy**.

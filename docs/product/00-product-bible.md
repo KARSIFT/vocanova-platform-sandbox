@@ -93,7 +93,7 @@ The delivery participants are the founder/product owner, ChatGPT as planning and
 advisor, Codex as implementation worker, Claude Code as independent verifier, GitHub as repository
 system of record, and GitHub Actions as deterministic automation.
 
-Product vision and material scope require the authority defined by the
-[canonical governance index](../governance/README.md). [DOC-19](../operations/19-governance-reconciliation-notes.md)
-is a non-authoritative orientation note that explains the reconciliation without restating a
-competing approval model.
+The product owner sets product scope. Repository delivery follows [AGENTS.md](../../AGENTS.md):
+one PR against `main`, required CI checks, and automated review. The former multi-role
+governance pipeline is retired. Historical change packages explain earlier implementation
+decisions but do not require recreating that process.

@@ -137,6 +137,11 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
       page.getByRole("link", { name: "Skip to main content" }),
     ).toBeFocused();
     await page.keyboard.press("Tab");
+    // The brand is now a useful Home link before Settings in the tab order.
+    for (let step = 0; step < 3; step += 1) {
+      if (await settingsLink.evaluate((element) => element === document.activeElement)) break;
+      await page.keyboard.press("Tab");
+    }
     await expect(settingsLink).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/settings$/);
@@ -170,9 +175,6 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
       ).join("\n")}`,
     ).toEqual([]);
 
-    // The Home page renders at least two links ("Go to Journey",
-    // "Start review") and the sentence-feedback form's submit
-    // button. Use a conservative floor.
     await assertKeyboardReachable(page, { minFocusable: 2 });
 
     // Non-color-only feedback: the mission progress text, the
@@ -182,11 +184,12 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
     await assertNonColorOnlyFeedback(page, {
       contextLabel: "/home",
       requireText: [
-        "text=Review target",
-        "text=words reviewed today",
-        "text=-day streak",
-        "text=words due today",
+        "text=reviews complete",
+        "text=STREAK",
+        "text=In progress",
       ],
     });
+    await expect(page.getByRole("progressbar", { name: "Today’s mission progress" }))
+      .toHaveAttribute("aria-valuenow", "0");
   });
 });

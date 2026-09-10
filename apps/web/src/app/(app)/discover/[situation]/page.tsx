@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ApiResponseError } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
+import { Eyebrow, PageContainer } from "@/ui/surface";
 
 import { getSituationDetailView } from "./_components/situation-view";
 
@@ -29,18 +30,22 @@ export default async function SituationDiscoverPage({
   const { situation: situationData, meanings } = response.data;
 
   return (
-    <div className="p-[var(--spacing-lg)]">
+    <PageContainer>
       <Link
         href="/discover"
-        className="text-base font-semibold text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+        className="inline-flex min-h-11 items-center text-base font-semibold text-primary-700 hover:text-primary-800"
       >
         Back to Journey
       </Link>
-      <h1 className="mt-[var(--spacing-md)] text-2xl font-semibold text-neutral-900">
+      <Eyebrow>
+        {situationData.category.replaceAll("_", " ")}
+        {situationData.levelBand ? ` · ${situationData.levelBand}` : ""}
+      </Eyebrow>
+      <h1 className="mt-[var(--spacing-xs)] text-3xl font-bold tracking-tight text-neutral-900">
         {situationData.title}
       </h1>
       <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-        Words already saved are marked below.
+        {situationData.shortDescription}
       </p>
 
       {getSituationDetailView(meanings.length) === "empty" ? (
@@ -65,7 +70,7 @@ export default async function SituationDiscoverPage({
             <li key={meaning.meaningId}>
               <Link
                 href={`/discover/${situation}/${meaning.wordSlug}`}
-                className="block rounded-md border border-neutral-200 bg-neutral-50 p-[var(--spacing-md)] shadow-sm hover:border-primary-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary-600"
+                className="block rounded-[var(--radius-lg)] border border-neutral-200 bg-white p-[var(--spacing-md)] shadow-sm transition hover:border-primary-300 hover:shadow-md"
               >
                 <div className="flex items-start justify-between gap-[var(--spacing-md)]">
                   <div>
@@ -87,6 +92,6 @@ export default async function SituationDiscoverPage({
           ))}
         </ul>
       )}
-    </div>
+    </PageContainer>
   );
 }

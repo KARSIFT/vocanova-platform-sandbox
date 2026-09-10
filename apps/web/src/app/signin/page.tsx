@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { getSignInAuthCapabilities } from "@/lib/auth-capabilities";
 import { normalizeReturnTo } from "@/lib/return-to";
+import { Surface } from "@/ui/surface";
 
 import { MagicLinkForm, OAuthButton } from "./_components/auth-forms";
 
@@ -21,14 +22,17 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   const showOAuth = oauthEnabled && magicOnly !== "1";
 
   return (
-    <main className="grid min-h-screen place-items-center p-6">
+    <main className="grid min-h-screen place-items-center bg-neutral-100 p-6">
       {/* max-w-[28rem] (not max-w-md): this repo's tokens.generated.css only
           defines a --spacing-* scale, so Tailwind resolves the named
           max-w-md utility to --spacing-md (16px) instead of the intended
           28rem, collapsing this card to a single-character column. See
           the matching note on /onboarding's page.tsx. */}
-      <div className="w-full max-w-[28rem] space-y-[var(--spacing-lg)] rounded-xl border border-neutral-200 bg-white p-[var(--spacing-lg)] shadow-sm">
+      <Surface className="w-full max-w-[28rem] space-y-[var(--spacing-lg)]">
         <div className="space-y-[var(--spacing-xs)]">
+          <p className="text-sm font-bold tracking-wide text-primary-700">
+            VocaNova
+          </p>
           <h1 className="text-2xl font-semibold text-neutral-900">
             Sign in to Vocanova
           </h1>
@@ -52,7 +56,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         ) : null}
 
         <MagicLinkForm returnTo={safeReturnTo} />
-      </div>
+      </Surface>
     </main>
   );
 }

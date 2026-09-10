@@ -8,6 +8,7 @@ import { ApiResponseError } from "@vocanova/api-client";
 
 import { createApiClient } from "@/lib/api";
 import { normalizeReturnTo } from "@/lib/return-to";
+import { Surface } from "@/ui/surface";
 
 export function MagicLinkPageContent() {
   const searchParams = useSearchParams();
@@ -47,11 +48,14 @@ export function MagicLinkPageContent() {
   }, [token, email, returnTo]);
 
   return (
-    <main className="grid min-h-screen place-items-center p-6">
+    <main className="grid min-h-screen place-items-center bg-neutral-100 p-6">
       {/* max-w-[28rem] (not max-w-md): see the token-collision note on
           /onboarding's page.tsx - tokens.generated.css's --spacing-md
           (16px) shadows the intended 28rem max-w-md container size. */}
-      <div className="w-full max-w-[28rem] space-y-[var(--spacing-md)] rounded-xl border border-neutral-200 bg-white p-[var(--spacing-lg)] shadow-sm">
+      <Surface className="w-full max-w-[28rem] space-y-[var(--spacing-md)]">
+        <p className="text-sm font-bold tracking-wide text-primary-700">
+          VocaNova
+        </p>
         <h1 className="text-2xl font-semibold text-neutral-900">
           Sign in link
         </h1>
@@ -70,7 +74,7 @@ export function MagicLinkPageContent() {
             Back to sign in
           </Link>
         ) : null}
-      </div>
+      </Surface>
     </main>
   );
 }

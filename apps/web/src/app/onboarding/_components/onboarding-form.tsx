@@ -74,19 +74,19 @@ const MAIN_USE_CASES: { value: MainUseCase; label: string }[] = [
 const DAILY_REVIEW_TARGETS = [5, 10, 15, 20, 30, 50, 75, 100];
 
 const NATIVE_LANGUAGE_SUGGESTIONS = [
-  "es",
-  "en",
-  "pt",
-  "fr",
-  "de",
-  "it",
-  "zh",
-  "ja",
-  "ko",
-  "ar",
-  "ru",
-  "hi",
-];
+  { code: "es", label: "Spanish" },
+  { code: "en", label: "English" },
+  { code: "pt", label: "Portuguese" },
+  { code: "fr", label: "French" },
+  { code: "de", label: "German" },
+  { code: "it", label: "Italian" },
+  { code: "zh", label: "Chinese" },
+  { code: "ja", label: "Japanese" },
+  { code: "ko", label: "Korean" },
+  { code: "ar", label: "Arabic" },
+  { code: "ru", label: "Russian" },
+  { code: "hi", label: "Hindi" },
+] as const;
 
 interface FormState {
   englishLevel: EnglishLevel | null;
@@ -101,7 +101,7 @@ const INITIAL_STATE: FormState = {
   nativeLanguage: "",
   learningGoal: null,
   mainUseCase: null,
-  dailyReviewTarget: 20,
+  dailyReviewTarget: 5,
 };
 
 function isFormComplete(state: FormState): boolean {
@@ -492,8 +492,7 @@ function NativeLanguageStep({
         aria-describedby="native-language-helper native-language-suggestions"
       />
       <p id="native-language-helper" className="text-sm text-neutral-700">
-        Use the short form (for example, &ldquo;Spanish&rdquo; or
-        &ldquo;es&rdquo;).
+        Choose a common language below, or enter another language.
       </p>
       <div
         id="native-language-suggestions"
@@ -501,12 +500,12 @@ function NativeLanguageStep({
         aria-label="Common suggestions"
       >
         {NATIVE_LANGUAGE_SUGGESTIONS.map((suggestion) => {
-          const isSelected = value.trim().toLowerCase() === suggestion;
+          const isSelected = value.trim().toLowerCase() === suggestion.code;
           return (
             <button
-              key={suggestion}
+              key={suggestion.code}
               type="button"
-              onClick={() => onChange(suggestion)}
+              onClick={() => onChange(suggestion.code)}
               aria-pressed={isSelected}
               className={`min-h-[var(--spacing-xl)] rounded-full border px-[var(--spacing-sm)] text-sm font-medium transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 ${
                 isSelected
@@ -514,7 +513,7 @@ function NativeLanguageStep({
                   : "border-neutral-300 bg-white text-neutral-800 hover:border-primary-300"
               }`}
             >
-              {suggestion}
+              {suggestion.label}
             </button>
           );
         })}
@@ -646,7 +645,12 @@ function SummaryCard({
         <div className="flex justify-between">
           <dt className="text-neutral-600">Native language</dt>
           <dd className="font-medium text-neutral-900">
-            {state.nativeLanguage.trim() || "Not set"}
+            {NATIVE_LANGUAGE_SUGGESTIONS.find(
+              (language) =>
+                language.code === state.nativeLanguage.trim().toLowerCase(),
+            )?.label ||
+              state.nativeLanguage.trim() ||
+              "Not set"}
           </dd>
         </div>
         <div className="flex justify-between">

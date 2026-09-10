@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ApiResponseError } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
+import { PageContainer, Surface } from "@/ui/surface";
 import { SentenceFeedback } from "../../_components/sentence-feedback";
 import { RemoveSavedWordButton } from "../_components/remove-saved-word-button";
 import { formatSavedWordStatus } from "../_components/saved-word-view";
@@ -51,10 +52,10 @@ export default async function SavedWordDetailPage({
   const statusLabel = formatSavedWordStatus(savedWord.status);
 
   return (
-    <div className="p-[var(--spacing-lg)]">
+    <PageContainer>
       <Link
         href="/words"
-        className="text-base font-semibold text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+        className="inline-flex min-h-11 items-center text-base font-semibold text-primary-700 hover:text-primary-800"
       >
         Back to saved vocabulary
       </Link>
@@ -80,7 +81,7 @@ export default async function SavedWordDetailPage({
         />
       </div>
 
-      <section className="mt-[var(--spacing-lg)] rounded-md border border-neutral-200 bg-neutral-50 p-[var(--spacing-md)] shadow-sm">
+      <Surface className="mt-[var(--spacing-lg)]">
         <h2 className="text-xl font-semibold text-neutral-900">Meaning</h2>
         <p className="mt-[var(--spacing-sm)] text-base text-neutral-800">
           {meaning.shortDefinition}
@@ -121,7 +122,7 @@ export default async function SavedWordDetailPage({
             </ul>
           </div>
         ) : null}
-      </section>
+      </Surface>
 
       <SentenceFeedback
         targetWord={savedWord.wordText}
@@ -129,7 +130,7 @@ export default async function SavedWordDetailPage({
         source="word_detail"
         shortDefinition={savedWord.shortDefinition}
       />
-    </div>
+    </PageContainer>
   );
 }
 

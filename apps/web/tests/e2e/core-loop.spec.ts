@@ -57,15 +57,8 @@
 //       navigate to /home, expect the auth-gate middleware to
 //       redirect to /login.
 //
-// Project scope: T08 follows the T07a "one representative
-// desktop width" pattern - mobile-360 / mobile-430 are
-// accessibility-only, exercised by T07b. The functional flow
-// runs on home-desktop-1280 only. The test self-skips on the
-// mobile projects so adding the mobile projects to the
-// Playwright config (T07b) does not silently expand T08's
-// scope. Running the full functional flow on three projects
-// would triple test time without coverage gain beyond what
-// T07b's mobile accessibility scans already provide.
+// Run the complete functional loop at desktop, 360px, and 430px. Accessibility
+// scans alone do not prove that a mobile learner can complete every action.
 
 import { randomUUID } from "node:crypto";
 
@@ -99,10 +92,6 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     page,
     context,
   }, testInfo) => {
-    test.skip(
-      testInfo.project.name !== "home-desktop-1280",
-      "T08 scope is one representative desktop width >=1024px (mirrors T07a); mobile projects are T07b's accessibility scope.",
-    );
     test.setTimeout(CORE_LOOP_TEST_TIMEOUT_MS);
 
     // ----- 1. Auth: set the session + CSRF + onboarding cookies.
@@ -295,6 +284,7 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     // question). The flow is: Show answer -> rate -> advance ->
     // refetch returns empty -> "all caught up" state.
     await page.goto("/reviews");
+    await expect(page.getByText("Review 1 of 1", { exact: true })).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Review", level: 1 }),
     ).toBeVisible();
@@ -394,13 +384,12 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     // reflects that. After one review, the home page should
     // show "1 of 20 words reviewed today" (the default target).
     await page.goto("/home");
-    await expect(page.getByText(/1 of 20 words reviewed today/)).toBeVisible();
+    await expect(page.getByRole("progressbar", { name: "Today’s mission progress" }))
+      .toHaveAttribute("aria-valuenow", "1");
 
-    // Issue #1181 (PRD §2), entry point 2 of 3: the Home screen's
-    // "Saved words" list renders a SentenceFeedback widget per saved
-    // word (see home/page.tsx). "pour" was saved in step 4, so it
-    // should appear here too, independent of the Word Detail and
-    // Review Completion widgets already exercised above.
+    // Home exposes one deliberate practice entry, independent of word detail
+    // and review completion, without crowding the daily mission with forms.
+    await page.locator("summary").filter({ hasText: "Practice “pour” in a sentence" }).click();
     await expect(
       page.getByRole("heading", { name: /Practice with pour/ }),
     ).toBeVisible();
