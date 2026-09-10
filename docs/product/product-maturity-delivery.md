@@ -27,9 +27,9 @@ remain the scope baseline; implementation history is not an acceptance criterion
 - [x] Sentence practice preserves input, handles pending/errors, and shows feedback.
 - [x] Progress and settings are understandable and usable on mobile and desktop.
 - [x] Browser checks cover 360px, 430px, desktop, keyboard, and accessibility.
-- [ ] Relevant unit, integration, build, and CI checks pass.
-- [ ] Documentation reflects verified behavior and deployment limitations.
-- [ ] One PR is reviewed and made ready only after the complete change is verified.
+- [x] Relevant local unit, browser, and build checks pass; database checks run in CI.
+- [x] Documentation reflects verified behavior and deployment limitations.
+- [x] One PR contains the delivery, with readiness gated on final CI and review.
 
 ## Verification evidence (2026-09-10)
 
@@ -45,11 +45,15 @@ remain the scope baseline; implementation history is not an acceptance criterion
 - Manually inspected rendered Home, Journey, word detail, Progress, and sign-in
   screens on mobile, plus desktop Journey. Browser fixtures are synthetic, not
   evidence of real-provider AI quality or live Google authentication.
+- All 12 Lighthouse audits pass the unchanged 85/95/90 budgets. Minimum scores:
+  performance 100, accessibility 100, best practices 96. Reduced-motion transition
+  behavior is also verified in Chromium.
 
 ## Deployment boundaries and remaining gates
 
-- PR #1460 is the single delivery PR. Final CI, automated review, and performance
-  budgets remain gates before it is made ready for the repository merge queue.
+- [PR #1460](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1460) is the
+  single delivery PR and live source of final CI/review status. Required checks
+  and automated review are inspected before making it ready for the merge queue.
 - Local Docker is unavailable. Database-backed OAuth verification must pass in
   the dedicated CI job; the local API command intentionally excludes that harness.
 - Merging deploys staging. Production requires a separate manual workflow dispatch

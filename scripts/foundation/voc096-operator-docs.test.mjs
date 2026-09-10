@@ -41,9 +41,11 @@ test("VOC-096-TEST-12: operator procedure documents secret update and verificati
   assert.match(doc, /Add or remove a cohort member/i);
   assert.match(doc, /Pick up the change/i);
   assert.match(doc, /controlled signup ready: true/);
-  assert.match(doc, /Prove cohort preservation across automatic deploys/i);
+  assert.match(doc, /Prove cohort preservation across deploys/i);
   assert.match(doc, /two consecutive/i);
-  assert.match(doc, /push/i);
+  assert.match(doc, /manually dispatched/i);
+  assert.match(doc, /deploy-production.*successes/i);
+  assert.doesNotMatch(doc, /automatic deploys/i);
   assert.match(doc, /staging-controlled-signup\.md/);
   assert.match(doc, /verify-production-oauth-start\.sh/);
   assert.match(doc, /synthetic\.production\.oauth-expected-state/);
