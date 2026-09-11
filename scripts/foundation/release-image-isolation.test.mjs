@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
@@ -26,4 +27,21 @@ test("environment-specific images cannot overwrite another environment's commit 
       "production must pull the same tag prefix it publishes",
     );
   }
+});
+
+test("release verification survives bot filtering and rejects mixed builds", () => {
+  const result = spawnSync(
+    "python3",
+    [
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "infra/scripts",
+      "-p",
+      "test_verify_deployed_release.py",
+    ],
+    { encoding: "utf8" },
+  );
+  assert.equal(result.status, 0, result.stderr || result.error?.message);
 });

@@ -28,18 +28,22 @@ def main():
     }
     for service in ("API", "WEB"):
         url = os.environ[f"RELEASE_{service}_URL"].rstrip("/") + "/version"
+        last_failure = "release metadata mismatch"
         for attempt in range(12):
             try:
-                request = urllib.request.Request(url, headers={"Cache-Control": "no-cache"})
+                request = urllib.request.Request(url, headers={"Cache-Control": "no-cache", "User-Agent": "VocaNova-Release-Check/1.0"})
                 with urllib.request.urlopen(request, timeout=5) as response:
                     actual = json.loads(response.read(16384))
+                last_failure = "release metadata mismatch"
                 if isinstance(actual, dict) and matches_identity(actual, expected):
                     print(f"{service} release identity matches the deployment")
                     break
+            except urllib.error.HTTPError as error:
+                last_failure = f"HTTP {error.code}"
             except (urllib.error.URLError, TimeoutError, ValueError):
-                pass
+                last_failure = "request failed or returned invalid JSON"
             if attempt == 11:
-                raise SystemExit(f"{service} release identity is unavailable or does not match the deployment")
+                raise SystemExit(f"{service} release identity is unavailable or does not match the deployment ({last_failure})")
             time.sleep(5)
 
 
