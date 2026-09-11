@@ -712,6 +712,46 @@ func authTestService(t *testing.T) (*auth.Service, *auth.MemoryRepository, *emai
 	return svc, repo, fake, c
 }
 
+func TestEffectivePasswordEnabledRequiresEnabledSwitchAndRealSender(t *testing.T) {
+	base := newProductionTestConfig()
+	base.PasswordOn = true
+	base.EmailProviderURL = "https://api.example.com/emails"
+	base.EmailProviderAPIKey = "test-key"
+	base.EmailFrom = "Vocanova <[email protected]>"
+	for _, tc := range []struct {
+		name string
+		edit func(*ProductionConfig)
+		want bool
+	}{
+		{name: "complete configuration", want: true},
+		{name: "switch off", edit: func(c *ProductionConfig) { c.PasswordOn = false }, want: false},
+		{name: "missing api key", edit: func(c *ProductionConfig) { c.EmailProviderAPIKey = "" }, want: false},
+		{name: "missing URL", edit: func(c *ProductionConfig) { c.EmailProviderURL = "" }, want: false},
+		{name: "missing from", edit: func(c *ProductionConfig) { c.EmailFrom = "" }, want: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := base
+			if tc.edit != nil {
+				tc.edit(&cfg)
+			}
+			assert.Equal(t, tc.want, effectivePasswordEnabled(cfg))
+		})
+	}
+}
+
+func TestBuildEmailSenderSupportsPasswordOnlyDelivery(t *testing.T) {
+	cfg := newProductionTestConfig()
+	cfg.MagicLinkOn = false
+	cfg.PasswordOn = true
+	cfg.EmailProviderURL = "https://api.example.com/emails"
+	cfg.EmailProviderAPIKey = "test-key"
+	cfg.EmailFrom = "Vocanova <[email protected]>"
+	s, err := buildEmailSender(cfg)
+	require.NoError(t, err)
+	_, ok := s.(*email.HTTPSender)
+	assert.True(t, ok)
+}
+
 // TestBuildEmailSender_FallsBackToFakeWhenKillSwitchOff covers
 // the first T14 fallback rule: when EMAIL_MAGIC_LINK_ENABLED is
 // "false" the production wiring always uses Fake{}, even if a

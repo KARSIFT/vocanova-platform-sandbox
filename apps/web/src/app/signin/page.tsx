@@ -7,6 +7,7 @@ import { normalizeReturnTo } from "@/lib/return-to";
 import { Surface } from "@/ui/surface";
 
 import { MagicLinkForm, OAuthButton } from "./_components/auth-forms";
+import { PasswordLoginForm } from "../auth/password/_components/password-forms";
 
 export const metadata: Metadata = {
   title: "Sign in — Vocanova",
@@ -26,7 +27,8 @@ interface SignInPageProps {
 export default async function SignInPage({ searchParams }: SignInPageProps) {
   const { magicOnly, oauth, reason, returnTo, signedOut } = await searchParams;
   const safeReturnTo = normalizeReturnTo(returnTo);
-  const { magicLinkEnabled, oauthEnabled } = await getSignInAuthCapabilities();
+  const { magicLinkEnabled, oauthEnabled, passwordEnabled } =
+    await getSignInAuthCapabilities();
   const magicOnlyUnavailable = magicOnly === "1" && !magicLinkEnabled;
   const showOAuth = oauthEnabled && (magicOnly !== "1" || magicOnlyUnavailable);
   const oauthMessage = getOAuthCallbackMessage(oauth);
@@ -61,7 +63,9 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           <p className="text-base text-neutral-700">
             {magicOnly === "1" && !magicOnlyUnavailable
               ? "Enter your email to continue securely."
-              : "No password needed. Choose a secure sign-in method to continue."}
+              : passwordEnabled
+                ? "Sign in with your email and password, or choose another secure method."
+                : "No password needed. Choose a secure sign-in method to continue."}
           </p>
         </div>
 
@@ -123,21 +127,42 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           </p>
         ) : null}
 
+        {passwordEnabled && magicOnly !== "1" ? (
+          <PasswordLoginForm returnTo={safeReturnTo} />
+        ) : null}
+
+        {passwordEnabled && (showOAuth || magicLinkEnabled) ? (
+          <div className="relative flex items-center gap-[var(--spacing-sm)]">
+            <div className="h-px flex-1 bg-neutral-200" />
+            <span className="text-sm text-neutral-500">
+              or use another method
+            </span>
+            <div className="h-px flex-1 bg-neutral-200" />
+          </div>
+        ) : null}
+
         {showOAuth ? (
           <>
             <OAuthButton returnTo={safeReturnTo} />
 
-            <div className="relative flex items-center gap-[var(--spacing-sm)]">
-              <div className="h-px flex-1 bg-neutral-200" />
-              <span className="text-sm text-neutral-500">or</span>
-              <div className="h-px flex-1 bg-neutral-200" />
-            </div>
+            {!passwordEnabled && magicLinkEnabled ? (
+              <div className="relative flex items-center gap-[var(--spacing-sm)]">
+                <div className="h-px flex-1 bg-neutral-200" />
+                <span className="text-sm text-neutral-500">or</span>
+                <div className="h-px flex-1 bg-neutral-200" />
+              </div>
+            ) : null}
           </>
         ) : null}
 
-        {magicLinkEnabled ? <MagicLinkForm returnTo={safeReturnTo} /> : null}
+        {magicLinkEnabled ? (
+          <MagicLinkForm
+            returnTo={safeReturnTo}
+            emailLabel={passwordEnabled ? "Email for sign-in link" : undefined}
+          />
+        ) : null}
 
-        {!magicLinkEnabled && !showOAuth ? (
+        {!passwordEnabled && !magicLinkEnabled && !showOAuth ? (
           <p
             role="alert"
             aria-live="assertive"

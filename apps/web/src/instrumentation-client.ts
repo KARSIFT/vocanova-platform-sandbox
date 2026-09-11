@@ -1,10 +1,17 @@
 import * as Sentry from "@sentry/nextjs";
+import {
+  sanitizeTelemetryEvent,
+  sanitizeTelemetryBreadcrumb,
+} from "./lib/telemetry-privacy";
 
 const sentryDsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
 if (sentryDsn) {
   Sentry.init({
     dsn: sentryDsn,
+    sendDefaultPii: false,
+    beforeSend: sanitizeTelemetryEvent,
+    beforeBreadcrumb: sanitizeTelemetryBreadcrumb,
     environment:
       process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT ?? process.env.NODE_ENV,
     release: process.env.NEXT_PUBLIC_SENTRY_RELEASE,

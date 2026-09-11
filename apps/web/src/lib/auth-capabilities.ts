@@ -3,6 +3,7 @@ import { createServerApiClient } from "./api-server";
 export interface SignInAuthCapabilities {
   magicLinkEnabled: boolean;
   oauthEnabled: boolean;
+  passwordEnabled: boolean;
 }
 
 /**
@@ -17,8 +18,13 @@ export async function getSignInAuthCapabilities(): Promise<SignInAuthCapabilitie
     return {
       magicLinkEnabled: data.kill_switches?.magic_link_enabled === true,
       oauthEnabled: data.kill_switches?.oauth_enabled === true,
+      passwordEnabled: data.kill_switches?.password_enabled === true,
     };
   } catch {
-    return { magicLinkEnabled: false, oauthEnabled: false };
+    return {
+      magicLinkEnabled: false,
+      oauthEnabled: false,
+      passwordEnabled: false,
+    };
   }
 }

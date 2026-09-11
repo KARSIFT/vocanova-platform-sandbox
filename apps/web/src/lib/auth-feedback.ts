@@ -1,7 +1,14 @@
 import { ApiResponseError } from "@vocanova/api-client";
 
 export type AuthErrorContext =
-  "magic-request" | "magic-consume" | "oauth-start" | "logout";
+  | "magic-request"
+  | "magic-consume"
+  | "oauth-start"
+  | "logout"
+  | "password-login"
+  | "password-signup"
+  | "password-reset-request"
+  | "password-reset";
 
 /**
  * Keeps API implementation details out of learner-facing authentication
@@ -13,6 +20,49 @@ export function getAuthErrorMessage(
   context: AuthErrorContext,
 ): string {
   const status = error instanceof ApiResponseError ? error.status : undefined;
+
+  if (context === "password-login") {
+    if (status === 429) {
+      return "Too many password sign-in attempts were made. Please wait a few minutes, then try again.";
+    }
+    if (status === 503) {
+      return "Password sign-in is temporarily unavailable. Please try again later.";
+    }
+    return "We couldn't sign you in with that email and password. Check them and try again.";
+  }
+
+  if (context === "password-signup") {
+    if (status === 429) {
+      return "Too many account requests were made. Please wait a few minutes, then try again.";
+    }
+    if (status === 503) {
+      return "Account creation is temporarily unavailable. Please try again later.";
+    }
+    return "We couldn't create your account. Check the details and try again.";
+  }
+
+  if (context === "password-reset-request") {
+    if (status === 429) {
+      return "Too many password reset requests were made. Please wait a few minutes, then try again.";
+    }
+    if (status === 503) {
+      return "Password email is temporarily unavailable. Please try again later.";
+    }
+    return "We couldn't send that email. Check the address and try again.";
+  }
+
+  if (context === "password-reset") {
+    if (status === 401) {
+      return "This password link is invalid, expired, or has already been used. Request a new one.";
+    }
+    if (status === 429) {
+      return "Too many password reset attempts were made. Please wait a few minutes, then try again.";
+    }
+    if (status === 503) {
+      return "Password reset is temporarily unavailable. Please try again later.";
+    }
+    return "We couldn't save your new password. Check the password and try again.";
+  }
 
   if (context === "magic-request") {
     if (status === 429) {

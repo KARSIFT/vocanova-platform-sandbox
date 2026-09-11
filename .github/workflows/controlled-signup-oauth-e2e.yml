@@ -60,3 +60,16 @@ jobs:
             echo "controlled-signup OAuth callback E2E cases must not skip" >&2
             exit 1
           fi
+
+      - name: Verify password authentication against disposable PostgreSQL
+        run: |
+          set -euo pipefail
+          cd apps/api
+          test_log="$(mktemp)"
+          trap 'rm -f "$test_log"' EXIT
+          go test ./app/api/... -run '^TestPasswordAuthPostgreSQL$' -count=1 -v | tee "$test_log"
+          grep -Eq '^--- PASS: TestPasswordAuthPostgreSQL ' "$test_log"
+          if grep -Eq '^--- SKIP: TestPasswordAuthPostgreSQL' "$test_log"; then
+            echo "password authentication PostgreSQL verification must not skip" >&2
+            exit 1
+          fi

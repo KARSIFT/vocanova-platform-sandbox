@@ -12,6 +12,7 @@ import {
 
 interface MagicLinkFormProps {
   returnTo: string;
+  emailLabel?: string;
 }
 
 const RESEND_COOLDOWN_SECONDS = 60;
@@ -25,7 +26,10 @@ function oauthReturnTo(returnTo: string): string {
     : "/home";
 }
 
-export function MagicLinkForm({ returnTo }: MagicLinkFormProps) {
+export function MagicLinkForm({
+  returnTo,
+  emailLabel = "Email address",
+}: MagicLinkFormProps) {
   const [email, setEmail] = useState("");
   const [phase, setPhase] = useState<"idle" | "sending" | "sent">("idle");
   const [hasSent, setHasSent] = useState(false);
@@ -143,7 +147,7 @@ export function MagicLinkForm({ returnTo }: MagicLinkFormProps) {
           htmlFor="email"
           className="block text-base font-medium text-neutral-900"
         >
-          Email address
+          {emailLabel}
         </label>
         <input
           id="email"

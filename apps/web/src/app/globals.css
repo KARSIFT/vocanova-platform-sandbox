@@ -2,7 +2,28 @@
 @import "./tokens.generated.css";
 
 :root {
+  --color-white: #ffffff;
   color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --color-white: #151b25;
+  --color-neutral-50: #111720;
+  --color-neutral-100: #171e29;
+  --color-neutral-200: #2a3544;
+  --color-neutral-300: #425066;
+  --color-neutral-400: #94a3b8;
+  --color-neutral-500: #aab6c6;
+  --color-neutral-600: #c0cad8;
+  --color-neutral-700: #d5ddea;
+  --color-neutral-800: #e8eef7;
+  --color-neutral-900: #f8fafc;
+  --color-primary-50: #14243e;
+  --color-primary-100: #18345b;
+  --color-primary-200: #24508c;
+  --color-secondary-50: #211a39;
+  --color-secondary-100: #2d214d;
+  --color-secondary-200: #44316f;
 }
 
 * {
@@ -28,6 +49,88 @@ body {
     ui-rounded, "Nunito Sans", "Avenir Next", Avenir, system-ui, sans-serif;
   line-height: 1.5;
   text-rendering: optimizeLegibility;
+}
+
+:root[data-theme="dark"] body {
+  background:
+    radial-gradient(
+      circle at top right,
+      rgb(59 130 246 / 0.16),
+      transparent 31rem
+    ),
+    var(--color-neutral-100);
+}
+
+/* Text and background utilities share the generated palette. In dark mode,
+ * retain the existing blue brand buttons while giving inline brand text the
+ * luminance it needs on dark surfaces. */
+:root[data-theme="dark"] :where(.text-white, .text-neutral-50) {
+  color: #f8fafc;
+}
+
+:root[data-theme="dark"]
+  :where(
+    .text-primary-600,
+    .text-primary-700,
+    .text-primary-800,
+    .text-primary-900
+  ) {
+  color: #93c5fd;
+}
+
+/* Primary 100/200 are darker surface shades in the dark palette. When a
+ * primary panel uses them for text, keep the original light-on-brand intent. */
+:root[data-theme="dark"]
+  :where(.bg-primary-600, .bg-primary-700, .bg-primary-800, .bg-primary-900)
+  :where(.text-primary-50, .text-primary-100, .text-primary-200) {
+  color: #eff6ff;
+}
+
+:root[data-theme="dark"]
+  :where(.text-secondary-700, .text-secondary-800, .text-secondary-900) {
+  color: #c4b5fd;
+}
+
+:root[data-theme="dark"] ::selection {
+  background: #24508c;
+  color: #f8fafc;
+}
+
+/* Feedback utilities come from Tailwind's built-in palette rather than the
+ * generated VocaNova tokens. Keep their message panels subdued and readable
+ * on dark surfaces instead of leaving isolated light cards behind. */
+:root[data-theme="dark"] :where(.bg-red-50, .bg-red-100) {
+  background-color: #461a24;
+}
+
+:root[data-theme="dark"] :where(.border-red-200, .border-red-300) {
+  border-color: #9f3348;
+}
+
+:root[data-theme="dark"]
+  :where(.text-red-600, .text-red-700, .text-red-800, .text-red-900) {
+  color: #fecdd3;
+}
+
+:root[data-theme="dark"] :where(.bg-green-50, .bg-green-100) {
+  background-color: #123c31;
+}
+
+:root[data-theme="dark"] :where(.border-green-300) {
+  border-color: #27785f;
+}
+
+:root[data-theme="dark"]
+  :where(.text-green-700, .text-green-800, .text-green-900) {
+  color: #a7f3d0;
+}
+
+:root[data-theme="dark"] :where(.bg-yellow-50, .bg-amber-50) {
+  background-color: #493716;
+}
+
+:root[data-theme="dark"] :where(.text-yellow-900, .text-amber-900) {
+  color: #fef3c7;
 }
 
 button,

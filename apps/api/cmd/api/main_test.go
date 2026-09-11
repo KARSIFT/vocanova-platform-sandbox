@@ -287,3 +287,19 @@ func TestRun_RejectsMissingBaseURL(t *testing.T) {
 		t.Fatal("run() must return an error when BASE_URL is missing")
 	}
 }
+
+type errorAuthCleaner struct {
+	calls int
+	err   error
+}
+
+func (c *errorAuthCleaner) Cleanup(context.Context) error { c.calls++; return c.err }
+
+func TestCombinedAuthCleanupAttemptsBothEvenIfOneFails(t *testing.T) {
+	legacy := &errorAuthCleaner{err: errors.New("legacy retention unavailable")}
+	passwords := &errorAuthCleaner{}
+	err := (combinedAuthCleaner{legacy: legacy, passwords: passwords}).Cleanup(context.Background())
+	if !errors.Is(err, legacy.err) || legacy.calls != 1 || passwords.calls != 1 {
+		t.Fatal("both credential retention passes must run and preserve failures")
+	}
+}

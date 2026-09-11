@@ -62,6 +62,11 @@ The MVP is done when an authenticated A2–B1 learner can, on a responsive mobil
 8. do all of the above through Google OAuth or email magic-link authentication, with no password
    login in MVP.
 
+The subsequent [password, profile and appearance delivery](password-profile-and-theme.md)
+extends authentication with verified email/password registration and recovery,
+and adds editable profile details and Light/Dark/System preferences. The original
+MVP exclusion above describes the initial release, not a permanent restriction.
+
 ## 4. Explicit MVP exclusions
 
 Native mobile app (React Native/Expo — architected for, not built), leaderboards, badges, social

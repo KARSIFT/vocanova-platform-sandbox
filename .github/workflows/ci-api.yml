@@ -113,11 +113,11 @@ jobs:
             exit 1
           fi
 
-      # -skip TestControlledSignupOAuth: this test starts a disposable
+      # These tests start disposable
       # Postgres via the mounted docker.sock. That container is a sibling on
       # the host's network, not reachable via 127.0.0.1 from inside this
       # container (a docker-outside-of-docker networking limitation, not a
       # test bug). Already correctly covered on a plain host runner by the
       # dedicated controlled-signup-oauth-e2e.yml workflow - redundant here.
       - name: go test
-        run: cd apps/api && go test -buildvcs=false -skip 'TestControlledSignupOAuth' ./...
+        run: cd apps/api && go test -buildvcs=false -skip 'TestControlledSignupOAuth|TestPasswordAuthPostgreSQL' ./...

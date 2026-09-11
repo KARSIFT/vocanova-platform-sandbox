@@ -3,7 +3,7 @@
 // /settings is the screen that renders every editable Settings
 // field (daily review target, review rhythm, app language,
 // notifications, marketing emails, display name) and the
-// "Manage account" link to the deeper account sub-screen.
+// "Account security" link to the deeper account sub-screen.
 // /settings/account coverage lives in settings-account-accessibility.spec.ts
 // (VOC-073-T03).
 
@@ -94,7 +94,7 @@ test.describe("Settings accessibility (VOC-031-T07b)", () => {
 
     // /settings has 8 daily-review-target radios + 2 available review-rhythm
     // radios (the unshipped custom choice is disabled) + 2 checkbox toggles + 1 display-name input + 1 save
-    // button + 2 links (Back to Home, Manage account) = 17+
+    // button + 2 links (Back to Home, Account security) = 17+
     // focusable elements. Use a conservative floor.
     await assertKeyboardReachable(page, { minFocusable: 10 });
 
@@ -103,7 +103,7 @@ test.describe("Settings accessibility (VOC-031-T07b)", () => {
       requireText: [
         "text=Daily review target",
         "text=Review rhythm",
-        "text=Manage account",
+        "text=Account security",
         "text=Vocanova default",
         "text=Faster reminders",
       ],

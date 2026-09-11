@@ -21,6 +21,7 @@ source_files:
   - path: 03-ui-ux-design.md
     sha256: f3f37beea86bc29a5230f66731730ab28a07635546d60084e49f954e53b30ed4
 ---
+
 # 03 — VocaNova UI/UX Design
 
 ## 1. UX purpose and principles
@@ -51,7 +52,7 @@ Three-tab bottom navigation:
 
 Sentence practice is a **reusable component**, not a fourth tab or standalone route — it is invoked
 from Home, Word Detail, and Review Completion. This is a deliberate MVP scoping decision: it keeps
-the tab bar simple and treats "write a sentence" as something the learner does *in the middle of*
+the tab bar simple and treats "write a sentence" as something the learner does _in the middle of_
 another activity, not as its own destination.
 
 The [maturity delivery](../product/mature-learning-and-account-experience.md) adds
@@ -64,7 +65,7 @@ remains historical context. History is a secondary destination, not a fourth tab
 
 ## 3. Onboarding flow
 
-Short, low-friction sequence: sign-in (Google OAuth or email magic link, no password) → a handful of
+Short, low-friction sequence: sign-in (Google OAuth, verified email/password, or configured email magic link) → a handful of
 onboarding questions (English level, native language, learning goal, main use case, daily review
 target) → straight into the first Today's Mission. Onboarding answers populate
 `user_onboarding_profiles` (see [05](../engineering/05-database-design.md) §6) and are used to seed sensible defaults,

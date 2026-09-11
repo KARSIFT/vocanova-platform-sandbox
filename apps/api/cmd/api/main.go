@@ -22,6 +22,7 @@ import (
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/accounts"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/auth"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/learning"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/password"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/getsentry/sentry-go"
 	sentryhttp "github.com/getsentry/sentry-go/http"
@@ -244,7 +245,18 @@ func stopDeletionSweep(cancel context.CancelFunc, done <-chan struct{}) {
 // the cleanup loop. Cleanup only needs the PostgreSQL repository and clock;
 // delivery, OAuth, and request-rate-limit collaborators are not involved.
 func newAuthCleanupService(db *sql.DB) authCleaner {
-	return auth.NewService(auth.NewPostgreSQLRepository(db), nil, nil, clock.Real{}, nil, auth.Config{})
+	return combinedAuthCleaner{
+		auth.NewService(auth.NewPostgreSQLRepository(db), nil, nil, clock.Real{}, nil, auth.Config{}),
+		password.NewCleaner(db, clock.Real{}),
+	}
+}
+
+// combinedAuthCleaner keeps password-proof retention on the same managed
+// lifecycle as existing auth retention without creating another worker loop.
+type combinedAuthCleaner struct{ legacy, passwords authCleaner }
+
+func (c combinedAuthCleaner) Cleanup(ctx context.Context) error {
+	return errors.Join(c.legacy.Cleanup(ctx), c.passwords.Cleanup(ctx))
 }
 
 // newEmailChangeCleanupService builds the narrow account-owned service used

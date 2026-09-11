@@ -150,7 +150,7 @@
 # path must update this workflow in the same change.
 #
 # Image-tag strategy: per VOC-032-D06, every image is pushed
-# with two tags — `sha-<short-sha>` (immutable, historical
+# with two tags — `staging-sha-<short-sha>` (environment-scoped, historical
 # record of "what was deployed when") and `dev` (mutable
 # latest, which is the tag T04's docker-compose.yml references
 # at `image: ghcr.io/karsift/vocanova-api:dev` / `vocanova-
@@ -158,7 +158,7 @@
 # whichever image the `:dev` tag currently points at (i.e.
 # the just-pushed one), so the deploy always lands the
 # commit at HEAD without any compose-side change. The
-# `sha-<short-sha>` tag is preserved on GHCR for at least
+# `staging-sha-<short-sha>` tag is preserved on GHCR for at least
 # the registry's default retention window; redeploying a
 # historical commit requires re-tagging the image or pinning
 # `IMAGE_TAG` in the compose file (out of scope for T07;
@@ -401,6 +401,10 @@ jobs:
         id: sha
         run: echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
+      - name: Read release identity
+        id: release
+        run: bash scripts/foundation/release-metadata.sh >> "$GITHUB_OUTPUT"
+
       - name: Validate staging Sentry DSN configuration for api/web
         env:
           STAGING_SENTRY_DSN: ${{ secrets.STAGING_SENTRY_DSN }}
@@ -453,8 +457,13 @@ jobs:
           context: apps/api
           file: apps/api/Dockerfile
           push: true
+          build-args: |
+            VOCANOVA_BUILD_VERSION=${{ steps.release.outputs.version }}
+            VOCANOVA_BUILD_COMMIT=${{ steps.release.outputs.commit }}
+            VOCANOVA_BUILD_ENVIRONMENT=staging
+            VOCANOVA_BUILD_BUILT_AT=${{ steps.release.outputs.built_at }}
           tags: |
-            ghcr.io/karsift/vocanova-api:sha-${{ steps.sha.outputs.short_sha }}
+            ghcr.io/karsift/vocanova-api:staging-sha-${{ steps.sha.outputs.short_sha }}
             ghcr.io/karsift/vocanova-api:dev
           provenance: false
 
@@ -493,8 +502,12 @@ jobs:
             NEXT_PUBLIC_SENTRY_DSN=${{ secrets.STAGING_WEB_SENTRY_DSN }}
             NEXT_PUBLIC_SENTRY_ENVIRONMENT=staging
             NEXT_PUBLIC_SENTRY_RELEASE=sha-${{ steps.sha.outputs.short_sha }}
+            NEXT_PUBLIC_VOCANOVA_BUILD_VERSION=${{ steps.release.outputs.version }}
+            NEXT_PUBLIC_VOCANOVA_BUILD_COMMIT=${{ steps.release.outputs.commit }}
+            NEXT_PUBLIC_VOCANOVA_BUILD_ENVIRONMENT=staging
+            NEXT_PUBLIC_VOCANOVA_BUILD_BUILT_AT=${{ steps.release.outputs.built_at }}
           tags: |
-            ghcr.io/karsift/vocanova-web:sha-${{ steps.sha.outputs.short_sha }}
+            ghcr.io/karsift/vocanova-web:staging-sha-${{ steps.sha.outputs.short_sha }}
             ghcr.io/karsift/vocanova-web:dev
           provenance: false
 
@@ -1430,6 +1443,17 @@ jobs:
           echo "  containers are still serving traffic (docker compose up -d" >&2
           echo "  only removes old containers once the new ones are healthy)." >&2
           exit 1
+
+      - name: Verify deployed release identity
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          RELEASE_COMMIT: ${{ steps.release.outputs.commit }}
+          RELEASE_BUILT_AT: ${{ steps.release.outputs.built_at }}
+          RELEASE_ENVIRONMENT: staging
+          RELEASE_API_URL: https://api-staging.vocanova.site
+          RELEASE_WEB_URL: https://staging.vocanova.site
+        run: python3 infra/scripts/verify-deployed-release.py
 
       # ---------------------------------------------------------------
       # VOC-084-T02: post-deploy OAuth-start initiation check.

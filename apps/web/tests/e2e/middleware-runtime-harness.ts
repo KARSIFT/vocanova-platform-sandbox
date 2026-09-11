@@ -264,7 +264,7 @@ function createNodeMiddlewareContext(env: NodeJS.ProcessEnv): object {
  * on the Edge runtime.
  */
 export async function readDeclaredMiddlewareRuntime(): Promise<MiddlewareRuntime> {
-  const context = createNodeMiddlewareContext({});
+  const context = createNodeMiddlewareContext({ NODE_ENV: "test" });
   runInContext(
     `${NEXT_RESPONSE_RECORDER}\n${await readMiddlewareScripts()}`,
     context,

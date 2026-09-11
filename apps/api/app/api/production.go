@@ -19,6 +19,7 @@ import (
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/learning"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/missions"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/password"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/reviews"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/users"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
@@ -64,6 +65,7 @@ type ProductionConfig struct {
 
 	AIEnabled    bool
 	MagicLinkOn  bool
+	PasswordOn   bool
 	OAuthOn      bool
 	NewSignupsOn bool
 
@@ -208,6 +210,7 @@ func LoadProductionConfig() (ProductionConfig, error) {
 		APITimeout:      getenvDuration("AI_PROVIDER_TIMEOUT", 8*time.Second),
 		AIEnabled:       getenvBool("AI_FEATURES_ENABLED", true),
 		MagicLinkOn:     getenvBool("EMAIL_MAGIC_LINK_ENABLED", true),
+		PasswordOn:      getenvBool("EMAIL_PASSWORD_ENABLED", false),
 		OAuthOn:         getenvBool("GOOGLE_OAUTH_ENABLED", true),
 		NewSignupsOn:    getenvBool("NEW_USER_SIGNUP_ENABLED", true),
 
@@ -368,35 +371,23 @@ type Healthchecker interface {
 	PingContext(ctx context.Context) error
 }
 
-// buildEmailSender returns the email.Sender the production wiring
-// should use, applying the T14 fallback rules:
-//
-//   - When EMAIL_MAGIC_LINK_ENABLED is "false", always return
-//     Fake{}. The auth service will reject magic-link requests
-//     outright (and accounts.NewService will not call the sender
-//     for magic-link sends), so the real sender is never reached;
-//     Fake{} is correct here.
-//   - When EMAIL_PROVIDER_API_KEY is unset (or empty), return
-//     Fake{}. The real provider requires an API key; falling back
-//     keeps staging runnable with magic-link delivery disabled at
-//     the provider layer rather than crashing at startup.
-//   - When EMAIL_PROVIDER_API_KEY is set, also require
-//     EMAIL_PROVIDER_URL and EMAIL_FROM - NewHTTPSender validates
-//     these are non-empty. A misconfigured URL or missing From is
-//     a hard startup error: silently falling back to Fake{} would
-//     hide a real configuration mistake.
-//
-// The decision is logged to stderr (matching cmd/api/main.go's
-// logging style) so an operator running the binary interactively
-// can see which sender is wired without having to read the env
-// file. The log line never includes the API key.
+// buildEmailSender returns the shared sender for enabled email authentication
+// methods. If neither magic-link nor password authentication is enabled, or a
+// provider API key is absent, it uses Fake. Password capability separately
+// requires a complete real-sender configuration so it is never advertised when
+// delivery would only be simulated. A partial configured sender is an explicit
+// startup error instead of a silent fallback.
+func effectivePasswordEnabled(cfg ProductionConfig) bool {
+	return cfg.PasswordOn && cfg.EmailProviderAPIKey != "" && cfg.EmailProviderURL != "" && cfg.EmailFrom != ""
+}
+
 func buildEmailSender(cfg ProductionConfig) (email.Sender, error) {
-	if !cfg.MagicLinkOn {
-		fmt.Fprintf(os.Stderr, "api: email sender=Fake (EMAIL_MAGIC_LINK_ENABLED=false)\n")
+	if !cfg.MagicLinkOn && !cfg.PasswordOn {
+		fmt.Fprintf(os.Stderr, "api: email sender=Fake (email authentication disabled)\n")
 		return &email.Fake{}, nil
 	}
 	if cfg.EmailProviderAPIKey == "" {
-		fmt.Fprintf(os.Stderr, "api: email sender=Fake (EMAIL_PROVIDER_API_KEY unset; magic-link delivery disabled at the provider layer)\n")
+		fmt.Fprintf(os.Stderr, "api: email sender=Fake (EMAIL_PROVIDER_API_KEY unset; email delivery disabled at the provider layer)\n")
 		return &email.Fake{}, nil
 	}
 	sender, err := email.NewHTTPSender(email.HTTPSenderConfig{
@@ -613,6 +604,7 @@ type HealthzOutput struct {
 // suite assert the intended posture without any state-mutating probe.
 type KillSwitchStatus struct {
 	MagicLinkEnabled  bool `json:"magic_link_enabled" example:"false"`
+	PasswordEnabled   bool `json:"password_enabled" example:"false"`
 	OAuthEnabled      bool `json:"oauth_enabled" example:"false"`
 	NewSignupsEnabled bool `json:"new_signups_enabled" example:"false"`
 	AIEnabled         bool `json:"ai_enabled" example:"true"`
@@ -735,6 +727,7 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	authSvc := auth.NewService(authRepo, mailer, oauthProvider, clk, limiter, authCfg)
 	authSvc.SetKillSwitches(&auth.KillSwitches{
 		MagicLinkEnabled:       cfg.MagicLinkOn,
+		PasswordEnabled:        effectivePasswordEnabled(cfg),
 		OAuthEnabled:           cfg.OAuthOn,
 		NewSignupsEnabled:      cfg.NewSignupsOn,
 		SignupAllowlist:        cfg.SignupAllowlist,
@@ -824,6 +817,9 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	api.UseMiddleware(AuthMiddleware(authSvc))
 	RegisterContract(api)
 	RegisterAuth(api, authSvc)
+	passwordEnabled := effectivePasswordEnabled(cfg)
+	passwordSvc := password.NewService(db, mailer, clk, limiter, cfg.BaseURL, cfg.Environment, cfg.SessionLifetime, func() bool { return passwordEnabled }, authSvc.PasswordSignupAllowed, authSvc.PasswordIdentityAllowed)
+	RegisterPasswordAuth(api, passwordSvc, authSvc)
 	RegisterOnboarding(api, usersSvc, authSvc)
 	RegisterSettings(api, usersSvc, authSvc)
 	RegisterEmailChangeLinks(api, accountsSvc, authSvc)
@@ -845,6 +841,7 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 
 	RegisterHealthz(api, db, KillSwitchStatus{
 		MagicLinkEnabled:  cfg.MagicLinkOn,
+		PasswordEnabled:   effectivePasswordEnabled(cfg),
 		OAuthEnabled:      cfg.OAuthOn,
 		NewSignupsEnabled: cfg.NewSignupsOn,
 		AIEnabled:         aiGenerationEnabled,

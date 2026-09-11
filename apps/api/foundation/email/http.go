@@ -12,26 +12,11 @@ import (
 	"time"
 )
 
-// HTTPSender is a Sender implementation that POSTs each message as
-// JSON to a transactional-email provider's HTTP API. It is
-// provider-agnostic: any provider that accepts an
-// `Authorization: Bearer <key>` JSON POST with a
-// {"from","to","subject","text","html"} body works (Resend,
-// SendGrid v3, Postmark's token-auth mode, etc.). The
-// provider-agnostic shape is intentional - T14 fixes the
-// "no real email sender exists" gap (VOC-032-D10) by adding the
-// first HTTP-based real implementation, not by binding to a single
-// vendor's exact wire format. A future, narrower follow-up can
-// add a provider-specific request shape if the founder picks a
-// vendor whose API needs something this generic sender does not
-// produce.
-//
-// HTTPSender is the production-wiring path. Fake{} remains in place
-// for unit tests and for the "no credential configured" fallback -
-// the production wiring in apps/api/app/api/production.go uses
-// HTTPSender only when the credential env var is set, and falls
-// back to Fake{} otherwise (and always when
-// EMAIL_MAGIC_LINK_ENABLED is false, per DOC-11 §3's kill switch).
+// HTTPSender posts the Resend-compatible JSON payload with Bearer
+// authentication. Providers with a different wire format (such as SendGrid
+// or Postmark) require a separate adapter; they are not interchangeable.
+// Production uses it when email authentication is enabled and a provider
+// credential is configured. Fake remains available for isolated tests.
 //
 // HTTPSender is safe for concurrent use; the only mutable state is
 // the *http.Client, which net/http documents as safe for concurrent
