@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { Surface } from "@/ui/surface";
+import { AuthShell } from "@/ui/auth-shell";
 
 import { OnboardingForm } from "./_components/onboarding-form";
 
@@ -28,13 +29,7 @@ export default async function OnboardingPage() {
   }
 
   return (
-    <main className="grid min-h-screen place-items-center bg-neutral-100 p-6">
-      {/* max-w-[36rem] (not max-w-xl): this repo's tokens.generated.css only
-          defines a --spacing-* scale, so Tailwind resolves the named
-          max-w-xl utility to --spacing-xl (32px) instead of the intended
-          36rem, collapsing this card to a single-character column. The
-          same defect pre-exists on the authentication routes; fixing the
-          shared token config is out of this task's scope. */}
+    <AuthShell wide>
       <Surface className="w-full max-w-[36rem] space-y-[var(--spacing-lg)]">
         <header className="space-y-[var(--spacing-xs)]">
           <h1 className="text-2xl font-semibold text-neutral-900">
@@ -47,6 +42,6 @@ export default async function OnboardingPage() {
         </header>
         <OnboardingForm />
       </Surface>
-    </main>
+    </AuthShell>
   );
 }

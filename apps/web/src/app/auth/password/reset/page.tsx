@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { getSignInAuthCapabilities } from "@/lib/auth-capabilities";
+import { AuthShell } from "@/ui/auth-shell";
 import { Surface } from "@/ui/surface";
 
 import {
@@ -21,12 +22,9 @@ export default async function PasswordResetPage({
   const passwordUnavailable = !hasToken && !passwordEnabled;
 
   return (
-    <main className="grid min-h-screen place-items-center bg-neutral-100 p-6">
-      <Surface className="w-full max-w-[28rem] space-y-[var(--spacing-lg)]">
+    <AuthShell>
+      <Surface className="w-full space-y-[var(--spacing-lg)] border-neutral-200 bg-white shadow-[0_12px_28px_rgb(15_23_42_/_0.07)]">
         <div className="space-y-[var(--spacing-sm)]">
-          <p className="text-sm font-bold tracking-wide text-primary-700">
-            VOCANOVA
-          </p>
           <h1 className="text-2xl font-semibold text-neutral-900">
             {hasToken
               ? "Choose a new password"
@@ -54,6 +52,6 @@ export default async function PasswordResetPage({
           Back to sign in
         </Link>
       </Surface>
-    </main>
+    </AuthShell>
   );
 }

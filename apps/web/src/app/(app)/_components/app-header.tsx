@@ -10,11 +10,19 @@ import { CSRF_COOKIE_NAME, deleteCookie } from "@/lib/cookies";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { clearOAuthContinuation } from "@/lib/oauth-continuation";
 import { handleSessionExpired, isSessionExpiredError } from "@/lib/session";
+import { BrandMark } from "@/ui/brand-mark";
 
 import {
   clearSentenceFeedbackDrafts,
   hasSentenceFeedbackDrafts,
 } from "./sentence-feedback-drafts";
+import { isPrimaryNavItemActive } from "./bottom-nav-state";
+
+const DESKTOP_NAV_ITEMS = [
+  ["/home", "Home"],
+  ["/discover", "Journey"],
+  ["/progress", "Progress"],
+] as const;
 
 export function AppHeader() {
   const pathname = usePathname();
@@ -71,32 +79,41 @@ export function AppHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-10 border-b border-neutral-200/90 bg-white/95 pt-[env(safe-area-inset-top)] shadow-[0_1px_0_rgb(255_255_255_/_0.8)] backdrop-blur">
-        <div className="mx-auto flex h-16 w-full max-w-[48rem] items-center justify-between px-[var(--spacing-md)] sm:px-[var(--spacing-xl)]">
+      <header className="sticky top-0 z-10 border-b border-neutral-200/90 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
+        <div className="mx-auto flex min-h-16 w-full max-w-[76rem] items-center gap-[var(--spacing-sm)] px-[var(--spacing-md)] sm:px-[var(--spacing-xl)]">
           <Link
             href="/home"
-            className="group inline-flex min-h-11 items-center gap-[var(--spacing-sm)] rounded-md pr-[var(--spacing-sm)]"
+            className="inline-flex min-h-11 items-center gap-[var(--spacing-sm)] rounded-md pr-[var(--spacing-sm)]"
           >
-            <span
-              aria-hidden="true"
-              className="grid h-9 w-9 place-items-center rounded-xl bg-primary-700 text-base font-bold text-white shadow-sm transition-transform duration-[var(--duration-fast)] group-hover:-translate-y-0.5"
-            >
-              V
-            </span>
-            <span>
-              <span className="block text-lg font-bold tracking-tight text-neutral-900">
-                VocaNova
-              </span>
-              <span className="block text-xs font-medium text-neutral-500">
-                practical English
-              </span>
-            </span>
+            <BrandMark />
           </Link>
-          <div className="flex items-center gap-[var(--spacing-xs)]">
+          <nav
+            aria-label="Primary"
+            className="ml-auto hidden items-center gap-1 lg:flex"
+          >
+            {DESKTOP_NAV_ITEMS.map(([href, label]) => {
+              const active = isPrimaryNavItemActive(pathname, href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  aria-current={active ? "page" : undefined}
+                  className={`inline-flex min-h-11 items-center rounded-md px-3 text-sm font-semibold transition-colors ${active ? "bg-primary-50 text-primary-800" : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"}`}
+                >
+                  {label}
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="ml-auto flex items-center gap-[var(--spacing-xs)] lg:ml-4">
             <Link
               href="/settings"
               aria-label="Settings"
-              aria-current={pathname === "/settings" ? "page" : undefined}
+              aria-current={
+                pathname === "/settings" || pathname.startsWith("/settings/")
+                  ? "page"
+                  : undefined
+              }
               className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl px-[var(--spacing-sm)] py-[var(--spacing-xs)] text-neutral-700 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-primary-50 hover:text-primary-800"
             >
               <svg

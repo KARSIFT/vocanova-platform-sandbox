@@ -44,7 +44,7 @@ export default async function ProgressPage() {
   }));
 
   return (
-    <PageContainer>
+    <PageContainer className="max-w-[64rem]">
       <Eyebrow>Your practice record</Eyebrow>
       <h1 className="mt-[var(--spacing-xs)] text-3xl font-bold tracking-tight text-neutral-900">
         Progress

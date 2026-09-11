@@ -305,8 +305,9 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
       page.getByRole("link", { name: "Skip to main content" }),
     ).toBeFocused();
     await page.keyboard.press("Tab");
-    // The brand is now a useful Home link before Settings in the tab order.
-    for (let step = 0; step < 3; step += 1) {
+    // Desktop includes the three primary destinations between the brand and
+    // account controls; mobile keeps those destinations in the bottom bar.
+    for (let step = 0; step < 6; step += 1) {
       if (
         await settingsLink.evaluate(
           (element) => element === document.activeElement,

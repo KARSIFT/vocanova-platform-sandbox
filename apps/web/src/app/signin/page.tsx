@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getSignInAuthCapabilities } from "@/lib/auth-capabilities";
 import { getOAuthCallbackMessage } from "@/lib/auth-feedback";
 import { normalizeReturnTo } from "@/lib/return-to";
+import { AuthShell } from "@/ui/auth-shell";
 import { Surface } from "@/ui/surface";
 
 import { MagicLinkForm, OAuthButton } from "./_components/auth-forms";
@@ -34,29 +35,14 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   const oauthMessage = getOAuthCallbackMessage(oauth);
 
   return (
-    <main className="grid min-h-screen place-items-center bg-[radial-gradient(circle_at_top,_var(--color-primary-100),_var(--color-neutral-100)_48rem)] p-6">
+    <AuthShell>
       {/* max-w-[28rem] (not max-w-md): this repo's tokens.generated.css only
           defines a --spacing-* scale, so Tailwind resolves the named
           max-w-md utility to --spacing-md (16px) instead of the intended
           28rem, collapsing this card to a single-character column. See
           the matching note on /onboarding's page.tsx. */}
-      <Surface className="w-full max-w-[28rem] space-y-[var(--spacing-lg)] border-primary-100 shadow-[0_1.5rem_3.5rem_rgb(30_58_138_/_0.12)]">
+      <Surface className="w-full space-y-[var(--spacing-lg)] border-neutral-200 bg-white shadow-[0_12px_28px_rgb(15_23_42_/_0.07)]">
         <div className="space-y-[var(--spacing-sm)]">
-          <Link
-            href="/"
-            aria-label="VocaNova home"
-            className="inline-flex w-fit items-center gap-[var(--spacing-sm)] rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-          >
-            <span
-              aria-hidden="true"
-              className="grid h-10 w-10 place-items-center rounded-xl bg-primary-700 text-lg font-bold text-white shadow-sm"
-            >
-              V
-            </span>
-            <p className="text-sm font-bold tracking-wide text-primary-700">
-              VOCANOVA
-            </p>
-          </Link>
           <h1 className="text-xl font-semibold text-neutral-900">
             Sign in to Vocanova
           </h1>
@@ -172,6 +158,6 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           </p>
         ) : null}
       </Surface>
-    </main>
+    </AuthShell>
   );
 }

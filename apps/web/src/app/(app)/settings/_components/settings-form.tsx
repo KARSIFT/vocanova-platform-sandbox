@@ -109,9 +109,9 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
     <form
       onSubmit={handleSubmit}
       aria-label="Practice settings"
-      className="mt-[var(--spacing-lg)] space-y-[var(--spacing-lg)]"
+      className="mt-[var(--spacing-lg)] space-y-[var(--spacing-lg)] rounded-[0.9rem] border border-neutral-200 bg-white p-[var(--spacing-md)] sm:p-[var(--spacing-lg)]"
     >
-      <fieldset className="space-y-[var(--spacing-md)]">
+      <fieldset className="space-y-[var(--spacing-md)] border-b border-neutral-200 pb-[var(--spacing-lg)]">
         <legend className="text-lg font-semibold text-neutral-900">
           Daily review target
         </legend>
@@ -151,7 +151,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
         </div>
       </fieldset>
 
-      <fieldset className="space-y-[var(--spacing-md)]">
+      <fieldset className="space-y-[var(--spacing-md)] border-b border-neutral-200 pb-[var(--spacing-lg)]">
         <legend className="text-lg font-semibold text-neutral-900">
           Review rhythm
         </legend>
@@ -213,7 +213,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
         </div>
       </fieldset>
 
-      <fieldset className="space-y-[var(--spacing-md)]">
+      <fieldset className="space-y-[var(--spacing-md)] border-b border-neutral-200 pb-[var(--spacing-lg)]">
         <legend className="text-lg font-semibold text-neutral-900">
           App language
         </legend>
@@ -241,7 +241,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
         </label>
       </fieldset>
 
-      <fieldset className="space-y-[var(--spacing-md)]">
+      <fieldset className="space-y-[var(--spacing-md)] border-b border-neutral-200 pb-[var(--spacing-lg)]">
         <legend className="text-lg font-semibold text-neutral-900">
           Notifications and emails
         </legend>

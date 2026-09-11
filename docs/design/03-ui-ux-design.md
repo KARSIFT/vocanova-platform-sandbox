@@ -43,7 +43,8 @@ progress toward practically usable English. Guiding principles carried through e
 
 ## 2. Information architecture and navigation
 
-Three-tab bottom navigation:
+Three primary destinations, presented in bottom navigation on mobile and adapted
+to the desktop workspace (see [the visual direction](learning-workspace.md)):
 
 1. **Home** — Today's Mission, streak, due-review entry, quick sentence-practice entry, discovery
    teaser.
