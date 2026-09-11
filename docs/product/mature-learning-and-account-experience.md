@@ -98,7 +98,13 @@ Google/email flow. Fixture tests and CI cannot establish those claims by themsel
 - `go test -skip TestControlledSignupOAuth ./...` passed; this does not establish
   live database/OAuth integration. CI must run the full suite with its database.
 - Production workspace build, final web rebuild, lint and formatting passed.
-- Focused desktop browser verification passed 20 recovery/auth/learning checks
-  (one layout-specific skip), plus all four sentence-history checks. The full
-  browser matrix and Lighthouse are being verified before readying the PR.
-- The PR stays draft until required CI and independent review are resolved.
+- Full Playwright browser/accessibility verification passed 193 tests with 17
+  existing layout-specific skips across desktop, 360px and 430px layouts.
+- All 12 Lighthouse audits passed: performance 100, accessibility 100 and best
+  practices 96 on every audited screen/layout. These are local production-build
+  results against fixtures, not claims about production traffic or devices.
+- The first CI run passed full API tests, controlled-signup OAuth, web validation,
+  container smoke and Lighthouse. Latest-commit CI and independent review are
+  tracked in [PR #1464](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1464).
+  The PR stays draft until those checks and review are resolved; the PR is the
+  authoritative record of the eventual merge.
