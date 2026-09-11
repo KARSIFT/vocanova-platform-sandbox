@@ -182,6 +182,12 @@ func TestCreateAccountDeletionRequestHappyPath(t *testing.T) {
 	req.Header.Set("X-CSRF-Token", csrfToken)
 	api.Adapter().ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code, "happy path returns 200")
+	clearSession := findCookie(w.Result().Cookies(), "vocanova_session")
+	require.NotNil(t, clearSession, "successful deactivation clears the server session cookie")
+	assert.True(t, clearSession.Expires.Before(time.Now()) || clearSession.MaxAge < 0)
+	clearCSRF := findCookie(w.Result().Cookies(), "vocanova_csrf")
+	require.NotNil(t, clearCSRF, "successful deactivation clears the CSRF cookie")
+	assert.True(t, clearCSRF.Expires.Before(time.Now()) || clearCSRF.MaxAge < 0)
 
 	var body CreateAccountDeletionRequestDTO
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))

@@ -30,6 +30,17 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
         url: page.url(),
       },
     ]);
+    await page.evaluate(() => {
+      sessionStorage.setItem(
+        "vocanova:sentence-feedback-draft:learner:word_detail:failed-logout",
+        JSON.stringify({
+          attemptId: "failed-logout",
+          savedAt: Date.now(),
+          sentence: "I practise every day.",
+          source: "word_detail",
+        }),
+      );
+    });
 
     let logoutRequestCount = 0;
     await page.route("**/api/v1/auth/logout", async (route) => {
@@ -43,15 +54,30 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
       });
     });
 
+    page.once("dialog", (dialog) => dialog.accept());
     await page.getByRole("button", { name: "Log out" }).click();
 
-    const alert = page.getByText("Unable to log out. Please try again.", {
-      exact: true,
-    });
+    const alert = page.getByText(
+      "We couldn't sign you out. Please try again.",
+      {
+        exact: true,
+      },
+    );
     const header = page.getByRole("banner");
-    await expect(alert).toHaveText("Unable to log out. Please try again.");
+    await expect(alert).toHaveText(
+      "We couldn't sign you out. Please try again.",
+    );
     expect(logoutRequestCount).toBe(1);
     await expect(page.getByRole("button", { name: "Log out" })).toBeEnabled();
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          sessionStorage.getItem(
+            "vocanova:sentence-feedback-draft:learner:word_detail:failed-logout",
+          ),
+        ),
+      )
+      .not.toBeNull();
 
     const [alertBox, headerBox] = await Promise.all([
       alert.boundingBox(),
@@ -67,6 +93,148 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
       () => document.documentElement.scrollWidth,
     );
     expect(documentWidth).toBeLessThanOrEqual(page.viewportSize()!.width);
+  });
+
+  test("keeps an unsent draft when the learner cancels logout", async ({
+    page,
+  }) => {
+    await page.goto("/home");
+    await page.evaluate(() => {
+      sessionStorage.setItem(
+        "vocanova:sentence-feedback-draft:learner:word_detail:attempt",
+        JSON.stringify({
+          attemptId: "attempt",
+          savedAt: Date.now(),
+          sentence: "I practise every day.",
+          source: "word_detail",
+        }),
+      );
+    });
+    let logoutRequestCount = 0;
+    await page.route("**/api/v1/auth/logout", async (route) => {
+      logoutRequestCount += 1;
+      await route.continue();
+    });
+    page.once("dialog", (dialog) => dialog.dismiss());
+
+    await page.getByRole("button", { name: "Log out" }).click();
+
+    expect(logoutRequestCount).toBe(0);
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          sessionStorage.getItem(
+            "vocanova:sentence-feedback-draft:learner:word_detail:attempt",
+          ),
+        ),
+      )
+      .not.toBeNull();
+  });
+
+  test("clears an unsent draft after confirmed server-side logout", async ({
+    page,
+  }) => {
+    await page.goto("/home");
+    await page
+      .context()
+      .addCookies([
+        { name: "vocanova_csrf", value: "logout-draft-csrf", url: page.url() },
+      ]);
+    await page.evaluate(() => {
+      sessionStorage.setItem(
+        "vocanova:sentence-feedback-draft:learner:word_detail:attempt",
+        JSON.stringify({
+          attemptId: "attempt",
+          savedAt: Date.now(),
+          sentence: "I practise every day.",
+          source: "word_detail",
+        }),
+      );
+    });
+    page.once("dialog", (dialog) => dialog.accept());
+
+    await page.getByRole("button", { name: "Log out" }).click();
+    await expect(page).toHaveURL(/\/login\?signedOut=1$/);
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          sessionStorage.getItem(
+            "vocanova:sentence-feedback-draft:learner:word_detail:attempt",
+          ),
+        ),
+      )
+      .toBeNull();
+  });
+
+  test("restores a missing CSRF cookie before logging out", async ({
+    page,
+    context,
+  }, testInfo) => {
+    const baseURL = testInfo.project.use.baseURL;
+    if (!baseURL) {
+      throw new Error("Expected a configured base URL.");
+    }
+    // Let the shell observe an existing token, so this test isolates recovery
+    // initiated by the later logout click.
+    await context.addCookies([
+      { name: "vocanova_csrf", value: "initial-csrf", url: baseURL },
+    ]);
+    await page.goto("/home");
+    await expect(page.getByRole("button", { name: "Log out" })).toBeVisible();
+
+    let recoveryRequests = 0;
+    await page.route("**/api/v1/me", async (route) => {
+      recoveryRequests += 1;
+      await route.continue();
+    });
+    await page.evaluate(() => {
+      document.cookie = "vocanova_csrf=; Max-Age=0; path=/";
+    });
+
+    let logoutCSRFHeader: string | undefined;
+    await page.route("**/api/v1/auth/logout", async (route) => {
+      logoutCSRFHeader = route.request().headers()["x-csrf-token"];
+      await route.continue();
+    });
+
+    await page.getByRole("button", { name: "Log out" }).click();
+    await expect(page).toHaveURL(/\/login\?signedOut=1$/);
+    expect(recoveryRequests).toBe(1);
+    expect(logoutCSRFHeader).toBeTruthy();
+  });
+
+  test("returns to sign-in when CSRF recovery confirms an expired session", async ({
+    page,
+    context,
+  }, testInfo) => {
+    const baseURL = testInfo.project.use.baseURL;
+    if (!baseURL) {
+      throw new Error("Expected a configured base URL.");
+    }
+    await context.addCookies([
+      { name: "vocanova_csrf", value: "initial-csrf", url: baseURL },
+    ]);
+    await page.goto("/home");
+    await expect(page.getByRole("button", { name: "Log out" })).toBeVisible();
+
+    await page.route("**/api/v1/me", async (route) => {
+      await route.fulfill({
+        status: 401,
+        contentType: "application/problem+json",
+        body: JSON.stringify({ detail: "authentication required" }),
+      });
+    });
+    await page.evaluate(() => {
+      document.cookie = "vocanova_csrf=; Max-Age=0; path=/";
+    });
+
+    await page.getByRole("button", { name: "Log out" }).click();
+    await expect(page).toHaveURL(
+      /\/login\?returnTo=%2Fhome&reason=session-expired$/,
+    );
+    await expect(
+      page.getByText("Your session expired. Sign in again to continue."),
+    ).toBeVisible();
   });
 
   test("lets keyboard users skip the persistent app shell on every authenticated route", async ({
@@ -139,7 +307,12 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
     await page.keyboard.press("Tab");
     // The brand is now a useful Home link before Settings in the tab order.
     for (let step = 0; step < 3; step += 1) {
-      if (await settingsLink.evaluate((element) => element === document.activeElement)) break;
+      if (
+        await settingsLink.evaluate(
+          (element) => element === document.activeElement,
+        )
+      )
+        break;
       await page.keyboard.press("Tab");
     }
     await expect(settingsLink).toBeFocused();
@@ -183,13 +356,10 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
     // message is also text.
     await assertNonColorOnlyFeedback(page, {
       contextLabel: "/home",
-      requireText: [
-        "text=reviews complete",
-        "text=STREAK",
-        "text=In progress",
-      ],
+      requireText: ["text=reviews complete", "text=STREAK", "text=In progress"],
     });
-    await expect(page.getByRole("progressbar", { name: "Today’s mission progress" }))
-      .toHaveAttribute("aria-valuenow", "0");
+    await expect(
+      page.getByRole("progressbar", { name: "Today’s mission progress" }),
+    ).toHaveAttribute("aria-valuenow", "0");
   });
 });

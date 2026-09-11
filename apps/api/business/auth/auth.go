@@ -153,6 +153,7 @@ type OAuthIdentity struct {
 var (
 	ErrInvalidMagicLink             = errors.New("invalid or expired magic link")
 	ErrAuthenticationRequired       = errors.New("authentication required")
+	ErrSessionNotFound              = errors.New("session not found")
 	ErrUserDisabled                 = errors.New("user disabled")
 	ErrRateLimited                  = errors.New("rate limited")
 	ErrInvalidOAuthState            = errors.New("invalid or expired oauth state")

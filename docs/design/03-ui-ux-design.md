@@ -54,13 +54,13 @@ from Home, Word Detail, and Review Completion. This is a deliberate MVP scoping 
 the tab bar simple and treats "write a sentence" as something the learner does *in the middle of*
 another activity, not as its own destination.
 
-There is **no dedicated Sentence History screen.** History is retained in the backend
-(`learner_sentences` / `ai_feedback_attempts` — see [05](../engineering/05-database-design.md) §11) for future use, but
-is not surfaced as its own MVP UI. (This reverses an earlier PRD draft that listed a "Sentence
-History Page" — see
-[the migration notes](../archive/README-migration-notes.md#4-sentence-history-screen-conflict).
-Treat "sentence-history insights" as a named post-MVP opportunity,
-not a cut corner.)
+The [maturity delivery](../product/mature-learning-and-account-experience.md) adds
+Sentence History under Progress at `/progress/sentences`. It presents the retained
+`learner_sentences` / `ai_feedback_attempts` data (see
+[05](../engineering/05-database-design.md) §11), including processing failures and
+pending feedback without presenting them as learning outcomes. The original MVP
+deferred this screen; its [migration rationale](../archive/README-migration-notes.md#4-sentence-history-screen-conflict)
+remains historical context. History is a secondary destination, not a fourth tab.
 
 ## 3. Onboarding flow
 

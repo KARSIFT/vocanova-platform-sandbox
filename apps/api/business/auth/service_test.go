@@ -65,6 +65,26 @@ func (r losingOAuthStateRepository) ConsumeOAuthState(context.Context, uuid.UUID
 	return false, nil
 }
 
+type failingLogoutRepository struct {
+	*MemoryRepository
+	lookupErr error
+	revokeErr error
+}
+
+func (r failingLogoutRepository) GetSessionByTokenHash(ctx context.Context, hash []byte) (*Session, error) {
+	if r.lookupErr != nil {
+		return nil, r.lookupErr
+	}
+	return r.MemoryRepository.GetSessionByTokenHash(ctx, hash)
+}
+
+func (r failingLogoutRepository) RevokeSession(ctx context.Context, id uuid.UUID, revokedAt time.Time) error {
+	if r.revokeErr != nil {
+		return r.revokeErr
+	}
+	return r.MemoryRepository.RevokeSession(ctx, id, revokedAt)
+}
+
 // racedGoogleIdentityRepository simulates the database uniqueness race where
 // another valid OAuth callback creates the identity immediately before this
 // callback's insert reports its duplicate-key error.
@@ -403,6 +423,50 @@ func TestLogoutRevokesSession(t *testing.T) {
 
 	_, err = svc.ValidateSession(ctx, sessionToken)
 	assert.ErrorIs(t, err, ErrAuthenticationRequired)
+}
+
+func TestLogoutOnlyTreatsAbsentOrInactiveSessionsAsIdempotent(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 7, 24, 12, 0, 0, 0, time.UTC)
+	c := &clock.Fixed{T: now}
+	lookupFailure := errors.New("database lookup unavailable")
+	revokeFailure := errors.New("database revoke unavailable")
+
+	for _, tc := range []struct {
+		name      string
+		lookupErr error
+		revokeErr error
+		want      error
+	}{
+		{name: "lookup failure", lookupErr: lookupFailure, want: lookupFailure},
+		{name: "revoke failure", revokeErr: revokeFailure, want: revokeFailure},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			memory := NewMemoryRepository()
+			user, err := memory.CreateUser(ctx, "logout@example.com", nil)
+			require.NoError(t, err)
+			token, hash, err := generateToken()
+			require.NoError(t, err)
+			_, err = memory.CreateSession(ctx, user.ID, hash, now, now.Add(time.Hour))
+			require.NoError(t, err)
+
+			repo := failingLogoutRepository{
+				MemoryRepository: memory,
+				lookupErr:        tc.lookupErr,
+				revokeErr:        tc.revokeErr,
+			}
+			svc := NewService(
+				repo,
+				&email.Fake{},
+				nil,
+				c,
+				NewFixedWindowRateLimiter(c, time.Hour, 10),
+				testConfig(),
+			)
+
+			assert.ErrorIs(t, svc.Logout(ctx, token), tc.want)
+		})
+	}
 }
 
 func TestValidateSessionRejectsExpired(t *testing.T) {

@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { createApiClient } from "@/lib/api";
-import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
+import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError } from "@/lib/session";
 
 interface EmailChangeFormProps {
@@ -27,19 +27,18 @@ export function EmailChangeForm({ currentEmail }: EmailChangeFormProps) {
       return;
     }
 
-    const csrfToken = getCookieValue(CSRF_COOKIE_NAME);
-    if (!csrfToken) {
-      setPhase({
-        type: "error",
-        message:
-          "Your session is missing a security token. Please refresh the page and try again.",
-      });
-      return;
-    }
-
     setPhase({ type: "requesting" });
     const client = createApiClient();
     try {
+      const csrfToken = await getOrRefreshCSRFToken();
+      if (!csrfToken) {
+        setPhase({
+          type: "error",
+          message:
+            "We couldn't prepare this request securely. Please try again.",
+        });
+        return;
+      }
       await client.requestEmailChangeLink(
         { newEmail: trimmed },
         { headers: { "X-CSRF-Token": csrfToken } },
@@ -152,7 +151,10 @@ export function EmailChangeForm({ currentEmail }: EmailChangeFormProps) {
       {currentEmail ? (
         <p className="text-sm text-neutral-700">
           Your current sign-in address is{" "}
-          <span className="font-medium text-neutral-900">{currentEmail}</span>.
+          <span className="break-all font-medium text-neutral-900">
+            {currentEmail}
+          </span>
+          .
         </p>
       ) : null}
     </div>

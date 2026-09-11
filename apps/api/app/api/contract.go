@@ -12,8 +12,10 @@ import (
 )
 
 // CurrentUser is the minimal public identity projection. It intentionally omits
-// database IDs, provider subjects, tokens, and session metadata.
+// provider subjects, tokens, and session metadata. The opaque requester ID lets
+// clients isolate temporary local drafts without storing email addresses.
 type CurrentUser struct {
+	ID              string     `json:"id" format:"uuid" doc:"Opaque authenticated learner identifier; never an authorization credential"`
 	Email           *string    `json:"email,omitempty" format:"email" doc:"Verified email when available"`
 	DisplayName     *string    `json:"displayName,omitempty" maxLength:"120"`
 	AvatarURL       *string    `json:"avatarUrl,omitempty" format:"uri"`

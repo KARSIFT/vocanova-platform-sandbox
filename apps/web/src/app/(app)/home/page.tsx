@@ -9,10 +9,19 @@ export default async function HomePage() {
   let savedWordsResponse: Awaited<ReturnType<typeof client.listSavedWords>>;
   let dueResponse: Awaited<ReturnType<typeof client.listDueWords>>;
   let dailyMissionResponse: Awaited<ReturnType<typeof client.getDailyMission>>;
+  let currentUserResponse: Awaited<ReturnType<typeof client.getCurrentUser>>;
   try {
-    savedWordsResponse = await client.listSavedWords({ limit: 3 });
-    dueResponse = await client.listDueWords({ limit: 1 });
-    dailyMissionResponse = await client.getDailyMission();
+    [
+      savedWordsResponse,
+      dueResponse,
+      dailyMissionResponse,
+      currentUserResponse,
+    ] = await Promise.all([
+      client.listSavedWords({ limit: 3 }),
+      client.listDueWords({ limit: 1 }),
+      client.getDailyMission(),
+      client.getCurrentUser(),
+    ]);
   } catch (error) {
     requireAuthRedirect(error, "/home");
   }
@@ -23,6 +32,10 @@ export default async function HomePage() {
   const {
     reviewTarget: missionTargetWords,
     reviewsCompleted: reviewedWordsToday,
+    newWordTarget,
+    newWordsCompleted,
+    sentencePracticeTarget,
+    sentencePracticesCompleted,
     streak,
   } = dailyMissionResponse.data;
   const currentStreakDays = streak.currentStreakCount;
@@ -36,6 +49,18 @@ export default async function HomePage() {
       : 0;
   const missionComplete = dailyMissionResponse.data.status === "completed";
   const hasDueReviews = dueReviewWords > 0;
+  const hasRemainingReviewTarget = reviewedWordsToday < missionTargetWords;
+  const hasRemainingNewWordTarget =
+    typeof newWordTarget === "number" &&
+    typeof newWordsCompleted === "number" &&
+    newWordsCompleted < newWordTarget;
+  const remainingSentencePractices =
+    typeof sentencePracticeTarget === "number" &&
+    typeof sentencePracticesCompleted === "number"
+      ? Math.max(0, sentencePracticeTarget - sentencePracticesCompleted)
+      : null;
+  const hasRemainingSentenceTarget =
+    remainingSentencePractices !== null && remainingSentencePractices > 0;
   const primaryAction = missionComplete
     ? {
         href: "/discover",
@@ -43,25 +68,39 @@ export default async function HomePage() {
         detail:
           "Your daily review goal is complete. Keep the momentum with useful vocabulary.",
       }
-    : hasDueReviews
+    : hasDueReviews && hasRemainingReviewTarget
       ? {
           href: "/review",
           label: "Start review",
           detail: `${dueReviewWords} ${dueReviewWords === 1 ? "word is" : "words are"} ready when you are.`,
         }
-      : savedWords.length > 0
+      : savedWords.length === 0
         ? {
-            href: "/discover",
-            label: "Explore a new situation",
-            detail:
-              "Nothing is due right now. Add a useful word for a future review.",
-          }
-        : {
             href: "/discover",
             label: "Start your Journey",
             detail:
               "Save a word from a real-life situation to begin your review habit.",
-          };
+          }
+        : hasRemainingNewWordTarget || hasRemainingReviewTarget
+          ? {
+              href: "/discover",
+              label: "Explore a new situation",
+              detail: hasRemainingReviewTarget
+                ? "Nothing is due right now. Add a useful word to keep building today’s practice."
+                : "Choose a useful word from a real-life situation to continue today’s mission.",
+            }
+          : hasRemainingSentenceTarget && savedWords.length > 0
+            ? {
+                href: "#sentence-practice",
+                label: "Practice a sentence",
+                detail: `${remainingSentencePractices} sentence ${remainingSentencePractices === 1 ? "practice is" : "practices are"} left in today’s mission.`,
+              }
+            : {
+                href: "/progress",
+                label: "View your progress",
+                detail:
+                  "Your next mission step will be ready when there’s something new to practice.",
+              };
 
   return (
     <PageContainer>
@@ -88,7 +127,7 @@ export default async function HomePage() {
             >
               Today&apos;s Mission
             </h1>
-            <h2 className="mt-[var(--spacing-xs)] text-2xl font-bold tracking-tight">
+            <h2 className="mt-[var(--spacing-xs)] text-xl font-bold tracking-tight sm:text-2xl">
               {missionComplete ? "Mission complete" : "Build your review habit"}
             </h2>
           </div>
@@ -175,7 +214,10 @@ export default async function HomePage() {
                 </li>
               ))}
             </ul>
-            <details className="mt-[var(--spacing-md)] rounded-xl border border-secondary-100 bg-secondary-50 px-[var(--spacing-md)]">
+            <details
+              id="sentence-practice"
+              className="mt-[var(--spacing-md)] rounded-xl border border-secondary-100 bg-secondary-50 px-[var(--spacing-md)]"
+            >
               <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-secondary-900 marker:text-secondary-700">
                 Practice “{savedWords[0]!.wordText}” in a sentence
               </summary>
@@ -183,6 +225,7 @@ export default async function HomePage() {
                 targetWord={savedWords[0]!.wordText}
                 attemptId={savedWords[0]!.userWordId}
                 source="word_detail"
+                userId={currentUserResponse.data.id}
                 shortDefinition={savedWords[0]!.shortDefinition}
               />
             </details>

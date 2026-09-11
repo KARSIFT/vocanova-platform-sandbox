@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Settings, UpdateSettingsBody } from "@vocanova/api-client";
 
 import { createApiClient } from "@/lib/api";
-import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
+import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError } from "@/lib/session";
 
 const DAILY_REVIEW_TARGETS = [5, 10, 15, 20, 30, 50, 75, 100];
@@ -66,16 +66,6 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const csrfToken = getCookieValue(CSRF_COOKIE_NAME);
-    if (!csrfToken) {
-      setStatus({
-        type: "error",
-        message:
-          "Your session is missing a security token. Please refresh the page and try again.",
-      });
-      return;
-    }
-
     const body = buildUpdateBody(state, baseline);
     if (Object.keys(body).length === 0) {
       setStatus({ type: "saved" });
@@ -85,6 +75,15 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
     setStatus({ type: "saving" });
     const client = createApiClient();
     try {
+      const csrfToken = await getOrRefreshCSRFToken();
+      if (!csrfToken) {
+        setStatus({
+          type: "error",
+          message:
+            "We couldn't prepare these changes securely. Please try again.",
+        });
+        return;
+      }
       const { data } = await client.updateSettings(body, {
         headers: { "X-CSRF-Token": csrfToken },
       });

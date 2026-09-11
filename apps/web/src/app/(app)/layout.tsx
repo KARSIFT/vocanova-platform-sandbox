@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 
 import { AppHeader } from "./_components/app-header";
 import { BottomNav } from "./_components/bottom-nav";
+import { CSRFRecovery } from "./_components/csrf-recovery";
+import { OAuthContinuation } from "./_components/oauth-continuation";
 
 export default function AppShellLayout({
   children,
@@ -14,6 +16,8 @@ export default function AppShellLayout({
       >
         Skip to main content
       </a>
+      <OAuthContinuation />
+      <CSRFRecovery />
       <AppHeader />
       <main
         id="main-content"

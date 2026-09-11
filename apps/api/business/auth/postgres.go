@@ -111,7 +111,7 @@ func (r *PostgreSQLRepository) GetSessionByTokenHash(ctx context.Context, tokenH
 	var revokedAt sql.NullTime
 	err := row.Scan(&s.ID, &s.UserID, &s.CreatedAt, &s.ExpiresAt, &revokedAt)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, errors.New("session not found")
+		return nil, ErrSessionNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("scan session: %w", err)

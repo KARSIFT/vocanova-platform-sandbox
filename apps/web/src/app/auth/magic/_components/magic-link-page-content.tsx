@@ -4,9 +4,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { ApiResponseError } from "@vocanova/api-client";
-
 import { createApiClient } from "@/lib/api";
+import { getAuthErrorMessage } from "@/lib/auth-feedback";
 import { normalizeReturnTo } from "@/lib/return-to";
 import { Surface } from "@/ui/surface";
 
@@ -39,11 +38,10 @@ export function MagicLinkPageContent() {
         window.location.href = returnTo;
       })
       .catch((error: unknown) => {
-        const message =
-          error instanceof ApiResponseError
-            ? error.message
-            : "This sign-in link is invalid or has expired. Please request a new one.";
-        setStatus({ type: "error", message });
+        setStatus({
+          type: "error",
+          message: getAuthErrorMessage(error, "magic-consume"),
+        });
       });
   }, [token, email, returnTo]);
 
@@ -67,12 +65,20 @@ export function MagicLinkPageContent() {
           {status.message}
         </p>
         {status.type === "error" ? (
-          <Link
-            href={`/login?${new URLSearchParams({ returnTo }).toString()}`}
-            className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-          >
-            Back to sign in
-          </Link>
+          <div className="flex flex-wrap gap-[var(--spacing-sm)]">
+            <Link
+              href={`/login?${new URLSearchParams({ returnTo }).toString()}`}
+              className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+            >
+              Back to sign in
+            </Link>
+            <Link
+              href="/"
+              className="inline-flex min-h-[var(--spacing-2xl)] items-center justify-center rounded-md px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+            >
+              Back to home
+            </Link>
+          </div>
         ) : null}
       </Surface>
     </main>

@@ -40,7 +40,7 @@ test.describe("Landing accessibility (VOC-073-T01)", () => {
       requireText: [
         "text=Learn in context",
         "text=Remember for longer",
-        "text=Turn words into speech",
+        "text=Put words into practice",
       ],
     });
 

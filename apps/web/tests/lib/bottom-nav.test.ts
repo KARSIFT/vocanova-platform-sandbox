@@ -27,9 +27,10 @@ test("does not activate Journey for a similarly named route", () => {
   assert.equal(isPrimaryNavItemActive("/discovery", "/discover"), false);
 });
 
-test("keeps Home and Progress exact", () => {
+test("keeps Home exact and Progress active for nested progress routes", () => {
   assert.equal(isPrimaryNavItemActive("/home", "/home"), true);
   assert.equal(isPrimaryNavItemActive("/home/details", "/home"), false);
   assert.equal(isPrimaryNavItemActive("/progress", "/progress"), true);
-  assert.equal(isPrimaryNavItemActive("/progress/week", "/progress"), false);
+  assert.equal(isPrimaryNavItemActive("/progress/sentences", "/progress"), true);
+  assert.equal(isPrimaryNavItemActive("/progression", "/progress"), false);
 });

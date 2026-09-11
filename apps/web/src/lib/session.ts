@@ -2,7 +2,7 @@
 
 import { ApiResponseError } from "@vocanova/api-client";
 
-import { CSRF_COOKIE_NAME, deleteCookie, SESSION_COOKIE_NAME } from "./cookies";
+import { CSRF_COOKIE_NAME, deleteCookie } from "./cookies";
 
 /**
  * isSessionExpiredError reports whether the supplied error indicates the
@@ -23,10 +23,10 @@ export function isSessionExpiredError(error: unknown): boolean {
 
 /**
  * handleSessionExpired is the single client-side entry point for the
- * session-expiry mid-flow handler. It clears the local session and CSRF
- * cookies (so a stale request cannot be replayed against the same identity)
- * and routes the learner to /login with the current page as returnTo, so
- * after re-authentication the learner lands back where they were.
+ * session-expiry mid-flow handler. It clears the browser-visible CSRF cookie;
+ * the HttpOnly session cookie is owned by the API, which has already rejected
+ * it. The learner is routed to /login with the current page as returnTo, so
+ * after re-authentication they land back where they were.
  *
  * Components must NOT catch a 401 silently and continue: the cross-cutting
  * property T06 guarantees is that the learner is never left looking at a
@@ -38,11 +38,10 @@ export function handleSessionExpired(currentPath?: string): void {
   if (typeof window === "undefined") {
     return;
   }
-  deleteCookie(SESSION_COOKIE_NAME);
   deleteCookie(CSRF_COOKIE_NAME);
   const returnTo =
     currentPath ?? `${window.location.pathname}${window.location.search}`;
-  const params = new URLSearchParams({ returnTo });
+  const params = new URLSearchParams({ returnTo, reason: "session-expired" });
   window.location.href = `/login?${params.toString()}`;
 }
 

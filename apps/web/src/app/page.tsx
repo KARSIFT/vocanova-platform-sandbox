@@ -19,7 +19,7 @@ const benefits = [
     marker: "02",
   },
   {
-    label: "Turn words into speech",
+    label: "Put words into practice",
     copy: "Write your own sentence and get concise, encouraging feedback focused on the word you chose.",
     marker: "03",
   },

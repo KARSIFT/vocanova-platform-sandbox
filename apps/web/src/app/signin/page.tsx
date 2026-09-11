@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { getSignInAuthCapabilities } from "@/lib/auth-capabilities";
+import { getOAuthCallbackMessage } from "@/lib/auth-feedback";
 import { normalizeReturnTo } from "@/lib/return-to";
 import { Surface } from "@/ui/surface";
 
@@ -12,36 +14,114 @@ export const metadata: Metadata = {
 };
 
 interface SignInPageProps {
-  searchParams: Promise<{ magicOnly?: string; returnTo?: string }>;
+  searchParams: Promise<{
+    magicOnly?: string;
+    oauth?: string;
+    reason?: string;
+    returnTo?: string;
+    signedOut?: string;
+  }>;
 }
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {
-  const { magicOnly, returnTo } = await searchParams;
+  const { magicOnly, oauth, reason, returnTo, signedOut } = await searchParams;
   const safeReturnTo = normalizeReturnTo(returnTo);
-  const { oauthEnabled } = await getSignInAuthCapabilities();
-  const showOAuth = oauthEnabled && magicOnly !== "1";
+  const { magicLinkEnabled, oauthEnabled } = await getSignInAuthCapabilities();
+  const magicOnlyUnavailable = magicOnly === "1" && !magicLinkEnabled;
+  const showOAuth = oauthEnabled && (magicOnly !== "1" || magicOnlyUnavailable);
+  const oauthMessage = getOAuthCallbackMessage(oauth);
 
   return (
-    <main className="grid min-h-screen place-items-center bg-neutral-100 p-6">
+    <main className="grid min-h-screen place-items-center bg-[radial-gradient(circle_at_top,_var(--color-primary-100),_var(--color-neutral-100)_48rem)] p-6">
       {/* max-w-[28rem] (not max-w-md): this repo's tokens.generated.css only
           defines a --spacing-* scale, so Tailwind resolves the named
           max-w-md utility to --spacing-md (16px) instead of the intended
           28rem, collapsing this card to a single-character column. See
           the matching note on /onboarding's page.tsx. */}
-      <Surface className="w-full max-w-[28rem] space-y-[var(--spacing-lg)]">
-        <div className="space-y-[var(--spacing-xs)]">
-          <p className="text-sm font-bold tracking-wide text-primary-700">
-            VocaNova
-          </p>
-          <h1 className="text-2xl font-semibold text-neutral-900">
+      <Surface className="w-full max-w-[28rem] space-y-[var(--spacing-lg)] border-primary-100 shadow-[0_1.5rem_3.5rem_rgb(30_58_138_/_0.12)]">
+        <div className="space-y-[var(--spacing-sm)]">
+          <Link
+            href="/"
+            aria-label="VocaNova home"
+            className="inline-flex w-fit items-center gap-[var(--spacing-sm)] rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+          >
+            <span
+              aria-hidden="true"
+              className="grid h-10 w-10 place-items-center rounded-xl bg-primary-700 text-lg font-bold text-white shadow-sm"
+            >
+              V
+            </span>
+            <p className="text-sm font-bold tracking-wide text-primary-700">
+              VOCANOVA
+            </p>
+          </Link>
+          <h1 className="text-xl font-semibold text-neutral-900">
             Sign in to Vocanova
           </h1>
           <p className="text-base text-neutral-700">
-            {magicOnly === "1"
+            {magicOnly === "1" && !magicOnlyUnavailable
               ? "Enter your email to continue securely."
-              : "Choose a sign-in method to continue."}
+              : "No password needed. Choose a secure sign-in method to continue."}
           </p>
         </div>
+
+        {signedOut === "1" ? (
+          <p
+            role="status"
+            aria-live="polite"
+            className="rounded-md border border-primary-200 bg-primary-50 p-[var(--spacing-sm)] text-base text-primary-900"
+          >
+            You&apos;re signed out.
+          </p>
+        ) : null}
+
+        {signedOut === "expired" ? (
+          <p
+            role="status"
+            aria-live="polite"
+            className="rounded-md border border-primary-200 bg-primary-50 p-[var(--spacing-sm)] text-base text-primary-900"
+          >
+            Your previous session had already expired. You can sign in again.
+          </p>
+        ) : null}
+
+        {reason === "session-expired" ? (
+          <p
+            role="status"
+            aria-live="polite"
+            className="rounded-md border border-primary-200 bg-primary-50 p-[var(--spacing-sm)] text-base text-primary-900"
+          >
+            Your session expired. Sign in again to continue.
+          </p>
+        ) : null}
+
+        {oauthMessage ? (
+          <p
+            role="alert"
+            aria-live="assertive"
+            className="rounded-md border border-red-200 bg-red-50 p-[var(--spacing-sm)] text-base text-red-800"
+          >
+            {oauthMessage}
+          </p>
+        ) : null}
+
+        {magicOnlyUnavailable ? (
+          <p
+            role="status"
+            aria-live="polite"
+            className="rounded-md border border-primary-200 bg-primary-50 p-[var(--spacing-sm)] text-base text-primary-900"
+          >
+            Email sign-in is unavailable right now. You can continue with Google
+            or{" "}
+            <Link
+              href={`/login?${new URLSearchParams({ returnTo: safeReturnTo }).toString()}`}
+              className="font-semibold underline"
+            >
+              use the standard sign-in page
+            </Link>
+            .
+          </p>
+        ) : null}
 
         {showOAuth ? (
           <>
@@ -55,7 +135,17 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           </>
         ) : null}
 
-        <MagicLinkForm returnTo={safeReturnTo} />
+        {magicLinkEnabled ? <MagicLinkForm returnTo={safeReturnTo} /> : null}
+
+        {!magicLinkEnabled && !showOAuth ? (
+          <p
+            role="alert"
+            aria-live="assertive"
+            className="rounded-md border border-red-200 bg-red-50 p-[var(--spacing-sm)] text-base text-red-800"
+          >
+            Sign-in is temporarily unavailable. Please try again later.
+          </p>
+        ) : null}
       </Surface>
     </main>
   );

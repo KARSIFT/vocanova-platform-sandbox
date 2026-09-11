@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 
 import { SentenceFeedbackResult } from "@vocanova/api-client";
 
@@ -15,11 +16,19 @@ import {
   getSentenceCharacterLimitStatus,
   MAX_SENTENCE_CHARACTERS,
 } from "./sentence-feedback-input";
+import {
+  canUseSentenceFeedbackDraftStorage,
+  clearSentenceFeedbackDraft,
+  readSentenceFeedbackDraftIntent,
+  saveSentenceFeedbackDraft,
+} from "./sentence-feedback-drafts";
 
 interface SentenceFeedbackProps {
   targetWord: string;
   attemptId: string;
   source: "word_detail" | "review" | "daily_mission" | "free_practice";
+  /** The API-provided stable user id; drafts stay disabled without it. */
+  userId?: string;
   shortDefinition?: string;
   onFeedbackSubmitted?: (result: SentenceFeedbackResult) => void;
 }
@@ -42,6 +51,7 @@ export function SentenceFeedback({
   targetWord,
   attemptId,
   source,
+  userId,
   shortDefinition,
   onFeedbackSubmitted,
 }: SentenceFeedbackProps) {
@@ -57,11 +67,36 @@ export function SentenceFeedback({
   const [submittedSentence, setSubmittedSentence] = useState<string | null>(
     null,
   );
+  const [previousFeedback, setPreviousFeedback] = useState<{
+    result: SentenceFeedbackResult;
+    sentence: string;
+  } | null>(null);
+  const [canRecoverDraft, setCanRecoverDraft] = useState(false);
   const pendingSubmission = useRef<{
     idempotencyKey: string;
     sentenceText: string;
   } | null>(null);
   const submittingSynchronously = useRef(false);
+
+  useEffect(() => {
+    setCanRecoverDraft(canUseSentenceFeedbackDraftStorage(userId));
+    const draft = readSentenceFeedbackDraftIntent({
+      userId,
+      source,
+      attemptId,
+    });
+    pendingSubmission.current = draft?.idempotencyKey
+      ? { idempotencyKey: draft.idempotencyKey, sentenceText: draft.sentence }
+      : null;
+    setSentence(draft?.sentence ?? "");
+    setResult(null);
+    setSubmittedSentence(null);
+    setPreviousFeedback(null);
+    setErrorMessage(null);
+    setReported(false);
+    setReportStatus("idle");
+    setShowReportReasons(false);
+  }, [attemptId, source, userId]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -81,6 +116,13 @@ export function SentenceFeedback({
       sentenceText: sentence,
     };
     pendingSubmission.current = pending;
+    saveSentenceFeedbackDraft({
+      userId,
+      source,
+      attemptId,
+      sentence: pending.sentenceText,
+      idempotencyKey: pending.idempotencyKey,
+    });
     submittingSynchronously.current = true;
     setIsLoading(true);
     setErrorMessage(null);
@@ -97,25 +139,35 @@ export function SentenceFeedback({
       );
       setResult(data);
       setSubmittedSentence(data.originalSentence || pending.sentenceText);
-      pendingSubmission.current = null;
       // A deduplicated response may represent feedback that was already
       // reported in an earlier submission. The backend is authoritative for
       // that persisted state, so do not make the learner report it again.
       setReported(data.reported);
       setShowReportReasons(false);
       if (data.errorCode) {
+        // The API made a definite rejection. Keep the learner's words, but
+        // discard the prior request key so a corrected sentence is a new
+        // submission rather than a replay of that rejection.
+        pendingSubmission.current = null;
+        saveSentenceFeedbackDraft({
+          userId,
+          source,
+          attemptId,
+          sentence: data.originalSentence || pending.sentenceText,
+        });
         setErrorMessage(
           data.errorMessage || getDefaultErrorMessage(data, targetWord),
         );
-      } else {
+      } else if (data.processingStatus === "completed") {
+        pendingSubmission.current = null;
         setErrorMessage(null);
+        clearSentenceFeedbackDraft({ userId, source, attemptId });
       }
       onFeedbackSubmitted?.(data);
     } catch (error) {
       setResult(null);
-      // The controlled textarea preserves a draft through recoverable,
-      // in-place failures. A re-auth navigation starts a new component, so
-      // it cannot preserve the draft across that navigation.
+      // The controlled textarea and its user-scoped tab draft preserve an
+      // unresolved submission through recoverable failures and re-auth.
       setErrorMessage(
         handleApiError(
           error,
@@ -170,12 +222,50 @@ export function SentenceFeedback({
   }
 
   const hasResult = result !== null;
-  const hasSuccessResult = hasResult && !result.errorCode;
+  const hasSuccessResult =
+    hasResult && result.processingStatus === "completed" && !result.errorCode;
   const statusLabel = result ? getStatusLabel(result.status) : null;
   const characterCount = countSentenceCharacters(sentence);
   const characterCountId = `sentence-character-count-${attemptId}`;
   const characterLimitMessageId = `sentence-character-limit-${attemptId}`;
   const characterLimitStatus = getSentenceCharacterLimitStatus(sentence);
+
+  function handleTryAnotherSentence() {
+    pendingSubmission.current = null;
+    setResult(null);
+    setSubmittedSentence(null);
+    setPreviousFeedback(null);
+    setSentence("");
+    setErrorMessage(null);
+    clearSentenceFeedbackDraft({ userId, source, attemptId });
+    document.getElementById(`sentence-input-${attemptId}`)?.focus();
+  }
+
+  function handleDiscardDraft() {
+    pendingSubmission.current = null;
+    setSentence("");
+    setErrorMessage(null);
+    clearSentenceFeedbackDraft({ userId, source, attemptId });
+  }
+
+  function handleReviseSentence() {
+    if (result && submittedSentence) {
+      setPreviousFeedback({ result, sentence: submittedSentence });
+      // Revising makes the checked text an unresolved draft again. Keep it
+      // through a reload, but deliberately discard the completed request key
+      // so the revision receives a fresh idempotency identity.
+      saveSentenceFeedbackDraft({
+        userId,
+        source,
+        attemptId,
+        sentence: submittedSentence,
+      });
+    }
+    pendingSubmission.current = null;
+    setResult(null);
+    setErrorMessage(null);
+    document.getElementById(`sentence-input-${attemptId}`)?.focus();
+  }
 
   return (
     <section
@@ -197,6 +287,20 @@ export function SentenceFeedback({
         For your privacy, do not include personal information such as phone
         numbers, addresses, or passwords.
       </p>
+      {canRecoverDraft ? (
+        <div className="mt-[var(--spacing-sm)] flex flex-wrap items-center gap-[var(--spacing-sm)] rounded-md bg-neutral-50 px-[var(--spacing-sm)] py-[var(--spacing-xs)] text-sm text-neutral-700">
+          <p>Unsent drafts stay in this tab for up to two hours.</p>
+          {!hasSuccessResult && !isLoading && sentence.trim() ? (
+            <button
+              type="button"
+              onClick={handleDiscardDraft}
+              className="inline-flex min-h-11 items-center px-[var(--spacing-xs)] font-semibold text-primary-700 underline hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+            >
+              Discard draft
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       <form
         onSubmit={handleSubmit}
@@ -219,6 +323,12 @@ export function SentenceFeedback({
               if (next !== sentence) {
                 setErrorMessage(null);
                 pendingSubmission.current = null;
+                saveSentenceFeedbackDraft({
+                  userId,
+                  source,
+                  attemptId,
+                  sentence: next,
+                });
               }
               setSentence(next);
             }}
@@ -269,6 +379,7 @@ export function SentenceFeedback({
               aria-label={`Feedback result: ${statusLabel}`}
               className={`rounded-md p-[var(--spacing-md)] ${getStatusClasses(result.status)}`}
             >
+              <p className="text-sm font-semibold">{statusLabel}</p>
               <p className="font-semibold">{result.headline || statusLabel}</p>
               {result.explanation ? (
                 <p className="mt-[var(--spacing-xs)] text-base">
@@ -334,6 +445,28 @@ export function SentenceFeedback({
 
           {hasSuccessResult ? (
             <div className="rounded-md border border-neutral-200 p-[var(--spacing-md)]">
+              <div className="flex flex-wrap gap-[var(--spacing-sm)]">
+                <button
+                  type="button"
+                  onClick={handleReviseSentence}
+                  className="inline-flex min-h-11 items-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-semibold text-white hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+                >
+                  Revise sentence
+                </button>
+                <button
+                  type="button"
+                  onClick={handleTryAnotherSentence}
+                  className="inline-flex min-h-11 items-center rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-semibold text-neutral-900 hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+                >
+                  Try another sentence
+                </button>
+                <Link
+                  href="/progress/sentences"
+                  className="inline-flex min-h-11 items-center px-[var(--spacing-sm)] py-[var(--spacing-sm)] text-base font-semibold text-primary-700 underline hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+                >
+                  View sentence history
+                </Link>
+              </div>
               <p className="text-sm text-neutral-600">{AI_LIMITATION_COPY}</p>
               <div className="mt-[var(--spacing-sm)] flex items-center gap-[var(--spacing-md)]">
                 {reported ? (
@@ -381,6 +514,28 @@ export function SentenceFeedback({
             Mission completed: {result.missionCompleted ? "Yes" : "Not yet"}
           </p>
         </div>
+      ) : null}
+
+      {previousFeedback ? (
+        <aside
+          aria-label="Previous feedback"
+          className="mt-[var(--spacing-md)] rounded-md border border-secondary-200 bg-secondary-50 p-[var(--spacing-md)] text-secondary-900"
+        >
+          <p className="text-sm font-semibold">Previous feedback</p>
+          <p className="mt-[var(--spacing-xs)] wrap-anywhere text-base">
+            {previousFeedback.sentence}
+          </p>
+          {previousFeedback.result.correctedSentence ? (
+            <p className="mt-[var(--spacing-xs)] wrap-anywhere text-sm">
+              Suggested revision: {previousFeedback.result.correctedSentence}
+            </p>
+          ) : null}
+          {previousFeedback.result.explanation ? (
+            <p className="mt-[var(--spacing-xs)] text-sm">
+              {previousFeedback.result.explanation}
+            </p>
+          ) : null}
+        </aside>
       ) : null}
     </section>
   );

@@ -70,13 +70,14 @@ Route groups: `(public)`, `(onboarding)`, `(app)`.
 /review
 /review/session
 /progress
+/progress/sentences
 /settings
 /settings/account
 ```
 
-Note: there is deliberately **no** sentence-history route (see [03](03-ui-ux-design.md) §2 and
-[the migration notes](../archive/README-migration-notes.md#4-sentence-history-screen-conflict)) —
-sentence practice is a component, not a route.
+Sentence history is a secondary Progress route added by the
+[maturity delivery](../product/mature-learning-and-account-experience.md).
+Sentence practice remains a reusable component within learning activities.
 
 ## Core UX decisions
 

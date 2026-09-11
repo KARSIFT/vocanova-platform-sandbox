@@ -50,10 +50,36 @@ export default async function ProgressPage() {
         Progress
       </h1>
       <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-        Every practice session builds your confidence.
+        See the practice you&apos;ve completed and choose a useful next step.
       </p>
 
-      <div className="mt-[var(--spacing-lg)] grid grid-cols-2 gap-[var(--spacing-md)]">
+      <Surface
+        aria-labelledby="sentence-history-heading"
+        className="mt-[var(--spacing-lg)] bg-secondary-50"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-[var(--spacing-md)]">
+          <div>
+            <h2
+              id="sentence-history-heading"
+              className="text-lg font-semibold text-neutral-900"
+            >
+              Sentence practice
+            </h2>
+            <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
+              Revisit your writing and the feedback that can guide your next
+              sentence.
+            </p>
+          </div>
+          <Link
+            href="/progress/sentences"
+            className="inline-flex min-h-11 items-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-semibold text-white hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+          >
+            View sentence history
+          </Link>
+        </div>
+      </Surface>
+
+      <div className="mt-[var(--spacing-md)] grid grid-cols-2 gap-[var(--spacing-md)]">
         <Surface aria-labelledby="confidence-points-heading" tone="primary">
           <h2
             id="confidence-points-heading"

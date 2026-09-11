@@ -14,14 +14,34 @@ import (
 // must add RequireAuth.
 func AuthMiddleware(svc *auth.Service) func(huma.Context, func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
+		// Authentication responses may establish, inspect, or invalidate a
+		// browser session. Keep them out of browser and intermediary caches
+		// even when a handler returns an error before its normal response.
+		if isSensitiveAuthPath(ctx.URL().Path) {
+			ctx.SetHeader("Cache-Control", "no-store")
+			ctx.SetHeader("Pragma", "no-cache")
+		}
 		token := sessionCookieValue(ctx, svc.SessionCookieName())
 		if token != "" {
 			if user, err := svc.ValidateSession(ctx.Context(), token); err == nil {
 				ctx = huma.WithValue(ctx, requesterKey{}, user)
+				// A session outlives the browser-session CSRF cookie. Let an
+				// authenticated browser refresh that cookie through /me before it
+				// makes a protected write, without accepting a missing token on the
+				// write itself.
+				if ctx.Method() == http.MethodGet && ctx.URL().Path == "/api/v1/me" && csrfCookieValue(ctx, svc.CSRFCookieName()) == "" {
+					if _, csrfCookie := svc.IssueCSRFCookie(); csrfCookie != nil {
+						ctx.AppendHeader("Set-Cookie", csrfCookie.String())
+					}
+				}
 			}
 		}
 		next(ctx)
 	}
+}
+
+func isSensitiveAuthPath(path string) bool {
+	return path == "/api/v1/me" || strings.HasPrefix(path, "/api/v1/auth/")
 }
 
 // RequireAuth aborts the request with 401 when no authenticated requester was

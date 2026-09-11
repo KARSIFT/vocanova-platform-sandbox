@@ -140,7 +140,7 @@ func (r *MemoryRepository) GetSessionByTokenHash(ctx context.Context, tokenHash 
 	defer r.mu.Unlock()
 	s, ok := r.sessionsByHash[string(tokenHash)]
 	if !ok {
-		return nil, errors.New("session not found")
+		return nil, ErrSessionNotFound
 	}
 	copy := *s
 	return &copy, nil
