@@ -51,8 +51,8 @@ type CreateAccountDeletionRequestOutput struct {
 // CSRF, and an Idempotency-Key header (DOC-07). On success,
 // the session is invalidated server-side: every active
 // session for the account is revoked in the same
-// transaction. The client should follow up with a logout
-// request to clear the cookie; the API layer renders a
+// transaction. The successful response clears the requester cookies so a
+// deactivated session cannot remain in the browser; the API layer renders a
 // 200/202 with a clear post-deletion body.
 func RegisterAccountDeletionRequests(api huma.API, svc *accounts.Service, authSvc *auth.Service) {
 	huma.Register(api, huma.Operation{
@@ -77,6 +77,8 @@ func RegisterAccountDeletionRequests(api huma.API, svc *accounts.Service, authSv
 		if err != nil {
 			return nil, mapAccountDeletionError(err)
 		}
+		c.AppendHeader("Set-Cookie", authSvc.ClearSessionCookie().String())
+		c.AppendHeader("Set-Cookie", authSvc.ClearCSRFCookie().String())
 		return &CreateAccountDeletionRequestOutput{Body: CreateAccountDeletionRequestDTO{
 			Status:         res.Status,
 			UserID:         res.UserID.String(),

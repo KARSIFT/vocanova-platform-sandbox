@@ -20,8 +20,12 @@ export default async function SavedWordDetailPage({
   const client = await createServerApiClient();
 
   let savedResponse: Awaited<ReturnType<typeof client.getSavedWord>>;
+  let currentUserResponse: Awaited<ReturnType<typeof client.getCurrentUser>>;
   try {
-    savedResponse = await client.getSavedWord(userWordId);
+    [savedResponse, currentUserResponse] = await Promise.all([
+      client.getSavedWord(userWordId),
+      client.getCurrentUser(),
+    ]);
   } catch (error) {
     if (
       error instanceof ApiResponseError &&
@@ -128,6 +132,7 @@ export default async function SavedWordDetailPage({
         targetWord={savedWord.wordText}
         attemptId={savedWord.userWordId}
         source="word_detail"
+        userId={currentUserResponse.data.id}
         shortDefinition={savedWord.shortDefinition}
       />
     </PageContainer>

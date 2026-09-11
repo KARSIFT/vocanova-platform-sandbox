@@ -27,4 +27,10 @@ describe("normalizeReturnTo", () => {
       assert.equal(normalizeReturnTo(value), "/home", value);
     }
   });
+
+  it("does not return a learner to a public auth route after sign-in", () => {
+    for (const value of ["/login", "/signin", "/magic-link", "/auth/magic"]) {
+      assert.equal(normalizeReturnTo(value), "/home", value);
+    }
+  });
 });

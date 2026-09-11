@@ -8,3 +8,6 @@
 
 [Migration notes](../archive/README-migration-notes.md) preserve VOC-007 source reconciliation evidence;
 [adoption notes](../archive/README-adoption-notes.md) record the VOC-008 semantic correction decisions.
+
+[Mature learning and account experience](mature-learning-and-account-experience.md)
+records the founder-authorized post-MVP delivery, acceptance criteria, and verification.

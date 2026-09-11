@@ -20,8 +20,12 @@ export default async function WordDetailPage({ params }: WordDetailPageProps) {
   const client = await createServerApiClient();
   let situationResponse: Awaited<ReturnType<typeof client.getJourneySituation>>;
   let response: Awaited<ReturnType<typeof client.getCanonicalWord>>;
+  let currentUserResponse: Awaited<ReturnType<typeof client.getCurrentUser>>;
   try {
-    situationResponse = await client.getJourneySituation(situation);
+    [situationResponse, currentUserResponse] = await Promise.all([
+      client.getJourneySituation(situation),
+      client.getCurrentUser(),
+    ]);
     if (!isWordInSituation(situationResponse.data.meanings, word)) {
       notFound();
     }
@@ -135,6 +139,7 @@ export default async function WordDetailPage({ params }: WordDetailPageProps) {
                     targetWord={wordData.text}
                     attemptId={meaning.userWordId}
                     source="word_detail"
+                    userId={currentUserResponse.data.id}
                     shortDefinition={meaning.shortDefinition}
                   />
                 ) : null}

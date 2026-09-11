@@ -28,6 +28,8 @@ export default async function SituationDiscoverPage({
   }
 
   const { situation: situationData, meanings } = response.data;
+  const savedCount = meanings.filter((meaning) => meaning.saved).length;
+  const nextMeaning = meanings.find((meaning) => !meaning.saved);
 
   return (
     <PageContainer>
@@ -47,6 +49,41 @@ export default async function SituationDiscoverPage({
       <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
         {situationData.shortDescription}
       </p>
+
+      {meanings.length > 0 ? (
+        <section
+          aria-label="Situation progress"
+          className="mt-[var(--spacing-md)] rounded-[var(--radius-lg)] border border-secondary-100 bg-secondary-50 p-[var(--spacing-md)]"
+        >
+          <p className="text-sm font-semibold text-secondary-900">
+            {savedCount} of {meanings.length}{" "}
+            {meanings.length === 1 ? "word" : "words"} saved
+          </p>
+          <p className="mt-[var(--spacing-xs)] text-sm text-neutral-700">
+            {nextMeaning
+              ? "Choose one useful word to save, then practice it in a sentence when you’re ready."
+              : "You’ve saved every word in this situation. Review them when you’re ready."}
+          </p>
+          <div className="mt-[var(--spacing-sm)] flex flex-wrap gap-[var(--spacing-sm)]">
+            {nextMeaning ? (
+              <Link
+                href={`/discover/${situation}/${nextMeaning.wordSlug}`}
+                className="inline-flex min-h-11 items-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-semibold text-white hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+              >
+                Continue with {nextMeaning.wordText}
+              </Link>
+            ) : null}
+            {savedCount > 0 ? (
+              <Link
+                href="/words"
+                className="inline-flex min-h-11 items-center rounded-md px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-semibold text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+              >
+                View saved vocabulary
+              </Link>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
 
       {getSituationDetailView(meanings.length) === "empty" ? (
         <div className="flex flex-col items-center justify-center py-[var(--spacing-2xl)] text-center">

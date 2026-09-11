@@ -151,6 +151,21 @@ func (s *Service) magicLinkURL(token, email, returnTo string) string {
 	return u.String()
 }
 
+// OAuthFailureURL returns the trusted web sign-in page with a concise outcome
+// code. It is used only after the provider has returned to this server; no
+// request-supplied URL participates in this recovery destination. The false
+// result means the configured application origin is not safe to redirect to.
+func (s *Service) OAuthFailureURL(outcome string) (string, bool) {
+	u, err := url.Parse(s.cfg.BaseURL)
+	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
+		return "", false
+	}
+	u.Path = "/login"
+	u.RawQuery = url.Values{"oauth": []string{outcome}}.Encode()
+	u.Fragment = ""
+	return u.String(), true
+}
+
 func normalizeReturnTo(value string) string {
 	value = strings.TrimSpace(value)
 	if !strings.HasPrefix(value, "/") || strings.HasPrefix(value, "//") || strings.Contains(value, "\\") {
@@ -498,7 +513,10 @@ func (s *Service) Logout(ctx context.Context, token string) error {
 	}
 	session, err := s.repo.GetSessionByTokenHash(ctx, hash)
 	if err != nil {
-		return nil
+		if errors.Is(err, ErrSessionNotFound) {
+			return nil
+		}
+		return fmt.Errorf("get session for logout: %w", err)
 	}
 	now := s.clock.Now()
 	if !session.Valid(now) {

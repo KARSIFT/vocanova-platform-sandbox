@@ -41,10 +41,12 @@ completion criteria.
 Sentence practice is **not** a fourth tab — it's a reusable component surfaced from Home, Word
 Detail, and Review Completion. See [03](../design/03-ui-ux-design.md).
 
-There is **no dedicated sentence-history screen in MVP.** (Doc 01 originally listed one; doc 03 and
-doc 08 later dropped it in favor of storing history in the backend without a dedicated UI. See
-[the migration notes](../archive/README-migration-notes.md#4-sentence-history-screen-conflict).) Sentence-history
-insights are a named post-MVP opportunity, not cut work.
+The original MVP retained sentence history without a dedicated screen (see
+[the migration notes](../archive/README-migration-notes.md#4-sentence-history-screen-conflict)).
+The founder-authorized [maturity delivery](mature-learning-and-account-experience.md)
+extends Progress with `/progress/sentences`: a paginated record of original sentences
+and their feedback. Sentence practice remains contextual, and the app retains three
+primary tabs. History records practice; it does not claim measured fluency or mastery.
 
 ## 3. MVP completion criteria
 

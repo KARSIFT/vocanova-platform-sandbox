@@ -114,8 +114,16 @@ const CSRF_COOKIE_NAME = "vocanova_csrf";
 const SESSION_DEFAULT_VALUE = "test-session-default";
 
 const DEFAULT_USER = {
+  id: "00000000-0000-0000-0000-000000000001",
   email: "core-loop-fixture@example.test",
   displayName: "Core Loop Fixture",
+  emailVerifiedAt: "2026-01-01T00:00:00Z",
+};
+
+const ALTERNATE_USER = {
+  id: "00000000-0000-0000-0000-000000000002",
+  email: "alternate-fixture@example.test",
+  displayName: "Alternate Fixture",
   emailVerifiedAt: "2026-01-01T00:00:00Z",
 };
 
@@ -161,6 +169,33 @@ const DEFAULT_DAILY_MISSION = {
   graceApplied: false,
   streak: DEFAULT_PROGRESS.streak,
 };
+
+const PAGINATED_SENTENCE_HISTORY = Array.from({ length: 13 }, (_, index) => ({
+  id: `history-${index + 1}`,
+  feedbackId: `feedback-history-${index + 1}`,
+  processingStatus: "completed",
+  status: index === 12 ? "needs_improvement" : "correct",
+  originalSentence: `Fixture sentence ${index + 1} uses pour naturally.`,
+  correctedSentence:
+    index === 12 ? "Fixture sentence 13 uses pour more naturally." : null,
+  headline: index === 12 ? "A small revision could help" : "Looks good",
+  explanation: "This is deterministic sentence-history feedback.",
+  improvementTip: index === 12 ? "Keep the word close to its meaning." : null,
+  targetWordUsedCorrectly: true,
+  grammarAcceptable: true,
+  meaningClear: true,
+  naturalness: "natural",
+  reported: false,
+  createdAt: "2026-01-01T00:00:00Z",
+}));
+
+const UNBROKEN_SENTENCE_HISTORY = [
+  {
+    ...PAGINATED_SENTENCE_HISTORY[0],
+    id: "history-unbroken",
+    originalSentence: "a".repeat(300),
+  },
+];
 
 const CANONICAL_WORDS = {
   pour: {
@@ -321,8 +356,19 @@ function buildCsrfCookie(value) {
   return `${CSRF_COOKIE_NAME}=${value}; Path=/; SameSite=Lax`;
 }
 
+function restoreCsrfCookieHeaders(cookies) {
+  if (cookies[CSRF_COOKIE_NAME]) {
+    return undefined;
+  }
+  return { "Set-Cookie": buildCsrfCookie(generateId("csrf")) };
+}
+
 function buildClearSessionCookie() {
   return `${SESSION_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax`;
+}
+
+function buildClearCsrfCookie() {
+  return `${CSRF_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax`;
 }
 
 // --- per-session mutable state ---------------------------------
@@ -370,11 +416,16 @@ function cloneProgress(progress) {
   };
 }
 
-function buildCurrentUser(state) {
+function getFixtureUser(cookies) {
+  return cookies.e2e_user_id === "alternate" ? ALTERNATE_USER : DEFAULT_USER;
+}
+
+function buildCurrentUser(state, fixtureUser = DEFAULT_USER) {
   return {
-    email: DEFAULT_USER.email,
+    id: fixtureUser.id,
+    email: fixtureUser.email,
     displayName: state.settings.displayName,
-    emailVerifiedAt: DEFAULT_USER.emailVerifiedAt,
+    emailVerifiedAt: fixtureUser.emailVerifiedAt,
     onboardingStatus: state.onboardingCompleted ? "completed" : "not_started",
   };
 }
@@ -525,6 +576,55 @@ function buildJourneySituations() {
   return { items: JOURNEY_SITUATIONS.map((s) => ({ ...s })) };
 }
 
+function learnerSentenceFromAttempt(attempt) {
+  const completed = !attempt.evaluation.errorCode;
+  return {
+    id: attempt.sentenceId,
+    feedbackId: `feedback-${attempt.sentenceId}`,
+    processingStatus: completed ? "completed" : "failed",
+    status: attempt.evaluation.status,
+    originalSentence: attempt.sentenceText,
+    correctedSentence:
+      attempt.evaluation.correctedSentence ??
+      (attempt.evaluation.status === "correct" ? attempt.sentenceText : null),
+    headline: completed
+      ? attempt.evaluation.status === "correct"
+        ? "Looks good"
+        : "A small revision could help"
+      : undefined,
+    explanation: attempt.evaluation.explanation,
+    improvementTip:
+      attempt.evaluation.status === "needs_improvement"
+        ? "Try using the target word naturally in your sentence."
+        : null,
+    targetWordUsedCorrectly: completed,
+    grammarAcceptable: completed,
+    meaningClear: completed,
+    naturalness: completed ? "natural" : undefined,
+    reported: attempt.reported,
+    createdAt: attempt.createdAt,
+  };
+}
+
+function buildLearnerSentenceHistoryFromItems(allItems, { after, limit }) {
+  const start = after ? Number.parseInt(after, 10) : 0;
+  const offset = Number.isSafeInteger(start) && start >= 0 ? start : 0;
+  const items = allItems.slice(offset, offset + limit);
+  const nextOffset = offset + items.length;
+  return {
+    items,
+    hasMore: nextOffset < allItems.length,
+    nextCursor: nextOffset < allItems.length ? String(nextOffset) : undefined,
+  };
+}
+
+function buildLearnerSentenceHistory(state, params) {
+  return buildLearnerSentenceHistoryFromItems(
+    state.sentenceAttempts.slice().reverse().map(learnerSentenceFromAttempt),
+    params,
+  );
+}
+
 function generateId(prefix) {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
 }
@@ -553,6 +653,13 @@ function evaluateSentenceFeedback({ sentence, targetWord }) {
       status: "needs_improvement",
       errorCode: "too_long",
       errorMessage: "Your sentence is too long. Keep it under 300 characters.",
+    };
+  }
+  if (/\bteh\b/i.test(trimmed)) {
+    return {
+      status: "needs_improvement",
+      correctedSentence: trimmed.replace(/\bteh\b/gi, "the"),
+      explanation: "A small spelling change makes this sentence clearer.",
     };
   }
   const containsTarget = targetWord
@@ -688,8 +795,9 @@ const server = createServer(async (req, res) => {
       database: "ok",
       timestamp: new Date().toISOString(),
       kill_switches: {
-        magic_link_enabled: true,
-        oauth_enabled: MOCK_OAUTH_ENABLED,
+        magic_link_enabled: cookies.e2e_magic_link_enabled !== "false",
+        oauth_enabled:
+          MOCK_OAUTH_ENABLED || cookies.e2e_oauth_enabled === "true",
         new_signups_enabled: false,
         ai_enabled: true,
       },
@@ -717,7 +825,7 @@ const server = createServer(async (req, res) => {
       res,
       200,
       {
-        ...DEFAULT_USER,
+        ...getFixtureUser(cookies),
         onboardingStatus: "completed",
       },
       {
@@ -771,16 +879,21 @@ const server = createServer(async (req, res) => {
     const onboardingStatusOverride = cookies.e2e_onboarding_status;
     if (ONBOARDING_STATUSES.has(onboardingStatusOverride)) {
       logLine(req, 200, { onboardingStatus: onboardingStatusOverride });
-      jsonResponse(res, 200, {
-        ...DEFAULT_USER,
-        onboardingStatus: onboardingStatusOverride,
-      });
+      jsonResponse(
+        res,
+        200,
+        {
+          ...getFixtureUser(cookies),
+          onboardingStatus: onboardingStatusOverride,
+        },
+        restoreCsrfCookieHeaders(cookies),
+      );
       return;
     }
     const state = getSessionState(cookies);
-    const user = buildCurrentUser(state);
+    const user = buildCurrentUser(state, getFixtureUser(cookies));
     logLine(req, 200, { onboardingStatus: user.onboardingStatus });
-    jsonResponse(res, 200, user);
+    jsonResponse(res, 200, user, restoreCsrfCookieHeaders(cookies));
     return;
   }
 
@@ -1033,13 +1146,22 @@ const server = createServer(async (req, res) => {
       jsonResponse(res, 200, {
         sentenceId: existingAttempt.sentenceId,
         attemptId: body.attemptId,
+        processingStatus: existingAttempt.evaluation.errorCode
+          ? "failed"
+          : "completed",
         status: existingAttempt.evaluation.status,
         originalSentence: body.sentenceText,
         correctedSentence:
-          existingAttempt.evaluation.status === "correct"
+          existingAttempt.evaluation.correctedSentence ??
+          (existingAttempt.evaluation.status === "correct"
             ? body.sentenceText
-            : undefined,
+            : undefined),
         explanation: existingAttempt.evaluation.explanation,
+        headline: existingAttempt.evaluation.errorCode
+          ? undefined
+          : existingAttempt.evaluation.status === "correct"
+            ? "Looks good"
+            : "A small revision could help",
         improvementTip:
           existingAttempt.evaluation.status === "needs_improvement"
             ? "Try using the target word naturally in your sentence."
@@ -1047,6 +1169,9 @@ const server = createServer(async (req, res) => {
         missionCompleted: !existingAttempt.evaluation.errorCode,
         canRetry: Boolean(existingAttempt.evaluation.errorCode),
         reported: existingAttempt.reported,
+        targetWordUsedCorrectly: !existingAttempt.evaluation.errorCode,
+        grammarAcceptable: !existingAttempt.evaluation.errorCode,
+        meaningClear: !existingAttempt.evaluation.errorCode,
         errorCode: existingAttempt.evaluation.errorCode,
         errorMessage: existingAttempt.evaluation.errorMessage,
       });
@@ -1064,6 +1189,7 @@ const server = createServer(async (req, res) => {
       sentenceText: body.sentenceText,
       evaluation,
       reported: false,
+      createdAt: new Date().toISOString(),
     });
     if (!evaluation.errorCode) {
       state.sentenceCount += 1;
@@ -1076,11 +1202,18 @@ const server = createServer(async (req, res) => {
     jsonResponse(res, 200, {
       sentenceId,
       attemptId: body.attemptId,
+      processingStatus: evaluation.errorCode ? "failed" : "completed",
       status: evaluation.status,
       originalSentence: body.sentenceText,
       correctedSentence:
-        evaluation.status === "correct" ? body.sentenceText : undefined,
+        evaluation.correctedSentence ??
+        (evaluation.status === "correct" ? body.sentenceText : undefined),
       explanation: evaluation.explanation,
+      headline: evaluation.errorCode
+        ? undefined
+        : evaluation.status === "correct"
+          ? "Looks good"
+          : "A small revision could help",
       improvementTip:
         evaluation.status === "needs_improvement"
           ? "Try using the target word naturally in your sentence."
@@ -1088,6 +1221,9 @@ const server = createServer(async (req, res) => {
       missionCompleted: !evaluation.errorCode,
       canRetry: Boolean(evaluation.errorCode),
       reported: false,
+      targetWordUsedCorrectly: !evaluation.errorCode,
+      grammarAcceptable: !evaluation.errorCode,
+      meaningClear: !evaluation.errorCode,
       errorCode: evaluation.errorCode,
       errorMessage: evaluation.errorMessage,
     });
@@ -1135,6 +1271,38 @@ const server = createServer(async (req, res) => {
     const state = getSessionState(cookies);
     logLine(req, 200, { reviewedCount: state.reviewedCount });
     jsonResponse(res, 200, buildProgress(state));
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/v1/learner-sentences") {
+    if (cookies.e2e_sentence_history_fixture === "error") {
+      logLine(req, 500, { fixture: "sentence-history-error" });
+      jsonResponse(res, 500, { error: "temporary_failure" });
+      return;
+    }
+    const state = getSessionState(cookies);
+    const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? "20", 10);
+    const limit = Number.isSafeInteger(requestedLimit)
+      ? Math.min(Math.max(requestedLimit, 1), 50)
+      : 20;
+    const historyParams = {
+      after: url.searchParams.get("after"),
+      limit,
+    };
+    const history =
+      cookies.e2e_sentence_history_fixture === "paginated"
+        ? buildLearnerSentenceHistoryFromItems(
+            PAGINATED_SENTENCE_HISTORY,
+            historyParams,
+          )
+        : cookies.e2e_sentence_history_fixture === "unbroken"
+          ? buildLearnerSentenceHistoryFromItems(
+              UNBROKEN_SENTENCE_HISTORY,
+              historyParams,
+            )
+        : buildLearnerSentenceHistory(state, historyParams);
+    logLine(req, 200, { sentenceCount: history.items.length });
+    jsonResponse(res, 200, history);
     return;
   }
 
@@ -1285,7 +1453,11 @@ const server = createServer(async (req, res) => {
         idempotencyKey: req.headers["idempotency-key"] ?? "",
         replayed: false,
       },
-      { "Set-Cookie": buildClearSessionCookie() },
+      {
+        "Set-Cookie": [buildClearSessionCookie(), buildClearCsrfCookie()].join(
+          ", ",
+        ),
+      },
     );
     return;
   }

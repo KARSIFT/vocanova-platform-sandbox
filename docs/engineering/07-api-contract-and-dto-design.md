@@ -36,6 +36,14 @@ Never expose Ent models directly — always explicit request/response DTOs. Keep
 frontend-friendly. Strict validation, reject unknown fields. Standard error responses. OpenAPI is
 the contract source. Avoid unnecessary MVP complexity.
 
+The maturity delivery adds `id` to the authenticated current-user projection.
+It is the requester's opaque UUID, stable across sessions, used only to isolate
+temporary browser drafts. It is not a session credential or authorization input;
+all reads and writes still derive ownership from the authenticated requester.
+Older APIs without the field remain usable; the client disables draft persistence
+until a stable identity is available. Provider subjects and session material remain
+excluded from the public DTO.
+
 ## Response standards
 
 Success responses are direct DTOs. Lists use:

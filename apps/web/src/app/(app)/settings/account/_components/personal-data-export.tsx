@@ -1,7 +1,7 @@
 "use client";
 
 import { createApiClient } from "@/lib/api";
-import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
+import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError } from "@/lib/session";
 import { useState } from "react";
 
@@ -16,17 +16,17 @@ export function PersonalDataExport() {
   const [message, setMessage] = useState("");
 
   async function download() {
-    const csrf = getCookieValue(CSRF_COOKIE_NAME);
-    if (!csrf) {
-      setState("error");
-      setMessage(
-        "Your session security token is missing. Refresh the page and try again.",
-      );
-      return;
-    }
     setState("loading");
     setMessage("");
     try {
+      const csrf = await getOrRefreshCSRFToken();
+      if (!csrf) {
+        setState("error");
+        setMessage(
+          "We couldn't prepare your export securely. Please try again.",
+        );
+        return;
+      }
       const { data } = await createApiClient().exportPersonalData(
         idempotencyKey(),
         { headers: { "X-CSRF-Token": csrf } },

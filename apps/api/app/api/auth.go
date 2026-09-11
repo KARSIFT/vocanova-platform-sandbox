@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -198,8 +199,8 @@ func RegisterAuth(api huma.API, svc *auth.Service) {
 		Summary:     "Handle the Google OAuth provider callback",
 		Tags:        []string{"Authentication"},
 		Responses: map[string]*huma.Response{
-			"302": {Description: "Redirect to the authenticated application"},
-			"401": {Description: "Invalid or expired OAuth state, or the provider/account failed verification"},
+			"302": {Description: "Redirect to the authenticated application or the trusted sign-in recovery screen"},
+			"401": {Description: "OAuth callback could not be recovered safely"},
 			"404": {Description: "OAuth provider not configured"},
 			"429": {Description: "Rate limited"},
 			"503": {Description: "Google OAuth sign-in, or new sign-ups, is disabled"},
@@ -207,11 +208,33 @@ func RegisterAuth(api huma.API, svc *auth.Service) {
 	}, func(ctx context.Context, input *OAuthCallbackInput) (*OAuthCallbackOutput, error) {
 		c := authHumaContext(ctx)
 		if input.Error != "" {
-			return nil, mapAuthError(auth.ErrOAuthProviderFailed)
+			c.AppendHeader("Set-Cookie", svc.ClearOAuthStateCookie().String())
+			location, ok := svc.OAuthFailureURL("cancelled")
+			if !ok {
+				return nil, mapAuthError(auth.ErrOAuthProviderFailed)
+			}
+			c.AppendHeader("Location", location)
+			return &OAuthCallbackOutput{Status: http.StatusFound}, nil
 		}
 		cookieState := oauthStateCookieValue(c, svc.OAuthStateCookieName())
 		_, session, token, returnURL, err := svc.OAuthCallback(ctx, clientIPFromHuma(c), input.Code, input.State, cookieState)
 		if err != nil {
+			outcome := ""
+			switch {
+			case errors.Is(err, auth.ErrInvalidOAuthState):
+				outcome = "expired"
+			case errors.Is(err, auth.ErrOAuthProviderFailed), errors.Is(err, auth.ErrUserDisabled):
+				outcome = "failed"
+			}
+			if outcome != "" {
+				c.AppendHeader("Set-Cookie", svc.ClearOAuthStateCookie().String())
+				location, ok := svc.OAuthFailureURL(outcome)
+				if !ok {
+					return nil, mapAuthError(auth.ErrOAuthProviderFailed)
+				}
+				c.AppendHeader("Location", location)
+				return &OAuthCallbackOutput{Status: http.StatusFound}, nil
+			}
 			return nil, mapAuthError(err)
 		}
 		c.AppendHeader("Set-Cookie", svc.SessionCookie(token, session.ExpiresAt).String())
@@ -229,9 +252,8 @@ func RegisterAuth(api huma.API, svc *auth.Service) {
 		Path:        "/api/v1/auth/logout",
 		Summary:     "Log out the current session",
 		Tags:        []string{"Authentication"},
-		Middlewares: []func(huma.Context, func(huma.Context)){RequireAuth(), CSRFMiddleware(svc)},
+		Middlewares: []func(huma.Context, func(huma.Context)){CSRFMiddleware(svc)},
 		Responses: map[string]*huma.Response{
-			"401": {Description: "Authentication is required"},
 			"403": {Description: "Invalid CSRF token"},
 			"429": {Description: "Rate limited"},
 		},
@@ -242,7 +264,10 @@ func RegisterAuth(api huma.API, svc *auth.Service) {
 		if err == nil {
 			token = sessionCookie.Value
 		}
-		if err := svc.Logout(ctx, token); err != nil {
+		// A stale cookie is already an ended server-side session. Treat it as
+		// a successful local sign-out so the response can clear both cookies;
+		// active sessions still pass through Service.Logout and are revoked.
+		if err := svc.Logout(ctx, token); err != nil && !errors.Is(err, auth.ErrAuthenticationRequired) {
 			return nil, mapAuthError(err)
 		}
 		cookie := svc.ClearSessionCookie()
@@ -254,6 +279,7 @@ func RegisterAuth(api huma.API, svc *auth.Service) {
 
 func currentUserFromAuth(u *auth.User) CurrentUser {
 	cu := CurrentUser{
+		ID:              u.ID.String(),
 		Email:           &u.Email,
 		EmailVerifiedAt: u.EmailVerifiedAt,
 	}

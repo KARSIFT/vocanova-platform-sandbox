@@ -15,7 +15,7 @@ afterEach(() => {
   }
 });
 
-it("returns oauthEnabled true when kill_switches.oauth_enabled is true", async () => {
+it("returns enabled methods from the health capability signal", async () => {
   process.env.API_BASE_URL = "http://api.internal:8080";
 
   globalThis.fetch = ((url: string): Promise<Response> => {
@@ -24,7 +24,7 @@ it("returns oauthEnabled true when kill_switches.oauth_enabled is true", async (
       Response.json(
         {
           status: "ok",
-          kill_switches: { oauth_enabled: true },
+          kill_switches: { magic_link_enabled: true, oauth_enabled: true },
         },
         { status: 200 },
       ),
@@ -32,6 +32,7 @@ it("returns oauthEnabled true when kill_switches.oauth_enabled is true", async (
   }) as typeof globalThis.fetch;
 
   const capabilities = await getSignInAuthCapabilities();
+  assert.equal(capabilities.magicLinkEnabled, true);
   assert.equal(capabilities.oauthEnabled, true);
 });
 
@@ -52,6 +53,7 @@ it("returns oauthEnabled false when kill_switches.oauth_enabled is false", async
   }) as typeof globalThis.fetch;
 
   const capabilities = await getSignInAuthCapabilities();
+  assert.equal(capabilities.magicLinkEnabled, false);
   assert.equal(capabilities.oauthEnabled, false);
 });
 
@@ -63,6 +65,7 @@ it("returns oauthEnabled false when kill_switches is absent", async () => {
   }) as typeof globalThis.fetch;
 
   const capabilities = await getSignInAuthCapabilities();
+  assert.equal(capabilities.magicLinkEnabled, false);
   assert.equal(capabilities.oauthEnabled, false);
 });
 
@@ -74,6 +77,7 @@ it("returns oauthEnabled false when /healthz is unavailable", async () => {
   }) as typeof globalThis.fetch;
 
   const capabilities = await getSignInAuthCapabilities();
+  assert.equal(capabilities.magicLinkEnabled, false);
   assert.equal(capabilities.oauthEnabled, false);
 });
 
@@ -87,7 +91,7 @@ it("reads oauth_enabled from a 503 /healthz body without throwing", async () => 
         {
           status: "unhealthy",
           database: "unhealthy",
-          kill_switches: { oauth_enabled: true },
+          kill_switches: { magic_link_enabled: true, oauth_enabled: true },
         },
         { status: 503 },
       ),
@@ -95,5 +99,6 @@ it("reads oauth_enabled from a 503 /healthz body without throwing", async () => 
   }) as typeof globalThis.fetch;
 
   const capabilities = await getSignInAuthCapabilities();
+  assert.equal(capabilities.magicLinkEnabled, true);
   assert.equal(capabilities.oauthEnabled, true);
 });

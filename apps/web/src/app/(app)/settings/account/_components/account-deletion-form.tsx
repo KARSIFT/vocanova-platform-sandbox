@@ -4,13 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { createApiClient } from "@/lib/api";
-import {
-  CSRF_COOKIE_NAME,
-  deleteCookie,
-  getCookieValue,
-  SESSION_COOKIE_NAME,
-} from "@/lib/cookies";
+import { CSRF_COOKIE_NAME, deleteCookie } from "@/lib/cookies";
+import { getOrRefreshCSRFToken } from "@/lib/csrf";
+import { clearOAuthContinuation } from "@/lib/oauth-continuation";
 import { handleApiError } from "@/lib/session";
+
+import { clearSentenceFeedbackDrafts } from "../../../_components/sentence-feedback-drafts";
 
 type DeletionPhase = { type: "idle" } | { type: "confirming" };
 
@@ -52,34 +51,26 @@ export function AccountDeletionForm() {
       return;
     }
 
-    const csrfToken = getCookieValue(CSRF_COOKIE_NAME);
-    if (!csrfToken) {
-      setErrorMessage(
-        "Your session is missing a security token. Please refresh the page and try again.",
-      );
-      return;
-    }
-
     setIsDeleting(true);
     const client = createApiClient();
     try {
+      const csrfToken = await getOrRefreshCSRFToken();
+      if (!csrfToken) {
+        setErrorMessage(
+          "We couldn't prepare this request securely. Please try again.",
+        );
+        return;
+      }
       const { data } = await client.createAccountDeletionRequest(
         generateIdempotencyKey(),
         { headers: { "X-CSRF-Token": csrfToken } },
       );
-      // The server already revoked every active session; the local
-      // cookie is just a presentation concern. Clear it so subsequent
-      // requests (e.g. via a still-pending client request) cannot
-      // re-use the deactivated session, then follow up with a
-      // logout call to flush the requester-side session.
+      // The server revoked all active sessions and cleared its HttpOnly
+      // session cookie in this response. The browser-visible CSRF cookie can
+      // be cleared here before leaving the authenticated shell.
+      clearSentenceFeedbackDrafts();
+      clearOAuthContinuation();
       deleteCookie(CSRF_COOKIE_NAME);
-      deleteCookie(SESSION_COOKIE_NAME);
-      try {
-        await client.logout({ headers: { "X-CSRF-Token": csrfToken } });
-      } catch {
-        // Best-effort: the server has already revoked the session
-        // even if the logout call fails on the client.
-      }
       // The acknowledgement must be outside the authenticated shell: this
       // request revokes the session, making its header and navigation invalid.
       router.replace(

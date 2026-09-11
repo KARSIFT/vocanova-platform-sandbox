@@ -10,6 +10,7 @@ import { createApiClient } from "@/lib/api";
 import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
 import { handleApiError } from "@/lib/session";
 import { SentenceFeedback } from "../../_components/sentence-feedback";
+import { saveReviewCompletionContext } from "../../_components/sentence-feedback-drafts";
 
 import {
   isMultipleChoiceOptionDisabled,
@@ -57,12 +58,14 @@ interface ReviewSessionProps {
   initialDueWords: DueWord[];
   initialTotalCount: number;
   reviewSessionLimit: number;
+  userId?: string;
 }
 
 export function ReviewSession({
   initialDueWords,
   initialTotalCount,
   reviewSessionLimit,
+  userId,
 }: ReviewSessionProps) {
   const [dueWords, setDueWords] = useState<DueWord[]>(initialDueWords);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -268,6 +271,12 @@ export function ReviewSession({
       setHasSubmittedCurrentCard(true);
       setLastReviewedCard(currentCard);
       setLastReviewAttemptId(data.attemptId);
+      saveReviewCompletionContext({
+        userId,
+        attemptId: data.attemptId,
+        targetWord: currentCard.wordText,
+        shortDefinition: currentCard.shortDefinition,
+      });
       setRemainingCount((count) => Math.max(0, count - 1));
       const nextCompletedReviewCount = getCompletedReviewCountAfterSubmission(
         completedReviewCount,
@@ -356,6 +365,7 @@ export function ReviewSession({
               targetWord={lastReviewedCard.wordText}
               attemptId={lastReviewAttemptId}
               source="review"
+              userId={userId}
               shortDefinition={lastReviewedCard.shortDefinition}
             />
           </div>

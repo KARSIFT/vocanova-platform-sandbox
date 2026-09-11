@@ -377,6 +377,15 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
       page.getByRole("button", { name: "Correction changed my meaning" }),
     ).toHaveCount(0);
 
+    await page.getByRole("link", { name: "View sentence history" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Sentence history", level: 1 }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("I will pour the coffee into a cup."),
+    ).toBeVisible();
+    await expect(page.getByText("Looks good", { exact: true })).toBeVisible();
+
     // ----- 7. Progress update.
     //
     // The mock's POST /api/v1/reviews/submissions increments

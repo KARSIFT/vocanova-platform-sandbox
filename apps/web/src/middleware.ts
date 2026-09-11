@@ -12,6 +12,7 @@ export const config = {
     "/words",
     "/words/:path*",
     "/progress",
+    "/progress/:path*",
     "/review",
     "/review/:path*",
     "/reviews",

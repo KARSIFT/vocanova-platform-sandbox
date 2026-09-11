@@ -21,6 +21,10 @@ import (
 )
 
 func testAuthAPI(t *testing.T) (huma.API, *auth.Service, *auth.MemoryRepository, *email.Fake, *clock.Fixed) {
+	return testAuthAPIWithBaseURL(t, "https://test.example.com")
+}
+
+func testAuthAPIWithBaseURL(t *testing.T, baseURL string) (huma.API, *auth.Service, *auth.MemoryRepository, *email.Fake, *clock.Fixed) {
 	t.Helper()
 	now := time.Date(2026, 7, 24, 12, 0, 0, 0, time.UTC)
 	c := &clock.Fixed{T: now}
@@ -30,7 +34,7 @@ func testAuthAPI(t *testing.T) (huma.API, *auth.Service, *auth.MemoryRepository,
 	oauth := auth.NewFakeOAuthProvider(&auth.OAuthIdentity{Subject: "sub-123", Email: "user@example.com", EmailVerified: true, DisplayName: "User", AvatarURL: "https://example.com/avatar.png"})
 	svc := auth.NewService(repo, fake, oauth, c, limiter, auth.Config{
 		Environment:            "test",
-		BaseURL:                "https://test.example.com",
+		BaseURL:                baseURL,
 		MagicLinkPath:          "/auth/magic",
 		OAuthRedirectURI:       "https://test.example.com/auth/oauth/google/callback",
 		OAuthRedirectAllowlist: []string{"https://test.example.com/app"},
@@ -296,12 +300,13 @@ func TestOAuthCallbackEndpointSetsSessionAndRedirects(t *testing.T) {
 	require.NotNil(t, clearCookie)
 	assert.True(t, clearCookie.Expires.Before(time.Now()) || clearCookie.MaxAge < 0)
 
-	// Replaying the callback fails.
+	// Replaying the callback redirects to the trusted sign-in recovery screen.
 	w = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/google/callback?code=auth-code&state="+state, nil)
 	req.AddCookie(oauthStateCookie)
 	api.Adapter().ServeHTTP(w, req)
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	assert.Equal(t, http.StatusFound, w.Code)
+	assert.Equal(t, "https://test.example.com/login?oauth=expired", w.Header().Get("Location"))
 }
 
 func TestOAuthCallbackEndpointRejectsMissingStateCookie(t *testing.T) {
@@ -321,11 +326,60 @@ func TestOAuthCallbackEndpointRejectsMissingStateCookie(t *testing.T) {
 	require.NoError(t, err)
 	state := u.Query().Get("state")
 
-	// Callback without the state cookie should fail.
+	// Callback without the state cookie redirects to a truthful recovery state.
 	w = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/google/callback?code=auth-code&state="+state, nil)
 	api.Adapter().ServeHTTP(w, req)
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	assert.Equal(t, http.StatusFound, w.Code)
+	assert.Equal(t, "https://test.example.com/login?oauth=expired", w.Header().Get("Location"))
+}
+
+func TestOAuthCallbackEndpointRedirectsCancellationToSignIn(t *testing.T) {
+	api, _, _, _, _ := testAuthAPI(t)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/google/callback?error=access_denied", nil)
+	api.Adapter().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusFound, w.Code)
+	assert.Equal(t, "https://test.example.com/login?oauth=cancelled", w.Header().Get("Location"))
+	clearCookie := findCookie(w.Result().Cookies(), "vocanova_oauth_state")
+	require.NotNil(t, clearCookie)
+	assert.Empty(t, clearCookie.Value)
+	assert.Less(t, clearCookie.MaxAge, 0)
+}
+
+func TestOAuthCallbackFailsClosedWithoutTrustedFailureRedirect(t *testing.T) {
+	for _, baseURL := range []string{"", "not a URL", "ftp://test.example.com"} {
+		t.Run(baseURL, func(t *testing.T) {
+			api, _, _, _, _ := testAuthAPIWithBaseURL(t, baseURL)
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/google/callback?error=access_denied", nil)
+			api.Adapter().ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusUnauthorized, w.Code)
+			assert.Empty(t, w.Header().Get("Location"))
+			clearCookie := findCookie(w.Result().Cookies(), "vocanova_oauth_state")
+			require.NotNil(t, clearCookie)
+			assert.Less(t, clearCookie.MaxAge, 0)
+		})
+	}
+}
+
+func TestOAuthCallbackInvalidStateFailsClosedWithoutTrustedFailureRedirect(t *testing.T) {
+	for _, baseURL := range []string{"", "not a URL"} {
+		t.Run(baseURL, func(t *testing.T) {
+			api, _, _, _, _ := testAuthAPIWithBaseURL(t, baseURL)
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/google/callback?code=auth-code&state=invalid", nil)
+			api.Adapter().ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusUnauthorized, w.Code)
+			assert.Empty(t, w.Header().Get("Location"))
+			clearCookie := findCookie(w.Result().Cookies(), "vocanova_oauth_state")
+			require.NotNil(t, clearCookie)
+			assert.Less(t, clearCookie.MaxAge, 0)
+		})
+	}
 }
 
 func hasCookie(cookies []*http.Cookie, name string) bool {
@@ -418,6 +472,22 @@ func TestGetCurrentUserReturnsAuthenticatedRequester(t *testing.T) {
 	require.NoError(t, jsonDecode(w.Body.String(), &body))
 	require.NotNil(t, body.Email)
 	assert.Equal(t, "user@example.com", *body.Email)
+	assert.True(t, hasCookie(w.Result().Cookies(), "vocanova_csrf"), "missing CSRF cookie is restored for an authenticated browser")
+}
+
+func TestGetCurrentUserDoesNotReplaceExistingCSRFCookie(t *testing.T) {
+	api, svc, _, fake, _ := testAuthAPI(t)
+	sessionCookie := consumeMagicLinkForEmail(t, api, fake, "user@example.com")
+	_, csrfCookie := svc.IssueCSRFCookie()
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/me", nil)
+	req.AddCookie(sessionCookie)
+	req.AddCookie(csrfCookie)
+	api.Adapter().ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Nil(t, findCookie(w.Result().Cookies(), "vocanova_csrf"))
 }
 
 func TestGetCurrentUserRejectsInvalidCookie(t *testing.T) {
@@ -509,9 +579,23 @@ func TestGetCurrentUserCrossUserIsolation(t *testing.T) {
 	require.NoError(t, jsonDecode(w.Body.String(), &bodyB))
 	require.NotNil(t, bodyB.Email)
 	assert.Equal(t, "b@example.com", *bodyB.Email)
+	assert.NotEmpty(t, bodyA.ID)
+	assert.NotEmpty(t, bodyB.ID)
+	assert.NotEqual(t, bodyA.ID, bodyB.ID, "draft identity must be requester-scoped")
+
+	// A new session for the same account must keep its draft identity.
+	sessionA2 := consumeMagicLinkForEmail(t, api, fake, "a@example.com")
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/me", nil)
+	req.AddCookie(sessionA2)
+	api.Adapter().ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+	var bodyA2 CurrentUser
+	require.NoError(t, jsonDecode(w.Body.String(), &bodyA2))
+	assert.Equal(t, bodyA.ID, bodyA2.ID)
 }
 
-func TestLogoutRequiresAuthentication(t *testing.T) {
+func TestLogoutClearsCookiesWithoutAnActiveSession(t *testing.T) {
 	api, svc, _, _, _ := testAuthAPI(t)
 
 	w := httptest.NewRecorder()
@@ -522,7 +606,9 @@ func TestLogoutRequiresAuthentication(t *testing.T) {
 	req.Header.Set("X-CSRF-Token", csrfToken)
 	api.Adapter().ServeHTTP(w, req)
 
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	assert.Equal(t, http.StatusNoContent, w.Code)
+	assert.True(t, hasCookie(w.Result().Cookies(), "vocanova_session"))
+	assert.True(t, hasCookie(w.Result().Cookies(), "vocanova_csrf"))
 }
 
 func TestLogoutRequiresCSRF(t *testing.T) {
@@ -537,4 +623,26 @@ func TestLogoutRequiresCSRF(t *testing.T) {
 	api.Adapter().ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestSensitiveAuthResponsesAreNotStored(t *testing.T) {
+	api, _, _, _, _ := testAuthAPI(t)
+
+	for _, request := range []struct {
+		method string
+		target string
+		body   string
+	}{
+		{method: http.MethodGet, target: "/api/v1/me"},
+		{method: http.MethodPost, target: "/api/v1/auth/magic-links", body: `{"email":"cache@example.com"}`},
+	} {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(request.method, request.target, strings.NewReader(request.body))
+		if request.body != "" {
+			req.Header.Set("Content-Type", "application/json")
+		}
+		api.Adapter().ServeHTTP(w, req)
+		assert.Equal(t, "no-store", w.Header().Get("Cache-Control"), request.target)
+		assert.Equal(t, "no-cache", w.Header().Get("Pragma"), request.target)
+	}
 }

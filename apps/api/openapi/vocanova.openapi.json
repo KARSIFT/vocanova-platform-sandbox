@@ -257,6 +257,11 @@
             "format": "date-time",
             "type": "string"
           },
+          "id": {
+            "description": "Opaque authenticated learner identifier; never an authorization credential",
+            "format": "uuid",
+            "type": "string"
+          },
           "onboardingStatus": {
             "description": "Onboarding status; not_started when the learner has not yet submitted onboarding",
             "enum": [
@@ -268,6 +273,7 @@
           }
         },
         "required": [
+          "id",
           "onboardingStatus"
         ],
         "type": "object"
@@ -2895,9 +2901,6 @@
           "204": {
             "description": "No Content"
           },
-          "401": {
-            "description": "Authentication is required"
-          },
           "403": {
             "description": "Invalid CSRF token"
           },
@@ -3021,10 +3024,10 @@
             "description": "No Content"
           },
           "302": {
-            "description": "Redirect to the authenticated application"
+            "description": "Redirect to the authenticated application or the trusted sign-in recovery screen"
           },
           "401": {
-            "description": "Invalid or expired OAuth state, or the provider/account failed verification"
+            "description": "OAuth callback could not be recovered safely"
           },
           "404": {
             "description": "OAuth provider not configured"

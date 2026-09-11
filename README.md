@@ -11,6 +11,10 @@ Journey/Discover (including situation drill-down) screens (VOC-018 through VOC-0
 against the wired design-token system - not skeletons awaiting later approved changes. See
 the [local development guide](docs/development.md) for exact tools and commands.
 
+The [learning and account maturity delivery](docs/product/mature-learning-and-account-experience.md)
+adds sentence history under Progress, recoverable practice drafts, and clearer
+passwordless sign-in and account flows while keeping the three primary tabs.
+
 ## Documentation
 
 - [Documentation index](docs/README.md)

@@ -5,8 +5,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { createApiClient } from "@/lib/api";
-import { CSRF_COOKIE_NAME, deleteCookie, getCookieValue } from "@/lib/cookies";
-import { handleApiError } from "@/lib/session";
+import { getAuthErrorMessage } from "@/lib/auth-feedback";
+import { CSRF_COOKIE_NAME, deleteCookie } from "@/lib/cookies";
+import { getOrRefreshCSRFToken } from "@/lib/csrf";
+import { clearOAuthContinuation } from "@/lib/oauth-continuation";
+import { handleSessionExpired, isSessionExpiredError } from "@/lib/session";
+
+import {
+  clearSentenceFeedbackDrafts,
+  hasSentenceFeedbackDrafts,
+} from "./sentence-feedback-drafts";
 
 export function AppHeader() {
   const pathname = usePathname();
@@ -19,31 +27,44 @@ export function AppHeader() {
   });
 
   async function handleLogout() {
-    setStatus({ type: "loading", message: "" });
-    const csrfToken = getCookieValue(CSRF_COOKIE_NAME);
-    if (!csrfToken) {
-      setStatus({
-        type: "error",
-        message: "Unable to log out. Please try again.",
-      });
+    if (
+      hasSentenceFeedbackDrafts() &&
+      !window.confirm(
+        "You have an unsent practice draft in this tab. Signing out will discard it. Do you want to sign out?",
+      )
+    ) {
       return;
     }
 
+    setStatus({ type: "loading", message: "" });
     const client = createApiClient();
     try {
+      const csrfToken = await getOrRefreshCSRFToken();
+      if (!csrfToken) {
+        setStatus({
+          type: "error",
+          message: "We couldn't prepare a secure sign-out. Please try again.",
+        });
+        return;
+      }
       await client.logout({
         headers: { "X-CSRF-Token": csrfToken },
       });
+      clearSentenceFeedbackDrafts();
+      clearOAuthContinuation();
       deleteCookie(CSRF_COOKIE_NAME);
-      window.location.href = "/login";
+      window.location.assign("/login?signedOut=1");
     } catch (error) {
-      // T06: a 401 on logout is the documented "session already
-      // expired" case — clear the local session cookie anyway and
-      // route the learner to sign in, matching the same
-      // session-expiry mid-flow handler used by the core loop.
+      // A recovery GET /me that confirms the session is no longer accepted
+      // follows the normal re-authentication path. Drafts remain until a
+      // server-side logout actually succeeds.
+      if (isSessionExpiredError(error)) {
+        handleSessionExpired();
+        return;
+      }
       setStatus({
         type: "error",
-        message: handleApiError(error, "Unable to log out. Please try again."),
+        message: getAuthErrorMessage(error, "logout"),
       });
     }
   }

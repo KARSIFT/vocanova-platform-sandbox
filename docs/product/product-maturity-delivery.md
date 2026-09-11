@@ -1,6 +1,6 @@
 # Vocanova product maturity delivery
 
-This delivery is one pull request against `main`. It turns the documented A2–B1
+This delivery landed in PR #1460 on 2026-09-10. It turns the documented A2–B1
 learning loop into a coherent, usable product. The product bible and MVP PRD
 remain the scope baseline; implementation history is not an acceptance criterion.
 
@@ -52,9 +52,9 @@ remain the scope baseline; implementation history is not an acceptance criterion
 
 ## Deployment boundaries and remaining gates
 
-- [PR #1460](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1460) is the
-  single delivery PR and live source of final CI/review status. Required checks
-  and automated review are inspected before making it ready for the merge queue.
+- [PR #1460](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1460) merged
+  on 2026-09-10. This document preserves that delivery's verification evidence;
+  subsequent work is tracked in [Mature learning and account experience](mature-learning-and-account-experience.md).
 - Local Docker is unavailable. Database-backed OAuth verification must pass in
   the dedicated CI job; the local API command intentionally excludes that harness.
 - Merging deploys staging. Production requires a separate manual workflow dispatch
@@ -63,8 +63,9 @@ remain the scope baseline; implementation history is not an acceptance criterion
   credentials. Test mocks cannot silently become production learner feedback.
 - Live Google account login requires a human/provider session; the OAuth callback
   harness and readiness checks do not claim to replace that audit.
-- Issue #1459 still tracks the production authenticated route sweep. Do not close
-  it without a successful deployed check.
+- Issue #1459 is closed. The latest three scheduled synthetic runs inspected on
+  2026-09-11 passed, including [run 34628867152](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/34628867152).
+  This is dated operational evidence, not a guarantee of current availability.
 
 ## Baseline findings
 
@@ -78,4 +79,5 @@ remain the scope baseline; implementation history is not an acceptance criterion
 - Issue #1459 tracks a failing production authenticated route sweep; the same
   workflow's staging learning journey and production content checks pass.
 
-This checklist records work in progress, not a release claim.
+This checklist records the completed PR delivery and its original local checks;
+it does not establish which revision is currently deployed to production.

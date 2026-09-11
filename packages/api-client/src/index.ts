@@ -1,4 +1,6 @@
 export interface CurrentUser {
+  /** Opaque learner identity for local draft isolation; absent on older APIs. */
+  id?: string;
   email?: string;
   displayName?: string;
   avatarUrl?: string;

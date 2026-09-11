@@ -6,6 +6,7 @@ import { PageContainer } from "@/ui/surface";
 
 import { getReviewsView } from "./_components/reviews-view";
 import { ReviewSession } from "./_components/review-session";
+import { ReviewSentenceDraftRecovery } from "./_components/review-sentence-draft-recovery";
 import {
   getDueRequestLimit,
   getRemainingReviewTarget,
@@ -19,8 +20,12 @@ export const metadata: Metadata = {
 export default async function ReviewsPage() {
   const client = await createServerApiClient();
   let dailyMissionResponse: Awaited<ReturnType<typeof client.getDailyMission>>;
+  let currentUserResponse: Awaited<ReturnType<typeof client.getCurrentUser>>;
   try {
-    dailyMissionResponse = await client.getDailyMission();
+    [dailyMissionResponse, currentUserResponse] = await Promise.all([
+      client.getDailyMission(),
+      client.getCurrentUser(),
+    ]);
   } catch (error) {
     requireAuthRedirect(error, "/reviews");
   }
@@ -31,7 +36,7 @@ export default async function ReviewsPage() {
   );
 
   if (remainingReviewTarget === 0) {
-    return <MissionTargetComplete />;
+    return <MissionTargetComplete userId={currentUserResponse.data.id} />;
   }
 
   let dueResponse: Awaited<ReturnType<typeof client.listDueWords>>;
@@ -86,13 +91,15 @@ export default async function ReviewsPage() {
           initialDueWords={dueWords}
           initialTotalCount={Math.min(totalCount, remainingReviewTarget)}
           reviewSessionLimit={remainingReviewTarget}
+          userId={currentUserResponse.data.id}
         />
       )}
+      <ReviewSentenceDraftRecovery userId={currentUserResponse.data.id} />
     </PageContainer>
   );
 }
 
-function MissionTargetComplete() {
+function MissionTargetComplete({ userId }: Readonly<{ userId?: string }>) {
   return (
     <PageContainer className="max-w-[40rem]">
       <div className="mb-[var(--spacing-md)] flex items-center justify-between">
@@ -117,6 +124,7 @@ function MissionTargetComplete() {
         >
           Back to Home
         </Link>
+        <ReviewSentenceDraftRecovery userId={userId} />
       </div>
     </PageContainer>
   );
