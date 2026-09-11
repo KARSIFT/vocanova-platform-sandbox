@@ -1444,6 +1444,17 @@ jobs:
           echo "  only removes old containers once the new ones are healthy)." >&2
           exit 1
 
+      - name: Verify deployed release identity
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          RELEASE_COMMIT: ${{ steps.release.outputs.commit }}
+          RELEASE_BUILT_AT: ${{ steps.release.outputs.built_at }}
+          RELEASE_ENVIRONMENT: staging
+          RELEASE_API_URL: https://api-staging.vocanova.site
+          RELEASE_WEB_URL: https://staging.vocanova.site
+        run: python3 infra/scripts/verify-deployed-release.py
+
       # ---------------------------------------------------------------
       # VOC-084-T02: post-deploy OAuth-start initiation check.
       #

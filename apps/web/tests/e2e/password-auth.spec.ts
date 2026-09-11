@@ -61,9 +61,9 @@ test.describe("Password authentication", () => {
     await page.getByRole("textbox", { name: "Password" }).fill("short");
     await page.getByRole("button", { name: "Create account" }).click();
     await expect(
-      page.getByRole("alert", {
-        name: "Use a password between 15 and 128 characters.",
-      }),
+      page
+        .getByRole("alert")
+        .filter({ hasText: "Use a password between 15 and 128 characters." }),
     ).toBeVisible();
 
     await page.getByRole("textbox", { name: "Password" }).fill(PASSWORD);
@@ -105,13 +105,17 @@ test.describe("Password authentication", () => {
     await page.goto("/auth/password/verify?token=valid-signup-token");
     await page.getByRole("button", { name: "Verify email" }).click();
     await expect(
-      page.getByRole("alert", { name: /invalid, expired, or has already been used/ }),
+      page
+        .getByRole("alert")
+        .filter({ hasText: /invalid, expired, or has already been used/ }),
     ).toBeVisible();
 
     await page.goto("/auth/password/verify?token=not-a-real-token");
     await page.getByRole("button", { name: "Verify email" }).click();
     await expect(
-      page.getByRole("alert", { name: /invalid, expired, or has already been used/ }),
+      page
+        .getByRole("alert")
+        .filter({ hasText: /invalid, expired, or has already been used/ }),
     ).toBeVisible();
   });
 
@@ -130,7 +134,9 @@ test.describe("Password authentication", () => {
     );
     await page.getByRole("button", { name: "Sign in" }).click();
     await wrongResponse;
-    await expect(page.getByRole("alert", { name: /couldn't sign you in/ })).toBeVisible();
+    await expect(
+      page.getByRole("alert").filter({ hasText: /couldn't sign you in/ }),
+    ).toBeVisible();
 
     await page.getByLabel("Email address").fill("unavailable@example.test");
     const unavailableResponse = page.waitForResponse(
@@ -141,7 +147,7 @@ test.describe("Password authentication", () => {
     await page.getByRole("button", { name: "Sign in" }).click();
     await unavailableResponse;
     await expect(
-      page.getByRole("alert", { name: /temporarily unavailable/ }),
+      page.getByRole("alert").filter({ hasText: /temporarily unavailable/ }),
     ).toBeVisible();
 
     await page.getByLabel("Email address").fill("rate-limited@example.test");
@@ -152,7 +158,11 @@ test.describe("Password authentication", () => {
     );
     await page.getByRole("button", { name: "Sign in" }).click();
     await rateLimitedResponse;
-    await expect(page.getByRole("alert", { name: /Too many password sign-in attempts/ })).toBeVisible();
+    await expect(
+      page
+        .getByRole("alert")
+        .filter({ hasText: /Too many password sign-in attempts/ }),
+    ).toBeVisible();
 
     await page.getByLabel("Email address").fill("learner@example.test");
     await page.getByRole("button", { name: "Sign in" }).click();
@@ -183,10 +193,18 @@ test.describe("Password authentication", () => {
     await page.goto("/auth/password/reset?token=valid-reset-token");
     await page.getByRole("textbox", { name: "Password" }).fill(PASSWORD);
     await page.getByRole("button", { name: "Save new password" }).click();
-    await expect(page.getByRole("alert", { name: /invalid, expired, or has already been used/ })).toBeVisible();
+    await expect(
+      page
+        .getByRole("alert")
+        .filter({ hasText: /invalid, expired, or has already been used/ }),
+    ).toBeVisible();
     await page.goto("/auth/password/reset?token=invalid-reset-token");
     await page.getByRole("textbox", { name: "Password" }).fill(PASSWORD);
     await page.getByRole("button", { name: "Save new password" }).click();
-    await expect(page.getByRole("alert", { name: /invalid, expired, or has already been used/ })).toBeVisible();
+    await expect(
+      page
+        .getByRole("alert")
+        .filter({ hasText: /invalid, expired, or has already been used/ }),
+    ).toBeVisible();
   });
 });

@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"database/sql"
 	"net/url"
 	"strings"
 	"sync"
@@ -34,11 +35,17 @@ func TestPasswordAuthPostgreSQL(t *testing.T) {
 		t.Helper()
 		msg, ok := fake.Last()
 		require.True(t, ok)
-		u, err := url.Parse(strings.TrimSpace(msg.BodyText))
-		require.NoError(t, err)
-		token := u.Query().Get("token")
-		require.NotEmpty(t, token)
-		return token
+		for _, line := range strings.Split(msg.BodyText, "\n") {
+			u, err := url.Parse(strings.TrimSpace(line))
+			if err == nil && u.Scheme == "https" {
+				token := u.Query().Get("token")
+				if token != "" {
+					return token
+				}
+			}
+		}
+		t.Fatal("password email did not contain a usable HTTPS link")
+		return ""
 	}
 	insertGoogleUser := func(t *testing.T, address string) uuid.UUID {
 		t.Helper()
@@ -64,6 +71,44 @@ func TestPasswordAuthPostgreSQL(t *testing.T) {
 	before := len(fake.Sent)
 	require.NoError(t, svc.RequestSignup(ctx, "127.0.0.1", "learner@example.com", "must never replace this password", "Other"))
 	assert.Len(t, fake.Sent, before, "existing-account signup is a generic no-op")
+
+	t.Run("login racing a reset cannot retain an old-password session", func(t *testing.T) {
+		require.NoError(t, svc.RequestReset(ctx, "127.0.0.10", "learner@example.com"))
+		resetToken := lastToken(t)
+		type loginResult struct {
+			raw string
+			err error
+		}
+		loginResults := make(chan loginResult, 1)
+		resetResults := make(chan error, 1)
+		var wg sync.WaitGroup
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			_, _, raw, err := svc.Login(ctx, "127.0.0.10", "learner@example.com", "correct horse battery staple")
+			loginResults <- loginResult{raw: raw, err: err}
+		}()
+		go func() {
+			defer wg.Done()
+			resetResults <- svc.Reset(ctx, "127.0.0.10", resetToken, "a newer sufficiently long password")
+		}()
+		wg.Wait()
+		require.NoError(t, <-resetResults)
+		result := <-loginResults
+		if result.err == nil {
+			_, sessionHash, err := auth.TokenAndHash(result.raw)
+			require.NoError(t, err)
+			var revoked sql.NullTime
+			require.NoError(t, db.QueryRow(`SELECT revoked_at FROM sessions WHERE token_hash=$1`, sessionHash).Scan(&revoked))
+			assert.True(t, revoked.Valid, "a session minted before reset must be revoked by it")
+		} else {
+			assert.ErrorIs(t, result.err, password.ErrInvalidCredentials)
+		}
+		_, _, _, err := svc.Login(ctx, "127.0.0.10", "learner@example.com", "correct horse battery staple")
+		require.ErrorIs(t, err, password.ErrInvalidCredentials)
+		_, _, _, err = svc.Login(ctx, "127.0.0.10", "learner@example.com", "a newer sufficiently long password")
+		require.NoError(t, err)
+	})
 
 	t.Run("registration proof honours expiry environment and signup policy", func(t *testing.T) {
 		require.NoError(t, svc.RequestSignup(ctx, "127.0.0.2", "expired@example.com", "correct horse battery staple", "Expired"))

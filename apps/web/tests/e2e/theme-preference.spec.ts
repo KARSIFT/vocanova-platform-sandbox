@@ -77,18 +77,45 @@ test.describe("Theme preference", () => {
     }
   });
 
+  test("keeps dark theme accessible across authenticated account and practice surfaces", async ({
+    page,
+  }) => {
+    await useDarkTheme(page);
+
+    for (const route of [
+      "/settings",
+      "/settings/profile",
+      "/settings/account",
+      "/words",
+      "/reviews",
+      "/review",
+    ]) {
+      await page.goto(route);
+      await expect.poll(() => new URL(page.url()).pathname).toBe(route);
+      await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+      const { criticalOrSerious } = await scanForAxeViolations(page);
+      expect(
+        criticalOrSerious,
+        `Expected zero critical or serious axe-core violations in dark mode on ${route}; found:\n${formatViolations(
+          criticalOrSerious,
+        ).join("\n")}`,
+      ).toEqual([]);
+    }
+  });
+
   test("keeps an invalid password message readable in dark mode", async ({
     page,
   }) => {
     await useDarkTheme(page);
     await page.goto("/signup");
     await page.getByLabel("Email address").fill("learner@example.com");
-    await page.getByLabel("Password").fill("too short");
+    await page.getByLabel("Password", { exact: true }).fill("too short");
     await page.getByRole("button", { name: "Create account" }).click();
     await expect(
-      page.getByRole("alert", {
-        name: "Use a password between 15 and 128 characters.",
-      }),
+      page
+        .getByRole("alert")
+        .filter({ hasText: "Use a password between 15 and 128 characters." }),
     ).toBeVisible();
 
     const { criticalOrSerious } = await scanForAxeViolations(page);

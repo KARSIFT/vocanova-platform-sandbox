@@ -38,6 +38,16 @@ func withArgon[T any](fn func() T) T {
 	return fn()
 }
 
+// burnPasswordCheck spends the same bounded Argon2id work for identities
+// without a credential. The fixed, all-zero salt is not a credential and is
+// never stored; the result is deliberately discarded.
+func burnPasswordCheck(value string) {
+	var salt [saltBytes]byte
+	_ = withArgon(func() []byte {
+		return argon2.IDKey([]byte(value), salt[:], iterations, memoryKiB, parallelism, keyBytes)
+	})
+}
+
 func Validate(value string) error {
 	if len(value) > maxBytes || !utf8.ValidString(value) || utf8.RuneCountInString(value) < minChars || utf8.RuneCountInString(value) > maxChars {
 		return ErrInvalidPassword

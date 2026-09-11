@@ -63,11 +63,22 @@ export function ThemeBootstrap() {
 }
 
 export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
-  const [preference, setPreferenceState] = useState<ThemePreference>(
-    getDocumentPreference,
-  );
+  // The server renders System. The bootstrap script can already have applied a
+  // saved choice before hydration, so wait to synchronize React state until
+  // after hydration rather than overwriting that first paint with System.
+  const [preference, setPreferenceState] = useState<ThemePreference>("system");
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
+    setPreferenceState(getDocumentPreference());
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+
     applyTheme(preference);
     if (preference !== "system") {
       return;
@@ -77,7 +88,7 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
     const updateSystemTheme = () => applyTheme("system");
     mediaQuery.addEventListener("change", updateSystemTheme);
     return () => mediaQuery.removeEventListener("change", updateSystemTheme);
-  }, [preference]);
+  }, [isHydrated, preference]);
 
   const setPreference = useCallback((nextPreference: ThemePreference) => {
     persistPreference(nextPreference);

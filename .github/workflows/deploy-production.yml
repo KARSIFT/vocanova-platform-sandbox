@@ -719,6 +719,16 @@ jobs:
           echo "ERROR: production web did not return 2xx within 5 minutes" >&2
           exit 1
 
+      - name: Verify deployed release identity
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          RELEASE_COMMIT: ${{ steps.release.outputs.commit }}
+          RELEASE_BUILT_AT: ${{ steps.release.outputs.built_at }}
+          RELEASE_ENVIRONMENT: production
+          RELEASE_API_URL: https://${{ inputs.production_api_host || 'api-production.vocanova.site' }}
+          RELEASE_WEB_URL: https://${{ inputs.production_web_host || 'production.vocanova.site' }}
+        run: python3 infra/scripts/verify-deployed-release.py
+
       # VOC-050-T04: mint a real session for the deploy-seeded synthetic
       # smoke-test account (VOC-050-T00) via VOC-050-T01's token-gated
       # endpoint, so the smoke suite's core-loop section can authenticate

@@ -56,8 +56,9 @@ Staging and production workflows inject the same version, full commit, explicit
 environment and UTC build timestamp into their API and web builds. These are
 public build metadata, never runtime configuration. Settings → About shows the
 version, environment and abbreviated commit. Both services expose `/version` with
-`version`, `commit`, `environment`, and `builtAt`; compare both services after a
-deploy. An `unknown` field means the build metadata was absent or invalid.
+`version`, `commit`, `environment`, and `builtAt`. Both deployment workflows
+verify these public responses against the intended build after health checks,
+so a stale or mixed release fails deployment verification. An `unknown` field means the build metadata was absent or invalid.
 
 - [Staging web version](https://staging.vocanova.site/version)
 - [Staging API version](https://api-staging.vocanova.site/version)

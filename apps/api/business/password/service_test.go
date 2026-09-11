@@ -2,12 +2,16 @@ package password
 
 import (
 	"context"
+	"io"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/auth"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/email"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -59,4 +63,38 @@ func TestServiceRejectsMalformedProofBeforeLimiter(t *testing.T) {
 	assert.ErrorIs(t, svc.VerifySignup(t.Context(), "127.0.0.1", "not-a-token"), ErrInvalidToken)
 	assert.ErrorIs(t, svc.Reset(t.Context(), "127.0.0.1", "not-a-token", "correct horse battery staple"), ErrInvalidToken)
 	assert.Empty(t, limiter.keys)
+}
+
+func TestLoginLogsMalformedStoredHashWithoutSensitiveValues(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+	now := time.Date(2026, 9, 12, 0, 0, 0, 0, time.UTC)
+	userID := uuid.New()
+	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT id,email").WithArgs("learner@example.test").WillReturnRows(
+		sqlmock.NewRows([]string{"id", "email", "display_name", "avatar_url", "status", "email_verified_at", "created_at", "updated_at"}).
+			AddRow(userID, "learner@example.test", "Learner", "", "active", now, now, now),
+	)
+	mock.ExpectQuery("SELECT password_hash").WithArgs(userID).WillReturnRows(
+		sqlmock.NewRows([]string{"password_hash"}).AddRow("corrupt"),
+	)
+	mock.ExpectRollback()
+	svc := NewService(db, &email.Fake{}, &clock.Fixed{T: now}, &recordingLimiter{ok: true}, "https://example.test", "test", time.Hour, func() bool { return true }, nil, nil)
+
+	oldStderr := os.Stderr
+	read, write, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stderr = write
+	t.Cleanup(func() { os.Stderr = oldStderr })
+	_, _, _, err = svc.Login(t.Context(), "127.0.0.1", "learner@example.test", "a long pasted password with spaces")
+	require.ErrorIs(t, err, ErrInvalidCredentials)
+	require.NoError(t, write.Close())
+	logged, err := io.ReadAll(read)
+	require.NoError(t, err)
+	require.NoError(t, read.Close())
+	assert.Equal(t, "password: malformed stored credential hash\n", string(logged))
+	assert.NotContains(t, string(logged), "learner@example.test")
+	assert.NotContains(t, string(logged), "corrupt")
+	require.NoError(t, mock.ExpectationsWereMet())
 }

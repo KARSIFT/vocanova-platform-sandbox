@@ -8,6 +8,7 @@ import {
 
 test("error telemetry excludes proof queries, password bodies and session headers", () => {
   const result = sanitizeTelemetryEvent({
+    type: undefined,
     event_id: "safe-event-id",
     request: {
       url: "https://example.test/auth/password/reset?token=secret-proof#fragment",

@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/auth"
@@ -19,11 +19,6 @@ import (
 var ErrInvalidToken = errors.New("invalid or expired password token")
 var ErrInvalidCredentials = errors.New("invalid credentials")
 var ErrDisabled = errors.New("password sign-in disabled")
-
-var (
-	dummyHashOnce sync.Once
-	dummyHash     string
-)
 
 type Service struct {
 	db              *sql.DB
@@ -74,13 +69,6 @@ func (s *Service) allowToken(ctx context.Context, action, ip, token string) erro
 	return nil
 }
 
-func burnPasswordCheck(value string) {
-	dummyHashOnce.Do(func() { dummyHash, _ = Hash("not-a-real-password") })
-	if dummyHash != "" {
-		_, _ = Verify(dummyHash, value)
-	}
-}
-
 func tokenIsBounded(token string) bool {
 	// NewTokenAndHash emits 32 bytes in padded URL-safe base64: exactly 44
 	// characters. Reject anything else before it reaches a limiter key or decoder.
@@ -124,7 +112,13 @@ func (s *Service) RequestSignup(ctx context.Context, ip, emailAddr, pass, name s
 	if err != nil {
 		return fmt.Errorf("create registration: %w", err)
 	}
-	return s.mail.Send(ctx, email.Message{To: []email.Address{{Email: emailAddr}}, Subject: "Verify your Vocanova account", BodyText: s.baseURL + "/auth/password/verify?token=" + token})
+	return s.mail.Send(ctx, email.Message{
+		To:      []email.Address{{Email: emailAddr}},
+		Subject: "Verify your VocaNova account",
+		BodyText: "Finish setting up your VocaNova account by opening this link within 15 minutes:\n\n" +
+			s.baseURL + "/auth/password/verify?token=" + token + "\n\n" +
+			"If you did not request this, you can ignore this email. Do not share this link.",
+	})
 }
 
 // Remaining token consumption is intentionally transaction-only in PostgreSQL; API wiring follows this service.
@@ -211,7 +205,13 @@ func (s *Service) RequestReset(ctx context.Context, ip, emailAddr string) error 
 	if _, err = s.db.ExecContext(ctx, `INSERT INTO password_reset_links(id,user_id,email_at_issue,token_hash,environment,created_at,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7)`, uuid.New(), id, emailAddr, th, s.env, now, now.Add(15*time.Minute)); err != nil {
 		return err
 	}
-	return s.mail.Send(ctx, email.Message{To: []email.Address{{Email: emailAddr}}, Subject: "Reset your Vocanova password", BodyText: s.baseURL + "/auth/password/reset?token=" + token})
+	return s.mail.Send(ctx, email.Message{
+		To:      []email.Address{{Email: emailAddr}},
+		Subject: "Reset or add your VocaNova password",
+		BodyText: "Open this link within 15 minutes to reset or add a VocaNova password:\n\n" +
+			s.baseURL + "/auth/password/reset?token=" + token + "\n\n" +
+			"If you did not request this, you can ignore this email. Do not share this link.",
+	})
 }
 
 // Reset atomically replaces the credential, consumes sibling reset links and
@@ -316,23 +316,42 @@ func (s *Service) Login(ctx context.Context, ip, emailAddr, pass string) (*auth.
 	defer tx.Rollback()
 	var u auth.User
 	var verified sql.NullTime
-	var hash string
-	err = tx.QueryRowContext(ctx, `SELECT u.id,u.email,COALESCE(u.display_name,''),COALESCE(u.avatar_url,''),u.status,u.email_verified_at,u.created_at,u.updated_at,p.password_hash FROM users u JOIN password_credentials p ON p.user_id=u.id WHERE lower(u.email)=lower($1) AND u.deleted_at IS NULL FOR UPDATE OF u,p`, emailAddr).Scan(&u.ID, &u.Email, &u.DisplayName, &u.AvatarURL, &u.Status, &verified, &u.CreatedAt, &u.UpdatedAt, &hash)
+	// User is always locked first. Reset and account deletion lock this row
+	// before touching credentials, which gives all credential/session mutations
+	// one lock order and prevents planner-dependent lock inversions.
+	err = tx.QueryRowContext(ctx, `SELECT id,email,COALESCE(display_name,''),COALESCE(avatar_url,''),status,email_verified_at,created_at,updated_at FROM users WHERE lower(email)=lower($1) AND deleted_at IS NULL FOR UPDATE`, emailAddr).Scan(&u.ID, &u.Email, &u.DisplayName, &u.AvatarURL, &u.Status, &verified, &u.CreatedAt, &u.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		burnPasswordCheck(pass)
 		return nil, nil, "", ErrInvalidCredentials
 	}
 	if err != nil {
-		return nil, nil, "", fmt.Errorf("lookup password credential: %w", err)
+		return nil, nil, "", fmt.Errorf("lock password user: %w", err)
 	}
 	if !u.Active() || !verified.Valid {
 		burnPasswordCheck(pass)
 		return nil, nil, "", ErrInvalidCredentials
 	}
+	var hash string
+	err = tx.QueryRowContext(ctx, `SELECT password_hash FROM password_credentials WHERE user_id=$1 FOR UPDATE`, u.ID).Scan(&hash)
+	if errors.Is(err, sql.ErrNoRows) {
+		burnPasswordCheck(pass)
+		return nil, nil, "", ErrInvalidCredentials
+	}
+	if err != nil {
+		return nil, nil, "", fmt.Errorf("lock password credential: %w", err)
+	}
 	u.EmailVerifiedAt = &verified.Time
 	u.HasPassword = true
 	ok, err := Verify(hash, pass)
-	if err != nil || !ok {
+	if err != nil {
+		if errors.Is(err, ErrMalformedHash) {
+			// Deliberately static: diagnostics must not include a password,
+			// credential hash, identity, or any user-controlled value.
+			fmt.Fprintln(os.Stderr, "password: malformed stored credential hash")
+		}
+		return nil, nil, "", ErrInvalidCredentials
+	}
+	if !ok {
 		return nil, nil, "", ErrInvalidCredentials
 	}
 	now := s.clock.Now().UTC()

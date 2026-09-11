@@ -78,6 +78,14 @@ body {
   color: #93c5fd;
 }
 
+/* Primary 100/200 are darker surface shades in the dark palette. When a
+ * primary panel uses them for text, keep the original light-on-brand intent. */
+:root[data-theme="dark"]
+  :where(.bg-primary-600, .bg-primary-700, .bg-primary-800, .bg-primary-900)
+  :where(.text-primary-50, .text-primary-100, .text-primary-200) {
+  color: #eff6ff;
+}
+
 :root[data-theme="dark"]
   :where(.text-secondary-700, .text-secondary-800, .text-secondary-900) {
   color: #c4b5fd;
