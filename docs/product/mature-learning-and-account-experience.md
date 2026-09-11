@@ -100,6 +100,10 @@ Google/email flow. Fixture tests and CI cannot establish those claims by themsel
 - Production workspace build, final web rebuild, lint and formatting passed.
 - Full Playwright browser/accessibility verification passed 193 tests with 17
   existing layout-specific skips across desktop, 360px and 430px layouts.
+- Independent review identified invalid OAuth recovery configuration and draft
+  cleanup iteration edge cases. Follow-up regressions cover safe callback failure,
+  explicit OAuth-state cookie clearing, and adjacent expired/live drafts; the web
+  helper suite now contains 75 passing tests.
 - All 12 Lighthouse audits passed: performance 100, accessibility 100 and best
   practices 96 on every audited screen/layout. These are local production-build
   results against fixtures, not claims about production traffic or devices.

@@ -21,6 +21,10 @@ import (
 )
 
 func testAuthAPI(t *testing.T) (huma.API, *auth.Service, *auth.MemoryRepository, *email.Fake, *clock.Fixed) {
+	return testAuthAPIWithBaseURL(t, "https://test.example.com")
+}
+
+func testAuthAPIWithBaseURL(t *testing.T, baseURL string) (huma.API, *auth.Service, *auth.MemoryRepository, *email.Fake, *clock.Fixed) {
 	t.Helper()
 	now := time.Date(2026, 7, 24, 12, 0, 0, 0, time.UTC)
 	c := &clock.Fixed{T: now}
@@ -30,7 +34,7 @@ func testAuthAPI(t *testing.T) (huma.API, *auth.Service, *auth.MemoryRepository,
 	oauth := auth.NewFakeOAuthProvider(&auth.OAuthIdentity{Subject: "sub-123", Email: "user@example.com", EmailVerified: true, DisplayName: "User", AvatarURL: "https://example.com/avatar.png"})
 	svc := auth.NewService(repo, fake, oauth, c, limiter, auth.Config{
 		Environment:            "test",
-		BaseURL:                "https://test.example.com",
+		BaseURL:                baseURL,
 		MagicLinkPath:          "/auth/magic",
 		OAuthRedirectURI:       "https://test.example.com/auth/oauth/google/callback",
 		OAuthRedirectAllowlist: []string{"https://test.example.com/app"},
@@ -338,7 +342,44 @@ func TestOAuthCallbackEndpointRedirectsCancellationToSignIn(t *testing.T) {
 
 	assert.Equal(t, http.StatusFound, w.Code)
 	assert.Equal(t, "https://test.example.com/login?oauth=cancelled", w.Header().Get("Location"))
-	assert.True(t, hasCookie(w.Result().Cookies(), "vocanova_oauth_state"))
+	clearCookie := findCookie(w.Result().Cookies(), "vocanova_oauth_state")
+	require.NotNil(t, clearCookie)
+	assert.Empty(t, clearCookie.Value)
+	assert.Less(t, clearCookie.MaxAge, 0)
+}
+
+func TestOAuthCallbackFailsClosedWithoutTrustedFailureRedirect(t *testing.T) {
+	for _, baseURL := range []string{"", "not a URL", "ftp://test.example.com"} {
+		t.Run(baseURL, func(t *testing.T) {
+			api, _, _, _, _ := testAuthAPIWithBaseURL(t, baseURL)
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/google/callback?error=access_denied", nil)
+			api.Adapter().ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusUnauthorized, w.Code)
+			assert.Empty(t, w.Header().Get("Location"))
+			clearCookie := findCookie(w.Result().Cookies(), "vocanova_oauth_state")
+			require.NotNil(t, clearCookie)
+			assert.Less(t, clearCookie.MaxAge, 0)
+		})
+	}
+}
+
+func TestOAuthCallbackInvalidStateFailsClosedWithoutTrustedFailureRedirect(t *testing.T) {
+	for _, baseURL := range []string{"", "not a URL"} {
+		t.Run(baseURL, func(t *testing.T) {
+			api, _, _, _, _ := testAuthAPIWithBaseURL(t, baseURL)
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oauth/google/callback?code=auth-code&state=invalid", nil)
+			api.Adapter().ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusUnauthorized, w.Code)
+			assert.Empty(t, w.Header().Get("Location"))
+			clearCookie := findCookie(w.Result().Cookies(), "vocanova_oauth_state")
+			require.NotNil(t, clearCookie)
+			assert.Less(t, clearCookie.MaxAge, 0)
+		})
+	}
 }
 
 func hasCookie(cookies []*http.Cookie, name string) bool {

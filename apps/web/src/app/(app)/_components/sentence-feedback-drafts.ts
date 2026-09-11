@@ -293,7 +293,9 @@ export function hasSentenceFeedbackDrafts(): boolean {
     return false;
   }
   try {
-    for (let index = 0; index < storage.length; index += 1) {
+    // Removing a stale key shifts Storage indexes. Sweep backwards so an
+    // adjacent current draft is still inspected before the logout prompt.
+    for (let index = storage.length - 1; index >= 0; index -= 1) {
       const key = storage.key(index);
       if (!key?.startsWith(DRAFT_PREFIX)) {
         continue;

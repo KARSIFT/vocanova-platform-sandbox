@@ -3026,6 +3026,9 @@
           "302": {
             "description": "Redirect to the authenticated application or the trusted sign-in recovery screen"
           },
+          "401": {
+            "description": "OAuth callback could not be recovered safely"
+          },
           "404": {
             "description": "OAuth provider not configured"
           },

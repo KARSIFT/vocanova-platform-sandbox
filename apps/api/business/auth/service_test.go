@@ -57,6 +57,30 @@ func testServiceWithOAuth(t *testing.T, oauth OAuthProvider) (*Service, *MemoryR
 	return svc, repo, fake, c
 }
 
+func TestOAuthFailureURLUsesOnlyTrustedHTTPOrigins(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		baseURL string
+		wantURL string
+		wantOK  bool
+	}{
+		{name: "https origin", baseURL: "https://app.example.com/base", wantURL: "https://app.example.com/login?oauth=cancelled", wantOK: true},
+		{name: "http origin", baseURL: "http://localhost:3000", wantURL: "http://localhost:3000/login?oauth=cancelled", wantOK: true},
+		{name: "missing", baseURL: "", wantOK: false},
+		{name: "malformed", baseURL: "not a URL", wantOK: false},
+		{name: "non http", baseURL: "ftp://app.example.com", wantOK: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			svc, _, _, _ := testService(t)
+			svc.cfg.BaseURL = tc.baseURL
+
+			gotURL, gotOK := svc.OAuthFailureURL("cancelled")
+			assert.Equal(t, tc.wantOK, gotOK)
+			assert.Equal(t, tc.wantURL, gotURL)
+		})
+	}
+}
+
 // losingOAuthStateRepository simulates the callback that loses the atomic
 // single-use claim after it has read an otherwise valid OAuth state.
 type losingOAuthStateRepository struct{ *MemoryRepository }

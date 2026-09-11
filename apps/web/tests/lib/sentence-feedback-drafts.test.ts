@@ -119,6 +119,53 @@ describe("sentence feedback drafts", () => {
     assert.equal(hasSentenceFeedbackDrafts(), false);
   });
 
+  it("keeps scanning past adjacent expired and malformed drafts", () => {
+    saveSentenceFeedbackDraft({
+      userId: "learner-a",
+      source: "word_detail",
+      attemptId: "current-word",
+      sentence: "I pour coffee every morning.",
+    });
+    const expiredKey =
+      "vocanova:sentence-feedback-draft:learner-a:word_detail:expired-word";
+    const malformedKey =
+      "vocanova:sentence-feedback-draft:learner-a:word_detail:malformed-word";
+    memoryStorage.setItem(
+      expiredKey,
+      JSON.stringify({
+        attemptId: "expired-word",
+        savedAt: Date.now() - 3 * 60 * 60 * 1000,
+        sentence: "I poured coffee yesterday.",
+        source: "word_detail",
+      }),
+    );
+    memoryStorage.setItem(malformedKey, "not valid JSON");
+
+    assert.equal(hasSentenceFeedbackDrafts(), true);
+    assert.equal(memoryStorage.getItem(expiredKey), null);
+    assert.equal(memoryStorage.getItem(malformedKey), null);
+  });
+
+  it("finds a live draft immediately after an expired one", () => {
+    memoryStorage.setItem(
+      "vocanova:sentence-feedback-draft:learner-a:word_detail:expired-word",
+      JSON.stringify({
+        attemptId: "expired-word",
+        savedAt: Date.now() - 3 * 60 * 60 * 1000,
+        sentence: "I poured coffee yesterday.",
+        source: "word_detail",
+      }),
+    );
+    saveSentenceFeedbackDraft({
+      userId: "learner-a",
+      source: "word_detail",
+      attemptId: "current-word",
+      sentence: "I pour coffee every morning.",
+    });
+
+    assert.equal(hasSentenceFeedbackDrafts(), true);
+  });
+
   it("keeps an unresolved idempotency intent and review context user-scoped", () => {
     saveSentenceFeedbackDraft({
       userId: "learner-a",

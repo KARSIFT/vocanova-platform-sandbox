@@ -200,6 +200,7 @@ func RegisterAuth(api huma.API, svc *auth.Service) {
 		Tags:        []string{"Authentication"},
 		Responses: map[string]*huma.Response{
 			"302": {Description: "Redirect to the authenticated application or the trusted sign-in recovery screen"},
+			"401": {Description: "OAuth callback could not be recovered safely"},
 			"404": {Description: "OAuth provider not configured"},
 			"429": {Description: "Rate limited"},
 			"503": {Description: "Google OAuth sign-in, or new sign-ups, is disabled"},
@@ -208,7 +209,11 @@ func RegisterAuth(api huma.API, svc *auth.Service) {
 		c := authHumaContext(ctx)
 		if input.Error != "" {
 			c.AppendHeader("Set-Cookie", svc.ClearOAuthStateCookie().String())
-			c.AppendHeader("Location", svc.OAuthFailureURL("cancelled"))
+			location, ok := svc.OAuthFailureURL("cancelled")
+			if !ok {
+				return nil, mapAuthError(auth.ErrOAuthProviderFailed)
+			}
+			c.AppendHeader("Location", location)
 			return &OAuthCallbackOutput{Status: http.StatusFound}, nil
 		}
 		cookieState := oauthStateCookieValue(c, svc.OAuthStateCookieName())
@@ -223,7 +228,11 @@ func RegisterAuth(api huma.API, svc *auth.Service) {
 			}
 			if outcome != "" {
 				c.AppendHeader("Set-Cookie", svc.ClearOAuthStateCookie().String())
-				c.AppendHeader("Location", svc.OAuthFailureURL(outcome))
+				location, ok := svc.OAuthFailureURL(outcome)
+				if !ok {
+					return nil, mapAuthError(auth.ErrOAuthProviderFailed)
+				}
+				c.AppendHeader("Location", location)
 				return &OAuthCallbackOutput{Status: http.StatusFound}, nil
 			}
 			return nil, mapAuthError(err)
