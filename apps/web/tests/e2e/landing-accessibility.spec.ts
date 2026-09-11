@@ -16,6 +16,11 @@ test.describe("Landing accessibility (VOC-073-T01)", () => {
     page,
   }) => {
     await page.goto("/");
+    const brand = await page
+      .getByRole("link", { name: "VocaNova home" })
+      .boundingBox();
+    expect(brand).not.toBeNull();
+    expect(brand!.height).toBeGreaterThanOrEqual(44);
     const action = page.getByRole("link", {
       name: "Start learning",
       exact: true,

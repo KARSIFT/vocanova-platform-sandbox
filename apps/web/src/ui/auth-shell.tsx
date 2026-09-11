@@ -28,7 +28,11 @@ export function AuthShell({
         </div>
       </aside>
       <section className={`auth-panel${wide ? " auth-panel-wide" : ""}`}>
-        <Link href="/" aria-label="VocaNova home" className="auth-brand">
+        <Link
+          href="/"
+          aria-label="VocaNova home"
+          className="auth-brand min-h-11"
+        >
           <BrandMark />
         </Link>
         <div className="auth-form">{children}</div>

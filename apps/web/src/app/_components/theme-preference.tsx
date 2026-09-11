@@ -123,7 +123,7 @@ export function ThemePreferenceControl() {
   return (
     <section
       aria-labelledby="appearance-heading"
-      className="mt-[var(--spacing-lg)] rounded-[var(--radius-lg)] border border-neutral-200 bg-white p-[var(--spacing-md)] shadow-sm sm:p-[var(--spacing-lg)]"
+      className="rounded-[var(--radius-lg)] border border-neutral-200 bg-white p-[var(--spacing-md)] shadow-sm sm:p-[var(--spacing-lg)]"
     >
       <h2
         id="appearance-heading"

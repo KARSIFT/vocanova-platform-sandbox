@@ -40,12 +40,9 @@ export default async function SettingsPage() {
         preferences.
       </p>
 
-      <div className="mt-[var(--spacing-lg)] grid gap-[var(--spacing-lg)] lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
-        <aside className="space-y-[var(--spacing-md)] lg:order-2">
-          <Surface
-            aria-labelledby="account-section-heading"
-            className="border-secondary-200 bg-secondary-50"
-          >
+      <div className="mt-[var(--spacing-lg)] grid gap-[var(--spacing-lg)] lg:grid-cols-[22rem_minmax(0,1fr)] lg:items-start">
+        <aside className="space-y-[var(--spacing-md)]">
+          <Surface aria-labelledby="account-section-heading" tone="secondary">
             <h2
               id="account-section-heading"
               className="text-lg font-semibold text-neutral-900"
@@ -71,7 +68,7 @@ export default async function SettingsPage() {
           <ThemePreferenceControl />
           <BuildIdentity />
         </aside>
-        <div className="lg:order-1">
+        <div>
           <h2 className="text-xl font-semibold tracking-[-0.03em] text-neutral-900">
             Learning preferences
           </h2>

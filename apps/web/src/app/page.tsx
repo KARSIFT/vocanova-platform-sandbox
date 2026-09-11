@@ -26,7 +26,7 @@ export default function Page() {
           <Link
             href="/"
             aria-label="VocaNova home"
-            className="inline-flex items-center gap-[var(--spacing-sm)] rounded-md"
+            className="inline-flex min-h-11 items-center gap-[var(--spacing-sm)] rounded-md"
           >
             <BrandMark />
           </Link>
