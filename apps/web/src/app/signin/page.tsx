@@ -36,11 +36,6 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
   return (
     <AuthShell>
-      {/* max-w-[28rem] (not max-w-md): this repo's tokens.generated.css only
-          defines a --spacing-* scale, so Tailwind resolves the named
-          max-w-md utility to --spacing-md (16px) instead of the intended
-          28rem, collapsing this card to a single-character column. See
-          the matching note on /onboarding's page.tsx. */}
       <Surface className="w-full space-y-[var(--spacing-lg)] border-neutral-200 bg-white shadow-[0_12px_28px_rgb(15_23_42_/_0.07)]">
         <div className="space-y-[var(--spacing-sm)]">
           <h1 className="text-xl font-semibold text-neutral-900">
