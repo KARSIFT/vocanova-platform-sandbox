@@ -150,7 +150,7 @@ jobs:
             VOCANOVA_BUILD_ENVIRONMENT=production
             VOCANOVA_BUILD_BUILT_AT=${{ steps.release.outputs.built_at }}
           tags: |
-            ghcr.io/karsift/vocanova-api:sha-${{ steps.sha.outputs.short_sha }}
+            ghcr.io/karsift/vocanova-api:production-sha-${{ steps.sha.outputs.short_sha }}
             ghcr.io/karsift/vocanova-api:prod
           provenance: false
 
@@ -170,7 +170,7 @@ jobs:
             NEXT_PUBLIC_VOCANOVA_BUILD_ENVIRONMENT=production
             NEXT_PUBLIC_VOCANOVA_BUILD_BUILT_AT=${{ steps.release.outputs.built_at }}
           tags: |
-            ghcr.io/karsift/vocanova-web:sha-${{ steps.sha.outputs.short_sha }}
+            ghcr.io/karsift/vocanova-web:production-sha-${{ steps.sha.outputs.short_sha }}
             ghcr.io/karsift/vocanova-web:prod
           provenance: false
 
@@ -564,7 +564,7 @@ jobs:
             fi
 
             export VOCANOVA_PRODUCTION_ROOT="/opt/vocanova/production"
-            export PRODUCTION_IMAGE_TAG="sha-${PRODUCTION_IMAGE_SHA_TAG}"
+            export PRODUCTION_IMAGE_TAG="production-sha-${PRODUCTION_IMAGE_SHA_TAG}"
 
             # Pre-flight cross-tier guard. `docker compose config` folds
             # env_file entries into `environment:` and drops their paths,

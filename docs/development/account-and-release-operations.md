@@ -54,7 +54,10 @@ when the human-readable version is unchanged.
 
 Staging and production workflows inject the same version, full commit, explicit
 environment and UTC build timestamp into their API and web builds. These are
-public build metadata, never runtime configuration. Settings → About shows the
+public build metadata, never runtime configuration. Commit image tags are scoped
+by environment (`staging-sha-…` and `production-sha-…`), because the web bundle
+and image identity differ between environments. The existing `dev` and `prod`
+convenience tags remain available. Settings → About shows the
 version, environment and abbreviated commit. Both services expose `/version` with
 `version`, `commit`, `environment`, and `builtAt`. Both deployment workflows
 verify these public responses against the intended build after health checks,

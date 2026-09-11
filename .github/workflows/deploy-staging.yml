@@ -150,7 +150,7 @@
 # path must update this workflow in the same change.
 #
 # Image-tag strategy: per VOC-032-D06, every image is pushed
-# with two tags — `sha-<short-sha>` (immutable, historical
+# with two tags — `staging-sha-<short-sha>` (environment-scoped, historical
 # record of "what was deployed when") and `dev` (mutable
 # latest, which is the tag T04's docker-compose.yml references
 # at `image: ghcr.io/karsift/vocanova-api:dev` / `vocanova-
@@ -158,7 +158,7 @@
 # whichever image the `:dev` tag currently points at (i.e.
 # the just-pushed one), so the deploy always lands the
 # commit at HEAD without any compose-side change. The
-# `sha-<short-sha>` tag is preserved on GHCR for at least
+# `staging-sha-<short-sha>` tag is preserved on GHCR for at least
 # the registry's default retention window; redeploying a
 # historical commit requires re-tagging the image or pinning
 # `IMAGE_TAG` in the compose file (out of scope for T07;
@@ -463,7 +463,7 @@ jobs:
             VOCANOVA_BUILD_ENVIRONMENT=staging
             VOCANOVA_BUILD_BUILT_AT=${{ steps.release.outputs.built_at }}
           tags: |
-            ghcr.io/karsift/vocanova-api:sha-${{ steps.sha.outputs.short_sha }}
+            ghcr.io/karsift/vocanova-api:staging-sha-${{ steps.sha.outputs.short_sha }}
             ghcr.io/karsift/vocanova-api:dev
           provenance: false
 
@@ -507,7 +507,7 @@ jobs:
             NEXT_PUBLIC_VOCANOVA_BUILD_ENVIRONMENT=staging
             NEXT_PUBLIC_VOCANOVA_BUILD_BUILT_AT=${{ steps.release.outputs.built_at }}
           tags: |
-            ghcr.io/karsift/vocanova-web:sha-${{ steps.sha.outputs.short_sha }}
+            ghcr.io/karsift/vocanova-web:staging-sha-${{ steps.sha.outputs.short_sha }}
             ghcr.io/karsift/vocanova-web:dev
           provenance: false
 
