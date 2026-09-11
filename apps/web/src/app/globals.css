@@ -90,7 +90,7 @@ body {
   display: none;
 }
 
-@media (min-width: 48rem) {
+@media (min-width: 64rem) {
   .auth-shell {
     grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
   }
