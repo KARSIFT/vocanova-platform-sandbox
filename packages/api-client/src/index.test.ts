@@ -52,6 +52,57 @@ describe("VocanovaClient", () => {
     assert.equal(response.status, 204);
   });
 
+  it("sends password signup, login, verification, and reset requests", async () => {
+    const calls: Array<{ url: string; init: RequestInit }> = [];
+    const fetch = (url: string, init: RequestInit): Promise<Response> => {
+      calls.push({ url, init });
+      if (url.endsWith("/login")) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ email: "user@example.com" }), {
+            headers: { "Content-Type": "application/json" },
+            status: 200,
+          }),
+        );
+      }
+      return Promise.resolve(new Response(null, { status: 204 }));
+    };
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: fetch as typeof globalThis.fetch,
+    });
+
+    await client.requestPasswordSignup({
+      email: "user@example.com",
+      password: "a long enough password",
+      displayName: "Learner",
+    });
+    const { data } = await client.loginWithPassword({
+      email: "user@example.com",
+      password: "a long enough password",
+    });
+    await client.verifyPasswordSignup({ token: "signup-token" });
+    await client.requestPasswordReset({ email: "user@example.com" });
+    await client.resetPassword({
+      token: "reset-token",
+      password: "another long password",
+    });
+
+    assert.equal(data.email, "user@example.com");
+    assert.deepEqual(
+      calls.map(({ url, init }) => ({
+        path: new URL(url).pathname,
+        method: init.method,
+      })),
+      [
+        { path: "/api/v1/auth/password/signups", method: "POST" },
+        { path: "/api/v1/auth/password/login", method: "POST" },
+        { path: "/api/v1/auth/password/signups/verify", method: "POST" },
+        { path: "/api/v1/auth/password/reset-requests", method: "POST" },
+        { path: "/api/v1/auth/password/resets", method: "POST" },
+      ],
+    );
+  });
+
   it("sends CSRF header on logout", async () => {
     const fetch = (url: string, init: RequestInit): Promise<Response> => {
       assert.equal(url, "https://api.example.com/api/v1/auth/logout");

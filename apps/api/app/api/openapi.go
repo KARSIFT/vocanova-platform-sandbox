@@ -13,6 +13,7 @@ import (
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/learning"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/missions"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/password"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/reviews"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/users"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
@@ -62,6 +63,7 @@ func NewContractAPI() huma.API {
 	contractAPI.UseMiddleware(AuthMiddleware(svc))
 	RegisterContract(contractAPI)
 	RegisterAuth(contractAPI, svc)
+	RegisterPasswordAuth(contractAPI, password.NewService(nil, &email.Fake{}, clock.Real{}, auth.NewFixedWindowRateLimiter(clock.Real{}, time.Minute, 10), "https://example.com", "openapi", 30*24*time.Hour, func() bool { return true }, svc.PasswordSignupAllowed, svc.PasswordIdentityAllowed), svc)
 
 	// VOC-031-T01: register the onboarding service so the
 	// /api/v1/onboarding routes appear in the OpenAPI document. The

@@ -21,6 +21,7 @@ source_files:
   - path: 08-web-app-design.md
     sha256: da9154f1962e52f5046c712e581f5627122f48aec86684b24f69de1b9ee129d5
 ---
+
 # 08 — VocaNova Web Application Design
 
 ## Summary
@@ -126,3 +127,16 @@ Authentication, onboarding, home mission loop, discovery, saved words, review, s
 progress, settings/account management all work; CI contract checks exist; critical flows are tested.
 (Matches [DOC-01](../product/01-mvp-prd.md) §3 — restated here only as the web-app-specific checklist,
 not a separate decision.)
+
+## Account and appearance extension (0.2.0)
+
+The [account/settings acceptance](../product/password-profile-and-theme.md)
+extends the original MVP. Google and email/password are explicit configured
+choices, with email verification and recovery states. Settings links to Profile
+and Account security while retaining the three learning tabs. Profile edits the
+existing display-name setting; email changes remain verified account operations.
+
+Light, Dark and System are device preferences, defaulting to System. Apply the
+resolved theme before hydration, follow OS changes only in System mode, and retain
+readable error/success states and visible focus indicators in either palette.
+Settings About exposes public release identity for support and deployment checks.

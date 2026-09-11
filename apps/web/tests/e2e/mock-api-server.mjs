@@ -374,6 +374,8 @@ function buildClearCsrfCookie() {
 // --- per-session mutable state ---------------------------------
 
 const sessions = new Map();
+const usedPasswordSignupTokens = new Set();
+const usedPasswordResetTokens = new Set();
 
 function getSessionState(cookies) {
   const sessionId = cookies[SESSION_COOKIE_NAME] ?? SESSION_DEFAULT_VALUE;
@@ -427,6 +429,7 @@ function buildCurrentUser(state, fixtureUser = DEFAULT_USER) {
     displayName: state.settings.displayName,
     emailVerifiedAt: fixtureUser.emailVerifiedAt,
     onboardingStatus: state.onboardingCompleted ? "completed" : "not_started",
+    hasPassword: true,
   };
 }
 
@@ -799,6 +802,7 @@ const server = createServer(async (req, res) => {
         oauth_enabled:
           MOCK_OAUTH_ENABLED || cookies.e2e_oauth_enabled === "true",
         new_signups_enabled: false,
+        password_enabled: cookies.e2e_password_enabled !== "false",
         ai_enabled: true,
       },
     });
@@ -810,6 +814,75 @@ const server = createServer(async (req, res) => {
   if (req.method === "POST" && url.pathname === "/api/v1/auth/magic-links") {
     logLine(req, 200);
     jsonResponse(res, 200, {});
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/v1/auth/password/signups") {
+    logLine(req, 204, { action: "password-signup-request" });
+    emptyResponse(res, 204);
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/v1/auth/password/signups/verify") {
+    const body = await readJsonBody(req).catch(() => ({}));
+    if (
+      body.token !== "valid-signup-token" ||
+      usedPasswordSignupTokens.has(body.token)
+    ) {
+      logLine(req, 401, { reason: "invalid-password-signup-token" });
+      jsonResponse(res, 401, { error: "unauthorized" });
+      return;
+    }
+    usedPasswordSignupTokens.add(body.token);
+    logLine(req, 204, { action: "password-signup-verify" });
+    emptyResponse(res, 204);
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/v1/auth/password/login") {
+    const body = await readJsonBody(req).catch(() => ({}));
+    if (body.email === "wrong-password@example.test") {
+      logLine(req, 401, { reason: "invalid-password-login" });
+      jsonResponse(res, 401, { error: "unauthorized" });
+      return;
+    }
+    if (body.email === "unavailable@example.test") {
+      logLine(req, 503, { reason: "password-login-unavailable" });
+      jsonResponse(res, 503, { error: "unavailable" });
+      return;
+    }
+    if (body.email === "rate-limited@example.test") {
+      logLine(req, 429, { reason: "password-login-rate-limited" });
+      jsonResponse(res, 429, { error: "rate_limited" });
+      return;
+    }
+    const sessionValue = generateId("session");
+    const csrfValue = generateId("csrf");
+    sessions.set(sessionValue, createInitialState());
+    logLine(req, 200, { session: "issued-password" });
+    jsonResponse(res, 200, { ...DEFAULT_USER, onboardingStatus: "completed", hasPassword: true }, { "Set-Cookie": [buildSessionCookie(sessionValue), buildCsrfCookie(csrfValue)].join(", ") });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/v1/auth/password/reset-requests") {
+    logLine(req, 204, { action: "password-reset-request" });
+    emptyResponse(res, 204);
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/v1/auth/password/resets") {
+    const body = await readJsonBody(req).catch(() => ({}));
+    if (
+      body.token !== "valid-reset-token" ||
+      usedPasswordResetTokens.has(body.token)
+    ) {
+      logLine(req, 401, { reason: "invalid-password-reset-token" });
+      jsonResponse(res, 401, { error: "unauthorized" });
+      return;
+    }
+    usedPasswordResetTokens.add(body.token);
+    logLine(req, 204, { action: "password-reset" });
+    emptyResponse(res, 204);
     return;
   }
 
@@ -891,7 +964,13 @@ const server = createServer(async (req, res) => {
       return;
     }
     const state = getSessionState(cookies);
-    const user = buildCurrentUser(state, getFixtureUser(cookies));
+    const user = {
+      ...buildCurrentUser(state, getFixtureUser(cookies)),
+      hasPassword: cookies.e2e_has_password !== "false",
+      ...(cookies.e2e_email_verified === "false"
+        ? { emailVerifiedAt: undefined }
+        : {}),
+    };
     logLine(req, 200, { onboardingStatus: user.onboardingStatus });
     jsonResponse(res, 200, user, restoreCsrfCookieHeaders(cookies));
     return;

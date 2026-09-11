@@ -697,15 +697,10 @@ secrets, the staging environment is reachable at:
   unauthenticated health check, returning 200 only when the
   database ping succeeds
 
-A live magic-link sign-in and a live Google sign-in each
-require the third-party accounts the founder must provision
-under `VOC-032-DEP-07` (a transactional-email provider
-account; a Google Cloud OAuth 2.0 client). Until those
-accounts exist, magic-link and Google sign-in both fall back
-to their `Fake{}` implementations and cannot be fully
-demonstrated end-to-end — this is the same gap `T14`/`T15`
-record as a unit-tested code path plus a one-time live
-evidence step.
+Google login is configured independently of transactional email and is already
+working on staging. Password verification/recovery and magic links require an
+email provider. See [password email setup and release identity](../docs/development/account-and-release-operations.md)
+for the current configuration and activation checks.
 
 ## Dependencies and open blockers
 

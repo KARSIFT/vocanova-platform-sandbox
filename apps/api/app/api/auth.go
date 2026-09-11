@@ -278,10 +278,12 @@ func RegisterAuth(api huma.API, svc *auth.Service) {
 }
 
 func currentUserFromAuth(u *auth.User) CurrentUser {
+	hasPassword := u.HasPassword
 	cu := CurrentUser{
 		ID:              u.ID.String(),
 		Email:           &u.Email,
 		EmailVerifiedAt: u.EmailVerifiedAt,
+		HasPassword:     &hasPassword,
 	}
 	if u.DisplayName != "" {
 		cu.DisplayName = &u.DisplayName

@@ -13,10 +13,13 @@ import (
 // User is the service-layer identity projection. It intentionally omits tokens
 // and provider subjects.
 type User struct {
-	ID              uuid.UUID
-	Email           string
-	DisplayName     string
-	AvatarURL       string
+	ID          uuid.UUID
+	Email       string
+	DisplayName string
+	AvatarURL   string
+	// HasPassword indicates whether a local password credential is currently set.
+	// It is safe to expose; no credential material is included.
+	HasPassword     bool
 	Status          string
 	EmailVerifiedAt *time.Time
 	LastLoginAt     *time.Time

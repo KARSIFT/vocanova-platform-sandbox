@@ -119,6 +119,10 @@ jobs:
         id: sha
         run: echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
+      - name: Read release identity
+        id: release
+        run: bash scripts/foundation/release-metadata.sh >> "$GITHUB_OUTPUT"
+
       - name: Validate production Sentry DSN configuration for api/web
         env:
           PRODUCTION_SENTRY_DSN: ${{ secrets.PRODUCTION_SENTRY_DSN }}
@@ -140,6 +144,11 @@ jobs:
           context: apps/api
           file: apps/api/Dockerfile
           push: true
+          build-args: |
+            VOCANOVA_BUILD_VERSION=${{ steps.release.outputs.version }}
+            VOCANOVA_BUILD_COMMIT=${{ steps.release.outputs.commit }}
+            VOCANOVA_BUILD_ENVIRONMENT=production
+            VOCANOVA_BUILD_BUILT_AT=${{ steps.release.outputs.built_at }}
           tags: |
             ghcr.io/karsift/vocanova-api:sha-${{ steps.sha.outputs.short_sha }}
             ghcr.io/karsift/vocanova-api:prod
@@ -156,6 +165,10 @@ jobs:
             NEXT_PUBLIC_SENTRY_DSN=${{ secrets.PRODUCTION_WEB_SENTRY_DSN }}
             NEXT_PUBLIC_SENTRY_ENVIRONMENT=production
             NEXT_PUBLIC_SENTRY_RELEASE=sha-${{ steps.sha.outputs.short_sha }}
+            NEXT_PUBLIC_VOCANOVA_BUILD_VERSION=${{ steps.release.outputs.version }}
+            NEXT_PUBLIC_VOCANOVA_BUILD_COMMIT=${{ steps.release.outputs.commit }}
+            NEXT_PUBLIC_VOCANOVA_BUILD_ENVIRONMENT=production
+            NEXT_PUBLIC_VOCANOVA_BUILD_BUILT_AT=${{ steps.release.outputs.built_at }}
           tags: |
             ghcr.io/karsift/vocanova-web:sha-${{ steps.sha.outputs.short_sha }}
             ghcr.io/karsift/vocanova-web:prod

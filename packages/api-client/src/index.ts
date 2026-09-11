@@ -5,6 +5,8 @@ export interface CurrentUser {
   displayName?: string;
   avatarUrl?: string;
   emailVerifiedAt?: string;
+  /** Whether this account has an email/password credential. */
+  hasPassword?: boolean;
   /**
    * VOC-031-T01 additive field. Always present in the response.
    * The Next.js middleware uses it to gate the core-loop routes
@@ -50,6 +52,30 @@ export interface ConsumeMagicLinkBody {
   email: string;
 }
 
+export interface PasswordSignupBody {
+  email: string;
+  password: string;
+  displayName?: string;
+}
+
+export interface VerifyPasswordSignupBody {
+  token: string;
+}
+
+export interface PasswordLoginBody {
+  email: string;
+  password: string;
+}
+
+export interface PasswordResetRequestBody {
+  email: string;
+}
+
+export interface PasswordResetBody {
+  token: string;
+  password: string;
+}
+
 export interface OAuthStartBody {
   redirectUri: string;
 }
@@ -68,6 +94,7 @@ export interface KillSwitchStatus {
   oauth_enabled?: boolean;
   new_signups_enabled?: boolean;
   ai_enabled?: boolean;
+  password_enabled?: boolean;
 }
 
 /**
@@ -574,6 +601,72 @@ export class VocanovaClient {
     );
     const data = (await response.json()) as CurrentUser;
     return { data, response };
+  }
+
+  async requestPasswordSignup(
+    body: PasswordSignupBody,
+    init?: RequestInit,
+  ): Promise<{ response: Response }> {
+    const response = await this.request(
+      "POST",
+      "/api/v1/auth/password/signups",
+      body,
+      init,
+    );
+    return { response };
+  }
+
+  async verifyPasswordSignup(
+    body: VerifyPasswordSignupBody,
+    init?: RequestInit,
+  ): Promise<{ response: Response }> {
+    const response = await this.request(
+      "POST",
+      "/api/v1/auth/password/signups/verify",
+      body,
+      init,
+    );
+    return { response };
+  }
+
+  async loginWithPassword(
+    body: PasswordLoginBody,
+    init?: RequestInit,
+  ): Promise<{ data: CurrentUser; response: Response }> {
+    const response = await this.request(
+      "POST",
+      "/api/v1/auth/password/login",
+      body,
+      init,
+    );
+    const data = (await response.json()) as CurrentUser;
+    return { data, response };
+  }
+
+  async requestPasswordReset(
+    body: PasswordResetRequestBody,
+    init?: RequestInit,
+  ): Promise<{ response: Response }> {
+    const response = await this.request(
+      "POST",
+      "/api/v1/auth/password/reset-requests",
+      body,
+      init,
+    );
+    return { response };
+  }
+
+  async resetPassword(
+    body: PasswordResetBody,
+    init?: RequestInit,
+  ): Promise<{ response: Response }> {
+    const response = await this.request(
+      "POST",
+      "/api/v1/auth/password/resets",
+      body,
+      init,
+    );
+    return { response };
   }
 
   async startOAuth(

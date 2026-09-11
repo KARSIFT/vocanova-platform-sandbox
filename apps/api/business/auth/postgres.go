@@ -48,14 +48,16 @@ func (r *PostgreSQLRepository) CreateUser(ctx context.Context, email string, ver
 
 func (r *PostgreSQLRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*User, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, email, status, email_verified_at, last_login_at, created_at, updated_at
+		`SELECT id, email, COALESCE(display_name,''), COALESCE(avatar_url,''), status, email_verified_at, last_login_at, created_at, updated_at,
+		        EXISTS(SELECT 1 FROM password_credentials WHERE user_id = users.id)
 		 FROM users WHERE id = $1 AND deleted_at IS NULL`, id)
 	return scanUser(row)
 }
 
 func (r *PostgreSQLRepository) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	row := r.db.QueryRowContext(ctx,
-		`SELECT id, email, status, email_verified_at, last_login_at, created_at, updated_at
+		`SELECT id, email, COALESCE(display_name,''), COALESCE(avatar_url,''), status, email_verified_at, last_login_at, created_at, updated_at,
+		        EXISTS(SELECT 1 FROM password_credentials WHERE user_id = users.id)
 		 FROM users WHERE lower(email) = lower($1) AND deleted_at IS NULL`, email)
 	return scanUser(row)
 }
@@ -64,7 +66,7 @@ func scanUser(row *sql.Row) (*User, error) {
 	var u User
 	var email sql.NullString
 	var verifiedAt, lastLoginAt sql.NullTime
-	err := row.Scan(&u.ID, &email, &u.Status, &verifiedAt, &lastLoginAt, &u.CreatedAt, &u.UpdatedAt)
+	err := row.Scan(&u.ID, &email, &u.DisplayName, &u.AvatarURL, &u.Status, &verifiedAt, &lastLoginAt, &u.CreatedAt, &u.UpdatedAt, &u.HasPassword)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, errors.New("user not found")
 	}

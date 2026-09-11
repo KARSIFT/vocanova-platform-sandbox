@@ -34,14 +34,16 @@ func TestPostgreSQLRepositoryCreateUserAndGetByEmail(t *testing.T) {
 	assert.Equal(t, email, user.Email)
 	assert.Equal(t, "active", user.Status)
 
-	mock.ExpectQuery("SELECT id, email, status, email_verified_at, last_login_at, created_at, updated_at FROM users").
+	mock.ExpectQuery(`SELECT id, email, COALESCE\(display_name,''\), COALESCE\(avatar_url,''\), status, email_verified_at, last_login_at, created_at, updated_at,`).
 		WithArgs(email).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "email", "status", "email_verified_at", "last_login_at", "created_at", "updated_at"}).
-			AddRow(id, email, "active", nil, nil, now, now))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "email", "display_name", "avatar_url", "status", "email_verified_at", "last_login_at", "created_at", "updated_at", "has_password"}).
+			AddRow(id, email, "Learner", "https://example.com/avatar.png", "active", nil, nil, now, now, false))
 
 	got, err := repo.GetUserByEmail(ctx, email)
 	require.NoError(t, err)
 	assert.Equal(t, email, got.Email)
+	assert.Equal(t, "Learner", got.DisplayName)
+	assert.Equal(t, "https://example.com/avatar.png", got.AvatarURL)
 
 	require.NoError(t, mock.ExpectationsWereMet())
 }

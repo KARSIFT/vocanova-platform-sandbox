@@ -68,6 +68,12 @@ Google OAuth + email magic link, no password login in MVP. Sessions: PostgreSQL-
 HttpOnly cookies, hashed session tokens, 30-day lifetime, no sliding renewal initially. Magic links:
 15-minute expiry, single use, stored hashed.
 
+The post-MVP [password/profile delivery](../product/password-profile-and-theme.md)
+adds verified email/password registration and recovery alongside those methods.
+It reuses server-owned sessions and CSRF protection. Password credentials and
+purpose-bound registration/reset tokens require versioned migrations, atomic
+consumption and account-lifecycle cleanup; they are not profile/export fields.
+
 ## 7. Authorization and validation
 
 `/me` routes require authentication; private resources return 404 (not 403) when inaccessible to the

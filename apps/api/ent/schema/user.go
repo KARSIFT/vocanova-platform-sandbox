@@ -33,6 +33,8 @@ func (User) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("external_identities", ExternalIdentity.Type),
 		edge.To("sessions", Session.Type),
+		edge.To("password_credential", PasswordCredential.Type).Unique(),
+		edge.To("password_reset_links", PasswordResetLink.Type),
 		edge.To("magic_links", MagicLink.Type),
 		edge.To("email_change_links", EmailChangeLink.Type),
 		edge.To("user_words", UserWord.Type),

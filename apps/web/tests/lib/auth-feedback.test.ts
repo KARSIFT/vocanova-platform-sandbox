@@ -26,6 +26,17 @@ describe("authentication feedback", () => {
     );
   });
 
+  it("distinguishes unavailable and rate-limited password sign-in", () => {
+    assert.equal(
+      getAuthErrorMessage(new ApiResponseError(503, null), "password-login"),
+      "Password sign-in is temporarily unavailable. Please try again later.",
+    );
+    assert.equal(
+      getAuthErrorMessage(new ApiResponseError(429, null), "password-login"),
+      "Too many password sign-in attempts were made. Please wait a few minutes, then try again.",
+    );
+  });
+
   it("explains each supported OAuth callback outcome", () => {
     assert.match(getOAuthCallbackMessage("cancelled") ?? "", /cancelled/);
     assert.match(getOAuthCallbackMessage("expired") ?? "", /expired/);

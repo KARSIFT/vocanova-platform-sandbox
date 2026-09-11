@@ -20,6 +20,7 @@ type CurrentUser struct {
 	DisplayName     *string    `json:"displayName,omitempty" maxLength:"120"`
 	AvatarURL       *string    `json:"avatarUrl,omitempty" format:"uri"`
 	EmailVerifiedAt *time.Time `json:"emailVerifiedAt,omitempty" format:"date-time"`
+	HasPassword     *bool      `json:"hasPassword,omitempty" doc:"Whether this account has a local password credential"`
 	// OnboardingStatus is the additive field VOC-031-T01 introduces on
 	// top of the A1 current-user contract. The Next.js middleware uses
 	// it to gate routes on whether the learner has completed onboarding
@@ -84,6 +85,7 @@ func SetOnboardingStatusLookup(lookup OnboardingStatusLookup) {
 // every previously-existing field is unchanged, so consumers that
 // never read onboardingStatus are unaffected.
 func RegisterContract(api huma.API) {
+	RegisterVersion(api)
 	huma.Register(api, huma.Operation{
 		OperationID: "GetCurrentUser",
 		Method:      http.MethodGet,

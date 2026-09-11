@@ -23,6 +23,9 @@ type KillSwitches struct {
 	// service refuses to issue or consume any magic link.
 	MagicLinkEnabled bool
 
+	// PasswordEnabled gates email/password signup, login, and reset flows.
+	PasswordEnabled bool
+
 	// OAuthEnabled gates GET /api/v1/auth/oauth/:provider/start
 	// and the corresponding callback. When false, OAuthStart
 	// returns ErrOAuthNotConfigured regardless of whether a
@@ -104,6 +107,19 @@ func (s *Service) SetKillSwitches(sw *KillSwitches) {
 // did install them.
 func (s *Service) KillSwitches() *KillSwitches {
 	return s.killSwitches
+}
+
+// PasswordSignupAllowed applies the same controlled-signup and reserved
+// synthetic-identity policy used by every other first-account flow.
+func (s *Service) PasswordSignupAllowed(email string) bool {
+	email = normalizeEmail(email)
+	return !s.killSwitches.IsReservedSyntheticEmail(email) && s.killSwitches.signupAllowed(email)
+}
+
+// PasswordIdentityAllowed refuses the reserved synthetic identity on every
+// password path, including reset and login.
+func (s *Service) PasswordIdentityAllowed(email string) bool {
+	return !s.killSwitches.IsReservedSyntheticEmail(normalizeEmail(email))
 }
 
 // ErrMagicLinkDisabled is returned by RequestMagicLink and

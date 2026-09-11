@@ -1,11 +1,13 @@
 import Link from "next/link";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
+import { getSignInAuthCapabilities } from "@/lib/auth-capabilities";
 import { PageContainer, Surface } from "@/ui/surface";
 
 import { AccountDeletionForm } from "./_components/account-deletion-form";
 import { PersonalDataExport } from "./_components/personal-data-export";
 import { EmailChangeForm } from "./_components/email-change-form";
+import { PasswordSecurity } from "./_components/password-security";
 
 export const metadata = {
   title: "Account — Vocanova",
@@ -22,6 +24,7 @@ export default async function SettingsAccountPage() {
   }
 
   const currentEmail = meResponse.data.email ?? "";
+  const { passwordEnabled } = await getSignInAuthCapabilities();
 
   return (
     <PageContainer>
@@ -64,6 +67,13 @@ export default async function SettingsAccountPage() {
       </Surface>
 
       <PersonalDataExport />
+
+      {passwordEnabled ? (
+        <PasswordSecurity
+          email={currentEmail}
+          hasPassword={meResponse.data.hasPassword === true}
+        />
+      ) : null}
 
       <section
         aria-labelledby="account-deletion-heading"

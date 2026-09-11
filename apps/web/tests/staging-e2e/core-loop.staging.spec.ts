@@ -514,6 +514,13 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
     });
 
     await test.step("9. log out", async () => {
+      // A real evaluator may leave a recoverable, unsent draft. The learner
+      // must explicitly confirm discarding it before logout can proceed.
+      page.once("dialog", async (dialog) => {
+        expect(dialog.type()).toBe("confirm");
+        expect(dialog.message()).toContain("unsent practice draft");
+        await dialog.accept();
+      });
       await page.getByRole("button", { name: "Log out" }).click();
       await expect(page).toHaveURL(/\/login(\?|$)/);
       await expect(

@@ -32,16 +32,16 @@ test.describe("Sign-in accessibility (VOC-073-T00)", () => {
       ).join("\n")}`,
     ).toEqual([]);
 
-    // Email input and submit button are the two Tab stops when OAuth is
-    // disabled (mock /healthz reports oauth_enabled=false by default).
-    await assertKeyboardReachable(page, { minFocusable: 2, minTabStops: 2 });
+    // Password sign-in remains usable when OAuth is disabled; magic-link
+    // sign-in remains available as a secondary email recovery option.
+    await assertKeyboardReachable(page, { minFocusable: 5, minTabStops: 5 });
 
     await assertNonColorOnlyFeedback(page, {
       contextLabel: "/signin",
       requireText: [
-        "text=No password needed",
+        "text=Sign in with your email and password",
         "text=Email address",
-        "text=Send sign-in link",
+        "text=Create account",
       ],
     });
 
@@ -54,7 +54,9 @@ test.describe("Sign-in accessibility (VOC-073-T00)", () => {
     page,
   }) => {
     await page.goto("/signin");
-    await page.getByLabel("Email address").fill("learner@example.test");
+    await page
+      .getByLabel("Email for sign-in link")
+      .fill("learner@example.test");
     await page.getByRole("button", { name: "Send sign-in link" }).click();
 
     await expect(
@@ -66,7 +68,7 @@ test.describe("Sign-in accessibility (VOC-073-T00)", () => {
     ).toBeDisabled();
 
     await page.getByRole("button", { name: "Use a different email" }).click();
-    await expect(page.getByLabel("Email address")).toHaveValue(
+    await expect(page.getByLabel("Email for sign-in link")).toHaveValue(
       "learner@example.test",
     );
   });
@@ -81,6 +83,7 @@ test.describe("Sign-in accessibility (VOC-073-T00)", () => {
     }
     await context.addCookies([
       { name: "e2e_magic_link_enabled", value: "false", url: baseURL },
+      { name: "e2e_password_enabled", value: "false", url: baseURL },
     ]);
 
     await page.goto("/signin");

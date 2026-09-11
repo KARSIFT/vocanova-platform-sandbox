@@ -62,6 +62,12 @@ func (l *FixedWindowRateLimiter) Allow(ctx context.Context, key string) (bool, e
 // KeyForIP builds a key for a client IP address and action.
 func KeyForIP(action, ip string) string { return fmt.Sprintf("ip:%s:%s", action, ip) }
 
+// KeyForEmail scopes anonymous authentication requests without retaining the
+// address itself in a limiter backend or its operational logs.
+func KeyForEmail(action, address string) string {
+	return fmt.Sprintf("email:%s:%s", action, hashTokenString(normalizeEmail(address)))
+}
+
 // KeyForSession builds a key for a session token and action.
 func KeyForSession(action, token string) string {
 	return fmt.Sprintf("session:%s:%s", action, hashTokenString(token))

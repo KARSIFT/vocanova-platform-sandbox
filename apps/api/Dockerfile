@@ -82,9 +82,13 @@ COPY . .
 #                surface.
 #   * -o /out/api writes the binary to a stable path the
 #                next stage can COPY from.
+ARG VOCANOVA_BUILD_VERSION=unknown
+ARG VOCANOVA_BUILD_COMMIT=unknown
+ARG VOCANOVA_BUILD_ENVIRONMENT=unknown
+ARG VOCANOVA_BUILD_BUILT_AT=unknown
 RUN go build \
     -trimpath \
-    -ldflags="-s -w" \
+    -ldflags="-s -w -X github.com/KARSIFT/vocanova-platform/apps/api/foundation/buildinfo.Version=${VOCANOVA_BUILD_VERSION} -X github.com/KARSIFT/vocanova-platform/apps/api/foundation/buildinfo.Commit=${VOCANOVA_BUILD_COMMIT} -X github.com/KARSIFT/vocanova-platform/apps/api/foundation/buildinfo.Environment=${VOCANOVA_BUILD_ENVIRONMENT} -X github.com/KARSIFT/vocanova-platform/apps/api/foundation/buildinfo.BuiltAt=${VOCANOVA_BUILD_BUILT_AT}" \
     -o /out/api \
     ./cmd/api
 

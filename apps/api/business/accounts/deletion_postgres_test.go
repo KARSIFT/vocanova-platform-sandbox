@@ -50,6 +50,9 @@ func TestPostgreSQLRepositoryCreateAccountDeletionRequestDeactivatesUser(t *test
 	mock.ExpectExec("UPDATE email_change_links SET revoked_at").
 		WithArgs(uid, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec("UPDATE password_reset_links SET revoked_at").
+		WithArgs(uid, now).
+		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("INSERT INTO account_deletion_requests").
 		WithArgs(sqlmock.AnyArg(), uid, now, purgeAfter, idemKey).
 		WillReturnResult(sqlmock.NewResult(1, 1))
@@ -123,6 +126,9 @@ func TestPostgreSQLRepositoryCreateAccountDeletionRequestAlreadyInFlight(t *test
 		WithArgs(uid, now).
 		WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectExec("UPDATE email_change_links SET revoked_at").
+		WithArgs(uid, now).
+		WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec("UPDATE password_reset_links SET revoked_at").
 		WithArgs(uid, now).
 		WillReturnResult(sqlmock.NewResult(0, 0))
 	pqErr := &pq.Error{Code: "23505", Message: `duplicate key value violates unique constraint "account_deletion_requests_user_id_key"`}
@@ -312,6 +318,9 @@ func TestPostgreSQLRepositoryAnonymizeUserDataUsesPersistedSchema(t *testing.T) 
 		"DELETE FROM user_settings WHERE user_id = \\$1",
 		"DELETE FROM idempotency_keys WHERE user_id = \\$1",
 		"DELETE FROM email_change_links WHERE user_id = \\$1",
+		"DELETE FROM password_reset_links WHERE user_id = \\$1",
+		"DELETE FROM password_credentials WHERE user_id = \\$1",
+		"DELETE FROM password_registration_links",
 		"DELETE FROM magic_links WHERE user_id = \\$1",
 		"DELETE FROM sessions WHERE user_id = \\$1",
 		"DELETE FROM external_identities WHERE user_id = \\$1",

@@ -247,6 +247,7 @@ export function validateMockInventory() {
     "gamification",
     "users",
     "accounts",
+    "password", // Verified password accounts (0.2.0).
   ]);
   for (const entry of readdirSync(apiBusinessRoot, {
     withFileTypes: true,
@@ -289,6 +290,9 @@ export function validateMockInventory() {
     "emailchangelink.go",
     "accountdeletionrequest.go",
     "aifeedbackqualityreviewreport.go",
+    "passwordcredential.go",
+    "passwordregistrationlink.go",
+    "passwordresetlink.go",
   ]);
   for (const entry of readdirSync(apiSchemaRoot, { withFileTypes: true })) {
     if (
@@ -361,6 +365,7 @@ export function validateMockInventory() {
     "20260909142061_mission_completed_at_integrity.sql",
     "20260909142062_review_attempt_result_rating_integrity.sql",
     "20260909142063_voc1411_idempotency_record_integrity.sql",
+    "20260912090000_password_credentials.sql",
   ]);
   for (const entry of readdirSync(apiMigrationRoot, {
     withFileTypes: true,

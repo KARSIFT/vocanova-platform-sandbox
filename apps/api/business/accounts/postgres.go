@@ -354,6 +354,13 @@ func (r *PostgreSQLRepository) CreateAccountDeletionRequest(ctx context.Context,
 	); err != nil {
 		return nil, fmt.Errorf("revoke email change links: %w", err)
 	}
+	if _, err := tx.ExecContext(ctx,
+		`UPDATE password_reset_links SET revoked_at = $2
+		 WHERE user_id = $1 AND consumed_at IS NULL AND revoked_at IS NULL`,
+		userID, now,
+	); err != nil {
+		return nil, fmt.Errorf("revoke password reset links: %w", err)
+	}
 
 	id := uuid.New()
 	if _, err := tx.ExecContext(ctx,
@@ -613,6 +620,25 @@ func (r *PostgreSQLRepository) anonymizeUserDataTx(ctx context.Context, tx *sql.
 		`DELETE FROM email_change_links WHERE user_id = $1`)
 	if err != nil {
 		return counters, fmt.Errorf("delete email_change_links: %w", err)
+	}
+	// Password material and proof-token hashes are never exported. Purge them
+	// before redacting the user identity, including pending signup records for
+	// the same email that otherwise have no user_id relationship.
+	c, err = execCount(ctx, tx, userID,
+		`DELETE FROM password_reset_links WHERE user_id = $1`)
+	if err != nil {
+		return counters, fmt.Errorf("delete password_reset_links: %w", err)
+	}
+	c, err = execCount(ctx, tx, userID,
+		`DELETE FROM password_credentials WHERE user_id = $1`)
+	if err != nil {
+		return counters, fmt.Errorf("delete password_credentials: %w", err)
+	}
+	c, err = execCount(ctx, tx, userID,
+		`DELETE FROM password_registration_links
+		 WHERE lower(email) = lower((SELECT email FROM users WHERE id = $1))`)
+	if err != nil {
+		return counters, fmt.Errorf("delete password_registration_links: %w", err)
 	}
 	c, err = execCount(ctx, tx, userID,
 		`DELETE FROM magic_links WHERE user_id = $1`)

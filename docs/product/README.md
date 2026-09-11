@@ -11,3 +11,6 @@
 
 [Mature learning and account experience](mature-learning-and-account-experience.md)
 records the founder-authorized post-MVP delivery, acceptance criteria, and verification.
+
+[Password authentication, profile and appearance](password-profile-and-theme.md)
+records the follow-up account and Light/Dark/System delivery.

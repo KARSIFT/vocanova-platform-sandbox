@@ -22,6 +22,7 @@ source_files:
   - path: 07-api-contract-and-dto-design.md
     sha256: c1b44de8d2edd02a98098b03b6839f553c594a8225e7371952751a8e19f6883e
 ---
+
 # 07 — VocaNova API Contract and DTO Design
 
 ## Core API decisions
@@ -149,3 +150,24 @@ routes per the approved contract → tests before acceptance → export OpenAPI 
 
 DTO correctness, contract compliance, security middleware, OpenAPI changes, test coverage, no leaked
 internal data.
+
+## Verified password authentication extension (0.2.0)
+
+The generated OpenAPI contract is authoritative for the added endpoints:
+
+| Method and path                             | Success         | Purpose                                                |
+| ------------------------------------------- | --------------- | ------------------------------------------------------ |
+| `POST /api/v1/auth/password/signups`        | 204             | Request verification; generic response                 |
+| `POST /api/v1/auth/password/signups/verify` | 204             | Consume verification proof; no session                 |
+| `POST /api/v1/auth/password/login`          | 200 CurrentUser | Password sign-in and standard session/CSRF cookies     |
+| `POST /api/v1/auth/password/reset-requests` | 204             | Request reset/setup proof; generic response            |
+| `POST /api/v1/auth/password/resets`         | 204             | Consume proof and revoke existing sessions; no session |
+| `GET /version`                              | 200             | Public immutable API build identity                    |
+
+Password operations require JSON, bounded bodies, and rate limits. Invalid proof
+or credentials return 401; unavailable password authentication returns 503.
+`CurrentUser.hasPassword` is additive, and health capability `password_enabled`
+reflects the switch plus configured email delivery. Profile uses the existing
+`PATCH /api/v1/settings` displayName field rather than another write endpoint.
+See [acceptance and security boundaries](../product/password-profile-and-theme.md)
+and [email setup](../development/account-and-release-operations.md).

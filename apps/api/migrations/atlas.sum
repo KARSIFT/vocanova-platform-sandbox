@@ -1,4 +1,4 @@
-h1:33mb+HTg1uid49hK3eqD/TYkXD4CdHieBtE6lp9/fI8=
+h1:oAyDFj9bpXi21iInEpLylMI34GrxJSCc9uNNB9pEvfo=
 20260724210000_identity_foundation.sql h1:kCE91pYCtOUccWkoJGp8Ow1N7oOWjxAvGcPQtSIC17k=
 20260724210001_oauth_state.sql h1:8UfSmhz20WitPSfl/I/KlApBO0VK39xYS053oC3IEiU=
 20260725100000_voc026_p1_content_tables.sql h1:rTIXQ0O1B1X6fu82HtnYS3xb0KU3yYQO/kJmui0C9j8=
@@ -31,3 +31,4 @@ h1:33mb+HTg1uid49hK3eqD/TYkXD4CdHieBtE6lp9/fI8=
 20260909142061_mission_completed_at_integrity.sql h1:mvlo+sqgiAzg4Fwsv+d6vAb4eZ/JXH9Ri4Phuefy8WQ=
 20260909142062_review_attempt_result_rating_integrity.sql h1:i0gUfHjkguZhhw9HrI/s9mCCGu5D5Jy4t5po64qnyRg=
 20260909142063_voc1411_idempotency_record_integrity.sql h1:MmbjyN4YdSbJWfF3QXIugYsymKlgFvIaPYsmxs+7nAY=
+20260912090000_password_credentials.sql h1:yNS5gp6PqdvCmAC2vEwFIq6XP0GL/JY3O4mDNgm7l/Q=
