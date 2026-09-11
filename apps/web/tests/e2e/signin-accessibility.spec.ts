@@ -19,6 +19,11 @@ test.describe("Sign-in accessibility (VOC-073-T00)", () => {
     page,
   }, testInfo) => {
     await page.goto("/signin");
+    const brand = await page
+      .getByRole("link", { name: "VocaNova home" })
+      .boundingBox();
+    expect(brand).not.toBeNull();
+    expect(brand!.height).toBeGreaterThanOrEqual(44);
 
     await expect(
       page.getByRole("heading", { name: "Sign in to Vocanova", level: 1 }),

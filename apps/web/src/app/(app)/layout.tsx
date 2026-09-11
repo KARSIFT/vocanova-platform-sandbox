@@ -22,7 +22,7 @@ export default function AppShellLayout({
       <main
         id="main-content"
         tabIndex={-1}
-        className="min-h-screen pb-[calc(5rem+env(safe-area-inset-bottom))]"
+        className="min-h-[calc(100dvh_-_4rem_-_env(safe-area-inset-top))] pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0"
       >
         {children}
       </main>

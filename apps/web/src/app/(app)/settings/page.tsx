@@ -22,9 +22,11 @@ export default async function SettingsPage() {
   }
 
   return (
-    <PageContainer>
-      <div className="mb-[var(--spacing-md)] flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-neutral-900">Settings</h1>
+    <PageContainer className="lg:max-w-[72rem]">
+      <div className="app-page-heading mb-[var(--spacing-md)] flex items-center justify-between gap-[var(--spacing-md)]">
+        <h1 className="text-3xl font-semibold tracking-[-0.04em] text-neutral-900">
+          Settings
+        </h1>
         <Link
           href="/home"
           className="text-base font-semibold text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
@@ -33,45 +35,48 @@ export default async function SettingsPage() {
         </Link>
       </div>
 
-      <p className="text-base text-neutral-700">
+      <p className="app-page-heading text-base leading-7 text-neutral-700">
         Update your daily review target, review rhythm, and other practice
         preferences.
       </p>
 
-      <SettingsForm initialSettings={response.data} />
-
-      <Surface
-        aria-labelledby="account-section-heading"
-        className="mt-[var(--spacing-lg)]"
-      >
-        <h2
-          id="account-section-heading"
-          className="text-lg font-semibold text-neutral-900"
-        >
-          Account
-        </h2>
-        <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-          Manage your profile, sign-in email, password, or account deletion.
-        </p>
-        <Link
-          href="/settings/account"
-          className="mt-[var(--spacing-md)] inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-        >
-          Account security
-        </Link>
-        <Link
-          href="/settings/profile"
-          className="mt-[var(--spacing-md)] ml-[var(--spacing-sm)] inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-        >
-          Profile
-        </Link>
-      </Surface>
-
-      <div className="mt-[var(--spacing-lg)]">
-        <ThemePreferenceControl />
-      </div>
-      <div className="mt-[var(--spacing-lg)]">
-        <BuildIdentity />
+      <div className="mt-[var(--spacing-lg)] grid gap-[var(--spacing-lg)] lg:grid-cols-[22rem_minmax(0,1fr)] lg:items-start">
+        <aside className="space-y-[var(--spacing-md)]">
+          <Surface aria-labelledby="account-section-heading" tone="secondary">
+            <h2
+              id="account-section-heading"
+              className="text-lg font-semibold text-neutral-900"
+            >
+              Account
+            </h2>
+            <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
+              Manage your profile, sign-in email, password, or account deletion.
+            </p>
+            <Link
+              href="/settings/account"
+              className="mt-[var(--spacing-md)] inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+            >
+              Account security
+            </Link>
+            <Link
+              href="/settings/profile"
+              className="mt-[var(--spacing-md)] ml-[var(--spacing-sm)] inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+            >
+              Profile
+            </Link>
+          </Surface>
+          <ThemePreferenceControl />
+          <BuildIdentity />
+        </aside>
+        <div>
+          <h2 className="text-xl font-semibold tracking-[-0.03em] text-neutral-900">
+            Learning preferences
+          </h2>
+          <p className="mt-[var(--spacing-xs)] text-sm leading-6 text-neutral-600">
+            Set the pace and reminders that support your daily practice.
+          </p>
+          <SettingsForm initialSettings={response.data} />
+        </div>
       </div>
     </PageContainer>
   );

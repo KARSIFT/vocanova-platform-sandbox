@@ -38,6 +38,14 @@ test.describe("Theme preference", () => {
     await expect(root).toHaveAttribute("data-theme-preference", "system");
     await expect(page.getByRole("radio", { name: "System" })).toBeChecked();
 
+    for (const name of ["Light", "Dark", "System"]) {
+      const labelFits = await page.getByRole("radio", { name }).evaluate((radio) => {
+        const label = radio.closest("label")!;
+        return label.scrollWidth <= label.clientWidth;
+      });
+      expect(labelFits, `${name} must fit inside its clickable label`).toBe(true);
+    }
+
     const light = page.getByRole("radio", { name: "Light" });
     await light.focus();
     await page.keyboard.press("Space");

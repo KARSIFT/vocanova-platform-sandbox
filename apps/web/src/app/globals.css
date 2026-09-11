@@ -32,33 +32,114 @@
 
 html {
   background: var(--color-neutral-100);
+  scroll-padding-block: 5rem 6rem;
 }
 
 body {
   margin: 0;
   min-width: 320px;
-  background:
-    radial-gradient(
-      circle at top right,
-      rgb(221 214 254 / 0.42),
-      transparent 31rem
-    ),
-    var(--color-neutral-100);
+  background: var(--color-neutral-100);
   color: var(--color-neutral-900);
-  font-family:
-    ui-rounded, "Nunito Sans", "Avenir Next", Avenir, system-ui, sans-serif;
+  font-family: "Avenir Next", Avenir, "Segoe UI", system-ui, sans-serif;
   line-height: 1.5;
   text-rendering: optimizeLegibility;
 }
 
-:root[data-theme="dark"] body {
-  background:
-    radial-gradient(
-      circle at top right,
-      rgb(59 130 246 / 0.16),
-      transparent 31rem
-    ),
-    var(--color-neutral-100);
+.app-page-heading {
+  max-width: 42rem;
+}
+
+.auth-shell {
+  display: grid;
+  min-height: 100vh;
+  background: var(--color-neutral-100);
+}
+
+.auth-panel {
+  display: flex;
+  width: min(100%, 38rem);
+  margin-inline: auto;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2rem 1.25rem;
+}
+
+.auth-brand {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 2.25rem;
+  border-radius: 0.5rem;
+}
+
+.auth-form {
+  width: 100%;
+  max-width: 28rem;
+}
+
+.auth-panel-wide {
+  width: min(100%, 44rem);
+}
+
+.auth-panel-wide .auth-form {
+  max-width: 36rem;
+}
+
+.auth-context {
+  display: none;
+}
+
+@media (min-width: 64rem) {
+  .auth-shell {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
+  }
+  .auth-context {
+    display: flex;
+    align-items: stretch;
+    background: #17284d;
+    color: #edf4ff;
+    padding: clamp(2rem, 7vw, 7rem);
+  }
+  .auth-context-inner {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+  .auth-context-mark {
+    max-width: 28rem;
+  }
+  .auth-context-mark span {
+    display: block;
+    margin-bottom: 1.25rem;
+    color: #c9c2ff;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+  .auth-context-mark strong {
+    display: block;
+    font-size: clamp(2.25rem, 4vw, 4.5rem);
+    font-weight: 600;
+    letter-spacing: -0.065em;
+    line-height: 0.98;
+  }
+  .auth-context-mark p {
+    max-width: 25rem;
+    margin: 1.75rem 0 0;
+    color: #cbd5e1;
+    font-size: 1.05rem;
+    line-height: 1.65;
+  }
+  .auth-context-caption {
+    margin: auto 0 0;
+    color: #aab9d1;
+    font-size: 0.9rem;
+  }
+  .auth-panel {
+    justify-content: center;
+    padding: clamp(1.5rem, 4vw, 4rem);
+  }
 }
 
 /* Text and background utilities share the generated palette. In dark mode,

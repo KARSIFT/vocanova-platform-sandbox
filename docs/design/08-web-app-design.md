@@ -55,6 +55,9 @@ tests/staging-e2e/  # deployed learning-flow verification
 Feature areas: auth, onboarding, dashboard, discovery, words, reviews, sentences, progress,
 settings.
 
+The [learning workspace visual direction](learning-workspace.md) defines shared
+branding, responsive navigation, reading widths, and the browser review workflow.
+
 ## Routing
 
 Route groups: `(public)`, `(onboarding)`, `(app)`.

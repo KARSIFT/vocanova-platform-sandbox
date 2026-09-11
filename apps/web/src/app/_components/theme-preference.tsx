@@ -123,7 +123,7 @@ export function ThemePreferenceControl() {
   return (
     <section
       aria-labelledby="appearance-heading"
-      className="mt-[var(--spacing-lg)] rounded-[var(--radius-lg)] border border-neutral-200 bg-white p-[var(--spacing-md)] shadow-sm sm:p-[var(--spacing-lg)]"
+      className="rounded-[var(--radius-lg)] border border-neutral-200 bg-white p-[var(--spacing-md)] shadow-sm sm:p-[var(--spacing-lg)]"
     >
       <h2
         id="appearance-heading"
@@ -144,11 +144,11 @@ export function ThemePreferenceControl() {
         <legend className="text-sm font-semibold text-neutral-900">
           Theme
         </legend>
-        <div className="mt-[var(--spacing-sm)] grid gap-[var(--spacing-sm)] sm:grid-cols-3">
+        <div className="mt-[var(--spacing-sm)] grid grid-cols-[repeat(auto-fit,minmax(5.75rem,1fr))] gap-[var(--spacing-sm)]">
           {THEME_PREFERENCES.map((option) => (
             <label
               key={option}
-              className="flex min-h-11 cursor-pointer items-center gap-[var(--spacing-sm)] rounded-md border border-neutral-300 bg-neutral-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors hover:bg-neutral-100 has-[:checked]:border-primary-600 has-[:checked]:bg-primary-50"
+              className="flex min-h-11 cursor-pointer items-center justify-center gap-[var(--spacing-sm)] rounded-md border border-neutral-300 bg-neutral-50 px-[var(--spacing-sm)] py-[var(--spacing-sm)] text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-100 has-[:checked]:border-primary-600 has-[:checked]:bg-primary-50"
             >
               <input
                 type="radio"
@@ -156,7 +156,7 @@ export function ThemePreferenceControl() {
                 value={option}
                 checked={preference === option}
                 onChange={() => setPreference(option)}
-                className="size-4 accent-primary-600"
+                className="size-4 shrink-0 accent-primary-600"
               />
               {preferenceCopy[option]}
             </label>

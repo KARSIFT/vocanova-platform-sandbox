@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { getSignInAuthCapabilities } from "@/lib/auth-capabilities";
 import { normalizeReturnTo } from "@/lib/return-to";
+import { AuthShell } from "@/ui/auth-shell";
 import { Surface } from "@/ui/surface";
 
 import { PasswordSignupForm } from "../auth/password/_components/password-forms";
@@ -24,12 +25,9 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
   const unavailable = !passwordEnabled && !oauthEnabled;
 
   return (
-    <main className="grid min-h-screen place-items-center bg-[radial-gradient(circle_at_top,_var(--color-primary-100),_var(--color-neutral-100)_48rem)] p-6">
-      <Surface className="w-full max-w-[28rem] space-y-[var(--spacing-lg)] border-primary-100 shadow-[0_1.5rem_3.5rem_rgb(30_58_138_/_0.12)]">
+    <AuthShell>
+      <Surface className="w-full space-y-[var(--spacing-lg)] border-neutral-200 bg-white shadow-[0_12px_28px_rgb(15_23_42_/_0.07)]">
         <div className="space-y-[var(--spacing-sm)]">
-          <p className="text-sm font-bold tracking-wide text-primary-700">
-            VOCANOVA
-          </p>
           <h1 className="text-xl font-semibold text-neutral-900">
             {unavailable
               ? "Account creation is unavailable"
@@ -68,6 +66,6 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
           </Link>
         </p>
       </Surface>
-    </main>
+    </AuthShell>
   );
 }

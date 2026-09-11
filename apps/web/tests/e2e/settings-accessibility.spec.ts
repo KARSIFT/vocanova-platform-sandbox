@@ -18,6 +18,40 @@ import {
 } from "./axe-helper.js";
 
 test.describe("Settings accessibility (VOC-031-T07b)", () => {
+  test("keeps settings reading order consistent with the visual layout", async ({
+    page,
+  }) => {
+    await page.goto("/settings");
+    const account = page.getByRole("complementary");
+    const learning = page.getByRole("heading", {
+      name: "Learning preferences",
+    });
+    const [accountBox, learningBox] = await Promise.all([
+      account.boundingBox(),
+      learning.boundingBox(),
+    ]);
+    expect(accountBox).not.toBeNull();
+    expect(learningBox).not.toBeNull();
+    const accountComesFirst = await account.evaluate((aside) => {
+      const form = document.querySelector(
+        'form[aria-label="Practice settings"]',
+      )!;
+      return Boolean(
+        aside.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    });
+    expect(accountComesFirst).toBe(true);
+    if (page.viewportSize()!.width >= 1024) {
+      expect(accountBox!.x + accountBox!.width).toBeLessThanOrEqual(
+        learningBox!.x,
+      );
+    } else {
+      expect(accountBox!.y + accountBox!.height).toBeLessThanOrEqual(
+        learningBox!.y,
+      );
+    }
+  });
+
   test("preserves a stored Custom preset when saving unrelated settings", async ({
     page,
     context,

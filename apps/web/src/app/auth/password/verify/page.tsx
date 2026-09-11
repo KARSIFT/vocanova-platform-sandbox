@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useRef, useState } from "react";
 
 import { createApiClient } from "@/lib/api";
+import { AuthShell } from "@/ui/auth-shell";
 import { Surface } from "@/ui/surface";
 
 function VerifyPasswordSignupContent() {
@@ -46,11 +47,8 @@ function VerifyPasswordSignupContent() {
           ? "Your email is verified and your password is ready to use."
           : "This verification link is invalid, expired, or has already been used.";
   return (
-    <main className="grid min-h-screen place-items-center bg-neutral-100 p-6">
-      <Surface className="w-full max-w-[28rem] space-y-[var(--spacing-md)]">
-        <p className="text-sm font-bold tracking-wide text-primary-700">
-          VOCANOVA
-        </p>
+    <AuthShell>
+      <Surface className="w-full space-y-[var(--spacing-md)] border-neutral-200 bg-white shadow-[0_12px_28px_rgb(15_23_42_/_0.07)]">
         <h1 className="text-2xl font-semibold text-neutral-900">
           Verify your email
         </h1>
@@ -89,7 +87,7 @@ function VerifyPasswordSignupContent() {
           </Link>
         ) : null}
       </Surface>
-    </main>
+    </AuthShell>
   );
 }
 
@@ -97,9 +95,9 @@ export default function VerifyPasswordSignupPage() {
   return (
     <Suspense
       fallback={
-        <main className="grid min-h-screen place-items-center p-6">
+        <AuthShell>
           <p className="text-base text-neutral-700">Loading verification...</p>
-        </main>
+        </AuthShell>
       }
     >
       <VerifyPasswordSignupContent />

@@ -12,7 +12,7 @@ export function PageContainer({
   return (
     <div
       className={joinClasses(
-        "mx-auto w-full max-w-[48rem] px-[var(--spacing-md)] py-[var(--spacing-lg)] sm:px-[var(--spacing-xl)] sm:py-[var(--spacing-xl)]",
+        "mx-auto w-full max-w-[48rem] px-[var(--spacing-md)] py-[var(--spacing-lg)] sm:px-[var(--spacing-xl)] sm:py-[2.5rem]",
         className,
       )}
       {...props}
@@ -33,7 +33,7 @@ export function Surface({
   return (
     <section
       className={joinClasses(
-        "rounded-[var(--radius-lg)] border p-[var(--spacing-md)] shadow-sm sm:p-[var(--spacing-lg)]",
+        "rounded-[0.9rem] border p-[var(--spacing-md)] shadow-[0_1px_2px_rgb(15_23_42_/_0.05)] sm:p-[var(--spacing-lg)]",
         tone === "primary"
           ? "border-primary-200 bg-primary-50"
           : tone === "secondary"
@@ -49,9 +49,5 @@ export function Surface({
 }
 
 export function Eyebrow({ children }: { children: ReactNode }) {
-  return (
-    <p className="text-sm font-semibold tracking-[0.08em] text-primary-700 uppercase">
-      {children}
-    </p>
-  );
+  return <p className="text-sm font-semibold text-primary-700">{children}</p>;
 }
