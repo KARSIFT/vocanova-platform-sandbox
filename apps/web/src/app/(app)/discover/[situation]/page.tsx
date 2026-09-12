@@ -7,6 +7,7 @@ import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { Eyebrow, PageContainer } from "@/ui/surface";
 
 import { getSituationDetailView } from "./_components/situation-view";
+import { formatLevelBand } from "../_components/level-band";
 
 interface SituationDiscoverPageProps {
   params: Promise<{ situation: string }>;
@@ -41,7 +42,9 @@ export default async function SituationDiscoverPage({
       </Link>
       <Eyebrow>
         {situationData.category.replaceAll("_", " ")}
-        {situationData.levelBand ? ` · ${situationData.levelBand}` : ""}
+        {situationData.levelBand
+          ? ` · ${formatLevelBand(situationData.levelBand)}`
+          : ""}
       </Eyebrow>
       <h1 className="mt-[var(--spacing-xs)] text-3xl font-bold tracking-tight text-neutral-900">
         {situationData.title}

@@ -357,7 +357,7 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
     // message is also text.
     await assertNonColorOnlyFeedback(page, {
       contextLabel: "/home",
-      requireText: ["text=reviews complete", "text=STREAK", "text=In progress"],
+      requireText: ["text=reviews complete", "text=Streak", "text=In progress"],
     });
     await expect(
       page.getByRole("progressbar", { name: "Today’s mission progress" }),

@@ -84,7 +84,11 @@ English, one meaningful sentence, includes the target word/accepted inflection/a
 variant, belongs to an eligible attempt owned by the authenticated learner. Backend normalizes
 (trim, collapse whitespace, Unicode-normalize) while preserving the learner's original display text.
 Target-word matching accepts capitalization, approved inflections (`work`→`works/worked/working`),
-and configured phrase variants — but does not silently accept unrelated synonyms
+regular final-noun plurals for noun phrases/collocations (`security check`→`security checks`),
+and configured phrase variants. Idioms and phrasal verbs still require their canonical or
+explicitly configured forms. Phrase matching requires contiguous whole tokens; recognizing
+an inflection only establishes presence, leaving meaning and grammar to the evaluator.
+It does not silently accept unrelated synonyms
 (`good`≠`better` unless explicitly configured). Validation codes: `too_short`, `too_long`,
 `missing_target`, `invalid_input`, `unsupported_language`, `attempt_not_eligible`. Validation
 failures never call the model and never complete the mission.

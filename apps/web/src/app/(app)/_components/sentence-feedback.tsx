@@ -277,31 +277,17 @@ export function SentenceFeedback({
         className="text-base font-semibold text-neutral-900"
       >
         Practice with {targetWord}
-        {shortDefinition ? ` — ${shortDefinition}` : null}
       </h3>
-      <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-        Write a sentence using the word{" "}
-        <span className="font-medium text-neutral-900">{targetWord}</span>.
-      </p>
-      <p className="mt-[var(--spacing-xs)] text-sm text-neutral-600">
-        For your privacy, do not include personal information such as phone
-        numbers, addresses, or passwords.
-      </p>
-      {canRecoverDraft ? (
-        <div className="mt-[var(--spacing-sm)] flex flex-wrap items-center gap-[var(--spacing-sm)] rounded-md bg-neutral-50 px-[var(--spacing-sm)] py-[var(--spacing-xs)] text-sm text-neutral-700">
-          <p>Unsent drafts stay in this tab for up to two hours.</p>
-          {!hasSuccessResult && !isLoading && sentence.trim() ? (
-            <button
-              type="button"
-              onClick={handleDiscardDraft}
-              className="inline-flex min-h-11 items-center px-[var(--spacing-xs)] font-semibold text-primary-700 underline hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-            >
-              Discard draft
-            </button>
-          ) : null}
-        </div>
+      {shortDefinition ? (
+        <p className="mt-1 text-sm text-neutral-700">{shortDefinition}</p>
       ) : null}
-
+      <p className="mt-[var(--spacing-sm)] text-base text-neutral-700">
+        Write one sentence using{" "}
+        <span className="font-semibold text-neutral-900">{targetWord}</span>.
+      </p>
+      <p className="mt-[var(--spacing-xs)] text-xs text-neutral-600">
+        Avoid personal details such as contact information or passwords.
+      </p>
       <form
         onSubmit={handleSubmit}
         className="mt-[var(--spacing-md)] space-y-[var(--spacing-md)]"
@@ -359,6 +345,20 @@ export function SentenceFeedback({
         >
           {isLoading ? "Checking..." : "Check my sentence"}
         </button>
+        {canRecoverDraft ? (
+          <div className="flex flex-wrap items-center gap-[var(--spacing-sm)] rounded-md bg-neutral-50 px-[var(--spacing-sm)] py-[var(--spacing-xs)] text-sm text-neutral-700">
+            <p>Draft stays in this tab for up to two hours.</p>
+            {!hasSuccessResult && !isLoading && sentence.trim() ? (
+              <button
+                type="button"
+                onClick={handleDiscardDraft}
+                className="inline-flex min-h-11 items-center px-[var(--spacing-xs)] font-semibold text-primary-700 underline hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+              >
+                Discard draft
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </form>
 
       {errorMessage && !hasResult ? (
@@ -577,7 +577,7 @@ function getDefaultErrorMessage(
     case "too_long":
       return "Your sentence is too long. Keep it under 300 characters.";
     case "missing_target":
-      return `Your sentence is missing the target word "${targetWord}".`;
+      return `Add "${targetWord}" to your sentence, then try again.`;
     case "unsupported_language":
       return "Please write your sentence in English.";
     case "invalid_input":
