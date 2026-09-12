@@ -15,20 +15,11 @@ const REVIEW_INTERVAL_PRESETS = [
     value: "vocanova_default",
     label: "Vocanova default",
     helper: "Spaced repetition tuned for everyday vocabulary.",
-    available: true,
   },
   {
     value: "wordup_like",
     label: "Faster reminders",
     helper: "Words come back sooner — useful before an exam or trip.",
-    available: true,
-  },
-  {
-    value: "custom",
-    label: "Custom (coming soon)",
-    helper:
-      "Custom review schedules are not available yet. Your current choice stays saved until then.",
-    available: false,
   },
 ] as const;
 
@@ -172,38 +163,21 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
                   checked
                     ? "border-primary-600 bg-primary-50"
                     : "border-neutral-200 bg-white hover:border-primary-300"
-                } ${
-                  preset.available
-                    ? "cursor-pointer focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary-700"
-                    : "cursor-not-allowed opacity-70"
-                }`}
+                } cursor-pointer focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary-700`}
               >
                 <input
                   type="radio"
                   name="reviewIntervalPreset"
                   value={preset.value}
                   checked={checked}
-                  disabled={preset.available === false}
                   onChange={() => patch("reviewIntervalPreset", preset.value)}
-                  aria-describedby={
-                    preset.available === false
-                      ? "custom-review-rhythm-unavailable"
-                      : undefined
-                  }
                   className="mt-[var(--spacing-xs)] size-4 accent-primary-600"
                 />
                 <span className="flex flex-col">
                   <span className="text-base font-medium text-neutral-900">
                     {preset.label}
                   </span>
-                  <span
-                    id={
-                      preset.available === false
-                        ? "custom-review-rhythm-unavailable"
-                        : undefined
-                    }
-                    className="text-sm text-neutral-700"
-                  >
+                  <span className="text-sm text-neutral-700">
                     {preset.helper}
                   </span>
                 </span>
@@ -211,6 +185,12 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
             );
           })}
         </div>
+        {state.reviewIntervalPreset === "custom" ? (
+          <p className="rounded-md bg-neutral-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-sm text-neutral-700">
+            Your saved custom rhythm stays saved until you choose one of the
+            available options.
+          </p>
+        ) : null}
       </fieldset>
 
       <fieldset className="space-y-[var(--spacing-md)] border-b border-neutral-200 pb-[var(--spacing-lg)]">

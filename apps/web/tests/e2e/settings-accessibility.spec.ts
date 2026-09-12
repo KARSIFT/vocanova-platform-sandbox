@@ -74,9 +74,15 @@ test.describe("Settings accessibility (VOC-031-T07b)", () => {
     });
     expect(seed.ok()).toBeTruthy();
     await page.goto("/settings");
-    const custom = page.getByRole("radio", { name: "Custom (coming soon)" });
-    await expect(custom).toBeChecked();
-    await expect(custom).toBeDisabled();
+    const customNotice = page
+      .getByRole("form", { name: "Practice settings" })
+      .getByText(
+        "Your saved custom rhythm stays saved until you choose one of the available options.",
+      );
+    await expect(customNotice).toBeVisible();
+    await expect(
+      page.getByRole("radio", { name: /Custom/ }),
+    ).toHaveCount(0);
     const patches: unknown[] = [];
     page.on("request", (request) => {
       if (
@@ -105,8 +111,7 @@ test.describe("Settings accessibility (VOC-031-T07b)", () => {
       page.getByText("Your settings have been saved."),
     ).toBeVisible();
     await page.reload();
-    await expect(custom).toBeChecked();
-    await expect(custom).toBeDisabled();
+    await expect(customNotice).toBeVisible();
   });
 
   test("/settings renders with zero critical/serious axe violations, is keyboard reachable, and uses text-based state", async ({
@@ -127,8 +132,8 @@ test.describe("Settings accessibility (VOC-031-T07b)", () => {
     ).toEqual([]);
 
     // /settings has 8 daily-review-target radios + 2 available review-rhythm
-    // radios (the unshipped custom choice is disabled) + 2 checkbox toggles + 1 display-name input + 1 save
-    // button + 2 links (Back to Home, Account security) = 17+
+    // radios + 2 checkbox toggles + 1 display-name input + 1 save button + 2
+    // links (Back to Home, Account security) = 16+
     // focusable elements. Use a conservative floor.
     await assertKeyboardReachable(page, { minFocusable: 10 });
 
@@ -143,12 +148,6 @@ test.describe("Settings accessibility (VOC-031-T07b)", () => {
       ],
     });
 
-    const customReviewRhythm = page.getByRole("radio", {
-      name: "Custom (coming soon)",
-    });
-    await expect(customReviewRhythm).toBeDisabled();
-    await expect(
-      page.getByText("Custom review schedules are not available yet."),
-    ).toBeVisible();
+    await expect(page.getByRole("radio", { name: /Custom/ })).toHaveCount(0);
   });
 });

@@ -73,6 +73,19 @@ func TestValidateSentenceMissingTarget(t *testing.T) {
 	assert.Equal(t, ValidationCodeMissingTarget, result.Code)
 }
 
+func TestValidateSentenceAcceptsRegularPluralNounPhrase(t *testing.T) {
+	target := &Target{
+		NormalizedWord: "security check",
+		WordType:       "phrase",
+		PartOfSpeech:   "noun",
+		AcceptedForms:  BuildAcceptedForms("security check", "phrase", "noun"),
+	}
+
+	result := ValidateSentence("Authentication code helps software with security checks to improve safety.", target)
+
+	assert.True(t, result.Valid)
+}
+
 func TestValidateSentenceUnsupportedLanguage(t *testing.T) {
 	target := &Target{
 		NormalizedWord: "work",

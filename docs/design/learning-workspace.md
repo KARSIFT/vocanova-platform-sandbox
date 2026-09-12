@@ -41,6 +41,25 @@ The layout adapts to the task: a broader overview for Home and Journey, a narrow
 reading width for word detail and focused practice. Do not stretch every form
 merely because a larger screen is available.
 
+## Learning flow refinements
+
+Keep daily goals distinct from the review queue available now. The mission's
+backend-selected action remains authoritative; presentation must not imply that
+more words are due just because the learner has a larger daily target.
+
+Review completion should lead naturally into optional sentence practice, with a
+clear route back home. Keep the word and its meaning separate from the writing
+instruction. Put the writing area and actionable feedback ahead of secondary
+draft-storage details, while retaining the privacy guidance and draft controls.
+
+Journey labels use readable categories and level ranges, such as A2–B1. Topic
+icons should identify the situation rather than repeat a generic work icon.
+Progress shows dated, chronological records returned by the API. Missing dates
+are not evidence of rest days, and a protected streak day is not evidence of a
+completed mission. Explain the points balance as rewards for learning activity,
+not a language proficiency score. Unavailable settings should not appear as new
+choices; previously stored values must survive unrelated edits.
+
 ## Working with design skills
 
 Use [Anthropic's frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design)

@@ -41,6 +41,9 @@ func BuildAcceptedForms(word, wordType, partOfSpeech string) []string {
 	forms := map[string]struct{}{base: {}}
 
 	if isPhraseType(wordType) {
+		if isRegularNounPhraseType(wordType) && partOfSpeech == "noun" {
+			addNounPhraseForms(forms, base)
+		}
 		return sortedForms(forms)
 	}
 
@@ -63,6 +66,10 @@ func isPhraseType(wordType string) bool {
 		return true
 	}
 	return false
+}
+
+func isRegularNounPhraseType(wordType string) bool {
+	return wordType == "phrase" || wordType == "collocation"
 }
 
 func addVerbForms(forms map[string]struct{}, base string) {
@@ -103,6 +110,35 @@ func addNounForms(forms map[string]struct{}, base string) {
 		strings.HasSuffix(base, "ch"), strings.HasSuffix(base, "sh"),
 		strings.HasSuffix(base, "o"):
 		addForm(forms, base+"es")
+	}
+}
+
+// addNounPhraseForms adds regular plural forms by inflecting only the final
+// token. Irregular or non-final plurals must be configured explicitly.
+func addNounPhraseForms(forms map[string]struct{}, base string) {
+	parts := strings.Fields(base)
+	if len(parts) < 2 {
+		return
+	}
+
+	finalForms := map[string]struct{}{}
+	addRegularPluralNounForm(finalForms, parts[len(parts)-1])
+	prefix := strings.Join(parts[:len(parts)-1], " ")
+	for final := range finalForms {
+		addForm(forms, prefix+" "+final)
+	}
+}
+
+func addRegularPluralNounForm(forms map[string]struct{}, base string) {
+	switch {
+	case strings.HasSuffix(base, "y") && !hasVowelBeforeSuffix(base, "y"):
+		addForm(forms, base[:len(base)-1]+"ies")
+	case strings.HasSuffix(base, "s"), strings.HasSuffix(base, "x"),
+		strings.HasSuffix(base, "ch"), strings.HasSuffix(base, "sh"),
+		strings.HasSuffix(base, "o"):
+		addForm(forms, base+"es")
+	default:
+		addForm(forms, base+"s")
 	}
 }
 

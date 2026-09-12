@@ -672,7 +672,7 @@ function evaluateSentenceFeedback({ sentence, targetWord }) {
     return {
       status: "needs_improvement",
       errorCode: "missing_target",
-      errorMessage: `Your sentence is missing the target word "${targetWord}".`,
+      errorMessage: `Add "${targetWord}" to your sentence, then try again.`,
     };
   }
   return {
@@ -1349,7 +1349,15 @@ const server = createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/v1/progress") {
     const state = getSessionState(cookies);
     logLine(req, 200, { reviewedCount: state.reviewedCount });
-    jsonResponse(res, 200, buildProgress(state));
+    const progress = buildProgress(state);
+    if (cookies.e2e_progress_history_fixture === "sparse") {
+      progress.completionHistory = [
+        { localDate: "2026-09-12", completed: false },
+        { localDate: "2026-09-10", completed: true },
+        { localDate: "2026-09-09", completed: false },
+      ];
+    }
+    jsonResponse(res, 200, progress);
     return;
   }
 

@@ -48,6 +48,12 @@ const RATING_GUIDANCE: Record<Rating, string> = {
   good: "Remembered comfortably",
   easy: "Felt automatic",
 };
+const RATING_BAR_COUNT: Record<Rating, number> = {
+  again: 1,
+  hard: 2,
+  good: 3,
+  easy: 4,
+};
 
 interface ReviewOption {
   meaningId: string;
@@ -330,37 +336,33 @@ export function ReviewSession({
       : null;
 
     return (
-      <div className="flex flex-col items-center justify-center py-[var(--spacing-2xl)] text-center">
-        <h2 className="text-xl font-semibold text-neutral-900">
-          {completionSummary ? "Review complete" : "You're all caught up"}
-        </h2>
-        <p className="mt-[var(--spacing-sm)] text-base text-neutral-700">
-          {completionSummary ?? "No words are due for review right now."}
-        </p>
-        {queueUpdateMessage ? (
-          <p
-            role="status"
-            aria-live="polite"
-            className="mt-[var(--spacing-sm)] text-sm text-neutral-700"
-          >
-            {queueUpdateMessage}
+      <div className="py-[var(--spacing-xl)]">
+        <div className="mx-auto max-w-[34rem] text-center">
+          <h2 className="text-xl font-semibold text-neutral-900">
+            {completionSummary ? "Review complete" : "You're all caught up"}
+          </h2>
+          <p className="mt-[var(--spacing-sm)] text-base text-neutral-700">
+            {completionSummary ?? "No words are due for review right now."}
           </p>
-        ) : null}
-        <Link
-          href="/home"
-          className="mt-[var(--spacing-lg)] inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-        >
-          Back to Home
-        </Link>
+          {lastReviewedCard && lastReviewAttemptId ? (
+            <p className="mt-[var(--spacing-sm)] text-sm text-neutral-600">
+              Optional: practise a reviewed word in your own sentence.
+            </p>
+          ) : null}
+          {queueUpdateMessage ? (
+            <p
+              role="status"
+              aria-live="polite"
+              className="mt-[var(--spacing-sm)] text-sm text-neutral-700"
+            >
+              {queueUpdateMessage}
+            </p>
+          ) : null}
+        </div>
         {lastReviewedCard && lastReviewAttemptId ? (
-          // max-w-[28rem] (not max-w-md): see the token-collision note on
-          // /onboarding's page.tsx - tokens.generated.css's --spacing-md
-          // (16px) shadows the intended 28rem max-w-md container size,
-          // which otherwise collapses this section to a near-zero-width
-          // column (confirmed via VOC-031-T08's core-loop test: the
-          // "Practice with pour" heading word-wrapped to 0px measured
-          // width and Playwright reported it as hidden).
-          <div className="mt-[var(--spacing-lg)] w-full max-w-[28rem] text-left">
+          // Use an explicit arbitrary width: generated spacing tokens can
+          // shadow similarly named utility tokens in this workspace.
+          <div className="mx-auto mt-[var(--spacing-lg)] w-full max-w-[42rem] text-left">
             <SentenceFeedback
               targetWord={lastReviewedCard.wordText}
               attemptId={lastReviewAttemptId}
@@ -370,6 +372,12 @@ export function ReviewSession({
             />
           </div>
         ) : null}
+        <Link
+          href="/home"
+          className="mx-auto mt-[var(--spacing-lg)] flex min-h-11 w-fit items-center justify-center px-[var(--spacing-md)] text-base font-semibold text-primary-700 underline hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+        >
+          Back to Home
+        </Link>
       </div>
     );
   }
@@ -579,11 +587,24 @@ export function ReviewSession({
                           isRefetching,
                           hasSubmittedCurrentCard,
                         )}
-                        className="min-h-11 rounded-md border border-neutral-200 bg-neutral-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-900 transition-colors hover:bg-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex min-h-11 items-center gap-[var(--spacing-sm)] rounded-md border border-neutral-200 bg-neutral-50 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-left text-base font-medium text-neutral-900 transition-colors hover:border-primary-700 hover:bg-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <span className="block">{RATING_LABELS[rating]}</span>
-                        <span className="block text-xs font-normal text-neutral-600">
-                          {RATING_GUIDANCE[rating]}
+                        <span
+                          aria-hidden="true"
+                          className="flex shrink-0 gap-0.5"
+                        >
+                          {Array.from({ length: 4 }, (_, index) => (
+                            <span
+                              key={index}
+                              className={`h-5 w-1 rounded-full ${index < RATING_BAR_COUNT[rating] ? "bg-neutral-700" : "bg-neutral-200"}`}
+                            />
+                          ))}
+                        </span>
+                        <span>
+                          <span className="block">{RATING_LABELS[rating]}</span>
+                          <span className="block text-xs font-normal text-neutral-600">
+                            {RATING_GUIDANCE[rating]}
+                          </span>
                         </span>
                       </button>
                     ))}

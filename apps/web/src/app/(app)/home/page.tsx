@@ -72,7 +72,7 @@ export default async function HomePage() {
       ? {
           href: "/review",
           label: "Start review",
-          detail: `${dueReviewWords} ${dueReviewWords === 1 ? "word is" : "words are"} ready when you are.`,
+          detail: "A short session with the words due now.",
         }
       : savedWords.length === 0
         ? {
@@ -109,26 +109,26 @@ export default async function HomePage() {
           <Eyebrow>Today’s learning space</Eyebrow>
         </div>
         <div className="shrink-0 rounded-xl bg-secondary-50 px-[var(--spacing-sm)] py-[var(--spacing-xs)] text-right">
-          <p className="text-xs font-semibold text-secondary-800">STREAK</p>
+          <p className="text-xs font-semibold text-secondary-800">Streak</p>
           <p className="text-lg font-bold leading-tight text-secondary-900">
             {currentStreakDays} day{currentStreakDays === 1 ? "" : "s"}
           </p>
         </div>
       </div>
-      <div className="lg:grid lg:grid-cols-[minmax(0,1.45fr)_minmax(18rem,0.75fr)] lg:gap-[var(--spacing-lg)]">
+      <div className="lg:grid lg:items-start lg:grid-cols-[minmax(0,1.45fr)_minmax(18rem,0.75fr)] lg:gap-[var(--spacing-lg)]">
         <section
           aria-labelledby="todays-mission-heading"
-          className="rounded-[0.9rem] bg-primary-800 p-[var(--spacing-lg)] text-white shadow-[0_10px_24px_rgb(30_58_138_/_0.18)] sm:p-[var(--spacing-xl)]"
+          className="rounded-[0.9rem] bg-primary-800 p-[var(--spacing-md)] text-white shadow-[0_10px_24px_rgb(30_58_138_/_0.18)] sm:p-[var(--spacing-lg)]"
         >
           <div className="flex items-start justify-between gap-[var(--spacing-md)]">
             <div>
               <h1
                 id="todays-mission-heading"
-                className="text-sm font-semibold tracking-[0.08em] text-primary-200 uppercase"
+                className="text-sm font-semibold text-primary-100"
               >
                 Today&apos;s Mission
               </h1>
-              <h2 className="mt-[var(--spacing-xs)] text-xl font-bold tracking-tight sm:text-2xl">
+              <h2 className="mt-1 text-xl font-bold tracking-tight">
                 {missionComplete
                   ? "Mission complete"
                   : "Build your review habit"}
@@ -140,10 +140,14 @@ export default async function HomePage() {
               {missionComplete ? "Complete" : "In progress"}
             </span>
           </div>
-          <p className="mt-[var(--spacing-md)] text-base text-primary-100">
+          <p className="mt-[var(--spacing-sm)] text-base text-primary-100">
             {missionComplete
               ? `You reviewed ${reviewedWordsToday} of ${missionTargetWords} words today.`
-              : `${reviewedWordsToday} of ${missionTargetWords} reviews complete`}
+              : `Daily goal: ${reviewedWordsToday} of ${missionTargetWords} reviews complete`}
+          </p>
+          <p className="mt-[var(--spacing-xs)] text-sm text-primary-100">
+            Currently due: {dueReviewWords}{" "}
+            {dueReviewWords === 1 ? "word" : "words"}.
           </p>
           <div
             role="progressbar"
@@ -151,7 +155,7 @@ export default async function HomePage() {
             aria-valuemin={0}
             aria-valuemax={missionTargetWords}
             aria-valuenow={Math.min(reviewedWordsToday, missionTargetWords)}
-            className="mt-[var(--spacing-md)] h-2 w-full overflow-hidden rounded-full bg-primary-900/50"
+            className="mt-[var(--spacing-sm)] h-2 w-full overflow-hidden rounded-full bg-primary-900/50"
           >
             <div
               className="h-full rounded-full bg-primary-200 transition-[width] duration-[var(--duration-slow)]"
@@ -160,14 +164,11 @@ export default async function HomePage() {
           </div>
           <Link
             href={primaryAction.href}
-            className="mt-[var(--spacing-md)] inline-flex min-h-11 items-center justify-center rounded-xl bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-semibold text-primary-800 shadow-sm transition-colors hover:bg-primary-50"
+            className="mt-[var(--spacing-sm)] inline-flex min-h-11 items-center justify-center rounded-xl bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-semibold text-primary-800 shadow-sm transition-colors hover:bg-primary-50"
           >
             {primaryAction.label}
-            <span aria-hidden="true" className="ml-[var(--spacing-sm)]">
-              →
-            </span>
           </Link>
-          <p className="mt-[var(--spacing-sm)] text-sm text-primary-100">
+          <p className="mt-[var(--spacing-xs)] text-sm text-primary-100">
             {primaryAction.detail}
           </p>
         </section>

@@ -67,7 +67,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 const ONBOARDING_COOKIE_VALUE = "not_started";
 const CORE_LOOP_TEST_TIMEOUT_MS = 90_000;
 const SENTENCE_PRIVACY_REMINDER =
-  "For your privacy, do not include personal information such as phone numbers, addresses, or passwords.";
+  "Avoid personal details such as contact information or passwords.";
 
 async function expectSentencePracticePrivacyReminder(page: Page) {
   await expect(page.getByText(SENTENCE_PRIVACY_REMINDER)).toBeVisible();
