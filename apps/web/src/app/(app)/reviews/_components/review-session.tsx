@@ -374,7 +374,7 @@ export function ReviewSession({
         ) : null}
         <Link
           href="/home"
-          className="mx-auto mt-[var(--spacing-lg)] inline-flex min-h-11 items-center justify-center px-[var(--spacing-md)] text-base font-semibold text-primary-700 underline hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+          className="mx-auto mt-[var(--spacing-lg)] flex min-h-11 w-fit items-center justify-center px-[var(--spacing-md)] text-base font-semibold text-primary-700 underline hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
         >
           Back to Home
         </Link>

@@ -124,7 +124,7 @@ function SituationIcon({
       </svg>
     );
   }
-  if (slug.includes("airport")) {
+  if (slug.includes("airport") || category === "travel") {
     return (
       <svg {...sharedProps}>
         <path

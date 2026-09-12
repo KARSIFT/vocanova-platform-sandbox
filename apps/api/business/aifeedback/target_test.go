@@ -33,7 +33,7 @@ func TestBuildAcceptedFormsNounPhrasePluralizesFinalNoun(t *testing.T) {
 		want     []string
 		notWant  string
 	}{
-		{"screenshot noun phrase", "security check", "phrase", []string{"security check", "security checks"}, "security checkes"},
+		{"regular s ending", "security check", "phrase", []string{"security check", "security checks"}, "security checkes"},
 		{"s and ch ending", "boarding pass", "phrase", []string{"boarding pass", "boarding passes"}, "boarding passs"},
 		{"consonant y ending", "capital city", "phrase", []string{"capital cities", "capital city"}, "capital citys"},
 		{"vowel y ending", "public holiday", "phrase", []string{"public holiday", "public holidays"}, "public holidayses"},
