@@ -74,6 +74,20 @@ behavior, learner retention, or recoverable production backups. The migrated
 disposable database verifies integration paths, not production durability. No
 public-launch milestone is complete from these results alone.
 
+### Dependency security follow-up
+
+A fresh registry audit identified newer advisories beyond the initial GitHub
+alert. The follow-up updates Next.js to 16.3.6, fast-uri to 3.1.8, and
+brace-expansion to 5.0.12. Independent review found no unrelated lockfile changes,
+and the updated lockfile audit reported no known vulnerabilities. The application
+does not use the affected Node.js ImageResponse path or directly import fast-uri;
+this source inspection does not establish the contents of deployed images.
+
+Track clean-install, build, browser and CI results for the final dependency set
+in [PR #1470](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1470).
+The earlier local evidence above applies to the learning-code revision
+`0008ba70`; it must not be mistaken for verification of a later dependency set.
+
 ## Deliver work in bounded slices
 
 Each slice should identify the learner problem, state the intended behavior, change the smallest relevant surface, include meaningful regression coverage and document remaining limits. Use parallel agents for independent areas and independent review; coordinate shared files, builds and servers. Follow [repository instructions](../../AGENTS.md) for draft PRs, CI, merging and deployment.
