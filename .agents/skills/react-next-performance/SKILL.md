@@ -77,4 +77,4 @@ When this skill conflicts with `AGENTS.md`, `CLAUDE.md`, approved change package
 
 ## Safety
 
-Performance work does not bypass governance — behavior changes need an adopted change package. Do not read `.env*` files. Do not paste raw CI logs into chat or issues. Never log secrets, tokens, or personal data while profiling.
+Keep performance changes within the requested scope and follow the PR/CI workflow in `AGENTS.md`; historical change packages are context, not a prerequisite for ordinary work. Do not read `.env*` files. Do not paste raw CI logs into chat or issues. Never log secrets, tokens, or personal data while profiling.

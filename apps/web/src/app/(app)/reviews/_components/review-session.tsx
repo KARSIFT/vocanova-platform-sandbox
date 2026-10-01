@@ -31,6 +31,7 @@ import {
   getDueRequestLimit,
   hasReachedReviewSessionLimit,
 } from "./review-session-limit";
+import { buildMultipleChoiceOptions } from "./review-session-options";
 
 type Rating = "again" | "hard" | "good" | "easy";
 
@@ -54,11 +55,6 @@ const RATING_BAR_COUNT: Record<Rating, number> = {
   good: 3,
   easy: 4,
 };
-
-interface ReviewOption {
-  meaningId: string;
-  label: string;
-}
 
 interface ReviewSessionProps {
   initialDueWords: DueWord[];
@@ -677,42 +673,6 @@ function determinePromptType(
     return "multiple_choice";
   }
   return "self_check";
-}
-
-function buildMultipleChoiceOptions(
-  dueWords: DueWord[],
-  currentIndex: number,
-): ReviewOption[] {
-  const current = dueWords[currentIndex];
-  if (!current) {
-    return [];
-  }
-  const distractors = dueWords
-    .filter((_, index) => index !== currentIndex)
-    .slice(0, 3)
-    .map((dueWord) => ({
-      meaningId: dueWord.meaningId,
-      label: `${dueWord.partOfSpeech} — ${dueWord.shortDefinition}`,
-    }));
-  const all = [
-    {
-      meaningId: current.meaningId,
-      label: `${current.partOfSpeech} — ${current.shortDefinition}`,
-    },
-    ...distractors,
-  ];
-  return shuffleArray(all);
-}
-
-function shuffleArray<T>(items: readonly T[]): T[] {
-  const result = [...items];
-  for (let index = result.length - 1; index > 0; index--) {
-    const swapIndex = Math.floor(Math.random() * (index + 1));
-    const temp = result[index]!;
-    result[index] = result[swapIndex]!;
-    result[swapIndex] = temp;
-  }
-  return result;
 }
 
 function generateClientAttemptId(): string {

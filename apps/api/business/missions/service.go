@@ -119,15 +119,25 @@ func (s *Service) MarkSnapshotCompleted(
 }
 
 // MarkSnapshotProtected links a grace-day ledger debit to the exact missed
-// local-day snapshot that it protects. It is conditional on status='missed',
-// so a retry cannot protect the day twice.
+// local-day snapshot that it protects, first materializing a naturally missed
+// day if it was absent or open. The final transition requires status='missed',
+// so a retry cannot protect the day twice. timezone is used only for an absent
+// snapshot; established historical snapshots keep their own timezone.
 func (s *Service) MarkSnapshotProtected(
 	ctx context.Context,
 	tx *sql.Tx,
 	userID uuid.UUID,
 	localDate time.Time,
 	graceDayID uuid.UUID,
+	timezone string,
 ) (bool, error) {
+	// A naturally missed day can be absent or still open. Materialize that
+	// missed state in the completion transaction before linking its grace debit.
+	// Existing snapshot targets/timezones and completed/protected states remain
+	// unchanged. The caller has already verified the one-day recovery window.
+	if err := s.missions.MarkSnapshotMissed(ctx, tx, userID, localDate, timezone); err != nil {
+		return false, err
+	}
 	return s.missions.MarkSnapshotProtected(ctx, tx, userID, localDate, graceDayID)
 }
 

@@ -106,3 +106,13 @@ func TestLocalDateYesterday(t *testing.T) {
 	assert.Equal(t, time.July, d.Month())
 	assert.Equal(t, 25, d.Day())
 }
+
+func TestResolveSettingsPreservesStoredTargetAcrossTimezoneFallbacks(t *testing.T) {
+	for _, timezone := range []string{"UTC", ""} {
+		for _, client := range []string{"", "Asia/Tehran"} {
+			res, err := ResolveSettings(UserSettingsSource{Stored: true, Timezone: timezone, DailyReviewTarget: 5}, client)
+			require.NoError(t, err)
+			assert.Equal(t, 5, res.DailyReviewTarget)
+		}
+	}
+}

@@ -516,7 +516,7 @@ func (r *PostgreSQLRepository) applyP4ReviewWiring(
 	}
 	if reconciliation.GraceDayUsed != nil && reconciliation.GraceDayUsedID != nil && reconciliation.YesterdayProtectedLocalDate != nil {
 		protected, err := r.missions.MarkSnapshotProtected(
-			ctx, tx, req.UserID, *reconciliation.YesterdayProtectedLocalDate, *reconciliation.GraceDayUsedID,
+			ctx, tx, req.UserID, *reconciliation.YesterdayProtectedLocalDate, *reconciliation.GraceDayUsedID, resolved.Timezone,
 		)
 		if err != nil {
 			return fmt.Errorf("mark grace-protected snapshot: %w", err)

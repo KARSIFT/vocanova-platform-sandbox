@@ -50,35 +50,36 @@ var ErrInvalidTimezone = errors.New("invalid IANA timezone")
 //
 //  1. If the per-user user_settings row has a stored non-default value, use it.
 //  2. Else, if a request-time client-supplied IANA timezone is provided, validate
-//     it against the IANA timezone database and use it (with the user_settings
-//     schema default daily_review_target).
-//  3. Else, fall back to UTC and the user_settings default of 20 reviews.
+//     it against the IANA timezone database and use it.
+//  3. Else, fall back to UTC. The stored review target is independent of
+//     timezone selection; only an absent target defaults to 20 reviews.
 //
 // This function is pure (no IO) and deterministic. The caller's repository
 // layer is responsible for reading the user_settings row and calling
 // LoadLocation on the request-time client timezone before invoking this.
 func ResolveSettings(stored UserSettingsSource, clientTimezone string) (ResolvedSettings, error) {
+	// Resolve the persisted target independently of timezone fallback. UTC is
+	// also a valid learner timezone and must not discard a customized target.
+	target := DefaultDailyReviewTarget
+	if stored.Stored && stored.DailyReviewTarget > 0 {
+		target = stored.DailyReviewTarget
+	}
+	if target < MinDailyReviewTarget || target > MaxDailyReviewTarget {
+		return ResolvedSettings{}, fmt.Errorf("stored daily review target %d out of range [%d,%d]", target, MinDailyReviewTarget, MaxDailyReviewTarget)
+	}
 	if stored.Stored && stored.Timezone != "" && stored.Timezone != DefaultTimezone {
 		if _, err := time.LoadLocation(stored.Timezone); err != nil {
 			return ResolvedSettings{}, fmt.Errorf("%w: stored %q: %v", ErrInvalidTimezone, stored.Timezone, err)
 		}
-		loc := stored.Timezone
-		target := stored.DailyReviewTarget
-		if target <= 0 {
-			target = DefaultDailyReviewTarget
-		}
-		if target < MinDailyReviewTarget || target > MaxDailyReviewTarget {
-			return ResolvedSettings{}, fmt.Errorf("stored daily review target %d out of range [%d,%d]", target, MinDailyReviewTarget, MaxDailyReviewTarget)
-		}
-		return ResolvedSettings{Timezone: loc, DailyReviewTarget: target}, nil
+		return ResolvedSettings{Timezone: stored.Timezone, DailyReviewTarget: target}, nil
 	}
 	if clientTimezone != "" {
 		if _, err := time.LoadLocation(clientTimezone); err != nil {
 			return ResolvedSettings{}, fmt.Errorf("%w: client %q: %v", ErrInvalidTimezone, clientTimezone, err)
 		}
-		return ResolvedSettings{Timezone: clientTimezone, DailyReviewTarget: DefaultDailyReviewTarget}, nil
+		return ResolvedSettings{Timezone: clientTimezone, DailyReviewTarget: target}, nil
 	}
-	return ResolvedSettings{Timezone: DefaultTimezone, DailyReviewTarget: DefaultDailyReviewTarget}, nil
+	return ResolvedSettings{Timezone: DefaultTimezone, DailyReviewTarget: target}, nil
 }
 
 // LocalDate returns the calendar date for a given instant in the given IANA

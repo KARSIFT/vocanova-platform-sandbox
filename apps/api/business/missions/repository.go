@@ -455,9 +455,9 @@ func (r *Repository) MarkSnapshotProtected(
 	return rows > 0, nil
 }
 
-// MarkSnapshotMissed is called lazily when streak reconciliation detects a
-// missed day during a read or write. status='missed', grace_applied remains
-// false until a grace day is later applied.
+// MarkSnapshotMissed materializes a naturally missed day when a completion
+// applies grace. Existing snapshot goals and timezone remain unchanged; only
+// an open snapshot transitions to missed. Completed/protected days are kept.
 func (r *Repository) MarkSnapshotMissed(
 	ctx context.Context,
 	tx *sql.Tx,

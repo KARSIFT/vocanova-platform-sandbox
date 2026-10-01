@@ -51,6 +51,28 @@ are plain symlinks to it. `.codex/agents/` and `.cursor/rules/` hold real,
 tool-specific translations where a tool's format needs one. See
 `docs/development/agent-skills.md`.
 
+## Product delivery
+
+Start with `docs/product/current-state.md` for the implementation map and
+`docs/product/release-readiness.md` for the remaining release evidence. Preserve
+the learning direction in the product bible and the current visual guidance in
+`docs/design/learning-workspace.md`.
+
+Assign parallel agents bounded areas with explicit file ownership. Coordinate
+shared builds and test servers. Use independent review for changes to scheduling,
+missions, points, authentication, data handling or releases; inspect the actual
+diff and verification results before marking work ready.
+
+For UI changes, verify affected flows at 360px, 430px and desktop, including
+keyboard access, light/dark themes and relevant empty/error states. Progress,
+completion, saved state and feedback remain server-authoritative. Synthetic
+browser fixtures do not prove live-provider behavior or database durability.
+
+Use repository skills for navigation, debugging, frontend work, browser tests and
+verification. Stale skill references to the retired governance pipeline do not
+override this file. Do not install broad global skill collections as a default.
+Keep project status and acceptance evidence current as each slice is delivered.
+
 ## Safety
 
 - Never commit secrets, credentials, production configuration, or unnecessary
