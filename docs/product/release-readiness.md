@@ -83,10 +83,39 @@ and the updated lockfile audit reported no known vulnerabilities. The applicatio
 does not use the affected Node.js ImageResponse path or directly import fast-uri;
 this source inspection does not establish the contents of deployed images.
 
-Track clean-install, build, browser and CI results for the final dependency set
-in [PR #1470](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1470).
-The earlier local evidence above applies to the learning-code revision
-`0008ba70`; it must not be mistaken for verification of a later dependency set.
+Frozen installation, full workspace validation, all 242 browser tests and all
+applicable GitHub checks passed on dependency revision `2739e3da`. The database
+integration evidence above applies to `0008ba70`, whose API code was unchanged
+by the dependency update. Track later revision evidence in
+[PR #1470](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1470).
+
+### Review follow-up: truthful activity history
+
+The automated review found two additional history concerns. A reconstructed
+missed day now uses today's established mission target instead of a hardcoded
+twenty. Later settings changes cannot overwrite that established target.
+Existing historical targets, counters and timezones remain unchanged. Because
+no historical settings record exists for an absent day, the reconstructed target
+is a fallback, not proof of yesterday's original goal.
+
+Progress now distinguishes completed missions from grace-protected streak days.
+The API adds the actual mission `status`, while retaining the legacy `completed`
+boolean for compatibility. The client accepts older API responses and labels
+ambiguous legacy history "Completed or protected"; current responses show
+"Completed", "Streak protected" or "Not complete" with distinct existing theme
+colors.
+
+Both failures were reproduced before fixing them. Independent review found no
+actionable issues. Full workspace validation passed again, including 244
+foundation, 32 API-client and 93 web helper tests, the full Go suite against a
+migrated disposable database, and both production builds. Database regressions
+also check the learner's account export, settings drift, preserved history,
+duplicate recovery and rollback. The full browser suite passed 248 tests with
+37 existing skips. Six new cases cover activity labels, distinct colors,
+accessibility and overflow at 360px, 430px and desktop in both themes. Six
+refreshed Progress screenshots had no horizontal overflow; representative mobile
+and desktop views were visually inspected. Fresh OpenAPI generation matched the
+committed contract. Release checks remain separate from this local evidence.
 
 ## Deliver work in bounded slices
 

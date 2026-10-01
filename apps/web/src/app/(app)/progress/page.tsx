@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { Eyebrow, PageContainer, Surface } from "@/ui/surface";
+import { getCompletionDayView } from "./completion-day-view";
 
 const SAVED_VOCABULARY_DISPLAY_LIMIT = 10;
 
@@ -42,7 +43,11 @@ export default async function ProgressPage() {
 
   const historyWithLabels = [...completionHistory]
     .sort((first, second) => first.localDate.localeCompare(second.localDate))
-    .map((day) => ({ ...day, label: formatActivityDate(day.localDate) }));
+    .map((day) => ({
+      ...day,
+      label: formatActivityDate(day.localDate),
+      view: getCompletionDayView(day),
+    }));
 
   return (
     <PageContainer className="max-w-[64rem]">
@@ -133,7 +138,7 @@ export default async function ProgressPage() {
               {historyWithLabels.map((day) => (
                 <li
                   key={day.localDate}
-                  className={`flex min-w-0 items-center justify-between gap-[var(--spacing-sm)] rounded-md border-l-4 px-[var(--spacing-md)] py-[var(--spacing-sm)] ${day.completed ? "border-primary-700 bg-primary-50 text-primary-900" : "border-neutral-400 bg-neutral-100 text-neutral-700"}`}
+                  className={`flex min-w-0 items-center justify-between gap-[var(--spacing-sm)] rounded-md border-l-4 px-[var(--spacing-md)] py-[var(--spacing-sm)] ${day.view.className}`}
                 >
                   <time
                     dateTime={day.localDate}
@@ -141,9 +146,7 @@ export default async function ProgressPage() {
                   >
                     {day.label}
                   </time>
-                  <p className="min-w-0 text-right text-sm">
-                    {day.completed ? "Completed or protected" : "Not complete"}
-                  </p>
+                  <p className="min-w-0 text-right text-sm">{day.view.label}</p>
                 </li>
               ))}
             </ul>

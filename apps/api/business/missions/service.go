@@ -121,8 +121,10 @@ func (s *Service) MarkSnapshotCompleted(
 // MarkSnapshotProtected links a grace-day ledger debit to the exact missed
 // local-day snapshot that it protects, first materializing a naturally missed
 // day if it was absent or open. The final transition requires status='missed',
-// so a retry cannot protect the day twice. timezone is used only for an absent
-// snapshot; established historical snapshots keep their own timezone.
+// so a retry cannot protect the day twice. timezone and reconstructionTarget
+// are used only for an absent snapshot. The target is today's established
+// mission target as a fallback, not evidence of yesterday's actual target;
+// established historical snapshots keep their own target and timezone.
 func (s *Service) MarkSnapshotProtected(
 	ctx context.Context,
 	tx *sql.Tx,
@@ -130,12 +132,13 @@ func (s *Service) MarkSnapshotProtected(
 	localDate time.Time,
 	graceDayID uuid.UUID,
 	timezone string,
+	reconstructionTarget int,
 ) (bool, error) {
 	// A naturally missed day can be absent or still open. Materialize that
 	// missed state in the completion transaction before linking its grace debit.
 	// Existing snapshot targets/timezones and completed/protected states remain
 	// unchanged. The caller has already verified the one-day recovery window.
-	if err := s.missions.MarkSnapshotMissed(ctx, tx, userID, localDate, timezone); err != nil {
+	if err := s.missions.MarkSnapshotMissed(ctx, tx, userID, localDate, timezone, reconstructionTarget); err != nil {
 		return false, err
 	}
 	return s.missions.MarkSnapshotProtected(ctx, tx, userID, localDate, graceDayID)
@@ -298,6 +301,7 @@ func (s *Service) GetProgressView(
 	for _, d := range days {
 		view.CompletionHistory = append(view.CompletionHistory, CompletionHistoryEntry{
 			LocalDate: d.LocalDate,
+			Status:    d.Status,
 			Completed: d.Status == StatusCompleted || d.Status == StatusProtected,
 		})
 	}
@@ -333,6 +337,7 @@ type ProgressView struct {
 // CompletionHistoryEntry is one day in the bounded 7-day history.
 type CompletionHistoryEntry struct {
 	LocalDate time.Time
+	Status    string
 	Completed bool
 }
 

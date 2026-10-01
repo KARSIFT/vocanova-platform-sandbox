@@ -3,6 +3,7 @@ package reviews
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/accounts"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/learning"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/missions"
@@ -390,8 +392,8 @@ func TestSubmitReviewGraceRecoveryProtectsMissedSnapshotPostgreSQL(t *testing.T)
 			if missedStatus == "absent" {
 				_, err := db.ExecContext(ctx, `DELETE FROM daily_mission_snapshots WHERE user_id=$1 AND local_date=$2`, req.UserID, yesterdayDate)
 				require.NoError(t, err)
-			} else if missedStatus == "open" {
-				_, err := db.ExecContext(ctx, `UPDATE daily_mission_snapshots SET status='open', review_target=37, reviews_completed=2, timezone='Europe/Berlin' WHERE user_id=$1 AND local_date=$2`, req.UserID, yesterdayDate)
+			} else {
+				_, err := db.ExecContext(ctx, `UPDATE daily_mission_snapshots SET status=$3, review_target=37, reviews_completed=2, timezone='Europe/Berlin' WHERE user_id=$1 AND local_date=$2`, req.UserID, yesterdayDate, missedStatus)
 				require.NoError(t, err)
 			}
 			_, err := db.ExecContext(ctx, `DELETE FROM daily_mission_snapshots WHERE user_id=$1 AND local_date=$2`, req.UserID, todayDate)
@@ -460,14 +462,41 @@ func TestSubmitReviewGraceRecoveryProtectsMissedSnapshotPostgreSQL(t *testing.T)
 			require.Equal(t, "completed", todayStatus)
 			require.Equal(t, "protected", yesterdayStatus)
 			require.True(t, protected)
-			if missedStatus == "open" {
-				var target, completed int
-				var timezone string
-				require.NoError(t, db.QueryRowContext(ctx, `SELECT review_target,reviews_completed,timezone FROM daily_mission_snapshots WHERE user_id=$1 AND local_date=$2`, req.UserID, yesterday).Scan(&target, &completed, &timezone))
-				require.Equal(t, 37, target)
-				require.Equal(t, 2, completed)
-				require.Equal(t, "Europe/Berlin", timezone)
+			wantTarget, wantCompleted, wantTimezone := 5, 0, "UTC"
+			if missedStatus != "absent" {
+				wantTarget, wantCompleted, wantTimezone = 37, 2, "Europe/Berlin"
 			}
+			var target, completed int
+			var timezone string
+			require.NoError(t, db.QueryRowContext(ctx, `SELECT review_target,reviews_completed,timezone FROM daily_mission_snapshots WHERE user_id=$1 AND local_date=$2`, req.UserID, yesterday).Scan(&target, &completed, &timezone))
+			require.Equal(t, wantTarget, target, "absent history uses today's established target, not the default or changed live settings; existing history stays immutable")
+			require.Equal(t, wantCompleted, completed)
+			require.Equal(t, wantTimezone, timezone)
+
+			// The learner-visible account export reads this same historical snapshot.
+			payload, err := accounts.NewPostgreSQLRepository(db).ExportPersonalData(ctx, req.UserID)
+			require.NoError(t, err)
+			var exported struct {
+				DailyMissions []struct {
+					LocalDate        string `json:"localDate"`
+					ReviewTarget     int    `json:"reviewTarget"`
+					ReviewsCompleted int    `json:"reviewsCompleted"`
+					Timezone         string `json:"timezone"`
+					Status           string `json:"status"`
+				} `json:"dailyMissions"`
+			}
+			require.NoError(t, json.Unmarshal(payload, &exported))
+			found := false
+			for _, day := range exported.DailyMissions {
+				if day.LocalDate == yesterday.Format("2006-01-02") {
+					found = true
+					require.Equal(t, wantTarget, day.ReviewTarget)
+					require.Equal(t, wantCompleted, day.ReviewsCompleted)
+					require.Equal(t, wantTimezone, day.Timezone)
+					require.Equal(t, missions.StatusProtected, day.Status)
+				}
+			}
+			require.True(t, found, "export includes the grace-protected historical day")
 			require.Equal(t, debitID, snapshotGraceID, "the owner/date-scoped missed snapshot links the exact debit")
 
 			var streak int

@@ -109,13 +109,13 @@ func TestPostgreSQLRepositoryMarkSnapshotMissedSuppliesTimestamps(t *testing.T) 
 
 	mock.ExpectBegin()
 	mock.ExpectExec(missedSnapshotInsertColumnsPattern).
-		WithArgs(sqlmock.AnyArg(), userID, day, "UTC").
+		WithArgs(sqlmock.AnyArg(), userID, day, "UTC", 5).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
 	tx, err := db.Begin()
 	require.NoError(t, err)
-	require.NoError(t, repo.MarkSnapshotMissed(t.Context(), tx, userID, day, "UTC"))
+	require.NoError(t, repo.MarkSnapshotMissed(t.Context(), tx, userID, day, "UTC", 5))
 	require.NoError(t, tx.Commit())
 	require.NoError(t, mock.ExpectationsWereMet())
 }
