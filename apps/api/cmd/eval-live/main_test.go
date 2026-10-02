@@ -144,30 +144,34 @@ func TestRunEvalLive_RendersReportAgainstFakeProvider(t *testing.T) {
 	}
 }
 
-func TestRunEvalLive_ExitsZeroWhenProviderMeetsEveryThreshold(t *testing.T) {
-	// The "exits 0 when no violations" path is exercised
-	// by injecting a provider that returns the right
-	// status for every case. We do this by inspecting
-	// the task and returning the expected status from
-	// the dataset. The cmd's job is to translate "no
-	// violations" to exit 0, regardless of which
-	// provider produced the no-violations outcome.
-	provider := &expectationMatchingProvider{}
-	withFakeProviderPerCall(t, func(cfg aifeedback.OpenCodeConfig) aifeedback.FeedbackProvider {
-		return provider
+func TestRunEvalLive_ExitCodeUsesExplicitAcceptanceState(t *testing.T) {
+	withFakeProvider(t, aifeedback.ProviderFeedback{})
+	for _, tc := range []struct {
+		state string
+		want  int
+	}{
+		{"PASS", exitSuccess}, {"FAIL", exitReleaseBlocking}, {"INCOMPLETE", exitIncomplete}, {"", exitIncomplete},
+	} {
+		t.Run(tc.state, func(t *testing.T) {
+			withFakeRunLiveEvaluation(t, func(context.Context, aifeedback.FeedbackProvider, aifeedback.LiveEvaluationOptions) aifeedback.LiveEvaluationReport {
+				return aifeedback.LiveEvaluationReport{AcceptanceState: tc.state}
+			})
+			var stdout, stderr bytes.Buffer
+			got := runEvalLive([]string{"--base-url", "http://example.invalid", "--api-key", "test-key"}, &stdout, &stderr, time.Now)
+			if got != tc.want {
+				t.Fatalf("state %q: got %d, want %d", tc.state, got, tc.want)
+			}
+		})
+	}
+}
+
+// Command wiring tests do not assert provider quality. An incomplete report is
+// the expected result when acceptance evidence has not been supplied.
+func withIncompleteEvaluation(t *testing.T) {
+	t.Helper()
+	withFakeRunLiveEvaluation(t, func(context.Context, aifeedback.FeedbackProvider, aifeedback.LiveEvaluationOptions) aifeedback.LiveEvaluationReport {
+		return aifeedback.LiveEvaluationReport{AcceptanceState: "INCOMPLETE"}
 	})
-	stdout := &bytes.Buffer{}
-	stderr := &bytes.Buffer{}
-	code := runEvalLive([]string{
-		"--base-url", "http://example.invalid",
-		"--api-key", "test-key",
-	}, stdout, stderr, time.Now)
-	if code != exitSuccess {
-		t.Fatalf("expectation-matching provider should pass; got %d stderr=%s\nstdout=%s", code, stderr.String(), stdout.String())
-	}
-	if !strings.Contains(stdout.String(), "Result: PASS") {
-		t.Fatalf("expected Result: PASS; got: %s", stdout.String())
-	}
 }
 
 // violatingProvider is a provider whose every output is
@@ -233,6 +237,7 @@ func TestRunEvalLive_CostCeilingExceededIsReleaseBlocking(t *testing.T) {
 }
 
 func TestRunEvalLive_WritesOutputFile(t *testing.T) {
+	withIncompleteEvaluation(t)
 	provider := &expectationMatchingProvider{}
 	withFakeProviderPerCall(t, func(cfg aifeedback.OpenCodeConfig) aifeedback.FeedbackProvider {
 		return provider
@@ -246,8 +251,8 @@ func TestRunEvalLive_WritesOutputFile(t *testing.T) {
 		"--api-key", "test-key",
 		"--output", out,
 	}, stdout, stderr, time.Now)
-	if code != exitSuccess {
-		t.Fatalf("expected exitSuccess; got %d stderr=%s", code, stderr.String())
+	if code != exitIncomplete {
+		t.Fatalf("expected exitIncomplete; got %d stderr=%s", code, stderr.String())
 	}
 	// Read the file back and assert it is the same
 	// report that was on stdout. (Reading a different
@@ -285,6 +290,7 @@ func TestRunEvalLive_OutputFileUnwritableReturnsUsageError(t *testing.T) {
 }
 
 func TestRunEvalLive_BuildsProviderWithSuppliedConfig(t *testing.T) {
+	withIncompleteEvaluation(t)
 	// The cmd's newProvider seam receives the
 	// OpenCodeConfig built from the supplied flags/env.
 	// Assert the config flows through unchanged so a
@@ -305,8 +311,8 @@ func TestRunEvalLive_BuildsProviderWithSuppliedConfig(t *testing.T) {
 		"--model", "opencode-go/deepseek-v4-pro",
 		"--timeout", "12s",
 	}, stdout, stderr, time.Now)
-	if code != exitSuccess {
-		t.Fatalf("expected exitSuccess; got %d stderr=%s", code, stderr.String())
+	if code != exitIncomplete {
+		t.Fatalf("expected exitIncomplete; got %d stderr=%s", code, stderr.String())
 	}
 	if captured.BaseURL != "http://staging.example" {
 		t.Errorf("BaseURL: got %q", captured.BaseURL)
@@ -326,6 +332,7 @@ func TestRunEvalLive_BuildsProviderWithSuppliedConfig(t *testing.T) {
 }
 
 func TestRunEvalLive_RespectsEnvDefaults(t *testing.T) {
+	withIncompleteEvaluation(t)
 	// The flags' defaults should pull from env vars
 	// when those are set. Assert that the env
 	// resolution does NOT short-circuit the
@@ -345,8 +352,8 @@ func TestRunEvalLive_RespectsEnvDefaults(t *testing.T) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	code := runEvalLive(nil, stdout, stderr, time.Now)
-	if code != exitSuccess {
-		t.Fatalf("expected exitSuccess from env-defaults path; got %d stderr=%s", code, stderr.String())
+	if code != exitIncomplete {
+		t.Fatalf("expected exitIncomplete from env-defaults path; got %d stderr=%s", code, stderr.String())
 	}
 	if captured.BaseURL != "http://from-env" {
 		t.Errorf("BaseURL from env: got %q", captured.BaseURL)
@@ -389,6 +396,7 @@ func TestRunEvalLive_DoesNotLogAPIKey(t *testing.T) {
 }
 
 func TestRunEvalLive_ProviderSelectionRoutesToExpectedConstructor(t *testing.T) {
+	withIncompleteEvaluation(t)
 	var (
 		openCodeCalls int
 		geminiCalls   int
@@ -409,8 +417,8 @@ func TestRunEvalLive_ProviderSelectionRoutesToExpectedConstructor(t *testing.T) 
 		"--provider", "gemini",
 		"--api-key", "test-key",
 	}, stdout, stderr, time.Now)
-	if code != exitSuccess {
-		t.Fatalf("gemini provider path should complete successfully; got %d stderr=%s", code, stderr.String())
+	if code != exitIncomplete {
+		t.Fatalf("gemini provider path should complete with incomplete evidence; got %d stderr=%s", code, stderr.String())
 	}
 	if geminiCalls != 1 || openCodeCalls != 0 {
 		t.Fatalf("expected gemini constructor only for --provider gemini; got gemini=%d opencode=%d", geminiCalls, openCodeCalls)
@@ -422,8 +430,8 @@ func TestRunEvalLive_ProviderSelectionRoutesToExpectedConstructor(t *testing.T) 
 	code = runEvalLive([]string{
 		"--api-key", "test-key",
 	}, stdout, stderr, time.Now)
-	if code != exitSuccess {
-		t.Fatalf("gemini env provider path should complete successfully; got %d stderr=%s", code, stderr.String())
+	if code != exitIncomplete {
+		t.Fatalf("gemini env provider path should complete with incomplete evidence; got %d stderr=%s", code, stderr.String())
 	}
 	if geminiCalls != 2 || openCodeCalls != 0 {
 		t.Fatalf("expected gemini constructor for AI_PROVIDER=gemini; got gemini=%d opencode=%d", geminiCalls, openCodeCalls)
@@ -436,8 +444,8 @@ func TestRunEvalLive_ProviderSelectionRoutesToExpectedConstructor(t *testing.T) 
 		"--base-url", "http://example.invalid",
 		"--api-key", "test-key",
 	}, stdout, stderr, time.Now)
-	if code != exitSuccess {
-		t.Fatalf("default provider path should complete successfully; got %d stderr=%s", code, stderr.String())
+	if code != exitIncomplete {
+		t.Fatalf("default provider path should complete with incomplete evidence; got %d stderr=%s", code, stderr.String())
 	}
 	if geminiCalls != 2 || openCodeCalls != 1 {
 		t.Fatalf("expected openCode constructor for default provider; got gemini=%d opencode=%d", geminiCalls, openCodeCalls)
@@ -464,6 +472,7 @@ func TestRunEvalLive_GeminiDoesNotRequireBaseURL(t *testing.T) {
 }
 
 func TestRunEvalLive_CloudflareProviderSelectionAndValidation(t *testing.T) {
+	withIncompleteEvaluation(t)
 	var (
 		openCodeCalls   int
 		geminiCalls     int
@@ -490,8 +499,8 @@ func TestRunEvalLive_CloudflareProviderSelectionAndValidation(t *testing.T) {
 		"--api-key", "test-key",
 		"--account-id", "account-123",
 	}, stdout, stderr, time.Now)
-	if code != exitSuccess {
-		t.Fatalf("cloudflare provider path should complete successfully; got %d stderr=%s", code, stderr.String())
+	if code != exitIncomplete {
+		t.Fatalf("cloudflare provider path should complete with incomplete evidence; got %d stderr=%s", code, stderr.String())
 	}
 	if cloudflareCalls != 1 || geminiCalls != 0 || openCodeCalls != 0 {
 		t.Fatalf("expected cloudflare constructor only; got cloudflare=%d gemini=%d opencode=%d", cloudflareCalls, geminiCalls, openCodeCalls)
@@ -516,8 +525,8 @@ func TestRunEvalLive_CloudflareProviderSelectionAndValidation(t *testing.T) {
 	t.Setenv("AI_PROVIDER_API_KEY", "env-key")
 	t.Setenv("AI_PROVIDER_ACCOUNT_ID", "env-account")
 	code = runEvalLive(nil, stdout, stderr, time.Now)
-	if code != exitSuccess {
-		t.Fatalf("cloudflare env provider path should complete successfully; got %d stderr=%s", code, stderr.String())
+	if code != exitIncomplete {
+		t.Fatalf("cloudflare env provider path should complete with incomplete evidence; got %d stderr=%s", code, stderr.String())
 	}
 	if cloudflareCalls != 2 || geminiCalls != 0 || openCodeCalls != 0 {
 		t.Fatalf("expected cloudflare constructor for AI_PROVIDER=cloudflare; got cloudflare=%d gemini=%d opencode=%d", cloudflareCalls, geminiCalls, openCodeCalls)
@@ -562,8 +571,8 @@ func TestRunEvalLive_RequestIntervalWrapsProviderWhenPositive(t *testing.T) {
 		"--api-key", "test-key",
 		"--request-interval", "1ms",
 	}, stdout, stderr, time.Now)
-	if code != exitSuccess {
-		t.Fatalf("expected exitSuccess; got %d stderr=%s", code, stderr.String())
+	if code != exitIncomplete {
+		t.Fatalf("expected exitIncomplete; got %d stderr=%s", code, stderr.String())
 	}
 	if capturedConfig.BaseURL != "http://example.invalid" {
 		t.Fatalf("expected openCode constructor to be used with same config; got baseURL=%q", capturedConfig.BaseURL)
@@ -586,8 +595,8 @@ func TestRunEvalLive_RequestIntervalEnvDefaultWrapsProvider(t *testing.T) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	code := runEvalLive(nil, stdout, stderr, time.Now)
-	if code != exitSuccess {
-		t.Fatalf("request interval env default path should complete successfully; got %d stderr=%s", code, stderr.String())
+	if code != exitIncomplete {
+		t.Fatalf("request interval env default path should complete with incomplete evidence; got %d stderr=%s", code, stderr.String())
 	}
 	if _, ok := capturedProvider.(*pacedFeedbackProvider); !ok {
 		t.Fatalf("expected env default request interval to wrap provider, got %T", capturedProvider)
@@ -610,8 +619,8 @@ func TestRunEvalLive_DefaultRequestIntervalDoesNotWrapProvider(t *testing.T) {
 		"--base-url", "http://example.invalid",
 		"--api-key", "test-key",
 	}, stdout, stderr, time.Now)
-	if code != exitSuccess {
-		t.Fatalf("default request interval path should complete successfully; got %d stderr=%s", code, stderr.String())
+	if code != exitIncomplete {
+		t.Fatalf("default request interval path should complete with incomplete evidence; got %d stderr=%s", code, stderr.String())
 	}
 	if _, ok := capturedProvider.(*pacedFeedbackProvider); ok {
 		t.Fatalf("expected default request interval to leave provider unwrapped, got %T", capturedProvider)
@@ -649,56 +658,16 @@ func TestPacedFeedbackProvider_RespectsContextCancellation(t *testing.T) {
 	}
 }
 
-func TestRunEvalLive_FlagsAfterArgumentsIgnored(t *testing.T) {
-	// flag.NewFlagSet stops parsing at the first
-	// non-flag argument, so a stray positional arg
-	// would be silently dropped. This is a regression
-	// guard for the documented "all args are flags"
-	// behavior.
-	provider := &expectationMatchingProvider{}
-	withFakeProviderPerCall(t, func(cfg aifeedback.OpenCodeConfig) aifeedback.FeedbackProvider {
-		return provider
-	})
-	stdout := &bytes.Buffer{}
-	stderr := &bytes.Buffer{}
-	code := runEvalLive([]string{
-		"--base-url", "http://example.invalid",
-		"--api-key", "test-key",
-		"unexpected-positional",
-	}, stdout, stderr, time.Now)
-	if code != exitSuccess {
-		t.Fatalf("expected exitSuccess (the positional is silently dropped by flag); got %d stderr=%s", code, stderr.String())
+func TestRunEvalLive_RejectsFlagsAfterPositionalArguments(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	code := runEvalLive([]string{"--base-url", "http://example.invalid", "--api-key", "test-key", "unexpected-positional", "--cost", "100"}, &stdout, &stderr, time.Now)
+	if code != exitUsageError {
+		t.Fatalf("positional argument must not silently discard settings: got %d", code)
 	}
 }
 
-// expectationMatchingProvider is a provider that returns
-// the dataset's ExpectedStatus for every case. It looks up
-// the case in the dataset by matching the task's
-// UserPayload's (target_word, learner_sentence) pair. This
-// is the only way to make the cmd's "exit 0 on no
-// violations" path testable: the dataset is internal to
-// the library and the cmd does not expose a per-case
-// override, so the provider must match the dataset on its
-// own.
-//
-// The matching is case-insensitive: the eval pipeline
-// normalizes the sentence (lowercasing the first character
-// among other transformations) before passing it to the
-// provider, but the dataset's Sentence field retains the
-// original capitalization ("I work every day." in the
-// dataset vs "i work every day." in the task's
-// UserPayload). A case-sensitive compare would miss every
-// case and fall back to "correct", defeating the test's
-// purpose.
-//
-// The provider is intentionally limited to the cmd's
-// test file (not the library) because it depends on the
-// library's GoldenSet() shape; a library refactor that
-// renames or removes cases would surface as a test
-// failure here (cases that no longer match a dataset
-// entry default to "correct", which mismatches the
-// expected status, so the run fails the gate, which is the
-// right loud failure mode).
+// expectationMatchingProvider returns only matching labels. It intentionally
+// supplies no valid structured/human/service evidence and cannot establish PASS.
 type expectationMatchingProvider struct{}
 
 func (expectationMatchingProvider) GenerateFeedback(ctx context.Context, task aifeedback.ProviderTask) (*aifeedback.ProviderFeedback, error) {

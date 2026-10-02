@@ -177,11 +177,11 @@ func TestSummarizeLatenciesMultipleValues(t *testing.T) {
 	if s.mean != expectedMean {
 		t.Fatalf("mean: got %s want %s", s.mean, expectedMean)
 	}
-	// Nearest-rank p50 on 20 sorted values: rank = (50*(20-1))/100 = 9 (0-indexed) -> 10 ms.
+	// Nearest-rank p50: ceil(50*20/100) = 10 (one-based).
 	if s.p50 != 10*time.Millisecond {
 		t.Fatalf("p50: got %s want 10ms", s.p50)
 	}
-	// Nearest-rank p95 on 20 sorted values: rank = (95*(20-1))/100 = 18 (0-indexed) -> 19 ms.
+	// Nearest-rank p95: ceil(95*20/100) = 19 (one-based).
 	if s.p95 != 19*time.Millisecond {
 		t.Fatalf("p95: got %s want 19ms", s.p95)
 	}

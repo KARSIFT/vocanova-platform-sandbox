@@ -1,7 +1,7 @@
 # Vocanova current product state
 
 Reviewed on 2026-10-02 against repository baseline
-`5b16186c6471cbbc1c935a703bb5a8a33bf28797`. This is a dated inventory and readiness
+`43e58080718f746f1d0052c528c4ea00d345ea60`. This is a dated inventory and readiness
 guide. Update it when behavior, deployment, or verified evidence changes; it does
 not establish that the final product is complete.
 
@@ -52,11 +52,16 @@ curriculum coverage. Generated feedback is distinct from canonical vocabulary.
 
 ## Live deployment observation
 
-The 2026-10-02 operational audit observed staging and production serving version
-`0.3.1`, commit `5b16186c6471cbbc1c935a703bb5a8a33bf28797`. All eight inspected
-containers were healthy and the API reported database health `ok`. This proves
-the observed availability and release identity, not authenticated learner
-acceptance.
+Public checks on 2026-10-02 at 00:28 UTC observed staging web and API serving
+version `0.3.1`, commit `43e58080718f746f1d0052c528c4ea00d345ea60`, after
+[PR #1470](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1470).
+Production remained at `5b16186c6471cbbc1c935a703bb5a8a33bf28797`, version
+`0.3.1`. Both APIs reported database health `ok` and correct environment labels.
+The [staging deployment](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36945712699)
+passed release identity, OAuth initiation and the reserved synthetic learner
+journey. These establish availability and the tested synthetic flow; they do
+not establish real account acceptance, live feedback quality or recoverable
+backups. No production release was performed for this milestone.
 
 Both environments reported Google OAuth and AI enabled. Magic-link email,
 password authentication, and public new-user signup were disabled. Access is
@@ -90,6 +95,12 @@ Browser fixtures establish interface behavior with synthetic data. Disposable
 database tests establish integration under test conditions. Neither proves live
 email deliverability, Google account behavior, learner retention, or feedback
 quality. Health checks and deployments also do not establish those claims.
+
+The feedback evaluator is being reconciled with the documented acceptance
+rubric. See the [evaluation guide](../engineering/feedback-evaluation.md) and
+[fixture migration](../engineering/feedback-evaluation-fixtures.md) for the
+meaning-aware cases, recorded evidence and checks that remain unmeasured.
+An adapter-only run cannot establish full feedback acceptance.
 
 Voice/pronunciation, reminders, monetization, and native applications need
 separate product decisions. Deliver the learning loop reliably and prioritize

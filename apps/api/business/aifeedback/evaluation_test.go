@@ -11,10 +11,18 @@ func TestInitialDatasetHasAtLeastTwoHundredCases(t *testing.T) {
 	assert.GreaterOrEqual(t, len(cases), 200, "initial dataset must contain at least 200 synthetic cases")
 }
 
-func TestGoldenSetHasApproximatelyFiftyCases(t *testing.T) {
+func TestGoldenSetExpandsCoverageWithoutLosingOriginalCases(t *testing.T) {
 	cases := GoldenSet()
-	assert.GreaterOrEqual(t, len(cases), 40, "golden set should contain around 50 cases")
-	assert.LessOrEqual(t, len(cases), 60, "golden set should contain around 50 cases")
+	assert.GreaterOrEqual(t, len(cases), 56, "retain previous golden cases while adding missing dimensions")
+	for _, category := range requiredEvaluationCategories {
+		found := false
+		for _, c := range cases {
+			if c.Category == category {
+				found = true
+			}
+		}
+		assert.True(t, found, "golden category %s must be represented", category)
+	}
 }
 
 func TestInitialDatasetCoversAllRequiredCategories(t *testing.T) {
@@ -74,6 +82,7 @@ func TestEvaluationResultContainsOnlyAllowedStatuses(t *testing.T) {
 		LearningStatusIncorrect,
 		"validation_failed",
 		"provider_error",
+		"invalid_output",
 	}
 	for _, c := range result.MismatchedCases {
 		assert.NotEmpty(t, c.Case.ID)
