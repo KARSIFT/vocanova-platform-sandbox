@@ -1,7 +1,7 @@
 # Vocanova current product state
 
 Reviewed on 2026-10-02 against repository baseline
-`18f34a56e85e823b253b3809fe3c540c05534305` plus the synthetic recovery tooling in
+`56bbff54a7ac5872a996af9d6b5c29f94e0ffe5f` plus the backup-discovery tooling in
 this revision. This is a dated inventory and readiness
 guide. Update it when behavior, deployment, or verified evidence changes; it does
 not establish that the final product is complete.
@@ -57,12 +57,12 @@ distinct from canonical vocabulary.
 
 ## Live deployment observation
 
-Public checks on 2026-10-02 at 02:01 UTC observed staging web and API serving
-version `0.3.1`, commit `18f34a56e85e823b253b3809fe3c540c05534305`, after
-[PR #1472](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1472).
+Public checks on 2026-10-02 at approximately 03:24 UTC observed staging web and API
+serving version `0.3.1`, commit `56bbff54a7ac5872a996af9d6b5c29f94e0ffe5f`, after
+[PR #1473](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1473).
 Production remained at `5b16186c6471cbbc1c935a703bb5a8a33bf28797`, version
 `0.3.1`. Both APIs reported database health `ok` and correct environment labels.
-The [staging deployment](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36953460367)
+The [staging deployment](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36959705987)
 passed release identity, OAuth initiation and the reserved synthetic learner
 journey. These establish availability and the tested synthetic flow; they do
 not establish real account acceptance, live feedback quality or recoverable

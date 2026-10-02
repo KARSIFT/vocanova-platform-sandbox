@@ -27,6 +27,7 @@ MERGE_GROUP_GUARD = "${{ github.event_name != 'merge_group' }}"
 NON_REQUIRED = {
     "accessibility.yml",
     "auto-merge.yml",
+    "backup-discovery.yml",
     "claude-code-review.yml",
     "claude-review.yml",
     "ci-base-image.yml",
@@ -280,6 +281,35 @@ class WorkflowContractTest(unittest.TestCase):
     def test_staging_deploys_on_push_to_main(self) -> None:
         push = triggers(WORKFLOWS["deploy-staging.yml"]).get("push") or {}
         self.assertEqual(push.get("branches"), ["main"])
+
+    def test_backup_discovery_is_manual_main_only_and_metadata_scoped(self) -> None:
+        workflow = WORKFLOWS["backup-discovery.yml"]
+        self.assertEqual(triggers(workflow), {"workflow_dispatch": None})
+        self.assertEqual(workflow["permissions"], {"contents": "read"})
+        self.assertFalse(workflow["concurrency"]["cancel-in-progress"])
+        jobs = real_jobs(workflow)
+        self.assertEqual(set(jobs), {"discover"})
+        job = jobs["discover"]
+        self.assertIn("github.ref == 'refs/heads/main'", job["if"])
+        self.assertIn("github.event_name == 'workflow_dispatch'", job["if"])
+        self.assertIn("github.repository == 'KARSIFT/vocanova-platform-sandbox'", job["if"])
+        self.assertEqual(job["environment"], "production")
+        checkout, collect, retain = job["steps"]
+        self.assertEqual(checkout["with"]["ref"], "${{ github.sha }}")
+        self.assertFalse(checkout["with"]["persist-credentials"])
+        self.assertEqual(set(collect["env"]), {
+            "BACKUP_SSH_HOST", "BACKUP_SSH_USER", "BACKUP_SSH_PRIVATE_KEY", "BACKUP_SSH_KNOWN_HOSTS",
+        })
+        for target, source in {
+            "BACKUP_SSH_HOST": "PRODUCTION_SSH_HOST",
+            "BACKUP_SSH_USER": "PRODUCTION_SSH_USER",
+            "BACKUP_SSH_PRIVATE_KEY": "PRODUCTION_SSH_PRIVATE_KEY",
+            "BACKUP_SSH_KNOWN_HOSTS": "PRODUCTION_SSH_KNOWN_HOSTS",
+        }.items():
+            self.assertEqual(collect["env"][target], "${{ secrets." + source + " }}")
+        self.assertEqual(collect["run"], 'python3 infra/scripts/collect_backup_discovery.py --report-dir "$RUNNER_TEMP/backup-discovery"')
+        self.assertEqual(retain["with"]["path"], "${{ runner.temp }}/backup-discovery/report.json")
+        self.assertEqual(retain["with"]["retention-days"], 7)
 
     def test_merge_group_workflows_never_cancel_a_queue_run(self) -> None:
         for name, wf in WORKFLOWS.items():

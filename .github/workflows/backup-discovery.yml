@@ -1,0 +1,44 @@
+name: backup-discovery
+
+# Read-only leads, never a production backup/restore readiness check.
+# Credentials are available only to an explicit run of reviewed main.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-backup-discovery
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    name: collect backup scheduling leads
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository == 'KARSIFT/vocanova-platform-sandbox' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: production
+    steps:
+      - name: Check out reviewed revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Read bounded scheduling metadata
+        env:
+          BACKUP_SSH_HOST: ${{ secrets.PRODUCTION_SSH_HOST }}
+          BACKUP_SSH_USER: ${{ secrets.PRODUCTION_SSH_USER }}
+          BACKUP_SSH_PRIVATE_KEY: ${{ secrets.PRODUCTION_SSH_PRIVATE_KEY }}
+          BACKUP_SSH_KNOWN_HOSTS: ${{ secrets.PRODUCTION_SSH_KNOWN_HOSTS }}
+        run: python3 infra/scripts/collect_backup_discovery.py --report-dir "$RUNNER_TEMP/backup-discovery"
+
+      - name: Retain validated metadata only
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: backup-discovery-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/backup-discovery/report.json
+          if-no-files-found: ignore
+          retention-days: 7

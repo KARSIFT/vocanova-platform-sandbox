@@ -236,7 +236,7 @@ passed the release, health, OAuth-initiation and reserved synthetic journey chec
 Public web/API identities matched at 02:01 UTC; production remained at `5b16186c`.
 Synthetic evidence does not establish live provider quality or observed learner value.
 
-## Synthetic recovery tooling — current slice
+## Synthetic recovery tooling — PR #1473
 
 The [recovery rehearsal](../operations/postgres-recovery-rehearsal.md) creates
 fresh isolated local PostgreSQL 16 databases, applies the actual migrations and
@@ -289,9 +289,40 @@ checks. A real negative case replaces the feedback guard with `CHECK (true)`;
 the historical checker incorrectly accepted it. The final suite comprises 24
 offline contracts and eight real database cases, including these regressions.
 
+The final local eight-case suite passed in 57.697 seconds. Recovery
+[CI 36958781566](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36958781566)
+passed all eight cases on a clean checkout with the same tree as reviewed head
+`36ef9f6f`. Independent and automated reviews had no remaining actionable
+findings. [PR #1473](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1473)
+merged as `56bbff54a7ac5872a996af9d6b5c29f94e0ffe5f` after required checks passed.
+[Staging deployment 36959705987](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36959705987)
+passed identity, health, OAuth initiation and the reserved learner journey.
+Public checks at approximately 03:24 UTC matched the merged revision; production
+remained at `5b16186c`.
+
 No production data, credentials, existing container or provider is used. This
 does not establish production backup schedule, retention, separate storage,
 point-in-time recovery, application acceptance after restoration or alert receipt.
+
+## Backup discovery — current slice
+
+The [read-only discovery workflow](../operations/backup-discovery.md) gathers
+bounded system timer metadata and fixed tool-presence observations through the
+existing production SSH boundary. It accepts no remote command, path or branch
+input and uses strict supplied host-key verification. Sanitized reports preserve
+unknown production association, artifacts, storage, restore and alert claims.
+Offline checks and actual dispatch evidence must be recorded separately; a
+successful collection cannot establish backup or public-launch readiness.
+
+Local validation passed all 44 focused collector/transport tests, including
+actual SIGINT/SIGTERM tests against synthetic local child processes. Full
+workspace validation passed 246 foundation, 32 API-client and 94 web helper
+tests, Go checks and both builds before the final cancellation/freshness
+follow-ups; the final focused wrapper and all 22 workflow contracts passed
+afterward. Independent static review found no remaining actionable issues.
+The browser matrix and optional Go database environment were not rerun because
+application behavior is unchanged. Live access and backup observations remain
+unverified until a reviewed manual dispatch completes.
 
 ## Deliver work in bounded slices
 
