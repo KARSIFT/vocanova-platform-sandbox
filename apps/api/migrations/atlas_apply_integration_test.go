@@ -262,23 +262,21 @@ func removeContainer(t *testing.T, containerName string) {
 	}
 }
 
-// waitForPostgresReady polls `docker exec <container>
-// pg_isready -U vocanova -d vocanova` until it reports ready or
-// the timeout elapses. The function deliberately does not use
-// `docker run` with a wait-for-port command, because the
-// official postgres image does not include a wait helper
-// directly accessible from outside; `pg_isready` is the
-// canonical "is the database accepting connections" probe.
-// Polling rather than busy-waiting keeps the test well-behaved
-// on a developer's terminal (no 100% CPU while Postgres
-// initializes).
+// waitForPostgresReady polls a real SQL query over TCP until the requested
+// database is ready or the timeout elapses. The initialization server exposes
+// only a Unix socket, so it cannot satisfy this check prematurely. Polling
+// leaves time for the container to initialize without busy-waiting.
 func waitForPostgresReady(t *testing.T, containerName string, timeout time.Duration) {
 	t.Helper()
 	deadline := time.Now().Add(timeout)
 	var lastErr error
 	var lastOut []byte
 	for time.Now().Before(deadline) {
-		cmd := exec.Command("docker", "exec", containerName, "pg_isready", "-U", "vocanova", "-d", "vocanova")
+		// The image's temporary initialization server accepts Unix-socket
+		// connections before the requested database exists, then shuts down.
+		// Require a real query over TCP, which the final server exposes only
+		// after initialization finishes.
+		cmd := exec.Command("docker", "exec", containerName, "psql", "-X", "-h", "127.0.0.1", "-U", "vocanova", "-d", "vocanova", "-v", "ON_ERROR_STOP=1", "-c", "SELECT 1")
 		out, err := cmd.CombinedOutput()
 		if err == nil {
 			return
@@ -287,7 +285,7 @@ func waitForPostgresReady(t *testing.T, containerName string, timeout time.Durat
 		lastOut = out
 		time.Sleep(applyProofTestPollInterval)
 	}
-	t.Fatalf("postgres container %s did not become ready within %s; last error: %v\nlast pg_isready output:\n%s", containerName, timeout, lastErr, lastOut)
+	t.Fatalf("postgres container %s did not become ready within %s; last error: %v\nlast readiness query output:\n%s", containerName, timeout, lastErr, lastOut)
 }
 
 // applyAtlasMigrate runs `atlas migrate apply` from the

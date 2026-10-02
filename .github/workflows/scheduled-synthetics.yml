@@ -138,6 +138,12 @@ jobs:
       ${{ github.event_name != 'workflow_dispatch' || inputs.synthetic_id == '' ||
           inputs.synthetic_id == 'synthetic.staging.authenticated-core-journey' }}
     runs-on: ubuntu-latest
+    # Share the deploy job's lock across preparation, session mint and browser
+    # execution so neither run replaces the other's reserved synthetic account.
+    concurrency:
+      group: staging-synthetic-account
+      cancel-in-progress: false
+      queue: max
     # Matches deploy-staging.yml's proven post-deploy core-loop gate budget
     # (VOC-090-D02). Registry timeout_seconds tracks this wall clock.
     timeout-minutes: 40
@@ -147,10 +153,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      # The browser journey mutates only the reserved synthetic account. Re-run
-      # the same idempotent repository seed used by deploy-staging so at least
-      # one previously saved word is due on repeated hourly runs. This avoids
-      # depending on wall-clock review scheduling or touching a real user.
+      # Prepare directly so the wrapper validates the existing identity and
+      # history before changing anything; do not run the legacy seed first.
+      # The installed wrapper is mandatory: a missing/stale deployment must
+      # fail this check before a session is minted.
       - name: Refresh reserved staging synthetic review state
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
         with:
@@ -164,7 +170,7 @@ jobs:
             set -a
             . /opt/vocanova/infra/secrets/api.env
             set +a
-            sh /opt/vocanova/apps/api/scripts/seed-synthetic-smoke-user.sh
+            sh /opt/vocanova/apps/api/scripts/prepare-synthetic-staging-journey.sh
 
       - name: Mint synthetic smoke-test session for staging core-loop
         id: mint_staging_session

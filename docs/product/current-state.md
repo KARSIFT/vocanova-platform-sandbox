@@ -1,7 +1,7 @@
 # Vocanova current product state
 
 Reviewed on 2026-10-02 against repository baseline
-`65c34b04756c99b522eedf83c3ded5499fa0eb35` plus the context-lookup follow-up
+`f53c30211045ea6d15a6114250cd6b250d0e0732` plus the staging-fixture follow-up
 in this working revision. This is a dated inventory and readiness
 guide. Update it when behavior, deployment, or verified evidence changes; it does
 not establish that the final product is complete.
@@ -82,9 +82,15 @@ call the evaluator. The exact helper is also exercised locally. Its first
 passed identity/health/OAuth checks but failed an ambiguous example-text lookup
 on the sounds-good page after completing the three examples. That is not a full
 journey pass. The follow-up checks one visible example within the main landmark,
-with local controls for hidden and visibly duplicated markup. A later deployed
-run must pass the entire journey; no real-account, physical-device, screen-reader
-speech or learning-effectiveness claim follows from it. See
+with local controls for hidden and visibly duplicated markup.
+[PR #1480](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1480) shipped
+that correction, and [staging36977504685](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36977504685)
+passed the complete context phase. The existing review phase then failed because
+the persistent synthetic account had completed its daily target. The full journey
+has not passed on this revision. The fixture follow-up prepares a fresh guarded
+staging account while preserving retired history and normal learner behavior.
+No real-account, physical-device, screen-reader speech or learning-effectiveness
+claim follows from synthetic checks. See
 [curriculum guidance](daily-conversation-curriculum.md#optional-context-practice).
 
 Sentence practice protects pending drafts and retry identities from older

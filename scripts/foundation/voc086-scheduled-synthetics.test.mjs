@@ -154,13 +154,14 @@ test("VOC-086-TEST-12: synthetic checks reuse mint secrets and mask sessions", (
     "staging-authenticated-core-journey",
   );
   assert.match(stagingJob, /Refresh reserved staging synthetic review state/);
-  assert.match(stagingJob, /seed-synthetic-smoke-user\.sh/);
+  assert.match(stagingJob, /prepare-synthetic-staging-journey\.sh/);
+  assert.doesNotMatch(stagingJob, /seed-synthetic-smoke-user\.sh/);
   assert.match(stagingJob, /cd \/opt\/vocanova\/infra/);
   assert.match(stagingJob, /STAGING_SSH_PRIVATE_KEY/);
   assert.ok(
-    stagingJob.indexOf("seed-synthetic-smoke-user.sh") <
+    stagingJob.indexOf("prepare-synthetic-staging-journey.sh") <
       stagingJob.indexOf("Mint synthetic smoke-test session"),
-    "the reserved synthetic account must be refreshed before its session is minted",
+    "the guarded staging fixture must be prepared before its session is minted",
   );
 
   assert.match(

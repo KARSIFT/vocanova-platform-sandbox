@@ -454,6 +454,32 @@ where a modified click did not produce the expected new-page event.
 The three shared-journey checks also passed three consecutive repetitions per
 layout (27 checks, no retries).
 
+## Staging daily-target fixture follow-up — working revision
+
+[PR #1480](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1480) merged
+as `f53c3021` after current-head CI, inspected code/security reviews and queue
+checks passed. Its [staging run36977504685](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36977504685)
+passed release identity, health, OAuth initiation and the entire context phase.
+It then failed the existing review phase at the required minimum of one card.
+The synthetic failure snapshot explicitly showed today's target was complete.
+This establishes the context correction, not a complete staging acceptance pass.
+
+The existing seed restored a due word but retained the account's completed daily
+mission. The working correction prepares a fresh, guarded staging fixture while
+retaining retired synthetic identities and their complete history. Shared job
+concurrency protects preparation through browser completion. Default production
+seeding, learner daily targets and the minimum-one-card gate remain intact.
+See [the operator guidance](../operations/monitoring.md#scheduled-synthetics).
+
+Disposable PostgreSQL integration passed: an old completed mission, its rewards
+and learning history survived retirement; the fresh account completed a real
+review the same day. Refusal, forced-failure rollback, session revocation,
+repeated preparation and normal-seed idempotency controls passed. Atlas applied
+the migration set to an empty database and confirmed a second apply was a no-op.
+All 37 focused workflow contracts and the normal migration suite passed.
+The full hosted staging journey remains pending; no production promotion
+follows from this working revision.
+
 ## Deliver work in bounded slices
 
 Each slice should identify the learner problem, state the intended behavior, change the smallest relevant surface, include meaningful regression coverage and document remaining limits. Use parallel agents for independent areas and independent review; coordinate shared files, builds and servers. Follow [repository instructions](../../AGENTS.md) for draft PRs, CI, merging and deployment.

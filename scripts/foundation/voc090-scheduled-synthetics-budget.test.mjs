@@ -144,19 +144,20 @@ test("VOC-090-TEST-04: job timeout covers Playwright journey timeout plus setup 
   );
 });
 
-test("VOC-090-TEST-05: core-loop synthetic wiring unchanged", () => {
+test("VOC-090-TEST-05: core-loop keeps its budget and prepares before session mint", () => {
   const workflowSource = loadWorkflowSource();
   const jobBlock = loadStagingCoreJourneyJobBlock();
   const coreLoopSpec = readFileSync(coreLoopSpecPath, "utf8");
 
   assert.match(jobBlock, /Refresh reserved staging synthetic review state/);
-  assert.match(jobBlock, /seed-synthetic-smoke-user\.sh/);
+  assert.match(jobBlock, /prepare-synthetic-staging-journey\.sh/);
+  assert.doesNotMatch(jobBlock, /seed-synthetic-smoke-user\.sh/);
   assert.match(jobBlock, /mint-synthetic-session\.sh/);
   assert.match(jobBlock, /playwright\.staging\.config\.ts/);
   assert.ok(
-    jobBlock.indexOf("seed-synthetic-smoke-user.sh") <
+    jobBlock.indexOf("prepare-synthetic-staging-journey.sh") <
       jobBlock.indexOf("Mint synthetic smoke-test session"),
-    "SSH seed must precede session mint",
+    "guarded staging preparation must precede session mint",
   );
   assert.match(coreLoopSpec, /const MAX_REVIEW_CARDS = 8;/);
   assert.doesNotMatch(jobBlock, /retries:\s*[1-9]/);
