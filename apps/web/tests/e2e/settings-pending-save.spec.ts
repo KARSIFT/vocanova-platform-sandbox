@@ -34,10 +34,11 @@ for (const theme of ["light", "dark"] as const) {
     await page.goto("/settings");
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     const name = page.getByRole("textbox", { name: "Display name" });
-    const reminders = page.getByRole("switch", {
-      name: /^Daily review reminder/,
+    const productEmails = page.getByRole("switch", {
+      name: "Product news and tips",
+      exact: true,
     });
-    await expect(reminders).toHaveAttribute("aria-checked", "true");
+    await expect(productEmails).toHaveAttribute("aria-checked", "false");
     await name.fill("Earlier name");
     await page.getByRole("button", { name: "Save settings" }).click();
     await expect.poll(() => requests.length).toBe(1);
@@ -50,7 +51,7 @@ for (const theme of ["light", "dark"] as const) {
       await expect(
         page.getByRole("radio", { name: "10", exact: true }),
       ).toBeChecked();
-      await reminders.click();
+      await productEmails.click();
     } finally {
       releaseFirstSave?.();
     }
@@ -62,7 +63,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(
       page.getByRole("radio", { name: "10", exact: true }),
     ).toBeChecked();
-    await expect(reminders).toHaveAttribute("aria-checked", "false");
+    await expect(productEmails).toHaveAttribute("aria-checked", "true");
     await expect(page.getByRole("status")).toHaveText(NEWER_CHANGES_MESSAGE);
     await expect(page.getByText("Your settings have been saved.")).toHaveCount(
       0,
@@ -84,7 +85,7 @@ for (const theme of ["light", "dark"] as const) {
       {
         displayName: "Newer name",
         dailyReviewTarget: 10,
-        notificationsEnabled: false,
+        marketingEmailsEnabled: true,
       },
     ]);
     await page.reload();
@@ -92,7 +93,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(
       page.getByRole("radio", { name: "10", exact: true }),
     ).toBeChecked();
-    await expect(reminders).toHaveAttribute("aria-checked", "false");
+    await expect(productEmails).toHaveAttribute("aria-checked", "true");
   });
 }
 

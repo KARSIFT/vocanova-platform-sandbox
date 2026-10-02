@@ -24,6 +24,9 @@ type CloudflareConfig struct {
 	BaseURL    string
 	Timeout    time.Duration
 	MaxRetries int
+	// OnModerationFailure receives only sanitized metadata, once per failed
+	// moderation operation. It must return promptly; nil disables reporting.
+	OnModerationFailure func(CloudflareModerationFailure)
 }
 
 type cloudflareTransport struct {
@@ -125,7 +128,10 @@ func (p *CloudflareModerationProvider) Classify(ctx context.Context, input Moder
 	}
 
 	var result *ModerationResult
+	var diagnosticStatus int
+	var diagnosticBody []byte
 	parseErr := p.sendWithRetry(ctx, body, func(statusCode int, respBody []byte) error {
+		diagnosticStatus, diagnosticBody = statusCode, respBody
 		content, err := parseCloudflareTextResponse(statusCode, respBody)
 		if err != nil {
 			return err
@@ -151,6 +157,9 @@ func (p *CloudflareModerationProvider) Classify(ctx context.Context, input Moder
 		return nil
 	})
 	if parseErr != nil {
+		if report := p.config.OnModerationFailure; report != nil {
+			report(cloudflareModerationFailure(parseErr, diagnosticStatus, diagnosticBody))
+		}
 		return nil, parseErr
 	}
 
@@ -210,13 +219,16 @@ func (t *cloudflareTransport) sendOnce(ctx context.Context, requestBody []byte) 
 
 	resp, err := t.client.Do(req)
 	if err != nil {
-		return 0, nil, mapNetworkError(err)
+		return 0, nil, cloudflareNetworkFailure(err)
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
-		return resp.StatusCode, nil, fmt.Errorf("read response body: %w", err)
+		failure := cloudflareNetworkFailure(err)
+		failure.cause = fmt.Errorf("read response body: %w", err)
+		failure.httpStatus = resp.StatusCode
+		return resp.StatusCode, nil, failure
 	}
 	return resp.StatusCode, respBody, nil
 }

@@ -253,6 +253,12 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 		// DOC-09 §§5, 8, and 18 require a provider failure to be retryable.
 		// Append a fresh generation so the failed attempt remains immutable
 		// operational history instead of making the retry replay its failure.
+		// Case-equivalent requests share one logical sentence. Reuse its first
+		// stored original, rather than evaluating a later request's case edits.
+		storedSentence, err := s.repo.GetLearnerSentence(ctx, req.UserID, existing.LearnerSentenceID)
+		if err != nil || storedSentence == nil || normalizeSentence(storedSentence.OriginalSentence) != validation.Normalized {
+			return s.temporaryFailureResult(req.SentenceText), nil
+		}
 		retry, err := s.repo.CreateRetryAttempt(ctx, existing, s.config.Provider, s.config.Model, s.clock.Now().UTC())
 		if err != nil {
 			if ctx.Err() != nil {
@@ -280,7 +286,7 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 			}
 			return nil, fmt.Errorf("record retry idempotency: %w", err)
 		}
-		return s.completePendingAttempt(ctx, req, target, validation.Normalized, retry.Pending, start)
+		return s.completePendingAttempt(ctx, req, target, storedSentence.OriginalSentence, retry.Pending, start)
 	}
 
 	moderation, err := s.safety.Classify(ctx, ModerationInput{
@@ -354,7 +360,7 @@ func (s *Service) SubmitSentenceFeedback(ctx context.Context, req SubmitSentence
 		return nil, fmt.Errorf("record idempotency: %w", err)
 	}
 
-	return s.completePendingAttempt(ctx, req, target, validation.Normalized, pending, start)
+	return s.completePendingAttempt(ctx, req, target, req.SentenceText, pending, start)
 }
 
 type replayTargetLoader interface {
@@ -410,8 +416,8 @@ func (s *Service) replayStoredResult(ctx context.Context, req SubmitSentenceFeed
 
 // completePendingAttempt calls the provider and finalizes one pending row. It
 // is shared by a first submission and a retry of a failed generation.
-func (s *Service) completePendingAttempt(ctx context.Context, req SubmitSentenceFeedbackRequest, target *Target, normalized string, pending *PendingAttempt, start time.Time) (*SentenceFeedbackResult, error) {
-	feedback, providerDuration, providerErr := s.generateWithRepair(ctx, target, normalized)
+func (s *Service) completePendingAttempt(ctx context.Context, req SubmitSentenceFeedbackRequest, target *Target, originalSentence string, pending *PendingAttempt, start time.Time) (*SentenceFeedbackResult, error) {
+	feedback, providerDuration, providerErr := s.generateWithRepair(ctx, target, originalSentence)
 
 	if providerErr != nil {
 		if err := s.failPendingAttempt(ctx, *pending, providerErr); err != nil {
@@ -579,8 +585,8 @@ func (s *Service) ReportFeedback(ctx context.Context, userID, attemptID uuid.UUI
 // context is the DOC-09 §18 10-second total backend target; the adapter itself
 // enforces an 8-second per-request timeout. An uncooperative provider can delay
 // return beyond that deadline, but no repair or success is started afterward.
-func (s *Service) generateWithRepair(ctx context.Context, target *Target, normalized string) (*ProviderFeedback, time.Duration, error) {
-	task := s.taskBuilder.Build(target, normalized)
+func (s *Service) generateWithRepair(ctx context.Context, target *Target, originalSentence string) (*ProviderFeedback, time.Duration, error) {
+	task := s.taskBuilder.Build(target, originalSentence)
 	providerStart := s.clock.Now()
 	if err := ctx.Err(); err != nil {
 		return nil, 0, err

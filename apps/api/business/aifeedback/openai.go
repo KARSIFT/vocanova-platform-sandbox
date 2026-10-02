@@ -21,18 +21,20 @@ const (
 	openAIMaxResponseBytes    = 1 << 20
 )
 
-// OpenAIConfig configures the evaluator-only Responses adapter. MaxRetries is
-// clamped to zero or one; the timeout applies to each HTTP attempt.
+// OpenAIConfig configures Responses adapters. MaxRetries is clamped to zero or
+// one for evaluation; runtime wiring and moderation use zero transport retries.
+// The timeout applies per HTTP attempt, within the service request context.
 type OpenAIConfig struct {
 	BaseURL    string
 	APIKey     string
 	Model      string
 	Timeout    time.Duration
 	MaxRetries int
+	OnFailure  func(OpenAIFailure)
 }
 
-// OpenAIFeedbackProvider is opt-in evaluation infrastructure, not a runtime
-// provider selection. The existing feedback interface does not expose usage;
+// OpenAIFeedbackProvider supports explicit runtime and evaluator selection.
+// The existing feedback interface does not expose usage;
 // response usage is therefore not reported as measured billing or token data.
 type OpenAIFeedbackProvider struct {
 	config OpenAIConfig
@@ -66,75 +68,92 @@ func (p *OpenAIFeedbackProvider) EvaluationIdentity() (string, string) {
 	return "openai", p.config.Model
 }
 
-func (p *OpenAIFeedbackProvider) GenerateFeedback(ctx context.Context, task ProviderTask) (*ProviderFeedback, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	if strings.TrimSpace(p.config.APIKey) == "" {
-		return nil, ErrProviderAuth
-	}
-	u, err := url.Parse(p.config.BaseURL)
-	if err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" ||
-		(u.Scheme != "https" && !(u.Scheme == "http" && (u.Hostname() == "localhost" || u.Hostname() == "127.0.0.1" || u.Hostname() == "::1"))) {
-		return nil, ErrProviderInvalidInput
-	}
-	u.Path = strings.TrimRight(u.Path, "/") + "/responses"
+func (p *OpenAIFeedbackProvider) GenerateFeedback(ctx context.Context, task ProviderTask) (feedback *ProviderFeedback, err error) {
+	status := 0
+	defer func() { p.recordFailure(OpenAIStageFeedback, status, err) }()
 	body, err := buildOpenAIRequest(task, p.config.Model)
 	if err != nil {
 		return nil, err
 	}
+	data, status, err := p.sendResponse(ctx, body)
+	if err != nil {
+		return nil, err
+	}
+	return parseOpenAIResponse(data)
+}
+
+// sendResponse never returns raw provider errors or bodies on failure.
+func (p *OpenAIFeedbackProvider) sendResponse(ctx context.Context, body []byte) ([]byte, int, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, 0, err
+	}
+	if strings.TrimSpace(p.config.APIKey) == "" {
+		return nil, 0, ErrProviderAuth
+	}
+	u, err := url.Parse(p.config.BaseURL)
+	if err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" ||
+		(u.Scheme != "https" && !(u.Scheme == "http" && (u.Hostname() == "localhost" || u.Hostname() == "127.0.0.1" || u.Hostname() == "::1"))) {
+		return nil, 0, ErrProviderInvalidInput
+	}
+	u.Path = strings.TrimRight(u.Path, "/") + "/responses"
 	for attempt := 0; attempt <= p.config.MaxRetries; attempt++ {
 		if err := ctx.Err(); err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), bytes.NewReader(body))
 		if err != nil {
-			return nil, ErrProviderInvalidInput
+			return nil, 0, ErrProviderInvalidInput
 		}
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+p.config.APIKey)
 		resp, err := p.client.Do(req)
 		if err != nil {
 			if ctx.Err() != nil {
-				return nil, ctx.Err()
+				return nil, 0, ctx.Err()
 			}
 			if attempt < p.config.MaxRetries {
 				continue
 			}
-			return nil, ErrProviderTimeout
+			return nil, 0, ErrProviderTimeout
 		}
 		data, readErr := io.ReadAll(io.LimitReader(resp.Body, openAIMaxResponseBytes+1))
 		resp.Body.Close()
 		if ctx.Err() != nil {
-			return nil, ctx.Err()
+			return nil, 0, ctx.Err()
 		}
 		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-			return nil, ErrProviderAuth
+			return nil, resp.StatusCode, ErrProviderAuth
 		}
 		if resp.StatusCode == http.StatusBadRequest || resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusUnprocessableEntity {
-			return nil, ErrProviderInvalidInput
+			return nil, resp.StatusCode, ErrProviderInvalidInput
 		}
 		if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500 {
 			if attempt < p.config.MaxRetries {
 				continue
 			}
-			return nil, ErrProviderTimeout
+			return nil, resp.StatusCode, ErrProviderTimeout
 		}
 		if errors.Is(readErr, context.DeadlineExceeded) {
 			if attempt < p.config.MaxRetries {
 				continue
 			}
-			return nil, ErrProviderTimeout
+			return nil, 0, ErrProviderTimeout
 		}
 		if resp.StatusCode != http.StatusOK || readErr != nil || len(data) > openAIMaxResponseBytes {
-			return nil, ErrProviderInvalidResponse
+			return nil, resp.StatusCode, ErrProviderInvalidResponse
 		}
-		return parseOpenAIResponse(data)
+		return data, resp.StatusCode, nil
 	}
-	return nil, ErrProviderTimeout
+	return nil, 0, ErrProviderTimeout
 }
 
 func buildOpenAIRequest(task ProviderTask, model string) ([]byte, error) {
+	return buildOpenAIStructuredRequest(task, model, outputSchema(), "sentence_feedback")
+}
+
+// Only the two internal canonical contracts reach this helper. It copies the
+// schema before strict adaptation and never changes the caller's task.
+func buildOpenAIStructuredRequest(task ProviderTask, model string, expected map[string]any, name string) ([]byte, error) {
 	effort, profileLimit, err := openAIModelProfile(model)
 	if err != nil {
 		return nil, err
@@ -142,10 +161,9 @@ func buildOpenAIRequest(task ProviderTask, model string) ([]byte, error) {
 	if task.EnableTools || task.EnableWebSearch || task.EnableMemory {
 		return nil, ErrProviderInvalidInput
 	}
-	// This adapter deliberately supports only the current feedback contract.
-	// Copy through JSON so the strict wire adaptation cannot mutate the task.
+	// Reject any schema outside the selected internal contract.
 	schemaJSON, err := json.Marshal(task.OutputSchema)
-	canonical, canonicalErr := json.Marshal(outputSchema())
+	canonical, canonicalErr := json.Marshal(expected)
 	if err != nil || canonicalErr != nil || !bytes.Equal(schemaJSON, canonical) {
 		return nil, ErrProviderInvalidInput
 	}
@@ -161,11 +179,6 @@ func buildOpenAIRequest(task ProviderTask, model string) ([]byte, error) {
 	sort.Strings(required)
 	schema["required"] = required
 	schema["additionalProperties"] = false
-	// Responses strict schemas require every field. Optional feedback strings
-	// use explicit null on the wire and remain nil in ProviderFeedback.
-	for _, name := range []string{"corrected_sentence", "improvement_tip"} {
-		properties[name].(map[string]any)["type"] = []string{"string", "null"}
-	}
 	userJSON, err := json.Marshal(task.UserPayload)
 	if err != nil {
 		return nil, ErrProviderInvalidInput
@@ -189,7 +202,7 @@ func buildOpenAIRequest(task ProviderTask, model string) ([]byte, error) {
 			{"role": "user", "content": string(userJSON)},
 		},
 		"text": map[string]any{"format": map[string]any{
-			"type": "json_schema", "name": "sentence_feedback", "strict": true, "schema": schema,
+			"type": "json_schema", "name": name, "strict": true, "schema": schema,
 		}},
 		"store":             false,
 		"tools":             []any{},
@@ -215,6 +228,7 @@ func openAIModelProfile(model string) (string, int, error) {
 	}{
 		{"gpt-5-nano", "minimal", openAINanoMaxOutputTokens},
 		{"gpt-4.1-nano", "", openAIMaxOutputTokens},
+		{"gpt-4o-mini", "", openAIMaxOutputTokens},
 		{"gpt-6-luna", "none", openAIMaxOutputTokens},
 	} {
 		if model == profile.model {
@@ -229,7 +243,7 @@ func openAIModelProfile(model string) (string, int, error) {
 	return "", 0, ErrProviderInvalidInput
 }
 
-func parseOpenAIResponse(data []byte) (*ProviderFeedback, error) {
+func parseOpenAIOutputText(data []byte) (string, error) {
 	var response struct {
 		Status string          `json:"status"`
 		Error  json.RawMessage `json:"error"`
@@ -245,7 +259,7 @@ func parseOpenAIResponse(data []byte) (*ProviderFeedback, error) {
 	}
 	if json.Unmarshal(data, &response) != nil || response.Status != "completed" ||
 		(len(response.Error) != 0 && string(response.Error) != "null") {
-		return nil, ErrProviderInvalidResponse
+		return "", ErrProviderInvalidResponse
 	}
 	var text string
 	for _, item := range response.Output {
@@ -253,17 +267,28 @@ func parseOpenAIResponse(data []byte) (*ProviderFeedback, error) {
 			continue
 		}
 		if item.Type != "message" || item.Role != "assistant" || item.Status != "completed" {
-			return nil, ErrProviderInvalidResponse
+			return "", ErrProviderInvalidResponse
 		}
 		for _, part := range item.Content {
 			if part.Type == "refusal" {
-				return nil, ErrProviderRefusal
+				return "", ErrProviderRefusal
 			}
 			if part.Type != "output_text" || text != "" || strings.TrimSpace(part.Text) == "" {
-				return nil, ErrProviderInvalidResponse
+				return "", ErrProviderInvalidResponse
 			}
 			text = part.Text
 		}
+	}
+	if text == "" {
+		return "", ErrProviderInvalidResponse
+	}
+	return text, nil
+}
+
+func parseOpenAIResponse(data []byte) (*ProviderFeedback, error) {
+	text, err := parseOpenAIOutputText(data)
+	if err != nil {
+		return nil, err
 	}
 	var raw map[string]any
 	if json.Unmarshal([]byte(text), &raw) != nil || !validOpenAIFeedbackShape(raw) {

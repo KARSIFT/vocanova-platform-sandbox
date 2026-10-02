@@ -3,6 +3,8 @@ import Link from "next/link";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { Eyebrow, PageContainer, Surface } from "@/ui/surface";
 import { getCompletionDayView } from "./completion-day-view";
+import { KnowledgeOverview } from "../_components/knowledge-overview";
+import { Achievements } from "../_components/achievements";
 
 const SAVED_VOCABULARY_DISPLAY_LIMIT = 10;
 
@@ -30,6 +32,12 @@ export default async function ProgressPage() {
   }
 
   const { items: savedWords } = savedWordsResponse.data;
+  const [knowledgeResponse, lessonResponse, achievementsResponse] =
+    await Promise.all([
+      client.getKnowledgeSummary().catch(() => null),
+      client.listLessons().catch(() => null),
+      client.listAchievements().catch(() => null),
+    ]);
 
   const {
     confidencePointsBalance: confidencePointsTotal,
@@ -58,6 +66,67 @@ export default async function ProgressPage() {
       <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
         See the practice you&apos;ve completed and choose a useful next step.
       </p>
+
+      {knowledgeResponse ? (
+        <KnowledgeOverview summary={knowledgeResponse.data} />
+      ) : (
+        <p role="status" className="mt-6 text-neutral-700">
+          Your vocabulary map is unavailable right now. Your other progress is
+          below.
+        </p>
+      )}
+      {lessonResponse && (
+        <Surface className="mt-4" aria-labelledby="lesson-progress-heading">
+          <h2
+            id="lesson-progress-heading"
+            className="text-xl font-bold text-neutral-900"
+          >
+            Your learning path
+          </h2>
+          <p className="mt-2 text-neutral-700">
+            {
+              lessonResponse.data.items.filter(
+                (item) => item.status === "completed",
+              ).length
+            }{" "}
+            of {lessonResponse.data.items.length} lessons completed
+          </p>
+          <ul className="mt-4 divide-y divide-neutral-200">
+            {lessonResponse.data.items
+              .filter((item) => item.status !== "not_started")
+              .map((item) => (
+                <li key={item.key} className="py-3">
+                  <Link
+                    href={`/learn/${encodeURIComponent(item.key)}`}
+                    className="inline-flex min-h-11 items-center font-semibold text-primary-700"
+                  >
+                    {item.title}
+                  </Link>
+                  <p className="text-sm text-neutral-600">
+                    {item.status === "completed"
+                      ? "Completed"
+                      : `${item.completedSteps} of ${item.stepCount} steps saved`}
+                  </p>
+                </li>
+              ))}
+          </ul>
+          <Link
+            href="/discover"
+            className="mt-3 inline-flex min-h-11 items-center font-semibold text-primary-700"
+          >
+            Continue your Journey
+          </Link>
+        </Surface>
+      )}
+
+      {achievementsResponse ? (
+        <Achievements achievements={achievementsResponse.data} />
+      ) : (
+        <p role="status" className="mt-6 text-neutral-700">
+          Your milestones could not load. Your other progress is still
+          available.
+        </p>
+      )}
 
       <Surface
         aria-labelledby="sentence-history-heading"

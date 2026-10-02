@@ -98,6 +98,105 @@ const expectedTopLevelRouteDirectories = [
   path.join("auth", "email-change"),
 ];
 
+// Retain the established surface; new learning features use bounded route shapes.
+export function isRegisteredAPIPath(apiPath) {
+  const allowedAPIPaths = [
+    /^\/api\/v1\/me$/,
+    /^\/api\/v1\/auth(?:\/|$)/,
+    /^\/api\/v1\/journey-situations(?:\/[^/]+)?$/,
+    /^\/api\/v1\/canonical-words(?:\/[^/]+)?$/,
+    /^\/api\/v1\/user-words$/,
+    /^\/api\/v1\/user-words\/[^/]+$/,
+    /^\/api\/v1\/user-words\/records\/[^/]+$/,
+    /^\/api\/v1\/reviews\/due$/,
+    /^\/api\/v1\/reviews\/submissions$/,
+    /^\/api\/v1\/sentence-feedback$/,
+    /^\/api\/v1\/sentence-feedback\/[^/]+\/reports$/,
+    /^\/api\/v1\/learner-sentences(?:\/[^/]*)?$/,
+    /^\/api\/v1\/daily-mission$/,
+    /^\/api\/v1\/progress$/,
+    /^\/api\/v1\/onboarding$/,
+    /^\/api\/v1\/settings$/,
+    /^\/api\/v1\/settings\/email-change-links$/,
+    /^\/api\/v1\/settings\/email-change-links\/consume$/,
+    /^\/api\/v1\/account-deletion-requests$/,
+    /^\/api\/v1\/personal-data-export$/,
+    /^\/api\/v1\/lessons$/,
+    /^\/api\/v1\/lessons\/[^/]+\/sessions$/,
+    /^\/api\/v1\/lesson-sessions\/[^/]+(?:\/actions)?$/,
+    /^\/api\/v1\/practice-sessions$/,
+    /^\/api\/v1\/practice-sessions\/[^/]+(?:\/actions)?$/,
+    /^\/api\/v1\/meaning-knowledge\/[^/]+$/,
+    /^\/api\/v1\/knowledge-summary$/,
+    /^\/api\/v1\/learning-preferences$/,
+    /^\/api\/v1\/lesson-recommendation$/,
+    /^\/api\/v1\/achievements$/,
+  ];
+  return allowedAPIPaths.some((allowed) => allowed.test(apiPath));
+}
+
+export function isRegisteredBusinessModule(name) {
+  const allowedBusinessModules = new Set([
+    "auth",
+    "content",
+    "learning",
+    "reviews",
+    "aifeedback",
+    "missions",
+    "gamification",
+    "users",
+    "accounts",
+    "password", // Verified password accounts (0.2.0).
+    "lessons",
+    "practice",
+    "wordknowledge",
+    "achievements",
+  ]);
+  return allowedBusinessModules.has(name);
+}
+
+export function isRegisteredSchemaFile(name) {
+  const allowedSchemaFiles = new Set([
+    "canonicalword.go",
+    "externalidentity.go",
+    "journeysituation.go",
+    "journeyword.go",
+    "learnersentence.go",
+    "magiclink.go",
+    "mixins.go",
+    "reviewattempt.go",
+    "aifeedbackattempt.go",
+    "session.go",
+    "usagenote.go",
+    "user.go",
+    "userword.go",
+    "wordexample.go",
+    "wordmeaning.go",
+    "dailymissionsnapshot.go",
+    "dailyactivitysummary.go",
+    "confidencepointledger.go",
+    "streakstate.go",
+    "gracedayledger.go",
+    "usersettings.go",
+    "useronboardingprofile.go",
+    "emailchangelink.go",
+    "accountdeletionrequest.go",
+    "aifeedbackqualityreviewreport.go",
+    "passwordcredential.go",
+    "passwordregistrationlink.go",
+    "passwordresetlink.go",
+    "lessonaction.go",
+    "lessonsession.go",
+    "practiceaction.go",
+    "practicemistakeresolution.go",
+    "practicesession.go",
+    "userlearningpreferences.go",
+    "userwordknowledge.go",
+    "wordknowledgeaction.go",
+  ]);
+  return allowedSchemaFiles.has(name);
+}
+
 export function validateMockInventory() {
   const errors = [];
 
@@ -196,36 +295,21 @@ export function validateMockInventory() {
   // VOC-031-T02 settings read/write routes, the
   // VOC-031-T03 email-change request/consume routes, and the
   // VOC-031-T04 account-deletion request route and the synchronous
-  // personal-data export privacy route were invented.
-  const allowedAPIPaths = [
-    /^\/api\/v1\/me$/,
-    /^\/api\/v1\/auth(?:\/|$)/,
-    /^\/api\/v1\/journey-situations(?:\/[^/]+)?$/,
-    /^\/api\/v1\/canonical-words(?:\/[^/]+)?$/,
-    /^\/api\/v1\/user-words$/,
-    /^\/api\/v1\/user-words\/[^/]+$/,
-    /^\/api\/v1\/user-words\/records\/[^/]+$/,
-    /^\/api\/v1\/reviews\/due$/,
-    /^\/api\/v1\/reviews\/submissions$/,
-    /^\/api\/v1\/sentence-feedback$/,
-    /^\/api\/v1\/sentence-feedback\/[^/]+\/reports$/,
-    /^\/api\/v1\/learner-sentences(?:\/[^/]*)?$/,
-    /^\/api\/v1\/daily-mission$/,
-    /^\/api\/v1\/progress$/,
-    /^\/api\/v1\/onboarding$/,
-    /^\/api\/v1\/settings$/,
-    /^\/api\/v1\/settings\/email-change-links$/,
-    /^\/api\/v1\/settings\/email-change-links\/consume$/,
-    /^\/api\/v1\/account-deletion-requests$/,
-    /^\/api\/v1\/personal-data-export$/,
-  ];
+  // personal-data export privacy route. The current delivery adds reviewed
+  // lessons, practice, private knowledge, preferences, and derived milestones.
+
   const apiRouteFiles = globSync("**/*.go", { cwd: apiRouteRoot });
   for (const file of apiRouteFiles) {
     const content = readFileSync(path.join(apiRouteRoot, file), "utf8");
     const apiPaths = content.matchAll(/["'](\/api\/v1\/[^"'?\s]*)/g);
     for (const match of apiPaths) {
       const apiPath = match[1];
-      if (!allowedAPIPaths.some((allowed) => allowed.test(apiPath))) {
+      const concatenatedTestPrefix =
+        file.endsWith("_test.go") &&
+        ["/api/v1/lesson-sessions/", "/api/v1/meaning-knowledge/"].includes(
+          apiPath,
+        );
+      if (!isRegisteredAPIPath(apiPath) && !concatenatedTestPrefix) {
         errors.push(
           `${file}: API path ${apiPath} is outside the registered product API surface`,
         );
@@ -237,24 +321,13 @@ export function validateMockInventory() {
   // `missions` and `gamification` modules; T01-T03 will wire them into
   // the existing P1/P2/P3 transactions. VOC-031-T00 introduces the
   // `users` module; T03 adds the `accounts` module.
-  const allowedBusinessModules = new Set([
-    "auth",
-    "content",
-    "learning",
-    "reviews",
-    "aifeedback",
-    "missions",
-    "gamification",
-    "users",
-    "accounts",
-    "password", // Verified password accounts (0.2.0).
-  ]);
+
   for (const entry of readdirSync(apiBusinessRoot, {
     withFileTypes: true,
   })) {
-    if (entry.isDirectory() && !allowedBusinessModules.has(entry.name)) {
+    if (entry.isDirectory() && !isRegisteredBusinessModule(entry.name)) {
       errors.push(
-        `apps/api/business/${entry.name}: unexpected business module outside the approved A1/P1/P2/P4-T00/P5-T03 boundary`,
+        `apps/api/business/${entry.name}: unexpected business module outside the registered product boundary`,
       );
     }
   }
@@ -264,44 +337,15 @@ export function validateMockInventory() {
   // confidence_point_ledger, streak_states, grace_day_ledger, and
   // user_settings. VOC-031-T00 adds user_onboarding_profiles; T03
   // adds email_change_links; T04 adds account_deletion_requests.
-  const allowedSchemaFiles = new Set([
-    "canonicalword.go",
-    "externalidentity.go",
-    "journeysituation.go",
-    "journeyword.go",
-    "learnersentence.go",
-    "magiclink.go",
-    "mixins.go",
-    "reviewattempt.go",
-    "aifeedbackattempt.go",
-    "session.go",
-    "usagenote.go",
-    "user.go",
-    "userword.go",
-    "wordexample.go",
-    "wordmeaning.go",
-    "dailymissionsnapshot.go",
-    "dailyactivitysummary.go",
-    "confidencepointledger.go",
-    "streakstate.go",
-    "gracedayledger.go",
-    "usersettings.go",
-    "useronboardingprofile.go",
-    "emailchangelink.go",
-    "accountdeletionrequest.go",
-    "aifeedbackqualityreviewreport.go",
-    "passwordcredential.go",
-    "passwordregistrationlink.go",
-    "passwordresetlink.go",
-  ]);
+
   for (const entry of readdirSync(apiSchemaRoot, { withFileTypes: true })) {
     if (
       entry.isFile() &&
       entry.name.endsWith(".go") &&
-      !allowedSchemaFiles.has(entry.name)
+      !isRegisteredSchemaFile(entry.name)
     ) {
       errors.push(
-        `apps/api/ent/schema/${entry.name}: unexpected schema outside the approved A1/P1/P2/P4-T00/P5-T03 boundary`,
+        `apps/api/ent/schema/${entry.name}: unexpected schema outside the registered product boundary`,
       );
     }
   }
@@ -369,6 +413,10 @@ export function validateMockInventory() {
     "20260909142063_voc1411_idempotency_record_integrity.sql",
     "20260912090000_password_credentials.sql",
     "20261002190000_active_synthetic_identity_uniqueness.sql",
+    "20261002210000_guided_lessons.sql",
+    "20261002220000_word_knowledge.sql",
+    "20261002230000_practice_sessions.sql",
+    "20261002233000_learning_preferences.sql",
   ]);
   for (const entry of readdirSync(apiMigrationRoot, {
     withFileTypes: true,
@@ -379,7 +427,7 @@ export function validateMockInventory() {
       !allowedMigrationFiles.has(entry.name)
     ) {
       errors.push(
-        `apps/api/migrations/${entry.name}: unexpected migration outside the approved A1/P1/P2/T00/P5-T03 boundary`,
+        `apps/api/migrations/${entry.name}: migration needs an explicit inventory review`,
       );
     }
   }

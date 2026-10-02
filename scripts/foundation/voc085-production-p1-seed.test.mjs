@@ -28,6 +28,14 @@ const seedMainTestPath = path.join(
   repositoryRoot,
   "apps/api/cmd/seed/main_test.go",
 );
+const seedDataPath = path.join(
+  repositoryRoot,
+  "apps/api/cmd/seed/voc026-p1.json",
+);
+const seedPreservationTestPath = path.join(
+  repositoryRoot,
+  "apps/api/cmd/seed/starter_curriculum_test.go",
+);
 const syntheticSeedSqlPath = path.join(
   repositoryRoot,
   "apps/api/scripts/seed-synthetic-smoke-user.sql",
@@ -185,6 +193,8 @@ docker compose up -d --remove-orphans
 test("VOC-085-TEST-03: canonical seed remains idempotent upsert-only", () => {
   const seedMain = readFileSync(seedMainPath, "utf8");
   const seedTests = readFileSync(seedMainTestPath, "utf8");
+  const dataset = JSON.parse(readFileSync(seedDataPath, "utf8"));
+  const preservationTests = readFileSync(seedPreservationTestPath, "utf8");
 
   assert.match(
     seedMain,
@@ -201,10 +211,60 @@ test("VOC-085-TEST-03: canonical seed remains idempotent upsert-only", () => {
     /TestApplySeedExecutesUpsertStatementsInOrder/,
     "existing seed tests must cover upsert statement execution",
   );
+  const expandedInventory = {
+    journey_situations: ["JourneySituations", 17],
+    canonical_words: ["CanonicalWords", 89],
+    word_meanings: ["WordMeanings", 92],
+    word_examples: ["WordExamples", 148],
+    usage_notes: ["UsageNotes", 200],
+    journey_words: ["JourneyWords", 92],
+  };
+  for (const [table, [field, count]] of Object.entries(expandedInventory)) {
+    assert.equal(
+      dataset[table].length,
+      count,
+      `${table}: approved expanded inventory`,
+    );
+    assert.equal(
+      new Set(dataset[table].map((row) => row.id)).size,
+      count,
+      `${table}: fixed row identities must be unique`,
+    );
+    assert.match(
+      seedTests,
+      new RegExp(`require\\.Len\\(t, seed\\.${field}, ${count}\\)`),
+      `${table}: Go seed loading must retain its exact count check`,
+    );
+  }
+
+  // Expansion must retain the dedicated regression for all 400 historical row
+  // identities; new totals alone could otherwise hide removed/replaced content.
   assert.match(
-    seedTests,
-    /require\.Len\(t, seed\.JourneySituations, 7\)/,
-    "embedded canonical dataset must remain the seven P1 situations",
+    preservationTests,
+    /func TestStarterCurriculumStableIdentitiesAndHistoricalInventory\(t \*testing\.T\)/,
+  );
+  const historicalInventory = {
+    journey_situations: 7,
+    canonical_words: 51,
+    word_meanings: 54,
+    word_examples: 72,
+    usage_notes: 162,
+    journey_words: 54,
+  };
+  for (const [table, count] of Object.entries(historicalInventory)) {
+    assert.match(
+      preservationTests,
+      new RegExp(`"${table}":\\s*\\{${count}, "[a-f0-9]{64}"\\}`),
+      `${table}: historical ID count and frozen hash must remain in the preservation test`,
+    );
+  }
+  assert.match(
+    preservationTests,
+    /require\.Len\(t, retained, baseline\[table\]\.count, table\)/,
+  );
+  assert.match(
+    preservationTests,
+    /require\.Equal\(t, baseline\[table\]\.hash,[^\n]+sha256\.Sum256/,
   );
 });
 

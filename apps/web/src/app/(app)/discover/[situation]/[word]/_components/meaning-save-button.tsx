@@ -9,7 +9,7 @@ import { handleApiError } from "@/lib/session";
 
 interface MeaningSaveButtonProps {
   meaningId: string;
-  source: "journey";
+  source: "journey" | "search";
   initialSaved: boolean;
   wordText: string;
   shortDefinition: string;

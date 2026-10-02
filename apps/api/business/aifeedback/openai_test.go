@@ -281,6 +281,8 @@ func TestOpenAIModelProfilesPreserveCallerCeilings(t *testing.T) {
 		{"gpt-6-luna-2026-09-01", "none", 300},
 		{"gpt-4.1-nano", "", 300},
 		{"gpt-4.1-nano-2025-04-14", "", 300},
+		{"gpt-4o-mini", "", 300},
+		{"gpt-4o-mini-2024-07-18", "", 300},
 	}
 	for _, profile := range profiles {
 		t.Run(profile.model, func(t *testing.T) {
@@ -341,6 +343,7 @@ func TestOpenAIUnsupportedProfilesNeverSendRequest(t *testing.T) {
 		"gpt-5", "gpt-5-mini", "gpt-5-mini-2025-08-07", "gpt-6-astra",
 		"gpt-5-nano-custom", "gpt-5-nano-2025-99-99", "gpt-5-nano-2025-08-07-extra",
 		"gpt-4.1-nano-preview", "gpt-6-luna-fast", "unreviewed-synthetic-model",
+		"gpt-4o-mini-preview", "gpt-4o-mini-2024-02-30", "gpt-4o-mini-2024-07-18-extra",
 	} {
 		t.Run(model, func(t *testing.T) {
 			p := NewOpenAIFeedbackProvider(OpenAIConfig{BaseURL: server.URL, APIKey: "synthetic", Model: model, MaxRetries: 1})

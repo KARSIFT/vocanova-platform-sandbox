@@ -5,7 +5,7 @@ of a word. Matching a status label does not prove that a correction is sound,
 that an explanation is helpful or that the learner service saved the result.
 The [AI requirements](09-ai-features.md) remain the acceptance rubric.
 
-The v3 prompt and semantic feedback contract distinguish a wrong selected meaning/POS from
+The v4 prompt and unchanged v3 semantic feedback contract distinguish a wrong selected meaning/POS from
 grammar errors with an understandable intended meaning. Diagnostics describe the original learner
 clause, and feedback must preserve valid interpretations. An `incorrect` result may have a null
 correction when a useful rewrite cannot preserve the message while demonstrating the selected
@@ -23,7 +23,7 @@ these representations, but do not establish live provider compatibility or feedb
 Review status, diagnostic consistency, correction usefulness and tip relevance separately.
 Neither a null correction nor a schema-valid response proves meaning preservation. Keep wrong-sense
 fixture labels intact; do not relabel cases to accommodate a model's preferred judgment. Prompt and
-semantic contract versions are `sentence-feedback-v3` and `feedback-schema-v3`, so earlier pilot
+semantic contract versions are `sentence-feedback-v4` and `feedback-schema-v3`, so earlier pilot
 results must retain their original version labels and cannot certify the changed rubric.
 
 ## V3 development pilot — 2026-10-02
@@ -46,6 +46,67 @@ persistence or learner-service behavior. They changed no runtime provider and ca
 Live feedback quality remains a release blocker; the current rubric still needs broader evaluation
 and the required human and service evidence. Earlier acceptance and pilot records retain their
 original scope and versions.
+
+A follow-up private compact-rubric candidate kept the same schema, system prompt,
+300-token allowance and zero retries. On two previously inspected regression cases,
+GPT-5 nano fixed the original-sentence grammar flag but falsely accepted the fish
+sense of “school” as the selected educational meaning. Both responses were schema-valid;
+only one status matched. This candidate failed that model-specific semantic gate. The same
+compact rubric is now versioned as runtime v4 to make independent original-clause judgments
+explicit in both initial and repair instructions; this is not acceptance of GPT-5 nano or any
+other model. The schema, system prompt and canonical 300-token allowance remain unchanged.
+Prompt changes alone have not established suitability, and these reused examples remain
+development evidence. A separately preregistered service-level evaluation must establish
+moderation, feedback and deadline behavior before provider activation.
+
+## V4 service development gate — 2026-10-02
+
+A ten-case synthetic service gate first stopped GPT-5 nano after four POSTs: its agreement-error
+feedback matched the status and grammar reference but called the original sentence natural,
+contrary to the frozen reference. Six cases remained unrun; the failure was retained.
+
+An explicitly approved GPT-4o mini comparison reused the exact cases, rubric and references.
+All ten automated checks passed with 14 POSTs: eight moderation and six feedback requests,
+all HTTP 200 and complete, returning `gpt-4o-mini-2024-07-18`. The run kept the 300-token allowance,
+16 KiB request bound, zero transport retries, eight-second adapter timeout and actual ten-second
+service context. No constrained repair was needed. The longest service call was 4.459 seconds.
+Successful feedback replays made no additional provider call or mission update. Local validation
+and urgent-safety controls made no provider calls; remote threat and self-harm cases interrupted
+feedback without a successful submission or mission award.
+
+The coordinating AI reviewer inspected every output and accepted this bounded development gate.
+Technical headlines, overly cheerful praise around bereavement and a thin correctness explanation
+remain teaching-quality limitations. The lowercased agreement correction also exposed the service's
+lowercased provider input; the separate preparation change below addresses that source defect.
+These reused cases are not held-out evidence, human learner review or general launch acceptance.
+Persistence used isolated memory fixtures, not a real learner database; live repair quality and
+the full 91-case golden set remain unmeasured. No runtime default, deployment or activation changed.
+
+There is a provenance limitation: the source/binary hash manifest was recorded after the first two
+POSTs because its initial filename lookup failed. The binary checked the frozen case/rubric hashes
+before network access. The deviation was disclosed, and the same process continued under its
+original shared counter without repeating paid cases. Results must retain this limitation.
+
+Returned usage was 9,416 input and 704 output tokens, with no missing usage or reasoning tokens.
+At the documented GPT-4o mini rates below, the estimate is $0.0018348; this is not reconciled billing.
+
+### Subsequent input-preparation change
+
+`sentence-input-v2-case-preserving` identifies a source change after that gate, independently of
+the unchanged v4 rubric and feedback schema. Feedback tasks now receive the original sentence
+with NFKC compatibility normalization and collapsed whitespace, retaining capitalization and
+capitalization mistakes. Constrained repair receives that same text. A fresh-key retry of a failed
+generation loads the first stored, requester-owned original before allocating another attempt;
+an unavailable or mismatched original cannot start a provider call. Stored display text stays exact.
+
+Matching, moderation input and request fingerprints retain their existing lowercase normalization.
+Case-only variants therefore still share one logical submission: for example, `US` and `us` can
+replay the first result rather than request a new judgment. This preserves compatibility, not a
+claim that capitalization never changes meaning. No local output capitalization is guessed.
+Offline service tests cover input and repair, unavailable originals and case-equivalent replay;
+a real PostgreSQL test covers first-original retry, one retained sentence, two generation records
+and exactly one pair of sentence/feedback rewards. The preceding paid gate evaluated the older
+input preparation and does not establish live quality for this changed pipeline.
 
 ## What the current evaluator measures
 
@@ -115,13 +176,14 @@ moderation, repair or deployment settings. An OpenAI key cannot be used with
 the OpenCode provider, which has a different session protocol.
 
 Supported request profiles are limited to the reviewed `gpt-5-nano`,
-`gpt-4.1-nano` and `gpt-6-luna` aliases and their valid `YYYY-MM-DD` snapshot
+`gpt-4.1-nano`, `gpt-4o-mini` and `gpt-6-luna` aliases and their valid `YYYY-MM-DD` snapshot
 forms. Unknown profiles are rejected before any HTTP request. A valid snapshot
 name does not establish that the model exists or is available to the account;
 verify availability before a live run.
 
-Start with `gpt-5-nano`, the candidate with the lowest listed input/output
-unit rates among those reviewed for this evaluation. Upgrade only when observed
+The unchanged default is `gpt-5-nano`, the candidate with the lowest listed input/output
+unit rates among those reviewed for this evaluation; its failed gates above do not support
+quality acceptance. Change candidates only when observed
 quality, reliability, availability or total cost warrants it. As checked on
 2 October 2026, [its official model page](https://developers.openai.com/api/docs/models/gpt-5-nano)
 lists $0.05 per million uncached input tokens and $0.40 per million output tokens.
@@ -132,6 +194,19 @@ This is a temporary candidate: the
 [official deprecation notice](https://developers.openai.com/api/docs/deprecations)
 schedules `gpt-5-nano-2025-08-07` for shutdown on 11 December 2026. Record the
 resolved model/snapshot and plan a tested replacement before that date.
+
+GPT-4.1 nano is also deprecated, with shutdown on 23 October 2026 according to the
+[official deprecation notice](https://developers.openai.com/api/docs/deprecations).
+As checked on 2 October 2026, the [GPT-4o mini model page](https://developers.openai.com/api/docs/models/gpt-4o-mini)
+lists Responses and Structured Outputs support at $0.15 per million uncached input tokens
+and $0.60 per million output tokens, and is not marked deprecated. Its reviewed profile omits
+the reasoning field and caps output at 300 tokens; the documented snapshot is
+`gpt-4o-mini-2024-07-18`. These are model capabilities and listed rates, not an availability
+or quality guarantee.
+
+The learner service separately supports explicit `AI_PROVIDER=openai` configuration with paired
+four-outcome moderation and configurable `AI_PROVIDER_MODEL`. Adding a request profile or running
+the evaluator does not activate that configuration or add automatic fallback from Cloudflare.
 
 The adapter uses `minimal` reasoning for GPT-5 nano, the lowest supported effort
 in the [GPT-5 family guidance](https://developers.openai.com/api/docs/guides/latest-model?model=gpt-5).

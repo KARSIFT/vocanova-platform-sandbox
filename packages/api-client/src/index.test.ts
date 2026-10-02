@@ -1,9 +1,858 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { ApiResponseError, VocanovaClient } from "./index.js";
+import {
+  ApiResponseError,
+  VocanovaClient,
+  type KnowledgeSummary,
+  type LessonAction,
+  type LessonSession,
+  type LessonSummary,
+  type LessonRecommendationResponse,
+  type ListSavedWordsResponse,
+  type MeaningKnowledge,
+  type VocabularySearchResponse,
+} from "./index.js";
 
 describe("VocanovaClient", () => {
+  it("preserves literal saved-word filters and exposes full-filter counts and server review state", async () => {
+    const expected: ListSavedWordsResponse = {
+      items: [
+        {
+          userWordId: "saved-1",
+          meaningId: "meaning-1",
+          wordId: "word-1",
+          wordText: "refund",
+          wordSlug: "refund",
+          partOfSpeech: "noun",
+          shortDefinition: "Money returned after payment.",
+          status: "learning",
+          source: "manual",
+          saved: true,
+          addedAt: "2026-10-02T12:00:00Z",
+          reviewState: "reviewing",
+          due: true,
+        },
+      ],
+      totalCount: 24,
+      nextCursor: "next/+cursor=",
+      hasMore: true,
+    };
+    const seen: URL[] = [];
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: async (input, init) => {
+        const url = new URL(String(input));
+        seen.push(url);
+        assert.equal(init?.method, "GET");
+        assert.equal(init?.body, undefined);
+        assert.equal(url.pathname, "/api/v1/user-words");
+        return new Response(JSON.stringify(expected), { status: 200 });
+      },
+    });
+    assert.deepEqual(
+      (
+        await client.listSavedWords({
+          q: "refund %_ &",
+          stage: "reviewing",
+          due: true,
+          after: "opaque/+cursor=",
+          limit: 1,
+        })
+      ).data,
+      expected,
+    );
+    assert.deepEqual(Object.fromEntries(seen[0]!.searchParams), {
+      q: "refund %_ &",
+      stage: "reviewing",
+      due: "true",
+      after: "opaque/+cursor=",
+      limit: "1",
+    });
+    await client.listSavedWords({ due: false });
+    assert.equal(seen[1]!.searchParams.has("due"), false);
+  });
+
+  it("retains recommendation availability and nullable results without manufacturing a lesson", async () => {
+    const recommended: LessonRecommendationResponse = {
+      status: "recommended",
+      recommendation: {
+        lesson: {
+          key: "conversation-start",
+          version: "1",
+          title: "Start a conversation",
+          situationSlug: "daily-conversation",
+          situationTitle: "Daily Conversation",
+          description: "Useful words for meeting someone.",
+          wordCount: 3,
+          stepCount: 9,
+          status: "not_started",
+          completedSteps: 0,
+        },
+        reason: "focus_and_useful_words",
+        usefulTargetCount: 1,
+        totalTargetCount: 3,
+        matchesFocus: true,
+      },
+    };
+    const responses: LessonRecommendationResponse[] = [
+      recommended,
+      { status: "content_unavailable", recommendation: null },
+      { status: "no_useful_targets", recommendation: null },
+      { status: "no_unfinished_lessons", recommendation: null },
+    ];
+    let calls = 0;
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: async (input, init) => {
+        assert.equal(
+          String(input),
+          "https://api.example.com/api/v1/lesson-recommendation",
+        );
+        assert.equal(init?.method, "GET");
+        assert.equal(init?.body, undefined);
+        return new Response(JSON.stringify(responses[calls++]), {
+          status: 200,
+        });
+      },
+    });
+    for (const expected of responses)
+      assert.deepEqual((await client.getLessonRecommendation()).data, expected);
+    assert.equal(calls, responses.length);
+  });
+
+  it("reads nullable learning direction and sends the exact revisioned intent on explicit retry", async () => {
+    const calls: { method: string | undefined; body: unknown }[] = [];
+    const headers = new Headers({ "X-CSRF-Token": "synthetic-csrf" });
+    const intent = {
+      learningGoal: "conversation" as const,
+      mainUseCase: "social" as const,
+      expectedRevision: 0,
+    };
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: async (url, init) => {
+        assert.equal(
+          String(url),
+          "https://api.example.com/api/v1/learning-preferences",
+        );
+        if (init?.method === "PATCH")
+          assert.equal(
+            new Headers(init.headers).get("X-CSRF-Token"),
+            "synthetic-csrf",
+          );
+        calls.push({
+          method: init?.method,
+          body: init?.body ? JSON.parse(String(init.body)) : null,
+        });
+        return new Response(
+          JSON.stringify(
+            init?.method === "PATCH"
+              ? {
+                  learningGoal: "conversation",
+                  mainUseCase: "social",
+                  revision: 1,
+                }
+              : { learningGoal: null, mainUseCase: null, revision: 0 },
+          ),
+          { status: 200 },
+        );
+      },
+    });
+    assert.deepEqual((await client.getLearningPreferences()).data, {
+      learningGoal: null,
+      mainUseCase: null,
+      revision: 0,
+    });
+    for (let attempt = 0; attempt < 2; attempt++)
+      assert.deepEqual(
+        (await client.updateLearningPreferences(intent, { headers })).data,
+        { learningGoal: "conversation", mainUseCase: "social", revision: 1 },
+      );
+    assert.deepEqual(
+      calls.map((call) => call.body),
+      [null, intent, intent],
+    );
+    assert.equal(calls[1]?.method, "PATCH");
+    assert.deepEqual(
+      [...headers.entries()],
+      [["x-csrf-token", "synthetic-csrf"]],
+    );
+  });
+
+  it("surfaces a learning-direction conflict without retrying or changing the requested revision", async () => {
+    let calls = 0;
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: async (_url, init) => {
+        calls++;
+        assert.deepEqual(JSON.parse(String(init?.body)), {
+          learningGoal: "work",
+          mainUseCase: "work",
+          expectedRevision: 3,
+        });
+        return new Response(
+          JSON.stringify({ detail: "learning preferences changed" }),
+          { status: 409 },
+        );
+      },
+    });
+    await assert.rejects(
+      client.updateLearningPreferences({
+        learningGoal: "work",
+        mainUseCase: "work",
+        expectedRevision: 3,
+      }),
+      (error: unknown) =>
+        error instanceof ApiResponseError && error.status === 409,
+    );
+    assert.equal(calls, 1);
+  });
+
+  it("partially sets known status without sending a note and preserves caller headers on exact retry", async () => {
+    const observed: {
+      url: string;
+      method: string | undefined;
+      body: unknown;
+      key: string | null;
+    }[] = [];
+    const headers = new Headers({
+      "X-CSRF-Token": "synthetic-csrf",
+      "Idempotency-Key": "caller-value",
+    });
+    const expected: MeaningKnowledge = {
+      meaningId: "meaning/one",
+      selfReportedKnown: true,
+      note: "The current private note",
+    };
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: async (input, init) => {
+        const sentHeaders = new Headers(init?.headers);
+        assert.equal(sentHeaders.get("X-CSRF-Token"), "synthetic-csrf");
+        observed.push({
+          url: String(input),
+          method: init?.method,
+          body: JSON.parse(String(init?.body)),
+          key: sentHeaders.get("Idempotency-Key"),
+        });
+        return new Response(JSON.stringify(expected), { status: 200 });
+      },
+    });
+    for (let attempt = 0; attempt < 2; attempt++) {
+      assert.deepEqual(
+        (
+          await client.setMeaningKnown("meaning/one", true, "assessment-key", {
+            headers,
+          })
+        ).data,
+        expected,
+      );
+    }
+    assert.deepEqual(
+      observed,
+      Array(2).fill({
+        url: "https://api.example.com/api/v1/meaning-knowledge/meaning%2Fone",
+        method: "PATCH",
+        body: { selfReportedKnown: true },
+        key: "assessment-key",
+      }),
+    );
+    assert.equal(headers.get("Idempotency-Key"), "caller-value");
+  });
+
+  it("sends an explicit false assessment and exposes conflict without automatically retrying", async () => {
+    let calls = 0;
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: async (_input, init) => {
+        calls++;
+        assert.equal(init?.method, "PATCH");
+        assert.deepEqual(JSON.parse(String(init?.body)), {
+          selfReportedKnown: false,
+        });
+        return new Response(
+          JSON.stringify({ detail: "Idempotency key conflict" }),
+          {
+            status: 409,
+            headers: { "Content-Type": "application/problem+json" },
+          },
+        );
+      },
+    });
+    await assert.rejects(
+      client.setMeaningKnown("meaning", false, "key"),
+      (error: unknown) =>
+        error instanceof ApiResponseError && error.status === 409,
+    );
+    assert.equal(calls, 1);
+  });
+
+  describe("vocabulary and guided learning contracts", () => {
+    const word = {
+      meaningId: "00000000-0000-0000-0000-000000000002",
+      wordText: "invite",
+      wordSlug: "invite",
+      partOfSpeech: "verb",
+      definition: "to ask someone to come to an event",
+      example: "I will invite her to dinner.",
+      usageNote: "Invite someone to an event.",
+    };
+    const session: LessonSession = {
+      id: "00000000-0000-0000-0000-000000000010",
+      lessonKey: "conversation-basics",
+      lessonVersion: "1",
+      title: "Make a plan with a friend",
+      situationSlug: "daily-conversation",
+      status: "in_progress",
+      revision: 0,
+      completedSteps: 0,
+      totalSteps: 9,
+      words: [word],
+      currentStep: {
+        id: "teach-1",
+        kind: "teach",
+        word,
+        prompt: "Meet a useful word",
+        choices: [],
+      },
+      feedback: null,
+      canContinue: true,
+      firstAnswersCorrect: 0,
+      questionsAnswered: 0,
+    };
+
+    function jsonResponse(value: unknown): Response {
+      return new Response(JSON.stringify(value), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    it("encodes vocabulary filters and cursor without losing result identities or knowledge flags", async () => {
+      const expected: VocabularySearchResponse = {
+        items: [
+          {
+            meaningId: word.meaningId,
+            wordId: "00000000-0000-0000-0000-000000000003",
+            wordSlug: word.wordSlug,
+            wordText: word.wordText,
+            partOfSpeech: word.partOfSpeech,
+            shortDefinition: word.definition,
+            difficultyLevel: "a2",
+            saved: true,
+            selfReportedKnown: false,
+            userWordId: "00000000-0000-0000-0000-000000000004",
+            reviewState: "learning",
+            due: true,
+          },
+        ],
+        totalCount: 23,
+        hasMore: true,
+        nextCursor: "next+page/2=",
+      };
+      const client = new VocanovaClient({
+        baseURL: "https://api.example.com",
+        credentials: "include",
+        fetch: async (input, init) => {
+          const url = new URL(String(input));
+          assert.equal(url.pathname, "/api/v1/canonical-words");
+          assert.deepEqual(Object.fromEntries(url.searchParams), {
+            q: "café & tea?",
+            category: "social",
+            level: "a2",
+            knowledge: "saved",
+            after: "page+1/==",
+            limit: "7",
+          });
+          assert.equal(init?.method, "GET");
+          assert.equal(init?.body, undefined);
+          assert.equal(init?.credentials, "include");
+          assert.equal(
+            new Headers(init?.headers).get("Accept"),
+            "application/json",
+          );
+          return jsonResponse(expected);
+        },
+      });
+      const { data, response } = await client.searchVocabulary({
+        q: "café & tea?",
+        category: "social",
+        level: "a2",
+        knowledge: "saved",
+        after: "page+1/==",
+        limit: 7,
+      });
+      assert.deepEqual(data, expected);
+      assert.equal(response.status, 200);
+    });
+
+    it("omits empty vocabulary filters and supports the default catalog request", async () => {
+      let calls = 0;
+      const empty: VocabularySearchResponse = {
+        items: [],
+        totalCount: 0,
+        hasMore: false,
+      };
+      const client = new VocanovaClient({
+        baseURL: "https://api.example.com",
+        fetch: async (input, init) => {
+          calls++;
+          assert.equal(
+            String(input),
+            "https://api.example.com/api/v1/canonical-words",
+          );
+          assert.equal(init?.method, "GET");
+          return jsonResponse(empty);
+        },
+      });
+      assert.deepEqual((await client.searchVocabulary()).data, empty);
+      assert.deepEqual(
+        (
+          await client.searchVocabulary({
+            q: "",
+            category: "",
+            level: undefined,
+            knowledge: "",
+            after: "",
+          })
+        ).data,
+        empty,
+      );
+      assert.equal(calls, 2);
+    });
+
+    it("reads knowledge counts without merging self-reported knowledge into reviewed mastery", async () => {
+      const expected: KnowledgeSummary = {
+        selfReportedKnown: 11,
+        saved: 15,
+        new: 3,
+        learning: 4,
+        reviewing: 5,
+        mastered: 1,
+        ignored: 2,
+        archived: 0,
+        due: 6,
+      };
+      const signal = new AbortController().signal;
+      const client = new VocanovaClient({
+        baseURL: "https://api.example.com",
+        fetch: async (input, init) => {
+          assert.equal(
+            String(input),
+            "https://api.example.com/api/v1/knowledge-summary",
+          );
+          assert.equal(init?.method, "GET");
+          assert.equal(init?.signal, signal);
+          assert.equal(
+            new Headers(init?.headers).get("X-Test-Request"),
+            "knowledge",
+          );
+          return jsonResponse(expected);
+        },
+      });
+      const { data } = await client.getKnowledgeSummary({
+        signal,
+        headers: { "X-Test-Request": "knowledge" },
+      });
+      assert.deepEqual(data, expected);
+    });
+
+    it("reads private meaning knowledge using an encoded meaning identity", async () => {
+      const expected: MeaningKnowledge = {
+        meaningId: word.meaningId,
+        selfReportedKnown: true,
+        note: "Use this when planning dinner with friends.",
+        updatedAt: "2026-10-02T12:00:00Z",
+      };
+      const client = new VocanovaClient({
+        baseURL: "https://api.example.com",
+        credentials: "include",
+        fetch: async (input, init) => {
+          assert.equal(
+            String(input),
+            "https://api.example.com/api/v1/meaning-knowledge/meaning%2Fone%3Fsource%3Dsearch",
+          );
+          assert.equal(init?.method, "GET");
+          assert.equal(init?.body, undefined);
+          assert.equal(init?.credentials, "include");
+          assert.equal(
+            new Headers(init?.headers).get("X-Test-Request"),
+            "meaning-knowledge",
+          );
+          return jsonResponse(expected);
+        },
+      });
+      const { data } = await client.getMeaningKnowledge(
+        "meaning/one?source=search",
+        { headers: { "X-Test-Request": "meaning-knowledge" } },
+      );
+      assert.deepEqual(data, expected);
+    });
+
+    it("updates known status and a private note with PUT, CSRF and the supplied retry key", async () => {
+      const body = {
+        selfReportedKnown: false,
+        note: "Café invitation — practise again.",
+      };
+      const expected: MeaningKnowledge = {
+        meaningId: word.meaningId,
+        ...body,
+        updatedAt: "2026-10-02T12:01:00Z",
+      };
+      const headers = new Headers({
+        "X-CSRF-Token": "csrf-fixture",
+        "Idempotency-Key": "previous-key",
+      });
+      const signal = new AbortController().signal;
+      const client = new VocanovaClient({
+        baseURL: "https://api.example.com",
+        fetch: async (input, init) => {
+          assert.equal(
+            String(input),
+            "https://api.example.com/api/v1/meaning-knowledge/meaning%2Fone",
+          );
+          assert.equal(init?.method, "PUT");
+          assert.equal(init?.signal, signal);
+          assert.equal(
+            new Headers(init?.headers).get("Content-Type"),
+            "application/json",
+          );
+          assert.equal(
+            new Headers(init?.headers).get("X-CSRF-Token"),
+            "csrf-fixture",
+          );
+          assert.equal(
+            new Headers(init?.headers).get("Idempotency-Key"),
+            "knowledge-retry-key",
+          );
+          assert.deepEqual(JSON.parse(String(init?.body)), body);
+          return jsonResponse(expected);
+        },
+      });
+      assert.deepEqual(
+        (
+          await client.updateMeaningKnowledge(
+            "meaning/one",
+            body,
+            "knowledge-retry-key",
+            { headers, signal },
+          )
+        ).data,
+        expected,
+      );
+      assert.equal(headers.get("Idempotency-Key"), "previous-key");
+    });
+
+    it("clears meaning knowledge with an authenticated idempotent DELETE and accepts an empty 204", async () => {
+      const headers = new Headers({
+        "X-CSRF-Token": "csrf-fixture",
+        "Idempotency-Key": "previous-key",
+      });
+      const noContent = new Response(null, { status: 204 });
+      const client = new VocanovaClient({
+        baseURL: "https://api.example.com",
+        credentials: "include",
+        fetch: async (input, init) => {
+          assert.equal(
+            String(input),
+            "https://api.example.com/api/v1/meaning-knowledge/meaning%2Fone",
+          );
+          assert.equal(init?.method, "DELETE");
+          assert.equal(init?.body, undefined);
+          assert.equal(init?.credentials, "include");
+          assert.equal(
+            new Headers(init?.headers).get("X-CSRF-Token"),
+            "csrf-fixture",
+          );
+          assert.equal(
+            new Headers(init?.headers).get("Idempotency-Key"),
+            "clear-retry-key",
+          );
+          return noContent;
+        },
+      });
+      const result = await client.clearMeaningKnowledge(
+        "meaning/one",
+        "clear-retry-key",
+        { headers },
+      );
+      assert.deepEqual(result, { response: noContent });
+      assert.equal(result.response.status, 204);
+      assert.equal(headers.get("Idempotency-Key"), "previous-key");
+    });
+
+    it("lists lesson availability with saved session identity and completed step counts", async () => {
+      const summary: LessonSummary = {
+        key: "conversation-basics",
+        version: "1",
+        title: "Make a plan with a friend",
+        situationSlug: "daily-conversation",
+        situationTitle: "Daily Conversation",
+        description: "Invite a friend and agree on a plan.",
+        wordCount: 3,
+        stepCount: 9,
+        status: "in_progress",
+        sessionId: session.id,
+        completedSteps: 4,
+      };
+      const expected = {
+        items: [
+          summary,
+          {
+            ...summary,
+            key: "airport",
+            status: "not_started" as const,
+            sessionId: undefined,
+            completedSteps: 0,
+          },
+        ],
+      };
+      const client = new VocanovaClient({
+        baseURL: "https://api.example.com",
+        fetch: async (input, init) => {
+          assert.equal(String(input), "https://api.example.com/api/v1/lessons");
+          assert.equal(init?.method, "GET");
+          assert.equal(
+            new Headers(init?.headers).get("X-Test-Request"),
+            "lessons",
+          );
+          return jsonResponse(expected);
+        },
+      });
+      const { data } = await client.listLessons({
+        headers: { "X-Test-Request": "lessons" },
+      });
+      assert.deepEqual(data.items[0], summary);
+      assert.equal(data.items[1]?.status, "not_started");
+      assert.equal(data.items[1]?.sessionId, undefined);
+      assert.equal(data.items[1]?.completedSteps, 0);
+    });
+
+    it("starts a lesson with its explicit retry key while retaining CSRF and caller options", async () => {
+      const headers = new Headers({
+        "X-CSRF-Token": "csrf-fixture",
+        "Idempotency-Key": "old-key",
+      });
+      const signal = new AbortController().signal;
+      const client = new VocanovaClient({
+        baseURL: "https://api.example.com",
+        credentials: "include",
+        fetch: async (input, init) => {
+          assert.equal(
+            String(input),
+            "https://api.example.com/api/v1/lessons/daily%20plans%2F1/sessions",
+          );
+          assert.equal(init?.method, "POST");
+          assert.equal(init?.body, undefined);
+          assert.equal(init?.signal, signal);
+          assert.equal(init?.credentials, "include");
+          assert.equal(
+            new Headers(init?.headers).get("X-CSRF-Token"),
+            "csrf-fixture",
+          );
+          assert.equal(
+            new Headers(init?.headers).get("Idempotency-Key"),
+            "start-retry-key",
+          );
+          return jsonResponse(session);
+        },
+      });
+      const { data } = await client.startLesson(
+        "daily plans/1",
+        "start-retry-key",
+        { headers, signal },
+      );
+      assert.deepEqual(data, session);
+      assert.equal(
+        headers.get("Idempotency-Key"),
+        "old-key",
+        "the caller's Headers object remains reusable",
+      );
+    });
+
+    it("loads a completed lesson without inventing a current step or dropping completion evidence", async () => {
+      const completed: LessonSession = {
+        ...session,
+        status: "completed",
+        revision: 17,
+        completedSteps: 9,
+        currentStep: null,
+        feedback: null,
+        canContinue: false,
+        firstAnswersCorrect: 5,
+        questionsAnswered: 6,
+        completedAt: "2026-10-02T12:00:00Z",
+      };
+      const client = new VocanovaClient({
+        baseURL: "https://api.example.com",
+        fetch: async (input, init) => {
+          assert.equal(
+            String(input),
+            "https://api.example.com/api/v1/lesson-sessions/owned%2Fsession%3F1",
+          );
+          assert.equal(init?.method, "GET");
+          assert.equal(init?.body, undefined);
+          return jsonResponse(completed);
+        },
+      });
+      const { data } = await client.getLessonSession("owned/session?1");
+      assert.deepEqual(data, completed);
+    });
+
+    it("sends the same lesson answer identity, revision and choice on an explicit retry", async () => {
+      const answer: LessonAction = {
+        stepId: "context-1",
+        expectedRevision: 12,
+        clientActionId: "answer-action-1",
+        action: "answer",
+        choiceId: word.meaningId,
+      };
+      const expected: LessonSession = {
+        ...session,
+        revision: 13,
+        completedSteps: 6,
+        currentStep: {
+          id: "context-1",
+          kind: "context",
+          word,
+          prompt: "Choose a word",
+          context: "Ask a friend to come to dinner.",
+          choices: [{ id: word.meaningId, text: word.wordText }],
+        },
+        feedback: {
+          stepId: "context-1",
+          correct: true,
+          explanation: "Invite asks someone to join you.",
+          correctChoiceId: word.meaningId,
+        },
+        canContinue: true,
+        firstAnswersCorrect: 4,
+        questionsAnswered: 4,
+      };
+      const original = { ...answer };
+      let calls = 0;
+      const client = new VocanovaClient({
+        baseURL: "https://api.example.com",
+        fetch: async (input, init) => {
+          calls++;
+          assert.equal(
+            String(input),
+            `https://api.example.com/api/v1/lesson-sessions/${session.id}/actions`,
+          );
+          assert.equal(init?.method, "POST");
+          assert.equal(
+            new Headers(init?.headers).get("Content-Type"),
+            "application/json",
+          );
+          assert.equal(
+            new Headers(init?.headers).get("X-CSRF-Token"),
+            "csrf-fixture",
+          );
+          assert.equal(
+            new Headers(init?.headers).get("Idempotency-Key"),
+            "answer-retry-key",
+          );
+          assert.deepEqual(JSON.parse(String(init?.body)), original);
+          return jsonResponse(expected);
+        },
+      });
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const { data } = await client.submitLessonAction(
+          session.id,
+          answer,
+          "answer-retry-key",
+          { headers: { "X-CSRF-Token": "csrf-fixture" } },
+        );
+        assert.deepEqual(data, expected);
+      }
+      assert.equal(calls, 2);
+      assert.deepEqual(answer, original);
+    });
+
+    it("sends a lesson continue action without inventing an answer choice", async () => {
+      const action: LessonAction = {
+        stepId: "teach-1",
+        expectedRevision: 0,
+        clientActionId: "continue-action-1",
+        action: "continue",
+      };
+      const expected = {
+        ...session,
+        revision: 1,
+        completedSteps: 1,
+        currentStep: { ...session.currentStep!, id: "teach-2" },
+      };
+      const client = new VocanovaClient({
+        baseURL: "https://api.example.com",
+        fetch: async (input, init) => {
+          assert.equal(
+            String(input),
+            "https://api.example.com/api/v1/lesson-sessions/owned%2Fsession%3F1/actions",
+          );
+          assert.equal(init?.method, "POST");
+          assert.equal(
+            new Headers(init?.headers).get("Idempotency-Key"),
+            action.clientActionId,
+          );
+          assert.deepEqual(JSON.parse(String(init?.body)), action);
+          return jsonResponse(expected);
+        },
+      });
+      assert.deepEqual(
+        (
+          await client.submitLessonAction(
+            "owned/session?1",
+            action,
+            action.clientActionId,
+          )
+        ).data,
+        expected,
+      );
+    });
+
+    it("surfaces a stale lesson revision as a conflict without retrying or fabricating progress", async () => {
+      let calls = 0;
+      const client = new VocanovaClient({
+        baseURL: "https://api.example.com",
+        fetch: async () => {
+          calls++;
+          return new Response(
+            JSON.stringify({
+              detail: "This lesson changed. Reload it to continue.",
+            }),
+            {
+              status: 409,
+              headers: { "Content-Type": "application/problem+json" },
+            },
+          );
+        },
+      });
+      await assert.rejects(
+        client.submitLessonAction(
+          session.id,
+          {
+            stepId: "teach-1",
+            expectedRevision: 0,
+            clientActionId: "stale-action",
+            action: "continue",
+          },
+          "stale-action",
+        ),
+        (error: unknown) => {
+          assert.ok(error instanceof ApiResponseError);
+          assert.equal(error.status, 409);
+          assert.equal(
+            error.message,
+            "This lesson changed. Reload it to continue.",
+          );
+          return true;
+        },
+      );
+      assert.equal(calls, 1);
+    });
+  });
+
   it("sends GET /api/v1/me with Accept header", async () => {
     const fetch = (url: string, init: RequestInit): Promise<Response> => {
       assert.equal(url, "https://api.example.com/api/v1/me");

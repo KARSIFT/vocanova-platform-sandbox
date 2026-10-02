@@ -83,6 +83,22 @@ func addCuratedNaturalForms(forms map[string]struct{}, base, wordType, partOfSpe
 		approved = []string{"catches up", "catching up", "caught up"}
 	case base == "meet up" && wordType == "phrasal_verb" && partOfSpeech == "verb":
 		approved = []string{"meets up", "meeting up", "met up"}
+	case base == "try on" && wordType == "phrasal_verb" && partOfSpeech == "verb":
+		approved = []string{"tries on", "trying on", "tried on"}
+		// These authored clothing forms permit only the two object pronouns,
+		// not arbitrary gaps or a generic separable-phrasal-verb algorithm.
+		for _, head := range []string{"try", "tries", "trying", "tried"} {
+			for _, object := range []string{"it", "them"} {
+				approved = append(approved, head+" "+object+" on")
+			}
+		}
+	case base == "call back" && wordType == "phrasal_verb" && partOfSpeech == "verb":
+		approved = []string{"calls back", "calling back", "called back"}
+		for _, head := range []string{"call", "calls", "calling", "called"} {
+			for _, object := range []string{"me", "you", "him", "her", "us", "them"} {
+				approved = append(approved, head+" "+object+" back")
+			}
+		}
 	case base == "keep in touch" && wordType == "idiom" && partOfSpeech == "verb":
 		approved = []string{"keeps in touch", "keeping in touch", "kept in touch"}
 	case base == "sounds good" && wordType == "phrase" && partOfSpeech == "phrase":
@@ -242,6 +258,13 @@ func SentenceContainsTarget(sentence string, target *Target) bool {
 		forms := append([]string{target.NormalizedWord}, target.AcceptedForms...)
 		for _, form := range forms {
 			phraseTokens := sentenceTokens(strings.ToLower(strings.TrimSpace(form)))
+			if target.WordType == "phrasal_verb" && target.PartOfSpeech == "verb" &&
+				(target.NormalizedWord == "try on" || target.NormalizedWord == "call back") && len(phraseTokens) == 3 {
+				if containsCuratedObjectForm(sentence, phraseTokens) {
+					return true
+				}
+				continue
+			}
 			if containsTokenSequence(tokens, phraseTokens) {
 				return true
 			}
@@ -258,6 +281,20 @@ func SentenceContainsTarget(sentence string, target *Target) bool {
 		tok = stripPunctuation(tok)
 		tok = stripPossessive(tok)
 		if _, ok := forms[tok]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+// Only the new curated three-word object-pronoun forms use this path. Keep
+// punctuation between the words from joining separate clauses or sentences.
+// Outer quotation marks and sentence punctuation do not hide a valid form.
+func containsCuratedObjectForm(sentence string, form []string) bool {
+	words := strings.Fields(sentence)
+	for i := 0; i+2 < len(words); i++ {
+		if strings.TrimLeftFunc(words[i], isPunctuationOrSymbol) == form[0] &&
+			words[i+1] == form[1] && strings.TrimRightFunc(words[i+2], isPunctuationOrSymbol) == form[2] {
 			return true
 		}
 	}

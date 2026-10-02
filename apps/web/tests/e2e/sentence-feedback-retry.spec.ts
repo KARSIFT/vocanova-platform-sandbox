@@ -136,6 +136,12 @@ test.describe("Sentence feedback retries", () => {
     await expect(feedback.getByRole("alert")).toHaveText(
       "Your sentence is too short. Write at least 3 words.",
     );
+    await expect(
+      feedback.getByText("Your sentence", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      feedback.getByText("Sentence checked", { exact: true }),
+    ).toHaveCount(0);
 
     await textarea.fill("I will pour tea slowly.");
     await submit.click();

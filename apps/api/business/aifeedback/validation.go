@@ -56,11 +56,20 @@ func ValidateSentence(input string, target *Target) ValidationResult {
 }
 
 func normalizeSentence(s string) string {
+	return strings.ToLower(prepareProviderSentence(s))
+}
+
+// ProviderInputPreparationVersion identifies input preparation independently of
+// the unchanged rubric/schema and case-equivalent request fingerprint.
+const ProviderInputPreparationVersion = "sentence-input-v2-case-preserving"
+
+// prepareProviderSentence preserves learner capitalization, including mistakes.
+// Compatibility normalization and whitespace folding match request validation.
+func prepareProviderSentence(s string) string {
 	s = strings.TrimSpace(s)
 	s = norm.NFKC.String(s)
 	fields := strings.Fields(s)
-	s = strings.Join(fields, " ")
-	return strings.ToLower(s)
+	return strings.Join(fields, " ")
 }
 
 func meaningfulTokens(s string) []string {

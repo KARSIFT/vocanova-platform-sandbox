@@ -314,6 +314,14 @@ func TestPostgreSQLRepositoryAnonymizeUserDataUsesPersistedSchema(t *testing.T) 
 		"DELETE FROM grace_day_ledger WHERE user_id = \\$1",
 		"DELETE FROM daily_activity_summaries WHERE user_id = \\$1",
 		"DELETE FROM streak_states WHERE user_id = \\$1",
+		"DELETE FROM user_learning_preferences WHERE user_id = \\$1",
+		"DELETE FROM practice_mistake_resolutions WHERE user_id = \\$1",
+		"DELETE FROM practice_actions WHERE user_id = \\$1",
+		"DELETE FROM practice_sessions WHERE user_id = \\$1",
+		"DELETE FROM word_knowledge_actions WHERE user_id = \\$1",
+		"DELETE FROM user_word_knowledge WHERE user_id = \\$1",
+		"DELETE FROM lesson_actions WHERE user_id = \\$1",
+		"DELETE FROM lesson_sessions WHERE user_id = \\$1",
 		"DELETE FROM user_onboarding_profiles WHERE user_id = \\$1",
 		"DELETE FROM user_settings WHERE user_id = \\$1",
 		"DELETE FROM idempotency_keys WHERE user_id = \\$1",
@@ -336,6 +344,14 @@ func TestPostgreSQLRepositoryAnonymizeUserDataUsesPersistedSchema(t *testing.T) 
 	assert.Equal(t, int64(1), counters.AIFeedbackAttempts)
 	assert.Equal(t, int64(1), counters.AIQualityReviewReports)
 	assert.Equal(t, int64(1), counters.ReviewAttempts)
+	assert.Equal(t, int64(1), counters.PracticeSessions)
+	assert.Equal(t, int64(1), counters.PracticeActions)
+	assert.Equal(t, int64(1), counters.PracticeMistakeResolutions)
+	assert.Equal(t, int64(1), counters.LearningPreferences)
+	assert.Equal(t, int64(1), counters.WordKnowledge)
+	assert.Equal(t, int64(1), counters.WordKnowledgeActions)
+	assert.Equal(t, int64(1), counters.LessonActions)
+	assert.Equal(t, int64(1), counters.LessonSessions)
 	assert.Equal(t, int64(1), counters.LearnerSentences)
 	assert.Equal(t, int64(1), counters.UserWords)
 	assert.Equal(t, int64(1), counters.ExternalIdentities)

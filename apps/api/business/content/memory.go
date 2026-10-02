@@ -10,6 +10,8 @@ import (
 // MemoryRepository is a deterministic in-memory repository for service and route
 // tests. It is not concurrency-safe.
 type MemoryRepository struct {
+	knowledge    KnowledgeReader
+	savedReader  SavedStateReader
 	situations   []Situation
 	words        []SeedWord
 	meanings     []SeedMeaning

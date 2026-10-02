@@ -4,7 +4,68 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { validateMockInventory } from "./mock-inventory.mjs";
+import {
+  isRegisteredAPIPath,
+  isRegisteredBusinessModule,
+  isRegisteredSchemaFile,
+  validateMockInventory,
+} from "./mock-inventory.mjs";
+
+test("current delivery registers only the reviewed learning feature boundaries", () => {
+  for (const route of [
+    "/api/v1/lessons",
+    "/api/v1/lessons/{lessonKey}/sessions",
+    "/api/v1/lesson-sessions/{sessionId}",
+    "/api/v1/lesson-sessions/{sessionId}/actions",
+    "/api/v1/practice-sessions",
+    "/api/v1/practice-sessions/{sessionId}",
+    "/api/v1/practice-sessions/{sessionId}/actions",
+    "/api/v1/meaning-knowledge/{meaningId}",
+    "/api/v1/knowledge-summary",
+    "/api/v1/learning-preferences",
+    "/api/v1/lesson-recommendation",
+    "/api/v1/achievements",
+  ])
+    assert.equal(isRegisteredAPIPath(route), true, route);
+  for (const module of ["lessons", "practice", "wordknowledge", "achievements"])
+    assert.equal(isRegisteredBusinessModule(module), true, module);
+  for (const schema of [
+    "lessonaction.go",
+    "lessonsession.go",
+    "practiceaction.go",
+    "practicemistakeresolution.go",
+    "practicesession.go",
+    "userlearningpreferences.go",
+    "userwordknowledge.go",
+    "wordknowledgeaction.go",
+  ])
+    assert.equal(isRegisteredSchemaFile(schema), true, schema);
+  assert.deepEqual(validateMockInventory(), []);
+});
+
+test("registered feature families do not admit invented routes, modules, or schemas", () => {
+  for (const route of [
+    "/api/v1/invented-feature",
+    "/api/v1/lessons/{lessonKey}/publish",
+    "/api/v1/lesson-sessions/{sessionId}/rewards",
+    "/api/v1/practice-sessions/{sessionId}/mastery",
+    "/api/v1/meaning-knowledge/{meaningId}/share",
+    "/api/v1/learning-preferences/admin",
+    "/api/v1/lesson-recommendation/override",
+    "/api/v1/achievements/claim",
+    "/api/v1/lesson-sessions/",
+    "/api/v1/meaning-knowledge/",
+  ])
+    assert.equal(isRegisteredAPIPath(route), false, route);
+  for (const module of ["invented", "lessonrewards", "practiceanalytics"])
+    assert.equal(isRegisteredBusinessModule(module), false, module);
+  for (const schema of [
+    "invented.go",
+    "lessonreward.go",
+    "achievementclaim.go",
+  ])
+    assert.equal(isRegisteredSchemaFile(schema), false, schema);
+});
 
 // VOC-031-T03: the protected-boundary allow list now includes the
 // T03 email-change routes (`/api/v1/settings/email-change-links`),

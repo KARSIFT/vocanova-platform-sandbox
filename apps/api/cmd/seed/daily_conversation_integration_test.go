@@ -49,8 +49,8 @@ func TestCanonicalSeedPostgreSQLRerunPreservesLearningReference(t *testing.T) {
 	seed, err := loadSeed()
 	require.NoError(t, err)
 	expectedCounts := map[string]int{
-		"journey_situations": 7, "canonical_words": 51, "word_meanings": 54,
-		"word_examples": 72, "usage_notes": 162, "journey_words": 54,
+		"journey_situations": 17, "canonical_words": 89, "word_meanings": 92,
+		"word_examples": 148, "usage_notes": 200, "journey_words": 92,
 	}
 	const savedID = "edf9c1dc-0c0d-4bf1-a6e5-22c2c1fd1bf7"
 	const retainedMeaningID = "3d64c3c9-ede0-5ffd-b1ef-278f6b70e486" // catch up

@@ -702,10 +702,18 @@ func (s *Service) RunDeletionSweep(ctx context.Context, clientIP, sessionToken s
 		result.AnonymizationTotals.GraceDayLedger += counters.GraceDayLedger
 		result.AnonymizationTotals.FeatureAuditLogs += counters.FeatureAuditLogs
 		result.AnonymizationTotals.UserOnboardingProfiles += counters.UserOnboardingProfiles
+		result.AnonymizationTotals.LearningPreferences += counters.LearningPreferences
 		result.AnonymizationTotals.UserSettings += counters.UserSettings
 		result.AnonymizationTotals.DailyMissionSnapshots += counters.DailyMissionSnapshots
 		result.AnonymizationTotals.DailyActivitySummaries += counters.DailyActivitySummaries
 		result.AnonymizationTotals.StreakStates += counters.StreakStates
+		result.AnonymizationTotals.PracticeSessions += counters.PracticeSessions
+		result.AnonymizationTotals.PracticeActions += counters.PracticeActions
+		result.AnonymizationTotals.PracticeMistakeResolutions += counters.PracticeMistakeResolutions
+		result.AnonymizationTotals.WordKnowledge += counters.WordKnowledge
+		result.AnonymizationTotals.WordKnowledgeActions += counters.WordKnowledgeActions
+		result.AnonymizationTotals.LessonSessions += counters.LessonSessions
+		result.AnonymizationTotals.LessonActions += counters.LessonActions
 	}
 	return result, nil
 }

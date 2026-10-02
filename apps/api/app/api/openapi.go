@@ -6,15 +6,19 @@ import (
 	"time"
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/accounts"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/achievements"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/aifeedback"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/auth"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/content"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/learning"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/lessons"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/missions"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/password"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/practice"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/reviews"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/users"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/wordknowledge"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/email"
 	"github.com/danielgtaylor/huma/v2"
@@ -74,8 +78,10 @@ func NewContractAPI() huma.API {
 	// appear in the contract.
 	usersRepo := users.NewMemoryRepository()
 	usersSvc := users.NewService(usersRepo, usersRepo, usersRepo, clock.Real{})
+	learningPreferencesSvc := users.NewLearningPreferencesService(usersRepo)
 	RegisterOnboarding(contractAPI, usersSvc, svc)
 	RegisterSettings(contractAPI, usersSvc, svc)
+	RegisterLearningPreferences(contractAPI, learningPreferencesSvc, svc)
 	SetOnboardingStatusLookup(newOnboardingStatusLookup(usersSvc))
 
 	// VOC-031-T03: register the email-change routes on the
@@ -112,7 +118,7 @@ func NewContractAPI() huma.API {
 		content.NewMemoryRepository(content.MemoryRepositoryData{}),
 		content.NewMemorySavedStateReader(nil),
 	)
-	RegisterContent(contractAPI, contentSvc, usersSvc)
+	RegisterContent(contractAPI, contentSvc, usersSvc, learningPreferencesSvc)
 
 	// Register learning routes for OpenAPI generation using an empty in-memory repo.
 	learningSvc := learning.NewService(
@@ -121,6 +127,11 @@ func NewContractAPI() huma.API {
 		clock.Real{},
 	)
 	RegisterLearning(contractAPI, learningSvc, svc)
+	RegisterLessons(contractAPI, lessons.NewService(lessons.NewPostgreSQLRepository(nil), clock.Real{}), svc)
+	RegisterLessonRecommendation(contractAPI, lessons.NewRecommendationService(lessons.NewPostgreSQLRepository(nil)))
+	RegisterWordKnowledge(contractAPI, wordknowledge.NewService(wordknowledge.NewPostgreSQLRepository(nil), clock.Real{}), svc)
+	RegisterPractice(contractAPI, practice.NewService(practice.NewPostgreSQLRepository(nil), clock.Real{}), svc)
+	RegisterAchievements(contractAPI, achievements.NewService(achievements.NewPostgreSQLRepository(nil)))
 
 	// Register review routes for OpenAPI generation using an empty in-memory repo.
 	reviewsSvc := reviews.NewService(

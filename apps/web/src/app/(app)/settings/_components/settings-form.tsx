@@ -265,13 +265,6 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
         </legend>
         <div className="space-y-[var(--spacing-sm)]">
           <ToggleRow
-            id="notifications-enabled"
-            label="Daily review reminder preference"
-            description="Review reminders are not available yet. This only saves your preference."
-            checked={state.notificationsEnabled}
-            onChange={(value) => patch("notificationsEnabled", value)}
-          />
-          <ToggleRow
             id="marketing-emails-enabled"
             label="Product news and tips"
             description="Save your preference for occasional product news and learning tips. You can opt out any time."
@@ -442,18 +435,22 @@ function ToggleRow({
           role="switch"
           aria-checked={checked}
           onClick={() => onChange(!checked)}
-          className={`relative inline-flex h-[var(--spacing-xl)] w-[var(--spacing-2xl)] items-center rounded-full transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 ${
-            checked ? "bg-primary-600" : "bg-neutral-300"
-          }`}
+          className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] shrink-0 items-center justify-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
         >
           <span
             aria-hidden="true"
-            className={`inline-block h-[var(--spacing-md)] w-[var(--spacing-md)] transform rounded-full bg-white transition-transform duration-[var(--duration-fast)] ease-[var(--ease-out)] ${
-              checked
-                ? "translate-x-[var(--spacing-xl)]"
-                : "translate-x-[var(--spacing-xs)]"
+            className={`relative inline-flex h-[var(--spacing-xl)] w-[var(--spacing-2xl)] items-center rounded-full transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] ${
+              checked ? "bg-primary-600" : "bg-neutral-300"
             }`}
-          />
+          >
+            <span
+              className={`inline-block h-[var(--spacing-md)] w-[var(--spacing-md)] transform rounded-full bg-white transition-transform duration-[var(--duration-fast)] ease-[var(--ease-out)] ${
+                checked
+                  ? "translate-x-[var(--spacing-xl)]"
+                  : "translate-x-[var(--spacing-xs)]"
+              }`}
+            />
+          </span>
         </button>
         <span className="text-sm text-neutral-700" aria-hidden="true">
           {checked ? "On" : "Off"}

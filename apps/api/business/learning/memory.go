@@ -3,6 +3,7 @@ package learning
 import (
 	"context"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -166,53 +167,41 @@ func (r *MemoryRepository) GetSavedMeaningByID(ctx context.Context, userID, user
 func (r *MemoryRepository) ListSavedWords(ctx context.Context, req ListSavedWordsRequest) (*ListSavedWordsResponse, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-
-	limit := req.Limit
-	if limit <= 0 {
-		limit = 20
+	req, cursor, err := prepareSavedWords(req)
+	if err != nil {
+		return nil, err
 	}
-	if limit > 50 {
-		limit = 50
+	items := []SavedMeaning{}
+	for _, item := range r.activeSavedMeanings(req.UserID) {
+		if req.Query != "" && !strings.Contains(strings.ToLower(item.WordText), req.Query) && !strings.Contains(strings.ToLower(item.ShortDefinition), req.Query) {
+			continue
+		}
+		if req.Stage != "" && item.ReviewState != req.Stage {
+			continue
+		}
+		if req.DueOnly && !item.Due {
+			continue
+		}
+		items = append(items, item)
 	}
-
-	items := r.activeSavedMeanings(req.UserID)
 	sort.Slice(items, func(i, j int) bool {
 		if items[i].AddedAt.Equal(items[j].AddedAt) {
 			return items[i].UserWordID.String() > items[j].UserWordID.String()
 		}
 		return items[i].AddedAt.After(items[j].AddedAt)
 	})
-
-	start := 0
-	if req.AfterCursor != "" {
-		c, err := decodeSavedCursor(req.AfterCursor)
-		if err != nil {
-			return nil, ErrInvalidCursor
+	resp := &ListSavedWordsResponse{Items: []SavedMeaning{}, TotalCount: len(items)}
+	for _, item := range items {
+		// The cursor is an exclusive boundary even if its original row was removed.
+		if cursor.ID != uuid.Nil && (item.AddedAt.After(cursor.AddedAt) || (item.AddedAt.Equal(cursor.AddedAt) && item.UserWordID.String() >= cursor.ID.String())) {
+			continue
 		}
-		// A cursor is an exclusive boundary, not a reference to a row that
-		// must still exist. Start exhausted unless an item strictly after the
-		// boundary is found, so a deleted cursor row cannot skip that item or
-		// restart the list.
-		start = len(items)
-		for i, it := range items {
-			if it.AddedAt.Before(c.AddedAt) || (it.AddedAt.Equal(c.AddedAt) && it.UserWordID.String() < c.ID.String()) {
-				start = i
-				break
-			}
+		resp.Items = append(resp.Items, item)
+		if len(resp.Items) > req.Limit {
+			resp.Items = resp.Items[:req.Limit]
+			resp.NextCursor = nextSavedCursor(req, resp.Items[len(resp.Items)-1])
+			break
 		}
-	}
-	if start > len(items) {
-		start = len(items)
-	}
-	end := start + limit
-	if end > len(items) {
-		end = len(items)
-	}
-	page := items[start:end]
-	resp := &ListSavedWordsResponse{Items: page}
-	if len(page) == limit && end < len(items) {
-		last := page[len(page)-1]
-		resp.NextCursor = encodeSavedCursor(savedCursor{AddedAt: last.AddedAt, ID: last.UserWordID})
 	}
 	return resp, nil
 }
@@ -295,6 +284,7 @@ func (r *MemoryRepository) meaningActive(id uuid.UUID) bool {
 
 func (r *MemoryRepository) activeSavedMeanings(userID uuid.UUID) []SavedMeaning {
 	var out []SavedMeaning
+	now := time.Now()
 	for _, uw := range r.userWords {
 		if uw.UserID != userID || uw.DeletedAt != nil {
 			continue
@@ -316,6 +306,8 @@ func (r *MemoryRepository) activeSavedMeanings(userID uuid.UUID) []SavedMeaning 
 			PartOfSpeech:    m.PartOfSpeech,
 			ShortDefinition: m.ShortDefinition,
 			Status:          uw.Status,
+			ReviewState:     reviewState(uw),
+			Due:             (uw.Status == "new" || uw.Status == "learning" || uw.Status == "reviewing") && (uw.NextReviewAt == nil || !uw.NextReviewAt.After(now)),
 			Source:          uw.Source,
 			Saved:           true,
 			AddedAt:         uw.AddedAt,

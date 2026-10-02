@@ -1,0 +1,422 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import {
+  ApiResponseError,
+  type LessonAction,
+  type LessonSession,
+  type LessonSummary,
+} from "@vocanova/api-client";
+
+import { createApiClient } from "@/lib/api";
+import { getOrRefreshCSRFToken } from "@/lib/csrf";
+import { handleApiError } from "@/lib/session";
+import { ListenButton } from "@/ui/pronunciation";
+import { Surface } from "@/ui/surface";
+
+const primary =
+  "inline-flex min-h-12 items-center justify-center rounded-xl bg-primary-700 px-5 py-3 font-semibold text-white hover:bg-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:opacity-50";
+const secondary =
+  "inline-flex min-h-12 items-center justify-center rounded-xl border border-neutral-300 bg-white px-4 py-3 font-semibold text-neutral-900 hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:opacity-50";
+
+export function LessonPlayer({
+  lesson,
+  initialSession,
+}: {
+  lesson: LessonSummary;
+  initialSession: LessonSession | null;
+}) {
+  const [session, setSession] = useState(initialSession);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [needsRetry, setNeedsRetry] = useState(false);
+  const [needsRefresh, setNeedsRefresh] = useState(false);
+  const inFlight = useRef(false);
+  const pendingAction = useRef<LessonAction | null>(null);
+  const startKey = useRef<string | null>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const feedback = useRef<HTMLDivElement>(null);
+  const focusAfterResponse = useRef(false);
+  const priorStep = useRef(initialSession?.currentStep?.id);
+
+  useEffect(() => {
+    if (!focusAfterResponse.current) return;
+    focusAfterResponse.current = false;
+    if (
+      session?.currentStep?.id !== priorStep.current ||
+      session?.status === "completed"
+    )
+      heading.current?.focus();
+    else if (session?.feedback) feedback.current?.focus();
+    priorStep.current = session?.currentStep?.id;
+  }, [session]);
+
+  function accept(next: LessonSession) {
+    focusAfterResponse.current = true;
+    setSession((current) =>
+      current && current.id === next.id && current.revision > next.revision
+        ? current
+        : next,
+    );
+  }
+
+  async function refreshProgress() {
+    if (!session || inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true);
+    try {
+      accept((await createApiClient().getLessonSession(session.id)).data);
+      pendingAction.current = null;
+      setNeedsRetry(false);
+      setNeedsRefresh(false);
+      setError("");
+      setNotice("Your saved lesson progress is up to date.");
+    } catch (cause) {
+      setError(
+        handleApiError(
+          cause,
+          "We could not load your saved progress. Try again when you are connected.",
+        ),
+      );
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
+  }
+
+  async function submit(action?: "answer" | "continue", choiceId?: string) {
+    if (inFlight.current || needsRefresh) return;
+    // Preserve the exact intent before session/CSRF preparation can fail. A
+    // retry must have the same action even when no mutation reached the API.
+    if (session && !pendingAction.current) {
+      if (!session.currentStep || !action) return;
+      pendingAction.current = {
+        stepId: session.currentStep.id,
+        expectedRevision: session.revision,
+        clientActionId: crypto.randomUUID(),
+        action,
+        ...(choiceId ? { choiceId } : {}),
+      };
+    }
+    inFlight.current = true;
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const token = await getOrRefreshCSRFToken();
+      if (!token) throw new Error("session not ready");
+      const init = { headers: { "X-CSRF-Token": token } };
+      const client = createApiClient();
+      let next: LessonSession;
+      if (!session) {
+        startKey.current ??= crypto.randomUUID();
+        next = (await client.startLesson(lesson.key, startKey.current, init))
+          .data;
+      } else {
+        const body = pendingAction.current;
+        if (!body) return;
+        next = (
+          await client.submitLessonAction(
+            session.id,
+            body,
+            body.clientActionId,
+            init,
+          )
+        ).data;
+      }
+      pendingAction.current = null;
+      setNeedsRetry(false);
+      accept(next);
+    } catch (cause) {
+      if (
+        cause instanceof ApiResponseError &&
+        cause.status === 409 &&
+        session
+      ) {
+        setNeedsRefresh(true);
+        setNeedsRetry(false);
+        setError(
+          "This lesson changed in another request. Load your saved progress to continue.",
+        );
+      } else {
+        setNeedsRetry(true);
+        setError(
+          handleApiError(
+            cause,
+            "We could not confirm that step. Retry to check and save it safely, or come back later.",
+          ),
+        );
+      }
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
+  }
+
+  const step = session?.currentStep;
+  const locked = busy || needsRetry || needsRefresh;
+
+  return (
+    <div>
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <Link
+          className="inline-flex min-h-11 items-center font-semibold text-primary-700"
+          href="/discover"
+        >
+          Back to Journey
+        </Link>
+        <span className="text-sm text-neutral-600">
+          {lesson.situationTitle}
+        </span>
+      </div>
+      {session && (
+        <div className="mb-6">
+          <div className="mb-2 flex justify-between gap-3 text-sm text-neutral-700">
+            <span>{session.title}</span>
+            <span className="shrink-0">
+              {session.completedSteps} of {session.totalSteps} steps
+            </span>
+          </div>
+          <progress
+            aria-label="Lesson progress"
+            value={session.completedSteps}
+            max={session.totalSteps}
+            className="h-2 w-full accent-primary-700"
+          />
+        </div>
+      )}
+
+      {!session ? (
+        <Surface>
+          <p className="text-sm font-semibold text-primary-700">
+            Learn, remember, use
+          </p>
+          <h1
+            ref={heading}
+            tabIndex={-1}
+            className="mt-2 text-3xl font-bold tracking-tight text-neutral-900"
+          >
+            {lesson.title}
+          </h1>
+          <p className="mt-3 text-lg text-neutral-700">{lesson.description}</p>
+          <ol className="my-6 space-y-3 text-neutral-700">
+            <li>
+              Meet {lesson.wordCount} useful words and hear how they sound.
+            </li>
+            <li>Check what you remember with short questions.</li>
+            <li>Choose the words that fit a real situation.</li>
+          </ol>
+          <button
+            type="button"
+            disabled={locked}
+            className={`${primary} w-full`}
+            onClick={() => void submit()}
+          >
+            {busy ? "Opening lesson…" : "Start lesson"}
+          </button>
+          <p className="mt-3 text-sm text-neutral-600">
+            Your progress saves as you go. You can leave and return.
+          </p>
+        </Surface>
+      ) : session.status === "completed" ? (
+        <Surface>
+          <p className="text-sm font-semibold text-primary-700">
+            {lesson.situationTitle}
+          </p>
+          <h1
+            ref={heading}
+            tabIndex={-1}
+            className="mt-2 text-3xl font-bold text-neutral-900"
+          >
+            Lesson complete
+          </h1>
+          <p className="mt-3 text-lg text-neutral-700">
+            You practised {session.words.length} words in context.
+          </p>
+          <p className="mt-2 text-neutral-600">
+            {session.firstAnswersCorrect} of {session.questionsAnswered}{" "}
+            questions correct on your first try. Returning to these words will
+            help them stay with you.
+          </p>
+          <ul className="my-6 divide-y divide-neutral-200">
+            {session.words.map((word) => (
+              <li key={word.meaningId} className="py-4">
+                <Link
+                  className="inline-flex min-h-11 items-center text-lg font-semibold text-primary-700"
+                  href={`/vocabulary/${encodeURIComponent(word.wordSlug)}`}
+                >
+                  {word.wordText}
+                </Link>
+                <p className="text-neutral-700">{word.definition}</p>
+              </li>
+            ))}
+          </ul>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href={`/practice?lesson=${encodeURIComponent(session.lessonKey)}`}
+              className={secondary}
+            >
+              Practise these words
+            </Link>
+            <Link href="/discover" className={primary}>
+              Choose your next lesson
+            </Link>
+            <Link href="/review" className={secondary}>
+              Review saved words
+            </Link>
+          </div>
+        </Surface>
+      ) : step ? (
+        <Surface key={step.id}>
+          <p className="text-sm font-semibold text-primary-700">
+            {step.kind === "teach"
+              ? "Meet a word"
+              : step.kind === "recall"
+                ? "Remember the meaning"
+                : "Use it in context"}
+          </p>
+          <h1
+            ref={heading}
+            tabIndex={-1}
+            className="mt-2 text-2xl font-bold leading-snug text-neutral-900"
+          >
+            {step.prompt}
+          </h1>
+          {step.kind === "teach" ? (
+            <div className="mt-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-3xl font-bold text-neutral-900">
+                  {step.word.wordText}
+                </h2>
+                <ListenButton text={step.word.wordText} />
+              </div>
+              <p className="mt-1 text-sm text-neutral-600">
+                {step.word.partOfSpeech}
+              </p>
+              <p className="mt-4 text-xl leading-relaxed text-neutral-900">
+                {step.word.definition}
+              </p>
+              <blockquote className="mt-5 border-l-4 border-primary-300 pl-4 text-lg text-neutral-700">
+                {step.word.example}
+              </blockquote>
+              <div className="mt-2">
+                <ListenButton
+                  text={step.word.example}
+                  label="Listen to example"
+                  showCaption={false}
+                />
+              </div>
+              {step.word.usageNote && (
+                <p className="mt-5 rounded-xl bg-secondary-50 p-4 text-neutral-800">
+                  {step.word.usageNote}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="mt-5">
+              {step.context && (
+                <p className="mb-5 rounded-xl bg-secondary-50 p-4 text-lg leading-relaxed text-neutral-900">
+                  {step.context}
+                </p>
+              )}
+              <div
+                role="group"
+                aria-label="Answer choices"
+                className="grid gap-3"
+              >
+                {step.choices.map((choice) => (
+                  <button
+                    type="button"
+                    key={choice.id}
+                    disabled={locked || session.canContinue}
+                    onClick={() => void submit("answer", choice.id)}
+                    className={`${secondary} justify-start text-left ${session.feedback?.correctChoiceId === choice.id ? "border-primary-500 bg-primary-50" : ""}`}
+                  >
+                    {choice.text}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {session.feedback && (
+            <div
+              ref={feedback}
+              tabIndex={-1}
+              role="status"
+              className={`mt-5 rounded-xl border p-4 ${session.feedback.correct ? "border-primary-200 bg-primary-50" : "border-secondary-200 bg-secondary-50"}`}
+            >
+              <h2 className="font-semibold text-neutral-900">
+                {session.feedback.correct ? "That’s right" : "Let’s look again"}
+              </h2>
+              <p className="mt-1 text-neutral-700">
+                {session.feedback.explanation}
+              </p>
+              {!session.feedback.correct && (
+                <p className="mt-2 text-sm text-neutral-700">
+                  Choose an answer to try again.
+                </p>
+              )}
+            </div>
+          )}
+          {session.canContinue && (
+            <button
+              type="button"
+              disabled={locked}
+              onClick={() => void submit("continue")}
+              className={`${primary} mt-6 w-full`}
+            >
+              {busy
+                ? "Saving progress…"
+                : session.completedSteps + 1 === session.totalSteps
+                  ? "Finish lesson"
+                  : "Continue"}
+            </button>
+          )}
+        </Surface>
+      ) : null}
+
+      {error && (
+        <div
+          role="alert"
+          className="mt-4 rounded-xl border border-secondary-300 bg-secondary-50 p-4 text-neutral-900"
+        >
+          <p>{error}</p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            {needsRetry && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void submit()}
+                className={secondary}
+              >
+                Retry step
+              </button>
+            )}
+            {session && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void refreshProgress()}
+                className={secondary}
+              >
+                Load saved progress
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      {notice && (
+        <p role="status" className="mt-4 text-neutral-700">
+          {notice}
+        </p>
+      )}
+      {busy && (
+        <p role="status" className="mt-3 text-sm text-neutral-600">
+          Saving your progress…
+        </p>
+      )}
+    </div>
+  );
+}

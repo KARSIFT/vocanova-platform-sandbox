@@ -106,10 +106,10 @@ func TestApplySeedExecutesUpsertStatementsInOrder(t *testing.T) {
 func TestLoadSeedParsesEmbeddedJSON(t *testing.T) {
 	seed, err := loadSeed()
 	require.NoError(t, err)
-	require.Len(t, seed.JourneySituations, 7)
-	require.Len(t, seed.CanonicalWords, 51)
-	require.Len(t, seed.WordMeanings, 54)
-	require.Len(t, seed.WordExamples, 72)
-	require.Len(t, seed.UsageNotes, 162)
-	require.Len(t, seed.JourneyWords, 54)
+	require.Len(t, seed.JourneySituations, 17)
+	require.Len(t, seed.CanonicalWords, 89)
+	require.Len(t, seed.WordMeanings, 92)
+	require.Len(t, seed.WordExamples, 148)
+	require.Len(t, seed.UsageNotes, 200)
+	require.Len(t, seed.JourneyWords, 92)
 }

@@ -54,7 +54,7 @@ func TestServiceNilFeedbackUsesBoundedRepair(t *testing.T) {
 			require.Len(t, provider.tasks, 2, "one initial call and at most one constrained repair")
 			require.NotContains(t, provider.tasks[0].UserPayload, "repair_attempt")
 			require.Equal(t, true, provider.tasks[1].UserPayload["repair_attempt"])
-			require.Equal(t, normalizeSentence(req.SentenceText), provider.tasks[1].UserPayload["learner_sentence"])
+			require.Equal(t, req.SentenceText, provider.tasks[1].UserPayload["learner_sentence"])
 			if tc.nilFirst {
 				prior, exists := provider.tasks[1].UserPayload["prior_output"]
 				require.True(t, exists)

@@ -137,20 +137,28 @@ func (r AccountDeletionRequest) EligibleForPurge(now time.Time) bool {
 // (a "documented per-table count" claim requires a real
 // count, not an assertion).
 type AnonymizationCounters struct {
-	ExternalIdentities     int64
-	UserWords              int64
-	LearnerSentences       int64
-	ReviewAttempts         int64
-	AIFeedbackAttempts     int64
-	AIQualityReviewReports int64
-	ConfidencePointLedger  int64
-	GraceDayLedger         int64
-	FeatureAuditLogs       int64
-	UserOnboardingProfiles int64
-	UserSettings           int64
-	DailyMissionSnapshots  int64
-	DailyActivitySummaries int64
-	StreakStates           int64
+	LearningPreferences        int64
+	PracticeSessions           int64
+	PracticeActions            int64
+	PracticeMistakeResolutions int64
+	WordKnowledge              int64
+	WordKnowledgeActions       int64
+	LessonSessions             int64
+	LessonActions              int64
+	ExternalIdentities         int64
+	UserWords                  int64
+	LearnerSentences           int64
+	ReviewAttempts             int64
+	AIFeedbackAttempts         int64
+	AIQualityReviewReports     int64
+	ConfidencePointLedger      int64
+	GraceDayLedger             int64
+	FeatureAuditLogs           int64
+	UserOnboardingProfiles     int64
+	UserSettings               int64
+	DailyMissionSnapshots      int64
+	DailyActivitySummaries     int64
+	StreakStates               int64
 }
 
 // SweepResult is the aggregate result of one sweep pass. The

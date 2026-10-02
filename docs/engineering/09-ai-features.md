@@ -84,6 +84,11 @@ Validate before any paid AI call whenever possible. Rules: ≥3 words, ≤300 ch
 English, one meaningful sentence, includes the target word/accepted inflection/approved phrase
 variant, belongs to an eligible attempt owned by the authenticated learner. Backend normalizes
 (trim, collapse whitespace, Unicode-normalize) while preserving the learner's original display text.
+Feedback input preparation `sentence-input-v2-case-preserving` uses NFKC and collapsed whitespace
+without lowercasing, so the provider can judge capitalization in the original sentence. Repair and
+failed-generation retries retain the first stored original. Matching, moderation and request hashes
+keep their existing lowercase policy; case-only edits can replay the first result. This preparation
+version is separate from the rubric/schema versions and requires separate live quality evidence.
 Target-word matching accepts capitalization, approved inflections (`work`→`works/worked/working`),
 regular final-noun plurals for noun phrases/collocations (`security check`→`security checks`),
 and configured phrase variants. Idioms and phrasal verbs still require their canonical or
@@ -177,7 +182,9 @@ enums, empty required fields, excessive lengths, off-target feedback, unexpected
 contradictory explanations, unsafe output, or leaked instructions/conversation. One constrained
 repair attempt is permitted when budget allows.
 
-`sentence-feedback-v3` shares the same rubric between initial and repair prompts.
+`sentence-feedback-v4` shares the same compact rubric between initial and repair prompts.
+It separates judgments about original target use, grammar, clarity and naturalness before status
+and consistent feedback. This instruction clarification does not establish model quality.
 `feedback-schema-v3` records the semantic contract change allowing a null correction for `incorrect`.
 The canonical JSON Schema now explicitly allows `string` or `null` for `corrected_sentence` and
 `improvement_tip`, with their existing length limits and optional presence. Cloudflare receives this
@@ -294,6 +301,17 @@ backend-design draft that said 12s — see [06](06-backend-design.md) §12). At 
 for a clearly transient failure, and one structured-output repair attempt — never both indefinitely.
 No automatic retry for invalid input, blocked content, auth failure, invalid credentials, persistent
 schema incompatibility, a valid-but-questionable judgment, or learner cancellation.
+
+The optional OpenAI adapter accepts explicit reviewed GPT-5 nano, GPT-4.1 nano, GPT-4o mini and
+GPT-6 Luna profiles, including valid dated snapshot forms; syntax alone does not establish account
+availability. Cloudflare remains the default provider. OpenAI requires explicit configuration,
+paired four-outcome moderation, strict structured feedback and `store:false`; runtime transport
+retries are zero, with the existing bounded service repair retained. GPT-4o mini support changes no
+default or deployment. The [evaluation record](feedback-evaluation.md#v4-service-development-gate--2026-10-02)
+documents its small v4 development gate, teaching-quality limits and late hash-manifest provenance.
+That gate is not human review, general quality acceptance, live repair evidence or production
+database evidence; it does not authorize activation. Recheck documented prices, model lifecycle
+and account access before any separately approved live evaluation.
 
 ## 19. Rate limiting, cost control, deduplication
 

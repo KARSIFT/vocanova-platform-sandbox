@@ -4,6 +4,145 @@ This is the working completion plan for the product requested on 2 October 2026.
 
 Read [the current state](current-state.md), [product bible](00-product-bible.md), [learning workspace design](../design/learning-workspace.md) and [development guide](../development.md) before extending scope.
 
+The owner's later feature-first direction expands this baseline. Use
+[feature-complete delivery](feature-complete-delivery.md) for the required
+connected feature set and build order. The previous consolidated acceptance
+below applies only to that earlier revision; it does not accept the ongoing
+lesson, knowledge-map and varied-practice expansion. That work remains on one
+delivery branch for a single consolidated PR after integration and verification.
+
+## Active feature expansion checkpoint — 2026-10-02
+
+The delivery branch implements the connected learning expansion described in
+[current state](current-state.md#active-feature-expansion--delivery-branch-not-deployed).
+It has not been accepted on staging or promoted to production. The earlier
+consolidated PR evidence below remains historical and does not cover this work.
+
+- **Curriculum and durable sessions:** the [30-lesson course](starter-curriculum.md)
+  targets 90 distinct meanings. All 400 original seed rows and seven original
+  lesson definitions are preserved. The inventory is 17 situations, 89 words/
+  phrases, 92 meanings, 148 examples and 200 notes. Disposable PostgreSQL 16
+  checks passed repeated seed execution, preserved saved references, all guided
+  lessons and independent practice, including actual stored version-1 session
+  read/list/replay/answer/continue behavior. The expanded catalog uses
+  `starter-90-v2`; supported `starter-21-v1` sessions retain their snapshots.
+  Unknown content/grading versions still fail closed. The same run checked the
+  recovery fixture's invariants after reseeding; it was not a new dump/restore.
+- **Learning direction and privacy:** authenticated GET/PATCH
+  `/api/v1/learning-preferences` separates current goal/focus from immutable
+  onboarding answers. Writes require CSRF and an expected revision; an
+  already-applied intent returns current state without another write, and a
+  conflicting stale intent is rejected. Migration
+  [20261002233000](../../apps/api/migrations/20261002233000_learning_preferences.sql)
+  brings the inventory to 38. All 38 forward SQL migrations applied to a fresh
+  disposable database, followed by passing preference concurrency/preservation,
+  account export/anonymization and current/historical practice checks. This was
+  forward SQL verification, not an Atlas revision-history test. Export schema
+  1.4 includes the new data. Editing is connected to the plan and starting-word
+  check. The later 42-check mock-browser set passed learning-direction
+  retry/conflict/CSRF recovery, lesson-specific practice selection and canonical
+  search. This does not establish real-account or deployment acceptance.
+- **Calendar reminders:** the [optional calendar export](calendar-reminders.md)
+  is implemented with validated date/time, a daily floating-local event and a
+  display alarm. Six exporter tests pass and a bounded static review found no
+  actionable issue. All nine calendar browser checks and 30 affected Settings
+  checks passed across 360px, 430px and desktop. They inspect actual downloaded
+  bytes, unchanged settings, both themes, keyboard access and preparation failures.
+  A real calendar import, correct first
+  event/timezone and observed alert are still required for calendar delivery
+  acceptance. Email/push reminders are not enabled; retained legacy preferences
+  do not authorize messages. Imported reminders are edited or stopped in the
+  learner's calendar, and repeat imports can create duplicates.
+- **Earlier local UI evidence:** guided lessons, vocabulary search, device
+  pronunciation, notes/knowledge and repeatable practice have focused mock-backed
+  browser passes recorded in current state. Self-check, learning plan and
+  achievements passed 27/27 checks across 360px, 430px and desktop. Those runs
+  predate the later learning-direction and calendar checks above. They are not
+  live-provider, real-calendar, learner-outcome or final combined-build evidence.
+
+The collection now supports literal word/short-definition search and separate
+stage/due filters over the full requester-owned saved set. List items expose
+learner-facing review state and actual scheduling eligibility; raw persisted
+status stays unchanged. A single PostgreSQL query supplies filtered totals and
+page data, including exhausted pages. Filter/requester-bound cursors reject stale
+or mismatched queries rather than silently mixing result sets. Both focused
+PostgreSQL regressions passed against all 38 migrations and the real canonical
+seed, including more than 50 rows, archived canonical compatibility, legacy
+review state, literal `%`/`_`, isolation and deleted pagination boundaries.
+
+Home and the learning plan now read a personal lesson recommendation based on
+unfinished sessions, current focus and known/mastered target coverage. Reading it
+does not complete lessons or award progress. A 48-check mock-browser set passed
+self-check, recommendation and collection filters in all three layouts; the
+three existing save/library/detail/practice/remove checks passed in a separate
+follow-up. A later recommendation run passed 15/15 checks across the three
+layouts, including Home's expired-session redirect, resume after known-status
+changes and unavailable-state recovery. These are focused checks, not a fresh
+full browser matrix.
+
+The integrated baseline passed `pnpm run validate` with exit 0: formatting,
+lint, Go vet, type checks, all 256 foundation tests, 50 API-client tests, 133 web
+helper tests, Go package suites and application builds. Earlier mock-inventory
+failures were resolved with bounded predicates and regression tests for the
+approved additions. The practice-migration scanner's false positive was fixed by
+formatting one column per line; whitespace-stripped SQL stayed identical. Its
+Atlas checksum was updated, and Atlas validation and Go migration-scanner tests
+passed. The existing 38-migration database evidence therefore predates formatting
+only, not a SQL behavior change.
+
+This accepted baseline does not cover the pending self-check/saved-empty
+interface changes or AI input case-preservation fix. Those changes need focused
+verification before the final combined acceptance. Local validation also does
+not substitute for the affected browser matrix, staging/provider acceptance or
+production release requirements.
+
+The optional OpenAI runtime adapters and `sentence-feedback-v4` prompt are
+implemented locally. The semantic contract stays `feedback-schema-v3`, and the
+canonical output allowance remains 300 tokens. OpenAI requires explicit provider
+selection; there is no automatic fallback or deployment activation from the
+evaluation. Local safety checks precede provider moderation, and both OpenAI
+stages use zero transport retries within the service request deadline.
+
+The new preregistered GPT-5 nano service gate is **FAILED / STOPPED**. Four of ten
+planned synthetic cases were exercised: missing-target and local urgent-safety
+controls made zero provider calls; an ordinary invitation and an agreement-error
+sentence each made one moderation and one feedback POST. All four POSTs returned
+complete HTTP 200 responses. The gate stopped at the agreement case because
+`naturalness=natural` differed from the frozen `understandable` reference. The
+model did identify the agreement problem and supplied a faithful retry tip;
+valid output and those correct observations do not waive the preregistered
+failure. Six cases remain unrun, without relabeling or tuning to continue.
+
+The run used the real service with synthetic targets and isolated memory
+repositories. It observed history and replay behavior for the ordinary case,
+not PostgreSQL durability, real learners or live constrained repair. Usage was
+returned, but billing was not reconciled. Independent coordinating AI review
+confirmed the stopped result; this is not human learner review or a general
+ranking of models. No runtime provider was activated and no deployment changed.
+Live writing-feedback availability, representative quality and controlled
+provider/service acceptance remain release blockers.
+
+A separately approved GPT-4o mini follow-up completed the ten reused development
+cases with 14 POSTs (eight moderation and six feedback), no transport retries and
+no constrained repair. All frozen automated references, safety outcomes and
+memory-backed lifecycle/replay checks passed. Independent coordinating AI review
+read all ten vectors and six feedback outputs and accepted **only the bounded
+development gate**. Technical headings, a cheerful grief-related headline and a
+lowercase correction remain pedagogical/style limitations, not evidence of
+general learner usefulness.
+
+The source/binary hash manifest was recorded after the first two POSTs because
+its initial file lookup failed. The binary's exact case/rubric hash guards ran
+before network access; the error was disclosed and the same process continued,
+without rerunning paid cases. Preserve that provenance gap with this result.
+Returned usage was 9,416 input and 704 output tokens; the recorded list-price
+estimate was $0.0018348, not reconciled billing. The longest observed service case
+was 4.459 seconds, which is not a production latency estimate. The run used
+synthetic memory repositories, not PostgreSQL service persistence, and exercised
+no live repair. It is not held-out, full-golden-set or human learner evidence.
+The failed/stopped nano result remains intact. No provider default, activation or
+deployment changed, and the live availability/quality release requirements remain.
+
 ## Consolidated delivery acceptance — 2026-10-02
 
 Implementation revision `5b074584cb1799d6b8da7ee02909c703382a3ee5` in
@@ -26,6 +165,9 @@ failures and corrections that led to this acceptance.
 
 ## Live feedback quality remains open — 2026-10-02
 
+The v3 evidence below precedes the v4 service gate recorded above; it retains its
+original scope and does not accept the newer optional provider implementation.
+
 A separate v3 development pilot compared `gpt-5-nano` and `gpt-4.1-nano` on the same nine synthetic
 cases through evaluator-only adapters. All 18 responses were complete and schema-valid, but AI
 review rejected both candidates for meaning or original-sentence diagnostic errors despite status
@@ -35,6 +177,20 @@ learner-service checks remain unproven by this pilot. No runtime provider change
 resulted. See the [dated pilot evidence and limits](../engineering/feedback-evaluation.md#v3-development-pilot--2026-10-02).
 The prior consolidated acceptance above does not close this live-quality blocker.
 
+The delivery branch also corrects a deployment configuration mismatch: both
+workflows wrote `@cf/meta/llama-3.1-8b-instruct-fp8-fast`, while the feedback
+adapter and production constructor use `@cf/meta/llama-3.3-70b-instruct-fp8-fast`.
+The workflows now match that existing default. Both models exist in
+[Cloudflare's current pricing list](https://developers.cloudflare.com/workers-ai/platform/pricing/).
+The latter has documented [JSON-mode support](https://developers.cloudflare.com/workers-ai/features/json-mode/);
+the former is absent from that feature's supported-model list, checked 2 October 2026.
+This does not establish the cause of the live failure. A configuration parity regression passes. This is a local
+correction, not proof that the staging moderation failure is resolved: no
+deployment or live provider request has verified it, and safe failure diagnostics
+remain necessary. The later optional OpenAI implementation and failed/stopped
+service gate are recorded above; they do not close this availability or quality
+gap.
+
 ## Definition of a usable first release
 
 A target learner can sign in through a supported method, choose sensible learning preferences, find relevant words, save them, finish a short review, write an original sentence, understand useful feedback and return later without losing confirmed progress. The interface works on small phones and desktop with keyboard access, readable themes and understandable recovery paths. Production data can be restored, failures are detected, and the release can be identified and rolled back.
@@ -43,18 +199,18 @@ Points and streaks support this experience. They must not imply a proficiency sc
 
 ## Ordered delivery work
 
-| Priority | Outcome                                 | Acceptance evidence                                                                                                                                 | Current position                                                                                          |
-| -------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| 1        | Trustworthy review and mission behavior | Reproduced defects fixed; regression tests; stable reloads and retries; target/timezone boundaries exercised                                        | PR #1470 merged; staging release and synthetic journey passed                                             |
-| 1        | Clear project instructions              | Current source map, commands, deployment process and handoff; retired automation clearly historical                                                 | Source documentation and two repository skills reconciled and merged                                      |
-| 1        | Repeatable integration verification     | Full Go database tests, production build and browser matrix on the reviewed revision                                                                | Final local checks and required CI passed; merged staging revision verified                               |
-| 2        | Consistent daily learning experience    | Mobile 360/430px and desktop walkthroughs; keyboard and light/dark checks; empty/error/long-content states                                          | Browser matrix, theme/width screenshots and Lighthouse passed; live-device acceptance remains open        |
-| 2        | Sufficient practical content            | Inventory by situation and level; editorial check of meanings/examples/distractors; pilot learners can find useful vocabulary for repeated sessions | 7 situations, 51 words, 54 meanings; reviewed Daily Conversation expansion; pilot usefulness remains open |
-| 2        | Reliable live sentence feedback         | Synthetic evaluation set against the configured provider; correctness, helpfulness, failures, latency and measured cost documented                  | V3 nine-case candidate pilot rejected both models; live quality and human/service evidence remain open    |
-| 2        | Durable operations                      | Documented backup schedule, retention, separate storage and successful isolated restore; release rollback rehearsal; alert delivery proof           | Synthetic restore and failure controls pass locally; production recovery and alert evidence remain open   |
-| 3        | Working intended signup path            | Real provider sign-in and email lifecycle verified; configuration accurately reflected in the UI; owner selects when to expand access               | Controlled Google signup live; email/password disabled                                                    |
-| 3        | Learner validation                      | Small consented pilot of A2–B1 learners; task completion, misunderstandings and return visits inform the next iteration                             | No fresh pilot evidence                                                                                   |
-| 3        | Public launch review                    | Accurate privacy/terms and support/contact arrangements; remaining release blockers resolved                                                        | Requires owner/business decisions and appropriate review                                                  |
+| Priority | Outcome                                 | Acceptance evidence                                                                                                                                 | Current position                                                                                                                                    |
+| -------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1        | Trustworthy review and mission behavior | Reproduced defects fixed; regression tests; stable reloads and retries; target/timezone boundaries exercised                                        | PR #1470 merged; staging release and synthetic journey passed                                                                                       |
+| 1        | Clear project instructions              | Current source map, commands, deployment process and handoff; retired automation clearly historical                                                 | Source documentation and two repository skills reconciled and merged                                                                                |
+| 1        | Repeatable integration verification     | Full Go database tests, production build and browser matrix on the reviewed revision                                                                | Final local checks and required CI passed; merged staging revision verified                                                                         |
+| 2        | Consistent daily learning experience    | Mobile 360/430px and desktop walkthroughs; keyboard and light/dark checks; empty/error/long-content states                                          | Browser matrix, theme/width screenshots and Lighthouse passed; live-device acceptance remains open                                                  |
+| 2        | Sufficient practical content            | Inventory by situation and level; editorial check of meanings/examples/distractors; pilot learners can find useful vocabulary for repeated sessions | Local 30-lesson course and persistence checks passed; 17 situations, 89 words, 92 meanings; deployed and learner usefulness acceptance remains open |
+| 2        | Reliable live sentence feedback         | Synthetic evaluation set against the configured provider; correctness, helpfulness, failures, latency and measured cost documented                  | Nano gate failed/stopped; later 4o-mini ten-case development gate accepted only within its stated limits; no activation or live-quality acceptance  |
+| 2        | Durable operations                      | Documented backup schedule, retention, separate storage and successful isolated restore; release rollback rehearsal; alert delivery proof           | Synthetic restore and failure controls pass locally; production recovery and alert evidence remain open                                             |
+| 3        | Working intended signup path            | Real provider sign-in and email lifecycle verified; configuration accurately reflected in the UI; owner selects when to expand access               | Controlled Google signup live; email/password disabled                                                                                              |
+| 3        | Learner validation                      | Small consented pilot of A2–B1 learners; task completion, misunderstandings and return visits inform the next iteration                             | No fresh pilot evidence                                                                                                                             |
+| 3        | Public launch review                    | Accurate privacy/terms and support/contact arrangements; remaining release blockers resolved                                                        | Requires owner/business decisions and appropriate review                                                                                            |
 
 ## Delivery evidence — 2026-10-02
 

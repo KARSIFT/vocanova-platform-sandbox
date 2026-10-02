@@ -78,6 +78,68 @@ test("revision retains prior feedback and submits a new request identity", async
   expect(requestKeys).toHaveLength(2);
 });
 
+test("revision preserves a newer unsent draft through reload", async ({
+  page,
+  context,
+}, testInfo) => {
+  const requests: Array<{ key: string; sentence: string }> = [];
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      request.url().includes("/api/v1/learner-sentences")
+    ) {
+      requests.push({
+        key: request.headers()["idempotency-key"] ?? "",
+        sentence: request.postDataJSON().sentenceText,
+      });
+    }
+  });
+  await prepareSavedWord(page, context, testInfo.project.use.baseURL!);
+
+  const checkedSentence = "I pour teh coffee.";
+  const newerDraft = "I pour tea for my friends.";
+  const sentenceInput = page.getByRole("textbox", {
+    name: /Write a sentence using pour/,
+  });
+  await sentenceInput.fill(checkedSentence);
+  await page.getByRole("button", { name: "Check my sentence" }).click();
+  await expect(
+    page.getByRole("status", { name: "Feedback result: Needs improvement" }),
+  ).toBeVisible();
+  await expect(sentenceInput).toBeEnabled();
+
+  // No request is pending: the learner edits before using the earlier
+  // feedback's revision action. The visible draft must remain recoverable.
+  await sentenceInput.fill(newerDraft);
+  await page.getByRole("button", { name: "Revise sentence" }).click();
+  await expect(sentenceInput).toHaveValue(newerDraft);
+  await expect(sentenceInput).toBeFocused();
+  const previousFeedback = page.getByLabel("Previous feedback");
+  await expect(
+    previousFeedback.getByText(checkedSentence, { exact: true }),
+  ).toBeVisible();
+  await expect(previousFeedback).toContainText(
+    "Suggested revision: I pour the coffee.",
+  );
+  await expect(previousFeedback).not.toContainText(newerDraft);
+  expect(requests).toHaveLength(1);
+
+  await page.reload();
+  await expect(sentenceInput).toHaveValue(newerDraft);
+  // Only the draft is recovered; previous feedback is not stored as a
+  // fabricated result for the new sentence.
+  await expect(previousFeedback).not.toBeVisible();
+  await page.getByRole("button", { name: "Check my sentence" }).click();
+  await expect(
+    page.getByRole("status", { name: "Feedback result: Correct" }),
+  ).toBeVisible();
+  expect(requests).toHaveLength(2);
+  expect(requests[0]!.key).toBeTruthy();
+  expect(requests[1]!.key).toBeTruthy();
+  expect(requests[1]!.key).not.toBe(requests[0]!.key);
+  expect(requests[1]!.sentence).toBe(newerDraft);
+});
+
 test("a word-detail draft survives an auth gate and same-user return", async ({
   page,
   context,

@@ -49,7 +49,7 @@ test.describe("Saved vocabulary library", () => {
       page.getByRole("heading", { name: "Saved vocabulary", level: 1 }),
     ).toBeVisible();
     await expect(page.getByRole("heading", { name: "pour" })).toBeVisible();
-    await expect(page.getByText("New", { exact: true })).toBeVisible();
+    await expect(page.getByRole("list", { name: "Saved vocabulary results" }).getByText("New", { exact: true })).toBeVisible();
 
     const listScan = await scanForAxeViolations(page);
     expect(
@@ -88,5 +88,35 @@ test.describe("Saved vocabulary library", () => {
     await expect(
       page.getByRole("heading", { name: "Your vocabulary starts here" }),
     ).toBeVisible();
+
+    for (const theme of ["light", "dark"] as const) {
+      await context.addCookies([
+        { name: "vocanova_theme", value: theme, url: baseURL },
+      ]);
+      await page.goto("/words");
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      const guidance = page.getByRole("main").getByText(
+        "Save a useful word from Journey and it will appear here, ready for review and sentence practice.",
+        { exact: true },
+      );
+      await expect(guidance).toBeVisible();
+      const guidanceBox = await guidance.boundingBox();
+      expect(guidanceBox).not.toBeNull();
+      // A spacing-token collision previously squeezed this paragraph to 24px.
+      expect(guidanceBox!.width).toBeGreaterThanOrEqual(
+        Math.min(320, page.viewportSize()!.width - 64),
+      );
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+      ).toBeLessThanOrEqual(page.viewportSize()!.width);
+      const explore = page.getByRole("link", { name: "Explore Journey" });
+      await expect(explore).toHaveAttribute("href", "/discover");
+      await explore.focus();
+      await expect(explore).toBeFocused();
+      await page.screenshot({
+        path: testInfo.outputPath(`empty-saved-vocabulary-${theme}.png`),
+        fullPage: true,
+      });
+    }
   });
 });

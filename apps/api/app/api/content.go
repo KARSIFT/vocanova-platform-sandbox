@@ -24,13 +24,14 @@ type SituationDTO struct {
 
 // SituationMeaningDTO is a meaning entry shown in a situation drill-down.
 type SituationMeaningDTO struct {
-	MeaningID       string `json:"meaningId" format:"uuid" doc:"Meaning identifier"`
-	WordID          string `json:"wordId" format:"uuid" doc:"Canonical word identifier"`
-	WordSlug        string `json:"wordSlug" doc:"Canonical word URL slug"`
-	WordText        string `json:"wordText" doc:"Canonical word text"`
-	PartOfSpeech    string `json:"partOfSpeech" doc:"Part of speech"`
-	ShortDefinition string `json:"shortDefinition" doc:"Short definition"`
-	Saved           bool   `json:"saved" doc:"Whether the authenticated requester has saved this meaning"`
+	MeaningID         string `json:"meaningId" format:"uuid" doc:"Meaning identifier"`
+	WordID            string `json:"wordId" format:"uuid" doc:"Canonical word identifier"`
+	WordSlug          string `json:"wordSlug" doc:"Canonical word URL slug"`
+	WordText          string `json:"wordText" doc:"Canonical word text"`
+	PartOfSpeech      string `json:"partOfSpeech" doc:"Part of speech"`
+	ShortDefinition   string `json:"shortDefinition" doc:"Short definition"`
+	SelfReportedKnown bool   `json:"selfReportedKnown" doc:"Requester self-assessment, independent of review mastery"`
+	Saved             bool   `json:"saved" doc:"Whether the authenticated requester has saved this meaning"`
 }
 
 // WordExampleDTO is a canonical example sentence.
@@ -53,6 +54,7 @@ type WordMeaningDTO struct {
 	PartOfSpeech      string             `json:"partOfSpeech" doc:"Part of speech"`
 	ShortDefinition   string             `json:"shortDefinition" doc:"Short definition"`
 	LearnerDefinition string             `json:"learnerDefinition,omitempty" doc:"Learner-friendly definition"`
+	SelfReportedKnown bool               `json:"selfReportedKnown" doc:"Requester self-assessment, independent of review mastery"`
 	Saved             bool               `json:"saved" doc:"Whether the authenticated requester has saved this meaning"`
 	UserWordID        string             `json:"userWordId,omitempty" format:"uuid" doc:"Saved record identifier when this meaning is saved"`
 	ReviewState       string             `json:"reviewState,omitempty" enum:"new,learning,reviewing,mastered,ignored,archived" doc:"Learner-visible saved-word state"`
@@ -115,8 +117,11 @@ type GetWordOutput struct {
 // usersSvc is used, read-only, to look up the requester's onboarding
 // main-use-case answer so the first page of Discover can surface
 // goal-relevant situations first (VOC-1183); it may be nil, in which
-// case Discover ordering falls back to plain display_order.
-func RegisterContent(api huma.API, svc *content.Service, usersSvc *users.Service) {
+// case Discover ordering falls back to plain display_order. An optional current
+// preferences reader takes precedence, including an authoritative unknown focus.
+// A lookup failure retains the original onboarding fallback.
+func RegisterContent(api huma.API, svc *content.Service, usersSvc *users.Service, preferences ...LearningPreferencesReader) {
+	registerCanonicalSearch(api, svc)
 	huma.Register(api, huma.Operation{
 		OperationID: "ListJourneySituations",
 		Method:      http.MethodGet,
@@ -132,7 +137,7 @@ func RegisterContent(api huma.API, svc *content.Service, usersSvc *users.Service
 		resp, err := svc.ListSituations(ctx, content.ListSituationsRequest{
 			AfterCursor:      input.After,
 			Limit:            input.Limit,
-			PriorityCategory: requesterMainUseCase(ctx, usersSvc),
+			PriorityCategory: requesterMainUseCase(ctx, usersSvc, preferences...),
 		})
 		if err != nil {
 			return nil, mapContentError(err)
@@ -168,13 +173,14 @@ func RegisterContent(api huma.API, svc *content.Service, usersSvc *users.Service
 		out.Body.Meanings = make([]SituationMeaningDTO, len(detail.Meanings))
 		for i, m := range detail.Meanings {
 			out.Body.Meanings[i] = SituationMeaningDTO{
-				MeaningID:       m.MeaningID.String(),
-				WordID:          m.WordID.String(),
-				WordSlug:        m.WordSlug,
-				WordText:        m.WordText,
-				PartOfSpeech:    m.PartOfSpeech,
-				ShortDefinition: m.ShortDefinition,
-				Saved:           m.Saved,
+				MeaningID:         m.MeaningID.String(),
+				WordID:            m.WordID.String(),
+				WordSlug:          m.WordSlug,
+				WordText:          m.WordText,
+				PartOfSpeech:      m.PartOfSpeech,
+				ShortDefinition:   m.ShortDefinition,
+				Saved:             m.Saved,
+				SelfReportedKnown: m.SelfReportedKnown,
 			}
 		}
 		return out, nil
@@ -243,6 +249,7 @@ func wordToDTO(w *content.WordDetail) WordDetailDTO {
 			ShortDefinition:   m.ShortDefinition,
 			LearnerDefinition: m.LearnerDefinition,
 			Saved:             m.Saved,
+			SelfReportedKnown: m.SelfReportedKnown,
 			UserWordID:        userWordID,
 			ReviewState:       m.ReviewState,
 			Due:               m.Due,
@@ -267,12 +274,20 @@ func wordToDTO(w *content.WordDetail) WordDetailDTO {
 // onboarding profile exists yet, or the lookup fails — a learner who
 // hasn't onboarded, or any lookup error, simply gets the unprioritized
 // display_order ordering rather than a broken Discover page.
-func requesterMainUseCase(ctx context.Context, usersSvc *users.Service) string {
-	if usersSvc == nil {
-		return ""
-	}
+func requesterMainUseCase(ctx context.Context, usersSvc *users.Service, preferences ...LearningPreferencesReader) string {
 	uid := RequesterUserID(ctx)
 	if uid == uuid.Nil {
+		return ""
+	}
+	if len(preferences) > 0 && preferences[0] != nil {
+		if current, err := preferences[0].GetLearningPreferences(ctx, uid); err == nil {
+			if current.MainUseCase != nil {
+				return *current.MainUseCase
+			}
+			return ""
+		}
+	}
+	if usersSvc == nil {
 		return ""
 	}
 	profile, err := usersSvc.GetOnboarding(ctx, uid)
@@ -293,6 +308,8 @@ func mapContentError(err error) huma.StatusError {
 		return huma.Error404NotFound("word not found")
 	case errors.Is(err, content.ErrInvalidCursor):
 		return huma.Error400BadRequest("invalid cursor")
+	case errors.Is(err, content.ErrInvalidSearch):
+		return huma.Error400BadRequest("invalid search query or filter")
 	default:
 		return huma.Error500InternalServerError("internal error")
 	}

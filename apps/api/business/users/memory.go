@@ -14,12 +14,13 @@ import (
 // against the same in-memory user_settings slice, so tests can wire a
 // single instance to both Repository and UserSettingsReader.
 type MemoryRepository struct {
-	mu           sync.Mutex
-	profiles     map[uuid.UUID]*MemoryOnboardingProfile
-	settings     map[uuid.UUID]*MemoryUserSettings
-	displayNames map[uuid.UUID]string // userID -> display_name
-	seenUsers    map[uuid.UUID]struct{}
-	onboarding   map[uuid.UUID]string // userID -> onboarding_status
+	mu                  sync.Mutex
+	profiles            map[uuid.UUID]*MemoryOnboardingProfile
+	settings            map[uuid.UUID]*MemoryUserSettings
+	displayNames        map[uuid.UUID]string // userID -> display_name
+	seenUsers           map[uuid.UUID]struct{}
+	onboarding          map[uuid.UUID]string // userID -> onboarding_status
+	learningPreferences map[uuid.UUID]LearningPreferences
 }
 
 // MemoryOnboardingProfile is the in-memory shape of a

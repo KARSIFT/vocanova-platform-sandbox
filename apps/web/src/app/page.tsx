@@ -133,6 +133,14 @@ export default function Page() {
             </ol>
           </div>
         </section>
+        <footer className="border-t border-neutral-200 py-5">
+          <Link
+            href="/help"
+            className="inline-flex min-h-11 items-center font-semibold text-primary-700 underline underline-offset-4"
+          >
+            Help and support
+          </Link>
+        </footer>
       </div>
     </main>
   );

@@ -164,6 +164,12 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             Sign-in is temporarily unavailable. Please try again later.
           </p>
         ) : null}
+        <Link
+          href="/help"
+          className="inline-flex min-h-11 items-center font-semibold text-primary-700 underline underline-offset-4"
+        >
+          Help and support
+        </Link>
       </Surface>
     </AuthShell>
   );

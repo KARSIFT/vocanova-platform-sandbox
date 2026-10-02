@@ -1,0 +1,28 @@
+package schema
+
+import (
+	"encoding/json"
+	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
+	"entgo.io/ent/schema"
+	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
+	"github.com/google/uuid"
+)
+
+type LessonAction struct{ ent.Schema }
+
+func (LessonAction) Annotations() []schema.Annotation {
+	return []schema.Annotation{entsql.Annotation{Table: "lesson_actions"}}
+}
+func (LessonAction) Mixin() []ent.Mixin { return []ent.Mixin{UUIDMixin{}} }
+func (LessonAction) Fields() []ent.Field {
+	return []ent.Field{
+		field.UUID("session_id", uuid.UUID{}).Immutable(), field.UUID("user_id", uuid.UUID{}).Immutable(),
+		field.Enum("operation").Values("start", "action").Immutable(), field.String("idempotency_key").NotEmpty().Immutable(), field.String("client_action_id").NotEmpty().Immutable(),
+		field.String("fingerprint").Immutable(), field.JSON("action", json.RawMessage{}).Immutable(), field.JSON("result", json.RawMessage{}).Immutable(), field.Time("created_at").Immutable(),
+	}
+}
+func (LessonAction) Indexes() []ent.Index {
+	return []ent.Index{index.Fields("user_id", "operation", "idempotency_key").Unique(), index.Fields("session_id", "operation", "client_action_id").Unique(), index.Fields("session_id", "created_at")}
+}
