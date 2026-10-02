@@ -1,0 +1,59 @@
+name: recovery-rehearsal
+
+# Supplemental synthetic recovery evidence. No production credentials or data.
+# Keep this path-scoped check out of required merge-queue status names.
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/api/migrations/**"
+      - "apps/api/cmd/seed/voc026-p1.json"
+      - "infra/recovery/**"
+      - "infra/scripts/*postgres*restore*"
+      - ".github/workflows/recovery-rehearsal.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/api/migrations/**"
+      - "apps/api/cmd/seed/voc026-p1.json"
+      - "infra/recovery/**"
+      - "infra/scripts/*postgres*restore*"
+      - ".github/workflows/recovery-rehearsal.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: recovery-rehearsal-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  recovery-rehearsal:
+    name: synthetic PostgreSQL recovery
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out reviewed revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      # Image acquisition is explicit. The rehearsal itself never pulls and
+      # resolves this cached tag to one immutable image ID for both databases.
+      - name: Cache disposable PostgreSQL image
+        run: docker --host unix:///var/run/docker.sock pull postgres:16-alpine
+
+      - name: Verify restore, corruption detection and interruption cleanup
+        env:
+          VOCANOVA_REHEARSAL_REPORT_ROOT: ${{ runner.temp }}/recovery-reports
+        run: python3 infra/scripts/test_rehearse_postgres_restore_live.py
+
+      - name: Retain sanitized synthetic reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: synthetic-recovery-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/recovery-reports/*/report.json
+          if-no-files-found: warn
+          retention-days: 14
