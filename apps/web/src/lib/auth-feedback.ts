@@ -2,6 +2,8 @@ import { ApiResponseError } from "@vocanova/api-client";
 
 import type { SignInAuthCapabilities } from "./auth-capabilities";
 
+export type OAuthIntent = "signin" | "signup";
+
 export type AuthErrorContext =
   | "magic-request"
   | "magic-consume"
@@ -15,11 +17,14 @@ export type AuthErrorContext =
 function withAvailableEmailMethod(
   message: string,
   capabilities?: SignInAuthCapabilities,
+  intent: OAuthIntent = "signin",
 ): string {
   if (capabilities?.passwordEnabled) {
-    return `${message} You can sign in with your email and password.`;
+    return intent === "signup"
+      ? `${message} You can create your account with your email and password.`
+      : `${message} You can sign in with your email and password.`;
   }
-  if (capabilities?.magicLinkEnabled) {
+  if (intent === "signin" && capabilities?.magicLinkEnabled) {
     return `${message} You can request an email sign-in link.`;
   }
   return message;
@@ -34,6 +39,7 @@ export function getAuthErrorMessage(
   error: unknown,
   context: AuthErrorContext,
   capabilities?: SignInAuthCapabilities,
+  oauthIntent: OAuthIntent = "signin",
 ): string {
   const status = error instanceof ApiResponseError ? error.status : undefined;
 
@@ -111,11 +117,13 @@ export function getAuthErrorMessage(
       return withAvailableEmailMethod(
         "Google sign-in is unavailable right now. Please try again later.",
         capabilities,
+        oauthIntent,
       );
     }
     return withAvailableEmailMethod(
       "We couldn't start Google sign-in. Please try again.",
       capabilities,
+      oauthIntent,
     );
   }
 

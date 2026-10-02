@@ -19,6 +19,7 @@ BEGIN
      OR current_setting('vocanova.api_environment') NOT IN ('', 'staging') THEN
     RAISE EXCEPTION 'synthetic journey preparation requires staging';
   END IF;
+  -- Keep email limits and pattern in sync with prepare-synthetic-staging-journey.sh.
   IF length(target_email) > 254 OR target_email !~
      '^[a-z0-9][a-z0-9._%+-]{0,63}@[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*\.invalid$' THEN
     RAISE EXCEPTION 'synthetic journey requires a canonical lowercase .invalid email';

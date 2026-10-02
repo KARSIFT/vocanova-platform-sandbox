@@ -143,6 +143,43 @@ for (const colorScheme of ["light", "dark"] as const) {
       });
     }
 
+    for (const alternate of ["password", "magic-link"] as const) {
+      test(`Google signup errors respect the rendered ${alternate} account options`, async ({
+        page,
+        context,
+        baseURL,
+      }, testInfo) => {
+        await setCapabilities(context, baseURL, {
+          magicLinkEnabled: alternate === "magic-link",
+          oauthEnabled: true,
+          passwordEnabled: alternate === "password",
+        });
+        await rejectOAuthStart(page);
+        await page.goto("/signup");
+        const google = page.getByRole("button", { name: "Continue with Google" });
+        await google.focus();
+        await page.keyboard.press("Enter");
+
+        const main = page.getByRole("main");
+        const alert = main.getByRole("alert");
+        await expect(alert).toContainText(/try again/i);
+        await expect(alert).not.toContainText(/private-provider-diagnostic|sign in with/i);
+        await expect(google).toBeEnabled();
+        await expect(main.getByRole("button", { name: "Send sign-in link" })).toHaveCount(0);
+
+        if (alternate === "password") {
+          await expect(alert).toContainText(/create (?:an|your) account with (?:your )?email and password/i);
+          await expect(main.getByLabel("Password", { exact: true })).toBeVisible();
+          await expect(main.getByRole("button", { name: "Create account", exact: true })).toBeVisible();
+        } else {
+          await expect(alert).not.toContainText(/email|password|sign-in link/i);
+          await expect(main.getByLabel("Password", { exact: true })).toHaveCount(0);
+          await expect(main.getByRole("button", { name: "Create account", exact: true })).toHaveCount(0);
+        }
+        await captureLayout(page, testInfo, `signup-${alternate}-failure`);
+      });
+    }
+
     test("unavailable email-link recovery leads to enabled password sign-in and preserves the destination", async ({
       page,
       context,

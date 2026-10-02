@@ -512,6 +512,22 @@ Independent review found no remaining actionable findings, and the fresh
 dependency audit reported zero known vulnerabilities. Hosted acceptance remains
 pending. These checks cannot establish real provider access or learner acceptance.
 
+Automated review found a further signup-specific recovery case: an enabled
+sign-in method need not have a form on the signup page. Six unit regressions and
+four desktop browser cases reproduced the misleading suggestions. Signup now
+recommends creating an account only when its password form is shown and does not
+advertise an absent magic-link form. Final local validation passed again with
+250 foundation, 32 API-client and 121 web helper tests, database-backed Go checks
+and both builds. All 84 affected authentication browser checks passed with 12
+existing skips across the three layouts and both themes; captured signup states
+were inspected. The full 383-check local matrix above predates this follow-up.
+
+The disposable PostgreSQL readiness probe now supplies its fixture password
+explicitly, and the test container enforces SCRAM for host connections. Atlas,
+fixture-retirement and default-seed integration checks passed under that stricter
+configuration. The earlier default-image runs passed; no universal timeout on
+the former readiness probe is claimed.
+
 ## Deliver work in bounded slices
 
 Each slice should identify the learner problem, state the intended behavior, change the smallest relevant surface, include meaningful regression coverage and document remaining limits. Use parallel agents for independent areas and independent review; coordinate shared files, builds and servers. Follow [repository instructions](../../AGENTS.md) for draft PRs, CI, merging and deployment.

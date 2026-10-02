@@ -13,6 +13,7 @@ for override in "${DOCKER_COMPOSE_CMD:-}" "${COMPOSE_FILE:-}" "${COMPOSE_PROJECT
 done
 
 synthetic_email="${VOCANOVA_SYNTHETIC_SMOKE_TEST_EMAIL:-smoke-test-bot@synthetic.vocanova.invalid}"
+# Keep email limits and pattern in sync with prepare-synthetic-staging-journey.sql.
 case "$synthetic_email" in *[!a-z0-9._%+@-]*) fail 'synthetic journey requires a canonical lowercase .invalid email' ;; esac
 [ "${#synthetic_email}" -le 254 ] || fail 'synthetic journey requires a canonical lowercase .invalid email'
 printf '%s\n' "$synthetic_email" | LC_ALL=C grep -Eq '^[a-z0-9][a-z0-9._%+-]{0,63}@[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*\.invalid$' || fail 'synthetic journey requires a canonical lowercase .invalid email'

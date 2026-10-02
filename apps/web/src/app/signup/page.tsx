@@ -46,7 +46,11 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
         </div>
 
         {oauthEnabled ? (
-          <OAuthButton returnTo={safeReturnTo} capabilities={capabilities} />
+          <OAuthButton
+            returnTo={safeReturnTo}
+            capabilities={capabilities}
+            intent="signup"
+          />
         ) : null}
 
         {passwordEnabled && oauthEnabled ? (

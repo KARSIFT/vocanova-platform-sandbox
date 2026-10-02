@@ -138,4 +138,40 @@ describe("authentication feedback", () => {
     assert.match(message, /wait a few minutes/);
     assert.doesNotMatch(message, /email|password|sign-in link/i);
   });
+
+  for (const status of [404, 503, 500]) {
+    it(`suggests creating an account after a Google signup failure when its password form is available (${status})`, () => {
+      const message = getAuthErrorMessage(
+        new ApiResponseError(status, null, "private-provider-diagnostic"),
+        "oauth-start",
+        { ...passwordOnly, oauthEnabled: true },
+        "signup",
+      );
+      assert.match(message, /try again/i);
+      assert.match(message, /create (?:an|your) account with (?:your )?email and password/i);
+      assert.doesNotMatch(message, /sign in with|sign-in link|private-provider-diagnostic/i);
+    });
+
+    it(`does not advertise the absent email-link form after a Google signup failure (${status})`, () => {
+      const message = getAuthErrorMessage(
+        new ApiResponseError(status, null, "private-provider-diagnostic"),
+        "oauth-start",
+        { ...magicLinkOnly, oauthEnabled: true },
+        "signup",
+      );
+      assert.match(message, /try again/i);
+      assert.doesNotMatch(message, /email|password|sign-in link|private-provider-diagnostic/i);
+    });
+  }
+
+  it("keeps Google signup rate-limit guidance without offering an immediate alternative", () => {
+    const message = getAuthErrorMessage(
+      new ApiResponseError(429, null),
+      "oauth-start",
+      { ...passwordOnly, oauthEnabled: true },
+      "signup",
+    );
+    assert.match(message, /wait a few minutes/);
+    assert.doesNotMatch(message, /email|password|sign-in link/i);
+  });
 });

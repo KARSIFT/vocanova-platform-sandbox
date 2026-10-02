@@ -71,10 +71,10 @@ import (
 // `postgres:16-alpine` on a developer machine or a typical CI
 // runner; a longer timeout would only delay surfacing a genuinely
 // broken environment. Used as the argument to the
-// `pg_isready` poll loop.
+// TCP SQL-query poll loop.
 const applyProofTestTimeout = 30 * time.Second
 
-// applyProofTestPollInterval is the gap between `pg_isready`
+// applyProofTestPollInterval is the gap between TCP SQL-query
 // probes. 250ms keeps the test responsive without hammering the
 // container with hundreds of probes per second. At 250ms the
 // poll loop makes ~120 attempts in 30s, which is well under any
@@ -87,7 +87,7 @@ const applyProofTestPollInterval = 250 * time.Millisecond
 // starts a disposable `postgres:16-alpine` container via
 // `docker run` (bound to 127.0.0.1 on a dynamically chosen free
 // port so the test never collides with a developer's own local
-// Postgres), waits for `pg_isready` to report ready, then runs
+// Postgres), waits for a TCP SQL query to succeed, then runs
 // `atlas migrate apply` twice in succession against the
 // committed `apps/api/migrations/` directory:
 //
@@ -207,7 +207,7 @@ func randomHex(t *testing.T, byteCount int) string {
 // whatever the local Docker daemon happened to pull most
 // recently). `docker run -d` is used (rather than `docker
 // create` + `docker start`) so the call returns immediately and
-// the test can poll `pg_isready` until the database is ready.
+// the test can poll a TCP SQL query until the database is ready.
 //
 // The function never binds the container to anything other than
 // 127.0.0.1; this is the load-bearing protection that makes
@@ -234,6 +234,9 @@ func startDisposablePostgres(t *testing.T, containerName string, hostPort int) {
 		"-e", "POSTGRES_USER=vocanova",
 		"-e", "POSTGRES_PASSWORD=vocanova",
 		"-e", "POSTGRES_DB=vocanova",
+		// Exercise password authentication even on container loopback;
+		// Unix-socket psql setup commands retain their local trust policy.
+		"-e", "POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256",
 		"postgres:16-alpine",
 	}
 	cmd := exec.Command("docker", args...)
@@ -275,8 +278,9 @@ func waitForPostgresReady(t *testing.T, containerName string, timeout time.Durat
 		// The image's temporary initialization server accepts Unix-socket
 		// connections before the requested database exists, then shuts down.
 		// Require a real query over TCP, which the final server exposes only
-		// after initialization finishes.
-		cmd := exec.Command("docker", "exec", containerName, "psql", "-X", "-h", "127.0.0.1", "-U", "vocanova", "-d", "vocanova", "-v", "ON_ERROR_STOP=1", "-c", "SELECT 1")
+		// after initialization finishes. Supply the fixed disposable-fixture
+		// password so readiness does not depend on localhost trust rules.
+		cmd := exec.Command("docker", "exec", "-e", "PGPASSWORD=vocanova", containerName, "psql", "-X", "-h", "127.0.0.1", "-U", "vocanova", "-d", "vocanova", "-v", "ON_ERROR_STOP=1", "-c", "SELECT 1")
 		out, err := cmd.CombinedOutput()
 		if err == nil {
 			return
