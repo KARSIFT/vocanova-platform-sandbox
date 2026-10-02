@@ -363,7 +363,7 @@ OAuth initiation and the reserved synthetic learner core loop. Production was
 not promoted; no new direct public-health observation is claimed after the
 earlier local HTTP 403.
 
-## Optional Daily Conversation context activity — working revision
+## Optional Daily Conversation context activity — delivered in PR #1476
 
 Three independently reviewed authored examples use message/dialogue completion
 to contrast invite/join, sounds good/keep in touch and reschedule/cancel.
@@ -382,12 +382,24 @@ saving before sentence practice. The full browser matrix passed 314 tests with
 360px viewport captures were retained; selected activity views were inspected.
 The viewport captures verified that apparent navigation overlap in an oversized
 element capture was a capture artifact, with retry visible and keyboard reachable.
-Independent static review found no remaining actionable issues. Release
-verification remains pending.
+Independent static review found no remaining actionable issues.
 Actual screen-reader speech and physical-device behavior remain unverified.
 Its [curriculum guidance](daily-conversation-curriculum.md#optional-context-practice)
 defines the authored scope; observed learner value and learning effectiveness
 remain unverified.
+
+[PR #1476](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1476) merged
+at 05:16:59 UTC as `e4cc4236f1f1c18df0059b005a4ade3b07addc31`. Applicable CI
+and inspected current-head Codex/Claude reviews cleared; all seven merge-queue
+checks passed. [Staging deployment 36968236895](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36968236895)
+succeeded, verified at 05:21 UTC, including exact release identity, web/API health,
+OAuth initiation and the reserved synthetic learner core loop. Production was
+not promoted. The deployed browser journey chooses a situation and word and
+tests the general learning loop; it does not exercise this context activity or
+establish the complete deployed Daily Conversation curriculum. The activity's
+specific UI/content checks above use the local mock-backed suite and actual seed
+file. Real-account access, physical-device behavior and learner usefulness remain
+separate acceptance gaps.
 
 ## Deliver work in bounded slices
 

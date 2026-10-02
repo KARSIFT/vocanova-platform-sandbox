@@ -67,8 +67,11 @@ Full workspace validation passed, including four new real-seed helper checks.
 All 21 focused browser checks passed across 360px, 430px and desktop, covering
 both themes, keyboard navigation, explanations, retry/restart/exit, reload,
 missing-content fallback and explicit saving before sentence practice. The full
-browser matrix passed 314 tests with 37 existing skips. Release verification
-remains pending. Synthetic checks do not
+browser matrix passed 314 tests with 37 existing skips. The activity shipped in
+[PR #1476](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1476), and
+[staging release checks](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36968236895)
+passed on merged revision `e4cc4236`. The deployed synthetic journey covers the
+general learning loop; it does not exercise these three examples. Synthetic checks do not
 establish screen-reader speech or learning effectiveness.
 
 ## Stable identities and repeat seeding

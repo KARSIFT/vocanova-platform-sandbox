@@ -44,6 +44,66 @@ source_files:
 ---
 # 11 — VocaNova DevOps and CI/CD Plan
 
+## Current operator process — 2 October 2026
+
+> **Use this section for current work.** The approved plan and its July–August
+> amendments are preserved below as historical records. Their approval dates,
+> version and owners in the frontmatter have not been changed. This correction
+> records the current repository implementation; it does not claim a new owner
+> approval. The retired `develop`, promotion, `pipeline.yml`, change-package and
+> governance-token procedures below are not current operator instructions.
+
+- **Changes and checks:** follow [AGENTS.md](../../AGENTS.md) and the
+  [development guide](../development.md). Open PRs against `main`, keep them draft
+  or apply `hold` while review is pending, and inspect the reviewed revision's
+  check results before release. Ready, unheld PRs are handled by
+  [auto-merge](../../.github/workflows/auto-merge.yml) and the merge queue. Required
+  checks must pass; do not bypass the queue, weaken checks or manufacture success
+  statuses. If checks or queue activation are missing, inspect the actual PR,
+  queue candidate and workflow runs before choosing a bounded recovery action.
+  The historical activation-recovery commands below no longer apply.
+- **Staging:** [deploy-staging](../../.github/workflows/deploy-staging.yml)
+  automatically selects pushes to `main` that match its path allowlist. A
+  docs-only change under `docs/` does not by itself trigger staging. The workflow
+  also supports manual retry/redeployment; its `skip_ssh_deploy=true` mode builds
+  and publishes images without deploying and is not live-deployment evidence.
+- **Production:** [deploy-production](../../.github/workflows/deploy-production.yml)
+  is manually dispatched. A merge or successful staging run does not deploy
+  production. Use the reviewed workflow's current inputs and the intended
+  release revision; leave the historical origin-port-cutover input at `skip`
+  for an ordinary release. Deployment can change migrations, containers and
+  runtime configuration; it is not a read-only health check.
+- **Runtime and release identity:** the app runs as Next.js and Go images with
+  PostgreSQL 16 in separate staging/production Compose stacks behind a shared
+  nginx edge. Cloudflare provides DNS/TLS/WAF/CDN, not application compute. See
+  [the infrastructure layout](../../infra/README.md). Workflows build
+  environment-specific images with `staging-sha-…` and `production-sha-…` tags;
+  the historical OpenNext/Atlas-image and build-once promotion plan below does
+  not describe current release artifacts. Verify both API and web `/version`
+  responses against the intended release as described in
+  [release operations](../development/account-and-release-operations.md).
+  A failed deploy is not proof that the prior release is still running.
+- **Monitoring:** use the current [monitoring runbook](monitoring.md) for Kuma,
+  scheduled synthetics, Sentry and failure issues. Successful checks or matching
+  inventory do not establish receipt of an alert by the operator.
+- **Recovery evidence:** the [synthetic PostgreSQL rehearsal](postgres-recovery-rehearsal.md)
+  and [bounded backup discovery](backup-discovery.md) have distinct scopes.
+  Neither establishes production artifact inventory, retention, separate
+  storage, a successful production-data restore or alert receipt. The historical
+  managed-database/PITR wording below is a target, not evidence that these
+  capabilities are provisioned. Track remaining evidence in
+  [release readiness](../product/release-readiness.md); preserve unknowns rather
+  than assuming a backup exists from a timer name or successful job exit.
+
+## Historical approved plan and amendments
+
+<details>
+<summary>July–August 2026 plan, retained for provenance — not the current runbook</summary>
+
+The following text records the earlier design and governance process. References
+to retired workflows, permissions, branch policy and approval procedures are
+historical descriptions, not commands or authority for current operations.
+
 ## 1. Environments and infrastructure
 
 Canonical environments: Local, Preview (per-PR, temporary, isolated, no production data/secrets),
@@ -101,7 +161,11 @@ is currently deployed against — not a plan:
 | Uptime monitoring | Uptime Kuma (availability/TLS/basic API health) + scheduled synthetics (authenticated behavior) — **amended 2026-08-19 by `VOC-086-§1-amendment`**; Sentry remains the separate error-monitoring channel (VOC-051) |
 | Harness, Terraform/OpenTofu, Cloudflare D1/KV/Durable Objects/Queues/R2 | Deferred post-MVP (unchanged) |
 
-### Missing Actions activation recovery
+### Historical Missing Actions activation recovery — retired
+
+> This recovery implementation was retired. Do not dispatch `pipeline.yml`,
+> recreate its tokens or publish its derived status attestations. Use the current
+> operator process above and the workflows present in this checkout.
 
 If GitHub does not activate required workflows after an App-driven task merge or
 promotion-PR creation, do not toggle PR state or create unbacked check/status
@@ -259,7 +323,7 @@ depends on the effective R0–R4 risk, RL1–RL3 release class, any predefined f
 event, and any actual EHR trigger. The deployment sequence may run only after the live governance
 and technically enabled gates permit it; failed migrations, health checks, or smoke tests stop the
 deployment and invoke the governed rollback path. See the
-[canonical governance index](../governance/README.md) and [DOC-19](19-governance-reconciliation-notes.md).
+historical `docs/governance/README.md` reference and [DOC-19](19-governance-reconciliation-notes.md).
 
 ## 3. Rollback
 
@@ -289,3 +353,5 @@ non-production tiers.
 **Launch-ready** additionally requires: the full core MVP journey verified end to end on mobile,
 privacy policy and terms published, a support/contact path, founder alerting confirmed, and an
 accepted cost budget.
+
+</details>
