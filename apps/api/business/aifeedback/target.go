@@ -101,6 +101,11 @@ func shouldAddEs(base string) bool {
 }
 
 func addNounForms(forms map[string]struct{}, base string) {
+	// The canonical syllabus usage note explicitly approves both syllabuses
+	// and syllabi (cmd/seed/voc026-p1.json). Keep this exception noun-only.
+	if base == "syllabus" {
+		addForm(forms, "syllabi")
+	}
 	addForm(forms, base+"s")
 
 	switch {
@@ -118,6 +123,12 @@ func addNounForms(forms map[string]struct{}, base string) {
 func addNounPhraseForms(forms map[string]struct{}, base string) {
 	parts := strings.Fields(base)
 	if len(parts) < 2 {
+		// Hyphenated noun compounds such as follow-up and check-out are one
+		// whitespace token. They still take the regular suffix on the last part;
+		// phrase matching already recognizes their hyphen-separated tokens.
+		if len(parts) == 1 && strings.Contains(base, "-") {
+			addRegularPluralNounForm(forms, base)
+		}
 		return
 	}
 

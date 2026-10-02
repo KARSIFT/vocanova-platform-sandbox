@@ -1,40 +1,63 @@
 # Vocanova
 
-Vocanova is an AI-powered platform for practical English learning. It is maintained
-by KARSIFT as a pnpm and Go monorepo. The repository is public; see
-`docs/governance/repository-settings.md` for the security posture that implies
-(secret scanning/push protection enabled, no assumption of a private audience).
+Vocanova helps A2–B1 English learners discover vocabulary in real situations,
+save useful words, review them, and practise original sentences with AI feedback.
+The responsive web product is a Next.js and Go monorepo maintained by KARSIFT.
 
-Its canonical roots are `apps/web`, `apps/api`, and the shared packages under `packages/`.
-Real, shipped product surfaces exist today - `apps/web` has working Home, Progress, and
-Journey/Discover (including situation drill-down) screens (VOC-018 through VOC-022), built
-against the wired design-token system - not skeletons awaiting later approved changes. See
-the [local development guide](docs/development.md) for exact tools and commands.
+The application includes daily missions, Journey discovery and word detail,
+saved vocabulary, spaced reviews, sentence practice and history, progress,
+onboarding, and account settings. Home, Journey, and Progress are the three
+primary destinations. Sign-in methods depend on environment configuration;
+implemented password flows do not mean email is enabled live.
 
-The [learning and account maturity delivery](docs/product/mature-learning-and-account-experience.md)
-adds sentence history under Progress, recoverable practice drafts, and clearer
-passwordless sign-in and account flows while keeping the three primary tabs.
+Start with the [current product state](docs/product/current-state.md) for the
+implemented surfaces, dated deployment observation, and remaining readiness work.
+The separate ChatGPT Site prototype is design input, not the Next.js/Go app.
 
-## Documentation
+## Work locally
 
-- [Documentation index](docs/README.md)
-- [Product documentation](docs/product/)
-- [Architecture documentation](docs/architecture/)
-- [Planning documentation](docs/planning/)
-- [Architecture Decision Records](docs/decisions/README.md)
-- [Executable change packages](specs/README.md)
-- [Autonomous development governance](docs/governance/README.md)
-- [Workflow templates](docs/templates/README.md)
-- [GitHub repository configuration](.github/README.md)
-- [Contribution guidelines](CONTRIBUTING.md)
+Use the exact tools and prerequisites in the [development guide](docs/development.md):
+
+```bash
+corepack enable
+pnpm install --frozen-lockfile
+pnpm dev
+```
+
+`pnpm validate` runs the repository validation sequence. Browser checks and
+database integration tests have additional prerequisites documented in that guide.
+
+## Repository map
+
+| Path                      | Purpose                                                       |
+| ------------------------- | ------------------------------------------------------------- |
+| `apps/web/`               | Next.js public, authentication, learning, and account screens |
+| `apps/api/`               | Go services, PostgreSQL schemas, and migrations               |
+| `packages/api-client/`    | Shared typed API client                                       |
+| `packages/design-tokens/` | Shared visual tokens                                          |
+| `infra/`                  | Deployment, shared edge, monitoring, and operational scripts  |
+| `docs/`                   | Product, design, engineering, and operational guidance        |
+| `specs/changes/`          | Historical implementation packages and evidence               |
+| `.agents/`                | Canonical repository skills and agents                        |
+
+## Delivery and documentation
+
+[AGENTS.md](AGENTS.md) defines the current workflow: PRs target `main`, required
+CI and the merge queue gate merging, and a draft or `hold` label keeps a PR from
+auto-merging. Automated review is advisory. Staging deploys from pushes to
+`main`; production requires a separate manual dispatch of
+[`deploy-production.yml`](.github/workflows/deploy-production.yml).
+
+- [Documentation index and source authority](docs/README.md)
+- [Release-readiness plan](docs/product/release-readiness.md)
+- [Product bible](docs/product/00-product-bible.md) and [MVP PRD](docs/product/01-mvp-prd.md)
+- [Learning workspace design](docs/design/learning-workspace.md)
+- [Account email activation and release identity](docs/development/account-and-release-operations.md)
+- [Repository agent skills](docs/development/agent-skills.md)
+- [Architecture decisions](docs/decisions/README.md)
 - [Security policy](SECURITY.md)
 
-The repository uses three distinct knowledge systems: `docs/` for approved living
-documentation, `docs/decisions/` for material decision rationale, and `specs/` for
-bounded executable change packages. Documents 00–13 were migrated and adopted as canonical
-(VOC-007/VOC-008); DOC-14 was deliberately reconciled but not adopted (see
-[docs/README.md](docs/README.md) for the full index and each document's actual status -
-that index, not this paragraph, is the source of truth for migration state going forward).
-
-
-<!-- merge-queue verification: this line proves a PR can actually go through the queue end-to-end -->
+Older documents preserve delivery history. Their adoption metadata does not
+reinstate the retired plan/adopt/roster pipeline or former `develop` branch.
+Use current instructions, executable workflows, and source code when historical
+documents disagree with today's process.

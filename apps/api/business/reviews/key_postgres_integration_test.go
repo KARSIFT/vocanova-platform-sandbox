@@ -3,6 +3,7 @@ package reviews
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/accounts"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/learning"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/missions"
@@ -374,86 +376,152 @@ func seedGraceRecoveryReview(t *testing.T, db *sql.DB, now time.Time) SubmitRevi
 }
 
 func TestSubmitReviewGraceRecoveryProtectsMissedSnapshotPostgreSQL(t *testing.T) {
-	db := reviewKeyDB(t)
-	ctx, cancel := context.WithTimeout(t.Context(), 45*time.Second)
-	defer cancel()
-	now := time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)
-	req := seedGraceRecoveryReview(t, db, now)
-	gam := gamification.NewService(gamification.NewRepository(db))
-	missionService := missions.NewService(missions.NewRepository(db), gam)
-	clk := &clock.Fixed{T: now}
-	svc := NewService(NewPostgreSQLRepository(db, clk,
-		WithGamificationService(gam), WithMissionsService(missionService)), nil, clk)
+	for _, missedStatus := range []string{"missed", "open", "absent"} {
+		t.Run(missedStatus, func(t *testing.T) {
+			db := reviewKeyDB(t)
+			ctx, cancel := context.WithTimeout(t.Context(), 45*time.Second)
+			defer cancel()
+			now := time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)
+			req := seedGraceRecoveryReview(t, db, now)
+			gam := gamification.NewService(gamification.NewRepository(db))
+			missionService := missions.NewService(missions.NewRepository(db), gam)
+			// Exercise the natural daily boundary: an inactive day is absent; a
+			// partially completed day is still open. No maintenance job marks it missed.
+			todayDate := now.Truncate(24 * time.Hour)
+			yesterdayDate := todayDate.AddDate(0, 0, -1)
+			if missedStatus == "absent" {
+				_, err := db.ExecContext(ctx, `DELETE FROM daily_mission_snapshots WHERE user_id=$1 AND local_date=$2`, req.UserID, yesterdayDate)
+				require.NoError(t, err)
+			} else {
+				_, err := db.ExecContext(ctx, `UPDATE daily_mission_snapshots SET status=$3, review_target=37, reviews_completed=2, timezone='Europe/Berlin' WHERE user_id=$1 AND local_date=$2`, req.UserID, yesterdayDate, missedStatus)
+				require.NoError(t, err)
+			}
+			_, err := db.ExecContext(ctx, `DELETE FROM daily_mission_snapshots WHERE user_id=$1 AND local_date=$2`, req.UserID, todayDate)
+			require.NoError(t, err)
+			view, err := missionService.GetDailyMissionView(ctx, req.UserID, "", now)
+			require.NoError(t, err)
+			require.Equal(t, 5, view.ReviewTarget, "new UTC mission uses persisted custom target")
+			require.Equal(t, 4, view.Streak.CurrentStreakCount)
+			require.Equal(t, gamification.StreakStatusAtRisk, view.Streak.Status)
+			require.Equal(t, 1, view.GraceDayBalance, "read reserves grace without consuming it")
+			// A same-day settings edit applies only to future mission snapshots.
+			_, err = db.ExecContext(ctx, `UPDATE user_settings SET daily_review_target=10 WHERE user_id=$1`, req.UserID)
+			require.NoError(t, err)
+			_, err = db.ExecContext(ctx, `UPDATE daily_mission_snapshots SET reviews_completed=4 WHERE user_id=$1 AND local_date=$2`, req.UserID, todayDate)
+			require.NoError(t, err)
+			clk := &clock.Fixed{T: now}
+			svc := NewService(NewPostgreSQLRepository(db, clk,
+				WithGamificationService(gam), WithMissionsService(missionService)), nil, clk)
 
-	// Two simultaneous delivery attempts and a settled retry are all the same
-	// production SubmitReview request. The database claim and user-word lock
-	// must publish its review, rewards, streak update, debit, and link once.
-	start := make(chan struct{})
-	type result struct {
-		attempt *ReviewAttempt
-		err     error
+			// Two simultaneous delivery attempts and a settled retry are all the same
+			// production SubmitReview request. The database claim and user-word lock
+			// must publish its review, rewards, streak update, debit, and link once.
+			start := make(chan struct{})
+			type result struct {
+				attempt *ReviewAttempt
+				err     error
+			}
+			results := make(chan result, 2)
+			for range 2 {
+				go func() {
+					<-start
+					a, err := svc.SubmitReview(ctx, req)
+					results <- result{a, err}
+				}()
+			}
+			close(start)
+			first, second := <-results, <-results
+			require.NoError(t, first.err)
+			require.NoError(t, second.err)
+			require.Equal(t, first.attempt.ID, second.attempt.ID)
+			replayed, err := svc.SubmitReview(ctx, req)
+			require.NoError(t, err)
+			require.Equal(t, first.attempt.ID, replayed.ID)
+
+			today := now.Truncate(24 * time.Hour)
+			yesterday := today.AddDate(0, 0, -1)
+			var attempts, pointRows, graceRows, reviewsCompleted, reviewStep, totalReviews int
+			require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM review_attempts WHERE user_id=$1`, req.UserID).Scan(&attempts))
+			require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM confidence_point_ledger WHERE user_id=$1`, req.UserID).Scan(&pointRows))
+			require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM grace_day_ledger WHERE user_id=$1`, req.UserID).Scan(&graceRows))
+			require.NoError(t, db.QueryRowContext(ctx, `SELECT reviews_completed FROM daily_mission_snapshots WHERE user_id=$1 AND local_date=$2`, req.UserID, today).Scan(&reviewsCompleted))
+			require.NoError(t, db.QueryRowContext(ctx, `SELECT review_step,total_review_count FROM user_words WHERE id=$1`, req.UserWordID).Scan(&reviewStep, &totalReviews))
+			require.Equal(t, 1, attempts)
+			require.Equal(t, 2, pointRows, "the review and completion awards share the submission transaction")
+			require.Equal(t, 2, graceRows, "the seed and exactly one used-grace debit")
+			require.Equal(t, 5, reviewsCompleted)
+			require.Equal(t, 1, reviewStep)
+			require.Equal(t, 1, totalReviews)
+
+			var todayStatus, yesterdayStatus string
+			var protected bool
+			var snapshotGraceID, debitID uuid.UUID
+			require.NoError(t, db.QueryRowContext(ctx, `SELECT status FROM daily_mission_snapshots WHERE user_id=$1 AND local_date=$2`, req.UserID, today).Scan(&todayStatus))
+			require.NoError(t, db.QueryRowContext(ctx, `SELECT status,grace_applied,grace_day_id FROM daily_mission_snapshots WHERE user_id=$1 AND local_date=$2`, req.UserID, yesterday).Scan(&yesterdayStatus, &protected, &snapshotGraceID))
+			require.NoError(t, db.QueryRowContext(ctx, `SELECT id FROM grace_day_ledger WHERE user_id=$1 AND amount=-1 AND applied_to_local_date=$2`, req.UserID, yesterday).Scan(&debitID))
+			require.Equal(t, "completed", todayStatus)
+			require.Equal(t, "protected", yesterdayStatus)
+			require.True(t, protected)
+			wantTarget, wantCompleted, wantTimezone := 5, 0, "UTC"
+			if missedStatus != "absent" {
+				wantTarget, wantCompleted, wantTimezone = 37, 2, "Europe/Berlin"
+			}
+			var target, completed int
+			var timezone string
+			require.NoError(t, db.QueryRowContext(ctx, `SELECT review_target,reviews_completed,timezone FROM daily_mission_snapshots WHERE user_id=$1 AND local_date=$2`, req.UserID, yesterday).Scan(&target, &completed, &timezone))
+			require.Equal(t, wantTarget, target, "absent history uses today's established target, not the default or changed live settings; existing history stays immutable")
+			require.Equal(t, wantCompleted, completed)
+			require.Equal(t, wantTimezone, timezone)
+
+			// The learner-visible account export reads this same historical snapshot.
+			payload, err := accounts.NewPostgreSQLRepository(db).ExportPersonalData(ctx, req.UserID)
+			require.NoError(t, err)
+			var exported struct {
+				DailyMissions []struct {
+					LocalDate        string `json:"localDate"`
+					ReviewTarget     int    `json:"reviewTarget"`
+					ReviewsCompleted int    `json:"reviewsCompleted"`
+					Timezone         string `json:"timezone"`
+					Status           string `json:"status"`
+				} `json:"dailyMissions"`
+			}
+			require.NoError(t, json.Unmarshal(payload, &exported))
+			found := false
+			for _, day := range exported.DailyMissions {
+				if day.LocalDate == yesterday.Format("2006-01-02") {
+					found = true
+					require.Equal(t, wantTarget, day.ReviewTarget)
+					require.Equal(t, wantCompleted, day.ReviewsCompleted)
+					require.Equal(t, wantTimezone, day.Timezone)
+					require.Equal(t, missions.StatusProtected, day.Status)
+				}
+			}
+			require.True(t, found, "export includes the grace-protected historical day")
+			require.Equal(t, debitID, snapshotGraceID, "the owner/date-scoped missed snapshot links the exact debit")
+
+			var streak int
+			require.NoError(t, db.QueryRowContext(ctx, `SELECT current_streak_count FROM streak_states WHERE user_id=$1`, req.UserID).Scan(&streak))
+			require.Equal(t, 5, streak)
+
+			// A later non-completing production review reconciles from the protected
+			// history and leaves the recovered five-day streak intact.
+			tomorrow := now.AddDate(0, 0, 1)
+			nextReq := seedReviewKeyRequest(t, db, tomorrow)
+			_, err = db.ExecContext(ctx, `UPDATE user_words SET user_id=$1 WHERE id=$2`, req.UserID, nextReq.UserWordID)
+			require.NoError(t, err)
+			nextReq.UserID = req.UserID
+			nextReq.ClientAttemptID = "later-day-attempt"
+			nextReq.IdempotencyKey = "later-day-key"
+			clk.T = tomorrow
+			_, err = svc.SubmitReview(ctx, nextReq)
+			require.NoError(t, err)
+			require.NoError(t, db.QueryRowContext(ctx, `SELECT current_streak_count FROM streak_states WHERE user_id=$1`, req.UserID).Scan(&streak))
+			require.Equal(t, 5, streak)
+			var nextTarget int
+			require.NoError(t, db.QueryRowContext(ctx, `SELECT review_target FROM daily_mission_snapshots WHERE user_id=$1 AND local_date=$2`, req.UserID, today.AddDate(0, 0, 1)).Scan(&nextTarget))
+			require.Equal(t, 10, nextTarget, "updated target takes effect on the next local day")
+		})
 	}
-	results := make(chan result, 2)
-	for range 2 {
-		go func() {
-			<-start
-			a, err := svc.SubmitReview(ctx, req)
-			results <- result{a, err}
-		}()
-	}
-	close(start)
-	first, second := <-results, <-results
-	require.NoError(t, first.err)
-	require.NoError(t, second.err)
-	require.Equal(t, first.attempt.ID, second.attempt.ID)
-	replayed, err := svc.SubmitReview(ctx, req)
-	require.NoError(t, err)
-	require.Equal(t, first.attempt.ID, replayed.ID)
-
-	today := now.Truncate(24 * time.Hour)
-	yesterday := today.AddDate(0, 0, -1)
-	var attempts, pointRows, graceRows, reviewsCompleted, reviewStep, totalReviews int
-	require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM review_attempts WHERE user_id=$1`, req.UserID).Scan(&attempts))
-	require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM confidence_point_ledger WHERE user_id=$1`, req.UserID).Scan(&pointRows))
-	require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM grace_day_ledger WHERE user_id=$1`, req.UserID).Scan(&graceRows))
-	require.NoError(t, db.QueryRowContext(ctx, `SELECT reviews_completed FROM daily_mission_snapshots WHERE user_id=$1 AND local_date=$2`, req.UserID, today).Scan(&reviewsCompleted))
-	require.NoError(t, db.QueryRowContext(ctx, `SELECT review_step,total_review_count FROM user_words WHERE id=$1`, req.UserWordID).Scan(&reviewStep, &totalReviews))
-	require.Equal(t, 1, attempts)
-	require.Equal(t, 2, pointRows, "the review and completion awards share the submission transaction")
-	require.Equal(t, 2, graceRows, "the seed and exactly one used-grace debit")
-	require.Equal(t, 5, reviewsCompleted)
-	require.Equal(t, 1, reviewStep)
-	require.Equal(t, 1, totalReviews)
-
-	var todayStatus, yesterdayStatus string
-	var protected bool
-	var snapshotGraceID, debitID uuid.UUID
-	require.NoError(t, db.QueryRowContext(ctx, `SELECT status FROM daily_mission_snapshots WHERE user_id=$1 AND local_date=$2`, req.UserID, today).Scan(&todayStatus))
-	require.NoError(t, db.QueryRowContext(ctx, `SELECT status,grace_applied,grace_day_id FROM daily_mission_snapshots WHERE user_id=$1 AND local_date=$2`, req.UserID, yesterday).Scan(&yesterdayStatus, &protected, &snapshotGraceID))
-	require.NoError(t, db.QueryRowContext(ctx, `SELECT id FROM grace_day_ledger WHERE user_id=$1 AND amount=-1 AND applied_to_local_date=$2`, req.UserID, yesterday).Scan(&debitID))
-	require.Equal(t, "completed", todayStatus)
-	require.Equal(t, "protected", yesterdayStatus)
-	require.True(t, protected)
-	require.Equal(t, debitID, snapshotGraceID, "the owner/date-scoped missed snapshot links the exact debit")
-
-	var streak int
-	require.NoError(t, db.QueryRowContext(ctx, `SELECT current_streak_count FROM streak_states WHERE user_id=$1`, req.UserID).Scan(&streak))
-	require.Equal(t, 5, streak)
-
-	// A later non-completing production review reconciles from the protected
-	// history and leaves the recovered five-day streak intact.
-	tomorrow := now.AddDate(0, 0, 1)
-	nextReq := seedReviewKeyRequest(t, db, tomorrow)
-	_, err = db.ExecContext(ctx, `UPDATE user_words SET user_id=$1 WHERE id=$2`, req.UserID, nextReq.UserWordID)
-	require.NoError(t, err)
-	nextReq.UserID = req.UserID
-	nextReq.ClientAttemptID = "later-day-attempt"
-	nextReq.IdempotencyKey = "later-day-key"
-	clk.T = tomorrow
-	_, err = svc.SubmitReview(ctx, nextReq)
-	require.NoError(t, err)
-	require.NoError(t, db.QueryRowContext(ctx, `SELECT current_streak_count FROM streak_states WHERE user_id=$1`, req.UserID).Scan(&streak))
-	require.Equal(t, 5, streak)
 }
 
 func TestSubmitReviewRollsBackWhenGraceSnapshotProtectionDoesNotUpdatePostgreSQL(t *testing.T) {

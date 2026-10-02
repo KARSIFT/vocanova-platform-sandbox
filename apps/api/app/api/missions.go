@@ -50,6 +50,7 @@ type ProgressDTO struct {
 // CompletionDayDTO is one day in the bounded 7-day completion history.
 type CompletionDayDTO struct {
 	LocalDate string `json:"localDate" format:"date" doc:"Local calendar date for the day"`
+	Status    string `json:"status" enum:"open,completed,missed,protected" doc:"Actual mission state; protected days used grace and were not completed"`
 	Completed bool   `json:"completed" doc:"Whether the mission was completed or protected that local day"`
 }
 
@@ -165,6 +166,7 @@ func progressViewToDTO(v *missions.ProgressView) ProgressDTO {
 	for _, d := range v.CompletionHistory {
 		dto.CompletionHistory = append(dto.CompletionHistory, CompletionDayDTO{
 			LocalDate: d.LocalDate.Format("2006-01-02"),
+			Status:    d.Status,
 			Completed: d.Completed,
 		})
 	}

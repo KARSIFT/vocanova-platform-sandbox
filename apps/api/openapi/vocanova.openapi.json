@@ -85,10 +85,21 @@
             "description": "Local calendar date for the day",
             "format": "date",
             "type": "string"
+          },
+          "status": {
+            "description": "Actual mission state; protected days used grace and were not completed",
+            "enum": [
+              "open",
+              "completed",
+              "missed",
+              "protected"
+            ],
+            "type": "string"
           }
         },
         "required": [
           "localDate",
+          "status",
           "completed"
         ],
         "type": "object"

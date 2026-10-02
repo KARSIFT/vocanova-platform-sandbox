@@ -21,8 +21,8 @@ tests, or source code, the repository sources win.
 2. Open the listed paths (smallest set that answers the question).
 3. Use repository validation commands from `docs/development.md`—do not invent
    substitutes.
-4. For governed implementation work, confirm an adopted change package before
-   editing product behavior.
+4. Follow `AGENTS.md` for the current PR and review workflow. Historical change
+   packages explain earlier decisions; ordinary work does not require a new one.
 
 ## Routing table
 
@@ -35,9 +35,9 @@ tests, or source code, the repository sources win.
 | Content seed | `apps/api/cmd/seed/` |
 | Deploy / infra / shared edge | `infra/`, `.github/workflows/deploy-*.yml`, `docs/operations/11-devops-and-ci-cd.md`, `scripts/foundation/voc079-single-edge-invariants.test.mjs` |
 | Monitoring | `infra/monitoring/`, `docs/operations/monitoring.md` |
-| Governance / change workflow | `AGENTS.md`, `docs/governance/`, `specs/changes/`, `specs/templates/change-package/` |
+| Contribution / release workflow | `AGENTS.md`, `CONTRIBUTING.md`, `.github/workflows/`, `docs/development/account-and-release-operations.md` |
 | Validation / tests | `docs/development.md`, `pnpm validate`, `scripts/foundation/*.test.mjs` |
-| Issue → plan → task lifecycle | `AGENTS.md` (Reporting a bug / change workflow), `specs/changes/` |
+| Product state / next improvement | `docs/product/current-state.md`, `docs/product/release-readiness.md`, `docs/design/learning-workspace.md` |
 
 ## Safety
 

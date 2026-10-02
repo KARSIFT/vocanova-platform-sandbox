@@ -381,3 +381,70 @@ func TestReconcileStreakIdempotencyKeysContainUserAndDate(t *testing.T) {
 	require.NotNil(t, rec.GraceDayEarned)
 	assert.Equal(t, "streak:user-abc:2026-07-26:grace_day_earned", rec.GraceDayEarned.IdempotencyKey.String())
 }
+
+func TestReconcileStreakInfersNaturallyMissedYesterday(t *testing.T) {
+	// Local Oct 2 has already started in Tehran while UTC is still Oct 1.
+	now := time.Date(2026, 10, 1, 22, 0, 0, 0, time.UTC)
+	today := atLocalDate(t, "2026-10-02")
+	last := today.AddDate(0, 0, -2)
+	for _, status := range []string{"absent", MissionStatusOpen, MissionStatusMissed} {
+		t.Run(status, func(t *testing.T) {
+			state := StreakState{CurrentStreakCount: 7, LongestStreakCount: 7, LastCompletedLocalDate: &last, Timezone: "Asia/Tehran", Status: StreakStatusActive}
+			snaps := []StreakSnapshot{{LocalDate: last, Status: MissionStatusCompleted}}
+			if status != "absent" {
+				snaps = append(snaps, StreakSnapshot{LocalDate: today.AddDate(0, 0, -1), Status: status})
+			}
+			read, err := ReconcileStreak("user", now, state, GraceBalance{Balance: 1}, snaps, false)
+			require.NoError(t, err)
+			require.Equal(t, 7, read.NewState.CurrentStreakCount)
+			require.Equal(t, StreakStatusAtRisk, read.NewState.Status)
+			require.Nil(t, read.GraceDayUsed)
+			completed, err := ReconcileStreak("user", now, read.NewState, GraceBalance{Balance: 1}, snaps, true)
+			require.NoError(t, err)
+			require.Equal(t, 8, completed.NewState.CurrentStreakCount)
+			require.NotNil(t, completed.GraceDayUsed)
+			require.Equal(t, today.AddDate(0, 0, -1), completed.GraceDayUsed.AppliedToLocalDate)
+			require.Equal(t, -1, completed.GraceDayUsed.Amount)
+		})
+	}
+}
+
+func TestReconcileStreakDoesNotProtectWithoutAnEstablishedStreak(t *testing.T) {
+	now := time.Date(2026, 10, 2, 12, 0, 0, 0, time.UTC)
+	rec, err := ReconcileStreak("user", now, StreakState{Timezone: "UTC"}, GraceBalance{Balance: 2}, nil, true)
+	require.NoError(t, err)
+	require.Equal(t, 1, rec.NewState.CurrentStreakCount)
+	require.Nil(t, rec.GraceDayUsed)
+}
+
+func TestReconcileStreakNaturalMissedDayRecoveryBoundaries(t *testing.T) {
+	now := time.Date(2026, 10, 2, 12, 0, 0, 0, time.UTC)
+	today := atLocalDate(t, "2026-10-02")
+	for _, tc := range []struct {
+		name            string
+		gap, grace      int
+		yesterdayStatus string
+		wantCount       int
+	}{
+		{"absent without grace", 2, 0, "", 1},
+		{"open without grace", 2, 0, MissionStatusOpen, 1},
+		{"two absent missed days", 3, 2, "", 1},
+		{"two missed days with open yesterday", 3, 2, MissionStatusOpen, 1},
+		{"completed yesterday", 2, 2, MissionStatusCompleted, 8},
+		{"protected yesterday", 2, 2, MissionStatusProtected, 8},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			last := today.AddDate(0, 0, -tc.gap)
+			state := StreakState{CurrentStreakCount: 7, LongestStreakCount: 7, LastCompletedLocalDate: &last, Timezone: "UTC", Status: StreakStatusActive}
+			snaps := []StreakSnapshot{{LocalDate: last, Status: MissionStatusCompleted}}
+			if tc.yesterdayStatus != "" {
+				snaps = append(snaps, StreakSnapshot{LocalDate: today.AddDate(0, 0, -1), Status: tc.yesterdayStatus})
+			}
+			rec, err := ReconcileStreak("user", now, state, GraceBalance{Balance: tc.grace}, snaps, true)
+			require.NoError(t, err)
+			require.Equal(t, tc.wantCount, rec.NewState.CurrentStreakCount)
+			require.Nil(t, rec.GraceDayUsed)
+			require.Nil(t, rec.GraceDayEarned)
+		})
+	}
+}

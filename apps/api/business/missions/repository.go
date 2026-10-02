@@ -455,15 +455,18 @@ func (r *Repository) MarkSnapshotProtected(
 	return rows > 0, nil
 }
 
-// MarkSnapshotMissed is called lazily when streak reconciliation detects a
-// missed day during a read or write. status='missed', grace_applied remains
-// false until a grace day is later applied.
+// MarkSnapshotMissed materializes a naturally missed day when a completion
+// applies grace. Existing snapshot goals and timezone remain unchanged; only
+// an open snapshot transitions to missed. Completed/protected days are kept.
+// An absent day uses reconstructionTarget from today's established mission;
+// this fallback does not establish what yesterday's actual goal was.
 func (r *Repository) MarkSnapshotMissed(
 	ctx context.Context,
 	tx *sql.Tx,
 	userID uuid.UUID,
 	localDate time.Time,
 	timezone string,
+	reconstructionTarget int,
 ) error {
 	if tx == nil {
 		return errors.New("transaction required")
@@ -473,13 +476,13 @@ func (r *Repository) MarkSnapshotMissed(
 			id, user_id, local_date, timezone, review_target, policy_version, status,
 			created_at, updated_at
 		) VALUES (
-			$1, $2, $3, $4, 20, 'p4-mission-policy-v1', 'missed',
+			$1, $2, $3, $4, $5, 'p4-mission-policy-v1', 'missed',
 			NOW(), NOW()
 		)
 		ON CONFLICT (user_id, local_date) DO UPDATE
 		  SET status = CASE WHEN daily_mission_snapshots.status = 'open' THEN 'missed' ELSE daily_mission_snapshots.status END,
 		      updated_at = NOW()`,
-		uuid.New(), userID, localDate, timezone,
+		uuid.New(), userID, localDate, timezone, reconstructionTarget,
 	); err != nil {
 		return fmt.Errorf("mark snapshot missed: %w", err)
 	}

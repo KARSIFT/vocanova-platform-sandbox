@@ -29,8 +29,8 @@ official Go toolchain distribution and no repository secret.
 | `pnpm validate`     | Run workspace, format, lint/vet, type, test, and build validation.              |
 | `pnpm lint`         | Run Next.js-aware web lint, package ESLint, and `go vet` for the API.           |
 | `pnpm typecheck`    | Generate Next.js route types and type-check the web and shared packages.        |
-| `pnpm test`         | Run workspace foundation tests and API tests.                                   |
-| `pnpm build`        | Build the Next.js web app, TypeScript packages, and Go API skeleton.            |
+| `pnpm test`         | Run foundation, API-client, web helper, and Go API tests.                       |
+| `pnpm build`        | Build the Next.js web app, TypeScript packages, and Go API.                     |
 | `pnpm format:check` | Check Prettier and `gofmt` formatting without writing.                          |
 | `pnpm format`       | Apply Prettier and `gofmt` formatting.                                          |
 | `pnpm audit`        | Fail when the pnpm production dependency graph has a high or critical advisory. |
@@ -59,6 +59,28 @@ go test ./...
 PostgreSQL migrations. The API implements authentication, canonical content,
 learning, reviews, sentence feedback, missions, progress, and account settings.
 
+## Full database integration checks
+
+Some PostgreSQL tests are skipped unless `VOCANOVA_TEST_POSTGRES_DSN` is set.
+Use a disposable local PostgreSQL 16 database and apply all forward SQL files in
+`apps/api/migrations/` in filename order, excluding `*.down.sql`. The concurrent
+magic-link test uses the supplied database's existing schema; other tests create
+isolated schemas themselves. Never point this variable at staging or production.
+
+Use PostgreSQL keyword connection syntax because some existing harnesses append
+their own `search_path` setting. For example, if your disposable database is
+bound to loopback port 54329 with synthetic `vocanova` credentials:
+
+```bash
+cd apps/api
+VOCANOVA_TEST_POSTGRES_DSN='host=127.0.0.1 port=54329 user=vocanova password=vocanova dbname=vocanova sslmode=disable' go test -count=1 ./...
+```
+
+The controlled-signup OAuth and password lifecycle tests additionally start their
+own disposable Docker containers from `postgres:16-alpine`. Ensure Docker can
+pull that image before treating a download failure as an application failure.
+Remove only the disposable resources created for the test run after verification.
+
 ## Browser verification
 
 The local browser harness uses synthetic data through a mock API; it does not
@@ -80,9 +102,10 @@ The suite covers desktop and 360px/430px mobile layouts, accessibility, auth,
 onboarding, the learning loop, saved vocabulary, and account settings. Docker
 must be running for disposable PostgreSQL OAuth and other database integration
 tests. In WSL, enable Docker Desktop integration for this distribution. The
-standard `ci-api` job excludes `TestControlledSignupOAuth` because the dedicated
-`controlled-signup-oauth-e2e` workflow runs it on a host with Docker networking;
-that exclusion alone is not proof that OAuth integration passes.
+standard `ci-api` job excludes `TestControlledSignupOAuth` and
+`TestPasswordAuthPostgreSQL`. The dedicated `controlled-signup-oauth-e2e`
+workflow runs both on a host with Docker networking and rejects skipped results;
+the exclusions alone do not prove either integration passes.
 
 ## Troubleshooting
 

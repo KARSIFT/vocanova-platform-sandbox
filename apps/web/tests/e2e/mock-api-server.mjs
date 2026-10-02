@@ -1357,6 +1357,16 @@ const server = createServer(async (req, res) => {
         { localDate: "2026-09-09", completed: false },
       ];
     }
+    if (cookies.e2e_progress_history_fixture === "statuses") {
+      progress.completionHistory = [
+        { localDate: "2026-09-10", completed: true, status: "completed" },
+        { localDate: "2026-09-11", completed: true, status: "protected" },
+        { localDate: "2026-09-12", completed: false, status: "missed" },
+        { localDate: "2026-09-13", completed: false, status: "open" },
+        { localDate: "2026-09-14", completed: true },
+        { localDate: "2026-09-15", completed: false },
+      ];
+    }
     jsonResponse(res, 200, progress);
     return;
   }

@@ -344,6 +344,9 @@ func TestGetProgressReturnsBalanceStreakAndHistory(t *testing.T) {
 	assert.False(t, body.Body.CompletionHistory[4].Completed) // missed
 	assert.True(t, body.Body.CompletionHistory[5].Completed)
 	assert.True(t, body.Body.CompletionHistory[6].Completed)
+	for i, want := range []string{"open", "completed", "completed", "protected", "missed", "completed", "completed"} {
+		assert.Equal(t, want, body.Body.CompletionHistory[i].Status)
+	}
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 

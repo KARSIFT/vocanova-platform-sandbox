@@ -7,4 +7,4 @@ authoritative_sources:
   - docs/design/08-web-app-design.md
 committed_files:
   - path: SKILL.md
-    sha256: 6522199187322fb3b3938b2f7adda34bf986bb4d5954437aa4d59dfca8a1091c
+    sha256: ecb6ddf5699ff8b51958bdfea0b33ef3139d69f42c2171b218cd2272aaa3753d

@@ -7,4 +7,4 @@ authoritative_sources:
   - specs/changes/VOC-112-add-portable-repository-scoped-agent-skills-and/specification.md
 committed_files:
   - path: SKILL.md
-    sha256: b58be5905c7f8027c4f28423d2033459698209aecbde93996bdbeffb05fadbce
+    sha256: 7cdb3241ebba0d572f83ca8aaa8acdb3fcc9facc277f9a10ed20f1c4fec52976

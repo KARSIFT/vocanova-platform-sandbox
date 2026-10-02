@@ -264,15 +264,17 @@ func ReconcileStreak(
 		return StreakReconciliation{NewState: newState, GraceDayEarned: rec.GraceDayEarned}, nil
 	}
 
-	// gap >= 2: yesterday was missed (or worse). If gap == 2 and yesterday
-	// is in the missed status, we have one missed day. If grace is
-	// available, consume it; otherwise break the streak.
-	if gap == 2 && hasYesterday && yesterdaySnap.Status == MissionStatusMissed && grace.Balance > 0 {
+	// An inactive day has no snapshot, and a partially completed day remains
+	// open until the next visit. Both mean yesterday was missed. The prior
+	// completion anchor and exact two-day gap limit recovery to one missed day;
+	// completed/protected snapshots must never consume another grace day.
+	yesterdayMissed := !hasYesterday || yesterdaySnap.Status == MissionStatusOpen || yesterdaySnap.Status == MissionStatusMissed
+	if gap == 2 && yesterdayMissed && grace.Balance > 0 {
 		if !currentCompletion {
 			// No completion yet today; the grace day is held in
-			// reserve until today's completion lands. Snapshot
-			// status of yesterday is updated lazily by the caller
-			// when the read happens — here we just signal intent.
+			// reserve until today's completion lands. The transaction
+			// owner materializes the missed snapshot only when consuming
+			// grace; reads signal eligibility without changing history.
 			rec.YesterdayProtectedLocalDate = &yesterday
 			rec.YesterdayWasMissed = true
 			newState.Status = StreakStatusAtRisk

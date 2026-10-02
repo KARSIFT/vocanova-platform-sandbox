@@ -351,7 +351,10 @@ export interface DailyMission {
 
 export interface CompletionDay {
   localDate: string;
+  /** Legacy streak-credit flag: true for completed and protected days. */
   completed: boolean;
+  /** Optional while older API deployments still return only completed. */
+  status?: DailyMission["status"];
 }
 
 export interface Progress {
