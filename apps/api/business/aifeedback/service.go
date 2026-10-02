@@ -600,7 +600,11 @@ func (s *Service) generateWithRepair(ctx context.Context, target *Target, normal
 		return feedback, providerDuration, nil
 	}
 
-	repairTask := s.taskBuilder.BuildRepair(task, validationErr.Error(), feedback.RawJSON)
+	var priorOutput map[string]any
+	if feedback != nil {
+		priorOutput = feedback.RawJSON
+	}
+	repairTask := s.taskBuilder.BuildRepair(task, validationErr.Error(), priorOutput)
 	repairStart := s.clock.Now()
 	if err := ctx.Err(); err != nil {
 		return nil, providerDuration, err

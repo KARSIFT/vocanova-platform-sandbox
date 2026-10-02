@@ -229,11 +229,40 @@ func buildGeminiGenerateContentBody(
 		},
 		GenerationConfig: geminiGenerationConfig{
 			ResponseMimeType: "application/json",
-			ResponseSchema:   responseSchema,
+			ResponseSchema:   geminiResponseSchema(responseSchema),
 		},
 	}
 
 	return json.Marshal(req)
+}
+
+// Gemini responseSchema uses the OpenAPI nullable flag instead of JSON Schema
+// type unions. Adapt only the two canonical feedback strings; moderation and
+// all other rules stay unchanged. Copy the changed maps because initial and
+// repair tasks share their canonical schema.
+func geminiResponseSchema(schema map[string]any) map[string]any {
+	properties, ok := schema["properties"].(map[string]any)
+	if !ok {
+		return schema
+	}
+	adapted := shallowCopy(schema)
+	adaptedProperties := shallowCopy(properties)
+	adapted["properties"] = adaptedProperties
+	for _, name := range []string{"corrected_sentence", "improvement_tip"} {
+		field, ok := properties[name].(map[string]any)
+		if !ok {
+			continue
+		}
+		types, ok := field["type"].([]string)
+		if !ok || len(types) != 2 || types[0] != "string" || types[1] != "null" {
+			continue
+		}
+		nullable := shallowCopy(field)
+		nullable["type"] = "string"
+		nullable["nullable"] = true
+		adaptedProperties[name] = nullable
+	}
+	return adapted
 }
 
 func parseGeminiJSONResponse(statusCode int, body []byte) (map[string]any, error) {

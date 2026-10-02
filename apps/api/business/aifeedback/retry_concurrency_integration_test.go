@@ -42,7 +42,7 @@ func TestPostgreSQLRepositoryConcurrentRetryReturnsExistingGeneration(t *testing
 	defer testDB.Close()
 	require.NoError(t, testDB.PingContext(ctx))
 	_, err = testDB.ExecContext(ctx, `
-		CREATE TABLE learner_sentences (id uuid PRIMARY KEY, status text NOT NULL, updated_at timestamptz NOT NULL);
+		CREATE TABLE learner_sentences (id uuid PRIMARY KEY, status text NOT NULL, submitted_at timestamptz NOT NULL, updated_at timestamptz NOT NULL);
 		CREATE TABLE ai_feedback_attempts (
 			id uuid PRIMARY KEY, learner_sentence_id uuid NOT NULL, status text NOT NULL,
 			provider text NOT NULL, model text NOT NULL, prompt_version text NOT NULL, request_hash text NOT NULL,
@@ -54,10 +54,11 @@ func TestPostgreSQLRepositoryConcurrentRetryReturnsExistingGeneration(t *testing
 			ON ai_feedback_attempts (request_hash) WHERE status IN ('pending', 'succeeded');`)
 	require.NoError(t, err)
 
-	now := time.Now().UTC()
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	submittedAt := now.Add(-time.Hour)
 	sentenceID, failedID := uuid.New(), uuid.New()
-	require.NoError(t, execRetrySQL(ctx, testDB, `INSERT INTO learner_sentences (id, status, updated_at) VALUES ($1, 'feedback_failed', $2)`, sentenceID, now))
-	failed := &StoredFeedbackAttempt{ID: failedID, LearnerSentenceID: sentenceID, Status: AttemptStatusFailed, RequestHash: "concurrent-retry-hash"}
+	require.NoError(t, execRetrySQL(ctx, testDB, `INSERT INTO learner_sentences (id, status, submitted_at, updated_at) VALUES ($1, 'feedback_failed', $2, $3)`, sentenceID, submittedAt, now))
+	failed := &StoredFeedbackAttempt{ID: failedID, LearnerSentenceID: sentenceID, Status: AttemptStatusFailed, RequestHash: "concurrent-retry-hash", SubmittedAt: submittedAt}
 	require.NoError(t, execRetrySQL(ctx, testDB, `INSERT INTO ai_feedback_attempts (id, learner_sentence_id, status, provider, model, prompt_version, request_hash, error_code, created_at, updated_at) VALUES ($1, $2, 'failed', 'mock', 'mock', 'v1', $3, 'temporary_failure', $4, $4)`, failedID, sentenceID, failed.RequestHash, now))
 
 	start := make(chan struct{})
@@ -83,17 +84,27 @@ func TestPostgreSQLRepositoryConcurrentRetryReturnsExistingGeneration(t *testing
 	}
 
 	var created, extant int
+	var pendingID, existingID uuid.UUID
 	for retry := range results {
+		require.NotNil(t, retry)
 		if retry.Pending != nil {
+			require.Equal(t, sentenceID, retry.Pending.SentenceID)
+			require.True(t, submittedAt.Equal(retry.Pending.SubmittedAt), "retry preserves original submission time")
+			pendingID = retry.Pending.AttemptID
 			created++
 		} else {
 			require.NotNil(t, retry.Existing)
 			require.Equal(t, AttemptStatusPending, retry.Existing.Status)
+			require.Equal(t, sentenceID, retry.Existing.LearnerSentenceID)
+			require.True(t, submittedAt.Equal(retry.Existing.SubmittedAt), "existing generation retains original submission time")
+			existingID = retry.Existing.ID
 			extant++
 		}
 	}
 	require.Equal(t, 1, created)
 	require.Equal(t, 1, extant)
+	require.NotEqual(t, uuid.Nil, pendingID)
+	require.Equal(t, pendingID, existingID, "concurrent callers share one retry generation")
 	var active int
 	require.NoError(t, testDB.QueryRowContext(ctx, `SELECT count(*) FROM ai_feedback_attempts WHERE request_hash = $1 AND status IN ('pending', 'succeeded')`, failed.RequestHash).Scan(&active))
 	require.Equal(t, 1, active)

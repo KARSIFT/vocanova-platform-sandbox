@@ -24,6 +24,17 @@ CI and queue checks. Production promotion and the human, provider, recovery and
 launch requirements below remain open. Earlier dated records document the
 failures and corrections that led to this acceptance.
 
+## Live feedback quality remains open — 2026-10-02
+
+A separate v3 development pilot compared `gpt-5-nano` and `gpt-4.1-nano` on the same nine synthetic
+cases through evaluator-only adapters. All 18 responses were complete and schema-valid, but AI
+review rejected both candidates for meaning or original-sentence diagnostic errors despite status
+agreement of 9/9 and 8/9. This inspected sample informed prompt revision; it is not held-out quality
+or human learner evidence. The full 91-case evaluation and moderation, repair, persistence and
+learner-service checks remain unproven by this pilot. No runtime provider changed and no deployment
+resulted. See the [dated pilot evidence and limits](../engineering/feedback-evaluation.md#v3-development-pilot--2026-10-02).
+The prior consolidated acceptance above does not close this live-quality blocker.
+
 ## Definition of a usable first release
 
 A target learner can sign in through a supported method, choose sensible learning preferences, find relevant words, save them, finish a short review, write an original sentence, understand useful feedback and return later without losing confirmed progress. The interface works on small phones and desktop with keyboard access, readable themes and understandable recovery paths. Production data can be restored, failures are detected, and the release can be identified and rolled back.
@@ -32,18 +43,18 @@ Points and streaks support this experience. They must not imply a proficiency sc
 
 ## Ordered delivery work
 
-| Priority | Outcome                                 | Acceptance evidence                                                                                                                                 | Current position                                                                                                 |
-| -------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| 1        | Trustworthy review and mission behavior | Reproduced defects fixed; regression tests; stable reloads and retries; target/timezone boundaries exercised                                        | PR #1470 merged; staging release and synthetic journey passed                                                    |
-| 1        | Clear project instructions              | Current source map, commands, deployment process and handoff; retired automation clearly historical                                                 | Source documentation and two repository skills reconciled and merged                                             |
-| 1        | Repeatable integration verification     | Full Go database tests, production build and browser matrix on the reviewed revision                                                                | Final local checks and required CI passed; merged staging revision verified                                      |
-| 2        | Consistent daily learning experience    | Mobile 360/430px and desktop walkthroughs; keyboard and light/dark checks; empty/error/long-content states                                          | Browser matrix, theme/width screenshots and Lighthouse passed; live-device acceptance remains open               |
-| 2        | Sufficient practical content            | Inventory by situation and level; editorial check of meanings/examples/distractors; pilot learners can find useful vocabulary for repeated sessions | 7 situations, 51 words, 54 meanings; reviewed Daily Conversation expansion; pilot usefulness remains open        |
-| 2        | Reliable live sentence feedback         | Synthetic evaluation set against the configured provider; correctness, helpfulness, failures, latency and measured cost documented                  | Evaluator repair merged in PR #1471 and verified on staging; live quality and human/service evidence remain open |
-| 2        | Durable operations                      | Documented backup schedule, retention, separate storage and successful isolated restore; release rollback rehearsal; alert delivery proof           | Synthetic restore and failure controls pass locally; production recovery and alert evidence remain open          |
-| 3        | Working intended signup path            | Real provider sign-in and email lifecycle verified; configuration accurately reflected in the UI; owner selects when to expand access               | Controlled Google signup live; email/password disabled                                                           |
-| 3        | Learner validation                      | Small consented pilot of A2–B1 learners; task completion, misunderstandings and return visits inform the next iteration                             | No fresh pilot evidence                                                                                          |
-| 3        | Public launch review                    | Accurate privacy/terms and support/contact arrangements; remaining release blockers resolved                                                        | Requires owner/business decisions and appropriate review                                                         |
+| Priority | Outcome                                 | Acceptance evidence                                                                                                                                 | Current position                                                                                          |
+| -------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| 1        | Trustworthy review and mission behavior | Reproduced defects fixed; regression tests; stable reloads and retries; target/timezone boundaries exercised                                        | PR #1470 merged; staging release and synthetic journey passed                                             |
+| 1        | Clear project instructions              | Current source map, commands, deployment process and handoff; retired automation clearly historical                                                 | Source documentation and two repository skills reconciled and merged                                      |
+| 1        | Repeatable integration verification     | Full Go database tests, production build and browser matrix on the reviewed revision                                                                | Final local checks and required CI passed; merged staging revision verified                               |
+| 2        | Consistent daily learning experience    | Mobile 360/430px and desktop walkthroughs; keyboard and light/dark checks; empty/error/long-content states                                          | Browser matrix, theme/width screenshots and Lighthouse passed; live-device acceptance remains open        |
+| 2        | Sufficient practical content            | Inventory by situation and level; editorial check of meanings/examples/distractors; pilot learners can find useful vocabulary for repeated sessions | 7 situations, 51 words, 54 meanings; reviewed Daily Conversation expansion; pilot usefulness remains open |
+| 2        | Reliable live sentence feedback         | Synthetic evaluation set against the configured provider; correctness, helpfulness, failures, latency and measured cost documented                  | V3 nine-case candidate pilot rejected both models; live quality and human/service evidence remain open    |
+| 2        | Durable operations                      | Documented backup schedule, retention, separate storage and successful isolated restore; release rollback rehearsal; alert delivery proof           | Synthetic restore and failure controls pass locally; production recovery and alert evidence remain open   |
+| 3        | Working intended signup path            | Real provider sign-in and email lifecycle verified; configuration accurately reflected in the UI; owner selects when to expand access               | Controlled Google signup live; email/password disabled                                                    |
+| 3        | Learner validation                      | Small consented pilot of A2–B1 learners; task completion, misunderstandings and return visits inform the next iteration                             | No fresh pilot evidence                                                                                   |
+| 3        | Public launch review                    | Accurate privacy/terms and support/contact arrangements; remaining release blockers resolved                                                        | Requires owner/business decisions and appropriate review                                                  |
 
 ## Delivery evidence — 2026-10-02
 
