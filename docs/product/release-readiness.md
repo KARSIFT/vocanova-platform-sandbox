@@ -480,9 +480,45 @@ All 37 focused workflow contracts and the normal migration suite passed.
 The full hosted staging journey remains pending; no production promotion
 follows from this working revision.
 
+## Consolidated learner reliability — working revision
+
+The remaining implementation is kept on one delivery branch for one final PR.
+Three reproduced gaps are addressed together with the staging fixture correction:
+
+- Review choices exclude the current word's alternate meanings before selecting
+  distractors. Actual seeded pairs for reservation, deadline and follow-up
+  reproduce the ambiguity. A short queue retains the existing self-check fallback;
+  answer identities, deterministic ordering and learning mutations are unchanged.
+- The separate profile editor holds its pending guard through the request,
+  preserves newer typing, applies server normalization to the submitted draft
+  when appropriate, and distinguishes earlier saved changes from newer edits.
+  Errors retain the current name for an explicit retry.
+- Google recovery suggests email/password or an email link only when that method
+  is enabled. Magic-link and signup guidance likewise follow known capabilities.
+  Unknown or unavailable alternatives get retry guidance. No authentication
+  method is enabled by this change.
+
+The focused review-option regression changed from six failures to twelve passing
+tests. Authentication baselines reproduced nine failures; profile baselines
+reproduced lost pending state, misleading success and overlapping submissions
+across all three layouts. Final local workspace validation passed formatting,
+lint/vet, type checks, 250 foundation tests, 32 API-client tests, 114 web helper
+tests, the Go suite against a fresh migrated PostgreSQL 16 database and both
+production builds. E2E typechecking passed. The full browser matrix passed 383
+checks with 37 existing skips in 5.2 minutes, covering the corrected profile and
+authentication flows in light/dark themes at all three layouts. Captured profile
+and recovery states were visually inspected; authentication overflow checks passed.
+Independent review found no remaining actionable findings, and the fresh
+dependency audit reported zero known vulnerabilities. Hosted acceptance remains
+pending. These checks cannot establish real provider access or learner acceptance.
+
 ## Deliver work in bounded slices
 
 Each slice should identify the learner problem, state the intended behavior, change the smallest relevant surface, include meaningful regression coverage and document remaining limits. Use parallel agents for independent areas and independent review; coordinate shared files, builds and servers. Follow [repository instructions](../../AGENTS.md) for draft PRs, CI, merging and deployment.
+
+The owner requests one consolidated PR for the remaining product-completion
+work. Keep bounded implementation tasks and local verification on the delivery
+branch, then review and validate the combined result before opening that PR.
 
 Prioritize demonstrated failures in the learning loop over a new tutor, leaderboard, social system or native app. Those features require a separate product case and are not necessary to complete the current first release.
 

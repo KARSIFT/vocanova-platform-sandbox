@@ -331,7 +331,9 @@ export function validateMockInventory() {
   // existing confidence-point and grace-day histories append-only, with a
   // transaction-local exception for account purges. VOC-1406 constrains the
   // saved word's current result/rating state. VOC-1411 binds idempotency
-  // claims to real users and fingerprints.
+  // claims to real users and fingerprints. The active synthetic identity
+  // migration retains retired fixture history while permitting one active
+  // marked account; it does not add an application boundary.
   const allowedMigrationFiles = new Set([
     "20260724210000_identity_foundation.sql",
     "20260724210001_oauth_state.sql",
@@ -366,6 +368,7 @@ export function validateMockInventory() {
     "20260909142062_review_attempt_result_rating_integrity.sql",
     "20260909142063_voc1411_idempotency_record_integrity.sql",
     "20260912090000_password_credentials.sql",
+    "20261002190000_active_synthetic_identity_uniqueness.sql",
   ]);
   for (const entry of readdirSync(apiMigrationRoot, {
     withFileTypes: true,

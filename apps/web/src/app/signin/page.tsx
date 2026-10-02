@@ -28,11 +28,12 @@ interface SignInPageProps {
 export default async function SignInPage({ searchParams }: SignInPageProps) {
   const { magicOnly, oauth, reason, returnTo, signedOut } = await searchParams;
   const safeReturnTo = normalizeReturnTo(returnTo);
-  const { magicLinkEnabled, oauthEnabled, passwordEnabled } =
-    await getSignInAuthCapabilities();
+  const capabilities = await getSignInAuthCapabilities();
+  const { magicLinkEnabled, oauthEnabled, passwordEnabled } = capabilities;
   const magicOnlyUnavailable = magicOnly === "1" && !magicLinkEnabled;
+  const showPassword = passwordEnabled && magicOnly !== "1";
   const showOAuth = oauthEnabled && (magicOnly !== "1" || magicOnlyUnavailable);
-  const oauthMessage = getOAuthCallbackMessage(oauth);
+  const oauthMessage = getOAuthCallbackMessage(oauth, capabilities);
 
   return (
     <AuthShell>
@@ -44,9 +45,15 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           <p className="text-base text-neutral-700">
             {magicOnly === "1" && !magicOnlyUnavailable
               ? "Enter your email to continue securely."
-              : passwordEnabled
-                ? "Sign in with your email and password, or choose another secure method."
-                : "No password needed. Choose a secure sign-in method to continue."}
+              : showPassword
+                ? showOAuth || magicLinkEnabled
+                  ? "Sign in with your email and password, or choose another secure method."
+                  : "Sign in with your email and password."
+                : showOAuth
+                  ? "Continue with Google to sign in."
+                  : magicLinkEnabled
+                    ? "Enter your email to continue securely."
+                    : "Sign in to continue your vocabulary practice."}
           </p>
         </div>
 
@@ -96,23 +103,28 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             aria-live="polite"
             className="rounded-md border border-primary-200 bg-primary-50 p-[var(--spacing-sm)] text-base text-primary-900"
           >
-            Email sign-in is unavailable right now. You can continue with Google
-            or{" "}
-            <Link
-              href={`/login?${new URLSearchParams({ returnTo: safeReturnTo }).toString()}`}
-              className="font-semibold underline"
-            >
-              use the standard sign-in page
-            </Link>
-            .
+            Email sign-in links are unavailable right now.{" "}
+            {showOAuth ? "You can continue with Google below. " : null}
+            {passwordEnabled ? (
+              <>
+                For email and password,{" "}
+                <Link
+                  href={`/login?${new URLSearchParams({ returnTo: safeReturnTo }).toString()}`}
+                  className="font-semibold underline"
+                >
+                  use the standard sign-in page
+                </Link>
+                .
+              </>
+            ) : !showOAuth ? (
+              "Please try again later."
+            ) : null}
           </p>
         ) : null}
 
-        {passwordEnabled && magicOnly !== "1" ? (
-          <PasswordLoginForm returnTo={safeReturnTo} />
-        ) : null}
+        {showPassword ? <PasswordLoginForm returnTo={safeReturnTo} /> : null}
 
-        {passwordEnabled && (showOAuth || magicLinkEnabled) ? (
+        {showPassword && (showOAuth || magicLinkEnabled) ? (
           <div className="relative flex items-center gap-[var(--spacing-sm)]">
             <div className="h-px flex-1 bg-neutral-200" />
             <span className="text-sm text-neutral-500">
@@ -124,9 +136,9 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
         {showOAuth ? (
           <>
-            <OAuthButton returnTo={safeReturnTo} />
+            <OAuthButton returnTo={safeReturnTo} capabilities={capabilities} />
 
-            {!passwordEnabled && magicLinkEnabled ? (
+            {!showPassword && magicLinkEnabled ? (
               <div className="relative flex items-center gap-[var(--spacing-sm)]">
                 <div className="h-px flex-1 bg-neutral-200" />
                 <span className="text-sm text-neutral-500">or</span>

@@ -101,6 +101,16 @@ unsaved edits from confirmed changes. A retry explicitly resends fields whose
 previous save response was lost. Reminder controls store preferences only;
 the interface does not claim reminder delivery is available.
 
+The consolidated delivery also protects the separate profile editor: an earlier
+save cannot replace newer typing, overlapping saves are ignored while pending,
+and the status distinguishes confirmed changes from a newer unsaved name.
+Review choices exclude other meanings of the current canonical word because the
+word-only prompt cannot distinguish those valid answers. When fewer than three
+safe alternatives remain, the existing self-check mode is used. Sign-in recovery
+uses known capabilities when suggesting another method; unknown capabilities
+fall back to retry guidance. These working changes require the combined release
+verification recorded in [release readiness](release-readiness.md).
+
 ## Live deployment observation
 
 Public checks on 2026-10-02 at approximately 03:24 UTC observed staging web and API

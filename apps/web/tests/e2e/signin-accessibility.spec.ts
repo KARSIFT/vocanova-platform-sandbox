@@ -100,7 +100,7 @@ test.describe("Sign-in accessibility (VOC-073-T00)", () => {
     await expect(page.getByLabel("Email address")).toHaveCount(0);
   });
 
-  test("offers Google when an email-only recovery route cannot send email", async ({
+  test("offers enabled Google when an email-link recovery route is unavailable", async ({
     page,
     context,
   }, testInfo) => {
@@ -115,7 +115,7 @@ test.describe("Sign-in accessibility (VOC-073-T00)", () => {
 
     await page.goto("/login?magicOnly=1");
     await expect(
-      page.getByText("Email sign-in is unavailable right now."),
+      page.getByText("Email sign-in links are unavailable right now."),
     ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Continue with Google" }),

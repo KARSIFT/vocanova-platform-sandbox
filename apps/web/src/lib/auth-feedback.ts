@@ -1,5 +1,7 @@
 import { ApiResponseError } from "@vocanova/api-client";
 
+import type { SignInAuthCapabilities } from "./auth-capabilities";
+
 export type AuthErrorContext =
   | "magic-request"
   | "magic-consume"
@@ -10,6 +12,19 @@ export type AuthErrorContext =
   | "password-reset-request"
   | "password-reset";
 
+function withAvailableEmailMethod(
+  message: string,
+  capabilities?: SignInAuthCapabilities,
+): string {
+  if (capabilities?.passwordEnabled) {
+    return `${message} You can sign in with your email and password.`;
+  }
+  if (capabilities?.magicLinkEnabled) {
+    return `${message} You can request an email sign-in link.`;
+  }
+  return message;
+}
+
 /**
  * Keeps API implementation details out of learner-facing authentication
  * screens. The status codes are stable contract signals; response bodies are
@@ -18,6 +33,7 @@ export type AuthErrorContext =
 export function getAuthErrorMessage(
   error: unknown,
   context: AuthErrorContext,
+  capabilities?: SignInAuthCapabilities,
 ): string {
   const status = error instanceof ApiResponseError ? error.status : undefined;
 
@@ -92,9 +108,15 @@ export function getAuthErrorMessage(
       return "Too many Google sign-in attempts were made. Please wait a few minutes, then try again.";
     }
     if (status === 404 || status === 503) {
-      return "Google sign-in is unavailable right now. You can use email instead.";
+      return withAvailableEmailMethod(
+        "Google sign-in is unavailable right now. Please try again later.",
+        capabilities,
+      );
     }
-    return "We couldn't start Google sign-in. Please try again or use email instead.";
+    return withAvailableEmailMethod(
+      "We couldn't start Google sign-in. Please try again.",
+      capabilities,
+    );
   }
 
   if (status === 403) {
@@ -106,16 +128,28 @@ export function getAuthErrorMessage(
   return "We couldn't sign you out. Please try again.";
 }
 
-export function getOAuthCallbackMessage(value?: string): string | null {
+export function getOAuthCallbackMessage(
+  value?: string,
+  capabilities?: SignInAuthCapabilities,
+): string | null {
   switch (value) {
     case "cancelled":
-      return "Google sign-in was cancelled. You can try again or use email instead.";
+      return withAvailableEmailMethod(
+        "Google sign-in was cancelled. You can try again.",
+        capabilities,
+      );
     case "expired":
       return "This Google sign-in attempt expired or could not be verified. Please try again.";
     case "unavailable":
-      return "Google sign-in is unavailable right now. You can use email instead.";
+      return withAvailableEmailMethod(
+        "Google sign-in is unavailable right now. Please try again later.",
+        capabilities,
+      );
     case "failed":
-      return "Google could not complete sign-in. Please try again or use email instead.";
+      return withAvailableEmailMethod(
+        "Google could not complete sign-in. Please try again.",
+        capabilities,
+      );
     default:
       return null;
   }
