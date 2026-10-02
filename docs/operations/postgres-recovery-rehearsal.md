@@ -49,6 +49,14 @@ The target must also allow a valid settings write and reject selected invalid
 writes through the restored constraints and append-only trigger. Those probes
 roll back, and the original state is checked again before comparison.
 
+The plain schema dumps share a fresh per-run `--restrict-key` solely to make
+their output comparable. PostgreSQL's
+[version 16 documentation](https://www.postgresql.org/docs/16/app-pgdump.html)
+explicitly supports that testing use; the real local and CI rehearsals used
+PostgreSQL 16.15. These schema dumps are hashed, never executed. The custom-format
+restore archive does not use this option. Older cached images lacking the option
+must be refreshed explicitly before running the rehearsal.
+
 The report contains identities, timestamps, durations, input/archive hashes,
 counts, check outcomes and cleanup status. It excludes learner rows, SQL error
 details, provider output and credentials. Each subprocess is time bounded. A
@@ -81,6 +89,12 @@ report directory. The first two must fail at `restore`; the missing record must
 fail at `invariants` and show the differing table count. Exit 0 means a successful
 rehearsal and cleanup, exit 1 means a recorded rehearsal/cleanup failure, and exit
 2 means invalid arguments, output reservation or report-writing failure.
+
+Invariant failures intentionally use the fixed code `invariant_check_failed`,
+without PostgreSQL error text or individual record values. Use the differing
+table counts/digests and recorded input hashes to locate the failure. Further
+SQL diagnosis belongs in a separate disposable development database following
+the fixture contract; this runner always cleans up its own databases.
 
 Foundation tests exercise argument rejection, output preservation, isolation,
 error redaction, interruption and cleanup failure without Docker. The

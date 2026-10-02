@@ -186,6 +186,75 @@ class RehearsalContracts(unittest.TestCase):
         self.assertEqual(report["failure_stage"], "source_create")
         self.assertFalse(self.runner.temp_dir.exists())
 
+    def test_first_interrupt_during_cleanup_finishes_cleanup_but_cannot_pass(self):
+        cleanup_finished = []
+        def execute():
+            self.runner.report["status"] = "PASS"
+        def cleanup():
+            os.kill(os.getpid(), signal.SIGTERM)
+            os.kill(os.getpid(), signal.SIGINT)
+            cleanup_finished.append(True)
+            return {"status": "PASS", "verified_absent": True}
+        with patch.object(self.runner, "_execute", side_effect=execute), \
+             patch.object(self.runner, "_cleanup", side_effect=cleanup):
+            report = self.runner.run()
+        self.assertEqual(cleanup_finished, [True])
+        self.assertEqual(report["cleanup"]["status"], "PASS")
+        self.assertEqual(report["status"], "FAIL")
+        self.assertEqual(report["failure_stage"], "cleanup")
+        self.assertEqual(report["failure_code"], "interrupted")
+
+    def test_cleanup_interrupt_preserves_an_earlier_restore_failure(self):
+        def execute():
+            self.runner.stage = "restore"
+            raise restore.RehearsalError("command_failed")
+        def cleanup():
+            os.kill(os.getpid(), signal.SIGTERM)
+            return {"status": "PASS", "verified_absent": True}
+        with patch.object(self.runner, "_execute", side_effect=execute), \
+             patch.object(self.runner, "_cleanup", side_effect=cleanup):
+            report = self.runner.run()
+        self.assertEqual(report["status"], "FAIL")
+        self.assertEqual(report["failure_stage"], "restore")
+        self.assertEqual(report["failure_code"], "command_failed")
+        self.assertTrue(report["cleanup"]["temporary_files_removed"])
+
+    def test_interrupt_during_temporary_file_cleanup_also_prevents_pass(self):
+        remove_temporary = restore.tempfile.TemporaryDirectory.cleanup
+        def execute():
+            self.runner.report["status"] = "PASS"
+        def cleanup(directory):
+            os.kill(os.getpid(), signal.SIGINT)
+            remove_temporary(directory)
+        with patch.object(self.runner, "_execute", side_effect=execute), \
+             patch.object(self.runner, "_cleanup", return_value={"status": "PASS", "verified_absent": True}), \
+             patch.object(restore.tempfile.TemporaryDirectory, "cleanup", new=cleanup):
+            report = self.runner.run()
+        self.assertEqual(report["status"], "FAIL")
+        self.assertEqual(report["failure_stage"], "cleanup")
+        self.assertEqual(report["failure_code"], "interrupted")
+        self.assertTrue(report["cleanup"]["temporary_files_removed"])
+
+    def test_unsupported_cached_tool_is_rejected_before_migrations(self):
+        def docker(*args, **kwargs):
+            if args[:2] == ("image", "inspect"):
+                return ("sha256:" + "a" * 64).encode()
+            if args[0] == "version":
+                return b"29.8.1"
+            if args[-1] == "--version":
+                return f"{args[-2]} (PostgreSQL) 16.9".encode()
+            if args[-1] == "--help":
+                return b"synthetic old pg_dump help without repeatable-dump capability"
+            self.fail("unexpected Docker call before capability rejection")
+        with patch.object(self.runner, "_command", side_effect=[b"a" * 40, b""]), \
+             patch.object(self.runner, "_docker", side_effect=docker), \
+             patch.object(self.runner, "_create"), \
+             patch.object(self.runner, "_psql", return_value=b"160009") as psql:
+            with self.assertRaises(restore.RehearsalError) as error:
+                self.runner._execute()
+        self.assertEqual(str(error.exception), "pg_dump_restrict_key_unsupported")
+        psql.assert_called_once_with(self.runner.names[0], "SHOW server_version_num;")
+
     def test_invariant_results_must_be_nonempty_and_all_true(self):
         for invalid in (b"{}", b'{"saved_word_schedule":false}', b'{"saved_word_schedule":1}'):
             with patch.object(self.runner, "_psql", return_value=invalid):

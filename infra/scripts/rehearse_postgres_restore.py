@@ -271,6 +271,11 @@ class Rehearsal:
                 if not re.fullmatch(r"[A-Za-z_]+ \(PostgreSQL\) 16\.[0-9]+(?: [A-Za-z0-9().+ _-]+)?", version):
                     raise RehearsalError("postgres_tool_identity_invalid")
                 self.report["identities"][tool] = version
+            # Inspect the cached binary's capability, not just its major version.
+            # Older cached minor releases may lack this schema-dump option.
+            if b"--restrict-key" not in self._docker("exec", source, "pg_dump", "--help"):
+                raise RehearsalError("pg_dump_restrict_key_unsupported")
+            self.report["identities"]["pg_dump_restrict_key_supported"] = True
         with self._stage("migrate"):
             for _, migration in migrations:
                 self._psql(source, migration)
@@ -368,8 +373,20 @@ class Rehearsal:
         started = time.monotonic()
         old_handlers = {}
         temporary = None
+        cleaning_up = False
+        interruption_pending = False
 
         def interrupt(_signum, _frame):
+            nonlocal interruption_pending
+            # Cleanup must finish, but a first cancellation arriving during
+            # container or temporary-file cleanup must still prevent PASS.
+            self.report["status"] = "FAIL"
+            if self.report["failure_stage"] is None:
+                self.report.update(failure_stage="cleanup" if cleaning_up else self.stage,
+                                   failure_code="interrupted")
+            if cleaning_up or interruption_pending:
+                return
+            interruption_pending = True
             raise RehearsalError("interrupted")
 
         for sig in (signal.SIGINT, signal.SIGTERM):
@@ -384,9 +401,9 @@ class Rehearsal:
         except (OSError, ValueError, TypeError, KeyError):
             self.report.update(status="FAIL", failure_stage=self.stage, failure_code="invalid_local_input_or_result")
         finally:
-            # Once cleanup starts, a second interrupt must not skip it.
-            for sig in old_handlers:
-                signal.signal(sig, signal.SIG_IGN)
+            # Keep the same handler installed throughout cleanup: cancellation
+            # is recorded, while further exceptions are deferred until it ends.
+            cleaning_up = True
             try:
                 with self._stage("cleanup"):
                     try:

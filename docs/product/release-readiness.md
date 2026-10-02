@@ -263,6 +263,14 @@ workflow contracts and immutable action-reference checks also passed. Browser
 routes and API implementation are unchanged; the browser matrix and optional
 Go PostgreSQL environment were not rerun for this operations-only slice.
 
+Review follow-up reproduced a second cancellation edge: the first signal during
+cleanup could leave a provisional PASS unchanged. A single phase-aware handler
+now records failure while allowing cleanup to finish, including repeated signals
+and temporary-file removal. Nineteen offline contracts and the five-case real
+Docker suite passed again (42.9 seconds). A cached-tool capability check also
+rejects old `pg_dump` binaries without `--restrict-key` before migrations; current
+PostgreSQL 16.15 supports the comparison option, as the real runs demonstrate.
+
 No production data, credentials, existing container or provider is used. This
 does not establish production backup schedule, retention, separate storage,
 point-in-time recovery, application acceptance after restoration or alert receipt.
