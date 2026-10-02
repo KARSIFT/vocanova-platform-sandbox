@@ -281,6 +281,14 @@ Twenty-three offline contracts pass. The real acceptance suite now has seven
 cases, including both intentionally weakened trigger definitions, and passes;
 the historical checker failed those new regressions by incorrectly returning PASS.
 
+Terminal-level Ctrl-C testing then reproduced a child-command interruption that
+could abort cleanup even while the parent deferred its signal. Commands now run
+in separate process sessions while retaining bounded timeout/cancellation. All
+six named constraints also have specific invalid-write probes and post-rollback
+checks. A real negative case replaces the feedback guard with `CHECK (true)`;
+the historical checker incorrectly accepted it. The final suite comprises 24
+offline contracts and eight real database cases, including these regressions.
+
 No production data, credentials, existing container or provider is used. This
 does not establish production backup schedule, retention, separate storage,
 point-in-time recovery, application acceptance after restoration or alert receipt.

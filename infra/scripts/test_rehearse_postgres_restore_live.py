@@ -174,6 +174,35 @@ class RecoveryAcceptance(unittest.TestCase):
     def test_grace_ledger_missing_delete_protection_is_rejected(self):
         self.assert_delete_protection_is_required("grace_day_ledger")
 
+    def test_named_but_ineffective_feedback_constraint_is_rejected(self):
+        directory = self.reports / "weakened-feedback-constraint"
+        original_checks = restore.Rehearsal._checks
+        weakened = []
+        def checks(runner, container, sql):
+            if container == runner.names[0]:
+                runner._psql(container, """BEGIN;
+                    ALTER TABLE public.ai_feedback_attempts
+                      DROP CONSTRAINT ai_feedback_attempts_feedback_json_required_on_success;
+                    ALTER TABLE public.ai_feedback_attempts
+                      ADD CONSTRAINT ai_feedback_attempts_feedback_json_required_on_success CHECK (true);
+                    COMMIT;
+                """)
+                definition = runner._psql(container, """SELECT pg_get_constraintdef(oid)
+                    FROM pg_constraint WHERE conrelid='public.ai_feedback_attempts'::regclass
+                    AND conname='ai_feedback_attempts_feedback_json_required_on_success';""")
+                self.assertEqual(definition.strip(), b"CHECK (true)")
+                weakened.append(True)
+            return original_checks(runner, container, sql)
+        with patch.object(restore.Rehearsal, "_checks", new=checks), \
+             contextlib.redirect_stdout(io.StringIO()):
+            status = restore.main(["--report-dir", str(directory)])
+        self.assertEqual(weakened, [True])
+        self.assertEqual(status, 1, "a matching constraint name alone must not establish its protection")
+        report = self.read_report(directory)
+        self.assertEqual(report["status"], "FAIL")
+        self.assertEqual(report["failure_stage"], "fixture")
+        self.assertEqual(report["failure_code"], "command_failed")
+
     def test_signal_cleans_up_isolated_container_and_preserves_failed_report(self):
         directory = self.reports / "interrupted"
         def containers():

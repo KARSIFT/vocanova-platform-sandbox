@@ -463,6 +463,58 @@ BEGIN
       RAISE EXCEPTION 'rehearsal_unexpected_review_foreign_key';
     END IF;
   END;
+  -- Each remaining named guard must reject a write that only it should prohibit.
+  BEGIN
+    UPDATE public.ai_feedback_attempts SET feedback_json=NULL
+    WHERE id='d0c0a001-0000-4000-8000-000000000006';
+    RAISE EXCEPTION 'rehearsal_missing_success_feedback_was_not_rejected';
+  EXCEPTION WHEN check_violation THEN
+    GET STACKED DIAGNOSTICS violated_constraint = CONSTRAINT_NAME;
+    IF violated_constraint <> 'ai_feedback_attempts_feedback_json_required_on_success' THEN
+      RAISE EXCEPTION 'rehearsal_unexpected_feedback_constraint';
+    END IF;
+  END;
+  BEGIN
+    UPDATE public.daily_mission_snapshots SET completed_at='2026-10-02 10:06:01+00'
+    WHERE id='d0c0a001-0000-4000-8000-000000000007';
+    RAISE EXCEPTION 'rehearsal_open_mission_completion_was_not_rejected';
+  EXCEPTION WHEN check_violation THEN
+    GET STACKED DIAGNOSTICS violated_constraint = CONSTRAINT_NAME;
+    IF violated_constraint <> 'daily_mission_snapshots_completed_at_only_on_done' THEN
+      RAISE EXCEPTION 'rehearsal_unexpected_mission_completion_constraint';
+    END IF;
+  END;
+  BEGIN
+    -- The exact single-user fixture above guarantees this different user is absent.
+    UPDATE public.idempotency_keys SET user_id='d0c0a001-0000-4000-8000-999999999999'
+    WHERE id='d0c0a001-0000-4000-8000-000000000015';
+    RAISE EXCEPTION 'rehearsal_orphan_idempotency_claim_was_not_rejected';
+  EXCEPTION WHEN foreign_key_violation THEN
+    GET STACKED DIAGNOSTICS violated_constraint = CONSTRAINT_NAME;
+    IF violated_constraint <> 'idempotency_keys_user_id_fkey' THEN
+      RAISE EXCEPTION 'rehearsal_unexpected_idempotency_foreign_key';
+    END IF;
+  END;
+  BEGIN
+    UPDATE public.daily_activity_summaries SET confidence_points_earned=-1
+    WHERE id='d0c0a001-0000-4000-8000-000000000008';
+    RAISE EXCEPTION 'rehearsal_negative_points_earned_was_not_rejected';
+  EXCEPTION WHEN check_violation THEN
+    GET STACKED DIAGNOSTICS violated_constraint = CONSTRAINT_NAME;
+    IF violated_constraint <> 'daily_activity_summaries_confidence_point_counters_nonnegative' THEN
+      RAISE EXCEPTION 'rehearsal_unexpected_points_earned_constraint';
+    END IF;
+  END;
+  BEGIN
+    UPDATE public.daily_activity_summaries SET confidence_points_spent=-1
+    WHERE id='d0c0a001-0000-4000-8000-000000000008';
+    RAISE EXCEPTION 'rehearsal_negative_points_spent_was_not_rejected';
+  EXCEPTION WHEN check_violation THEN
+    GET STACKED DIAGNOSTICS violated_constraint = CONSTRAINT_NAME;
+    IF violated_constraint <> 'daily_activity_summaries_confidence_point_counters_nonnegative' THEN
+      RAISE EXCEPTION 'rehearsal_unexpected_points_spent_constraint';
+    END IF;
+  END;
 END;
 $check$;
 
@@ -479,7 +531,16 @@ BEGIN
     OR NOT EXISTS (SELECT 1 FROM public.user_words
       WHERE id='d0c0a001-0000-4000-8000-000000000003' AND last_result='correct' AND last_rating='good')
     OR NOT EXISTS (SELECT 1 FROM public.review_attempts
-      WHERE id='d0c0a001-0000-4000-8000-000000000004' AND meaning_id='3d64c3c9-ede0-5ffd-b1ef-278f6b70e486') THEN
+      WHERE id='d0c0a001-0000-4000-8000-000000000004' AND meaning_id='3d64c3c9-ede0-5ffd-b1ef-278f6b70e486')
+    OR NOT EXISTS (SELECT 1 FROM public.ai_feedback_attempts
+      WHERE id='d0c0a001-0000-4000-8000-000000000006' AND status='succeeded'
+        AND feedback_json='{"status":"correct","target_word_used_correctly":true,"grammar_acceptable":true,"meaning_clear":true,"naturalness":"natural","headline":"Good use of catch up.","explanation":"Caught up clearly describes sharing news after time apart."}'::jsonb)
+    OR NOT EXISTS (SELECT 1 FROM public.daily_mission_snapshots
+      WHERE id='d0c0a001-0000-4000-8000-000000000007' AND status='open' AND completed_at IS NULL)
+    OR NOT EXISTS (SELECT 1 FROM public.idempotency_keys
+      WHERE id='d0c0a001-0000-4000-8000-000000000015' AND user_id='d0c0a001-0000-4000-8000-000000000001')
+    OR NOT EXISTS (SELECT 1 FROM public.daily_activity_summaries
+      WHERE id='d0c0a001-0000-4000-8000-000000000008' AND confidence_points_earned=12 AND confidence_points_spent=0) THEN
     RAISE EXCEPTION 'rehearsal_probe_rollback_state';
   END IF;
 END;

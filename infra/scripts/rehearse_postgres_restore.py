@@ -116,9 +116,13 @@ class Rehearsal:
 
     def _command(self, args, *, input_data=None, timeout=60) -> bytes:
         try:
+            # Terminal Ctrl-C targets the foreground process group. Keep each
+            # bounded child outside that group so deferred cleanup can finish.
+            # subprocess.run still kills/waits for its child on timeout or when
+            # our active-work signal handler raises; no signal mask is changed.
             result = subprocess.run(args, input=input_data, stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE, timeout=timeout,
-                                    env=COMMAND_ENV, check=False)
+                                    env=COMMAND_ENV, check=False, start_new_session=True)
         except subprocess.TimeoutExpired:
             raise RehearsalError("command_timeout") from None
         except OSError:

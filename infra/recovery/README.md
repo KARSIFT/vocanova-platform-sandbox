@@ -49,10 +49,17 @@ the expected function with no arguments. The exact PostgreSQL trigger event/type
 bits are checked for both ledgers, including the empty grace ledger; an
 UPDATE-only trigger cannot pass. Functional probes update one real settings row,
 require the points-ledger trigger to reject both UPDATE and DELETE of a nonempty
-record, and require the named result/rating check and composite review-ownership
-FK to reject invalid writes. The probe transaction ends in `ROLLBACK`; failed probes
-also abort it. A following read-only transaction verifies that settings, points,
-review state and review meaning retain their original values. The runner must wait for successful psql exit before
+record, and exercise all six named constraints. The constraint probes require
+rejection of an inconsistent result/rating, a review linked to the wrong saved
+meaning, missing JSON for succeeded feedback, a completion time on an open
+mission, an idempotency claim for a nonexistent user, and negative earned and
+spent points independently. Each constraint probe requires its expected SQLSTATE
+and exact constraint name; an unexpected success raises an uncaught error.
+These are bounded functional checks, not an exhaustive proof of every allowed or
+forbidden value. The probe transaction ends in `ROLLBACK`; failed probes also
+abort it. A following read-only transaction verifies that settings, points,
+review state/meaning, feedback JSON, mission completion, idempotency ownership and
+activity totals retain their original values. The runner must wait for successful psql exit before
 accepting the final one-row JSON object or taking a post-check snapshot. Normal
 output contains fourteen named true booleans and no data rows; errors use fixed
 codes and must not be published with unsanitized PostgreSQL detail.

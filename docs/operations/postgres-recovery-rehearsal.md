@@ -55,6 +55,10 @@ roll back, and the original state is checked again before comparison.
 Both ledger triggers must protect every row from updates and deletions without
 a conditional exemption. A nonempty points record is also tested against both
 operations inside the rollback transaction.
+All six named constraints have invalid-write probes that require their specific
+rejection, including absent success feedback, invalid mission completion,
+missing claim ownership and negative activity points. These are bounded checks
+of the stated protections, not exhaustive proof of every application invariant.
 
 The plain schema dumps share a fresh per-run `--restrict-key` solely to make
 their output comparable. PostgreSQL's
@@ -72,10 +76,13 @@ both the unique run label and requested container name before removing anything;
 an unresolved creation or cleanup failure prevents PASS. SIGKILL, daemon failure
 or machine loss can prevent cleanup and require local inspection using the
 report's run ID; never use a broad container prune as recovery for this tool.
+Child commands run in separate process sessions so terminal Ctrl-C cannot abort
+a cleanup command while the parent defers cancellation. Commands retain their
+timeouts and are terminated when active work is interrupted.
 
 ## Failure controls and automation
 
-Run the complete seven-case acceptance suite explicitly:
+Run the complete eight-case acceptance suite explicitly:
 
 ```bash
 evidence_parent="$(mktemp -d /tmp/vocanova-recovery-tests.XXXXXX)"
@@ -86,8 +93,9 @@ VOCANOVA_REHEARSAL_REPORT_ROOT="$evidence_parent/cases" \
 It requires a real local Docker daemon and cached image; missing prerequisites
 fail the suite instead of skipping it. Cases cover a successful restore,
 corrupted archive, truncated archive, a removed activity record, SIGTERM
-cleanup and either ledger's deletion protection being removed. The negative
-cases must produce the expected failed report while the
+cleanup, either ledger's deletion protection being removed, and a feedback
+constraint retaining its name but losing enforcement. The negative cases must
+produce the expected failed report while the
 test suite itself succeeds. Without the report-root environment variable, the
 test suite removes its reports after completion.
 

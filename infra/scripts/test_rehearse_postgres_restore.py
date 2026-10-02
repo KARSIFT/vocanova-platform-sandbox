@@ -10,6 +10,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -175,6 +176,47 @@ raise SystemExit(restore.main(["--report-dir", sys.argv[2]]))
             with self.assertRaises(restore.RehearsalError) as error:
                 self.runner._command(["docker", "version"], timeout=1)
         self.assertEqual(str(error.exception), "command_timeout")
+
+    def test_terminal_group_interrupt_does_not_kill_cleanup_command(self):
+        program = '''
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("restore", sys.argv[1])
+restore = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(restore)
+restore.Rehearsal._execute = lambda self: self.report.update(status="PASS")
+def cleanup(self):
+    helper = "import pathlib,sys,time; pathlib.Path(sys.argv[1]).write_text('started'); time.sleep(0.6); print('finished')"
+    result = self._command([sys.executable, "-c", helper, sys.argv[3]], timeout=3)
+    if result.strip() != b"finished":
+        raise restore.RehearsalError("cleanup_child_did_not_finish")
+    return {"status":"PASS", "verified_absent":True}
+restore.Rehearsal._cleanup = cleanup
+raise SystemExit(restore.main(["--report-dir", sys.argv[2]]))
+'''
+        directory = self.directory / "group-interrupt"
+        marker = self.directory / "cleanup-started"
+        process = subprocess.Popen([sys.executable, "-c", program, restore.__file__, str(directory), str(marker)],
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
+        try:
+            deadline = time.monotonic() + 5
+            while not marker.exists() and process.poll() is None and time.monotonic() < deadline:
+                time.sleep(0.01)
+            self.assertTrue(marker.exists(), "cleanup subprocess did not start")
+            # Match terminal Ctrl-C delivery, not just an os.kill of the parent.
+            os.killpg(process.pid, signal.SIGINT)
+            process.communicate(timeout=5)
+            self.assertEqual(process.returncode, 1)
+            report = json.loads((directory / "report.json").read_text())
+            self.assertEqual(report["status"], "FAIL")
+            self.assertEqual(report["failure_code"], "interrupted")
+            self.assertEqual(report["cleanup"]["status"], "PASS", "terminal interrupt aborted a cleanup subprocess")
+            self.assertTrue(report["cleanup"]["temporary_files_removed"])
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.communicate(timeout=5)
+            process.stdout.close()
+            process.stderr.close()
 
     def test_create_is_isolated_and_tracks_a_request_before_daemon_failure(self):
         observed = []
