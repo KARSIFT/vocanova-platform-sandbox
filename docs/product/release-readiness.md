@@ -4,6 +4,26 @@ This is the working completion plan for the product requested on 2 October 2026.
 
 Read [the current state](current-state.md), [product bible](00-product-bible.md), [learning workspace design](../design/learning-workspace.md) and [development guide](../development.md) before extending scope.
 
+## Consolidated delivery acceptance — 2026-10-02
+
+Implementation revision `5b074584cb1799d6b8da7ee02909c703382a3ee5` in
+[PR #1482](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1482) passed
+the complete [pre-merge staging deployment and learning journey](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36989699136)
+at 09:29 UTC. A second [staging-only scheduled journey](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36990179266)
+passed at 09:31 UTC. Both ran the frozen implementation revision; the second
+exercised fresh account preparation and repeated the full learning loop on the
+same day. The deployment also verified release identity, health and OAuth
+initiation. No overlapping old scheduled run was observed during either check.
+
+The consolidated fixes cover review distractors, pending profile edits,
+capability-aware authentication guidance, completed onboarding without stored
+questionnaire answers and repeatable staging fixtures. Local validation, hosted CI and
+independent review passed; automated code and security review of this revision
+completed without remaining valid findings. The final merge still follows normal
+CI and queue checks. Production promotion and the human, provider, recovery and
+launch requirements below remain open. Earlier dated records document the
+failures and corrections that led to this acceptance.
+
 ## Definition of a usable first release
 
 A target learner can sign in through a supported method, choose sensible learning preferences, find relevant words, save them, finish a short review, write an original sentence, understand useful feedback and return later without losing confirmed progress. The interface works on small phones and desktop with keyboard access, readable themes and understandable recovery paths. Production data can be restored, failures are detected, and the release can be identified and rolled back.
@@ -454,9 +474,124 @@ where a modified click did not produce the expected new-page event.
 The three shared-journey checks also passed three consecutive repetitions per
 layout (27 checks, no retries).
 
+## Staging daily-target fixture follow-up — working revision
+
+[PR #1480](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1480) merged
+as `f53c3021` after current-head CI, inspected code/security reviews and queue
+checks passed. Its [staging run36977504685](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36977504685)
+passed release identity, health, OAuth initiation and the entire context phase.
+It then failed the existing review phase at the required minimum of one card.
+The synthetic failure snapshot explicitly showed today's target was complete.
+This establishes the context correction, not a complete staging acceptance pass.
+
+The existing seed restored a due word but retained the account's completed daily
+mission. The working correction prepares a fresh, guarded staging fixture while
+retaining retired synthetic identities and their complete history. Shared job
+concurrency protects preparation through browser completion. Default production
+seeding, learner daily targets and the minimum-one-card gate remain intact.
+See [the operator guidance](../operations/monitoring.md#scheduled-synthetics).
+
+Disposable PostgreSQL integration passed: an old completed mission, its rewards
+and learning history survived retirement; the fresh account completed a real
+review the same day. Refusal, forced-failure rollback, session revocation,
+repeated preparation and normal-seed idempotency controls passed. Atlas applied
+the migration set to an empty database and confirmed a second apply was a no-op.
+All 37 focused workflow contracts and the normal migration suite passed.
+At this checkpoint the hosted staging journey was still pending. Its later
+completion is recorded in the opening acceptance section; production promotion
+remains separate.
+
+## Consolidated learner reliability — working revision
+
+The remaining implementation is kept on one delivery branch for one final PR.
+Three reproduced gaps are addressed together with the staging fixture correction:
+
+- Review choices exclude the current word's alternate meanings before selecting
+  distractors. Actual seeded pairs for reservation, deadline and follow-up
+  reproduce the ambiguity. A short queue retains the existing self-check fallback;
+  answer identities, deterministic ordering and learning mutations are unchanged.
+- The separate profile editor holds its pending guard through the request,
+  preserves newer typing, applies server normalization to the submitted draft
+  when appropriate, and distinguishes earlier saved changes from newer edits.
+  Errors retain the current name for an explicit retry.
+- Google recovery suggests email/password or an email link only when that method
+  is enabled. Magic-link and signup guidance likewise follow known capabilities.
+  Unknown or unavailable alternatives get retry guidance. No authentication
+  method is enabled by this change.
+
+The focused review-option regression changed from six failures to twelve passing
+tests. Authentication baselines reproduced nine failures; profile baselines
+reproduced lost pending state, misleading success and overlapping submissions
+across all three layouts. Final local workspace validation passed formatting,
+lint/vet, type checks, 250 foundation tests, 32 API-client tests, 114 web helper
+tests, the Go suite against a fresh migrated PostgreSQL 16 database and both
+production builds. E2E typechecking passed. The full browser matrix passed 383
+checks with 37 existing skips in 5.2 minutes, covering the corrected profile and
+authentication flows in light/dark themes at all three layouts. Captured profile
+and recovery states were visually inspected; authentication overflow checks passed.
+Independent review found no remaining actionable findings, and the fresh
+dependency audit reported zero known vulnerabilities. Hosted acceptance was
+pending at this checkpoint and subsequently passed as recorded above. These
+checks cannot establish real provider access or learner acceptance.
+
+Automated review found a further signup-specific recovery case: an enabled
+sign-in method need not have a form on the signup page. Six unit regressions and
+four desktop browser cases reproduced the misleading suggestions. Signup now
+recommends creating an account only when its password form is shown and does not
+advertise an absent magic-link form. Final local validation passed again with
+250 foundation, 32 API-client and 121 web helper tests, database-backed Go checks
+and both builds. All 84 affected authentication browser checks passed with 12
+existing skips across the three layouts and both themes; captured signup states
+were inspected. The full 383-check local matrix above predates this follow-up.
+
+The disposable PostgreSQL readiness probe now supplies its fixture password
+explicitly, and the test container enforces SCRAM for host connections. Atlas,
+fixture-retirement and default-seed integration checks passed under that stricter
+configuration. The earlier default-image runs passed; no universal timeout on
+the former readiness probe is claimed.
+
+A subsequent review found that fresh staging preparation depended on optional
+Sentry configuration. Deployment now persists `ENVIRONMENT=staging` in its core
+configuration step, and both wrapper and SQL require that explicit environment.
+Missing, blank or production values fail closed; monitoring settings cannot
+authorize or block preparation. Two isolated configuration regressions and six
+wrapper cases failed before correction. All 253 foundation checks and the
+disposable Atlas, fixture-history, refusal, rollback and default-seed integrations
+passed after correction. The configuration tests also verify stale-value
+replacement, preservation of unrelated values and repeat-run idempotence without
+a monitoring DSN. Independent review found no further issue in this delta.
+The preceding revision's complete hosted CI passed; hosted verification of this
+correction then exposed the onboarding defect described next.
+
+Pre-merge [staging run36988013273](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36988013273)
+successfully deployed the reviewed revision and passed configuration, fixture
+preparation, health, identity and OAuth initiation. The browser then returned to
+onboarding. Source tracing found that the current-user lookup discarded an
+authoritative completed status when a grandfathered account had no questionnaire
+profile, a state explicitly supported by the onboarding migration. The shared
+lookup now preserves known status for that expected missing-answers condition;
+nil profiles, unknown statuses and genuine read errors remain conservative.
+No questionnaire answers are fabricated.
+
+Six unit cases and two PostgreSQL-backed current-user responses reproduced the
+status defect; all fourteen unit cases and three real-database response cases
+passed after correction. Two browser controls reproduced the staging helper's
+premature navigation and loss of failed-save feedback. The shared helper now
+waits for successful submission and the application's own Home navigation.
+All twelve affected onboarding/core-journey browser checks passed across the
+three layouts. Full workspace validation passed again with 253 foundation,
+32 API-client and 121 web helper tests, database-backed Go checks, both builds
+and E2E typechecking. Independent review found no further actionable issue.
+The corrected implementation subsequently passed both hosted journeys recorded
+in the opening acceptance section.
+
 ## Deliver work in bounded slices
 
 Each slice should identify the learner problem, state the intended behavior, change the smallest relevant surface, include meaningful regression coverage and document remaining limits. Use parallel agents for independent areas and independent review; coordinate shared files, builds and servers. Follow [repository instructions](../../AGENTS.md) for draft PRs, CI, merging and deployment.
+
+The owner requests one consolidated PR for the remaining product-completion
+work. Keep bounded implementation tasks and local verification on the delivery
+branch, then review and validate the combined result before opening that PR.
 
 Prioritize demonstrated failures in the learning loop over a new tutor, leaderboard, social system or native app. Those features require a separate product case and are not necessary to complete the current first release.
 

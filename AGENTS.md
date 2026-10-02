@@ -64,6 +64,12 @@ shared builds and test servers. Use independent review for changes to scheduling
 missions, points, authentication, data handling or releases; inspect the actual
 diff and verification results before marking work ready.
 
+For the current product-completion goal, the owner requests one consolidated PR
+after the remaining work is integrated and verified. Keep implementation tasks
+on the delivery branch, using local commits and parallel agents as useful.
+Do not create a separate PR for every task unless the owner changes this request.
+The normal draft/hold, review, CI and merge-queue rules apply to the final PR.
+
 For UI changes, verify affected flows at 360px, 430px and desktop, including
 keyboard access, light/dark themes and relevant empty/error states. Progress,
 completion, saved state and feedback remain server-authoritative. Synthetic

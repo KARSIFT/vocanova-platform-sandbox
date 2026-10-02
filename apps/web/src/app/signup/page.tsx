@@ -21,7 +21,8 @@ interface SignupPageProps {
 export default async function SignupPage({ searchParams }: SignupPageProps) {
   const { returnTo } = await searchParams;
   const safeReturnTo = normalizeReturnTo(returnTo);
-  const { passwordEnabled, oauthEnabled } = await getSignInAuthCapabilities();
+  const capabilities = await getSignInAuthCapabilities();
+  const { passwordEnabled, oauthEnabled } = capabilities;
   const unavailable = !passwordEnabled && !oauthEnabled;
 
   return (
@@ -35,14 +36,22 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
           </h1>
           <p className="text-base text-neutral-700">
             {passwordEnabled
-              ? "Use Google, or we'll email a verification link before your password can be used."
+              ? oauthEnabled
+                ? "Use Google, or we'll email a verification link before your password can be used."
+                : "We'll email a verification link before your password can be used."
               : oauthEnabled
                 ? "Continue with Google to sign in or create your account."
                 : "Please try again later or use an available sign-in method."}
           </p>
         </div>
 
-        {oauthEnabled ? <OAuthButton returnTo={safeReturnTo} /> : null}
+        {oauthEnabled ? (
+          <OAuthButton
+            returnTo={safeReturnTo}
+            capabilities={capabilities}
+            intent="signup"
+          />
+        ) : null}
 
         {passwordEnabled && oauthEnabled ? (
           <div className="relative flex items-center gap-[var(--spacing-sm)]">

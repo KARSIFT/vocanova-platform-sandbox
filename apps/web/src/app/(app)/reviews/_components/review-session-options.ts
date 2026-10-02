@@ -14,8 +14,10 @@ export function buildMultipleChoiceOptions(
   if (!current) {
     return [];
   }
+  // The prompt names the word without a context that distinguishes its senses.
+  // Another meaning of that word is a valid answer, not a safe distractor.
   const distractors = dueWords
-    .filter((_, index) => index !== currentIndex)
+    .filter((dueWord) => dueWord.wordId !== current.wordId)
     .slice(0, 3)
     .map((dueWord) => ({
       meaningId: dueWord.meaningId,

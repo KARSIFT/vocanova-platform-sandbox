@@ -1,8 +1,9 @@
 # Vocanova current product state
 
-Reviewed on 2026-10-02 against repository baseline
-`65c34b04756c99b522eedf83c3ded5499fa0eb35` plus the context-lookup follow-up
-in this working revision. This is a dated inventory and readiness
+Reviewed on 2026-10-02 against implementation revision
+`5b074584cb1799d6b8da7ee02909c703382a3ee5` in the consolidated
+[PR #1482](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1482).
+This is a dated inventory and readiness
 guide. Update it when behavior, deployment, or verified evidence changes; it does
 not establish that the final product is complete.
 
@@ -82,9 +83,15 @@ call the evaluator. The exact helper is also exercised locally. Its first
 passed identity/health/OAuth checks but failed an ambiguous example-text lookup
 on the sounds-good page after completing the three examples. That is not a full
 journey pass. The follow-up checks one visible example within the main landmark,
-with local controls for hidden and visibly duplicated markup. A later deployed
-run must pass the entire journey; no real-account, physical-device, screen-reader
-speech or learning-effectiveness claim follows from it. See
+with local controls for hidden and visibly duplicated markup.
+[PR #1480](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1480) shipped
+that correction, and [staging36977504685](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36977504685)
+passed the complete context phase. The existing review phase then failed because
+the persistent synthetic account had completed its daily target. The full journey
+had not passed at that point. The fixture follow-up prepares a fresh guarded
+staging account while preserving retired history and normal learner behavior.
+No real-account, physical-device, screen-reader speech or learning-effectiveness
+claim follows from synthetic checks. See
 [curriculum guidance](daily-conversation-curriculum.md#optional-context-practice).
 
 Sentence practice protects pending drafts and retry identities from older
@@ -95,7 +102,31 @@ unsaved edits from confirmed changes. A retry explicitly resends fields whose
 previous save response was lost. Reminder controls store preferences only;
 the interface does not claim reminder delivery is available.
 
+The consolidated delivery also protects the separate profile editor: an earlier
+save cannot replace newer typing, overlapping saves are ignored while pending,
+and the status distinguishes confirmed changes from a newer unsaved name.
+Review choices exclude other meanings of the current canonical word because the
+word-only prompt cannot distinguish those valid answers. When fewer than three
+safe alternatives remain, the existing self-check mode is used. Sign-in recovery
+uses known capabilities when suggesting another method; unknown capabilities
+fall back to retry guidance. The current-user response preserves an authoritative
+completed onboarding status for older accounts without questionnaire answers;
+missing answers alone no longer send those learners back through setup.
+These working changes require the combined release
+verification recorded in [release readiness](release-readiness.md).
+
 ## Live deployment observation
+
+The consolidated implementation `5b074584` passed the complete
+[staging deployment and learning journey](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36989699136)
+on 2026-10-02 at 09:29 UTC. Release identity, health and OAuth initiation also
+passed. A second [staging-only scheduled journey](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36990179266)
+passed at 09:31 UTC, exercising fresh preparation and the full learning loop
+again on the same day. These were pre-merge checks of the frozen PR revision.
+They establish synthetic acceptance on staging; production promotion, real
+provider-account acceptance and learner usefulness remain separate requirements.
+
+### Earlier deployment observations
 
 Public checks on 2026-10-02 at approximately 03:24 UTC observed staging web and API
 serving version `0.3.1`, commit `56bbff54a7ac5872a996af9d6b5c29f94e0ffe5f`, after

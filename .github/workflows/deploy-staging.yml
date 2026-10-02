@@ -118,15 +118,18 @@
 #   /opt/vocanova/apps/api/scripts/seed-synthetic-smoke-user.sh
 #   /opt/vocanova/apps/api/scripts/seed-synthetic-smoke-user.sql
 #                                              (SCPed by this workflow;
-#                                              VOC-050-T00's idempotent
-#                                              synthetic smoke-test account
-#                                              seed, run after migrations)
+#                                              legacy seed retained as an
+#                                              operator utility; not invoked
+#                                              by the staging journey)
+#   /opt/vocanova/apps/api/scripts/prepare-synthetic-staging-journey.sh
+#   /opt/vocanova/apps/api/scripts/prepare-synthetic-staging-journey.sql
+#                                              (staging-only guarded fixture,
+#                                              run after canonical seeding)
 #   /opt/vocanova/apps/api/bin/p1-content-seed
 #                                              (built by this workflow from
 #                                              apps/api/cmd/seed and SCPed in
 #                                              the deploy bundle; runs after
-#                                              migrations and the synthetic
-#                                              smoke-user seed to upsert the
+#                                              migrations to upsert the
 #                                              canonical P1 discover content)
 #   /opt/vocanova/apps/api/migrations/...       (SCPed by this workflow)
 #   /usr/local/bin/atlas                     (installed by this workflow
@@ -222,9 +225,11 @@
 #     file the T06 wrapper consults before applying; copied
 #     along with the .sql files in the deploy bundle.
 #   * apps/api/scripts/seed-synthetic-smoke-user.sh + .sql
-#     (VOC-050-T00) — the idempotent seed this workflow's
-#     SSH step runs immediately after migrations, while
-#     only Postgres is up.
+#     (VOC-050-T00) — legacy operator utility copied to the host;
+#     staging journey preparation does not invoke it.
+#   * apps/api/scripts/prepare-synthetic-staging-journey.sh + .sql
+#     — guarded fresh staging fixture, run after migrations and canonical
+#     seeding while only Postgres is up, before minting the browser session.
 #   * apps/api/cmd/seed + apps/api/cmd/seed/voc026-p1.json
 #     (VOC-052-T00) — built into /opt/vocanova/apps/api/bin/
 #     p1-content-seed during bundling, then run on the host
@@ -327,6 +332,12 @@ jobs:
   deploy:
     name: deploy to staging
     runs-on: ubuntu-latest
+    # Hold the same account lock as the scheduled staging journey from fixture
+    # preparation through logout, including any app restart during deployment.
+    concurrency:
+      group: staging-synthetic-account
+      cancel-in-progress: false
+      queue: max
     # Total budget: SSH command (15m) + api health check
     # (5m) + web health check (5m) + OAuth-start initiation check
     # (<1m) + post-deploy core-loop journey, including its
@@ -620,6 +631,10 @@ jobs:
           cp apps/api/scripts/seed-synthetic-smoke-user.sh /tmp/deploy-bundle/apps/api/scripts/
           cp apps/api/scripts/seed-synthetic-smoke-user.sql /tmp/deploy-bundle/apps/api/scripts/
           chmod +x /tmp/deploy-bundle/apps/api/scripts/seed-synthetic-smoke-user.sh
+          # Staging-only fresh journey fixture; never shipped by production.
+          cp apps/api/scripts/prepare-synthetic-staging-journey.sh /tmp/deploy-bundle/apps/api/scripts/
+          cp apps/api/scripts/prepare-synthetic-staging-journey.sql /tmp/deploy-bundle/apps/api/scripts/
+          chmod +x /tmp/deploy-bundle/apps/api/scripts/prepare-synthetic-staging-journey.sh
           # VOC-052-T00's canonical P1 content seed binary. Build on the
           # runner, then ship and run on the staging host so Postgres remains
           # private (no new public database ingress from GitHub Actions).
@@ -674,8 +689,8 @@ jobs:
       # GITHUB_TOKEN (passed via the SSH session's
       # environment, see the `envs:` block), pulls
       # the new images, applies any pending
-      # migrations via T06's wrapper, runs both
-      # idempotent seed steps, and brings the
+      # migrations via T06's wrapper, seeds canonical
+      # content, prepares the staging fixture, and brings the
       # four-service stack up via `docker compose
       # up -d`.
       #
@@ -883,6 +898,7 @@ jobs:
             sudo touch /opt/vocanova/infra/secrets/api.env
             sudo chown "$(id -un)":"$(id -gn)" /opt/vocanova/infra/secrets/api.env
             sed -i \
+              -e '/^ENVIRONMENT=/d' \
               -e '/^BASE_URL=/d' \
               -e '/^MAGIC_LINK_PATH=/d' \
               -e '/^OAUTH_REDIRECT_URI=/d' \
@@ -892,6 +908,7 @@ jobs:
               -e '/^NEW_USER_SIGNUP_ALLOWLIST=/d' \
               /opt/vocanova/infra/secrets/api.env
             {
+              echo "ENVIRONMENT=staging"
               echo "BASE_URL=https://staging.vocanova.site"
               echo "MAGIC_LINK_PATH=/magic-link"
               echo "OAUTH_REDIRECT_URI=https://api-staging.vocanova.site/api/v1/auth/oauth/google/callback"
@@ -1117,26 +1134,21 @@ jobs:
             fi
             DATABASE_URL="$migration_database_url" sh /opt/vocanova/apps/api/scripts/migrate.sh
 
-            # VOC-050-T00: ensure the synthetic smoke-test account
-            # exists before the rest of the stack starts. The seed is
-            # idempotent, so it runs on every deploy; it reads the
-            # reserved identity from the api.env sourced above, which
-            # is the same value the API itself refuses on every real
-            # sign-in path. A seed failure aborts the deploy under
-            # `set -e` before `up -d`, leaving the running containers
-            # untouched - the same fail-closed shape as the migration
-            # step above.
-            sh /opt/vocanova/apps/api/scripts/seed-synthetic-smoke-user.sh
-
             # -------------------------------------------------------------
             # 6. VOC-052-T00: seed canonical P1 discover content
-            #    after migrations + synthetic smoke-user seed, while only
+            #    after migrations, while only
             # Postgres is up. The binary is built on the GitHub runner
             # and copied in the deploy bundle to avoid exposing
             # Postgres outside the private host network.
             # -------------------------------------------------------------
             DATABASE_URL="$migration_database_url" /opt/vocanova/apps/api/bin/p1-content-seed
             unset migration_database_url
+
+            # Prepare the reserved staging journey directly. The legacy seed
+            # must not run first: it can alter the account/history that this
+            # wrapper checks before creating a fresh isolated journey.
+            # A completed target from an earlier run must not skip reviews.
+            sh /opt/vocanova/apps/api/scripts/prepare-synthetic-staging-journey.sh
 
             # -------------------------------------------------------------
             # 7. Bring the staging app stack up (postgres/api/web only).

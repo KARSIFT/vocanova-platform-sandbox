@@ -248,10 +248,33 @@ gh workflow run scheduled-synthetics.yml --ref main \
 Mint tokens (`STAGING_SMOKE_TEST_SESSION_MINT_TOKEN`,
 `PRODUCTION_SMOKE_TEST_SESSION_MINT_TOKEN`) are masked in logs. Production
 route sweep remains non-mutating (`mutating: false` in registry). The staging
-core-loop is explicitly `mutating: true`; immediately before each run its job
-reuses the deployment's idempotent synthetic-user seed over SSH to mark a saved
-word due for the reserved `.invalid` test account. This makes hourly review
-coverage deterministic without changing any real user's data.
+core-loop is explicitly `mutating: true`. The separate
+[staging journey preparation](../../apps/api/scripts/prepare-synthetic-staging-journey.sh)
+creates an absent guarded fixture or retires and replaces the matching active
+synthetic account for the full browser run. Making a saved word due
+alone is insufficient after a persistent account has completed its daily target.
+
+Preparation requires explicit `ENVIRONMENT=staging` and the pinned staging Compose
+scope. Deployment writes this core setting before preparation; scheduled checks
+read the persisted setting. Optional Sentry configuration cannot authorize or
+block preparation. In one transaction it retires only the exact active, marked reserved
+identity, revokes its live sessions and creates a replacement under the same
+address. Retired learning, mission, activity and reward rows remain attached to
+their original user ID, with their synthetic marker retained. Each preparation
+adds one new fixture identity; no automatic history cleanup is performed.
+The normal seed and production checks do not use this operation.
+
+Deployment and scheduled staging journeys share the `staging-synthetic-account`
+job concurrency group across preparation, session minting and the complete
+browser run. They wait without canceling the running job. Existing workflow
+queues remain in place. The
+[GitHub concurrency documentation](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency)
+describes the shared job lock and queued-run behavior.
+
+A missing preparation script, rejected identity/environment or failed SQL
+transaction fails the run before session minting. Do not substitute a counter
+reset or remove the requirement to review at least one card. Verify the full
+journey after deployment; static wiring checks do not prove hosted execution.
 
 ### Sentry and workflow-failure monitoring
 

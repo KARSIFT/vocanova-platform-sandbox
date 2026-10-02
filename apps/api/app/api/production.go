@@ -831,13 +831,7 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	RegisterAIFeedback(api, aifeedbackSvc, authSvc)
 	RegisterMissions(api, missionsSvc)
 
-	SetOnboardingStatusLookup(func(ctx context.Context, userID uuid.UUID) (string, error) {
-		profile, err := usersSvc.GetOnboarding(ctx, userID)
-		if err != nil {
-			return users.OnboardingStatusNotStarted, nil
-		}
-		return profile.Status, nil
-	})
+	SetOnboardingStatusLookup(newOnboardingStatusLookup(usersSvc))
 
 	RegisterHealthz(api, db, KillSwitchStatus{
 		MagicLinkEnabled:  cfg.MagicLinkOn,

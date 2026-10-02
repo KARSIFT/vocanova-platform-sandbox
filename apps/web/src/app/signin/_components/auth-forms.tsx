@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 
 import { createApiClient } from "@/lib/api";
-import { getAuthErrorMessage } from "@/lib/auth-feedback";
+import type { SignInAuthCapabilities } from "@/lib/auth-capabilities";
+import { getAuthErrorMessage, type OAuthIntent } from "@/lib/auth-feedback";
 import { getAppOrigin } from "@/lib/env";
 import {
   clearOAuthContinuation,
@@ -183,9 +184,15 @@ export function MagicLinkForm({
 
 interface OAuthButtonProps {
   returnTo: string;
+  capabilities: SignInAuthCapabilities;
+  intent?: OAuthIntent;
 }
 
-export function OAuthButton({ returnTo }: OAuthButtonProps) {
+export function OAuthButton({
+  returnTo,
+  capabilities,
+  intent = "signin",
+}: OAuthButtonProps) {
   const [status, setStatus] = useState<{
     type: "idle" | "loading" | "error";
     message: string;
@@ -206,7 +213,12 @@ export function OAuthButton({ returnTo }: OAuthButtonProps) {
       clearOAuthContinuation();
       setStatus({
         type: "error",
-        message: getAuthErrorMessage(error, "oauth-start"),
+        message: getAuthErrorMessage(
+          error,
+          "oauth-start",
+          capabilities,
+          intent,
+        ),
       });
     }
   }
