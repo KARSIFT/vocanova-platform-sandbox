@@ -39,6 +39,7 @@ NON_REQUIRED = {
     "operational-failure-monitoring.yml",
     "pr-title.yml",
     "pr-walkthrough.yml",
+    "recovery-rehearsal.yml",
     "scheduled-synthetics.yml",
     "sync-monitoring.yml",
 }

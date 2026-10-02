@@ -1,7 +1,7 @@
 # Vocanova current product state
 
 Reviewed on 2026-10-02 against repository baseline
-`1601c67b0c18d21eaf513164ce2bca2758b1ace0` plus the Daily Conversation changes in
+`18f34a56e85e823b253b3809fe3c540c05534305` plus the synthetic recovery tooling in
 this revision. This is a dated inventory and readiness
 guide. Update it when behavior, deployment, or verified evidence changes; it does
 not establish that the final product is complete.
@@ -57,12 +57,12 @@ distinct from canonical vocabulary.
 
 ## Live deployment observation
 
-Public checks on 2026-10-02 at 01:15 UTC observed staging web and API serving
-version `0.3.1`, commit `1601c67b0c18d21eaf513164ce2bca2758b1ace0`, after
-[PR #1471](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1471).
+Public checks on 2026-10-02 at 02:01 UTC observed staging web and API serving
+version `0.3.1`, commit `18f34a56e85e823b253b3809fe3c540c05534305`, after
+[PR #1472](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1472).
 Production remained at `5b16186c6471cbbc1c935a703bb5a8a33bf28797`, version
 `0.3.1`. Both APIs reported database health `ok` and correct environment labels.
-The [staging deployment](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36949720029)
+The [staging deployment](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36953460367)
 passed release identity, OAuth initiation and the reserved synthetic learner
 journey. These establish availability and the tested synthetic flow; they do
 not establish real account acceptance, live feedback quality or recoverable
@@ -92,7 +92,7 @@ mention former branch/promotion arrangements. Keep host configuration private.
 | Learning quality   | Evaluate real-provider feedback against the documented rubric using representative A2–B1 sentences; inspect corrections, failures, and reporting                                | [AI requirements](../engineering/09-ai-features.md), [live evaluation command](../../apps/api/cmd/eval-live/), [feedback service](../../apps/api/business/aifeedback/) |
 | Curriculum         | Editorially review and expand coherent situations based on learner needs; retain provenance                                                                                     | [Seed](../../apps/api/cmd/seed/), [content service](../../apps/api/business/content/)                                                                                  |
 | Learner value      | Run an observed cohort; measure first-session friction, completed sessions, and return visits with cohort size and observation window                                           | [Evidence needs](mature-learning-and-account-experience.md#product-evidence-after-this-delivery)                                                                       |
-| Recovery           | Retain proof of database restore into an isolated environment and verify behavior against restored data                                                                         | [Infrastructure](../../infra/README.md), [monitoring](../operations/monitoring.md)                                                                                     |
+| Recovery           | Synthetic dump/restore and failure controls pass locally; still need real backup inventory, isolated production recovery, retention and alert evidence                          | [Recovery rehearsal](../operations/postgres-recovery-rehearsal.md), [monitoring](../operations/monitoring.md)                                                          |
 | Wider rollout      | Verify core flows on the chosen release with real accounts and physical/mobile devices; resolve failures and explicitly decide cohort expansion                                 | [Browser guidance](../development.md), [fixtures](../../apps/web/tests/e2e/)                                                                                           |
 | Scaling            | Decide on a shared limiter before relying on multiple API replicas; current auth limits are process-local                                                                       | [Auth limiter](../../apps/api/business/auth/rate.go)                                                                                                                   |
 

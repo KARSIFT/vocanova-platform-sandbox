@@ -20,7 +20,7 @@ Points and streaks support this experience. They must not imply a proficiency sc
 | 2        | Consistent daily learning experience    | Mobile 360/430px and desktop walkthroughs; keyboard and light/dark checks; empty/error/long-content states                                          | Browser matrix, theme/width screenshots and Lighthouse passed; live-device acceptance remains open               |
 | 2        | Sufficient practical content            | Inventory by situation and level; editorial check of meanings/examples/distractors; pilot learners can find useful vocabulary for repeated sessions | 7 situations, 51 words, 54 meanings; reviewed Daily Conversation expansion; pilot usefulness remains open        |
 | 2        | Reliable live sentence feedback         | Synthetic evaluation set against the configured provider; correctness, helpfulness, failures, latency and measured cost documented                  | Evaluator repair merged in PR #1471 and verified on staging; live quality and human/service evidence remain open |
-| 2        | Durable operations                      | Documented backup schedule, retention, separate storage and successful isolated restore; release rollback rehearsal; alert delivery proof           | Not established by current read-only audit                                                                       |
+| 2        | Durable operations                      | Documented backup schedule, retention, separate storage and successful isolated restore; release rollback rehearsal; alert delivery proof           | Synthetic restore and failure controls pass locally; production recovery and alert evidence remain open          |
 | 3        | Working intended signup path            | Real provider sign-in and email lifecycle verified; configuration accurately reflected in the UI; owner selects when to expand access               | Controlled Google signup live; email/password disabled                                                           |
 | 3        | Learner validation                      | Small consented pilot of A2–B1 learners; task completion, misunderstandings and return visits inform the next iteration                             | No fresh pilot evidence                                                                                          |
 | 3        | Public launch review                    | Accurate privacy/terms and support/contact arrangements; remaining release blockers resolved                                                        | Requires owner/business decisions and appropriate review                                                         |
@@ -185,7 +185,7 @@ assembly avoids absolute mutation indices, preserves Unicode text when forming
 clauses and explicitly checks expanded golden membership. Report-file cleanup
 still closes on early failures and now avoids a redundant close after success.
 
-## Daily Conversation and natural forms — current slice
+## Daily Conversation and natural forms — PR #1472
 
 The reviewed [Daily Conversation curriculum](daily-conversation-curriculum.md)
 expands from six to 18 ordered meanings, with two examples and distinct fuller
@@ -226,9 +226,72 @@ Independent editorial, backend, interface and release-path reviews found no
 remaining actionable issues. Automated review requested two minor cleanups:
 clarify that the ninth variant check comes from the second `follow-up` meaning
 (not a second `cancel` meaning), and share the identical usage-note formatter.
-The follow-up preserves rendered behavior. Final revision checks and deployment
-are tracked in the PR; synthetic evidence does not establish live provider
-quality or observed learner value.
+The follow-up preserves rendered behavior. Final revision `922086d6` passed the
+[266-test browser matrix](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36952671883)
+with 37 existing skips, [Lighthouse](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36952671794),
+workspace validation and applicable reviews. It merged as
+`18f34a56e85e823b253b3809fe3c540c05534305`.
+[Staging deployment 36953460367](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36953460367)
+passed the release, health, OAuth-initiation and reserved synthetic journey checks.
+Public web/API identities matched at 02:01 UTC; production remained at `5b16186c`.
+Synthetic evidence does not establish live provider quality or observed learner value.
+
+## Synthetic recovery tooling — current slice
+
+The [recovery rehearsal](../operations/postgres-recovery-rehearsal.md) creates
+fresh isolated local PostgreSQL 16 databases, applies the actual migrations and
+canonical seed, adds a synthetic learner and restores a custom-format archive.
+The local successful round trip compared 30 tables and 415 rows, including
+nonempty learning records, with matching schema and content digests. Fourteen
+independent checks also passed on both databases, including rolled-back writes
+and enforcement of selected constraints and the append-only ledger trigger.
+
+The five-case local acceptance suite passed in 41.7 seconds on PostgreSQL 16.15:
+success, corrupt archive, truncated archive, missing activity record and SIGTERM.
+Every case verified cleanup. The first run exposed a startup retry that consumed
+an interruption; a failing regression reproduced it, and the corrected suite
+confirmed prompt failure and cleanup. The complete run's elapsed time is test
+evidence, not a production recovery target. Reports identify the base revision,
+dirty checkout, exact input hashes and local image ID; final revision CI evidence
+must be tracked separately.
+
+Independent static review found no remaining actionable issues. Local workspace
+validation passed formatting, lint/vet, type checks, 245 foundation tests, 32
+API-client tests, 94 web helper tests, the Go suite and both production builds.
+The new foundation wrapper includes 15 offline recovery contracts. All 21
+workflow contracts and immutable action-reference checks also passed. Browser
+routes and API implementation are unchanged; the browser matrix and optional
+Go PostgreSQL environment were not rerun for this operations-only slice.
+
+Review follow-up reproduced a second cancellation edge: the first signal during
+cleanup could leave a provisional PASS unchanged. A single phase-aware handler
+now records failure while allowing cleanup to finish, including repeated signals
+and temporary-file removal. Nineteen offline contracts and the five-case real
+Docker suite passed again (42.9 seconds). A cached-tool capability check also
+rejects old `pg_dump` binaries without `--restrict-key` before migrations; current
+PostgreSQL 16.15 supports the comparison option, as the real runs demonstrate.
+
+A further review reproduced interruption during report serialization, which
+could terminate the process with an empty report, and missing deletion protection
+on either ledger, which the old checker accepted. Reports now publish atomically
+under deferred interruption handling; a failed corrective write removes only its
+own stale publication. Both ledger triggers must retain unconditional row-level
+update/delete protection, and a rolled-back deletion probe verifies enforcement.
+Twenty-three offline contracts pass. The real acceptance suite now has seven
+cases, including both intentionally weakened trigger definitions, and passes;
+the historical checker failed those new regressions by incorrectly returning PASS.
+
+Terminal-level Ctrl-C testing then reproduced a child-command interruption that
+could abort cleanup even while the parent deferred its signal. Commands now run
+in separate process sessions while retaining bounded timeout/cancellation. All
+six named constraints also have specific invalid-write probes and post-rollback
+checks. A real negative case replaces the feedback guard with `CHECK (true)`;
+the historical checker incorrectly accepted it. The final suite comprises 24
+offline contracts and eight real database cases, including these regressions.
+
+No production data, credentials, existing container or provider is used. This
+does not establish production backup schedule, retention, separate storage,
+point-in-time recovery, application acceptance after restoration or alert receipt.
 
 ## Deliver work in bounded slices
 
