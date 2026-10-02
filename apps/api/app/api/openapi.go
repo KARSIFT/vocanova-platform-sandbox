@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"database/sql"
 	"net/http"
 	"time"
@@ -21,7 +20,6 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 )
 
 // NewContractAPI returns the OpenAPI contract with all registered routes. It
@@ -78,17 +76,7 @@ func NewContractAPI() huma.API {
 	usersSvc := users.NewService(usersRepo, usersRepo, usersRepo, clock.Real{})
 	RegisterOnboarding(contractAPI, usersSvc, svc)
 	RegisterSettings(contractAPI, usersSvc, svc)
-	SetOnboardingStatusLookup(func(ctx context.Context, userID uuid.UUID) (string, error) {
-		profile, err := usersSvc.GetOnboarding(ctx, userID)
-		if err != nil {
-			// An unseen user has not yet submitted onboarding, so
-			// the gate status is "not_started". This matches the
-			// production semantics where the contract default
-			// is "not_started" until CompleteOnboarding is called.
-			return users.OnboardingStatusNotStarted, nil
-		}
-		return profile.Status, nil
-	})
+	SetOnboardingStatusLookup(newOnboardingStatusLookup(usersSvc))
 
 	// VOC-031-T03: register the email-change routes on the
 	// contract. The accounts service is constructed against the

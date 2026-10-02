@@ -38,6 +38,7 @@ import { expect, test } from "@playwright/test";
 import type { Locator, Page, TestInfo } from "@playwright/test";
 
 import { verifyContextPracticeJourney } from "../e2e/context-practice-journey";
+import { completeOnboardingIfRedirected } from "../e2e/onboarding-journey";
 import {
   getEnabledReviewPromptControl,
   waitForReviewReadiness,
@@ -175,51 +176,6 @@ async function readReviewedTodayCountAfterReviews(
       `reviewedBefore=${reviewedBefore}, reviewedCards=${reviewedCards}, ` +
       `minimumExpected=${minimumExpected}, observed=[${attemptValues.join(", ")}]`,
   );
-}
-
-async function completeOnboardingIfRedirected(page: Page): Promise<void> {
-  if (!page.url().includes("/onboarding")) {
-    return;
-  }
-
-  await expect(
-    page.getByRole("heading", { name: "Welcome to Vocanova", level: 1 }),
-  ).toBeVisible();
-
-  await page.getByRole("radio", { name: /A2/ }).check();
-  await page.getByRole("button", { name: "Continue" }).click();
-
-  await expect(
-    page.getByRole("heading", { name: /What's your native language\?/ }),
-  ).toBeVisible();
-  await page.getByRole("textbox", { name: "Native language" }).fill("es");
-  await page.getByRole("button", { name: "Continue" }).click();
-
-  await expect(
-    page.getByRole("radiogroup", {
-      name: /What's your main reason for learning\?/,
-    }),
-  ).toBeVisible();
-  await page.getByRole("radio", { name: "General growth" }).check();
-  await page.getByRole("button", { name: "Continue" }).click();
-
-  await expect(
-    page.getByRole("radiogroup", { name: /Where will you use English most\?/ }),
-  ).toBeVisible();
-  await page.getByRole("radio", { name: "Daily life" }).check();
-  await page.getByRole("button", { name: "Continue" }).click();
-
-  await expect(
-    page.getByRole("heading", { name: "Daily review target" }),
-  ).toBeVisible();
-  await page
-    .getByRole("radiogroup", { name: "Daily review target" })
-    .getByText("15", { exact: true })
-    .click();
-  await page.getByRole("button", { name: "Finish setup" }).click();
-
-  await page.goto("/home");
-  await expect(page).toHaveURL(/\/home(\?|$)/);
 }
 
 // Prefers a word the account has not saved yet. If every word in the

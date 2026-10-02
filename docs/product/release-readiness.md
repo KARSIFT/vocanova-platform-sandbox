@@ -541,6 +541,27 @@ a monitoring DSN. Independent review found no further issue in this delta.
 The preceding revision's complete hosted CI passed; the updated revision still
 requires hosted checks and staging journey verification.
 
+Pre-merge [staging run36988013273](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36988013273)
+successfully deployed the reviewed revision and passed configuration, fixture
+preparation, health, identity and OAuth initiation. The browser then returned to
+onboarding. Source tracing found that the current-user lookup discarded an
+authoritative completed status when a grandfathered account had no questionnaire
+profile, a state explicitly supported by the onboarding migration. The shared
+lookup now preserves known status for that expected missing-answers condition;
+nil profiles, unknown statuses and genuine read errors remain conservative.
+No questionnaire answers are fabricated.
+
+Six unit cases and two PostgreSQL-backed current-user responses reproduced the
+status defect; all fourteen unit cases and three real-database response cases
+passed after correction. Two browser controls reproduced the staging helper's
+premature navigation and loss of failed-save feedback. The shared helper now
+waits for successful submission and the application's own Home navigation.
+All twelve affected onboarding/core-journey browser checks passed across the
+three layouts. Full workspace validation passed again with 253 foundation,
+32 API-client and 121 web helper tests, database-backed Go checks, both builds
+and E2E typechecking. Independent review found no further actionable issue.
+The full hosted journey on this corrected revision remains required.
+
 ## Deliver work in bounded slices
 
 Each slice should identify the learner problem, state the intended behavior, change the smallest relevant surface, include meaningful regression coverage and document remaining limits. Use parallel agents for independent areas and independent review; coordinate shared files, builds and servers. Follow [repository instructions](../../AGENTS.md) for draft PRs, CI, merging and deployment.

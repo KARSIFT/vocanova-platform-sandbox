@@ -108,7 +108,10 @@ Review choices exclude other meanings of the current canonical word because the
 word-only prompt cannot distinguish those valid answers. When fewer than three
 safe alternatives remain, the existing self-check mode is used. Sign-in recovery
 uses known capabilities when suggesting another method; unknown capabilities
-fall back to retry guidance. These working changes require the combined release
+fall back to retry guidance. The current-user response preserves an authoritative
+completed onboarding status for older accounts without questionnaire answers;
+missing answers alone no longer send those learners back through setup.
+These working changes require the combined release
 verification recorded in [release readiness](release-readiness.md).
 
 ## Live deployment observation
