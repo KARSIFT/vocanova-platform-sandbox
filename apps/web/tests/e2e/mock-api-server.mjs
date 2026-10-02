@@ -98,6 +98,10 @@
 // without enabling extra debug output.
 
 import { createServer } from "node:http";
+import {
+  dailyConversationFixture,
+  dailyConversationWords,
+} from "./seed-content-fixture.mjs";
 
 const PORT = Number(process.env.MOCK_API_PORT ?? 8080);
 const HOST = process.env.MOCK_API_HOST ?? "127.0.0.1";
@@ -198,6 +202,7 @@ const UNBROKEN_SENTENCE_HISTORY = [
 ];
 
 const CANONICAL_WORDS = {
+  ...dailyConversationWords,
   pour: {
     id: "word-pour",
     text: "pour",
@@ -250,6 +255,7 @@ const JOURNEY_SITUATIONS = [
 ];
 
 const SITUATIONS_BY_SLUG = {
+  "daily-conversation": dailyConversationFixture,
   "ordering-at-a-cafe": {
     situation: JOURNEY_SITUATIONS[0],
     meanings: [
@@ -451,11 +457,18 @@ function buildDailyMission(state, reviewTarget = DEFAULT_DAILY_MISSION.reviewTar
   };
 }
 
+function findCanonicalMeaning(meaningId) {
+  for (const word of Object.values(CANONICAL_WORDS)) {
+    const meaning = word.meanings.find((item) => item.id === meaningId);
+    if (meaning) return { word, meaning };
+  }
+  return {};
+}
+
 function buildSavedWords(state) {
   const items = [];
   for (const meaningId of state.savedMeaningIds) {
-    const word = CANONICAL_WORDS.pour;
-    const meaning = word.meanings.find((m) => m.id === meaningId);
+    const { word, meaning } = findCanonicalMeaning(meaningId);
     if (!meaning) {
       continue;
     }
@@ -508,8 +521,7 @@ function buildDueWords(state, { fixtureDueWordCount, limit }) {
     if (state.reviewedMeaningIds.has(meaningId)) {
       continue;
     }
-    const word = CANONICAL_WORDS.pour;
-    const meaning = word.meanings.find((m) => m.id === meaningId);
+    const { word, meaning } = findCanonicalMeaning(meaningId);
     if (!meaning) {
       continue;
     }
@@ -532,13 +544,20 @@ function buildDueWords(state, { fixtureDueWordCount, limit }) {
   };
 }
 
-function buildWordDetailResponse(state, slug) {
+function buildWordDetailResponse(state, slug, definitionFixture) {
   const word = CANONICAL_WORDS[slug];
   if (!word) {
     return null;
   }
   const meanings = word.meanings.map((meaning) => ({
     ...meaning,
+    ...(definitionFixture === "duplicate"
+      ? { learnerDefinition: `  ${meaning.shortDefinition.toUpperCase().replaceAll(" ", "   ")}  ` }
+      : definitionFixture === "distinct"
+        ? { learnerDefinition: `${meaning.shortDefinition}. You control where the liquid goes by tipping its container.` }
+        : definitionFixture === "blank"
+          ? { learnerDefinition: "   " }
+          : {}),
     saved: state.savedMeaningIds.has(meaning.id),
     userWordId: state.savedMeaningIds.has(meaning.id)
       ? `uw-${meaning.id}`
@@ -575,8 +594,11 @@ function buildSituationResponse(slug, state) {
   };
 }
 
-function buildJourneySituations() {
-  return { items: JOURNEY_SITUATIONS.map((s) => ({ ...s })) };
+function buildJourneySituations(includeDailyConversation) {
+  const situations = includeDailyConversation
+    ? [...JOURNEY_SITUATIONS, dailyConversationFixture.situation]
+    : JOURNEY_SITUATIONS;
+  return { items: situations.map((s) => ({ ...s })) };
 }
 
 function learnerSentenceFromAttempt(attempt) {
@@ -1058,10 +1080,13 @@ const server = createServer(async (req, res) => {
       jsonResponse(res, 400, { error: "missing_meaning_id" });
       return;
     }
+    const { word, meaning } = findCanonicalMeaning(meaningId);
+    if (!meaning) {
+      jsonResponse(res, 404, { error: "meaning_not_found" });
+      return;
+    }
     state.savedMeaningIds.add(meaningId);
     logLine(req, 200, { action: "save", meaningId });
-    const word = CANONICAL_WORDS.pour;
-    const meaning = word.meanings.find((m) => m.id === meaningId);
     jsonResponse(res, 200, {
       userWordId: `uw-${meaningId}`,
       meaningId: meaning.id,
@@ -1405,7 +1430,7 @@ const server = createServer(async (req, res) => {
 
   if (req.method === "GET" && url.pathname === "/api/v1/journey-situations") {
     logLine(req, 200);
-    jsonResponse(res, 200, buildJourneySituations());
+    jsonResponse(res, 200, buildJourneySituations(cookies.e2e_daily_conversation === "true"));
     return;
   }
 
@@ -1435,7 +1460,7 @@ const server = createServer(async (req, res) => {
       url.pathname.slice("/api/v1/canonical-words/".length),
     );
     const state = getSessionState(cookies);
-    const response = buildWordDetailResponse(state, slug);
+    const response = buildWordDetailResponse(state, slug, cookies.e2e_definition_fixture);
     if (!response) {
       logLine(req, 404, { slug });
       jsonResponse(res, 404, { error: "not_found", slug });
@@ -1571,8 +1596,7 @@ function lookupTargetWord(attemptId) {
   const meaningId = attemptId.startsWith("uw-")
     ? attemptId.slice("uw-".length)
     : attemptId;
-  const word = CANONICAL_WORDS.pour;
-  const meaning = word.meanings.find((m) => m.id === meaningId);
+  const { word, meaning } = findCanonicalMeaning(meaningId);
   return meaning ? word.text : "pour";
 }
 

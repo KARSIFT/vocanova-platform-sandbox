@@ -12,18 +12,18 @@ Points and streaks support this experience. They must not imply a proficiency sc
 
 ## Ordered delivery work
 
-| Priority | Outcome                                 | Acceptance evidence                                                                                                                                 | Current position                                                                                    |
-| -------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| 1        | Trustworthy review and mission behavior | Reproduced defects fixed; regression tests; stable reloads and retries; target/timezone boundaries exercised                                        | PR #1470 merged; staging release and synthetic journey passed                                       |
-| 1        | Clear project instructions              | Current source map, commands, deployment process and handoff; retired automation clearly historical                                                 | Source documentation and two repository skills reconciled and merged                                |
-| 1        | Repeatable integration verification     | Full Go database tests, production build and browser matrix on the reviewed revision                                                                | Final local checks and required CI passed; merged staging revision verified                         |
-| 2        | Consistent daily learning experience    | Mobile 360/430px and desktop walkthroughs; keyboard and light/dark checks; empty/error/long-content states                                          | Browser matrix, theme/width screenshots and Lighthouse passed; live-device acceptance remains open  |
-| 2        | Sufficient practical content            | Inventory by situation and level; editorial check of meanings/examples/distractors; pilot learners can find useful vocabulary for repeated sessions | 7 situations, 39 words, 42 meanings; repeated definitions and coherent expansion need work          |
-| 2        | Reliable live sentence feedback         | Synthetic evaluation set against the configured provider; correctness, helpfulness, failures, latency and measured cost documented                  | Evaluation fixtures/reporting repaired locally; live quality and human/service evidence remain open |
-| 2        | Durable operations                      | Documented backup schedule, retention, separate storage and successful isolated restore; release rollback rehearsal; alert delivery proof           | Not established by current read-only audit                                                          |
-| 3        | Working intended signup path            | Real provider sign-in and email lifecycle verified; configuration accurately reflected in the UI; owner selects when to expand access               | Controlled Google signup live; email/password disabled                                              |
-| 3        | Learner validation                      | Small consented pilot of A2–B1 learners; task completion, misunderstandings and return visits inform the next iteration                             | No fresh pilot evidence                                                                             |
-| 3        | Public launch review                    | Accurate privacy/terms and support/contact arrangements; remaining release blockers resolved                                                        | Requires owner/business decisions and appropriate review                                            |
+| Priority | Outcome                                 | Acceptance evidence                                                                                                                                 | Current position                                                                                                 |
+| -------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| 1        | Trustworthy review and mission behavior | Reproduced defects fixed; regression tests; stable reloads and retries; target/timezone boundaries exercised                                        | PR #1470 merged; staging release and synthetic journey passed                                                    |
+| 1        | Clear project instructions              | Current source map, commands, deployment process and handoff; retired automation clearly historical                                                 | Source documentation and two repository skills reconciled and merged                                             |
+| 1        | Repeatable integration verification     | Full Go database tests, production build and browser matrix on the reviewed revision                                                                | Final local checks and required CI passed; merged staging revision verified                                      |
+| 2        | Consistent daily learning experience    | Mobile 360/430px and desktop walkthroughs; keyboard and light/dark checks; empty/error/long-content states                                          | Browser matrix, theme/width screenshots and Lighthouse passed; live-device acceptance remains open               |
+| 2        | Sufficient practical content            | Inventory by situation and level; editorial check of meanings/examples/distractors; pilot learners can find useful vocabulary for repeated sessions | 7 situations, 51 words, 54 meanings; reviewed Daily Conversation expansion; pilot usefulness remains open        |
+| 2        | Reliable live sentence feedback         | Synthetic evaluation set against the configured provider; correctness, helpfulness, failures, latency and measured cost documented                  | Evaluator repair merged in PR #1471 and verified on staging; live quality and human/service evidence remain open |
+| 2        | Durable operations                      | Documented backup schedule, retention, separate storage and successful isolated restore; release rollback rehearsal; alert delivery proof           | Not established by current read-only audit                                                                       |
+| 3        | Working intended signup path            | Real provider sign-in and email lifecycle verified; configuration accurately reflected in the UI; owner selects when to expand access               | Controlled Google signup live; email/password disabled                                                           |
+| 3        | Learner validation                      | Small consented pilot of A2–B1 learners; task completion, misunderstandings and return visits inform the next iteration                             | No fresh pilot evidence                                                                                          |
+| 3        | Public launch review                    | Accurate privacy/terms and support/contact arrangements; remaining release blockers resolved                                                        | Requires owner/business decisions and appropriate review                                                         |
 
 ## Delivery evidence — 2026-10-02
 
@@ -144,7 +144,7 @@ builds. The complete browser suite passed 248 tests with 37 existing skips. The
 API is unchanged from the database-backed verification at `48ff7dca`; this
 frontend follow-up did not rerun the optional PostgreSQL integration suite.
 
-## Feedback evidence repair — current slice
+## Feedback evidence repair — PR #1471
 
 The evaluator now supplies the selected meaning and retains one observation per
 input, including failures and returned feedback. The versioned fixture migration
@@ -168,7 +168,13 @@ fixture ambiguities and found no remaining actionable issues. Final local
 32 API-client tests, 94 web helper tests, the Go suite and both production
 builds. The optional PostgreSQL integration environment and browser matrix were
 not rerun for this evaluator/CLI/documentation change; learner routes and
-database behavior are unchanged. PR/CI and staging evidence remain separate.
+database behavior are unchanged. The final changes merged as
+`1601c67b0c18d21eaf513164ce2bca2758b1ace0` in
+[PR #1471](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1471).
+Required CI and [staging deployment 36949720029](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36949720029)
+passed. Public web/API checks at 01:15 UTC matched that revision; production
+remained at `5b16186c`. These checks establish deployment of the evaluator repair,
+not passing model quality.
 No paid/live provider run or production-provider configuration change was made.
 
 Review follow-up corrected absent-provider accounting: no configured provider
@@ -178,6 +184,51 @@ report now uses standard numeric formatting and a string builder. Fixture
 assembly avoids absolute mutation indices, preserves Unicode text when forming
 clauses and explicitly checks expanded golden membership. Report-file cleanup
 still closes on early failures and now avoids a redundant close after success.
+
+## Daily Conversation and natural forms — current slice
+
+The reviewed [Daily Conversation curriculum](daily-conversation-curriculum.md)
+expands from six to 18 ordered meanings, with two examples and distinct fuller
+guidance per meaning. All 298 existing seed row identities and their relationships
+remain intact. Item levels are editorial A2/B1 judgments, not certification.
+
+Sentence validation accepts the documented regional spellings and inflections of
+`catch up`, `meet up`, `keep in touch` and `sounds good` through exact curated
+word/type/part-of-speech entries. Matching remains contiguous and token bounded;
+lexical presence still requires the provider to judge the selected meaning. The
+minimum three-word practice rule remains unchanged. Evaluation fixture v3 retains
+all 336 case IDs and 91 golden members, with only the three resolved regional
+exclusions removed; six ambiguity exclusions remain.
+
+Both Journey and saved-word detail pages suppress blank or repeated fuller
+definitions after whitespace/case normalization. Distinct explanations, including
+ones that begin with the short definition, remain visible.
+
+Implementation `679f192c` in
+[PR #1472](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1472) passed
+full workspace validation, including 244 foundation, 32 API-client and 94 web
+helper tests, Go tests against a migrated disposable PostgreSQL database, and
+both builds. The seed rerun test exercised actual content constraints and a
+surrogate saved-learning reference; it does not stand in for a production
+restore. All 72 shipped examples and nine approved variant/meaning pairs passed
+the repository-loaded target regression.
+
+The corrected complete [CI browser matrix](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36951969577)
+passed 266 tests with 37 existing skips. Local verification first exposed an
+incorrect test expectation of B1 for the intentionally A2 `meet up` entry;
+correcting that expectation required no curriculum change. Eighteen screenshots
+cover the curriculum and word pages at 360px, 430px and desktop in both themes.
+They passed overflow and critical/serious accessibility checks; representative
+views were visually inspected. [Lighthouse](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36951969591)
+and all other applicable CI passed on that implementation.
+
+Independent editorial, backend, interface and release-path reviews found no
+remaining actionable issues. Automated review requested two minor cleanups:
+clarify that the ninth variant check comes from the second `follow-up` meaning
+(not a second `cancel` meaning), and share the identical usage-note formatter.
+The follow-up preserves rendered behavior. Final revision checks and deployment
+are tracked in the PR; synthetic evidence does not establish live provider
+quality or observed learner value.
 
 ## Deliver work in bounded slices
 

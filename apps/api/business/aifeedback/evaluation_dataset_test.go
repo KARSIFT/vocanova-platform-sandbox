@@ -50,11 +50,22 @@ func TestEditorialDatasetPreservesLegacyIDsAndGoldenMembership(t *testing.T) {
 			if !found {
 				t.Errorf("legacy fixture lost: %s", id)
 			}
-			if (index == 0 || index == 2) && !c.IsGolden {
-				t.Errorf("legacy golden fixture dropped: %s", id)
+			expanded := word == "work" || word == "drive" || word == "big" || word == "school"
+			regional := index == 5 && (word == "travel" || word == "learn" || word == "organize")
+			wantGolden := index == 0 || index == 2 || (expanded && index >= 4) || regional
+			if c.IsGolden != wantGolden {
+				t.Errorf("v2 golden membership changed for %s: got %v, want %v", id, c.IsGolden, wantGolden)
 			}
-			if (word == "work" || word == "drive" || word == "big" || word == "school") && index >= 4 && !c.IsGolden {
-				t.Errorf("expanded golden fixture dropped: %s", id)
+			if index == 10 {
+				pairedLevel := "b1"
+				if c.LearnerLevel == "b1" {
+					pairedLevel = "a2"
+				}
+				pairID := id + "-paired-" + pairedLevel
+				pair, found := byID[pairID]
+				if !found || pair.IsGolden != expanded {
+					t.Errorf("level-pair identity or golden membership changed: %s", pairID)
+				}
 			}
 		}
 	}
@@ -97,26 +108,39 @@ func TestEditorialCasesHaveMeaningRationaleAndExplicitOutcomes(t *testing.T) {
 	}
 }
 
-func TestEditorialValidationGapsRemainVisibleWithoutChangingLanguageLabels(t *testing.T) {
-	gaps := map[string]string{"travel": "I travelled to the city.", "learn": "I learnt English last year.", "organize": "I organised my notes."}
-	seen := 0
+func TestEditorialRegionalFormsRegainScoringWithoutChangingLanguageLabels(t *testing.T) {
+	regionals := map[string]string{"travel": "I travelled to the city.", "learn": "I learnt English last year.", "organize": "I organised my notes."}
+	remainingExclusions := map[string]bool{"work": true, "play": true, "study": true, "cook": true, "book": true, "take off": true}
+	seen, excluded := 0, 0
 	for _, c := range InitialDataset() {
 		target := &Target{NormalizedWord: c.TargetWord, WordType: c.WordType, PartOfSpeech: c.PartOfSpeech, AcceptedForms: BuildAcceptedForms(c.TargetWord, c.WordType, c.PartOfSpeech)}
-		validation := ValidateSentence(c.Sentence, target)
-		if c.Category == EvaluationCategoryRegionalVariant && gaps[c.TargetWord] != "" {
+		if validation := ValidateSentence(c.Sentence, target); !validation.Valid {
+			t.Errorf("validator failure for %s: %s", c.ID, validation.Code)
+		}
+		if c.Category == EvaluationCategoryRegionalVariant && regionals[c.TargetWord] != "" {
 			seen++
-			if c.Sentence != gaps[c.TargetWord] || c.ExpectedStatus != LearningStatusCorrect || c.ExpectedOutcome != EvaluationOutcomeFeedback || c.ScoringExclusionReason == "" || !c.IsGolden {
-				t.Errorf("regional regression was hidden or relabeled: %+v", c)
+			if c.Sentence != regionals[c.TargetWord] || c.ExpectedStatus != LearningStatusCorrect || c.ExpectedOutcome != EvaluationOutcomeFeedback || c.ScoringExclusionReason != "" || !c.IsGolden {
+				t.Errorf("regional regression must retain identity/labels/golden membership and regain scoring: %+v", c)
 			}
-			if validation.Valid || validation.Code != ValidationCodeMissingTarget {
-				t.Errorf("validator behavior changed for %s; reassess and remove the stale scoring exclusion", c.ID)
+		}
+		for _, tag := range c.Tags {
+			if tag == "known_target_validation_gap" {
+				t.Errorf("stale matcher-gap tag for %s", c.ID)
 			}
-		} else if !validation.Valid {
-			t.Errorf("unexpected validator failure for %s: %s", c.ID, validation.Code)
+		}
+		if c.ScoringExclusionReason != "" {
+			excluded++
+			if c.Category != EvaluationCategoryAmbiguity || !remainingExclusions[c.TargetWord] || c.ExpectedStatus != "" || c.ExpectedOutcome != EvaluationOutcomeFeedback {
+				t.Errorf("unexpected scoring exclusion: %+v", c)
+			}
+			delete(remainingExclusions, c.TargetWord)
 		}
 	}
-	if seen != 3 {
-		t.Fatalf("expected all three retained regional gaps, got %d", seen)
+	if seen != 3 || excluded != 6 || len(remainingExclusions) != 0 {
+		t.Fatalf("expected 3 restored regionals and exactly 6 unchanged ambiguity exclusions; got %d and %d, missing %v", seen, excluded, remainingExclusions)
+	}
+	if DatasetVersion != "meaning-aware-dataset-v3" || GoldenSetVersion != "meaning-aware-golden-v3" {
+		t.Fatal("scoring eligibility changes need new dataset and golden versions")
 	}
 }
 

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ApiResponseError } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
+import { formatNoteType, getAdditionalDefinition } from "@/lib/word-definition";
 import { PageContainer, Surface } from "@/ui/surface";
 import { SentenceFeedback } from "../../_components/sentence-feedback";
 import { RemoveSavedWordButton } from "../_components/remove-saved-word-button";
@@ -54,6 +55,10 @@ export default async function SavedWordDetailPage({
     notFound();
   }
   const statusLabel = formatSavedWordStatus(savedWord.status);
+  const additionalDefinition = getAdditionalDefinition(
+    meaning.shortDefinition,
+    meaning.learnerDefinition,
+  );
 
   return (
     <PageContainer>
@@ -90,9 +95,9 @@ export default async function SavedWordDetailPage({
         <p className="mt-[var(--spacing-sm)] text-base text-neutral-800">
           {meaning.shortDefinition}
         </p>
-        {meaning.learnerDefinition ? (
+        {additionalDefinition ? (
           <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-            {meaning.learnerDefinition}
+            {additionalDefinition}
           </p>
         ) : null}
 
@@ -137,11 +142,4 @@ export default async function SavedWordDetailPage({
       />
     </PageContainer>
   );
-}
-
-function formatNoteType(noteType: string): string {
-  return noteType
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
 }

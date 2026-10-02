@@ -4,8 +4,10 @@ import { notFound } from "next/navigation";
 import { ApiResponseError } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
+import { formatNoteType, getAdditionalDefinition } from "@/lib/word-definition";
 import { Eyebrow, PageContainer } from "@/ui/surface";
 import { SentenceFeedback } from "../../../_components/sentence-feedback";
+import { formatLevelBand } from "../../_components/level-band";
 
 import { MeaningSaveButton } from "./_components/meaning-save-button";
 import { formatWordReviewState } from "./_components/word-review-state";
@@ -54,8 +56,10 @@ export default async function WordDetailPage({ params }: WordDetailPageProps) {
           {wordData.text}
         </h1>
         <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-          {wordData.wordType}
-          {wordData.difficultyLevel ? ` · ${wordData.difficultyLevel}` : null}
+          {wordData.wordType.replaceAll("_", " ")}
+          {wordData.difficultyLevel
+            ? ` · ${formatLevelBand(wordData.difficultyLevel)}`
+            : null}
         </p>
       </div>
 
@@ -63,6 +67,10 @@ export default async function WordDetailPage({ params }: WordDetailPageProps) {
         <h2 className="text-xl font-semibold text-neutral-900">Meanings</h2>
         <ul className="mt-[var(--spacing-sm)] space-y-[var(--spacing-md)]">
           {wordData.meanings.map((meaning) => {
+            const additionalDefinition = getAdditionalDefinition(
+              meaning.shortDefinition,
+              meaning.learnerDefinition,
+            );
             const reviewState = formatWordReviewState(
               meaning.reviewState,
               meaning.due,
@@ -81,9 +89,9 @@ export default async function WordDetailPage({ params }: WordDetailPageProps) {
                     <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
                       {meaning.shortDefinition}
                     </p>
-                    {meaning.learnerDefinition ? (
+                    {additionalDefinition ? (
                       <p className="mt-[var(--spacing-xs)] text-base text-neutral-600">
-                        {meaning.learnerDefinition}
+                        {additionalDefinition}
                       </p>
                     ) : null}
                     {reviewState ? (
@@ -150,11 +158,4 @@ export default async function WordDetailPage({ params }: WordDetailPageProps) {
       </section>
     </PageContainer>
   );
-}
-
-function formatNoteType(noteType: string): string {
-  return noteType
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
 }

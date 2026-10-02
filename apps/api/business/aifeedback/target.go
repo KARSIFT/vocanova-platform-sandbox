@@ -39,6 +39,7 @@ type LoadTargetRequest struct {
 func BuildAcceptedForms(word, wordType, partOfSpeech string) []string {
 	base := strings.ToLower(strings.TrimSpace(word))
 	forms := map[string]struct{}{base: {}}
+	addCuratedNaturalForms(forms, base, wordType, partOfSpeech)
 
 	if isPhraseType(wordType) {
 		if isRegularNounPhraseType(wordType) && partOfSpeech == "noun" {
@@ -58,6 +59,38 @@ func BuildAcceptedForms(word, wordType, partOfSpeech string) []string {
 		addDefaultForms(forms, base)
 	}
 	return sortedForms(forms)
+}
+
+// addCuratedNaturalForms approves only these canonical target/type/POS tuples.
+// Phrase heads are not inflected generically: idioms and other phrase types may
+// have different meanings or morphology. Presence still says nothing about
+// grammatical correctness or whether the learner used the selected meaning.
+func addCuratedNaturalForms(forms map[string]struct{}, base, wordType, partOfSpeech string) {
+	var approved []string
+	switch {
+	case wordType == "word" && partOfSpeech == "verb":
+		switch base {
+		case "travel":
+			approved = []string{"travelled", "travelling"}
+		case "learn":
+			approved = []string{"learnt"}
+		case "organize":
+			approved = []string{"organise", "organises", "organised", "organising"}
+		case "cancel":
+			approved = []string{"cancelled", "cancelling"}
+		}
+	case base == "catch up" && wordType == "phrase" && partOfSpeech == "verb":
+		approved = []string{"catches up", "catching up", "caught up"}
+	case base == "meet up" && wordType == "phrasal_verb" && partOfSpeech == "verb":
+		approved = []string{"meets up", "meeting up", "met up"}
+	case base == "keep in touch" && wordType == "idiom" && partOfSpeech == "verb":
+		approved = []string{"keeps in touch", "keeping in touch", "kept in touch"}
+	case base == "sounds good" && wordType == "phrase" && partOfSpeech == "phrase":
+		approved = []string{"sound good", "sounded good"}
+	}
+	for _, form := range approved {
+		addForm(forms, form)
+	}
 }
 
 func isPhraseType(wordType string) bool {

@@ -22,8 +22,8 @@ const (
 	EvaluationOutcomeFeedback            = "feedback"
 	EvaluationOutcomeValidationFailed    = "validation_failed"
 	EvaluationOutcomeSafetyIntercept     = "safety_intercept"
-	DatasetVersion                       = "meaning-aware-dataset-v2"
-	GoldenSetVersion                     = "meaning-aware-golden-v2"
+	DatasetVersion                       = "meaning-aware-dataset-v3"
+	GoldenSetVersion                     = "meaning-aware-golden-v3"
 )
 
 // EvaluationCase contains authored synthetic text, never learner data. Expected
@@ -60,7 +60,6 @@ type evaluationTargetFixture struct {
 	Incorrect             string `json:"incorrect"`
 	IncorrectRationale    string `json:"incorrect_rationale"`
 	Regional              string `json:"regional"`
-	RegionalValidationGap string `json:"regional_validation_gap,omitempty"`
 	Ambiguous             string `json:"ambiguous"`
 	AmbiguityReviewReason string `json:"ambiguity_review_reason,omitempty"`
 }
@@ -99,6 +98,18 @@ func GoldenSet() []EvaluationCase {
 	return golden
 }
 
+// isRegionalGoldenTarget preserves the three v2 regional regression IDs even
+// after their matcher limitations are fixed. Membership never depends on a
+// current scoring exclusion or on provider/validator results.
+func isRegionalGoldenTarget(word string) bool {
+	switch word {
+	case "travel", "learn", "organize":
+		return true
+	default:
+		return false
+	}
+}
+
 func buildCasesForTarget(target evaluationTargetFixture) []EvaluationCase {
 	var cases []EvaluationCase
 	// Fixed subset includes verbs, adjectives, nouns and all nine categories.
@@ -133,12 +144,7 @@ func buildCasesForTarget(target evaluationTargetFixture) []EvaluationCase {
 		target.IncorrectRationale, expandedGolden, "wrong_meaning")
 	add(EvaluationCategoryRegionalVariant, target.Regional, LearningStatusCorrect,
 		"Accept standard British spelling/usage and the stated target sense; regional variation is not a language error.",
-		expandedGolden || target.RegionalValidationGap != "", "regional")
-	if target.RegionalValidationGap != "" {
-		regional := &cases[len(cases)-1]
-		regional.ScoringExclusionReason = target.RegionalValidationGap
-		regional.Tags = append(regional.Tags, "known_target_validation_gap")
-	}
+		expandedGolden || isRegionalGoldenTarget(target.Word), "regional")
 	add(EvaluationCategoryAmbiguity, target.Ambiguous, LearningStatusCorrect,
 		"Ordinary implicit references or an unspecified tense do not alone justify correcting an otherwise acceptable target use.", expandedGolden, "ambiguous")
 	if target.AmbiguityReviewReason != "" {
