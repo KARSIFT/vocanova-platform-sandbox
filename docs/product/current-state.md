@@ -1,8 +1,8 @@
 # Vocanova current product state
 
 Reviewed on 2026-10-02 against repository baseline
-`ea6ec479b9cb2923430944d51224dfd00f339786` plus the pending-edit recovery changes in
-this revision. This is a dated inventory and readiness
+`bb0241cb2ace5f848a1e28bbd4b3cb9b3d3118db` plus the optional context-practice
+changes in this working revision. This is a dated inventory and readiness
 guide. Update it when behavior, deployment, or verified evidence changes; it does
 not establish that the final product is complete.
 
@@ -55,6 +55,19 @@ and preserved existing identities. Word pages suppress repeated short/full
 definitions while retaining distinct fuller guidance. Generated feedback is
 distinct from canonical vocabulary.
 
+This working revision adds optional Daily Conversation context practice: three
+independently reviewed message/dialogue examples contrast invite/join,
+sounds good/keep in touch and reschedule/cancel. Explanations follow the choice;
+learners can retry, restart or exit locally. Completion uses existing word-page
+links and explicit saving before sentence practice. All six canonical IDs, text
+and slugs must match the situation response; missing or drifted references omit
+the activity. It adds no points, mission/progress changes, API/schema or provider
+calls. Full workspace validation passed (246 foundation, 32 API-client and 98
+web helper tests, Go checks and builds). All 21 focused browser checks passed
+across 360px, 430px and desktop in both themes. The full browser matrix passed
+314 tests with 37 existing skips; release verification remains pending. See
+[curriculum guidance](daily-conversation-curriculum.md#optional-context-practice).
+
 Sentence practice protects pending drafts and retry identities from older
 feedback actions. Current session errors remain visible alongside earlier
 feedback, and late report responses cannot mark a newer result as reported.
@@ -82,6 +95,17 @@ merged as `ea6ec479b9cb2923430944d51224dfd00f339786` and its
 passed release identity, health, OAuth initiation and the reserved learner
 journey. A fresh local public-endpoint request returned HTTP 403; this later
 release observation therefore comes from the deployment checks.
+
+[PR #1475](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1475) then
+delivered pending-edit recovery as `bb0241cb2ace5f848a1e28bbd4b3cb9b3d3118db`.
+Required CI and Codex/Claude reviews cleared; local browser verification passed
+299 tests with 37 existing skips. Its
+[staging deployment](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36965361774)
+succeeded, verified at 04:41:55 UTC, including strict release identity, web/API
+health, OAuth initiation and the reserved synthetic learner core loop. This is
+workflow verification, not a new direct public-endpoint observation after the
+earlier HTTP 403. Production was not promoted. The optional context activity in
+the working revision above has not yet been released.
 
 Both environments reported Google OAuth and AI enabled. Magic-link email,
 password authentication, and public new-user signup were disabled. Access is
