@@ -177,11 +177,11 @@ func TestSummarizeLatenciesMultipleValues(t *testing.T) {
 	if s.mean != expectedMean {
 		t.Fatalf("mean: got %s want %s", s.mean, expectedMean)
 	}
-	// Nearest-rank p50 on 20 sorted values: rank = (50*(20-1))/100 = 9 (0-indexed) -> 10 ms.
+	// Nearest-rank p50: ceil(50*20/100) = 10 (one-based).
 	if s.p50 != 10*time.Millisecond {
 		t.Fatalf("p50: got %s want 10ms", s.p50)
 	}
-	// Nearest-rank p95 on 20 sorted values: rank = (95*(20-1))/100 = 18 (0-indexed) -> 19 ms.
+	// Nearest-rank p95: ceil(95*20/100) = 19 (one-based).
 	if s.p95 != 19*time.Millisecond {
 		t.Fatalf("p95: got %s want 19ms", s.p95)
 	}
@@ -451,6 +451,16 @@ func TestFtoaHandlesNegativesAndZero(t *testing.T) {
 	}
 	if got := ftoa(-2.75); got != "-2.75" {
 		t.Fatalf("ftoa(-2.75): got %q want %q", got, "-2.75")
+	}
+}
+
+func TestFormatLiveEvaluationReportLargeFiniteCostDoesNotOverflow(t *testing.T) {
+	rendered := FormatLiveEvaluationReport(LiveEvaluationReport{CostUSD: 1e20, CostCeilingUSD: -1})
+	if !strings.Contains(rendered, "CostUSD: 100000000000000000000.00\n") {
+		t.Fatalf("large finite cost must retain its value with two decimals; got:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "CostCeilingUSD: -1.00\n") {
+		t.Fatal("the unknown-cost sentinel must remain distinct")
 	}
 }
 

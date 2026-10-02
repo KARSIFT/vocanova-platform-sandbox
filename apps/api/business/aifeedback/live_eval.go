@@ -2,39 +2,39 @@ package aifeedback
 
 import (
 	"context"
+	"encoding/json"
+	"math"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
+	"unicode/utf8"
 )
 
-// LiveEvaluationReport is the structured output of a single
-// T10 live-provider evaluation pass. It is the data T10 records
-// in `staging-evidence.md` after the one real run, and the
-// shape the cmd/eval-live command writes to stdout (and
-// optionally to a file) when the founder has provisioned the
-// staging AI-provider credentials (VOC-032-DEP-03).
-//
-// The report is intentionally structured (not free-text) so
-// every DOC-09 §23 threshold T10 must record has a named
-// field, and so the same report shape is what the test suite
-// asserts against the fake-provider path (proving the
-// procedure is exercisable end-to-end without depending on a
-// real provider call). The provider-supplied data the report
-// cannot determine on its own (billed cost, exact token
-// usage) is in fields the operator fills in from the
-// provider's billing console / dashboard after the run;
-// leaving them as named fields rather than guessing them
-// keeps the recorded evidence honest (a "not recorded" or
-// "0" cost is a fact, not a fabricated number).
-//
-// LiveEvaluationReport is the single source of truth for T10
-// evidence: every value the staging-evidence.md "EV-22"
-// section requires has a field here.
+// LiveEvaluationReport is private synthetic evaluation evidence. It separates
+// adapter observations, measured failures and missing acceptance requirements.
+// Fake-provider runs validate the harness, never a real model's quality.
 type LiveEvaluationReport struct {
+	// Configured retry allowance; actual transport attempts remain unmeasured.
+	MaxRetries    int
+	ThresholdSpec GoldenThresholdSpec
+	// These are caller-supplied configuration metadata, not transport measurements.
+	Timeout          time.Duration
+	RequestInterval  time.Duration
+	AcceptanceState  string
+	AcceptanceGaps   []string
+	CaseEvidence     []EvaluationCaseEvidence
+	Scope            string
+	GoldenSetVersion string
+	PromptVersion    string
+	SchemaVersion    string
+	Commit           string
+	// Logical-call elapsed time includes wrapper pacing and hidden adapter retries.
+	LatencyDefinition string
+
 	// Provider identifies the feedback provider the run
 	// actually exercised (e.g. "opencode", "mock"). The
-	// cmd/eval-live command always reports the value
-	// supplied to NewOpenCodeFeedbackProvider; tests
-	// against a fake provider report the fake's name.
+	// identity hook unwraps supported pacing wrappers without exposing config.
 	Provider string
 	// Model is the model identifier the provider was
 	// invoked with (e.g. "opencode-go/deepseek-v4-pro").
@@ -55,9 +55,8 @@ type LiveEvaluationReport struct {
 	Thresholds GoldenThresholds
 	// Violations is the list of DOC-09 §23 thresholds
 	// the run's computed values failed against Spec.
-	// An empty slice means every tracked threshold was
-	// met. The cmd/eval-live command's exit code is
-	// derived from the slice being non-empty.
+	// An empty slice means no measured violation was found; acceptance can
+	// still be INCOMPLETE. Consult AcceptanceState and AcceptanceGaps.
 	Violations []ThresholdViolation
 	// Duration is the wall-clock time the entire run
 	// took, measured around RunEvaluation. Recorded so
@@ -111,11 +110,8 @@ type LiveEvaluationReport struct {
 	// EVAL_LIVE_COST_USD env var) the operator can use
 	// to set the value from the provider's billing
 	// dashboard; the value is then embedded in the
-	// written report. Recording a zero or negative
-	// value is treated as "cost not recorded" and the
-	// report is still valid; the field exists so a
-	// recorded cost is a recorded fact, not an empty
-	// cell.
+	// written report. A value of -1 means unknown. Zero is a valid
+	// recorded zero cost. Missing/invalid billing metadata remains a gap.
 	CostUSD float64
 	// CostCeilingUSD is the pre-agreed cost ceiling the
 	// run was operating under, per DOC-12 §9. The
@@ -123,11 +119,8 @@ type LiveEvaluationReport struct {
 	// flag (or EVAL_LIVE_COST_CEILING_USD env var) the
 	// operator must set before the run; the value is
 	// compared against CostUSD and surfaced as a
-	// CostCeilingExceeded flag (not as a threshold
-	// violation - the threshold gate is the
-	// release-blocking check; the cost ceiling is the
-	// pre-run agreement, recorded for the reviewer's
-	// benefit, not enforced as a gate).
+	// CostCeilingExceeded flag. A recorded breach makes acceptance FAIL.
+	// This is a post-run comparison, never a spending guard or reservation.
 	CostCeilingUSD float64
 	// CostCeilingExceeded is true when CostUSD >
 	// CostCeilingUSD. Recorded so a reviewer
@@ -202,12 +195,8 @@ type InstrumentedProvider struct {
 	OutputChars int
 }
 
-// NewInstrumentedProvider returns an InstrumentedProvider
-// wrapping inner. inner must be non-nil; a nil inner is
-// treated as a programmer error and returns nil so the
-// caller's later GenerateFeedback call panics loudly rather
-// than silently producing a "successful" report with zero
-// provider calls.
+// NewInstrumentedProvider returns nil for a nil provider. RunLiveEvaluation
+// records that configuration as unavailable rather than claiming success.
 func NewInstrumentedProvider(inner FeedbackProvider) *InstrumentedProvider {
 	if inner == nil {
 		return nil
@@ -254,7 +243,7 @@ func (p *InstrumentedProvider) GenerateFeedback(ctx context.Context, task Provid
 // the prompt's input. See the GenerateFeedback comment for
 // what is and is not counted.
 func taskInputCharCount(task ProviderTask) int {
-	n := len(task.SystemPrompt) + len(task.DeveloperPrompt)
+	n := utf8.RuneCountInString(task.SystemPrompt) + utf8.RuneCountInString(task.DeveloperPrompt)
 	for _, key := range []string{
 		"learner_sentence",
 		"target_word",
@@ -263,12 +252,12 @@ func taskInputCharCount(task ProviderTask) int {
 		"learner_level",
 	} {
 		if v, ok := task.UserPayload[key].(string); ok {
-			n += len(v)
+			n += utf8.RuneCountInString(v)
 		}
 	}
 	if forms, ok := task.UserPayload["accepted_forms"].([]string); ok {
 		for _, f := range forms {
-			n += len(f)
+			n += utf8.RuneCountInString(f)
 		}
 	}
 	return n
@@ -279,12 +268,12 @@ func taskInputCharCount(task ProviderTask) int {
 // are *string fields and may be nil; both are dereferenced
 // safely.
 func feedbackOutputCharCount(feedback *ProviderFeedback) int {
-	n := len(feedback.Status) + len(feedback.Explanation)
+	n := utf8.RuneCountInString(feedback.Status) + utf8.RuneCountInString(feedback.Explanation) + utf8.RuneCountInString(feedback.Headline) + utf8.RuneCountInString(feedback.Naturalness)
 	if feedback.CorrectedSentence != nil {
-		n += len(*feedback.CorrectedSentence)
+		n += utf8.RuneCountInString(*feedback.CorrectedSentence)
 	}
 	if feedback.ImprovementTip != nil {
-		n += len(*feedback.ImprovementTip)
+		n += utf8.RuneCountInString(*feedback.ImprovementTip)
 	}
 	return n
 }
@@ -316,6 +305,12 @@ func (e *instrumentedProviderError) Error() string { return e.message }
 // applied to the returned report, not consumed during the
 // run itself.
 type LiveEvaluationOptions struct {
+	MaxRetries int
+	// Non-secret configured timeout and wrapper pacing; the harness does not enforce them.
+	Timeout         time.Duration
+	RequestInterval time.Duration
+	Commit          string
+
 	// Cases is the dataset the run exercises. Nil
 	// means GoldenSet().
 	Cases []EvaluationCase
@@ -324,7 +319,7 @@ type LiveEvaluationOptions struct {
 	// DefaultGoldenThresholdSpec().
 	Spec GoldenThresholdSpec
 	// CostCeilingUSD is the pre-agreed cost ceiling.
-	// A negative value means "no ceiling" (the
+	// A value of -1 means "no ceiling recorded" (the
 	// ceiling-exceeded check is skipped). A zero
 	// value means "ceiling is zero dollars", which
 	// any non-zero CostUSD will exceed; this is
@@ -333,30 +328,17 @@ type LiveEvaluationOptions struct {
 	// loudly.
 	CostCeilingUSD float64
 	// CostUSD is the operator-supplied post-run billed
-	// cost. Negative means "not recorded".
+	// cost. -1 means "not recorded"; other negative values are invalid.
 	CostUSD float64
 	// OperatorNotes is the free-text notes the
 	// operator attached to the run.
 	OperatorNotes string
 }
 
-// RunLiveEvaluation runs the dataset against the supplied
-// provider, instruments the run for latency and character
-// counts, computes the per-threshold values, and returns
-// the structured report. It is the T10-deliverable
-// library function: same threshold-computation logic
-// T08's mock gate uses, but exercised against an
-// arbitrary (real or fake) provider.
-//
-// The function does NOT make any policy decision: it
-// returns the report and the violation list, leaving the
-// caller's exit-code choice to itself. The cmd/eval-live
-// command's main() is the caller that translates
-// "violations non-empty" into "exit 1".
-//
-// The function is safe to call against a fake provider in
-// tests: every code path it exercises is independent of
-// network or external services.
+// RunLiveEvaluation executes adapter diagnostics and returns private case
+// evidence. AcceptanceState is FAIL for observed violations, INCOMPLETE for
+// missing evidence, and PASS only when no acceptance requirements are missing.
+// This harness does not exercise the full production service.
 func RunLiveEvaluation(ctx context.Context, provider FeedbackProvider, opts LiveEvaluationOptions) LiveEvaluationReport {
 	startedAt := time.Now()
 	if opts.Cases == nil {
@@ -367,17 +349,93 @@ func RunLiveEvaluation(ctx context.Context, provider FeedbackProvider, opts Live
 	if spec == zeroSpec {
 		spec = DefaultGoldenThresholdSpec()
 	}
+	var metadataGaps []string
+	specVersion := "doc09-v1"
+	if spec != DefaultGoldenThresholdSpec() {
+		specVersion = "custom-diagnostic"
+		metadataGaps = append(metadataGaps, "custom or disabled threshold bounds do not establish DOC-09 acceptance")
+	}
+	for _, bound := range []*float64{
+		&spec.StructuredOutputValidFirstResponse, &spec.StructuredOutputValidAfterOneRepair,
+		&spec.OverallStatusAccuracy, &spec.ClearlyCorrectAccuracy, &spec.ClearlyIncorrectTargetUseAccuracy,
+		&spec.UnnecessaryCorrectionOnClearlyCorrect, &spec.MeaningPreservation, &spec.CorrectSelfHarmIntervention,
+	} {
+		if math.IsNaN(*bound) || math.IsInf(*bound, 0) || *bound < NotTracked || (*bound < 0 && *bound != NotTracked) || *bound > 1 {
+			*bound = NotTracked
+			metadataGaps = append(metadataGaps, "invalid threshold bound is unscored")
+		}
+	}
 	ip := NewInstrumentedProvider(provider)
-	result := RunEvaluation(ctx, ip, opts.Cases)
+	var evaluatedProvider FeedbackProvider
+	if ip == nil {
+		// Keep the nil provider visible to RunEvaluation. The empty metrics
+		// holder must never be invoked as though an adapter were available.
+		ip = &InstrumentedProvider{}
+	} else {
+		evaluatedProvider = ip
+	}
+	result := RunEvaluation(ctx, evaluatedProvider, opts.Cases)
 	finishedAt := time.Now()
 	computed := ComputeGoldenThresholds(result, opts.Cases)
 	violations := CheckGoldenThresholds(spec, computed)
 	latencyStats := summarizeLatencies(ip.PerCallLatency)
+	acceptanceState, gaps := EvaluationAcceptance(computed, violations)
+	gaps = append(gaps, metadataGaps...)
+	if opts.MaxRetries < 0 {
+		gaps = append(gaps, "configured retry allowance is invalid")
+	}
+	if math.IsNaN(opts.CostUSD) || math.IsInf(opts.CostUSD, 0) || (opts.CostUSD < 0 && opts.CostUSD != -1) {
+		gaps = append(gaps, "invalid billed-cost metadata")
+		opts.CostUSD = -1
+	}
+	if math.IsNaN(opts.CostCeilingUSD) || math.IsInf(opts.CostCeilingUSD, 0) || (opts.CostCeilingUSD < 0 && opts.CostCeilingUSD != -1) {
+		gaps = append(gaps, "invalid cost-ceiling metadata")
+		opts.CostCeilingUSD = -1
+	}
+	if opts.CostUSD == -1 {
+		gaps = append(gaps, "billed cost is unrecorded")
+	}
+	if opts.CostCeilingUSD == -1 {
+		gaps = append(gaps, "agreed cost ceiling is unrecorded")
+	}
+	if opts.Timeout <= 0 {
+		gaps = append(gaps, "configured provider timeout is unrecorded or invalid")
+	}
+	if opts.RequestInterval < 0 {
+		gaps = append(gaps, "configured pacing interval is invalid")
+	}
+	if opts.Commit == "" {
+		opts.Commit = "unknown"
+	}
+	if opts.Commit == "unknown" {
+		gaps = append(gaps, "source commit is unrecorded")
+	}
+	if providerName(provider) == "unknown" {
+		gaps = append(gaps, "provider identity is unknown")
+	}
+	if providerName(provider) == "mock" {
+		gaps = append(gaps, "fake-provider results exercise the harness and do not establish model quality")
+	}
+	if len(gaps) > 0 && acceptanceState == "PASS" {
+		acceptanceState = "INCOMPLETE"
+	}
+	if opts.CostCeilingUSD >= 0 && opts.CostUSD > opts.CostCeilingUSD {
+		acceptanceState = "FAIL"
+	}
 	report := LiveEvaluationReport{
+		MaxRetries: opts.MaxRetries, ThresholdSpec: spec,
+		Timeout: opts.Timeout, RequestInterval: opts.RequestInterval,
+		AcceptanceState: acceptanceState, AcceptanceGaps: gaps,
+		CaseEvidence: result.CaseEvidence, Scope: result.Scope,
+		GoldenSetVersion: GoldenSetVersion,
+		PromptVersion:    PromptVersionSentenceFeedbackV1, SchemaVersion: SchemaVersionFeedbackV1,
+		Commit:            opts.Commit,
+		LatencyDefinition: "logical adapter-call elapsed time, including wrapper pacing and adapter retries; nearest-rank percentiles",
+
 		Provider:             providerName(ip.inner),
 		Model:                providerModel(ip.inner),
 		DatasetVersion:       result.DatasetVersion,
-		SpecVersion:          "doc09-v1",
+		SpecVersion:          specVersion,
 		Thresholds:           computed,
 		Violations:           violations,
 		Duration:             finishedAt.Sub(startedAt),
@@ -400,34 +458,42 @@ func RunLiveEvaluation(ctx context.Context, provider FeedbackProvider, opts Live
 	return report
 }
 
-// providerName is a small reflection-free hook that returns
-// the provider's identifying name for the report. It is
-// implemented as a type switch so the library does not have
-// to know about every concrete FeedbackProvider type via
-// registration; if a future provider is added, the
-// production-wiring site's own type switch is the place
-// to add the matching case (or to introduce a Provider
-// interface method that returns the name).
-func providerName(p FeedbackProvider) string {
-	switch v := p.(type) {
-	case *OpenCodeFeedbackProvider:
-		return "opencode"
-	case *MockProvider:
-		return "mock"
-	default:
-		_ = v
-		return "unknown"
-	}
+// EvaluationProviderIdentity exposes only non-secret provider/model identifiers.
+// Wrappers should forward this optional contract; never return URLs or config.
+type EvaluationProviderIdentity interface {
+	EvaluationIdentity() (provider string, model string)
 }
 
-// providerModel is the parallel hook for the model
-// identifier. Only the OpenCode provider currently
-// exposes one; everything else reports the empty string.
-func providerModel(p FeedbackProvider) string {
-	if oc, ok := p.(*OpenCodeFeedbackProvider); ok {
-		return oc.config.Model
+func ProviderEvaluationIdentity(p FeedbackProvider) (string, string) {
+	if identity, ok := p.(EvaluationProviderIdentity); ok {
+		return identity.EvaluationIdentity()
 	}
-	return ""
+	switch v := p.(type) {
+	case *OpenCodeFeedbackProvider:
+		if v != nil {
+			return "opencode", v.config.Model
+		}
+	case *CloudflareFeedbackProvider:
+		if v != nil && v.cloudflareTransport != nil {
+			return "cloudflare", v.config.Model
+		}
+	case *GeminiFeedbackProvider:
+		if v != nil && v.geminiTransport != nil {
+			return "gemini", v.config.Model
+		}
+	case *MockProvider:
+		return "mock", ""
+	case *InstrumentedProvider:
+		if v != nil {
+			return ProviderEvaluationIdentity(v.inner)
+		}
+	}
+	return "unknown", ""
+}
+func providerName(p FeedbackProvider) string { name, _ := ProviderEvaluationIdentity(p); return name }
+func providerModel(p FeedbackProvider) string {
+	_, model := ProviderEvaluationIdentity(p)
+	return model
 }
 
 // latencySummary holds the per-call latency summary
@@ -443,14 +509,8 @@ type latencySummary struct {
 	p95  time.Duration
 }
 
-// summarizeLatencies computes the per-call latency
-// summary statistics. The percentile method is the
-// nearest-rank method (NIST handbook §7.2.1.1) with the
-// standard floor((n-1)*p/100)+1 rank, applied to a
-// pre-sorted slice. The function is deterministic: the
-// same input slice produces the same output values.
-//
-// A zero-length input produces the zero latencySummary.
+// summarizeLatencies uses nearest-rank percentiles: ceil(p*n/100), one-based.
+// A zero-length input produces a zero summary.
 func summarizeLatencies(latencies []time.Duration) latencySummary {
 	if len(latencies) == 0 {
 		return latencySummary{}
@@ -474,23 +534,7 @@ func summarizeLatencies(latencies []time.Duration) latencySummary {
 	}
 }
 
-// percentileNearestRank returns the p-th percentile of the
-// (assumed sorted ascending) input using the nearest-rank
-// method. p is clamped to [0, 100]. A zero-length input
-// returns the zero duration.
-//
-// The nearest-rank formula is:
-//
-//	rank = ceil(p / 100 * n)   (1-indexed)
-//
-// or equivalently in 0-indexed form:
-//
-//	rank = floor(p / 100 * (n-1))   (0-indexed)
-//
-// Go's integer division makes the 0-indexed form
-// straightforward and is what this implementation uses.
-// Both forms produce the same result for the same input;
-// the 0-indexed form is what NIST's example uses.
+// percentileNearestRank uses ceil(p*n/100), clamped to the observed range.
 func percentileNearestRank(sorted []time.Duration, p int) time.Duration {
 	n := len(sorted)
 	if n == 0 {
@@ -502,143 +546,73 @@ func percentileNearestRank(sorted []time.Duration, p int) time.Duration {
 	if p > 100 {
 		p = 100
 	}
-	rank := (p * (n - 1)) / 100
-	return sorted[rank]
+	rank := (p*n + 99) / 100
+	if rank < 1 {
+		rank = 1
+	}
+	return sorted[rank-1]
 }
 
-// FormatLiveEvaluationReport renders a LiveEvaluationReport
-// as a human-readable, multi-line plain-text block. The
-// format is the same the cmd/eval-live command writes to
-// stdout and to the optional output file, so the operator
-// can copy-paste the rendered block straight into
-// staging-evidence.md's "EV-22" section. The function is
-// deterministic and produces stable output for a given
-// input; tests assert on substrings, not on byte-for-byte
-// equality, so a future field addition does not break
-// existing assertions.
-//
-// Every field on LiveEvaluationReport appears in the
-// rendered output - a report that omits a field is
-// unusable as evidence, so the omission is not allowed.
+// FormatLiveEvaluationReport includes the complete synthetic case observations.
+// Keep this output private: provider-generated content is untrusted evidence for
+// human review, not material to copy wholesale into CI or public release notes.
 func FormatLiveEvaluationReport(r LiveEvaluationReport) string {
-	var s string
-	s = s + "=== T10 Live AI Evaluation Report ===\n"
-	s = s + "Provider: " + r.Provider + "\n"
-	s = s + "Model: " + r.Model + "\n"
-	s = s + "Dataset: " + r.DatasetVersion + "\n"
-	s = s + "Spec: " + r.SpecVersion + "\n"
-	s = s + "StartedAt: " + r.StartedAt.Format(time.RFC3339) + "\n"
-	s = s + "FinishedAt: " + r.FinishedAt.Format(time.RFC3339) + "\n"
-	s = s + "Duration: " + r.Duration.String() + "\n"
-	s = s + "ProviderCalls: " + itoa(r.ProviderCalls) + "\n"
-	s = s + "EstimatedInputChars: " + itoa(r.EstimatedInputChars) + "\n"
-	s = s + "EstimatedOutputChars: " + itoa(r.EstimatedOutputChars) + "\n"
-	s = s + "CostUSD: " + ftoa(r.CostUSD) + "\n"
-	s = s + "CostCeilingUSD: " + ftoa(r.CostCeilingUSD) + "\n"
+	var s strings.Builder
+	s.WriteString("=== T10 Live AI Evaluation Report ===\n")
+	s.WriteString("Provider: " + r.Provider + "\n")
+	s.WriteString("Model: " + r.Model + "\n")
+	s.WriteString("Dataset: " + r.DatasetVersion + "\n")
+	s.WriteString("Spec: " + r.SpecVersion + "\n")
+	s.WriteString("Scope: " + r.Scope + "\nGoldenSet: " + r.GoldenSetVersion + "\nPrompt: " + r.PromptVersion + "\nSchema: " + r.SchemaVersion + "\nCommit: " + r.Commit + "\n")
+	s.WriteString("LatencyDefinition: " + r.LatencyDefinition + "\n")
+	s.WriteString("ConfiguredTimeout: " + r.Timeout.String() + "\nRequestInterval: " + r.RequestInterval.String() + "\nConfiguredMaxRetries: " + itoa(r.MaxRetries) + "\n")
+	specJSON, _ := json.Marshal(r.ThresholdSpec)
+	s.WriteString("ThresholdSpec: " + string(specJSON) + "\n")
+	for _, gap := range r.AcceptanceGaps {
+		s.WriteString("AcceptanceGap: " + gap + "\n")
+	}
+	s.WriteString("StartedAt: " + r.StartedAt.Format(time.RFC3339) + "\n")
+	s.WriteString("FinishedAt: " + r.FinishedAt.Format(time.RFC3339) + "\n")
+	s.WriteString("Duration: " + r.Duration.String() + "\n")
+	s.WriteString("ProviderCalls: " + itoa(r.ProviderCalls) + "\n")
+	s.WriteString("EstimatedInputChars: " + itoa(r.EstimatedInputChars) + "\n")
+	s.WriteString("EstimatedOutputChars: " + itoa(r.EstimatedOutputChars) + "\n")
+	s.WriteString("CostUSD: " + ftoa(r.CostUSD) + "\n")
+	s.WriteString("CostCeilingUSD: " + ftoa(r.CostCeilingUSD) + "\n")
 	if r.CostCeilingUSD < 0 {
-		s = s + "CostCeilingExceeded: (ceiling not set; not enforced)\n"
+		s.WriteString("CostCeilingExceeded: (ceiling not set; not enforced)\n")
 	} else {
 		if r.CostCeilingExceeded {
-			s = s + "CostCeilingExceeded: true\n"
+			s.WriteString("CostCeilingExceeded: true\n")
 		} else {
-			s = s + "CostCeilingExceeded: false\n"
+			s.WriteString("CostCeilingExceeded: false\n")
 		}
 	}
-	s = s + "LatencyMin: " + r.LatencyMin.String() + "\n"
-	s = s + "LatencyMax: " + r.LatencyMax.String() + "\n"
-	s = s + "LatencyMean: " + r.LatencyMean.String() + "\n"
-	s = s + "LatencyP50: " + r.LatencyP50.String() + "\n"
-	s = s + "LatencyP95: " + r.LatencyP95.String() + "\n"
+	s.WriteString("LatencyMin: " + r.LatencyMin.String() + "\n")
+	s.WriteString("LatencyMax: " + r.LatencyMax.String() + "\n")
+	s.WriteString("LatencyMean: " + r.LatencyMean.String() + "\n")
+	s.WriteString("LatencyP50: " + r.LatencyP50.String() + "\n")
+	s.WriteString("LatencyP95: " + r.LatencyP95.String() + "\n")
 	if r.OperatorNotes != "" {
-		s = s + "OperatorNotes: " + r.OperatorNotes + "\n"
+		s.WriteString("OperatorNotes: " + r.OperatorNotes + "\n")
 	}
-	s = s + "--- Per-threshold computed values ---\n"
-	s = s + FormatThresholdReport(r.Thresholds, r.Violations)
-	if len(r.Violations) == 0 {
-		s = s + "=== Result: PASS (every tracked DOC-09 §23 threshold met) ===\n"
-	} else {
-		s = s + "=== Result: FAIL (" + itoa(len(r.Violations)) + " tracked threshold(s) violated) ===\n"
+	s.WriteString("--- Per-threshold computed values ---\n")
+	s.WriteString(FormatThresholdReport(r.Thresholds, r.Violations))
+	// Case evidence is synthetic-only private report data, not a standard log.
+	evidenceJSON, err := json.MarshalIndent(r.CaseEvidence, "", "  ")
+	if err == nil {
+		s.WriteString("--- Per-case evidence (human review pending) ---\n" + string(evidenceJSON) + "\n")
 	}
-	return s
+	state := r.AcceptanceState
+	if state == "" {
+		state = "INCOMPLETE"
+	}
+	s.WriteString("=== Result: " + state + " ===\n")
+	return s.String()
 }
 
-// itoa is a small helper for rendering integer values
-// without dragging in fmt just for this. The cmd/eval-live
-// command imports fmt directly; the library keeps its
-// surface lean to keep the test assertions stable.
-func itoa(i int) string {
-	if i == 0 {
-		return "0"
-	}
-	neg := i < 0
-	if neg {
-		i = -i
-	}
-	var buf [20]byte
-	pos := len(buf)
-	for i > 0 {
-		pos--
-		buf[pos] = byte('0' + i%10)
-		i /= 10
-	}
-	if neg {
-		pos--
-		buf[pos] = '-'
-	}
-	return string(buf[pos:])
-}
+func itoa(i int) string { return strconv.Itoa(i) }
 
-// ftoa renders a float64 with a fixed two-decimal precision
-// for the report. Negative values render with a leading
-// minus (so a "-1" cost from the operator is rendered as
-// "-1.00" and distinguishable from a "0.00" not-recorded).
-// A NaN renders as "NaN" so an operator who accidentally
-// pipes a non-finite value does not produce a silent zero.
-func ftoa(f float64) string {
-	if f != f {
-		return "NaN"
-	}
-	neg := f < 0
-	if neg {
-		f = -f
-	}
-	cents := int64(f*100 + 0.5)
-	whole := cents / 100
-	frac := cents % 100
-	out := itoa64(whole)
-	out += "."
-	if frac < 10 {
-		out += "0"
-	}
-	out += itoa64(frac)
-	if neg {
-		out = "-" + out
-	}
-	return out
-}
-
-// itoa64 is the int64 counterpart of itoa, used by ftoa.
-// It is a separate function because Go's strconv.Itoa
-// rejects int64, and the report's cost field is a float64
-// whose integer part is built from cents / 100.
-func itoa64(i int64) string {
-	if i == 0 {
-		return "0"
-	}
-	neg := i < 0
-	if neg {
-		i = -i
-	}
-	var buf [20]byte
-	pos := len(buf)
-	for i > 0 {
-		pos--
-		buf[pos] = byte('0' + i%10)
-		i /= 10
-	}
-	if neg {
-		pos--
-		buf[pos] = '-'
-	}
-	return string(buf[pos:])
-}
+// ftoa uses standard fixed-point formatting without an integer-cents conversion.
+// Finite large costs remain representable; -1 stays the unknown-cost sentinel.
+func ftoa(f float64) string { return strconv.FormatFloat(f, 'f', 2, 64) }

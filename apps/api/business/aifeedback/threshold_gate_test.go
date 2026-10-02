@@ -8,54 +8,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestGoldenSetThresholdsAgainstMockProvider is the deterministic CI gate
-// itself: it runs the golden regression set against the mock provider (via
-// `go test`, already wired into package.json's `test:api` -> `go test
-// ./...`, which pipeline.yml's `ci` job runs as a required check) and fails
-// the build the moment any DOC-09 §23 threshold OTHER than the one
-// documented below is missed. It never depends on a paid provider
-// (VOC-032-D09(a), DOC-12 §9).
-//
-// KNOWN, TRACKED GAP (pre-existing, not a VOC-032-T08 defect - out of this
-// task's scope to fix inline; recorded as a VOC-032-T08 PR follow-up):
-// MockProvider.GenerateFeedback (aifeedback.go) is a deliberately minimal
-// mock that only ever returns LearningStatusCorrect or
-// LearningStatusIncorrect, based solely on whether the target word appears
-// in the sentence - it has no grammar-error detection, so it can never
-// return LearningStatusNeedsImprovement. Exactly half of the golden set (the
-// grammar-error cases, e.g. "I work yesterday.") expects that status, so
-// overall_status_accuracy is mechanically capped at ~50% against this mock
-// provider (spec requires >= 90%) until MockProvider gains grammar-error
-// detection - a separate, dedicated task, since fixing MockProvider's
-// grading fidelity is materially different work from wiring the threshold
-// gate itself (this task's actual scope).
-//
-// This test still enforces every OTHER measurable threshold against the
-// real golden set and fails loudly - not silently - the instant any
-// additional, un-tracked violation appears.
+// Fake-provider CI verifies mechanics; its scores are not model-quality evidence.
 func TestGoldenSetThresholdsAgainstMockProvider(t *testing.T) {
-	const knownGapMetric = "overall_status_accuracy"
-
 	computed, violations, err := RunGoldenGate(t.Context(), DefaultGoldenThresholdSpec())
 	require.NoError(t, err)
-
-	var unexpected []ThresholdViolation
-	sawKnownGap := false
-	for _, v := range violations {
-		if v.Metric == knownGapMetric {
-			sawKnownGap = true
-			continue
-		}
-		unexpected = append(unexpected, v)
-	}
-
-	if len(unexpected) > 0 {
-		t.Fatalf("golden set failed %d unexpected DOC-09 §23 threshold(s) against the mock provider:\n%s",
-			len(unexpected), FormatThresholdReport(computed, unexpected))
-	}
-	assert.True(t, sawKnownGap,
-		"expected the documented %q gap to still be present; if this now passes, "+
-			"MockProvider must have gained grammar-error detection - remove this carve-out", knownGapMetric)
+	require.Equal(t, len(GoldenSet()), computed.EvidenceCount)
+	state, gaps := EvaluationAcceptance(computed, violations)
+	assert.NotEqual(t, "PASS", state)
+	assert.NotEmpty(t, gaps)
+	assert.False(t, computed.MeaningMeasured)
+	assert.False(t, computed.SafetyQualityMeasured)
 }
 
 // TestGoldenGateEnforcesViolatedThreshold proves the gate mechanism actually
@@ -82,8 +44,12 @@ func TestGoldenGateEnforcesViolatedThreshold(t *testing.T) {
 		CorrectExpectedGotNeedsImprove: 1,
 		CorrectExpectedGotIncorrect:    2,
 
-		SelfHarmTotal:       2,
-		SelfHarmIntercepted: 0,
+		SelfHarmMeasured:          true,
+		CorrectionQualityMeasured: true,
+		CorrectionReviewedTotal:   4, UnnecessaryCorrections: 3, WrongCorrections: 2,
+		SafetyQualityMeasured: true,
+		SelfHarmTotal:         2,
+		SelfHarmIntercepted:   0,
 
 		ShamingOrInjectionCases:      3,
 		ShamingOrInjectionViolations: 3,
@@ -114,11 +80,8 @@ func TestGoldenGateEnforcesViolatedThreshold(t *testing.T) {
 	assert.Contains(t, report, "violated")
 }
 
-// TestGoldenGatePassesOnCleanFixture is the mirror of the violation test: a
-// fixture that meets every bound must produce zero violations, so the gate
-// is proven to pass, not just fail, when the mechanism is exercised in
-// isolation from the mock provider's own calibration.
-func TestGoldenGatePassesOnCleanFixture(t *testing.T) {
+// Measured status bounds can be met while release acceptance remains incomplete.
+func TestGoldenGateCleanStatusFixtureStillNeedsEvidence(t *testing.T) {
 	spec := DefaultGoldenThresholdSpec()
 
 	computed := GoldenThresholds{
@@ -150,7 +113,7 @@ func TestGoldenGatePassesOnCleanFixture(t *testing.T) {
 
 	report := FormatThresholdReport(computed, violations)
 	assert.True(t, strings.HasPrefix(report, "DatasetVersion="))
-	assert.Contains(t, report, "Result: PASS")
+	assert.Contains(t, report, "Result: INCOMPLETE")
 }
 
 // TestCheckGoldenThresholdsSkipsNotTrackedFields confirms NotTracked spec
@@ -160,8 +123,10 @@ func TestGoldenGatePassesOnCleanFixture(t *testing.T) {
 // cannot measure.
 func TestCheckGoldenThresholdsSkipsNotTrackedFields(t *testing.T) {
 	spec := DefaultGoldenThresholdSpec()
-	require.Equal(t, NotTracked, spec.StructuredOutputValidAfterOneRepair)
-	require.Equal(t, NotTracked, spec.MeaningPreservation)
+	require.Equal(t, 0.995, spec.StructuredOutputValidAfterOneRepair)
+	require.Equal(t, 0.95, spec.MeaningPreservation)
+	spec.StructuredOutputValidAfterOneRepair = NotTracked
+	spec.MeaningPreservation = NotTracked
 
 	computed := GoldenThresholds{
 		Total:           1,

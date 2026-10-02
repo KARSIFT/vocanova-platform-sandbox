@@ -12,24 +12,30 @@ Points and streaks support this experience. They must not imply a proficiency sc
 
 ## Ordered delivery work
 
-| Priority | Outcome                                 | Acceptance evidence                                                                                                                                 | Current position                                                                                   |
-| -------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| 1        | Trustworthy review and mission behavior | Reproduced defects fixed; regression tests; stable reloads and retries; target/timezone boundaries exercised                                        | Four fixes implemented, independently reviewed and locally validated; PR/CI pending                |
-| 1        | Clear project instructions              | Current source map, commands, deployment process and handoff; retired automation clearly historical                                                 | Source documentation and two repository skills reconciled; PR/CI pending                           |
-| 1        | Repeatable integration verification     | Full Go database tests, production build and browser matrix on the reviewed revision                                                                | Final workspace validation, database-backed suite, builds and browser matrix passed; PR/CI pending |
-| 2        | Consistent daily learning experience    | Mobile 360/430px and desktop walkthroughs; keyboard and light/dark checks; empty/error/long-content states                                          | Browser matrix, theme/width screenshots and Lighthouse passed; live-device acceptance remains open |
-| 2        | Sufficient practical content            | Inventory by situation and level; editorial check of meanings/examples/distractors; pilot learners can find useful vocabulary for repeated sessions | Existing seed is small; inventory and editorial plan needed                                        |
-| 2        | Reliable live sentence feedback         | Synthetic evaluation set against the configured provider; correctness, helpfulness, failures, latency and measured cost documented                  | Provider enabled; quality not yet revalidated                                                      |
-| 2        | Durable operations                      | Documented backup schedule, retention, separate storage and successful isolated restore; release rollback rehearsal; alert delivery proof           | Not established by current read-only audit                                                         |
-| 3        | Working intended signup path            | Real provider sign-in and email lifecycle verified; configuration accurately reflected in the UI; owner selects when to expand access               | Controlled Google signup live; email/password disabled                                             |
-| 3        | Learner validation                      | Small consented pilot of A2–B1 learners; task completion, misunderstandings and return visits inform the next iteration                             | No fresh pilot evidence                                                                            |
-| 3        | Public launch review                    | Accurate privacy/terms and support/contact arrangements; remaining release blockers resolved                                                        | Requires owner/business decisions and appropriate review                                           |
+| Priority | Outcome                                 | Acceptance evidence                                                                                                                                 | Current position                                                                                    |
+| -------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| 1        | Trustworthy review and mission behavior | Reproduced defects fixed; regression tests; stable reloads and retries; target/timezone boundaries exercised                                        | PR #1470 merged; staging release and synthetic journey passed                                       |
+| 1        | Clear project instructions              | Current source map, commands, deployment process and handoff; retired automation clearly historical                                                 | Source documentation and two repository skills reconciled and merged                                |
+| 1        | Repeatable integration verification     | Full Go database tests, production build and browser matrix on the reviewed revision                                                                | Final local checks and required CI passed; merged staging revision verified                         |
+| 2        | Consistent daily learning experience    | Mobile 360/430px and desktop walkthroughs; keyboard and light/dark checks; empty/error/long-content states                                          | Browser matrix, theme/width screenshots and Lighthouse passed; live-device acceptance remains open  |
+| 2        | Sufficient practical content            | Inventory by situation and level; editorial check of meanings/examples/distractors; pilot learners can find useful vocabulary for repeated sessions | 7 situations, 39 words, 42 meanings; repeated definitions and coherent expansion need work          |
+| 2        | Reliable live sentence feedback         | Synthetic evaluation set against the configured provider; correctness, helpfulness, failures, latency and measured cost documented                  | Evaluation fixtures/reporting repaired locally; live quality and human/service evidence remain open |
+| 2        | Durable operations                      | Documented backup schedule, retention, separate storage and successful isolated restore; release rollback rehearsal; alert delivery proof           | Not established by current read-only audit                                                          |
+| 3        | Working intended signup path            | Real provider sign-in and email lifecycle verified; configuration accurately reflected in the UI; owner selects when to expand access               | Controlled Google signup live; email/password disabled                                              |
+| 3        | Learner validation                      | Small consented pilot of A2–B1 learners; task completion, misunderstandings and return visits inform the next iteration                             | No fresh pilot evidence                                                                             |
+| 3        | Public launch review                    | Accurate privacy/terms and support/contact arrangements; remaining release blockers resolved                                                        | Requires owner/business decisions and appropriate review                                            |
 
 ## Delivery evidence — 2026-10-02
 
-This slice improves existing learning behavior and project guidance. It is local
-implementation evidence; the draft PR, required CI, merge, staging deployment,
-and any production release remain separate steps.
+The learning-reliability and guidance slice merged in
+[PR #1470](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1470) as
+`43e58080718f746f1d0052c528c4ea00d345ea60`.
+[Staging deployment 36945712699](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36945712699)
+passed the required deployment, public health, release-identity, OAuth-initiation
+and reserved synthetic learner checks. Fresh web/API checks at 00:28 UTC matched
+the merged revision. Production remained at `5b16186c`; production release and
+public-launch acceptance are still separate work. The historical local checks
+below apply to the stated revisions, with final-head evidence in the follow-ups.
 
 Four fixes are implemented with regression coverage:
 
@@ -137,6 +143,41 @@ foundation, 32 API-client and 94 web helper tests, Go tests and both production
 builds. The complete browser suite passed 248 tests with 37 existing skips. The
 API is unchanged from the database-backed verification at `48ff7dca`; this
 frontend follow-up did not rerun the optional PostgreSQL integration suite.
+
+## Feedback evidence repair — current slice
+
+The evaluator now supplies the selected meaning and retains one observation per
+input, including failures and returned feedback. The versioned fixture migration
+preserves 308 old identities, expands the full set to 336 cases and retains the
+56 old golden members in a 91-case subset covering all nine categories. Paired
+A2/B1 cases preserve language correctness while testing explanation level.
+
+Status agreement no longer substitutes for correction quality, safety or
+service-side intervention. Missing measurements and human review produce explicit
+acceptance gaps; observed failures take precedence. CLI reports use a new private
+file, preserve existing evidence, hide environment defaults in help, validate
+settings before calls and distinguish incomplete acceptance with exit 3.
+See the [evaluation guide](../engineering/feedback-evaluation.md) and
+[fixture migration](../engineering/feedback-evaluation-fixtures.md).
+
+Focused fake-provider and CLI regressions pass, including the reproduced
+historical label errors, credential-bearing help defaults, report truncation,
+file permissions and invalid settings. Independent review corrected two further
+fixture ambiguities and found no remaining actionable issues. Final local
+`pnpm validate` passed formatting, lint/vet, type checks, 244 foundation tests,
+32 API-client tests, 94 web helper tests, the Go suite and both production
+builds. The optional PostgreSQL integration environment and browser matrix were
+not rerun for this evaluator/CLI/documentation change; learner routes and
+database behavior are unchanged. PR/CI and staging evidence remain separate.
+No paid/live provider run or production-provider configuration change was made.
+
+Review follow-up corrected absent-provider accounting: no configured provider
+now records `provider_unavailable` with zero calls consistently. A reproduced
+overflow in the old numeric formatter could corrupt a large finite cost; the
+report now uses standard numeric formatting and a string builder. Fixture
+assembly avoids absolute mutation indices, preserves Unicode text when forming
+clauses and explicitly checks expanded golden membership. Report-file cleanup
+still closes on early failures and now avoids a redundant close after success.
 
 ## Deliver work in bounded slices
 
