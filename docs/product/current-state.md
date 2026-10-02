@@ -1,8 +1,7 @@
 # Vocanova current product state
 
 Reviewed on 2026-10-02 against repository baseline
-`bb0241cb2ace5f848a1e28bbd4b3cb9b3d3118db` plus the optional context-practice
-changes in this working revision. This is a dated inventory and readiness
+`e4cc4236f1f1c18df0059b005a4ade3b07addc31`. This is a dated inventory and readiness
 guide. Update it when behavior, deployment, or verified evidence changes; it does
 not establish that the final product is complete.
 
@@ -55,7 +54,7 @@ and preserved existing identities. Word pages suppress repeated short/full
 definitions while retaining distinct fuller guidance. Generated feedback is
 distinct from canonical vocabulary.
 
-This working revision adds optional Daily Conversation context practice: three
+Daily Conversation includes optional context practice: three
 independently reviewed message/dialogue examples contrast invite/join,
 sounds good/keep in touch and reschedule/cancel. Explanations follow the choice;
 learners can retry, restart or exit locally. Completion uses existing word-page
@@ -65,7 +64,11 @@ the activity. It adds no points, mission/progress changes, API/schema or provide
 calls. Full workspace validation passed (246 foundation, 32 API-client and 98
 web helper tests, Go checks and builds). All 21 focused browser checks passed
 across 360px, 430px and desktop in both themes. The full browser matrix passed
-314 tests with 37 existing skips; release verification remains pending. See
+314 tests with 37 existing skips. The change merged in
+[PR #1476](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1476), with
+staging release checks passing as recorded below. The deployed synthetic journey
+does not exercise this specific activity; its interaction evidence comes from
+the mock-backed browser suite. See
 [curriculum guidance](daily-conversation-curriculum.md#optional-context-practice).
 
 Sentence practice protects pending drafts and retry identities from older
@@ -104,8 +107,16 @@ Required CI and Codex/Claude reviews cleared; local browser verification passed
 succeeded, verified at 04:41:55 UTC, including strict release identity, web/API
 health, OAuth initiation and the reserved synthetic learner core loop. This is
 workflow verification, not a new direct public-endpoint observation after the
-earlier HTTP 403. Production was not promoted. The optional context activity in
-the working revision above has not yet been released.
+earlier HTTP 403. Production was not promoted.
+
+[PR #1476](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1476) delivered
+context practice as `e4cc4236f1f1c18df0059b005a4ade3b07addc31` at 05:16:59 UTC.
+Applicable CI, inspected Codex code/security and Claude reviews, and all seven
+merge-queue checks passed. [Staging deployment 36968236895](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36968236895)
+succeeded, verified at 05:21 UTC, including exact release identity, web/API health,
+OAuth initiation and the reserved synthetic learner core loop. The merged source
+tree matches the reviewed head. These are workflow observations; production was
+not promoted and no new direct local public-endpoint check is claimed.
 
 Both environments reported Google OAuth and AI enabled. Magic-link email,
 password authentication, and public new-user signup were disabled. Access is
@@ -117,11 +128,14 @@ Google sign-in, email delivery, or real-provider feedback quality.
 - Production: [web version](https://production.vocanova.site/version),
   [API version](https://api-production.vocanova.site/version).
 
-Staging deploys automatically from pushes to `main`; production requires manual
-dispatch. Inspect the actual triggers in
+Staging deploys automatically when pushes to `main` match the workflow's path
+allowlist; a docs-only change under `docs/` does not itself trigger deployment.
+Production requires manual dispatch. Inspect the actual triggers in
 [staging](../../.github/workflows/deploy-staging.yml) and
 [production](../../.github/workflows/deploy-production.yml); old comments still
-mention former branch/promotion arrangements. Keep host configuration private.
+mention former branch/promotion arrangements. Use the current operator section
+in the [DevOps guide](../operations/11-devops-and-ci-cd.md#current-operator-process--2-october-2026)
+and [monitoring runbook](../operations/monitoring.md). Keep host configuration private.
 
 ## Remaining readiness work
 

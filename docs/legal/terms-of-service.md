@@ -2,7 +2,7 @@
 
 **Status:** Draft, not yet approved for publication  
 **Prepared under:** `VOC-037-T02`  
-**Last updated:** 2026-08-01
+**Last updated:** 2026-10-02 (technical amendments awaiting review)
 
 ## 1. Acceptance of Terms
 
@@ -10,13 +10,25 @@ These Terms of Service ("Terms") govern your use of the VocaNova web application
 and related services ("Service"). By using the Service, you agree to these Terms.
 
 This document is a draft prepared for founder review and may be revised before
-publication.
+publication. The conditional founder approval recorded on 2026-08-02 applies to
+the earlier draft; the technical amendments dated 2026-10-02 have not been
+approved. See the review records below and the [legal document status](README.md).
 
 ## 2. Eligibility and Account Access
 
 - You are responsible for using the Service in compliance with applicable laws.
 - You are responsible for maintaining control of your account access methods.
-- Authentication currently supports Google OAuth and email magic-link flows.
+- The implementation supports Google OAuth, email magic-link and password
+  authentication, subject to environment configuration. Implemented methods
+  are not necessarily enabled or available to every user.
+
+The deployment observation recorded on **2026-10-02** reported Google OAuth
+enabled with controlled access; email magic-link, password authentication and
+public new-user signup were disabled in both staging and production. This is a
+dated configuration observation, not proof of real account acceptance or a
+promise of public registration. Available methods and access restrictions can
+change; confirm the selected environment's current sign-in options. See the
+[deployment observation](../product/current-state.md#live-deployment-observation).
 
 You must be at least **13 years old** to use the Service (founder decision,
 2026-08-02).
@@ -114,8 +126,9 @@ Governing law, venue, and dispute-resolution method are `TBD`. This is
 genuinely unresolved pending VocaNova's incorporation/registered-jurisdiction
 decision, not an oversight — asked of the founder on 2026-08-02, who deferred
 it rather than naming a jurisdiction ahead of incorporation. **This section
-blocks publication** until decided; everything else in this document is
-founder-approved (see Founder Review Record below).
+blocks publication** until decided. The 2026-08-02 record conditionally approved
+the version reviewed then; it does not approve subsequent technical amendments
+(see the review records below).
 
 ## 15. Contact
 
@@ -143,5 +156,17 @@ date and additional notice where required.
   once Cloudflare Email Routing is verified live (§15). **Still open, blocking
   publication:** governing law/jurisdiction (§14, and the mirrored item in
   `privacy-policy.md` §11) pending VocaNova's incorporation decision. This
-  document is founder-approved in substance but not yet cleared to publish
-  until that single item resolves.
+  version was founder-approved in substance but not cleared to publish until
+  that item resolved. This is the historical 2026-08-02 record; it does not
+  approve the later technical amendments.
+
+## Technical Amendment Review Record
+
+- Amendment date: 2026-10-02
+- Scope: Implemented authentication methods versus dated, configuration-dependent
+  controlled access (§2)
+- Reviewer and review date: Not yet recorded
+- Decision: Pending; no publication clearance
+- Remaining conditions: Review these amendments and resolve the historical
+  governing-law/jurisdiction publication gate. No new jurisdiction, access
+  policy, minimum-age or contact decision is made by this update.
