@@ -117,6 +117,27 @@ refreshed Progress screenshots had no horizontal overflow; representative mobile
 and desktop views were visually inspected. Fresh OpenAPI generation matched the
 committed contract. Release checks remain separate from this local evidence.
 
+### Review follow-up: answer positions across sessions
+
+A separate review identified that permanent card identities alone keep each
+word's answer in the same position across later sessions. The server now
+generates a fresh session seed after reading request data and serializes it to
+the client. The mounted session retains that seed through queue updates, so
+choices agree during hydration and remain steady during practice while varying
+across later sessions. Both review entry routes use the same page.
+
+A deterministic regression reproduced the old behavior: 64 supplied session
+seeds produced only one answer position. The corrected helper exercises all four
+positions for the same card. Browser coverage also checks unchanged choices
+after an authoritative queue refresh, without requiring random sessions to
+produce different positions every time.
+
+Independent review found no issues. Full workspace validation passed with 244
+foundation, 32 API-client and 94 web helper tests, Go tests and both production
+builds. The complete browser suite passed 248 tests with 37 existing skips. The
+API is unchanged from the database-backed verification at `48ff7dca`; this
+frontend follow-up did not rerun the optional PostgreSQL integration suite.
+
 ## Deliver work in bounded slices
 
 Each slice should identify the learner problem, state the intended behavior, change the smallest relevant surface, include meaningful regression coverage and document remaining limits. Use parallel agents for independent areas and independent review; coordinate shared files, builds and servers. Follow [repository instructions](../../AGENTS.md) for draft PRs, CI, merging and deployment.

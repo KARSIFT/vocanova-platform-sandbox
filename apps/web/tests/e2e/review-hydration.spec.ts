@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
 for (const route of ["/reviews", "/review/session"]) {
-  test(`${route} preserves server-rendered choices through hydration and selection`, async ({
+  test(`${route} preserves server-rendered choices through hydration and queue refresh`, async ({
     page,
     context,
   }, testInfo) => {
@@ -69,6 +69,32 @@ for (const route of ["/reviews", "/review/session"]) {
     await expect(
       page.getByRole("button", { name: "Good", exact: true }),
     ).toBeVisible();
+    await expect(labels).toHaveText(serverChoices);
+    expect(hydrationErrors).toEqual([]);
+
+    // Force an authoritative queue reload without changing the fixture cards.
+    // The mounted session must keep its seed when the same queue is returned.
+    await page.route(
+      "**/api/v1/reviews/submissions",
+      (request) =>
+        request.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ error: "not_found" }),
+        }),
+      { times: 1 },
+    );
+    await page.getByRole("button", { name: "Good", exact: true }).click();
+    await expect(page.getByRole("status")).toHaveText(
+      "This word was removed. Your review list was updated.",
+    );
+    await expect(labels).toHaveText(serverChoices);
+    await group
+      .getByRole("button", {
+        name: "noun — definition for review word 1",
+        exact: true,
+      })
+      .click();
     await expect(labels).toHaveText(serverChoices);
     expect(hydrationErrors).toEqual([]);
 

@@ -8,6 +8,7 @@ interface ReviewOption {
 export function buildMultipleChoiceOptions(
   dueWords: readonly DueWord[],
   currentIndex: number,
+  sessionSeed: string,
 ): ReviewOption[] {
   const current = dueWords[currentIndex];
   if (!current) {
@@ -29,9 +30,14 @@ export function buildMultipleChoiceOptions(
   ];
 
   // Initial options render on both the server and client. Seed the shuffle
-  // from the card identity so hydration agrees while answer positions vary
-  // across cards. Keep scheduling metadata out so queue refreshes stay stable.
-  const identity = JSON.stringify([current.userWordId, current.meaningId]);
+  // from the serialized session seed and card identity so hydration agrees
+  // while positions vary between sessions. Keep scheduling metadata out so
+  // queue refreshes within a session stay stable.
+  const identity = JSON.stringify([
+    sessionSeed,
+    current.userWordId,
+    current.meaningId,
+  ]);
   let seed = 2166136261;
   for (let index = 0; index < identity.length; index++) {
     seed = Math.imul(seed ^ identity.charCodeAt(index), 16777619);

@@ -20,14 +20,33 @@ function card(index: number): DueWord {
 }
 
 describe("review multiple-choice options", () => {
+  it("varies the same card's answer position across separate session seeds", () => {
+    const dueWords = Array.from({ length: 4 }, (_, index) => card(index));
+    const positions = new Set<number>();
+    for (let index = 0; index < 64; index++) {
+      const options = buildMultipleChoiceOptions(
+        dueWords,
+        0,
+        `session-${index}`,
+      );
+      positions.add(
+        options.findIndex(
+          (option) => option.meaningId === dueWords[0]!.meaningId,
+        ),
+      );
+    }
+    assert.equal(positions.size, 4);
+  });
+
   it("keeps server and client order identical despite different random sources", (t) => {
     const dueWords = Array.from({ length: 4 }, (_, index) => card(index));
     const random = t.mock.method(Math, "random", () => 0);
-    const serverOptions = buildMultipleChoiceOptions(dueWords, 0);
+    const serverOptions = buildMultipleChoiceOptions(dueWords, 0, "session-a");
     random.mock.mockImplementation(() => 0.999999);
     const clientOptions = buildMultipleChoiceOptions(
       JSON.parse(JSON.stringify(dueWords)) as DueWord[],
       0,
+      "session-a",
     );
     assert.deepEqual(clientOptions, serverOptions);
   });
@@ -37,7 +56,7 @@ describe("review multiple-choice options", () => {
       Object.freeze(card(index)),
     );
     Object.freeze(dueWords);
-    const options = buildMultipleChoiceOptions(dueWords, 4);
+    const options = buildMultipleChoiceOptions(dueWords, 4, "session-a");
     assert.deepEqual(
       [...options].sort((a, b) => a.meaningId.localeCompare(b.meaningId)),
       [0, 1, 2, 4].map((index) => ({
@@ -59,6 +78,7 @@ describe("review multiple-choice options", () => {
         const options = buildMultipleChoiceOptions(
           [current, card(1), card(2), card(3)],
           0,
+          "session-a",
         );
         positions.add(
           options.findIndex((option) => option.meaningId === current.meaningId),
@@ -74,7 +94,7 @@ describe("review multiple-choice options", () => {
 
   it("keeps order stable when unrelated scheduling metadata changes", () => {
     const dueWords = Array.from({ length: 4 }, (_, index) => card(index));
-    const options = buildMultipleChoiceOptions(dueWords, 0);
+    const options = buildMultipleChoiceOptions(dueWords, 0, "session-a");
     assert.deepEqual(
       buildMultipleChoiceOptions(
         dueWords.map((item) => ({
@@ -83,19 +103,21 @@ describe("review multiple-choice options", () => {
           status: "learning",
         })),
         0,
+        "session-a",
       ),
       options,
     );
   });
 
   it("handles missing cards and small queues for the self-check fallback", () => {
-    assert.deepEqual(buildMultipleChoiceOptions([], 0), []);
-    assert.deepEqual(buildMultipleChoiceOptions([card(0)], 1), []);
+    assert.deepEqual(buildMultipleChoiceOptions([], 0, "session-a"), []);
+    assert.deepEqual(buildMultipleChoiceOptions([card(0)], 1, "session-a"), []);
     for (let count = 1; count < 4; count++) {
       assert.equal(
         buildMultipleChoiceOptions(
           Array.from({ length: count }, (_, index) => card(index)),
           0,
+          "session-a",
         ).length,
         count,
       );

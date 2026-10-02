@@ -57,6 +57,7 @@ const RATING_BAR_COUNT: Record<Rating, number> = {
 };
 
 interface ReviewSessionProps {
+  initialSessionSeed: string;
   initialDueWords: DueWord[];
   initialTotalCount: number;
   reviewSessionLimit: number;
@@ -64,11 +65,15 @@ interface ReviewSessionProps {
 }
 
 export function ReviewSession({
+  initialSessionSeed,
   initialDueWords,
   initialTotalCount,
   reviewSessionLimit,
   userId,
 }: ReviewSessionProps) {
+  // The server serializes one seed for hydration. Preserve it for this mounted
+  // session, including queue updates and server refreshes with new props.
+  const [sessionSeed] = useState(initialSessionSeed);
   const [dueWords, setDueWords] = useState<DueWord[]>(initialDueWords);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [remainingCount, setRemainingCount] = useState(initialTotalCount);
@@ -98,14 +103,14 @@ export function ReviewSession({
   const currentCard = dueWords[currentIndex];
 
   const promptType = currentCard
-    ? determinePromptType(dueWords, currentIndex)
+    ? determinePromptType(dueWords, currentIndex, sessionSeed)
     : null;
   const options = useMemo(() => {
     if (!currentCard || promptType !== "multiple_choice") {
       return null;
     }
-    return buildMultipleChoiceOptions(dueWords, currentIndex);
-  }, [currentCard, currentIndex, dueWords, promptType]);
+    return buildMultipleChoiceOptions(dueWords, currentIndex, sessionSeed);
+  }, [currentCard, currentIndex, dueWords, promptType, sessionSeed]);
 
   // Reset prompt state before paint when the card changes so a new MC card
   // never inherits phase === "feedback" from the prior card (VOC-076-T00).
@@ -665,8 +670,13 @@ export function ReviewSession({
 function determinePromptType(
   dueWords: DueWord[],
   currentIndex: number,
+  sessionSeed: string,
 ): "multiple_choice" | "self_check" {
-  const options = buildMultipleChoiceOptions(dueWords, currentIndex);
+  const options = buildMultipleChoiceOptions(
+    dueWords,
+    currentIndex,
+    sessionSeed,
+  );
   // Build a mix of both prompt types when possible: even-indexed cards use
   // multiple-choice if enough distractors exist, otherwise fall back to self-check.
   if (options.length >= 4 && currentIndex % 2 === 0) {

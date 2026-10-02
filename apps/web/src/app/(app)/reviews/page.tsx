@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -88,6 +90,7 @@ export default async function ReviewsPage() {
         </div>
       ) : (
         <ReviewSession
+          initialSessionSeed={randomUUID()}
           initialDueWords={dueWords}
           initialTotalCount={Math.min(totalCount, remainingReviewTarget)}
           reviewSessionLimit={remainingReviewTarget}
