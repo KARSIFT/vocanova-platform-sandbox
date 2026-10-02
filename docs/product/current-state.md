@@ -1,8 +1,8 @@
 # Vocanova current product state
 
 Reviewed on 2026-10-02 against repository baseline
-`cc064a52d4f604e0b47c9401a54335c466061682` plus the deployed-context coverage
-changes in this working revision. This is a dated inventory and readiness
+`65c34b04756c99b522eedf83c3ded5499fa0eb35` plus the context-lookup follow-up
+in this working revision. This is a dated inventory and readiness
 guide. Update it when behavior, deployment, or verified evidence changes; it does
 not establish that the final product is complete.
 
@@ -71,15 +71,20 @@ staging release checks passing as recorded below. That release's deployed
 synthetic journey did not exercise this specific activity; its interaction
 evidence came from the mock-backed browser suite.
 
-This working revision adds a focused context phase to the existing staging
+[PR #1478](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1478) added a focused context phase to the existing staging
 journey, before its save/review/submission actions. It checks the Daily
 Conversation inventory, the three examples and explanations, keyboard
 retry/continuation, completion/restart/exit, reload reset and canonical word
 destinations. It does not save words or submit sentences; the rest of the
 existing staging journey still changes the reserved synthetic account and may
-call the evaluator. The exact helper is also exercised locally. Deployed
-execution of this added phase remains to be verified; no real-account, physical
-device, screen-reader speech or learning-effectiveness claim follows from it. See
+call the evaluator. The exact helper is also exercised locally. Its first
+[staging run](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36973540873)
+passed identity/health/OAuth checks but failed an ambiguous example-text lookup
+on the sounds-good page after completing the three examples. That is not a full
+journey pass. The follow-up checks one visible example within the main landmark,
+with local controls for hidden and visibly duplicated markup. A later deployed
+run must pass the entire journey; no real-account, physical-device, screen-reader
+speech or learning-effectiveness claim follows from it. See
 [curriculum guidance](daily-conversation-curriculum.md#optional-context-practice).
 
 Sentence practice protects pending drafts and retry identities from older

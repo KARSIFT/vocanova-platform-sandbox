@@ -108,10 +108,8 @@ export async function verifyContextPracticeJourney(page: Page): Promise<void> {
       apiMutationCount++;
     }
   };
-  // Context scope includes the word-detail tab opened from a completion link.
-  // Retain only a count, never request bodies, headers or identifiers.
+  // Retain only a context-wide count, never request bodies, headers or identifiers.
   context.on("request", countMutation);
-  let wordPage: Page | undefined;
 
   try {
     await page.goto("/discover");
@@ -234,31 +232,6 @@ export async function verifyContextPracticeJourney(page: Page): Promise<void> {
       destinations.push((await link.getAttribute("href"))!);
     }
 
-    // Follow an actual completion Link in a sibling tab, preserving the
-    // completed activity for restart/exit checks without relying on Back state.
-    const newWordPage = context.waitForEvent("page");
-    await practice
-      .getByRole("link", { name: "Practice with invite", exact: true })
-      .click({ modifiers: ["ControlOrMeta"] });
-    wordPage = await newWordPage;
-    for (const [index, example] of EXAMPLES.entries()) {
-      if (index > 0) await wordPage.goto(destinations[index]!);
-      await expect(wordPage).toHaveURL(new RegExp(`${example.href}$`));
-      await expect(
-        wordPage.getByRole("heading", {
-          level: 1,
-          name: example.correct,
-          exact: true,
-        }),
-      ).toBeVisible();
-      await expect(
-        wordPage.getByText(example.canonicalExample, { exact: true }),
-      ).toBeVisible();
-    }
-    await wordPage.close();
-    wordPage = undefined;
-    await page.bringToFront();
-
     await tabTo(
       page,
       practice.getByRole("button", { name: "Restart practice" }),
@@ -305,12 +278,71 @@ export async function verifyContextPracticeJourney(page: Page): Promise<void> {
     // A concurrent synthetic journey can legitimately change the server's
     // saved count. Only the mounted activity above must preserve its baseline.
     await expect(savedProgress).toBeVisible();
+
+    // Complete again after checking recovery so an ordinary completion-link
+    // click can leave this page. Avoid browser-specific modifier/new-tab behavior.
+    await start.click();
+    for (const [index, example] of EXAMPLES.entries()) {
+      await expect(
+        practice.getByRole("heading", { name: example.title, exact: true }),
+      ).toBeFocused();
+      await expect(
+        practice.getByText(example.prompt, { exact: true }),
+      ).toBeVisible();
+      const feedback = practice.getByRole("status");
+      await expect(feedback).toBeEmpty();
+      await practice
+        .getByRole("button", { name: example.correct, exact: true })
+        .click();
+      await expect(feedback).toContainText("That fits this situation.");
+      const next = practice.getByRole("button", {
+        name:
+          index === EXAMPLES.length - 1 ? "Finish practice" : "Next example",
+      });
+      await expect(next).toBeEnabled();
+      await next.click();
+    }
+    await expect(
+      practice.getByRole("heading", {
+        name: "You’ve explored three situations",
+      }),
+    ).toBeFocused();
+    const inviteLink = practice.getByRole("link", {
+      name: "Practice with invite",
+      exact: true,
+    });
+    await expect(inviteLink).toHaveAttribute("href", destinations[0]!);
+    await inviteLink.click();
+    for (const [index, example] of EXAMPLES.entries()) {
+      if (index > 0) await page.goto(destinations[index]!);
+      await expect(page).toHaveURL(new RegExp(`${example.href}$`));
+      const main = page.getByRole("main");
+      await expect(
+        main.getByRole("heading", {
+          level: 1,
+          name: example.correct,
+          exact: true,
+        }),
+      ).toBeVisible();
+      // Server streaming can leave hidden copies outside or within main.
+      // Ignore those copies, but reject duplicate examples visible anywhere.
+      await expect(
+        page
+          .getByText(example.canonicalExample, { exact: true })
+          .filter({ visible: true }),
+        "Canonical example must have exactly one globally visible copy",
+      ).toHaveCount(1);
+      await expect(
+        main
+          .getByText(example.canonicalExample, { exact: true })
+          .filter({ visible: true }),
+      ).toBeVisible();
+    }
     expect(
       apiMutationCount,
       "Context practice must not mutate learning state",
     ).toBe(0);
   } finally {
     context.off("request", countMutation);
-    if (wordPage && !wordPage.isClosed()) await wordPage.close();
   }
 }

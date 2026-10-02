@@ -401,9 +401,9 @@ specific UI/content checks above use the local mock-backed suite and actual seed
 file. Real-account access, physical-device behavior and learner usefulness remain
 separate acceptance gaps.
 
-## Deployed context coverage — working revision
+## Deployed context coverage — first run and lookup follow-up
 
-PR1476's staging journey did not visit the new activity. This revision adds a
+PR1476's staging journey did not visit the new activity. PR1478 added a
 bounded phase inside the existing authenticated journey before its learning
 mutations, using the same reserved session and unchanged workflows/time budget.
 The phase checks the Daily Conversation inventory, all three examples and both
@@ -419,7 +419,7 @@ not a server-wide audit. The existing full journey still mutates reserved
 synthetic learning state and may call the evaluator. All 18 targeted local
 browser checks passed across desktop, 360px and 430px; E2E typechecking, the
 production build and 21 existing scheduling/dispatch/path checks passed.
-Deployed execution remains pending. This does not replace a consented learner
+This does not replace a consented learner
 pilot, real Google-account acceptance, physical-device checks, screen-reader
 speech or feedback-quality evaluation.
 
@@ -431,6 +431,28 @@ failure probe used a fake cookie: the former trace setting retained the marker,
 while the current configuration produced no trace and no marker in the retained
 results or embedded HTML report. This does not sanitize earlier artifacts or
 establish protection against future explicit secret logging.
+
+[PR #1478](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1478) merged
+as `65c34b04` after applicable CI and inspected reviews cleared. Its first
+[staging run 36973540873](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36973540873)
+passed release identity, health and OAuth checks, then **failed** the added phase
+at a sounds-good example lookup with two exact DOM matches. It reached all three
+activity examples and completion but did not complete the full journey. No
+deployed acceptance pass is claimed from that run.
+
+The follow-up scopes canonical content to the main landmark and requires exactly
+one globally visible copy of the example. Local hidden-copy and visible-copy
+controls verify that hidden markup does not cause an ambiguous lookup while a
+visible duplicate still fails. This is a robust visibility assertion, not proof
+that hidden streaming markup caused the original live failure. The corrected
+journey must pass against the real staging content before closing this gate.
+All 24 focused checks passed locally across the three layouts, including both
+new controls; E2E typechecking and the 21 workflow contracts also passed.
+The helper also follows the actual completion link in the same tab after its
+restart/exit/reload checks. This avoids an observed mobile-emulation failure
+where a modified click did not produce the expected new-page event.
+The three shared-journey checks also passed three consecutive repetitions per
+layout (27 checks, no retries).
 
 ## Deliver work in bounded slices
 
