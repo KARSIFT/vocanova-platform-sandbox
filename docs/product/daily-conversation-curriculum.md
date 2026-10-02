@@ -73,13 +73,18 @@ browser matrix passed 314 tests with 37 existing skips. The activity shipped in
 passed on merged revision `e4cc4236`. That release's deployed synthetic journey
 covered the general learning loop without exercising these three examples.
 
-The current test revision adds a context phase to that existing staging journey,
+[PR #1478](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1478) added a context phase to that existing staging journey,
 with the same helper exercised locally: it checks the 18-word inventory, all
 three wrong/retry/correct paths and explanations, keyboard transitions, restart,
 exit, reload and the three canonical word destinations. The added phase makes
 no intentional learning writes or provider submissions; the surrounding journey
-remains mutating. Its deployed execution must be verified separately. Synthetic
-checks do not establish screen-reader speech or learning effectiveness.
+remains mutating. The first deployed run reached activity completion but failed
+because the canonical picnic example on sounds-good matched two DOM elements.
+The follow-up requires exactly one visible example inside main; hidden-copy and
+visible-copy controls distinguish markup ambiguity from a visible duplicate.
+This does not establish what caused the original live duplicate. The full
+deployed journey must pass separately; synthetic checks do not establish
+screen-reader speech or learning effectiveness.
 
 ## Stable identities and repeat seeding
 

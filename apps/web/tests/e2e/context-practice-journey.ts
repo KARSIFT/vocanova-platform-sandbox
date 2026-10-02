@@ -244,15 +244,26 @@ export async function verifyContextPracticeJourney(page: Page): Promise<void> {
     for (const [index, example] of EXAMPLES.entries()) {
       if (index > 0) await wordPage.goto(destinations[index]!);
       await expect(wordPage).toHaveURL(new RegExp(`${example.href}$`));
+      const main = wordPage.getByRole("main");
       await expect(
-        wordPage.getByRole("heading", {
+        main.getByRole("heading", {
           level: 1,
           name: example.correct,
           exact: true,
         }),
       ).toBeVisible();
+      // Server streaming can leave hidden copies outside or within main.
+      // Ignore those copies, but reject duplicate examples visible anywhere.
       await expect(
-        wordPage.getByText(example.canonicalExample, { exact: true }),
+        wordPage
+          .getByText(example.canonicalExample, { exact: true })
+          .filter({ visible: true }),
+        "Canonical example must have exactly one globally visible copy",
+      ).toHaveCount(1);
+      await expect(
+        main
+          .getByText(example.canonicalExample, { exact: true })
+          .filter({ visible: true }),
       ).toBeVisible();
     }
     await wordPage.close();

@@ -60,6 +60,73 @@ test("shared deployed context journey works against the local canonical fixture"
   await verifyContextPracticeJourney(page);
 });
 
+for (const copyVisibility of ["hidden", "visible"] as const) {
+  test(`shared context journey ${copyVisibility === "hidden" ? "ignores a hidden" : "rejects a visible"} streamed example copy`, async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    if (!baseURL) throw new Error("A local test app URL is required");
+    const origin = new URL(baseURL).origin;
+    expect(new URL(baseURL).hostname).toMatch(
+      /^(127\.0\.0\.1|localhost|\[::1\])$/,
+    );
+    let injectedCopies = 0;
+    await context.exposeFunction("reportContextExampleCopy", () => {
+      injectedCopies++;
+    });
+    await context.addInitScript(
+      ({ expectedOrigin, sentence, visibility }) => {
+        if (
+          window.location.origin !== expectedOrigin ||
+          window.location.pathname !==
+            "/discover/daily-conversation/sounds-good"
+        ) {
+          return;
+        }
+        const observer = new MutationObserver(() => {
+          const main = document.getElementById("main-content");
+          if (!main || !document.body) return;
+          const example = Array.from(main.querySelectorAll("li")).find(
+            (item) => item.textContent === sentence,
+          );
+          if (!example) return;
+          observer.disconnect();
+          const copiedSegment = document.createElement("div");
+          copiedSegment.hidden = visibility === "hidden";
+          const list = document.createElement("ul");
+          list.append(example.cloneNode(true));
+          copiedSegment.append(list);
+          document.body.append(copiedSegment);
+          void (
+            window as unknown as {
+              reportContextExampleCopy: () => Promise<void>;
+            }
+          ).reportContextExampleCopy();
+        });
+        observer.observe(document, { childList: true, subtree: true });
+        window.addEventListener("pagehide", () => observer.disconnect(), {
+          once: true,
+        });
+      },
+      {
+        expectedOrigin: origin,
+        sentence: "A picnic sounds good, but let's check the weather first.",
+        visibility: copyVisibility,
+      },
+    );
+
+    if (copyVisibility === "visible") {
+      await expect(verifyContextPracticeJourney(page)).rejects.toThrow(
+        "Canonical example must have exactly one globally visible copy",
+      );
+    } else {
+      await verifyContextPracticeJourney(page);
+    }
+    expect(injectedCopies).toBe(1);
+  });
+}
+
 function collectMutations(page: Page) {
   const mutations: Array<{ method: string; path: string; body: unknown }> = [];
   page.on("request", (request) => {
