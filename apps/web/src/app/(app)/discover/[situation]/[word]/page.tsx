@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ApiResponseError } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { getAdditionalDefinition } from "@/lib/word-definition";
+import { formatNoteType, getAdditionalDefinition } from "@/lib/word-definition";
 import { Eyebrow, PageContainer } from "@/ui/surface";
 import { SentenceFeedback } from "../../../_components/sentence-feedback";
 import { formatLevelBand } from "../../_components/level-band";
@@ -158,11 +158,4 @@ export default async function WordDetailPage({ params }: WordDetailPageProps) {
       </section>
     </PageContainer>
   );
-}
-
-function formatNoteType(noteType: string): string {
-  return noteType
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
 }

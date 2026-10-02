@@ -12,3 +12,10 @@ export function getAdditionalDefinition(
     ? null
     : explanation;
 }
+
+export function formatNoteType(noteType: string): string {
+  return noteType
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}

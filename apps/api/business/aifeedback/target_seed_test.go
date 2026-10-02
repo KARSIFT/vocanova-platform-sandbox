@@ -82,7 +82,7 @@ func TestSeededTargetsAcceptExamplesAndApprovedVariants(t *testing.T) {
 		}
 	}
 	require.Equal(t, len(seed.Examples), checkedExamples, "every shipped example must have a loaded target")
-	require.Equal(t, 9, checkedVariants, "four noun meaning pairs and five Daily Conversation targets")
+	require.Equal(t, 9, checkedVariants, "syllabus, check-out, both follow-up meanings, and five Daily Conversation targets")
 	t.Logf("validated %d shipped examples and %d approved variant/meaning pairs", checkedExamples, checkedVariants)
 }
 

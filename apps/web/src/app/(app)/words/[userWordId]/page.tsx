@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ApiResponseError } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { getAdditionalDefinition } from "@/lib/word-definition";
+import { formatNoteType, getAdditionalDefinition } from "@/lib/word-definition";
 import { PageContainer, Surface } from "@/ui/surface";
 import { SentenceFeedback } from "../../_components/sentence-feedback";
 import { RemoveSavedWordButton } from "../_components/remove-saved-word-button";
@@ -142,11 +142,4 @@ export default async function SavedWordDetailPage({
       />
     </PageContainer>
   );
-}
-
-function formatNoteType(noteType: string): string {
-  return noteType
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
 }

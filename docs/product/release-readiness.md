@@ -204,6 +204,32 @@ Both Journey and saved-word detail pages suppress blank or repeated fuller
 definitions after whitespace/case normalization. Distinct explanations, including
 ones that begin with the short definition, remain visible.
 
+Implementation `679f192c` in
+[PR #1472](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1472) passed
+full workspace validation, including 244 foundation, 32 API-client and 94 web
+helper tests, Go tests against a migrated disposable PostgreSQL database, and
+both builds. The seed rerun test exercised actual content constraints and a
+surrogate saved-learning reference; it does not stand in for a production
+restore. All 72 shipped examples and nine approved variant/meaning pairs passed
+the repository-loaded target regression.
+
+The corrected complete [CI browser matrix](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36951969577)
+passed 266 tests with 37 existing skips. Local verification first exposed an
+incorrect test expectation of B1 for the intentionally A2 `meet up` entry;
+correcting that expectation required no curriculum change. Eighteen screenshots
+cover the curriculum and word pages at 360px, 430px and desktop in both themes.
+They passed overflow and critical/serious accessibility checks; representative
+views were visually inspected. [Lighthouse](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36951969591)
+and all other applicable CI passed on that implementation.
+
+Independent editorial, backend, interface and release-path reviews found no
+remaining actionable issues. Automated review requested two minor cleanups:
+clarify that the ninth variant check comes from the second `follow-up` meaning
+(not a second `cancel` meaning), and share the identical usage-note formatter.
+The follow-up preserves rendered behavior. Final revision checks and deployment
+are tracked in the PR; synthetic evidence does not establish live provider
+quality or observed learner value.
+
 ## Deliver work in bounded slices
 
 Each slice should identify the learner problem, state the intended behavior, change the smallest relevant surface, include meaningful regression coverage and document remaining limits. Use parallel agents for independent areas and independent review; coordinate shared files, builds and servers. Follow [repository instructions](../../AGENTS.md) for draft PRs, CI, merging and deployment.
