@@ -300,7 +300,7 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
       await completeOnboardingIfRedirected(page);
       await expect(page).toHaveURL(/\/home(\?|$)/);
       await expect(
-        page.getByRole("heading", { name: "Today's Mission", level: 1 }),
+        page.getByRole("heading", { name: "Today's Mission", level: 2 }),
       ).toBeVisible();
     });
 

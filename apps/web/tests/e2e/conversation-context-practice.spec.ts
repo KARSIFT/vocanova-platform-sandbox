@@ -87,7 +87,9 @@ for (const copyVisibility of ["hidden", "visible"] as const) {
         const observer = new MutationObserver(() => {
           const main = document.getElementById("main-content");
           if (!main || !document.body) return;
-          const example = Array.from(main.querySelectorAll("li")).find(
+          // Word detail now groups each sentence paragraph with a Listen
+          // control. The enclosing li's text therefore includes button copy.
+          const example = Array.from(main.querySelectorAll("li > p")).find(
             (item) => item.textContent?.trim() === sentence,
           );
           if (!example) return;
@@ -95,7 +97,9 @@ for (const copyVisibility of ["hidden", "visible"] as const) {
           const copiedSegment = document.createElement("div");
           copiedSegment.hidden = visibility === "hidden";
           const list = document.createElement("ul");
-          list.append(example.cloneNode(true));
+          const item = document.createElement("li");
+          item.append(example.cloneNode(true));
+          list.append(item);
           copiedSegment.append(list);
           document.body.append(copiedSegment);
           void (

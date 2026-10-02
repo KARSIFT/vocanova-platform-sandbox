@@ -127,6 +127,15 @@ for (const theme of ["light", "dark"] as const) {
       await (await context.request.get(`${apiURL}/api/v1/settings`)).json(),
     ).toEqual(settings);
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    // Saving refreshes server-rendered preferences and streamed metadata.
+    // Scan the settled page, while retaining the document-title rule.
+    await expect(
+      page.getByRole("main").locator("dl").getByText("More confident conversations", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("main").locator("dl").getByText("Social situations", { exact: true }),
+    ).toBeVisible();
+    await expect(page).toHaveTitle("Your learning plan — Vocanova");
     const scan = await scanForAxeViolations(page);
     expect(
       scan.criticalOrSerious,

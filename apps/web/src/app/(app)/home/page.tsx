@@ -116,11 +116,11 @@ export default async function HomePage() {
     <PageContainer className="max-w-[72rem]">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-neutral-900">
-            Make English part of your day
+          <h1 className="text-xl font-bold tracking-tight text-neutral-900 sm:text-3xl">
+            Your learning today
           </h1>
           <p className="mt-2 text-neutral-700">
-            Learn something useful, then keep the words you know fresh.
+            Learn new words and keep them fresh.
           </p>
         </div>
         <div className="flex flex-wrap gap-4">
@@ -138,8 +138,7 @@ export default async function HomePage() {
           </Link>
         </div>
       </div>
-      <RecommendedLesson data={recommendation?.data ?? null} className="my-6" />
-      <div className="mb-[var(--spacing-md)] flex items-center justify-between gap-[var(--spacing-md)]">
+      <div className="my-[var(--spacing-md)] flex items-center justify-between gap-[var(--spacing-md)]">
         <div>
           <Eyebrow>Today’s learning space</Eyebrow>
         </div>
@@ -282,6 +281,7 @@ export default async function HomePage() {
           )}
         </Surface>
       </div>
+      <RecommendedLesson data={recommendation?.data ?? null} className="mt-6" />
     </PageContainer>
   );
 }
