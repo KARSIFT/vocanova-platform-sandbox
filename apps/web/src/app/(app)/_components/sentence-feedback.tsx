@@ -287,14 +287,14 @@ export function SentenceFeedback({
 
     if (result && submittedSentence) {
       setPreviousFeedback({ result, sentence: submittedSentence });
-      // Revising makes the checked text an unresolved draft again. Keep it
-      // through a reload, but deliberately discard the completed request key
-      // so the revision receives a fresh idempotency identity.
+      // Keep the visible draft, including edits made after this feedback.
+      // The earlier result still belongs to submittedSentence. Discard the
+      // completed request key so the revision receives a fresh identity.
       saveSentenceFeedbackDraft({
         userId,
         source,
         attemptId,
-        sentence: submittedSentence,
+        sentence,
       });
     }
     pendingSubmission.current = null;
@@ -428,7 +428,7 @@ export function SentenceFeedback({
           {submittedSentence ? (
             <div className="rounded-md bg-neutral-50 p-[var(--spacing-md)]">
               <p className="text-sm font-medium text-neutral-700">
-                Sentence checked
+                {hasSuccessResult ? "Sentence checked" : "Your sentence"}
               </p>
               <p className="mt-[var(--spacing-xs)] text-base text-neutral-900">
                 {submittedSentence}

@@ -98,6 +98,7 @@ export function ReviewSession({
   const [hasSubmittedCurrentCard, setHasSubmittedCurrentCard] = useState(false);
   const pendingSubmission = useRef<PendingReviewSubmission | null>(null);
   const promptHeadingRef = useRef<HTMLHeadingElement>(null);
+  const completionHeadingRef = useRef<HTMLHeadingElement>(null);
   const shouldFocusPrompt = useRef(false);
 
   const currentCard = dueWords[currentIndex];
@@ -137,6 +138,14 @@ export function ReviewSession({
       heading.focus();
     }
   }, [currentCard, isRefetching]);
+
+  useLayoutEffect(() => {
+    // The final rating/retry control disappears only after an authoritative
+    // completion. Move focus once; an initially empty queue has no such action.
+    if (completed) {
+      completionHeadingRef.current?.focus();
+    }
+  }, [completed]);
 
   const refetchDueQueue = ({
     fallbackErrorMessage,
@@ -339,7 +348,11 @@ export function ReviewSession({
     return (
       <div className="py-[var(--spacing-xl)]">
         <div className="mx-auto max-w-[34rem] text-center">
-          <h2 className="text-xl font-semibold text-neutral-900">
+          <h2
+            ref={completionHeadingRef}
+            tabIndex={-1}
+            className="text-xl font-semibold text-neutral-900"
+          >
             {completionSummary ? "Review complete" : "You're all caught up"}
           </h2>
           <p className="mt-[var(--spacing-sm)] text-base text-neutral-700">
@@ -561,7 +574,9 @@ export function ReviewSession({
                   </legend>
                   <div
                     className={`grid gap-[var(--spacing-sm)] ${
-                      isMultipleChoiceCorrect ? "grid-cols-3" : "grid-cols-2"
+                      isMultipleChoiceCorrect
+                        ? "grid-cols-1 sm:grid-cols-3"
+                        : "grid-cols-2"
                     }`}
                   >
                     {(isMultipleChoiceCorrect

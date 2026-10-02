@@ -23,6 +23,7 @@ source_files:
   - path: 09-ai-features.md
     sha256: 57e798e3f2d259b18a1710e6c5a67a3a1c2d790133501d6aa9bf785ed7f61f74
 ---
+
 # 09 — VocaNova AI Features
 
 ## 1. Purpose and product principle
@@ -83,6 +84,11 @@ Validate before any paid AI call whenever possible. Rules: ≥3 words, ≤300 ch
 English, one meaningful sentence, includes the target word/accepted inflection/approved phrase
 variant, belongs to an eligible attempt owned by the authenticated learner. Backend normalizes
 (trim, collapse whitespace, Unicode-normalize) while preserving the learner's original display text.
+Feedback input preparation `sentence-input-v2-case-preserving` uses NFKC and collapsed whitespace
+without lowercasing, so the provider can judge capitalization in the original sentence. Repair and
+failed-generation retries retain the first stored original. Matching, moderation and request hashes
+keep their existing lowercase policy; case-only edits can replay the first result. This preparation
+version is separate from the rubric/schema versions and requires separate live quality evidence.
 Target-word matching accepts capitalization, approved inflections (`work`→`works/worked/working`),
 regular final-noun plurals for noun phrases/collocations (`security check`→`security checks`),
 and configured phrase variants. Idioms and phrasal verbs still require their canonical or
@@ -111,7 +117,15 @@ Exactly three learning statuses, separate from operational/validation/safety out
 - **`incorrect`** — target word used with the wrong meaning, or used in a way that substantially
   breaks the sentence, or the sentence isn't reliably understandable, or doesn't demonstrate
   meaningful knowledge of the target vocabulary. Behavior: stay encouraging, state the central issue,
-  provide a corrected sentence, explain one important distinction, don't list every error.
+  explain one important distinction and provide a specific retry tip. Include a corrected sentence
+  only when it can preserve the intended message and demonstrate the selected meaning/POS;
+  otherwise leave it null. Don't invent an unrelated example or list every error.
+
+Judge the selected meaning and part of speech first. A grammatical sentence using a different
+sense remains `incorrect` for this exercise; its grammar and clarity can still be acceptable.
+Inflection, agreement, tense and collocation errors with a clear intended target meaning normally
+belong to `needs_improvement`, rather than being treated as different senses. Accept ordinary valid
+interpretations and implicit references; don't invent missing context to justify a correction.
 
 The three state layers must not be collapsed. Persistence uses operational attempt states
 `pending`/`succeeded`/`failed`/`cancelled`. The public processing envelope maps these to
@@ -139,10 +153,10 @@ type SentenceFeedbackResult = {
   targetWordId: string;
   status: SentenceFeedbackStatus;
   originalSentence: string;
-  correctedSentence: string | null;   // null for correct/natural; optional for needs_improvement; required for incorrect
-  headline: string;                    // ≤60 chars, encouraging but honest
-  explanation: string;                 // ≤240 chars
-  improvementTip: string | null;       // optional for correct; required for needs_improvement/incorrect, ≤160 chars
+  correctedSentence: string | null; // null for correct; otherwise only a useful, faithful correction, never blank
+  headline: string; // ≤60 chars, encouraging but honest
+  explanation: string; // ≤240 chars
+  improvementTip: string | null; // optional for correct; required for needs_improvement/incorrect, ≤160 chars
   targetWordUsedCorrectly: boolean;
   grammarAcceptable: boolean;
   meaningClear: boolean;
@@ -152,8 +166,10 @@ type SentenceFeedbackResult = {
 };
 ```
 
-Diagnostic fields support backend logic/evaluation/debugging; the frontend doesn't need to display
-them directly.
+Diagnostic fields describe the original learner clause, not a corrected version, and support
+backend logic/evaluation/debugging; the frontend doesn't need to display them directly. A substantive
+grammar error requires `grammarAcceptable=false`. `targetWordUsedCorrectly=false` remains permitted
+with `needs_improvement`; it does not by itself determine the overall status.
 
 ## 10. Internal provider schema and consistency checks
 
@@ -161,10 +177,22 @@ Provider returns a smaller internal structure (status, corrected_sentence, headl
 improvement_tip, target_word_used_correctly, grammar_acceptable, meaning_clear, naturalness). The
 model never controls database IDs, timestamps, mission completion, ownership, or persistence state.
 Backend rejects inconsistent combinations (e.g. `status=correct` with
-`target_word_used_correctly=false`, or `status=incorrect` with `corrected_sentence=null`), invalid
+`target_word_used_correctly=false`, a blank non-null correction, or `incorrect` without a retry tip), invalid
 enums, empty required fields, excessive lengths, off-target feedback, unexpected markup,
 contradictory explanations, unsafe output, or leaked instructions/conversation. One constrained
 repair attempt is permitted when budget allows.
+
+`sentence-feedback-v4` shares the same compact rubric between initial and repair prompts.
+It separates judgments about original target use, grammar, clarity and naturalness before status
+and consistent feedback. This instruction clarification does not establish model quality.
+`feedback-schema-v3` records the semantic contract change allowing a null correction for `incorrect`.
+The canonical JSON Schema now explicitly allows `string` or `null` for `corrected_sentence` and
+`improvement_tip`, with their existing length limits and optional presence. Cloudflare receives this
+schema directly and OpenCode receives it in the task prompt. Gemini's OpenAPI response schema uses
+`type: "string"` with `nullable: true` for those fields. OpenAI retains its existing strict schema with
+all fields required and the two strings nullable. Public response fields are unchanged. Moderation
+schemas are unchanged. A null correction is not a successful correction or proof of model quality:
+the explanation and retry tip still require semantic review.
 
 ## 11. Correction philosophy
 
@@ -172,8 +200,13 @@ Priority order: incorrect target-word meaning/use → grammar directly tied to t
 errors preventing understanding → major unnatural phrasing → minor mechanics. Normally explain only
 one main issue. Preserve the learner's intended message, subject, target vocabulary, and approximate
 level of complexity — don't replace with an unrelated advanced example. For correct sentences: don't
-invent a weakness or rewrite purely to sound more sophisticated. For unnatural-but-understandable
-sentences: gentle wording ("This is understandable. A more common way to say it is…"), don't label
+invent a weakness or rewrite purely to sound more sophisticated; prefer no tip over generic advice.
+When no useful rewrite can preserve the message and selected target meaning/POS, use a null
+correction with an explanation and specific retry guidance. A paraphrase that drops the target word
+or uses its other sense does not demonstrate the selected vocabulary meaning. The UI hides the
+correction block when this value is null; it still shows the feedback and tip.
+For unnatural-but-understandable sentences: gentle wording ("This is understandable. A more common
+way to say it is…"), don't label
 every uncommon expression as wrong. Don't penalize valid regional variation (British/American
 spelling, standard regional vocabulary, formal/informal register) — prefer "a more common way to say
 this is…" over "this is the only correct way." Minor punctuation/capitalization shouldn't
@@ -246,8 +279,8 @@ All AI orchestration lives in the Go backend; the frontend never knows the provi
 credentials, constructs prompts, calls moderation directly, interprets raw output, or determines
 mission completion. Request lifecycle: authenticate → authorize attempt ownership → load
 authoritative target/learner data → normalize → validate → rate-limit → idempotency/dedup check →
-safety checks → build provider-neutral task → call provider → validate/normalize output → persist
-+ update mission transactionally → emit privacy-safe telemetry → return backend-confirmed result.
+safety checks → build provider-neutral task → call provider → validate/normalize output → persist and
+update the mission transactionally → emit privacy-safe telemetry → return backend-confirmed result.
 Synchronous request-response (no queue) — output is short and learners expect immediate feedback.
 
 Use a **narrow** feedback-provider interface and a separate moderation interface — not a vague
@@ -268,6 +301,17 @@ backend-design draft that said 12s — see [06](06-backend-design.md) §12). At 
 for a clearly transient failure, and one structured-output repair attempt — never both indefinitely.
 No automatic retry for invalid input, blocked content, auth failure, invalid credentials, persistent
 schema incompatibility, a valid-but-questionable judgment, or learner cancellation.
+
+The optional OpenAI adapter accepts explicit reviewed GPT-5 nano, GPT-4.1 nano, GPT-4o mini and
+GPT-6 Luna profiles, including valid dated snapshot forms; syntax alone does not establish account
+availability. Cloudflare remains the default provider. OpenAI requires explicit configuration,
+paired four-outcome moderation, strict structured feedback and `store:false`; runtime transport
+retries are zero, with the existing bounded service repair retained. GPT-4o mini support changes no
+default or deployment. The [evaluation record](feedback-evaluation.md#v4-service-development-gate--2026-10-02)
+documents its small v4 development gate, teaching-quality limits and late hash-manifest provenance.
+That gate is not human review, general quality acceptance, live repair evidence or production
+database evidence; it does not authorize activation. Recheck documented prices, model lifecycle
+and account access before any separately approved live evaluation.
 
 ## 19. Rate limiting, cost control, deduplication
 

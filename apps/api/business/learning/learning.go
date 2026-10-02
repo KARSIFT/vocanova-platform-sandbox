@@ -39,6 +39,8 @@ type SavedMeaning struct {
 	PartOfSpeech    string
 	ShortDefinition string
 	Status          string
+	ReviewState     string
+	Due             bool
 	Source          string
 	Saved           bool
 	AddedAt         time.Time
@@ -55,6 +57,9 @@ type SaveUserWordRequest struct {
 // ListSavedWordsRequest is a paginated query for the authenticated user's saved meanings.
 type ListSavedWordsRequest struct {
 	UserID      uuid.UUID
+	Query       string
+	Stage       string
+	DueOnly     bool
 	AfterCursor string
 	Limit       int
 }
@@ -62,11 +67,13 @@ type ListSavedWordsRequest struct {
 // ListSavedWordsResponse is a paginated list of saved meanings.
 type ListSavedWordsResponse struct {
 	Items      []SavedMeaning
+	TotalCount int
 	NextCursor string
 }
 
 // Repository is the persistence boundary for learner-owned user_words.
 type Repository interface {
+	GetKnowledgeSummary(ctx context.Context, userID uuid.UUID) (*KnowledgeSummary, error)
 	// SaveUserWord inserts or restores a user_words row for the requester.
 	// It returns the existing active row without error when the meaning is already saved.
 	SaveUserWord(ctx context.Context, req SaveUserWordRequest, now time.Time) (*SavedMeaning, error)
@@ -126,6 +133,7 @@ var (
 	ErrUserWordNotFound       = errors.New("user word not found")
 	ErrIdempotencyConflict    = errors.New("idempotency key conflict")
 	ErrInvalidCursor          = errors.New("invalid cursor")
+	ErrInvalidSavedFilter     = errors.New("invalid saved collection filter")
 	ErrIdempotencyKeyRequired = errors.New("idempotency key required")
 )
 
@@ -133,9 +141,10 @@ const operationSaveUserWord = "user_words:save"
 
 // Service implements save/unsave/list for user_words.
 type Service struct {
-	repo  Repository
-	idem  IdempotencyStore
-	clock clock.Clock
+	knowledge KnowledgeReader
+	repo      Repository
+	idem      IdempotencyStore
+	clock     clock.Clock
 }
 
 // NewService creates a learning service.

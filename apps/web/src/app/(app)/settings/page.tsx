@@ -6,6 +6,7 @@ import { PageContainer, Surface } from "@/ui/surface";
 import { SettingsForm } from "./_components/settings-form";
 import { ThemePreferenceControl } from "@/app/_components/theme-preference";
 import { BuildIdentity } from "@/app/_components/build-identity";
+import { CalendarReminder } from "./_components/calendar-reminder";
 
 export const metadata = {
   title: "Settings — Vocanova",
@@ -66,6 +67,12 @@ export default async function SettingsPage() {
             </Link>
           </Surface>
           <ThemePreferenceControl />
+          <Link
+            href="/help"
+            className="inline-flex min-h-11 items-center font-semibold text-primary-700 underline underline-offset-4"
+          >
+            Help and support
+          </Link>
           <BuildIdentity />
         </aside>
         <div>
@@ -76,6 +83,7 @@ export default async function SettingsPage() {
             Set the pace and preferences that support your daily practice.
           </p>
           <SettingsForm initialSettings={response.data} />
+          <CalendarReminder />
         </div>
       </div>
     </PageContainer>

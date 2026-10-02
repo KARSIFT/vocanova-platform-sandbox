@@ -10,6 +10,8 @@ import (
 )
 
 type savedCursor struct {
+	Version int       `json:"v"`
+	Filter  string    `json:"f"`
 	AddedAt time.Time `json:"a"`
 	ID      uuid.UUID `json:"i"`
 }

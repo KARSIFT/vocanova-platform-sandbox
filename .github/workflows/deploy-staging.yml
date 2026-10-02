@@ -745,7 +745,7 @@ jobs:
               echo "AI_PROVIDER=cloudflare"
               echo "AI_PROVIDER_API_KEY=${CLOUDFLARE_API_TOKEN}"
               echo "AI_PROVIDER_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID}"
-              echo "AI_PROVIDER_MODEL=@cf/meta/llama-3.1-8b-instruct-fp8-fast"
+              echo "AI_PROVIDER_MODEL=@cf/meta/llama-3.3-70b-instruct-fp8-fast"
               echo "AI_FEATURES_ENABLED=true"
             } >> /opt/vocanova/infra/secrets/api.env
             chmod 600 /opt/vocanova/infra/secrets/api.env

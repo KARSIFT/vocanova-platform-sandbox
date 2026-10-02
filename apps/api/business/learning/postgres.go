@@ -320,67 +320,59 @@ func (r *PostgreSQLRepository) GetSavedMeaningByID(ctx context.Context, userID, 
 }
 
 func (r *PostgreSQLRepository) ListSavedWords(ctx context.Context, req ListSavedWordsRequest) (*ListSavedWordsResponse, error) {
-	limit := req.Limit
-	if limit <= 0 {
-		limit = 20
+	req, cursor, err := prepareSavedWords(req)
+	if err != nil {
+		return nil, err
 	}
-	if limit > 50 {
-		limit = 50
-	}
-
 	var cursorTime sql.NullTime
-	var cursorID uuid.UUID
-	if req.AfterCursor != "" {
-		c, err := decodeSavedCursor(req.AfterCursor)
-		if err != nil {
-			return nil, ErrInvalidCursor
-		}
-		cursorTime = sql.NullTime{Time: c.AddedAt, Valid: true}
-		cursorID = c.ID
+	if cursor.ID != uuid.Nil {
+		cursorTime = sql.NullTime{Time: cursor.AddedAt, Valid: true}
 	}
-
-	rows, err := r.db.QueryContext(ctx,
-		`SELECT uw.id, uw.meaning_id, cw.id, cw.text, cw.normalized_text,
-			wm.part_of_speech, wm.short_definition, uw.status, uw.source, uw.added_at
-		 FROM user_words uw
-		 JOIN word_meanings wm ON wm.id = uw.meaning_id
-		 JOIN canonical_words cw ON cw.id = wm.word_id
-		 WHERE uw.user_id = $1 AND uw.deleted_at IS NULL
-		   AND ($2::timestamptz IS NULL OR
-				uw.added_at < $2 OR
-				(uw.added_at = $2 AND uw.id < $3))
-		 ORDER BY uw.added_at DESC, uw.id DESC
-		LIMIT $4`,
-		req.UserID, cursorTime, cursorID, limit+1,
-	)
+	// Total and page share a single snapshot, including an exhausted cursor.
+	// strpos gives literal percent/underscore search rather than SQL wildcards.
+	rows, err := r.db.QueryContext(ctx, `WITH saved AS (
+ SELECT uw.id AS user_word_id,uw.meaning_id,cw.id AS word_id,cw.text AS word_text,cw.normalized_text,
+ wm.part_of_speech,wm.short_definition,uw.status,uw.source,uw.added_at,
+ CASE WHEN uw.status='new' AND uw.total_review_count>0 THEN 'learning' ELSE uw.status END AS review_state,
+ (uw.status IN ('new','learning','reviewing') AND (uw.next_review_at IS NULL OR uw.next_review_at<=CURRENT_TIMESTAMP)) AS due
+ FROM user_words uw JOIN word_meanings wm ON wm.id=uw.meaning_id JOIN canonical_words cw ON cw.id=wm.word_id
+ WHERE uw.user_id=$1 AND uw.deleted_at IS NULL
+ ), matches AS (
+ SELECT * FROM saved WHERE ($2='' OR strpos(lower(word_text),$2)>0 OR strpos(lower(short_definition),$2)>0)
+ AND ($3='' OR review_state=$3) AND (NOT $4::boolean OR due)
+ ), page AS (
+ SELECT * FROM matches WHERE ($5::timestamptz IS NULL OR (added_at,user_word_id)<($5::timestamptz,$6::uuid))
+ ORDER BY added_at DESC,user_word_id DESC LIMIT $7
+ )
+ SELECT totals.total_count,page.user_word_id,page.meaning_id,page.word_id,page.word_text,page.normalized_text,
+ page.part_of_speech,page.short_definition,page.status,page.source,page.added_at,page.review_state,page.due
+ FROM (SELECT count(*) AS total_count FROM matches) totals LEFT JOIN page ON true
+ ORDER BY page.added_at DESC,page.user_word_id DESC`, req.UserID, req.Query, req.Stage, req.DueOnly, cursorTime, cursor.ID, req.Limit+1)
 	if err != nil {
 		return nil, fmt.Errorf("list saved words: %w", err)
 	}
 	defer rows.Close()
-
-	var items []SavedMeaning
+	resp := &ListSavedWordsResponse{Items: []SavedMeaning{}}
 	for rows.Next() {
-		var m SavedMeaning
-		var normalizedText string
-		if err := rows.Scan(&m.UserWordID, &m.MeaningID, &m.WordID, &m.WordText, &normalizedText,
-			&m.PartOfSpeech, &m.ShortDefinition, &m.Status, &m.Source, &m.AddedAt); err != nil {
+		var userWordID, meaningID, wordID uuid.NullUUID
+		var text, normalized, pos, definition, status, source, reviewState sql.NullString
+		var addedAt sql.NullTime
+		var due sql.NullBool
+		if err := rows.Scan(&resp.TotalCount, &userWordID, &meaningID, &wordID, &text, &normalized, &pos, &definition, &status, &source, &addedAt, &reviewState, &due); err != nil {
 			return nil, fmt.Errorf("scan saved word: %w", err)
 		}
-		m.WordSlug = wordSlug(normalizedText)
-		m.Saved = true
-		items = append(items, m)
+		if !userWordID.Valid {
+			continue
+		}
+		resp.Items = append(resp.Items, SavedMeaning{UserWordID: userWordID.UUID, MeaningID: meaningID.UUID, WordID: wordID.UUID, WordText: text.String, WordSlug: wordSlug(normalized.String), PartOfSpeech: pos.String, ShortDefinition: definition.String, Status: status.String, Source: source.String, Saved: true, AddedAt: addedAt.Time, ReviewState: reviewState.String, Due: due.Bool})
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("list saved words rows: %w", err)
 	}
-
-	resp := &ListSavedWordsResponse{}
-	if len(items) > limit {
-		items = items[:limit]
-		last := items[len(items)-1]
-		resp.NextCursor = encodeSavedCursor(savedCursor{AddedAt: last.AddedAt, ID: last.UserWordID})
+	if len(resp.Items) > req.Limit {
+		resp.Items = resp.Items[:req.Limit]
+		resp.NextCursor = nextSavedCursor(req, resp.Items[len(resp.Items)-1])
 	}
-	resp.Items = items
 	return resp, nil
 }
 

@@ -5,6 +5,7 @@ import { Eyebrow, PageContainer } from "@/ui/surface";
 
 import { getDiscoverListView } from "./_components/discover-view";
 import { formatLevelBand } from "./_components/level-band";
+import { LessonPath } from "../_components/lesson-path";
 
 export default async function DiscoverPage() {
   const client = await createServerApiClient();
@@ -16,6 +17,15 @@ export default async function DiscoverPage() {
   }
 
   const { items } = response.data;
+  const lessonResponse = await client.listLessons().catch(() => null);
+  const situationOrder = new Map(
+    items.map((item, index) => [item.slug, index]),
+  );
+  const lessons = [...(lessonResponse?.data.items ?? [])].sort(
+    (a, b) =>
+      (situationOrder.get(a.situationSlug) ?? 999) -
+      (situationOrder.get(b.situationSlug) ?? 999),
+  );
 
   return (
     <PageContainer className="max-w-[64rem]">
@@ -25,7 +35,8 @@ export default async function DiscoverPage() {
       </h1>
       <div className="flex flex-wrap items-end justify-between gap-[var(--spacing-md)]">
         <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-          Choose a familiar moment, then collect words you will actually use.
+          Follow a short lesson or explore words for a moment that matters to
+          you.
         </p>
         <Link
           href="/words"
@@ -34,6 +45,38 @@ export default async function DiscoverPage() {
           View saved vocabulary
         </Link>
       </div>
+
+      <div className="my-5 flex flex-wrap gap-3">
+        <Link
+          href="/plan"
+          className="inline-flex min-h-12 items-center rounded-xl border border-neutral-300 bg-white px-5 py-3 font-semibold text-primary-700"
+        >
+          Your learning plan
+        </Link>
+        <Link
+          href="/vocabulary"
+          className="inline-flex min-h-12 items-center rounded-xl bg-primary-700 px-5 py-3 font-semibold text-white hover:bg-primary-800"
+        >
+          Search all vocabulary
+        </Link>
+        <Link
+          href="/practice"
+          className="inline-flex min-h-12 items-center rounded-xl border border-neutral-300 bg-white px-5 py-3 font-semibold text-primary-700"
+        >
+          Choose a practice
+        </Link>
+      </div>
+      {lessonResponse ? (
+        <LessonPath lessons={lessons} />
+      ) : (
+        <p role="status" className="my-6 text-neutral-700">
+          Guided lessons are unavailable right now. You can still explore the
+          situations below.
+        </p>
+      )}
+      <h2 className="mt-8 text-2xl font-bold tracking-tight text-neutral-900">
+        Explore by situation
+      </h2>
 
       {getDiscoverListView(items.length) === "empty" ? (
         <div className="flex flex-col items-center justify-center py-[var(--spacing-2xl)] text-center">

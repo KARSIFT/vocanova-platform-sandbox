@@ -56,6 +56,9 @@ func TestPostgreSQLRepositoryExportAndAnonymization(t *testing.T) {
 		magicHash := sha256.Sum256([]byte(user.id.String() + "magic"))
 		emailChangeHash := sha256.Sum256([]byte(user.id.String() + "email-change"))
 		exec(`INSERT INTO users (id, email, status, created_at, updated_at) VALUES ($1, $2, 'deleted', $3, $3)`, user.id, user.email, now)
+		lessonID := uuid.New()
+		exec(`INSERT INTO lesson_sessions(id,user_id,lesson_key,lesson_version,snapshot,total_steps,created_at,updated_at) VALUES($1,$2,'airport','1','{"definition":{"title":"Find your flight"},"words":[{"wordText":"boarding pass"}]}',9,$3,$3)`, lessonID, user.id, now)
+		exec(`INSERT INTO lesson_actions(id,session_id,user_id,operation,idempotency_key,client_action_id,fingerprint,action,result,created_at) VALUES($1,$2,$3,'action','private-lesson-idem','private-client-action',repeat('a',64),'{"stepId":"teach-1","action":"continue"}','{"completedSteps":1,"feedback":null}',$4)`, uuid.New(), lessonID, user.id, now)
 		exec(`INSERT INTO external_identities (id, user_id, provider, provider_subject, created_at, updated_at) VALUES ($1, $2, 'email', $3, $4, $4)`, uuid.New(), user.id, user.id.String(), now)
 		exec(`INSERT INTO sessions (id, user_id, token_hash, created_at, expires_at) VALUES ($1, $2, $3, $4, $5)`, uuid.New(), user.id, sessionHash[:], now, now.Add(time.Hour))
 		exec(`INSERT INTO magic_links (id, user_id, email, token_hash, environment, created_at, expires_at) VALUES ($1, $2, $3, $4, 'test', $5, $6)`, uuid.New(), user.id, user.email, magicHash[:], now, now.Add(time.Minute))
@@ -86,6 +89,13 @@ func TestPostgreSQLRepositoryExportAndAnonymization(t *testing.T) {
 		t.Fatal(err)
 	}
 	settings := export["settings"].(map[string]any)
+	lessons := export["guidedLessons"].([]any)
+	if len(lessons) != 1 || lessons[0].(map[string]any)["lessonKey"] != "airport" || len(lessons[0].(map[string]any)["actions"].([]any)) != 1 {
+		t.Fatal("guided lesson progress and action history missing from export")
+	}
+	if export["schemaVersion"] != "1.4" || strings.Contains(string(payload), "private-lesson-idem") || strings.Contains(string(payload), "private-client-action") {
+		t.Fatal("export must include versioned lesson progress without internal replay keys")
+	}
 	if settings["timezone"] != "Asia/Tehran" || settings["dailyReviewTarget"] != float64(25) {
 		t.Fatalf("unexpected real settings projection: %#v", settings)
 	}
@@ -108,6 +118,18 @@ func TestPostgreSQLRepositoryExportAndAnonymization(t *testing.T) {
 	}
 	if counters.LearnerSentences != 1 || counters.AIFeedbackAttempts != 1 || counters.AIQualityReviewReports != 1 || counters.ExternalIdentities != 1 {
 		t.Fatalf("unexpected purge counters: %#v", counters)
+	}
+	if counters.LessonSessions != 1 || counters.LessonActions != 1 {
+		t.Fatalf("lesson purge counts missing: %+v", counters)
+	}
+	for _, table := range []string{"lesson_sessions", "lesson_actions"} {
+		var count int
+		if err := db.QueryRowContext(ctx, "SELECT count(*) FROM "+table+" WHERE user_id=$1", userA).Scan(&count); err != nil || count != 0 {
+			t.Fatalf("lesson data remains: %s count=%d err=%v", table, count, err)
+		}
+		if err := db.QueryRowContext(ctx, "SELECT count(*) FROM "+table+" WHERE user_id=$1", userB).Scan(&count); err != nil || count != 1 {
+			t.Fatalf("other learner changed: %s count=%d err=%v", table, count, err)
+		}
 	}
 	if counters.FeatureAuditLogs != 1 {
 		t.Fatalf("unexpected feature audit disposition count: %#v", counters)

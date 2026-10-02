@@ -414,7 +414,7 @@ func TestServiceListSavedWordsExhaustedCursorReturnsEmptyPage(t *testing.T) {
 		ID: MustParseUUID("00000000-0000-0000-0000-000000000010"), UserID: MustParseUUID("00000000-0000-0000-0000-000000000003"),
 		MeaningID: MustParseUUID("00000000-0000-0000-0000-000000000002"), AddedAt: time.Now(),
 	}}
-	cursor := encodeSavedCursor(savedCursor{AddedAt: time.Time{}, ID: MustParseUUID("00000000-0000-0000-0000-000000000001")})
+	cursor := nextSavedCursor(ListSavedWordsRequest{UserID: MustParseUUID("00000000-0000-0000-0000-000000000003")}, SavedMeaning{AddedAt: time.Time{}, UserWordID: MustParseUUID("00000000-0000-0000-0000-000000000001")})
 
 	resp, err := svc.ListSavedWords(t.Context(), ListSavedWordsRequest{UserID: MustParseUUID("00000000-0000-0000-0000-000000000003"), AfterCursor: cursor})
 	require.NoError(t, err)

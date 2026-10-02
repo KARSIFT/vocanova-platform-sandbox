@@ -893,7 +893,7 @@ func TestServiceConcurrentFreshRetriesRecoverAfterWinningGenerationFails(t *test
 	require.NoError(t, err)
 	hash := RequestHash(request.UserID, request.AttemptID, target.NormalizedWord, "i work every day.", PromptVersionSentenceFeedbackV1)
 	failedSentenceID := uuid.New()
-	f.repo.sentences = append(f.repo.sentences, MemoryLearnerSentence{ID: failedSentenceID, UserID: f.userID, Status: SentenceStatusFeedbackFailed})
+	f.repo.sentences = append(f.repo.sentences, MemoryLearnerSentence{ID: failedSentenceID, UserID: f.userID, SentenceText: request.SentenceText, NormalizedSentenceText: "i work every day.", Status: SentenceStatusFeedbackFailed})
 	f.repo.attempts = append(f.repo.attempts, MemoryAIFeedbackAttempt{
 		ID: uuid.New(), LearnerSentenceID: failedSentenceID, Status: AttemptStatusFailed, RequestHash: hash,
 	})
@@ -961,7 +961,7 @@ func testServiceRetryLoserKeyReplayDoesNotGenerateAfterWinnerFails(t *testing.T,
 	require.NoError(t, err)
 	hash := RequestHash(request.UserID, request.AttemptID, target.NormalizedWord, "i work every day.", PromptVersionSentenceFeedbackV1)
 	failedSentenceID := uuid.New()
-	f.repo.sentences = append(f.repo.sentences, MemoryLearnerSentence{ID: failedSentenceID, UserID: f.userID, Status: SentenceStatusFeedbackFailed})
+	f.repo.sentences = append(f.repo.sentences, MemoryLearnerSentence{ID: failedSentenceID, UserID: f.userID, SentenceText: request.SentenceText, NormalizedSentenceText: "i work every day.", Status: SentenceStatusFeedbackFailed})
 	f.repo.attempts = append(f.repo.attempts, MemoryAIFeedbackAttempt{
 		ID: uuid.New(), LearnerSentenceID: failedSentenceID, Status: AttemptStatusFailed, RequestHash: hash,
 	})

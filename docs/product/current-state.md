@@ -1,14 +1,129 @@
 # Vocanova current product state
 
-Reviewed on 2026-10-02 against implementation revision
+The deployed baseline was reviewed on 2026-10-02 against implementation revision
 `5b074584cb1799d6b8da7ee02909c703382a3ee5` in the consolidated
 [PR #1482](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1482).
-This is a dated inventory and readiness
-guide. Update it when behavior, deployment, or verified evidence changes; it does
+The active delivery-branch section also records later local implementation and
+verification on that date. This is a dated inventory and readiness guide.
+Update it when behavior, deployment, or verified evidence changes; it does
 not establish that the final product is complete.
 
 Use the [release-readiness plan](release-readiness.md) to turn the gaps below
 into bounded delivery work with explicit acceptance evidence.
+
+The owner's later direction on 2 October is **feature completeness before a
+dedicated polish pass**. The [feature-complete delivery scope](feature-complete-delivery.md)
+defines the connected product being built. The MVP inventory below is a baseline,
+not the intended stopping point.
+
+## Active feature expansion — delivery branch, not deployed
+
+The `codex/vocanova-product-delivery` working tree now contains a versioned
+30-lesson path (90 target meanings), durable teaching/recall/context sessions,
+canonical vocabulary search with situation/level/personal-knowledge filters,
+device pronunciation, a connected practice hub, a visual vocabulary map and
+private per-meaning notes and self-assessments. Typed recall, listening choices,
+mistake practice, an optional starting-word check, a personal learning plan and
+eight history-derived milestones are implemented locally. Home, Journey and Progress connect
+these features while retaining the three primary destinations. Self-reported
+knowledge, saved words, SRS stages and lesson completion remain distinct.
+
+New domain data is included in account export and deletion. The lesson and
+knowledge/practice migrations were first checked with 37 forward migrations in disposable PostgreSQL 16 databases, with
+ownership, concurrency, replay, rollback and export/purge checks. Earlier local web
+production build, type checks, 46 API-client tests and 127 web helper tests passed.
+The integrated baseline then passed `pnpm run validate` (exit 0): formatting,
+lint, Go vet, type checks, 256 foundation tests, 50 API-client tests, 133 web helper
+tests, the Go package suites and application builds. This baseline predates the
+pending self-check/saved-empty interface changes and AI input case-preservation
+fix; those changes need their own focused verification and final integration.
+Focused browser checks now pass for guided lessons 12/12, vocabulary search 6/6,
+pronunciation 18/18 and private knowledge/notes 12/12 across 360px, 430px and desktop.
+The practice hub passed 21/21 after a mobile navigation contrast fix; repeatable
+practice passed 27/27 including corrected navigation assertions. Initial fixture-origin/CORS and locator
+failures were reproduced and corrected without weakening assertions.
+This is in-progress local evidence, not staging or final release acceptance.
+The self-check's atomic known-status update passed PostgreSQL concurrency,
+note-preservation, replay and account-deactivation checks. Achievement threshold
+dates and qualifying history passed read-only PostgreSQL checks and independent
+review. Self-check, plan and achievement browser checks passed 27/27 across 360px,
+430px and desktop, including light/dark, keyboard, accessibility, empty and
+unavailable states, note-preserving retry and signed-out redirects.
+The [expanded curriculum](starter-curriculum.md) preserves all 400 original seed
+rows and the original seven lesson definitions. The canonical inventory is now
+17 situations, 89 words/phrases, 92 meanings, 148 examples and 200 notes, with 90
+distinct meaning targets across 30 lessons. Disposable PostgreSQL checks passed
+repeated seeding, preserved saved references, all guided lessons, current practice
+and persisted version-1 practice read/list/replay/answer/continue behavior. These
+are content and persistence checks, not a learner-effectiveness study.
+
+Current goal and focus have a separate authenticated, CSRF-protected
+[learning-preferences API](../../apps/api/app/api/learning_preferences.go).
+It preserves original onboarding answers and existing daily pace/settings;
+revision checks reject a conflicting stale change while a retry of already-saved
+intent is a no-op. Missing overrides fall back to onboarding, with nulls retained
+for an older completed account that has no answers. Migration
+[20261002233000](../../apps/api/migrations/20261002233000_learning_preferences.sql)
+brings the forward inventory to 38. A fresh disposable PostgreSQL 16 run passed
+preference concurrency/preservation, account export/anonymization and current/
+historical practice checks. Account export schema is now 1.4. Goal/focus editing
+is connected to the plan and starting-word check. A later 42-check mock-browser
+run passed learning-direction editing/retry/conflict recovery, lesson-specific
+practice selection and canonical search across 360px, 430px and desktop.
+
+Home and the plan use a requester-owned
+[lesson recommendation](../../apps/api/app/api/lesson_recommendation.go).
+An unfinished session stays resumable. Otherwise the recommendation prefers
+the learner's focus and actual useful target coverage, excluding meanings marked
+known or currently mastered; saved alone does not mean known. Missing content or
+read failures are not represented as completed learning. The read-only API
+awards no progress or points.
+A later 15/15 mock-browser recommendation run passed across the three layouts,
+including Home's redirect when its recommendation read encounters an expired
+session, unfinished-session resume and honest unavailable states.
+
+[Calendar reminders](calendar-reminders.md) are implemented as an optional,
+explicit download and calendar import. The daily event uses the importing
+calendar's local-time behavior and contains a display alarm. Exporter tests pass
+6/6 and static review found no actionable issue. All nine calendar browser checks
+and 30 affected Settings checks passed across the three layouts, including
+downloaded bytes, unchanged preferences, both themes and failure recovery.
+A real calendar import and observed alert remain unverified. No email or push reminder is
+sent, and the retained legacy reminder preference is not treated as consent.
+
+The branch contains an optional OpenAI moderation/feedback provider and the
+`sentence-feedback-v4` prompt with unchanged `feedback-schema-v3` semantics.
+It has not activated OpenAI on staging or production. A preregistered synthetic
+service gate for GPT-5 nano **failed and stopped** after four provider POSTs:
+two cases reached moderation and feedback, while two local validation/safety
+controls used no provider calls. The second provider case disagreed with the
+frozen original-sentence naturalness reference; six cases remain unrun. This
+used isolated memory storage, not PostgreSQL, and exercised no live repair.
+It establishes neither model acceptance nor resolution of the observed live
+feedback failure. See the [current acceptance record](release-readiness.md#active-feature-expansion-checkpoint--2026-10-02).
+
+A later GPT-4o mini gate completed ten reused development cases with 14 POSTs
+and passed the frozen automated references and lifecycle checks. Independent
+coordinating AI review accepted only that bounded development gate; technical
+headings, overly cheerful grief feedback and a lowercase correction remain
+quality notes. It used isolated memory, exercised no live repair and had no human
+learner review. Its source/binary hash manifest was recorded after the first two
+POSTs; internal frozen case/rubric guards ran before network access, and the same
+process continued after the gap was disclosed. No model activation or deployment
+followed. This does not supersede the failed nano gate or establish broad quality.
+
+The saved collection now has its own full-collection word/definition search,
+learning-stage and due filters. Its page and total share one database snapshot;
+cursors bind the requester and normalized filters. Displayed review state keeps
+reviewed legacy `new` records in Learning while preserving raw status. Due means
+eligible by the existing review schedule, without a daily-target cap. Both
+PostgreSQL regressions passed after all 38 migrations and the real canonical seed,
+covering more than 50 saved meanings, literal search, isolation, removed cursor
+boundaries and exhausted-page counts. A 48-check mock-browser set passed self-check,
+plan recommendation and collection-filter flows; the three existing library
+save/detail/practice/remove checks then passed separately. The integrated local
+baseline above is accepted within its scope; the later changes, combined browser
+acceptance, deployment, quality and launch requirements stay open.
 
 ## Product and source of truth
 
@@ -18,6 +133,11 @@ focused feedback, and return for the next daily mission. The
 [product bible](00-product-bible.md) and [MVP PRD](01-mvp-prd.md) define the
 baseline; later owner-authorized delivery documents describe additions.
 [AGENTS.md](../../AGENTS.md) governs implementation and release work.
+
+Product direction recorded on 2026-10-02: Vocanova serves individual learners;
+B2B is outside the product scope. The MVP should be free at launch. Any future
+monetization requires a separate owner decision informed by learner value and
+retention.
 
 A separate ChatGPT Site prototype describes a three-word lesson, recall,
 sentence practice, discovery, collection, progress, and mobile navigation with
@@ -31,16 +151,20 @@ claim to preserve every conversation or attachment.
 These links locate existing implementation. They do not imply each flow was
 freshly tested live on the review date.
 
-| Surface                 | Current implementation                                                           | Source                                                                                                                                                                                               |
-| ----------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Entry                   | Landing, capability-driven sign-in/signup, onboarding                            | [Web routes](../../apps/web/src/app/), [auth capabilities](../../apps/web/src/lib/auth-capabilities.ts)                                                                                              |
-| Home                    | Daily mission, next action, due reviews, saved words, sentence practice          | [Home](<../../apps/web/src/app/(app)/home/page.tsx>), [missions](../../apps/api/business/missions/)                                                                                                  |
-| Journey                 | Situation browsing, situation/word detail, saved vocabulary                      | [Discovery](<../../apps/web/src/app/(app)/discover/>), [content](../../apps/api/business/content/), [learning](../../apps/api/business/learning/)                                                    |
-| Recall                  | Focused review sessions and deterministic spaced scheduling                      | [Review routes](../../apps/web/src/app/review/), [reviews](../../apps/api/business/reviews/)                                                                                                         |
-| Sentence practice       | Feedback, recoverable drafts, retries, sentence history                          | [Practice](<../../apps/web/src/app/(app)/_components/sentence-feedback.tsx>), [history](<../../apps/web/src/app/(app)/progress/sentences/>), [feedback service](../../apps/api/business/aifeedback/) |
-| Progress                | API-backed activity, missions/streaks, Confidence Points                         | [Progress](<../../apps/web/src/app/(app)/progress/>), [gamification](../../apps/api/business/gamification/)                                                                                          |
-| Account                 | Learning preferences, profile, email change, password security, export, deletion | [Settings](<../../apps/web/src/app/(app)/settings/>), [accounts](../../apps/api/business/accounts/), [passwords](../../apps/api/business/password/)                                                  |
-| Appearance and identity | Light/Dark/System; web/API release identity                                      | [Theme](../../apps/web/src/lib/theme-preference.ts), [web version](../../apps/web/src/app/version/), [release operations](../development/account-and-release-operations.md)                          |
+| Surface                 | Current implementation                                                                       | Source                                                                                                                                                                                               |
+| ----------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Entry                   | Landing, capability-driven sign-in/signup, onboarding                                        | [Web routes](../../apps/web/src/app/), [auth capabilities](../../apps/web/src/lib/auth-capabilities.ts)                                                                                              |
+| Home                    | Daily mission, next action, due reviews, saved words, sentence practice                      | [Home](<../../apps/web/src/app/(app)/home/page.tsx>), [missions](../../apps/api/business/missions/)                                                                                                  |
+| Journey                 | Situation browsing, situation/word detail, saved vocabulary                                  | [Discovery](<../../apps/web/src/app/(app)/discover/>), [content](../../apps/api/business/content/), [learning](../../apps/api/business/learning/)                                                    |
+| Recall                  | Focused review sessions and deterministic spaced scheduling                                  | [Review routes](../../apps/web/src/app/review/), [reviews](../../apps/api/business/reviews/)                                                                                                         |
+| Guided learning         | Durable teaching, recall and context lessons; optional starting-word check and personal plan | [Lessons](<../../apps/web/src/app/(app)/learn/>), [self-check](<../../apps/web/src/app/(app)/vocabulary/check/>), [plan](<../../apps/web/src/app/(app)/plan/>)                                       |
+| Independent practice    | Repeatable typed recall, device listening choices, mistake practice and resumable sessions   | [Practice hub](<../../apps/web/src/app/(app)/practice/>), [practice domain](../../apps/api/business/practice/)                                                                                       |
+| Personal knowledge      | Canonical search, whole-catalog knowledge summary, explicit known status and private notes   | [Vocabulary](<../../apps/web/src/app/(app)/vocabulary/>), [word knowledge](../../apps/api/business/wordknowledge/)                                                                                   |
+| Sentence practice       | Feedback, recoverable drafts, retries, sentence history                                      | [Practice](<../../apps/web/src/app/(app)/_components/sentence-feedback.tsx>), [history](<../../apps/web/src/app/(app)/progress/sentences/>), [feedback service](../../apps/api/business/aifeedback/) |
+| Progress                | API-backed activity, missions/streaks, Confidence Points                                     | [Progress](<../../apps/web/src/app/(app)/progress/>), [gamification](../../apps/api/business/gamification/)                                                                                          |
+| Account                 | Learning preferences, profile, email change, password security, export, deletion             | [Settings](<../../apps/web/src/app/(app)/settings/>), [accounts](../../apps/api/business/accounts/), [passwords](../../apps/api/business/password/)                                                  |
+| Appearance and identity | Light/Dark/System; web/API release identity                                                  | [Theme](../../apps/web/src/lib/theme-preference.ts), [web version](../../apps/web/src/app/version/), [release operations](../development/account-and-release-operations.md)                          |
+| Calendar reminder       | Optional daily event download; learner imports and manages it in a calendar                  | [Reminder component](<../../apps/web/src/app/(app)/settings/_components/calendar-reminder.tsx>), [scope and limits](calendar-reminders.md)                                                           |
 
 Home, Journey, and Progress remain the three primary destinations. Additions are
 documented in [product maturity](product-maturity-delivery.md),
@@ -48,9 +172,11 @@ documented in [product maturity](product-maturity-delivery.md),
 [password/profile/theme scope](password-profile-and-theme.md). These contain
 dated evidence or acceptance plans, rather than a fresh test report.
 
-The canonical [seed](../../apps/api/cmd/seed/voc026-p1.json) contains seven
-situations, 51 words, 54 meanings and 72 examples: a bounded starter curriculum,
-not broad curriculum coverage. [Daily Conversation](daily-conversation-curriculum.md)
+The deployed baseline had seven situations, 51 words, 54 meanings and 72 examples.
+The delivery branch's canonical [seed](../../apps/api/cmd/seed/voc026-p1.json)
+now contains the [30-lesson starter curriculum](starter-curriculum.md) described
+above; deployment and learner usefulness remain separate gates.
+[Daily Conversation](daily-conversation-curriculum.md)
 has 18 ordered meanings and two examples each, with editorial level rationales
 and preserved existing identities. Word pages suppress repeated short/full
 definitions while retaining distinct fuller guidance. Generated feedback is
@@ -99,8 +225,9 @@ feedback actions. Current session errors remain visible alongside earlier
 feedback, and late report responses cannot mark a newer result as reported.
 Settings preserve edits made during an earlier save and distinguish those
 unsaved edits from confirmed changes. A retry explicitly resends fields whose
-previous save response was lost. Reminder controls store preferences only;
-the interface does not claim reminder delivery is available.
+previous save response was lost. The deployed baseline's reminder switch stored
+a preference only. The delivery branch replaces it with the explicit calendar
+download described above, without changing that stored value or sending messages.
 
 The consolidated delivery also protects the separate profile editor: an earlier
 save cannot replace newer typing, overlapping saves are ignored while pending,
@@ -210,7 +337,8 @@ See the [evaluation guide](../engineering/feedback-evaluation.md) and
 meaning-aware cases, recorded evidence and checks that remain unmeasured.
 An adapter-only run cannot establish full feedback acceptance.
 
-Voice/pronunciation, reminders, monetization, and native applications need
-separate product decisions. Deliver the learning loop reliably and prioritize
-additions using learner evidence; historical Control Plane plans are not the
-current product roadmap.
+Device pronunciation and optional calendar reminders are now part of the
+authorized delivery scope. Speech recording/scoring, server-sent reminders,
+monetization and native applications remain separate product decisions. Deliver
+the connected learning experience reliably and prioritize additions using learner
+evidence; historical Control Plane plans are not the current product roadmap.

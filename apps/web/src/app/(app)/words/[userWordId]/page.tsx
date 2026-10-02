@@ -6,7 +6,9 @@ import { ApiResponseError } from "@vocanova/api-client";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { formatNoteType, getAdditionalDefinition } from "@/lib/word-definition";
 import { PageContainer, Surface } from "@/ui/surface";
+import { ListenButton } from "@/ui/pronunciation";
 import { SentenceFeedback } from "../../_components/sentence-feedback";
+import { MeaningKnowledgeEditor } from "../../_components/meaning-knowledge-editor";
 import { RemoveSavedWordButton } from "../_components/remove-saved-word-button";
 import { formatSavedWordStatus } from "../_components/saved-word-view";
 
@@ -74,6 +76,7 @@ export default async function SavedWordDetailPage({
           <h1 className="text-2xl font-semibold text-neutral-900">
             {savedWord.wordText}
           </h1>
+          <ListenButton text={savedWord.wordText} />
           <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
             {savedWord.partOfSpeech}
           </p>
@@ -108,7 +111,14 @@ export default async function SavedWordDetailPage({
             </h3>
             <ul className="mt-[var(--spacing-xs)] list-disc space-y-[var(--spacing-xs)] pl-[var(--spacing-lg)] text-base text-neutral-700">
               {meaning.examples.map((example) => (
-                <li key={example.id}>{example.exampleText}</li>
+                <li key={example.id}>
+                  <p>{example.exampleText}</p>
+                  <ListenButton
+                    text={example.exampleText}
+                    label={`example: ${example.exampleText}`}
+                    showCaption={false}
+                  />
+                </li>
               ))}
             </ul>
           </div>
@@ -131,6 +141,10 @@ export default async function SavedWordDetailPage({
             </ul>
           </div>
         ) : null}
+        <MeaningKnowledgeEditor
+          meaningId={meaning.id}
+          initialKnown={meaning.selfReportedKnown}
+        />
       </Surface>
 
       <SentenceFeedback

@@ -14,6 +14,15 @@ export function getAdditionalDefinition(
 }
 
 export function formatNoteType(noteType: string): string {
+  switch (noteType) {
+    case "collocation":
+      return "Often used with";
+    case "register":
+      return "When to use it";
+    case "common_mistake":
+      return "Watch out";
+  }
+
   return noteType
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))

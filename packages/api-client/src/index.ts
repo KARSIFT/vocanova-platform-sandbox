@@ -22,6 +22,18 @@ export type LearningGoal =
 
 export type MainUseCase = "daily_life" | "work" | "travel" | "study" | "social";
 
+export interface LearningPreferences {
+  learningGoal: LearningGoal | null;
+  mainUseCase: MainUseCase | null;
+  revision: number;
+}
+
+export interface LearningPreferencesUpdate {
+  learningGoal: LearningGoal;
+  mainUseCase: MainUseCase;
+  expectedRevision: number;
+}
+
 export interface OnboardingProfile {
   status: "not_started" | "in_progress" | "completed";
   englishLevel?: EnglishLevel;
@@ -127,6 +139,7 @@ export interface SituationMeaning {
   partOfSpeech: string;
   shortDefinition: string;
   saved: boolean;
+  selfReportedKnown: boolean;
 }
 
 export interface WordExample {
@@ -147,6 +160,7 @@ export interface WordMeaning {
   shortDefinition: string;
   learnerDefinition?: string;
   saved: boolean;
+  selfReportedKnown: boolean;
   userWordId?: string;
   reviewState?:
     "new" | "learning" | "reviewing" | "mastered" | "ignored" | "archived";
@@ -194,9 +208,235 @@ export interface SavedMeaning {
 }
 
 export interface ListSavedWordsResponse {
-  items: SavedMeaning[];
+  items: Array<SavedMeaning & { reviewState: string; due: boolean }>;
+  totalCount: number;
   nextCursor?: string;
   hasMore: boolean;
+}
+
+export interface ListSavedWordsParams {
+  q?: string;
+  stage?:
+    "" | "new" | "learning" | "reviewing" | "mastered" | "ignored" | "archived";
+  due?: boolean;
+  after?: string;
+  limit?: number;
+}
+
+export interface VocabularySearchItem {
+  meaningId: string;
+  wordId: string;
+  wordSlug: string;
+  wordText: string;
+  partOfSpeech: string;
+  shortDefinition: string;
+  difficultyLevel: string;
+  saved: boolean;
+  selfReportedKnown: boolean;
+  userWordId?: string;
+  reviewState?: string;
+  due: boolean;
+}
+
+export interface VocabularySearchParams {
+  q?: string;
+  category?: string;
+  level?: string;
+  knowledge?: "known" | "saved" | "unexplored" | "";
+  after?: string;
+  limit?: number;
+}
+
+export interface VocabularySearchResponse {
+  items: VocabularySearchItem[];
+  totalCount: number;
+  nextCursor?: string;
+  hasMore: boolean;
+}
+
+export interface KnowledgeSummary {
+  selfReportedKnown: number;
+  saved: number;
+  new: number;
+  learning: number;
+  reviewing: number;
+  mastered: number;
+  ignored: number;
+  archived: number;
+  due: number;
+}
+
+export interface MeaningKnowledge {
+  meaningId: string;
+  selfReportedKnown: boolean;
+  note: string;
+  updatedAt?: string;
+}
+
+export interface Achievement {
+  id: string;
+  label: string;
+  description: string;
+  category: "lessons" | "practice" | "reviews" | "writing";
+  criterion: "participation" | "unaided_recall";
+  current: number;
+  target: number;
+  earned: boolean;
+  earnedAt?: string;
+}
+
+export interface AchievementList {
+  catalogVersion: string;
+  items: Achievement[];
+}
+
+export interface MeaningKnowledgeUpdate {
+  selfReportedKnown: boolean;
+  note: string;
+}
+
+export type PracticeMode = "typed_recall" | "listening_choice" | "mistakes";
+
+export interface PracticeStartRequest {
+  mode: PracticeMode;
+  lessonKey?: string;
+}
+
+export interface PracticeSessionSummary {
+  id: string;
+  mode: PracticeMode;
+  lessonKey?: string;
+  contentVersion: string;
+  gradingVersion: string;
+  status: "in_progress" | "completed";
+  revision: number;
+  completedSteps: number;
+  totalSteps: number;
+  firstAnswersCorrect: number;
+  questionsAnswered: number;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+}
+
+export interface PracticeStep {
+  id: string;
+  kind: "typed_recall" | "listening_choice";
+  prompt: string;
+  choices: { id: string; text: string }[];
+  speechText?: string;
+  speechLanguage?: string;
+}
+
+export interface PracticeFeedback {
+  stepId: string;
+  correct: boolean;
+  assisted: boolean;
+  answer: string;
+  explanation: string;
+  wordText: string;
+  wordSlug: string;
+  meaningId: string;
+}
+
+export interface PracticeSession extends PracticeSessionSummary {
+  currentStep: PracticeStep | null;
+  feedback: PracticeFeedback | null;
+  canContinue: boolean;
+}
+
+export interface PracticeSessionsResponse {
+  items: PracticeSessionSummary[];
+  availableMistakes: number;
+}
+
+export interface PracticeAction {
+  stepId: string;
+  expectedRevision: number;
+  clientActionId: string;
+  action: "answer" | "continue" | "reveal";
+  typedAnswer?: string;
+  choiceId?: string;
+}
+
+export interface LessonSummary {
+  key: string;
+  version: string;
+  title: string;
+  situationSlug: string;
+  situationTitle: string;
+  description: string;
+  wordCount: number;
+  stepCount: number;
+  status: "not_started" | "in_progress" | "completed";
+  sessionId?: string;
+  completedSteps: number;
+}
+
+export interface LessonRecommendationResponse {
+  status:
+    | "recommended"
+    | "no_unfinished_lessons"
+    | "no_useful_targets"
+    | "content_unavailable";
+  recommendation: null | {
+    lesson: LessonSummary;
+    reason: "resume" | "focus_and_useful_words" | "useful_words";
+    usefulTargetCount: number;
+    totalTargetCount: number;
+    matchesFocus: boolean;
+  };
+}
+
+export interface LessonWord {
+  meaningId: string;
+  wordText: string;
+  wordSlug: string;
+  partOfSpeech: string;
+  definition: string;
+  example: string;
+  usageNote: string;
+}
+
+export interface LessonStep {
+  id: string;
+  kind: "teach" | "recall" | "context";
+  word: LessonWord;
+  prompt: string;
+  context?: string;
+  choices: { id: string; text: string }[];
+}
+
+export interface LessonSession {
+  id: string;
+  lessonKey: string;
+  lessonVersion: string;
+  title: string;
+  situationSlug: string;
+  status: "in_progress" | "completed";
+  revision: number;
+  completedSteps: number;
+  totalSteps: number;
+  words: LessonWord[];
+  currentStep: LessonStep | null;
+  feedback: {
+    stepId: string;
+    correct: boolean;
+    explanation: string;
+    correctChoiceId: string;
+  } | null;
+  canContinue: boolean;
+  firstAnswersCorrect: number;
+  questionsAnswered: number;
+  completedAt?: string;
+}
+
+export interface LessonAction {
+  stepId: string;
+  expectedRevision: number;
+  clientActionId: string;
+  action: "answer" | "continue";
+  choiceId?: string;
 }
 
 export interface SaveUserWordBody {
@@ -474,6 +714,8 @@ export interface PersonalDataExport {
   profile: Record<string, unknown>;
   settings: Record<string, unknown>;
   onboardingProfile: Record<string, unknown> | null;
+  learningPreferences?:
+    (LearningPreferences & { createdAt: string; updatedAt: string }) | null;
   savedWords: unknown[];
   reviewHistory: unknown[];
   sentenceFeedbackHistory: unknown[];
@@ -482,6 +724,9 @@ export interface PersonalDataExport {
   confidencePointLedger: unknown[];
   graceDayLedger: unknown[];
   streakState: Record<string, unknown> | null;
+  guidedLessons?: unknown[];
+  wordKnowledge?: MeaningKnowledge[];
+  practiceSessions?: unknown[];
 }
 
 export interface ApiError {
@@ -715,6 +960,276 @@ export class VocanovaClient {
     return { data, response };
   }
 
+  async searchVocabulary(
+    params: VocabularySearchParams = {},
+    init?: RequestInit,
+  ): Promise<{ data: VocabularySearchResponse; response: Response }> {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== "") query.set(key, String(value));
+    }
+    const response = await this.request(
+      "GET",
+      `/api/v1/canonical-words${query.size ? `?${query}` : ""}`,
+      undefined,
+      init,
+    );
+    return {
+      data: (await response.json()) as VocabularySearchResponse,
+      response,
+    };
+  }
+
+  async getKnowledgeSummary(
+    init?: RequestInit,
+  ): Promise<{ data: KnowledgeSummary; response: Response }> {
+    const response = await this.request(
+      "GET",
+      "/api/v1/knowledge-summary",
+      undefined,
+      init,
+    );
+    return { data: (await response.json()) as KnowledgeSummary, response };
+  }
+
+  async listPracticeSessions(
+    init?: RequestInit,
+  ): Promise<{ data: PracticeSessionsResponse; response: Response }> {
+    const response = await this.request(
+      "GET",
+      "/api/v1/practice-sessions",
+      undefined,
+      init,
+    );
+    return {
+      data: (await response.json()) as PracticeSessionsResponse,
+      response,
+    };
+  }
+
+  async listAchievements(
+    init?: RequestInit,
+  ): Promise<{ data: AchievementList; response: Response }> {
+    const response = await this.request(
+      "GET",
+      "/api/v1/achievements",
+      undefined,
+      init,
+    );
+    return { data: (await response.json()) as AchievementList, response };
+  }
+
+  async getLearningPreferences(
+    init?: RequestInit,
+  ): Promise<{ data: LearningPreferences; response: Response }> {
+    const response = await this.request(
+      "GET",
+      "/api/v1/learning-preferences",
+      undefined,
+      init,
+    );
+    return { data: (await response.json()) as LearningPreferences, response };
+  }
+
+  async updateLearningPreferences(
+    body: LearningPreferencesUpdate,
+    init?: RequestInit,
+  ): Promise<{ data: LearningPreferences; response: Response }> {
+    const response = await this.request(
+      "PATCH",
+      "/api/v1/learning-preferences",
+      body,
+      init,
+    );
+    return { data: (await response.json()) as LearningPreferences, response };
+  }
+
+  async startPracticeSession(
+    body: PracticeStartRequest,
+    idempotencyKey: string,
+    init?: RequestInit,
+  ): Promise<{ data: PracticeSession; response: Response }> {
+    const headers = new Headers(init?.headers);
+    headers.set("Idempotency-Key", idempotencyKey);
+    const response = await this.request(
+      "POST",
+      "/api/v1/practice-sessions",
+      body,
+      { ...init, headers },
+    );
+    return { data: (await response.json()) as PracticeSession, response };
+  }
+
+  async getPracticeSession(
+    sessionId: string,
+    init?: RequestInit,
+  ): Promise<{ data: PracticeSession; response: Response }> {
+    const response = await this.request(
+      "GET",
+      `/api/v1/practice-sessions/${encodeURIComponent(sessionId)}`,
+      undefined,
+      init,
+    );
+    return { data: (await response.json()) as PracticeSession, response };
+  }
+
+  async submitPracticeAction(
+    sessionId: string,
+    body: PracticeAction,
+    idempotencyKey: string,
+    init?: RequestInit,
+  ): Promise<{ data: PracticeSession; response: Response }> {
+    const headers = new Headers(init?.headers);
+    headers.set("Idempotency-Key", idempotencyKey);
+    const response = await this.request(
+      "POST",
+      `/api/v1/practice-sessions/${encodeURIComponent(sessionId)}/actions`,
+      body,
+      { ...init, headers },
+    );
+    return { data: (await response.json()) as PracticeSession, response };
+  }
+
+  async listLessons(
+    init?: RequestInit,
+  ): Promise<{ data: { items: LessonSummary[] }; response: Response }> {
+    const response = await this.request(
+      "GET",
+      "/api/v1/lessons",
+      undefined,
+      init,
+    );
+    return {
+      data: (await response.json()) as { items: LessonSummary[] },
+      response,
+    };
+  }
+
+  async getLessonRecommendation(
+    init?: RequestInit,
+  ): Promise<{ data: LessonRecommendationResponse; response: Response }> {
+    const response = await this.request(
+      "GET",
+      "/api/v1/lesson-recommendation",
+      undefined,
+      init,
+    );
+    return {
+      data: (await response.json()) as LessonRecommendationResponse,
+      response,
+    };
+  }
+
+  async getMeaningKnowledge(
+    meaningId: string,
+    init?: RequestInit,
+  ): Promise<{ data: MeaningKnowledge; response: Response }> {
+    const response = await this.request(
+      "GET",
+      `/api/v1/meaning-knowledge/${encodeURIComponent(meaningId)}`,
+      undefined,
+      init,
+    );
+    return { data: (await response.json()) as MeaningKnowledge, response };
+  }
+
+  async updateMeaningKnowledge(
+    meaningId: string,
+    body: MeaningKnowledgeUpdate,
+    idempotencyKey: string,
+    init?: RequestInit,
+  ): Promise<{ data: MeaningKnowledge; response: Response }> {
+    const headers = new Headers(init?.headers);
+    headers.set("Idempotency-Key", idempotencyKey);
+    const response = await this.request(
+      "PUT",
+      `/api/v1/meaning-knowledge/${encodeURIComponent(meaningId)}`,
+      body,
+      { ...init, headers },
+    );
+    return { data: (await response.json()) as MeaningKnowledge, response };
+  }
+
+  /** Change only the self-assessment; the server preserves the current note. */
+  async setMeaningKnown(
+    meaningId: string,
+    selfReportedKnown: boolean,
+    idempotencyKey: string,
+    init?: RequestInit,
+  ): Promise<{ data: MeaningKnowledge; response: Response }> {
+    const headers = new Headers(init?.headers);
+    headers.set("Idempotency-Key", idempotencyKey);
+    const response = await this.request(
+      "PATCH",
+      `/api/v1/meaning-knowledge/${encodeURIComponent(meaningId)}`,
+      { selfReportedKnown },
+      { ...init, headers },
+    );
+    return { data: (await response.json()) as MeaningKnowledge, response };
+  }
+
+  async clearMeaningKnowledge(
+    meaningId: string,
+    idempotencyKey: string,
+    init?: RequestInit,
+  ): Promise<{ response: Response }> {
+    const headers = new Headers(init?.headers);
+    headers.set("Idempotency-Key", idempotencyKey);
+    const response = await this.request(
+      "DELETE",
+      `/api/v1/meaning-knowledge/${encodeURIComponent(meaningId)}`,
+      undefined,
+      { ...init, headers },
+    );
+    return { response };
+  }
+
+  async startLesson(
+    lessonKey: string,
+    idempotencyKey: string,
+    init?: RequestInit,
+  ): Promise<{ data: LessonSession; response: Response }> {
+    const headers = new Headers(init?.headers);
+    headers.set("Idempotency-Key", idempotencyKey);
+    const response = await this.request(
+      "POST",
+      `/api/v1/lessons/${encodeURIComponent(lessonKey)}/sessions`,
+      undefined,
+      { ...init, headers },
+    );
+    return { data: (await response.json()) as LessonSession, response };
+  }
+
+  async getLessonSession(
+    sessionId: string,
+    init?: RequestInit,
+  ): Promise<{ data: LessonSession; response: Response }> {
+    const response = await this.request(
+      "GET",
+      `/api/v1/lesson-sessions/${encodeURIComponent(sessionId)}`,
+      undefined,
+      init,
+    );
+    return { data: (await response.json()) as LessonSession, response };
+  }
+
+  async submitLessonAction(
+    sessionId: string,
+    body: LessonAction,
+    idempotencyKey: string,
+    init?: RequestInit,
+  ): Promise<{ data: LessonSession; response: Response }> {
+    const headers = new Headers(init?.headers);
+    headers.set("Idempotency-Key", idempotencyKey);
+    const response = await this.request(
+      "POST",
+      `/api/v1/lesson-sessions/${encodeURIComponent(sessionId)}/actions`,
+      body,
+      { ...init, headers },
+    );
+    return { data: (await response.json()) as LessonSession, response };
+  }
+
   async getJourneySituation(
     slug: string,
     init?: RequestInit,
@@ -744,10 +1259,13 @@ export class VocanovaClient {
   }
 
   async listSavedWords(
-    params?: { after?: string; limit?: number },
+    params?: ListSavedWordsParams,
     init?: RequestInit,
   ): Promise<{ data: ListSavedWordsResponse; response: Response }> {
     const query = new URLSearchParams();
+    if (params?.q) query.set("q", params.q);
+    if (params?.stage) query.set("stage", params.stage);
+    if (params?.due) query.set("due", "true");
     if (params?.after) {
       query.set("after", params.after);
     }

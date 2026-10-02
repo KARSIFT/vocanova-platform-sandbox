@@ -4,6 +4,7 @@ async function seedReviewFixture(
   page: Page,
   count: number,
   testInfo: TestInfo,
+  reviewTarget = count,
 ) {
   // The mock keeps review state in a process-wide map keyed by this cookie.
   // Every Playwright project and retry therefore needs its own key: the three
@@ -39,7 +40,7 @@ async function seedReviewFixture(
     },
     {
       name: "e2e_daily_review_target",
-      value: String(count),
+      value: String(reviewTarget),
       domain: "127.0.0.1",
       path: "/",
     },
@@ -78,6 +79,9 @@ test.describe("Review completion summary", () => {
       page.getByRole("heading", { name: "Review complete", level: 2 }),
     ).toBeVisible();
     await expect(page.getByText("You reviewed 51 words.")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Review complete", level: 2 }),
+    ).toBeFocused();
   });
 
   test("does not count a rejected submission before its successful retry", async ({
@@ -97,9 +101,109 @@ test.describe("Review completion summary", () => {
     await page.getByRole("button", { name: "Good" }).click();
     await expect(page.getByText("HTTP 500")).toBeVisible();
     await expect(page.getByText(/You reviewed \d+ word/)).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "Review complete", level: 2 }),
+    ).toHaveCount(0);
 
     await page.unroute("**/api/v1/reviews/submissions");
-    await page.getByRole("button", { name: "Good" }).click();
+    const rating = page.getByRole("button", { name: "Good" });
+    await rating.focus();
+    await rating.press("Enter");
     await expect(page.getByText("You reviewed 1 word.")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Review complete", level: 2 }),
+    ).toBeFocused();
+  });
+
+  test("focuses completion only after a failed queue refresh succeeds", async ({
+    page,
+  }, testInfo) => {
+    await seedReviewFixture(page, 1, testInfo, 2);
+    await page.goto("/reviews");
+    let refreshCount = 0;
+    let releaseRefresh!: () => void;
+    const delayedRefresh = new Promise<void>((resolve) => {
+      releaseRefresh = resolve;
+    });
+    await page.route("**/api/v1/reviews/due?limit=*", async (route) => {
+      refreshCount += 1;
+      if (refreshCount === 1) {
+        await route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: JSON.stringify({ error: "temporary_failure" }),
+        });
+        return;
+      }
+      await delayedRefresh;
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({ items: [], totalCount: 0 }),
+      });
+    });
+    await submitCurrentReview(page, 1);
+    const retry = page.getByRole("button", { name: "Retry loading reviews" });
+    await expect(retry).toBeVisible();
+    const completion = page.getByRole("heading", {
+      name: "Review complete",
+      level: 2,
+    });
+    await expect(completion).toHaveCount(0);
+    await retry.focus();
+    await retry.press("Enter");
+    try {
+      await expect.poll(() => refreshCount).toBe(2);
+      await expect(page.getByText("Loading next reviews…")).toBeVisible();
+      await expect(completion).toHaveCount(0);
+    } finally {
+      releaseRefresh();
+    }
+    await expect(completion).toBeFocused();
+    await expect(page.getByText("You reviewed 1 word.")).toBeVisible();
+  });
+
+  test("an initially empty queue does not claim session completion", async ({
+    page,
+  }, testInfo) => {
+    await seedReviewFixture(page, 0, testInfo, 1);
+    await page.goto("/reviews");
+    const caughtUp = page.getByRole("heading", {
+      name: "You're all caught up",
+      level: 2,
+    });
+    await expect(caughtUp).toBeVisible();
+    await expect(caughtUp).not.toBeFocused();
+    await expect(page.getByText(/You reviewed \d+ word/)).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "Review complete", level: 2 }),
+    ).toHaveCount(0);
+  });
+
+  test("an emptied stale queue focuses caught-up state without crediting a review", async ({
+    page,
+  }, testInfo) => {
+    await seedReviewFixture(page, 1, testInfo);
+    await page.goto("/reviews");
+    await page.route("**/api/v1/reviews/submissions", async (route) => {
+      await route.fulfill({
+        status: 404,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "saved_word_not_found" }),
+      });
+    });
+    await page.route("**/api/v1/reviews/due?limit=*", async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({ items: [], totalCount: 0 }),
+      });
+    });
+    await submitCurrentReview(page, 1);
+    await expect(
+      page.getByRole("heading", { name: "You're all caught up", level: 2 }),
+    ).toBeFocused();
+    await expect(page.getByText(/You reviewed \d+ word/)).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "Review complete", level: 2 }),
+    ).toHaveCount(0);
   });
 });

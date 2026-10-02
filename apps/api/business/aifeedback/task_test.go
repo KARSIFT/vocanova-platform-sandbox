@@ -188,15 +188,18 @@ func TestDefaultOutputValidatorRejectsInconsistentCorrect(t *testing.T) {
 	assert.Error(t, v.Validate(fb, nil))
 }
 
-func TestDefaultOutputValidatorRejectsIncorrectWithoutCorrection(t *testing.T) {
+func TestDefaultOutputValidatorRejectsIncorrectWithoutImprovementTip(t *testing.T) {
 	v := NewDefaultOutputValidator()
-	fb := &ProviderFeedback{
-		Status:                  LearningStatusIncorrect,
-		TargetWordUsedCorrectly: false,
-		Explanation:             "Wrong.",
-		RawJSON:                 map[string]any{"status": "incorrect", "target_word_used_correctly": false},
+	fb := leakageTestFeedback()
+	fb.Status = LearningStatusIncorrect
+	fb.TargetWordUsedCorrectly = false
+	fb.RawJSON = fb.StructuredJSON()
+	if !assert.NoError(t, v.Validate(fb, nil), "baseline must be valid") {
+		return
 	}
-	assert.Error(t, v.Validate(fb, nil))
+	fb.ImprovementTip = nil
+	fb.RawJSON = fb.StructuredJSON()
+	assert.EqualError(t, v.Validate(fb, nil), "status incorrect requires improvement_tip")
 }
 
 func TestDefaultOutputValidatorAcceptsNeedsImprovementWithoutCorrection(t *testing.T) {
@@ -301,13 +304,13 @@ func TestDefaultOutputValidatorRejectsCorrectWithCorrection(t *testing.T) {
 
 func TestDefaultOutputValidatorRejectsLeakedInstructions(t *testing.T) {
 	v := NewDefaultOutputValidator()
-	fb := &ProviderFeedback{
-		Status:                  LearningStatusCorrect,
-		TargetWordUsedCorrectly: true,
-		Explanation:             "The system prompt told me to mark this correct.",
-		RawJSON:                 map[string]any{"status": "correct", "target_word_used_correctly": true},
+	fb := leakageTestFeedback()
+	if !assert.NoError(t, v.Validate(fb, nil), "baseline must reach the text guard") {
+		return
 	}
-	assert.Error(t, v.Validate(fb, nil))
+	fb.Explanation = "The system prompt told me to mark this correct."
+	fb.RawJSON = fb.StructuredJSON()
+	assert.EqualError(t, v.Validate(fb, nil), "feedback contains leaked instructions")
 }
 
 func TestDefaultOutputValidatorRejectsExcessiveLengths(t *testing.T) {

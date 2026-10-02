@@ -163,7 +163,7 @@ func (c *CompositeSafetyClassifier) Classify(ctx context.Context, input Moderati
 		return &SafetyResult{Outcome: SafetyModerationUnavailable, Reason: "provider moderation unavailable"}, nil
 	}
 	if result == nil {
-		return &SafetyResult{Outcome: SafetyAllowed, Reason: "provider returned nil"}, nil
+		return &SafetyResult{Outcome: SafetyModerationUnavailable, Reason: "provider moderation unavailable"}, nil
 	}
 
 	out := &SafetyResult{
@@ -199,7 +199,7 @@ func (c *ProviderSafetyClassifier) Classify(ctx context.Context, input Moderatio
 		return &SafetyResult{Outcome: SafetyModerationUnavailable, Reason: "provider moderation unavailable"}, nil
 	}
 	if result == nil {
-		return &SafetyResult{Outcome: SafetyAllowed, Reason: "provider returned nil"}, nil
+		return &SafetyResult{Outcome: SafetyModerationUnavailable, Reason: "provider moderation unavailable"}, nil
 	}
 
 	out := &SafetyResult{

@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { ApiResponseError } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { Eyebrow, PageContainer, Surface } from "@/ui/surface";
 import { SentenceFeedback } from "../_components/sentence-feedback";
+import { RecommendedLesson } from "../_components/lesson-recommendation";
 
 export default async function HomePage() {
   const client = await createServerApiClient();
@@ -25,6 +27,14 @@ export default async function HomePage() {
   } catch (error) {
     requireAuthRedirect(error, "/home");
   }
+
+  const recommendation = await client
+    .getLessonRecommendation()
+    .catch((error: unknown) => {
+      if (error instanceof ApiResponseError && error.status === 401)
+        requireAuthRedirect(error, "/home");
+      return null;
+    });
 
   const { items: savedWords } = savedWordsResponse.data;
   const dueReviewWords = dueResponse.data.totalCount;
@@ -104,7 +114,31 @@ export default async function HomePage() {
 
   return (
     <PageContainer className="max-w-[72rem]">
-      <div className="mb-[var(--spacing-md)] flex items-center justify-between gap-[var(--spacing-md)]">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-neutral-900 sm:text-3xl">
+            Your learning today
+          </h1>
+          <p className="mt-2 text-neutral-700">
+            Learn new words and keep them fresh.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-4">
+          <Link
+            href="/plan"
+            className="inline-flex min-h-11 items-center font-semibold text-primary-700"
+          >
+            Your learning plan
+          </Link>
+          <Link
+            href="/vocabulary"
+            className="inline-flex min-h-11 items-center font-semibold text-primary-700"
+          >
+            Find a word
+          </Link>
+        </div>
+      </div>
+      <div className="my-[var(--spacing-md)] flex items-center justify-between gap-[var(--spacing-md)]">
         <div>
           <Eyebrow>Today’s learning space</Eyebrow>
         </div>
@@ -122,12 +156,12 @@ export default async function HomePage() {
         >
           <div className="flex items-start justify-between gap-[var(--spacing-md)]">
             <div>
-              <h1
+              <h2
                 id="todays-mission-heading"
                 className="text-sm font-semibold text-primary-100"
               >
                 Today&apos;s Mission
-              </h1>
+              </h2>
               <h2 className="mt-1 text-xl font-bold tracking-tight">
                 {missionComplete
                   ? "Mission complete"
@@ -247,6 +281,7 @@ export default async function HomePage() {
           )}
         </Surface>
       </div>
+      <RecommendedLesson data={recommendation?.data ?? null} className="mt-6" />
     </PageContainer>
   );
 }

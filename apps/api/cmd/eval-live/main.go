@@ -27,6 +27,7 @@ const (
 	exitIncomplete      = 3
 	providerOpenCode    = string(aifeedback.ProviderOpenCode)
 	providerGemini      = "gemini"
+	providerOpenAI      = "openai"
 	providerCloudflare  = "cloudflare"
 )
 
@@ -39,6 +40,9 @@ var newGeminiProvider = func(cfg aifeedback.GeminiConfig) aifeedback.FeedbackPro
 }
 var newCloudflareProvider = func(cfg aifeedback.CloudflareConfig) aifeedback.FeedbackProvider {
 	return aifeedback.NewCloudflareFeedbackProvider(cfg)
+}
+var newOpenAIProvider = func(cfg aifeedback.OpenAIConfig) aifeedback.FeedbackProvider {
+	return aifeedback.NewOpenAIFeedbackProvider(cfg)
 }
 var runLiveEvaluation = aifeedback.RunLiveEvaluation
 
@@ -119,11 +123,11 @@ func runEvalLive(args []string, stdout, stderr io.Writer, _ func() time.Time) in
 	fs := flag.NewFlagSet("eval-live", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	var (
-		provider        = fs.String("provider", providerOpenCode, "provider: opencode, gemini, cloudflare (env: AI_PROVIDER)")
+		provider        = fs.String("provider", providerOpenCode, "evaluation provider: opencode, gemini, cloudflare, openai (env: AI_PROVIDER)")
 		baseURL         = fs.String("base-url", "", "provider base URL (env: AI_PROVIDER_BASE_URL)")
 		accountID       = fs.String("account-id", "", "Cloudflare account ID (env: AI_PROVIDER_ACCOUNT_ID)")
-		apiKey          = fs.String("api-key", "", "provider API key; prefer AI_PROVIDER_API_KEY environment variable")
-		model           = fs.String("model", "", "model identifier (env: AI_PROVIDER_MODEL)")
+		apiKey          = fs.String("api-key", "", "provider API key; prefer AI_PROVIDER_API_KEY (OpenAI shell mapping: export AI_PROVIDER_API_KEY=\"$OPENAI_API_KEY\")")
+		model           = fs.String("model", "", "model identifier; OpenAI defaults to gpt-5-nano (env: AI_PROVIDER_MODEL)")
 		timeout         = fs.Duration("timeout", 8*time.Second, "positive per-request timeout (env: AI_PROVIDER_TIMEOUT)")
 		requestInterval = fs.Duration("request-interval", 0, "nonnegative delay before each call (env: EVAL_LIVE_REQUEST_INTERVAL)")
 		costUSD         = fs.Float64("cost", -1, "recorded billed cost in USD; -1 means unknown (env: EVAL_LIVE_COST_USD)")
@@ -153,9 +157,9 @@ func runEvalLive(args []string, stdout, stderr io.Writer, _ func() time.Time) in
 		return exitUsageError
 	}
 	switch *provider {
-	case providerOpenCode, providerGemini, providerCloudflare:
+	case providerOpenCode, providerGemini, providerCloudflare, providerOpenAI:
 	default:
-		fmt.Fprintln(stderr, "eval-live: --provider must be opencode, gemini, or cloudflare")
+		fmt.Fprintln(stderr, "eval-live: --provider must be opencode, gemini, cloudflare, or openai")
 		return exitUsageError
 	}
 	if *timeout <= 0 || *requestInterval < 0 {
@@ -200,6 +204,13 @@ func runEvalLive(args []string, stdout, stderr io.Writer, _ func() time.Time) in
 	}
 	var feedbackProvider aifeedback.FeedbackProvider
 	switch *provider {
+	case providerOpenAI:
+		if *model == "" {
+			*model = aifeedback.DefaultOpenAIModel
+		}
+		feedbackProvider = newOpenAIProvider(aifeedback.OpenAIConfig{
+			BaseURL: *baseURL, APIKey: *apiKey, Model: *model, Timeout: *timeout, MaxRetries: 1,
+		})
 	case providerGemini:
 		feedbackProvider = newGeminiProvider(aifeedback.GeminiConfig{
 			BaseURL: *baseURL, APIKey: *apiKey, Model: *model, Timeout: *timeout, MaxRetries: 1,

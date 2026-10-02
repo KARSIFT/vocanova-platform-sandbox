@@ -69,6 +69,106 @@
       "category": "study",
       "status": "active",
       "display_order": 7
+    },
+    {
+      "id": "3d184275-efbd-5eb1-abd3-041071f6a9a8",
+      "slug": "shopping",
+      "title": "Shopping",
+      "short_description": "Choose clothes, check a purchase, and ask about a return.",
+      "level_band": "a2_b1",
+      "category": "daily_life",
+      "status": "active",
+      "display_order": 8
+    },
+    {
+      "id": "b71c361b-0127-56e3-b21e-aae3241f1107",
+      "slug": "home-and-renting",
+      "title": "Home and Renting",
+      "short_description": "Talk about rent and arrange help with a home problem.",
+      "level_band": "a2_b1",
+      "category": "daily_life",
+      "status": "active",
+      "display_order": 9
+    },
+    {
+      "id": "803c50b4-6021-5211-b09c-76a30455d66c",
+      "slug": "public-transport",
+      "title": "Public Transport",
+      "short_description": "Find your service, buy a ticket, and change trains or buses.",
+      "level_band": "a2_b1",
+      "category": "travel",
+      "status": "active",
+      "display_order": 10
+    },
+    {
+      "id": "790cd2e5-6b3e-5037-9336-4fbd11bded1b",
+      "slug": "deliveries",
+      "title": "Deliveries",
+      "short_description": "Give an address and talk about parcels and deliveries.",
+      "level_band": "a2_b1",
+      "category": "daily_life",
+      "status": "active",
+      "display_order": 11
+    },
+    {
+      "id": "0c60fee3-cbdb-5175-9938-4fe9c9c4a8cd",
+      "slug": "everyday-payments",
+      "title": "Everyday Payments",
+      "short_description": "Talk about paying with cash or a bank card.",
+      "level_band": "a2_b1",
+      "category": "daily_life",
+      "status": "active",
+      "display_order": 12
+    },
+    {
+      "id": "6a8b37e5-d46f-52e8-b1f3-f586d0c44cd9",
+      "slug": "everyday-services",
+      "title": "Everyday Services",
+      "short_description": "Wait your turn and complete a simple form.",
+      "level_band": "a2_b1",
+      "category": "daily_life",
+      "status": "active",
+      "display_order": 13
+    },
+    {
+      "id": "0fc569c8-9983-58a8-a16e-5d7e7c2ae33b",
+      "slug": "health-appointments",
+      "title": "Health Appointments",
+      "short_description": "Arrange a visit and describe a health concern in simple language.",
+      "level_band": "a2_b1",
+      "category": "daily_life",
+      "status": "active",
+      "display_order": 14
+    },
+    {
+      "id": "659c03df-cd70-520b-911d-060fd2a20c80",
+      "slug": "phone-calls",
+      "title": "Phone Calls",
+      "short_description": "Leave a message, return a call, and explain a connection problem.",
+      "level_band": "a2_b1",
+      "category": "social",
+      "status": "active",
+      "display_order": 15
+    },
+    {
+      "id": "1295dad6-5368-5230-84a5-926aed8bdff1",
+      "slug": "email-and-online-tasks",
+      "title": "Email and Online Tasks",
+      "short_description": "Send files, open a link, and reply to a message.",
+      "level_band": "a2_b1",
+      "category": "daily_life",
+      "status": "active",
+      "display_order": 16
+    },
+    {
+      "id": "5777ce2e-bc7a-5b20-90a6-2a85506d5d8f",
+      "slug": "everyday-work",
+      "title": "Everyday Work",
+      "short_description": "Talk about your working hours, breaks, and colleagues.",
+      "level_band": "a2_b1",
+      "category": "work",
+      "status": "active",
+      "display_order": 17
     }
   ],
   "canonical_words": [
@@ -527,6 +627,348 @@
       "text": "keep in touch",
       "normalized_text": "keep in touch",
       "word_type": "idiom",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "1e7a889f-a956-58af-8c43-c2edb028ebd6",
+      "text": "size",
+      "normalized_text": "size",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "0a5aca4f-0267-517a-af70-c7fc4a38d9e8",
+      "text": "try on",
+      "normalized_text": "try on",
+      "word_type": "phrasal_verb",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "c2e8a79d-7636-5b9d-a7ea-4b9839c29c6a",
+      "text": "fit",
+      "normalized_text": "fit",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "dbe298a6-369c-5056-a332-b7de432e9052",
+      "text": "receipt",
+      "normalized_text": "receipt",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "d831642f-a28f-5756-b16d-01cd1f58307f",
+      "text": "refund",
+      "normalized_text": "refund",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "daeea375-768e-59b9-aec7-dc91b9e598cb",
+      "text": "exchange",
+      "normalized_text": "exchange",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "88b44026-0a03-5df9-b4c3-e87f97bacfb0",
+      "text": "rent",
+      "normalized_text": "rent",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "1e640536-8e66-5397-ad80-1ff68df4b256",
+      "text": "landlord",
+      "normalized_text": "landlord",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "cfd60ace-4c1f-521d-b03f-dc3c38459bc7",
+      "text": "repair",
+      "normalized_text": "repair",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "e195adbc-64f1-5f8a-ae8d-e42b9803687f",
+      "text": "bus stop",
+      "normalized_text": "bus stop",
+      "word_type": "phrase",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "6c4e30cb-0831-5655-82b0-56b4355cd3cc",
+      "text": "timetable",
+      "normalized_text": "timetable",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "e3f54ce9-b232-5b18-bdc1-4a81cb9fd235",
+      "text": "platform",
+      "normalized_text": "platform",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "798a6a5e-4527-5ca7-a3a2-1124c6e72be8",
+      "text": "single ticket",
+      "normalized_text": "single ticket",
+      "word_type": "phrase",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "2331fa3d-05d0-5962-97a9-f5df097c0a27",
+      "text": "return ticket",
+      "normalized_text": "return ticket",
+      "word_type": "phrase",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "7c4d3a84-db2f-5e5f-b671-b8ae7d36f3d5",
+      "text": "change",
+      "normalized_text": "change",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "bd2bb35c-5f5f-54ff-888f-13bc77a4bc7f",
+      "text": "parcel",
+      "normalized_text": "parcel",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "81511eb8-1bcb-5b32-a270-3d57c4c87fe0",
+      "text": "address",
+      "normalized_text": "address",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "91eb981c-15db-586a-b830-020e7164d99d",
+      "text": "delivery",
+      "normalized_text": "delivery",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "746459be-298a-577a-a51e-a074770afb83",
+      "text": "cash",
+      "normalized_text": "cash",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "0c391f56-6ede-5f64-ac6e-b89d8fa9098d",
+      "text": "bank card",
+      "normalized_text": "bank card",
+      "word_type": "phrase",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "f2baae17-f72d-5610-9bc8-f230a0403135",
+      "text": "payment",
+      "normalized_text": "payment",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "518d47fe-d487-552a-9be1-d5e2b0430273",
+      "text": "form",
+      "normalized_text": "form",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "8893652a-6bfa-5aff-b7b3-c22e1f1ccd13",
+      "text": "signature",
+      "normalized_text": "signature",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "7f75eeca-7146-5fc3-8a1a-4a3a2f17806e",
+      "text": "queue",
+      "normalized_text": "queue",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "fbbd1a6e-3c77-50d5-9692-c4495482a9e8",
+      "text": "appointment",
+      "normalized_text": "appointment",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "5db88ba3-a58e-5bf4-bf89-2f1a2aad6673",
+      "text": "symptom",
+      "normalized_text": "symptom",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "69ef3300-214d-50c7-b954-63491ef10d74",
+      "text": "pharmacy",
+      "normalized_text": "pharmacy",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "4c056966-b2c4-5d12-859f-1e37cc88b9ca",
+      "text": "signal",
+      "normalized_text": "signal",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "00a4a18d-06c5-52f3-a714-f6daf22e234f",
+      "text": "voicemail",
+      "normalized_text": "voicemail",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "30a09b88-d100-5f4f-80e9-96bda2c52c10",
+      "text": "call back",
+      "normalized_text": "call back",
+      "word_type": "phrasal_verb",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "b40ffcbd-c82d-5cca-9668-0afa69287649",
+      "text": "attachment",
+      "normalized_text": "attachment",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "01f8d295-dce8-5a84-99c9-e4b5a8a2c128",
+      "text": "link",
+      "normalized_text": "link",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "53f12126-c2b3-575d-a377-a8746270d73f",
+      "text": "reply",
+      "normalized_text": "reply",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "72b07b2b-8a10-5dd2-97c1-30062ed701f5",
+      "text": "shift",
+      "normalized_text": "shift",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "6cb052bb-d9db-5685-b663-3a07c4b32b7c",
+      "text": "break",
+      "normalized_text": "break",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "54d1dc01-13b9-5565-810c-2ca9d5f34202",
+      "text": "colleague",
+      "normalized_text": "colleague",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "a84dff17-e9d5-5b37-9027-cbe7355f85ad",
+      "text": "update",
+      "normalized_text": "update",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "2d5f556b-71f5-5390-9275-3fe533e4902f",
+      "text": "presentation",
+      "normalized_text": "presentation",
+      "word_type": "word",
       "language_code": "en",
       "status": "active",
       "difficulty_level": "b1"
@@ -1069,6 +1511,386 @@
       "part_of_speech": "verb",
       "short_definition": "To continue communicating with someone over time.",
       "learner_definition": "You can keep in touch by calling, messaging or meeting. The phrase is often used when people say goodbye and want to stay connected.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "7dee60f4-25c4-5d55-9111-dc5174dcd5b5",
+      "word_id": "1e7a889f-a956-58af-8c43-c2edb028ebd6",
+      "part_of_speech": "noun",
+      "short_definition": "A measurement or category showing how big something is, especially clothes.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "481f699b-4788-5620-b8a5-51347d90e6e5",
+      "word_id": "0a5aca4f-0267-517a-af70-c7fc4a38d9e8",
+      "part_of_speech": "verb",
+      "short_definition": "To put on clothes or shoes to see whether they suit you or fit.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "6c80ff44-eb45-5332-b48d-228872ead757",
+      "word_id": "c2e8a79d-7636-5b9d-a7ea-4b9839c29c6a",
+      "part_of_speech": "verb",
+      "short_definition": "To be the right size and shape for someone.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "74a55fe5-7736-58f0-98b8-23eef998067d",
+      "word_id": "dbe298a6-369c-5056-a332-b7de432e9052",
+      "part_of_speech": "noun",
+      "short_definition": "A paper or electronic record showing that you have paid.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "538cc7f5-983c-59cc-8664-173cefca65ad",
+      "word_id": "d831642f-a28f-5756-b16d-01cd1f58307f",
+      "part_of_speech": "noun",
+      "short_definition": "Money returned to someone who has paid for something.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "c916143f-197b-5cd7-a4c9-7b21178f04aa",
+      "word_id": "daeea375-768e-59b9-aec7-dc91b9e598cb",
+      "part_of_speech": "verb",
+      "short_definition": "To return something you bought and receive another item instead.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "e507b507-5432-51a0-bcc3-be12294143db",
+      "word_id": "88b44026-0a03-5df9-b4c3-e87f97bacfb0",
+      "part_of_speech": "noun",
+      "short_definition": "Money paid regularly to use a home owned by someone else.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "75be2229-a161-5e08-856f-143098221439",
+      "word_id": "1e640536-8e66-5397-ad80-1ff68df4b256",
+      "part_of_speech": "noun",
+      "short_definition": "A person or company that rents out a home or other property.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "3c382279-cf27-5d6b-ba75-a0389f1d5680",
+      "word_id": "cfd60ace-4c1f-521d-b03f-dc3c38459bc7",
+      "part_of_speech": "noun",
+      "short_definition": "Work done to fix something that is broken or damaged.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "bf1bee5c-b8f0-5ebc-9252-53c4ac9ef7de",
+      "word_id": "e195adbc-64f1-5f8a-ae8d-e42b9803687f",
+      "part_of_speech": "noun",
+      "short_definition": "A place where a bus stops so passengers can get on or off.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "6d08080d-4855-5652-ae35-cf0c2bcb9222",
+      "word_id": "6c4e30cb-0831-5655-82b0-56b4355cd3cc",
+      "part_of_speech": "noun",
+      "short_definition": "A list of the times when transport services arrive or leave.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "9aa8876d-25c6-54d1-9b65-0816e604e7a5",
+      "word_id": "e3f54ce9-b232-5b18-bdc1-4a81cb9fd235",
+      "part_of_speech": "noun",
+      "short_definition": "The area beside a railway track where people wait for and enter a train.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "faf13c57-a106-5406-a2bc-e743eb00ec4e",
+      "word_id": "798a6a5e-4527-5ca7-a3a2-1124c6e72be8",
+      "part_of_speech": "noun",
+      "short_definition": "A travel ticket for a journey in one direction only.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "35b47079-26eb-5441-bf1d-05060d125a7e",
+      "word_id": "2331fa3d-05d0-5962-97a9-f5df097c0a27",
+      "part_of_speech": "noun",
+      "short_definition": "A travel ticket for a journey to a place and back again.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "91888c86-1fc6-5633-a6dd-a46017f8fdf7",
+      "word_id": "7c4d3a84-db2f-5e5f-b671-b8ae7d36f3d5",
+      "part_of_speech": "verb",
+      "short_definition": "To leave one bus or train and continue your journey on another.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "0b593408-6679-5fb8-a21c-b73a525c76e5",
+      "word_id": "bd2bb35c-5f5f-54ff-888f-13bc77a4bc7f",
+      "part_of_speech": "noun",
+      "short_definition": "An object or group of objects wrapped for sending or delivery.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "3bb8e710-2cfb-5f6f-a281-c0a167d46fb2",
+      "word_id": "81511eb8-1bcb-5b32-a270-3d57c4c87fe0",
+      "part_of_speech": "noun",
+      "short_definition": "The details of where someone lives or where a building is.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "4609031d-af20-550a-906e-3fd3cde7588e",
+      "word_id": "91eb981c-15db-586a-b830-020e7164d99d",
+      "part_of_speech": "noun",
+      "short_definition": "The act of bringing goods or a parcel to a person or place.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "b20c1447-0e63-5712-9ae7-dd4aca9aeb85",
+      "word_id": "746459be-298a-577a-a51e-a074770afb83",
+      "part_of_speech": "noun",
+      "short_definition": "Money in the form of coins or notes.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "d78438f3-30bd-58bf-9b96-1489c4f57d3b",
+      "word_id": "0c391f56-6ede-5f64-ac6e-b89d8fa9098d",
+      "part_of_speech": "noun",
+      "short_definition": "A card linked to a bank account or credit account, used to pay or obtain money.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "c6a6c8f7-1ce0-59df-b963-e07066796992",
+      "word_id": "f2baae17-f72d-5610-9bc8-f230a0403135",
+      "part_of_speech": "noun",
+      "short_definition": "The act of paying money, or an amount of money paid.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "b548ade3-8682-521e-bf26-848526519854",
+      "word_id": "518d47fe-d487-552a-9be1-d5e2b0430273",
+      "part_of_speech": "noun",
+      "short_definition": "A document with spaces for information that you need to provide.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "c7bbc8ae-3f64-58e9-acf0-3069e317c471",
+      "word_id": "8893652a-6bfa-5aff-b7b3-c22e1f1ccd13",
+      "part_of_speech": "noun",
+      "short_definition": "Your name written in your usual way to sign a document.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "64360906-46e2-588e-96d7-c78213875c9b",
+      "word_id": "7f75eeca-7146-5fc3-8a1a-4a3a2f17806e",
+      "part_of_speech": "noun",
+      "short_definition": "A line of people waiting for something.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "c76cb86d-be5a-5375-8d88-72bda7b98e7d",
+      "word_id": "fbbd1a6e-3c77-50d5-9692-c4495482a9e8",
+      "part_of_speech": "noun",
+      "short_definition": "An arrangement to meet someone at a particular time, often for a service.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "096a46ea-93b8-59c2-9423-bc07f3332297",
+      "word_id": "5db88ba3-a58e-5bf4-bf89-2f1a2aad6673",
+      "part_of_speech": "noun",
+      "short_definition": "A physical or mental change that may be a sign of an illness or health problem.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "c3a26504-d404-5151-bbac-5e22511aae5f",
+      "word_id": "69ef3300-214d-50c7-b954-63491ef10d74",
+      "part_of_speech": "noun",
+      "short_definition": "A shop or service where people can get medicines.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "5966f508-b502-5669-a7d6-c619ce92639f",
+      "word_id": "4c056966-b2c4-5d12-859f-1e37cc88b9ca",
+      "part_of_speech": "noun",
+      "short_definition": "The connection received by a mobile phone that allows it to communicate.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "2fd7a730-c9e9-5a7b-b094-dea868bc7cd3",
+      "word_id": "00a4a18d-06c5-52f3-a714-f6daf22e234f",
+      "part_of_speech": "noun",
+      "short_definition": "A system for recording spoken messages when a phone call is not answered, or a message on that system.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "e1b649b8-b6d8-5caf-8671-5b9e57ebd71c",
+      "word_id": "30a09b88-d100-5f4f-80e9-96bda2c52c10",
+      "part_of_speech": "verb",
+      "short_definition": "To phone someone after they have phoned you.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "ee851d91-6476-5942-9454-8f1b2db92682",
+      "word_id": "b40ffcbd-c82d-5cca-9668-0afa69287649",
+      "part_of_speech": "noun",
+      "short_definition": "A file sent with an email or other electronic message.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "ae343b98-d972-5565-8bac-87f04fe96d06",
+      "word_id": "01f8d295-dce8-5a84-99c9-e4b5a8a2c128",
+      "part_of_speech": "noun",
+      "short_definition": "A clickable address or item that opens an online page or resource.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "2d1adc4c-058b-5d12-ae17-86afc4195588",
+      "word_id": "53f12126-c2b3-575d-a377-a8746270d73f",
+      "part_of_speech": "verb",
+      "short_definition": "To answer a message or question.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "f97ad45b-01ee-51f9-b77a-ddab1881b374",
+      "word_id": "72b07b2b-8a10-5dd2-97c1-30062ed701f5",
+      "part_of_speech": "noun",
+      "short_definition": "A scheduled period of time when someone works.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "ea64a58a-2521-50fa-8af9-a5cf9e013763",
+      "word_id": "6cb052bb-d9db-5685-b663-3a07c4b32b7c",
+      "part_of_speech": "noun",
+      "short_definition": "A short time when you stop working to rest.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "8ecac8d4-b7c0-51bb-95be-14a73d8637e3",
+      "word_id": "54d1dc01-13b9-5565-810c-2ca9d5f34202",
+      "part_of_speech": "noun",
+      "short_definition": "Someone you work with.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "e62a2ba4-c6b7-5186-98f6-20d69f4dc196",
+      "word_id": "a84dff17-e9d5-5b37-9027-cbe7355f85ad",
+      "part_of_speech": "noun",
+      "short_definition": "New information about the current state or progress of something.",
+      "learner_definition": null,
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "c1e69c4e-2915-5c99-96ab-d946e67653fd",
+      "word_id": "2d5f556b-71f5-5390-9275-3fe533e4902f",
+      "part_of_speech": "noun",
+      "short_definition": "A talk that explains a topic to an audience, often using pictures or slides.",
+      "learner_definition": null,
       "meaning_order": 1,
       "status": "active",
       "difficulty_level": "b1"
@@ -1686,6 +2508,614 @@
       "difficulty_level": "b1",
       "situation_label": "Daily Conversation",
       "status": "active"
+    },
+    {
+      "id": "69228a1a-42d0-51c0-9809-bfb98f669d3f",
+      "meaning_id": "7dee60f4-25c4-5d55-9111-dc5174dcd5b5",
+      "example_text": "Do you have this shirt in a smaller size?",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Shopping"
+    },
+    {
+      "id": "595e252a-4474-573f-9e2e-cbf2049e98d5",
+      "meaning_id": "7dee60f4-25c4-5d55-9111-dc5174dcd5b5",
+      "example_text": "This is the right size for me.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Shopping"
+    },
+    {
+      "id": "caebb7ab-0f1b-5fe9-9efd-b736e0dc7eae",
+      "meaning_id": "481f699b-4788-5620-b8a5-51347d90e6e5",
+      "example_text": "Can I try on this jacket?",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Shopping"
+    },
+    {
+      "id": "157483ad-7b92-5ab3-bf0a-bb6dc5c3d770",
+      "meaning_id": "481f699b-4788-5620-b8a5-51347d90e6e5",
+      "example_text": "She tried on the shoes before buying them.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Shopping"
+    },
+    {
+      "id": "fbc909bd-c6fc-5f0c-96fc-530a1bccbf0f",
+      "meaning_id": "6c80ff44-eb45-5332-b48d-228872ead757",
+      "example_text": "These shoes fit me well.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Shopping"
+    },
+    {
+      "id": "f25b4f5d-4964-586a-b867-5f74360496aa",
+      "meaning_id": "6c80ff44-eb45-5332-b48d-228872ead757",
+      "example_text": "The jacket did not fit, so I chose a larger one.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Shopping"
+    },
+    {
+      "id": "ef005e09-3ab8-52e2-9efd-2b8ae24b6fe1",
+      "meaning_id": "74a55fe5-7736-58f0-98b8-23eef998067d",
+      "example_text": "Please keep your receipt.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Shopping"
+    },
+    {
+      "id": "92991b7b-2efa-501f-819a-63245367007f",
+      "meaning_id": "74a55fe5-7736-58f0-98b8-23eef998067d",
+      "example_text": "The shop emailed me a receipt after I paid.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Shopping"
+    },
+    {
+      "id": "8044ee5a-313c-5095-afe9-9b8c7b52f9c5",
+      "meaning_id": "538cc7f5-983c-59cc-8664-173cefca65ad",
+      "example_text": "I asked for a refund because the lamp was broken.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Shopping"
+    },
+    {
+      "id": "f5ba4846-89e7-5adf-89d0-cdfd1e762072",
+      "meaning_id": "538cc7f5-983c-59cc-8664-173cefca65ad",
+      "example_text": "The shop sent my refund to my bank account.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Shopping"
+    },
+    {
+      "id": "2f86abf6-6467-5316-8bba-06203a6ed2ed",
+      "meaning_id": "c916143f-197b-5cd7-a4c9-7b21178f04aa",
+      "example_text": "Can I exchange this shirt for a larger one?",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Shopping"
+    },
+    {
+      "id": "a7a652b3-6d3f-5016-9807-e89b41d9838b",
+      "meaning_id": "c916143f-197b-5cd7-a4c9-7b21178f04aa",
+      "example_text": "She exchanged the blue bag for a black one.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Shopping"
+    },
+    {
+      "id": "e511d767-3454-52a4-beab-388ec19a74c8",
+      "meaning_id": "e507b507-5432-51a0-bcc3-be12294143db",
+      "example_text": "Our rent is due at the start of each month.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Home and Renting"
+    },
+    {
+      "id": "14015412-442e-5d36-81da-cdc5bf763aae",
+      "meaning_id": "e507b507-5432-51a0-bcc3-be12294143db",
+      "example_text": "The rent includes water but not electricity.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Home and Renting"
+    },
+    {
+      "id": "ac39a7a1-c398-5487-8b8d-7a396dc6afce",
+      "meaning_id": "75be2229-a161-5e08-856f-143098221439",
+      "example_text": "I told the landlord about the broken window.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Home and Renting"
+    },
+    {
+      "id": "962dd71f-cae7-51b8-bc7e-061b0cc3ad5c",
+      "meaning_id": "75be2229-a161-5e08-856f-143098221439",
+      "example_text": "Our landlord arranged a visit to check the heating.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Home and Renting"
+    },
+    {
+      "id": "38c9734b-1735-5147-824e-215a35c22aa5",
+      "meaning_id": "3c382279-cf27-5d6b-ba75-a0389f1d5680",
+      "example_text": "The door needs a small repair.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Home and Renting"
+    },
+    {
+      "id": "fae10e38-4f19-5ef1-a981-e15e193ef0f0",
+      "meaning_id": "3c382279-cf27-5d6b-ba75-a0389f1d5680",
+      "example_text": "The repair took two hours.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Home and Renting"
+    },
+    {
+      "id": "bf3b44cb-6bd3-5d0a-b080-c6c2aa5eb521",
+      "meaning_id": "bf1bee5c-b8f0-5ebc-9252-53c4ac9ef7de",
+      "example_text": "The bus stop is opposite the library.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Public Transport"
+    },
+    {
+      "id": "0936f080-7b1a-5836-96c2-2c5f50cb34a8",
+      "meaning_id": "bf1bee5c-b8f0-5ebc-9252-53c4ac9ef7de",
+      "example_text": "We waited at the bus stop for ten minutes.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Public Transport"
+    },
+    {
+      "id": "facff793-481b-5498-92bc-24fa1a3bbb42",
+      "meaning_id": "6d08080d-4855-5652-ae35-cf0c2bcb9222",
+      "example_text": "Check the timetable before you leave home.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Public Transport"
+    },
+    {
+      "id": "46bfd430-4ea8-57c7-a9f7-942e2bd0c4a9",
+      "meaning_id": "6d08080d-4855-5652-ae35-cf0c2bcb9222",
+      "example_text": "The new timetable shows a later bus on Sundays.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Public Transport"
+    },
+    {
+      "id": "fb2268cf-bd75-5678-8ba6-a5010720dc06",
+      "meaning_id": "9aa8876d-25c6-54d1-9b65-0816e604e7a5",
+      "example_text": "Our train leaves from platform three.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Public Transport"
+    },
+    {
+      "id": "10f791c4-1d86-5528-8fc6-f5011d7b10d6",
+      "meaning_id": "9aa8876d-25c6-54d1-9b65-0816e604e7a5",
+      "example_text": "Please wait on the platform until the train stops.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Public Transport"
+    },
+    {
+      "id": "2d8da1df-69eb-53fd-8041-d44b8c3ebb0d",
+      "meaning_id": "faf13c57-a106-5406-a2bc-e743eb00ec4e",
+      "example_text": "I would like a single ticket to Oxford.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Public Transport"
+    },
+    {
+      "id": "1e065910-0f97-58b8-8797-483bd6341b76",
+      "meaning_id": "faf13c57-a106-5406-a2bc-e743eb00ec4e",
+      "example_text": "She bought a single ticket because she was not coming back that day.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Public Transport"
+    },
+    {
+      "id": "c3eff19b-e608-5a23-957d-8ea48e0cc930",
+      "meaning_id": "35b47079-26eb-5441-bf1d-05060d125a7e",
+      "example_text": "Is a return ticket cheaper than two single tickets?",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Public Transport"
+    },
+    {
+      "id": "d0d73919-5459-51fb-837c-3a9dd34308b7",
+      "meaning_id": "35b47079-26eb-5441-bf1d-05060d125a7e",
+      "example_text": "I used my return ticket to travel home that evening.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Public Transport"
+    },
+    {
+      "id": "03ac94db-d635-5177-8b2d-e361bd209656",
+      "meaning_id": "91888c86-1fc6-5633-a6dd-a46017f8fdf7",
+      "example_text": "We need to change trains at the next station.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Public Transport"
+    },
+    {
+      "id": "65090f18-11fa-544c-bcae-94e07a60157c",
+      "meaning_id": "91888c86-1fc6-5633-a6dd-a46017f8fdf7",
+      "example_text": "You can take this bus, but you must change in the town centre.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Public Transport"
+    },
+    {
+      "id": "6297dd9a-56ae-5f36-ab3f-c0d155165de6",
+      "meaning_id": "0b593408-6679-5fb8-a21c-b73a525c76e5",
+      "example_text": "A parcel arrived for you this morning.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Deliveries"
+    },
+    {
+      "id": "7cec54ea-2504-500d-b71b-e78d85e7e16b",
+      "meaning_id": "0b593408-6679-5fb8-a21c-b73a525c76e5",
+      "example_text": "I packed the book in a small parcel.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Deliveries"
+    },
+    {
+      "id": "62fbc11d-6901-5fd9-bf38-a4d348aba60e",
+      "meaning_id": "3bb8e710-2cfb-5f6f-a281-c0a167d46fb2",
+      "example_text": "Please write your delivery address here.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Deliveries"
+    },
+    {
+      "id": "30663100-2b45-559a-8e17-bf9b9826c90b",
+      "meaning_id": "3bb8e710-2cfb-5f6f-a281-c0a167d46fb2",
+      "example_text": "I sent the parcel to the wrong address.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Deliveries"
+    },
+    {
+      "id": "d827365f-df83-5fd8-84da-5963db9dcd4c",
+      "meaning_id": "4609031d-af20-550a-906e-3fd3cde7588e",
+      "example_text": "The shop offers delivery on Saturdays.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Deliveries"
+    },
+    {
+      "id": "3bcde800-8995-5307-b829-9aec71009460",
+      "meaning_id": "4609031d-af20-550a-906e-3fd3cde7588e",
+      "example_text": "We are waiting for the delivery of our new table.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Deliveries"
+    },
+    {
+      "id": "7c591c8c-6bd8-505e-83f0-580655b8be69",
+      "meaning_id": "b20c1447-0e63-5712-9ae7-dd4aca9aeb85",
+      "example_text": "Can I pay in cash?",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Everyday Payments"
+    },
+    {
+      "id": "26ac58b9-fb78-5d80-8c73-ccc85280221d",
+      "meaning_id": "b20c1447-0e63-5712-9ae7-dd4aca9aeb85",
+      "example_text": "I do not have enough cash for the bus.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Everyday Payments"
+    },
+    {
+      "id": "33ffc670-0e8f-582f-94a0-26b5367e6038",
+      "meaning_id": "d78438f3-30bd-58bf-9b96-1489c4f57d3b",
+      "example_text": "You can pay with a bank card.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Everyday Payments"
+    },
+    {
+      "id": "915a7ab3-b074-5c08-8d11-b7ca0464c683",
+      "meaning_id": "d78438f3-30bd-58bf-9b96-1489c4f57d3b",
+      "example_text": "I used my bank card to buy the tickets.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Everyday Payments"
+    },
+    {
+      "id": "a7e6c61d-dc3e-551d-bc6b-af1d99403654",
+      "meaning_id": "c6a6c8f7-1ce0-59df-b963-e07066796992",
+      "example_text": "Your payment has been received.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Everyday Payments"
+    },
+    {
+      "id": "08f6d874-6943-54d9-874f-a8da09e7300a",
+      "meaning_id": "c6a6c8f7-1ce0-59df-b963-e07066796992",
+      "example_text": "I made the payment online this morning.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Everyday Payments"
+    },
+    {
+      "id": "0f67f42f-a02c-5c51-a18b-e66daa8271b7",
+      "meaning_id": "b548ade3-8682-521e-bf26-848526519854",
+      "example_text": "Please fill in this form with your name and address.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Everyday Services"
+    },
+    {
+      "id": "893d1152-60e2-55ae-93cd-47f4859f95b6",
+      "meaning_id": "b548ade3-8682-521e-bf26-848526519854",
+      "example_text": "I checked the form before sending it.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Everyday Services"
+    },
+    {
+      "id": "c2b7b5ef-9014-5b5f-8b45-c607678ba2af",
+      "meaning_id": "c7bbc8ae-3f64-58e9-acf0-3069e317c471",
+      "example_text": "We need your signature at the bottom of the page.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Everyday Services"
+    },
+    {
+      "id": "881c5d3e-defe-5248-81d1-ad9f2e37a896",
+      "meaning_id": "c7bbc8ae-3f64-58e9-acf0-3069e317c471",
+      "example_text": "Her signature was next to the date.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Everyday Services"
+    },
+    {
+      "id": "c4a1f693-5fb8-545e-ac0a-0d28b2eb7ba8",
+      "meaning_id": "64360906-46e2-588e-96d7-c78213875c9b",
+      "example_text": "There was a long queue at the counter.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Everyday Services"
+    },
+    {
+      "id": "6cfcd001-1c2e-5acd-bf9a-de39f127b11d",
+      "meaning_id": "64360906-46e2-588e-96d7-c78213875c9b",
+      "example_text": "We joined the queue outside the office.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Everyday Services"
+    },
+    {
+      "id": "3420ef3d-ee07-5897-813f-5c6013ef6946",
+      "meaning_id": "c76cb86d-be5a-5375-8d88-72bda7b98e7d",
+      "example_text": "I have a doctor's appointment on Monday.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Health Appointments"
+    },
+    {
+      "id": "a4a5fe2a-f327-5ca1-8332-4a17bb3530da",
+      "meaning_id": "c76cb86d-be5a-5375-8d88-72bda7b98e7d",
+      "example_text": "She called to change her appointment time.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Health Appointments"
+    },
+    {
+      "id": "de8981c3-7334-5ccf-99df-43e7550c4a26",
+      "meaning_id": "096a46ea-93b8-59c2-9423-bc07f3332297",
+      "example_text": "The doctor asked me to describe my symptoms.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Health Appointments"
+    },
+    {
+      "id": "7364a08a-3870-5d89-9974-2262d599eb6c",
+      "meaning_id": "096a46ea-93b8-59c2-9423-bc07f3332297",
+      "example_text": "I wrote down when each symptom started.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Health Appointments"
+    },
+    {
+      "id": "fd3702a6-ffef-5bc2-93de-b0c4b3b1a811",
+      "meaning_id": "c3a26504-d404-5151-bbac-5e22511aae5f",
+      "example_text": "Is there a pharmacy near the station?",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Health Appointments"
+    },
+    {
+      "id": "52955af4-9b45-5d86-8c6d-ecbd36674c74",
+      "meaning_id": "c3a26504-d404-5151-bbac-5e22511aae5f",
+      "example_text": "I asked the pharmacist when the pharmacy closes.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Health Appointments"
+    },
+    {
+      "id": "20e0595e-739d-575e-a2ef-ac58756d21c1",
+      "meaning_id": "5966f508-b502-5669-a7d6-c619ce92639f",
+      "example_text": "There is no phone signal in this room.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Phone Calls"
+    },
+    {
+      "id": "d3d2a2c2-e4cf-552c-8d81-ca83f2347d31",
+      "meaning_id": "5966f508-b502-5669-a7d6-c619ce92639f",
+      "example_text": "I moved outside to get a better signal.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Phone Calls"
+    },
+    {
+      "id": "599effc7-a3ab-5ddf-b1f2-0779477dfccf",
+      "meaning_id": "2fd7a730-c9e9-5a7b-b094-dea868bc7cd3",
+      "example_text": "Please leave a voicemail if I do not answer.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Phone Calls"
+    },
+    {
+      "id": "68784d58-d511-5246-8f0b-9e1838616978",
+      "meaning_id": "2fd7a730-c9e9-5a7b-b094-dea868bc7cd3",
+      "example_text": "I listened to your voicemail after lunch.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Phone Calls"
+    },
+    {
+      "id": "481ca738-e1c3-59b5-8d47-5850c583f2bd",
+      "meaning_id": "e1b649b8-b6d8-5caf-8671-5b9e57ebd71c",
+      "example_text": "Can you call back after six?",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Phone Calls"
+    },
+    {
+      "id": "57e7dab2-9312-5136-bd15-6e2183501891",
+      "meaning_id": "e1b649b8-b6d8-5caf-8671-5b9e57ebd71c",
+      "example_text": "I called back when the meeting ended.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Phone Calls"
+    },
+    {
+      "id": "f10bd7ff-2af8-5f73-b47a-b6157db1165d",
+      "meaning_id": "ee851d91-6476-5942-9454-8f1b2db92682",
+      "example_text": "The timetable is in the attachment.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Email and Online Tasks"
+    },
+    {
+      "id": "128bd16a-f8ae-58d3-a2ee-c419cc08d2e3",
+      "meaning_id": "ee851d91-6476-5942-9454-8f1b2db92682",
+      "example_text": "I forgot to include the attachment in my email.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Email and Online Tasks"
+    },
+    {
+      "id": "7b994cb0-c978-5224-9fb8-f191a300c695",
+      "meaning_id": "ae343b98-d972-5565-8bac-87f04fe96d06",
+      "example_text": "I sent you a link to the booking page.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Email and Online Tasks"
+    },
+    {
+      "id": "ab51a91b-d43e-5231-9963-0f8d868e29fa",
+      "meaning_id": "ae343b98-d972-5565-8bac-87f04fe96d06",
+      "example_text": "The link in the email did not open.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Email and Online Tasks"
+    },
+    {
+      "id": "5ad3e1e1-a8ae-5f77-bd8b-4be428d04e26",
+      "meaning_id": "2d1adc4c-058b-5d12-ae17-86afc4195588",
+      "example_text": "Please reply to my email by Friday.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Email and Online Tasks"
+    },
+    {
+      "id": "464b6c48-3dfe-54f2-84de-17b2d1a94f49",
+      "meaning_id": "2d1adc4c-058b-5d12-ae17-86afc4195588",
+      "example_text": "She replied to the message that evening.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Email and Online Tasks"
+    },
+    {
+      "id": "b651a3eb-2f93-532d-bba3-04d2d5d35829",
+      "meaning_id": "f97ad45b-01ee-51f9-b77a-ddab1881b374",
+      "example_text": "My shift starts at seven in the morning.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Everyday Work"
+    },
+    {
+      "id": "6955cce6-b52c-5319-b097-721791d936aa",
+      "meaning_id": "f97ad45b-01ee-51f9-b77a-ddab1881b374",
+      "example_text": "He works the late shift on Fridays.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Everyday Work"
+    },
+    {
+      "id": "d50fe1b8-2ee5-5d48-a632-8279d18f2aba",
+      "meaning_id": "ea64a58a-2521-50fa-8af9-a5cf9e013763",
+      "example_text": "Let's take a short break.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Everyday Work"
+    },
+    {
+      "id": "5e3720fa-3c5f-54c5-b1b5-2ddc1725d302",
+      "meaning_id": "ea64a58a-2521-50fa-8af9-a5cf9e013763",
+      "example_text": "I called my sister during my lunch break.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Everyday Work"
+    },
+    {
+      "id": "a7786ae6-2982-570b-bce7-6c346ae4f22c",
+      "meaning_id": "8ecac8d4-b7c0-51bb-95be-14a73d8637e3",
+      "example_text": "My colleague showed me how to use the printer.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Everyday Work"
+    },
+    {
+      "id": "7dd38419-510e-5a12-a827-d7bac49ca8a8",
+      "meaning_id": "8ecac8d4-b7c0-51bb-95be-14a73d8637e3",
+      "example_text": "I had lunch with two colleagues from my team.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Everyday Work"
+    },
+    {
+      "id": "34a7dacd-427d-549b-b36d-f3f02d08a1fc",
+      "meaning_id": "e62a2ba4-c6b7-5186-98f6-20d69f4dc196",
+      "example_text": "Could you give us an update on the project?",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "Work Meeting"
+    },
+    {
+      "id": "56045c87-e81f-57a2-81d5-4c4f0c037ea1",
+      "meaning_id": "e62a2ba4-c6b7-5186-98f6-20d69f4dc196",
+      "example_text": "I sent a short update after the meeting.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "Work Meeting"
+    },
+    {
+      "id": "e8c0c3b8-5505-55ee-a39d-d69b6095e9f2",
+      "meaning_id": "c1e69c4e-2915-5c99-96ab-d946e67653fd",
+      "example_text": "Our group gave a presentation about public transport.",
+      "example_order": 1,
+      "status": "active",
+      "situation_label": "University Class"
+    },
+    {
+      "id": "6a603161-391e-5445-8f7d-2e2d8177c83d",
+      "meaning_id": "c1e69c4e-2915-5c99-96ab-d946e67653fd",
+      "example_text": "I practised my presentation with a friend.",
+      "example_order": 2,
+      "status": "active",
+      "situation_label": "University Class"
     }
   ],
   "usage_notes": [
@@ -2984,6 +4414,310 @@
       "note_text": "Use with before the person: keep in touch with me. The past form is kept in touch.",
       "note_order": 3,
       "status": "active"
+    },
+    {
+      "id": "4eb844e0-34b2-5717-9ddb-68756a5fc406",
+      "meaning_id": "7dee60f4-25c4-5d55-9111-dc5174dcd5b5",
+      "note_type": "other",
+      "note_text": "Ask for a smaller or larger size. A size label does not guarantee that clothes will fit.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "97caa9a6-2b7f-5bae-8601-3ea18834b768",
+      "meaning_id": "481f699b-4788-5620-b8a5-51347d90e6e5",
+      "note_type": "grammar",
+      "note_text": "Use try on plus the clothes: try on a jacket. With a pronoun, say try it on.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "a6fd9913-6fee-5cfc-b388-98220787ea5f",
+      "meaning_id": "6c80ff44-eb45-5332-b48d-228872ead757",
+      "note_type": "other",
+      "note_text": "Use fit plus a person: the shoes fit me. A colour or style that looks good on you suits you.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "dc129269-253f-5ab7-8f6f-9592d7eee3cd",
+      "meaning_id": "74a55fe5-7736-58f0-98b8-23eef998067d",
+      "note_type": "other",
+      "note_text": "Keep a receipt as proof of payment. It is different from the bill you receive before paying.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "b3d3201c-fe6c-5ed6-9916-ef1316c7f5f5",
+      "meaning_id": "538cc7f5-983c-59cc-8664-173cefca65ad",
+      "note_type": "other",
+      "note_text": "Ask for a refund or receive a refund. A shop may have conditions for returning goods.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "f95fafa5-744b-5d2f-ab73-110947d0bd69",
+      "meaning_id": "c916143f-197b-5cd7-a4c9-7b21178f04aa",
+      "note_type": "grammar",
+      "note_text": "Use exchange something for something else. A refund gives money back instead of another item.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "9cd97d54-7959-5479-acca-715289c6da12",
+      "meaning_id": "e507b507-5432-51a0-bcc3-be12294143db",
+      "note_type": "grammar",
+      "note_text": "Here rent is a noun: pay the rent. To rent a flat uses the same spelling as a verb.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "f980841c-390b-59a0-9f9c-952131fb623c",
+      "meaning_id": "75be2229-a161-5e08-856f-143098221439",
+      "note_type": "other",
+      "note_text": "This word names the person or company renting out a property; it does not describe your rights or the rental agreement.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "aee485ae-c282-5496-b1de-145d35ada886",
+      "meaning_id": "3c382279-cf27-5d6b-ba75-a0389f1d5680",
+      "note_type": "grammar",
+      "note_text": "Here repair is a noun: a repair or repairs. You can also use repair as a verb: repair the door.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "a11a08a7-f4d8-5ecd-9762-4e462d4d9ec3",
+      "meaning_id": "bf1bee5c-b8f0-5ebc-9252-53c4ac9ef7de",
+      "note_type": "other",
+      "note_text": "Use at the bus stop for the place where you wait. A large transport building may be a bus station.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "39c45dd7-700a-560b-9ca1-4a57477e4a33",
+      "meaning_id": "6d08080d-4855-5652-ae35-cf0c2bcb9222",
+      "note_type": "register",
+      "note_text": "In this travel meaning, schedule is another common word. Check which day the listed times apply to.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "bbfcf6c7-bdff-564f-b148-6850377e3bcd",
+      "meaning_id": "9aa8876d-25c6-54d1-9b65-0816e604e7a5",
+      "note_type": "other",
+      "note_text": "At a railway station, look for a platform number. This meaning is not an online service or a stage.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "21db9005-3f41-5a77-9b14-53671ecf2973",
+      "meaning_id": "faf13c57-a106-5406-a2bc-e743eb00ec4e",
+      "note_type": "register",
+      "note_text": "One-way ticket is another common term. A single ticket does not include the journey back.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "e8f53908-9fe4-5146-8bf0-813779f41853",
+      "meaning_id": "35b47079-26eb-5441-bf1d-05060d125a7e",
+      "note_type": "register",
+      "note_text": "Round-trip ticket is another common term. Check when and where the ticket can be used.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "7772d885-2869-5604-b882-6abba7eb4d7e",
+      "meaning_id": "91888c86-1fc6-5633-a6dd-a46017f8fdf7",
+      "note_type": "grammar",
+      "note_text": "Use change trains or change buses without the. You can name the place with at: change at Central Station.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "851f07c6-751d-5002-8c87-ce099c016a9e",
+      "meaning_id": "0b593408-6679-5fb8-a21c-b73a525c76e5",
+      "note_type": "register",
+      "note_text": "Package is another common word for something wrapped for delivery.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "586a338c-b4a8-52af-9276-5947ac40981c",
+      "meaning_id": "3bb8e710-2cfb-5f6f-a281-c0a167d46fb2",
+      "note_type": "other",
+      "note_text": "A postal address can include a building number, street, town and postal code. Share only the details needed for the delivery.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "c5691127-235a-5771-8e0b-6b23ce51d988",
+      "meaning_id": "4609031d-af20-550a-906e-3fd3cde7588e",
+      "note_type": "grammar",
+      "note_text": "Use delivery of something or delivery to a place. Delivery dates describe when the goods are brought.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "0a40ffab-4d55-54e2-8f16-f8a461a57d22",
+      "meaning_id": "b20c1447-0e63-5712-9ae7-dd4aca9aeb85",
+      "note_type": "grammar",
+      "note_text": "Cash is uncountable: some cash, not a cash. Notes are also called bills in American English.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "1d08cdbb-2479-558a-80e7-1f498e9ed100",
+      "meaning_id": "d78438f3-30bd-58bf-9b96-1489c4f57d3b",
+      "note_type": "other",
+      "note_text": "This can include a debit or credit card. Never share a card number or security code in a practice sentence.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "accd6d3a-3e3f-5a80-b43c-8680a59b321c",
+      "meaning_id": "c6a6c8f7-1ce0-59df-b963-e07066796992",
+      "note_type": "other",
+      "note_text": "Common phrases include make a payment and receive a payment. Paid is the past form of the verb pay.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "92756d64-1021-5de0-9115-1a1860cc7f85",
+      "meaning_id": "b548ade3-8682-521e-bf26-848526519854",
+      "note_type": "grammar",
+      "note_text": "Fill in a form and fill out a form both mean providing the requested information.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "fc80bb00-23b7-5e96-b490-637faa97faf0",
+      "meaning_id": "c7bbc8ae-3f64-58e9-acf0-3069e317c471",
+      "note_type": "grammar",
+      "note_text": "Use sign as the verb: sign the form. Signature is the written name, not the action.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "59e76e99-bd8b-5da3-8632-cfb337b478a6",
+      "meaning_id": "64360906-46e2-588e-96d7-c78213875c9b",
+      "note_type": "register",
+      "note_text": "Line is another common word in this meaning. You can join a queue or wait in a queue.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "107bad23-0447-5ef5-9ba4-bd5c9eea5fe4",
+      "meaning_id": "c76cb86d-be5a-5375-8d88-72bda7b98e7d",
+      "note_type": "grammar",
+      "note_text": "Use make an appointment, have an appointment, or change an appointment. This word is also used for other arranged services.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "bb19ff73-8487-55c4-ac77-f9317794bc77",
+      "meaning_id": "096a46ea-93b8-59c2-9423-bc07f3332297",
+      "note_type": "other",
+      "note_text": "Use describe your symptoms to talk about what you notice. Knowing this vocabulary does not identify an illness.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "d86cd16b-5dd9-552a-b52b-3d9ca65e7fb5",
+      "meaning_id": "c3a26504-d404-5151-bbac-5e22511aae5f",
+      "note_type": "other",
+      "note_text": "A pharmacist is the person trained to supply medicines and give advice; a pharmacy is the place or service.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "aad8f0d8-1eb9-5344-9cd1-9d98602521fd",
+      "meaning_id": "5966f508-b502-5669-a7d6-c619ce92639f",
+      "note_type": "other",
+      "note_text": "Use a weak signal or no signal for a poor phone connection. This is different from the sound used for a notification.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "c259eaf4-c330-5250-8722-2e60519fcdfe",
+      "meaning_id": "2fd7a730-c9e9-5a7b-b094-dea868bc7cd3",
+      "note_type": "grammar",
+      "note_text": "Leave a voicemail means record a message for someone. Check your voicemail means listen to messages left for you.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "0ac57588-77a0-5c27-831d-aca13ffaa1ee",
+      "meaning_id": "e1b649b8-b6d8-5caf-8671-5b9e57ebd71c",
+      "note_type": "grammar",
+      "note_text": "Use call back after a time, or call someone back. With a pronoun, say call her back, not call back her.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "657a3b8d-8e08-5c76-834d-24f9961e879c",
+      "meaning_id": "ee851d91-6476-5942-9454-8f1b2db92682",
+      "note_type": "other",
+      "note_text": "Use an attachment for a file included with a message. It is not the main text of the email.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "feb47553-7e60-5b59-a38c-c3026f769a31",
+      "meaning_id": "ae343b98-d972-5565-8bac-87f04fe96d06",
+      "note_type": "other",
+      "note_text": "In a message, a link opens another online resource. Check that a message is trustworthy before opening its links.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "f089b83b-4a14-5a2d-9677-2a875f5be6f7",
+      "meaning_id": "2d1adc4c-058b-5d12-ae17-86afc4195588",
+      "note_type": "grammar",
+      "note_text": "Use reply to a message or reply to someone. The preposition to comes before the person or message.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "4f2d9d65-c568-594e-b33b-55101577c12d",
+      "meaning_id": "f97ad45b-01ee-51f9-b77a-ddab1881b374",
+      "note_type": "other",
+      "note_text": "Common phrases include the morning shift and the night shift. A shift is a work period, not a change of opinion here.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "6f6ffa36-be5a-533b-ba9a-42968b9a0059",
+      "meaning_id": "ea64a58a-2521-50fa-8af9-a5cf9e013763",
+      "note_type": "grammar",
+      "note_text": "Use take a break or have a break. A lunch break is a pause in work for a meal.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "583f3fe9-80c2-5c61-b07a-9530d4e46c11",
+      "meaning_id": "8ecac8d4-b7c0-51bb-95be-14a73d8637e3",
+      "note_type": "register",
+      "note_text": "Co-worker is another common word. This relationship does not necessarily mean the person is your manager or friend.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "c9ec0566-7b13-5a0f-aed8-8014185350b5",
+      "meaning_id": "e62a2ba4-c6b7-5186-98f6-20d69f4dc196",
+      "note_type": "grammar",
+      "note_text": "Here update is a noun: give an update on a project. To update a file uses the same spelling as a verb.",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "a122fd1a-32c9-532a-9091-a1af634a5788",
+      "meaning_id": "c1e69c4e-2915-5c99-96ab-d946e67653fd",
+      "note_type": "grammar",
+      "note_text": "Use give a presentation on or about a topic. A talk can be a presentation even without slides.",
+      "note_order": 1,
+      "status": "active"
     }
   ],
   "journey_words": [
@@ -3417,6 +5151,310 @@
       "meaning_id": "ddde743f-15ab-5d13-bea6-9835a56c991d",
       "relevance_score": 80,
       "display_order": 17,
+      "is_core": true
+    },
+    {
+      "id": "ad096c63-9de7-5ec8-ab36-6324b1f6e359",
+      "journey_situation_id": "3d184275-efbd-5eb1-abd3-041071f6a9a8",
+      "meaning_id": "7dee60f4-25c4-5d55-9111-dc5174dcd5b5",
+      "relevance_score": 100,
+      "display_order": 1,
+      "is_core": true
+    },
+    {
+      "id": "761ab610-9cef-5221-b7b9-3c0401cc0df2",
+      "journey_situation_id": "3d184275-efbd-5eb1-abd3-041071f6a9a8",
+      "meaning_id": "481f699b-4788-5620-b8a5-51347d90e6e5",
+      "relevance_score": 100,
+      "display_order": 2,
+      "is_core": true
+    },
+    {
+      "id": "6d6b607d-a937-58fb-9519-744c86c032d2",
+      "journey_situation_id": "3d184275-efbd-5eb1-abd3-041071f6a9a8",
+      "meaning_id": "6c80ff44-eb45-5332-b48d-228872ead757",
+      "relevance_score": 100,
+      "display_order": 3,
+      "is_core": true
+    },
+    {
+      "id": "fb735109-80a8-53ba-b0c2-7c42b523d58a",
+      "journey_situation_id": "3d184275-efbd-5eb1-abd3-041071f6a9a8",
+      "meaning_id": "74a55fe5-7736-58f0-98b8-23eef998067d",
+      "relevance_score": 100,
+      "display_order": 4,
+      "is_core": true
+    },
+    {
+      "id": "12128b35-824c-568a-a35e-65b6b0e1b0f4",
+      "journey_situation_id": "3d184275-efbd-5eb1-abd3-041071f6a9a8",
+      "meaning_id": "538cc7f5-983c-59cc-8664-173cefca65ad",
+      "relevance_score": 100,
+      "display_order": 5,
+      "is_core": true
+    },
+    {
+      "id": "7546327f-474e-5560-896b-2a9dfe96a840",
+      "journey_situation_id": "3d184275-efbd-5eb1-abd3-041071f6a9a8",
+      "meaning_id": "c916143f-197b-5cd7-a4c9-7b21178f04aa",
+      "relevance_score": 100,
+      "display_order": 6,
+      "is_core": true
+    },
+    {
+      "id": "da45f557-4d7c-5104-aa1c-a03a0762e1f9",
+      "journey_situation_id": "b71c361b-0127-56e3-b21e-aae3241f1107",
+      "meaning_id": "e507b507-5432-51a0-bcc3-be12294143db",
+      "relevance_score": 100,
+      "display_order": 1,
+      "is_core": true
+    },
+    {
+      "id": "f09619cc-a966-5686-8fd1-85b441388283",
+      "journey_situation_id": "b71c361b-0127-56e3-b21e-aae3241f1107",
+      "meaning_id": "75be2229-a161-5e08-856f-143098221439",
+      "relevance_score": 100,
+      "display_order": 2,
+      "is_core": true
+    },
+    {
+      "id": "d1c69574-0345-547b-a469-07e90f830c15",
+      "journey_situation_id": "b71c361b-0127-56e3-b21e-aae3241f1107",
+      "meaning_id": "3c382279-cf27-5d6b-ba75-a0389f1d5680",
+      "relevance_score": 100,
+      "display_order": 3,
+      "is_core": true
+    },
+    {
+      "id": "94609ee0-c589-50d2-825c-a12b15f83c09",
+      "journey_situation_id": "803c50b4-6021-5211-b09c-76a30455d66c",
+      "meaning_id": "bf1bee5c-b8f0-5ebc-9252-53c4ac9ef7de",
+      "relevance_score": 100,
+      "display_order": 1,
+      "is_core": true
+    },
+    {
+      "id": "9532c0a3-2088-5de5-a0ae-b92a0e0218ee",
+      "journey_situation_id": "803c50b4-6021-5211-b09c-76a30455d66c",
+      "meaning_id": "6d08080d-4855-5652-ae35-cf0c2bcb9222",
+      "relevance_score": 100,
+      "display_order": 2,
+      "is_core": true
+    },
+    {
+      "id": "ecf756a5-ea18-5a78-8f48-7d59bc5cd517",
+      "journey_situation_id": "803c50b4-6021-5211-b09c-76a30455d66c",
+      "meaning_id": "9aa8876d-25c6-54d1-9b65-0816e604e7a5",
+      "relevance_score": 100,
+      "display_order": 3,
+      "is_core": true
+    },
+    {
+      "id": "a906ec2a-95b0-55e0-a87a-70e1c54710cd",
+      "journey_situation_id": "803c50b4-6021-5211-b09c-76a30455d66c",
+      "meaning_id": "faf13c57-a106-5406-a2bc-e743eb00ec4e",
+      "relevance_score": 100,
+      "display_order": 4,
+      "is_core": true
+    },
+    {
+      "id": "3ef71b1d-db80-50bf-a5a9-f85c4256561a",
+      "journey_situation_id": "803c50b4-6021-5211-b09c-76a30455d66c",
+      "meaning_id": "35b47079-26eb-5441-bf1d-05060d125a7e",
+      "relevance_score": 100,
+      "display_order": 5,
+      "is_core": true
+    },
+    {
+      "id": "cddf7e42-8364-57bf-a6be-0dbee9e53dda",
+      "journey_situation_id": "803c50b4-6021-5211-b09c-76a30455d66c",
+      "meaning_id": "91888c86-1fc6-5633-a6dd-a46017f8fdf7",
+      "relevance_score": 100,
+      "display_order": 6,
+      "is_core": true
+    },
+    {
+      "id": "40053f22-6fc8-522a-8f6d-1bc01e37c365",
+      "journey_situation_id": "790cd2e5-6b3e-5037-9336-4fbd11bded1b",
+      "meaning_id": "0b593408-6679-5fb8-a21c-b73a525c76e5",
+      "relevance_score": 100,
+      "display_order": 1,
+      "is_core": true
+    },
+    {
+      "id": "f22c1440-96ed-5173-9cb1-291d86465ca1",
+      "journey_situation_id": "790cd2e5-6b3e-5037-9336-4fbd11bded1b",
+      "meaning_id": "3bb8e710-2cfb-5f6f-a281-c0a167d46fb2",
+      "relevance_score": 100,
+      "display_order": 2,
+      "is_core": true
+    },
+    {
+      "id": "72daae55-2128-53a5-b4e4-84a3bd280b9f",
+      "journey_situation_id": "790cd2e5-6b3e-5037-9336-4fbd11bded1b",
+      "meaning_id": "4609031d-af20-550a-906e-3fd3cde7588e",
+      "relevance_score": 100,
+      "display_order": 3,
+      "is_core": true
+    },
+    {
+      "id": "b3b866bb-6f29-565f-91ff-714d7867c342",
+      "journey_situation_id": "0c60fee3-cbdb-5175-9938-4fe9c9c4a8cd",
+      "meaning_id": "b20c1447-0e63-5712-9ae7-dd4aca9aeb85",
+      "relevance_score": 100,
+      "display_order": 1,
+      "is_core": true
+    },
+    {
+      "id": "2d11d5a6-675c-5546-96aa-aeb9f5522df3",
+      "journey_situation_id": "0c60fee3-cbdb-5175-9938-4fe9c9c4a8cd",
+      "meaning_id": "d78438f3-30bd-58bf-9b96-1489c4f57d3b",
+      "relevance_score": 100,
+      "display_order": 2,
+      "is_core": true
+    },
+    {
+      "id": "e16c1774-cb2b-5be3-8541-88594462985a",
+      "journey_situation_id": "0c60fee3-cbdb-5175-9938-4fe9c9c4a8cd",
+      "meaning_id": "c6a6c8f7-1ce0-59df-b963-e07066796992",
+      "relevance_score": 100,
+      "display_order": 3,
+      "is_core": true
+    },
+    {
+      "id": "199e3ff9-4b3f-5162-8c60-8aad1a748db0",
+      "journey_situation_id": "6a8b37e5-d46f-52e8-b1f3-f586d0c44cd9",
+      "meaning_id": "b548ade3-8682-521e-bf26-848526519854",
+      "relevance_score": 100,
+      "display_order": 1,
+      "is_core": true
+    },
+    {
+      "id": "0e1fff29-c3b3-54f3-8d04-0c5a0ad938ae",
+      "journey_situation_id": "6a8b37e5-d46f-52e8-b1f3-f586d0c44cd9",
+      "meaning_id": "c7bbc8ae-3f64-58e9-acf0-3069e317c471",
+      "relevance_score": 100,
+      "display_order": 2,
+      "is_core": true
+    },
+    {
+      "id": "f2fa18f0-53ef-5dd0-a238-246493e5abd4",
+      "journey_situation_id": "6a8b37e5-d46f-52e8-b1f3-f586d0c44cd9",
+      "meaning_id": "64360906-46e2-588e-96d7-c78213875c9b",
+      "relevance_score": 100,
+      "display_order": 3,
+      "is_core": true
+    },
+    {
+      "id": "0762f953-0cb1-53f7-85b7-6d6bfb4ab76a",
+      "journey_situation_id": "0fc569c8-9983-58a8-a16e-5d7e7c2ae33b",
+      "meaning_id": "c76cb86d-be5a-5375-8d88-72bda7b98e7d",
+      "relevance_score": 100,
+      "display_order": 1,
+      "is_core": true
+    },
+    {
+      "id": "8de35aeb-f075-57ef-ac40-d958022af62a",
+      "journey_situation_id": "0fc569c8-9983-58a8-a16e-5d7e7c2ae33b",
+      "meaning_id": "096a46ea-93b8-59c2-9423-bc07f3332297",
+      "relevance_score": 100,
+      "display_order": 2,
+      "is_core": true
+    },
+    {
+      "id": "8023a61c-359c-56bb-8231-52b7063f2451",
+      "journey_situation_id": "0fc569c8-9983-58a8-a16e-5d7e7c2ae33b",
+      "meaning_id": "c3a26504-d404-5151-bbac-5e22511aae5f",
+      "relevance_score": 100,
+      "display_order": 3,
+      "is_core": true
+    },
+    {
+      "id": "fffe623f-806a-5567-817a-7a2de49f39b9",
+      "journey_situation_id": "659c03df-cd70-520b-911d-060fd2a20c80",
+      "meaning_id": "5966f508-b502-5669-a7d6-c619ce92639f",
+      "relevance_score": 100,
+      "display_order": 1,
+      "is_core": true
+    },
+    {
+      "id": "6189d1b2-a636-5092-993d-191ff695cb17",
+      "journey_situation_id": "659c03df-cd70-520b-911d-060fd2a20c80",
+      "meaning_id": "2fd7a730-c9e9-5a7b-b094-dea868bc7cd3",
+      "relevance_score": 100,
+      "display_order": 2,
+      "is_core": true
+    },
+    {
+      "id": "76318ee1-24d6-5ff2-ba03-07687f1022f7",
+      "journey_situation_id": "659c03df-cd70-520b-911d-060fd2a20c80",
+      "meaning_id": "e1b649b8-b6d8-5caf-8671-5b9e57ebd71c",
+      "relevance_score": 100,
+      "display_order": 3,
+      "is_core": true
+    },
+    {
+      "id": "c08b3968-0357-5ebd-b934-f3272a1ec9c3",
+      "journey_situation_id": "1295dad6-5368-5230-84a5-926aed8bdff1",
+      "meaning_id": "ee851d91-6476-5942-9454-8f1b2db92682",
+      "relevance_score": 100,
+      "display_order": 1,
+      "is_core": true
+    },
+    {
+      "id": "a996b1c4-d2fb-51c6-817a-0b213bdc02c1",
+      "journey_situation_id": "1295dad6-5368-5230-84a5-926aed8bdff1",
+      "meaning_id": "ae343b98-d972-5565-8bac-87f04fe96d06",
+      "relevance_score": 100,
+      "display_order": 2,
+      "is_core": true
+    },
+    {
+      "id": "0a04e557-89f8-5249-b6fa-bb3eabf51dca",
+      "journey_situation_id": "1295dad6-5368-5230-84a5-926aed8bdff1",
+      "meaning_id": "2d1adc4c-058b-5d12-ae17-86afc4195588",
+      "relevance_score": 100,
+      "display_order": 3,
+      "is_core": true
+    },
+    {
+      "id": "2751e405-74de-5197-905d-7443c2605e40",
+      "journey_situation_id": "5777ce2e-bc7a-5b20-90a6-2a85506d5d8f",
+      "meaning_id": "f97ad45b-01ee-51f9-b77a-ddab1881b374",
+      "relevance_score": 100,
+      "display_order": 1,
+      "is_core": true
+    },
+    {
+      "id": "068f5122-c17d-563b-bae5-373b6c1534d6",
+      "journey_situation_id": "5777ce2e-bc7a-5b20-90a6-2a85506d5d8f",
+      "meaning_id": "ea64a58a-2521-50fa-8af9-a5cf9e013763",
+      "relevance_score": 100,
+      "display_order": 2,
+      "is_core": true
+    },
+    {
+      "id": "0ea45db1-5ba8-54e0-95d8-c90ab794159a",
+      "journey_situation_id": "5777ce2e-bc7a-5b20-90a6-2a85506d5d8f",
+      "meaning_id": "8ecac8d4-b7c0-51bb-95be-14a73d8637e3",
+      "relevance_score": 100,
+      "display_order": 3,
+      "is_core": true
+    },
+    {
+      "id": "54bd1b26-b507-5ec0-ba68-c9ce945176cc",
+      "journey_situation_id": "9c689720-9b7f-571a-8a75-4905d5c982e5",
+      "meaning_id": "e62a2ba4-c6b7-5186-98f6-20d69f4dc196",
+      "relevance_score": 100,
+      "display_order": 7,
+      "is_core": true
+    },
+    {
+      "id": "1cb961ac-f7ff-5f13-8bc1-14f0fe80d92d",
+      "journey_situation_id": "a1adeeba-ab2a-5c8f-91e0-50317a2d1898",
+      "meaning_id": "c1e69c4e-2915-5c99-96ab-d946e67653fd",
+      "relevance_score": 100,
+      "display_order": 7,
       "is_core": true
     }
   ]

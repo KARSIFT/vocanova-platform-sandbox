@@ -1,4 +1,4 @@
-h1:xO/fhxKwARBS9KAWe7csL+lhI7ss53Lwn1h3Amile/o=
+h1:DimHyxLXK0poV4ocyYU5DcHaydF0efHbM/oSqfAU2Ws=
 20260724210000_identity_foundation.sql h1:kCE91pYCtOUccWkoJGp8Ow1N7oOWjxAvGcPQtSIC17k=
 20260724210001_oauth_state.sql h1:8UfSmhz20WitPSfl/I/KlApBO0VK39xYS053oC3IEiU=
 20260725100000_voc026_p1_content_tables.sql h1:rTIXQ0O1B1X6fu82HtnYS3xb0KU3yYQO/kJmui0C9j8=
@@ -33,3 +33,7 @@ h1:xO/fhxKwARBS9KAWe7csL+lhI7ss53Lwn1h3Amile/o=
 20260909142063_voc1411_idempotency_record_integrity.sql h1:MmbjyN4YdSbJWfF3QXIugYsymKlgFvIaPYsmxs+7nAY=
 20260912090000_password_credentials.sql h1:yNS5gp6PqdvCmAC2vEwFIq6XP0GL/JY3O4mDNgm7l/Q=
 20261002190000_active_synthetic_identity_uniqueness.sql h1:BsgEPwOPuRLcgVWqS1lpn8ziraMb+efO6mRWAS+l/4U=
+20261002210000_guided_lessons.sql h1:JWogNwI7ZYNocTW5AUrHzFVOHfttzGOQLzbxPqrRqCo=
+20261002220000_word_knowledge.sql h1:cVITEfVJgJA/i8QmH0QaUEI0FiW+sHUzB6IE1Rk+HBE=
+20261002230000_practice_sessions.sql h1:TsRoQ/84jHrcy0s1SxYuoTwEYnsDnkWSB+OxcdQx0mI=
+20261002233000_learning_preferences.sql h1:2jN23NnNTmFiVLSdYgnufhBLyEyL3pnrDs3/XB8CkUY=

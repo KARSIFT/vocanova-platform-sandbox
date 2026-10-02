@@ -27,13 +27,14 @@ type Situation struct {
 
 // MeaningSummary is a meaning entry as shown in a situation drill-down.
 type MeaningSummary struct {
-	MeaningID       uuid.UUID
-	WordID          uuid.UUID
-	WordSlug        string
-	WordText        string
-	PartOfSpeech    string
-	ShortDefinition string
-	Saved           bool
+	MeaningID         uuid.UUID
+	WordID            uuid.UUID
+	WordSlug          string
+	WordText          string
+	PartOfSpeech      string
+	ShortDefinition   string
+	Saved             bool
+	SelfReportedKnown bool
 }
 
 // SituationDetail is a situation with its meanings.
@@ -71,6 +72,7 @@ type WordMeaning struct {
 	UserWordID        uuid.UUID
 	ReviewState       string
 	Due               bool
+	SelfReportedKnown bool
 }
 
 // WordDetail is a canonical word with all its meanings.
@@ -86,6 +88,7 @@ type WordDetail struct {
 
 // Repository is the persistence boundary for canonical content.
 type Repository interface {
+	SearchMeanings(ctx context.Context, req SearchRequest) (*SearchResponse, error)
 	ListSituations(ctx context.Context, req ListSituationsRequest) (*ListSituationsResponse, error)
 	GetSituationBySlug(ctx context.Context, slug string) (*Situation, error)
 	GetMeaningsBySituation(ctx context.Context, situationID uuid.UUID) ([]MeaningSummary, error)
@@ -143,12 +146,16 @@ var (
 
 // Service implements the discovery and canonical word read operations.
 type Service struct {
-	repo   Repository
-	reader SavedStateReader
+	repo      Repository
+	reader    SavedStateReader
+	knowledge KnowledgeReader
 }
 
 // NewService creates a content service.
 func NewService(repo Repository, reader SavedStateReader) *Service {
+	if memory, ok := repo.(*MemoryRepository); ok {
+		memory.savedReader = reader
+	}
 	return &Service{repo: repo, reader: reader}
 }
 
@@ -201,6 +208,17 @@ func (s *Service) GetSituation(ctx context.Context, userID uuid.UUID, slug strin
 	if err := s.applySaved(ctx, userID, &meanings); err != nil {
 		return nil, err
 	}
+	ids := make([]uuid.UUID, len(meanings))
+	for i, m := range meanings {
+		ids[i] = m.MeaningID
+	}
+	known, err := s.knownStates(ctx, userID, ids)
+	if err != nil {
+		return nil, err
+	}
+	for i := range meanings {
+		meanings[i].SelfReportedKnown = known[meanings[i].MeaningID]
+	}
 	return &SituationDetail{Situation: *situation, Meanings: meanings}, nil
 }
 
@@ -213,6 +231,17 @@ func (s *Service) GetWordDetail(ctx context.Context, userID uuid.UUID, wordSlug 
 	}
 	if err := s.applySavedWord(ctx, userID, word); err != nil {
 		return nil, err
+	}
+	ids := make([]uuid.UUID, len(word.Meanings))
+	for i, m := range word.Meanings {
+		ids[i] = m.ID
+	}
+	known, err := s.knownStates(ctx, userID, ids)
+	if err != nil {
+		return nil, err
+	}
+	for i := range word.Meanings {
+		word.Meanings[i].SelfReportedKnown = known[word.Meanings[i].ID]
 	}
 	return word, nil
 }

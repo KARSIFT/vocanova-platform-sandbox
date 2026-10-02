@@ -48,7 +48,7 @@ test.describe("Discover accessibility (VOC-031-T07b)", () => {
     await assertNonColorOnlyFeedback(page, {
       contextLabel: "/discover",
       requireText: [
-        "text=Choose a familiar moment",
+        "text=Explore by situation",
         // The two fixture situation cards must each render their
         // title text - the situation grid is the page's primary
         // content.

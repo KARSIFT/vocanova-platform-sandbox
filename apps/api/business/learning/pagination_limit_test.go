@@ -42,7 +42,7 @@ func TestPostgreSQLPaginationCapsLookaheadAt51(t *testing.T) {
 		require.NoError(t, err)
 		repo := NewPostgreSQLRepository(db)
 		userID := uuid.New()
-		mock.ExpectQuery("SELECT uw.id").WithArgs(userID, sqlmock.AnyArg(), sqlmock.AnyArg(), 51).WillReturnRows(sqlmock.NewRows([]string{"unused"}))
+		mock.ExpectQuery("SELECT uw.id").WithArgs(userID, "", "", false, sqlmock.AnyArg(), sqlmock.AnyArg(), 51).WillReturnRows(sqlmock.NewRows([]string{"unused"}))
 		_, err = repo.ListSavedWords(t.Context(), ListSavedWordsRequest{UserID: userID, Limit: requested})
 		require.NoError(t, err)
 		require.NoError(t, mock.ExpectationsWereMet())

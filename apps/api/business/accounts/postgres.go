@@ -24,7 +24,11 @@ func (r *PostgreSQLRepository) ExportPersonalData(ctx context.Context, userID uu
 	var payload []byte
 	err := r.db.QueryRowContext(ctx, `
 SELECT jsonb_build_object(
- 'schemaVersion', '1.0', 'exportedAt', now(),
+ 'schemaVersion', '1.4', 'exportedAt', now(),
+ 'learningPreferences', (SELECT jsonb_build_object('learningGoal', learning_goal, 'mainUseCase', main_use_case, 'revision', revision, 'createdAt', created_at, 'updatedAt', updated_at) FROM user_learning_preferences WHERE user_id=$1),
+ 'practiceSessions', COALESCE((SELECT jsonb_agg(jsonb_build_object('id', ps.id, 'mode', ps.mode, 'lessonKey', ps.lesson_key, 'contentVersion', ps.snapshot->>'ContentVersion', 'gradingVersion', ps.snapshot->>'GradingVersion', 'status', ps.status, 'completedSteps', ps.current_step, 'totalSteps', ps.total_steps, 'firstAnswersCorrect', ps.first_answers_correct, 'questionsAnswered', ps.questions_answered, 'startedAt', ps.created_at, 'updatedAt', ps.updated_at, 'completedAt', ps.completed_at, 'actions', COALESCE((SELECT jsonb_agg(jsonb_build_object('action', jsonb_strip_nulls(jsonb_build_object('stepId', pa.action->'stepId', 'action', pa.action->'action', 'typedAnswer', pa.action->'typedAnswer', 'choiceId', pa.action->'choiceId')), 'meaningId', pa.meaning_id, 'correct', pa.correct, 'feedback', pa.result->'feedback', 'createdAt', pa.created_at) ORDER BY pa.created_at, pa.id) FROM practice_actions pa WHERE pa.session_id=ps.id AND pa.user_id=$1 AND pa.operation='action'), '[]'::jsonb)) ORDER BY ps.created_at, ps.id) FROM practice_sessions ps WHERE ps.user_id=$1), '[]'::jsonb),
+ 'wordKnowledge', COALESCE((SELECT jsonb_agg(jsonb_build_object('meaningId', k.meaning_id, 'selfReportedKnown', k.self_reported_known, 'note', k.note, 'updatedAt', k.updated_at) ORDER BY k.meaning_id) FROM user_word_knowledge k WHERE k.user_id=$1), '[]'::jsonb),
+ 'guidedLessons', COALESCE((SELECT jsonb_agg(jsonb_build_object('id', ls.id, 'lessonKey', ls.lesson_key, 'lessonVersion', ls.lesson_version, 'title', ls.snapshot->'definition'->>'title', 'words', ls.snapshot->'words', 'status', ls.status, 'completedSteps', ls.current_step, 'totalSteps', ls.total_steps, 'firstAnswersCorrect', ls.first_answers_correct, 'questionsAnswered', ls.questions_answered, 'feedback', ls.feedback, 'startedAt', ls.created_at, 'updatedAt', ls.updated_at, 'completedAt', ls.completed_at, 'actions', COALESCE((SELECT jsonb_agg(jsonb_build_object('action', jsonb_strip_nulls(jsonb_build_object('stepId', la.action->'stepId', 'action', la.action->'action', 'choiceId', la.action->'choiceId', 'lessonKey', la.action->'lessonKey')), 'feedback', la.result->'feedback', 'completedSteps', la.result->'completedSteps', 'createdAt', la.created_at) ORDER BY la.created_at, la.id) FROM lesson_actions la WHERE la.session_id = ls.id AND la.user_id = $1), '[]'::jsonb)) ORDER BY ls.created_at, ls.id) FROM lesson_sessions ls WHERE ls.user_id = $1), '[]'::jsonb),
  'profile', (SELECT jsonb_build_object('id', id, 'email', email, 'displayName', display_name, 'avatarUrl', avatar_url, 'onboardingStatus', onboarding_status, 'emailVerifiedAt', email_verified_at, 'createdAt', created_at, 'updatedAt', updated_at) FROM users WHERE id = $1),
  'settings', COALESCE((SELECT jsonb_build_object('timezone', timezone, 'dailyReviewTarget', daily_review_target, 'reviewIntervalPreset', review_interval_preset, 'notificationsEnabled', notifications_enabled, 'marketingEmailsEnabled', marketing_emails_enabled, 'appLanguage', app_language, 'createdAt', created_at, 'updatedAt', updated_at) FROM user_settings WHERE user_id = $1), jsonb_build_object('timezone', 'UTC', 'dailyReviewTarget', 20, 'reviewIntervalPreset', 'vocanova_default', 'notificationsEnabled', true, 'marketingEmailsEnabled', false, 'appLanguage', 'en', 'createdAt', NULL, 'updatedAt', NULL)),
  'onboardingProfile', (SELECT jsonb_build_object('englishLevel', english_level, 'nativeLanguage', native_language, 'learningGoal', learning_goal, 'mainUseCase', main_use_case, 'dailyReviewTarget', daily_review_target, 'completedAt', completed_at, 'createdAt', created_at, 'updatedAt', updated_at) FROM user_onboarding_profiles WHERE user_id = $1),
@@ -599,6 +603,38 @@ func (r *PostgreSQLRepository) anonymizeUserDataTx(ctx context.Context, tx *sql.
 		return counters, fmt.Errorf("delete streak_states: %w", err)
 	}
 	counters.StreakStates = c
+	counters.LearningPreferences, err = execCount(ctx, tx, userID, `DELETE FROM user_learning_preferences WHERE user_id = $1`)
+	if err != nil {
+		return counters, fmt.Errorf("delete learning preferences: %w", err)
+	}
+	counters.PracticeMistakeResolutions, err = execCount(ctx, tx, userID, `DELETE FROM practice_mistake_resolutions WHERE user_id = $1`)
+	if err != nil {
+		return counters, fmt.Errorf("delete practice mistake resolutions: %w", err)
+	}
+	counters.PracticeActions, err = execCount(ctx, tx, userID, `DELETE FROM practice_actions WHERE user_id = $1`)
+	if err != nil {
+		return counters, fmt.Errorf("delete practice actions: %w", err)
+	}
+	counters.PracticeSessions, err = execCount(ctx, tx, userID, `DELETE FROM practice_sessions WHERE user_id = $1`)
+	if err != nil {
+		return counters, fmt.Errorf("delete practice sessions: %w", err)
+	}
+	counters.WordKnowledgeActions, err = execCount(ctx, tx, userID, `DELETE FROM word_knowledge_actions WHERE user_id = $1`)
+	if err != nil {
+		return counters, fmt.Errorf("delete word knowledge actions: %w", err)
+	}
+	counters.WordKnowledge, err = execCount(ctx, tx, userID, `DELETE FROM user_word_knowledge WHERE user_id = $1`)
+	if err != nil {
+		return counters, fmt.Errorf("delete word knowledge: %w", err)
+	}
+	counters.LessonActions, err = execCount(ctx, tx, userID, `DELETE FROM lesson_actions WHERE user_id = $1`)
+	if err != nil {
+		return counters, fmt.Errorf("delete lesson actions: %w", err)
+	}
+	counters.LessonSessions, err = execCount(ctx, tx, userID, `DELETE FROM lesson_sessions WHERE user_id = $1`)
+	if err != nil {
+		return counters, fmt.Errorf("delete lesson sessions: %w", err)
+	}
 	c, err = execCount(ctx, tx, userID,
 		`DELETE FROM user_onboarding_profiles WHERE user_id = $1`)
 	if err != nil {

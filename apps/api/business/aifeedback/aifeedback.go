@@ -56,8 +56,8 @@ const (
 // Prompt and schema versions (DOC-09 §14). Material prompt changes must create a
 // new version; version strings live in version-controlled code.
 const (
-	PromptVersionSentenceFeedbackV1 = "sentence-feedback-v2"
-	SchemaVersionFeedbackV1         = "feedback-schema-v2"
+	PromptVersionSentenceFeedbackV1 = "sentence-feedback-v4"
+	SchemaVersionFeedbackV1         = "feedback-schema-v3"
 	PromptVersionModerationV1       = "moderation-v1"
 	SchemaVersionModerationV1       = "moderation-schema-v1"
 )

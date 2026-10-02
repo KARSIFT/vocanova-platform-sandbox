@@ -15,22 +15,22 @@ BEGIN
   END IF;
 
   -- Required current seed inventory and stable selected sense.
-  IF (SELECT count(*) FROM public.journey_situations) <> 7 THEN
+  IF (SELECT count(*) FROM public.journey_situations) <> 17 THEN
     RAISE EXCEPTION 'rehearsal_canonical_count_journey_situations';
   END IF;
-  IF (SELECT count(*) FROM public.canonical_words) <> 51 THEN
+  IF (SELECT count(*) FROM public.canonical_words) <> 89 THEN
     RAISE EXCEPTION 'rehearsal_canonical_count_canonical_words';
   END IF;
-  IF (SELECT count(*) FROM public.word_meanings) <> 54 THEN
+  IF (SELECT count(*) FROM public.word_meanings) <> 92 THEN
     RAISE EXCEPTION 'rehearsal_canonical_count_word_meanings';
   END IF;
-  IF (SELECT count(*) FROM public.word_examples) <> 72 THEN
+  IF (SELECT count(*) FROM public.word_examples) <> 148 THEN
     RAISE EXCEPTION 'rehearsal_canonical_count_word_examples';
   END IF;
-  IF (SELECT count(*) FROM public.usage_notes) <> 162 THEN
+  IF (SELECT count(*) FROM public.usage_notes) <> 200 THEN
     RAISE EXCEPTION 'rehearsal_canonical_count_usage_notes';
   END IF;
-  IF (SELECT count(*) FROM public.journey_words) <> 54 THEN
+  IF (SELECT count(*) FROM public.journey_words) <> 92 THEN
     RAISE EXCEPTION 'rehearsal_canonical_count_journey_words';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM public.word_meanings m JOIN public.canonical_words w ON w.id=m.word_id WHERE m.id='3d64c3c9-ede0-5ffd-b1ef-278f6b70e486' AND w.id='812d1cd9-52c8-5726-a7b8-08c094e3fdd2' AND w.normalized_text='catch up' AND w.word_type='phrase' AND m.part_of_speech='verb' AND m.short_definition='To talk after time apart.') THEN

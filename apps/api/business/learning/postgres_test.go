@@ -197,10 +197,10 @@ func TestPostgreSQLRepositoryListSavedWords(t *testing.T) {
 	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
 	now := time.Now()
 
-	mock.ExpectQuery("SELECT uw.id, uw.meaning_id, cw.id, cw.text, cw.normalized_text").
-		WithArgs(userID, sqlmock.AnyArg(), sqlmock.AnyArg(), 2).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "meaning_id", "word_id", "text", "normalized_text", "part_of_speech", "short_definition", "status", "source", "added_at"}).
-			AddRow("00000000-0000-0000-0000-000000000003", "00000000-0000-0000-0000-000000000002", "00000000-0000-0000-0000-000000000004", "boarding pass", "boarding pass", "noun", "A document.", "new", "journey", now))
+	mock.ExpectQuery("WITH saved AS").
+		WithArgs(userID, "", "", false, sqlmock.AnyArg(), sqlmock.AnyArg(), 2).
+		WillReturnRows(sqlmock.NewRows([]string{"total_count", "id", "meaning_id", "word_id", "text", "normalized_text", "part_of_speech", "short_definition", "status", "source", "added_at", "review_state", "due"}).
+			AddRow(1, "00000000-0000-0000-0000-000000000003", "00000000-0000-0000-0000-000000000002", "00000000-0000-0000-0000-000000000004", "boarding pass", "boarding pass", "noun", "A document.", "new", "journey", now, "new", true))
 
 	resp, err := repo.ListSavedWords(t.Context(), ListSavedWordsRequest{UserID: userID, Limit: 1})
 	require.NoError(t, err)
@@ -218,11 +218,11 @@ func TestPostgreSQLRepositoryListSavedWordsUsesLookahead(t *testing.T) {
 	repo := NewPostgreSQLRepository(db)
 	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
 	now := time.Now()
-	mock.ExpectQuery("ORDER BY uw.added_at DESC, uw.id DESC").
-		WithArgs(userID, sqlmock.AnyArg(), sqlmock.AnyArg(), 2).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "meaning_id", "word_id", "text", "normalized_text", "part_of_speech", "short_definition", "status", "source", "added_at"}).
-			AddRow("00000000-0000-0000-0000-000000000003", "00000000-0000-0000-0000-000000000002", "00000000-0000-0000-0000-000000000004", "first", "first", "noun", "First.", "new", "journey", now).
-			AddRow("00000000-0000-0000-0000-000000000005", "00000000-0000-0000-0000-000000000006", "00000000-0000-0000-0000-000000000007", "second", "second", "noun", "Second.", "new", "journey", now))
+	mock.ExpectQuery("ORDER BY added_at DESC,user_word_id DESC").
+		WithArgs(userID, "", "", false, sqlmock.AnyArg(), sqlmock.AnyArg(), 2).
+		WillReturnRows(sqlmock.NewRows([]string{"total_count", "id", "meaning_id", "word_id", "text", "normalized_text", "part_of_speech", "short_definition", "status", "source", "added_at", "review_state", "due"}).
+			AddRow(2, "00000000-0000-0000-0000-000000000003", "00000000-0000-0000-0000-000000000002", "00000000-0000-0000-0000-000000000004", "first", "first", "noun", "First.", "new", "journey", now, "new", true).
+			AddRow(2, "00000000-0000-0000-0000-000000000005", "00000000-0000-0000-0000-000000000006", "00000000-0000-0000-0000-000000000007", "second", "second", "noun", "Second.", "new", "journey", now, "new", true))
 
 	resp, err := repo.ListSavedWords(t.Context(), ListSavedWordsRequest{UserID: userID, Limit: 1})
 	require.NoError(t, err)

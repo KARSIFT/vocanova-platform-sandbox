@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strconv"
@@ -13,15 +14,19 @@ import (
 	"time"
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/accounts"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/achievements"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/aifeedback"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/auth"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/content"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/learning"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/lessons"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/missions"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/password"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/practice"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/reviews"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/users"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/wordknowledge"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/email"
 	"github.com/danielgtaylor/huma/v2"
@@ -129,6 +134,7 @@ const (
 // so the selector value is named here instead of repeated as a literal.
 const (
 	providerGemini     = "gemini"
+	providerOpenAI     = "openai"
 	providerCloudflare = "cloudflare"
 
 	// defaultOpenCodeBaseURL is the loopback `opencode serve` host an
@@ -157,12 +163,12 @@ const (
 
 // aiProviderBaseURL resolves AI_PROVIDER_BASE_URL for the selected
 // provider. OpenCode has no usable endpoint without one, so it keeps
-// its loopback default. Gemini and Cloudflare both have fixed provider
+// its loopback default. Gemini, Cloudflare and OpenAI have fixed provider
 // hosts in their own config defaults, so an unset variable must stay
 // empty here instead of inheriting OpenCode's loopback default.
 // An explicitly-set value is still honored for any provider.
 func aiProviderBaseURL(provider string) string {
-	if provider == providerGemini || provider == providerCloudflare {
+	if provider == providerGemini || provider == providerCloudflare || provider == providerOpenAI {
 		return os.Getenv("AI_PROVIDER_BASE_URL")
 	}
 	return getenv("AI_PROVIDER_BASE_URL", defaultOpenCodeBaseURL)
@@ -173,6 +179,9 @@ func aiProviderBaseURL(provider string) string {
 // so an unset variable defaults to that provider's own model rather
 // than to OpenCode's for every provider.
 func aiProviderModel(provider string) string {
+	if provider == providerOpenAI {
+		return getenv("AI_PROVIDER_MODEL", aifeedback.DefaultOpenAIModel)
+	}
 	if provider == providerGemini {
 		return getenv("AI_PROVIDER_MODEL", defaultGeminiModel)
 	}
@@ -456,65 +465,15 @@ func buildOAuthProvider(cfg ProductionConfig) (auth.OAuthProvider, error) {
 	return provider, nil
 }
 
-// buildAIProviders returns the (FeedbackProvider, SafetyClassifier) the
-// production wiring should hand to aifeedback.NewService, applying the
-// VOC-034-D00 fix for the literal-nil safety-classifier defect the old
-// inline construction had at this exact call site:
-//
-//   - When AI_PROVIDER=opencode AND AI_PROVIDER_API_KEY is set (the
-//     same condition the prior inline block used to select the real
-//     OpenCodeFeedbackProvider), return a real OpenCodeFeedbackProvider
-//     and a CompositeSafetyClassifier wrapping a real
-//     OpenCodeModerationProvider.
-//   - When AI_PROVIDER=gemini AND AI_PROVIDER_API_KEY is set, return a
-//     real GeminiFeedbackProvider and a CompositeSafetyClassifier
-//     wrapping a real GeminiModerationProvider.
-//   - When AI_PROVIDER=cloudflare AND both AI_PROVIDER_API_KEY and
-//     AI_PROVIDER_ACCOUNT_ID are set, return a real
-//     CloudflareFeedbackProvider and a CompositeSafetyClassifier
-//     wrapping a real CloudflareModerationProvider.
-//   - When those conditions are false, return aifeedback.NewMockProvider()
-//     for the feedback role and a CompositeSafetyClassifier wrapping
-//     MockProvider for the moderation role. This preserves the prior
-//     fallback behavior exactly - the mock already implements both
-//     FeedbackProvider and ModerationProvider (see aifeedback.go).
-//
-// Each real branch builds one shared per-provider config struct
-// (OpenCodeConfig or GeminiConfig) that both roles read, so no
-// configuration can mix one provider's feedback adapter with another
-// provider's moderation adapter. cfg.APIProvider's literal value is
-// the sole selector, so exactly one branch is ever active
-// (VOC-035-D00). The Gemini branch passes cfg.APIBaseURL through
-// as-is: LoadProductionConfig leaves it empty unless
-// AI_PROVIDER_BASE_URL is explicitly set when AI_PROVIDER=gemini, so
-// GeminiConfig applies Google's own endpoint default, while an
-// operator who deliberately sets the variable keeps their override
-// (VOC-035-D02).
-//
-// Both branches build the safety classifier via
-// NewCompositeSafetyClassifier(NewDefaultLocalAbuseChecker(), provider)
-// so the deterministic local checks run before any provider call
-// (composite ordering is unchanged; safety.go is not modified). The
-// moderation provider forces its own MaxRetries to 0 internally
-// (VOC-034-D03) regardless of the 1 carried in the shared
-// OpenCodeConfig struct; the feedback provider keeps MaxRetries=1 as
-// before. The two providers therefore share BaseURL / APIKey / Model
-// / Timeout configuration but apply different retry budgets, by
-// design - the latency-budget question against DOC-09 §18's 10s total
-// backend target is explicitly deferred to VOC-032-T10's live
-// threshold evaluation.
-//
-// The decision is logged to stderr (matching buildEmailSender /
-// buildOAuthProvider's style) so an operator running the binary
-// interactively can see which providers are wired without having to
-// read the env file. The log line never includes the API key, the
-// model string, or any request body.
+// productionAIGenerationEnabled keeps incomplete provider configuration from
+// presenting internal mock output as real feedback. OpenAI is explicit opt-in;
+// no branch automatically forwards a failed request to another provider.
 func productionAIGenerationEnabled(cfg ProductionConfig) bool {
 	if !cfg.AIEnabled || strings.TrimSpace(cfg.APIKey) == "" {
 		return false
 	}
 	switch cfg.APIProvider {
-	case string(aifeedback.ProviderOpenCode), providerGemini:
+	case string(aifeedback.ProviderOpenCode), providerGemini, providerOpenAI:
 		return true
 	case providerCloudflare:
 		return strings.TrimSpace(cfg.APIAccountID) != ""
@@ -523,7 +482,23 @@ func productionAIGenerationEnabled(cfg ProductionConfig) bool {
 	}
 }
 
+// buildAIProviders pairs each selected provider's feedback and moderation
+// adapters. Local safety checks always run first. OpenAI uses zero transport
+// retries for both stages; the other providers retain their existing budgets.
+// All calls share the service's total request context. Constructor logs contain
+// only fixed implementation/provider names, never credentials or model strings.
 func buildAIProviders(cfg ProductionConfig) (aifeedback.FeedbackProvider, aifeedback.SafetyClassifier) {
+	if cfg.APIProvider == providerOpenAI && strings.TrimSpace(cfg.APIKey) != "" {
+		openAICfg := aifeedback.OpenAIConfig{
+			BaseURL: cfg.APIBaseURL, APIKey: cfg.APIKey, Model: cfg.APIModel,
+			Timeout: cfg.APITimeout, MaxRetries: 0,
+			OnFailure: func(event aifeedback.OpenAIFailure) { writeOpenAIFailure(os.Stderr, event) },
+		}
+		fmt.Fprintln(os.Stderr, "api: ai feedback=OpenAIFeedbackProvider ai moderation=OpenAIModerationProvider (provider=openai)")
+		return aifeedback.NewOpenAIFeedbackProvider(openAICfg), aifeedback.NewCompositeSafetyClassifier(
+			aifeedback.NewDefaultLocalAbuseChecker(), aifeedback.NewOpenAIModerationProvider(openAICfg),
+		)
+	}
 	if cfg.APIProvider == string(aifeedback.ProviderOpenCode) && cfg.APIKey != "" {
 		openCodeCfg := aifeedback.OpenCodeConfig{
 			BaseURL:    cfg.APIBaseURL,
@@ -562,6 +537,9 @@ func buildAIProviders(cfg ProductionConfig) (aifeedback.FeedbackProvider, aifeed
 			BaseURL:    cfg.APIBaseURL,
 			Timeout:    cfg.APITimeout,
 			MaxRetries: 1,
+			OnModerationFailure: func(event aifeedback.CloudflareModerationFailure) {
+				writeCloudflareModerationFailure(os.Stderr, event)
+			},
 		}
 		fmt.Fprintf(os.Stderr, "api: ai feedback=CloudflareFeedbackProvider ai moderation=CloudflareModerationProvider (provider=cloudflare)\n")
 		return aifeedback.NewCloudflareFeedbackProvider(cloudflareCfg),
@@ -576,6 +554,21 @@ func buildAIProviders(cfg ProductionConfig) (aifeedback.FeedbackProvider, aifeed
 			aifeedback.NewDefaultLocalAbuseChecker(),
 			aifeedback.NewMockProvider(),
 		)
+}
+
+// No model, URL, account, provider body/error or learner text enters this log.
+func writeOpenAIFailure(w io.Writer, event aifeedback.OpenAIFailure) {
+	status := event.HTTPStatus
+	if status < 100 || status > 599 {
+		status = 0
+	}
+	fmt.Fprintf(w, "api: ai provider=openai stage=%s failure=%s http_status=%d\n", event.Stage.String(), event.Category.String(), status)
+}
+
+// Keep this record restricted to fixed vocabulary and numbers. In particular,
+// never log the provider error, response body, request, model or account ID.
+func writeCloudflareModerationFailure(w io.Writer, event aifeedback.CloudflareModerationFailure) {
+	fmt.Fprintf(w, "api: ai provider=cloudflare stage=moderation category=%s http_status=%d provider_code=%d\n", event.Category.String(), event.HTTPStatus, event.ProviderCode)
 }
 
 // HealthzInput is intentionally empty - /healthz takes no parameters.
@@ -736,6 +729,7 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 
 	usersRepo := users.NewPostgreSQLRepository(db)
 	usersSvc := users.NewService(usersRepo, usersRepo, usersRepo, clk)
+	learningPreferencesSvc := users.NewLearningPreferencesService(usersRepo)
 
 	contentRepo := content.NewPostgreSQLRepository(db)
 	gamRepo := gamification.NewRepository(db)
@@ -750,6 +744,11 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	// workflows.
 	learningRepo := newProductionLearningRepository(db, gamSvc, missionsSvc)
 	learningSvc := learning.NewService(learningRepo, learningIdem, clk)
+	lessonsSvc := lessons.NewService(lessons.NewPostgreSQLRepository(db), clk)
+	knowledgeSvc := wordknowledge.NewService(wordknowledge.NewPostgreSQLRepository(db), clk)
+	practiceSvc := practice.NewService(practice.NewPostgreSQLRepository(db), clk)
+	contentSvc.SetKnowledgeReader(knowledgeSvc)
+	learningSvc.SetKnowledgeReader(knowledgeSvc)
 
 	reviewsRepo := newProductionReviewsRepository(db, clk, gamSvc, missionsSvc)
 	reviewsSvc := reviews.NewService(reviewsRepo, learningIdem, clk)
@@ -822,11 +821,17 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	RegisterPasswordAuth(api, passwordSvc, authSvc)
 	RegisterOnboarding(api, usersSvc, authSvc)
 	RegisterSettings(api, usersSvc, authSvc)
+	RegisterLearningPreferences(api, learningPreferencesSvc, authSvc)
 	RegisterEmailChangeLinks(api, accountsSvc, authSvc)
 	RegisterAccountDeletionRequests(api, accountsSvc, authSvc)
 	RegisterPersonalDataExports(api, accountsSvc, authSvc)
-	RegisterContent(api, contentSvc, usersSvc)
+	RegisterContent(api, contentSvc, usersSvc, learningPreferencesSvc)
 	RegisterLearning(api, learningSvc, authSvc)
+	RegisterLessons(api, lessonsSvc, authSvc)
+	RegisterLessonRecommendation(api, lessons.NewRecommendationService(lessons.NewPostgreSQLRepository(db)))
+	RegisterWordKnowledge(api, knowledgeSvc, authSvc)
+	RegisterPractice(api, practiceSvc, authSvc)
+	RegisterAchievements(api, achievements.NewService(achievements.NewPostgreSQLRepository(db)))
 	RegisterReviews(api, reviewsSvc, authSvc)
 	RegisterAIFeedback(api, aifeedbackSvc, authSvc)
 	RegisterMissions(api, missionsSvc)

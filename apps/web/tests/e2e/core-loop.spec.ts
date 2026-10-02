@@ -208,7 +208,7 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     await page.goto("/home");
     await expect(page).toHaveURL(/\/home(\?|$)/);
     await expect(
-      page.getByRole("heading", { name: "Today's Mission", level: 1 }),
+      page.getByRole("heading", { name: "Today's Mission", level: 2, exact: true }),
     ).toBeVisible();
 
     // ----- 3. Discover.

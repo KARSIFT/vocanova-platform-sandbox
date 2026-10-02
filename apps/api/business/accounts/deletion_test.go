@@ -257,7 +257,7 @@ func TestExportPersonalDataReturnsRequesterScopedJSON(t *testing.T) {
 
 	payload, err := svc.ExportPersonalData(context.Background(), uid.String(), "1.2.3.4", "session", "export-key")
 	require.NoError(t, err)
-	assert.JSONEq(t, `{"schemaVersion":"1.0","profile":{"id":"`+uid.String()+`","email":"user@example.com"},"settings":{"timezone":"UTC","dailyReviewTarget":20,"reviewIntervalPreset":"vocanova_default","notificationsEnabled":true,"marketingEmailsEnabled":false,"appLanguage":"en","createdAt":null,"updatedAt":null},"onboardingProfile":null,"savedWords":[],"reviewHistory":[],"sentenceFeedbackHistory":[],"dailyMissions":[],"dailyActivity":[],"confidencePointLedger":[],"graceDayLedger":[],"streakState":null}`, string(payload))
+	assert.JSONEq(t, `{"schemaVersion":"1.4","learningPreferences":null,"practiceSessions":[],"wordKnowledge":[],"guidedLessons":[],"profile":{"id":"`+uid.String()+`","email":"user@example.com"},"settings":{"timezone":"UTC","dailyReviewTarget":20,"reviewIntervalPreset":"vocanova_default","notificationsEnabled":true,"marketingEmailsEnabled":false,"appLanguage":"en","createdAt":null,"updatedAt":null},"onboardingProfile":null,"savedWords":[],"reviewHistory":[],"sentenceFeedbackHistory":[],"dailyMissions":[],"dailyActivity":[],"confidencePointLedger":[],"graceDayLedger":[],"streakState":null}`, string(payload))
 
 	_, err = svc.ExportPersonalData(context.Background(), uid.String(), "1.2.3.4", "session", "")
 	assert.ErrorIs(t, err, ErrDataExportIdempotencyKeyRequired)

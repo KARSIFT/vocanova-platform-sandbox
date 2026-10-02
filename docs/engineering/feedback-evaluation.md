@@ -5,6 +5,109 @@ of a word. Matching a status label does not prove that a correction is sound,
 that an explanation is helpful or that the learner service saved the result.
 The [AI requirements](09-ai-features.md) remain the acceptance rubric.
 
+The v4 prompt and unchanged v3 semantic feedback contract distinguish a wrong selected meaning/POS from
+grammar errors with an understandable intended meaning. Diagnostics describe the original learner
+clause, and feedback must preserve valid interpretations. An `incorrect` result may have a null
+correction when a useful rewrite cannot preserve the message while demonstrating the selected
+meaning; it still requires an explanation and specific retry tip. A present correction cannot be
+blank or an unrelated example. The normal and repair prompts share this rubric, without changing
+the provider-neutral fields or canonical 300-token allowance.
+
+The canonical schema explicitly permits string or null for the optional `corrected_sentence` and
+`improvement_tip` fields without changing their length limits. Cloudflare and OpenCode use that JSON
+Schema; Gemini translates those two fields to its OpenAPI `nullable: true` representation without
+mutating the task. OpenAI retains its existing all-required nullable strict schema. Initial and repair
+requests use the same field rules; moderation is unchanged. Offline request-shape regressions verify
+these representations, but do not establish live provider compatibility or feedback quality.
+
+Review status, diagnostic consistency, correction usefulness and tip relevance separately.
+Neither a null correction nor a schema-valid response proves meaning preservation. Keep wrong-sense
+fixture labels intact; do not relabel cases to accommodate a model's preferred judgment. Prompt and
+semantic contract versions are `sentence-feedback-v4` and `feedback-schema-v3`, so earlier pilot
+results must retain their original version labels and cannot certify the changed rubric.
+
+## V3 development pilot — 2026-10-02
+
+Separate from the earlier consolidated PR acceptance, two evaluator-only candidate runs used the
+same nine synthetic cases, the canonical 300-token allowance and zero retries. All 18 requests
+returned HTTP 200 with complete, schema-valid feedback. Status agreement was 9/9 for `gpt-5-nano`
+and 8/9 for `gpt-4.1-nano`; neither candidate was accepted.
+
+The coordinating and independent AI reviewers found that `gpt-5-nano` gave a contradictory
+explanation about the selected meaning of “school” and incorrect grammar diagnostics for the
+original learner sentence. `gpt-4.1-nano` falsely accepted the fish-group sense of “school” for a
+different selected meaning and also made an original-sentence grammar diagnostic error. Matching
+status labels and valid JSON did not establish trustworthy feedback.
+
+This was AI review, not human learner review. The inspected sample informed prompt revision, so
+these results are development regression evidence, not held-out or general quality evidence. The
+full 91-case golden set was not run. These adapter-only requests establish no moderation, repair,
+persistence or learner-service behavior. They changed no runtime provider and caused no deployment.
+Live feedback quality remains a release blocker; the current rubric still needs broader evaluation
+and the required human and service evidence. Earlier acceptance and pilot records retain their
+original scope and versions.
+
+A follow-up private compact-rubric candidate kept the same schema, system prompt,
+300-token allowance and zero retries. On two previously inspected regression cases,
+GPT-5 nano fixed the original-sentence grammar flag but falsely accepted the fish
+sense of “school” as the selected educational meaning. Both responses were schema-valid;
+only one status matched. This candidate failed that model-specific semantic gate. The same
+compact rubric is now versioned as runtime v4 to make independent original-clause judgments
+explicit in both initial and repair instructions; this is not acceptance of GPT-5 nano or any
+other model. The schema, system prompt and canonical 300-token allowance remain unchanged.
+Prompt changes alone have not established suitability, and these reused examples remain
+development evidence. A separately preregistered service-level evaluation must establish
+moderation, feedback and deadline behavior before provider activation.
+
+## V4 service development gate — 2026-10-02
+
+A ten-case synthetic service gate first stopped GPT-5 nano after four POSTs: its agreement-error
+feedback matched the status and grammar reference but called the original sentence natural,
+contrary to the frozen reference. Six cases remained unrun; the failure was retained.
+
+An explicitly approved GPT-4o mini comparison reused the exact cases, rubric and references.
+All ten automated checks passed with 14 POSTs: eight moderation and six feedback requests,
+all HTTP 200 and complete, returning `gpt-4o-mini-2024-07-18`. The run kept the 300-token allowance,
+16 KiB request bound, zero transport retries, eight-second adapter timeout and actual ten-second
+service context. No constrained repair was needed. The longest service call was 4.459 seconds.
+Successful feedback replays made no additional provider call or mission update. Local validation
+and urgent-safety controls made no provider calls; remote threat and self-harm cases interrupted
+feedback without a successful submission or mission award.
+
+The coordinating AI reviewer inspected every output and accepted this bounded development gate.
+Technical headlines, overly cheerful praise around bereavement and a thin correctness explanation
+remain teaching-quality limitations. The lowercased agreement correction also exposed the service's
+lowercased provider input; the separate preparation change below addresses that source defect.
+These reused cases are not held-out evidence, human learner review or general launch acceptance.
+Persistence used isolated memory fixtures, not a real learner database; live repair quality and
+the full 91-case golden set remain unmeasured. No runtime default, deployment or activation changed.
+
+There is a provenance limitation: the source/binary hash manifest was recorded after the first two
+POSTs because its initial filename lookup failed. The binary checked the frozen case/rubric hashes
+before network access. The deviation was disclosed, and the same process continued under its
+original shared counter without repeating paid cases. Results must retain this limitation.
+
+Returned usage was 9,416 input and 704 output tokens, with no missing usage or reasoning tokens.
+At the documented GPT-4o mini rates below, the estimate is $0.0018348; this is not reconciled billing.
+
+### Subsequent input-preparation change
+
+`sentence-input-v2-case-preserving` identifies a source change after that gate, independently of
+the unchanged v4 rubric and feedback schema. Feedback tasks now receive the original sentence
+with NFKC compatibility normalization and collapsed whitespace, retaining capitalization and
+capitalization mistakes. Constrained repair receives that same text. A fresh-key retry of a failed
+generation loads the first stored, requester-owned original before allocating another attempt;
+an unavailable or mismatched original cannot start a provider call. Stored display text stays exact.
+
+Matching, moderation input and request fingerprints retain their existing lowercase normalization.
+Case-only variants therefore still share one logical submission: for example, `US` and `us` can
+replay the first result rather than request a new judgment. This preserves compatibility, not a
+claim that capitalization never changes meaning. No local output capitalization is guessed.
+Offline service tests cover input and repair, unavailable originals and case-equivalent replay;
+a real PostgreSQL test covers first-original retry, one retained sentence, two generation records
+and exactly one pair of sentence/feedback rewards. The preceding paid gate evaluated the older
+input preparation and does not establish live quality for this changed pipeline.
+
 ## What the current evaluator measures
 
 `apps/api/cmd/eval-live` runs the 91-case golden regression subset and exercises
@@ -64,6 +167,82 @@ identity through pacing, unmeasured safety/correction quality, explicit incomple
 acceptance and private output handling.
 
 ## Preparing a bounded live run
+
+### OpenAI candidate evaluation
+
+The evaluator supports `--provider openai` through the Responses API. This is
+an evaluation path only: it does not change the learner service provider,
+moderation, repair or deployment settings. An OpenAI key cannot be used with
+the OpenCode provider, which has a different session protocol.
+
+Supported request profiles are limited to the reviewed `gpt-5-nano`,
+`gpt-4.1-nano`, `gpt-4o-mini` and `gpt-6-luna` aliases and their valid `YYYY-MM-DD` snapshot
+forms. Unknown profiles are rejected before any HTTP request. A valid snapshot
+name does not establish that the model exists or is available to the account;
+verify availability before a live run.
+
+The unchanged default is `gpt-5-nano`, the candidate with the lowest listed input/output
+unit rates among those reviewed for this evaluation; its failed gates above do not support
+quality acceptance. Change candidates only when observed
+quality, reliability, availability or total cost warrants it. As checked on
+2 October 2026, [its official model page](https://developers.openai.com/api/docs/models/gpt-5-nano)
+lists $0.05 per million uncached input tokens and $0.40 per million output tokens.
+These rates do not establish the cheapest completed evaluation: hidden reasoning
+also consumes billed output tokens. Recheck rates and account access before use.
+
+This is a temporary candidate: the
+[official deprecation notice](https://developers.openai.com/api/docs/deprecations)
+schedules `gpt-5-nano-2025-08-07` for shutdown on 11 December 2026. Record the
+resolved model/snapshot and plan a tested replacement before that date.
+
+GPT-4.1 nano is also deprecated, with shutdown on 23 October 2026 according to the
+[official deprecation notice](https://developers.openai.com/api/docs/deprecations).
+As checked on 2 October 2026, the [GPT-4o mini model page](https://developers.openai.com/api/docs/models/gpt-4o-mini)
+lists Responses and Structured Outputs support at $0.15 per million uncached input tokens
+and $0.60 per million output tokens, and is not marked deprecated. Its reviewed profile omits
+the reasoning field and caps output at 300 tokens; the documented snapshot is
+`gpt-4o-mini-2024-07-18`. These are model capabilities and listed rates, not an availability
+or quality guarantee.
+
+The learner service separately supports explicit `AI_PROVIDER=openai` configuration with paired
+four-outcome moderation and configurable `AI_PROVIDER_MODEL`. Adding a request profile or running
+the evaluator does not activate that configuration or add automatic fallback from Cloudflare.
+
+The adapter uses `minimal` reasoning for GPT-5 nano, the lowest supported effort
+in the [GPT-5 family guidance](https://developers.openai.com/api/docs/guides/latest-model?model=gpt-5).
+It requests strict structured feedback with no tools and response storage disabled.
+Its wire schema represents optional strings as nullable required fields; this
+provider-specific representation does not change the canonical field-presence rules or downstream validation. Refused,
+incomplete or invalid responses are recorded as failures, not accepted feedback.
+
+Begin with one private synthetic pilot request, with retries disabled and an
+explicit output allowance of at most 1,024 tokens. Use the existing canonical
+task builder and selected meaning, inspect the returned structure and feedback,
+and record completion, latency and available usage before considering expansion.
+The allowance includes both reasoning and visible output; an incomplete response
+can consume tokens without producing feedback, as described in the
+[reasoning guide](https://developers.openai.com/api/docs/guides/reasoning).
+
+The ordinary evaluator still runs all 91 golden cases, uses the canonical
+300-token task allowance and permits one adapter retry. It has no single-case,
+output-token or retry override flags. A reviewed private caller must explicitly
+set the pilot's larger allowance and zero retries. A successful 1,024-token
+pilot does not prove the 300-token full run is viable. Before a full golden run, validate the intended
+allowance, request/retry budget and account spending controls, and resolve any
+needed runner support explicitly. Do not launch all 91 cases to diagnose one
+incomplete response. The golden set and DOC-09 human review must establish
+suitability before any learner-service switch.
+
+Use a privately provisioned `AI_PROVIDER_API_KEY` environment variable. If a
+local shell already has `OPENAI_API_KEY`, map it into `AI_PROVIDER_API_KEY`
+without printing it. Do not put a key in a command argument, report or commit.
+The CLI retains existing credential precedence. Choose a new private evidence
+path and record the actual source revision. Token usage is not exposed through
+the shared provider result, so its report cannot establish billed usage or budget
+compliance. Reconcile billing separately without repeating requests solely to
+obtain a cost figure. No pilot or full run is part of ordinary tests.
+
+### Shared run controls
 
 First record the intended provider/model, reviewed fixture revision, source
 revision, account-side spending limit, request count/retry allowance, pacing and

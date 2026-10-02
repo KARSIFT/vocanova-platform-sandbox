@@ -4,13 +4,9 @@ import { notFound } from "next/navigation";
 import { ApiResponseError } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { formatNoteType, getAdditionalDefinition } from "@/lib/word-definition";
-import { Eyebrow, PageContainer } from "@/ui/surface";
-import { SentenceFeedback } from "../../../_components/sentence-feedback";
-import { formatLevelBand } from "../../_components/level-band";
+import { PageContainer } from "@/ui/surface";
+import { WordDetailContent } from "../../../_components/word-detail-content";
 
-import { MeaningSaveButton } from "./_components/meaning-save-button";
-import { formatWordReviewState } from "./_components/word-review-state";
 import { isWordInSituation } from "./_components/word-route";
 
 interface WordDetailPageProps {
@@ -50,112 +46,12 @@ export default async function WordDetailPage({ params }: WordDetailPageProps) {
         Back to Journey
       </Link>
 
-      <div className="mt-[var(--spacing-md)]">
-        <Eyebrow>{situationResponse.data.situation.title}</Eyebrow>
-        <h1 className="text-2xl font-semibold text-neutral-900">
-          {wordData.text}
-        </h1>
-        <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-          {wordData.wordType.replaceAll("_", " ")}
-          {wordData.difficultyLevel
-            ? ` · ${formatLevelBand(wordData.difficultyLevel)}`
-            : null}
-        </p>
-      </div>
-
-      <section className="mt-[var(--spacing-lg)]">
-        <h2 className="text-xl font-semibold text-neutral-900">Meanings</h2>
-        <ul className="mt-[var(--spacing-sm)] space-y-[var(--spacing-md)]">
-          {wordData.meanings.map((meaning) => {
-            const additionalDefinition = getAdditionalDefinition(
-              meaning.shortDefinition,
-              meaning.learnerDefinition,
-            );
-            const reviewState = formatWordReviewState(
-              meaning.reviewState,
-              meaning.due,
-            );
-
-            return (
-              <li
-                key={meaning.id}
-                className="rounded-[var(--radius-lg)] border border-neutral-200 bg-white p-[var(--spacing-lg)] shadow-sm"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-[var(--spacing-md)]">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-neutral-900">
-                      {meaning.partOfSpeech}
-                    </p>
-                    <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-                      {meaning.shortDefinition}
-                    </p>
-                    {additionalDefinition ? (
-                      <p className="mt-[var(--spacing-xs)] text-base text-neutral-600">
-                        {additionalDefinition}
-                      </p>
-                    ) : null}
-                    {reviewState ? (
-                      <p className="mt-[var(--spacing-xs)] text-sm font-medium text-primary-700">
-                        {reviewState}
-                      </p>
-                    ) : null}
-                  </div>
-                  <MeaningSaveButton
-                    meaningId={meaning.id}
-                    source="journey"
-                    initialSaved={meaning.saved}
-                    wordText={wordData.text}
-                    shortDefinition={meaning.shortDefinition}
-                  />
-                </div>
-
-                {meaning.examples.length > 0 ? (
-                  <div className="mt-[var(--spacing-md)]">
-                    <h3 className="text-base font-semibold text-neutral-900">
-                      Example sentences
-                    </h3>
-                    <ul className="mt-[var(--spacing-xs)] list-disc space-y-[var(--spacing-xs)] pl-[var(--spacing-lg)] text-base text-neutral-700">
-                      {meaning.examples.map((example) => (
-                        <li key={example.id}>{example.exampleText}</li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-
-                {meaning.usageNotes.length > 0 ? (
-                  <div className="mt-[var(--spacing-md)]">
-                    <h3 className="text-base font-semibold text-neutral-900">
-                      Usage notes
-                    </h3>
-                    <ul className="mt-[var(--spacing-xs)] space-y-[var(--spacing-sm)]">
-                      {meaning.usageNotes.map((note) => (
-                        <li key={note.id}>
-                          <h4 className="text-sm font-semibold text-neutral-800">
-                            {formatNoteType(note.noteType)}
-                          </h4>
-                          <p className="text-base text-neutral-700">
-                            {note.noteText}
-                          </p>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-
-                {meaning.saved && meaning.userWordId ? (
-                  <SentenceFeedback
-                    targetWord={wordData.text}
-                    attemptId={meaning.userWordId}
-                    source="word_detail"
-                    userId={currentUserResponse.data.id}
-                    shortDefinition={meaning.shortDefinition}
-                  />
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      </section>
+      <WordDetailContent
+        word={wordData}
+        userId={currentUserResponse.data.id}
+        contextTitle={situationResponse.data.situation.title}
+        source="journey"
+      />
     </PageContainer>
   );
 }

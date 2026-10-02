@@ -51,6 +51,9 @@ type UnsaveUserWordOutput struct{}
 
 // ListSavedWordsInput requests a paginated list of the authenticated requester's saved meanings.
 type ListSavedWordsInput struct {
+	Query string `query:"q" doc:"Literal word or short-definition search; up to 100 Unicode characters"`
+	Stage string `query:"stage" enum:"new,learning,reviewing,mastered,ignored,archived" doc:"Learner-facing review stage; omit for all saved meanings"`
+	Due   bool   `query:"due" default:"false" doc:"Only meanings currently eligible for scheduled review, without a daily target cap"`
 	After string `query:"after" doc:"Opaque pagination cursor"`
 	Limit int    `query:"limit" default:"20" doc:"Requested page size; defaults to 20 and is capped at 50"`
 }
@@ -58,10 +61,19 @@ type ListSavedWordsInput struct {
 // ListSavedWordsOutput returns a page of saved meanings.
 type ListSavedWordsOutput struct {
 	Body struct {
-		Items      []SavedMeaningDTO `json:"items" doc:"Saved meanings"`
-		NextCursor string            `json:"nextCursor,omitempty" doc:"Opaque cursor for the next page"`
-		HasMore    bool              `json:"hasMore" doc:"Whether another page is available"`
+		Items      []SavedCollectionMeaningDTO `json:"items" doc:"Saved meanings"`
+		TotalCount int                         `json:"totalCount" doc:"Full requester-owned count matching the filters, before pagination"`
+		NextCursor string                      `json:"nextCursor,omitempty" doc:"Opaque cursor for the next page"`
+		HasMore    bool                        `json:"hasMore" doc:"Whether another page is available"`
 	}
+}
+
+// SavedCollectionMeaningDTO adds current read-only scheduling metadata to list
+// items without changing save or detail response contracts.
+type SavedCollectionMeaningDTO struct {
+	SavedMeaningDTO
+	ReviewState string `json:"reviewState" doc:"Learner-facing review stage; reviewed legacy new records are learning"`
+	Due         bool   `json:"due" doc:"Currently eligible for a scheduled review, without a daily target cap"`
 }
 
 // GetSavedWordInput requests one learner-owned saved record.
@@ -76,6 +88,7 @@ type GetSavedWordOutput struct {
 
 // RegisterLearning registers the user-words save/unsave/list routes.
 func RegisterLearning(api huma.API, svc *learning.Service, authSvc *auth.Service) {
+	registerKnowledgeSummary(api, svc)
 	huma.Register(api, huma.Operation{
 		OperationID: "ListSavedWords",
 		Method:      http.MethodGet,
@@ -84,12 +97,15 @@ func RegisterLearning(api huma.API, svc *learning.Service, authSvc *auth.Service
 		Tags:        []string{"Learning"},
 		Middlewares: []func(huma.Context, func(huma.Context)){RequireAuth()},
 		Responses: map[string]*huma.Response{
-			"400": {Description: "Invalid pagination cursor"},
+			"400": {Description: "Invalid collection filter or pagination cursor"},
 			"401": {Description: "Authentication is required"},
 		},
 	}, func(ctx context.Context, input *ListSavedWordsInput) (*ListSavedWordsOutput, error) {
 		resp, err := svc.ListSavedWords(ctx, learning.ListSavedWordsRequest{
 			UserID:      RequesterUserID(ctx),
+			Query:       input.Query,
+			Stage:       input.Stage,
+			DueOnly:     input.Due,
 			AfterCursor: input.After,
 			Limit:       input.Limit,
 		})
@@ -97,10 +113,11 @@ func RegisterLearning(api huma.API, svc *learning.Service, authSvc *auth.Service
 			return nil, mapLearningError(err)
 		}
 		out := &ListSavedWordsOutput{}
-		out.Body.Items = make([]SavedMeaningDTO, len(resp.Items))
+		out.Body.Items = make([]SavedCollectionMeaningDTO, len(resp.Items))
 		for i, m := range resp.Items {
-			out.Body.Items[i] = savedMeaningToDTO(m)
+			out.Body.Items[i] = SavedCollectionMeaningDTO{SavedMeaningDTO: savedMeaningToDTO(m), ReviewState: m.ReviewState, Due: m.Due}
 		}
+		out.Body.TotalCount = resp.TotalCount
 		out.Body.NextCursor = resp.NextCursor
 		out.Body.HasMore = resp.NextCursor != ""
 		return out, nil
@@ -203,6 +220,8 @@ func mapLearningError(err error) huma.StatusError {
 		return huma.Error400BadRequest("idempotency key required")
 	case errors.Is(err, learning.ErrInvalidCursor):
 		return huma.Error400BadRequest("invalid cursor")
+	case errors.Is(err, learning.ErrInvalidSavedFilter):
+		return huma.Error400BadRequest("invalid saved collection filter")
 	default:
 		return huma.Error500InternalServerError("internal error")
 	}

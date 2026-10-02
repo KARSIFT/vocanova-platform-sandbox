@@ -98,6 +98,7 @@
 // without enabling extra debug output.
 
 import { createServer } from "node:http";
+import { handleLearningFeatures } from "./learning-features-fixture.mjs";
 import {
   dailyConversationFixture,
   dailyConversationWords,
@@ -559,6 +560,7 @@ function buildWordDetailResponse(state, slug, definitionFixture) {
           ? { learnerDefinition: "   " }
           : {}),
     saved: state.savedMeaningIds.has(meaning.id),
+    selfReportedKnown: state.wordKnowledge?.get(meaning.id)?.selfReportedKnown ?? false,
     userWordId: state.savedMeaningIds.has(meaning.id)
       ? `uw-${meaning.id}`
       : undefined,
@@ -590,6 +592,7 @@ function buildSituationResponse(slug, state) {
     meanings: fixture.meanings.map((meaning) => ({
       ...meaning,
       saved: state.savedMeaningIds.has(meaning.meaningId),
+      selfReportedKnown: state.wordKnowledge?.get(meaning.meaningId)?.selfReportedKnown ?? false,
     })),
   };
 }
@@ -787,7 +790,7 @@ const server = createServer(async (req, res) => {
   if (req.method === "OPTIONS") {
     res.setHeader(
       "Access-Control-Allow-Methods",
-      "GET, POST, PATCH, DELETE, OPTIONS",
+      "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     );
     // Every custom header @vocanova/api-client ever sets
     // (packages/api-client/src/index.ts) - Idempotency-Key was
@@ -965,6 +968,8 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  if (await handleLearningFeatures({ req, res, url, cookies, state: getSessionState(cookies), canonicalWords: CANONICAL_WORDS, jsonResponse, readJsonBody, checkCsrf, logLine })) return;
+
   if (req.method === "GET" && url.pathname === "/api/v1/me") {
     if (url.searchParams.get("fail") === "me") {
       logLine(req, 401, { reason: "fixture-forced-401" });
@@ -1006,7 +1011,7 @@ const server = createServer(async (req, res) => {
       englishLevel: "a2",
       nativeLanguage: "es",
       learningGoal: "general",
-      mainUseCase: "daily_life",
+      mainUseCase: ["daily_life", "work", "travel", "study", "social"].includes(cookies.e2e_onboarding_focus) ? cookies.e2e_onboarding_focus : "daily_life",
       dailyReviewTarget: state.settings.dailyReviewTarget,
       completedAt: state.onboardingCompleted
         ? new Date().toISOString()

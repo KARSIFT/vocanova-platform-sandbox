@@ -338,7 +338,7 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
     await page.goto("/home");
 
     await expect(
-      page.getByRole("heading", { name: "Today's Mission", level: 1 }),
+      page.getByRole("heading", { name: "Today's Mission", level: 2 }),
     ).toBeVisible();
 
     const { criticalOrSerious } = await scanForAxeViolations(page);

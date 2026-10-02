@@ -32,7 +32,7 @@ export function BottomNav() {
               className={`relative flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl text-xs transition-colors ${
                 isActive
                   ? "font-semibold text-primary-800"
-                  : "font-medium text-neutral-500 hover:text-neutral-800"
+                  : "font-medium text-neutral-600 hover:text-neutral-800"
               }`}
             >
               <Icon />

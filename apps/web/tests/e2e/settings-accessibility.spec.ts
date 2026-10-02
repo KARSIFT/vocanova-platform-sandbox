@@ -2,7 +2,7 @@
 //
 // /settings is the screen that renders every editable Settings
 // field (daily review target, review rhythm, app language,
-// notifications, marketing emails, display name) and the
+// product emails, display name) and the
 // "Account security" link to the deeper account sub-screen.
 // /settings/account coverage lives in settings-account-accessibility.spec.ts
 // (VOC-073-T03).
@@ -18,6 +18,90 @@ import {
 } from "./axe-helper.js";
 
 test.describe("Settings accessibility (VOC-031-T07b)", () => {
+  for (const theme of ["light", "dark"] as const) {
+    test(`the product email switch provides a large touch target and retains explicit save in ${theme} mode`, async ({
+      page,
+      context,
+      baseURL,
+    }, testInfo) => {
+      if (!baseURL) throw new Error("A test app URL is required");
+      await context.addCookies([
+        { name: "vocanova_session", value: randomUUID(), url: baseURL },
+        { name: "vocanova_csrf", value: randomUUID(), url: baseURL },
+        { name: "vocanova_theme", value: theme, url: baseURL },
+      ]);
+      const submitted: Record<string, unknown>[] = [];
+      page.on("request", (request) => {
+        if (
+          request.method() === "PATCH" &&
+          new URL(request.url()).pathname === "/api/v1/settings"
+        ) {
+          submitted.push(request.postDataJSON());
+        }
+      });
+      await page.goto("/settings");
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      const form = page.getByRole("form", { name: "Practice settings" });
+      const preferences = [
+        { name: "Product news and tips", field: "marketingEmailsEnabled" },
+      ];
+      const changes: Record<string, boolean> = {};
+      for (const preference of preferences) {
+        const control = form.getByRole("switch", {
+          name: preference.name,
+          exact: true,
+        });
+        await expect(control).toBeVisible();
+        await control.scrollIntoViewIfNeeded();
+        const box = await control.boundingBox();
+        expect(box).not.toBeNull();
+        expect(box!.width).toBeGreaterThanOrEqual(44);
+        expect(box!.height).toBeGreaterThanOrEqual(44);
+        const initiallyChecked =
+          (await control.getAttribute("aria-checked")) === "true";
+        changes[preference.field] = !initiallyChecked;
+
+        // The area above the compact visual track must also activate the switch.
+        await control.click({ position: { x: box!.width / 2, y: 2 } });
+        await expect(control).toHaveAttribute(
+          "aria-checked",
+          String(!initiallyChecked),
+        );
+        await control.press("Space");
+        await expect(control).toBeFocused();
+        await expect(control).toHaveAttribute(
+          "aria-checked",
+          String(initiallyChecked),
+        );
+        await control.press("Space");
+        await expect(control).toHaveAttribute(
+          "aria-checked",
+          String(!initiallyChecked),
+        );
+      }
+      expect(submitted).toEqual([]);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+      ).toBeLessThanOrEqual(page.viewportSize()!.width);
+      await form
+        .getByRole("group", { name: "Notifications and emails" })
+        .screenshot({
+          path: testInfo.outputPath(`settings-switch-targets-${theme}.png`),
+        });
+      await form.getByRole("button", { name: "Save settings" }).click();
+      await expect(form.getByRole("status")).toHaveText(
+        "Your settings have been saved.",
+      );
+      expect(submitted).toEqual([changes]);
+      await page.reload();
+      for (const preference of preferences) {
+        await expect(
+          form.getByRole("switch", { name: preference.name, exact: true }),
+        ).toHaveAttribute("aria-checked", String(changes[preference.field]));
+      }
+    });
+  }
+
   test("keeps settings reading order consistent with the visual layout", async ({
     page,
   }) => {
@@ -80,9 +164,7 @@ test.describe("Settings accessibility (VOC-031-T07b)", () => {
         "Your saved custom rhythm stays saved until you choose one of the available options.",
       );
     await expect(customNotice).toBeVisible();
-    await expect(
-      page.getByRole("radio", { name: /Custom/ }),
-    ).toHaveCount(0);
+    await expect(page.getByRole("radio", { name: /Custom/ })).toHaveCount(0);
     const patches: unknown[] = [];
     page.on("request", (request) => {
       if (
@@ -132,9 +214,9 @@ test.describe("Settings accessibility (VOC-031-T07b)", () => {
     ).toEqual([]);
 
     // /settings has 8 daily-review-target radios + 2 available review-rhythm
-    // radios + 2 checkbox toggles + 1 display-name input + 1 save button + 2
-    // links (Back to Home, Account security) = 16+
-    // focusable elements. Use a conservative floor.
+    // radios, the product email switch, display name, calendar reminder fields,
+    // save/download buttons and account links provide many focusable elements.
+    // Use a conservative floor.
     await assertKeyboardReachable(page, { minFocusable: 10 });
 
     await assertNonColorOnlyFeedback(page, {
