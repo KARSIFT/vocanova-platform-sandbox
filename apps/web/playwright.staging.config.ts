@@ -53,7 +53,10 @@ export default defineConfig({
   expect: { timeout: ASSERTION_TIMEOUT_MS },
   use: {
     baseURL,
-    trace: "retain-on-failure",
+    // This journey uses a live synthetic session. Runner masking does not
+    // sanitize trace archives containing network headers or API call arguments.
+    // Keep visual/error reports, but never record an authenticated trace here.
+    trace: "off",
     video: "retain-on-failure",
     screenshot: "only-on-failure",
   },

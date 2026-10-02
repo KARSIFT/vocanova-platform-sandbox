@@ -37,8 +37,9 @@ See `docs/development.md` for prerequisites and troubleshooting.
 
 ## Deploys
 
-- Staging deploys automatically on every push to `main` (`.github/workflows/
-  deploy-staging.yml`).
+- Staging deploys automatically when a push to `main` matches the path allowlist
+  in `.github/workflows/deploy-staging.yml`. Docs-only changes under `docs/` do
+  not trigger deployment.
 - Production deploys are manual: `gh workflow run deploy-production.yml`
   (`.github/workflows/deploy-production.yml`). Nothing deploys to production
   automatically.

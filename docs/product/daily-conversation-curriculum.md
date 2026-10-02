@@ -70,9 +70,16 @@ missing-content fallback and explicit saving before sentence practice. The full
 browser matrix passed 314 tests with 37 existing skips. The activity shipped in
 [PR #1476](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1476), and
 [staging release checks](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36968236895)
-passed on merged revision `e4cc4236`. The deployed synthetic journey covers the
-general learning loop; it does not exercise these three examples. Synthetic checks do not
-establish screen-reader speech or learning effectiveness.
+passed on merged revision `e4cc4236`. That release's deployed synthetic journey
+covered the general learning loop without exercising these three examples.
+
+The current test revision adds a context phase to that existing staging journey,
+with the same helper exercised locally: it checks the 18-word inventory, all
+three wrong/retry/correct paths and explanations, keyboard transitions, restart,
+exit, reload and the three canonical word destinations. The added phase makes
+no intentional learning writes or provider submissions; the surrounding journey
+remains mutating. Its deployed execution must be verified separately. Synthetic
+checks do not establish screen-reader speech or learning effectiveness.
 
 ## Stable identities and repeat seeding
 
