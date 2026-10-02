@@ -1,7 +1,7 @@
 # Vocanova current product state
 
 Reviewed on 2026-10-02 against repository baseline
-`56bbff54a7ac5872a996af9d6b5c29f94e0ffe5f` plus the backup-discovery tooling in
+`ea6ec479b9cb2923430944d51224dfd00f339786` plus the pending-edit recovery changes in
 this revision. This is a dated inventory and readiness
 guide. Update it when behavior, deployment, or verified evidence changes; it does
 not establish that the final product is complete.
@@ -55,6 +55,14 @@ and preserved existing identities. Word pages suppress repeated short/full
 definitions while retaining distinct fuller guidance. Generated feedback is
 distinct from canonical vocabulary.
 
+Sentence practice protects pending drafts and retry identities from older
+feedback actions. Current session errors remain visible alongside earlier
+feedback, and late report responses cannot mark a newer result as reported.
+Settings preserve edits made during an earlier save and distinguish those
+unsaved edits from confirmed changes. A retry explicitly resends fields whose
+previous save response was lost. Reminder controls store preferences only;
+the interface does not claim reminder delivery is available.
+
 ## Live deployment observation
 
 Public checks on 2026-10-02 at approximately 03:24 UTC observed staging web and API
@@ -67,6 +75,13 @@ passed release identity, OAuth initiation and the reserved synthetic learner
 journey. These establish availability and the tested synthetic flow; they do
 not establish real account acceptance, live feedback quality or recoverable
 backups. No production release was performed for this milestone.
+
+Later, [PR #1474](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1474)
+merged as `ea6ec479b9cb2923430944d51224dfd00f339786` and its
+[staging deployment](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36962911361)
+passed release identity, health, OAuth initiation and the reserved learner
+journey. A fresh local public-endpoint request returned HTTP 403; this later
+release observation therefore comes from the deployment checks.
 
 Both environments reported Google OAuth and AI enabled. Magic-link email,
 password authentication, and public new-user signup were disabled. Access is

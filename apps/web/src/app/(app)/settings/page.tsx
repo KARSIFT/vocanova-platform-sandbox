@@ -73,7 +73,7 @@ export default async function SettingsPage() {
             Learning preferences
           </h2>
           <p className="mt-[var(--spacing-xs)] text-sm leading-6 text-neutral-600">
-            Set the pace and reminders that support your daily practice.
+            Set the pace and preferences that support your daily practice.
           </p>
           <SettingsForm initialSettings={response.data} />
         </div>
