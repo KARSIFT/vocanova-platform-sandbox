@@ -9,6 +9,7 @@ import {
 } from "@playwright/test";
 
 import { scanForAxeViolations } from "./axe-helper";
+import { verifyContextPracticeJourney } from "./context-practice-journey";
 
 const SITUATION_PATH = "/discover/daily-conversation";
 const PRACTICE_NAME = "Choose the word for the situation";
@@ -51,6 +52,12 @@ test.beforeEach(async ({ context, baseURL }) => {
     { name: "vocanova_csrf", value: randomUUID(), url: baseURL },
     { name: "e2e_daily_conversation", value: "true", url: baseURL },
   ]);
+});
+
+test("shared deployed context journey works against the local canonical fixture", async ({
+  page,
+}) => {
+  await verifyContextPracticeJourney(page);
 });
 
 function collectMutations(page: Page) {

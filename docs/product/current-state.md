@@ -1,7 +1,8 @@
 # Vocanova current product state
 
 Reviewed on 2026-10-02 against repository baseline
-`e4cc4236f1f1c18df0059b005a4ade3b07addc31`. This is a dated inventory and readiness
+`cc064a52d4f604e0b47c9401a54335c466061682` plus the deployed-context coverage
+changes in this working revision. This is a dated inventory and readiness
 guide. Update it when behavior, deployment, or verified evidence changes; it does
 not establish that the final product is complete.
 
@@ -66,9 +67,19 @@ web helper tests, Go checks and builds). All 21 focused browser checks passed
 across 360px, 430px and desktop in both themes. The full browser matrix passed
 314 tests with 37 existing skips. The change merged in
 [PR #1476](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1476), with
-staging release checks passing as recorded below. The deployed synthetic journey
-does not exercise this specific activity; its interaction evidence comes from
-the mock-backed browser suite. See
+staging release checks passing as recorded below. That release's deployed
+synthetic journey did not exercise this specific activity; its interaction
+evidence came from the mock-backed browser suite.
+
+This working revision adds a focused context phase to the existing staging
+journey, before its save/review/submission actions. It checks the Daily
+Conversation inventory, the three examples and explanations, keyboard
+retry/continuation, completion/restart/exit, reload reset and canonical word
+destinations. It does not save words or submit sentences; the rest of the
+existing staging journey still changes the reserved synthetic account and may
+call the evaluator. The exact helper is also exercised locally. Deployed
+execution of this added phase remains to be verified; no real-account, physical
+device, screen-reader speech or learning-effectiveness claim follows from it. See
 [curriculum guidance](daily-conversation-curriculum.md#optional-context-practice).
 
 Sentence practice protects pending drafts and retry identities from older

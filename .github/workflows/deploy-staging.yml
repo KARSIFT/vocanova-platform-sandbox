@@ -1550,9 +1550,10 @@ jobs:
 
           # Both values are credential-shaped (they grant access to
           # the synthetic account until it expires), and step outputs
-          # are not secrets. Register them for masking BEFORE they are
-          # written anywhere, so neither can surface in this run's log
-          # or in a Playwright trace uploaded on failure.
+          # are not secrets. Mask them before writing step outputs to protect
+          # runner logs. Masking does not sanitize artifacts: the staging
+          # Playwright config disables traces, and tests must not log or attach
+          # credentials. Retained visual/error reports still contain synthetic UI.
           echo "::add-mask::$session_cookie"
           echo "::add-mask::$csrf_token"
 

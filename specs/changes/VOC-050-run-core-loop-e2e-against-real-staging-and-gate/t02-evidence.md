@@ -166,6 +166,15 @@ reasoning in place so a later edit does not "restore" the fragile order.
 
 ## 6. Secret handling — minted credentials are masked before they are written
 
+> **Correction, 2026-10-02:** The historical claim below that runner masking
+> protects uploaded trace files is incorrect. Masking applies to runner output,
+> not arbitrary artifact contents. The current staging Playwright config turns
+> trace capture off because this journey uses a live synthetic session.
+> Screenshots, video, accessibility/error context and HTML reports can still
+> contain rendered synthetic content, test output and assertion details; tests
+> must not log or attach credentials. This change does not remove earlier
+> artifacts or revoke sessions from earlier runs.
+
 The minted `session_cookie` and `csrf_token` grant access to the synthetic
 account until they expire, and GitHub step outputs are not secrets. Both values
 are now registered with `::add-mask::` **before** being written to

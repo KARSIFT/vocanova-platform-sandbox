@@ -24,10 +24,10 @@
 //      driven for real if the app redirects there, so a
 //      regression in onboarding is caught rather than hidden.
 //   3. Fixture content. The mock serves fixed fixtures; staging
-//      serves whatever canonical content is seeded. Every selector
-//      here is content-agnostic (first situation, first word,
-//      whichever prompt type the review session picks) instead of
-//      hard-coding "Ordering at a cafe" / "pour".
+//      serves canonical content from Postgres. The save/review loop
+//      remains content-agnostic (first situation, first word,
+//      whichever review prompt appears). The context-practice phase
+//      checks the authored Daily Conversation curriculum explicitly.
 //
 // Rerun safety: this journey runs on every staging deploy against
 // an account that keeps its state between runs. Each step is
@@ -37,6 +37,7 @@
 import { expect, test } from "@playwright/test";
 import type { Locator, Page, TestInfo } from "@playwright/test";
 
+import { verifyContextPracticeJourney } from "../e2e/context-practice-journey";
 import {
   getEnabledReviewPromptControl,
   waitForReviewReadiness,
@@ -98,7 +99,9 @@ function requiredEnv(name: string): string {
 async function readReviewedTodayProgress(
   page: Page,
 ): Promise<ReviewedTodayProgress> {
-  const counter = page.getByRole("progressbar", { name: "Today’s mission progress" });
+  const counter = page.getByRole("progressbar", {
+    name: "Today’s mission progress",
+  });
   await expect(counter).toBeVisible();
   const reviewed = Number(await counter.getAttribute("aria-valuenow"));
   const target = Number(await counter.getAttribute("aria-valuemax"));
@@ -262,8 +265,7 @@ async function reviewOneCard(page: Page): Promise<boolean> {
   const PROMPT_READY_TIMEOUT_MS = 120_000;
 
   if (
-    (await waitForReviewReadiness(page, PROMPT_READY_TIMEOUT_MS)) ===
-    "terminal"
+    (await waitForReviewReadiness(page, PROMPT_READY_TIMEOUT_MS)) === "terminal"
   ) {
     return false;
   }
@@ -349,6 +351,10 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
     const { reviewed: reviewedBefore, target: reviewTarget } =
       await test.step("2. read the daily-mission baseline", async () =>
         readReviewedTodayProgress(page));
+
+    await test.step("2a. explore Daily Conversation without learning mutations", async () => {
+      await verifyContextPracticeJourney(page);
+    });
 
     await test.step("3. discover a situation and open a word", async () => {
       await page.goto("/discover");

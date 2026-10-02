@@ -401,6 +401,37 @@ specific UI/content checks above use the local mock-backed suite and actual seed
 file. Real-account access, physical-device behavior and learner usefulness remain
 separate acceptance gaps.
 
+## Deployed context coverage — working revision
+
+PR1476's staging journey did not visit the new activity. This revision adds a
+bounded phase inside the existing authenticated journey before its learning
+mutations, using the same reserved session and unchanged workflows/time budget.
+The phase checks the Daily Conversation inventory, all three examples and both
+explanations, keyboard wrong/retry/correct transitions, completion/restart/exit,
+reload reset and canonical word destinations. A local wrapper runs the exact
+same helper against the existing mock-backed build; staging uses its real API
+and seeded content. No new workflow, test account or mock-auth override is added
+to staging.
+
+The added phase does not intentionally save, review or submit sentences and
+checks that it emitted no browser API mutation requests. That observation is
+not a server-wide audit. The existing full journey still mutates reserved
+synthetic learning state and may call the evaluator. All 18 targeted local
+browser checks passed across desktop, 360px and 430px; E2E typechecking, the
+production build and 21 existing scheduling/dispatch/path checks passed.
+Deployed execution remains pending. This does not replace a consented learner
+pilot, real Google-account acceptance, physical-device checks, screen-reader
+speech or feedback-quality evaluation.
+
+Staging trace capture is disabled because the test uses live session cookies;
+runner log masking does not sanitize trace archives. Screenshots, video, error
+context and HTML reports still contain synthetic UI and test diagnostics and
+must not receive credentials through logs or attachments. An isolated local
+failure probe used a fake cookie: the former trace setting retained the marker,
+while the current configuration produced no trace and no marker in the retained
+results or embedded HTML report. This does not sanitize earlier artifacts or
+establish protection against future explicit secret logging.
+
 ## Deliver work in bounded slices
 
 Each slice should identify the learner problem, state the intended behavior, change the smallest relevant surface, include meaningful regression coverage and document remaining limits. Use parallel agents for independent areas and independent review; coordinate shared files, builds and servers. Follow [repository instructions](../../AGENTS.md) for draft PRs, CI, merging and deployment.
