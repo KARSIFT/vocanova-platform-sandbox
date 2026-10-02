@@ -304,7 +304,7 @@ No production data, credentials, existing container or provider is used. This
 does not establish production backup schedule, retention, separate storage,
 point-in-time recovery, application acceptance after restoration or alert receipt.
 
-## Backup discovery — current slice
+## Backup discovery — delivered in PR #1474
 
 The [read-only discovery workflow](../operations/backup-discovery.md) gathers
 bounded system timer metadata and fixed tool-presence observations through the
@@ -321,8 +321,39 @@ tests, Go checks and both builds before the final cancellation/freshness
 follow-ups; the final focused wrapper and all 22 workflow contracts passed
 afterward. Independent static review found no remaining actionable issues.
 The browser matrix and optional Go database environment were not rerun because
-application behavior is unchanged. Live access and backup observations remain
-unverified until a reviewed manual dispatch completes.
+application behavior was unchanged. All configured PR and merge-group checks
+passed, followed by the
+[staging deployment](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36962911361).
+
+One [manual discovery](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36963233434)
+on reviewed main `ea6ec479b9cb2923430944d51224dfd00f339786` completed on
+2026-10-02. The validated artifact reported complete, nontruncated collection of
+the supported system-timer metadata and one generic backup-name candidate.
+This establishes access to that bounded metadata, not a production backup:
+Vocanova association, retained artifacts, separate storage, restore record and
+alert receipt remain unknown. Cron, user timers, containers and provider backups
+were outside the collection scope. The report is retained privately; identify
+the actual backup mechanism before expanding inspection or running a restore.
+
+## Pending edits and recovery — current slice
+
+Delayed browser requests reproduced settings edits being overwritten, a
+server-applied save whose lost response made a reverted retry appear saved,
+older sentence actions erasing the current draft, and current session errors
+being hidden by retained feedback. Settings now preserve newer edits against
+the confirmed response and explicitly resend fields with uncertain outcomes.
+Sentence controls protect pending text and retry identity; current errors and
+late report responses stay associated with the appropriate request.
+
+Local workspace validation passed 246 foundation, 32 API-client and 94 web
+helper tests, Go checks and both builds. Focused browser checks passed 26
+settings cases (four existing viewport skips) and 18 sentence cases across
+360px, 430px and desktop, including light/dark error and unsaved-change states.
+Twelve screenshots were retained and representative mobile/desktop captures
+were inspected. Independent static review found no remaining actionable
+findings. These checks use synthetic API state; they do not establish real
+provider behavior or production data recovery. Full browser and release
+verification remain pending at this update.
 
 ## Deliver work in bounded slices
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { Settings, UpdateSettingsBody } from "@vocanova/api-client";
 
@@ -18,7 +18,7 @@ const REVIEW_INTERVAL_PRESETS = [
   },
   {
     value: "wordup_like",
-    label: "Faster reminders",
+    label: "Faster reviews",
     helper: "Words come back sooner — useful before an exam or trip.",
   },
 ] as const;
@@ -27,6 +27,7 @@ type SaveStatus =
   | { type: "idle" }
   | { type: "saving" }
   | { type: "saved" }
+  | { type: "newer_changes" }
   | { type: "error"; message: string };
 
 interface SettingsFormProps {
@@ -46,10 +47,14 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
     toFormState(initialSettings),
   );
   const [status, setStatus] = useState<SaveStatus>({ type: "idle" });
+  const currentState = useRef(state);
+  const isSaving = useRef(false);
+  const unconfirmedFields = useRef(new Set<keyof FormState>());
 
   function patch<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setState((current) => ({ ...current, [key]: value }));
-    if (status.type === "saved" || status.type === "error") {
+    currentState.current = { ...currentState.current, [key]: value };
+    setState(currentState.current);
+    if (status.type !== "saving") {
       setStatus({ type: "idle" });
     }
   }
@@ -57,14 +62,23 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const body = buildUpdateBody(state, baseline);
+    if (isSaving.current) return;
+
+    const submittedState = currentState.current;
+    const body = buildUpdateBody(
+      submittedState,
+      baseline,
+      unconfirmedFields.current,
+    );
     if (Object.keys(body).length === 0) {
       setStatus({ type: "saved" });
       return;
     }
 
+    isSaving.current = true;
     setStatus({ type: "saving" });
     const client = createApiClient();
+    let writeStarted = false;
     try {
       const csrfToken = await getOrRefreshCSRFToken();
       if (!csrfToken) {
@@ -75,14 +89,36 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
         });
         return;
       }
+      writeStarted = true;
       const { data } = await client.updateSettings(body, {
         headers: { "X-CSRF-Token": csrfToken },
       });
       const savedSettings = toFormState(data);
-      setState(savedSettings);
+      // The response confirms only the submitted snapshot. Keep edits made
+      // while it was pending, including a reversion to the previous baseline.
+      const nextState = {
+        ...savedSettings,
+        ...buildUpdateBody(currentState.current, submittedState),
+      };
+      currentState.current = nextState;
+      setState(nextState);
       setBaseline(savedSettings);
-      setStatus({ type: "saved" });
+      unconfirmedFields.current.clear();
+      setStatus({
+        type:
+          Object.keys(buildUpdateBody(nextState, savedSettings)).length > 0
+            ? "newer_changes"
+            : "saved",
+      });
     } catch (error) {
+      if (writeStarted) {
+        // A failed response does not prove the server rejected the write.
+        // Explicitly resend these fields on retry, even when the learner
+        // reverted them to the last confirmed values while saving.
+        for (const key of Object.keys(body) as Array<keyof FormState>) {
+          unconfirmedFields.current.add(key);
+        }
+      }
       // T06: a 401 mid-settings-write is the documented
       // session-expiry mid-flow case. handleApiError routes the
       // learner to re-auth; the form state is preserved on the
@@ -93,6 +129,8 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
         "We couldn't save your settings. Please try again.",
       );
       setStatus({ type: "error", message });
+    } finally {
+      isSaving.current = false;
     }
   }
 
@@ -147,7 +185,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
           Review rhythm
         </legend>
         <p className="text-base text-neutral-700">
-          Pick the reminder rhythm that fits your schedule.
+          Pick when saved words return for review.
         </p>
         <div
           role="radiogroup"
@@ -228,15 +266,15 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
         <div className="space-y-[var(--spacing-sm)]">
           <ToggleRow
             id="notifications-enabled"
-            label="Daily review reminders"
-            description="We will send a gentle reminder when your reviews are waiting."
+            label="Daily review reminder preference"
+            description="Review reminders are not available yet. This only saves your preference."
             checked={state.notificationsEnabled}
             onChange={(value) => patch("notificationsEnabled", value)}
           />
           <ToggleRow
             id="marketing-emails-enabled"
             label="Product news and tips"
-            description="Occasional updates about new features and learning tips. You can opt out any time."
+            description="Save your preference for occasional product news and learning tips. You can opt out any time."
             checked={state.marketingEmailsEnabled}
             onChange={(value) => patch("marketingEmailsEnabled", value)}
           />
@@ -291,6 +329,16 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
         </p>
       ) : null}
 
+      {status.type === "newer_changes" ? (
+        <p
+          role="status"
+          aria-live="polite"
+          className="rounded-md border border-primary-200 bg-primary-50 p-[var(--spacing-sm)] text-base text-primary-900"
+        >
+          Your earlier changes were saved. You have newer changes to save.
+        </p>
+      ) : null}
+
       <div className="flex flex-wrap items-center justify-end gap-[var(--spacing-sm)]">
         <button
           type="submit"
@@ -319,24 +367,43 @@ function toFormState(settings: Settings): FormState {
 function buildUpdateBody(
   next: FormState,
   baseline: FormState,
+  unconfirmedFields?: ReadonlySet<keyof FormState>,
 ): UpdateSettingsBody {
   const body: UpdateSettingsBody = {};
-  if (next.dailyReviewTarget !== baseline.dailyReviewTarget) {
+  if (
+    next.dailyReviewTarget !== baseline.dailyReviewTarget ||
+    unconfirmedFields?.has("dailyReviewTarget")
+  ) {
     body.dailyReviewTarget = next.dailyReviewTarget;
   }
-  if (next.reviewIntervalPreset !== baseline.reviewIntervalPreset) {
+  if (
+    next.reviewIntervalPreset !== baseline.reviewIntervalPreset ||
+    unconfirmedFields?.has("reviewIntervalPreset")
+  ) {
     body.reviewIntervalPreset = next.reviewIntervalPreset;
   }
-  if (next.appLanguage !== baseline.appLanguage) {
+  if (
+    next.appLanguage !== baseline.appLanguage ||
+    unconfirmedFields?.has("appLanguage")
+  ) {
     body.appLanguage = next.appLanguage;
   }
-  if (next.notificationsEnabled !== baseline.notificationsEnabled) {
+  if (
+    next.notificationsEnabled !== baseline.notificationsEnabled ||
+    unconfirmedFields?.has("notificationsEnabled")
+  ) {
     body.notificationsEnabled = next.notificationsEnabled;
   }
-  if (next.marketingEmailsEnabled !== baseline.marketingEmailsEnabled) {
+  if (
+    next.marketingEmailsEnabled !== baseline.marketingEmailsEnabled ||
+    unconfirmedFields?.has("marketingEmailsEnabled")
+  ) {
     body.marketingEmailsEnabled = next.marketingEmailsEnabled;
   }
-  if (next.displayName !== baseline.displayName) {
+  if (
+    next.displayName !== baseline.displayName ||
+    unconfirmedFields?.has("displayName")
+  ) {
     body.displayName = next.displayName;
   }
   return body;

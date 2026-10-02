@@ -58,7 +58,10 @@ export function SentenceFeedback({
   const [sentence, setSentence] = useState("");
   const [result, setResult] = useState<SentenceFeedbackResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<{
+    text: string;
+    source: "local" | "result";
+  } | null>(null);
   const [reported, setReported] = useState(false);
   const [reportStatus, setReportStatus] = useState<
     "idle" | "loading" | "error"
@@ -77,8 +80,11 @@ export function SentenceFeedback({
     sentenceText: string;
   } | null>(null);
   const submittingSynchronously = useRef(false);
+  // Reports belong to the displayed feedback, not a later sentence result.
+  const feedbackGeneration = useRef(0);
 
   useEffect(() => {
+    feedbackGeneration.current += 1;
     setCanRecoverDraft(canUseSentenceFeedbackDraftStorage(userId));
     const draft = readSentenceFeedbackDraftIntent({
       userId,
@@ -96,6 +102,9 @@ export function SentenceFeedback({
     setReported(false);
     setReportStatus("idle");
     setShowReportReasons(false);
+    return () => {
+      feedbackGeneration.current += 1;
+    };
   }, [attemptId, source, userId]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -107,7 +116,10 @@ export function SentenceFeedback({
 
     const csrfToken = getCookieValue(CSRF_COOKIE_NAME);
     if (!csrfToken) {
-      setErrorMessage("Session is not ready. Please refresh the page.");
+      setErrorMessage({
+        text: "Session is not ready. Please refresh the page.",
+        source: "local",
+      });
       return;
     }
 
@@ -124,6 +136,7 @@ export function SentenceFeedback({
       idempotencyKey: pending.idempotencyKey,
     });
     submittingSynchronously.current = true;
+    feedbackGeneration.current += 1;
     setIsLoading(true);
     setErrorMessage(null);
     setReported(false);
@@ -155,9 +168,10 @@ export function SentenceFeedback({
           attemptId,
           sentence: data.originalSentence || pending.sentenceText,
         });
-        setErrorMessage(
-          data.errorMessage || getDefaultErrorMessage(data, targetWord),
-        );
+        setErrorMessage({
+          text: data.errorMessage || getDefaultErrorMessage(data, targetWord),
+          source: "result",
+        });
       } else if (data.processingStatus === "completed") {
         pendingSubmission.current = null;
         setErrorMessage(null);
@@ -168,12 +182,13 @@ export function SentenceFeedback({
       setResult(null);
       // The controlled textarea and its user-scoped tab draft preserve an
       // unresolved submission through recoverable failures and re-auth.
-      setErrorMessage(
-        handleApiError(
+      setErrorMessage({
+        text: handleApiError(
           error,
           "Unable to check this sentence right now. Please try again.",
         ),
-      );
+        source: "local",
+      });
     } finally {
       setIsLoading(false);
       submittingSynchronously.current = false;
@@ -181,9 +196,10 @@ export function SentenceFeedback({
   }
 
   async function handleReport(reason: (typeof REPORT_REASONS)[number][0]) {
-    if (!result?.attemptId) {
+    if (submittingSynchronously.current || !result?.attemptId) {
       return;
     }
+    const generation = feedbackGeneration.current;
 
     const csrfToken = getCookieValue(CSRF_COOKIE_NAME);
     if (!csrfToken) {
@@ -201,10 +217,16 @@ export function SentenceFeedback({
         generateIdempotencyKey(),
         { headers: { "X-CSRF-Token": csrfToken } },
       );
+      if (feedbackGeneration.current !== generation) {
+        return;
+      }
       setReported(true);
       setShowReportReasons(false);
       setReportStatus("idle");
     } catch (error) {
+      if (feedbackGeneration.current !== generation) {
+        return;
+      }
       // T06: a 401 on a report submission routes the learner to
       // re-auth. The text is in component state and the feedback
       // result is still visible — nothing is lost.
@@ -231,6 +253,11 @@ export function SentenceFeedback({
   const characterLimitStatus = getSentenceCharacterLimitStatus(sentence);
 
   function handleTryAnotherSentence() {
+    if (submittingSynchronously.current) {
+      return;
+    }
+    feedbackGeneration.current += 1;
+
     pendingSubmission.current = null;
     setResult(null);
     setSubmittedSentence(null);
@@ -242,6 +269,10 @@ export function SentenceFeedback({
   }
 
   function handleDiscardDraft() {
+    if (submittingSynchronously.current) {
+      return;
+    }
+
     pendingSubmission.current = null;
     setSentence("");
     setErrorMessage(null);
@@ -249,6 +280,11 @@ export function SentenceFeedback({
   }
 
   function handleReviseSentence() {
+    if (submittingSynchronously.current) {
+      return;
+    }
+    feedbackGeneration.current += 1;
+
     if (result && submittedSentence) {
       setPreviousFeedback({ result, sentence: submittedSentence });
       // Revising makes the checked text an unresolved draft again. Keep it
@@ -361,13 +397,13 @@ export function SentenceFeedback({
         ) : null}
       </form>
 
-      {errorMessage && !hasResult ? (
+      {errorMessage?.source === "local" ? (
         <p
           role="alert"
           aria-live="polite"
           className="mt-[var(--spacing-md)] rounded-md bg-red-50 p-[var(--spacing-sm)] text-base text-red-700"
         >
-          {errorMessage}
+          {errorMessage.text}
         </p>
       ) : null}
 
@@ -400,13 +436,15 @@ export function SentenceFeedback({
             </div>
           ) : null}
 
-          {result.errorCode && !result.crisisResourceMessage && errorMessage ? (
+          {result.errorCode &&
+          !result.crisisResourceMessage &&
+          errorMessage?.source === "result" ? (
             <div
               role="alert"
               aria-live="polite"
               className="rounded-md bg-red-50 p-[var(--spacing-md)] text-base text-red-700"
             >
-              {errorMessage}
+              {errorMessage.text}
             </div>
           ) : null}
 
@@ -449,14 +487,16 @@ export function SentenceFeedback({
                 <button
                   type="button"
                   onClick={handleReviseSentence}
-                  className="inline-flex min-h-11 items-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-semibold text-white hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+                  disabled={isLoading}
+                  className="inline-flex min-h-11 items-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-semibold text-white hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Revise sentence
                 </button>
                 <button
                   type="button"
                   onClick={handleTryAnotherSentence}
-                  className="inline-flex min-h-11 items-center rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-semibold text-neutral-900 hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+                  disabled={isLoading}
+                  className="inline-flex min-h-11 items-center rounded-md border border-neutral-300 bg-white px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-semibold text-neutral-900 hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Try another sentence
                 </button>
@@ -481,7 +521,7 @@ export function SentenceFeedback({
                         key={reason}
                         type="button"
                         onClick={() => handleReport(reason)}
-                        disabled={reportStatus === "loading"}
+                        disabled={isLoading || reportStatus === "loading"}
                         className="flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center text-left text-sm text-neutral-600 underline transition-colors hover:text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {label}
@@ -491,8 +531,12 @@ export function SentenceFeedback({
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setShowReportReasons(true)}
-                    disabled={reportStatus === "loading"}
+                    onClick={() => {
+                      if (!submittingSynchronously.current) {
+                        setShowReportReasons(true);
+                      }
+                    }}
+                    disabled={isLoading || reportStatus === "loading"}
                     aria-busy={reportStatus === "loading"}
                     className="inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center text-sm font-medium text-neutral-600 underline transition-colors hover:text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >

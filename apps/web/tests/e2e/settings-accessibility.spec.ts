@@ -144,7 +144,7 @@ test.describe("Settings accessibility (VOC-031-T07b)", () => {
         "text=Review rhythm",
         "text=Account security",
         "text=Vocanova default",
-        "text=Faster reminders",
+        "text=Faster reviews",
       ],
     });
 
