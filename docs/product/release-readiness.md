@@ -528,6 +528,19 @@ fixture-retirement and default-seed integration checks passed under that stricte
 configuration. The earlier default-image runs passed; no universal timeout on
 the former readiness probe is claimed.
 
+A subsequent review found that fresh staging preparation depended on optional
+Sentry configuration. Deployment now persists `ENVIRONMENT=staging` in its core
+configuration step, and both wrapper and SQL require that explicit environment.
+Missing, blank or production values fail closed; monitoring settings cannot
+authorize or block preparation. Two isolated configuration regressions and six
+wrapper cases failed before correction. All 253 foundation checks and the
+disposable Atlas, fixture-history, refusal, rollback and default-seed integrations
+passed after correction. The configuration tests also verify stale-value
+replacement, preservation of unrelated values and repeat-run idempotence without
+a monitoring DSN. Independent review found no further issue in this delta.
+The preceding revision's complete hosted CI passed; the updated revision still
+requires hosted checks and staging journey verification.
+
 ## Deliver work in bounded slices
 
 Each slice should identify the learner problem, state the intended behavior, change the smallest relevant surface, include meaningful regression coverage and document remaining limits. Use parallel agents for independent areas and independent review; coordinate shared files, builds and servers. Follow [repository instructions](../../AGENTS.md) for draft PRs, CI, merging and deployment.

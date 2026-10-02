@@ -6,8 +6,8 @@ set -eu
 
 fail() { printf '%s\n' "$1" >&2; exit 1; }
 [ "$#" -eq 0 ] || fail 'synthetic journey preparation takes no arguments'
-[ "${SENTRY_ENVIRONMENT:-}" = staging ] || fail 'synthetic journey preparation requires staging'
-case "${ENVIRONMENT:-}" in ''|staging) ;; *) fail 'synthetic journey preparation requires staging' ;; esac
+# The application environment authorizes preparation; monitoring is optional.
+[ "${ENVIRONMENT:-}" = staging ] || fail 'synthetic journey preparation requires staging'
 for override in "${DOCKER_COMPOSE_CMD:-}" "${COMPOSE_FILE:-}" "${COMPOSE_PROJECT_NAME:-}" "${DOCKER_HOST:-}" "${DOCKER_CONTEXT:-}"; do
   [ -z "$override" ] || fail 'synthetic journey preparation refuses Docker scope overrides'
 done
@@ -30,7 +30,6 @@ docker --context default compose \
   exec -T postgres psql -X --set=ON_ERROR_STOP=1 \
   --username "${POSTGRES_USER:-vocanova}" \
   --dbname "${POSTGRES_DB:-vocanova}" \
-  --set=journey_environment="$SENTRY_ENVIRONMENT" \
-  --set=api_environment="${ENVIRONMENT:-}" \
+  --set=journey_environment="$ENVIRONMENT" \
   --set=synthetic_email="$synthetic_email" \
   --file - < "$prepare_sql"

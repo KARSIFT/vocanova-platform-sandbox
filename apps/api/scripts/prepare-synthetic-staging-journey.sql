@@ -5,7 +5,6 @@ BEGIN;
 SET LOCAL lock_timeout = '10s';
 SET LOCAL statement_timeout = '30s';
 SELECT set_config('vocanova.journey_environment', :'journey_environment', true) AS journey_environment_setting,
-       set_config('vocanova.api_environment', :'api_environment', true) AS api_environment_setting,
        set_config('vocanova.journey_email', :'synthetic_email', true) AS journey_email_setting
 \gset
 
@@ -15,8 +14,7 @@ DECLARE
   prior_user users%ROWTYPE;
   prepared_at timestamptz := now();
 BEGIN
-  IF current_setting('vocanova.journey_environment') <> 'staging'
-     OR current_setting('vocanova.api_environment') NOT IN ('', 'staging') THEN
+  IF current_setting('vocanova.journey_environment') <> 'staging' THEN
     RAISE EXCEPTION 'synthetic journey preparation requires staging';
   END IF;
   -- Keep email limits and pattern in sync with prepare-synthetic-staging-journey.sh.

@@ -1,5 +1,14 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
@@ -139,6 +148,110 @@ test("staging ships both fixture files and prepares after migrations and canonic
     /^\s*docker\s+compose\s+up\s+-d\s+postgres\s+api\s+web\s*$/m,
   ]);
 });
+
+test("core staging configuration runs before fixture preparation without a monitoring dependency", () => {
+  const configStep = step(deploy, "Write staging application configuration");
+  const hostStep = step(deploy, "Deploy to staging host");
+  assert.equal(scalars(configStep).if, scalars(hostStep).if);
+  assert.doesNotMatch(configStep, /SENTRY|continue-on-error:\s*true/);
+  ordered(deploy, [
+    /name:\s*Write staging application configuration/,
+    /name:\s*Deploy to staging host/,
+    prepareCommand,
+  ]);
+});
+
+for (const [label, previousMarkers] of [
+  ["missing", ""],
+  ["stale and duplicated", "ENVIRONMENT=production\nENVIRONMENT=legacy\n"],
+]) {
+  test(`application configuration replaces ${label} core environment without a Sentry DSN`, (t) => {
+    const directory = mkdtempSync(
+      path.join(tmpdir(), "vocanova-staging-config-"),
+    );
+    t.after(() => rmSync(directory, { recursive: true, force: true }));
+    const secretsDirectory = path.join(directory, "secrets");
+    const binDirectory = path.join(directory, "bin");
+    mkdirSync(secretsDirectory);
+    mkdirSync(binDirectory);
+    const envFile = path.join(secretsDirectory, "api.env");
+    writeFileSync(
+      envFile,
+      `# synthetic fixture only\nUNRELATED_SETTING=keep-me\n${previousMarkers}BASE_URL=https://old.example.invalid\n`,
+    );
+
+    // No host configuration is read or written. Remap every fixed secret path
+    // before execution and fail closed if a host /opt reference remains.
+    const script = block(
+      step(deploy, "Write staging application configuration"),
+      "script",
+    );
+    const hostSecretsDirectory = "/opt/vocanova/infra/secrets";
+    assert.ok(script.includes(hostSecretsDirectory));
+    const quotedDirectory = `'${secretsDirectory.replaceAll("'", "'\\''")}'`;
+    const isolatedScript = script.replaceAll(
+      hostSecretsDirectory,
+      quotedDirectory,
+    );
+    assert.doesNotMatch(isolatedScript, /\/opt(?:\/|\b)/);
+
+    // The fake sudo permits only the expected operations on this new temp
+    // directory. Ownership changes are checked but deliberately not executed.
+    writeFileSync(
+      path.join(binDirectory, "sudo"),
+      `#!/bin/sh
+set -eu
+case "$1" in
+  mkdir)
+    [ "$#" -eq 3 ] && [ "$2" = "-p" ] && [ "$3" = "$TEST_SECRETS_DIRECTORY" ] || exit 90
+    exec /bin/mkdir -p -- "$3"
+    ;;
+  touch)
+    [ "$#" -eq 2 ] && [ "$2" = "$TEST_SECRETS_DIRECTORY/api.env" ] || exit 91
+    exec /usr/bin/touch -- "$2"
+    ;;
+  chown)
+    [ "$#" -eq 3 ] && [ "$3" = "$TEST_SECRETS_DIRECTORY/api.env" ] || exit 92
+    ;;
+  *) exit 93 ;;
+esac
+`,
+      { mode: 0o700 },
+    );
+    const runConfig = () => {
+      const result = spawnSync("/bin/bash", ["-c", isolatedScript], {
+        cwd: directory,
+        env: {
+          PATH: `${binDirectory}:/usr/bin:/bin`,
+          TEST_SECRETS_DIRECTORY: secretsDirectory,
+          STAGING_GOOGLE_OAUTH_ENABLED: "false",
+          STAGING_NEW_USER_SIGNUP_ALLOWLIST: "",
+        },
+        encoding: "utf8",
+        timeout: 5_000,
+      });
+      assert.equal(result.error, undefined);
+      assert.equal(result.status, 0, result.stderr);
+      return readFileSync(envFile, "utf8");
+    };
+
+    const configured = runConfig();
+    assert.deepEqual(
+      configured.split("\n").filter((line) => line.startsWith("ENVIRONMENT=")),
+      ["ENVIRONMENT=staging"],
+    );
+    assert.match(configured, /^UNRELATED_SETTING=keep-me$/m);
+    assert.match(configured, /^# synthetic fixture only$/m);
+    assert.match(configured, /^BASE_URL=https:\/\/staging\.vocanova\.site$/m);
+    assert.doesNotMatch(configured, /^SENTRY_DSN=/m);
+    assert.equal(statSync(envFile).mode & 0o777, 0o600);
+    assert.equal(
+      runConfig(),
+      configured,
+      "repeated configuration is idempotent",
+    );
+  });
+}
 
 test("scheduled staging requires installed fixture preparation before session mint", () => {
   const job = extractTopLevelJobBlock(

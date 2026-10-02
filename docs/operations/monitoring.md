@@ -254,8 +254,10 @@ creates an absent guarded fixture or retires and replaces the matching active
 synthetic account for the full browser run. Making a saved word due
 alone is insufficient after a persistent account has completed its daily target.
 
-Preparation requires staging configuration and the pinned staging Compose
-scope. In one transaction it retires only the exact active, marked reserved
+Preparation requires explicit `ENVIRONMENT=staging` and the pinned staging Compose
+scope. Deployment writes this core setting before preparation; scheduled checks
+read the persisted setting. Optional Sentry configuration cannot authorize or
+block preparation. In one transaction it retires only the exact active, marked reserved
 identity, revokes its live sessions and creates a replacement under the same
 address. Retired learning, mission, activity and reward rows remain attached to
 their original user ID, with their synthetic marker retained. Each preparation

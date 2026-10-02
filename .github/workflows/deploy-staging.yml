@@ -898,6 +898,7 @@ jobs:
             sudo touch /opt/vocanova/infra/secrets/api.env
             sudo chown "$(id -un)":"$(id -gn)" /opt/vocanova/infra/secrets/api.env
             sed -i \
+              -e '/^ENVIRONMENT=/d' \
               -e '/^BASE_URL=/d' \
               -e '/^MAGIC_LINK_PATH=/d' \
               -e '/^OAUTH_REDIRECT_URI=/d' \
@@ -907,6 +908,7 @@ jobs:
               -e '/^NEW_USER_SIGNUP_ALLOWLIST=/d' \
               /opt/vocanova/infra/secrets/api.env
             {
+              echo "ENVIRONMENT=staging"
               echo "BASE_URL=https://staging.vocanova.site"
               echo "MAGIC_LINK_PATH=/magic-link"
               echo "OAUTH_REDIRECT_URI=https://api-staging.vocanova.site/api/v1/auth/oauth/google/callback"

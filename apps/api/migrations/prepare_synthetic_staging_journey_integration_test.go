@@ -25,20 +25,21 @@ import (
 
 const journeyEmail = "journey-proof@synthetic.vocanova.invalid"
 
-func prepareJourneyCommand(t *testing.T, container, environment, apiEnvironment, email string) *exec.Cmd {
+func prepareJourneyCommand(t *testing.T, container, environment, email string) *exec.Cmd {
 	t.Helper()
 	contents, err := os.ReadFile(filepath.Join("..", "scripts", "prepare-synthetic-staging-journey.sql"))
 	require.NoError(t, err)
+	// Fixture setup uses Unix-socket local trust; readiness separately verifies TCP/SCRAM.
 	cmd := exec.Command("docker", "exec", "-i", container, "psql", "-X", "--set=ON_ERROR_STOP=1",
 		"--username", "vocanova", "--dbname", "vocanova", "--set=journey_environment="+environment,
-		"--set=api_environment="+apiEnvironment, "--set=synthetic_email="+email, "--file", "-")
+		"--set=synthetic_email="+email, "--file", "-")
 	cmd.Stdin = strings.NewReader(string(contents))
 	return cmd
 }
 
 func prepareJourney(t *testing.T, container string) uuid.UUID {
 	t.Helper()
-	out, err := prepareJourneyCommand(t, container, "staging", "staging", journeyEmail).CombinedOutput()
+	out, err := prepareJourneyCommand(t, container, "staging", journeyEmail).CombinedOutput()
 	require.NoError(t, err, "preparation: %s", out)
 	require.Contains(t, string(out), "prepared")
 	return uuid.MustParse(querySingleValue(t, container, "SELECT id FROM users WHERE is_synthetic_test_account AND deleted_at IS NULL"))
@@ -164,18 +165,19 @@ func TestSyntheticStagingPreparationRefusesUnsafeChangesAndRollsBack(t *testing.
 	snapshot := func() string {
 		return querySingleValue(t, container, `SELECT jsonb_build_object('users',(SELECT jsonb_agg(to_jsonb(u) ORDER BY id) FROM users u),'sessions',(SELECT jsonb_agg(to_jsonb(s) ORDER BY id) FROM sessions s))::text`)
 	}
-	for _, tc := range []struct{ name, env, apiEnv, email, message string }{
-		{"missing staging", "", "", journeyEmail, "requires staging"},
-		{"production", "production", "production", journeyEmail, "requires staging"},
-		{"contradictory api environment", "staging", "production", journeyEmail, "requires staging"},
-		{"deliverable address", "staging", "staging", "journey@example.com", "canonical lowercase .invalid"},
-		{"noncanonical address", "staging", "staging", " JOURNEY@synthetic.vocanova.invalid ", "canonical lowercase .invalid"},
-		{"SQL-shaped address", "staging", "staging", "x'; SELECT 1;--@synthetic.vocanova.invalid", "canonical lowercase .invalid"},
-		{"different marked identity", "staging", "staging", "other@synthetic.vocanova.invalid", "different active synthetic identity"},
+	for _, tc := range []struct{ name, env, email, message string }{
+		{"blank core environment", "", journeyEmail, "requires staging"},
+		{"production", "production", journeyEmail, "requires staging"},
+		{"invalid core environment", "development", journeyEmail, "requires staging"},
+		{"noncanonical core environment", "Staging", journeyEmail, "requires staging"},
+		{"deliverable address", "staging", "journey@example.com", "canonical lowercase .invalid"},
+		{"noncanonical address", "staging", " JOURNEY@synthetic.vocanova.invalid ", "canonical lowercase .invalid"},
+		{"SQL-shaped address", "staging", "x'; SELECT 1;--@synthetic.vocanova.invalid", "canonical lowercase .invalid"},
+		{"different marked identity", "staging", "other@synthetic.vocanova.invalid", "different active synthetic identity"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			before := snapshot()
-			out, err := prepareJourneyCommand(t, container, tc.env, tc.apiEnv, tc.email).CombinedOutput()
+			out, err := prepareJourneyCommand(t, container, tc.env, tc.email).CombinedOutput()
 			require.Error(t, err)
 			require.Contains(t, string(out), tc.message)
 			require.Equal(t, before, snapshot())
@@ -184,7 +186,7 @@ func TestSyntheticStagingPreparationRefusesUnsafeChangesAndRollsBack(t *testing.
 	for _, change := range []string{"is_synthetic_test_account=false", "status='disabled'"} {
 		execSQL(t, container, "UPDATE users SET "+change+" WHERE id="+sqlLiteral(userID.String()), "arrange refused identity")
 		before := snapshot()
-		out, err := prepareJourneyCommand(t, container, "staging", "", journeyEmail).CombinedOutput()
+		out, err := prepareJourneyCommand(t, container, "staging", journeyEmail).CombinedOutput()
 		require.Error(t, err)
 		require.Contains(t, string(out), "unmarked or inactive reserved identity")
 		require.Equal(t, before, snapshot())
@@ -193,7 +195,7 @@ func TestSyntheticStagingPreparationRefusesUnsafeChangesAndRollsBack(t *testing.
 	execSQL(t, container, `CREATE FUNCTION reject_journey_replacement() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'forced replacement insert failure'; END $$;
  CREATE TRIGGER reject_journey_replacement BEFORE INSERT ON users FOR EACH ROW EXECUTE FUNCTION reject_journey_replacement()`, "force insert failure")
 	before := snapshot()
-	out, err := prepareJourneyCommand(t, container, "staging", "staging", journeyEmail).CombinedOutput()
+	out, err := prepareJourneyCommand(t, container, "staging", journeyEmail).CombinedOutput()
 	require.Error(t, err)
 	require.Contains(t, string(out), "forced replacement insert failure")
 	require.Equal(t, before, snapshot(), "retirement and session revocation roll back with the failed replacement")
@@ -213,16 +215,22 @@ func TestSyntheticStagingWrapperScopeGuards(t *testing.T) {
 		env     []string
 		allowed bool
 	}{
-		{"missing staging", nil, false},
-		{"production", []string{"SENTRY_ENVIRONMENT=production"}, false},
-		{"contradictory environment", []string{"SENTRY_ENVIRONMENT=staging", "ENVIRONMENT=production"}, false},
-		{"invalid address", []string{"SENTRY_ENVIRONMENT=staging", "VOCANOVA_SYNTHETIC_SMOKE_TEST_EMAIL=real@example.com"}, false},
-		{"compose command", []string{"SENTRY_ENVIRONMENT=staging", "DOCKER_COMPOSE_CMD=docker compose -p production"}, false},
-		{"compose file", []string{"SENTRY_ENVIRONMENT=staging", "COMPOSE_FILE=production.yml"}, false},
-		{"compose project", []string{"SENTRY_ENVIRONMENT=staging", "COMPOSE_PROJECT_NAME=production"}, false},
-		{"docker host", []string{"SENTRY_ENVIRONMENT=staging", "DOCKER_HOST=tcp://example.invalid:2375"}, false},
-		{"docker context", []string{"SENTRY_ENVIRONMENT=staging", "DOCKER_CONTEXT=production"}, false},
-		{"staging default", []string{"SENTRY_ENVIRONMENT=staging"}, true},
+		{"missing core environment", nil, false},
+		{"Sentry alone cannot authorize staging", []string{"SENTRY_ENVIRONMENT=staging"}, false},
+		{"blank core environment", []string{"ENVIRONMENT=", "SENTRY_ENVIRONMENT=staging"}, false},
+		{"production despite staging Sentry", []string{"ENVIRONMENT=production", "SENTRY_ENVIRONMENT=staging"}, false},
+		{"invalid core environment", []string{"ENVIRONMENT=development", "SENTRY_ENVIRONMENT=staging"}, false},
+		{"noncanonical core environment", []string{"ENVIRONMENT=Staging", "SENTRY_ENVIRONMENT=staging"}, false},
+		{"invalid address", []string{"ENVIRONMENT=staging", "SENTRY_ENVIRONMENT=staging", "VOCANOVA_SYNTHETIC_SMOKE_TEST_EMAIL=real@example.com"}, false},
+		{"compose command", []string{"ENVIRONMENT=staging", "SENTRY_ENVIRONMENT=staging", "DOCKER_COMPOSE_CMD=docker compose -p production"}, false},
+		{"compose file", []string{"ENVIRONMENT=staging", "SENTRY_ENVIRONMENT=staging", "COMPOSE_FILE=production.yml"}, false},
+		{"compose project", []string{"ENVIRONMENT=staging", "SENTRY_ENVIRONMENT=staging", "COMPOSE_PROJECT_NAME=production"}, false},
+		{"docker host", []string{"ENVIRONMENT=staging", "SENTRY_ENVIRONMENT=staging", "DOCKER_HOST=tcp://example.invalid:2375"}, false},
+		{"docker context", []string{"ENVIRONMENT=staging", "SENTRY_ENVIRONMENT=staging", "DOCKER_CONTEXT=production"}, false},
+		{"core staging without Sentry", []string{"ENVIRONMENT=staging"}, true},
+		{"core staging with blank Sentry", []string{"ENVIRONMENT=staging", "SENTRY_ENVIRONMENT="}, true},
+		{"core staging with unrelated Sentry label", []string{"ENVIRONMENT=staging", "SENTRY_ENVIRONMENT=production"}, true},
+		{"core staging with staging Sentry", []string{"ENVIRONMENT=staging", "SENTRY_ENVIRONMENT=staging"}, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := t.TempDir()
@@ -243,6 +251,8 @@ func TestSyntheticStagingWrapperScopeGuards(t *testing.T) {
 			require.Contains(t, string(args), "--context\ndefault\ncompose\n--project-name\nvocanova-staging\n--file\n")
 			require.Contains(t, string(args), "/infra/docker-compose.yml\nexec\n-T\npostgres\npsql\n-X\n")
 			require.Contains(t, string(args), "--set=synthetic_email=smoke-test-bot@synthetic.vocanova.invalid")
+			require.Contains(t, string(args), "--set=journey_environment=staging\n")
+			require.NotContains(t, string(args), "--set=api_environment=")
 		})
 	}
 }
