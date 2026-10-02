@@ -423,12 +423,108 @@ class Rehearsal:
                         self.report["status"] = "FAIL"
                         if self.report["failure_stage"] is None:
                             self.report.update(failure_stage="cleanup", failure_code="temporary_cleanup_failed")
+                # Keep deferred cancellation active through final metadata too.
+                self.report["durations"]["total"] = round(time.monotonic() - started, 3)
+                self.report["finished_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
             finally:
                 for sig, handler in old_handlers.items():
                     signal.signal(sig, handler)
-        self.report["durations"]["total"] = round(time.monotonic() - started, 3)
-        self.report["finished_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
         return self.report
+
+
+class ReportCancellation:
+    """Defer late CLI cancellation until a complete failed report is published."""
+
+    def __init__(self):
+        self.report = None
+        self.interrupted = False
+        self.complete = False
+
+    def bind(self, report):
+        self.report = report
+        if self.interrupted:
+            self.record()
+
+    def record(self, _signum=None, _frame=None):
+        if self.complete:
+            return
+        self.interrupted = True
+        if self.report is not None:
+            self.report["status"] = "FAIL"
+            if self.report.get("failure_stage") is None:
+                self.report.update(failure_stage="report_persistence", failure_code="interrupted")
+
+
+def write_report_atomic(report_dir: Path, report: dict, cancellation: ReportCancellation):
+    """Publish only complete JSON; cancellation can require at most one rewrite.
+
+    The first publication is exclusive. A retry may replace only the file this
+    call published, never a preexisting report. Signals remain deferred during
+    serialization and fsync. A short masked section checks pending signals on
+    both sides of atomic publication, then closes the completed operation.
+    """
+    cancellation.bind(report)
+    destination = report_dir / "report.json"
+    published_identity = None
+    watched = {signal.SIGINT, signal.SIGTERM}
+    try:
+        for _ in range(2):
+            interrupted_before = cancellation.interrupted
+            descriptor, filename = tempfile.mkstemp(prefix=".report-", suffix=".json", dir=report_dir)
+            temporary = Path(filename)
+            try:
+                with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+                    json.dump(report, handle, indent=2, sort_keys=True)
+                    handle.write("\n")
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, watched)
+                try:
+                    if signal.sigpending() & watched:
+                        cancellation.record()
+                    if interrupted_before != cancellation.interrupted:
+                        # Do not publish a snapshot serialized before cancellation.
+                        continue
+                    identity = temporary.stat()
+                    if published_identity is None:
+                        os.link(temporary, destination)
+                    else:
+                        existing = destination.lstat()
+                        if (existing.st_dev, existing.st_ino) != published_identity:
+                            raise RehearsalError("report_identity_changed")
+                        os.replace(temporary, destination)
+                    published_identity = (identity.st_dev, identity.st_ino)
+                    # Finish removing our sibling before declaring persistence done;
+                    # cancellation during this final cleanup is still recorded.
+                    temporary.unlink(missing_ok=True)
+                    temporary = None
+                    if signal.sigpending() & watched:
+                        cancellation.record()
+                    if interrupted_before != cancellation.interrupted:
+                        # A signal during publication needs one atomic FAIL rewrite.
+                        continue
+                    # Publication is complete. Signals arriving after this point
+                    # cannot alter a completed report or interrupt its persistence.
+                    cancellation.complete = True
+                    return
+                finally:
+                    signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+            finally:
+                if temporary is not None:
+                    temporary.unlink(missing_ok=True)
+        raise RehearsalError("report_publication_incomplete")
+    except (OSError, ValueError, TypeError, RehearsalError):
+        # A signal after the first publication can require a corrective FAIL
+        # rewrite. If that write fails, do not leave our earlier PASS behind.
+        # Never remove an output whose identity this helper did not publish.
+        if published_identity is not None and not cancellation.complete:
+            try:
+                existing = destination.lstat()
+                if (existing.st_dev, existing.st_ino) == published_identity:
+                    destination.unlink()
+            except FileNotFoundError:
+                pass
+        raise
 
 
 def main(argv=None):
@@ -439,25 +535,24 @@ def main(argv=None):
     os.umask(0o077)
     try:
         args.report_dir.mkdir(mode=0o700, parents=False, exist_ok=False)
-        descriptor = os.open(args.report_dir / "report.json", os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     except OSError:
         print("Restore rehearsal: output directory must be new and writable.", file=sys.stderr)
         return 2
+    cancellation = ReportCancellation()
+    old_handlers = {sig: signal.signal(sig, cancellation.record) for sig in (signal.SIGINT, signal.SIGTERM)}
     try:
         runner = Rehearsal(Path(__file__).resolve().parents[2], args.report_dir, args.fault)
+        cancellation.bind(runner.report)
         report = runner.run()
-        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
-            json.dump(report, handle, indent=2, sort_keys=True)
-            handle.write("\n")
+        write_report_atomic(args.report_dir, report, cancellation)
         print(f"Restore rehearsal: {report['status']} (synthetic data only).")
         return 0 if report["status"] == "PASS" else 1
-    except (OSError, ValueError, RehearsalError):
-        try:
-            os.close(descriptor)
-        except OSError:
-            pass
+    except (OSError, ValueError, TypeError, RehearsalError):
         print("Restore rehearsal: could not complete or write the private report.", file=sys.stderr)
         return 2
+    finally:
+        for sig, handler in old_handlers.items():
+            signal.signal(sig, handler)
 
 
 if __name__ == "__main__":

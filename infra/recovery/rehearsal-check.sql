@@ -399,6 +399,11 @@ BEGIN
         ('public.confidence_point_ledger'::regclass,'confidence_point_ledger_append_only'),
         ('public.grace_day_ledger'::regclass,'grace_day_ledger_append_only'))
       AND NOT tgisinternal AND tgenabled='O'
+      -- pg_trigger.tgtype: ROW=1, BEFORE=2, DELETE=8, UPDATE=16.
+      -- Exact bits reject statement/AFTER/UPDATE-only triggers on either ledger.
+      AND tgtype = (1 | 2 | 8 | 16)
+      -- Both migration triggers are unconditional, cover every column and take no args.
+      AND tgattr = ''::int2vector AND tgqual IS NULL AND tgnargs=0
       AND tgfoid='public.vocanova_reject_learning_ledger_mutation()'::regprocedure) <> 2 THEN
     RAISE EXCEPTION 'rehearsal_append_only_triggers';
   END IF;
@@ -427,6 +432,13 @@ BEGIN
     UPDATE public.confidence_point_ledger SET amount=amount+1
     WHERE id='d0c0a001-0000-4000-8000-000000000010';
     RAISE EXCEPTION 'rehearsal_ledger_update_was_not_rejected';
+  EXCEPTION WHEN SQLSTATE '55000' THEN
+    NULL;
+  END;
+  BEGIN
+    DELETE FROM public.confidence_point_ledger
+    WHERE id='d0c0a001-0000-4000-8000-000000000010';
+    RAISE EXCEPTION 'rehearsal_ledger_delete_was_not_rejected';
   EXCEPTION WHEN SQLSTATE '55000' THEN
     NULL;
   END;

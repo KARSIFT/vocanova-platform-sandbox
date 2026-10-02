@@ -271,6 +271,16 @@ Docker suite passed again (42.9 seconds). A cached-tool capability check also
 rejects old `pg_dump` binaries without `--restrict-key` before migrations; current
 PostgreSQL 16.15 supports the comparison option, as the real runs demonstrate.
 
+A further review reproduced interruption during report serialization, which
+could terminate the process with an empty report, and missing deletion protection
+on either ledger, which the old checker accepted. Reports now publish atomically
+under deferred interruption handling; a failed corrective write removes only its
+own stale publication. Both ledger triggers must retain unconditional row-level
+update/delete protection, and a rolled-back deletion probe verifies enforcement.
+Twenty-three offline contracts pass. The real acceptance suite now has seven
+cases, including both intentionally weakened trigger definitions, and passes;
+the historical checker failed those new regressions by incorrectly returning PASS.
+
 No production data, credentials, existing container or provider is used. This
 does not establish production backup schedule, retention, separate storage,
 point-in-time recovery, application acceptance after restoration or alert receipt.

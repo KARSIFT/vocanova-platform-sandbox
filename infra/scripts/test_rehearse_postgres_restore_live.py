@@ -3,6 +3,8 @@
 Run separately from foundation tests. The optional report root must be new;
 only sanitized reports survive. No external archive or connection is accepted.
 """
+import contextlib
+import io
 import json
 import os
 from pathlib import Path
@@ -13,7 +15,9 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 
+import rehearse_postgres_restore as restore
 from rehearse_postgres_restore import COMMAND_ENV, DOCKER_ENDPOINT, LABEL
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -133,6 +137,42 @@ class RecoveryAcceptance(unittest.TestCase):
         self.assertEqual(table["source"]["count"], 1)
         self.assertEqual(table["target"]["count"], 0)
         self.assertFalse(table["match"])
+
+    def assert_delete_protection_is_required(self, table):
+        directory = self.reports / ("weakened-" + table)
+        original_checks = restore.Rehearsal._checks
+        weakened = []
+        def checks(runner, container, sql):
+            if container == runner.names[0]:
+                # These two fixed test cases mutate only the synthetic source
+                # created by this runner. No runtime or CLI table input exists.
+                self.assertIn(table, ("confidence_point_ledger", "grace_day_ledger"))
+                trigger = table + "_append_only"
+                runner._psql(container, f"""BEGIN;
+                    DROP TRIGGER {trigger} ON public.{table};
+                    CREATE TRIGGER {trigger} BEFORE UPDATE ON public.{table}
+                    FOR EACH ROW EXECUTE FUNCTION public.vocanova_reject_learning_ledger_mutation();
+                    COMMIT;
+                """)
+                bits = runner._psql(container, f"SELECT tgtype FROM pg_trigger WHERE tgrelid='public.{table}'::regclass AND tgname='{trigger}';")
+                self.assertEqual(bits.strip(), b"19", "test must establish UPDATE-only trigger before checking it")
+                weakened.append(table)
+            return original_checks(runner, container, sql)
+        with patch.object(restore.Rehearsal, "_checks", new=checks), \
+             contextlib.redirect_stdout(io.StringIO()):
+            status = restore.main(["--report-dir", str(directory)])
+        self.assertEqual(weakened, [table])
+        self.assertEqual(status, 1, "a weakened source schema must not pass merely because the restore matches")
+        report = self.read_report(directory)
+        self.assertEqual(report["status"], "FAIL")
+        self.assertEqual(report["failure_stage"], "fixture")
+        self.assertEqual(report["failure_code"], "command_failed")
+
+    def test_point_ledger_missing_delete_protection_is_rejected(self):
+        self.assert_delete_protection_is_required("confidence_point_ledger")
+
+    def test_grace_ledger_missing_delete_protection_is_rejected(self):
+        self.assert_delete_protection_is_required("grace_day_ledger")
 
     def test_signal_cleans_up_isolated_container_and_preserves_failed_report(self):
         directory = self.reports / "interrupted"

@@ -43,10 +43,14 @@ records. Consequently, two equally empty or equally malformed databases cannot
 pass just because their digests agree. Expectations are static; the verifier never
 imports its oracle from the dump or a source snapshot.
 
-Selected schema protections must exist. Functional probes update one real
-settings row, require the append-only ledger trigger to reject an update, and
-require the named result/rating check and composite review-ownership FK to reject
-invalid writes. The probe transaction ends in `ROLLBACK`; failed probes
+Selected schema protections must exist. Both ledger triggers must be enabled,
+unconditional, row-level `BEFORE UPDATE OR DELETE` triggers for all columns, using
+the expected function with no arguments. The exact PostgreSQL trigger event/type
+bits are checked for both ledgers, including the empty grace ledger; an
+UPDATE-only trigger cannot pass. Functional probes update one real settings row,
+require the points-ledger trigger to reject both UPDATE and DELETE of a nonempty
+record, and require the named result/rating check and composite review-ownership
+FK to reject invalid writes. The probe transaction ends in `ROLLBACK`; failed probes
 also abort it. A following read-only transaction verifies that settings, points,
 review state and review meaning retain their original values. The runner must wait for successful psql exit before
 accepting the final one-row JSON object or taking a post-check snapshot. Normal

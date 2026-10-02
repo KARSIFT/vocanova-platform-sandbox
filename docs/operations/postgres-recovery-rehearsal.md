@@ -25,6 +25,10 @@ directories and symlinks are preserved. The directory is private (`0700`), and
 `report.json` is private (`0600`). Keep the report with the revision it describes;
 the dump itself is temporary and removed during cleanup. A dirty checkout is
 explicitly marked, with hashes of the migrations, seed and verification fixtures.
+The report is published atomically only after complete serialization and a file
+flush. A stop signal through report persistence records failure; cleanup still
+finishes. If writing fails, the tool exits 2 without publishing partial JSON or
+retaining its own stale PASS. A report that appears concurrently is preserved.
 
 Only `--report-dir`, `--fault` and help are accepted. There are no host, DSN,
 container, credentials or imported-archive options. Ambient Docker contexts,
@@ -48,6 +52,9 @@ history with prewritten synthetic feedback, missions, activity and points.
 The target must also allow a valid settings write and reject selected invalid
 writes through the restored constraints and append-only trigger. Those probes
 roll back, and the original state is checked again before comparison.
+Both ledger triggers must protect every row from updates and deletions without
+a conditional exemption. A nonempty points record is also tested against both
+operations inside the rollback transaction.
 
 The plain schema dumps share a fresh per-run `--restrict-key` solely to make
 their output comparable. PostgreSQL's
@@ -68,7 +75,7 @@ report's run ID; never use a broad container prune as recovery for this tool.
 
 ## Failure controls and automation
 
-Run the complete five-case acceptance suite explicitly:
+Run the complete seven-case acceptance suite explicitly:
 
 ```bash
 evidence_parent="$(mktemp -d /tmp/vocanova-recovery-tests.XXXXXX)"
@@ -78,8 +85,9 @@ VOCANOVA_REHEARSAL_REPORT_ROOT="$evidence_parent/cases" \
 
 It requires a real local Docker daemon and cached image; missing prerequisites
 fail the suite instead of skipping it. Cases cover a successful restore,
-corrupted archive, truncated archive, a removed activity record and SIGTERM
-cleanup. The negative cases must produce the expected failed report while the
+corrupted archive, truncated archive, a removed activity record, SIGTERM
+cleanup and either ledger's deletion protection being removed. The negative
+cases must produce the expected failed report while the
 test suite itself succeeds. Without the report-root environment variable, the
 test suite removes its reports after completion.
 
@@ -97,7 +105,8 @@ SQL diagnosis belongs in a separate disposable development database following
 the fixture contract; this runner always cleans up its own databases.
 
 Foundation tests exercise argument rejection, output preservation, isolation,
-error redaction, interruption and cleanup failure without Docker. The
+error redaction, interruption, atomic report persistence and cleanup failure
+without Docker. The
 [recovery workflow](../../.github/workflows/recovery-rehearsal.yml) runs the real
 suite for changes to migrations, canonical seed or this harness, and supports
 manual dispatch. It retains only sanitized JSON reports for 14 days. It is a

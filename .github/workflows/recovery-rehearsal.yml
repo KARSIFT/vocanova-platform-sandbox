@@ -44,7 +44,7 @@ jobs:
       - name: Cache disposable PostgreSQL image
         run: docker --host unix:///var/run/docker.sock pull postgres:16-alpine
 
-      - name: Verify restore, corruption detection and interruption cleanup
+      - name: Verify restores, schema protections and failure handling
         env:
           VOCANOVA_REHEARSAL_REPORT_ROOT: ${{ runner.temp }}/recovery-reports
         run: python3 infra/scripts/test_rehearse_postgres_restore_live.py

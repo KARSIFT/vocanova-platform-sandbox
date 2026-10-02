@@ -8,6 +8,7 @@ from pathlib import Path
 import signal
 import stat
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -72,6 +73,88 @@ class RehearsalContracts(unittest.TestCase):
             self.assertEqual(stat.S_IMODE(directory.stat().st_mode), 0o700)
             self.assertEqual(stat.S_IMODE((directory / "report.json").stat().st_mode), 0o600)
             self.assertEqual(json.loads((directory / "report.json").read_text())["status"], result)
+
+    def test_signal_during_serialization_publishes_complete_failure_report(self):
+        # Separate process: the historical bug restores the default SIGTERM
+        # action, so reproducing it in this test process would kill the suite.
+        program = '''
+import json, os, signal, sys
+sys.path.insert(0, sys.argv[1])
+import rehearse_postgres_restore as restore
+restore.Rehearsal.run = lambda self: {"status":"PASS", "failure_stage":None, "failure_code":None}
+original = restore.json.dump
+sent = False
+def interrupted_dump(*args, **kwargs):
+    global sent
+    if sent:
+        return original(*args, **kwargs)
+    if sys.argv[3] == "after":
+        original(*args, **kwargs)
+    if not sent:
+        sent = True
+        os.kill(os.getpid(), signal.SIGTERM)
+        os.kill(os.getpid(), signal.SIGINT)
+    if sys.argv[3] == "before":
+        return original(*args, **kwargs)
+restore.json.dump = interrupted_dump
+raise SystemExit(restore.main(["--report-dir", sys.argv[2]]))
+'''
+        for timing in ("before", "after"):
+            with self.subTest(timing=timing):
+                directory = self.directory / ("interrupted-report-" + timing)
+                process = subprocess.run([sys.executable, "-c", program, str(ROOT / "infra/scripts"), str(directory), timing],
+                                         capture_output=True, timeout=10)
+                self.assertEqual(process.returncode, 1, "serialization interruption was not recorded")
+                report = json.loads((directory / "report.json").read_text())
+                self.assertEqual(report["status"], "FAIL")
+                self.assertEqual(report["failure_stage"], "report_persistence")
+                self.assertEqual(report["failure_code"], "interrupted")
+                self.assertEqual(sorted(p.name for p in directory.iterdir()), ["report.json"])
+
+    def test_failed_serialization_never_publishes_partial_json(self):
+        directory = self.directory / "write-error"
+        def broken_dump(data, handle, **kwargs):
+            handle.write('{"status":')
+            raise OSError("synthetic-private-disk-diagnostic")
+        with patch.object(restore.Rehearsal, "run", return_value={"status": "PASS"}), \
+             patch.object(restore.json, "dump", side_effect=broken_dump):
+            status, output = self.cli("--report-dir", str(directory))
+        self.assertEqual(status, 2)
+        self.assertNotIn("synthetic-private-disk-diagnostic", output)
+        self.assertFalse((directory / "report.json").exists())
+        self.assertEqual(list(directory.iterdir()), [])
+
+    def test_atomic_publication_refuses_a_report_created_during_execution(self):
+        directory = self.directory / "existing-report"
+        def execute(runner):
+            (directory / "report.json").write_text("existing evidence")
+            return {"status": "PASS"}
+        with patch.object(restore.Rehearsal, "run", new=execute):
+            status, _ = self.cli("--report-dir", str(directory))
+        self.assertEqual(status, 2)
+        self.assertEqual((directory / "report.json").read_text(), "existing evidence")
+        self.assertEqual(sorted(p.name for p in directory.iterdir()), ["report.json"])
+
+    def test_failed_interruption_rewrite_removes_owned_stale_pass(self):
+        directory = self.directory / "failed-correction"
+        original_link, original_dump = restore.os.link, restore.json.dump
+        dumps = []
+        def interrupted_link(*args, **kwargs):
+            original_link(*args, **kwargs)
+            os.kill(os.getpid(), signal.SIGTERM)
+        def failing_second_dump(*args, **kwargs):
+            dumps.append(True)
+            if len(dumps) == 2:
+                raise OSError("synthetic failed interruption rewrite")
+            return original_dump(*args, **kwargs)
+        with patch.object(restore.Rehearsal, "run", return_value={"status": "PASS"}), \
+             patch.object(restore.os, "link", side_effect=interrupted_link), \
+             patch.object(restore.json, "dump", side_effect=failing_second_dump):
+            status, _ = self.cli("--report-dir", str(directory))
+        self.assertEqual(status, 2)
+        self.assertEqual(len(dumps), 2)
+        self.assertFalse((directory / "report.json").exists(), "failed correction must not retain a stale PASS")
+        self.assertEqual(list(directory.iterdir()), [])
 
     def test_commands_use_bounded_minimal_environment_and_hide_raw_errors(self):
         secret = "synthetic-secret-not-for-report"
