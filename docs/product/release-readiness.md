@@ -4,6 +4,26 @@ This is the working completion plan for the product requested on 2 October 2026.
 
 Read [the current state](current-state.md), [product bible](00-product-bible.md), [learning workspace design](../design/learning-workspace.md) and [development guide](../development.md) before extending scope.
 
+## Consolidated delivery acceptance — 2026-10-02
+
+Implementation revision `5b074584cb1799d6b8da7ee02909c703382a3ee5` in
+[PR #1482](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1482) passed
+the complete [pre-merge staging deployment and learning journey](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36989699136)
+at 09:29 UTC. A second [staging-only scheduled journey](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36990179266)
+passed at 09:31 UTC. Both ran the frozen implementation revision; the second
+exercised fresh account preparation and repeated the full learning loop on the
+same day. The deployment also verified release identity, health and OAuth
+initiation. No overlapping old scheduled run was observed during either check.
+
+The consolidated fixes cover review distractors, pending profile edits,
+capability-aware authentication guidance, completed onboarding without stored
+questionnaire answers and repeatable staging fixtures. Local validation, hosted CI and
+independent review passed; automated code and security review of this revision
+completed without remaining valid findings. The final merge still follows normal
+CI and queue checks. Production promotion and the human, provider, recovery and
+launch requirements below remain open. Earlier dated records document the
+failures and corrections that led to this acceptance.
+
 ## Definition of a usable first release
 
 A target learner can sign in through a supported method, choose sensible learning preferences, find relevant words, save them, finish a short review, write an original sentence, understand useful feedback and return later without losing confirmed progress. The interface works on small phones and desktop with keyboard access, readable themes and understandable recovery paths. Production data can be restored, failures are detected, and the release can be identified and rolled back.
@@ -477,8 +497,9 @@ review the same day. Refusal, forced-failure rollback, session revocation,
 repeated preparation and normal-seed idempotency controls passed. Atlas applied
 the migration set to an empty database and confirmed a second apply was a no-op.
 All 37 focused workflow contracts and the normal migration suite passed.
-The full hosted staging journey remains pending; no production promotion
-follows from this working revision.
+At this checkpoint the hosted staging journey was still pending. Its later
+completion is recorded in the opening acceptance section; production promotion
+remains separate.
 
 ## Consolidated learner reliability — working revision
 
@@ -509,8 +530,9 @@ checks with 37 existing skips in 5.2 minutes, covering the corrected profile and
 authentication flows in light/dark themes at all three layouts. Captured profile
 and recovery states were visually inspected; authentication overflow checks passed.
 Independent review found no remaining actionable findings, and the fresh
-dependency audit reported zero known vulnerabilities. Hosted acceptance remains
-pending. These checks cannot establish real provider access or learner acceptance.
+dependency audit reported zero known vulnerabilities. Hosted acceptance was
+pending at this checkpoint and subsequently passed as recorded above. These
+checks cannot establish real provider access or learner acceptance.
 
 Automated review found a further signup-specific recovery case: an enabled
 sign-in method need not have a form on the signup page. Six unit regressions and
@@ -538,8 +560,8 @@ disposable Atlas, fixture-history, refusal, rollback and default-seed integratio
 passed after correction. The configuration tests also verify stale-value
 replacement, preservation of unrelated values and repeat-run idempotence without
 a monitoring DSN. Independent review found no further issue in this delta.
-The preceding revision's complete hosted CI passed; the updated revision still
-requires hosted checks and staging journey verification.
+The preceding revision's complete hosted CI passed; hosted verification of this
+correction then exposed the onboarding defect described next.
 
 Pre-merge [staging run36988013273](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36988013273)
 successfully deployed the reviewed revision and passed configuration, fixture
@@ -560,7 +582,8 @@ All twelve affected onboarding/core-journey browser checks passed across the
 three layouts. Full workspace validation passed again with 253 foundation,
 32 API-client and 121 web helper tests, database-backed Go checks, both builds
 and E2E typechecking. Independent review found no further actionable issue.
-The full hosted journey on this corrected revision remains required.
+The corrected implementation subsequently passed both hosted journeys recorded
+in the opening acceptance section.
 
 ## Deliver work in bounded slices
 
