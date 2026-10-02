@@ -39,6 +39,38 @@ The sequence follows a conversation from opening through suggesting, agreeing, a
 - Catch up means exchanging news after time apart; meet up means getting together and need not involve sharing news. Keep in touch concerns continuing contact, not arranging a particular meeting.
 - Valid British cancelled and natural met up, kept in touch and caught up examples are retained. Content is not rewritten into unnatural English to fit a lexical matcher.
 
+## Optional context practice
+
+Daily Conversation includes an authored “Choose the word for the situation”
+activity with three independently reviewed message/dialogue examples:
+`invite` versus `join`, `sounds good` versus `keep in touch`, and `reschedule`
+versus `cancel`. Each example has two choices; explanations appear after a
+choice. Learners can try again, move to the next example, exit to the word list,
+or restart after completion. Answer state is local and resets on a fresh page
+load.
+
+Completion links to the existing word pages. Saving remains explicit; an
+already-saved word supports sentence practice, while an unsaved word must first
+be saved. Context answers do not change points, missions, progress, saved words
+or scheduled reviews. The activity introduces no API, schema or provider calls
+and makes no claim about learning effectiveness.
+
+The [content helper](<../../apps/web/src/app/(app)/discover/[situation]/_components/conversation-context-content.ts>)
+requires the actual Daily Conversation situation and all six canonical meanings
+to match their expected IDs, text and route slugs exactly, with no duplicate ID.
+If any reference is missing or drifts, the optional activity is omitted and the
+ordinary situation word list remains available. The
+[practice component](<../../apps/web/src/app/(app)/discover/[situation]/_components/conversation-context-practice.tsx>)
+uses those guarded references for its word-page links.
+
+Full workspace validation passed, including four new real-seed helper checks.
+All 21 focused browser checks passed across 360px, 430px and desktop, covering
+both themes, keyboard navigation, explanations, retry/restart/exit, reload,
+missing-content fallback and explicit saving before sentence practice. The full
+browser matrix passed 314 tests with 37 existing skips. Release verification
+remains pending. Synthetic checks do not
+establish screen-reader speech or learning effectiveness.
+
 ## Stable identities and repeat seeding
 
 All existing row IDs and foreign-key relationships are preserved, including the six original examples, notes and journey memberships. Greeting example wording, farewell definition and selected notes change in place. Display order changes do not change identities.

@@ -335,7 +335,7 @@ alert receipt remain unknown. Cron, user timers, containers and provider backups
 were outside the collection scope. The report is retained privately; identify
 the actual backup mechanism before expanding inspection or running a restore.
 
-## Pending edits and recovery — current slice
+## Pending edits and recovery — delivered in PR #1475
 
 Delayed browser requests reproduced settings edits being overwritten, a
 server-applied save whose lost response made a reverted retry appear saved,
@@ -351,9 +351,43 @@ settings cases (four existing viewport skips) and 18 sentence cases across
 360px, 430px and desktop, including light/dark error and unsaved-change states.
 Twelve screenshots were retained and representative mobile/desktop captures
 were inspected. Independent static review found no remaining actionable
-findings. These checks use synthetic API state; they do not establish real
-provider behavior or production data recovery. Full browser and release
-verification remain pending at this update.
+findings. The full local browser matrix passed 299 tests with 37 existing skips.
+These checks use synthetic API state; they do not establish real provider
+behavior or production data recovery.
+
+[PR #1475](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1475) merged
+as `bb0241cb2ace5f848a1e28bbd4b3cb9b3d3118db` after required CI and Codex/Claude
+reviews cleared. [Staging deployment 36965361774](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36965361774)
+succeeded, verified at 04:41:55 UTC, including strict identity, web/API health,
+OAuth initiation and the reserved synthetic learner core loop. Production was
+not promoted; no new direct public-health observation is claimed after the
+earlier local HTTP 403.
+
+## Optional Daily Conversation context activity — working revision
+
+Three independently reviewed authored examples use message/dialogue completion
+to contrast invite/join, sounds good/keep in touch and reschedule/cancel.
+Explanations follow the choice, with local retry/restart/exit and existing
+word-page links for explicit saving and sentence practice. All six canonical
+meaning IDs, text and slugs are checked against the actual situation response;
+missing or drifted references omit the optional activity. It changes no points,
+missions or progress and introduces no API/schema or provider calls.
+
+Full workspace validation passed: 246 foundation, 32 API-client and 98 web
+helper tests, Go checks and builds. All 21 focused browser checks passed at
+360px, 430px and desktop in light/dark themes, including keyboard navigation,
+feedback text, retry/restart/exit, reload, missing-content fallback and explicit
+saving before sentence practice. The full browser matrix passed 314 tests with
+37 existing skips in 4.3 minutes. Thirty-six screenshots and six additional
+360px viewport captures were retained; selected activity views were inspected.
+The viewport captures verified that apparent navigation overlap in an oversized
+element capture was a capture artifact, with retry visible and keyboard reachable.
+Independent static review found no remaining actionable issues. Release
+verification remains pending.
+Actual screen-reader speech and physical-device behavior remain unverified.
+Its [curriculum guidance](daily-conversation-curriculum.md#optional-context-practice)
+defines the authored scope; observed learner value and learning effectiveness
+remain unverified.
 
 ## Deliver work in bounded slices
 

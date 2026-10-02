@@ -40,7 +40,11 @@ for (const theme of ["light", "dark"] as const) {
     await expect(
       page.getByRole("heading", { level: 1, name: "Daily Conversation" }),
     ).toBeVisible();
-    await expect(page.locator("main h2")).toHaveText(pathway);
+    await expect(
+      page
+        .getByRole("list", { name: "Words in this situation" })
+        .getByRole("heading", { level: 2 }),
+    ).toHaveText(pathway);
     await expect(
       page.getByText("0 of 18 words saved", { exact: true }),
     ).toBeVisible();

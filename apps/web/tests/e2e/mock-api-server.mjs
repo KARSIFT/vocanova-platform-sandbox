@@ -1447,6 +1447,16 @@ const server = createServer(async (req, res) => {
       jsonResponse(res, 404, { error: "not_found", slug });
       return;
     }
+    if (
+      slug === "daily-conversation" &&
+      cookies.e2e_context_practice_missing_meaning === "true"
+    ) {
+      // Exercise the optional activity's unavailable-content fallback using
+      // the real curriculum while leaving the remaining situation usable.
+      response.meanings = response.meanings.filter(
+        (meaning) => meaning.meaningId !== "ee53d6ba-4303-5394-b7f9-79937ce66d09",
+      );
+    }
     logLine(req, 200, { slug });
     jsonResponse(res, 200, response);
     return;

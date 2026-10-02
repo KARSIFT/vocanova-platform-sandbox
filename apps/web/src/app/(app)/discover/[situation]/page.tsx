@@ -7,6 +7,8 @@ import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { Eyebrow, PageContainer } from "@/ui/surface";
 
 import { getSituationDetailView } from "./_components/situation-view";
+import { getConversationPractice } from "./_components/conversation-context-content";
+import { ConversationContextPractice } from "./_components/conversation-context-practice";
 import { formatLevelBand } from "../_components/level-band";
 
 interface SituationDiscoverPageProps {
@@ -29,6 +31,10 @@ export default async function SituationDiscoverPage({
   }
 
   const { situation: situationData, meanings } = response.data;
+  const conversationPractice = getConversationPractice(
+    situationData.id,
+    meanings,
+  );
   const savedCount = meanings.filter((meaning) => meaning.saved).length;
   const nextMeaning = meanings.find((meaning) => !meaning.saved);
 
@@ -88,6 +94,14 @@ export default async function SituationDiscoverPage({
         </section>
       ) : null}
 
+      {conversationPractice.length > 0 ? (
+        <ConversationContextPractice
+          key={situationData.id}
+          cases={conversationPractice}
+          situationSlug={situation}
+        />
+      ) : null}
+
       {getSituationDetailView(meanings.length) === "empty" ? (
         <div className="flex flex-col items-center justify-center py-[var(--spacing-2xl)] text-center">
           <h2 className="text-xl font-semibold text-neutral-900">
@@ -105,7 +119,12 @@ export default async function SituationDiscoverPage({
           </Link>
         </div>
       ) : (
-        <ul className="mt-[var(--spacing-lg)] space-y-[var(--spacing-md)]">
+        <ul
+          id="situation-words"
+          aria-label="Words in this situation"
+          tabIndex={-1}
+          className="mt-[var(--spacing-lg)] space-y-[var(--spacing-md)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+        >
           {meanings.map((meaning) => (
             <li key={meaning.meaningId}>
               <Link
