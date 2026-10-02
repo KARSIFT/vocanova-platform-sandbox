@@ -88,7 +88,7 @@ for (const copyVisibility of ["hidden", "visible"] as const) {
           const main = document.getElementById("main-content");
           if (!main || !document.body) return;
           const example = Array.from(main.querySelectorAll("li")).find(
-            (item) => item.textContent === sentence,
+            (item) => item.textContent?.trim() === sentence,
           );
           if (!example) return;
           observer.disconnect();

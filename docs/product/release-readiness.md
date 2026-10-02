@@ -448,6 +448,11 @@ that hidden streaming markup caused the original live failure. The corrected
 journey must pass against the real staging content before closing this gate.
 All 24 focused checks passed locally across the three layouts, including both
 new controls; E2E typechecking and the 21 workflow contracts also passed.
+The helper also follows the actual completion link in the same tab after its
+restart/exit/reload checks. This avoids an observed mobile-emulation failure
+where a modified click did not produce the expected new-page event.
+The three shared-journey checks also passed three consecutive repetitions per
+layout (27 checks, no retries).
 
 ## Deliver work in bounded slices
 
