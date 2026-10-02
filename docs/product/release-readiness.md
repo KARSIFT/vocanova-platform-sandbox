@@ -171,6 +171,14 @@ not rerun for this evaluator/CLI/documentation change; learner routes and
 database behavior are unchanged. PR/CI and staging evidence remain separate.
 No paid/live provider run or production-provider configuration change was made.
 
+Review follow-up corrected absent-provider accounting: no configured provider
+now records `provider_unavailable` with zero calls consistently. A reproduced
+overflow in the old numeric formatter could corrupt a large finite cost; the
+report now uses standard numeric formatting and a string builder. Fixture
+assembly avoids absolute mutation indices, preserves Unicode text when forming
+clauses and explicitly checks expanded golden membership. Report-file cleanup
+still closes on early failures and now avoids a redundant close after success.
+
 ## Deliver work in bounded slices
 
 Each slice should identify the learner problem, state the intended behavior, change the smallest relevant surface, include meaningful regression coverage and document remaining limits. Use parallel agents for independent areas and independent review; coordinate shared files, builds and servers. Follow [repository instructions](../../AGENTS.md) for draft PRs, CI, merging and deployment.

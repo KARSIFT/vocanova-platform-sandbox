@@ -454,6 +454,16 @@ func TestFtoaHandlesNegativesAndZero(t *testing.T) {
 	}
 }
 
+func TestFormatLiveEvaluationReportLargeFiniteCostDoesNotOverflow(t *testing.T) {
+	rendered := FormatLiveEvaluationReport(LiveEvaluationReport{CostUSD: 1e20, CostCeilingUSD: -1})
+	if !strings.Contains(rendered, "CostUSD: 100000000000000000000.00\n") {
+		t.Fatalf("large finite cost must retain its value with two decimals; got:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "CostCeilingUSD: -1.00\n") {
+		t.Fatal("the unknown-cost sentinel must remain distinct")
+	}
+}
+
 func TestLiveEvaluationEnvironmentConstantsMatchDocString(t *testing.T) {
 	// A future change to the env-var names is a breaking
 	// change to the documented operator procedure in

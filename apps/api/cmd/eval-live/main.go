@@ -192,7 +192,11 @@ func runEvalLive(args []string, stdout, stderr io.Writer, _ func() time.Time) in
 			fmt.Fprintln(stderr, "eval-live: cannot create a new private output file; choose an unused writable path")
 			return exitUsageError
 		}
-		defer outputFile.Close()
+		defer func() {
+			if outputFile != nil {
+				_ = outputFile.Close()
+			}
+		}()
 	}
 	var feedbackProvider aifeedback.FeedbackProvider
 	switch *provider {
@@ -239,7 +243,9 @@ func runEvalLive(args []string, stdout, stderr io.Writer, _ func() time.Time) in
 			fmt.Fprintln(stderr, "eval-live: cannot sync output file")
 			return exitUsageError
 		}
-		if err := outputFile.Close(); err != nil {
+		closeErr := outputFile.Close()
+		outputFile = nil
+		if closeErr != nil {
 			fmt.Fprintln(stderr, "eval-live: cannot close output file")
 			return exitUsageError
 		}

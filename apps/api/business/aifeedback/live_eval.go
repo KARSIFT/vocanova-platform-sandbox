@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"math"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 	"unicode/utf8"
 )
@@ -364,10 +366,15 @@ func RunLiveEvaluation(ctx context.Context, provider FeedbackProvider, opts Live
 		}
 	}
 	ip := NewInstrumentedProvider(provider)
+	var evaluatedProvider FeedbackProvider
 	if ip == nil {
+		// Keep the nil provider visible to RunEvaluation. The empty metrics
+		// holder must never be invoked as though an adapter were available.
 		ip = &InstrumentedProvider{}
+	} else {
+		evaluatedProvider = ip
 	}
-	result := RunEvaluation(ctx, ip, opts.Cases)
+	result := RunEvaluation(ctx, evaluatedProvider, opts.Cases)
 	finishedAt := time.Now()
 	computed := ComputeGoldenThresholds(result, opts.Cases)
 	violations := CheckGoldenThresholds(spec, computed)
@@ -550,137 +557,62 @@ func percentileNearestRank(sorted []time.Duration, p int) time.Duration {
 // Keep this output private: provider-generated content is untrusted evidence for
 // human review, not material to copy wholesale into CI or public release notes.
 func FormatLiveEvaluationReport(r LiveEvaluationReport) string {
-	var s string
-	s = s + "=== T10 Live AI Evaluation Report ===\n"
-	s = s + "Provider: " + r.Provider + "\n"
-	s = s + "Model: " + r.Model + "\n"
-	s = s + "Dataset: " + r.DatasetVersion + "\n"
-	s = s + "Spec: " + r.SpecVersion + "\n"
-	s += "Scope: " + r.Scope + "\nGoldenSet: " + r.GoldenSetVersion + "\nPrompt: " + r.PromptVersion + "\nSchema: " + r.SchemaVersion + "\nCommit: " + r.Commit + "\n"
-	s += "LatencyDefinition: " + r.LatencyDefinition + "\n"
-	s += "ConfiguredTimeout: " + r.Timeout.String() + "\nRequestInterval: " + r.RequestInterval.String() + "\nConfiguredMaxRetries: " + itoa(r.MaxRetries) + "\n"
+	var s strings.Builder
+	s.WriteString("=== T10 Live AI Evaluation Report ===\n")
+	s.WriteString("Provider: " + r.Provider + "\n")
+	s.WriteString("Model: " + r.Model + "\n")
+	s.WriteString("Dataset: " + r.DatasetVersion + "\n")
+	s.WriteString("Spec: " + r.SpecVersion + "\n")
+	s.WriteString("Scope: " + r.Scope + "\nGoldenSet: " + r.GoldenSetVersion + "\nPrompt: " + r.PromptVersion + "\nSchema: " + r.SchemaVersion + "\nCommit: " + r.Commit + "\n")
+	s.WriteString("LatencyDefinition: " + r.LatencyDefinition + "\n")
+	s.WriteString("ConfiguredTimeout: " + r.Timeout.String() + "\nRequestInterval: " + r.RequestInterval.String() + "\nConfiguredMaxRetries: " + itoa(r.MaxRetries) + "\n")
 	specJSON, _ := json.Marshal(r.ThresholdSpec)
-	s += "ThresholdSpec: " + string(specJSON) + "\n"
+	s.WriteString("ThresholdSpec: " + string(specJSON) + "\n")
 	for _, gap := range r.AcceptanceGaps {
-		s += "AcceptanceGap: " + gap + "\n"
+		s.WriteString("AcceptanceGap: " + gap + "\n")
 	}
-	s = s + "StartedAt: " + r.StartedAt.Format(time.RFC3339) + "\n"
-	s = s + "FinishedAt: " + r.FinishedAt.Format(time.RFC3339) + "\n"
-	s = s + "Duration: " + r.Duration.String() + "\n"
-	s = s + "ProviderCalls: " + itoa(r.ProviderCalls) + "\n"
-	s = s + "EstimatedInputChars: " + itoa(r.EstimatedInputChars) + "\n"
-	s = s + "EstimatedOutputChars: " + itoa(r.EstimatedOutputChars) + "\n"
-	s = s + "CostUSD: " + ftoa(r.CostUSD) + "\n"
-	s = s + "CostCeilingUSD: " + ftoa(r.CostCeilingUSD) + "\n"
+	s.WriteString("StartedAt: " + r.StartedAt.Format(time.RFC3339) + "\n")
+	s.WriteString("FinishedAt: " + r.FinishedAt.Format(time.RFC3339) + "\n")
+	s.WriteString("Duration: " + r.Duration.String() + "\n")
+	s.WriteString("ProviderCalls: " + itoa(r.ProviderCalls) + "\n")
+	s.WriteString("EstimatedInputChars: " + itoa(r.EstimatedInputChars) + "\n")
+	s.WriteString("EstimatedOutputChars: " + itoa(r.EstimatedOutputChars) + "\n")
+	s.WriteString("CostUSD: " + ftoa(r.CostUSD) + "\n")
+	s.WriteString("CostCeilingUSD: " + ftoa(r.CostCeilingUSD) + "\n")
 	if r.CostCeilingUSD < 0 {
-		s = s + "CostCeilingExceeded: (ceiling not set; not enforced)\n"
+		s.WriteString("CostCeilingExceeded: (ceiling not set; not enforced)\n")
 	} else {
 		if r.CostCeilingExceeded {
-			s = s + "CostCeilingExceeded: true\n"
+			s.WriteString("CostCeilingExceeded: true\n")
 		} else {
-			s = s + "CostCeilingExceeded: false\n"
+			s.WriteString("CostCeilingExceeded: false\n")
 		}
 	}
-	s = s + "LatencyMin: " + r.LatencyMin.String() + "\n"
-	s = s + "LatencyMax: " + r.LatencyMax.String() + "\n"
-	s = s + "LatencyMean: " + r.LatencyMean.String() + "\n"
-	s = s + "LatencyP50: " + r.LatencyP50.String() + "\n"
-	s = s + "LatencyP95: " + r.LatencyP95.String() + "\n"
+	s.WriteString("LatencyMin: " + r.LatencyMin.String() + "\n")
+	s.WriteString("LatencyMax: " + r.LatencyMax.String() + "\n")
+	s.WriteString("LatencyMean: " + r.LatencyMean.String() + "\n")
+	s.WriteString("LatencyP50: " + r.LatencyP50.String() + "\n")
+	s.WriteString("LatencyP95: " + r.LatencyP95.String() + "\n")
 	if r.OperatorNotes != "" {
-		s = s + "OperatorNotes: " + r.OperatorNotes + "\n"
+		s.WriteString("OperatorNotes: " + r.OperatorNotes + "\n")
 	}
-	s = s + "--- Per-threshold computed values ---\n"
-	s = s + FormatThresholdReport(r.Thresholds, r.Violations)
+	s.WriteString("--- Per-threshold computed values ---\n")
+	s.WriteString(FormatThresholdReport(r.Thresholds, r.Violations))
 	// Case evidence is synthetic-only private report data, not a standard log.
 	evidenceJSON, err := json.MarshalIndent(r.CaseEvidence, "", "  ")
 	if err == nil {
-		s += "--- Per-case evidence (human review pending) ---\n" + string(evidenceJSON) + "\n"
+		s.WriteString("--- Per-case evidence (human review pending) ---\n" + string(evidenceJSON) + "\n")
 	}
 	state := r.AcceptanceState
 	if state == "" {
 		state = "INCOMPLETE"
 	}
-	s += "=== Result: " + state + " ===\n"
-	return s
+	s.WriteString("=== Result: " + state + " ===\n")
+	return s.String()
 }
 
-// itoa is a small helper for rendering integer values
-// without dragging in fmt just for this. The cmd/eval-live
-// command imports fmt directly; the library keeps its
-// surface lean to keep the test assertions stable.
-func itoa(i int) string {
-	if i == 0 {
-		return "0"
-	}
-	neg := i < 0
-	if neg {
-		i = -i
-	}
-	var buf [20]byte
-	pos := len(buf)
-	for i > 0 {
-		pos--
-		buf[pos] = byte('0' + i%10)
-		i /= 10
-	}
-	if neg {
-		pos--
-		buf[pos] = '-'
-	}
-	return string(buf[pos:])
-}
+func itoa(i int) string { return strconv.Itoa(i) }
 
-// ftoa renders a float64 with a fixed two-decimal precision
-// for the report. Negative values render with a leading
-// minus (so a "-1" cost from the operator is rendered as
-// "-1.00" and distinguishable from a "0.00" not-recorded).
-// A NaN renders as "NaN" so an operator who accidentally
-// pipes a non-finite value does not produce a silent zero.
-func ftoa(f float64) string {
-	if f != f {
-		return "NaN"
-	}
-	neg := f < 0
-	if neg {
-		f = -f
-	}
-	cents := int64(f*100 + 0.5)
-	whole := cents / 100
-	frac := cents % 100
-	out := itoa64(whole)
-	out += "."
-	if frac < 10 {
-		out += "0"
-	}
-	out += itoa64(frac)
-	if neg {
-		out = "-" + out
-	}
-	return out
-}
-
-// itoa64 is the int64 counterpart of itoa, used by ftoa.
-// It is a separate function because Go's strconv.Itoa
-// rejects int64, and the report's cost field is a float64
-// whose integer part is built from cents / 100.
-func itoa64(i int64) string {
-	if i == 0 {
-		return "0"
-	}
-	neg := i < 0
-	if neg {
-		i = -i
-	}
-	var buf [20]byte
-	pos := len(buf)
-	for i > 0 {
-		pos--
-		buf[pos] = byte('0' + i%10)
-		i /= 10
-	}
-	if neg {
-		pos--
-		buf[pos] = '-'
-	}
-	return string(buf[pos:])
-}
+// ftoa uses standard fixed-point formatting without an integer-cents conversion.
+// Finite large costs remain representable; -1 stays the unknown-cost sentinel.
+func ftoa(f float64) string { return strconv.FormatFloat(f, 'f', 2, 64) }

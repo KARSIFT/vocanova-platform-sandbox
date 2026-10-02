@@ -53,6 +53,20 @@ func TestEditorialDatasetPreservesLegacyIDsAndGoldenMembership(t *testing.T) {
 			if (index == 0 || index == 2) && !c.IsGolden {
 				t.Errorf("legacy golden fixture dropped: %s", id)
 			}
+			if (word == "work" || word == "drive" || word == "big" || word == "school") && index >= 4 && !c.IsGolden {
+				t.Errorf("expanded golden fixture dropped: %s", id)
+			}
+		}
+	}
+}
+
+func TestEditorialContinuationPreservesUnicodeAndPronoun(t *testing.T) {
+	for _, tc := range []struct{ input, want string }{
+		{"", ""}, {"I work here.", "I work here."},
+		{"Éva works here.", "éva works here."}, {"“I work here.”", "“I work here.”"},
+	} {
+		if got := continueSentence(tc.input); got != tc.want {
+			t.Errorf("continueSentence(%q) = %q, want %q", tc.input, got, tc.want)
 		}
 	}
 }

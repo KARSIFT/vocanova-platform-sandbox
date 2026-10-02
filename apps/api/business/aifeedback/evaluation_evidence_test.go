@@ -249,6 +249,22 @@ func TestEvaluationEvidenceCostMetadataIsFiniteAndExplicit(t *testing.T) {
 	assert.True(t, r.CostCeilingExceeded)
 }
 
+func TestEvaluationEvidenceUnavailableProviderDoesNotRecordAttempts(t *testing.T) {
+	cases := []EvaluationCase{evidenceFixture("one"), evidenceFixture("two")}
+	report := RunLiveEvaluation(t.Context(), nil, LiveEvaluationOptions{Cases: cases})
+	require.Len(t, report.CaseEvidence, len(cases))
+	for _, e := range report.CaseEvidence {
+		assert.Equal(t, "provider_unavailable", e.ProviderErrorCode)
+		assert.Zero(t, e.ProviderAttempts)
+		assert.False(t, e.ProviderReturned)
+	}
+	assert.Zero(t, report.Thresholds.ProviderCalled)
+	assert.Zero(t, report.ProviderCalls)
+	assert.Empty(t, report.PerCallLatency)
+	assert.Equal(t, "unknown", report.Provider)
+	assert.Equal(t, "FAIL", report.AcceptanceState)
+}
+
 func TestEvaluationEvidenceDisabledOrInvalidBoundsCannotEstablishAcceptance(t *testing.T) {
 	for _, bound := range []float64{NotTracked, math.NaN(), math.Inf(1)} {
 		spec := DefaultGoldenThresholdSpec()
