@@ -1,7 +1,8 @@
 # Vocanova current product state
 
 Reviewed on 2026-10-02 against repository baseline
-`43e58080718f746f1d0052c528c4ea00d345ea60`. This is a dated inventory and readiness
+`1601c67b0c18d21eaf513164ce2bca2758b1ace0` plus the Daily Conversation changes in
+this revision. This is a dated inventory and readiness
 guide. Update it when behavior, deployment, or verified evidence changes; it does
 not establish that the final product is complete.
 
@@ -47,17 +48,21 @@ documented in [product maturity](product-maturity-delivery.md),
 dated evidence or acceptance plans, rather than a fresh test report.
 
 The canonical [seed](../../apps/api/cmd/seed/voc026-p1.json) contains seven
-situations, 39 words, and 42 meanings: a bounded starter curriculum, not broad
-curriculum coverage. Generated feedback is distinct from canonical vocabulary.
+situations, 51 words, 54 meanings and 72 examples: a bounded starter curriculum,
+not broad curriculum coverage. [Daily Conversation](daily-conversation-curriculum.md)
+has 18 ordered meanings and two examples each, with editorial level rationales
+and preserved existing identities. Word pages suppress repeated short/full
+definitions while retaining distinct fuller guidance. Generated feedback is
+distinct from canonical vocabulary.
 
 ## Live deployment observation
 
-Public checks on 2026-10-02 at 00:28 UTC observed staging web and API serving
-version `0.3.1`, commit `43e58080718f746f1d0052c528c4ea00d345ea60`, after
-[PR #1470](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1470).
+Public checks on 2026-10-02 at 01:15 UTC observed staging web and API serving
+version `0.3.1`, commit `1601c67b0c18d21eaf513164ce2bca2758b1ace0`, after
+[PR #1471](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1471).
 Production remained at `5b16186c6471cbbc1c935a703bb5a8a33bf28797`, version
 `0.3.1`. Both APIs reported database health `ok` and correct environment labels.
-The [staging deployment](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36945712699)
+The [staging deployment](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/36949720029)
 passed release identity, OAuth initiation and the reserved synthetic learner
 journey. These establish availability and the tested synthetic flow; they do
 not establish real account acceptance, live feedback quality or recoverable
@@ -96,8 +101,11 @@ database tests establish integration under test conditions. Neither proves live
 email deliverability, Google account behavior, learner retention, or feedback
 quality. Health checks and deployments also do not establish those claims.
 
-The feedback evaluator is being reconciled with the documented acceptance
-rubric. See the [evaluation guide](../engineering/feedback-evaluation.md) and
+The feedback evaluator now records meaning-aware observations and explicit
+acceptance gaps. The v3 fixtures retain all 336 cases and 91 golden members;
+six ambiguity cases remain excluded from status scoring. Curated regional
+and phrase forms improve lexical validation without awarding semantic credit.
+See the [evaluation guide](../engineering/feedback-evaluation.md) and
 [fixture migration](../engineering/feedback-evaluation-fixtures.md) for the
 meaning-aware cases, recorded evidence and checks that remain unmeasured.
 An adapter-only run cannot establish full feedback acceptance.

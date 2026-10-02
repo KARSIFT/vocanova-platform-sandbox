@@ -44,8 +44,8 @@
       "id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
       "slug": "daily-conversation",
       "title": "Daily Conversation",
-      "short_description": "Handle everyday small talk and casual exchanges naturally.",
-      "level_band": "a1_a2",
+      "short_description": "Start friendly conversations, make and change plans, and keep in touch.",
+      "level_band": "a2_b1",
       "category": "social",
       "status": "active",
       "display_order": 5
@@ -151,7 +151,7 @@
       "word_type": "word",
       "language_code": "en",
       "status": "active",
-      "difficulty_level": null
+      "difficulty_level": "a2"
     },
     {
       "id": "812d1cd9-52c8-5726-a7b8-08c094e3fdd2",
@@ -160,7 +160,7 @@
       "word_type": "phrase",
       "language_code": "en",
       "status": "active",
-      "difficulty_level": null
+      "difficulty_level": "b1"
     },
     {
       "id": "cc424986-4e4d-5c62-acc3-ff2a74faeea2",
@@ -205,7 +205,7 @@
       "word_type": "word",
       "language_code": "en",
       "status": "active",
-      "difficulty_level": null
+      "difficulty_level": "b1"
     },
     {
       "id": "19e74673-e746-540e-8a33-20724c758443",
@@ -241,7 +241,7 @@
       "word_type": "word",
       "language_code": "en",
       "status": "active",
-      "difficulty_level": null
+      "difficulty_level": "a2"
     },
     {
       "id": "481213da-c938-5edb-8d35-e131e9521c70",
@@ -367,7 +367,7 @@
       "word_type": "phrase",
       "language_code": "en",
       "status": "active",
-      "difficulty_level": null
+      "difficulty_level": "b1"
     },
     {
       "id": "282a4495-dfa6-5a2f-9f09-63874c3427a7",
@@ -421,7 +421,115 @@
       "word_type": "phrase",
       "language_code": "en",
       "status": "active",
-      "difficulty_level": null
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "bdd6b648-1ff9-5f91-81ce-169058ac4d37",
+      "text": "invite",
+      "normalized_text": "invite",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "8204f592-613d-5e87-b1e3-0963561011c8",
+      "text": "join",
+      "normalized_text": "join",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "5f500dfd-bc7f-5341-a606-4422b34ac80a",
+      "text": "available",
+      "normalized_text": "available",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "2899457a-37d7-5e49-a465-cafbee381185",
+      "text": "suggest",
+      "normalized_text": "suggest",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "4b801f45-5848-5245-9415-ebcc28a76305",
+      "text": "arrange",
+      "normalized_text": "arrange",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "8099ff18-e215-59c5-8711-f6749d08f2ef",
+      "text": "confirm",
+      "normalized_text": "confirm",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "1af5bdaa-71ba-5cdc-b6bc-885a2c49ca93",
+      "text": "reschedule",
+      "normalized_text": "reschedule",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "2bae0d24-27e2-5395-aa5f-1b729844d407",
+      "text": "cancel",
+      "normalized_text": "cancel",
+      "word_type": "word",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "874720bb-d242-536d-ad53-85aa5e71377a",
+      "text": "on time",
+      "normalized_text": "on time",
+      "word_type": "phrase",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "973b7d32-82dd-5a14-bc3d-6adc214c897b",
+      "text": "sounds good",
+      "normalized_text": "sounds good",
+      "word_type": "phrase",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "671005a4-b781-5a95-8f78-a38246bcac84",
+      "text": "meet up",
+      "normalized_text": "meet up",
+      "word_type": "phrasal_verb",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "d7f74aca-5ec1-56ca-9d7a-0b2d9f385a42",
+      "text": "keep in touch",
+      "normalized_text": "keep in touch",
+      "word_type": "idiom",
+      "language_code": "en",
+      "status": "active",
+      "difficulty_level": "b1"
     }
   ],
   "word_meanings": [
@@ -559,11 +667,11 @@
       "id": "c954cdb6-c0bc-5d61-9045-18db360f4b84",
       "word_id": "5669bc27-e811-5918-a606-046c71082080",
       "part_of_speech": "noun",
-      "short_definition": "Words used to say goodbye to someone.",
-      "learner_definition": "Words used to say goodbye to someone.",
+      "short_definition": "A goodbye, especially when someone is leaving for a long time.",
+      "learner_definition": "Farewell often suggests a more formal or important goodbye. With friends in everyday conversation, Goodbye or See you is usually more natural.",
       "meaning_order": 1,
       "status": "active",
-      "difficulty_level": null
+      "difficulty_level": "b1"
     },
     {
       "id": "5d21c02b-ef51-5545-bd8a-01f5814d3a67",
@@ -620,20 +728,20 @@
       "word_id": "7d759285-c327-5f01-a5a5-cdd200403f5e",
       "part_of_speech": "noun",
       "short_definition": "Words used to say hello to someone.",
-      "learner_definition": "Words used to say hello to someone.",
+      "learner_definition": "A greeting starts an interaction. Hello and Good morning are examples; choose words that fit the person and situation.",
       "meaning_order": 1,
       "status": "active",
-      "difficulty_level": null
+      "difficulty_level": "a2"
     },
     {
       "id": "3d64c3c9-ede0-5ffd-b1ef-278f6b70e486",
       "word_id": "812d1cd9-52c8-5726-a7b8-08c094e3fdd2",
       "part_of_speech": "verb",
       "short_definition": "To talk after time apart.",
-      "learner_definition": "To talk after time apart.",
+      "learner_definition": "When friends catch up, they tell each other what has happened since they last talked. This use is about sharing news, not reaching the same speed or level.",
       "meaning_order": 1,
       "status": "active",
-      "difficulty_level": null
+      "difficulty_level": "b1"
     },
     {
       "id": "fd6c39c0-f097-5a5b-b947-c93096e635d0",
@@ -670,10 +778,10 @@
       "word_id": "a301a5b5-593c-52b4-893f-3c7c1e50715a",
       "part_of_speech": "phrase",
       "short_definition": "Activities planned for the weekend.",
-      "learner_definition": "Activities planned for the weekend.",
+      "learner_definition": "These are activities you intend to do on Saturday or Sunday. Asking about someone's weekend plans can begin a friendly conversation or lead to an invitation.",
       "meaning_order": 1,
       "status": "active",
-      "difficulty_level": null
+      "difficulty_level": "a2"
     },
     {
       "id": "d990ce6e-4756-52e0-96e8-9926442963f2",
@@ -710,10 +818,10 @@
       "word_id": "bcfb5030-4a13-5039-9eec-ee12814ad070",
       "part_of_speech": "noun",
       "short_definition": "Light conversation about everyday topics.",
-      "learner_definition": "Light conversation about everyday topics.",
+      "learner_definition": "People make small talk to be friendly, often before a longer conversation or while waiting. It usually avoids very personal subjects.",
       "meaning_order": 1,
       "status": "active",
-      "difficulty_level": null
+      "difficulty_level": "b1"
     },
     {
       "id": "52c8ed28-544d-5a80-a911-6ddd03953606",
@@ -800,10 +908,10 @@
       "word_id": "f3daab92-c700-5ee8-b9a3-6706dbf5f4ab",
       "part_of_speech": "adjective",
       "short_definition": "Relaxed and informal in style or conversation.",
-      "learner_definition": "Relaxed and informal in style or conversation.",
+      "learner_definition": "A casual conversation feels relaxed and does not follow formal rules. It can still be polite and respectful.",
       "meaning_order": 1,
       "status": "active",
-      "difficulty_level": null
+      "difficulty_level": "a2"
     },
     {
       "id": "b571a540-89bb-533b-be81-9cedf443a64a",
@@ -844,6 +952,126 @@
       "meaning_order": 1,
       "status": "active",
       "difficulty_level": null
+    },
+    {
+      "id": "ee53d6ba-4303-5394-b7f9-79937ce66d09",
+      "word_id": "bdd6b648-1ff9-5f91-81ce-169058ac4d37",
+      "part_of_speech": "verb",
+      "short_definition": "To ask someone to come to an event or do something with you.",
+      "learner_definition": "You can name the event after to, or use to plus a verb for the activity. The other person can accept or refuse.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "0c030a86-51fc-5d13-9246-09950c45a43c",
+      "word_id": "8204f592-613d-5e87-b1e3-0963561011c8",
+      "part_of_speech": "verb",
+      "short_definition": "To take part in an activity with other people.",
+      "learner_definition": "Use join plus a person or group when you want to do an activity with them. You can add for to name a meal or activity.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "b2d5132c-b969-587f-975d-4009c454968f",
+      "word_id": "5f500dfd-bc7f-5341-a606-4422b34ac80a",
+      "part_of_speech": "adjective",
+      "short_definition": "Not busy and able to do something at a particular time.",
+      "learner_definition": "Use available to ask whether a person has time for an activity. Say when, using a phrase such as on Saturday or after six.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "d602623a-1bf7-5656-b867-484d2be3f5a9",
+      "word_id": "2899457a-37d7-5e49-a465-cafbee381185",
+      "part_of_speech": "verb",
+      "short_definition": "To give an idea for someone to consider.",
+      "learner_definition": "A suggestion is an option for the group to discuss. After suggest, you can name an activity or use a verb ending in -ing.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "40ed986a-7261-54eb-a3c8-4213c3bdc4fd",
+      "word_id": "4b801f45-5848-5245-9415-ebcc28a76305",
+      "part_of_speech": "verb",
+      "short_definition": "To plan and organize something that will happen.",
+      "learner_definition": "Arranging a meeting can include choosing a time, finding a place and contacting the people who will come.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "6348aad5-937a-57d0-aebc-15887a771938",
+      "word_id": "8099ff18-e215-59c5-8711-f6749d08f2ef",
+      "part_of_speech": "verb",
+      "short_definition": "To state that a planned time or arrangement is correct or definite.",
+      "learner_definition": "You can check a detail such as the time or place, or say definitely that you will attend. Asking someone to confirm a plan helps everyone know what to expect.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "0cdfa962-ee1c-570d-8533-999088905805",
+      "word_id": "1af5bdaa-71ba-5cdc-b6bc-885a2c49ca93",
+      "part_of_speech": "verb",
+      "short_definition": "To change the time or date of a planned event.",
+      "learner_definition": "The event is still planned, but it will happen at a different time. You can use for before the new day or time.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
+    },
+    {
+      "id": "f98bfb7b-c140-55a6-b76c-774ee096d1ca",
+      "word_id": "2bae0d24-27e2-5395-aa5f-1b729844d407",
+      "part_of_speech": "verb",
+      "short_definition": "To stop a planned event or arrangement from going ahead.",
+      "learner_definition": "Cancelling a plan does not by itself give it a new time. You may make another plan later, but the original event is no longer going ahead.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "b535cf81-3777-5553-959d-1ccf9d22a209",
+      "word_id": "874720bb-d242-536d-ad53-85aa5e71377a",
+      "part_of_speech": "adverb",
+      "short_definition": "At the planned or expected time; not late.",
+      "learner_definition": "Use on time when there is an expected arrival or start time. For a meeting at six, arriving on time means being there when the meeting is due to begin.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "52b8ebc0-ba65-579d-8749-6ff51b9ce6b5",
+      "word_id": "973b7d32-82dd-5a14-bc3d-6adc214c897b",
+      "part_of_speech": "phrase",
+      "short_definition": "Used to say that you like an idea or plan.",
+      "learner_definition": "This friendly response can show agreement with a suggestion. You may still need to agree on details such as the time and place.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "c5454676-5349-52d2-ad14-814d516fed56",
+      "word_id": "671005a4-b781-5a95-8f78-a38246bcac84",
+      "part_of_speech": "verb",
+      "short_definition": "To meet another person, usually to spend time together.",
+      "learner_definition": "You can meet up with friends at a place or after an activity. Unlike catch up, meet up does not necessarily mean sharing news after time apart.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "a2"
+    },
+    {
+      "id": "ddde743f-15ab-5d13-bea6-9835a56c991d",
+      "word_id": "d7f74aca-5ec1-56ca-9d7a-0b2d9f385a42",
+      "part_of_speech": "verb",
+      "short_definition": "To continue communicating with someone over time.",
+      "learner_definition": "You can keep in touch by calling, messaging or meeting. The phrase is often used when people say goodbye and want to stay connected.",
+      "meaning_order": 1,
+      "status": "active",
+      "difficulty_level": "b1"
     }
   ],
   "word_examples": [
@@ -861,7 +1089,8 @@
       "example_text": "The conversation was friendly and casual.",
       "example_order": 1,
       "status": "active",
-      "situation_label": "Daily Conversation"
+      "situation_label": "Daily Conversation",
+      "difficulty_level": "a2"
     },
     {
       "id": "873dae53-db10-5e3c-8239-c37d14501090",
@@ -917,7 +1146,8 @@
       "example_text": "We made small talk while waiting.",
       "example_order": 1,
       "status": "active",
-      "situation_label": "Daily Conversation"
+      "situation_label": "Daily Conversation",
+      "difficulty_level": "b1"
     },
     {
       "id": "14da984a-cd90-5d7a-aa9b-f3d1038653b2",
@@ -933,7 +1163,8 @@
       "example_text": "Let's catch up over coffee.",
       "example_order": 1,
       "status": "active",
-      "situation_label": "Daily Conversation"
+      "situation_label": "Daily Conversation",
+      "difficulty_level": "b1"
     },
     {
       "id": "2798e11c-5798-5f70-8319-e3261b5d621e",
@@ -1050,10 +1281,11 @@
     {
       "id": "bb9398a3-34b6-52f9-923e-f56636cfec5b",
       "meaning_id": "ac93d068-7c3e-55c9-9d85-3fd3518592dc",
-      "example_text": "She opened the email with a friendly greeting.",
+      "example_text": "She welcomed us with a friendly greeting.",
       "example_order": 1,
       "status": "active",
-      "situation_label": "Daily Conversation"
+      "situation_label": "Daily Conversation",
+      "difficulty_level": "a2"
     },
     {
       "id": "287390b4-3fa5-5306-96bd-823b7749b326",
@@ -1101,7 +1333,8 @@
       "example_text": "They said a quick farewell at the station.",
       "example_order": 1,
       "status": "active",
-      "situation_label": "Daily Conversation"
+      "situation_label": "Daily Conversation",
+      "difficulty_level": "b1"
     },
     {
       "id": "df12558e-e43c-5ee3-8062-b49351bbd049",
@@ -1109,7 +1342,8 @@
       "example_text": "Do you have any weekend plans?",
       "example_order": 1,
       "status": "active",
-      "situation_label": "Daily Conversation"
+      "situation_label": "Daily Conversation",
+      "difficulty_level": "a2"
     },
     {
       "id": "bd1166c0-5487-5c29-8bb1-fe16e640911a",
@@ -1182,6 +1416,276 @@
       "example_order": 1,
       "status": "active",
       "situation_label": "University Class"
+    },
+    {
+      "id": "88d04986-502e-58ba-800d-65da3ff8a110",
+      "meaning_id": "0d267f75-f227-5478-962d-b4b944e0e93e",
+      "example_text": "We had a casual chat while waiting for the bus.",
+      "example_order": 2,
+      "difficulty_level": "a2",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "88c8319c-c6e6-5cc0-87ff-c73d21ef10f4",
+      "meaning_id": "3d64c3c9-ede0-5ffd-b1ef-278f6b70e486",
+      "example_text": "I caught up with Maya and heard about her new job.",
+      "example_order": 2,
+      "difficulty_level": "b1",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "b8e365c9-5d1a-5623-a78f-a8d2223c9c72",
+      "meaning_id": "c954cdb6-c0bc-5d61-9045-18db360f4b84",
+      "example_text": "We gave Maya a warm farewell before she moved away.",
+      "example_order": 2,
+      "difficulty_level": "b1",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "7f9a3723-44ca-5c36-954a-2072244426c3",
+      "meaning_id": "ac93d068-7c3e-55c9-9d85-3fd3518592dc",
+      "example_text": "We exchanged greetings before sitting down.",
+      "example_order": 2,
+      "difficulty_level": "a2",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "4ece66a4-d3ee-57d2-a13d-8a7b38e5a9c2",
+      "meaning_id": "3265c02c-5751-5465-b94b-e767aa871d8d",
+      "example_text": "Small talk about the weather helped us feel relaxed.",
+      "example_order": 2,
+      "difficulty_level": "b1",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "d19dcd5b-9f81-5723-b736-9089134dc667",
+      "meaning_id": "c99075bf-94cb-5f51-90d5-f244f66ea942",
+      "example_text": "Our weekend plans changed because of the rain.",
+      "example_order": 2,
+      "difficulty_level": "a2",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "793a6398-f792-5f28-b4c4-918dccb6a9ac",
+      "meaning_id": "ee53d6ba-4303-5394-b7f9-79937ce66d09",
+      "example_text": "I want to invite you to dinner on Friday.",
+      "example_order": 1,
+      "difficulty_level": "a2",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "ac25bbd5-e047-5d97-832e-c21404a04ff1",
+      "meaning_id": "ee53d6ba-4303-5394-b7f9-79937ce66d09",
+      "example_text": "Maya invited us to watch a film at her house.",
+      "example_order": 2,
+      "difficulty_level": "a2",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "e366e604-07a6-5a61-87b4-d687e7ad03cf",
+      "meaning_id": "0c030a86-51fc-5d13-9246-09950c45a43c",
+      "example_text": "Would you like to join us for lunch?",
+      "example_order": 1,
+      "difficulty_level": "a2",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "e88dddd9-9f8e-5e30-aa3e-e139318241bc",
+      "meaning_id": "0c030a86-51fc-5d13-9246-09950c45a43c",
+      "example_text": "I joined my friends for a walk after work.",
+      "example_order": 2,
+      "difficulty_level": "a2",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "f8ef7257-e4c8-5f7a-b36a-941bb539f2cd",
+      "meaning_id": "b2d5132c-b969-587f-975d-4009c454968f",
+      "example_text": "Are you available for lunch on Saturday?",
+      "example_order": 1,
+      "difficulty_level": "a2",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "9343e28b-a663-5118-8b7e-c0eca3a67936",
+      "meaning_id": "b2d5132c-b969-587f-975d-4009c454968f",
+      "example_text": "I am available after six, but I have to leave by eight.",
+      "example_order": 2,
+      "difficulty_level": "a2",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "c2605b98-06fa-5921-afd3-9c37a4d7f0d8",
+      "meaning_id": "d602623a-1bf7-5656-b867-484d2be3f5a9",
+      "example_text": "I suggest meeting outside the cinema at seven.",
+      "example_order": 1,
+      "difficulty_level": "b1",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "f2259a6d-71af-5f02-ae5c-6e62607c87b1",
+      "meaning_id": "d602623a-1bf7-5656-b867-484d2be3f5a9",
+      "example_text": "Leo suggested a picnic instead of lunch at a restaurant.",
+      "example_order": 2,
+      "difficulty_level": "b1",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "a6054fcb-7791-5808-b9b8-7837971d55e4",
+      "meaning_id": "40ed986a-7261-54eb-a3c8-4213c3bdc4fd",
+      "example_text": "Can we arrange a time to meet this week?",
+      "example_order": 1,
+      "difficulty_level": "b1",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "a737a393-05c2-5b22-a05a-f6ae3ecae9d1",
+      "meaning_id": "40ed986a-7261-54eb-a3c8-4213c3bdc4fd",
+      "example_text": "We arranged a picnic in the park for Sunday.",
+      "example_order": 2,
+      "difficulty_level": "b1",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "92a5cc31-d888-577a-ba12-fe1d5f7c9e7e",
+      "meaning_id": "6348aad5-937a-57d0-aebc-15887a771938",
+      "example_text": "Can you confirm the time for our meeting tomorrow?",
+      "example_order": 1,
+      "difficulty_level": "b1",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "b8095faa-854a-552d-822a-e2382dd69711",
+      "meaning_id": "6348aad5-937a-57d0-aebc-15887a771938",
+      "example_text": "I confirmed that I could come to dinner on Friday.",
+      "example_order": 2,
+      "difficulty_level": "b1",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "154dbf64-03e5-5e71-be5f-8197e9b20eb8",
+      "meaning_id": "0cdfa962-ee1c-570d-8533-999088905805",
+      "example_text": "Could we reschedule our lunch for Friday?",
+      "example_order": 1,
+      "difficulty_level": "b1",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "fe34abcc-8618-57aa-8295-3a1f709a5289",
+      "meaning_id": "0cdfa962-ee1c-570d-8533-999088905805",
+      "example_text": "We rescheduled the picnic because rain was expected on Sunday.",
+      "example_order": 2,
+      "difficulty_level": "b1",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "1c8c25b4-c7f7-5bd2-b2ad-802142c09b06",
+      "meaning_id": "f98bfb7b-c140-55a6-b76c-774ee096d1ca",
+      "example_text": "We need to cancel the picnic because of the storm.",
+      "example_order": 1,
+      "difficulty_level": "a2",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "86239fb8-66cc-5398-a4e7-d20c25b71e71",
+      "meaning_id": "f98bfb7b-c140-55a6-b76c-774ee096d1ca",
+      "example_text": "I cancelled our dinner booking when two friends became ill.",
+      "example_order": 2,
+      "difficulty_level": "a2",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "7f321d76-7c1d-5c66-bd9a-840d01261c83",
+      "meaning_id": "b535cf81-3777-5553-959d-1ccf9d22a209",
+      "example_text": "Please arrive on time so we can order together.",
+      "example_order": 1,
+      "difficulty_level": "a2",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "d708cc9c-45a1-5498-8fe0-25618b480b0b",
+      "meaning_id": "b535cf81-3777-5553-959d-1ccf9d22a209",
+      "example_text": "The bus was late, but I still reached the cinema on time.",
+      "example_order": 2,
+      "difficulty_level": "a2",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "cc39b697-53e8-5879-be95-b9b1dd057203",
+      "meaning_id": "52b8ebc0-ba65-579d-8749-6ff51b9ce6b5",
+      "example_text": "That sounds good.",
+      "example_order": 1,
+      "difficulty_level": "a2",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "c871e8b9-b78b-51f9-9cc7-79dfcfd4eca5",
+      "meaning_id": "52b8ebc0-ba65-579d-8749-6ff51b9ce6b5",
+      "example_text": "A picnic sounds good, but let's check the weather first.",
+      "example_order": 2,
+      "difficulty_level": "a2",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "c9c3532e-9f23-515f-a48a-419a89d44a55",
+      "meaning_id": "c5454676-5349-52d2-ad14-814d516fed56",
+      "example_text": "Shall we meet up outside the station at six?",
+      "example_order": 1,
+      "difficulty_level": "a2",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "2c67f8ad-8c86-514b-8b92-131bfb809359",
+      "meaning_id": "c5454676-5349-52d2-ad14-814d516fed56",
+      "example_text": "We met up with Ana after class and went for coffee.",
+      "example_order": 2,
+      "difficulty_level": "a2",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "9df3db56-86cf-57e9-ad6c-1d617eea731b",
+      "meaning_id": "ddde743f-15ab-5d13-bea6-9835a56c991d",
+      "example_text": "Let us keep in touch after the course ends.",
+      "example_order": 1,
+      "difficulty_level": "b1",
+      "situation_label": "Daily Conversation",
+      "status": "active"
+    },
+    {
+      "id": "e55302b4-1d99-5301-b73a-4bf48eef5469",
+      "meaning_id": "ddde743f-15ab-5d13-bea6-9835a56c991d",
+      "example_text": "We kept in touch by sending each other a message every week.",
+      "example_order": 2,
+      "difficulty_level": "b1",
+      "situation_label": "Daily Conversation",
+      "status": "active"
     }
   ],
   "usage_notes": [
@@ -1941,7 +2445,7 @@
       "id": "bd3398c9-c874-5e3a-93d8-c6fa2fb851bd",
       "meaning_id": "c954cdb6-c0bc-5d61-9045-18db360f4b84",
       "note_type": "register",
-      "note_text": "Neutral to formal; goodbye is more conversational.",
+      "note_text": "Farewell can sound formal or mark an important goodbye; Goodbye and See you are more usual between friends.",
       "note_order": 2,
       "status": "active"
     },
@@ -1949,7 +2453,7 @@
       "id": "72ece1c5-6254-5e14-afcc-3e70afdba595",
       "meaning_id": "c954cdb6-c0bc-5d61-9045-18db360f4b84",
       "note_type": "common_mistake",
-      "note_text": "Farewell can sound formal, so use goodbye in casual speech when appropriate.",
+      "note_text": "Use to before the person: say farewell to someone.",
       "note_order": 3,
       "status": "active"
     },
@@ -1973,7 +2477,7 @@
       "id": "14ed0412-5684-5778-945e-bdf445f30cab",
       "meaning_id": "c99075bf-94cb-5f51-90d5-f244f66ea942",
       "note_type": "common_mistake",
-      "note_text": "Use plans in the plural when asking generally about someone's weekend.",
+      "note_text": "Plans is usually plural when asking generally about someone's weekend; a weekend plan can refer to one specific plan.",
       "note_order": 3,
       "status": "active"
     },
@@ -2190,6 +2694,294 @@
       "meaning_id": "fd6c39c0-f097-5a5b-b947-c93096e635d0",
       "note_type": "common_mistake",
       "note_text": "A lecture is the teaching session, while a lecturer is the person.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "0fbb6558-435b-5ab9-b7f7-56b8e877795c",
+      "meaning_id": "ee53d6ba-4303-5394-b7f9-79937ce66d09",
+      "note_type": "collocation",
+      "note_text": "invite someone to dinner; invite someone to do something",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "bc0ba0d0-f00b-58a8-9601-b075efa29217",
+      "meaning_id": "ee53d6ba-4303-5394-b7f9-79937ce66d09",
+      "note_type": "register",
+      "note_text": "Would you like to...? is a friendly way to make the invitation itself.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "f7521cb4-6ec6-5ea8-8043-be5cd43951ae",
+      "meaning_id": "ee53d6ba-4303-5394-b7f9-79937ce66d09",
+      "note_type": "common_mistake",
+      "note_text": "Keep the person after invite: invite her to dinner, not invite to her dinner.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "490166db-a91a-52b0-b988-5cedf201c3b2",
+      "meaning_id": "0c030a86-51fc-5d13-9246-09950c45a43c",
+      "note_type": "collocation",
+      "note_text": "join us for lunch; join my friends for a walk",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "966ef6d3-5b45-550b-abc2-16eec4d72d58",
+      "meaning_id": "0c030a86-51fc-5d13-9246-09950c45a43c",
+      "note_type": "register",
+      "note_text": "Can I join you? is a friendly way to ask to take part.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "d2b1da26-6f33-5279-a25b-e3256a968b4b",
+      "meaning_id": "0c030a86-51fc-5d13-9246-09950c45a43c",
+      "note_type": "common_mistake",
+      "note_text": "Join us for lunch is the usual invitation; no with is needed here.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "3271458e-9862-5307-96bd-21101402071b",
+      "meaning_id": "b2d5132c-b969-587f-975d-4009c454968f",
+      "note_type": "collocation",
+      "note_text": "available on Saturday; available after six; available for lunch",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "0c0a8c1f-c8f0-5acb-bb24-fe1ce89c526e",
+      "meaning_id": "b2d5132c-b969-587f-975d-4009c454968f",
+      "note_type": "register",
+      "note_text": "Free is a more informal alternative when talking about time.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "d66830bf-9082-525a-8ab7-22785363e7a4",
+      "meaning_id": "b2d5132c-b969-587f-975d-4009c454968f",
+      "note_type": "common_mistake",
+      "note_text": "Use a form of be: Are you available?, not Do you available?",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "31f8959a-ee12-5c52-b6c9-cb8128c9fb83",
+      "meaning_id": "d602623a-1bf7-5656-b867-484d2be3f5a9",
+      "note_type": "collocation",
+      "note_text": "suggest a picnic; suggest meeting at seven",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "bb3714db-502c-58c4-81e4-d92895fe090c",
+      "meaning_id": "d602623a-1bf7-5656-b867-484d2be3f5a9",
+      "note_type": "register",
+      "note_text": "Suggest is neutral; How about ...? is another common way to offer an idea in conversation.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "c0613bc3-4b8e-5fcb-828e-243257eb82b8",
+      "meaning_id": "d602623a-1bf7-5656-b867-484d2be3f5a9",
+      "note_type": "common_mistake",
+      "note_text": "Say suggest meeting, not suggest to meet, when the activity comes directly after suggest.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "ec71f1d1-a999-5179-aeb7-26beeb3a6df3",
+      "meaning_id": "40ed986a-7261-54eb-a3c8-4213c3bdc4fd",
+      "note_type": "collocation",
+      "note_text": "arrange a time; arrange a meeting; arrange to meet",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "ec85e860-4025-513a-868a-1417431d04bb",
+      "meaning_id": "40ed986a-7261-54eb-a3c8-4213c3bdc4fd",
+      "note_type": "register",
+      "note_text": "Arrange is useful in everyday planning as well as at work.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "42903690-8c37-5264-b5ba-8f7d69635b7a",
+      "meaning_id": "40ed986a-7261-54eb-a3c8-4213c3bdc4fd",
+      "note_type": "common_mistake",
+      "note_text": "Arrange to meet describes making the plan; it does not say that the meeting has already happened.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "4a0c705f-3d0c-5f34-b76d-34242b16a337",
+      "meaning_id": "6348aad5-937a-57d0-aebc-15887a771938",
+      "note_type": "collocation",
+      "note_text": "confirm the time; confirm that you can come",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "95456bf1-2c15-53f6-89ad-b020b6e58dda",
+      "meaning_id": "6348aad5-937a-57d0-aebc-15887a771938",
+      "note_type": "register",
+      "note_text": "Confirm is useful when checking plans; Are we still meeting at seven? is a more casual question.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "229a589b-2417-5aa4-aebd-17ecf2712e67",
+      "meaning_id": "6348aad5-937a-57d0-aebc-15887a771938",
+      "note_type": "common_mistake",
+      "note_text": "To confirm attendance is to say you will come; it does not mean you have already arrived.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "b3af6899-6ad0-5c0d-8909-9acd2420dccb",
+      "meaning_id": "0cdfa962-ee1c-570d-8533-999088905805",
+      "note_type": "collocation",
+      "note_text": "reschedule lunch for Friday; reschedule a meeting",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "c1119c5f-8827-51a3-9bce-866dbf83ce7d",
+      "meaning_id": "0cdfa962-ee1c-570d-8533-999088905805",
+      "note_type": "register",
+      "note_text": "Could we reschedule...? is a polite way to ask for a change.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "7b126f38-0681-5ad7-84d3-1b1d68794ef6",
+      "meaning_id": "0cdfa962-ee1c-570d-8533-999088905805",
+      "note_type": "common_mistake",
+      "note_text": "Reschedule changes when an event happens; cancel says it will not happen as planned.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "305573b4-6abc-549c-8a1b-579452e14f5c",
+      "meaning_id": "f98bfb7b-c140-55a6-b76c-774ee096d1ca",
+      "note_type": "collocation",
+      "note_text": "cancel a picnic; cancel a booking",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "a3017a29-eaf0-5510-84a0-099ad8f70145",
+      "meaning_id": "f98bfb7b-c140-55a6-b76c-774ee096d1ca",
+      "note_type": "register",
+      "note_text": "When changing plans with friends, a short explanation and an apology can help.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "d89b439d-01bc-58e1-b5e6-22d0fff92677",
+      "meaning_id": "f98bfb7b-c140-55a6-b76c-774ee096d1ca",
+      "note_type": "common_mistake",
+      "note_text": "Cancelled and cancelling are usual British forms; canceled and canceling are usual American forms. Both spellings are valid.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "fbae5afc-6c1f-5ce2-98ee-2318cf6c05bd",
+      "meaning_id": "b535cf81-3777-5553-959d-1ccf9d22a209",
+      "note_type": "collocation",
+      "note_text": "arrive on time; start on time",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "9b1122dd-caac-5c57-aa78-0384e95efab2",
+      "meaning_id": "b535cf81-3777-5553-959d-1ccf9d22a209",
+      "note_type": "register",
+      "note_text": "On time is neutral and useful for both social and work plans.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "4773df51-c17b-5ed2-ae66-8ec5243a3d56",
+      "meaning_id": "b535cf81-3777-5553-959d-1ccf9d22a209",
+      "note_type": "common_mistake",
+      "note_text": "On time means not late for the plan; in time for the film means early enough to see it.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "4f0d656f-d119-5623-934f-32b8dc79a47e",
+      "meaning_id": "52b8ebc0-ba65-579d-8749-6ff51b9ce6b5",
+      "note_type": "collocation",
+      "note_text": "That sounds good; sounds good to me",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "409573fe-9383-5189-bb4d-d5e3f15dbdae",
+      "meaning_id": "52b8ebc0-ba65-579d-8749-6ff51b9ce6b5",
+      "note_type": "register",
+      "note_text": "Sounds good! is a natural short response in friendly conversation and messages. In sentence practice, use a complete example such as That sounds good.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "5716a746-1ac1-5b30-80d7-4694e1d3709b",
+      "meaning_id": "52b8ebc0-ba65-579d-8749-6ff51b9ce6b5",
+      "note_type": "common_mistake",
+      "note_text": "Use sounds good for a singular idea: That sounds good. With plural plans, use sound: Those plans sound good.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "5b35de9f-e0c6-51d1-950a-f2100acc658e",
+      "meaning_id": "c5454676-5349-52d2-ad14-814d516fed56",
+      "note_type": "collocation",
+      "note_text": "meet up with a friend; meet up outside the station",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "a5916337-5797-5de2-ab3d-1eb4418dc53c",
+      "meaning_id": "c5454676-5349-52d2-ad14-814d516fed56",
+      "note_type": "register",
+      "note_text": "Meet up is informal and common when making social plans.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "e88843ab-9ad3-54c0-9c1b-713404b1523e",
+      "meaning_id": "c5454676-5349-52d2-ad14-814d516fed56",
+      "note_type": "common_mistake",
+      "note_text": "Use meet up with Ana, not meet Ana up. The past form is met up.",
+      "note_order": 3,
+      "status": "active"
+    },
+    {
+      "id": "b2ef8df5-4853-546e-8aaf-f2c5390249e8",
+      "meaning_id": "ddde743f-15ab-5d13-bea6-9835a56c991d",
+      "note_type": "collocation",
+      "note_text": "keep in touch with someone; keep in touch by email",
+      "note_order": 1,
+      "status": "active"
+    },
+    {
+      "id": "010ec02b-76ae-5bb1-ae1b-340aa83e3c8e",
+      "meaning_id": "ddde743f-15ab-5d13-bea6-9835a56c991d",
+      "note_type": "register",
+      "note_text": "Keep in touch! is a friendly goodbye, but it does not arrange a particular meeting.",
+      "note_order": 2,
+      "status": "active"
+    },
+    {
+      "id": "e23b93cc-01a8-5aed-a6c0-d53ffeb12703",
+      "meaning_id": "ddde743f-15ab-5d13-bea6-9835a56c991d",
+      "note_type": "common_mistake",
+      "note_text": "Use with before the person: keep in touch with me. The past form is kept in touch.",
       "note_order": 3,
       "status": "active"
     }
@@ -2440,7 +3232,7 @@
       "journey_situation_id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
       "meaning_id": "3265c02c-5751-5465-b94b-e767aa871d8d",
       "relevance_score": 80,
-      "display_order": 1,
+      "display_order": 2,
       "is_core": true
     },
     {
@@ -2448,7 +3240,7 @@
       "journey_situation_id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
       "meaning_id": "3d64c3c9-ede0-5ffd-b1ef-278f6b70e486",
       "relevance_score": 80,
-      "display_order": 2,
+      "display_order": 16,
       "is_core": true
     },
     {
@@ -2456,7 +3248,7 @@
       "journey_situation_id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
       "meaning_id": "c99075bf-94cb-5f51-90d5-f244f66ea942",
       "relevance_score": 80,
-      "display_order": 3,
+      "display_order": 4,
       "is_core": true
     },
     {
@@ -2464,15 +3256,15 @@
       "journey_situation_id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
       "meaning_id": "ac93d068-7c3e-55c9-9d85-3fd3518592dc",
       "relevance_score": 80,
-      "display_order": 4,
-      "is_core": false
+      "display_order": 1,
+      "is_core": true
     },
     {
       "id": "22c93ba5-a7c2-57c7-8be3-fb5d7f8481ff",
       "journey_situation_id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
       "meaning_id": "c954cdb6-c0bc-5d61-9045-18db360f4b84",
       "relevance_score": 80,
-      "display_order": 5,
+      "display_order": 18,
       "is_core": false
     },
     {
@@ -2480,8 +3272,8 @@
       "journey_situation_id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
       "meaning_id": "0d267f75-f227-5478-962d-b4b944e0e93e",
       "relevance_score": 80,
-      "display_order": 6,
-      "is_core": false
+      "display_order": 3,
+      "is_core": true
     },
     {
       "id": "4df537d5-67dd-5401-9aea-47cd74e43de1",
@@ -2530,6 +3322,102 @@
       "relevance_score": 80,
       "display_order": 6,
       "is_core": false
+    },
+    {
+      "id": "f85ed52e-5681-544b-8b87-bc6cc1badb20",
+      "journey_situation_id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
+      "meaning_id": "ee53d6ba-4303-5394-b7f9-79937ce66d09",
+      "relevance_score": 80,
+      "display_order": 6,
+      "is_core": true
+    },
+    {
+      "id": "f28341b9-e6b9-5802-b5ec-0cc315aca25d",
+      "journey_situation_id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
+      "meaning_id": "0c030a86-51fc-5d13-9246-09950c45a43c",
+      "relevance_score": 80,
+      "display_order": 7,
+      "is_core": true
+    },
+    {
+      "id": "8dfd1717-fc9b-505e-8ce3-dd6b25c391be",
+      "journey_situation_id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
+      "meaning_id": "b2d5132c-b969-587f-975d-4009c454968f",
+      "relevance_score": 80,
+      "display_order": 5,
+      "is_core": true
+    },
+    {
+      "id": "f88cda4c-2b77-50bf-b7c2-78763fcf5d37",
+      "journey_situation_id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
+      "meaning_id": "d602623a-1bf7-5656-b867-484d2be3f5a9",
+      "relevance_score": 80,
+      "display_order": 8,
+      "is_core": true
+    },
+    {
+      "id": "91fccd37-082e-50b2-bfb0-ade40f7596d2",
+      "journey_situation_id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
+      "meaning_id": "40ed986a-7261-54eb-a3c8-4213c3bdc4fd",
+      "relevance_score": 80,
+      "display_order": 10,
+      "is_core": true
+    },
+    {
+      "id": "a7fe7462-1ccc-51a3-b80a-bae0741f7625",
+      "journey_situation_id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
+      "meaning_id": "6348aad5-937a-57d0-aebc-15887a771938",
+      "relevance_score": 80,
+      "display_order": 12,
+      "is_core": true
+    },
+    {
+      "id": "cb675af8-92ce-583c-b9c5-ccb8096daf34",
+      "journey_situation_id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
+      "meaning_id": "0cdfa962-ee1c-570d-8533-999088905805",
+      "relevance_score": 80,
+      "display_order": 14,
+      "is_core": true
+    },
+    {
+      "id": "7b4736b5-0e66-5f9f-b165-71284124227b",
+      "journey_situation_id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
+      "meaning_id": "f98bfb7b-c140-55a6-b76c-774ee096d1ca",
+      "relevance_score": 80,
+      "display_order": 15,
+      "is_core": true
+    },
+    {
+      "id": "dba12d12-ecbb-5389-b459-9e1bbf5a7880",
+      "journey_situation_id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
+      "meaning_id": "b535cf81-3777-5553-959d-1ccf9d22a209",
+      "relevance_score": 80,
+      "display_order": 13,
+      "is_core": true
+    },
+    {
+      "id": "76663a8d-0bae-524d-99bf-1e0fb4127554",
+      "journey_situation_id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
+      "meaning_id": "52b8ebc0-ba65-579d-8749-6ff51b9ce6b5",
+      "relevance_score": 80,
+      "display_order": 9,
+      "is_core": true
+    },
+    {
+      "id": "7cd08e4f-b47c-56d4-8567-727e97da9f60",
+      "journey_situation_id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
+      "meaning_id": "c5454676-5349-52d2-ad14-814d516fed56",
+      "relevance_score": 80,
+      "display_order": 11,
+      "is_core": true
+    },
+    {
+      "id": "c51a8b42-7f07-54bd-9e39-07087b46cdc9",
+      "journey_situation_id": "d9f0dfc7-bc05-5595-bbf2-035c4a61ca9c",
+      "meaning_id": "ddde743f-15ab-5d13-bea6-9835a56c991d",
+      "relevance_score": 80,
+      "display_order": 17,
+      "is_core": true
     }
   ]
 }

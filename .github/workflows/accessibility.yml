@@ -24,6 +24,7 @@ on:
     branches:
       - main
     paths:
+      - "apps/api/cmd/seed/voc026-p1.json"
       - "apps/web/**"
       - "apps/web/tests/**"
       - "apps/web/playwright.config.ts"

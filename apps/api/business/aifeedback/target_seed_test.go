@@ -13,7 +13,7 @@ import (
 // Read the shipped content rather than inventing dictionary entries. Loading
 // each target through the repository also verifies that accepted forms reach
 // the real validation path, rather than only existing in test-built Targets.
-func TestSeededTargetsAcceptExamplesAndApprovedNounVariants(t *testing.T) {
+func TestSeededTargetsAcceptExamplesAndApprovedVariants(t *testing.T) {
 	var seed struct {
 		Words []struct {
 			ID         string
@@ -37,9 +37,14 @@ func TestSeededTargetsAcceptExamplesAndApprovedNounVariants(t *testing.T) {
 	require.NoError(t, json.Unmarshal(data, &seed))
 	require.NotEmpty(t, seed.Examples)
 	variants := map[string]struct{ accepted, rejected string }{
-		"syllabus":  {"The syllabi are available online.", "The syllabic structure is complex."},
-		"follow-up": {"I sent two follow-ups.", "I sent two follow-updates."},
-		"check-out": {"The hotel has late check-outs.", "The hotel has late check-outings."},
+		"syllabus":      {"The syllabi are available online.", "The syllabic structure is complex."},
+		"follow-up":     {"I sent two follow-ups.", "I sent two follow-updates."},
+		"check-out":     {"The hotel has late check-outs.", "The hotel has late check-outings."},
+		"catch up":      {"I caught up with Maya yesterday.", "I caught the bus yesterday."},
+		"meet up":       {"We met up after class.", "We met after class yesterday."},
+		"keep in touch": {"We kept in touch after school.", "We lost touch after school."},
+		"sounds good":   {"Those plans sound good to me.", "That good sound is music."},
+		"cancel":        {"I cancelled our dinner booking yesterday.", "The cancellation came too late."},
 	}
 	checkedExamples, checkedVariants := 0, 0
 	for _, meaning := range seed.Meanings {
@@ -77,7 +82,7 @@ func TestSeededTargetsAcceptExamplesAndApprovedNounVariants(t *testing.T) {
 		}
 	}
 	require.Equal(t, len(seed.Examples), checkedExamples, "every shipped example must have a loaded target")
-	require.Equal(t, 4, checkedVariants, "syllabus, check-out, and both follow-up meanings")
+	require.Equal(t, 9, checkedVariants, "four noun meaning pairs and five Daily Conversation targets")
 	t.Logf("validated %d shipped examples and %d approved variant/meaning pairs", checkedExamples, checkedVariants)
 }
 

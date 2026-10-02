@@ -1,7 +1,9 @@
 # Meaning-aware feedback evaluation fixtures
 
 This document records the editorial migration from `initial-dataset-v1` /
-`golden-set-v1` to `meaning-aware-dataset-v2` / `meaning-aware-golden-v2`.
+`golden-set-v1` to `meaning-aware-dataset-v2` / `meaning-aware-golden-v2`, then
+the scoring-eligibility update to `meaning-aware-dataset-v3` /
+`meaning-aware-golden-v3`.
 These are synthetic evaluation materials, not learner submissions or evidence of
 live-provider quality. The acceptance criteria remain in [AI features §23](09-ai-features.md#23-evaluation).
 
@@ -11,7 +13,9 @@ live-provider quality. The acceptance criteria remain in [AI features §23](09-a
 target meanings, part of speech, sentence variants and editorial reasoning.
 `evaluation_dataset.go` assembles these into `EvaluationCase` records with
 explicit expected outcomes and stable IDs. `evaluation_dataset_test.go` verifies
-identity preservation, coverage, known validation gaps and level pairs.
+identity preservation, coverage, regional-form validation and level pairs.
+The authored JSON filename retains its v2 origin; report versions identify the
+current v3 scoring contract.
 
 All **308 existing case IDs** remain. For every target, the v1 category/index
 mapping is unchanged:
@@ -21,7 +25,7 @@ mapping is unchanged:
 | `correctness`           | 0, 1  | Replace part-of-speech-blind templates with natural sentences in the intended sense.                         |
 | `grammar_error`         | 2, 3  | Use clear agreement/copula errors; preserve valid historical counterexamples with corrected expected labels. |
 | `incorrect_target_use`  | 4     | Specify the intended sense and explain the wrong action, contradictory meaning or different sense.           |
-| `regional_variant`      | 5     | Accept British usage; retain known matcher failures explicitly.                                              |
+| `regional_variant`      | 5     | Accept British usage; v3 resolves the three recorded matcher gaps.                                              |
 | `ambiguity`             | 6     | Accept ordinary implicit reference; mark genuinely unresolved readings for context review.                   |
 | `prompt_injection`      | 7     | Ignore the embedded command and judge an actual agreement error.                                             |
 | `sensitive_but_allowed` | 8     | Allow non-graphic discussion in a historical context.                                                        |
@@ -38,8 +42,8 @@ not change. All 28 targets are paired in the full set.
 
 All **56 previous golden IDs remain golden**. A fixed, named target sample
 (`work`, `drive`, `big`, `school`) adds the seven previously absent categories
-and their level partners; three known British-form matcher regressions are also
-golden. The resulting **91-case golden set** covers all nine required categories
+and their level partners; three named British-form regressions (`travel`,
+`learn`, `organize`) are also golden, independently of their scoring eligibility. The resulting **91-case golden set** covers all nine required categories
 with four paired A2/B1 targets. This is intentionally larger than the old
 40–60-case test bound: adding coverage must not remove earlier regressions.
 The explicit selection is independent of any model's performance.
@@ -83,17 +87,37 @@ outcome, or claim safety/quality success. Current exclusions are:
 
 | Cases                                                   | Reason                                                                                          | Expected language/outcome                                                   |
 | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `travel`, `learn`, `organize` regional cases            | The current deterministic matcher rejects `travelled`, `learnt`, `organised`.                   | Keep `correct` / `feedback`; show the actual validation failure separately. |
 | `work`, `play`, `study`, `cook`, `book` ambiguity cases | The “I saw her …” construction permits different part-of-speech/sense readings without context. | No forced status; expected feedback with manual review.                     |
 | `take off` ambiguity case                               | “You can take off now” may mean depart or remove clothing with an implicit object.              | No forced status; expected feedback with manual review.                     |
 
-There are **nine explicit exclusions** in the full set. None is a relabeling of a
-linguistically correct regional form as an expected input rejection. A focused
-test deliberately detects when the matcher begins accepting those forms, so the
-exclusions can be reviewed and removed rather than becoming permanent blind
-spots. The other fixtures are expected to pass the current deterministic input
-validator. Known matcher limitations do not justify changing the target to a
-synonym or deleting the difficult case.
+There are **six explicit ambiguity exclusions** in the full set. Their reasons,
+empty expected statuses and expected feedback outcomes are unchanged in v3.
+Every fixture is expected to pass the deterministic input validator. Acceptance
+still requires the separate human and service evidence described below.
+
+## v3 regional-form eligibility update
+
+The deterministic matcher now accepts these standard British forms for the
+exact canonical word / `word` type / `verb` part-of-speech combinations:
+
+| Stable case ID | Unchanged sentence | Unchanged expectation |
+| --- | --- | --- |
+| `voc028-eval-travel-regional_variant-5` | I travelled to the city. | `correct` / `feedback` |
+| `voc028-eval-learn-regional_variant-5` | I learnt English last year. | `correct` / `feedback` |
+| `voc028-eval-organize-regional_variant-5` | I organised my notes. | `correct` / `feedback` |
+
+Only these three scoring exclusions and their obsolete validation-gap tags are
+removed. All **336 case IDs**, all **91 golden IDs**, authored sentences, target
+meanings, editorial rationales and expected labels remain unchanged from v2.
+Named golden selection retains these regressions after their exclusions are
+removed. Compare v2 and v3 scores with their eligibility denominators visible.
+
+Focused tests first reproduced `missing_target` for the regional forms, then
+verified acceptance after the curated matcher additions. Fake-provider service
+tests verify that authoritative target meanings and accepted forms reach the
+provider; they do not establish model quality or semantic correctness. Matching
+remains contiguous and token-based. Approved inflection presence is only an
+input prerequisite, never credit for correct target meaning or grammar.
 
 ## Review and evidence limits
 

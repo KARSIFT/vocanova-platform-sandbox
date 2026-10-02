@@ -178,8 +178,7 @@
     "incorrect": "I travel my homework into my bag.",
     "incorrect_rationale": "Travel is not the act of putting an object into a container.",
     "regional": "I travelled to the city.",
-    "ambiguous": "I travel there every year.",
-    "regional_validation_gap": "Known deterministic target-matching limitation: standard British 'travelled' is not accepted for 'travel'. Keep linguistic expectation correct and report validation failure separately; exclude only from provider-status accuracy until input reaches the provider."
+    "ambiguous": "I travel there every year."
   },
   {
     "word": "learn",
@@ -195,8 +194,7 @@
     "incorrect": "I learn English to my sister so she can speak it.",
     "incorrect_rationale": "The speaker is providing instruction and needs teach, not learn.",
     "regional": "I learnt English last year.",
-    "ambiguous": "I learn something from that.",
-    "regional_validation_gap": "Known deterministic target-matching limitation: standard British 'learnt' is not accepted for 'learn'. Keep linguistic expectation correct and report validation failure separately; exclude only from provider-status accuracy until input reaches the provider."
+    "ambiguous": "I learn something from that."
   },
   {
     "word": "organize",
@@ -212,8 +210,7 @@
     "incorrect": "I organize my notes; I mean I leave them in a random mess with no order.",
     "incorrect_rationale": "The explicitly intended lack of arrangement contradicts organize in the selected orderly-arrangement sense.",
     "regional": "I organised my notes.",
-    "ambiguous": "I organize it every year.",
-    "regional_validation_gap": "Known deterministic target-matching limitation: standard British 'organised' is not accepted for 'organize'. Keep linguistic expectation correct and report validation failure separately; exclude only from provider-status accuracy until input reaches the provider."
+    "ambiguous": "I organize it every year."
   },
   {
     "word": "happy",
