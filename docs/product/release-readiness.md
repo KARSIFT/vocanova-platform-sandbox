@@ -1,11 +1,12 @@
 # Vocanova release readiness
 
-## Consolidated maturity verification — 4 October 2026
+## Consolidated maturity verification — 5 October 2026
 
 [PR #1484](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1484) adds the
 connected list, teaching, mixed-lesson, story, guidebook and writing capabilities
-in [maturity delivery](maturity-delivery.md). The release candidate is **0.4.0**. This records the application source-check
-checkpoint before merge and real-staging acceptance; it does not claim deployment.
+in [maturity delivery](maturity-delivery.md). The release candidate is **0.4.0**. It merged on 4 October as
+`af3eacb44edacedd4ee0fec0fa9d1f3026e9f742`. The source-check evidence below
+precedes real-staging acceptance; the later promotion evidence is recorded below.
 Independent root evidence:
 
 - **Fresh validation:** follow-up `pnpm run validate` passed (exit 0): 258
@@ -46,16 +47,47 @@ Independent root evidence:
   sanitized errors. A deliberate fake-token GET/DELETE failure probe inspected
   eight retained artifacts, including embedded HTML data, and found zero markers.
   Browser types/discovery and 29 deployment/install contracts pass. The new
-  real-staging journey itself has not yet run; static/failure-probe evidence is
-  not deployed acceptance.
+  source-check checkpoint preceded the real-staging journey; its later successful
+  run is recorded below. Static/failure-probe evidence alone is not deployed
+  acceptance.
 
-These additions are not deployed. The verified release below remains 0.3.1; its
-historical evidence does not accept PR #1484. Live AI feedback quality/availability,
+[Staging run 37232617616](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/37232617616)
+deployed the merged 0.4.0 revision and passed the exact identity gate, then failed
+the core journey on a hidden guide word link selected by an outdated test. The
+feedback phase was not reached. Independent review identified another test
+selector that can toggle audio speed instead of saving a meaning. Correct these
+selectors before promotion; the original maturity journey was skipped. The
+focused correction in [PR #1485](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1485)
+passed 18 browser regressions across desktop, 360px and 430px, including actual
+fixture API state/readback and reload persistence.
+[Staging retry 37234463076](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/37234463076)
+passed exact identity, the real core journey and the real maturity journey at
+`2d222621ac721e1d81dd2d329c08a97c971ffc76`. Its differences from merged `af3eacb44`
+are limited to three tests and two docs; deployment inputs and application source
+match. This accepts these live flows while retaining the wider gates below.
+Production promotion is verified below. Earlier 0.3.1 evidence alone does not
+accept PR #1484. Live AI feedback quality/availability,
 actual reminder alarms, physical speech playback and observed learner acceptance
 remain separate open gates. The older 38-migration/schema 1.4 and smaller local
 checkpoints below are historical; the active maturity inventory is 40/schema 1.5.
 
-## Latest release evidence — verified 4 October 2026
+## Latest release evidence — verified 5 October 2026
+
+[Production deployment 37235094589](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/37235094589)
+completed successfully from merged `af3eacb44edacedd4ee0fec0fa9d1f3026e9f742`.
+Fresh production web/API `/version` probes agree on **0.4.0**, that commit and
+**production**; API health reports service/database **ok**. Exact release identity,
+readiness and the normal synthetic smoke gates passed. Independent release review
+confirmed that merged application/deployment inputs match accepted staging
+`2d222621`; its differences are limited to three tests and two docs. This is source
+equivalence, not an assertion that staging and production image digests match.
+
+The consolidated features are deployed with controlled signup. Broad real-provider
+feedback quality, physical-device playback, actual calendar alarms and learner
+acceptance remain separate evidence requirements. Passing these deployment gates
+does not declare the full product goal complete.
+
+## Previous release evidence — verified 4 October 2026
 
 The learning expansion described below was merged in
 [PR #1483](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1483) and

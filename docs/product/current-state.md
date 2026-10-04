@@ -1,11 +1,12 @@
 # Vocanova current product state
 
-## Active consolidated maturity delivery — 4 October 2026
+## Consolidated maturity delivery — 5 October 2026
 
-The `codex/vocanova-maturity` branch adds private named lists and list-selected
+[PR #1484](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1484), merged
+on 4 October as `af3eacb44edacedd4ee0fec0fa9d1f3026e9f742`, adds private named lists and list-selected
 practice, direct per-meaning lesson saving, typed/listening guided exercises,
 shared authored meaning teaching, six original mini-stories, seventeen situation
-guides and topic writing. These additions form one connected delivery for one PR.
+guides and topic writing. These additions were delivered together in one PR, version **0.4.0**.
 See [maturity delivery](maturity-delivery.md) for navigation, data contracts,
 verified outcomes and limitations. Forward migrations are now 40 and account
 export is schema 1.5; original lesson definitions and historical snapshots remain
@@ -16,9 +17,40 @@ lists, lessons, practice and stories on the isolated database after all 40 real
 migrations and canonical seed. Consolidated regression checks pass (258 foundation,
 52 client and 135 web helper tests, plus Go suites). The affected browser matrix passes
 177/177 across 360px, 430px and desktop, including keyboard and both themes.
-No new deployment or real-provider quality acceptance is implied by this checkpoint.
+[Staging run 37232617616](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/37232617616)
+deployed the merged revision and passed exact release identity verification. Its
+core journey failed before feedback: an old test selector chose a hidden word link
+inside the new closed guide accordion. Independent review also found that its
+generic pressed-button selector can choose the audio speed control instead of
+saving a meaning. The original maturity journey was skipped.
 
-## Latest deployed release — verified 4 October 2026
+The focused correction in [PR #1485](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1485)
+passed 18 browser regressions across all three layouts.
+[Staging retry 37234463076](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/37234463076)
+passed exact release identity and both real core and maturity journeys at
+`2d222621ac721e1d81dd2d329c08a97c971ffc76`. Compared with merged `af3eacb44`,
+only three test files and two docs differ; application and deployment inputs are
+identical. This accepts the exercised staging flows, not physical speech playback,
+calendar alarms, broad feedback quality or learner effectiveness.
+Production promotion is verified below.
+
+## Latest deployed release — verified 5 October 2026
+
+[Production deployment 37235094589](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/37235094589)
+completed successfully from merged PR #1484. Fresh production web and API
+`/version` reads agree on **0.4.0**, commit
+`af3eacb44edacedd4ee0fec0fa9d1f3026e9f742` and environment **production**.
+The public API health probe reports service and database **ok**. Normal deployment
+identity, readiness and synthetic smoke gates passed. Promotion used the merged
+application source proven equivalent to the accepted staging build above; image
+digest equivalence is not asserted.
+
+The consolidated lists, authored teaching, mixed guided lessons, explicit lesson
+saving, mini-stories, guides and topic writing are included. This release remains
+a controlled-signup product. Live-flow acceptance does not establish broad AI
+feedback quality, physical audio, reminder alarms or learner effectiveness.
+
+## Previous production release — verified 4 October 2026
 
 The expanded learning product was released through
 [PR #1483](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1483), merged

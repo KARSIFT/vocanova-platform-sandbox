@@ -3,8 +3,8 @@
 //
 // Relationship to tests/e2e/core-loop.spec.ts (VOC-031-T08): same
 // journey, different backend. That spec runs at PR time against
-// mock-api-server.mjs and is untouched by this task. This spec runs
-// after a staging deploy against the real Go API and real Postgres,
+// mock-api-server.mjs. Both use the named situation vocabulary list for word
+// navigation, keeping guidebook links separate. This spec runs after a staging deploy against the real Go API and real Postgres,
 // so the two differ in the three places where the mock's shortcuts
 // have no real-backend equivalent (specification.md's open
 // questions 2 and 3):
@@ -35,7 +35,7 @@
 // the account with saved words, a due-review backlog, or none.
 
 import { expect, test } from "@playwright/test";
-import type { Locator, Page, TestInfo } from "@playwright/test";
+import type { Page, TestInfo } from "@playwright/test";
 
 import { verifyContextPracticeJourney } from "../e2e/context-practice-journey";
 import { completeOnboardingIfRedirected } from "../e2e/onboarding-journey";
@@ -44,6 +44,10 @@ import {
   waitForReviewReadiness,
 } from "../e2e/review-readiness";
 import { reviewSeedActions } from "./review-seed";
+import {
+  chooseSituationWordLink,
+  getFirstMeaningSaveControl,
+} from "../e2e/situation-word-navigation";
 
 const SESSION_COOKIE_ENV = "E2E_SESSION_COOKIE";
 const CSRF_COOKIE_ENV = "E2E_CSRF_TOKEN";
@@ -178,25 +182,6 @@ async function readReviewedTodayCountAfterReviews(
   );
 }
 
-// Prefers a word the account has not saved yet. If every word in the
-// situation is already saved, step 4 deliberately removes and restores the
-// selected word so its review schedule is reset and it becomes due now.
-async function chooseWordLink(page: Page): Promise<Locator> {
-  const wordItems = page
-    .locator("main ul > li")
-    .filter({ has: page.locator("a") });
-  const count = await wordItems.count();
-  expect(count).toBeGreaterThan(0);
-
-  for (let index = 0; index < count; index++) {
-    const item = wordItems.nth(index);
-    if ((await item.getByText("Saved").count()) === 0) {
-      return item.locator("a").first();
-    }
-  }
-  return wordItems.first().locator("a").first();
-}
-
 // Returns false when the queue turns out to be empty by the time this
 // function actually gets to interact with it, true when a card was
 // genuinely reviewed - the caller must treat false as "stop, don't
@@ -326,19 +311,37 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
         page.getByRole("link", { name: "Back to Journey" }),
       ).toBeVisible();
 
-      const wordLink = await chooseWordLink(page);
+      const wordLink = await chooseSituationWordLink(page);
       await wordLink.click();
       await expect(page).toHaveURL(/\/discover\/[^/]+\/[^/]+(\?|$)/);
     });
 
     await test.step("4. save the word", async () => {
-      const saveButton = page.locator("button[aria-pressed]").first();
+      const meaningCard = page
+        .getByRole("main")
+        .locator('li[id^="meaning-"]')
+        .first();
+      const saveButton = getFirstMeaningSaveControl(page);
       await expect(saveButton).toBeVisible();
+      const meaningId = (await meaningCard.getAttribute("id"))?.slice(
+        "meaning-".length,
+      );
+      expect(meaningId).toBeTruthy();
 
       const initiallySaved =
         (await saveButton.getAttribute("aria-pressed")) === "true";
       for (const action of reviewSeedActions(initiallySaved)) {
+        const response = page.waitForResponse((result) => {
+          const path = new URL(result.url()).pathname;
+          return action === "remove"
+            ? result.request().method() === "DELETE" &&
+                path === `/api/v1/user-words/${meaningId}`
+            : result.request().method() === "POST" &&
+                path === "/api/v1/user-words" &&
+                result.request().postDataJSON()?.meaningId === meaningId;
+        });
         await saveButton.click();
+        expect((await response).ok()).toBe(true);
         await expect(saveButton).toHaveAttribute(
           "aria-pressed",
           action === "remove" ? "false" : "true",
