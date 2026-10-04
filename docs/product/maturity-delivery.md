@@ -92,17 +92,23 @@ revision-history acceptance must be checked separately.
   corrects the old authenticated-fixture assumption while retaining keyboard and
   navigation assertions. These mock-backed runs do not establish live login,
   provider quality or database durability.
-- **PR evidence:** [PR #1484](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1484)
-  is ready with `hold`, not merged or deployed; the follow-up push is pending.
-  Core CI, performance and automated review passed before these follow-ups.
-  Hosted full accessibility previously failed (six failed, 752 passed, 37 skipped);
-  a fresh hosted run is required after pushing the fixes.
-- **Live and learning acceptance:** the opt-in staging maturity journey is authored,
-  with credential safety and fake artifact verification ongoing. No live pass,
-  new deployment, real-provider feedback run, physical-device audio validation or
-  learner acceptance is recorded. The earlier release applies only to its revision.
+- **Hosted source-check checkpoint:** application revision `deacbf8c` in
+  [PR #1484](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1484)
+  passed all applicable CI, including performance and
+  [full accessibility](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/37229666520):
+  **767 passed, 37 existing skips**. Earlier automated review and subsequent
+  independent review findings were resolved or assessed against actual invariants.
+  The release candidate version is **0.4.0**.
+- **Credential-safe staging gate:** the authored opt-in journey is independently
+  reviewed. Bounded Node API requests reject redirects and sanitize errors rather
+  than retain authenticated Playwright request diagnostics. Two deliberate
+  fake-token failures produced eight inspected artifacts with zero marker leaks.
+  Staging test discovery/types and 29 deployment/install contracts pass.
+- **Live and learning acceptance:** no live maturity journey, new deployment,
+  physical-device audio validation or learner acceptance is recorded at this
+  source-check checkpoint. The earlier release applies only to its revision.
   The Chrome connector failed with a kernel reset; local browser verification used
-  Chromium.
+  Chromium. Source-check evidence does not substitute for deployed acceptance.
 
 The staging journey should create a list, add one specific meaning without saving
 it for SRS, practise that list, complete a mixed lesson and explicitly save a chosen

@@ -4,8 +4,9 @@
 
 [PR #1484](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1484) adds the
 connected list, teaching, mixed-lesson, story, guidebook and writing capabilities
-in [maturity delivery](maturity-delivery.md). It is ready with `hold`, not merged
-or deployed; the follow-up push is pending. Current independent root evidence:
+in [maturity delivery](maturity-delivery.md). The release candidate is **0.4.0**. This records the application source-check
+checkpoint before merge and real-staging acceptance; it does not claim deployment.
+Independent root evidence:
 
 - **Fresh validation:** follow-up `pnpm run validate` passed (exit 0): 258
   foundation, 52 client and 135 web-helper tests plus Go suites, formatting,
@@ -34,12 +35,19 @@ or deployed; the follow-up push is pending. Current independent root evidence:
   interface/transport behavior, not live login, provider grading or production
   durability. The Chrome connector failed twice with a kernel reset; the local
   Chromium harness remains usable.
-- **Hosted checks and live journey:** core CI, performance and automated review
-  passed on the preceding pushed revision. Full accessibility failed with six
-  failures, 752 passed and 37 skipped; a fresh hosted passing run remains required
-  after pushing the fixes. The opt-in staging maturity journey is authored, but
-  credential safety and fake artifact verification are ongoing. No live pass is
-  recorded for this journey.
+- **Hosted checks:** application revision `deacbf8c` passed all applicable CI,
+  including web/API, controlled sign-in, container, architecture, workflow,
+  performance and synthetic recovery checks. Full accessibility
+  [run37229666520](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/37229666520)
+  passed **767 cases with 37 existing skips**. This supersedes the preceding
+  six-failure run; the corrected route-loop tests retain their assertions.
+- **Staging credential safety:** the opt-in maturity journey is authored and
+  independently reviewed. Direct API checks use bounded Node requests with
+  sanitized errors. A deliberate fake-token GET/DELETE failure probe inspected
+  eight retained artifacts, including embedded HTML data, and found zero markers.
+  Browser types/discovery and 29 deployment/install contracts pass. The new
+  real-staging journey itself has not yet run; static/failure-probe evidence is
+  not deployed acceptance.
 
 These additions are not deployed. The verified release below remains 0.3.1; its
 historical evidence does not accept PR #1484. Live AI feedback quality/availability,

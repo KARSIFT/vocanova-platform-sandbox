@@ -16,13 +16,20 @@ packages including `app/api`. The preceding affected browser checkpoint passed
 177/177 cases plus three screenshot-only checks. The latest three-spec follow-up
 passed **53 cases with one existing desktop skip** across all three layouts,
 including all six previously failing route loops and all 24 lesson-save cases.
-Core CI, performance and automated review passed before these follow-up changes.
-Hosted full accessibility previously failed (six failed, 752 passed, 37 skipped);
-a fresh hosted run is still required after pushing the fixes. PR #1484 is ready
-with `hold`, **not merged or deployed**, and the follow-up push is pending.
-The opt-in staging maturity journey is authored, but credential safety and fake
-artifact verification are ongoing; no live pass is recorded. See
-[release readiness](release-readiness.md) for changing acceptance status.
+Application revision `deacbf8c` passed all applicable hosted CI, including
+[full accessibility](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/37229666520)
+with **767 passed and 37 existing skips**. The previous six route-loop failures
+were reproduced and corrected without weakening application authentication or
+accessibility assertions. Independent review accepted the export, story and
+save-recovery fixes.
+
+The release candidate is **0.4.0**, kept in the same consolidated PR. The opt-in
+real-staging maturity journey is authored and independently reviewed. A deliberate
+failure probe used fake session/CSRF markers: two expected sanitized errors, eight
+retained artifacts inspected, zero marker leaks. This is credential-report evidence,
+not a live journey pass. Merge, deployed release identity and real-staging acceptance
+remain separate from the local/hosted source-check checkpoint recorded here. See
+[release readiness](release-readiness.md) for acceptance boundaries.
 
 New migrations 39–40 and export schema 1.5 cover the additional learner data.
 Source/build, local browser and isolated database evidence do not establish live
