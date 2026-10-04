@@ -4,11 +4,14 @@ import { notFound } from "next/navigation";
 import { ApiResponseError } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { formatNoteType, getAdditionalDefinition } from "@/lib/word-definition";
+import { getAdditionalDefinition } from "@/lib/word-definition";
 import { PageContainer, Surface } from "@/ui/surface";
 import { ListenButton } from "@/ui/pronunciation";
 import { SentenceFeedback } from "../../_components/sentence-feedback";
 import { MeaningKnowledgeEditor } from "../../_components/meaning-knowledge-editor";
+import { MeaningListEditor } from "../../_components/meaning-list-editor";
+import { MeaningTeaching } from "../../_components/meaning-teaching";
+import { MeaningComparison } from "../../_components/meaning-comparison";
 import { RemoveSavedWordButton } from "../_components/remove-saved-word-button";
 import { formatSavedWordStatus } from "../_components/saved-word-view";
 
@@ -104,48 +107,19 @@ export default async function SavedWordDetailPage({
           </p>
         ) : null}
 
-        {meaning.examples.length > 0 ? (
-          <div className="mt-[var(--spacing-md)]">
-            <h3 className="text-lg font-semibold text-neutral-900">
-              Example sentences
-            </h3>
-            <ul className="mt-[var(--spacing-xs)] list-disc space-y-[var(--spacing-xs)] pl-[var(--spacing-lg)] text-base text-neutral-700">
-              {meaning.examples.map((example) => (
-                <li key={example.id}>
-                  <p>{example.exampleText}</p>
-                  <ListenButton
-                    text={example.exampleText}
-                    label={`example: ${example.exampleText}`}
-                    showCaption={false}
-                  />
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
-        {meaning.usageNotes.length > 0 ? (
-          <div className="mt-[var(--spacing-md)]">
-            <h3 className="text-lg font-semibold text-neutral-900">
-              Usage notes
-            </h3>
-            <ul className="mt-[var(--spacing-xs)] space-y-[var(--spacing-sm)]">
-              {meaning.usageNotes.map((note) => (
-                <li key={note.id}>
-                  <h4 className="text-sm font-semibold text-neutral-800">
-                    {formatNoteType(note.noteType)}
-                  </h4>
-                  <p className="text-base text-neutral-700">{note.noteText}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
+        <MeaningTeaching meaning={meaning} />
+        <MeaningListEditor meaningId={meaning.id} />
         <MeaningKnowledgeEditor
           meaningId={meaning.id}
           initialKnown={meaning.selfReportedKnown}
         />
       </Surface>
+
+      <MeaningComparison
+        word={wordResponse.data.word}
+        currentMeaningId={meaning.id}
+        canonicalPath={`/vocabulary/${encodeURIComponent(savedWord.wordSlug)}`}
+      />
 
       <SentenceFeedback
         targetWord={savedWord.wordText}
@@ -154,6 +128,12 @@ export default async function SavedWordDetailPage({
         userId={currentUserResponse.data.id}
         shortDefinition={savedWord.shortDefinition}
       />
+      <Link
+        href="/writing"
+        className="mt-4 inline-flex min-h-12 items-center rounded-md font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+      >
+        Choose a topic writing prompt
+      </Link>
     </PageContainer>
   );
 }

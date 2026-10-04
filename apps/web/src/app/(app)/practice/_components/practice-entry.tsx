@@ -9,11 +9,12 @@ import {
   type PracticeSessionsResponse,
   type PracticeStartRequest,
   type LessonSummary,
+  type WordListSummary,
 } from "@vocanova/api-client";
 
 import { createApiClient } from "@/lib/api";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
-import { handleApiError } from "@/lib/session";
+import { handleApiError, isSessionExpiredError } from "@/lib/session";
 import { Surface } from "@/ui/surface";
 
 import { practiceModes } from "./practice-modes";
@@ -23,14 +24,29 @@ export function PracticeEntry({
   initialSessions,
   lessons,
   initialLessonKey,
+  initialLists,
+  initialListId,
 }: {
   initialSessions: PracticeSessionsResponse | null;
   lessons: LessonSummary[];
   initialLessonKey: string;
+  initialLists: WordListSummary[] | null;
+  initialListId: string;
 }) {
   const router = useRouter();
   const [sessions, setSessions] = useState(initialSessions);
-  const [lessonKey, setLessonKey] = useState(initialLessonKey);
+  const [selection, setSelection] = useState(
+    initialListId ? `list:${initialListId}` : initialLessonKey,
+  );
+  const [lists, setLists] = useState(initialLists);
+  const selectedListId = selection.startsWith("list:")
+    ? selection.slice(5)
+    : "";
+  const selectedList = lists?.find((item) => item.id === selectedListId);
+  const unavailableSelection = Boolean(
+    selectedListId && (!selectedList || selectedList.usableMemberCount === 0),
+  );
+  const expired = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [needsRetry, setNeedsRetry] = useState(false);
@@ -40,16 +56,20 @@ export function PracticeEntry({
     null,
   );
   const inFlight = useRef(false);
-  const locked = busy || needsRetry || needsRefresh;
+  const locked = busy || needsRetry || needsRefresh || expired.current;
 
   async function start(mode?: PracticeMode) {
-    if (inFlight.current || needsRefresh) return;
+    if (inFlight.current || needsRefresh || expired.current) return;
     if (!pending.current) {
-      if (!mode) return;
+      if (!mode || (mode !== "mistakes" && unavailableSelection)) return;
       pending.current = {
         body: {
           mode,
-          ...(mode !== "mistakes" && lessonKey ? { lessonKey } : {}),
+          ...(mode !== "mistakes" && selectedList
+            ? { listId: selectedList.id, listRevision: selectedList.revision }
+            : mode !== "mistakes" && selection && !selectedListId
+              ? { lessonKey: selection }
+              : {}),
         },
         key: crypto.randomUUID(),
       };
@@ -71,6 +91,7 @@ export function PracticeEntry({
       opened = true;
       router.push(`/practice/session/${encodeURIComponent(data.id)}`);
     } catch (cause) {
+      if (isSessionExpiredError(cause)) expired.current = true;
       if (cause instanceof ApiResponseError && cause.status === 409) {
         setNeedsRefresh(true);
         setNeedsRetry(false);
@@ -78,7 +99,7 @@ export function PracticeEntry({
           "Your available practice has changed. Load saved sessions to see what is ready now.",
         );
       } else {
-        setNeedsRetry(true);
+        setNeedsRetry(!isSessionExpiredError(cause));
         setError(
           handleApiError(
             cause,
@@ -95,16 +116,23 @@ export function PracticeEntry({
   }
 
   async function loadSessions() {
-    if (inFlight.current) return;
+    if (inFlight.current || expired.current) return;
     inFlight.current = true;
     setBusy(true);
     try {
-      setSessions((await createApiClient().listPracticeSessions()).data);
+      const client = createApiClient();
+      const [currentSessions, currentLists] = await Promise.all([
+        client.listPracticeSessions(),
+        client.listWordLists(),
+      ]);
+      setSessions(currentSessions.data);
+      setLists(currentLists.data.items);
       pending.current = null;
       setNeedsRetry(false);
       setNeedsRefresh(false);
       setError("");
     } catch (cause) {
+      if (isSessionExpiredError(cause)) expired.current = true;
       setError(
         handleApiError(
           cause,
@@ -128,7 +156,7 @@ export function PracticeEntry({
       <p className="mt-2 text-neutral-700">
         Short sessions save as you go. Pick the skill you want to work on.
       </p>
-      {lessons.length > 0 && (
+      {lessons.length > 0 || lists?.length || selectedListId ? (
         <div className="mt-4 max-w-[40rem]">
           <label
             htmlFor="practice-vocabulary"
@@ -138,13 +166,25 @@ export function PracticeEntry({
           </label>
           <select
             id="practice-vocabulary"
-            value={lessonKey}
+            value={selection}
             disabled={locked}
             aria-describedby="practice-vocabulary-help"
-            onChange={(event) => setLessonKey(event.target.value)}
+            onChange={(event) => setSelection(event.target.value)}
             className="mt-2 min-h-12 w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-base text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
           >
             <option value="">Mix from the full course</option>
+            {selectedListId && !selectedList && (
+              <option value={selection}>Selected list is unavailable</option>
+            )}
+            {lists && lists.length > 0 && (
+              <optgroup label="Personal lists">
+                {lists.map((list) => (
+                  <option key={list.id} value={`list:${list.id}`}>
+                    {list.name} ({list.usableMemberCount} practice meanings)
+                  </option>
+                ))}
+              </optgroup>
+            )}
             {lessons.map((lesson) => (
               <option key={lesson.key} value={lesson.key}>
                 {lesson.situationTitle}: {lesson.title}
@@ -155,12 +195,44 @@ export function PracticeEntry({
             id="practice-vocabulary-help"
             className="mt-2 text-sm text-neutral-600"
           >
-            Choose words from one lesson for typed or listening practice. A
-            full-course mix can include words you have not studied yet. Mistake
-            practice uses your past answers.
+            Choose words from one lesson or personal list for typed or listening
+            practice. A full-course mix can include words you have not studied
+            yet. Mistake practice uses your past answers.
           </p>
         </div>
+      ) : null}
+      {selectedList && (
+        <p className="mt-3 text-neutral-700">
+          Selected list: {selectedList.name}. {selectedList.usableMemberCount}{" "}
+          of {selectedList.memberCount} meanings are available in focused
+          practice. The session keeps this list version.
+        </p>
       )}
+      {unavailableSelection && (
+        <p role="status" className="mt-3 text-neutral-700">
+          {selectedList
+            ? "This list has no meanings available for focused practice. Add a supported meaning or choose another vocabulary source."
+            : "Your selected list could not be loaded. Load saved sessions to refresh your lists, or explicitly choose another vocabulary source."}
+        </p>
+      )}
+      {!lists && (
+        <p role="status" className="mt-3 text-neutral-700">
+          Personal lists are unavailable. Load saved sessions to try again.
+        </p>
+      )}
+      <div className="mt-2 flex flex-wrap gap-3">
+        <Link href="/lists" className={textLink}>
+          Manage personal lists
+        </Link>
+        <button
+          type="button"
+          disabled={busy || expired.current}
+          className={textLink}
+          onClick={() => void loadSessions()}
+        >
+          Refresh practice sources
+        </button>
+      </div>
       <div className="mt-4 grid gap-4 md:grid-cols-3">
         {(Object.keys(practiceModes) as PracticeMode[]).map((mode) => {
           const content = practiceModes[mode];
@@ -184,7 +256,9 @@ export function PracticeEntry({
               {!noMistakes && (
                 <button
                   type="button"
-                  disabled={locked}
+                  disabled={
+                    locked || (mode !== "mistakes" && unavailableSelection)
+                  }
                   className={`${primaryAction} mt-4`}
                   onClick={() => void start(mode)}
                 >
@@ -272,6 +346,11 @@ export function PracticeEntry({
                   <p className="font-semibold text-neutral-900">
                     {practiceModes[session.mode].title}
                   </p>
+                  {session.listName && (
+                    <p className="text-sm text-neutral-600">
+                      Personal list: {session.listName}
+                    </p>
+                  )}
                   <p className="text-sm text-neutral-600">
                     {session.status === "completed"
                       ? `${session.firstAnswersCorrect} of ${session.questionsAnswered} correct on your first try`

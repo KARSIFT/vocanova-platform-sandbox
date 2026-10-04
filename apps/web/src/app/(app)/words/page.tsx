@@ -110,6 +110,10 @@ export default async function SavedWordsPage({
         </Link>
       </div>
 
+      <Link href="/lists" className={`${linkStyle} my-3`}>
+        Organize meanings in personal lists
+      </Link>
+
       {!emptyCollection && (
         <form
           key={resultsURL()}

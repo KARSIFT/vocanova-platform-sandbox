@@ -1,5 +1,51 @@
 # Vocanova current product state
 
+## Active consolidated maturity delivery — 4 October 2026
+
+The `codex/vocanova-maturity` branch adds private named lists and list-selected
+practice, direct per-meaning lesson saving, typed/listening guided exercises,
+shared authored meaning teaching, six original mini-stories, seventeen situation
+guides and topic writing. These additions form one connected delivery for one PR.
+See [maturity delivery](maturity-delivery.md) for navigation, data contracts,
+verified outcomes and limitations. Forward migrations are now 40 and account
+export is schema 1.5; original lesson definitions and historical snapshots remain
+compatible.
+
+Final whole-workspace `pnpm run validate` passes. Independent root PostgreSQL checks pass for accounts,
+lists, lessons, practice and stories on the isolated database after all 40 real
+migrations and canonical seed. Consolidated regression checks pass (258 foundation,
+52 client and 135 web helper tests, plus Go suites). The affected browser matrix passes
+177/177 across 360px, 430px and desktop, including keyboard and both themes.
+No new deployment or real-provider quality acceptance is implied by this checkpoint.
+
+## Latest deployed release — verified 4 October 2026
+
+The expanded learning product was released through
+[PR #1483](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1483), merged
+on 2 October as `73846e2eac6596733bcca1b4a0a7c6a0e4cc2df0`.
+[Production deployment 37055589721](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/37055589721)
+completed successfully. Fresh web and API version reads on 4 October returned
+**0.3.1**, that exact commit and environment **production**. The integrated
+[accessibility run 37053713291](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/37053713291)
+also reports success. These are release/CI facts, not evidence of live AI quality,
+calendar alerts, physical-device pronunciation or learner effectiveness.
+
+The local reference-review checkout is `0b2cee78`, the PR head. Its implemented
+30-lesson course, vocabulary/knowledge features, varied practice, preferences,
+calendar exporter, achievements and help page are included in the release.
+Direct per-meaning saving at lesson completion remains a follow-up. Existing
+completion already shows practised words, first-attempt accuracy and practice links.
+
+The owner's recordings are important design sources. Use the
+[timestamped video review and maturity priorities](reference-video-review.md)
+before future feature or design work. This release is progress toward the full
+product goal, not a claim that it is complete.
+
+## Historical inventory and pre-release evidence
+
+The dated local checkpoints below precede the final release and must not be read
+as the current deployment status. Their specific test boundaries remain relevant.
+
 The deployed baseline was reviewed on 2026-10-02 against implementation revision
 `5b074584cb1799d6b8da7ee02909c703382a3ee5` in the consolidated
 [PR #1482](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1482).

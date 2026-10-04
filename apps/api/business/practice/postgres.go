@@ -68,8 +68,16 @@ func mistakes(ctx context.Context, q queryer, u uuid.UUID) (map[string]Source, e
 	}
 	// Rank before removing resolutions. Resolving the latest mistake must not
 	// resurrect older mistakes; resolving an old snapshot cannot erase a new one.
+	// The frozen step identifies the target, including typed answers without a
+	// choice ID. Retain feedback fallback for historical actions/snapshots.
 	rows, err := q.QueryContext(ctx, `WITH events AS (
- SELECT 'lesson'::text kind,la.id,la.result->'feedback'->>'correctChoiceId' meaning,la.created_at FROM lesson_actions la WHERE la.user_id=$1 AND la.operation='action' AND la.action->>'action'='answer' AND la.result->'feedback'->>'correct'='false'
+ SELECT 'lesson'::text kind,la.id,
+ COALESCE((SELECT NULLIF(step->'step'->'word'->>'meaningId','')
+   FROM jsonb_array_elements(ls.snapshot->'steps') step
+   WHERE step->'step'->>'id'=la.action->>'stepId' LIMIT 1),
+   NULLIF(la.result->'feedback'->>'correctChoiceId','')) meaning,la.created_at
+ FROM lesson_actions la JOIN lesson_sessions ls ON ls.id=la.session_id AND ls.user_id=la.user_id
+ WHERE la.user_id=$1 AND la.operation='action' AND la.action->>'action'='answer' AND la.result->'feedback'->>'correct'='false'
  UNION ALL SELECT 'review',ra.id,ra.meaning_id::text,ra.created_at FROM review_attempts ra WHERE ra.user_id=$1 AND ra.prompt_type='multiple_choice' AND ra.result='incorrect'
  UNION ALL SELECT 'practice',pa.id,pa.meaning_id::text,pa.created_at FROM practice_actions pa WHERE pa.user_id=$1 AND pa.correct=false AND pa.action->>'action'='answer'
  ),ranked AS(SELECT *,row_number() OVER(PARTITION BY meaning ORDER BY created_at DESC,id DESC,kind) rn FROM events WHERE meaning=ANY($2::text[]))
@@ -111,8 +119,11 @@ func (r *PostgreSQLRepository) List(ctx context.Context, u uuid.UUID) ([]State, 
 	return out, len(sources), rows.Err()
 }
 func loadWords(ctx context.Context, tx *sql.Tx) ([]Word, error) {
-	ids := make([]string, len(catalog))
-	for i, r := range catalog {
+	return loadReferences(ctx, tx, catalog)
+}
+func loadReferences(ctx context.Context, tx *sql.Tx, refs []reference) ([]Word, error) {
+	ids := make([]string, len(refs))
+	for i, r := range refs {
 		ids[i] = r.MeaningID
 	}
 	rows, err := tx.QueryContext(ctx, `SELECT wm.id,cw.text,wm.short_definition FROM word_meanings wm JOIN canonical_words cw ON cw.id=wm.word_id WHERE wm.id=ANY($1::uuid[]) AND wm.status='active' AND cw.status='active'`, pq.Array(ids))
@@ -137,7 +148,7 @@ func loadWords(ctx context.Context, tx *sql.Tx) ([]Word, error) {
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
-	if len(out) != len(catalog) {
+	if len(out) != len(refs) {
 		return nil, ErrContentUnavailable
 	}
 	return out, nil
@@ -168,10 +179,6 @@ func (r *PostgreSQLRepository) Start(ctx context.Context, u uuid.UUID, req Start
 	if !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
-	words, err := loadWords(ctx, tx)
-	if err != nil {
-		return nil, err
-	}
 	sources := map[string]Source{}
 	if req.Mode == "mistakes" {
 		sources, err = mistakes(ctx, tx, u)
@@ -179,10 +186,72 @@ func (r *PostgreSQLRepository) Start(ctx context.Context, u uuid.UUID, req Start
 			return nil, err
 		}
 	}
+	listName := ""
+	if req.ListID != "" {
+		var revision int
+		err = tx.QueryRowContext(ctx, `SELECT name,revision FROM user_word_lists WHERE id=$1 AND user_id=$2 AND deleted_at IS NULL FOR UPDATE`, req.ListID, u).Scan(&listName, &revision)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		if err != nil {
+			return nil, err
+		}
+		if revision != *req.ListRevision {
+			return nil, ErrConflict
+		}
+		rows, e := tx.QueryContext(ctx, `SELECT m.meaning_id::text,cw.text,wm.short_definition FROM user_word_list_members m JOIN word_meanings wm ON wm.id=m.meaning_id JOIN canonical_words cw ON cw.id=wm.word_id WHERE m.list_id=$1 AND wm.status='active' AND cw.status='active'`, req.ListID)
+		if e != nil {
+			return nil, e
+		}
+		for rows.Next() {
+			var meaning, text, definition string
+			if e = rows.Scan(&meaning, &text, &definition); e != nil {
+				rows.Close()
+				return nil, e
+			}
+			if SupportsMeaning(meaning, text, definition) {
+				sources[meaning] = Source{}
+			}
+		}
+		e = rows.Err()
+		rows.Close()
+		if e != nil {
+			return nil, e
+		}
+	}
+	refs := catalog
+	if req.ListID != "" {
+		refs = []reference{}
+		lessons := map[string]bool{}
+		for _, ref := range catalog {
+			if _, ok := sources[ref.MeaningID]; ok {
+				lessons[ref.LessonKey] = true
+			}
+		}
+		for _, ref := range catalog {
+			_, member := sources[ref.MeaningID]
+			if member || (req.Mode == "listening_choice" && lessons[ref.LessonKey]) {
+				refs = append(refs, ref)
+			}
+		}
+		if len(refs) == 0 {
+			return nil, ErrListEmpty
+		}
+	}
+	words, err := loadReferences(ctx, tx, refs)
+	if err != nil {
+		return nil, err
+	}
 	id = uuid.New()
 	snap, err := build(req, words, sources, id.String())
 	if err != nil {
 		return nil, err
+	}
+	if req.ListID != "" {
+		snap.ListID = req.ListID
+		snap.ListName = listName
+		revision := *req.ListRevision
+		snap.ListRevision = &revision
 	}
 	st := &State{ID: id, UserID: u, Snapshot: snap, CreatedAt: now, UpdatedAt: now}
 	raw, err := json.Marshal(snap)

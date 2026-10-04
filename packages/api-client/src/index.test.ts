@@ -2027,3 +2027,107 @@ describe("VocanovaClient", () => {
     assert.equal(isSessionExpiredError("401"), false);
   });
 });
+
+describe("private list and story contracts", () => {
+  it("sends list revisions, safe encoded IDs, retry keys and preserves current membership", async () => {
+    const seen: { url: URL; init?: RequestInit }[] = [];
+    const detail = {
+      id: "list",
+      name: "Travel",
+      revision: 3,
+      memberCount: 0,
+      usableMemberCount: 0,
+      members: [],
+      createdAt: "now",
+      updatedAt: "now",
+    };
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: async (input, init) => {
+        seen.push({ url: new URL(String(input)), init });
+        return init?.method === "DELETE" && seen.length === 7
+          ? new Response(null, { status: 204 })
+          : new Response(JSON.stringify(detail), { status: 200 });
+      },
+    });
+    await client.listWordLists();
+    await client.getWordList("list/one");
+    const created = await client.putWordList(
+      "list/one",
+      { name: "Travel", expectedRevision: 0 },
+      "create-key",
+      { headers: { "X-CSRF-Token": "token" } },
+    );
+    assert.deepEqual(created.data, detail);
+    await client.putWordListMember(
+      "list/one",
+      "meaning/two",
+      { expectedRevision: 1 },
+      "add-key",
+    );
+    const removed = await client.deleteWordListMember(
+      "list/one",
+      "meaning/two",
+      2,
+      "remove-key",
+    );
+    assert.deepEqual(removed.data.members, []);
+    await client.startPracticeSession(
+      { mode: "typed_recall", listId: "list", listRevision: 3 },
+      "start-key",
+    );
+    await client.deleteWordList("list/one", 3, "delete-key");
+    assert.equal(seen[1]!.url.pathname, "/api/v1/word-lists/list%2Fone");
+    assert.equal(
+      seen[3]!.url.pathname,
+      "/api/v1/word-lists/list%2Fone/members/meaning%2Ftwo",
+    );
+    assert.equal(seen[4]!.url.searchParams.get("expectedRevision"), "2");
+    assert.equal(seen[6]!.url.searchParams.get("expectedRevision"), "3");
+    assert.equal(
+      new Headers(seen[2]!.init?.headers).get("Idempotency-Key"),
+      "create-key",
+    );
+    assert.equal(
+      new Headers(seen[2]!.init?.headers).get("X-CSRF-Token"),
+      "token",
+    );
+    assert.deepEqual(JSON.parse(String(seen[5]!.init?.body)), {
+      mode: "typed_recall",
+      listId: "list",
+      listRevision: 3,
+    });
+  });
+  it("preserves story content, session action revisions and retry headers", async () => {
+    const seen: { url: URL; init?: RequestInit }[] = [];
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: async (input, init) => {
+        seen.push({ url: new URL(String(input)), init });
+        return new Response(JSON.stringify({ items: [] }), { status: 200 });
+      },
+    });
+    await client.listStories();
+    await client.getStory("travel/story");
+    await client.startStorySession({ storyKey: "travel" }, "start");
+    await client.getStorySession("session/one");
+    await client.submitStoryAction(
+      "session/one",
+      {
+        stepId: "question",
+        expectedRevision: 2,
+        clientActionId: "answer-one",
+        action: "answer",
+        choiceId: "one",
+      },
+      "answer",
+    );
+    assert.equal(seen[1]!.url.pathname, "/api/v1/stories/travel%2Fstory");
+    assert.equal(seen[3]!.url.pathname, "/api/v1/story-sessions/session%2Fone");
+    assert.equal(
+      new Headers(seen[4]!.init?.headers).get("Idempotency-Key"),
+      "answer",
+    );
+    assert.equal(JSON.parse(String(seen[4]!.init?.body)).expectedRevision, 2);
+  });
+});

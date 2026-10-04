@@ -1,0 +1,1118 @@
+[
+  {
+    "Story": {
+      "key": "a-quiet-lunch",
+      "title": "A quiet lunch",
+      "description": "Order a light lunch before a meeting.",
+      "situation": "restaurant",
+      "level": "A2–B1",
+      "contentVersion": "original-dialogues-v1",
+      "lineCount": 8,
+      "questionCount": 2,
+      "vocabulary": [
+        {
+          "wordText": "menu",
+          "wordSlug": "menu",
+          "meaningId": "329c4ec9-6562-568e-9e71-9134da2f0d8d",
+          "definition": "A list of food and drinks you can order."
+        },
+        {
+          "wordText": "appetizer",
+          "wordSlug": "appetizer",
+          "meaningId": "2534b539-a80f-5001-b9a4-27a5e0679539",
+          "definition": "A small dish before the main meal."
+        },
+        {
+          "wordText": "bill",
+          "wordSlug": "bill",
+          "meaningId": "5d21c02b-ef51-5545-bd8a-01f5814d3a67",
+          "definition": "The amount you need to pay for your meal."
+        }
+      ]
+    },
+    "ContentVersion": "original-dialogues-v1",
+    "GradingVersion": "curated-choice-v1",
+    "Steps": [
+      {
+        "Public": {
+          "id": "a-quiet-lunch-1",
+          "kind": "line",
+          "line": {
+            "id": "a-quiet-lunch-1",
+            "speaker": "Narrator",
+            "text": "Nora has a meeting at two. She stops at a small restaurant for lunch."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-quiet-lunch-2",
+          "kind": "line",
+          "line": {
+            "id": "a-quiet-lunch-2",
+            "speaker": "Server",
+            "text": "Here is the menu. Would you like a table by the window?"
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-quiet-lunch-3",
+          "kind": "line",
+          "line": {
+            "id": "a-quiet-lunch-3",
+            "speaker": "Nora",
+            "text": "Yes, please. I only have forty minutes."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-quiet-lunch-4",
+          "kind": "line",
+          "line": {
+            "id": "a-quiet-lunch-4",
+            "speaker": "Server",
+            "text": "The soup is a small appetizer. The vegetable sandwich is a full meal."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-quiet-lunch-5",
+          "kind": "comprehension",
+          "prompt": "Why does Nora need a quick lunch?",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "She is meeting the server at the station."
+            },
+            {
+              "id": "choice-2",
+              "text": "She has a meeting at two."
+            },
+            {
+              "id": "choice-3",
+              "text": "The restaurant is closing now."
+            }
+          ]
+        },
+        "CorrectChoice": "choice-2",
+        "Explanation": "Nora has a meeting at two and says she only has forty minutes."
+      },
+      {
+        "Public": {
+          "id": "a-quiet-lunch-6",
+          "kind": "line",
+          "line": {
+            "id": "a-quiet-lunch-6",
+            "speaker": "Nora",
+            "text": "I'll have the vegetable sandwich and a glass of water, please."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-quiet-lunch-7",
+          "kind": "line",
+          "line": {
+            "id": "a-quiet-lunch-7",
+            "speaker": "Server",
+            "text": "Of course. Your sandwich will be ready in ten minutes."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-quiet-lunch-8",
+          "kind": "line",
+          "line": {
+            "id": "a-quiet-lunch-8",
+            "speaker": "Nora",
+            "text": "That gives me enough time. Could I have the bill with my food?"
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-quiet-lunch-9",
+          "kind": "line",
+          "line": {
+            "id": "a-quiet-lunch-9",
+            "speaker": "Narrator",
+            "text": "Nora pays after eating and arrives at her meeting on time."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-quiet-lunch-10",
+          "kind": "phrase_completion",
+          "prompt": "Complete Nora's request: Could I have the ___ with my food?",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "window"
+            },
+            {
+              "id": "choice-2",
+              "text": "meeting"
+            },
+            {
+              "id": "choice-3",
+              "text": "bill"
+            }
+          ]
+        },
+        "CorrectChoice": "choice-3",
+        "Explanation": "Nora asks for the bill so she can pay promptly after her lunch."
+      }
+    ]
+  },
+  {
+    "Story": {
+      "key": "the-right-platform",
+      "title": "The right platform",
+      "description": "Ask for help when a train timetable changes.",
+      "situation": "transport",
+      "level": "A2–B1",
+      "contentVersion": "original-dialogues-v1",
+      "lineCount": 8,
+      "questionCount": 2,
+      "vocabulary": [
+        {
+          "wordText": "timetable",
+          "wordSlug": "timetable",
+          "meaningId": "6d08080d-4855-5652-ae35-cf0c2bcb9222",
+          "definition": "A list of the times when buses or trains leave."
+        },
+        {
+          "wordText": "platform",
+          "wordSlug": "platform",
+          "meaningId": "9aa8876d-25c6-54d1-9b65-0816e604e7a5",
+          "definition": "The place beside the track where you board a train."
+        },
+        {
+          "wordText": "return ticket",
+          "wordSlug": "return-ticket",
+          "meaningId": "35b47079-26eb-5441-bf1d-05060d125a7e",
+          "definition": "A ticket for a journey there and back."
+        }
+      ]
+    },
+    "ContentVersion": "original-dialogues-v1",
+    "GradingVersion": "curated-choice-v1",
+    "Steps": [
+      {
+        "Public": {
+          "id": "the-right-platform-1",
+          "kind": "line",
+          "line": {
+            "id": "the-right-platform-1",
+            "speaker": "Narrator",
+            "text": "Sam wants to visit his cousin in Lakeside and come home that evening."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "the-right-platform-2",
+          "kind": "line",
+          "line": {
+            "id": "the-right-platform-2",
+            "speaker": "Sam",
+            "text": "A return ticket to Lakeside, please."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "the-right-platform-3",
+          "kind": "line",
+          "line": {
+            "id": "the-right-platform-3",
+            "speaker": "Clerk",
+            "text": "Here you are. The next train leaves at eleven twenty."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "the-right-platform-4",
+          "kind": "line",
+          "line": {
+            "id": "the-right-platform-4",
+            "speaker": "Sam",
+            "text": "The old timetable says platform two. Is that still right?"
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "the-right-platform-5",
+          "kind": "line",
+          "line": {
+            "id": "the-right-platform-5",
+            "speaker": "Clerk",
+            "text": "No, today's train leaves from platform four. Platform two is closed."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "the-right-platform-6",
+          "kind": "comprehension",
+          "prompt": "Where should Sam wait for today's train?",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "Platform four."
+            },
+            {
+              "id": "choice-2",
+              "text": "Platform two."
+            },
+            {
+              "id": "choice-3",
+              "text": "Outside the station."
+            }
+          ]
+        },
+        "CorrectChoice": "choice-1",
+        "Explanation": "The clerk says today's train leaves from platform four. The old timetable is no longer correct."
+      },
+      {
+        "Public": {
+          "id": "the-right-platform-7",
+          "kind": "line",
+          "line": {
+            "id": "the-right-platform-7",
+            "speaker": "Sam",
+            "text": "Thank you. Is platform four far from here?"
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "the-right-platform-8",
+          "kind": "line",
+          "line": {
+            "id": "the-right-platform-8",
+            "speaker": "Clerk",
+            "text": "Go past the cafe and turn left. You have fifteen minutes."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "the-right-platform-9",
+          "kind": "line",
+          "line": {
+            "id": "the-right-platform-9",
+            "speaker": "Narrator",
+            "text": "Sam finds platform four and checks the sign before getting on."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "the-right-platform-10",
+          "kind": "phrase_completion",
+          "prompt": "Sam plans to come home the same day. He asks for a ___ ticket.",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "single"
+            },
+            {
+              "id": "choice-2",
+              "text": "return"
+            },
+            {
+              "id": "choice-3",
+              "text": "closed"
+            }
+          ]
+        },
+        "CorrectChoice": "choice-2",
+        "Explanation": "A return ticket covers the journey to Lakeside and the journey back."
+      }
+    ]
+  },
+  {
+    "Story": {
+      "key": "a-clear-deadline",
+      "title": "A clear deadline",
+      "description": "Check a work task and agree when to send it.",
+      "situation": "work",
+      "level": "A2–B1",
+      "contentVersion": "original-dialogues-v1",
+      "lineCount": 8,
+      "questionCount": 2,
+      "vocabulary": [
+        {
+          "wordText": "colleague",
+          "wordSlug": "colleague",
+          "meaningId": "8ecac8d4-b7c0-51bb-95be-14a73d8637e3",
+          "definition": "A person you work with."
+        },
+        {
+          "wordText": "deadline",
+          "wordSlug": "deadline",
+          "meaningId": "b571a540-89bb-533b-be81-9cedf443a64a",
+          "definition": "The latest time or date when work must be finished."
+        },
+        {
+          "wordText": "attachment",
+          "wordSlug": "attachment",
+          "meaningId": "ee851d91-6476-5942-9454-8f1b2db92682",
+          "definition": "A file sent with an email."
+        }
+      ]
+    },
+    "ContentVersion": "original-dialogues-v1",
+    "GradingVersion": "curated-choice-v1",
+    "Steps": [
+      {
+        "Public": {
+          "id": "a-clear-deadline-1",
+          "kind": "line",
+          "line": {
+            "id": "a-clear-deadline-1",
+            "speaker": "Narrator",
+            "text": "Mina is preparing a price list. She asks her colleague Alex for help."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-clear-deadline-2",
+          "kind": "line",
+          "line": {
+            "id": "a-clear-deadline-2",
+            "speaker": "Mina",
+            "text": "I have the new prices, but two product names are missing."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-clear-deadline-3",
+          "kind": "line",
+          "line": {
+            "id": "a-clear-deadline-3",
+            "speaker": "Alex",
+            "text": "I can check those names after our morning meeting."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-clear-deadline-4",
+          "kind": "line",
+          "line": {
+            "id": "a-clear-deadline-4",
+            "speaker": "Mina",
+            "text": "Great. The deadline is four this afternoon."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-clear-deadline-5",
+          "kind": "comprehension",
+          "prompt": "What does Mina need Alex to check?",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "The time of tomorrow's meeting."
+            },
+            {
+              "id": "choice-2",
+              "text": "The prices of every product."
+            },
+            {
+              "id": "choice-3",
+              "text": "Two missing product names."
+            }
+          ]
+        },
+        "CorrectChoice": "choice-3",
+        "Explanation": "Mina says two product names are missing. Alex offers to check those names."
+      },
+      {
+        "Public": {
+          "id": "a-clear-deadline-6",
+          "kind": "line",
+          "line": {
+            "id": "a-clear-deadline-6",
+            "speaker": "Alex",
+            "text": "I'll send the names before lunch. When will you email the list?"
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-clear-deadline-7",
+          "kind": "line",
+          "line": {
+            "id": "a-clear-deadline-7",
+            "speaker": "Mina",
+            "text": "At three, so I have an hour to fix any problems."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-clear-deadline-8",
+          "kind": "line",
+          "line": {
+            "id": "a-clear-deadline-8",
+            "speaker": "Alex",
+            "text": "Please send the list as an attachment. The manager wants a file."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-clear-deadline-9",
+          "kind": "line",
+          "line": {
+            "id": "a-clear-deadline-9",
+            "speaker": "Narrator",
+            "text": "Mina adds the names and sends the file at three."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-clear-deadline-10",
+          "kind": "phrase_completion",
+          "prompt": "Complete Alex's request: Please send the list as an ___.",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "attachment"
+            },
+            {
+              "id": "choice-2",
+              "text": "appointment"
+            },
+            {
+              "id": "choice-3",
+              "text": "appetizer"
+            }
+          ]
+        },
+        "CorrectChoice": "choice-1",
+        "Explanation": "An attachment is a file sent with an email, which is what the manager needs."
+      }
+    ]
+  },
+  {
+    "Story": {
+      "key": "a-better-fit",
+      "title": "A better fit",
+      "description": "Exchange a jacket and check the new size.",
+      "situation": "shopping",
+      "level": "A2–B1",
+      "contentVersion": "original-dialogues-v1",
+      "lineCount": 8,
+      "questionCount": 2,
+      "vocabulary": [
+        {
+          "wordText": "receipt",
+          "wordSlug": "receipt",
+          "meaningId": "74a55fe5-7736-58f0-98b8-23eef998067d",
+          "definition": "A paper or digital record showing what you paid."
+        },
+        {
+          "wordText": "exchange",
+          "wordSlug": "exchange",
+          "meaningId": "c916143f-197b-5cd7-a4c9-7b21178f04aa",
+          "definition": "To replace a bought item with another item."
+        },
+        {
+          "wordText": "try on",
+          "wordSlug": "try-on",
+          "meaningId": "481f699b-4788-5620-b8a5-51347d90e6e5",
+          "definition": "To put on clothes to see how they look or fit."
+        }
+      ]
+    },
+    "ContentVersion": "original-dialogues-v1",
+    "GradingVersion": "curated-choice-v1",
+    "Steps": [
+      {
+        "Public": {
+          "id": "a-better-fit-1",
+          "kind": "line",
+          "line": {
+            "id": "a-better-fit-1",
+            "speaker": "Narrator",
+            "text": "Leo bought a blue jacket yesterday. At home, he noticed the sleeves were too short."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-better-fit-2",
+          "kind": "line",
+          "line": {
+            "id": "a-better-fit-2",
+            "speaker": "Leo",
+            "text": "I'd like to exchange this jacket for a larger size, please."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-better-fit-3",
+          "kind": "line",
+          "line": {
+            "id": "a-better-fit-3",
+            "speaker": "Assistant",
+            "text": "Do you have your receipt?"
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-better-fit-4",
+          "kind": "line",
+          "line": {
+            "id": "a-better-fit-4",
+            "speaker": "Leo",
+            "text": "Yes, here it is. I don't need a refund; I like the jacket."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-better-fit-5",
+          "kind": "comprehension",
+          "prompt": "What does Leo want to do?",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "Get his money back."
+            },
+            {
+              "id": "choice-2",
+              "text": "Get the same jacket in a larger size."
+            },
+            {
+              "id": "choice-3",
+              "text": "Buy a jacket in a different colour."
+            }
+          ]
+        },
+        "CorrectChoice": "choice-2",
+        "Explanation": "Leo asks for a larger size and says he does not need a refund."
+      },
+      {
+        "Public": {
+          "id": "a-better-fit-6",
+          "kind": "line",
+          "line": {
+            "id": "a-better-fit-6",
+            "speaker": "Assistant",
+            "text": "We have the same blue jacket in a large. You can try it on over there."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-better-fit-7",
+          "kind": "line",
+          "line": {
+            "id": "a-better-fit-7",
+            "speaker": "Leo",
+            "text": "This one feels better. The sleeves reach my wrists."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-better-fit-8",
+          "kind": "line",
+          "line": {
+            "id": "a-better-fit-8",
+            "speaker": "Assistant",
+            "text": "Good. Both sizes cost the same, so there is nothing extra to pay."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-better-fit-9",
+          "kind": "line",
+          "line": {
+            "id": "a-better-fit-9",
+            "speaker": "Narrator",
+            "text": "Leo takes the larger jacket and keeps the new receipt."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-better-fit-10",
+          "kind": "phrase_completion",
+          "prompt": "Before choosing a size, Leo can ___ the jacket.",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "call back"
+            },
+            {
+              "id": "choice-2",
+              "text": "check out"
+            },
+            {
+              "id": "choice-3",
+              "text": "try on"
+            }
+          ]
+        },
+        "CorrectChoice": "choice-3",
+        "Explanation": "To try on a jacket means to put it on and check the fit."
+      }
+    ]
+  },
+  {
+    "Story": {
+      "key": "plans-for-saturday",
+      "title": "Plans for Saturday",
+      "description": "Make plans with a friend when the weather changes.",
+      "situation": "friends",
+      "level": "A2–B1",
+      "contentVersion": "original-dialogues-v1",
+      "lineCount": 8,
+      "questionCount": 2,
+      "vocabulary": [
+        {
+          "wordText": "available",
+          "wordSlug": "available",
+          "meaningId": "b2d5132c-b969-587f-975d-4009c454968f",
+          "definition": "Free to do something at a particular time."
+        },
+        {
+          "wordText": "reschedule",
+          "wordSlug": "reschedule",
+          "meaningId": "0cdfa962-ee1c-570d-8533-999088905805",
+          "definition": "To arrange an activity for a different time."
+        },
+        {
+          "wordText": "meet up",
+          "wordSlug": "meet-up",
+          "meaningId": "c5454676-5349-52d2-ad14-814d516fed56",
+          "definition": "To meet someone, usually for a social activity."
+        }
+      ]
+    },
+    "ContentVersion": "original-dialogues-v1",
+    "GradingVersion": "curated-choice-v1",
+    "Steps": [
+      {
+        "Public": {
+          "id": "plans-for-saturday-1",
+          "kind": "line",
+          "line": {
+            "id": "plans-for-saturday-1",
+            "speaker": "Narrator",
+            "text": "Ella and Ravi planned a picnic for Saturday morning."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "plans-for-saturday-2",
+          "kind": "line",
+          "line": {
+            "id": "plans-for-saturday-2",
+            "speaker": "Ella",
+            "text": "The weather report says it will rain all morning."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "plans-for-saturday-3",
+          "kind": "line",
+          "line": {
+            "id": "plans-for-saturday-3",
+            "speaker": "Ravi",
+            "text": "Let's reschedule the picnic for Sunday. Are you available then?"
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "plans-for-saturday-4",
+          "kind": "line",
+          "line": {
+            "id": "plans-for-saturday-4",
+            "speaker": "Ella",
+            "text": "I'm working on Sunday, but I'm free on Saturday afternoon."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "plans-for-saturday-5",
+          "kind": "comprehension",
+          "prompt": "When is Ella free?",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "Saturday afternoon."
+            },
+            {
+              "id": "choice-2",
+              "text": "Sunday morning."
+            },
+            {
+              "id": "choice-3",
+              "text": "Every day this weekend."
+            }
+          ]
+        },
+        "CorrectChoice": "choice-1",
+        "Explanation": "Ella says she is free on Saturday afternoon and working on Sunday."
+      },
+      {
+        "Public": {
+          "id": "plans-for-saturday-6",
+          "kind": "line",
+          "line": {
+            "id": "plans-for-saturday-6",
+            "speaker": "Ravi",
+            "text": "We could meet up at the museum on Saturday afternoon instead."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "plans-for-saturday-7",
+          "kind": "line",
+          "line": {
+            "id": "plans-for-saturday-7",
+            "speaker": "Ella",
+            "text": "Sounds good. The museum is indoors. Shall we meet at two?"
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "plans-for-saturday-8",
+          "kind": "line",
+          "line": {
+            "id": "plans-for-saturday-8",
+            "speaker": "Ravi",
+            "text": "Yes, at the main entrance. We can have a picnic another weekend."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "plans-for-saturday-9",
+          "kind": "line",
+          "line": {
+            "id": "plans-for-saturday-9",
+            "speaker": "Narrator",
+            "text": "They keep their Saturday plans and choose an activity away from the rain."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "plans-for-saturday-10",
+          "kind": "phrase_completion",
+          "prompt": "Ravi suggests: We could ___ at the museum.",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "pay back"
+            },
+            {
+              "id": "choice-2",
+              "text": "meet up"
+            },
+            {
+              "id": "choice-3",
+              "text": "try on"
+            }
+          ]
+        },
+        "CorrectChoice": "choice-2",
+        "Explanation": "Meet up means to meet someone for a social activity, like their museum visit."
+      }
+    ]
+  },
+  {
+    "Story": {
+      "key": "a-room-for-tonight",
+      "title": "A room for tonight",
+      "description": "Check in and ask about breakfast and check-out.",
+      "situation": "hotel",
+      "level": "A2–B1",
+      "contentVersion": "original-dialogues-v1",
+      "lineCount": 8,
+      "questionCount": 2,
+      "vocabulary": [
+        {
+          "wordText": "reservation",
+          "wordSlug": "reservation",
+          "meaningId": "edb20c6e-1023-5f10-af4b-0dc059a781b2",
+          "definition": "An arrangement to keep a room for you."
+        },
+        {
+          "wordText": "key card",
+          "wordSlug": "key-card",
+          "meaningId": "d990ce6e-4756-52e0-96e8-9926442963f2",
+          "definition": "A plastic card used to open a hotel room."
+        },
+        {
+          "wordText": "check-out",
+          "wordSlug": "check-out",
+          "meaningId": "846f3dde-4b90-5eb8-929e-ecd28e8315f3",
+          "definition": "The process of leaving a hotel and returning the room key."
+        }
+      ]
+    },
+    "ContentVersion": "original-dialogues-v1",
+    "GradingVersion": "curated-choice-v1",
+    "Steps": [
+      {
+        "Public": {
+          "id": "a-room-for-tonight-1",
+          "kind": "line",
+          "line": {
+            "id": "a-room-for-tonight-1",
+            "speaker": "Narrator",
+            "text": "Aisha arrives at a hotel after a long bus journey."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-room-for-tonight-2",
+          "kind": "line",
+          "line": {
+            "id": "a-room-for-tonight-2",
+            "speaker": "Aisha",
+            "text": "I have a reservation for one night under Aisha Malik."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-room-for-tonight-3",
+          "kind": "line",
+          "line": {
+            "id": "a-room-for-tonight-3",
+            "speaker": "Receptionist",
+            "text": "Welcome. Your room is on the second floor. Here is your key card."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-room-for-tonight-4",
+          "kind": "line",
+          "line": {
+            "id": "a-room-for-tonight-4",
+            "speaker": "Aisha",
+            "text": "Thank you. What time is breakfast?"
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-room-for-tonight-5",
+          "kind": "line",
+          "line": {
+            "id": "a-room-for-tonight-5",
+            "speaker": "Receptionist",
+            "text": "Breakfast is from seven to nine. Check-out is at eleven."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-room-for-tonight-6",
+          "kind": "comprehension",
+          "prompt": "What is the latest check-out time?",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "Seven in the morning."
+            },
+            {
+              "id": "choice-2",
+              "text": "Nine in the morning."
+            },
+            {
+              "id": "choice-3",
+              "text": "Eleven in the morning."
+            }
+          ]
+        },
+        "CorrectChoice": "choice-3",
+        "Explanation": "The receptionist says check-out is at eleven. Seven to nine are breakfast times."
+      },
+      {
+        "Public": {
+          "id": "a-room-for-tonight-7",
+          "kind": "line",
+          "line": {
+            "id": "a-room-for-tonight-7",
+            "speaker": "Aisha",
+            "text": "My bus leaves at one. Can you keep my bag after check-out?"
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-room-for-tonight-8",
+          "kind": "line",
+          "line": {
+            "id": "a-room-for-tonight-8",
+            "speaker": "Receptionist",
+            "text": "Yes, bring it to the front desk. We will keep it until you leave."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-room-for-tonight-9",
+          "kind": "line",
+          "line": {
+            "id": "a-room-for-tonight-9",
+            "speaker": "Narrator",
+            "text": "Aisha can enjoy breakfast and explore the town before her bus journey."
+          }
+        },
+        "CorrectChoice": "",
+        "Explanation": ""
+      },
+      {
+        "Public": {
+          "id": "a-room-for-tonight-10",
+          "kind": "phrase_completion",
+          "prompt": "Complete the receptionist's instruction: Here is your ___ to open the room.",
+          "choices": [
+            {
+              "id": "choice-1",
+              "text": "key card"
+            },
+            {
+              "id": "choice-2",
+              "text": "return ticket"
+            },
+            {
+              "id": "choice-3",
+              "text": "receipt"
+            }
+          ]
+        },
+        "CorrectChoice": "choice-1",
+        "Explanation": "The receptionist gives Aisha a key card, which opens her hotel room."
+      }
+    ]
+  }
+]

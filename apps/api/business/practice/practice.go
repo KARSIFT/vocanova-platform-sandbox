@@ -21,6 +21,7 @@ var (
 	ErrInvalid            = errors.New("invalid practice action")
 	ErrConflict           = errors.New("practice changed or idempotency conflict")
 	ErrNoMistakes         = errors.New("no supported mistakes to practise")
+	ErrListEmpty          = errors.New("list has no supported meanings to practise")
 	ErrContentUnavailable = errors.New("practice content unavailable")
 )
 
@@ -28,8 +29,10 @@ const ContentVersion = "starter-90-v2"
 const GradingVersion = "exact-recall-v1"
 
 type PracticeStartRequest struct {
-	Mode      string `json:"mode" enum:"typed_recall,listening_choice,mistakes"`
-	LessonKey string `json:"lessonKey,omitempty" maxLength:"100"`
+	Mode         string `json:"mode" enum:"typed_recall,listening_choice,mistakes"`
+	LessonKey    string `json:"lessonKey,omitempty" maxLength:"100"`
+	ListID       string `json:"listId,omitempty" format:"uuid"`
+	ListRevision *int   `json:"listRevision,omitempty" minimum:"1"`
 }
 type PracticeChoice struct {
 	ID   string `json:"id"`
@@ -54,6 +57,9 @@ type PracticeFeedback struct {
 	MeaningID   string `json:"meaningId"`
 }
 type PracticeSummary struct {
+	ListID              string     `json:"listId,omitempty"`
+	ListName            string     `json:"listName,omitempty"`
+	ListRevision        *int       `json:"listRevision,omitempty"`
 	ID                  string     `json:"id"`
 	Mode                string     `json:"mode"`
 	LessonKey           string     `json:"lessonKey,omitempty"`
@@ -102,6 +108,8 @@ type privateStep struct {
 	Source        *Source
 }
 type Snapshot struct {
+	ListID, ListName                                string `json:",omitempty"`
+	ListRevision                                    *int   `json:",omitempty"`
 	Mode, LessonKey, ContentVersion, GradingVersion string
 	Steps                                           []privateStep
 }
@@ -154,6 +162,13 @@ func (s *Service) Start(ctx context.Context, u uuid.UUID, req StartRequest, key 
 	if !validKey(key) || !validLesson(req.LessonKey) || (req.Mode != "typed_recall" && req.Mode != "listening_choice" && req.Mode != "mistakes") {
 		return nil, ErrInvalid
 	}
+	if req.ListID != "" {
+		if id, err := uuid.Parse(req.ListID); err != nil || id == uuid.Nil || req.ListRevision == nil || *req.ListRevision < 1 || req.LessonKey != "" || req.Mode == "mistakes" {
+			return nil, ErrInvalid
+		}
+	} else if req.ListRevision != nil {
+		return nil, ErrInvalid
+	}
 	st, err := s.repo.Start(ctx, u, req, key, s.clock.Now())
 	if err != nil {
 		return nil, err
@@ -191,7 +206,7 @@ func project(st State) Session {
 	if st.CompletedAt != nil {
 		status = "completed"
 	}
-	p := Session{Summary: Summary{ID: st.ID.String(), Mode: st.Snapshot.Mode, LessonKey: st.Snapshot.LessonKey, ContentVersion: st.Snapshot.ContentVersion, GradingVersion: st.Snapshot.GradingVersion, Status: status, Revision: st.Revision, CompletedSteps: st.Index, TotalSteps: len(st.Snapshot.Steps), FirstAnswersCorrect: st.FirstAnswersCorrect, QuestionsAnswered: st.QuestionsAnswered, CreatedAt: st.CreatedAt, UpdatedAt: st.UpdatedAt, CompletedAt: st.CompletedAt}}
+	p := Session{Summary: Summary{ListID: st.Snapshot.ListID, ListName: st.Snapshot.ListName, ListRevision: st.Snapshot.ListRevision, ID: st.ID.String(), Mode: st.Snapshot.Mode, LessonKey: st.Snapshot.LessonKey, ContentVersion: st.Snapshot.ContentVersion, GradingVersion: st.Snapshot.GradingVersion, Status: status, Revision: st.Revision, CompletedSteps: st.Index, TotalSteps: len(st.Snapshot.Steps), FirstAnswersCorrect: st.FirstAnswersCorrect, QuestionsAnswered: st.QuestionsAnswered, CreatedAt: st.CreatedAt, UpdatedAt: st.UpdatedAt, CompletedAt: st.CompletedAt}}
 	if st.CompletedAt == nil && st.Index < len(st.Snapshot.Steps) {
 		step := st.Snapshot.Steps[st.Index].Public
 		p.CurrentStep = &step

@@ -91,7 +91,7 @@ func (r *MemoryRepository) ExportPersonalData(ctx context.Context, userID uuid.U
 		return nil, ErrUserNotFound
 	}
 	return json.Marshal(map[string]any{
-		"schemaVersion": "1.4", "learningPreferences": nil, "practiceSessions": []any{}, "wordKnowledge": []any{}, "guidedLessons": []any{}, "profile": map[string]any{"id": u.ID.String(), "email": u.Email},
+		"schemaVersion": "1.5", "wordLists": []any{}, "storySessions": []any{}, "learningPreferences": nil, "practiceSessions": []any{}, "wordKnowledge": []any{}, "guidedLessons": []any{}, "profile": map[string]any{"id": u.ID.String(), "email": u.Email},
 		"settings": map[string]any{"timezone": "UTC", "dailyReviewTarget": 20, "reviewIntervalPreset": "vocanova_default", "notificationsEnabled": true, "marketingEmailsEnabled": false, "appLanguage": "en", "createdAt": nil, "updatedAt": nil}, "onboardingProfile": nil, "savedWords": []any{}, "reviewHistory": []any{},
 		"sentenceFeedbackHistory": []any{}, "dailyMissions": []any{}, "dailyActivity": []any{},
 		"confidencePointLedger": []any{}, "graceDayLedger": []any{}, "streakState": nil,

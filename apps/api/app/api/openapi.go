@@ -17,8 +17,10 @@ import (
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/password"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/practice"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/reviews"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/stories"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/users"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/wordknowledge"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/wordlists"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/email"
 	"github.com/danielgtaylor/huma/v2"
@@ -131,6 +133,8 @@ func NewContractAPI() huma.API {
 	RegisterLessonRecommendation(contractAPI, lessons.NewRecommendationService(lessons.NewPostgreSQLRepository(nil)))
 	RegisterWordKnowledge(contractAPI, wordknowledge.NewService(wordknowledge.NewPostgreSQLRepository(nil), clock.Real{}), svc)
 	RegisterPractice(contractAPI, practice.NewService(practice.NewPostgreSQLRepository(nil), clock.Real{}), svc)
+	RegisterWordLists(contractAPI, wordlists.NewService(wordlists.NewPostgreSQLRepository(nil), clock.Real{}), svc)
+	RegisterStories(contractAPI, stories.NewService(stories.NewPostgreSQLRepository(nil), clock.Real{}), svc)
 	RegisterAchievements(contractAPI, achievements.NewService(achievements.NewPostgreSQLRepository(nil)))
 
 	// Register review routes for OpenAPI generation using an empty in-memory repo.

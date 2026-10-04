@@ -73,7 +73,7 @@ export function ListenButton({
           aria-pressed={slow}
           disabled={active}
           onClick={() => setSlow((previous) => !previous)}
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-neutral-200 px-[var(--spacing-sm)] text-sm text-neutral-700 hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 aria-pressed:border-primary-600 aria-pressed:bg-primary-50 aria-pressed:text-primary-800 disabled:cursor-default disabled:opacity-60"
+          className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-neutral-200 px-[var(--spacing-sm)] text-sm ${slow ? "text-primary-800" : "text-neutral-700"} hover:bg-neutral-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 aria-pressed:border-primary-600 aria-pressed:bg-primary-50 disabled:cursor-default disabled:opacity-60`}
         >
           Slow
         </button>

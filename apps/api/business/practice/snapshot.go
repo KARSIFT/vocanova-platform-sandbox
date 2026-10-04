@@ -10,11 +10,16 @@ import (
 func order(seed, s string) string { h := sha256.Sum256([]byte(seed + ":" + s)); return string(h[:]) }
 func build(req StartRequest, words []Word, sources map[string]Source, seed string) (Snapshot, error) {
 	snap := Snapshot{Mode: req.Mode, LessonKey: req.LessonKey, ContentVersion: ContentVersion, GradingVersion: GradingVersion, Steps: []privateStep{}}
-	if len(words) < 3 {
+	if len(words) == 0 || (len(words) < 3 && (req.ListID == "" || req.Mode == "listening_choice")) {
 		return snap, ErrContentUnavailable
 	}
 	selected := []Word{}
 	for _, w := range words {
+		if req.ListID != "" {
+			if _, ok := sources[w.MeaningID]; !ok {
+				continue
+			}
+		}
 		if req.LessonKey != "" && w.LessonKey != req.LessonKey {
 			continue
 		}
@@ -30,6 +35,9 @@ func build(req StartRequest, words []Word, sources map[string]Source, seed strin
 		selected = selected[:6]
 	}
 	if len(selected) == 0 {
+		if req.ListID != "" {
+			return snap, ErrListEmpty
+		}
 		if req.Mode == "mistakes" {
 			return snap, ErrNoMistakes
 		}

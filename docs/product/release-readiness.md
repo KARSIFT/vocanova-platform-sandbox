@@ -1,5 +1,57 @@
 # Vocanova release readiness
 
+## Consolidated maturity verification — 4 October 2026
+
+The single delivery branch adds the connected list, teaching, mixed-lesson,
+story, guidebook and writing capabilities described in
+[maturity delivery](maturity-delivery.md). Independent root checks freshly passed:
+
+- Forty actual forward migrations and canonical seed applied to isolated
+  PostgreSQL 16. Atlas v1.2.0 library checksum regenerated/read back; historical
+  migration hashes remain unchanged. Migration-scanner tests pass. Direct SQL
+  application is not proof of deployed Atlas revision history.
+- `go test -tags=integration ./business/accounts ./business/lessons
+./business/wordlists ./business/practice ./business/stories -count=1` passes with
+  the private disposable test DSN. Ownership, retry/concurrency, legacy snapshots,
+  filtered list practice, schema 1.5 export and deletion are covered.
+- **Final `pnpm run validate` passes (exit 0)** after the last persistence fix.
+  Root also reran all five PostgreSQL suites successfully.
+- Consolidated tests pass: 258 foundation, 52 client and 135 web helper tests,
+  plus Go package suites. Formatting, lint/Go vet, client/E2E types, web production
+  build and API build pass. These checks do not accept the live feedback provider.
+- Five independent review findings were fixed and regression-covered: archived
+  list members blocking usable practice, retired story start replay, removed-word
+  save replay recovery, editing after typed-answer validation rejection, and typed
+  lesson targets entering mistake practice with legacy snapshot fallback.
+- The affected browser matrix passes 177/177 across desktop, 360px and 430px,
+  including keyboard, both themes and accessibility/error/retry paths. Browser
+  fixtures establish the built interface/transport behavior, not live login,
+  provider grading or production durability. PR CI is recorded separately. The interactive Chrome connector
+  failed twice with a kernel reset; the local Chromium harness remains usable.
+
+These additions are not yet deployed. The verified deployed release below remains
+0.3.1. Live AI feedback quality/availability, actual reminder alarms, physical
+speech playback and observed learner acceptance remain separate open gates.
+
+## Latest release evidence — verified 4 October 2026
+
+The learning expansion described below was merged in
+[PR #1483](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1483) and
+[deployed successfully](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/37055589721)
+on 2 October. Fresh production web/API version endpoints on 4 October agree on
+version **0.3.1**, environment **production** and commit
+`73846e2eac6596733bcca1b4a0a7c6a0e4cc2df0`. The final integrated accessibility
+workflow also reports success. This supersedes the undeployed status in the
+historical checkpoints below.
+
+Real AI availability/quality, actual calendar import/alerts, physical-device audio,
+learner usefulness and public legal/support operating decisions remain separate
+acceptance work. Deployed version identity does not prove these outcomes. The
+[recording review](reference-video-review.md) adds timestamped design evidence and
+prioritized maturity requirements; it does not accept Vocanova runtime behavior.
+
+## Historical completion plan
+
 This is the working completion plan for the product requested on 2 October 2026. Vocanova already implements its main learning loop. Finishing it requires reliable behavior, enough useful content and evidence that real learners can use and trust the deployed service. Historical delivery records remain useful context; this checklist requires fresh evidence for a public launch.
 
 Read [the current state](current-state.md), [product bible](00-product-bible.md), [learning workspace design](../design/learning-workspace.md) and [development guide](../development.md) before extending scope.

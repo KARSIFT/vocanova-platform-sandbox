@@ -39,6 +39,9 @@ func scanState(row scanner) (*State, error) {
 			return nil, err
 		}
 	}
+	if st.Snapshot.ExerciseVersion != "" && st.Snapshot.ExerciseVersion != ExerciseVersion {
+		return nil, ErrContentUnavailable
+	}
 	if len(st.Snapshot.Steps) == 0 || st.Index < 0 || st.Index > len(st.Snapshot.Steps) {
 		return nil, errors.New("invalid stored lesson state")
 	}
@@ -61,7 +64,7 @@ func (r *PostgreSQLRepository) List(ctx context.Context, u uuid.UUID) ([]State, 
 	return out, rows.Err()
 }
 func (r *PostgreSQLRepository) Get(ctx context.Context, u, id uuid.UUID) (*State, error) {
-	return scanState(r.db.QueryRowContext(ctx, `SELECT `+stateColumns+` FROM lesson_sessions WHERE id=$1 AND user_id=$2`, id, u))
+	return scanState(r.db.QueryRowContext(ctx, `SELECT `+stateColumns+` FROM lesson_sessions WHERE id=$1 AND user_id=$2 AND EXISTS(SELECT 1 FROM users WHERE id=$2 AND status='active' AND deleted_at IS NULL)`, id, u))
 }
 func lockUser(ctx context.Context, tx *sql.Tx, u uuid.UUID) error {
 	var id uuid.UUID
@@ -104,7 +107,7 @@ func (r *PostgreSQLRepository) Start(ctx context.Context, u uuid.UUID, d Definit
 			return nil, e
 		}
 		id := uuid.New()
-		snapshot, e := buildSnapshot(d, words, id.String())
+		snapshot, e := buildVariedSnapshot(d, words, id.String())
 		if e != nil {
 			return nil, e
 		}

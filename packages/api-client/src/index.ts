@@ -295,14 +295,133 @@ export interface MeaningKnowledgeUpdate {
   note: string;
 }
 
+export interface WordListSummary {
+  id: string;
+  name: string;
+  revision: number;
+  memberCount: number;
+  usableMemberCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface WordListMember {
+  meaningId: string;
+  wordId: string;
+  wordSlug: string;
+  wordText: string;
+  shortDefinition: string;
+  partOfSpeech: string;
+  practiceAvailable: boolean;
+  addedAt: string;
+}
+export interface WordListDetail extends WordListSummary {
+  members: WordListMember[];
+}
+export interface WordListsResponse {
+  items: WordListSummary[];
+}
+export interface WordListWriteBody {
+  name: string;
+  expectedRevision: number;
+}
+export interface WordListRevisionBody {
+  expectedRevision: number;
+}
+
+export interface StoryLine {
+  id: string;
+  speaker: string;
+  text: string;
+}
+export interface StoryVocabulary {
+  wordText: string;
+  wordSlug: string;
+  meaningId: string;
+  definition: string;
+}
+export interface StoryChoice {
+  id: string;
+  text: string;
+}
+export interface StoryStep {
+  id: string;
+  kind: "line" | "comprehension" | "phrase_completion";
+  line?: StoryLine;
+  prompt?: string;
+  choices?: StoryChoice[];
+}
+export interface StoryFeedback {
+  stepId: string;
+  correct: boolean;
+  answer: string;
+  explanation: string;
+}
+export interface StorySummary {
+  id: string;
+  storyKey: string;
+  title: string;
+  situation: string;
+  contentVersion: string;
+  gradingVersion: string;
+  status: "in_progress" | "completed";
+  revision: number;
+  completedSteps: number;
+  totalSteps: number;
+  firstAnswersCorrect: number;
+  questionsAnswered: number;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+}
+export interface StorySession extends StorySummary {
+  currentStep: StoryStep | null;
+  feedback: StoryFeedback | null;
+  canContinue: boolean;
+  visibleLines: StoryLine[];
+  vocabulary: StoryVocabulary[];
+}
+export interface StoryCatalogItem {
+  key: string;
+  title: string;
+  description: string;
+  situation: string;
+  level: string;
+  contentVersion: string;
+  lineCount: number;
+  questionCount: number;
+  vocabulary: StoryVocabulary[];
+  latestSession?: StorySummary;
+}
+export interface StoryLibrary {
+  items: StoryCatalogItem[];
+}
+export interface StoryReading extends StoryCatalogItem {
+  lines: StoryLine[];
+}
+export interface StoryStartRequest {
+  storyKey: string;
+}
+export interface StoryAction {
+  stepId: string;
+  expectedRevision: number;
+  clientActionId: string;
+  action: "answer" | "continue";
+  choiceId?: string;
+}
+
 export type PracticeMode = "typed_recall" | "listening_choice" | "mistakes";
 
 export interface PracticeStartRequest {
+  listId?: string;
+  listRevision?: number;
   mode: PracticeMode;
   lessonKey?: string;
 }
 
 export interface PracticeSessionSummary {
+  listId?: string;
+  listName?: string;
+  listRevision?: number;
   id: string;
   mode: PracticeMode;
   lessonKey?: string;
@@ -400,7 +519,9 @@ export interface LessonWord {
 
 export interface LessonStep {
   id: string;
-  kind: "teach" | "recall" | "context";
+  kind: "teach" | "recall" | "context" | "typed_recall" | "listening_choice";
+  speechText?: string;
+  speechLanguage?: string;
   word: LessonWord;
   prompt: string;
   context?: string;
@@ -408,6 +529,7 @@ export interface LessonStep {
 }
 
 export interface LessonSession {
+  exerciseVersion?: string;
   id: string;
   lessonKey: string;
   lessonVersion: string;
@@ -424,6 +546,7 @@ export interface LessonSession {
     correct: boolean;
     explanation: string;
     correctChoiceId: string;
+    answer?: string;
   } | null;
   canContinue: boolean;
   firstAnswersCorrect: number;
@@ -432,6 +555,7 @@ export interface LessonSession {
 }
 
 export interface LessonAction {
+  typedAnswer?: string;
   stepId: string;
   expectedRevision: number;
   clientActionId: string;
@@ -990,6 +1114,172 @@ export class VocanovaClient {
       init,
     );
     return { data: (await response.json()) as KnowledgeSummary, response };
+  }
+
+  async listWordLists(
+    init?: RequestInit,
+  ): Promise<{ data: WordListsResponse; response: Response }> {
+    const response = await this.request(
+      "GET",
+      "/api/v1/word-lists",
+      undefined,
+      init,
+    );
+    return { data: (await response.json()) as WordListsResponse, response };
+  }
+
+  async getWordList(
+    listId: string,
+    init?: RequestInit,
+  ): Promise<{ data: WordListDetail; response: Response }> {
+    const response = await this.request(
+      "GET",
+      `/api/v1/word-lists/${encodeURIComponent(listId)}`,
+      undefined,
+      init,
+    );
+    return { data: (await response.json()) as WordListDetail, response };
+  }
+
+  async putWordList(
+    listId: string,
+    body: WordListWriteBody,
+    idempotencyKey: string,
+    init?: RequestInit,
+  ): Promise<{ data: WordListDetail; response: Response }> {
+    const headers = new Headers(init?.headers);
+    headers.set("Idempotency-Key", idempotencyKey);
+    const response = await this.request(
+      "PUT",
+      `/api/v1/word-lists/${encodeURIComponent(listId)}`,
+      body,
+      { ...init, headers },
+    );
+    return { data: (await response.json()) as WordListDetail, response };
+  }
+
+  async deleteWordList(
+    listId: string,
+    expectedRevision: number,
+    idempotencyKey: string,
+    init?: RequestInit,
+  ): Promise<{ response: Response }> {
+    const headers = new Headers(init?.headers);
+    headers.set("Idempotency-Key", idempotencyKey);
+    const response = await this.request(
+      "DELETE",
+      `/api/v1/word-lists/${encodeURIComponent(listId)}?expectedRevision=${expectedRevision}`,
+      undefined,
+      { ...init, headers },
+    );
+    return { response };
+  }
+
+  async putWordListMember(
+    listId: string,
+    meaningId: string,
+    body: WordListRevisionBody,
+    idempotencyKey: string,
+    init?: RequestInit,
+  ): Promise<{ data: WordListDetail; response: Response }> {
+    const headers = new Headers(init?.headers);
+    headers.set("Idempotency-Key", idempotencyKey);
+    const response = await this.request(
+      "PUT",
+      `/api/v1/word-lists/${encodeURIComponent(listId)}/members/${encodeURIComponent(meaningId)}`,
+      body,
+      { ...init, headers },
+    );
+    return { data: (await response.json()) as WordListDetail, response };
+  }
+
+  async deleteWordListMember(
+    listId: string,
+    meaningId: string,
+    expectedRevision: number,
+    idempotencyKey: string,
+    init?: RequestInit,
+  ): Promise<{ data: WordListDetail; response: Response }> {
+    const headers = new Headers(init?.headers);
+    headers.set("Idempotency-Key", idempotencyKey);
+    const response = await this.request(
+      "DELETE",
+      `/api/v1/word-lists/${encodeURIComponent(listId)}/members/${encodeURIComponent(meaningId)}?expectedRevision=${expectedRevision}`,
+      undefined,
+      { ...init, headers },
+    );
+    return { data: (await response.json()) as WordListDetail, response };
+  }
+
+  async listStories(
+    init?: RequestInit,
+  ): Promise<{ data: StoryLibrary; response: Response }> {
+    const response = await this.request(
+      "GET",
+      "/api/v1/stories",
+      undefined,
+      init,
+    );
+    return { data: (await response.json()) as StoryLibrary, response };
+  }
+
+  async getStory(
+    storyKey: string,
+    init?: RequestInit,
+  ): Promise<{ data: StoryReading; response: Response }> {
+    const response = await this.request(
+      "GET",
+      `/api/v1/stories/${encodeURIComponent(storyKey)}`,
+      undefined,
+      init,
+    );
+    return { data: (await response.json()) as StoryReading, response };
+  }
+
+  async startStorySession(
+    body: StoryStartRequest,
+    idempotencyKey: string,
+    init?: RequestInit,
+  ): Promise<{ data: StorySession; response: Response }> {
+    const headers = new Headers(init?.headers);
+    headers.set("Idempotency-Key", idempotencyKey);
+    const response = await this.request(
+      "POST",
+      "/api/v1/story-sessions",
+      body,
+      { ...init, headers },
+    );
+    return { data: (await response.json()) as StorySession, response };
+  }
+
+  async getStorySession(
+    sessionId: string,
+    init?: RequestInit,
+  ): Promise<{ data: StorySession; response: Response }> {
+    const response = await this.request(
+      "GET",
+      `/api/v1/story-sessions/${encodeURIComponent(sessionId)}`,
+      undefined,
+      init,
+    );
+    return { data: (await response.json()) as StorySession, response };
+  }
+
+  async submitStoryAction(
+    sessionId: string,
+    body: StoryAction,
+    idempotencyKey: string,
+    init?: RequestInit,
+  ): Promise<{ data: StorySession; response: Response }> {
+    const headers = new Headers(init?.headers);
+    headers.set("Idempotency-Key", idempotencyKey);
+    const response = await this.request(
+      "POST",
+      `/api/v1/story-sessions/${encodeURIComponent(sessionId)}/actions`,
+      body,
+      { ...init, headers },
+    );
+    return { data: (await response.json()) as StorySession, response };
   }
 
   async listPracticeSessions(

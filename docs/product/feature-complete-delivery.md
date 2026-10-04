@@ -1,5 +1,37 @@
 # Vocanova feature-complete delivery
 
+## Consolidated maturity feature set — 4 October 2026
+
+The owner renewed the feature-first, one-PR direction. The connected additions are
+implemented on `codex/vocanova-maturity`: named lists and their practice selection,
+lesson completion saving, authored meaning teaching, mixed guided exercises,
+original stories, situation guidebooks and topic writing. Read the
+[maturity delivery contracts and acceptance](maturity-delivery.md). These additions
+extend the recording-derived priorities without importing competitor assets.
+
+New migrations 39–40 and export schema 1.5 cover the additional learner data.
+Combined source/build and isolated PostgreSQL evidence are separate from live
+feedback, physical-device audio and learner usefulness. Required release/learner
+evidence remains in [release readiness](release-readiness.md); the full product
+goal is not completed by opening this consolidated PR.
+
+## Release and new reference checkpoint — 4 October 2026
+
+The connected expansion was merged through
+[PR #1483](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1483) and
+released as **0.3.1**, commit `73846e2eac6596733bcca1b4a0a7c6a0e4cc2df0`.
+Fresh production web/API version reads and the successful deployment workflow
+were checked on 4 October; see [current state](current-state.md). The local
+implementation/checkpoint wording below was written before that release and is
+historical. Its undeployed statements are superseded here, while live quality
+and learner acceptance limits remain open.
+
+The owner's WordUp/Duolingo recordings are primary design references. Read the
+[timestamped comparison and maturity requirements](reference-video-review.md)
+before subsequent feature work. They extend the direction with richer teaching,
+personal lists, varied guided sessions, original stories and productive practice.
+These are prioritized future improvements, not shipped or accepted capabilities.
+
 Owner direction, 2 October 2026: the current MVP is too narrow. Build the connected feature set first, then conduct a dedicated design, usability and quality pass. Keep the work on one delivery branch and open one consolidated PR. Existing reliability fixes are supporting work, not the product milestone.
 
 ## Product target

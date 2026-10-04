@@ -58,6 +58,10 @@ Start with `docs/product/current-state.md` for the implementation map and
 `docs/product/release-readiness.md` for the remaining release evidence. Preserve
 the learning direction in the product bible and the current visual guidance in
 `docs/design/learning-workspace.md`.
+The owner-supplied WordUp/Duolingo recordings are important role models. Read
+`docs/product/reference-video-review.md` for timestamped observations and maturity
+priorities before related product or interface changes. Original recordings live
+in the private parent `Opponent/` folder; do not commit them or account imagery.
 
 Assign parallel agents bounded areas with explicit file ownership. Coordinate
 shared builds and test servers. Use independent review for changes to scheduling,

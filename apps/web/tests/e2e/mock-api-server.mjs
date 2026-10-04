@@ -98,6 +98,10 @@
 // without enabling extra debug output.
 
 import { createServer } from "node:http";
+import { handleUnitGuideFeatures } from "./unit-guides-fixture.mjs";
+import { handleMeaningTeaching } from "./meaning-teaching-fixture.mjs";
+import { handlePersonalLists } from "./personal-lists-fixture.mjs";
+import { handleStoryFeatures } from "./stories-fixture.mjs";
 import { handleLearningFeatures } from "./learning-features-fixture.mjs";
 import {
   dailyConversationFixture,
@@ -448,7 +452,10 @@ function buildProgress(state) {
   return cloneProgress(state.progress);
 }
 
-function buildDailyMission(state, reviewTarget = DEFAULT_DAILY_MISSION.reviewTarget) {
+function buildDailyMission(
+  state,
+  reviewTarget = DEFAULT_DAILY_MISSION.reviewTarget,
+) {
   const streak = { ...state.progress.streak };
   return {
     ...state.dailyMission,
@@ -553,14 +560,19 @@ function buildWordDetailResponse(state, slug, definitionFixture) {
   const meanings = word.meanings.map((meaning) => ({
     ...meaning,
     ...(definitionFixture === "duplicate"
-      ? { learnerDefinition: `  ${meaning.shortDefinition.toUpperCase().replaceAll(" ", "   ")}  ` }
+      ? {
+          learnerDefinition: `  ${meaning.shortDefinition.toUpperCase().replaceAll(" ", "   ")}  `,
+        }
       : definitionFixture === "distinct"
-        ? { learnerDefinition: `${meaning.shortDefinition}. You control where the liquid goes by tipping its container.` }
+        ? {
+            learnerDefinition: `${meaning.shortDefinition}. You control where the liquid goes by tipping its container.`,
+          }
         : definitionFixture === "blank"
           ? { learnerDefinition: "   " }
           : {}),
     saved: state.savedMeaningIds.has(meaning.id),
-    selfReportedKnown: state.wordKnowledge?.get(meaning.id)?.selfReportedKnown ?? false,
+    selfReportedKnown:
+      state.wordKnowledge?.get(meaning.id)?.selfReportedKnown ?? false,
     userWordId: state.savedMeaningIds.has(meaning.id)
       ? `uw-${meaning.id}`
       : undefined,
@@ -592,7 +604,8 @@ function buildSituationResponse(slug, state) {
     meanings: fixture.meanings.map((meaning) => ({
       ...meaning,
       saved: state.savedMeaningIds.has(meaning.meaningId),
-      selfReportedKnown: state.wordKnowledge?.get(meaning.meaningId)?.selfReportedKnown ?? false,
+      selfReportedKnown:
+        state.wordKnowledge?.get(meaning.meaningId)?.selfReportedKnown ?? false,
     })),
   };
 }
@@ -842,13 +855,19 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  if (req.method === "POST" && url.pathname === "/api/v1/auth/password/signups") {
+  if (
+    req.method === "POST" &&
+    url.pathname === "/api/v1/auth/password/signups"
+  ) {
     logLine(req, 204, { action: "password-signup-request" });
     emptyResponse(res, 204);
     return;
   }
 
-  if (req.method === "POST" && url.pathname === "/api/v1/auth/password/signups/verify") {
+  if (
+    req.method === "POST" &&
+    url.pathname === "/api/v1/auth/password/signups/verify"
+  ) {
     const body = await readJsonBody(req).catch(() => ({}));
     if (
       body.token !== "valid-signup-token" ||
@@ -885,17 +904,33 @@ const server = createServer(async (req, res) => {
     const csrfValue = generateId("csrf");
     sessions.set(sessionValue, createInitialState());
     logLine(req, 200, { session: "issued-password" });
-    jsonResponse(res, 200, { ...DEFAULT_USER, onboardingStatus: "completed", hasPassword: true }, { "Set-Cookie": [buildSessionCookie(sessionValue), buildCsrfCookie(csrfValue)].join(", ") });
+    jsonResponse(
+      res,
+      200,
+      { ...DEFAULT_USER, onboardingStatus: "completed", hasPassword: true },
+      {
+        "Set-Cookie": [
+          buildSessionCookie(sessionValue),
+          buildCsrfCookie(csrfValue),
+        ].join(", "),
+      },
+    );
     return;
   }
 
-  if (req.method === "POST" && url.pathname === "/api/v1/auth/password/reset-requests") {
+  if (
+    req.method === "POST" &&
+    url.pathname === "/api/v1/auth/password/reset-requests"
+  ) {
     logLine(req, 204, { action: "password-reset-request" });
     emptyResponse(res, 204);
     return;
   }
 
-  if (req.method === "POST" && url.pathname === "/api/v1/auth/password/resets") {
+  if (
+    req.method === "POST" &&
+    url.pathname === "/api/v1/auth/password/resets"
+  ) {
     const body = await readJsonBody(req).catch(() => ({}));
     if (
       body.token !== "valid-reset-token" ||
@@ -968,7 +1003,54 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  if (await handleLearningFeatures({ req, res, url, cookies, state: getSessionState(cookies), canonicalWords: CANONICAL_WORDS, jsonResponse, readJsonBody, checkCsrf, logLine })) return;
+  if (await handleUnitGuideFeatures({ req, res, url, cookies, jsonResponse }))
+    return;
+  if (handleMeaningTeaching({ req, res, url, cookies, jsonResponse })) return;
+  if (
+    await handlePersonalLists({
+      req,
+      res,
+      url,
+      cookies,
+      state: getSessionState(cookies),
+      canonicalWords: CANONICAL_WORDS,
+      jsonResponse,
+      readJsonBody,
+      checkCsrf,
+      logLine,
+    })
+  )
+    return;
+  if (
+    await handleStoryFeatures({
+      req,
+      res,
+      url,
+      cookies,
+      state: getSessionState(cookies),
+      canonicalWords: CANONICAL_WORDS,
+      jsonResponse,
+      readJsonBody,
+      checkCsrf,
+      logLine,
+    })
+  )
+    return;
+  if (
+    await handleLearningFeatures({
+      req,
+      res,
+      url,
+      cookies,
+      state: getSessionState(cookies),
+      canonicalWords: CANONICAL_WORDS,
+      jsonResponse,
+      readJsonBody,
+      checkCsrf,
+      logLine,
+    })
+  )
+    return;
 
   if (req.method === "GET" && url.pathname === "/api/v1/me") {
     if (url.searchParams.get("fail") === "me") {
@@ -1011,7 +1093,11 @@ const server = createServer(async (req, res) => {
       englishLevel: "a2",
       nativeLanguage: "es",
       learningGoal: "general",
-      mainUseCase: ["daily_life", "work", "travel", "study", "social"].includes(cookies.e2e_onboarding_focus) ? cookies.e2e_onboarding_focus : "daily_life",
+      mainUseCase: ["daily_life", "work", "travel", "study", "social"].includes(
+        cookies.e2e_onboarding_focus,
+      )
+        ? cookies.e2e_onboarding_focus
+        : "daily_life",
       dailyReviewTarget: state.settings.dailyReviewTarget,
       completedAt: state.onboardingCompleted
         ? new Date().toISOString()
@@ -1408,7 +1494,10 @@ const server = createServer(async (req, res) => {
       return;
     }
     const state = getSessionState(cookies);
-    const requestedLimit = Number.parseInt(url.searchParams.get("limit") ?? "20", 10);
+    const requestedLimit = Number.parseInt(
+      url.searchParams.get("limit") ?? "20",
+      10,
+    );
     const limit = Number.isSafeInteger(requestedLimit)
       ? Math.min(Math.max(requestedLimit, 1), 50)
       : 20;
@@ -1427,7 +1516,7 @@ const server = createServer(async (req, res) => {
               UNBROKEN_SENTENCE_HISTORY,
               historyParams,
             )
-        : buildLearnerSentenceHistory(state, historyParams);
+          : buildLearnerSentenceHistory(state, historyParams);
     logLine(req, 200, { sentenceCount: history.items.length });
     jsonResponse(res, 200, history);
     return;
@@ -1435,7 +1524,11 @@ const server = createServer(async (req, res) => {
 
   if (req.method === "GET" && url.pathname === "/api/v1/journey-situations") {
     logLine(req, 200);
-    jsonResponse(res, 200, buildJourneySituations(cookies.e2e_daily_conversation === "true"));
+    jsonResponse(
+      res,
+      200,
+      buildJourneySituations(cookies.e2e_daily_conversation === "true"),
+    );
     return;
   }
 
@@ -1459,7 +1552,8 @@ const server = createServer(async (req, res) => {
       // Exercise the optional activity's unavailable-content fallback using
       // the real curriculum while leaving the remaining situation usable.
       response.meanings = response.meanings.filter(
-        (meaning) => meaning.meaningId !== "ee53d6ba-4303-5394-b7f9-79937ce66d09",
+        (meaning) =>
+          meaning.meaningId !== "ee53d6ba-4303-5394-b7f9-79937ce66d09",
       );
     }
     logLine(req, 200, { slug });
@@ -1475,7 +1569,11 @@ const server = createServer(async (req, res) => {
       url.pathname.slice("/api/v1/canonical-words/".length),
     );
     const state = getSessionState(cookies);
-    const response = buildWordDetailResponse(state, slug, cookies.e2e_definition_fixture);
+    const response = buildWordDetailResponse(
+      state,
+      slug,
+      cookies.e2e_definition_fixture,
+    );
     if (!response) {
       logLine(req, 404, { slug });
       jsonResponse(res, 404, { error: "not_found", slug });

@@ -8,8 +8,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"golang.org/x/text/unicode/norm"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/google/uuid"
@@ -36,20 +39,24 @@ type Choice struct {
 	Text string `json:"text"`
 }
 type Step struct {
-	ID      string   `json:"id"`
-	Kind    string   `json:"kind" enum:"teach,recall,context"`
-	Word    Word     `json:"word"`
-	Prompt  string   `json:"prompt"`
-	Context string   `json:"context,omitempty"`
-	Choices []Choice `json:"choices"`
+	ID             string   `json:"id"`
+	Kind           string   `json:"kind" enum:"teach,recall,context,typed_recall,listening_choice"`
+	SpeechText     string   `json:"speechText,omitempty"`
+	SpeechLanguage string   `json:"speechLanguage,omitempty"`
+	Word           Word     `json:"word"`
+	Prompt         string   `json:"prompt"`
+	Context        string   `json:"context,omitempty"`
+	Choices        []Choice `json:"choices"`
 }
 type Feedback struct {
+	Answer          string `json:"answer,omitempty"`
 	StepID          string `json:"stepId"`
 	Correct         bool   `json:"correct"`
 	Explanation     string `json:"explanation"`
 	CorrectChoiceID string `json:"correctChoiceId"`
 }
 type Session struct {
+	ExerciseVersion     string     `json:"exerciseVersion,omitempty"`
 	ID                  string     `json:"id"`
 	LessonKey           string     `json:"lessonKey"`
 	LessonVersion       string     `json:"lessonVersion"`
@@ -81,6 +88,7 @@ type Summary struct {
 	CompletedSteps int    `json:"completedSteps"`
 }
 type Action struct {
+	TypedAnswer      string `json:"typedAnswer,omitempty" maxLength:"200"`
 	StepID           string `json:"stepId" minLength:"1" maxLength:"100"`
 	ExpectedRevision int    `json:"expectedRevision" minimum:"0"`
 	ClientActionID   string `json:"clientActionId" minLength:"1" maxLength:"128"`
@@ -90,11 +98,13 @@ type Action struct {
 
 // Snapshot includes private answer keys. Never serialize it as an API response.
 type Snapshot struct {
-	Definition Definition    `json:"definition"`
-	Words      []Word        `json:"words"`
-	Steps      []privateStep `json:"steps"`
+	ExerciseVersion string        `json:"exerciseVersion,omitempty"`
+	Definition      Definition    `json:"definition"`
+	Words           []Word        `json:"words"`
+	Steps           []privateStep `json:"steps"`
 }
 type privateStep struct {
+	Accepted        []string          `json:"accepted,omitempty"`
 	Step            Step              `json:"step"`
 	CorrectChoiceID string            `json:"correctChoiceId"`
 	Explanations    map[string]string `json:"explanations"`
@@ -156,7 +166,23 @@ func (s *Service) List(ctx context.Context, u uuid.UUID) ([]Summary, error) {
 	}
 	return out, nil
 }
-func validKey(k string) bool { return strings.TrimSpace(k) != "" && len(k) <= 128 }
+func validKey(k string) bool {
+	return strings.TrimSpace(k) != "" && len(k) <= 128 && validPlain(k, 128)
+}
+func validPlain(s string, max int) bool {
+	if len(s) > max || !utf8.ValidString(s) {
+		return false
+	}
+	for _, r := range s {
+		if unicode.IsControl(r) {
+			return false
+		}
+	}
+	return true
+}
+func normalizeAnswer(s string) string {
+	return strings.ToLower(strings.Join(strings.Fields(norm.NFC.String(s)), " "))
+}
 func (s *Service) Start(ctx context.Context, u uuid.UUID, key, idem string) (*Session, error) {
 	if u == uuid.Nil {
 		return nil, ErrNotFound
@@ -190,7 +216,7 @@ func (s *Service) Act(ctx context.Context, u, id uuid.UUID, a Action, idem strin
 	if u == uuid.Nil || id == uuid.Nil {
 		return nil, ErrNotFound
 	}
-	if !validKey(idem) || !validKey(a.ClientActionID) || len(a.StepID) > 100 || len(a.ChoiceID) > 100 || a.ExpectedRevision < 0 || (a.Action != "answer" && a.Action != "continue") {
+	if !validKey(idem) || !validKey(a.ClientActionID) || !validPlain(a.StepID, 100) || !validPlain(a.ChoiceID, 100) || !validPlain(a.TypedAnswer, 200) || a.StepID == "" || (a.TypedAnswer != "" && a.ChoiceID != "") || (a.Action == "continue" && (a.TypedAnswer != "" || a.ChoiceID != "")) || a.ExpectedRevision < 0 || (a.Action != "answer" && a.Action != "continue") {
 		return nil, ErrInvalid
 	}
 	st, err := s.repo.Act(ctx, u, id, a, idem, s.clock.Now().UTC())
@@ -202,7 +228,7 @@ func (s *Service) Act(ctx context.Context, u, id uuid.UUID, a Action, idem strin
 }
 func project(st State) Session {
 	d := st.Snapshot.Definition
-	p := Session{ID: st.ID.String(), LessonKey: d.Key, LessonVersion: d.Version, Title: d.Title, SituationSlug: d.SituationSlug, Status: "in_progress", Revision: st.Revision, CompletedSteps: st.Index, TotalSteps: len(st.Snapshot.Steps), Words: st.Snapshot.Words, Feedback: st.Feedback, FirstAnswersCorrect: st.FirstAnswersCorrect, QuestionsAnswered: st.QuestionsAnswered, CompletedAt: st.CompletedAt}
+	p := Session{ExerciseVersion: st.Snapshot.ExerciseVersion, ID: st.ID.String(), LessonKey: d.Key, LessonVersion: d.Version, Title: d.Title, SituationSlug: d.SituationSlug, Status: "in_progress", Revision: st.Revision, CompletedSteps: st.Index, TotalSteps: len(st.Snapshot.Steps), Words: st.Snapshot.Words, Feedback: st.Feedback, FirstAnswersCorrect: st.FirstAnswersCorrect, QuestionsAnswered: st.QuestionsAnswered, CompletedAt: st.CompletedAt}
 	if st.CompletedAt != nil {
 		p.Status = "completed"
 		p.Feedback = nil
@@ -216,7 +242,10 @@ func project(st State) Session {
 	return p
 }
 func apply(st *State, a Action, now time.Time) error {
-	if st.CompletedAt != nil || a.ExpectedRevision != st.Revision || st.Index >= len(st.Snapshot.Steps) {
+	if !validPlain(a.TypedAnswer, 200) || (a.TypedAnswer != "" && a.ChoiceID != "") || (a.Action != "continue" && a.Action != "answer") {
+		return ErrInvalid
+	}
+	if st.CompletedAt != nil || a.ExpectedRevision != st.Revision || st.Index < 0 || st.Index >= len(st.Snapshot.Steps) {
 		return ErrConflict
 	}
 	step := st.Snapshot.Steps[st.Index]
@@ -224,7 +253,7 @@ func apply(st *State, a Action, now time.Time) error {
 		return ErrConflict
 	}
 	if a.Action == "continue" {
-		if a.ChoiceID != "" {
+		if a.ChoiceID != "" || a.TypedAnswer != "" {
 			return ErrInvalid
 		}
 		if step.Step.Kind != "teach" && (st.Feedback == nil || !st.Feedback.Correct || st.Feedback.StepID != a.StepID) {
@@ -242,18 +271,39 @@ func apply(st *State, a Action, now time.Time) error {
 		if st.Feedback != nil && st.Feedback.Correct {
 			return ErrConflict
 		}
-		explanation, ok := step.Explanations[a.ChoiceID]
-		if !ok {
-			return ErrInvalid
+		correct := false
+		explanation := ""
+		answer := ""
+		if step.Step.Kind == "typed_recall" {
+			if a.ChoiceID != "" || normalizeAnswer(a.TypedAnswer) == "" || len(step.Accepted) == 0 {
+				return ErrInvalid
+			}
+			for _, accepted := range step.Accepted {
+				if normalizeAnswer(a.TypedAnswer) == normalizeAnswer(accepted) {
+					correct = true
+				}
+			}
+			answer = step.Step.Word.WordText
+			explanation = "The word or phrase is “" + answer + "”. " + step.Step.Word.Definition
+		} else {
+			if a.TypedAnswer != "" {
+				return ErrInvalid
+			}
+			var ok bool
+			explanation, ok = step.Explanations[a.ChoiceID]
+			if !ok {
+				return ErrInvalid
+			}
+			correct = a.ChoiceID == step.CorrectChoiceID
 		}
-		correct := a.ChoiceID == step.CorrectChoiceID
 		if st.Feedback == nil {
 			st.QuestionsAnswered++
 			if correct {
 				st.FirstAnswersCorrect++
 			}
 		}
-		st.Feedback = &Feedback{StepID: a.StepID, Correct: correct, Explanation: explanation, CorrectChoiceID: step.CorrectChoiceID}
+		st.Feedback = &Feedback{StepID: a.StepID, Correct: correct, Explanation: explanation, CorrectChoiceID: step.CorrectChoiceID, Answer: answer}
+
 	}
 	st.Revision++
 	return nil

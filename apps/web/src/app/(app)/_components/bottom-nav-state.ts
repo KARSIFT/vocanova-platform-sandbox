@@ -13,6 +13,11 @@ export function isPrimaryNavItemActive(
         pathname === "/practice" ||
         pathname.startsWith("/practice/") ||
         pathname.startsWith("/learn/") ||
+        pathname === "/writing" ||
+        pathname === "/lists" ||
+        pathname.startsWith("/lists/") ||
+        pathname === "/stories" ||
+        pathname.startsWith("/stories/") ||
         pathname === "/words" ||
         pathname.startsWith("/words/")))
   );

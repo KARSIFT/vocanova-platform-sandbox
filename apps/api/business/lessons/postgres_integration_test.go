@@ -152,6 +152,10 @@ func TestPostgreSQLGuidedLessonsResumeReplayConcurrencyAndRollback(t *testing.T)
 		if !current.CanContinue {
 			a.Action = "answer"
 			a.ChoiceID = current.CurrentStep.Word.MeaningID
+			if current.CurrentStep.Kind == "typed_recall" {
+				a.ChoiceID = ""
+				a.TypedAnswer = current.CurrentStep.Word.WordText
+			}
 			if !wrongOnce {
 				for _, c := range current.CurrentStep.Choices {
 					if c.ID != a.ChoiceID {
