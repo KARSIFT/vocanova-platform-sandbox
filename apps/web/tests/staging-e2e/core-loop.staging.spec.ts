@@ -338,7 +338,7 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
                 path === `/api/v1/user-words/${meaningId}`
             : result.request().method() === "POST" &&
                 path === "/api/v1/user-words" &&
-                result.request().postDataJSON().meaningId === meaningId;
+                result.request().postDataJSON()?.meaningId === meaningId;
         });
         await saveButton.click();
         expect((await response).ok()).toBe(true);

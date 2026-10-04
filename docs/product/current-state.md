@@ -22,11 +22,35 @@ deployed the merged revision and passed exact release identity verification. Its
 core journey failed before feedback: an old test selector chose a hidden word link
 inside the new closed guide accordion. Independent review also found that its
 generic pressed-button selector can choose the audio speed control instead of
-saving a meaning. Both test defects require a focused follow-up and a real staging
-rerun. The maturity journey was skipped; live-provider quality is not accepted.
-Production remains the verified 0.3.1 release below.
+saving a meaning. The original maturity journey was skipped.
 
-## Latest deployed release — verified 4 October 2026
+The focused correction in [PR #1485](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1485)
+passed 18 browser regressions across all three layouts.
+[Staging retry 37234463076](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/37234463076)
+passed exact release identity and both real core and maturity journeys at
+`2d222621ac721e1d81dd2d329c08a97c971ffc76`. Compared with merged `af3eacb44`,
+only three test files and two docs differ; application and deployment inputs are
+identical. This accepts the exercised staging flows, not physical speech playback,
+calendar alarms, broad feedback quality or learner effectiveness.
+Production promotion is verified below.
+
+## Latest deployed release — verified 5 October 2026
+
+[Production deployment 37235094589](https://github.com/KARSIFT/vocanova-platform-sandbox/actions/runs/37235094589)
+completed successfully from merged PR #1484. Fresh production web and API
+`/version` reads agree on **0.4.0**, commit
+`af3eacb44edacedd4ee0fec0fa9d1f3026e9f742` and environment **production**.
+The public API health probe reports service and database **ok**. Normal deployment
+identity, readiness and synthetic smoke gates passed. Promotion used the merged
+application source proven equivalent to the accepted staging build above; image
+digest equivalence is not asserted.
+
+The consolidated lists, authored teaching, mixed guided lessons, explicit lesson
+saving, mini-stories, guides and topic writing are included. This release remains
+a controlled-signup product. Live-flow acceptance does not establish broad AI
+feedback quality, physical audio, reminder alarms or learner effectiveness.
+
+## Previous production release — verified 4 October 2026
 
 The expanded learning product was released through
 [PR #1483](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1483), merged
