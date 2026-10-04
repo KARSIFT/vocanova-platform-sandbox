@@ -10,6 +10,8 @@ import { getSituationDetailView } from "./_components/situation-view";
 import { getConversationPractice } from "./_components/conversation-context-content";
 import { ConversationContextPractice } from "./_components/conversation-context-practice";
 import { formatLevelBand } from "../_components/level-band";
+import { UnitGuidebook } from "./_components/unit-guidebook";
+import { unitGuides } from "./_components/unit-guide-content";
 
 interface SituationDiscoverPageProps {
   params: Promise<{ situation: string }>;
@@ -31,6 +33,42 @@ export default async function SituationDiscoverPage({
   }
 
   const { situation: situationData, meanings } = response.data;
+  // Secondary catalogs and examples cannot hide the existing situation words.
+  // Authentication errors still redirect instead of resembling missing content.
+  async function optional<T>(request: Promise<T>): Promise<T | null> {
+    try {
+      return await request;
+    } catch (error) {
+      if (error instanceof ApiResponseError && error.status === 401) {
+        requireAuthRedirect(error, `/discover/${situation}`);
+      }
+      return null;
+    }
+  }
+  const guideWords = meanings.filter((meaning) =>
+    unitGuides[situation]?.phrases.some(
+      (phrase) => phrase.word === meaning.wordText,
+    ),
+  );
+  const [lessonResponse, storyResponse, wordResponses] = await Promise.all([
+    optional(client.listLessons()),
+    optional(client.listStories()),
+    Promise.all(
+      guideWords.map((word) =>
+        optional(client.getCanonicalWord(word.wordSlug)),
+      ),
+    ),
+  ]);
+  const examples: Record<string, string> = {};
+  for (let index = 0; index < guideWords.length; index++) {
+    const guideWord = guideWords[index];
+    if (!guideWord) continue;
+    const matchingMeaning = wordResponses[index]?.data.word.meanings.find(
+      (meaning) => meaning.id === guideWord.meaningId,
+    );
+    const example = matchingMeaning?.examples[0]?.exampleText;
+    if (example) examples[guideWord.meaningId] = example;
+  }
   const conversationPractice = getConversationPractice(
     situationData.id,
     meanings,
@@ -93,6 +131,14 @@ export default async function SituationDiscoverPage({
           </div>
         </section>
       ) : null}
+
+      <UnitGuidebook
+        situationSlug={situation}
+        meanings={meanings}
+        examples={examples}
+        lessons={lessonResponse?.data.items ?? null}
+        stories={storyResponse?.data.items ?? null}
+      />
 
       {conversationPractice.length > 0 ? (
         <ConversationContextPractice

@@ -28,19 +28,155 @@ type CreatePersonalDataExportOutput struct {
 // deliberately not a map or a database row: adding a database column cannot
 // make it downloadable without a conscious DTO and SQL-projection change.
 type PersonalDataExportDTO struct {
-	SchemaVersion           string                            `json:"schemaVersion"`
-	ExportedAt              string                            `json:"exportedAt,omitempty" format:"date-time"`
-	Profile                 PersonalDataProfileDTO            `json:"profile"`
-	Settings                PersonalDataSettingsDTO           `json:"settings"`
-	OnboardingProfile       *PersonalDataOnboardingDTO        `json:"onboardingProfile"`
-	SavedWords              []PersonalDataSavedWordDTO        `json:"savedWords"`
-	ReviewHistory           []PersonalDataReviewDTO           `json:"reviewHistory"`
-	SentenceFeedbackHistory []PersonalDataSentenceFeedbackDTO `json:"sentenceFeedbackHistory"`
-	DailyMissions           []PersonalDataMissionDTO          `json:"dailyMissions"`
-	DailyActivity           []PersonalDataActivityDTO         `json:"dailyActivity"`
-	ConfidencePointLedger   []PersonalDataConfidenceLedgerDTO `json:"confidencePointLedger"`
-	GraceDayLedger          []PersonalDataGraceLedgerDTO      `json:"graceDayLedger"`
-	StreakState             *PersonalDataStreakDTO            `json:"streakState"`
+	WordLists               []PersonalDataWordListDTO           `json:"wordLists"`
+	StorySessions           []PersonalDataStorySessionDTO       `json:"storySessions"`
+	LearningPreferences     *PersonalDataLearningPreferencesDTO `json:"learningPreferences"`
+	PracticeSessions        []PersonalDataPracticeSessionDTO    `json:"practiceSessions"`
+	WordKnowledge           []PersonalDataWordKnowledgeDTO      `json:"wordKnowledge"`
+	GuidedLessons           []PersonalDataGuidedLessonDTO       `json:"guidedLessons"`
+	SchemaVersion           string                              `json:"schemaVersion"`
+	ExportedAt              string                              `json:"exportedAt,omitempty" format:"date-time"`
+	Profile                 PersonalDataProfileDTO              `json:"profile"`
+	Settings                PersonalDataSettingsDTO             `json:"settings"`
+	OnboardingProfile       *PersonalDataOnboardingDTO          `json:"onboardingProfile"`
+	SavedWords              []PersonalDataSavedWordDTO          `json:"savedWords"`
+	ReviewHistory           []PersonalDataReviewDTO             `json:"reviewHistory"`
+	SentenceFeedbackHistory []PersonalDataSentenceFeedbackDTO   `json:"sentenceFeedbackHistory"`
+	DailyMissions           []PersonalDataMissionDTO            `json:"dailyMissions"`
+	DailyActivity           []PersonalDataActivityDTO           `json:"dailyActivity"`
+	ConfidencePointLedger   []PersonalDataConfidenceLedgerDTO   `json:"confidencePointLedger"`
+	GraceDayLedger          []PersonalDataGraceLedgerDTO        `json:"graceDayLedger"`
+	StreakState             *PersonalDataStreakDTO              `json:"streakState"`
+}
+
+// Learning-history DTOs enumerate only the repository's learner-visible
+// projection. Private snapshots, answer maps and receipt identifiers are absent.
+type PersonalDataWordListDTO struct {
+	ID        string                          `json:"id"`
+	Name      string                          `json:"name"`
+	Revision  int                             `json:"revision"`
+	CreatedAt string                          `json:"createdAt"`
+	UpdatedAt string                          `json:"updatedAt"`
+	DeletedAt *string                         `json:"deletedAt"`
+	Members   []PersonalDataWordListMemberDTO `json:"members"`
+}
+type PersonalDataWordListMemberDTO struct {
+	MeaningID string `json:"meaningId"`
+	AddedAt   string `json:"addedAt"`
+}
+type PersonalDataLearningPreferencesDTO struct {
+	_            struct{} `nullable:"true"`
+	LearningGoal string   `json:"learningGoal"`
+	MainUseCase  string   `json:"mainUseCase"`
+	Revision     int      `json:"revision"`
+	CreatedAt    string   `json:"createdAt"`
+	UpdatedAt    string   `json:"updatedAt"`
+}
+type PersonalDataWordKnowledgeDTO struct {
+	MeaningID         string `json:"meaningId"`
+	SelfReportedKnown bool   `json:"selfReportedKnown"`
+	Note              string `json:"note"`
+	UpdatedAt         string `json:"updatedAt"`
+}
+type PersonalDataSessionProgressDTO struct {
+	ID                  string  `json:"id"`
+	Status              string  `json:"status"`
+	CompletedSteps      int     `json:"completedSteps"`
+	TotalSteps          int     `json:"totalSteps"`
+	FirstAnswersCorrect int     `json:"firstAnswersCorrect"`
+	QuestionsAnswered   int     `json:"questionsAnswered"`
+	StartedAt           string  `json:"startedAt"`
+	UpdatedAt           string  `json:"updatedAt"`
+	CompletedAt         *string `json:"completedAt"`
+}
+type PersonalDataLearningActionDTO struct {
+	StepID      *string `json:"stepId,omitempty"`
+	Action      *string `json:"action,omitempty"`
+	ChoiceID    *string `json:"choiceId,omitempty"`
+	TypedAnswer *string `json:"typedAnswer,omitempty"`
+	LessonKey   *string `json:"lessonKey,omitempty"`
+}
+type PersonalDataStorySessionDTO struct {
+	PersonalDataSessionProgressDTO
+	StoryKey       string                       `json:"storyKey"`
+	Title          string                       `json:"title"`
+	ContentVersion string                       `json:"contentVersion"`
+	GradingVersion string                       `json:"gradingVersion"`
+	Actions        []PersonalDataStoryActionDTO `json:"actions"`
+}
+type PersonalDataStoryActionDTO struct {
+	Action    PersonalDataLearningActionDTO `json:"action"`
+	Feedback  *PersonalDataStoryFeedbackDTO `json:"feedback"`
+	CreatedAt string                        `json:"createdAt"`
+}
+type PersonalDataStoryFeedbackDTO struct {
+	_           struct{} `nullable:"true"`
+	StepID      string   `json:"stepId"`
+	Correct     bool     `json:"correct"`
+	Answer      string   `json:"answer"`
+	Explanation string   `json:"explanation"`
+}
+type PersonalDataPracticeSessionDTO struct {
+	PersonalDataSessionProgressDTO
+	Mode           string                          `json:"mode"`
+	LessonKey      *string                         `json:"lessonKey"`
+	ListID         *string                         `json:"listId"`
+	ListName       *string                         `json:"listName"`
+	ListRevision   *int                            `json:"listRevision"`
+	ContentVersion string                          `json:"contentVersion"`
+	GradingVersion string                          `json:"gradingVersion"`
+	Actions        []PersonalDataPracticeActionDTO `json:"actions"`
+}
+type PersonalDataPracticeActionDTO struct {
+	Action    PersonalDataLearningActionDTO    `json:"action"`
+	MeaningID *string                          `json:"meaningId"`
+	Correct   *bool                            `json:"correct"`
+	Feedback  *PersonalDataPracticeFeedbackDTO `json:"feedback"`
+	CreatedAt string                           `json:"createdAt"`
+}
+type PersonalDataPracticeFeedbackDTO struct {
+	_           struct{} `nullable:"true"`
+	StepID      string   `json:"stepId"`
+	Correct     bool     `json:"correct"`
+	Assisted    bool     `json:"assisted"`
+	Answer      string   `json:"answer"`
+	Explanation string   `json:"explanation"`
+	WordText    string   `json:"wordText"`
+	WordSlug    string   `json:"wordSlug"`
+	MeaningID   string   `json:"meaningId"`
+}
+type PersonalDataGuidedLessonDTO struct {
+	PersonalDataSessionProgressDTO
+	LessonKey       string                         `json:"lessonKey"`
+	LessonVersion   string                         `json:"lessonVersion"`
+	ExerciseVersion *string                        `json:"exerciseVersion"`
+	Title           string                         `json:"title"`
+	Words           []PersonalDataLessonWordDTO    `json:"words"`
+	Feedback        *PersonalDataLessonFeedbackDTO `json:"feedback"`
+	Actions         []PersonalDataLessonActionDTO  `json:"actions"`
+}
+type PersonalDataLessonWordDTO struct {
+	MeaningID    string `json:"meaningId"`
+	WordText     string `json:"wordText"`
+	WordSlug     string `json:"wordSlug"`
+	PartOfSpeech string `json:"partOfSpeech"`
+	Definition   string `json:"definition"`
+	Example      string `json:"example"`
+	UsageNote    string `json:"usageNote"`
+}
+type PersonalDataLessonActionDTO struct {
+	Action         PersonalDataLearningActionDTO  `json:"action"`
+	Feedback       *PersonalDataLessonFeedbackDTO `json:"feedback"`
+	CompletedSteps int                            `json:"completedSteps"`
+	CreatedAt      string                         `json:"createdAt"`
+}
+type PersonalDataLessonFeedbackDTO struct {
+	_               struct{} `nullable:"true"`
+	StepID          string   `json:"stepId"`
+	Correct         bool     `json:"correct"`
+	Explanation     string   `json:"explanation"`
+	CorrectChoiceID string   `json:"correctChoiceId"`
+	Answer          string   `json:"answer,omitempty"`
 }
 
 type PersonalDataProfileDTO struct {

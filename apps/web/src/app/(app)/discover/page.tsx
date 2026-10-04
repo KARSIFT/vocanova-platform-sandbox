@@ -48,6 +48,12 @@ export default async function DiscoverPage() {
 
       <div className="my-5 flex flex-wrap gap-3">
         <Link
+          href="/lists"
+          className="inline-flex min-h-12 items-center rounded-xl border border-neutral-300 bg-white px-5 py-3 font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+        >
+          Personal lists
+        </Link>
+        <Link
           href="/plan"
           className="inline-flex min-h-12 items-center rounded-xl border border-neutral-300 bg-white px-5 py-3 font-semibold text-primary-700"
         >
@@ -66,6 +72,12 @@ export default async function DiscoverPage() {
           Choose a practice
         </Link>
       </div>
+      <Link
+        href="/writing"
+        className="mb-5 inline-flex min-h-12 items-center rounded-xl border border-neutral-300 bg-white px-5 py-3 font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+      >
+        Topic writing
+      </Link>
       {lessonResponse ? (
         <LessonPath lessons={lessons} />
       ) : (

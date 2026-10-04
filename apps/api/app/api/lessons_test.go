@@ -121,6 +121,13 @@ func TestLessonAPIStartActionAndOwnershipContract(t *testing.T) {
 	result := send("POST", route+"/actions", body, "action-id", repo.owner)
 	require.Equal(t, 200, result.Code, result.Body.String())
 	require.Equal(t, lessons.Action{StepID: "recall-1", ExpectedRevision: 4, ClientActionID: "action-id", Action: "answer", ChoiceID: "choice-a"}, repo.action)
+	typedBody := `{"stepId":"typed_recall-2","expectedRevision":5,"clientActionId":"typed-answer","action":"answer","typedAnswer":"small talk"}`
+	typedResult := send("POST", route+"/actions", typedBody, "typed-answer", repo.owner)
+	require.Equal(t, 200, typedResult.Code, typedResult.Body.String())
+	require.Equal(t, "small talk", repo.action.TypedAnswer)
+	require.Empty(t, repo.action.ChoiceID)
+	mixedBody := `{"stepId":"typed_recall-2","expectedRevision":5,"clientActionId":"invalid","action":"answer","typedAnswer":"small talk","choiceId":"choice"}`
+	require.Equal(t, 400, send("POST", route+"/actions", mixedBody, "invalid", repo.owner).Code)
 	repo.err = lessons.ErrConflict
 	require.Equal(t, 409, send("POST", route+"/actions", body, "action-id", repo.owner).Code)
 	repo.err = lessons.ErrContentUnavailable

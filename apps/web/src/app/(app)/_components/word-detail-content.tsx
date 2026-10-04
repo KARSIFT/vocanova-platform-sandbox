@@ -1,6 +1,6 @@
 import type { WordDetail } from "@vocanova/api-client";
 
-import { formatNoteType, getAdditionalDefinition } from "@/lib/word-definition";
+import { getAdditionalDefinition } from "@/lib/word-definition";
 import { ListenButton } from "@/ui/pronunciation";
 import { Eyebrow } from "@/ui/surface";
 
@@ -9,6 +9,9 @@ import { MeaningSaveButton } from "../discover/[situation]/[word]/_components/me
 import { formatWordReviewState } from "../discover/[situation]/[word]/_components/word-review-state";
 import { SentenceFeedback } from "./sentence-feedback";
 import { MeaningKnowledgeEditor } from "./meaning-knowledge-editor";
+import { MeaningListEditor } from "./meaning-list-editor";
+import { MeaningTeaching } from "./meaning-teaching";
+import { MeaningComparison, meaningAnchor } from "./meaning-comparison";
 
 interface WordDetailContentProps {
   word: WordDetail;
@@ -39,6 +42,8 @@ export function WordDetailContent({
         </p>
       </div>
 
+      <MeaningComparison word={wordData} />
+
       <section className="mt-[var(--spacing-lg)]">
         <h2 className="text-xl font-semibold text-neutral-900">Meanings</h2>
         <ul className="mt-[var(--spacing-sm)] space-y-[var(--spacing-md)]">
@@ -55,7 +60,9 @@ export function WordDetailContent({
             return (
               <li
                 key={meaning.id}
-                className="rounded-[var(--radius-lg)] border border-neutral-200 bg-white p-[var(--spacing-lg)] shadow-sm"
+                id={meaningAnchor(meaning.id)}
+                tabIndex={-1}
+                className="scroll-mt-24 rounded-[var(--radius-lg)] border border-neutral-200 bg-white p-[var(--spacing-lg)] shadow-sm"
               >
                 <div className="flex flex-wrap items-start justify-between gap-[var(--spacing-md)]">
                   <div className="min-w-0 flex-1">
@@ -85,45 +92,9 @@ export function WordDetailContent({
                   />
                 </div>
 
-                {meaning.examples.length > 0 ? (
-                  <div className="mt-[var(--spacing-md)]">
-                    <h3 className="text-base font-semibold text-neutral-900">
-                      Example sentences
-                    </h3>
-                    <ul className="mt-[var(--spacing-xs)] list-disc space-y-[var(--spacing-xs)] pl-[var(--spacing-lg)] text-base text-neutral-700">
-                      {meaning.examples.map((example) => (
-                        <li key={example.id}>
-                          <p>{example.exampleText}</p>
-                          <ListenButton
-                            text={example.exampleText}
-                            label={`example: ${example.exampleText}`}
-                            showCaption={false}
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
+                <MeaningTeaching meaning={meaning} />
 
-                {meaning.usageNotes.length > 0 ? (
-                  <div className="mt-[var(--spacing-md)]">
-                    <h3 className="text-base font-semibold text-neutral-900">
-                      Usage notes
-                    </h3>
-                    <ul className="mt-[var(--spacing-xs)] space-y-[var(--spacing-sm)]">
-                      {meaning.usageNotes.map((note) => (
-                        <li key={note.id}>
-                          <h4 className="text-sm font-semibold text-neutral-800">
-                            {formatNoteType(note.noteType)}
-                          </h4>
-                          <p className="text-base text-neutral-700">
-                            {note.noteText}
-                          </p>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
+                <MeaningListEditor meaningId={meaning.id} />
 
                 <MeaningKnowledgeEditor
                   meaningId={meaning.id}

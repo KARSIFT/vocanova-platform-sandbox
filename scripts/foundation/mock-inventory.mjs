@@ -100,6 +100,11 @@ const expectedTopLevelRouteDirectories = [
 
 // Retain the established surface; new learning features use bounded route shapes.
 export function isRegisteredAPIPath(apiPath) {
+  const uuid =
+    "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
+  const listId = `(?:${uuid}|\\{listId\\})`;
+  const meaningId = `(?:${uuid}|\\{meaningId\\})`;
+  const sessionId = `(?:${uuid}|\\{sessionId\\})`;
   const allowedAPIPaths = [
     /^\/api\/v1\/me$/,
     /^\/api\/v1\/auth(?:\/|$)/,
@@ -131,6 +136,13 @@ export function isRegisteredAPIPath(apiPath) {
     /^\/api\/v1\/learning-preferences$/,
     /^\/api\/v1\/lesson-recommendation$/,
     /^\/api\/v1\/achievements$/,
+    /^\/api\/v1\/word-lists$/,
+    new RegExp(`^/api/v1/word-lists/${listId}$`),
+    new RegExp(`^/api/v1/word-lists/${listId}/members/${meaningId}$`),
+    /^\/api\/v1\/stories$/,
+    /^\/api\/v1\/stories\/(?:[a-z0-9]+(?:-[a-z0-9]+)*|\{storyKey\})$/,
+    /^\/api\/v1\/story-sessions$/,
+    new RegExp(`^/api/v1/story-sessions/${sessionId}(?:/actions)?$`),
   ];
   return allowedAPIPaths.some((allowed) => allowed.test(apiPath));
 }
@@ -151,6 +163,8 @@ export function isRegisteredBusinessModule(name) {
     "practice",
     "wordknowledge",
     "achievements",
+    "wordlists",
+    "stories",
   ]);
   return allowedBusinessModules.has(name);
 }
@@ -195,6 +209,77 @@ export function isRegisteredSchemaFile(name) {
     "wordknowledgeaction.go",
   ]);
   return allowedSchemaFiles.has(name);
+}
+
+// Migration filenames remain explicit; only these two feature migrations receive
+// a table-set guard here. Adding a table requires a separate inventory review.
+const allowedMigrationFiles = new Set([
+  "20260724210000_identity_foundation.sql",
+  "20260724210001_oauth_state.sql",
+  "20260725100000_voc026_p1_content_tables.sql",
+  "20260725100001_voc026_p1_idempotency_keys.sql",
+  "20260725110000_voc027_p2_review_attempts.sql",
+  "20260725120000_voc028_p3_learner_sentences.sql",
+  "20260725120001_voc028_p3_ai_feedback_attempts.sql",
+  "20260725130000_voc030_p4_user_settings.sql",
+  "20260725130001_voc030_p4_mission_tables.sql",
+  "20260725130002_voc030_p4_gamification_tables.sql",
+  "20260725140000_voc031_p5_user_onboarding_profiles.sql",
+  "20260725140001_voc031_p5_email_change_links.sql",
+  "20260725140002_voc031_p5_account_deletion_requests.sql",
+  "20260808141000_voc050_t00_synthetic_smoke_test_user.sql",
+  "20260905120000_voc1200_ai_feedback_quality_review_reports.sql",
+  "20260905130000_ai_feedback_retry_history.sql",
+  "20260908010000_voc1350_restrict_ai_feedback_report_foreign_keys.sql",
+  "20260908020000_voc1352_feature_audit_logs.sql",
+  "20260908110000_daily_activity_review_counter_integrity.sql",
+  "20260908120000_grace_protected_mission_linkage.sql",
+  "20260908130000_email_change_links_cleanup_order.sql",
+  "20260908140000_voc1398_ai_feedback_outcome_integrity.sql",
+  "20260908150000_daily_activity_point_aggregate_integrity.sql",
+  "20260908153000_voc1402_append_only_learning_ledgers.sql",
+  "20260908170000_user_word_review_counter_constraints.sql",
+  "20260908180000_daily_activity_remaining_counter_integrity.sql",
+  "20260908190000_voc1406_user_word_result_rating_integrity.sql",
+  "20260909142059_review_attempt_user_word_integrity.sql",
+  "20260909142060_mission_optional_goal_pair_integrity.sql",
+  "20260909142061_mission_completed_at_integrity.sql",
+  "20260909142062_review_attempt_result_rating_integrity.sql",
+  "20260909142063_voc1411_idempotency_record_integrity.sql",
+  "20260912090000_password_credentials.sql",
+  "20261002190000_active_synthetic_identity_uniqueness.sql",
+  "20261002210000_guided_lessons.sql",
+  "20261002220000_word_knowledge.sql",
+  "20261002230000_practice_sessions.sql",
+  "20261002233000_learning_preferences.sql",
+  "20261004100000_word_lists.sql",
+  "20261004140000_original_stories.sql",
+]);
+export function isRegisteredMigrationFile(name) {
+  return allowedMigrationFiles.has(name);
+}
+const featureMigrationTables = new Map([
+  [
+    "20261004100000_word_lists.sql",
+    ["user_word_lists", "user_word_list_members", "word_list_actions"],
+  ],
+  ["20261004140000_original_stories.sql", ["story_sessions", "story_actions"]],
+]);
+export function isRegisteredFeatureMigrationTables(name, tables) {
+  const expected = featureMigrationTables.get(name);
+  return (
+    !!expected &&
+    tables.length === expected.length &&
+    tables.every((table) => expected.includes(table)) &&
+    new Set(tables).size === expected.length
+  );
+}
+export function migrationTableNames(source) {
+  return [
+    ...source.matchAll(
+      /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([^();]+?)\s*\(/gi,
+    ),
+  ].map((match) => match[1].trim());
 }
 
 export function validateMockInventory() {
@@ -378,56 +463,35 @@ export function validateMockInventory() {
   // claims to real users and fingerprints. The active synthetic identity
   // migration retains retired fixture history while permitting one active
   // marked account; it does not add an application boundary.
-  const allowedMigrationFiles = new Set([
-    "20260724210000_identity_foundation.sql",
-    "20260724210001_oauth_state.sql",
-    "20260725100000_voc026_p1_content_tables.sql",
-    "20260725100001_voc026_p1_idempotency_keys.sql",
-    "20260725110000_voc027_p2_review_attempts.sql",
-    "20260725120000_voc028_p3_learner_sentences.sql",
-    "20260725120001_voc028_p3_ai_feedback_attempts.sql",
-    "20260725130000_voc030_p4_user_settings.sql",
-    "20260725130001_voc030_p4_mission_tables.sql",
-    "20260725130002_voc030_p4_gamification_tables.sql",
-    "20260725140000_voc031_p5_user_onboarding_profiles.sql",
-    "20260725140001_voc031_p5_email_change_links.sql",
-    "20260725140002_voc031_p5_account_deletion_requests.sql",
-    "20260808141000_voc050_t00_synthetic_smoke_test_user.sql",
-    "20260905120000_voc1200_ai_feedback_quality_review_reports.sql",
-    "20260905130000_ai_feedback_retry_history.sql",
-    "20260908010000_voc1350_restrict_ai_feedback_report_foreign_keys.sql",
-    "20260908020000_voc1352_feature_audit_logs.sql",
-    "20260908110000_daily_activity_review_counter_integrity.sql",
-    "20260908120000_grace_protected_mission_linkage.sql",
-    "20260908130000_email_change_links_cleanup_order.sql",
-    "20260908140000_voc1398_ai_feedback_outcome_integrity.sql",
-    "20260908150000_daily_activity_point_aggregate_integrity.sql",
-    "20260908153000_voc1402_append_only_learning_ledgers.sql",
-    "20260908170000_user_word_review_counter_constraints.sql",
-    "20260908180000_daily_activity_remaining_counter_integrity.sql",
-    "20260908190000_voc1406_user_word_result_rating_integrity.sql",
-    "20260909142059_review_attempt_user_word_integrity.sql",
-    "20260909142060_mission_optional_goal_pair_integrity.sql",
-    "20260909142061_mission_completed_at_integrity.sql",
-    "20260909142062_review_attempt_result_rating_integrity.sql",
-    "20260909142063_voc1411_idempotency_record_integrity.sql",
-    "20260912090000_password_credentials.sql",
-    "20261002190000_active_synthetic_identity_uniqueness.sql",
-    "20261002210000_guided_lessons.sql",
-    "20261002220000_word_knowledge.sql",
-    "20261002230000_practice_sessions.sql",
-    "20261002233000_learning_preferences.sql",
-  ]);
+
   for (const entry of readdirSync(apiMigrationRoot, {
     withFileTypes: true,
   })) {
     if (
       entry.isFile() &&
       entry.name.endsWith(".sql") &&
-      !allowedMigrationFiles.has(entry.name)
+      !isRegisteredMigrationFile(entry.name)
     ) {
       errors.push(
         `apps/api/migrations/${entry.name}: migration needs an explicit inventory review`,
+      );
+    }
+  }
+
+  for (const name of featureMigrationTables.keys()) {
+    const migrationPath = path.join(apiMigrationRoot, name);
+    if (!exists(migrationPath)) {
+      errors.push(
+        `apps/api/migrations/${name}: registered feature migration is missing`,
+      );
+    } else if (
+      !isRegisteredFeatureMigrationTables(
+        name,
+        migrationTableNames(readFileSync(migrationPath, "utf8")),
+      )
+    ) {
+      errors.push(
+        `apps/api/migrations/${name}: table set is outside the registered feature inventory`,
       );
     }
   }

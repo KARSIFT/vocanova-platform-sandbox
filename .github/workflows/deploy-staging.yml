@@ -1614,7 +1614,63 @@ jobs:
           E2E_CSRF_TOKEN: ${{ steps.mint_staging_session.outputs.csrf_token }}
         run: |
           pnpm --filter @vocanova/web exec playwright test \
-            --config playwright.staging.config.ts
+            --config playwright.staging.config.ts core-loop.staging.spec.ts
+
+      # The core journey signs out. Mint a new synthetic session rather than
+      # reusing its revoked cookie for the connected maturity acceptance gate.
+      - name: Mint synthetic smoke-test session for the staging maturity journey
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        id: mint_staging_maturity_session
+        env:
+          STAGING_SMOKE_TEST_SESSION_MINT_TOKEN: ${{ secrets.STAGING_SMOKE_TEST_SESSION_MINT_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${STAGING_SMOKE_TEST_SESSION_MINT_TOKEN:-}" ]; then
+            echo "ERROR: STAGING_SMOKE_TEST_SESSION_MINT_TOKEN is required for the staging maturity journey check" >&2
+            echo "  It must match the staging api container's SMOKE_TEST_SESSION_MINT_TOKEN;" >&2
+            echo "  VOC-050-T01 does not register the mint endpoint at all when that is unset." >&2
+            exit 1
+          fi
+
+          response_json="$(curl -fsS --max-time 20 \
+            -X POST \
+            -H "Host: api-staging.vocanova.site" \
+            -H "Authorization: Bearer ${STAGING_SMOKE_TEST_SESSION_MINT_TOKEN}" \
+            -H "Accept: application/json" \
+            "https://api-staging.vocanova.site/ops/synthetic-smoke-test/session")"
+
+          session_cookie="$(printf '%s' "$response_json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["session_cookie"])')"
+          csrf_token="$(printf '%s' "$response_json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["csrf_token"])')"
+
+          if [ -z "$session_cookie" ] || [ -z "$csrf_token" ]; then
+            echo "ERROR: the session-mint endpoint returned an empty session or csrf value" >&2
+            exit 1
+          fi
+
+          # Both values are credential-shaped (they grant access to
+          # the synthetic account until it expires), and step outputs
+          # are not secrets. Mask them before writing step outputs to protect
+          # runner logs. Masking does not sanitize artifacts: the staging
+          # Playwright config disables traces, and tests must not log or attach
+          # credentials. Retained visual/error reports still contain synthetic UI.
+          echo "::add-mask::$session_cookie"
+          echo "::add-mask::$csrf_token"
+
+          echo "session_cookie=$session_cookie" >> "$GITHUB_OUTPUT"
+          echo "csrf_token=$csrf_token" >> "$GITHUB_OUTPUT"
+          echo "Minted a synthetic smoke-test session for the staging maturity journey check."
+
+      - name: Run the staging maturity journey
+        if: ${{ inputs.skip_ssh_deploy != true }}
+        env:
+          CI: "1"
+          STAGING_WEB_BASE_URL: "https://staging.vocanova.site"
+          E2E_MATURITY_JOURNEY: "true"
+          E2E_SESSION_COOKIE: ${{ steps.mint_staging_maturity_session.outputs.session_cookie }}
+          E2E_CSRF_TOKEN: ${{ steps.mint_staging_maturity_session.outputs.csrf_token }}
+        run: |
+          pnpm --filter @vocanova/web exec playwright test \
+            --config playwright.staging.config.ts maturity.staging.spec.ts
 
       # VOC-053-DEP-00 diagnostic (temporary - see issue #453/VOC-053-T01):
       # T01's independent review confirmed the implementer correctly

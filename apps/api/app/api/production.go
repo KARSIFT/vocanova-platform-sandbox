@@ -25,8 +25,10 @@ import (
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/password"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/practice"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/reviews"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/stories"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/users"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/wordknowledge"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/wordlists"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/clock"
 	"github.com/KARSIFT/vocanova-platform/apps/api/foundation/email"
 	"github.com/danielgtaylor/huma/v2"
@@ -831,6 +833,8 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	RegisterLessonRecommendation(api, lessons.NewRecommendationService(lessons.NewPostgreSQLRepository(db)))
 	RegisterWordKnowledge(api, knowledgeSvc, authSvc)
 	RegisterPractice(api, practiceSvc, authSvc)
+	RegisterWordLists(api, wordlists.NewService(wordlists.NewPostgreSQLRepository(db), clk), authSvc)
+	RegisterStories(api, stories.NewService(stories.NewPostgreSQLRepository(db), clk), authSvc)
 	RegisterAchievements(api, achievements.NewService(achievements.NewPostgreSQLRepository(db)))
 	RegisterReviews(api, reviewsSvc, authSvc)
 	RegisterAIFeedback(api, aifeedbackSvc, authSvc)

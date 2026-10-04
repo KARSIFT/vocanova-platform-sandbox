@@ -125,6 +125,10 @@
             "maxLength": 100,
             "minLength": 1,
             "type": "string"
+          },
+          "typedAnswer": {
+            "maxLength": 200,
+            "type": "string"
           }
         },
         "required": [
@@ -675,6 +679,9 @@
       "Feedback": {
         "additionalProperties": false,
         "properties": {
+          "answer": {
+            "type": "string"
+          },
           "correct": {
             "type": "boolean"
           },
@@ -1702,8 +1709,29 @@
               "null"
             ]
           },
+          "guidedLessons": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalDataGuidedLessonDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "learningPreferences": {
+            "$ref": "#/components/schemas/PersonalDataLearningPreferencesDTO"
+          },
           "onboardingProfile": {
             "$ref": "#/components/schemas/PersonalDataOnboardingDTO"
+          },
+          "practiceSessions": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalDataPracticeSessionDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "profile": {
             "$ref": "#/components/schemas/PersonalDataProfileDTO"
@@ -1741,11 +1769,44 @@
           "settings": {
             "$ref": "#/components/schemas/PersonalDataSettingsDTO"
           },
+          "storySessions": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalDataStorySessionDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
           "streakState": {
             "$ref": "#/components/schemas/PersonalDataStreakDTO"
+          },
+          "wordKnowledge": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalDataWordKnowledgeDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "wordLists": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalDataWordListDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
         "required": [
+          "wordLists",
+          "storySessions",
+          "learningPreferences",
+          "practiceSessions",
+          "wordKnowledge",
+          "guidedLessons",
           "schemaVersion",
           "profile",
           "settings",
@@ -1901,6 +1962,244 @@
         ],
         "type": "object"
       },
+      "PersonalDataGuidedLessonDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalDataLessonActionDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "completedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "completedSteps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "exerciseVersion": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "feedback": {
+            "$ref": "#/components/schemas/PersonalDataLessonFeedbackDTO"
+          },
+          "firstAnswersCorrect": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "id": {
+            "type": "string"
+          },
+          "lessonKey": {
+            "type": "string"
+          },
+          "lessonVersion": {
+            "type": "string"
+          },
+          "questionsAnswered": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "startedAt": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "totalSteps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "words": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalDataLessonWordDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "lessonKey",
+          "lessonVersion",
+          "exerciseVersion",
+          "title",
+          "words",
+          "feedback",
+          "actions",
+          "id",
+          "status",
+          "completedSteps",
+          "totalSteps",
+          "firstAnswersCorrect",
+          "questionsAnswered",
+          "startedAt",
+          "updatedAt",
+          "completedAt"
+        ],
+        "type": "object"
+      },
+      "PersonalDataLearningActionDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "choiceId": {
+            "type": "string"
+          },
+          "lessonKey": {
+            "type": "string"
+          },
+          "stepId": {
+            "type": "string"
+          },
+          "typedAnswer": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "PersonalDataLearningPreferencesDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "createdAt": {
+            "type": "string"
+          },
+          "learningGoal": {
+            "type": "string"
+          },
+          "mainUseCase": {
+            "type": "string"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "learningGoal",
+          "mainUseCase",
+          "revision",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "PersonalDataLessonActionDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/PersonalDataLearningActionDTO"
+          },
+          "completedSteps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "feedback": {
+            "$ref": "#/components/schemas/PersonalDataLessonFeedbackDTO"
+          }
+        },
+        "required": [
+          "action",
+          "feedback",
+          "completedSteps",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "PersonalDataLessonFeedbackDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "answer": {
+            "type": "string"
+          },
+          "correct": {
+            "type": "boolean"
+          },
+          "correctChoiceId": {
+            "type": "string"
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "stepId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "stepId",
+          "correct",
+          "explanation",
+          "correctChoiceId"
+        ],
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "PersonalDataLessonWordDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "definition": {
+            "type": "string"
+          },
+          "example": {
+            "type": "string"
+          },
+          "meaningId": {
+            "type": "string"
+          },
+          "partOfSpeech": {
+            "type": "string"
+          },
+          "usageNote": {
+            "type": "string"
+          },
+          "wordSlug": {
+            "type": "string"
+          },
+          "wordText": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "meaningId",
+          "wordText",
+          "wordSlug",
+          "partOfSpeech",
+          "definition",
+          "example",
+          "usageNote"
+        ],
+        "type": "object"
+      },
       "PersonalDataMissionDTO": {
         "additionalProperties": false,
         "properties": {
@@ -2029,6 +2328,185 @@
           "object",
           "null"
         ]
+      },
+      "PersonalDataPracticeActionDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/PersonalDataLearningActionDTO"
+          },
+          "correct": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "feedback": {
+            "$ref": "#/components/schemas/PersonalDataPracticeFeedbackDTO"
+          },
+          "meaningId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "action",
+          "meaningId",
+          "correct",
+          "feedback",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "PersonalDataPracticeFeedbackDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "answer": {
+            "type": "string"
+          },
+          "assisted": {
+            "type": "boolean"
+          },
+          "correct": {
+            "type": "boolean"
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "meaningId": {
+            "type": "string"
+          },
+          "stepId": {
+            "type": "string"
+          },
+          "wordSlug": {
+            "type": "string"
+          },
+          "wordText": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "stepId",
+          "correct",
+          "assisted",
+          "answer",
+          "explanation",
+          "wordText",
+          "wordSlug",
+          "meaningId"
+        ],
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "PersonalDataPracticeSessionDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalDataPracticeActionDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "completedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "completedSteps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "contentVersion": {
+            "type": "string"
+          },
+          "firstAnswersCorrect": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "gradingVersion": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "lessonKey": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "listId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "listName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "listRevision": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "mode": {
+            "type": "string"
+          },
+          "questionsAnswered": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "startedAt": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "totalSteps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "lessonKey",
+          "listId",
+          "listName",
+          "listRevision",
+          "contentVersion",
+          "gradingVersion",
+          "actions",
+          "id",
+          "status",
+          "completedSteps",
+          "totalSteps",
+          "firstAnswersCorrect",
+          "questionsAnswered",
+          "startedAt",
+          "updatedAt",
+          "completedAt"
+        ],
+        "type": "object"
       },
       "PersonalDataProfileDTO": {
         "additionalProperties": false,
@@ -2408,6 +2886,130 @@
         ],
         "type": "object"
       },
+      "PersonalDataStoryActionDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/PersonalDataLearningActionDTO"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "feedback": {
+            "$ref": "#/components/schemas/PersonalDataStoryFeedbackDTO"
+          }
+        },
+        "required": [
+          "action",
+          "feedback",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "PersonalDataStoryFeedbackDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "answer": {
+            "type": "string"
+          },
+          "correct": {
+            "type": "boolean"
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "stepId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "stepId",
+          "correct",
+          "answer",
+          "explanation"
+        ],
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "PersonalDataStorySessionDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalDataStoryActionDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "completedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "completedSteps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "contentVersion": {
+            "type": "string"
+          },
+          "firstAnswersCorrect": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "gradingVersion": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "questionsAnswered": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "startedAt": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "storyKey": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "totalSteps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "storyKey",
+          "title",
+          "contentVersion",
+          "gradingVersion",
+          "actions",
+          "id",
+          "status",
+          "completedSteps",
+          "totalSteps",
+          "firstAnswersCorrect",
+          "questionsAnswered",
+          "startedAt",
+          "updatedAt",
+          "completedAt"
+        ],
+        "type": "object"
+      },
       "PersonalDataStreakDTO": {
         "additionalProperties": false,
         "properties": {
@@ -2458,6 +3060,92 @@
           "object",
           "null"
         ]
+      },
+      "PersonalDataWordKnowledgeDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "meaningId": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "selfReportedKnown": {
+            "type": "boolean"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "meaningId",
+          "selfReportedKnown",
+          "note",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "PersonalDataWordListDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "createdAt": {
+            "type": "string"
+          },
+          "deletedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalDataWordListMemberDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "revision",
+          "createdAt",
+          "updatedAt",
+          "deletedAt",
+          "members"
+        ],
+        "type": "object"
+      },
+      "PersonalDataWordListMemberDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "addedAt": {
+            "type": "string"
+          },
+          "meaningId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "meaningId",
+          "addedAt"
+        ],
+        "type": "object"
       },
       "PracticeAction": {
         "additionalProperties": false,
@@ -2648,6 +3336,16 @@
           "lessonKey": {
             "type": "string"
           },
+          "listId": {
+            "type": "string"
+          },
+          "listName": {
+            "type": "string"
+          },
+          "listRevision": {
+            "format": "int64",
+            "type": "integer"
+          },
           "mode": {
             "type": "string"
           },
@@ -2709,6 +3407,15 @@
           "lessonKey": {
             "maxLength": 100,
             "type": "string"
+          },
+          "listId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "listRevision": {
+            "format": "int64",
+            "minimum": 1,
+            "type": "integer"
           },
           "mode": {
             "enum": [
@@ -2794,6 +3501,16 @@
           },
           "lessonKey": {
             "type": "string"
+          },
+          "listId": {
+            "type": "string"
+          },
+          "listName": {
+            "type": "string"
+          },
+          "listRevision": {
+            "format": "int64",
+            "type": "integer"
           },
           "mode": {
             "type": "string"
@@ -3621,6 +4338,9 @@
           "currentStep": {
             "$ref": "#/components/schemas/Step"
           },
+          "exerciseVersion": {
+            "type": "string"
+          },
           "feedback": {
             "$ref": "#/components/schemas/Feedback"
           },
@@ -3865,11 +4585,19 @@
             "enum": [
               "teach",
               "recall",
-              "context"
+              "context",
+              "typed_recall",
+              "listening_choice"
             ],
             "type": "string"
           },
           "prompt": {
+            "type": "string"
+          },
+          "speechLanguage": {
+            "type": "string"
+          },
+          "speechText": {
             "type": "string"
           },
           "word": {
@@ -3882,6 +4610,557 @@
           "word",
           "prompt",
           "choices"
+        ],
+        "type": "object"
+      },
+      "StoryAction": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/StoryAction.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "action": {
+            "enum": [
+              "answer",
+              "continue"
+            ],
+            "type": "string"
+          },
+          "choiceId": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "clientActionId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "expectedRevision": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "stepId": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "stepId",
+          "expectedRevision",
+          "clientActionId",
+          "action"
+        ],
+        "type": "object"
+      },
+      "StoryCatalogItem": {
+        "additionalProperties": false,
+        "properties": {
+          "contentVersion": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "latestSession": {
+            "$ref": "#/components/schemas/StorySummary"
+          },
+          "level": {
+            "type": "string"
+          },
+          "lineCount": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "questionCount": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "situation": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "vocabulary": {
+            "items": {
+              "$ref": "#/components/schemas/StoryVocabulary"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "description",
+          "situation",
+          "level",
+          "contentVersion",
+          "lineCount",
+          "questionCount",
+          "vocabulary"
+        ],
+        "type": "object"
+      },
+      "StoryChoice": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "type": "object"
+      },
+      "StoryFeedback": {
+        "additionalProperties": false,
+        "properties": {
+          "answer": {
+            "type": "string"
+          },
+          "correct": {
+            "type": "boolean"
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "stepId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "stepId",
+          "correct",
+          "answer",
+          "explanation"
+        ],
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "StoryLibrary": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/StoryLibrary.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StoryCatalogItem"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "StoryLine": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "speaker": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "speaker",
+          "text"
+        ],
+        "type": "object"
+      },
+      "StoryReading": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/StoryReading.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "contentVersion": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "latestSession": {
+            "$ref": "#/components/schemas/StorySummary"
+          },
+          "level": {
+            "type": "string"
+          },
+          "lineCount": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/StoryLine"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "questionCount": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "situation": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "vocabulary": {
+            "items": {
+              "$ref": "#/components/schemas/StoryVocabulary"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "lines",
+          "key",
+          "title",
+          "description",
+          "situation",
+          "level",
+          "contentVersion",
+          "lineCount",
+          "questionCount",
+          "vocabulary"
+        ],
+        "type": "object"
+      },
+      "StorySession": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/StorySession.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "canContinue": {
+            "type": "boolean"
+          },
+          "completedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "completedSteps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "contentVersion": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "currentStep": {
+            "$ref": "#/components/schemas/StoryStep"
+          },
+          "feedback": {
+            "$ref": "#/components/schemas/StoryFeedback"
+          },
+          "firstAnswersCorrect": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "gradingVersion": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "questionsAnswered": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "situation": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "in_progress",
+              "completed"
+            ],
+            "type": "string"
+          },
+          "storyKey": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "totalSteps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "visibleLines": {
+            "items": {
+              "$ref": "#/components/schemas/StoryLine"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "vocabulary": {
+            "items": {
+              "$ref": "#/components/schemas/StoryVocabulary"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "currentStep",
+          "feedback",
+          "canContinue",
+          "visibleLines",
+          "vocabulary",
+          "id",
+          "storyKey",
+          "title",
+          "situation",
+          "contentVersion",
+          "gradingVersion",
+          "status",
+          "revision",
+          "completedSteps",
+          "totalSteps",
+          "firstAnswersCorrect",
+          "questionsAnswered",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "StoryStartRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/StoryStartRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "storyKey": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "storyKey"
+        ],
+        "type": "object"
+      },
+      "StoryStep": {
+        "additionalProperties": false,
+        "properties": {
+          "choices": {
+            "items": {
+              "$ref": "#/components/schemas/StoryChoice"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "line",
+              "comprehension",
+              "phrase_completion"
+            ],
+            "type": "string"
+          },
+          "line": {
+            "$ref": "#/components/schemas/StoryLine"
+          },
+          "prompt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind"
+        ],
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "StorySummary": {
+        "additionalProperties": false,
+        "properties": {
+          "completedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "completedSteps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "contentVersion": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "firstAnswersCorrect": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "gradingVersion": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "questionsAnswered": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "situation": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "in_progress",
+              "completed"
+            ],
+            "type": "string"
+          },
+          "storyKey": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "totalSteps": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "storyKey",
+          "title",
+          "situation",
+          "contentVersion",
+          "gradingVersion",
+          "status",
+          "revision",
+          "completedSteps",
+          "totalSteps",
+          "firstAnswersCorrect",
+          "questionsAnswered",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "StoryVocabulary": {
+        "additionalProperties": false,
+        "properties": {
+          "definition": {
+            "type": "string"
+          },
+          "meaningId": {
+            "type": "string"
+          },
+          "wordSlug": {
+            "type": "string"
+          },
+          "wordText": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "wordText",
+          "wordSlug",
+          "meaningId",
+          "definition"
         ],
         "type": "object"
       },
@@ -4328,6 +5607,233 @@
         "required": [
           "id",
           "exampleText"
+        ],
+        "type": "object"
+      },
+      "WordListDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/WordListDetail.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "memberCount": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/WordListMember"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "usableMemberCount": {
+            "description": "Active meanings supported by the reviewed practice catalog",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "members",
+          "id",
+          "name",
+          "revision",
+          "memberCount",
+          "usableMemberCount",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "WordListMember": {
+        "additionalProperties": false,
+        "properties": {
+          "addedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "meaningId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "partOfSpeech": {
+            "type": "string"
+          },
+          "practiceAvailable": {
+            "type": "boolean"
+          },
+          "shortDefinition": {
+            "type": "string"
+          },
+          "wordId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "wordSlug": {
+            "type": "string"
+          },
+          "wordText": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "meaningId",
+          "wordId",
+          "wordSlug",
+          "wordText",
+          "shortDefinition",
+          "partOfSpeech",
+          "practiceAvailable",
+          "addedAt"
+        ],
+        "type": "object"
+      },
+      "WordListRevisionBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/WordListRevisionBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "expectedRevision": {
+            "format": "int64",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expectedRevision"
+        ],
+        "type": "object"
+      },
+      "WordListSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "memberCount": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "usableMemberCount": {
+            "description": "Active meanings supported by the reviewed practice catalog",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "revision",
+          "memberCount",
+          "usableMemberCount",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "WordListWriteBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/WordListWriteBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "expectedRevision": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "expectedRevision"
+        ],
+        "type": "object"
+      },
+      "WordListsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/WordListsResponse.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WordListSummary"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items"
         ],
         "type": "object"
       },
@@ -6934,6 +8440,237 @@
         ]
       }
     },
+    "/api/v1/stories": {
+      "get": {
+        "operationId": "ListStories",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoryLibrary"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Original A2–B1 story library and your latest attempts",
+        "tags": [
+          "Stories"
+        ]
+      }
+    },
+    "/api/v1/stories/{storyKey}": {
+      "get": {
+        "operationId": "GetStory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "storyKey",
+            "required": true,
+            "schema": {
+              "maxLength": 100,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoryReading"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Read the full original story and vocabulary without credit",
+        "tags": [
+          "Stories"
+        ]
+      }
+    },
+    "/api/v1/story-sessions": {
+      "post": {
+        "operationId": "StartStorySession",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoryStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorySession"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Start a repeatable story using a frozen original content snapshot",
+        "tags": [
+          "Stories"
+        ]
+      }
+    },
+    "/api/v1/story-sessions/{sessionId}": {
+      "get": {
+        "operationId": "GetStorySession",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorySession"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Resume your saved story",
+        "tags": [
+          "Stories"
+        ]
+      }
+    },
+    "/api/v1/story-sessions/{sessionId}/actions": {
+      "post": {
+        "operationId": "SubmitStoryAction",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoryAction"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorySession"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Grade a story choice or continue after a line or correct retry",
+        "tags": [
+          "Stories"
+        ]
+      }
+    },
     "/api/v1/user-words": {
       "get": {
         "operationId": "ListSavedWords",
@@ -7153,6 +8890,334 @@
         "summary": "Remove a saved meaning for the authenticated requester",
         "tags": [
           "Learning"
+        ]
+      }
+    },
+    "/api/v1/word-lists": {
+      "get": {
+        "operationId": "ListWordLists",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WordListsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List your private named vocabulary collections",
+        "tags": [
+          "Word lists"
+        ]
+      }
+    },
+    "/api/v1/word-lists/{listId}": {
+      "delete": {
+        "operationId": "DeleteWordList",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "expectedRevision",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete your list without changing saved words or practice history",
+        "tags": [
+          "Word lists"
+        ]
+      },
+      "get": {
+        "operationId": "GetWordList",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WordListDetail"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Get your list and meaning memberships",
+        "tags": [
+          "Word lists"
+        ]
+      },
+      "put": {
+        "operationId": "PutWordList",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WordListWriteBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WordListDetail"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Create or rename your private list with revision protection",
+        "tags": [
+          "Word lists"
+        ]
+      }
+    },
+    "/api/v1/word-lists/{listId}/members/{meaningId}": {
+      "delete": {
+        "operationId": "DeleteWordListMember",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "meaningId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "expectedRevision",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WordListDetail"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Remove a meaning without changing SRS or knowledge",
+        "tags": [
+          "Word lists"
+        ]
+      },
+      "put": {
+        "operationId": "PutWordListMember",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "meaningId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WordListRevisionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WordListDetail"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Add a canonical meaning to your list",
+        "tags": [
+          "Word lists"
         ]
       }
     },

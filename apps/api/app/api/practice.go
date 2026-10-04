@@ -64,6 +64,8 @@ func mapPracticeError(err error) error {
 		return huma.Error400BadRequest("Invalid practice request")
 	case errors.Is(err, practice.ErrConflict):
 		return huma.Error409Conflict("This practice changed. Reload it to continue.")
+	case errors.Is(err, practice.ErrListEmpty):
+		return huma.Error409Conflict("This list has no supported meanings to practise. Add words from the starter course first.")
 	case errors.Is(err, practice.ErrNoMistakes):
 		return huma.Error409Conflict("There are no supported mistakes to practise right now.")
 	case errors.Is(err, practice.ErrContentUnavailable):

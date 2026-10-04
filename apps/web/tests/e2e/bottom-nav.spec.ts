@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
 test.describe("Primary navigation", () => {
@@ -37,7 +38,15 @@ test.describe("Primary navigation", () => {
 
   test("keeps Journey current throughout the discovery flow", async ({
     page,
+    context,
+    baseURL,
   }) => {
+    if (!baseURL) throw new Error("Missing app URL");
+    // The guide loads authenticated story links. Legacy /me fixture defaults
+    // alone are not a signed-in session for these connected API reads.
+    await context.addCookies([
+      { name: "vocanova_session", value: randomUUID(), url: baseURL },
+    ]);
     for (const path of [
       "/discover",
       "/discover/ordering-at-a-cafe",
@@ -45,6 +54,7 @@ test.describe("Primary navigation", () => {
       "/words",
     ]) {
       await page.goto(path);
+      await expect(page).toHaveURL(new URL(path, baseURL).toString());
 
       await expect(
         page.getByRole("navigation", { name: "Primary" }).getByRole("link", {

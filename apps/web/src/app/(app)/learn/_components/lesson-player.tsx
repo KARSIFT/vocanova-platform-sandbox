@@ -14,6 +14,8 @@ import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError } from "@/lib/session";
 import { ListenButton } from "@/ui/pronunciation";
 import { Surface } from "@/ui/surface";
+import { LessonAudio } from "./lesson-audio";
+import { LessonReviewSave } from "./lesson-review-save";
 
 const primary =
   "inline-flex min-h-12 items-center justify-center rounded-xl bg-primary-700 px-5 py-3 font-semibold text-white hover:bg-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:opacity-50";
@@ -31,6 +33,7 @@ export function LessonPlayer({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [typedAnswer, setTypedAnswer] = useState("");
   const [needsRetry, setNeedsRetry] = useState(false);
   const [needsRefresh, setNeedsRefresh] = useState(false);
   const inFlight = useRef(false);
@@ -55,6 +58,7 @@ export function LessonPlayer({
 
   function accept(next: LessonSession) {
     focusAfterResponse.current = true;
+    if (next.currentStep?.id !== session?.currentStep?.id) setTypedAnswer("");
     setSession((current) =>
       current && current.id === next.id && current.revision > next.revision
         ? current
@@ -86,7 +90,11 @@ export function LessonPlayer({
     }
   }
 
-  async function submit(action?: "answer" | "continue", choiceId?: string) {
+  async function submit(
+    action?: "answer" | "continue",
+    choiceId?: string,
+    typed?: string,
+  ) {
     if (inFlight.current || needsRefresh) return;
     // Preserve the exact intent before session/CSRF preparation can fail. A
     // retry must have the same action even when no mutation reached the API.
@@ -98,6 +106,7 @@ export function LessonPlayer({
         clientActionId: crypto.randomUUID(),
         action,
         ...(choiceId ? { choiceId } : {}),
+        ...(typed !== undefined ? { typedAnswer: typed } : {}),
       };
     }
     inFlight.current = true;
@@ -131,6 +140,15 @@ export function LessonPlayer({
       accept(next);
     } catch (cause) {
       if (
+        cause instanceof ApiResponseError &&
+        (cause.status === 400 || cause.status === 422)
+      ) {
+        pendingAction.current = null;
+        setNeedsRetry(false);
+        setError(
+          "That answer could not be accepted. Check your text and try again; your draft is still here.",
+        );
+      } else if (
         cause instanceof ApiResponseError &&
         cause.status === 409 &&
         session
@@ -240,6 +258,10 @@ export function LessonPlayer({
             questions correct on your first try. Returning to these words will
             help them stay with you.
           </p>
+          <p className="mt-3 text-sm text-neutral-600">
+            Finishing a lesson does not save its words automatically. Choose the
+            meanings you want to review later.
+          </p>
           <ul className="my-6 divide-y divide-neutral-200">
             {session.words.map((word) => (
               <li key={word.meaningId} className="py-4">
@@ -250,6 +272,11 @@ export function LessonPlayer({
                   {word.wordText}
                 </Link>
                 <p className="text-neutral-700">{word.definition}</p>
+                <LessonReviewSave
+                  meaningId={word.meaningId}
+                  wordSlug={word.wordSlug}
+                  wordText={word.wordText}
+                />
               </li>
             ))}
           </ul>
@@ -275,7 +302,11 @@ export function LessonPlayer({
               ? "Meet a word"
               : step.kind === "recall"
                 ? "Remember the meaning"
-                : "Use it in context"}
+                : step.kind === "typed_recall"
+                  ? "Recall the word"
+                  : step.kind === "listening_choice"
+                    ? "Listen and understand"
+                    : "Use it in context"}
           </p>
           <h1
             ref={heading}
@@ -321,23 +352,69 @@ export function LessonPlayer({
                   {step.context}
                 </p>
               )}
-              <div
-                role="group"
-                aria-label="Answer choices"
-                className="grid gap-3"
-              >
-                {step.choices.map((choice) => (
-                  <button
-                    type="button"
-                    key={choice.id}
-                    disabled={locked || session.canContinue}
-                    onClick={() => void submit("answer", choice.id)}
-                    className={`${secondary} justify-start text-left ${session.feedback?.correctChoiceId === choice.id ? "border-primary-500 bg-primary-50" : ""}`}
+              {step.kind === "listening_choice" && step.speechText && (
+                <LessonAudio text={step.speechText} />
+              )}
+              {step.kind === "typed_recall" ? (
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    if (typedAnswer.trim())
+                      void submit("answer", undefined, typedAnswer);
+                  }}
+                  className="space-y-3"
+                >
+                  <label
+                    htmlFor="lesson-typed-answer"
+                    className="block font-semibold text-neutral-900"
                   >
-                    {choice.text}
+                    Your word or phrase
+                  </label>
+                  <input
+                    id="lesson-typed-answer"
+                    type="text"
+                    autoComplete="off"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    maxLength={200}
+                    value={typedAnswer}
+                    onChange={(event) => setTypedAnswer(event.target.value)}
+                    disabled={locked || session.canContinue}
+                    className="min-h-12 w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+                  />
+                  <p className="text-sm text-neutral-600">
+                    Try to remember the word. Capital letters and extra spaces
+                    do not matter.
+                  </p>
+                  <button
+                    type="submit"
+                    className={primary}
+                    disabled={
+                      locked || session.canContinue || !typedAnswer.trim()
+                    }
+                  >
+                    Check answer
                   </button>
-                ))}
-              </div>
+                </form>
+              ) : (
+                <div
+                  role="group"
+                  aria-label="Answer choices"
+                  className="grid gap-3"
+                >
+                  {step.choices.map((choice) => (
+                    <button
+                      type="button"
+                      key={choice.id}
+                      disabled={locked || session.canContinue}
+                      onClick={() => void submit("answer", choice.id)}
+                      className={`${secondary} justify-start text-left ${session.feedback?.correctChoiceId === choice.id ? "border-primary-500 bg-primary-50" : ""}`}
+                    >
+                      {choice.text}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
           {session.feedback && (
@@ -355,7 +432,9 @@ export function LessonPlayer({
               </p>
               {!session.feedback.correct && (
                 <p className="mt-2 text-sm text-neutral-700">
-                  Choose an answer to try again.
+                  {step.kind === "typed_recall"
+                    ? `Try typing the answer again${session.feedback.answer ? `: ${session.feedback.answer}` : "."}`
+                    : "Choose an answer to try again."}
                 </p>
               )}
             </div>

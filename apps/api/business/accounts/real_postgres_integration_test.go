@@ -93,7 +93,7 @@ func TestPostgreSQLRepositoryExportAndAnonymization(t *testing.T) {
 	if len(lessons) != 1 || lessons[0].(map[string]any)["lessonKey"] != "airport" || len(lessons[0].(map[string]any)["actions"].([]any)) != 1 {
 		t.Fatal("guided lesson progress and action history missing from export")
 	}
-	if export["schemaVersion"] != "1.4" || strings.Contains(string(payload), "private-lesson-idem") || strings.Contains(string(payload), "private-client-action") {
+	if export["schemaVersion"] != "1.5" || strings.Contains(string(payload), "private-lesson-idem") || strings.Contains(string(payload), "private-client-action") {
 		t.Fatal("export must include versioned lesson progress without internal replay keys")
 	}
 	if settings["timezone"] != "Asia/Tehran" || settings["dailyReviewTarget"] != float64(25) {

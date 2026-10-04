@@ -5,30 +5,30 @@ End-to-end Playwright suites for `@vocanova/web`. Net-new as of
 `docs/design/08-web-app-design.md` §"Architecture" but never
 created). Subsequent tasks extend it:
 
-| Task      | Status   | Adds                                                                                                                                          |
-| --------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| T07a      | shipped  | This directory + `playwright.config.ts` + a single Home scan at 1280x720 + the mock API server. **Scaffolding only.**                        |
-| T07b      | shipped  | Every remaining core-loop screen (Discover, Discover/[situation], Discover/[situation]/[word], Reviews, Progress, Onboarding, Settings) plus Home at the 360px and 430px viewports. Explicit keyboard-reachability and non-color-only-feedback assertions on top of the axe scan (axe alone is not sufficient for the T07b acceptance criterion's full wording). |
-| T08       | shipped  | The DOC-10 §7 full core-loop functional flow (auth → onboarding → discover → save → review session → sentence submission → deterministic AI feedback → progress update → settings change → logout → unauthenticated-access rejection). One Playwright test, one representative desktop width (mirrors T07a's "ONE representative desktop width" scope; mobile projects self-skip). |
-| T09       | shipped  | Lighthouse CI budgets in a separate directory (`apps/web/tests/lighthouse/`). 4 screens × 3 layouts = 12 audits, asserting the DOC-08 quality-standards thresholds (Performance 85+, Accessibility 95+, Best Practices 90+) against the same fixed local production build this directory's Playwright config serves. Wired into CI as `.github/workflows/lighthouse.yml`, mirroring this directory's `accessibility.yml` separation pattern. |
-| VOC-073   | shipped  | Dedicated accessibility specs for four entry surfaces omitted from T07b: `/signin`, `/` (landing), `/auth/magic`, and `/settings/account` (extracted from `settings-accessibility.spec.ts` into its own file — no duplicate CI run for that screen). |
+| Task    | Status  | Adds                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| T07a    | shipped | This directory + `playwright.config.ts` + a single Home scan at 1280x720 + the mock API server. **Scaffolding only.**                                                                                                                                                                                                                                                                                                                        |
+| T07b    | shipped | Every remaining core-loop screen (Discover, Discover/[situation], Discover/[situation]/[word], Reviews, Progress, Onboarding, Settings) plus Home at the 360px and 430px viewports. Explicit keyboard-reachability and non-color-only-feedback assertions on top of the axe scan (axe alone is not sufficient for the T07b acceptance criterion's full wording).                                                                             |
+| T08     | shipped | The DOC-10 §7 full core-loop functional flow (auth → onboarding → discover → save → review session → sentence submission → deterministic AI feedback → progress update → settings change → logout → unauthenticated-access rejection). One Playwright test, one representative desktop width (mirrors T07a's "ONE representative desktop width" scope; mobile projects self-skip).                                                           |
+| T09     | shipped | Lighthouse CI budgets in a separate directory (`apps/web/tests/lighthouse/`). 4 screens × 3 layouts = 12 audits, asserting the DOC-08 quality-standards thresholds (Performance 85+, Accessibility 95+, Best Practices 90+) against the same fixed local production build this directory's Playwright config serves. Wired into CI as `.github/workflows/lighthouse.yml`, mirroring this directory's `accessibility.yml` separation pattern. |
+| VOC-073 | shipped | Dedicated accessibility specs for four entry surfaces omitted from T07b: `/signin`, `/` (landing), `/auth/magic`, and `/settings/account` (extracted from `settings-accessibility.spec.ts` into its own file — no duplicate CI run for that screen).                                                                                                                                                                                         |
 
 ## T07b screen × viewport coverage matrix
 
-| Screen                              | 360px | 430px | 1280x720 |
-| ----------------------------------- | :---: | :---: | :------: |
-| `/home`                             |  T07b |  T07b |  T07a    |
-| `/discover`                         |  T07b |  T07b |  T07b    |
-| `/discover/[situation]`             |  T07b |  T07b |  T07b    |
-| `/discover/[situation]/[word]`      |  T07b |  T07b |  T07b    |
-| `/reviews`                          |  T07b |  T07b |  T07b    |
-| `/progress`                         |  T07b |  T07b |  T07b    |
-| `/onboarding`                       |  T07b |  T07b |  T07b    |
-| `/settings`                         |  T07b |  T07b |  T07b    |
-| `/settings/account`                 | VOC-073 | VOC-073 | VOC-073 |
-| `/signin`                           | VOC-073 | VOC-073 | VOC-073 |
-| `/` (landing)                       | VOC-073 | VOC-073 | VOC-073 |
-| `/auth/magic`                       | VOC-073 | VOC-073 | VOC-073 |
+| Screen                         |  360px  |  430px  | 1280x720 |
+| ------------------------------ | :-----: | :-----: | :------: |
+| `/home`                        |  T07b   |  T07b   |   T07a   |
+| `/discover`                    |  T07b   |  T07b   |   T07b   |
+| `/discover/[situation]`        |  T07b   |  T07b   |   T07b   |
+| `/discover/[situation]/[word]` |  T07b   |  T07b   |   T07b   |
+| `/reviews`                     |  T07b   |  T07b   |   T07b   |
+| `/progress`                    |  T07b   |  T07b   |   T07b   |
+| `/onboarding`                  |  T07b   |  T07b   |   T07b   |
+| `/settings`                    |  T07b   |  T07b   |   T07b   |
+| `/settings/account`            | VOC-073 | VOC-073 | VOC-073  |
+| `/signin`                      | VOC-073 | VOC-073 | VOC-073  |
+| `/` (landing)                  | VOC-073 | VOC-073 | VOC-073  |
+| `/auth/magic`                  | VOC-073 | VOC-073 | VOC-073  |
 
 Every T07b cell above runs the same three checks:
 
@@ -57,13 +57,18 @@ bash infra/scripts/install-playwright-chromium.sh
 # Build the web app once (Playwright's webServer uses `pnpm start`
 # so the test runs against the production bundle, not the dev
 # server's hot-reload variant).
-pnpm --filter @vocanova/web build
+API_BASE_URL=http://127.0.0.1:8080 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8080 pnpm --filter @vocanova/web build
 
 # Run the suite. The Playwright config starts the mock API server
 # and the Next.js production server itself; you do not need to
 # start them by hand. Set CI=1 to mirror the CI experience.
 pnpm --filter @vocanova/web test:e2e
 ```
+
+For a focused run, forward filters directly to Playwright:
+`pnpm --filter @vocanova/web exec playwright test personal-lists.spec.ts --project=mobile-360`.
+The browser API origin is compiled into the bundle: keep the build-time API host
+consistent with the test host (`127.0.0.1`) so same-site synthetic cookies reach it.
 
 ## Layout
 
@@ -205,7 +210,7 @@ inside the workflow's 30-minute budget.
   T43 staged cross-user/CSRF/idempotency validations).
 - The T08 suite runs on one representative desktop width
   (mirroring T07a's scope). The mobile functional flow is
-  *not* covered separately; the mobile accessibility scans
+  _not_ covered separately; the mobile accessibility scans
   in T07b already exercise the same mobile-first screens.
   Promoting the T08 flow to the mobile projects would triple
   test time without a coverage gain beyond T07b's mobile
@@ -294,3 +299,27 @@ runtime gap rather than asserting on source text:
 
 Like T08, it self-skips on the mobile projects (runtime
 behavior is viewport-independent).
+
+## Connected maturity staging acceptance
+
+`tests/staging-e2e/maturity.staging.spec.ts` is a separate, opt-in journey against
+real staging. Deployment selects the existing core spec first, then mints a new
+reserved synthetic session and selects the maturity spec with
+`E2E_MATURITY_JOURNEY=true`. The core journey signs out, so its session cannot be
+reused. Dependency and browser installation are shared; failure remains blocking.
+
+The journey verifies the reserved synthetic identity and exact HTTPS staging
+origins before mutations. It creates one uniquely named list, adds one canonical
+meaning, practises the list with server-confirmed reloads, reads/answers/resumes an
+original story and follows its guide/writing destinations. It submits no AI
+feedback and does not reset saved words or existing activity. Cleanup deletes
+only the list created by that invocation, after checking its identity/name and
+current revision.
+
+Do not run this spec with learner or production credentials. Keep credentials in
+masked runner environment variables, never command arguments or attachments.
+Direct API checks use bounded Node requests with sanitized errors: Playwright
+API request diagnostics can retain cookie and CSRF headers in failed reports,
+even with tracing disabled. Failure artifacts still contain synthetic UI. Test
+listing/typechecking and fake-token report probes do not accept the live journey;
+record a successful deployed run separately.

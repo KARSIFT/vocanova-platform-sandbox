@@ -8,6 +8,9 @@ import {
   isRegisteredAPIPath,
   isRegisteredBusinessModule,
   isRegisteredSchemaFile,
+  isRegisteredMigrationFile,
+  isRegisteredFeatureMigrationTables,
+  migrationTableNames,
   validateMockInventory,
 } from "./mock-inventory.mjs";
 
@@ -189,4 +192,131 @@ test("VOC-031-T11 SupportedAppLanguages is restricted to en-only at the source",
     /SupportedAppLanguages\s*=\s*\[\]string\{"en"\}/,
     'VOC-031-D06: apps/api/business/users/settings.go must declare SupportedAppLanguages = []string{"en"} exactly; admitting a second locale without i18n infrastructure would silently claim a capability the product does not have',
   );
+});
+
+test("private lists and original stories admit only implemented route shapes", () => {
+  const id = "ac93d068-7c3e-55c9-9d85-3fd3518592dc";
+  for (const route of [
+    "/api/v1/word-lists",
+    "/api/v1/word-lists/{listId}",
+    `/api/v1/word-lists/${id}`,
+    "/api/v1/word-lists/{listId}/members/{meaningId}",
+    `/api/v1/word-lists/${id}/members/${id}`,
+    "/api/v1/stories",
+    "/api/v1/stories/{storyKey}",
+    "/api/v1/stories/a-quiet-lunch",
+    "/api/v1/story-sessions",
+    "/api/v1/story-sessions/{sessionId}",
+    "/api/v1/story-sessions/{sessionId}/actions",
+    `/api/v1/story-sessions/${id}`,
+    `/api/v1/story-sessions/${id}/actions`,
+  ])
+    assert.equal(isRegisteredAPIPath(route), true, route);
+  for (const route of [
+    "/api/v1/word-lists/",
+    "/api/v1/word-lists/invalid",
+    `/api/v1/word-lists/${id}/share`,
+    `/api/v1/word-lists/${id}/members`,
+    `/api/v1/word-lists/${id}/members/invalid`,
+    `/api/v1/word-lists/${id}/members/${id}/restore`,
+    `/api/v1/word-lists/${id}/members/${id}?admin=true`,
+    "/api/v1/stories/",
+    "/api/v1/stories/bad_key",
+    "/api/v1/stories/a-quiet-lunch/publish",
+    "/api/v1/story-sessions/",
+    "/api/v1/story-sessions/invalid",
+    `/api/v1/story-sessions/${id}/rewards`,
+    `/api/v1/story-sessions/${id}/actions/admin`,
+  ])
+    assert.equal(isRegisteredAPIPath(route), false, route);
+  for (const module of ["wordlists", "stories"])
+    assert.equal(isRegisteredBusinessModule(module), true, module);
+  for (const module of ["wordlistsharing", "storyanalytics"])
+    assert.equal(isRegisteredBusinessModule(module), false, module);
+  for (const schema of ["wordlistshare.go", "storyreward.go"])
+    assert.equal(isRegisteredSchemaFile(schema), false, schema);
+});
+
+test("list/story real route sources and exact migration table inventories remain bounded", () => {
+  const root = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../..",
+  );
+  for (const file of ["word_lists.go", "stories.go"]) {
+    const source = readFileSync(
+      path.join(root, "apps/api/app/api", file),
+      "utf8",
+    );
+    const routes = [...source.matchAll(/Path:\s*"([^"\s]+)"/g)].map(
+      (match) => match[1],
+    );
+    assert.ok(routes.length > 0);
+    for (const route of routes)
+      assert.equal(isRegisteredAPIPath(route), true, `${file}: ${route}`);
+  }
+  for (const migration of [
+    "20261004100000_word_lists.sql",
+    "20261004140000_original_stories.sql",
+  ]) {
+    assert.equal(isRegisteredMigrationFile(migration), true, migration);
+    const source = readFileSync(
+      path.join(root, "apps/api/migrations", migration),
+      "utf8",
+    );
+    const tables = migrationTableNames(source);
+    for (const extra of [
+      "CREATE TABLE unexpected_table(id uuid);",
+      'CREATE TABLE "unexpected table"(id uuid);',
+      "CREATE TABLE private.unexpected_table(id uuid);",
+      "CREATE TABLE IF NOT EXISTS unexpected_table(id uuid);",
+    ]) {
+      assert.equal(
+        isRegisteredFeatureMigrationTables(
+          migration,
+          migrationTableNames(`${source}\n${extra}`),
+        ),
+        false,
+        extra,
+      );
+    }
+    assert.equal(
+      isRegisteredFeatureMigrationTables(migration, tables),
+      true,
+      migration,
+    );
+    assert.equal(
+      isRegisteredFeatureMigrationTables(migration, [
+        ...tables,
+        "unexpected_table",
+      ]),
+      false,
+    );
+    assert.equal(
+      isRegisteredFeatureMigrationTables(migration, tables.slice(1)),
+      false,
+    );
+    assert.equal(
+      isRegisteredFeatureMigrationTables(migration, [
+        ...tables.slice(1),
+        tables[1],
+      ]),
+      false,
+    );
+  }
+  for (const migration of [
+    "20261004100001_word_lists.sql",
+    "20261004150000_story_rewards.sql",
+    "invented.sql",
+  ]) {
+    assert.equal(isRegisteredMigrationFile(migration), false, migration);
+    assert.equal(
+      isRegisteredFeatureMigrationTables(migration, [
+        "story_sessions",
+        "story_actions",
+      ]),
+      false,
+      migration,
+    );
+  }
+  assert.deepEqual(validateMockInventory(), []);
 });

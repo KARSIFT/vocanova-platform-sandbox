@@ -156,3 +156,9 @@ func recallDefinition(w Word) string {
 		return w.Definition
 	}
 }
+
+// SupportsMeaning reports whether a canonical meaning has reviewed practice content.
+func SupportsMeaning(id, text, definition string) bool {
+	ref, ok := referenceFor(id)
+	return ok && ref.WordText == text && definition != ""
+}

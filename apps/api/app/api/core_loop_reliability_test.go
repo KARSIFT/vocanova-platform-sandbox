@@ -287,12 +287,34 @@ func TestCrossCuttingNoClientFabricatedFallbackInContract(t *testing.T) {
 		"provider_subject",
 		"revokedAt",
 		"revoked_at",
-		"deletedAt",
-		"deleted_at",
 	}
 	for _, field := range forbiddenFields {
 		assert.NotContains(t, strings.ToLower(contract), strings.ToLower(field),
 			"contract must not expose internal field %q (a client could fabricate a fallback from it)", field)
+	}
+
+	// Portable exports intentionally retain the learner's deleted-list history.
+	// Keep tombstone timestamps confined to that exact export DTO; interactive
+	// schemas and all other export DTOs must still omit them. Credential checks
+	// above remain global, including portable exports.
+	var schemas struct {
+		Components struct {
+			Schemas map[string]json.RawMessage `json:"schemas"`
+		} `json:"components"`
+	}
+	require.NoError(t, json.Unmarshal(document, &schemas))
+	for name, schema := range schemas.Components.Schemas {
+		var fields struct {
+			Properties map[string]json.RawMessage `json:"properties"`
+		}
+		require.NoError(t, json.Unmarshal(schema, &fields))
+		for field := range fields.Properties {
+			if strings.EqualFold(field, "deletedAt") || strings.EqualFold(field, "deleted_at") {
+				assert.Equal(t, "PersonalDataWordListDTO", name,
+					"deletion timestamps must remain confined to portable list history")
+				assert.Equal(t, "deletedAt", field)
+			}
+		}
 	}
 }
 

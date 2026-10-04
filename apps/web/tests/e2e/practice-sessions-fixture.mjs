@@ -83,18 +83,36 @@ export async function handlePracticeSessions({
   if (parts.length === 0) {
     if (!["typed_recall", "listening_choice", "mistakes"].includes(body.mode))
       return send(400, { detail: "Invalid mode" });
-    if (body.lessonKey && !["daily-conversation", "conversation-basics"].includes(body.lessonKey))
+    if (
+      body.lessonKey &&
+      !["daily-conversation", "conversation-basics"].includes(body.lessonKey)
+    )
       return send(503, { detail: "Fixture lesson unavailable" });
+    const selectedList = body.listId ? state.wordLists?.get(body.listId) : null;
+    if (
+      (body.listId !== undefined) !== (body.listRevision !== undefined) ||
+      (body.listId && (body.lessonKey || body.mode === "mistakes"))
+    )
+      return send(422, { detail: "Invalid list selection" });
+    if (
+      body.listId &&
+      (!selectedList || selectedList.revision !== body.listRevision)
+    )
+      return send(409, { detail: "Selected list changed or was deleted" });
     const selected =
       body.mode === "mistakes"
         ? words.filter((word) => {
             const source = state.practiceMistakes.get(word.meaningId);
             return source && !source.resolved;
           })
-        : words;
+        : selectedList
+          ? words.filter((word) => selectedList.members.has(word.meaningId))
+          : words;
     if (!selected.length)
       return send(409, {
-        detail: "There are no supported mistakes to practise right now.",
+        detail: selectedList
+          ? "This list has no supported meanings to practise."
+          : "There are no supported mistakes to practise right now.",
       });
     const now = new Date().toISOString();
     const id = randomUUID();
@@ -103,6 +121,13 @@ export async function handlePracticeSessions({
         id,
         mode: body.mode,
         ...(body.lessonKey ? { lessonKey: body.lessonKey } : {}),
+        ...(selectedList
+          ? {
+              listId: selectedList.id,
+              listName: selectedList.name,
+              listRevision: selectedList.revision,
+            }
+          : {}),
         contentVersion: "starter-21-v1",
         gradingVersion: "exact-recall-v1",
         status: "in_progress",

@@ -35,6 +35,12 @@ export default async function PracticePage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const query = await searchParams;
+  const requestedList =
+    query.list !== undefined
+      ? typeof query.list === "string" && query.list
+        ? query.list
+        : "invalid-list-selection"
+      : "";
   const client = await createServerApiClient();
   const [
     dueResponse,
@@ -42,12 +48,14 @@ export default async function PracticePage({
     savedResponse,
     missionResponse,
     practiceResponse,
+    listsResponse,
   ] = await Promise.all([
     loadActivity(client.listDueWords({ limit: 1 })),
     loadActivity(client.listLessons()),
     loadActivity(client.listSavedWords({ limit: 3 })),
     loadActivity(client.getDailyMission()),
     loadActivity(client.listPracticeSessions()),
+    loadActivity(client.listWordLists()),
   ]);
 
   const dueCount = dueResponse?.data.totalCount;
@@ -83,10 +91,12 @@ export default async function PracticePage({
       </header>
 
       <PracticeEntry
-        key={selectedLessonKey}
+        key={`${selectedLessonKey}:${requestedList}`}
         initialSessions={practiceResponse?.data ?? null}
         lessons={lessons ?? []}
         initialLessonKey={selectedLessonKey}
+        initialLists={listsResponse?.data.items ?? null}
+        initialListId={requestedList}
       />
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -222,6 +232,23 @@ export default async function PracticePage({
               </Link>
             </>
           )}
+        </Surface>
+
+        <Surface aria-labelledby="practice-topic-writing-heading">
+          <Eyebrow>Write about real life</Eyebrow>
+          <h2
+            id="practice-topic-writing-heading"
+            className="mt-2 text-xl font-bold text-neutral-900"
+          >
+            Topic writing
+          </h2>
+          <p className="mt-3 text-neutral-700">
+            Choose an everyday situation, use a meaning you saved, and write
+            your own message or sentence. Read a correction and try a rewrite.
+          </p>
+          <Link href="/writing" className={actionStyle}>
+            Choose a writing topic
+          </Link>
         </Surface>
 
         <Surface aria-labelledby="practice-listening-heading" tone="secondary">
