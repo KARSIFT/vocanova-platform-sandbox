@@ -829,6 +829,76 @@ export interface CreateAccountDeletionRequestResult {
   replayed: boolean;
 }
 
+/** Learner-visible history, without private grading snapshots or receipts. */
+export interface PersonalDataSessionProgress {
+  id: string;
+  status: string;
+  completedSteps: number;
+  totalSteps: number;
+  firstAnswersCorrect: number;
+  questionsAnswered: number;
+  startedAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+}
+export interface PersonalDataLearningAction {
+  stepId?: string;
+  action?: string;
+  choiceId?: string;
+  typedAnswer?: string;
+  lessonKey?: string;
+}
+export interface PersonalDataWordList {
+  id: string;
+  name: string;
+  revision: number;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  members: Array<{ meaningId: string; addedAt: string }>;
+}
+export interface PersonalDataStorySession extends PersonalDataSessionProgress {
+  storyKey: string;
+  title: string;
+  contentVersion: string;
+  gradingVersion: string;
+  actions: Array<{
+    action: PersonalDataLearningAction;
+    feedback: StoryFeedback | null;
+    createdAt: string;
+  }>;
+}
+export interface PersonalDataPracticeSession extends PersonalDataSessionProgress {
+  mode: string;
+  lessonKey: string | null;
+  listId: string | null;
+  listName: string | null;
+  listRevision: number | null;
+  contentVersion: string;
+  gradingVersion: string;
+  actions: Array<{
+    action: PersonalDataLearningAction;
+    meaningId: string | null;
+    correct: boolean | null;
+    feedback: PracticeFeedback | null;
+    createdAt: string;
+  }>;
+}
+export interface PersonalDataGuidedLesson extends PersonalDataSessionProgress {
+  lessonKey: string;
+  lessonVersion: string;
+  exerciseVersion: string | null;
+  title: string;
+  words: LessonWord[];
+  feedback: LessonSession["feedback"];
+  actions: Array<{
+    action: PersonalDataLearningAction;
+    feedback: LessonSession["feedback"];
+    completedSteps: number;
+    createdAt: string;
+  }>;
+}
+
 /** A portable learner-visible personal-data export. Values are deliberately
  * data-shaped rather than internal API DTOs so additions remain backward
  * compatible. It never contains credentials, hidden prompts, or abuse data. */
@@ -848,9 +918,16 @@ export interface PersonalDataExport {
   confidencePointLedger: unknown[];
   graceDayLedger: unknown[];
   streakState: Record<string, unknown> | null;
-  guidedLessons?: unknown[];
-  wordKnowledge?: MeaningKnowledge[];
-  practiceSessions?: unknown[];
+  guidedLessons?: PersonalDataGuidedLesson[] | null;
+  wordKnowledge?: Array<{
+    meaningId: string;
+    selfReportedKnown: boolean;
+    note: string;
+    updatedAt: string;
+  }> | null;
+  practiceSessions?: PersonalDataPracticeSession[] | null;
+  wordLists?: PersonalDataWordList[] | null;
+  storySessions?: PersonalDataStorySession[] | null;
 }
 
 export interface ApiError {

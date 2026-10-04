@@ -2,36 +2,50 @@
 
 ## Consolidated maturity verification — 4 October 2026
 
-The single delivery branch adds the connected list, teaching, mixed-lesson,
-story, guidebook and writing capabilities described in
-[maturity delivery](maturity-delivery.md). Independent root checks freshly passed:
+[PR #1484](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1484) adds the
+connected list, teaching, mixed-lesson, story, guidebook and writing capabilities
+in [maturity delivery](maturity-delivery.md). It is ready with `hold`, not merged
+or deployed; the follow-up push is pending. Current independent root evidence:
 
-- Forty actual forward migrations and canonical seed applied to isolated
-  PostgreSQL 16. Atlas v1.2.0 library checksum regenerated/read back; historical
-  migration hashes remain unchanged. Migration-scanner tests pass. Direct SQL
-  application is not proof of deployed Atlas revision history.
-- `go test -tags=integration ./business/accounts ./business/lessons
-./business/wordlists ./business/practice ./business/stories -count=1` passes with
-  the private disposable test DSN. Ownership, retry/concurrency, legacy snapshots,
-  filtered list practice, schema 1.5 export and deletion are covered.
-- **Final `pnpm run validate` passes (exit 0)** after the last persistence fix.
-  Root also reran all five PostgreSQL suites successfully.
-- Consolidated tests pass: 258 foundation, 52 client and 135 web helper tests,
-  plus Go package suites. Formatting, lint/Go vet, client/E2E types, web production
-  build and API build pass. These checks do not accept the live feedback provider.
-- Five independent review findings were fixed and regression-covered: archived
-  list members blocking usable practice, retired story start replay, removed-word
-  save replay recovery, editing after typed-answer validation rejection, and typed
-  lesson targets entering mistake practice with legacy snapshot fallback.
-- The affected browser matrix passes 177/177 across desktop, 360px and 430px,
-  including keyboard, both themes and accessibility/error/retry paths. Browser
-  fixtures establish the built interface/transport behavior, not live login,
-  provider grading or production durability. PR CI is recorded separately. The interactive Chrome connector
-  failed twice with a kernel reset; the local Chromium harness remains usable.
+- **Fresh validation:** follow-up `pnpm run validate` passed (exit 0): 258
+  foundation, 52 client and 135 web-helper tests plus Go suites, formatting,
+  lint/Go vet, types and production web/API builds. Generated OpenAPI matches
+  its generator. These checks do not accept the live feedback provider.
+- **Actual database:** six PostgreSQL packages passed with `-tags=integration`
+  and `-count=1`: accounts, lessons, wordlists, practice, stories and `app/api`.
+  Forty actual forward migrations and canonical seed were applied to isolated
+  PostgreSQL 16. Atlas v1.2.0 library checksum was regenerated/read back;
+  historical migration hashes remain unchanged. Direct SQL application is not
+  proof of deployed Atlas revision history.
+- **Privacy and compatibility:** explicit HTTP export DTOs preserve all six
+  learning fields, typed wording and visible false feedback, retain legacy schema
+  versions/null collections and exclude private snapshots/receipts. Nullable story
+  references, newest session per story key, ownership, concurrent replay, frozen
+  list practice and schema 1.5 export/purge are regression-covered. Lesson-save
+  conflicts now reread canonical state; an unknown status cannot trigger automatic
+  saving. Earlier fixed persistence/replay findings remain covered.
+- **Browser checkpoints:** the preceding affected matrix passed 177/177 cases
+  across desktop, 360px and 430px, plus three screenshot-only checks. The latest
+  full lesson-save, primary-navigation and Home mobile accessibility specs passed
+  **53 cases with one existing desktop skip** across all three layouts. All six
+  formerly failing route loops and all 24 save cases pass. The route loops lacked
+  a fixture session cookie; seeding authenticated state preserves auth guards,
+  navigation assertions and keyboard skip-link proof. These fixtures verify built
+  interface/transport behavior, not live login, provider grading or production
+  durability. The Chrome connector failed twice with a kernel reset; the local
+  Chromium harness remains usable.
+- **Hosted checks and live journey:** core CI, performance and automated review
+  passed on the preceding pushed revision. Full accessibility failed with six
+  failures, 752 passed and 37 skipped; a fresh hosted passing run remains required
+  after pushing the fixes. The opt-in staging maturity journey is authored, but
+  credential safety and fake artifact verification are ongoing. No live pass is
+  recorded for this journey.
 
-These additions are not yet deployed. The verified deployed release below remains
-0.3.1. Live AI feedback quality/availability, actual reminder alarms, physical
-speech playback and observed learner acceptance remain separate open gates.
+These additions are not deployed. The verified release below remains 0.3.1; its
+historical evidence does not accept PR #1484. Live AI feedback quality/availability,
+actual reminder alarms, physical speech playback and observed learner acceptance
+remain separate open gates. The older 38-migration/schema 1.4 and smaller local
+checkpoints below are historical; the active maturity inventory is 40/schema 1.5.
 
 ## Latest release evidence — verified 4 October 2026
 

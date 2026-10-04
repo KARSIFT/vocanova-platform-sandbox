@@ -49,7 +49,10 @@ their original steps and action fingerprints. Typed grading normalizes Unicode
 NFC, whitespace and case. Story snapshots use `original-dialogues-v1` and
 `curated-choice-v1`; exact start/action replay returns current saved progress,
 including a start replay after a story is retired from the current catalog.
-All these learning mutations require authentication and CSRF protection.
+Story current-step and feedback schema references accept null for completion or
+no feedback. Library reads select the newest session per story key instead of
+loading every repeated attempt. All learning mutations require authentication
+and CSRF protection.
 
 Lists, story completion and independent practice do not manufacture SRS reviews,
 mastery, mission completion or reward points. Saving for scheduled review remains
@@ -57,8 +60,11 @@ an explicit learner action. Story/lesson first-answer results describe those
 activities; device pronunciation is not a speech assessment.
 
 Account export is schema **1.5**, including list membership, frozen practice list
-metadata, mixed lesson version/typed answer history and story activity. Internal
-replay keys, client action IDs, fingerprints and private grading snapshots are
+metadata, mixed lesson version/typed answer history and story activity. HTTP
+transport explicitly preserves lists, stories, learning preferences, practice
+sessions, word knowledge and guided lessons. Older schema versions and absent/null
+learning fields remain intact. Learner-visible deleted-list history includes its
+`deletedAt` timestamp; interactive list DTOs omit it. Internal replay keys, client action IDs, fingerprints and private grading snapshots are
 excluded. Account purge deletes the new requester-linked rows in foreign-key-safe
 order. Forward migration **39** is
 [private lists](../../apps/api/migrations/20261004100000_word_lists.sql); **40** is
@@ -68,19 +74,42 @@ revision-history acceptance must be checked separately.
 
 ## Verification checkpoint and remaining acceptance
 
-| Evidence layer               | Current boundary                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Source and focused checks    | Independent root consolidated checks passed: 258 foundation, 52 API-client and 135 web-helper tests plus Go package suites. Formatting, lint/Go vet, client/E2E types and production web/API builds passed. The generated API description exactly matches its generator. **Final `pnpm run validate` passed (exit 0)** after the last persistence fix. The new actual-database regression reproduced typed mistakes missing before the fix and passed afterward; root reran all five PostgreSQL packages successfully.                                         |
-| Disposable PostgreSQL        | Root independently reproduced all five integration suites for accounts, lessons, lists, practice and stories after applying 40 real forward migrations and canonical seed to isolated PostgreSQL 16. Ownership, concurrent replay, rollback, historical snapshots, retired-catalog start replay, frozen list practice and schema 1.5 export/purge passed. Direct SQL application does not verify deployed Atlas revision history.                                                                                                                              |
-| Browser                      | **177/177 passed** across 360px, 430px and desktop on the production build: personal lists, meaning teaching, original stories, varied lessons, topic writing, explicit lesson saving, all 17 guides and affected existing lesson/pronunciation flows. Keyboard interaction, light/dark themes, accessibility scans, overflow, empty/error/conflict and exact-retry paths are covered. Root inspected light/dark desktop/mobile story screenshots. Mock-backed browser passes cannot establish live authentication, provider quality or PostgreSQL durability. |
-| Live and learning acceptance | No new deployment, real-provider login/feedback run, physical-device audio validation or observed learner acceptance is recorded for these additions. The interactive Chrome connector failed with a kernel reset; browser verification used the local Chromium harness. Earlier release evidence applies only to its recorded revision.                                                                                                                                                                                                                       |
+- **Fresh local validation:** follow-up `pnpm run validate` passed (exit 0),
+  including 258 foundation, 52 API-client and 135 web-helper tests, Go suites,
+  formatting, lint/Go vet, types and production builds. Generated OpenAPI matches
+  its generator. Explicit export transport/legacy nulls, nullable story references,
+  newest-per-key story history and lesson-save conflict recovery are covered.
+- **Actual PostgreSQL:** root independently reran six packages—accounts, lessons,
+  lists, practice, stories and `app/api`—against isolated PostgreSQL 16 with 40
+  forward migrations and canonical seed. Ownership, concurrent replay, rollback,
+  historical snapshots, frozen list practice and schema 1.5 export/purge pass.
+  This does not verify deployed Atlas revision history.
+- **Browser checkpoints:** the preceding production-build affected matrix passed
+  177/177 cases across 360px, 430px and desktop, plus three screenshot-only checks.
+  The latest complete lesson-save, primary-navigation and Home mobile accessibility
+  specs passed **53 cases with one existing desktop skip** at all three layouts.
+  All six formerly failing route loops and all 24 save cases pass. Cookie seeding
+  corrects the old authenticated-fixture assumption while retaining keyboard and
+  navigation assertions. These mock-backed runs do not establish live login,
+  provider quality or database durability.
+- **PR evidence:** [PR #1484](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1484)
+  is ready with `hold`, not merged or deployed; the follow-up push is pending.
+  Core CI, performance and automated review passed before these follow-ups.
+  Hosted full accessibility previously failed (six failed, 752 passed, 37 skipped);
+  a fresh hosted run is required after pushing the fixes.
+- **Live and learning acceptance:** the opt-in staging maturity journey is authored,
+  with credential safety and fake artifact verification ongoing. No live pass,
+  new deployment, real-provider feedback run, physical-device audio validation or
+  learner acceptance is recorded. The earlier release applies only to its revision.
+  The Chrome connector failed with a kernel reset; local browser verification used
+  Chromium.
 
-The next acceptance journey should create a list, add one specific meaning without
-saving it for SRS, practise the selected list, complete a mixed lesson and explicitly
-save a chosen meaning, read/resume a story, use its guide, and write/rewrite a sentence.
-Repeat this journey against staging after PR CI/review and deployment; the local
-browser and database checks cover reload, lost-response replay, conflicting writes,
-deletion and account export/purge independently.
+The staging journey should create a list, add one specific meaning without saving
+it for SRS, practise that list, complete a mixed lesson and explicitly save a chosen
+meaning, read/resume a story, use its guide, and write/rewrite a sentence. Execute
+it after PR CI/review and deployment, recording revision and results in
+[release readiness](release-readiness.md). Lesson-save conflict recovery reads
+canonical state; failed status reads offer a usable check without saving automatically.
 
 Topic writing reuses `word_detail` feedback: the provider checks the **selected
 meaning and language**, **not adherence to the topic prompt**. It requires a saved

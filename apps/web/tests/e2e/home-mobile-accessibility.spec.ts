@@ -7,6 +7,7 @@
 // keyboard-reachability and non-color-only-feedback assertions on
 // top of the axe scan, not only infer them from a clean axe run.
 
+import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
 import {
@@ -239,7 +240,15 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
 
   test("lets keyboard users skip the persistent app shell on every authenticated route", async ({
     page,
+    context,
+    baseURL,
   }) => {
+    if (!baseURL) throw new Error("Missing app URL");
+    // Situation guides now read authenticated story links as well as /me.
+    // Use an actual isolated fixture session for this authenticated route loop.
+    await context.addCookies([
+      { name: "vocanova_session", value: randomUUID(), url: baseURL },
+    ]);
     const authenticatedRoutes = [
       "/home",
       "/discover",
@@ -256,6 +265,7 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
 
     for (const route of authenticatedRoutes) {
       await page.goto(route);
+      await expect(page).toHaveURL(new URL(route, baseURL).toString());
 
       const skipLink = page.getByRole("link", {
         name: "Skip to main content",

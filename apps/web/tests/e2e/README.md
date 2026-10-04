@@ -299,3 +299,27 @@ runtime gap rather than asserting on source text:
 
 Like T08, it self-skips on the mobile projects (runtime
 behavior is viewport-independent).
+
+## Connected maturity staging acceptance
+
+`tests/staging-e2e/maturity.staging.spec.ts` is a separate, opt-in journey against
+real staging. Deployment selects the existing core spec first, then mints a new
+reserved synthetic session and selects the maturity spec with
+`E2E_MATURITY_JOURNEY=true`. The core journey signs out, so its session cannot be
+reused. Dependency and browser installation are shared; failure remains blocking.
+
+The journey verifies the reserved synthetic identity and exact HTTPS staging
+origins before mutations. It creates one uniquely named list, adds one canonical
+meaning, practises the list with server-confirmed reloads, reads/answers/resumes an
+original story and follows its guide/writing destinations. It submits no AI
+feedback and does not reset saved words or existing activity. Cleanup deletes
+only the list created by that invocation, after checking its identity/name and
+current revision.
+
+Do not run this spec with learner or production credentials. Keep credentials in
+masked runner environment variables, never command arguments or attachments.
+Direct API checks use bounded Node requests with sanitized errors: Playwright
+API request diagnostics can retain cookie and CSRF headers in failed reports,
+even with tracing disabled. Failure artifacts still contain synthetic UI. Test
+listing/typechecking and fake-token report probes do not accept the live journey;
+record a successful deployed run separately.

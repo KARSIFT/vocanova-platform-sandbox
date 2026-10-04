@@ -352,3 +352,104 @@ test("an unavailable current saved state cannot be mistaken for an unsaved word"
   ).toBeVisible();
   expect(writes).toEqual([]);
 });
+
+for (const state of ["saved", "unsaved", "unavailable"] as const) {
+  test(`a save conflict reloads ${state} canonical state without automatically saving`, async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    const session = await completedLesson(context, baseURL!);
+    const meaningId = session.words[0]!.meaningId;
+    await page.goto("/learn/conversation-basics");
+    const row = wordRow(page, "invite");
+    const save = row.getByRole("button", { name: "Save invite for review" });
+    await expect(save).toBeEnabled();
+    const writes: { key: string | undefined; body: string | null }[] = [];
+    let conflictReturned = false;
+    let recoveryReads = 0;
+    await page.route("**/api/v1/canonical-words/invite", async (route) => {
+      if (!conflictReturned) return route.continue();
+      recoveryReads += 1;
+      if (state === "unavailable" && recoveryReads === 1) {
+        return route.fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: JSON.stringify({ detail: "temporarily unavailable" }),
+        });
+      }
+      return route.continue();
+    });
+    await page.route("**/api/v1/user-words", async (route) => {
+      if (route.request().method() !== "POST") return route.continue();
+      writes.push({
+        key: route.request().headers()["idempotency-key"],
+        body: route.request().postData(),
+      });
+      if (writes.length !== 1) return route.continue();
+      if (state === "saved") {
+        // Another confirmed action has already saved this meaning. A conflict
+        // must read that current state instead of implying this write succeeded.
+        const saved = await context.request.post(
+          apiURL(baseURL!, "/api/v1/user-words"),
+          {
+            headers: await mutationHeaders(context),
+            data: { meaningId, source: "journey" },
+          },
+        );
+        expect(saved.ok()).toBe(true);
+      }
+      conflictReturned = true;
+      return route.fulfill({
+        status: 409,
+        contentType: "application/problem+json",
+        body: JSON.stringify({ detail: "saved state changed" }),
+      });
+    });
+    await save.click();
+    if (state === "unavailable") {
+      await expect(row.getByRole("alert")).toContainText(
+        "could not confirm the current saved status",
+      );
+      await expect(save).toHaveCount(0);
+      await expect(
+        row.getByRole("link", { name: "Open saved invite" }),
+      ).toHaveCount(0);
+      expect(recoveryReads).toBe(1);
+      expect(writes).toHaveLength(1);
+      await row.getByRole("button", { name: "Check saved status" }).click();
+    }
+    if (state === "saved") {
+      await expect(
+        row.getByRole("link", { name: "Open saved invite" }),
+      ).toBeVisible();
+      await expect(row.getByRole("status")).toContainText(
+        "The current saved meaning is up to date.",
+      );
+      await expect(save).toHaveCount(0);
+    } else {
+      await expect(save).toBeEnabled();
+      await expect(
+        row.getByRole("link", { name: "Open saved invite" }),
+      ).toHaveCount(0);
+    }
+    expect(recoveryReads).toBe(state === "unavailable" ? 2 : 1);
+    expect(writes).toHaveLength(1);
+    const library = await context.request.get(
+      apiURL(baseURL!, "/api/v1/user-words"),
+    );
+    expect((await library.json()).totalCount).toBe(state === "saved" ? 1 : 0);
+    if (state === "unsaved") {
+      await expect(row.getByRole("status")).toContainText(
+        "Your earlier save was not reapplied",
+      );
+      await save.click();
+      await expect(
+        row.getByRole("link", { name: "Open saved invite" }),
+      ).toBeVisible();
+      expect(writes).toHaveLength(2);
+      expect(writes[1]!.key).not.toBe(writes[0]!.key);
+      expect(writes[1]!.body).toBe(writes[0]!.body);
+    }
+  });
+}

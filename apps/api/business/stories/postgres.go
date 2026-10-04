@@ -61,23 +61,20 @@ func (r *PostgreSQLRepository) List(ctx context.Context, u uuid.UUID) ([]State, 
 	if err := r.Active(ctx, u); err != nil {
 		return nil, err
 	}
-	// The newest attempt for EACH story survives other repeated attempts.
-	rows, err := r.db.QueryContext(ctx, "SELECT "+columns+" FROM story_sessions s JOIN users u ON u.id=s.user_id WHERE s.user_id=$1 AND u.status='active' AND u.deleted_at IS NULL ORDER BY s.updated_at DESC,s.id DESC", u)
+	// Select one newest attempt per story in PostgreSQL before loading any
+	// snapshots. Repeated attempts cannot grow this response or decoding work.
+	rows, err := r.db.QueryContext(ctx, "SELECT DISTINCT ON (s.story_key) "+columns+" FROM story_sessions s JOIN users u ON u.id=s.user_id WHERE s.user_id=$1 AND u.status='active' AND u.deleted_at IS NULL ORDER BY s.story_key,s.updated_at DESC,s.id DESC", u)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	out := []State{}
-	seen := map[string]bool{}
 	for rows.Next() {
 		st, e := scan(rows)
 		if e != nil {
 			return nil, e
 		}
-		if !seen[st.Snapshot.Story.Key] {
-			out = append(out, *st)
-			seen[st.Snapshot.Story.Key] = true
-		}
+		out = append(out, *st)
 	}
 	return out, rows.Err()
 }

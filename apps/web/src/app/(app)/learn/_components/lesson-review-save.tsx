@@ -146,7 +146,10 @@ export function LessonReviewSave({
       if (!mounted.current) return;
       const conflict =
         cause instanceof ApiResponseError && cause.status === 409;
-      if (cause instanceof ApiResponseError && cause.status === 404) {
+      if (
+        cause instanceof ApiResponseError &&
+        (cause.status === 404 || conflict)
+      ) {
         pending.current = null;
         setNeedsRetry(false);
         try {
@@ -168,7 +171,7 @@ export function LessonReviewSave({
             ),
           );
         }
-      } else if (responseReceived || conflict) {
+      } else if (responseReceived) {
         pending.current = null;
         setMeaning(null);
         setNeedsRetry(false);

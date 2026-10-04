@@ -41,6 +41,7 @@ type StoryChoice struct {
 	Text string `json:"text"`
 }
 type StoryStep struct {
+	_       struct{}      `nullable:"true"`
 	ID      string        `json:"id"`
 	Kind    string        `json:"kind" enum:"line,comprehension,phrase_completion"`
 	Line    *StoryLine    `json:"line,omitempty"`
@@ -48,10 +49,11 @@ type StoryStep struct {
 	Choices []StoryChoice `json:"choices,omitempty"`
 }
 type StoryFeedback struct {
-	StepID      string `json:"stepId"`
-	Correct     bool   `json:"correct"`
-	Answer      string `json:"answer"`
-	Explanation string `json:"explanation"`
+	_           struct{} `nullable:"true"`
+	StepID      string   `json:"stepId"`
+	Correct     bool     `json:"correct"`
+	Answer      string   `json:"answer"`
+	Explanation string   `json:"explanation"`
 }
 type StorySummary struct {
 	ID                  string     `json:"id"`
