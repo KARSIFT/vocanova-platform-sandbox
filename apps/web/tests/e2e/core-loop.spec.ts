@@ -63,6 +63,11 @@
 import { randomUUID } from "node:crypto";
 
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import {
+  chooseSituationWordLink,
+  getFirstMeaningSaveControl,
+} from "./situation-word-navigation";
+import { reviewSeedActions } from "../staging-e2e/review-seed";
 
 const ONBOARDING_COOKIE_VALUE = "not_started";
 const CORE_LOOP_TEST_TIMEOUT_MS = 90_000;
@@ -208,7 +213,11 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     await page.goto("/home");
     await expect(page).toHaveURL(/\/home(\?|$)/);
     await expect(
-      page.getByRole("heading", { name: "Today's Mission", level: 2, exact: true }),
+      page.getByRole("heading", {
+        name: "Today's Mission",
+        level: 2,
+        exact: true,
+      }),
     ).toBeVisible();
 
     // ----- 3. Discover.
@@ -221,7 +230,8 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     await expect(
       page.getByRole("heading", { name: "Ordering at a cafe", level: 1 }),
     ).toBeVisible();
-    await page.getByRole("link", { name: /pour/ }).first().click();
+    const wordLink = await chooseSituationWordLink(page);
+    await wordLink.click();
     await expect(page).toHaveURL(/\/discover\/ordering-at-a-cafe\/pour(\?|$)/);
     await expect(
       page.getByRole("heading", { name: "pour", level: 1 }),
@@ -284,7 +294,9 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     // question). The flow is: Show answer -> rate -> advance ->
     // refetch returns empty -> "all caught up" state.
     await page.goto("/reviews");
-    await expect(page.getByText("Review 1 of 1", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("Review 1 of 1", { exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Review", level: 1 }),
     ).toBeVisible();
@@ -393,12 +405,16 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     // reflects that. After one review, the home page should
     // show "1 of 20 words reviewed today" (the default target).
     await page.goto("/home");
-    await expect(page.getByRole("progressbar", { name: "Today’s mission progress" }))
-      .toHaveAttribute("aria-valuenow", "1");
+    await expect(
+      page.getByRole("progressbar", { name: "Today’s mission progress" }),
+    ).toHaveAttribute("aria-valuenow", "1");
 
     // Home exposes one deliberate practice entry, independent of word detail
     // and review completion, without crowding the daily mission with forms.
-    await page.locator("summary").filter({ hasText: "Practice “pour” in a sentence" }).click();
+    await page
+      .locator("summary")
+      .filter({ hasText: "Practice “pour” in a sentence" })
+      .click();
     await expect(
       page.getByRole("heading", { name: /Practice with pour/ }),
     ).toBeVisible();
@@ -447,3 +463,173 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     await expect(page).toHaveURL(/\/login\?returnTo=%2Fhome(\b|$)/);
   });
 });
+
+test("word navigation uses the visible situation list while guide examples stay closed", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  if (!baseURL) throw new Error("Missing app URL");
+  await context.addCookies([
+    { name: "vocanova_session", value: randomUUID(), url: baseURL },
+    { name: "e2e_unit_guides", value: "true", url: baseURL },
+  ]);
+  await page.goto("/discover/airport");
+  const guide = page.getByRole("region", {
+    name: "A quick guide",
+    exact: true,
+  });
+  const examples = guide.locator("details").filter({
+    hasText: "Words and examples",
+  });
+  await expect(examples).toHaveJSProperty("open", false);
+  const hiddenGuideWord = examples.getByRole("link", {
+    name: "boarding pass",
+    exact: true,
+    includeHidden: true,
+  });
+  await expect(hiddenGuideWord).toHaveCount(1);
+  await expect(hiddenGuideWord).toBeHidden();
+  const words = page.getByRole("main").getByRole("list", {
+    name: "Words in this situation",
+    exact: true,
+  });
+  await expect(words).toHaveCount(1);
+  await expect(words).toBeVisible();
+  await expect(words).toHaveAttribute("id", "situation-words");
+  const wordLink = await chooseSituationWordLink(page);
+  await expect(wordLink).toBeVisible();
+  const href = await wordLink.getAttribute("href");
+  expect(href).toMatch(/^\/discover\/airport\/[^#]+$/);
+  const wordText = await wordLink
+    .getByRole("heading", { level: 2 })
+    .innerText();
+  await expect(examples).toHaveJSProperty("open", false);
+  await wordLink.focus();
+  await expect(wordLink).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(new URL(href!, baseURL).toString());
+  await expect(
+    page.getByRole("heading", { name: wordText, exact: true, level: 1 }),
+  ).toBeVisible();
+});
+
+for (const allSaved of [false, true]) {
+  test(`situation word selection ${allSaved ? "falls back when all are saved" : "prefers an unsaved word after a saved word"}`, async ({
+    page,
+  }) => {
+    // Keep the real badge's hidden check mark: exact text "Saved" misses
+    // its normalized DOM text "✓ Saved" and would pick the first saved item.
+    await page.setContent(`
+      <main>
+        <details><summary>Words and examples</summary><ul><li>
+          <a href="/discover/airport/boarding-pass#meaning-guide">boarding pass</a>
+        </li></ul></details>
+        <ul id="situation-words" aria-label="Words in this situation">
+          <li><a href="/discover/airport/boarding-pass"><h2>boarding pass</h2>
+            <span><span aria-hidden="true">✓</span> Saved</span>
+          </a></li>
+          <li><a href="/discover/airport/gate"><h2>gate</h2>
+            ${allSaved ? '<span><span aria-hidden="true">✓</span> Saved</span>' : ""}
+          </a></li>
+        </ul>
+      </main>
+    `);
+    const chosen = await chooseSituationWordLink(page);
+    await expect(chosen).toBeVisible();
+    await expect(chosen).toHaveAttribute(
+      "href",
+      `/discover/airport/${allSaved ? "boarding-pass" : "gate"}`,
+    );
+  });
+}
+
+for (const initiallySaved of [false, true]) {
+  test(`word saving targets a meaning action and confirms API state when initially ${initiallySaved ? "saved" : "unsaved"}`, async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    if (!baseURL) throw new Error("Missing app URL");
+    const csrf = randomUUID();
+    await context.addCookies([
+      { name: "vocanova_session", value: randomUUID(), url: baseURL },
+      { name: "vocanova_csrf", value: csrf, url: baseURL },
+    ]);
+    const api = new URL(baseURL);
+    api.port = process.env.MOCK_API_PORT ?? "8080";
+    const libraryURL = new URL("/api/v1/user-words", api).toString();
+    if (initiallySaved) {
+      const prepared = await context.request.post(libraryURL, {
+        headers: { "X-CSRF-Token": csrf, "Idempotency-Key": randomUUID() },
+        data: { meaningId: "mean-pour", source: "journey" },
+      });
+      expect(prepared.ok()).toBe(true);
+    }
+    await page.goto("/discover/ordering-at-a-cafe/pour");
+    // This is the previous staging selector's actual first result. Changing
+    // playback speed cannot serve as evidence that a meaning was saved.
+    const slow = page.locator("button[aria-pressed]").first();
+    await expect(slow).toHaveAccessibleName("Slow pronunciation of pour");
+    await expect(slow).toHaveAttribute("aria-pressed", "false");
+    const save = getFirstMeaningSaveControl(page);
+    await expect(save).toHaveCount(1);
+    await expect(save).toHaveAttribute("aria-pressed", String(initiallySaved));
+    const observed: {
+      method: string;
+      status: number;
+      path: string;
+      meaningId?: string;
+    }[] = [];
+    page.on("response", (response) => {
+      const request = response.request();
+      const path = new URL(response.url()).pathname;
+      if (request.method() === "POST" && path === "/api/v1/user-words") {
+        observed.push({
+          method: request.method(),
+          status: response.status(),
+          path,
+          meaningId: request.postDataJSON().meaningId,
+        });
+      } else if (
+        request.method() === "DELETE" &&
+        path === "/api/v1/user-words/mean-pour"
+      ) {
+        observed.push({
+          method: request.method(),
+          status: response.status(),
+          path,
+        });
+      }
+    });
+    const actions = reviewSeedActions(initiallySaved);
+    for (let index = 0; index < actions.length; index++) {
+      const action = actions[index]!;
+      await save.click();
+      await expect.poll(() => observed.length).toBe(index + 1);
+      expect(observed[index]!.status).toBeGreaterThanOrEqual(200);
+      expect(observed[index]!.status).toBeLessThan(300);
+      expect(observed[index]!.method).toBe(
+        action === "remove" ? "DELETE" : "POST",
+      );
+      if (action === "save")
+        expect(observed[index]!.meaningId).toBe("mean-pour");
+      await expect(save).toHaveAttribute(
+        "aria-pressed",
+        String(action === "save"),
+      );
+      const library = await context.request.get(libraryURL);
+      expect(library.ok()).toBe(true);
+      const body = await library.json();
+      expect(
+        body.items.map((item: { meaningId: string }) => item.meaningId),
+      ).toEqual(action === "save" ? ["mean-pour"] : []);
+      await expect(slow).toHaveAttribute("aria-pressed", "false");
+    }
+    await page.reload();
+    await expect(save).toHaveAttribute("aria-pressed", "true");
+    await expect(
+      page.getByRole("heading", { name: "Practice with pour", exact: true }),
+    ).toBeVisible();
+  });
+}
