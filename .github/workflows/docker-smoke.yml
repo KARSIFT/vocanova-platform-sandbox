@@ -41,8 +41,10 @@ jobs:
           image_tag="vocanova-web:pr-${PR_NUMBER}-${RUN_ID}"
           container_name="vocanova-web-runtime-${RUN_ID}"
           host_port=13000
+          picture_response=$(mktemp)
 
           cleanup() {
+            rm -f "$picture_response"
             docker rm -f "$container_name" >/dev/null 2>&1 || true
             docker rmi -f "$image_tag" >/dev/null 2>&1 || true
           }
@@ -82,6 +84,15 @@ jobs:
             docker logs --tail=100 "$container_name" >&2 || true
             exit 1
           fi
+
+          # Check the actual shipped bytes, not only the app root. A missing
+          # public/ COPY can otherwise produce a healthy but pictureless image.
+          picture_path=images/meanings/7ee5fc1b-8108-5fb4-a254-f75af84695f3.webp
+          curl --fail --silent --show-error --max-time 10 \
+            "http://127.0.0.1:${host_port}/${picture_path}" \
+            --output "$picture_response"
+          cmp "apps/web/public/${picture_path}" "$picture_response"
+          echo "Vocabulary picture served with exact source bytes"
 
           if [ "$(docker inspect --format '{{.State.Running}}' "$container_name")" != "true" ]; then
             echo "Container is not running after successful HTTP smoke" >&2

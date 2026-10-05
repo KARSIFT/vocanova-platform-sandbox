@@ -53,7 +53,7 @@ test("an unfinished lesson stays resumable when its words are marked known", asy
   await markTargetsKnown(context);
   await page.goto("/plan");
   const region = page.getByRole("main").getByRole("region", { name: "Pick up your lesson" });
-  await expect(region.getByText("0 of 9 steps saved. Continue where you left off.", { exact: true })).toBeVisible();
+  await expect(region.getByText("0 of 9 steps complete.", { exact: true })).toBeVisible();
   await region.getByRole("link", { name: /^Continue lesson\s*:/ }).click();
   await expect(page.getByRole("main").getByRole("heading", { name: "invite", exact: true })).toBeVisible();
 });

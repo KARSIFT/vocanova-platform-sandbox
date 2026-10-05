@@ -348,7 +348,7 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
     await page.goto("/home");
 
     await expect(
-      page.getByRole("heading", { name: "Today's Mission", level: 2 }),
+      page.getByRole("heading", { name: /Today.s practice|Mission complete/, level: 2 }),
     ).toBeVisible();
 
     const { criticalOrSerious } = await scanForAxeViolations(page);
@@ -367,10 +367,10 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
     // message is also text.
     await assertNonColorOnlyFeedback(page, {
       contextLabel: "/home",
-      requireText: ["text=reviews complete", "text=Streak", "text=In progress"],
+      requireText: ["text=Reviews today", "text=day streak", "text=In progress"],
     });
     await expect(
-      page.getByRole("progressbar", { name: "Today’s mission progress" }),
+      page.getByRole("progressbar", { name: "Reviews today" }),
     ).toHaveAttribute("aria-valuenow", "0");
   });
 });

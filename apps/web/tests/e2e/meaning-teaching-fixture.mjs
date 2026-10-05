@@ -1,6 +1,6 @@
 // Authored catalog fixture for a word with multiple real meanings.
 // The normal mock covers only the smaller starter subset; this handler exposes
-// deadline's actual canonical meanings without inventing related content.
+// actual canonical meanings without inventing related content.
 import { readFileSync } from "node:fs";
 const seed = JSON.parse(
   readFileSync(
@@ -18,12 +18,14 @@ export function handleMeaningTeaching({
   if (
     cookies.e2e_teaching !== "true" ||
     req.method !== "GET" ||
-    url.pathname !== "/api/v1/canonical-words/deadline"
+    !url.pathname.startsWith("/api/v1/canonical-words/")
   )
     return false;
+  const slug = decodeURIComponent(url.pathname.split("/").at(-1));
   const word = seed.canonical_words.find(
-    (item) => item.normalized_text === "deadline",
+    (item) => item.normalized_text.replaceAll(" ", "-") === slug,
   );
+  if (!word) return false;
   const meanings = seed.word_meanings
     .filter((item) => item.word_id === word.id && item.status === "active")
     .map((meaning) => ({
@@ -53,7 +55,7 @@ export function handleMeaningTeaching({
     word: {
       id: word.id,
       text: word.text,
-      slug: "deadline",
+      slug,
       wordType: word.word_type,
       difficultyLevel: word.difficulty_level,
       meanings,

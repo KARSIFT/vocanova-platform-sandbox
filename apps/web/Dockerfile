@@ -286,22 +286,9 @@ COPY --from=build --chown=vocanova:vocanova /repo/apps/web/.next/standalone/ ./
 # /_next/static/* request.
 COPY --from=build --chown=vocanova:vocanova /repo/apps/web/.next/static ./apps/web/.next/static
 
-# public/ assets (favicons, robots.txt, etc.)
-# are served verbatim by Next.js. The directory
-# does not exist in apps/web today (the repo's
-# source tree has no public/ directory - the
-# apps/web/src/app/ tree is the only public
-# surface, and Next.js's build is responsible
-# for fingerprinting any public/ files at
-# request time), so there is no COPY here. If a
-# future change adds public/, the right line is:
-#   COPY --from=build --chown=vocanova:vocanova /repo/apps/web/public ./apps/web/public
-# No public/.gitkeep or empty-dir marker is
-# added by this Dockerfile - public/ being
-# absent is a deliberate, repo-current state,
-# not a bug to work around, and adding an
-# empty public/ just to make the COPY line
-# always-succeed would be a misleading change.
+# Original vocabulary pictures are served from public/. Next standalone
+# tracing does not copy these runtime assets automatically.
+COPY --from=build --chown=vocanova:vocanova /repo/apps/web/public ./apps/web/public
 
 # PORT default matches Next.js's own default
 # (3000). The container does not need to know

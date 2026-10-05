@@ -1,5 +1,13 @@
 # Vocanova release readiness
 
+## Visual learning phase — current verification
+
+See [visual learning delivery](../design/visual-learning-delivery.md) for the
+current phase's acceptance record. Prior release evidence below does not accept
+these new interface or artwork changes. The consolidated PR must pass its own
+applicable hosted checks, including container asset delivery. A new production
+deployment remains separate.
+
 ## Consolidated maturity verification — 5 October 2026
 
 [PR #1484](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1484) adds the

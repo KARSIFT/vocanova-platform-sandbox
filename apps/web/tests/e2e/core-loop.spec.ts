@@ -214,7 +214,7 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     await expect(page).toHaveURL(/\/home(\?|$)/);
     await expect(
       page.getByRole("heading", {
-        name: "Today's Mission",
+        name: /Today.s practice|Mission complete/,
         level: 2,
         exact: true,
       }),
@@ -251,6 +251,11 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     await expect(
       page.getByText("Could you pour me a cup of coffee?"),
     ).toBeVisible();
+    const usageTips = page.locator("summary").filter({ hasText: "Usage tips" });
+    await expect(usageTips.locator("..")).not.toHaveAttribute("open");
+    await usageTips.focus();
+    await page.keyboard.press("Enter");
+    await expect(usageTips.locator("..")).toHaveAttribute("open", "");
     await expect(
       page.getByText("Common in everyday service contexts."),
     ).toBeVisible();
@@ -406,7 +411,7 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     // show "1 of 20 words reviewed today" (the default target).
     await page.goto("/home");
     await expect(
-      page.getByRole("progressbar", { name: "Today’s mission progress" }),
+      page.getByRole("progressbar", { name: "Reviews today" }),
     ).toHaveAttribute("aria-valuenow", "1");
 
     // Home exposes one deliberate practice entry, independent of word detail

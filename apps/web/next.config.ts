@@ -65,6 +65,13 @@ import { withSentryConfig } from "@sentry/nextjs";
 const nextConfig = {
   ...(process.env.VERCEL ? {} : { output: "standalone" }),
   outputFileTracingRoot: path.join(__dirname, "../.."),
+  images: {
+    localPatterns: [
+      // Preserve ordinary local images; only vocabulary revisions need queries.
+      { pathname: "**", search: "" },
+      { pathname: "/images/meanings/*.webp" },
+    ],
+  },
 };
 
 // VOC-051-T01: hand-adapted equivalent of the @sentry/nextjs wizard's

@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { Eyebrow, PageContainer } from "@/ui/surface";
+import { PageContainer } from "@/ui/surface";
 
 import { getDiscoverListView } from "./_components/discover-view";
 import { formatLevelBand } from "./_components/level-band";
@@ -19,7 +19,7 @@ export default async function DiscoverPage() {
   const { items } = response.data;
   const lessonResponse = await client.listLessons().catch(() => null);
   const situationOrder = new Map(
-    items.map((item, index) => [item.slug, index]),
+    items.map((item, index) => [item.slug, index] as const),
   );
   const lessons = [...(lessonResponse?.data.items ?? [])].sort(
     (a, b) =>
@@ -29,55 +29,25 @@ export default async function DiscoverPage() {
 
   return (
     <PageContainer className="max-w-[64rem]">
-      <Eyebrow>Learn in context</Eyebrow>
-      <h1 className="mt-[var(--spacing-xs)] text-3xl font-bold tracking-tight text-neutral-900">
-        Journey
-      </h1>
-      <div className="flex flex-wrap items-end justify-between gap-[var(--spacing-md)]">
-        <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-          Follow a short lesson or explore words for a moment that matters to
-          you.
-        </p>
-        <Link
-          href="/words"
-          className="inline-flex min-h-[var(--spacing-2xl)] items-center rounded-md px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-semibold text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-        >
-          View saved vocabulary
-        </Link>
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+        <h1 className="text-3xl font-bold tracking-tight text-neutral-900">
+          Journey
+        </h1>
+        <div className="flex flex-wrap gap-5">
+          <Link
+            href="/vocabulary"
+            className="inline-flex min-h-11 items-center font-semibold text-primary-700 hover:text-primary-800"
+          >
+            Find a word
+          </Link>
+          <Link
+            href="/words"
+            className="inline-flex min-h-11 items-center font-semibold text-primary-700 hover:text-primary-800"
+          >
+            Saved words
+          </Link>
+        </div>
       </div>
-
-      <div className="my-5 flex flex-wrap gap-3">
-        <Link
-          href="/lists"
-          className="inline-flex min-h-12 items-center rounded-xl border border-neutral-300 bg-white px-5 py-3 font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-        >
-          Personal lists
-        </Link>
-        <Link
-          href="/plan"
-          className="inline-flex min-h-12 items-center rounded-xl border border-neutral-300 bg-white px-5 py-3 font-semibold text-primary-700"
-        >
-          Your learning plan
-        </Link>
-        <Link
-          href="/vocabulary"
-          className="inline-flex min-h-12 items-center rounded-xl bg-primary-700 px-5 py-3 font-semibold text-white hover:bg-primary-800"
-        >
-          Search all vocabulary
-        </Link>
-        <Link
-          href="/practice"
-          className="inline-flex min-h-12 items-center rounded-xl border border-neutral-300 bg-white px-5 py-3 font-semibold text-primary-700"
-        >
-          Choose a practice
-        </Link>
-      </div>
-      <Link
-        href="/writing"
-        className="mb-5 inline-flex min-h-12 items-center rounded-xl border border-neutral-300 bg-white px-5 py-3 font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-      >
-        Topic writing
-      </Link>
       {lessonResponse ? (
         <LessonPath lessons={lessons} />
       ) : (
@@ -86,6 +56,32 @@ export default async function DiscoverPage() {
           situations below.
         </p>
       )}
+      <details className="my-6 border-y border-neutral-200 py-2">
+        <summary className="min-h-11 cursor-pointer content-center font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
+          More ways to practise
+        </summary>
+        <nav
+          aria-label="More ways to practise"
+          className="grid gap-2 py-3 sm:grid-cols-2"
+        >
+          {(
+            [
+              ["/practice", "Choose a practice"],
+              ["/writing", "Topic writing"],
+              ["/lists", "Personal lists"],
+              ["/plan", "Your learning plan"],
+            ] as const
+          ).map(([href, label]) => (
+            <Link
+              key={href}
+              href={href}
+              className="inline-flex min-h-11 items-center rounded-xl bg-white px-4 py-3 font-semibold text-primary-700 hover:bg-primary-50"
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
+      </details>
       <h2 className="mt-8 text-2xl font-bold tracking-tight text-neutral-900">
         Explore by situation
       </h2>

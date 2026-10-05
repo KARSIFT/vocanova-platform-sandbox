@@ -60,6 +60,24 @@ completed mission. Explain the points balance as rewards for learning activity,
 not a language proficiency score. Unavailable settings should not appear as new
 choices; previously stored values must survive unrelated edits.
 
+## Vocabulary artwork
+
+Mix realistic photos, illustrations and simple visual diagrams, as the owner
+requested for the current collection and future pictures. Preserve the 3:2 picture
+shape and readable teaching layout. Vary people, ages, appearance, clothing,
+objects, colors, architecture, indoor/outdoor settings and times of day. The interface palette does not require every illustrated
+person to wear blue or lavender or every background to resemble the same room.
+Avoid repeating a small cast or template composition throughout the vocabulary.
+
+Show clear actions and interactions when they explain the meaning: reaching,
+handing over, entering, leaving, responding, repairing or changing direction.
+Pose, gesture and composition should make the action legible in a still picture.
+Use quiet object-focused scenes where that best explains a noun; do not add busy
+motion that obscures the lesson. Keep one recognizable meaning, readable at
+mobile size, with an accurate alternative description and no answer leakage in
+graded exercises. Review batches together for variety as well as each image's
+meaning accuracy.
+
 ## Working with design skills
 
 Use [Anthropic's frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design)

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ApiResponseError } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { Eyebrow, PageContainer, Surface } from "@/ui/surface";
+import { PageContainer, Surface } from "@/ui/surface";
 import { SentenceFeedback } from "../_components/sentence-feedback";
 import { RecommendedLesson } from "../_components/lesson-recommendation";
 
@@ -114,40 +114,13 @@ export default async function HomePage() {
 
   return (
     <PageContainer className="max-w-[72rem]">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-neutral-900 sm:text-3xl">
-            Your learning today
-          </h1>
-          <p className="mt-2 text-neutral-700">
-            Learn new words and keep them fresh.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-4">
-          <Link
-            href="/plan"
-            className="inline-flex min-h-11 items-center font-semibold text-primary-700"
-          >
-            Your learning plan
-          </Link>
-          <Link
-            href="/vocabulary"
-            className="inline-flex min-h-11 items-center font-semibold text-primary-700"
-          >
-            Find a word
-          </Link>
-        </div>
-      </div>
-      <div className="my-[var(--spacing-md)] flex items-center justify-between gap-[var(--spacing-md)]">
-        <div>
-          <Eyebrow>Today’s learning space</Eyebrow>
-        </div>
-        <div className="shrink-0 rounded-xl bg-secondary-50 px-[var(--spacing-sm)] py-[var(--spacing-xs)] text-right">
-          <p className="text-xs font-semibold text-secondary-800">Streak</p>
-          <p className="text-lg font-bold leading-tight text-secondary-900">
-            {currentStreakDays} day{currentStreakDays === 1 ? "" : "s"}
-          </p>
-        </div>
+      <div className="mb-5 flex items-center justify-between gap-4">
+        <h1 className="text-3xl font-bold tracking-tight text-neutral-900">
+          Today
+        </h1>
+        <p className="rounded-xl bg-secondary-50 px-3 py-2 text-sm font-semibold text-secondary-900">
+          {currentStreakDays}-day streak
+        </p>
       </div>
       <div className="lg:grid lg:items-start lg:grid-cols-[minmax(0,1.45fr)_minmax(18rem,0.75fr)] lg:gap-[var(--spacing-lg)]">
         <section
@@ -158,14 +131,9 @@ export default async function HomePage() {
             <div>
               <h2
                 id="todays-mission-heading"
-                className="text-sm font-semibold text-primary-100"
+                className="text-xl font-bold tracking-tight"
               >
-                Today&apos;s Mission
-              </h2>
-              <h2 className="mt-1 text-xl font-bold tracking-tight">
-                {missionComplete
-                  ? "Mission complete"
-                  : "Build your review habit"}
+                {missionComplete ? "Mission complete" : "Today’s practice"}
               </h2>
             </div>
             <span
@@ -175,9 +143,7 @@ export default async function HomePage() {
             </span>
           </div>
           <p className="mt-[var(--spacing-sm)] text-base text-primary-100">
-            {missionComplete
-              ? `You reviewed ${reviewedWordsToday} of ${missionTargetWords} words today.`
-              : `Daily goal: ${reviewedWordsToday} of ${missionTargetWords} reviews complete`}
+            Reviews today: {reviewedWordsToday} of {missionTargetWords}
           </p>
           <p className="mt-[var(--spacing-xs)] text-sm text-primary-100">
             Currently due: {dueReviewWords}{" "}
@@ -185,14 +151,14 @@ export default async function HomePage() {
           </p>
           <div
             role="progressbar"
-            aria-label="Today’s mission progress"
+            aria-label="Reviews today"
             aria-valuemin={0}
             aria-valuemax={missionTargetWords}
             aria-valuenow={Math.min(reviewedWordsToday, missionTargetWords)}
             className="mt-[var(--spacing-sm)] h-2 w-full overflow-hidden rounded-full bg-primary-900/50"
           >
             <div
-              className="h-full rounded-full bg-primary-200 transition-[width] duration-[var(--duration-slow)]"
+              className="h-full rounded-full bg-primary-200"
               style={{ width: `${missionProgressPercent}%` }}
             />
           </div>
@@ -206,10 +172,13 @@ export default async function HomePage() {
             {primaryAction.detail}
           </p>
         </section>
-
+        <RecommendedLesson
+          data={recommendation?.data ?? null}
+          className="mt-4 lg:col-start-1"
+        />
         <Surface
           aria-labelledby="saved-words-heading"
-          className="mt-[var(--spacing-md)] lg:mt-0"
+          className="mt-[var(--spacing-md)] lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:mt-0"
         >
           <div className="flex items-baseline justify-between gap-[var(--spacing-md)]">
             <h2
@@ -281,7 +250,20 @@ export default async function HomePage() {
           )}
         </Surface>
       </div>
-      <RecommendedLesson data={recommendation?.data ?? null} className="mt-6" />
+      <div className="mt-5 flex flex-wrap gap-x-6 gap-y-1">
+        <Link
+          href="/vocabulary"
+          className="inline-flex min-h-11 items-center font-semibold text-primary-700 hover:text-primary-800"
+        >
+          Find a word
+        </Link>
+        <Link
+          href="/plan"
+          className="inline-flex min-h-11 items-center font-semibold text-primary-700 hover:text-primary-800"
+        >
+          Your learning plan
+        </Link>
+      </div>
     </PageContainer>
   );
 }

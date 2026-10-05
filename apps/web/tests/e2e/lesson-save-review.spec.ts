@@ -124,8 +124,19 @@ for (const theme of ["light", "dark"] as const) {
     await expect(
       page
         .getByRole("main")
-        .getByText("Finishing a lesson does not save its words automatically."),
+        .getByText(
+          "Want to remember these? Save the meanings you want to review.",
+        ),
     ).toBeVisible();
+    const beforeChoosing = await context.request.get(
+      apiURL(baseURL!, "/api/v1/user-words"),
+    );
+    expect(beforeChoosing.ok()).toBe(true);
+    const initiallySaved = await beforeChoosing.json();
+    expect(
+      initiallySaved.items.map((item: SavedMeaning) => item.meaningId),
+      "Completing the lesson must not save unchosen meanings",
+    ).toEqual([confirm.meaningId]);
     expect(browserWrites).toEqual([]);
     const bounds = await save.boundingBox();
     expect(bounds?.height).toBeGreaterThanOrEqual(44);

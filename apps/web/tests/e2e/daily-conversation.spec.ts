@@ -55,6 +55,9 @@ for (const theme of ["light", "dark"] as const) {
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth),
       ).toBeLessThanOrEqual(page.viewportSize()!.width);
+      // Keyboard focus may leave the back link clipped under the sticky header.
+      // Scan the same stable viewport used by the other teaching a11y tests.
+      await page.evaluate(() => window.scrollTo(0, 0));
       const { criticalOrSerious } = await scanForAxeViolations(page);
       expect(criticalOrSerious).toEqual([]);
       await page.screenshot({
@@ -72,18 +75,22 @@ for (const theme of ["light", "dark"] as const) {
       { exact: true },
     );
     await expect(fullerDefinition).toBeVisible();
-    // Verify both authored examples survive the seed -> API fixture -> page path.
-    await expect(
-      page.getByText(
-        "We kept in touch by sending each other a message every week.",
-        { exact: true },
-      ),
-    ).toBeVisible();
-    const examples = page
-      .getByRole("heading", { name: "Example sentences", exact: true })
-      .locator("..")
-      .getByRole("listitem");
-    await expect(examples).toHaveCount(2);
+    // Both authored examples remain available; only the first is initially shown.
+    async function verifyExamples() {
+      const first = page.getByRole("heading", { name: "In a sentence", exact: true }).locator("..").getByRole("listitem");
+      await expect(first).toHaveCount(1);
+      await expect(first.getByText("Let us keep in touch after the course ends.", { exact: true })).toBeVisible();
+      const more = page.locator("summary").filter({ hasText: "More examples" });
+      const extra = more.locator("..").getByRole("listitem");
+      const second = extra.getByText("We kept in touch by sending each other a message every week.", { exact: true });
+      await expect(second).toBeHidden();
+      await more.focus();
+      await page.keyboard.press("Enter");
+      await expect(more).toBeFocused();
+      await expect(extra).toHaveCount(1);
+      await expect(second).toBeVisible();
+    }
+    await verifyExamples();
     const save = page.getByRole("button", { name: /^Save keep in touch:/ });
     await save.focus();
     await expect(save).toBeFocused();
@@ -106,7 +113,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(
       page.getByRole("heading", { level: 1, name: "keep in touch" }),
     ).toBeVisible();
-    await expect(examples).toHaveCount(2);
+    await verifyExamples();
     await expect(fullerDefinition).toBeVisible();
     await expect(
       page.getByRole("region", { name: "Practice with keep in touch" }),
@@ -114,7 +121,7 @@ for (const theme of ["light", "dark"] as const) {
     await checkPageAndCapture("saved-keep-in-touch");
     await page.goto("/discover/daily-conversation");
     await expect(
-      page.getByText("1 of 18 words saved", { exact: true }),
+      page.getByRole("main").getByRole("region", { name: "Situation progress", exact: true }).getByText("1 of 18 words saved", { exact: true }),
     ).toBeVisible();
     // Navigation state is derived from the mock API's saved set, not a visual-only toggle.
     await expect(

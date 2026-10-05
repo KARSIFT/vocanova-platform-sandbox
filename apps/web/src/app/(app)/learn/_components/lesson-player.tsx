@@ -12,6 +12,7 @@ import {
 import { createApiClient } from "@/lib/api";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError } from "@/lib/session";
+import { MeaningPicture } from "@/ui/meaning-picture";
 import { ListenButton } from "@/ui/pronunciation";
 import { Surface } from "@/ui/surface";
 import { LessonAudio } from "./lesson-audio";
@@ -219,13 +220,9 @@ export function LessonPlayer({
             {lesson.title}
           </h1>
           <p className="mt-3 text-lg text-neutral-700">{lesson.description}</p>
-          <ol className="my-6 space-y-3 text-neutral-700">
-            <li>
-              Meet {lesson.wordCount} useful words and hear how they sound.
-            </li>
-            <li>Check what you remember with short questions.</li>
-            <li>Choose the words that fit a real situation.</li>
-          </ol>
+          <p className="my-6 text-neutral-700">
+            {lesson.wordCount} words, then a little practice.
+          </p>
           <button
             type="button"
             disabled={locked}
@@ -255,12 +252,10 @@ export function LessonPlayer({
           </p>
           <p className="mt-2 text-neutral-600">
             {session.firstAnswersCorrect} of {session.questionsAnswered}{" "}
-            questions correct on your first try. Returning to these words will
-            help them stay with you.
+            questions correct on your first try.
           </p>
           <p className="mt-3 text-sm text-neutral-600">
-            Finishing a lesson does not save its words automatically. Choose the
-            meanings you want to review later.
+            Want to remember these? Save the meanings you want to review.
           </p>
           <ul className="my-6 divide-y divide-neutral-200">
             {session.words.map((word) => (
@@ -296,162 +291,174 @@ export function LessonPlayer({
           </div>
         </Surface>
       ) : step ? (
-        <Surface key={step.id}>
-          <p className="text-sm font-semibold text-primary-700">
-            {step.kind === "teach"
-              ? "Meet a word"
-              : step.kind === "recall"
-                ? "Remember the meaning"
-                : step.kind === "typed_recall"
-                  ? "Recall the word"
-                  : step.kind === "listening_choice"
-                    ? "Listen and understand"
-                    : "Use it in context"}
-          </p>
-          <h1
-            ref={heading}
-            tabIndex={-1}
-            className="mt-2 text-2xl font-bold leading-snug text-neutral-900"
-          >
-            {step.prompt}
-          </h1>
-          {step.kind === "teach" ? (
-            <div className="mt-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-3xl font-bold text-neutral-900">
-                  {step.word.wordText}
-                </h2>
-                <ListenButton text={step.word.wordText} />
-              </div>
-              <p className="mt-1 text-sm text-neutral-600">
-                {step.word.partOfSpeech}
-              </p>
-              <p className="mt-4 text-xl leading-relaxed text-neutral-900">
-                {step.word.definition}
-              </p>
-              <blockquote className="mt-5 border-l-4 border-primary-300 pl-4 text-lg text-neutral-700">
-                {step.word.example}
-              </blockquote>
-              <div className="mt-2">
-                <ListenButton
-                  text={step.word.example}
-                  label="Listen to example"
-                  showCaption={false}
-                />
-              </div>
-              {step.word.usageNote && (
-                <p className="mt-5 rounded-xl bg-secondary-50 p-4 text-neutral-800">
-                  {step.word.usageNote}
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="mt-5">
-              {step.context && (
-                <p className="mb-5 rounded-xl bg-secondary-50 p-4 text-lg leading-relaxed text-neutral-900">
-                  {step.context}
-                </p>
-              )}
-              {step.kind === "listening_choice" && step.speechText && (
-                <LessonAudio text={step.speechText} />
-              )}
-              {step.kind === "typed_recall" ? (
-                <form
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    if (typedAnswer.trim())
-                      void submit("answer", undefined, typedAnswer);
-                  }}
-                  className="space-y-3"
-                >
-                  <label
-                    htmlFor="lesson-typed-answer"
-                    className="block font-semibold text-neutral-900"
-                  >
-                    Your word or phrase
-                  </label>
-                  <input
-                    id="lesson-typed-answer"
-                    type="text"
-                    autoComplete="off"
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    maxLength={200}
-                    value={typedAnswer}
-                    onChange={(event) => setTypedAnswer(event.target.value)}
-                    disabled={locked || session.canContinue}
-                    className="min-h-12 w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-                  />
-                  <p className="text-sm text-neutral-600">
-                    Try to remember the word. Capital letters and extra spaces
-                    do not matter.
-                  </p>
-                  <button
-                    type="submit"
-                    className={primary}
-                    disabled={
-                      locked || session.canContinue || !typedAnswer.trim()
-                    }
-                  >
-                    Check answer
-                  </button>
-                </form>
-              ) : (
-                <div
-                  role="group"
-                  aria-label="Answer choices"
-                  className="grid gap-3"
-                >
-                  {step.choices.map((choice) => (
-                    <button
-                      type="button"
-                      key={choice.id}
-                      disabled={locked || session.canContinue}
-                      onClick={() => void submit("answer", choice.id)}
-                      className={`${secondary} justify-start text-left ${session.feedback?.correctChoiceId === choice.id ? "border-primary-500 bg-primary-50" : ""}`}
-                    >
-                      {choice.text}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          {session.feedback && (
-            <div
-              ref={feedback}
+        <Surface key={step.id} className="flex min-h-[32rem] flex-col">
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-primary-700">
+              {step.kind === "teach"
+                ? "Meet a word"
+                : step.kind === "recall"
+                  ? "Remember the meaning"
+                  : step.kind === "typed_recall"
+                    ? "Recall the word"
+                    : step.kind === "listening_choice"
+                      ? "Listen and understand"
+                      : "Use it in context"}
+            </p>
+            <h1
+              ref={heading}
               tabIndex={-1}
-              role="status"
-              className={`mt-5 rounded-xl border p-4 ${session.feedback.correct ? "border-primary-200 bg-primary-50" : "border-secondary-200 bg-secondary-50"}`}
+              className="mt-2 text-2xl font-bold leading-snug text-neutral-900"
             >
-              <h2 className="font-semibold text-neutral-900">
-                {session.feedback.correct ? "That’s right" : "Let’s look again"}
-              </h2>
-              <p className="mt-1 text-neutral-700">
-                {session.feedback.explanation}
-              </p>
-              {!session.feedback.correct && (
-                <p className="mt-2 text-sm text-neutral-700">
-                  {step.kind === "typed_recall"
-                    ? `Try typing the answer again${session.feedback.answer ? `: ${session.feedback.answer}` : "."}`
-                    : "Choose an answer to try again."}
+              {step.prompt}
+            </h1>
+            {step.kind === "teach" ? (
+              <div className="mt-6">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="text-3xl font-bold text-neutral-900">
+                    {step.word.wordText}
+                  </h2>
+                  <ListenButton text={step.word.wordText} />
+                </div>
+                <p className="mt-1 text-sm text-neutral-600">
+                  {step.word.partOfSpeech}
                 </p>
-              )}
-            </div>
-          )}
+                <p className="mt-4 text-xl leading-relaxed text-neutral-900">
+                  {step.word.definition}
+                </p>
+                <MeaningPicture meaningId={step.word.meaningId} />
+                <blockquote className="mt-5 border-l-4 border-primary-300 pl-4 text-lg text-neutral-700">
+                  {step.word.example}
+                </blockquote>
+                <div className="mt-2">
+                  <ListenButton
+                    text={step.word.example}
+                    label="Listen to example"
+                    showCaption={false}
+                  />
+                </div>
+                {step.word.usageNote && (
+                  <details className="mt-4 border-t border-neutral-200">
+                    <summary className="min-h-11 cursor-pointer py-3 font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
+                      Usage tip
+                    </summary>
+                    <p className="rounded-xl bg-secondary-50 p-4 text-neutral-800">
+                      {step.word.usageNote}
+                    </p>
+                  </details>
+                )}
+              </div>
+            ) : (
+              <div className="mt-5">
+                {step.context && (
+                  <p className="mb-5 rounded-xl bg-secondary-50 p-4 text-lg leading-relaxed text-neutral-900">
+                    {step.context}
+                  </p>
+                )}
+                {step.kind === "listening_choice" && step.speechText && (
+                  <LessonAudio text={step.speechText} />
+                )}
+                {step.kind === "typed_recall" ? (
+                  <form
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      if (typedAnswer.trim())
+                        void submit("answer", undefined, typedAnswer);
+                    }}
+                    className="space-y-3"
+                  >
+                    <label
+                      htmlFor="lesson-typed-answer"
+                      className="block font-semibold text-neutral-900"
+                    >
+                      Your word or phrase
+                    </label>
+                    <input
+                      id="lesson-typed-answer"
+                      type="text"
+                      autoComplete="off"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      maxLength={200}
+                      value={typedAnswer}
+                      onChange={(event) => setTypedAnswer(event.target.value)}
+                      disabled={locked || session.canContinue}
+                      className="min-h-12 w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+                    />
+                    <p className="text-sm text-neutral-600">
+                      Try to remember the word. Capital letters and extra spaces
+                      do not matter.
+                    </p>
+                    <button
+                      type="submit"
+                      className={primary}
+                      disabled={
+                        locked || session.canContinue || !typedAnswer.trim()
+                      }
+                    >
+                      Check answer
+                    </button>
+                  </form>
+                ) : (
+                  <div
+                    role="group"
+                    aria-label="Answer choices"
+                    className="grid gap-3"
+                  >
+                    {step.choices.map((choice) => (
+                      <button
+                        type="button"
+                        key={choice.id}
+                        disabled={locked || session.canContinue}
+                        onClick={() => void submit("answer", choice.id)}
+                        className={`${secondary} justify-start text-left ${session.feedback?.correctChoiceId === choice.id ? "border-primary-500 bg-primary-50" : ""}`}
+                      >
+                        {choice.text}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {session.feedback && (
+              <div
+                ref={feedback}
+                tabIndex={-1}
+                role="status"
+                className={`mt-5 rounded-xl border p-4 ${session.feedback.correct ? "border-primary-200 bg-primary-50" : "border-secondary-200 bg-secondary-50"}`}
+              >
+                <h2 className="font-semibold text-neutral-900">
+                  {session.feedback.correct
+                    ? "That’s right"
+                    : "Let’s look again"}
+                </h2>
+                <p className="mt-1 text-neutral-700">
+                  {session.feedback.explanation}
+                </p>
+                {!session.feedback.correct && (
+                  <p className="mt-2 text-sm text-neutral-700">
+                    {step.kind === "typed_recall"
+                      ? `Try typing the answer again${session.feedback.answer ? `: ${session.feedback.answer}` : "."}`
+                      : "Choose an answer to try again."}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
           {session.canContinue && (
-            <button
-              type="button"
-              disabled={locked}
-              onClick={() => void submit("continue")}
-              className={`${primary} mt-6 w-full`}
-            >
-              {busy
-                ? "Saving progress…"
-                : session.completedSteps + 1 === session.totalSteps
-                  ? "Finish lesson"
-                  : "Continue"}
-            </button>
+            <div className="mt-6 border-t border-neutral-200 pt-4">
+              <button
+                type="button"
+                disabled={locked}
+                onClick={() => void submit("continue")}
+                className={`${primary} w-full`}
+              >
+                {busy
+                  ? "Saving progress…"
+                  : session.completedSteps + 1 === session.totalSteps
+                    ? "Finish lesson"
+                    : "Continue"}
+              </button>
+            </div>
           )}
         </Surface>
       ) : null}

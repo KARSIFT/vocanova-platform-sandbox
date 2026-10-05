@@ -56,7 +56,7 @@ test.describe("Home accessibility (VOC-031-T07a)", () => {
     // reporting false-positive violations for half-rendered
     // markup.
     await expect(
-      page.getByRole("heading", { name: "Today's Mission", level: 2 }),
+      page.getByRole("heading", { name: /Today.s practice|Mission complete/, level: 2 }),
     ).toBeVisible();
 
     const { criticalOrSerious } = await scanForAxeViolations(page);
