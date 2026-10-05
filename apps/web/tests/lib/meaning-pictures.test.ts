@@ -116,25 +116,35 @@ describe("meaning-specific picture content", () => {
   it("omits unavailable and failed media without inventing a replacement", () => {
     assert.equal(getReadyMeaningPicture("unknown-meaning"), undefined);
     for (const picture of Object.values(MEANING_PICTURES)) {
+      const ready = getReadyMeaningPicture(picture.meaningId);
+      assert.ok(ready);
+      assert.equal(ready.alt, picture.alt);
+      const source = new URL(ready.src, "https://vocanova.invalid");
+      assert.equal(source.pathname, picture.src);
+      assert.match(source.searchParams.get("v")!, /^[a-f0-9]{16}$/);
       assert.equal(
-        getReadyMeaningPicture(picture.meaningId, picture.src),
-        undefined,
+        source.searchParams.get("v"),
+        runtimeCatalogue[picture.meaningId as keyof typeof runtimeCatalogue]
+          .version,
       );
-      assert.deepEqual(
-        getReadyMeaningPicture(picture.meaningId),
-        picture.status === "ready"
-          ? { alt: picture.alt, src: picture.src }
-          : undefined,
+      assert.equal(
+        getReadyMeaningPicture(picture.meaningId, ready.src),
+        undefined,
       );
     }
   });
 
-  it("ships a synchronized catalogue containing only ready IDs and alt text", () => {
+  it("ships a synchronized catalogue with only ready IDs, alt text and byte revisions", () => {
     const expected = createRuntimeCatalogue(MEANING_PICTURES);
     assert.equal(Object.keys(expected).length, 92);
     assert.deepEqual(runtimeCatalogue, expected);
     assert.ok(
-      Object.values(runtimeCatalogue).every((alt) => typeof alt === "string"),
+      Object.values(runtimeCatalogue).every(
+        (picture) =>
+          typeof picture.alt === "string" &&
+          /^[a-f0-9]{16}$/.test(picture.version) &&
+          Object.keys(picture).sort().join(",") === "alt,version",
+      ),
     );
     const result = spawnSync(
       process.execPath,
@@ -150,6 +160,38 @@ describe("meaning-specific picture content", () => {
       { encoding: "utf8" },
     );
     assert.equal(result.status, 0, result.stderr);
+  });
+
+  it("gives changed artwork bytes a new cache identity while preserving the meaning and alt", () => {
+    const picture = Object.values(MEANING_PICTURES)[0]!;
+    const manifest = { [picture.meaningId]: picture };
+    const first = createRuntimeCatalogue(manifest, () =>
+      Buffer.from("first artwork payload"),
+    );
+    const repeated = createRuntimeCatalogue(manifest, () =>
+      Buffer.from("first artwork payload"),
+    );
+    const revised = createRuntimeCatalogue(manifest, () =>
+      Buffer.from("revised artwork payload"),
+    );
+    assert.deepEqual(
+      first,
+      repeated,
+      "Unchanged bytes retain their cache identity",
+    );
+    const original = first[picture.meaningId];
+    const replacement = revised[picture.meaningId];
+    assert.ok(original && replacement);
+    assert.notEqual(original.version, replacement.version);
+    assert.equal(original.alt, replacement.alt);
+    assert.deepEqual(Object.keys(first), Object.keys(revised));
+    assert.throws(
+      () =>
+        createRuntimeCatalogue(manifest, () => {
+          throw new Error("Missing ready asset");
+        }),
+      /Missing ready asset/,
+    );
   });
 
   it("excludes pending artwork and rejects mismatched identities or empty descriptions", () => {

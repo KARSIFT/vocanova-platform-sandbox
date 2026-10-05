@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 import process from "node:process";
 import { log } from "node:console";
@@ -9,8 +10,13 @@ const destination = new URL(
   "../src/lib/meaning-pictures.runtime.json",
   import.meta.url,
 );
-/** Keep editorial context out of client bundles; only reviewed media is visible. */
-export function createRuntimeCatalogue(manifest) {
+/**
+ * Keep editorial context out of client bundles; only reviewed media is visible.
+ * @param {Record<string, {meaningId: string, src: string, status: string, alt: string}>} manifest
+ * @param {(asset: URL) => Uint8Array} [readPicture]
+ */
+export function createRuntimeCatalogue(manifest, readPicture = readFileSync) {
+  /** @type {Record<string, {alt: string, version: string}>} */
   const runtime = {};
   for (const [meaningId, picture] of Object.entries(manifest).sort(([a], [b]) =>
     a.localeCompare(b),
@@ -29,7 +35,15 @@ export function createRuntimeCatalogue(manifest) {
       if (typeof picture.alt !== "string" || !picture.alt.trim()) {
         throw new Error(`Missing ready picture alt text: ${meaningId}`);
       }
-      runtime[meaningId] = picture.alt;
+      // UUIDs identify meanings, while file bytes identify an artwork revision.
+      // Revised artwork must bypass an older Next/image or browser cache entry.
+      const version = createHash("sha256")
+        .update(
+          readPicture(new URL(`../public${picture.src}`, import.meta.url)),
+        )
+        .digest("hex")
+        .slice(0, 16);
+      runtime[meaningId] = { alt: picture.alt, version };
     }
   }
   return runtime;
