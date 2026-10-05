@@ -63,6 +63,7 @@ const EDGE_BUILD_TIME_ENV: Record<string, string> = {
 export type MiddlewareOutcome =
   | { kind: "next" }
   | { kind: "redirect"; location: string }
+  | { kind: "rewrite"; location: string; status?: number }
   | { kind: "threw"; message: string };
 
 export interface AuthCheckRequest {
@@ -162,6 +163,7 @@ async function readMiddlewareScripts(): Promise<string> {
 const NEXT_RESPONSE_RECORDER = `
   globalThis.NextResponse = {
     redirect: (url) => ({ kind: "redirect", location: String(url) }),
+    rewrite: (url, options) => ({ kind: "rewrite", location: String(url), status: options?.status }),
     next: () => ({ kind: "next" }),
   };
 `;
@@ -248,6 +250,8 @@ function createNodeMiddlewareContext(env: NodeJS.ProcessEnv): object {
     Headers: globalThis.Headers,
     Request: globalThis.Request,
     Response: globalThis.Response,
+    AbortController: globalThis.AbortController,
+    AbortSignal: globalThis.AbortSignal,
     URL: globalThis.URL,
     URLSearchParams: globalThis.URLSearchParams,
     TextEncoder: globalThis.TextEncoder,
