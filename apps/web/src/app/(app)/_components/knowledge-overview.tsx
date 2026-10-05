@@ -32,13 +32,12 @@ export function KnowledgeOverview({ summary }: { summary: KnowledgeSummary }) {
         </Link>
       </div>
       <dl className="mt-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {stages.map(([label, count, explanation]) => (
+        {stages.map(([label, count]) => (
           <div key={label} className="border-l-4 border-primary-200 pl-3">
             <dt className="font-semibold text-neutral-700">{label}</dt>
             <dd className="mt-1 text-3xl font-bold tabular-nums text-neutral-900">
               {count}
             </dd>
-            <dd className="mt-1 text-sm text-neutral-600">{explanation}</dd>
           </div>
         ))}
       </dl>
@@ -75,9 +74,22 @@ export function KnowledgeOverview({ summary }: { summary: KnowledgeSummary }) {
           {summary.due ? "Start review" : "Find new words"}
         </Link>
       </div>
-      <p className="mt-3 text-sm text-neutral-600">
-        Stages describe your saved vocabulary, not your overall English level.
-      </p>
+      <details className="mt-3 border-t border-neutral-200 pt-2">
+        <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
+          About these stages
+        </summary>
+        <dl className="space-y-2 pb-3 text-sm text-neutral-600">
+          {stages.map(([label, , explanation]) => (
+            <div key={label}>
+              <dt className="font-semibold text-neutral-900">{label}</dt>
+              <dd>{explanation}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="pb-3 text-sm text-neutral-600">
+          Stages describe your saved vocabulary, not your overall English level.
+        </p>
+      </details>
     </Surface>
   );
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { LessonRecommendationResponse } from "@vocanova/api-client";
-import { Eyebrow, Surface } from "@/ui/surface";
+import { Surface } from "@/ui/surface";
 
 const action =
   "mt-4 inline-flex min-h-12 items-center justify-center rounded-xl bg-primary-700 px-5 py-3 font-semibold text-white hover:bg-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
@@ -19,10 +19,9 @@ export function RecommendedLesson({
   const unavailable = !data || data.status === "content_unavailable";
   return (
     <Surface aria-labelledby="recommended-lesson-heading" className={className}>
-      <Eyebrow>Learn in context</Eyebrow>
       <h2
         id="recommended-lesson-heading"
-        className="mt-2 text-2xl font-bold tracking-tight text-neutral-900"
+        className="text-lg font-bold tracking-tight text-neutral-900"
       >
         {recommendation?.reason === "resume"
           ? "Pick up your lesson"
@@ -39,8 +38,8 @@ export function RecommendedLesson({
           <p className="mt-2 text-neutral-700">{lesson.description}</p>
           <p className="mt-3 text-sm text-neutral-600">
             {recommendation.reason === "resume"
-              ? `${lesson.completedSteps} of ${lesson.stepCount} steps saved. Continue where you left off.`
-              : `${recommendation.matchesFocus ? "A match for your focus, with" : "A next step with"} ${recommendation.usefulTargetCount} ${recommendation.usefulTargetCount === 1 ? "meaning" : "meanings"} to work on. Uses your “Already know” choices and review progress.`}
+              ? `${lesson.completedSteps} of ${lesson.stepCount} steps complete.`
+              : `${recommendation.usefulTargetCount} ${recommendation.usefulTargetCount === 1 ? "meaning" : "meanings"} to practise${recommendation.matchesFocus ? " in your chosen focus" : ""}.`}
           </p>
           <Link
             href={`/learn/${encodeURIComponent(lesson.key)}`}

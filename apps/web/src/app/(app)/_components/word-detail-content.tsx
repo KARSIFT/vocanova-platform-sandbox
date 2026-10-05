@@ -1,6 +1,7 @@
 import type { WordDetail } from "@vocanova/api-client";
 
 import { getAdditionalDefinition } from "@/lib/word-definition";
+import { MeaningPicture } from "@/ui/meaning-picture";
 import { ListenButton } from "@/ui/pronunciation";
 import { Eyebrow } from "@/ui/surface";
 
@@ -92,6 +93,7 @@ export function WordDetailContent({
                   />
                 </div>
 
+                <MeaningPicture meaningId={meaning.id} />
                 <MeaningTeaching meaning={meaning} />
 
                 <MeaningListEditor meaningId={meaning.id} />

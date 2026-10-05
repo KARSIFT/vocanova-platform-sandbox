@@ -1,5 +1,16 @@
 # Vocanova current product state
 
+## Visual learning phase — delivery branch, 5 October 2026
+
+The current delivery branch simplifies Home, Journey, Progress and word teaching,
+with optional explanations behind keyboard-accessible disclosures. Meaning-specific
+original illustrations are mapped to the 92 active canonical meanings; they appear
+in teaching and word detail, never in graded questions. See
+[visual learning delivery](../design/visual-learning-delivery.md) for artwork coverage,
+reference-video decisions and current verification. This phase is not yet a
+verified production release; the previously accepted release below remains the
+production record.
+
 ## Consolidated maturity delivery — 5 October 2026
 
 [PR #1484](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1484), merged

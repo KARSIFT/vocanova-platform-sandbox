@@ -35,10 +35,10 @@ export function LessonPath({
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-neutral-900">
-            {compact ? "Your next lesson" : "Learn a little. Use it today."}
+            {compact ? "Your next lesson" : "Your lessons"}
           </h2>
           <p className="mt-1 text-neutral-700">
-            Three useful words, then a chance to remember and use them.
+            Learn three words, then practise them.
           </p>
         </div>
         {compact && (
@@ -54,8 +54,7 @@ export function LessonPath({
         <div className="space-y-3">
           <p className="text-sm text-neutral-600">
             {lessons.filter((lesson) => lesson.status === "completed").length}{" "}
-            of {lessons.length} lessons completed. Open a situation to choose a
-            lesson; you can learn in any order.
+            of {lessons.length} lessons completed. Choose any situation.
           </p>
           {[...groups.entries()].map(([slug, group]) => (
             <details

@@ -99,21 +99,20 @@ export function MeaningKnowledgeEditor({
   return (
     <section
       aria-labelledby={`${id}-heading`}
-      className="mt-6 border-t border-neutral-200 pt-5"
+      className="mt-3 border-t border-neutral-200 pt-3"
     >
-      <h3
-        id={`${id}-heading`}
-        className="text-lg font-semibold text-neutral-900"
-      >
+      <h3 id={`${id}-heading`} className="sr-only">
         Your knowledge and note
       </h3>
-      <p className="mt-2 text-sm text-neutral-600">
-        {!open && initialKnown
-          ? "You marked this meaning as already known. "
-          : ""}
-        Keep a personal example or memory cue. Your note is private to your
-        account.
-      </p>
+      {!open && initialKnown && (
+        <p className="text-sm text-primary-700">Already known</p>
+      )}
+      {open && (
+        <p className="mt-2 text-sm text-neutral-600">
+          Keep a personal example or memory cue. Your note is private to your
+          account.
+        </p>
+      )}
       {!open ? (
         <button
           type="button"

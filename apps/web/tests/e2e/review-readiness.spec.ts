@@ -87,7 +87,7 @@ test.describe("Review readiness", () => {
     );
     await page.goto("/home");
     await expect(
-      page.getByRole("progressbar", { name: "Today’s mission progress" }),
+      page.getByRole("progressbar", { name: "Reviews today" }),
     ).toHaveAttribute("aria-valuenow", "5");
   });
 });

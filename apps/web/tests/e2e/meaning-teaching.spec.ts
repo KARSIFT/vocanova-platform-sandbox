@@ -33,6 +33,8 @@ test("meaning comparison links only real meanings and keeps authored notes align
   );
   const work = page.locator(`#meaning-${workMeaning}`);
   const study = page.locator(`#meaning-${studyMeaning}`);
+  await work.getByText("Usage tips", { exact: true }).click();
+  await study.getByText("Usage tips", { exact: true }).click();
   await expect(
     work.getByText("meet a deadline", { exact: true }),
   ).toBeVisible();
@@ -130,6 +132,7 @@ for (const theme of ["light", "dark"] as const) {
           })
           .click();
       await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      await main.getByText("Usage tips", { exact: true }).click();
       const phrase = main.getByRole("group", {
         name: "Pronunciation of combination: That sounds good; sounds good to me",
         exact: true,
@@ -196,6 +199,7 @@ test("unavailable phrase audio keeps the authored guidance readable", async ({
   });
   await page.goto("/vocabulary/deadline");
   const meaning = page.locator(`#meaning-${workMeaning}`);
+  await meaning.getByText("Usage tips", { exact: true }).click();
   await meaning
     .getByRole("button", {
       name: "Listen to combination: meet a deadline",

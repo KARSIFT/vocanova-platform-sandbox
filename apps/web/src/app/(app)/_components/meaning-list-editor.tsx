@@ -84,18 +84,17 @@ export function MeaningListEditor({ meaningId }: { meaningId: string }) {
   return (
     <section
       aria-labelledby={`${id}-heading`}
-      className="mt-6 border-t border-neutral-200 pt-5"
+      className="mt-3 border-t border-neutral-200 pt-3"
     >
-      <h3
-        id={`${id}-heading`}
-        className="text-lg font-semibold text-neutral-900"
-      >
+      <h3 id={`${id}-heading`} className="sr-only">
         Personal lists
       </h3>
-      <p className="mt-2 text-sm text-neutral-600">
-        Organize this meaning without changing scheduled review or your known
-        status.
-      </p>
+      {open && (
+        <p className="mt-2 text-sm text-neutral-600">
+          Organize this meaning without changing scheduled review or your known
+          status.
+        </p>
+      )}
       {!open ? (
         <button type="button" className={`${listButton} mt-3`} onClick={reload}>
           Choose personal lists

@@ -37,7 +37,7 @@ test.describe("Route loading states", () => {
     await disableViewportPrefetch(page);
     await page.goto("/home");
     await expect(
-      page.getByRole("heading", { name: "Today's Mission", level: 2, exact: true }),
+      page.getByRole("heading", { name: /Today.s practice|Mission complete/, level: 2, exact: true }),
     ).toBeVisible();
 
     await delayNextServerRequest(page);
@@ -69,7 +69,7 @@ test.describe("Route loading states", () => {
     }]);
     await page.goto("/home");
     await expect(
-      page.getByRole("heading", { name: "Today's Mission", level: 2, exact: true }),
+      page.getByRole("heading", { name: /Today.s practice|Mission complete/, level: 2, exact: true }),
     ).toBeVisible();
 
     await delayNextServerRequest(page);
@@ -102,7 +102,7 @@ test.describe("Route loading states", () => {
     await delayNextServerRequest(page);
 
     const navigation = page
-      .getByRole("link", { name: "View saved vocabulary" })
+      .getByRole("link", { name: "Saved words" })
       .click();
     const status = page.getByRole("status").filter({
       hasText: "Loading saved vocabulary",

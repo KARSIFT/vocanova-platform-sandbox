@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { Eyebrow, PageContainer, Surface } from "@/ui/surface";
+import { PageContainer, Surface } from "@/ui/surface";
 import { getCompletionDayView } from "./completion-day-view";
 import { KnowledgeOverview } from "../_components/knowledge-overview";
 import { Achievements } from "../_components/achievements";
@@ -59,100 +59,9 @@ export default async function ProgressPage() {
 
   return (
     <PageContainer className="max-w-[64rem]">
-      <Eyebrow>Your practice record</Eyebrow>
       <h1 className="mt-[var(--spacing-xs)] text-3xl font-bold tracking-tight text-neutral-900">
         Progress
       </h1>
-      <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-        See the practice you&apos;ve completed and choose a useful next step.
-      </p>
-
-      {knowledgeResponse ? (
-        <KnowledgeOverview summary={knowledgeResponse.data} />
-      ) : (
-        <p role="status" className="mt-6 text-neutral-700">
-          Your vocabulary map is unavailable right now. Your other progress is
-          below.
-        </p>
-      )}
-      {lessonResponse && (
-        <Surface className="mt-4" aria-labelledby="lesson-progress-heading">
-          <h2
-            id="lesson-progress-heading"
-            className="text-xl font-bold text-neutral-900"
-          >
-            Your learning path
-          </h2>
-          <p className="mt-2 text-neutral-700">
-            {
-              lessonResponse.data.items.filter(
-                (item) => item.status === "completed",
-              ).length
-            }{" "}
-            of {lessonResponse.data.items.length} lessons completed
-          </p>
-          <ul className="mt-4 divide-y divide-neutral-200">
-            {lessonResponse.data.items
-              .filter((item) => item.status !== "not_started")
-              .map((item) => (
-                <li key={item.key} className="py-3">
-                  <Link
-                    href={`/learn/${encodeURIComponent(item.key)}`}
-                    className="inline-flex min-h-11 items-center font-semibold text-primary-700"
-                  >
-                    {item.title}
-                  </Link>
-                  <p className="text-sm text-neutral-600">
-                    {item.status === "completed"
-                      ? "Completed"
-                      : `${item.completedSteps} of ${item.stepCount} steps saved`}
-                  </p>
-                </li>
-              ))}
-          </ul>
-          <Link
-            href="/discover"
-            className="mt-3 inline-flex min-h-11 items-center font-semibold text-primary-700"
-          >
-            Continue your Journey
-          </Link>
-        </Surface>
-      )}
-
-      {achievementsResponse ? (
-        <Achievements achievements={achievementsResponse.data} />
-      ) : (
-        <p role="status" className="mt-6 text-neutral-700">
-          Your milestones could not load. Your other progress is still
-          available.
-        </p>
-      )}
-
-      <Surface
-        aria-labelledby="sentence-history-heading"
-        className="mt-[var(--spacing-lg)] bg-secondary-50"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-[var(--spacing-md)]">
-          <div>
-            <h2
-              id="sentence-history-heading"
-              className="text-lg font-semibold text-neutral-900"
-            >
-              Sentence practice
-            </h2>
-            <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-              Revisit your writing and the feedback that can guide your next
-              sentence.
-            </p>
-          </div>
-          <Link
-            href="/progress/sentences"
-            className="inline-flex min-h-11 items-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-semibold text-white hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-          >
-            View sentence history
-          </Link>
-        </div>
-      </Surface>
 
       <Surface
         className="mt-[var(--spacing-md)]"
@@ -191,6 +100,114 @@ export default async function ProgressPage() {
         </p>
       </Surface>
 
+      {knowledgeResponse ? (
+        <KnowledgeOverview summary={knowledgeResponse.data} />
+      ) : (
+        <p role="status" className="mt-6 text-neutral-700">
+          Your vocabulary map is unavailable right now. Your other progress is
+          below.
+        </p>
+      )}
+      {lessonResponse && (
+        <Surface className="mt-4" aria-labelledby="lesson-progress-heading">
+          <h2
+            id="lesson-progress-heading"
+            className="text-xl font-bold text-neutral-900"
+          >
+            Your learning path
+          </h2>
+          <p className="mt-2 text-neutral-700">
+            {
+              lessonResponse.data.items.filter(
+                (item) => item.status === "completed",
+              ).length
+            }{" "}
+            of {lessonResponse.data.items.length} lessons completed
+          </p>
+          {lessonResponse.data.items
+            .filter((item) => item.status === "in_progress")
+            .map((item) => (
+              <Link
+                key={item.key}
+                href={`/learn/${encodeURIComponent(item.key)}`}
+                className="mt-3 flex min-h-12 flex-wrap items-center justify-between gap-2 rounded-xl bg-primary-50 px-4 py-3 font-semibold text-primary-800 hover:bg-primary-100"
+              >
+                <span>
+                  {item.title}
+                  <span className="mt-1 block text-sm font-normal">
+                    {item.completedSteps} of {item.stepCount} steps saved
+                  </span>
+                </span>
+                <span className="text-sm">Continue lesson</span>
+              </Link>
+            ))}
+          {lessonResponse.data.items.some(
+            (item) => item.status === "completed",
+          ) && (
+            <details className="mt-3">
+              <summary className="min-h-11 cursor-pointer content-center font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
+                Lesson history
+              </summary>
+              <ul className="mt-4 divide-y divide-neutral-200">
+                {lessonResponse.data.items
+                  .filter((item) => item.status === "completed")
+                  .map((item) => (
+                    <li key={item.key} className="py-3">
+                      <Link
+                        href={`/learn/${encodeURIComponent(item.key)}`}
+                        className="inline-flex min-h-11 items-center font-semibold text-primary-700"
+                      >
+                        {item.title}
+                      </Link>
+                      <p className="text-sm text-neutral-600">Completed</p>
+                    </li>
+                  ))}
+              </ul>
+            </details>
+          )}
+          <Link
+            href="/discover"
+            className="mt-3 inline-flex min-h-11 items-center font-semibold text-primary-700"
+          >
+            Continue your Journey
+          </Link>
+        </Surface>
+      )}
+
+      {achievementsResponse ? (
+        <Achievements achievements={achievementsResponse.data} />
+      ) : (
+        <p role="status" className="mt-6 text-neutral-700">
+          Your milestones could not load. Your other progress is still
+          available.
+        </p>
+      )}
+
+      <Surface
+        aria-labelledby="sentence-history-heading"
+        className="mt-[var(--spacing-lg)] bg-secondary-50"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-[var(--spacing-md)]">
+          <div>
+            <h2
+              id="sentence-history-heading"
+              className="text-lg font-semibold text-neutral-900"
+            >
+              Sentence practice
+            </h2>
+            <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
+              Your sentences and feedback, saved together.
+            </p>
+          </div>
+          <Link
+            href="/progress/sentences"
+            className="inline-flex min-h-11 items-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-semibold text-white hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+          >
+            View sentence history
+          </Link>
+        </div>
+      </Surface>
+
       <div className="mt-[var(--spacing-md)] lg:grid lg:grid-cols-2 lg:items-start lg:gap-[var(--spacing-md)]">
         <Surface aria-labelledby="completion-history-heading">
           <h2
@@ -200,7 +217,7 @@ export default async function ProgressPage() {
             Recent activity
           </h2>
           <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-            Recorded mission days, shown in date order.
+            Your recorded mission days.
           </p>
           {historyWithLabels.length > 0 ? (
             <ul className="mt-[var(--spacing-md)] space-y-[var(--spacing-xs)]">
