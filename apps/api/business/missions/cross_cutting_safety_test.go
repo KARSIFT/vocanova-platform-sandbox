@@ -1,6 +1,7 @@
 package missions
 
 import (
+	"context"
 	"database/sql"
 	"testing"
 	"time"
@@ -412,7 +413,11 @@ func expectGetDailyMissionSnapshotNoRow(mock sqlmock.Sqlmock, userID uuid.UUID, 
 // service, not the pure ReconcileStreak helper, so the read-time
 // reconciliation is verified in the actual read code path.
 func TestCrossCuttingMultiDayGapReconciliationOnRead(t *testing.T) {
-	_, mock, _, missionsSvc := newCrossCuttingDB(t)
+	db, mock, _, missionsSvc := newCrossCuttingDB(t)
+	// All reads inside reconciliation must share its transaction connection.
+	db.SetMaxOpenConns(1)
+	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+	defer cancel()
 
 	userID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
 	now := fixedNow()
@@ -501,7 +506,7 @@ func TestCrossCuttingMultiDayGapReconciliationOnRead(t *testing.T) {
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"balance_after"}).AddRow(0))
 
-	view, err := missionsSvc.GetDailyMissionView(t.Context(), userID, "", now)
+	view, err := missionsSvc.GetDailyMissionView(ctx, userID, "", now)
 	require.NoError(t, err)
 	require.NotNil(t, view)
 	assert.Equal(t, today.Format("2006-01-02"), view.LocalDate.Format("2006-01-02"))

@@ -81,7 +81,22 @@ func NewRepository(db *sql.DB) *Repository {
 // GetStreakState reads the current streak_states row for userID. Returns
 // (nil, nil) if no row exists yet.
 func (r *Repository) GetStreakState(ctx context.Context, userID uuid.UUID) (*StreakStateRow, error) {
-	row := r.db.QueryRowContext(ctx,
+	return getStreakState(ctx, r.db, userID)
+}
+
+// GetStreakStateTx observes the state after the caller acquires its advisory
+// lock, using the same connection and transaction as the reconciliation writes.
+func (r *Repository) GetStreakStateTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID) (*StreakStateRow, error) {
+	if tx == nil {
+		return nil, errors.New("transaction required")
+	}
+	return getStreakState(ctx, tx, userID)
+}
+
+func getStreakState(ctx context.Context, query interface {
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}, userID uuid.UUID) (*StreakStateRow, error) {
+	row := query.QueryRowContext(ctx,
 		`SELECT user_id, current_streak_count, longest_streak_count,
 		        last_completed_local_date, last_activity_local_date,
 		        timezone, status, created_at, updated_at

@@ -1,6 +1,7 @@
 package missions
 
 import (
+	"context"
 	"database/sql"
 	"testing"
 	"time"
@@ -33,6 +34,9 @@ func TestUpdateForSentenceP4SuccessWiring(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
+	db.SetMaxOpenConns(1)
+	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+	defer cancel()
 
 	now := time.Date(2026, 7, 26, 12, 0, 0, 0, time.UTC)
 	updater, _ := newP4Updater(t, db)
@@ -127,7 +131,7 @@ func TestUpdateForSentenceP4SuccessWiring(t *testing.T) {
 	mock.ExpectCommit()
 
 	resolved := gamification.ResolvedSettings{Timezone: "UTC", DailyReviewTarget: 20}
-	completed, err := updater.UpdateForSentence(t.Context(), userID, sentenceID, attemptID, resolved, now, false)
+	completed, err := updater.UpdateForSentence(ctx, userID, sentenceID, attemptID, resolved, now, false)
 	require.NoError(t, err)
 	assert.False(t, completed, "P3 path never completes the mission (only the P2 review path increments reviews_completed)")
 	require.NoError(t, mock.ExpectationsWereMet())

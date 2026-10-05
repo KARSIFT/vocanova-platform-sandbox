@@ -157,6 +157,7 @@ var (
 	ErrInvalidMagicLink             = errors.New("invalid or expired magic link")
 	ErrAuthenticationRequired       = errors.New("authentication required")
 	ErrSessionNotFound              = errors.New("session not found")
+	ErrUserNotFound                 = errors.New("user not found")
 	ErrUserDisabled                 = errors.New("user disabled")
 	ErrRateLimited                  = errors.New("rate limited")
 	ErrInvalidOAuthState            = errors.New("invalid or expired oauth state")

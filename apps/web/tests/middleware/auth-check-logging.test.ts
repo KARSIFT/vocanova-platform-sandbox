@@ -62,6 +62,18 @@ function assertRedirectsToSignIn(response: Response): void {
   assert.equal(new URL(location).pathname, "/login");
 }
 
+function assertRecoverableOutage(response: Response): void {
+  assert.equal(response.status, 503);
+  assert.equal(response.headers.get("location"), null);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.equal(response.headers.get("set-cookie"), null);
+  const rewrite = response.headers.get("x-middleware-rewrite");
+  assert.ok(rewrite);
+  const destination = new URL(rewrite);
+  assert.equal(destination.pathname, "/connection-error");
+  assert.equal(destination.searchParams.get("returnTo"), PROTECTED_ROUTE);
+}
+
 function assertNoCredentialMaterial(line: string): void {
   assert.ok(
     !line.includes(SESSION_COOKIE_VALUE),
@@ -107,7 +119,7 @@ describe("middleware auth-check failure logging", () => {
     assert.equal(log.routePath, PROTECTED_ROUTE);
     assert.equal(log.status, undefined);
     assertNoCredentialMaterial(line);
-    assertRedirectsToSignIn(response);
+    assertRecoverableOutage(response);
   });
 
   it("logs the unauthorized_401 category with its status when the API returns 401", async () => {
@@ -139,7 +151,7 @@ describe("middleware auth-check failure logging", () => {
     assert.equal(log.routePath, PROTECTED_ROUTE);
     assert.equal(log.status, SERVICE_UNAVAILABLE);
     assertNoCredentialMaterial(line);
-    assertRedirectsToSignIn(response);
+    assertRecoverableOutage(response);
   });
 
   it("logs nothing when the auth check succeeds", async () => {
@@ -155,6 +167,32 @@ describe("middleware auth-check failure logging", () => {
       }),
     );
 
+    assert.deepEqual(loggedLines, []);
+  });
+
+  it("treats a failed identity response body as an outage rather than unfinished onboarding", async () => {
+    stubFetch(() => Promise.resolve(new Response(new ReadableStream({
+      start(controller) {
+        controller.error(new DOMException("body timed out", "TimeoutError"));
+      },
+    }), { status: 200 })));
+    const response = await middleware(requestWithSessionCookie());
+    assertRecoverableOutage(response);
+    const line = singleFailureLine();
+    assert.equal((JSON.parse(line) as AuthCheckFailureLog).category, "body_read_failed");
+    assertNoCredentialMaterial(line);
+  });
+
+  it("treats malformed identity JSON as a recoverable outage", async () => {
+    stubFetch(() => Promise.resolve(new Response("broken JSON", { status: 200 })));
+    assertRecoverableOutage(await middleware(requestWithSessionCookie()));
+  });
+
+  it("keeps the conservative onboarding gate for a successfully read identity with a missing status", async () => {
+    stubFetch(() => Promise.resolve(Response.json({ id: "synthetic-user" })));
+    const response = await middleware(requestWithSessionCookie());
+    assert.equal(response.status, 307);
+    assert.equal(new URL(response.headers.get("location")!).pathname, "/onboarding");
     assert.deepEqual(loggedLines, []);
   });
 });

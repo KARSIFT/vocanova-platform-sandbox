@@ -29,13 +29,14 @@ export default async function WritingPage({
   let detail;
   let currentUser;
   try {
-    const [library, user] = await Promise.all([
+    const [library, user, situationDetail] = await Promise.all([
       client.listJourneySituations({ limit: 50 }),
       client.getCurrentUser(),
+      situation ? client.getJourneySituation(situation) : undefined,
     ]);
     situations = library.data;
     currentUser = user.data;
-    if (situation) detail = (await client.getJourneySituation(situation)).data;
+    detail = situationDetail?.data;
   } catch (error) {
     if (error instanceof ApiResponseError && error.status === 404) notFound();
     requireAuthRedirect(error, returnTo);

@@ -1053,6 +1053,11 @@ const server = createServer(async (req, res) => {
     return;
 
   if (req.method === "GET" && url.pathname === "/api/v1/me") {
+    if (cookies.e2e_auth_check_unavailable === "1") {
+      logLine(req, 503, { reason: "fixture-auth-check-unavailable" });
+      jsonResponse(res, 503, { error: "temporarily unavailable" });
+      return;
+    }
     if (url.searchParams.get("fail") === "me") {
       logLine(req, 401, { reason: "fixture-forced-401" });
       jsonResponse(res, 401, { error: "unauthorized" });

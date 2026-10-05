@@ -23,34 +23,48 @@ export default async function ProgressPage() {
   const client = await createServerApiClient();
   let savedWordsResponse: Awaited<ReturnType<typeof client.listSavedWords>>;
   let progressResponse: Awaited<ReturnType<typeof client.getProgress>>;
+  let knowledgeResponse: Awaited<
+    ReturnType<typeof client.getKnowledgeSummary>
+  > | null;
+  let lessonResponse: Awaited<ReturnType<typeof client.listLessons>> | null;
+  let achievementsResponse: Awaited<
+    ReturnType<typeof client.listAchievements>
+  > | null;
+  let sentencesResponse: Awaited<
+    ReturnType<typeof client.listLearnerSentences>
+  > | null;
+  async function optional<T>(request: Promise<T>): Promise<T | null> {
+    try {
+      return await request;
+    } catch (error) {
+      if (error instanceof ApiResponseError && error.status === 401)
+        requireAuthRedirect(error, "/progress");
+      return null;
+    }
+  }
   try {
-    savedWordsResponse = await client.listSavedWords({
-      limit: SAVED_VOCABULARY_DISPLAY_LIMIT,
-    });
-    progressResponse = await client.getProgress();
+    [
+      savedWordsResponse,
+      progressResponse,
+      knowledgeResponse,
+      lessonResponse,
+      achievementsResponse,
+      sentencesResponse,
+    ] = await Promise.all([
+      client.listSavedWords({ limit: SAVED_VOCABULARY_DISPLAY_LIMIT }),
+      client.getProgress(),
+      optional(client.getKnowledgeSummary()),
+      optional(client.listLessons()),
+      optional(client.listAchievements()),
+      optional(
+        client.listLearnerSentences({ limit: 2 }, { cache: "no-store" }),
+      ),
+    ]);
   } catch (error) {
     requireAuthRedirect(error, "/progress");
   }
 
   const { items: savedWords } = savedWordsResponse.data;
-  const [
-    knowledgeResponse,
-    lessonResponse,
-    achievementsResponse,
-    sentencesResponse,
-  ] = await Promise.all([
-    client.getKnowledgeSummary().catch(() => null),
-    client.listLessons().catch(() => null),
-    client.listAchievements().catch(() => null),
-    client
-      .listLearnerSentences({ limit: 2 }, { cache: "no-store" })
-      .catch((error) => {
-        if (error instanceof ApiResponseError && error.status === 401)
-          requireAuthRedirect(error, "/progress");
-        return null;
-      }),
-  ]);
-
   const {
     confidencePointsBalance: confidencePointsTotal,
     streak,

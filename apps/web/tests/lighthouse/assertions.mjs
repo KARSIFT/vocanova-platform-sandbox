@@ -37,6 +37,24 @@ export const LIGHTHOUSE_CATEGORIES = Object.freeze([
   "best-practices",
 ]);
 
+// A fast login, onboarding, or outage page is not evidence about the intended
+// learner screen. Reject redirected or failed documents before scoring them.
+export function assertAuditedPage({ requestedUrl, report }) {
+  const displayedUrl = report?.finalDisplayedUrl ?? report?.finalUrl;
+  if (!displayedUrl || new URL(displayedUrl).href !== new URL(requestedUrl).href) {
+    throw new Error(`Lighthouse audited ${displayedUrl ?? "an unknown URL"} instead of ${requestedUrl}`);
+  }
+  if (report.runtimeError) {
+    throw new Error(`Lighthouse could not load ${requestedUrl}: ${report.runtimeError.code}`);
+  }
+  const document = report.audits?.["network-requests"]?.details?.items?.find(
+    (item) => item.resourceType === "Document" && item.url === displayedUrl,
+  );
+  if (!document || document.statusCode !== 200) {
+    throw new Error(`Lighthouse document for ${requestedUrl} returned ${document?.statusCode ?? "no response"}`);
+  }
+}
+
 /**
  * formatCategoryScoreRow renders one (screen, layout, category)
  * result line in the runner's stdout report. Kept as a separate

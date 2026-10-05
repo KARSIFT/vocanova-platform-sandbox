@@ -66,7 +66,7 @@ func (r *MemoryRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*User
 	defer r.mu.Unlock()
 	u, ok := r.users[id]
 	if !ok {
-		return nil, errors.New("user not found")
+		return nil, ErrUserNotFound
 	}
 	copy := *u
 	return &copy, nil
@@ -77,7 +77,7 @@ func (r *MemoryRepository) GetUserByEmail(ctx context.Context, email string) (*U
 	defer r.mu.Unlock()
 	u, ok := r.usersByEmail[email]
 	if !ok {
-		return nil, errors.New("user not found")
+		return nil, ErrUserNotFound
 	}
 	copy := *u
 	return &copy, nil
@@ -88,7 +88,7 @@ func (r *MemoryRepository) UpdateUserLastLogin(ctx context.Context, id uuid.UUID
 	defer r.mu.Unlock()
 	u, ok := r.users[id]
 	if !ok {
-		return errors.New("user not found")
+		return ErrUserNotFound
 	}
 	u.LastLoginAt = &t
 	return nil
@@ -101,7 +101,7 @@ func (r *MemoryRepository) SetUserStatus(id uuid.UUID, status string) error {
 	defer r.mu.Unlock()
 	u, ok := r.users[id]
 	if !ok {
-		return errors.New("user not found")
+		return ErrUserNotFound
 	}
 	u.Status = status
 	return nil

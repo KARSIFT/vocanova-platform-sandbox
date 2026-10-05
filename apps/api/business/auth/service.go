@@ -479,7 +479,10 @@ func (s *Service) ValidateSession(ctx context.Context, token string) (*User, err
 	}
 	session, err := s.repo.GetSessionByTokenHash(ctx, hash)
 	if err != nil {
-		return nil, ErrAuthenticationRequired
+		if errors.Is(err, ErrSessionNotFound) {
+			return nil, ErrAuthenticationRequired
+		}
+		return nil, fmt.Errorf("validate session lookup: %w", err)
 	}
 	now := s.clock.Now()
 	if !session.Valid(now) {
@@ -487,7 +490,10 @@ func (s *Service) ValidateSession(ctx context.Context, token string) (*User, err
 	}
 	user, err := s.repo.GetUserByID(ctx, session.UserID)
 	if err != nil {
-		return nil, ErrAuthenticationRequired
+		if errors.Is(err, ErrUserNotFound) {
+			return nil, ErrAuthenticationRequired
+		}
+		return nil, fmt.Errorf("validate session user lookup: %w", err)
 	}
 	if !user.Active() {
 		return nil, ErrUserDisabled

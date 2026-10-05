@@ -7,6 +7,7 @@ import { SentenceFeedbackResult } from "@vocanova/api-client";
 
 import { createApiClient } from "@/lib/api";
 import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
+import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError } from "@/lib/session";
 import { compareSentences, type SentenceChange } from "./sentence-comparison";
 
@@ -115,15 +116,8 @@ export function SentenceFeedback({
       return;
     }
 
-    const csrfToken = getCookieValue(CSRF_COOKIE_NAME);
-    if (!csrfToken) {
-      setErrorMessage({
-        text: "Session is not ready. Please refresh the page.",
-        source: "local",
-      });
-      return;
-    }
-
+    // Capture and persist the exact intent before session recovery can fail.
+    // A recovered cookie or same-user return must retry the same submission.
     const pending = pendingSubmission.current ?? {
       idempotencyKey: generateIdempotencyKey(),
       sentenceText: sentence,
@@ -145,7 +139,11 @@ export function SentenceFeedback({
     setShowReportReasons(false);
 
     const client = createApiClient();
+    let submissionStarted = false;
     try {
+      const csrfToken = await getOrRefreshCSRFToken();
+      if (!csrfToken) throw new Error("Session is not ready");
+      submissionStarted = true;
       const { data } = await client.submitSentenceFeedback(
         { sentenceText: pending.sentenceText, source, attemptId },
         pending.idempotencyKey,
@@ -180,7 +178,9 @@ export function SentenceFeedback({
       }
       onFeedbackSubmitted?.(data);
     } catch (error) {
-      setResult(null);
+      // Recovery did not check a new sentence. Keep earlier feedback and
+      // crisis guidance visible alongside the current preparation error.
+      if (submissionStarted) setResult(null);
       // The controlled textarea and its user-scoped tab draft preserve an
       // unresolved submission through recoverable failures and re-auth.
       setErrorMessage({

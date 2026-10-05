@@ -161,7 +161,7 @@ func (s *Service) ReconcileAndAdvance(
 	if err != nil {
 		return nil, err
 	}
-	state, err := s.repo.GetStreakState(ctx, userID)
+	state, err := s.repo.GetStreakStateTx(ctx, tx, userID)
 	if err != nil {
 		return nil, err
 	}
