@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
 async function seedReviewSession(
@@ -82,6 +84,7 @@ test.describe("Review stale-card recovery", () => {
 
     const sessionId = [
       "review-stale-card",
+      randomUUID(),
       testInfo.testId,
       `retry-${testInfo.retry}`,
     ]
@@ -145,6 +148,7 @@ test.describe("Review stale-card recovery", () => {
 
     const sessionId = [
       "review-stale-card-prior-confirmed",
+      randomUUID(),
       testInfo.testId,
       `retry-${testInfo.retry}`,
     ]
@@ -201,6 +205,7 @@ test.describe("Review stale-card recovery", () => {
 
     const sessionId = [
       "review-stale-card-status-lifecycle",
+      randomUUID(),
       testInfo.testId,
       `retry-${testInfo.retry}`,
     ]

@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 
 async function seedReviewFixture(
@@ -7,7 +9,7 @@ async function seedReviewFixture(
   reviewTarget = count,
 ) {
   // The mock keeps review state in a process-wide map keyed by this cookie.
-  // Every Playwright project and retry therefore needs its own key: the three
+  // Every invocation, project and retry therefore needs its own key: the three
   // accessibility projects share the same mock server, and a retry may begin
   // after its earlier attempt has consumed some fixture cards.
   const sessionId = [
@@ -15,6 +17,7 @@ async function seedReviewFixture(
     testInfo.project.name,
     testInfo.testId,
     `retry-${testInfo.retry}`,
+    randomUUID(),
   ]
     .map(encodeURIComponent)
     .join("-");
