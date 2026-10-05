@@ -326,6 +326,15 @@ export async function verifyContextPracticeJourney(page: Page): Promise<void> {
       ).toBeVisible();
       // Server streaming can leave hidden copies outside or within main.
       // Ignore those copies, but reject duplicate examples visible anywhere.
+      const moreExamples = main
+        .locator("summary")
+        .filter({ hasText: "More examples" });
+      if (await moreExamples.count()) {
+        await expect(moreExamples.locator("..")).not.toHaveAttribute("open");
+        await moreExamples.focus();
+        await page.keyboard.press("Enter");
+        await expect(moreExamples.locator("..")).toHaveAttribute("open", "");
+      }
       await expect(
         page
           .getByText(example.canonicalExample, { exact: true })

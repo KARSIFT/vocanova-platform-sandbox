@@ -1,36 +1,20 @@
-import manifest from "./meaning-pictures.json" with { type: "json" };
+import readyPictureAlts from "./meaning-pictures.runtime.json" with { type: "json" };
 
-export interface MeaningPictureContent {
-  meaningId: string;
-  word: string;
-  definition: string;
-  /** Editorial brief, never learner-facing copy. */
-  scene: string;
+export interface ReadyMeaningPicture {
   alt: string;
   src: string;
-  /** Mark ready only after the local asset has been generated and reviewed. */
-  status: "pending" | "ready";
 }
 
-/** Original scene briefs, aligned to the canonical seed by meaning UUID. */
-export const MEANING_PICTURES: Readonly<Record<string, MeaningPictureContent>> =
-  manifest as Record<string, MeaningPictureContent>;
+/** Browser-only lookup data: editorial scenes and definitions stay out of this graph. */
+const pictureAlts: Readonly<Record<string, string>> = readyPictureAlts;
 
-export function getMeaningPicture(
-  meaningId: string,
-): MeaningPictureContent | undefined {
-  return Object.hasOwn(MEANING_PICTURES, meaningId)
-    ? MEANING_PICTURES[meaningId]
-    : undefined;
-}
-
-/** Pending or failed media must never replace the readable teaching content. */
+/** Unknown, pending or failed media leaves the readable teaching content intact. */
 export function getReadyMeaningPicture(
   meaningId: string,
   failedSrc?: string,
-): MeaningPictureContent | undefined {
-  const picture = getMeaningPicture(meaningId);
-  return picture?.status === "ready" && picture.src !== failedSrc
-    ? picture
-    : undefined;
+): ReadyMeaningPicture | undefined {
+  if (!Object.hasOwn(pictureAlts, meaningId)) return undefined;
+  const alt = pictureAlts[meaningId];
+  const src = `/images/meanings/${meaningId}.webp`;
+  return alt && src !== failedSrc ? { alt, src } : undefined;
 }

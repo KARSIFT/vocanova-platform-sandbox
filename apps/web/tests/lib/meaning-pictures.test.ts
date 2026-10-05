@@ -1,11 +1,29 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { describe, it } from "node:test";
-import {
-  MEANING_PICTURES,
-  getMeaningPicture,
-  getReadyMeaningPicture,
-} from "../../src/lib/meaning-pictures";
+import { fileURLToPath } from "node:url";
+import { getReadyMeaningPicture } from "../../src/lib/meaning-pictures";
+import { createRuntimeCatalogue } from "../../scripts/generate-meaning-pictures.mjs";
+import runtimeCatalogue from "../../src/lib/meaning-pictures.runtime.json" with { type: "json" };
+
+interface AuthoredMeaningPicture {
+  meaningId: string;
+  word: string;
+  definition: string;
+  scene: string;
+  alt: string;
+  src: string;
+  status: "ready" | "pending";
+}
+
+// Authoring content is read only in tests and the generator, never by client UI.
+const MEANING_PICTURES = JSON.parse(
+  readFileSync(
+    new URL("../../src/lib/meaning-pictures.json", import.meta.url),
+    "utf8",
+  ),
+) as Record<string, AuthoredMeaningPicture>;
 
 const seed = JSON.parse(
   readFileSync(
@@ -27,6 +45,7 @@ describe("meaning-specific picture content", () => {
     const meanings = seed.word_meanings.filter(
       (meaning) => meaning.status === "active",
     );
+    assert.equal(meanings.length, 92);
     assert.deepEqual(
       Object.keys(MEANING_PICTURES).sort(),
       meanings.map((meaning) => meaning.id).sort(),
@@ -34,7 +53,7 @@ describe("meaning-specific picture content", () => {
     const sources = new Set<string>();
     const scenes = new Set<string>();
     for (const meaning of meanings) {
-      const picture = getMeaningPicture(meaning.id)!;
+      const picture = MEANING_PICTURES[meaning.id]!;
       assert.equal(picture.meaningId, meaning.id);
       assert.equal(
         picture.word,
@@ -83,9 +102,15 @@ describe("meaning-specific picture content", () => {
       assert.notEqual(pictures[0].scene, pictures[1].scene);
       assert.notEqual(pictures[0].alt, pictures[1].alt);
     }
-    assert.equal(getMeaningPicture("reservation"), undefined);
-    assert.equal(getMeaningPicture("unknown-meaning"), undefined);
-    assert.equal(getMeaningPicture("toString"), undefined);
+    for (const id of [
+      "reservation",
+      "unknown-meaning",
+      "toString",
+      "constructor",
+      "__proto__",
+    ]) {
+      assert.equal(getReadyMeaningPicture(id), undefined);
+    }
   });
 
   it("omits unavailable and failed media without inventing a replacement", () => {
@@ -95,10 +120,56 @@ describe("meaning-specific picture content", () => {
         getReadyMeaningPicture(picture.meaningId, picture.src),
         undefined,
       );
-      assert.equal(
+      assert.deepEqual(
         getReadyMeaningPicture(picture.meaningId),
-        picture.status === "ready" ? picture : undefined,
+        picture.status === "ready"
+          ? { alt: picture.alt, src: picture.src }
+          : undefined,
       );
     }
+  });
+
+  it("ships a synchronized catalogue containing only ready IDs and alt text", () => {
+    const expected = createRuntimeCatalogue(MEANING_PICTURES);
+    assert.equal(Object.keys(expected).length, 92);
+    assert.deepEqual(runtimeCatalogue, expected);
+    assert.ok(
+      Object.values(runtimeCatalogue).every((alt) => typeof alt === "string"),
+    );
+    const result = spawnSync(
+      process.execPath,
+      [
+        fileURLToPath(
+          new URL(
+            "../../scripts/generate-meaning-pictures.mjs",
+            import.meta.url,
+          ),
+        ),
+        "--check",
+      ],
+      { encoding: "utf8" },
+    );
+    assert.equal(result.status, 0, result.stderr);
+  });
+
+  it("excludes pending artwork and rejects mismatched identities or empty descriptions", () => {
+    const picture = Object.values(MEANING_PICTURES)[0]!;
+    assert.deepEqual(
+      createRuntimeCatalogue({
+        [picture.meaningId]: { ...picture, status: "pending" },
+      }),
+      {},
+    );
+    for (const invalid of [
+      { ...picture, meaningId: "different" },
+      { ...picture, src: "/images/another-meaning.webp" },
+      { ...picture, status: "unreviewed" },
+      { ...picture, alt: " " },
+    ]) {
+      assert.throws(() =>
+        createRuntimeCatalogue({ [picture.meaningId]: invalid }),
+      );
+    }
+    assert.throws(() => createRuntimeCatalogue({ unknown: picture }));
   });
 });

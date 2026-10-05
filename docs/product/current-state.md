@@ -4,7 +4,7 @@
 
 The current delivery branch simplifies Home, Journey, Progress and word teaching,
 with optional explanations behind keyboard-accessible disclosures. Meaning-specific
-original illustrations are mapped to the 92 active canonical meanings; they appear
+original photos, illustrations and diagrams are mapped to the 92 active canonical meanings; they appear
 in teaching and word detail, never in graded questions. See
 [visual learning delivery](../design/visual-learning-delivery.md) for artwork coverage,
 reference-video decisions and current verification. This phase is not yet a

@@ -19,7 +19,7 @@ export default async function DiscoverPage() {
   const { items } = response.data;
   const lessonResponse = await client.listLessons().catch(() => null);
   const situationOrder = new Map(
-    items.map((item, index) => [item.slug, index]),
+    items.map((item, index) => [item.slug, index] as const),
   );
   const lessons = [...(lessonResponse?.data.items ?? [])].sort(
     (a, b) =>
@@ -64,15 +64,17 @@ export default async function DiscoverPage() {
           aria-label="More ways to practise"
           className="grid gap-2 py-3 sm:grid-cols-2"
         >
-          {[
-            ["/practice", "Choose a practice"],
-            ["/writing", "Topic writing"],
-            ["/lists", "Personal lists"],
-            ["/plan", "Your learning plan"],
-          ].map(([href, label]) => (
+          {(
+            [
+              ["/practice", "Choose a practice"],
+              ["/writing", "Topic writing"],
+              ["/lists", "Personal lists"],
+              ["/plan", "Your learning plan"],
+            ] as const
+          ).map(([href, label]) => (
             <Link
               key={href}
-              href={href!}
+              href={href}
               className="inline-flex min-h-11 items-center rounded-xl bg-white px-4 py-3 font-semibold text-primary-700 hover:bg-primary-50"
             >
               {label}

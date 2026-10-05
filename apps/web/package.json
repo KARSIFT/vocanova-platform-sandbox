@@ -13,7 +13,9 @@
     "test:e2e": "playwright test",
     "test:middleware": "node --import ./tests/middleware/extensionless-import-resolver.mjs --import ./tests/lib/next-headers-test-hook.mjs --test \"tests/middleware/*.test.ts\" \"tests/lib/*.test.ts\"",
     "test:lighthouse": "node tests/lighthouse/runner.mjs",
-    "generate:tokens": "node scripts/generate-tokens-css.mjs"
+    "generate:tokens": "node scripts/generate-tokens-css.mjs",
+    "generate:meaning-pictures": "node scripts/generate-meaning-pictures.mjs",
+    "check:meaning-pictures": "node scripts/generate-meaning-pictures.mjs --check"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.70.0",

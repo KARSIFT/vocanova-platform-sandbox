@@ -84,7 +84,7 @@ test("staging onboarding helper waits for delayed completion and lets the app re
   });
   await expect(page).toHaveURL(/\/home(\?|$)/);
   await expect(
-    page.getByRole("heading", { name: "Today's Mission", level: 2, exact: true }),
+    page.getByRole("heading", { name: "Today’s practice", level: 2, exact: true }),
   ).toBeVisible();
 });
 

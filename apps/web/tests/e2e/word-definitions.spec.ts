@@ -67,9 +67,8 @@ for (const theme of ["light", "dark"] as const) {
     ]);
     await page.goto("/discover/daily-conversation/sounds-good");
     const main = page.getByRole("main");
-    const notes = main
-      .getByRole("heading", { name: "Usage notes", exact: true })
-      .locator("..");
+    const tips = main.locator("summary").filter({ hasText: "Usage tips" });
+    const notes = tips.locator("..");
     const expectedNotes = [
       {
         heading: "Often used with",
@@ -90,6 +89,10 @@ for (const theme of ["light", "dark"] as const) {
       await expect(
         main.getByRole("heading", { name: "sounds good", level: 1 }),
       ).toBeVisible();
+      await expect(notes.getByRole("heading", { name: "Often used with", exact: true })).toBeHidden();
+      await tips.focus();
+      await page.keyboard.press("Enter");
+      await expect(tips).toBeFocused();
       await expect(notes.getByRole("heading", { level: 4 })).toHaveText(
         expectedNotes.map((note) => note.heading),
       );

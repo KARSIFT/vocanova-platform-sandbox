@@ -126,7 +126,7 @@ test.describe("Discover accessibility (VOC-031-T07b)", () => {
       requireText: [
         "text=Meanings",
         "text=to make liquid flow into a container",
-        "text=Example sentences",
+        "text=In a sentence",
         "text=Could you pour me a cup of coffee?",
       ],
     });
