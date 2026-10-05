@@ -15,6 +15,12 @@ performance and container acceptance is recorded on the consolidated PR; local
 fixture checks do not substitute for those gates. Prior release evidence does
 not accept this new branch. Production promotion remains a separate manual action.
 
+[PR #1487](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1487) contains
+the integrated delivery. Its actual automated review prompted presentation
+memoization, a disabled-button cue and a working recommendation-recovery shortcut.
+A fresh build and 84 focused browser cases pass after those refinements. All
+required hosted checks must accept the revised head before the hold is released.
+
 ## Visual learning phase — prior accepted verification
 
 See [visual learning delivery](../design/visual-learning-delivery.md) for the

@@ -10,10 +10,14 @@ export function RecommendedLesson({
   data,
   className,
   compact = false,
+  browseHref = "/discover",
+  browseLabel = "All lessons",
 }: {
   data: LessonRecommendationResponse | null;
   className?: string;
   compact?: boolean;
+  browseHref?: string;
+  browseLabel?: string;
 }) {
   const recommendation = data?.recommendation;
   const lesson = recommendation?.lesson;
@@ -72,8 +76,8 @@ export function RecommendedLesson({
         </p>
       )}
       <div className="mt-3 flex flex-wrap gap-4">
-        <Link href="/discover" className={link}>
-          All lessons
+        <Link href={browseHref} className={link}>
+          {browseLabel}
         </Link>
         {!lesson && (
           <Link href="/practice" className={link}>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { SentenceFeedbackResult } from "@vocanova/api-client";
 
@@ -252,10 +252,14 @@ export function SentenceFeedback({
   const characterCountId = `sentence-character-count-${attemptId}`;
   const characterLimitMessageId = `sentence-character-limit-${attemptId}`;
   const characterLimitStatus = getSentenceCharacterLimitStatus(sentence);
-  const comparison =
-    submittedSentence && result?.correctedSentence && hasSuccessResult
-      ? compareSentences(submittedSentence, result.correctedSentence)
-      : null;
+  const correctedSentence = result?.correctedSentence;
+  const comparison = useMemo(
+    () =>
+      submittedSentence && correctedSentence && hasSuccessResult
+        ? compareSentences(submittedSentence, correctedSentence)
+        : null,
+    [submittedSentence, correctedSentence, hasSuccessResult],
+  );
 
   function handleTryAnotherSentence() {
     if (submittingSynchronously.current) {
@@ -473,7 +477,7 @@ export function SentenceFeedback({
                   type="button"
                   onClick={handleReviseSentence}
                   disabled={isLoading}
-                  className="mt-3 inline-flex min-h-11 items-center rounded-lg bg-primary-600 px-4 py-3 font-semibold text-white hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:opacity-50"
+                  className="mt-3 inline-flex min-h-11 items-center rounded-lg bg-primary-600 px-4 py-3 font-semibold text-white hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Revise sentence
                 </button>

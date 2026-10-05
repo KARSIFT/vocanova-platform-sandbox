@@ -53,7 +53,11 @@ export default async function DiscoverPage() {
           </Link>
         </div>
       </header>
-      <RecommendedLesson data={recommendation?.data ?? null} />
+      <RecommendedLesson
+        data={recommendation?.data ?? null}
+        browseHref="#journey-lessons"
+        browseLabel={lessonResponse ? "All lessons" : "Explore situations"}
+      />
       <nav
         aria-label="Ways to practise"
         className="my-6 grid grid-cols-1 gap-2 border-y border-neutral-200 py-4 sm:grid-cols-3"
@@ -95,26 +99,28 @@ export default async function DiscoverPage() {
           situations below.
         </p>
       )}
-      <LessonPath
-        lessons={lessonResponse?.data.items ?? []}
-        situations={response.data.items}
-      />
-      {!response.data.items.length && !lessonResponse?.data.items.length && (
-        <div className="py-8">
-          <h2 className="text-xl font-semibold text-neutral-900">
-            New situations are on the way
-          </h2>
-          <p className="mt-2 text-neutral-700">
-            Review your saved words while we add more situations.
-          </p>
-          <Link
-            href="/review"
-            className="mt-3 inline-flex min-h-11 items-center font-semibold text-primary-700"
-          >
-            Go to Reviews
-          </Link>
-        </div>
-      )}
+      <div id="journey-lessons" className="scroll-mt-24" tabIndex={-1}>
+        <LessonPath
+          lessons={lessonResponse?.data.items ?? []}
+          situations={response.data.items}
+        />
+        {!response.data.items.length && !lessonResponse?.data.items.length && (
+          <div className="py-8">
+            <h2 className="text-xl font-semibold text-neutral-900">
+              New situations are on the way
+            </h2>
+            <p className="mt-2 text-neutral-700">
+              Review your saved words while we add more situations.
+            </p>
+            <Link
+              href="/review"
+              className="mt-3 inline-flex min-h-11 items-center font-semibold text-primary-700"
+            >
+              Go to Reviews
+            </Link>
+          </div>
+        )}
+      </div>
       <div className="mt-6 flex flex-wrap gap-x-6 border-t border-neutral-200 pt-3">
         <Link
           href="/lists"

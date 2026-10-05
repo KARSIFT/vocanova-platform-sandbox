@@ -57,6 +57,25 @@ test("Journey resumes the actual saved lesson and recommendation expiry redirect
   await expect(page).toHaveURL(/\/login\?returnTo=%2Fdiscover$/);
 });
 
+test("Journey recommendation failure leads to the available situation catalogue", async ({ page, context, baseURL }) => {
+  await context.addCookies([{ name: "e2e_lessons", value: "unavailable", url: baseURL! }]);
+  await page.goto("/discover");
+  const recommendation = page.getByRole("region", { name: "Your next lesson", exact: true });
+  await expect(recommendation.getByRole("status")).toContainText("recommendation is unavailable");
+  const browse = recommendation.getByRole("link", { name: "Explore situations", exact: true });
+  await expect(browse).toHaveAttribute("href", "#journey-lessons");
+  await browse.focus();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/discover#journey-lessons$/);
+  const catalogue = page.locator("#journey-lessons");
+  await expect(catalogue.getByRole("heading", { name: "Explore by situation" })).toBeVisible();
+  await expect.poll(async () => {
+    const box = await catalogue.boundingBox();
+    return Boolean(box && box.y >= 64 && box.y < page.viewportSize()!.height);
+  }).toBe(true);
+  await expect(catalogue.locator("summary").filter({ hasText: "Ordering at a cafe" })).toHaveCount(1);
+});
+
 test("Practice defaults to taught vocabulary while full course stays an explicit choice", async ({ page, context }) => {
   const csrf = (await context.cookies()).find(cookie => cookie.name === "vocanova_csrf")!.value;
   const headers = { "X-CSRF-Token": csrf };

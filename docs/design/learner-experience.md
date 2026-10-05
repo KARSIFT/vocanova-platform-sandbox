@@ -79,6 +79,11 @@ Fresh root verification on 5 October:
   broken writing fragment shortcut; it was reproduced, corrected and verified
   by clicking through to the visible writing heading. No remaining actionable
   source finding was reported by the independent final review.
+- The actual automated review on [PR #1487](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1487#issuecomment-5998071251)
+  prompted memoizing the bounded comparison during typing, restoring the
+  disabled-button cursor and directing Journey's browsing shortcut to its actual
+  catalogue. A fresh build and **84 browser cases** pass after those refinements,
+  including keyboard recovery when lessons/recommendations are unavailable.
 - The authorized local Jev browser adapter read the local public preview and
   activated its visible example-feedback control at 360px without horizontal
   overflow. Native screenshot capture timed out, so it is not claimed as native
@@ -90,7 +95,8 @@ and [Vercel web-design-guidelines](https://github.com/vercel-labs/agent-skills/b
 The original WordUp/Duolingo review informs the connected loop, focused sessions
 and visible corrections. This is one consolidated delivery: open draft with
 hold, require actual automated review and all applicable hosted checks, then use
-the normal merge queue. The PR check record establishes hosted acceptance;
+the normal merge queue. [PR #1487](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1487)
+is the consolidated delivery; its check record establishes hosted acceptance;
 production promotion remains separate.
 
 Fresh live staging inspection observed a transient Practice-page internal error;

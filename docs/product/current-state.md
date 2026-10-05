@@ -16,6 +16,7 @@ See [learner experience improvement](../design/learner-experience.md) for the
 critique, visual direction, behavior boundaries and exact local acceptance.
 The consolidated PR check record establishes hosted acceptance. Production
 promotion remains separate. The accepted artwork phase is preserved.
+The integrated change is in [PR #1487](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1487).
 
 ## Visual learning phase — merged, 5 October 2026
 

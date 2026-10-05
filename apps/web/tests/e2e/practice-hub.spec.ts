@@ -38,8 +38,10 @@ for (const theme of ["light", "dark"] as const) {
     await writingShortcut.click();
     const writingHeading = main.getByRole("heading", { name: "Write a sentence", exact: true });
     await expect(writingHeading).toHaveAttribute("id", "practice-writing-heading");
-    await expect.poll(async () => (await writingHeading.boundingBox())!.y).toBeGreaterThanOrEqual(64);
-    expect((await writingHeading.boundingBox())!.y).toBeLessThan(page.viewportSize()!.height);
+    await expect.poll(async () => {
+      const box = await writingHeading.boundingBox();
+      return Boolean(box && box.y >= 64 && box.y < page.viewportSize()!.height);
+    }).toBe(true);
     // The endpoint returns one item but seven due words. The count must come
     // from totalCount, never from the sampled queue length.
     await expect(
