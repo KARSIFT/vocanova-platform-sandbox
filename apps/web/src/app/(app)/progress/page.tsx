@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ApiResponseError } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { PageContainer, Surface } from "@/ui/surface";
@@ -32,12 +33,23 @@ export default async function ProgressPage() {
   }
 
   const { items: savedWords } = savedWordsResponse.data;
-  const [knowledgeResponse, lessonResponse, achievementsResponse] =
-    await Promise.all([
-      client.getKnowledgeSummary().catch(() => null),
-      client.listLessons().catch(() => null),
-      client.listAchievements().catch(() => null),
-    ]);
+  const [
+    knowledgeResponse,
+    lessonResponse,
+    achievementsResponse,
+    sentencesResponse,
+  ] = await Promise.all([
+    client.getKnowledgeSummary().catch(() => null),
+    client.listLessons().catch(() => null),
+    client.listAchievements().catch(() => null),
+    client
+      .listLearnerSentences({ limit: 2 }, { cache: "no-store" })
+      .catch((error) => {
+        if (error instanceof ApiResponseError && error.status === 401)
+          requireAuthRedirect(error, "/progress");
+        return null;
+      }),
+  ]);
 
   const {
     confidencePointsBalance: confidencePointsTotal,
@@ -62,43 +74,10 @@ export default async function ProgressPage() {
       <h1 className="mt-[var(--spacing-xs)] text-3xl font-bold tracking-tight text-neutral-900">
         Progress
       </h1>
-
-      <Surface
-        className="mt-[var(--spacing-md)]"
-        tone="primary"
-        aria-label="Learning summary"
-      >
-        <div className="grid grid-cols-2 gap-[var(--spacing-md)]">
-          <div>
-            <h2
-              id="confidence-points-heading"
-              className="text-sm font-medium text-primary-900"
-            >
-              Confidence Points
-            </h2>
-            <p className="mt-[var(--spacing-xs)] text-3xl font-semibold tabular-nums text-primary-900">
-              {confidencePointsTotal.toLocaleString()}
-            </p>
-          </div>
-          <div className="border-l border-primary-200 pl-[var(--spacing-md)]">
-            <h2
-              id="streak-heading"
-              className="text-sm font-medium text-primary-900"
-            >
-              Your streaks
-            </h2>
-            <p className="mt-[var(--spacing-sm)] text-base text-primary-900">
-              {currentStreakDays}-day streak
-            </p>
-            <p className="mt-[var(--spacing-xs)] text-sm text-primary-900">
-              Best: {longestStreakDays} days
-            </p>
-          </div>
-        </div>
-        <p className="mt-[var(--spacing-md)] text-sm text-primary-900">
-          Earn points by saving words, reviewing, and practising sentences.
-        </p>
-      </Surface>
+      <p className="mt-2 text-neutral-600">
+        Your words, lessons and writing. See what you have practised and keep
+        going.
+      </p>
 
       {knowledgeResponse ? (
         <KnowledgeOverview summary={knowledgeResponse.data} />
@@ -174,15 +153,6 @@ export default async function ProgressPage() {
         </Surface>
       )}
 
-      {achievementsResponse ? (
-        <Achievements achievements={achievementsResponse.data} />
-      ) : (
-        <p role="status" className="mt-6 text-neutral-700">
-          Your milestones could not load. Your other progress is still
-          available.
-        </p>
-      )}
-
       <Surface
         aria-labelledby="sentence-history-heading"
         className="mt-[var(--spacing-lg)] bg-secondary-50"
@@ -206,7 +176,85 @@ export default async function ProgressPage() {
             View sentence history
           </Link>
         </div>
+        {sentencesResponse ? (
+          sentencesResponse.data.items.length > 0 ? (
+            <ul aria-label="Recent sentences" className="mt-5 space-y-3">
+              {sentencesResponse.data.items.map((sentence) => (
+                <li key={sentence.id} className="rounded-xl bg-white p-4">
+                  <p className="break-words text-base text-neutral-900 [overflow-wrap:anywhere]">
+                    {sentence.originalSentence}
+                  </p>
+                  <p className="mt-2 text-sm text-neutral-600">
+                    {sentence.processingStatus === "pending"
+                      ? "Feedback is being prepared"
+                      : sentence.processingStatus === "completed"
+                        ? "Feedback saved in your sentence history"
+                        : "Sentence saved — feedback unavailable"}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Link
+              href="/writing"
+              className="mt-4 inline-flex min-h-11 items-center font-semibold text-primary-700"
+            >
+              Write your first sentence
+            </Link>
+          )
+        ) : (
+          <p role="status" className="mt-4 text-neutral-700">
+            Your recent writing could not load. Open sentence history to try
+            again.
+          </p>
+        )}
       </Surface>
+
+      <Surface
+        className="mt-[var(--spacing-md)]"
+        tone="primary"
+        aria-label="Learning summary"
+      >
+        <div className="grid grid-cols-2 gap-[var(--spacing-md)]">
+          <div>
+            <h2
+              id="confidence-points-heading"
+              className="text-sm font-medium text-primary-900"
+            >
+              Confidence Points
+            </h2>
+            <p className="mt-[var(--spacing-xs)] text-3xl font-semibold tabular-nums text-primary-900">
+              {confidencePointsTotal.toLocaleString()}
+            </p>
+          </div>
+          <div className="border-l border-primary-200 pl-[var(--spacing-md)]">
+            <h2
+              id="streak-heading"
+              className="text-sm font-medium text-primary-900"
+            >
+              Your streaks
+            </h2>
+            <p className="mt-[var(--spacing-sm)] text-base text-primary-900">
+              {currentStreakDays}-day streak
+            </p>
+            <p className="mt-[var(--spacing-xs)] text-sm text-primary-900">
+              Best: {longestStreakDays} days
+            </p>
+          </div>
+        </div>
+        <p className="mt-[var(--spacing-md)] text-sm text-primary-900">
+          Earn points by saving words, reviewing, and practising sentences.
+        </p>
+      </Surface>
+
+      {achievementsResponse ? (
+        <Achievements achievements={achievementsResponse.data} />
+      ) : (
+        <p role="status" className="mt-6 text-neutral-700">
+          Your milestones could not load. Your other progress is still
+          available.
+        </p>
+      )}
 
       <div className="mt-[var(--spacing-md)] lg:grid lg:grid-cols-2 lg:items-start lg:gap-[var(--spacing-md)]">
         <Surface aria-labelledby="completion-history-heading">

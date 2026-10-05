@@ -37,7 +37,7 @@ test.describe("Route loading states", () => {
     await disableViewportPrefetch(page);
     await page.goto("/home");
     await expect(
-      page.getByRole("heading", { name: /Today.s practice|Mission complete/, level: 2, exact: true }),
+      page.getByRole("region", { name: /Today.s practice|Mission complete/, exact: true }),
     ).toBeVisible();
 
     await delayNextServerRequest(page);
@@ -69,7 +69,7 @@ test.describe("Route loading states", () => {
     }]);
     await page.goto("/home");
     await expect(
-      page.getByRole("heading", { name: /Today.s practice|Mission complete/, level: 2, exact: true }),
+      page.getByRole("region", { name: /Today.s practice|Mission complete/, exact: true }),
     ).toBeVisible();
 
     await delayNextServerRequest(page);

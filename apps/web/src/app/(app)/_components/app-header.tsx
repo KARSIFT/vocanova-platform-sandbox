@@ -17,6 +17,7 @@ import {
   hasSentenceFeedbackDrafts,
 } from "./sentence-feedback-drafts";
 import { isPrimaryNavItemActive } from "./bottom-nav-state";
+import { getSessionExit } from "./session-route";
 
 const DESKTOP_NAV_ITEMS = [
   ["/home", "Home"],
@@ -75,6 +76,32 @@ export function AppHeader() {
         message: getAuthErrorMessage(error, "logout"),
       });
     }
+  }
+
+  const sessionExit = getSessionExit(pathname);
+  if (sessionExit) {
+    return (
+      <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
+        <div className="mx-auto flex min-h-14 max-w-[52rem] items-center justify-between gap-4 px-4">
+          <span className="inline-flex items-center gap-2 text-sm font-bold text-neutral-900">
+            <span
+              aria-hidden="true"
+              className="grid size-8 place-items-center rounded-lg bg-primary-700 text-white"
+            >
+              V
+            </span>
+            VocaNova
+          </span>
+          <Link
+            href={sessionExit.href}
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+          >
+            <span aria-hidden="true">×</span>
+            {sessionExit.label}
+          </Link>
+        </div>
+      </header>
+    );
   }
 
   return (

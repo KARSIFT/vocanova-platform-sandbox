@@ -66,8 +66,19 @@ export default async function PracticePage({
   const canStartReview =
     dueCount !== undefined && dueCount > 0 && mission && !reviewTargetComplete;
   const lessons = lessonResponse?.data.items;
+  // Prefer vocabulary already taught, never a merely opened lesson or an
+  // unstudied recommendation. Explicit URL selections keep their meaning.
+  const studiedLesson =
+    lessons?.find((lesson) => lesson.status === "completed") ??
+    lessons?.find(
+      (lesson) =>
+        lesson.status === "in_progress" &&
+        lesson.completedSteps >= lesson.wordCount,
+    );
   const selectedLessonKey =
-    lessons?.find((lesson) => lesson.key === query.lesson)?.key ?? "";
+    query.lesson === undefined
+      ? (studiedLesson?.key ?? "")
+      : (lessons?.find((lesson) => lesson.key === query.lesson)?.key ?? "");
   const nextLesson =
     lessons?.find((lesson) => lesson.status === "in_progress") ??
     lessons?.find((lesson) => lesson.status === "not_started") ??
@@ -85,10 +96,24 @@ export default async function PracticePage({
           Practice your way
         </h1>
         <p className="mt-2 max-w-[40rem] text-lg text-neutral-700">
-          Remember a word, use it in a sentence, or hear how it sounds. Choose
-          what you want to work on today.
+          Remember a word, use it in a sentence, or follow a short story.
         </p>
       </header>
+
+      <nav
+        aria-label="Practice activities"
+        className="mb-6 flex flex-wrap gap-x-5 border-y border-neutral-200 py-2"
+      >
+        <a href="#focused-practice-heading" className={linkStyle}>
+          Remember words
+        </a>
+        <a href="#practice-writing-heading" className={linkStyle}>
+          Write a sentence
+        </a>
+        <Link href="/stories" className={linkStyle}>
+          Short stories
+        </Link>
+      </nav>
 
       <PracticeEntry
         key={`${selectedLessonKey}:${requestedList}`}
@@ -99,7 +124,7 @@ export default async function PracticePage({
         initialListId={requestedList}
       />
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-x-8 gap-y-4 md:grid-cols-2">
         <Surface aria-labelledby="practice-review-heading" tone="primary">
           <Eyebrow>Keep words fresh</Eyebrow>
           <h2
@@ -132,7 +157,10 @@ export default async function PracticePage({
           </Link>
         </Surface>
 
-        <Surface aria-labelledby="practice-lesson-heading">
+        <Surface
+          aria-labelledby="practice-lesson-heading"
+          className="border-neutral-200 bg-transparent shadow-none"
+        >
           <Eyebrow>Remember and use</Eyebrow>
           <h2
             id="practice-lesson-heading"
@@ -185,7 +213,7 @@ export default async function PracticePage({
           <Eyebrow>Make it your own</Eyebrow>
           <h2
             id="practice-writing-heading"
-            className="mt-2 text-xl font-bold text-neutral-900"
+            className="mt-2 scroll-mt-24 text-xl font-bold text-neutral-900"
           >
             Write a sentence
           </h2>
@@ -234,7 +262,10 @@ export default async function PracticePage({
           )}
         </Surface>
 
-        <Surface aria-labelledby="practice-topic-writing-heading">
+        <Surface
+          aria-labelledby="practice-topic-writing-heading"
+          className="border-neutral-200 bg-transparent shadow-none"
+        >
           <Eyebrow>Write about real life</Eyebrow>
           <h2
             id="practice-topic-writing-heading"

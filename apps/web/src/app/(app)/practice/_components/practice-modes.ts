@@ -10,20 +10,17 @@ export const practiceModes: Record<
 > = {
   typed_recall: {
     title: "Type the word",
-    description:
-      "Read a meaning and recall the word or phrase you learned, without answer choices.",
+    description: "See a meaning, then type the word you remember.",
     startLabel: "Start typed recall",
   },
   listening_choice: {
     title: "Listen for meaning",
-    description:
-      "Hear a word with device pronunciation, then choose its meaning. No microphone is needed.",
+    description: "Hear a word, then choose its meaning. No microphone needed.",
     startLabel: "Start listening practice",
   },
   mistakes: {
     title: "Revisit mistakes",
-    description:
-      "Give words you missed another try, with focused questions from supported lessons, reviews and practice.",
+    description: "Try again with words you missed in earlier practice.",
     startLabel: "Practise past mistakes",
   },
 };

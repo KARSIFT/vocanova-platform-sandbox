@@ -32,6 +32,16 @@ for (const theme of ["light", "dark"] as const) {
     await expect(
       main.getByRole("heading", { level: 1, name: "Practice your way" }),
     ).toBeVisible();
+    const writingShortcut = main.getByRole("navigation", { name: "Practice activities" })
+      .getByRole("link", { name: "Write a sentence", exact: true });
+    await expect(writingShortcut).toHaveAttribute("href", "#practice-writing-heading");
+    await writingShortcut.click();
+    const writingHeading = main.getByRole("heading", { name: "Write a sentence", exact: true });
+    await expect(writingHeading).toHaveAttribute("id", "practice-writing-heading");
+    await expect.poll(async () => {
+      const box = await writingHeading.boundingBox();
+      return Boolean(box && box.y >= 64 && box.y < page.viewportSize()!.height);
+    }).toBe(true);
     // The endpoint returns one item but seven due words. The count must come
     // from totalCount, never from the sampled queue length.
     await expect(
@@ -110,7 +120,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/learn\/conversation-basics$/);
     await expect(main.getByRole("heading", { level: 1 })).toHaveText(
-      session.currentStep.prompt,
+      session.currentStep.word.wordText,
     );
     await expect(
       main.getByRole("progressbar", { name: "Lesson progress" }),

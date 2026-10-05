@@ -212,20 +212,39 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     await context.clearCookies({ name: "e2e_onboarding_status" });
     await page.goto("/home");
     await expect(page).toHaveURL(/\/home(\?|$)/);
+    const mission = page.getByRole("region", {
+      name: /Today.s practice|Mission complete/,
+      exact: true,
+    });
+    await expect(mission).toBeVisible();
+    await expect(mission.getByRole("heading", { level: 2 })).toBeVisible();
     await expect(
-      page.getByRole("heading", {
-        name: /Today.s practice|Mission complete/,
-        level: 2,
-        exact: true,
-      }),
-    ).toBeVisible();
+      mission.getByRole("link", { name: "Start your Journey", exact: true }),
+    ).toHaveAttribute("href", "/discover");
+    await expect(
+      mission.getByRole("progressbar", { name: "Reviews today" }),
+    ).toHaveAttribute("aria-valuenow", "0");
 
     // ----- 3. Discover.
     await page.goto("/discover");
     await expect(
       page.getByRole("heading", { name: "Journey", level: 1 }),
     ).toBeVisible();
-    await page.getByRole("link", { name: /Ordering at a cafe/ }).click();
+    const cafeSituation = page
+      .getByRole("region", { name: "Guided lessons", exact: true })
+      .locator("details")
+      .filter({
+        has: page.locator("summary").filter({ hasText: "Ordering at a cafe" }),
+      });
+    await expect(cafeSituation).toHaveCount(1);
+    await cafeSituation.locator("summary").focus();
+    await page.keyboard.press("Enter");
+    await cafeSituation
+      .getByRole("link", {
+        name: "Explore words in Ordering at a cafe",
+        exact: true,
+      })
+      .click();
     await expect(page).toHaveURL(/\/discover\/ordering-at-a-cafe(\?|$)/);
     await expect(
       page.getByRole("heading", { name: "Ordering at a cafe", level: 1 }),
@@ -414,14 +433,20 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
       page.getByRole("progressbar", { name: "Reviews today" }),
     ).toHaveAttribute("aria-valuenow", "1");
 
-    // Home exposes one deliberate practice entry, independent of word detail
-    // and review completion, without crowding the daily mission with forms.
-    await page
-      .locator("summary")
-      .filter({ hasText: "Practice “pour” in a sentence" })
-      .click();
+    // Home exposes the writing task directly, independent of word detail
+    // and review completion, without requiring another disclosure.
+    const homeWriting = page.getByRole("region", {
+      name: "Use a word",
+      exact: true,
+    });
     await expect(
-      page.getByRole("heading", { name: /Practice with pour/ }),
+      homeWriting.getByRole("heading", { name: /Practice with pour/ }),
+    ).toBeVisible();
+    await expect(
+      homeWriting.getByRole("textbox", {
+        name: "Write a sentence using pour",
+        exact: true,
+      }),
     ).toBeVisible();
     await expectSentencePracticePrivacyReminder(page);
 

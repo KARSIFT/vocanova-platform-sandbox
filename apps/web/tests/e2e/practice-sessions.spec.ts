@@ -64,16 +64,29 @@ async function saved(page: Page, id: string) {
   return (await response.json()) as PracticeSession;
 }
 
-test("returning through Practice navigation offers the saved session and a fresh start", async ({ page }) => {
+test("returning through Practice navigation offers the saved session and a fresh start", async ({
+  page,
+}) => {
   const initial = await start(page);
-  await main(page).getByRole("link", { name: "Back to Practice", exact: true }).click();
+  await page
+    .getByRole("link", { name: "Back to Practice", exact: true })
+    .click();
   await expect(page).toHaveURL(/\/practice$/);
-  await expect(main(page).getByRole("button", { name: "Start typed recall", exact: true })).toBeEnabled();
-  const resume = main(page).getByRole("link", { name: /^Resume practice\s*:\s*Type the word$/ });
-  await expect(resume).toHaveAttribute("href", `/practice/session/${initial.id}`);
+  await expect(
+    main(page).getByRole("button", { name: "Start typed recall", exact: true }),
+  ).toBeEnabled();
+  const resume = main(page).getByRole("link", {
+    name: /^Resume practice\s*:\s*Type the word$/,
+  });
+  await expect(resume).toHaveAttribute(
+    "href",
+    `/practice/session/${initial.id}`,
+  );
   await resume.click();
   await expect(page).toHaveURL(new RegExp(`/practice/session/${initial.id}$`));
-  await expect(main(page).getByRole("textbox", { name: "Your answer" })).toBeEnabled();
+  await expect(
+    main(page).getByRole("textbox", { name: "Your answer" }),
+  ).toBeEnabled();
 });
 
 test("typed recall saves normalized, wrong and assisted answers without review credit and can repeat", async ({
@@ -440,7 +453,7 @@ for (const theme of ["light", "dark"] as const) {
     ]);
     expect((await saved(page, session.id)).questionsAnswered).toBe(0);
     const options = main(page).getByRole("group", { name: "Answer choices" });
-    await expect(options.getByRole("button")).toHaveCount(3);
+    await expect(options.getByRole("radio")).toHaveCount(3);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -456,10 +469,13 @@ for (const theme of ["light", "dark"] as const) {
         r.url().endsWith(`/practice-sessions/${session.id}/actions`),
     );
     await options
-      .getByRole("button", {
+      .getByRole("radio", {
         name: "To ask someone to come to an event or do something with you.",
         exact: true,
       })
+      .check();
+    await main(page)
+      .getByRole("button", { name: "Check answer", exact: true })
       .click();
     const result = (await (await graded).json()) as PracticeSession;
     expect(result.feedback).toMatchObject({

@@ -348,7 +348,7 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
     await page.goto("/home");
 
     await expect(
-      page.getByRole("heading", { name: /Today.s practice|Mission complete/, level: 2 }),
+      page.getByRole("region", { name: /Today.s practice|Mission complete/ }),
     ).toBeVisible();
 
     const { criticalOrSerious } = await scanForAxeViolations(page);
@@ -362,12 +362,11 @@ test.describe("Home accessibility (VOC-031-T07b mobile)", () => {
     await assertKeyboardReachable(page, { minFocusable: 2 });
 
     // Non-color-only feedback: the mission progress text, the
-    // streak text, and the "words due today" line all carry
-    // their state in text, not just color. The empty-saved-words
-    // message is also text.
+    // streak text, and the current due-word count carry their
+    // state in text, not just color.
     await assertNonColorOnlyFeedback(page, {
       contextLabel: "/home",
-      requireText: ["text=Reviews today", "text=day streak", "text=In progress"],
+      requireText: ["text=Reviews today", "text=day streak", "text=Currently due"],
     });
     await expect(
       page.getByRole("progressbar", { name: "Reviews today" }),

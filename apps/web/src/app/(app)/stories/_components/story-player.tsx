@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   ApiResponseError,
   type StoryAction,
@@ -11,6 +11,7 @@ import { createApiClient } from "@/lib/api";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError } from "@/lib/session";
 import { Surface } from "@/ui/surface";
+import { SessionActions } from "@/ui/session";
 import {
   primaryAction,
   secondaryAction,
@@ -28,6 +29,7 @@ export function StoryPlayer({
 }) {
   const [session, setSession] = useState(initialSession);
   const [choice, setChoice] = useState("");
+  const answerFormId = useId();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -139,10 +141,7 @@ export function StoryPlayer({
     }
   }
   return (
-    <div>
-      <Link href="/stories" className={textLink}>
-        Back to Stories
-      </Link>
+    <div className="pb-[7rem]">
       <p className="mb-2 mt-3 text-sm font-semibold text-primary-700">
         {session.situation} · A2–B1
       </p>
@@ -219,6 +218,7 @@ export function StoryPlayer({
         </ol>
         {step && step.kind !== "line" && (
           <form
+            id={answerFormId}
             className="mt-6"
             onSubmit={(event) => {
               event.preventDefault();
@@ -240,21 +240,21 @@ export function StoryPlayer({
                     value={option.id}
                     checked={choice === option.id}
                     onChange={() => setChoice(option.id)}
+                    aria-label={option.text}
                     className="h-5 w-5 shrink-0 accent-primary-700"
                   />
-                  <span>{option.text}</span>
+                  <span className="grow">{option.text}</span>
+                  {choice === option.id && (
+                    <span
+                      aria-hidden="true"
+                      className="text-sm font-semibold text-primary-800"
+                    >
+                      Selected
+                    </span>
+                  )}
                 </label>
               ))}
             </fieldset>
-            {!checked?.correct && (
-              <button
-                type="submit"
-                className={primaryAction}
-                disabled={locked || !choice}
-              >
-                {busy ? "Checking…" : checked ? "Check again" : "Check answer"}
-              </button>
-            )}
           </form>
         )}
         {checked && (
@@ -278,19 +278,33 @@ export function StoryPlayer({
             )}
           </div>
         )}
-        {session.canContinue && (
-          <button
-            type="button"
-            className={`${primaryAction} mt-5`}
-            disabled={locked}
-            onClick={() => void submit("continue")}
-          >
-            {busy
-              ? "Saving…"
-              : session.completedSteps + 1 === session.totalSteps
-                ? "Finish story"
-                : "Continue"}
-          </button>
+        {step && (
+          <SessionActions>
+            {step.kind !== "line" && !checked?.correct && (
+              <button
+                type="submit"
+                form={answerFormId}
+                className={`${primaryAction} w-full`}
+                disabled={locked || !choice}
+              >
+                {busy ? "Checking…" : checked ? "Check again" : "Check answer"}
+              </button>
+            )}
+            {session.canContinue && (
+              <button
+                type="button"
+                className={`${primaryAction} w-full`}
+                disabled={locked}
+                onClick={() => void submit("continue")}
+              >
+                {busy
+                  ? "Saving…"
+                  : session.completedSteps + 1 === session.totalSteps
+                    ? "Finish story"
+                    : "Continue"}
+              </button>
+            )}
+          </SessionActions>
         )}
         {error && (
           <div

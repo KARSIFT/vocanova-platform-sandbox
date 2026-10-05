@@ -11,6 +11,7 @@ import { getConversationPractice } from "./_components/conversation-context-cont
 import { ConversationContextPractice } from "./_components/conversation-context-practice";
 import { formatLevelBand } from "../_components/level-band";
 import { UnitGuidebook } from "./_components/unit-guidebook";
+import { getSituationOutcome } from "../../_components/situation-presentation";
 import { unitGuides } from "./_components/unit-guide-content";
 
 interface SituationDiscoverPageProps {
@@ -94,8 +95,82 @@ export default async function SituationDiscoverPage({
         {situationData.title}
       </h1>
       <p className="mt-[var(--spacing-xs)] text-base text-neutral-700">
-        {situationData.shortDescription}
+        {getSituationOutcome(situation) ?? situationData.shortDescription}
       </p>
+
+      <nav
+        aria-label="This situation"
+        className="mt-4 flex flex-wrap gap-x-5 border-y border-neutral-200 py-2"
+      >
+        {meanings.length > 0 && (
+          <a
+            href="#situation-words"
+            className="inline-flex min-h-11 items-center font-semibold text-primary-700"
+          >
+            Words to use
+          </a>
+        )}
+        {unitGuides[situation] && (
+          <a
+            href="#unit-guide"
+            className="inline-flex min-h-11 items-center font-semibold text-primary-700"
+          >
+            A quick guide
+          </a>
+        )}
+        <Link
+          href={`/writing?situation=${encodeURIComponent(situation)}`}
+          className="inline-flex min-h-11 items-center font-semibold text-primary-700"
+        >
+          Write about this situation
+        </Link>
+      </nav>
+      {lessonResponse?.data.items.some(
+        (lesson) => lesson.situationSlug === situation,
+      ) && (
+        <section aria-labelledby="situation-lessons-heading" className="mt-6">
+          <h2
+            id="situation-lessons-heading"
+            className="text-xl font-bold text-neutral-900"
+          >
+            Lessons in this situation
+          </h2>
+          <ul className="mt-3 divide-y divide-neutral-200">
+            {lessonResponse.data.items
+              .filter((lesson) => lesson.situationSlug === situation)
+              .map((lesson) => (
+                <li
+                  key={lesson.key}
+                  className="flex flex-wrap items-center justify-between gap-2 py-3"
+                >
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-neutral-900">
+                      {lesson.title}
+                    </h3>
+                    <p className="mt-1 text-sm text-neutral-600">
+                      {lesson.status === "completed"
+                        ? "Completed"
+                        : lesson.status === "in_progress"
+                          ? `${lesson.completedSteps} of ${lesson.stepCount} steps`
+                          : `${lesson.wordCount} words`}
+                    </p>
+                  </div>
+                  <Link
+                    href={`/learn/${encodeURIComponent(lesson.key)}`}
+                    className="inline-flex min-h-11 items-center font-semibold text-primary-700"
+                  >
+                    {lesson.status === "in_progress"
+                      ? "Continue lesson"
+                      : lesson.status === "completed"
+                        ? "Revisit words"
+                        : "Start lesson"}
+                    <span className="sr-only">: {lesson.title}</span>
+                  </Link>
+                </li>
+              ))}
+          </ul>
+        </section>
+      )}
 
       {meanings.length > 0 ? (
         <section
@@ -169,13 +244,13 @@ export default async function SituationDiscoverPage({
           id="situation-words"
           aria-label="Words in this situation"
           tabIndex={-1}
-          className="mt-[var(--spacing-lg)] space-y-[var(--spacing-md)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+          className="scroll-mt-24 mt-[var(--spacing-lg)] divide-y divide-neutral-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
         >
           {meanings.map((meaning) => (
             <li key={meaning.meaningId}>
               <Link
                 href={`/discover/${situation}/${meaning.wordSlug}`}
-                className="block rounded-[var(--radius-lg)] border border-neutral-200 bg-white p-[var(--spacing-md)] shadow-sm transition hover:border-primary-300 hover:shadow-md"
+                className="block min-h-11 rounded-lg py-4 px-2 transition-colors hover:bg-primary-50"
               >
                 <div className="flex items-start justify-between gap-[var(--spacing-md)]">
                   <div>

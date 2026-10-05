@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ApiResponseError } from "@vocanova/api-client";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { Eyebrow, PageContainer, Surface } from "@/ui/surface";
-import { SentenceFeedback } from "../_components/sentence-feedback";
+import { SaveAndWrite } from "./_components/save-and-write";
 import { writingPrompts } from "./_components/writing-prompts";
 import {
   textLink,
@@ -66,8 +66,8 @@ export default async function WritingPage({
           Topic writing
         </h1>
         <p className="mt-3 max-w-[44rem] text-lg text-neutral-700">
-          Choose a situation and a meaning, then write a sentence of your own.
-          Get a correction, understand it, and try a rewrite.
+          Write something you could use today. Choose a topic and a word, then
+          compare feedback with your own sentence.
         </p>
       </header>
       <details
@@ -108,11 +108,6 @@ export default async function WritingPage({
           <p className="mt-3 text-lg text-neutral-800">
             {writingPrompts[situation] ??
               "Write one sentence about this situation using a word you want to practise."}
-          </p>
-          <p className="mt-3 text-sm text-neutral-600">
-            Feedback checks your chosen meaning and language. It does not grade
-            whether you followed the scenario. Your checked sentence appears in
-            writing history.
           </p>
           <details
             open={!selected}
@@ -159,32 +154,25 @@ export default async function WritingPage({
               <h3 className="text-xl font-bold text-neutral-900">
                 Write with {selected.wordText}
               </h3>
-              <p className="mt-2 text-neutral-700">
-                {canonical.shortDefinition}
+              {canonical.shortDefinition ? (
+                <p className="mt-2 text-neutral-700">
+                  {canonical.shortDefinition}
+                </p>
+              ) : null}
+              <SaveAndWrite
+                key={`${currentUser.id}:${selected.meaningId}`}
+                meaningId={selected.meaningId}
+                wordSlug={selected.wordSlug}
+                wordText={selected.wordText}
+                shortDefinition={canonical.shortDefinition}
+                initialMeaning={canonical}
+                userId={currentUser.id}
+              />
+              <p className="mt-4 text-sm text-neutral-600">
+                Feedback checks the chosen meaning and language, rather than
+                whether you followed the topic. Checked sentences appear in your
+                writing history.
               </p>
-              {canonical.saved && canonical.userWordId ? (
-                <SentenceFeedback
-                  key={canonical.userWordId}
-                  targetWord={selected.wordText}
-                  attemptId={canonical.userWordId}
-                  source="word_detail"
-                  userId={currentUser.id}
-                  shortDefinition={canonical.shortDefinition}
-                />
-              ) : (
-                <>
-                  <p className="mt-3 text-neutral-700">
-                    Save this meaning first to unlock writing feedback. You can
-                    return here after saving it.
-                  </p>
-                  <Link
-                    className={`${textLink} mt-3`}
-                    href={`/vocabulary/${encodeURIComponent(selected.wordSlug)}#meaning-${encodeURIComponent(selected.meaningId)}`}
-                  >
-                    Open {selected.wordText} to save it
-                  </Link>
-                </>
-              )}
             </section>
           )}
           <Link

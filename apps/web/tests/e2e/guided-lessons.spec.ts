@@ -10,20 +10,50 @@ test.beforeEach(async ({ context, baseURL }) => {
   ]);
 });
 
-test("a larger curriculum groups lessons without locking other situations", async ({ page, context, baseURL }) => {
-  await context.addCookies([{ name: "e2e_lessons", value: "expanded", url: baseURL! }]);
+test("a larger curriculum groups lessons without locking other situations", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await context.addCookies([
+    { name: "e2e_lessons", value: "expanded", url: baseURL! },
+  ]);
   await page.goto("/discover");
-  const section = page.getByRole("region", { name: "Guided lessons", exact: true });
-  await expect(section.getByText("0 of 30 lessons completed.", { exact: false })).toBeVisible();
-  const travel = section.locator("details").filter({ has: page.locator("summary").filter({ hasText: "Travel basics" }) });
+  const section = page.getByRole("region", {
+    name: "Guided lessons",
+    exact: true,
+  });
+  await expect(
+    section.getByText("0 of 30 lessons completed.", { exact: false }),
+  ).toBeVisible();
+  const travel = section
+    .locator("details")
+    .filter({
+      has: page.locator("summary").filter({ hasText: "Travel basics" }),
+    });
   await expect(travel).not.toHaveAttribute("open");
   await travel.locator("summary").focus();
   await page.keyboard.press("Enter");
-  await expect(travel.getByRole("link", { name: /^Start lesson\s*:\s*Fixture lesson 7$/ })).toBeVisible();
-  await expect(travel.getByRole("link", { name: /^Start lesson\s*:\s*Fixture lesson 7$/ })).toHaveAttribute("href", "/learn/fixture-lesson-6");
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
-  await section.getByRole("link", { name: /^Start lesson\s*:\s*Make a plan with a friend$/ }).click();
-  await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveText("Make a plan with a friend");
+  await expect(
+    travel.getByRole("link", { name: /^Start lesson\s*:\s*Fixture lesson 7$/ }),
+  ).toBeVisible();
+  await expect(
+    travel.getByRole("link", { name: /^Start lesson\s*:\s*Fixture lesson 7$/ }),
+  ).toHaveAttribute("href", "/learn/fixture-lesson-6");
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(page.viewportSize()!.width);
+  const conversation = section.locator("details").filter({ has: page.locator("summary").filter({ hasText: "Daily Conversation" }) });
+  await conversation.locator("summary").focus();
+  await page.keyboard.press("Enter");
+  await section
+    .getByRole("link", {
+      name: /^Start lesson\s*:\s*Make a plan with a friend$/,
+    })
+    .click();
+  await expect(
+    page.getByRole("main").getByRole("heading", { level: 1 }),
+  ).toHaveText("Make a plan with a friend");
 });
 
 test("a guided lesson resumes and completes teaching, recall and context", async ({
@@ -60,7 +90,10 @@ test("a guided lesson resumes and completes teaching, recall and context", async
     const word = words[index % 3];
     if (!wrongAnswerUsed) {
       await page
-        .getByRole("button", { name: words[1].definition, exact: true })
+        .getByRole("radio", { name: words[1].definition, exact: true })
+        .check();
+      await page
+        .getByRole("button", { name: "Check answer", exact: true })
         .click();
       await expect(
         page.getByRole("heading", { name: "Let’s look again" }),
@@ -75,10 +108,13 @@ test("a guided lesson resumes and completes teaching, recall and context", async
       wrongAnswerUsed = true;
     }
     await page
-      .getByRole("button", {
+      .getByRole("radio", {
         name: index < 3 ? word.definition : word.wordText,
         exact: true,
       })
+      .check();
+    await page
+      .getByRole("button", { name: "Check answer", exact: true })
       .click();
     await expect(
       page.getByRole("heading", { name: "That’s right" }),
@@ -104,10 +140,14 @@ test("a guided lesson resumes and completes teaching, recall and context", async
   ).toBeVisible();
   await page.goto("/progress");
   await expect(
-    page.getByRole("main").getByText("1 of 1 lessons completed", { exact: true }),
+    page
+      .getByRole("main")
+      .getByText("1 of 1 lessons completed", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("main").getByText("0 saved meanings, each at its own stage.", { exact: true }),
+    page
+      .getByRole("main")
+      .getByText("0 saved meanings, each at its own stage.", { exact: true }),
   ).toBeVisible();
 });
 
@@ -131,7 +171,9 @@ test("an applied lesson action can be retried after its response is lost", async
     } else await route.continue();
   });
   await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await expect(page.getByRole("main").getByRole("alert")).toContainText("could not confirm");
+  await expect(page.getByRole("main").getByRole("alert")).toContainText(
+    "could not confirm",
+  );
   await expect(
     page.getByRole("button", { name: "Continue", exact: true }),
   ).toBeDisabled();
@@ -177,7 +219,7 @@ test("a failed CSRF preflight preserves the chosen lesson answer for retry", asy
   // Choose a specific wrong option: retry must preserve this selection, not
   // silently choose the target meaning or manufacture a correct result.
   const chosenWord = session.words[1]!;
-  const choice = page.getByRole("button", {
+  const choice = page.getByRole("radio", {
     name: chosenWord.definition,
     exact: true,
   });
@@ -206,14 +248,15 @@ test("a failed CSRF preflight preserves the chosen lesson answer for retry", asy
   // The helper reads the cookie on every call. Remove it after initial shell
   // recovery and successful lesson actions, so this is the mutation preflight.
   await context.clearCookies({ name: "vocanova_csrf" });
-  await choice.click();
+  await choice.check();
+  await page.getByRole("button", { name: "Check answer", exact: true }).click();
   const main = page.getByRole("main");
   await expect(main.getByRole("alert")).toContainText("could not confirm");
   expect(recoveryRequests).toBe(1);
   expect(requests).toEqual([]);
   for (const answer of await main
     .getByRole("group", { name: "Answer choices" })
-    .getByRole("button")
+    .getByRole("radio")
     .all()) {
     await expect(answer).toBeDisabled();
   }

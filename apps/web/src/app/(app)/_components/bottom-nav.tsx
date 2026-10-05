@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { isPrimaryNavItemActive } from "./bottom-nav-state";
+import { getSessionExit } from "./session-route";
 
 const NAV_ITEMS = [
   { href: "/home", label: "Home", icon: HomeIcon },
@@ -13,6 +14,7 @@ const NAV_ITEMS = [
 
 export function BottomNav() {
   const pathname = usePathname();
+  if (getSessionExit(pathname)) return null;
 
   return (
     <nav

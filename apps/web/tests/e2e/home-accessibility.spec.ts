@@ -48,7 +48,7 @@ test.describe("Home accessibility (VOC-031-T07a)", () => {
     // /home instead of redirecting to /login.
     await page.goto("/home");
 
-    // The "Today's Mission" heading is the most specific
+    // The daily-action region is the most specific
     // signal that the Home page server component has rendered
     // with the mocked data; waiting on it (rather than on a
     // generic network-idle) keeps the scan from running
@@ -56,7 +56,7 @@ test.describe("Home accessibility (VOC-031-T07a)", () => {
     // reporting false-positive violations for half-rendered
     // markup.
     await expect(
-      page.getByRole("heading", { name: /Today.s practice|Mission complete/, level: 2 }),
+      page.getByRole("region", { name: /Today.s practice|Mission complete/ }),
     ).toBeVisible();
 
     const { criticalOrSerious } = await scanForAxeViolations(page);

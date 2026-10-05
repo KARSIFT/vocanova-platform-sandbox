@@ -37,7 +37,10 @@ for (const theme of ["light", "dark"])
       await page.getByRole("button", { name: "Continue", exact: true }).click();
     }
     await page
-      .getByRole("button", { name: session.words[0].definition, exact: true })
+      .getByRole("radio", { name: session.words[0].definition, exact: true })
+      .check();
+    await page
+      .getByRole("button", { name: "Check answer", exact: true })
       .click();
     await page.getByRole("button", { name: "Continue", exact: true }).click();
     const input = page.getByRole("textbox", { name: "Your word or phrase" });
@@ -86,12 +89,18 @@ for (const theme of ["light", "dark"])
     ).toBeLessThanOrEqual(page.viewportSize()!.width);
     expect((await scanForAxeViolations(page)).criticalOrSerious).toEqual([]);
     await page
-      .getByRole("button", { name: session.words[2].definition, exact: true })
+      .getByRole("radio", { name: session.words[2].definition, exact: true })
+      .check();
+    await page
+      .getByRole("button", { name: "Check answer", exact: true })
       .click();
     await page.getByRole("button", { name: "Continue", exact: true }).click();
     for (let i = 0; i < 3; i++) {
       await page
-        .getByRole("button", { name: session.words[i].wordText, exact: true })
+        .getByRole("radio", { name: session.words[i].wordText, exact: true })
+        .check();
+      await page
+        .getByRole("button", { name: "Check answer", exact: true })
         .click();
       await page
         .getByRole("button", {
@@ -121,8 +130,9 @@ test("typed lesson retry keeps its exact answer after response loss", async ({
   for (let i = 0; i < 3; i++)
     await page.getByRole("button", { name: "Continue", exact: true }).click();
   await page
-    .getByRole("button", { name: session.words[0].definition, exact: true })
-    .click();
+    .getByRole("radio", { name: session.words[0].definition, exact: true })
+    .check();
+  await page.getByRole("button", { name: "Check answer", exact: true }).click();
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   const intents: unknown[] = [];
   let lost = false;
@@ -166,8 +176,9 @@ test("a confirmed typed validation rejection keeps an editable draft", async ({
   for (let i = 0; i < 3; i++)
     await page.getByRole("button", { name: "Continue", exact: true }).click();
   await page
-    .getByRole("button", { name: session.words[0].definition, exact: true })
-    .click();
+    .getByRole("radio", { name: session.words[0].definition, exact: true })
+    .check();
+  await page.getByRole("button", { name: "Check answer", exact: true }).click();
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   const draft = page.getByRole("textbox", { name: "Your word or phrase" });
   await draft.fill("é".repeat(101));

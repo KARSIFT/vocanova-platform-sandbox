@@ -36,7 +36,27 @@ for (const theme of ["light", "dark"] as const) {
       { name: "vocanova_theme", value: theme, url },
     ]);
     await page.goto("/discover");
-    await page.getByRole("link", { name: /Daily Conversation/ }).click();
+    const situation = page
+      .getByRole("region", { name: "Guided lessons", exact: true })
+      .locator("details")
+      .filter({
+        has: page.locator("summary").filter({ hasText: "Daily Conversation" }),
+      });
+    await expect(situation).toHaveCount(1);
+    if ((await situation.getAttribute("open")) === null) {
+      await situation.locator("summary").focus();
+      await page.keyboard.press("Enter");
+      await expect(situation).toHaveAttribute("open", "");
+    }
+    const openWords = situation.getByRole("link", {
+      name: "Explore words in Daily Conversation",
+      exact: true,
+    });
+    await expect(openWords).toBeVisible();
+    await expect(openWords).toHaveAttribute("href", "/discover/daily-conversation");
+    await openWords.focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/\/discover\/daily-conversation$/);
     await expect(
       page.getByRole("heading", { level: 1, name: "Daily Conversation" }),
     ).toBeVisible();

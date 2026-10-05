@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   ApiResponseError,
   type LessonAction,
@@ -15,6 +15,7 @@ import { handleApiError } from "@/lib/session";
 import { MeaningPicture } from "@/ui/meaning-picture";
 import { ListenButton } from "@/ui/pronunciation";
 import { Surface } from "@/ui/surface";
+import { SessionActions } from "@/ui/session";
 import { LessonAudio } from "./lesson-audio";
 import { LessonReviewSave } from "./lesson-review-save";
 
@@ -35,6 +36,8 @@ export function LessonPlayer({
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [typedAnswer, setTypedAnswer] = useState("");
+  const [selectedChoice, setSelectedChoice] = useState("");
+  const answerFormId = useId();
   const [needsRetry, setNeedsRetry] = useState(false);
   const [needsRefresh, setNeedsRefresh] = useState(false);
   const inFlight = useRef(false);
@@ -59,7 +62,12 @@ export function LessonPlayer({
 
   function accept(next: LessonSession) {
     focusAfterResponse.current = true;
-    if (next.currentStep?.id !== session?.currentStep?.id) setTypedAnswer("");
+    if (next.currentStep?.id !== session?.currentStep?.id) {
+      setTypedAnswer("");
+      setSelectedChoice("");
+    } else if (next.feedback && !next.feedback.correct) {
+      setSelectedChoice("");
+    }
     setSession((current) =>
       current && current.id === next.id && current.revision > next.revision
         ? current
@@ -147,7 +155,9 @@ export function LessonPlayer({
         pendingAction.current = null;
         setNeedsRetry(false);
         setError(
-          "That answer could not be accepted. Check your text and try again; your draft is still here.",
+          session?.currentStep?.kind === "typed_recall"
+            ? "That answer could not be accepted. Check your text and try again; your draft is still here."
+            : "That answer could not be accepted. Choose again, then check your answer.",
         );
       } else if (
         cause instanceof ApiResponseError &&
@@ -178,18 +188,7 @@ export function LessonPlayer({
   const locked = busy || needsRetry || needsRefresh;
 
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between gap-3">
-        <Link
-          className="inline-flex min-h-11 items-center font-semibold text-primary-700"
-          href="/discover"
-        >
-          Back to Journey
-        </Link>
-        <span className="text-sm text-neutral-600">
-          {lesson.situationTitle}
-        </span>
-      </div>
+    <div className="pb-[7rem]">
       {session && (
         <div className="mb-6">
           <div className="mb-2 flex justify-between gap-3 text-sm text-neutral-700">
@@ -299,26 +298,33 @@ export function LessonPlayer({
                 : step.kind === "recall"
                   ? "Remember the meaning"
                   : step.kind === "typed_recall"
-                    ? "Recall the word"
+                    ? "Remember the word"
                     : step.kind === "listening_choice"
                       ? "Listen and understand"
                       : "Use it in context"}
             </p>
-            <h1
-              ref={heading}
-              tabIndex={-1}
-              className="mt-2 text-2xl font-bold leading-snug text-neutral-900"
-            >
-              {step.prompt}
-            </h1>
             {step.kind === "teach" ? (
-              <div className="mt-6">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="text-3xl font-bold text-neutral-900">
-                    {step.word.wordText}
-                  </h2>
-                  <ListenButton text={step.word.wordText} />
-                </div>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+                <h1
+                  ref={heading}
+                  tabIndex={-1}
+                  className="text-3xl font-bold leading-snug text-neutral-900"
+                >
+                  {step.word.wordText}
+                </h1>
+                <ListenButton text={step.word.wordText} />
+              </div>
+            ) : (
+              <h1
+                ref={heading}
+                tabIndex={-1}
+                className="mt-2 text-2xl font-bold leading-snug text-neutral-900"
+              >
+                {step.prompt}
+              </h1>
+            )}
+            {step.kind === "teach" ? (
+              <div className="mt-3">
                 <p className="mt-1 text-sm text-neutral-600">
                   {step.word.partOfSpeech}
                 </p>
@@ -359,6 +365,7 @@ export function LessonPlayer({
                 )}
                 {step.kind === "typed_recall" ? (
                   <form
+                    id={answerFormId}
                     onSubmit={(event) => {
                       event.preventDefault();
                       if (typedAnswer.trim())
@@ -388,34 +395,50 @@ export function LessonPlayer({
                       Try to remember the word. Capital letters and extra spaces
                       do not matter.
                     </p>
-                    <button
-                      type="submit"
-                      className={primary}
-                      disabled={
-                        locked || session.canContinue || !typedAnswer.trim()
-                      }
-                    >
-                      Check answer
-                    </button>
                   </form>
                 ) : (
-                  <div
-                    role="group"
-                    aria-label="Answer choices"
-                    className="grid gap-3"
+                  <form
+                    id={answerFormId}
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      if (selectedChoice) void submit("answer", selectedChoice);
+                    }}
                   >
-                    {step.choices.map((choice) => (
-                      <button
-                        type="button"
-                        key={choice.id}
-                        disabled={locked || session.canContinue}
-                        onClick={() => void submit("answer", choice.id)}
-                        className={`${secondary} justify-start text-left ${session.feedback?.correctChoiceId === choice.id ? "border-primary-500 bg-primary-50" : ""}`}
-                      >
-                        {choice.text}
-                      </button>
-                    ))}
-                  </div>
+                    <fieldset
+                      disabled={locked || session.canContinue}
+                      className="grid gap-3"
+                    >
+                      <legend className="sr-only">Answer choices</legend>
+                      {step.choices.map((choice) => (
+                        <label
+                          key={choice.id}
+                          className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border p-4 text-neutral-900 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary-700 ${selectedChoice === choice.id ? "border-primary-600 bg-primary-50" : "border-neutral-300 bg-white"} ${locked || session.canContinue ? "cursor-default" : ""}`}
+                        >
+                          <input
+                            type="radio"
+                            name={answerFormId}
+                            aria-label={choice.text}
+                            value={choice.id}
+                            checked={selectedChoice === choice.id}
+                            onChange={() => setSelectedChoice(choice.id)}
+                            className="h-5 w-5 shrink-0 accent-primary-700"
+                          />
+                          <span className="grow">{choice.text}</span>
+                          {selectedChoice === choice.id && (
+                            <span
+                              aria-hidden="true"
+                              className="text-sm font-semibold text-primary-800"
+                            >
+                              Selected
+                            </span>
+                          )}
+                        </label>
+                      ))}
+                    </fieldset>
+                    <p className="mt-3 text-sm text-neutral-600">
+                      Choose an answer, then check it.
+                    </p>
+                  </form>
                 )}
               </div>
             )}
@@ -444,8 +467,8 @@ export function LessonPlayer({
               </div>
             )}
           </div>
-          {session.canContinue && (
-            <div className="mt-6 border-t border-neutral-200 pt-4">
+          <SessionActions>
+            {session.canContinue ? (
               <button
                 type="button"
                 disabled={locked}
@@ -458,8 +481,22 @@ export function LessonPlayer({
                     ? "Finish lesson"
                     : "Continue"}
               </button>
-            </div>
-          )}
+            ) : step.kind !== "teach" ? (
+              <button
+                type="submit"
+                form={answerFormId}
+                className={`${primary} w-full`}
+                disabled={
+                  locked ||
+                  (step.kind === "typed_recall"
+                    ? !typedAnswer.trim()
+                    : !selectedChoice)
+                }
+              >
+                {busy ? "Checking…" : "Check answer"}
+              </button>
+            ) : null}
+          </SessionActions>
         </Surface>
       ) : null}
 
