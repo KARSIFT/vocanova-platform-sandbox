@@ -43,6 +43,9 @@ export function PracticePlayer({
   const step = session.currentStep;
   const checked =
     session.feedback?.stepId === step?.id ? session.feedback : null;
+  const displayedChoice = checked?.correct
+    ? (checked.correctChoiceId ?? selectedChoice)
+    : selectedChoice;
   const locked = busy || needsRetry || needsRefresh;
 
   useEffect(() => {
@@ -261,19 +264,19 @@ export function PracticePlayer({
                   {step.choices.map((choice) => (
                     <label
                       key={choice.id}
-                      className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border p-4 text-neutral-900 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary-700 ${selectedChoice === choice.id ? "border-primary-600 bg-primary-50" : "border-neutral-300 bg-white"} ${locked || checked?.correct ? "cursor-default" : ""}`}
+                      className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border p-4 text-neutral-900 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary-700 ${displayedChoice === choice.id ? "border-primary-600 bg-primary-50" : "border-neutral-300 bg-white"} ${locked || checked?.correct ? "cursor-default" : ""}`}
                     >
                       <input
                         type="radio"
                         name={answerFormId}
                         aria-label={choice.text}
                         value={choice.id}
-                        checked={selectedChoice === choice.id}
+                        checked={displayedChoice === choice.id}
                         onChange={() => setSelectedChoice(choice.id)}
                         className="h-5 w-5 shrink-0 accent-primary-700"
                       />
                       <span className="grow">{choice.text}</span>
-                      {selectedChoice === choice.id && (
+                      {displayedChoice === choice.id && (
                         <span
                           aria-hidden="true"
                           className="text-sm font-semibold text-primary-800"

@@ -107,3 +107,34 @@ physical audio, physical mobile keyboard behavior or learner effectiveness.
 
 This improves the interface and its verified behavior. Real learner usability,
 feedback quality and learning outcomes remain separate evidence to collect.
+
+## Hosted acceptance and resume correction
+
+PR #1487 merged through the protected queue as `36361f19`. Its reviewed head
+passed all applicable hosted checks, including **893 browser cases with 37
+intentional scope skips** and all **12 Lighthouse screen/layout audits**. Staging
+run `37341576653` passed release identity and both core-loop and maturity journeys
+on rerun. The first attempt stopped before those journeys because runner package
+downloads timed out. Native Chrome inspection confirmed the new Home and Progress
+at 360px, loaded teaching imagery, visible writing and unchanged account progress.
+On Journey, native Tab/Enter moved focus from All lessons to the catalogue; the
+next Tab reached its first situation. These read-only checks did not grade answers.
+
+A late review after the consolidated merge found that reopening a correctly
+graded lesson or listening practice left its disabled choice radios unchecked.
+The narrow correction derives displayed selection from matching, correct server
+feedback. Practice adds an optional `correctChoiceId`, projected from the frozen
+session snapshot even for older saved feedback. It is omitted before grading,
+for wrong/revealed or typed answers, and for mismatched steps or unknown choices.
+Assisted correct answers remain assisted; scoring, receipts and learning mutations
+are unchanged. Lesson 400/422 recovery also clears the rejected local choice.
+
+Four new desktop regression cases failed on the original production bundle before
+the correction. A fresh package/web/API build, browser types, web lint and formatting
+pass afterward; **66 focused browser cases** pass across 360px, 430px and desktop,
+including existing theme, uncertain retry, wrong-answer and keyboard coverage.
+Practice package tests, the API auth/CSRF contract test and practice vet pass.
+The historical-feedback SQL mock test proves the read/projection path, not actual
+PostgreSQL durability. Independent combined review found no actionable issue.
+Fresh hosted checks and staging acceptance are required for the correction;
+the prior release's acceptance does not substitute for them.

@@ -47,14 +47,15 @@ type PracticeStep struct {
 	SpeechLanguage string   `json:"speechLanguage,omitempty"`
 }
 type PracticeFeedback struct {
-	StepID      string `json:"stepId"`
-	Correct     bool   `json:"correct"`
-	Assisted    bool   `json:"assisted"`
-	Answer      string `json:"answer"`
-	Explanation string `json:"explanation"`
-	WordText    string `json:"wordText"`
-	WordSlug    string `json:"wordSlug"`
-	MeaningID   string `json:"meaningId"`
+	StepID          string `json:"stepId"`
+	Correct         bool   `json:"correct"`
+	CorrectChoiceID string `json:"correctChoiceId,omitempty" doc:"Confirmed choice identity, present only after a correct listening answer."`
+	Assisted        bool   `json:"assisted"`
+	Answer          string `json:"answer"`
+	Explanation     string `json:"explanation"`
+	WordText        string `json:"wordText"`
+	WordSlug        string `json:"wordSlug"`
+	MeaningID       string `json:"meaningId"`
 }
 type PracticeSummary struct {
 	ListID              string     `json:"listId,omitempty"`
@@ -208,9 +209,24 @@ func project(st State) Session {
 	}
 	p := Session{Summary: Summary{ListID: st.Snapshot.ListID, ListName: st.Snapshot.ListName, ListRevision: st.Snapshot.ListRevision, ID: st.ID.String(), Mode: st.Snapshot.Mode, LessonKey: st.Snapshot.LessonKey, ContentVersion: st.Snapshot.ContentVersion, GradingVersion: st.Snapshot.GradingVersion, Status: status, Revision: st.Revision, CompletedSteps: st.Index, TotalSteps: len(st.Snapshot.Steps), FirstAnswersCorrect: st.FirstAnswersCorrect, QuestionsAnswered: st.QuestionsAnswered, CreatedAt: st.CreatedAt, UpdatedAt: st.UpdatedAt, CompletedAt: st.CompletedAt}}
 	if st.CompletedAt == nil && st.Index < len(st.Snapshot.Steps) {
-		step := st.Snapshot.Steps[st.Index].Public
+		savedStep := st.Snapshot.Steps[st.Index]
+		step := savedStep.Public
 		p.CurrentStep = &step
-		p.Feedback = st.Feedback
+		if st.Feedback != nil {
+			// Derive presentation data from the frozen session snapshot, including
+			// historical feedback that predates this field. Do not mutate receipts.
+			feedback := *st.Feedback
+			feedback.CorrectChoiceID = ""
+			if feedback.StepID == step.ID && feedback.Correct && step.Kind == "listening_choice" {
+				for _, choice := range step.Choices {
+					if choice.ID == savedStep.CorrectChoice {
+						feedback.CorrectChoiceID = choice.ID
+						break
+					}
+				}
+			}
+			p.Feedback = &feedback
+		}
 		p.CanContinue = st.Feedback != nil
 	}
 	return p

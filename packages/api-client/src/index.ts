@@ -450,6 +450,8 @@ export interface PracticeStep {
 export interface PracticeFeedback {
   stepId: string;
   correct: boolean;
+  /** Confirmed session choice, present only after a correct listening answer. */
+  correctChoiceId?: string;
   assisted: boolean;
   answer: string;
   explanation: string;

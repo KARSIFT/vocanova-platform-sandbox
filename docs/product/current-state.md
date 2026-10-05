@@ -1,6 +1,6 @@
 # Vocanova current product state
 
-## Connected learner experience — integrated delivery, 5 October 2026
+## Connected learner experience — merged, 5 October 2026
 
 The owner requested a candid usability critique and authorized substantial changes.
 The integrated `codex/vocanova-learner-experience` branch makes the daily action
@@ -17,6 +17,12 @@ critique, visual direction, behavior boundaries and exact local acceptance.
 The consolidated PR check record establishes hosted acceptance. Production
 promotion remains separate. The accepted artwork phase is preserved.
 The integrated change is in [PR #1487](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1487).
+It merged as `36361f196ce26cc7a96e5e97501fdb61c30b1488` and passed staging
+core-loop and maturity journeys. A late review identified a separate resume
+presentation defect: correctly graded choice questions can reopen without their
+selected radio. The narrow correction restores selection from matching server
+feedback; listening practice receives an additive optional confirmed-choice ID
+derived from its saved snapshot. No new learning mutation or scoring rule is introduced.
 
 ## Visual learning phase — merged, 5 October 2026
 

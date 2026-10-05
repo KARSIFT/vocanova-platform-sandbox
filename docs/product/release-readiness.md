@@ -19,7 +19,17 @@ not accept this new branch. Production promotion remains a separate manual actio
 the integrated delivery. Its actual automated review prompted presentation
 memoization, a disabled-button cue and a working recommendation-recovery shortcut.
 A fresh build and 84 focused browser cases pass after those refinements. All
-required hosted checks must accept the revised head before the hold is released.
+required hosted checks accepted `ea0a9d8`; the full hosted browser suite passed
+893 cases with 37 intentional scope skips, and all 12 Lighthouse screen/layout
+audits passed. All seven merge-group workflows passed and the normal queue merged
+the delivery as `36361f19`. Staging run `37341576653` passed release identity,
+core-loop and maturity journeys on rerun. Its first attempt stopped before the
+journeys because runner package downloads timed out; it is not counted as a pass.
+
+A late review found a resume presentation defect in correctly graded choice
+questions. The separate narrow correction and its fresh evidence are recorded in
+the learner-experience design note; earlier staging acceptance does not accept
+that newer correction.
 
 ## Visual learning phase — prior accepted verification
 

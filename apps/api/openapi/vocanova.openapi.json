@@ -3227,6 +3227,10 @@
           "correct": {
             "type": "boolean"
           },
+          "correctChoiceId": {
+            "description": "Confirmed choice identity, present only after a correct listening answer.",
+            "type": "string"
+          },
           "explanation": {
             "type": "string"
           },

@@ -121,6 +121,12 @@ for (const theme of ["light", "dark"] as const) {
       await expect(
         page.getByRole("heading", { name: "Let’s look again", exact: true }),
       ).toBeVisible();
+      await page.reload();
+      await expect(
+        page.getByRole("heading", { name: "Let’s look again", exact: true }),
+      ).toBeVisible();
+      await expect(page.getByRole("radio", { checked: true })).toHaveCount(0);
+      await expect(choices.first()).toBeEnabled();
       await expect(check).toBeDisabled();
       await expect(
         page.getByRole("button", { name: "Continue", exact: true }),
@@ -247,3 +253,159 @@ test("a lost listening answer retries the same confirmed choice without re-selec
   expect(sent[0]!.key).toBeTruthy();
   expect(sent[1]).toEqual(sent[0]);
 });
+
+test("reopening a correctly graded lesson keeps its confirmed answer selected", async ({
+  page,
+}) => {
+  const session = await openLessonQuestion(page);
+  const correct = page.getByRole("radio", {
+    name: session.words[0]!.definition,
+    exact: true,
+  });
+  const graded = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().endsWith("/lesson-sessions/" + session.id + "/actions"),
+  );
+  await correct.check();
+  await page.getByRole("button", { name: "Check answer", exact: true }).click();
+  const confirmed = (await (await graded).json()) as LessonSession;
+  expect(confirmed.feedback).toMatchObject({
+    correct: true,
+    stepId: session.currentStep!.id,
+    correctChoiceId: session.words[0]!.meaningId,
+  });
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "That’s right", exact: true }),
+  ).toBeVisible();
+  await expect(correct).toBeChecked();
+  await expect(correct).toBeDisabled();
+  await expect(page.getByRole("radio", { checked: true })).toHaveCount(1);
+  await expect(
+    page.getByRole("button", { name: "Continue", exact: true }),
+  ).toBeEnabled();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await expect(page.getByRole("radio", { checked: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Check answer", exact: true }),
+  ).toBeDisabled();
+});
+
+test("reopening listening practice restores only its confirmed correct choice", async ({
+  page,
+}) => {
+  const session = await openListeningPractice(page);
+  const actions: unknown[] = [];
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      request.url().endsWith("/practice-sessions/" + session.id + "/actions")
+    ) {
+      actions.push(request.postDataJSON());
+    }
+  });
+  const choices = page
+    .getByRole("group", { name: "Answer choices" })
+    .getByRole("radio");
+  const check = page.getByRole("button", {
+    name: "Check answer",
+    exact: true,
+  });
+  const graded = () =>
+    page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        response
+          .url()
+          .endsWith("/practice-sessions/" + session.id + "/actions"),
+    );
+  await choices.nth(1).check();
+  expect(actions).toEqual([]);
+  const wrongResponse = graded();
+  await check.click();
+  const wrong = (await (await wrongResponse).json()) as PracticeSession;
+  expect(wrong.feedback).toMatchObject({ correct: false });
+  expect(wrong.feedback!.correctChoiceId).toBeUndefined();
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Keep practising", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("radio", { checked: true })).toHaveCount(0);
+  await expect(choices.first()).toBeEnabled();
+  await expect(check).toBeDisabled();
+  await choices.first().check();
+  expect(actions).toHaveLength(1);
+  const correctResponse = graded();
+  await check.click();
+  const confirmed = (await (await correctResponse).json()) as PracticeSession;
+  expect(confirmed).toMatchObject({
+    questionsAnswered: 1,
+    firstAnswersCorrect: 0,
+    canContinue: true,
+    feedback: {
+      correct: true,
+      assisted: true,
+      stepId: session.currentStep!.id,
+      correctChoiceId: session.currentStep!.choices[0]!.id,
+    },
+  });
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Practised with help", exact: true }),
+  ).toBeVisible();
+  await expect(choices.first()).toBeChecked();
+  await expect(choices.first()).toBeDisabled();
+  await expect(page.getByRole("radio", { checked: true })).toHaveCount(1);
+  expect(actions).toHaveLength(2);
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await expect(page.getByRole("radio", { checked: true })).toHaveCount(0);
+  await expect(check).toBeDisabled();
+});
+
+for (const status of [400, 422]) {
+  test(
+    "a confirmed lesson choice rejection clears selection after " + status,
+    async ({ page }) => {
+      const session = await openLessonQuestion(page);
+      const correct = page.getByRole("radio", {
+        name: session.words[0]!.definition,
+        exact: true,
+      });
+      const sent: unknown[] = [];
+      await page.route(
+        "**/api/v1/lesson-sessions/" + session.id + "/actions",
+        (route) => {
+          sent.push(route.request().postDataJSON());
+          return route.fulfill({
+            status,
+            contentType: "application/json",
+            body: JSON.stringify({ detail: "Invalid lesson action" }),
+          });
+        },
+        { times: 1 },
+      );
+      await correct.check();
+      expect(sent).toEqual([]);
+      await page
+        .getByRole("button", { name: "Check answer", exact: true })
+        .click();
+      await expect(page.getByRole("main").getByRole("alert")).toContainText(
+        "Choose again",
+      );
+      expect(sent).toHaveLength(1);
+      await expect(correct).toBeEnabled();
+      await expect(page.getByRole("radio", { checked: true })).toHaveCount(0);
+      await expect(
+        page.getByRole("button", { name: "Check answer", exact: true }),
+      ).toBeDisabled();
+      await correct.check();
+      await page
+        .getByRole("button", { name: "Check answer", exact: true })
+        .click();
+      await expect(
+        page.getByRole("heading", { name: "That’s right", exact: true }),
+      ).toBeVisible();
+    },
+  );
+}

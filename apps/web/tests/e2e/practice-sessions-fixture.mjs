@@ -242,6 +242,9 @@ export async function handlePracticeSessions({
     entry.feedback = {
       stepId: step.public.id,
       correct,
+      ...(correct && step.public.kind === "listening_choice"
+        ? { correctChoiceId: step.correctChoice }
+        : {}),
       assisted,
       answer: step.word.wordText,
       explanation: `The word from this lesson is “${step.word.wordText}”. ${step.word.definition}${assisted ? " This answer was practised with help." : ""}`,
