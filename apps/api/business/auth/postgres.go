@@ -68,7 +68,7 @@ func scanUser(row *sql.Row) (*User, error) {
 	var verifiedAt, lastLoginAt sql.NullTime
 	err := row.Scan(&u.ID, &email, &u.DisplayName, &u.AvatarURL, &u.Status, &verifiedAt, &lastLoginAt, &u.CreatedAt, &u.UpdatedAt, &u.HasPassword)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, errors.New("user not found")
+		return nil, ErrUserNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("scan user: %w", err)

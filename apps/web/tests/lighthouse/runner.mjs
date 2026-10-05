@@ -42,13 +42,15 @@
 
 import { launch } from "chrome-launcher";
 import lighthouse from "lighthouse";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
   DOC_08_THRESHOLDS,
   assertScores,
+  assertAuditedPage,
   formatCategoryScoreRow,
 } from "./assertions.mjs";
 
@@ -174,8 +176,15 @@ function buildLighthouseSettings({ layout, screen }) {
   };
 }
 
-function buildChromeLaunchOptions() {
-  const opts = { chromeFlags: CHROME_FLAGS };
+function buildChromeLaunchOptions(userDataDir) {
+  const chromeFlags = [...CHROME_FLAGS];
+  if (process.platform === "linux" && CHROME_PATH && !/\.exe$/i.test(CHROME_PATH)) {
+    // WSL path conversion assumes a Windows browser even when an explicitly
+    // selected Playwright Chromium is Linux. The final flag keeps that browser
+    // on its native path; launcher log/pid files use the same owned directory.
+    chromeFlags.push(`--user-data-dir=${userDataDir}`);
+  }
+  const opts = { chromeFlags, userDataDir };
   if (CHROME_PATH) {
     opts.chromePath = CHROME_PATH;
   }
@@ -197,6 +206,7 @@ async function runOneAudit({ chrome, url, settings, screen, layout }) {
       `lighthouse returned no result for ${screen.name}@${layout.name}`,
     );
   }
+  assertAuditedPage({ requestedUrl: url, report: runnerResult.lhr });
   const categories = runnerResult.lhr.categories ?? {};
   return {
     screen: screen.name,
@@ -258,12 +268,17 @@ async function main() {
 
   await mkdir(reportsDir, { recursive: true });
 
-  const chrome = await launch(buildChromeLaunchOptions());
+  // chrome-launcher can treat WSL as Windows and otherwise create its default
+  // profile under an inherited LOCALAPPDATA path inside the checkout. Own a
+  // fresh OS temporary directory so audits cannot pollute source or lint input.
+  const userDataDir = await mkdtemp(path.join(os.tmpdir(), "vocanova-lighthouse-"));
+  let chrome;
 
   const allResults = [];
   const allFailures = [];
 
   try {
+    chrome = await launch(buildChromeLaunchOptions(userDataDir));
     for (const screen of SCREENS) {
       for (const layout of LAYOUTS) {
         const url = `${URL_PREFIX}${screen.path}`;
@@ -312,7 +327,11 @@ async function main() {
       }
     }
   } finally {
-    await chrome.kill();
+    try {
+      await chrome?.kill();
+    } finally {
+      await rm(userDataDir, { recursive: true, force: true });
+    }
   }
 
   const finishedAt = new Date().toISOString();

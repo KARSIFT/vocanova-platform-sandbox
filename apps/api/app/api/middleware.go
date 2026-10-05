@@ -2,12 +2,15 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/auth"
 	"github.com/danielgtaylor/huma/v2"
 )
+
+type authenticationUnavailableKey struct{}
 
 // AuthMiddleware validates the session cookie and injects the requester into
 // the context. It never fails on its own; routes that require authentication
@@ -34,6 +37,10 @@ func AuthMiddleware(svc *auth.Service) func(huma.Context, func(huma.Context)) {
 						ctx.AppendHeader("Set-Cookie", csrfCookie.String())
 					}
 				}
+			} else if !errors.Is(err, auth.ErrAuthenticationRequired) && !errors.Is(err, auth.ErrUserDisabled) {
+				// Public routes remain usable with an old cookie. Only protected
+				// routes consume this failure flag; never expose storage details.
+				ctx = huma.WithValue(ctx, authenticationUnavailableKey{}, true)
 			}
 		}
 		next(ctx)
@@ -44,11 +51,17 @@ func isSensitiveAuthPath(path string) bool {
 	return path == "/api/v1/me" || strings.HasPrefix(path, "/api/v1/auth/")
 }
 
-// RequireAuth aborts the request with 401 when no authenticated requester was
-// set by AuthMiddleware.
+// RequireAuth rejects an invalid session with 401. If session validation could
+// not read storage, return a recoverable 503 without advancing the handler.
 func RequireAuth() func(huma.Context, func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
 		if Requester(ctx.Context()) == nil {
+			if unavailable, _ := ctx.Context().Value(authenticationUnavailableKey{}).(bool); unavailable {
+				ctx.SetHeader("Cache-Control", "no-store")
+				ctx.SetHeader("Pragma", "no-cache")
+				writeHumaError(ctx, huma.Error503ServiceUnavailable("authentication is temporarily unavailable; please try again"))
+				return
+			}
 			writeHumaError(ctx, huma.Error401Unauthorized("authentication required"))
 			return
 		}

@@ -28,6 +28,66 @@ concurrency:
   cancel-in-progress: ${{ github.event_name != 'merge_group' }}
 
 jobs:
+  postgres-read-reliability:
+    name: PostgreSQL read reliability
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: vocanova
+          POSTGRES_PASSWORD: vocanova_test
+          POSTGRES_DB: vocanova_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vocanova -d vocanova_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      VOCANOVA_TEST_POSTGRES_DSN: postgres://vocanova:vocanova_test@127.0.0.1:5432/vocanova_test?sslmode=disable
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: apps/api/go.mod
+          cache-dependency-path: apps/api/go.sum
+      - name: Apply committed forward migrations to disposable PostgreSQL
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          set -euo pipefail
+          for migration in apps/api/migrations/*.sql; do
+            [[ "$migration" == *.down.sql ]] && continue
+            docker exec -i "$POSTGRES_CONTAINER" psql -U vocanova -d vocanova_test \
+              --single-transaction -v ON_ERROR_STOP=1 < "$migration"
+          done
+      - name: Seed canonical content
+        working-directory: apps/api
+        env:
+          DATABASE_URL: ${{ env.VOCANOVA_TEST_POSTGRES_DSN }}
+        run: go run ./cmd/seed
+      - name: Verify recommendation SQL and single-connection recovery without skips
+        working-directory: apps/api
+        run: |
+          set -euo pipefail
+          test_log="$(mktemp)"
+          trap 'rm -f "$test_log"' EXIT
+          go test -tags=integration ./business/lessons ./business/missions \
+            -run '^TestPostgreSQL(LessonRecommendationCoverageAndPrivacy|SingleConnectionMissionAndSentenceRecovery)$' \
+            -count=1 -v | tee "$test_log"
+          for case in TestPostgreSQLLessonRecommendationCoverageAndPrivacy TestPostgreSQLSingleConnectionMissionAndSentenceRecovery; do
+            grep -Eq "^--- PASS: $case " "$test_log"
+          done
+          if grep -Eq '^--- SKIP:' "$test_log"; then
+            echo "PostgreSQL read reliability cases must not skip" >&2
+            exit 1
+          fi
+
   ci-api:
     name: ci-api
     runs-on: ubuntu-latest

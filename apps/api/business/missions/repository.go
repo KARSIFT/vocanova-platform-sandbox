@@ -26,7 +26,24 @@ func NewRepository(db *sql.DB) *Repository {
 // GetDailyMissionSnapshot fetches the daily_mission_snapshots row for
 // (userID, localDate). Returns (nil, nil) if no row exists.
 func (r *Repository) GetDailyMissionSnapshot(ctx context.Context, userID uuid.UUID, localDate time.Time) (*DailyMissionSnapshot, error) {
-	row := r.db.QueryRowContext(ctx,
+	return getDailyMissionSnapshot(ctx, r.db, userID, localDate)
+}
+
+// GetDailyMissionSnapshotInTx reads the snapshot using the caller's transaction.
+func (r *Repository) GetDailyMissionSnapshotInTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID, localDate time.Time) (*DailyMissionSnapshot, error) {
+	if tx == nil {
+		return nil, errors.New("transaction required")
+	}
+	return getDailyMissionSnapshot(ctx, tx, userID, localDate)
+}
+
+type snapshotQuerier interface {
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
+}
+
+func getDailyMissionSnapshot(ctx context.Context, query snapshotQuerier, userID uuid.UUID, localDate time.Time) (*DailyMissionSnapshot, error) {
+	row := query.QueryRowContext(ctx,
 		`SELECT id, user_id, local_date, timezone, review_target, reviews_completed,
 		        new_word_target, new_words_completed, sentence_practice_target,
 		        sentence_practices_completed, policy_version, status, completed_at,
@@ -55,7 +72,20 @@ func (r *Repository) GetDailyActivitySummary(ctx context.Context, userID uuid.UU
 // ListRecentSnapshots fetches the last `days` daily_mission_snapshots for
 // userID ending at today. Used by streak reconciliation.
 func (r *Repository) ListRecentSnapshots(ctx context.Context, userID uuid.UUID, days int) ([]DailyMissionSnapshot, error) {
-	rows, err := r.db.QueryContext(ctx,
+	return listRecentSnapshots(ctx, r.db, userID, days)
+}
+
+// ListRecentSnapshotsInTx includes the caller's uncommitted snapshot changes
+// and avoids acquiring another connection while a transaction is open.
+func (r *Repository) ListRecentSnapshotsInTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID, days int) ([]DailyMissionSnapshot, error) {
+	if tx == nil {
+		return nil, errors.New("transaction required")
+	}
+	return listRecentSnapshots(ctx, tx, userID, days)
+}
+
+func listRecentSnapshots(ctx context.Context, query snapshotQuerier, userID uuid.UUID, days int) ([]DailyMissionSnapshot, error) {
+	rows, err := query.QueryContext(ctx,
 		`SELECT id, user_id, local_date, timezone, review_target, reviews_completed,
 		        new_word_target, new_words_completed, sentence_practice_target,
 		        sentence_practices_completed, policy_version, status, completed_at,

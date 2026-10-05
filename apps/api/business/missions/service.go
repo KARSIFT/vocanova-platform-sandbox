@@ -211,7 +211,7 @@ func (s *Service) ensureTodaySnapshotAndReconcile(
 		return nil, fmt.Errorf("begin tx: %w", err)
 	}
 	defer tx.Rollback()
-	snap, err := s.missions.GetDailyMissionSnapshot(ctx, userID, today)
+	snap, err := s.missions.GetDailyMissionSnapshotInTx(ctx, tx, userID, today)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +229,7 @@ func (s *Service) ensureTodaySnapshotAndReconcile(
 		// must surface as "broken"/0, not a stale "active"). The
 		// ReconcileAndAdvance helper is itself a no-op when there is
 		// nothing to transition, so this is cheap for the common case.
-		snaps, err := s.missions.ListRecentSnapshots(ctx, userID, 14)
+		snaps, err := s.missions.ListRecentSnapshotsInTx(ctx, tx, userID, 14)
 		if err != nil {
 			return nil, fmt.Errorf("list recent snapshots: %w", err)
 		}
@@ -517,7 +517,7 @@ func (u *MissionUpdater) updateForSentence(ctx context.Context, tx *sql.Tx, user
 	// still runs so the streak status reflects "at_risk" honestly if
 	// today isn't yet completed. This keeps Home/Progress reads
 	// consistent with backend state.
-	snaps, err := u.missions.missions.ListRecentSnapshots(ctx, userID, 14)
+	snaps, err := u.missions.missions.ListRecentSnapshotsInTx(ctx, tx, userID, 14)
 	if err != nil {
 		return false, fmt.Errorf("list recent snapshots: %w", err)
 	}

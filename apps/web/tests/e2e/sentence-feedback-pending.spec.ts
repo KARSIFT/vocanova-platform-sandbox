@@ -28,6 +28,21 @@ async function prepareFeedback(
   ).toBeVisible();
 }
 
+async function savedIntent(page: Page, sentence: string) {
+  return page.evaluate((sentence) => {
+    for (const key of Object.keys(sessionStorage)) {
+      if (!key.startsWith("vocanova:sentence-feedback-draft:")) continue;
+      const draft = JSON.parse(sessionStorage.getItem(key)!);
+      if (draft.sentence === sentence)
+        return {
+          sentence: draft.sentence as string,
+          idempotencyKey: draft.idempotencyKey as string | undefined,
+        };
+    }
+    return null;
+  }, sentence);
+}
+
 for (const action of ["Revise sentence", "Try another sentence"]) {
   test(`${action} cannot discard a pending sentence or its retry identity`, async ({
     page,
@@ -104,7 +119,7 @@ for (const action of ["Revise sentence", "Try another sentence"]) {
 }
 
 for (const theme of ["light", "dark"] as const) {
-  test(`a current session error remains visible beside earlier feedback in ${theme} mode`, async ({
+  test(`a failed session recovery keeps earlier feedback and retries its draft in ${theme} mode`, async ({
     page,
     context,
   }, testInfo) => {
@@ -119,6 +134,9 @@ for (const theme of ["light", "dark"] as const) {
     });
     await input.fill(draft);
     await context.clearCookies({ name: "vocanova_csrf" });
+    await page.route("**/api/v1/me", (route) => route.abort("failed"), {
+      times: 1,
+    });
     let submissions = 0;
     page.on("request", (request) => {
       if (
@@ -132,13 +150,16 @@ for (const theme of ["light", "dark"] as const) {
     await expect(
       page
         .getByRole("alert")
-        .filter({ hasText: "Session is not ready. Please refresh the page." }),
+        .filter({ hasText: "Unable to check this sentence" }),
     ).toBeVisible();
     await expect(input).toHaveValue(draft);
     await expect(
       page.getByText("Sentence checked", { exact: true }).locator(".."),
     ).toContainText("I pour coffee before work.");
     expect(submissions).toBe(0);
+    const pending = await savedIntent(page, draft);
+    expect(pending?.idempotencyKey).toBeTruthy();
+    await expect(input).toBeEnabled();
     const feedback = page.getByRole("region", { name: "Practice with pour" });
     await feedback.screenshot({
       path: testInfo.outputPath(`sentence-current-error-${theme}.png`),
@@ -148,6 +169,19 @@ for (const theme of ["light", "dark"] as const) {
       scan.criticalOrSerious,
       formatViolations(scan.criticalOrSerious).join("\n"),
     ).toEqual([]);
+    const submitted = page.waitForRequest(
+      (request) =>
+        request.method() === "POST" &&
+        request.url().endsWith("/api/v1/learner-sentences"),
+    );
+    await page.getByRole("button", { name: "Check my sentence" }).click();
+    expect((await submitted).headers()["idempotency-key"]).toBe(
+      pending!.idempotencyKey,
+    );
+    await expect(
+      page.getByText("Sentence checked", { exact: true }).locator(".."),
+    ).toContainText(draft);
+    expect(submissions).toBe(1);
   });
 }
 
@@ -183,11 +217,14 @@ test("a current session error is not hidden by retained crisis guidance", async 
   await expect(guidance).toBeVisible();
   await input.fill("I pour water into a glass.");
   await context.clearCookies({ name: "vocanova_csrf" });
+  await page.route("**/api/v1/me", (route) => route.abort("failed"), {
+    times: 1,
+  });
   await page.getByRole("button", { name: "Check my sentence" }).click();
   await expect(
     page
       .getByRole("alert")
-      .filter({ hasText: "Session is not ready. Please refresh the page." }),
+      .filter({ hasText: "Unable to check this sentence" }),
   ).toBeVisible();
   await expect(guidance).toBeVisible();
   await expect(input).toHaveValue("I pour water into a glass.");
@@ -256,4 +293,134 @@ test("a late report for previous feedback cannot mark the new feedback as report
   } finally {
     releaseReport();
   }
+});
+
+test("a disappearing CSRF cookie recovers before checking and retains one retry identity", async ({
+  page,
+  context,
+}, testInfo) => {
+  await prepareFeedback(page, context, testInfo.project.use.baseURL!);
+  const draft = "I pour tea for my friends.";
+  const input = page.getByRole("textbox", {
+    name: /Write a sentence using pour/,
+  });
+  await input.fill(draft);
+  await context.clearCookies({ name: "vocanova_csrf" });
+  let recoveries = 0;
+  let releaseRecovery!: () => void;
+  const recovery = new Promise<void>((resolve) => {
+    releaseRecovery = resolve;
+  });
+  await page.route("**/api/v1/me", async (route) => {
+    recoveries += 1;
+    await recovery;
+    await route.continue();
+  });
+  const requests: Array<{ key: string | undefined; body: unknown }> = [];
+  await page.route("**/api/v1/learner-sentences", async (route) => {
+    requests.push({
+      key: route.request().headers()["idempotency-key"],
+      body: route.request().postDataJSON(),
+    });
+    if (requests.length === 1) {
+      const response = await route.fetch();
+      expect(response.status()).toBe(200);
+      await route.abort("failed");
+    } else {
+      await route.continue();
+    }
+  });
+  const form = input.locator("xpath=ancestor::form");
+  await form.evaluate((element) => {
+    (element as HTMLFormElement).requestSubmit();
+    (element as HTMLFormElement).requestSubmit();
+  });
+  let pending: Awaited<ReturnType<typeof savedIntent>> = null;
+  try {
+    await expect.poll(() => recoveries).toBe(1);
+    expect(requests).toEqual([]);
+    await expect(input).toBeDisabled();
+    await expect(input).toHaveValue(draft);
+    await expect(
+      page.getByRole("button", { name: "Checking...", exact: true }),
+    ).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Revise sentence", exact: true }),
+    ).toBeDisabled();
+    pending = await savedIntent(page, draft);
+    expect(pending?.idempotencyKey).toBeTruthy();
+  } finally {
+    releaseRecovery();
+  }
+  await expect(
+    page
+      .getByRole("alert")
+      .filter({ hasText: "Unable to check this sentence" }),
+  ).toBeVisible();
+  await expect(input).toHaveValue(draft);
+  expect(requests).toHaveLength(1);
+  expect(requests[0]!.key).toBe(pending!.idempotencyKey);
+  await page.getByRole("button", { name: "Check my sentence" }).click();
+  await expect(
+    page.getByText("Sentence checked", { exact: true }).locator(".."),
+  ).toContainText(draft);
+  expect(recoveries).toBe(1);
+  expect(requests).toHaveLength(2);
+  expect(requests[1]).toEqual(requests[0]);
+});
+
+test("an expired session during CSRF recovery preserves the intent for same-user return", async ({
+  page,
+  context,
+}, testInfo) => {
+  await prepareFeedback(page, context, testInfo.project.use.baseURL!);
+  const draft = "I pour water into a glass.";
+  const input = page.getByRole("textbox", {
+    name: /Write a sentence using pour/,
+  });
+  await input.fill(draft);
+  await context.clearCookies({ name: "vocanova_csrf" });
+  let submissions = 0;
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      request.url().endsWith("/api/v1/learner-sentences")
+    )
+      submissions += 1;
+  });
+  await page.route(
+    "**/api/v1/me",
+    (route) =>
+      route.fulfill({
+        status: 401,
+        contentType: "application/problem+json",
+        body: JSON.stringify({ detail: "Authentication required" }),
+      }),
+    { times: 1 },
+  );
+  await page.getByRole("button", { name: "Check my sentence" }).click();
+  await expect(page).toHaveURL(/\/login\?returnTo=/);
+  const loginURL = new URL(page.url());
+  expect(loginURL.searchParams.get("reason")).toBe("session-expired");
+  expect(loginURL.searchParams.get("returnTo")).toBe(
+    "/discover/ordering-at-a-cafe/pour",
+  );
+  expect(submissions).toBe(0);
+  const pending = await savedIntent(page, draft);
+  expect(pending?.idempotencyKey).toBeTruthy();
+  await page.goto("/discover/ordering-at-a-cafe/pour");
+  await expect(input).toHaveValue(draft);
+  const submitted = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      request.url().endsWith("/api/v1/learner-sentences"),
+  );
+  await page.getByRole("button", { name: "Check my sentence" }).click();
+  expect((await submitted).headers()["idempotency-key"]).toBe(
+    pending!.idempotencyKey,
+  );
+  await expect(
+    page.getByText("Sentence checked", { exact: true }).locator(".."),
+  ).toContainText(draft);
+  expect(submissions).toBe(1);
 });

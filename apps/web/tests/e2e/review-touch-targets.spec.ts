@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import {
   expect,
   test,
@@ -16,6 +18,7 @@ async function seedReviewFixture(
     testInfo.project.name,
     testInfo.testId,
     `retry-${testInfo.retry}`,
+    randomUUID(),
   ]
     .map(encodeURIComponent)
     .join("-");

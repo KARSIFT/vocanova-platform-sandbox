@@ -7498,6 +7498,9 @@
           },
           "401": {
             "description": "Authentication is required"
+          },
+          "503": {
+            "description": "Session validation is temporarily unavailable; retry without clearing the session"
           }
         },
         "summary": "Get the authenticated user",

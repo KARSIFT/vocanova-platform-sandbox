@@ -12,28 +12,30 @@ export default async function HomePage() {
   let dueResponse: Awaited<ReturnType<typeof client.listDueWords>>;
   let dailyMissionResponse: Awaited<ReturnType<typeof client.getDailyMission>>;
   let currentUserResponse: Awaited<ReturnType<typeof client.getCurrentUser>>;
+  let recommendation: Awaited<
+    ReturnType<typeof client.getLessonRecommendation>
+  > | null;
   try {
     [
       savedWordsResponse,
       dueResponse,
       dailyMissionResponse,
       currentUserResponse,
+      recommendation,
     ] = await Promise.all([
       client.listSavedWords({ limit: 3 }),
       client.listDueWords({ limit: 1 }),
       client.getDailyMission(),
       client.getCurrentUser(),
+      client.getLessonRecommendation().catch((error: unknown) => {
+        if (error instanceof ApiResponseError && error.status === 401)
+          requireAuthRedirect(error, "/home");
+        return null;
+      }),
     ]);
   } catch (error) {
     requireAuthRedirect(error, "/home");
   }
-  const recommendation = await client
-    .getLessonRecommendation()
-    .catch((error: unknown) => {
-      if (error instanceof ApiResponseError && error.status === 401)
-        requireAuthRedirect(error, "/home");
-      return null;
-    });
   const { items: savedWords } = savedWordsResponse.data;
   const firstWord = savedWords[0];
   const dueReviewWords = dueResponse.data.totalCount;

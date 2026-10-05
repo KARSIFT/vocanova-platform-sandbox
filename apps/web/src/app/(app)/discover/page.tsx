@@ -18,15 +18,19 @@ async function optional<T>(request: Promise<T>): Promise<T | null> {
 export default async function DiscoverPage() {
   const client = await createServerApiClient();
   let response: Awaited<ReturnType<typeof client.listJourneySituations>>;
+  let lessonResponse: Awaited<ReturnType<typeof client.listLessons>> | null;
+  let recommendation: Awaited<
+    ReturnType<typeof client.getLessonRecommendation>
+  > | null;
   try {
-    response = await client.listJourneySituations();
+    [response, lessonResponse, recommendation] = await Promise.all([
+      client.listJourneySituations(),
+      optional(client.listLessons()),
+      optional(client.getLessonRecommendation()),
+    ]);
   } catch (error) {
     requireAuthRedirect(error, "/discover");
   }
-  const [lessonResponse, recommendation] = await Promise.all([
-    optional(client.listLessons()),
-    optional(client.getLessonRecommendation()),
-  ]);
   return (
     <PageContainer className="max-w-[72rem]">
       <header className="mb-6 flex flex-wrap items-end justify-between gap-3">

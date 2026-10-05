@@ -95,6 +95,7 @@ func RegisterContract(api huma.API) {
 		Middlewares: []func(huma.Context, func(huma.Context)){RequireAuth()},
 		Responses: map[string]*huma.Response{
 			"401": {Description: "Authentication is required"},
+			"503": {Description: "Session validation is temporarily unavailable; retry without clearing the session"},
 		},
 	}, func(ctx context.Context, input *struct{}) (*CurrentUserOutput, error) {
 		u := Requester(ctx)

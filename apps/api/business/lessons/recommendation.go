@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 // Recommendation reports actual target coverage, not a proficiency estimate.
@@ -183,17 +185,68 @@ func (r *PostgreSQLRepository) ReadRecommendation(ctx context.Context, userID uu
 	if err != nil {
 		return data, err
 	}
+	content, err := loadRecommendationWords(ctx, tx)
+	if err != nil {
+		return data, err
+	}
 	for _, d := range catalog {
-		words, e := loadWords(ctx, tx, d)
-		if errors.Is(e, ErrContentUnavailable) {
+		words := make([]Word, 0, len(d.Words))
+		for _, ref := range d.Words {
+			if word, ok := content[d.SituationSlug][ref.MeaningID]; ok {
+				words = append(words, word)
+			}
+		}
+		if len(words) != len(d.Words) {
 			continue
 		}
-		if e != nil {
-			return data, e
-		}
 		// Apply the same canonical identity/completeness guard as starting a lesson.
-		_, e = buildSnapshot(d, words, "recommendation")
+		_, e := buildSnapshot(d, words, "recommendation")
 		data.Available[d.Key] = e == nil
 	}
 	return data, tx.Commit()
+}
+
+// Read the catalog's canonical targets once, retaining each active situation
+// link so a meaning linked elsewhere cannot make a lesson falsely available.
+func loadRecommendationWords(ctx context.Context, tx *sql.Tx) (map[string]map[string]Word, error) {
+	ids, slugs := []string{}, []string{}
+	seenIDs, seenSlugs := map[string]bool{}, map[string]bool{}
+	for _, d := range catalog {
+		if !seenSlugs[d.SituationSlug] {
+			slugs = append(slugs, d.SituationSlug)
+			seenSlugs[d.SituationSlug] = true
+		}
+		for _, ref := range d.Words {
+			if !seenIDs[ref.MeaningID] {
+				ids = append(ids, ref.MeaningID)
+				seenIDs[ref.MeaningID] = true
+			}
+		}
+	}
+	rows, err := tx.QueryContext(ctx, `SELECT js.slug,wm.id,cw.text,wm.part_of_speech,wm.short_definition,
+ COALESCE((SELECT example_text FROM word_examples WHERE meaning_id=wm.id AND status='active' ORDER BY example_order,id LIMIT 1),''),
+ COALESCE((SELECT note_text FROM usage_notes WHERE meaning_id=wm.id AND status='active' ORDER BY note_order,id LIMIT 1),'')
+ FROM word_meanings wm JOIN canonical_words cw ON cw.id=wm.word_id
+ JOIN journey_words jw ON jw.meaning_id=wm.id
+ JOIN journey_situations js ON js.id=jw.journey_situation_id
+ WHERE wm.id=ANY($1::uuid[]) AND wm.status='active' AND cw.status='active'
+ AND js.slug=ANY($2::text[]) AND js.status='active'`, pq.Array(ids), pq.Array(slugs))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	content := map[string]map[string]Word{}
+	for rows.Next() {
+		var slug string
+		var word Word
+		if err := rows.Scan(&slug, &word.MeaningID, &word.WordText, &word.PartOfSpeech, &word.Definition, &word.Example, &word.UsageNote); err != nil {
+			return nil, err
+		}
+		word.WordSlug = strings.ReplaceAll(strings.ToLower(word.WordText), " ", "-")
+		if content[slug] == nil {
+			content[slug] = map[string]Word{}
+		}
+		content[slug][word.MeaningID] = word
+	}
+	return content, rows.Err()
 }

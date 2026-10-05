@@ -1,5 +1,16 @@
 # Vocanova current product state
 
+## Performance and recovery — under validation, 6 October 2026
+
+The latest investigation reproduces avoidable page request waves, repeated
+recommendation content reads, missing session-route loading feedback, unnecessary
+sentence-refresh requests and misleading sign-outs during temporary identity
+failures. It also repairs transaction reads that can wait for their own connection
+under a bounded pool. See [performance and recovery](performance-reliability.md)
+for measurements, behavior boundaries and the real-database acceptance gate.
+Fresh release checks show staging on `3e54a92a` and production on `af3eacb44`;
+the current changes are not a verified production release.
+
 ## Connected learner experience — merged, 5 October 2026
 
 The owner requested a candid usability critique and authorized substantial changes.

@@ -53,7 +53,8 @@ function logAuthCheckFailure({
   routePath,
   status,
 }: {
-  category: "fetch_threw" | "unauthorized_401" | "non_ok_response";
+  category:
+    "fetch_threw" | "body_read_failed" | "unauthorized_401" | "non_ok_response";
   routePath: string;
   status?: number;
 }): void {
@@ -65,6 +66,18 @@ function logAuthCheckFailure({
       ...(status === undefined ? {} : { status }),
     }),
   );
+}
+
+function connectionErrorResponse(request: NextRequest): NextResponse {
+  const retryUrl = new URL("/connection-error", request.url);
+  retryUrl.searchParams.set(
+    "returnTo",
+    `${request.nextUrl.pathname}${request.nextUrl.search}`,
+  );
+  return NextResponse.rewrite(retryUrl, {
+    status: 503,
+    headers: { "Cache-Control": "no-store" },
+  });
 }
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
@@ -85,13 +98,16 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
         Cookie: cookieHeader,
       },
       credentials: "include",
+      // A stalled identity read must fail closed with a recoverable screen,
+      // rather than leaving navigation waiting indefinitely.
+      signal: AbortSignal.timeout(10_000),
     });
   } catch {
     logAuthCheckFailure({
       category: "fetch_threw",
       routePath: request.nextUrl.pathname,
     });
-    return NextResponse.redirect(signInUrl);
+    return connectionErrorResponse(request);
   }
 
   if (meResponse.status === 401) {
@@ -108,7 +124,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       routePath: request.nextUrl.pathname,
       status: meResponse.status,
     });
-    return NextResponse.redirect(signInUrl);
+    return connectionErrorResponse(request);
   }
 
   // Parse the additive onboardingStatus field introduced by
@@ -127,7 +143,12 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       onboardingStatus = me.onboardingStatus;
     }
   } catch {
-    // fall through with the conservative "not_started" default
+    logAuthCheckFailure({
+      category: "body_read_failed",
+      routePath: request.nextUrl.pathname,
+      status: meResponse.status,
+    });
+    return connectionErrorResponse(request);
   }
 
   const isOnboardingRoute = request.nextUrl.pathname === "/onboarding";
