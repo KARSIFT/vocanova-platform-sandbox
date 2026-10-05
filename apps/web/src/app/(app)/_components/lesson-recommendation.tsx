@@ -1,6 +1,5 @@
 import Link from "next/link";
 import type { LessonRecommendationResponse } from "@vocanova/api-client";
-import { Surface } from "@/ui/surface";
 
 const action =
   "mt-4 inline-flex min-h-12 items-center justify-center rounded-xl bg-primary-700 px-5 py-3 font-semibold text-white hover:bg-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
@@ -10,15 +9,20 @@ const link =
 export function RecommendedLesson({
   data,
   className,
+  compact = false,
 }: {
   data: LessonRecommendationResponse | null;
   className?: string;
+  compact?: boolean;
 }) {
   const recommendation = data?.recommendation;
   const lesson = recommendation?.lesson;
   const unavailable = !data || data.status === "content_unavailable";
   return (
-    <Surface aria-labelledby="recommended-lesson-heading" className={className}>
+    <section
+      aria-labelledby="recommended-lesson-heading"
+      className={`${compact ? "border-b border-neutral-200 pb-5" : "rounded-2xl border border-neutral-200 bg-white p-5 sm:p-6"} ${className ?? ""}`}
+    >
       <h2
         id="recommended-lesson-heading"
         className="text-lg font-bold tracking-tight text-neutral-900"
@@ -43,7 +47,11 @@ export function RecommendedLesson({
           </p>
           <Link
             href={`/learn/${encodeURIComponent(lesson.key)}`}
-            className={action}
+            className={
+              compact
+                ? `${link} mt-3 rounded-xl border border-primary-200 px-5 py-2 hover:bg-primary-50`
+                : action
+            }
           >
             {recommendation.reason === "resume"
               ? "Continue lesson"
@@ -73,6 +81,6 @@ export function RecommendedLesson({
           </Link>
         )}
       </div>
-    </Surface>
+    </section>
   );
 }

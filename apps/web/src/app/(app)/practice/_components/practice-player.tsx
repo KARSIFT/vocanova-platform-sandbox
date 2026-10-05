@@ -12,6 +12,7 @@ import { createApiClient } from "@/lib/api";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError } from "@/lib/session";
 import { Surface } from "@/ui/surface";
+import { SessionActions } from "@/ui/session";
 
 import { PracticeAudio } from "./practice-audio";
 import { practiceModes } from "./practice-modes";
@@ -24,6 +25,7 @@ export function PracticePlayer({
 }) {
   const [session, setSession] = useState(initialSession);
   const [answer, setAnswer] = useState("");
+  const [selectedChoice, setSelectedChoice] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -36,6 +38,7 @@ export function PracticePlayer({
   const focusAfterResponse = useRef(false);
   const priorStep = useRef(initialSession.currentStep?.id);
   const answerId = useId();
+  const answerFormId = useId();
   const helpId = useId();
   const step = session.currentStep;
   const checked =
@@ -58,7 +61,12 @@ export function PracticePlayer({
     // A response can acknowledge a replay after another request advanced the
     // session. Only the returned authoritative revision changes the UI.
     if (next.id !== session.id || next.revision < session.revision) return;
-    if (next.currentStep?.id !== session.currentStep?.id) setAnswer("");
+    if (next.currentStep?.id !== session.currentStep?.id) {
+      setAnswer("");
+      setSelectedChoice("");
+    } else if (next.feedback && !next.feedback.correct) {
+      setSelectedChoice("");
+    }
     focusAfterResponse.current = true;
     setSession(next);
   }
@@ -146,10 +154,7 @@ export function PracticePlayer({
   }
 
   return (
-    <div>
-      <Link href="/practice" className={textLink}>
-        Back to Practice
-      </Link>
+    <div className="pb-[7rem]">
       <div className="mb-5 mt-3">
         <p className="text-sm font-semibold text-primary-700">
           {practiceModes[session.mode].title}
@@ -197,6 +202,7 @@ export function PracticePlayer({
           </h1>
           {step.kind === "typed_recall" ? (
             <form
+              id={answerFormId}
               className="mt-5"
               onSubmit={(event) => {
                 event.preventDefault();
@@ -226,15 +232,6 @@ export function PracticePlayer({
                 Use the word or phrase you learned. Different words can be valid
                 English, but this practice checks that particular vocabulary.
               </p>
-              {!checked?.correct && (
-                <button
-                  type="submit"
-                  disabled={locked || !answer.trim()}
-                  className={`${primaryAction} mt-4`}
-                >
-                  Check answer
-                </button>
-              )}
             </form>
           ) : (
             <div className="mt-4">
@@ -249,40 +246,55 @@ export function PracticePlayer({
                   answer or return to Practice for another activity.
                 </p>
               )}
-              <div
-                role="group"
-                aria-label="Answer choices"
-                className="grid gap-3"
+              <form
+                id={answerFormId}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (selectedChoice) void submit("answer", selectedChoice);
+                }}
               >
-                {step.choices.map((choice) => (
-                  <button
-                    type="button"
-                    key={choice.id}
-                    disabled={locked || Boolean(checked?.correct)}
-                    className={`${secondaryAction} justify-start text-left`}
-                    onClick={() => void submit("answer", choice.id)}
-                  >
-                    {choice.text}
-                  </button>
-                ))}
-              </div>
+                <fieldset
+                  disabled={locked || Boolean(checked?.correct)}
+                  className="grid gap-3"
+                >
+                  <legend className="sr-only">Answer choices</legend>
+                  {step.choices.map((choice) => (
+                    <label
+                      key={choice.id}
+                      className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border p-4 text-neutral-900 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary-700 ${selectedChoice === choice.id ? "border-primary-600 bg-primary-50" : "border-neutral-300 bg-white"} ${locked || checked?.correct ? "cursor-default" : ""}`}
+                    >
+                      <input
+                        type="radio"
+                        name={answerFormId}
+                        aria-label={choice.text}
+                        value={choice.id}
+                        checked={selectedChoice === choice.id}
+                        onChange={() => setSelectedChoice(choice.id)}
+                        className="h-5 w-5 shrink-0 accent-primary-700"
+                      />
+                      <span className="grow">{choice.text}</span>
+                      {selectedChoice === choice.id && (
+                        <span
+                          aria-hidden="true"
+                          className="text-sm font-semibold text-primary-800"
+                        >
+                          Selected
+                        </span>
+                      )}
+                    </label>
+                  ))}
+                </fieldset>
+                <p className="mt-3 text-sm text-neutral-600">
+                  Choose an answer, then check it.
+                </p>
+              </form>
             </div>
           )}
 
           {!checked && (
-            <div className="mt-5 border-t border-neutral-200 pt-4">
-              <button
-                type="button"
-                disabled={locked}
-                onClick={() => void submit("reveal")}
-                className={secondaryAction}
-              >
-                Show answer
-              </button>
-              <p className="mt-2 text-sm text-neutral-600">
-                Showing the answer counts as practice with help.
-              </p>
-            </div>
+            <p className="mt-5 text-sm text-neutral-600">
+              Showing the answer counts as practice with help.
+            </p>
           )}
           {checked && (
             <div
@@ -318,18 +330,45 @@ export function PracticePlayer({
               </Link>
             </div>
           )}
-          {session.canContinue && (
-            <button
-              type="button"
-              disabled={locked}
-              className={`${primaryAction} mt-5 w-full`}
-              onClick={() => void submit("continue")}
-            >
-              {session.completedSteps + 1 === session.totalSteps
-                ? "Finish practice"
-                : "Continue"}
-            </button>
-          )}
+          <SessionActions>
+            {!checked && (
+              <button
+                type="button"
+                disabled={locked}
+                onClick={() => void submit("reveal")}
+                className={secondaryAction}
+              >
+                Show answer
+              </button>
+            )}
+            {!checked?.correct && (
+              <button
+                type="submit"
+                form={answerFormId}
+                disabled={
+                  locked ||
+                  (step.kind === "typed_recall"
+                    ? !answer.trim()
+                    : !selectedChoice)
+                }
+                className={`${session.canContinue ? secondaryAction : primaryAction} grow`}
+              >
+                {busy ? "Checking…" : "Check answer"}
+              </button>
+            )}
+            {session.canContinue && (
+              <button
+                type="button"
+                disabled={locked}
+                className={`${primaryAction} grow`}
+                onClick={() => void submit("continue")}
+              >
+                {session.completedSteps + 1 === session.totalSteps
+                  ? "Finish practice"
+                  : "Continue"}
+              </button>
+            )}
+          </SessionActions>
         </Surface>
       ) : (
         <Surface>

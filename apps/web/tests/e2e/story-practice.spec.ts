@@ -209,9 +209,9 @@ test("lost action response retries the exact request and resumes from library", 
   expect(requests).toHaveLength(2);
   expect(requests[0]).toBe(requests[1]);
   expect(next.revision).toBe(1);
-  await main(page)
-    .getByRole("link", { name: "Back to Stories", exact: true })
-    .click();
+  const exit = page.getByRole("link", { name: "Back to Stories", exact: true });
+  await expect(exit).toHaveCount(1);
+  await exit.click();
   const resume = main(page).getByRole("link", {
     name: "Continue story",
     exact: true,

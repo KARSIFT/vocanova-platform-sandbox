@@ -83,9 +83,17 @@ test("staging onboarding helper waits for delayed completion and lets the app re
     dailyReviewTarget: 15,
   });
   await expect(page).toHaveURL(/\/home(\?|$)/);
+  const mission = page.getByRole("region", {
+    name: "Today’s practice",
+    exact: true,
+  });
+  await expect(mission).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Today’s practice", level: 2, exact: true }),
-  ).toBeVisible();
+    mission.getByRole("link", { name: "Start your Journey", exact: true }),
+  ).toHaveAttribute("href", "/discover");
+  await expect(
+    mission.getByRole("progressbar", { name: "Reviews today", exact: true }),
+  ).toHaveAttribute("aria-valuenow", "0");
 });
 
 test("staging onboarding helper rejects a failed save and preserves the retry form", async ({

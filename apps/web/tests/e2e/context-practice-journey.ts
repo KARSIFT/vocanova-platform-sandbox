@@ -116,7 +116,24 @@ export async function verifyContextPracticeJourney(page: Page): Promise<void> {
     await expect(
       page.getByRole("heading", { level: 1, name: "Journey", exact: true }),
     ).toBeVisible();
-    await page.getByRole("link", { name: /^Daily Conversation\b/ }).click();
+    const situation = page
+      .getByRole("region", { name: "Guided lessons", exact: true })
+      .locator("details")
+      .filter({ has: page.locator("summary").filter({ hasText: "Daily Conversation" }) });
+    await expect(situation).toHaveCount(1);
+    const summary = situation.locator("summary");
+    if ((await situation.getAttribute("open")) === null) {
+      await tabTo(page, summary);
+      await page.keyboard.press("Enter");
+      await expect(situation).toHaveAttribute("open", "");
+    }
+    const wordsLink = situation.getByRole("link", {
+      name: "Explore words in Daily Conversation",
+      exact: true,
+    });
+    await expect(wordsLink).toHaveAttribute("href", SITUATION_PATH);
+    await tabTo(page, wordsLink);
+    await page.keyboard.press("Enter");
     await expect(page).toHaveURL(new RegExp(`${SITUATION_PATH}$`));
     await expect(
       page.getByRole("heading", {

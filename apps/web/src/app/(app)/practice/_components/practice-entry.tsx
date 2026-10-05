@@ -149,12 +149,12 @@ export function PracticeEntry({
     <section aria-labelledby="focused-practice-heading" className="mb-6">
       <h2
         id="focused-practice-heading"
-        className="text-2xl font-bold tracking-tight text-neutral-900"
+        className="scroll-mt-24 text-xl font-bold tracking-tight text-neutral-900"
       >
-        A little focused practice
+        Remember your words
       </h2>
       <p className="mt-2 text-neutral-700">
-        Short sessions save as you go. Pick the skill you want to work on.
+        Choose how to practise. Your progress saves as you go.
       </p>
       {lessons.length > 0 || lists?.length || selectedListId ? (
         <div className="mt-4 max-w-[40rem]">
@@ -195,17 +195,17 @@ export function PracticeEntry({
             id="practice-vocabulary-help"
             className="mt-2 text-sm text-neutral-600"
           >
-            Choose words from one lesson or personal list for typed or listening
-            practice. A full-course mix can include words you have not studied
-            yet. Mistake practice uses your past answers.
+            {selection
+              ? "Practise these words by typing or listening."
+              : "A full-course mix can include words you have not studied yet."}{" "}
+            Mistake practice uses your past answers.
           </p>
         </div>
       ) : null}
       {selectedList && (
         <p className="mt-3 text-neutral-700">
           Selected list: {selectedList.name}. {selectedList.usableMemberCount}{" "}
-          of {selectedList.memberCount} meanings are available in focused
-          practice. The session keeps this list version.
+          of {selectedList.memberCount} words are available for practice.
         </p>
       )}
       {unavailableSelection && (
@@ -233,13 +233,16 @@ export function PracticeEntry({
           Refresh practice sources
         </button>
       </div>
-      <div className="mt-4 grid gap-4 md:grid-cols-3">
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
         {(Object.keys(practiceModes) as PracticeMode[]).map((mode) => {
           const content = practiceModes[mode];
           const noMistakes =
             mode === "mistakes" && sessions?.availableMistakes === 0;
           return (
-            <Surface key={mode} className="flex flex-col">
+            <article
+              key={mode}
+              className="flex flex-col border-t-2 border-primary-200 bg-white p-4"
+            >
               <h3 className="text-xl font-bold text-neutral-900">
                 {content.title}
               </h3>
@@ -265,7 +268,7 @@ export function PracticeEntry({
                   {content.startLabel}
                 </button>
               )}
-            </Surface>
+            </article>
           );
         })}
       </div>

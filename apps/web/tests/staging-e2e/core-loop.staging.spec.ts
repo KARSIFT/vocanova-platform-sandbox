@@ -285,7 +285,10 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
       await completeOnboardingIfRedirected(page);
       await expect(page).toHaveURL(/\/home(\?|$)/);
       await expect(
-        page.getByRole("heading", { name: /Today.s practice|Mission complete/, level: 2 }),
+        page.getByRole("region", {
+          name: /Today.s practice|Mission complete/,
+          exact: true,
+        }),
       ).toBeVisible();
     });
 
@@ -303,9 +306,29 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
         page.getByRole("heading", { name: "Journey", level: 1 }),
       ).toBeVisible();
 
-      const situationLinks = page.locator("main ul > li > a");
-      expect(await situationLinks.count()).toBeGreaterThan(0);
-      await situationLinks.first().click();
+      const situations = page
+        .getByRole("region", { name: "Guided lessons", exact: true })
+        .locator("details")
+        .filter({
+          has: page.getByRole("link", {
+            name: /^Explore words in /,
+            includeHidden: true,
+          }),
+        });
+      expect(await situations.count()).toBeGreaterThan(0);
+      const firstSituation = situations.first();
+      if (
+        !(await firstSituation.evaluate((element) =>
+          element.hasAttribute("open"),
+        ))
+      )
+        await firstSituation.locator("summary").click();
+      const explore = firstSituation.getByRole("link", {
+        name: /^Explore words in /,
+      });
+      await expect(explore).toBeVisible();
+      await expect(explore).toHaveAttribute("href", /^\/discover\/[^/]+$/);
+      await explore.click();
       await expect(page).toHaveURL(/\/discover\/[^/]+(\?|$)/);
       await expect(
         page.getByRole("link", { name: "Back to Journey" }),

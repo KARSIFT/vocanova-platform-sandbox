@@ -1,8 +1,25 @@
 # Vocanova current product state
 
-## Visual learning phase — delivery branch, 5 October 2026
+## Connected learner experience — integrated delivery, 5 October 2026
 
-The current delivery branch simplifies Home, Journey, Progress and word teaching,
+The owner requested a candid usability critique and authorized substantial changes.
+The integrated `codex/vocanova-learner-experience` branch makes the daily action
+clearer, exposes writing on Home, presents each Journey situation once and keeps
+practice, writing and stories discoverable. Lesson, practice and story sessions
+use a focused shell and reachable action rail. Choice questions now require
+explicit Check after selection. Writing saves its selected meaning in place and
+compares exact original and suggested sentences beside rewriting. Progress leads
+with learning evidence, including two recent server records. The public preview
+demonstrates real teaching imagery and explicitly authored feedback.
+
+See [learner experience improvement](../design/learner-experience.md) for the
+critique, visual direction, behavior boundaries and exact local acceptance.
+The consolidated PR check record establishes hosted acceptance. Production
+promotion remains separate. The accepted artwork phase is preserved.
+
+## Visual learning phase — merged, 5 October 2026
+
+The merged visual learning phase simplified Home, Journey, Progress and word teaching,
 with optional explanations behind keyboard-accessible disclosures. Meaning-specific
 original photos, illustrations and diagrams are mapped to the 92 active canonical meanings; they appear
 in teaching and word detail, never in graded questions. See

@@ -437,7 +437,7 @@ test("connected maturity journey against real staging", async ({
         revision: story.revision,
         feedback: { correct: true },
       });
-      await main
+      await page
         .getByRole("link", { name: "Back to Stories", exact: true })
         .click();
       const card = main.getByRole("region", {
@@ -502,13 +502,17 @@ test("connected maturity journey against real staging", async ({
             exact: true,
           }),
         ).toBeVisible();
-      else
+      else {
         await expect(
-          main.getByText(
-            "Save this meaning first to unlock writing feedback.",
-            { exact: false },
-          ),
-        ).toBeVisible();
+          main.getByRole("button", { name: "Save and write", exact: true }),
+        ).toBeEnabled();
+        await expect(
+          main.getByRole("textbox", {
+            name: "Write a sentence using menu",
+            exact: true,
+          }),
+        ).toHaveCount(0);
+      }
       expect(vocabularyState(await readMeaning())).toEqual(before);
     });
     expect(

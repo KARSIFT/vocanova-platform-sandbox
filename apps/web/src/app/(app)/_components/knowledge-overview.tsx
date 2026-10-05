@@ -1,6 +1,5 @@
 import Link from "next/link";
 import type { KnowledgeSummary } from "@vocanova/api-client";
-import { Surface } from "@/ui/surface";
 
 export function KnowledgeOverview({ summary }: { summary: KnowledgeSummary }) {
   const stages = [
@@ -10,7 +9,10 @@ export function KnowledgeOverview({ summary }: { summary: KnowledgeSummary }) {
     ["Mastered", summary.mastered, "Established through your review history"],
   ] as const;
   return (
-    <Surface aria-labelledby="vocabulary-map-heading" className="mt-6">
+    <section
+      aria-labelledby="vocabulary-map-heading"
+      className="mt-6 rounded-2xl bg-white p-5 sm:p-7"
+    >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2
@@ -90,6 +92,6 @@ export function KnowledgeOverview({ summary }: { summary: KnowledgeSummary }) {
           Stages describe your saved vocabulary, not your overall English level.
         </p>
       </details>
-    </Surface>
+    </section>
   );
 }

@@ -8,6 +8,7 @@ import { SentenceFeedbackResult } from "@vocanova/api-client";
 import { createApiClient } from "@/lib/api";
 import { CSRF_COOKIE_NAME, getCookieValue } from "@/lib/cookies";
 import { handleApiError } from "@/lib/session";
+import { compareSentences, type SentenceChange } from "./sentence-comparison";
 
 import {
   acceptSentenceEdit,
@@ -34,7 +35,7 @@ interface SentenceFeedbackProps {
 }
 
 const AI_LIMITATION_COPY =
-  "AI feedback can make mistakes. Use your own judgment and your teacher's guidance when learning.";
+  "AI feedback can make mistakes. Keep the meaning you intended.";
 
 const RETRY_MESSAGE =
   "Vocanova could not check this sentence right now. Your sentence is still here, so you can try again.";
@@ -251,6 +252,10 @@ export function SentenceFeedback({
   const characterCountId = `sentence-character-count-${attemptId}`;
   const characterLimitMessageId = `sentence-character-limit-${attemptId}`;
   const characterLimitStatus = getSentenceCharacterLimitStatus(sentence);
+  const comparison =
+    submittedSentence && result?.correctedSentence && hasSuccessResult
+      ? compareSentences(submittedSentence, result.correctedSentence)
+      : null;
 
   function handleTryAnotherSentence() {
     if (submittingSynchronously.current) {
@@ -416,7 +421,9 @@ export function SentenceFeedback({
               className={`rounded-md p-[var(--spacing-md)] ${getStatusClasses(result.status)}`}
             >
               <p className="text-sm font-semibold">{statusLabel}</p>
-              <p className="font-semibold">{result.headline || statusLabel}</p>
+              {result.headline && result.headline !== statusLabel ? (
+                <p className="font-semibold">{result.headline}</p>
+              ) : null}
               {result.explanation ? (
                 <p className="mt-[var(--spacing-xs)] text-base">
                   {result.explanation}
@@ -426,14 +433,52 @@ export function SentenceFeedback({
           ) : null}
 
           {submittedSentence ? (
-            <div className="rounded-md bg-neutral-50 p-[var(--spacing-md)]">
-              <p className="text-sm font-medium text-neutral-700">
-                {hasSuccessResult ? "Sentence checked" : "Your sentence"}
-              </p>
-              <p className="mt-[var(--spacing-xs)] text-base text-neutral-900">
-                {submittedSentence}
-              </p>
-            </div>
+            <section
+              aria-label="Sentence comparison"
+              className="rounded-xl border border-neutral-200 p-4"
+            >
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="min-w-0 rounded-lg bg-neutral-50 p-3">
+                  <p className="text-sm font-medium text-neutral-700">
+                    {hasSuccessResult ? "Sentence checked" : "Your sentence"}
+                  </p>
+                  <p className="mt-2 whitespace-pre-wrap wrap-anywhere text-base leading-relaxed text-neutral-900">
+                    {comparison?.hasChanges ? (
+                      <ChangedSentence parts={comparison.original} />
+                    ) : (
+                      submittedSentence
+                    )}
+                  </p>
+                </div>
+                {comparison?.hasChanges ? (
+                  <div className="min-w-0 rounded-lg bg-primary-50 p-3">
+                    <p className="text-sm font-medium text-neutral-700">
+                      Corrected sentence
+                    </p>
+                    <p className="mt-2 whitespace-pre-wrap wrap-anywhere text-base leading-relaxed text-neutral-900">
+                      <ChangedSentence parts={comparison.suggested} />
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+              {comparison ? (
+                <p className="mt-3 text-sm text-neutral-600">
+                  {comparison.hasChanges
+                    ? "Highlighted text shows what changed."
+                    : "No wording changes suggested."}
+                </p>
+              ) : null}
+              {hasSuccessResult ? (
+                <button
+                  type="button"
+                  onClick={handleReviseSentence}
+                  disabled={isLoading}
+                  className="mt-3 inline-flex min-h-11 items-center rounded-lg bg-primary-600 px-4 py-3 font-semibold text-white hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:opacity-50"
+                >
+                  Revise sentence
+                </button>
+              ) : null}
+            </section>
           ) : null}
 
           {result.errorCode &&
@@ -461,17 +506,6 @@ export function SentenceFeedback({
             </div>
           ) : null}
 
-          {result.correctedSentence ? (
-            <div className="rounded-md bg-neutral-50 p-[var(--spacing-md)]">
-              <p className="text-sm font-medium text-neutral-700">
-                Corrected sentence
-              </p>
-              <p className="mt-[var(--spacing-xs)] text-base text-neutral-900">
-                {result.correctedSentence}
-              </p>
-            </div>
-          ) : null}
-
           {result.improvementTip ? (
             <div className="rounded-md bg-neutral-50 p-[var(--spacing-md)]">
               <p className="text-sm font-medium text-neutral-700">Tip</p>
@@ -484,14 +518,6 @@ export function SentenceFeedback({
           {hasSuccessResult ? (
             <div className="rounded-md border border-neutral-200 p-[var(--spacing-md)]">
               <div className="flex flex-wrap gap-[var(--spacing-sm)]">
-                <button
-                  type="button"
-                  onClick={handleReviseSentence}
-                  disabled={isLoading}
-                  className="inline-flex min-h-11 items-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-semibold text-white hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Revise sentence
-                </button>
                 <button
                   type="button"
                   onClick={handleTryAnotherSentence}
@@ -554,9 +580,11 @@ export function SentenceFeedback({
             </div>
           ) : null}
 
-          <p className="text-sm text-neutral-600">
-            Mission completed: {result.missionCompleted ? "Yes" : "Not yet"}
-          </p>
+          {result.missionCompleted || source === "daily_mission" ? (
+            <p className="text-sm text-neutral-600">
+              Mission completed: {result.missionCompleted ? "Yes" : "Not yet"}
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -582,6 +610,21 @@ export function SentenceFeedback({
         </aside>
       ) : null}
     </section>
+  );
+}
+
+function ChangedSentence({ parts }: { parts: SentenceChange[] }) {
+  return parts.map((part, index) =>
+    part.changed ? (
+      <mark
+        key={index}
+        className="rounded-sm bg-secondary-100 text-neutral-900 underline decoration-secondary-600 decoration-2 underline-offset-4"
+      >
+        {part.text}
+      </mark>
+    ) : (
+      <span key={index}>{part.text}</span>
+    ),
   );
 }
 

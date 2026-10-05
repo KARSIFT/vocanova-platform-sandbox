@@ -1,11 +1,26 @@
 # Vocanova release readiness
 
-## Visual learning phase — current verification
+## Connected learner experience — integrated verification
+
+The current integrated redesign is described in
+[learner experience improvement](../design/learner-experience.md). A fresh web/API
+build passes. Formatting, lint, types and 258 foundation, 52 client and 146 web
+helper tests pass. Full local validation stops at three existing PostgreSQL tests
+because the local Docker engine is unavailable; it is not claimed as a full pass.
+The final affected browser matrix passes 149 cases with one existing scope skip
+at all three widths, including both themes. The broad run recorded 888 passes,
+37 skips and two obsolete Home-label assertions, subsequently repaired and
+verified in the affected run. Required hosted database, full accessibility,
+performance and container acceptance is recorded on the consolidated PR; local
+fixture checks do not substitute for those gates. Prior release evidence does
+not accept this new branch. Production promotion remains a separate manual action.
+
+## Visual learning phase — prior accepted verification
 
 See [visual learning delivery](../design/visual-learning-delivery.md) for the
-current phase's acceptance record. Prior release evidence below does not accept
-these new interface or artwork changes. The consolidated PR must pass its own
-applicable hosted checks, including container asset delivery. A new production
+artwork phase's acceptance record. Its consolidated PR #1486 merged and passed
+applicable hosted checks, including container asset delivery. That evidence does
+not accept the newer connected learner experience branch above. A new production
 deployment remains separate.
 
 ## Consolidated maturity verification — 5 October 2026

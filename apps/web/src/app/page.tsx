@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { BrandMark } from "@/ui/brand-mark";
+import { LearningPreview } from "@/ui/learning-preview";
 
 export const metadata: Metadata = {
   title: "Vocanova — English for the moments that matter",
@@ -66,39 +67,7 @@ export default function Page() {
             </div>
           </div>
 
-          <div className="relative mx-auto w-full max-w-[31rem] border border-secondary-200 bg-white p-5 shadow-[0_18px_45px_rgb(30_41_59_/_0.1)] sm:p-8">
-            <div className="border-l-4 border-secondary-300 pl-4">
-              <p className="text-sm font-semibold text-secondary-800">
-                At a café
-              </p>
-              <p className="mt-3 text-[clamp(1.8rem,3.5vw,2.7rem)] font-semibold leading-tight tracking-[-0.045em] text-neutral-900">
-                “Could I get this to go?”
-              </p>
-            </div>
-            <div className="mt-8 border-y border-neutral-200 py-5">
-              <div className="flex items-baseline justify-between gap-4">
-                <p className="text-2xl font-semibold tracking-[-0.04em] text-primary-800">
-                  to go
-                </p>
-                <p className="text-sm text-neutral-500">phrase</p>
-              </div>
-              <p className="mt-3 max-w-[24rem] text-base leading-7 text-neutral-700">
-                Take food or drink away with you, instead of having it at the
-                café.
-              </p>
-            </div>
-            <div className="mt-5 flex items-center justify-between gap-4">
-              <p className="text-sm font-medium text-neutral-600">
-                A word worth keeping.
-              </p>
-              <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary-800">
-                <span className="grid size-6 place-items-center rounded-full bg-primary-100">
-                  ✓
-                </span>{" "}
-                Saved
-              </span>
-            </div>
-          </div>
+          <LearningPreview />
         </section>
 
         <section

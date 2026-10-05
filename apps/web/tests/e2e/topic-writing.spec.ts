@@ -26,19 +26,27 @@ for (const theme of ["light", "dark"])
       page.getByText("A plan with a friend has changed.", { exact: false }),
     ).toBeVisible();
     await page.getByRole("link", { name: "invite", exact: true }).click();
+    const saves: string[] = [];
+    page.on("request", (request) => {
+      if (
+        request.method() === "POST" &&
+        new URL(request.url()).pathname === "/api/v1/user-words"
+      )
+        saves.push(request.url());
+    });
     await expect(
-      page.getByText("Save this meaning first to unlock writing feedback.", {
-        exact: false,
-      }),
+      page.getByRole("button", { name: "Save and write", exact: true }),
     ).toBeVisible();
-    const selected = new URL(page.url()).searchParams.get("meaning")!;
+    const selectedURL = page.url();
+    expect(saves).toEqual([]);
     await page
-      .getByRole("link", { name: "Open invite to save it", exact: true })
+      .getByRole("button", { name: "Save and write", exact: true })
       .click();
-    await page.getByRole("button", { name: /^Save invite:/ }).click();
-    await page.goto(
-      `/writing?${new URLSearchParams({ situation: "daily-conversation", meaning: selected })}`,
-    );
+    await expect(
+      page.getByRole("textbox", { name: "Write a sentence using invite" }),
+    ).toBeVisible();
+    expect(saves).toHaveLength(1);
+    expect(page.url()).toBe(selectedURL);
     await expect(
       page
         .getByRole("main")
