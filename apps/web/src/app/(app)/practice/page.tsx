@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ApiResponseError } from "@vocanova/api-client";
 
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
-import { Eyebrow, PageContainer, Surface } from "@/ui/surface";
+import { PageContainer } from "@/ui/surface";
 import { PracticeEntry } from "./_components/practice-entry";
 
 export const metadata: Metadata = {
@@ -11,8 +11,6 @@ export const metadata: Metadata = {
   description: "Review, remember and use your English vocabulary.",
 };
 
-const actionStyle =
-  "mt-4 inline-flex min-h-12 items-center justify-center rounded-xl bg-primary-700 px-5 py-3 font-semibold text-white hover:bg-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
 const linkStyle =
   "inline-flex min-h-11 items-center font-semibold text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700";
 
@@ -87,33 +85,15 @@ export default async function PracticePage({
   const firstWord = savedWords?.[0];
 
   return (
-    <PageContainer className="max-w-[64rem]">
+    <PageContainer className="max-w-[56rem]">
       <Link href="/discover" className={linkStyle}>
         Back to Journey
       </Link>
       <header className="mb-6 mt-3">
         <h1 className="text-3xl font-bold tracking-tight text-neutral-900">
-          Practice your way
+          Practice
         </h1>
-        <p className="mt-2 max-w-[40rem] text-lg text-neutral-700">
-          Remember a word, use it in a sentence, or follow a short story.
-        </p>
       </header>
-
-      <nav
-        aria-label="Practice activities"
-        className="mb-6 flex flex-wrap gap-x-5 border-y border-neutral-200 py-2"
-      >
-        <a href="#focused-practice-heading" className={linkStyle}>
-          Remember words
-        </a>
-        <a href="#practice-writing-heading" className={linkStyle}>
-          Write a sentence
-        </a>
-        <Link href="/stories" className={linkStyle}>
-          Short stories
-        </Link>
-      </nav>
 
       <PracticeEntry
         key={`${selectedLessonKey}:${requestedList}`}
@@ -124,209 +104,163 @@ export default async function PracticePage({
         initialListId={requestedList}
       />
 
-      <div className="grid gap-x-8 gap-y-4 md:grid-cols-2">
-        <Surface aria-labelledby="practice-review-heading" tone="primary">
-          <Eyebrow>Keep words fresh</Eyebrow>
+      <nav
+        aria-label="Practice activities"
+        className="flex flex-wrap gap-x-6 border-y border-neutral-200 py-3"
+      >
+        <Link href="/writing" className={linkStyle}>
+          Topic writing
+        </Link>
+        <Link href="/stories" className={linkStyle}>
+          Short stories
+        </Link>
+      </nav>
+
+      <section
+        aria-labelledby="practice-review-heading"
+        className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 py-5"
+      >
+        <div className="min-w-0 flex-1 basis-48">
           <h2
             id="practice-review-heading"
-            className="mt-2 text-xl font-bold text-neutral-900"
+            className="text-lg font-bold text-neutral-900"
           >
             Scheduled review
           </h2>
           {dueCount === undefined ? (
-            <p role="status" className="mt-3 text-neutral-700">
+            <p role="status" className="mt-1 text-sm text-neutral-600">
               We could not load your review count. Open your reviews to try
               again.
             </p>
           ) : (
-            <p className="mt-3 font-semibold text-neutral-900">
+            <p className="mt-1 text-sm text-neutral-600">
               {dueCount === 0
                 ? "No words are due right now."
                 : `${dueCount} ${dueCount === 1 ? "word is" : "words are"} due for review.`}
             </p>
           )}
-          <p className="mt-2 text-neutral-700">
-            {reviewTargetComplete
-              ? "Today’s review target is complete. Your next review session is tomorrow."
-              : canStartReview
-                ? "A short session helps you remember the words you saved."
-                : "Reviews follow your saved words and daily target. You can also choose another activity below."}
-          </p>
-          <Link href="/review" className={actionStyle}>
-            {canStartReview ? "Start review" : "View reviews"}
-          </Link>
-        </Surface>
+          {reviewTargetComplete && (
+            <p className="mt-1 text-sm text-neutral-600">
+              Today’s review target is complete. Your next review session is
+              tomorrow.
+            </p>
+          )}
+        </div>
+        <Link href="/review" className={linkStyle}>
+          {canStartReview ? "Start review" : "View reviews"}
+        </Link>
+      </section>
 
-        <Surface
-          aria-labelledby="practice-lesson-heading"
-          className="border-neutral-200 bg-transparent shadow-none"
-        >
-          <Eyebrow>Remember and use</Eyebrow>
+      <section
+        aria-labelledby="practice-lesson-heading"
+        className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 py-5"
+      >
+        <div className="min-w-0 flex-1 basis-48">
           <h2
             id="practice-lesson-heading"
-            className="mt-2 text-xl font-bold text-neutral-900"
+            className="text-lg font-bold text-neutral-900"
           >
             Guided lessons
           </h2>
           {nextLesson ? (
             <>
-              <p className="mt-3 font-semibold text-neutral-900">
+              <p className="mt-1 text-sm text-neutral-600">
                 {nextLesson.title}
               </p>
-              <p className="mt-2 text-neutral-700">{nextLesson.description}</p>
-              <p className="mt-2 text-sm text-neutral-600">
-                {nextLesson.status === "in_progress"
-                  ? `${nextLesson.completedSteps} of ${nextLesson.stepCount} steps saved. Pick up where you left off.`
-                  : nextLesson.status === "completed"
-                    ? "Lesson complete. Revisit its words and examples."
-                    : `${nextLesson.wordCount} words, with meaning and context questions.`}
-              </p>
-              <Link
-                href={`/learn/${encodeURIComponent(nextLesson.key)}`}
-                className={actionStyle}
-              >
-                {nextLesson.status === "in_progress"
-                  ? "Continue lesson"
-                  : nextLesson.status === "completed"
-                    ? "Revisit lesson"
-                    : "Start lesson"}
-              </Link>
+              {nextLesson.status === "in_progress" && (
+                <p className="mt-1 text-sm text-neutral-600">
+                  {nextLesson.completedSteps} of {nextLesson.stepCount} steps
+                  saved
+                </p>
+              )}
             </>
           ) : (
-            <>
-              <p
-                role={lessons ? undefined : "status"}
-                className="mt-3 text-neutral-700"
-              >
-                {lessons
-                  ? "There are no guided lessons available right now. Explore words in a real-life situation."
-                  : "We could not load your lessons. You can still practise with your vocabulary."}
-              </p>
-              <Link href="/discover" className={actionStyle}>
-                Explore situations
-              </Link>
-            </>
+            <p
+              role={lessons ? undefined : "status"}
+              className="mt-1 text-sm text-neutral-600"
+            >
+              {lessons
+                ? "No guided lessons are available yet."
+                : "We could not load your lessons. You can still practise with your vocabulary."}
+            </p>
           )}
-        </Surface>
-
-        <Surface aria-labelledby="practice-writing-heading">
-          <Eyebrow>Make it your own</Eyebrow>
-          <h2
-            id="practice-writing-heading"
-            className="mt-2 scroll-mt-24 text-xl font-bold text-neutral-900"
-          >
-            Write a sentence
-          </h2>
-          {savedWords?.length ? (
-            <>
-              <p className="mt-3 text-neutral-700">
-                Choose a saved meaning, write your own sentence, and get focused
-                feedback.
-              </p>
-              <ul className="mt-3 divide-y divide-neutral-200">
-                {savedWords.map((word) => (
-                  <li key={word.userWordId} className="py-2">
-                    <Link
-                      href={`/words/${encodeURIComponent(word.userWordId)}`}
-                      className={linkStyle}
-                    >
-                      Write with {word.wordText}
-                    </Link>
-                    <p className="text-sm text-neutral-700">
-                      {word.shortDefinition}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-              <Link href="/words" className={`${linkStyle} mt-3`}>
-                Choose another saved word
-              </Link>
-            </>
-          ) : (
-            <>
-              <p
-                role={savedWords ? undefined : "status"}
-                className="mt-3 text-neutral-700"
-              >
-                {savedWords
-                  ? "Save a word first, then use its meaning in a sentence of your own."
-                  : "We could not load your saved words. Open your vocabulary to try again."}
-              </p>
-              <Link
-                href={savedWords ? "/vocabulary" : "/words"}
-                className={actionStyle}
-              >
-                {savedWords ? "Find a word to save" : "Open saved vocabulary"}
-              </Link>
-            </>
-          )}
-        </Surface>
-
-        <Surface
-          aria-labelledby="practice-topic-writing-heading"
-          className="border-neutral-200 bg-transparent shadow-none"
+        </div>
+        <Link
+          href={
+            nextLesson
+              ? `/learn/${encodeURIComponent(nextLesson.key)}`
+              : "/discover"
+          }
+          className={linkStyle}
         >
-          <Eyebrow>Write about real life</Eyebrow>
-          <h2
-            id="practice-topic-writing-heading"
-            className="mt-2 text-xl font-bold text-neutral-900"
-          >
-            Topic writing
-          </h2>
-          <p className="mt-3 text-neutral-700">
-            Choose an everyday situation, use a meaning you saved, and write
-            your own message or sentence. Read a correction and try a rewrite.
-          </p>
-          <Link href="/writing" className={actionStyle}>
-            Choose a writing topic
-          </Link>
-        </Surface>
+          {nextLesson
+            ? nextLesson.status === "in_progress"
+              ? "Continue lesson"
+              : nextLesson.status === "completed"
+                ? "Revisit lesson"
+                : "Start lesson"
+            : "Explore situations"}
+        </Link>
+      </section>
 
-        <Surface aria-labelledby="practice-listening-heading" tone="secondary">
-          <Eyebrow>Hear it, then say it</Eyebrow>
-          <h2
-            id="practice-listening-heading"
-            className="mt-2 text-xl font-bold text-neutral-900"
-          >
-            Listen and repeat
-          </h2>
-          <p className="mt-3 text-neutral-700">
-            Open a word and use device pronunciation to hear the word and its
-            examples. Try the slower speed, then say it aloud yourself.
-          </p>
-          <p className="mt-2 text-sm text-neutral-600">
-            This is listening practice. Your voice is not recorded or scored.
-          </p>
-          <Link
-            href={
-              firstWord
-                ? `/vocabulary/${encodeURIComponent(firstWord.wordSlug)}`
-                : "/vocabulary"
-            }
-            className={actionStyle}
-          >
-            {firstWord
-              ? `Listen to ${firstWord.wordText}`
-              : "Find a word to hear"}
-          </Link>
-        </Surface>
-      </div>
-
-      <Surface aria-labelledby="practice-history-heading" className="mt-4">
+      <section aria-labelledby="practice-writing-heading" className="py-5">
         <h2
-          id="practice-history-heading"
-          className="text-xl font-bold text-neutral-900"
+          id="practice-writing-heading"
+          className="scroll-mt-24 text-lg font-bold text-neutral-900"
         >
-          Learn from your sentences
+          Write a sentence
         </h2>
-        <p className="mt-2 text-neutral-700">
-          Return to sentences you have written and read their feedback. Notice
-          what worked and what you want to try next.
-        </p>
-        <Link href="/progress/sentences" className={actionStyle}>
+        {savedWords?.length ? (
+          <div className="mt-1 flex flex-wrap gap-x-5">
+            {savedWords.map((word) => (
+              <Link
+                key={word.userWordId}
+                href={`/words/${encodeURIComponent(word.userWordId)}#sentence-practice`}
+                className={linkStyle}
+              >
+                Write with {word.wordText}
+              </Link>
+            ))}
+            <Link href="/words" className={linkStyle}>
+              Choose another saved word
+            </Link>
+          </div>
+        ) : (
+          <>
+            <p
+              role={savedWords ? undefined : "status"}
+              className="mt-1 text-sm text-neutral-600"
+            >
+              {savedWords
+                ? "Save a word first, then use it in your own sentence."
+                : "We could not load your saved words. Open your vocabulary to try again."}
+            </p>
+            <Link
+              href={savedWords ? "/vocabulary" : "/words"}
+              className={linkStyle}
+            >
+              {savedWords ? "Find a word to save" : "Open saved vocabulary"}
+            </Link>
+          </>
+        )}
+      </section>
+      <div className="flex flex-wrap gap-x-6 border-t border-neutral-200 pt-3">
+        <Link href="/progress/sentences" className={linkStyle}>
           Open sentence history
         </Link>
-      </Surface>
+        <Link
+          href={
+            firstWord
+              ? `/vocabulary/${encodeURIComponent(firstWord.wordSlug)}`
+              : "/vocabulary"
+          }
+          className={linkStyle}
+        >
+          {firstWord
+            ? `Listen to ${firstWord.wordText}`
+            : "Find a word to hear"}
+        </Link>
+      </div>
     </PageContainer>
   );
 }

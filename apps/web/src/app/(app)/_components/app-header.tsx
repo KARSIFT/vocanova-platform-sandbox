@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Form from "next/form";
 import { usePathname } from "next/navigation";
 
 import { createApiClient } from "@/lib/api";
@@ -107,16 +108,61 @@ export function AppHeader() {
   return (
     <>
       <header className="sticky top-0 z-10 border-b border-neutral-200/90 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
-        <div className="mx-auto flex min-h-16 w-full max-w-[76rem] items-center gap-[var(--spacing-sm)] px-[var(--spacing-md)] sm:px-[var(--spacing-xl)]">
+        <div
+          className={`app-header-inner ${pathname === "/vocabulary" ? "app-header-search-page" : ""}`}
+        >
           <Link
             href="/home"
             className="inline-flex min-h-11 items-center gap-[var(--spacing-sm)] rounded-md pr-[var(--spacing-sm)]"
           >
             <BrandMark />
           </Link>
+          {pathname !== "/vocabulary" && (
+            <Form
+              action="/vocabulary"
+              role="search"
+              aria-label="Word search"
+              className="header-search"
+              key={pathname}
+            >
+              <label htmlFor="header-word-query" className="sr-only">
+                Search any English word
+              </label>
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                className="size-5 shrink-0 fill-none stroke-current stroke-[1.8]"
+              >
+                <circle cx="10.5" cy="10.5" r="6.5" />
+                <path strokeLinecap="round" d="m16 16 4.5 4.5" />
+              </svg>
+              <input
+                id="header-word-query"
+                name="q"
+                type="search"
+                placeholder="Search any word…"
+                maxLength={100}
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <button type="submit" aria-label="Search words">
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="size-5 fill-none stroke-current stroke-[1.8]"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 12h14m-5-5 5 5-5 5"
+                  />
+                </svg>
+              </button>
+            </Form>
+          )}
           <nav
             aria-label="Primary"
-            className="ml-auto hidden items-center gap-1 lg:flex"
+            className="header-primary hidden items-center gap-1 lg:flex"
           >
             {DESKTOP_NAV_ITEMS.map(([href, label]) => {
               const active = isPrimaryNavItemActive(pathname, href);
@@ -132,7 +178,7 @@ export function AppHeader() {
               );
             })}
           </nav>
-          <div className="ml-auto flex items-center gap-[var(--spacing-xs)] lg:ml-4">
+          <div className="header-account flex items-center gap-[var(--spacing-xs)]">
             <Link
               href="/settings"
               aria-label="Settings"

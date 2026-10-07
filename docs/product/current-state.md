@@ -1,6 +1,15 @@
 # Vocanova current product state
 
-## Performance and recovery — under validation, 6 October 2026
+## Calm learning and broader search — 7 October 2026
+
+The current delivery simplifies Home, Journey, Practice, Progress and word detail,
+adds persistent search and a local dictionary beyond lesson words, and bounds
+stalled server reads. See [calm learning and broader search](../design/calm-learning.md)
+for behavior, provenance and exact local acceptance boundaries. This delivery
+uses one consolidated PR and the protected merge queue. Production promotion
+remains a separate manual operation.
+
+## Performance and recovery — merged, 6 October 2026
 
 The latest investigation reproduces avoidable page request waves, repeated
 recommendation content reads, missing session-route loading feedback, unnecessary
@@ -8,8 +17,10 @@ sentence-refresh requests and misleading sign-outs during temporary identity
 failures. It also repairs transaction reads that can wait for their own connection
 under a bounded pool. See [performance and recovery](performance-reliability.md)
 for measurements, behavior boundaries and the real-database acceptance gate.
-Fresh release checks show staging on `3e54a92a` and production on `af3eacb44`;
-the current changes are not a verified production release.
+[PR #1489](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1489)
+merged as `64d15eb1`; staging run 37377995092 passed both live journeys and
+web/API identities matched that merge. Production remained on `af3eacb44` at
+that checkpoint. Historical acceptance does not verify the new delivery above.
 
 ## Connected learner experience — merged, 5 October 2026
 

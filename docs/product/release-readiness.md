@@ -1,5 +1,17 @@
 # Vocanova release readiness
 
+## Calm learning and broader search — local acceptance, 7 October 2026
+
+See [calm learning and broader search](../design/calm-learning.md) for the revised
+interfaces, dictionary boundaries, visual review and exact verification. The
+117-case focused matrix passes. The full local sweep recorded 968 passes, 37
+existing scope skips and 27 old-presentation/scan-position failures, followed by
+93 passing affected learning cases and 24 passing conversation cases after test
+repairs. All 12 Lighthouse audits pass at the existing budgets. Current package,
+API, format, lint, type and build checks pass. Required hosted checks must accept
+the integrated revision, and staging includes a real dictionary lookup. Production
+remains a separate manual release. Older evidence below describes its own revisions.
+
 ## Connected learner experience — integrated verification
 
 The current integrated redesign is described in

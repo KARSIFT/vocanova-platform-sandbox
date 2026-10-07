@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
-const WORD_DETAIL_PATH = "/discover/ordering-at-a-cafe/pour";
+const WORD_DETAIL_PATH = "/discover/ordering-at-a-cafe/pour#sentence-practice";
 
 async function prepareSavedWord(
   page: Page,

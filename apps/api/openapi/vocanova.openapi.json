@@ -538,6 +538,139 @@
         ],
         "type": "object"
       },
+      "DictionaryAttributionDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "licenses": {
+            "items": {
+              "$ref": "#/components/schemas/DictionaryLicenseDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "provider": {
+            "type": "string"
+          },
+          "providerUrl": {
+            "format": "uri",
+            "type": "string"
+          },
+          "sourceUrls": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "provider",
+          "providerUrl",
+          "sourceUrls",
+          "licenses"
+        ],
+        "type": "object"
+      },
+      "DictionaryDefinitionDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "definition": {
+            "type": "string"
+          },
+          "example": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "definition"
+        ],
+        "type": "object"
+      },
+      "DictionaryEntryDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/DictionaryEntryDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "attribution": {
+            "$ref": "#/components/schemas/DictionaryAttributionDTO"
+          },
+          "meanings": {
+            "items": {
+              "$ref": "#/components/schemas/DictionaryMeaningDTO"
+            },
+            "maxItems": 4,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "word": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "word",
+          "meanings",
+          "attribution"
+        ],
+        "type": "object"
+      },
+      "DictionaryLicenseDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "text": {
+            "description": "Complete original license notice and disclaimer",
+            "type": "string"
+          },
+          "url": {
+            "format": "uri",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "url",
+          "text"
+        ],
+        "type": "object"
+      },
+      "DictionaryMeaningDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "definitions": {
+            "items": {
+              "$ref": "#/components/schemas/DictionaryDefinitionDTO"
+            },
+            "maxItems": 2,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "partOfSpeech": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "partOfSpeech",
+          "definitions"
+        ],
+        "type": "object"
+      },
       "DueWordDTO": {
         "additionalProperties": false,
         "properties": {
@@ -6830,6 +6963,61 @@
         "summary": "Get today's daily mission for the authenticated requester",
         "tags": [
           "Missions"
+        ]
+      }
+    },
+    "/api/v1/dictionary": {
+      "get": {
+        "operationId": "LookupDictionary",
+        "parameters": [
+          {
+            "description": "One explicitly submitted English word, maximum 48 letters with optional internal apostrophes or hyphens; not a phrase or browse request",
+            "explode": false,
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "description": "One explicitly submitted English word, maximum 48 letters with optional internal apostrophes or hyphens; not a phrase or browse request",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DictionaryEntryDTO"
+                }
+              }
+            },
+            "description": "OK",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Enter one English word"
+          },
+          "401": {
+            "description": "Authentication is required"
+          },
+          "404": {
+            "description": "No entry in the bundled dictionary"
+          },
+          "429": {
+            "description": "Lookup limit reached; retry in a minute"
+          },
+          "503": {
+            "description": "Dictionary temporarily unavailable"
+          }
+        },
+        "summary": "Read a locally bundled English dictionary entry without saving or grading it",
+        "tags": [
+          "Discovery"
         ]
       }
     },

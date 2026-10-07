@@ -320,3 +320,41 @@ test("list/story real route sources and exact migration table inventories remain
   }
   assert.deepEqual(validateMockInventory(), []);
 });
+
+test("dictionary registers only its read-only lookup and no learner storage", () => {
+  assert.equal(isRegisteredAPIPath("/api/v1/dictionary"), true);
+  assert.equal(isRegisteredBusinessModule("dictionary"), true);
+  for (const route of [
+    "/api/v1/dictionary/",
+    "/api/v1/dictionary/book",
+    "/api/v1/dictionary/save",
+    "/api/v1/dictionary/reviews",
+    "/api/v1/dictionary/admin",
+    "/api/v1/dictionary-extra",
+  ])
+    assert.equal(isRegisteredAPIPath(route), false, route);
+  for (const module of ["dictionarylearning", "dictionaryadmin"])
+    assert.equal(isRegisteredBusinessModule(module), false, module);
+  for (const schema of [
+    "dictionary.go",
+    "dictionaryword.go",
+    "userdictionaryword.go",
+  ])
+    assert.equal(isRegisteredSchemaFile(schema), false, schema);
+  assert.equal(
+    isRegisteredMigrationFile("20261007010000_dictionary.sql"),
+    false,
+  );
+  const root = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../..",
+  );
+  const contract = JSON.parse(
+    readFileSync(
+      path.join(root, "apps/api/openapi/vocanova.openapi.json"),
+      "utf8",
+    ),
+  );
+  assert.deepEqual(Object.keys(contract.paths["/api/v1/dictionary"]), ["get"]);
+  assert.deepEqual(validateMockInventory(), []);
+});

@@ -3,7 +3,7 @@ import type { WordDetail } from "@vocanova/api-client";
 import { getAdditionalDefinition } from "@/lib/word-definition";
 import { MeaningPicture } from "@/ui/meaning-picture";
 import { ListenButton } from "@/ui/pronunciation";
-import { Eyebrow } from "@/ui/surface";
+import { WordPracticeDisclosure } from "./word-practice-disclosure";
 
 import { formatLevelBand } from "../discover/_components/level-band";
 import { MeaningSaveButton } from "../discover/[situation]/[word]/_components/meaning-save-button";
@@ -30,7 +30,9 @@ export function WordDetailContent({
   return (
     <>
       <div className="mt-[var(--spacing-md)]">
-        {contextTitle ? <Eyebrow>{contextTitle}</Eyebrow> : null}
+        {contextTitle ? (
+          <p className="mb-2 text-sm text-neutral-600">{contextTitle}</p>
+        ) : null}
         <h1 className="text-2xl font-semibold text-neutral-900">
           {wordData.text}
         </h1>
@@ -48,7 +50,7 @@ export function WordDetailContent({
       <section className="mt-[var(--spacing-lg)]">
         <h2 className="text-xl font-semibold text-neutral-900">Meanings</h2>
         <ul className="mt-[var(--spacing-sm)] space-y-[var(--spacing-md)]">
-          {wordData.meanings.map((meaning) => {
+          {wordData.meanings.map((meaning, index) => {
             const additionalDefinition = getAdditionalDefinition(
               meaning.shortDefinition,
               meaning.learnerDefinition,
@@ -96,21 +98,33 @@ export function WordDetailContent({
                 <MeaningPicture meaningId={meaning.id} />
                 <MeaningTeaching meaning={meaning} />
 
-                <MeaningListEditor meaningId={meaning.id} />
-
-                <MeaningKnowledgeEditor
-                  meaningId={meaning.id}
-                  initialKnown={meaning.selfReportedKnown}
-                />
+                <details className="mt-4 border-t border-neutral-200 pt-2">
+                  <summary className="min-h-12 cursor-pointer content-center font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
+                    Personal tools
+                  </summary>
+                  <MeaningListEditor meaningId={meaning.id} />
+                  <MeaningKnowledgeEditor
+                    meaningId={meaning.id}
+                    initialKnown={meaning.selfReportedKnown}
+                  />
+                </details>
 
                 {meaning.saved && meaning.userWordId ? (
-                  <SentenceFeedback
-                    targetWord={wordData.text}
-                    attemptId={meaning.userWordId}
-                    source="word_detail"
-                    userId={userId}
-                    shortDefinition={meaning.shortDefinition}
-                  />
+                  <WordPracticeDisclosure
+                    anchor={
+                      index === 0
+                        ? "sentence-practice"
+                        : `sentence-practice-${meaning.id}`
+                    }
+                  >
+                    <SentenceFeedback
+                      targetWord={wordData.text}
+                      attemptId={meaning.userWordId}
+                      source="word_detail"
+                      userId={userId}
+                      shortDefinition={meaning.shortDefinition}
+                    />
+                  </WordPracticeDisclosure>
                 ) : null}
               </li>
             );

@@ -1,4 +1,4 @@
-// Real-staging acceptance for PR #1484's connected learning features.
+// Real-staging acceptance for connected learning and local dictionary search.
 // Explicitly opt in and run THIS spec with a fresh synthetic session. The core
 // journey logs out, so its already-revoked token cannot be reused here.
 // No mock server, AI feedback request, vocabulary reset or session-history purge.
@@ -6,6 +6,7 @@ import { randomUUID } from "node:crypto";
 import { expect, test, type BrowserContext } from "@playwright/test";
 import type {
   CurrentUser,
+  DictionaryEntry,
   PracticeSession,
   StorySession,
   WordDetailResponse,
@@ -221,6 +222,68 @@ test("connected maturity journey against real staging", async ({
       ownedListId = match[1]!;
   });
   try {
+    await test.step("search beyond lesson words using the real local dictionary without saving", async () => {
+      await page.goto(`${webOrigin}/home`);
+      const search = page.getByRole("search", {
+        name: "Word search",
+        exact: true,
+      });
+      await search
+        .getByRole("searchbox", {
+          name: "Search any English word",
+          exact: true,
+        })
+        .fill("serendipity");
+      await search
+        .getByRole("button", { name: "Search words", exact: true })
+        .click();
+      await expect(page).toHaveURL(`${webOrigin}/vocabulary?q=serendipity`);
+      const result = main.getByRole("region", {
+        name: "Dictionary result",
+        exact: true,
+      });
+      await expect(result).toBeVisible();
+      await expect(
+        result.getByRole("heading", { name: "serendipity", exact: true }),
+      ).toBeVisible();
+      await expect(
+        result.getByText(
+          "good luck in making unexpected and fortunate discoveries",
+          { exact: true },
+        ),
+      ).toBeVisible();
+      await expect(result.getByRole("button", { name: /save/i })).toHaveCount(
+        0,
+      );
+      await result.getByText("Dictionary source", { exact: true }).click();
+      await expect(
+        result.getByRole("link", { name: "WordNet 3.0", exact: true }),
+      ).toHaveAttribute("href", "https://wordnet.princeton.edu/");
+      await expect(
+        result.getByText(/WordNet 3\.0 Copyright 2006 by Princeton University/),
+      ).toBeVisible();
+
+      // Read the deployed API through the redacted helper, never Playwright's
+      // authenticated request diagnostics or a raw response-body assertion.
+      const response = await safeStagingRequest(
+        context,
+        apiOrigin,
+        `${apiOrigin}/api/v1/dictionary?q=serendipity`,
+      );
+      expect(response.status()).toBe(200);
+      const entry = (await response.json()) as DictionaryEntry;
+      expect(entry.word).toBe("serendipity");
+      expect(entry.attribution.provider).toBe("WordNet 3.0");
+      expect(
+        entry.attribution.licenses.some((license) =>
+          license.text.includes(
+            "WordNet 3.0 Copyright 2006 by Princeton University",
+          ),
+        ),
+        "The deployed dictionary must preserve the original source notice.",
+      ).toBe(true);
+    });
+
     await test.step("create one unique personal list and add the actual menu meaning", async () => {
       await page.goto(`${webOrigin}/lists`);
       await main.getByLabel("List name", { exact: true }).fill(listName);
@@ -244,6 +307,7 @@ test("connected maturity journey against real staging", async ({
 
       await page.goto(`${webOrigin}/vocabulary/menu#meaning-${MEANING_ID}`);
       const meaning = main.locator(`[id="meaning-${MEANING_ID}"]`);
+      await meaning.getByText("Personal tools", { exact: true }).click();
       await meaning
         .getByRole("button", { name: "Choose personal lists", exact: true })
         .click();

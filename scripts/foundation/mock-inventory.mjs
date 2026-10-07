@@ -107,6 +107,7 @@ export function isRegisteredAPIPath(apiPath) {
   const sessionId = `(?:${uuid}|\\{sessionId\\})`;
   const allowedAPIPaths = [
     /^\/api\/v1\/me$/,
+    /^\/api\/v1\/dictionary$/, // Read-only bundled dictionary lookup.
     /^\/api\/v1\/auth(?:\/|$)/,
     /^\/api\/v1\/journey-situations(?:\/[^/]+)?$/,
     /^\/api\/v1\/canonical-words(?:\/[^/]+)?$/,
@@ -151,6 +152,7 @@ export function isRegisteredBusinessModule(name) {
   const allowedBusinessModules = new Set([
     "auth",
     "content",
+    "dictionary", // Immutable local reading aid; no learner schema or mutation.
     "learning",
     "reviews",
     "aifeedback",

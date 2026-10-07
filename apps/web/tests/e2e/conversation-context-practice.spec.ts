@@ -166,6 +166,9 @@ async function inspectAndCapture(
     expect(box?.height).toBeGreaterThanOrEqual(44);
     expect(box?.width).toBeGreaterThanOrEqual(44);
   }
+  // Scan from a stable page position: keyboard-driven practice may leave an
+  // unrelated disclosure partially under the sticky header.
+  await page.evaluate(() => window.scrollTo(0, 0));
   const { criticalOrSerious } = await scanForAxeViolations(page);
   expect(criticalOrSerious).toEqual([]);
   await region.screenshot({ path: testInfo.outputPath(`${name}.png`) });
@@ -326,6 +329,7 @@ test("finishing practice leads to an explicit save and existing sentence feedbac
   expect(mutations).toEqual([]);
 
   await page.getByRole("button", { name: /^Save sounds good:/ }).click();
+  await page.locator("summary").filter({ hasText: "Practise in a sentence" }).click();
   const input = page.getByRole("textbox", {
     name: /Write a sentence using sounds good/,
   });

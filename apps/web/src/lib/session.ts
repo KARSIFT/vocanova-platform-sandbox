@@ -40,7 +40,8 @@ export function handleSessionExpired(currentPath?: string): void {
   }
   deleteCookie(CSRF_COOKIE_NAME);
   const returnTo =
-    currentPath ?? `${window.location.pathname}${window.location.search}`;
+    currentPath ??
+    `${window.location.pathname}${window.location.search}${window.location.hash}`;
   const params = new URLSearchParams({ returnTo, reason: "session-expired" });
   window.location.href = `/login?${params.toString()}`;
 }

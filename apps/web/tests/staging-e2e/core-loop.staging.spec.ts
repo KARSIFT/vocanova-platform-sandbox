@@ -321,8 +321,11 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
         !(await firstSituation.evaluate((element) =>
           element.hasAttribute("open"),
         ))
-      )
-        await firstSituation.locator("summary").click();
+      ) {
+        await firstSituation.locator("summary").focus();
+        await page.keyboard.press("Enter");
+        await expect(firstSituation).toHaveAttribute("open", "");
+      }
       const explore = firstSituation.getByRole("link", {
         name: /^Explore words in /,
       });
@@ -372,6 +375,23 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
       }
 
       await expect(saveButton).toHaveAttribute("aria-pressed", "true");
+
+      // Saving exposes optional writing on this exact meaning without an
+      // extra reload. Open its native disclosure as a learner would; a hidden
+      // editor is not evidence that the writing entry point is usable.
+      const wordPractice = meaningCard.locator("summary").filter({
+        hasText: "Practise in a sentence",
+      });
+      await expect(wordPractice).toBeVisible();
+      const disclosure = wordPractice.locator("..");
+      if ((await disclosure.getAttribute("open")) === null) {
+        await wordPractice.focus();
+        await page.keyboard.press("Enter");
+      }
+      await expect(disclosure).toHaveAttribute("open", "");
+      await expect(meaningCard.getByRole("textbox", {
+        name: /^Write a sentence using /,
+      })).toBeVisible();
     });
 
     const reviewedCards =

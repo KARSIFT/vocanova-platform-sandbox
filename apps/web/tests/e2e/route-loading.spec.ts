@@ -51,7 +51,7 @@ test.describe("Route loading states", () => {
       await expect(status).toBeVisible();
       await expect(status.locator("..")).toHaveAttribute("aria-busy", "true");
       await expect(
-        page.getByRole("heading", { name: "Practice your way", level: 1 }),
+        page.getByRole("heading", { name: "Practice", level: 1 }),
       ).toBeVisible({ timeout: 10_000 });
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth),

@@ -304,7 +304,13 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     // now refreshes via router.refresh() right after a successful save -
     // without that refresh the button flips to "Saved" but this widget
     // never appears until a manual reload, silently breaking this entry
-    // point. Assert it renders immediately, with no navigation in between.
+    // point. The writing entry appears immediately; the learner opens the
+    // optional editor deliberately, with no navigation or manual reload.
+    const wordPractice = page.locator("summary").filter({ hasText: "Practise in a sentence" });
+    await expect(wordPractice).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Practice with pour/ })).toBeHidden();
+    await wordPractice.focus();
+    await page.keyboard.press("Enter");
     await expect(
       page.getByRole("heading", { name: /Practice with pour/ }),
     ).toBeVisible();
@@ -433,21 +439,12 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
       page.getByRole("progressbar", { name: "Reviews today" }),
     ).toHaveAttribute("aria-valuenow", "1");
 
-    // Home exposes the writing task directly, independent of word detail
-    // and review completion, without requiring another disclosure.
-    const homeWriting = page.getByRole("region", {
-      name: "Use a word",
-      exact: true,
-    });
-    await expect(
-      homeWriting.getByRole("heading", { name: /Practice with pour/ }),
-    ).toBeVisible();
-    await expect(
-      homeWriting.getByRole("textbox", {
-        name: "Write a sentence using pour",
-        exact: true,
-      }),
-    ).toBeVisible();
+    // Home offers optional writing as a deliberate entry into the saved word.
+    await expect(page.getByRole("textbox", { name: /Write a sentence using/ })).toHaveCount(0);
+    await page.getByRole("link", { name: "Write with pour", exact: true }).click();
+    await expect(page).toHaveURL(/#sentence-practice$/);
+    await expect(page.getByRole("heading", { name: /Practice with pour/ })).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Write a sentence using pour", exact: true })).toBeVisible();
     await expectSentencePracticePrivacyReminder(page);
 
     // ----- 8. Settings change.
@@ -658,6 +655,7 @@ for (const initiallySaved of [false, true]) {
     }
     await page.reload();
     await expect(save).toHaveAttribute("aria-pressed", "true");
+    await page.locator("summary").filter({ hasText: "Practise in a sentence" }).click();
     await expect(
       page.getByRole("heading", { name: "Practice with pour", exact: true }),
     ).toBeVisible();
