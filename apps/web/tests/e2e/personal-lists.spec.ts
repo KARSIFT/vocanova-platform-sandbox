@@ -48,6 +48,7 @@ async function seedList(
 }
 async function openMembership(page: Page, list: WordListDetail) {
   await page.goto("/vocabulary/invite");
+  await page.locator("summary").filter({ hasText: "Personal tools" }).click();
   await page
     .getByRole("button", { name: "Choose personal lists", exact: true })
     .click();

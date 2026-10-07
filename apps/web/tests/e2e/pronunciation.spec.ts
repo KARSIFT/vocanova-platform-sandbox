@@ -121,6 +121,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(
       main.getByRole("button", { name: "Remove pour from saved words" }),
     ).toBeVisible();
+    await main.locator("summary").filter({ hasText: "Practise in a sentence" }).click();
     await expect(
       main.getByRole("textbox", { name: "Write a sentence using pour" }),
     ).toBeVisible();

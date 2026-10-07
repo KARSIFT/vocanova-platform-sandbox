@@ -1,12 +1,15 @@
 import Link from "next/link";
+import Form from "next/form";
 import {
   ApiResponseError,
   type VocabularySearchResponse,
+  type DictionaryEntry,
 } from "@vocanova/api-client";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { PageContainer } from "@/ui/surface";
 import { MeaningSaveButton } from "../discover/[situation]/[word]/_components/meaning-save-button";
 import { VocabularyMap } from "../_components/vocabulary-map";
+import { DictionaryCard } from "../_components/dictionary-card";
 
 const categories = [
   ["", "All situations"],
@@ -43,22 +46,64 @@ export default async function VocabularyPage({
       (value) => value === single("knowledge"),
     ) ?? "";
   let data: VocabularySearchResponse | null = null;
+  let dictionary: DictionaryEntry | null = null;
+  let dictionaryError: "unavailable" | "limited" | null = null;
   let invalidCursor = false;
   let invalidSearch = false;
-  try {
-    if (!invalidQuery)
-      data = (
-        await (
-          await createServerApiClient()
-        ).searchVocabulary({ q, category, level, knowledge, after, limit: 20 })
-      ).data;
-  } catch (error) {
-    if (error instanceof ApiResponseError && error.status === 400) {
+  const dictionaryEligible =
+    !invalidQuery &&
+    !mapView &&
+    !category &&
+    !level &&
+    !knowledge &&
+    q.length <= 48 &&
+    /^[a-zA-Z]+(?:['-][a-zA-Z]+)*$/.test(q);
+  if (!invalidQuery) {
+    const client = await createServerApiClient();
+    const results = await Promise.allSettled([
+      client.searchVocabulary({
+        q,
+        category,
+        level,
+        knowledge,
+        after,
+        limit: 20,
+      }),
+      dictionaryEligible ? client.lookupDictionary(q) : Promise.resolve(null),
+    ]);
+    // Check both reads before rendering: an expired session must never look like an empty search.
+    for (const result of results) {
+      if (
+        result.status === "rejected" &&
+        result.reason instanceof ApiResponseError &&
+        result.reason.status === 401
+      )
+        requireAuthRedirect(result.reason, resultURL(after));
+    }
+    const [catalog, lookup] = results;
+    if (catalog.status === "fulfilled") data = catalog.value.data;
+    else if (
+      catalog.reason instanceof ApiResponseError &&
+      catalog.reason.status === 400
+    ) {
       invalidCursor = Boolean(after);
       invalidSearch = !after;
-    } else if (error instanceof ApiResponseError && error.status === 401)
-      requireAuthRedirect(error, "/vocabulary");
+    }
+    if (lookup.status === "fulfilled") dictionary = lookup.value?.data ?? null;
+    else if (!(
+      lookup.reason instanceof ApiResponseError && lookup.reason.status === 404
+    ))
+      dictionaryError =
+        lookup.reason instanceof ApiResponseError &&
+        lookup.reason.status === 429
+          ? "limited"
+          : "unavailable";
   }
+  const exactLessonWord = data?.items.some(
+    (item) => item.wordText.toLowerCase() === q.toLowerCase(),
+  );
+  const showDictionary =
+    dictionary && !exactLessonWord && !invalidSearch && !invalidCursor;
   function resultURL(cursor?: string) {
     const next = new URLSearchParams();
     if (q) next.set("q", q);
@@ -71,125 +116,113 @@ export default async function VocabularyPage({
   }
   return (
     <PageContainer className="max-w-[64rem]">
-      <Link
-        href="/discover"
-        className="inline-flex min-h-11 items-center font-semibold text-primary-700"
-      >
-        Back to Journey
-      </Link>
       <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-neutral-900">
-            {mapView ? "Your vocabulary map" : "Find your next word"}
+            {mapView ? "Your vocabulary map" : "Word search"}
           </h1>
-          <p className="mt-2 text-neutral-700">
-            Explore practical words, understand their meanings, and keep the
-            ones you want to learn.
-          </p>
         </div>
-        <Link
-          href="/words"
-          className="inline-flex min-h-11 items-center font-semibold text-primary-700"
-        >
-          Saved vocabulary
-        </Link>
       </div>
-      <nav
-        aria-label="Vocabulary views"
-        className="mt-4 flex flex-wrap gap-4 text-primary-700"
-      >
-        <Link
-          href="/vocabulary"
-          aria-current={!mapView ? "page" : undefined}
-          className="inline-flex min-h-12 items-center font-semibold underline-offset-4 aria-[current=page]:underline"
-        >
-          Word search
-        </Link>
-        <Link
-          href="/vocabulary?view=map"
-          aria-current={mapView ? "page" : undefined}
-          className="inline-flex min-h-12 items-center font-semibold underline-offset-4 aria-[current=page]:underline"
-        >
-          Knowledge map
-        </Link>
-        <Link
-          href="/vocabulary/check"
-          className="inline-flex min-h-12 items-center font-semibold underline-offset-4"
-        >
-          Find your starting words
-        </Link>
-      </nav>
-      <form
+      <Form
         action="/vocabulary"
+        key={resultURL(after)}
         role="search"
         className="my-6 rounded-2xl border border-neutral-200 bg-white p-4 sm:p-5"
       >
         {mapView && <input type="hidden" name="view" value="map" />}
-        <label
-          className="block font-semibold text-neutral-900"
-          htmlFor="vocabulary-query"
-        >
+        <label className="sr-only" htmlFor="vocabulary-query">
           Search words and meanings
         </label>
-        <input
-          id="vocabulary-query"
-          name="q"
-          type="search"
-          defaultValue={q}
-          maxLength={100}
-          placeholder="Try a word or a meaning"
-          className={inputStyle}
-        />
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
-          <label className="block text-sm font-semibold text-neutral-700">
-            Situation
-            <select
-              name="category"
-              defaultValue={category}
-              className={inputStyle}
-            >
-              {categories.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-sm font-semibold text-neutral-700">
-            Level
-            <select name="level" defaultValue={level} className={inputStyle}>
-              {levels.map((value) => (
-                <option key={value} value={value}>
-                  {value === ""
-                    ? "All levels"
-                    : value === "unknown"
-                      ? "Not specified"
-                      : value.toUpperCase()}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-sm font-semibold text-neutral-700">
-            My knowledge
-            <select
-              name="knowledge"
-              defaultValue={knowledge}
-              className={inputStyle}
-            >
-              <option value="">All words</option>
-              <option value="known">Already known</option>
-              <option value="saved">Saved to learn</option>
-              <option value="unexplored">Not explored yet</option>
-            </select>
-          </label>
+        <div className="flex items-center gap-2">
+          <input
+            id="vocabulary-query"
+            name="q"
+            type="search"
+            defaultValue={q}
+            maxLength={100}
+            placeholder="Search any English word…"
+            className={`${inputStyle} !mt-0 min-w-0`}
+            autoComplete="off"
+            spellCheck={false}
+          />
           <button
             type="submit"
-            className="min-h-12 rounded-xl bg-primary-700 px-6 py-3 font-semibold text-white hover:bg-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+            className="min-h-12 shrink-0 rounded-xl bg-primary-700 px-4 py-3 font-semibold text-white hover:bg-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
           >
             Search
           </button>
         </div>
-      </form>
+        <details
+          className="mt-3"
+          open={Boolean(category || level || knowledge)}
+        >
+          <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-neutral-700">
+            Filter lesson words
+          </summary>
+          <div className="grid gap-3 sm:grid-cols-3 sm:items-end">
+            <label className="block text-sm font-semibold text-neutral-700">
+              Situation
+              <select
+                name="category"
+                defaultValue={category}
+                className={inputStyle}
+              >
+                {categories.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm font-semibold text-neutral-700">
+              Level
+              <select name="level" defaultValue={level} className={inputStyle}>
+                {levels.map((value) => (
+                  <option key={value} value={value}>
+                    {value === ""
+                      ? "All levels"
+                      : value === "unknown"
+                        ? "Not specified"
+                        : value.toUpperCase()}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm font-semibold text-neutral-700">
+              My knowledge
+              <select
+                name="knowledge"
+                defaultValue={knowledge}
+                className={inputStyle}
+              >
+                <option value="">All words</option>
+                <option value="known">Already known</option>
+                <option value="saved">Saved to learn</option>
+                <option value="unexplored">Not explored yet</option>
+              </select>
+            </label>
+          </div>
+        </details>
+      </Form>
+      {showDictionary && dictionary && <DictionaryCard entry={dictionary} />}
+      {dictionaryError && !exactLessonWord && (
+        <div
+          role="status"
+          className="mb-5 rounded-xl bg-secondary-50 p-5 text-neutral-900"
+        >
+          <p>
+            {dictionaryError === "limited"
+              ? "You’ve searched several words quickly. Try again in a minute."
+              : "We could not load the dictionary right now."}
+          </p>
+          <Link
+            href={resultURL()}
+            className="inline-flex min-h-11 items-center font-semibold text-primary-700"
+          >
+            Try dictionary again
+          </Link>
+        </div>
+      )}
       {invalidQuery || invalidSearch ? (
         <p
           role="alert"
@@ -228,21 +261,23 @@ export default async function VocabularyPage({
       ) : (
         data && (
           <>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-neutral-700">
-                {data.totalCount}{" "}
-                {data.totalCount === 1 ? "meaning" : "meanings"}
-                {q ? ` matching “${q}”` : " to explore"}
-              </p>
-              {(q || category || level || knowledge) && (
-                <Link
-                  href={mapView ? "/vocabulary?view=map" : "/vocabulary"}
-                  className="inline-flex min-h-11 items-center font-semibold text-primary-700"
-                >
-                  Clear filters
-                </Link>
-              )}
-            </div>
+            {(!showDictionary || data.totalCount > 0) && (
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-neutral-700">
+                  {data.totalCount}{" "}
+                  {data.totalCount === 1 ? "meaning" : "meanings"}
+                  {q ? ` matching “${q}”` : " to explore"}
+                </p>
+                {(q || category || level || knowledge) && (
+                  <Link
+                    href={mapView ? "/vocabulary?view=map" : "/vocabulary"}
+                    className="inline-flex min-h-11 items-center font-semibold text-primary-700"
+                  >
+                    Clear filters
+                  </Link>
+                )}
+              </div>
+            )}
             {data.items.length && mapView ? (
               <VocabularyMap items={data.items} />
             ) : data.items.length ? (
@@ -296,14 +331,13 @@ export default async function VocabularyPage({
                   </li>
                 ))}
               </ul>
-            ) : (
+            ) : showDictionary || dictionaryError ? null : (
               <div className="rounded-2xl border border-neutral-200 bg-white p-6">
                 <h2 className="text-xl font-semibold text-neutral-900">
                   No matching words yet
                 </h2>
                 <p className="mt-2 text-neutral-700">
-                  Try a shorter search or another situation. We are growing the
-                  vocabulary collection.
+                  Try another spelling or a shorter search.
                 </p>
                 <Link
                   href="/vocabulary"
@@ -333,10 +367,47 @@ export default async function VocabularyPage({
                   Next results
                 </Link>
               )}
+              <Link
+                href="/words"
+                className="inline-flex min-h-11 items-center font-semibold text-primary-700"
+              >
+                Saved vocabulary
+              </Link>
             </nav>
           </>
         )
       )}
+      <nav
+        aria-label="Vocabulary views"
+        className="mt-4 flex flex-wrap gap-4 text-primary-700"
+      >
+        <Link
+          href="/vocabulary"
+          aria-current={!mapView ? "page" : undefined}
+          className="inline-flex min-h-12 items-center font-semibold underline-offset-4 aria-[current=page]:underline"
+        >
+          Word search
+        </Link>
+        <Link
+          href="/vocabulary?view=map"
+          aria-current={mapView ? "page" : undefined}
+          className="inline-flex min-h-12 items-center font-semibold underline-offset-4 aria-[current=page]:underline"
+        >
+          Knowledge map
+        </Link>
+        <Link
+          href="/vocabulary/check"
+          className="inline-flex min-h-12 items-center font-semibold underline-offset-4"
+        >
+          Find your starting words
+        </Link>
+        <Link
+          href="/words"
+          className="inline-flex min-h-11 items-center font-semibold text-primary-700"
+        >
+          Saved vocabulary
+        </Link>
+      </nav>
     </PageContainer>
   );
 }

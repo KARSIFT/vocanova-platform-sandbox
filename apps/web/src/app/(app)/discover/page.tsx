@@ -38,9 +38,6 @@ export default async function DiscoverPage() {
           <h1 className="text-3xl font-bold tracking-tight text-neutral-900">
             Journey
           </h1>
-          <p className="mt-2 max-w-[40rem] text-neutral-700">
-            English for the places and conversations in your life.
-          </p>
         </div>
         <div className="flex flex-wrap gap-x-5">
           <Link
@@ -64,7 +61,7 @@ export default async function DiscoverPage() {
       />
       <nav
         aria-label="Ways to practise"
-        className="my-6 grid grid-cols-1 gap-2 border-y border-neutral-200 py-4 sm:grid-cols-3"
+        className="my-4 flex flex-wrap gap-x-5 border-b border-neutral-200 pb-3"
       >
         {(
           [
@@ -84,16 +81,13 @@ export default async function DiscoverPage() {
               "Follow a conversation and check its meaning.",
             ],
           ] as const
-        ).map(([href, label, description]) => (
+        ).map(([href, label]) => (
           <Link
             key={href}
             href={href}
-            className="min-h-11 rounded-xl px-3 py-3 text-primary-800 hover:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+            className="inline-flex min-h-11 items-center rounded-lg text-primary-700 hover:text-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
           >
             <span className="block font-semibold">{label}</span>
-            <span className="mt-1 block text-sm font-normal text-neutral-600">
-              {description}
-            </span>
           </Link>
         ))}
       </nav>

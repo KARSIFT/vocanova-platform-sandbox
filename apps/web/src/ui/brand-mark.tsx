@@ -11,9 +11,6 @@ export function BrandMark() {
         <span className="block text-lg font-bold tracking-[-0.045em] text-neutral-900">
           VocaNova
         </span>
-        <span className="block text-xs font-medium text-neutral-600">
-          practical English
-        </span>
       </span>
     </span>
   );

@@ -13,6 +13,7 @@ const editorFor = (page: Page) =>
   page.getByRole("region", { name: "Your knowledge and note", exact: true });
 
 async function openEditor(page: Page) {
+  await page.locator("summary").filter({ hasText: "Personal tools" }).click();
   const editor = editorFor(page);
   await editor.getByRole("button", { name: "Edit knowledge and note" }).click();
   await expect(editor.getByRole("textbox", { name: "My note" })).toBeEnabled();
@@ -64,8 +65,9 @@ for (const theme of ["light", "dark"] as const) {
 
     await page.goto("/progress");
     let overview = page.getByRole("region", { name: "Your vocabulary map" });
+    await overview.locator("summary").click();
     await expect(
-      overview.getByText("0 saved meanings, each at its own stage.", {
+      overview.getByText("0 saved · 0 ready for review", {
         exact: true,
       }),
     ).toBeVisible();
@@ -96,14 +98,15 @@ for (const theme of ["light", "dark"] as const) {
 
     await page.goto("/progress");
     overview = page.getByRole("region", { name: "Your vocabulary map" });
+    await overview.locator("summary").click();
     await expect(
-      overview.getByText("1 saved meaning, each at its own stage.", {
+      overview.getByText("1 saved · 1 ready for review", {
         exact: true,
       }),
     ).toBeVisible();
     await expect(
-      overview.getByText("1 ready for review now", { exact: true }),
-    ).toBeVisible();
+      overview.getByRole("link", { name: "Start review", exact: true }),
+    ).toHaveAttribute("href", "/review");
     await overview
       .getByRole("link", {
         name: "1 meaning marked already known",
@@ -147,6 +150,7 @@ for (const theme of ["light", "dark"] as const) {
     ).toBeVisible();
     await page.goto("/progress");
     overview = page.getByRole("region", { name: "Your vocabulary map" });
+    await overview.locator("summary").click();
     await expect(
       overview.getByRole("link", {
         name: "0 meanings marked already known",
@@ -154,13 +158,13 @@ for (const theme of ["light", "dark"] as const) {
       }),
     ).toBeVisible();
     await expect(
-      overview.getByText("1 saved meaning, each at its own stage.", {
+      overview.getByText("1 saved · 1 ready for review", {
         exact: true,
       }),
     ).toBeVisible();
     await expect(
-      overview.getByText("1 ready for review now", { exact: true }),
-    ).toBeVisible();
+      overview.getByRole("link", { name: "Start review", exact: true }),
+    ).toHaveAttribute("href", "/review");
   });
 }
 
@@ -268,6 +272,7 @@ test("failed initial knowledge loading cannot replace an existing private note",
     }
     return route.continue();
   });
+  await page.locator("summary").filter({ hasText: "Personal tools" }).click();
   await editor.getByRole("button", { name: "Edit knowledge and note" }).click();
   await expect(editor.getByRole("alert")).toBeVisible();
   await expect(editor.getByRole("textbox", { name: "My note" })).toHaveCount(0);

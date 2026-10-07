@@ -254,6 +254,21 @@ export interface VocabularySearchResponse {
   hasMore: boolean;
 }
 
+/** Read-only dictionary text; these entries have no canonical learning IDs. */
+export interface DictionaryEntry {
+  word: string;
+  meanings: Array<{
+    partOfSpeech: string;
+    definitions: Array<{ definition: string; example?: string }>;
+  }>;
+  attribution: {
+    provider: string;
+    providerUrl: string;
+    sourceUrls: string[];
+    licenses: Array<{ name: string; url: string; text: string }>;
+  };
+}
+
 export interface KnowledgeSummary {
   selfReportedKnown: number;
   saved: number;
@@ -1161,6 +1176,20 @@ export class VocanovaClient {
     const response = await this.request("GET", path, undefined, init);
     const data = (await response.json()) as ListSituationsResponse;
     return { data, response };
+  }
+
+  async lookupDictionary(
+    word: string,
+    init?: RequestInit,
+  ): Promise<{ data: DictionaryEntry; response: Response }> {
+    const query = new URLSearchParams({ q: word });
+    const response = await this.request(
+      "GET",
+      `/api/v1/dictionary?${query.toString()}`,
+      undefined,
+      init,
+    );
+    return { data: (await response.json()) as DictionaryEntry, response };
   }
 
   async searchVocabulary(

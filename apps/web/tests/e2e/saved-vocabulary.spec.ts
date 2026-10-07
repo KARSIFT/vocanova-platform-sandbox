@@ -70,6 +70,7 @@ test.describe("Saved vocabulary library", () => {
     await expect(
       page.getByText("Could you pour me a cup of coffee?"),
     ).toBeVisible();
+    await page.locator("summary").filter({ hasText: "Practise in a sentence" }).click();
     await expect(
       page.getByRole("textbox", { name: "Write a sentence using pour" }),
     ).toBeVisible();

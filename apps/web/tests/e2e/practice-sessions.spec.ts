@@ -165,7 +165,7 @@ test("typed recall saves normalized, wrong and assisted answers without review c
   // Self-study must not save words, award mastery or advance the review target.
   await page.goto("/progress");
   await expect(
-    main(page).getByText("0 saved meanings, each at its own stage.", {
+    main(page).getByText("0 saved · 0 ready for review", {
       exact: true,
     }),
   ).toBeVisible();

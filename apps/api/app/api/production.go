@@ -18,6 +18,7 @@ import (
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/aifeedback"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/auth"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/content"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/dictionary"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/gamification"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/learning"
 	"github.com/KARSIFT/vocanova-platform/apps/api/business/lessons"
@@ -828,6 +829,7 @@ func NewProductionAPI(cfg ProductionConfig, db *sql.DB) (huma.API, *sql.DB, erro
 	RegisterAccountDeletionRequests(api, accountsSvc, authSvc)
 	RegisterPersonalDataExports(api, accountsSvc, authSvc)
 	RegisterContent(api, contentSvc, usersSvc, learningPreferencesSvc)
+	RegisterDictionary(api, dictionary.New())
 	RegisterLearning(api, learningSvc, authSvc)
 	RegisterLessons(api, lessonsSvc, authSvc)
 	RegisterLessonRecommendation(api, lessons.NewRecommendationService(lessons.NewPostgreSQLRepository(db)))

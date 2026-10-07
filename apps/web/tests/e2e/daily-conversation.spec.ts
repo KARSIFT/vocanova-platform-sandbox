@@ -135,6 +135,9 @@ for (const theme of ["light", "dark"] as const) {
     ).toBeVisible();
     await verifyExamples();
     await expect(fullerDefinition).toBeVisible();
+    const writing = page.locator("summary").filter({ hasText: "Practise in a sentence" });
+    await writing.focus();
+    await page.keyboard.press("Enter");
     await expect(
       page.getByRole("region", { name: "Practice with keep in touch" }),
     ).toBeVisible();

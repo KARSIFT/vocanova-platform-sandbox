@@ -21,7 +21,7 @@ test.describe("Sentence feedback character-limit accessibility", () => {
       { name: "vocanova_csrf", value: csrfValue, url: baseURL },
     ]);
 
-    await page.goto("/discover/ordering-at-a-cafe/pour");
+    await page.goto("/discover/ordering-at-a-cafe/pour#sentence-practice");
     await page.getByRole("button", { name: /Save pour:/ }).click();
 
     const feedback = page

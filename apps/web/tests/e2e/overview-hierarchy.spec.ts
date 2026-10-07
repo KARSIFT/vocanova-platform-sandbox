@@ -29,7 +29,7 @@ for (const theme of ["light", "dark"] as const) {
     expect((await map.boundingBox())!.y).toBeLessThan((await summary.boundingBox())!.y);
     await page.screenshot({ path: testInfo.outputPath(`progress-${theme}.png`), fullPage: true });
     const stages = map.locator("summary").filter({ hasText: "About these stages" });
-    const explanation = map.getByText("Stages describe your saved vocabulary, not your overall English level.");
+    const explanation = map.getByText("New words become Learning, Reviewing and Mastered through your review history. These stages describe saved words, not your overall English level.");
     await expect(explanation).toBeHidden();
     await stages.focus();
     await page.keyboard.press("Enter");

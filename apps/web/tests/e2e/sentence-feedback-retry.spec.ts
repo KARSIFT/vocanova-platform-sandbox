@@ -12,7 +12,7 @@ test.describe("Sentence feedback retries", () => {
       { name: "vocanova_session", value: `sentence-retry-${randomUUID()}`, url: baseURL },
       { name: "vocanova_csrf", value: `sentence-retry-csrf-${randomUUID()}`, url: baseURL },
     ]);
-    await page.goto("/discover/ordering-at-a-cafe/pour");
+    await page.goto("/discover/ordering-at-a-cafe/pour#sentence-practice");
     await page.getByRole("button", { name: /Save pour:/ }).click();
 
     const textarea = page.getByRole("textbox", { name: /Write a sentence using pour/ });
@@ -61,7 +61,7 @@ test.describe("Sentence feedback retries", () => {
       { name: "vocanova_session", value: `sentence-rapid-${randomUUID()}`, url: baseURL },
       { name: "vocanova_csrf", value: `sentence-rapid-csrf-${randomUUID()}`, url: baseURL },
     ]);
-    await page.goto("/discover/ordering-at-a-cafe/pour");
+    await page.goto("/discover/ordering-at-a-cafe/pour#sentence-practice");
     await page.getByRole("button", { name: /Save pour:/ }).click();
     let requestCount = 0;
     let release: (() => void) | undefined;
@@ -93,7 +93,7 @@ test.describe("Sentence feedback retries", () => {
       { name: "vocanova_session", value: `sentence-alert-${randomUUID()}`, url: baseURL },
       { name: "vocanova_csrf", value: `sentence-alert-csrf-${randomUUID()}`, url: baseURL },
     ]);
-    await page.goto("/discover/ordering-at-a-cafe/pour");
+    await page.goto("/discover/ordering-at-a-cafe/pour#sentence-practice");
     await page.getByRole("button", { name: /Save pour:/ }).click();
 
     let requestCount = 0;

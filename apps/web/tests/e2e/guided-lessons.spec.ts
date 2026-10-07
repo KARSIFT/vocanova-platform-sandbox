@@ -24,7 +24,7 @@ test("a larger curriculum groups lessons without locking other situations", asyn
     exact: true,
   });
   await expect(
-    section.getByText("0 of 30 lessons completed.", { exact: false }),
+    section.getByText("0 of 30 lessons completed", { exact: true }),
   ).toBeVisible();
   const travel = section
     .locator("details")
@@ -139,15 +139,16 @@ test("a guided lesson resumes and completes teaching, recall and context", async
     page.getByRole("heading", { name: "Lesson complete", exact: true }),
   ).toBeVisible();
   await page.goto("/progress");
+  const path = page.getByRole("main").locator("summary").filter({ hasText: "Your learning path" });
+  await expect(path).toContainText("1 of 1 lessons");
+  await path.focus();
+  await page.keyboard.press("Enter");
+  await expect(path.locator("..").getByText("Completed", { exact: true })).toBeVisible();
+  await expect(path.locator("..").getByRole("link", { name: "Make a plan with a friend", exact: true })).toHaveAttribute("href", "/learn/conversation-basics");
   await expect(
     page
       .getByRole("main")
-      .getByText("1 of 1 lessons completed", { exact: true }),
-  ).toBeVisible();
-  await expect(
-    page
-      .getByRole("main")
-      .getByText("0 saved meanings, each at its own stage.", { exact: true }),
+      .getByText("0 saved · 0 ready for review", { exact: true }),
   ).toBeVisible();
 });
 

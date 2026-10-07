@@ -39,8 +39,8 @@ test("search, save, detail and knowledge summary form one learner flow", async (
   await page.getByRole("link", { name: "pour", exact: true }).click();
   await expect(page.getByRole("heading", { name: "pour", exact: true })).toBeVisible();
   await page.goto("/progress");
-  await expect(page.getByRole("main").getByText("1 saved meaning, each at its own stage.", { exact: true })).toBeVisible();
-  await expect(page.getByRole("main").getByText("1 ready for review now", { exact: true })).toBeVisible();
+  await expect(page.getByRole("main").getByText("1 saved · 1 ready for review", { exact: true })).toBeVisible();
+  await expect(page.getByRole("main").getByRole("link", { name: "Start review", exact: true })).toHaveAttribute("href", "/review");
 });
 
 test("search filters and empty results survive navigation", async ({ page, context, baseURL }) => {

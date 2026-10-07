@@ -6,6 +6,8 @@ import { ApiResponseError } from "@vocanova/api-client";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { getAdditionalDefinition } from "@/lib/word-definition";
 import { PageContainer, Surface } from "@/ui/surface";
+import { MeaningPicture } from "@/ui/meaning-picture";
+import { WordPracticeDisclosure } from "../../_components/word-practice-disclosure";
 import { ListenButton } from "@/ui/pronunciation";
 import { SentenceFeedback } from "../../_components/sentence-feedback";
 import { MeaningKnowledgeEditor } from "../../_components/meaning-knowledge-editor";
@@ -71,7 +73,7 @@ export default async function SavedWordDetailPage({
         href="/words"
         className="inline-flex min-h-11 items-center text-base font-semibold text-primary-700 hover:text-primary-800"
       >
-        Back to saved vocabulary
+        Saved words
       </Link>
 
       <div className="mt-[var(--spacing-md)] flex flex-wrap items-start justify-between gap-[var(--spacing-md)]">
@@ -107,12 +109,18 @@ export default async function SavedWordDetailPage({
           </p>
         ) : null}
 
+        <MeaningPicture meaningId={meaning.id} />
         <MeaningTeaching meaning={meaning} />
-        <MeaningListEditor meaningId={meaning.id} />
-        <MeaningKnowledgeEditor
-          meaningId={meaning.id}
-          initialKnown={meaning.selfReportedKnown}
-        />
+        <details className="mt-4 border-t border-neutral-200 pt-2">
+          <summary className="min-h-12 cursor-pointer content-center font-semibold text-neutral-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
+            Personal tools
+          </summary>
+          <MeaningListEditor meaningId={meaning.id} />
+          <MeaningKnowledgeEditor
+            meaningId={meaning.id}
+            initialKnown={meaning.selfReportedKnown}
+          />
+        </details>
       </Surface>
 
       <MeaningComparison
@@ -121,19 +129,21 @@ export default async function SavedWordDetailPage({
         canonicalPath={`/vocabulary/${encodeURIComponent(savedWord.wordSlug)}`}
       />
 
-      <SentenceFeedback
-        targetWord={savedWord.wordText}
-        attemptId={savedWord.userWordId}
-        source="word_detail"
-        userId={currentUserResponse.data.id}
-        shortDefinition={savedWord.shortDefinition}
-      />
-      <Link
-        href="/writing"
-        className="mt-4 inline-flex min-h-12 items-center rounded-md font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-      >
-        Choose a topic writing prompt
-      </Link>
+      <WordPracticeDisclosure>
+        <SentenceFeedback
+          targetWord={savedWord.wordText}
+          attemptId={savedWord.userWordId}
+          source="word_detail"
+          userId={currentUserResponse.data.id}
+          shortDefinition={savedWord.shortDefinition}
+        />
+        <Link
+          href="/writing"
+          className="mt-4 inline-flex min-h-12 items-center rounded-md font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+        >
+          Choose a writing topic
+        </Link>
+      </WordPracticeDisclosure>
     </PageContainer>
   );
 }

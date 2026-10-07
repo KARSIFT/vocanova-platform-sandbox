@@ -17,7 +17,7 @@ async function prepareFeedback(
     },
     { name: "vocanova_csrf", value: `csrf-${randomUUID()}`, url: baseURL },
   ]);
-  await page.goto("/discover/ordering-at-a-cafe/pour");
+  await page.goto("/discover/ordering-at-a-cafe/pour#sentence-practice");
   await page.getByRole("button", { name: /Save pour:/ }).click();
   await page
     .getByRole("textbox", { name: /Write a sentence using pour/ })
@@ -403,12 +403,12 @@ test("an expired session during CSRF recovery preserves the intent for same-user
   const loginURL = new URL(page.url());
   expect(loginURL.searchParams.get("reason")).toBe("session-expired");
   expect(loginURL.searchParams.get("returnTo")).toBe(
-    "/discover/ordering-at-a-cafe/pour",
+    "/discover/ordering-at-a-cafe/pour#sentence-practice",
   );
   expect(submissions).toBe(0);
   const pending = await savedIntent(page, draft);
   expect(pending?.idempotencyKey).toBeTruthy();
-  await page.goto("/discover/ordering-at-a-cafe/pour");
+  await page.goto("/discover/ordering-at-a-cafe/pour#sentence-practice");
   await expect(input).toHaveValue(draft);
   const submitted = page.waitForRequest(
     (request) =>

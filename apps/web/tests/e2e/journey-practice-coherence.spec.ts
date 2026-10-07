@@ -96,10 +96,15 @@ test("Practice defaults to taught vocabulary while full course stays an explicit
     session = await advanced.json() as LessonSession;
   }
   await page.reload();
-  const selection = page.getByLabel("Practice vocabulary", { exact: true });
+  // Next may retain an inactive subtree during hydration. Interact with the
+  // accessible practice region rather than matching its hidden DOM copy.
+  const practice = page.getByRole("region", { name: "Remember your words", exact: true });
+  const selection = practice.getByLabel("Practice vocabulary", { exact: true });
   await expect(selection).toHaveValue("conversation-basics");
   await selection.selectOption("");
-  await expect(page.getByText("A full-course mix can include words you have not studied yet.", { exact: false })).toBeVisible();
+  await practice.locator("summary").filter({ hasText: "About this selection" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(practice.getByText("A full-course mix can include words you have not studied yet.", { exact: false })).toBeVisible();
   const sent = page.waitForRequest(request => request.method() === "POST" && new URL(request.url()).pathname === "/api/v1/practice-sessions");
   await page.getByRole("button", { name: "Start typed recall", exact: true }).click();
   expect((await sent).postDataJSON()).toEqual({ mode: "typed_recall" });

@@ -154,7 +154,6 @@ describe("independent server page reads", () => {
         "user-words",
         "reviews/due",
         "daily-mission",
-        "me",
         "lesson-recommendation",
       ],
     ],
@@ -167,7 +166,6 @@ describe("independent server page reads", () => {
       "Progress",
       ProgressPage,
       [
-        "user-words",
         "progress",
         "knowledge-summary",
         "lessons",

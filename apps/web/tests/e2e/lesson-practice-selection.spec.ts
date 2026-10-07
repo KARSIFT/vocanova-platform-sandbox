@@ -81,6 +81,8 @@ test("an unknown lesson query falls back to an explicit full-course mix", async 
   await expect(
     main.getByLabel("Practice vocabulary", { exact: true }),
   ).toHaveValue("");
+  await main.locator("summary").filter({ hasText: "About this selection" }).focus();
+  await page.keyboard.press("Enter");
   await expect(
     main.getByText(
       "A full-course mix can include words you have not studied yet.",

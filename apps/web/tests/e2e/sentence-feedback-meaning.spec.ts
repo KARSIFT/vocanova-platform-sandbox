@@ -26,7 +26,7 @@ for (const theme of ["light", "dark"] as const) {
       await page.addInitScript((selectedTheme) => {
         window.localStorage.setItem("vocanova:theme-preference", selectedTheme);
       }, theme);
-      await page.goto("/discover/ordering-at-a-cafe/pour");
+      await page.goto("/discover/ordering-at-a-cafe/pour#sentence-practice");
       await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
       await page.getByRole("button", { name: /Save pour:/ }).click();
 

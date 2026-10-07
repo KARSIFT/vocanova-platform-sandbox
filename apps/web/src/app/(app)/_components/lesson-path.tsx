@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { LessonSummary, Situation } from "@vocanova/api-client";
 import { getSituationOutcome } from "./situation-presentation";
+import { SituationIcon } from "./situation-icon";
 
 export function LessonPath({
   lessons,
@@ -62,7 +63,7 @@ export function LessonPath({
         {lessons.length > 0 && (
           <p className="text-sm text-neutral-600">
             {lessons.filter((lesson) => lesson.status === "completed").length}{" "}
-            of {lessons.length} lessons completed. Choose any situation.
+            of {lessons.length} lessons completed
           </p>
         )}
       </div>
@@ -81,23 +82,24 @@ export function LessonPath({
               className={`rounded-xl border bg-white ${continuing ? "border-primary-300" : "border-neutral-200"}`}
             >
               <summary className="min-h-11 cursor-pointer rounded-xl p-4 marker:text-primary-700 hover:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
-                <span className="font-semibold text-neutral-900">
-                  {group.title}
+                <span className="inline-flex max-w-[90%] items-center gap-3 align-middle font-semibold text-neutral-900">
+                  <SituationIcon slug={slug} />
+                  <span>{group.title}</span>
                 </span>
-                {group.description && (
-                  <span className="mt-2 block text-sm leading-relaxed font-normal text-neutral-600">
-                    {group.description}
+                {group.lessons.length > 0 && (
+                  <span className="mt-1 block text-sm font-medium text-neutral-600">
+                    {continuing
+                      ? "Lesson in progress"
+                      : `${complete} of ${group.lessons.length} completed`}
                   </span>
                 )}
-                <span className="mt-3 block text-sm font-medium text-primary-700">
-                  {continuing
-                    ? "Lesson in progress"
-                    : group.lessons.length
-                      ? `${complete} of ${group.lessons.length} completed`
-                      : "Explore words and examples"}
-                </span>
               </summary>
               <div className="border-t border-neutral-200 px-4 pb-3">
+                {group.description && (
+                  <p className="mt-3 text-sm leading-relaxed text-neutral-600">
+                    {group.description}
+                  </p>
+                )}
                 <ol className="divide-y divide-neutral-200">
                   {group.lessons.map((lesson) => (
                     <LessonRow key={lesson.key} lesson={lesson} />

@@ -15,10 +15,9 @@ import {
 import { createApiClient } from "@/lib/api";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError, isSessionExpiredError } from "@/lib/session";
-import { Surface } from "@/ui/surface";
 
 import { practiceModes } from "./practice-modes";
-import { primaryAction, secondaryAction, textLink } from "./practice-styles";
+import { secondaryAction, textLink } from "./practice-styles";
 
 export function PracticeEntry({
   initialSessions,
@@ -43,6 +42,9 @@ export function PracticeEntry({
     ? selection.slice(5)
     : "";
   const selectedList = lists?.find((item) => item.id === selectedListId);
+  const hasVocabularySelection = Boolean(
+    lessons.length > 0 || lists?.length || selectedListId,
+  );
   const unavailableSelection = Boolean(
     selectedListId && (!selectedList || selectedList.usableMemberCount === 0),
   );
@@ -147,23 +149,28 @@ export function PracticeEntry({
 
   return (
     <section aria-labelledby="focused-practice-heading" className="mb-6">
-      <h2
-        id="focused-practice-heading"
-        className="scroll-mt-24 text-xl font-bold tracking-tight text-neutral-900"
-      >
+      <h2 id="focused-practice-heading" className="sr-only">
         Remember your words
       </h2>
-      <p className="mt-2 text-neutral-700">
-        Choose how to practise. Your progress saves as you go.
-      </p>
-      {lessons.length > 0 || lists?.length || selectedListId ? (
+      {hasVocabularySelection ? (
         <div className="mt-4 max-w-[40rem]">
-          <label
-            htmlFor="practice-vocabulary"
-            className="font-semibold text-neutral-900"
-          >
-            Practice vocabulary
-          </label>
+          <div className="flex items-center justify-between gap-3">
+            <label
+              htmlFor="practice-vocabulary"
+              className="font-semibold text-neutral-900"
+            >
+              Practice vocabulary
+            </label>
+            <button
+              type="button"
+              aria-label="Refresh practice sources"
+              disabled={busy || expired.current}
+              className={`${textLink} text-sm`}
+              onClick={() => void loadSessions()}
+            >
+              Refresh
+            </button>
+          </div>
           <select
             id="practice-vocabulary"
             value={selection}
@@ -191,15 +198,20 @@ export function PracticeEntry({
               </option>
             ))}
           </select>
-          <p
-            id="practice-vocabulary-help"
-            className="mt-2 text-sm text-neutral-600"
-          >
-            {selection
-              ? "Practise these words by typing or listening."
-              : "A full-course mix can include words you have not studied yet."}{" "}
-            Mistake practice uses your past answers.
-          </p>
+          <details className="mt-1">
+            <summary className="min-h-11 cursor-pointer content-center text-sm text-neutral-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
+              About this selection
+            </summary>
+            <p
+              id="practice-vocabulary-help"
+              className="pb-3 text-sm text-neutral-600"
+            >
+              {selection
+                ? "Practise these words by typing or listening."
+                : "A full-course mix can include words you have not studied yet."}{" "}
+              Mistake practice uses your past answers.
+            </p>
+          </details>
         </div>
       ) : null}
       {selectedList && (
@@ -216,62 +228,80 @@ export function PracticeEntry({
         </p>
       )}
       {!lists && (
-        <p role="status" className="mt-3 text-neutral-700">
-          Personal lists are unavailable. Load saved sessions to try again.
-        </p>
+        <div className="mt-3">
+          <p role="status" className="text-neutral-700">
+            Personal lists are unavailable. Refresh to try again.
+          </p>
+          {!hasVocabularySelection && (
+            <button
+              type="button"
+              aria-label="Refresh practice sources"
+              disabled={busy || expired.current}
+              className={`${textLink} text-sm`}
+              onClick={() => void loadSessions()}
+            >
+              Refresh
+            </button>
+          )}
+        </div>
       )}
-      <div className="mt-2 flex flex-wrap gap-3">
-        <Link href="/lists" className={textLink}>
-          Manage personal lists
-        </Link>
-        <button
-          type="button"
-          disabled={busy || expired.current}
-          className={textLink}
-          onClick={() => void loadSessions()}
-        >
-          Refresh practice sources
-        </button>
-      </div>
-      <div className="mt-4 grid gap-3 md:grid-cols-3">
+      <div className="mt-4 divide-y divide-neutral-200 border-y border-neutral-200">
         {(Object.keys(practiceModes) as PracticeMode[]).map((mode) => {
           const content = practiceModes[mode];
           const noMistakes =
             mode === "mistakes" && sessions?.availableMistakes === 0;
-          return (
-            <article
+          const description =
+            mode === "mistakes" && sessions
+              ? noMistakes
+                ? "No past mistakes to revisit right now."
+                : `${sessions.availableMistakes} ${sessions.availableMistakes === 1 ? "word is" : "words are"} ready for another try.`
+              : content.description;
+          const label = (
+            <span className="min-w-0">
+              <span className="block text-lg font-semibold text-neutral-900">
+                {noMistakes ? content.title : content.startLabel}
+              </span>
+              <span
+                id={`practice-mode-${mode}-description`}
+                className="mt-1 block text-sm font-normal text-neutral-600"
+              >
+                {description}
+              </span>
+            </span>
+          );
+          return noMistakes ? (
+            <div key={mode} className="px-3 py-4">
+              {label}
+            </div>
+          ) : (
+            <button
               key={mode}
-              className="flex flex-col border-t-2 border-primary-200 bg-white p-4"
+              type="button"
+              aria-label={content.startLabel}
+              aria-describedby={`practice-mode-${mode}-description`}
+              disabled={locked || (mode !== "mistakes" && unavailableSelection)}
+              className="flex min-h-20 w-full items-center justify-between gap-4 rounded-lg px-3 py-4 text-left hover:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() => void start(mode)}
             >
-              <h3 className="text-xl font-bold text-neutral-900">
-                {content.title}
-              </h3>
-              <p className="mt-2 grow text-neutral-700">
-                {content.description}
-              </p>
-              {mode === "mistakes" && sessions && (
-                <p className="mt-3 text-sm text-neutral-600">
-                  {noMistakes
-                    ? "No past mistakes to revisit right now."
-                    : `${sessions.availableMistakes} ${sessions.availableMistakes === 1 ? "word is" : "words are"} ready for another try.`}
-                </p>
-              )}
-              {!noMistakes && (
-                <button
-                  type="button"
-                  disabled={
-                    locked || (mode !== "mistakes" && unavailableSelection)
-                  }
-                  className={`${primaryAction} mt-4`}
-                  onClick={() => void start(mode)}
-                >
-                  {content.startLabel}
-                </button>
-              )}
-            </article>
+              {label}
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className="size-5 shrink-0 text-primary-700"
+              >
+                <path d="m9 5 7 7-7 7" />
+              </svg>
+            </button>
           );
         })}
       </div>
+
+      <Link href="/lists" className={`${textLink} mt-2 text-sm`}>
+        Manage personal lists
+      </Link>
 
       {busy && (
         <p role="status" className="mt-3 text-neutral-700">
@@ -332,13 +362,15 @@ export function PracticeEntry({
       )}
 
       {sessions && sessions.items.length > 0 && (
-        <Surface aria-labelledby="recent-practice-heading" className="mt-4">
-          <h3
-            id="recent-practice-heading"
-            className="text-lg font-bold text-neutral-900"
-          >
+        <details
+          open={sessions.items.some(
+            (session) => session.status !== "completed",
+          )}
+          className="mt-4"
+        >
+          <summary className="min-h-11 cursor-pointer content-center font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">
             Recent practice
-          </h3>
+          </summary>
           <ul className="mt-2 divide-y divide-neutral-200">
             {sessions.items.map((session) => (
               <li
@@ -374,7 +406,7 @@ export function PracticeEntry({
               </li>
             ))}
           </ul>
-        </Surface>
+        </details>
       )}
     </section>
   );

@@ -30,18 +30,12 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page).toHaveTitle("Practice — Vocanova");
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     await expect(
-      main.getByRole("heading", { level: 1, name: "Practice your way" }),
+      main.getByRole("heading", { level: 1, name: "Practice" }),
     ).toBeVisible();
-    const writingShortcut = main.getByRole("navigation", { name: "Practice activities" })
-      .getByRole("link", { name: "Write a sentence", exact: true });
-    await expect(writingShortcut).toHaveAttribute("href", "#practice-writing-heading");
-    await writingShortcut.click();
-    const writingHeading = main.getByRole("heading", { name: "Write a sentence", exact: true });
-    await expect(writingHeading).toHaveAttribute("id", "practice-writing-heading");
-    await expect.poll(async () => {
-      const box = await writingHeading.boundingBox();
-      return Boolean(box && box.y >= 64 && box.y < page.viewportSize()!.height);
-    }).toBe(true);
+    const activities = main.getByRole("navigation", { name: "Practice activities" });
+    await expect(activities.getByRole("link", { name: "Topic writing", exact: true })).toHaveAttribute("href", "/writing");
+    await expect(activities.getByRole("link", { name: "Short stories", exact: true })).toHaveAttribute("href", "/stories");
+    await expect(main.getByRole("heading", { name: "Write a sentence", exact: true })).toHaveAttribute("id", "practice-writing-heading");
     // The endpoint returns one item but seven due words. The count must come
     // from totalCount, never from the sampled queue length.
     await expect(
@@ -55,16 +49,12 @@ for (const theme of ["light", "dark"] as const) {
     ).toHaveAttribute("href", "/learn/conversation-basics");
     await expect(
       main.getByRole("link", { name: "Write with pour", exact: true }),
-    ).toHaveAttribute("href", "/words/uw-mean-pour");
+    ).toHaveAttribute("href", "/words/uw-mean-pour#sentence-practice");
     await expect(
       main.getByRole("link", { name: "Listen to pour", exact: true }),
     ).toHaveAttribute("href", "/vocabulary/pour");
-    await expect(
-      main.getByText(
-        "This is listening practice. Your voice is not recorded or scored.",
-        { exact: true },
-      ),
-    ).toBeVisible();
+    // The listening choice explains the activity where the learner starts it.
+    await expect(main.getByRole("button", { name: "Start listening practice", exact: true })).toContainText("No microphone needed.");
     await expect(
       main.getByRole("link", { name: "Open sentence history", exact: true }),
     ).toHaveAttribute("href", "/progress/sentences");
@@ -108,7 +98,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.reload();
     await expect(
       main.getByText(
-        `${session.completedSteps} of ${session.totalSteps} steps saved. Pick up where you left off.`,
+        `${session.completedSteps} of ${session.totalSteps} steps saved`,
         { exact: true },
       ),
     ).toBeVisible();
@@ -151,7 +141,7 @@ for (const theme of ["light", "dark"] as const) {
     ).toHaveAttribute("href", "/review");
     await expect(
       main.getByText(
-        "There are no guided lessons available right now. Explore words in a real-life situation.",
+        "No guided lessons are available yet.",
         { exact: true },
       ),
     ).toBeVisible();
@@ -160,7 +150,7 @@ for (const theme of ["light", "dark"] as const) {
     ).toHaveAttribute("href", "/discover");
     await expect(
       main.getByText(
-        "Save a word first, then use its meaning in a sentence of your own.",
+        "Save a word first, then use it in your own sentence.",
         { exact: true },
       ),
     ).toBeVisible();
@@ -267,6 +257,43 @@ test("Practice distinguishes unavailable lessons from an empty catalog without h
   ).toBeVisible();
 });
 
+for (const lessons of ["empty", "unavailable"]) {
+  test(`Practice can reload unavailable lists with ${lessons} lessons and loaded sessions`, async ({ page, context, baseURL }) => {
+    if (!baseURL) throw new Error("A test app URL is required");
+    const csrf = randomUUID();
+    await context.addCookies([
+      { name: "vocanova_session", value: randomUUID(), url: baseURL },
+      { name: "vocanova_csrf", value: csrf, url: baseURL },
+      { name: "e2e_lessons", value: lessons, url: baseURL },
+      { name: "e2e_lists", value: "unavailable", url: baseURL },
+    ]);
+    await page.goto("/practice");
+    const main = page.getByRole("main");
+    await expect(main.getByLabel("Practice vocabulary", { exact: true })).toHaveCount(0);
+    await expect(main.getByText("Personal lists are unavailable. Refresh to try again.", { exact: true })).toBeVisible();
+    // A successful empty session read must not hide the list retry action.
+    await expect(main.getByRole("button", { name: "Load saved sessions", exact: true })).toHaveCount(0);
+    const refresh = main.getByRole("button", { name: "Refresh practice sources", exact: true });
+    await expect(refresh).toBeVisible();
+    await context.clearCookies({ name: "e2e_lists" });
+    const id = randomUUID();
+    const created = await context.request.put(`${mockAPI}/api/v1/word-lists/${id}`, {
+      headers: { "X-CSRF-Token": csrf, "Idempotency-Key": randomUUID() },
+      data: { name: "Recovered list", expectedRevision: 0 },
+    });
+    expect(created.ok()).toBe(true);
+    const reloaded = page.waitForResponse(response => new URL(response.url()).pathname === "/api/v1/word-lists" && response.request().method() === "GET");
+    await refresh.focus();
+    await page.keyboard.press("Enter");
+    expect((await reloaded).status()).toBe(200);
+    await expect(main.getByText("Personal lists are unavailable. Refresh to try again.", { exact: true })).toHaveCount(0);
+    const selection = main.getByLabel("Practice vocabulary", { exact: true });
+    await expect(selection).toBeVisible();
+    await expect(selection.locator(`option[value="list:${id}"]`)).toHaveText("Recovered list (0 practice meanings)");
+    await expect(main.getByRole("button", { name: "Start typed recall", exact: true })).toBeEnabled();
+  });
+}
+
 test("Practice asks signed-out learners to sign in and preserves their destination", async ({
   page,
   context,
@@ -279,6 +306,6 @@ test("Practice asks signed-out learners to sign in and preserves their destinati
   await page.goto("/practice");
   await expect(page).toHaveURL(/\/login\?returnTo=%2Fpractice$/);
   await expect(
-    page.getByRole("main").getByRole("heading", { name: "Practice your way" }),
+    page.getByRole("main").getByRole("heading", { name: "Practice" }),
   ).toHaveCount(0);
 });

@@ -15,6 +15,67 @@ import {
 } from "./index.js";
 
 describe("VocanovaClient", () => {
+  it("looks up an explicitly submitted dictionary word without learning mutations", async () => {
+    const expected = {
+      word: "serendipity",
+      meanings: [
+        {
+          partOfSpeech: "noun",
+          definitions: [{ definition: "A synthetic dictionary fixture." }],
+        },
+      ],
+      attribution: {
+        provider: "WordNet 3.0",
+        providerUrl: "https://wordnet.princeton.edu/",
+        sourceUrls: ["https://wordnet.princeton.edu/"],
+        licenses: [
+          {
+            name: "WordNet 3.0",
+            url: "https://wordnet.princeton.edu/license-and-commercial-use",
+            text: "Synthetic notice fixture",
+          },
+        ],
+      },
+    };
+    const controller = new AbortController();
+    let calls = 0;
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: async (input, init) => {
+        calls++;
+        const url = new URL(String(input));
+        assert.equal(url.pathname, "/api/v1/dictionary");
+        assert.equal(url.searchParams.get("q"), "Mother-in-law");
+        assert.equal(init?.method, "GET");
+        assert.equal(init?.body, undefined);
+        assert.equal(init?.signal, controller.signal);
+        return Response.json(expected);
+      },
+    });
+    const result = await client.lookupDictionary("Mother-in-law", {
+      signal: controller.signal,
+    });
+    assert.deepEqual(result.data, expected);
+    assert.equal(calls, 1);
+  });
+
+  for (const status of [400, 401, 404, 429, 503]) {
+    it(`preserves dictionary ${status} as a distinct API error without retry`, async () => {
+      let calls = 0;
+      const client = new VocanovaClient({
+        baseURL: "https://api.example.com",
+        fetch: async () => {
+          calls++;
+          return new Response(null, { status });
+        },
+      });
+      await assert.rejects(
+        client.lookupDictionary("word"),
+        (error) => error instanceof ApiResponseError && error.status === status,
+      );
+      assert.equal(calls, 1);
+    });
+  }
   it("preserves literal saved-word filters and exposes full-filter counts and server review state", async () => {
     const expected: ListSavedWordsResponse = {
       items: [

@@ -98,6 +98,7 @@
 // without enabling extra debug output.
 
 import { createServer } from "node:http";
+import { readFileSync } from "node:fs";
 import { handleUnitGuideFeatures } from "./unit-guides-fixture.mjs";
 import { handleMeaningTeaching } from "./meaning-teaching-fixture.mjs";
 import { handlePersonalLists } from "./personal-lists-fixture.mjs";
@@ -107,6 +108,36 @@ import {
   dailyConversationFixture,
   dailyConversationWords,
 } from "./seed-content-fixture.mjs";
+
+// Synthetic dictionary examples verify presentation and recovery, not corpus
+// coverage. Include the real complete license so source disclosure is exercised.
+const dictionaryLicense = readFileSync(
+  new URL("../../../api/business/dictionary/LICENSE.wordnet", import.meta.url),
+  "utf8",
+);
+const dictionaryAttribution = {
+  provider: "WordNet 3.0",
+  providerUrl: "https://wordnet.princeton.edu/",
+  sourceUrls: ["https://wordnet.princeton.edu/"],
+  licenses: [{
+    name: "WordNet 3.0",
+    url: "https://wordnet.princeton.edu/license-and-commercial-use",
+    text: dictionaryLicense,
+  }],
+};
+const dictionaryFixtures = {
+  serendipity: {
+    word: "serendipity",
+    meanings: [{ partOfSpeech: "noun", definitions: [{ definition: "Finding something useful or pleasant when you are not looking for it.", example: "By serendipity, she found the book she needed." }] }],
+  },
+  books: {
+    word: "book",
+    meanings: [
+      { partOfSpeech: "noun", definitions: [{ definition: "A written work with pages bound together.", example: "She opened a book." }, { definition: "A written record of business accounts." }] },
+      { partOfSpeech: "verb", definitions: [{ definition: "Arrange to use a room, seat, or service at a future time." }] },
+    ],
+  },
+};
 
 const PORT = Number(process.env.MOCK_API_PORT ?? 8080);
 const HOST = process.env.MOCK_API_HOST ?? "127.0.0.1";
@@ -1000,6 +1031,25 @@ const server = createServer(async (req, res) => {
     // consistently across every authenticated mock route.
     logLine(req, 401, { reason: "e2e-unauthenticated-override" });
     jsonResponse(res, 401, { error: "unauthorized" });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/v1/dictionary") {
+    const q = (url.searchParams.get("q") ?? "").trim().toLowerCase();
+    if (!q || q.length > 48 || !/^[a-z]+(?:['-][a-z]+)*$/.test(q)) {
+      logLine(req, 400);
+      jsonResponse(res, 400, { error: "Enter one English word of up to 48 letters." });
+      return;
+    }
+    const fixtureStatus = { unavailable: 503, rate_limited: 429, unauthorized: 401 }[cookies.e2e_dictionary];
+    if (fixtureStatus) {
+      logLine(req, fixtureStatus);
+      jsonResponse(res, fixtureStatus, { error: cookies.e2e_dictionary });
+      return;
+    }
+    const entry = dictionaryFixtures[q];
+    logLine(req, entry ? 200 : 404);
+    jsonResponse(res, entry ? 200 : 404, entry ? { ...entry, attribution: dictionaryAttribution } : { error: "Word not found" });
     return;
   }
 

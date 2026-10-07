@@ -42,6 +42,7 @@ test.describe("Progress accessibility (VOC-031-T07b)", () => {
     // read-only nature is itself the correct a11y posture.
     await assertKeyboardReachable(page, { minFocusable: 0 });
 
+    await page.locator("summary").filter({ hasText: /^Rewards/ }).click();
     await assertNonColorOnlyFeedback(page, {
       contextLabel: "/progress",
       requireText: [
