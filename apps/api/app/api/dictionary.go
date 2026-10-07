@@ -66,6 +66,8 @@ func registerDictionary(api huma.API, svc dictionaryLookup, limiter auth.RateLim
 		if c := HumaContext(ctx); c != nil {
 			c.SetHeader("Cache-Control", "no-store")
 		}
+		// Reject malformed input before consuming the lookup quota. The business
+		// service also validates its own callers independently of this HTTP boundary.
 		word, err := dictionary.NormalizeWord(input.Query)
 		if err != nil {
 			return nil, huma.Error400BadRequest("Enter one English word, up to 48 letters, with optional apostrophes or hyphens.")
@@ -87,6 +89,7 @@ func registerDictionary(api huma.API, svc dictionaryLookup, limiter auth.RateLim
 			}
 			return nil, huma.Error503ServiceUnavailable("Dictionary is unavailable right now.")
 		}
+		// Declare the success header in OpenAPI as well as setting it early for errors.
 		out := &DictionaryLookupOutput{CacheControl: "no-store", Body: DictionaryEntryDTO{
 			Word: entry.Word, Meanings: []DictionaryMeaningDTO{},
 			Attribution: DictionaryAttributionDTO{Provider: "WordNet 3.0", ProviderURL: dictionary.SourceURL,

@@ -39,7 +39,7 @@ for (const theme of ["light", "dark"] as const) {
       const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
       return box.height >= 44 && (hit === element || element.contains(hit));
     })).toBe(true);
-    await expect(result.getByRole("link", { name: "Princeton WordNet 3.0", exact: true })).toHaveAttribute("href", "https://wordnet.princeton.edu/");
+    await expect(result.getByRole("link", { name: "WordNet 3.0", exact: true })).toHaveAttribute("href", "https://wordnet.princeton.edu/");
     const notice = result.locator("p").filter({ hasText: "WordNet Release 3.0" });
     await expect(notice).toBeVisible();
     expect(normalizeSpace(await notice.innerText())).toBe(normalizeSpace(license));

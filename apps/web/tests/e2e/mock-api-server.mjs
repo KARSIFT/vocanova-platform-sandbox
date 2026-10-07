@@ -116,7 +116,7 @@ const dictionaryLicense = readFileSync(
   "utf8",
 );
 const dictionaryAttribution = {
-  provider: "Princeton WordNet 3.0",
+  provider: "WordNet 3.0",
   providerUrl: "https://wordnet.princeton.edu/",
   sourceUrls: ["https://wordnet.princeton.edu/"],
   licenses: [{
