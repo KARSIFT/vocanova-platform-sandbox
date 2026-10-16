@@ -257,26 +257,12 @@
 name: deploy-staging
 
 on:
-  # Push to develop deploys to staging when changed files match the
-  # fail-closed runtime/deploy allowlist below (VOC-111-D03). Matches
-  # DOC-12 §3's F3 "develop→staging deploy workflow" wording (the
-  # planner's own choice between a push trigger and a tag-based RC
-  # trigger, recorded in `VOC-032-D05`). Merges that touch only
-  # documentation (`docs/**`), governed package material (`specs/**`),
-  # evidence carriers (for example `.karsift/**`), or other paths
-  # outside the allowlist do **not** schedule this workflow on push —
-  # use `workflow_dispatch` below for manual retry/redeploy.
+  # Every merge to main receives a new patch version and deploys to staging,
+  # including documentation-only changes (owner request, 2026-10-16).
+  # Retries/recovery keep the checked-out commit's original version.
   push:
     branches:
       - main
-    paths:
-      - "*"
-      - "apps/**"
-      - "packages/**"
-      - "infra/**"
-      - "tests/staging-e2e/**"
-      - ".github/workflows/deploy-staging.yml"
-      - "scripts/foundation/voc111-deploy-staging-paths.test.mjs"
   # Manual retry / re-deploy path. The `skip_ssh_deploy`
   # input lets the build/push steps be exercised without
   # the SSH secrets (the `TEST-16` "disposable test branch

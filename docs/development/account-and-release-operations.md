@@ -46,11 +46,25 @@ is a separate manual deploy and must repeat the delivery check.
 
 ## Identify a deployed release
 
-`VERSION` is the human-readable release version, beginning with `0.2.0` for this
-account/settings release. Bump it in a PR when releasing a new feature set or fix:
-minor for additive features, patch for compatible fixes, major for incompatible
-changes. Individual deployments are distinguished by their full Git commit even
-when the human-readable version is unchanged.
+`VERSION` is a committed semantic-version base, starting at `0.4.1` for the
+automatic-version policy introduced on 16 October 2026. The shared release script
+adds the number of first-parent commits since the most recent change to `VERSION`
+to its patch component. With squash merging, each merged PR therefore advances
+one patch: `0.4.1`, `0.4.2`, `0.4.3`, including documentation-only changes. A
+multi-commit topic branch merged normally also counts as one mainline release.
+The build uses checked-out Git history, never a workflow run number or a mutable
+"latest" tag. Rerunning a deployment or promoting the same commit to production
+keeps the version unchanged. Rolling back an older commit restores its version.
+
+Every push to `main` now deploys staging, without a path filter. No version-bump
+commit is pushed by automation, so there is no recursive workflow or write access
+to the protected branch. Both deployment checkouts require full Git history;
+shallow histories and uncommitted `VERSION` changes fail instead of guessing.
+To begin a deliberate minor or major release, change `VERSION` in that release's
+PR (for example `0.5.0`); subsequent merges increment from that new base. Choose a
+base higher than the currently deployed version. Ordinary patches need no edit.
+The workspace package versions are package/tooling metadata, not this product
+release number.
 
 Staging and production workflows inject the same version, full commit, explicit
 environment and UTC build timestamp into their API and web builds. These are
