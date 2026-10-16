@@ -1,5 +1,31 @@
 # Vocanova current product state
 
+## Discovery and daily review — integrated delivery, 17 October 2026
+
+The current delivery makes the complete 10,000-word knowledge map the main
+Journey, in 100 ranges of 100. Learn/Already know decisions persist against a
+word revision, preserve existing notes and history, and advance only after
+confirmation. Discovery supports automatic device pronunciation, mute and replay.
+Guided discovery continues through unseen words and unfinished ranges; a fully
+assessed map retains explicit word revisits without restarting discovery.
+Ordering is subtitle frequency among selected entries; it is not personalized
+or a CEFR ranking. Original curriculum words, meanings and examples keep their
+identities. Licensed source data and original editorial corrections are documented
+in `apps/api/business/knowledgecatalog/SOURCE.md`.
+
+Home starts or resumes a durable lesson drawn from actual due saved words.
+Each question checks a meaning, shows feedback and continues. Mistakes return
+later in the lesson. Only a server-graded correct answer can earn daily review
+credit, once per meaning and learner-local day. Incorrect retries earn no daily
+lesson rating points. Existing due timestamps survive the new eight-box schedule.
+Situation courses remain at `/courses`; sentence writing is an optional tool.
+
+See [discovery and daily review](../design/discovery-daily-review.md) for recording
+evidence, interaction decisions and acceptance boundaries. The delivery has two
+forward migrations (42 total) and personal export schema 1.6. Local validation,
+hosted checks and staging release identity are separate gates; this section does
+not establish deployment or learner acceptance.
+
 ## Calm learning and broader search — 7 October 2026
 
 The current delivery simplifies Home, Journey, Practice, Progress and word detail,

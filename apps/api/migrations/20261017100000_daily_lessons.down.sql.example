@@ -1,0 +1,5 @@
+DROP TABLE daily_lesson_actions;
+DROP TABLE daily_review_successes;
+DROP TABLE daily_lesson_sessions;
+
+ALTER TABLE review_attempts DROP CONSTRAINT review_attempts_id_user_meaning_key;

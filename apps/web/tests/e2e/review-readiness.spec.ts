@@ -16,28 +16,24 @@ async function seedReviewFixture(
 ): Promise<void> {
   await context.addCookies([
     { name: "vocanova_session", value: sessionId, url: baseURL },
-    { name: "vocanova_csrf", value: `review-readiness-csrf-${randomUUID()}`, url: baseURL },
+    {
+      name: "vocanova_csrf",
+      value: `review-readiness-csrf-${randomUUID()}`,
+      url: baseURL,
+    },
     { name: "e2e_review_fixture_count", value: String(count), url: baseURL },
     { name: "e2e_daily_review_target", value: String(count), url: baseURL },
   ]);
 }
 
-async function submitReadyReview(page: Parameters<typeof waitForReviewReadiness>[0]) {
+async function submitReadyReview(
+  page: Parameters<typeof waitForReviewReadiness>[0],
+) {
   const promptControl = getEnabledReviewPromptControl(page);
   await expect(promptControl).toBeVisible();
-  await promptControl.click();
-
-  const goodButton = page.getByRole("button", { name: "Good", disabled: false });
-  const continueButton = page.getByRole("button", {
-    name: "Continue",
-    disabled: false,
-  });
-  await expect(goodButton.or(continueButton).first()).toBeVisible();
-  if (await goodButton.isVisible()) {
-    await goodButton.click();
-  } else {
-    await continueButton.click();
-  }
+  await promptControl.check();
+  await page.getByRole("button", { name: "Check answer", exact: true }).click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
 }
 
 test.describe("Review readiness", () => {
@@ -47,7 +43,9 @@ test.describe("Review readiness", () => {
   }, testInfo) => {
     const baseURL = testInfo.project.use.baseURL;
     if (!baseURL) {
-      throw new Error("Expected the Playwright project to configure use.baseURL.");
+      throw new Error(
+        "Expected the Playwright project to configure use.baseURL.",
+      );
     }
 
     const interactiveSession = `review-readiness-controls-${randomUUID()}`;
@@ -56,15 +54,18 @@ test.describe("Review readiness", () => {
     expect(await waitForReviewReadiness(page)).toBe("prompt");
 
     const multipleChoiceOption = page
-      .getByRole("group", { name: /^Choose the meaning for / })
-      .getByRole("button", { disabled: false })
+      .getByRole("group", { name: /^Meaning of / })
+      .getByRole("radio", { disabled: false })
       .first();
     await expect(multipleChoiceOption).toBeVisible();
     await submitReadyReview(page);
 
     expect(await waitForReviewReadiness(page)).toBe("prompt");
     await expect(
-      page.getByRole("button", { name: "Show answer", disabled: false }),
+      page.getByRole("radio", {
+        name: "definition for review word 2",
+        disabled: false,
+      }),
     ).toBeVisible();
 
     const terminalSession = `review-readiness-terminal-${randomUUID()}`;
@@ -79,11 +80,11 @@ test.describe("Review readiness", () => {
     }
 
     expect(await waitForReviewReadiness(page)).toBe("terminal");
-    await expect(getTerminalReviewHeading(page)).toHaveText("Review complete");
+    await expect(getTerminalReviewHeading(page)).toHaveText("Lesson complete");
     await page.goto("/reviews");
     expect(await waitForReviewReadiness(page)).toBe("terminal");
     await expect(getTerminalReviewHeading(page)).toHaveText(
-      "Today's review target is complete",
+      "You’re ready for new words",
     );
     await page.goto("/home");
     await expect(

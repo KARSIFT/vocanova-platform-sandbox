@@ -10,7 +10,7 @@ export function RecommendedLesson({
   data,
   className,
   compact = false,
-  browseHref = "/discover",
+  browseHref = "/courses",
   browseLabel = "All lessons",
 }: {
   data: LessonRecommendationResponse | null;

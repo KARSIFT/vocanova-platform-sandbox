@@ -1,3 +1,101 @@
+export interface VocabularyAttribution {
+  title: string;
+  sourceUrl: string;
+  licenseUrl: string;
+  wordnetLicense: string;
+}
+
+export interface KnowledgeMapItem {
+  rank: number;
+  meaningId: string;
+  wordId: string;
+  wordText: string;
+  wordSlug: string;
+  partOfSpeech: string;
+  shortDefinition: string;
+  exampleSentence?: string;
+  selfReportedKnown: boolean;
+  saved: boolean;
+  due: boolean;
+  revision: string;
+}
+
+export interface KnowledgeMap {
+  attribution: VocabularyAttribution;
+  catalogVersion: string;
+  totalWords: number;
+  bandSize: number;
+  ordering: { title: string; description: string; sourceUrl: string };
+  bands: {
+    number: number;
+    startRank: number;
+    endRank: number;
+    totalWords: number;
+    knownCount: number;
+    learningCount: number;
+    unseenCount: number;
+  }[];
+  currentBand: { number: number; items: KnowledgeMapItem[] };
+}
+
+export interface KnowledgeMapDecision {
+  meaningId: string;
+  decision: "learn" | "known";
+  expectedRevision: string;
+}
+
+export interface KnowledgeMapDecisionResult {
+  meaningId: string;
+  decision: "learn" | "known";
+  revision: string;
+}
+
+export interface DailyLesson {
+  attribution: VocabularyAttribution;
+  id: string;
+  status: "in_progress" | "completed";
+  revision: number;
+  completedWords: number;
+  totalWords: number;
+  firstAnswersCorrect: number;
+  questionsAnswered: number;
+  creditedToday: number;
+  currentStep: {
+    id: string;
+    kind: "meaning_choice";
+    wordText: string;
+    wordSlug: string;
+    partOfSpeech: string;
+    choices: { id: string; text: string }[];
+  } | null;
+  feedback: {
+    stepId: string;
+    correct: boolean;
+    answer: string;
+    explanation: string;
+    meaningId: string;
+    wordText: string;
+    credited: boolean;
+    skipped: boolean;
+    reason?: string;
+    correctChoiceId?: string;
+    selectedChoiceId?: string;
+  } | null;
+  canContinue: boolean;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+}
+
+export interface DailyLessonAction {
+  stepId: string;
+  expectedRevision: number;
+  clientActionId: string;
+  action: "answer" | "continue" | "skip";
+  choiceId?: string;
+  wasHintUsed?: boolean;
+}
+
 export interface CurrentUser {
   /** Opaque learner identity for local draft isolation; absent on older APIs. */
   id?: string;
@@ -936,6 +1034,34 @@ export interface PersonalDataExport {
   graceDayLedger: unknown[];
   streakState: Record<string, unknown> | null;
   guidedLessons?: PersonalDataGuidedLesson[] | null;
+  dailyLessons?: Array<{
+    id: string;
+    status: DailyLesson["status"];
+    revision: number;
+    completedWords: number;
+    totalWords: number;
+    firstAnswersCorrect: number;
+    questionsAnswered: number;
+    creditedToday: number;
+    startedAt: string;
+    updatedAt: string;
+    completedAt?: string | null;
+    actions: Array<{
+      action: Pick<
+        DailyLessonAction,
+        "stepId" | "action" | "choiceId" | "wasHintUsed"
+      >;
+      feedback: DailyLesson["feedback"];
+      createdAt: string;
+    }>;
+  }> | null;
+  dailyReviewSuccesses?: Array<{
+    meaningId: string;
+    localDate: string;
+    reviewAttemptId: string;
+    dailySessionId: string;
+    createdAt: string;
+  }> | null;
   wordKnowledge?: Array<{
     meaningId: string;
     selfReportedKnown: boolean;
@@ -1580,6 +1706,93 @@ export class VocanovaClient {
       { ...init, headers },
     );
     return { response };
+  }
+
+  async getKnowledgeMap(
+    band = 1,
+    init?: RequestInit,
+  ): Promise<{ data: KnowledgeMap; response: Response }> {
+    const response = await this.request(
+      "GET",
+      `/api/v1/knowledge-map?band=${encodeURIComponent(String(band))}`,
+      undefined,
+      init,
+    );
+    return { data: await response.json(), response };
+  }
+
+  async decideKnowledgeMapWord(
+    body: KnowledgeMapDecision,
+    idempotencyKey: string,
+    init?: RequestInit,
+  ): Promise<{ data: KnowledgeMapDecisionResult; response: Response }> {
+    const headers = new Headers(init?.headers);
+    headers.set("Idempotency-Key", idempotencyKey);
+    const response = await this.request(
+      "POST",
+      "/api/v1/knowledge-map/decisions",
+      body,
+      { ...init, headers },
+    );
+    return { data: await response.json(), response };
+  }
+
+  async getCurrentDailyLesson(init?: RequestInit): Promise<{
+    data: { session: DailyLesson | null; dueCount: number };
+    response: Response;
+  }> {
+    const response = await this.request(
+      "GET",
+      "/api/v1/daily-lessons/current",
+      undefined,
+      init,
+    );
+    return { data: await response.json(), response };
+  }
+
+  async startDailyLesson(
+    idempotencyKey: string,
+    init?: RequestInit,
+  ): Promise<{ data: DailyLesson; response: Response }> {
+    const headers = new Headers(init?.headers);
+    headers.set("Idempotency-Key", idempotencyKey);
+    const response = await this.request(
+      "POST",
+      "/api/v1/daily-lessons",
+      {},
+      { ...init, headers },
+    );
+    return { data: await response.json(), response };
+  }
+
+  async getDailyLesson(
+    sessionId: string,
+    init?: RequestInit,
+  ): Promise<{ data: DailyLesson; response: Response }> {
+    const response = await this.request(
+      "GET",
+      `/api/v1/daily-lessons/${encodeURIComponent(sessionId)}`,
+      undefined,
+      init,
+    );
+    return { data: await response.json(), response };
+  }
+
+  async submitDailyLessonAction(
+    sessionId: string,
+    body: DailyLessonAction,
+    idempotencyKey: string,
+    init?: RequestInit,
+  ): Promise<{ data: DailyLesson; response: Response }> {
+    const headers = new Headers(init?.headers);
+    headers.set("Idempotency-Key", idempotencyKey);
+    const response = await this.request(
+      "POST",
+      `/api/v1/daily-lessons/${encodeURIComponent(sessionId)}/actions`,
+      body,
+      { ...init, headers },
+    );
+    return { data: await response.json(), response };
   }
 
   async startLesson(

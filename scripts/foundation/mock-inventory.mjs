@@ -64,6 +64,9 @@ const expectedRouteDirectories = [
   path.join("discover", "[situation]", "[word]"),
   "progress",
   "reviews",
+  "courses",
+  "knowledge-map",
+  "discovery",
   // DOC-08 saved-vocabulary management routes.
   "words",
   path.join("words", "[userWordId]"),
@@ -108,6 +111,9 @@ export function isRegisteredAPIPath(apiPath) {
   const allowedAPIPaths = [
     /^\/api\/v1\/me$/,
     /^\/api\/v1\/dictionary$/, // Read-only bundled dictionary lookup.
+    /^\/api\/v1\/knowledge-map(?:\/decisions)?$/,
+    /^\/api\/v1\/daily-lessons(?:\/current)?$/,
+    new RegExp(`^/api/v1/daily-lessons/${sessionId}(?:/actions)?$`),
     /^\/api\/v1\/auth(?:\/|$)/,
     /^\/api\/v1\/journey-situations(?:\/[^/]+)?$/,
     /^\/api\/v1\/canonical-words(?:\/[^/]+)?$/,
@@ -153,6 +159,8 @@ export function isRegisteredBusinessModule(name) {
     "auth",
     "content",
     "dictionary", // Immutable local reading aid; no learner schema or mutation.
+    "knowledgecatalog",
+    "dailylesson",
     "learning",
     "reviews",
     "aifeedback",
@@ -256,6 +264,8 @@ const allowedMigrationFiles = new Set([
   "20261002233000_learning_preferences.sql",
   "20261004100000_word_lists.sql",
   "20261004140000_original_stories.sql",
+  "20261017100000_daily_lessons.sql",
+  "20261017100001_knowledge_catalog.sql",
 ]);
 export function isRegisteredMigrationFile(name) {
   return allowedMigrationFiles.has(name);
@@ -266,6 +276,11 @@ const featureMigrationTables = new Map([
     ["user_word_lists", "user_word_list_members", "word_list_actions"],
   ],
   ["20261004140000_original_stories.sql", ["story_sessions", "story_actions"]],
+  [
+    "20261017100000_daily_lessons.sql",
+    ["daily_review_successes", "daily_lesson_sessions", "daily_lesson_actions"],
+  ],
+  ["20261017100001_knowledge_catalog.sql", ["knowledge_catalog_entries"]],
 ]);
 export function isRegisteredFeatureMigrationTables(name, tables) {
   const expected = featureMigrationTables.get(name);
@@ -324,12 +339,12 @@ export function validateMockInventory() {
       );
     }
     if (
-      !/const\s+dueReviewWords\s*=\s*dueResponse\.data\.totalCount/.test(
+      !/const\s+dueReviewWords\s*=\s*(?:dueResponse\.data\.totalCount|dailyLessonResponse\.data\.dueCount)/.test(
         homeContent,
       )
     ) {
       errors.push(
-        "apps/web/src/app/(app)/home/page.tsx: dueReviewWords is not wired to the real due-queue totalCount",
+        "apps/web/src/app/(app)/home/page.tsx: dueReviewWords is not wired to a server-owned due queue count",
       );
     }
   }

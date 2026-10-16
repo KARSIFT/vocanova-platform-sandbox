@@ -2,6 +2,8 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 import { getApiBaseURL } from "./lib/env";
+import { connectionErrorDocument } from "./lib/connection-error";
+import { THEME_COOKIE_NAME } from "./lib/theme-preference";
 
 export const config = {
   matcher: [
@@ -12,6 +14,9 @@ export const config = {
     "/discover/:path*",
     "/vocabulary",
     "/vocabulary/:path*",
+    "/knowledge-map",
+    "/discovery",
+    "/courses",
     "/learn/:path*",
     "/writing",
     "/lists",
@@ -69,14 +74,20 @@ function logAuthCheckFailure({
 }
 
 function connectionErrorResponse(request: NextRequest): NextResponse {
-  const retryUrl = new URL("/connection-error", request.url);
-  retryUrl.searchParams.set(
-    "returnTo",
+  const html = connectionErrorDocument(
     `${request.nextUrl.pathname}${request.nextUrl.search}`,
+    request.cookies.get(THEME_COOKIE_NAME)?.value,
   );
-  return NextResponse.rewrite(retryUrl, {
+  return new NextResponse(html, {
     status: 503,
-    headers: { "Cache-Control": "no-store" },
+    headers: {
+      "Cache-Control": "no-store",
+      "Content-Type": "text/html; charset=utf-8",
+      "Content-Security-Policy":
+        "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      "X-Content-Type-Options": "nosniff",
+      "X-Robots-Tag": "noindex, nofollow",
+    },
   });
 }
 

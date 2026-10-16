@@ -105,7 +105,7 @@ func TestSubmitReviewSchedulesAndUpdatesCounters(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, 1, attempt.ReviewStepAfter)
-	assert.Equal(t, 1.0, attempt.NextReviewAt.Sub(answeredAt).Hours())
+	assert.Equal(t, 24.0, attempt.NextReviewAt.Sub(answeredAt).Hours())
 	assert.Equal(t, 1, repo.userWords[0].TotalReviewCount)
 	assert.Equal(t, 1, repo.userWords[0].CorrectReviewCount)
 	assert.Equal(t, 1, repo.userWords[0].ConsecutiveCorrectCount)
@@ -135,8 +135,8 @@ func TestSubmitReviewAnchorsScheduleToServerClock(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, clientAnsweredAt, attempt.AnsweredAt, "attempt history retains the client-recorded answer time")
-	assert.Equal(t, serverNow.Add(time.Hour), attempt.NextReviewAt, "the client timestamp cannot manipulate the schedule")
-	assert.Equal(t, serverNow.Add(time.Hour), *repo.userWords[0].NextReviewAt)
+	assert.Equal(t, serverNow.Add(24*time.Hour), attempt.NextReviewAt, "the client timestamp cannot manipulate the schedule")
+	assert.Equal(t, serverNow.Add(24*time.Hour), *repo.userWords[0].NextReviewAt)
 }
 
 func TestSubmitReviewRejectsForgedMultipleChoiceCorrectResult(t *testing.T) {
@@ -308,7 +308,8 @@ func TestSubmitReviewTwoConsecutiveIncorrectResetsStep(t *testing.T) {
 			{ID: userWordID, UserID: userID, MeaningID: meaningID, Status: "learning", Source: "journey", ReviewStep: 3},
 		},
 	})
-	svc := NewService(repo, learning.NewMemoryIdempotencyStore(), nil)
+	clk := &clock.Fixed{T: time.Now().UTC()}
+	svc := NewService(repo, learning.NewMemoryIdempotencyStore(), clk)
 
 	base := SubmitReviewRequest{
 		UserID: userID, UserWordID: userWordID, MeaningID: meaningID,
@@ -324,6 +325,7 @@ func TestSubmitReviewTwoConsecutiveIncorrectResetsStep(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 2, repo.userWords[0].ReviewStep)
 
+	clk.T = *repo.userWords[0].NextReviewAt
 	_, err = svc.SubmitReview(t.Context(), SubmitReviewRequest{
 		UserID: base.UserID, UserWordID: base.UserWordID, MeaningID: base.MeaningID,
 		AttemptType: base.AttemptType, PromptType: base.PromptType, Result: base.Result,

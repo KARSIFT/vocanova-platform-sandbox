@@ -64,7 +64,8 @@ func TestSaveUserWordRejectsInactiveCanonicalWordPostgreSQL(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if _, err := db.ExecContext(ctx, `
-		CREATE TABLE canonical_words (id uuid PRIMARY KEY, status text NOT NULL);
+		CREATE TABLE users(id uuid PRIMARY KEY,status text DEFAULT 'active',deleted_at timestamptz);
+ CREATE TABLE canonical_words (id uuid PRIMARY KEY, status text NOT NULL);
 		CREATE TABLE word_meanings (
 			id uuid PRIMARY KEY,
 			word_id uuid NOT NULL REFERENCES canonical_words(id),
@@ -107,8 +108,12 @@ func TestSaveUserWordRejectsInactiveCanonicalWordPostgreSQL(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	owner := uuid.New()
+	if _, err := db.ExecContext(ctx, "INSERT INTO users(id)VALUES($1)", owner); err != nil {
+		t.Fatal(err)
+	}
 	_, err := NewPostgreSQLRepository(db).SaveUserWord(ctx, SaveUserWordRequest{
-		UserID:    uuid.New(),
+		UserID:    owner,
 		MeaningID: meaningID,
 		Source:    "journey",
 	}, time.Now().UTC())
@@ -236,7 +241,8 @@ func TestSaveUserWordAtomicIdempotencyPostgreSQL(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 	_, err := db.ExecContext(ctx, `
-		CREATE TABLE canonical_words (id uuid PRIMARY KEY, text text NOT NULL DEFAULT 'word', normalized_text text NOT NULL DEFAULT 'word', status text NOT NULL);
+		CREATE TABLE users(id uuid PRIMARY KEY,status text DEFAULT 'active',deleted_at timestamptz);
+ CREATE TABLE canonical_words (id uuid PRIMARY KEY, text text NOT NULL DEFAULT 'word', normalized_text text NOT NULL DEFAULT 'word', status text NOT NULL);
 		CREATE TABLE word_meanings (id uuid PRIMARY KEY, word_id uuid NOT NULL REFERENCES canonical_words(id), part_of_speech text NOT NULL DEFAULT 'noun', short_definition text NOT NULL DEFAULT 'definition', status text NOT NULL);
 		CREATE TABLE user_words (id uuid PRIMARY KEY, user_id uuid NOT NULL, meaning_id uuid NOT NULL, status text NOT NULL, source text NOT NULL, review_step integer NOT NULL, next_review_at timestamptz, last_reviewed_at timestamptz, last_result text, last_rating text, consecutive_correct_count integer NOT NULL, consecutive_incorrect_count integer NOT NULL, total_review_count integer NOT NULL, correct_review_count integer NOT NULL, added_at timestamptz NOT NULL, mastered_at timestamptz, ignored_at timestamptz, deleted_at timestamptz, created_at timestamptz NOT NULL, updated_at timestamptz NOT NULL);
 		CREATE TABLE feature_audit_logs (id uuid PRIMARY KEY, user_id uuid, action text NOT NULL, entity_type text NOT NULL, entity_id uuid, request_id text, actor_type text NOT NULL, actor_id uuid, metadata jsonb NOT NULL, created_at timestamptz NOT NULL, updated_at timestamptz NOT NULL);
@@ -248,6 +254,9 @@ func TestSaveUserWordAtomicIdempotencyPostgreSQL(t *testing.T) {
 		t.Fatal(err)
 	}
 	wordID, firstMeaning, secondMeaning, failingMeaning, userID := uuid.New(), uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	if _, err := db.ExecContext(ctx, "INSERT INTO users(id)VALUES($1)", userID); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := db.ExecContext(ctx, `INSERT INTO canonical_words (id, status) VALUES ($1, 'active')`, wordID); err != nil {
 		t.Fatal(err)
 	}
@@ -321,6 +330,9 @@ func TestSaveUserWordAtomicIdempotencyPostgreSQL(t *testing.T) {
 	// The transaction must remove the word and idempotency claim along with the
 	// failed ledger write.
 	failingUser := uuid.New()
+	if _, err := db.ExecContext(ctx, "INSERT INTO users(id)VALUES($1)", failingUser); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := db.ExecContext(ctx, fmt.Sprintf(`ALTER TABLE confidence_point_ledger ADD CONSTRAINT reject_failing_user CHECK (user_id <> '%s'::uuid)`, failingUser)); err != nil {
 		t.Fatal(err)
 	}

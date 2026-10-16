@@ -1,0 +1,3 @@
+-- Public catalog only. Canonical rows may already have learner history; retain them.
+DROP TABLE knowledge_catalog_entries;
+DROP INDEX word_meanings_catalog_owner_idx;

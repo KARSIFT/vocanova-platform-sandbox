@@ -97,7 +97,7 @@ export default async function WritingPage({
         </nav>
       </details>
       {situations.hasMore && (
-        <Link href="/discover" className={textLink}>
+        <Link href="/courses" className={textLink}>
           Explore more situations
         </Link>
       )}

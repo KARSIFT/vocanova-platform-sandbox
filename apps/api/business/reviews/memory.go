@@ -314,6 +314,16 @@ func (r *MemoryRepository) submitReviewLocked(ctx context.Context, req SubmitRev
 	}
 
 	uw := &r.userWords[idx]
+	now := req.scheduledAt
+	if now.IsZero() {
+		now = time.Now().UTC()
+	}
+	if !isDueStatus(uw.Status) || (!req.AllowSessionRetry && uw.NextReviewAt != nil && uw.NextReviewAt.After(now)) {
+		return nil, ErrNotDue
+	}
+	if req.ExpectedReviewCount != nil && *req.ExpectedReviewCount != uw.TotalReviewCount {
+		return nil, ErrNotDue
+	}
 	prior := ReviewState{
 		ReviewStep: uw.ReviewStep,
 		Counters: ReviewCounters{

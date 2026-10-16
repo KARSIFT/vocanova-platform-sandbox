@@ -257,7 +257,7 @@ func TestExportPersonalDataReturnsRequesterScopedJSON(t *testing.T) {
 
 	payload, err := svc.ExportPersonalData(context.Background(), uid.String(), "1.2.3.4", "session", "export-key")
 	require.NoError(t, err)
-	assert.JSONEq(t, `{"schemaVersion":"1.5","wordLists":[],"storySessions":[],"learningPreferences":null,"practiceSessions":[],"wordKnowledge":[],"guidedLessons":[],"profile":{"id":"`+uid.String()+`","email":"user@example.com"},"settings":{"timezone":"UTC","dailyReviewTarget":20,"reviewIntervalPreset":"vocanova_default","notificationsEnabled":true,"marketingEmailsEnabled":false,"appLanguage":"en","createdAt":null,"updatedAt":null},"onboardingProfile":null,"savedWords":[],"reviewHistory":[],"sentenceFeedbackHistory":[],"dailyMissions":[],"dailyActivity":[],"confidencePointLedger":[],"graceDayLedger":[],"streakState":null}`, string(payload))
+	assert.JSONEq(t, `{"schemaVersion":"1.6","dailyLessons":[],"dailyReviewSuccesses":[],"wordLists":[],"storySessions":[],"learningPreferences":null,"practiceSessions":[],"wordKnowledge":[],"guidedLessons":[],"profile":{"id":"`+uid.String()+`","email":"user@example.com"},"settings":{"timezone":"UTC","dailyReviewTarget":20,"reviewIntervalPreset":"vocanova_default","notificationsEnabled":true,"marketingEmailsEnabled":false,"appLanguage":"en","createdAt":null,"updatedAt":null},"onboardingProfile":null,"savedWords":[],"reviewHistory":[],"sentenceFeedbackHistory":[],"dailyMissions":[],"dailyActivity":[],"confidencePointLedger":[],"graceDayLedger":[],"streakState":null}`, string(payload))
 
 	_, err = svc.ExportPersonalData(context.Background(), uid.String(), "1.2.3.4", "session", "")
 	assert.ErrorIs(t, err, ErrDataExportIdempotencyKeyRequired)
@@ -314,6 +314,28 @@ func TestExportPersonalDataUsesExplicitPrivacyProjection(t *testing.T) {
 	assert.Contains(t, projection, "'dailyReviewTarget', 20")
 }
 
+// deletionCounterRepository supplies repository response fixtures at the service
+// boundary while retaining the real in-memory claim/completion lifecycle. It
+// does not invent learner records or change MemoryRepository's purge counters.
+type deletionCounterRepository struct {
+	Repository
+	byUser map[uuid.UUID]AnonymizationCounters
+	calls  map[uuid.UUID]int
+}
+
+func (r *deletionCounterRepository) FinalizeAccountDeletionClaim(ctx context.Context, id, userID uuid.UUID, claimedAt, now time.Time) (AnonymizationCounters, bool, error) {
+	r.calls[userID]++
+	counters, completed, err := r.Repository.FinalizeAccountDeletionClaim(ctx, id, userID, claimedAt, now)
+	if err != nil || !completed {
+		return counters, completed, err
+	}
+	response := r.byUser[userID]
+	counters.DailyLessonActions = response.DailyLessonActions
+	counters.DailyLessonSessions = response.DailyLessonSessions
+	counters.DailyReviewSuccesses = response.DailyReviewSuccesses
+	return counters, true, nil
+}
+
 // TestRunDeletionSweepProcessesDueRequests covers VOC-031-TEST-21:
 // the sweep reads every 'deactivated' row past its purge_after,
 // claims each, runs the per-table disposition, and transitions
@@ -334,6 +356,15 @@ func TestRunDeletionSweepProcessesDueRequests(t *testing.T) {
 	_, err = svc.CreateAccountDeletionRequest(context.Background(), uidB.String(), "1.2.3.4", "sess-token", "idem-B")
 	require.NoError(t, err)
 
+	counterRepo := &deletionCounterRepository{
+		Repository: repo,
+		byUser: map[uuid.UUID]AnonymizationCounters{
+			uidA: {DailyLessonActions: 2, DailyLessonSessions: 3, DailyReviewSuccesses: 5},
+			uidB: {DailyLessonActions: 7, DailyLessonSessions: 11, DailyReviewSuccesses: 13},
+		},
+		calls: map[uuid.UUID]int{},
+	}
+	svc.repo = counterRepo
 	c.Advance(31 * 24 * time.Hour)
 	res, err := svc.RunDeletionSweep(context.Background(), "1.2.3.4", "sess-token")
 	require.NoError(t, err)
@@ -358,6 +389,20 @@ func TestRunDeletionSweepProcessesDueRequests(t *testing.T) {
 	assert.Greater(t, res.AnonymizationTotals.ExternalIdentities, int64(0))
 	assert.Greater(t, res.AnonymizationTotals.UserWords, int64(0))
 	assert.Greater(t, res.AnonymizationTotals.ReviewAttempts, int64(0))
+	assert.Equal(t, int64(9), res.AnonymizationTotals.DailyLessonActions)
+	assert.Equal(t, int64(14), res.AnonymizationTotals.DailyLessonSessions)
+	assert.Equal(t, int64(18), res.AnonymizationTotals.DailyReviewSuccesses)
+	assert.Equal(t, map[uuid.UUID]int{uidA: 1, uidB: 1}, counterRepo.calls)
+
+	// A later sweep does not finalize completed learners again or report their
+	// already-counted daily learning records as fresh deletion work.
+	repeated, err := svc.RunDeletionSweep(context.Background(), "1.2.3.4", "sess-token")
+	require.NoError(t, err)
+	assert.Zero(t, repeated.Processed)
+	assert.Zero(t, repeated.Anonymized)
+	assert.Zero(t, repeated.Failed)
+	assert.Equal(t, AnonymizationCounters{}, repeated.AnonymizationTotals)
+	assert.Equal(t, map[uuid.UUID]int{uidA: 1, uidB: 1}, counterRepo.calls)
 }
 
 // TestRunDeletionSweepSkipsRowsNotYetDue covers VOC-031-TEST-22:

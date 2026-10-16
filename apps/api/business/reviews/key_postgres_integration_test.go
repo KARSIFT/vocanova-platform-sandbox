@@ -383,6 +383,7 @@ func TestSubmitReviewGraceRecoveryProtectsMissedSnapshotPostgreSQL(t *testing.T)
 			defer cancel()
 			now := time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)
 			req := seedGraceRecoveryReview(t, db, now)
+			seedVerifiedSessionForRewardTest(t, db, &req, now)
 			gam := gamification.NewService(gamification.NewRepository(db))
 			missionService := missions.NewService(missions.NewRepository(db), gam)
 			// Exercise the natural daily boundary: an inactive day is absent; a
@@ -530,6 +531,7 @@ func TestSubmitReviewRollsBackWhenGraceSnapshotProtectionDoesNotUpdatePostgreSQL
 	defer cancel()
 	now := time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)
 	req := seedGraceRecoveryReview(t, db, now)
+	seedVerifiedSessionForRewardTest(t, db, &req, now)
 	yesterday := now.AddDate(0, 0, -1).Truncate(24 * time.Hour)
 	// RETURN NULL suppresses precisely the owner/date/status protection update:
 	// ReconcileAndAdvance has already observed the missed snapshot and written
@@ -575,4 +577,17 @@ func TestSubmitReviewRollsBackWhenGraceSnapshotProtectionDoesNotUpdatePostgreSQL
 	require.Equal(t, "missed", yesterdayStatus)
 	require.False(t, applied)
 	require.Equal(t, 4, streak)
+}
+
+// Reward/streak transaction controls exercise a trusted server-graded origin.
+// The HTTP DTO has no access to this package-private field; its negative control
+// lives in the daily-lesson/API tests.
+func seedVerifiedSessionForRewardTest(t *testing.T, db *sql.DB, req *SubmitReviewRequest, now time.Time) {
+	t.Helper()
+	id := uuid.New()
+	raw, e := json.Marshal(map[string]any{"Words": []map[string]string{{"MeaningID": req.MeaningID.String(), "UserWordID": req.UserWordID.String()}}})
+	require.NoError(t, e)
+	_, e = db.Exec("INSERT INTO daily_lesson_sessions(id,user_id,state,status,created_at,updated_at)VALUES($1,$2,$3,'in_progress',$4,$4)", id, req.UserID, string(raw), now)
+	require.NoError(t, e)
+	req.verifiedSessionID = id
 }

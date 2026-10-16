@@ -18,7 +18,7 @@ test("a larger curriculum groups lessons without locking other situations", asyn
   await context.addCookies([
     { name: "e2e_lessons", value: "expanded", url: baseURL! },
   ]);
-  await page.goto("/discover");
+  await page.goto("/courses");
   const section = page.getByRole("region", {
     name: "Guided lessons",
     exact: true,

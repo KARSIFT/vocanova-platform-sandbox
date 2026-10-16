@@ -1,0 +1,22 @@
+Frequency data and derivative ranked catalog: CC BY-SA 4.0
+
+English frequency counts: Hermit Dave, FrequencyWords project.
+Underlying corpus: OpenSubtitles 2018 / OPUS; credit OpenSubtitles.
+Source: https://github.com/hermitdave/FrequencyWords
+Pinned data: https://github.com/hermitdave/FrequencyWords/blob/072bbed282316a23651aa7068c7173aa7898cf80/content/2018/en/en_50k.txt
+The upstream README licenses the content under CC BY-SA 4.0 (the repository's
+MIT LICENSE applies to its code, which is not copied here).
+
+License: Creative Commons Attribution-ShareAlike 4.0 International
+https://creativecommons.org/licenses/by-sa/4.0/
+Full legal code: https://creativecommons.org/licenses/by-sa/4.0/legalcode.en
+
+Changes by Vocanova: filtering of source word forms, contiguous ranking of the
+selected inventory, joining with WordNet 3.0, and an original editorial core.
+The derivative selection, arrangement and editorial additions in this catalog
+are also made available under CC BY-SA 4.0. WordNet portions retain their
+separate original notice and terms in LICENSE.wordnet and inside catalog.json.gz.
+Existing authored lesson content outside this catalog retains its own terms.
+
+No endorsement by source authors is implied. The data is supplied as-is,
+without warranties; see the full license and WordNet disclaimer.

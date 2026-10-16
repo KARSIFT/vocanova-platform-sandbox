@@ -14,6 +14,8 @@ test("keeps Journey active throughout nested discovery routes", () => {
     true,
   );
   assert.equal(isPrimaryNavItemActive("/words", "/discover"), true);
+  for (const route of ["/discovery", "/knowledge-map", "/courses"])
+    assert.equal(isPrimaryNavItemActive(route, "/discover"), true);
   assert.equal(
     isPrimaryNavItemActive(
       "/words/00000000-0000-0000-0000-000000000001",
@@ -24,7 +26,7 @@ test("keeps Journey active throughout nested discovery routes", () => {
 });
 
 test("does not activate Journey for a similarly named route", () => {
-  assert.equal(isPrimaryNavItemActive("/discovery", "/discover"), false);
+  assert.equal(isPrimaryNavItemActive("/discovery-old", "/discover"), false);
 });
 
 test("keeps Home exact and Progress active for nested progress routes", () => {

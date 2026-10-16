@@ -1,277 +1,132 @@
 import { randomUUID } from "node:crypto";
+import { expect, test, type Page } from "@playwright/test";
+import { answerReviewWord, startReviewLesson } from "./review-readiness";
 
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
-
-async function seedReviewSession(
-  context: BrowserContext,
-  sessionId: string,
-  fixtureCount?: number,
-  reviewTarget?: number,
-) {
-  const origins = [
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:8080",
-    "http://localhost:8080",
-  ];
-  await context.addCookies(
-    origins.flatMap((url) => [
-      { name: "vocanova_session", value: sessionId, url },
-      { name: "vocanova_csrf", value: "review-stale-card-csrf", url },
-      ...(fixtureCount === undefined
-        ? []
-        : [
-            {
-              name: "e2e_review_fixture_count",
-              value: String(fixtureCount),
-              url,
-            },
-            ...(reviewTarget === undefined
-              ? []
-              : [
-                  {
-                    name: "e2e_daily_review_target",
-                    value: String(reviewTarget),
-                    url,
-                  },
-                ]),
-          ]),
-    ]),
-  );
+async function seed(page: Page, count: number) {
+  const url = test.info().project.use.baseURL!;
+  await page.context().addCookies([
+    { name: "vocanova_session", value: randomUUID(), url },
+    { name: "vocanova_csrf", value: "stale-daily-csrf", url },
+    { name: "e2e_review_fixture_count", value: String(count), url },
+  ]);
+  await page.goto("/reviews");
+  await startReviewLesson(page);
 }
 
-async function submitFixtureReview(page: Page, index: number) {
-  const showAnswer = page.getByRole("button", { name: "Show answer" });
-  const multipleChoiceOption = page.getByRole("button", {
-    name: `noun — definition for review word ${index}`,
-  });
-
-  // Navigation may briefly show neither review control while the due queue is
-  // loading. Wait for the prompt type instead of deciding from that transient
-  // state, so the helper does not wait for an option that will never render.
-  await expect(showAnswer.or(multipleChoiceOption).first()).toBeVisible();
-
-  if (await showAnswer.isVisible()) {
-    await showAnswer.click();
-  } else {
-    await multipleChoiceOption.click();
+// A second tab changes server progress. The old client must stop, reload the
+// confirmed state, and avoid treating its rejected answer as another credit.
+async function conflictFromOtherTab(page: Page, index: number, skip: boolean) {
+  const other = await page.context().newPage();
+  await other.goto(page.url());
+  await expect(
+    other.getByRole("heading", { name: `Review word ${index}`, exact: true }),
+  ).toBeVisible();
+  if (skip)
+    await other
+      .getByRole("button", { name: "Skip for now", exact: true })
+      .click();
+  else {
+    await other
+      .getByRole("radio", {
+        name: `definition for review word ${index}`,
+        exact: true,
+      })
+      .check();
+    await other
+      .getByRole("button", { name: "Check answer", exact: true })
+      .click();
   }
-  await page.getByRole("button", { name: "Good" }).click();
-}
-
-function fixtureDueWord(index: number) {
-  return {
-    userWordId: `recovered-user-word-${index}`,
-    meaningId: `recovered-meaning-${index}`,
-    wordId: `recovered-word-${index}`,
-    wordSlug: `recovered-word-${index}`,
-    wordText: `Review word ${index}`,
-    partOfSpeech: "noun",
-    shortDefinition: `definition for review word ${index}`,
-    status: "due",
-    reviewStep: 0,
-  };
+  await expect(
+    other.getByRole("button", { name: "Continue", exact: true }),
+  ).toBeEnabled();
+  let rejected = 0;
+  page.on("response", (response) => {
+    if (
+      response.request().method() === "POST" &&
+      response.url().includes("/actions") &&
+      response.status() === 409
+    )
+      rejected++;
+  });
+  await page
+    .getByRole("radio", { name: "A different meaning.", exact: true })
+    .check();
+  await page.getByRole("button", { name: "Check answer", exact: true }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText(
+    "Your lesson changed",
+  );
+  expect(rejected).toBe(1);
+  await expect(
+    page.getByRole("button", { name: "Retry same answer", exact: true }),
+  ).toHaveCount(0);
+  for (const radio of await page.getByRole("radio").all())
+    await expect(radio).toBeDisabled();
+  const load = page.getByRole("button", {
+    name: "Load saved progress",
+    exact: true,
+  });
+  await load.focus();
+  await load.press("Enter");
+  await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: skip ? /^Skipped for now/ : /^Correct/ }),
+  ).toBeFocused();
+  await other.close();
 }
 
 test.describe("Review stale-card recovery", () => {
-  test("reconciles a removed last card instead of retrying its rejected answer", async ({
+  test("a last word skipped elsewhere gives no false daily credit", async ({
     page,
-    context,
-  }, testInfo) => {
-    test.skip(
-      testInfo.project.name !== "home-desktop-1280",
-      "The mutation flow is covered once against the production bundle.",
-    );
-
-    const sessionId = [
-      "review-stale-card",
-      randomUUID(),
-      testInfo.testId,
-      `retry-${testInfo.retry}`,
-    ]
-      .map(encodeURIComponent)
-      .join("-");
-    // Server rendering uses the configured 127.0.0.1 API origin while the
-    // production client bundle may use localhost. Give both origins the same
-    // mock session so this remains one learner session across the two tabs.
-    await seedReviewSession(context, sessionId);
-
-    await page.goto("/discover/ordering-at-a-cafe/pour");
-    await page.getByRole("button", { name: "Save" }).click();
+  }) => {
+    await seed(page, 1);
+    await conflictFromOtherTab(page, 1, true);
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
     await expect(
-      page.getByRole("button", { name: "Remove pour from saved words" }),
-    ).toBeVisible();
-
-    await page.goto("/reviews");
-    await page.getByRole("button", { name: "Show answer" }).click();
-
-    const otherTab = await context.newPage();
-    await otherTab.goto("/discover/ordering-at-a-cafe/pour");
-    await otherTab
-      .getByRole("button", { name: "Remove pour from saved words" })
-      .click();
-
-    let rejectedSubmissionCount = 0;
-    await page.route("**/api/v1/reviews/submissions", async (route) => {
-      rejectedSubmissionCount += 1;
-      await route.fulfill({
-        status: 404,
-        contentType: "application/json",
-        body: JSON.stringify({
-          title: "Not Found",
-          status: 404,
-          detail: "saved word not found",
-        }),
-      });
-    });
-
-    await page.getByRole("button", { name: "Good" }).click();
-
+      page.getByRole("heading", { name: "Lesson complete", exact: true }),
+    ).toBeFocused();
     await expect(
-      page.getByRole("heading", { name: "You're all caught up", level: 2 }),
+      page.getByText("0 words remembered for today.", { exact: true }),
     ).toBeVisible();
-    await expect(
-      page.getByText("This word was removed. Your review list was updated."),
-    ).toBeVisible();
-    await expect(page.getByText(/You reviewed \d+ word/)).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Good" })).toHaveCount(0);
-    expect(rejectedSubmissionCount).toBe(1);
   });
-
-  test("preserves earlier confirmed reviews when the next card was removed", async ({
+  test("preserves earlier confirmed answers when the next word is skipped elsewhere", async ({
     page,
-    context,
-  }, testInfo) => {
-    test.skip(
-      testInfo.project.name !== "home-desktop-1280",
-      "The mutation flow is covered once against the production bundle.",
-    );
-
-    const sessionId = [
-      "review-stale-card-prior-confirmed",
-      randomUUID(),
-      testInfo.testId,
-      `retry-${testInfo.retry}`,
-    ]
-      .map(encodeURIComponent)
-      .join("-");
-    await seedReviewSession(context, sessionId, 2, 2);
-    await page.goto("/reviews");
-
-    await submitFixtureReview(page, 1);
+  }) => {
+    await seed(page, 2);
+    await answerReviewWord(page, "definition for review word 1");
+    await conflictFromOtherTab(page, 2, true);
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
     await expect(
-      page.getByRole("heading", { name: "Review word 2", level: 2 }),
-    ).toBeVisible();
-
-    let dueRefreshCount = 0;
-    await page.route("**/api/v1/reviews/due?limit=*", async (route) => {
-      dueRefreshCount += 1;
-      await route.fulfill({
-        contentType: "application/json",
-        body: JSON.stringify({ items: [], totalCount: 0 }),
-      });
-    });
-    await page.route("**/api/v1/reviews/submissions", async (route) => {
-      await route.fulfill({
-        status: 404,
-        contentType: "application/json",
-        body: JSON.stringify({
-          title: "Not Found",
-          status: 404,
-          detail: "saved word not found",
-        }),
-      });
-    });
-
-    await submitFixtureReview(page, 2);
-
+      page.getByRole("heading", { name: "Lesson complete", exact: true }),
+    ).toBeFocused();
     await expect(
-      page.getByRole("heading", { name: "Review complete", level: 2 }),
+      page.getByText("1 word remembered for today.", { exact: true }),
     ).toBeVisible();
-    await expect(page.getByText("You reviewed 1 word.")).toBeVisible();
-    await expect(
-      page.getByText("This word was removed. Your review list was updated."),
-    ).toBeVisible();
-    expect(dueRefreshCount).toBe(1);
   });
-
-  test("clears the removed-word status after later normal reviews", async ({
+  test("clears stale feedback before later normal answers and credits each word once", async ({
     page,
-    context,
-  }, testInfo) => {
-    test.skip(
-      testInfo.project.name !== "home-desktop-1280",
-      "The mutation flow is covered once against the production bundle.",
-    );
-
-    const sessionId = [
-      "review-stale-card-status-lifecycle",
-      randomUUID(),
-      testInfo.testId,
-      `retry-${testInfo.retry}`,
-    ]
-      .map(encodeURIComponent)
-      .join("-");
-    await seedReviewSession(context, sessionId, 1, 2);
-    await page.goto("/reviews");
-
-    let submissionCount = 0;
-    await page.route("**/api/v1/reviews/submissions", async (route) => {
-      submissionCount += 1;
-      if (submissionCount === 1) {
-        await route.fulfill({
-          status: 404,
-          contentType: "application/json",
-          body: JSON.stringify({
-            title: "Not Found",
-            status: 404,
-            detail: "saved word not found",
-          }),
-        });
-        return;
-      }
-      await route.continue();
-    });
-
-    let dueRefreshCount = 0;
-    await page.route("**/api/v1/reviews/due?limit=*", async (route) => {
-      dueRefreshCount += 1;
-      await route.fulfill({
-        contentType: "application/json",
-        body: JSON.stringify(
-          dueRefreshCount === 1
-            ? {
-                items: [fixtureDueWord(2), fixtureDueWord(3)],
-                totalCount: 2,
-              }
-            : { items: [], totalCount: 0 },
-        ),
-      });
-    });
-
-    await submitFixtureReview(page, 1);
+  }) => {
+    await seed(page, 3);
+    await conflictFromOtherTab(page, 1, false);
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
     await expect(
-      page.getByRole("heading", { name: "Review word 2", level: 2 }),
-    ).toBeVisible();
+      page.getByRole("heading", { name: "Review word 2", exact: true }),
+    ).toBeFocused();
+    await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
     await expect(
-      page.getByText("This word was removed. Your review list was updated."),
-    ).toBeVisible();
-
-    await submitFixtureReview(page, 2);
-    await expect(
-      page.getByRole("heading", { name: "Review word 3", level: 2 }),
-    ).toBeVisible();
-    await expect(
-      page.getByText("This word was removed. Your review list was updated."),
+      page.getByRole("status").filter({ hasText: /^Correct/ }),
     ).toHaveCount(0);
-
-    await submitFixtureReview(page, 3);
+    await answerReviewWord(page, "definition for review word 2");
+    await answerReviewWord(page, "definition for review word 3");
     await expect(
-      page.getByRole("heading", { name: "Review complete", level: 2 }),
+      page.getByRole("heading", { name: "Lesson complete", exact: true }),
+    ).toBeFocused();
+    await expect(
+      page.getByText("3 words remembered for today.", { exact: true }),
     ).toBeVisible();
-    await expect(page.getByText("You reviewed 2 words.")).toBeVisible();
     await expect(
-      page.getByText("This word was removed. Your review list was updated."),
-    ).toHaveCount(0);
-    expect(dueRefreshCount).toBe(2);
+      page.getByText("3 correct on the first try.", { exact: true }),
+    ).toBeVisible();
   });
 });

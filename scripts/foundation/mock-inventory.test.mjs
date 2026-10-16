@@ -28,6 +28,12 @@ test("current delivery registers only the reviewed learning feature boundaries",
     "/api/v1/learning-preferences",
     "/api/v1/lesson-recommendation",
     "/api/v1/achievements",
+    "/api/v1/knowledge-map",
+    "/api/v1/knowledge-map/decisions",
+    "/api/v1/daily-lessons",
+    "/api/v1/daily-lessons/current",
+    "/api/v1/daily-lessons/{sessionId}",
+    "/api/v1/daily-lessons/{sessionId}/actions",
   ])
     assert.equal(isRegisteredAPIPath(route), true, route);
   for (const module of ["lessons", "practice", "wordknowledge", "achievements"])
@@ -56,6 +62,9 @@ test("registered feature families do not admit invented routes, modules, or sche
     "/api/v1/learning-preferences/admin",
     "/api/v1/lesson-recommendation/override",
     "/api/v1/achievements/claim",
+    "/api/v1/knowledge-map/award",
+    "/api/v1/daily-lessons/invalid/actions",
+    "/api/v1/daily-lessons/{sessionId}/rewards",
     "/api/v1/lesson-sessions/",
     "/api/v1/meaning-knowledge/",
   ])
@@ -237,12 +246,17 @@ test("private lists and original stories admit only implemented route shapes", (
     assert.equal(isRegisteredSchemaFile(schema), false, schema);
 });
 
-test("list/story real route sources and exact migration table inventories remain bounded", () => {
+test("learning route sources and exact migration table inventories remain bounded", () => {
   const root = path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
     "../..",
   );
-  for (const file of ["word_lists.go", "stories.go"]) {
+  for (const file of [
+    "word_lists.go",
+    "stories.go",
+    "daily_lessons.go",
+    "knowledge_map.go",
+  ]) {
     const source = readFileSync(
       path.join(root, "apps/api/app/api", file),
       "utf8",
@@ -257,6 +271,8 @@ test("list/story real route sources and exact migration table inventories remain
   for (const migration of [
     "20261004100000_word_lists.sql",
     "20261004140000_original_stories.sql",
+    "20261017100000_daily_lessons.sql",
+    "20261017100001_knowledge_catalog.sql",
   ]) {
     assert.equal(isRegisteredMigrationFile(migration), true, migration);
     const source = readFileSync(

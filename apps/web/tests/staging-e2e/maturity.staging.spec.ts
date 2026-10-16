@@ -352,9 +352,15 @@ test("connected maturity journey against real staging", async ({
           { exact: true },
         ),
       ).toBeVisible();
-      await main
-        .getByRole("link", { name: "Practice this list", exact: true })
-        .click();
+      const practiceLink = main.getByRole("link", {
+        name: "Practice this list",
+        exact: true,
+      });
+      await expect(practiceLink).toHaveAttribute(
+        "href",
+        `/practice?list=${list.id}`,
+      );
+      await practiceLink.click();
       await expect(
         main.getByLabel("Practice vocabulary", { exact: true }),
       ).toHaveValue(`list:${list.id}`);
@@ -522,9 +528,15 @@ test("connected maturity journey against real staging", async ({
 
     await test.step("open the matching unit guide and original topic prompt without AI submission", async () => {
       await page.goto(`${webOrigin}/stories/${STORY_KEY}`);
-      await main
-        .getByRole("link", { name: "Open the situation guide", exact: true })
-        .click();
+      const guideLink = main.getByRole("link", {
+        name: "Open the situation guide",
+        exact: true,
+      });
+      await expect(guideLink).toHaveAttribute(
+        "href",
+        "/discover/restaurant#unit-guide",
+      );
+      await guideLink.click();
       await expect(page).toHaveURL(
         `${webOrigin}/discover/restaurant#unit-guide`,
       );
@@ -537,9 +549,15 @@ test("connected maturity journey against real staging", async ({
       await expect(
         guide.getByText("Could I have the menu, please?", { exact: true }),
       ).toBeVisible();
-      await guide
-        .getByRole("link", { name: "Write about this situation", exact: true })
-        .click();
+      const writingLink = guide.getByRole("link", {
+        name: "Write about this situation",
+        exact: true,
+      });
+      await expect(writingLink).toHaveAttribute(
+        "href",
+        "/writing?situation=restaurant",
+      );
+      await writingLink.click();
       await expect(page).toHaveURL(`${webOrigin}/writing?situation=restaurant`);
       await expect(
         main.getByRole("heading", { name: "Topic writing", exact: true }),

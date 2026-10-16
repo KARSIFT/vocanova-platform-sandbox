@@ -62,16 +62,19 @@ function assertRedirectsToSignIn(response: Response): void {
   assert.equal(new URL(location).pathname, "/login");
 }
 
-function assertRecoverableOutage(response: Response): void {
+async function assertRecoverableOutage(response: Response): Promise<void> {
   assert.equal(response.status, 503);
   assert.equal(response.headers.get("location"), null);
   assert.equal(response.headers.get("cache-control"), "no-store");
   assert.equal(response.headers.get("set-cookie"), null);
-  const rewrite = response.headers.get("x-middleware-rewrite");
-  assert.ok(rewrite);
-  const destination = new URL(rewrite);
-  assert.equal(destination.pathname, "/connection-error");
-  assert.equal(destination.searchParams.get("returnTo"), PROTECTED_ROUTE);
+  assert.equal(response.headers.get("x-middleware-rewrite"), null);
+  assert.equal(response.headers.get("content-type"), "text/html; charset=utf-8");
+  assert.match(response.headers.get("content-security-policy")!, /default-src 'none'/);
+  const html = await response.text();
+  assert.match(html, /We couldn't connect/);
+  assert.ok(html.includes(`href="${PROTECTED_ROUTE}"`));
+  assert.ok(!html.includes(SESSION_COOKIE_VALUE));
+  assert.ok(!html.includes("<script"));
 }
 
 function assertNoCredentialMaterial(line: string): void {
@@ -119,7 +122,7 @@ describe("middleware auth-check failure logging", () => {
     assert.equal(log.routePath, PROTECTED_ROUTE);
     assert.equal(log.status, undefined);
     assertNoCredentialMaterial(line);
-    assertRecoverableOutage(response);
+    await assertRecoverableOutage(response);
   });
 
   it("logs the unauthorized_401 category with its status when the API returns 401", async () => {
@@ -151,7 +154,7 @@ describe("middleware auth-check failure logging", () => {
     assert.equal(log.routePath, PROTECTED_ROUTE);
     assert.equal(log.status, SERVICE_UNAVAILABLE);
     assertNoCredentialMaterial(line);
-    assertRecoverableOutage(response);
+    await assertRecoverableOutage(response);
   });
 
   it("logs nothing when the auth check succeeds", async () => {
@@ -177,7 +180,7 @@ describe("middleware auth-check failure logging", () => {
       },
     }), { status: 200 })));
     const response = await middleware(requestWithSessionCookie());
-    assertRecoverableOutage(response);
+    await assertRecoverableOutage(response);
     const line = singleFailureLine();
     assert.equal((JSON.parse(line) as AuthCheckFailureLog).category, "body_read_failed");
     assertNoCredentialMaterial(line);
@@ -185,7 +188,7 @@ describe("middleware auth-check failure logging", () => {
 
   it("treats malformed identity JSON as a recoverable outage", async () => {
     stubFetch(() => Promise.resolve(new Response("broken JSON", { status: 200 })));
-    assertRecoverableOutage(await middleware(requestWithSessionCookie()));
+    await assertRecoverableOutage(await middleware(requestWithSessionCookie()));
   });
 
   it("keeps the conservative onboarding gate for a successfully read identity with a missing status", async () => {
@@ -195,4 +198,18 @@ describe("middleware auth-check failure logging", () => {
     assert.equal(new URL(response.headers.get("location")!).pathname, "/onboarding");
     assert.deepEqual(loggedLines, []);
   });
+});
+
+it("outage HTML escapes destinations and uses only recognized theme preferences", async () => {
+  const { connectionErrorDocument, connectionRetryDestination } = await import("../../src/lib/connection-error");
+  const html = connectionErrorDocument('/progress?from=practice&next=" onmouseover="bad', 'dark" onload="bad');
+  assert.ok(html.includes('data-theme-preference="system"'));
+  assert.ok(html.includes('href="/progress?from=practice&amp;next=%22%20onmouseover=%22bad"'));
+  assert.ok(!html.includes(' onmouseover="'));
+  assert.ok(!html.includes(' onload="'));
+  for (const destination of ["https://outside.example/", "//outside.example/", "/connection-error?again=1", "/login", "/\\outside.example/"]) {
+    assert.equal(connectionRetryDestination(destination), "/home");
+  }
+  assert.ok(connectionErrorDocument("/home", "dark").includes('data-theme-preference="dark"'));
+  assert.ok(connectionErrorDocument("/home", "light").includes('data-theme-preference="light"'));
 });

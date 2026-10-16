@@ -30,13 +30,17 @@ func TestPostgreSQLSubmitReviewAnchorsScheduleToServerClock(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 	_, err = db.ExecContext(ctx, `
-		CREATE TEMP TABLE idempotency_keys (
+		CREATE TEMP TABLE users(id uuid PRIMARY KEY,status text DEFAULT 'active',deleted_at timestamptz);
+ CREATE TEMP TABLE user_word_knowledge(user_id uuid,meaning_id uuid,self_reported_known bool);
+ CREATE TEMP TABLE daily_review_successes(user_id uuid,meaning_id uuid,local_date date);
+ CREATE TEMP TABLE user_settings(user_id uuid,timezone text);
+ CREATE TEMP TABLE idempotency_keys (
 			id uuid PRIMARY KEY, user_id uuid NOT NULL, operation text NOT NULL,
 			key text NOT NULL, fingerprint text NOT NULL, created_at timestamptz NOT NULL,
 			UNIQUE(user_id, operation, key)
 		);
 		CREATE TEMP TABLE user_words (
-			id uuid PRIMARY KEY, user_id uuid NOT NULL, meaning_id uuid NOT NULL,
+			id uuid PRIMARY KEY, user_id uuid NOT NULL, meaning_id uuid NOT NULL, status text DEFAULT 'new',
 			review_step integer NOT NULL, total_review_count integer NOT NULL,
 			correct_review_count integer NOT NULL, consecutive_correct_count integer NOT NULL,
 			consecutive_incorrect_count integer NOT NULL, next_review_at timestamptz,
@@ -60,6 +64,8 @@ func TestPostgreSQLSubmitReviewAnchorsScheduleToServerClock(t *testing.T) {
 	repo := NewPostgreSQLRepository(db, clock.Fixed{T: serverNow})
 	svc := NewService(repo, learning.NewMemoryIdempotencyStore(), clock.Fixed{T: serverNow})
 	userID, meaningID := uuid.New(), uuid.New()
+	_, err = db.ExecContext(ctx, "INSERT INTO users(id)VALUES($1)", userID)
+	require.NoError(t, err)
 
 	for _, tc := range []struct {
 		name       string
@@ -79,17 +85,18 @@ func TestPostgreSQLSubmitReviewAnchorsScheduleToServerClock(t *testing.T) {
 				userWordID, userID, meaningID, serverNow)
 			require.NoError(t, err)
 
-			attempt, err := svc.SubmitReview(ctx, SubmitReviewRequest{
+			req := SubmitReviewRequest{
 				UserID: userID, UserWordID: userWordID, MeaningID: meaningID,
 				AttemptType: AttemptTypeReview, PromptType: PromptTypeMultipleChoice,
 				Result: ResultCorrect, Rating: RatingGood, SelectedOptionMeaningID: &meaningID,
 				AnsweredAt: tc.answeredAt, Source: SourceReview,
 				ClientAttemptID: "server-clock-" + userWordID.String(),
 				IdempotencyKey:  "server-clock-" + userWordID.String(),
-			})
+			}
+			attempt, err := svc.SubmitReview(ctx, req)
 			require.NoError(t, err)
 			require.Equal(t, tc.answeredAt, attempt.AnsweredAt)
-			require.Equal(t, serverNow.Add(time.Hour), attempt.NextReviewAt)
+			require.Equal(t, serverNow.Add(24*time.Hour), attempt.NextReviewAt)
 
 			var storedAnsweredAt, nextReviewAt, lastReviewedAt time.Time
 			require.NoError(t, db.QueryRowContext(ctx,
@@ -98,8 +105,43 @@ func TestPostgreSQLSubmitReviewAnchorsScheduleToServerClock(t *testing.T) {
 				`SELECT next_review_at, last_reviewed_at FROM user_words WHERE id = $1`, userWordID).
 				Scan(&nextReviewAt, &lastReviewedAt))
 			require.True(t, storedAnsweredAt.Equal(tc.answeredAt), "attempt history remains client-recorded")
-			require.True(t, nextReviewAt.Equal(serverNow.Add(time.Hour)), "schedule is server-owned")
+			require.True(t, nextReviewAt.Equal(serverNow.Add(24*time.Hour)), "schedule is server-owned")
 			require.True(t, lastReviewedAt.Equal(serverNow), "last review time is server-owned")
+			// The active-user SELECT lock must accept a real row, and immutable
+			// replay still works after the successful answer moves it into future.
+			replayed, err := repo.SubmitReview(ctx, req)
+			require.NoError(t, err)
+			require.Equal(t, attempt.ID, replayed.ID)
+			var total int
+			require.NoError(t, db.QueryRowContext(ctx, `SELECT total_review_count FROM user_words WHERE id=$1`, userWordID).Scan(&total))
+			require.Equal(t, 1, total)
+		})
+	}
+	// A non-active, removed, or missing learner must fail at the user boundary
+	// before any attempt or idempotency claim can be written.
+	for _, boundary := range []struct {
+		name             string
+		status           string
+		deleted, missing bool
+	}{
+		{name: "inactive", status: "suspended"},
+		{name: "soft-deleted", status: "active", deleted: true},
+		{name: "missing", missing: true},
+	} {
+		t.Run(boundary.name, func(t *testing.T) {
+			owner := uuid.New()
+			if !boundary.missing {
+				_, err := db.ExecContext(ctx, `INSERT INTO users(id,status,deleted_at)VALUES($1,$2,CASE WHEN $3 THEN $4::timestamptz ELSE NULL END)`, owner, boundary.status, boundary.deleted, serverNow)
+				require.NoError(t, err)
+			}
+			req := SubmitReviewRequest{UserID: owner, UserWordID: uuid.New(), MeaningID: meaningID, AttemptType: AttemptTypeReview, PromptType: PromptTypeSelfCheck, Result: ResultCorrect, Rating: RatingGood, AnsweredAt: serverNow, Source: SourceReview, ClientAttemptID: "boundary-" + boundary.name, IdempotencyKey: "boundary-" + boundary.name}
+			_, err := repo.SubmitReview(ctx, req)
+			require.ErrorIs(t, err, ErrUserWordNotFound)
+			for _, table := range []string{"review_attempts", "idempotency_keys"} {
+				var count int
+				require.NoError(t, db.QueryRowContext(ctx, `SELECT count(*) FROM `+table+` WHERE user_id=$1`, owner).Scan(&count))
+				require.Zero(t, count)
+			}
 		})
 	}
 }

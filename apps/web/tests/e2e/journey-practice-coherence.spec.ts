@@ -16,9 +16,9 @@ test.beforeEach(async ({ context, baseURL }) => {
 for (const theme of ["light", "dark"] as const) {
   test(`Journey connects activities without a second catalogue in ${theme}`, async ({ page, context, baseURL }, testInfo) => {
     await context.addCookies([{ name: "vocanova_theme", value: theme, url: baseURL! }]);
-    await page.goto("/discover");
+    await page.goto("/courses");
     const activities = page.getByRole("navigation", { name: "Ways to practise" });
-    for (const [name, href] of [["Choose a practice", "/practice"], ["Topic writing", "/writing"], ["Short stories", "/stories"]] as const) {
+    for (const [name, href] of [["Choose a practice", "/practice"], ["Short stories", "/stories"]] as const) {
       const entry = activities.getByRole("link", { name: new RegExp(name) });
       await expect(entry).toBeVisible();
       await expect(entry).toHaveAttribute("href", href);
@@ -46,27 +46,27 @@ test("Journey resumes the actual saved lesson and recommendation expiry redirect
   });
   expect(started.ok()).toBe(true);
   const session = await started.json() as LessonSession;
-  await page.goto("/discover");
+  await page.goto("/courses");
   const recommendation = page.getByRole("region", { name: "Pick up your lesson", exact: true });
   await expect(recommendation.getByText(`${session.completedSteps} of ${session.totalSteps} steps complete.`, { exact: true })).toBeVisible();
   await recommendation.getByRole("link", { name: /^Continue lesson\s*:/ }).click();
   await expect(page).toHaveURL(/\/learn\/conversation-basics$/);
   await expect(page.getByRole("heading", { name: "invite", exact: true })).toBeVisible();
   await context.addCookies([{ name: "e2e_recommendation_auth", value: "expired", url: baseURL! }]);
-  await page.goto("/discover");
-  await expect(page).toHaveURL(/\/login\?returnTo=%2Fdiscover$/);
+  await page.goto("/courses");
+  await expect(page).toHaveURL(/\/login\?returnTo=%2Fcourses$/);
 });
 
 test("Journey recommendation failure leads to the available situation catalogue", async ({ page, context, baseURL }) => {
   await context.addCookies([{ name: "e2e_lessons", value: "unavailable", url: baseURL! }]);
-  await page.goto("/discover");
+  await page.goto("/courses");
   const recommendation = page.getByRole("region", { name: "Your next lesson", exact: true });
   await expect(recommendation.getByRole("status")).toContainText("recommendation is unavailable");
   const browse = recommendation.getByRole("link", { name: "Explore situations", exact: true });
   await expect(browse).toHaveAttribute("href", "#journey-lessons");
   await browse.focus();
   await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/\/discover#journey-lessons$/);
+  await expect(page).toHaveURL(/\/courses#journey-lessons$/);
   const catalogue = page.locator("#journey-lessons");
   await expect(catalogue.getByRole("heading", { name: "Explore by situation" })).toBeVisible();
   await expect.poll(async () => {

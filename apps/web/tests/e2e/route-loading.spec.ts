@@ -1,5 +1,12 @@
 import { expect, test } from "@playwright/test";
 
+test.beforeEach(async ({ context, baseURL }) => {
+  await context.addCookies([
+    { name: "vocanova_session", value: crypto.randomUUID(), url: baseURL! },
+    { name: "vocanova_csrf", value: "route-loading-csrf", url: baseURL! },
+  ]);
+});
+
 const DELAY_COOKIE = {
   name: "e2e_response_delay_ms",
   value: "1500",
@@ -37,9 +44,9 @@ test.describe("Route loading states", () => {
     }) => {
       await page.emulateMedia({ colorScheme: theme });
       await disableViewportPrefetch(page);
-      await page.goto("/discover");
+      await page.goto("/courses");
       await expect(
-        page.getByRole("heading", { name: "Journey", level: 1 }),
+        page.getByRole("heading", { name: "Situation courses", level: 1 }),
       ).toBeVisible();
       await delayNextServerRequest(page);
 
@@ -88,7 +95,7 @@ test.describe("Route loading states", () => {
             page.getByRole("heading", { name: "confirm", exact: true }),
           ).toBeVisible();
         }
-        await page.goto("/discover");
+        await page.goto("/courses");
         const recommendation = page.getByRole("region", {
           name: resumed ? "Pick up your lesson" : "Your next lesson",
           exact: true,
@@ -146,7 +153,7 @@ test.describe("Route loading states", () => {
     await expect(status.locator("..")).toHaveAttribute("aria-busy", "true");
     await navigation;
     await expect(
-      page.getByRole("heading", { name: "Journey", level: 1 }),
+      page.getByRole("heading", { name: "Knowledge map", level: 1 }),
     ).toBeVisible({ timeout: 10_000 });
   });
 
@@ -171,26 +178,21 @@ test.describe("Route loading states", () => {
 
     await delayNextServerRequest(page);
 
-    const navigation = page.getByRole("link", { name: "Start review" }).click();
+    const action = page.getByRole("button", { name: "Start today’s lesson", exact: true });
+    await action.click();
+    await expect(page.getByRole("button", { name: "Starting…", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Starting…", exact: true })).toBeDisabled();
+    await expect(page.getByRole("heading", { name: "Review word 1", exact: true })).toBeVisible({ timeout: 15_000 });
 
-    const status = page.getByRole("status").filter({
-      hasText: "Loading reviews",
-    });
-    await expect(status).toBeVisible();
-    await expect(status.locator("..")).toHaveAttribute("aria-busy", "true");
-    await navigation;
-    await expect(
-      page.getByRole("heading", { name: "Review", level: 1 }),
-    ).toBeVisible({ timeout: 10_000 });
   });
 
   test("Saved vocabulary shows loading feedback while its data is delayed", async ({
     page,
   }) => {
     await disableViewportPrefetch(page);
-    await page.goto("/discover");
+    await page.goto("/courses");
     await expect(
-      page.getByRole("heading", { name: "Journey", level: 1 }),
+      page.getByRole("heading", { name: "Situation courses", level: 1 }),
     ).toBeVisible();
 
     await delayNextServerRequest(page);

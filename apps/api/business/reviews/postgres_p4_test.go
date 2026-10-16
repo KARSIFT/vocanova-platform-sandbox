@@ -89,14 +89,16 @@ func TestPostgreSQLRepositorySubmitReviewP4NilDependenciesNoP4Wiring(t *testing.
 	meaningID := p4TestID(t, "00000000-0000-0000-0000-000000000003")
 
 	mock.ExpectBegin()
+	mock.ExpectExec("SELECT id FROM users").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("SELECT review_step, meaning_id").
 		WithArgs(userWordID, userID).
-		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count"}).
-			AddRow(0, meaningID, 0, 0, 0, 0))
+		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count", "status", "next_review_at"}).
+			AddRow(0, meaningID, 0, 0, 0, 0, "new", nil))
 	expectReviewKeyClaim(mock)
 	mock.ExpectQuery("SELECT ra.id, ra.user_word_id").
 		WithArgs(userID, "ca-1").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "user_word_id", "meaning_id", "attempt_type", "prompt_type", "result", "rating", "review_step_before", "review_step_after", "answered_at", "response_time_ms", "selected_option_meaning_id", "typed_answer", "was_hint_used", "source", "client_attempt_id", "metadata", "next_review_at"}))
+	mock.ExpectQuery("SELECT EXISTS").WillReturnRows(sqlmock.NewRows([]string{"known"}).AddRow(false))
 	mock.ExpectExec("INSERT INTO review_attempts").
 		WithArgs(sqlmock.AnyArg(), userID, userWordID, meaningID, "review", "multiple_choice", "correct", "good", 0, 1, now, 0, nil, nil, false, "review", "ca-1", nil, now, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -105,19 +107,21 @@ func TestPostgreSQLRepositorySubmitReviewP4NilDependenciesNoP4Wiring(t *testing.
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
+	// Simulate trusted daily grading for this transaction-level reward-core test.
 	req := SubmitReviewRequest{
-		UserID:          userID,
-		UserWordID:      userWordID,
-		MeaningID:       meaningID,
-		AttemptType:     AttemptTypeReview,
-		PromptType:      PromptTypeMultipleChoice,
-		Result:          ResultCorrect,
-		Rating:          RatingGood,
-		AnsweredAt:      now,
-		ResponseTimeMs:  0,
-		Source:          SourceReview,
-		ClientAttemptID: "ca-1",
-		IdempotencyKey:  "review-test-key",
+		verifiedSessionID: uuid.New(),
+		UserID:            userID,
+		UserWordID:        userWordID,
+		MeaningID:         meaningID,
+		AttemptType:       AttemptTypeReview,
+		PromptType:        PromptTypeMultipleChoice,
+		Result:            ResultCorrect,
+		Rating:            RatingGood,
+		AnsweredAt:        now,
+		ResponseTimeMs:    0,
+		Source:            SourceReview,
+		ClientAttemptID:   "ca-1",
+		IdempotencyKey:    "review-test-key",
 	}
 	attempt, err := repo.SubmitReview(t.Context(), req)
 	require.NoError(t, err)
@@ -156,14 +160,16 @@ func TestPostgreSQLRepositorySubmitReviewP4RatingGoodWiring(t *testing.T) {
 	// Phase 1: existing P2 SQL (lock user word, idempotency, insert attempt,
 	// update user_words).
 	mock.ExpectBegin()
+	mock.ExpectExec("SELECT id FROM users").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("SELECT review_step, meaning_id").
 		WithArgs(userWordID, userID).
-		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count"}).
-			AddRow(0, meaningID, 0, 0, 0, 0))
+		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count", "status", "next_review_at"}).
+			AddRow(0, meaningID, 0, 0, 0, 0, "new", nil))
 	expectReviewKeyClaim(mock)
 	mock.ExpectQuery("SELECT ra.id, ra.user_word_id").
 		WithArgs(userID, "ca-1").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "user_word_id", "meaning_id", "attempt_type", "prompt_type", "result", "rating", "review_step_before", "review_step_after", "answered_at", "response_time_ms", "selected_option_meaning_id", "typed_answer", "was_hint_used", "source", "client_attempt_id", "metadata", "next_review_at"}))
+	mock.ExpectQuery("SELECT EXISTS").WillReturnRows(sqlmock.NewRows([]string{"known"}).AddRow(false))
 	mock.ExpectExec("INSERT INTO review_attempts").
 		WithArgs(sqlmock.AnyArg(), userID, userWordID, meaningID, "review", "multiple_choice", "correct", "good", 0, 1, now, 0, nil, nil, false, "review", "ca-1", nil, now, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -193,8 +199,9 @@ func TestPostgreSQLRepositorySubmitReviewP4RatingGoodWiring(t *testing.T) {
 		))
 	// 2c. IncrementReviewsCompleted: UPDATE daily_mission_snapshots
 	// RETURNING reviews_completed, then INSERT into daily_activity_summaries.
+	mock.ExpectExec("INSERT INTO daily_review_successes").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("UPDATE daily_mission_snapshots").
-		WithArgs(userID, day).
+		WithArgs(userID, day, 1).
 		WillReturnRows(sqlmock.NewRows([]string{"reviews_completed"}).AddRow(1))
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -239,19 +246,21 @@ func TestPostgreSQLRepositorySubmitReviewP4RatingGoodWiring(t *testing.T) {
 
 	mock.ExpectCommit()
 
+	// Simulate trusted daily grading for this transaction-level reward-core test.
 	req := SubmitReviewRequest{
-		UserID:          userID,
-		UserWordID:      userWordID,
-		MeaningID:       meaningID,
-		AttemptType:     AttemptTypeReview,
-		PromptType:      PromptTypeMultipleChoice,
-		Result:          ResultCorrect,
-		Rating:          RatingGood,
-		AnsweredAt:      now,
-		ResponseTimeMs:  0,
-		Source:          SourceReview,
-		ClientAttemptID: "ca-1",
-		IdempotencyKey:  "review-test-key",
+		verifiedSessionID: uuid.New(),
+		UserID:            userID,
+		UserWordID:        userWordID,
+		MeaningID:         meaningID,
+		AttemptType:       AttemptTypeReview,
+		PromptType:        PromptTypeMultipleChoice,
+		Result:            ResultCorrect,
+		Rating:            RatingGood,
+		AnsweredAt:        now,
+		ResponseTimeMs:    0,
+		Source:            SourceReview,
+		ClientAttemptID:   "ca-1",
+		IdempotencyKey:    "review-test-key",
 	}
 	attempt, err := repo.SubmitReview(t.Context(), req)
 	require.NoError(t, err)
@@ -286,14 +295,16 @@ func TestPostgreSQLRepositorySubmitReviewP4MissionCompletion(t *testing.T) {
 
 	// Phase 1: existing P2 SQL.
 	mock.ExpectBegin()
+	mock.ExpectExec("SELECT id FROM users").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("SELECT review_step, meaning_id").
 		WithArgs(userWordID, userID).
-		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count"}).
-			AddRow(0, meaningID, 0, 0, 0, 0))
+		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count", "status", "next_review_at"}).
+			AddRow(0, meaningID, 0, 0, 0, 0, "new", nil))
 	expectReviewKeyClaim(mock)
 	mock.ExpectQuery("SELECT ra.id, ra.user_word_id").
 		WithArgs(userID, "ca-20").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "user_word_id", "meaning_id", "attempt_type", "prompt_type", "result", "rating", "review_step_before", "review_step_after", "answered_at", "response_time_ms", "selected_option_meaning_id", "typed_answer", "was_hint_used", "source", "client_attempt_id", "metadata", "next_review_at"}))
+	mock.ExpectQuery("SELECT EXISTS").WillReturnRows(sqlmock.NewRows([]string{"known"}).AddRow(false))
 	mock.ExpectExec("INSERT INTO review_attempts").
 		WithArgs(sqlmock.AnyArg(), userID, userWordID, meaningID, "review", "multiple_choice", "correct", "good", 0, 1, now, 0, nil, nil, false, "review", "ca-20", nil, now, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -320,8 +331,9 @@ func TestPostgreSQLRepositorySubmitReviewP4MissionCompletion(t *testing.T) {
 			gamification.MissionPolicyVersion, "open", nil, false, nil,
 		))
 	// IncrementReviewsCompleted: 19 -> 20 (target met).
+	mock.ExpectExec("INSERT INTO daily_review_successes").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("UPDATE daily_mission_snapshots").
-		WithArgs(userID, day).
+		WithArgs(userID, day, 1).
 		WillReturnRows(sqlmock.NewRows([]string{"reviews_completed"}).AddRow(20))
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -394,19 +406,21 @@ func TestPostgreSQLRepositorySubmitReviewP4MissionCompletion(t *testing.T) {
 
 	mock.ExpectCommit()
 
+	// Simulate trusted daily grading for this transaction-level reward-core test.
 	req := SubmitReviewRequest{
-		UserID:          userID,
-		UserWordID:      userWordID,
-		MeaningID:       meaningID,
-		AttemptType:     AttemptTypeReview,
-		PromptType:      PromptTypeMultipleChoice,
-		Result:          ResultCorrect,
-		Rating:          RatingGood,
-		AnsweredAt:      now,
-		ResponseTimeMs:  0,
-		Source:          SourceReview,
-		ClientAttemptID: "ca-20",
-		IdempotencyKey:  "review-test-key",
+		verifiedSessionID: uuid.New(),
+		UserID:            userID,
+		UserWordID:        userWordID,
+		MeaningID:         meaningID,
+		AttemptType:       AttemptTypeReview,
+		PromptType:        PromptTypeMultipleChoice,
+		Result:            ResultCorrect,
+		Rating:            RatingGood,
+		AnsweredAt:        now,
+		ResponseTimeMs:    0,
+		Source:            SourceReview,
+		ClientAttemptID:   "ca-20",
+		IdempotencyKey:    "review-test-key",
 	}
 	attempt, err := repo.SubmitReview(t.Context(), req)
 	require.NoError(t, err)
@@ -439,14 +453,16 @@ func TestPostgreSQLRepositorySubmitReviewP4SkippedNoRatingReward(t *testing.T) {
 
 	// Phase 1: existing P2 SQL.
 	mock.ExpectBegin()
+	mock.ExpectExec("SELECT id FROM users").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("SELECT review_step, meaning_id").
 		WithArgs(userWordID, userID).
-		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count"}).
-			AddRow(0, meaningID, 0, 0, 0, 0))
+		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count", "status", "next_review_at"}).
+			AddRow(0, meaningID, 0, 0, 0, 0, "new", nil))
 	expectReviewKeyClaim(mock)
 	mock.ExpectQuery("SELECT ra.id, ra.user_word_id").
 		WithArgs(userID, "ca-skip").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "user_word_id", "meaning_id", "attempt_type", "prompt_type", "result", "rating", "review_step_before", "review_step_after", "answered_at", "response_time_ms", "selected_option_meaning_id", "typed_answer", "was_hint_used", "source", "client_attempt_id", "metadata", "next_review_at"}))
+	mock.ExpectQuery("SELECT EXISTS").WillReturnRows(sqlmock.NewRows([]string{"known"}).AddRow(false))
 	mock.ExpectExec("INSERT INTO review_attempts").
 		WithArgs(sqlmock.AnyArg(), userID, userWordID, meaningID, "review", "multiple_choice", "skipped", nil, 0, 0, now, 0, nil, nil, false, "review", "ca-skip", nil, now, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -474,7 +490,7 @@ func TestPostgreSQLRepositorySubmitReviewP4SkippedNoRatingReward(t *testing.T) {
 	// reviews_attempted and reviews_skipped both bump by 1; reviews_completed
 	// also increments toward the target (every submitted attempt counts).
 	mock.ExpectQuery("UPDATE daily_mission_snapshots").
-		WithArgs(userID, day).
+		WithArgs(userID, day, 0).
 		WillReturnRows(sqlmock.NewRows([]string{"reviews_completed"}).AddRow(1))
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -499,18 +515,20 @@ func TestPostgreSQLRepositorySubmitReviewP4SkippedNoRatingReward(t *testing.T) {
 
 	mock.ExpectCommit()
 
+	// Simulate trusted daily grading for this transaction-level reward-core test.
 	req := SubmitReviewRequest{
-		UserID:          userID,
-		UserWordID:      userWordID,
-		MeaningID:       meaningID,
-		AttemptType:     AttemptTypeReview,
-		PromptType:      PromptTypeMultipleChoice,
-		Result:          ResultSkipped,
-		AnsweredAt:      now,
-		ResponseTimeMs:  0,
-		Source:          SourceReview,
-		ClientAttemptID: "ca-skip",
-		IdempotencyKey:  "review-test-key",
+		verifiedSessionID: uuid.New(),
+		UserID:            userID,
+		UserWordID:        userWordID,
+		MeaningID:         meaningID,
+		AttemptType:       AttemptTypeReview,
+		PromptType:        PromptTypeMultipleChoice,
+		Result:            ResultSkipped,
+		AnsweredAt:        now,
+		ResponseTimeMs:    0,
+		Source:            SourceReview,
+		ClientAttemptID:   "ca-skip",
+		IdempotencyKey:    "review-test-key",
 	}
 	attempt, err := repo.SubmitReview(t.Context(), req)
 	require.NoError(t, err)
@@ -543,10 +561,11 @@ func TestPostgreSQLRepositorySubmitReviewP4IdempotentMatchNoP4Wiring(t *testing.
 	existingAttemptID := p4TestID(t, "00000000-0000-0000-0000-000000000004")
 
 	mock.ExpectBegin()
+	mock.ExpectExec("SELECT id FROM users").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("SELECT review_step, meaning_id").
 		WithArgs(userWordID, userID).
-		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count"}).
-			AddRow(0, meaningID, 0, 0, 0, 0))
+		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count", "status", "next_review_at"}).
+			AddRow(0, meaningID, 0, 0, 0, 0, "new", nil))
 	// fetchAttemptByClientAttemptID returns the existing attempt (same body).
 	expectReviewKeyClaim(mock)
 	mock.ExpectQuery("SELECT ra.id, ra.user_word_id").
@@ -557,18 +576,20 @@ func TestPostgreSQLRepositorySubmitReviewP4IdempotentMatchNoP4Wiring(t *testing.
 	// No P4 SQL — the existing-attempt short-circuit returns before the
 	// gamification/missions block.
 
+	// Simulate trusted daily grading for this transaction-level reward-core test.
 	req := SubmitReviewRequest{
-		UserID:          userID,
-		UserWordID:      userWordID,
-		MeaningID:       meaningID,
-		AttemptType:     AttemptTypeReview,
-		PromptType:      PromptTypeMultipleChoice,
-		Result:          ResultCorrect,
-		Rating:          RatingGood,
-		AnsweredAt:      now,
-		Source:          SourceReview,
-		ClientAttemptID: "ca-1",
-		IdempotencyKey:  "review-test-key",
+		verifiedSessionID: uuid.New(),
+		UserID:            userID,
+		UserWordID:        userWordID,
+		MeaningID:         meaningID,
+		AttemptType:       AttemptTypeReview,
+		PromptType:        PromptTypeMultipleChoice,
+		Result:            ResultCorrect,
+		Rating:            RatingGood,
+		AnsweredAt:        now,
+		Source:            SourceReview,
+		ClientAttemptID:   "ca-1",
+		IdempotencyKey:    "review-test-key",
 	}
 	attempt, err := repo.SubmitReview(t.Context(), req)
 	require.NoError(t, err)
@@ -603,14 +624,16 @@ func TestPostgreSQLRepositorySubmitReviewP4AlreadyCompletedSnapshotNoDoubleRewar
 	day := time.Date(2026, 7, 26, 0, 0, 0, 0, time.UTC)
 
 	mock.ExpectBegin()
+	mock.ExpectExec("SELECT id FROM users").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("SELECT review_step, meaning_id").
 		WithArgs(userWordID, userID).
-		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count"}).
-			AddRow(0, meaningID, 0, 0, 0, 0))
+		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count", "status", "next_review_at"}).
+			AddRow(0, meaningID, 0, 0, 0, 0, "new", nil))
 	expectReviewKeyClaim(mock)
 	mock.ExpectQuery("SELECT ra.id, ra.user_word_id").
 		WithArgs(userID, "ca-2nd").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "user_word_id", "meaning_id", "attempt_type", "prompt_type", "result", "rating", "review_step_before", "review_step_after", "answered_at", "response_time_ms", "selected_option_meaning_id", "typed_answer", "was_hint_used", "source", "client_attempt_id", "metadata", "next_review_at"}))
+	mock.ExpectQuery("SELECT EXISTS").WillReturnRows(sqlmock.NewRows([]string{"known"}).AddRow(false))
 	mock.ExpectExec("INSERT INTO review_attempts").
 		WithArgs(sqlmock.AnyArg(), userID, userWordID, meaningID, "review", "multiple_choice", "correct", "good", 0, 1, now, 0, nil, nil, false, "review", "ca-2nd", nil, now, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -635,8 +658,9 @@ func TestPostgreSQLRepositorySubmitReviewP4AlreadyCompletedSnapshotNoDoubleRewar
 			nil, nil, nil, nil,
 			gamification.MissionPolicyVersion, "completed", now, false, nil,
 		))
+	mock.ExpectExec("INSERT INTO daily_review_successes").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("UPDATE daily_mission_snapshots").
-		WithArgs(userID, day).
+		WithArgs(userID, day, 1).
 		WillReturnRows(sqlmock.NewRows([]string{"reviews_completed"}).AddRow(20))
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -680,19 +704,21 @@ func TestPostgreSQLRepositorySubmitReviewP4AlreadyCompletedSnapshotNoDoubleRewar
 
 	mock.ExpectCommit()
 
+	// Simulate trusted daily grading for this transaction-level reward-core test.
 	req := SubmitReviewRequest{
-		UserID:          userID,
-		UserWordID:      userWordID,
-		MeaningID:       meaningID,
-		AttemptType:     AttemptTypeReview,
-		PromptType:      PromptTypeMultipleChoice,
-		Result:          ResultCorrect,
-		Rating:          RatingGood,
-		AnsweredAt:      now,
-		ResponseTimeMs:  0,
-		Source:          SourceReview,
-		ClientAttemptID: "ca-2nd",
-		IdempotencyKey:  "review-test-key",
+		verifiedSessionID: uuid.New(),
+		UserID:            userID,
+		UserWordID:        userWordID,
+		MeaningID:         meaningID,
+		AttemptType:       AttemptTypeReview,
+		PromptType:        PromptTypeMultipleChoice,
+		Result:            ResultCorrect,
+		Rating:            RatingGood,
+		AnsweredAt:        now,
+		ResponseTimeMs:    0,
+		Source:            SourceReview,
+		ClientAttemptID:   "ca-2nd",
+		IdempotencyKey:    "review-test-key",
 	}
 	attempt, err := repo.SubmitReview(t.Context(), req)
 	require.NoError(t, err)

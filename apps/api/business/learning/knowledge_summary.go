@@ -50,7 +50,7 @@ func (r *PostgreSQLRepository) GetKnowledgeSummary(ctx context.Context, userID u
 	 count(*) FILTER (WHERE uw.status='mastered'),
 	 count(*) FILTER (WHERE uw.status='ignored'),
 	 count(*) FILTER (WHERE uw.status='archived'),
-	 count(*) FILTER (WHERE uw.status IN ('new','learning','reviewing') AND (uw.next_review_at IS NULL OR uw.next_review_at <= CURRENT_TIMESTAMP))
+	 count(*) FILTER (WHERE uw.status IN ('new','learning','reviewing') AND (uw.next_review_at IS NULL OR uw.next_review_at <= CURRENT_TIMESTAMP) AND NOT EXISTS (SELECT 1 FROM user_word_knowledge k WHERE k.user_id=uw.user_id AND k.meaning_id=uw.meaning_id AND k.self_reported_known) AND NOT EXISTS (SELECT 1 FROM daily_review_successes d WHERE d.user_id=uw.user_id AND d.meaning_id=uw.meaning_id AND d.local_date=(CURRENT_TIMESTAMP AT TIME ZONE COALESCE((SELECT timezone FROM user_settings WHERE user_id=uw.user_id),'UTC'))::date))
 	 FROM user_words uw JOIN word_meanings wm ON wm.id=uw.meaning_id JOIN canonical_words cw ON cw.id=wm.word_id
 	 WHERE uw.user_id=$1 AND uw.deleted_at IS NULL`, userID).Scan(&summary.Saved, &summary.New, &summary.Learning, &summary.Reviewing, &summary.Mastered, &summary.Ignored, &summary.Archived, &summary.Due)
 	if err != nil {

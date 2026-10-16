@@ -316,7 +316,7 @@ func TestPostgreSQLRepositoryIncrementReviewsCompleted(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectQuery("UPDATE daily_mission_snapshots").
-		WithArgs(userID, day).
+		WithArgs(userID, day, 1).
 		WillReturnRows(sqlmock.NewRows([]string{"reviews_completed"}).AddRow(1))
 	mock.ExpectExec("INSERT INTO daily_activity_summaries").
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -344,7 +344,7 @@ func TestPostgreSQLRepositoryIncrementReviewsCompletedSnapshotMissing(t *testing
 
 	mock.ExpectBegin()
 	mock.ExpectQuery("UPDATE daily_mission_snapshots").
-		WithArgs(userID, day).
+		WithArgs(userID, day, 1).
 		WillReturnError(sqlmock.ErrCancelled)
 	mock.ExpectRollback()
 

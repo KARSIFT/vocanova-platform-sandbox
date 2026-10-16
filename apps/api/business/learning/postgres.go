@@ -68,6 +68,12 @@ func (r *PostgreSQLRepository) SaveUserWordAtomically(ctx context.Context, req S
 	}
 	defer tx.Rollback()
 
+	// Lock the learner before the idempotency INSERT: its user foreign key
+	// otherwise takes KEY SHARE first and concurrent saves can deadlock while
+	// upgrading to the user-wide mutation lock.
+	if err := lockActiveSavedWordUser(ctx, tx, req.UserID); err != nil {
+		return nil, IdempotencyAbsent, err
+	}
 	var claimedFingerprint string
 	err = tx.QueryRowContext(ctx, `INSERT INTO idempotency_keys (id, user_id, operation, key, fingerprint, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6)
@@ -110,7 +116,23 @@ func (r *PostgreSQLRepository) SaveUserWordAtomically(ctx context.Context, req S
 	return m, IdempotencyAbsent, nil
 }
 
+func lockActiveSavedWordUser(ctx context.Context, tx *sql.Tx, userID uuid.UUID) error {
+	var owner uuid.UUID
+	if err := tx.QueryRowContext(ctx, "SELECT id FROM users WHERE id=$1 AND status='active' AND deleted_at IS NULL FOR UPDATE", userID).Scan(&owner); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrMeaningNotFound
+		}
+		return err
+	}
+	return nil
+}
 func (r *PostgreSQLRepository) saveUserWordTx(ctx context.Context, tx *sql.Tx, req SaveUserWordRequest, now time.Time, readSavedMeaning bool) (*SavedMeaning, error) {
+	// Serialize every saved-word mutation in the same user -> word order used by
+	// discovery decisions and scheduled daily lessons.
+	if err := lockActiveSavedWordUser(ctx, tx, req.UserID); err != nil {
+		return nil, err
+	}
+
 	// The partial active-row unique index prevents duplicate persistence, but it
 	// cannot make two concurrent first saves return the same idempotent result:
 	// both transactions can observe no row before either INSERT commits. The P4
@@ -211,7 +233,7 @@ func (r *PostgreSQLRepository) saveUserWordTx(ctx context.Context, tx *sql.Tx, r
 		var resolved gamification.ResolvedSettings
 		var snap *missions.DailyMissionSnapshot
 		if r.missions != nil {
-			resolved, err = r.gamification.GetSettings(ctx, req.UserID, "")
+			resolved, err = r.gamification.GetSettingsTx(ctx, tx, req.UserID, "")
 			if err != nil {
 				return nil, fmt.Errorf("get mission settings: %w", err)
 			}
@@ -283,7 +305,19 @@ func (r *PostgreSQLRepository) HasP4Wiring() bool {
 }
 
 func (r *PostgreSQLRepository) UnsaveUserWord(ctx context.Context, userID, meaningID uuid.UUID, now time.Time) error {
-	res, err := r.db.ExecContext(ctx,
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var owner uuid.UUID
+	if err = tx.QueryRowContext(ctx, "SELECT id FROM users WHERE id=$1 AND status='active' AND deleted_at IS NULL FOR UPDATE", userID).Scan(&owner); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrUserWordNotFound
+		}
+		return err
+	}
+	res, err := tx.ExecContext(ctx,
 		`UPDATE user_words
 		 SET deleted_at = $1, updated_at = $1
 		 WHERE user_id = $2 AND meaning_id = $3 AND deleted_at IS NULL`,
@@ -299,7 +333,7 @@ func (r *PostgreSQLRepository) UnsaveUserWord(ctx context.Context, userID, meani
 	if rows == 0 {
 		return ErrUserWordNotFound
 	}
-	return nil
+	return tx.Commit()
 }
 
 func (r *PostgreSQLRepository) GetSavedMeaning(ctx context.Context, userID, meaningID uuid.UUID) (*SavedMeaning, error) {
@@ -334,7 +368,7 @@ func (r *PostgreSQLRepository) ListSavedWords(ctx context.Context, req ListSaved
  SELECT uw.id AS user_word_id,uw.meaning_id,cw.id AS word_id,cw.text AS word_text,cw.normalized_text,
  wm.part_of_speech,wm.short_definition,uw.status,uw.source,uw.added_at,
  CASE WHEN uw.status='new' AND uw.total_review_count>0 THEN 'learning' ELSE uw.status END AS review_state,
- (uw.status IN ('new','learning','reviewing') AND (uw.next_review_at IS NULL OR uw.next_review_at<=CURRENT_TIMESTAMP)) AS due
+ (uw.status IN ('new','learning','reviewing') AND (uw.next_review_at IS NULL OR uw.next_review_at<=CURRENT_TIMESTAMP) AND NOT EXISTS (SELECT 1 FROM user_word_knowledge k WHERE k.user_id=uw.user_id AND k.meaning_id=uw.meaning_id AND k.self_reported_known) AND NOT EXISTS (SELECT 1 FROM daily_review_successes d WHERE d.user_id=uw.user_id AND d.meaning_id=uw.meaning_id AND d.local_date=(CURRENT_TIMESTAMP AT TIME ZONE COALESCE((SELECT timezone FROM user_settings WHERE user_id=uw.user_id),'UTC'))::date)) AS due
  FROM user_words uw JOIN word_meanings wm ON wm.id=uw.meaning_id JOIN canonical_words cw ON cw.id=wm.word_id
  WHERE uw.user_id=$1 AND uw.deleted_at IS NULL
  ), matches AS (
@@ -447,7 +481,7 @@ func (r *PostgreSQLRepository) SavedWordStates(ctx context.Context, userID uuid.
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT meaning_id, id,
 			CASE WHEN status = 'new' AND total_review_count > 0 THEN 'learning' ELSE status END,
-			(status IN ('new', 'learning', 'reviewing') AND (next_review_at IS NULL OR next_review_at <= CURRENT_TIMESTAMP)) AS due
+			(status IN ('new', 'learning', 'reviewing') AND (next_review_at IS NULL OR next_review_at <= CURRENT_TIMESTAMP) AND NOT EXISTS (SELECT 1 FROM user_word_knowledge k WHERE k.user_id=user_words.user_id AND k.meaning_id=user_words.meaning_id AND k.self_reported_known) AND NOT EXISTS (SELECT 1 FROM daily_review_successes d WHERE d.user_id=user_words.user_id AND d.meaning_id=user_words.meaning_id AND d.local_date=(CURRENT_TIMESTAMP AT TIME ZONE COALESCE((SELECT timezone FROM user_settings WHERE user_id=user_words.user_id),'UTC'))::date)) AS due
 		 FROM user_words
 		 WHERE user_id = $1 AND meaning_id = ANY($2::uuid[]) AND deleted_at IS NULL`,
 		userID, pq.Array(meaningIDs),

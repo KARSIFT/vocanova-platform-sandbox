@@ -6,7 +6,7 @@ import { formatViolations, scanForAxeViolations } from "./axe-helper";
 const mockAPI = `http://127.0.0.1:${process.env.MOCK_API_PORT ?? 8080}`;
 
 for (const theme of ["light", "dark"] as const) {
-  test(`Practice connects real review, lesson, writing and listening activities in ${theme} mode`, async ({
+  test(`Practice connects review, discovery, lesson and listening activities in ${theme} mode`, async ({
     page,
     context,
     baseURL,
@@ -33,23 +33,20 @@ for (const theme of ["light", "dark"] as const) {
       main.getByRole("heading", { level: 1, name: "Practice" }),
     ).toBeVisible();
     const activities = main.getByRole("navigation", { name: "Practice activities" });
-    await expect(activities.getByRole("link", { name: "Topic writing", exact: true })).toHaveAttribute("href", "/writing");
+    await expect(activities.getByRole("link", { name: "Discover words", exact: true })).toHaveAttribute("href", "/discovery");
     await expect(activities.getByRole("link", { name: "Short stories", exact: true })).toHaveAttribute("href", "/stories");
-    await expect(main.getByRole("heading", { name: "Write a sentence", exact: true })).toHaveAttribute("id", "practice-writing-heading");
+    await expect(main.getByRole("textbox")).toHaveCount(0);
     // The endpoint returns one item but seven due words. The count must come
     // from totalCount, never from the sampled queue length.
     await expect(
       main.getByText("7 words are due for review.", { exact: true }),
     ).toBeVisible();
     await expect(
-      main.getByRole("link", { name: "Start review", exact: true }),
+      main.getByRole("link", { name: "Start today’s lesson", exact: true }),
     ).toHaveAttribute("href", "/review");
     await expect(
       main.getByRole("link", { name: "Start lesson", exact: true }),
     ).toHaveAttribute("href", "/learn/conversation-basics");
-    await expect(
-      main.getByRole("link", { name: "Write with pour", exact: true }),
-    ).toHaveAttribute("href", "/words/uw-mean-pour#sentence-practice");
     await expect(
       main.getByRole("link", { name: "Listen to pour", exact: true }),
     ).toHaveAttribute("href", "/vocabulary/pour");
@@ -134,10 +131,10 @@ for (const theme of ["light", "dark"] as const) {
       main.getByText("No words are due right now.", { exact: true }),
     ).toBeVisible();
     await expect(
-      main.getByRole("link", { name: "Start review", exact: true }),
+      main.getByRole("link", { name: "Start today’s lesson", exact: true }),
     ).toHaveCount(0);
     await expect(
-      main.getByRole("link", { name: "View reviews", exact: true }),
+      main.getByRole("link", { name: "View today’s lesson", exact: true }),
     ).toHaveAttribute("href", "/review");
     await expect(
       main.getByText(
@@ -147,16 +144,8 @@ for (const theme of ["light", "dark"] as const) {
     ).toBeVisible();
     await expect(
       main.getByRole("link", { name: "Explore situations", exact: true }),
-    ).toHaveAttribute("href", "/discover");
-    await expect(
-      main.getByText(
-        "Save a word first, then use it in your own sentence.",
-        { exact: true },
-      ),
-    ).toBeVisible();
-    await expect(
-      main.getByRole("link", { name: "Find a word to save", exact: true }),
-    ).toHaveAttribute("href", "/vocabulary");
+    ).toHaveAttribute("href", "/courses");
+    await expect(main.getByRole("link", { name: "Discover words", exact: true })).toHaveAttribute("href", "/discovery");
     await expect(
       main.getByRole("link", { name: "Find a word to hear", exact: true }),
     ).toHaveAttribute("href", "/vocabulary");
@@ -189,42 +178,32 @@ test("Practice keeps scheduled count truthful after today's review target is com
     { name: "e2e_review_fixture_count", value: "7", url: baseURL },
     { name: "e2e_daily_review_target", value: "5", url: baseURL },
   ]);
-  for (let index = 1; index <= 5; index += 1) {
-    const response = await context.request.post(
-      `${mockAPI}/api/v1/reviews/submissions`,
-      {
-        headers: { "X-CSRF-Token": csrf, "Idempotency-Key": randomUUID() },
-        data: {
-          userWordId: `fixture-user-word-${index}`,
-          meaningId: `fixture-meaning-${index}`,
-          promptType: "self_check",
-          result: "correct",
-          rating: "good",
-          answeredAt: new Date().toISOString(),
-          clientAttemptId: randomUUID(),
-        },
-      },
-    );
-    expect(response.ok()).toBe(true);
+  let response = await context.request.post(`${mockAPI}/api/v1/daily-lessons`, {
+    headers: { "X-CSRF-Token": csrf, "Idempotency-Key": randomUUID() }, data: {},
+  });
+  expect(response.ok()).toBe(true);
+  let lesson = await response.json();
+  for (let index = 0; index < 5; index++) {
+    for (const action of ["answer", "continue"] as const) {
+      const id = randomUUID();
+      response = await context.request.post(`${mockAPI}/api/v1/daily-lessons/${lesson.id}/actions`, {
+        headers: { "X-CSRF-Token": csrf, "Idempotency-Key": id },
+        data: { action, clientActionId: id, stepId: lesson.currentStep.id, expectedRevision: lesson.revision, ...(action === "answer" ? { choiceId: "meaning-a" } : {}) },
+      });
+      expect(response.ok()).toBe(true); lesson = await response.json();
+    }
   }
+
   await page.goto("/practice");
   const main = page.getByRole("main");
   await expect(
     main.getByText("2 words are due for review.", { exact: true }),
   ).toBeVisible();
-  await expect(
-    main.getByText(
-      "Today’s review target is complete. Your next review session is tomorrow.",
-      { exact: true },
-    ),
-  ).toBeVisible();
-  await expect(
-    main.getByRole("link", { name: "Start review", exact: true }),
-  ).toHaveCount(0);
-  await main.getByRole("link", { name: "View reviews", exact: true }).click();
-  await expect(
-    main.getByRole("heading", { name: "Today's review target is complete" }),
-  ).toBeVisible();
+  // A daily habit target does not conceal still-due words or an active lesson.
+  await main.getByRole("link", { name: "Start today’s lesson", exact: true }).click();
+  await expect(main.getByRole("heading", { name: "Review word 6", exact: true })).toBeVisible();
+  await expect(main.getByRole("progressbar", { name: "Lesson progress" })).toHaveAttribute("value", "5");
+
 });
 
 test("Practice distinguishes unavailable lessons from an empty catalog without hiding other activities", async ({
@@ -247,7 +226,7 @@ test("Practice distinguishes unavailable lessons from an empty catalog without h
     main.getByText("3 words are due for review.", { exact: true }),
   ).toBeVisible();
   await expect(
-    main.getByRole("link", { name: "Start review", exact: true }),
+    main.getByRole("link", { name: "Start today’s lesson", exact: true }),
   ).toBeVisible();
   await expect(
     main.getByRole("link", { name: "Find a word to hear", exact: true }),

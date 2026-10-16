@@ -1,3 +1,5 @@
+import { openOptionalWriting, openPersonalTools } from "./optional-writing";
+import { answerReviewWord, startReviewLesson } from "./review-readiness";
 // VOC-031-T08 - Full core-loop end-to-end Playwright suite.
 //
 // This is the DOC-10 §7-documented end-to-end flow, built for
@@ -22,7 +24,7 @@
 //   2.  Onboarding: fill the 5-step form, submit, expect
 //       /onboarding -> /home.
 //
-//   3.  Discover: /home -> /discover -> /discover/ordering-at-a-
+//   3.  Courses: /home -> /courses -> /discover/ordering-at-a-
 //       cafe -> /discover/ordering-at-a-cafe/pour.
 //
 //   4.  Save: click the Save button on the Word Detail screen,
@@ -32,9 +34,7 @@
 //       save -> saved transition).
 //
 //   5.  Review: /reviews, complete the one due card via the
-//       self-check flow (Show answer -> rate), expect the "all
-//       caught up" empty state plus a sentence-feedback widget
-//       for the just-reviewed card.
+//       meaning-choice flow, then verify server-confirmed daily credit.
 //
 //   6.  Sentence feedback + deterministic AI: back on the Word
 //       Detail screen, type a sentence containing the target
@@ -219,16 +219,16 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     await expect(mission).toBeVisible();
     await expect(mission.getByRole("heading", { level: 2 })).toBeVisible();
     await expect(
-      mission.getByRole("link", { name: "Start your Journey", exact: true }),
-    ).toHaveAttribute("href", "/discover");
+      mission.getByRole("link", { name: "Discover words", exact: true }),
+    ).toHaveAttribute("href", "/discovery");
     await expect(
       mission.getByRole("progressbar", { name: "Reviews today" }),
     ).toHaveAttribute("aria-valuenow", "0");
 
     // ----- 3. Discover.
-    await page.goto("/discover");
+    await page.goto("/courses");
     await expect(
-      page.getByRole("heading", { name: "Journey", level: 1 }),
+      page.getByRole("heading", { name: "Situation courses", level: 1 }),
     ).toBeVisible();
     const cafeSituation = page
       .getByRole("region", { name: "Guided lessons", exact: true })
@@ -295,18 +295,10 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     ).toBeVisible();
     await expect(page.getByText("Due today", { exact: true })).toBeVisible();
 
-    // Issue #1181 (PRD §2): sentence practice is "surfaced from Home,
-    // Word Detail, and Review Completion" - not a fourth tab. This is
-    // entry point 1 of 3: the SentenceFeedback widget below a saved
-    // meaning on the Word Detail screen. It's gated on the server-
-    // rendered `meaning.saved`/`meaning.userWordId` fields (see
-    // discover/[situation]/[word]/page.tsx), which meaning-save-button.tsx
-    // now refreshes via router.refresh() right after a successful save -
-    // without that refresh the button flips to "Saved" but this widget
-    // never appears until a manual reload, silently breaking this entry
-    // point. The writing entry appears immediately; the learner opens the
-    // optional editor deliberately, with no navigation or manual reload.
-    const wordPractice = page.locator("summary").filter({ hasText: "Practise in a sentence" });
+    // A successful save exposes Optional writing inside Personal tools without
+    // a manual reload. Opening it is deliberate and retains the mounted draft.
+    await openPersonalTools(page);
+    const wordPractice = page.locator("summary").filter({ hasText: "Optional writing" });
     await expect(wordPractice).toBeVisible();
     await expect(page.getByRole("heading", { name: /Practice with pour/ })).toBeHidden();
     await wordPractice.focus();
@@ -316,37 +308,17 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
     ).toBeVisible();
     await expectSentencePracticePrivacyReminder(page);
 
-    // ----- 5. Review session.
-    //
-    // The mock returns the one saved word as a due word. With a
-    // single due word, the review session uses the self_check
-    // prompt type (no distractors to build a multiple-choice
-    // question). The flow is: Show answer -> rate -> advance ->
-    // refetch returns empty -> "all caught up" state.
+    // ----- 5. A server-graded meaning answer counts once for today.
     await page.goto("/reviews");
-    await expect(
-      page.getByText("Review 1 of 1", { exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "Review", level: 1 }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "pour", level: 2 }),
-    ).toBeVisible();
-    await page.getByRole("button", { name: "Show answer" }).click();
-    await expect(page.getByRole("button", { name: "Good" })).toBeVisible();
-    await page.getByRole("button", { name: "Good" }).click();
-
-    // DOC-03 §4 requires Review Completion to surface a summary and
-    // offer sentence practice. The one submitted card was confirmed
-    // by the mock API, so it must be counted once here.
-    await expect(
-      page.getByRole("heading", { name: "Review complete", level: 2 }),
-    ).toBeVisible();
-    await expect(page.getByText("You reviewed 1 word.")).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: /Practice with pour/ }),
-    ).toBeVisible();
+    await startReviewLesson(page);
+    await expect(page.getByRole("heading", { name: "pour", exact: true, level: 1 })).toBeVisible();
+    await answerReviewWord(page, "to make liquid flow into a container");
+    await expect(page.getByRole("heading", { name: "Lesson complete", exact: true, level: 1 })).toBeFocused();
+    await expect(page.getByText("1 word remembered for today.", { exact: true })).toBeVisible();
+    await expect(page.getByRole("textbox")).toHaveCount(0);
+    // Writing is a deliberate personal tool, separate from today's recall.
+    await page.goto("/discover/ordering-at-a-cafe/pour#sentence-practice");
+    await expect(page.getByRole("heading", { name: /Practice with pour/ })).toBeVisible();
     await expectSentencePracticePrivacyReminder(page);
 
     // ----- 6. Sentence feedback + deterministic AI.
@@ -430,20 +402,16 @@ test.describe("Core loop end-to-end (VOC-031-T08)", () => {
 
     // ----- 7. Progress update.
     //
-    // The mock's POST /api/v1/reviews/submissions increments
-    // state.reviewedCount; the home page's daily-mission text
-    // reflects that. After one review, the home page should
-    // show "1 of 20 words reviewed today" (the default target).
+    // The confirmed daily-lesson answer updates the server mission counter.
     await page.goto("/home");
     await expect(
       page.getByRole("progressbar", { name: "Reviews today" }),
     ).toHaveAttribute("aria-valuenow", "1");
 
-    // Home offers optional writing as a deliberate entry into the saved word.
+    // Home leads with discovery and the saved word; writing stays optional.
     await expect(page.getByRole("textbox", { name: /Write a sentence using/ })).toHaveCount(0);
-    await page.getByRole("link", { name: "Write with pour", exact: true }).click();
-    await expect(page).toHaveURL(/#sentence-practice$/);
-    await expect(page.getByRole("heading", { name: /Practice with pour/ })).toBeVisible();
+    await page.getByRole("link", { name: "pour", exact: true }).click();
+    await openOptionalWriting(page);
     await expect(page.getByRole("textbox", { name: "Write a sentence using pour", exact: true })).toBeVisible();
     await expectSentencePracticePrivacyReminder(page);
 
@@ -655,7 +623,7 @@ for (const initiallySaved of [false, true]) {
     }
     await page.reload();
     await expect(save).toHaveAttribute("aria-pressed", "true");
-    await page.locator("summary").filter({ hasText: "Practise in a sentence" }).click();
+    await openOptionalWriting(page);
     await expect(
       page.getByRole("heading", { name: "Practice with pour", exact: true }),
     ).toBeVisible();

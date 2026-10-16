@@ -211,18 +211,27 @@ func (r *Repository) IncrementReviewsCompleted(
 	reviewTarget int,
 	correct bool,
 	skipped bool,
+	successCredit ...bool,
 ) (int, error) {
 	if tx == nil {
 		return 0, errors.New("transaction required")
 	}
+	credit := correct
+	if len(successCredit) > 0 {
+		credit = successCredit[0]
+	}
+	increment := 0
+	if credit {
+		increment = 1
+	}
 	var newCount int
 	err := tx.QueryRowContext(ctx,
 		`UPDATE daily_mission_snapshots
-		 SET reviews_completed = LEAST(reviews_completed + 1, review_target),
+		 SET reviews_completed = LEAST(reviews_completed + $3, review_target),
 		     updated_at = NOW()
 		 WHERE user_id = $1 AND local_date = $2
 		 RETURNING reviews_completed`,
-		userID, localDate,
+		userID, localDate, increment,
 	).Scan(&newCount)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

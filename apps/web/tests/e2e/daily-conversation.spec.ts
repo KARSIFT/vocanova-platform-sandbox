@@ -1,3 +1,4 @@
+import { openPersonalTools } from "./optional-writing";
 import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
@@ -35,7 +36,7 @@ for (const theme of ["light", "dark"] as const) {
       { name: "e2e_daily_conversation", value: "true", url },
       { name: "vocanova_theme", value: theme, url },
     ]);
-    await page.goto("/discover");
+    await page.goto("/courses");
     const situation = page
       .getByRole("region", { name: "Guided lessons", exact: true })
       .locator("details")
@@ -135,7 +136,8 @@ for (const theme of ["light", "dark"] as const) {
     ).toBeVisible();
     await verifyExamples();
     await expect(fullerDefinition).toBeVisible();
-    const writing = page.locator("summary").filter({ hasText: "Practise in a sentence" });
+    await openPersonalTools(page);
+    const writing = page.locator("summary").filter({ hasText: "Optional writing" });
     await writing.focus();
     await page.keyboard.press("Enter");
     await expect(

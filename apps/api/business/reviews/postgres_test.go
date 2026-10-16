@@ -30,14 +30,16 @@ func TestPostgreSQLRepositorySubmitReview(t *testing.T) {
 	attemptID := uuid.MustParse("00000000-0000-0000-0000-000000000004")
 
 	mock.ExpectBegin()
+	mock.ExpectExec("SELECT id FROM users").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("SELECT review_step, meaning_id").
 		WithArgs(userWordID, userID).
-		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count"}).
-			AddRow(0, meaningID, 0, 0, 0, 0))
+		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count", "status", "next_review_at"}).
+			AddRow(0, meaningID, 0, 0, 0, 0, "new", nil))
 	expectReviewKeyClaim(mock)
 	mock.ExpectQuery("SELECT ra.id, ra.user_word_id").
 		WithArgs(userID, "ca-1").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "user_word_id", "meaning_id", "attempt_type", "prompt_type", "result", "rating", "review_step_before", "review_step_after", "answered_at", "response_time_ms", "selected_option_meaning_id", "typed_answer", "was_hint_used", "source", "client_attempt_id", "metadata", "next_review_at"}))
+	mock.ExpectQuery("SELECT EXISTS").WillReturnRows(sqlmock.NewRows([]string{"known"}).AddRow(false))
 	mock.ExpectExec("INSERT INTO review_attempts").
 		WithArgs(sqlmock.AnyArg(), userID, userWordID, meaningID, "review", "multiple_choice", "correct", "good", 0, 1, now, 0, nil, nil, false, "review", "ca-1", nil, now, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -64,7 +66,7 @@ func TestPostgreSQLRepositorySubmitReview(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEqual(t, attemptID, attempt.ID) // random uuid
 	assert.Equal(t, 1, attempt.ReviewStepAfter)
-	assert.Equal(t, now.Add(time.Hour), attempt.NextReviewAt)
+	assert.Equal(t, now.Add(24*time.Hour), attempt.NextReviewAt)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -79,9 +81,10 @@ func TestPostgreSQLRepositorySubmitReviewUserWordNotFound(t *testing.T) {
 	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
 
 	mock.ExpectBegin()
+	mock.ExpectExec("SELECT id FROM users").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("SELECT review_step, meaning_id").
 		WithArgs(userWordID, userID).
-		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count"}))
+		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count", "status", "next_review_at"}))
 	mock.ExpectRollback()
 
 	_, err = repo.SubmitReview(t.Context(), SubmitReviewRequest{
@@ -112,10 +115,11 @@ func TestPostgreSQLRepositorySubmitReviewMeaningMismatch(t *testing.T) {
 	storedMeaningID := uuid.MustParse("00000000-0000-0000-0000-000000000099")
 
 	mock.ExpectBegin()
+	mock.ExpectExec("SELECT id FROM users").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("SELECT review_step, meaning_id").
 		WithArgs(userWordID, userID).
-		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count"}).
-			AddRow(0, storedMeaningID, 0, 0, 0, 0))
+		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count", "status", "next_review_at"}).
+			AddRow(0, storedMeaningID, 0, 0, 0, 0, "new", nil))
 	mock.ExpectRollback()
 
 	_, err = repo.SubmitReview(t.Context(), SubmitReviewRequest{
@@ -148,10 +152,11 @@ func TestPostgreSQLRepositorySubmitReviewIdempotencyConflict(t *testing.T) {
 	attemptID := uuid.MustParse("00000000-0000-0000-0000-000000000004")
 
 	mock.ExpectBegin()
+	mock.ExpectExec("SELECT id FROM users").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("SELECT review_step, meaning_id").
 		WithArgs(userWordID, userID).
-		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count"}).
-			AddRow(0, meaningID, 0, 0, 0, 0))
+		WillReturnRows(sqlmock.NewRows([]string{"review_step", "meaning_id", "total_review_count", "correct_review_count", "consecutive_correct_count", "consecutive_incorrect_count", "status", "next_review_at"}).
+			AddRow(0, meaningID, 0, 0, 0, 0, "new", nil))
 	expectReviewKeyClaim(mock)
 	mock.ExpectQuery("SELECT ra.id, ra.user_word_id").
 		WithArgs(userID, "ca-1").

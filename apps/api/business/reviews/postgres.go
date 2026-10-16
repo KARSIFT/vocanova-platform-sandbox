@@ -101,6 +101,7 @@ func (r *PostgreSQLRepository) ListDueWords(ctx context.Context, req ListDueWord
 		 WHERE uw.user_id = $1
 		   AND uw.deleted_at IS NULL
 		   AND uw.status IN ('new', 'learning', 'reviewing')
+ AND NOT EXISTS(SELECT 1 FROM user_word_knowledge k WHERE k.user_id=uw.user_id AND k.meaning_id=uw.meaning_id AND k.self_reported_known) AND NOT EXISTS(SELECT 1 FROM daily_review_successes d WHERE d.user_id=uw.user_id AND d.meaning_id=uw.meaning_id AND d.local_date=(CURRENT_TIMESTAMP AT TIME ZONE COALESCE((SELECT timezone FROM user_settings WHERE user_id=uw.user_id),'UTC'))::date)
 		   AND (uw.next_review_at IS NULL OR uw.next_review_at <= NOW())
 		 ) AS due
 		 WHERE ($3::uuid = '00000000-0000-0000-0000-000000000000'::uuid OR
@@ -147,6 +148,7 @@ func (r *PostgreSQLRepository) ListDueWords(ctx context.Context, req ListDueWord
 		 JOIN canonical_words cw ON cw.id = wm.word_id
 		 WHERE uw.user_id = $1 AND uw.deleted_at IS NULL
 		 AND uw.status IN ('new', 'learning', 'reviewing')
+ AND NOT EXISTS(SELECT 1 FROM user_word_knowledge k WHERE k.user_id=uw.user_id AND k.meaning_id=uw.meaning_id AND k.self_reported_known) AND NOT EXISTS(SELECT 1 FROM daily_review_successes d WHERE d.user_id=uw.user_id AND d.meaning_id=uw.meaning_id AND d.local_date=(CURRENT_TIMESTAMP AT TIME ZONE COALESCE((SELECT timezone FROM user_settings WHERE user_id=uw.user_id),'UTC'))::date)
 		 AND (uw.next_review_at IS NULL OR uw.next_review_at <= NOW())`, req.UserID).Scan(&totalCount)
 		if err != nil {
 			return nil, fmt.Errorf("count due words: %w", err)
@@ -198,16 +200,67 @@ func (r *PostgreSQLRepository) SubmitReview(ctx context.Context, req SubmitRevie
 	}
 	defer tx.Rollback()
 
+	// Every review path uses the same user -> session -> word -> mission lock order.
+	result, err := tx.ExecContext(ctx, "SELECT id FROM users WHERE id=$1 AND status='active' AND deleted_at IS NULL FOR UPDATE", req.UserID)
+	if err != nil {
+		return nil, err
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return nil, err
+	}
+	if n != 1 {
+		return nil, ErrUserWordNotFound
+	}
+	attempt, err := r.SubmitReviewTx(ctx, tx, req)
+	if err != nil {
+		return nil, err
+	}
+	if err = tx.Commit(); err != nil {
+		return nil, err
+	}
+	return attempt, nil
+}
+
+// SubmitDailyReviewTx is the only path that can grant verified daily credit.
+// It binds trusted server grading to the owned session's frozen exact saved meaning.
+func (r *PostgreSQLRepository) SubmitDailyReviewTx(ctx context.Context, tx *sql.Tx, req SubmitReviewRequest, sessionID uuid.UUID) (*ReviewAttempt, error) {
+	if tx == nil || sessionID == uuid.Nil {
+		return nil, ErrUserWordNotFound
+	}
+	var member bool
+	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM daily_lesson_sessions s CROSS JOIN LATERAL jsonb_array_elements(s.state->'Words') w
+ WHERE s.id=$1 AND s.user_id=$2 AND s.status='in_progress' AND w->>'MeaningID'=$3 AND w->>'UserWordID'=$4)`, sessionID, req.UserID, req.MeaningID.String(), req.UserWordID.String()).Scan(&member)
+	if err != nil {
+		return nil, err
+	}
+	if !member {
+		return nil, ErrUserWordNotFound
+	}
+	req.verifiedSessionID = sessionID
+	return r.SubmitReviewTx(ctx, tx, req)
+}
+
+// SubmitReviewTx applies the exact same scheduling, receipt and reward transaction
+// to a server-graded daily lesson. The caller must hold the active user lock and
+// commit this transaction together with its own durable session/action state.
+func (r *PostgreSQLRepository) SubmitReviewTx(ctx context.Context, tx *sql.Tx, req SubmitReviewRequest) (*ReviewAttempt, error) {
+	var err error
+	if tx == nil {
+		return nil, errors.New("transaction required")
+	}
 	var priorStep, totalCount, correctCount, consecutiveCorrect, consecutiveIncorrect int
 	var meaningID uuid.UUID
+	var status string
+	var nextDue sql.NullTime
 	err = tx.QueryRowContext(ctx,
 		`SELECT review_step, meaning_id, total_review_count, correct_review_count,
-		        consecutive_correct_count, consecutive_incorrect_count
+		        consecutive_correct_count, consecutive_incorrect_count, status, next_review_at
 		 FROM user_words
 		 WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
 		 FOR UPDATE`,
 		req.UserWordID, req.UserID,
-	).Scan(&priorStep, &meaningID, &totalCount, &correctCount, &consecutiveCorrect, &consecutiveIncorrect)
+	).Scan(&priorStep, &meaningID, &totalCount, &correctCount, &consecutiveCorrect, &consecutiveIncorrect, &status, &nextDue)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrUserWordNotFound
 	}
@@ -251,9 +304,6 @@ func (r *PostgreSQLRepository) SubmitReview(ctx context.Context, req SubmitRevie
 	}
 	if existing != nil {
 		if reviewAttemptEqualsRequest(existing, req) {
-			if err := tx.Commit(); err != nil {
-				return nil, fmt.Errorf("commit idempotent: %w", err)
-			}
 			return existing, nil
 		}
 		return nil, ErrIdempotencyConflict
@@ -262,6 +312,22 @@ func (r *PostgreSQLRepository) SubmitReview(ctx context.Context, req SubmitRevie
 		return nil, ErrReviewAttemptNotFound
 	}
 
+	if req.ExpectedReviewCount != nil && *req.ExpectedReviewCount != totalCount {
+		return nil, ErrNotDue
+	}
+	if !isDueStatus(status) || (!req.AllowSessionRetry && nextDue.Valid && nextDue.Time.After(now)) {
+		return nil, ErrNotDue
+	}
+	// A verified answer resolves this meaning for the learner's local day even
+	// if a legacy restore reset its schedule. Exact replays returned above;
+	// the private daily path retains its own receipt dedupe.
+	var unavailable bool
+	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM user_word_knowledge WHERE user_id=$1 AND meaning_id=$2 AND self_reported_known) OR ($3::boolean AND EXISTS(SELECT 1 FROM daily_review_successes d WHERE d.user_id=$1 AND d.meaning_id=$2 AND d.local_date=($4 AT TIME ZONE COALESCE((SELECT timezone FROM user_settings WHERE user_id=$1),'UTC'))::date))`, req.UserID, req.MeaningID, req.verifiedSessionID == uuid.Nil, now).Scan(&unavailable); err != nil {
+		return nil, err
+	}
+	if unavailable {
+		return nil, ErrNotDue
+	}
 	prior := ReviewState{
 		ReviewStep: priorStep,
 		Counters: ReviewCounters{
@@ -367,10 +433,6 @@ func (r *PostgreSQLRepository) SubmitReview(ctx context.Context, req SubmitRevie
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("commit review submission: %w", err)
-	}
-
 	return &ReviewAttempt{
 		ID:                      attemptID,
 		UserID:                  req.UserID,
@@ -413,7 +475,7 @@ func (r *PostgreSQLRepository) applyP4ReviewWiring(
 	// user_settings row first, then the request-time client IANA timezone
 	// (empty here — P2's SubmitReview is the caller's own transaction, not
 	// an HTTP request), falling back to UTC/default. D01 governs.
-	resolved, err := r.gamification.GetSettings(ctx, req.UserID, "")
+	resolved, err := r.gamification.GetSettingsTx(ctx, tx, req.UserID, "")
 	if err != nil {
 		return fmt.Errorf("get settings: %w", err)
 	}
@@ -435,9 +497,21 @@ func (r *PostgreSQLRepository) applyP4ReviewWiring(
 
 	// Increment reviews_completed on the snapshot (capped at review_target
 	// by LEAST) and upsert the activity summary's review counters.
+	credited := false
+	if correct && !req.WasHintUsed && req.verifiedSessionID != uuid.Nil {
+		result, e := tx.ExecContext(ctx, `INSERT INTO daily_review_successes(user_id,meaning_id,local_date,review_attempt_id,created_at,daily_session_id) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(user_id,meaning_id,local_date) DO NOTHING`, req.UserID, req.MeaningID, snap.LocalDate, attemptID, now, req.verifiedSessionID)
+		if e != nil {
+			return e
+		}
+		n, e := result.RowsAffected()
+		if e != nil {
+			return e
+		}
+		credited = n == 1
+	}
 	newReviewsCompleted, err := r.missions.IncrementReviewsCompleted(
 		ctx, tx, req.UserID, snap.LocalDate, resolved.Timezone,
-		resolved.DailyReviewTarget, correct, skipped,
+		resolved.DailyReviewTarget, correct, skipped, credited,
 	)
 	if err != nil {
 		return fmt.Errorf("increment reviews completed: %w", err)
@@ -446,7 +520,11 @@ func (r *PostgreSQLRepository) applyP4ReviewWiring(
 	// Skipped reviews do not award a rating-tiered point (DOC-06 §11
 	// prices only Again/Hard/Good/Easy, all of which require a rating)
 	// but the activity counter above already recorded the attempt.
-	if !skipped {
+	// A server-graded daily lesson awards rating XP only for a newly credited
+	// correct meaning. Repeated wrong retries are learning attempts, not XP.
+	// Standalone legacy review keeps its original rating policy.
+	awardRating := !skipped && (req.verifiedSessionID == uuid.Nil || (correct && credited))
+	if awardRating {
 		balance, err := r.gamification.CurrentBalanceTx(ctx, tx, req.UserID)
 		if err != nil {
 			return fmt.Errorf("get latest point balance: %w", err)
