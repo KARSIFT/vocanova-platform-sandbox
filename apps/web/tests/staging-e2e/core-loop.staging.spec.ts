@@ -620,8 +620,22 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
     });
 
     let openedWordPath = "";
-    await test.step("3. discover a situation and open a word", async () => {
-      await page.goto("/courses");
+    await test.step("3. open situation courses from Journey and discover a word", async () => {
+      const journey = page
+        .getByRole("navigation", { name: "Primary", exact: true })
+        .getByRole("link", { name: "Journey", exact: true });
+      await expect(journey).toHaveAttribute("href", "/discover");
+      await journey.click();
+      await expect(page).toHaveURL(/\/discover$/);
+      await expect(
+        page.getByRole("heading", { name: "Knowledge map", exact: true }),
+      ).toBeVisible();
+      const courses = page
+        .getByRole("navigation", { name: "More ways to learn", exact: true })
+        .getByRole("link", { name: "Situation courses", exact: true });
+      await expect(courses).toHaveAttribute("href", "/courses");
+      await courses.click();
+      await expect(page).toHaveURL(/\/courses$/);
       await expect(
         page.getByRole("heading", { name: "Situation courses", level: 1 }),
       ).toBeVisible();
@@ -653,9 +667,12 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
       await expect(explore).toHaveAttribute("href", /^\/discover\/[^/]+$/);
       await explore.click();
       await expect(page).toHaveURL(/\/discover\/[^/]+(\?|$)/);
-      await expect(
-        page.getByRole("link", { name: "Back to Journey" }),
-      ).toBeVisible();
+      const allCourses = page.getByRole("link", {
+        name: "All courses",
+        exact: true,
+      });
+      await expect(allCourses).toBeVisible();
+      await expect(allCourses).toHaveAttribute("href", "/courses");
 
       const wordLink = await chooseSituationWordLink(page);
       await wordLink.click();
@@ -767,8 +784,11 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
         .getByRole("heading", { name: /^Practice with / })
         .first();
       await expect(feedbackHeading).toBeVisible();
-
-      const sentenceInput = page.getByRole("textbox", {
+      const feedback = page.getByRole("region", {
+        name: await feedbackHeading.innerText(),
+        exact: true,
+      });
+      const sentenceInput = feedback.getByRole("textbox", {
         name: /^Write a sentence using /,
       });
       const targetWord = (
@@ -783,16 +803,14 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
           response.url().includes("/api/v1/learner-sentences") &&
           response.request().method() === "POST",
       );
-      await page.getByRole("button", { name: "Check my sentence" }).click();
+      await feedback
+        .getByRole("button", { name: "Check my sentence", exact: true })
+        .click();
       expect((await feedbackResponse).status()).toBe(200);
 
       // The real evaluator is not deterministic, so the assertion is
       // that the widget settled on a rendered outcome - a verdict or
       // an explicit error - not which verdict it was.
-      const feedback = page.getByRole("region", {
-        name: await feedbackHeading.innerText(),
-        exact: true,
-      });
       const verdict = feedback.getByRole("status", {
         name: /^Feedback result: /,
       });
