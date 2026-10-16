@@ -63,8 +63,9 @@ source_files:
   queue candidate and workflow runs before choosing a bounded recovery action.
   The historical activation-recovery commands below no longer apply.
 - **Staging:** [deploy-staging](../../.github/workflows/deploy-staging.yml)
-  automatically selects pushes to `main` that match its path allowlist. A
-  docs-only change under `docs/` does not by itself trigger staging. The workflow
+  deploys every push to `main`, including documentation-only changes. Each
+  mainline commit advances the patch version; redeploying the same commit retains
+  its version. See [release numbering](../development/account-and-release-operations.md#identify-a-deployed-release). The workflow
   also supports manual retry/redeployment; its `skip_ssh_deploy=true` mode builds
   and publishes images without deploying and is not live-deployment evidence.
 - **Production:** [deploy-production](../../.github/workflows/deploy-production.yml)
@@ -156,7 +157,7 @@ is currently deployed against — not a plan:
 | Reverse proxy / TLS termination | `nginx` service (the only host-published service) terminates TLS using a Cloudflare-issued origin certificate (`VOC-032-DEP-01`); real client IP restored from `CF-Connecting-IP` only when the connection genuinely originates from Cloudflare's published IP ranges (never `0.0.0.0/0`); `staging.vocanova.site` → `web`, `api-staging.vocanova.site` → `api`; plain-`80` redirects to `443`; standard security headers set on every response |
 | DNS/TLS/WAF/CDN (edge) | Cloudflare (narrowed role) — DNS, TLS, WAF, and CDN only; **no Cloudflare compute** (no Workers, no OpenNext, no Cloudflare D1/KV/Durable Objects/Queues/R2 at the edge) |
 | Atlas migration tooling | `apps/api/atlas.hcl` + `apps/api/scripts/migrate.sh` apply the existing `apps/api/migrations/*.sql` set; `.down.sql.example` files remain non-executable by Atlas per the existing `apps/api/migrations/README.md` rule |
-| Deploy automation | `.github/workflows/deploy-staging.yml` — on `develop` **push**, runs only when changed files match the fail-closed runtime/deploy allowlist (repository-root files, `apps/**`, `packages/**`, `infra/**`, `tests/staging-e2e/**`, and the workflow/selector-test paths); documentation, governed `specs/**` package material, and other evidence-only carriers **do not** schedule the workflow. When selected (or via manual `workflow_dispatch` retry/redeploy), build + tag by commit SHA + push to `ghcr.io`, then SSH to the staging host, pull, apply migrations via the `T06` wrapper, `docker compose up -d`, poll `/healthz`; fails closed without tearing down currently-running containers if the health check does not pass within a bounded timeout |
+| Deploy automation | `.github/workflows/deploy-staging.yml` deploys every push to `main`, including documentation-only merges. The shared release metadata script gives each mainline commit a distinct patch version. Manual `workflow_dispatch` retries retain that version. Build and publish environment-specific images, apply migrations, deploy, and verify health plus exact web/API release identity; production remains manual. |
 | Error monitoring | Sentry — **extended 2026-08-08 by `VOC-051-§1-amendment`** to cover `apps/web` browser-side/server-side error reporting and an hourly Sentry-to-GitHub-issue monitoring workflow (see the amendment note below); the tool choice itself is unchanged |
 | Uptime monitoring | Uptime Kuma (availability/TLS/basic API health) + scheduled synthetics (authenticated behavior) — **amended 2026-08-19 by `VOC-086-§1-amendment`**; Sentry remains the separate error-monitoring channel (VOC-051) |
 | Harness, Terraform/OpenTofu, Cloudflare D1/KV/Durable Objects/Queues/R2 | Deferred post-MVP (unchanged) |
