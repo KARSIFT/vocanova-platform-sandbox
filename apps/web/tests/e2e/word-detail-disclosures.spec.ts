@@ -1,6 +1,72 @@
+import { openOptionalWriting, openPersonalTools } from "./optional-writing";
 import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { scanForAxeViolations } from "./axe-helper";
+
+test("native writing opened before hydration preserves its reload target", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await context.addCookies([
+    { name: "vocanova_session", value: randomUUID(), url: baseURL! },
+    { name: "vocanova_csrf", value: randomUUID(), url: baseURL! },
+  ]);
+  await page.goto("/vocabulary/pour");
+  await page.getByRole("button", { name: /^Save pour:/ }).click();
+  await expect(
+    page.getByRole("button", { name: "Remove pour from saved words" }),
+  ).toBeVisible();
+
+  // A separate document has no previously running React state. Routing its
+  // chunks also disables HTTP cache, so this interaction must use native HTML.
+  const nativePage = await context.newPage();
+  let releaseChunks!: () => void;
+  const chunksReleased = new Promise<void>((resolve) => {
+    releaseChunks = resolve;
+  });
+  let blockedChunks = 0;
+  let deadlineReleased = false;
+  const deadline = setTimeout(() => {
+    deadlineReleased = true;
+    releaseChunks();
+  }, 15_000);
+  await nativePage.route("**/_next/static/**/*.js", async (route) => {
+    blockedChunks += 1;
+    await chunksReleased;
+    await route.continue();
+  });
+  try {
+    await nativePage.goto("/words/uw-mean-pour", { waitUntil: "commit" });
+    await expect.poll(() => blockedChunks).toBeGreaterThan(0);
+    await openOptionalWriting(nativePage);
+    const writing = nativePage.getByRole("textbox", {
+      name: "Write a sentence using pour",
+      exact: true,
+    });
+    await expect(writing).toBeVisible();
+    // React has not attached either its activation or toggle handler yet.
+    await expect(nativePage).not.toHaveURL(/#sentence-practice$/);
+    expect(deadlineReleased).toBe(false);
+    const historyLength = await nativePage.evaluate(() => history.length);
+    releaseChunks();
+    await expect(nativePage).toHaveURL(/#sentence-practice$/);
+    expect(await nativePage.evaluate(() => history.length)).toBe(historyLength);
+    await writing.fill("I pour tea into my cup.");
+    await nativePage.reload();
+    await expect(writing).toBeVisible();
+    await expect(writing).toHaveValue("I pour tea into my cup.");
+    await expect(nativePage.locator("#sentence-practice")).toHaveAttribute(
+      "open",
+      "",
+    );
+  } finally {
+    clearTimeout(deadline);
+    releaseChunks();
+    await nativePage.unrouteAll({ behavior: "wait" });
+    await nativePage.close();
+  }
+});
 
 for (const theme of ["light", "dark"] as const) {
   test(`word teaching stays focused and optional tools retain state in ${theme}`, async ({
@@ -23,7 +89,7 @@ for (const theme of ["light", "dark"] as const) {
     });
     const practice = page
       .locator("summary")
-      .filter({ hasText: "Practise in a sentence" });
+      .filter({ hasText: "Optional writing" });
     await expect(writing).toBeHidden();
     await expect(
       page.getByRole("button", { name: "Edit knowledge and note" }),
@@ -31,6 +97,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(
       page.getByText("Could you pour me a cup of coffee?", { exact: true }),
     ).toBeVisible();
+    await openPersonalTools(page);
     const historyLength = await page.evaluate(() => window.history.length);
     await practice.focus();
     await page.keyboard.press("Enter");
@@ -65,7 +132,14 @@ for (const theme of ["light", "dark"] as const) {
     });
     await expect(writing).toBeVisible();
     const tools = page.locator("summary").filter({ hasText: "Personal tools" });
+    await expect(
+      page.getByRole("button", { name: "Edit knowledge and note" }),
+    ).toBeVisible();
     await tools.focus();
+    await page.keyboard.press("Space");
+    await expect(
+      page.getByRole("button", { name: "Edit knowledge and note" }),
+    ).toBeHidden();
     await page.keyboard.press("Space");
     await expect(
       page.getByRole("button", { name: "Edit knowledge and note" }),
@@ -95,10 +169,8 @@ test("manually opened sentence practice restores the visible draft and exact ret
     name: "Write a sentence using pour",
   });
   await expect(writing).toBeHidden();
-  await page
-    .locator("summary")
-    .filter({ hasText: "Practise in a sentence" })
-    .click();
+  await openPersonalTools(page);
+  await page.locator("summary").filter({ hasText: "Optional writing" }).click();
   await expect(writing).toBeVisible();
   await expect(page).toHaveURL(
     /\/vocabulary\/pour\?from=home#sentence-practice$/,

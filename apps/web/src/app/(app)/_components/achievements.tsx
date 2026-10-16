@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { AchievementList } from "@vocanova/api-client";
 
 const nextSteps = {
-  lessons: { href: "/discover", label: "Choose a lesson" },
+  lessons: { href: "/courses", label: "Choose a lesson" },
   practice: { href: "/practice", label: "Choose a practice" },
   reviews: { href: "/review", label: "View scheduled reviews" },
   writing: { href: "/words", label: "Write with a saved word" },

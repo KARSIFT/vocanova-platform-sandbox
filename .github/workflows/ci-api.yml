@@ -88,8 +88,26 @@ jobs:
             exit 1
           fi
 
+      - name: Verify discovery and daily lessons against PostgreSQL without skips
+        working-directory: apps/api
+        run: |
+          set -euo pipefail
+          test_log="$(mktemp)"
+          trap 'rm -f "$test_log"' EXIT
+          go test -race ./business/knowledgecatalog ./business/dailylesson \
+            -count=1 -v | tee "$test_log"
+          for case in TestPostgreSQLCompleteCatalogSeedAndConsistentBandCounts TestPostgreSQLDiscoveryAtomicChoicesIsolationHistoryAndReplay TestPostgreSQLDailyLessonAuthorityRetryCreditResumeAndExport TestPostgreSQLFullCatalogHasEnoughDailyLessonChoices TestPostgreSQLVerifiedTodayDueConsistencyAcrossRestorePaths TestPostgreSQLFreshSaveKeysLockUserBeforeForeignKeyClaims; do
+            grep -Eq "^--- PASS: $case " "$test_log"
+          done
+          if grep -Eq '^[[:space:]]*--- SKIP:' "$test_log"; then
+            echo "Discovery and daily lesson PostgreSQL cases must not skip" >&2
+            exit 1
+          fi
+
   ci-api:
     name: ci-api
+    needs: postgres-read-reliability
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     container:
@@ -98,6 +116,11 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      - name: Require PostgreSQL acceptance
+        env:
+          POSTGRES_ACCEPTANCE_RESULT: ${{ needs.postgres-read-reliability.result }}
+        run: test "$POSTGRES_ACCEPTANCE_RESULT" = success
+
       # actions/checkout v7.0.1, pinned to the immutable commit documented at
       # https://github.com/actions/checkout/releases/tag/v7.0.1
       - name: Check out repository

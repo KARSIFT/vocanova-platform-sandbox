@@ -69,19 +69,19 @@ func StepInterval(step int) time.Duration {
 	case 0:
 		return 10 * time.Minute
 	case 1:
-		return 1 * time.Hour
-	case 2:
 		return 24 * time.Hour
-	case 3:
+	case 2:
 		return 3 * 24 * time.Hour
-	case 4:
+	case 3:
 		return 7 * 24 * time.Hour
-	case 5:
+	case 4:
 		return 14 * 24 * time.Hour
-	case 6:
+	case 5:
 		return 30 * 24 * time.Hour
-	case 7:
+	case 6:
 		return 60 * 24 * time.Hour
+	case 7:
+		return 120 * 24 * time.Hour
 	default:
 		return 10 * time.Minute
 	}
@@ -154,9 +154,13 @@ func ApplyReview(prior ReviewState, req ApplyReviewRequest, now time.Time) (Appl
 		}
 	}
 
+	next := now.Add(StepInterval(newStep))
+	if req.Result == ResultCorrect && !isIncorrect && next.Before(now.Add(24*time.Hour)) {
+		next = now.Add(24 * time.Hour)
+	}
 	return ApplyReviewResult{
 		ReviewStep:     newStep,
-		NextReviewAt:   now.Add(StepInterval(newStep)),
+		NextReviewAt:   next,
 		Counters:       counters,
 		LastReviewedAt: now,
 		LastResult:     lastResult,

@@ -30,13 +30,17 @@ func TestPostgreSQLSubmitReviewAnchorsScheduleToServerClock(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 	_, err = db.ExecContext(ctx, `
-		CREATE TEMP TABLE idempotency_keys (
+		CREATE TEMP TABLE users(id uuid PRIMARY KEY,status text DEFAULT 'active',deleted_at timestamptz);
+ CREATE TEMP TABLE user_word_knowledge(user_id uuid,meaning_id uuid,self_reported_known bool);
+ CREATE TEMP TABLE daily_review_successes(user_id uuid,meaning_id uuid,local_date date);
+ CREATE TEMP TABLE user_settings(user_id uuid,timezone text);
+ CREATE TEMP TABLE idempotency_keys (
 			id uuid PRIMARY KEY, user_id uuid NOT NULL, operation text NOT NULL,
 			key text NOT NULL, fingerprint text NOT NULL, created_at timestamptz NOT NULL,
 			UNIQUE(user_id, operation, key)
 		);
 		CREATE TEMP TABLE user_words (
-			id uuid PRIMARY KEY, user_id uuid NOT NULL, meaning_id uuid NOT NULL,
+			id uuid PRIMARY KEY, user_id uuid NOT NULL, meaning_id uuid NOT NULL, status text DEFAULT 'new',
 			review_step integer NOT NULL, total_review_count integer NOT NULL,
 			correct_review_count integer NOT NULL, consecutive_correct_count integer NOT NULL,
 			consecutive_incorrect_count integer NOT NULL, next_review_at timestamptz,
@@ -60,6 +64,8 @@ func TestPostgreSQLSubmitReviewAnchorsScheduleToServerClock(t *testing.T) {
 	repo := NewPostgreSQLRepository(db, clock.Fixed{T: serverNow})
 	svc := NewService(repo, learning.NewMemoryIdempotencyStore(), clock.Fixed{T: serverNow})
 	userID, meaningID := uuid.New(), uuid.New()
+	_, err = db.ExecContext(ctx, "INSERT INTO users(id)VALUES($1)", userID)
+	require.NoError(t, err)
 
 	for _, tc := range []struct {
 		name       string
@@ -89,7 +95,7 @@ func TestPostgreSQLSubmitReviewAnchorsScheduleToServerClock(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, tc.answeredAt, attempt.AnsweredAt)
-			require.Equal(t, serverNow.Add(time.Hour), attempt.NextReviewAt)
+			require.Equal(t, serverNow.Add(24*time.Hour), attempt.NextReviewAt)
 
 			var storedAnsweredAt, nextReviewAt, lastReviewedAt time.Time
 			require.NoError(t, db.QueryRowContext(ctx,
@@ -98,7 +104,7 @@ func TestPostgreSQLSubmitReviewAnchorsScheduleToServerClock(t *testing.T) {
 				`SELECT next_review_at, last_reviewed_at FROM user_words WHERE id = $1`, userWordID).
 				Scan(&nextReviewAt, &lastReviewedAt))
 			require.True(t, storedAnsweredAt.Equal(tc.answeredAt), "attempt history remains client-recorded")
-			require.True(t, nextReviewAt.Equal(serverNow.Add(time.Hour)), "schedule is server-owned")
+			require.True(t, nextReviewAt.Equal(serverNow.Add(24*time.Hour)), "schedule is server-owned")
 			require.True(t, lastReviewedAt.Equal(serverNow), "last review time is server-owned")
 		})
 	}

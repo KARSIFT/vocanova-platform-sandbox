@@ -7,6 +7,9 @@ export function isPrimaryNavItemActive(
     (href === "/progress" && pathname.startsWith("/progress/")) ||
     (href === "/discover" &&
       (pathname.startsWith("/discover/") ||
+        pathname === "/knowledge-map" ||
+        pathname === "/discovery" ||
+        pathname === "/courses" ||
         pathname === "/plan" ||
         pathname === "/vocabulary" ||
         pathname.startsWith("/vocabulary/") ||

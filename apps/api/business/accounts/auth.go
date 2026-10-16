@@ -137,11 +137,14 @@ func (r AccountDeletionRequest) EligibleForPurge(now time.Time) bool {
 // (a "documented per-table count" claim requires a real
 // count, not an assertion).
 type AnonymizationCounters struct {
-	StoryActions    int64
-	StorySessions   int64
-	WordListActions int64
-	WordListMembers int64
-	WordLists       int64
+	DailyLessonActions   int64
+	DailyLessonSessions  int64
+	DailyReviewSuccesses int64
+	StoryActions         int64
+	StorySessions        int64
+	WordListActions      int64
+	WordListMembers      int64
+	WordLists            int64
 
 	LearningPreferences        int64
 	PracticeSessions           int64

@@ -112,9 +112,9 @@ export async function verifyContextPracticeJourney(page: Page): Promise<void> {
   context.on("request", countMutation);
 
   try {
-    await page.goto("/discover");
+    await page.goto("/courses");
     await expect(
-      page.getByRole("heading", { level: 1, name: "Journey", exact: true }),
+      page.getByRole("heading", { level: 1, name: "Situation courses", exact: true }),
     ).toBeVisible();
     const situation = page
       .getByRole("region", { name: "Guided lessons", exact: true })

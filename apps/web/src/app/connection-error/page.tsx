@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { normalizeReturnTo } from "@/lib/return-to";
+import { connectionRetryDestination } from "@/lib/connection-error";
 import { AuthShell } from "@/ui/auth-shell";
 import { Surface } from "@/ui/surface";
 
@@ -15,10 +15,7 @@ export default async function ConnectionErrorPage({
   searchParams: Promise<{ returnTo?: string }>;
 }) {
   const { returnTo } = await searchParams;
-  const destination = normalizeReturnTo(returnTo);
-  const retryPath = new URL(destination, "https://vocanova.invalid").pathname;
-  const safeDestination =
-    retryPath === "/connection-error" ? "/home" : destination;
+  const safeDestination = connectionRetryDestination(returnTo);
 
   return (
     <AuthShell>

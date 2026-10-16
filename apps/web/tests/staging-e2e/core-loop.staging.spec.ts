@@ -1,3 +1,11 @@
+import type {
+  CurrentUser,
+  DailyLesson,
+  DailyMission,
+  KnowledgeMap,
+  KnowledgeMapDecisionResult,
+  Progress,
+} from "@vocanova/api-client";
 // VOC-050-T02 - the core-loop journey run against a real deployed
 // environment (staging), as deploy-staging.yml's post-deploy gate.
 //
@@ -26,7 +34,7 @@
 //   3. Fixture content. The mock serves fixed fixtures; staging
 //      serves canonical content from Postgres. The save/review loop
 //      remains content-agnostic (first situation, first word,
-//      whichever review prompt appears). The context-practice phase
+//      the supplied meaning choices). The context-practice phase
 //      checks the authored Daily Conversation curriculum explicitly.
 //
 // Rerun safety: this journey runs on every staging deploy against
@@ -35,12 +43,13 @@
 // the account with saved words, a due-review backlog, or none.
 
 import { expect, test } from "@playwright/test";
-import type { Page, TestInfo } from "@playwright/test";
+import type { Page, Route, TestInfo } from "@playwright/test";
 
 import { verifyContextPracticeJourney } from "../e2e/context-practice-journey";
 import { completeOnboardingIfRedirected } from "../e2e/onboarding-journey";
 import {
   getEnabledReviewPromptControl,
+  getTerminalReviewHeading,
   waitForReviewReadiness,
 } from "../e2e/review-readiness";
 import { reviewSeedActions } from "./review-seed";
@@ -99,6 +108,277 @@ function requiredEnv(name: string): string {
     );
   }
   return value;
+}
+
+// Reads use Node fetch so failed Playwright APIRequestContext diagnostics never
+// retain authenticated headers. No writes, redirects, fixtures or response logs.
+async function readStagingState<T>(
+  page: Page,
+  apiOrigin: string,
+  path: string,
+): Promise<T> {
+  try {
+    const url = new URL(path, apiOrigin);
+    if (url.origin !== apiOrigin || !url.pathname.startsWith("/api/v1/"))
+      throw new Error("Outside staging scope");
+    const cookies = (await page.context().cookies(apiOrigin)).filter(
+      (cookie) => cookie.name === SESSION_COOKIE_NAME,
+    );
+    if (!cookies.length) throw new Error("Session missing");
+    const response = await fetch(url, {
+      headers: {
+        Cookie: cookies
+          .map((cookie) => `${cookie.name}=${cookie.value}`)
+          .join("; "),
+      },
+      redirect: "error",
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (response.status !== 200) throw new Error("Staging read failed");
+    return (await response.json()) as T;
+  } catch {
+    // Never preserve causes, headers, cookie values or response bodies.
+    throw new Error("The bounded authenticated staging read failed.");
+  }
+}
+
+function stagingOrigin(raw: string, hostname: string): string {
+  const url = new URL(raw);
+  if (
+    url.protocol !== "https:" ||
+    url.hostname !== hostname ||
+    url.port ||
+    url.username ||
+    url.password ||
+    url.pathname !== "/" ||
+    url.search ||
+    url.hash
+  ) {
+    throw new Error(
+      `The core journey only accepts the HTTPS ${hostname} origin.`,
+    );
+  }
+  return url.origin;
+}
+
+async function verifyRealKnowledgeMap(page: Page, apiOrigin: string) {
+  const [map, beforeMission, beforeProgress] = await Promise.all([
+    readStagingState<KnowledgeMap>(
+      page,
+      apiOrigin,
+      "/api/v1/knowledge-map?band=100",
+    ),
+    readStagingState<DailyMission>(page, apiOrigin, "/api/v1/daily-mission"),
+    readStagingState<Progress>(page, apiOrigin, "/api/v1/progress"),
+  ]);
+  expect(map.totalWords).toBe(10_000);
+  expect(map.bandSize).toBe(100);
+  expect(map.bands).toHaveLength(100);
+  for (const [index, band] of map.bands.entries()) {
+    expect([
+      band.number,
+      band.startRank,
+      band.endRank,
+      band.totalWords,
+    ]).toEqual([index + 1, index * 100 + 1, (index + 1) * 100, 100]);
+    expect(band.knownCount + band.learningCount + band.unseenCount).toBe(100);
+  }
+  expect(map.currentBand.number).toBe(100);
+  expect(map.currentBand.items.map((item) => item.rank)).toEqual(
+    Array.from({ length: 100 }, (_, index) => 9901 + index),
+  );
+  expect(
+    new Set(map.currentBand.items.map((item) => item.meaningId)).size,
+  ).toBe(100);
+
+  // Never pause an existing saved review merely to exercise assessment. A new
+  // known word is intentional synthetic-account state; reruns can safely
+  // reapply Known once this bounded range has no unseen unsaved words left.
+  const chosen =
+    map.currentBand.items.find(
+      (item) =>
+        item.saved === false &&
+        item.due === false &&
+        item.selfReportedKnown === false,
+    ) ??
+    map.currentBand.items.find(
+      (item) =>
+        item.saved === false &&
+        item.due === false &&
+        item.selfReportedKnown === true,
+    );
+  expect(
+    Boolean(chosen),
+    "The synthetic account needs an unsaved word in the last range; do not reset its saved history.",
+  ).toBe(true);
+  if (!chosen) throw new Error("No safe synthetic map word available.");
+  expect(Number.isSafeInteger(beforeMission.reviewsCompleted)).toBe(true);
+  expect(Number.isSafeInteger(beforeProgress.confidencePointsBalance)).toBe(
+    true,
+  );
+
+  await page.goto("/knowledge-map");
+  await expect(
+    page.getByRole("heading", { name: "Knowledge map", exact: true }),
+  ).toBeVisible();
+  await page.locator("summary").filter({ hasText: "Choose a range" }).click();
+  const ranges = page
+    .getByRole("navigation", { name: "Word ranges", exact: true })
+    .getByRole("link");
+  await expect(ranges).toHaveCount(100);
+  expect(
+    await ranges.evaluateAll((links) =>
+      links.map((link) => link.getAttribute("href")),
+    ),
+  ).toEqual(
+    Array.from(
+      { length: 100 },
+      (_, index) => `/knowledge-map?band=${index + 1}#range-words`,
+    ),
+  );
+  await ranges.last().click();
+  await expect(
+    page.getByRole("heading", { name: "Words 9,901–10,000", exact: true }),
+  ).toBeVisible();
+  const tile = () =>
+    page
+      .getByRole("region", { name: "Words 9,901–10,000", exact: true })
+      .locator(`a[href="/discovery?band=100&word=${chosen.rank}"]`);
+  await expect(
+    tile().getByText(chosen.wordText, { exact: true }),
+  ).toBeVisible();
+  await tile().click();
+  await page
+    .getByRole("button", { name: "Start discovering", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: chosen.wordText, level: 1, exact: true }),
+  ).toBeFocused();
+  await expect(
+    page
+      .getByRole("article", { name: chosen.wordText, exact: true })
+      .getByText(chosen.shortDefinition, { exact: true }),
+  ).toBeVisible();
+
+  // Pass through to the real API; block an incorrectly configured frontend
+  // before this new assessment can write to any origin except staging.
+  let forbiddenWrite = false;
+  const guard = async (route: Route) => {
+    if (new URL(route.request().url()).origin !== apiOrigin) {
+      forbiddenWrite = true;
+      await route.abort("blockedbyclient");
+    } else await route.continue();
+  };
+  const decisionPattern = "**/api/v1/knowledge-map/decisions";
+  await page.route(decisionPattern, guard);
+  try {
+    const acknowledged = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        new URL(response.url()).origin === apiOrigin &&
+        new URL(response.url()).pathname === "/api/v1/knowledge-map/decisions",
+    );
+    await page
+      .getByRole("button", { name: "Already know", exact: true })
+      .click();
+    const response = await acknowledged;
+    expect(
+      forbiddenWrite,
+      "Assessment must only write to the staging API.",
+    ).toBe(false);
+    expect(response.status()).toBe(200);
+    expect(response.request().postDataJSON()).toEqual({
+      meaningId: chosen.meaningId,
+      decision: "known",
+      expectedRevision: chosen.revision,
+    });
+    expect(Boolean(response.request().headers()["idempotency-key"])).toBe(true);
+    const result = (await response.json()) as KnowledgeMapDecisionResult;
+    expect(result.meaningId).toBe(chosen.meaningId);
+    expect(result.decision).toBe("known");
+    expect(result.revision).toMatch(/^[a-f0-9]{64}$/);
+
+    if (chosen.rank === 10_000) {
+      await expect(
+        page.getByRole("heading", {
+          name: "You reached the end of the map",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await page.getByRole("link", { name: "View map", exact: true }).click();
+    } else {
+      const next = map.currentBand.items.find(
+        (item) => item.rank === chosen.rank + 1,
+      )!;
+      await expect(
+        page.getByRole("heading", {
+          name: next.wordText,
+          level: 1,
+          exact: true,
+        }),
+      ).toBeFocused();
+      await page
+        .getByRole("link", { name: "Knowledge map", exact: true })
+        .click();
+    }
+    await expect(
+      tile().getByText("Already know", { exact: true }),
+    ).toBeVisible();
+    await page.reload();
+    await expect(
+      tile().getByText(chosen.wordText, { exact: true }),
+    ).toBeVisible();
+    await expect(
+      tile().getByText("Already know", { exact: true }),
+    ).toBeVisible();
+
+    const [persisted, afterMission, afterProgress] = await Promise.all([
+      readStagingState<KnowledgeMap>(
+        page,
+        apiOrigin,
+        "/api/v1/knowledge-map?band=100",
+      ),
+      readStagingState<DailyMission>(page, apiOrigin, "/api/v1/daily-mission"),
+      readStagingState<Progress>(page, apiOrigin, "/api/v1/progress"),
+    ]);
+    const saved = persisted.currentBand.items.find(
+      (item) => item.meaningId === chosen.meaningId,
+    );
+    expect(saved?.selfReportedKnown).toBe(true);
+    expect(saved?.saved).toBe(false);
+    expect(saved?.due).toBe(false);
+    expect(saved?.revision).toBe(result.revision);
+    expect(persisted.bands[99]!.knownCount).toBe(
+      map.bands[99]!.knownCount + (chosen.selfReportedKnown ? 0 : 1),
+    );
+    expect(persisted.bands[99]!.learningCount).toBe(
+      map.bands[99]!.learningCount,
+    );
+    expect(
+      afterMission.localDate,
+      "A date change prevents a stable assessment-credit comparison.",
+    ).toBe(beforeMission.localDate);
+    expect(
+      afterMission.reviewsCompleted,
+      "Self-assessment must not grant review credit.",
+    ).toBe(beforeMission.reviewsCompleted);
+    expect(
+      afterProgress.confidencePointsBalance,
+      "Self-assessment must not award confidence points, even when the daily target is already capped.",
+    ).toBe(beforeProgress.confidencePointsBalance);
+    expect(afterMission.streak.currentStreakCount).toBe(
+      beforeMission.streak.currentStreakCount,
+    );
+  } finally {
+    await page.unroute(decisionPattern, guard);
+  }
+  await page
+    .getByRole("navigation", { name: "Primary", exact: true })
+    .getByRole("link", { name: "Home", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Today", exact: true }),
+  ).toBeVisible();
 }
 
 async function readReviewedTodayProgress(
@@ -182,69 +462,82 @@ async function readReviewedTodayCountAfterReviews(
   );
 }
 
-// Returns false when the queue turns out to be empty by the time this
-// function actually gets to interact with it, true when a card was
-// genuinely reviewed - the caller must treat false as "stop, don't
-// count this iteration," not a failure.
-//
-// After Good/Continue, submitReview and (on batch end) listDueWords can
-// leave the prior card mounted in feedback with every MC option disabled.
-// Waiting only for a visible MC group / progress label then re-entering this
-// helper is the VOC-076 run #227 failure mode. Settle on a *prompt-ready*
-// control (enabled Show answer, enabled MC option) or a terminal review state
-// before returning, and require the same signal at entry.
-async function reviewOneCard(page: Page): Promise<boolean> {
-  const showAnswerButton = page.getByRole("button", {
-    name: "Show answer",
-    disabled: false,
-  });
-  const enabledPromptControl = getEnabledReviewPromptControl(page);
-
-  // Batch-end listDueWords and in-flight submitReview can exceed the
-  // default 20s expect timeout while the prior feedback card is still
-  // mounted; allow a longer settle window inside the 240s journey budget.
-  const PROMPT_READY_TIMEOUT_MS = 120_000;
-
-  if (
-    (await waitForReviewReadiness(page, PROMPT_READY_TIMEOUT_MS)) === "terminal"
-  ) {
-    return false;
-  }
-
-  if (await showAnswerButton.isVisible()) {
-    await showAnswerButton.click();
-    const goodButton = page.getByRole("button", {
-      name: "Good",
+// Only confirmed correct answers newly credited today count toward the gate.
+// Visible correction text is remembered for a later retry, never treated as a
+// first-try success. A bounded loop also handles saved progress from prior runs.
+async function reviewOneCard(
+  page: Page,
+  meanings: Map<string, string>,
+): Promise<boolean> {
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const resume = page.getByRole("button", {
+      name: "Continue",
+      exact: true,
       disabled: false,
     });
-    await expect(goodButton).toBeVisible();
-    await goodButton.click();
-    await waitForReviewReadiness(page, PROMPT_READY_TIMEOUT_MS);
-    return true;
+    await expect(
+      resume
+        .or(getEnabledReviewPromptControl(page))
+        .or(getTerminalReviewHeading(page))
+        .or(page.getByRole("button", { name: "Start lesson", exact: true }))
+        .first(),
+    ).toBeVisible({ timeout: 120_000 });
+    if (await resume.isVisible()) {
+      // An interrupted earlier run may already have an acknowledged answer.
+      // Advance it without counting its pre-existing credit toward this run.
+      await resume.click();
+      continue;
+    }
+    const readiness = await waitForReviewReadiness(page, 120_000);
+    if (readiness === "terminal") {
+      const next = page.getByRole("button", {
+        name: "Next lesson",
+        exact: true,
+      });
+      if (await next.isVisible()) {
+        await next.click();
+        continue;
+      }
+      return false;
+    }
+    const word = await page
+      .getByRole("main")
+      .getByRole("heading", { level: 1 })
+      .innerText();
+    const known = meanings.get(word);
+    const option = known
+      ? page.getByRole("radio", { name: known, exact: true })
+      : getEnabledReviewPromptControl(page);
+    await option.check();
+    const graded = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        /\/api\/v1\/daily-lessons\/[^/]+\/actions$/.test(
+          new URL(response.url()).pathname,
+        ),
+    );
+    await page
+      .getByRole("button", { name: "Check answer", exact: true })
+      .click();
+    const response = await graded;
+    expect(response.ok()).toBe(true);
+    const lesson = (await response.json()) as DailyLesson;
+    expect(lesson.feedback).toBeTruthy();
+    const feedback = lesson.feedback!;
+    meanings.set(feedback.wordText, feedback.answer);
+    await expect(
+      page
+        .getByRole("main")
+        .getByRole("status")
+        .filter({ hasText: feedback.answer }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await waitForReviewReadiness(page, 120_000);
+    if (feedback.credited) return true;
   }
-
-  // Multiple-choice prompt. Which option is correct is not knowable
-  // from the rendered page, so the journey answers, then follows
-  // whichever branch the app shows - both submit a real attempt.
-  // enabledPromptControl is already the readiness signal (VOC-076-AC-02).
-  await enabledPromptControl.click();
-
-  const ratingButton = page.getByRole("button", {
-    name: "Good",
-    disabled: false,
-  });
-  const continueButton = page.getByRole("button", {
-    name: "Continue",
-    disabled: false,
-  });
-  await expect(ratingButton.or(continueButton)).toBeVisible();
-  if (await ratingButton.isVisible()) {
-    await ratingButton.click();
-  } else {
-    await continueButton.click();
-  }
-  await waitForReviewReadiness(page, PROMPT_READY_TIMEOUT_MS);
-  return true;
+  throw new Error(
+    "No new daily credit after 40 confirmed lesson answers; do not count attempts as learned words.",
+  );
 }
 
 test.describe("Core loop against real staging (VOC-050-T02)", () => {
@@ -300,10 +593,37 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
       await verifyContextPracticeJourney(page);
     });
 
+    await test.step("2b. assess a real map word without review credit and retain it after reload", async () => {
+      const apiOrigin = stagingOrigin(
+        process.env.STAGING_API_BASE_URL ?? "https://api-staging.vocanova.site",
+        "api-staging.vocanova.site",
+      );
+      stagingOrigin(baseURL, "staging.vocanova.site");
+      const expectedEmail =
+        process.env.VOCANOVA_SYNTHETIC_SMOKE_TEST_EMAIL ??
+        "smoke-test-bot@synthetic.vocanova.invalid";
+      expect(
+        expectedEmail.endsWith("@synthetic.vocanova.invalid"),
+        "Only the designated synthetic identity may assess map words in this gate.",
+      ).toBe(true);
+      const me = await readStagingState<CurrentUser>(
+        page,
+        apiOrigin,
+        "/api/v1/me",
+      );
+      expect(
+        me.email === expectedEmail,
+        "Refuse assessment outside the designated synthetic account.",
+      ).toBe(true);
+      await verifyRealKnowledgeMap(page, apiOrigin);
+      expect(await readReviewedTodayCount(page)).toBe(reviewedBefore);
+    });
+
+    let openedWordPath = "";
     await test.step("3. discover a situation and open a word", async () => {
-      await page.goto("/discover");
+      await page.goto("/courses");
       await expect(
-        page.getByRole("heading", { name: "Journey", level: 1 }),
+        page.getByRole("heading", { name: "Situation courses", level: 1 }),
       ).toBeVisible();
 
       const situations = page
@@ -340,6 +660,7 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
       const wordLink = await chooseSituationWordLink(page);
       await wordLink.click();
       await expect(page).toHaveURL(/\/discover\/[^/]+\/[^/]+(\?|$)/);
+      openedWordPath = new URL(page.url()).pathname;
     });
 
     await test.step("4. save the word", async () => {
@@ -379,8 +700,13 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
       // Saving exposes optional writing on this exact meaning without an
       // extra reload. Open its native disclosure as a learner would; a hidden
       // editor is not evidence that the writing entry point is usable.
+      const tools = meaningCard
+        .locator("summary")
+        .filter({ hasText: "Personal tools" });
+      if ((await tools.locator("..").getAttribute("open")) === null)
+        await tools.click();
       const wordPractice = meaningCard.locator("summary").filter({
-        hasText: "Practise in a sentence",
+        hasText: "Optional writing",
       });
       await expect(wordPractice).toBeVisible();
       const disclosure = wordPractice.locator("..");
@@ -389,29 +715,20 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
         await page.keyboard.press("Enter");
       }
       await expect(disclosure).toHaveAttribute("open", "");
-      await expect(meaningCard.getByRole("textbox", {
-        name: /^Write a sentence using /,
-      })).toBeVisible();
+      await expect(
+        meaningCard.getByRole("textbox", {
+          name: /^Write a sentence using /,
+        }),
+      ).toBeVisible();
     });
 
     const reviewedCards =
       await test.step("5. work the review queue", async () => {
         await page.goto("/reviews");
-        await expect(
-          page.getByRole("heading", { name: "Review", level: 1 }),
-        ).toBeVisible();
-
         let reviewed = 0;
+        const meanings = new Map<string, string>();
         while (reviewed < MAX_REVIEW_CARDS) {
-          // The route can still be loading just after navigation or a
-          // submission. Wait for an actionable prompt or terminal state,
-          // rather than taking an instantaneous DOM snapshot that could race
-          // an empty queue and leave reviewOneCard waiting for a card that
-          // will never render.
-          if ((await waitForReviewReadiness(page)) === "terminal") {
-            break;
-          }
-          const didReview = await reviewOneCard(page);
+          const didReview = await reviewOneCard(page, meanings);
           if (!didReview) {
             // reviewOneCard independently found a terminal review state - trust
             // it over this loop's own now-stale check above.
@@ -441,22 +758,15 @@ test.describe("Core loop against real staging (VOC-050-T02)", () => {
         return reviewed;
       });
 
-    await test.step("6. sentence feedback on the reviewed word", async () => {
-      const feedbackHeading = page.getByRole("heading", {
-        name: /^Practice with /,
-      });
-      if (!(await feedbackHeading.isVisible())) {
-        // The widget only renders in a terminal review state (caught-up or
-        // Review complete), for a card reviewed in this same session. A run
-        // that started with a
-        // backlog deeper than MAX_REVIEW_CARDS legitimately never
-        // reaches it.
-        testInfo.annotations.push({
-          type: "skipped-step",
-          description: `sentence feedback not reachable this run (reviewed ${reviewedCards} card(s), queue not emptied)`,
-        });
-        return;
-      }
+    await test.step("6. optional sentence feedback on the saved word", async () => {
+      // Recall no longer embeds a compulsory editor. Revisit the saved word
+      // deliberately; this gate still exercises real sentence feedback.
+      expect(openedWordPath).toMatch(/^\/discover\/[^/]+\/[^/]+$/);
+      await page.goto(`${openedWordPath}#sentence-practice`);
+      const feedbackHeading = page
+        .getByRole("heading", { name: /^Practice with / })
+        .first();
+      await expect(feedbackHeading).toBeVisible();
 
       const sentenceInput = page.getByRole("textbox", {
         name: /^Write a sentence using /,

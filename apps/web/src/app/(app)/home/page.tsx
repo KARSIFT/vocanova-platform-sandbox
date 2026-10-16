@@ -1,93 +1,49 @@
 import Link from "next/link";
-import { ApiResponseError } from "@vocanova/api-client";
 import { createServerApiClient, requireAuthRedirect } from "@/lib/api-server";
 import { PageContainer } from "@/ui/surface";
 import { MeaningPicture } from "@/ui/meaning-picture";
-import { RecommendedLesson } from "../_components/lesson-recommendation";
+import { StartDailyLessonButton } from "../reviews/_components/daily-lesson-start";
 
 export default async function HomePage() {
   const client = await createServerApiClient();
   let savedWordsResponse: Awaited<ReturnType<typeof client.listSavedWords>>;
-  let dueResponse: Awaited<ReturnType<typeof client.listDueWords>>;
+  let dailyLessonResponse: Awaited<
+    ReturnType<typeof client.getCurrentDailyLesson>
+  >;
   let dailyMissionResponse: Awaited<ReturnType<typeof client.getDailyMission>>;
-  let recommendation: Awaited<
-    ReturnType<typeof client.getLessonRecommendation>
-  > | null;
   try {
-    [savedWordsResponse, dueResponse, dailyMissionResponse, recommendation] =
+    [savedWordsResponse, dailyLessonResponse, dailyMissionResponse] =
       await Promise.all([
         client.listSavedWords({ limit: 1 }),
-        client.listDueWords({ limit: 1 }),
+        client.getCurrentDailyLesson(),
         client.getDailyMission(),
-        client.getLessonRecommendation().catch((error: unknown) => {
-          if (error instanceof ApiResponseError && error.status === 401)
-            requireAuthRedirect(error, "/home");
-          return null;
-        }),
       ]);
   } catch (error) {
     requireAuthRedirect(error, "/home");
   }
   const firstWord = savedWordsResponse.data.items[0];
-  const dueReviewWords = dueResponse.data.totalCount;
+  const dueReviewWords = dailyLessonResponse.data.dueCount;
+  const currentLesson = dailyLessonResponse.data.session;
   const mission = dailyMissionResponse.data;
-  const {
-    reviewTarget,
-    reviewsCompleted,
-    newWordTarget,
-    newWordsCompleted,
-    sentencePracticeTarget,
-    sentencePracticesCompleted,
-    streak,
-  } = mission;
+  const { reviewTarget, reviewsCompleted, streak } = mission;
   const complete = mission.status === "completed";
-  const remainingReviews = reviewsCompleted < reviewTarget;
-  const remainingNewWords =
-    typeof newWordTarget === "number" &&
-    typeof newWordsCompleted === "number" &&
-    newWordsCompleted < newWordTarget;
-  const remainingSentences =
-    typeof sentencePracticeTarget === "number" &&
-    typeof sentencePracticesCompleted === "number" &&
-    sentencePracticesCompleted < sentencePracticeTarget;
-  const writingHref = firstWord
-    ? `/words/${encodeURIComponent(firstWord.userWordId)}#sentence-practice`
-    : "/writing";
-  const action = complete
+  const action = currentLesson
     ? {
-        href: "/discover",
-        label: "Explore a new situation",
-        title: "A little progress. Every day.",
+        href: "/review",
+        label: "Continue lesson",
+        title: "Pick up where you left off.",
       }
-    : dueReviewWords > 0 && remainingReviews
+    : dueReviewWords > 0
       ? {
           href: "/review",
-          label: "Start review",
-          title: "Keep your words fresh.",
+          label: "Start today’s lesson",
+          title: "Remember today’s words.",
         }
-      : !firstWord
-        ? {
-            href: "/discover",
-            label: "Start your Journey",
-            title: "Find your first useful word.",
-          }
-        : remainingNewWords || remainingReviews
-          ? {
-              href: "/discover",
-              label: "Explore a new situation",
-              title: "What will you learn today?",
-            }
-          : remainingSentences
-            ? {
-                href: writingHref,
-                label: "Practice a sentence",
-                title: "Make a word your own.",
-              }
-            : {
-                href: "/progress",
-                label: "View your progress",
-                title: "See how far you’ve come.",
-              };
+      : {
+          href: "/discovery",
+          label: "Discover words",
+          title: "Meet your next useful word.",
+        };
   const progress =
     reviewTarget > 0
       ? Math.min(100, Math.round((reviewsCompleted / reviewTarget) * 100))
@@ -133,9 +89,16 @@ export default async function HomePage() {
               )}
             </div>
             <h2 id="todays-mission-heading">{action.title}</h2>
-            <Link href={action.href} className="learning-primary">
-              {action.label}
-            </Link>
+            {!currentLesson && dueReviewWords > 0 ? (
+              <StartDailyLessonButton
+                className="learning-primary"
+                label={action.label}
+              />
+            ) : (
+              <Link href={action.href} className="learning-primary">
+                {action.label}
+              </Link>
+            )}
             <div className="daily-meter">
               <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 text-sm text-neutral-600">
                 <span>
@@ -164,7 +127,15 @@ export default async function HomePage() {
               </div>
             </div>
           </section>
-          <RecommendedLesson data={recommendation?.data ?? null} compact />
+          <Link
+            href="/knowledge-map"
+            className="mt-6 flex min-h-16 items-center justify-between gap-4 rounded-xl border border-neutral-200 bg-white p-4 text-lg font-semibold text-neutral-900 hover:border-primary-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-700"
+          >
+            <span>Your word map</span>
+            <span className="text-sm font-medium text-primary-700">
+              Explore 100-word groups
+            </span>
+          </Link>
           <nav aria-label="Explore your English" className="study-shortcuts">
             <Link href="/practice">
               <span className="shortcut-symbol" aria-hidden="true">
@@ -221,8 +192,8 @@ export default async function HomePage() {
                 id="sentence-practice"
                 className="mt-4 flex flex-wrap gap-x-5 border-t border-neutral-200 pt-2"
               >
-                <Link href={writingHref} className="learning-text-link">
-                  Write with {firstWord.wordText}
+                <Link href="/discovery" className="learning-text-link">
+                  Discover another word
                 </Link>
                 <Link href="/lists" className="learning-text-link">
                   Personal lists
@@ -242,9 +213,6 @@ export default async function HomePage() {
               </Link>
             </div>
           )}
-          <Link href="/writing" className="learning-text-link text-sm">
-            Choose a writing topic
-          </Link>
         </section>
       </div>
     </PageContainer>

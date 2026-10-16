@@ -1,3 +1,4 @@
+import { openOptionalWriting } from "./optional-writing";
 import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { scanForAxeViolations, formatViolations } from "./axe-helper";
@@ -5,7 +6,7 @@ import { scanForAxeViolations, formatViolations } from "./axe-helper";
 const apiURL = `http://127.0.0.1:${process.env.MOCK_API_PORT ?? 8080}`;
 
 for (const theme of ["light", "dark"] as const) {
-  test(`Home exposes productive writing and Progress leads with learning evidence in ${theme}`, async ({ page, context, baseURL }, testInfo) => {
+  test(`Home keeps writing optional and Progress leads with learning evidence in ${theme}`, async ({ page, context, baseURL }, testInfo) => {
     const csrf = randomUUID();
     await context.addCookies([
       { name: "vocanova_session", value: randomUUID(), url: baseURL! },
@@ -25,11 +26,12 @@ for (const theme of ["light", "dark"] as const) {
     page.on("request", request => { if (request.method() === "POST") mutations.push(request.url()); });
     await page.goto("/home");
     await expect(page.getByRole("textbox", { name: /Write a sentence using/ })).toHaveCount(0);
-    const writingLink = page.getByRole("link", { name: "Write with invite", exact: true });
-    await expect(writingLink).toHaveAttribute("href", /#sentence-practice$/);
+    const savedWord = page.getByRole("link", { name: "invite", exact: true });
+    await expect(savedWord).toHaveAttribute("href", `/words/uw-${word.meanings[0].id}`);
     await expect(page.getByRole("navigation", { name: "Explore your English" }).getByRole("link", { name: "Short stories", exact: true })).toHaveAttribute("href", "/stories");
     await page.screenshot({ path: testInfo.outputPath(`home-workspace-${theme}.png`), fullPage: true });
-    await writingLink.click();
+    await savedWord.click();
+    await openOptionalWriting(page);
     await expect(page).toHaveURL(/#sentence-practice$/);
     const textbox = page.getByRole("textbox", { name: "Write a sentence using invite" });
     await expect(textbox).toBeVisible();

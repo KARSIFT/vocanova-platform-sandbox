@@ -44,25 +44,18 @@ export default async function PracticePage({
     dueResponse,
     lessonResponse,
     savedResponse,
-    missionResponse,
     practiceResponse,
     listsResponse,
   ] = await Promise.all([
     loadActivity(client.listDueWords({ limit: 1 })),
     loadActivity(client.listLessons()),
     loadActivity(client.listSavedWords({ limit: 3 })),
-    loadActivity(client.getDailyMission()),
     loadActivity(client.listPracticeSessions()),
     loadActivity(client.listWordLists()),
   ]);
 
   const dueCount = dueResponse?.data.totalCount;
-  const mission = missionResponse?.data;
-  const reviewTargetComplete = mission
-    ? mission.reviewsCompleted >= mission.reviewTarget
-    : false;
-  const canStartReview =
-    dueCount !== undefined && dueCount > 0 && mission && !reviewTargetComplete;
+  const canStartReview = dueCount !== undefined && dueCount > 0;
   const lessons = lessonResponse?.data.items;
   // Prefer vocabulary already taught, never a merely opened lesson or an
   // unstudied recommendation. Explicit URL selections keep their meaning.
@@ -108,8 +101,8 @@ export default async function PracticePage({
         aria-label="Practice activities"
         className="flex flex-wrap gap-x-6 border-y border-neutral-200 py-3"
       >
-        <Link href="/writing" className={linkStyle}>
-          Topic writing
+        <Link href="/discovery" className={linkStyle}>
+          Discover words
         </Link>
         <Link href="/stories" className={linkStyle}>
           Short stories
@@ -125,7 +118,7 @@ export default async function PracticePage({
             id="practice-review-heading"
             className="text-lg font-bold text-neutral-900"
           >
-            Scheduled review
+            Today’s lesson
           </h2>
           {dueCount === undefined ? (
             <p role="status" className="mt-1 text-sm text-neutral-600">
@@ -139,15 +132,9 @@ export default async function PracticePage({
                 : `${dueCount} ${dueCount === 1 ? "word is" : "words are"} due for review.`}
             </p>
           )}
-          {reviewTargetComplete && (
-            <p className="mt-1 text-sm text-neutral-600">
-              Today’s review target is complete. Your next review session is
-              tomorrow.
-            </p>
-          )}
         </div>
         <Link href="/review" className={linkStyle}>
-          {canStartReview ? "Start review" : "View reviews"}
+          {canStartReview ? "Start today’s lesson" : "View today’s lesson"}
         </Link>
       </section>
 
@@ -189,7 +176,7 @@ export default async function PracticePage({
           href={
             nextLesson
               ? `/learn/${encodeURIComponent(nextLesson.key)}`
-              : "/discover"
+              : "/courses"
           }
           className={linkStyle}
         >
@@ -203,47 +190,6 @@ export default async function PracticePage({
         </Link>
       </section>
 
-      <section aria-labelledby="practice-writing-heading" className="py-5">
-        <h2
-          id="practice-writing-heading"
-          className="scroll-mt-24 text-lg font-bold text-neutral-900"
-        >
-          Write a sentence
-        </h2>
-        {savedWords?.length ? (
-          <div className="mt-1 flex flex-wrap gap-x-5">
-            {savedWords.map((word) => (
-              <Link
-                key={word.userWordId}
-                href={`/words/${encodeURIComponent(word.userWordId)}#sentence-practice`}
-                className={linkStyle}
-              >
-                Write with {word.wordText}
-              </Link>
-            ))}
-            <Link href="/words" className={linkStyle}>
-              Choose another saved word
-            </Link>
-          </div>
-        ) : (
-          <>
-            <p
-              role={savedWords ? undefined : "status"}
-              className="mt-1 text-sm text-neutral-600"
-            >
-              {savedWords
-                ? "Save a word first, then use it in your own sentence."
-                : "We could not load your saved words. Open your vocabulary to try again."}
-            </p>
-            <Link
-              href={savedWords ? "/vocabulary" : "/words"}
-              className={linkStyle}
-            >
-              {savedWords ? "Find a word to save" : "Open saved vocabulary"}
-            </Link>
-          </>
-        )}
-      </section>
       <div className="flex flex-wrap gap-x-6 border-t border-neutral-200 pt-3">
         <Link href="/progress/sentences" className={linkStyle}>
           Open sentence history

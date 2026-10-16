@@ -104,6 +104,7 @@ import { handleMeaningTeaching } from "./meaning-teaching-fixture.mjs";
 import { handlePersonalLists } from "./personal-lists-fixture.mjs";
 import { handleStoryFeatures } from "./stories-fixture.mjs";
 import { handleLearningFeatures } from "./learning-features-fixture.mjs";
+import { handleDailyDiscovery } from "./daily-discovery-fixture.mjs";
 import {
   dailyConversationFixture,
   dailyConversationWords,
@@ -1033,6 +1034,8 @@ const server = createServer(async (req, res) => {
     jsonResponse(res, 401, { error: "unauthorized" });
     return;
   }
+
+  if (await handleDailyDiscovery({ req, res, url, cookies, state: getSessionState(cookies), jsonResponse, readJsonBody, checkCsrf, logLine, dueWords: () => buildDueWords(getSessionState(cookies), { fixtureDueWordCount: Number(cookies.e2e_review_fixture_count ?? 0), limit: Number.POSITIVE_INFINITY }) })) return;
 
   if (req.method === "GET" && url.pathname === "/api/v1/dictionary") {
     const q = (url.searchParams.get("q") ?? "").trim().toLowerCase();

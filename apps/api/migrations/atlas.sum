@@ -1,4 +1,4 @@
-h1:x1poVRZvoMwKYZhVRZXv9JWdj8tfxnotrY6WWP/QxYk=
+h1:v78Yn8D9wFMf/vEWF7Jc94tTXTW+FW7Ot6BSMOW5918=
 20260724210000_identity_foundation.sql h1:kCE91pYCtOUccWkoJGp8Ow1N7oOWjxAvGcPQtSIC17k=
 20260724210001_oauth_state.sql h1:8UfSmhz20WitPSfl/I/KlApBO0VK39xYS053oC3IEiU=
 20260725100000_voc026_p1_content_tables.sql h1:rTIXQ0O1B1X6fu82HtnYS3xb0KU3yYQO/kJmui0C9j8=
@@ -39,3 +39,5 @@ h1:x1poVRZvoMwKYZhVRZXv9JWdj8tfxnotrY6WWP/QxYk=
 20261002233000_learning_preferences.sql h1:2jN23NnNTmFiVLSdYgnufhBLyEyL3pnrDs3/XB8CkUY=
 20261004100000_word_lists.sql h1:j8jRCWt/X7pomMNdmqBoxAAC/zZAtItRvDoG8thiYrs=
 20261004140000_original_stories.sql h1:4Kblrj34OhDfykfLx243xixd2h3l0SxUw191TdLEPP0=
+20261017100000_daily_lessons.sql h1:bni6nHVvgulMzftZOHS0b1RRs7aM56kaQlFuIVgl9VQ=
+20261017100001_knowledge_catalog.sql h1:+/r+Xhl87zMK8JbERL2V/VwjXQ8m6s7ITjb+RxdwvLA=

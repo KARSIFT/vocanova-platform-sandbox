@@ -107,25 +107,24 @@ export function WordDetailContent({
                     meaningId={meaning.id}
                     initialKnown={meaning.selfReportedKnown}
                   />
+                  {meaning.saved && meaning.userWordId ? (
+                    <WordPracticeDisclosure
+                      anchor={
+                        index === 0
+                          ? "sentence-practice"
+                          : `sentence-practice-${meaning.id}`
+                      }
+                    >
+                      <SentenceFeedback
+                        targetWord={wordData.text}
+                        attemptId={meaning.userWordId}
+                        source="word_detail"
+                        userId={userId}
+                        shortDefinition={meaning.shortDefinition}
+                      />
+                    </WordPracticeDisclosure>
+                  ) : null}
                 </details>
-
-                {meaning.saved && meaning.userWordId ? (
-                  <WordPracticeDisclosure
-                    anchor={
-                      index === 0
-                        ? "sentence-practice"
-                        : `sentence-practice-${meaning.id}`
-                    }
-                  >
-                    <SentenceFeedback
-                      targetWord={wordData.text}
-                      attemptId={meaning.userWordId}
-                      source="word_detail"
-                      userId={userId}
-                      shortDefinition={meaning.shortDefinition}
-                    />
-                  </WordPracticeDisclosure>
-                ) : null}
               </li>
             );
           })}

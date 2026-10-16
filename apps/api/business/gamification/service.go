@@ -43,6 +43,19 @@ func (s *Service) GetSettings(ctx context.Context, userID uuid.UUID, clientTimez
 	return ResolveSettings(source, clientTimezone)
 }
 
+// GetSettingsTx resolves settings from the caller's existing transaction.
+func (s *Service) GetSettingsTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID, clientTimezone string) (ResolvedSettings, error) {
+	row, err := s.repo.GetUserSettingsTx(ctx, tx, userID)
+	if err != nil {
+		return ResolvedSettings{}, err
+	}
+	source := UserSettingsSource{Stored: false}
+	if row != nil {
+		source = UserSettingsSource{Stored: true, Timezone: row.Timezone, DailyReviewTarget: row.DailyReviewTarget}
+	}
+	return ResolveSettings(source, clientTimezone)
+}
+
 // EnsureUserSettings lazily creates the user_settings row inside tx with
 // schema defaults if one does not exist; otherwise returns the existing row.
 func (s *Service) EnsureUserSettings(ctx context.Context, tx *sql.Tx, userID uuid.UUID, timezone string, dailyReviewTarget int) (*UserSettingsRow, error) {

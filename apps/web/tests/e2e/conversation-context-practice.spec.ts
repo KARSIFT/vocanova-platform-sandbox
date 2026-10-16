@@ -1,3 +1,4 @@
+import { openOptionalWriting } from "./optional-writing";
 import { randomUUID } from "node:crypto";
 
 import {
@@ -329,7 +330,7 @@ test("finishing practice leads to an explicit save and existing sentence feedbac
   expect(mutations).toEqual([]);
 
   await page.getByRole("button", { name: /^Save sounds good:/ }).click();
-  await page.locator("summary").filter({ hasText: "Practise in a sentence" }).click();
+  await openOptionalWriting(page);
   const input = page.getByRole("textbox", {
     name: /Write a sentence using sounds good/,
   });

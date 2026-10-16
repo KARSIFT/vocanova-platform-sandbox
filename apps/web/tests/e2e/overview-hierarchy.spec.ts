@@ -13,7 +13,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(mission.getByRole("progressbar", { name: "Reviews today" })).toHaveAttribute("aria-valuenow", "0");
     await expect(mission.getByRole("link")).toBeInViewport();
     await page.screenshot({ path: testInfo.outputPath(`home-${theme}.png`), fullPage: true });
-    await page.goto("/discover");
+    await page.goto("/courses");
     await expect(page.getByRole("region", { name: "Guided lessons" })).toBeVisible();
     const practice = page.getByRole("navigation", { name: "Ways to practise" }).getByRole("link", { name: /^Choose a practice/ });
     await expect(practice).toBeVisible();

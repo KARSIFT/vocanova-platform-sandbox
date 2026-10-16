@@ -38,6 +38,7 @@ func TestPostgreSQLRepositorySaveUserWord(t *testing.T) {
 	newID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
 
 	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT id FROM users").WithArgs(userID).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(userID))
 	mock.ExpectQuery("SELECT wm.id FROM word_meanings wm JOIN canonical_words cw").
 		WithArgs(meaningID).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(meaningID))
@@ -78,6 +79,7 @@ func TestPostgreSQLRepositorySaveUserWordMeaningNotFound(t *testing.T) {
 	now := time.Now()
 
 	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT id FROM users").WithArgs(userID).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(userID))
 	mock.ExpectQuery("SELECT wm.id FROM word_meanings wm JOIN canonical_words cw").
 		WithArgs(meaningID).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}))
@@ -103,6 +105,7 @@ func TestPostgreSQLRepositorySaveUserWordRejectsInactiveCanonicalWord(t *testing
 	now := time.Now()
 
 	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT id FROM users").WithArgs(userID).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(userID))
 	mock.ExpectQuery("SELECT wm.id FROM word_meanings wm JOIN canonical_words cw").
 		WithArgs(meaningID).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}))
@@ -130,6 +133,7 @@ func TestPostgreSQLRepositorySaveUserWordAlreadySaved(t *testing.T) {
 	existingID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
 
 	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT id FROM users").WithArgs(userID).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(userID))
 	mock.ExpectQuery("SELECT wm.id FROM word_meanings wm JOIN canonical_words cw").
 		WithArgs(meaningID).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(meaningID))
@@ -162,9 +166,12 @@ func TestPostgreSQLRepositoryUnsaveUserWord(t *testing.T) {
 	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
 	now := time.Now()
 
+	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT id FROM users").WithArgs(userID).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(userID))
 	mock.ExpectExec("UPDATE user_words").
 		WithArgs(sqlmock.AnyArg(), userID, meaningID).
 		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
 
 	require.NoError(t, repo.UnsaveUserWord(t.Context(), userID, meaningID, now))
 	require.NoError(t, mock.ExpectationsWereMet())
@@ -180,9 +187,12 @@ func TestPostgreSQLRepositoryUnsaveUserWordNotFound(t *testing.T) {
 	meaningID := uuid.MustParse("00000000-0000-0000-0000-000000000002")
 	now := time.Now()
 
+	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT id FROM users").WithArgs(userID).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(userID))
 	mock.ExpectExec("UPDATE user_words").
 		WithArgs(sqlmock.AnyArg(), userID, meaningID).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectRollback()
 
 	assert.ErrorIs(t, repo.UnsaveUserWord(t.Context(), userID, meaningID, now), ErrUserWordNotFound)
 	require.NoError(t, mock.ExpectationsWereMet())
@@ -336,6 +346,7 @@ func TestPostgreSQLRepositorySaveUserWordWithGamificationNil(t *testing.T) {
 	newID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
 
 	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT id FROM users").WithArgs(userID).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(userID))
 	mock.ExpectQuery("SELECT wm.id FROM word_meanings wm JOIN canonical_words cw").
 		WithArgs(meaningID).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(meaningID))
@@ -379,6 +390,7 @@ func TestPostgreSQLRepositorySaveUserWordFailedInsertNoReward(t *testing.T) {
 	now := time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC)
 
 	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT id FROM users").WithArgs(userID).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(userID))
 	mock.ExpectQuery("SELECT wm.id FROM word_meanings wm JOIN canonical_words cw").
 		WithArgs(meaningID).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(meaningID))
@@ -417,6 +429,7 @@ func TestPostgreSQLRepositorySaveUserWordRestoreDeletedNoNewReward(t *testing.T)
 	existingID := uuid.MustParse("00000000-0000-0000-0000-000000000003")
 
 	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT id FROM users").WithArgs(userID).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(userID))
 	mock.ExpectQuery("SELECT wm.id FROM word_meanings wm JOIN canonical_words cw").
 		WithArgs(meaningID).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(meaningID))

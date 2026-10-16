@@ -225,10 +225,15 @@ func nullableString(s string) *string {
 }
 
 func mapReviewsError(err error) huma.StatusError {
+	if errors.Is(err, reviews.ErrNotDue) {
+		return huma.Error409Conflict("This word is no longer due. Reload your lesson.")
+	}
 	if err == nil {
 		return nil
 	}
 	switch {
+	case errors.Is(err, reviews.ErrReservedMetadata):
+		return huma.Error400BadRequest("Review metadata contains a reserved server field")
 	case errors.Is(err, reviews.ErrInvalidCursor):
 		return huma.Error400BadRequest("invalid cursor")
 	case errors.Is(err, reviews.ErrUserWordNotFound):

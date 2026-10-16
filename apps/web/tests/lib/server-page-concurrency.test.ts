@@ -45,7 +45,7 @@ async function importPage(path: string): Promise<ServerPage> {
     .default;
 }
 const HomePage = await importPage("home");
-const JourneyPage = await importPage("discover");
+const CoursesPage = await importPage("courses");
 const ProgressPage = await importPage("progress");
 const WritingPage = await importPage("writing");
 
@@ -63,6 +63,7 @@ const fixture: Record<string, unknown> = {
   [api("me")]: { id: "test-learner", onboardingStatus: "completed" },
   [api("user-words")]: emptyCollection,
   [api("reviews/due")]: { ...emptyCollection, totalCount: 0 },
+  [api("daily-lessons/current")]: { session: null, dueCount: 0 },
   [api("daily-mission")]: {
     reviewTarget: 5,
     reviewsCompleted: 0,
@@ -152,14 +153,13 @@ describe("independent server page reads", () => {
       HomePage,
       [
         "user-words",
-        "reviews/due",
+        "daily-lessons/current",
         "daily-mission",
-        "lesson-recommendation",
       ],
     ],
     [
-      "Journey",
-      JourneyPage,
+      "Situation courses",
+      CoursesPage,
       ["journey-situations", "lessons", "lesson-recommendation"],
     ],
     [
@@ -208,13 +208,13 @@ describe("independent server page reads", () => {
 
 describe("page error semantics", () => {
   for (const [name, page, required, optional, returnTo] of [
-    ["Home", HomePage, "daily-mission", "lesson-recommendation", "/home"],
+    ["Home", HomePage, "daily-lessons/current", null, "/home"],
     [
-      "Journey",
-      JourneyPage,
+      "Situation courses",
+      CoursesPage,
       "journey-situations",
       "lesson-recommendation",
-      "/discover",
+      "/courses",
     ],
     ["Progress", ProgressPage, "progress", "learner-sentences", "/progress"],
   ] as const) {
@@ -226,7 +226,7 @@ describe("page error semantics", () => {
           error instanceof ApiResponseError && error.status === 503,
       );
     });
-    it(`${name} retains optional-service fallback`, async () => {
+    if (optional) it(`${name} retains optional-service fallback`, async () => {
       mockFetch({ [api(optional)]: 503 });
       const rendered = await page();
       if (name === "Progress") {
@@ -244,7 +244,7 @@ describe("page error semantics", () => {
         );
       }
     });
-    it(`${name} redirects expired optional authentication`, async () => {
+    if (optional) it(`${name} redirects expired optional authentication`, async () => {
       mockFetch({ [api(optional)]: 401 });
       await assert.rejects(
         page(),

@@ -9,12 +9,14 @@ interface ListenButtonProps {
   text: string;
   label?: string;
   showCaption?: boolean;
+  autoPlay?: boolean;
 }
 
 export function ListenButton({
   text,
   label = text,
   showCaption = true,
+  autoPlay = false,
 }: ListenButtonProps) {
   const owner = useRef(Symbol("pronunciation"));
   const [state, setState] = useState<PronunciationState>({ status: "idle" });
@@ -26,8 +28,9 @@ export function ListenButton({
     const currentOwner = owner.current;
     deviceSpeech.prepare();
     setState({ status: "idle" });
+    if (autoPlay) deviceSpeech.play(currentOwner, text, false, setState);
     return () => deviceSpeech.release(currentOwner);
-  }, [text]);
+  }, [text, autoPlay]);
 
   return (
     <div

@@ -1,5 +1,56 @@
 # Vocanova release readiness
 
+## Discovery and daily review — local acceptance, 17 October 2026
+
+The integrated behavior and private-recording observations are described in
+[discovery and daily review](../design/discovery-daily-review.md). Root-run real
+PostgreSQL race checks pass for the 10,000-entry seed/map and durable daily lesson
+packages. They cover concurrent exact replay, stale/known/removed words,
+transaction rollback, minimum-day scheduling, local-day credit deduplication,
+metadata-forgery rejection, wrong-retry point protection, export and purge.
+The same real-database checks cover all seven due projections after restores,
+non-UTC day boundaries, forged review metadata and concurrent fresh save keys.
+The production candidate query and semantic-alias guard have at least five
+eligible distractors for every one of the 10,000 catalog entries. This is an
+availability invariant, not proof that every question is semantically unambiguous.
+The frozen catalog and alias assets reproduce byte-for-byte from the pinned
+inputs; source notices and the limits of model content review accompany them.
+
+Whole-workspace validation passes: formatting, lint/vet, types, foundation tests,
+60 client tests, 185 web-helper tests, Go suites and production web/API builds.
+The final optional-editor fix also has a fresh web build, formatting, lint and
+E2E typecheck. The API check now requires real PostgreSQL acceptance; database
+failures or skips cannot be hidden behind a passing unit-only API check.
+
+The complete local browser sweep recorded **1,006 passes, 31 existing scope
+skips and 19 failures**. It retained the failing artifacts. A genuine middleware
+rewrite-status defect, an optional-editor pre-hydration fragment race and retired
+Home/review assertions were corrected. The subsequent **63 affected cases pass**
+across 360px, 430px and desktop, including the real 503 document and in-app
+navigation fallback, course destinations, durable review aliases and exact draft
+recovery. A controlled test opens native disclosures before JavaScript loads,
+then verifies the restored location, unchanged history length and visible draft
+after reload. No failed test was silently skipped.
+
+All 24 new daily/discovery cases passed in the broad sweep, including both-theme
+accessibility, native keyboard selection and unobscured focus, refresh, delayed
+mistakes, all map ranges and uncertain-write recovery. Actual rendered screens
+were inspected at all three widths in both themes. These synthetic browser
+fixtures do not prove production authentication, device audibility or database
+durability; the real PostgreSQL checks establish the tested database invariants
+separately. Independent backend/interface reviews completed, and their findings
+were corrected and re-reviewed.
+
+All 12 final local Lighthouse audits pass: performance 100, accessibility 100
+and best practices 96 across Home, Journey, Reviews and Progress at all three
+widths. These lab scores do not measure production network latency.
+Applicable hosted checks on the consolidated PR, protected merge and live
+staging verification remain release gates. The staging
+journey now includes a real unsaved-word assessment with persistence after
+navigation/reload and unchanged review, streak and confidence-point credit.
+That new staging step has not yet been executed. No production promotion is
+authorized by this delivery request. Older evidence below describes its own revisions.
+
 ## Calm learning and broader search — local acceptance, 7 October 2026
 
 See [calm learning and broader search](../design/calm-learning.md) for the revised

@@ -1,37 +1,18 @@
 import { randomUUID } from "node:crypto";
+import { expect, test, type Page } from "@playwright/test";
+import { answerReviewWord, startReviewLesson } from "./review-readiness";
 
-import { expect, test, type Page, type TestInfo } from "@playwright/test";
-
-async function seedReviewFixture(
-  page: Page,
-  count: number,
-  testInfo: TestInfo,
-  reviewTarget = count,
-) {
-  // The mock keeps review state in a process-wide map keyed by this cookie.
-  // Every invocation, project and retry therefore needs its own key: the three
-  // accessibility projects share the same mock server, and a retry may begin
-  // after its earlier attempt has consumed some fixture cards.
-  const sessionId = [
-    "review-summary",
-    testInfo.project.name,
-    testInfo.testId,
-    `retry-${testInfo.retry}`,
-    randomUUID(),
-  ]
-    .map(encodeURIComponent)
-    .join("-");
-
+async function seed(page: Page, count: number) {
   await page.context().addCookies([
     {
       name: "vocanova_session",
-      value: sessionId,
+      value: randomUUID(),
       domain: "127.0.0.1",
       path: "/",
     },
     {
       name: "vocanova_csrf",
-      value: "review-summary-csrf",
+      value: "summary-csrf",
       domain: "127.0.0.1",
       path: "/",
     },
@@ -43,170 +24,147 @@ async function seedReviewFixture(
     },
     {
       name: "e2e_daily_review_target",
-      value: String(reviewTarget),
+      value: String(count || 1),
       domain: "127.0.0.1",
       path: "/",
     },
   ]);
+  await page.goto("/reviews");
 }
-
-async function submitCurrentReview(page: Page, index: number) {
-  const showAnswer = page.getByRole("button", { name: "Show answer" });
-  if (await showAnswer.isVisible()) {
-    await showAnswer.click();
-  } else {
-    await page
-      .getByRole("button", {
-        name: `noun — definition for review word ${index}`,
-      })
-      .click();
-  }
-  await page.getByRole("button", { name: "Good" }).click();
-}
+const completed = (page: Page) =>
+  page.getByRole("heading", { name: "Lesson complete", level: 1 });
+const actions = "**/api/v1/daily-lessons/*/actions";
 
 test.describe("Review completion summary", () => {
-  test("counts a paginated 51-card session after server confirmations", async ({
+  test("counts 51 words across bounded lessons only after confirmations", async ({
     page,
-  }, testInfo) => {
-    await seedReviewFixture(page, 51, testInfo);
-    await page.goto("/reviews");
-
-    for (let index = 1; index <= 51; index += 1) {
+  }) => {
+    test.setTimeout(90_000);
+    await seed(page, 51);
+    await startReviewLesson(page);
+    for (let index = 1; index <= 51; index++) {
       await expect(
-        page.getByRole("heading", { name: `Review word ${index}`, level: 2 }),
+        page.getByRole("heading", {
+          name: `Review word ${index}`,
+          exact: true,
+        }),
       ).toBeVisible();
-      await submitCurrentReview(page, index);
+      await answerReviewWord(page, `definition for review word ${index}`);
+      if (index % 10 === 0 || index === 51) {
+        await expect(completed(page)).toBeFocused();
+        await expect(
+          page.getByText(
+            `${index === 51 ? 1 : 10} ${index === 51 ? "word" : "words"} remembered for today.`,
+            { exact: true },
+          ),
+        ).toBeVisible();
+        if (index < 51)
+          await page
+            .getByRole("button", { name: "Next lesson", exact: true })
+            .click();
+      }
     }
-
+    await page.goto("/home");
     await expect(
-      page.getByRole("heading", { name: "Review complete", level: 2 }),
-    ).toBeVisible();
-    await expect(page.getByText("You reviewed 51 words.")).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "Review complete", level: 2 }),
-    ).toBeFocused();
+      page.getByRole("progressbar", { name: "Reviews today" }),
+    ).toHaveAttribute("aria-valuenow", "51");
   });
 
-  test("does not count a rejected submission before its successful retry", async ({
+  test("does not count a rejected answer before its successful keyboard retry", async ({
     page,
-  }, testInfo) => {
-    await seedReviewFixture(page, 1, testInfo);
-    await page.goto("/reviews");
-    await page.getByRole("button", { name: "Show answer" }).click();
-
-    await page.route("**/api/v1/reviews/submissions", async (route) => {
-      await route.fulfill({
-        status: 500,
-        contentType: "application/json",
-        body: JSON.stringify({ error: "temporary_failure" }),
-      });
-    });
-    await page.getByRole("button", { name: "Good" }).click();
-    await expect(page.getByText("HTTP 500")).toBeVisible();
-    await expect(page.getByText(/You reviewed \d+ word/)).toHaveCount(0);
-    await expect(
-      page.getByRole("heading", { name: "Review complete", level: 2 }),
-    ).toHaveCount(0);
-
-    await page.unroute("**/api/v1/reviews/submissions");
-    const rating = page.getByRole("button", { name: "Good" });
-    await rating.focus();
-    await rating.press("Enter");
-    await expect(page.getByText("You reviewed 1 word.")).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "Review complete", level: 2 }),
-    ).toBeFocused();
-  });
-
-  test("focuses completion only after a failed queue refresh succeeds", async ({
-    page,
-  }, testInfo) => {
-    await seedReviewFixture(page, 1, testInfo, 2);
-    await page.goto("/reviews");
-    let refreshCount = 0;
-    let releaseRefresh!: () => void;
-    const delayedRefresh = new Promise<void>((resolve) => {
-      releaseRefresh = resolve;
-    });
-    await page.route("**/api/v1/reviews/due?limit=*", async (route) => {
-      refreshCount += 1;
-      if (refreshCount === 1) {
-        await route.fulfill({
+  }) => {
+    await seed(page, 1);
+    await startReviewLesson(page);
+    await page.route(
+      actions,
+      (route) =>
+        route.fulfill({
           status: 500,
           contentType: "application/json",
-          body: JSON.stringify({ error: "temporary_failure" }),
-        });
-        return;
-      }
-      await delayedRefresh;
-      await route.fulfill({
-        contentType: "application/json",
-        body: JSON.stringify({ items: [], totalCount: 0 }),
-      });
-    });
-    await submitCurrentReview(page, 1);
-    const retry = page.getByRole("button", { name: "Retry loading reviews" });
-    await expect(retry).toBeVisible();
-    const completion = page.getByRole("heading", {
-      name: "Review complete",
-      level: 2,
-    });
-    await expect(completion).toHaveCount(0);
+          body: JSON.stringify({ detail: "temporary failure" }),
+        }),
+      { times: 1 },
+    );
+    await page
+      .getByRole("radio", { name: "definition for review word 1", exact: true })
+      .check();
+    await page
+      .getByRole("button", { name: "Check answer", exact: true })
+      .click();
+    await expect(page.getByRole("main").getByRole("alert")).toBeVisible();
+    await expect(completed(page)).toHaveCount(0);
+    for (const radio of await page.getByRole("radio").all())
+      await expect(radio).toBeDisabled();
+    const retry = page.getByRole("button", { name: "Retry same answer" });
+    await expect(retry).toBeInViewport({ ratio: 1 });
+    const alert = page.getByRole("main").getByRole("alert");
+    await expect
+      .poll(() =>
+        alert.evaluate(
+          (element) =>
+            element === document.activeElement ||
+            element.contains(document.activeElement),
+        ),
+      )
+      .toBe(true);
+    const retryBox = await retry.boundingBox();
+    const actionsBox = await page
+      .getByRole("region", { name: "Session actions" })
+      .boundingBox();
+    expect(retryBox!.y + retryBox!.height).toBeLessThanOrEqual(actionsBox!.y);
     await retry.focus();
     await retry.press("Enter");
-    try {
-      await expect.poll(() => refreshCount).toBe(2);
-      await expect(page.getByText("Loading next reviews…")).toBeVisible();
-      await expect(completion).toHaveCount(0);
-    } finally {
-      releaseRefresh();
-    }
-    await expect(completion).toBeFocused();
-    await expect(page.getByText("You reviewed 1 word.")).toBeVisible();
+    await expect(
+      page.getByRole("status").filter({ hasText: /^Correct/ }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await expect(completed(page)).toBeFocused();
+    await expect(
+      page.getByText("1 word remembered for today.", { exact: true }),
+    ).toBeVisible();
+  });
+
+  test("an unconfirmed continuation cannot announce completion", async ({
+    page,
+  }) => {
+    await seed(page, 1);
+    await startReviewLesson(page);
+    await page
+      .getByRole("radio", { name: "definition for review word 1", exact: true })
+      .check();
+    await page
+      .getByRole("button", { name: "Check answer", exact: true })
+      .click();
+    await expect(
+      page.getByRole("status").filter({ hasText: /^Correct/ }),
+    ).toBeVisible();
+    await page.route(actions, (route) => route.abort("failed"), { times: 1 });
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: "Retry same answer" }),
+    ).toBeVisible();
+    await expect(completed(page)).toHaveCount(0);
+    await page.getByRole("button", { name: "Retry same answer" }).click();
+    await expect(completed(page)).toBeFocused();
+    await expect(
+      page.getByText("1 word remembered for today.", { exact: true }),
+    ).toBeVisible();
   });
 
   test("an initially empty queue does not claim session completion", async ({
     page,
-  }, testInfo) => {
-    await seedReviewFixture(page, 0, testInfo, 1);
-    await page.goto("/reviews");
-    const caughtUp = page.getByRole("heading", {
-      name: "You're all caught up",
-      level: 2,
+  }) => {
+    await seed(page, 0);
+    const empty = page.getByRole("heading", {
+      name: "You’re ready for new words",
+      exact: true,
     });
-    await expect(caughtUp).toBeVisible();
-    await expect(caughtUp).not.toBeFocused();
-    await expect(page.getByText(/You reviewed \d+ word/)).toHaveCount(0);
+    await expect(empty).toBeVisible();
+    await expect(empty).not.toBeFocused();
+    await expect(completed(page)).toHaveCount(0);
+    await expect(page.getByText(/words? remembered for today/)).toHaveCount(0);
     await expect(
-      page.getByRole("heading", { name: "Review complete", level: 2 }),
-    ).toHaveCount(0);
-  });
-
-  test("an emptied stale queue focuses caught-up state without crediting a review", async ({
-    page,
-  }, testInfo) => {
-    await seedReviewFixture(page, 1, testInfo);
-    await page.goto("/reviews");
-    await page.route("**/api/v1/reviews/submissions", async (route) => {
-      await route.fulfill({
-        status: 404,
-        contentType: "application/json",
-        body: JSON.stringify({ error: "saved_word_not_found" }),
-      });
-    });
-    await page.route("**/api/v1/reviews/due?limit=*", async (route) => {
-      await route.fulfill({
-        contentType: "application/json",
-        body: JSON.stringify({ items: [], totalCount: 0 }),
-      });
-    });
-    await submitCurrentReview(page, 1);
-    await expect(
-      page.getByRole("heading", { name: "You're all caught up", level: 2 }),
-    ).toBeFocused();
-    await expect(page.getByText(/You reviewed \d+ word/)).toHaveCount(0);
-    await expect(
-      page.getByRole("heading", { name: "Review complete", level: 2 }),
-    ).toHaveCount(0);
+      page.getByRole("link", { name: "Discover words", exact: true }),
+    ).toHaveAttribute("href", "/discovery");
   });
 });

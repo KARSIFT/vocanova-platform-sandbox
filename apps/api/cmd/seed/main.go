@@ -4,10 +4,12 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"github.com/KARSIFT/vocanova-platform/apps/api/business/knowledgecatalog"
 	"os"
 
 	_ "github.com/lib/pq"
@@ -124,12 +126,17 @@ func run() error {
 		return err
 	}
 
+	if err := knowledgecatalog.Seed(context.Background(), tx); err != nil {
+		return err
+	}
+
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit transaction: %w", err)
 	}
 
 	fmt.Printf("seed applied: %d situations, %d words, %d meanings, %d examples, %d notes, %d journey_words\n",
 		len(seed.JourneySituations), len(seed.CanonicalWords), len(seed.WordMeanings), len(seed.WordExamples), len(seed.UsageNotes), len(seed.JourneyWords))
+	fmt.Printf("ranked catalog applied: %d words (%s)\n", knowledgecatalog.TotalWords, knowledgecatalog.CatalogVersion)
 	return nil
 }
 

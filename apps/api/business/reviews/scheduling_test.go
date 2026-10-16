@@ -195,5 +195,18 @@ func TestStepIntervalForEveryStep(t *testing.T) {
 		assert.Positive(t, StepInterval(i))
 	}
 	assert.Equal(t, StepInterval(0), 10*time.Minute)
-	assert.Equal(t, StepInterval(1), 1*time.Hour)
+	assert.Equal(t, StepInterval(1), 24*time.Hour)
+}
+
+func TestLeitnerIntervalsAndCorrectWordWaitsAtLeastOneDay(t *testing.T) {
+	expected := []time.Duration{10 * time.Minute, 24 * time.Hour, 3 * 24 * time.Hour, 7 * 24 * time.Hour, 14 * 24 * time.Hour, 30 * 24 * time.Hour, 60 * 24 * time.Hour, 120 * 24 * time.Hour}
+	now := time.Date(2026, 10, 17, 23, 0, 0, 0, time.UTC)
+	for step, want := range expected {
+		require.Equal(t, want, StepInterval(step))
+		for _, rating := range []string{RatingHard, RatingGood, RatingEasy} {
+			got, e := ApplyReview(ReviewState{ReviewStep: step}, ApplyReviewRequest{Result: ResultCorrect, Rating: rating}, now)
+			require.NoError(t, e)
+			require.False(t, got.NextReviewAt.Before(now.Add(24*time.Hour)))
+		}
+	}
 }

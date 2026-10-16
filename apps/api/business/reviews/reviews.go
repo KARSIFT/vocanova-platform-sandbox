@@ -71,6 +71,10 @@ type ReviewAttempt struct {
 // SubmitReviewRequest is a request to record a review attempt and update the
 // schedule for the authenticated user.
 type SubmitReviewRequest struct {
+	verifiedSessionID uuid.UUID
+	// Server-only session generation guard. Never populated by the HTTP review DTO.
+	ExpectedReviewCount     *int
+	AllowSessionRetry       bool
 	UserID                  uuid.UUID
 	UserWordID              uuid.UUID
 	MeaningID               uuid.UUID
@@ -128,6 +132,8 @@ type Repository interface {
 var (
 	ErrInvalidCursor                   = errors.New("invalid cursor")
 	ErrUserWordNotFound                = errors.New("saved word not found")
+	ErrReservedMetadata                = errors.New("review metadata contains a reserved server field")
+	ErrNotDue                          = errors.New("saved word is no longer due")
 	ErrInvalidPromptType               = errors.New("invalid prompt type")
 	ErrInvalidRatingForResult          = errors.New("rating is not permitted for the result")
 	ErrInvalidAttemptType              = errors.New("invalid attempt type")
@@ -251,6 +257,13 @@ func (s *Service) SubmitReview(ctx context.Context, req SubmitReviewRequest) (*R
 		return attempt, nil
 	}
 
+	if _, reserved := req.Metadata["dailySessionId"]; reserved {
+		prior, e := s.repo.GetReviewAttemptByClientAttemptID(ctx, req.UserID, req.ClientAttemptID)
+		if e == nil && reviewAttemptEqualsRequest(prior, req) {
+			return prior, nil
+		}
+		return nil, ErrReservedMetadata
+	}
 	attempt, err := s.repo.SubmitReview(ctx, req)
 	if err != nil {
 		return nil, err

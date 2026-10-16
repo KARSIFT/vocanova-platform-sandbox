@@ -23,13 +23,13 @@ import {
 } from "./axe-helper.js";
 
 test.describe("Discover accessibility (VOC-031-T07b)", () => {
-  test("/discover renders with zero critical/serious axe violations, is keyboard reachable, and uses text-based state", async ({
+  test("/courses renders with zero critical/serious axe violations, is keyboard reachable, and uses text-based state", async ({
     page,
   }) => {
-    await page.goto("/discover");
+    await page.goto("/courses");
 
     await expect(
-      page.getByRole("heading", { name: "Journey", level: 1 }),
+      page.getByRole("heading", { name: "Situation courses", level: 1 }),
     ).toBeVisible();
 
     const { criticalOrSerious } = await scanForAxeViolations(page);
@@ -92,9 +92,12 @@ test.describe("Discover accessibility (VOC-031-T07b)", () => {
         // The "Saved" indicator on already-saved meanings is the
         // most likely colour-only regression on this screen.
         "text=Saved",
-        "text=Back to Journey",
+        "text=All courses",
       ],
     });
+    await expect(
+      page.getByRole("link", { name: "All courses", exact: true }),
+    ).toHaveAttribute("href", "/courses");
   });
 
   test("/discover/[situation]/[word] (Word Detail + sentence feedback) renders with zero critical/serious axe violations, is keyboard reachable, and uses text-based state", async ({

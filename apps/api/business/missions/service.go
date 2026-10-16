@@ -65,9 +65,10 @@ func (s *Service) IncrementReviewsCompleted(
 	reviewTarget int,
 	correct bool,
 	skipped bool,
+	successCredit ...bool,
 ) (int, error) {
 	return s.missions.IncrementReviewsCompleted(
-		ctx, tx, userID, localDate, timezone, reviewTarget, correct, skipped,
+		ctx, tx, userID, localDate, timezone, reviewTarget, correct, skipped, successCredit...,
 	)
 }
 

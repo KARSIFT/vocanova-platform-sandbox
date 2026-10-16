@@ -120,6 +120,15 @@ export default async function SavedWordDetailPage({
             meaningId={meaning.id}
             initialKnown={meaning.selfReportedKnown}
           />
+          <WordPracticeDisclosure>
+            <SentenceFeedback
+              targetWord={savedWord.wordText}
+              attemptId={savedWord.userWordId}
+              source="word_detail"
+              userId={currentUserResponse.data.id}
+              shortDefinition={savedWord.shortDefinition}
+            />
+          </WordPracticeDisclosure>
         </details>
       </Surface>
 
@@ -128,22 +137,6 @@ export default async function SavedWordDetailPage({
         currentMeaningId={meaning.id}
         canonicalPath={`/vocabulary/${encodeURIComponent(savedWord.wordSlug)}`}
       />
-
-      <WordPracticeDisclosure>
-        <SentenceFeedback
-          targetWord={savedWord.wordText}
-          attemptId={savedWord.userWordId}
-          source="word_detail"
-          userId={currentUserResponse.data.id}
-          shortDefinition={savedWord.shortDefinition}
-        />
-        <Link
-          href="/writing"
-          className="mt-4 inline-flex min-h-12 items-center rounded-md font-semibold text-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
-        >
-          Choose a writing topic
-        </Link>
-      </WordPracticeDisclosure>
     </PageContainer>
   );
 }

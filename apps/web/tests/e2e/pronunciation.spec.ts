@@ -1,3 +1,4 @@
+import { openOptionalWriting } from "./optional-writing";
 import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 
@@ -121,7 +122,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(
       main.getByRole("button", { name: "Remove pour from saved words" }),
     ).toBeVisible();
-    await main.locator("summary").filter({ hasText: "Practise in a sentence" }).click();
+    await openOptionalWriting(page);
     await expect(
       main.getByRole("textbox", { name: "Write a sentence using pour" }),
     ).toBeVisible();
@@ -279,4 +280,212 @@ test("canonical word detail preserves authentication and missing-word handling",
   ]);
   await page.goto("/vocabulary/pour");
   await expect(page).toHaveURL(/\/login\?returnTo=%2Fvocabulary%2Fpour/);
+});
+
+test("discovery automatically speaks each word, supports mute and explicit replay, and cancels on exit", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await installSpeech(page);
+  await context.addCookies([
+    { name: "vocanova_session", value: randomUUID(), url: baseURL! },
+    { name: "vocanova_csrf", value: "discovery-audio", url: baseURL! },
+  ]);
+  await page.goto("/discovery");
+  expect(await page.evaluate(() => window.__pronunciationTest.calls)).toEqual(
+    [],
+  );
+  await page
+    .getByRole("button", { name: "Start discovering", exact: true })
+    .click();
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        window.__pronunciationTest.calls.map((call) => call.text),
+      ),
+    )
+    .toEqual(["the"]);
+  await page.getByRole("button", { name: "Already know", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "be", exact: true }),
+  ).toBeFocused();
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        window.__pronunciationTest.calls.map((call) => call.text),
+      ),
+    )
+    .toEqual(["the", "be"]);
+  const beforeMute = await page.evaluate(
+    () => window.__pronunciationTest.cancellations,
+  );
+  await expect(
+    page.getByRole("button", { name: "Automatic sound on", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page
+    .getByRole("button", { name: "Automatic sound on", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Automatic sound off", exact: true }),
+  ).toHaveAttribute("aria-pressed", "false");
+  expect(
+    await page.evaluate(() => window.__pronunciationTest.cancellations),
+  ).toBe(beforeMute + 1);
+  await page.getByRole("button", { name: "Learn", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Map word 3", exact: true }),
+  ).toBeFocused();
+  expect(
+    await page.evaluate(() =>
+      window.__pronunciationTest.calls.map((call) => call.text),
+    ),
+  ).toEqual(["the", "be"]);
+  await page
+    .getByRole("button", { name: "Listen to Map word 3", exact: true })
+    .click();
+  await expect
+    .poll(() =>
+      page.evaluate(() => window.__pronunciationTest.calls.at(-1)?.text),
+    )
+    .toBe("Map word 3");
+  const beforeExit = await page.evaluate(
+    () => window.__pronunciationTest.cancellations,
+  );
+  await page
+    .getByRole("link", { name: "Back to word map", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Knowledge map", exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() => window.__pronunciationTest.cancellations),
+  ).toBe(beforeExit + 1);
+});
+
+test("daily lesson audio stops when muted and on route exit without changing grading", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await installSpeech(page);
+  await context.addCookies([
+    { name: "vocanova_session", value: randomUUID(), url: baseURL! },
+    { name: "vocanova_csrf", value: "daily-audio", url: baseURL! },
+    { name: "e2e_review_fixture_count", value: "2", url: baseURL! },
+  ]);
+  await page.goto("/reviews");
+  expect(await page.evaluate(() => window.__pronunciationTest.calls)).toEqual(
+    [],
+  );
+  await page.getByRole("button", { name: "Start lesson", exact: true }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        window.__pronunciationTest.calls.map((call) => call.text),
+      ),
+    )
+    .toEqual(["Review word 1"]);
+  const beforeMute = await page.evaluate(
+    () => window.__pronunciationTest.cancellations,
+  );
+  await expect(
+    page.getByRole("button", { name: "Automatic audio on", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page
+    .getByRole("button", { name: "Automatic audio on", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Automatic audio off", exact: true }),
+  ).toHaveAttribute("aria-pressed", "false");
+  expect(
+    await page.evaluate(() => window.__pronunciationTest.cancellations),
+  ).toBe(beforeMute + 1);
+  await page
+    .getByRole("radio", { name: "definition for review word 1", exact: true })
+    .check();
+  await page.getByRole("button", { name: "Check answer", exact: true }).click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Review word 2", exact: true }),
+  ).toBeFocused();
+  expect(
+    await page.evaluate(() => window.__pronunciationTest.calls),
+  ).toHaveLength(1);
+  await page
+    .getByRole("button", { name: "Listen to Review word 2", exact: true })
+    .click();
+  await expect
+    .poll(() =>
+      page.evaluate(() => window.__pronunciationTest.calls.at(-1)?.text),
+    )
+    .toBe("Review word 2");
+  const beforeExit = await page.evaluate(
+    () => window.__pronunciationTest.cancellations,
+  );
+  await page.getByRole("link", { name: "Back to Home", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Today", exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() => window.__pronunciationTest.cancellations),
+  ).toBe(beforeExit + 1);
+});
+
+test("discovery brings an unconfirmed choice and its exact retry into view", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await installSpeech(page, "no-english");
+  await context.addCookies([
+    { name: "vocanova_session", value: randomUUID(), url: baseURL! },
+    { name: "vocanova_csrf", value: "discovery-visible-retry", url: baseURL! },
+  ]);
+  await page.goto("/discovery");
+  await page
+    .getByRole("button", { name: "Start discovering", exact: true })
+    .click();
+  const requests: { key: string | undefined; body: unknown }[] = [];
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      new URL(request.url()).pathname === "/api/v1/knowledge-map/decisions"
+    )
+      requests.push({
+        key: request.headers()["idempotency-key"],
+        body: request.postDataJSON(),
+      });
+  });
+  await page.route(
+    "**/api/v1/knowledge-map/decisions",
+    (route) => route.abort("failed"),
+    { times: 1 },
+  );
+  await page.getByRole("button", { name: "Learn", exact: true }).click();
+  const alert = page.getByRole("main").getByRole("alert");
+  const retry = alert.getByRole("button", {
+    name: "Retry choice",
+    exact: true,
+  });
+  await expect(retry).toBeInViewport({ ratio: 1 });
+  await expect
+    .poll(() =>
+      alert.evaluate(
+        (element) =>
+          element === document.activeElement ||
+          element.contains(document.activeElement),
+      ),
+    )
+    .toBe(true);
+  await expect(
+    page.getByRole("button", { name: "Learn", exact: true }),
+  ).toBeDisabled();
+  await retry.click();
+  await expect(
+    page.getByRole("heading", { name: "be", exact: true }),
+  ).toBeFocused();
+  expect(requests).toHaveLength(2);
+  expect(requests[0]!.key).toBeTruthy();
+  expect(requests[1]).toEqual(requests[0]);
 });

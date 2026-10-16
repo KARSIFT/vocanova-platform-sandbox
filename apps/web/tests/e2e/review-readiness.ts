@@ -4,42 +4,42 @@ export type ReviewReadiness = "prompt" | "terminal";
 
 export function getTerminalReviewHeading(page: Page): Locator {
   return page
-    .getByRole("heading", { name: "You're all caught up", level: 2 })
-    .or(page.getByRole("heading", { name: "Review complete", level: 2 }))
-    .or(
-      page.getByRole("heading", {
-        name: "Today's review target is complete",
-        level: 2,
-      }),
-    );
+    .getByRole("heading", { name: "You’re ready for new words", level: 1 })
+    .or(page.getByRole("heading", { name: "Lesson complete", level: 1 }));
 }
 
 export function getEnabledReviewPromptControl(page: Page): Locator {
-  const showAnswerButton = page.getByRole("button", {
-    name: "Show answer",
-    disabled: false,
-  });
-  const enabledMultipleChoiceOption = page
-    .getByRole("group", { name: /^Choose the meaning for / })
-    .getByRole("button", { disabled: false })
-    .first();
+  return page.getByRole("radio", { disabled: false }).first();
+}
 
-  return showAnswerButton.or(enabledMultipleChoiceOption).first();
+export async function startReviewLesson(page: Page, timeout?: number) {
+  const start = page.getByRole("button", { name: "Start lesson", exact: true });
+  await expect(
+    start
+      .or(getEnabledReviewPromptControl(page))
+      .or(getTerminalReviewHeading(page))
+      .first(),
+  ).toBeVisible(timeout === undefined ? {} : { timeout });
+  if (await start.isVisible()) await start.click();
+}
+
+export async function answerReviewWord(page: Page, meaning: string) {
+  await page.getByRole("radio", { name: meaning, exact: true }).check();
+  await page.getByRole("button", { name: "Check answer", exact: true }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: /^Correct/ }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
 }
 
 export async function waitForReviewReadiness(
   page: Page,
   timeout?: number,
 ): Promise<ReviewReadiness> {
-  const terminalReviewHeading = getTerminalReviewHeading(page);
-  const readiness = getEnabledReviewPromptControl(page)
-    .or(terminalReviewHeading)
-    .first();
-  if (timeout === undefined) {
-    await expect(readiness).toBeVisible();
-  } else {
-    await expect(readiness).toBeVisible({ timeout });
-  }
-
-  return (await terminalReviewHeading.isVisible()) ? "terminal" : "prompt";
+  await startReviewLesson(page, timeout);
+  const terminal = getTerminalReviewHeading(page);
+  await expect(
+    getEnabledReviewPromptControl(page).or(terminal).first(),
+  ).toBeVisible(timeout === undefined ? {} : { timeout });
+  return (await terminal.isVisible()) ? "terminal" : "prompt";
 }

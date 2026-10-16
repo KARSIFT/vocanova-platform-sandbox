@@ -3,8 +3,8 @@ import { expect, test, type BrowserContext } from "@playwright/test";
 import { formatViolations, scanForAxeViolations } from "./axe-helper";
 
 const apiURL = `http://127.0.0.1:${process.env.MOCK_API_PORT ?? 8080}`;
-test("Home redirects when its recommendation read sees an expired session", async ({ page, context, baseURL }) => {
-  await context.addCookies([{ name: "e2e_recommendation_auth", value: "expired", url: baseURL! }]);
+test("Home redirects when its daily lesson read sees an expired session", async ({ page, context, baseURL }) => {
+  await context.addCookies([{ name: "e2e_daily_lesson_auth", value: "expired", url: baseURL! }]);
   await page.goto("/home");
   await expect(page).toHaveURL(/\/login\?returnTo=%2Fhome$/);
 });
@@ -25,17 +25,25 @@ async function markTargetsKnown(context: BrowserContext) {
   }
 }
 for (const theme of ["light", "dark"] as const) {
-  test(`Home and plan use actual target coverage without awarding completion (${theme})`, async ({ page, context, baseURL }) => {
+  test(`plan uses actual target coverage while Home leads with discovery without awarding completion (${theme})`, async ({ page, context, baseURL }) => {
     await context.addCookies([{ name: "vocanova_theme", value: theme, url: baseURL! }]);
     await page.goto("/plan");
     await expect(page.getByRole("main").getByRole("link", { name: /^Start lesson\s*:/ })).toBeVisible();
     await markTargetsKnown(context);
     for (const path of ["/plan", "/home"]) {
       await page.goto(path);
-      const region = page.getByRole("main").getByRole("region", { name: "Your next lesson", exact: true });
-      await expect(region.getByText(/You have marked the remaining lesson meanings as known/)).toBeVisible();
-      await expect(region.getByRole("link", { name: /^Start lesson/ })).toHaveCount(0);
-      await expect(region.getByRole("link", { name: "All lessons", exact: true })).toHaveAttribute("href", "/discover");
+      if (path === "/plan") {
+        const region = page.getByRole("main").getByRole("region", { name: "Your next lesson", exact: true });
+        await expect(region.getByText(/You have marked the remaining lesson meanings as known/)).toBeVisible();
+        await expect(region.getByRole("link", { name: /^Start lesson/ })).toHaveCount(0);
+        await expect(region.getByRole("link", { name: "All lessons", exact: true })).toHaveAttribute("href", "/courses");
+      } else {
+        await expect(page.getByRole("region", { name: "Your next lesson", exact: true })).toHaveCount(0);
+        const region = page.getByRole("region", { name: "Today’s practice", exact: true });
+        await expect(region.getByRole("link", { name: "Discover words", exact: true })).toHaveAttribute("href", "/discovery");
+        await expect(region.getByText("Currently due: 0 words.", { exact: false })).toBeVisible();
+        await expect(region.getByRole("progressbar", { name: "Reviews today", exact: true })).toHaveAttribute("aria-valuenow", "0");
+      }
       await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
       const scan = await scanForAxeViolations(page);

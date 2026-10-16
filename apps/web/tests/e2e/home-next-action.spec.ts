@@ -10,6 +10,7 @@ test.describe("Daily learning entry", () => {
       const baseURL = testInfo.project.use.baseURL!;
       await context.addCookies([
         { name: "vocanova_session", value: randomUUID(), url: baseURL },
+        { name: "vocanova_csrf", value: "home-next-action", url: baseURL },
         {
           name: "e2e_review_fixture_count",
           value: hasReviews ? "2" : "0",
@@ -18,15 +19,11 @@ test.describe("Daily learning entry", () => {
       ]);
       await page.goto("/home");
       await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
-      const action = page.getByRole("link", {
-        name: hasReviews ? "Start review" : "Start your Journey",
-        exact: true,
-      });
+      const action = hasReviews
+        ? page.getByRole("button", { name: "Start today’s lesson", exact: true })
+        : page.getByRole("link", { name: "Discover words", exact: true });
       await expect(action).toBeVisible();
-      await expect(action).toHaveAttribute(
-        "href",
-        hasReviews ? "/review" : "/discover",
-      );
+      if (!hasReviews) await expect(action).toHaveAttribute("href", "/discovery");
       const actionBox = await action.boundingBox();
       const navigationBox = await page
         .getByRole("navigation", { name: "Primary" })

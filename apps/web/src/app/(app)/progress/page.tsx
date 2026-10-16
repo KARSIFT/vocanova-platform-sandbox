@@ -244,15 +244,15 @@ export default async function ProgressPage() {
                   </li>
                 ))}
             </ul>
-            <Link href="/discover" className={`${linkStyle} mb-2`}>
-              Continue your Journey
+            <Link href="/courses" className={`${linkStyle} mb-2`}>
+              Browse courses
             </Link>
           </details>
         ) : (
           <p role="status" className="py-4 text-neutral-700">
             Your lesson progress could not load.{" "}
-            <Link href="/discover" className={linkStyle}>
-              Open Journey
+            <Link href="/courses" className={linkStyle}>
+              Browse courses
             </Link>
           </p>
         )}

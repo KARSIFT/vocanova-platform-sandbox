@@ -89,8 +89,8 @@ test("staging onboarding helper waits for delayed completion and lets the app re
   });
   await expect(mission).toBeVisible();
   await expect(
-    mission.getByRole("link", { name: "Start your Journey", exact: true }),
-  ).toHaveAttribute("href", "/discover");
+    mission.getByRole("link", { name: "Discover words", exact: true }),
+  ).toHaveAttribute("href", "/discovery");
   await expect(
     mission.getByRole("progressbar", { name: "Reviews today", exact: true }),
   ).toHaveAttribute("aria-valuenow", "0");

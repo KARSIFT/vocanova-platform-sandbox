@@ -287,7 +287,7 @@ export function LessonPlayer({
             >
               Practise these words
             </Link>
-            <Link href="/discover" className={primary}>
+            <Link href="/courses" className={primary}>
               Choose your next lesson
             </Link>
             <Link href="/review" className={secondary}>

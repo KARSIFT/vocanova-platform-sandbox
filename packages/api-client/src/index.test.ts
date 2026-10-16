@@ -15,6 +15,83 @@ import {
 } from "./index.js";
 
 describe("VocanovaClient", () => {
+  it("keeps daily lesson mutations tied to the exact session and retry intent", async () => {
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
+    const controller = new AbortController();
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: async (input, init) => {
+        requests.push({ url: String(input), init });
+        return Response.json({ id: "session", revision: 2 });
+      },
+    });
+    const action = {
+      stepId: "step-1",
+      expectedRevision: 1,
+      clientActionId: "intent-1",
+      action: "answer" as const,
+      choiceId: "choice-2",
+    };
+    await client.submitDailyLessonAction("session/other", action, "intent-1", {
+      headers: { "X-CSRF-Token": "synthetic-csrf" },
+      signal: controller.signal,
+    });
+    assert.ok(requests[0]);
+    assert.equal(
+      new URL(requests[0].url).pathname,
+      "/api/v1/daily-lessons/session%2Fother/actions",
+    );
+    assert.equal(requests[0].init?.method, "POST");
+    assert.equal(requests[0].init?.signal, controller.signal);
+    assert.equal(
+      new Headers(requests[0].init?.headers).get("X-CSRF-Token"),
+      "synthetic-csrf",
+    );
+    assert.equal(
+      new Headers(requests[0].init?.headers).get("Idempotency-Key"),
+      "intent-1",
+    );
+    assert.deepEqual(JSON.parse(String(requests[0].init?.body)), action);
+  });
+
+  it("reads a word range without mutation and submits an explicit revision-bound discovery choice", async () => {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const client = new VocanovaClient({
+      baseURL: "https://api.example.com",
+      fetch: async (input, init) => {
+        calls.push({ url: String(input), init });
+        return Response.json({});
+      },
+    });
+    await client.getKnowledgeMap(100);
+    assert.ok(calls[0]);
+    assert.equal(new URL(calls[0].url).searchParams.get("band"), "100");
+    assert.equal(calls[0].init?.method, "GET");
+    assert.equal(calls[0].init?.body, undefined);
+    const choice = {
+      meaningId: "meaning",
+      decision: "known" as const,
+      expectedRevision: "a".repeat(64),
+    };
+    await client.decideKnowledgeMapWord(choice, "discovery-intent", {
+      headers: { "X-CSRF-Token": "synthetic-csrf" },
+    });
+    assert.ok(calls[1]);
+    assert.equal(
+      new URL(calls[1].url).pathname,
+      "/api/v1/knowledge-map/decisions",
+    );
+    assert.equal(
+      new Headers(calls[1].init?.headers).get("Idempotency-Key"),
+      "discovery-intent",
+    );
+    assert.equal(
+      new Headers(calls[1].init?.headers).get("X-CSRF-Token"),
+      "synthetic-csrf",
+    );
+    assert.deepEqual(JSON.parse(String(calls[1].init?.body)), choice);
+  });
+
   it("looks up an explicitly submitted dictionary word without learning mutations", async () => {
     const expected = {
       word: "serendipity",

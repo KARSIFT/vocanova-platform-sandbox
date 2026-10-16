@@ -36,7 +36,7 @@ export default async function StoriesPage() {
       {!library.items.length ? (
         <Surface>
           <p>No stories are available right now.</p>
-          <Link href="/discover" className={textLink}>
+          <Link href="/courses" className={textLink}>
             Explore situations
           </Link>
         </Surface>

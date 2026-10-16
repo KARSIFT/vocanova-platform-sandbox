@@ -80,10 +80,10 @@ export default async function SituationDiscoverPage({
   return (
     <PageContainer>
       <Link
-        href="/discover"
+        href="/courses"
         className="inline-flex min-h-11 items-center text-base font-semibold text-primary-700 hover:text-primary-800"
       >
-        Back to Journey
+        All courses
       </Link>
       <Eyebrow>
         {situationData.category.replaceAll("_", " ")}
@@ -233,7 +233,7 @@ export default async function SituationDiscoverPage({
             situation for now.
           </p>
           <Link
-            href="/discover"
+            href="/courses"
             className="mt-[var(--spacing-lg)] inline-flex min-h-[var(--spacing-2xl)] min-w-[var(--spacing-2xl)] items-center justify-center rounded-md bg-primary-600 px-[var(--spacing-md)] py-[var(--spacing-sm)] text-base font-medium text-neutral-50 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
           >
             Browse other situations

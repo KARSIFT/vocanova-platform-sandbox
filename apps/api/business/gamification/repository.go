@@ -172,7 +172,21 @@ func (r *Repository) GetLatestGraceBalanceTx(ctx context.Context, tx *sql.Tx, us
 // GetUserSettings reads the user_settings row for userID. Returns
 // (nil, nil) if no row exists yet.
 func (r *Repository) GetUserSettings(ctx context.Context, userID uuid.UUID) (*UserSettingsRow, error) {
-	row := r.db.QueryRowContext(ctx,
+	return getUserSettings(ctx, r.db, userID)
+}
+
+// GetUserSettingsTx never acquires another pooled connection while the caller
+// holds a learning transaction.
+func (r *Repository) GetUserSettingsTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID) (*UserSettingsRow, error) {
+	if tx == nil {
+		return nil, errors.New("transaction required")
+	}
+	return getUserSettings(ctx, tx, userID)
+}
+func getUserSettings(ctx context.Context, q interface {
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}, userID uuid.UUID) (*UserSettingsRow, error) {
+	row := q.QueryRowContext(ctx,
 		`SELECT user_id, timezone, daily_review_target, review_interval_preset,
 		        notifications_enabled, marketing_emails_enabled, app_language
 		 FROM user_settings
