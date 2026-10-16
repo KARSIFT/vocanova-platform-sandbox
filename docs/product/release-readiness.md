@@ -51,9 +51,22 @@ required PostgreSQL acceptance job. Home's mission-complete variable is used,
 and source-link URLs are fixed HTTPS application constants; those findings did
 not require speculative changes.
 
+A subsequent Codex review found that deletion repositories correctly removed
+and counted the new lesson records, while the sweep service omitted those
+three fields from its aggregate report. The service now sums daily actions,
+sessions and successes. The existing two-learner sweep regression verifies
+distinct nonzero totals and an empty repeat sweep without extra finalization;
+independent root race checks pass.
+
 All 12 final local Lighthouse audits pass: performance 100, accessibility 100
 and best practices 96 across Home, Journey, Reviews and Progress at all three
 widths. These lab scores do not measure production network latency.
+Hosted Lighthouse run `38976663765` at `14b273c6` recorded one 430px Journey
+performance failure (72 against the unchanged 85 budget): one 2,043ms
+unattributed task, with normal rendering/network metrics. Its report and logs
+were retained. One exact-SHA reproducibility rerun passed all 12 audits; no
+source, threshold, aggregation or skip changed. This does not establish the
+original task's cause. Final hosted acceptance remains a separate gate.
 Applicable hosted checks on the consolidated PR, protected merge and live
 staging verification remain release gates. The staging
 journey now includes a real unsaved-word assessment with persistence after

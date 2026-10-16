@@ -693,6 +693,9 @@ func (s *Service) RunDeletionSweep(ctx context.Context, clientIP, sessionToken s
 			continue
 		}
 		result.Anonymized++
+		result.AnonymizationTotals.DailyLessonActions += counters.DailyLessonActions
+		result.AnonymizationTotals.DailyLessonSessions += counters.DailyLessonSessions
+		result.AnonymizationTotals.DailyReviewSuccesses += counters.DailyReviewSuccesses
 		result.AnonymizationTotals.ExternalIdentities += counters.ExternalIdentities
 		result.AnonymizationTotals.UserWords += counters.UserWords
 		result.AnonymizationTotals.LearnerSentences += counters.LearnerSentences
