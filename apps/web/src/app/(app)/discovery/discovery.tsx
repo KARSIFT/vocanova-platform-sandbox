@@ -47,6 +47,8 @@ export function Discovery({
     data.currentBand.items[0];
   const band = data.currentBand.number;
   const bandSummary = data.bands.find((value) => value.number === band);
+  const displayedRank = item?.rank;
+  const displayedWord = item?.wordText;
 
   useEffect(() => {
     if (!error) return;
@@ -66,19 +68,24 @@ export function Discovery({
   }, []);
 
   useEffect(() => {
-    if (!started || !item || done) return;
+    if (!started || displayedRank === undefined || done) return;
     window.history.replaceState(
       window.history.state,
       "",
-      `/discovery?band=${band}&word=${item.rank}`,
+      `/discovery?band=${band}&word=${displayedRank}`,
     );
     titleRef.current?.focus();
-    if (lastSpoken.current !== item.rank) {
-      lastSpoken.current = item.rank;
+  }, [started, displayedRank, band, done]);
+
+  useEffect(() => {
+    if (!started || displayedRank === undefined || !displayedWord || done)
+      return;
+    if (lastSpoken.current !== displayedRank) {
+      lastSpoken.current = displayedRank;
       if (!muted)
-        deviceSpeech.play(speechOwner.current, item.wordText, false, setSpeech);
+        deviceSpeech.play(speechOwner.current, displayedWord, false, setSpeech);
     }
-  }, [started, item, band, muted, done]);
+  }, [started, displayedRank, displayedWord, muted, done]);
 
   function start() {
     if (!item) return;

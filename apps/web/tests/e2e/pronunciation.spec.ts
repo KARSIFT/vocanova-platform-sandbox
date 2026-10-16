@@ -320,18 +320,42 @@ test("discovery automatically speaks each word, supports mute and explicit repla
   const beforeMute = await page.evaluate(
     () => window.__pronunciationTest.cancellations,
   );
+  const soundOn = page.getByRole("button", {
+    name: "Automatic sound on",
+    exact: true,
+  });
+  const soundOff = page.getByRole("button", {
+    name: "Automatic sound off",
+    exact: true,
+  });
+  await expect(soundOn).toHaveAttribute("aria-pressed", "true");
+  // Start from the new-word heading and use native keyboard navigation. Audio
+  // preferences must not send focus back to the title or replay this word.
+  await page.keyboard.press("Tab");
   await expect(
-    page.getByRole("button", { name: "Automatic sound on", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
-  await page
-    .getByRole("button", { name: "Automatic sound on", exact: true })
-    .click();
-  await expect(
-    page.getByRole("button", { name: "Automatic sound off", exact: true }),
-  ).toHaveAttribute("aria-pressed", "false");
+    page.getByRole("button", { name: "Listen to be", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(soundOn).toBeFocused();
+  const wordUrl = page.url();
+  await page.keyboard.press("Space");
+  await expect(soundOff).toHaveAttribute("aria-pressed", "false");
+  await expect(soundOff).toBeFocused();
+  await expect(page).toHaveURL(wordUrl);
   expect(
     await page.evaluate(() => window.__pronunciationTest.cancellations),
   ).toBe(beforeMute + 1);
+  await page.keyboard.press("Space");
+  await expect(soundOn).toHaveAttribute("aria-pressed", "true");
+  await expect(soundOn).toBeFocused();
+  await page.keyboard.press("Space");
+  await expect(soundOff).toHaveAttribute("aria-pressed", "false");
+  await expect(soundOff).toBeFocused();
+  expect(
+    await page.evaluate(() =>
+      window.__pronunciationTest.calls.map((call) => call.text),
+    ),
+  ).toEqual(["the", "be"]);
   await page.getByRole("button", { name: "Learn", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Map word 3", exact: true }),

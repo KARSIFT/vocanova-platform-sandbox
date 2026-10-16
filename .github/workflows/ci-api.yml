@@ -88,15 +88,15 @@ jobs:
             exit 1
           fi
 
-      - name: Verify discovery and daily lessons against PostgreSQL without skips
+      - name: Verify discovery and review transactions against PostgreSQL without skips
         working-directory: apps/api
         run: |
           set -euo pipefail
           test_log="$(mktemp)"
           trap 'rm -f "$test_log"' EXIT
-          go test -race ./business/knowledgecatalog ./business/dailylesson \
+          go test -race ./business/knowledgecatalog ./business/dailylesson ./business/reviews \
             -count=1 -v | tee "$test_log"
-          for case in TestPostgreSQLCompleteCatalogSeedAndConsistentBandCounts TestPostgreSQLDiscoveryAtomicChoicesIsolationHistoryAndReplay TestPostgreSQLDailyLessonAuthorityRetryCreditResumeAndExport TestPostgreSQLFullCatalogHasEnoughDailyLessonChoices TestPostgreSQLVerifiedTodayDueConsistencyAcrossRestorePaths TestPostgreSQLFreshSaveKeysLockUserBeforeForeignKeyClaims; do
+          for case in TestPostgreSQLCompleteCatalogSeedAndConsistentBandCounts TestPostgreSQLDiscoveryAtomicChoicesIsolationHistoryAndReplay TestPostgreSQLDailyLessonAuthorityRetryCreditResumeAndExport TestPostgreSQLFullCatalogHasEnoughDailyLessonChoices TestPostgreSQLVerifiedTodayDueConsistencyAcrossRestorePaths TestPostgreSQLFreshSaveKeysLockUserBeforeForeignKeyClaims TestPostgreSQLSubmitReviewAnchorsScheduleToServerClock; do
             grep -Eq "^--- PASS: $case " "$test_log"
           done
           if grep -Eq '^[[:space:]]*--- SKIP:' "$test_log"; then

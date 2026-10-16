@@ -491,9 +491,7 @@ func (s *Service) Act(ctx context.Context, u, id uuid.UUID, a Action, key string
 			if e = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM daily_review_successes WHERE review_attempt_id=$1)", attempt.ID).Scan(&fb.Credited); e != nil {
 				return nil, e
 			}
-			if fb.Credited {
-				st.CreditedToday++
-			}
+
 			if correct {
 				fb.Explanation = "Correct. This word is reviewed for today."
 				w.Resolved = true

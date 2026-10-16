@@ -41,6 +41,16 @@ durability; the real PostgreSQL checks establish the tested database invariants
 separately. Independent backend/interface reviews completed, and their findings
 were corrected and re-reviewed.
 
+The actual automated review on [PR #1493](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1493)
+prompted a separate mute-toggle focus correction and removal of a redundant local
+credit increment before the authoritative database count. Its SELECT row-count
+claim was not reproduced: pinned lib/pq explicitly parses SELECT command tags,
+and a real PostgreSQL probe returned one active owner and zero inactive, deleted
+or missing owners. Durable repository replay/ownership cases now also run in the
+required PostgreSQL acceptance job. Home's mission-complete variable is used,
+and source-link URLs are fixed HTTPS application constants; those findings did
+not require speculative changes.
+
 All 12 final local Lighthouse audits pass: performance 100, accessibility 100
 and best practices 96 across Home, Journey, Reviews and Progress at all three
 widths. These lab scores do not measure production network latency.
