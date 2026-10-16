@@ -298,18 +298,44 @@ async function verifyRealKnowledgeMap(page: Page, apiOrigin: string) {
     expect(result.decision).toBe("known");
     expect(result.revision).toMatch(/^[a-f0-9]{64}$/);
 
-    if (chosen.rank === 10_000) {
+    // Guided discovery skips assessed gaps. Derive the next unseen word from
+    // fresh real server state, rather than assuming rank + 1 is still new.
+    const acknowledgedMap = await readStagingState<KnowledgeMap>(
+      page,
+      apiOrigin,
+      "/api/v1/knowledge-map?band=100",
+    );
+    const currentUnseen = acknowledgedMap.currentBand.items.find(
+      (item) => !item.selfReportedKnown && !item.saved,
+    );
+    const nextBand = currentUnseen
+      ? acknowledgedMap.currentBand.number
+      : acknowledgedMap.bands.find((band) => band.unseenCount > 0)?.number;
+    if (nextBand === undefined) {
       await expect(
         page.getByRole("heading", {
-          name: "You reached the end of the map",
+          name: "You’ve explored the whole map",
           exact: true,
         }),
       ).toBeVisible();
       await page.getByRole("link", { name: "View map", exact: true }).click();
     } else {
-      const next = map.currentBand.items.find(
-        (item) => item.rank === chosen.rank + 1,
-      )!;
+      const nextMap =
+        nextBand === acknowledgedMap.currentBand.number
+          ? acknowledgedMap
+          : await readStagingState<KnowledgeMap>(
+              page,
+              apiOrigin,
+              `/api/v1/knowledge-map?band=${nextBand}`,
+            );
+      const next = nextMap.currentBand.items.find(
+        (item) => !item.selfReportedKnown && !item.saved,
+      );
+      expect(
+        next,
+        "A range reported as unseen must contain a new word.",
+      ).toBeDefined();
+      if (!next) throw new Error("The real next unseen word is missing.");
       await expect(
         page.getByRole("heading", {
           name: next.wordText,
@@ -317,9 +343,23 @@ async function verifyRealKnowledgeMap(page: Page, apiOrigin: string) {
           exact: true,
         }),
       ).toBeFocused();
+      await expect(page).toHaveURL(
+        new RegExp(`/discovery\\?band=${nextBand}&word=${next.rank}$`),
+      );
       await page
         .getByRole("link", { name: "Knowledge map", exact: true })
         .click();
+      if (nextBand !== 100) {
+        await page
+          .locator("summary")
+          .filter({ hasText: "Choose a range" })
+          .click();
+        await page
+          .getByRole("navigation", { name: "Word ranges", exact: true })
+          .getByRole("link")
+          .last()
+          .click();
+      }
     }
     await expect(
       tile().getByText("Already know", { exact: true }),

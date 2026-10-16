@@ -36,6 +36,11 @@ decisions: Learn or Already know. Decisions persist before advancing. Revisit,
 changed decisions, retry and browser return must work. An assessment is not
 graded mastery. Existing notes, saved references and review history survive.
 
+Guided discovery skips assessed words and continues to an unfinished range.
+When every word is assessed, it shows completion rather than restarting the
+first range. Deliberate links from map tiles still open individual words for
+revisiting or changing a choice.
+
 The broad inventory must come from reproducible licensed sources, with stable
 word/meaning identities and independently reviewed common-word senses. Existing
 authored teaching and phrases retain their IDs and content. Source frequency is

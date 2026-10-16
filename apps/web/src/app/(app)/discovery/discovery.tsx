@@ -12,7 +12,11 @@ import { createApiClient } from "@/lib/api";
 import { getOrRefreshCSRFToken } from "@/lib/csrf";
 import { handleApiError } from "@/lib/session";
 import { deviceSpeech, type PronunciationState } from "@/lib/speech";
-import { wordStateLabel, type KnowledgeMapData } from "../knowledge-map/models";
+import {
+  nextDiscoveryTarget,
+  wordStateLabel,
+  type KnowledgeMapData,
+} from "../knowledge-map/models";
 import styles from "../knowledge-map/workspace.module.css";
 
 interface PendingDecision {
@@ -133,18 +137,26 @@ export function Discovery({
         request.key,
         { headers: { "X-CSRF-Token": csrf } },
       );
-      const nextRank = rank + 1;
-      // Read confirmed state before changing the card; a retry retains the exact mutation key/body.
-      const nextBand =
-        nextRank <= data.totalWords
-          ? Math.floor((nextRank - 1) / data.bandSize) + 1
-          : band;
-      const confirmed = (await createApiClient().getKnowledgeMap(nextBand))
-        .data;
+      // Read confirmed state before choosing the next unseen word. Keep the
+      // exact pending intent until a different range, if needed, also loads.
+      const client = createApiClient();
+      const current = (await client.getKnowledgeMap(band)).data;
+      const target = nextDiscoveryTarget(current);
+      const confirmed =
+        target && target.band !== band
+          ? (await client.getKnowledgeMap(target.band)).data
+          : current;
+      const nextWord = target
+        ? confirmed.currentBand.items.find(
+            (word) => !word.selfReportedKnown && !word.saved,
+          )
+        : null;
+      if (target && !nextWord)
+        throw new Error("The next unseen word could not be confirmed");
       pending.current = null;
       setData(confirmed);
-      if (nextRank > data.totalWords) setDone(true);
-      else setRank(nextRank);
+      if (!nextWord) setDone(true);
+      else setRank(nextWord.rank);
     } catch (failure) {
       if (failure instanceof ApiResponseError && failure.status === 409) {
         pending.current = null;
@@ -211,7 +223,7 @@ export function Discovery({
   if (done)
     return (
       <div className={styles.focus}>
-        <h1 className={styles.title}>You reached the end of the map</h1>
+        <h1 className={styles.title}>You’ve explored the whole map</h1>
         <p className={styles.definition}>
           Your choices are saved. Keep the words you are learning fresh with a
           short review.

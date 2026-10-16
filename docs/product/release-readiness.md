@@ -58,6 +58,18 @@ sessions and successes. The existing two-learner sweep regression verifies
 distinct nonzero totals and an empty repeat sweep without extra finalization;
 independent root race checks pass.
 
+A final journey check reproduced discovery restarting the first range after
+100 acknowledged assessments. Guided entry and advancement now skip assessed
+words, continue into unfinished ranges and retain exact mutation retries through
+failed next-range reads. Explicit word links still support revisits. Completion
+requires fresh global counts with no unseen words; a concurrent range change
+offers a bounded retry. Independent review found and verified that race guard.
+The rebuilt preview passes all 63 daily/discovery and pronunciation cases across
+the three layouts, including four new rollover/gap/completion/race regressions.
+An initial three-layout failure matched Next's announcement area as well as the
+page alert; the assertion now targets main content, with failure artifacts kept.
+Formatting, lint, web/E2E types and the production web build also pass.
+
 All 12 final local Lighthouse audits pass: performance 100, accessibility 100
 and best practices 96 across Home, Journey, Reviews and Progress at all three
 widths. These lab scores do not measure production network latency.

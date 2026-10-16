@@ -5,6 +5,7 @@ import { PageContainer } from "@/ui/surface";
 import { VocabularySources } from "@/ui/vocabulary-sources";
 import {
   validBand,
+  nextDiscoveryTarget,
   wordState,
   wordStateLabel,
   type KnowledgeMapData,
@@ -44,20 +45,20 @@ export default async function KnowledgeMapPage({
     (sum, item) => sum + item.learningCount,
     0,
   );
-  const next =
-    data.currentBand.items.find(
-      (item) => !item.selfReportedKnown && !item.saved,
-    ) ?? data.currentBand.items[0];
+  const next = nextDiscoveryTarget(data);
   return (
     <PageContainer className={styles.wide}>
       <header className={`${styles.header} ${styles.mapHeader}`}>
         <div>
           <h1 className={styles.title}>Knowledge map</h1>
+          {!next && (
+            <p className={styles.status}>No new words left to discover.</p>
+          )}
         </div>
         {next && (
           <Link
             className={styles.primary}
-            href={`/discovery?band=${band}&word=${next.rank}`}
+            href={`/discovery?band=${next.band}${next.rank === undefined ? "" : `&word=${next.rank}`}`}
           >
             Discover
           </Link>

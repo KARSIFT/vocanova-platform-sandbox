@@ -6,6 +6,8 @@ The current delivery makes the complete 10,000-word knowledge map the main
 Journey, in 100 ranges of 100. Learn/Already know decisions persist against a
 word revision, preserve existing notes and history, and advance only after
 confirmation. Discovery supports automatic device pronunciation, mute and replay.
+Guided discovery continues through unseen words and unfinished ranges; a fully
+assessed map retains explicit word revisits without restarting discovery.
 Ordering is subtitle frequency among selected entries; it is not personalized
 or a CEFR ranking. Original curriculum words, meanings and examples keep their
 identities. Licensed source data and original editorial corrections are documented

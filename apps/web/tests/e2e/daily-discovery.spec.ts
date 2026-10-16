@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
+import type { KnowledgeMap } from "@vocanova/api-client";
 import { scanForAxeViolations } from "./axe-helper";
 
 async function learner(page: Page, count = 2) {
@@ -10,6 +11,25 @@ async function learner(page: Page, count = 2) {
     { name: "vocanova_csrf", value: "daily-browser-csrf", url: baseURL },
     { name: "e2e_review_fixture_count", value: String(count), url: baseURL },
   ]);
+}
+async function assessRangeOne(page: Page, keepUnseen: number[] = []) {
+  const api = `http://127.0.0.1:${process.env.MOCK_API_PORT ?? 8080}`;
+  const initial = await page.request.get(`${api}/api/v1/knowledge-map?band=1`);
+  expect(initial.status()).toBe(200);
+  const range = (await initial.json()) as KnowledgeMap;
+  expect(range.currentBand.items).toHaveLength(100);
+  for (const word of range.currentBand.items) {
+    if (keepUnseen.includes(word.rank)) continue;
+    const assessed = await page.request.post(`${api}/api/v1/knowledge-map/decisions`, {
+      headers: { "X-CSRF-Token": "daily-browser-csrf", "Idempotency-Key": randomUUID() },
+      data: { meaningId: word.meaningId, decision: "known", expectedRevision: word.revision },
+    });
+    expect(assessed.status()).toBe(200);
+    expect(await assessed.json()).toMatchObject({ meaningId: word.meaningId, decision: "known" });
+  }
+  const confirmed = await page.request.get(`${api}/api/v1/knowledge-map?band=1`);
+  expect(confirmed.status()).toBe(200);
+  return (await confirmed.json()) as KnowledgeMap;
 }
 async function start(page: Page, count = 2) {
   await learner(page, count);
@@ -115,6 +135,106 @@ test("all 100 ranges are reachable, discovery confirms choices before advancing,
   await expect(page.getByText("1 learning", { exact: true })).toBeVisible();
   await page.reload();
   await expect(page.getByRole("link", { name: "1 the Already know", exact: true })).toBeVisible();
+});
+
+test("discovery continues to the next unseen range after 100 acknowledged assessments", async ({ page }) => {
+  await learner(page, 0);
+  const confirmed = await assessRangeOne(page);
+  expect(confirmed.bands[0]).toMatchObject({ knownCount: 100, unseenCount: 0 });
+
+  await page.goto("/home");
+  await page.getByRole("link", { name: "Discover words", exact: true }).click();
+  await page.getByRole("button", { name: "Start discovering", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Map word 101", exact: true })).toBeFocused();
+  await expect(page).toHaveURL(/\/discovery\?band=2&word=101$/);
+
+  await page.goto("/knowledge-map?band=1");
+  const discover = page.getByRole("link", { name: "Discover", exact: true });
+  await expect(discover).toHaveAttribute("href", "/discovery?band=2");
+  await discover.click();
+  await page.getByRole("button", { name: "Start discovering", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Map word 101", exact: true })).toBeFocused();
+
+  await page.goto("/discovery?band=1");
+  await page.getByRole("button", { name: "Start discovering", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Map word 101", exact: true })).toBeFocused();
+  await page.goto("/discovery?band=1&word=1");
+  await page.getByRole("button", { name: "Start discovering", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "the", exact: true })).toBeFocused();
+  await expect(page).toHaveURL(/\/discovery\?band=1&word=1$/);
+});
+
+test("guided discovery skips assessed gaps and retains its decision until the next range loads", async ({ page }) => {
+  await learner(page, 0);
+  const before = await assessRangeOne(page, [1, 3]);
+  expect(before.bands[0]).toMatchObject({ knownCount: 98, unseenCount: 2 });
+  await page.goto("/discovery?band=1&word=1");
+  await page.getByRole("button", { name: "Start discovering", exact: true }).click();
+  await page.getByRole("button", { name: "Learn", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Map word 3", exact: true })).toBeFocused();
+  await expect(page).toHaveURL(/\/discovery\?band=1&word=3$/);
+
+  const attempts: Array<{ key: string | undefined; body: string | null }> = [];
+  page.on("request", (request) => {
+    if (request.method() === "POST" && new URL(request.url()).pathname === "/api/v1/knowledge-map/decisions")
+      attempts.push({ key: request.headers()["idempotency-key"], body: request.postData() });
+  });
+  await page.route("**/api/v1/knowledge-map?band=2", (route) => route.abort("failed"), { times: 1 });
+  await page.getByRole("button", { name: "Already know", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Retry choice", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Map word 3", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Learn", exact: true })).toBeDisabled();
+  await expect(page).toHaveURL(/\/discovery\?band=1&word=3$/);
+  await page.getByRole("button", { name: "Retry choice", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Map word 101", exact: true })).toBeFocused();
+  await expect(page).toHaveURL(/\/discovery\?band=2&word=101$/);
+  expect(attempts).toHaveLength(2);
+  expect(attempts[0]!.key).toBeTruthy();
+  expect(attempts[1]).toEqual(attempts[0]);
+});
+
+test("an entirely assessed map has no guided word but keeps explicit revisits", async ({ page }) => {
+  await learner(page, 0);
+  await page.context().addCookies([
+    { name: "e2e_knowledge_map", value: "complete", url: test.info().project.use.baseURL! },
+  ]);
+  await page.goto("/discovery");
+  await expect(page.getByRole("heading", { name: "You’ve explored the whole map", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start discovering", exact: true })).toHaveCount(0);
+  const map = page.getByRole("link", { name: "Knowledge map", exact: true });
+  await expect(map).toHaveAttribute("href", "/knowledge-map?band=1#range-words");
+  await map.click();
+  await expect(page.getByText("10,000 already know", { exact: true })).toBeVisible();
+  await expect(page.getByText("No new words left to discover.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Discover", exact: true })).toHaveCount(0);
+  const revisit = page.getByRole("link", { name: "1 the Already know", exact: true });
+  await expect(revisit).toHaveAttribute("href", "/discovery?band=1&word=1");
+  await revisit.click();
+  await page.getByRole("button", { name: "Start discovering", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "the", exact: true })).toBeFocused();
+  await expect(page).toHaveURL(/\/discovery\?band=1&word=1$/);
+  await page.getByRole("button", { name: "Already know", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "You’ve explored the whole map", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "View map", exact: true })).toHaveAttribute("href", "/knowledge-map?band=1");
+  await page.goto("/discovery?band=100");
+  await expect(page.getByRole("heading", { name: "You’ve explored the whole map", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Knowledge map", exact: true })).toHaveAttribute("href", "/knowledge-map?band=100#range-words");
+});
+
+test("a concurrent range completion offers a bounded retry instead of claiming the map is complete", async ({ page }) => {
+  await learner(page, 0);
+  await page.context().addCookies([
+    { name: "e2e_knowledge_map", value: "rollover-race", url: test.info().project.use.baseURL! },
+  ]);
+  await page.goto("/discovery");
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText("New words changed elsewhere. Try again to load your next word.");
+  await expect(page.getByRole("heading", { name: "You’ve explored the whole map", exact: true })).toHaveCount(0);
+  const retry = page.getByRole("link", { name: "Try again", exact: true });
+  await expect(retry).toHaveAttribute("href", "/discovery");
+  await retry.click();
+  await page.getByRole("button", { name: "Start discovering", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Map word 201", exact: true })).toBeFocused();
+  await expect(page).toHaveURL(/\/discovery\?band=3&word=201$/);
 });
 
 test("daily choices remain accessible and unobscured in both themes", async ({ page }) => {

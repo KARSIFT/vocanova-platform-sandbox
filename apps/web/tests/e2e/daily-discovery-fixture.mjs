@@ -22,12 +22,28 @@ export async function handleDailyDiscovery({ req, res, url, cookies, state, json
   state.dailyReceipts ??= new Map();
   state.dailyStartReceipts ??= new Map();
   state.mapReceipts ??= new Map();
-  const count = (band, decision) => [...state.mapDecisions.entries()].filter(([rank, entry]) => Math.floor((rank - 1) / 100) + 1 === band && entry.decision === decision).length;
+  // The complete-map case avoids 10,000 setup writes while keeping its range
+  // metadata and individual word states consistent. Ordinary tests use CAS.
+  const completeMap = cookies.e2e_knowledge_map === "complete";
+  // Simulate another tab finishing range2 between the two server reads. After
+  // that single change the fixture stays stable, so explicit retry can recover.
+  const rolloverRace = cookies.e2e_knowledge_map === "rollover-race";
+  if (rolloverRace && req.method === "GET" && path === "/api/v1/knowledge-map" && url.searchParams.get("band") === "2")
+    state.mapRolloverRaceResolved = true;
+  const completeThrough = completeMap ? 100 : rolloverRace ? state.mapRolloverRaceResolved ? 2 : 1 : 0;
+  const mapEntry = (rank) => state.mapDecisions.get(rank) ?? (rank <= completeThrough * 100 ? { decision: "known", revision: 0 } : undefined);
+  const count = (band, decision) => {
+    let total = 0;
+    for (let rank = (band - 1) * 100 + 1; rank <= band * 100; rank++) {
+      if (mapEntry(rank)?.decision === decision) total++;
+    }
+    return total;
+  };
   const map = (band) => ({
     attribution, catalogVersion: "synthetic-browser-v1", totalWords: 10000, bandSize: 100,
     ordering: { title: "Common words first", description: "Synthetic interface fixture. The released catalog uses selected English subtitle frequency, not a personalized or CEFR ranking.", sourceUrl: attribution.sourceUrl },
     bands: Array.from({ length: 100 }, (_, index) => { const number = index + 1; const knownCount = count(number, "known"); const learningCount = count(number, "learn"); return { number, startRank: index * 100 + 1, endRank: number * 100, totalWords: 100, knownCount, learningCount, unseenCount: 100 - knownCount - learningCount }; }),
-    currentBand: { number: band, items: Array.from({ length: 100 }, (_, index) => { const rank = (band - 1) * 100 + index + 1; const entry = state.mapDecisions.get(rank); return { rank, meaningId: `map-meaning-${rank}`, wordId: `map-word-${rank}`, wordText: rank === 1 ? "the" : rank === 2 ? "be" : `Map word ${rank}`, wordSlug: `map-word-${rank}`, partOfSpeech: rank === 1 ? "determiner" : "verb", shortDefinition: rank === 1 ? "Used before a person or thing that is already clear." : "A synthetic meaning for this browser fixture.", selfReportedKnown: entry?.decision === "known", saved: entry?.decision === "learn", due: entry?.decision === "learn", revision: revision(entry?.revision ?? 0) }; }) },
+    currentBand: { number: band, items: Array.from({ length: 100 }, (_, index) => { const rank = (band - 1) * 100 + index + 1; const entry = mapEntry(rank); return { rank, meaningId: `map-meaning-${rank}`, wordId: `map-word-${rank}`, wordText: rank === 1 ? "the" : rank === 2 ? "be" : `Map word ${rank}`, wordSlug: `map-word-${rank}`, partOfSpeech: rank === 1 ? "determiner" : "verb", shortDefinition: rank === 1 ? "Used before a person or thing that is already clear." : "A synthetic meaning for this browser fixture.", selfReportedKnown: entry?.decision === "known", saved: entry?.decision === "learn", due: entry?.decision === "learn", revision: revision(entry?.revision ?? 0) }; }) },
   });
   if (req.method === "GET" && path === "/api/v1/knowledge-map") {
     if (cookies.e2e_knowledge_map === "unavailable") return send(503, { detail: "Map unavailable" });
@@ -49,7 +65,7 @@ export async function handleDailyDiscovery({ req, res, url, cookies, state, json
     const prior = state.mapReceipts.get(key);
     if (prior) return prior.body === JSON.stringify(body) ? send(200, prior.result) : send(409, { detail: "Conflicting retry" });
     const rank = Number(body.meaningId?.replace("map-meaning-", ""));
-    const entry = state.mapDecisions.get(rank);
+    const entry = mapEntry(rank);
     if (!Number.isInteger(rank) || rank < 1 || rank > 10000 || !["known", "learn"].includes(body.decision)) return send(400, { detail: "Invalid choice" });
     if (body.expectedRevision !== revision(entry?.revision ?? 0)) return send(409, { detail: "Word changed" });
     const next = (entry?.revision ?? 0) + 1;
