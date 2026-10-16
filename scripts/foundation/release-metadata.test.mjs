@@ -162,3 +162,11 @@ for (const invalid of [
     rejects(root);
   });
 }
+
+test("rejects an index-only VERSION change even when the working file matches HEAD", (t) => {
+  const { root } = fixture(t);
+  writeFileSync(join(root, "VERSION"), "9.0.0\n");
+  git(root, "add", "VERSION");
+  writeFileSync(join(root, "VERSION"), "0.4.1\n");
+  rejects(root);
+});

@@ -5,7 +5,7 @@ if [[ "$(git rev-parse --is-shallow-repository)" != false ]]; then
   echo "Release version calculation requires full Git history (fetch-depth: 0)" >&2
   exit 1
 fi
-if ! git diff --quiet HEAD -- VERSION; then
+if ! git diff --quiet HEAD -- VERSION || ! git diff --cached --quiet HEAD -- VERSION; then
   echo "VERSION must match the checked-out release commit" >&2
   exit 1
 fi
