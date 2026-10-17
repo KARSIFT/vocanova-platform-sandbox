@@ -29,6 +29,16 @@ before the fresh matrix. One first-run loading-text failure remains unexplained;
 it passed its unchanged isolated diagnostic and the subsequent full matrices.
 No specific loading fix is claimed for that observation.
 
+The first full hosted browser run on PR #1495 recorded **1,139 passed, six
+failed and 31 skipped**. All six failures came from the existing authored-phrase
+audio test across themes and widths: it assumed an immediate device-speech call
+and toggled Slow again after navigation, although speed is now shared and saved.
+Both assumptions were reproduced separately before updating the fixture. The
+corrected check asserts no automatic speech, the exact phrase/language/rate,
+keyboard operation and saved Slow state after navigation. All 12 cases in that
+file pass across the three widths, without retries. The failure is retained;
+the next full hosted run must still establish acceptance.
+
 The full API check also exposed a missing public export projection. Download
 DTOs now retain actual daily-review and mixed-practice history; real HTTP export
 matches the repository without private snapshots, answer maps or receipt keys.
