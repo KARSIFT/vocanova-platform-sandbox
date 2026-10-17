@@ -269,6 +269,41 @@ test("saved-progress recovery acknowledges a lost Start before a later Next uses
   expect(keys[2]).not.toBe(keys[0]);
 });
 
+test("an acknowledged Start with a failed progress read retries only GET and loads the latest answer", async ({ page }) => {
+  await learner(page, 1);
+  await page.goto("/reviews");
+  const keys: Array<string | undefined> = [];
+  let initial: DailyLesson;
+  await page.route("**/api/v1/daily-lessons", async (route) => {
+    keys.push(route.request().headers()["idempotency-key"]);
+    if (keys.length === 1) {
+      const committed = await route.fetch();
+      initial = await committed.json() as DailyLesson;
+      await route.abort("failed");
+    } else await route.continue();
+  });
+  await page.getByRole("button", { name: "Start lesson", exact: true }).click();
+  const error = page.getByRole("main").getByRole("alert");
+  await expect(error).toBeVisible();
+  await page.route(`**/api/v1/daily-lessons/${initial!.id}`, (route) => route.abort("failed"), { times: 1 });
+  await error.getByRole("button", { name: "Load saved progress", exact: true }).click();
+  await expect(error).toContainText("Your lesson was saved, but we could not load your progress. Load saved progress to retry.");
+  expect(keys).toHaveLength(2);
+  expect(keys[0]).toBeTruthy();
+  expect(keys[1]).toBe(keys[0]);
+  // The acknowledgement retired the key even though the following read failed.
+  // A second actor's newer answer must be loaded with GET, without another Start.
+  const other = await otherActorPost(page, `/api/v1/daily-lessons/${initial!.id}/actions`, { action: "answer", choiceId: "meaning-a", stepId: initial!.currentStep!.id, expectedRevision: initial!.revision, clientActionId: randomUUID() });
+  expect(other.feedback?.correct).toBe(true);
+  const recovering = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/v1/daily-lessons/current");
+  await error.getByRole("button", { name: "Load saved progress", exact: true }).click();
+  expect((await recovering).status()).toBe(200);
+  await expect(page.getByRole("status").filter({ hasText: /^Correct/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeEnabled();
+  await expect(error).toHaveCount(0);
+  expect(keys).toHaveLength(2);
+});
+
 test("saved-progress recovery reads beyond an immutable Start receipt after another actor completes the lesson", async ({ page }) => {
   await learner(page, 1);
   await page.goto("/reviews");

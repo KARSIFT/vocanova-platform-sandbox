@@ -162,6 +162,7 @@ export function DailyLessonPlayer({
     setError("");
     deviceSpeech.prepare();
     startKey.current ??= crypto.randomUUID();
+    let startAcknowledged = false;
     try {
       const token = await getOrRefreshCSRFToken();
       if (!token) throw new Error("session not ready");
@@ -174,6 +175,7 @@ export function DailyLessonPlayer({
       // The POST acknowledges this key, but a replayed receipt is an immutable
       // snapshot. Saved-progress recovery must read the current lesson too.
       startKey.current = null;
+      startAcknowledged = true;
       let confirmed = data;
       if (loadSavedProgress) {
         const [current, saved] = await Promise.all([
@@ -198,6 +200,7 @@ export function DailyLessonPlayer({
       setConflict(false);
     } catch (cause) {
       if (
+        !startAcknowledged &&
         cause instanceof ApiResponseError &&
         cause.status === 409 &&
         cause.body?.detail === NO_DUE_DETAIL
@@ -238,7 +241,9 @@ export function DailyLessonPlayer({
         setError(
           handleApiError(
             cause,
-            "We could not start your lesson. Try again safely.",
+            startAcknowledged
+              ? "Your lesson was saved, but we could not load your progress. Load saved progress to retry."
+              : "We could not start your lesson. Try again safely.",
           ),
         );
       }

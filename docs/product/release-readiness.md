@@ -40,6 +40,18 @@ and 185 web-helper tests, lint and E2E types. Frozen installation succeeds;
 unrelated development-tool resolution changes were restored. Independent
 dependency/lock review found no blocker. Hosted checks apply to the final head.
 
+Actual automated review also identified misleading fallback wording when Start
+was acknowledged but a subsequent progress read failed. The message now
+distinguishes saved progress from a failed Start. A network-failure regression
+recovers another actor's newer answer by GET without another Start request;
+the rebuilt affected matrix passes all 114 cases. Independent contract review
+verified that `/current` returns only in-progress sessions and a fresh Start key
+resumes an existing active lesson under the owner lock; the review's proposed
+completed-current stall and active-session abandonment are not reachable under
+those contracts. The patched runtime passes all 12 local Lighthouse audits
+(performance 100, accessibility 100, best practices 96); these lab scores do not
+establish live network latency.
+
 ## Discovery and daily review — local acceptance, 17 October 2026
 
 The integrated behavior and private-recording observations are described in
