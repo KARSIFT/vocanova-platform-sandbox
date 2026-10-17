@@ -180,6 +180,9 @@ type PersonalDataDailyActionDTO struct {
 	WasHintUsed *bool   `json:"wasHintUsed,omitempty"`
 	NextReview  *string `json:"nextReview,omitempty"`
 }
+
+// Daily feedback receipts contain a stable meaningId but no wordSlug. Export
+// their recorded fields without reconstructing a current routing key.
 type PersonalDataDailyFeedbackDTO struct {
 	_                struct{} `nullable:"true"`
 	StepID           string   `json:"stepId"`

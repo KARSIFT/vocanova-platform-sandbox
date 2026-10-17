@@ -2459,6 +2459,208 @@
         ],
         "type": "object"
       },
+      "PersonalDataDailyActionDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "choiceId": {
+            "type": "string"
+          },
+          "nextReview": {
+            "type": "string"
+          },
+          "stepId": {
+            "type": "string"
+          },
+          "wasHintUsed": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "PersonalDataDailyFeedbackDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "answer": {
+            "type": "string"
+          },
+          "correct": {
+            "type": "boolean"
+          },
+          "correctChoiceId": {
+            "type": "string"
+          },
+          "credited": {
+            "type": "boolean"
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "meaningId": {
+            "type": "string"
+          },
+          "nextReviewAt": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "reviewStep": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "selectedChoiceId": {
+            "type": "string"
+          },
+          "skipped": {
+            "type": "boolean"
+          },
+          "stepId": {
+            "type": "string"
+          },
+          "wordText": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "stepId",
+          "correct",
+          "answer",
+          "explanation",
+          "meaningId",
+          "wordText",
+          "credited",
+          "skipped"
+        ],
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "PersonalDataDailyLessonActionDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/PersonalDataDailyActionDTO"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "feedback": {
+            "$ref": "#/components/schemas/PersonalDataDailyFeedbackDTO"
+          }
+        },
+        "required": [
+          "action",
+          "feedback",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "PersonalDataDailyLessonDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalDataDailyLessonActionDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "completedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "completedWords": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "creditedToday": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "firstAnswersCorrect": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "id": {
+            "type": "string"
+          },
+          "questionsAnswered": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "startedAt": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "totalWords": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "revision",
+          "completedWords",
+          "totalWords",
+          "firstAnswersCorrect",
+          "questionsAnswered",
+          "creditedToday",
+          "startedAt",
+          "updatedAt",
+          "completedAt",
+          "actions"
+        ],
+        "type": "object"
+      },
+      "PersonalDataDailyReviewSuccessDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "createdAt": {
+            "type": "string"
+          },
+          "dailySessionId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "localDate": {
+            "type": "string"
+          },
+          "meaningId": {
+            "type": "string"
+          },
+          "reviewAttemptId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "meaningId",
+          "localDate",
+          "reviewAttemptId",
+          "dailySessionId",
+          "createdAt"
+        ],
+        "type": "object"
+      },
       "PersonalDataExportDTO": {
         "additionalProperties": false,
         "properties": {
@@ -2489,9 +2691,27 @@
               "null"
             ]
           },
+          "dailyLessons": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalDataDailyLessonDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
           "dailyMissions": {
             "items": {
               "$ref": "#/components/schemas/PersonalDataMissionDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "dailyReviewSuccesses": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalDataDailyReviewSuccessDTO"
             },
             "type": [
               "array",
@@ -2607,6 +2827,8 @@
           "storySessions",
           "learningPreferences",
           "practiceSessions",
+          "dailyLessons",
+          "dailyReviewSuccesses",
           "wordKnowledge",
           "guidedLessons",
           "schemaVersion",
@@ -2872,6 +3094,15 @@
           },
           "stepId": {
             "type": "string"
+          },
+          "tokenIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "typedAnswer": {
             "type": "string"
@@ -3177,11 +3408,35 @@
           "correct": {
             "type": "boolean"
           },
+          "correctChoiceId": {
+            "type": "string"
+          },
+          "correctTokenIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
           "explanation": {
             "type": "string"
           },
           "meaningId": {
             "type": "string"
+          },
+          "revealed": {
+            "type": "boolean"
+          },
+          "selectedTokenIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "stepId": {
             "type": "string"
@@ -3243,6 +3498,13 @@
           "id": {
             "type": "string"
           },
+          "journeyLesson": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
           "lessonKey": {
             "type": [
               "string",
@@ -3271,6 +3533,13 @@
           "mode": {
             "type": "string"
           },
+          "newWords": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
           "questionsAnswered": {
             "format": "int64",
             "type": "integer"
@@ -3295,6 +3564,8 @@
           "listId",
           "listName",
           "listRevision",
+          "journeyLesson",
+          "newWords",
           "contentVersion",
           "gradingVersion",
           "actions",
@@ -4307,6 +4578,10 @@
               "gap_choice",
               "sentence_build"
             ],
+            "type": "string"
+          },
+          "meaningId": {
+            "description": "Teaching-only visual context; absent from graded questions.",
             "type": "string"
           },
           "prompt": {

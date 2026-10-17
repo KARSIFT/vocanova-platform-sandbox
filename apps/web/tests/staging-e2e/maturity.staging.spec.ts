@@ -3,6 +3,7 @@
 // journey logs out, so its already-revoked token cannot be reused here.
 // No mock server, AI feedback request, vocabulary reset or session-history purge.
 import { randomUUID } from "node:crypto";
+import { writeFile } from "node:fs/promises";
 import { expect, test, type BrowserContext } from "@playwright/test";
 import type {
   CurrentUser,
@@ -807,8 +808,10 @@ test("connected maturity journey against real staging", async ({
       expect(decoded.sampleRate > 0 && decoded.channels > 0).toBe(true);
       // Only the validated public word clip is retained for owner listening.
       // Never attach API envelopes, cookies, headers or authenticated traces.
+      const samplePath = test.info().outputPath("natural-pronunciation-invite.mp3");
+      await writeFile(samplePath, Buffer.from(first.audioBase64, "base64"));
       await test.info().attach("natural-pronunciation-invite.mp3", {
-        body: Buffer.from(first.audioBase64, "base64"),
+        path: samplePath,
         contentType: "audio/mpeg",
       });
     });

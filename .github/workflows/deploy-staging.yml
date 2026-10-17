@@ -1658,6 +1658,17 @@ jobs:
           pnpm --filter @vocanova/web exec playwright test \
             --config playwright.staging.config.ts maturity.staging.spec.ts
 
+      # Retain only the validated public-word clip, including on successful
+      # runs. Authenticated reports and traces are not part of this artifact.
+      - name: Retain the validated public pronunciation sample
+        if: ${{ always() && inputs.skip_ssh_deploy != true }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: staging-public-pronunciation-sample
+          path: apps/web/test-results-staging/**/natural-pronunciation-invite.mp3
+          if-no-files-found: ignore
+          retention-days: 7
+
       # VOC-053-DEP-00 diagnostic (temporary - see issue #453/VOC-053-T01):
       # T01's independent review confirmed the implementer correctly
       # declined a speculative fix without direct daily_mission_snapshots

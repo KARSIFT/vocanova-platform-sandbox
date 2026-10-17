@@ -22,6 +22,8 @@ func (r *PostgreSQLRepository) ExportPersonalData(ctx context.Context, userID uu
 		return nil, errors.New("user id required")
 	}
 	var payload []byte
+	// Only journey snapshots count new words. Preserve null for legacy/manual
+	// modes, where an absent count does not mean that zero new words were taught.
 	err := r.db.QueryRowContext(ctx, `
 SELECT jsonb_build_object(
  'schemaVersion', '1.7', 'exportedAt', now(),
