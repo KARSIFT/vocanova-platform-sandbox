@@ -60,6 +60,19 @@ retained for owner listening; synthetic audio does not establish provider qualit
 Final staging appearance and owner/provider acceptance remain distinct evidence.
 Production promotion is outside this phase.
 
+The first complete hosted pass on `1bc4e07a` recorded **1,145 passed and 31
+skipped**, with no failures, flaky results or retries. The ready-state reviews
+then found two valid combinations missing from that coverage: an empty/deleted
+manual list blocked the independent personal lesson, and an unavailable saved
+device voice could not be cleared when no English voices were exposed. The PR
+was held before merge. Both failures were reproduced before changing code.
+Personal journey starts now ignore only the unrelated manual-list guard; manual
+list modes retain their restrictions. Voice reset remains an explicit learner
+choice and preserves speed and active-playback restrictions. A rebuilt preview
+passes all **93** related browser cases across the three widths without retries,
+skips or flaky results; speech units, types, lint and formatting also pass.
+Fresh hosted checks and staging acceptance are still required for that follow-up.
+
 ## Daily lesson completion — staging repair, 17 October 2026
 
 [PR #1493](https://github.com/KARSIFT/vocanova-platform-sandbox/pull/1493)

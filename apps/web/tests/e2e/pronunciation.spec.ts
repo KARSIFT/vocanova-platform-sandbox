@@ -312,6 +312,118 @@ test("voice and learner speed choices survive reload and apply to replay", async
   ).toBe(0.7);
 });
 
+test("an unavailable saved device voice can be explicitly cleared for natural playback", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await installSpeech(page, "no-english");
+  await context.addCookies([
+    { name: "vocanova_session", value: randomUUID(), url: baseURL! },
+    { name: "vocanova_csrf", value: "reset-voice-csrf", url: baseURL! },
+  ]);
+  const requests: { text: string; csrf: string | undefined }[] = [];
+  await page.route("**/api/v1/pronunciation", async (route) => {
+    requests.push({
+      text: route.request().postDataJSON().text,
+      csrf: route.request().headers()["x-csrf-token"],
+    });
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        audioBase64: "aWQz",
+        mimeType: "audio/mpeg",
+        voice: "luna",
+        cacheHit: false,
+      }),
+    });
+  });
+  await page.addInitScript(() => {
+    if (localStorage.getItem("vocanova.speech.v1") === null)
+      localStorage.setItem(
+        "vocanova.speech.v1",
+        JSON.stringify({ rate: 0.7, voiceURI: "previous-device-voice" }),
+      );
+    const state = { rates: [] as number[] };
+    Object.defineProperty(window, "__resetVoiceAudioTest", { value: state });
+    class AudioFixture {
+      playbackRate = 1;
+      preservesPitch = false;
+      onended: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      preload = "auto";
+      async play() {
+        state.rates.push(this.playbackRate);
+      }
+      pause() {}
+    }
+    Object.defineProperty(window, "Audio", {
+      configurable: true,
+      value: AudioFixture,
+    });
+  });
+  await page.goto("/vocabulary/pour");
+  const word = page.getByRole("group", {
+    name: "Pronunciation of pour",
+    exact: true,
+  });
+  const voice = word.getByLabel("English voice", { exact: true });
+  const speed = word.getByLabel("Playback speed", { exact: true });
+  await word.getByText("Voice & speed", { exact: true }).click();
+  await expect(voice).toHaveValue("previous-device-voice");
+  await expect(voice.locator("option:checked")).toHaveText(
+    "Previous voice unavailable",
+  );
+  await word
+    .getByRole("button", { name: "Listen to pour", exact: true })
+    .click();
+  await expect(word.getByRole("status")).toHaveText(
+    "An English voice is not ready on this device. Please try again.",
+  );
+  expect(requests).toEqual([]);
+  expect(await page.evaluate(() => window.__pronunciationTest.calls)).toEqual(
+    [],
+  );
+  await page.reload();
+  await word.getByText("Voice & speed", { exact: true }).click();
+  // Missing device voices must not silently overwrite an explicit preference.
+  await expect(voice).toHaveValue("previous-device-voice");
+  await expect(speed).toHaveValue("0.7");
+  await expect(voice).toBeEnabled();
+  await voice.selectOption("");
+  expect(
+    await page.evaluate(() =>
+      JSON.parse(localStorage.getItem("vocanova.speech.v1")!),
+    ),
+  ).toEqual({ rate: 0.7, voiceURI: "" });
+  await word
+    .getByRole("button", { name: "Listen to pour", exact: true })
+    .click();
+  await expect(
+    word.getByText("Natural pronunciation", { exact: true }),
+  ).toBeVisible();
+  expect(requests).toEqual([{ text: "pour", csrf: "reset-voice-csrf" }]);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as unknown as { __resetVoiceAudioTest: { rates: number[] } })
+          .__resetVoiceAudioTest.rates,
+    ),
+  ).toEqual([0.7]);
+  await expect(speed).toBeDisabled();
+  await expect(voice).toBeDisabled();
+  await word
+    .getByRole("button", { name: "Stop listening to pour", exact: true })
+    .click();
+  await expect(speed).toBeEnabled();
+  await page.reload();
+  await word.getByText("Voice & speed", { exact: true }).click();
+  await expect(voice).toHaveValue("");
+  await expect(speed).toHaveValue("0.7");
+  expect(requests).toHaveLength(1);
+});
+
 test("natural pronunciation requests only authored text with CSRF and replays at learner pace", async ({
   page,
   context,

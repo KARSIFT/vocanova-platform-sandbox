@@ -71,7 +71,9 @@ export function SpeechSettings({ disabled = false }: { disabled?: boolean }) {
           <select
             id={`${id}-voice`}
             value={preferences.voiceURI}
-            disabled={disabled || voices.length === 0}
+            disabled={
+              disabled || (voices.length === 0 && !preferences.voiceURI)
+            }
             onChange={(event) => update({ voiceURI: event.target.value })}
             className="min-h-11 w-full rounded-md border border-neutral-300 bg-white px-2 text-neutral-900"
           >

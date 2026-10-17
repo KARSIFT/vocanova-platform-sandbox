@@ -5,6 +5,91 @@ import { formatViolations, scanForAxeViolations } from "./axe-helper";
 
 const mockAPI = `http://127.0.0.1:${process.env.MOCK_API_PORT ?? 8080}`;
 
+for (const source of ["empty list", "deleted list"] as const) {
+  test(`Personal practice starts independently of a selected ${source}`, async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    if (!baseURL) throw new Error("A test app URL is required");
+    const csrf = randomUUID();
+    await context.addCookies([
+      { name: "vocanova_session", value: randomUUID(), url: baseURL },
+      { name: "vocanova_csrf", value: csrf, url: baseURL },
+    ]);
+    const listId = randomUUID();
+    const created = await context.request.put(
+      `${mockAPI}/api/v1/word-lists/${listId}`,
+      {
+        headers: { "X-CSRF-Token": csrf, "Idempotency-Key": randomUUID() },
+        data: { name: "Empty personal list", expectedRevision: 0 },
+      },
+    );
+    expect(created.ok()).toBe(true);
+    const list = await created.json();
+    if (source === "deleted list") {
+      const removed = await context.request.delete(
+        `${mockAPI}/api/v1/word-lists/${listId}?expectedRevision=${list.revision}`,
+        {
+          headers: { "X-CSRF-Token": csrf, "Idempotency-Key": randomUUID() },
+        },
+      );
+      expect(removed.ok()).toBe(true);
+      await page.goto(`/practice?list=${listId}`);
+      await expect(
+        page.getByLabel("Practice vocabulary", { exact: true }),
+      ).toHaveValue(`list:${listId}`);
+      await expect(
+        page.getByRole("option", { name: "Selected list is unavailable" }),
+      ).toHaveCount(1);
+    } else {
+      await page.goto("/practice");
+      await page.getByText("More practice", { exact: true }).click();
+      await page
+        .getByLabel("Practice vocabulary", { exact: true })
+        .selectOption(`list:${listId}`);
+    }
+    await expect(
+      page.getByRole("button", { name: "Start typed recall", exact: true }),
+    ).toBeDisabled();
+    await expect(
+      page.getByRole("button", {
+        name: "Start listening practice",
+        exact: true,
+      }),
+    ).toBeDisabled();
+    const start = page.getByRole("button", {
+      name: "Start practice lesson",
+      exact: true,
+    });
+    await expect(start).toBeEnabled();
+    const started = page
+      .waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          new URL(response.url()).pathname === "/api/v1/practice-sessions",
+        { timeout: 5_000 },
+      )
+      .catch(() => undefined);
+    await start.click();
+    const response = await started;
+    expect(
+      response,
+      "The enabled personal practice button must send a journey start request",
+    ).toBeDefined();
+    expect(response!.ok()).toBe(true);
+    // Personal practice ignores the focused-practice selection, including an
+    // empty or deleted list. Never forward its identity or revision.
+    expect(response!.request().postDataJSON()).toEqual({ mode: "journey" });
+    const session = await response!.json();
+    expect(session.mode).toBe("journey");
+    await expect(page).toHaveURL(`/practice/session/${session.id}`);
+    await expect(
+      page.getByRole("progressbar", { name: "Practice progress" }),
+    ).toBeVisible();
+  });
+}
+
 for (const theme of ["light", "dark"] as const) {
   test(`Practice connects review, discovery, lesson and listening activities in ${theme} mode`, async ({
     page,

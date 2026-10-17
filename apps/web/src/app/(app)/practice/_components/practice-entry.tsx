@@ -70,7 +70,11 @@ export function PracticeEntry({
   async function start(mode?: PracticeMode) {
     if (inFlight.current || needsRefresh || expired.current) return;
     if (!pending.current) {
-      if (!mode || (mode !== "mistakes" && unavailableSelection)) return;
+      if (
+        !mode ||
+        (mode !== "mistakes" && mode !== "journey" && unavailableSelection)
+      )
+        return;
       pending.current = {
         body: {
           mode,
