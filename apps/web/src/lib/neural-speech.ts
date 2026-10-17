@@ -79,7 +79,12 @@ export function createPronunciationController(
       if (notify)
         previous.notify({
           status: "idle",
-          source: previous.phase === "audio" ? "neural" : "device",
+          source:
+            previous.phase === "audio"
+              ? "neural"
+              : previous.phase === "device"
+                ? "device"
+                : undefined,
         });
       return true;
     } catch {

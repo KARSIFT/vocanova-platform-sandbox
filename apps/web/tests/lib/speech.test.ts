@@ -10,6 +10,7 @@ import {
 
 import {
   createDeviceSpeechController,
+  pronunciationCaption,
   readSpeechPreferences,
   selectEnglishVoice,
   type PronunciationState,
@@ -401,6 +402,8 @@ test("stopping a pending natural voice aborts it and ignores late results; unrel
   await settleSpeech();
   assert.equal(f.clips.length, 0);
   assert.equal(states.at(-1)!.status, "idle");
+  assert.equal(states.at(-1)!.source, undefined);
+  assert.equal(pronunciationCaption(states.at(-1)!), "English pronunciation");
   f.controller.play(owner, "coffee", true, (state) => states.push(state));
   f.requests[1]!.resolve(audioResponse);
   await settleSpeech();
